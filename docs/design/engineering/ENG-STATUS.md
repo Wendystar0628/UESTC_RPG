@@ -58,8 +58,8 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`60d7fbe` WP-34 世界时间与正向换季的主线版。
-- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`，第 4 批共享契约 `d4f46a5`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`、WP-34 `60d7fbe`。
+- 当前 `main`：`6a1d7aa` WP-45a 天气核心的主线版。
+- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`，第 4 批共享契约 `d4f46a5`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`、WP-34 `60d7fbe`、WP-45a `6a1d7aa`。
 - 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）。
 - 最近可运行入口：`d4f46a5`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景；90 帧窗口冒烟、Release 导出与导出版运行时通过，不代表完整主线旅程）。
 - 已冻结的契约组：尚无（v1 候选）。
@@ -88,7 +88,7 @@ gates: []
 | WP-42 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-42` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-43 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-43` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-44 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-44` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-45a | 天气核心主线版，已批准且前置已满足 | `..\UESTC_RPG.wt\WP-45a` | `wp/45a-weather` | `2edfc00` | 待合入 | — | 值班会话复跑 G1–G5 后合入 |
+| WP-45a | 主线版已合入；天气存档真实容器联调 | `..\UESTC_RPG.wt\WP-45a` | `wp/45a-weather` | — | 阻塞 | G20 真实容器联调待 WP-50 | WP-50 接通后验证全局与按图天气恢复；GPU 仍归 WP-45b |
 | WP-46 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-46` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-48c | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48c` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
