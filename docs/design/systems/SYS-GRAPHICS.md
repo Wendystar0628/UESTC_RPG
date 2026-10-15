@@ -119,7 +119,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 | 植被 | 植被与草密度 | 75% / 100% | 即 | `MultiMesh.VisibleInstanceCount`；远池用全局参数调抖动阈值 | WP-23 |
 | 植被 | 草地范围 | 12 / 20 m | 即 | 草的循环范围 | WP-23 |
 | 水 | 西湖倒影刷新 | 每 4 / 3 / 2 帧 | 即 | `SubViewport.RenderTargetUpdateMode` | WP-24 |
-| 粒子 | 降水与粒子密度 | 50% / 75% / 100% | 即 | 降水池、飘落池的 `VisibleInstanceCount`（萤火虫不降，它只占 1 次绘制） | WP-45（WP-38 只读，按同一密度设飘落池） |
+| 粒子 | 降水与粒子密度 | 50% / 75% / 100% | 即 | 降水池、飘落池的 `VisibleInstanceCount`（萤火虫不降，它只占 1 次绘制） | WP-45b（WP-38 只读，按同一密度设飘落池） |
 | 帧率 | 自动调节画质 | 开 / 关 | 即 | §5 | WP-32 |
 | 高级 | 图形接口 | D3D12（默认）/ Vulkan | 启 | 写 `user://engine_override.cfg`，经项目设置 `application/config/project_settings_override` 读取；`OS.SetRestartOnExit` 后退出 | WP-32 |
 | 高级 | 显卡选择 | 双显卡笔记本上选独显 / 核显；主线阶段不可选，显示"引擎默认" | 启 | Godot 只能用启动参数 `--gpu-index` 选显卡，没有对应的工程设置，所以不写进 `engine_override.cfg`；以后由 WP-01 的启动器在引擎启动前传参 | WP-32 |
