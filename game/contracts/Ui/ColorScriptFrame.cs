@@ -25,11 +25,12 @@ public interface IColorScriptFrame
 /// <param name="CdlPower">Per-channel ASC CDL power.</param>
 /// <param name="FogLow">fog_low: top height in metres, density, lake-fog strength, reserved zero.</param>
 /// <param name="CdlSaturation">Fourth ASC CDL parameter; one is neutral.</param>
-/// <param name="GlowHdrThreshold">High-light glow threshold, normally 0.85.</param>
+/// <param name="GlowHdrThreshold">High-light glow threshold, at least 1.0 and above registered lit colours.</param>
 /// <param name="GlowHdrScale">High-light glow scale, normally 0.3.</param>
 /// <param name="GlowIntensity">Overall glow intensity, including the seasonal multiplier.</param>
 /// <param name="VignetteTint">RGB multiplier used by the vignette formula, not a display color token.</param>
-/// <param name="Fog">fog: density, haze-band elevation in degrees, fog start distance and silhouette distance in metres.
+/// <param name="Fog">fog: density, haze-band elevation above the horizon in degrees (not metres),
+/// fog start distance and silhouette distance in metres.
 /// Weather fog is applied separately through weather_fog, not multiplied into this vector a second time.</param>
 public readonly record struct ColorScriptSnapshot(
     long Rev,
@@ -52,4 +53,10 @@ public readonly record struct ColorScriptSnapshot(
 {
     /// <summary>Streetlamp light-pool gain, written by WP-37 and read by WP-39/WP-03: 1.5 on winter nights, otherwise 1.</summary>
     public float LampPoolGain { get; init; } = 1f;
+
+    /// <summary>Linear RGB horizon fog colour towards the key light, including season/weather evaluation.</summary>
+    public Vector3 FogSun { get; init; }
+
+    /// <summary>Linear RGB horizon fog colour away from the key light, including season/weather evaluation.</summary>
+    public Vector3 FogAnti { get; init; }
 }

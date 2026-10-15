@@ -31,11 +31,27 @@ public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveServi
         return Task.FromResult(request.Map ?? maps.Default);
     }
 
-    public Task PrepareWorld()
+    public async Task PrepareWorld()
     {
         if (_bootRequest is null) throw new InvalidOperationException("PrepareBoot must run first.");
-        // The D0 save service has no readable slots. World and map defaults were set by bootstrap.
-        return Task.CompletedTask;
+        LoadResult? loaded = null;
+        if (_bootRequest.LoadFile is { } path)
+            loaded = await saves.LoadFile(path);
+        else if (_bootRequest.Slot is { } slot)
+            loaded = await saves.Load(slot, _bootRequest.ShowTitle ? LoadScope.Preview : LoadScope.Full);
+        if (loaded is null) return; // No-save preview uses the data bootstrap's defaults.
+        switch (loaded.Status)
+        {
+            case LoadStatus.Loaded:
+            case LoadStatus.Recovered:
+                return;
+            case LoadStatus.Empty:
+            case LoadStatus.Corrupt:
+            case LoadStatus.NewerBuild:
+            case LoadStatus.Failed:
+                throw new InvalidOperationException($"Requested boot save could not be loaded: {loaded.Status}; {loaded.Error}");
+            default: throw new ArgumentOutOfRangeException(nameof(loaded.Status));
+        }
     }
 
     public Task CompleteBoot()

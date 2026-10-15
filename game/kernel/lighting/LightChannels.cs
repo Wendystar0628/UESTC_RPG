@@ -2,63 +2,6 @@ using Campus.Contracts;
 
 namespace Campus.Kernel.Lighting;
 
-/// <summary>
-/// Slot table of the 32 light channels (ENG-PERF 10.3), drafted with WP-39. The slot is what
-/// geometry encodes (window UV2.y = slot + 32 × columns) and what light_channels stores per texel,
-/// so gen and runtime must share it: proposed for game/contracts in WP-03's contract request.
-/// Per-map lighting-schedule.json files only give curves per slot; they never move slots.
-/// </summary>
-public static class LightChannelCatalog
-{
-    public const int Count = 32;
-
-    private static readonly string[] Names =
-    [
-        // 0–11 window-type channels: L = share of lit windows (≤ 0.85, library 0.9)
-        "window.general", "window.dorm", "window.teach", "window.library", "window.lab", "window.canteen",
-        "window.outskirts", "window.allnight", "window.cafe", "window.venue", "window.gym", "interior.public",
-        // 12–27 fixtures: L = retained share; each lamp's sun-altitude threshold lives in lamp_table
-        "lamp.first", "lamp.first.half", "lamp.street", "lamp.landscape", "lamp.statue", "lamp.canopy",
-        "lamp.pilotis", "lamp.corridor", "lamp.court", "sign.shop", "sign.signal", "lamp.cue",
-        "lamp.fountain", "clock.face", "lamp.aviation", "water.pool",
-        // 28–29 reserved; 30 sys.cue: L = 1 while the title cue overrides, Δ = its target sun altitude (°);
-        // 31 sys.poolGain: L = lamp pool gain (winter nights 1.5), not a 0–1 value
-        "reserved.28", "reserved.29", "sys.cue", "sys.poolGain",
-    ];
-
-    private static readonly Dictionary<string, int> Slots = BuildSlots();
-
-    public static ChannelId Id(int slot)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(slot);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(slot, Count);
-        return new(Names[slot]);
-    }
-
-    /// <summary>Slot of an allocated channel, or −1.</summary>
-    public static int Slot(ChannelId id) =>
-        id.Value is { } value && Slots.TryGetValue(value, out var slot) ? slot : -1;
-
-    private static Dictionary<string, int> BuildSlots()
-    {
-        if (Names.Length != Count) throw new InvalidOperationException("Light channel catalog must have 32 slots.");
-        var slots = new Dictionary<string, int>(Count, StringComparer.Ordinal);
-        for (var i = 0; i < Names.Length; i++)
-            if (!slots.TryAdd(Names[i], i)) throw new InvalidOperationException($"Duplicate light channel {Names[i]}.");
-        return slots;
-    }
-}
-
-/// <summary>
-/// Write side of the light channels (proposed contract, WP-03 implements, WP-39 calls once per frame
-/// in FramePriority.Channels). Each element is (L, Δ) for one slot; Δ is the adaptive transition
-/// width clamp(|dL/dt| × 0.3 s, Δmin, Δmax) of ENG-PERF 10.3; sys.cue carries a target altitude in Δ.
-/// </summary>
-public interface ILightChannelSink
-{
-    void Submit(ReadOnlySpan<System.Numerics.Vector2> lDelta);
-}
-
 /// <summary>Adaptive Δ per slot (ENG-PERF 10.3): 0.3 s of the current rate, clamped to [0.005, 0.15].</summary>
 public sealed class ChannelDeltaTracker
 {

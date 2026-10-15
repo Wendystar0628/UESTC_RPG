@@ -1095,6 +1095,10 @@ Campus.Contracts.Bake.BakedSurface.IndexData.get -> System.ReadOnlyMemory<byte>
 Campus.Contracts.Bake.BakedSurface.Lods.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Bake.BakedMeshLod!>!
 Campus.Contracts.Bake.BakedSurface.Material.get -> Campus.Contracts.ToonRef
 Campus.Contracts.Bake.BakedSurface.Primitive.get -> Campus.Contracts.Bake.BakedPrimitive
+Campus.Contracts.Bake.BakedSurface.Reflect.get -> bool
+Campus.Contracts.Bake.BakedSurface.Reflect.init -> void
+Campus.Contracts.Bake.BakedSurface.Shader.get -> Campus.Contracts.ShaderId?
+Campus.Contracts.Bake.BakedSurface.Shader.init -> void
 Campus.Contracts.Bake.BakedSurface.SkinData.get -> System.ReadOnlyMemory<byte>
 Campus.Contracts.Bake.BakedSurface.UvScale.get -> System.Numerics.Vector4
 Campus.Contracts.Bake.BakedSurface.Variant.get -> Campus.Contracts.VariantTag?
@@ -1108,6 +1112,8 @@ Campus.Contracts.Bake.CollisionTile.CollisionTile(Campus.Contracts.Bake.BakeKey 
 Campus.Contracts.Bake.CollisionTile.Key.get -> Campus.Contracts.Bake.BakeKey
 Campus.Contracts.Bake.CollisionTile.StatisticsJson.get -> string!
 Campus.Contracts.Bake.CollisionTile.Tile.get -> Campus.Contracts.TileKey
+Campus.Contracts.Bake.IBakeCommand
+Campus.Contracts.Bake.IBakeCommand.Run(Campus.Contracts.Startup.BootContext! context) -> System.Threading.Tasks.Task<int>!
 Campus.Contracts.Bake.IBakeHandle
 Campus.Contracts.Bake.IBakeHandle.Collision.get -> Campus.Contracts.Bake.CollisionTile?
 Campus.Contracts.Bake.IBakeHandle.Error.get -> string?
@@ -1184,12 +1190,16 @@ Campus.Contracts.BoxCollider.Half.get -> System.Numerics.Vector3
 Campus.Contracts.BoxCollider.Half.init -> void
 Campus.Contracts.BuildContext
 Campus.Contracts.BuildContext.BuildContext() -> void
+Campus.Contracts.BuildContext.ClaimedBy.get -> System.Func<Campus.Contracts.FeatureId, Campus.Contracts.Aspects, Campus.Contracts.WpId?>!
+Campus.Contracts.BuildContext.ClaimedBy.init -> void
 Campus.Contracts.BuildContext.CodeHash.get -> string!
 Campus.Contracts.BuildContext.CodeHash.init -> void
 Campus.Contracts.BuildContext.DataHash.get -> string!
 Campus.Contracts.BuildContext.DataHash.init -> void
 Campus.Contracts.BuildContext.Map.get -> Campus.Contracts.Maps.MapDescriptor!
 Campus.Contracts.BuildContext.Map.init -> void
+Campus.Contracts.BuildContext.Palette.get -> Campus.Contracts.PaletteRegistry?
+Campus.Contracts.BuildContext.Palette.init -> void
 Campus.Contracts.BuildContext.Seeded(Campus.Contracts.FeatureId feature, Campus.Contracts.PartId part, string! purpose) -> Campus.Contracts.Rng
 Campus.Contracts.BuildContext.SourceInputs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>!
 Campus.Contracts.BuildContext.SourceInputs.init -> void
@@ -1579,6 +1589,10 @@ Campus.Contracts.Cinematic.FovKey.T.get -> double
 Campus.Contracts.Cinematic.FovKey.T.init -> void
 Campus.Contracts.Cinematic.FovKey.Value.get -> float?
 Campus.Contracts.Cinematic.FovKey.Value.init -> void
+Campus.Contracts.Cinematic.ILampCueHook
+Campus.Contracts.Cinematic.ILampCueHook.Begin(string! cueRef, float targetSunAltDeg) -> bool
+Campus.Contracts.Cinematic.ILampCueHook.End() -> void
+Campus.Contracts.Cinematic.ILampCueHook.Seek(double timelineSeconds) -> void
 Campus.Contracts.Cinematic.LampCueDef
 Campus.Contracts.Cinematic.LampCueDef.Band.get -> float
 Campus.Contracts.Cinematic.LampCueDef.Band.init -> void
@@ -1691,8 +1705,12 @@ Campus.Contracts.ColorScriptSnapshot.Exposure.get -> float
 Campus.Contracts.ColorScriptSnapshot.Exposure.init -> void
 Campus.Contracts.ColorScriptSnapshot.Fog.get -> System.Numerics.Vector4
 Campus.Contracts.ColorScriptSnapshot.Fog.init -> void
+Campus.Contracts.ColorScriptSnapshot.FogAnti.get -> System.Numerics.Vector3
+Campus.Contracts.ColorScriptSnapshot.FogAnti.init -> void
 Campus.Contracts.ColorScriptSnapshot.FogLow.get -> System.Numerics.Vector4
 Campus.Contracts.ColorScriptSnapshot.FogLow.init -> void
+Campus.Contracts.ColorScriptSnapshot.FogSun.get -> System.Numerics.Vector3
+Campus.Contracts.ColorScriptSnapshot.FogSun.init -> void
 Campus.Contracts.ColorScriptSnapshot.Glow.get -> float
 Campus.Contracts.ColorScriptSnapshot.Glow.init -> void
 Campus.Contracts.ColorScriptSnapshot.GlowHdrScale.get -> float
@@ -1726,13 +1744,19 @@ Campus.Contracts.ContentOutput.ContentOutput(System.Collections.Generic.IReadOnl
 Campus.Contracts.ContentOutput.Deconstruct(out System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBundle!>! Meshes, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.PlacedPart!>! Parts, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>? Emitters, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.Footprint2D!>? Occupancy) -> void
 Campus.Contracts.ContentOutput.Emitters.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>?
 Campus.Contracts.ContentOutput.Emitters.init -> void
+Campus.Contracts.ContentOutput.Entrances.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>!
+Campus.Contracts.ContentOutput.Entrances.init -> void
 Campus.Contracts.ContentOutput.Equals(Campus.Contracts.ContentOutput? other) -> bool
+Campus.Contracts.ContentOutput.LooseWindows.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowDecl!>!
+Campus.Contracts.ContentOutput.LooseWindows.init -> void
 Campus.Contracts.ContentOutput.Meshes.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBundle!>!
 Campus.Contracts.ContentOutput.Meshes.init -> void
 Campus.Contracts.ContentOutput.Occupancy.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Footprint2D!>?
 Campus.Contracts.ContentOutput.Occupancy.init -> void
 Campus.Contracts.ContentOutput.Parts.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.PlacedPart!>!
 Campus.Contracts.ContentOutput.Parts.init -> void
+Campus.Contracts.ContentOutput.Windows.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowFacadeDecl!>!
+Campus.Contracts.ContentOutput.Windows.init -> void
 Campus.Contracts.ContractJson
 Campus.Contracts.DesignKind
 Campus.Contracts.DesignKind.Deconstruct(out string! Value) -> void
@@ -1934,6 +1958,14 @@ Campus.Contracts.FidelityZone.K2 = 2 -> Campus.Contracts.FidelityZone
 Campus.Contracts.FidelityZone.K3 = 3 -> Campus.Contracts.FidelityZone
 Campus.Contracts.FidelityZone.K4 = 4 -> Campus.Contracts.FidelityZone
 Campus.Contracts.FidelityZone.K5 = 5 -> Campus.Contracts.FidelityZone
+Campus.Contracts.FlatTerrain
+Campus.Contracts.FlatTerrain.FactsAt(float x, float z) -> Campus.Contracts.TerrainFacts
+Campus.Contracts.FlatTerrain.FillTile(Campus.Contracts.TileKey tile, int level, System.Span<short> cm) -> void
+Campus.Contracts.FlatTerrain.FlatTerrain(System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, float>? waterLevels = null) -> void
+Campus.Contracts.FlatTerrain.HeightAt(float x, float z) -> float
+Campus.Contracts.FlatTerrain.IsFlat(Campus.Contracts.TileKey tile) -> bool
+Campus.Contracts.FlatTerrain.PadY(Campus.Contracts.FeatureId feature) -> float
+Campus.Contracts.FlatTerrain.WaterY(Campus.Contracts.FeatureId water) -> float?
 Campus.Contracts.Flow
 Campus.Contracts.Flow.Deconstruct(out int Rate) -> void
 Campus.Contracts.Flow.Equals(Campus.Contracts.Flow other) -> bool
@@ -1984,8 +2016,12 @@ Campus.Contracts.GeometryBundle.Normal.get -> float[]!
 Campus.Contracts.GeometryBundle.Normal.init -> void
 Campus.Contracts.GeometryBundle.Position.get -> float[]!
 Campus.Contracts.GeometryBundle.Position.init -> void
+Campus.Contracts.GeometryBundle.Reflect.get -> bool
+Campus.Contracts.GeometryBundle.Reflect.init -> void
 Campus.Contracts.GeometryBundle.Reserved.get -> byte[]?
 Campus.Contracts.GeometryBundle.Reserved.init -> void
+Campus.Contracts.GeometryBundle.Shader.get -> Campus.Contracts.ShaderId?
+Campus.Contracts.GeometryBundle.Shader.init -> void
 Campus.Contracts.GeometryBundle.Uv.get -> float[]?
 Campus.Contracts.GeometryBundle.Uv.init -> void
 Campus.Contracts.GeometryBundle.Uv2.get -> float[]?
@@ -2039,6 +2075,14 @@ Campus.Contracts.ICameraRig.Speed.get -> float
 Campus.Contracts.ICameraRig.Transit(Campus.Contracts.Pose to, Campus.Contracts.TransitOptions? o = null) -> Campus.Contracts.ITransitHandle!
 Campus.Contracts.IChannelReader
 Campus.Contracts.IChannelReader.Value(Campus.Contracts.ChannelId id) -> float
+Campus.Contracts.ICinemaPresenter
+Campus.Contracts.ICinemaPresenter.Active.get -> bool
+Campus.Contracts.ICinemaPresenter.Begin(Campus.Contracts.Cinematic.CinematicDef! def, string? placeKey) -> void
+Campus.Contracts.ICinemaPresenter.End(Campus.Contracts.Cinematic.CinematicEnd! end, bool skipped) -> void
+Campus.Contracts.ICinemaPresenter.Present(double timelineSeconds, float skipProgress, bool skipHintVisible, double waitingSeconds) -> void
+Campus.Contracts.ICinematicSettings
+Campus.Contracts.ICinematicSettings.Changed -> System.Action?
+Campus.Contracts.ICinematicSettings.Mode.get -> Campus.Contracts.AppFlow.CinematicMode
 Campus.Contracts.ICollisionWorld
 Campus.Contracts.ICollisionWorld.Ready(System.Numerics.Vector3 p, float r) -> bool
 Campus.Contracts.ICollisionWorld.SupportY(float x, float z, float yHint) -> Campus.Contracts.SupportHit?
@@ -2083,6 +2127,20 @@ Campus.Contracts.IInteriorProvider.Layout(Campus.Contracts.BuildContext! ctx, Ca
 Campus.Contracts.IInteriorProvider.Nav(Campus.Contracts.BuildContext! ctx, Campus.Contracts.FeatureId id, int storey) -> Campus.Contracts.NavFloorGraph!
 Campus.Contracts.IInteriorProvider.Priority.get -> int
 Campus.Contracts.IInteriorProvider.Walkable.get -> bool
+Campus.Contracts.IKeyLightState
+Campus.Contracts.IKeyLightState.Body.get -> Campus.Contracts.KeyBody
+Campus.Contracts.IKeyLightState.KeyDir.get -> System.Numerics.Vector3
+Campus.Contracts.IKeyLightState.KeyStrength.get -> float
+Campus.Contracts.IKeyLightState.OvercastDir.get -> System.Numerics.Vector3
+Campus.Contracts.IKeyLightState.RetreatY.get -> float
+Campus.Contracts.IKeyLightState.ShadowStrength.get -> float
+Campus.Contracts.ILightChannelSink
+Campus.Contracts.ILightChannelSink.Submit(System.ReadOnlySpan<System.Numerics.Vector2> lDelta) -> void
+Campus.Contracts.ILightInventory
+Campus.Contracts.ILightInventory.Facades.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowFacadeDecl!>!
+Campus.Contracts.ILightInventory.Lamps.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>!
+Campus.Contracts.ILightInventory.Rev.get -> long
+Campus.Contracts.ILightInventory.Windows.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowDecl!>!
 Campus.Contracts.ILightningFeed
 Campus.Contracts.ILightningFeed.Flash -> System.Action<Campus.Contracts.LightningFlash>?
 Campus.Contracts.IMediumPresenter
@@ -2090,6 +2148,9 @@ Campus.Contracts.IMediumPresenter.Enter(Campus.Contracts.IRuntimeContext! rt, in
 Campus.Contracts.IMediumPresenter.Exit(Campus.Contracts.IRuntimeContext! rt) -> void
 Campus.Contracts.IMediumPresenter.Kinds.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.MediumKind>!
 Campus.Contracts.IMediumPresenter.Update(Campus.Contracts.IRuntimeContext! rt, in Campus.Contracts.CameraMedium m, float blend) -> Campus.Contracts.PostOverride!
+Campus.Contracts.IMediumRenderState
+Campus.Contracts.IMediumRenderState.Medium.get -> System.Numerics.Vector4
+Campus.Contracts.IMediumRenderState.MediumColor.get -> System.Numerics.Vector3
 Campus.Contracts.IMediumState
 Campus.Contracts.IMediumState.Blend.get -> float
 Campus.Contracts.IMediumState.Current.get -> Campus.Contracts.CameraMedium
@@ -2118,6 +2179,8 @@ Campus.Contracts.IOutskirtsModel.FrontLine.get -> System.Collections.Generic.IRe
 Campus.Contracts.IOutskirtsModel.SoftFloor(float x, float z) -> float
 Campus.Contracts.IPaletteProbe
 Campus.Contracts.IPaletteProbe.SampleHorizon(Campus.Contracts.Season season, Campus.Contracts.WeatherVec weather, System.Span<System.Numerics.Vector3> srgb24) -> void
+Campus.Contracts.IPaletteRegistrySource
+Campus.Contracts.IPaletteRegistrySource.Registry.get -> Campus.Contracts.PaletteRegistry!
 Campus.Contracts.IPartDef<TParams>
 Campus.Contracts.IPartDef<TParams>.Bounds(TParams p) -> Campus.Contracts.Box3
 Campus.Contracts.IPartDef<TParams>.Budget.get -> Campus.Contracts.PartBudget!
@@ -2137,6 +2200,9 @@ Campus.Contracts.IRuntimeContext
 Campus.Contracts.IRuntimeContext.Camera.get -> Campus.Contracts.ICameraRig!
 Campus.Contracts.IRuntimeContext.Render.get -> Campus.Contracts.IRenderHost!
 Campus.Contracts.IRuntimeContext.World.get -> Campus.Contracts.IWorldState!
+Campus.Contracts.ISkipInputState
+Campus.Contracts.ISkipInputState.HintVisible.get -> bool
+Campus.Contracts.ISkipInputState.Progress.get -> float
 Campus.Contracts.ISpatialIndex
 Campus.Contracts.ISpatialIndex.GroundY(float x, float z) -> float
 Campus.Contracts.ISpatialIndex.MediumAt(System.Numerics.Vector3 p) -> Campus.Contracts.CameraMedium
@@ -2155,6 +2221,13 @@ Campus.Contracts.IStreamMountWork.Kind.get -> Campus.Contracts.StreamMountKind
 Campus.Contracts.IStreamMountWork.Priority.get -> Campus.Contracts.Bake.BakePriority
 Campus.Contracts.IStreamMountWork.Revision.get -> long
 Campus.Contracts.IStreamMountWork.Step(double budgetMilliseconds) -> bool
+Campus.Contracts.ITerrain
+Campus.Contracts.ITerrain.FactsAt(float x, float z) -> Campus.Contracts.TerrainFacts
+Campus.Contracts.ITerrain.FillTile(Campus.Contracts.TileKey tile, int level, System.Span<short> cm) -> void
+Campus.Contracts.ITerrain.HeightAt(float x, float z) -> float
+Campus.Contracts.ITerrain.IsFlat(Campus.Contracts.TileKey tile) -> bool
+Campus.Contracts.ITerrain.PadY(Campus.Contracts.FeatureId feature) -> float
+Campus.Contracts.ITerrain.WaterY(Campus.Contracts.FeatureId water) -> float?
 Campus.Contracts.ITransitDriver
 Campus.Contracts.ITransitDriver.Destination.get -> Campus.Contracts.Pose?
 Campus.Contracts.ITransitDriver.Start(Campus.Contracts.Pose from, Campus.Contracts.Pose to, Campus.Contracts.TransitOptions? options = null) -> Campus.Contracts.ITransitHandle!
@@ -2163,6 +2236,14 @@ Campus.Contracts.ITransitHandle.Cancel() -> void
 Campus.Contracts.ITransitHandle.Done.get -> System.Threading.Tasks.Task<Campus.Contracts.TransitResult>!
 Campus.Contracts.ITransitHandle.Kind.get -> Campus.Contracts.TransitKind
 Campus.Contracts.ITransitHandle.Progress.get -> float
+Campus.Contracts.IUiSurfaceSink
+Campus.Contracts.IUiSurfaceSink.Report(Campus.Contracts.UiSurface surface, bool open) -> void
+Campus.Contracts.IUiSurfaceState
+Campus.Contracts.IUiSurfaceState.Changed -> System.Action?
+Campus.Contracts.IUiSurfaceState.InterfaceMode.get -> bool
+Campus.Contracts.IUiSurfaceState.Open.get -> Campus.Contracts.UiSurface
+Campus.Contracts.IUiSurfaceState.Rev.get -> long
+Campus.Contracts.IUiSurfaceState.SettingsPage.get -> string?
 Campus.Contracts.IVeilService
 Campus.Contracts.IVeilService.Cover(Campus.Contracts.VeilReason reason, float seconds, Campus.Contracts.VeilContent content = Campus.Contracts.VeilContent.Fog) -> System.Threading.Tasks.Task!
 Campus.Contracts.IVeilService.HoldUntil(Campus.Contracts.VeilReason reason, System.Func<bool>! ready, float maxWaitSeconds) -> void
@@ -2212,7 +2293,10 @@ Campus.Contracts.IWeatherProcess.Select(Campus.Contracts.WeatherSel sel) -> void
 Campus.Contracts.IWeatherProcess.Selection.get -> Campus.Contracts.WeatherSel
 Campus.Contracts.IWeatherProcess.Step(in Campus.Contracts.WeatherTick t) -> void
 Campus.Contracts.IWeatherProcess.Transitioning.get -> bool
+Campus.Contracts.IWeatherRenderState
+Campus.Contracts.IWeatherRenderState.WeatherFog.get -> System.Numerics.Vector4
 Campus.Contracts.IWindField
+Campus.Contracts.IWindField.Direction.get -> System.Numerics.Vector2
 Campus.Contracts.IWindField.Sample(float x, float z, double animTime) -> Campus.Contracts.WindSample
 Campus.Contracts.IWorldControl
 Campus.Contracts.IWorldControl.Advance(double hours) -> void
@@ -2234,6 +2318,7 @@ Campus.Contracts.IWorldModel.Interiors.get -> Campus.Contracts.IInteriorIndex!
 Campus.Contracts.IWorldModel.Network.get -> Campus.Contracts.WorldNetwork!
 Campus.Contracts.IWorldModel.Outskirts.get -> Campus.Contracts.IOutskirtsModel?
 Campus.Contracts.IWorldModel.Spatial.get -> Campus.Contracts.ISpatialIndex!
+Campus.Contracts.IWorldModel.Terrain.get -> Campus.Contracts.ITerrain!
 Campus.Contracts.IWorldModelLoader
 Campus.Contracts.IWorldModelLoader.Load(Campus.Contracts.MapId map, System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>! files) -> Campus.Contracts.WorldModelLoadResult!
 Campus.Contracts.IWorldRestore
@@ -2254,6 +2339,7 @@ Campus.Contracts.IWorldState.SeasonPos.get -> double
 Campus.Contracts.IWorldState.SeasonTarget.get -> Campus.Contracts.Season
 Campus.Contracts.IWorldState.Step12.get -> double
 Campus.Contracts.IWorldState.Sun.get -> Campus.Contracts.Body
+Campus.Contracts.IWorldState.SunAltDegAt(double clock, Campus.Contracts.Season season) -> float
 Campus.Contracts.IWorldState.Transition.get -> Campus.Contracts.WorldTransition
 Campus.Contracts.IWorldState.ViewMode.get -> Campus.Contracts.ViewMode
 Campus.Contracts.IWorldState.Weather.get -> Campus.Contracts.WeatherSel
@@ -2391,6 +2477,10 @@ Campus.Contracts.KernelServiceAttribute.KernelServiceAttribute(System.Type! serv
 Campus.Contracts.KernelServiceAttribute.Owner.get -> string!
 Campus.Contracts.KernelServiceAttribute.Owner.set -> void
 Campus.Contracts.KernelServiceAttribute.Service.get -> System.Type!
+Campus.Contracts.KeyBody
+Campus.Contracts.KeyBody.Moon = 1 -> Campus.Contracts.KeyBody
+Campus.Contracts.KeyBody.Sun = 0 -> Campus.Contracts.KeyBody
+Campus.Contracts.LightChannelCatalog
 Campus.Contracts.LightEmitter
 Campus.Contracts.LightEmitter.<Clone>$() -> Campus.Contracts.LightEmitter!
 Campus.Contracts.LightEmitter.Channel.get -> Campus.Contracts.ChannelId
@@ -2478,6 +2568,9 @@ Campus.Contracts.Maps.IMapContext.BakeRoot.get -> string!
 Campus.Contracts.Maps.IMapContext.DataRoot.get -> string!
 Campus.Contracts.Maps.IMapContext.Descriptor.get -> Campus.Contracts.Maps.MapDescriptor!
 Campus.Contracts.Maps.IMapContext.World.get -> Campus.Contracts.IWorldModel!
+Campus.Contracts.Maps.IMapDataParticipant
+Campus.Contracts.Maps.IMapDataParticipant.Prepare(Campus.Contracts.Maps.IMapContext! context) -> System.Threading.Tasks.Task!
+Campus.Contracts.Maps.IMapDataParticipant.Unload(Campus.Contracts.MapId from) -> void
 Campus.Contracts.Maps.IMapRuntime
 Campus.Contracts.Maps.IMapRuntime.BeginWarm() -> void
 Campus.Contracts.Maps.IMapRuntime.DestinationReady.get -> bool
@@ -4085,6 +4178,63 @@ Campus.Contracts.SweepHit.T.get -> float
 Campus.Contracts.SweepHit.T.init -> void
 Campus.Contracts.SweepHit.Tag.get -> Campus.Contracts.SurfaceTag
 Campus.Contracts.SweepHit.Tag.init -> void
+Campus.Contracts.TerrainClass
+Campus.Contracts.TerrainClass.Flat = 0 -> Campus.Contracts.TerrainClass
+Campus.Contracts.TerrainClass.Slope = 1 -> Campus.Contracts.TerrainClass
+Campus.Contracts.TerrainClass.Transition = 2 -> Campus.Contracts.TerrainClass
+Campus.Contracts.TerrainFacts
+Campus.Contracts.TerrainFacts.Class.get -> Campus.Contracts.TerrainClass
+Campus.Contracts.TerrainFacts.Class.init -> void
+Campus.Contracts.TerrainFacts.CrestDist.get -> float
+Campus.Contracts.TerrainFacts.CrestDist.init -> void
+Campus.Contracts.TerrainFacts.Deconstruct(out float Grade, out Campus.Contracts.TerrainClass Class, out float CrestDist, out float ToeDist) -> void
+Campus.Contracts.TerrainFacts.Equals(Campus.Contracts.TerrainFacts other) -> bool
+Campus.Contracts.TerrainFacts.Grade.get -> float
+Campus.Contracts.TerrainFacts.Grade.init -> void
+Campus.Contracts.TerrainFacts.TerrainFacts() -> void
+Campus.Contracts.TerrainFacts.TerrainFacts(float Grade, Campus.Contracts.TerrainClass Class, float CrestDist, float ToeDist) -> void
+Campus.Contracts.TerrainFacts.ToeDist.get -> float
+Campus.Contracts.TerrainFacts.ToeDist.init -> void
+Campus.Contracts.TerrainOp
+Campus.Contracts.TerrainOp.Deconstruct(out string! Id, out string! Reason, out int Priority) -> void
+Campus.Contracts.TerrainOp.Id.get -> string!
+Campus.Contracts.TerrainOp.Id.init -> void
+Campus.Contracts.TerrainOp.Priority.get -> int
+Campus.Contracts.TerrainOp.Priority.init -> void
+Campus.Contracts.TerrainOp.Reason.get -> string!
+Campus.Contracts.TerrainOp.Reason.init -> void
+Campus.Contracts.TerrainOp.TerrainOp(Campus.Contracts.TerrainOp! original) -> void
+Campus.Contracts.TerrainOp.TerrainOp(string! Id, string! Reason, int Priority = 50) -> void
+Campus.Contracts.TerrainOp.Zone.get -> Campus.Contracts.ZoneId
+Campus.Contracts.TerrainOp.Zone.init -> void
+Campus.Contracts.TerrainOverlayFile
+Campus.Contracts.TerrainOverlayFile.<Clone>$() -> Campus.Contracts.TerrainOverlayFile!
+Campus.Contracts.TerrainOverlayFile.Deconstruct(out Campus.Contracts.ZoneId Zone, out Campus.Contracts.WpId Owner, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainOp!>! Ops) -> void
+Campus.Contracts.TerrainOverlayFile.Equals(Campus.Contracts.TerrainOverlayFile? other) -> bool
+Campus.Contracts.TerrainOverlayFile.Map.get -> Campus.Contracts.MapId?
+Campus.Contracts.TerrainOverlayFile.Map.init -> void
+Campus.Contracts.TerrainOverlayFile.Ops.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainOp!>!
+Campus.Contracts.TerrainOverlayFile.Ops.init -> void
+Campus.Contracts.TerrainOverlayFile.Owner.get -> Campus.Contracts.WpId
+Campus.Contracts.TerrainOverlayFile.Owner.init -> void
+Campus.Contracts.TerrainOverlayFile.TerrainOverlayFile(Campus.Contracts.ZoneId Zone, Campus.Contracts.WpId Owner, System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainOp!>! Ops) -> void
+Campus.Contracts.TerrainOverlayFile.Zone.get -> Campus.Contracts.ZoneId
+Campus.Contracts.TerrainOverlayFile.Zone.init -> void
+Campus.Contracts.TerrainSampleGrid
+Campus.Contracts.TerrainSampleGrid.Deconstruct(out System.Numerics.Vector2 Origin, out System.Numerics.Vector2 Step, out int Width, out int Height) -> void
+Campus.Contracts.TerrainSampleGrid.Equals(Campus.Contracts.TerrainSampleGrid other) -> bool
+Campus.Contracts.TerrainSampleGrid.Height.get -> int
+Campus.Contracts.TerrainSampleGrid.Height.init -> void
+Campus.Contracts.TerrainSampleGrid.Origin.get -> System.Numerics.Vector2
+Campus.Contracts.TerrainSampleGrid.Origin.init -> void
+Campus.Contracts.TerrainSampleGrid.SampleCount.get -> int
+Campus.Contracts.TerrainSampleGrid.Step.get -> System.Numerics.Vector2
+Campus.Contracts.TerrainSampleGrid.Step.init -> void
+Campus.Contracts.TerrainSampleGrid.TerrainSampleGrid() -> void
+Campus.Contracts.TerrainSampleGrid.TerrainSampleGrid(System.Numerics.Vector2 Origin, System.Numerics.Vector2 Step, int Width, int Height) -> void
+Campus.Contracts.TerrainSampleGrid.Width.get -> int
+Campus.Contracts.TerrainSampleGrid.Width.init -> void
+Campus.Contracts.TerrainSampling
 Campus.Contracts.TileKey
 Campus.Contracts.TileKey.Deconstruct(out int X, out int Z) -> void
 Campus.Contracts.TileKey.Equals(Campus.Contracts.TileKey other) -> bool
@@ -4222,6 +4372,18 @@ Campus.Contracts.UiPaletteDocument.Special.init -> void
 Campus.Contracts.UiPaletteDocument.Themes.get -> Campus.Contracts.UiThemePalette!
 Campus.Contracts.UiPaletteDocument.Themes.init -> void
 Campus.Contracts.UiPaletteDocument.UiPaletteDocument(System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyDictionary<string!, string!>!>! Ramps, System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.UiColorToken!>! Special, Campus.Contracts.UiThemePalette! Themes, Campus.Contracts.UiMapPalette! Map, string? Schema = null) -> void
+Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.Atlas = 2 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.AtlasIndex = 4 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.Cinema = 512 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.Dialog = 64 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.Minimap = 1 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.None = 0 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.SavePage = 16 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.SettingsCard = 8 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.TimeCard = 128 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.TitleMenu = 32 -> Campus.Contracts.UiSurface
+Campus.Contracts.UiSurface.WeatherStrip = 256 -> Campus.Contracts.UiSurface
 Campus.Contracts.UiThemePalette
 Campus.Contracts.UiThemePalette.<Clone>$() -> Campus.Contracts.UiThemePalette!
 Campus.Contracts.UiThemePalette.Dark.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
@@ -4480,7 +4642,7 @@ Campus.Contracts.WeatherQueueItem.Minutes.get -> double
 Campus.Contracts.WeatherQueueItem.Minutes.init -> void
 Campus.Contracts.WeatherQueueItem.WeatherQueueItem() -> void
 Campus.Contracts.WeatherQueueItem.WeatherQueueItem(Campus.Contracts.WeatherKind Kind, double Minutes) -> void
-Campus.Contracts.WeatherQueueItem.WeatherQueueItem(Campus.Contracts.WeatherKind Kind, double Minutes, float? Intensity) -> void
+Campus.Contracts.WeatherQueueItem.WeatherQueueItem(Campus.Contracts.WeatherKind Kind, double Minutes, float? Intensity = null) -> void
 Campus.Contracts.WeatherSel
 Campus.Contracts.WeatherSel.Deconstruct(out Campus.Contracts.WeatherMode Mode, out Campus.Contracts.WeatherKind Kind, out float Intensity) -> void
 Campus.Contracts.WeatherSel.Equals(Campus.Contracts.WeatherSel other) -> bool
@@ -4557,6 +4719,7 @@ Campus.Contracts.WeatherVec.WeatherVec() -> void
 Campus.Contracts.WeatherVec.WeatherVec(float Cloud, float CloudType, float Cb, float Overcast, float Precip, float PrecipKind, float Wet, float Puddle, float Fog, float GroundFog, float Storm, float SnowAdd, float Rainbow, float Lightning) -> void
 Campus.Contracts.WeatherVec.Wet.get -> float
 Campus.Contracts.WeatherVec.Wet.init -> void
+Campus.Contracts.WetSurface
 Campus.Contracts.WindSample
 Campus.Contracts.WindSample.Deconstruct(out float Gust, out float Phase) -> void
 Campus.Contracts.WindSample.Equals(Campus.Contracts.WindSample other) -> bool
@@ -4566,6 +4729,62 @@ Campus.Contracts.WindSample.Phase.get -> float
 Campus.Contracts.WindSample.Phase.init -> void
 Campus.Contracts.WindSample.WindSample() -> void
 Campus.Contracts.WindSample.WindSample(float Gust, float Phase) -> void
+Campus.Contracts.WindowDecl
+Campus.Contracts.WindowDecl.<Clone>$() -> Campus.Contracts.WindowDecl!
+Campus.Contracts.WindowDecl.BaseId.get -> int
+Campus.Contracts.WindowDecl.BaseId.init -> void
+Campus.Contracts.WindowDecl.Center.get -> System.Numerics.Vector3
+Campus.Contracts.WindowDecl.Center.init -> void
+Campus.Contracts.WindowDecl.Channel.get -> Campus.Contracts.ChannelId
+Campus.Contracts.WindowDecl.Channel.init -> void
+Campus.Contracts.WindowDecl.Deconstruct(out int Id, out int BaseId, out int TotalColumns, out Campus.Contracts.ChannelId Channel, out System.Numerics.Vector3 Center, out System.Numerics.Vector3 Right, out System.Numerics.Vector3 Up, out float Width, out float Height) -> void
+Campus.Contracts.WindowDecl.Equals(Campus.Contracts.WindowDecl? other) -> bool
+Campus.Contracts.WindowDecl.Height.get -> float
+Campus.Contracts.WindowDecl.Height.init -> void
+Campus.Contracts.WindowDecl.Id.get -> int
+Campus.Contracts.WindowDecl.Id.init -> void
+Campus.Contracts.WindowDecl.Right.get -> System.Numerics.Vector3
+Campus.Contracts.WindowDecl.Right.init -> void
+Campus.Contracts.WindowDecl.TotalColumns.get -> int
+Campus.Contracts.WindowDecl.TotalColumns.init -> void
+Campus.Contracts.WindowDecl.Up.get -> System.Numerics.Vector3
+Campus.Contracts.WindowDecl.Up.init -> void
+Campus.Contracts.WindowDecl.Width.get -> float
+Campus.Contracts.WindowDecl.Width.init -> void
+Campus.Contracts.WindowDecl.WindowDecl(int Id, int BaseId, int TotalColumns, Campus.Contracts.ChannelId Channel, System.Numerics.Vector3 Center, System.Numerics.Vector3 Right, System.Numerics.Vector3 Up, float Width, float Height) -> void
+Campus.Contracts.WindowFacadeDecl
+Campus.Contracts.WindowFacadeDecl.<Clone>$() -> Campus.Contracts.WindowFacadeDecl!
+Campus.Contracts.WindowFacadeDecl.BaseId.get -> int
+Campus.Contracts.WindowFacadeDecl.BaseId.init -> void
+Campus.Contracts.WindowFacadeDecl.Channel.get -> Campus.Contracts.ChannelId
+Campus.Contracts.WindowFacadeDecl.Channel.init -> void
+Campus.Contracts.WindowFacadeDecl.ColumnStart.get -> int
+Campus.Contracts.WindowFacadeDecl.ColumnStart.init -> void
+Campus.Contracts.WindowFacadeDecl.Columns.get -> int
+Campus.Contracts.WindowFacadeDecl.Columns.init -> void
+Campus.Contracts.WindowFacadeDecl.Deconstruct(out int BaseId, out int TotalColumns, out Campus.Contracts.ChannelId Channel, out int ColumnStart, out int Columns, out int Rows, out System.Numerics.Vector3 Origin, out System.Numerics.Vector3 Right, out System.Numerics.Vector3 Up, out float Pitch, out float Width, out float Height, out System.Collections.Generic.IReadOnlyList<float>! SillY) -> void
+Campus.Contracts.WindowFacadeDecl.Equals(Campus.Contracts.WindowFacadeDecl? other) -> bool
+Campus.Contracts.WindowFacadeDecl.Height.get -> float
+Campus.Contracts.WindowFacadeDecl.Height.init -> void
+Campus.Contracts.WindowFacadeDecl.Origin.get -> System.Numerics.Vector3
+Campus.Contracts.WindowFacadeDecl.Origin.init -> void
+Campus.Contracts.WindowFacadeDecl.Pitch.get -> float
+Campus.Contracts.WindowFacadeDecl.Pitch.init -> void
+Campus.Contracts.WindowFacadeDecl.Right.get -> System.Numerics.Vector3
+Campus.Contracts.WindowFacadeDecl.Right.init -> void
+Campus.Contracts.WindowFacadeDecl.Rows.get -> int
+Campus.Contracts.WindowFacadeDecl.Rows.init -> void
+Campus.Contracts.WindowFacadeDecl.SillY.get -> System.Collections.Generic.IReadOnlyList<float>!
+Campus.Contracts.WindowFacadeDecl.SillY.init -> void
+Campus.Contracts.WindowFacadeDecl.Skip.get -> System.Collections.Generic.IReadOnlyList<int>!
+Campus.Contracts.WindowFacadeDecl.Skip.init -> void
+Campus.Contracts.WindowFacadeDecl.TotalColumns.get -> int
+Campus.Contracts.WindowFacadeDecl.TotalColumns.init -> void
+Campus.Contracts.WindowFacadeDecl.Up.get -> System.Numerics.Vector3
+Campus.Contracts.WindowFacadeDecl.Up.init -> void
+Campus.Contracts.WindowFacadeDecl.Width.get -> float
+Campus.Contracts.WindowFacadeDecl.Width.init -> void
+Campus.Contracts.WindowFacadeDecl.WindowFacadeDecl(int BaseId, int TotalColumns, Campus.Contracts.ChannelId Channel, int ColumnStart, int Columns, int Rows, System.Numerics.Vector3 Origin, System.Numerics.Vector3 Right, System.Numerics.Vector3 Up, float Pitch, float Width, float Height, System.Collections.Generic.IReadOnlyList<float>! SillY) -> void
 Campus.Contracts.WorldControlMask
 Campus.Contracts.WorldControlMask.All = Campus.Contracts.WorldControlMask.Clock | Campus.Contracts.WorldControlMask.Season | Campus.Contracts.WorldControlMask.Weather | Campus.Contracts.WorldControlMask.Flow -> Campus.Contracts.WorldControlMask
 Campus.Contracts.WorldControlMask.Clock = 1 -> Campus.Contracts.WorldControlMask
@@ -4722,6 +4941,7 @@ abstract Campus.Contracts.InteriorOverlayOp.<Clone>$() -> Campus.Contracts.Inter
 abstract Campus.Contracts.OverlayGeometry.<Clone>$() -> Campus.Contracts.OverlayGeometry!
 abstract Campus.Contracts.OverlayOp.<Clone>$() -> Campus.Contracts.OverlayOp!
 abstract Campus.Contracts.Parts.BoxPartParams.<Clone>$() -> Campus.Contracts.Parts.BoxPartParams!
+abstract Campus.Contracts.TerrainOp.<Clone>$() -> Campus.Contracts.TerrainOp!
 const Campus.Contracts.Audio.AudioBuses.Air = "Air" -> string!
 const Campus.Contracts.Audio.AudioBuses.AmbBed = "Amb.Bed" -> string!
 const Campus.Contracts.Audio.AudioBuses.AmbEmit = "Amb.Emit" -> string!
@@ -4762,8 +4982,12 @@ const Campus.Contracts.FramePriority.Systems = 0 -> int
 const Campus.Contracts.FramePriority.WorldState = -1000 -> int
 const Campus.Contracts.InstanceShaderParameters.FadeT0 = "fade_t0" -> string!
 const Campus.Contracts.InstanceShaderParameters.FogExempt = "fog_exempt" -> string!
+const Campus.Contracts.InstanceShaderParameters.PrecipD = "precip_d" -> string!
+const Campus.Contracts.InstanceShaderParameters.PrecipK = "precip_k" -> string!
+const Campus.Contracts.InstanceShaderParameters.PrecipV = "precip_v" -> string!
 const Campus.Contracts.InstanceShaderParameters.RetreatBias = "retreat_bias" -> string!
 const Campus.Contracts.InstanceShaderParameters.ShadowProxy = "shadow_proxy" -> string!
+const Campus.Contracts.LightChannelCatalog.Count = 32 -> int
 const Campus.Contracts.Parts.PartCatalog.AirConditioner = "roof.air-conditioner" -> string!
 const Campus.Contracts.Parts.PartCatalog.Antenna = "roof.antenna" -> string!
 const Campus.Contracts.Parts.PartCatalog.AtlasKiosk = "street.atlas-kiosk" -> string!
@@ -4921,9 +5145,25 @@ const Campus.Contracts.ShaderGlobals.WeatherB = "weather_b" -> string!
 const Campus.Contracts.ShaderGlobals.WeatherFog = "weather_fog" -> string!
 const Campus.Contracts.ShaderGlobals.Wind = "wind" -> string!
 const Campus.Contracts.ShaderGlobals.WindowOverride = "window_override" -> string!
+const Campus.Contracts.TerrainSampling.Centimetre = 0.01 -> float
+const Campus.Contracts.TerrainSampling.HoleCm = -32768 -> short
+const Campus.Contracts.TerrainSampling.MaximumHeight = 10 -> float
+const Campus.Contracts.TerrainSampling.MinimumHeight = -5 -> float
+const Campus.Contracts.TerrainSampling.TileQuads = 64 -> int
+const Campus.Contracts.TerrainSampling.TileSamples = 65 -> int
+const Campus.Contracts.TerrainSampling.WholeMapSamples = 81 -> int
 const Campus.Contracts.WalkBakeData.CurrentVersion = 1 -> int
 const Campus.Contracts.WalkGrid.CellSize = 2 -> float
 const Campus.Contracts.WalkGrid.NearBoundaryFlag = 1 -> byte
+const Campus.Contracts.WetSurface.FlatFrom = 0.93 -> float
+const Campus.Contracts.WetSurface.FlatTo = 0.985 -> float
+const Campus.Contracts.WetSurface.PuddleSpan = 0.24 -> float
+const Campus.Contracts.WetSurface.PuddleTop = 0.8 -> float
+const Campus.Contracts.WetSurface.ResponseFrom = 0.5 -> float
+const Campus.Contracts.WetSurface.ResponseTo = 0.9 -> float
+const Campus.Contracts.WetSurface.ScaleA = 2.4 -> float
+const Campus.Contracts.WetSurface.ScaleB = 0.9 -> float
+const Campus.Contracts.WetSurface.WeightA = 0.62 -> float
 override Campus.Contracts.AddOp.<Clone>$() -> Campus.Contracts.AddOp!
 override Campus.Contracts.AddOp.Equals(object? obj) -> bool
 override Campus.Contracts.AddOp.GetHashCode() -> int
@@ -5468,6 +5708,14 @@ override Campus.Contracts.StyleOp.GetHashCode() -> int
 override Campus.Contracts.StyleOp.ToString() -> string!
 override Campus.Contracts.SupportHit.GetHashCode() -> int
 override Campus.Contracts.SweepHit.GetHashCode() -> int
+override Campus.Contracts.TerrainFacts.GetHashCode() -> int
+override Campus.Contracts.TerrainOp.Equals(object? obj) -> bool
+override Campus.Contracts.TerrainOp.GetHashCode() -> int
+override Campus.Contracts.TerrainOp.ToString() -> string!
+override Campus.Contracts.TerrainOverlayFile.Equals(object? obj) -> bool
+override Campus.Contracts.TerrainOverlayFile.GetHashCode() -> int
+override Campus.Contracts.TerrainOverlayFile.ToString() -> string!
+override Campus.Contracts.TerrainSampleGrid.GetHashCode() -> int
 override Campus.Contracts.TileKey.GetHashCode() -> int
 override Campus.Contracts.ToonRef.GetHashCode() -> int
 override Campus.Contracts.ToonSpec.Equals(object? obj) -> bool
@@ -5527,6 +5775,12 @@ override Campus.Contracts.WeatherSpan.GetHashCode() -> int
 override Campus.Contracts.WeatherTick.GetHashCode() -> int
 override Campus.Contracts.WeatherVec.GetHashCode() -> int
 override Campus.Contracts.WindSample.GetHashCode() -> int
+override Campus.Contracts.WindowDecl.Equals(object? obj) -> bool
+override Campus.Contracts.WindowDecl.GetHashCode() -> int
+override Campus.Contracts.WindowDecl.ToString() -> string!
+override Campus.Contracts.WindowFacadeDecl.Equals(object? obj) -> bool
+override Campus.Contracts.WindowFacadeDecl.GetHashCode() -> int
+override Campus.Contracts.WindowFacadeDecl.ToString() -> string!
 override Campus.Contracts.WorldFeature.Equals(object? obj) -> bool
 override Campus.Contracts.WorldFeature.GetHashCode() -> int
 override Campus.Contracts.WorldFeature.ToString() -> string!
@@ -5800,6 +6054,7 @@ static Campus.Contracts.FidelityOverlayOp.operator !=(Campus.Contracts.FidelityO
 static Campus.Contracts.FidelityOverlayOp.operator ==(Campus.Contracts.FidelityOverlayOp? left, Campus.Contracts.FidelityOverlayOp? right) -> bool
 static Campus.Contracts.FidelityRaiseOp.operator !=(Campus.Contracts.FidelityRaiseOp? left, Campus.Contracts.FidelityRaiseOp? right) -> bool
 static Campus.Contracts.FidelityRaiseOp.operator ==(Campus.Contracts.FidelityRaiseOp? left, Campus.Contracts.FidelityRaiseOp? right) -> bool
+static Campus.Contracts.FlatTerrain.Default.get -> Campus.Contracts.FlatTerrain!
 static Campus.Contracts.Flow.operator !=(Campus.Contracts.Flow left, Campus.Contracts.Flow right) -> bool
 static Campus.Contracts.Flow.operator ==(Campus.Contracts.Flow left, Campus.Contracts.Flow right) -> bool
 static Campus.Contracts.Footprint2D.operator !=(Campus.Contracts.Footprint2D? left, Campus.Contracts.Footprint2D? right) -> bool
@@ -5826,6 +6081,8 @@ static Campus.Contracts.InteriorOverlayFile.operator !=(Campus.Contracts.Interio
 static Campus.Contracts.InteriorOverlayFile.operator ==(Campus.Contracts.InteriorOverlayFile? left, Campus.Contracts.InteriorOverlayFile? right) -> bool
 static Campus.Contracts.InteriorOverlayOp.operator !=(Campus.Contracts.InteriorOverlayOp? left, Campus.Contracts.InteriorOverlayOp? right) -> bool
 static Campus.Contracts.InteriorOverlayOp.operator ==(Campus.Contracts.InteriorOverlayOp? left, Campus.Contracts.InteriorOverlayOp? right) -> bool
+static Campus.Contracts.LightChannelCatalog.Id(int slot) -> Campus.Contracts.ChannelId
+static Campus.Contracts.LightChannelCatalog.Slot(Campus.Contracts.ChannelId id) -> int
 static Campus.Contracts.LightEmitter.operator !=(Campus.Contracts.LightEmitter? left, Campus.Contracts.LightEmitter? right) -> bool
 static Campus.Contracts.LightEmitter.operator ==(Campus.Contracts.LightEmitter? left, Campus.Contracts.LightEmitter? right) -> bool
 static Campus.Contracts.LightningFlash.operator !=(Campus.Contracts.LightningFlash left, Campus.Contracts.LightningFlash right) -> bool
@@ -6034,6 +6291,17 @@ static Campus.Contracts.SupportHit.operator !=(Campus.Contracts.SupportHit left,
 static Campus.Contracts.SupportHit.operator ==(Campus.Contracts.SupportHit left, Campus.Contracts.SupportHit right) -> bool
 static Campus.Contracts.SweepHit.operator !=(Campus.Contracts.SweepHit left, Campus.Contracts.SweepHit right) -> bool
 static Campus.Contracts.SweepHit.operator ==(Campus.Contracts.SweepHit left, Campus.Contracts.SweepHit right) -> bool
+static Campus.Contracts.TerrainFacts.operator !=(Campus.Contracts.TerrainFacts left, Campus.Contracts.TerrainFacts right) -> bool
+static Campus.Contracts.TerrainFacts.operator ==(Campus.Contracts.TerrainFacts left, Campus.Contracts.TerrainFacts right) -> bool
+static Campus.Contracts.TerrainOp.operator !=(Campus.Contracts.TerrainOp? left, Campus.Contracts.TerrainOp? right) -> bool
+static Campus.Contracts.TerrainOp.operator ==(Campus.Contracts.TerrainOp? left, Campus.Contracts.TerrainOp? right) -> bool
+static Campus.Contracts.TerrainOverlayFile.operator !=(Campus.Contracts.TerrainOverlayFile? left, Campus.Contracts.TerrainOverlayFile? right) -> bool
+static Campus.Contracts.TerrainOverlayFile.operator ==(Campus.Contracts.TerrainOverlayFile? left, Campus.Contracts.TerrainOverlayFile? right) -> bool
+static Campus.Contracts.TerrainSampleGrid.operator !=(Campus.Contracts.TerrainSampleGrid left, Campus.Contracts.TerrainSampleGrid right) -> bool
+static Campus.Contracts.TerrainSampleGrid.operator ==(Campus.Contracts.TerrainSampleGrid left, Campus.Contracts.TerrainSampleGrid right) -> bool
+static Campus.Contracts.TerrainSampling.DecodeHeight(short cm) -> float
+static Campus.Contracts.TerrainSampling.Grid(Campus.Contracts.TileKey tile, int level, Campus.Contracts.Maps.MapRect! dataRect) -> Campus.Contracts.TerrainSampleGrid
+static Campus.Contracts.TerrainSampling.SampleCount(int level) -> int
 static Campus.Contracts.TileKey.operator !=(Campus.Contracts.TileKey left, Campus.Contracts.TileKey right) -> bool
 static Campus.Contracts.TileKey.operator ==(Campus.Contracts.TileKey left, Campus.Contracts.TileKey right) -> bool
 static Campus.Contracts.ToonRef.operator !=(Campus.Contracts.ToonRef left, Campus.Contracts.ToonRef right) -> bool
@@ -6085,8 +6353,18 @@ static Campus.Contracts.WeatherTick.operator !=(Campus.Contracts.WeatherTick lef
 static Campus.Contracts.WeatherTick.operator ==(Campus.Contracts.WeatherTick left, Campus.Contracts.WeatherTick right) -> bool
 static Campus.Contracts.WeatherVec.operator !=(Campus.Contracts.WeatherVec left, Campus.Contracts.WeatherVec right) -> bool
 static Campus.Contracts.WeatherVec.operator ==(Campus.Contracts.WeatherVec left, Campus.Contracts.WeatherVec right) -> bool
+static Campus.Contracts.WetSurface.Exposure(float normalY, bool interior) -> float
+static Campus.Contracts.WetSurface.IsPuddle(float x, float z, float level) -> bool
+static Campus.Contracts.WetSurface.PuddleLevel(float weatherPuddle, float response, float normalY) -> float
+static Campus.Contracts.WetSurface.PuddlePotential(float x, float z) -> float
+static Campus.Contracts.WetSurface.PuddleThreshold(float level) -> float
+static Campus.Contracts.WetSurface.Wet(float weatherWet, float exposure, float response) -> float
 static Campus.Contracts.WindSample.operator !=(Campus.Contracts.WindSample left, Campus.Contracts.WindSample right) -> bool
 static Campus.Contracts.WindSample.operator ==(Campus.Contracts.WindSample left, Campus.Contracts.WindSample right) -> bool
+static Campus.Contracts.WindowDecl.operator !=(Campus.Contracts.WindowDecl? left, Campus.Contracts.WindowDecl? right) -> bool
+static Campus.Contracts.WindowDecl.operator ==(Campus.Contracts.WindowDecl? left, Campus.Contracts.WindowDecl? right) -> bool
+static Campus.Contracts.WindowFacadeDecl.operator !=(Campus.Contracts.WindowFacadeDecl? left, Campus.Contracts.WindowFacadeDecl? right) -> bool
+static Campus.Contracts.WindowFacadeDecl.operator ==(Campus.Contracts.WindowFacadeDecl? left, Campus.Contracts.WindowFacadeDecl? right) -> bool
 static Campus.Contracts.WorldFeature.operator !=(Campus.Contracts.WorldFeature? left, Campus.Contracts.WorldFeature? right) -> bool
 static Campus.Contracts.WorldFeature.operator ==(Campus.Contracts.WorldFeature? left, Campus.Contracts.WorldFeature? right) -> bool
 static Campus.Contracts.WorldFeaturePart.operator !=(Campus.Contracts.WorldFeaturePart? left, Campus.Contracts.WorldFeaturePart? right) -> bool
@@ -6129,6 +6407,9 @@ virtual Campus.Contracts.OverlayOp.PrintMembers(System.Text.StringBuilder! build
 virtual Campus.Contracts.Parts.BoxPartParams.EqualityContract.get -> System.Type!
 virtual Campus.Contracts.Parts.BoxPartParams.Equals(Campus.Contracts.Parts.BoxPartParams? other) -> bool
 virtual Campus.Contracts.Parts.BoxPartParams.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Campus.Contracts.TerrainOp.EqualityContract.get -> System.Type!
+virtual Campus.Contracts.TerrainOp.Equals(Campus.Contracts.TerrainOp? other) -> bool
+virtual Campus.Contracts.TerrainOp.PrintMembers(System.Text.StringBuilder! builder) -> bool
 ~override Campus.Contracts.Atlas.MarkerId.Equals(object obj) -> bool
 ~override Campus.Contracts.Atlas.MarkerId.ToString() -> string
 ~override Campus.Contracts.Audio.AcousticEnv.Equals(object obj) -> bool
@@ -6233,6 +6514,10 @@ virtual Campus.Contracts.Parts.BoxPartParams.PrintMembers(System.Text.StringBuil
 ~override Campus.Contracts.SupportHit.ToString() -> string
 ~override Campus.Contracts.SweepHit.Equals(object obj) -> bool
 ~override Campus.Contracts.SweepHit.ToString() -> string
+~override Campus.Contracts.TerrainFacts.Equals(object obj) -> bool
+~override Campus.Contracts.TerrainFacts.ToString() -> string
+~override Campus.Contracts.TerrainSampleGrid.Equals(object obj) -> bool
+~override Campus.Contracts.TerrainSampleGrid.ToString() -> string
 ~override Campus.Contracts.TileKey.Equals(object obj) -> bool
 ~override Campus.Contracts.TileKey.ToString() -> string
 ~override Campus.Contracts.ToonRef.Equals(object obj) -> bool

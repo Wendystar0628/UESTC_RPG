@@ -17,3 +17,6 @@ output/
 
 # 本地发布产物
 /build/
+
+# gdUnit4 runtime adapter injects its own temporary SceneTree runner.
+/game/gdunit4_testadapter_v*/

@@ -11,13 +11,15 @@ public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interio
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; private set; } =
         new ReadOnlyDictionary<FeatureId, WorldFeature>(new Dictionary<FeatureId, WorldFeature>());
     public WorldNetwork Network { get; private set; } = WorldNetwork.Empty;
+    public ITerrain Terrain { get; private set; } = FlatTerrain.Default;
     public ISpatialIndex Spatial { get; } = spatial;
     public IInteriorIndex Interiors { get; } = interiors;
     public IOutskirtsModel? Outskirts => null;
     public IFidelityModel? Fidelity { get; } = fidelity;
 
     /// <summary>Allows D0 fixture data to be supplied without embedding a map or feature ID.</summary>
-    public void Configure(IEnumerable<WorldFeature> features, WorldNetwork? network = null, PolygonRings? boundary = null)
+    public void Configure(IEnumerable<WorldFeature> features, WorldNetwork? network = null, PolygonRings? boundary = null,
+        ITerrain? terrain = null)
     {
         ArgumentNullException.ThrowIfNull(features);
         var snapshot = new ReadOnlyDictionary<FeatureId, WorldFeature>(
@@ -25,17 +27,18 @@ public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interio
                 .ToDictionary(feature => feature.Id));
         Features = snapshot;
         Network = network ?? WorldNetwork.Empty;
+        Terrain = terrain ?? FlatTerrain.Default;
         Boundary = boundary is null ? new([]) : new(
             Array.AsReadOnly(boundary.Outer.ToArray()),
             Array.AsReadOnly(boundary.Holes.Select(hole => (IReadOnlyList<Vector2>)Array.AsReadOnly(hole.ToArray())).ToArray()));
-        if (Spatial is StubSpatialIndex stubSpatial) stubSpatial.Configure(snapshot);
+        if (Spatial is StubSpatialIndex stubSpatial) stubSpatial.Configure(snapshot, Terrain);
         if (Fidelity is StubFidelityModel stubFidelity) stubFidelity.Configure(snapshot);
     }
 
-    public void Configure(D0CampusData data)
+    public void Configure(D0CampusData data, ITerrain? terrain = null)
     {
         ArgumentNullException.ThrowIfNull(data);
-        Configure(data.Features.Values, boundary: data.Boundary);
+        Configure(data.Features.Values, boundary: data.Boundary, terrain: terrain);
     }
 }
 
@@ -43,19 +46,24 @@ public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interio
 public sealed class StubSpatialIndex : ISpatialIndex
 {
     private IReadOnlyList<WorldFeature> _features = [];
-    public void Configure(IReadOnlyDictionary<FeatureId, WorldFeature> features) =>
+    private ITerrain _terrain = FlatTerrain.Default;
+    public void Configure(IReadOnlyDictionary<FeatureId, WorldFeature> features, ITerrain? terrain = null)
+    {
         _features = features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
+        _terrain = terrain ?? FlatTerrain.Default;
+    }
     public IReadOnlyList<FeatureId> Query(Box3 box) =>
         _features.Where(feature => feature.Bounds.Intersects(box)).Select(feature => feature.Id).ToArray();
-    public float GroundY(float x, float z) => 0f;
+    public float GroundY(float x, float z) => _terrain.HeightAt(x, z);
     public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-    public float? SupportY(float x, float z, float yHint) => 0f;
+    public float? SupportY(float x, float z, float yHint) => _terrain.HeightAt(x, z);
     public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
     public Vector3? NearestSafe(Vector3 p, float maxDist)
     {
         if (!float.IsFinite(maxDist) || maxDist < 0f) throw new ArgumentOutOfRangeException(nameof(maxDist));
         if (!float.IsFinite(p.X) || !float.IsFinite(p.Y) || !float.IsFinite(p.Z)) return null;
-        return MathF.Abs(p.Y) <= maxDist ? new Vector3(p.X, 0f, p.Z) : null;
+        float y = _terrain.HeightAt(p.X, p.Z);
+        return float.IsFinite(y) && MathF.Abs(p.Y - y) <= maxDist ? new Vector3(p.X, y, p.Z) : null;
     }
 }
 

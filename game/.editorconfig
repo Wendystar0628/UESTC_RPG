@@ -7,3 +7,8 @@ insert_final_newline = true
 # PascalCase namespaces follow assembly responsibilities; G1 checks this explicitly.
 # Folder names are intentionally lower-case, and contract groups share the published namespace.
 dotnet_diagnostic.IDE0130.severity = none
+
+[addons/gdUnit4/src/dotnet/GdUnit4CSharpApi.cs]
+# Vendored test tooling assigns ephemeral test-suite IDs; this is not game-state identity.
+# First-party sources retain the BannedSymbols error policy.
+dotnet_diagnostic.RS0030.severity = none

@@ -50,7 +50,7 @@ public partial class D0Stage : Node3D
         if (AppBoot.Value("gate") == "registry")
         {
             var report = RegistryGateRunner.Run(registry, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(IRenderHost)]);
+                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteRegistry), typeof(IRenderHost)]);
             GD.Print("G5_D0_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
             GD.Print($"G5 registry D0-scope PASS maps={report.Maps} declarations={report.Declarations}; runtime checks NOT_IMPLEMENTED={report.NotImplemented.Count}");
             GetTree().Quit();
@@ -80,6 +80,9 @@ public partial class D0Stage : Node3D
         maps.LoadFromBytes(indexBytes, Read(entry.Dir + "map.json"), world, campus.Geo, campus.Center,
             campus.Bounds, campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints);
         var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
+        var weather = registry.Get<IWeatherProcess>();
+        weather.Reset(new WeatherBoot(context.Descriptor.Seed));
+        weather.Enter(context.Descriptor.Id, context.Descriptor.World.WeatherProfile, registry.Get<IWorldState>().Clock);
         var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
             .ToDictionary(r => r.Id, r => (IInteriorProvider)registry.Create(r.Type), StringComparer.Ordinal);
         var buildContext = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = context.Descriptor.Seed };
@@ -90,9 +93,12 @@ public partial class D0Stage : Node3D
         ((CollisionWorldStub)registry.Get<ICollisionWorld>()).Configure(colliders);
         _rig = (CameraRigStub)registry.Get<ICameraRig>();
         _rig.ConfigureBounds(campus.Bounds);
-        var state = (WorldStateStub)registry.Get<IWorldState>();
         var save = (SaveServiceStub)registry.Get<ISaveService>();
-        save.BeginNewInstance = _ => state.BeginNewInstance();
+        save.BeginNewInstance = _ =>
+        {
+            if (registry.Get<IWorldState>() is WorldStateStub stub) stub.BeginNewInstance();
+            else registry.Get<IWorldRestore>().CompleteRestore();
+        };
         foreach (var registration in registry.Entries.Where(r => r.Kind == "save"))
         {
             var instance = registry.Create(registration.Type);
@@ -144,17 +150,23 @@ public partial class D0Stage : Node3D
                 TonemapMode = Godot.Environment.ToneMapper.Linear
             }
         });
-        AddChild(new DirectionalLight3D { RotationDegrees = new(-5.5f, -241f, 0), LightEnergy = 0.85f, ShadowEnabled = true });
+        if (!registry.ForMap(entry.Id.Value).Any(r => r.Kind == "node" && r.Id == "key-light" && !r.IsStub))
+            AddChild(new DirectionalLight3D { RotationDegrees = new(-5.5f, -61f, 0), LightEnergy = 0.85f, ShadowEnabled = true });
         renderer.Mount(campus.Content, new("WP-00"));
         renderer.Mount(interiors.Content, new("WP-00"));
         D0CollisionMount.Mount(this, colliders);
         _camera = new Camera3D { Current = true, Near = 0.05f, Far = 8000f };
         AddChild(_camera);
+        var nodes = new List<Node>();
         foreach (var registration in registry.ForMap(entry.Id.Value).Where(r => r.Kind == "node"))
         {
             var node = registry.Create(registration.Type) as Node
                 ?? throw new InvalidOperationException($"KernelNode must inherit Node: {registration.Type}");
             AddChild(node);
+            nodes.Add(node);
+        }
+        foreach (var node in nodes)
+        {
             if (node is IMapAware mapAware) mapAware.OnMapLoaded(context);
             if (node is IQualityAware qualityAware)
                 qualityAware.ApplyQuality(registry.Get<IQualityService>().Effective, new QualityChange(1, ulong.MaxValue, ApplyOrigin.Startup, true));
@@ -197,10 +209,17 @@ public partial class D0Stage : Node3D
 
     private void BuildDebugUi(Campus.Style.Stubs.D0MaterialLibrary palette)
     {
-        var veilLayer = new CanvasLayer { Layer = 5 };
-        _veilRect = new ColorRect { Color = palette.ColorOf(new("d0.fog")), MouseFilter = Control.MouseFilterEnum.Ignore };
-        veilLayer.AddChild(_veilRect); AddChild(veilLayer);
-        _veilRect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        if (!Services.Services.Entries.Any(r => r.Kind == "node" && r.Id == "post.veil" && !r.IsStub))
+        {
+            var veilLayer = new CanvasLayer { Layer = 5 };
+            _veilRect = new ColorRect { Color = palette.ColorOf(new("d0.fog")), MouseFilter = Control.MouseFilterEnum.Ignore };
+            veilLayer.AddChild(_veilRect); AddChild(veilLayer);
+            _veilRect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        }
+        var attribution = new CanvasLayer { Layer = 11 }; AddChild(attribution);
+        attribution.AddChild(new Label { Text = "© OpenStreetMap contributors", Position = new(24, 1020), Modulate = palette.ColorOf(new("d0.text")) });
+        if (AppBoot.Value("ui") != "debug" && Services.Services.Entries.Any(r => r.Kind == "node" && r.Id == "hud" && !r.IsStub))
+            return;
         var ui = new CanvasLayer { Layer = 10 }; AddChild(ui);
         var panel = new VBoxContainer { Position = new(24, 24) };
         _debugPanel = panel; ui.AddChild(panel);
@@ -212,9 +231,8 @@ public partial class D0Stage : Node3D
         AddButton(panel, "Fly / walk readout", ToggleMode);
         AddButton(panel, "Quit", () => _ = CloseAsync());
         panel.AddChild(new Label { Text = "Click scene: mouse capture / Esc: release\nWASD + Space/Shift: move / Ctrl: faster\nD0 only: save disabled, geometry is placeholder." });
-        panel.Visible = AppBoot.Value("ui", "1") != "0";
-        var attribution = new CanvasLayer { Layer = 11 }; AddChild(attribution);
-        attribution.AddChild(new Label { Text = "© OpenStreetMap contributors", Position = new(24, 1020), Modulate = palette.ColorOf(new("d0.text")) });
+        panel.Visible = AppBoot.Value("ui", "1") != "0" &&
+            (AppBoot.Value("ui") == "debug" || !Services.Services.Entries.Any(r => r.Kind == "node" && r.Id == "hud" && !r.IsStub));
     }
     private static void AddButton(Node parent, string text, Action action)
     {

@@ -3,9 +3,6 @@ using Campus.Contracts;
 
 namespace Campus.Kernel.Lighting;
 
-/// <summary>Which art body currently drives the single key light (ART-SKYLIGHT 3.1).</summary>
-public enum KeyBody : byte { Sun, Moon }
-
 /// <summary>Per-frame readouts the key light needs; all angles are art altitudes in degrees.</summary>
 public readonly record struct KeyLightInput(
     Vector3 SunDir, float SunAltDeg,

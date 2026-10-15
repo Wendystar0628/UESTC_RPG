@@ -46,6 +46,14 @@ public sealed class BuildContext
     public required IWorldModel World { get; init; }
     public required MapDescriptor Map { get; init; }
     public required uint WorldSeed { get; init; }
+    /// <summary>Immutable palette registration supplied by the kernel/baker; its fingerprint belongs in the bake key. Null keeps token-based material grouping.</summary>
+    public PaletteRegistry? Palette { get; init; }
+    /// <summary>
+    /// Ownership query supplied from the current map's formally resolved claims ledger, after map filtering
+    /// and conflict checks. Never infer ownership from module names, directories or feature-ID prefixes.
+    /// Returns null when the requested feature/aspect has no registered owner.
+    /// </summary>
+    public Func<FeatureId, Aspects, WpId?> ClaimedBy { get; init; } = (_, _) => null;
     /// <summary>Caller-preloaded immutable bytes keyed by forward-slash paths relative to DataRoot; generators never perform IO.</summary>
     public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> SourceInputs { get; init; } =
         new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal));
@@ -69,6 +77,9 @@ public sealed record ContentOutput(
     IReadOnlyList<Footprint2D>? Occupancy = null)
 {
     public static ContentOutput Empty { get; } = new([], []);
+    public IReadOnlyList<EntranceDecl> Entrances { get; init; } = [];
+    public IReadOnlyList<WindowFacadeDecl> Windows { get; init; } = [];
+    public IReadOnlyList<WindowDecl> LooseWindows { get; init; } = [];
 }
 
 public sealed record MeshLod(float Error, int[] Index)
@@ -100,12 +111,28 @@ public sealed record GeometryBundle(
     VariantTag? Variant = null)
 {
     public bool IgnoreOcclusionCulling { get; init; }
+    /// <summary>Null uses ToonRef as before. Otherwise the host obtains the approved shader material and shares it per ShaderId within that host.</summary>
+    public ShaderId? Shader { get; init; }
+    /// <summary>Opt-in reflection-world proxy, mounted and released with the owning tile. Does not create engine instances in generators.</summary>
+    public bool Reflect { get; init; }
     // VF-A COLOR RGBA8: ColorIds, quantized Ao, Flags, Reserved. Each byte array has one entry per vertex.
     // Missing ColorIds uses Material.Spec.Lit; missing Ao means 1; missing Flags and Reserved mean 0.
     public byte[]? ColorIds { get; init; }
     // Bit values: 1 interior, 2 outskirts, 4 decal, 8 no shadow. Upper four bits remain reserved.
     public byte[]? Flags { get; init; }
+    // VF-B glass window-type byte: 0 unspecified; 1-15 respectively W-CLS, W-LEC, W-COR,
+    // W-STR, W-OFF, W-LAB, W-CLEAN, W-DORM, W-WC, W-CAN, W-SHOP, W-MED, W-GYM, W-POOL, W-MECH.
+    // This occupies COLOR's fourth (Reserved) byte; non-glass surfaces retain their existing semantics.
     public byte[]? Reserved { get; init; }
+    // VF-B glass: floor(Uv) is (building-grid column, row), fract(Uv) is the position in that cell.
+    // A facade contributes ColumnStart + local column; blank bays and courtyard-ring bays count too.
+    // Uv2.x is the shared building BaseId (an integer up to 2^24); Uv2.y = channel slot + 32 * TotalColumns.
+    // Window ID = BaseId + row * TotalColumns + building-grid column. All building parts participate in
+    // ordinal (FeatureId, part SourceId) numbering, including claimed buildings, so every producer agrees.
+    // UV2 MUST retain fp32 components through packing/cache/GPU upload: half/UNorm16 loses integer IDs.
+    // Flags bit 2 marks outskirts windows (dedicated IDs >= 65536), which skip window_override lookup.
+    // Water shader payload instead uses Uv=(flow vx,vz) m/s, Uv2=(shore distance m, reflection lake or -1),
+    // Flags bit 8 for no shadow, upward normals, and optional ColorIds falling back to water.far.lit.
     // VF-C channels: card centre/h2, branch anchor/h3, cluster centre/reserved; all are xyzw per vertex.
     public float[]? Custom0 { get; init; }
     public float[]? Custom1 { get; init; }

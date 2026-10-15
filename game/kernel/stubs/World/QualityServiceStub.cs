@@ -49,7 +49,7 @@ public sealed class QualityServiceStub : IQualityService
         Spec(QualityKnob.FoliageDensity, "WP-23", ApplyClass.Immediate, KnobKind.Performance, 0.75f, 1, 0.25f, 0.75f, adaptive: true),
         Spec(QualityKnob.GrassRadius, "WP-23", ApplyClass.Immediate, KnobKind.Performance, 12, 20, 8, 12),
         Spec(QualityKnob.ReflectionInterval, "WP-24", ApplyClass.Immediate, KnobKind.Floor, 2, 4, 1, 4, higherIsBetter: false, adaptive: true),
-        Spec(QualityKnob.ParticleDensity, "WP-45", ApplyClass.Immediate, KnobKind.Performance, 0.5f, 1, 0.25f, 0.5f, adaptive: true),
+        Spec(QualityKnob.ParticleDensity, "WP-45b", ApplyClass.Immediate, KnobKind.Performance, 0.5f, 1, 0.25f, 0.5f, adaptive: true),
         Spec(QualityKnob.Adaptive, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0, 1, 1, 0),
         Spec(QualityKnob.GraphicsApi, "WP-32", ApplyClass.Restart, KnobKind.Performance, 0, 1, 1, 0),
         Spec(QualityKnob.GpuIndex, "WP-32", ApplyClass.Restart, KnobKind.Performance, 0, 0, 1, 0),

@@ -72,4 +72,13 @@ public static class InstanceShaderParameters
 
     /// <summary>Landmark fog exemption, from zero to one; defaults to zero and is owned by WP-40.</summary>
     public const string FogExempt = "fog_exempt";
+
+    /// <summary>Precipitation loop-box displacement in xyz and half-size in w; owned by WP-45b.</summary>
+    public const string PrecipD = "precip_d";
+
+    /// <summary>Precipitation direction in xyz and streak length in w; owned by WP-45b.</summary>
+    public const string PrecipV = "precip_v";
+
+    /// <summary>Precipitation kind, intensity, role and reserved value; owned by WP-45b.</summary>
+    public const string PrecipK = "precip_k";
 }

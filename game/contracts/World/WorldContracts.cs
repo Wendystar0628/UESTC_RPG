@@ -37,6 +37,8 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     double SeasonPos { get; }               // 旧网页版的 season：0–4，连续，循环；0 春 1 夏 2 秋 3 冬
     Season SeasonTarget { get; }
     Body Sun { get; }
+    /// <summary>Queries the art-directed solar altitude without advancing or modifying the world.</summary>
+    float SunAltDegAt(double clock, Season season) => throw new NotSupportedException("Solar forecast is not implemented by this world-state provider.");
     Body Moon { get; }
     float MoonPhase { get; }                // 默认 1 = 满月
     float Omega { get; }                    // 主光角速度 °/s；WP-03 据此决定量化转灯还是连续转动（ENG-PERF §10.1）
@@ -92,7 +94,7 @@ public readonly record struct WeatherQueueItem(WeatherKind Kind, double Minutes)
     public float? Intensity { get; init; }
 
     [JsonConstructor]
-    public WeatherQueueItem(WeatherKind Kind, double Minutes, float? Intensity) : this(Kind, Minutes)
+    public WeatherQueueItem(WeatherKind Kind, double Minutes, float? Intensity = null) : this(Kind, Minutes)
     {
         this.Intensity = Intensity;
     }
@@ -189,6 +191,8 @@ public readonly record struct VariantTag(SeasonMask Seasons = SeasonMask.All, Ni
 public readonly record struct WindSample(float Gust, float Phase);
 public interface IWindField                 // WP-26
 {
+    /// <summary>Normalized horizontal direction of air travel in world X/Z coordinates; zero means calm.</summary>
+    Vector2 Direction => Vector2.Zero;
     WindSample Sample(float x, float z, double animTime);   // CPU 侧：植被近池重建、粒子槽位
 }
 // 着色器侧是 res://style/shaders/motion_wind.gdshaderinc，与 Sample 同一公式；G2 比对两边的输出

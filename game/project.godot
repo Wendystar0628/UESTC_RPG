@@ -43,6 +43,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="Campus"
 
+[gui]
+
+common/show_focus_state_on_pointer_event=0
+
 [input]
 
 ui_accept={
@@ -272,6 +276,8 @@ common/physics_jitter_fix=0.0
 
 rendering_device/driver.windows="d3d12"
 lights_and_shadows/positional_shadow/atlas_16_bits=false
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
+lights_and_shadows/directional_shadow/16_bits=true
 anti_aliasing/screen_space_roughness_limiter/enabled=false
 anti_aliasing/quality/use_debanding=true
 anti_aliasing/quality/screen_space_aa=2
@@ -308,7 +314,7 @@ moon_dir={
 }
 moon_lit={
 "type": "vec4",
-"value": Vector4(0, 0, 1, 1)
+"value": Vector4(-0.870594, 0.095846, 0.482578, 1)
 }
 key_dir={
 "type": "vec3",
@@ -348,7 +354,7 @@ stars={
 }
 fog={
 "type": "vec4",
-"value": Vector4(1, 60, 200, 800)
+"value": Vector4(1, 2.5, 200, 800)
 }
 fog_low={
 "type": "vec4",

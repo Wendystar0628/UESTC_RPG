@@ -23,7 +23,13 @@ public partial class Kernel : Node
         var assemblies = new List<Assembly> { typeof(Kernel).Assembly };
         foreach (var name in BuildInfo.ModuleAssemblies) assemblies.Add(Assembly.Load(new AssemblyName(name)));
         Services.Discover(assemblies);
+        Services.Add(Services.Get<IPaletteRegistrySource>().Registry);
         GD.Print($"D0 registry: {Services.Entries.Count} declarations; build {BuildInfo.Build}");
+    }
+    public override void _ExitTree()
+    {
+        // Scene-owned producers and post callbacks exit before this autoload.
+        Services.Get<Campus.Kernel.Renderer.IGlobalDataTextureRegistry>().Dispose();
     }
     private sealed class RulesetService(RulesetDescriptor current) : IRuleset, IRulesetActivation
     {

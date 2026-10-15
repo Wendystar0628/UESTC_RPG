@@ -68,6 +68,10 @@ public sealed class BakedSurface
         IgnoreOcclusionCulling = ignoreOcclusionCulling;
     }
     public ToonRef Material { get; }
+    /// <summary>Optional whitelisted non-toon shader, preserved from GeometryBundle through the bake codec.</summary>
+    public ShaderId? Shader { get; init; }
+    /// <summary>Mount a synchronized proxy in the current reflection world; use the same mesh lifetime as the main surface.</summary>
+    public bool Reflect { get; init; }
     public ulong Format { get; }
     public BakedPrimitive Primitive { get; }
     public int VertexCount { get; }

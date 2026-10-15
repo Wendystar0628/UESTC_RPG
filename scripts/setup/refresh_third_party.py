@@ -4,6 +4,8 @@ Downloads package archives for license/provenance inspection only. Does not run
 restore, compile, import, install packages into a project, or execute package code.
 Both packages.lock.json and project-specific *.packages.lock.json files are read.
 Manual entries (including fonts supplied by another package) are preserved.
+Python wheel inventory may retain explicit pending license reviews; that is not
+license approval. The certifi exception is restricted to its approved artifact.
 Recorded validation is preserved for unchanged artifacts; refreshing package
 metadata does not run validation or promote a historical result to a new run.
 """
@@ -61,6 +63,32 @@ def package_entry(name, version, scopes):
     }
 
 
+def validate_manual_license(entry):
+    if entry["license"] in ALLOWED:
+        return
+    development_wheel = (
+        entry.get("kind") == "python-wheel"
+        and entry.get("provider") == "WP-08"
+        and entry.get("developmentOnly") is True
+        and entry.get("exported") is False
+        and entry.get("vendored") is False
+    )
+    review = entry.get("licenseReview", {})
+    if development_wheel and review.get("status") == "PENDING_POLICY_REVIEW":
+        return  # Inventory only; the unapproved license remains visible.
+    certifi_exception = (
+        entry["name"] == "certifi" and entry["version"] == "2026.7.22"
+        and entry["license"] == "MPL-2.0"
+        and entry.get("sha256") == "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+        and review.get("status") == "APPROVED_EXCEPTION"
+        and review.get("approvedBy") == "Opus"
+        and review.get("evidence") == "E:/Project/UESTC_RPG.wt/.collab/notes/opus-to-astra.md#2026-10-16-0440"
+    )
+    if development_wheel and certifi_exception:
+        return
+    raise ValueError(f"Manual entry license outside allowlist: {entry['name']}")
+
+
 def main():
     DOWNLOADS.mkdir(parents=True, exist_ok=True)
     manifest_path = ROOT / "third_party.json"
@@ -114,8 +142,7 @@ def main():
     for entry in manual_entries:
         if (entry["name"], entry["version"]) in generated_keys:
             raise ValueError(f"Manual entry conflicts with generated package: {entry['name']}")
-        if entry["license"] not in ALLOWED:
-            raise ValueError(f"Manual entry license outside allowlist: {entry['name']}")
+        validate_manual_license(entry)
     entries.extend(manual_entries)
     result = {"version": 1, "allowedLicenses": sorted(ALLOWED), "entries": entries,
         "nugetClosure": {"lockFiles": sorted(lock_files), "lockFilePatterns": ["packages.lock.json", "*.packages.lock.json"], "status": "LOCKFILES_INCLUDED" if lock_files else "PENDING_RESTORE_LOCKFILES", "policy": "Read every lockfile independently without modifying it. Run this script after restoring all projects to include every resolved transitive package; missing lockfiles are not license validation success."},

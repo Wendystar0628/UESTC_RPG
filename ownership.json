@@ -2,6 +2,52 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/kernel/renderer/ShaderNames.cs",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "scripts/gates/native-render.ps1",
+      "owner": "WP-27",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/kernel/lighting/LightChannels.cs",
+      "owner": "WP-03",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/kernel/lighting/KeyLightState.cs",
+      "owner": "WP-03",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/kernel/lighting/KeyLightModel.cs",
+      "owner": "WP-03",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/style/shaders/precip_wet.gdshaderinc",
+      "owner": "WP-45b"
+    },
+    {
+      "pattern": "game/style/shaders/precip_wet.gdshaderinc.uid",
+      "owner": "WP-45b"
+    },
+    {
+      "pattern": "game/style/shaders/lamp.gdshaderinc",
+      "owner": "WP-39",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/style/shaders/lamp.gdshaderinc.uid",
+      "owner": "WP-39",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/systems/ground/**",
+      "owner": "WP-15"
+    },
+    {
       "pattern": "game/gen/zones/showcase-interiors/Campus.Gen.Zones.ShowcaseInteriors.csproj",
       "owner": "WP-00"
     },
@@ -2351,7 +2397,7 @@
     },
     {
       "pattern": "scripts/gate.ps1",
-      "owner": "WP-27"
+      "owner": "WP-00"
     },
     {
       "pattern": "third_party.json",
@@ -2797,10 +2843,12 @@
     "game/style/shaders/fx_fall.gdshader",
     "game/style/shaders/fx_glow.gdshader",
     "game/style/shaders/globals.gdshaderinc",
+    "game/style/shaders/lamp.gdshaderinc",
     "game/style/shaders/map_base.gdshader",
     "game/style/shaders/medium_overlay.gdshader",
     "game/style/shaders/motion_wind.gdshaderinc",
     "game/style/shaders/precip.gdshader",
+    "game/style/shaders/precip_wet.gdshaderinc",
     "game/style/shaders/reflect_flat.gdshader",
     "game/style/shaders/sky.gdshader",
     "game/style/shaders/toon.gdshaderinc",

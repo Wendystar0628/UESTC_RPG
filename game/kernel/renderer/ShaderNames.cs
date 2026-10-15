@@ -63,4 +63,7 @@ public static class InstanceShaderNames
     public static readonly StringName RetreatBias = new("retreat_bias");
     public static readonly StringName ShadowProxy = new("shadow_proxy");
     public static readonly StringName FogExempt = new("fog_exempt");
+    public static readonly StringName PrecipD = new("precip_d");
+    public static readonly StringName PrecipV = new("precip_v");
+    public static readonly StringName PrecipK = new("precip_k");
 }

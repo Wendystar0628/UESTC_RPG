@@ -20,6 +20,12 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
     public Body Moon { get; } = new(new Vector3(0.870593f, -0.095846f, -0.482578f), -5.5f, 61, 0);
     public float MoonPhase => 1;
     public float Omega => 0;
+    public float SunAltDegAt(double clock, Season season)
+    {
+        ValidateClock(clock);
+        if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
+        return Sun.AltDeg; // D0 deliberately exposes a settled, fixed celestial state.
+    }
     public Flow Flow { get; private set; } = new(1);
     public bool Scrubbing => false;
     public WorldTransition Transition => WorldTransition.None;

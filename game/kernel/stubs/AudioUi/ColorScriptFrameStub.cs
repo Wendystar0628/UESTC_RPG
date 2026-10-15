@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Kernel.Stubs.RenderState;
 
 namespace Campus.Kernel.Stubs.AudioUi;
 
@@ -20,12 +21,14 @@ public sealed class ColorScriptFrameStub : IColorScriptFrame
         CdlPower: Vector3.One,
         FogLow: Vector4.Zero,
         CdlSaturation: 1.03f,
-        GlowHdrThreshold: 0.85f,
+        GlowHdrThreshold: 1f,
         GlowHdrScale: 0.3f,
         GlowIntensity: 0.6f,
         VignetteTint: new Vector3(0.92f, 0.90f, 0.93f),
         Fog: new Vector4(1f, 60f, 200f, 800f))
     {
-        LampPoolGain = 1f
+        LampPoolGain = 1f,
+        FogSun = D0RenderColors.ToLinear(D0RenderColors.FogSunSrgb),
+        FogAnti = D0RenderColors.ToLinear(D0RenderColors.FogAntiSrgb)
     };
 }

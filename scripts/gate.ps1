@@ -151,7 +151,9 @@ foreach ($id in $selected) {
                     $testPaths = if ($test -eq 'Campus.Gen.Tests') { '^(game/(contracts|gen)/.*?/tests/|game/contracts/tests/)' } else { '^game/(kernel|camera|systems|audio|hud|flow)/.*?/tests/' }
                     $present = @(Get-UESTCFiles $root | Where-Object { $_ -match $testPaths -and $_ -match '\.cs$' })
                     if (-not $present.Count) { $notes += "${test}: Skipped (no authored tests yet)"; continue }
-                    $null = Invoke-LockedProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'test-results'))
+                    # Native rendering/resource-lifetime tests are run explicitly with a GPU lease.
+                    # Ordinary merge quick checks remain headless CPU checks (D-167).
+                    $null = Invoke-LockedProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter','TestCategory!=NativeRender','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
                     $runCount++
                 }
                 if ($runCount -eq 0) { $status = 'Skipped' }

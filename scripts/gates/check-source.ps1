@@ -55,7 +55,7 @@ function Test-UESTCOwnership {
         }
         if ($Wp -in $maintainers) { continue }
         if ($owner -eq $Wp -or ($Wp -eq 'WP-00' -and $owner -in @('shared','main')) -or
-            ($Wp -eq 'WP-32' -and $owner -in @('WP-32a','WP-32b'))) { continue }
+            ($Wp -cmatch '^WP-[0-9]{2}$' -and $owner -cmatch ('^' + [regex]::Escape($Wp) + '[a-z]$'))) { continue }
         $initial = $false
         if ($D0 -and $Wp -eq 'WP-00' -and $owner -and $path -notmatch '^docs/' -and 'game/project.godot' -notin $initialPaths) {
             $initial = $path -notin $initialPaths
