@@ -149,6 +149,16 @@ gates: []
 - 简报按 ENG-WP §4 的模板写；开工手册由 `CLAUDE.md` 自动载入。Astra 的子代理不会自动载入它，要在简报里写明先读 `docs/design/engineering/ENG-ONBOARD.md`。
 - `dotnet build`、`--import` 和烘焙这类重 CPU 任务，走 `..\UESTC_RPG.wt\.locks\` 下的计数锁（ENG-ARCH §6）。
 
+**按任务难度选模型**（两边都适用）：
+
+| 任务 | Claude 侧 | Codex 侧 |
+| --- | --- | --- |
+| 简单任务：范围清楚、设计判断少，例如调研、文档整理与补丁、数据转换、机械性的重命名或接线、单文件小修、按既定格式写数据 | Sonnet，推理强度 xhigh | gpt-6.1-sol |
+| 难任务：架构、契约、复杂工程（Astra 一侧） | — | gpt-6-astra，xhigh |
+| 难任务：画面与风格、跨系统取舍、质感移植（Opus 一侧） | Opus | — |
+
+这两个"简单任务"模型与旗舰差距不大，拿不准时先派它们，结果不够好再换旗舰。
+
 ### 6.1 Opus
 
 - 用 Agent 工具在后台开子代理，一个包一个，简报里写明工作树的绝对路径。
