@@ -187,7 +187,7 @@ game/data/
              "newGameStart": { "clock": 17.083333, "season": "autumn", "weather": "clear" } },
   "env": { "sky": "sky.json", "backdrop": "backdrop.json", "outskirts": "outskirts.json",
            "reflectLakes": ["qsh:relation:7849759", "qsh:relation:7849760"] },
-  "title": { "t0": "（T0 位姿由 WP-49b 定，约 (−1342, 542, 3207)，SYS-TITLE）", "cloudLayout": "qingshuihe" },
+  "title": { "t0": "（T0 位姿由 WP-49b 定，约 (−1240, 495, 2928)，SYS-TITLE）", "cloudLayout": "qingshuihe" },
   "cinematics": { "enterNew": "enter_new", "enterNewShort": "enter_new_short",
                   "enterContinue": "enter_continue", "leave": "leave" },
   "portals": []
