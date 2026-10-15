@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 43.2k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 43.3k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -75,13 +75,13 @@
   - CORE-CONVENTIONS §8.2 改什么 · L540 · 1.0k
   - CORE-CONVENTIONS §8.3 门禁与回报 · L555 · 684
   - CORE-CONVENTIONS §8.4 文件操作 · L562 · 755
-  - CORE-CONVENTIONS §8.5 主代理的角色 · L577 · 476
+  - CORE-CONVENTIONS §8.5 主代理的角色 · L577 · 478
   - CORE-CONVENTIONS §8.6 主线优先（D-168） · L584 · 307
 - CORE-CONVENTIONS §9 待对齐 · L592 · 48
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 26.9k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 27.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,7 +95,7 @@
 - CORE-DECISIONS §7 音频 · L174 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L196 · 1.8k
 - CORE-DECISIONS §9 工程 · L216 · 3.3k
-- CORE-DECISIONS §10 流程 · L241 · 4.0k
+- CORE-DECISIONS §10 流程 · L241 · 4.1k
 - CORE-DECISIONS §11 待对齐 · L270 · 61
 
 ## CORE-GLOSSARY · 术语表
@@ -1483,7 +1483,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 187.0k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 187.6k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.3k
@@ -1493,10 +1493,10 @@
 - ENG-ARCH §3 关键接口（契约草案） · L475 · 102.1k
 - ENG-ARCH §4 资源管线 · L2055 · 10.6k
 - ENG-ARCH §5 接口先定、桩先合入 · L2143 · 3.3k
-- ENG-ARCH §6 git 工作树流程 · L2182 · 5.1k
-- ENG-ARCH §7 主要风险与对策 · L2249 · 6.3k
-- ENG-ARCH §8 扩展点（RPG） · L2302 · 8.6k
-- ENG-ARCH §9 待验证（P0） · L2346 · 2.3k
+- ENG-ARCH §6 git 工作树流程 · L2182 · 5.7k
+- ENG-ARCH §7 主要风险与对策 · L2254 · 6.3k
+- ENG-ARCH §8 扩展点（RPG） · L2307 · 8.6k
+- ENG-ARCH §9 待验证（P0） · L2351 · 2.3k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
@@ -1533,26 +1533,26 @@
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 12.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD.md` · 12.3k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
 
 - ENG-ONBOARD §0 结论 · L26 · 675
   - ★ ENG-ONBOARD §0.1 接入要点 · L43 · 69
 - ENG-ONBOARD §1 项目与当前阶段 · L47 · 603
-- ENG-ONBOARD §2 开工环境 · L62 · 781
+- ENG-ONBOARD §2 开工环境 · L62 · 878
 - ENG-ONBOARD §3 硬规则 · L78 · 4.5k
-  - ENG-ONBOARD §3.1 改哪里 · L80 · 705
+  - ENG-ONBOARD §3.1 改哪里 · L80 · 709
   - ENG-ONBOARD §3.2 代码边界与接入方式 · L91 · 1.5k
   - ENG-ONBOARD §3.3 禁用写法 · L121 · 1.4k
   - ENG-ONBOARD §3.4 内容与画面的底线 · L150 · 587
   - ENG-ONBOARD §3.5 文件操作 · L166 · 384
 - ENG-ONBOARD §4 查资料 · L177 · 3.8k
   - ENG-ONBOARD §4.1 文档在哪、怎么找 · L179 · 858
-  - ENG-ONBOARD §4.2 按要做的事查哪里 · L199 · 2.4k
-  - ENG-ONBOARD §4.3 Godot API · L270 · 223
-  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L276 · 219
-- ENG-ONBOARD §5 完成与回报 · L284 · 427
-- ENG-ONBOARD §6 改文档时 · L295 · 331
+  - ENG-ONBOARD §4.2 按要做的事查哪里 · L199 · 2.5k
+  - ENG-ONBOARD §4.3 Godot API · L272 · 223
+  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L278 · 219
+- ENG-ONBOARD §5 完成与回报 · L286 · 427
+- ENG-ONBOARD §6 改文档时 · L297 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
@@ -1625,34 +1625,64 @@
 `docs/design/engineering/ENG-STATUS.md` · 6.3k 字 · 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步
 
-- ENG-STATUS §0 结论 · L23 · 387
+- ENG-STATUS §0 结论 · L23 · 422
   - ★ ENG-STATUS §0.1 接入要点 · L29 · 222
-- ENG-STATUS §1 填写规则 · L35 · 914
+- ENG-STATUS §1 填写规则 · L35 · 911
 - ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 1.2k
 - ENG-STATUS §3 活跃工作包 · L71 · 3.0k
 
-## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
+## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 14.8k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
-关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
+`docs/design/engineering/ENG-TEAM.md` · 29.0k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、service_tier、rate_limits、重置卡、完成度调研、持续调研、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
-- ENG-TEAM §0 结论 · L34 · 3.1k
-  - ★ ENG-TEAM §0.1 接入要点 · L80 · 712
-- ENG-TEAM §1 谁擅长什么 · L94 · 675
-- ENG-TEAM §2 包的归属 · L112 · 1.3k
-- ENG-TEAM §3 开工顺序 · L136 · 1.0k
-- ENG-TEAM §4 交接文件 · L149 · 1.0k
-- ENG-TEAM §5 审美与契约的交叉评审 · L170 · 434
-- ENG-TEAM §6 怎么开子代理 · L177 · 6.1k
-  - ENG-TEAM §6.1 Opus · L199 · 129
-  - ENG-TEAM §6.2 Astra · L205 · 593
-  - ENG-TEAM §6.3 旁路 Sol 会话 · L230 · 2.2k
-  - ENG-TEAM §6.4 二号会话（第二个 Claude 账号，Max 5x） · L271 · 2.1k
-- ENG-TEAM §7 待验证（P0） · L318 · 210
+- ENG-TEAM §0 结论 · L37 · 2.7k
+  - ★ ENG-TEAM §0.1 接入要点 · L54 · 1.2k
+- ENG-TEAM §1 参与者与会话 · L70 · 2.0k
+  - ENG-TEAM §1.1 决定权与执行人 · L88 · 434
+- ENG-TEAM §2 按模型能力分工 · L106 · 1.9k
+  - ENG-TEAM §2.1 各模型的长处与短板 · L110 · 589
+  - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L119 · 399
+  - ENG-TEAM §2.3 事归谁 · L127 · 607
+  - ENG-TEAM §2.4 交叉的地方 · L144 · 205
+- ENG-TEAM §3 模型等级与任务划分 · L150 · 1.8k
+  - ENG-TEAM §3.1 按任务难度选模型 · L154 · 606
+  - ENG-TEAM §3.2 总指挥只做什么 · L168 · 465
+  - ENG-TEAM §3.3 Astra 名下交给 6.1-sol 子代理的包 · L182 · 588
+  - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L196 · 110
+- ENG-TEAM §4 包的归属与开工顺序 · L201 · 2.0k
+  - ENG-TEAM §4.1 包的归属 · L203 · 919
+  - ENG-TEAM §4.2 开工顺序与合并顺序 · L217 · 1.1k
+- ENG-TEAM §5 开发流程 · L230 · 5.7k
+  - ENG-TEAM §5.1 全流程一览 · L234 · 610
+  - ENG-TEAM §5.2 派工 · L248 · 1.1k
+  - ENG-TEAM §5.3 施工与回报 · L269 · 779
+  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L288 · 639
+  - ENG-TEAM §5.5 批准与合并 · L300 · 1.3k
+  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L321 · 438
+  - ENG-TEAM §5.7 契约申请与共享工程文件 · L330 · 475
+  - ENG-TEAM §5.8 完成度调研并入工作包 · L338 · 368
+- ENG-TEAM §6 会话通信与工作交接 · L346 · 4.8k
+  - ENG-TEAM §6.1 交接目录与文件 · L350 · 1.5k
+  - ENG-TEAM §6.2 命名与写法 · L373 · 304
+  - ENG-TEAM §6.3 任务单与请求文件的格式 · L380 · 534
+  - ENG-TEAM §6.4 消息与流水 · L398 · 492
+  - ENG-TEAM §6.5 唤醒脚本 · L412 · 1.3k
+  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L439 · 478
+- ENG-TEAM §7 账号与额度管理 · L452 · 1.5k
+  - ENG-TEAM §7.1 主账号（主会话） · L456 · 133
+  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L461 · 757
+  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L479 · 481
+- ENG-TEAM §8 旁路任务与长期值班 · L489 · 4.5k
+  - ENG-TEAM §8.1 Sol 值班会话 · L493 · 712
+  - ENG-TEAM §8.2 完成度调研 · L510 · 1.8k
+  - ENG-TEAM §8.3 Sol 旁路会话 · L554 · 869
+  - ENG-TEAM §8.4 怎么开子代理 · L575 · 1.1k
+- ENG-TEAM §9 待验证（P0） · L602 · 229
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
-`docs/design/engineering/ENG-WP.md` · 92.2k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP.md` · 92.3k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、后置细节、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.5k

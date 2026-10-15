@@ -22,7 +22,7 @@ gates: []
 
 ## 0 结论
 
-1. 只有主代理改本文（CORE-CONVENTIONS §8.5）；子代理只读。
+1. 内容由主会话决定，由 Sol 值班会话在每次合入后维护（ENG-TEAM §8.1，CORE-CONVENTIONS §8.5）；其余子代理只读。
 2. 只记"现在"：活跃的包一行一个，合进 `main` 并做完的包从表里删掉，历史交给 Git。
 3. "代理回报完成"不等于"已集成"：只有合进 `main` 并推送以后，才算集成（ENG-ARCH §6 第 4 步）。
 
@@ -49,7 +49,7 @@ gates: []
 | 工作树 | `..\UESTC_RPG.wt\<WP-xx>\`；直接在主检出上做的写"主检出" |
 | 分支 | `wp/<xx>-<slug>` |
 | 候选提交 | 待合入的那个提交的短 SHA；还没有写"—" |
-| 状态 | 已派工、施工中、待合入（代理已回报，等主代理 rebase 和跑门禁）、合入中、阻塞，五选一 |
+| 状态 | 已派工、施工中、待合入（代理已回报，等主会话批准、值班会话合并）、合入中、阻塞，五选一 |
 | 阻塞 | 卡在什么上、等谁；没有写"—" |
 | 下一步 | 下一个动作和由谁做 |
 
@@ -63,7 +63,7 @@ gates: []
 - 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）；DOC-terrain-map `e37a34c`（清水河分区地形方案）。
 - 最近可运行入口：`d4f46a5`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景；90 帧窗口冒烟、Release 导出与导出版运行时通过，不代表完整主线旅程）。
 - 已冻结的契约组：尚无（v1 候选）。
-- 当前阶段：第一波（ENG-TEAM §3）。第二波前提里 WP-09、WP-14、WP-08 已合入，还差 WP-02。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
+- 当前阶段：第一波（ENG-TEAM §4.2）。第二波前提里 WP-09、WP-14、WP-08 已合入，还差 WP-02。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
 - 高优先级插入项：地形分层 D-180 已登记；contract-15 阶段 0（`ITerrain`、统一采样布局与平地桩）已合入 `d4f46a5`；完整非平地 DTO/schema/评估器待下一批；规范 WLD-TERRAIN 已合入 `874f89f`；分区方案 MAP-QSH-TERRAIN 已合入 `e37a34c`。
 - 共享工程后续：contract-16 UI 底图桥、显式 world 加载上下文、存档恢复故障协议、BuildInfo 生产者 hash 留待 core5。
 - 已知问题：截图进程卡住会一直占 GPU 锁，截图脚本一律给每个 Godot 进程加 120 s 超时。

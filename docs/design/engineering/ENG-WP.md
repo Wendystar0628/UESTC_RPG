@@ -20,11 +20,11 @@ gates: [G1, G3, G5]
 > **读者**：主代理派工时读全文；子代理只读本包在 §2 主表与 §2.1 的两行，以及派工简报。
 > **关联**：[ENG-ONBOARD 开工手册](ENG-ONBOARD.md)、[CORE-INDEX 总索引](../README.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)、[ENG-STATUS 施工状态](ENG-STATUS.md)、[TOOL-PREVIEW 内容预览](../tools/TOOL-PREVIEW.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
-正式开发由两个主力模型协作：Opus 管画面、风格与内容并担任主代理，Astra 管架构与复杂工程，两边都可以开子代理（ENG-TEAM，D-179）；git 流程按 ENG-ARCH §6（D-166）。本表把工作拆成 54 个包（WP-00 至 WP-53），每个包归谁见 ENG-TEAM §2。WP-00 由 Astra 先做，约 1 天；完成后其余包按 ENG-TEAM §3 分两波开工，它们都能基于桩并行。最大的几个包还可以再拆（见 §3），并行度能到 80 左右。
+正式开发由多个模型协作：主会话的 Opus 管画面、风格与内容并担任唯一的主代理，Astra 管架构与复杂工程，Opus 侧的包由二号会话开子代理施工，合并执行、施工状态与杂活由 Sol 会话承担（ENG-TEAM §1，D-179）；git 流程按 ENG-ARCH §6（D-166）。本表把工作拆成 54 个包（WP-00 至 WP-53），每个包归谁见 ENG-TEAM §4.1。WP-00 由 Astra 先做，约 1 天；完成后其余包按 ENG-TEAM §4.2 分两波开工，它们都能基于桩并行。最大的几个包还可以再拆（见 §3），并行度能到 80 左右。
 
 ## 0 结论
 
-1. 共 54 个包（WP-00 至 WP-53）。WP-00 由 Astra 在 D0 先做，约 1 天；完成后其余包按 ENG-TEAM §3 分两波开工，同一波里的包并行。最大的几个包按 §3 再拆，并行度能到 80 左右（§2、§3）。
+1. 共 54 个包（WP-00 至 WP-53）。WP-00 由 Astra 在 D0 先做，约 1 天；完成后其余包按 ENG-TEAM §4.2 分两波开工，同一波里的包并行。最大的几个包按 §3 再拆，并行度能到 80 左右（§2、§3）。
 2. 阶段依次是 D0、D1 起、主线闸口、主线闸口之后、收尾，金样与主线并行、不阻塞主线；各文档里的 P0–P3 按 §1 的阶段名表对应（§1）。
 3. 主线版先行：主线闸口之前，每个包按 §2.1 自己那一行交主线版，后置细节留到闸口之后；主线闸口以主线冒烟（G5）通过为准（§1、§2.1，CORE-CONVENTIONS §8.6）。
 4. 开工只读三样：开工手册 ENG-ONBOARD、本包在 §2 主表与 §2.1 的两行、派工简报。其余文档按 ENG-ONBOARD §4 按需查；"起读文档""起读小节"两栏是起点，不是通读清单（§2，D-178）。
@@ -51,8 +51,8 @@ gates: [G1, G3, G5]
 
 | 阶段 | 内容 | 闸口 |
 | --- | --- | --- |
-| D0 | Astra 完成 WP-00（ENG-TEAM §3；Opus 同时做不依赖骨架的美术基础）：在已有的仓库上（清理前的基线在标签 `baseline-map`，网页栈已从 `main` 删除，ENG-ARCH §1）搭好下面列出的 Godot 骨架，交出能编译的契约 v1 候选（含多地图、平面地图、开始页、存档、外围、室内、音频、界面契约，以及规则集、观者状态与按原因计的输入占用，ENG-ARCH §3、ENG-ROADMAP §6），合入全部桩，搭好门禁骨架（`scripts\gate.ps1`），建好 `ownership.json`、`budgets.json`（含 `maps.qingshuihe` 一节，ENG-BUDGET §8）和 `third_party.json` | 在 net10.0 下 `dotnet build -warnaserror` 通过（D-177）；`--headless --import` 的日志里没有 `ERROR`；`-- --gate=registry --map=*` 的退出码为 0；窗口模式运行桩场景能截图（启动经 `IAppFlow` 的桩，直接走 `--title=0` 的路径） |
-| D1 起 | 按 ENG-TEAM §3 分两波开工：第一波是内核与系统包，WP-08、WP-02、WP-09、WP-14 的主线版合入后开第二波的内容包；各自在自己的工作树里，先基于桩跑起来，先交主线版（CORE-CONVENTIONS §8.6、D-168）。WP-33 的遮挡调优排在 P2 才交付，但 D1 就开始搭框架。WP-47 基于桩开工，楼块先画包围盒方块；WP-48b 在单色底图的桩上做界面；WP-49 开工前，其他包照旧经 `IAppFlow` 的桩启动 | — |
+| D0 | Astra 完成 WP-00（ENG-TEAM §4.2；Opus 同时做不依赖骨架的美术基础）：在已有的仓库上（清理前的基线在标签 `baseline-map`，网页栈已从 `main` 删除，ENG-ARCH §1）搭好下面列出的 Godot 骨架，交出能编译的契约 v1 候选（含多地图、平面地图、开始页、存档、外围、室内、音频、界面契约，以及规则集、观者状态与按原因计的输入占用，ENG-ARCH §3、ENG-ROADMAP §6），合入全部桩，搭好门禁骨架（`scripts\gate.ps1`），建好 `ownership.json`、`budgets.json`（含 `maps.qingshuihe` 一节，ENG-BUDGET §8）和 `third_party.json` | 在 net10.0 下 `dotnet build -warnaserror` 通过（D-177）；`--headless --import` 的日志里没有 `ERROR`；`-- --gate=registry --map=*` 的退出码为 0；窗口模式运行桩场景能截图（启动经 `IAppFlow` 的桩，直接走 `--title=0` 的路径） |
+| D1 起 | 按 ENG-TEAM §4.2 分两波开工：第一波是内核与系统包，WP-08、WP-02、WP-09、WP-14 的主线版合入后开第二波的内容包；各自在自己的工作树里，先基于桩跑起来，先交主线版（CORE-CONVENTIONS §8.6、D-168）。WP-33 的遮挡调优排在 P2 才交付，但 D1 就开始搭框架。WP-47 基于桩开工，楼块先画包围盒方块；WP-48b 在单色底图的桩上做界面；WP-49 开工前，其他包照旧经 `IAppFlow` 的桩启动 | — |
 | 与主线并行 | **金样**（ART-MODELING §6；定风格方向，与主线并行做，不阻塞主线）：WP-09 交出部件内核，WP-10 至 WP-13 交出首批部件；交出 ART-MODELING §6 的前 4 个金样：石材科研楼（WP-09 与 WP-14）、宿舍（WP-14）、树组（WP-23：一株插片型银杏、一株云团型樱花或桂花，加灌木球）、街道道具套件（WP-13）。每件金样另交秋 17:30、夏 12:50、冬 21:00 雪夜（`--weather=snow`）三张截图。同期：WP-37 交出"4 季 × 12 关键帧"的色板联表（按 ART-STYLE §3 的影色规则推导，并过 SYS-TIME §8 的影色自检）；WP-34 和 WP-42 在桩上做到"能拖时间、能换季、能在银杏大道上走"。另有：<br>- WP-51、WP-52、WP-31c 交出室内金样：学知苑 1 栋一、二层（走廊、4 人间、开水间、楼梯平台铁栅门），附三张时季截图与楼梯行走测试（WLD-INTERIORS §18）；<br>- WP-50 与 WP-34 同为 P0：容器版本 1 和第一份金档在 P0 交付（SYS-SAVE §15）；<br>- WP-53 交出总线树、`IAcousticEnv` 与 `IFoleyService` 的桩，以及首批声音的方向样（界面音原型、一段床、一组脚步），P0 听评（SYS-AUDIO §21.1）；<br>- WP-35 交出 `ui.json` 的令牌、Theme 生成器和两个界面着色器，组件画廊出两套主题的样张（UI-VISUAL §13）。<br>这段时间里，各区包只做布局、覆盖层、认领和体量，不做立面细节 | 主代理和风格负责人看图评审金样、色板联表、室内金样和声音方向样（不跑门禁），通过后发布金样截图；评审要改契约的向主代理申请：还没冻结的组改候选，已冻结的组只增不改（§5 第 3 条） |
 | 主线闸口 | 主线打通（CORE-INDEX §2）：各包的主线版全部接通；从扉页、开始页、新游戏或继续，到全校飞行与行走、切换时间季节天气、小地图与传送、存档退出再继续，能完整走一遍；全校的地形、道路、水体和楼宇体量成形，主要地标认得出；默认状态下风格方向对，没有明显卡顿 | 主线冒烟（G5）通过；随后安排第一次集中测试（ENG-GATES §2） |
 | 主线闸口之后 | 各区包按金样和各文档的完整规格做细节。南区（WP-18）和北部生活区（WP-20）先交细节版，评审通过后，其余区按同一标准推进。精选室内按 WLD-INTERIORS §18 的顺序推进：I1 每区先做一处，让 R1–R5 穿过室内；I2 其余开放处、关门提示、门口光、简化室内；I3 最低配置档调优、G19 在集中测试时全量跑、安装体积 | 风格负责人看图横向比对 |
@@ -241,7 +241,7 @@ gates: [G1, G3, G5]
 | WP-45 | 45a 过程与剧本：规则、模板、前向过程（按图）、过渡、预报读数、存档段、lint 与统计测试（独占 `game/systems/weather`，`precip` 子目录除外，以及 `game/data/weather`）；45b 降水与湿润：降水池、`precip.gdshader`（含太阳雨）、湿润与积水的公共函数、`precip_occ` 与地面遮罩 2 的烘焙（独占 `game/systems/weather/precip` 和 `game/style/shaders/precip.gdshader`）。两者之间只经天气向量 `WeatherVec`（ENG-ARCH §3）交接，SYS-WEATHER §10。远雷不在 45b，归 WP-53b（SYS-AUDIO §6.1） |
 | WP-47 | 47a 数据管线（`pipeline/outskirts`）；47b 生成（`game/gen/outskirts`）。两者只经 `outskirts.json` 的格式交接，格式由 47a 先定（WLD-OUTSKIRTS §12.1） |
 | WP-48 | 48a 底图烘焙与地标贴图（`pipeline/map`、`atlas/labels.json`）；48b 小地图与大地图界面（`game/hud/map`、`game/style/shaders/map_*`）；48c 标记、锚点、传送与解锁服务（`game/systems/atlas`、`atlas/markers.json`、`overlay/atlas.overlay.json`）。48a 先定底图纹理与 `map.manifest.json` 的格式 |
-| WP-49 | 49a 流程与播放器（独占 `game/flow`、`game/camera/cinematic`）；49b 标题美术与过场数据（独占 `game/assets/title`、`cine_*` 着色器、`game/data/maps/*/cinematics`）。两者经过场 JSON 的格式交接：格式由 49a 先定，镜头路径、节奏与字幕由 49b 写（ENG-TEAM §2） |
+| WP-49 | 49a 流程与播放器（独占 `game/flow`、`game/camera/cinematic`）；49b 标题美术与过场数据（独占 `game/assets/title`、`cine_*` 着色器、`game/data/maps/*/cinematics`）。两者经过场 JSON 的格式交接：格式由 49a 先定，镜头路径、节奏与字幕由 49b 写（ENG-TEAM §4.1） |
 | WP-50 | 不拆：格式、迁移和金档必须由一个包独占 |
 | WP-51 | 51a 平面内核与开间网格（独占 `gen/interior/core`）；51b 壳体、简化室内、I0、室内索引、窗卡与门厅卡（独占 `gen/interior/shell`）。两个程序集，由 WP-00 建 |
 | WP-52 | 52a 家具与房间模板；52b 生活痕迹与状态掩码 |
@@ -269,7 +269,7 @@ gates: [G1, G3, G5]
 
 ## 5 主代理的职责
 
-1. 验收并合入 Astra 交出的 WP-00，然后按 ENG-TEAM §3 发派工简报；Opus 是唯一的主代理（ENG-TEAM §0）。
+1. 验收并合入 Astra 交出的 WP-00，然后按 ENG-TEAM §4.2 发派工简报；主会话的 Opus 是唯一的主代理（ENG-TEAM §1.1）。
 2. 维护合并队列，一次合一个：rebase → 快检与相关的核心专项（`gate.ps1` 按改动选，ENG-GATES §2） → squash 合进 `main` → `git push origin main` → 删本地分支。合进 `main` 后在主检出跑一次 `--headless --import`，更新工作树的 `.godot` 种子，并通知各工作树 rebase（ENG-ARCH §6）。远端只有 `main` 和标签；任何时刻只有一个主代理。
 3. **契约分批定死**（D-134，ENG-ARCH §3）：WP-00 先交能编译的契约 v1 候选和全部桩，覆盖天气与画质契约，多地图、平面地图、开始页、存档、外围、室内、音频与界面契约，以及 ENG-ROADMAP §6 的规则集、观者状态与输入占用预留。某组契约的真实生产方与使用方在主线上接通、相关核心专项通过（ENG-GATES §2）后，主代理宣布冻结这一组，记进 ENG-STATUS §2，之后这一组只增不改；还没冻结的组按申请修改。改契约、加全局着色器参数（`project.godot` 的 Shader Globals，含 `map_rect`、`edge_fog`、`shaft`、`interior_light`）、着色器白名单（`ownership.json` 里 `game/style/shaders/` 的逐文件归属，含 `ui_panel`、`ui_screen`、`map_base`、`cine_cloud`）、程序集引用和 NuGet 包的申请，一律由主代理统一处理；共享文件只由主代理改（ENG-ARCH §6）。
 4. 主持金样评审，指定一名风格负责人。风格负责人可以由一个 Opus 子代理担任，只做审图，不写代码。

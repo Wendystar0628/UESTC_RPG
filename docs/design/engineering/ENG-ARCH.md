@@ -2184,8 +2184,13 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 **远端与分支**（D-166）：
 
 - 远端 `origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签（`baseline-map`、`contracts-v1-rc` 等）。不开 PR，不推送任何别的分支，不对 `main` 强推。
-- 本地分支只用来隔离并行施工：每个写代码的子代理一个工作树、一个本地临时分支 `wp/<xx>-<slug>`。分支在本地提交、从不推送，合进 `main` 后立即删除。
-- **并发规模**：常态同时运行十几个 Opus 代理，可以分属两个账号，都在本机同一个仓库上工作。任何时刻只有一个主代理；合并队列、`main` 上的提交和推送只由它做。
+- 本地分支只用来隔离并行施工：每个写代码的子代理一个工作树、一个本地临时分支 `wp/<xx>-<slug>`。分支在本地提交、从不推送；合进 `main` 后由 Sol 值班会话把它重置到新的 `main`，包整体做完以后的清理由主会话决定（ENG-TEAM §5.5）。
+- **并发规模**：各方都在本机同一个仓库上工作，同时开多少个代理按账号额度定（ENG-TEAM §7）：
+  - 两个 Claude 账号都是 Max 20x。二号会话的 Opus 子代理按剩余额度算，同时 1 到 8 个，一个一个开；Sonnet 子代理不占 Opus 名额，两者合计不超过 10 个（ENG-TEAM §7.2）；
+  - 主会话仍只做总指挥，主账号不开新的子代理，所有并发的 Opus 子代理都在二号会话的账号上跑（ENG-TEAM §3.2）；
+  - Codex 侧（Astra 与 Sol 各会话）每个会话的子代理不超过 `max_concurrent_threads_per_session`，快速模式按 Codex 剩余额度用（ENG-TEAM §7.3、§8.4）。
+
+  任何时刻只有一个主代理，就是主会话：合并队列、`main` 上的提交和推送由它决定，由 Sol 值班会话按批准行执行（ENG-TEAM §5.5）；`main` 同一时刻只有一个执行人。
 - **什么时候开工作树**：同一时刻有两个以上代理要写代码、编译或导入时，每个写代码的代理各开一个工作树。
   - 只有一个代理写代码时（例如主代理改文档或小修），直接在主检出（`E:\Project\UESTC_RPG`）的 `main` 上做：同样先过与改动相关的门禁，再提交、推送。
   - 只改文档、不编译的代理在主检出里改，由主代理分派（CORE-CONVENTIONS §7.6），两个代理不同时改同一个文件。
@@ -2198,7 +2203,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档和待迁移的数据与脚本（§1）。
    - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
    - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
-   - WP-00 由 Astra 在工作树 `..\UESTC_RPG.wt\WP-00`（分支 `wp/00-core`）里搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），经主代理的合并队列进 `main`（ENG-TEAM §4）。主代理合入后在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子，再打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。之后共享工程文件的改动也由 Astra 在同一个工作树里提交、经合并队列进 `main`。
+   - WP-00 由 Astra 在工作树 `..\UESTC_RPG.wt\WP-00`（分支 `wp/00-core`）里搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），经主代理的合并队列进 `main`（主会话批准，Sol 值班会话执行合并，ENG-TEAM §5.5、§5.7）。合入后在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子，再打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。之后共享工程文件的改动也由 Astra 在同一个工作树里提交、经合并队列进 `main`。
    - WP-00 同时为主检出准备 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让主检出的开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
 2. **开工作树**：由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，从当前 `main` 拉本地分支，展开就是：
 
@@ -2219,7 +2224,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 不要用目录联接共享 `.godot`：导入产物的文件名是"文件名-路径 md5"，两个分支内容不同时会互相覆盖。复制种子后，引擎发现修改时间不同会再比对 md5，内容一致就不重新导入。
    - `--import` 的含义是"启动编辑器，等资源导入完成后退出"。导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。
 3. **日常开发**：
-   - 在自己的分支上小步提交，不推送，不碰 `main`。主代理通知 `main` 有新的合入时，在工作树里 `git rebase main` 跟上；rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
+   - 在自己的分支上小步提交，不推送，不碰 `main`。`main` 有新的合入时（`merged.log` 新增一行，派你的一方也会通知，ENG-TEAM §5.6），在工作树里 `git rebase main` 跟上；rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
    - 代理只走命令行，不在编辑器里打开或重存场景；场景尽量由代码生成。
    - 截图类门禁（G7、G9）必须在交互式会话的窗口模式下跑，窗口不能最小化；无界面模式用的是空渲染器，不能截图，也不编译着色器。截图取共享 GPU 锁，同时最多 2 个工作包在跑；性能门禁（G10）取独占锁（ENG-PERF §12.5）。
    - **先选检查，再决定要不要烘焙**：`gate.ps1` 先按改动选出本次要跑的检查（快检；碰到核心体验时加核心专项；集中测试时全量；测试节奏只以 ENG-GATES §2 为准），再看所选的检查要不要烘焙产物：
@@ -2230,13 +2235,13 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
      各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
    - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务。十几个工作树并行时，同时运行的重 CPU 任务不超过 max(2, 逻辑核数 / 8) 个，用 `..\UESTC_RPG.wt\.locks\` 下的计数锁排队（初值，P0 按本机实测调整，§9）；持有独占 GPU 锁时，其他工作树一律不得运行它们。
-4. **合并**（主代理的合并队列，一次合一个）：
-   1. 子代理回报完成后，主代理在它的工作树里 `git rebase main`；
-   2. 跑 `scripts\gate.ps1 -Wp <WP-xx>`（按改动跑快检，碰到核心专项的输入时加跑核心专项，ENG-GATES §2），全部通过（CORE-CONVENTIONS §8.3）；
-   3. 回到主检出，`git merge --squash wp/<xx>-<slug>`，提交为一个提交，首行写 `WP-xx: <一句话说明>`；
-   4. `git push origin main`；
-   5. 删本地分支：工作包做完了就 `git worktree remove` 再 `git branch -D`；还要继续做，就在工作树里 `git switch -C wp/<xx>-<slug> main`，从新的 `main` 重建分支，保留 `.godot` 和编译缓存；
-   6. 在主检出跑一次 `--headless --import` 更新工作树种子，并通知其他工作树 rebase。
+4. **合并**（主代理的合并队列，一次合一个；主会话批准，Sol 值班会话执行合并，ENG-TEAM §5.5）：
+   1. 施工方交候选之前，先在自己的工作树里 `git rebase main`，再跑 `scripts\gate.ps1 -Wp <WP-xx>`（按改动跑快检，碰到核心专项的输入时加跑核心专项，ENG-GATES §2），全部通过（CORE-CONVENTIONS §8.3）；
+   2. 主会话评审通过后，在合并请求或任务单末尾写批准行；
+   3. Sol 值班会话在主检出 `git merge --squash <候选提交>`，在主检出再跑一遍门禁，提交为一个提交，首行写 `WP-xx: <一句话说明>`；有冲突或门禁不过就撤回并报告，由施工方 rebase 后重交；
+   4. Sol 值班会话 `git push origin main`；
+   5. 重建分支：工作树干净时，值班会话在工作树里 `git switch -C wp/<xx>-<slug> main`，从新的 `main` 重建分支，保留 `.godot` 和编译缓存；工作包整体做完以后，`git worktree remove` 与 `git branch -D` 由主会话决定；
+   6. 资源有改动时，门禁 G1 在主检出跑 `--headless --import`，同时更新工作树种子；值班会话在 `merged.log` 记一行并写明需要谁 rebase，各派工方通知名下的工作树（ENG-TEAM §5.6）。
    - 内核包按这个顺序合入：WP-08 → WP-34 → WP-01 → WP-50 → WP-04 → WP-02 → WP-46 → WP-03 → WP-05 → WP-09 → WP-06 → WP-07 → WP-43 → WP-27。WP-50（存档，与 WP-34 同为 P0，容器版本 1 和第一份金档在 P0 交付）排在 WP-01 之后；WP-46（地图服务，要 WP-02 的整图卸载接口）排在 WP-02 之后、WP-43 之前（SYS-SAVE §15、SYS-MAPS §16）。
    - 其余包靠桩就能运行，门禁通过就可以合入，不必等内核。
 5. **冲突规则**：
