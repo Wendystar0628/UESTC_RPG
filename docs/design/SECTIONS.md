@@ -961,7 +961,7 @@
 
 ## SYS-MOTION · 动态与事件
 
-`docs/design/systems/SYS-MOTION.md` · 43.4k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与微动的节奏，唯一的偶发事件、季节氛围与转场
+`docs/design/systems/SYS-MOTION.md` · 43.5k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与微动的节奏，唯一的偶发事件、季节氛围与转场
 关键词：动态、两个时钟、动画时钟、AnimTime、anim_time、一拍二、step_rate、Step12、T12、480 s 回绕、内置 TIME、风场、阵风、IWindField、WindSample、wind、飘落池、萤火虫、河面漂浮物、解析运动、季节氛围、偶发事件、晚归者、IncidentDirector、incidents.json、incident、转场、TransitionDirector、钟面指针、钟锤
 
   - SYS-MOTION 分工 · L23 · 755
@@ -976,7 +976,7 @@
 - SYS-MOTION §7 光的缓慢变化（由世界时钟驱动） · L267 · 1.1k
 - SYS-MOTION §8 远景 · L288 · 1.3k
 - SYS-MOTION §9 图书馆、开放室内与钟楼的微动 · L303 · 1.6k
-- SYS-MOTION §10 偶发事件（全片唯一） · L324 · 5.5k
+- SYS-MOTION §10 偶发事件（全片唯一） · L324 · 5.6k
 - SYS-MOTION §11 季节氛围 · L405 · 2.3k
 - SYS-MOTION §12 转场 · L435 · 6.1k
 - SYS-MOTION §13 粒子类与解析运动 · L508 · 4.0k
@@ -1326,14 +1326,14 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 182.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 182.5k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L66 · 2.3k
   - ★ ENG-ARCH §0.1 接入要点 · L78 · 1.3k
 - ENG-ARCH §1 旧网页栈怎么处理 · L92 · 5.1k
 - ENG-ARCH §2 目录结构与归属 · L155 · 33.6k
-- ENG-ARCH §3 关键接口（契约草案） · L473 · 98.2k
+- ENG-ARCH §3 关键接口（契约草案） · L473 · 98.3k
 - ENG-ARCH §4 资源管线 · L1999 · 10.6k
 - ENG-ARCH §5 接口先定、桩先合入 · L2087 · 3.0k
 - ENG-ARCH §6 git 工作树流程 · L2125 · 5.1k

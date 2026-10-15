@@ -844,7 +844,7 @@ public interface IWindField                 // WP-26
 - 部件仍按语义级别（L0、L1）分别给几何；每级几何内部可以另给网格 LOD（`GeometryBundle.Lods`：每级是误差加这一级的索引数组），由内核写进 `AddSurfaceFromArrays` 的 `lods` 字典（键是误差，值是该级的索引数组）。截取索引前缀只是 `MeshLod.Prefix` 这一种快捷写法，限于整件拿掉独立小件（ENG-PERF §1.2）。建筑的主线版只用语义级别，同级内部的网格 LOD 后做。
 - 引擎锁定为 Godot 4.7.2-stable .NET 版（`tools/godot-version.txt`；csproj 写 `Sdk="Godot.NET.Sdk/4.7.2"`）。升级要经主代理评审（ENG-WP §5）。
 - 容器怎么选（按块合并的 ArrayMesh、MultiMesh、独立实例），见 ENG-PERF §1。
-- JSON 一律用契约程序集里的 `ContractJson.Options` 读写：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`。多态类型（覆盖层操作、碰撞体）的类型字段必须写在每个对象的第一个字段（System.Text.Json 的默认要求；不开 AllowOutOfOrderMetadataProperties）。存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定与 `ContractJson.Options` 一致，ID 类的 record struct 写成字符串；存读档不得用不带 `JsonTypeInfo` 的重载（SYS-SAVE §3.5）。`map.json`、`interiors.json`、`markers.json`、过场 JSON 的 schema 放在 `game/contracts/schemas/`。
+- JSON 一律用契约程序集里的 `ContractJson.Options` 读写：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`。多态类型（覆盖层操作、碰撞体）的类型字段必须写在每个对象的第一个字段（System.Text.Json 的默认要求；不开 AllowOutOfOrderMetadataProperties）。存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定与 `ContractJson.Options` 一致，ID 类的 record struct 写成字符串；存读档不得用不带 `JsonTypeInfo` 的重载（SYS-SAVE §3.5）。`map.json`、`interiors.json`、`markers.json`、过场 JSON 的 schema 放在 `game/contracts/schemas/`，作为 `Campus.Contracts` 程序集的嵌入资源（EmbeddedResource）随程序集发布，运行时和门禁都从程序集读；`game/contracts/` 有 `.gdignore`，导出过滤器不会把这个目录打进包，契约程序集保持纯 .NET。
 
 **窗灯**：每扇窗有一个随机阈值，灯光通道的值超过阈值时这扇窗就亮。通道值由灯光时刻表按"建筑类别 × 灯种"驱动（SYS-TIME §6，共 32 个通道），由 WP-03 每帧写进 32×1 的全局数据纹理，不增加任何绘制调用；窗号基址放在顶点属性里（`GeometryBundle.Uv2`）。同一钟点、同一哈希的窗，亮灭结果相同；阴雨天通道按有效太阳高度求值，灯会提前亮（SYS-WEATHER §7）。窗覆盖纹理为 256×256；开放室内的房间灯按房间哈希读本楼的通道，不要求与窗灯逐间对应（WLD-INTERIORS §5.1、WLD-INTERIORS §6.3）；每个开放入口在灯表里登记一盏门口灯（WLD-INTERIORS §4）。
 
