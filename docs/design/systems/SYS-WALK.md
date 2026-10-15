@@ -7,7 +7,7 @@ keywords: [行走模式, 行走, 角色控制器, 手感参数, 模式切换, �
 owners: [WP-42, WP-43, WP-44]
 contributors: [WP-00, WP-01, WP-06, WP-07, WP-10, WP-11, WP-13, WP-15, WP-16, WP-17, WP-18, WP-20, WP-23, WP-24, WP-28, WP-30, WP-31a, WP-31b, WP-31c, WP-35, WP-36, WP-47, WP-48c, WP-50, WP-51, WP-53d]
 depends: [CORE-INDEX, SYS-VIEW, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS]
+related: [SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-TERRAIN]
 contracts: [WalkClass, SurfaceTag, Collider, WallCollider, RampCollider, PostCollider, BoxCollider, SlabCollider, HeightFieldCollider, SlopedWallCollider, SweepHit, SupportHit, ICollisionWorld, IViewControl, ModeSwitchVia, ModeSwitchResult, IWalkTelemetry]
 data: ["game/data/maps/qingshuihe/overlay/walkable.overlay.json", "game/data/maps/qingshuihe/nav/routes.json"]
 gates: [G4, G8, G15, G16, G19, G21]
@@ -18,7 +18,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 > **范围**：本文规定行走模式：手感与键位、旁观与行走的切换、可行走范围与边界收口、开放室内里与行走有关的门和电梯、水与回位、行走走廊与推荐路线、角色控制器、碰撞数据及其验收。
 > **不在本文**：旁观飞行与介质呈现（SYS-VIEW）；开放清单、室内布局与门的细则（WLD-INTERIORS）；校界与外围环境（WLD-OUTSKIRTS）；观者声的素材与混音（SYS-AUDIO）；界面提示与跳转（UI-NAV、UI-VISUAL）；传送与锚点（SYS-ATLAS）；存档格式（SYS-SAVE）。
 > **查阅**：先读 §0；手感与键位看 §2–§4；模式切换看 §5；可行走范围、边界收口与挡路规则看 §6–§7；楼内的门与电梯看 §8；控制器看 §12；碰撞图元与契约看 §13；G15 验收看 §15
-> **关联**：[CORE-INDEX 总索引](../README.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)；另见 [SYS-MOTION](SYS-MOTION.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ART-FIDELITY](../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-WP](../engineering/ENG-WP.md)、[SYS-TIME](SYS-TIME.md)、[SYS-WEATHER](SYS-WEATHER.md)、[SYS-GRAPHICS](SYS-GRAPHICS.md)、[SYS-ATLAS](SYS-ATLAS.md)、[SYS-TITLE](SYS-TITLE.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)；另见 [SYS-MOTION](SYS-MOTION.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ART-FIDELITY](../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-WP](../engineering/ENG-WP.md)、[SYS-TIME](SYS-TIME.md)、[SYS-WEATHER](SYS-WEATHER.md)、[SYS-GRAPHICS](SYS-GRAPHICS.md)、[SYS-ATLAS](SYS-ATLAS.md)、[SYS-TITLE](SYS-TITLE.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ### 分工
 
@@ -133,7 +133,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 
 1. **找落点**：
    - 镜头离地 30 m 以内：落点在正下方。
-   - 更高：落点取画面中心视线与可行走地面的交点（600 m 以内）；没有交点，就取正下方。这时碰撞格还没加载，求交用常驻的 2 m 分类栅格加低精度地形高度做 2.5D 步进，不用物理射线。
+   - 更高：落点取画面中心视线与可行走地面的交点（600 m 以内）；没有交点，就取正下方。这时碰撞格还没加载，求交用常驻的 2 m 分类栅格加地形高度（`ITerrain.HeightAt`）做 2.5D 步进，不用物理射线。
    - 落点不可走（关着的楼里、地下、水里、禁行区、外围）：查全局的 8 m 安全点网格（§9），取 50 m 内最近的安全点。离落点 20 m 以内时，用 0.8 s 滑过去；更远时，按 UI-NAV §7 的跳转飞过去。50 m 内找不到，就拒绝切换，提示"这里无法落地"。
    - 室内的落点（WLD-INTERIORS §10）：
      - 镜头在开放楼内：落到下方最近的楼板，要等这一层的楼板碰撞就绪才开启重力（§14 第 6 条）；
@@ -180,7 +180,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 | **外围**（校外） | 能看不能进；行走停在校界（§7）；旁观也只能飞到前沿线以内的低空和外围上空（WLD-OUTSKIRTS §8） |
 | **只能飞到** | WLD-INTERIORS §3 以外的楼顶、关着的楼内、开放楼的封口以外、水面 |
 
-- **可行走遮罩**：WP-44 在构建期（`pipeline/walk/` 与 `game/gen/walkable/`）按 1 m 栅格把全图分成七类：可走、可进入室内、涉水、楼、水、禁行、外围（契约里是 `WalkClass.Outside`，§13）。另外按坡度标出陡坡。
+- **可行走遮罩**：WP-44 在构建期（`pipeline/walk/` 与 `game/gen/walkable/`）按 1 m 栅格把全图分成七类：可走、可进入室内、涉水、楼、水、禁行、外围（契约里是 `WalkClass.Outside`，§13）。另外按坡度标出陡坡 `WalkClass.Steep`：坡度 > 26.6°（1:2），只出现在台缘带、挡墙、驳岸实体盖住的过渡带里，那里不放安全点和落点；坡度读 `ITerrain.FactsAt`，分级见 WLD-TERRAIN §7.1。
   - 运行时常驻一张 2 m 精度的分类栅格，供模式切换时快速判断。栅格另标出"离校界 3 m 以内"，供 §7 第 7 条的缓停查询（WLD-OUTSKIRTS §7.2）。2 m 栅格只表示地面层，多层室内的可走性由导航图和室内楼板碰撞表达（WLD-INTERIORS §10）。
   - 遮罩和 2 m 分类栅格按图构建，只有当前图常驻，切图时在 LoadData 一步换成新图的（SYS-MAPS §4.2）。
   - 开放入口所在的格把"可走"和"可进入室内"接通；关着的楼保持"楼"（WLD-INTERIORS §10）。
@@ -209,11 +209,11 @@ gates: [G4, G8, G15, G16, G19, G21]
 **硬规则**
 
 1. **看得见的阻挡物**高度不低于 0.9 m，临水的不低于 1.05 m；MAP-QSH-ADDITIONS §2.5 的河渠望柱取 1.05 m（ART-FIDELITY §7 第 6 条）。
-2. **碰撞顶加高**：所有用来挡路的栏杆、绿篱、护岸，碰撞体的顶取 max(视觉高度, 1.5 m)。跳跃最高 1.25 m，所以翻不过去。真实栏杆约 1.05–1.10 m，不加高就会被跳过。
+2. **碰撞顶加高**：所有用来挡路的栏杆、绿篱、护岸，碰撞体的顶取 max(视觉高度, 1.5 m)。跳跃最高 1.25 m，所以翻不过去。真实栏杆约 1.05–1.10 m，不加高就会被跳过。地面有坡时，这个高度从两侧带内的最高地面算起（§13）。
 3. **水平外扩**：碰撞体比看得见的物体外扩不超过 0.3 m。这是"不用隐形墙"的可测定义。
    - 西湖岸线（含水杉路临湖一侧）的栏杆和护岸归 WP-16；三条河渠的归 WP-28；东湖的归 WP-18。
 4. **缝隙**：阻挡物之间的缝隙小于 0.5 m。
-5. **可达性检查**：从主网出发，把高差不超过 1.25 m、水平间距不超过 7.2 m（2× 步速下疾跑跳的最远距离）的面逐一连起来，确认只到得了 WLD-INTERIORS §3 登记的三处屋顶或高处，而且只能经开放室内的楼梯或电梯到达。长椅、树池沿、读书石台故意做成跳得上去的高度。
+5. **可达性检查**：从主网出发，把高差不超过 1.25 m、水平间距不超过 7.2 m（2× 步速下疾跑跳的最远距离）的面逐一连起来，确认只到得了 WLD-INTERIORS §3 登记的三处屋顶或高处，而且只能经开放室内的楼梯或电梯到达。长椅、树池沿、读书石台故意做成跳得上去的高度。检查计入地形：面的高差按 `ITerrain` 的地面算；校界、栏杆两侧的地面差使"栏杆碰撞顶 − 己方地面"小于 1.25 + 0.25 m 即报错；台缘带、坐阶、花池这类矮台都进跳跃链（WLD-TERRAIN §7.5）。
 6. **软墙提示**：顶着边界走 0.8 s 以上，出现一次提示（UI-NAV §4.9），同一处 60 s 内不重复。挡住角色的是什么，从滑动碰撞的 `GetCollider()` 读出表面类型（§13），按表面类型换文案（WLD-OUTSKIRTS §9、WLD-INTERIORS §4）：
 
    | 表面类型 | 文案 | "同一处" | 声音（SYS-AUDIO §9.3、SYS-AUDIO §9.8） |
@@ -333,7 +333,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 | --- | --- |
 | 长按 R 0.6 s | 回到距当前位置至少 3 m 的最近记录点；切图途中不响应（SYS-MAPS §6） |
 | 涉水区以外，脚低于水面 0.3 m（含泳池） | 先走本节"水"里的沉水过程，再回位 |
-| 低于地面 3 m、越出本图校界、离开可行走遮罩 2 m 以上 | 立即回位。"越出校界"只作异常兜底：校界有栏杆和缓停（§7），正常走路碰不到，G15 统计触发次数应为 0（WLD-OUTSKIRTS §7.5） |
+| 低于地面 3 m（地面取 `ITerrain.HeightAt`，水体范围内取河床）、越出本图校界、离开可行走遮罩 2 m 以上 | 立即回位。"越出校界"只作异常兜底：校界有栏杆和缓停（§7），正常走路碰不到，G15 统计触发次数应为 0（WLD-OUTSKIRTS §7.5） |
 | 1 s 内再次触发 | 改取更早的记录点 |
 
 回位过渡：0.2 s 淡出到当前地平线的雾色（WP-01 的雾幕层，UI-NAV §9），传送，清掉相机的插值缓冲（§12），再用 0.3 s 淡入。淡出时观者声跟着压低 12 dB，淡入时恢复，免得传送那一瞬脚步突变（SYS-AUDIO §9.10）。
@@ -420,7 +420,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 | 坡面匀速 | `FloorConstantSpeed = true`；`FloorStopOnSlope`、`FloorBlockOnWall` 保持默认 true | — |
 | 皮肤厚度 | `SafeMargin` 从 0.01 起调 | 皮肤厚度 0.01 m |
 | 每步滑动次数 | `MaxSlides = 4` | 初值，原型可调（§17） |
-| 内部边 | `physics/jolt_physics_3d/motion_queries/use_enhanced_internal_edge_removal` 保持默认开 | 避免在拼接的地面和墙段接缝处被绊住 |
+| 内部边 | `physics/jolt_physics_3d/motion_queries/use_enhanced_internal_edge_removal` 保持默认开 | 避免在拼接的地面和墙段接缝处被绊住；它只在同一个 body 内生效，相邻地面格之间的接缝见 WLD-TERRAIN §7.4 |
 
 **每个物理步的处理**（`_PhysicsProcess`，120 Hz；物理步先于本帧全部 `_Process`）
 
@@ -481,12 +481,12 @@ gates: [G4, G8, G15, G16, G19, G21]
 
 | 对象 | 契约图元 | Godot 形状 | 规则 | 提供者 |
 | --- | --- | --- | --- | --- |
-| 地面 | `HeightFieldCollider`：每格 65×65 个 int16（单位 cm），1 m 间距 | `HeightMapShape3D` 65×65，1 m 间距是原生的，不用缩放 | 与 WP-15 的 L0 地面同网格；三角剖分的对角线要与 L0 一致，误差不超过 2 cm（P0 验证，§17）。Jolt 对正方形高度图建双面的 HeightField | WP-15 |
-| 楼体 | `WallCollider`：首层外包轮廓的每条边 | 薄 `BoxShape3D`，顶取地面以上约 300 m | 屋顶上不去。厚度向楼内加，外表面与看得见的墙面相距不超过 0.3 m；相邻墙段在拐角处各延长半个厚度，不留缝。全校 278 栋楼共 2,422 条边。开放入口处按室内索引的 `EntranceDecl.Open` 开洞；关着的门处不开洞，门所在的墙段表面类型记 `DoorClosed`（WLD-INTERIORS §5.2） | WP-43 从世界模型和室内索引自动生成 |
-| 栏杆、绿篱、护岸 | `WallCollider`（折线逐段） | 每段一个 `BoxShape3D` | 顶 = max(视觉高度, 1.5 m)（§7 第 2 条） | 部件包（WP-11 等）、WP-28、WP-30、各区包 |
+| 地面 | `HeightFieldCollider`：每格 65×65 个 int16（单位 cm），1 m 间距 | `HeightMapShape3D` 65×65，1 m 间距是原生的，不用缩放 | 高度直接取 `ITerrain.FillTile(tile, 0)` 的整数，与 WP-15 的 L0 地面读同一份、同网格；三角剖分的对角线连接 (x+1, z) 与 (x, z+1)，L0 用同一种分割，误差不超过 2 cm（P0 验证，§17）。`HeightsCm` 的 `short.MinValue` 是洞哨兵，WP-43 映射为 NaN（只在 WLD-TERRAIN §5.6 的高墙用）。高度场里不出现竖壁，0.35 m 以上的落差是台阶、坡道、台缘带实体（WLD-TERRAIN §5）。Jolt 对正方形高度图建双面的 HeightField | WP-15 |
+| 楼体 | `WallCollider`：首层外包轮廓的每条边 | 薄 `BoxShape3D`，顶取地面以上约 300 m | 屋顶上不去。底 Y0 取脚印外 3 m 带内最低地面 − 2 m，坡地一侧不漏缝（WLD-TERRAIN §7.3）。厚度向楼内加，外表面与看得见的墙面相距不超过 0.3 m；相邻墙段在拐角处各延长半个厚度，不留缝。全校 278 栋楼共 2,422 条边。开放入口处按室内索引的 `EntranceDecl.Open` 开洞；关着的门处不开洞，门所在的墙段表面类型记 `DoorClosed`（WLD-INTERIORS §5.2） | WP-43 从世界模型和室内索引自动生成 |
+| 栏杆、绿篱、护岸 | `WallCollider`（折线逐段） | 每段一个 `BoxShape3D` | 顶 = max(视觉高度, 1.5 m)（§7 第 2 条）。有坡时 Y1 = 沿线两侧 ±3 m 带内地面的最高值 + 这个高度，Y0 = 同一带内地面的最低值 − 1.0 m（WLD-TERRAIN §7.3） | 部件包（WP-11 等）、WP-28、WP-30、各区包 |
 | 校界 | `WallCollider`，表面类型 `Boundary` | 每段一个 `BoxShape3D` | 校界栏杆碰撞顶 2.2 m；校门闸机、车道抬杆、河渠格栅 1.5 m；校门处的隐形墙段到 2.2 m（§7、WLD-OUTSKIRTS §7.1） | WP-30、WP-18（南门）、WP-44 |
 | 台阶、坡道、桥面 | `RampCollider`：凸四边形加底面厚度 | 斜放的 `BoxShape3D`，或 8 个顶点的 `ConvexPolygonShape3D` | 3 级以上的梯段做成一整块坡面；单级台阶靠自动登阶；桥面按 2 m 分段。室内楼梯（WLD-INTERIORS §10）：过全部踏步前缘，坡度 26–34°，门禁上限 40°；斜面顶边与上平台的上表面严格齐平，底边埋进下层地面 ≥ 0.2 m；坡面厚度取梯段板厚 0.15–0.2 m，同时是下面那一跑的"顶"；平台是平的 `SlabCollider` | WP-11、WP-15、WP-28、各室内提供者 |
-| 树干、灯杆、柱子 | `PostCollider`：圆加一个高度区间 | `CylinderShape3D` | 树干的顶取分枝点，树冠下面可以走 | WP-23、WP-13、各区包 |
+| 树干、灯杆、柱子 | `PostCollider`：圆加一个高度区间 | `CylinderShape3D` | 树干的顶取分枝点，树冠下面可以走；Y0 取脚印内最低地面 − 0.1 m | WP-23、WP-13、各区包 |
 | 长椅、花池、石台 | `BoxCollider`：带顶面的盒子 | `BoxShape3D` | 顶面可站（可以跳上去） | WP-13、各区包 |
 | 楼板、平台（室内） | `SlabCollider`：多边形板，带厚度 | 凸分解成若干 `ConvexPolygonShape3D`；实在分不开才用 `ConcavePolygonShape3D`，要经审批（ENG-WP §5） | 只在开放室内，按层由 `CollisionStorey()` 提供（WLD-INTERIORS §15）；正交楼直接是矩形块 | WP-17、WP-31a–c（普通部分经 WP-51 的平面内核） |
 | 宽梯井与敞开楼梯的栏杆 | `SlopedWallCollider`：斜顶薄墙 | 8 个顶点的 `ConvexPolygonShape3D` | 顶在踏步前缘线以上 1.5 m；梯井宽 ≤ 0.2 m（常规双跑梯）时不用它，两跑之间做一道整面 `WallCollider`（`Barrier`），从下层楼面到上层楼面再加 1.5 m（WLD-INTERIORS §10） | WP-11、各室内提供者 |
@@ -524,7 +524,7 @@ gates: [G4, G8, G15, G16, G19, G21]
   - 先用 `CreateShapeOwner()`、`ShapeOwnerAddShape()`、`ShapeOwnerSetTransform()` 把这个 body 的全部形状加完，再 `AddChild()` 入树。原因：Jolt 对已经在物理空间里的 body，每加一个形状就会立即重建整个复合形状，逐个加是 O(n²)；
   - body 只在主线程创建和删除：物理模拟默认不是线程安全的；
   - 用 shape owner 加的形状，在"显示碰撞形状"调试模式下照样看得到。它比几千个 `CollisionShape3D` 节点轻，也比直接调 `PhysicsServer3D`（要手动释放 RID，没有调试显示）更适合多代理协作。
-- **常驻数据**：2 m 分类栅格、8 m 安全点网格、低精度地形高度，都用自写查询（`ISpatialIndex`），不进物理引擎。它们随启动集 `boot_<地图>.pck` 发布，不在本机烘焙（SYS-MAPS §2.4，D-165），所以 LoadData 之后就能查，模式切换找落点不依赖本机缓存。模式切换找落点、旁观模式的贴地限速都用它们。常驻数据按图，只有当前图的在内存里（SYS-MAPS §6）。
+- **常驻数据**：2 m 分类栅格、8 m 安全点网格，都用自写查询（`ISpatialIndex`），不进物理引擎。它们随启动集 `boot_<地图>.pck` 发布，不在本机烘焙（SYS-MAPS §2.4，D-165），所以 LoadData 之后就能查，模式切换找落点不依赖本机缓存。地形高度由 `ITerrain.HeightAt` 运行时求值，随世界模型在 LoadData 时建好，不另存表（WLD-TERRAIN §9.4）。模式切换找落点、旁观模式的贴地限速都用它们。常驻数据按图，只有当前图的在内存里（SYS-MAPS §6）。
 - **切图**（SYS-MAPS §13）：Unload 时整图的碰撞 body 出树并释放（WP-43），本图的 body 计数归零，这是 G16 切图判据之一；新图出生前按 §14 第 5 条等碰撞就绪（§5"切图出生"）。
 
 **内存与耗时**（数值待 P0 实测，§17）
@@ -626,7 +626,8 @@ public interface IViewControl
 - 抽样检查碰撞体的水平外扩不超过 0.3 m；
 - 在可行走遮罩上随机撒 2000 个点，放下角色的圆柱碰撞体：不穿透，1 秒内着地；
 - 集中测试时从 200 个随机点出发，各按脚本随机走、跑、跳 30 s：不进入关着的楼和开放楼的封口以外，不穿地，卡住不超过 3 s；
-- 可达性检查（§7 第 5 条）：只到得了 WLD-INTERIORS §3 登记的三处屋顶或高处，而且只经开放室内的楼梯或电梯；
+- 可达性检查（§7 第 5 条，计入地形）：只到得了 WLD-INTERIORS §3 登记的三处屋顶或高处，而且只经开放室内的楼梯或电梯；
+- **地形**（WLD-TERRAIN §7.4、WLD-TERRAIN §7.5）：碰撞高度场与 L0 网格的整数逐格相同（洞格除外）；统计相邻碰撞格接缝两侧坡度折角 > 5° 的位置，出 lint 报告，不阻断；`Stand` 落点周围 5 m 内坡度 ≤ 5%；坡度 > 26.6° 的格都记 `Steep`，那里没有安全点；
 - **落地检查**：行走模式下跳到或传送到全部可传送标记的 `Stand`，都能正确落地。范围是：点位 P00–P23（含 WLD-INTERIORS §2.17 的室内新增点 P16–P23，`Entry = Door` 的从最近的开放入口走进去）；锚点 A01–A13 的导览亭与导览桩（SYS-ATLAS §6）；每个开放入口门外 2.5 m 面向门的落点；路线 R1–R14 的起点（SYS-ATLAS §5）。传送到达时碰撞格就绪后才散开雾幕，最多等 1.5 s（§14 第 5 条，SYS-ATLAS §7.2）；`Stand` 不在缓冲带里，也不在离校界 1 m 以内（WLD-OUTSKIRTS §13.1）；
 - **读档落地**：在可行走遮罩和开放室内各层随机取 500 个脚位存档再读回：都直接站在原脚位，不下落；把其中 50 个脚位改到楼体里或已不开放的室内，都按 SYS-SAVE §5.6 挪到 50 m 内最近的安全点，找不到的切到旁观；
 - **校界缓停**（WLD-OUTSKIRTS §13.2）：从校界上 20 个随机点，以 3.6 m/s 和 5.6 m/s、正面和斜 30° 走向栏杆、闸机、格栅：都在 0.6 m 内平滑停下，速度单调减小；能沿栏杆滑走；"校外暂未开放"出现一次、60 s 内不重复；越出校界的回位兜底触发 0 次；
@@ -663,6 +664,7 @@ public interface IViewControl
 | 镜头贴墙 0.3 m 时渲染端会不会抖（§12 精度） | 在校区角点实测，WP-01 | 不做额外处理 |
 | 控制器每帧耗时与它的额度（§12 耗时、§13 内存与耗时、ENG-BUDGET §8） | P0 原型实测后定额度，WP-42 | 预计 0.05–0.3 ms |
 | 碰撞高度场的三角剖分对角线与 L0 一致，误差不超过 2 cm（§13 图元映射"地面"） | P0 验证，WP-15、WP-43 | 与 L0 同网格、同对角线 |
+| 相邻地面碰撞格接缝处是否绊脚，要不要把加载环内的地面高度场并进同一个 body（§12 设置"内部边"） | P0 接缝实验，WP-43、WP-42（WLD-TERRAIN §11 T1） | 每格一个 body；折角 > 5° 只统计 |
 | 每格碰撞 `.tbin` 的大小，加载环内 Jolt 内部结构的内存（§13） | P0 实测，WP-43 | 每格 50–200 KB；加载环内 `.tbin` 合计 ≤ 1.3 MB，Jolt 内部结构另计 |
 | 碰撞一格的本机烘焙耗时，冷缓存下沿 F1 行走一圈的碰撞冻结累计（§13、§14 第 5 条，D-165） | P0 实测，WP-43、WP-02；G10 冷缓存子项 | 一格 ≤ 50 ms（开发机单线程）；冻结累计 ≤ 2 s |
 | 碰撞级 C 的加载半径与卸载半径（§13） | P0 定，PC 上可以放宽，WP-43 | 96 m / 160 m |

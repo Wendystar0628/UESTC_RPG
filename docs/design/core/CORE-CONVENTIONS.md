@@ -127,10 +127,11 @@ gates: [G1, G2, G3, G4, G5]
 | 实体 ID（`FeatureId`） | `campus.json` 的 `entities[].id`；清水河的前缀是 `qsh:`，形如 `qsh:<类型>:<编号>` | `qsh:way:544688571`、`qsh:relation:8407525` | 只在本图内唯一；`qsh:` 是数据，不是地图 ID；按 ID 定位对象，不按名字；通用代码里不写字面量；以后的图换用自己的前缀，G5 查前缀不冲突 | CORE-INDEX §4、SYS-MAPS §2.1 |
 | 设计增补 | `design:` 开头；锚点实体写 `design:anchor:Axx` | `design:anchor:A02` | 只经覆盖层的 `add` 新增，写明理由 | ENG-ARCH §3、MAP-QSH-ADDITIONS §0、SYS-ATLAS §6 |
 | 可行走区域 | `walk:` 开头 | — | 只在 `overlay/walkable.overlay.json` | SYS-WALK §6 |
+| 地形操作 | `design:terrain:` 开头，本图内唯一 | `design:terrain:lakeside-lawn-tier1` | 只在 `overlay/terrain/<区>.terrain.json`；每条写理由 | WLD-TERRAIN §3.2 |
 | 环境发声器 | `amb:` 开头，本图内唯一 | — | G5 查重 | ENG-ARCH §3（音频块） |
 | RPG 预留前缀 | `npc:`、`item:`、`quest:` | — | 观光数据不得使用 | ENG-ROADMAP §6.1 第 6 条 |
 
-- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<区>.overlay.json`，一区一个文件，由该区工作包独占。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。
+- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<区>.overlay.json`，一区一个文件，由该区工作包独占。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
 
 ### 3.2 编号体系
 
@@ -333,6 +334,7 @@ UESTC_RPG/
 | `overlay/outskirts.overlay.json`、`outskirts.json` | WP-47 |
 | `overlay/atlas.overlay.json`、`atlas/markers.json` | WP-48c；`atlas/labels.json` 归 WP-48a |
 | `overlay/interior/<区>.interior.json` | 各区精修室内的包 |
+| `overlay/terrain/<区>.terrain.json` | 一个文件只归一个包（文件与包的对应见 MAP-QSH-TERRAIN，写法见 WLD-TERRAIN §3） |
 | `interiors.json` | 开放室内清单：主代理（schema 与格式归 WP-51，条目由负责包经回报提交，增删由主代理审批，D-164） |
 | `incidents.json` | WP-26（偶发事件清单，SYS-MOTION §10） |
 | `waypoints.json` | WP-36 |

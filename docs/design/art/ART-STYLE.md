@@ -7,7 +7,7 @@ keywords: [三渲二, 卡通材质, toon.gdshaderinc, 调色板, 色名, 调色�
 owners: [WP-04, WP-05]
 contributors: [WP-23, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ENG-ARCH, ENG-PERF, SYS-TIME]
-related: [ART-SKYLIGHT, WLD-VEGETATION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-BUDGET, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, WLD-INTERIORS, ART-AMBIENCE, ART-RENOVATION]
+related: [ART-SKYLIGHT, WLD-VEGETATION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-BUDGET, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, WLD-INTERIORS, ART-AMBIENCE, ART-RENOVATION, WLD-TERRAIN]
 contracts: [PaletteToken, ToonSpec, ToonRef, ToonFx, ToonNormal, LineClass, ShadeSteps]
 data: ["game/style/palette/", "game/style/palette/ext/ui.json"]
 gates: [G4, G5, G6, G7, G12, G13, G16, G17]
@@ -17,7 +17,7 @@ gates: [G4, G5, G6, G7, G12, G13, G16, G17]
 > **范围**：本文规定全局风格：调色板与色名、明暗分阶与影色推导、描线、高光边缘光与透光、贴图、后期、排除元素和情绪弧线。文中色值是默认状态（秋 · 黄金，17:30，晴）这一格，其他"关键帧 × 季节"格由色彩脚本推导；四季和昼夜一律视觉效果优先，真实的天文、花期、气候只作参考。凡是上屏的内容都受本文约束，按需查对应小节。
 > **不在本文**：天空、太阳和雾的数值（ART-SKYLIGHT、SYS-TIME）；色名在其他格的取值和天气修正量（SYS-TIME §3、SYS-WEATHER §7）；建筑几何（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；动态（SYS-MOTION）；界面色的取值（UI-VISUAL §3）。
 > **查阅**：先读 §0；质感参照与移植做法看 §1；色名与登记看 §8；影色看 §3；明暗分阶与着色器写法看 §2；描线看 §4；贴图看 §6；后期看 §7；排除元素与场景文字看 §9、§11
-> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[ART-SKYLIGHT 天空光照大气](ART-SKYLIGHT.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)
+> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[ART-SKYLIGHT 天空光照大气](ART-SKYLIGHT.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ### 分工
 
@@ -137,6 +137,7 @@ WP-04 负责调色板、卡通材质、贴图；WP-05 负责描线、后期。�
     - 物体与地面、墙与地面的接触处一律不推。接地感交给"物体分界线（§4.1）+ 真实投影"。
     - 推阈值的做法参考《罪恶装备 Xrd》的顶点色阈值偏移（设 0 时永远在影里）。
 - **2.2 法线展平**：建筑大面的法线要展平，避免在平墙上出现碎影。原则是"把多余的三维感杀掉"。建筑平面用硬边法线、曲面用软边法线、球柱类道具用解析法线，规则见 ART-MODELING §7.6。
+  - **地面**：平面类（坡度缓于 1:6）着色法线恒向上；设计土坡（不缓于 1:6）用分面平法线，冠线、脚线做硬边，按顶点属性里到冠线、脚线的有符号距离取阈值；坡面与平面用同一个色名，靠明暗阶读出起伏（WLD-TERRAIN §8.2）。
   - 地标曲面（八角穹顶、电子管穹顶、圆鼓体量）的明暗交界形状要干净，用手调法线加顶点阈值偏移（Xrd 的做法；Hi-Fi Rush 的面部阈值图是同一思路），不做贴图式 SDF。P0 在 17:30 和正午各看一次穹顶的交界线。
 - **2.3 树冠法线**分三类（WLD-VEGETATION §1.1）：
   - **云团型**（樱花、桂花、灌木球等）：法线向所属小球的球心软化 0.72，生成时烘进网格，每个小球自成一块干净的明暗。

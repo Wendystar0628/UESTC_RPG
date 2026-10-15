@@ -7,7 +7,7 @@ keywords: [外围, 校外, 校界, 边界, 前沿线, 截面线, 大箱庭, 外�
 owners: [WP-47]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, ART-STYLE, WLD-DIORAMA, SYS-VIEW, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-WALK, SYS-MAPS]
-related: [ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, UI-NAV, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE]
+related: [ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, UI-NAV, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE, WLD-TERRAIN]
 contracts: [SurfaceTag.Boundary, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, IWorldModel.Outskirts, RoamLimits.PushRate, RoamLimits.PushMax, RoamLimits.EdgeFogMax, MapEnvironment.Outskirts, ICameraRig.EdgeFog, ShaderGlobals.EdgeFog]
 data: ["pipeline/outskirts/", "game/data/maps/qingshuihe/outskirts.json", "game/data/maps/qingshuihe/overlay/outskirts.overlay.json"]
 gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
@@ -17,7 +17,7 @@ gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
 > **范围**：本文规定大箱庭的范围（校界、前沿线、截面线）与截面精度，外围环境带 O0–O3 的内容、精度、灯光与季节，外围的保留、删除与新增，行走和旁观在边界处的阻挡、推回与提示，以及外围的数据管线、许可、预算与验收。校界以外的内容、活动范围（SYS-VIEW §2.3）和校界收口（SYS-WALK §7）的细则以本文为准。
 > **不在本文**：截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS §2.14）；行走控制器与碰撞数据（SYS-WALK）；活动范围的契约字段与按图数据（SYS-MAPS）；声音的实现（SYS-AUDIO）。
 > **查阅**：先读 §0；校界、前沿线与截面线看 §3；外围分层与精度判定看 §4；数据管线与覆盖层看 §6；行走阻挡看 §7；飞行阻挡与 `edge_fog` 看 §8；提示文案看 §9；预算与各包增量看 §11、§12
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)、[WLD-TERRAIN 地形](WLD-TERRAIN.md)
 
 ### 分工
 
@@ -66,6 +66,7 @@ WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
 - **在外围加或改内容**：地标、风格化改动和氛围新增写进 `outskirts.overlay.json`（WP-47 独占，ID 以 `design:` 开头、写明理由），不改 OSM 快照；外围不画车流、不加动态，不用霓虹、彩色灯和 LED 屏（§4.4、§4.6、§5.3、§6.3）
 - **外围的灯与地面覆盖**：灯接 WP-39 的时刻表，不新增灯光通道；O0 的灯进 `lamp_grid`、`lamp_table`，O1、O2 只画光晕和路面灯带；O0 读 `ground_mask`、`ground_mask2`，O1、O2 和截面上缘按顶点标志读顶点潜势；不新增着色器（§4.4、§4.5、§11.3）
 - **出边界提示**：行走顶住校界出"校外暂未开放"，旁观到水平边缘出"前方暂未开放"；"前方不可前往 · F 切换旁观可穿过"只用于校内阻挡，不用在校界（§9）
+- **校界附近的地形与水位**：校界内侧 20 m 是地形零带，高度恒为基准 0，外围 O0、O1 与截面上缘一律按平地 y = 0 做；河渠断面可以穿出校界，岸顶恒为 0，河渠的水面高取 `outskirts.json` 交点记录的 `waterY`，与校内该段河渠的常水位一致（§3.5、§12.3，WLD-TERRAIN §2.6、WLD-TERRAIN §6.6）
 
 ## 1 参考做法：挡路与精度的共同规律
 
@@ -159,6 +160,7 @@ WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
 | 量 | 值 | 用途 |
 | --- | --- | --- |
 | 校界 | x −991…989、z −1020…1021（CORE-INDEX、WLD-DIORAMA §1.1） | 行走的边界（§3.1） |
+| 地形零带 | 校界内侧 20 m | 地形高度恒为基准 0（河渠断面除外，岸顶恒为 0），与 O0、O1 和截面上缘的平地接平（WLD-TERRAIN §2.6） |
 | `map_rect`（全图纹理的覆盖范围） | x、z 都是 −1280…1280，即 SYS-MAPS `map.json` 的 `dataRect` | `ground_mask`、`ground_mask2`、`terrain_height`、`precip_occ`、`lamp_grid` 覆盖这个范围（ENG-PERF §1.5）。它盖住 O0（前沿线以内，约 ±1150 m），O0 能贴近到 0.5 m，需要这些纹理；O1、O2 和截面上缘不读它们，即使落在范围内（§4.5） |
 | 地图包围盒（SYS-MAPS的 `MapDescriptor.Bounds`，即箱庭包围盒） | 截面线的包围盒，约 x −1250…1260、z −1400…1440（§15）；管线定稿后写进 `outskirts.json` 的截面线，`Bounds` 由它派生（SYS-MAPS） | 四叉树覆盖范围（约 ±1.5 km）、平面地图的页面范围（SYS-ATLAS）、坐标精度。跟相机走的降水池不用它，用可达范围（SYS-MAPS） |
 | 活动范围的中心 | 校界形心，约 (50, 77)，即 SYS-MAPS的 `MapDescriptor.Center` | §8.1 的 3 km 上限 |
@@ -366,7 +368,7 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 - 两条线：前沿线、截面线（校界仍在 `campus.json`）；
 - 要素：道路横断面、轨道与站台、水系、用地；
 - 楼块：楼型、轮廓、高度、层数、立面与屋顶级别、种子；
-- 其他：树点、灯位、地标引用、水柱交点；
+- 其他：树点、灯位、地标引用、水柱交点；河渠与截面线的交点、河渠穿出校界的点各带 `waterY`，取校内该段河渠的常水位（WLD-TERRAIN §6.6）；
 - 两张网格：软地板、前沿线距离场；
 - 给平面地图的矢量（SYS-ATLAS）：街区轮廓、主要道路边线、河道，供 WP-48a 画外围淡线；截面线（箱庭外缘）的闭合折线，供 SYS-ATLAS底图外围纹理 `map_sdf_out` 的 A 通道（箱庭外缘）。都是上面已有要素的派生，不另采数据。
 
@@ -631,7 +633,7 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 | WP-02 | 四叉树覆盖地图包围盒 `MapDescriptor.Bounds`（箱庭包围盒，约 ±1.5 km）；O2 常驻块随 L4 在雾幕里同步加载、不淘汰；O1 只有临街店面那一层裙房有 L0；流畅档 O2 切卡片环 |
 | WP-04 | `fog.gdshaderinc` 加 `edge_fog` 一项；`toon.gdshaderinc` 按外围的顶点标志选择地面潜势的来源（§4.5）；外围窗号段跳过 `window_override`；作物和外围的色名；外围按 §5.4 的画法取色与线 |
 | WP-05 | Compositor 写给计算着色器的 push constant 加 `edge_fog` 和 `map_rect` 中心 |
-| WP-08 | 世界模型解析 `outskirts.json` 和外围覆盖层（单独一层）；向 WP-06 提供前沿线距离场、软地板网格；向 WP-23 提供外围树点 |
+| WP-08 | 世界模型解析 `outskirts.json` 和外围覆盖层（单独一层）；向 WP-06 提供前沿线距离场、软地板网格；向 WP-23 提供外围树点；地形评估器校验校界零带，并核对河渠的常水位与交点记录的 `waterY` 一致（WLD-TERRAIN §3.8） |
 | WP-13 | 部件被外围复用；按需加市政变体（公交站牌、路名牌），走部件参数 |
 | WP-14 | 把立面规则提升到部件内核，供外围楼型复用（ENG-ARCH §2） |
 | WP-15 | 道路横断面、路缘、铺装提升为部件，供 O0 复用；`ground_mask`、`ground_mask2`、`terrain_height` 覆盖 `map_rect` |
@@ -671,6 +673,7 @@ public interface IOutskirtsModel                             // WP-08 解析 out
     float FrontDistance(float x, float z);                  // 到前沿线的距离，线内为 0（16 m 网格，双线性）
     float SoftFloor(float x, float z);                      // 屋顶净空 + 40 m（8 m 网格，外扩一格取最大）
     // 道路横断面、轨道与站台、水系、用地、树点、灯位、地标、水柱交点：字段由 WP-47 定，经 WP-00 并入
+    // 水柱交点与河渠穿出校界的点各带 float WaterY：与校内该段河渠的常水位一致（WLD-TERRAIN §6.6）
 }
 // IWorldModel 增：IOutskirtsModel? Outskirts { get; }       // 没有外围数据的地图为 null
 

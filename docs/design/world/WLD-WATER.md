@@ -7,7 +7,7 @@ keywords: [水体, 水面, 湖面, 西湖, 东湖, 河渠, 波纹线, 主光反�
 owners: [WP-24]
 contributors: [WP-07, WP-18, WP-21, WP-23, WP-26, WP-28, WP-30, WP-37, WP-42, WP-44, WP-45b, WP-47, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
-related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, SYS-VIEW, SYS-WALK, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
+related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, SYS-VIEW, SYS-WALK, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, WLD-TERRAIN]
 contracts: [refl_lamps, reflect_tex, reflect_vp, reflect_lake]
 data: ["game/data/maps/qingshuihe/map.json"]
 gates: [G4, G7, G8, G10, G12, G13, G16, G17]
@@ -18,7 +18,7 @@ gates: [G4, G7, G8, G10, G12, G13, G16, G17]
 > **范围**：本文规定全校水面的动画式画法（底色与色带、波纹线、主光反光带、泡沫线、倒影、四季与天气的水面、涉水涟漪），西湖、东湖、河渠、主楼水池、截面水柱、游泳池池水和品学楼叠水喷泉的水面，以及 Godot 下的水面材质、倒影接口与数据通道。
 > **不在本文**：驳岸、栈桥、拱桥、亭子（MAP-QSH-CORE、MAP-QSH-SOUTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST）；水边的动物（WLD-LIFE）；荷和水生植物（WLD-VEGETATION）；水的动态节奏（SYS-MOTION）；路面积水的倒影（SYS-WEATHER §7，WP-45b）；水下的介质呈现（SYS-VIEW §5）；水声（SYS-AUDIO）。
 > **查阅**：先读 §0；所有水面通用的画法（色带、波纹线、反光带、倒影、四季与天气）看 §1；西湖与喷泉看 §2；东湖看 §3；河渠与漂浮物看 §4；水面材质、倒影接口与数据通道看 §7；游泳池与叠水喷泉看 §8、§9；待定参数看 §10
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)；相关：[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[WLD-VEGETATION 植被](WLD-VEGETATION.md)、[WLD-LIFE 动物与生活痕迹](WLD-LIFE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)；相关：[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[WLD-VEGETATION 植被](WLD-VEGETATION.md)、[WLD-LIFE 动物与生活痕迹](WLD-LIFE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[WLD-TERRAIN 地形](WLD-TERRAIN.md)
 
 ### 分工
 
@@ -69,6 +69,7 @@ gates: [G4, G7, G8, G10, G12, G13, G16, G17]
 - **驱动漂浮物和喷泉的节奏（SYS-MOTION）**：本包提供波纹相位、流速、喷泉高度和每条河按 1 m 重采样的中线；漂浮物的中线截到校界格栅前 2 m（§4.2、§4.3）
 - **做驳岸、桥、亭、格栅、喷泉石台（区域包、WP-21、WP-30）**：只做岸上和水中的结构，水面和落水归本包；格栅条上挂的落叶是 WP-30 的静态物件（"分工"一节、§4.3、§9）
 - **阴天和雨夜的水色（WP-37）**：由调色板的天气修正层给出，水面只读调色板，不另读天气（§7.1）
+- **定水位、做岸或湖底（WP-08、各区包、WP-28）**：水面高一律读 `ITerrain.WaterY`；湖岸、河岸的地形与岸型按 WLD-TERRAIN §6，岸线与 OSM 水体多边形重合（§7.1）
 
 ## 1 动画式水面（所有水体通用）
 
@@ -273,6 +274,7 @@ gates: [G4, G7, G8, G10, G12, G13, G16, G17]
   - `cull_disabled`，从水下能看到水面的背面（§7.5）；
   - 本身 `cast_shadow = Off`，否则湖底和水下的东西会被水面遮暗。
 - **水面网格与顶点数据**：水面按内容格由 WP-24 的生成器（纯 .NET）从水体多边形和覆盖层算出，随格烘焙（D-165）、随格加载，所有水面用同一个 `water.gdshader`。到岸距离与流向逐顶点写进水面网格，不做全图岸线遮罩，也没有按湖的遮罩贴图：UV = 流速 (vx, vz)，单位 m/s，湖为 0；UV2 = (到岸距离，单位 m；倒影湖号，−1 表示不做平面倒影)。以后别的包需要岸线距离或逐像素的标记数据，再由生成器的数据提供。
+- **水面高 `waterY`**：每个水体（每个湖、每段河渠、池水）有自己的常水位，由地形评估器给出（`ITerrain.WaterY`，WLD-TERRAIN §6.1），不写死。水面网格的高度、倒影镜像面的 h（§7.2）、冬季浅滩的顶面（waterY − 0.05 m，§3.5）、截面水柱的上缘（WLD-DIORAMA §3）都读它；水面网格顶点里的到岸距离以 OSM 水体多边形的边为零线，与地形的岸线重合（WLD-TERRAIN §6.1）。河渠每段水位恒定，只在堰、闸、涵口阶降。
 - **伪深度**：三道硬边色带（§1.1），阈值 1.5 / 4 / 9 m 读顶点属性里的到岸距离，近岸浅、湖心深。边界用 fwidth 抗锯齿。
 - **四芒星闪点**（§1.3）：在 fragment 里按 0.5 m 网格取格，只在波纹亮线遮罩为 1、反射视线与全局 `sun_dir` 夹角很小的格里画；星形用两条正交的细长亮条，颜色取调色板的主光色，HDR 增益 2.0–2.8，写进 `EMISSION`，乘 (1 − smoothstep(0.4, 0.5, 阴度))；同屏 40 个的上限用格子的哈希阈值随距离收紧来保证，不在 CPU 计数。
 - **泡沫线**：到岸距离小于 w 处画白线，w = 0.3–0.5 m，冬季 0.5–0.9 m（读全局 `snow`）；断口用沿岸噪声做阈值；边缘用 fwidth 抗锯齿。浅滩边缘的泡沫线取浅滩阈值的等值线。
@@ -297,7 +299,7 @@ gates: [G4, G7, G8, G10, G12, G13, G16, G17]
 | 世界里放什么 | 平涂的 REFLECT 代理：远景环、不超过 10 个地标（L2/L3 网格）、岸边树冠替身、两组荷（WLD-VEGETATION §7.3）。代理着色器读全局调色板，岸树替身读季相行，亮窗和灯读同一套哈希与灯光通道纹理，所以倒影里的亮灭与岸上一致。倒影世界里不画天空：放一个 WorldEnvironment，背景用纯色清除，环境光、反射源、辉光和雾全关，色调映射参数与主世界同步 |
 | 天空 | 倒影视口的背景透明，倒影世界里不画天空。水面着色器用 `fog.gdshaderinc` 的 `sky_side_weight`、`sky_column_lab` 解析补出天空：平面倒影图里没画到的像素，以及走解析天空的湖，都用它，与 WP-40 的天空同源 |
 | 怎么放 | 复用 TileBundle 里已有的网格和 MultiMesh 资源，用 RenderingServer 在倒影世界的 scenario 里另建实例，不复制几何；代理与本体同格加载、同格卸载 |
-| 镜像相机 | 位置 y′ = 2h − y（h 为该湖水面高度），朝向用镜像后的前向和上向量经 `LookAtFromPosition` 得到；视场角、长宽比、远近裁剪面与主相机相同 |
+| 镜像相机 | 位置 y′ = 2h − y（h 为该湖的常水位 `waterY`，§7.1），朝向用镜像后的前向和上向量经 `LookAtFromPosition` 得到；视场角、长宽比、远近裁剪面与主相机相同 |
 | 裁剪 | 4.7 的 Camera3D 没有斜裁剪：只放水面以上的代理，并在代理着色器里丢弃 y < h 的片元 |
 | 选湖 | WP-24 的 C# 估算各候选湖在屏幕上的面积，只给最大的那个湖做倒影，换湖带回差；其余湖和全部河渠用公共 include 里的解析天空函数，加上灯条（§7.3）。路面积水复用同一个解析天空函数和灯条（SYS-WEATHER §7）。候选湖读本图 `map.json` 的 `env.reflectLakes`，列表顺序就是湖号 `reflect_lake`（SYS-MAPS §3）。清水河要列西湖和东湖两个：东湖映着宣邦楼的塔楼和钟楼（§3.2），只靠解析天空画不出来 |
 | 交给水面 | 全局参数 `reflect_tex`（sampler2D，SubViewport 的 ViewportTexture）、`reflect_vp`（mat4，渲这张图那一帧的反射相机"投影 × 视图"矩阵）、`reflect_lake`（int，当前做倒影的湖号）。水面顶点属性里的倒影湖号（UV2.y）等于 `reflect_lake` 时，把片元的世界坐标乘 `reflect_vp` 得到 UV 去采样；否则走解析天空 |

@@ -7,7 +7,7 @@ keywords: [箱庭边界, 地层截面, 剖面, 截面上缘, 地下水线, 卵�
 owners: [WP-22]
 contributors: [WP-37, WP-47, WP-40, WP-07, WP-30]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-WATER, SYS-TIME, SYS-WEATHER, SYS-MAPS, WLD-OUTSKIRTS]
-related: [SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-ATLAS]
+related: [SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-ATLAS, WLD-TERRAIN]
 contracts: []
 data: ["game/data/maps/qingshuihe/backdrop.json", "game/assets/style/backdrop/qingshuihe/"]
 gates: [G4, G5, G7, G8, G12, G13, G16]
@@ -17,7 +17,7 @@ gates: [G4, G5, G7, G8, G12, G13, G16]
 > **范围**：本文规定箱庭外缘沿截面线切下的地层截面、河渠水柱截面、截面下缘与雾海（含清水河银带），以及四周 360° 的手绘远景和雪山，包括它们随时段、季节、天气的变化。时刻和季节可调，每种组合都要好看；受光关系一律按实时主光判定，文中写到的具体光色是默认状态（秋 17:30）的样子。
 > **不在本文**：天空穹顶、星空与日月（ART-SKYLIGHT）；外围街区 O0–O2 与截面线的生成（WLD-OUTSKIRTS）；校界栏杆、校门与河渠格栅（WLD-OUTSKIRTS §7）；镜头活动范围（SYS-VIEW §2.3、WLD-OUTSKIRTS §8）；镜头在地下和雾海里的画面（SYS-VIEW §5）。
 > **查阅**：先读 §0；截面的画法、受光与实现看 §2；河渠水柱看 §3；雾海、清水河银带与雾天抬升看 §4；远景卡片的分层与实现看 §5；雪山看 §6；待定参数看 §7
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-WATER 水](WLD-WATER.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS.md)；[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-WATER 水](WLD-WATER.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS.md)；[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[WLD-TERRAIN 地形](WLD-TERRAIN.md)
 
 ### 分工
 
@@ -123,7 +123,7 @@ gates: [G4, G5, G7, G8, G12, G13, G16]
 
 - 上层浅青绿，下层深青绿，中间有一道分层。
 - 河底是卵石，有几株倒伏的水草，摆动见 SYS-MOTION §5.3。
-- 水柱的上缘就是水面线，和箱庭里的水面接上。
+- 水柱的上缘就是水面线，和箱庭里的水面接上：高度取 `outskirts.json` 交点记录的 `waterY`，与校内该段河渠的常水位一致（WLD-OUTSKIRTS §12.3、WLD-TERRAIN §6.6）。
 - 水色与 WLD-WATER §1 一致。
 - 实现：每个交点一个盒体（暗涵断面同理），不透明；两层水色加分层线、玻璃白边、河底卵石都画在截面着色器的水柱分支里（按 instance uniform 切换，不另加着色器）；水草在 vertex() 里按 `anim_time` 摆动，周期 4–6 s（SYS-MOTION §5.3）。
 

@@ -7,7 +7,7 @@ keywords: [着色器白名单, 全局着色器参数, 全局数据纹理, Shader
 owners: [WP-01, WP-02]
 contributors: [WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-32, WP-33, WP-34, WP-37, WP-38, WP-39, WP-40, WP-42, WP-43, WP-45, WP-46, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-WP]
+related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-WP, WLD-TERRAIN]
 contracts: [ShaderGlobals]
 data: ["game/style/shaders/", "game/style/outline/", "output/perf/"]
 gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
@@ -19,7 +19,7 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 > **查阅**：先读 §0；着色器白名单与全局参数登记看 §1.4、§1.5；预热与编译看 §2；图层与剔除看 §4；流式与本机烘焙看 §5；阴影、灯光与后期看 §10；画面设置与自动调节看 §11；交付自检看 §14
 > **读者**：按需查阅。其他包接入时先看 §0.1；给场景加内容时查 §1.1（容器选型）、§1.4（着色器）和 §4（图层）；写着色器或要读世界状态时查 §1.5、§2；内核与流式（WP-01、02、43、51）读 §1、§5–§8 里与自己相关的小节；材质与后期（WP-04、05）读 §2、§3、§10.2；阴影、灯光与倒影（WP-03、24、39）读 §10.1、§10.3、§10.4；植被、飘落与降水（WP-23、38、45）读 §9；剔除（WP-33）读 §4；界面与平面地图（WP-35、48）查 §1.4 的画布着色器和 §2 的二维预热；画面设置与自动调节（WP-32）读 §11；测量与门禁（WP-27）读 §12；任何包交付前对照 §14 自检。
 > **API 参考**：[docs/godot-api/README.md](../../godot-api/README.md)，写代码时以它的签名为准。
-> **关联**：[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-WP 工作包](ENG-WP.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)
+> **关联**：[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-WP 工作包](ENG-WP.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ## 0 十条总原则
 
@@ -55,7 +55,7 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 
 | 内容 | 容器 | 说明 |
 | --- | --- | --- |
-| 静态、独有的块几何（墙板、屋面、地面、铺装） | 离线按"材质 × 不超过 16–24 m 的块"合并成 ArrayMesh，经 RenderingServer 挂载 | 每块 1–8k 三角形，每块每种材质一个表面。块要小，遮挡剔除才有效（§4） |
+| 静态、独有的块几何（墙板、屋面、地面、铺装） | 离线按"材质 × 不超过 16–24 m 的块"合并成 ArrayMesh，经 RenderingServer 挂载 | 每块 1–8k 三角形，每块每种材质一个表面。块要小，遮挡剔除才有效（§4）。例外：有地形起伏的地面格每格每表面一块，不切小块（地面几乎没有遮挡，视锥剔除够用），P0 按绘制调用实测确认（WLD-TERRAIN §9.5） |
 | 在本格只出现 1–3 次、不超过 2k 三角形的部件 | 烘焙时直接并进所在的块 | 不值得单独实例化 |
 | 每格同种不超过约 64 个的重复部件（雨水管、外机、灯杆、长椅） | 独立实例：同一个 Mesh RID、同一个材质 | Forward+ 的自动实例化把它们合成一次绘制，每个实例单独剔除 |
 | 每格同种超过约 64 个的重复部件（窗模块、窗帘、栏杆段、单车） | MultiMesh，范围取"格 ∩ 楼"（一栋楼的同种部件一个） | MultiMesh 整体剔除、共用一级 LOD；按楼拆开，才有机会被遮挡剔除 |
@@ -254,7 +254,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `tree_species` | 32×8 RGBA32F | 树种表：叶量 A、开花 B 的四季锚点，摆幅，枝条笔触的数组层号，色行号，是否落叶 | WP-38 | 启动时 |
 | `mat_table` | 128×4 RGBA8，最近邻 | 按材质 ID 查：行 0 = 线表（线色染色强度、线宽系数、擦除位、只描外轮廓、内部软线、不描、小件淡出距离）；行 1 = 明暗档、`half_level`、`band_soft`、湿润响应；行 2 = 透光系数 k_t、受光侧暖边系数、闪点系数；行 3 = 解析法线的方式（0 不用、1 球、2 柱）、倒角提亮的受光幅度、影里幅度（0 表示这个材质不提亮，也不画凸边亮线）、保留（ART-STYLE §2.5、ART-STYLE §2.6、ART-STYLE §4.5）。线表放在这张全局纹理里、不另建 RD 纹理：toon 着色器要读湿润响应，RD 纹理它读不到；计算着色器用 `RenderingServer.TextureGetRdTexture()` 读这一张 | WP-04 持有，WP-05 共读 | 启动时写入，静态 |
 | `ground_mask` | 全图（范围 = `map_rect`）RGBA8，不压缩 | R 银杏落叶潜势、G 其他落叶与花瓣、B 积雪潜势、A 保留（§9） | WP-15（R、G 由 WP-23 生成） | 静态（切图时重建） |
-| `terrain_height` | 全图（范围 = `map_rect`）RF | 低精度地形高度（飘落池落地） | WP-15 | 静态（切图时重建） |
+| `terrain_height` | 全图（范围 = `map_rect`）RF，8 m 格距（清水河 320²，约 400 KB） | 地形高度（飘落池落地）：数据来自 WP-08 的地形评估器（`ITerrain.HeightAt`），LoadData 时在后台按 8 m 格点求值一次；范围外取 0（WLD-TERRAIN §9.4） | WP-15：纹理的创建、上传与全局参数写入归 ground 系统（`game/systems/ground`） | 静态（切图时重建） |
 | `reflect_tex` | 倒影 SubViewport 的 ViewportTexture | 倒影 | WP-24 | 按预设的刷新间隔（每 2–4 帧，SYS-GRAPHICS §1） |
 | `cloud_noise` | 512² RGBA8，可平铺 | 云层和地面云影共用的噪声（SYS-WEATHER §7） | WP-40 | 静态 |
 | `precip_occ` | 全图（范围 = `map_rect`）`Image.Format.Rh`，2 m/px（清水河 1280²，3.3 MB） | 俯视遮蔽顶面高度：雨丝截在顶面、积水倒影步进（§9） | WP-45（开发期烘焙，随启动集发，D-165；与 WP-02、WP-15 配合） | 静态（切图时重建） |
@@ -439,7 +439,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 
 ## 5 流式加载（WP-02）
 
-**级别分工**：全部级别都是烘焙产物，**本机烘焙**（D-165）只有四类：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）、碰撞级 C、室内包与碰撞包、平面地图底图。它们不随包发，在玩家机器上由与开发烘焙器同一个 `Build()`（ENG-ARCH §3、§4）生成：第一次需要时生成，按"格 × 级"存成自定义的格包二进制格式 `.tbin`（整体 zstd），写进本机缓存，之后照常从缓存读（缓存、查找顺序和调度见"本机缓存"与"本机烘焙的时机"两段）。随包发的只有启动集 `boot_<地图>.pck`（L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度、需要 GPU 才能出的产物如 L2 半八面体替身图集，以及全图常驻的小数据：派生数据纹理、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表、导航图，§8）。开发和 CI 的无界面烘焙器 `--bake=all` 照旧，用来出参考哈希、给门禁预烘缓存；`--gen=live` 只生成、不读也不写缓存。启动集在 `res://` 里，仍用 `.res`。`Build()` 在工作线程上跑，内核在同一个工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（Forward+ 下可以在调用线程上创建 GPU 资源），主线程照常只挂载。
+**级别分工**：全部级别都是烘焙产物，**本机烘焙**（D-165）只有四类：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）、碰撞级 C、室内包与碰撞包、平面地图底图。它们不随包发，在玩家机器上由与开发烘焙器同一个 `Build()`（ENG-ARCH §3、§4）生成：第一次需要时生成，按"格 × 级"存成自定义的格包二进制格式 `.tbin`（整体 zstd），写进本机缓存，之后照常从缓存读（缓存、查找顺序和调度见"本机缓存"与"本机烘焙的时机"两段）。随包发的只有启动集 `boot_<地图>.pck`（L4、遮挡体、外围 O2 常驻块与卡片版、需要 GPU 才能出的产物如 L2 半八面体替身图集，以及全图常驻的小数据：派生数据纹理、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表、导航图，§8）。开发和 CI 的无界面烘焙器 `--bake=all` 照旧，用来出参考哈希、给门禁预烘缓存；`--gen=live` 只生成、不读也不写缓存。启动集在 `res://` 里，仍用 `.res`。`Build()` 在工作线程上跑，内核在同一个工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（Forward+ 下可以在调用线程上创建 GPU 资源），主线程照常只挂载。
 
 **TileBundle**（自定义 Resource，WP-02 定义；启动集里存成 `.res`，本机缓存和开发共享缓存里存成 `.tbin`，见"本机缓存"）：
 
@@ -480,7 +480,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 
 **碰撞级 "C"**（SYS-WALK §13）：
 
-- 与渲染的 L0–L4 无关。本机烘焙（D-165），与可见几何用同一套参数生成；每格一个碰撞 `.tbin`（只存形状参数），存在本机缓存里，不在 TileBundle 里。只在行走模式下加载；旁观模式下只保留全局常驻数据（2 m 分类栅格、8 m 安全点网格、低精度地形高度，约 0.9 MB 的 C# 数组；都在启动集里）。
+- 与渲染的 L0–L4 无关。本机烘焙（D-165），与可见几何用同一套参数生成；每格一个碰撞 `.tbin`（只存形状参数），存在本机缓存里，不在 TileBundle 里。只在行走模式下加载；旁观模式下只保留全局常驻数据（2 m 分类栅格、8 m 安全点网格，约 0.9 MB 的 C# 数组，都在启动集里；地形高度由 `ITerrain.HeightAt` 运行时求值，不另存表，待 Astra 在 contract-15 确认，WLD-TERRAIN §9.4）。
 - 图元映射按 SYS-WALK §13：地面 HeightMapShape3D 65×65；墙段、栏杆、绿篱、护岸用 BoxShape3D；台阶、坡道、桥面用斜 Box 或 8 顶点 ConvexPolygonShape3D；树干、灯杆用 CylinderShape3D；室内楼板凸分解。
 - 读缓存的工作线程任务读入碰撞 `.tbin`，解压、校验哈希后由形状参数创建形状资源（在工作线程上建，形状 RID 表是否线程安全由 P0 验证（§16）；不安全时在主线程建形状）。
 - 主线程入树（`kernel/collision`，WP-43）：每格按表面类型建几个 StaticBody3D，类型写进 `CollisionLayer` 和 meta；**入树之前**用 `CreateShapeOwner` 和 `ShapeOwnerAddShape` 加完全部形状，再 `AddChild`（Jolt 对已在空间里的 body 逐个加形状是 O(n²)）。每帧最多入树 1 格，不超过 0.3 ms，计入挂载的 1.0 ms。
@@ -711,7 +711,7 @@ Godot 在 D3D12/Vulkan 上没有"上下文丢失"这一类事件；设备移除�
 | 扉页静帧（每张图 8 张，WebP，每张 0.5–1 MB，SYS-TITLE §1.3） | 约 4–8 MB |
 | 世界数据 JSON（全局 data 与按图的 `data/maps/<地图>/`：`campus.json`、覆盖层、点位、时刻表、`outskirts.json` ≤ 5 MB、`interiors.json`、过场） | 约 10–15 MB |
 | 英雄资产 `.glb`（如有） | 计入主 PCK |
-| 启动集 `boot_<地图>.pck`（每图：L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度、需要 GPU 才能出的产物如 L2 半八面体替身图集；全图常驻的小数据：派生数据纹理（岸线 SDF、灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表（`ambience.bake`）、导航图；参考哈希清单 `bake.manifest.json`，包内 `res://bake/<地图>/boot/bake.manifest.json`，G6 的 `--bake-verify` 用；zstd） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） |
+| 启动集 `boot_<地图>.pck`（每图：L4、遮挡体、外围 O2 常驻块与卡片版、需要 GPU 才能出的产物如 L2 半八面体替身图集；全图常驻的小数据：派生数据纹理（灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表（`ambience.bake`）、导航图；参考哈希清单 `bake.manifest.json`，包内 `res://bake/<地图>/boot/bake.manifest.json`，G6 的 `--bake-verify` 用；zstd） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） |
 | 音频（床 Ogg、短声 QOA、界面 PCM、开场音乐，SYS-AUDIO §18.2） | 约 125–165 MB，G6 里单列 ≤ 165 MB |
 
 合计约 0.45–0.75 GB。几何类烘焙产物不随包发，在玩家机器上本机烘焙并缓存（D-165，§5）。**不随包发、本机烘焙**的只有四类：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）；碰撞级 C；开放室内与简化室内的室内包和碰撞包；平面地图底图（SDF、MSDF 图集、`labels.bake`、区域栅格）。
@@ -724,7 +724,7 @@ G6 的导出体积预算写进 `budgets.json`，两个上限分开记：安装�
 UESTC/                              安装目录（G6 导出，≤ 0.9 GB）
 ├─ UESTC.exe                        导出模板
 ├─ UESTC.pck                        主资源：着色器（D3D12）、贴图、字体、全局音频、assets/title/（扉页）、全局 data 与 data/maps/*/
-├─ boot_qingshuihe.pck              清水河的启动集：L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度、需要 GPU 才能出的产物（如 L2 半八面体替身图集）、全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、ambience.bake 与声学网格、导航图 nav/）、bake.manifest.json；包内路径 res://bake/qingshuihe/boot/
+├─ boot_qingshuihe.pck              清水河的启动集：L4、遮挡体、外围 O2 常驻块与卡片版、需要 GPU 才能出的产物（如 L2 半八面体替身图集）、全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、ambience.bake 与声学网格、导航图 nav/）、bake.manifest.json；包内路径 res://bake/qingshuihe/boot/
 └─ data_<程序集名>_windows_x86_64/   .NET 程序集与运行时（Godot .NET 导出的固定布局）
 
 user://（导出版是 %APPDATA%\UESTC\，不带版本号，ENG-ARCH §2）
@@ -740,7 +740,7 @@ user://（导出版是 %APPDATA%\UESTC\，不带版本号，ENG-ARCH §2）
 
 1. 引擎与 .NET 启动、程序集加载；读画面设置（命令行 > `graphics.cfg` > 自动推荐 > 默认，SYS-GRAPHICS §6）。首次运行时先用默认值，第 6 步分档后再换成推荐预设，仍在扉页后面完成；预热已覆盖所有可达的组合，换预设不再编译；
 2. 主场景第一帧在 0.3 s 内换上扉页（`--title=0` 时是雾色），读各存档位的 meta，选出最近存档位；读 `index.json`，定起始图（`--map` > 最近存档的图 > 默认图）；
-3. `IMapService.Travel(Boot)` 的 LoadData 与 Mount：挂上起始图的 `boot_<地图>.pck`；解析 `campus.json`（WP-08，`System.Text.Json`）和 `outskirts.json`；同步加载 L4、本图遮挡体、外围 O2 常驻块、常驻的低精度地形高度和全图常驻的小数据（都在启动集里，不现烘）；写 `map_rect`，创建全局数据纹理（调色板、树种表、`mat_table`、地面遮罩与地面遮罩 2、灯表、天气的 `cloud_noise` 和 `precip_occ`，灯表、`precip_occ` 等派生数据纹理从启动集读）；音频内核建总线树，后台加载常驻声音集；
+3. `IMapService.Travel(Boot)` 的 LoadData 与 Mount：挂上起始图的 `boot_<地图>.pck`；解析 `campus.json`（WP-08，`System.Text.Json`）和 `outskirts.json`；同步加载 L4、本图遮挡体、外围 O2 常驻块和全图常驻的小数据（都在启动集里，不现烘）；世界模型建好地形评估器，地形高度此后可按 `ITerrain.HeightAt` 查（WLD-TERRAIN §9.4）；写 `map_rect`，创建全局数据纹理（调色板、树种表、`mat_table`、地面遮罩与地面遮罩 2、灯表、天气的 `cloud_noise` 和 `precip_occ`，灯表、`precip_occ` 等派生数据纹理从启动集读）；音频内核建总线树，后台加载常驻声音集；
 4. 三维预热（§2）；
 5. 二维预热：界面着色器、`map_base`、开始页与放映层组件，大页预建并隐藏（§2）；
 6. 首次分档的测量（§11.2）；
@@ -985,6 +985,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 - **退光线**：太阳高度从 2.5° 降到 0.3° 时，`retreat_y` 从 −10 m 升到 80 m。vertex() 里算世界高度 `v_wy = (MODEL_MATRIX × vec4(VERTEX, 1)).y + retreat_bias`；light() 的方向光分支把受光乘以 smoothstep(R − 1.5, R + 1.5, v_wy)，3 m 软边。这样复现 ART-SKYLIGHT §3.4 的退场顺序：地面 → 低层 → 高层 → 穹顶。日出时反向，穹顶最先受光。
 - **穹顶偏置**：instance uniform `retreat_bias` 只在宣邦楼穹顶的实例上设为 6 m，所以**穹顶必须是单独的实例，不能并进块几何**（WP-18 交付时注意）。
 - **掠射面**：light() 里再乘 smoothstep(0, 0.06, N·L)，把容易出痤疮的掠射面整体判进影里；引擎的偏移不能逐片元改，所以由这一条和 `ShadowNormalBias` 共同防痤疮。
+  - **地面材质例外**：地面（图层 2）不乘这一项，只保留 −0.03 ± 0.02 的一阶。地面不投影，没有自遮挡的痤疮；乘上它，背阳的缓坡在低太阳下会大片变暗、明暗交界乱爬。待 P0 在地形样板区 A/B（WLD-TERRAIN §11 T4），验证前按不乘做。
 
 **无影蓝调里的日月交接**（SYS-TIME §2）：
 
@@ -1014,7 +1015,9 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 - 植被的投影见 §9。投影物的绘制调用和三角形按 ENG-BUDGET §2 和 ENG-BUDGET §8。
 - **可选的远影图**：只在 P0 证明第 4 级不够用时才做。用一个 SubViewport 加沿光方向的正交相机渲染深度代理，只在量化步时设 `UpdateMode.Once`，在 max_distance 以外由 `toon.gdshaderinc` 采样。
 
-**不做接触阴影**：不做 SSAO、屏幕空间接触影、地面轮廓距离场色带、道具接触贴片和动物接触球；接地感由描线的物体分界线（ART-STYLE §4.1）和真实投影给出。地面遮罩的 A 通道保留不用，不设全局纹理 `contact_spheres`，WP-25 不写接触球（§1.5）。顶点 AO 只用于覆雪和窄凹处的阈值偏移（窗洞内壁、檐底 0.5 m 内、门洞、栏杆缝，最多推 0.3，颜色仍是同一个影色）。
+**不做接触阴影**：不做 SSAO、屏幕空间接触影、地面轮廓距离场色带、道具接触贴片和动物接触球；接地感由描线的物体分界线（ART-STYLE §4.1）和真实投影给出。
+
+- **例外：草坪的硬质边色带**：草坪靠硬质边（路缘、铺装、楼脚）的一圈画一条深一档的色带，宽 0.5 m，只在 L0。它是几何色带：WP-15 在草坪网格靠硬质边处加一圈顶点，按逐顶点色号换成深一档的颜色，颜色由 WP-15 已登记的草坪暗档色名 `ground.grassDark` 推导，不新增色名；不是全图距离场，不读、不新建任何距离场纹理；L1 以远不画。地面遮罩的 A 通道保留不用，不设全局纹理 `contact_spheres`，WP-25 不写接触球（§1.5）。顶点 AO 只用于覆雪和窄凹处的阈值偏移（窗洞内壁、檐底 0.5 m 内、门洞、栏杆缝，最多推 0.3，颜色仍是同一个影色）。
 
 **楼内、地下和水下**：
 
@@ -1179,7 +1182,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 - **随时段与季节**：代理读调色板行 0，岸边替身读季相行，所以倒影自动跟随时段和季节，不需要额外更新。天空是解析计算的，本来就跟得上。主光反光带、月光银带的画法归 WLD-WATER，这里只保证它们用的主光方向与 `key_dir` 一致。
 - **河渠**：不做平面反射。用反射向量查询共用的解析天空函数，再叠上 `refl_lamps` 里的竖向光条。
 - **天气**（SYS-WEATHER §7）：雨天湖面的波纹线换成雨点环，在 `water` 里按 0.8 m 网格的哈希解析画出（硬边同心环，一拍二），不占涟漪槽位；阴雨天关主光反光带（WLD-WATER）。积水的倒影不用这个视口：反射视线沿 `precip_occ` 步进 8–12 次，碰到顶面画剪影色，否则画解析天空，夜间叠 `refl_lamps` 的灯条；不用 SSR，也不加平面反射（每个视口都会把方向光阴影重渲一遍）。
-- **水面本身**（WLD-WATER）：默认不透明，不读深度和屏幕纹理（读了就会被强制归到透明通道、而且不投影），能接收阴影，`cull_disabled` 让水下能看到底面；泡沫线和"伪深度"读烘焙的岸线 SDF（开发期烘焙，随启动集发，D-165；约 0.25 m/px）；需要真实交界泡沫时才用 `water_clear`。
+- **水面本身**（WLD-WATER）：默认不透明，不读深度和屏幕纹理（读了就会被强制归到透明通道、而且不投影），能接收阴影，`cull_disabled` 让水下能看到底面；泡沫线和"伪深度"读水面网格顶点里的到岸距离（WP-24 的水面生成器写入，随内容格本机烘焙，D-165；没有全图岸线遮罩）；需要真实交界泡沫时才用 `water_clear`。
 - **不用 SSR**：只作用于不透明物体，到画面边缘会断。**不用反射探针**：设成每帧更新时要渲 6 个面。
 - **开销**：每次更新约 0.3–0.6 ms（估计值），平均到每帧按 ENG-BUDGET §2 的 5% 记账。地下和水下时设 `UpdateMode.Disabled`。
 

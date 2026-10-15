@@ -7,7 +7,7 @@ keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用�
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, ENG-GATES, ENG-WP, ENG-PERF]
-related: [ART-STYLE, ART-FIDELITY, SYS-MOTION, SYS-VIEW, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
+related: [ART-STYLE, ART-FIDELITY, SYS-MOTION, SYS-VIEW, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP, WLD-TERRAIN]
 contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, Box3, LodLevel, TileKey, MapId,
   WaypointRef, StableHash, Rng, DetMath, Aspects, Claim, FeatureClaim, AreaClaim, ContentModuleAttribute,
   IContentModule, BuildContext, ContentOutput, MeshLod, GeometryBundle, PartAttribute, ParamAttribute,
@@ -51,7 +51,8 @@ contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, 
   WorldNetwork, PolygonRings, Polyline, OverlayGeometry, BuildingFamily, FacadePreset, DesignKind,
   PostOverride, IRuntimeContext, CinematicDef, CameraSeg, WorldCue, MaskSeg, CaptionCue, ExtraCue, AudioCue,
   CinematicEnd, IBakeService, BakeKey, BakePriority, BakeState, IBakeHandle, BakeProgress, FidelityZone, FacadeSegment,
-  RoofZone, IFidelityModel, FidelityOverlayFile, FidelityOverlayOp, FidelityK1Op, FidelityRaiseOp]
+  RoofZone, IFidelityModel, FidelityOverlayFile, FidelityOverlayOp, FidelityK1Op, FidelityRaiseOp,
+  ITerrain, TerrainFacts, TerrainClass, TerrainOverlayFile, TerrainOp]
 data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt", "game/contracts/schemas/", "game/data/rulesets/", ".gitattributes", ".gitignore"]
 gates: [G1, G2, G3, G4, G5, G6]
 ---
@@ -61,7 +62,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 > **不在本文**：各系统的行为细则以各自的文档为准（例如门的参数 WLD-INTERIORS §4.1、天气 SYS-WEATHER）；全局参数登记表见 ENG-PERF §1.5；预算见 ENG-BUDGET；门禁判据见 ENG-GATES；工作包分工见 ENG-WP；以后的扩展路线见 ENG-ROADMAP。
 > **查阅**：先读 §0；目录归属、程序集边界、禁用写法与自动发现看 §2；契约签名看 §3；资源管线与本机烘焙看 §4；桩看 §5；git 工作树流程看 §6；风险与待验证项看 §7、§9；RPG 扩展点看 §8
 > **读者与技术栈**：写代码的子代理先看 §0 的接入要点，再按"查阅"一行查要用的那一节；主代理另查 §5–§7 的桩、合并队列与风险。引擎是 Godot 4.7.2-stable .NET 版，目标框架 net10.0（D-177），只做 PC（Windows），渲染器 Forward+；代码全部用 C#，着色器用 Godot 着色语言（`.gdshader`、`.gdshaderinc`），计算着色器用 GLSL（`.glsl`）；§3 的 Godot 侧写法以 [引擎 C# API 参考](../../godot-api/README.md) 的签名为准。
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ## 0 结论
 
@@ -195,7 +196,7 @@ UESTC_RPG/
 │  ├─ data/                  运行时 JSON（按图的数据都在 maps/ 下，SYS-MAPS §2.1）：
 │  │  ├─ maps/index.json     WP-46  地图清单、默认地图
 │  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<区>.overlay.json、walkable、outskirts、atlas、fidelity，
-│  │  │                      以及 overlay/interior/<区>.interior.json）；outskirts.json；fidelity.json；interiors.json；waypoints.json；lighting-schedule.json；
+│  │  │                      以及 overlay/interior/<区>.interior.json、overlay/terrain/<区>.terrain.json）；outskirts.json；fidelity.json；interiors.json；waypoints.json；lighting-schedule.json；
 │  │  │                      backdrop.json；sky.json；review.json；cinematics/<id>.json；atlas/（markers.json、labels.json）；
 │  │  │                      audio/（声景与声学的本图数据）；nav/（routes.json、views.json）；incidents.json（偶发事件清单）；
 │  │  │                      entities/（RPG 预留，观光期不写入）
@@ -317,6 +318,7 @@ game/data/maps/qingshuihe/overlay/outskirts.overlay.json、outskirts.json   WP-4
 game/data/maps/qingshuihe/overlay/atlas.overlay.json、atlas/markers.json   WP-48c  锚点实体与标记（SYS-ATLAS §9）
 game/data/maps/qingshuihe/atlas/labels.json   WP-48a  标注（初稿由烘焙器生成，人工校订）
 game/data/maps/qingshuihe/overlay/interior/<区>.interior.json   各区精修室内的包独占本区一份（WLD-INTERIORS §14）
+game/data/maps/qingshuihe/overlay/terrain/<区>.terrain.json   地形覆盖层，一个文件只归一个包（WLD-TERRAIN §3.1；清水河的文件与包的对应见 MAP-QSH-TERRAIN）
 game/data/maps/qingshuihe/interiors.json   主代理  开放室内清单（清单的增删由主代理审批；格式与 schema 由 WP-51 定，WLD-INTERIORS §14）
 game/data/maps/qingshuihe/waypoints.json   WP-36  点位清单（UI-NAV §6）
 game/data/maps/qingshuihe/lighting-schedule.json   WP-39  灯光时刻表
@@ -463,7 +465,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 | `[SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]` | 实现 `ISaveSection<T>` 的 `[KernelService]` 或 `[KernelNode]` 类；`Scope = SaveScope.PerMap` 的段在文件里展开为 `map:<id>/<段>`。G5 查 `Phase` 与 SYS-SAVE §2 的表一致、`Order` 不重复、`Owner` 与 `ownership.json` 一致（SYS-SAVE §10） | 主程序集 | 主线程：`Capture` 在 `FramePriority.Save` 那一步，`Restore` 在读档那一帧的同一步；迁移函数在后台线程 |
 | `[assembly: MapScope("qingshuihe")]` | 各区程序集，由 WP-00 写进 csproj（见 §2 的 `MapScope` 条） | gen | 注册时求模块归属 |
 | `res://style/palette/ext/*.json` | 调色板扩展，一包一个文件 | — | 启动时用 `ResourceLoader.ListDirectory` 扫描 |
-| `res://data/maps/<地图>/overlay/*.overlay.json`、`overlay/interior/*.interior.json` | 覆盖层，一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
+| `res://data/maps/<地图>/overlay/*.overlay.json`、`overlay/interior/*.interior.json`、`overlay/terrain/*.terrain.json` | 覆盖层，一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
 
 - **Autoload 只有两个**，D0 冻结：`Boot`（WP-01，解析命令行参数）和 `Kernel`（WP-00，服务定位器）。需要新的全局对象时，用 `[KernelService]` 注册成 Kernel 的服务，不往 `project.godot` 里加条目。`IMapService`、`IAtlasService`、`IAppFlow`、`ISaveService`、`IAudioService` 等一律如此。
 - **build 与 mount 分开**：生成在纯 .NET 里，可以在线程池或烘焙器里跑（发布版的本机烘焙就在工作线程上调 `Build()`，D-165）；Godot 侧的挂载和动态物体只在主线程。gen 里的内容包没有挂载：随时间动的东西一律通过通道（`ChannelDecl`、`PlacedPart.Emitter`）和着色器（风场、`anim_time`）表达，需要节点的动态物体由 Godot 侧包的 `[KernelNode]` 负责（SYS-MOTION）。开放室内里会动的门扇同样如此：gen 只声明门扇（`DoorLeafDecl`），转动与运行时门体由 WP-07、WP-43 负责（§3）。
@@ -892,6 +894,28 @@ public sealed record SealOp(FeatureId Building, int Storey, Vector2 A, Vector2 B
 public sealed record InteriorConfigOp(FeatureId Building, string Profile, JsonElement Config, string Reason) : InteriorOverlayOp;
     // 配置型楼给 GenericInteriorProvider 的楼型配置：楼型、各层房间配比、开门比例、主痕迹的风格倾向（WLD-INTERIORS §14）
 
+// 地形覆盖层（WLD-TERRAIN §3，D-180）：maps/<地图>/overlay/terrain/<区>.terrain.json，一个文件只归一个包；
+// 另起文件类型，不并进上面的 OverlayOp。"op" 写在每个对象的第一个字段；schema 放 game/contracts/schemas/
+// 这一组的名字、签名与放置位置以 Astra 落地的源码为准（contract-15）
+public sealed record TerrainOverlayFile(ZoneId Zone, WpId Owner, IReadOnlyList<TerrainOp> Ops)
+{
+    public MapId? Map { get; init; }      // 只用于自检；归属以文件所在目录为准
+}
+public abstract record TerrainOp(string Id /* 必须以 design:terrain: 开头 */, string Reason, int Priority);
+    // 多态 "op"：platform、mound、basin、slope、terrace、channel、lake、pad、corridor；字段见 WLD-TERRAIN §3.3
+public interface ITerrain                  // 地形评估器（WP-08）：覆盖层与 OSM 的路、水、楼合成的确定性纯函数；gen 只读
+{
+    bool IsFlat(TileKey tile);             // 本格（含格边）上 H 恒为 0：平地快路径，产物与平地逐字节相同
+    float HeightAt(float x, float z);      // 解析值；1 m 格点上与 FillTile 的厘米值相差 ≤ 0.5 cm
+    void FillTile(TileKey tile, int level, Span<short> cm);   // 65×65 个厘米值，level 0–3 对应 1/2/4/8 m 格距；level 4 填全图 81×81
+    float PadY(FeatureId feature);         // 楼或广场的垫层标高（WLD-TERRAIN §4.3）
+    float? WaterY(FeatureId water);        // 水体常水位（WLD-TERRAIN §6.1）；不是水体返回 null
+    TerrainFacts FactsAt(float x, float z);   // 坡度、地形类别、到冠线与脚线的有符号距离
+}
+public enum TerrainClass : byte { Flat, Slope, Transition }   // 平面类、坡面类、墙下过渡带（WLD-TERRAIN §8.2）；只在末尾追加
+public readonly record struct TerrainFacts(float Grade, TerrainClass Class, float CrestDist, float ToeDist);
+// 常量：HeightFieldCollider.HeightsCm 的洞哨兵 short.MinValue（WP-43 映射为 NaN）；地面格的 y 量化范围全图固定 [−5, +10] m（WLD-TERRAIN §9.3）
+
 public enum FeatureSource { Osm, OsmOverlay, Design }             // 每个要素标明来源
 public interface IWorldModel
 {
@@ -901,15 +925,16 @@ public interface IWorldModel
     IInteriorIndex Interiors { get; }      // 室内索引（WP-51 烘焙，WP-08 随空间索引加载，约 50 KB，WLD-INTERIORS §15）
     IOutskirtsModel? Outskirts { get; }    // 外围数据；没有外围数据的图为 null（WLD-OUTSKIRTS §12.3）
     IFidelityModel? Fidelity { get; }      // 精度区（ART-FIDELITY §0.4，见本节末尾）；没有精度区数据的图（门禁夹具图）为 null，一律按 K3 处理
+    ITerrain Terrain { get; }              // 地形（WLD-TERRAIN §3.7）；平地桩见 §5
 }
 public interface ISpatialIndex
 {
     IReadOnlyList<FeatureId> Query(Box3 box);
-    float GroundY(float x, float z);       // 也是常驻的低精度地形高度：旁观速度律、落点搜索用（SYS-VIEW §2）
-    CameraMedium MediumAt(Vector3 p);      // Interior 的楼与层读室内索引
+    float GroundY(float x, float z);       // 常驻的地形高度，取 ITerrain.HeightAt（运行时求值，不另烘低精度表；待 Astra 在 contract-15 确认）：旁观速度律、落点搜索用（SYS-VIEW §2）
+    CameraMedium MediumAt(Vector3 p);      // Interior 的楼与层读室内索引；地下按 y < ITerrain.HeightAt(x, z) 判
     // 行走模式用（SYS-WALK §13）
-    float? SupportY(float x, float z, float yHint);
-    WalkClass WalkClassAt(float x, float z);
+    float? SupportY(float x, float z, float yHint);   // 地面层取 ITerrain.HeightAt
+    WalkClass WalkClassAt(float x, float z);           // Steep：坡度 > 26.6°（WLD-TERRAIN §7.1）
     Vector3? NearestSafe(Vector3 p, float maxDist);
     // 常驻栅格的原点与尺寸从 MapDescriptor.DataRect 换算，不写死（SYS-MAPS §10）
 }
@@ -920,6 +945,7 @@ public interface ISpatialIndex
 - 轮廓调整在 4 m 以内算轻微（`Minor`）。超过 4 m，或者新增设计物体，必须写明理由；门禁会生成差异报告，供主代理审阅。
 - 两个覆盖层改同一个要素时报错，除非其中一个已经认领了该要素。
 - 照片和 OSM 只定结构，细节按氛围做艺术化处理；为画面新增的元素（`add`）和删掉的难看元素（`hide`）都写进本图的覆盖层，在 `Reason` 里注明属于设计处理并写明理由（CORE-INDEX 的作品定位）。覆盖层按图存放，WP-08 只扫当前图的目录。
+- 地形覆盖层（`overlay/terrain/`）只写地形操作，每条带 `design:terrain:` 开头的 ID 和理由；合成顺序、坡度包络、确定性写法和校验见 WLD-TERRAIN §3，差异报告与普通覆盖层一起生成。
 
 ```csharp
 // 相机（WP-06）与介质呈现（WP-07），详见 SYS-VIEW
@@ -1105,7 +1131,7 @@ public sealed record RampCollider(Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3
 public sealed record PostCollider(Vector2 C, float R, float Y0, float Y1, SurfaceTag Tag) : Collider(Tag);     // 树干、灯杆
 public sealed record BoxCollider(Matrix4x4 At, Vector3 Half, SurfaceTag Tag) : Collider(Tag);                // 长椅、花池
 public sealed record SlabCollider(IReadOnlyList<Vector2> Ring, float Y, float Thick, SurfaceTag Tag) : Collider(Tag);  // 室内楼板
-public sealed record HeightFieldCollider(TileKey Tile, short[] HeightsCm, SurfaceTag Tag) : Collider(Tag)      // 地面：65×65，1 m 间距（WP-15）
+public sealed record HeightFieldCollider(TileKey Tile, short[] HeightsCm, SurfaceTag Tag) : Collider(Tag)      // 地面：65×65，1 m 间距（WP-15）；HeightsCm 即 ITerrain.FillTile(tile, 0) 的整数，short.MinValue 表示洞
 {
     public byte[]? FootMatHalfMeter { get; init; }        // 128×128 的 FootMat 栅格（SYS-AUDIO §9.3）
     public IReadOnlyList<FootPatch>? Patches { get; init; }   // 井盖、箅子、排水沟这类点状特征
@@ -2042,7 +2068,7 @@ public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
     - 开发共享缓存（`UESTC_BAKE_CACHE`）和 `--bake=all` 也写同一种 `.tbin`；启动集在 `res://` 里，仍用 `.res`。
   - 遮挡体每图一份，随 L4 放在启动集 `boot_<地图>.pck` 里，在切图的 Mount 那一步加载，不进 TileBundle（WP-33，ENG-PERF §4、SYS-MAPS §4.2）。
   - 碰撞级 C 每格单独一个 `.tbin`（同一种格式，只装碰撞形状参数和统计），与 TileBundle 分开，只在行走模式下加载（WP-43，SYS-WALK §13）。
-  - 岸线 SDF、路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
+  - 路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
   - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 GPU 锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
   - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各有自己的键（§4"其他烘焙子任务"）。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`fidelity.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
     - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与工作树路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
@@ -2084,7 +2110,7 @@ public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
     | 启动集 `boot_<地图>.pck`（含全图常驻的小数据和参考哈希清单 `bake.manifest.json`） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） |
     | 音频 | ≤ 165 MB |
 
-    - 启动集每图一个 `boot_<地图>.pck`，包内路径一律 `res://bake/<地图>/boot/`：L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度，以及需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它）；另含全图常驻的小数据：派生数据纹理（岸线 SDF、灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表（`ambience.bake`）、导航图；以及参考哈希清单 `res://bake/<地图>/boot/bake.manifest.json`（< 1 MB；读本机缓存时按它校验，也是 `--bake-verify` 的比对依据）。小数据和清单由开发和 CI 的烘焙器出，打包步骤从共享缓存取来打进启动集，同步挂上，不在本机烘焙。主 PCK 只留全局资源、各图的 JSON 和英雄资产。某张图第一次进入时用 `ProjectSettings.LoadResourcePack(path, replaceFiles: false)` 挂上，之后不卸载；G6 检查各 PCK 的路径集合两两不相交（SYS-MAPS §2.4）。
+    - 启动集每图一个 `boot_<地图>.pck`，包内路径一律 `res://bake/<地图>/boot/`：L4、遮挡体、外围 O2 常驻块与卡片版，以及需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它）；另含全图常驻的小数据：派生数据纹理（灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表（`ambience.bake`）、导航图；以及参考哈希清单 `res://bake/<地图>/boot/bake.manifest.json`（< 1 MB；读本机缓存时按它校验，也是 `--bake-verify` 的比对依据）。小数据和清单由开发和 CI 的烘焙器出，打包步骤从共享缓存取来打进启动集，同步挂上，不在本机烘焙。主 PCK 只留全局资源、各图的 JSON 和英雄资产。某张图第一次进入时用 `ProjectSettings.LoadResourcePack(path, replaceFiles: false)` 挂上，之后不卸载；G6 检查各 PCK 的路径集合两两不相交（SYS-MAPS §2.4）。
     - 不再随包发、改为本机烘焙的只有四类：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）、碰撞级 C、开放室内与简化室内的室内包和碰撞包、平面地图底图（SDF、MSDF 图集、`labels.bake`、区域栅格）。全图常驻的小数据体积小，又是启动和第一次切到行走时就要的，本机现烘会拖慢首次运行，所以随启动集发。
     - G6 的上限：安装目录 ≤ 0.9 GB，分发压缩包（7-Zip，LZMA2，`-mx=9`，文件名 `UESTC-<版本>-win64.7z`）≤ 0.7 GB，分别记在 `budgets.json` 的 `export.install` 和 `export.archive`（ENG-GATES §2、ENG-BUDGET §8）。
 - **其他烘焙子任务**（底图、室内包、外围 O0/O1 是本机烘焙，由 `IBakeService` 在发布版里调用，所以代码随包发，放进随包程序集，不能只放在 `pipeline/`，受 §2 的确定性禁用写法约束，产物走同一套缓存键、`cache.index` 和查找顺序，不随包发；导航图、声学与声景是全图常驻的小数据，由开发和 CI 的烘焙器出，随启动集发）：
@@ -2145,6 +2171,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 介质 | 永远返回"在空气中"；`IMediumState` 同此 |
 | 门禁 | `scripts\gate.ps1 -Wp <WP-xx>` 的骨架，G1–G6 能跑 |
 | 精度区 | `IWorldModel.Fidelity` 的桩：立面段、屋顶、地面一律 K3，`WalkDistanceAt` 返回 15 m；WP-44 交出 `fidelity.json` 之前，生成器照 K3 做 |
+| 地形 | `IWorldModel.Terrain` 的平地桩：`HeightAt` 恒 0、`IsFlat` 恒真、`PadY` 恒 0、`FillTile` 全 0、`WaterY` 取 WP-24 现用的水面高；`ISpatialIndex.GroundY`、`SupportY` 经它取值。WP-08 交出评估器之前各包照桩接线，产物与平地相同（WLD-TERRAIN §10.1，contract-15） |
 
 部件按"编目先行"的方式管理：
 

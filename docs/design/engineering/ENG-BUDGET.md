@@ -7,7 +7,7 @@ keywords: [性能预算, 预算, 额度, 份额, 配额, 额度总账, budgets.j
 owners: [WP-00]
 contributors: [WP-02, WP-27, WP-32, WP-36, WP-47]
 depends: [CORE-INDEX, ENG-ARCH, ENG-PERF, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [ART-STYLE, SYS-VIEW, ENG-GATES, ENG-WP, ENG-ROADMAP]
+related: [ART-STYLE, SYS-VIEW, ENG-GATES, ENG-WP, ENG-ROADMAP, WLD-TERRAIN]
 contracts: []
 data: ["budgets.json"]
 gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
@@ -18,7 +18,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 > **不在本文**："怎么做"写在 ENG-PERF。两者冲突时，预算数值和硬规则以本文为准，实现做法以 ENG-PERF 为准。门禁的跑法见 ENG-GATES，各包分工见 ENG-WP。
 > **查阅**：先读 §0；本包的额度看 §8；预设与设备档的总量看 §2；硬规则看 §7；细节级别与分块看 §3；速度律看 §4；怎么测看 §9；`project.godot` 等工程设置看 §10
 > **引擎 API**：本文出现的引擎 API 名以 [godot-api/README.md](../../godot-api/README.md) 为准。
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ## 0 结论
 
@@ -234,7 +234,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 
 加载机制见 ENG-PERF §5 的 TileBundle：`res://` 里的资源用 `ResourceLoader.LoadThreadedRequest`，本机缓存的 `.tbin` 由工作线程任务读入。
 
-- **有效速度**（旁观模式）= min(滚轮档位速度, 6 + 0.5 × 离地高度) × 冲刺倍数（冲刺 ×2）。上限 200 m/s。离地越近，速度越慢。离地高度用常驻的低精度地形高度查询。
+- **有效速度**（旁观模式）= min(滚轮档位速度, 6 + 0.5 × 离地高度) × 冲刺倍数（冲刺 ×2）。上限 200 m/s。离地越近，速度越慢。离地高度用常驻的地形高度查询（`ITerrain.HeightAt`，运行时求值，WLD-TERRAIN §9.4）。
 - **按速度提高屏幕误差阈值**：τ = 1.5 px × (1 + v / 30 m/s)。另有两道硬门槛：
   - 速度超过 15 m/s，不加载 L0；
   - 速度超过 45 m/s，不加载 L1；
@@ -324,7 +324,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 | 工作包 | 三角形（主通道） | 绘制调用（主通道） | 阴影绘制调用 | GPU 帧时占比 |
 | --- | --- | --- | --- | --- |
 | 建筑：WP-14、WP-16–21、WP-28–31（按区细分，见 ENG-WP）；含关着的楼的简化室内与 I0（旁观穿墙时），以及室外视角下门口看进去的门厅和"看进去例外"（WLD-INTERIORS §6.2） | 38% | 38% | 48% | 36% |
-| 地表与道路：WP-15 | 7% | 6% | 2% | 6% |
+| 地表与道路：WP-15；含地形起伏格（WLD-TERRAIN §9.5）：典型视角增加 3–5 万、最坏约 12 万三角形，与铺装、路缘共用本行；起伏格每格每表面 1 次绘制调用，平面、坡面、台缘带前壁最多 3 次；地面不投影，阴影份额只含台缘带与挡墙实体。P0 在样板区按 G8 对账，超出时先降 L2、L3 的格点到 33² 或合并表面 | 7% | 6% | 2% | 6% |
 | 植被：WP-23 | 30% | 14% | 22% | 18% |
 | 动物与家具：WP-25、WP-13 | 8% | 16% | 13% | 6% |
 | 箱庭截面与远景：WP-22 | 3% | 2% | 2% | 3% |
@@ -401,7 +401,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 | 扉页静帧（8 个变体） | 约 4–8 MB | SYS-TITLE §1.3 |
 | 世界数据 JSON（含 `outskirts.json` ≤ 5 MB、精度区数据 `fidelity.json` ≤ 1 MB） | 约 10–15 MB | WLD-OUTSKIRTS §11.3、ENG-ARCH §3 |
 | 英雄资产 `.glb`（如有） | 计入主 PCK | — |
-| 启动集 `boot_<地图>.pck`：L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度，需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它），全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表、导航图），以及参考哈希清单 `bake.manifest.json`（包内 `res://bake/<地图>/boot/bake.manifest.json`） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） | ENG-PERF §8 |
+| 启动集 `boot_<地图>.pck`：L4、遮挡体、外围 O2 常驻块与卡片版，需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它），全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表、导航图），以及参考哈希清单 `bake.manifest.json`（包内 `res://bake/<地图>/boot/bake.manifest.json`） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） | ENG-PERF §8 |
 | 音频（单列） | ≤ 165 MB（约 125–165 MB） | SYS-AUDIO §18.2 |
 | **合计** | **约 0.45–0.75 GB** | — |
 

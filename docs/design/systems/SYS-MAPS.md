@@ -64,6 +64,7 @@ game/data/
 │     ├─ overlay/outskirts.overlay.json  WP-47（WLD-OUTSKIRTS）
 │     ├─ overlay/atlas.overlay.json      WP-48c（SYS-ATLAS）锚点实体
 │     ├─ overlay/interior/<区>.interior.json   各区精修室内的包（WLD-INTERIORS）：配置型室内的楼型配置
+│     ├─ overlay/terrain/<区>.terrain.json     地形覆盖层，一个文件只归一个包（WLD-TERRAIN §3.1；清水河的文件与包的对应见 MAP-QSH-TERRAIN）
 │     ├─ outskirts.json                  WP-47（WLD-OUTSKIRTS）
 │     ├─ interiors.json                  主代理  开放室内清单（WLD-INTERIORS）：schema 与格式归 WP-51，条目由负责包填写；以后加楼只在这里加一项，清单的增删由主代理审批
 │     ├─ waypoints.json                  WP-36   点位 P00 起，室内新增 P16–P23（UI-NAV §6、WLD-INTERIORS）
@@ -119,7 +120,7 @@ game/data/
 - **缓存键**：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`（ENG-PERF §5 的键在 ABI 之后加地图）。本机缓存目录 `user://cache/bake/<地图>/<ABI>/…`（导出版在 `%APPDATA%` 下）；开发和门禁用 `--bake-cache=<绝对路径>` 指到共享缓存（默认 `UESTC_BAKE_CACHE`）。各图互不覆盖。
 - **数据哈希只算本图里影响 `Build()` 的输入**：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`。改出生点、默认状态、过场、点位不重烘。
 - **烘焙命令**：`--bake=all --map=<id>` 是开发和 CI 的无界面烘焙器，用来出参考哈希、给带 `--bake-strict=1` 的检查补共享缓存；`--map=*` 依次烘全部图。`gate.ps1` 先按改动选出本次要跑的检查，再决定要不要准备烘焙数据：快检不烘，不带 `--bake-strict=1` 的检查缺什么按玩家路径现烘，带它的检查只把用到的图按哈希增量补进共享缓存；`--map=*` 只在集中测试或所选检查确实要全部图时跑（ENG-ARCH §6）。发布版运行时的本机烘焙由 `IBakeService` 调用同一个 `Build()`。
-- **启动集**：每张图一个 `boot_<地图>.pck`，随安装包发，包内路径 `res://bake/<地图>/boot/`。内容是 L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度，以及需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它）；另有**全图常驻的小数据**：派生数据纹理（岸线 SDF、灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表 `ambience.bake`（SYS-AUDIO）、导航图（WLD-INTERIORS）；以及参考哈希清单 `bake.manifest.json`（`res://bake/<地图>/boot/bake.manifest.json`）。每图 ≤ 60 MB，其中全图常驻小数据约 10–15 MB。这些小数据体积小，又是启动和第一次切到行走时就要的，所以随包发，不在本机烘焙；它们同样由开发烘焙器出（离线烘焙），随启动集挂载，LoadData 之后就能读。
+- **启动集**：每张图一个 `boot_<地图>.pck`，随安装包发，包内路径 `res://bake/<地图>/boot/`。内容是 L4、遮挡体、外围 O2 常驻块与卡片版，以及需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它）；另有**全图常驻的小数据**：派生数据纹理（灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表 `ambience.bake`（SYS-AUDIO）、导航图（WLD-INTERIORS）；以及参考哈希清单 `bake.manifest.json`（`res://bake/<地图>/boot/bake.manifest.json`）。每图 ≤ 60 MB，其中全图常驻小数据约 10–15 MB。这些小数据体积小，又是启动和第一次切到行走时就要的，所以随包发，不在本机烘焙；它们同样由开发烘焙器出（离线烘焙），随启动集挂载，LoadData 之后就能读。
 - **本机烘焙产物的位置**（按各自的键进缓存，同样在 ABI 之后加地图）：L0–L3 的 TileBundle，碰撞级 C，平面地图的底图与标注 `map/`（SYS-ATLAS），开放室内与简化室内的按层包和碰撞包 `interior/`（WLD-INTERIORS）。开放室内不另设 PCK。
 - **挂载**：某张图第一次进入时，在 LoadData 那一步 `ProjectSettings.LoadResourcePack(path, replaceFiles: false)` 挂上 `boot_<地图>.pck`，之后不卸载（Godot 没有卸载接口）。挂载只读目录表，常驻开销按很小计（§19）。G6 检查各 PCK 的路径集合两两不相交，否则同名文件会互相覆盖。
 - **本机缓存与画面设置、世界状态、存档无关**：`Build()` 的输入里没有这些（CORE-CONVENTIONS §6），所以缓存跨存档、跨画质共用；`--seed` 覆盖时种子进数据哈希，各自一份。它不是存档（SYS-SAVE）。
@@ -216,7 +217,7 @@ game/data/
 | 1 | VeilIn | 0.5 s | 雾幕盖满，沿用开场和跳转的那一层（SYS-VIEW §3、UI-NAV §9），原因写 `VeilReason.MapTravel`（SYS-AUDIO）。取得输入占用 `ICameraRig.LockInput(InputLockReason.MapTravel)`（ENG-ARCH §3）；取消正在进行的跳转和已知目的地预取（UI-NAV §7.5）；小地图淡出（SYS-ATLAS）；存档服务暂停拍快照（不是安全时刻，SYS-SAVE）；声音的 World 组 0.5 s 压到 −40 dB（SYS-AUDIO） |
 | 2 | Snapshot | 1 帧 | 给存档的挂点：记下旧图的 `MapVisit`（最后位姿、观察模式、天气 epoch、离开时的世界时间）；`IWeatherProcess.Leave(旧图)` |
 | 3 | Unload | ≤ 0.5 s | 流式（`Stream`）不再发新请求，在途的照常完成后 `Dispose()`，挂载（`StreamMount`）不再挂本图的格子；本图所有实例 `FreeRid`，碰撞 body 出树，释放 L4、遮挡体和倒影代理；全图数据纹理交还各写入方；各 `IMapAware` 节点按 ID 顺序收到 `OnMapUnloading`（音频节点在这里丢掉本图的发声器、声景场、声学网格和房间，SYS-AUDIO）；带 `Map` 的 `[KernelNode]` 释放；`Context` 置空；最后 `GC.Collect()` 一次（雾幕里允许，期间 GC 延迟模式临时改回 Interactive，ENG-PERF §6） |
-| 4 | LoadData | ≤ 1 s | 首次进图时挂上 `boot_<地图>.pck`（启动集，§2.4）；内核读字节、工作线程解析新图数据、建世界模型（ENG-ARCH §2"纯 .NET 代码不碰文件路径"）；读本图的常驻数据（2 m 分类栅格、8 m 安全点网格、低精度地形高度，都在启动集里，§2.4）；注册器按"通用 + 本图"重新筛选模块（§7）；`IWeatherProcess.Enter(新图)`，补算队列（§5） |
+| 4 | LoadData | ≤ 1 s | 首次进图时挂上 `boot_<地图>.pck`（启动集，§2.4）；内核读字节、工作线程解析新图数据、建世界模型（ENG-ARCH §2"纯 .NET 代码不碰文件路径"）；读本图的常驻数据（2 m 分类栅格、8 m 安全点网格，都在启动集里，§2.4）；世界模型建好地形评估器，地形高度此后按 `ITerrain.HeightAt` 求值（WLD-TERRAIN §9.4）；注册器按"通用 + 本图"重新筛选模块（§7）；`IWeatherProcess.Enter(新图)`，补算队列（§5） |
 | 5 | Mount | ≤ 1.5 s | 同步加载 L4 和遮挡体（ENG-PERF §5 第 1 条）；写全局参数 `map_rect`（§10）；各写入方重建全图数据纹理并重新设全局参数；实例化本图的 `[KernelNode]`；各 `IMapAware` 节点按 ID 顺序收到 `OnMapLoaded`（`IAtlasService` 换底图与标记，SYS-ATLAS；音频节点读本图的 `audio/` 和烘焙产物，SYS-AUDIO）；材质库按需重新分配材质 ID（风险 5）；按已知目的地预取出生点周围的 L0+–L2 各环和室内提供者，行走模式另加碰撞格 |
 | 6 | Warm | 同图 0；新图 ≤ 2 s | 只预热本图新出现的组合，等 SURFACE、DRAW、Canvas 三项管线编译计数连续 30 帧不再增长（ENG-PERF §2）；本图节点空跑 30 帧做 JIT 预热。G16 对每张图都成立 |
 | 7 | Spawn | ≤ 1.5 s | 设位姿（§6），按 WLD-OUTSKIRTS的可达空间合法化；行走模式等 `ICollisionWorld.Ready()`（SYS-WALK §14 第 5 条），出生点在开放室内时等这一层就绪（ENG-PERF §5 第 6 条，WLD-INTERIORS §6.4）；清相机插值缓冲，重判介质；`Current` 换成新图，`Rev` + 1 |

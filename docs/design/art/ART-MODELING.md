@@ -7,7 +7,7 @@ keywords: [风格化造型, 风格化比例, 身份特征, 比例表, 重复上�
 owners: [WP-09]
 contributors: [WP-10, WP-11, WP-12, WP-13, WP-14, WP-15, WP-23, WP-31c, WP-37, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, SYS-TIME, WLD-INTERIORS]
-related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-PERF, ENG-WP, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, ART-RENOVATION, ART-AMBIENCE]
+related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-PERF, ENG-WP, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, ART-RENOVATION, ART-AMBIENCE, WLD-TERRAIN]
 contracts: [IPartDef]
 data: []
 gates: [G2, G4, G5, G7, G12]
@@ -17,7 +17,7 @@ gates: [G2, G4, G5, G7, G12]
 > **范围**：本文规定建筑、植被、道具与室内的风格化比例和形体，固有色的约束，参数化部件库的写法，每类对象的最低合格构件与法线规则，以及金样和跨包风格一致性的流程。时刻和季节都不换模型（SYS-TIME §0 第 5 条），造型规则对四季昼夜一样适用，四季昼夜一律视觉效果优先。
 > **不在本文**：精度判据与一票否决（ART-FIDELITY）；明暗、影色、描线与调色板（ART-STYLE）；树种与季相（WLD-VEGETATION、SYS-TIME §4）；室内的开放清单、类型库与预算（WLD-INTERIORS）；契约的定义（ENG-ARCH §3）。
 > **查阅**：先读 §0；身份特征看 §1；建筑比例看 §2；植被、地面与道具看 §3、§4；固有色看 §5；金样与部件库看 §6；法线看 §7.6；最低合格构件看 §7.8
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 ### 分工
 
@@ -285,7 +285,7 @@ gates: [G2, G4, G5, G7, G12]
 两阶明暗把 N·L 在 −0.03 处一刀切（ART-STYLE §2.1），离交界线近的面，几度的法线偏差就会翻转。默认格 17:30 的太阳高度只有 5.5°，侧立面接近掠射，任何法线误差都会被阈值放大成碎影。所以：
 
 - **建筑平面用硬边**：分面平法线，同一平面上所有模块的法线逐位相同，由平面方程算，不由量化后的三角形叉积算。盒子不能整体平滑：平均后的角点法线会让大面带上渐变，交界线斜着切过墙面，就是碎影（ART-STYLE §2.2）。
-- **地面**：法线展平朝上，起伏用色斑表达；路缘、台阶的竖面保留真法线，才有干脆的明暗和折角线。
+- **地面**：按地形类别给法线（WLD-TERRAIN §8.2）。平面类（铺装、道路、广场、草地缓坡，坡度缓于 1:6）法线展平朝上，起伏用色斑表达，几何照常贴地起伏；设计土坡（丘、堤、台地边坡，不缓于 1:6）用分面平法线，由操作的平面方程或解析梯度算，不由量化后的三角形叉积算，冠线、脚线处拆顶点做硬边。路缘、台阶、台缘带前壁的竖面保留真法线，才有干脆的明暗和折角线。
 - **曲面用软边**：曲面一律平滑法线，不跨硬边平滑。硬边的 8–12 段圆柱在两阶下每个面要么全亮要么全暗，变成一道道条纹，是低模感最重的来源。平滑法线下，柱的明暗交界是一条直线，球是一条折线。
 - **段数按剪影定，明暗按法线定**：圆柱的段数只按 ART-FIDELITY §4 的 1 px 剪影误差选（半径 3 cm 以下 12 段、15 cm 左右 24 段、树干 32 段），明暗交界的平滑度交给法线。
 - **解析法线**：球、柱、胶囊类的独立实例或 MultiMesh 道具（灯头、球形灌木、护柱、灯杆），可以在片元里按中心或轴逐像素算法线：球取 normalize(P − C)，柱从 P − C 里减去它在轴上的投影；中心 C 取实例原点（MultiMesh 在 vertex() 里取，经 flat varying 传给片元）。明暗交界与段数和细节级别都无关，降段只改剪影、不改明暗。合并块里的件没有中心，不适用。写法见 ART-STYLE §2.6。

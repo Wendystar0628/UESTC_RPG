@@ -7,7 +7,7 @@ keywords: [开始页, 标题页, 主菜单, 扉页, 启动序列, 启动失败�
 owners: [WP-49, WP-35d]
 contributors: [WP-01, WP-02, WP-06, WP-25, WP-27, WP-32, WP-34, WP-39, WP-41, WP-46, WP-50, WP-53a]
 depends: [ENG-ARCH, ENG-PERF, SYS-TIME, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
-related: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-ROADMAP]
+related: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-ROADMAP, WLD-TERRAIN]
 contracts: [IAppFlow, AppState, EnterKind, CinematicMode, EnterPath, EnterResult, EnterRequest, CinematicDef, CameraSeg, WorldCue, MaskSeg, CaptionCue, ExtraCue, AudioCue, CinematicEnd]
 data: ["game/data/maps/qingshuihe/cinematics/", "game/assets/title/qingshuihe/"]
 gates: [G2, G7, G8, G10, G13, G14, G16]
@@ -18,7 +18,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 > **范围**：本文规定冷启动序列与扉页、开始页（T0 镜头、菜单、片名块）、新游戏与继续的进场过场、返回标题、跳过与安全落点、`IAppFlow` 状态机、过场数据格式与 `CinematicPlayer`、云卡着色器、过场的流式预取与门禁增项。
 > **不在本文**：存档格式、读档与保存时机（SYS-SAVE）；地图加载与切换（SYS-MAPS）；界面令牌、放映层与开始页的视觉细则（UI-VISUAL）；声音与开场音乐的内容（SYS-AUDIO）；世界时间与 `FlowTo` 的实现（SYS-TIME）。
 > **查阅**：先读 §0；启动序列、扉页与启动失败页看 §1；开始页的 T0 与菜单看 §2；新游戏、继续与返回标题的分镜看 §3、§4；跳过与设置项开场过场看 §5；`IAppFlow` 的状态、各状态下的约定与契约看 §7；过场数据格式与 `CinematicPlayer` 看 §8；预算与门禁增项看 §11
-> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)；[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
+> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)；[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN.md)
 
 **分工**：WP-49 开始页与进场演出（49a 流程与播放器、49b 标题美术）；WP-35d 开始页与存档页的界面部分（与 WP-49 配合，视觉按 UI-VISUAL）。WP-01、02、06、25、27、32、34、39、41、46、50 各有增量，WP-53 留音频挂点（§14）。
 
@@ -559,7 +559,7 @@ game/data/maps/qingshuihe/cinematics/
 1. 格式：版本号、段时间首尾相接、总长等于 `duration`、锚点都能解析、翻译键都在表里。
 2. 镜头：段接缝处速度差不超过 5%；偏航、俯仰角速度不超限；没有滚转。
 3. 遮罩：每层云卡全遮不超过 0.3 s；`newTimeline`、`restoreSlot` 都在全遮或雾幕区间里。
-4. 路径不穿模：每 0.25 s 采样一次，镜头离楼体实体、地形和树干不小于 3 m（读世界模型和常驻的 2 m 分类栅格）；云卡全遮区间除外。
+4. 路径不穿模：每 0.25 s 采样一次，镜头离楼体实体、地形和树干不小于 3 m（读世界模型和常驻的 2 m 分类栅格；地形高度读 `ITerrain.HeightAt`，WLD-TERRAIN §7.6）；云卡全遮区间除外。路径不按平地写：地形定稿和每次改动地形覆盖层之后，全部过场路径重核一遍，不过的由 WP-49b 改路径。
 5. 新游戏的终态：按世界轨模拟，`end` 的终态等于本图 `map.json` 的默认预设（秋 17:30、晴、自动、1×）。
 6. 减少动态效果：每个过场都有雾幕直达的替代路径（由 `IAppFlow` 统一生成，不在文件里另写）。
 7. 终点合法：`end` 的终点位姿（新游戏的 P00；继续的 `$dest` 由运行时按 SYS-SAVE的校验修复）在本图的可达空间内，而且不在缓冲带里（WLD-OUTSKIRTS）；T0 与过场途中的镜头不受活动范围约束。
