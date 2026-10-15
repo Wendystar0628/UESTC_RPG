@@ -58,13 +58,13 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`6a1d7aa` WP-45a 天气核心的主线版。
+- 当前 `main`：`e37a34c` 文档：清水河分区地形方案 MAP-QSH-TERRAIN（D-180）。
 - 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`，第 4 批共享契约 `d4f46a5`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`、WP-34 `60d7fbe`、WP-45a `6a1d7aa`。
-- 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）。
+- 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）；DOC-terrain-map `e37a34c`（清水河分区地形方案）。
 - 最近可运行入口：`d4f46a5`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景；90 帧窗口冒烟、Release 导出与导出版运行时通过，不代表完整主线旅程）。
 - 已冻结的契约组：尚无（v1 候选）。
 - 当前阶段：第一波（ENG-TEAM §3）。第二波前提里 WP-09、WP-14、WP-08 已合入，还差 WP-02。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
-- 高优先级插入项：地形分层 D-180 已登记；contract-15 阶段 0（`ITerrain`、统一采样布局与平地桩）已合入 `d4f46a5`；完整非平地 DTO/schema/评估器待下一批；规范 WLD-TERRAIN 已合入 `874f89f`；分区方案 MAP-QSH-TERRAIN 在写（工作树 `DOC-terrain-map`）。
+- 高优先级插入项：地形分层 D-180 已登记；contract-15 阶段 0（`ITerrain`、统一采样布局与平地桩）已合入 `d4f46a5`；完整非平地 DTO/schema/评估器待下一批；规范 WLD-TERRAIN 已合入 `874f89f`；分区方案 MAP-QSH-TERRAIN 已合入 `e37a34c`。
 - 共享工程后续：contract-16 UI 底图桥、显式 world 加载上下文、存档恢复故障协议、BuildInfo 生产者 hash 留待 core5。
 - 已知问题：截图进程卡住会一直占 GPU 锁，截图脚本一律给每个 Godot 进程加 120 s 超时。
 
@@ -95,4 +95,3 @@ gates: []
 | WP-50 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-50` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-51a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-51a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-53a | 主线版已合入；正式 Boot 音频联调 | `..\UESTC_RPG.wt\WP-53a` | `wp/53a-audio-core` | — | 阻塞 | 实际初始化、Ready 与换图运行待 WP-01 正式 Boot | WP-01 接通后联调；素材由 53e 后续接入 |
-| DOC-terrain-map | 清水河分区地形方案 MAP-QSH-TERRAIN | `..\UESTC_RPG.wt\DOC-terrain-map` | `doc/terrain-map` | — | 施工中 | — | Opus 评审后合入 |
