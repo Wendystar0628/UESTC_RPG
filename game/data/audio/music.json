@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "cues": {
+    "Silence": "Silence",
+    "Title": "Silence",
+    "EnterNew": "Silence",
+    "EnterContinue": "Silence",
+    "ReturnTitle": "Silence"
+  }
+}

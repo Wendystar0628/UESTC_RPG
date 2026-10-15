@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "cues": [
+    { "cue": "Focus", "resourcePath": null, "durationSeconds": 0.04, "peakDb": -30, "cooldownSeconds": 0.08 },
+    { "cue": "Hover", "resourcePath": null, "durationSeconds": 0.04, "peakDb": -30, "cooldownSeconds": 0.08 },
+    { "cue": "Confirm", "resourcePath": null, "durationSeconds": 0.26, "peakDb": -16, "cooldownSeconds": 0.08 },
+    { "cue": "Back", "resourcePath": null, "durationSeconds": 0.24, "peakDb": -18, "cooldownSeconds": 0.08 },
+    { "cue": "Toggle", "resourcePath": null, "durationSeconds": 0.03, "peakDb": -20, "cooldownSeconds": 0.08 },
+    { "cue": "PageOpen", "resourcePath": null, "durationSeconds": 0.4, "peakDb": -22, "cooldownSeconds": 0.08 },
+    { "cue": "PageClose", "resourcePath": null, "durationSeconds": 0.2, "peakDb": -24, "cooldownSeconds": 0.08 },
+    { "cue": "SliderTick", "resourcePath": null, "durationSeconds": 0.02, "peakDb": -28, "cooldownSeconds": 0.1 },
+    { "cue": "TeleportConfirm", "resourcePath": null, "durationSeconds": 0.7, "peakDb": -16, "cooldownSeconds": 0.08 },
+    { "cue": "TeleportArrive", "resourcePath": null, "durationSeconds": 0.4, "peakDb": -22, "cooldownSeconds": 0.08 },
+    { "cue": "Saved", "resourcePath": null, "durationSeconds": 0.9, "peakDb": -16, "cooldownSeconds": 0.08 },
+    { "cue": "ShiftDayNight", "resourcePath": null, "durationSeconds": 0.6, "peakDb": -22, "cooldownSeconds": 0.08 },
+    { "cue": "Denied", "resourcePath": null, "durationSeconds": 0.2, "peakDb": -22, "cooldownSeconds": 0.08 }
+  ]
+}
