@@ -19,7 +19,7 @@ public static class RoofStyle
     /// <summary>Grey aluminium: louvre blades, base rails, fence posts and caps, skylight frames, ladders.</summary>
     public const string Aluminium = "frame.alu";
     /// <summary>
-    /// Blue-grey steel (ids 248/249; lit #6B7380 at autumn 17:30, intrinsic #4D6484): the perforated fence boards that read as one dark band, and the dark
+    /// Blue-grey steel (ids 248/249; intrinsic #50647F capped at chroma 0.049, lit #6E737B at autumn 17:30): the perforated fence boards that read as one dark band, and the dark
     /// inserts that must stay dark without turning olive in low sun (fan discs, heat-pump coil panels).
     /// </summary>
     public const string FenceSteel = "equip.fence";

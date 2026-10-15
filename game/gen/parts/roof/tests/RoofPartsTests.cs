@@ -136,8 +136,11 @@ public sealed class RoofPartsTests
             {
                 if (!entry.TryGetProperty("token", out var token)) continue;
                 tokens.Add(token.GetString()!);
-                if (Path.GetFileName(file) == "WP-12.json")
-                    Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251, $"{token.GetString()} lies outside WP-12's ids 248–251.");
+                if (Path.GetFileName(file) != "WP-12.json") continue;
+                Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251, $"{token.GetString()} lies outside WP-12's ids 248–251.");
+                // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING §5).
+                var albedo = entry.GetProperty("albedo").EnumerateArray().Select(v => v.GetDouble()).ToArray();
+                Check(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05, $"{token.GetString()} has intrinsic chroma above 0.05.");
             }
         }
         foreach (var example in RoofGallery.CreateExamples())
@@ -157,6 +160,19 @@ public sealed class RoofPartsTests
             Check(grille ? reduced.Length > 0 : reduced.Length == 0, $"{example.Id} has the wrong occlusion layout.");
             Check(reduced.All(v => v is >= 0.45f and <= 0.88f), $"{example.Id} has a reveal visibility outside 0.45–0.88.");
         }
+    }
+
+    /// <summary>OKLCH chroma of an sRGB colour (Ottosson's matrices, as WP-37's Oklab).</summary>
+    private static double OklabChroma(double r, double g, double b)
+    {
+        static double Linear(double c) => c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        double lr = Linear(r), lg = Linear(g), lb = Linear(b);
+        var l = Math.Cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+        var m = Math.Cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+        var s = Math.Cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+        var a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+        var bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+        return Math.Sqrt(a * a + bb * bb);
     }
 
     private static string RepositoryRoot()
