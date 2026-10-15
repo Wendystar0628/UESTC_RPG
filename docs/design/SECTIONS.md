@@ -1073,7 +1073,7 @@
 - SYS-TITLE §3 新游戏过场 · L168 · 4.5k
   - SYS-TITLE §3.1 分镜表 · L170 · 2.3k
   - SYS-TITLE §3.2 字幕、时间读数与标题卡 · L191 · 1.1k
-  - SYS-TITLE §3.3 过场专属元素 · L210 · 667
+  - SYS-TITLE §3.3 过场专属元素 · L210 · 690
   - SYS-TITLE §3.4 简短版 · L227 · 412
 - SYS-TITLE §4 继续过场与返回标题 · L240 · 1.7k
   - SYS-TITLE §4.1 继续（约 9 s） · L242 · 1.0k
