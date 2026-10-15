@@ -248,6 +248,7 @@ gates: []
 | [RFC-ART-JP-AMBIENCE](proposals/RFC-ART-JP-AMBIENCE.md) 日式氛围元素目录 |  | — | — |
 | [RFC-ART-JP-CONFLICTS](proposals/RFC-ART-JP-CONFLICTS.md) 日式方向与现行规则的冲突 |  | — | — |
 | [RFC-ART-OLD-RENOVATION](proposals/RFC-ART-OLD-RENOVATION.md) 老旧建筑的风格化翻新规则 |  | — | — |
+| [RFC-MAP-OLD-BUILDINGS](proposals/RFC-MAP-OLD-BUILDINGS.md) 清水河校区老旧建筑清单 |  | — | — |
 
 ### 7.12 待用的文件夹
 
@@ -413,6 +414,7 @@ graph LR
     RFC_ART_JP_AMBIENCE["RFC-ART-JP-AMBIENCE"]
     RFC_ART_JP_CONFLICTS["RFC-ART-JP-CONFLICTS"]
     RFC_ART_OLD_RENOVATION["RFC-ART-OLD-RENOVATION"]
+    RFC_MAP_OLD_BUILDINGS["RFC-MAP-OLD-BUILDINGS"]
   end
   ART_STYLE --> ART_FIDELITY
   ART_MODELING --> ART_FIDELITY
