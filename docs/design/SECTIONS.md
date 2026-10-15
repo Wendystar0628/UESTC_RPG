@@ -1229,7 +1229,7 @@
 
 ## UI-VISUAL · 界面视觉语言：令牌、字体、形状、材质、图标、组件、画面布局、动效与实现
 
-`docs/design/ui/UI-VISUAL.md` · 74.3k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
+`docs/design/ui/UI-VISUAL.md` · 74.4k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
 关键词：界面视觉、色彩令牌、主题色、清蓝、晶白、深屏、深色主题、昼夜交班、常驻件、界面字体、切角、发丝线、过孔灯、衍射光边、焦点环、界面图标、窗口图标、动效母题、界面动画、减少动态效果、辉光、等待灯、界面缩放、ui.json、ui_theme.tres、ui_panel.gdshader、ui_screen.gdshader、ui_night、IMotionSettings、IPaletteProbe
 
   - UI-VISUAL 分工 · L22 · 376
@@ -1252,7 +1252,7 @@
   - UI-VISUAL §3.5 两套主题的语义令牌 · L227 · 1.4k
   - UI-VISUAL §3.6 昼夜切换 · L253 · 994
   - UI-VISUAL §3.7 关键组合的对比度（WCAG 2.2：文字 ≥ 4.5:1，图形与控件 ≥ 3:1） · L271 · 1.6k
-  - UI-VISUAL §3.8 登记：`game/style/palette/ext/ui.json` · L306 · 3.2k
+  - UI-VISUAL §3.8 登记：`game/style/palette/ext/ui.json` · L306 · 3.3k
 - UI-VISUAL §4 字体与字号阶梯 · L359 · 2.3k
   - UI-VISUAL §4.1 字体与许可 · L361 · 587
   - UI-VISUAL §4.2 回退链与数字 · L374 · 662
