@@ -2,7 +2,7 @@
 id: RFC-MAP-OLD-BUILDINGS
 title: 清水河校区老旧建筑清单
 category: proposals
-status: draft
+status: review
 domain: MAP
 affects: [MAP-QSH-NORTH, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, MAP-QSH-WEST, MAP-QSH-CORE, MAP-QSH-ADDITIONS]
 owners: []
@@ -14,6 +14,19 @@ created: 2026-10-15
 > **范围**：本文列出清水河校区现实中建成较早、带陈旧元素的建筑和环境，逐项写明名称与位置、实体 ID、大致年代、老旧表现、严重程度，以及分区文档现在的写法，供风格化翻新取用。
 > **不在本文**：翻新的做法和规则（另一份调研负责）；各区建筑的现行外观规定（MAP-QSH-CORE、MAP-QSH-SOUTH、MAP-QSH-NORTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST）；增补物和禁做清单（MAP-QSH-ADDITIONS）。
 > **关联**：[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[MAP-QSH-WEST 西区与西北区](../maps/qingshuihe/MAP-QSH-WEST.md)、[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)
+
+## 作者已定（2026-10-15）
+
+| 事项 | 结论 |
+| --- | --- |
+| 日式的边界 | 日式日常街景元素可以用；宗教与地标符号不用；场景文字一律简体中文 |
+| 传统和式建筑构件（和式瓦屋顶、唐破风、障子） | 不用 |
+| 教室推拉门 | 不用 |
+| 日式附属件（店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚） | 只用在商业街和后勤小楼，按新的、干净的样子做 |
+| 黄昏乌鸦 | 有叫声；画面上黄昏时 2–3 只静止停在楼顶或电线上，不画成群飞过，夜里和雨天不出现 |
+| 傍晚广播旋律 | 用原创旋律；不用威斯敏斯特钟声；钟楼仍是单音 |
+| 老旧元素 | 一律修掉，换成与项目风格统一的新设计，不保留岁月感 |
+| 做旧层 | 全校建筑立面和地面都不做旧（沥青裂缝、补丁、油渍、路缘缺口也不做），只留天气湿痕和季节落物；生活感靠干净的生活痕迹 |
 
 ## 0 结论
 

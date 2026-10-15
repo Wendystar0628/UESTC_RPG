@@ -2,7 +2,7 @@
 id: RFC-ART-JP-CONFLICTS
 title: 日式方向与现行规则的冲突
 category: proposals
-status: draft
+status: review
 domain: ART
 affects: [CORE-INDEX, CORE-DECISIONS, ART-STYLE, ART-FIDELITY, ENG-GATES, WLD-INTERIORS, WLD-LIFE, WLD-OUTSKIRTS, WLD-DIORAMA, WLD-VEGETATION, MAP-QSH-ADDITIONS, MAP-QSH-NORTH, MAP-QSH-SOUTH, SYS-AUDIO, REF-PROMPT]
 owners: []
@@ -14,6 +14,19 @@ created: 2026-10-15
 > **范围**：本文盘点现行文档里与"地图细节走日式氛围"冲突的规定，按作者选定的边界 (a) 给出每处的改法和可以直接替换的规定草稿；声音单列一节（§4）。
 > **不在本文**：地图结构（不改，MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；边界 (b)(c) 的展开；增补物的最终数值与落位（评审通过后写进 MAP-QSH-ADDITIONS、WLD-LIFE 等）。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[CORE-DECISIONS 决策登记](../core/CORE-DECISIONS.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+
+## 作者已定（2026-10-15）
+
+| 事项 | 结论 |
+| --- | --- |
+| 日式的边界 | 日式日常街景元素可以用；宗教与地标符号不用；场景文字一律简体中文 |
+| 传统和式建筑构件（和式瓦屋顶、唐破风、障子） | 不用 |
+| 教室推拉门 | 不用 |
+| 日式附属件（店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚） | 只用在商业街和后勤小楼，按新的、干净的样子做 |
+| 黄昏乌鸦 | 有叫声；画面上黄昏时 2–3 只静止停在楼顶或电线上，不画成群飞过，夜里和雨天不出现 |
+| 傍晚广播旋律 | 用原创旋律；不用威斯敏斯特钟声；钟楼仍是单音 |
+| 老旧元素 | 一律修掉，换成与项目风格统一的新设计，不保留岁月感 |
+| 做旧层 | 全校建筑立面和地面都不做旧（沥青裂缝、补丁、油渍、路缘缺口也不做），只留天气湿痕和季节落物；生活感靠干净的生活痕迹 |
 
 ## 0 结论
 

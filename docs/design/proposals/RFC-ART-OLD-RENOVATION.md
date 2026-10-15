@@ -2,7 +2,7 @@
 id: RFC-ART-OLD-RENOVATION
 title: 老旧建筑的风格化翻新规则
 category: proposals
-status: draft
+status: review
 domain: ART
 affects: [ART-STYLE, ART-MODELING, ART-FIDELITY, MAP-QSH-ADDITIONS, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-SOUTH, WLD-LIFE]
 owners: []
@@ -14,6 +14,19 @@ created: 2026-10-15
 > **范围**：本文提出校园老旧建筑的"全部翻新"规则：楼的位置、体量和身份特征不动，外观上显旧的东西全部换成与新楼同一套材质、配色和部件。内容包括动画背景的参照与取舍、材质与配色、删简留清单、窗与檐口与楼梯间与屋顶的改法、日式氛围与成电辨认、与现行规范的衔接，以及老宿舍、老教学楼、老食堂三个示例。
 > **不在本文**：楼的位置、体量与身份特征（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST、ART-MODELING §1）；明暗、影色、描线与调色板机制（ART-STYLE）；精度判据（ART-FIDELITY）；生活痕迹的摆放（WLD-LIFE）；室内（WLD-INTERIORS）。
 > **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-MODELING 风格化造型](../art/ART-MODELING.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)
+
+## 作者已定（2026-10-15）
+
+| 事项 | 结论 |
+| --- | --- |
+| 日式的边界 | 日式日常街景元素可以用；宗教与地标符号不用；场景文字一律简体中文 |
+| 传统和式建筑构件（和式瓦屋顶、唐破风、障子） | 不用 |
+| 教室推拉门 | 不用 |
+| 日式附属件（店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚） | 只用在商业街和后勤小楼，按新的、干净的样子做 |
+| 黄昏乌鸦 | 有叫声；画面上黄昏时 2–3 只静止停在楼顶或电线上，不画成群飞过，夜里和雨天不出现 |
+| 傍晚广播旋律 | 用原创旋律；不用威斯敏斯特钟声；钟楼仍是单音 |
+| 老旧元素 | 一律修掉，换成与项目风格统一的新设计，不保留岁月感 |
+| 做旧层 | 全校建筑立面和地面都不做旧（沥青裂缝、补丁、油渍、路缘缺口也不做），只留天气湿痕和季节落物；生活感靠干净的生活痕迹 |
 
 ## 0 结论
 
