@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "entries": [
+    {"token": "curtain.cream.lit", "id": 244, "albedo": [0.841461, 0.87125, 0.886093], "materialClass": "fabric", "seasonal": false, "role": "lit"},
+    {"token": "curtain.cream.shade", "id": 245, "albedo": [0.841461, 0.87125, 0.886093], "materialClass": "fabric", "seasonal": false, "role": "shade"},
+    {"token": "door.wood.lit", "id": 246, "albedo": [0.534375, 0.410689, 0.346755], "materialClass": "building", "seasonal": false, "role": "lit"},
+    {"token": "door.wood.shade", "id": 247, "albedo": [0.534375, 0.410689, 0.346755], "materialClass": "building", "seasonal": false, "role": "shade"}
+  ]
+}
