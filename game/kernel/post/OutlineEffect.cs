@@ -13,7 +13,7 @@ namespace Campus.Kernel.Post;
 /// </summary>
 public partial class OutlineEffect : CompositorEffect
 {
-    private const string ShaderPath = "res://style/outline/post_outline.glsl";
+    internal const string ShaderPath = "res://style/outline/post_outline.glsl";   // every WP-05 kernel is a version of it
     private const int UboFloats = 96;   // layout of OutlineParams in post_outline.glsl
 
     private static readonly StringName Context = "wp05_outline";

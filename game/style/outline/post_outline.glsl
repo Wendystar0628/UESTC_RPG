@@ -2,6 +2,8 @@
 
 mask = "#define PASS_MASK";
 composite = "#define PASS_COMPOSITE";
+lut = "#define PASS_LUT";
+tiltshift_comp = "#define PASS_TILTSHIFT_COMP";
 
 #[compute]
 
@@ -9,9 +11,15 @@ composite = "#define PASS_COMPOSITE";
 
 VERSION_DEFINES
 
-// post_outline.glsl — WP-05. Post-process outline in CompositorEffect POST_SKY (ART-STYLE §4.5, ENG-PERF §10.2).
+// post_outline.glsl — WP-05. The one RDShaderFile of the project: every WP-05 compute kernel is a version here.
+// Godot 4.7.2 crashes now and then (0xC0000005) when `--import` imports two or more .glsl files on parallel
+// threads; with a single .glsl file no two shader-file imports ever overlap. Versions:
+//   mask, composite : the outline in CompositorEffect POST_SKY (below),
+//   lut             : the runtime colour-grading LUT (section PASS_LUT),
+//   tiltshift_comp  : the compose dispatch in CompositorEffect POST_TRANSPARENT (section PASS_TILTSHIFT_COMP).
+// Kernels added later (tilt-shift blur, flare, FXAA) become further versions of this file.
 //
-// Two dispatches from this one file:
+// Outline (ART-STYLE §4.5, ENG-PERF §10.2), two dispatches:
 //   mask      : reads depth + normal_roughness (7-bit material ID in alpha) + mat_table row 0, writes a RG8 mask
 //               R = line coverage (sub-pixel widths drawn as coverage),
 //               G = material ID of the side the line takes its colour from (bits 0-6) + convex-lit flag (bit 7).
@@ -35,6 +43,8 @@ VERSION_DEFINES
 //   ID     : material IDs differ (material boundary / object boundary).
 // Widths follow ART-STYLE §4.3 by linear depth (outer 1.25 px at 1080p, crease x0.8, ID x0.6, 0 beyond 400 m),
 // scaled by internal_height / 1080 with a minimum width for lines whose nominal width is >= 1 px.
+
+#if defined(PASS_MASK) || defined(PASS_COMPOSITE)
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
@@ -608,3 +618,161 @@ void main() {
 }
 
 #endif // PASS_COMPOSITE
+
+#endif // PASS_MASK || PASS_COMPOSITE
+
+#ifdef PASS_LUT
+
+// ---- version lut. Writes the runtime colour-grading LUT: CDL ∘ base table (ART-STYLE §7.2, ENG-PERF §10.2).
+//
+// The LUT is sampled by the engine's tonemap pass through Environment.AdjustmentColorCorrection, after
+// linear_to_srgb, so both its input coordinate and its output are sRGB-encoded values in 0..1.
+//
+// base table (static; split toning and saturation, ART-STYLE §7.2 / §7.8), evaluated in linear light:
+//   shadows    x (0.97, 1.00, 1.04), weight 1 - smoothstep(0.08, 0.60, L)
+//   highlights x (1.03, 1.00, 0.97), weight smoothstep(0.55, 0.95, L)      L = OKLab lightness
+//   saturation 1.02
+// CDL (per keyframe, interpolated on the C# side), ASC order on the sRGB-encoded value:
+//   out = pow(max(in * slope + offset, 0), power), then saturation around Rec.709 luma.
+//
+// One 32^3 dispatch per frame (or when the CDL changes beyond a threshold). The static base is computed in place
+// here; if a hand-graded base table is introduced later it replaces base_table() as a sampled 3D texture.
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(rgba16f, set = 0, binding = 0) uniform restrict writeonly image3D lut_out;
+
+layout(push_constant, std430) uniform LutParams {
+	vec4 slope;    // rgb: CDL slope; w: LUT size (texels per axis)
+	vec4 offset;   // rgb: CDL offset; w: CDL saturation
+	vec4 power;    // rgb: CDL power; w: base-table saturation (1.02)
+	vec4 misc;     // x: split-toning strength (1 = as specified), yzw: reserved
+} pc;
+
+vec3 srgb_to_linear(vec3 c) {
+	vec3 lo = c / 12.92;
+	vec3 hi = pow((c + 0.055) / 1.055, vec3(2.4));
+	return mix(lo, hi, step(vec3(0.04045), c));
+}
+
+vec3 linear_to_srgb(vec3 c) {
+	c = max(c, vec3(0.0));
+	vec3 lo = c * 12.92;
+	vec3 hi = 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055;
+	return mix(lo, hi, step(vec3(0.0031308), c));
+}
+
+float oklab_l(vec3 c) {
+	float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+	float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+	float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+	l = pow(max(l, 0.0), 1.0 / 3.0);
+	m = pow(max(m, 0.0), 1.0 / 3.0);
+	s = pow(max(s, 0.0), 1.0 / 3.0);
+	return 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
+}
+
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+vec3 base_table(vec3 srgb) {
+	vec3 lin = srgb_to_linear(srgb);
+	float L = oklab_l(lin);
+	float k = pc.misc.x;
+	float w_dark = (1.0 - smoothstep(0.08, 0.60, L)) * k;
+	float w_light = smoothstep(0.55, 0.95, L) * k;
+	lin *= mix(vec3(1.0), vec3(0.97, 1.00, 1.04), w_dark);
+	lin *= mix(vec3(1.0), vec3(1.03, 1.00, 0.97), w_light);
+	float y = dot(lin, LUMA);
+	lin = vec3(y) + (lin - vec3(y)) * pc.power.w;
+	return linear_to_srgb(lin);
+}
+
+vec3 cdl(vec3 c) {
+	c = pow(max(c * pc.slope.rgb + pc.offset.rgb, vec3(0.0)), pc.power.rgb);
+	float y = dot(c, LUMA);
+	return vec3(y) + (c - vec3(y)) * pc.offset.w;
+}
+
+void main() {
+	int n = int(pc.slope.w + 0.5);
+	ivec3 t = ivec3(gl_GlobalInvocationID.xyz);
+	if (any(greaterThanEqual(t, ivec3(n)))) {
+		return;
+	}
+	// Texel -> input value, centre-aligned: texel i holds the grade of (i + 0.5) / n. The tonemap pass samples the
+	// LUT (bilinear, clamp to edge) directly at the colour value, so this is the encoding that reproduces an
+	// identity (measured in the WP-05 sandbox: <= 1/255 error between 4/255 and 251/255; the clamped ends
+	// differ by up to +2/255 at black and -4/255 at white). Edge-aligned i / (n - 1) gave an S-shaped
+	// +-2.5/255 error over the whole range.
+	vec3 x = (vec3(t) + 0.5) / float(n);
+	vec3 y = clamp(cdl(base_table(x)), 0.0, 1.0);
+	imageStore(lut_out, t, vec4(y, 1.0));
+}
+
+#endif // PASS_LUT
+
+#ifdef PASS_TILTSHIFT_COMP
+
+// ---- version tiltshift_comp. CompositorEffect POST_TRANSPARENT, the compose dispatch of the tilt-shift pair
+// (ART-STYLE §7.2, §7.4, §7.8; ENG-PERF §10.2). Runs every frame even when tilt-shift is off, because the
+// highlight shoulder (style floor) and the vignette live here:
+//   1. tilt-shift blend: mix(c, blur, smoothstep(0.66, 1.05, |uv.y - 0.47| * 2) * 0.25 * amount)
+//      (amount 0 when the player turned tilt-shift off; the two blur dispatches are then skipped),
+//   2. highlight shoulder on the overflow only: registered palette colours (lit colours reach 1.0) pass unchanged
+//      (ΔE <= 2 required, here 0); above the start the peak is rolled off into a small headroom and desaturated
+//      toward white with Khronos PBR Neutral's term, so glow (threshold at the start) still blooms only the real
+//      highlights and the final clip falls on near-white instead of shifting hue,
+//   3. vignette: c *= mix(1 - k * (1 - tint), 1, smoothstep(1.15, 0.25, length((uv - 0.5) * vec2(aspect, 1)))).
+// Input and output are the linear HDR colour buffer before the engine's glow / tonemap / LUT.
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(rgba16f, set = 0, binding = 0) uniform restrict image2D color_image;
+layout(set = 0, binding = 1) uniform sampler2D blur_tex;   // 1/2 or 1/4 resolution blur, bilinear
+
+layout(push_constant, std430) uniform CompParams {
+	vec4 size;       // internal width, height, 1/width, 1/height
+	vec4 tilt;       // x: tilt-shift amount 0..1 (fades to 0 in 0.5 s when switched off), y: max blend (0.25), zw: reserved
+	vec4 vignette;   // rgb: vignette tint, w: strength k (0.10 day, 0.12 night; 0 when switched off)
+	vec4 misc;       // x: shoulder start (1.0, above every registered lit colour), y: headroom (0.5), zw: reserved
+} pc;
+
+vec3 highlight_shoulder(vec3 c, float start, float headroom) {
+	float peak = max(c.r, max(c.g, c.b));
+	if (peak > start) {
+		float np = start + headroom * (1.0 - exp(-(peak - start) / headroom));
+		c *= np / peak;
+		float g = 1.0 - 1.0 / (0.15 * (peak - np) + 1.0);
+		c = mix(c, vec3(np), g);
+	}
+	return c;
+}
+
+void main() {
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(p, ivec2(pc.size.xy)))) {
+		return;
+	}
+	vec2 uv = (vec2(p) + 0.5) * pc.size.zw;
+	vec4 col = imageLoad(color_image, p);
+	vec3 c = col.rgb;
+
+	if (pc.tilt.x > 0.0) {
+		float w = smoothstep(0.66, 1.05, abs(uv.y - 0.47) * 2.0) * pc.tilt.y * pc.tilt.x;
+		if (w > 0.0) {
+			c = mix(c, textureLod(blur_tex, uv, 0.0).rgb, w);
+		}
+	}
+
+	c = highlight_shoulder(max(c, vec3(0.0)), pc.misc.x, max(pc.misc.y, 1e-3));
+
+	if (pc.vignette.w > 0.0) {
+		float aspect = pc.size.x * pc.size.w;
+		float r = length((uv - 0.5) * vec2(aspect, 1.0));
+		c *= mix(vec3(1.0) - pc.vignette.w * (vec3(1.0) - pc.vignette.rgb), vec3(1.0), smoothstep(1.15, 0.25, r));
+	}
+
+	imageStore(color_image, p, vec4(c, col.a));
+}
+
+#endif // PASS_TILTSHIFT_COMP

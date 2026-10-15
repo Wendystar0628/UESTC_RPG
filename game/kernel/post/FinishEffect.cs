@@ -6,17 +6,18 @@ namespace Campus.Kernel.Post;
 /// <summary>
 /// The PostTransparent CompositorEffect (ENG-PERF §10.2 step 6). Every frame it
 /// <list type="number">
-/// <item>re-bakes the runtime colour LUT (style/outline/post_lut.glsl: CDL ∘ static base table, 32³) when the CDL
-/// moved, so the engine's tonemap pass reads it later in the same frame through Environment.AdjustmentColorCorrection;</item>
-/// <item>runs the compose dispatch of style/outline/post_tiltshift_comp.glsl: highlight shoulder on the overflow only
+/// <item>re-bakes the runtime colour LUT (version lut of style/outline/post_outline.glsl: CDL ∘ static base table,
+/// 32³) when the CDL moved, so the engine's tonemap pass reads it later in the same frame through
+/// Environment.AdjustmentColorCorrection;</item>
+/// <item>runs the compose dispatch (version tiltshift_comp of the same file): highlight shoulder on the overflow only
 /// (registered lit colours unchanged), vignette, and the tilt-shift blend (amount 0 until the blur passes land).</item>
 /// </list>
 /// The compose dispatch always runs: the shoulder is a style floor (SYS-GRAPHICS §2).
 /// </summary>
 public partial class FinishEffect : CompositorEffect
 {
-    private const string ComposePath = "res://style/outline/post_tiltshift_comp.glsl";
-    private const string LutPath = "res://style/outline/post_lut.glsl";
+    private static readonly StringName ComposeVersion = "tiltshift_comp";
+    private static readonly StringName LutVersion = "lut";
     internal const int LutSize = 32;
     private const float ShoulderStart = 1.0f;     // at or above every registered lit colour (peak 1.0)
     private const float ShoulderHeadroom = 0.5f;
@@ -51,16 +52,15 @@ public partial class FinishEffect : CompositorEffect
     {
         EffectCallbackType = EffectCallbackTypeEnum.PostTransparent;
         _setCompose = [_uColor, _uBlur];
-        var compose = GD.Load<RDShaderFile>(ComposePath);
-        var lut = GD.Load<RDShaderFile>(LutPath);
-        if (compose is null || lut is null)
+        var file = GD.Load<RDShaderFile>(OutlineEffect.ShaderPath);
+        if (file is null)
         {
-            GD.PushError("WP-05 finish: missing post shaders");
+            GD.PushError($"WP-05 finish: missing {OutlineEffect.ShaderPath}");
             _failed = true;
             return;
         }
-        _spirvCompose = compose.GetSpirV();
-        _spirvLut = lut.GetSpirV();
+        _spirvCompose = file.GetSpirV(ComposeVersion);
+        _spirvLut = file.GetSpirV(LutVersion);
     }
 
     private bool EnsureResources()
@@ -74,9 +74,9 @@ public partial class FinishEffect : CompositorEffect
             return false;
         }
         _rd = RenderingServer.GetRenderingDevice();
-        _shaderCompose = _rd.ShaderCreateFromSpirV(_spirvCompose, "post_tiltshift_comp");
+        _shaderCompose = _rd.ShaderCreateFromSpirV(_spirvCompose, "post_outline_tiltshift_comp");
         _pipelineCompose = _rd.ComputePipelineCreate(_shaderCompose);
-        _shaderLut = _rd.ShaderCreateFromSpirV(_spirvLut, "post_lut");
+        _shaderLut = _rd.ShaderCreateFromSpirV(_spirvLut, "post_outline_lut");
         _pipelineLut = _rd.ComputePipelineCreate(_shaderLut);
         _sampler = _rd.SamplerCreate(new RDSamplerState
         {

@@ -34,7 +34,7 @@ internal struct PostFrame
     // Stand-in data textures (RenderingServer RIDs), used only while the registry has no producer for a name
     public Rid FallbackPalette;
     public Rid FallbackMatTable;
-    // Finish pass (post_tiltshift_comp.glsl) and LUT (post_lut.glsl)
+    // Finish pass and LUT (versions tiltshift_comp and lut of post_outline.glsl)
     public float TiltAmount;      // 0 until the tilt-shift blur dispatches land
     public float VignetteK;       // after the quality fade
     public Vector3 VignetteTint;
