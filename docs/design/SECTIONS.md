@@ -1633,52 +1633,52 @@
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 29.0k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
-关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、service_tier、rate_limits、重置卡、完成度调研、持续调研、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
+`docs/design/engineering/ENG-TEAM.md` · 29.5k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、service_tier、rate_limits、重置卡、完成度调研、持续调研、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
-- ENG-TEAM §0 结论 · L37 · 2.7k
-  - ★ ENG-TEAM §0.1 接入要点 · L54 · 1.2k
-- ENG-TEAM §1 参与者与会话 · L70 · 2.0k
-  - ENG-TEAM §1.1 决定权与执行人 · L88 · 434
-- ENG-TEAM §2 按模型能力分工 · L106 · 1.9k
-  - ENG-TEAM §2.1 各模型的长处与短板 · L110 · 589
-  - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L119 · 399
-  - ENG-TEAM §2.3 事归谁 · L127 · 607
-  - ENG-TEAM §2.4 交叉的地方 · L144 · 205
-- ENG-TEAM §3 模型等级与任务划分 · L150 · 1.8k
-  - ENG-TEAM §3.1 按任务难度选模型 · L154 · 606
-  - ENG-TEAM §3.2 总指挥只做什么 · L168 · 465
-  - ENG-TEAM §3.3 Astra 名下交给 6.1-sol 子代理的包 · L182 · 588
-  - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L196 · 110
-- ENG-TEAM §4 包的归属与开工顺序 · L201 · 2.0k
-  - ENG-TEAM §4.1 包的归属 · L203 · 919
-  - ENG-TEAM §4.2 开工顺序与合并顺序 · L217 · 1.1k
-- ENG-TEAM §5 开发流程 · L230 · 5.7k
-  - ENG-TEAM §5.1 全流程一览 · L234 · 610
-  - ENG-TEAM §5.2 派工 · L248 · 1.1k
-  - ENG-TEAM §5.3 施工与回报 · L269 · 779
-  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L288 · 639
-  - ENG-TEAM §5.5 批准与合并 · L300 · 1.3k
-  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L321 · 438
-  - ENG-TEAM §5.7 契约申请与共享工程文件 · L330 · 475
-  - ENG-TEAM §5.8 完成度调研并入工作包 · L338 · 368
-- ENG-TEAM §6 会话通信与工作交接 · L346 · 4.8k
-  - ENG-TEAM §6.1 交接目录与文件 · L350 · 1.5k
-  - ENG-TEAM §6.2 命名与写法 · L373 · 304
-  - ENG-TEAM §6.3 任务单与请求文件的格式 · L380 · 534
-  - ENG-TEAM §6.4 消息与流水 · L398 · 492
-  - ENG-TEAM §6.5 唤醒脚本 · L412 · 1.3k
-  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L439 · 478
-- ENG-TEAM §7 账号与额度管理 · L452 · 1.5k
-  - ENG-TEAM §7.1 主账号（主会话） · L456 · 133
-  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L461 · 757
-  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L479 · 481
-- ENG-TEAM §8 旁路任务与长期值班 · L489 · 4.5k
-  - ENG-TEAM §8.1 Sol 值班会话 · L493 · 712
-  - ENG-TEAM §8.2 完成度调研 · L510 · 1.8k
-  - ENG-TEAM §8.3 Sol 旁路会话 · L554 · 869
-  - ENG-TEAM §8.4 怎么开子代理 · L575 · 1.1k
-- ENG-TEAM §9 待验证（P0） · L602 · 229
+- ENG-TEAM §0 结论 · L37 · 2.9k
+  - ★ ENG-TEAM §0.1 接入要点 · L54 · 1.4k
+- ENG-TEAM §1 参与者与会话 · L71 · 2.0k
+  - ENG-TEAM §1.1 决定权与执行人 · L89 · 434
+- ENG-TEAM §2 按模型能力分工 · L107 · 1.9k
+  - ENG-TEAM §2.1 各模型的长处与短板 · L111 · 589
+  - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L120 · 399
+  - ENG-TEAM §2.3 事归谁 · L128 · 607
+  - ENG-TEAM §2.4 交叉的地方 · L145 · 205
+- ENG-TEAM §3 模型等级与任务划分 · L151 · 1.8k
+  - ENG-TEAM §3.1 按任务难度选模型 · L155 · 606
+  - ENG-TEAM §3.2 总指挥只做什么 · L169 · 465
+  - ENG-TEAM §3.3 Astra 名下交给 6.1-sol 子代理的包 · L183 · 588
+  - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L197 · 110
+- ENG-TEAM §4 包的归属与开工顺序 · L202 · 2.0k
+  - ENG-TEAM §4.1 包的归属 · L204 · 919
+  - ENG-TEAM §4.2 开工顺序与合并顺序 · L218 · 1.1k
+- ENG-TEAM §5 开发流程 · L231 · 5.7k
+  - ENG-TEAM §5.1 全流程一览 · L235 · 610
+  - ENG-TEAM §5.2 派工 · L249 · 1.1k
+  - ENG-TEAM §5.3 施工与回报 · L270 · 779
+  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L289 · 639
+  - ENG-TEAM §5.5 批准与合并 · L301 · 1.3k
+  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L322 · 438
+  - ENG-TEAM §5.7 契约申请与共享工程文件 · L331 · 475
+  - ENG-TEAM §5.8 完成度调研并入工作包 · L339 · 368
+- ENG-TEAM §6 会话通信与工作交接 · L347 · 5.0k
+  - ENG-TEAM §6.1 交接目录与文件 · L351 · 1.5k
+  - ENG-TEAM §6.2 命名与写法 · L374 · 304
+  - ENG-TEAM §6.3 任务单与请求文件的格式 · L381 · 534
+  - ENG-TEAM §6.4 消息与流水 · L399 · 719
+  - ENG-TEAM §6.5 唤醒脚本 · L418 · 1.3k
+  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L445 · 478
+- ENG-TEAM §7 账号与额度管理 · L458 · 1.5k
+  - ENG-TEAM §7.1 主账号（主会话） · L462 · 133
+  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L467 · 757
+  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L485 · 481
+- ENG-TEAM §8 旁路任务与长期值班 · L495 · 4.5k
+  - ENG-TEAM §8.1 Sol 值班会话 · L499 · 712
+  - ENG-TEAM §8.2 完成度调研 · L516 · 1.8k
+  - ENG-TEAM §8.3 Sol 旁路会话 · L560 · 869
+  - ENG-TEAM §8.4 怎么开子代理 · L581 · 1.1k
+- ENG-TEAM §9 待验证（P0） · L608 · 229
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
