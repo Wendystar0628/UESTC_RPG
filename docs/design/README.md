@@ -240,7 +240,7 @@ gates: []
 | [ENG-ONBOARD](engineering/ENG-ONBOARD.md) 子代理开工手册 | 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报 | WP-00 | — |
 | [ENG-PERF](engineering/ENG-PERF.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
-| [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度 | WP-00 | — |
+| [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列 | WP-00 | — |
 | [ENG-TEAM](engineering/ENG-TEAM.md) 多模型协作规程：分工、额度、通信与开发流程 | 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务 | WP-00 | — |
 | [ENG-WP](engineering/ENG-WP.md) 工作包派工单：54 个工作包，可并行 53 个 | 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
 
