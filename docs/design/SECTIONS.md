@@ -274,42 +274,42 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 53.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 54.2k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
 - ART-STYLE §0 结论 · L48 · 2.7k
   - ★ ART-STYLE §0.1 接入要点 · L63 · 1.5k
-- ART-STYLE §1 总体风格与参照 · L78 · 2.0k
-- ART-STYLE §2 明暗分阶 · L117 · 5.5k
-- ART-STYLE §3 影子：明度为主，按材质定影色 · L192 · 5.3k
-  - ART-STYLE §3.1 原则 · L196 · 656
-  - ART-STYLE §3.2 推导规则 · L211 · 1.8k
-  - ART-STYLE §3.3 天光与地面反光 · L254 · 370
-  - ART-STYLE §3.4 室内暖影 · L262 · 622
-  - ART-STYLE §3.5 哪些材质有色调变化 · L273 · 346
-  - ART-STYLE §3.6 夜间与阴雨 · L285 · 321
-  - ART-STYLE §3.7 示例 · L291 · 1.0k
-- ART-STYLE §4 描线 · L312 · 6.1k
-- ART-STYLE §5 高光、边缘光与透光 · L391 · 3.9k
-- ART-STYLE §6 贴图与笔触 · L442 · 1.4k
-- ART-STYLE §7 后期 · L465 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L534 · 8.9k
-  - ART-STYLE §8.1 风格色 · L536 · 2.8k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L581 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L600 · 1.2k
-  - ART-STYLE §8.4 界面色 · L632 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L657 · 1.4k
-  - ART-STYLE §8.6 天气色 · L682 · 1.1k
-- ART-STYLE §9 排除元素 · L701 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L703 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L729 · 599
-- ART-STYLE §10 材质速查 · L738 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L756 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L788 · 419
-- ART-STYLE §13 情绪弧线 · L801 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L826 · 1.9k
-- ART-STYLE §14 待验证（P0） · L846 · 2.1k
+- ART-STYLE §1 总体风格与参照 · L78 · 2.2k
+- ART-STYLE §2 明暗分阶 · L119 · 5.5k
+- ART-STYLE §3 影子：明度为主，按材质定影色 · L194 · 5.3k
+  - ART-STYLE §3.1 原则 · L198 · 656
+  - ART-STYLE §3.2 推导规则 · L213 · 1.8k
+  - ART-STYLE §3.3 天光与地面反光 · L256 · 370
+  - ART-STYLE §3.4 室内暖影 · L264 · 622
+  - ART-STYLE §3.5 哪些材质有色调变化 · L275 · 346
+  - ART-STYLE §3.6 夜间与阴雨 · L287 · 321
+  - ART-STYLE §3.7 示例 · L293 · 1.0k
+- ART-STYLE §4 描线 · L314 · 6.1k
+- ART-STYLE §5 高光、边缘光与透光 · L393 · 3.9k
+- ART-STYLE §6 贴图与笔触 · L444 · 1.4k
+- ART-STYLE §7 后期 · L467 · 5.7k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L536 · 8.9k
+  - ART-STYLE §8.1 风格色 · L538 · 2.8k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L583 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L602 · 1.2k
+  - ART-STYLE §8.4 界面色 · L634 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L659 · 1.4k
+  - ART-STYLE §8.6 天气色 · L684 · 1.1k
+- ART-STYLE §9 排除元素 · L703 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L705 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L731 · 599
+- ART-STYLE §10 材质速查 · L740 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L758 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L790 · 419
+- ART-STYLE §13 情绪弧线 · L803 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L828 · 1.9k
+- ART-STYLE §14 待验证（P0） · L848 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
@@ -1476,20 +1476,20 @@
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 7.5k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 7.8k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
-- ENG-TEAM §0 结论 · L34 · 1.5k
-  - ★ ENG-TEAM §0.1 接入要点 · L60 · 411
-- ENG-TEAM §1 谁擅长什么 · L70 · 561
-- ENG-TEAM §2 包的归属 · L86 · 681
-- ENG-TEAM §3 开工顺序 · L98 · 1.0k
-- ENG-TEAM §4 交接文件 · L111 · 1.0k
-- ENG-TEAM §5 审美与契约的交叉评审 · L132 · 434
-- ENG-TEAM §6 怎么开子代理 · L139 · 1.1k
-  - ENG-TEAM §6.1 Opus · L147 · 129
-  - ENG-TEAM §6.2 Astra · L153 · 593
-- ENG-TEAM §7 待验证（P0） · L178 · 210
+- ENG-TEAM §0 结论 · L34 · 1.6k
+  - ★ ENG-TEAM §0.1 接入要点 · L63 · 411
+- ENG-TEAM §1 谁擅长什么 · L73 · 675
+- ENG-TEAM §2 包的归属 · L91 · 681
+- ENG-TEAM §3 开工顺序 · L103 · 1.0k
+- ENG-TEAM §4 交接文件 · L116 · 1.0k
+- ENG-TEAM §5 审美与契约的交叉评审 · L137 · 434
+- ENG-TEAM §6 怎么开子代理 · L144 · 1.1k
+  - ENG-TEAM §6.1 Opus · L152 · 129
+  - ENG-TEAM §6.2 Astra · L158 · 593
+- ENG-TEAM §7 待验证（P0） · L183 · 210
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
