@@ -18,6 +18,7 @@ public sealed record D0CampusData(
     ContentOutput Content,
     IReadOnlyList<Collider> Colliders)
 {
+    public PolygonRings Boundary { get; init; } = new([]);
     public Box3 GroundBounds { get; init; }
     public int SourceFeatureCount { get; init; }
     public int SourceEntityCount { get; init; }
@@ -46,6 +47,10 @@ public static class D0CampusLoader
             throw new JsonException("campus.meta.crs must be an EPSG code.");
         var boundaryBounds = ReadBounds(meta.GetProperty("bounds"));
         var geo = new GeoFrame(originLon, originLat, epsg, boundaryBounds.Min, boundaryBounds.Max);
+        var boundaryRings = ReadRings(root.GetProperty("boundary"));
+        if (boundaryRings.Count == 0 || boundaryRings[0].Count < 3) throw new JsonException("Campus boundary needs an outer ring.");
+        var boundary = new PolygonRings(Array.AsReadOnly(boundaryRings[0].ToArray()),
+            Array.AsReadOnly(boundaryRings.Skip(1).Select(ring => (IReadOnlyList<Vector2>)Array.AsReadOnly(ring.ToArray())).ToArray()));
         var center = BoundaryCenter(root.GetProperty("boundary"), (boundaryBounds.Min + boundaryBounds.Max) * 0.5f);
 
         // The D0 stage is square and covers at least 150 m beyond the source boundary.
@@ -105,8 +110,14 @@ public static class D0CampusLoader
                 levels = Math.Max(levels ?? 0, Integer(member, "levels") ?? 0);
             }
             if (kind == "building" && height <= 0f) height = MathF.Max(1, levels ?? 1) * 3.5f;
-            var world = new WorldFeature(id, FeatureSource.Osm, new(kind), new PolygonGeometry(Rectangle(plan.Min, plan.Max)))
+            OverlayGeometry entityGeometry = members.Count == 0
+                ? new PointGeometry(EntityPosition(entity, (plan.Min + plan.Max) * 0.5f))
+                : new PolygonGeometry(Rectangle(plan.Min, plan.Max));
+            var world = new WorldFeature(id, FeatureSource.Osm, new(kind), entityGeometry)
             {
+                Parts = Array.AsReadOnly(members.Values.Select(member => new WorldFeaturePart(
+                    RequiredText(member, "id"), SourceGeometry(member), Number(member, "height"), Integer(member, "levels"))
+                { Props = member.Clone() }).ToArray()),
                 Name = Text(entity, "name"),
                 Height = height,
                 Storeys = levels is > 0 ? levels : null,
@@ -168,6 +179,7 @@ public static class D0CampusLoader
         return new(geo, center, bounds, tileMin, tileMax,
             new ReadOnlyDictionary<FeatureId, WorldFeature>(features), new(meshes.AsReadOnly(), []), colliders.AsReadOnly())
         {
+            Boundary = boundary,
             GroundBounds = groundBounds,
             SourceFeatureCount = sourceFeatures.Length,
             SourceEntityCount = entities.Length
@@ -211,6 +223,36 @@ public static class D0CampusLoader
     }
     private static PolygonRings Rectangle(Vector2 min, Vector2 max) =>
         new([min, new(max.X, min.Y), max, new(min.X, max.Y)]);
+    private static Vector3 EntityPosition(JsonElement entity, Vector2 fallback)
+    {
+        if (!entity.TryGetProperty("anchor", out var anchor) || anchor.ValueKind == JsonValueKind.Null)
+            return new(fallback.X, 0f, fallback.Y);
+        if (anchor.ValueKind != JsonValueKind.Array || anchor.GetArrayLength() is not (2 or 3))
+            throw new JsonException("Entity anchor must contain X/Z or X/Y/Z.");
+        var position = anchor.GetArrayLength() == 3
+            ? new Vector3(anchor[0].GetSingle(), anchor[1].GetSingle(), anchor[2].GetSingle())
+            : new Vector3(anchor[0].GetSingle(), 0f, anchor[1].GetSingle());
+        if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+            throw new JsonException("Entity anchor must be finite.");
+        return position;
+    }
+    private static OverlayGeometry SourceGeometry(JsonElement source)
+    {
+        var polygons = new List<PolygonRings>();
+        foreach (var polygon in source.GetProperty("polygons").EnumerateArray())
+        {
+            var rings = ReadRings(polygon);
+            if (rings.Count == 0 || rings[0].Count < 3) throw new JsonException("Source polygon needs a valid outer ring.");
+            polygons.Add(new(Array.AsReadOnly(rings[0].ToArray()),
+                Array.AsReadOnly(rings.Skip(1).Select(ring => (IReadOnlyList<Vector2>)Array.AsReadOnly(ring.ToArray())).ToArray())));
+        }
+        return polygons.Count switch
+        {
+            0 => throw new JsonException("Source feature needs polygon geometry."),
+            1 => new PolygonGeometry(polygons[0]),
+            _ => new MultiPolygonGeometry(polygons.AsReadOnly())
+        };
+    }
     private static List<IReadOnlyList<Vector2>> ReadRings(JsonElement polygon)
     {
         var result = new List<IReadOnlyList<Vector2>>();

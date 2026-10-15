@@ -11,6 +11,7 @@ public readonly record struct ChannelId(string Value);
 public readonly record struct PaletteToken(string Value);
 public readonly record struct MapId(string Value);
 public readonly record struct WaypointRef(MapId Map, string Id);
+/// <summary>Cell index at the accompanying LOD: floor(worldXZ / (64 &lt;&lt; lod)); Tiles(ctx) emits L0 cells. L4 uses (0, 0) for the whole map.</summary>
 public readonly record struct TileKey(int X, int Z);
 
 public readonly record struct Box3(Vector3 Min, Vector3 Max)

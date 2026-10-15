@@ -7,7 +7,8 @@ namespace Campus.Kernel.Stubs;
 [KernelService(typeof(IWorldState), Owner = "WP-00", IsStub = true)]
 [KernelService(typeof(IWorldControl), Owner = "WP-00", IsStub = true)]
 [KernelService(typeof(IViewControl), Owner = "WP-00", IsStub = true)]
-public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : IWorldState, IWorldControl, IViewControl
+[KernelService(typeof(IWorldRestore), Owner = "WP-00", IsStub = true)]
+public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : IWorldState, IWorldControl, IViewControl, IWorldRestore
 {
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
@@ -150,12 +151,18 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
     /// <summary>Called by the D0 save stub when starting a fresh world instance.</summary>
     public void BeginNewInstance()
     {
-        Instance++;
         WorldHours = 17.5;
         SeasonTarget = Season.Autumn;
         AnimTime = 240;
         Flow = new Flow(1);
         ViewMode = ViewMode.Fly;
+        CompleteRestore();
+    }
+
+    public void CompleteRestore()
+    {
+        // D0 celestial readouts are already settled; leave restored weather untouched.
+        Instance++;
         Rev++;
     }
 

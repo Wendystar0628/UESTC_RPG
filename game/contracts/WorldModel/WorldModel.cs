@@ -15,9 +15,14 @@ public sealed record Polyline(IReadOnlyList<Vector2> Points);
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(PolygonGeometry), "polygon")]
 [JsonDerivedType(typeof(PolylineGeometry), "polyline")]
+[JsonDerivedType(typeof(MultiPolygonGeometry), "multiPolygon")]
+[JsonDerivedType(typeof(PointGeometry), "point")]
 public abstract record OverlayGeometry;
 public sealed record PolygonGeometry(PolygonRings Rings) : OverlayGeometry;
 public sealed record PolylineGeometry(Polyline Line) : OverlayGeometry;
+public sealed record MultiPolygonGeometry(IReadOnlyList<PolygonRings> Polygons) : OverlayGeometry;
+/// <summary>A non-area POI in world X/Y/Z; Y is its known ground height or zero when unavailable.</summary>
+public sealed record PointGeometry(Vector3 Position) : OverlayGeometry;
 
 // Open-ended vocabulary keys. New building/appearance families are data additions, not enum renumbering.
 public readonly record struct BuildingFamily(string Value);
@@ -25,8 +30,20 @@ public readonly record struct FacadePreset(string Value);
 public readonly record struct DesignKind(string Value);
 public enum FeatureSource { Osm, OsmOverlay, Design }
 
+/// <summary>One source geometry of an entity, retaining its own height and storey count. SourceId is provenance, not a FeatureId.</summary>
+public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry, float? Height, int? Storeys)
+{
+    public JsonElement? Props { get; init; }
+}
+
+/// <summary>
+/// Id remains the campus entity identity. Geometry and Bounds are its aggregate query envelope.
+/// When Parts is non-empty, generators build each part and must not additionally build aggregate Geometry.
+/// Simple design features may leave Parts empty and generate directly from Geometry.
+/// </summary>
 public sealed record WorldFeature(FeatureId Id, FeatureSource Source, DesignKind Kind, OverlayGeometry Geometry)
 {
+    public IReadOnlyList<WorldFeaturePart> Parts { get; init; } = [];
     public string? Name { get; init; }
     public ZoneId? Zone { get; init; }
     public float? Height { get; init; }
@@ -52,8 +69,11 @@ public sealed record WorldNetwork(
     public static WorldNetwork Empty { get; } = new([], [], [], [], []);
 }
 
-public interface IWorldModel
+public interface IWorldModel : IWalkDataSource
 {
+    WalkBakeData? IWalkDataSource.Walk => null;
+    /// <summary>Actual campus boundary from source geometry, including holes; never the map's bounding rectangle.</summary>
+    PolygonRings Boundary { get; }
     IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
     WorldNetwork Network { get; }
     ISpatialIndex Spatial { get; }

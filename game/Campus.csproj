@@ -1,6 +1,7 @@
 <Project Sdk="Godot.NET.Sdk/4.7.2">
   <PropertyGroup><LangVersion>14.0</LangVersion><RootNamespace>Campus</RootNamespace><EnableDynamicLoading>true</EnableDynamicLoading><TargetFramework>net10.0</TargetFramework></PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.IO.Hashing" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;**/tests/**/*.cs" />
     <ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />

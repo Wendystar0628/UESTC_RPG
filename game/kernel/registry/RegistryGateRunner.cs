@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
@@ -73,7 +74,7 @@ public static class RegistryGateRunner
                 throw new InvalidDataException($"Reflection lake is duplicate or absent from map entities: {entry.Id}");
             entityCount += ids.Count;
             var effective = registry.ForMap(entry.Id.Value);
-            if (effective.Where(item => item.Kind != "service").GroupBy(item => (item.Kind, item.Id)).Any(group => group.Count() > 1))
+            if (effective.Where(item => item.Kind != "service").GroupBy(item => (item.Kind, item.Id, item.Scope)).Any(group => group.Count() > 1))
                 throw new InvalidDataException($"Generic/map registrations conflict in map: {entry.Id}");
             using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
             foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
@@ -158,6 +159,7 @@ public static class RegistryGateRunner
                 "content" => typeof(IContentModule).IsAssignableFrom(entry.Type),
                 "interior" => typeof(IInteriorProvider).IsAssignableFrom(entry.Type),
                 "ambient" => typeof(IAmbientEmitterSource).IsAssignableFrom(entry.Type),
+                "bake" => typeof(IBakeProducer).IsAssignableFrom(entry.Type),
                 "medium" => typeof(IMediumPresenter).IsAssignableFrom(entry.Type),
                 "save" => typeof(ISaveSection).IsAssignableFrom(entry.Type),
                 "part" => entry.Type.GetInterfaces().Any(type => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IPartDef<>)),
@@ -175,7 +177,9 @@ public static class RegistryGateRunner
             }
             if (entry.Kind == "save")
             {
-                var section = entry.Type.GetCustomAttributes<SaveSectionAttribute>().Single(attribute => attribute.Id == entry.Id);
+                if (entry.Scope is null) throw new InvalidDataException($"Save registration has no scope: {entry.Id}");
+                var section = entry.Type.GetCustomAttributes<SaveSectionAttribute>()
+                    .Single(attribute => attribute.Id == entry.Id && attribute.Scope == entry.Scope);
                 if (section.Version < 1 || !Enum.IsDefined(section.Phase) || !Enum.IsDefined(section.Scope) || !saveOrders.Add((section.Phase, section.Order)))
                     throw new InvalidDataException($"Invalid or duplicate save-section order: {entry.Id}");
             }

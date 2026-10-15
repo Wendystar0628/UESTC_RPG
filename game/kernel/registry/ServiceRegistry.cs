@@ -1,9 +1,14 @@
 using System.Reflection;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
+using Campus.Contracts.Save;
 
 namespace Campus.Kernel.Registry;
 
-public sealed record Registration(string Kind, string Id, string Owner, string? Map, Type Type, bool IsStub);
+public sealed record Registration(string Kind, string Id, string Owner, string? Map, Type Type, bool IsStub)
+{
+    public SaveScope? Scope { get; init; }
+}
 
 /// <summary>Stable discovery with explicit fallback replacement and constructor injection.</summary>
 public sealed class ServiceRegistry
@@ -47,6 +52,15 @@ public sealed class ServiceRegistry
         finally { _constructing.Remove(implementation); }
     }
 
+    /// <summary>Forget a constructed instance and every alias to it. Its owner must dispose/free it first.</summary>
+    public void Release(Type implementation)
+    {
+        ArgumentNullException.ThrowIfNull(implementation);
+        if (!_instances.TryGetValue(implementation, out var instance)) return;
+        var aliases = _instances.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray();
+        foreach (var alias in aliases) _instances.Remove(alias);
+    }
+
     public void Discover(IEnumerable<Assembly> assemblies)
     {
         var types = assemblies.Distinct().OrderBy(a => a.FullName, StringComparer.Ordinal)
@@ -72,22 +86,27 @@ public sealed class ServiceRegistry
             AddAttribute(type, type.GetCustomAttribute<Campus.Contracts.Audio.AmbientEmitterAttribute>(), "ambient");
             AddAttribute(type, type.GetCustomAttribute<MediumPresenterAttribute>(), "medium");
             AddAttribute(type, type.GetCustomAttribute<KernelNodeAttribute>(), "node");
-            foreach (var section in type.GetCustomAttributes<Campus.Contracts.Save.SaveSectionAttribute>())
+            AddAttribute(type, type.GetCustomAttribute<BakeProducerAttribute>(), "bake");
+            foreach (var section in type.GetCustomAttributes<SaveSectionAttribute>())
                 AddAttribute(type, section, "save");
         }
-        foreach (var group in _entries.Where(e => e.Kind != "service").GroupBy(e => (e.Kind, e.Map, e.Id)).ToArray())
+        foreach (var group in _entries.Where(e => e.Kind != "service").GroupBy(e => (e.Kind, e.Map, e.Id, e.Scope)).ToArray())
         {
             var real = group.Where(e => !e.IsStub).ToArray();
             var selected = real.Length > 0 ? real : group.ToArray();
             if (selected.Length > 1) throw new InvalidOperationException($"Duplicate registration: {group.Key}");
             foreach (var dropped in group.Where(e => e != selected[0]).ToArray()) _entries.Remove(dropped);
         }
-        _entries.Sort((a, b) => StringComparer.Ordinal.Compare(a.Kind + ":" + a.Id, b.Kind + ":" + b.Id));
+        _entries.Sort((a, b) => StringComparer.Ordinal.Compare(
+            a.Kind + ":" + a.Id + ":" + a.Map + ":" + a.Scope,
+            b.Kind + ":" + b.Id + ":" + b.Map + ":" + b.Scope));
     }
 
     private void AddAttribute(Type type, Attribute? attribute, string kind)
     {
         if (attribute is null) return;
+        if (attribute is BakeProducerAttribute && !typeof(IBakeProducer).IsAssignableFrom(type))
+            throw new InvalidOperationException($"Bake producer does not implement IBakeProducer: {type.FullName}");
         var metadata = attribute.GetType();
         var id = metadata.GetProperty("Id")?.GetValue(attribute) as string
             ?? throw new InvalidOperationException($"Registration has no Id: {type.FullName}");
@@ -99,7 +118,10 @@ public sealed class ServiceRegistry
         var stub = metadata.GetProperty("IsStub")?.GetValue(attribute) is true ||
             type.Assembly.GetName().Name == "Campus.Gen.Parts.Stubs" ||
             type.Namespace?.StartsWith("Campus.Kernel.Stubs", StringComparison.Ordinal) == true;
-        _entries.Add(new(kind, id, owner, map, type, stub));
+        _entries.Add(new(kind, id, owner, map, type, stub)
+        {
+            Scope = attribute is SaveSectionAttribute section ? section.Scope : null
+        });
     }
 
     public void InstantiateServices()

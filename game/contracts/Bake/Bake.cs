@@ -7,6 +7,8 @@ public interface IBakeHandle
 {
     BakeState State { get; }
     object? Product { get; }
+    TileBundle? Tile => Product as TileBundle;
+    CollisionTile? Collision => Product as CollisionTile;
     string? Error { get; }
 }
 public readonly record struct BakeProgress(int Total, int Done, string Stage);

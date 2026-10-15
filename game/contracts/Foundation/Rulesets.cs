@@ -24,6 +24,11 @@ public interface IRuleset
     RulesetDescriptor Current { get; }
     long Rev { get; }
 }
+/// <summary>Restricted activation entry point for new-game and restore orchestration; rule data remains kernel-owned.</summary>
+public interface IRulesetActivation
+{
+    void Select(RulesetId id);
+}
 public interface IObserverState
 {
     Vector3 Feet { get; }

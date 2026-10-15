@@ -2764,6 +2764,20 @@
     {
       "pattern": "scripts/godot-api/ApiDump/*.packages.lock.json",
       "owner": "WP-00"
+    },
+    {
+      "pattern": "scripts/gates/check-naming.ps1",
+      "owner": "WP-27",
+      "maintainers": [
+        "WP-00"
+      ]
+    },
+    {
+      "pattern": "scripts/gates/check-source.ps1",
+      "owner": "WP-27",
+      "maintainers": [
+        "WP-00"
+      ]
     }
   ],
   "shaderWhitelist": [

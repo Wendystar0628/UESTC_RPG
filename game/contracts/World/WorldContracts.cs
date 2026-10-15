@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace Campus.Contracts;
 
@@ -72,9 +73,30 @@ public interface IWorldControl              // 没有任何让世界时间倒退
     void Freeze(double clock, Season season, double anim);     // 只给测试构建（--clock、--season、--anim）：启动时设初值，WorldHours 从 clock 起算
 }
 
+/// <summary>Commits the restored world once all World-phase save sections have succeeded.</summary>
+public interface IWorldRestore
+{
+    // WP-50 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
+    // 然后才执行地图 Travel 及 Content/Pose 阶段；新游戏同序，CompleteResume 不调用。
+    // world.Restore 只恢复本段并清瞬态，不增加 Instance，也不调用天气 Reset/Quiet/Step。
+    // 此处增加 Instance/Rev 并落定日月、季节读数；天气由自己的 Restore 立即求值，不再推进。
+    // World 阶段失败不调用；此提交之后的阶段失败不回滚到旧实例。
+    void CompleteRestore();
+}
+
 // 天气过程：WP-45 实现，注册为 Kernel 服务；只有 WorldState（WP-34）和 WP-45a 自己的存档段调用它
 // （Reset 由新游戏调用，见 WeatherBoot），其他代码一律读 IWorldState 和天气类全局参数。有了这一层，WP-34 和 WP-45 可以并行开发
-public readonly record struct WeatherQueueItem(WeatherKind Kind, double Minutes);
+public readonly record struct WeatherQueueItem(WeatherKind Kind, double Minutes)
+{
+    // 未指定只用于命令行输入或旧格式；生成并保存的队列必须写入已抽定的强度，恢复不重抽。
+    public float? Intensity { get; init; }
+
+    [JsonConstructor]
+    public WeatherQueueItem(WeatherKind Kind, double Minutes, float? Intensity) : this(Kind, Minutes)
+    {
+        this.Intensity = Intensity;
+    }
+}
 public sealed record WeatherBoot(            // Boot 解析 --weather* 后交给新游戏；新游戏在第一帧之前调 Reset（SYS-WEATHER §8、SYS-SAVE §5.5）
     uint Seed,                               // --weather-seed；没给时由 ISaveService.NewGame 取一次熵（§2 BannedApiAnalyzers 的唯一例外）。
                                              // 读档时不调 Reset，天气由 WP-45a 的 weather、map:<id>/weather 两个存档段恢复（SYS-SAVE §5.4）
@@ -88,10 +110,20 @@ public readonly record struct WeatherTick(
 public sealed record WeatherProcessState(    // 一张图的天气过程状态（落定值）；字段由 WP-45a 在 v1 里定，按 SYS-SAVE §3.5 只读、不含 Godot 类型，
     MapId Map, uint Epoch, int Segment,      // 至少包括：图、epoch、片段号、
     WeatherSel Selection,                    // 自动或手动的选择、
-    IReadOnlyList<WeatherQueueItem> Queue, double QueueFromHours,   // 前瞻队列、
+    IReadOnlyList<WeatherQueueItem> Queue, double QueueFromHours,   // 过去 24 h 与未来 24 h 的完整已生成项；不截半项，保留求自然过渡所需的上一项。
     double? PinFromHours, double? PinToHours, WeatherKind? PinKind, float? PinIntensity,   // 钉住窗口、
     double QuietUntilHours, float Wet, float Puddle,                // 保持晴的期限、湿润与积水余量、
-    double LeftAtHours);                     // 离开这张图时的世界时间（切图时冻结，SYS-MAPS §5）
+    double LeftAtHours)                      // 本图状态的快照时刻；离图时冻结为离开时刻，活跃图 Capture 时取保存的落定 WorldHours。
+{
+    public int Attempt { get; init; }                 // 下一候选尝试号；与 Epoch/Segment 一起恢复随机子流位置。
+    public Season Season { get; init; } = Season.Autumn; // 本图最后生成队列所用的季节，不由读档时的外部当前季节替代。
+    public double ClockOffset { get; init; }           // 已生成队列的美术钟点基准；恢复后不重排已有队列。
+    public float SnowAdd { get; init; }                // 保存时的新雪余量，与 Wet/Puddle 同属落定状态。
+    public float? WetOverride { get; init; }           // --wet 的固定读数覆盖；自然推进保留，人工 Select/Reseason/Quiet/Pin 清除，无衰减计时锚点。
+    // 自然天气向量由规范 Queue 项、QueueFromHours 与快照/后续世界时间直接求值；
+    // 不存可重建的 WeatherNow，也不把保存时刻当作新的自然衰减起点。
+    // 手动、换季、显式快进的视觉过渡 Capture 取终点，Restore 直接落定，不重播过渡。
+}
 public interface IWeatherProcess
 {
     void Reset(WeatherBoot b);               // 只在新游戏时调用

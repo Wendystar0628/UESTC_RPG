@@ -6,9 +6,12 @@ using Campus.Contracts.Save;
 namespace Campus.Kernel.Stubs;
 
 [KernelService(typeof(IAppFlow), Owner = "WP-00", IsStub = true)]
+[KernelService(typeof(IAppBootFlow), Owner = "WP-00", IsStub = true)]
 public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveService saves,
-    IMapService maps, IWorldControl world) : IAppFlow
+    IMapService maps, IWorldControl world) : IAppFlow, IAppBootFlow
 {
+    private BootFlowRequest? _bootRequest;
+    private IDisposable? _bootInput;
     public AppState State { get; private set; } = AppState.Boot;
     public long Rev { get; private set; }
     public event Action<AppState, AppState>? Changed;
@@ -19,6 +22,31 @@ public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveServi
         _ => throw new InvalidOperationException("Unknown application state."),
     };
     public bool Skippable => false;
+
+    public Task<MapId> PrepareBoot(BootFlowRequest request)
+    {
+        if (!IsState(AppState.Boot)) throw new InvalidOperationException("Startup has already completed.");
+        _bootRequest = request;
+        _bootInput ??= camera.LockInput(InputLockReason.Cinematic);
+        return Task.FromResult(request.Map ?? maps.Default);
+    }
+
+    public Task PrepareWorld()
+    {
+        if (_bootRequest is null) throw new InvalidOperationException("PrepareBoot must run first.");
+        // The D0 save service has no readable slots. World and map defaults were set by bootstrap.
+        return Task.CompletedTask;
+    }
+
+    public Task CompleteBoot()
+    {
+        if (_bootRequest is null) throw new InvalidOperationException("PrepareBoot must run first.");
+        // D0 intentionally retains the direct --title=0 path; WP-49a supplies the real title lifecycle.
+        Change(AppState.Playing);
+        _bootInput?.Dispose();
+        _bootInput = null;
+        return Task.CompletedTask;
+    }
 
     // Boot calls this after the map, world, registry, and viewport are ready.
     public async Task Initialize()

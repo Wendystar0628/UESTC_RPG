@@ -12,9 +12,11 @@ public sealed class MapServiceStub(ICameraRig camera) : IMapService
     public long Rev { get; private set; }
     public MapId Default { get; private set; }
     public IReadOnlyList<MapDescriptor> Maps { get; private set; } = [];
+    public IReadOnlyList<MapVisit> Visits { get; private set; } = [];
     public MapId Current { get; private set; }
     public IMapContext? Context { get; private set; }
     public IMapTransition? Transition => null;
+    public event Action<MapId, MapTravelCause>? Arrived;
 
     public void LoadFromBytes(ReadOnlySpan<byte> indexBytes, ReadOnlySpan<byte> mapBytes,
         IWorldModel world, GeoFrame geo, Vector2 center, Box3 bounds,
@@ -42,7 +44,9 @@ public sealed class MapServiceStub(ICameraRig camera) : IMapService
         Maps = Array.AsReadOnly(new[] { descriptor });
         Context = new MapContextStub(descriptor, world, entry.Dir, bakeRoot);
         camera.SetPose(pose);
+        Visits = Array.AsReadOnly(new[] { new MapVisit(Current, pose, camera.Mode, 0, 0) });
         Rev++;
+        Arrived?.Invoke(Current, MapTravelCause.Boot);
     }
 
     public IMapTransition Travel(MapTravelRequest r)
@@ -50,17 +54,20 @@ public sealed class MapServiceStub(ICameraRig camera) : IMapService
         var from = Current;
         if (Context is not { } context || r.Target != Current)
             return new MapTransitionStub(from, r.Target, r.Cause, MapTravelResult.Rejected);
+        Pose pose;
         try
         {
-            var pose = r.Pose ?? ResolvePose(context.Descriptor, r.Spawn ?? context.Descriptor.DefaultSpawn);
-            camera.SetPose(pose);
-            Rev++;
-            return new MapTransitionStub(from, r.Target, r.Cause, MapTravelResult.Arrived);
+            pose = r.Pose ?? ResolvePose(context.Descriptor, r.Spawn ?? context.Descriptor.DefaultSpawn);
         }
         catch (ArgumentException)
         {
             return new MapTransitionStub(from, r.Target, r.Cause, MapTravelResult.Rejected);
         }
+        camera.SetPose(pose);
+        Visits = Array.AsReadOnly(new[] { new MapVisit(Current, pose, camera.Mode, 0, 0) });
+        Rev++;
+        Arrived?.Invoke(Current, r.Cause);
+        return new MapTransitionStub(from, r.Target, r.Cause, MapTravelResult.Arrived);
     }
 
     public Pose ResolvePose(MapDescriptor map, string id) =>

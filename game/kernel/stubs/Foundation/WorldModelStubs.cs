@@ -7,6 +7,7 @@ namespace Campus.Kernel.Stubs.Foundation;
 [KernelService(typeof(IWorldModel), Owner = "WP-00", IsStub = true)]
 public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interiors, IFidelityModel fidelity) : IWorldModel
 {
+    public PolygonRings Boundary { get; private set; } = new([]);
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; private set; } =
         new ReadOnlyDictionary<FeatureId, WorldFeature>(new Dictionary<FeatureId, WorldFeature>());
     public WorldNetwork Network { get; private set; } = WorldNetwork.Empty;
@@ -16,7 +17,7 @@ public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interio
     public IFidelityModel? Fidelity { get; } = fidelity;
 
     /// <summary>Allows D0 fixture data to be supplied without embedding a map or feature ID.</summary>
-    public void Configure(IEnumerable<WorldFeature> features, WorldNetwork? network = null)
+    public void Configure(IEnumerable<WorldFeature> features, WorldNetwork? network = null, PolygonRings? boundary = null)
     {
         ArgumentNullException.ThrowIfNull(features);
         var snapshot = new ReadOnlyDictionary<FeatureId, WorldFeature>(
@@ -24,8 +25,17 @@ public sealed class StubWorldModel(ISpatialIndex spatial, IInteriorIndex interio
                 .ToDictionary(feature => feature.Id));
         Features = snapshot;
         Network = network ?? WorldNetwork.Empty;
+        Boundary = boundary is null ? new([]) : new(
+            Array.AsReadOnly(boundary.Outer.ToArray()),
+            Array.AsReadOnly(boundary.Holes.Select(hole => (IReadOnlyList<Vector2>)Array.AsReadOnly(hole.ToArray())).ToArray()));
         if (Spatial is StubSpatialIndex stubSpatial) stubSpatial.Configure(snapshot);
         if (Fidelity is StubFidelityModel stubFidelity) stubFidelity.Configure(snapshot);
+    }
+
+    public void Configure(D0CampusData data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        Configure(data.Features.Values, boundary: data.Boundary);
     }
 }
 
@@ -58,11 +68,17 @@ public sealed class StubFidelityModel : IFidelityModel
     public void Configure(IReadOnlyDictionary<FeatureId, WorldFeature> features) => _features = features;
     public IReadOnlyList<FacadeSegment> Facades(FeatureId building)
     {
-        if (!_features.TryGetValue(building, out var feature) || feature.Geometry is not PolygonGeometry polygon)
-            return [];
+        if (!_features.TryGetValue(building, out var feature)) return [];
+        IReadOnlyList<PolygonRings> polygons = feature.Geometry switch
+        {
+            PolygonGeometry polygon => [polygon.Rings],
+            MultiPolygonGeometry multi => multi.Polygons,
+            _ => []
+        };
         var segments = new List<FacadeSegment>();
-        Append(polygon.Rings.Outer);
-        foreach (var hole in polygon.Rings.Holes) Append(hole);
+        foreach (var polygon in polygons) Append(polygon.Outer);
+        foreach (var polygon in polygons)
+            foreach (var hole in polygon.Holes) Append(hole);
         return segments.AsReadOnly();
 
         void Append(IReadOnlyList<Vector2> ring)

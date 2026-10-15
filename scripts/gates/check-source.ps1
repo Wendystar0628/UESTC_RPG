@@ -45,8 +45,17 @@ function Test-UESTCOwnership {
     }
     foreach ($path in $Changes) {
         $owner = $null
-        foreach ($rule in $rules) { if (Test-UESTCGlob $path $rule.pattern) { $owner = $rule.owner; break } }
-        if ($owner -eq $Wp -or ($Wp -eq 'WP-00' -and $owner -in @('shared','main'))) { continue }
+        $maintainers = @()
+        foreach ($rule in $rules) {
+            if (Test-UESTCGlob $path $rule.pattern) {
+                $owner = $rule.owner
+                if ($rule.PSObject.Properties['maintainers']) { $maintainers = @($rule.maintainers) }
+                break
+            }
+        }
+        if ($Wp -in $maintainers) { continue }
+        if ($owner -eq $Wp -or ($Wp -eq 'WP-00' -and $owner -in @('shared','main')) -or
+            ($Wp -eq 'WP-32' -and $owner -in @('WP-32a','WP-32b'))) { continue }
         $initial = $false
         if ($D0 -and $Wp -eq 'WP-00' -and $owner -and $path -notmatch '^docs/' -and 'game/project.godot' -notin $initialPaths) {
             $initial = $path -notin $initialPaths

@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Audio.Core.Stubs;
 
 /// <summary>Creates the SYS-AUDIO 3.1 bus tree only. No sources or effects are instantiated.</summary>
-[KernelNode("d0-audio", Owner = "WP-00", IsStub = true)]
+[KernelNode("audio", Owner = "WP-00", IsStub = true)]
 public partial class D0AudioNode : Node
 {
     private static readonly (string Name, string? Parent)[] Buses =
@@ -38,6 +38,12 @@ public partial class D0AudioNode : Node
     ];
 
     internal static int DryBusIndex { get; } = Array.FindIndex(Buses, bus => bus.Name == AudioBuses.NearDry);
+
+    internal static int IndexOfBus(string name)
+    {
+        var index = Array.FindIndex(Buses, bus => string.Equals(bus.Name, name, StringComparison.Ordinal));
+        return index >= 0 ? index : throw new ArgumentException($"Unknown audio bus '{name}'.", nameof(name));
+    }
 
     public override void _Ready() => InitializeBusTree();
 

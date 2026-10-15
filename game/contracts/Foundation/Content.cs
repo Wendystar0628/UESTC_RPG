@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Collections.ObjectModel;
 using Campus.Contracts.Maps;
 
 namespace Campus.Contracts;
@@ -28,7 +29,12 @@ public interface IContentModule
 {
     IReadOnlyList<Claim> Claims { get; }
     ModuleBudget Budget { get; }
+    /// <summary>Enumerates the module's occupied L0 cells on the 64-metre grid, regardless of requested rendering LOD.</summary>
     IEnumerable<TileKey> Tiles(BuildContext ctx);
+    /// <summary>
+    /// For L0-L3, tile is the level's index: floor(worldXZ / (64 &lt;&lt; (int)lod)), including negative coordinates.
+    /// L4 is the module's entire-map product and always uses TileKey(0, 0).
+    /// </summary>
     ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod);
     IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => [];
     IReadOnlyList<ChannelDecl> Channels => [];
@@ -40,6 +46,13 @@ public sealed class BuildContext
     public required IWorldModel World { get; init; }
     public required MapDescriptor Map { get; init; }
     public required uint WorldSeed { get; init; }
+    /// <summary>Caller-preloaded immutable bytes keyed by forward-slash paths relative to DataRoot; generators never perform IO.</summary>
+    public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> SourceInputs { get; init; } =
+        new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal));
+    /// <summary>Fingerprint of inputs affecting this build, computed by the caller. Empty only for development fixtures.</summary>
+    public string DataHash { get; init; } = "";
+    /// <summary>Fingerprint of this producer and its shared generation dependencies, computed by the caller.</summary>
+    public string CodeHash { get; init; } = "";
     public Rng Seeded(FeatureId feature, PartId part, string purpose) =>
         new(StableHash.Hash32(WorldSeed, feature.Value, part.Value, purpose));
     public ToonRef Toon(ToonSpec spec)

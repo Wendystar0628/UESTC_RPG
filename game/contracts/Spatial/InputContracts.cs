@@ -1,0 +1,35 @@
+namespace Campus.Contracts;
+
+public readonly record struct InputActionEvent(string Action, bool Pressed, bool Echo);
+
+/// <summary>Shared keyboard action routing; physical key codes are numeric to keep Godot outside contracts.</summary>
+public interface IInputRouter
+{
+    /// <summary>Lower priority values run first; equal priority layers run newest first.</summary>
+    /// <remarks>A handler returning true consumes the event. Disposing a registration removes only that layer.</remarks>
+    IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler);
+    bool InterfaceMode { get; }
+    event Action<bool>? InterfaceModeChanged;
+    void SetInterfaceMode(bool enabled);
+    /// <summary>Tries one physical keyboard binding; false reports the conflicting action or rejection reason.</summary>
+    bool TryRebind(string action, int physicalKey, out string? conflict);
+    int PhysicalKey(string action);
+    void SaveBindings();
+}
+
+/// <summary>WP-36 transit execution. The camera resolves the driver after registration to avoid a constructor cycle.</summary>
+public interface ITransitDriver
+{
+    ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null);
+    /// <summary>The settled destination while a transit is active; null when no transit is running.</summary>
+    Pose? Destination { get; }
+}
+
+public interface ICameraPoseValidator
+{
+    /// <param name="outsideBuffer">True also excludes the inner edge buffer, as required for --pose and authored waypoints.
+    /// False accepts the full reachable volume including its buffer.</param>
+    bool IsLegal(Pose pose, bool outsideBuffer);
+    /// <summary>Projects an out-of-range pose into the reachable volume immediately, without a push-back animation.</summary>
+    Pose Legalize(Pose pose);
+}

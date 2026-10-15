@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Tests</RootNamespace><EnableDefaultCompileItems>false</EnableDefaultCompileItems><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
-  <ItemGroup><Compile Include="kernel/**/tests/**/*.cs;camera/**/tests/**/*.cs;systems/**/tests/**/*.cs;audio/**/tests/**/*.cs;hud/**/tests/**/*.cs;flow/**/tests/**/*.cs" /><ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj" /></ItemGroup>
+  <ItemGroup><Compile Include="kernel/**/tests/**/*.cs;camera/**/tests/**/*.cs;systems/**/tests/**/*.cs;audio/**/tests/**/*.cs;hud/**/tests/**/*.cs;flow/**/tests/**/*.cs;style/**/tests/**/*.cs" /><ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj" /></ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="kernel/stubs/Foundation/tests/campus-levels-integer.json" LogicalName="Campus.Tests.campus-levels-integer.json" />
     <ProjectReference Include="Campus.csproj" />

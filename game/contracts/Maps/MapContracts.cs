@@ -76,9 +76,11 @@ public interface IMapService                 // Kernel 服务（WP-46）
     long Rev { get; }                        // 每次 Spawn 完成 + 1
     MapId Default { get; }                   // index.json 的默认图
     IReadOnlyList<MapDescriptor> Maps { get; }
+    IReadOnlyList<MapVisit> Visits { get; }   // All visited maps, including the current one; save enumerates per-map sections.
     MapId Current { get; }
     IMapContext? Context { get; }            // Unload 到 Mount 之间为 null
     IMapTransition? Transition { get; }
+    event Action<MapId, MapTravelCause>? Arrived;   // Main thread, after successful Spawn; subscribers must not block the transition.
     IMapTransition Travel(MapTravelRequest r);   // 跨图切换走雾幕加载；同图内移动交给 ICameraRig.Transit 和 IAtlasService
 }
 public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用

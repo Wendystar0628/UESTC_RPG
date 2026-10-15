@@ -50,7 +50,7 @@ public partial class D0Stage : Node3D
         if (AppBoot.Value("gate") == "registry")
         {
             var report = RegistryGateRunner.Run(registry, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRenderHost)]);
+                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(IRenderHost)]);
             GD.Print("G5_D0_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
             GD.Print($"G5 registry D0-scope PASS maps={report.Maps} declarations={report.Declarations}; runtime checks NOT_IMPLEMENTED={report.NotImplemented.Count}");
             GetTree().Quit();
@@ -73,7 +73,7 @@ public partial class D0Stage : Node3D
         var campusBytes = Read(entry.Dir + "campus.json");
         var campus = await Task.Run(() => D0CampusLoader.FromBytes(campusBytes, open));
         var world = (StubWorldModel)registry.Get<IWorldModel>();
-        world.Configure(campus.Features.Values);
+        world.Configure(campus);
         var waypointsBytes = Read(entry.Dir + "waypoints.json");
         var waypoints = JsonSerializer.Deserialize<WaypointFile>(waypointsBytes, ContractJson.Options)!.Waypoints;
         var maps = (MapServiceStub)registry.Get<IMapService>();

@@ -181,7 +181,8 @@ public sealed class ArchitectureTests
     {
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(Kernel|Style|Camera|Medium|Systems|Audio|Flow)(\.|$)")
-                .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel"))
+                .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel")
+                .And().DoNotHaveFullName("Campus.Kernel.Materials.IShaderMaterialSource"))
             .WithoutRequiringPositiveResults());
         var hudForbiddenCalls = Methods().Where(method =>
             method.DeclaringType.FullName == "Campus.Kernel.Registry.Kernel" && !Regex.IsMatch(method.Name, @"^Get(?:<|\(|$)") ||
@@ -196,6 +197,8 @@ public sealed class ArchitectureTests
         foreach (var system in systemNames)
         {
             // Vegetation.Seasons is the one permitted intra-system shader-hook extension.
+            // The approved Kernel.Materials.IShaderMaterialSource is outside this
+            // peer-system set; ShaderMaterial construction remains Style-only above.
             var pattern = "^" + Regex.Escape(system) + @"(\.|$)";
             Check(Types().That().ResideInNamespaceMatching(pattern).Should()
                 .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems\.")
