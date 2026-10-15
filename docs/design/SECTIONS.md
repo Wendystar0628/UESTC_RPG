@@ -981,7 +981,7 @@
 
 ## SYS-AUDIO · 音频：环境声、观者声、空间声学、界面音效与混音
 
-`docs/design/systems/SYS-AUDIO.md` · 111.1k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
+`docs/design/systems/SYS-AUDIO.md` · 111.2k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
   - SYS-AUDIO 分工 · L22 · 121
@@ -1042,26 +1042,26 @@
   - SYS-AUDIO §10.8 遮挡与室内外传声 · L967 · 1.2k
   - SYS-AUDIO §10.9 介质与天气的消音感 · L977 · 900
 - SYS-AUDIO §11 界面音效 · L992 · 2.2k
-- SYS-AUDIO §12 开场音乐 · L1034 · 906
-- SYS-AUDIO §13 设置：五组音量与减少干扰 · L1046 · 1.3k
-- SYS-AUDIO §14 素材策略与许可 · L1070 · 2.9k
-  - SYS-AUDIO §14.1 来源白名单 · L1072 · 1.2k
-  - SYS-AUDIO §14.2 处理流程（53e 的 `pipeline/audio/`） · L1089 · 1.1k
-  - SYS-AUDIO §14.3 版本库：Git LFS · L1106 · 275
-  - SYS-AUDIO §14.4 署名页 · L1112 · 308
-- SYS-AUDIO §15 格式与导入 · L1119 · 1.6k
-- SYS-AUDIO §16 Godot 4.7 实现要点与引擎坑 · L1144 · 3.6k
-- SYS-AUDIO §17 确定性与 Movie Maker 录音 · L1180 · 928
-- SYS-AUDIO §18 性能预算与包体 · L1188 · 2.6k
-  - SYS-AUDIO §18.1 CPU · L1190 · 1.6k
-  - SYS-AUDIO §18.2 内存与包体 · L1210 · 937
-- SYS-AUDIO §19 C# 契约 · L1227 · 15.7k
-- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1465 · 2.0k
-- SYS-AUDIO §21 工作包 · L1493 · 5.3k
-  - SYS-AUDIO §21.1 WP-53 音频 · L1495 · 2.8k
-  - SYS-AUDIO §21.2 其他包的增量 · L1519 · 2.5k
-- SYS-AUDIO §22 验收：G21 声音 · L1547 · 4.2k
-- SYS-AUDIO §25 待验证（P0） · L1567 · 995
+- SYS-AUDIO §12 开场音乐 · L1034 · 1.0k
+- SYS-AUDIO §13 设置：五组音量与减少干扰 · L1047 · 1.3k
+- SYS-AUDIO §14 素材策略与许可 · L1071 · 2.9k
+  - SYS-AUDIO §14.1 来源白名单 · L1073 · 1.2k
+  - SYS-AUDIO §14.2 处理流程（53e 的 `pipeline/audio/`） · L1090 · 1.1k
+  - SYS-AUDIO §14.3 版本库：Git LFS · L1107 · 275
+  - SYS-AUDIO §14.4 署名页 · L1113 · 308
+- SYS-AUDIO §15 格式与导入 · L1120 · 1.6k
+- SYS-AUDIO §16 Godot 4.7 实现要点与引擎坑 · L1145 · 3.6k
+- SYS-AUDIO §17 确定性与 Movie Maker 录音 · L1181 · 928
+- SYS-AUDIO §18 性能预算与包体 · L1189 · 2.6k
+  - SYS-AUDIO §18.1 CPU · L1191 · 1.6k
+  - SYS-AUDIO §18.2 内存与包体 · L1211 · 937
+- SYS-AUDIO §19 C# 契约 · L1228 · 15.7k
+- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1466 · 2.0k
+- SYS-AUDIO §21 工作包 · L1494 · 5.3k
+  - SYS-AUDIO §21.1 WP-53 音频 · L1496 · 2.8k
+  - SYS-AUDIO §21.2 其他包的增量 · L1520 · 2.5k
+- SYS-AUDIO §22 验收：G21 声音 · L1548 · 4.2k
+- SYS-AUDIO §25 待验证（P0） · L1568 · 995
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
@@ -1682,18 +1682,20 @@
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
-`docs/design/engineering/ENG-WP.md` · 92.3k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责
-关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、后置细节、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
+`docs/design/engineering/ENG-WP.md` · 97.0k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
+关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
-- ENG-WP §0 结论 · L25 · 1.5k
-  - ★ ENG-WP §0.1 接入要点 · L38 · 666
-- ENG-WP §1 阶段与闸口 · L50 · 6.6k
-- ENG-WP §2 工作包一览 · L94 · 73.0k
-  - ENG-WP §2.1 各包主线版的范围 · L163 · 11.1k
-- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L228 · 3.6k
-- ENG-WP §4 子代理通用简报模板 · L252 · 630
-- ENG-WP §5 主代理的职责 · L270 · 3.2k
-- ENG-WP §6 待验证（P0） · L290 · 1.2k
+- ENG-WP §0 结论 · L25 · 1.7k
+  - ★ ENG-WP §0.1 接入要点 · L39 · 737
+- ENG-WP §1 阶段与闸口 · L52 · 6.6k
+- ENG-WP §2 工作包一览 · L96 · 77.5k
+  - ENG-WP §2.1 各包主线版的范围 · L165 · 12.9k
+  - ENG-WP §2.2 细节阶段待办 · L230 · 2.5k
+  - ENG-WP §2.3 候选包 · L260 · 255
+- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L268 · 3.6k
+- ENG-WP §4 子代理通用简报模板 · L292 · 630
+- ENG-WP §5 主代理的职责 · L310 · 3.2k
+- ENG-WP §6 待验证（P0） · L330 · 1.2k
 
 ## REF-PROMPT · 完整提示词（备份）
 
