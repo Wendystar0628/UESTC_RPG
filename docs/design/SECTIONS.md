@@ -1628,8 +1628,8 @@
 - ENG-STATUS §0 结论 · L23 · 569
   - ★ ENG-STATUS §0.1 接入要点 · L30 · 287
 - ENG-STATUS §1 填写规则 · L37 · 932
-- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L61 · 1.8k
-- ENG-STATUS §3 活跃工作包 · L78 · 3.3k
+- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L61 · 1.9k
+- ENG-STATUS §3 活跃工作包 · L79 · 3.2k
 - ENG-STATUS §4 待派工队列 · L108 · 1.2k
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
