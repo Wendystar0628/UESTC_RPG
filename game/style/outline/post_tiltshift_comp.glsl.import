@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://7v2x7tphh2dr"
+path="res://.godot/imported/post_tiltshift_comp.glsl-0149ab6d9059b60f34d5e96d28098851.res"
+
+[deps]
+
+source_file="res://style/outline/post_tiltshift_comp.glsl"
+dest_files=["res://.godot/imported/post_tiltshift_comp.glsl-0149ab6d9059b60f34d5e96d28098851.res"]
+
+[params]
+
