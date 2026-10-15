@@ -123,6 +123,6 @@ gates: [G6]
 | 地图数据（© OpenStreetMap contributors）：快照、补充数据和由它们生成的派生数据 | ODbL 1.0；每个公开版本附地图数据包（§5） | `README.md`；地图数据包的 `README.txt` |
 | 第三方素材与代码：字体、音频、插件、移植的算法 | 按各自的许可 | `third_party.json`、`game/data/audio/licenses.json`；汇总进 `LICENSES.txt`（SYS-VIEW §6） |
 
-- **第三方的许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL（ENG-WP §5；C# 移植的 earcut 是 ISC，ENG-ARCH §1）；音频素材的来源与许可按 SYS-AUDIO §14 登记。
+- **第三方的许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL（ENG-WP §5；C# 移植的 earcut 是 ISC，ENG-ARCH §1）。例外：只在开发机上运行的工具链依赖（Python 管线的传递依赖等，例如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材的来源与许可按 SYS-AUDIO §14 登记。
 - **不是校方作品**：`README.md` 开头写明这是个人创作，不是电子科技大学的官方作品，与学校没有关联；每个版本的发布说明也写这一句。场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §11）。
 - **说法一致**：`README.md` 的"许可"一段、许可页（SYS-VIEW §6）、安装包的 `LICENSES.txt` 和地图数据包的 `README.txt`，对同一类内容写同一种许可；改许可时先改 `LICENSE` 与 `README.md`，再同步其余几处。

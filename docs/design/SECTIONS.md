@@ -1606,7 +1606,7 @@
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/design/ops/OPS-RELEASE.md` · 7.6k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
+`docs/design/ops/OPS-RELEASE.md` · 7.8k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
 关键词：发布、发版、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、安装包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、升级、卸载、清理用户数据、诊断包、导出诊断、试玩反馈、许可、MIT、LICENSE、发布页、干净环境验证
 
   - OPS-RELEASE 分工 · L23 · 415
@@ -1618,4 +1618,4 @@
 - OPS-RELEASE §4 安装、更新与卸载 · L75 · 549
 - OPS-RELEASE §5 地图数据包（ODbL） · L87 · 696
 - OPS-RELEASE §6 故障处理与诊断 · L98 · 845
-- OPS-RELEASE §7 许可 · L115 · 874
+- OPS-RELEASE §7 许可 · L115 · 1.0k
