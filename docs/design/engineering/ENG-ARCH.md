@@ -616,12 +616,18 @@ public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylind
     // 解析球、解析柱：片元里按实例中心或轴算法线，只用于独立实例和 MultiMesh 的圆件（ENG-PERF §2）；只在末尾追加
 public enum LineClass { Building, Tree, Fine, None }
 public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }   // 建筑两阶、曲面道具两阶半、软物两阶半宽带、植被三阶（ART-STYLE §2.1）
+public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus }
+    // 材质库按它选白名单着色器（ENG-PERF §1.4）；只在末尾追加
 
 public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
+    // 顶点只存一个色号字节，按 Lit 解释：Lit 与 Shade 必须成对登记，Shade 的色号 = Lit 的色号 + 1；
+    // PlacedPart.Tint 也按 Lit 解释；G5 校验色名成对
 {
+    public ToonKind Kind { get; init; } = ToonKind.Static;
     public PaletteToken? Deep { get; init; }             // 只作 WP-37 自检的校验值；植被深影由着色器从影色算出
                                                          // （L × 0.88、C × 0.95，ART-STYLE §2.1），着色器不读本字段
-    public float Band { get; init; } = 0.02f;            // 明暗过渡带：建筑 0.02（阴雨天按天光方向时 0.06），植被团块 0.06（ART-STYLE §2.1）
+    public float Band { get; init; } = 0.02f;            // 明暗过渡带：建筑 0.02（阴雨天按天光方向时 0.06），植被团块 0.06（ART-STYLE §2.1）；
+                                                         // 只对 Two、Three 有效；TwoHalf、Soft 的过渡带由 Steps 推出（fwidth 的 1 倍、2.2 倍）
     public ToonNormal Normal { get; init; } = ToonNormal.Flat;   // 解析法线的方式与 ToonFx.BevelLift 的幅度写进 mat_table 行 3（ENG-PERF §1.5）
     public LineClass Line { get; init; } = LineClass.Building;
     public ToonFx Fx { get; init; }
@@ -629,6 +635,7 @@ public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
     public ChannelId? Emissive { get; init; }
     public ShadeSteps Steps { get; init; } = ShadeSteps.Two;   // 写进 mat_table 行 1（ENG-PERF §1.5）
     public float Translucency { get; init; }             // 透光系数 k_t，0 = 不透光；写进 mat_table 行 2（ART-STYLE §5.6）
+    public float Wet { get; init; } = 0.6f;              // 湿润响应：沥青 1、玻璃 0；写进 mat_table 行 1 的 A（SYS-WEATHER §7）
 }
 public readonly record struct ToonRef(ToonSpec Spec);   // 值语义，按内容比较；内核按它查材质缓存
 // Godot 侧：WP-04 的材质库（Campus.Style）把 ToonSpec 映射到白名单着色器的 ShaderMaterial，
