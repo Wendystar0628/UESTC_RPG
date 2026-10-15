@@ -1,0 +1,1985 @@
+{
+ "schema": 1,
+ "entries": [
+  {
+   "token": "sun.light",
+   "id": 0,
+   "albedo": [
+    1.0,
+    0.8275,
+    0.6118
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "ambient.sky",
+   "id": 1,
+   "albedo": [
+    0.6588,
+    0.6784,
+    0.7647
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "bounce.ground",
+   "id": 2,
+   "albedo": [
+    0.8471,
+    0.6902,
+    0.4863
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "interior.warm",
+   "id": 3,
+   "albedo": [
+    0.9216,
+    0.6902,
+    0.4667
+   ],
+   "materialClass": "interior",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "line.warm",
+   "id": 4,
+   "albedo": [
+    0.2902,
+    0.2039,
+    0.149
+   ],
+   "materialClass": "line",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "line.cool",
+   "id": 5,
+   "albedo": [
+    0.2078,
+    0.3137,
+    0.3529
+   ],
+   "materialClass": "line",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "shaft.near",
+   "id": 6,
+   "albedo": [
+    1.0,
+    0.9412,
+    0.7843
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "shaft.far",
+   "id": 7,
+   "albedo": [
+    0.9569,
+    0.7098,
+    0.2314
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "rim",
+   "id": 8,
+   "albedo": [
+    1.0,
+    0.851,
+    0.6275
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "glass.glare",
+   "id": 9,
+   "albedo": [
+    1.0,
+    0.9569,
+    0.8392
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "window.warm",
+   "id": 10,
+   "albedo": [
+    1.0,
+    0.8784,
+    0.6588
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "window.cool",
+   "id": 11,
+   "albedo": [
+    0.9333,
+    0.9569,
+    1.0
+   ],
+   "materialClass": "light",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "shadow.1",
+   "id": 12,
+   "albedo": [
+    0.6353,
+    0.6549,
+    0.7412
+   ],
+   "materialClass": "neutral",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "fog.sun",
+   "id": 13,
+   "albedo": [
+    0.9529,
+    0.8235,
+    0.651
+   ],
+   "materialClass": "fog",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "fog.anti",
+   "id": 14,
+   "albedo": [
+    0.7216,
+    0.7137,
+    0.8392
+   ],
+   "materialClass": "fog",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.sun.0",
+   "id": 15,
+   "albedo": [
+    1.0,
+    0.8824,
+    0.6275
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.sun.1",
+   "id": 16,
+   "albedo": [
+    0.9686,
+    0.6902,
+    0.4471
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.sun.2",
+   "id": 17,
+   "albedo": [
+    0.851,
+    0.5765,
+    0.6118
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.sun.3",
+   "id": 18,
+   "albedo": [
+    0.6118,
+    0.5961,
+    0.7843
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.sun.4",
+   "id": 19,
+   "albedo": [
+    0.2902,
+    0.3843,
+    0.6588
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.anti.0",
+   "id": 20,
+   "albedo": [
+    0.8902,
+    0.7647,
+    0.7529
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.anti.1",
+   "id": 21,
+   "albedo": [
+    0.7843,
+    0.749,
+    0.8235
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.anti.2",
+   "id": 22,
+   "albedo": [
+    0.6627,
+    0.7059,
+    0.8392
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.anti.3",
+   "id": 23,
+   "albedo": [
+    0.4941,
+    0.5647,
+    0.7686
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.anti.4",
+   "id": 24,
+   "albedo": [
+    0.2902,
+    0.3843,
+    0.6588
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.cloudLit",
+   "id": 25,
+   "albedo": [
+    1.0,
+    0.9529,
+    0.8157
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.cloudRim",
+   "id": 26,
+   "albedo": [
+    1.0,
+    0.7608,
+    0.4784
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.cloudBelly",
+   "id": 27,
+   "albedo": [
+    0.549,
+    0.502,
+    0.7059
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.cloudDeep",
+   "id": 28,
+   "albedo": [
+    0.4157,
+    0.4078,
+    0.5961
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "sky.moon",
+   "id": 29,
+   "albedo": [
+    0.9608,
+    0.9451,
+    0.8863
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "frame"
+  },
+  {
+   "token": "shadow.contact",
+   "id": 32,
+   "albedo": [
+    0.2784,
+    0.2784,
+    0.451
+   ],
+   "materialClass": "retired",
+   "seasonal": false,
+   "role": "retired"
+  },
+  {
+   "token": "line.building",
+   "id": 33,
+   "albedo": [
+    0.2314,
+    0.2118,
+    0.3216
+   ],
+   "materialClass": "retired",
+   "seasonal": false,
+   "role": "retired"
+  },
+  {
+   "token": "line.tree",
+   "id": 34,
+   "albedo": [
+    0.2902,
+    0.2275,
+    0.1804
+   ],
+   "materialClass": "retired",
+   "seasonal": false,
+   "role": "retired"
+  },
+  {
+   "token": "shadow.interior",
+   "id": 35,
+   "albedo": [
+    0.7647,
+    0.6549,
+    0.549
+   ],
+   "materialClass": "retired",
+   "seasonal": false,
+   "role": "retired"
+  },
+  {
+   "token": "weather.overcast",
+   "id": 40,
+   "albedo": [
+    0.7451,
+    0.702,
+    0.7529
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "weather.snowOvercast",
+   "id": 41,
+   "albedo": [
+    0.7216,
+    0.7059,
+    0.8
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "weather.nightRain",
+   "id": 42,
+   "albedo": [
+    0.2353,
+    0.1961,
+    0.3059
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "weather.cbBase",
+   "id": 43,
+   "albedo": [
+    0.3529,
+    0.3765,
+    0.5647
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "weather.fog",
+   "id": 44,
+   "albedo": [
+    0.8941,
+    0.8627,
+    0.8941
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "weather.washedSky",
+   "id": 45,
+   "albedo": [
+    0.2627,
+    0.3725,
+    0.7216
+   ],
+   "materialClass": "sky",
+   "seasonal": false,
+   "role": "weather"
+  },
+  {
+   "token": "sign.green",
+   "id": 48,
+   "albedo": [
+    0.3098,
+    0.749,
+    0.4784
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "firefly",
+   "id": 49,
+   "albedo": [
+    0.8745,
+    1.0,
+    0.5412
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "water.poolGlow",
+   "id": 50,
+   "albedo": [
+    0.5608,
+    0.8471,
+    0.8784
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "lamp.warm",
+   "id": 51,
+   "albedo": [
+    1.0,
+    0.8157,
+    0.549
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "lamp.amber",
+   "id": 52,
+   "albedo": [
+    1.0,
+    0.7059,
+    0.3529
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "lamp.cool",
+   "id": 53,
+   "albedo": [
+    0.902,
+    0.9333,
+    1.0
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
+   "token": "snow.lit",
+   "id": 64,
+   "albedo": [
+    0.9569,
+    0.9647,
+    0.9804
+   ],
+   "materialClass": "snow",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "snow.shade",
+   "id": 65,
+   "albedo": [
+    0.9569,
+    0.9647,
+    0.9804
+   ],
+   "materialClass": "snow",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "wall.lit",
+   "id": 66,
+   "albedo": [
+    0.8941,
+    0.8667,
+    0.8157
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "wall.shade",
+   "id": 67,
+   "albedo": [
+    0.8941,
+    0.8667,
+    0.8157
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "stone.beige.lit",
+   "id": 68,
+   "albedo": [
+    0.8118,
+    0.7843,
+    0.7255
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "stone.beige.shade",
+   "id": 69,
+   "albedo": [
+    0.8118,
+    0.7843,
+    0.7255
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "wall.greyWhite.lit",
+   "id": 70,
+   "albedo": [
+    0.8706,
+    0.8667,
+    0.8314
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "wall.greyWhite.shade",
+   "id": 71,
+   "albedo": [
+    0.8706,
+    0.8667,
+    0.8314
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "wall.dormYellow.lit",
+   "id": 72,
+   "albedo": [
+    0.8471,
+    0.7686,
+    0.6353
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "wall.dormYellow.shade",
+   "id": 73,
+   "albedo": [
+    0.8471,
+    0.7686,
+    0.6353
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "wall.creamCoffee.lit",
+   "id": 74,
+   "albedo": [
+    0.8039,
+    0.7098,
+    0.6078
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "wall.creamCoffee.shade",
+   "id": 75,
+   "albedo": [
+    0.8039,
+    0.7098,
+    0.6078
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "band.terracotta.lit",
+   "id": 76,
+   "albedo": [
+    0.7059,
+    0.4784,
+    0.4078
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "band.terracotta.shade",
+   "id": 77,
+   "albedo": [
+    0.7059,
+    0.4784,
+    0.4078
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "panel.yellowGreen.lit",
+   "id": 78,
+   "albedo": [
+    0.6667,
+    0.6627,
+    0.3804
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "panel.yellowGreen.shade",
+   "id": 79,
+   "albedo": [
+    0.6667,
+    0.6627,
+    0.3804
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "panel.pinkSand.lit",
+   "id": 80,
+   "albedo": [
+    0.7412,
+    0.6431,
+    0.5882
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "panel.pinkSand.shade",
+   "id": 81,
+   "albedo": [
+    0.7412,
+    0.6431,
+    0.5882
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "panel.brown.lit",
+   "id": 82,
+   "albedo": [
+    0.6196,
+    0.5294,
+    0.4431
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "panel.brown.shade",
+   "id": 83,
+   "albedo": [
+    0.6196,
+    0.5294,
+    0.4431
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "panel.paleGold.lit",
+   "id": 84,
+   "albedo": [
+    0.7569,
+    0.6784,
+    0.4745
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "panel.paleGold.shade",
+   "id": 85,
+   "albedo": [
+    0.7569,
+    0.6784,
+    0.4745
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "tile.canteen.lit",
+   "id": 86,
+   "albedo": [
+    0.7608,
+    0.6784,
+    0.549
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "tile.canteen.shade",
+   "id": 87,
+   "albedo": [
+    0.7608,
+    0.6784,
+    0.549
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "base.warmBrown.lit",
+   "id": 88,
+   "albedo": [
+    0.5922,
+    0.4667,
+    0.3961
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "base.warmBrown.shade",
+   "id": 89,
+   "albedo": [
+    0.5922,
+    0.4667,
+    0.3961
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "roof.grey.lit",
+   "id": 90,
+   "albedo": [
+    0.451,
+    0.4784,
+    0.4627
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "roof.grey.shade",
+   "id": 91,
+   "albedo": [
+    0.451,
+    0.4784,
+    0.4627
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "roof.silverMetal.lit",
+   "id": 92,
+   "albedo": [
+    0.7843,
+    0.8039,
+    0.8157
+   ],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "roof.silverMetal.shade",
+   "id": 93,
+   "albedo": [
+    0.7843,
+    0.8039,
+    0.8157
+   ],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "frame.alu.lit",
+   "id": 94,
+   "albedo": [
+    0.5725,
+    0.6078,
+    0.6
+   ],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "frame.alu.shade",
+   "id": 95,
+   "albedo": [
+    0.5725,
+    0.6078,
+    0.6
+   ],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "glass.lit",
+   "id": 96,
+   "albedo": [
+    0.2078,
+    0.3098,
+    0.349
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "glass.shade",
+   "id": 97,
+   "albedo": [
+    0.2078,
+    0.3098,
+    0.349
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "brick.lit",
+   "id": 98,
+   "albedo": [
+    0.7608,
+    0.3412,
+    0.2392
+   ],
+   "materialClass": "ground",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "brick.shade",
+   "id": 99,
+   "albedo": [
+    0.7608,
+    0.3412,
+    0.2392
+   ],
+   "materialClass": "ground",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "uestc.blue.lit",
+   "id": 100,
+   "albedo": [
+    0.0,
+    0.2471,
+    0.5529
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "uestc.blue.shade",
+   "id": 101,
+   "albedo": [
+    0.0,
+    0.2471,
+    0.5529
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "uestc.techblue.lit",
+   "id": 102,
+   "albedo": [
+    0.098,
+    0.3804,
+    0.6275
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "uestc.techblue.shade",
+   "id": 103,
+   "albedo": [
+    0.098,
+    0.3804,
+    0.6275
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "uestc.gold.lit",
+   "id": 104,
+   "albedo": [
+    0.8627,
+    0.6706,
+    0.4745
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "uestc.gold.shade",
+   "id": 105,
+   "albedo": [
+    0.8627,
+    0.6706,
+    0.4745
+   ],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.capsule.lit",
+   "id": 106,
+   "albedo": [
+    0.6784,
+    0.3294,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.capsule.shade",
+   "id": 107,
+   "albedo": [
+    0.6784,
+    0.3294,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "sign.wetFloor.lit",
+   "id": 108,
+   "albedo": [
+    0.8392,
+    0.7608,
+    0.4941
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "sign.wetFloor.shade",
+   "id": 109,
+   "albedo": [
+    0.8392,
+    0.7608,
+    0.4941
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "umbrella.grayblue.lit",
+   "id": 110,
+   "albedo": [
+    0.549,
+    0.6118,
+    0.6824
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "umbrella.grayblue.shade",
+   "id": 111,
+   "albedo": [
+    0.549,
+    0.6118,
+    0.6824
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "umbrella.graygreen.lit",
+   "id": 112,
+   "albedo": [
+    0.5765,
+    0.6353,
+    0.5804
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "umbrella.graygreen.shade",
+   "id": 113,
+   "albedo": [
+    0.5765,
+    0.6353,
+    0.5804
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "umbrella.beige.lit",
+   "id": 114,
+   "albedo": [
+    0.8353,
+    0.7843,
+    0.6824
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "umbrella.beige.shade",
+   "id": 115,
+   "albedo": [
+    0.8353,
+    0.7843,
+    0.6824
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "umbrella.graypink.lit",
+   "id": 116,
+   "albedo": [
+    0.7647,
+    0.6392,
+    0.6588
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "umbrella.graypink.shade",
+   "id": 117,
+   "albedo": [
+    0.7647,
+    0.6392,
+    0.6588
+   ],
+   "materialClass": "fabric",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "ginkgo.lit",
+   "id": 118,
+   "albedo": [
+    1.0,
+    0.851,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 4,
+   "role": "lit"
+  },
+  {
+   "token": "ginkgo.shade",
+   "id": 119,
+   "albedo": [
+    1.0,
+    0.851,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 5,
+   "role": "shade"
+  },
+  {
+   "token": "metaseq.lit",
+   "id": 120,
+   "albedo": [
+    0.851,
+    0.4706,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 6,
+   "role": "lit"
+  },
+  {
+   "token": "metaseq.shade",
+   "id": 121,
+   "albedo": [
+    0.851,
+    0.4706,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 7,
+   "role": "shade"
+  },
+  {
+   "token": "cherry.lit",
+   "id": 122,
+   "albedo": [
+    0.8784,
+    0.4784,
+    0.2706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 8,
+   "role": "lit"
+  },
+  {
+   "token": "cherry.shade",
+   "id": 123,
+   "albedo": [
+    0.8784,
+    0.4784,
+    0.2706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 9,
+   "role": "shade"
+  },
+  {
+   "token": "maple.lit",
+   "id": 124,
+   "albedo": [
+    0.8471,
+    0.2824,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 10,
+   "role": "lit"
+  },
+  {
+   "token": "maple.shade",
+   "id": 125,
+   "albedo": [
+    0.8471,
+    0.2824,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 11,
+   "role": "shade"
+  },
+  {
+   "token": "willow.lit",
+   "id": 126,
+   "albedo": [
+    0.7882,
+    0.8275,
+    0.4784
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 12,
+   "role": "lit"
+  },
+  {
+   "token": "willow.shade",
+   "id": 127,
+   "albedo": [
+    0.7882,
+    0.8275,
+    0.4784
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 13,
+   "role": "shade"
+  },
+  {
+   "token": "plum.lit",
+   "id": 128,
+   "albedo": [
+    0.6588,
+    0.3451,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 14,
+   "role": "lit"
+  },
+  {
+   "token": "plum.shade",
+   "id": 129,
+   "albedo": [
+    0.6588,
+    0.3451,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 15,
+   "role": "shade"
+  },
+  {
+   "token": "deciduous.lit",
+   "id": 130,
+   "albedo": [
+    0.9098,
+    0.7529,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 16,
+   "role": "lit"
+  },
+  {
+   "token": "deciduous.shade",
+   "id": 131,
+   "albedo": [
+    0.9098,
+    0.7529,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 17,
+   "role": "shade"
+  },
+  {
+   "token": "jacaranda.lit",
+   "id": 132,
+   "albedo": [
+    0.7216,
+    0.7686,
+    0.4157
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 18,
+   "role": "lit"
+  },
+  {
+   "token": "jacaranda.shade",
+   "id": 133,
+   "albedo": [
+    0.7216,
+    0.7686,
+    0.4157
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 19,
+   "role": "shade"
+  },
+  {
+   "token": "hibiscus.lit",
+   "id": 134,
+   "albedo": [
+    0.6118,
+    0.6902,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 20,
+   "role": "lit"
+  },
+  {
+   "token": "hibiscus.shade",
+   "id": 135,
+   "albedo": [
+    0.6118,
+    0.6902,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 21,
+   "role": "shade"
+  },
+  {
+   "token": "camphor.lit",
+   "id": 136,
+   "albedo": [
+    0.3686,
+    0.549,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 22,
+   "role": "lit"
+  },
+  {
+   "token": "camphor.shade",
+   "id": 137,
+   "albedo": [
+    0.3686,
+    0.549,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 23,
+   "role": "shade"
+  },
+  {
+   "token": "camphor.red.lit",
+   "id": 138,
+   "albedo": [
+    0.7843,
+    0.502,
+    0.3529
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 24,
+   "role": "lit"
+  },
+  {
+   "token": "camphor.red.shade",
+   "id": 139,
+   "albedo": [
+    0.7843,
+    0.502,
+    0.3529
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 25,
+   "role": "shade"
+  },
+  {
+   "token": "nanmu.lit",
+   "id": 140,
+   "albedo": [
+    0.3059,
+    0.4784,
+    0.2706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 26,
+   "role": "lit"
+  },
+  {
+   "token": "nanmu.shade",
+   "id": 141,
+   "albedo": [
+    0.3059,
+    0.4784,
+    0.2706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 27,
+   "role": "shade"
+  },
+  {
+   "token": "palm.lit",
+   "id": 142,
+   "albedo": [
+    0.3059,
+    0.4392,
+    0.2824
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 28,
+   "role": "lit"
+  },
+  {
+   "token": "palm.shade",
+   "id": 143,
+   "albedo": [
+    0.3059,
+    0.4392,
+    0.2824
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 29,
+   "role": "shade"
+  },
+  {
+   "token": "photinia.lit",
+   "id": 144,
+   "albedo": [
+    0.7216,
+    0.2588,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 30,
+   "role": "lit"
+  },
+  {
+   "token": "photinia.shade",
+   "id": 145,
+   "albedo": [
+    0.7216,
+    0.2588,
+    0.2275
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 31,
+   "role": "shade"
+  },
+  {
+   "token": "loropetalum.lit",
+   "id": 146,
+   "albedo": [
+    0.6118,
+    0.2902,
+    0.3686
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 32,
+   "role": "lit"
+  },
+  {
+   "token": "loropetalum.shade",
+   "id": 147,
+   "albedo": [
+    0.6118,
+    0.2902,
+    0.3686
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 33,
+   "role": "shade"
+  },
+  {
+   "token": "hedge.lit",
+   "id": 148,
+   "albedo": [
+    0.7843,
+    0.7843,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 34,
+   "role": "lit"
+  },
+  {
+   "token": "hedge.shade",
+   "id": 149,
+   "albedo": [
+    0.7843,
+    0.7843,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 35,
+   "role": "shade"
+  },
+  {
+   "token": "grass.lit",
+   "id": 150,
+   "albedo": [
+    0.8392,
+    0.7451,
+    0.3686
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 36,
+   "role": "lit"
+  },
+  {
+   "token": "grass.shade",
+   "id": 151,
+   "albedo": [
+    0.8392,
+    0.7451,
+    0.3686
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 37,
+   "role": "shade"
+  },
+  {
+   "token": "reed.lit",
+   "id": 152,
+   "albedo": [
+    0.7843,
+    0.7216,
+    0.4706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 38,
+   "role": "lit"
+  },
+  {
+   "token": "reed.shade",
+   "id": 153,
+   "albedo": [
+    0.7843,
+    0.7216,
+    0.4706
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 39,
+   "role": "shade"
+  },
+  {
+   "token": "lotus.lit",
+   "id": 154,
+   "albedo": [
+    0.5412,
+    0.4784,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 40,
+   "role": "lit"
+  },
+  {
+   "token": "lotus.shade",
+   "id": 155,
+   "albedo": [
+    0.5412,
+    0.4784,
+    0.2902
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 41,
+   "role": "shade"
+  },
+  {
+   "token": "tree.bare.lit",
+   "id": 156,
+   "albedo": [
+    0.5412,
+    0.4549,
+    0.4627
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 42,
+   "role": "lit"
+  },
+  {
+   "token": "tree.bare.shade",
+   "id": 157,
+   "albedo": [
+    0.5412,
+    0.4549,
+    0.4627
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 43,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.pink.lit",
+   "id": 158,
+   "albedo": [
+    0.9647,
+    0.7765,
+    0.8314
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 44,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.pink.shade",
+   "id": 159,
+   "albedo": [
+    0.9647,
+    0.7765,
+    0.8314
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 45,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.plum.lit",
+   "id": 160,
+   "albedo": [
+    0.9098,
+    0.4706,
+    0.6039
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 46,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.plum.shade",
+   "id": 161,
+   "albedo": [
+    0.9098,
+    0.4706,
+    0.6039
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 47,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.white.lit",
+   "id": 162,
+   "albedo": [
+    0.9804,
+    0.9647,
+    0.9333
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 48,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.white.shade",
+   "id": 163,
+   "albedo": [
+    0.9804,
+    0.9647,
+    0.9333
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 49,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.violet.lit",
+   "id": 164,
+   "albedo": [
+    0.5569,
+    0.5255,
+    0.8471
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 50,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.violet.shade",
+   "id": 165,
+   "albedo": [
+    0.5569,
+    0.5255,
+    0.8471
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 51,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.rose.lit",
+   "id": 166,
+   "albedo": [
+    0.8784,
+    0.4157,
+    0.5255
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 52,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.rose.shade",
+   "id": 167,
+   "albedo": [
+    0.8784,
+    0.4157,
+    0.5255
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 53,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.crape.lit",
+   "id": 168,
+   "albedo": [
+    0.8157,
+    0.4784,
+    0.7529
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 54,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.crape.shade",
+   "id": 169,
+   "albedo": [
+    0.8157,
+    0.4784,
+    0.7529
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 55,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.yellow.lit",
+   "id": 170,
+   "albedo": [
+    0.949,
+    0.8157,
+    0.2902
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 56,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.yellow.shade",
+   "id": 171,
+   "albedo": [
+    0.949,
+    0.8157,
+    0.2902
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 57,
+   "role": "shade"
+  },
+  {
+   "token": "bloom.lotus.lit",
+   "id": 172,
+   "albedo": [
+    0.949,
+    0.5412,
+    0.6588
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 58,
+   "role": "lit"
+  },
+  {
+   "token": "bloom.lotus.shade",
+   "id": 173,
+   "albedo": [
+    0.949,
+    0.5412,
+    0.6588
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 59,
+   "role": "shade"
+  },
+  {
+   "token": "plume.lit",
+   "id": 174,
+   "albedo": [
+    0.9294,
+    0.902,
+    0.8392
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 60,
+   "role": "lit"
+  },
+  {
+   "token": "plume.shade",
+   "id": 175,
+   "albedo": [
+    0.9294,
+    0.902,
+    0.8392
+   ],
+   "materialClass": "flower",
+   "seasonal": true,
+   "row": 61,
+   "role": "shade"
+  },
+  {
+   "token": "crop.lit",
+   "id": 176,
+   "albedo": [
+    0.8471,
+    0.7059,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 62,
+   "role": "lit"
+  },
+  {
+   "token": "crop.shade",
+   "id": 177,
+   "albedo": [
+    0.8471,
+    0.7059,
+    0.3765
+   ],
+   "materialClass": "vegetation",
+   "seasonal": true,
+   "row": 63,
+   "role": "shade"
+  }
+ ]
+}
