@@ -86,6 +86,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 | `--ui-theme` | `auto` | 界面主题（UI-VISUAL §11.12）：`auto` 按太阳高度切换，`light` 晶白，`dark` 深屏。常驻小部件（小地图、时间读数、临时提示、到达标题下的推荐小条）默认固定深屏，这个参数只影响大页 |
 | `--motion` | `full` | 动效档位：`full`、`reduced`、`instant`；`--ui=1` 的界面截图用 `instant` |
 | `--ui-scale` | 设置值 | 界面缩放 0.75–1.5，只在内存里生效 |
+| `--ui-gallery` | 无 | 启动后直接打开界面的某一页（如时间卡、设置卡、存档页、开始页），供界面截图与 G14；只用于开发和门禁 |
 
 截图默认值就是 `-- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --adaptive=0 --map=qingshuihe --title=0 --save=off --audio=off`，即默认状态（秋 17:30、晴，SYS-TIME §0 第 1 条、SYS-WEATHER §6.6）、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、无声。精致预设 1920×1080 原生就是视觉精度的验收基准（SYS-GRAPHICS §10）。出默认状态的截图时只换 `--pose`。带不带 `--map=qingshuihe` 画面完全相同（SYS-MAPS §17）。SYS-VIEW §2.5、ENG-ARCH §7、ENG-BUDGET §9、SYS-GRAPHICS §6 里的默认串与此一致。
 

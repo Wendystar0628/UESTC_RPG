@@ -1367,12 +1367,12 @@
 
 - ENG-GATES §0 结论 · L22 · 1.9k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 850
-- ENG-GATES §1 审查视角 · L52 · 14.5k
-- ENG-GATES §2 门禁与测试节奏 · L194 · 28.3k
-- ENG-GATES §3 一票否决 · L272 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L301 · 2.6k
-- ENG-GATES §5 回报格式 · L327 · 1.4k
-- ENG-GATES §6 待验证（P0） · L356 · 1.8k
+- ENG-GATES §1 审查视角 · L52 · 14.6k
+- ENG-GATES §2 门禁与测试节奏 · L195 · 28.3k
+- ENG-GATES §3 一票否决 · L273 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L302 · 2.6k
+- ENG-GATES §5 回报格式 · L328 · 1.4k
+- ENG-GATES §6 待验证（P0） · L357 · 1.8k
 
 ## ENG-ONBOARD · 子代理开工手册
 
