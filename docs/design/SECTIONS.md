@@ -255,7 +255,7 @@
 
 ## ART-SKYLIGHT · 天空、光照与大气
 
-`docs/design/art/ART-SKYLIGHT.md` · 31.1k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
+`docs/design/art/ART-SKYLIGHT.md` · 31.2k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
 关键词：主光、日月交接、无影蓝调、阴影、shadow_strength、方向量化、天光、环境光、天光方向、退光线、retreat_y、天空着色器、sky shader、霾带、云、飞机云、星空、银河、月亮外观、雾、大气透视、共用雾函数、fog.gdshaderinc、边缘雾、光柱、镜头光斑、太阳雨、彩虹、闪电、冷暖对照
 
   - ART-SKYLIGHT 分工 · L22 · 1.0k
@@ -266,7 +266,7 @@
 - ART-SKYLIGHT §3 光照骨架 · L142 · 5.8k
 - ART-SKYLIGHT §4 天空 · L203 · 5.2k
 - ART-SKYLIGHT §5 月亮 · L263 · 653
-- ART-SKYLIGHT §6 雾与大气透视 · L279 · 3.0k
+- ART-SKYLIGHT §6 雾与大气透视 · L279 · 3.2k
 - ART-SKYLIGHT §7 光效清单 · L309 · 3.8k
 - ART-SKYLIGHT §8 冷暖对照 · L368 · 701
 - ART-SKYLIGHT WP-34 / WP-03 / WP-40 交付验收 · L392 · 1.8k
@@ -961,7 +961,7 @@
 
 ## SYS-MOTION · 动态与事件
 
-`docs/design/systems/SYS-MOTION.md` · 43.5k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与微动的节奏，唯一的偶发事件、季节氛围与转场
+`docs/design/systems/SYS-MOTION.md` · 43.6k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与微动的节奏，唯一的偶发事件、季节氛围与转场
 关键词：动态、两个时钟、动画时钟、AnimTime、anim_time、一拍二、step_rate、Step12、T12、480 s 回绕、内置 TIME、风场、阵风、IWindField、WindSample、wind、飘落池、萤火虫、河面漂浮物、解析运动、季节氛围、偶发事件、晚归者、IncidentDirector、incidents.json、incident、转场、TransitionDirector、钟面指针、钟锤
 
   - SYS-MOTION 分工 · L23 · 755
@@ -978,7 +978,7 @@
 - SYS-MOTION §9 图书馆、开放室内与钟楼的微动 · L303 · 1.6k
 - SYS-MOTION §10 偶发事件（全片唯一） · L324 · 5.6k
 - SYS-MOTION §11 季节氛围 · L405 · 2.3k
-- SYS-MOTION §12 转场 · L435 · 6.1k
+- SYS-MOTION §12 转场 · L435 · 6.2k
 - SYS-MOTION §13 粒子类与解析运动 · L508 · 4.0k
   - SYS-MOTION §13.1 飘落池（13.3.3、13.4.1、13.4.3、13.10.5、13.12.2） · L520 · 903
   - SYS-MOTION §13.2 萤火虫（13.11.2） · L531 · 622
@@ -1033,7 +1033,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 40.2k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 40.3k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
@@ -1048,7 +1048,7 @@
   - SYS-TIME §3.4 难看时段的改造 · L319 · 516
   - SYS-TIME §3.5 英雄帧 · L328 · 986
 - SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L354 · 4.7k
-- SYS-TIME §5 过渡 · L413 · 1.8k
+- SYS-TIME §5 过渡 · L413 · 1.9k
 - SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L445 · 3.5k
 - SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L503 · 867
 - SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L516 · 2.9k
