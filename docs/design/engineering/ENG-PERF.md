@@ -136,6 +136,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `fog.gdshaderinc` | WP-04（天空色带的部分由 WP-40 以需求提交） | 共用雾函数：雾程按高度积分（标高 200 m，高空俯瞰不会整片陷在雾里），地平线天色、200 m 降饱和、800 m 剪影、贴地雾与湖雾、介质混合；天气只修正它的输入（`weather_fog`），签名不变；旁观边缘雾按 `edge_fog` 只在朝外一侧加浓：密度 ×(1 + 0.6 × `edge_fog` × w)（WLD-OUTSKIRTS §8.3）；另有一份逐行对应的 GLSL 版 `fog.glslinc` 给计算着色器 |
 | `motion_wind.gdshaderinc` | WP-26 | 风场相位与三层摆动（§9），与 C# 的 `IWindField.Sample` 同一公式 |
 | `precip_wet.gdshaderinc` | WP-45b | 湿润与积水的公共函数：暴露度、积水遮罩、积水倒影色、湿面掠射天光带、雨点环；toon、water 与外围都 include 它（toon 的挂点 `toon_wet_exposure`、`toon_wet`、`toon_puddle` 归 WP-04，函数体调本文件） |
+| `lamp.gdshaderinc` | WP-39 | 读灯光表与窗覆盖的公共函数：路灯光斑、窗灯阈值、灯头光晕；toon、water、precip 与 fx_glow 都 include 它，编码与 WP-03 的通道、WP-04 的窗号一致 |
 
 **空间着色器与其他**（共 25 个：空间与天空着色器 22 个、画布着色器 3 个；常驻 22 个，另有 1 个桩（`toon_stub`）、2 个可选或备选（`water_clear`、`toon_decal`）；主代理可再合并）：
 

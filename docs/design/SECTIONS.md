@@ -1033,7 +1033,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.1k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.2k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
@@ -1049,7 +1049,7 @@
   - SYS-TIME §3.5 英雄帧 · L332 · 986
 - SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L358 · 4.7k
 - SYS-TIME §5 过渡 · L417 · 1.9k
-- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L449 · 3.5k
+- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L449 · 3.6k
 - SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L507 · 867
 - SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L520 · 2.9k
 - SYS-TIME §10 待验证（P0） · L550 · 445
@@ -1399,52 +1399,52 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 132.1k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF.md` · 132.2k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
   - ★ ENG-PERF §0.1 接入要点 · L37 · 2.4k
-- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L52 · 21.9k
+- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L52 · 22.1k
   - ENG-PERF §1.1 容器选型规则 · L54 · 981
   - ENG-PERF §1.2 MultiMesh 与 RenderingServer 挂载的用法 · L74 · 3.6k
   - ENG-PERF §1.3 调用口径 · L113 · 716
-  - ENG-PERF §1.4 着色器白名单 · L126 · 6.4k
-  - ENG-PERF §1.5 全局参数与数据纹理表 · L194 · 9.8k
-  - ENG-PERF §1.6 排序与绘制顺序 · L304 · 373
-- ENG-PERF §2 着色器与编译（WP-04、WP-05、WP-01） · L311 · 6.9k
-- ENG-PERF §3 填充率与带宽（WP-05、WP-23） · L373 · 1.6k
-  - ENG-PERF §3.1 渲染目标格式 · L375 · 220
-  - ENG-PERF §3.3 过度绘制 · L379 · 830
-  - ENG-PERF §3.4 动态分辨率 · L391 · 526
-- ENG-PERF §4 剔除（WP-02、WP-33、WP-07） · L398 · 2.6k
-- ENG-PERF §5 流式加载（WP-02） · L439 · 13.9k
-- ENG-PERF §6 主线程与 C#（WP-01） · L599 · 4.0k
-- ENG-PERF §7 内存与显存（WP-01、WP-02） · L655 · 3.0k
-- ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L699 · 4.9k
-- ENG-PERF §9 植被（WP-23） · L758 · 10.7k
-- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L924 · 24.0k
-  - ENG-PERF §10.1 阴影（WP-03，引擎原生 PSSM） · L926 · 7.7k
-  - ENG-PERF §10.2 后期链（WP-05） · L1035 · 10.0k
-  - ENG-PERF §10.3 窗灯与路灯（WP-03 负责通道与着色，WP-39 负责时刻表） · L1120 · 4.3k
-  - ENG-PERF §10.4 倒影（WP-24） · L1165 · 1.9k
-- ENG-PERF §11 设备档、画面预设与自适应（WP-32，WP-01 配合） · L1185 · 10.5k
-  - ENG-PERF §11.1 设备档 → 推荐预设 · L1189 · 782
-  - ENG-PERF §11.2 首次分档（扉页后面完成，不超过 2.5 s） · L1203 · 1.5k
-  - ENG-PERF §11.3 运行时自适应（自动调节画质） · L1220 · 2.2k
-  - ENG-PERF §11.4 帧节奏与输入 · L1265 · 1.2k
-  - ENG-PERF §11.5 Windows 平台的已知问题 · L1276 · 447
-  - ENG-PERF §11.6 集成显卡 · L1284 · 486
-  - ENG-PERF §11.7 画面设置（WP-32a、32b，WP-01、WP-35 配合） · L1292 · 3.7k
-- ENG-PERF §12 测量、剖析与门禁（WP-27，WP-01 提供接口） · L1347 · 12.0k
-  - ENG-PERF §12.1 测量机器 · L1349 · 282
-  - ENG-PERF §12.2 运行时测量 · L1353 · 1.6k
-  - ENG-PERF §12.3 剖析工具 · L1367 · 408
-  - ENG-PERF §12.4 自动化基准 · L1378 · 4.1k
-  - ENG-PERF §12.5 门禁（写入 ENG-GATES §2） · L1429 · 4.3k
-  - ENG-PERF §12.6 日志与诊断（WP-01；WP-02、WP-32、WP-50 提供读数，WP-35 提供入口） · L1483 · 1.2k
-- ENG-PERF §13 D3D12 与 Vulkan 的选择 · L1495 · 776
-- ENG-PERF §14 每个工作包的性能自检清单 · L1521 · 2.0k
-- ENG-PERF §16 待验证（P0） · L1543 · 6.0k
+  - ENG-PERF §1.4 着色器白名单 · L126 · 6.6k
+  - ENG-PERF §1.5 全局参数与数据纹理表 · L195 · 9.8k
+  - ENG-PERF §1.6 排序与绘制顺序 · L305 · 373
+- ENG-PERF §2 着色器与编译（WP-04、WP-05、WP-01） · L312 · 6.9k
+- ENG-PERF §3 填充率与带宽（WP-05、WP-23） · L374 · 1.6k
+  - ENG-PERF §3.1 渲染目标格式 · L376 · 220
+  - ENG-PERF §3.3 过度绘制 · L380 · 830
+  - ENG-PERF §3.4 动态分辨率 · L392 · 526
+- ENG-PERF §4 剔除（WP-02、WP-33、WP-07） · L399 · 2.6k
+- ENG-PERF §5 流式加载（WP-02） · L440 · 13.9k
+- ENG-PERF §6 主线程与 C#（WP-01） · L600 · 4.0k
+- ENG-PERF §7 内存与显存（WP-01、WP-02） · L656 · 3.0k
+- ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L700 · 4.9k
+- ENG-PERF §9 植被（WP-23） · L759 · 10.7k
+- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L925 · 24.0k
+  - ENG-PERF §10.1 阴影（WP-03，引擎原生 PSSM） · L927 · 7.7k
+  - ENG-PERF §10.2 后期链（WP-05） · L1036 · 10.0k
+  - ENG-PERF §10.3 窗灯与路灯（WP-03 负责通道与着色，WP-39 负责时刻表） · L1121 · 4.3k
+  - ENG-PERF §10.4 倒影（WP-24） · L1166 · 1.9k
+- ENG-PERF §11 设备档、画面预设与自适应（WP-32，WP-01 配合） · L1186 · 10.5k
+  - ENG-PERF §11.1 设备档 → 推荐预设 · L1190 · 782
+  - ENG-PERF §11.2 首次分档（扉页后面完成，不超过 2.5 s） · L1204 · 1.5k
+  - ENG-PERF §11.3 运行时自适应（自动调节画质） · L1221 · 2.2k
+  - ENG-PERF §11.4 帧节奏与输入 · L1266 · 1.2k
+  - ENG-PERF §11.5 Windows 平台的已知问题 · L1277 · 447
+  - ENG-PERF §11.6 集成显卡 · L1285 · 486
+  - ENG-PERF §11.7 画面设置（WP-32a、32b，WP-01、WP-35 配合） · L1293 · 3.7k
+- ENG-PERF §12 测量、剖析与门禁（WP-27，WP-01 提供接口） · L1348 · 12.0k
+  - ENG-PERF §12.1 测量机器 · L1350 · 282
+  - ENG-PERF §12.2 运行时测量 · L1354 · 1.6k
+  - ENG-PERF §12.3 剖析工具 · L1368 · 408
+  - ENG-PERF §12.4 自动化基准 · L1379 · 4.1k
+  - ENG-PERF §12.5 门禁（写入 ENG-GATES §2） · L1430 · 4.3k
+  - ENG-PERF §12.6 日志与诊断（WP-01；WP-02、WP-32、WP-50 提供读数，WP-35 提供入口） · L1484 · 1.2k
+- ENG-PERF §13 D3D12 与 Vulkan 的选择 · L1496 · 776
+- ENG-PERF §14 每个工作包的性能自检清单 · L1522 · 2.0k
+- ENG-PERF §16 待验证（P0） · L1544 · 6.0k
 
 ## ENG-ROADMAP · 扩展路线：从观光到 RPG
 
