@@ -81,22 +81,22 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 26.2k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 26.5k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
   - ★ CORE-DECISIONS §0.1 接入要点 · L32 · 172
 - CORE-DECISIONS §1 作品定位与范围 · L38 · 1.5k
-- CORE-DECISIONS §2 世界与地图 · L54 · 3.2k
-- CORE-DECISIONS §3 时间、季节、天气 · L83 · 2.4k
-- CORE-DECISIONS §4 美术风格 · L108 · 2.2k
-- CORE-DECISIONS §5 界面 · L129 · 2.8k
-- CORE-DECISIONS §6 存档 · L158 · 1.2k
-- CORE-DECISIONS §7 音频 · L173 · 2.0k
-- CORE-DECISIONS §8 性能与画面设置 · L195 · 1.8k
-- CORE-DECISIONS §9 工程 · L215 · 3.3k
-- CORE-DECISIONS §10 流程 · L240 · 3.5k
-- CORE-DECISIONS §11 待对齐 · L267 · 61
+- CORE-DECISIONS §2 世界与地图 · L54 · 3.5k
+- CORE-DECISIONS §3 时间、季节、天气 · L84 · 2.4k
+- CORE-DECISIONS §4 美术风格 · L109 · 2.2k
+- CORE-DECISIONS §5 界面 · L130 · 2.8k
+- CORE-DECISIONS §6 存档 · L159 · 1.2k
+- CORE-DECISIONS §7 音频 · L174 · 2.0k
+- CORE-DECISIONS §8 性能与画面设置 · L196 · 1.8k
+- CORE-DECISIONS §9 工程 · L216 · 3.3k
+- CORE-DECISIONS §10 流程 · L241 · 3.5k
+- CORE-DECISIONS §11 待对齐 · L268 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -330,7 +330,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS.md` · 76.8k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS.md` · 76.9k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -359,40 +359,40 @@
 - WLD-INTERIORS §3 开放的屋顶与高处（3 处） · L299 · 1.6k
 - WLD-INTERIORS §4 门的区分：开与关 · L317 · 3.9k
   - WLD-INTERIORS §4.1 楼里的门：走近推开，闭门器关上 · L339 · 2.0k
-- WLD-INTERIORS §5 关着的楼：外壳、窗卡、门厅卡与简化室内 · L354 · 1.8k
-  - WLD-INTERIORS §5.1 外壳与窗卡 · L356 · 785
-  - WLD-INTERIORS §5.2 关着的门与门厅卡 · L364 · 397
-  - WLD-INTERIORS §5.3 旁观飞进关着的楼：简化室内 · L371 · 616
-- WLD-INTERIORS §6 加载与进楼衔接 · L381 · 3.1k
-  - WLD-INTERIORS §6.1 整体加载、按层显示 · L383 · 1.0k
-  - WLD-INTERIORS §6.2 触发 · L402 · 865
-  - WLD-INTERIORS §6.3 进楼与出楼时要做的事（WP-07） · L412 · 1.0k
-  - WLD-INTERIORS §6.4 进楼衔接（ENG-PERF §5 第 6 条） · L423 · 159
-- WLD-INTERIORS §7 平面生成器与类型库 · L428 · 6.1k
-  - WLD-INTERIORS §7.1 生成链与平面内核（WP-51a） · L430 · 1.1k
-  - WLD-INTERIORS §7.2 楼型（12 种） · L439 · 733
-  - WLD-INTERIORS §7.3 房间类型（35 类） · L458 · 2.1k
-  - WLD-INTERIORS §7.4 规范值与行走换算 · L502 · 1.1k
-  - WLD-INTERIORS §7.5 部件（约 120 个，分 8 组） · L522 · 1.1k
-- WLD-INTERIORS §8 风格 · L540 · 5.4k
-  - WLD-INTERIORS §8.1 艺术化处理 · L542 · 365
-  - WLD-INTERIORS §8.2 明暗分阶与室内暖影 · L549 · 1.3k
-  - WLD-INTERIORS §8.3 窗光斑与光（全片最重要的室内画面） · L565 · 1.6k
-  - WLD-INTERIORS §8.4 室内色名 · L584 · 999
-  - WLD-INTERIORS §8.5 中国高校识别要素与日式物件的分界 · L592 · 1.0k
-  - WLD-INTERIORS §8.6 夜间不死黑 · L615 · 184
-- WLD-INTERIORS §9 生活痕迹规则 · L619 · 1.9k
-- WLD-INTERIORS §10 楼梯、门洞、电梯与碰撞 · L650 · 2.6k
-- WLD-INTERIORS §11 展陈与门牌 · L699 · 379
-- WLD-INTERIORS §12 室内预算 · L705 · 1.7k
-- WLD-INTERIORS §13 导航图与路线 · L740 · 3.7k
-- WLD-INTERIORS §14 扩展：开放更多室内 · L781 · 2.8k
-- WLD-INTERIORS §15 契约增量（给 ENG-ARCH §3，这一组冻结前改，D-134） · L825 · 7.8k
-- WLD-INTERIORS §16 事实修正汇总表（给各区文档用） · L938 · 2.8k
-- WLD-INTERIORS §17 无主体块的归属 · L972 · 729
-- WLD-INTERIORS §18 工作包 · L985 · 3.6k
-- WLD-INTERIORS §19 验收：G19 路径与连通 · L1018 · 2.0k
-- WLD-INTERIORS §21 待验证（P0） · L1039 · 1.7k
+- WLD-INTERIORS §5 关着的楼：外壳、窗卡、门厅卡与简化室内 · L354 · 1.9k
+  - WLD-INTERIORS §5.1 外壳与窗卡 · L356 · 888
+  - WLD-INTERIORS §5.2 关着的门与门厅卡 · L366 · 397
+  - WLD-INTERIORS §5.3 旁观飞进关着的楼：简化室内 · L373 · 616
+- WLD-INTERIORS §6 加载与进楼衔接 · L383 · 3.1k
+  - WLD-INTERIORS §6.1 整体加载、按层显示 · L385 · 1.0k
+  - WLD-INTERIORS §6.2 触发 · L404 · 865
+  - WLD-INTERIORS §6.3 进楼与出楼时要做的事（WP-07） · L414 · 1.0k
+  - WLD-INTERIORS §6.4 进楼衔接（ENG-PERF §5 第 6 条） · L425 · 159
+- WLD-INTERIORS §7 平面生成器与类型库 · L430 · 6.1k
+  - WLD-INTERIORS §7.1 生成链与平面内核（WP-51a） · L432 · 1.1k
+  - WLD-INTERIORS §7.2 楼型（12 种） · L441 · 733
+  - WLD-INTERIORS §7.3 房间类型（35 类） · L460 · 2.1k
+  - WLD-INTERIORS §7.4 规范值与行走换算 · L504 · 1.1k
+  - WLD-INTERIORS §7.5 部件（约 120 个，分 8 组） · L524 · 1.1k
+- WLD-INTERIORS §8 风格 · L542 · 5.4k
+  - WLD-INTERIORS §8.1 艺术化处理 · L544 · 365
+  - WLD-INTERIORS §8.2 明暗分阶与室内暖影 · L551 · 1.3k
+  - WLD-INTERIORS §8.3 窗光斑与光（全片最重要的室内画面） · L567 · 1.6k
+  - WLD-INTERIORS §8.4 室内色名 · L586 · 999
+  - WLD-INTERIORS §8.5 中国高校识别要素与日式物件的分界 · L594 · 1.0k
+  - WLD-INTERIORS §8.6 夜间不死黑 · L617 · 184
+- WLD-INTERIORS §9 生活痕迹规则 · L621 · 1.9k
+- WLD-INTERIORS §10 楼梯、门洞、电梯与碰撞 · L652 · 2.6k
+- WLD-INTERIORS §11 展陈与门牌 · L701 · 379
+- WLD-INTERIORS §12 室内预算 · L707 · 1.7k
+- WLD-INTERIORS §13 导航图与路线 · L742 · 3.7k
+- WLD-INTERIORS §14 扩展：开放更多室内 · L783 · 2.8k
+- WLD-INTERIORS §15 契约增量（给 ENG-ARCH §3，这一组冻结前改，D-134） · L827 · 7.8k
+- WLD-INTERIORS §16 事实修正汇总表（给各区文档用） · L940 · 2.8k
+- WLD-INTERIORS §17 无主体块的归属 · L974 · 729
+- WLD-INTERIORS §18 工作包 · L987 · 3.6k
+- WLD-INTERIORS §19 验收：G19 路径与连通 · L1020 · 2.0k
+- WLD-INTERIORS §21 待验证（P0） · L1041 · 1.7k
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
