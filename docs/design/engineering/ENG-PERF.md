@@ -135,6 +135,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `toon.gdshaderinc` | WP-04 | 调色板取色、明暗分阶的合成与 light() 主体（ART-STYLE §2）、材质 ID 写进 ROUGHNESS、抖动淡化、退光线；天气分支：天光方向（§10.1）、湿润变暗与积水（SYS-WEATHER §7，挂点归 WP-04，公共函数归 WP-45b）、闪电的 EMISSION 增量（§10.2）。明暗档按材质读 `mat_table`（建筑两阶、曲面道具与软物两阶半、植被三阶，ART-STYLE §2.1）；影色读调色板行 0，室内顶点读行 2（室内影色）、行 3（室内受光色）并乘光斑增益 `interior_light.x`（ART-STYLE §3）；影里随法线 y 的天光渐变与朝下面的地面暖反光（ART-STYLE §3）；透光写 `BACKLIGHT`，在 light() 方向光分支里按阈值化阴影加进 `DIFFUSE_LIGHT`；受光侧暖边、湿面闪点（透光、暖边、闪点都见 ART-STYLE §5）；`map_rect` 以外的片元改读顶点里的季节覆盖潜势（WLD-OUTSKIRTS §4.5）；倒角带按法线曲率提亮一阶、球与柱类道具的解析法线、贴面贴花的底色混合（§2）。**不做接触影**，遮蔽只推阈值、不加一阶 |
 | `fog.gdshaderinc` | WP-04（天空色带的部分由 WP-40 以需求提交） | 共用雾函数：地平线天色、200 m 降饱和、800 m 剪影、贴地雾与湖雾、介质混合；天气只修正它的输入（`weather_fog`），签名不变；旁观边缘雾按 `edge_fog` 只在朝外一侧加浓：密度 ×(1 + 0.6 × `edge_fog` × w)（WLD-OUTSKIRTS §8.3）；另有一份逐行对应的 GLSL 版 `fog.glslinc` 给计算着色器 |
 | `motion_wind.gdshaderinc` | WP-26 | 风场相位与三层摆动（§9），与 C# 的 `IWindField.Sample` 同一公式 |
+| `precip_wet.gdshaderinc` | WP-45b | 湿润与积水的公共函数：暴露度、积水遮罩、积水倒影色、湿面掠射天光带、雨点环；toon、water 与外围都 include 它（toon 的挂点 `toon_wet_exposure`、`toon_wet`、`toon_puddle` 归 WP-04，函数体调本文件） |
 
 **空间着色器与其他**（共 25 个：空间与天空着色器 22 个、画布着色器 3 个；常驻 22 个，另有 1 个桩（`toon_stub`）、2 个可选或备选（`water_clear`、`toon_decal`）；主代理可再合并）：
 
@@ -227,9 +228,9 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `reflect_vp` | mat4 | 倒影相机渲染那一帧的 VP 矩阵 | WP-24 | 倒影更新时 |
 | `reflect_lake` | int | 当前做倒影的湖号；水面材质的湖号与它相同时才采样 `reflect_tex`，否则走解析天空（WLD-WATER） | WP-24 | 换湖时 |
 | `incident`、`incident_route` | vec4、vec4 | 偶发事件的进度、版本、淡出系数，版本含天气版本（SYS-MOTION §10.8）；路线折线端点（SYS-MOTION） | WP-26 | 事件期间每帧 |
-| `weather_a` | vec4 | 云量、阴度、降水量、降水类型（0 雨 → 1 雪） | WP-45 | 每帧（WorldState 求出天气向量之后，SYS-WEATHER §8） |
-| `weather_b` | vec4 | 湿润、积水、风暴度、彩虹 | WP-45 | 每帧 |
-| `weather_fog` | vec4 | 雾密度倍率、贴地雾顶高、贴地雾密度、远雨幕 | WP-45 | 每帧 |
+| `weather_a` | vec4 | 云量、阴度、降水量、降水类型（0 雨 → 1 雪） | WP-45b，在 `FramePriority.Motion` 从 `IWorldState.WeatherNow` 换算写入；45a 不碰全局参数 | 每帧（WorldState 求出天气向量之后，SYS-WEATHER §8） |
+| `weather_b` | vec4 | 湿润、积水、风暴度、彩虹 | WP-45b（同上） | 每帧 |
+| `weather_fog` | vec4 | 雾密度倍率、贴地雾顶高、贴地雾密度、远雨幕 | WP-45b（同上） | 每帧 |
 | `cloud` | vec4 | 漂移 xy（= f(世界时间) + g(`anim_time`)，C# 累加）、云型、积雨云量 | WP-40 | 每帧 |
 | `lightning` | vec4 | 闪光、方位、仰角、种子（节奏与闪光安全见 SYS-WEATHER §5） | WP-40 | 每帧（动态那一步） |
 | `snow_fx` | vec4 | 新雪亮度、冠雪、融雪湿、保留 | WP-38 | 每帧 |
@@ -288,6 +289,9 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `retreat_bias` | 退光线偏置，只有宣邦楼穹顶的实例设为 6 m（§10.1） | WP-03，按实体 ID 设 |
 | `shadow_proxy` | 植被投影代理打开噪声挖洞（§9） | WP-23 |
 | `fog_exempt` | 地标在浓雾里的雾豁免系数，0–1，默认 0；只有八角穹顶与宣邦楼钟楼的实例设值（ART-SKYLIGHT §6.6） | WP-40，按实体 ID 设 |
+| `precip_d` | 降水池：xyz 循环盒位移（C# 按 T12 累加、对 2h 取模），w 半边长 h（雨 18 m、雪 14 m） | WP-45b |
+| `precip_v` | 降水池：xyz 雨丝方向（单位向量，含风与倾角），w 丝长（m） | WP-45b |
+| `precip_k` | 降水池：x 降水类型（0 雨 → 1 雪），y 强度系数，z 角色（0 降水池、1 檐滴），w 保留 | WP-45b |
 
 **逐顶点数据**（ENG-BUDGET §7 第 7 条）：COLOR RGBA8 = 色号、AO、标志、1 字节备用；UV2 或 CUSTOM0 = 窗号基址与窗格行列（§10.3）。建筑按块合并以后，楼与楼的区别只能放在顶点上，不能放 instance uniform。各字节的用法：
 - "标志"字节含"室内"位（取调色板行 2、行 3），外围窗另有"跳过覆盖查表"位（§10.3），贴面贴花另有"贴花"位（§2）；各位的分配由 WP-04 登记；
