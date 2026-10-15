@@ -203,7 +203,7 @@
   - ART-MODELING §7.2 收边与倒角 · L207 · 1.4k
   - ART-MODELING §7.3 轮廓、深度层与截面 · L235 · 856
   - ART-MODELING §7.4 模块与修边条 · L253 · 990
-  - ART-MODELING §7.5 贴面几何与顶点数据 · L267 · 995
+  - ART-MODELING §7.5 贴面几何与顶点数据 · L267 · 1.0k
   - ART-MODELING §7.6 法线 · L283 · 880
   - ART-MODELING §7.7 换级不跳变 · L295 · 1.2k
   - ART-MODELING §7.8 每类对象的最低合格构件 · L314 · 3.6k
@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 53.5k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 53.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -294,22 +294,22 @@
 - ART-STYLE §5 高光、边缘光与透光 · L391 · 3.9k
 - ART-STYLE §6 贴图与笔触 · L442 · 1.4k
 - ART-STYLE §7 后期 · L465 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L534 · 8.4k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L534 · 8.9k
   - ART-STYLE §8.1 风格色 · L536 · 2.8k
   - ART-STYLE §8.2 大面积色与跳色的分工 · L581 · 1.1k
   - ART-STYLE §8.3 建筑固有色 · L600 · 1.2k
   - ART-STYLE §8.4 界面色 · L632 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L657 · 952
-  - ART-STYLE §8.6 天气色 · L670 · 1.1k
-- ART-STYLE §9 排除元素 · L689 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L691 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L717 · 599
-- ART-STYLE §10 材质速查 · L726 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L744 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L776 · 419
-- ART-STYLE §13 情绪弧线 · L789 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L814 · 1.9k
-- ART-STYLE §14 待验证（P0） · L834 · 2.1k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L657 · 1.4k
+  - ART-STYLE §8.6 天气色 · L682 · 1.1k
+- ART-STYLE §9 排除元素 · L701 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L703 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L729 · 599
+- ART-STYLE §10 材质速查 · L738 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L756 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L788 · 419
+- ART-STYLE §13 情绪弧线 · L801 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L826 · 1.9k
+- ART-STYLE §14 待验证（P0） · L846 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 

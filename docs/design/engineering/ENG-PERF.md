@@ -133,7 +133,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | --- | --- | --- |
 | `globals.gdshaderinc` | WP-01 | 全部 `global uniform` 的声明，由 §1.5 的登记表生成；G5 比对它、`project.godot` 和 C# 名字常量三者一致 |
 | `toon.gdshaderinc` | WP-04 | 调色板取色、明暗分阶的合成与 light() 主体（ART-STYLE §2）、材质 ID 写进 ROUGHNESS、抖动淡化、退光线；天气分支：天光方向（§10.1）、湿润变暗与积水（SYS-WEATHER §7，挂点归 WP-04，公共函数归 WP-45b）、闪电的 EMISSION 增量（§10.2）。明暗档按材质读 `mat_table`（建筑两阶、曲面道具与软物两阶半、植被三阶，ART-STYLE §2.1）；影色读调色板行 0，室内顶点读行 2（室内影色）、行 3（室内受光色）并乘光斑增益 `interior_light.x`（ART-STYLE §3）；影里随法线 y 的天光渐变与朝下面的地面暖反光（ART-STYLE §3）；透光写 `BACKLIGHT`，在 light() 方向光分支里按阈值化阴影加进 `DIFFUSE_LIGHT`；受光侧暖边、湿面闪点（透光、暖边、闪点都见 ART-STYLE §5）；`map_rect` 以外的片元改读顶点里的季节覆盖潜势（WLD-OUTSKIRTS §4.5）；倒角带按法线曲率提亮一阶、球与柱类道具的解析法线、贴面贴花的底色混合（§2）。**不做接触影**，遮蔽只推阈值、不加一阶 |
-| `fog.gdshaderinc` | WP-04（天空色带的部分由 WP-40 以需求提交） | 共用雾函数：地平线天色、200 m 降饱和、800 m 剪影、贴地雾与湖雾、介质混合；天气只修正它的输入（`weather_fog`），签名不变；旁观边缘雾按 `edge_fog` 只在朝外一侧加浓：密度 ×(1 + 0.6 × `edge_fog` × w)（WLD-OUTSKIRTS §8.3）；另有一份逐行对应的 GLSL 版 `fog.glslinc` 给计算着色器 |
+| `fog.gdshaderinc` | WP-04（天空色带的部分由 WP-40 以需求提交） | 共用雾函数：雾程按高度积分（标高 200 m，高空俯瞰不会整片陷在雾里），地平线天色、200 m 降饱和、800 m 剪影、贴地雾与湖雾、介质混合；天气只修正它的输入（`weather_fog`），签名不变；旁观边缘雾按 `edge_fog` 只在朝外一侧加浓：密度 ×(1 + 0.6 × `edge_fog` × w)（WLD-OUTSKIRTS §8.3）；另有一份逐行对应的 GLSL 版 `fog.glslinc` 给计算着色器 |
 | `motion_wind.gdshaderinc` | WP-26 | 风场相位与三层摆动（§9），与 C# 的 `IWindField.Sample` 同一公式 |
 | `precip_wet.gdshaderinc` | WP-45b | 湿润与积水的公共函数：暴露度、积水遮罩、积水倒影色、湿面掠射天光带、雨点环；toon、water 与外围都 include 它（toon 的挂点 `toon_wet_exposure`、`toon_wet`、`toon_puddle` 归 WP-04，函数体调本文件） |
 
