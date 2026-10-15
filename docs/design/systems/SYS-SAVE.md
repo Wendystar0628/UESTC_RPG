@@ -815,8 +815,8 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
 | **锁与开关** | 同时开两个进程；门禁模式跑一整轮 | 第二个进程 `Enabled = false`，一个文件都不写；`--save=off` 下 `user://saves` 不被创建、不被修改 |
 
 - **何时运行**：
-  - 合入前：改动 `game/kernel/save`、`Campus.Contracts.Save`，或者带 `[SaveSection]` 的包，都必跑（往返、迁移、损坏、退出时保存）；
-  - 每晚全量：再加续跑等价、强杀 100 次、保存耗时。
+  - 核心专项：改动 `game/kernel/save`、`Campus.Contracts.Save`，或者带 `[SaveSection]` 的包时，跑往返、损坏、退出时保存；
+  - 集中测试全量：再加迁移、续跑等价、强杀 100 次、保存耗时（ENG-GATES §2）。
 - **一票否决**（ENG-GATES §3）：
   - 丢档：正常退出后再进，状态不是退出时的落定状态；
   - 读档时执行了存档里的任何代码，或创建了存档内容指定的对象；

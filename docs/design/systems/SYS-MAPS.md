@@ -496,7 +496,7 @@ public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint Weat
 
 **G2 里的部分**（纯 .NET）：`index.json` 与每份 `map.json` 过 schema；切换状态机用假的服务测"不可取消、只留最后一次、未知图 Rejected、失败退回上一张图"；天气的进图补算与节奏无关（补一次和分几次补，队列相同）；`--map`、`--spawn` 的解析与非零退出。
 
-**何时跑**：改动 `kernel/map`、`kernel/stream`、`kernel/lod`、`kernel/bake`、`kernel/collision`，或新增、修改 `IMapAware` 实现的包，合入前必跑；每晚全量，另加行走模式一遍、`--weather=rain` 一遍（降水池、湿润纹理、天气过程）。如果决定做门禁夹具图（风险表第 8 条、§19），每晚加跑"清水河 → 夹具图 → 清水河"。
+**何时跑**：集中测试时全量跑，另加行走模式一遍、`--weather=rain` 一遍（降水池、湿润纹理、天气过程）。如果决定做门禁夹具图（风险表第 8 条、§19），集中测试时加跑"清水河 → 夹具图 → 清水河"（ENG-GATES §2）。
 
 ## 14 以后的方向
 
@@ -526,7 +526,7 @@ public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint Weat
 
 | # | 风险 | 对策与 P0 验证 |
 | --- | --- | --- |
-| 1 | 隐藏的单图假设：写死的全校纹理坐标、`CustomAabb`、通用代码里的实体 ID 和数据路径 | `map_rect`（§10）、G4 正则（§7）、每晚同图重载（§13） |
+| 1 | 隐藏的单图假设：写死的全校纹理坐标、`CustomAabb`、通用代码里的实体 ID 和数据路径 | `map_rect`（§10）、G4 正则（§7）、同图重载（§13） |
 | 2 | 卸载泄漏：RID、Jolt body、ImageTexture、ResourceLoader 缓存里还被引用的资源、托管堆里跨图持有的世界模型 | P0 实测同图重载 3 次的泄漏和耗时（热启动目标 ≤ 5 s） |
 | 3 | PCK 无法卸载 | 包内路径按图分开（§2.4）；P0 验证两张图的启动集 PCK 同时挂载、`replaceFiles: false` 的行为，以及导出过滤器带上 `data/maps/**` |
 | 4 | 全局纹理换尺寸 | P0 确认给全局 sampler 换一张尺寸不同的 ImageTexture 后 RID 保持、材质不失效、不触发管线编译；不行就改为各图一律用同一尺寸、范围外留空 |
