@@ -100,7 +100,10 @@ public static class CirculationStyle
     public const float StepColliderThickness = 0.3f;
 
     // ---- Grass seat tiers (MAP-QSH-ADDITIONS §2.6: 草阶看台, 下沉草阶草坪) ----
-    /// <summary>Concrete edge in front of each grass mat, the grass mat's rise over the concrete tread, the nosing chamfer.</summary>
+    /// <summary>
+    /// Concrete edge in front of each grass mat, the grass mat's rise over the concrete tread, the nosing chamfer.
+    /// Edge 0.25 m and grass 0.03 m are settled (main-session review, 2026-10-16).
+    /// </summary>
     public const float SeatEdge = 0.25f, SeatGrass = 0.03f, SeatNosingBevel = 0.02f;
 
     // ---- Ramps (WLD-TERRAIN §5.1, §5.3) ----

@@ -205,6 +205,40 @@ public sealed class CirculationTests
     }
 
     [TestCase]
+    public void EmbankmentStepsAndRiserCountsFollowTheOutdoorStepRule()
+    {
+        // 堤上路 (MAP-QSH-TERRAIN §8) by WLD-TERRAIN §5.1: the +1.0 m bank is one flight of 7 × 1/7 m on 0.65 − 2/7 m treads.
+        foreach (var plan in new[] { TerrainDrop.PlanSteps(1.0f, mainNetwork: true), TerrainDrop.Plan(1.0f, 3, mainNetwork: true) })
+        {
+            Check(plan is { Method: DropMethod.Steps, Risers: 7, Fits: true, ParallelRampNeeded: false } && plan.Parts.Count == 1 && plan.Landings.Count == 0,
+                "Embankment steps are not a single 7-riser flight.");
+            Near(1.0 / 7, plan.Riser, 1e-6); Near(0.65 - 2.0 / 7, plan.Tread, 1e-5);
+            var p = (StairParams)plan.Parts[0].Params;
+            Check(p.Steps == 7 && Math.Abs(p.Height - 1f) < 1e-5 && Math.Abs(p.Depth - 7 * plan.Tread) < 1e-4, "Embankment flight parameters are wrong.");
+        }
+        // The paired route (§5.1 两条路): a 1:12 ramp in two runs of ≤ 0.75 m when the bank has the room.
+        Check(TerrainDrop.Plan(1.0f, 40, mainNetwork: true) is { Method: DropMethod.Ramp, Fits: true }
+            && TerrainDrop.PlanRamp(1.0f, 40, mainNetwork: true).RampRuns.Count == 2, "The embankment's ramp route is wrong.");
+        // 4 × 0.25 m risers are outside the stone step range and are refused.
+        Throws(() => new StepsPart().Lods[LodLevel.L0](new StairParams(2.4f + 2 * S.CheekWidth, 1f, 4 * 0.3f, 4)));
+        Throws(() => StepsAlong.Build([new(0, 0), new(6, 0)], false, 0, 4, 0.25f, 0.3f, StepsFinish.Stone, LodLevel.L0));
+        // The riser count never drops as the drop grows; from 0.36 m the riser lies in 0.12–0.16 and is the closest to 0.15.
+        var previous = 0;
+        for (var i = 16; i <= 400; i++)
+        {
+            var rise = i / 100f; var n = TerrainDrop.RiserCount(rise);
+            Check(n >= previous, $"{rise} m takes {n} risers, fewer than a lower drop's {previous}.");
+            previous = n;
+            if (rise < 0.36f) continue;
+            var r = rise / n;
+            Check(n >= 3 && r >= S.RiserMin - 1e-5 && r <= S.RiserMax + 1e-5, $"{rise} m: riser {r} out of 0.12–0.16.");
+            for (var m = 3; m <= 40; m++)
+                if (rise / m >= S.RiserMin - 1e-5 && rise / m <= S.RiserMax + 1e-5)
+                    Check(Math.Abs(rise / m - S.RiserTarget) >= Math.Abs(r - S.RiserTarget) - 1e-5, $"{rise} m: {m} risers come closer to 0.15 than {n}.");
+        }
+    }
+
+    [TestCase]
     public void TerraceEdgeBandsAreClosedWalkableAndWalledOnTheLowSide()
     {
         Vector2[] line = [new(0, 0), new(8, 0), new(12, 4)];
