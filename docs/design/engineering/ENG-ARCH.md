@@ -6,7 +6,7 @@ summary: 目录与归属、程序集边界、全部 C# 契约、帧顺序、资�
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, ENG-GATES, ENG-WP, ENG-PERF]
-related: [ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
+related: [ART-STYLE, ART-FIDELITY, SYS-MOTION, SYS-VIEW, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
 contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, Box3, LodLevel, TileKey, MapId,
   WaypointRef, StableHash, Rng, DetMath, Aspects, Claim, FeatureClaim, AreaClaim, ContentModuleAttribute,
   IContentModule, BuildContext, ContentOutput, MeshLod, GeometryBundle, PartAttribute, ParamAttribute,
@@ -49,7 +49,8 @@ contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, 
   ModuleBudget, PartBudget, PartGeometry, LightEmitter, Footprint2D, InspectionProbe, WorldFeature,
   WorldNetwork, PolygonRings, Polyline, OverlayGeometry, BuildingFamily, FacadePreset, DesignKind,
   PostOverride, IRuntimeContext, CinematicDef, CameraSeg, WorldCue, MaskSeg, CaptionCue, ExtraCue, AudioCue,
-  CinematicEnd, IBakeService, BakeKey, BakePriority, BakeState, IBakeHandle, BakeProgress]
+  CinematicEnd, IBakeService, BakeKey, BakePriority, BakeState, IBakeHandle, BakeProgress, FidelityZone, FacadeSegment,
+  RoofZone, IFidelityModel, FidelityOverlayFile, FidelityOverlayOp, FidelityK1Op, FidelityRaiseOp]
 data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt", "game/contracts/schemas/", "game/data/rulesets/", ".gitattributes", ".gitignore"]
 gates: [G1, G2, G3, G4, G5, G6]
 ---
@@ -165,8 +166,8 @@ UESTC_RPG/
 │  ├─ gates/                 WP-27  截图机、路线回放、巡检的引擎内驱动，只在带门禁参数时启用；gates/matrix 归 WP-41
 │  ├─ data/                  运行时 JSON（按图的数据都在 maps/ 下，SYS-MAPS §2.1）：
 │  │  ├─ maps/index.json     WP-46  地图清单、默认地图
-│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<区>.overlay.json、walkable、outskirts、atlas，
-│  │  │                      以及 overlay/interior/<区>.interior.json）；outskirts.json；interiors.json；waypoints.json；lighting-schedule.json；
+│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<区>.overlay.json、walkable、outskirts、atlas、fidelity，
+│  │  │                      以及 overlay/interior/<区>.interior.json）；outskirts.json；fidelity.json；interiors.json；waypoints.json；lighting-schedule.json；
 │  │  │                      backdrop.json；sky.json；review.json；cinematics/<id>.json；atlas/（markers.json、labels.json）；
 │  │  │                      audio/（声景与声学的本图数据）；nav/（routes.json、views.json）；incidents.json（偶发事件清单）；
 │  │  │                      entities/（RPG 预留，观光期不写入）
@@ -283,6 +284,7 @@ game/data/maps/index.json、game/data/maps/*/map.json   WP-46  地图清单与 M
 game/data/maps/qingshuihe/campus.json、network.json、zones.json   WP-08
 game/data/maps/qingshuihe/overlay/<zone>.overlay.json   每个区一个文件，由该区工作包独占
 game/data/maps/qingshuihe/overlay/walkable.overlay.json   WP-44  可行走区域，ID 以 walk: 开头
+game/data/maps/qingshuihe/overlay/fidelity.overlay.json、fidelity.json   WP-44  精度区的 K1 名单与人工提级（ID 以 fid: 开头）、划分结果（§3）
 game/data/maps/qingshuihe/overlay/outskirts.overlay.json、outskirts.json   WP-47  外围覆盖层与外围数据（WLD-OUTSKIRTS §6）
 game/data/maps/qingshuihe/overlay/atlas.overlay.json、atlas/markers.json   WP-48c  锚点实体与标记（SYS-ATLAS §9）
 game/data/maps/qingshuihe/atlas/labels.json   WP-48a  标注（初稿由烘焙器生成，人工校订）
@@ -305,7 +307,7 @@ game/data/quality-presets.json        WP-32  四个画面预设的单项取值�
 game/entities/、game/contracts/Entities/、game/data/text/、game/data/maps/*/entities/
                                       WP-00  RPG 预留（ENG-ROADMAP §6 第 6 条），观光期不写入
 pipeline/                             WP-08  （walk、nav、assets、colorscript、outskirts、map、audio 子目录除外）；含 raw/<地图>/
-pipeline/walk、pipeline/nav           WP-44  可行走遮罩、分类栅格、安全点网格的构建；导航图烘焙（开发和 CI 出，随启动集发，WLD-INTERIORS §13）
+pipeline/walk、pipeline/nav           WP-44  可行走遮罩、分类栅格、安全点网格的构建；精度区划分（出 fidelity.json，§3）；导航图烘焙（开发和 CI 出，随启动集发，WLD-INTERIORS §13）
 pipeline/assets                       WP-04
 pipeline/colorscript                  WP-37  关键帧推导脚本与色板联表
 pipeline/outskirts                    WP-47  外围数据管线（Overpass 快照 → outskirts.json，WLD-OUTSKIRTS §6.1）
@@ -580,8 +582,10 @@ public sealed record PlacedPart(
 
 ```csharp
 // 风格
-[Flags] public enum ToonFx { None = 0, GlassStreak = 1, Glare = 2, AnisoBand = 4, Rim = 8, Mottle = 16, DetailTiling = 32 }
-public enum ToonNormal { Flat, Smooth, Spherical }
+[Flags] public enum ToonFx { None = 0, GlassStreak = 1, Glare = 2, AnisoBand = 4, Rim = 8, Mottle = 16, DetailTiling = 32,
+                            BevelLift = 64 }   // 倒角提亮与凸边亮线：只给硬质建筑材料和道具的平直件（ENG-PERF §2、§10.2）
+public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylinder }
+    // 解析球、解析柱：片元里按实例中心或轴算法线，只用于独立实例和 MultiMesh 的圆件（ENG-PERF §2）；只在末尾追加
 public enum LineClass { Building, Tree, Fine, None }
 public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }   // 建筑两阶、曲面道具两阶半、软物两阶半宽带、植被三阶（ART-STYLE §2.1）
 
@@ -590,7 +594,7 @@ public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
     public PaletteToken? Deep { get; init; }             // 只作 WP-37 自检的校验值；植被深影由着色器从影色算出
                                                          // （L × 0.88、C × 0.95，ART-STYLE §2.1），着色器不读本字段
     public float Band { get; init; } = 0.02f;            // 明暗过渡带：建筑 0.02（阴雨天按天光方向时 0.06），植被团块 0.06（ART-STYLE §2.1）
-    public ToonNormal Normal { get; init; } = ToonNormal.Flat;
+    public ToonNormal Normal { get; init; } = ToonNormal.Flat;   // 解析法线的方式与 ToonFx.BevelLift 的幅度写进 mat_table 行 3（ENG-PERF §1.5）
     public LineClass Line { get; init; } = LineClass.Building;
     public ToonFx Fx { get; init; }
     public PaletteToken? Backface { get; init; }         // 剖切色：镜头穿进物体时看到的切面颜色
@@ -861,6 +865,7 @@ public interface IWorldModel
     ISpatialIndex Spatial { get; }
     IInteriorIndex Interiors { get; }      // 室内索引（WP-51 烘焙，WP-08 随空间索引加载，约 50 KB，WLD-INTERIORS §15）
     IOutskirtsModel? Outskirts { get; }    // 外围数据；没有外围数据的图为 null（WLD-OUTSKIRTS §12.3）
+    IFidelityModel? Fidelity { get; }      // 精度区（ART-FIDELITY §0.4，见本节末尾）；没有精度区数据的图（门禁夹具图）为 null，一律按 K3 处理
 }
 public interface ISpatialIndex
 {
@@ -1915,6 +1920,54 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
 }
 ```
 
+```csharp
+// 精度区（照 ART-FIDELITY §0.4，D-176；WP-44 在开发期离线划分，连同 fidelity.overlay.json 的 K1 名单和提级一起写进 fidelity.json，WP-08 解析；
+// 生成器、G8、G9 和 ART-FIDELITY §8 第 3 条的自动检查只读结果，不自己判断；命名空间 Campus.Contracts）
+public enum FidelityZone : byte { K1 = 1, K2 = 2, K3 = 3, K4 = 4, K5 = 5 }   // 编号越小要求越高；只在末尾追加，JSON 按字符串存
+public sealed record FacadeSegment(FeatureId Building, int Index, Vector2 A, Vector2 B,   // 足迹环上的一段，A → B 沿环的方向
+    FidelityZone Zone,                 // 首层带以上的区：K1、K3 或 K4
+    FidelityZone GroundBand,           // 可走面以上 0–3 m 的带：落在行走走廊里取 K2，否则同 Zone；K1 楼仍是 K1（就高）
+    string? Raised = null);            // 人工提级时是覆盖层条目的 fid: ID，否则为 null
+public sealed record RoofZone(FeatureId Building, FidelityZone Zone, string? Raised = null);
+    // 默认 K4；K1 楼的屋顶随楼进 K1；开放屋顶（WLD-INTERIORS §3）整块记 K2
+public interface IFidelityModel                                // IWorldModel.Fidelity
+{
+    IReadOnlyList<FacadeSegment> Facades(FeatureId building);  // 外环在前、内环（内院面）在后，段号从 0 连续
+    RoofZone Roof(FeatureId building);
+    FidelityZone GroundAt(float x, float z);                    // 2 m 栅格，原点与尺寸按 MapDescriptor.DataRect 换算；校界外返回 K5
+    float WalkDistanceAt(float x, float z);                     // 最近行走距离 d_walk（m；8 m 网格，双线性），只对 K4 的地面有意义
+    string InputHash { get; }                                   // 划分时输入的哈希，G5 核对是否过期
+}
+
+// fidelity.overlay.json（WP-44 独占）：K1 名单与人工提级。ID 以 fid: 开头，每条写明理由（INV-9）；"op" 写在每个对象的第一个字段
+public sealed record FidelityOverlayFile(WpId Owner, IReadOnlyList<FidelityOverlayOp> Ops) { public MapId? Map { get; init; } }
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "op")]
+[JsonDerivedType(typeof(FidelityK1Op), "k1")] [JsonDerivedType(typeof(FidelityRaiseOp), "raise")]
+public abstract record FidelityOverlayOp(string Id, string Reason);
+public sealed record FidelityK1Op(string Id, string Reason, FeatureId? Feature,
+    IReadOnlyList<Vector2>? Path = null, float HalfWidth = 0f) : FidelityOverlayOp(Id, Reason);
+    // 各区"本区身份特征"表的对象（整栋楼含屋顶，Feature）、主轴路段（折线 Path 加半宽）、英雄帧机位的画面主体
+public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
+    FeatureId? Building = null, int? Segment = null, bool Roof = false, IReadOnlyList<Vector2>? Area = null) : FidelityOverlayOp(Id, Reason);
+    // 只能提级（To 的编号比原来小），不能降级：立面段（Building + Segment）、整个屋顶（Building + Roof）或一块地面（Area 多边形）
+```
+
+精度区数据的规则：
+
+- **怎么划**（WP-44，`pipeline/walk`，开发期离线跑，结果写进 `game/data/maps/<地图>/fidelity.json` 并提交）：
+  1. K2 = 行走走廊多边形（主网中线两侧 10 m，ART-FIDELITY §9.1）+ 开放室内 + 开放屋顶 + 涉水区和行走落水看得到的水面；立面只有走廊里可走面以上 0–3 m 的带记 K2（`GroundBand`）。
+  2. K1 = 覆盖层的 `k1` 条目 + 点位落点（UI-NAV §6）30 m 以内。
+  3. 立面段：足迹的每条边至少一段。从主网、道路中线和点位落点做可见性采样，60 m 内能正面看到（视线与立面法线的夹角 < 60°、不被遮挡）的记 K3，否则记 K4；同一条边可见性不同时切开。
+  4. 转角过渡（ART-FIDELITY §0.2）：与 K3 段相邻的 K4 段，从转角起切出 6 m 记 K3，约一个开间；生成器把这段的段界对齐到最近的开间线，不另判区。
+  5. 屋顶默认 K4，K1 楼的屋顶随楼进 K1，开放屋顶记 K2。
+  6. 地面：走廊以外的可走室外地面（草坪、球场、内院、停车场）记 K3；"能看不能进"和"只能飞到"的区域（SYS-WALK §6）记 K4，按 8 m 网格求 d_walk（WLD-OUTSKIRTS §4.1 的 d_min 算法，只算行走可达区）。校界外是 K5，外围的级别仍由 `OutskirtsBlock.FacadeLevel / RoofLevel` 给。
+  7. 就高：一个表面同时落在几个区里，取编号最小的区；K1 的要求包含 K2。最后叠加覆盖层的 `raise` 条目。
+- **不进数据的部分**：楼内和地下按规则定，不写进 `fidelity.json`：开放室内的可走部分是 K2；关着的楼内和地下是 K4，只判底线（ART-FIDELITY §5）。
+- **形态与体积**：`fidelity.json` 的头写格式版本和输入哈希，正文是立面段表、屋顶表和地面区多边形（K1、K2、K4 各一组，其余可走室外地面为 K3；K4 区另带 8 m 网格的 d_walk），清水河约 1 MB 以内，随世界数据 JSON 发（§4）。WP-08 加载时把地面多边形栅格化成 2 m 栅格，每格 1 字节，与 2 m 分类栅格同一原点和尺寸（清水河约 1.6 MB 内存）；栅格化只用整数和四则运算，确定。
+- **输入哈希**：算 `campus.json`、全部覆盖层（含 `fidelity.overlay.json`）、`interiors.json`、`waypoints.json` 和可行走遮罩的哈希，算法和输入清单由 WP-44 交一份，`pipeline/walk` 与 G5 共用；输入变了而 `fidelity.json` 没有重出时，G5 报"精度区过期"（ENG-GATES §2）。
+- **判定距离 d_K** 只给门禁用（G9 的抽样与判分、ENG-GATES §3 第 9 条），数值照 ART-FIDELITY §0.1，由 WP-27 写在 `review.json` 里；生成器不读 d_K，所以 P0 校准判定距离不会让格包重烘。
+- **改动**：`fidelity.json` 进数据哈希（§4）。它的输入除点位以外本来就在数据哈希里，所以重新划分一般不额外引起重烘；只改点位、精度区跟着变时，本图的格子按现行规则全部重烘。WP-44 每次重出都在差异报告里列出改了区的立面段、屋顶和地面面积。精度区的字段增改按本节的冻结规则由主代理评审。
+
 ## 4 资源管线
 
 资源用"PNG 源图 + Godot 导入"，几何是烘焙产物，在玩家机器上本机烘焙（D-165）；不用 KTX2、Basis、glTF 的 meshopt 压缩，也没有首屏网络和 CDN。
@@ -1933,7 +1986,7 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
   - 碰撞级 C 每格单独一个 `.tbin`（同一种格式，只装碰撞形状参数和统计），与 TileBundle 分开，只在行走模式下加载（WP-43，SYS-WALK §13）。
   - 岸线 SDF、路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
   - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 GPU 锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
-  - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各按下文自己的键。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
+  - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各按下文自己的键。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`fidelity.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
     - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与工作树路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
     - 内核里的表面打包和 `.tbin` 读写代码不算模块代码：改了它们的输出字节，就提高 ABI 里的格式版本。
   - **缓存位置**：
@@ -2033,6 +2086,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 界面 | 一个调试面板（Control）：时间前推按钮、季节按钮、天气格、模式切换 |
 | 介质 | 永远返回"在空气中"；`IMediumState` 同此 |
 | 门禁 | `scripts\gate.ps1 -Wp <WP-xx>` 的骨架，G1–G6 能跑 |
+| 精度区 | `IWorldModel.Fidelity` 的桩：立面段、屋顶、地面一律 K3，`WalkDistanceAt` 返回 15 m；WP-44 交出 `fidelity.json` 之前，生成器照 K3 做 |
 
 部件按"编目先行"的方式管理：
 
@@ -2228,3 +2282,4 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 首次运行到转为实时的时间（§4） | P0 在空缓存目录上实测；WP-02、WP-49 | ≤ 25 s（开发机），底图 8 线程 ≤ 20 s |
 | 本机缓存烘满后的实际体积（§4） | P0 全图烘满后量；WP-02 | 一张图约 0.8–1.4 GB；默认上限 2.5 GB |
 | 十几个工作树并行时重 CPU 任务的并发上限（§6） | P0 在本机同时开 12 个工作树编译、导入、烘焙，看总耗时与内存；WP-00 | max(2, 逻辑核数 / 8) 个 |
+| 精度区划分的可见性判据与转角过渡长度（§3"精度区数据的规则"） | WP-44 划分后抽 50 个 K4 立面段人工复核，看有没有常被看到的面被判成 K4；WP-44、WP-27 | 60 m 内、视线与立面法线夹角 < 60°、不被遮挡记 K3；转角切出 6 m；点位落点 30 m 以内记 K1 |

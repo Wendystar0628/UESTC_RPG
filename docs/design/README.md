@@ -39,7 +39,11 @@ gates: []
   - **日式氛围**：画面走日式动画背景，地图设计理念与之一致：在地图结构不变的前提下，增补和改造的建筑与环境细节带日式日常街景的氛围，主轴保持成电身份（ART-AMBIENCE、INV-7）。
   - **老旧外观一律翻新**：现实中老旧、破损的外观全部换成与新楼同标准的设计，全校建筑立面和地面都不做旧（ART-RENOVATION、MAP-QSH-RENOVATION、D-173、D-174）。
 - **视觉优先**：四季、昼夜、天象、花期、天气一律以画面好看为最高优先级。真实数据只作参考和灵感，以及用来保住"认得出是成电"的身份特征。
-- **最高验收标准是视觉精度**：不论镜头在哪里、离得多近，包括 1.7 m 人眼高度和贴墙 0.5 m，看到的都必须是精致的建模，不能露出粗糙的拉伸体块或糊掉的贴图（ART-FIDELITY）。这是最终验收标准，在集中测试和收尾时全面验收；主线阶段先求完整（§2）。
+- **视觉精度分两层：处处不粗糙，近看处更精细**（ART-FIDELITY §0，D-009、D-176）：
+  - **底线**：不论镜头在哪里、离得多近，包括 1.7 m 人眼高度、贴墙 0.5 m，以及只有飞行才到的屋顶、高处和背面，看到的东西都不能粗糙：比例对，有倒角和收边，不能露出光秃的拉伸体块或糊掉的贴图。
+  - **细节密度**：按精度区 K1–K5 分级，越常被近看的地方细节越多。主轴与地标、行走走廊和开放室内按贴脸标准做满；普通立面保证中景层次；屋顶、背立面和只有飞行才到的位置适度简化，只要求底线和轮廓。
+  - 校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）。关着的楼从窗外看、旁观穿墙进去看，用的是窗卡和简化室内；走进开放的室内才是全精度（WLD-INTERIORS §5）。
+  - 这是最终验收标准，在集中测试和收尾时全面验收；主线阶段先求完整（§2）。底线不拿来换性能预算，细节密度在预算里按区取舍（INV-12）。
   - 校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）。
   - 关着的楼从窗外看、旁观穿墙进去看，用的是窗卡和简化室内，精度不重要；走进开放的室内才要求全精度（WLD-INTERIORS §5）。
 - **叙事与默认状态**：
@@ -97,7 +101,7 @@ gates: []
 | INV-8 | 世界状态有三个量：时刻 0–24 小时连续可调；季节四档可调；天气 8 格加自动（SYS-WEATHER §1）。世界时间在一个世界实例内单调向前，不能逆转：拨时间环只能顺时针，跳到下一次出现的那个钟点（SYS-TIME §1）。新游戏、读档都是换一个世界实例（`IWorldState.Instance` 加 1），不算时间倒流；开始页停着的时间、关着游戏的那段现实时间都不计入世界时间（SYS-TITLE §6、SYS-SAVE §6）。默认状态是新游戏的终态，也是新存档的初值：秋季 17:30、晴、自动天气、流逝 1×；新游戏过场从 17:05 正向推到这里（SYS-TITLE §6）。退出时自动保存，再进同一存档时，世界是退出时的落定状态（SYS-SAVE §5）。流逝模式有暂停、1×、10×、60×、360×、1440×。天气受季节约束：春夏秋降雨、冬季降雪，雷雨只在春夏；自动天气是只走验证过组合的前向随机过程（SYS-WEATHER §6），每个存档一个天气种子（SYS-SAVE）。换季一律正向转场。所有切换都自然过渡，不能硬切；每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
 | INV-9 | 保留大体地形。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的任何风格化改动、设计增补（`add`）和删除（`hide`），都只能写在覆盖层里，并写明理由；覆盖层按图存放在 `game/data/maps/<地图>/overlay/`（SYS-MAPS §2.1） | MAP-QSH-ADDITIONS、ENG-ARCH §3、SYS-MAPS |
 | INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件。用户触发的时间、季节、天气、跳转、传送过渡不算偶发事件，进场过场和返回标题也不算；过场期间不触发偶发事件（SYS-TITLE §7.2）。闪电（只做远处云内闪）是雷雨的持续氛围，彩虹是雨后初晴的天象状态，两者都不算偶发事件（SYS-WEATHER §5）。声音同样轻、慢、持续：一次性声按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个（SYS-AUDIO §7）；偶发事件本身无声，只有它引起的抖落、积雨、旗动有声；远雷是雷雨的持续氛围，跟云内闪同步，可以关（SYS-AUDIO §6） | SYS-MOTION、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO |
-| INV-11 | 校内任意位置、任意距离都满足视觉精度标准。校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）；关着的楼只做外壳、窗卡和简化室内，开放的室内才要求全精度（WLD-INTERIORS §5） | ART-FIDELITY、WLD-OUTSKIRTS、WLD-INTERIORS |
+| INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有厚度、倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级、越常被近看越密：主轴与地标、行走走廊和开放室内按贴脸标准，普通立面按中景标准，屋顶、背立面和只有飞行才到的位置只判底线和轮廓。校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）；关着的楼只做外壳、窗卡和简化室内，开放的室内才要求全精度（WLD-INTERIORS §5） | ART-FIDELITY、WLD-OUTSKIRTS、WLD-INTERIORS |
 | INV-12 | 满足性能预算与硬规则，包括：界面（主线程、画布渲染 CPU、大页磨砂的 GPU，UI-VISUAL §12）；行走碰撞；存档（快照主线程 p99 ≤ 0.3 ms，从关闭请求到进程结束 ≤ 1.5 s，SYS-SAVE §13）；音频（主线程平均 ≤ 0.35 ms，在播 3D 声源 ≤ 32，常驻 ≤ 96 MB，SYS-AUDIO §18）。安装目录上限 0.9 GB、分发压缩包上限 0.7 GB，几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165，ENG-GATES §2 的 G6） | ENG-BUDGET、ENG-PERF、UI-NAV §9、SYS-WALK §14、UI-VISUAL §12、SYS-SAVE §13、SYS-AUDIO §18 |
 
 ## 4 坐标与数据约定
@@ -163,8 +167,8 @@ gates: []
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
 | [ART-AMBIENCE](art/ART-AMBIENCE.md) 日式日常街景：元素、分区与做法 | 日式日常街景元素的边界与分区，各元素的形、色、限定与三渲二做法，以及对应的鸟与声音 | WP-13 | G5、G7、G9、G12 |
-| [ART-FIDELITY](art/ART-FIDELITY.md) 视觉精度标准：任何小区域放大都必须精致 | 任意距离、时刻、季节、天气下的视觉精度判据、一票否决清单与验收方法，含行走走廊加密和外围分级精度 | WP-27 | G2、G7、G8、G9、G12、G13、G15、G17、G19 |
-| [ART-MODELING](art/ART-MODELING.md) 风格化造型规则：比例、形体、部件与风格一致性 | 建筑、植被、道具与室内的风格化比例和形体，固有色约束，部件库写法，以及金样与跨包风格一致性流程 | WP-09 | G2、G4、G5、G7、G12 |
+| [ART-FIDELITY](art/ART-FIDELITY.md) 视觉精度标准：处处不粗糙，细节按区分级 | 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度 | WP-27 | G2、G7、G8、G9、G12、G13、G15、G17、G19 |
+| [ART-MODELING](art/ART-MODELING.md) 风格化造型规则：比例、形体、部件与风格一致性 | 建筑、植被、道具与室内的风格化比例和形体，固有色约束，部件库写法，每类对象的最低合格构件与法线规则，以及金样与跨包风格一致性流程 | WP-09 | G2、G4、G5、G7、G12 |
 | [ART-RENOVATION](art/ART-RENOVATION.md) 老楼翻新：全部翻新的规则 | 老楼位置、体量与身份特征不动，外观全部换成新楼标准：材质配色、删简留、窗檐楼梯屋顶的改法、成电辨认与验收 | WP-14 | G5、G7、G9、G12 |
 | [ART-SKYLIGHT](art/ART-SKYLIGHT.md) 天空、光照与大气 | 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照 | WP-34、WP-03、WP-40 | G2、G7、G10、G12、G13、G16、G17 |
 | [ART-STYLE](art/ART-STYLE.md) 风格基础：三渲二日式动画背景规范 | 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪 | WP-04、WP-05 | G4、G5、G6、G7、G12、G13、G16、G17 |
@@ -292,7 +296,7 @@ gates: []
 | WP-12 | — | ART-FIDELITY、ART-MODELING、MAP-QSH-ADDITIONS、MAP-QSH-WEST、WLD-INTERIORS、WLD-LIFE |
 | WP-13 | ART-AMBIENCE、MAP-QSH-ADDITIONS、WLD-LIFE | ART-MODELING、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-RENOVATION、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-ATLAS、SYS-AUDIO、SYS-WALK、WLD-INTERIORS、WLD-OUTSKIRTS |
 | WP-14 | ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-RENOVATION | ART-AMBIENCE、ART-FIDELITY、ART-MODELING、WLD-INTERIORS、WLD-OUTSKIRTS |
-| WP-15 | — | ART-AMBIENCE、ART-FIDELITY、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-RENOVATION、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-MAPS、SYS-WALK、SYS-WEATHER、WLD-OUTSKIRTS、WLD-VEGETATION |
+| WP-15 | — | ART-AMBIENCE、ART-FIDELITY、ART-MODELING、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-RENOVATION、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-MAPS、SYS-WALK、SYS-WEATHER、WLD-OUTSKIRTS、WLD-VEGETATION |
 | WP-16 | MAP-QSH-CORE | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-LIBRARY、MAP-QSH-RENOVATION、MAP-QSH-WEST、SYS-WALK、WLD-INTERIORS |
 | WP-17 | MAP-QSH-LIBRARY、WLD-INTERIORS | ART-RENOVATION、MAP-QSH-CORE、SYS-AUDIO、SYS-WALK |
 | WP-18 | MAP-QSH-SOUTH | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-RENOVATION、SYS-WALK、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-WATER |
