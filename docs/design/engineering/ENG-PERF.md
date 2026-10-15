@@ -940,7 +940,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 | `DirectionalShadowBlendSplits` | 开 | 级与级之间混合，不出接缝 |
 | `DirectionalShadowFadeStart` | 0.85 | — |
 | `DirectionalShadowPancakeSize` | 默认，P0 按低太阳调 | — |
-| `LightAngularDistance` | 约 0.45° | 开启 PCSS：770 m 长的影子尾端半影约 6 m；近处影边仍然清楚。P0 比较 0.45° 与 0.3°，取一个固定值（运行时不改），要的是干脆的近处影边（ART-SKYLIGHT §3.1） |
+| `LightAngularDistance` | 0（不开 PCSS） | 实测 0.45° 影边起颗粒，0.1–0.2° 影边成块，远处长影还会整片消失；要干脆的影边（ART-SKYLIGHT §3.1）。软影滤波用 Soft Medium，写进 `project.godot` |
 | `ShadowBias` / `ShadowNormalBias` | 0.05 / 4.0 | 引擎已把法线偏移按每级纹素缩放；0.1 / 2.5 在树冠小球交叠处会漏出细亮缝 |
 | `ShadowReverseCullFace` | 开 | 闭合网格只往阴影图里渲背面，减少痤疮；双面材质不受影响 |
 | `ShadowBlur` | 1.0，固定 | — |
