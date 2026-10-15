@@ -1,0 +1,792 @@
+{
+  "version": 1,
+  "clearGapHours": 2.5,
+  "precipGapHours": 8,
+  "maxPrecipHoursPerDay": 12,
+  "blendHours": 0.6,
+  "templates": [
+    {
+      "id": "spring-night-rain",
+      "season": "spring",
+      "ratePerDay": 0.32,
+      "fromClock": 22,
+      "toClock": 2,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "lightRain",
+          "minHours": 1.5,
+          "maxHours": 5,
+          "minIntensity": 0.2,
+          "maxIntensity": 0.45
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "spring-shower",
+      "season": "spring",
+      "ratePerDay": 0.08,
+      "fromClock": 11,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "lightRain",
+          "minHours": 0.75,
+          "maxHours": 1.3,
+          "minIntensity": 0.2,
+          "maxIntensity": 0.45
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "spring-thunder",
+      "season": "spring",
+      "ratePerDay": 0.02,
+      "fromClock": 11,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 0.9,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 1.75,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "thunderstorm",
+          "minHours": 0.75,
+          "maxHours": 1.5,
+          "minIntensity": 0.65,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "spring-drizzle",
+      "season": "spring",
+      "ratePerDay": 0.04,
+      "fromClock": 9,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "lightRain",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 0.2,
+          "maxIntensity": 0.45
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "spring-fog",
+      "season": "spring",
+      "ratePerDay": 0.19,
+      "fromClock": 0,
+      "toClock": 4,
+      "phases": [
+        {
+          "kind": "fog",
+          "minHours": 1.5,
+          "maxHours": 4.5,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "spring-cloud",
+      "season": "spring",
+      "ratePerDay": 0.23,
+      "fromClock": 8,
+      "toClock": 15,
+      "phases": [
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "spring-overcast",
+      "season": "spring",
+      "ratePerDay": 0.08,
+      "fromClock": 9,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "summer-thunder",
+      "season": "summer",
+      "ratePerDay": 0.21,
+      "fromClock": 11,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 0.9,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 1.75,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "thunderstorm",
+          "minHours": 0.75,
+          "maxHours": 1.5,
+          "minIntensity": 0.65,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "summer-shower",
+      "season": "summer",
+      "ratePerDay": 0.12,
+      "fromClock": 9,
+      "toClock": 13,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "rain",
+          "minHours": 0.75,
+          "maxHours": 1.5,
+          "minIntensity": 0.55,
+          "maxIntensity": 0.95
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "summer-night-thunder",
+      "season": "summer",
+      "ratePerDay": 0.05,
+      "fromClock": 21,
+      "toClock": 0,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 0.9,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 1.75,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "thunderstorm",
+          "minHours": 0.75,
+          "maxHours": 1.5,
+          "minIntensity": 0.65,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "summer-fog",
+      "season": "summer",
+      "ratePerDay": 0.25,
+      "fromClock": 0,
+      "toClock": 4,
+      "phases": [
+        {
+          "kind": "fog",
+          "minHours": 1.5,
+          "maxHours": 4.5,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "summer-cloud",
+      "season": "summer",
+      "ratePerDay": 0.32,
+      "fromClock": 8,
+      "toClock": 15,
+      "phases": [
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "autumn-night-rain",
+      "season": "autumn",
+      "ratePerDay": 0.32,
+      "fromClock": 22,
+      "toClock": 1,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "lightRain",
+          "minHours": 1,
+          "maxHours": 5,
+          "minIntensity": 0.2,
+          "maxIntensity": 0.45
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "autumn-day-rain",
+      "season": "autumn",
+      "ratePerDay": 0.02,
+      "fromClock": 9,
+      "toClock": 12,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.65,
+          "maxHours": 1.1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "lightRain",
+          "minHours": 0.75,
+          "maxHours": 2,
+          "minIntensity": 0.2,
+          "maxIntensity": 0.45
+        },
+        {
+          "kind": "afterRain",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "autumn-fog",
+      "season": "autumn",
+      "ratePerDay": 0.23,
+      "fromClock": 0,
+      "toClock": 4,
+      "phases": [
+        {
+          "kind": "fog",
+          "minHours": 1.5,
+          "maxHours": 4.5,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "autumn-night-fog",
+      "season": "autumn",
+      "ratePerDay": 0.07,
+      "fromClock": 21,
+      "toClock": 23,
+      "phases": [
+        {
+          "kind": "fog",
+          "minHours": 1.5,
+          "maxHours": 4.5,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "autumn-overcast",
+      "season": "autumn",
+      "ratePerDay": 0.11,
+      "fromClock": 8,
+      "toClock": 13,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "autumn-cloud",
+      "season": "autumn",
+      "ratePerDay": 0.15,
+      "fromClock": 8,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "winter-night-snow",
+      "season": "winter",
+      "ratePerDay": 0.35,
+      "fromClock": 20,
+      "toClock": 23,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "snow",
+          "minHours": 2.5,
+          "maxHours": 8,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        },
+        {
+          "kind": "afterSnow",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "winter-day-snow",
+      "season": "winter",
+      "ratePerDay": 0.03,
+      "fromClock": 8,
+      "toClock": 10,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "snow",
+          "minHours": 4,
+          "maxHours": 8,
+          "minIntensity": 0.25,
+          "maxIntensity": 0.5
+        },
+        {
+          "kind": "afterSnow",
+          "minHours": 0.8,
+          "maxHours": 1.3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "winter-fog",
+      "season": "winter",
+      "ratePerDay": 0.24,
+      "fromClock": 0,
+      "toClock": 4,
+      "phases": [
+        {
+          "kind": "fog",
+          "minHours": 1.5,
+          "maxHours": 4.5,
+          "minIntensity": 0.3,
+          "maxIntensity": 0.8
+        }
+      ]
+    },
+    {
+      "id": "winter-overcast",
+      "season": "winter",
+      "ratePerDay": 0.16,
+      "fromClock": 9,
+      "toClock": 13,
+      "phases": [
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "overcast",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 0.75,
+          "maxHours": 1,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    },
+    {
+      "id": "winter-cloud",
+      "season": "winter",
+      "ratePerDay": 0.12,
+      "fromClock": 8,
+      "toClock": 14,
+      "phases": [
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "cloudy",
+          "minHours": 1.5,
+          "maxHours": 3,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        },
+        {
+          "kind": "fewClouds",
+          "minHours": 0.7,
+          "maxHours": 1.2,
+          "minIntensity": 1,
+          "maxIntensity": 1
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "clear",
+      "to": "cloudy"
+    },
+    {
+      "from": "cloudy",
+      "to": "overcast"
+    },
+    {
+      "from": "overcast",
+      "to": "lightRain"
+    },
+    {
+      "from": "lightRain",
+      "to": "afterRain"
+    },
+    {
+      "from": "afterRain",
+      "to": "clear"
+    },
+    {
+      "from": "overcast",
+      "to": "thunderstorm"
+    },
+    {
+      "from": "thunderstorm",
+      "to": "afterRain"
+    },
+    {
+      "from": "clear",
+      "to": "fog"
+    },
+    {
+      "from": "fog",
+      "to": "clear"
+    },
+    {
+      "from": "clear",
+      "to": "fewClouds"
+    },
+    {
+      "from": "fewClouds",
+      "to": "cloudy"
+    },
+    {
+      "from": "cloudy",
+      "to": "fewClouds"
+    },
+    {
+      "from": "fewClouds",
+      "to": "clear"
+    },
+    {
+      "from": "overcast",
+      "to": "cloudy"
+    },
+    {
+      "from": "cloudy",
+      "to": "clear"
+    },
+    {
+      "from": "overcast",
+      "to": "rain"
+    },
+    {
+      "from": "rain",
+      "to": "afterRain"
+    },
+    {
+      "from": "cloudy",
+      "to": "rain"
+    },
+    {
+      "from": "overcast",
+      "to": "snow"
+    },
+    {
+      "from": "snow",
+      "to": "afterSnow"
+    },
+    {
+      "from": "afterSnow",
+      "to": "clear"
+    }
+  ]
+}
