@@ -58,8 +58,8 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`874f89f` 文档：地形分层规范 WLD-TERRAIN（D-180）与相关文档接入。
-- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14 `cb7a8b0`、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`。
+- 当前 `main`：`e5a3947` WP-48a 平面地图底图烘焙的主线版。
+- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14 `cb7a8b0`、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`。
 - 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）。
 - 最近可运行入口：`4568685`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
 - 已冻结的契约组：尚无（v1 候选）。
@@ -90,7 +90,6 @@ gates: []
 | WP-44 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-44` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-45a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-45a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-46 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-46` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-48a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-48c | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48c` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-50 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-50` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
