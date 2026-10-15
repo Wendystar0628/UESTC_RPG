@@ -1,0 +1,10 @@
+{
+  "qingshuihe": {
+    "name": "电子科技大学清水河校区",
+    "entityPrefix": "qsh",
+    "origin": [103.9282919, 30.75316145],
+    "epsg": 32648,
+    "boundary": ["way", 544169854],
+    "source": "https://www.openstreetmap.org/api/0.6/map.json?bbox=103.9170,30.7433,103.9393,30.7630"
+  }
+}

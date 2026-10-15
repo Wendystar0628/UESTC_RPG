@@ -1,0 +1,118 @@
+{
+  "qingshuihe": {
+    "version": "2026-09-17",
+    "groups": [
+      {
+        "entity": "qsh:way:687370083",
+        "style": "academic",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:806848396",
+        "style": "library",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:relation:11043355",
+        "style": "academic",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:relation:11185938",
+        "style": "academic",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:relation:11665640",
+        "style": "research",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:relation:14153711",
+        "style": "research",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:relation:11032065",
+        "style": "research",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:844548980",
+        "style": "academic",
+        "reference": {
+          "title": "宣邦楼 · 2023 在建实拍参考",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:883187548",
+        "style": "modern",
+        "reference": {
+          "title": "文科楼群 · 2026 年 7 月施工实拍",
+          "url": "https://news.uestc.edu.cn/info/1162/42221.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:552816777",
+        "style": "academic",
+        "reference": {
+          "title": "成电！成电！ · 2023 校园实拍",
+          "url": "https://news.uestc.edu.cn/info/1013/5994.htm"
+        },
+        "referenceScope": "roof"
+      },
+      {
+        "entity": "qsh:way:217855275",
+        "style": "sports",
+        "reference": {
+          "title": "最美场馆 · 2023 大运会体育场馆实拍",
+          "url": "https://news.uestc.edu.cn/info/1053/23081.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:217855279",
+        "style": "sports",
+        "reference": {
+          "title": "最美场馆 · 2023 大运会体育场馆实拍",
+          "url": "https://news.uestc.edu.cn/info/1053/23081.htm"
+        }
+      },
+      {
+        "entity": "qsh:way:217855276",
+        "style": "sports",
+        "reference": {
+          "title": "最美场馆 · 2023 大运会体育场馆实拍",
+          "url": "https://news.uestc.edu.cn/info/1053/23081.htm"
+        }
+      }
+    ],
+    "families": [
+      {
+        "entity": "qsh:relation:17732622",
+        "style": "research"
+      }
+    ]
+  }
+}
