@@ -58,11 +58,18 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-当前没有进行中的工作包，main 为最新提交。
-
-已冻结的契约组：尚无。
+- 当前 `main`：`c3bd30e` 文档：双模型协作（D-179）。
+- 最近可运行入口：尚无（WP-00 合入后才有）。
+- 已冻结的契约组：尚无。
+- 当前阶段：D0（ENG-TEAM §3）。Astra 做 WP-00；Opus 的子代理同时做不依赖骨架的美术基础。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
 
 ## 3 活跃工作包
 
 | 包 | 目标 | 工作树 | 分支 | 候选提交 | 状态 | 阻塞 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| WP-00 | ENG-WP §1 的 D0 骨架、契约 v1 候选、全部桩、门禁骨架，net10.0 全链路 | `..\UESTC_RPG.wt\WP-00` | `wp/00-core` | — | 施工中 | — | Astra 写合并请求，Opus 合入并打标签 `contracts-v1-rc` |
+| WP-04 | 卡通着色器与样张（ENG-TEAM §3 的 D0 部分） | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 施工中 | 材质库等 WP-00 | Opus 子代理交样张；D0 合入后 rebase 接材质库 |
+| WP-05 | 描线与后期着色器、雾幕画法与样张 | `..\UESTC_RPG.wt\WP-05` | `wp/05-outline` | — | 施工中 | 合成器接线等 WP-00 | 同 WP-04 |
+| WP-35 | `ui.json` 令牌、界面着色器与组件画廊样张 | `..\UESTC_RPG.wt\WP-35` | `wp/35-ui` | — | 施工中 | 控件等 WP-00 的契约 | 同 WP-04 |
+| WP-37 | 秋季 12 关键帧与四季增量、色板联表预览工具 | `..\UESTC_RPG.wt\WP-37` | `wp/37-palette` | — | 施工中 | — | Opus 评审联表 |
+| WP-49b | 四段过场数据、`cine_cloud` 着色器与 T0 构图预览 | `..\UESTC_RPG.wt\WP-49b` | `wp/49b-title` | — | 施工中 | 过场格式以 49a 为准 | 与 Astra 的过场 schema 对齐 |
