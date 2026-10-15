@@ -58,18 +58,47 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`c3bd30e` 文档：双模型协作（D-179）。
-- 最近可运行入口：尚无（WP-00 合入后才有）。
-- 已冻结的契约组：尚无。
-- 当前阶段：D0（ENG-TEAM §3）。Astra 做 WP-00；Opus 的子代理同时做不依赖骨架的美术基础。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
+- 当前 `main`：`9c7e28a` WP-00: Godot 骨架、契约 v1 候选、全部桩与门禁骨架（net10.0）；标签 `contracts-v1-rc`。
+- 最近可运行入口：`9c7e28a`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
+- 已冻结的契约组：尚无（v1 候选）。
+- 当前阶段：第一波（ENG-TEAM §3）。第二波在 WP-08、WP-02、WP-09、WP-14 的主线版合入后开。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
+- 已知问题：Debug 编译会改写已提交的 NuGet 锁文件；`gate.ps1` 在 Windows PowerShell 5.1 下偶发失败。由 Astra 作为第一个共享文件修补处理（WP-00 工作树），合入前各包不提交锁文件改动。
 
 ## 3 活跃工作包
 
 | 包 | 目标 | 工作树 | 分支 | 候选提交 | 状态 | 阻塞 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WP-00 | ENG-WP §1 的 D0 骨架、契约 v1 候选、全部桩、门禁骨架，net10.0 全链路 | `..\UESTC_RPG.wt\WP-00` | `wp/00-core` | — | 施工中 | — | Astra 写合并请求，Opus 合入并打标签 `contracts-v1-rc` |
-| WP-04 | 卡通着色器与样张（ENG-TEAM §3 的 D0 部分） | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 施工中 | 材质库等 WP-00 | Opus 子代理交样张；D0 合入后 rebase 接材质库 |
-| WP-05 | 描线与后期着色器、雾幕画法与样张 | `..\UESTC_RPG.wt\WP-05` | `wp/05-outline` | — | 施工中 | 合成器接线等 WP-00 | 同 WP-04 |
-| WP-35 | `ui.json` 令牌、界面着色器与组件画廊样张 | `..\UESTC_RPG.wt\WP-35` | `wp/35-ui` | — | 施工中 | 控件等 WP-00 的契约 | 同 WP-04 |
-| WP-37 | 秋季 12 关键帧与四季增量、色板联表预览工具 | `..\UESTC_RPG.wt\WP-37` | `wp/37-palette` | — | 施工中 | — | Opus 评审联表 |
-| WP-49b | 四段过场数据、`cine_cloud` 着色器与 T0 构图预览 | `..\UESTC_RPG.wt\WP-49b` | `wp/49b-title` | — | 施工中 | 过场格式以 49a 为准 | 与 Astra 的过场 schema 对齐 |
+| WP-00 | 共享修补：锁文件按配置隔离、gate.ps1 在 PowerShell 5.1 下稳定；处理契约申请 | `..\UESTC_RPG.wt\WP-00` | `wp/00-core` | — | 施工中 | — | Astra 交 merge-WP-00-2，Opus 优先合入 |
+| WP-03 | 主光、阴影与灯光通道的主线版 | `..\UESTC_RPG.wt\WP-03` | `wp/03-lighting` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-04 | 材质库 C# 与正式着色器接入（D0 美术基础已过审） | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 施工中 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-05 | 后期合成器 C#、雾幕层（D0 着色器已过审） | `..\UESTC_RPG.wt\WP-05` | `wp/05-outline` | — | 施工中 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-14 | 通用建筑生成器的主线版（第二波前提） | `..\UESTC_RPG.wt\WP-14` | `wp/14-buildings` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-15 | 地表、道路、铺装的主线版 | `..\UESTC_RPG.wt\WP-15` | `wp/15-ground` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-24 | 水体的主线版 | `..\UESTC_RPG.wt\WP-24` | `wp/24-water` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-35 | 界面 C#、时间环与设置卡（D0 令牌与画廊已过审） | `..\UESTC_RPG.wt\WP-35` | `wp/35-ui` | — | 施工中 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-37 | 调色板求值器与 IColorScriptFrame（色板已定稿） | `..\UESTC_RPG.wt\WP-37` | `wp/37-palette` | — | 施工中 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-39 | 夜景灯光与时刻表的主线版 | `..\UESTC_RPG.wt\WP-39` | `wp/39-nightlight` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-40 | 全日天空的主线版 | `..\UESTC_RPG.wt\WP-40` | `wp/40-sky` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-45b | 降水与湿润的主线版 | `..\UESTC_RPG.wt\WP-45b` | `wp/45b-precip` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-48b | 小地图与大地图界面的主线版 | `..\UESTC_RPG.wt\WP-48b` | `wp/48b-map-ui` | — | 已派工 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-49b | 四段过场数据按新 schema、云卡着色器接入 | `..\UESTC_RPG.wt\WP-49b` | `wp/49b-title` | — | 施工中 | — | Opus 的子代理交主线版截图，Opus 评审后合入 |
+| WP-01 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-01` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-02a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-02a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-02b | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-02b` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-06 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-06` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-08 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-08` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-09 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-09` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-27 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-27` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-32 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-32` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-34 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-34` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-42 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-42` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-43 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-43` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-44 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-44` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-45a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-45a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-46 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-46` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-48a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-48c | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48c` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-50 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-50` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-51a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-51a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-53a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-53a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
