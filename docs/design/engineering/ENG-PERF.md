@@ -212,7 +212,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `sun_dir`、`moon_dir` | vec3 | 美术太阳、月亮的真实方向（天空和日月盘用，不量化、不钳高度） | WP-34 | 每帧 |
 | `moon_lit` | vec4 | xyz 月盘球面明暗的受光方向，w 月相（默认 1 = 满月） | WP-34 | 每帧 |
 | `key_dir` | vec3 | 主光当前（量化后）的方向，与 DirectionalLight3D 一致；给 light() 以外的代码用（水面碎金带、草的逆光） | WP-03 | 转灯时 |
-| `key_strength` | float | 主光强度 smoothstep(−1°, 4°, h) | WP-03 | 每帧 |
+| `key_strength` | float | 主光强度 smoothstep(−2°, 4°, h) | WP-03 | 每帧 |
 | `shadow_strength` | float | 阴影强度：无影蓝调里 0，月影最强 0.45，白天 1；再乘天气乘子 (1 − 0.8 × 阴度)，白天不低于 0.2，雨夜无月影（§10.1） | WP-03 | 每帧 |
 | `retreat_y` | float | 退光线的高度（§10.1） | WP-03 | 每帧 |
 | `wind` | vec4 | (风向 x, 风向 z, 幅度系数, 湍流)：幅度系数 = 四季 × 昼夜 × 天气 × 转场扬起，由 WP-26 每帧乘成一个数（SYS-MOTION §11.4、SYS-MOTION §12.2）；湍流是风暴度大于 0 时叠加的细碎阵风，周期取 480/k（SYS-MOTION §11.4、WLD-VEGETATION §11.6） | WP-26 | 每帧 |
@@ -976,7 +976,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 **太阳贴地**：
 
-- **主光强度** = smoothstep(−1°, 4°, h)，h 是太阳的真实高度，写进 `key_strength`。light() 的方向光分支乘它，不改 `LightEnergy`。
+- **主光强度** = smoothstep(−2°, 4°, h)，h 是太阳的真实高度，写进 `key_strength`。light() 的方向光分支乘它，不改 `LightEnergy`。
 - **退光线**：太阳高度从 2.5° 降到 0.3° 时，`retreat_y` 从 −10 m 升到 80 m。vertex() 里算世界高度 `v_wy = (MODEL_MATRIX × vec4(VERTEX, 1)).y + retreat_bias`；light() 的方向光分支把受光乘以 smoothstep(R − 1.5, R + 1.5, v_wy)，3 m 软边。这样复现 ART-SKYLIGHT §3.4 的退场顺序：地面 → 低层 → 高层 → 穹顶。日出时反向，穹顶最先受光。
 - **穹顶偏置**：instance uniform `retreat_bias` 只在宣邦楼穹顶的实例上设为 6 m，所以**穹顶必须是单独的实例，不能并进块几何**（WP-18 交付时注意）。
 - **掠射面**：light() 里再乘 smoothstep(0, 0.06, N·L)，把容易出痤疮的掠射面整体判进影里；引擎的偏移不能逐片元改，所以由这一条和 `ShadowNormalBias` 共同防痤疮。

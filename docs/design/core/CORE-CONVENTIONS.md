@@ -174,7 +174,7 @@ gates: [G1, G2, G3, G4, G5]
 
 ### 3.4 C# 程序集、命名空间与文件
 
-- **命名空间与目录一致**：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`（`.editorconfig` 开 IDE0130）（ENG-ARCH §2）。
+- **命名空间**：命名空间用 PascalCase，按 ENG-ARCH §2 的程序集与职责取，不跟目录的字面大小写：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`；契约程序集的分组目录（`Foundation/`、`Ui/` 等）共用根命名空间 `Campus.Contracts`，只有 ENG-ARCH §3 列出的子命名空间（如 `Campus.Contracts.AppFlow`）例外。IDE0130 按目录字面大小写判，不适用本约定，`.editorconfig` 里关掉；改由 G1 的源码门禁按本条检查（ENG-ARCH §2）。
 - **程序集**（边界与可引用关系以 ENG-ARCH §2 的表为准）：
 
 | 程序集 | 目录 | 说明 |

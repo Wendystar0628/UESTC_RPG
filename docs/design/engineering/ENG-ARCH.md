@@ -350,7 +350,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
   .gitattributes、.gitignore、docs/   主代理
 ```
 
-- C# 命名空间与目录一致：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`（`.editorconfig` 开 IDE0130 检查）。
+- C# 命名空间：命名空间用 PascalCase，按 ENG-ARCH §2 的程序集与职责取，不跟目录的字面大小写：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`；契约程序集的分组目录（`Foundation/`、`Ui/` 等）共用根命名空间 `Campus.Contracts`，只有 ENG-ARCH §3 列出的子命名空间（如 `Campus.Contracts.AppFlow`）例外。IDE0130 按目录字面大小写判，不适用本约定，`.editorconfig` 里关掉；改由 G1 的源码门禁按本条检查（CORE-CONVENTIONS §3.4）。
 - **RPG 名字占位**（ENG-ROADMAP §6 第 6 条，都不写代码）：上表记为 RPG 预留的目录观光期不写入；实体 ID 前缀 `npc:`、`item:`、`quest:` 保留，G5 的前缀检查拒绝观光数据使用；存档预留段名见 SYS-SAVE §2（含 `calendar`、`agents`）；输入动作 `interact`（E）、`inventory`（I）的名字和键位不分配给观光功能（UI-NAV §5）。
 - `game/contracts/`、`game/gen/` 和每个 `tests/` 目录里各放一个空的 `.gdignore`。Godot 不扫描这些纯 .NET 代码，它们不产生 `.uid`，也不进导出包。
 - 纯 .NET 代码不碰文件路径：数据由内核用 `FileAccess.GetFileAsBytes()` 读成字节，交给 `Campus.Gen.World` 解析。烘焙（开发烘焙器和本机烘焙）也走这条路。路径一律由 `IMapContext.DataRoot` 拼出（`res://data/maps/<地图>/…`，SYS-MAPS §7），代码里不写数据路径、地图 ID 和实体 ID 的字面量。这一条约束 gen 程序集和随包的烘焙子任务（含 `Campus.Pipeline.Map`）：它们在发布版里由 `IBakeService` 调用，只收字节和世界模型，产物字节交给 `IBakeService` 写盘，自己不碰路径；开发期的 `pipeline/*` 脚本和命令行入口可以读写仓库里的文件。

@@ -33,7 +33,7 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS.md` · 36.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
+`docs/design/core/CORE-CONVENTIONS.md` · 36.4k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
 关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性、文件头、front matter、keywords、范围块、查阅行、接入要点、小节引用、施工约定、文件操作、删除规则
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
@@ -44,11 +44,11 @@
   - CORE-CONVENTIONS §1.3 范围数（清水河） · L73 · 1.3k
   - CORE-CONVENTIONS §1.4 其他单位 · L88 · 370
 - CORE-CONVENTIONS §2 时间单位 · L97 · 2.3k
-- CORE-CONVENTIONS §3 标识与命名 · L120 · 10.0k
+- CORE-CONVENTIONS §3 标识与命名 · L120 · 10.2k
   - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L122 · 1.1k
   - CORE-CONVENTIONS §3.2 编号体系 · L135 · 1.6k
   - CORE-CONVENTIONS §3.3 同号不同义的读法 · L162 · 885
-  - CORE-CONVENTIONS §3.4 C# 程序集、命名空间与文件 · L175 · 2.4k
+  - CORE-CONVENTIONS §3.4 C# 程序集、命名空间与文件 · L175 · 2.6k
   - CORE-CONVENTIONS §3.5 色名 · L200 · 799
   - CORE-CONVENTIONS §3.6 着色器文件 · L209 · 1.2k
   - CORE-CONVENTIONS §3.7 其他命名 · L236 · 495
@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 51.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 52.4k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -282,34 +282,34 @@
   - ★ ART-STYLE §0.1 接入要点 · L63 · 1.5k
 - ART-STYLE §1 总体风格与参照 · L78 · 912
 - ART-STYLE §2 明暗分阶 · L96 · 5.5k
-- ART-STYLE §3 影子：明度为主，按材质定影色 · L171 · 4.8k
-  - ART-STYLE §3.1 原则 · L175 · 639
-  - ART-STYLE §3.2 推导规则 · L190 · 1.4k
-  - ART-STYLE §3.3 天光与地面反光 · L227 · 370
-  - ART-STYLE §3.4 室内暖影 · L235 · 622
-  - ART-STYLE §3.5 哪些材质有色调变化 · L246 · 346
-  - ART-STYLE §3.6 夜间与阴雨 · L258 · 321
-  - ART-STYLE §3.7 示例 · L264 · 930
-- ART-STYLE §4 描线 · L284 · 6.1k
-- ART-STYLE §5 高光、边缘光与透光 · L363 · 3.9k
-- ART-STYLE §6 贴图与笔触 · L414 · 1.4k
-- ART-STYLE §7 后期 · L437 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L506 · 8.4k
-  - ART-STYLE §8.1 风格色 · L508 · 2.8k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L553 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L572 · 1.2k
-  - ART-STYLE §8.4 界面色 · L604 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L629 · 952
-  - ART-STYLE §8.6 天气色 · L642 · 1.1k
-- ART-STYLE §9 排除元素 · L661 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L663 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L689 · 599
-- ART-STYLE §10 材质速查 · L698 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L716 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L748 · 419
-- ART-STYLE §13 情绪弧线 · L761 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L786 · 1.9k
-- ART-STYLE §14 待验证（P0） · L806 · 2.1k
+- ART-STYLE §3 影子：明度为主，按材质定影色 · L171 · 5.3k
+  - ART-STYLE §3.1 原则 · L175 · 656
+  - ART-STYLE §3.2 推导规则 · L190 · 1.8k
+  - ART-STYLE §3.3 天光与地面反光 · L233 · 370
+  - ART-STYLE §3.4 室内暖影 · L241 · 622
+  - ART-STYLE §3.5 哪些材质有色调变化 · L252 · 346
+  - ART-STYLE §3.6 夜间与阴雨 · L264 · 321
+  - ART-STYLE §3.7 示例 · L270 · 1.0k
+- ART-STYLE §4 描线 · L291 · 6.1k
+- ART-STYLE §5 高光、边缘光与透光 · L370 · 3.9k
+- ART-STYLE §6 贴图与笔触 · L421 · 1.4k
+- ART-STYLE §7 后期 · L444 · 5.7k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L513 · 8.4k
+  - ART-STYLE §8.1 风格色 · L515 · 2.8k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L560 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L579 · 1.2k
+  - ART-STYLE §8.4 界面色 · L611 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L636 · 952
+  - ART-STYLE §8.6 天气色 · L649 · 1.1k
+- ART-STYLE §9 排除元素 · L668 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L670 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L696 · 599
+- ART-STYLE §10 材质速查 · L705 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L723 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L755 · 419
+- ART-STYLE §13 情绪弧线 · L768 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L793 · 1.9k
+- ART-STYLE §14 待验证（P0） · L813 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
@@ -481,17 +481,17 @@
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION.md` · 41.5k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION.md` · 41.6k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
 - WLD-VEGETATION §0 结论 · L44 · 2.2k
   - ★ WLD-VEGETATION §0.1 接入要点 · L57 · 1.1k
 - WLD-VEGETATION §1 卡通树冠的画法 · L71 · 2.9k
-- WLD-VEGETATION §2 树种与四季 · L121 · 7.1k
+- WLD-VEGETATION §2 树种与四季 · L121 · 7.2k
   - WLD-VEGETATION §2.1 落叶树：状态、叶量与开花 · L131 · 2.0k
   - WLD-VEGETATION §2.2 常绿树与灌木 · L159 · 697
-  - WLD-VEGETATION §2.3 色名与四季色值 · L172 · 3.9k
+  - WLD-VEGETATION §2.3 色名与四季色值 · L172 · 4.0k
 - WLD-VEGETATION §3 线性种植 · L221 · 1.2k
 - WLD-VEGETATION §4 片区种植 · L251 · 2.5k
   - WLD-VEGETATION §4.1 外围（WLD-OUTSKIRTS） · L280 · 1.1k
@@ -606,7 +606,7 @@
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.2k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.3k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、core.overlay.json
 
   - MAP-QSH-CORE 分工 · L27 · 998
@@ -622,7 +622,7 @@
 - MAP-QSH-CORE §6 本区的构图关系 · L258 · 413
 - MAP-QSH-CORE WP-16 交付验收 · L266 · 929
 - MAP-QSH-CORE 定位、设计增补与近景要求 · L284 · 2.4k
-- MAP-QSH-CORE §7 季节与昼夜清单 · L330 · 4.8k
+- MAP-QSH-CORE §7 季节与昼夜清单 · L330 · 4.9k
 - MAP-QSH-CORE §8 行走 · L386 · 3.9k
   - MAP-QSH-CORE §8.1 主网路段（必须能走，SYS-WALK §6） · L390 · 335
   - MAP-QSH-CORE §8.2 能看不能进的地方与挡路物 · L405 · 792
@@ -1033,26 +1033,26 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 40.3k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.0k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
 - SYS-TIME §0 结论 · L34 · 2.9k
   - ★ SYS-TIME §0.1 接入要点 · L56 · 1.4k
 - SYS-TIME §1 世界状态与控制（WP-34） · L71 · 10.6k
-- SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.4k
-- SYS-TIME §3 色彩脚本（WP-37） · L249 · 7.9k
-  - SYS-TIME §3.1 组织方式 · L251 · 2.2k
-  - SYS-TIME §3.2 秋季基准关键帧 · L277 · 3.3k
-  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L300 · 876
-  - SYS-TIME §3.4 难看时段的改造 · L319 · 516
-  - SYS-TIME §3.5 英雄帧 · L328 · 986
-- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L354 · 4.7k
-- SYS-TIME §5 过渡 · L413 · 1.9k
-- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L445 · 3.5k
-- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L503 · 867
-- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L516 · 2.9k
-- SYS-TIME §10 待验证（P0） · L546 · 445
+- SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.5k
+- SYS-TIME §3 色彩脚本（WP-37） · L249 · 8.6k
+  - SYS-TIME §3.1 组织方式 · L251 · 2.3k
+  - SYS-TIME §3.2 秋季基准关键帧 · L277 · 3.8k
+  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L303 · 974
+  - SYS-TIME §3.4 难看时段的改造 · L322 · 516
+  - SYS-TIME §3.5 英雄帧 · L331 · 986
+- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L357 · 4.7k
+- SYS-TIME §5 过渡 · L416 · 1.9k
+- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L448 · 3.5k
+- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L506 · 867
+- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L519 · 2.9k
+- SYS-TIME §10 待验证（P0） · L549 · 445
 
 ## SYS-TITLE · 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`
 
@@ -1326,13 +1326,13 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 183.0k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 183.2k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L66 · 2.3k
   - ★ ENG-ARCH §0.1 接入要点 · L78 · 1.3k
 - ENG-ARCH §1 旧网页栈怎么处理 · L92 · 5.1k
-- ENG-ARCH §2 目录结构与归属 · L155 · 33.6k
+- ENG-ARCH §2 目录结构与归属 · L155 · 33.8k
 - ENG-ARCH §3 关键接口（契约草案） · L473 · 98.9k
 - ENG-ARCH §4 资源管线 · L2006 · 10.6k
 - ENG-ARCH §5 接口先定、桩先合入 · L2094 · 3.0k
@@ -1362,13 +1362,13 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-`docs/design/engineering/ENG-GATES.md` · 56.1k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+`docs/design/engineering/ENG-GATES.md` · 56.2k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
 
 - ENG-GATES §0 结论 · L22 · 1.9k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 850
 - ENG-GATES §1 审查视角 · L52 · 14.5k
-- ENG-GATES §2 门禁与测试节奏 · L194 · 28.2k
+- ENG-GATES §2 门禁与测试节奏 · L194 · 28.3k
 - ENG-GATES §3 一票否决 · L272 · 3.2k
 - ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L301 · 2.6k
 - ENG-GATES §5 回报格式 · L327 · 1.4k
