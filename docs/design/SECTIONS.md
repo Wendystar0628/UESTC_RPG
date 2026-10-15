@@ -1628,7 +1628,7 @@
 - ENG-STATUS §0 结论 · L23 · 387
   - ★ ENG-STATUS §0.1 接入要点 · L29 · 222
 - ENG-STATUS §1 填写规则 · L35 · 914
-- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 1.1k
+- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 1.2k
 - ENG-STATUS §3 活跃工作包 · L71 · 3.0k
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
