@@ -255,7 +255,7 @@
 
 ## ART-SKYLIGHT · 天空、光照与大气
 
-`docs/design/art/ART-SKYLIGHT.md` · 31.2k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
+`docs/design/art/ART-SKYLIGHT.md` · 31.3k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
 关键词：主光、日月交接、无影蓝调、阴影、shadow_strength、方向量化、天光、环境光、天光方向、退光线、retreat_y、天空着色器、sky shader、霾带、云、飞机云、星空、银河、月亮外观、雾、大气透视、共用雾函数、fog.gdshaderinc、边缘雾、光柱、镜头光斑、太阳雨、彩虹、闪电、冷暖对照
 
   - ART-SKYLIGHT 分工 · L22 · 1.0k
@@ -269,8 +269,8 @@
 - ART-SKYLIGHT §6 雾与大气透视 · L279 · 3.2k
 - ART-SKYLIGHT §7 光效清单 · L309 · 3.8k
 - ART-SKYLIGHT §8 冷暖对照 · L368 · 701
-- ART-SKYLIGHT WP-34 / WP-03 / WP-40 交付验收 · L392 · 1.8k
-- ART-SKYLIGHT §9 待验证（P0） · L411 · 537
+- ART-SKYLIGHT WP-34 / WP-03 / WP-40 交付验收 · L392 · 1.7k
+- ART-SKYLIGHT §9 待验证（P0） · L411 · 563
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
@@ -1033,26 +1033,26 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.0k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.2k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
 - SYS-TIME §0 结论 · L34 · 2.9k
   - ★ SYS-TIME §0.1 接入要点 · L56 · 1.4k
 - SYS-TIME §1 世界状态与控制（WP-34） · L71 · 10.6k
-- SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.5k
-- SYS-TIME §3 色彩脚本（WP-37） · L249 · 8.6k
-  - SYS-TIME §3.1 组织方式 · L251 · 2.3k
-  - SYS-TIME §3.2 秋季基准关键帧 · L277 · 3.8k
-  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L303 · 974
-  - SYS-TIME §3.4 难看时段的改造 · L322 · 516
-  - SYS-TIME §3.5 英雄帧 · L331 · 986
-- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L357 · 4.7k
-- SYS-TIME §5 过渡 · L416 · 1.9k
-- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L448 · 3.5k
-- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L506 · 867
-- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L519 · 2.9k
-- SYS-TIME §10 待验证（P0） · L549 · 445
+- SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.6k
+- SYS-TIME §3 色彩脚本（WP-37） · L250 · 8.6k
+  - SYS-TIME §3.1 组织方式 · L252 · 2.3k
+  - SYS-TIME §3.2 秋季基准关键帧 · L278 · 3.8k
+  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L304 · 974
+  - SYS-TIME §3.4 难看时段的改造 · L323 · 516
+  - SYS-TIME §3.5 英雄帧 · L332 · 986
+- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L358 · 4.7k
+- SYS-TIME §5 过渡 · L417 · 1.9k
+- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L449 · 3.5k
+- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L507 · 867
+- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L520 · 2.9k
+- SYS-TIME §10 待验证（P0） · L550 · 445
 
 ## SYS-TITLE · 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`
 
@@ -1399,7 +1399,7 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 132.1k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF.md` · 132.0k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1422,7 +1422,7 @@
 - ENG-PERF §7 内存与显存（WP-01、WP-02） · L655 · 3.0k
 - ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L699 · 4.9k
 - ENG-PERF §9 植被（WP-23） · L758 · 10.7k
-- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L924 · 23.9k
+- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L924 · 24.0k
   - ENG-PERF §10.1 阴影（WP-03，引擎原生 PSSM） · L926 · 7.7k
   - ENG-PERF §10.2 后期链（WP-05） · L1035 · 10.0k
   - ENG-PERF §10.3 窗灯与路灯（WP-03 负责通道与着色，WP-39 负责时刻表） · L1120 · 4.3k

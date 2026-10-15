@@ -941,7 +941,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 | `DirectionalShadowFadeStart` | 0.85 | — |
 | `DirectionalShadowPancakeSize` | 默认，P0 按低太阳调 | — |
 | `LightAngularDistance` | 约 0.45° | 开启 PCSS：770 m 长的影子尾端半影约 6 m；近处影边仍然清楚。P0 比较 0.45° 与 0.3°，取一个固定值（运行时不改），要的是干脆的近处影边（ART-SKYLIGHT §3.1） |
-| `ShadowBias` / `ShadowNormalBias` | 初值 0.03–0.1 / 1.5–2.5，P0 调 | 引擎已把法线偏移按每级纹素缩放 |
+| `ShadowBias` / `ShadowNormalBias` | 0.05 / 4.0 | 引擎已把法线偏移按每级纹素缩放；0.1 / 2.5 在树冠小球交叠处会漏出细亮缝 |
 | `ShadowReverseCullFace` | 开 | 闭合网格只往阴影图里渲背面，减少痤疮；双面材质不受影响 |
 | `ShadowBlur` | 1.0，固定 | — |
 | `ShadowOpacity` | 1；只在无影蓝调、地下和水下，以及天气让阴影强度低于 0.01 时设 0（见下） | 不在特化常量里，改它不重编译 |
@@ -1579,8 +1579,8 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 | 叶卡保覆盖率 mip 的做法 | 带保覆盖率 mip 的 DDS（BC7），或 fragment 里按 `textureQueryLod` 提高 alpha | P0 选一（数组纹理能否用 DDS 一并核实），WP-23 | §9 |
 | 降水的 GPU 增量 | 小雨约 +0.3 ms，大雨和雷雨 +0.6–0.8 ms，大雪约 +0.3 ms（独显高 1440p） | P0 按"E1 夏夜雷雨"基准实测，WP-45b；超出时由主代理决定收紧数量还是放宽上限（ENG-BUDGET §8） | §9 |
 | 均衡、流畅 2 级阴影的 `Split1` | 0.15 | P0 看图，WP-03 | §10.1 |
-| `DirectionalShadowPancakeSize`、`ShadowBias` / `ShadowNormalBias` | 默认；0.03–0.1 / 1.5–2.5 | P0 按低太阳调，WP-03 | §10.1 |
-| `LightAngularDistance` | 约 0.45° | P0 与 0.3° 比较后取一个固定值，WP-03 | §10.1 |
+| 低太阳下长影边的锯齿 | 约 100 m 处 20 px | P0 看图处理，WP-03 | §10.1 |
+| `DirectionalShadowPancakeSize` | 默认 | P0 按低太阳调，WP-03 | §10.1 |
 | 室内阴影方向的最低高度 | 14° | P0 原型看图（12°、14°、16° 的 A/B，秋 17:30 的教室和走廊），WP-03 | §10.1 |
 | 方向量化与始终连续转动 | 量化，δ = 0.01° | P0 A/B（秋 17:30 的银杏大道和宿舍区）后定 δ，WP-03 | §10.1 |
 | 阴影空跑切换前后的编译计数 | 不增 | P0 核实 SURFACE、DRAW 计数（G16），WP-03 | §10.1 |
