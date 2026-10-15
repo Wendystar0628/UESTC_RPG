@@ -1,0 +1,81 @@
+{
+  "format": 1,
+  "id": "enter_continue",
+  "map": "qingshuihe",
+  "kind": "enterContinue",
+  "duration": 9.0,
+  "camera": [
+    {
+      "t0": 0.0,
+      "t1": 1.5,
+      "path": "hold",
+      "points": [
+        { "anchor": "$title" }
+      ],
+      "look": { "mode": "fixed" },
+      "fov": [
+        { "t": 0.0, "value": 38 }
+      ]
+    },
+    {
+      "t0": 1.5,
+      "t1": 2.75,
+      "path": "bezier",
+      "points": [
+        { "anchor": "$title", "out": [13.5, -2.6, -58.4] },
+        { "p": [-1139.1, 473.0, 2677.8], "in": [-29.7, 11.1, 73.5] }
+      ],
+      "ease": [0.3333, 0.0, 0.6667, 0.3333],
+      "look": { "mode": "fixed" },
+      "fov": [
+        { "t": 1.5, "value": 38 },
+        { "t": 2.75, "value": 44 }
+      ]
+    },
+    {
+      "t0": 2.75,
+      "t1": 9.0,
+      "arriveAt": 8.6,
+      "path": "transit",
+      "points": [
+        { "anchor": "$destApproach" },
+        { "anchor": "$dest" }
+      ],
+      "look": {
+        "mode": "target",
+        "target": "$dest",
+        "settle": { "anchor": "$dest", "from": 0.5 }
+      },
+      "fov": [
+        { "t": 2.75, "value": 50 },
+        { "t": 8.2, "value": 50 },
+        { "t": 9.0, "anchor": "$dest" }
+      ]
+    }
+  ],
+  "world": [
+    { "t": 2.75, "cue": "restoreSlot" }
+  ],
+  "masks": [
+    { "t0": 0.9, "t1": 9.0, "kind": "letterbox", "fadeIn": 0.6, "fadeOut": 0.8 },
+    { "t0": 1.85, "t1": 2.45, "kind": "cloudCover", "layer": 0, "fadeIn": 0.25, "fadeOut": 0.15 },
+    {
+      "t0": 2.45,
+      "t1": 3.25,
+      "kind": "cloudCover",
+      "layer": 1,
+      "fadeIn": 0.15,
+      "fadeOut": 0.35,
+      "hold": { "until": "destReady", "maxWait": 1.5 }
+    }
+  ],
+  "captions": [
+    { "t0": 4.5, "t1": 8.0, "style": "place", "key": "CINE_PLACE" }
+  ],
+  "extras": [],
+  "audio": [
+    { "t": 2.75, "cue": "amb.altitude", "seconds": 0.0, "weight": 0.0 },
+    { "t": 9.0, "cue": "title.fadeOut", "seconds": 3.0 }
+  ],
+  "end": { "pose": "$dest", "mode": null, "flow": null, "titleCard": false, "firstGuide": false }
+}

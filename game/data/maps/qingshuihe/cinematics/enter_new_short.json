@@ -1,0 +1,79 @@
+{
+  "format": 1,
+  "id": "enter_new_short",
+  "map": "qingshuihe",
+  "kind": "enterNewShort",
+  "duration": 12.0,
+  "camera": [
+    {
+      "t0": 0.0,
+      "t1": 1.5,
+      "path": "hold",
+      "points": [
+        { "anchor": "$title" }
+      ],
+      "look": { "mode": "fixed" },
+      "fov": [
+        { "t": 0.0, "value": 38 }
+      ]
+    },
+    {
+      "t0": 1.5,
+      "t1": 2.75,
+      "path": "bezier",
+      "points": [
+        { "anchor": "$title", "out": [13.5, -2.6, -58.4] },
+        { "p": [-1139.1, 473.0, 2677.8], "in": [-29.7, 11.1, 73.5] }
+      ],
+      "ease": [0.3333, 0.0, 0.6667, 0.3333],
+      "look": { "mode": "target", "target": [-669.0, -21.0, 1231.0], "blendIn": 1.2 },
+      "fov": [
+        { "t": 1.5, "value": 38 },
+        { "t": 2.75, "value": 46 }
+      ]
+    },
+    {
+      "t0": 2.75,
+      "t1": 12.0,
+      "arriveAt": 9.5,
+      "path": "bezier",
+      "points": [
+        { "p": [-921.4, 1501.3, 2052.4] },
+        { "anchor": "$waypoint:P00" }
+      ],
+      "ease": [0.3333, 0.4052, 0.6667, 1.0],
+      "look": { "mode": "target", "target": [-193.0, 10.0, 51.0] },
+      "fov": [
+        { "t": 2.75, "value": 54 },
+        { "t": 9.5, "anchor": "$userFov" }
+      ]
+    }
+  ],
+  "world": [
+    { "t": 2.75, "cue": "newTimeline" },
+    { "t": 4.0, "cue": "flowTo", "clock": 17.5, "rate": 360 },
+    { "t": 12.0, "cue": "setFlow", "rate": 1 }
+  ],
+  "masks": [
+    { "t0": 0.9, "t1": 10.8, "kind": "letterbox", "fadeIn": 0.6, "fadeOut": 0.8 },
+    { "t0": 1.85, "t1": 2.45, "kind": "cloudCover", "layer": 0, "fadeIn": 0.25, "fadeOut": 0.15 },
+    {
+      "t0": 2.45,
+      "t1": 3.25,
+      "kind": "cloudCover",
+      "layer": 1,
+      "fadeIn": 0.15,
+      "fadeOut": 0.35,
+      "hold": { "until": "path15s", "maxWait": 2.0 }
+    }
+  ],
+  "captions": [
+    { "t0": 7.5, "t1": 9.9, "style": "titleCard", "key": "CINE_TITLE" }
+  ],
+  "extras": [],
+  "audio": [
+    { "t": 2.9, "cue": "amb.altitude", "seconds": 6.6, "weight": 0.0 },
+    { "t": 12.0, "cue": "title.fadeOut", "seconds": 7.0 }
+  ],
+  "end": { "pose": "$waypoint:P00", "mode": "fly", "flow": 1, "titleCard": true, "firstGuide": true }
+}

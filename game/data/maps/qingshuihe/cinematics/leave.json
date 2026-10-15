@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "id": "leave",
+  "map": "qingshuihe",
+  "kind": "leave",
+  "duration": 3.0,
+  "camera": [
+    {
+      "t0": 1.0,
+      "t1": 3.0,
+      "path": "hold",
+      "points": [
+        { "anchor": "$title" }
+      ],
+      "look": { "mode": "fixed" },
+      "fov": [
+        { "t": 1.0, "value": 38 }
+      ]
+    }
+  ],
+  "world": [
+    { "t": 1.0, "cue": "setFlow", "rate": 0 }
+  ],
+  "masks": [
+    {
+      "t0": 0.2,
+      "t1": 2.6,
+      "kind": "veil",
+      "fadeIn": 0.6,
+      "fadeOut": 0.8,
+      "hold": { "until": "titleReady", "maxWait": 2.0 }
+    }
+  ],
+  "captions": [],
+  "extras": [],
+  "audio": [
+    { "t": 1.0, "cue": "amb.altitude", "seconds": 0.0, "weight": 1.0 },
+    { "t": 1.0, "cue": "title.start", "seconds": 0.0 },
+    { "t": 1.8, "cue": "title.fadeIn", "seconds": 2.0 }
+  ],
+  "end": { "pose": "$title", "mode": null, "flow": 0, "titleCard": false, "firstGuide": false }
+}
