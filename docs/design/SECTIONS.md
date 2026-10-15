@@ -1553,7 +1553,7 @@
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 14.5k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 14.8k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
 - ENG-TEAM §0 结论 · L34 · 3.1k
@@ -1563,12 +1563,12 @@
 - ENG-TEAM §3 开工顺序 · L136 · 1.0k
 - ENG-TEAM §4 交接文件 · L149 · 1.0k
 - ENG-TEAM §5 审美与契约的交叉评审 · L170 · 434
-- ENG-TEAM §6 怎么开子代理 · L177 · 5.8k
+- ENG-TEAM §6 怎么开子代理 · L177 · 6.1k
   - ENG-TEAM §6.1 Opus · L199 · 129
   - ENG-TEAM §6.2 Astra · L205 · 593
-  - ENG-TEAM §6.3 旁路 Sol 会话 · L230 · 2.0k
-  - ENG-TEAM §6.4 二号会话（第二个 Claude 账号，Max 5x） · L267 · 2.1k
-- ENG-TEAM §7 待验证（P0） · L314 · 210
+  - ENG-TEAM §6.3 旁路 Sol 会话 · L230 · 2.2k
+  - ENG-TEAM §6.4 二号会话（第二个 Claude 账号，Max 5x） · L271 · 2.1k
+- ENG-TEAM §7 待验证（P0） · L318 · 210
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
