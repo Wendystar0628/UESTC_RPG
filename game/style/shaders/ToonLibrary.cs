@@ -86,7 +86,9 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         ArgumentNullException.ThrowIfNull(spec);
         lock (_gate)
         {
-            return _byClass.TryGetValue(MaterialClass.Of(spec), out var entry) && _states[entry.Material].Ready;
+            PruneDisposed();
+            return !_disposed && _byClass.TryGetValue(MaterialClass.Of(spec), out var entry)
+                && _states.TryGetValue(entry.Material, out var state) && state.Ready;
         }
     }
 
@@ -97,6 +99,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            PruneDisposed();
+            if (!GodotObject.IsInstanceValid(material)) throw new ObjectDisposedException(nameof(material));
             if (_states.TryGetValue(material, out var state))
             {
                 if (state.Shader == shader) return;
@@ -106,7 +110,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             }
             var added = new WarmState(material, null, shader);
             Add(added);
-            if (added.Pending) Advance();   // 非空间着色器登记即待预热；空间着色器要等登记布局
+            if (added.Pending) Advance();   // CanvasItem 登记即待预热；Spatial 要等登记布局
         }
     }
 
@@ -118,6 +122,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            PruneDisposed();
+            if (!GodotObject.IsInstanceValid(material)) throw new ObjectDisposedException(nameof(material));
             if (!_states.TryGetValue(material, out var state))
                 throw new InvalidOperationException("TrackLayout needs a material returned by Get(ToonSpec) or registered with Track(ShaderId, Material).");
             if (state.Requested.Contains(layout)) return;
@@ -132,7 +138,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         ArgumentNullException.ThrowIfNull(material);
         lock (_gate)
         {
-            return _states.TryGetValue(material, out var state) && state.Shader == shader && state.Ready;
+            PruneDisposed();
+            return !_disposed && _states.TryGetValue(material, out var state) && state.Shader == shader && state.Ready;
         }
     }
 
@@ -144,6 +151,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     {
         lock (_gate)
         {
+            PruneDisposed();
             if (_issued is not null && _issued.Revision == _revision) return _issued;
             var items = new List<ToonWarmMaterial>();
             foreach (var state in _order)
@@ -161,6 +169,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         if (batch is null) return false;
         lock (_gate)
         {
+            PruneDisposed();
             // 只收本类发出的、仍是当前修订号的那一批；修订号变了（新布局、画质变化）证据作废，下一帧重取。
             if (_disposed || !ReferenceEquals(batch, _issued) || batch.Revision != _revision) return false;
             foreach (var item in batch.Materials)
@@ -186,6 +195,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            PruneDisposed();
             if (_byClass.TryGetValue(key, out var found)) return found;
             if (OS.GetThreadCallerId() != OS.GetMainThreadId())
                 throw new InvalidOperationException("A new toon material class must be allocated on the main thread (mat_table update).");
@@ -211,6 +221,23 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         _order.Add(state);
     }
 
+    // 借用材质由 owner 卸图时释放。只查原生有效性，不再读取已释放实例的 Shader。
+    // 清退后旧批整批失效，存活材质的旧批证据也不能被部分接受。
+    private void PruneDisposed()
+    {
+        var removed = false;
+        for (var i = _order.Count - 1; i >= 0; i--)
+        {
+            var state = _order[i];
+            if (GodotObject.IsInstanceValid(state.Material)) continue;
+            _states.Remove(state.Material);
+            _order.RemoveAt(i);
+            if (state.Spec is not null) _byClass.Remove(MaterialClass.Of(state.Spec));
+            removed = true;
+        }
+        if (removed) Advance();
+    }
+
     // 待预热的集合变了：换修订号，已发出的批作废
     private void Advance()
     {
@@ -224,6 +251,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         if (!knobs.Any(AffectsPipelines)) return;
         lock (_gate)
         {
+            if (_disposed) return;
+            PruneDisposed();
             var any = false;
             foreach (var state in _order)
             {
@@ -294,45 +323,77 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     /// <summary>
     /// 退出时先停更新、清掉全局绑定，再注销登记；纹理由登记处在最后一个租约结束后释放。
-    /// 本类建的材质随进程结束释放（各包借用，不逐个 Dispose）。
+    /// 本类建的材质与 Image 在此释放；Track 借用的材质和登记处持有的纹理不在此释放。
     /// </summary>
     public void Dispose()
     {
+        Material[] owned;
         lock (_gate)
         {
             if (_disposed) return;
             _disposed = true;
             _issued = null;
+            owned = _byClass.Values.Select(entry => entry.Material).Distinct<Material>(ReferenceEqualityComparer.Instance).ToArray();
+            _byClass.Clear();
+            _states.Clear();
+            _order.Clear();
+            _shaders.Clear();
         }
         if (_quality is not null) _quality.Changed -= OnQualityChanged;
-        RenderingServer.GlobalShaderParameterSet(MatTableGlobal, default(Variant));
-        _registration?.Dispose();
-        _registration = null;
+        try
+        {
+            RenderingServer.GlobalShaderParameterSet(MatTableGlobal, default(Variant));
+        }
+        finally
+        {
+            try { _registration?.Dispose(); }
+            finally
+            {
+                _registration = null;
+                foreach (var material in owned)
+                    if (GodotObject.IsInstanceValid(material)) material.Dispose();
+                if (GodotObject.IsInstanceValid(_matImage)) _matImage.Dispose();
+            }
+        }
     }
 
     private sealed record ToonEntry(byte Id, Material Material);
 
     /// <summary>
     /// 一个材质的预热状态：调用方登记的布局（按登记先后）与已有绘制证据的布局。
-    /// 空间着色器按布局算（没有登记过布局就没有证据）；界面等非空间着色器没有顶点布局，画过一次就算。
+    /// Spatial 按布局算；CanvasItem 按实际画布绘制算。其他模式没有对应预热路径，保持不就绪。
     /// </summary>
     private sealed class WarmState(Material material, ToonSpec? spec, ShaderId? shader)
     {
         public Material Material { get; } = material;
         public ToonSpec? Spec { get; } = spec;          // 卡通材质：分配这个材质类的那份 ToonSpec
         public ShaderId? Shader { get; } = shader;      // 非卡通材质：Track 时给的白名单着色器
-        public bool Spatial { get; } = material is not ShaderMaterial { Shader: { } s } || s.GetMode() == Godot.Shader.Mode.Spatial;
+        private Godot.Shader.Mode? Mode { get; } = material switch
+        {
+            ShaderMaterial { Shader: { } s } => s.GetMode(),
+            _ => null
+        };
         public HashSet<WarmDrawLayout> Requested { get; } = [];
         public List<WarmDrawLayout> Order { get; } = [];
         public HashSet<WarmDrawLayout> Warmed { get; } = [];
         public bool Drawn { get; set; }
 
-        public bool Ready => Spatial ? Order.Count > 0 && Order.All(Warmed.Contains) : Drawn;
+        public bool Ready => Mode switch
+        {
+            Godot.Shader.Mode.Spatial => Order.Count > 0 && Order.All(Warmed.Contains),
+            Godot.Shader.Mode.CanvasItem => Drawn,
+            _ => false
+        };
 
-        public bool Pending => Spatial ? Order.Any(layout => !Warmed.Contains(layout)) : !Drawn;
+        public bool Pending => Mode switch
+        {
+            Godot.Shader.Mode.Spatial => Order.Any(layout => !Warmed.Contains(layout)),
+            Godot.Shader.Mode.CanvasItem => !Drawn,
+            _ => false
+        };
 
         public WarmDrawLayout[] PendingLayouts() =>
-            Spatial ? Order.Where(layout => !Warmed.Contains(layout)).ToArray() : [];
+            Mode == Godot.Shader.Mode.Spatial ? Order.Where(layout => !Warmed.Contains(layout)).ToArray() : [];
 
         public void Reset()
         {
