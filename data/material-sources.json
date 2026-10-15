@@ -1,0 +1,105 @@
+[
+  {
+    "family": "concrete",
+    "asset": "concrete_wall_006",
+    "source": "https://polyhaven.com/a/concrete_wall_006",
+    "license": "CC0-1.0",
+    "use": "generic surface; diffuse levels adapted for readable campus visualization, not a calibrated campus photograph",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "asphalt",
+    "asset": "aerial_asphalt_01",
+    "source": "https://polyhaven.com/a/aerial_asphalt_01",
+    "license": "CC0-1.0",
+    "use": "generic surface; diffuse levels adapted for readable campus visualization, not a calibrated campus photograph",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "paving",
+    "asset": "pavement_03",
+    "source": "https://polyhaven.com/a/pavement_03",
+    "license": "CC0-1.0",
+    "use": "generic surface; diffuse levels adapted for readable campus visualization, not a calibrated campus photograph",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "grass",
+    "source": "scripts/assets/prepare_materials.py",
+    "license": "project-created",
+    "use": "generic procedural surface",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "rubber",
+    "source": "scripts/assets/prepare_materials.py",
+    "license": "project-created",
+    "use": "generic procedural surface",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "water",
+    "source": "scripts/assets/prepare_materials.py",
+    "license": "project-created",
+    "use": "generic procedural surface",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "stone-panel",
+    "source": "scripts/assets/prepare_architecture_materials.py",
+    "license": "project-created",
+    "use": "Procedural campus visual language; not a measured or photographed facade texture.",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "brick",
+    "source": "scripts/assets/prepare_architecture_materials.py",
+    "license": "project-created",
+    "use": "Procedural campus visual language; not a measured or photographed facade texture.",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "metal",
+    "source": "scripts/assets/prepare_architecture_materials.py",
+    "license": "project-created",
+    "use": "Procedural campus visual language; not a measured or photographed facade texture.",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  },
+  {
+    "family": "glass",
+    "source": "scripts/assets/prepare_architecture_materials.py",
+    "license": "project-created",
+    "use": "Procedural campus visual language; not a measured or photographed facade texture.",
+    "maps": [
+      "color",
+      "normal"
+    ]
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "sourceTags": {
+    "osm:way:544161280": {
+      "tags": {
+        "surface": "paving_stones"
+      },
+      "source": "https://www.openstreetmap.org/way/544161280"
+    },
+    "osm:way:544161548": {
+      "tags": {
+        "surface": "concrete:plates"
+      },
+      "source": "https://www.openstreetmap.org/way/544161548"
+    },
+    "osm:way:627377952": {
+      "tags": {
+        "surface": "paving_stones"
+      },
+      "source": "https://www.openstreetmap.org/way/627377952"
+    },
+    "osm:way:844548980": {
+      "tags": {
+        "building:material": "concrete"
+      },
+      "source": "https://www.openstreetmap.org/way/844548980"
+    },
+    "osm:way:950008612": {
+      "tags": {
+        "surface": "gravel"
+      },
+      "source": "https://www.openstreetmap.org/way/950008612"
+    },
+    "osm:way:987943106": {
+      "tags": {
+        "building:colour": "#506c86",
+        "building:material": "glass"
+      },
+      "source": "https://www.openstreetmap.org/way/987943106"
+    },
+    "osm:way:988857959": {
+      "tags": {
+        "surface": "concrete:plates"
+      },
+      "source": "https://www.openstreetmap.org/way/988857959"
+    },
+    "osm:way:988857960": {
+      "tags": {
+        "surface": "concrete:plates"
+      },
+      "source": "https://www.openstreetmap.org/way/988857960"
+    },
+    "osm:way:1157144625": {
+      "tags": {
+        "building:material": "cement_block"
+      },
+      "source": "https://www.openstreetmap.org/way/1157144625"
+    },
+    "osm:way:1431098730": {
+      "tags": {
+        "surface": "asphalt"
+      },
+      "source": "https://www.openstreetmap.org/way/1431098730"
+    },
+    "osm:way:1431098731": {
+      "tags": {
+        "surface": "asphalt"
+      },
+      "source": "https://www.openstreetmap.org/way/1431098731"
+    },
+    "osm:way:1431098732": {
+      "tags": {
+        "surface": "asphalt"
+      },
+      "source": "https://www.openstreetmap.org/way/1431098732"
+    },
+    "osm:way:1436611292": {
+      "tags": {
+        "surface": "paved"
+      },
+      "source": "https://www.openstreetmap.org/way/1436611292"
+    }
+  },
+  "overrides": {}
+}

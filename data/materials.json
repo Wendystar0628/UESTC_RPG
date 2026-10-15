@@ -1,0 +1,212 @@
+{
+  "version": "materials-v1",
+  "presets": {
+    "wall-paint": {
+      "label": "通用涂层墙面",
+      "family": "concrete",
+      "color": "#ded7c8",
+      "roughness": 0.87,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0.08
+    },
+    "wall-concrete": {
+      "label": "混凝土墙面",
+      "family": "concrete",
+      "color": "#dddcd4",
+      "roughness": 0.92,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0.28
+    },
+    "roof-concrete": {
+      "label": "灰色防水屋面",
+      "family": "concrete",
+      "color": "#99a2a0",
+      "roughness": 0.9,
+      "metalness": 0,
+      "repeatSizeM": 4,
+      "normalStrength": 0.08
+    },
+    "asphalt": {
+      "label": "沥青路面",
+      "family": "asphalt",
+      "color": "#899498",
+      "roughness": 0.96,
+      "metalness": 0,
+      "repeatSizeM": 4,
+      "normalStrength": 0.35
+    },
+    "paving": {
+      "label": "铺装石材",
+      "family": "paving",
+      "color": "#d4cbb7",
+      "roughness": 0.89,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0.24
+    },
+    "concrete-ground": {
+      "label": "混凝土铺地",
+      "family": "concrete",
+      "color": "#cccfc6",
+      "roughness": 0.94,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0.22
+    },
+    "grass": {
+      "label": "通用草地",
+      "family": "grass",
+      "color": "#e1edcb",
+      "roughness": 0.98,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0
+    },
+    "turf": {
+      "label": "示意运动草坪",
+      "family": "grass",
+      "color": "#c5e9c7",
+      "roughness": 0.95,
+      "metalness": 0,
+      "repeatSizeM": 2,
+      "normalStrength": 0
+    },
+    "rubber-red": {
+      "label": "示意塑胶场地",
+      "family": "rubber",
+      "color": "#b87563",
+      "roughness": 0.91,
+      "metalness": 0,
+      "repeatSizeM": 1.5,
+      "normalStrength": 0
+    },
+    "rubber-green": {
+      "label": "示意球场面层",
+      "family": "rubber",
+      "color": "#608c80",
+      "roughness": 0.9,
+      "metalness": 0,
+      "repeatSizeM": 1.5,
+      "normalStrength": 0
+    },
+    "water": {
+      "label": "静态水面",
+      "family": "water",
+      "color": "#589698",
+      "roughness": 0.3,
+      "metalness": 0,
+      "repeatSizeM": 24,
+      "normalStrength": 0.14
+    },
+    "stone": {
+      "label": "通用石质表面",
+      "family": "concrete",
+      "color": "#d8d2c1",
+      "roughness": 0.82,
+      "metalness": 0,
+      "repeatSizeM": 2.5,
+      "normalStrength": 0.17
+    },
+    "wall-sandstone": {
+      "label": "暖砂岩立面",
+      "family": "stone-panel",
+      "color": "#d3c5ae",
+      "roughness": 0.84,
+      "metalness": 0,
+      "repeatSizeM": 3.6,
+      "normalStrength": 0.2
+    },
+    "wall-brick": {
+      "label": "赭红砖立面",
+      "family": "brick",
+      "color": "#b77c64",
+      "roughness": 0.92,
+      "metalness": 0,
+      "repeatSizeM": 2.4,
+      "normalStrength": 0.34
+    },
+    "wall-residence": {
+      "label": "浅米灰宿舍墙面",
+      "family": "stone-panel",
+      "color": "#e1dace",
+      "roughness": 0.9,
+      "metalness": 0,
+      "repeatSizeM": 3.3,
+      "normalStrength": 0.08
+    },
+    "glass": {
+      "label": "蓝灰玻璃",
+      "family": "glass",
+      "color": "#466b7b",
+      "roughness": 0.26,
+      "metalness": 0.28,
+      "repeatSizeM": 4,
+      "normalStrength": 0
+    },
+    "window-frame": {
+      "label": "深灰金属窗框",
+      "family": "metal",
+      "color": "#657174",
+      "roughness": 0.46,
+      "metalness": 0.32,
+      "repeatSizeM": 2,
+      "normalStrength": 0
+    },
+    "plinth": {
+      "label": "深灰石材基座",
+      "family": "stone-panel",
+      "color": "#858c88",
+      "roughness": 0.9,
+      "metalness": 0,
+      "repeatSizeM": 2,
+      "normalStrength": 0.15
+    },
+    "roof-metal": {
+      "label": "灰银金属屋面",
+      "family": "metal",
+      "color": "#9faeb0",
+      "roughness": 0.54,
+      "metalness": 0.35,
+      "repeatSizeM": 4,
+      "normalStrength": 0.22
+    },
+    "terracotta": {
+      "label": "陶土色立面分段",
+      "family": "brick",
+      "color": "#ad7460",
+      "roughness": 0.87,
+      "metalness": 0,
+      "repeatSizeM": 2.4,
+      "normalStrength": 0.2
+    },
+    "facade-trim": {
+      "label": "浅石色线脚",
+      "family": "concrete",
+      "color": "#e4dfd2",
+      "roughness": 0.8,
+      "metalness": 0,
+      "repeatSizeM": 3,
+      "normalStrength": 0.06
+    },
+    "facade-olive": {
+      "label": "黄绿色装饰面板",
+      "family": "metal",
+      "color": "#acb577",
+      "roughness": 0.7,
+      "metalness": 0.05,
+      "repeatSizeM": 3,
+      "normalStrength": 0
+    },
+    "roof-glass": {
+      "label": "灰蓝采光顶",
+      "family": "glass",
+      "color": "#7293a0",
+      "roughness": 0.28,
+      "metalness": 0.18,
+      "repeatSizeM": 80,
+      "normalStrength": 0
+    }
+  }
+}

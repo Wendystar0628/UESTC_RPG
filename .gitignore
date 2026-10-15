@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.venv/
+test-results/
+playwright-report/
+*.tsbuildinfo
+__pycache__/
+output/
+.playwright-cli/
+public/assets/materials-v1/
+data/raw/materials/
+scripts/godot-api/ApiDump/bin/
+scripts/godot-api/ApiDump/obj/
