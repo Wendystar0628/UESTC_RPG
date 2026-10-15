@@ -1476,7 +1476,7 @@
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 7.4k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 7.5k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
 - ENG-TEAM §0 结论 · L34 · 1.5k
@@ -1484,7 +1484,7 @@
 - ENG-TEAM §1 谁擅长什么 · L70 · 561
 - ENG-TEAM §2 包的归属 · L86 · 681
 - ENG-TEAM §3 开工顺序 · L98 · 1.0k
-- ENG-TEAM §4 交接文件 · L111 · 952
+- ENG-TEAM §4 交接文件 · L111 · 1.0k
 - ENG-TEAM §5 审美与契约的交叉评审 · L132 · 434
 - ENG-TEAM §6 怎么开子代理 · L139 · 1.1k
   - ENG-TEAM §6.1 Opus · L147 · 129
