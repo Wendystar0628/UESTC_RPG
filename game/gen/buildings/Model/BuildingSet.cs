@@ -10,8 +10,8 @@ public readonly record struct WindowBlock(FeatureId Feature, string Key, int Bas
 }
 
 /// <summary>
-/// All building plans of one world, with campus window numbers. Every building feature takes part in the
-/// numbering (claimed or not) in FeatureId then part-key ordinal order, so zone packs that reuse these
+/// All building plans of one world, with campus window numbers. Every building part of every feature takes part
+/// in the numbering (claimed or not) in FeatureId then part-key ordinal order, so zone packs that reuse these
 /// facade rules get the same numbers. Plans are cached per world model and seed; Build() calls on any tile agree.
 /// </summary>
 public sealed class BuildingSet
@@ -58,7 +58,6 @@ public sealed class BuildingSet
     private static BuildingSet Create(IWorldModel world, uint worldSeed)
     {
         var sources = world.Features.Values
-            .Where(BuildingPlanner.IsBuilding)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .SelectMany(BuildingPlanner.Sources)
             .ToArray();

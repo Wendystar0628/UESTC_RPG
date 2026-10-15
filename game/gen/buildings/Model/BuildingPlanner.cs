@@ -9,7 +9,7 @@ using Campus.Gen.Interior;
 
 namespace Campus.Gen.Buildings.Model;
 
-/// <summary>One footprint to build: a whole feature, or one source part of it (contract WorldFeature.Parts, pending).</summary>
+/// <summary>One footprint to build: a whole feature, or one building part of it (WorldFeature.Parts).</summary>
 public sealed record BuildingSource(WorldFeature Feature, string Key, PolygonRings Rings, float? Height, int? Storeys, JsonElement? Props);
 
 /// <summary>Turns a footprint into a level-independent plan: rings, wall skin, storeys, heights and the facade bay grid.</summary>
@@ -17,23 +17,33 @@ public static class BuildingPlanner
 {
     public static readonly DesignKind BuildingKind = new("building");
 
-    public static bool IsBuilding(WorldFeature f) => f.Kind == BuildingKind;
+    /// <summary>
+    /// Kind of one part: its source record's "kind" (Props), else the parent feature's kind — the same rule as the
+    /// world model's part filter. An entity whose own kind is, say, poi can still own building parts.
+    /// </summary>
+    public static string PartKind(WorldFeature f, WorldFeaturePart part) =>
+        part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared) &&
+        declared.ValueKind == JsonValueKind.String ? declared.GetString()! : f.Kind.Value;
 
     /// <summary>
-    /// The footprints of a building feature: each source part with its own height and storeys when Parts is
-    /// non-empty (the aggregate geometry is then not built), else the feature geometry itself.
-    /// Multi-polygons yield one footprint per polygon; keys stay stable (source ID, then "#index").
+    /// The building footprints of a feature, chosen per part and never by the parent's kind alone: every part whose
+    /// kind is building, with its own height and storeys (the aggregate geometry is then not built); a feature
+    /// without parts counts when its own kind is building. Multi-polygons yield one footprint per polygon;
+    /// keys stay stable (source ID, then "#index").
     /// </summary>
     public static IEnumerable<BuildingSource> Sources(WorldFeature f)
     {
-        if (!IsBuilding(f)) yield break;
         if (f.Parts.Count > 0)
         {
             foreach (var part in f.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
+            {
+                if (PartKind(f, part) != BuildingKind.Value) continue;
                 foreach (var (key, rings) in Polygons(part.SourceId, part.Geometry))
                     yield return new BuildingSource(f, key, rings, part.Height ?? f.Height, part.Storeys ?? f.Storeys, part.Props ?? f.Props);
+            }
             yield break;
         }
+        if (f.Kind != BuildingKind) yield break;
         foreach (var (key, rings) in Polygons(f.Id.Value, f.Geometry))
             yield return new BuildingSource(f, key, rings, f.Height, f.Storeys, f.Props);
     }
@@ -68,7 +78,7 @@ public static class BuildingPlanner
             holesClean.Add(ring);
         }
 
-        var style = FacadeRules.StyleOf(feature);
+        var style = FacadeRules.StyleOf(feature.Family, src.Props, feature.Props);
         var centroidClean = PlanRing.Centroid(outerClean, holesClean);
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",

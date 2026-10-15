@@ -126,6 +126,28 @@ public sealed class BuildingsTests
     }
 
     [TestCase]
+    public void BuildingPartsCountUnderAnyParentKind()
+    {
+        // WP-08 layout: the entity keeps its own kind (here poi), each part carries its source record with "kind".
+        static JsonElement Raw(string kind, string category) =>
+            JsonDocument.Parse("{\"kind\":\"" + kind + "\",\"category\":\"" + category + "\"}").RootElement.Clone();
+        var parts = new[]
+        {
+            new WorldFeaturePart("osm:way:10", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 14))), 12f, 3) { Props = Raw("building", "teaching") },
+            new WorldFeaturePart("osm:way:11", new PolygonGeometry(new PolygonRings(Rect(40, 0, 20, 14))), 8f, 2) { Props = Raw("building", "teaching") },
+            new WorldFeaturePart("osm:way:12", new PolygonGeometry(new PolygonRings(Rect(0, 30, 60, 30))), null, null) { Props = Raw("green", "landscape") },
+        };
+        var park = new WorldFeature(new FeatureId("qsh:way:9"), FeatureSource.Osm, new DesignKind("poi"),
+            new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 60))))
+        { Parts = parts, Props = Raw("poi", "teaching") };
+        var lawn = new WorldFeature(new FeatureId("qsh:way:8"), FeatureSource.Osm, new DesignKind("green"),
+            new PolygonGeometry(new PolygonRings(Rect(100, 0, 20, 20))));
+        var set = BuildingSet.For(World(park, lawn), 1u);
+        Require(set.Plans.Count == 2, "the two building parts of a poi entity, not its green part nor the lawn");
+        Require(set.Plans.All(p => p.Style == Rules.BuildingStyle.Academic), "style from the part's own category");
+    }
+
+    [TestCase]
     public void BaysAndWindowColumnsComeFromThePlanKernel()
     {
         var world = World(

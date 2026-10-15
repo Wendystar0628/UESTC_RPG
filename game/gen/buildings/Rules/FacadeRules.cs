@@ -146,10 +146,13 @@ public static class FacadeRules
         CardMix = [(WindowCard.Classroom, 6), (WindowCard.Office, 4)],
     };
 
-    /// <summary>Family from WorldFeature.Family (open vocabulary), else from the source category in Props.</summary>
-    public static BuildingStyle StyleOf(WorldFeature feature)
+    /// <summary>
+    /// Family from WorldFeature.Family (open vocabulary), else from the source category: the part's own record
+    /// first (a building part under a poi entity), then the entity's.
+    /// </summary>
+    public static BuildingStyle StyleOf(BuildingFamily? familyKey, JsonElement? partProps, JsonElement? featureProps)
     {
-        if (feature.Family is { Value: { Length: > 0 } family })
+        if (familyKey is { Value: { Length: > 0 } family })
         {
             var byFamily = family switch
             {
@@ -168,7 +171,7 @@ public static class FacadeRules
             };
             if (byFamily is { } known) return known;
         }
-        var category = Category(feature);
+        var category = Category(partProps) ?? Category(featureProps);
         return category switch
         {
             "residence" => BuildingStyle.Dormitory,
@@ -183,10 +186,10 @@ public static class FacadeRules
         };
     }
 
-    public static string? Category(WorldFeature feature)
+    public static string? Category(JsonElement? props)
     {
-        if (feature.Props is not { ValueKind: JsonValueKind.Object } props) return null;
-        return props.TryGetProperty("category", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+        if (props is not { ValueKind: JsonValueKind.Object } p) return null;
+        return p.TryGetProperty("category", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
     }
 
     /// <summary>
