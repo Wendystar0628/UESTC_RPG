@@ -168,16 +168,17 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `ui_screen.gdshader` | WP-35 | 界面：读屏幕纹理的效果，只在低频场合挂：`CanvasGroup` 整页揭示（扫描、网格、量化）与大页磨砂（配 `BackBufferCopy(Rect)`）（UI-VISUAL §11.5） | 画布 |
 | `map_base.gdshader` | WP-48b | 平面地图：底图 SDF 上色、地标线描 MSDF（`mode` 为材质 uniform，不用 `#define`）；只读 `season`（SYS-ATLAS §2.2） | 画布 |
 
-**计算着色器**（GLSL，经 RenderingDevice，共 6 个）：
+**计算着色器**（GLSL，经 RenderingDevice，共 1 个 `.glsl` 文件；同文件版本与计算侧 include 不另计）：
 
 | 文件 | 归属 | 用途 |
 | --- | --- | --- |
-| `post_outline.glsl` | WP-05 | 描线、凸边亮线与屏幕空间边缘光（POST_SKY）；远雨幕带、闪光帧加深并进同一次 dispatch（§10.2）。同一文件里分两次 dispatch（线遮罩 → 斑点去除、帐篷抗锯齿与合成），算一个文件 |
-| `post_tiltshift_blur.glsl`、`post_tiltshift_comp.glsl` | WP-05 | 移轴：1/2 或 1/4 分辨率可分离模糊（两种分辨率的管线启动时都建好）、按屏幕 y 与深度合成；合成那次 dispatch 并进高光肩部和暗角（ART-STYLE §7） |
-| `post_flare.glsl` | WP-05 | 主光可见度（32 个深度点写进存储缓冲）和光斑 |
-| `post_lut.glsl` | WP-05 | 把 CDL ∘ 32³ 基表写进运行时 LUT |
-| `post_fxaa.glsl` | WP-05 | 可选：跳过描线像素的自写 FXAA，只在 SMAA 侵蚀细线时启用（§10.2） |
+| `post_outline.glsl` | WP-05 | 描线、凸边亮线与屏幕空间边缘光（POST_SKY）；远雨幕带、闪光帧加深并进同一次 dispatch（§10.2）。同一文件里分两次 dispatch（线遮罩 → 斑点去除、帐篷抗锯齿与合成），算一个文件；含 lut、tiltshift_comp 两个版本，分别把 CDL ∘ 32³ 基表写进运行时 LUT，以及按屏幕 y 与深度合成移轴并处理高光肩部和暗角（ART-STYLE §7） |
+| `post_outline.glsl` 内的模糊版本（后续） | WP-05 | 移轴：1/2 或 1/4 分辨率可分离模糊（两种分辨率的管线启动时都建好），不另建 `.glsl` |
+| `post_outline.glsl` 内的光斑版本（后续） | WP-05 | 主光可见度（32 个深度点写进存储缓冲）和光斑，不另建 `.glsl` |
+| `post_outline.glsl` 内的 FXAA 版本（可选） | WP-05 | 可选：跳过描线像素的自写 FXAA，只在 SMAA 侵蚀细线时启用（§10.2），不另建 `.glsl` |
 | `fog.glslinc` | WP-05 | 计算侧的雾函数，与 WP-04 的 `fog.gdshaderinc` 逐行对应，逐像素差不超过 1/255；两边改动同步提交（ART-SKYLIGHT §6.5） |
+
+全项目只用一个计算着色器文件 `post_outline.glsl`：Godot 4.7.2 多线程导入两个以上 `.glsl` 时会偶发崩溃（0xC0000005），新的计算着色器（模糊、光斑、FXAA 等）一律做成它的版本，不另建 `.glsl`。
 
 另有烘焙专用的 `bake_impostor.gdshader`（归 WP-23，与替身烘焙器同包，§9；只在替身烘焙器的 SubViewport 里用，不进游戏场景）。
 
@@ -190,7 +191,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
   - **开始页与过场**只有 `cine_cloud.gdshader`（SYS-TITLE §9）。不复用 `diorama_far`：云卡要做全遮擦入擦出和受光两阶。
   - **外围**（WLD-OUTSKIRTS）不新增着色器：O0、O1 用 `toon_static`、`toon_glass`、`veg_*`；O2 和流畅档的卡片环用 `toon_static` 与 `diorama_far` 的已有分支；清水河银带是 `diorama_far` 雾海分支的顶点属性。
   - **室内**（WLD-INTERIORS）不新增着色器：门厅卡和窗卡是 `toon_glass` 的图层，室内壳的剖切用 `toon_cut`，门口光池走灯表着色。
-  - **风格**不新增着色器：都在 `toon.gdshaderinc`（明暗档、室内行、天光渐变与地面反光、透光、受光侧暖边、湿面闪点，不做接触影）、`fx_glow`（三种光柱分支）、`precip`（太阳雨）、`water`（色带、倒影碎片、闪点）、`post_outline`（两次 dispatch）和 `post_tiltshift_comp`（高光肩部、暗角）里。计算着色器仍是 6 个。
+  - **风格**不新增着色器：都在 `toon.gdshaderinc`（明暗档、室内行、天光渐变与地面反光、透光、受光侧暖边、湿面闪点，不做接触影）、`fx_glow`（三种光柱分支）、`precip`（太阳雨）、`water`（色带、倒影碎片、闪点）和 `post_outline`（描线两次 dispatch，以及处理高光肩部、暗角的 `tiltshift_comp` 版本）里。计算着色器只有 1 个 `.glsl` 文件。
 
 ### 1.5 全局参数与数据纹理表
 
