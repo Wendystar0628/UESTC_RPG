@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 42.6k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 43.2k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -15,21 +15,21 @@
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.3k
 - CORE-INDEX §5 文档怎么组织 · L135 · 764
 - CORE-INDEX §6 阅读路径 · L145 · 1.1k
-- CORE-INDEX §7 文档地图 · L163 · 9.3k
+- CORE-INDEX §7 文档地图 · L163 · 9.5k
   - CORE-INDEX §7.1 共识层 `core/` · L165 · 381
   - CORE-INDEX §7.2 美术方向 `art/` · L173 · 925
   - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.2k
-  - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L196 · 1.5k
-  - CORE-INDEX §7.5 运行时系统 `systems/` · L209 · 1.8k
-  - CORE-INDEX §7.6 界面 `ui/` · L225 · 335
-  - CORE-INDEX §7.7 工程 `engineering/` · L232 · 1.4k
-  - CORE-INDEX §7.8 参考 `reference/` · L246 · 171
-  - CORE-INDEX §7.9 工具 `tools/` · L252 · 178
-  - CORE-INDEX §7.10 运维 `ops/` · L258 · 173
-  - CORE-INDEX §7.11 提案 `proposals/` · L264 · 420
-  - CORE-INDEX §7.12 待用的文件夹 · L273 · 896
-- CORE-INDEX §8 工作包与文档 · L289 · 9.0k
-- CORE-INDEX §9 文档依赖图 · L364 · 11.8k
+  - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L196 · 1.7k
+  - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.8k
+  - CORE-INDEX §7.6 界面 `ui/` · L226 · 335
+  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 1.4k
+  - CORE-INDEX §7.8 参考 `reference/` · L247 · 171
+  - CORE-INDEX §7.9 工具 `tools/` · L253 · 178
+  - CORE-INDEX §7.10 运维 `ops/` · L259 · 173
+  - CORE-INDEX §7.11 提案 `proposals/` · L265 · 420
+  - CORE-INDEX §7.12 待用的文件夹 · L274 · 896
+- CORE-INDEX §8 工作包与文档 · L290 · 9.1k
+- CORE-INDEX §9 文档依赖图 · L365 · 12.1k
 
 ## CORE-CONVENTIONS · 约定
 
@@ -355,7 +355,7 @@
   - WLD-INTERIORS §2.14 朝阳餐厅（WP-31c） · L227 · 525
   - WLD-INTERIORS §2.15 立人楼一层的教室走廊（WP-31a） · L236 · 496
   - WLD-INTERIORS §2.16 开放清单汇总 · L246 · 1.1k
-  - WLD-INTERIORS §2.17 室内与高处的点位（P16 起，登记在 UI-NAV §6） · L269 · 2.9k
+  - WLD-INTERIORS §2.17 室内与高处的点位（P16 起，登记在 UI-NAV §6） · L269 · 3.0k
 - WLD-INTERIORS §3 开放的屋顶与高处（3 处） · L299 · 1.6k
 - WLD-INTERIORS §4 门的区分：开与关 · L317 · 3.9k
   - WLD-INTERIORS §4.1 楼里的门：走近推开，闭门器关上 · L339 · 2.0k
@@ -481,7 +481,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 36.5k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN.md` · 36.7k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -509,7 +509,7 @@
 - WLD-TERRAIN §4 贴地 · L283 · 3.2k
   - WLD-TERRAIN §4.1 先平后贴 · L285 · 779
   - WLD-TERRAIN §4.2 道路与铺装 · L301 · 864
-  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L313 · 955
+  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L313 · 1.0k
   - WLD-TERRAIN §4.4 树与道具落地 · L324 · 561
 - WLD-TERRAIN §5 竖直落差 · L335 · 2.4k
   - WLD-TERRAIN §5.1 连接规则 · L337 · 661
@@ -520,9 +520,9 @@
   - WLD-TERRAIN §5.6 高墙（增强阶段） · L383 · 209
   - WLD-TERRAIN §5.7 防护 · L388 · 172
   - WLD-TERRAIN §5.8 谁来做 · L394 · 155
-- WLD-TERRAIN §6 水体 · L399 · 2.2k
-  - WLD-TERRAIN §6.1 常水位 · L401 · 518
-  - WLD-TERRAIN §6.2 岸型 · L408 · 780
+- WLD-TERRAIN §6 水体 · L399 · 2.3k
+  - WLD-TERRAIN §6.1 常水位 · L401 · 532
+  - WLD-TERRAIN §6.2 岸型 · L408 · 853
   - WLD-TERRAIN §6.3 涉水带与浅滩 · L420 · 241
   - WLD-TERRAIN §6.4 湖盆 · L426 · 186
   - WLD-TERRAIN §6.5 河渠 · L432 · 258
@@ -618,23 +618,23 @@
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
-`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 41.8k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
+`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 42.2k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
 关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json
 
 - MAP-QSH-ADDITIONS §0 通用规则 · L22 · 2.6k
   - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L52 · 921
 - MAP-QSH-ADDITIONS §1 中国高校"有设计感"的常见手法 · L65 · 519
-- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L82 · 15.0k
+- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L82 · 15.1k
   - MAP-QSH-ADDITIONS §2.1 宿舍组团内外 · L86 · 944
   - MAP-QSH-ADDITIONS §2.2 食堂与商业街前 · L98 · 948
   - MAP-QSH-ADDITIONS §2.3 普通道路和路口 · L109 · 861
   - MAP-QSH-ADDITIONS §2.4 停车场 · L120 · 650
-  - MAP-QSH-ADDITIONS §2.5 河渠两岸（红光右支渠、走马河、磨底河） · L130 · 865
-  - MAP-QSH-ADDITIONS §2.6 湖岸 · L141 · 729
+  - MAP-QSH-ADDITIONS §2.5 河渠两岸（红光右支渠、走马河、磨底河） · L130 · 916
+  - MAP-QSH-ADDITIONS §2.6 湖岸 · L141 · 775
   - MAP-QSH-ADDITIONS §2.7 大片草坪 · L151 · 664
   - MAP-QSH-ADDITIONS §2.8 楼与楼之间的空地 · L162 · 657
   - MAP-QSH-ADDITIONS §2.9 屋顶 · L172 · 903
-  - MAP-QSH-ADDITIONS §2.10 运动区周边 · L185 · 515
+  - MAP-QSH-ADDITIONS §2.10 运动区周边 · L185 · 553
   - MAP-QSH-ADDITIONS §2.11 围墙和校界 · L195 · 1.0k
   - MAP-QSH-ADDITIONS §2.12 桥 · L207 · 544
   - MAP-QSH-ADDITIONS §2.13 步行服务设施（配合 SYS-WALK §10） · L217 · 1.7k
@@ -645,123 +645,123 @@
 - MAP-QSH-ADDITIONS §4 参照与转译规则 · L295 · 1.2k
 - MAP-QSH-ADDITIONS §5 不建议增补 · L321 · 1.2k
 - MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L343 · 833
-- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L365 · 7.0k
-- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L405 · 6.3k
-  - MAP-QSH-ADDITIONS §8.1 照度三级 · L417 · 674
-  - MAP-QSH-ADDITIONS §8.2 颜色 · L429 · 479
-  - MAP-QSH-ADDITIONS §8.3 初灯组 · L438 · 549
-  - MAP-QSH-ADDITIONS §8.4 调度表 · L445 · 2.9k
-  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L492 · 896
-- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L503 · 2.3k
-  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L507 · 1.2k
-  - MAP-QSH-ADDITIONS §9.2 积水点 · L528 · 945
-- MAP-QSH-ADDITIONS §10 待验证（P0） · L538 · 658
+- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L365 · 7.2k
+- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L408 · 6.3k
+  - MAP-QSH-ADDITIONS §8.1 照度三级 · L420 · 674
+  - MAP-QSH-ADDITIONS §8.2 颜色 · L432 · 479
+  - MAP-QSH-ADDITIONS §8.3 初灯组 · L441 · 549
+  - MAP-QSH-ADDITIONS §8.4 调度表 · L448 · 2.9k
+  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L495 · 896
+- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L506 · 2.3k
+  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L510 · 1.2k
+  - MAP-QSH-ADDITIONS §9.2 积水点 · L531 · 945
+- MAP-QSH-ADDITIONS §10 待验证（P0） · L541 · 658
 
 ## MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
-`docs/design/maps/qingshuihe/MAP-QSH-CENTER-EAST.md` · 28.3k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
+`docs/design/maps/qingshuihe/MAP-QSH-CENTER-EAST.md` · 28.7k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
 关键词：中部科研区、东区、基础实验大楼、一号科研实验楼、科研楼B区、科研楼C区、麦克斯韦像、方程石、林为干院士像、科研楼碑、银杏大道跨河小桥、品学楼、第一教学楼、书法横梁门框、架空通道、叠水喷泉石台、文科楼群、友谊树、综合训练馆、筒拱、网球场树墙、绿色房间、球场标线、球场围网、高杆灯、田径场、器材室、室外游泳池组团、东区月出、center-east.overlay.json
 
   - MAP-QSH-CENTER-EAST 分工 · L23 · 1.1k
   - MAP-QSH-CENTER-EAST 实现 · L47 · 644
-- MAP-QSH-CENTER-EAST §0 结论 · L56 · 1.8k
-  - ★ MAP-QSH-CENTER-EAST §0.1 接入要点 · L69 · 787
-- MAP-QSH-CENTER-EAST 数据定位 · L80 · 2.7k
-- MAP-QSH-CENTER-EAST §1 中部科研区 · L116 · 1.2k
-- MAP-QSH-CENTER-EAST §2 品学楼 · L142 · 2.3k
-- MAP-QSH-CENTER-EAST §3 文科楼群 · L177 · 854
-- MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L197 · 1.4k
-- MAP-QSH-CENTER-EAST §5 东缘 · L225 · 951
-- MAP-QSH-CENTER-EAST §6 本区的光 · L236 · 522
-- MAP-QSH-CENTER-EAST WP-21 交付验收 · L245 · 743
-- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L258 · 2.2k
-- MAP-QSH-CENTER-EAST §7 季节与昼夜清单 · L302 · 3.3k
-- MAP-QSH-CENTER-EAST §8 行走 · L342 · 4.1k
-- MAP-QSH-CENTER-EAST §9 声音要点（SYS-AUDIO） · L397 · 603
-- MAP-QSH-CENTER-EAST §10 待验证（P0） · L407 · 1.1k
+- MAP-QSH-CENTER-EAST §0 结论 · L56 · 2.1k
+  - ★ MAP-QSH-CENTER-EAST §0.1 接入要点 · L69 · 1.0k
+- MAP-QSH-CENTER-EAST 数据定位 · L81 · 2.7k
+- MAP-QSH-CENTER-EAST §1 中部科研区 · L117 · 1.2k
+- MAP-QSH-CENTER-EAST §2 品学楼 · L143 · 2.4k
+- MAP-QSH-CENTER-EAST §3 文科楼群 · L178 · 854
+- MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L198 · 1.4k
+- MAP-QSH-CENTER-EAST §5 东缘 · L226 · 951
+- MAP-QSH-CENTER-EAST §6 本区的光 · L237 · 522
+- MAP-QSH-CENTER-EAST WP-21 交付验收 · L246 · 743
+- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L259 · 2.2k
+- MAP-QSH-CENTER-EAST §7 季节与昼夜清单 · L303 · 3.3k
+- MAP-QSH-CENTER-EAST §8 行走 · L343 · 4.1k
+- MAP-QSH-CENTER-EAST §9 声音要点（SYS-AUDIO） · L398 · 603
+- MAP-QSH-CENTER-EAST §10 待验证（P0） · L408 · 1.1k
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.2k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.5k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、core.overlay.json
 
   - MAP-QSH-CORE 分工 · L27 · 998
   - MAP-QSH-CORE 实现 · L50 · 720
-- MAP-QSH-CORE §0 结论 · L59 · 2.1k
-  - ★ MAP-QSH-CORE §0.1 接入要点 · L74 · 1.0k
-- MAP-QSH-CORE 数据定位 · L88 · 2.2k
-- MAP-QSH-CORE §1 图书馆外观 · L117 · 3.1k
-- MAP-QSH-CORE §2 时间广场 · L167 · 589
-- MAP-QSH-CORE §3 日晷 · L180 · 595
-- MAP-QSH-CORE §4 电子科技博物馆 · L195 · 792
-- MAP-QSH-CORE §5 西湖的岸线与构筑物 · L212 · 2.2k
-- MAP-QSH-CORE §6 本区的构图关系 · L258 · 413
-- MAP-QSH-CORE WP-16 交付验收 · L266 · 929
-- MAP-QSH-CORE 定位、设计增补与近景要求 · L284 · 2.4k
-- MAP-QSH-CORE §7 季节与昼夜清单 · L330 · 4.8k
-- MAP-QSH-CORE §8 行走 · L386 · 3.9k
-  - MAP-QSH-CORE §8.1 主网路段（必须能走，SYS-WALK §6） · L390 · 335
-  - MAP-QSH-CORE §8.2 能看不能进的地方与挡路物 · L405 · 792
-  - MAP-QSH-CORE §8.3 可进入的室内 · L420 · 616
-  - MAP-QSH-CORE §8.4 涉水区（`wade`，水深不到 0.3 m，SYS-WALK §9） · L429 · 189
-  - MAP-QSH-CORE §8.5 行走落点 · L437 · 628
-  - MAP-QSH-CORE §8.6 节奏与行走走廊 · L452 · 1.2k
-- MAP-QSH-CORE §9 声音要点（SYS-AUDIO） · L479 · 751
-- MAP-QSH-CORE §10 待验证（P0） · L489 · 815
+- MAP-QSH-CORE §0 结论 · L59 · 2.3k
+  - ★ MAP-QSH-CORE §0.1 接入要点 · L74 · 1.2k
+- MAP-QSH-CORE 数据定位 · L89 · 2.2k
+- MAP-QSH-CORE §1 图书馆外观 · L118 · 3.1k
+- MAP-QSH-CORE §2 时间广场 · L168 · 676
+- MAP-QSH-CORE §3 日晷 · L182 · 595
+- MAP-QSH-CORE §4 电子科技博物馆 · L197 · 792
+- MAP-QSH-CORE §5 西湖的岸线与构筑物 · L214 · 2.2k
+- MAP-QSH-CORE §6 本区的构图关系 · L260 · 413
+- MAP-QSH-CORE WP-16 交付验收 · L268 · 929
+- MAP-QSH-CORE 定位、设计增补与近景要求 · L286 · 2.4k
+- MAP-QSH-CORE §7 季节与昼夜清单 · L332 · 4.8k
+- MAP-QSH-CORE §8 行走 · L388 · 3.9k
+  - MAP-QSH-CORE §8.1 主网路段（必须能走，SYS-WALK §6） · L392 · 335
+  - MAP-QSH-CORE §8.2 能看不能进的地方与挡路物 · L407 · 792
+  - MAP-QSH-CORE §8.3 可进入的室内 · L422 · 616
+  - MAP-QSH-CORE §8.4 涉水区（`wade`，水深不到 0.3 m，SYS-WALK §9） · L431 · 189
+  - MAP-QSH-CORE §8.5 行走落点 · L439 · 662
+  - MAP-QSH-CORE §8.6 节奏与行走走廊 · L454 · 1.2k
+- MAP-QSH-CORE §9 声音要点（SYS-AUDIO） · L481 · 751
+- MAP-QSH-CORE §10 待验证（P0） · L491 · 815
 
 ## MAP-QSH-LIBRARY · 图书馆与博物馆室内
 
-`docs/design/maps/qingshuihe/MAP-QSH-LIBRARY.md` · 28.4k 字 · 图书馆开放范围的室内、三条看进去的路径、室内光与视觉落点，以及博物馆展厅、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-LIBRARY.md` · 28.5k 字 · 图书馆开放范围的室内、三条看进去的路径、室内光与视觉落点，以及博物馆展厅、行走与声音要点
 关键词：图书馆室内、中庭、回廊、八字楼梯、塔楼梯、交通核、开放范围、封口、门斗、闸机、二楼门厅、看进去的路径、品·悦吧室内、光条、顶棚波光、门口的叶、红桌、视觉落点、八瓣光、台灯、校训木匾、五楼西窗阅览带、北侧露台、博物馆展厅、环形展线、interior.library、core.interior.json、lib.main
 
   - MAP-QSH-LIBRARY 分工 · L39 · 683
   - MAP-QSH-LIBRARY 实现 · L52 · 1.1k
-- MAP-QSH-LIBRARY §0 平面与分区 · L62 · 4.6k
+- MAP-QSH-LIBRARY §0 平面与分区 · L62 · 4.7k
   - MAP-QSH-LIBRARY §0.1 平面 · L64 · 1.2k
   - MAP-QSH-LIBRARY §0.2 交通核 · L89 · 1.1k
   - MAP-QSH-LIBRARY §0.3 每层的开放范围与封口（WLD-INTERIORS §2.1） · L111 · 834
   - MAP-QSH-LIBRARY §0.4 层高与标高（初值，§12） · L125 · 248
   - MAP-QSH-LIBRARY §0.5 研修室、卫生间、直饮水 · L130 · 263
-  - ★ MAP-QSH-LIBRARY §0.6 接入要点 · L138 · 1.0k
-- MAP-QSH-LIBRARY §1 三条看进去的路径 · L151 · 1.2k
-- MAP-QSH-LIBRARY §2 中庭与回廊 · L168 · 799
-- MAP-QSH-LIBRARY §3 一楼中厅与 A、D 扇区（由中庭八字楼梯下来） · L182 · 1.5k
-- MAP-QSH-LIBRARY §4 室外光的延伸 · L210 · 1.6k
-- MAP-QSH-LIBRARY §5 视觉落点 · L238 · 1.2k
-- MAP-QSH-LIBRARY §6 室内的生活痕迹 · L260 · 317
-- MAP-QSH-LIBRARY WP-17 交付验收 · L274 · 998
-- MAP-QSH-LIBRARY §7 季节与昼夜清单 · L290 · 3.4k
-- MAP-QSH-LIBRARY §8 行走 · L333 · 3.4k
-- MAP-QSH-LIBRARY §9 附属部分 · L396 · 1.1k
-- MAP-QSH-LIBRARY §10 博物馆展厅（WP-17，WLD-INTERIORS §2.2） · L417 · 1.2k
-- MAP-QSH-LIBRARY §11 声音要点（SYS-AUDIO） · L433 · 1.2k
-- MAP-QSH-LIBRARY §12 待验证（P0） · L450 · 934
+  - ★ MAP-QSH-LIBRARY §0.6 接入要点 · L138 · 1.1k
+- MAP-QSH-LIBRARY §1 三条看进去的路径 · L152 · 1.2k
+- MAP-QSH-LIBRARY §2 中庭与回廊 · L169 · 799
+- MAP-QSH-LIBRARY §3 一楼中厅与 A、D 扇区（由中庭八字楼梯下来） · L183 · 1.5k
+- MAP-QSH-LIBRARY §4 室外光的延伸 · L211 · 1.6k
+- MAP-QSH-LIBRARY §5 视觉落点 · L239 · 1.2k
+- MAP-QSH-LIBRARY §6 室内的生活痕迹 · L261 · 317
+- MAP-QSH-LIBRARY WP-17 交付验收 · L275 · 998
+- MAP-QSH-LIBRARY §7 季节与昼夜清单 · L291 · 3.4k
+- MAP-QSH-LIBRARY §8 行走 · L334 · 3.4k
+- MAP-QSH-LIBRARY §9 附属部分 · L397 · 1.1k
+- MAP-QSH-LIBRARY §10 博物馆展厅（WP-17，WLD-INTERIORS §2.2） · L418 · 1.2k
+- MAP-QSH-LIBRARY §11 声音要点（SYS-AUDIO） · L434 · 1.2k
+- MAP-QSH-LIBRARY §12 待验证（P0） · L451 · 934
 
 ## MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
-`docs/design/maps/qingshuihe/MAP-QSH-NORTH.md` · 33.4k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
+`docs/design/maps/qingshuihe/MAP-QSH-NORTH.md` · 33.7k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
 关键词：北部生活区、学生活动中心、成电会堂、赭红圆鼓、校医院、院名灯牌、商业街、玻璃拱顶步行街、店招、宿舍组团、学知苑、硕丰苑、博翰苑、留学生组团、本科楼A型、本科楼B型、组团闸机、学知一组团、阳台晾晒、银杏苑、芙蓉餐厅、思学苑、春晖苑、朝阳餐厅、西北餐厅、室外扶梯罩棚、风雨连廊、丹桂路、博士公寓、north.overlay.json
 
   - MAP-QSH-NORTH 分工 · L23 · 1.1k
   - MAP-QSH-NORTH 实现 · L43 · 634
-- MAP-QSH-NORTH §0 结论 · L52 · 1.8k
-  - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 697
-- MAP-QSH-NORTH 数据定位 · L76 · 4.3k
-  - MAP-QSH-NORTH 地标与服务 · L78 · 1.8k
-  - MAP-QSH-NORTH 店面与餐厅点位 · L100 · 1.3k
-  - MAP-QSH-NORTH 宿舍组团 · L128 · 1.2k
-- MAP-QSH-NORTH §1 学生活动中心与成电会堂 · L155 · 792
-- MAP-QSH-NORTH §2 校医院 · L172 · 505
-- MAP-QSH-NORTH §3 商业街 · L180 · 1.6k
-- MAP-QSH-NORTH §4 宿舍 · L215 · 3.5k
-- MAP-QSH-NORTH §5 餐厅 · L279 · 2.1k
-- MAP-QSH-NORTH §6 文化地标与丹桂路 · L309 · 205
-- MAP-QSH-NORTH WP-20 交付验收 · L316 · 807
-- MAP-QSH-NORTH 定位、设计增补与近景要求 · L330 · 2.2k
-- MAP-QSH-NORTH §7 季节与昼夜清单 · L373 · 3.8k
-- MAP-QSH-NORTH §8 行走 · L423 · 5.7k
-- MAP-QSH-NORTH §9 声音要点（SYS-AUDIO） · L494 · 780
-- MAP-QSH-NORTH §10 待验证（P0） · L505 · 942
+- MAP-QSH-NORTH §0 结论 · L52 · 2.1k
+  - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 1.0k
+- MAP-QSH-NORTH 数据定位 · L77 · 4.3k
+  - MAP-QSH-NORTH 地标与服务 · L79 · 1.8k
+  - MAP-QSH-NORTH 店面与餐厅点位 · L101 · 1.3k
+  - MAP-QSH-NORTH 宿舍组团 · L129 · 1.2k
+- MAP-QSH-NORTH §1 学生活动中心与成电会堂 · L156 · 792
+- MAP-QSH-NORTH §2 校医院 · L173 · 505
+- MAP-QSH-NORTH §3 商业街 · L181 · 1.6k
+- MAP-QSH-NORTH §4 宿舍 · L216 · 3.5k
+- MAP-QSH-NORTH §5 餐厅 · L280 · 2.1k
+- MAP-QSH-NORTH §6 文化地标与丹桂路 · L310 · 205
+- MAP-QSH-NORTH WP-20 交付验收 · L317 · 807
+- MAP-QSH-NORTH 定位、设计增补与近景要求 · L331 · 2.2k
+- MAP-QSH-NORTH §7 季节与昼夜清单 · L374 · 3.8k
+- MAP-QSH-NORTH §8 行走 · L424 · 5.7k
+- MAP-QSH-NORTH §9 声音要点（SYS-AUDIO） · L495 · 780
+- MAP-QSH-NORTH §10 待验证（P0） · L506 · 942
 
 ## MAP-QSH-RENOVATION · 清水河翻新清单
 
@@ -798,63 +798,143 @@
 
 ## MAP-QSH-SOUTH · 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 
-`docs/design/maps/qingshuihe/MAP-QSH-SOUTH.md` · 39.6k 字 · 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-SOUTH.md` · 40.0k 字 · 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
 关键词：南区、南门、校名墙、主楼、主轴线、屋顶空廊、过街楼、主楼泛光、森林公园、孔雀之家、东湖岸线、环湖跑道、里程标、六角亭、亲水平台、荷角、吴立人像、宣邦楼、钟楼、电子管穹顶、交班的钟、钟面指针、立人楼、体育馆、游泳馆、体育运动中心大平台、看台罩棚、国际创新中心、1–8 号楼、south.overlay.json
 
   - MAP-QSH-SOUTH 分工 · L22 · 1.2k
   - MAP-QSH-SOUTH 实现 · L46 · 706
-- MAP-QSH-SOUTH §0 结论 · L54 · 1.9k
-  - ★ MAP-QSH-SOUTH §0.1 接入要点 · L68 · 818
-- MAP-QSH-SOUTH 数据定位 · L79 · 4.9k
-- MAP-QSH-SOUTH §1 南门 · L143 · 1.1k
-- MAP-QSH-SOUTH §2 主楼 · L162 · 2.5k
-- MAP-QSH-SOUTH §3 主楼周边 · L198 · 635
-- MAP-QSH-SOUTH §4 东湖 · L213 · 1.6k
-- MAP-QSH-SOUTH §5 宣邦楼 · L250 · 2.5k
-- MAP-QSH-SOUTH §6 立人楼 · L291 · 665
-- MAP-QSH-SOUTH §7 体育场馆（沿西源大道从西到东） · L304 · 1.5k
-- MAP-QSH-SOUTH §8 西南角：成电国际创新中心与科创餐厅 · L331 · 509
-- MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L341 · 517
-- MAP-QSH-SOUTH §10 本区的水道 · L348 · 392
-- MAP-QSH-SOUTH WP-18 交付验收 · L355 · 1.0k
-- MAP-QSH-SOUTH 定位、设计增补与近景要求 · L372 · 2.9k
-- MAP-QSH-SOUTH §11 季节与昼夜清单 · L424 · 5.1k
-- MAP-QSH-SOUTH §12 行走 · L482 · 5.5k
-  - MAP-QSH-SOUTH §12.1 主网路段（必须能走，SYS-WALK §6） · L486 · 549
-  - MAP-QSH-SOUTH §12.2 能看不能进的地方与挡路物 · L500 · 1.3k
-  - MAP-QSH-SOUTH §12.3 可进入的室内 · L517 · 671
-  - MAP-QSH-SOUTH §12.4 涉水区（`wade`，水深不到 0.3 m，SYS-WALK §9） · L529 · 170
-  - MAP-QSH-SOUTH §12.5 行走落点 · L536 · 761
-  - MAP-QSH-SOUTH §12.6 节奏与行走走廊 · L549 · 1.9k
-- MAP-QSH-SOUTH §13 声音要点 · L584 · 936
-- MAP-QSH-SOUTH §14 待验证（P0） · L595 · 813
+- MAP-QSH-SOUTH §0 结论 · L54 · 2.1k
+  - ★ MAP-QSH-SOUTH §0.1 接入要点 · L68 · 1.0k
+- MAP-QSH-SOUTH 数据定位 · L80 · 4.9k
+- MAP-QSH-SOUTH §1 南门 · L144 · 1.1k
+- MAP-QSH-SOUTH §2 主楼 · L163 · 2.5k
+- MAP-QSH-SOUTH §3 主楼周边 · L199 · 713
+- MAP-QSH-SOUTH §4 东湖 · L215 · 1.6k
+- MAP-QSH-SOUTH §5 宣邦楼 · L252 · 2.5k
+- MAP-QSH-SOUTH §6 立人楼 · L293 · 665
+- MAP-QSH-SOUTH §7 体育场馆（沿西源大道从西到东） · L306 · 1.5k
+- MAP-QSH-SOUTH §8 西南角：成电国际创新中心与科创餐厅 · L333 · 509
+- MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L343 · 517
+- MAP-QSH-SOUTH §10 本区的水道 · L350 · 392
+- MAP-QSH-SOUTH WP-18 交付验收 · L357 · 1.0k
+- MAP-QSH-SOUTH 定位、设计增补与近景要求 · L374 · 2.9k
+- MAP-QSH-SOUTH §11 季节与昼夜清单 · L426 · 5.1k
+- MAP-QSH-SOUTH §12 行走 · L484 · 5.6k
+  - MAP-QSH-SOUTH §12.1 主网路段（必须能走，SYS-WALK §6） · L488 · 549
+  - MAP-QSH-SOUTH §12.2 能看不能进的地方与挡路物 · L502 · 1.3k
+  - MAP-QSH-SOUTH §12.3 可进入的室内 · L519 · 671
+  - MAP-QSH-SOUTH §12.4 涉水区（`wade`，水深不到 0.3 m，SYS-WALK §9） · L531 · 170
+  - MAP-QSH-SOUTH §12.5 行走落点 · L538 · 795
+  - MAP-QSH-SOUTH §12.6 节奏与行走走廊 · L551 · 1.9k
+- MAP-QSH-SOUTH §13 声音要点 · L586 · 936
+- MAP-QSH-SOUTH §14 待验证（P0） · L597 · 813
+
+## MAP-QSH-TERRAIN · 分区地形：骨架、地标丘、揭示路线与各区地形操作
+
+`docs/design/maps/qingshuihe/MAP-QSH-TERRAIN.md` · 41.8k 字 · 清水河全图地形骨架与各区地形操作：分层分布、红枫丘、宿舍台原、揭示路线、常水位、点位标高、验收镜头与冲突处理
+关键词：分区地形、地形骨架、红枫丘、地标丘、下沉时间广场、谷阶殿、落金沟、湖岸丘链、草阶看台台地、东湖亭丘、岛丘、品学楼台基、坡广场、宿舍台原、上台、下台、台口、台缘、通学坡、坡顶回望、缓波、看月台、堤上路、球场堤路、下沉草阶草坪、河岸低步道、渠堤、湿地低地、扇形草坪浅碟、中庭草丘、常水位表、湖口跌水、箱涵堰口、遮挡与揭示、地形验收镜头、terrain.json
+
+  - MAP-QSH-TERRAIN 分工 · L23 · 549
+- MAP-QSH-TERRAIN §0 结论 · L31 · 3.5k
+  - ★ MAP-QSH-TERRAIN §0.1 接入要点 · L59 · 1.4k
+- MAP-QSH-TERRAIN §1 全图骨架 · L73 · 8.2k
+  - MAP-QSH-TERRAIN §1.1 分层分布 · L75 · 1.0k
+  - MAP-QSH-TERRAIN §1.2 地标丘：红枫丘 · L90 · 1.1k
+  - MAP-QSH-TERRAIN §1.3 遮挡与揭示的三条路线 · L103 · 1.0k
+  - MAP-QSH-TERRAIN §1.4 水系与常水位 · L131 · 2.0k
+  - MAP-QSH-TERRAIN §1.5 全图高差表 · L155 · 1.3k
+  - MAP-QSH-TERRAIN §1.6 坡度与着色的取舍 · L187 · 512
+  - MAP-QSH-TERRAIN §1.7 从高空读成一只箱庭 · L194 · 407
+  - MAP-QSH-TERRAIN §1.8 文件归属与写法 · L202 · 911
+- MAP-QSH-TERRAIN §2 中轴广场与图书馆 · L216 · 1.3k
+  - MAP-QSH-TERRAIN §2.1 设计意图 · L218 · 193
+  - MAP-QSH-TERRAIN §2.2 地形操作 · L223 · 557
+  - MAP-QSH-TERRAIN §2.3 连接 · L231 · 249
+  - MAP-QSH-TERRAIN §2.4 受影响的元素与点位 · L237 · 257
+  - MAP-QSH-TERRAIN §2.5 验收镜头 · L244 · 42
+- MAP-QSH-TERRAIN §3 银杏大道 · L248 · 1.3k
+  - MAP-QSH-TERRAIN §3.1 设计意图 · L250 · 264
+  - MAP-QSH-TERRAIN §3.2 地形操作 · L255 · 681
+  - MAP-QSH-TERRAIN §3.3 连接 · L265 · 93
+  - MAP-QSH-TERRAIN §3.4 受影响的元素与点位 · L270 · 239
+  - MAP-QSH-TERRAIN §3.5 验收镜头 · L277 · 59
+- MAP-QSH-TERRAIN §4 西湖与红枫丘 · L281 · 2.5k
+  - MAP-QSH-TERRAIN §4.1 设计意图 · L283 · 215
+  - MAP-QSH-TERRAIN §4.2 地形操作 · L288 · 1.1k
+  - MAP-QSH-TERRAIN §4.3 连接 · L301 · 629
+  - MAP-QSH-TERRAIN §4.4 水位与岸型 · L310 · 182
+  - MAP-QSH-TERRAIN §4.5 受影响的元素与点位 · L316 · 302
+  - MAP-QSH-TERRAIN §4.6 验收镜头 · L324 · 54
+- MAP-QSH-TERRAIN §5 东湖 · L328 · 1.8k
+  - MAP-QSH-TERRAIN §5.1 设计意图 · L330 · 182
+  - MAP-QSH-TERRAIN §5.2 地形操作 · L335 · 934
+  - MAP-QSH-TERRAIN §5.3 连接 · L347 · 340
+  - MAP-QSH-TERRAIN §5.4 受影响的元素与点位 · L353 · 295
+  - MAP-QSH-TERRAIN §5.5 验收镜头 · L361 · 56
+- MAP-QSH-TERRAIN §6 河渠与箱涵 · L365 · 2.6k
+  - MAP-QSH-TERRAIN §6.1 设计意图 · L367 · 231
+  - MAP-QSH-TERRAIN §6.2 地形操作 · L372 · 1.6k
+  - MAP-QSH-TERRAIN §6.3 连接 · L390 · 566
+  - MAP-QSH-TERRAIN §6.4 受影响的元素与点位 · L397 · 170
+  - MAP-QSH-TERRAIN §6.5 验收镜头 · L403 · 35
+- MAP-QSH-TERRAIN §7 宿舍区 · L407 · 5.2k
+  - MAP-QSH-TERRAIN §7.1 设计意图 · L409 · 526
+  - MAP-QSH-TERRAIN §7.2 台原的范围 · L416 · 855
+  - MAP-QSH-TERRAIN §7.3 地形操作 · L427 · 1.6k
+  - MAP-QSH-TERRAIN §7.4 连接：台缘、台口与路 · L442 · 1.7k
+  - MAP-QSH-TERRAIN §7.5 受影响的元素与点位 · L471 · 445
+  - MAP-QSH-TERRAIN §7.6 验收镜头 · L479 · 97
+- MAP-QSH-TERRAIN §8 运动场与体育区 · L483 · 1.9k
+  - MAP-QSH-TERRAIN §8.1 设计意图 · L485 · 378
+  - MAP-QSH-TERRAIN §8.2 地形操作 · L490 · 945
+  - MAP-QSH-TERRAIN §8.3 连接与受影响的元素 · L501 · 509
+  - MAP-QSH-TERRAIN §8.4 验收镜头 · L508 · 79
+- MAP-QSH-TERRAIN §9 食堂与商业街 · L512 · 673
+  - MAP-QSH-TERRAIN §9.1 设计意图 · L514 · 307
+  - MAP-QSH-TERRAIN §9.2 地形操作 · L519 · 223
+  - MAP-QSH-TERRAIN §9.3 受影响的元素 · L525 · 130
+- MAP-QSH-TERRAIN §10 教学科研区 · L530 · 2.9k
+  - MAP-QSH-TERRAIN §10.1 设计意图 · L532 · 536
+  - MAP-QSH-TERRAIN §10.2 地形操作 · L539 · 1.4k
+  - MAP-QSH-TERRAIN §10.3 连接 · L551 · 610
+  - MAP-QSH-TERRAIN §10.4 受影响的元素与点位 · L559 · 272
+  - MAP-QSH-TERRAIN §10.5 验收镜头 · L566 · 70
+- MAP-QSH-TERRAIN §11 校门与校界 · L570 · 613
+  - MAP-QSH-TERRAIN §11.1 设计意图 · L572 · 270
+  - MAP-QSH-TERRAIN §11.2 河渠穿出校界处 · L577 · 241
+  - MAP-QSH-TERRAIN §11.3 受影响的元素 · L587 · 89
+- MAP-QSH-TERRAIN §12 验收镜头与冲突检查 · L592 · 5.1k
+  - MAP-QSH-TERRAIN §12.1 验收镜头总表 · L594 · 1.4k
+  - MAP-QSH-TERRAIN §12.2 冲突检查 · L616 · 2.6k
+  - MAP-QSH-TERRAIN §12.3 点位与锚点标高 · L635 · 1.1k
+- MAP-QSH-TERRAIN §13 待验证（P0） · L658 · 1.2k
 
 ## MAP-QSH-WEST · 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 
-`docs/design/maps/qingshuihe/MAP-QSH-WEST.md` · 27.0k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观、四季昼夜与天气、行走与开放入口、声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-WEST.md` · 27.3k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观、四季昼夜与天气、行走与开放入口、声音要点
 关键词：西区、西北区、六号科研楼、基础与前沿研究院、公式台阶、2F室外连廊、校训石、创新中心、经管楼、三号科研实验楼、宾诺咖啡、立人托幼公园、键盘立面、四号科研楼、扇形草坪、深蓝玻璃盒入口、五号科研楼、电子科学技术研究院大楼、微波暗室、工程训练中心、荟文楼、综合楼、核磁共振中心、国防科技园石刻、湿地公园、湿地栈道、西门桥头、水杉路、孤儿楼 6151 与 6154、west.overlay.json
 
   - MAP-QSH-WEST 分工 · L22 · 783
   - MAP-QSH-WEST 实现 · L39 · 604
-- MAP-QSH-WEST §0 结论 · L49 · 1.7k
-  - ★ MAP-QSH-WEST §0.1 接入要点 · L62 · 626
-- MAP-QSH-WEST 数据定位 · L72 · 3.3k
-- MAP-QSH-WEST §1 六号科研楼 · L124 · 1.2k
-- MAP-QSH-WEST §2 校训石 · L147 · 412
-- MAP-QSH-WEST §3 创新中心 · L161 · 431
-- MAP-QSH-WEST §4 经管楼 · L171 · 128
-- MAP-QSH-WEST §5 立人托幼公园 · L177 · 276
-- MAP-QSH-WEST §6 四号科研楼 · L184 · 425
-- MAP-QSH-WEST §7 五号科研楼、电子科学技术研究院大楼、核磁共振中心 · L197 · 806
-- MAP-QSH-WEST §8 荟文楼（综合楼） · L210 · 110
-- MAP-QSH-WEST §9 石刻 · L215 · 89
-- MAP-QSH-WEST §10 湿地公园与西门桥头 · L221 · 875
-- MAP-QSH-WEST WP-19 交付验收 · L239 · 775
-- MAP-QSH-WEST 定位、设计增补与近景要求 · L254 · 2.3k
-- MAP-QSH-WEST §11 季节与昼夜清单 · L296 · 3.7k
-- MAP-QSH-WEST §12 行走 · L339 · 4.9k
-- MAP-QSH-WEST §13 声音要点 · L411 · 468
-- MAP-QSH-WEST §14 待验证（P0） · L420 · 797
+- MAP-QSH-WEST §0 结论 · L49 · 1.8k
+  - ★ MAP-QSH-WEST §0.1 接入要点 · L62 · 791
+- MAP-QSH-WEST 数据定位 · L73 · 3.3k
+- MAP-QSH-WEST §1 六号科研楼 · L125 · 1.2k
+- MAP-QSH-WEST §2 校训石 · L148 · 412
+- MAP-QSH-WEST §3 创新中心 · L162 · 431
+- MAP-QSH-WEST §4 经管楼 · L172 · 128
+- MAP-QSH-WEST §5 立人托幼公园 · L178 · 276
+- MAP-QSH-WEST §6 四号科研楼 · L185 · 480
+- MAP-QSH-WEST §7 五号科研楼、电子科学技术研究院大楼、核磁共振中心 · L198 · 806
+- MAP-QSH-WEST §8 荟文楼（综合楼） · L211 · 110
+- MAP-QSH-WEST §9 石刻 · L216 · 89
+- MAP-QSH-WEST §10 湿地公园与西门桥头 · L222 · 972
+- MAP-QSH-WEST WP-19 交付验收 · L241 · 775
+- MAP-QSH-WEST 定位、设计增补与近景要求 · L256 · 2.3k
+- MAP-QSH-WEST §11 季节与昼夜清单 · L298 · 3.7k
+- MAP-QSH-WEST §12 行走 · L341 · 4.9k
+- MAP-QSH-WEST §13 声音要点 · L413 · 468
+- MAP-QSH-WEST §14 待验证（P0） · L422 · 797
 
 ## SYS-ATLAS · 平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁
 
