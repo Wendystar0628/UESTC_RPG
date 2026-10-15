@@ -58,7 +58,7 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`bc7bb0f` 文档：Sonnet 会话（第二个 Claude 账号）的分工与交接（ENG-TEAM §0 第 9 条、ENG-TEAM §6.4）。
+- 当前 `main`：`20bdce0` 文档：WLD-WATER 按 WP-24 实现改岸线距离、倒影天空、波纹线。
 - 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14 `cb7a8b0`、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`。
 - 最近可运行入口：`4568685`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
 - 已冻结的契约组：尚无（v1 候选）。
