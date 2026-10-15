@@ -8,7 +8,7 @@ namespace Campus.Kernel.Stubs;
 [KernelService(typeof(IAppFlow), Owner = "WP-00", IsStub = true)]
 [KernelService(typeof(IAppBootFlow), Owner = "WP-00", IsStub = true)]
 public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveService saves,
-    IMapService maps, IWorldControl world) : IAppFlow, IAppBootFlow
+    IMapService maps, IWorldControl world, IAppExit exit) : IAppFlow, IAppBootFlow
 {
     private BootFlowRequest? _bootRequest;
     private IDisposable? _bootInput;
@@ -148,7 +148,8 @@ public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveServi
     {
         Change(AppState.Quitting);
         var saved = await saves.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(5));
-        if (!CanLeave(saved.Status)) Change(AppState.Playing);
+        if (!CanLeave(saved.Status)) { Change(AppState.Playing); return; }
+        await exit.FinishQuit();
     }
     private static bool CanLeave(SaveStatus status) => status switch
     {

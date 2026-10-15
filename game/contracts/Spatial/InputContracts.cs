@@ -20,6 +20,8 @@ public interface IInputRouter
 /// <summary>WP-36 transit execution. The camera resolves the driver after registration to avoid a constructor cycle.</summary>
 public interface ITransitDriver
 {
+    /// <summary>True only when real transit execution and its readiness dependencies are available. Stub/default implementations remain false.</summary>
+    bool IsReady => false;
     ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null);
     /// <summary>The settled destination while a transit is active; null when no transit is running.</summary>
     Pose? Destination { get; }

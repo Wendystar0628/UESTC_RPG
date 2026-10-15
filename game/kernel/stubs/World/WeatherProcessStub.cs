@@ -146,6 +146,23 @@ public sealed class WeatherProcessStub : IWeatherProcess
         return Copy(state);
     }
 
+    public WeatherProcessState CaptureAt(MapId map, in WorldSaveMoment moment)
+    {
+        if (!double.IsFinite(moment.WorldHours) || moment.WorldHours < 0 ||
+            !double.IsFinite(moment.ClockOffset) || !double.IsFinite(moment.WorldHours + moment.ClockOffset) ||
+            !Enum.IsDefined(moment.Season) || moment.FlowRate is not (0 or 1 or 10 or 60 or 360 or 1440))
+            throw new ArgumentOutOfRangeException(nameof(moment));
+        if (_activeMap != map) return Capture(map);
+        // D0 has no evolving weather model. Preserve its settled DTO and change only the copy's endpoint.
+        // Capture already copies Queue; neither this operation nor the caller can mutate live state.
+        return Capture(map) with
+        {
+            LeftAtHours = moment.WorldHours,
+            ClockOffset = moment.ClockOffset,
+            Season = moment.Season,
+        };
+    }
+
     public void Restore(MapId map, WeatherProcessState s)
     {
         ArgumentNullException.ThrowIfNull(s);

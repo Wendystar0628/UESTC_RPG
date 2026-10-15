@@ -76,6 +76,8 @@ Campus.Contracts.AppFlow.IAppBootFlow
 Campus.Contracts.AppFlow.IAppBootFlow.CompleteBoot() -> System.Threading.Tasks.Task!
 Campus.Contracts.AppFlow.IAppBootFlow.PrepareBoot(Campus.Contracts.AppFlow.BootFlowRequest! request) -> System.Threading.Tasks.Task<Campus.Contracts.MapId>!
 Campus.Contracts.AppFlow.IAppBootFlow.PrepareWorld() -> System.Threading.Tasks.Task!
+Campus.Contracts.AppFlow.IAppExit
+Campus.Contracts.AppFlow.IAppExit.FinishQuit() -> System.Threading.Tasks.Task!
 Campus.Contracts.AppFlow.IAppFlow
 Campus.Contracts.AppFlow.IAppFlow.Changed -> System.Action<Campus.Contracts.AppFlow.AppState, Campus.Contracts.AppFlow.AppState>?
 Campus.Contracts.AppFlow.IAppFlow.Enter(Campus.Contracts.AppFlow.EnterRequest! r) -> System.Threading.Tasks.Task<Campus.Contracts.AppFlow.EnterResult>!
@@ -103,6 +105,36 @@ Campus.Contracts.Aspects.Roof = 4 -> Campus.Contracts.Aspects
 Campus.Contracts.Atlas.AnchorForm
 Campus.Contracts.Atlas.AnchorForm.Kiosk = 0 -> Campus.Contracts.Atlas.AnchorForm
 Campus.Contracts.Atlas.AnchorForm.Post = 1 -> Campus.Contracts.Atlas.AnchorForm
+Campus.Contracts.Atlas.AtlasBaseSnapshot
+Campus.Contracts.Atlas.AtlasBaseSnapshot.AtlasBaseSnapshot(Campus.Contracts.MapId map, Campus.Contracts.Maps.MapRect! pageRect, Campus.Contracts.Atlas.AtlasBaseTexture! sdfA, Campus.Contracts.Atlas.AtlasBaseTexture! sdfB, Campus.Contracts.Atlas.AtlasBaseTexture! sdfOut, Campus.Contracts.Atlas.AtlasBaseTexture! sdfRing, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.AtlasLabelBand!>? labelBands = null, bool labelsReady = false, Campus.Contracts.Atlas.AtlasBaseTexture? glyphs = null, System.Collections.Generic.IReadOnlyList<string!>? placeIds = null, System.Collections.Generic.IReadOnlyList<string!>? topRegionIds = null, System.ReadOnlyMemory<byte> placeToRegion = default(System.ReadOnlyMemory<byte>), bool regionsReady = false, System.Collections.Generic.IReadOnlyList<string!>? warnings = null) -> void
+Campus.Contracts.Atlas.AtlasBaseSnapshot.Glyphs.get -> Campus.Contracts.Atlas.AtlasBaseTexture?
+Campus.Contracts.Atlas.AtlasBaseSnapshot.GlyphsReady.get -> bool
+Campus.Contracts.Atlas.AtlasBaseSnapshot.LabelBands.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.AtlasLabelBand!>!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.LabelsReady.get -> bool
+Campus.Contracts.Atlas.AtlasBaseSnapshot.Map.get -> Campus.Contracts.MapId
+Campus.Contracts.Atlas.AtlasBaseSnapshot.PageRect.get -> Campus.Contracts.Maps.MapRect!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.PlaceIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.PlaceToRegion.get -> System.ReadOnlyMemory<byte>
+Campus.Contracts.Atlas.AtlasBaseSnapshot.RegionsReady.get -> bool
+Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfA.get -> Campus.Contracts.Atlas.AtlasBaseTexture!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfB.get -> Campus.Contracts.Atlas.AtlasBaseTexture!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfOut.get -> Campus.Contracts.Atlas.AtlasBaseTexture!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfRing.get -> Campus.Contracts.Atlas.AtlasBaseTexture!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.TopRegionIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Campus.Contracts.Atlas.AtlasBaseSnapshot.Warnings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Campus.Contracts.Atlas.AtlasBaseTexture
+Campus.Contracts.Atlas.AtlasBaseTexture.AtlasBaseTexture(string! name, int width, int height, Campus.Contracts.Maps.MapRect! rect, System.ReadOnlySpan<byte> rgba8) -> void
+Campus.Contracts.Atlas.AtlasBaseTexture.Height.get -> int
+Campus.Contracts.Atlas.AtlasBaseTexture.Name.get -> string!
+Campus.Contracts.Atlas.AtlasBaseTexture.Rect.get -> Campus.Contracts.Maps.MapRect!
+Campus.Contracts.Atlas.AtlasBaseTexture.Rgba8.get -> System.ReadOnlyMemory<byte>
+Campus.Contracts.Atlas.AtlasBaseTexture.Width.get -> int
+Campus.Contracts.Atlas.AtlasLabelBand
+Campus.Contracts.Atlas.AtlasLabelBand.AtlasLabelBand(string! language, byte zoomBand, float pixelsPerMetre, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.AtlasPlacedLabel!>! labels) -> void
+Campus.Contracts.Atlas.AtlasLabelBand.Labels.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.AtlasPlacedLabel!>!
+Campus.Contracts.Atlas.AtlasLabelBand.Language.get -> string!
+Campus.Contracts.Atlas.AtlasLabelBand.PixelsPerMetre.get -> float
+Campus.Contracts.Atlas.AtlasLabelBand.ZoomBand.get -> byte
 Campus.Contracts.Atlas.AtlasLayer
 Campus.Contracts.Atlas.AtlasLayer.<Clone>$() -> Campus.Contracts.Atlas.AtlasLayer!
 Campus.Contracts.Atlas.AtlasLayer.AtlasLayer(string! Id, Campus.Contracts.LocalizedName Name, float YMin, float YMax) -> void
@@ -127,6 +159,8 @@ Campus.Contracts.Atlas.AtlasMarker.Feature.get -> Campus.Contracts.FeatureId?
 Campus.Contracts.Atlas.AtlasMarker.Feature.init -> void
 Campus.Contracts.Atlas.AtlasMarker.Form.get -> Campus.Contracts.Atlas.AnchorForm?
 Campus.Contracts.Atlas.AtlasMarker.Form.init -> void
+Campus.Contracts.Atlas.AtlasMarker.Group.get -> Campus.Contracts.WaypointGroup?
+Campus.Contracts.Atlas.AtlasMarker.Group.init -> void
 Campus.Contracts.Atlas.AtlasMarker.Icon.get -> string!
 Campus.Contracts.Atlas.AtlasMarker.Icon.init -> void
 Campus.Contracts.Atlas.AtlasMarker.Id.get -> Campus.Contracts.Atlas.MarkerId
@@ -147,6 +181,21 @@ Campus.Contracts.Atlas.AtlasMarker.Teleport.get -> Campus.Contracts.Atlas.Telepo
 Campus.Contracts.Atlas.AtlasMarker.Teleport.init -> void
 Campus.Contracts.Atlas.AtlasMarker.WaypointId.get -> string?
 Campus.Contracts.Atlas.AtlasMarker.WaypointId.init -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel
+Campus.Contracts.Atlas.AtlasPlacedLabel.<Clone>$() -> Campus.Contracts.Atlas.AtlasPlacedLabel!
+Campus.Contracts.Atlas.AtlasPlacedLabel.At.get -> System.Numerics.Vector2
+Campus.Contracts.Atlas.AtlasPlacedLabel.At.init -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.AtlasPlacedLabel(string! Id, string! Text, System.Numerics.Vector2 At, System.Numerics.Vector2 OffsetPixels, System.Numerics.Vector2 Size) -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.Deconstruct(out string! Id, out string! Text, out System.Numerics.Vector2 At, out System.Numerics.Vector2 OffsetPixels, out System.Numerics.Vector2 Size) -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.Equals(Campus.Contracts.Atlas.AtlasPlacedLabel? other) -> bool
+Campus.Contracts.Atlas.AtlasPlacedLabel.Id.get -> string!
+Campus.Contracts.Atlas.AtlasPlacedLabel.Id.init -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.OffsetPixels.get -> System.Numerics.Vector2
+Campus.Contracts.Atlas.AtlasPlacedLabel.OffsetPixels.init -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.Size.get -> System.Numerics.Vector2
+Campus.Contracts.Atlas.AtlasPlacedLabel.Size.init -> void
+Campus.Contracts.Atlas.AtlasPlacedLabel.Text.get -> string!
+Campus.Contracts.Atlas.AtlasPlacedLabel.Text.init -> void
 Campus.Contracts.Atlas.AtlasRegion
 Campus.Contracts.Atlas.AtlasRegion.<Clone>$() -> Campus.Contracts.Atlas.AtlasRegion!
 Campus.Contracts.Atlas.AtlasRegion.AtlasRegion(string! Id, Campus.Contracts.LocalizedName Name, string? Parent) -> void
@@ -188,6 +237,11 @@ Campus.Contracts.Atlas.CustomPin.Note.get -> string?
 Campus.Contracts.Atlas.CustomPin.Note.init -> void
 Campus.Contracts.Atlas.CustomPin.Shape.get -> Campus.Contracts.Atlas.PinShape
 Campus.Contracts.Atlas.CustomPin.Shape.init -> void
+Campus.Contracts.Atlas.IAtlasBaseSource
+Campus.Contracts.Atlas.IAtlasBaseSource.Map.get -> Campus.Contracts.MapId
+Campus.Contracts.Atlas.IAtlasBaseSource.Ready.get -> bool
+Campus.Contracts.Atlas.IAtlasBaseSource.Rev.get -> long
+Campus.Contracts.Atlas.IAtlasBaseSource.Snapshot.get -> Campus.Contracts.Atlas.AtlasBaseSnapshot?
 Campus.Contracts.Atlas.IAtlasService
 Campus.Contracts.Atlas.IAtlasService.AddPin(System.Numerics.Vector2 at, Campus.Contracts.Atlas.PinShape shape) -> Campus.Contracts.Atlas.CustomPin?
 Campus.Contracts.Atlas.IAtlasService.CanTravel(Campus.Contracts.Atlas.MarkerId id, Campus.Contracts.Atlas.TravelStyle style, out Campus.Contracts.Atlas.TravelRefusal why) -> bool
@@ -196,6 +250,7 @@ Campus.Contracts.Atlas.IAtlasService.Find(Campus.Contracts.Atlas.MarkerId id) ->
 Campus.Contracts.Atlas.IAtlasService.Map.get -> Campus.Contracts.MapId
 Campus.Contracts.Atlas.IAtlasService.Markers.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.AtlasMarker!>!
 Campus.Contracts.Atlas.IAtlasService.MovePin(int id, System.Numerics.Vector2 at) -> void
+Campus.Contracts.Atlas.IAtlasService.PageRect.get -> Campus.Contracts.Maps.MapRect!
 Campus.Contracts.Atlas.IAtlasService.Pins.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Atlas.CustomPin!>!
 Campus.Contracts.Atlas.IAtlasService.PolicyId.get -> string!
 Campus.Contracts.Atlas.IAtlasService.Prefetch(Campus.Contracts.Atlas.MarkerId id) -> void
@@ -2230,6 +2285,7 @@ Campus.Contracts.ITerrain.PadY(Campus.Contracts.FeatureId feature) -> float
 Campus.Contracts.ITerrain.WaterY(Campus.Contracts.FeatureId water) -> float?
 Campus.Contracts.ITransitDriver
 Campus.Contracts.ITransitDriver.Destination.get -> Campus.Contracts.Pose?
+Campus.Contracts.ITransitDriver.IsReady.get -> bool
 Campus.Contracts.ITransitDriver.Start(Campus.Contracts.Pose from, Campus.Contracts.Pose to, Campus.Contracts.TransitOptions? options = null) -> Campus.Contracts.ITransitHandle!
 Campus.Contracts.ITransitHandle
 Campus.Contracts.ITransitHandle.Cancel() -> void
@@ -2279,6 +2335,7 @@ Campus.Contracts.IWalkDataSource.Walk.get -> Campus.Contracts.WalkBakeData?
 Campus.Contracts.IWeatherProcess
 Campus.Contracts.IWeatherProcess.Ahead.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WeatherSpan>!
 Campus.Contracts.IWeatherProcess.Capture(Campus.Contracts.MapId map) -> Campus.Contracts.WeatherProcessState!
+Campus.Contracts.IWeatherProcess.CaptureAt(Campus.Contracts.MapId map, in Campus.Contracts.WorldSaveMoment moment) -> Campus.Contracts.WeatherProcessState!
 Campus.Contracts.IWeatherProcess.Enter(Campus.Contracts.MapId map, string! profile, double worldHours) -> void
 Campus.Contracts.IWeatherProcess.IsNative(Campus.Contracts.WeatherKind k, Campus.Contracts.Season s) -> bool
 Campus.Contracts.IWeatherProcess.Leave(Campus.Contracts.MapId map, double worldHours) -> void
@@ -2321,8 +2378,12 @@ Campus.Contracts.IWorldModel.Spatial.get -> Campus.Contracts.ISpatialIndex!
 Campus.Contracts.IWorldModel.Terrain.get -> Campus.Contracts.ITerrain!
 Campus.Contracts.IWorldModelLoader
 Campus.Contracts.IWorldModelLoader.Load(Campus.Contracts.MapId map, System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>! files) -> Campus.Contracts.WorldModelLoadResult!
+Campus.Contracts.IWorldModelLoader.Load(Campus.Contracts.MapId map, System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>! files, Campus.Contracts.WorldModelLoadInputs! inputs) -> Campus.Contracts.WorldModelLoadResult!
 Campus.Contracts.IWorldRestore
+Campus.Contracts.IWorldRestore.AbortRestore() -> void
 Campus.Contracts.IWorldRestore.CompleteRestore() -> void
+Campus.Contracts.IWorldRestore.GetSaveMoment() -> Campus.Contracts.WorldSaveMoment
+Campus.Contracts.IWorldRestore.RestoreFaulted.get -> bool
 Campus.Contracts.IWorldState
 Campus.Contracts.IWorldState.AnimTime.get -> double
 Campus.Contracts.IWorldState.Clock.get -> double
@@ -3782,6 +3843,8 @@ Campus.Contracts.Save.CaptureContext.Forced.get -> bool
 Campus.Contracts.Save.CaptureContext.Forced.init -> void
 Campus.Contracts.Save.CaptureContext.Map.get -> Campus.Contracts.MapId
 Campus.Contracts.Save.CaptureContext.Map.init -> void
+Campus.Contracts.Save.CaptureContext.Moment.get -> Campus.Contracts.WorldSaveMoment?
+Campus.Contracts.Save.CaptureContext.Moment.init -> void
 Campus.Contracts.Save.CaptureContext.Reason.get -> Campus.Contracts.Save.SaveReason
 Campus.Contracts.Save.CaptureContext.Reason.init -> void
 Campus.Contracts.Save.ISaveSection
@@ -4838,6 +4901,14 @@ Campus.Contracts.WorldFeaturePart.SourceId.init -> void
 Campus.Contracts.WorldFeaturePart.Storeys.get -> int?
 Campus.Contracts.WorldFeaturePart.Storeys.init -> void
 Campus.Contracts.WorldFeaturePart.WorldFeaturePart(string! SourceId, Campus.Contracts.OverlayGeometry! Geometry, float? Height, int? Storeys) -> void
+Campus.Contracts.WorldModelLoadInputs
+Campus.Contracts.WorldModelLoadInputs.<Clone>$() -> Campus.Contracts.WorldModelLoadInputs!
+Campus.Contracts.WorldModelLoadInputs.ClaimedBy.get -> System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, Campus.Contracts.WpId>?
+Campus.Contracts.WorldModelLoadInputs.Deconstruct(out Campus.Contracts.Maps.MapDescriptor! Descriptor, out Campus.Contracts.WalkBakeData? Walk, out System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, Campus.Contracts.WpId>? ClaimedBy) -> void
+Campus.Contracts.WorldModelLoadInputs.Descriptor.get -> Campus.Contracts.Maps.MapDescriptor!
+Campus.Contracts.WorldModelLoadInputs.Equals(Campus.Contracts.WorldModelLoadInputs? other) -> bool
+Campus.Contracts.WorldModelLoadInputs.Walk.get -> Campus.Contracts.WalkBakeData?
+Campus.Contracts.WorldModelLoadInputs.WorldModelLoadInputs(Campus.Contracts.Maps.MapDescriptor! Descriptor, Campus.Contracts.WalkBakeData? Walk = null, System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, Campus.Contracts.WpId>? ClaimedBy = null) -> void
 Campus.Contracts.WorldModelLoadResult
 Campus.Contracts.WorldModelLoadResult.<Clone>$() -> Campus.Contracts.WorldModelLoadResult!
 Campus.Contracts.WorldModelLoadResult.Boundary.get -> Campus.Contracts.PolygonRings!
@@ -4886,6 +4957,19 @@ Campus.Contracts.WorldPreset.Season.init -> void
 Campus.Contracts.WorldPreset.Weather.get -> Campus.Contracts.WeatherKind?
 Campus.Contracts.WorldPreset.Weather.init -> void
 Campus.Contracts.WorldPreset.WorldPreset(double Clock, Campus.Contracts.Season Season, Campus.Contracts.WeatherKind? Weather = null, float? Intensity = null) -> void
+Campus.Contracts.WorldSaveMoment
+Campus.Contracts.WorldSaveMoment.ClockOffset.get -> double
+Campus.Contracts.WorldSaveMoment.ClockOffset.init -> void
+Campus.Contracts.WorldSaveMoment.Deconstruct(out double WorldHours, out double ClockOffset, out Campus.Contracts.Season Season, out int FlowRate) -> void
+Campus.Contracts.WorldSaveMoment.Equals(Campus.Contracts.WorldSaveMoment other) -> bool
+Campus.Contracts.WorldSaveMoment.FlowRate.get -> int
+Campus.Contracts.WorldSaveMoment.FlowRate.init -> void
+Campus.Contracts.WorldSaveMoment.Season.get -> Campus.Contracts.Season
+Campus.Contracts.WorldSaveMoment.Season.init -> void
+Campus.Contracts.WorldSaveMoment.WorldHours.get -> double
+Campus.Contracts.WorldSaveMoment.WorldHours.init -> void
+Campus.Contracts.WorldSaveMoment.WorldSaveMoment() -> void
+Campus.Contracts.WorldSaveMoment.WorldSaveMoment(double WorldHours, double ClockOffset, Campus.Contracts.Season Season, int FlowRate) -> void
 Campus.Contracts.WorldTransition
 Campus.Contracts.WorldTransition.None = 0 -> Campus.Contracts.WorldTransition
 Campus.Contracts.WorldTransition.Season = 2 -> Campus.Contracts.WorldTransition
@@ -4942,6 +5026,9 @@ abstract Campus.Contracts.OverlayGeometry.<Clone>$() -> Campus.Contracts.Overlay
 abstract Campus.Contracts.OverlayOp.<Clone>$() -> Campus.Contracts.OverlayOp!
 abstract Campus.Contracts.Parts.BoxPartParams.<Clone>$() -> Campus.Contracts.Parts.BoxPartParams!
 abstract Campus.Contracts.TerrainOp.<Clone>$() -> Campus.Contracts.TerrainOp!
+const Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfBoundaryByte = 128 -> byte
+const Campus.Contracts.Atlas.AtlasBaseSnapshot.SdfRangeMetres = 8 -> float
+const Campus.Contracts.Atlas.AtlasBaseSnapshot.UnknownRegion = 255 -> byte
 const Campus.Contracts.Audio.AudioBuses.Air = "Air" -> string!
 const Campus.Contracts.Audio.AudioBuses.AmbBed = "Amb.Bed" -> string!
 const Campus.Contracts.Audio.AudioBuses.AmbEmit = "Amb.Emit" -> string!
@@ -5184,6 +5271,9 @@ override Campus.Contracts.Atlas.AtlasLayer.ToString() -> string!
 override Campus.Contracts.Atlas.AtlasMarker.Equals(object? obj) -> bool
 override Campus.Contracts.Atlas.AtlasMarker.GetHashCode() -> int
 override Campus.Contracts.Atlas.AtlasMarker.ToString() -> string!
+override Campus.Contracts.Atlas.AtlasPlacedLabel.Equals(object? obj) -> bool
+override Campus.Contracts.Atlas.AtlasPlacedLabel.GetHashCode() -> int
+override Campus.Contracts.Atlas.AtlasPlacedLabel.ToString() -> string!
 override Campus.Contracts.Atlas.AtlasRegion.Equals(object? obj) -> bool
 override Campus.Contracts.Atlas.AtlasRegion.GetHashCode() -> int
 override Campus.Contracts.Atlas.AtlasRegion.ToString() -> string!
@@ -5787,6 +5877,9 @@ override Campus.Contracts.WorldFeature.ToString() -> string!
 override Campus.Contracts.WorldFeaturePart.Equals(object? obj) -> bool
 override Campus.Contracts.WorldFeaturePart.GetHashCode() -> int
 override Campus.Contracts.WorldFeaturePart.ToString() -> string!
+override Campus.Contracts.WorldModelLoadInputs.Equals(object? obj) -> bool
+override Campus.Contracts.WorldModelLoadInputs.GetHashCode() -> int
+override Campus.Contracts.WorldModelLoadInputs.ToString() -> string!
 override Campus.Contracts.WorldModelLoadResult.Equals(object? obj) -> bool
 override Campus.Contracts.WorldModelLoadResult.GetHashCode() -> int
 override Campus.Contracts.WorldModelLoadResult.ToString() -> string!
@@ -5796,6 +5889,7 @@ override Campus.Contracts.WorldNetwork.ToString() -> string!
 override Campus.Contracts.WorldPreset.Equals(object? obj) -> bool
 override Campus.Contracts.WorldPreset.GetHashCode() -> int
 override Campus.Contracts.WorldPreset.ToString() -> string!
+override Campus.Contracts.WorldSaveMoment.GetHashCode() -> int
 override Campus.Contracts.WpId.GetHashCode() -> int
 override Campus.Contracts.ZoneId.GetHashCode() -> int
 override Campus.Contracts.ZoneVolume.Equals(object? obj) -> bool
@@ -5853,6 +5947,8 @@ static Campus.Contracts.Atlas.AtlasLayer.operator !=(Campus.Contracts.Atlas.Atla
 static Campus.Contracts.Atlas.AtlasLayer.operator ==(Campus.Contracts.Atlas.AtlasLayer? left, Campus.Contracts.Atlas.AtlasLayer? right) -> bool
 static Campus.Contracts.Atlas.AtlasMarker.operator !=(Campus.Contracts.Atlas.AtlasMarker? left, Campus.Contracts.Atlas.AtlasMarker? right) -> bool
 static Campus.Contracts.Atlas.AtlasMarker.operator ==(Campus.Contracts.Atlas.AtlasMarker? left, Campus.Contracts.Atlas.AtlasMarker? right) -> bool
+static Campus.Contracts.Atlas.AtlasPlacedLabel.operator !=(Campus.Contracts.Atlas.AtlasPlacedLabel? left, Campus.Contracts.Atlas.AtlasPlacedLabel? right) -> bool
+static Campus.Contracts.Atlas.AtlasPlacedLabel.operator ==(Campus.Contracts.Atlas.AtlasPlacedLabel? left, Campus.Contracts.Atlas.AtlasPlacedLabel? right) -> bool
 static Campus.Contracts.Atlas.AtlasRegion.operator !=(Campus.Contracts.Atlas.AtlasRegion? left, Campus.Contracts.Atlas.AtlasRegion? right) -> bool
 static Campus.Contracts.Atlas.AtlasRegion.operator ==(Campus.Contracts.Atlas.AtlasRegion? left, Campus.Contracts.Atlas.AtlasRegion? right) -> bool
 static Campus.Contracts.Atlas.AtlasSave.operator !=(Campus.Contracts.Atlas.AtlasSave? left, Campus.Contracts.Atlas.AtlasSave? right) -> bool
@@ -6369,6 +6465,8 @@ static Campus.Contracts.WorldFeature.operator !=(Campus.Contracts.WorldFeature? 
 static Campus.Contracts.WorldFeature.operator ==(Campus.Contracts.WorldFeature? left, Campus.Contracts.WorldFeature? right) -> bool
 static Campus.Contracts.WorldFeaturePart.operator !=(Campus.Contracts.WorldFeaturePart? left, Campus.Contracts.WorldFeaturePart? right) -> bool
 static Campus.Contracts.WorldFeaturePart.operator ==(Campus.Contracts.WorldFeaturePart? left, Campus.Contracts.WorldFeaturePart? right) -> bool
+static Campus.Contracts.WorldModelLoadInputs.operator !=(Campus.Contracts.WorldModelLoadInputs? left, Campus.Contracts.WorldModelLoadInputs? right) -> bool
+static Campus.Contracts.WorldModelLoadInputs.operator ==(Campus.Contracts.WorldModelLoadInputs? left, Campus.Contracts.WorldModelLoadInputs? right) -> bool
 static Campus.Contracts.WorldModelLoadResult.operator !=(Campus.Contracts.WorldModelLoadResult? left, Campus.Contracts.WorldModelLoadResult? right) -> bool
 static Campus.Contracts.WorldModelLoadResult.operator ==(Campus.Contracts.WorldModelLoadResult? left, Campus.Contracts.WorldModelLoadResult? right) -> bool
 static Campus.Contracts.WorldNetwork.Empty.get -> Campus.Contracts.WorldNetwork!
@@ -6376,6 +6474,8 @@ static Campus.Contracts.WorldNetwork.operator !=(Campus.Contracts.WorldNetwork? 
 static Campus.Contracts.WorldNetwork.operator ==(Campus.Contracts.WorldNetwork? left, Campus.Contracts.WorldNetwork? right) -> bool
 static Campus.Contracts.WorldPreset.operator !=(Campus.Contracts.WorldPreset? left, Campus.Contracts.WorldPreset? right) -> bool
 static Campus.Contracts.WorldPreset.operator ==(Campus.Contracts.WorldPreset? left, Campus.Contracts.WorldPreset? right) -> bool
+static Campus.Contracts.WorldSaveMoment.operator !=(Campus.Contracts.WorldSaveMoment left, Campus.Contracts.WorldSaveMoment right) -> bool
+static Campus.Contracts.WorldSaveMoment.operator ==(Campus.Contracts.WorldSaveMoment left, Campus.Contracts.WorldSaveMoment right) -> bool
 static Campus.Contracts.WpId.operator !=(Campus.Contracts.WpId left, Campus.Contracts.WpId right) -> bool
 static Campus.Contracts.WpId.operator ==(Campus.Contracts.WpId left, Campus.Contracts.WpId right) -> bool
 static Campus.Contracts.ZoneId.operator !=(Campus.Contracts.ZoneId left, Campus.Contracts.ZoneId right) -> bool
@@ -6540,6 +6640,8 @@ virtual Campus.Contracts.TerrainOp.PrintMembers(System.Text.StringBuilder! build
 ~override Campus.Contracts.WeatherVec.ToString() -> string
 ~override Campus.Contracts.WindSample.Equals(object obj) -> bool
 ~override Campus.Contracts.WindSample.ToString() -> string
+~override Campus.Contracts.WorldSaveMoment.Equals(object obj) -> bool
+~override Campus.Contracts.WorldSaveMoment.ToString() -> string
 ~override Campus.Contracts.WpId.Equals(object obj) -> bool
 ~override Campus.Contracts.WpId.ToString() -> string
 ~override Campus.Contracts.ZoneId.Equals(object obj) -> bool

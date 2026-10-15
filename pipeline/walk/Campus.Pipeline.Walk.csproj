@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <RootNamespace>Campus.Pipeline.Walk</RootNamespace>
+    <!-- The shared project can land before WP-44's entry point; it becomes a CLI with that authored source. -->
+    <OutputType Condition="Exists('$(MSBuildProjectDirectory)/Program.cs')">Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../game/contracts/Campus.Contracts.csproj;../../game/gen/world/Campus.Gen.World.csproj;../../game/gen/walkable/Campus.Gen.Walkable.csproj" />
+  </ItemGroup>
+</Project>

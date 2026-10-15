@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts.Save;
+using Campus.Contracts.Maps;
 
 // 平面地图（照 SYS-ATLAS §11，WP-48c；Campus.Gen.* 不得引用 IAtlasService）
 // 自定义标记的 ID 是按存档递增的整数（Guid.NewGuid 被 G4 禁用）
@@ -28,7 +29,10 @@ public sealed record AtlasMarker(
     FeatureId? Feature = null,          // 锚点：design:anchor:Axx；地标、设施：实体；室内：楼
     string? WaypointId = null,          // Viewpoint：引用 waypoints.json，不复制位姿
     string? RouteId = null,
-    AnchorForm? Form = null);
+    AnchorForm? Form = null)
+{
+    public WaypointGroup? Group { get; init; }
+}
 
 public sealed record AtlasRegion(string Id, LocalizedName Name, string? Parent);   // 大区的 Parent 为 null
 public sealed record AtlasLayer(string Id, LocalizedName Name, float YMin, float YMax);   // 预留：楼层图
@@ -46,6 +50,7 @@ public interface IAtlasService                                    // Kernel 服�
 {
     long Rev { get; }
     MapId Map { get; }
+    MapRect PageRect { get; } // Atlas page extent from authored data; unavailable until the map is loaded.
     IReadOnlyList<AtlasMarker> Markers { get; }                   // 含运行时由室内索引生成的门口标记与自定义标记
     IReadOnlyList<AtlasRegion> Regions { get; }
     event Action? Changed;                                        // 主线程；换图、标记增删、解锁或追踪变化时发

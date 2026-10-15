@@ -13,9 +13,13 @@ public sealed class AtlasServiceStub(ICameraRig camera, IRuleset ruleset, IAppFl
     private readonly List<CustomPin> _pins = [];
     private AtlasMarker[] _waypointMarkers = [];
     private int _nextPinId = 1;
+    private MapRect? _pageRect;
+    private MapId _pageRectMap;
     public Func<string, byte[]>? ReadData { get; set; }
     public long Rev { get; private set; }
     public MapId Map { get; private set; }
+    public MapRect PageRect => _pageRect is { } rect && _pageRectMap == Map ? rect :
+        throw new InvalidOperationException("Atlas page rectangle is unavailable before map context is loaded.");
     public IReadOnlyList<AtlasMarker> Markers { get; private set; } = [];
     public IReadOnlyList<AtlasRegion> Regions => [];
     public event Action? Changed;
@@ -34,7 +38,8 @@ public sealed class AtlasServiceStub(ICameraRig camera, IRuleset ruleset, IAppFl
         _pins.Clear(); _nextPinId = 1; Tracked = null;
         _waypointMarkers = file.Waypoints.Select(w => new AtlasMarker(new MarkerId(w.Id), MarkerKind.Viewpoint,
             w.Name, new Vector2(w.Fly.Position.X, w.Fly.Position.Z), "viewpoint", 0, 0, null,
-            new TeleportSpec(w.Fly, w.Stand, w.Entry), WaypointId: w.Id)).ToArray();
+            new TeleportSpec(w.Fly, w.Stand, w.Entry), WaypointId: w.Id)
+        { Group = w.Group }).ToArray();
         Refresh();
     }
 
@@ -97,11 +102,19 @@ public sealed class AtlasServiceStub(ICameraRig camera, IRuleset ruleset, IAppFl
     }
     public void OnMapUnloading(MapId from)
     {
+        _pageRect = null;
+        _pageRectMap = default;
         _waypointMarkers = []; _pins.Clear(); _nextPinId = 1; Tracked = null; Map = default;
         Refresh();
     }
     public void OnMapLoaded(IMapContext ctx)
     {
+        // Explicit D0 fallback until authored atlas markers are available: 1.2 times this map's data extent.
+        var dataRect = ctx.Descriptor.DataRect;
+        var center = (dataRect.Min + dataRect.Max) * 0.5f;
+        var halfExtent = (dataRect.Max - dataRect.Min) * 0.6f;
+        _pageRect = new(center - halfExtent, center + halfExtent);
+        _pageRectMap = ctx.Descriptor.Id;
         if (ReadData is { } read) LoadFromBytes(ctx.Descriptor.Id, read(ctx.DataRoot + "waypoints.json"));
         else if (Map != ctx.Descriptor.Id)
         {

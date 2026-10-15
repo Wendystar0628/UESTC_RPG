@@ -155,6 +155,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Campus.Gen.Tests", "Campus.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Campus.Tests", "Campus.Tests.csproj", "{3281C4E8-6D6A-4121-B0E9-436665EE18E5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Campus.Pipeline.Walk", "..\pipeline\walk\Campus.Pipeline.Walk.csproj", "{D514E751-6FF6-43C9-8379-FBB23CF11015}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -621,6 +623,18 @@ Global
 		{3281C4E8-6D6A-4121-B0E9-436665EE18E5}.Release|x64.Build.0 = Release|Any CPU
 		{3281C4E8-6D6A-4121-B0E9-436665EE18E5}.Release|x86.ActiveCfg = Release|Any CPU
 		{3281C4E8-6D6A-4121-B0E9-436665EE18E5}.Release|x86.Build.0 = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|x64.Build.0 = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Debug|x86.Build.0 = Debug|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|x64.ActiveCfg = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|x64.Build.0 = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|x86.ActiveCfg = Release|Any CPU
+		{D514E751-6FF6-43C9-8379-FBB23CF11015}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

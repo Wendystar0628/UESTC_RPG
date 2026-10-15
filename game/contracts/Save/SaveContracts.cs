@@ -63,7 +63,12 @@ public enum RestorePhase : byte
 }
 public enum LoadScope : byte { Full, Preview }      // 读档范围：Preview 给开始页用，不恢复 Pose 阶段（SYS-SAVE §5.1，SYS-TITLE §1.1 第 6 步）
 
-public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool Forced);
+public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool Forced)
+{
+    // Shared settled endpoint captured once by WP-50; null retains the legacy caller shape.
+    // Core world and active-map weather sections must use the same non-null moment in production saves.
+    public WorldSaveMoment? Moment { get; init; }
+}
 // Forced：此刻不是安全时刻（退出，或顺延满 60 s），各段必须给出落定值（SYS-SAVE §4.2）
 public sealed class RestoreContext
 {

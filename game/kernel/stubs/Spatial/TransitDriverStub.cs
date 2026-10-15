@@ -8,6 +8,7 @@ namespace Campus.Kernel.Stubs;
 [KernelService(typeof(ITransitDriver), Owner = "WP-00", IsStub = true)]
 public sealed class TransitDriverStub(ICameraRig camera) : ITransitDriver
 {
+    public bool IsReady => false;
     public Pose? Destination { get; private set; }
 
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null)

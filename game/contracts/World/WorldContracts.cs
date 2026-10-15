@@ -75,9 +75,23 @@ public interface IWorldControl              // 没有任何让世界时间倒退
     void Freeze(double clock, Season season, double anim);     // 只给测试构建（--clock、--season、--anim）：启动时设初值，WorldHours 从 clock 起算
 }
 
+/// <summary>The single settled endpoint shared by every section in one Save-frame capture.</summary>
+public readonly record struct WorldSaveMoment(double WorldHours, double ClockOffset, Season Season, int FlowRate);
+
 /// <summary>Commits the restored world once all World-phase save sections have succeeded.</summary>
 public interface IWorldRestore
 {
+    // Get once per capture on the main Save frame, after all control requests for that frame.
+    // WorldHours/ClockOffset/Season are the settled target; FlowRate is 0 at a pending FlowTo stop.
+    // No time advancement, weather Step, random draws, or live-state mutation is permitted.
+    WorldSaveMoment GetSaveMoment() => throw new NotSupportedException("This world provider does not support a shared save moment.");
+
+    // Fault latch, not rollback: stop world progression and reject controls/capture while faulted.
+    // Abort must run synchronously in the same Save frame as the failing restore callback.
+    // It never increments Instance. Only a fresh valid Restore + CompleteRestore clears the latch.
+    void AbortRestore() => throw new NotSupportedException("This world provider does not support restore fault isolation.");
+    bool RestoreFaulted => false;
+
     // WP-50 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
     // 然后才执行地图 Travel 及 Content/Pose 阶段；新游戏同序，CompleteResume 不调用。
     // world.Restore 只恢复本段并清瞬态，不增加 Instance，也不调用天气 Reset/Quiet/Step。
@@ -144,6 +158,12 @@ public interface IWeatherProcess
     void Enter(MapId map, string profile, double worldHours);          // 进图：恢复或新建本图的过程，补算到 worldHours；离开超过 72 h 则 epoch + 1 从现在重排（SYS-MAPS §5）
     void Leave(MapId map, double worldHours);                          // 离图：冻结在离开那一刻
     WeatherProcessState Capture(MapId map);                            // 存档：给出落定值，过渡中取终点（SYS-SAVE §4.2）；在 FramePriority.Save 那一步调用
+    // Pure settled snapshot for the specified map and shared world endpoint. Work on a copy:
+    // never Step/Advance/Reseason the live process, consume its random stream, or change Now/Ahead.
+    // The save owner passes the shared moment only to the active map; inactive maps keep their frozen
+    // Capture(map) endpoint, including when CaptureAt is explicitly called for an inactive map.
+    WeatherProcessState CaptureAt(MapId map, in WorldSaveMoment moment) =>
+        throw new NotSupportedException("This weather provider does not support a specified save moment.");
     void Restore(MapId map, WeatherProcessState s);                    // 读档：在遮挡下直接落到存档的状态，不做过渡、不调 Reset
 }
 

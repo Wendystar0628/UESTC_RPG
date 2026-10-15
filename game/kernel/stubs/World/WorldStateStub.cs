@@ -10,10 +10,13 @@ namespace Campus.Kernel.Stubs;
 [KernelService(typeof(IWorldRestore), Owner = "WP-00", IsStub = true)]
 public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : IWorldState, IWorldControl, IViewControl, IWorldRestore
 {
+    private double _clockOffset;
+    private bool _restorePending;
+    public bool RestoreFaulted { get; private set; }
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
     public double WorldHours { get; private set; } = 17.5;
-    public double Clock => WorldHours % 24;
+    public double Clock => ((WorldHours + _clockOffset) % 24 + 24) % 24;
     public double SeasonPos => (int)SeasonTarget;
     public Season SeasonTarget { get; private set; } = Season.Autumn;
     public Body Sun { get; } = new(new Vector3(-0.870593f, 0.095846f, 0.482578f), 5.5f, 241, 1);
@@ -62,6 +65,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump)
     {
+        EnsureControlsAvailable();
         ValidateClock(hours);
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         WorldHours += (hours - Clock + 24) % 24;
@@ -70,6 +74,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void Advance(double hours)
     {
+        EnsureControlsAvailable();
         if (!double.IsFinite(hours) || hours <= 0 || !double.IsFinite(WorldHours + hours))
             throw new ArgumentOutOfRangeException(nameof(hours));
         WorldHours += hours;
@@ -78,6 +83,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void FlowTo(double clock, int rate)
     {
+        EnsureControlsAvailable();
         ValidateRate(rate);
         SetClock(clock);
         Flow = new Flow(0);
@@ -85,14 +91,16 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void SetSeason(Season s)
     {
+        EnsureControlsAvailable();
         if (!Enum.IsDefined(s)) throw new ArgumentOutOfRangeException(nameof(s));
         SeasonTarget = s;
-        weather.Reseason(WorldHours, s, 0);
+        weather.Reseason(WorldHours, s, _clockOffset);
         Rev++;
     }
 
     public void SetFlow(int rate)
     {
+        EnsureControlsAvailable();
         ValidateRate(rate);
         Flow = new Flow(rate);
         Rev++;
@@ -100,6 +108,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void SetWeather(WeatherKind kind, float? intensity = null)
     {
+        EnsureControlsAvailable();
         if (!IsNative(kind)) return;
         weather.Select(new WeatherSel(WeatherMode.Manual, kind, intensity ?? 0.5f));
         Rev++;
@@ -107,18 +116,21 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void SetWeatherIntensity(float intensity)
     {
+        EnsureControlsAvailable();
         weather.Select(Weather with { Intensity = intensity });
         Rev++;
     }
 
     public void SetWeatherAuto()
     {
+        EnsureControlsAvailable();
         weather.Select(Weather with { Mode = WeatherMode.Auto });
         Rev++;
     }
 
     public void Apply(WorldPreset p)
     {
+        EnsureControlsAvailable();
         ArgumentNullException.ThrowIfNull(p);
         ValidateClock(p.Clock);
         if (!Enum.IsDefined(p.Season)) throw new ArgumentOutOfRangeException(nameof(p));
@@ -134,6 +146,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void ResetDefault()
     {
+        EnsureControlsAvailable();
         SetSeason(Season.Autumn);
         SetClock(17.5);
         SetFlow(1);
@@ -143,10 +156,12 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public void Freeze(double clock, Season season, double anim)
     {
+        EnsureControlsAvailable();
         ValidateClock(clock);
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (!double.IsFinite(anim) || anim < 0) throw new ArgumentOutOfRangeException(nameof(anim));
         WorldHours = clock;
+        _clockOffset = 0;
         SeasonTarget = season;
         AnimTime = anim % 480;
         Flow = new Flow(0);
@@ -157,16 +172,47 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
     /// <summary>Called by the D0 save stub when starting a fresh world instance.</summary>
     public void BeginNewInstance()
     {
-        WorldHours = 17.5;
-        SeasonTarget = Season.Autumn;
+        Restore(new WorldSaveMoment(17.5, 0, Season.Autumn, 1));
         AnimTime = 240;
-        Flow = new Flow(1);
         ViewMode = ViewMode.Fly;
         CompleteRestore();
     }
 
+    public WorldSaveMoment GetSaveMoment()
+    {
+        EnsureControlsAvailable();
+        return new(WorldHours, _clockOffset, SeasonTarget, Flow.Rate);
+    }
+
+    public void AbortRestore()
+    {
+        // Do not pretend a partially restored world was rolled back or successfully committed.
+        var changed = !RestoreFaulted || _restorePending;
+        _restorePending = false;
+        RestoreFaulted = true;
+        if (changed) Rev++;
+    }
+
+    /// <summary>D0 staging hook for a fresh load/new-game restore; no weather mutation or instance change.</summary>
+    public void Restore(in WorldSaveMoment moment)
+    {
+        if (!double.IsFinite(moment.WorldHours) || moment.WorldHours < 0 ||
+            !double.IsFinite(moment.ClockOffset) || !double.IsFinite(moment.WorldHours + moment.ClockOffset) ||
+            !Enum.IsDefined(moment.Season)) throw new ArgumentOutOfRangeException(nameof(moment));
+        ValidateRate(moment.FlowRate);
+        WorldHours = moment.WorldHours;
+        _clockOffset = moment.ClockOffset;
+        SeasonTarget = moment.Season;
+        Flow = new Flow(moment.FlowRate);
+        _restorePending = true;
+        // Keep the fault latch until the coordinator successfully commits all World sections.
+    }
+
     public void CompleteRestore()
     {
+        if (!_restorePending) throw new InvalidOperationException("A fresh world restore is required before commit.");
+        _restorePending = false;
+        RestoreFaulted = false;
         // D0 celestial readouts are already settled; leave restored weather untouched.
         Instance++;
         Rev++;
@@ -175,6 +221,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
     /// <summary>Keeps the shared readout in sync with the D0 camera mode control.</summary>
     public void SetViewMode(ViewMode mode)
     {
+        EnsureControlsAvailable();
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         ViewMode = mode;
         Rev++;
@@ -182,11 +229,18 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
 
     public Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via)
     {
+        EnsureControlsAvailable();
         if (!Enum.IsDefined(m)) throw new ArgumentOutOfRangeException(nameof(m));
         if (!Enum.IsDefined(via)) throw new ArgumentOutOfRangeException(nameof(via));
         if (!ruleset.Current.ViewModes.Contains(m)) return Task.FromResult(ModeSwitchResult.Refused);
         SetViewMode(m);
         return Task.FromResult(ModeSwitchResult.Ok);
+    }
+
+    private void EnsureControlsAvailable()
+    {
+        if (RestoreFaulted || _restorePending)
+            throw new InvalidOperationException("World restore is incomplete or faulted; load or start a new game.");
     }
 
     private static void ValidateClock(double hours)
