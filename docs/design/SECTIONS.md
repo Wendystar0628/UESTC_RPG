@@ -274,42 +274,42 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 52.4k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 53.5k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
 - ART-STYLE §0 结论 · L48 · 2.7k
   - ★ ART-STYLE §0.1 接入要点 · L63 · 1.5k
-- ART-STYLE §1 总体风格与参照 · L78 · 912
-- ART-STYLE §2 明暗分阶 · L96 · 5.5k
-- ART-STYLE §3 影子：明度为主，按材质定影色 · L171 · 5.3k
-  - ART-STYLE §3.1 原则 · L175 · 656
-  - ART-STYLE §3.2 推导规则 · L190 · 1.8k
-  - ART-STYLE §3.3 天光与地面反光 · L233 · 370
-  - ART-STYLE §3.4 室内暖影 · L241 · 622
-  - ART-STYLE §3.5 哪些材质有色调变化 · L252 · 346
-  - ART-STYLE §3.6 夜间与阴雨 · L264 · 321
-  - ART-STYLE §3.7 示例 · L270 · 1.0k
-- ART-STYLE §4 描线 · L291 · 6.1k
-- ART-STYLE §5 高光、边缘光与透光 · L370 · 3.9k
-- ART-STYLE §6 贴图与笔触 · L421 · 1.4k
-- ART-STYLE §7 后期 · L444 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L513 · 8.4k
-  - ART-STYLE §8.1 风格色 · L515 · 2.8k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L560 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L579 · 1.2k
-  - ART-STYLE §8.4 界面色 · L611 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L636 · 952
-  - ART-STYLE §8.6 天气色 · L649 · 1.1k
-- ART-STYLE §9 排除元素 · L668 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L670 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L696 · 599
-- ART-STYLE §10 材质速查 · L705 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L723 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L755 · 419
-- ART-STYLE §13 情绪弧线 · L768 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L793 · 1.9k
-- ART-STYLE §14 待验证（P0） · L813 · 2.1k
+- ART-STYLE §1 总体风格与参照 · L78 · 2.0k
+- ART-STYLE §2 明暗分阶 · L117 · 5.5k
+- ART-STYLE §3 影子：明度为主，按材质定影色 · L192 · 5.3k
+  - ART-STYLE §3.1 原则 · L196 · 656
+  - ART-STYLE §3.2 推导规则 · L211 · 1.8k
+  - ART-STYLE §3.3 天光与地面反光 · L254 · 370
+  - ART-STYLE §3.4 室内暖影 · L262 · 622
+  - ART-STYLE §3.5 哪些材质有色调变化 · L273 · 346
+  - ART-STYLE §3.6 夜间与阴雨 · L285 · 321
+  - ART-STYLE §3.7 示例 · L291 · 1.0k
+- ART-STYLE §4 描线 · L312 · 6.1k
+- ART-STYLE §5 高光、边缘光与透光 · L391 · 3.9k
+- ART-STYLE §6 贴图与笔触 · L442 · 1.4k
+- ART-STYLE §7 后期 · L465 · 5.7k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L534 · 8.4k
+  - ART-STYLE §8.1 风格色 · L536 · 2.8k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L581 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L600 · 1.2k
+  - ART-STYLE §8.4 界面色 · L632 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L657 · 952
+  - ART-STYLE §8.6 天气色 · L670 · 1.1k
+- ART-STYLE §9 排除元素 · L689 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L691 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L717 · 599
+- ART-STYLE §10 材质速查 · L726 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L744 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L776 · 419
+- ART-STYLE §13 情绪弧线 · L789 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L814 · 1.9k
+- ART-STYLE §14 待验证（P0） · L834 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
