@@ -1,0 +1,54 @@
+using Campus.Contracts.Quality;
+
+namespace Campus.Kernel.Lighting;
+
+/// <summary>
+/// Engine-side shadow configuration for the three shadow knobs WP-03 owns (SYS-GRAPHICS 3, ENG-PERF 10.1).
+/// None of these change specialization constants: atlas size, split count, distance, splits and the
+/// caster mask are all switched without pipeline compilation.
+/// </summary>
+public readonly record struct ShadowSettings(int AtlasSize, int Splits, float MaxDistance,
+    float Split1, float Split2, float Split3, uint CasterMask)
+{
+    /// <summary>VisualInstance3D layers are 1-based in ENG-PERF 4; this is the bit of layer n.</summary>
+    public static uint LayerBit(int layer) => 1u << (layer - 1);
+
+    /// <summary>Layers that never cast: ground, vegetation visuals, grass/particles, underground, water, far ring.</summary>
+    public static readonly uint NonCasters =
+        LayerBit(2) | LayerBit(4) | LayerBit(6) | LayerBit(7) | LayerBit(9) | LayerBit(10);
+
+    /// <summary>Small casters (rails, lamp posts, benches, bikes) follow the "small casters" knob.</summary>
+    public static readonly uint SmallCasterLayer = LayerBit(3);
+
+    // ENG-PERF 10.1: PSSM 4 at 1600 m splits at 48 / 192 / 640 m; PSSM 2 uses Split1 = 0.15.
+    private const float Near1 = 48f, Near2 = 192f, Near3 = 640f;
+
+    public static ShadowSettings From(QualityView view)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+        return From((int)MathF.Round(view[QualityKnob.ShadowQuality]), view[QualityKnob.ShadowDistance],
+            view[QualityKnob.SmallCasters] >= 0.5f);
+    }
+
+    /// <param name="quality">0 = 2048 · 2 splits, 1 = 4096 · 4 splits, 2 = 8192 · 4 splits.</param>
+    public static ShadowSettings From(int quality, float distance, bool smallCasters)
+    {
+        var (size, splits) = quality switch
+        {
+            0 => (2048, 2),
+            1 => (4096, 4),
+            2 => (8192, 4),
+            _ => throw new ArgumentOutOfRangeException(nameof(quality), quality, "Shadow quality is 0, 1 or 2."),
+        };
+        if (!float.IsFinite(distance) || distance < 600f || distance > 1600f)
+            throw new ArgumentOutOfRangeException(nameof(distance), distance, "Shadow distance is 600–1600 m.");
+        var mask = ~NonCasters;
+        if (!smallCasters) mask &= ~SmallCasterLayer;
+        if (splits == 2) return new(size, 2, distance, 0.15f, 0f, 0f, mask);
+        // Keep the near cascades at their absolute size; the third boundary never exceeds 60 % of the range.
+        var s1 = Near1 / distance;
+        var s2 = Near2 / distance;
+        var s3 = MathF.Min(Near3 / distance, 0.6f);
+        return new(size, 4, distance, s1, s2, MathF.Max(s3, s2 + 0.05f), mask);
+    }
+}
