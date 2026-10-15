@@ -289,7 +289,7 @@
   - ART-STYLE §3.4 室内暖影 · L264 · 622
   - ART-STYLE §3.5 哪些材质有色调变化 · L275 · 346
   - ART-STYLE §3.6 夜间与阴雨 · L287 · 321
-  - ART-STYLE §3.7 示例 · L293 · 1.0k
+  - ART-STYLE §3.7 示例 · L293 · 1.1k
 - ART-STYLE §4 描线 · L314 · 6.1k
 - ART-STYLE §5 高光、边缘光与透光 · L393 · 3.9k
 - ART-STYLE §6 贴图与笔触 · L444 · 1.4k
@@ -606,7 +606,7 @@
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.3k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.2k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、core.overlay.json
 
   - MAP-QSH-CORE 分工 · L27 · 998
@@ -622,7 +622,7 @@
 - MAP-QSH-CORE §6 本区的构图关系 · L258 · 413
 - MAP-QSH-CORE WP-16 交付验收 · L266 · 929
 - MAP-QSH-CORE 定位、设计增补与近景要求 · L284 · 2.4k
-- MAP-QSH-CORE §7 季节与昼夜清单 · L330 · 4.9k
+- MAP-QSH-CORE §7 季节与昼夜清单 · L330 · 4.8k
 - MAP-QSH-CORE §8 行走 · L386 · 3.9k
   - MAP-QSH-CORE §8.1 主网路段（必须能走，SYS-WALK §6） · L390 · 335
   - MAP-QSH-CORE §8.2 能看不能进的地方与挡路物 · L405 · 792
@@ -1033,7 +1033,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.2k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.1k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
