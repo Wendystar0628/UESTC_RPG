@@ -388,8 +388,8 @@ Boot ──转为实时──▶ Title ──Enter──▶ Entering ──交�
 ### 7.4 契约
 
 ```csharp
-// game/contracts/Flow/（纯 .NET，只增不改；WP-00 合入，WP-49a 实现）
-namespace Campus.Contracts.Flow;
+// game/contracts/AppFlow/（纯 .NET，只增不改；WP-00 合入，WP-49a 实现）
+namespace Campus.Contracts.AppFlow;
 
 public enum AppState : byte { Boot, Title, Entering, Playing, Leaving, Quitting }
 public enum EnterKind : byte { NewGame, Continue, LoadSlot }

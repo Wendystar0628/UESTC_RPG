@@ -179,7 +179,7 @@ gates: [G1, G2, G3, G4, G5]
 
 | 程序集 | 目录 | 说明 |
 | --- | --- | --- |
-| `Campus.Contracts` | `game/contracts` | 纯 .NET 契约，只引用基础类库；子目录 `Quality/`、`Maps/`、`Atlas/`、`Flow/`、`Cinematic/`、`Save/`、`Audio/`、`Parts/`、`schemas/` |
+| `Campus.Contracts` | `game/contracts` | 纯 .NET 契约，只引用基础类库；子目录 `Quality/`、`Maps/`、`Atlas/`、`AppFlow/`、`Cinematic/`、`Save/`、`Audio/`、`Parts/`、`schemas/` |
 | `Campus.Gen.World` | `game/gen/world` | 世界模型 |
 | `Campus.Gen.Parts.Core`、`Campus.Gen.Parts.<类>` | `game/gen/parts/…` | 部件内核与各部件包 |
 | `Campus.Gen.Interior`、`Campus.Gen.InteriorProps` | `game/gen/interior/core`、`game/gen/interior-props` | 室内共享层，只许 `InteriorProps → Interior` 一个方向 |

@@ -1452,7 +1452,7 @@ public sealed record AtlasSave(
 
 ```csharp
 // 开始页与过场（照 SYS-TITLE §7.4，WP-49a 实现）
-namespace Campus.Contracts.Flow;
+namespace Campus.Contracts.AppFlow;   // 不叫 Flow：世界流逝的类型 Flow 已占用这个名字
 
 public enum AppState : byte { Boot, Title, Entering, Playing, Leaving, Quitting }
 public enum EnterKind : byte { NewGame, Continue, LoadSlot }
