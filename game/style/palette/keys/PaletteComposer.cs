@@ -31,16 +31,24 @@ public sealed class ColorScript
 
     public FrameVector Evaluate(Season season, double clock) => _curves[(int)season].Evaluate(ArtSun.PhaseAt(clock, season));
 
-    public WorldFrame EvaluateWorld(double clock, double seasonPos, in WeatherVec weather)
+    private FrameVector EvaluateAt(Season season, double altDeg, KeySide side) =>
+        _curves[(int)season].Evaluate(ArtSun.Phase(ArtSun.ToAutumnX(altDeg, season), side));
+
+    /// <summary>
+    /// Evaluates the world frame. Keyframes are indexed by sun altitude (SYS-TIME §3.1): <paramref name="sunAltDeg"/> is
+    /// IWorldState.Sun.AltDeg (WP-34, single source); the side of the arc comes from the clock. Null uses the mirrored art sun.
+    /// </summary>
+    public WorldFrame EvaluateWorld(double clock, double seasonPos, double? sunAltDeg, in WeatherVec weather)
     {
         var sp = ((seasonPos % 4.0) + 4.0) % 4.0;
         var ia = (int)Math.Floor(sp) % 4;
         var a = (Season)ia;
         var b = (Season)((ia + 1) % 4);
         var t = Oklab.Smootherstep(sp - Math.Floor(sp));
-        var f = Evaluate(a, clock);
-        if (t > 1e-9) f = DayCurve.Blend(f, Evaluate(b, clock), t);
-        var (h, _) = ArtSun.Altitude(clock, a);
+        var (ha, sideA) = ArtSun.Altitude(clock, a);
+        var h = sunAltDeg ?? ha;
+        var f = EvaluateAt(a, h, sideA);
+        if (t > 1e-9) f = DayCurve.Blend(f, EvaluateAt(b, h, ArtSun.Altitude(clock, b).Side), t);
         WeatherCorrection.Apply(Data.Weather, f, weather, h > -2.0);
         return new WorldFrame(f, ArtSun.ToAutumnX(h, a), h, a, b, t, WeatherCorrection.VegetationChromaMul(Data.Weather, weather));
     }
@@ -70,7 +78,7 @@ public sealed class PaletteComposer
     public const int Width = 256, Height = 64;
     public byte[] Pixels { get; } = new byte[Width * Height * 4];
 
-    private sealed record Pair(int LitId, string Family, string Class, Lab Albedo, VegetationSet.Entry? Veg);
+    private sealed record Pair(int LitId, string Family, string Class, Lab Albedo, VegetationSet.Entry? Veg, VegetationSet.Variant? Variant = null);
     private sealed record SeasonalFamily(int LitId, int Row, VegetationSet.Entry Veg);
 
     private readonly ColorScript _script;
@@ -105,6 +113,12 @@ public sealed class PaletteComposer
                 case PaletteRole.Lit:
                     var family = e.Token.Value.EndsWith(".lit", StringComparison.Ordinal) ? e.Token.Value[..^4] : e.Token.Value;
                     script.Vegetation.Entries.TryGetValue(family, out var veg);
+                    if (script.Vegetation.Variants.TryGetValue(family, out var variant))
+                    {
+                        if (e.Seasonal) { warnings.Add($"palette: variant '{family}' is registered as seasonal; variants only fill row 0"); break; }
+                        _pairs.Add(new Pair(e.Id, family, e.MaterialClass, FromSrgb(e.Albedo), script.Vegetation.Entries[variant.Base], variant));
+                        break;
+                    }
                     var cls = script.Deriver.HasClass(e.MaterialClass) ? e.MaterialClass : "building";
                     if (cls != e.MaterialClass) warnings.Add($"palette: material class '{e.MaterialClass}' of {e.Token.Value} unknown, using building");
                     if (e.Seasonal)
@@ -124,6 +138,13 @@ public sealed class PaletteComposer
     }
 
     private static Lab FromSrgb(Vector3 c) => Oklab.FromSrgb(c.X, c.Y, c.Z);
+
+    /// <summary>Linear RGB (ColorScriptSnapshot.FogSun / FogAnti are linear, unlike the sRGB palette bytes).</summary>
+    private static Vector3 LinearRgb(Lab c)
+    {
+        var (r, g, b) = Oklab.ToSrgbClipped(c);
+        return new Vector3((float)Oklab.SrgbToLinear(r), (float)Oklab.SrgbToLinear(g), (float)Oklab.SrgbToLinear(b));
+    }
 
     private void Put(int row, int col, Lab c)
     {
@@ -194,7 +215,14 @@ public sealed class PaletteComposer
             var m = p.Veg is { } veg
                 ? VegetationNow(veg, w)
                 : d.Material(p.Albedo, p.Class, w.Frame, w.X, null);
-            WritePair(p.LitId, m, d.LampLit(p.Albedo, _lampColor));
+            var lampAlbedo = p.Albedo;
+            if (p.Variant is { } variant)
+            {
+                m = VegetationSet.Offset(m, variant);
+                var a = p.Veg!.Albedo[(int)w.SeasonA];
+                lampAlbedo = Oklab.FromLch(a.L + variant.DL, a.Chroma, a.Hue + variant.Dh);
+            }
+            WritePair(p.LitId, m, d.LampLit(lampAlbedo, _lampColor));
         }
         foreach (var s in _seasonal)
         {
@@ -274,7 +302,9 @@ public sealed class PaletteComposer
             VignetteTint: tint,
             Fog: new Vector4((float)v[FogDensity], (float)v[HazeDeg], (float)v[FogStart], (float)v[FogSilhouette]))
         {
-            LampPoolGain = (float)v[LampPoolGain]
+            LampPoolGain = (float)v[LampPoolGain],
+            FogSun = LinearRgb(w.Frame.Color(FogSun)),
+            FogAnti = LinearRgb(w.Frame.Color(FogAnti))
         };
     }
 }

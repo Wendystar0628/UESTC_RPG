@@ -187,7 +187,18 @@ public sealed class VegetationSet
 {
     public sealed record Entry(string Token, string Class, Lab[] Albedo, HeroRef[] Hero, bool Constant);
 
+    /// <summary>A colour that follows another vegetation token with an OKLCH offset applied after derivation (vegetation.json variants).</summary>
+    public sealed record Variant(string Token, string Base, double DL, double Dh);
+
     public IReadOnlyDictionary<string, Entry> Entries { get; }
+    public IReadOnlyDictionary<string, Variant> Variants { get; }
+
+    /// <summary>Offsets every derived colour of the base token (lit, shade, interior rows) the same way, so shade follows lit.</summary>
+    public static MaterialColors Offset(MaterialColors m, Variant v)
+    {
+        Lab O(Lab c) => Oklab.FromLch(c.L + v.DL, c.Chroma, c.Hue + v.Dh);
+        return new(O(m.Lit), O(m.Shade), O(m.ShadeIn), O(m.LitIn));
+    }
 
     public VegetationSet(ColorScriptData data, Deriver deriver, IReadOnlyList<FrameVector>[] seasonKeys)
     {
@@ -231,5 +242,15 @@ public sealed class VegetationSet
             entries[token] = new Entry(token, v.GetProperty("class").GetString()!, [a, a, a, a], [h, h, h, h], true);
         }
         Entries = entries;
+        var variants = new Dictionary<string, Variant>(StringComparer.Ordinal);
+        if (data.Vegetation.TryGetProperty("variants", out var list))
+            foreach (var v in list.EnumerateArray())
+            {
+                var token = v.GetProperty("token").GetString()!;
+                var baseToken = v.GetProperty("base").GetString()!;
+                if (!entries.ContainsKey(baseToken)) throw new InvalidDataException($"Variant {token} follows unknown token {baseToken}.");
+                variants[token] = new Variant(token, baseToken, v.GetProperty("dL").GetDouble(), v.GetProperty("dh").GetDouble());
+            }
+        Variants = variants;
     }
 }

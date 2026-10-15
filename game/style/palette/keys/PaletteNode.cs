@@ -21,14 +21,15 @@ namespace Campus.Style.Palette.Keys;
 public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
 {
     private const string KeysDir = "res://style/palette/keys/";
-    // Contract-format registry (PaletteRegistryData) published by WP-04; the fallback mirrors its agreed layout.
-    private static readonly string[] RegistryPaths = ["res://style/palette/registry.json", "res://style/palette/core.json"];
+    private const string CorePath = "res://style/palette/core.json";
+    private const string ExtDir = "res://style/palette/ext";
 
     private readonly ColorScript _script;
     private readonly PaletteRegistry _registry;
     private readonly PaletteComposer _composer;
     private readonly Image _image;
     private readonly ImageTexture _texture;
+    private IDisposable? _registration;
     private IWorldState? _world;
     private long _rev;
     private long _instance = long.MinValue;
@@ -44,15 +45,17 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         ProcessPriority = FramePriority.Palette;
         _script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
             Read("vegetation.json"), Read("weather.json")));
-        (_registry, RegistrySource) = LoadRegistry();
+        (_registry, RegistrySource) = ResolveRegistry();
         _composer = new PaletteComposer(_script, _registry);
         foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
         // Default state until the world is read: autumn 17:30, clear (SYS-TIME §0).
-        var first = _script.EvaluateWorld(17.5, (double)Season.Autumn, default);
+        var first = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
         _composer.ComposeCurrent(first);
         _composer.StepSeasonal(first, full: true);
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture = ImageTexture.CreateFromImage(_image);
+        // WP-37 produces the palette (ENG-PERF §1.5); once published the registry owns its lifetime: never Dispose it here.
+        _registration = Services.Get<IGlobalDataTextureRegistry>().RegisterOwned(ShaderGlobals.Palette, _texture, _texture.GetRid());
         RenderingServer.GlobalShaderParameterSet(ShaderNames.Palette, _texture);
         Current = _composer.Snapshot(first, ++_rev);
         WriteGlobals(first);
@@ -70,70 +73,35 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         return bytes;
     }
 
-    private const string ExtDir = "res://style/palette/ext";
-
     /// <summary>
-    /// Core registry (contract PaletteRegistryData) plus every package extension in <c>style/palette/ext/*.json</c>
-    /// (ART-STYLE §8.5; <c>ui.json</c> is the UI token file, not a palette registry). Until WP-01 registers the shared
-    /// PaletteRegistry service, this is the evaluator's own loader; the WP-37 fallback replaces a missing core table.
+    /// The shared PaletteRegistry service once its source (IPaletteRegistrySource) is a production registration; until then
+    /// the same files WP-04's loader reads: core.json plus every package extension ext/WP-*.json (ART-STYLE §8.5).
     /// </summary>
-    private static (PaletteRegistry, string) LoadRegistry()
+    private static (PaletteRegistry, string) ResolveRegistry()
     {
-        var (core, source) = LoadCore();
-        var entries = new List<PaletteEntry>(core.Entries);
+        var source = Services.Services.Entries.FirstOrDefault(e => e.Kind == "service" && e.Id == typeof(IPaletteRegistrySource).FullName);
+        if (source is { IsStub: false }) return (Services.Get<PaletteRegistry>(), "service " + source.Type.Name);
+        var entries = new List<PaletteEntry>(Parse(CorePath).Entries);
         var extFiles = new List<string>();
         if (DirAccess.DirExistsAbsolute(ExtDir))
-        {
-            foreach (var name in ResourceLoader.ListDirectory(ExtDir).Where(n => n.EndsWith(".json", StringComparison.Ordinal)
-                && n != "ui.json").Order(StringComparer.Ordinal))
+            foreach (var name in ResourceLoader.ListDirectory(ExtDir)
+                .Where(n => n.StartsWith("WP-", StringComparison.Ordinal) && n.EndsWith(".json", StringComparison.Ordinal))
+                .Order(StringComparer.Ordinal))
             {
-                var path = ExtDir + "/" + name;
-                try
-                {
-                    var data = JsonSerializer.Deserialize<PaletteRegistryData>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options)
-                        ?? throw new InvalidDataException("empty registry");
-                    if (data.Schema != 1) throw new InvalidDataException($"schema {data.Schema}");
-                    entries.AddRange(data.Entries);
-                    extFiles.Add(name);
-                }
-                catch (Exception error) when (error is JsonException or ArgumentException or InvalidDataException or NotSupportedException)
-                {
-                    GD.PushWarning($"palette: skipped extension {path} ({error.Message}).");
-                }
+                entries.AddRange(Parse(ExtDir + "/" + name).Entries);
+                extFiles.Add(name);
             }
-        }
-        if (extFiles.Count == 0) return (core, source);
-        try
-        {
-            return (new PaletteRegistry(entries), source + " + ext/" + string.Join(",", extFiles));
-        }
-        catch (ArgumentException error)
-        {
-            GD.PushError($"palette: extensions conflict with the core registry ({error.Message}); extensions ignored.");
-            return (core, source);
-        }
+        return (new PaletteRegistry(entries), extFiles.Count == 0 ? CorePath : CorePath + " + ext/" + string.Join(",", extFiles));
     }
 
-    private static (PaletteRegistry, string) LoadCore()
+    private static PaletteRegistryData Parse(string path)
     {
-        foreach (var path in RegistryPaths)
-        {
-            if (!Godot.FileAccess.FileExists(path)) continue;
-            try
-            {
-                var data = JsonSerializer.Deserialize<PaletteRegistryData>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options)
-                    ?? throw new InvalidDataException("empty registry");
-                return (PaletteRegistry.FromData(data), path);
-            }
-            catch (Exception error) when (error is JsonException or ArgumentException or InvalidDataException or NotSupportedException)
-            {
-                GD.PushWarning($"palette: {path} is not a PaletteRegistryData file ({error.Message}); using the WP-37 fallback registry.");
-            }
-        }
-        var fallback = KeysDir + "registry.fallback.json";
-        var fallbackData = JsonSerializer.Deserialize<PaletteRegistryData>(Read("registry.fallback.json"), ContractJson.Options)
-            ?? throw new InvalidDataException("Fallback palette registry is empty.");
-        return (PaletteRegistry.FromData(fallbackData), fallback);
+        var bytes = Godot.FileAccess.GetFileAsBytes(path);
+        if (bytes.Length == 0) throw new FileNotFoundException($"Missing palette registry: {path}");
+        var data = JsonSerializer.Deserialize<PaletteRegistryData>(bytes, ContractJson.Options)
+            ?? throw new InvalidDataException($"Empty palette registry: {path}");
+        if (data.Schema != 1) throw new InvalidDataException($"Unsupported palette registry schema {data.Schema}: {path}");
+        return data;
     }
 
     public override void _Ready()
@@ -151,7 +119,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         var clock = _world.Clock;
         var season = _world.SeasonPos;
         var weather = _world.WeatherNow;
-        var w = _script.EvaluateWorld(clock, season, weather);
+        var w = _script.EvaluateWorld(clock, season, _world.Sun.AltDeg, weather);
         _composer.ComposeCurrent(w);
         var jump = double.IsNaN(_lastClock) || Math.Abs(Oklab.HueDiff(_lastClock * 15.0, clock * 15.0)) > 7.5;   // > 0.5 h
         var full = _world.Instance != _instance || season != _lastSeason || jump;
@@ -167,6 +135,15 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         _lastSeason = season;
         _inspector?.Refresh(w, clock, season);
         if (_inspector is not null && ++_frames == 30) PrintParity(w, clock, season);
+    }
+
+    public override void _ExitTree()
+    {
+        // Stop producing, unbind the global, then hand the texture back to the registry (it releases the native resource).
+        SetProcess(false);
+        RenderingServer.GlobalShaderParameterSet(ShaderNames.Palette, default(Variant));
+        _registration?.Dispose();
+        _registration = null;
     }
 
     private static void WriteGlobals(WorldFrame w)

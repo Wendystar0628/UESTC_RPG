@@ -152,13 +152,23 @@ def validate(src: "Sources") -> None:
 
 # ---------------------------------------------------------------- 美术太阳（SYS-TIME §2）
 
+# WP-34 美术星历（game/kernel/world/ArtEphemeris.cs）对秋季的微调：秋 17:30 正好 5.5°（SYS-TIME §2），
+# 日出、日落与正午高度不变。这里照抄同一个公式，保证离线脚本与运行时同一来源。
+_HERO_U = (17.5 - 455 / 60) / ((1085 - 455) / 60)
+_HERO_SINE = math.sin(math.pi * _HERO_U)
+_HERO_DELTA = 5.5 - 41.0 * _HERO_SINE ** SUN_EXP
+
+
 def sun_altitude(clock: float, season: str) -> Tuple[float, str, float]:
     """返回 (高度°, 侧, u)。侧：dawn / dusk；正午与最低点归到它所在的一侧。"""
     rise, sset, _, _, H = ART_SUN[season]
     c = clock % 24.0
-    if rise <= c <= sset:
+    if rise <= c < sset:
         u = (c - rise) / (sset - rise)
-        h = H * math.sin(math.pi * u) ** SUN_EXP
+        sine = math.sin(math.pi * u)
+        h = H * max(0.0, sine) ** SUN_EXP
+        if season == "autumn":
+            h += _HERO_DELTA * sine * (1.0 - sine) / (_HERO_SINE * (1.0 - _HERO_SINE))
         return h, ("dawn" if u < 0.5 else "dusk"), u
     night = (24.0 - sset) + rise
     u = ((c - sset) % 24.0) / night
@@ -632,6 +642,12 @@ def vegetation_albedos(src: Sources, frames: Dict[str, List[Frame]]) -> Dict[str
     return out
 
 
+def offset_lch(lab: ok.Lab, dL: float, dh: float) -> ok.Lab:
+    """变体色（vegetation.json variants）：在基准色名推导结果上做 OKLCH 偏移，影与受光同步，不重新推导。"""
+    L, C, h = ok.lab_to_lch(lab)
+    return ok.lch_to_lab((L + dL, C, (h + dh) % 360.0))
+
+
 def derive_grid(src: Sources) -> Dict[str, Any]:
     """4 季 × 12 关键帧的完整推导结果。"""
     frames = season_frames(src)
@@ -647,6 +663,12 @@ def derive_grid(src: Sources) -> Dict[str, Any]:
                                                   ok.hex_to_oklab(m["albedo"]), f, meta=m)
             for token, (name, cls, alb, ref) in veg[s].items():
                 res[token] = derive_material(src, token, name, cls, alb, f, meta={"vegetation": True}, hero=ref)
+            for v in src.vegetation.get("variants", []):
+                b = res[v["base"]]
+                off = lambda lab: offset_lch(lab, v["dL"], v["dh"])
+                res[v["token"]] = MaterialResult(v["token"], v["name"], b.cls, off(b.albedo), off(b.lit), off(b.shade),
+                                                 off(b.shade_in), off(b.lit_in), off(b.deep) if b.deep else None,
+                                                 meta={"vegetation": True, "variantOf": v["base"]})
             grid["materials"][(s, f.id)] = res
     return grid
 

@@ -4,7 +4,10 @@ using static Campus.Style.Palette.Keys.FrameLayout;
 
 namespace Campus.Style.Palette.Keys;
 
-/// <summary>SYS-TIME §2 art sun; the same formula WP-34 implements. Used to index keyframes by altitude.</summary>
+/// <summary>
+/// SYS-TIME §2 art sun, mirroring WP-34's ArtEphemeris (including its autumn 17:30 = 5.5° calibration). The live frame reads
+/// IWorldState.Sun.AltDeg; this class only supplies the side of the arc, the noon cap, and altitudes for IPaletteProbe hours.
+/// </summary>
 public static class ArtSun
 {
     // (sunrise h, sunset h, H noon cap °)
@@ -16,6 +19,8 @@ public static class ArtSun
         (7 + 55 / 60.0, 17 + 55 / 60.0, 34.0),   // winter
     ];
     public const double NightH = 24.0, Exponent = 1.15, AutumnH = 41.0, NormFrom = 25.0;
+    private static readonly double HeroSine = Math.Sin(Math.PI * (17.5 - 455 / 60.0) / ((1085 - 455) / 60.0));
+    private static readonly double HeroDelta = 5.5 - 41.0 * Math.Pow(HeroSine, Exponent);
 
     public static double NoonCap(Season s) => Params[(int)s].H;
 
@@ -25,10 +30,14 @@ public static class ArtSun
         var (rise, set, cap) = Params[(int)season];
         var c = clock % 24.0;
         if (c < 0) c += 24.0;
-        if (c >= rise && c <= set)
+        if (c >= rise && c < set)
         {
             var u = (c - rise) / (set - rise);
-            return (cap * Math.Pow(Math.Sin(Math.PI * u), Exponent), u < 0.5 ? KeySide.Dawn : KeySide.Dusk);
+            var sine = Math.Sin(Math.PI * u);
+            var h = cap * Math.Pow(Math.Max(0.0, sine), Exponent);
+            // WP-34 ArtEphemeris autumn calibration: autumn 17:30 is exactly 5.5° (SYS-TIME §2).
+            if (season == Season.Autumn) h += HeroDelta * sine * (1.0 - sine) / (HeroSine * (1.0 - HeroSine));
+            return (h, u < 0.5 ? KeySide.Dawn : KeySide.Dusk);
         }
         var night = 24.0 - set + rise;
         var un = ((c - set) % 24.0 + 24.0) % 24.0 / night;

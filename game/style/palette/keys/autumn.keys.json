@@ -6,7 +6,7 @@
   "notes": [
     "秋季 12 张基准关键帧，按太阳高度定锚：altDeg 是示例钟点在秋季美术轨迹上的太阳高度（SYS-TIME §2 公式），side 是晨侧 dawn、昏侧 dusk，正午 noon 与深夜最低点 nadir 两侧共用。",
     "25° 以上按正午归一：其他季节的高度 h 换算成秋季等效高度 x = 25 + (h − 25) / (H季 − 25) × (41 − 25)，所以正午键在任何季节都是正午。",
-    "slotDeg 是 SYS-TIME §3.1 的 19 键里最近的名义高度，只作对照；求值一律用 altDeg。黄金锚在 5.4753°（17:30 在公式上的值），保证秋 17:30 的默认状态逐值等于本帧。",
+    "slotDeg 是 SYS-TIME §3.1 的 19 键里最近的名义高度，只作对照；求值一律用 altDeg。黄金锚在 5.5°：WP-34 的美术星历把秋 17:30 校准到正好 5.5°（SYS-TIME §2），运行时读 IWorldState.Sun，所以默认状态逐值等于本帧。其余锚点照同一星历取值。",
     "sky.sun / sky.anti：5 段，从地平线到天顶，对应色名 sky.sun.0–4、sky.anti.0–4；夜间三帧的 sun 列是月侧。",
     "skyStopsDeg：sky.sun / sky.anti 五段各自所在的仰角（度，地平线 0、天顶 90），天空着色器按仰角在相邻两段间插值；粉橙只落在 0–25° 的带里（主代理评审）。",
     "ambientSky、interiorWarm 只用 a、b（OKLCH 的 c、h）；写进纹理时按 OKLCH (swatchL, c, h) 出示意色。",
@@ -58,7 +58,7 @@
       "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
     },
     {
-      "id": "preDawn", "name": "黎明前", "mood": "清冷、等待", "class": "night", "exampleClock": 6.6667, "side": "dawn", "altDeg": -4.0253, "slotDeg": -3,
+      "id": "preDawn", "name": "黎明前", "mood": "清冷、等待", "class": "night", "exampleClock": 6.6667, "side": "dawn", "altDeg": -4.0251, "slotDeg": -3,
       "sky": {
         "body": "sun",
         "sun":  ["#E8B49A", "#B49AB4", "#7E86BC", "#4E62A4", "#2C3E80"],
@@ -133,7 +133,7 @@
       "fogLow": {"topM": 0, "density": 0.0, "lake": 1.0}
     },
     {
-      "id": "earlyMorning", "name": "清晨", "mood": "清冽、通透、露水", "class": "lowSun", "exampleClock": 8.5, "side": "dawn", "altDeg": 9.1286, "slotDeg": 12,
+      "id": "earlyMorning", "name": "清晨", "mood": "清冽、通透、露水", "class": "lowSun", "exampleClock": 8.5, "side": "dawn", "altDeg": 9.1627, "slotDeg": 12,
       "sky": {
         "body": "sun",
         "sun":  ["#FFF4DE", "#F6E6D2", "#D4E0EC", "#9EC4EA", "#5E96DA"],
@@ -170,7 +170,7 @@
       "fogLow": {"topM": 6, "density": 0.6, "lake": 0.0}
     },
     {
-      "id": "morning", "name": "上午", "mood": "清爽、晨读", "class": "day", "exampleClock": 10.0, "side": "dawn", "altDeg": 25.4996, "slotDeg": 25,
+      "id": "morning", "name": "上午", "mood": "清爽、晨读", "class": "day", "exampleClock": 10.0, "side": "dawn", "altDeg": 25.5382, "slotDeg": 25,
       "sky": {
         "body": "sun",
         "sun":  ["#F8F0DC", "#D4E6EE", "#A2CCEC", "#6CA8E0", "#4682CC"],
@@ -244,7 +244,7 @@
       "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
     },
     {
-      "id": "afternoon", "name": "午后", "mood": "慵懒、蝉鸣", "class": "day", "exampleClock": 15.0, "side": "dusk", "altDeg": 31.5896, "slotDeg": 25,
+      "id": "afternoon", "name": "午后", "mood": "慵懒、蝉鸣", "class": "day", "exampleClock": 15.0, "side": "dusk", "altDeg": 31.6175, "slotDeg": 25,
       "sky": {
         "body": "sun",
         "sun":  ["#FFF0D0", "#D2E2EA", "#9AC6EA", "#62A0DE", "#3A78C8"],
@@ -281,7 +281,7 @@
       "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
     },
     {
-      "id": "golden", "name": "黄金", "mood": "丰盛的暖、怅惘", "class": "default", "default": true, "exampleClock": 17.5, "side": "dusk", "altDeg": 5.4753, "slotDeg": 6,
+      "id": "golden", "name": "黄金", "mood": "丰盛的暖、怅惘", "class": "default", "default": true, "exampleClock": 17.5, "side": "dusk", "altDeg": 5.5, "slotDeg": 6,
       "sky": {
         "body": "sun",
         "sun":  ["#FFE1A0", "#F7B072", "#D9939C", "#8E98CE", "#4A62A8"],

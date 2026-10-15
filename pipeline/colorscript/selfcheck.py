@@ -62,8 +62,9 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
             ok_h, ok_c = d <= 20.0, ratio >= 0.6
             lvl = "PASS" if (ok_h and ok_c) else "FAIL"
             out.append((lvl, s, k, "身份色", t, f"影 h{hs:.0f} 与固有 h{ha:.0f} 差 {d:.0f}°（≤ 20°）；影 C/受光 C = {ratio:.2f}（≥ 0.6）"))
-        # 3 非绿色材质的影不落橄榄区
-        if not _in_range(ha, *green) and Cs >= 0.02 and Ca >= 0.015:
+        # 3 非绿色材质的影不落橄榄区（变体按基准色名的固有色相判类：草坪亮块仍是绿色材质）
+        h_class = ok.lab_to_lch(mats[m.meta["variantOf"]].albedo)[2] if m.meta.get("variantOf") in mats else ha
+        if not _in_range(h_class, *green) and Cs >= 0.02 and Ca >= 0.015:
             bad = _in_range(hs, *olive)
             out.append(("FAIL" if bad else "PASS", s, k, "不落橄榄区", t, f"影 h{hs:.0f}（禁区 {olive[0]:.0f}–{olive[1]:.0f}°）"))
         # 4 浅色面
