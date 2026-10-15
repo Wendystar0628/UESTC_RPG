@@ -1483,7 +1483,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 187.6k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 187.7k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.3k
@@ -1493,7 +1493,7 @@
 - ENG-ARCH §3 关键接口（契约草案） · L475 · 102.1k
 - ENG-ARCH §4 资源管线 · L2055 · 10.6k
 - ENG-ARCH §5 接口先定、桩先合入 · L2143 · 3.3k
-- ENG-ARCH §6 git 工作树流程 · L2182 · 5.7k
+- ENG-ARCH §6 git 工作树流程 · L2182 · 5.8k
 - ENG-ARCH §7 主要风险与对策 · L2254 · 6.3k
 - ENG-ARCH §8 扩展点（RPG） · L2307 · 8.6k
 - ENG-ARCH §9 待验证（P0） · L2351 · 2.3k
@@ -1634,15 +1634,15 @@
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 31.0k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
-关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、service_tier、主会话移交、交接单、HANDOVER.md、goal 模式、get_usage、完成度调研、持续调研、调研入队流水线、待派工队列、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
+`docs/design/engineering/ENG-TEAM.md` · 31.1k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、普通速度、service_tier、主会话移交、交接单、HANDOVER.md、goal 模式、get_usage、完成度调研、持续调研、调研入队流水线、待派工队列、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
 - ENG-TEAM §0 结论 · L37 · 3.2k
   - ★ ENG-TEAM §0.1 接入要点 · L54 · 1.5k
 - ENG-TEAM §1 参与者与会话 · L71 · 2.0k
   - ENG-TEAM §1.1 决定权与执行人 · L89 · 434
-- ENG-TEAM §2 按模型能力分工 · L107 · 1.9k
-  - ENG-TEAM §2.1 各模型的长处与短板 · L111 · 589
+- ENG-TEAM §2 按模型能力分工 · L107 · 2.0k
+  - ENG-TEAM §2.1 各模型的长处与短板 · L111 · 604
   - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L120 · 399
   - ENG-TEAM §2.3 事归谁 · L128 · 607
   - ENG-TEAM §2.4 交叉的地方 · L145 · 205
@@ -1663,22 +1663,22 @@
   - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L324 · 502
   - ENG-TEAM §5.7 契约申请与共享工程文件 · L335 · 475
   - ENG-TEAM §5.8 调研入队流水线 · L343 · 808
-- ENG-TEAM §6 会话通信与工作交接 · L359 · 5.1k
+- ENG-TEAM §6 会话通信与工作交接 · L359 · 5.2k
   - ENG-TEAM §6.1 交接目录与文件 · L363 · 1.6k
   - ENG-TEAM §6.2 命名与写法 · L387 · 304
   - ENG-TEAM §6.3 任务单与请求文件的格式 · L394 · 534
   - ENG-TEAM §6.4 消息与流水 · L412 · 714
-  - ENG-TEAM §6.5 唤醒脚本 · L431 · 1.3k
+  - ENG-TEAM §6.5 唤醒脚本 · L431 · 1.4k
   - ENG-TEAM §6.6 上下文重置后怎么接着做 · L458 · 542
 - ENG-TEAM §7 账号与额度管理 · L471 · 2.0k
   - ENG-TEAM §7.1 主账号（主会话） · L475 · 133
   - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L480 · 757
-  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L498 · 187
+  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L498 · 209
   - ENG-TEAM §7.4 主会话移交 · L504 · 765
 - ENG-TEAM §8 旁路任务与长期值班 · L526 · 4.4k
   - ENG-TEAM §8.1 Sol 值班会话 · L530 · 720
   - ENG-TEAM §8.2 完成度调研 · L546 · 1.7k
-  - ENG-TEAM §8.3 Sol 旁路会话 · L588 · 821
+  - ENG-TEAM §8.3 Sol 旁路会话 · L588 · 828
   - ENG-TEAM §8.4 怎么开子代理 · L608 · 1.1k
 - ENG-TEAM §9 待验证（P0） · L635 · 229
 

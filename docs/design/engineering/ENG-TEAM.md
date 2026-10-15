@@ -3,7 +3,7 @@ id: ENG-TEAM
 title: 多模型协作规程：分工、额度、通信与开发流程
 category: engineering
 summary: 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
-keywords: [多模型协作, 协作规程, 参与者, 会话, 账号, 作者, 主会话, 总指挥, 主代理, 决定权, 二号会话, project-09, wendystar1145, Max 20x, Opus, Sonnet, Astra, GPT-6 Astra, gpt-6-astra, gpt-6.1-sol, Sol 值班会话, Sol 旁路会话, 旁路单, 调研单, side/cards, ROLE.md, Codex, codex exec, thread, 模型能力, 视觉风格归属, 审美, 工程负责人, 模型等级, 任务难度, 补 GPT 短板, 包的归属, 开工分波, D0, 第一波, 第二波, 合并顺序, 开发流程, 派工, 任务单, max 单, 通用简报, 建工作树, 施工, 回报, 初步核对, 评审, Opus 评审, 交叉评审, 可调参数, 批准行, 批准合入, 带条件的批准行, 合并执行, squash, 施工状态, rebase 通知, 契约申请, 共享工程文件, 合并请求, 评审请求, .collab, merged.log, 流水, 消息频率, 确认框, 转问作者, 唤醒脚本, sol_duty_watch, sol_side_runner, 上下文重置, 额度, 5 小时窗口, 并发公式, 记账, 快速模式, service_tier, 主会话移交, 交接单, HANDOVER.md, goal 模式, get_usage, 完成度调研, 持续调研, 调研入队流水线, 待派工队列, 调研索引, INDEX.md, 00-总览, Opus 审计, 巡检, spawn_agent, 子代理, 计数锁]
+keywords: [多模型协作, 协作规程, 参与者, 会话, 账号, 作者, 主会话, 总指挥, 主代理, 决定权, 二号会话, project-09, wendystar1145, Max 20x, Opus, Sonnet, Astra, GPT-6 Astra, gpt-6-astra, gpt-6.1-sol, Sol 值班会话, Sol 旁路会话, 旁路单, 调研单, side/cards, ROLE.md, Codex, codex exec, thread, 模型能力, 视觉风格归属, 审美, 工程负责人, 模型等级, 任务难度, 补 GPT 短板, 包的归属, 开工分波, D0, 第一波, 第二波, 合并顺序, 开发流程, 派工, 任务单, max 单, 通用简报, 建工作树, 施工, 回报, 初步核对, 评审, Opus 评审, 交叉评审, 可调参数, 批准行, 批准合入, 带条件的批准行, 合并执行, squash, 施工状态, rebase 通知, 契约申请, 共享工程文件, 合并请求, 评审请求, .collab, merged.log, 流水, 消息频率, 确认框, 转问作者, 唤醒脚本, sol_duty_watch, sol_side_runner, 上下文重置, 额度, 5 小时窗口, 并发公式, 记账, 快速模式, 普通速度, service_tier, 主会话移交, 交接单, HANDOVER.md, goal 模式, get_usage, 完成度调研, 持续调研, 调研入队流水线, 待派工队列, 调研索引, INDEX.md, 00-总览, Opus 审计, 巡检, spawn_agent, 子代理, 计数锁]
 owners: [WP-00]
 contributors: []
 depends: [ENG-WP, ENG-ARCH, ENG-ONBOARD]
@@ -40,7 +40,7 @@ gates: []
    - 主账号的 Opus **主会话**是总指挥；
    - **二号会话**（第二个 Claude 账号，Max 20x）开 Opus 与 Sonnet 子代理，承担 Opus 侧的施工；
    - **Astra**（GPT-6 Astra，xhigh，本机 Codex）是工程负责人，开自己的子代理；
-   - **Sol 会话**（gpt-6.1-sol，快速模式）有两个固定会话：值班会话做执行类的活，旁路会话按任务单开子代理，做完成度调研与旁路活。
+   - **Sol 会话**（gpt-6.1-sol）有两个固定会话：值班会话（快速模式）做执行类的活，旁路会话（普通速度）按任务单开子代理，做完成度调研与旁路活。
 2. **主代理只有一个，就是主会话**（§1.1，ENG-ARCH §6，D-166）：合并队列、`main` 的提交与推送、ENG-STATUS、`docs/design/` 的修改、与作者沟通，都由它决定。不需要判断的执行部分交 Sol 值班会话；`main` 同一时刻只有一个执行人。
 3. **按模型能力分工，视觉风格只由 Opus 侧做**（§2）：Opus 管审美、判断与变通；Sonnet 做语言与看图；Astra 管架构与复杂工程；gpt-6.1-sol 做便宜、快、可高并发的活。GPT 模型不做任何审美工作；玩家看得见、听得见的结果，参数和取舍都由主会话评审定值。
 4. **契约以 Astra 为准**（§5.7）：契约与共享工程文件只由 Astra 改。牵涉画面表现的契约由 Astra 起草，主会话确认后再冻结（§5.4，D-134）。
@@ -82,7 +82,7 @@ gates: []
 | Astra | Codex 账号 | gpt-6-astra，xhigh | 本机 Codex CLI 会话 | — | 工程负责人：WP-00、契约与共享工程文件、Astra 侧包的派工与架构审查、写合并请求 | 主会话 |
 | Astra 的子代理 | Codex 账号 | gpt-6-astra，或 gpt-6.1-sol（§3.3） | `spawn_agent` | `task_name` 写包号，如 `wp-02a` | Astra 侧包的施工 | Astra 主线程 |
 | Sol 值班会话 | Codex 账号 | gpt-6.1-sol，xhigh，快速模式 | `codex exec resume`，被值班唤醒脚本叫醒（§6.5） | thread `01a14132-0184-7ce1-89b8-b3e472a5af73`；任务单 `tasks/sol-001.md` | 合并执行、施工状态、巡检、排完成度调研 | 主会话 |
-| Sol 旁路会话 | Codex 账号 | gpt-6.1-sol，xhigh，快速模式 | `codex exec resume`，被旁路唤醒脚本按任务单叫醒，一次一张（§6.5） | thread `01a14176-abbf-7862-98ba-137e2ad1686f`；角色说明 `side/ROLE.md` | 按任务单开子代理，做完成度调研与旁路活：调研、补信息、数据转换与核对、按确切文字打文档补丁、批量的旁路工程活 | 主会话 |
+| Sol 旁路会话 | Codex 账号 | gpt-6.1-sol，xhigh，普通速度 | `codex exec resume`，被旁路唤醒脚本按任务单叫醒，一次一张（§6.5） | thread `01a14176-abbf-7862-98ba-137e2ad1686f`；角色说明 `side/ROLE.md` | 按任务单开子代理，做完成度调研与旁路活：调研、补信息、数据转换与核对、按确切文字打文档补丁、批量的旁路工程活 | 主会话 |
 
 各方之间经哪些文件、什么时候联系，见 §6。
 
@@ -115,7 +115,7 @@ gates: []
 | Claude Opus 5.5 | 主会话；二号会话的 Opus 子代理 | 审美、判断、变通：画面、风格、内容，跨系统取舍，需要 Opus 的文档撰写 | 额度最贵：主账号只给总指挥用，二号会话按并发公式开（§7） |
 | Claude Sonnet | 二号会话的 Sonnet 子代理 | 语言与看图，性价比高：中文文档改写、文案、看图初筛、质感做法整理 | 不定风格，画面与风格的定值归主会话 |
 | gpt-6-astra（xhigh） | Astra 主线程与它的 gpt-6-astra 子代理 | 架构与复杂工程：契约与程序集边界、注册器、桩、依赖方向；并发与线程、确定性、本机烘焙与流式、序列化与迁移、物理与碰撞、性能结构、构建与门禁脚本、复杂算法 | 不做任何审美工作；语言质感、看图和审美眼光是 GPT 模型的短板 |
-| gpt-6.1-sol | 两个 Sol 会话及旁路会话的子代理；Astra 开的 6.1-sol 子代理 | 便宜、快，能力接近 Astra；额度充足，快速模式下可以高并发 | 同属 GPT 模型，不做任何审美工作；不改契约和共享工程文件，设计文档只按确切文字打补丁（§8） |
+| gpt-6.1-sol | 两个 Sol 会话及旁路会话的子代理；Astra 开的 6.1-sol 子代理 | 便宜、快，能力接近 Astra；额度充足，可以高并发；值班会话用快速模式，旁路会话用普通速度 | 同属 GPT 模型，不做任何审美工作；不改契约和共享工程文件，设计文档只按确切文字打补丁（§8） |
 
 ### 2.2 硬规则：GPT 模型不做审美工作
 
@@ -449,7 +449,7 @@ Sonnet 和 gpt-6.1-sol 跟旗舰差距不大。拿不准时先派它们，结果
 
 **旁路唤醒脚本**按文件名顺序，从 `side/cards/` 里取一张还没交出的单，叫醒旁路会话，消息里写明任务单路径，并要求照 `side/ROLE.md` 执行；这一轮结束后再取下一张。一次只交一张。
 
-- **叫醒的命令**（两个脚本相同，只是 thread 和输出文件不同）：`codex exec -s danger-full-access -C "E:\Project\UESTC_RPG" resume <thread_id> -m gpt-6.1-sol -c model_reasoning_effort=xhigh -c 'service_tier="priority"' --json -o <输出文件> -`。
+- **叫醒的命令**：值班唤醒脚本用 `codex exec -s danger-full-access -C "E:\Project\UESTC_RPG" resume <thread_id> -m gpt-6.1-sol -c model_reasoning_effort=xhigh -c 'service_tier="priority"' --json -o <输出文件> -`；旁路唤醒脚本相同，但不带 `-c 'service_tier="priority"'`，用普通速度。
 - **每轮只做被叫醒的事**：值班会话只处理消息里写的事和巡检；旁路会话只做交给它的那一张单，做完写状态和流水就结束本轮。
 - **记录**：
   - `tools/sol_duty/`：`watch.log` 记每次唤醒；`seen.txt`、`cards.txt` 记已经处理过的批准行和任务单；`last.md`、`events.jsonl`、`stderr.log` 是值班会话最近一轮的输出。
@@ -499,7 +499,7 @@ Sonnet 和 gpt-6.1-sol 跟旗舰差距不大。拿不准时先派它们，结果
 
 - **额度充足**：杂活默认先派 Sol（§3.2）。
 - **不监控**：Codex 额度不监控，重置时机由作者自己决定；套餐额度用完会自动使用账户余额。
-- **快速模式**：`service_tier="priority"`，速度约 2 倍，额度约按 2.5 倍消耗。两个 Sol 会话都用快速模式。
+- **快速模式**：`service_tier="priority"`，速度约 2 倍，额度约按 2.5 倍消耗。只有 Sol 值班会话用快速模式；Sol 旁路会话用普通速度，不开快速模式。
 
 ### 7.4 主会话移交
 
@@ -587,7 +587,7 @@ Sonnet 和 gpt-6.1-sol 跟旗舰差距不大。拿不准时先派它们，结果
 
 ### 8.3 Sol 旁路会话
 
-**是什么**：一个固定的 gpt-6.1-sol 会话（快速模式），thread `01a14176-abbf-7862-98ba-137e2ad1686f`，角色说明 `side/ROLE.md`。完成度调研和其他旁路任务都由它一个会话管理，按任务单开子代理并行处理。
+**是什么**：一个固定的 gpt-6.1-sol 会话（普通速度，不开快速模式），thread `01a14176-abbf-7862-98ba-137e2ad1686f`，角色说明 `side/ROLE.md`。完成度调研和其他旁路任务都由它一个会话管理，按任务单开子代理并行处理。
 
 **两类任务单**（都放在 `side/cards/`）：
 - **调研单 `r<nnn>.md`**：由值班会话写，做法见 §8.2。
