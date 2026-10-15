@@ -109,7 +109,8 @@ public partial class HudRoot : CanvasLayer
         _title.CreditsRequested += () => OpenSettings(SettingsPage.Licenses, fromTitle: true);
         _title.QuitRequested += RequestQuit;
         _title.Notice += text => _toast.Show(text);
-        _settingsCard = SettingsCard.Create(_kit, _root, _settings);
+        ConnectInput();
+        _settingsCard = SettingsCard.Create(_kit, _root, _settings, _router);
         _settingsCard.CloseRequested += CloseSettings;
         _settingsCard.QuitRequested += RequestQuit;
         _settingsCard.ToTitleRequested += () => { CloseSettings(); _ = _flow?.ReturnToTitle(); };
@@ -209,7 +210,7 @@ public partial class HudRoot : CanvasLayer
 
     // ---------------- 状态 ----------------
     private bool Playing => _flow is null || _flow.State == AppState.Playing;
-    private bool InterfaceState => Input.MouseMode != Input.MouseModeEnum.Captured;
+    private bool InterfaceState => _router?.InterfaceMode ?? Input.MouseMode != Input.MouseModeEnum.Captured;
     private bool BigPage => _settingsCard.Visible || _savePage.Visible;
 
     private void SyncState()
@@ -265,7 +266,7 @@ public partial class HudRoot : CanvasLayer
         var step = (float)delta / (target < _corners.Modulate.A ? 1.2f : 0.18f);
         var a = Mathf.MoveToward(_corners.Modulate.A, target, _motion.Level == MotionLevel.Instant ? 1 : step);
         _corners.Modulate = new Color(1, 1, 1, a);
-        if (_weatherHeld && Input.IsActionPressed("weather"))
+        if (_weatherHeld)
         {
             _weatherHold += (float)delta;
             if (_weatherHold >= 0.6f)
@@ -327,7 +328,7 @@ public partial class HudRoot : CanvasLayer
         if (_savePage.Visible) CloseSaves();
         _settingsCard.Open(page, fromTitle);
         _audio?.PlayUi(UiCue.PageOpen);
-        if (Playing) Input.MouseMode = Input.MouseModeEnum.Visible;
+        if (Playing) SetInterface(true);
         SyncCorners();
     }
 
@@ -352,7 +353,7 @@ public partial class HudRoot : CanvasLayer
         if (_settingsCard.Visible) CloseSettings();
         _savePage.Open(fromTitle);
         _audio?.PlayUi(UiCue.PageOpen);
-        if (Playing) Input.MouseMode = Input.MouseModeEnum.Visible;
+        if (Playing) SetInterface(true);
         SyncCorners();
     }
 
@@ -386,115 +387,164 @@ public partial class HudRoot : CanvasLayer
         _model.Poke();
     }
 
-    // ---------------- 输入（UI-NAV §5） ----------------
+    // ---------------- 输入（UI-NAV §5）：三层，经 IInputRouter 分发；路由还没注册时由本节点按同样的层次自己分发 ----------------
+    // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归 WP-06。
+    public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
+    private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
+    private readonly List<IDisposable> _layers = [];
+    private IInputRouter? _router;
+
+    private void ConnectInput()
+    {
+        try { _router = Services.Get<IInputRouter>(); }
+        catch (InvalidOperationException) { _router = null; }
+        if (_router is null) return;
+        _layers.Add(_router.RegisterLayer("WP-35.dialog", LayerDialog, DialogLayer));
+        _layers.Add(_router.RegisterLayer("WP-35.page", LayerPage, PageLayer));
+        _layers.Add(_router.RegisterLayer("WP-35.hud", LayerHud, HudLayer));
+        _router.InterfaceModeChanged += _ => SyncCorners();
+    }
+
+    public override void _ExitTree()
+    {
+        foreach (var layer in _layers) layer.Dispose();
+        _layers.Clear();
+    }
+
+    /// <summary>漫游态 ⇄ 界面态：有路由时经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>
+    private void SetInterface(bool on)
+    {
+        if (_router is not null) _router.SetInterfaceMode(on);
+        else Input.MouseMode = on ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+    }
+
+    // 第 1 层：改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
+    private bool DialogLayer(InputActionEvent e) => _settingsCard.Visible && _settingsCard.Capturing;
+
+    // 第 2 层：大页（设置卡、存档页，含从开始页打开的）：Esc 关页，打开这一页的 H 再按一次关页，其余动作一律吞掉
+    private bool PageLayer(InputActionEvent e)
+    {
+        if (!BigPage) return false;
+        if (e.Pressed && !e.Echo)
+        {
+            switch (e.Action)
+            {
+                case "menu":
+                    if (_settingsCard.Visible) CloseSettings();
+                    else CloseSaves();
+                    break;
+                case "help":
+                    if (_settingsCard.Visible) CloseSettings();
+                    break;
+            }
+        }
+        return true;
+    }
+
+    // 第 3 层：普通 HUD：Esc 在漫游态与界面态之间切换（有面板展开时先收面板），单键快捷键受总开关约束
+    private bool HudLayer(InputActionEvent e)
+    {
+        if (_flow?.State == AppState.Title) return e.Action == "menu";   // 开始页主菜单上按 Esc 什么也不做
+        if (!Playing) return false;
+        if (e.Action == "weather" && !e.Pressed)
+        {
+            // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV §4.10）
+            if (!_weatherHeld) return false;
+            _weatherHeld = false;
+            if (_weatherHold < 0.6f) _weather.Next();
+            return true;
+        }
+        if (!e.Pressed) return false;
+        if (e.Action == "menu")
+        {
+            if (e.Echo) return true;
+            if (_timeOpen && InterfaceState) ToggleTime(false);
+            else SetInterface(!InterfaceState);
+            return true;
+        }
+        if (!_settings.SingleKeyShortcuts) return false;
+        // 只有 . 可以按住连续前进；其余键的自动重复直接吞掉
+        if (e.Echo && e.Action != "time_forward") return Array.IndexOf(Actions, e.Action) >= 0;
+        switch (e.Action)
+        {
+            case "time_panel":
+                var wasInterface = InterfaceState;
+                if (!wasInterface) SetInterface(true);
+                ToggleTime(!_timeOpen || !wasInterface);
+                return true;
+            case "help":
+                OpenSettings(SettingsPage.Keys, fromTitle: false);
+                return true;
+            case "time_forward":
+                if (!_model.Allows(WorldControlMask.Clock)) return false;
+                _control.Advance(1);
+                _model.Poke();
+                var clock = _model.World.Clock % 24;
+                _toast.Show(UiKit.T("toast.time_forward", ("clock", $"{(int)clock:00}:{(int)(clock % 1 * 60):00}")));
+                return true;
+            case "toggle_flow":
+                if (!_model.Allows(WorldControlMask.Flow)) return false;
+                _control.SetFlow(_model.FlowRate == 0 ? _timeCard.LastFlow : 0);
+                _model.Poke();
+                _toast.Show(UiKit.T(_model.World.Flow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.Flow.Rate == 0 ? "pause" : null);
+                return true;
+            case "next_season":
+                if (!_model.Allows(WorldControlMask.Season)) return false;
+                _control.SetSeason((Season)(((int)_model.World.SeasonTarget + 1) % 4));
+                _model.Poke();
+                return true;
+            case "weather":
+                if (!_model.Allows(WorldControlMask.Weather)) return false;
+                _weatherHeld = true;
+                _weatherHold = 0;
+                return true;
+            case "clean_view":
+                _clean = !_clean;
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public override void _Input(InputEvent e)
     {
         if (e is InputEventMouseMotion or InputEventMouseButton or InputEventKey { Pressed: true }) Touch();
-        // 改键捕获：下一个按键交给设置卡（输入优先级第 1 层）
+        // 改键捕获：下一个物理键交给设置卡（输入优先级第 1 层）
         if (_settingsCard.Visible && _settingsCard.Capturing && e is InputEventKey { Pressed: true, Echo: false } key)
         {
             if (_settingsCard.Capture(key) is { } conflict) _toast.Show(conflict, bar: "warning.fill");
-            GetViewport().SetInputAsHandled();
+            Handled();
         }
     }
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_flow?.State == AppState.Title)
+        // 有面板展开时，第一次单击画面只收起面板（UI-NAV §5）；单击是鼠标事件，不走动作路由
+        if (Playing && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _timeOpen && InterfaceState && !BigPage)
         {
-            if (e.IsActionPressed("menu"))
-            {
-                if (_settingsCard.Visible) CloseSettings();
-                else if (_savePage.Visible) CloseSaves();
-                GetViewport().SetInputAsHandled();
-            }
-            return;
-        }
-        if (!Playing) return;
-        if (e.IsActionPressed("menu"))
-        {
-            if (_settingsCard.Visible) { CloseSettings(); Handled(); return; }
-            if (_savePage.Visible) { CloseSaves(); Handled(); return; }
-            if (_timeOpen && InterfaceState) { ToggleTime(false); Handled(); return; }
-            if (InterfaceState) { Input.MouseMode = Input.MouseModeEnum.Captured; Handled(); }
-            return;   // 漫游态 → 界面态由相机一侧释放鼠标
-        }
-        if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _timeOpen && InterfaceState && !BigPage)
-        {
-            ToggleTime(false);   // 有面板展开时，第一次单击画面只收起面板
+            ToggleTime(false);
             Handled();
             return;
         }
-        if (e is not InputEventKey { Pressed: true }) return;
-        if (BigPage)
+        if (_router is not null) return;
+        // 路由还没注册（D0）：把按键换成同样的动作事件，按第 1、2、3 层依次分发
+        foreach (var action in Actions)
         {
-            // 大页打开时单键快捷键不响应，打开这一页的键除外（输入优先级第 2 层）
-            if (e.IsActionPressed("help") && _settingsCard.Visible) { CloseSettings(); Handled(); }
-            return;
-        }
-        if (!_settings.SingleKeyShortcuts && !e.IsActionPressed("menu")) return;
-        if (e.IsActionPressed("time_panel"))
-        {
-            if (!InterfaceState) Input.MouseMode = Input.MouseModeEnum.Visible;
-            ToggleTime(!_timeOpen || !InterfaceState);
-            Handled();
-        }
-        else if (e.IsActionPressed("help"))
-        {
-            OpenSettings(SettingsPage.Keys, fromTitle: false);
-            Handled();
-        }
-        else if (e.IsActionPressed("time_forward", true) && _model.Allows(WorldControlMask.Clock))
-        {
-            _control.Advance(1);
-            _model.Poke();
-            var clock = (_model.World.Clock) % 24;
-            _toast.Show(UiKit.T("toast.time_forward", ("clock", $"{(int)clock:00}:{(int)(clock % 1 * 60):00}")));
-            Handled();
-        }
-        else if (e.IsActionPressed("toggle_flow") && _model.Allows(WorldControlMask.Flow))
-        {
-            _control.SetFlow(_model.FlowRate == 0 ? _timeCard.LastFlow : 0);
-            _model.Poke();
-            _toast.Show(UiKit.T(_model.World.Flow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.Flow.Rate == 0 ? "pause" : null);
-            Handled();
-        }
-        else if (e.IsActionPressed("next_season") && _model.Allows(WorldControlMask.Season))
-        {
-            _control.SetSeason((Season)(((int)_model.World.SeasonTarget + 1) % 4));
-            _model.Poke();
-            Handled();
-        }
-        else if (e.IsActionPressed("weather") && _model.Allows(WorldControlMask.Weather))
-        {
-            _weatherHeld = true;
-            _weatherHold = 0;
-            Handled();
-        }
-        else if (e.IsActionPressed("clean_view"))
-        {
-            _clean = !_clean;
-            Handled();
+            InputActionEvent ev;
+            if (e.IsActionPressed(action, true)) ev = new InputActionEvent(action, true, e.IsEcho());
+            else if (e.IsActionReleased(action)) ev = new InputActionEvent(action, false, false);
+            else continue;
+            if (DialogLayer(ev) || PageLayer(ev) || HudLayer(ev)) { Handled(); return; }
         }
     }
 
     public override void _Notification(int what)
     {
-        if (what == NotificationApplicationFocusOut && Playing && Input.MouseMode == Input.MouseModeEnum.Captured)
-            Input.MouseMode = Input.MouseModeEnum.Visible;   // 失焦时主动切到界面态（UI-NAV §5）
+        // 失焦时主动切到界面态（UI-NAV §5）；有路由时这件事归 WP-06
+        if (what == NotificationApplicationFocusOut && _router is null && Playing && Input.MouseMode == Input.MouseModeEnum.Captured)
+            Input.MouseMode = Input.MouseModeEnum.Visible;
         else if (what == NotificationApplicationFocusIn) _motion.Refresh();
         else if (what == NotificationWMCloseRequest) _settings.Flush();
-    }
-
-    public override void _UnhandledKeyInput(InputEvent e)
-    {
-        // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV §4.10）
-        if (e is InputEventKey { Pressed: false } && e.IsActionReleased("weather") && _weatherHeld)
-        {
-            _weatherHeld = false;
-            if (_weatherHold < 0.6f) _weather.Next();
-            Handled();
-        }
     }
 
     private void Handled() => GetViewport().SetInputAsHandled();

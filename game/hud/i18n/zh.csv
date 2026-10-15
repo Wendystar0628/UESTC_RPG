@@ -270,3 +270,4 @@ saves.detail.ok,自动保存 · 保留最近 {gens} 代
 saves.detail.recovered,最近一次保存不完整，已回到上一代
 saves.detail.corrupt,存档文件损坏，无法读取
 saves.detail.newer,这个存档来自更新的版本
+rebind.rejected,这个键不能用：{reason}

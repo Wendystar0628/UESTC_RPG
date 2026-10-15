@@ -12,7 +12,8 @@
     },
     "success": { "light": "#045030", "dark": "#65D097", "solid": "#078452" },
     "warning": { "light": "#794D01", "dark": "#F6C88F", "solid": "#D68D0A" },
-    "danger": { "light": "#9F2125", "dark": "#FEBFB9", "solid.light": "#C13234", "solid.dark": "#FF958E" }
+    "danger": { "light": "#9F2125", "dark": "#FEBFB9", "solid.light": "#C13234", "solid.dark": "#FF958E" },
+    "sand": { "200": "#E2D9CB" }
   },
   "special": {
     "ink": "#192A44",
@@ -151,7 +152,7 @@
       "map.road": { "fill": "neutral.0", "line": "neutral.300" },
       "map.sport": { "line": "neutral.500", "inner": "neutral.400" },
       "map.building": { "fill": "neutral.150", "line": "neutral.500" },
-      "map.landmark": { "fill": "blue.200", "line": "blue.800" },
+      "map.landmark": { "fill": "sand.200", "line": "blue.800" },
       "map.bound": { "line": "neutral.600" },
       "map.interior": { "fill": "blue.50", "line": "blue.700" },
       "map.label": { "zh": "neutral.700", "en": "neutral.600" },

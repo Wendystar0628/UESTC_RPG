@@ -1,10 +1,12 @@
+using Campus.Contracts;
+using Campus.Kernel.Materials;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud.Style;
 
 /// <summary>
-/// 向 Campus.Style 的材质库申请 ui_panel、ui_screen（UI-VISUAL §11.5），只写 uniform：色表 pal_day / pal_night、
+/// 经 IShaderMaterialSource 向 Campus.Style 的材质库申请 ui_panel、ui_screen（UI-VISUAL §11.5），只写 uniform：色表 pal_day / pal_night、
 /// 数值令牌、kind / mode。逐控件的效果一律写 instance uniform（见 <see cref="UiFx"/>）。
 /// 材质来源还没注册时 <see cref="Available"/> 为 false，界面退回 Theme 的晶白兜底。
 /// </summary>
@@ -16,27 +18,27 @@ public sealed class UiMaterials
 
     public UiMaterials(UiTokens tokens, UiColors colors)
     {
-        IUiMaterialSource? source;
-        try { source = Services.Get<IUiMaterialSource>(); }
+        IShaderMaterialSource? source;
+        try { source = Services.Get<IShaderMaterialSource>(); }
         catch (InvalidOperationException)
         {
             source = null;
-            GD.PushWarning("UI materials: IUiMaterialSource is not registered yet (contract-3); HUD falls back to plain theme colours.");
+            GD.PushWarning("UI materials: IShaderMaterialSource is not registered; HUD falls back to plain theme colours.");
         }
         if (source is null) return;
         var day = colors.RoleTable(tokens, "light");
         var night = colors.RoleTable(tokens, "dark");
         for (var kind = 0; kind < _panel.Length; kind++)
         {
-            var m = source.Create(UiShader.Panel);
+            var m = source.Create(ShaderId.UiPanel);
             m.SetShaderParameter("kind", kind);
             m.SetShaderParameter("pal_day", day);
             m.SetShaderParameter("pal_night", night);
             WritePanelNumbers(m, tokens);
             _panel[kind] = m;
         }
-        Reveal = source.Create(UiShader.Screen);
-        Frost = source.Create(UiShader.Screen);
+        Reveal = source.Create(ShaderId.UiScreen);
+        Frost = source.Create(ShaderId.UiScreen);
         foreach (var (m, mode) in new[] { (Reveal, 0), (Frost, 1) })
         {
             m.SetShaderParameter("mode", mode);

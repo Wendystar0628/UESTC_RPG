@@ -34,6 +34,7 @@ public partial class SettingsCard : Control
     private readonly List<TechButton> _tabs = [];
     private readonly Dictionary<QualityKnob, float> _pending = [];
     private UiKit _kit = null!;
+    private IInputRouter? _router;   // 改键与键名经 IInputRouter（WP-06）；还没注册时退回 InputMap，只在内存里生效
     private HudSettings _settings = null!;
     private Panel _tabBar = null!;
     private ScrollContainer _scroll = null!;
@@ -51,12 +52,13 @@ public partial class SettingsCard : Control
     public SettingsPage Page => _page;
     public bool Capturing => _rebindAction is not null;
 
-    public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings)
+    public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter? router)
     {
         var card = new SettingsCard
         {
             _kit = kit,
             _settings = settings,
+            _router = router,
             Position = new Vector2(32, 32),
             Size = kit.Tokens.V2("metrics", "size", "settingsCard"),
             MouseFilter = MouseFilterEnum.Stop,
@@ -239,17 +241,27 @@ public partial class SettingsCard : Control
         return y + 64;
     }
 
-    public static string KeyLabel(string action)
+    /// <summary>键名按当前键盘布局显示（UI-NAV §5）：物理键码经 KeyboardGetLabelFromPhysical 换成布局上的字。</summary>
+    public string KeyLabel(string action)
     {
+        if (_router is not null)
+        {
+            var physical = _router.PhysicalKey(action);
+            return physical == 0 ? "—" : KeyName((Key)physical);
+        }
         foreach (var e in InputMap.ActionGetEvents(action))
         {
             if (e is not InputEventKey key) continue;
-            var code = key.PhysicalKeycode != Godot.Key.None ? key.PhysicalKeycode : key.Keycode;
-            var label = DisplayServer.KeyboardGetLabelFromPhysical(code);
-            var text = OS.GetKeycodeString(label != Godot.Key.None ? label : code);
-            return text switch { "Escape" => "Esc", "Period" => ".", "Space" => "Space", _ => text };
+            return KeyName(key.PhysicalKeycode != Godot.Key.None ? key.PhysicalKeycode : key.Keycode);
         }
         return "—";
+    }
+
+    private static string KeyName(Key code)
+    {
+        var label = DisplayServer.KeyboardGetLabelFromPhysical(code);
+        var text = OS.GetKeycodeString(label != Godot.Key.None ? label : code);
+        return text switch { "Escape" => "Esc", "Period" => ".", "Space" => "Space", _ => text };
     }
 
     // ---------------- 设置 ----------------
@@ -579,6 +591,17 @@ public partial class SettingsCard : Control
     {
         if (_rebindAction is not { } action) return null;
         if (key.PhysicalKeycode == Godot.Key.Escape) { EndCapture(); return null; }
+        if (_router is not null)
+        {
+            // 一个物理键只能绑一个动作，冲突时拒绝；成功后由 WP-06 写 user://input.cfg
+            if (!_router.TryRebind(action, (int)key.PhysicalKeycode, out var conflict))
+                return conflict is not null && Campus.Hud.I18n.Tr.Has("rebind.action." + conflict)
+                    ? UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + conflict)))
+                    : UiKit.T("rebind.rejected", ("reason", conflict ?? ""));
+            _router.SaveBindings();
+            EndCapture();
+            return null;
+        }
         foreach (var other in InputMap.GetActions())
         {
             var name = other.ToString();
