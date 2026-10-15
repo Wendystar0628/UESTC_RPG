@@ -70,14 +70,18 @@ gates: []
 - **引擎**：命令行版引擎的路径从环境变量 `UESTC_GODOT` 读，默认是 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`。
 - **工作树配置**：工作树里的 `game\override.cfg` 已经把 `user://` 指到 `UESTC_<WP-xx>`。不要改它，也不要提交它。
 - **当前施工状态**：看 ENG-STATUS，里面有哪些包在做、各自做到哪一步。
+- **两个模型协作**（ENG-TEAM，D-179）：
+  - Opus 是主代理，管画面、风格与内容；Astra 是工程负责人，管架构、契约与共享工程文件。
+  - 你向派你的一方回报：Astra 派的子代理找 Astra 主线程，Opus 派的找 Opus。
+  - 合并请求、契约申请和合并日志都在 `E:\Project\UESTC_RPG.wt\.collab\`（ENG-TEAM §4）。开始下一步之前看一眼 `merged.log`，`main` 变了就 rebase。
 
 ## 3 硬规则
 
 ### 3.1 改哪里
 
 - **只改本包的独占目录**：见 ENG-WP §2 的"独占目录"一列和 `ownership.json`。越界会被门禁 G3 拒绝。
-- **共享文件只由主代理改**：包括 `project.godot`、全部 csproj、`Directory.*.props`、契约等，清单见 CORE-CONVENTIONS §5.1。
-- **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都在回报里提申请，由主代理处理。契约分批冻结：已冻结的组只增不改（ENG-ARCH §3，D-134）。
+- **共享文件不自己改**：包括 `project.godot`、全部 csproj、`Directory.*.props`、契约等，清单见 CORE-CONVENTIONS §5.1。它们由 Astra 改、经主代理合入（ENG-TEAM §0）。
+- **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请（`.collab/requests/contract-*.md`），由 Astra 处理（ENG-TEAM §4）。契约分批冻结：已冻结的组只增不改（ENG-ARCH §3，D-134）。
 - **新模块用特性接入**：`[ContentModule]`、`[Part]`、`[KernelNode]`、`[KernelService]`、`[SaveSection]`、`[AmbientEmitter]`、`[InteriorProvider]`、`[MediumPresenter]`、`[QualityResponsive]`。不改注册表，不改主场景，不加 Autoload（ENG-ARCH §2）。
 - **场景与路径**：
   - 不在编辑器里打开或重存场景，场景尽量由代码生成；
@@ -216,6 +220,7 @@ gates: []
 | 版本号、用户目录、日志与导出诊断 | OPS-RELEASE §1、§2、§6 |
 | 引入第三方素材或代码、查许可 | OPS-RELEASE §7 |
 | 为 RPG 预留的接口（规则集、观者状态、输入占用、枚举纪律） | ENG-ROADMAP §6 |
+| 某个包归谁、先开哪些包、交接文件怎么写 | ENG-TEAM §2、§3、§4 |
 
 **接入各系统**
 

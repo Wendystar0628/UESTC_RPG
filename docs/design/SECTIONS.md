@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 41.3k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 41.5k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -15,25 +15,25 @@
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.1k
 - CORE-INDEX §5 文档怎么组织 · L134 · 764
 - CORE-INDEX §6 阅读路径 · L144 · 970
-- CORE-INDEX §7 文档地图 · L161 · 9.0k
+- CORE-INDEX §7 文档地图 · L161 · 9.1k
   - CORE-INDEX §7.1 共识层 `core/` · L163 · 381
   - CORE-INDEX §7.2 美术方向 `art/` · L171 · 925
   - CORE-INDEX §7.3 世界内容（通用） `world/` · L182 · 1.1k
   - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L193 · 1.5k
   - CORE-INDEX §7.5 运行时系统 `systems/` · L206 · 1.8k
   - CORE-INDEX §7.6 界面 `ui/` · L222 · 335
-  - CORE-INDEX §7.7 工程 `engineering/` · L229 · 1.2k
-  - CORE-INDEX §7.8 参考 `reference/` · L242 · 171
-  - CORE-INDEX §7.9 工具 `tools/` · L248 · 178
-  - CORE-INDEX §7.10 运维 `ops/` · L254 · 173
-  - CORE-INDEX §7.11 提案 `proposals/` · L260 · 420
-  - CORE-INDEX §7.12 待用的文件夹 · L269 · 896
-- CORE-INDEX §8 工作包与文档 · L285 · 8.7k
-- CORE-INDEX §9 文档依赖图 · L360 · 11.5k
+  - CORE-INDEX §7.7 工程 `engineering/` · L229 · 1.4k
+  - CORE-INDEX §7.8 参考 `reference/` · L243 · 171
+  - CORE-INDEX §7.9 工具 `tools/` · L249 · 178
+  - CORE-INDEX §7.10 运维 `ops/` · L255 · 173
+  - CORE-INDEX §7.11 提案 `proposals/` · L261 · 420
+  - CORE-INDEX §7.12 待用的文件夹 · L270 · 896
+- CORE-INDEX §8 工作包与文档 · L286 · 8.7k
+- CORE-INDEX §9 文档依赖图 · L361 · 11.6k
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS.md` · 36.1k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
+`docs/design/core/CORE-CONVENTIONS.md` · 36.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
 关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性、文件头、front matter、keywords、范围块、查阅行、接入要点、小节引用、施工约定、文件操作、删除规则
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
@@ -70,18 +70,18 @@
   - CORE-CONVENTIONS §7.6 冲突与决定层级 · L505 · 663
   - CORE-CONVENTIONS §7.7 新增文档与小节 · L519 · 438
   - CORE-CONVENTIONS §7.8 登记新决策 · L525 · 310
-- CORE-CONVENTIONS §8 子代理施工约定 · L531 · 3.4k
+- CORE-CONVENTIONS §8 子代理施工约定 · L531 · 3.5k
   - CORE-CONVENTIONS §8.1 开工 · L533 · 263
   - CORE-CONVENTIONS §8.2 改什么 · L538 · 1.0k
   - CORE-CONVENTIONS §8.3 门禁与回报 · L553 · 684
   - CORE-CONVENTIONS §8.4 文件操作 · L560 · 755
-  - CORE-CONVENTIONS §8.5 主代理的角色 · L575 · 388
+  - CORE-CONVENTIONS §8.5 主代理的角色 · L575 · 476
   - CORE-CONVENTIONS §8.6 主线优先（D-168） · L582 · 307
 - CORE-CONVENTIONS §9 待对齐 · L590 · 48
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 25.9k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 26.2k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L173 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L195 · 1.8k
 - CORE-DECISIONS §9 工程 · L215 · 3.3k
-- CORE-DECISIONS §10 流程 · L240 · 3.2k
-- CORE-DECISIONS §11 待对齐 · L266 · 61
+- CORE-DECISIONS §10 流程 · L240 · 3.5k
+- CORE-DECISIONS §11 待对齐 · L267 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -1326,7 +1326,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 182.2k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 182.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L66 · 2.3k
@@ -1336,7 +1336,7 @@
 - ENG-ARCH §3 关键接口（契约草案） · L473 · 98.2k
 - ENG-ARCH §4 资源管线 · L1999 · 10.6k
 - ENG-ARCH §5 接口先定、桩先合入 · L2087 · 3.0k
-- ENG-ARCH §6 git 工作树流程 · L2125 · 5.0k
+- ENG-ARCH §6 git 工作树流程 · L2125 · 5.1k
 - ENG-ARCH §7 主要风险与对策 · L2192 · 6.3k
 - ENG-ARCH §8 扩展点（RPG） · L2245 · 8.6k
 - ENG-ARCH §9 待验证（P0） · L2289 · 2.3k
@@ -1376,26 +1376,26 @@
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 11.7k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD.md` · 12.0k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
 
 - ENG-ONBOARD §0 结论 · L26 · 675
   - ★ ENG-ONBOARD §0.1 接入要点 · L43 · 69
 - ENG-ONBOARD §1 项目与当前阶段 · L47 · 603
-- ENG-ONBOARD §2 开工环境 · L62 · 535
-- ENG-ONBOARD §3 硬规则 · L74 · 4.4k
-  - ENG-ONBOARD §3.1 改哪里 · L76 · 625
-  - ENG-ONBOARD §3.2 代码边界与接入方式 · L87 · 1.5k
-  - ENG-ONBOARD §3.3 禁用写法 · L117 · 1.4k
-  - ENG-ONBOARD §3.4 内容与画面的底线 · L146 · 587
-  - ENG-ONBOARD §3.5 文件操作 · L162 · 384
-- ENG-ONBOARD §4 查资料 · L173 · 3.7k
-  - ENG-ONBOARD §4.1 文档在哪、怎么找 · L175 · 858
-  - ENG-ONBOARD §4.2 按要做的事查哪里 · L195 · 2.3k
-  - ENG-ONBOARD §4.3 Godot API · L264 · 223
-  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L270 · 219
-- ENG-ONBOARD §5 完成与回报 · L278 · 427
-- ENG-ONBOARD §6 改文档时 · L289 · 331
+- ENG-ONBOARD §2 开工环境 · L62 · 781
+- ENG-ONBOARD §3 硬规则 · L78 · 4.5k
+  - ENG-ONBOARD §3.1 改哪里 · L80 · 705
+  - ENG-ONBOARD §3.2 代码边界与接入方式 · L91 · 1.5k
+  - ENG-ONBOARD §3.3 禁用写法 · L121 · 1.4k
+  - ENG-ONBOARD §3.4 内容与画面的底线 · L150 · 587
+  - ENG-ONBOARD §3.5 文件操作 · L166 · 384
+- ENG-ONBOARD §4 查资料 · L177 · 3.7k
+  - ENG-ONBOARD §4.1 文档在哪、怎么找 · L179 · 858
+  - ENG-ONBOARD §4.2 按要做的事查哪里 · L199 · 2.4k
+  - ENG-ONBOARD §4.3 Godot API · L269 · 223
+  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L275 · 219
+- ENG-ONBOARD §5 完成与回报 · L283 · 427
+- ENG-ONBOARD §6 改文档时 · L294 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
@@ -1474,19 +1474,36 @@
 - ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 64
 - ENG-STATUS §3 活跃工作包 · L65 · 108
 
+## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
+
+`docs/design/engineering/ENG-TEAM.md` · 7.4k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
+
+- ENG-TEAM §0 结论 · L34 · 1.5k
+  - ★ ENG-TEAM §0.1 接入要点 · L60 · 411
+- ENG-TEAM §1 谁擅长什么 · L70 · 561
+- ENG-TEAM §2 包的归属 · L86 · 681
+- ENG-TEAM §3 开工顺序 · L98 · 1.0k
+- ENG-TEAM §4 交接文件 · L111 · 952
+- ENG-TEAM §5 审美与契约的交叉评审 · L132 · 434
+- ENG-TEAM §6 怎么开子代理 · L139 · 1.1k
+  - ENG-TEAM §6.1 Opus · L147 · 129
+  - ENG-TEAM §6.2 Astra · L153 · 593
+- ENG-TEAM §7 待验证（P0） · L178 · 210
+
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
-`docs/design/engineering/ENG-WP.md` · 88.5k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP.md` · 88.8k 字 · 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、后置细节、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.5k
   - ★ ENG-WP §0.1 接入要点 · L38 · 666
-- ENG-WP §1 阶段与闸口 · L50 · 6.5k
+- ENG-WP §1 阶段与闸口 · L50 · 6.6k
 - ENG-WP §2 工作包一览 · L94 · 69.6k
   - ENG-WP §2.1 各包主线版的范围 · L163 · 10.2k
 - ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L226 · 3.6k
 - ENG-WP §4 子代理通用简报模板 · L250 · 630
-- ENG-WP §5 主代理的职责 · L268 · 3.1k
+- ENG-WP §5 主代理的职责 · L268 · 3.2k
 - ENG-WP §6 待验证（P0） · L288 · 1.2k
 
 ## REF-PROMPT · 完整提示词（备份）

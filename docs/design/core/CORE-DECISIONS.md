@@ -261,7 +261,8 @@ gates: []
 | D-175 | 日式日常街景按"主轴留给成电，次路与后巷给日式"分区；传统和式建筑构件和教室推拉门不用；店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚只用在商业街和后勤小楼；黄昏有 2–3 只静止的乌鸦剪影，夜里和雨天不出现，不画成群飞过 | 全项目 | ART-AMBIENCE；MAP-QSH-ADDITIONS §2.16；WLD-LIFE | 生效 |
 | D-176 | 视觉精度与性能预算的关系：底线全图必须满足，不拿来换预算；细节密度在性能预算之内按精度区取舍，只有飞行才到的位置只判底线；屋顶只省贴近才看得到的细节，不省俯视构成；去粗糙按"最低合格构件"建模，倒角配自定义法线和着色器提亮，平面用硬边法线、曲面用软边法线，法线描线用软阈值 | 全部建模包 | ART-FIDELITY §0；ART-MODELING；ENG-PERF；ENG-BUDGET | 生效 |
 | D-178 | 子代理按需查阅文档：开工只读开工手册 ENG-ONBOARD（经仓库根的 `CLAUDE.md` 自动载入）、ENG-WP 本包的两行和派工简报，其余文档按 ENG-ONBOARD §4 的查阅指引按需查；每份规范文档带 `keywords`、范围块的"查阅"行、§0 结论和 §0 末尾的"接入要点"；小节目录 `docs/design/SECTIONS.md` 由 `scripts/docs/gen_index.py` 生成 | 全部工作包与文档 | ENG-ONBOARD；ENG-WP §2；ENG-WP §4；CORE-CONVENTIONS §7.1；CORE-CONVENTIONS §7.2 | 生效 |
-| D-161 | "主代理"是开发期的编排者：先做 WP-00；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）；文档里"须经 WP-00 审批"与"须经主代理审批"等价 | 全项目 | CORE-CONVENTIONS §8.5；CORE-GLOSSARY §14；ENG-WP §5 | 生效 |
+| D-179 | 双模型协作：Claude Opus 5.5 管画面、风格、内容与判断，并担任唯一的主代理（合并队列、`main` 推送、文档、施工状态）；GPT-6 Astra（xhigh，本机 Codex）管架构与复杂工程，做 WP-00，并独占契约与共享工程文件的修改；包按 ENG-TEAM §2 归属，主线按 D0、第一波、第二波开工，两边各开子代理，经 `.collab` 交接文件协作；画面取值以 Opus 评审为准，契约以 Astra 为准 | 全项目 | ENG-TEAM；ENG-WP §1；ENG-ARCH §6 | 生效 |
+| D-161 | "主代理"是开发期的编排者，由 Opus 担任；WP-00 由 Astra 做、主代理验收合入（D-179）；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）；文档里"须经 WP-00 审批"与"须经主代理审批"等价 | 全项目 | CORE-CONVENTIONS §8.5；CORE-GLOSSARY §14；ENG-WP §5 | 生效 |
 
 ## 11 待对齐
 

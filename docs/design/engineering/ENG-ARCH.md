@@ -2130,7 +2130,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 - 本地分支只用来隔离并行施工：每个写代码的子代理一个工作树、一个本地临时分支 `wp/<xx>-<slug>`。分支在本地提交、从不推送，合进 `main` 后立即删除。
 - **并发规模**：常态同时运行十几个 Opus 代理，可以分属两个账号，都在本机同一个仓库上工作。任何时刻只有一个主代理；合并队列、`main` 上的提交和推送只由它做。
 - **什么时候开工作树**：同一时刻有两个以上代理要写代码、编译或导入时，每个写代码的代理各开一个工作树。
-  - 只有一个代理写代码时（例如主代理自己做 WP-00、改共享文件或小修），直接在主检出（`E:\Project\UESTC_RPG`）的 `main` 上做：同样先过与改动相关的门禁，再提交、推送。
+  - 只有一个代理写代码时（例如主代理改文档或小修），直接在主检出（`E:\Project\UESTC_RPG`）的 `main` 上做：同样先过与改动相关的门禁，再提交、推送。
   - 只改文档、不编译的代理在主检出里改，由主代理分派（CORE-CONVENTIONS §7.6），两个代理不同时改同一个文件。
 
 工作树之间靠"每个工作树一个 `override.cfg` + 复制 `.godot` 做种子"隔离。
@@ -2141,8 +2141,8 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档和待迁移的数据与脚本（§1）。
    - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
    - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
-   - WP-00 在主检出的 `main` 上搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。完成后打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。
-   - WP-00 同时给主检出生成 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让主检出的开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
+   - WP-00 由 Astra 在工作树 `..\UESTC_RPG.wt\WP-00`（分支 `wp/00-core`）里搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），经主代理的合并队列进 `main`（ENG-TEAM §4）。主代理合入后在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子，再打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。之后共享工程文件的改动也由 Astra 在同一个工作树里提交、经合并队列进 `main`。
+   - WP-00 同时为主检出准备 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让主检出的开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
 2. **开工作树**：由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，从当前 `main` 拉本地分支，展开就是：
 
    ```powershell
