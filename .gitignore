@@ -1,0 +1,16 @@
+# Godot
+.godot/
+override.cfg
+
+# .NET
+bin/
+obj/
+.vs/
+*.user
+
+# Python（pipeline 的虚拟环境）
+.venv/
+__pycache__/
+
+# 本地产物：截图、门禁输出
+output/

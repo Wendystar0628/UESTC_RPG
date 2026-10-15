@@ -1,0 +1,27 @@
+<!-- 由 scripts/godot-api/gen_api_docs.py 生成，Godot Engine v4.7.2.stable.mono.official。不要手改。 -->
+
+# FramebufferCacheRD
+
+命名空间 `Godot`；class；继承 [`GodotObject`](GodotObject.md)
+
+Framebuffer cache manager for [`RenderingDevice`](RenderingDevice.md)-based renderers. Provides a way to create a framebuffer and reuse it in subsequent calls for as long as the used textures exists. Framebuffers will automatically be cleaned up when dependent objects are freed.
+
+## 构造函数
+
+### FramebufferCacheRD
+
+```csharp
+public FramebufferCacheRD()
+```
+
+## 方法
+
+### GetCacheMultipass
+
+```csharp
+public static Rid GetCacheMultipass(Array<Rid> textures, Array<RDFramebufferPass> passes, uint views)
+```
+
+引擎名：`get_cache_multipass`
+
+Creates, or obtains a cached, framebuffer. `textures` lists textures accessed. `passes` defines the subpasses and texture allocation, if left empty a single pass is created and textures are allocated depending on their usage flags. `views` defines the number of views used when rendering.

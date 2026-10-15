@@ -1,0 +1,83 @@
+"""校验 docs/design：小节引用、文件头的 depends/related、相对链接、工作包与门禁编号。
+
+用法：python -I scripts/docs/check_docs.py
+依赖：PyYAML。有问题时退出码为 1。
+"""
+import os, re, glob, sys
+from collections import Counter
+import yaml
+
+sys.stdout.reconfigure(encoding='utf-8')
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
+D = os.path.join(ROOT, 'docs', 'design')
+FM = re.compile(r'^---\r?\n(.*?)\r?\n---\r?\n', re.S)
+
+docs = {}
+for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
+    t = open(p, encoding='utf-8').read()
+    m = FM.match(t)
+    if not m:
+        continue
+    fm = yaml.safe_load(m.group(1))
+    secs = set(re.findall(r'^#{1,6}\s+(\d+(?:\.\d+)*[a-z]?)(?=\s)', t, re.M)) | set(re.findall(r'\*\*(\d+(?:\.\d+)+)', t))
+    docs[str(fm.get('id'))] = {'path': p, 'text': t, 'secs': secs, 'fm': fm}
+codes = set(docs)
+alt = '|'.join(sorted(map(re.escape, codes), key=len, reverse=True))
+
+
+def ok(code, sec):
+    s = docs[code]['secs']
+    return sec in s or any(x.startswith(sec + '.') for x in s)
+
+
+bad = []
+for code, d in docs.items():
+    t = d['text']
+    # 跨文档引用 "SYS-WEATHER §6.4"
+    for m in re.finditer(r'(' + alt + r')\s*§\s*(\d+(?:\.\d+)*)', t):
+        if not ok(m.group(1), m.group(2)):
+            bad.append((code, 'xref', m.group(0)))
+    # 裸 "§6.4"：紧跟在别的编码后面的（如 "SYS-WALK §6–§8"）按那份文档查，否则按本文查
+    for m in re.finditer(r'(?<![A-Z\-\w])§\s*(\d+(?:\.\d+)*)', t):
+        pre = t[max(0, m.start() - 25):m.start()]
+        if re.search(r'(' + alt + r')[^§\n]{0,3}$', pre):
+            continue
+        full_pre = t[t.rfind('\n', 0, m.start()) + 1:m.start()]
+        # 引号或反引号里的是写法示例，不查
+        if full_pre.count('`') % 2 or full_pre.count('"') % 2 or full_pre.count('“') > full_pre.count('”'):
+            continue
+        line_pre = full_pre[-80:]
+        near = list(re.finditer(r'(' + alt + r')', line_pre))
+        tgt = code
+        if near and re.fullmatch(r'[\s§\d.*、，,–\-和与及的至少读先看尤其全篇各自结论（(]*', line_pre[near[-1].end():]):
+            tgt = near[-1].group(1)
+        if not ok(tgt, m.group(1)):
+            bad.append((code, 'self', t[max(0, m.start() - 15):m.end()].replace('\n', ' ')))
+    for k in ('depends', 'related'):
+        for x in d['fm'].get(k) or []:
+            if str(x) not in codes:
+                bad.append((code, 'fm-' + k, x))
+    for m in re.finditer(r'\]\(([^)#\s]+?\.md)(#[^)]*)?\)', t):
+        tgt = os.path.normpath(os.path.join(os.path.dirname(d['path']), m.group(1)))
+        if not m.group(1).startswith('http') and not os.path.exists(tgt):
+            bad.append((code, 'link', m.group(1)))
+
+# 工作包与门禁编号以 ENG-WP、ENG-GATES 为准
+wp_text = open(os.path.join(D, 'engineering', 'ENG-WP.md'), encoding='utf-8').read()
+wps = set(re.findall(r'^\|\s*(WP-\d+[a-z]?)\s*\|', wp_text, re.M))
+gates = set(re.findall(r'\b(G\d{1,2})\b', open(os.path.join(D, 'engineering', 'ENG-GATES.md'), encoding='utf-8').read()))
+for code, d in docs.items():
+    fm = d['fm']
+    for k in ('owners', 'contributors'):
+        for w in fm.get(k) or []:
+            base = re.match(r'(WP-\d+)', str(w))
+            if not base or (str(w) not in wps and base.group(1) not in wps):
+                bad.append((code, k, w))
+    for g in fm.get('gates') or []:
+        if str(g) not in gates:
+            bad.append((code, 'gate', g))
+
+print('docs', len(docs), 'problems', len(bad), dict(Counter(b[1] for b in bad)))
+for b in bad:
+    print('%s\t%s\t%s' % b)
+sys.exit(1 if bad else 0)
