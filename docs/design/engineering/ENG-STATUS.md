@@ -58,8 +58,8 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`89dc0be` WP-15 地表、道路与铺装的主线版。
-- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14 `cb7a8b0`、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`。
+- 当前 `main`：`c4d1205` WP-24 水体的主线版（游戏内接通仍等 contract-17）。
+- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14 `cb7a8b0`、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`。
 - 最近可运行入口：`4568685`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
 - 已冻结的契约组：尚无（v1 候选）。
 - 当前阶段：第一波（ENG-TEAM §3）。第二波前提里 WP-09、WP-14 已合入，还差 WP-08、WP-02。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
@@ -72,7 +72,7 @@ gates: []
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | WP-00 | 契约第 4 批：contract-5（实例池、precip 登记、WetSurface）、contract-7（同源状态与纹理登记）；处理 contract-11–14 | `..\UESTC_RPG.wt\WP-00` | `wp/00-core` | — | 施工中 | — | Astra 交 merge-WP-00-4，Opus 合入 |
 | WP-04 | 接 `lamp.gdshaderinc`、`IToonMaterialProvider`、D0RenderHost 接材质库 | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 阻塞 | 等 Astra 的 contract-12 第 6 条、IToonMaterialProvider、contract-8 第 1 条 | 上游进 main 后由 Opus 的子代理接通 |
-| WP-24 | 水体主线版（评审中） | `..\UESTC_RPG.wt\WP-24` | `wp/24-water` | `8069bf7` | 阻塞 | 等 contract-17（几何指定白名单着色器、倒影世界挂代理物体） | Opus 评审；contract-17 落地后接通 |
+| WP-24 | 主线版已合入；接 contract-17 的白名单着色器与倒影代理 | `..\UESTC_RPG.wt\WP-24` | `wp/24-water` | — | 阻塞 | 等 contract-17（几何指定白名单着色器、倒影世界挂代理物体） | contract-17 合入后由 Opus 的子代理接通 |
 | WP-39 | 主线版已合入；接 contract-12 的灯具清单、窗格声明与光晕挂载 | `..\UESTC_RPG.wt\WP-39` | `wp/39-nightlight` | — | 阻塞 | 等 Astra 处理 contract-12 | contract-12 合入后由 Opus 的子代理接通 |
 | WP-40 | 全日天空主线版；修 17:30 云边锯齿 | `..\UESTC_RPG.wt\WP-40` | `wp/40-sky` | — | 施工中 | — | Opus 的子代理交候选，Opus 合入 |
 | WP-45b | 降水与湿润的主线版（评审已过） | `..\UESTC_RPG.wt\WP-45b` | `wp/45b-precip` | — | 阻塞 | 等 contract-5 的实例池与 `precip_wet` 白名单 | merge-WP-00-4 合入后接通、快检、合入 |
