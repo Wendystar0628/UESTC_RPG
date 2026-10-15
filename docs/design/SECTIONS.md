@@ -516,29 +516,29 @@
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
-`docs/design/world/WLD-WATER.md` · 24.4k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、各湖与河渠、喷泉与池水，以及 Godot 实现
+`docs/design/world/WLD-WATER.md` · 24.6k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、各湖与河渠、喷泉与池水，以及 Godot 实现
 关键词：水体、水面、湖面、西湖、东湖、河渠、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、涉水涟漪、灯的竖条倒影、refl_lamps、reflect_tex、reflect_vp、reflect_lake、西湖喷泉、叠水喷泉、游泳池池水、冬季浅滩、漂浮物、河渠中线、water.gdshader
 
-  - WLD-WATER 分工 · L23 · 740
+  - WLD-WATER 分工 · L23 · 750
 - WLD-WATER §0 结论 · L46 · 2.0k
   - ★ WLD-WATER §0.1 接入要点 · L59 · 1.0k
-- WLD-WATER §1 动画式水面（所有水体通用） · L73 · 5.2k
+- WLD-WATER §1 动画式水面（所有水体通用） · L73 · 5.3k
 - WLD-WATER §2 西湖 · L170 · 1.4k
 - WLD-WATER §3 东湖 · L197 · 885
 - WLD-WATER §4 河渠 · L217 · 1.7k
 - WLD-WATER §5 主楼喷泉（可选） · L246 · 145
 - WLD-WATER §6 截面水柱的水色 · L250 · 470
-- WLD-WATER §7 Godot 实现 · L264 · 6.2k
-  - WLD-WATER §7.1 水面材质（默认不透明） · L268 · 1.9k
-  - WLD-WATER §7.2 倒影接口 · L300 · 1.9k
-  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L321 · 1.5k
-  - WLD-WATER §7.4 透明变体（只在需要时） · L331 · 194
-  - WLD-WATER §7.5 水下 · L337 · 273
-  - WLD-WATER §7.6 多地图（SYS-MAPS） · L343 · 405
-- WLD-WATER §8 游泳馆与室外游泳池的池水 · L350 · 616
-- WLD-WATER §9 品学楼门前叠水喷泉 · L364 · 916
-- WLD-WATER WP-24 交付验收 · L375 · 1.1k
-- WLD-WATER §10 待验证（P0） · L400 · 523
+- WLD-WATER §7 Godot 实现 · L264 · 6.3k
+  - WLD-WATER §7.1 水面材质（默认不透明） · L268 · 1.8k
+  - WLD-WATER §7.2 倒影接口 · L291 · 2.1k
+  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L313 · 1.5k
+  - WLD-WATER §7.4 透明变体（只在需要时） · L323 · 194
+  - WLD-WATER §7.5 水下 · L329 · 273
+  - WLD-WATER §7.6 多地图（SYS-MAPS） · L335 · 420
+- WLD-WATER §8 游泳馆与室外游泳池的池水 · L342 · 616
+- WLD-WATER §9 品学楼门前叠水喷泉 · L356 · 916
+- WLD-WATER WP-24 交付验收 · L367 · 1.1k
+- WLD-WATER §10 待验证（P0） · L392 · 523
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
