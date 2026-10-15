@@ -39,6 +39,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 - **给过场提供钩子**（例如 WP-39 的灯光提示）：只在 Entering 生效，只改先后、不改终值，撤销后各值与不覆盖时完全相同（§3.3）
 - **系统行为要随应用状态变化**：读 `IAppFlow.State`、订阅 `Changed`；Boot、Title、Entering、Leaving 下不触发偶发事件，HUD 与小地图隐藏，自适应画质冻结，活动范围与边界推回不作用；自动保存只在 Playing 里有（Leaving 只在开始时存一次）（§7.2）
 - **开始页和过场期间要动镜头或读输入**：Boot、Title、Entering、Leaving 期间 `IAppFlow` 持有 `LockInput(InputLockReason.Cinematic)`，镜头只由 `CinematicPlayer` 经 `ICameraRig.SetPose` 驱动，WP-06 的相机不积分输入；开始页菜单和按住跳过走界面输入（§7.1、§7.4、§8.3）
+- **要在启动时做准备**：实现 `IBootParticipant`（实现在已注册的服务或节点上，不单独注册），在 `BeforeMap`、`AfterMapWarm`、`BeforeReveal` 里选一个阶段；不揭幕、不放输入；读档只由 `IAppBootFlow.PrepareWorld` 做（§1.4）
 - **用雾幕或在雾幕下换东西**：雾幕原因用 `VeilReason`，冷启动 `Boot`，跳过、雾幕直达、返回标题 `Cinematic`；WP-01 的雾幕服务要支持扉页这种内容和保持不透明直到条件满足；扉页与雾幕同在 layer 5，三维画面与预热层（layer 4）在下，放映层 9、界面 10、署名 11 在上（§1.1、§7.4）
 - **新加着色器组合、界面组件或大页**：要进扉页后面的预热（三维按 ENG-PERF §2 的阵列，二维画进预热样片，存档页、设置卡各页、大地图预建并隐藏）；转为实时之后 SURFACE、DRAW、Canvas 三项管线编译计数和新生成的 MSDF 字形都不得增长（§1.1、§11.2）
 - **内容会出现在 T0 或过场路径上**：外围街区与 O2 楼顶按 T0 的实际观看距离验收；过场沿途按所在精度区验收（南门、主楼、银杏大道、图书馆是 K1），不因镜头贴近另提标准；沿途几何改动后，过场路径离楼体、地形、树干不小于 3 m 的检查要照样通过（§2.1、§3.1、§8.4）
@@ -100,6 +101,26 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 - **变体**：4 季 × 昼、夜共 8 张，按最近存档的季节和"太阳高度是否高于 −4°"选一张；没有存档时用"秋 · 昼"（也就是落金初灯）。天气不分变体，差异交给交叉淡化。
 - **格式**：导入为 Lossy（WebP），每张约 0.5–1 MB；只在 Boot 状态加载一张，转为实时后释放（显存约 20 MB × 1，3440×1440 RGBA8）。
 - **版本核对**：静帧的元数据记 T0 位姿、云卡布局和世界数据的哈希；不一致时 G7 报警，首帧仍用旧图（只是交叉淡化不那么平）。
+
+### 1.4 接线（`Campus.Contracts.Startup` 与 `IAppBootFlow`）
+
+§1.1 的各步由内核的 Boot 串起来。各包不自己抢时机，按下面三个阶段接入：
+
+| 时机 | 对应 §1.1 | 谁做 | 做什么 |
+| --- | --- | --- | --- |
+| `BootPhase.BeforeMap` | 第 1 步 | 实现 `IBootParticipant` 的服务或节点 | 地图目录、存档 meta 与存档锁、静音的音频资源；这时还没选目的地 |
+| `IAppBootFlow.PrepareBoot(BootFlowRequest)` | 第 1 步末 | WP-49a | 记下命令行解析好的请求，选存档位和初始地图：显式 `Map` 优先，其次存档位 meta，最后默认图；按住过场输入 |
+| `IMapService.Travel(Boot)` 与预热 | 第 2–4 步 | 内核、WP-46、WP-01 | 见 §1.1 |
+| `BootPhase.AfterMapWarm` | 第 5 步 | 参与者 | 画质检测与应用（WP-32b） |
+| `IAppBootFlow.PrepareWorld()` | 第 6 步 | WP-49a | 唯一的启动读档入口：有标题时选中的存档位用 Preview，无标题用 Full；外部存档文件照 `LoadFile` 走 Full；定预览 T0 与流逝或恢复终点。没有存档的预览不新建游戏、不取熵 |
+| 命令行世界覆盖 | 第 6 步末 | 内核 | `--pose`、`--mode` 等显式参数在 `PrepareWorld` 之后套用 |
+| `BootPhase.BeforeReveal` | 第 7 步 | 参与者 | 最后的就绪工作 |
+| Reveal | 第 8 步 | 内核 | 只有内核揭幕，参与者不揭幕、不放输入 |
+| `IAppBootFlow.CompleteBoot()` | 第 8 步末 | WP-49a | Boot 转 Title 或 Playing；进 Playing 时放开启动输入锁；不再读档、换图、预热或揭幕 |
+
+- `IBootParticipant` 实现在已注册的服务或节点上，不单独注册成服务。内核按引用去重、拒绝重复 `Id`，每个阶段按 `Order`、再按 `Id` 序数串行调用，每个实例每个阶段至多一次；与本阶段无关的立即返回。
+- 任何一步抛异常都中止启动，交给 Boot 按 §1.1 的失败规则处理，雾幕保持不透明。
+- `IAppBootFlow` 与 `IAppFlow` 是同一个实例（WP-49a），只在启动时用；契约在 `game/contracts/AppFlow/AppBootContracts.cs` 与 `game/contracts/Startup/BootContracts.cs`。
 
 ## 2 开始页
 

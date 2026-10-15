@@ -1056,56 +1056,57 @@
 
 ## SYS-TITLE · 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`
 
-`docs/design/systems/SYS-TITLE.md` · 42.4k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
+`docs/design/systems/SYS-TITLE.md` · 43.8k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
 关键词：开始页、标题页、主菜单、扉页、启动序列、启动失败页、T0、云隙望穹、片名块、新游戏过场、继续过场、开场动画、返回标题、跳过过场、安全落点、开场过场设置、过场专属元素、云卡、放映层、标题卡、IAppFlow、AppState、EnterRequest、CinematicPlayer、CinematicDef、cine_cloud.gdshader、enter_new.json、game/data/maps/qingshuihe/cinematics/
 
-- SYS-TITLE §0 结论 · L25 · 3.0k
-  - ★ SYS-TITLE §0.1 接入要点 · L36 · 1.7k
-- SYS-TITLE §1 启动序列（SYS-VIEW §3 的启动流程以本节为准） · L50 · 4.8k
-  - SYS-TITLE §1.1 步骤 · L52 · 3.7k
-  - SYS-TITLE §1.2 目标 · L82 · 482
-  - SYS-TITLE §1.3 扉页 · L96 · 572
-- SYS-TITLE §2 开始页 · L104 · 4.0k
-  - SYS-TITLE §2.1 T0 镜头"云隙望穹" · L106 · 1.2k
-  - SYS-TITLE §2.2 菜单 · L124 · 1.5k
-  - SYS-TITLE §2.3 片名块 · L140 · 778
-  - SYS-TITLE §2.4 首次启动与再次启动 · L156 · 589
-- SYS-TITLE §3 新游戏过场 · L168 · 4.5k
-  - SYS-TITLE §3.1 分镜表 · L170 · 2.3k
-  - SYS-TITLE §3.2 字幕、时间读数与标题卡 · L191 · 1.1k
-  - SYS-TITLE §3.3 过场专属元素 · L210 · 690
-  - SYS-TITLE §3.4 简短版 · L227 · 412
-- SYS-TITLE §4 继续过场与返回标题 · L240 · 1.7k
-  - SYS-TITLE §4.1 继续（约 9 s） · L242 · 1.0k
-  - SYS-TITLE §4.2 返回标题（约 3 s） · L259 · 628
-- SYS-TITLE §5 跳过、安全落点与设置项 · L274 · 1.4k
-  - SYS-TITLE §5.1 跳过 · L276 · 323
-  - SYS-TITLE §5.2 安全落点 · L283 · 457
-  - SYS-TITLE §5.3 设置项"开场过场" · L296 · 642
-- SYS-TITLE §6 与时间不可逆的关系 · L310 · 1.1k
-- SYS-TITLE §7 `IAppFlow` 状态机 · L332 · 5.1k
-  - SYS-TITLE §7.1 状态与转移 · L334 · 1.5k
-  - SYS-TITLE §7.2 各状态下的约定 · L360 · 918
-  - SYS-TITLE §7.3 交还控制 · L379 · 351
-  - SYS-TITLE §7.4 契约 · L388 · 2.3k
-- SYS-TITLE §8 过场数据格式与 `CinematicPlayer` · L426 · 7.5k
-  - SYS-TITLE §8.1 文件 · L428 · 521
-  - SYS-TITLE §8.2 结构 · L442 · 3.4k
-  - SYS-TITLE §8.3 `CinematicPlayer` · L507 · 2.0k
-  - SYS-TITLE §8.4 检查（G2 的一部分，纯 .NET） · L536 · 552
-  - SYS-TITLE §8.5 放映层（WP-35d） · L547 · 261
-  - SYS-TITLE §8.6 音频挂点 · L554 · 692
-- SYS-TITLE §9 云卡 `cine_cloud.gdshader` · L565 · 843
-- SYS-TITLE §10 流式预取 · L578 · 751
-- SYS-TITLE §11 性能与门禁 · L591 · 2.0k
-  - SYS-TITLE §11.1 预算 · L593 · 365
-  - SYS-TITLE §11.2 门禁增项（写进 ENG-GATES §2） · L604 · 1.3k
-  - SYS-TITLE §11.3 体验脚本（写进 ENG-PERF §12.4） · L620 · 197
-  - SYS-TITLE §11.4 静态预算、性能回归与自适应画质 · L624 · 202
-- SYS-TITLE §12 多地图 · L630 · 803
-- SYS-TITLE §13 不做的事 · L644 · 355
-- SYS-TITLE §14 工作包分工 · L658 · 1.1k
-- SYS-TITLE §16 待验证（P0） · L677 · 724
+- SYS-TITLE §0 结论 · L25 · 3.2k
+  - ★ SYS-TITLE §0.1 接入要点 · L36 · 1.9k
+- SYS-TITLE §1 启动序列（SYS-VIEW §3 的启动流程以本节为准） · L51 · 6.1k
+  - SYS-TITLE §1.1 步骤 · L53 · 3.7k
+  - SYS-TITLE §1.2 目标 · L83 · 482
+  - SYS-TITLE §1.3 扉页 · L97 · 572
+  - SYS-TITLE §1.4 接线（`Campus.Contracts.Startup` 与 `IAppBootFlow`） · L105 · 1.3k
+- SYS-TITLE §2 开始页 · L125 · 4.0k
+  - SYS-TITLE §2.1 T0 镜头"云隙望穹" · L127 · 1.2k
+  - SYS-TITLE §2.2 菜单 · L145 · 1.5k
+  - SYS-TITLE §2.3 片名块 · L161 · 778
+  - SYS-TITLE §2.4 首次启动与再次启动 · L177 · 589
+- SYS-TITLE §3 新游戏过场 · L189 · 4.5k
+  - SYS-TITLE §3.1 分镜表 · L191 · 2.3k
+  - SYS-TITLE §3.2 字幕、时间读数与标题卡 · L212 · 1.1k
+  - SYS-TITLE §3.3 过场专属元素 · L231 · 690
+  - SYS-TITLE §3.4 简短版 · L248 · 412
+- SYS-TITLE §4 继续过场与返回标题 · L261 · 1.7k
+  - SYS-TITLE §4.1 继续（约 9 s） · L263 · 1.0k
+  - SYS-TITLE §4.2 返回标题（约 3 s） · L280 · 628
+- SYS-TITLE §5 跳过、安全落点与设置项 · L295 · 1.4k
+  - SYS-TITLE §5.1 跳过 · L297 · 323
+  - SYS-TITLE §5.2 安全落点 · L304 · 457
+  - SYS-TITLE §5.3 设置项"开场过场" · L317 · 642
+- SYS-TITLE §6 与时间不可逆的关系 · L331 · 1.1k
+- SYS-TITLE §7 `IAppFlow` 状态机 · L353 · 5.1k
+  - SYS-TITLE §7.1 状态与转移 · L355 · 1.5k
+  - SYS-TITLE §7.2 各状态下的约定 · L381 · 918
+  - SYS-TITLE §7.3 交还控制 · L400 · 351
+  - SYS-TITLE §7.4 契约 · L409 · 2.3k
+- SYS-TITLE §8 过场数据格式与 `CinematicPlayer` · L447 · 7.5k
+  - SYS-TITLE §8.1 文件 · L449 · 521
+  - SYS-TITLE §8.2 结构 · L463 · 3.4k
+  - SYS-TITLE §8.3 `CinematicPlayer` · L528 · 2.0k
+  - SYS-TITLE §8.4 检查（G2 的一部分，纯 .NET） · L557 · 552
+  - SYS-TITLE §8.5 放映层（WP-35d） · L568 · 261
+  - SYS-TITLE §8.6 音频挂点 · L575 · 692
+- SYS-TITLE §9 云卡 `cine_cloud.gdshader` · L586 · 843
+- SYS-TITLE §10 流式预取 · L599 · 751
+- SYS-TITLE §11 性能与门禁 · L612 · 2.0k
+  - SYS-TITLE §11.1 预算 · L614 · 365
+  - SYS-TITLE §11.2 门禁增项（写进 ENG-GATES §2） · L625 · 1.3k
+  - SYS-TITLE §11.3 体验脚本（写进 ENG-PERF §12.4） · L641 · 197
+  - SYS-TITLE §11.4 静态预算、性能回归与自适应画质 · L645 · 202
+- SYS-TITLE §12 多地图 · L651 · 803
+- SYS-TITLE §13 不做的事 · L665 · 355
+- SYS-TITLE §14 工作包分工 · L679 · 1.1k
+- SYS-TITLE §16 待验证（P0） · L698 · 724
 
 ## SYS-VIEW · 观察模式、介质与开场
 
@@ -1162,14 +1163,14 @@
 
 ## SYS-WEATHER · 天气：天气清单、画面规则、前向随机过程、过渡与验收
 
-`docs/design/systems/SYS-WEATHER.md` · 25.7k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
+`docs/design/systems/SYS-WEATHER.md` · 25.9k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
 关键词：天气、天气格、自动天气、手动天气、天气向量、WeatherNow、WeatherKind、WeatherVec、WeatherSpan、IWeatherProcess、WeatherProcessState、ILightningFeed、LightningFlash、前向随机过程、前瞻队列、天气预报、天气种子、天气修正量、太阳雨、雨的可读性、闪电、彩虹、降水池、precip.gdshader、precip_occ、湿润、积水、地面遮罩 2、refl_lamps、天气巡回
 
 - SYS-WEATHER §0 结论 · L24 · 2.0k
   - ★ SYS-WEATHER §0.1 接入要点 · L33 · 1.4k
 - SYS-WEATHER §1 天气清单与界面格 · L48 · 780
 - SYS-WEATHER §2 每种天气的画面规则 · L68 · 3.6k
-- SYS-WEATHER §3 雨的可读性规则 · L129 · 828
+- SYS-WEATHER §3 雨的可读性规则 · L129 · 995
 - SYS-WEATHER §4 与四季、昼夜的配合 · L142 · 266
 - SYS-WEATHER §5 闪电与彩虹 · L150 · 1.3k
 - SYS-WEATHER §6 自动天气：前向随机过程（WP-45a） · L159 · 4.0k
@@ -1326,20 +1327,20 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 183.2k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH.md` · 184.6k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L66 · 2.3k
   - ★ ENG-ARCH §0.1 接入要点 · L78 · 1.3k
 - ENG-ARCH §1 旧网页栈怎么处理 · L92 · 5.1k
 - ENG-ARCH §2 目录结构与归属 · L155 · 33.8k
-- ENG-ARCH §3 关键接口（契约草案） · L473 · 98.9k
-- ENG-ARCH §4 资源管线 · L2006 · 10.6k
-- ENG-ARCH §5 接口先定、桩先合入 · L2094 · 3.0k
-- ENG-ARCH §6 git 工作树流程 · L2132 · 5.1k
-- ENG-ARCH §7 主要风险与对策 · L2199 · 6.3k
-- ENG-ARCH §8 扩展点（RPG） · L2252 · 8.6k
-- ENG-ARCH §9 待验证（P0） · L2296 · 2.3k
+- ENG-ARCH §3 关键接口（契约草案） · L473 · 100.2k
+- ENG-ARCH §4 资源管线 · L2029 · 10.6k
+- ENG-ARCH §5 接口先定、桩先合入 · L2117 · 3.0k
+- ENG-ARCH §6 git 工作树流程 · L2155 · 5.1k
+- ENG-ARCH §7 主要风险与对策 · L2222 · 6.3k
+- ENG-ARCH §8 扩展点（RPG） · L2275 · 8.6k
+- ENG-ARCH §9 待验证（P0） · L2319 · 2.3k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
@@ -1476,20 +1477,21 @@
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 8.1k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 9.2k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
-- ENG-TEAM §0 结论 · L34 · 1.6k
-  - ★ ENG-TEAM §0.1 接入要点 · L63 · 411
-- ENG-TEAM §1 谁擅长什么 · L73 · 675
-- ENG-TEAM §2 包的归属 · L91 · 681
-- ENG-TEAM §3 开工顺序 · L103 · 1.0k
-- ENG-TEAM §4 交接文件 · L116 · 1.0k
-- ENG-TEAM §5 审美与契约的交叉评审 · L137 · 434
-- ENG-TEAM §6 怎么开子代理 · L144 · 1.4k
-  - ENG-TEAM §6.1 Opus · L162 · 129
-  - ENG-TEAM §6.2 Astra · L168 · 593
-- ENG-TEAM §7 待验证（P0） · L193 · 210
+- ENG-TEAM §0 结论 · L34 · 1.9k
+  - ★ ENG-TEAM §0.1 接入要点 · L64 · 492
+- ENG-TEAM §1 谁擅长什么 · L75 · 675
+- ENG-TEAM §2 包的归属 · L93 · 681
+- ENG-TEAM §3 开工顺序 · L105 · 1.0k
+- ENG-TEAM §4 交接文件 · L118 · 1.0k
+- ENG-TEAM §5 审美与契约的交叉评审 · L139 · 434
+- ENG-TEAM §6 怎么开子代理 · L146 · 2.4k
+  - ENG-TEAM §6.1 Opus · L165 · 129
+  - ENG-TEAM §6.2 Astra · L171 · 593
+  - ENG-TEAM §6.3 旁路 Sol 会话 · L196 · 843
+- ENG-TEAM §7 待验证（P0） · L218 · 210
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
