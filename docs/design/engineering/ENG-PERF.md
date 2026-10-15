@@ -1059,12 +1059,12 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
   | 雾、雨（叠加） | +0.05–0.08 | — | — | +0.05 | — |
   | 雷雨闪光帧（SYS-WEATHER §5）、换季雾幕 | +0.1 | — | — | — | — |
 
-  - 阈值取 0.85 而不是 1：高光肩部（序 6）在 Glow 之前把 > 0.76 的值压回 1 以内（ART-STYLE §7.2）。春季 +30% 乘在 `GlowIntensity` 上。
+  - 阈值取 1.0：只晕开大于 1 的真高光；高光肩部（序 6）只压大于 1.0 的溢出，调色板登记的受光色前后 ΔE ≤ 2（ART-STYLE §7.2）。春季 +30% 乘在 `GlowIntensity` 上。
   - 换级用 `SetGlowLevel` 在 0.5 s 内渐变，不硬切。观感 P0 看图确认（§16）。
 
   Glow 本身常开（风格底线）；画面设置的"柔光质量"只改 glow 级数和双三次放大（`RenderingServer.EnvironmentGlowSetUseBicubicUpscale`），即时、不编译。要去掉的那一级用 `SetGlowLevel` 在 0.5 s 内把强度渐变到 0，不硬切；双三次放大的开关差异很小，放在渐变结束的那一帧。
 - **CDL 与 LUT**：内置没有 CDL。32³ 基表保持静态；CDL 四个参数按关键帧插值（SYS-TIME §3.1），每帧（或变化超过阈值时）用一次 32³ dispatch 把"CDL ∘ 基表"写进运行时 LUT，赋给 `AdjustmentColorCorrection`（它接受 Texture3D，Texture3DRD 能否直接用由 P0 确认）。LUT 在 linear_to_srgb 之后执行，而且只有 Adjustment 开着时才执行，所以 Adjustment 开、亮度对比度饱和度都为 1。备选：在 `PostTransparent` 里直接算 CDL。基表烘入分调（暗部 ×(0.97, 1.0, 1.04)、亮部 ×(1.03, 1.0, 0.97)）和饱和 1.02；CDL 默认值按 ART-STYLE §7.2（白天 slope 0.96、offset +0.03，黄金 slope 0.97、offset +0.02、sat 1.03），offset 就是"抬黑"，让影和暗部清透。
-- **高光肩部与暗角**（ART-STYLE §7.2、ART-STYLE §7.8）：Godot 4.7 的 `Environment.ToneMapper` 只有 `Linear`、`Reinhardt`、`Filmic`、`Aces`、`Agx`，没有 Khronos PBR Neutral，所以只借它的高光压缩段，在移轴合成那次 dispatch 里自写：峰值 ≤ 0.76 的调色板颜色原样上屏，> 0.76 的按 Neutral 肩部压回、不爆白，暗部不偏移。暗角是风格默认、可关：强度白天 0.10、夜间 0.12，色调白天 (0.90, 0.91, 0.95)、黄金 (0.92, 0.90, 0.93)，强度与色调由 C# 经 push constant 写。
+- **高光肩部与暗角**（ART-STYLE §7.2、ART-STYLE §7.8）：Godot 4.7 的 `Environment.ToneMapper` 只有 `Linear`、`Reinhardt`、`Filmic`、`Aces`、`Agx`，没有 Khronos PBR Neutral，所以只借它的高光压缩段，在移轴合成那次 dispatch 里自写：峰值 ≤ 1.0 的调色板颜色原样上屏，> 1.0 的溢出（柔光、高光、灯）按 Neutral 肩部压回、不爆白，暗部不偏移。暗角是风格默认、可关：强度白天 0.10、夜间 0.12，色调白天 (0.90, 0.91, 0.95)、黄金 (0.92, 0.90, 0.93)，强度与色调由 C# 经 push constant 写。
 - **主光可见度与光斑**：第一次 dispatch 在主光屏幕位置周围采 32 个深度点（反向 Z 下天空深度为 0），结果写进存储缓冲；第二次 dispatch 画 1 条横条和 5 个光圈，不透明度不超过 25% × 可见度。全程不需要 CPU 回读。光斑只跟太阳；月亮只在天空着色器里画光晕（ART-STYLE §7.3）。雾天日盘隔雾可见但不出光斑（SYS-WEATHER §2）：可见度随天气的雾密度倍率淡到 0。
 - **随时段和天气变化的后期参数**只改 Environment 的属性值和 Compositor 的 push constant，不切 `*Enabled`，不重编译。
 - **移轴、光斑、光柱、暗角可关**（风格默认，SYS-GRAPHICS §2）：移轴的 1/2 和 1/4 分辨率两套计算管线、光斑的两次 dispatch 都在启动时建好；玩家关掉时，先在 0.5 s 内把强度（移轴的模糊半径、光斑的不透明度、光柱与细尘的亮度、暗角强度）淡到 0，再关掉对应的部分：光斑把 `CompositorEffect.Enabled` 设 false，光柱节点 `Visible = false`（节点启动时就在树里，已预编译）。打开时反过来。自动调节不关它们（§11.3）。

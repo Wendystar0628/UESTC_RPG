@@ -456,7 +456,7 @@ w     = max(w_min, smoothstep(0.06, 0.015, C_a))      // 中性材质 w → 1
 | 雷雨闪光帧、换季雾幕 | +0.1 | — | — | — | — |
 
   - **默认格的余量**：b0 默认 0.02，在 0–0.04 之间由 P0 看图定。默认格（17:30，h 5.5°）因此约有 0.02 的全帧柔光，画面偏"净"、偏"硬"。
-  - **阈值取 0.85 而不是 1**：高光肩部（§7.2）在 Glow 之前把 > 0.76 的值压回 1 以内，原始 1.0 压后约 0.88、1.35 约 0.93、2.8 约 0.98。
+  - **阈值取 1.0**：白天的柔光阈值放在调色板登记的受光色之上，只晕开大于 1 的真高光（日盘、灯、高光闪点）；高光肩部（§7.2）只压大于 1.0 的溢出，调色板登记的受光色经过肩部前后 ΔE ≤ 2，受光暖白墙 #FFE4BE 保持清透、不发桃。黄昏以后的全帧柔光照上表叠加，但不抬影面。
   - 春季的 +30% 乘在 `GlowIntensity` 上（SYS-TIME §3.3）；换季雾幕（SYS-TIME §5）和雷雨闪光帧（SYS-WEATHER §5）的 +0.1 加在 `GlowBloom` 上；雾、雨的增量由 WP-37 的天气修正量给出（SYS-WEATHER §7），初值 P0 看图定。
   - 实现：用 Environment 内置的 Glow。4.6 起 glow 在色调映射之前混合，混合模式用 Screen。`SetGlowLevel` 在 0.5 s 内渐变切级，不硬切。`GlowEnabled` 运行时不切。观感由 P0 看图确认。
   - 柔光质量"高 / 标准"只改 glow 的级数和是否双三次放大，即时生效（SYS-GRAPHICS §3）。
@@ -464,16 +464,16 @@ w     = max(w_min, smoothstep(0.06, 0.015, C_a))      // 中性材质 w → 1
   - CDL 的四个参数按关键帧插值；32³ 的调色 3D 纹理保持静态，不随时段换表（ENG-PERF §10.2）。切换时间和季节只改参数值：不切特化开关，管线编译计数不增。
   - **高光肩部**：借 Khronos PBR Neutral 的高光压缩段，不做它的暗部偏移，让亮处被柔和地压住、不爆白。放在 `PostTransparent` 的移轴合成那次 dispatch 里；移轴关掉时这次 dispatch 照样执行，只把移轴的混合量置 0。高光肩部属风格底线，随色调映射不能关。Godot 4.7 的 `Environment.ToneMapper` 只有 Linear / Reinhardt / Filmic / Aces / Agx，没有 Neutral，所以自写：
     ```glsl
+    // start = 1.0：高于全部登记受光色；headroom = 0.5
     float peak = max(c.r, max(c.g, c.b));
-    if (peak > 0.76) {
-        float dd = 0.24;
-        float np = 1.0 - dd * dd / (peak + dd - 0.76);
+    if (peak > start) {
+        float np = start + headroom * (1.0 - exp(-(peak - start) / headroom));
         c *= np / peak;
-        float g = 1.0 - 1.0 / (0.15 * (peak - np) + 1.0);
+        float g = 1.0 - 1.0 / (0.15 * (peak - np) + 1.0);   // 向白去饱和，取自 Neutral
         c = mix(c, vec3(np), g);
     }
     ```
-    峰值 ≤ 0.76 的调色板颜色原样上屏。
+    峰值 ≤ 1.0 的颜色（包括全部登记受光色）原样上屏，前后 ΔE ≤ 2；只有大于 1.0 的溢出（日盘、灯、柔光叠加）被平滑压进 0.5 的余量，并向白去饱和，最后的截断落在近白上，不偏色。
   - **分调与饱和**：烘进 32³ 静态基表。暗部 ×(0.97, 1.0, 1.04)，权重 1 − smoothstep(0.08, 0.6, L)；亮部 ×(1.03, 1.0, 0.97)，权重 smoothstep(0.55, 0.95, L)；饱和 1.02。
   - **CDL 默认值**：白天 slope 0.96、offset +0.03、power 1.0、sat 1.0；黄金 slope 0.97、offset +0.02、sat 1.03；夜间照 SYS-TIME §3.4。offset 就是"抬黑"，让影和暗部清透。
   - 实现：`TonemapMode = Linear`，它不改动颜色数据，调色板颜色能原样上屏。LUT 用内置的 `AdjustmentColorCorrection`；它只在 `AdjustmentEnabled = true` 时执行（亮度、对比、饱和保持 1），位置在 linear_to_srgb 之后。内置没有 CDL：32³ 基表保持静态，每帧用一次 32³ 的计算 dispatch 把 CDL 与基表合成进一张运行时 3D 纹理（Texture3DRD，C# 类名 `Texture3Drd`），赋给 `AdjustmentColorCorrection`。它能否被接受由 P0 原型确认；不行就改在 POST_TRANSPARENT 的 Compositor 通道里直接算 CDL。
