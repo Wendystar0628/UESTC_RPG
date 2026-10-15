@@ -6,8 +6,8 @@ summary: "规定存档位与世界线、存档段、文件格式与迁移、保�
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a]
 depends: [ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
-related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
-contracts: [ISaveService, ISaveSection, SaveSectionAttribute, SlotId, SlotKind, SaveScope, SaveReason, SlotHealth, SaveMeta, SlotInfo, RestorePhase, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult]
+related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP, CORE-CONVENTIONS]
+contracts: [ISaveService, ISaveSection, SaveSectionAttribute, SlotId, SlotKind, SaveScope, SaveReason, SlotHealth, SaveMeta, SlotInfo, RestorePhase, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState, ReadOnlyReason]
 data: ["user://saves/", "game/kernel/save/tests/golden/"]
 gates: [G2, G4, G5, G10, G16, G20]
 ---
@@ -16,7 +16,7 @@ gates: [G2, G4, G5, G10, G16, G20]
 
 > **范围**：本文规定存档服务 `ISaveService`：存档位与世界线、各存档段存什么、文件格式与版本迁移、保存时机与可靠性、读档流程与"状态一致"的定义、关游戏期间不计时、损坏与版本不兼容、设置类文件的安全读写、契约、帧顺序里的存档一步、命令行，以及 G20 门禁。
 > **不在本文**：各段的字段由各自的包负责（例如平面地图段见 SYS-ATLAS §12）；开始页与继续过场的流程（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）；音频设置的内容（SYS-AUDIO）。
-> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-MAPS 多地图](SYS-MAPS.md)；[CORE-INDEX 总索引](../README.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
+> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-MAPS 多地图](SYS-MAPS.md)；[CORE-INDEX 总索引](../README.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS.md)
 
 **分工**：WP-50 存档与持久化，独占 `game/kernel/save`，P0 交付。WP-00、01、02、06、26、27、32、34、35、36、42、43、45、46、48、49、53 各有增量（§15）。
 
@@ -252,6 +252,11 @@ user://saves/
   - 每个发布过的格式各留一份金档，放在 `game/kernel/save/tests/golden/`，从 P0 起累积；
   - 每一份都必须能读，每一步迁移单独测（G20）。
 - **容器版本 1 在 P0 定死**：RPG 开工时只加段，不改容器。
+- **持久化 ID 换名**（CORE-CONVENTIONS §3.9）：存档里引用的 ID（地图、点位、锚点与其余标记、室内入口、区域与 `placeKey`、`FeatureId`）不复用，改名不改身份，所以平时不需要迁移。确实要换 ID 时：
+  - 负责那份数据的包随数据提交一份旧 ID → 新 ID 的映射，放在本图目录的 `id-remap.json`（每条写旧 ID、新 ID 和生效的数据版本）；
+  - 引用这些 ID 的存档段各升一次 `v`；WP-50 提供按映射改写 ID 的公共迁移函数，各段的 `Migrate` 调它。映射在构建时生成为常量表传给迁移代码，迁移仍是纯函数、不读文件；
+  - 只有真正删除的对象不给映射，读档时照旧按 §5.6 的校验修复去掉；`placeKey` 查不到时按 §3.2 退回图名；
+  - 每次换 ID 补一份带旧 ID 的金档，G20 的迁移项验证改写结果。
 
 ## 4 保存时机与可靠性
 
@@ -308,20 +313,25 @@ user://saves/
 5. 按 §1 删掉多余的旧代。
 6. 用 `CallDeferred` 回到主线程，更新 `Slots`，发出 `SlotsChanged`。
 
-- 第 3、4 步失败（磁盘满、无权限、杀毒软件占着文件）时：删掉这次新写的、不完整的文件（只删自己刚写的），旧代不动；写日志，提示一次"无法保存：……"（UI-NAV §4.9），下一个时机再试。
+- 第 3、4 步失败（磁盘满、无权限、杀毒软件占着文件、读回校验不符）时：删掉这次新写的、不完整的文件（只删自己刚写的），旧代不动；写日志，把结果和原因记进保存状态，按 §4.6 让观者知道，下一个时机再试。
 
 ### 4.4 退出流程
 
 1. **关闭请求**：`NotificationWMCloseRequest` 到达，或观者点了菜单里的"退出"。WP-01 的 Boot 在第一帧之前就把 `GetTree().AutoAcceptQuit` 设为 false。
 2. **进入退出态**：`IAppFlow` 切到 Quitting，关闭输入（SYS-TITLE §7.1；Leaving 是"返回标题"，不是退出）。
    - 进场过场途中退出：先按"跳过"把世界落到终态，然后保存。跳过的终态与完整播放一致（SYS-TITLE）。
-   - 换图途中退出：等 `IMapTransition.Done`，最多 2 s；超时就不写这一代，上一代仍然有效。
+   - 换图途中退出：等 `IMapTransition.Done`，最多 2 s；超时，或换图以 `Failed` 结束（SYS-MAPS §4.3），就不写这一代，上一代仍然有效，`FlushForQuit` 返回 `Deferred`（有意不写，不算失败）。
 3. **写设置**：同步写设置文件（几 KB、几毫秒，§8）。
 4. **抓缩略图**：按 §3.4 分两帧抓。
 5. **保存**：调 `FlushForQuit(SaveReason.Quit, 2 s)`，拍强制快照、交给后台写盘。同时雾幕用 0.3 s 淡入，画面照常渲染；声音的 Master 组同步 0.3 s 淡出，不额外拖延退出（SYS-AUDIO）；等待超过 1.5 s 时亮三颗等待灯（UI-VISUAL）。
-6. **退出**：写完或超时后调 `GetTree().Quit()`。超时那一代不完整，读档时会被忽略。
+6. **退出**：按 `FlushForQuit` 返回的结果走：`Saved`；`Disabled`（`--save=off`，或另一个窗口持有锁，本来就不保存，§1）；`Deferred`（第 2 步有意不写）这三种调 `GetTree().Quit()`。`Failed`（写盘出错、读回校验不符，或 2 s 内没写完）不退出，转第 7 步。
+7. **保存明确失败时让观者选**：`IAppFlow` 停在 Quitting，雾幕上弹确认对话框（UI-VISUAL §8.8）"这次没能保存"，正文写原因和上一次成功保存的时间，例如"磁盘空间不足。上一次保存在 21:40（3 分钟前），之后的进度还没有存下"。三个按钮：
+   - **重试**（默认焦点）：等仍在进行的那次写盘结束，没写成就重新拍强制快照再写一次；写成就照常退出，又失败就留在这个对话框，原因随之更新；
+   - **返回游戏**（Esc 同此）：撤雾幕，恢复声音和输入，回到 Playing（SYS-TITLE §7.1），世界从退出前接着走；
+   - **仍然退出**：不再写，直接 `Quit()`；旧代不受影响。
+   - 超时的那次写盘不取消：对话框打开期间它若写成，对话框自动关闭，照常退出。对话框打开时再收到关闭请求，按"仍然退出"处理。
 
-- **时限**：从关闭请求到进程结束不超过 1.5 s（G10），硬上限 2 s（G5）。
+- **时限**：保存成功或有意不写时，从关闭请求到进程结束不超过 1.5 s（G10），硬上限 2 s（G5）；保存明确失败时等观者选，不计时限。
 - **崩溃**：收到 `NotificationCrash` 时不保存，这时状态可能已经坏了。
 - **系统关机、注销**：Godot 在 Windows 上不处理 WM_QUERYENDSESSION，收不到关闭请求，只能靠每 5 分钟的定时保存兜底。P2 可以评估是否自己子类化窗口过程，接住 WM_QUERYENDSESSION 后同步保存（§17）。
 
@@ -343,6 +353,17 @@ user://saves/
 | `GetImage()` 在 1080p 下占主线程 3.8–4.1 ms（第一次 9.1–9.5 ms），1440p 下 6.6–7.1 ms | — | 只在退出、返回标题、失焦、新游戏时抓；那一帧不计入自动调节画质的统计（ENG-PERF §11.3） |
 | `TextureGetDataAsync` 下一帧才回数据，调用本身仍占 2.2 ms，还会分配 8.3 MB 的托管数组 | — | 不用它，用 `GetImage()` |
 | Lanczos 缩到 384×216 要 23 ms（1440p 下 38–41 ms） | — | 放到线程池里做 |
+
+### 4.6 保存状态与失败反馈
+
+保住旧代不等于观者知道这次没存上，所以保存结果一直摆在界面上，不只提示一次。
+
+- **保存状态** `ISaveService.State`（§10）：当前存档位；本次运行最近一次写盘的结果和失败原因；当前存档位最后一次成功保存的时间（取最新可读一代 meta 的 `savedAtUnix`，重启后照样有）；不保存的原因（`--save=off`、另一个窗口持有锁）。值变时发 `SlotsChanged`。
+- **原因**写成文案键（UI-NAV §8）：`save.error.disk_full`（`IOException` 的 HResult 低 16 位是 `ERROR_DISK_FULL` 或 `ERROR_HANDLE_DISK_FULL`）、`save.error.locked`（`ERROR_SHARING_VIOLATION`、`ERROR_LOCK_VIOLATION`）、`save.error.denied`（`UnauthorizedAccessException`）、`save.error.verify`（读回的哈希不符）、`save.error.timeout`（退出时 2 s 内没写完）、`save.error.other`（其余，异常类型写日志）。
+- **持续显示**：存档页的存档卡和详情栏（UI-VISUAL §7.9）、设置卡"设置"页的"存档"一行（UI-NAV §4.6）都读这份状态。失败后一直显示"最近一次保存失败 · 原因 · 上次成功 21:40"，直到下一次保存成功；只读时显示原因。
+- **临时提示**：一串连续失败只在第一次时提示，中间成功过一次再失败会再提示；遇上过场、雾幕时延后到它们结束，不丢（UI-NAV §4.9）。
+- **退出时失败**：按 §4.4 第 7 步让观者选，不静默退出。返回标题时失败照常回到开始页，状态留在存档页上。
+- **分工**：WP-50 维护保存状态和 `FlushForQuit` 的结果；WP-49a 的 `IAppFlow` 处理退出时的三选一；WP-35（35b、35d）做对话框、存档卡、设置行和延后的提示。
 
 ## 5 加载流程与一致性
 
@@ -495,7 +516,7 @@ user://saves/
 | 未知段 | 文件里有本构建没登记的段 | 原样保留，写回时照抄 | — |
 | 某一段不合法 | 反序列化失败、缺字段、未知字段、数值越界 | `maps`、`world`、`weather`、`map:*/weather` 这四个核心段不合法，整代视为损坏，退到上一代；其余段只把这一段换成 `CreateDefault`，并记一次修复 | — |
 | 另一个进程占着锁 | 打不开 `.lock` | `Enabled = false`，只读 | "另一个窗口正在运行 · 本窗口不保存" |
-| 写盘失败 | §4.3 | 删掉这次写的不完整文件，旧代不动 | "无法保存：……"，只提示一次 |
+| 写盘失败 | §4.3 | 删掉这次写的不完整文件，旧代不动；保存状态记下结果和原因（§4.6） | "无法保存：……"，一串连续失败只提示一次；存档页和设置卡持续显示，直到下一次保存成功；退出时按 §4.4 第 7 步三选一 |
 
 - `corrupt/` 里的文件**从不自动删除**。观光档每代只有几 KB，攒多了也不占地方。
 - 坏档和新版本的档都不会被自动覆盖，观者明确确认之后才会把它们挪开。
@@ -658,6 +679,13 @@ public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
 public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
 public enum LoadStatus : byte { Loaded, Recovered, Empty, Corrupt, NewerBuild, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
+public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off（§12）、另一个窗口持有锁（§1）
+public sealed record SaveState(                                     // 保存状态（§4.6）：存档页、设置卡持续显示
+    SlotId? Slot,                   // 当前存档位
+    SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
+    string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
+    long? LastSavedAtUnix,          // 当前存档位最后一次成功保存的时间（最新可读一代 meta 的 savedAtUnix），只用于显示
+    ReadOnlyReason ReadOnly);
 
 public interface ISaveService                         // Kernel 服务（WP-50）；不加 Autoload
 {
@@ -666,6 +694,7 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     SlotId? Continue { get; }                         // 最近保存的可读存档位（§1）；没有就是 null
     SlotId? Active { get; }                           // 当前存档位：自动保存写到这里
     bool Busy { get; }                                // 后台写盘进行中
+    SaveState State { get; }                          // 保存状态（§4.6）；值变时也发 SlotsChanged
     event Action? SlotsChanged;                       // 在主线程发出
     void Request(SaveReason r);                       // 合并、限频、等安全时刻（§4.1）；只在漫游态有效；Quit、ToTitle 不走这里
     Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁、预留的手动槽
@@ -676,7 +705,9 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
     Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
         // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（§5.5）
-    Task FlushForQuit(SaveReason r, TimeSpan timeout);   // r 只能是 Quit 或 ToTitle；超时就放弃这一代，旧代不受影响
+    Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
+        // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
+        // Failed（写盘出错、校验不符、超时）由 IAppFlow 让观者选重试、返回游戏或仍然退出（§4.4）
     byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（§3.4）
 }
 ```
@@ -691,6 +722,7 @@ long Instance { get; }        // 世界实例号：启动后第一次得到世�
 // IWeatherProcess 增 Capture(MapId) → WeatherProcessState、Restore(MapId, WeatherProcessState)：weather、map:<id>/weather 两段由 WP-45a 用两个小类实现，
 //   经这两个方法读写天气过程；G20 的续跑等价也经它们比对天气状态（ENG-ARCH §3）
 // IWorldControl 增 FlowTo(double clock, int rate)：新游戏从 newGameStart 正向推到 17:30 停住（SYS-TITLE）
+// ISaveService（ENG-ARCH §3 的副本与上面一致）：FlushForQuit 返回 Task<SaveResult>；增 State 属性与 SaveState、ReadOnlyReason 两个类型（§4.6）
 // FramePriority 增（与 ENG-ARCH §3 的 17 步表一致，§11）：
 public const int StreamMount = 900; // WP-02 挂载、WP-43 碰撞入树
 public const int Save = 1000;       // WP-50：每帧最后一步，拍快照，读档时在这一步恢复（§11）
@@ -813,6 +845,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
 | **安全** | G4 的静态规则（§9）；运行时：把实验里的恶意 `.tres` 改名成 `.sav` 读一次，再分别读一份恶意的 `settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`（`audio.cfg` 与 SYS-AUDIO G21e 的设置文件安全测试是同一套） | 读前读后 `Performance.Monitor.ObjectCount` 不变；日志里没有被执行的输出；都按"损坏"或"退回默认值"处理 |
 | **读档顺序与预览** | 引擎里：`Preview` 读档后核对 `Pose` 阶段的段没有被恢复、`HasPendingPose` 为真；`CompleteResume` 后再 `Capture` 一次，与 `Full` 读同一份存档的结果相同；用门禁夹具图（SYS-MAPS，若做）存一份"当前图不是默认图"的档，读它 | `World` 阶段先于换图恢复，换图后的天气补算量为零；`Preview` + `CompleteResume` 与 `Full` 逐位相同；`CompleteResume` 不改 `Instance` |
 | **锁与开关** | 同时开两个进程；门禁模式跑一整轮 | 第二个进程 `Enabled = false`，一个文件都不写；`--save=off` 下 `user://saves` 不被创建、不被修改 |
+| **保存失败时退出** | `--save=1 --save-dir=<临时目录>`，用测试构建的故障注入让写盘抛"磁盘已满"，再发 WM_CLOSE；三个选项各走一遍（重试前先撤掉注入） | 进程不静默退出，出现三选一，原因写对；重试后照常退出、新一代通过校验；返回游戏后回到 Playing，`State` 仍记着失败；仍然退出后旧代完好可读 |
 
 - **何时运行**：
   - 核心专项：改动 `game/kernel/save`、`Campus.Contracts.Save`，或者带 `[SaveSection]` 的包时，跑往返、损坏、退出时保存；
@@ -853,6 +886,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
   - **WP-26**：`Instance` 变了就把偶发事件的计时重新开始（SYS-MOTION §10.1），不设存档段。
   - **WP-03、WP-23、WP-39，以及 WP-35 的界面主题**：换实例时直接落到新值（§5.2）。
   - **WP-27**：G20 接进 `gate.ps1`；G5 冒烟里的 WM_CLOSE；强杀测试；续跑等价的两次启动；G4 的正则。
+  - **保存失败反馈**（§4.4、§4.6）：WP-50 提供 `State` 和 `FlushForQuit` 的结果；WP-49a 在 Quitting 里处理三选一；WP-35 做对话框、存档卡、设置卡的"存档"一行与延后的提示。
 
 ## 17 待验证（P0）
 

@@ -188,9 +188,9 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 ### 2.5 文字与标注
 
-- **字体**：按 UI-VISUAL：中文思源黑体 SC，英文 Inter，编号、坐标、比例尺用 JetBrains Mono；用 MSDF 字形，在开场雾幕或扉页后预热（UI-VISUAL）。
+- **字体**：按 UI-VISUAL：中文思源黑体 SC，英文 Inter，编号、坐标、比例尺用 JetBrains Mono。大地图地图页的标注文字层用 MSDF 字形，这是 UI-VISUAL §11.8 登记的例外（连续缩放、缩放动画中整层 `Scale`，位图字会糊）；光标读数、比例尺数字、左栏和小地图底栏是普通界面文字，用位图字形。MSDF 字形导入时预渲染、在开场雾幕或扉页后预热（UI-VISUAL §11.8、§11.9）。
 - **标注类别与数据**：标注写在本图的 `atlas/labels.json` 里（§9），每条记：
-  - 中英文；
+  - 中英文，或指向名字来源的 `ref`（本节末"地名来源"）；
   - 类别：区域、地点、地标、道路、水体、外围路名；
   - 锚点或折线；
   - 优先级。
@@ -202,6 +202,12 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 - **区域与地点**：
   - 区域表分两级：大区（核心区、南区、西区、西北区、北部生活区、中部、东区，约 7 个），以及地点（如"核心区 · 图书馆""南区 · 东湖"，不超过 255 个）；
   - 地点按其登记点做 Voronoi 剖分，再裁到所属大区，编号烘进 `map_sdf_b.R`，CPU 侧另存一份 8 m 栅格给小地图查区域名（§3）。
+- **地名来源**（UI-NAV §8 的文本约定）：区域与地点表是区域名、地点名（含楼名）的唯一来源。`labels.json` 里区域、地点、地标类的标注只写 `ref`（区域、地点或标记的 ID），文字从来源取，不另写中英文；只有道路、水体、外围路名这类别处没有来源的标注自己写中英文。点位名取 `waypoints.json`，标记名取 `markers.json`（§9）。
+- **按语言排布局**（WP-48a）：`labels.bake` 每种界面语言各一份，每份含 5 个缩放档，排的是实际显示的文字：中文界面主名用中文，Z4 的副名用英文；英文界面主名用英文，Z4 的副名用中文。
+  - 文字框按运行时同一套字体、字号、字距和晕宽量出（引擎侧用 `Font.GetStringSize` 量好，交给烘焙器），放置仍由纯 .NET 的贪心算法做，运行时只查表。
+  - 布局用 1920×1080 基准的逻辑像素；界面缩放让地图页和文字一起放大，相对位置不变，所以不按缩放另排。
+  - 两种语言在首次运行时都排好；切换语言时直接换表，不现排。
+- **标注布局的缓存键**：在底图的键之外另含标注输入的哈希：`labels.json`（含区域与地点表）、`markers.json` 与 `waypoints.json` 里影响图标位置和名字的字段、字体文件、排版参数（字号、字距、晕宽、图标留白、各档 px/m）和语言。其中任何一项变了只重排标注，不重烘 SDF（失效规则见 SYS-MAPS §2.4）。
 
 ## 3 小地图（WP-48b）
 
@@ -245,7 +251,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 | 情况 | 呈现 |
 | --- | --- |
-| 漫游态、界面态 | 显示。界面态里鼠标闲置 4 s 其余界面淡出时（UI-NAV §3），小地图**不淡出** |
+| 漫游态、界面态 | 显示。界面态里 4 s 没有操作、其余界面淡出时（UI-NAV §3），小地图**不淡出** |
 | 设置为"移动时显示" | 镜头或角色移动时显示；静止 3 s 后在 0.6 s 内淡出 |
 | 设置为"关"，或按 N 关掉 | 不显示；按 N 恢复到原来的模式，并给一条临时提示 |
 | 镜头在室内、地下、水下 | 整体不透明度降到 0.6 |
@@ -572,11 +578,11 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | 路径 | 内容 | 谁写 | 进不进 git |
 | --- | --- | --- | --- |
 | `game/data/maps/qingshuihe/atlas/markers.json` | 缩放区间与缩放档；地图页范围 `atlasRect`（清水河 ±1536 m，§2.3；全分辨率部分的范围取 `map.json` 的 `dataRect`，不在这里另写）；锚点（ID、名称、形态、位置、`Fly`、`Stand`、引用的覆盖层 ID）；地标、设施的增删和优先级；隐藏清单 | WP-48c | 进 |
-| `game/data/maps/qingshuihe/atlas/labels.json` | 标注：文字（中英）、类别、锚点或折线、优先级；区域与地点表 | WP-48a 生成初稿，人工校订 | 进 |
+| `game/data/maps/qingshuihe/atlas/labels.json` | 标注：文字（中英）或名字来源的 `ref`、类别、锚点或折线、优先级；区域与地点表（区域名、地点名的唯一来源，§2.5） | WP-48a 生成初稿，人工校订 | 进 |
 | `game/data/maps/qingshuihe/overlay/atlas.overlay.json` | 锚点实体的 `add` 操作，`design:anchor:A01`…（§6）；覆盖层照 SYS-MAPS的规则放在本图的 `overlay/` 下 | WP-48c | 进 |
 | `game/data/maps/qingshuihe/waypoints.json` | 点位 P00–P23，观景点标记引用这里 | WP-36（UI-NAV §6） | 进 |
 | `game/data/maps/qingshuihe/interiors.json` 与室内索引 | 开放清单与入口（WLD-INTERIORS），运行时生成可进入室内的门口标记 | 清单：主代理（格式与 schema 归 WP-51，条目由负责包填写，SYS-MAPS §2.1）；室内索引：WP-51 | 进 |
-| 本机缓存 `user://cache/bake/qingshuihe/<ABI>/map/<哈希>/` | `map_sdf_a`、`map_sdf_b`、`map_sdf_out`、`map_sdf_ring`、`map_glyphs`、`labels.bake`、8 m 区域栅格、`map.manifest.json` | WP-48a 的烘焙器（本机烘焙） | 不进，也不随包发（ENG-ARCH §4、SYS-MAPS §2.4） |
+| 本机缓存 `user://cache/bake/qingshuihe/<ABI>/map/<哈希>/` | `map_sdf_a`、`map_sdf_b`、`map_sdf_out`、`map_sdf_ring`、`map_glyphs`、`labels.bake`（每种界面语言一份，§2.5）、8 m 区域栅格、`map.manifest.json` | WP-48a 的烘焙器（本机烘焙） | 不进，也不随包发（ENG-ARCH §4、SYS-MAPS §2.4） |
 | `game/assets/maps/qingshuihe/thumbs/` | 标记缩略图（§10） | WP-27 的截图机 | 进 |
 
 - **按图的**：底图与烘焙产物、标记、标注、区域表、锚点实体、缩略图、自定义标记、解锁状态。

@@ -4,7 +4,7 @@ C# 类 API 里没有着色语言的内置变量和函数，这里补上。内容
 
 - **来源提交**：`9adca4c1c72917bfe1b7be3108abed5ce26696a6`（2026-10-15 下载，见 `rst/_commit.txt`）
 - **范围**：`tutorials/shaders/` 下的全部 `.rst`（图片除外），加上与本项目直接相关的两篇：`tutorials/rendering/compositor.rst`、`tutorials/performance/pipeline_compilations.rst`。共 27 篇，约 574 KB。清单见 `rst/_list.txt`。
-- **许可**：godot-docs 的文字采用 CC BY 3.0，作者为 Juan Linietsky、Ariel Manzur 和 Godot 社区。这里只在仓库内部作参考，不再分发。
+- **许可**：godot-docs 的文字采用 CC BY 3.0，作者为 Juan Linietsky、Ariel Manzur 和 Godot 社区。仓库是公开的，这份副本按 CC BY 3.0 署名再分发，内容未改动。
 
 ## 先读哪些
 

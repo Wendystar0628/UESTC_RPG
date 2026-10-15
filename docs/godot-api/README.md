@@ -3,6 +3,7 @@
 本目录是项目锁定的引擎版本的完整 API 参考，由命令行从引擎本身导出，再生成按类拆分的 Markdown。开发代理写 C# 代码时，**以这里的签名为准**，不要凭记忆写 Godot API。模型的记忆里混着 Godot 3 和 4 的旧写法，这是最常见的错误来源。
 
 - **引擎**：Godot Engine v4.7.2.stable.mono.official（`ed1daf0bf`），2026-08-18 发布。单精度构建。
+- **许可**：本目录的签名、类说明和 `raw/` 下的导出来自 Godot 引擎，按 MIT 许可（© Godot Engine contributors，Juan Linietsky、Ariel Manzur）；`shaders/` 来自 godot-docs，按 CC BY 3.0（见该目录的 README）。
 - **本机路径**：`E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\`，已开启自包含模式（同目录有 `_sc_` 文件，编辑器设置存在这个目录里）。
   - 编辑器：`Godot_v4.7.2-stable_mono_win64.exe`
   - 命令行（带控制台输出，脚本和门禁用这个）：`Godot_v4.7.2-stable_mono_win64_console.exe`

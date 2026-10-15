@@ -201,3 +201,4 @@ VRM 自带的许可信息逐文件登记，做法同音频素材（SYS-AUDIO §1
 | 13 | 镜头规则：INV-2 的"不实现环绕、俯视、导览、自动运镜"，SYS-MOTION §1.4、SYS-VIEW §2.5 的"镜头不自己动"，会挡住第三人称跟随镜头和 Playing 里的剧情过场 | CORE-INDEX、SYS-MOTION、SYS-VIEW | 观光规则集下不变；RPG 规则集另列允许的镜头行为 |
 | 14 | 季节与日历：SYS-TIME §1"季节不自动推进"；SYS-TIME §6 的时刻表没有"日类型"维 | SYS-TIME | 观光规则集下不变；RPG 规则集由日历推进季节，时刻表以后加维 |
 | 15 | 文本：ENG-ARCH §3 的 `LocalizedName(Zh, En)` 内联两种语言；翻译表在 WP-35 的 `game/hud/i18n/`（UI-NAV §8） | ENG-ARCH、UI-NAV、UI-VISUAL | 不阻塞 v1；RPG 时加文本键和 `game/data/text/` |
+| 16 | 必须一起恢复的存档段：SYS-SAVE §7 只把 `maps`、`world`、`weather`、`map:*/weather` 当核心段，其余段不合法时各自换成默认值。`quest`、`inventory`、`flags`、`map:<id>/objects` 互相依赖，单独重置会重复领奖（任务重置、物品还在）或永久卡关（物品重置、任务还在） | SYS-SAVE、ENG-ARCH | 开工条件，由 WP-50 与首批任务包落实：① 规则集声明"必需段组"，并写明组内每段从哪个版本起必需（按存档里哪一层版本号判断由 WP-50 定，SYS-SAVE §3.6）；组内任一段损坏或不合法时，整组回退到同一世界线里最近一份完整可读的旧代，不单独换默认值；② 写档的版本早于该段起始版本的，缺段属于旧档，补默认值；不早于的，缺段是异常，按组内损坏处理；③ 任务选择、奖励发放和世界变化在同一个落定状态里完成之后才算安全时刻（SYS-SAVE §4.2），中途不拍快照。沿用现有容器、代际与回退机制（SYS-SAVE §3、SYS-SAVE §7），不另做事务框架 |

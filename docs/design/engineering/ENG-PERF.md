@@ -26,7 +26,7 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 3. **PC 的瓶颈在两头**：CPU 一侧是 Forward+ 每次绘制的提交和剔除开销；GPU 一侧是"同一份几何要走很多遍"（深度预通道、颜色通道、4 级阴影）和后期的填充。所以合批靠离线合并、自动实例化和 MultiMesh（§1），阴影只能靠减少投影物省钱（§10.1）。
 4. **阴影用引擎原生的 4 级 PSSM**，自写的只剩方向量化、阴影方向高度钳、主光强度、退光线和日月交接（§10.1）。描线、边缘光、移轴、光斑、倒影、窗灯和路灯光斑自己实现（§10.2–§10.4）。不用 SSAO、SSIL、SSR、SDFGI、体积雾、反射探针和 Environment 雾。
 5. **不透明通道里的 discard 只用于镂空类和抖动淡化**（ENG-BUDGET §7 第 8 条）。透明管线只留给水的透明变体、近景透明窗、贴花、粒子、光晕、光柱和细尘。
-6. **主线程只挂载，不生成。** 几何全部烘焙成 TileBundle：发布版在玩家机器上本机烘焙（D-165），第一次需要时由工作线程调同一个 `Build()` 生成并写进本机缓存，之后从缓存读（§5）；加载线程用 `ResourceLoader.LoadThreadedRequest` 读缓存里的 `.res`，GPU 资源就在加载线程上创建；主线程只调少量 RenderingServer 接口，每帧最多激活 1 格，不超过 1.0 ms（§5）。
+6. **主线程只挂载，不生成。** 几何全部烘焙成 TileBundle：发布版在玩家机器上本机烘焙（D-165），第一次需要时由工作线程调同一个 `Build()` 生成并写进本机缓存，之后从缓存读（§5）；本机缓存是自定义的 `.tbin`，由读缓存的工作线程任务读入、校验，并在同一工作线程上创建 GPU 资源，不经 `ResourceLoader`（读取路径以 ENG-ARCH §4 为准）；`ResourceLoader.LoadThreadedRequest` 只读 `res://` 里的启动集等资源；主线程只调少量 RenderingServer 接口，每帧最多激活 1 格，不超过 1.0 ms（§5）。
 7. **保证绝不卡帧、不穿地的六条不变量**，详见 §5：L4 常驻；父格要等 4 个子格都"加载、挂载、管线就绪"才隐藏；按字节 LRU 淘汰；看门狗；碰撞数据没有就绪就冻结物理（行走模式）；镜头在楼体里至少显示 I0、进开放室内前未就绪就在门槛前 1 m 软停（第 6 条，WLD-INTERIORS §6.4）。另有两条全局约束：雾幕之后管线编译计数不增（§2）；主线程从不生成几何（第 6 条）。
 8. **预算按"场景"核算，不按"格"平均。** 银杏大道这类热点地段按 E1 视角核算。
 9. **测量分两类**：吞吐量（`ViewportGetMeasuredRenderTimeGpu/Cpu` 的毫秒，用来判断回归）和体验（帧间隔、掉帧和卡顿，用来判断是否达标）。PC 上 GPU 计时一律可用。
@@ -73,7 +73,13 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 
 每格约 50–150 次调用。场景节点只留给动态物体。淘汰时先 `FreeRid` 掉本格的实例，再对 TileBundle 调 `Dispose()`，让 Mesh RID 立即释放，不等 GC（P0 用 `RenderVideoMemUsed` 回到基线来验证，§16）。
 
-**网格 LOD**：只换索引不换顶点。烘焙器把三角形按重要度排序，每一级 LOD 取前缀，写进表面的 `lods`（`AddSurfaceFromArrays` 的 `lods` 字典，或表面字典里的 `lods` 键）。默认阈值 1 px，运行时可调 `Viewport.MeshLodThreshold`。meshoptimizer 的自动简化（`ImporterMesh.GenerateLods`）只用于部件库和树冠云，不用于建筑，以免破坏轮廓和倒角高光。阴影通道用主相机选出的同一级 LOD。
+**网格 LOD**：只换索引不换顶点。每一级是"误差 + 这一级自己的索引数组"（契约 `MeshLod`，ENG-ARCH §3），与本表面共用同一份顶点，写进表面的 `lods`（`AddSurfaceFromArrays` 的 `lods` 字典，键是误差、值是该级的索引数组；或表面字典里的 `lods` 键）。引擎允许每级各有一份索引数组，不要求是前缀。
+
+- **连续表面**（墙面、屋面、倒角盒、树冠壳）的同级简化必须生成新的索引数组（边折叠一类的简化，只引用原有顶点），不能截掉一段三角形，否则会留下洞。
+- **前缀**只是快捷写法（`MeshLod.Prefix`）：三角形按件和重要度排好序，低一级截掉排在后面的整件，只用于独立的叶片、小件和合并块里的整栋楼。
+- **建筑的主线版**只用 L0+–L4 语义级别（ENG-BUDGET §3），不给同级网格 LOD；同级内部的简化后做。
+
+网格 LOD 的默认阈值 1 px，运行时可调 `Viewport.MeshLodThreshold`。meshoptimizer 的自动简化（`ImporterMesh.GenerateLods`）只用于部件库和树冠云，不用于建筑，以免破坏轮廓和倒角高光。阴影通道用主相机选出的同一级 LOD。
 
 ### 1.3 调用口径
 
@@ -474,18 +480,25 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
   - `System.Numerics.Vector<T>` 和 `System.Runtime.Intrinsics`（向量宽度随 CPU 变）、`Math.FusedMultiplyAdd`、`TensorPrimitives`。
 - **门禁**：G6 在集中测试时跑 `--bake-verify`：用导出的 release 版在空的临时缓存目录里烘，把逐文件哈希与随包的 `bake.manifest.json` 比对，有一个不同就不过；同时做全图逐字节比对（ENG-GATES §2）。
 
-**缓存键**：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`（数据哈希只算本图里影响 `Build()` 的输入，SYS-MAPS §2.4）。ABI 含引擎版本和顶点格式版本。tileId 是整数：`(lod<<20)|((ix+512)<<10)|(iz+512)`。碰撞级在缓存键里记为 "C"，在整数 tileId 里级别位取 7。室内包：`ABI/数据哈希/interior.<提供者>@代码哈希/featureId/storey/detail`，碰撞的细节位记 "C"（WLD-INTERIORS §6.1）。碰撞级 C、平面地图底图也各按这套键。开发态和 CI 的共享缓存放在仓库外的目录（`UESTC_BAKE_CACHE`，ENG-ARCH §4）。
+**缓存键**：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`（数据哈希只算本图里影响 `Build()` 的输入，SYS-MAPS §2.4）。ABI 含引擎版本和顶点格式版本。tileId 是整数：`(lod<<20)|((ix+512)<<10)|(iz+512)`。碰撞级在缓存键里记为 "C"，在整数 tileId 里级别位取 7。室内包：`ABI/地图/数据哈希/interior.<提供者>@代码哈希/featureId/storey/detail`，碰撞的细节位记 "C"（WLD-INTERIORS §6.1）。碰撞级 C、平面地图底图也各按这套键。代码哈希包含模块的全部共享生成依赖（契约、部件内核与部件包、室内共享层、世界模型），算法以 ENG-ARCH §4 为准。开发态和 CI 的共享缓存放在仓库外的目录（`UESTC_BAKE_CACHE`，ENG-ARCH §4）。
 
 **本机缓存**（D-165；服务是 `IBakeService`，`[KernelService]`，WP-02，契约见 ENG-ARCH §3）：
 
 - **位置**：`user://cache/bake/<地图>/<ABI>/…`（导出版在 `%APPDATA%` 下），其下按上面的键排列。`--bake-cache=<绝对路径>` 覆盖；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑。
 - **格式**（安全规则）：本机缓存不用 Godot 资源格式。`user://` 下的 `.res`/`.tres` 能嵌脚本、读入即执行（SYS-SAVE §8 的威胁模型），所以 `ResourceLoader`、`ResourceSaver` 一律不得读写 `user://`，不设例外。缓存用自定义的格包二进制格式 `.tbin`：头（魔数、格式版本、缓存键、长度）+ 各表面的顶点与索引缓冲（与"表面打包"同一份打包字节）+ 实例变换 + MultiMesh 缓冲 + 碰撞形状参数 + 统计 JSON，整体 zstd（`FileAccess.OpenCompressed` 或 .NET 的 zstd）。解析器逐段做边界检查，长度超限就拒收。开发共享缓存（`UESTC_BAKE_CACHE`）和 `--bake=all` 也写同一种 `.tbin`。
-- **读**：工作线程上读文件 → 解压 → 用 `System.IO.Hashing.XxHash128` 算哈希，与随包的 `res://bake/<地图>/boot/bake.manifest.json` 里这个缓存键的哈希比对，不符就删掉重烘。缓存键不在 manifest 里的文件（`--seed` 覆盖、开发构建）只在开发构建或带 `--seed` 时接受，按 `cache.index` 的哈希校验，其余情况一律重烘 → 在同一工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（与 `--gen=live` 同一条路径），碰撞形状由参数创建 → 主线程照常只挂载。
+- **读**：工作线程上读文件 → 解压 → 用 `System.IO.Hashing.XxHash128` 算哈希，与随包的 `res://bake/<地图>/boot/bake.manifest.json` 里这个缓存键的哈希比对，不符就删掉、自动重建一次（见下文"损坏、校验失败与终态"）。缓存键不在 manifest 里的文件（`--seed` 覆盖、开发构建）只在开发构建或带 `--seed` 时接受，按 `cache.index` 的哈希校验，其余情况一律重烘 → 在同一工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（与 `--gen=live` 同一条路径），碰撞形状由参数创建 → 主线程照常只挂载。
 - **写**：先写 tmp，`Flush` 后改名。每图一份 `cache.index`（键、字节、最后使用时间），只用于 LRU 和统计，不作信任依据；信任依据是随包的 `bake.manifest.json`。
 - **查找顺序**：启动集（`res://bake/<地图>/boot/`）→ 本机缓存 → 本机烘焙（生成后写进缓存）。
-- **失效**：缓存键里已含代码哈希和数据哈希，游戏更新后自然不命中，只有改了的模块重烘。启动时删掉 `user://cache/bake/<地图>/` 下不是当前 ABI 的目录。`--seed` 覆盖时种子进数据哈希，各自一份缓存。
+- **失效**：缓存键里已含代码哈希和数据哈希，游戏更新后自然不命中。数据哈希每图一份，任何一项 `Build()` 输入变了（哪怕只改一条覆盖层），本图全部产物重烘；代码哈希按模块，只改一个模块自己的代码只重烘它，改了共享生成依赖则所有用到它的模块一起重烘（ENG-ARCH §4）。数据输入要不要细分到模块，等全图失效确实拖慢制作再定。启动时删掉 `user://cache/bake/<地图>/` 下不是当前 ABI 的目录。`--seed` 覆盖时种子进数据哈希，各自一份缓存。
 - **大小与淘汰**：一张图烘满约 0.8–1.4 GB。默认上限 2.5 GB，超出按"最久未用"淘汰；剩余空间不足 1 GB 时不写缓存，只在内存里生成、用完即弃（ENG-BUDGET §8）。
 - **接口**：`Ensure(key, priority)` 返回句柄，挂载侧用；`Progress`（总量、已完成、当前阶段）给扉页和设置用；`CacheBytes`；`Clear()` 只清缓存，已挂载的不受影响，之后按需重烘。设置卡的"存储"一行（WP-35）显示占用和进度（"已完成"或"进行中 63%"），并带"清除缓存"按钮。
+- **损坏、校验失败与终态**（WP-02；失败页由 WP-01、WP-49、WP-35 提供，SYS-TITLE §1、SYS-MAPS §4）：
+  - **只自动重建一次**：读到损坏或哈希不符的文件，删掉、重建一次；同一个键在本次运行里最多自动重建一次。
+  - **就绪前校验**：新生成的产物在交给挂载、写进缓存之前，先对要写进 `.tbin` 的未压缩字节算 XxHash128（与"读"一条算的是同一份字节），与 manifest 比对（键不在 manifest 里的，照"读"一条的规则处理）。
+  - **终态**：重建后仍不符、`Build()` 抛异常或解析越界时，句柄进入 `BakeState.Failed`，`Error` 写一行可复制的原因（缓存键、阶段、期望与实际哈希或异常类型），不写缓存，本次运行不再自动重试；失败页的"重试"调 `ClearFailures()` 后才再试一次（ENG-ARCH §3）。每个失败的键写一条错误日志（§12.6）。
+  - **等待方怎么出来**：不阻塞画面的请求（游戏中的 L0–L3）失败时，照旧显示最近的已就绪祖先（第 2 条）。阻塞等待的一方（扉页的首次运行、切图与读档的雾幕、碰撞冻结、进楼软停）看到 `Failed` 就停止等待，转到不依赖三维世界的失败页：重试、复制错误信息、退出。
+  - **不按短时限误判**：正常烘焙只要还有进展就一直等，不设固定超时。只有等待的那批请求连续 60 s 没有任何进展（完成件数和子步骤都不变；底图这类大件按子步骤报进度；初值，§16），才按失败处理，原因记"烘焙停滞"。
+  - `--bake-strict=1` 下遇到 `Failed` 直接以非零退出码结束。
 
 **本机烘焙的时机**（D-165）：
 
@@ -660,11 +673,11 @@ UESTC/                              安装目录（G6 导出，≤ 0.9 GB）
 ├─ boot_qingshuihe.pck              清水河的启动集：L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度、需要 GPU 才能出的产物（如 L2 半八面体替身图集）、全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、ambience.bake 与声学网格、导航图 nav/）、bake.manifest.json；包内路径 res://bake/qingshuihe/boot/
 └─ data_<程序集名>_windows_x86_64/   .NET 程序集与运行时（Godot .NET 导出的固定布局）
 
-user://（导出版在 %APPDATA% 下，目录名由 ENG-ARCH 定）
-   settings.cfg、input.cfg、graphics.cfg（画面设置与分档缓存，SYS-GRAPHICS §6）、engine_override.cfg（重启类画面设置）、audio.cfg（SYS-AUDIO）、saves/<slot>/g*.sav、saves/.lock、saves/corrupt/（SYS-SAVE）、管线缓存（只有 Vulkan 用）、着色器缓存、cache/bake/<地图>/<ABI>/…（本机烘焙缓存，含每图一份 cache.index，§5，预算见 ENG-BUDGET §8）、日志
+user://（导出版是 %APPDATA%\UESTC\，不带版本号，ENG-ARCH §2）
+   settings.cfg、input.cfg、graphics.cfg（画面设置与分档缓存，SYS-GRAPHICS §6）、engine_override.cfg（重启类画面设置）、audio.cfg（SYS-AUDIO）、saves/<slot>/g*.sav、saves/.lock、saves/corrupt/（SYS-SAVE）、管线缓存（只有 Vulkan 用）、着色器缓存、cache/bake/<地图>/<ABI>/…（本机烘焙缓存，含每图一份 cache.index，§5，预算见 ENG-BUDGET §8）、logs/（日志，§12.6）、diagnostics/（导出的诊断包，§12.6）
 ```
 
-- **启动集按图分开**：WP-02 的打包步骤用 `PckPacker` 只把本图的启动集写进 `boot_<地图>.pck`（ENG-ARCH §4 的"按清单打进导出包"），首次进图时 `ProjectSettings.LoadResourcePack` 挂上、不卸载，`replaceFiles: false`；包内路径一律 `res://bake/<地图>/boot/`，G6 查各 PCK 的路径两两不相交（SYS-MAPS §2.4）。其余烘焙产物不进任何 PCK，在本机缓存里（§5）。改了代码或数据，缓存键变化，玩家机器上只重烘改了的模块；启动集内容变了才重打 `boot_<地图>.pck`。参考哈希清单 `bake.manifest.json`（每图一份）在启动集里，包内路径 `res://bake/<地图>/boot/bake.manifest.json`。
+- **启动集按图分开**：WP-02 的打包步骤用 `PckPacker` 只把本图的启动集写进 `boot_<地图>.pck`（ENG-ARCH §4 的"按清单打进导出包"），首次进图时 `ProjectSettings.LoadResourcePack` 挂上、不卸载，`replaceFiles: false`；包内路径一律 `res://bake/<地图>/boot/`，G6 查各 PCK 的路径两两不相交（SYS-MAPS §2.4）。其余烘焙产物不进任何 PCK，在本机缓存里（§5）。改了代码或数据，缓存键变化，玩家机器上按 §5"失效"一条的粒度重烘：数据变了整图重烘，只改了某个模块的代码就只重烘它；启动集内容变了才重打 `boot_<地图>.pck`。参考哈希清单 `bake.manifest.json`（每图一份）在启动集里，包内路径 `res://bake/<地图>/boot/bake.manifest.json`。
 - `.res` 本身已是 zstd 压缩，PCK 不再二次压缩；贴图本身是 BC 格式。
 - 设置类文件（`settings.cfg`、`input.cfg`、`graphics.cfg`、`engine_override.cfg`、`audio.cfg`）读值时只接受基本类型，先查文本、含 `Object(` 之类的写法就整份退回；写盘走 tmp + `Flush(true)` + `File.Replace`（SYS-SAVE §8）。
 - 只考虑 SSD；机械硬盘上的加载时间不作为验收条件。
@@ -1135,7 +1148,12 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 1. **读显卡信息**：`RenderingServer.GetVideoAdapterName()`、`GetVideoAdapterVendor()`、`OS.GetVideoAdapterDriverInfo()`。
 2. **查 DXGI 和 UMA**（做法与坑见 §11.7）：拿到 Godot 正在用的适配器，读显存预算和 UMA 标志。**不用** `GetVideoAdapterType()` 判核显：D3D12 下它以"专用显存 > 0"判独显，而核显也会报 32–256 MB 的专用显存。
 3. **判档**：UMA 或专用显存小于 1 GB 判为核显，再按名称分核显高（Iris Xe、Arc、680M、780M）和核显低；独显按显存预算和名称判高或中。名称是"AMD Radeon(TM) Graphics"这类通用名、或判不出来的，进入测速。
-4. **测速**：管线预热完、首批格子挂上之后，把镜头放到 V1（即 P00），先渲 30 帧把 GPU 拉到负载频率，再用渲染比例 1.0 和 0.67 各渲 90 帧，拟合"GPU 时间 = a × 像素数 + b"，按各档推荐预设的内部像素预测 p90，与该档预算的 80%（核显 75%）比较选档。测完镜头移到 T0；V1 的各环留着，给新游戏过场的终点复用（SYS-TITLE §1.1 第 5 步）。GPU 降频会让测得的时间偏大；笔记本刚开机时又可能偏快。
+4. **测速（限时采样）**：把镜头放到 V1（即 P00），管线预热完、V1 的各环挂上之后才开始计时；首次运行时等这些格子本机烘焙的时间算在首次运行的目标里（§8），不占这 2.5 s。按时间采样，不按帧数，垂直同步照常开（GPU 时间读 `ViewportGetMeasuredRenderTimeGpu`，不含等垂直同步的时间）：
+   - 0–0.4 s 预热，把 GPU 拉到负载频率，样本不用；
+   - 0.4–1.4 s 用渲染比例 1.0，1.4–2.4 s 用 0.67；换比例后的前 3 帧不用（GPU 计时滞后 2–3 帧，缓冲重建的那一帧也在其中）；
+   - 到 2.4 s 停止采样、出结果，整步不超过 2.5 s。60 Hz 下每档约 55 个样本，30 fps 的机器每档约 27 个。
+
+   两档的有效样本都不少于 20 个时，拟合"GPU 时间 = a × 像素数 + b"，按各档推荐预设的内部像素预测 p90，与该档预算的 80%（核显 75%）比较选档。**到时样本不够**（某档不足 20 个，即单帧约 50 ms 以上），或拟合结果不可信（a ≤ 0）时，采用保守结果：第 3 步判为核显的取核显低，判为独显的取独显中；照常写缓存，记一条日志，玩家可在设置页"重新检测"（第 6 条）。测完镜头移到 T0；V1 的各环留着，给新游戏过场的终点复用（SYS-TITLE §1.1 第 5 步）。GPU 降频会让测得的时间偏大；笔记本刚开机时又可能偏快。
 5. **写缓存**：结果写进 `user://graphics.cfg` 的 `[device]` 段，键是"显卡名 + 驱动版本 + 输出分辨率"；首次运行时推荐预设就是当前预设（SYS-GRAPHICS §5）。读写按 SYS-SAVE §8：只存基本类型，写盘走 tmp + `Flush(true)` + `File.Replace`。
 6. **之后**：玩家手动选过预设，下次启动不覆盖。只有显卡名、驱动版本或输出分辨率变了才重新检测；推荐变了用一条临时提示告知（UI-NAV §4.9），不自动改玩家的选择。设置页有"重新检测"。
 7. **双显卡笔记本**：名字是核显、而 DXGI 能枚举到独显时，在设置页提示，并提供"显卡选择"（重启类，SYS-GRAPHICS §3）。
@@ -1314,7 +1332,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
   基准默认精致 1080p；开发机另跑一遍 `--resolution 2560x1440 … --quality=ultra`，对照 ENG-BUDGET §2 的 8.0 ms（SYS-GRAPHICS §6）。`--tier=` 只设设备档（`igpu-low`、`igpu-high`、`dgpu-mid`、`dgpu-high`），决定推荐预设、帧率目标和自动调节的预算，单项以 `--quality` 为准。
 
-  本机烘焙的参数（D-165）：`--bake-cache=<绝对路径>` 指定本机缓存目录，`--bake-bg=0|1` 开关后台预烘（默认 1），`--bake-strict=1` 时缓存不命中直接报错退出、不现场生成（默认 0）。`scripts\gate.ps1` 先跑 `--bake=all` 把共享缓存补齐（按哈希增量），截图类门禁、基准和 G10 一律追加 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰；门禁和基准的截图默认串不变，这几个参数由 gate.ps1 追加（ENG-GATES §1、§2）。
+  本机烘焙的参数（D-165）：`--bake-cache=<绝对路径>` 指定本机缓存目录，`--bake-bg=0|1` 开关后台预烘（默认 1），`--bake-strict=1` 时缓存不命中直接报错退出、不现场生成（默认 0）。`scripts\gate.ps1` 先选出本次要跑的检查，再决定要不要预烘（ENG-ARCH §6 第 3 步）：截图类门禁、基准和 G10 运行前，先把它们用到的图按哈希增量补进共享缓存，运行时一律追加 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰；只跑快检时不烘焙；门禁和基准的截图默认串不变，这几个参数由 gate.ps1 追加（ENG-GATES §1、§2）。
 
 - **两种模式**：
   - 吞吐模式：`--disable-vsync --fixed-fps 60`。`--fixed-fps` 关掉实时同步、按固定步长推进，用来测吞吐。
@@ -1402,6 +1420,18 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
   3. 性能测试（G10、G13 的体验脚本、G17 的"预设轮换"）取独占锁，并且写优先：有性能测试在等时，新的截图不得进入。
 
   锁文件放在 `..\UESTC_RPG.wt\.locks\`，带 PID 和心跳，心跳 60 s 无更新即视为失效。持有独占 GPU 锁时，还要同时持有"重 CPU"锁，阻止其他工作树运行 `dotnet build`、`--import` 和烘焙。
+
+### 12.6 日志与诊断（WP-01；WP-02、WP-32、WP-50 提供读数，WP-35 提供入口）
+
+目的是把试玩时的"卡住了""闪退了"变成能定位的材料。发行版与开发态用同一套，不做在线遥测。
+
+- **一套日志**：用引擎自带的文件日志（`debug/file_logging/enable_file_logging = true`，导出版也开），路径 `user://logs/godot.log`，每次启动轮换，保留最近 5 次（`debug/file_logging/max_log_files = 5`）。各包只经 WP-01 的日志接口（`Campus.Kernel.Inspect`）写日志；接口给每行加前缀：启动后的毫秒与帧号、级别、所属工作包、当前图、流程阶段（`AppState`，切图途中另记 `MapStage`）；错误另带异常类型和堆栈。
+- **大小上限**：单次运行经接口写出的日志超过 16 MB 后，只再记警告和错误；同一条消息每分钟最多记 10 次，多出的只计数，在下一条里写"另有 N 条相同"。日志目录因此在约 80 MB 以内（初值，§16）。
+- **启动第一段**：构建信息（版本、提交、构建类别，ENG-ARCH §4）、命令行、Windows 版本、CPU 型号与逻辑核数、内存、显卡名与驱动版本、DXGI 显存预算、图形接口、设备档与当前预设。
+- **诊断摘要**（`diagnostics.json`，导出时现场生成，只读现有接口，不另存状态）：上面这段启动信息，加上画面预设与手动改过的项、自动调节的当前级别（`IQualityService`）；当前图、位姿、观察模式、流程阶段；世界状态（季节、钟点、天气与天气种子）；本机缓存占用、烘焙进度与失败的键（`IBakeService`）；最近一次成功保存的时间与存档位、最近一次保存失败的原因（`ISaveService`）；最近 20 条警告和错误。
+- **导出诊断**：把 `user://logs/` 下的日志和摘要打成一个 zip（`UESTC-diag-<版本>-<序号>.zip`），写进 `user://diagnostics/`（只留最近 3 份），再在文件管理器里打开这个目录（`OS.ShellShowInFileManager`）。默认只含日志和摘要，存档要玩家另外勾选。入口在操作说明页的"打开日志目录""导出诊断"（UI-NAV），故障处理的步骤见 OPS-RELEASE。
+- **隐私**：日志和摘要里的本机路径一律写成 `user://…`、`res://…`，不写出 Windows 用户名和安装位置。
+- **崩溃**：不强行保存（SYS-SAVE §4）；错误级别的日志立即落盘，闪退后下次启动仍能从轮换保留的文件里导出上一次运行的日志。
 
 ## 13 D3D12 与 Vulkan 的选择
 
@@ -1512,3 +1542,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 | 行走物理的每帧额度 | 预计 0.05–0.3 ms | P0 原型重定，WP-42 | §11.4 |
 | AMD APU 上的 UMA 判定 | 按 DXGI 的 UMA 标志 | G11 真机验证，WP-32b | §11.6 |
 | G17 描线像素占比的下限 | 不低于精致的 70% | P0 截图标定，WP-27 | §12.5 |
+| 网格 LOD 的"误差 + 每级索引数组" | 连续表面给新的索引数组；前缀只用于整件拿掉独立小件 | P0 用墙窗、倒角盒、树冠三个代表件各出两级，看有无破洞、轮廓与倒角高光是否完好，`lods` 写入与 `.tbin` 往返一致；WP-09、WP-02 | §1.2 |
+| 首次分档限时采样的样本数 | 2.5 s 内两档各 ≥ 20 个有效样本，不够就取保守结果 | P0 在一台核显笔记本上看样本数与选档结果，WP-32 | §11.2 |
+| 烘焙停滞的判定 | 等待的那批请求 60 s 没有进展 | P0 在核显笔记本上看最慢的单件和底图子步骤的间隔，WP-02 | §5 |
+| 日志上限 | 单次运行 16 MB，保留最近 5 次，同一消息每分钟 10 次 | P0 看首次运行和 F1 循环 10 分钟的日志量，WP-01 | §12.6 |

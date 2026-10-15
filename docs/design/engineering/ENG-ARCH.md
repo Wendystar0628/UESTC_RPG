@@ -49,7 +49,7 @@ contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, 
   WorldNetwork, PolygonRings, Polyline, OverlayGeometry, BuildingFamily, FacadePreset, DesignKind,
   PostOverride, IRuntimeContext, CinematicDef, CameraSeg, WorldCue, MaskSeg, CaptionCue, ExtraCue, AudioCue,
   CinematicEnd, IBakeService, BakeKey, BakePriority, BakeState, IBakeHandle, BakeProgress]
-data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "game/contracts/schemas/", "game/data/rulesets/", ".gitattributes", ".gitignore"]
+data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt", "game/contracts/schemas/", "game/data/rulesets/", ".gitattributes", ".gitignore"]
 gates: [G1, G2, G3, G4, G5, G6]
 ---
 # ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
@@ -115,6 +115,13 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 **OSM 快照里有、但 `campus.json` 丢掉的信息**：77 座桥、15 处涵洞、146 棵单独的树、13 条行道树线、67 处人行横道，以及道路和河渠的中心线。WP-08 要把它们导出成新的 `game/data/maps/qingshuihe/network.json`。
 
+**管线迁移时一并落实的约定**（WP-08；`pipeline/outskirts` 的 WP-47、共用环境的 WP-04、WP-37、WP-44 同样遵守）：同一份已提交的输入，在任何工作树、任何时候重建，输出逐字节相同。
+
+- **快照日期取自提交的元数据**：`pipeline/raw/<地图>/` 下每份快照旁边放一份 `<快照名>.meta.json`（获取日期（UTC）、来源端点、所用查询文件），和快照一起提交。生成物里的快照日期（如 `campus.json` 的 `meta.date`）读这份元数据，不读文件的修改时间（检出、复制、换工作树都会改它）。
+- **默认离线生成**：正常生成只读仓库里的快照；快照或元数据缺失时报错退出，不自动联网补。刷新快照只用显式命令（`--fetch`），刷新后快照与元数据一起作为单独的数据提交，提交说明写明刷新原因。
+- **锁定 Python 依赖**：`pipeline/requirements.txt` 写允许的范围，另提交 `pipeline/requirements.lock`，把实际使用的包精确到版本号和哈希，并记下 Python 版本；环境一律按锁文件安装（`pip install --require-hashes -r pipeline/requirements.lock`）。加、升依赖由 WP-08 改两个文件并重新生成锁文件。
+- 管线输出里的实体 ID 按 CORE-CONVENTIONS §3 的稳定规则生成，刷新快照不改已有实体的 ID。
+
 ## 2 目录结构与归属
 
 Godot 项目放在子目录 `game/`（即 `res://`），Godot 只扫描这个目录，不碰 docs、Python 和原始数据。
@@ -178,7 +185,7 @@ UESTC_RPG/
 │                            devices/（核显实测与设备登记，WP-32）、godot-api/（API 参考生成，主代理）、docs/（文档总索引生成与校验，主代理）
 ├─ tools/godot-version.txt   锁定的版本串 4.7.2.stable.mono.official.ed1daf0bf
 ├─ docs/                     design/、godot-api/
-└─ global.json、ownership.json、budgets.json、third_party.json、.gitattributes、.gitignore
+└─ version.txt（版本号，§4 构建信息）、global.json、ownership.json、budgets.json、third_party.json、.gitattributes、.gitignore
 ```
 
 不进 git 的位置：仓库外的工作树 `..\UESTC_RPG.wt\<WP-xx>\`、GPU 锁 `..\UESTC_RPG.wt\.locks\`、开发和 CI 的烘焙缓存 `..\UESTC_RPG.cache\bake\<地图>\`（§4，按图分目录；玩家机器上的本机缓存在 `user://cache/bake/`，不在仓库里）；仓库里的导出产物 `build/`、日志与截图 `output/`。音频的母带与素材（`*.wav`、`*.ogg`）进 Git LFS；仓库公开时，只许随游戏发布、不许公开分发的素材（如 Sonniss）放私有素材库（SYS-AUDIO §14.3）。
@@ -308,7 +315,7 @@ scripts/gates/matrix                  WP-41  时季验收矩阵，含天气维�
 scripts/gates/arch                    WP-00  ArchUnitNET 规则（增删规则要主代理批准）
 scripts/wt/                           WP-00
 scripts/devices/                      WP-32
-scripts/godot-api/、tools/、global.json、ownership.json、budgets.json、third_party.json、
+scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budgets.json、third_party.json、
   .gitattributes、.gitignore、docs/   主代理
 ```
 
@@ -332,6 +339,7 @@ scripts/godot-api/、tools/、global.json、ownership.json、budgets.json、thir
   - **设置类文件读值只接受基本类型**（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）：ConfigFile 的解析器在返回之前就会按 `Object(…)` 写法创建对象，所以先把文件读成文本，含 `Object(`、`Resource(`、`SubResource(`、`ExtResource(` 就整份退回 `.bak` 或默认值；再 `Parse`，每个键只接受 bool、int、float、String；写盘走 tmp + `FileStream.Flush(true)` + `File.Replace`（SYS-SAVE §8）。`engine_override.cfg` 由引擎先读，只写登记过的键。
   - 自定义地图标记存进存档（SYS-ATLAS §12）；存档以外只把地图的筛选偏好写进 `settings.cfg`。
   - 门禁和基准照旧不读任何 `user://` 文件（SYS-GRAPHICS §6）；本机烘焙缓存也一样，门禁和基准带 `--bake-cache` 指向共享缓存（ENG-GATES §1）；`--save=off` 下 `user://saves` 不被创建、不被修改（SYS-SAVE §12）。
+  - **正式版的 `user://` 目录名**：`project.godot`（主代理）设 `application/config/use_custom_user_dir = true`、`application/config/custom_user_dir_name = "UESTC"`，导出版的 `user://` 就是 `%APPDATA%\UESTC\`。目录名不带版本号，也不随作品名、版本或安装位置改变，所以解压新版本以后，存档、设置和日志原样沿用，本机缓存按 ABI 和缓存键自行失效（§4）。开发态另行隔离：主检出的 `game/override.cfg` 把目录名设成 `UESTC_DEV`（WP-00 在 D0 生成，§6 第 1 步），工作树是 `UESTC_WPxx`（§6 第 2 步）；本机上开发态与玩家版互不读写对方的目录。
 - **`game/systems/weather`**（WP-45，SYS-WEATHER）：天气的前向过程和剧本在这里，参数在 `game/data/weather/<剧本>/`。其他包只读天气向量（`IWorldState.WeatherNow`）和天气类全局参数（ENG-PERF §1.5），不自己判断天气。天气按图各一份前向过程，进图时补算到当前时间（SYS-MAPS §5）。
 - **`MapScope`**（SYS-MAPS §7）：各区程序集 `Campus.Gen.Zones.*`（core、library-interior、south、west、north、center-east、design-waterfront、design-public、design-boundary、showcase-interiors）带程序集级 `[assembly: MapScope("qingshuihe")]`，由 WP-00 在 D0 写进这些 csproj 的 `<AssemblyAttribute>`，各区包不写任何东西。其余 gen 程序集（buildings、ground、diorama、vegetation、water、fauna、traces、furniture、walkable、collision、outskirts、interior、interior-props、acoustics、ambience 和全部部件）是通用模块，只读 `BuildContext.Map` 和本图数据，不认识任何具体的图。模块的归属：类上的 `Map` → 程序集的 `MapScope` → 都没有就是通用；每次加载一张图只启用"通用 + 当前图"的模块（G5 查通用模块里不得有 `FeatureClaim`）。以后的图各区代码另建程序集，标自己的 `MapScope`。
 
@@ -368,7 +376,7 @@ scripts/godot-api/、tools/、global.json、ownership.json、budgets.json、thir
   - `ISaveService`：开始页、存档页只读存档位列表和缩略图；写入只经 `IAppFlow`（SYS-SAVE §10）；
   - `IMapService`：只读，取当前图的名字和"回到 ××"的按钮名（SYS-MAPS §5）；
   - `IAudioService`：界面音和"声音"页（SYS-AUDIO §16）；
-  - `IBakeService`：设置卡的"存储"行读 `Progress`、`CacheBytes`，"清除缓存"调 `Clear()`（D-165）；
+  - `IBakeService`：设置卡的"存储"行读 `Progress`、`CacheBytes`，"清除缓存"调 `Clear()`（D-165）；失败页读 `IBakeHandle.Error`，"重试"调 `ClearFailures()`（ENG-PERF §5）；
   - `IRuleset`：只读，世界控件按 `WorldControls` 显示可用或禁用态（§3 规则集块）。
 - `Campus.Hud.Map`（`game/hud/map`，WP-48b）除 GodotSharp 外只依赖契约、`Kernel.Get<T>()`、`IAtlasService`、`IWorldState`（读）、`IObserverState`（读：玩家箭头与所在区域）和 `ICameraRig.Pose`（读：视锥）；传送一律经 `IAtlasService.Travel`，不直接调 `ICameraRig.Transit`。`Campus.Systems.Atlas` 可以调 `ICameraRig.Transit`、`ICameraRig.LockInput`、`IViewControl`、读室内索引（`IWorldModel.Interiors`）和 `IObserverState`（`Proximity` 判定），只在目标在别的图时调 `IMapService.Travel`（SYS-ATLAS §11）。
 - 计时只能在 `Campus.Kernel.Frame`、`Campus.Kernel.Quality`、`Campus.Kernel.Inspect`、`Campus.Kernel.Save`（保存耗时与 G10 计数）和 `Campus.Gates` 里出现（`Time.GetTicks*`、`Stopwatch`）。界面的 0.1 s 采样由 `HudModel` 按帧间隔累加实现，不用 `Timer` 节点；音频也不自己计时，监视项登记在 `Campus.Kernel.Inspect`（SYS-AUDIO §18.1）。
@@ -522,7 +530,12 @@ public sealed record ContentOutput(
     IReadOnlyList<LightEmitter>? Emitters = null,
     IReadOnlyList<Footprint2D>? Occupancy = null);
 
-public readonly record struct MeshLod(float Error, int IndexCount);   // 网格 LOD：误差（m）和索引前缀的长度
+public sealed record MeshLod(float Error, int[] Index)   // 网格 LOD：误差（m）和这一级自己的三角形索引，与本表面共用同一份顶点
+{
+    // 快捷写法：只用于整件拿掉独立小件（叶片、小件、合并块里的整栋楼），要求三角形已按件和重要度排好序；
+    // 连续表面（墙面、屋面、倒角盒）的简化必须给新的索引数组，截前缀会留洞（ENG-PERF §1.2）
+    public static MeshLod Prefix(float error, int[] index, int count) => new(error, index[..count]);
+}
 
 public sealed record GeometryBundle(
     ToonRef Material,
@@ -532,7 +545,7 @@ public sealed record GeometryBundle(
     float[]? Ao = null,               // 每顶点 0–1，打包进 COLOR
     float[]? Uv = null,
     float[]? Uv2 = null,              // 窗号基址、窗格行列等逐顶点数据（ENG-PERF §10.3）
-    IReadOnlyList<MeshLod>? Lods = null,   // 三角形已按重要度排序时，每级取索引前缀，由细到粗
+    IReadOnlyList<MeshLod>? Lods = null,   // 由细到粗，每级一份索引数组（MeshLod），顶点共用上面这一份
     VariantTag? Variant = null);
 ```
 
@@ -790,7 +803,7 @@ public interface IWindField                 // WP-26
 - `Build` 写在 gen 里实现 `IContentModule` 的类中（`*Module.cs`）。Godot 侧包的根节点写在 `*Node.cs` 里，标 `[KernelNode]`。
 - `GeometryBundle` 里的 float 数据由内核统一打包：开发态实时生成时由内核打包，平时由烘焙（开发烘焙器或本机烘焙）打包（§4）。格式是 `ARRAY_FLAG_COMPRESS_ATTRIBUTES`，每顶点 20 B：位置 4×u16（按格包围盒归一化，第 4 分量存切线角度）、八面体法线 2×u16、UV 2×u16、COLOR RGBA8（色号、AO、标志）。每个表面不超过 65 536 个顶点；相邻格写统一的格包围盒，避免量化接缝（ENG-BUDGET §7、ENG-PERF §1）。
 - 生成器的内层循环用托管数组；跨引擎边界时，每个表面只拷贝一次。
-- 部件仍按语义级别（L0、L1）分别给几何；每级几何内部可以另给索引前缀形式的网格 LOD（`GeometryBundle.Lods`），由内核写进 `AddSurfaceFromArrays` 的 `lods` 字典。
+- 部件仍按语义级别（L0、L1）分别给几何；每级几何内部可以另给网格 LOD（`GeometryBundle.Lods`：每级是误差加这一级的索引数组），由内核写进 `AddSurfaceFromArrays` 的 `lods` 字典（键是误差，值是该级的索引数组）。截取索引前缀只是 `MeshLod.Prefix` 这一种快捷写法，限于整件拿掉独立小件（ENG-PERF §1.2）。建筑的主线版只用语义级别，同级内部的网格 LOD 后做。
 - 引擎锁定为 Godot 4.7.2-stable .NET 版（`tools/godot-version.txt`；csproj 写 `Sdk="Godot.NET.Sdk/4.7.2"`）。升级要经主代理评审（ENG-WP §5）。
 - 容器怎么选（按块合并的 ArrayMesh、MultiMesh、独立实例），见 ENG-PERF §1。
 - JSON 一律用契约程序集里的 `ContractJson.Options` 读写：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`。多态类型（覆盖层操作、碰撞体）的类型字段必须写在每个对象的第一个字段（.NET 8 的 System.Text.Json 要求）。存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定与 `ContractJson.Options` 一致，ID 类的 record struct 写成字符串；存读档不得用不带 `JsonTypeInfo` 的重载（SYS-SAVE §3.5）。`map.json`、`interiors.json`、`markers.json`、过场 JSON 的 schema 放在 `game/contracts/schemas/`。
@@ -1865,8 +1878,13 @@ public interface IFoleyService                             // Kernel 服务（53
 // 本机烘焙（WP-02；命名空间 Campus.Contracts.Bake；D-165，§4）：几何类烘焙产物在玩家机器上由同一个 Build() 生成并写进本机缓存
 public readonly record struct BakeKey(MapId Map, string Module, string Detail);   // Detail 是 "级别/tileId" 或 "featureId/storey/detail"；ABI、数据哈希、代码哈希由服务补齐，拼成 §4 的缓存键
 public enum BakePriority : byte { Collision, KnownDestination, InteriorPrefetch, Normal, Background }   // 前四个是流式的四个队列（ENG-PERF §5），Background 是后台预烘
-public enum BakeState : byte { Pending, Running, Ready, Failed }
-public interface IBakeHandle { BakeState State { get; } object? Product { get; } }   // Ready 时 Product 是引擎侧的产物（TileBundle 等），契约里不出现引擎类型；刚生成的产物直接交给挂载，不再读一遍盘
+public enum BakeState : byte { Pending, Running, Ready, Failed }   // Failed 是本次运行的终态：自动重建一次后仍不符、生成抛错或停滞（ENG-PERF §5"损坏、校验失败与终态"）
+public interface IBakeHandle
+{
+    BakeState State { get; }
+    object? Product { get; }   // Ready 时是引擎侧的产物（TileBundle 等），契约里不出现引擎类型；刚生成的产物直接交给挂载，不再读一遍盘
+    string? Error { get; }     // Failed 时是一行可复制的原因：缓存键、阶段、期望与实际哈希或异常类型；其余状态为 null
+}
 public readonly record struct BakeProgress(int Total, int Done, string Stage);       // 总量、已完成、当前阶段；扉页的首次运行进度行和设置卡的"存储"行读它
 
 public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typeof(IBakeService), Owner = "WP-02")] 标在实现类上）；gen 不得依赖（§2 ArchUnitNET 规则）
@@ -1875,6 +1893,7 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
     BakeProgress Progress { get; }
     long CacheBytes { get; }                                   // 本机缓存当前占用
     void Clear();                                              // 只清缓存；已挂载的不受影响，之后按需重烘
+    void ClearFailures();                                      // 失败页的"重试"调用：清掉本次运行记下的 Failed，之后的 Ensure 再试一次
 }
 ```
 
@@ -1897,13 +1916,19 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
   - 岸线 SDF、路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
   - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 GPU 锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
   - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各按下文自己的键。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
+    - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与工作树路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
+    - 内核里的表面打包和 `.tbin` 读写代码不算模块代码：改了它们的输出字节，就提高 ABI 里的格式版本。
   - **缓存位置**：
     - 开发和 CI：仓库外的共享缓存目录，路径从环境变量 `UESTC_BAKE_CACHE` 读，默认 `E:\Project\UESTC_RPG.cache\bake\`，按图分子目录 `<UESTC_BAKE_CACHE>\<地图>\`，各图互不覆盖。各工作树共用，按区单独烘焙；产物不进 git。
     - 玩家：`user://cache/bake/<地图>/<ABI>/…`，即导出版的 `%APPDATA%` 下，文件布局与缓存键同上。只有 `IBakeService` 读写这里，用 `.tbin`，不经 `ResourceLoader`、`ResourceSaver`（§2）。
     - `--bake-cache=<绝对路径>` 换缓存目录。默认是 `user://cache/bake/`；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑（ENG-GATES §1）。
-  - **缓存文件与校验**：写盘先写 tmp，`Flush` 后改名。读到长度超限、解析越界或哈希与 manifest 不符的文件时，删掉它，重新烘焙；`cache.index` 只用于 LRU，不作信任依据。
+  - **缓存文件与校验**：写盘先写 tmp，`Flush` 后改名。读到长度超限、解析越界或哈希与 manifest 不符的文件时，删掉它，自动重建一次；新产物就绪前同样按 manifest 校验，仍不符就以 `BakeState.Failed` 结束，不再循环重烘（ENG-PERF §5"损坏、校验失败与终态"）；`cache.index` 只用于 LRU，不作信任依据。
   - **查找顺序**：启动集（`res://bake/<地图>/boot/`）→ 本机缓存 → 本机烘焙（生成后写进缓存）。
-  - **失效**：缓存键里已含代码哈希和数据哈希，游戏更新后自然不命中，只有改了的模块重烘。启动时删掉 `user://cache/bake/<地图>/` 下不是当前 ABI 的目录。
+  - **失效**：缓存键里已含代码哈希和数据哈希，游戏更新或开发中改了输入以后自然不命中。失效粒度就是现行键的实际行为：
+    - 数据哈希每图一份：上面任何一项输入变了（哪怕只改了一条覆盖层），本图的全部格子、室内包、碰撞级 C 都换键重烘；
+    - 代码哈希按模块：只改了一个内容模块自己的代码，只有这个模块的产物重烘；改了共享生成依赖，所有用到它的模块一起重烘；
+    - 先保证这条简单而正确的规则。只有全图失效确实拖慢了制作，才把数据输入细分到模块，细分时由 G2 证明依赖没有漏算；不建逐实体的增量构建。
+    - 启动时删掉 `user://cache/bake/<地图>/` 下不是当前 ABI 的目录；同一 ABI 下旧键的文件不专门清理，按"最久未用"淘汰。
   - **大小**：一张图烘满约 0.8–1.4 GB。默认上限 2.5 GB，超出时按"最久未用"淘汰：先淘汰别的图，再淘汰本图的 L0 和室内包；L1–L4 和全图常驻数据不淘汰。磁盘剩余空间不足 1 GB 时不写缓存，只在内存里生成、用完即弃，并给一次几秒内淡出的临时提示（INV-3 允许）。
   - **与画面设置、世界状态、存档无关**：`Build()` 的输入里没有这些（§2），所以缓存跨存档、跨画质共用；`--seed` 覆盖时种子进数据哈希，各自一份缓存。
   - **什么时候烘**（预算和队列细则见 ENG-PERF §5）：
@@ -1954,6 +1979,11 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
   - 每个文件在 `game/data/audio/licenses.json` 登记来源与许可，署名页由它自动生成；音频在导出包里单列，不超过 165 MB。
 - **资源清单**：每个资源都要登记许可证、生成脚本、哈希和体积：自产资源登记在所在目录的 `manifest.json`（`game/assets/style/` 归 WP-04，`game/assets/hud/` 归 WP-35，`game/assets/title/` 归 WP-49b，`game/assets/maps/` 归 WP-27），音频登记在 `licenses.json`（WP-53e），第三方登记在 `third_party.json`。门禁拒收任何以照片为来源的资源。界面资源清单里没有银杏、书签、纸纹意象（UI-VISUAL §13）。
 - **导出过滤器**：`export_presets.cfg` 要显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` 等非资源文件（是否必需，由 P0 的导出验证确认，§7），排除 `gates/` 下的数据文件和全部 `tests/`，以及门禁夹具图（如果做，SYS-MAPS §15）。`gates/` 的 C# 代码仍编进主程序集，因为 G10 要在导出的 release 版里回放路线；不带门禁参数时它不启用。G6 的上限是安装目录 ≤ 0.9 GB、分发压缩包 ≤ 0.7 GB（上文"导出与随包内容"，ENG-PERF §8）。
+- **构建信息**（WP-00 建生成步骤，WP-01 读出并写日志）：版本号只有一个来源，仓库根的 `version.txt`（一行 `主.次.修订`，主代理维护，发版时改）。`Campus.csproj` 的构建步骤读它和当前提交（`git rev-parse --short=12 HEAD`；工作区有未提交的改动时加 `-dirty`，拿不到 Git 时写 `nogit`），生成 `BuildInfo.g.cs`，内容是：
+  - `Version`（版本号）、`Commit`（提交）、`Build`（`<版本>+<提交>`）；
+  - `Kind`：按构建配置，`Debug` 为 `dev`，`ExportDebug`、`ExportRelease` 为 `export`；
+  - 各模块的代码哈希（上文"缓存键"）。
+  - **谁读它**：显示版本的界面、`SaveMeta.Build`、日志第一行与诊断摘要（ENG-PERF §12.6）、`output/perf/` 报告、分发压缩包名 `UESTC-<版本>-win64.7z` 一律读它，别处不另写版本号。对外发布的构建必须来自干净的提交（`Commit` 不带 `-dirty`）；导出、发布与更新的步骤见 OPS-RELEASE。
 
 ## 5 接口先定、桩先合入
 
@@ -2012,6 +2042,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
    - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
    - WP-00 在主检出的 `main` 上搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。完成后打标签 `contracts-v1` 并推送。
+   - WP-00 同时给主检出生成 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让主检出的开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
 2. **开工作树**：由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，从当前 `main` 拉本地分支，展开就是：
 
    ```powershell
@@ -2034,7 +2065,13 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 在自己的分支上小步提交，不推送，不碰 `main`。主代理通知 `main` 有新的合入时，在工作树里 `git rebase main` 跟上；rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
    - 代理只走命令行，不在编辑器里打开或重存场景；场景尽量由代码生成。
    - 截图类门禁（G7、G9）必须在交互式会话的窗口模式下跑，窗口不能最小化；无界面模式用的是空渲染器，不能截图，也不编译着色器。截图取共享 GPU 锁，同时最多 2 个工作包在跑；性能门禁（G10）取独占锁（ENG-PERF §12.5）。
-   - `gate.ps1` 先跑 `--bake=all` 把共享缓存（`UESTC_BAKE_CACHE`）按哈希增量补齐；截图类门禁、基准和 G10 再带 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰（追加方式见 ENG-GATES §1）。各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
+   - **先选检查，再决定要不要烘焙**：`gate.ps1` 先按改动选出本次要跑的检查（快检；碰到核心体验时加核心专项；集中测试时全量；测试节奏只以 ENG-GATES §2 为准），再看所选的检查要不要烘焙产物：
+     - 快检（编译、单元测试、归属、无界面注册检查）不烘焙；
+     - 不带 `--bake-strict=1` 的检查（如核心专项的窗口冒烟）缺什么就按玩家路径现烘，不预烘；
+     - 带 `--bake-strict=1` 的检查（截图类门禁、基准、G10）先把它们用到的图（`--bake=all --map=<id>`）按哈希增量补进共享缓存（`UESTC_BAKE_CACHE`），运行时带 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰（追加方式见 ENG-GATES §1）；
+     - 全部图的 `--map=*` 预烘只在集中测试，或所选检查确实要全部图时跑。
+
+     各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
    - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务。十几个工作树并行时，同时运行的重 CPU 任务不超过 max(2, 逻辑核数 / 8) 个，用 `..\UESTC_RPG.wt\.locks\` 下的计数锁排队（初值，P0 按本机实测调整，§9）；持有独占 GPU 锁时，其他工作树一律不得运行它们。
 4. **合并**（主代理的合并队列，一次合一个）：
    1. 子代理回报完成后，主代理在它的工作树里 `git rebase main`；
@@ -2047,7 +2084,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 其余包靠桩就能运行，门禁通过就可以合入，不必等内核。
 5. **冲突规则**：
    - 改动路径必须在 `ownership.json` 给本包划定的范围内，否则门禁 G3 拒绝。
-   - 以下文件只有主代理能改：`game/project.godot`（含 Shader Globals 登记、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`，以及开放室内清单 `game/data/maps/*/interiors.json`（清单的增删由主代理审批，WLD-INTERIORS §14）。`map.json` 归 WP-46，但字段增改经主代理（SYS-MAPS §3）。
+   - 以下文件只有主代理能改：`game/project.godot`（含 Shader Globals 登记、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`version.txt`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`，以及开放室内清单 `game/data/maps/*/interiors.json`（清单的增删由主代理审批，WLD-INTERIORS §14）。`map.json` 归 WP-46，但字段增改经主代理（SYS-MAPS §3）。
    - `.uid` 跟着源文件走，和源文件在同一个目录，所以目录独占规则自然覆盖它。新文件的 `.uid` 由 `--import` 生成后一起提交。复制文件时删掉复制来的 `.uid`，否则会出现重复的 UID（G3 检查"每个脚本都有 `.uid`、全仓 UID 不重复"）。
    - 代码里只用 `res://` 路径，不手写 `uid://`。
    - `.import`、`.uid`、`export_presets.cfg` 进 git；`.godot/`、`override.cfg`、烘焙产物不进。
@@ -2071,7 +2108,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 界面破坏画面 | 漫游态唯一常驻的是左上角的小地图，可以关，按 U、`--ui=0`、过场时隐藏；界面态的组件贴四角，不进画面中央 60%；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；常驻小部件固定用深屏，免得浅色面板在高调画面上消失；`--ui=0` 截图门禁（UI-NAV、UI-VISUAL §13、SYS-ATLAS §14.2） |
 | 字体与题字的许可 | 只用 OFL 字体（界面是思源黑体 SC、Inter、JetBrains Mono），界面字体不改文件；原作字迹须先确认许可 |
 | `.uid` 缺失或重复 | `.uid` 与源文件同目录、一起提交；复制文件时删掉复制来的 `.uid`；代码只用 `res://` 路径（UID 失效时引擎退回按路径解析，只打印警告）；G3 检查缺失和重复 |
-| 工作树共用 `user://` | 所有工作树的项目名相同，会共用 `%APPDATA%\Godot\app_userdata\<名>`，日志和运行时着色器缓存互相干扰。每个工作树生成 `override.cfg`，把 `custom_user_dir_name` 设成 `UESTC_WPxx`（§6） |
+| 工作树共用 `user://` | 所有工作树的项目设置相同，会共用同一个 `user://`，日志和运行时着色器缓存互相干扰。每个工作树生成 `override.cfg`，把 `custom_user_dir_name` 设成 `UESTC_WPxx`；主检出设成 `UESTC_DEV`，不碰正式版的 `UESTC`（§2、§6） |
 | .NET 8 于 2026-11-10 停止支持 | Godot 4.7.2 默认目标是 net8.0。P0 原型验证能否改用 net10.0（需要另装 SDK 时从官方来源直接下载，下完说明，CORE-CONVENTIONS §8.4）；`global.json` 锁 SDK 版本 |
 | 无界面模式不编译着色器 | 着色器错误只有在窗口模式下才会暴露。G5 加一次短时间的窗口冒烟运行；G7 也在窗口模式下跑 |
 | 导出版里的反射与程序集加载 | 编译器会丢掉没用到的程序集引用，导出后反射可能扫不到模块。注册器按构建时生成的程序集清单显式加载；P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，确认导出版注册结果与编辑器一致 |

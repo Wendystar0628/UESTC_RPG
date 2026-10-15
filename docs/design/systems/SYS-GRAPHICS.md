@@ -6,7 +6,7 @@ summary: 四档画面预设与单项、风格底线、应用流程、首次分�
 owners: [WP-32]
 contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-35, WP-38, WP-41, WP-45, WP-47]
 depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
-related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
+related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE]
 contracts: [QualityPreset, DeviceTier, ApplyClass, KnobKind, QualityKnob, KnobSpec, QualityProfile, QualityView, ApplyOrigin, QualityChange, KnobDelta, ApplyPlan, ApplyStatus, ApplyResult, IQualityService, IQualityAware, QualityResponsiveAttribute]
 data: ["game/data/quality-presets.json", "user://graphics.cfg", "user://engine_override.cfg"]
 gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
@@ -17,7 +17,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 > **范围**：本文规定画面设置：设备档与四档预设、各单项的取值与生效方式、不随画质关掉的风格底线、应用流程、首次分档与自动调节、`graphics.cfg` 与命令行、契约、画面页的内容与验收。
 > **不在本文**：画面页的视觉（UI-VISUAL §8.5）；声音设置（SYS-AUDIO §13）；设备档的预算与帧率目标（ENG-BUDGET §2）；自动调节的控制律（ENG-PERF §11.3）；开放室内的介质呈现（WLD-INTERIORS）。
 > **分工**：WP-32 主责（32a 画面设置、32b 分档与自适应），WP-35 做画面页；各单项的负责方见 §3、§7。
-> **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)；另见 [CORE-INDEX](../README.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ART-FIDELITY](../art/ART-FIDELITY.md)、[SYS-TIME](SYS-TIME.md)、[UI-NAV](../ui/UI-NAV.md)、[UI-VISUAL](../ui/UI-VISUAL.md)、[SYS-TITLE](SYS-TITLE.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)、[WLD-OUTSKIRTS](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS](../world/WLD-INTERIORS.md)、[SYS-AUDIO](SYS-AUDIO.md)
+> **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)；另见 [CORE-INDEX](../README.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ART-FIDELITY](../art/ART-FIDELITY.md)、[SYS-TIME](SYS-TIME.md)、[UI-NAV](../ui/UI-NAV.md)、[UI-VISUAL](../ui/UI-VISUAL.md)、[SYS-TITLE](SYS-TITLE.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)、[WLD-OUTSKIRTS](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS](../world/WLD-INTERIORS.md)、[SYS-AUDIO](SYS-AUDIO.md)、[OPS-RELEASE](../ops/OPS-RELEASE.md)
 
 ## 0 结论
 
@@ -145,7 +145,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
    - **不能用** `GetVideoAdapterType()` 判核显：D3D12 下核显也会报几十到几百 MB 的"专用显存"，被误判为独显。
    - WMI 的显存数封顶约 4 GB，不能用。
 3. UMA 或专用显存小于 1 GB 判为核显，再按名称区分核显高（Iris Xe、Arc、680M、780M）和核显低；独显按显存预算和名称判高或中；判不出来的进入测速。
-4. 测速：起始视角 V1 下用渲染比例 1.0 和 0.67 各渲 90 帧，拟合"GPU 时间 = a × 像素数 + b"，取 p90 与该档预算的 80%（核显 75%）比较选档。
+4. 测速（限时采样，细则以 ENG-PERF §11.2 为准）：起始视角 V1 下按时间而不是按帧数采样，渲染比例 1.0 和 0.67 各采一段，整步不超过 2.5 s，到时就用已采到的样本；拟合"GPU 时间 = a × 像素数 + b"，取 p90 与该档预算的 80%（核显 75%）比较选档。样本不够或拟合不可信时采用保守结果（核显取核显低，独显取独显中），设置页可"重新检测"。
 5. 结果写进 `user://graphics.cfg` 的 `[device]` 段；推荐预设设为当前预设。
 
 **之后**：玩家手动选过预设，下次启动不覆盖。只有显卡名、驱动版本或输出分辨率变了才重新检测，推荐变了用一条临时提示告知（UI-NAV §4.9），不自动改玩家的选择。
@@ -199,6 +199,12 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
   - `--tier=igpu-low|igpu-high|dgpu-mid|dgpu-high`：只设设备档、跳过检测；只给 `--tier` 时预设取该档的推荐预设；
   - 优先级：命令行 > `graphics.cfg` > 自动推荐 > 默认值。门禁和基准只由命令行决定，不读 `user://`。
 - **截图默认串**追加 `--quality=fine --adaptive=0`；默认串末尾另有 `--map=qingshuihe --title=0 --save=off --audio=off`（ENG-GATES §1、SYS-AUDIO §17；截图和基准一律不出声，只有声音门禁显式给 `--audio=on`）。基准默认 `--quality=fine`，开发机另跑 `--quality=ultra`。
+- **恢复画面设置**（游戏外入口，WP-32 随包提供）：引擎在任何 C# 代码运行之前就读 `engine_override.cfg`，图形接口或显卡选择写坏时游戏可能起不来，游戏里的画面页和启动失败页（SYS-TITLE §1.1）都打不开。所以安装目录根下随包放一个 `reset-graphics.cmd`（界面和说明里叫"恢复画面设置"），不依赖 Godot 和 .NET：
+  - 把正式版 user 目录 `%APPDATA%\UESTC\`（ENG-ARCH §2）下的 `engine_override.cfg` 和 `graphics.cfg` 改名为 `<原名>.reset-<日期时间>`，不删除，留给诊断；
+  - 只动这两个文件：存档、`settings.cfg`、`input.cfg`、`audio.cfg`、日志和本机烘焙缓存都不碰；
+  - 下次启动按默认值走：D3D12、引擎默认的显卡，重新做首次分档并采用推荐预设（§5）；
+  - 两个文件都不存在时什么也不改，提示"画面设置已是默认值"；脚本只用 ASCII 命令，结果用中英两行写在窗口里，按任意键关闭；
+  - OPS-RELEASE §6 的故障处理引用这一入口；发版前在导出版上验证一次：写一份坏的 `engine_override.cfg`，运行脚本后游戏能正常启动。
 
 ## 7 各包的分工
 

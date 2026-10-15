@@ -6,7 +6,7 @@ summary: 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精�
 owners: [WP-47]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, ART-STYLE, WLD-DIORAMA, SYS-VIEW, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-WALK, SYS-MAPS]
-related: [ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, UI-NAV, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, WLD-INTERIORS, SYS-AUDIO]
+related: [ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, UI-NAV, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE]
 contracts: [SurfaceTag.Boundary, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, IWorldModel.Outskirts, RoamLimits.PushRate, RoamLimits.PushMax, RoamLimits.EdgeFogMax, MapEnvironment.Outskirts, ICameraRig.EdgeFog, ShaderGlobals.EdgeFog]
 data: ["pipeline/outskirts/", "game/data/maps/qingshuihe/outskirts.json", "game/data/maps/qingshuihe/overlay/outskirts.overlay.json"]
 gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
@@ -15,7 +15,7 @@ gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
 
 > **范围**：本文规定大箱庭的范围（校界、前沿线、截面线）与截面精度，外围环境带 O0–O3 的内容、精度、灯光与季节，外围的保留、删除与新增，行走和旁观在边界处的阻挡、推回与提示，以及外围的数据管线、许可、预算与验收。校界以外的内容、活动范围（SYS-VIEW §2.3）和校界收口（SYS-WALK §7）的细则以本文为准。
 > **不在本文**：截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS §2.14）；行走控制器与碰撞数据（SYS-WALK）；活动范围的契约字段与按图数据（SYS-MAPS）；声音的实现（SYS-AUDIO）。
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)
 
 ### 分工
 
@@ -366,9 +366,9 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 ### 6.4 许可
 
 - **署名**：外围数据和校内一样来自 OSM，画面上的署名同为"© OpenStreetMap contributors"（SYS-VIEW §6）。
-- **派生数据库**：`outskirts.json` 和 `campus.json` 一样，是 ODbL 1.0 下的派生数据库，随安装包分发。按 ODbL 第 4.6 条，公开使用派生数据库或由它做出的作品时，要提供派生数据库本身或生成它的方法。做法：
-  - 安装包的 `LICENSES.txt` 写明两份数据的来源、快照日期和 ODbL 1.0；
-  - 附上 Overpass 查询原文，说明派生数据可以用仓库里的管线重新生成。
+- **派生数据库**：`outskirts.json` 和 `campus.json` 一样，是 ODbL 1.0 下的派生数据库，随安装包分发。按 ODbL 第 4.6 条，公开使用派生数据库或由它做出的作品时，要提供完整的派生数据库，或包含全部改动与补充的材料；只给查询语句不够。做法：
+  - 每个公开版本附一份 `map-data-<版本>.zip`，放这一版实际使用的派生数据库（各图的 `campus.json`、`network.json`、`zones.json`、`outskirts.json` 和全部覆盖层），或能重建出同样字节的完整材料（快照、查询、管线与全部输入、覆盖层）；内容与打包见 OPS-RELEASE §5；
+  - 仓库 README、许可页（SYS-VIEW §6）和安装包的 `LICENSES.txt` 都指向同一版本的 `map-data-<版本>.zip`；`LICENSES.txt` 另写明两份数据的来源、快照日期、Overpass 查询原文和 ODbL 1.0。
 - **不用的数据源**：
   - 微软和谷歌的全球建筑轮廓数据集缺中国覆盖；
   - 高德、百度的楼块，服务条款不允许导出和再分发。
@@ -593,7 +593,7 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
   - O2 常驻合并块与流畅档的卡片环；
   - 覆盖层里的地标与新增元素；
   - 外围的灯具标记（Lamp 标记加时刻表标签，交 WP-39）、树点（交 WP-23）、作物色号（交 WP-04、WP-37、WP-38）；
-  - `LICENSES.txt` 里外围数据的那一段；
+  - `LICENSES.txt` 里外围数据的那一段；地图数据包里的外围部分（`outskirts.json`、外围覆盖层、Overpass 查询原文与快照日期），交 WP-08 一并打包（§6.4、OPS-RELEASE §5）；
   - 8 个巡检点（§13.2）。
 - **规模**：约 1.6k 行。可以拆成 47a 数据管线（`pipeline/outskirts`）和 47b 生成（`game/gen/outskirts`），两者只经 `outskirts.json` 的格式交接，格式由 47a 先定。
 - **依赖**：WP-08、WP-13、WP-14、WP-15、WP-22、WP-23、WP-39、WP-46。

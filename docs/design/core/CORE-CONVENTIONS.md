@@ -6,7 +6,7 @@ summary: 跨文档共同约定速查：坐标单位、时间、编号命名、�
 owners: [WP-00]
 contributors: [WP-27]
 depends: [CORE-INDEX]
-related: [ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-WP, ENG-PERF, SYS-TIME, SYS-SAVE, SYS-MAPS, CORE-DECISIONS, CORE-GLOSSARY, ENG-ROADMAP]
+related: [ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-WP, ENG-PERF, SYS-TIME, SYS-SAVE, SYS-MAPS, CORE-DECISIONS, CORE-GLOSSARY, ENG-ROADMAP, ENG-STATUS, OPS-RELEASE]
 contracts: []
 data: []
 gates: [G1, G2, G3, G4, G5]
@@ -16,7 +16,7 @@ gates: [G1, G2, G3, G4, G5]
 
 > **范围**：本文汇总所有子代理共同遵守的跨文档约定：坐标与单位、时间单位、标识与命名、帧顺序、目录与归属、确定性、文档写法和施工规则，查一处就够。有权威表的地方只给速查和指针。
 > **不在本文**：契约全文（ENG-ARCH §3）、全局参数登记表（ENG-PERF §1.5）、命令行参数表（ENG-GATES §1）、门禁（ENG-GATES §2）、预算（ENG-BUDGET）、工作包（ENG-WP）、决策（CORE-DECISIONS）、术语解释（CORE-GLOSSARY）、RPG 扩展点（ENG-ROADMAP）。
-> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[CORE-DECISIONS 决策登记](CORE-DECISIONS.md)、[CORE-GLOSSARY 术语表](CORE-GLOSSARY.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
+> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[CORE-DECISIONS 决策登记](CORE-DECISIONS.md)、[CORE-GLOSSARY 术语表](CORE-GLOSSARY.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)、[ENG-STATUS 施工状态](../engineering/ENG-STATUS.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)
 
 ## 0 原则与权威表
 
@@ -235,6 +235,15 @@ gates: [G1, G2, G3, G4, G5]
 - **"观者在哪"与"画面从哪看"分开读**：前者读 `IObserverState`，后者（视锥、听者、流式选级）读 `ICameraRig`（ENG-ROADMAP §3；契约以 ENG-ARCH §3 定稿为准）。
 - **换世界实例直接落到新值**：做平滑、回差、保留历史的系统看到 `IWorldState.Instance` 变了，就把状态直接设成新值；以后的 NPC、剧情状态同样遵守（SYS-SAVE §5.2）。
 
+### 3.9 持久化 ID 的稳定
+
+存档、覆盖层、标记和其他数据文件按 ID 引用对象，ID 就是对象的身份。下列 ID 都按本节执行：地图 ID、实体 ID（含 `design:` 增补）、点位 P、锚点 A、路线 R、室内入口 ID（标记写 `door:<入口 ID>`）、区域 ID 与地点翻译键、存档段 ID。
+
+- **不复用**：ID 进了 `main` 以后，对象删掉了，ID 也不再分给别的对象；新对象一律取新号（例如点位从 P24 往后编，§3.2）。
+- **改名不改身份**：改显示名、译名、所在文件或分区，ID 不变；轮廓、高度、位置的调整走覆盖层（§3.1），ID 也不变。
+- **确需换 ID 时给旧新映射**：例如刷新 OSM 快照后，同一个真实对象的 OSM ID 变了。负责该数据的包随数据提交一份旧 ID → 新 ID 的映射；引用这些 ID 的存档段升段版本，由 WP-50 在迁移函数里按映射改写（SYS-SAVE §3.6）。
+- **真正删除不给映射**：读档时按 SYS-SAVE §5.6 的校验修复处理（从已访问、解锁、追踪的列表里去掉，`map:<id>/objects` 丢掉那一条）。
+
 ## 4 帧顺序
 
 权威表在 ENG-ARCH §3 的 `FramePriority`（D-135）；SYS-TIME §1、ENG-PERF §6、SYS-MAPS §9、SYS-AUDIO §20 的表与它逐行一致。下表是速查，两者不一致时以 ENG-ARCH §3 为准。
@@ -337,6 +346,7 @@ UESTC_RPG/
 - 设置类文件读值只接受 bool、int、float、String；先按文本检查，含 `Object(`、`Resource(` 等就整份退回；写盘走 tmp + `FileStream.Flush(true)` + `File.Replace`（SYS-SAVE §8）。
 - 只有 `Campus.Kernel.Save` 能读写 `user://saves`；任何代码都不得用 `ResourceLoader`、`ResourceSaver` 读写 `user://`，因为 `user://` 里的 Godot 资源能嵌脚本，读入即执行（ENG-ARCH §2、SYS-SAVE §8）。本机缓存因此用自定义二进制 `.tbin`，由 `IBakeService` 用 `FileAccess` 读写，读入后先按随包的 `bake.manifest.json` 校验哈希再用（ENG-PERF §5）。
 - 门禁和基准不读任何 `user://` 文件，本机缓存由 `--bake-cache` 指到共享的烘焙缓存（ENG-GATES §1）；`--save=off` 下 `user://saves` 不被创建、不被修改（SYS-GRAPHICS §6、SYS-SAVE §12）。每个工作树经 `override.cfg` 有自己的 `user://`（ENG-ARCH §6）。
+- **目录名**：正式版的 `user://` 是 `%APPDATA%\UESTC\`（`custom_user_dir_name = "UESTC"`，ENG-ARCH §2）。目录名不带版本号，所有版本共用，解压新版本后存档、设置和日志照常沿用（OPS-RELEASE §2）。开发态另行隔离：主检出是 `UESTC_DEV`，工作树是 `UESTC_WPxx`（§3.7），都不读写正式目录。
 
 ### 5.4 文档目录
 
@@ -517,9 +527,9 @@ UESTC_RPG/
 
 ### 8.3 门禁与回报
 
-- 测试按 ENG-GATES §2 的三档（D-167）：每次合入前只跑几分钟的快检（编译、改动涉及的单元测试、归属、注册）；只有核心体验（启动与主线冒烟、行走不穿地、存档不丢不坏）在改动碰到时跑核心专项；其余测试全部留到大量开发之后的集中测试，一次做完。`scripts\gate.ps1 -Wp <WP-xx>` 默认按改动自动选，输入没变的门禁沿用上次结果，只改文档不跑。开发中自己截图看效果不算门禁。
+- 测试按 ENG-GATES §2 的三档（D-167）：每次合入前只跑几分钟的快检（编译、改动涉及的单元测试、归属、注册）；只有核心体验（启动与主线冒烟、行走不穿地、存档不丢不坏）在改动碰到时跑核心专项；其余测试全部留到大量开发之后的集中测试，一次做完。`scripts\gate.ps1 -Wp <WP-xx>` 默认按改动自动选，输入没变的门禁沿用上次结果，只改文档不跑；先选定本次的检查，选中的检查要用烘焙数据时才预烘共享缓存（ENG-ARCH §6）。开发中自己截图看效果不算门禁。
 - 截图类门禁（G7、G9）在已登录的交互式会话里、窗口模式下跑，窗口不能最小化；脚本自己排 GPU 锁，不绕过；截图与基准一律不开声音（ENG-GATES §1、ENG-ARCH §6）。
-- git 流程按 ENG-ARCH §6（D-166）：远端只有 `main` 和标签。并行写代码时每个代理一个工作树和本地临时分支，小步提交、不推送、不碰 `main`，主代理通知有新合入时 `git rebase main`；主代理的合并队列一次合一个：rebase → 全部门禁 → squash 合进 `main` → `git push origin main` → 删本地分支。只有一个代理写代码时，直接在主检出的 `main` 上做，同样先过门禁再提交、推送。
+- git 流程按 ENG-ARCH §6（D-166）：远端只有 `main` 和标签。并行写代码时每个代理一个工作树和本地临时分支，小步提交、不推送、不碰 `main`，主代理通知有新合入时 `git rebase main`；主代理的合并队列一次合一个：rebase → 快检与相关核心专项（ENG-GATES §2）→ squash 合进 `main` → `git push origin main` → 删本地分支。只有一个代理写代码时，直接在主检出的 `main` 上做，同样先过与改动相关的快检和核心专项，再提交、推送。
 - 完成后按 ENG-GATES §5 的格式回报，截图放 `output/render-review/`。
 
 ### 8.4 文件操作
@@ -542,6 +552,7 @@ UESTC_RPG/
 - **主代理**：开发期的编排者。先做 WP-00（骨架、契约 v1、桩）；之后发派工简报、维护合并队列，并审批三类事：契约变更（含全局着色器参数、着色器文件、程序集引用与 NuGet 包，§8.2）、开放室内清单 `interiors.json` 的增删（D-164）、预算余量（ENG-BUDGET §8 的"主代理余量"）（D-161）。
 - 文档里"须经 WP-00 审批"与"须经主代理审批"等价。
 - 共享文件只由主代理改（§5.1）；文档冲突报主代理，由主代理定案并登记进 CORE-DECISIONS（§7.6）。
+- 主代理维护 ENG-STATUS（当前施工状态），派工、合入和交接时更新；换会话或换账号接手时，先读它再对照 Git 核实（ENG-STATUS §1）。
 
 ### 8.6 主线优先（D-168）
 

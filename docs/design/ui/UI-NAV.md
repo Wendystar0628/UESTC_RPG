@@ -6,7 +6,7 @@ summary: 界面的内容与交互：组件、快捷键、点位清单、跳转�
 owners: [WP-35, WP-36]
 contributors: [WP-01, WP-06, WP-27, WP-48, WP-49, WP-50, WP-53]
 depends: [ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO]
-related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
+related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, OPS-RELEASE]
 contracts: [Waypoint, WaypointGroup, WaypointStand, WaypointRecommend, LocalizedName]
 data: ["game/data/maps/qingshuihe/waypoints.json", "user://settings.cfg", "user://input.cfg", "game/hud/i18n/"]
 gates: [G2, G4, G7, G13, G14, G15, G16]
@@ -15,7 +15,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 
 > **范围**：本文规定界面的内容与交互：有哪些组件、怎么操作、快捷键、鼠标捕获与界面态、点位与锚点清单、跳转与传送的过渡、无障碍与语言，以及界面的实现与性能。界面用来调速度、跳转到主要点位、展开操作说明、调节时间、季节和天气，并切换观察模式；点位的位姿、推荐状态和跳转过渡都以画面好看为先。
 > **不在本文**：界面视觉（令牌、字体、形状、组件外观、动效）见 UI-VISUAL；小地图、大地图与传送的细则见 SYS-ATLAS；开始页与过场见 SYS-TITLE；存档语义见 SYS-SAVE；多地图见 SYS-MAPS；边界提示见 WLD-OUTSKIRTS；室内与新增点位的入口见 WLD-INTERIORS；界面音效与"声音"页的取值见 SYS-AUDIO。
-> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)；另见 [CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)
+> **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)；另见 [CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)
 
 ### 分工
 
@@ -26,7 +26,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 ## 0 结论
 
 1. **风格**：界面的主题是信息、数据、电子、芯片、光与计算，主色清蓝 #73C9F9，专业克制，光只表示状态；白天"晶白"、夜间"深屏"两套主题，常驻小部件固定用深屏。令牌、字体、形状、图标、组件和动效一律以 UI-VISUAL 为准，本文件只定内容和交互（§2）。
-2. **呈现**：作品启动后先是扉页和开始页，进入时播进场过场（SYS-TITLE）。漫游态（鼠标被捕获）唯一常驻的元素是左上角的小地图（SYS-ATLAS，可关，N 切换），另有几秒内淡出的临时提示。按 Esc 进入界面态，界面出现，鼠标闲置 4 秒后淡出，小地图不淡出。按 U 进入纯净模式，小地图也隐藏。
+2. **呈现**：作品启动后先是扉页和开始页，进入时播进场过场（SYS-TITLE）。漫游态（鼠标被捕获）唯一常驻的元素是左上角的小地图（SYS-ATLAS，可关，N 切换），另有几秒内淡出的临时提示。按 Esc 进入界面态，界面出现，4 秒没有操作后淡出（键盘操作、焦点、大页和读屏都让它保持显示，§3），小地图不淡出。按 U 进入纯净模式，小地图也隐藏。
 3. **内容**：时间、季节、天气、速度、观察模式、小地图与大地图（点位目录在大地图的"目录"页，SYS-ATLAS）、操作说明与设置（含"画面"页 SYS-GRAPHICS §9、"声音"页 SYS-AUDIO §13），以及开始页、存档页和过场字幕（SYS-TITLE、SYS-SAVE）。3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱（INV-3）。
 4. **跳转与传送**：数字键、`[` `]` 和大地图上的【飞过去】都是飞过去，不做"淡出、加载、淡入"：短距离直线滑移；中距离走弧线；远距离在弧线顶点穿过雾幕；途中随时可以打断。大地图上另有【传送】：雾幕瞬移，是地图上的默认方式（§7.8、SYS-ATLAS §7）。
 5. **性能**：界面是 Godot 的 Control 树，放在一个 CanvasLayer（layer 10）里，不进 3D 场景。以 10 Hz 读取世界状态，值变了才刷新（小地图跟随镜头的变换是登记过的逐帧例外，SYS-ATLAS §10）；晶白与深屏按太阳高度离散切换，由 WP-35 写全局参数 `ui_night` 的扫描前沿实现，不改 Theme（UI-VISUAL §3.6）；主线程每帧平均不超过 0.2 ms（§9）。
@@ -92,7 +92,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 | 状态 | 呈现 |
 | --- | --- |
 | 漫游态（鼠标被捕获） | 唯一常驻的是小地图（设置可改为"移动时显示"或"关"，SYS-ATLAS §3）；其余只有临时提示（§4.9），2 秒内淡出。时间卡收起态也不显示 |
-| 界面态 | 鼠标 4 秒不动，界面在 1.2 秒内淡到 0；小地图不淡出 |
+| 界面态 | 4 秒没有对界面的操作，普通 HUD 在 1.2 秒内淡到 0；什么算操作、何时不隐藏、怎么唤回见本节末；小地图不淡出 |
 | 热区 | 界面态下鼠标进入屏幕四角 64 px 范围，界面在 180 ms 内回来 |
 | 纯净模式 | 按 U 隐藏全部界面，含小地图；再按一次恢复 |
 | 大地图打开 | 小地图和其余 HUD 隐藏，世界不暂停（SYS-ATLAS §4.1） |
@@ -102,6 +102,12 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 | 任何状态 | OSM 署名常驻；放映层出现黑边时署名改用固定的浅色（SYS-TITLE §8.5） |
 
 隐藏的界面先关掉焦点和鼠标（`FocusBehaviorRecursive`、`MouseBehaviorRecursive` 设为 `Disabled`），淡出结束再设 `Visible = false`，Tab 键不会落到看不见的控件上（§9）。
+
+**自动隐藏只作用于没人在用的普通 HUD**（WP-35）：
+
+- **什么算操作**：鼠标移动、点击、滚轮，以及对界面的键盘操作（Tab、方向键、Enter、空格作用在控件上；T、H、G、M、`.`、P、J、Y 这类开面板或改时间、季节、天气的快捷键），都让 4 秒重新算起。只移动镜头的键（WASD、升降）不算，所以在界面态里飞行时界面照样会淡出。
+- **不自动隐藏**：有控件持有键盘焦点；大页（大地图、设置卡、存档页、数据手册）、确认对话框打开；改键正在等新键；读屏软件在运行（`DisplayServer.AccessibilityScreenReaderActive()` 返回 1 或 −1）。大页本身从不自动隐藏。
+- **唤回**：鼠标进四角热区（上表），或按 Tab，HUD 在 180 ms 内回来。隐藏时焦点已经关掉，Tab 不会被控件吃掉、会到 `_UnhandledInput`，由 HUD 唤回并把焦点交给 Tab 顺序的第一个控件（§8）。
 
 ## 4 组件
 
@@ -242,6 +248,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 | 界面缩放 75–150% | 100%（小尺寸高 DPI 屏首次默认 125%；不乘系统 DPI，§9、UI-VISUAL §11.10） |
 | 语言 | 跟随系统（§8） |
 | 存储（本机缓存）：显示缓存占用（`IBakeService.CacheBytes`）和本机烘焙进度（"已完成"或"进行中 63%"，`Progress`），后接 [清除缓存] 按钮（`Clear()`，只清缓存、不动存档）。WP-35，SYS-MAPS §2.4、D-165 | 只读显示，无默认 |
+| 存档：读 `ISaveService.State`（SYS-SAVE §4.6）。平时写"SLOT 01 · 上次保存 21:40（3 分钟前）"；最近一次保存失败时写"最近一次保存失败 · 磁盘空间不足 · 上次成功 21:40"（危险色），直到下一次保存成功；不保存时写原因，如"不保存 · 另一个窗口正在运行"。WP-35 | 只读显示，无默认 |
 
 - **画面**：预设（流畅、均衡、精致、极致、自定义）、各单项、推荐与试跑、生效标签、"应用"按钮和 15 秒确认，全部按 SYS-GRAPHICS §9 实现，单项清单见 SYS-GRAPHICS §3，应用流程见 SYS-GRAPHICS §4。
   - 窗口模式、垂直同步、渲染比例在画面页的"显示""清晰度"两组；设备档不给观者手动选，画面页只有"推荐"一行（SYS-GRAPHICS §5），手动指定设备档只用命令行 `--tier`（SYS-GRAPHICS §6）；界面缩放不是画面单项，在上面的设置表里。
@@ -249,6 +256,10 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 - **声音**（SYS-AUDIO §13）：五组音量（总、环境、动作、界面、音乐，默认 80%、100%、80%、60%、70%）、界面音效开关、悬停与聚焦音、突发声音（正常 / 柔和 / 关）、安静模式、单声道、窗口在后台时、输出设备。取值与默认以 SYS-AUDIO §13 为准；界面只调用 `IAudioService.ApplySettings()`。画面设置不影响声音，声音也不是画面单项。声音页（约 30 个 Control）和画面页一样，随设置卡在扉页或开场雾幕后面**预建并隐藏**，打开时不建控件（§9、UI-VISUAL §11.9）。
 - **改键**：列出全部可改的动作，点一项后按下新键即可，冲突时提示（§5）。另有"恢复默认"。
 - **许可**：OSM（ODbL）、思源黑体 SC、Inter、JetBrains Mono（SIL OFL 1.1）、Godot 引擎（MIT）的许可文本（SYS-VIEW §6），以及音频素材的署名（由 `licenses.json` 生成，SYS-AUDIO §14.4）。它与开始页的"制作人员与许可"是同一个组件、同一份内容（UI-VISUAL §8.11）。
+- **日志与诊断**（"键位"页即操作说明页的底部，WP-35 做入口，WP-01 提供内容，ENG-PERF §12.6）：两个按钮 [打开日志目录] [导出诊断…]，从开始页打开设置卡时同样可用。
+  - 打开日志目录：在文件管理器里打开 `user://logs/` 换算出的目录（`OS.ShellOpen`）；
+  - 导出诊断：先弹确认对话框，列出要打包的内容（日志和诊断摘要），一个复选框"附带当前存档位的存档"，默认不勾；确认后按 ENG-PERF §12.6 打包写进 `user://diagnostics/`，再在文件管理器里打开这个目录；不联网、不上传。
+  - 门禁和 `--ui=0` 下不出现。故障处理的步骤见 OPS-RELEASE §6。
 
 ### 4.7 首次进入
 
@@ -288,6 +299,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
   - 将来可达空间边缘有地图入口时，入口段显示"前方：××"（WLD-OUTSKIRTS §10）；英文文案见 WLD-OUTSKIRTS §9；
 - 关着的门（WLD-INTERIORS §4）："此处暂不开放"：顶着关着的门或开放楼里的封口（表面类型 `DoorClosed`）0.8 s，同一扇门 60 秒内不重复；
 - 存档（SYS-SAVE §7、SYS-SAVE §4.3）："最近一次保存不完整 · 已回到 5 分钟前"（按两代 meta 的时间差写）、"另一个窗口正在运行 · 本窗口不保存"、"无法保存：磁盘空间不足"之类，各只提示一次；
+  - **保存失败的提示是例外**（SYS-SAVE §4.6）：停留 6 秒，期间不被别的提示顶替；遇上过场、雾幕时不丢，延后到雾幕散开、回到漫游态或界面态以后再出；一串连续失败只提示一次，中间成功过一次再失败会再提示。失败结果另在存档页和设置卡的"存档"一行持续显示，直到下一次保存成功（§4.6）；
 - 解锁反馈（RPG 预留，观光模式不出现）："已解锁：A08 校训石"（SYS-ATLAS §8）。
 
 ### 4.10 天气格
@@ -383,7 +395,7 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 | 状态 | 鼠标 | 界面 | 输入 |
 | --- | --- | --- | --- |
 | 漫游态 | 被捕获（`Input.MouseMode = Captured`），Windows 下走原始输入（SYS-VIEW §2.1） | 只有小地图常驻，另有临时提示（§4.9） | 移动、转视角、全部快捷键 |
-| 界面态 | 可见（`Input.MouseMode = Visible`） | 界面淡入，鼠标 4 秒不动后淡出，小地图不淡出（§3） | 移动键和快捷键照常有效；鼠标移动不转视角 |
+| 界面态 | 可见（`Input.MouseMode = Visible`） | 界面淡入，4 秒没有操作后淡出，小地图不淡出（§3） | 移动键和快捷键照常有效；鼠标移动不转视角。大页、确认对话框、改键打开时按本节末的输入优先级 |
 
 过场交还控制后处于界面态（SYS-TITLE §7.3），第一次新游戏时由首次引导提示"单击画面开始"（§4.7）。`--title=0`（门禁、截图）时没有开始页和过场，雾幕淡出后直接进入界面态（SYS-VIEW §3）。
 
@@ -416,7 +428,8 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
   - 收到关闭请求（`NotificationWMCloseRequest`）后，`IAppFlow` 进入退出流程，关闭输入；先同步写设置（§4.6），再调 `FlushForQuit(SaveReason.Quit, 2 s)`：雾幕 0.3 s 淡入，存档在后台写完，然后 `Quit()`；等待超过 1.5 s 时亮等待灯；
   - 进场过场途中退出：先把过场的终态落定（按跳过的收尾，不渲染过渡），再保存；开始页、Boot 里退出只写设置；
   - 鼠标被捕获时的 Alt+F4 由 Godot 转成关闭请求，走同一流程；
-  - 界面不用独占的 `Window` 弹窗：有独占子窗口打开时，关闭请求会被忽略（§9）。
+  - 界面不用独占的 `Window` 弹窗：有独占子窗口打开时，关闭请求会被忽略（§9）；
+  - 保存明确失败（`FlushForQuit` 返回 `Failed`）时不退出，在雾幕上弹"重试 / 返回游戏 / 仍然退出"三选一（SYS-SAVE §4.4 第 7 步）；它是确认对话框，按本节末输入优先级的第 1 层处理。
 
 **键位的实现**
 
@@ -455,6 +468,22 @@ gates: [G2, G4, G7, G13, G14, G15, G16]
 
 - 两种模式的疾跑默认都是"按住 Ctrl"，"双击 W（0.35 秒内）"同时保留，与《我的世界》Java 版一致。
 - 设置里可以改为"切换"：按一下 Ctrl 开始疾跑，停下或再按一下结束。
+
+**输入优先级**（Playing 状态，以及 Quitting 里的保存失败对话框；WP-06 分发，WP-35 声明各层，WP-00 加契约）
+
+同一时刻只有最上面的一层接键盘和鼠标，下层收不到：
+
+| 层 | 何时 | 这一层接什么 | 下层 |
+| --- | --- | --- | --- |
+| 1 确认与改键 | 确认对话框打开（含退出时的保存失败三选一）；改键页正在等新键 | 对话框：Tab、方向键、Enter、空格，Esc 等于"取消"或"返回游戏"；改键：下一个按键，Esc 取消这次捕获 | 移动、视角和全部单键快捷键都无效 |
+| 2 大页 | 设置卡、存档页、数据手册、大地图打开 | 页内的焦点键和本页的键；Esc 先关浮层再关页；打开这一页的键（H、M、G）再按一次关页 | 设置卡、存档页、数据手册打开时，移动和其余单键快捷键无效；大地图沿用 SYS-ATLAS §4.7（WASD 和方向键改作平移） |
+| 3 普通 HUD | 界面态，没有大页和对话框 | 有控件持有键盘焦点时，方向键、Enter、空格给这个控件 | WASD 等移动键和单键快捷键照常有效 |
+| 4 漫游 | 漫游态 | 全部 | — |
+
+- **输入占用的原因**：第 1、2 层打开期间经 `ICameraRig.LockInput` 占用观者输入。`InputLockReason` 末尾追加 `Menu`（设置卡、存档页、数据手册、确认对话框）和 `Rebind`（改键捕获），契约增量写进 ENG-ARCH §3（WP-00）；大地图沿用 `Atlas`。占用只挡观者输入，世界照常运行：时间流逝、天气和正在进行的过渡都不暂停（Esc 不暂停世界）。
+- **不绕过这一层**：相机和行走读移动键时不直接用 `Input.IsActionPressed` 轮询（它不管 GUI 是否已经吃掉这个键），由 WP-06 按本表过滤后再交给相机；第 3 层里被控件吃掉的方向键不算移动。
+- **单键快捷键**在第 1、2 层一律不响应（打开当前大页的那个键除外），所以确认框背后不会换季、换天气，改键时按下的键也不会同时触发动作。
+- 开始页、过场和返回标题途中按本节开头"开始页与过场期间"的规则，不走这张表。
 
 ## 6 点位清单（WP-36，`game/data/maps/qingshuihe/waypoints.json`）
 
@@ -654,6 +683,7 @@ public sealed record Waypoint(
   - 到达点位或传送到达时，一个 `AccessibilityLive = Polite` 的 Label 写入"已到达：图书馆正门"，读屏软件会朗读。过场字幕和标题卡也写进这样的 Label（SYS-TITLE §3.2）。
   - 每个可获得焦点的控件都要有可读的名字：用按钮文字，或 `AccessibilityName`。图标按钮必须写 `AccessibilityName`；小地图的名字是"小地图，核心区 · 图书馆"（SYS-ATLAS §3）。
   - 四角的组件各放在一个 `AccessibilityRegion = true` 的容器里，读屏软件可以按区域跳转（4.7 新增的地标导航）。
+  - **界面不会在键盘和读屏用户手里消失**：对界面的键盘操作、持有焦点、读屏软件在运行都让 HUD 保持显示，隐藏后按 Tab 唤回并落到 Tab 顺序的第一个控件（§3）。确认对话框、改键和大页打开时，键盘只到最上面那一层（§5 的输入优先级），焦点不逃出打开着的对话框和大页。
 - **读屏支持仍是实验性的**，G14 的读屏判据只能尽力而为（§10）。`accessibility/general/accessibility_support` 保持默认的"自动"：没有辅助软件运行时，不处理读屏更新。
 - **减少动态效果**：设置项，默认跟随系统。系统值用 `DisplayServer.AccessibilityShouldReduceAnimation()` 读，Windows 上取的是系统的动画开关；返回 −1（未知）时按"关"处理。效果见 §7.6；界面侧的替代表见 UI-VISUAL §10.1，昼夜交班直接换、不扫。
 - **降低透明度**：打开后全部面板 100% 不透明，关闭大页磨砂（UI-VISUAL §5.7）。
@@ -665,6 +695,14 @@ public sealed record Waypoint(
   - 默认按 `OS.GetLocaleLanguage()` 选择，设置里可以切换；
   - 点位名在大地图的目录页里中英双行显示，地图上的字可以有英文名（SYS-ATLAS §1）；
   - 理由：校内有留学生组团，博物馆门头已有一行英文。场景里的字仍然只用简体中文（INV-4）。
+- **文本约定**（WP-35c 维护；所有写界面文字的包照此写）：
+  - **稳定键**：界面文字一律写键，不写原文。键名是小写加点的 `<域>.<对象>.<用途>`，例如 `hud.toast.save_failed`、`save.error.disk_full`。发布过的键不改名、不复用；文案改了键不变，意思变了换新键。存档和日志只记键（如 meta 的 `placeKey`，SYS-SAVE §3.2）。
+  - **整句加具名占位**：一句话是一条翻译，变量写成 `{place}`、`{time}`、`{key:menu}` 这样的具名占位，不把几段译文拼成一句（中英文语序不同）。数字和时间由代码按当前语言格式化后填进去；`{key:<动作>}` 填当前绑定的键名（`KeyboardGetLabelFromPhysical`，§5）。英文要分单复数的写成两个键（`.one`、`.other`）。
+  - **地名只有一个来源**：区域名和地点名（含楼名）在本图 `atlas/labels.json` 的区域与地点表，点位名在 `waypoints.json`，锚点和其余标记的名字在 `atlas/markers.json`，图名在 `map.json` 的 `name`（SYS-ATLAS §2.5、§9）。别处只引用 ID，用到名字时查来源：平面地图标注、目录、到达标题、地点字幕、存档卡摘要都走同一个查询。`place.<区域 ID>` 这类键在加载时由区域与地点表注册进 `TranslationServer`，不在 CSV 里手写地名。
+  - **回退**：系统语言以 `zh` 开头取中文，其余取英文；当前语言缺键时回退中文，中文也缺就显示键名并写日志；`LocalizedName.En` 为空时用 `Zh`。
+  - **刷新**：控件只记"键 + 参数"，显示的文字由它们算出。切换语言时在同一帧调 `TranslationServer.SetLocale`，可见的控件收到 `NotificationTranslationChanged` 后重算文字和读屏名字；预建隐藏的页标脏，打开前先重算，不会出现半个界面换了语言的一帧。改键提交后，含 `{key:…}` 的文字同样重算。平面地图换用这种语言的标注布局（SYS-ATLAS §2.5）。
+  - **排版语言**：`Label.Language` 跟随当前语言，汉字字形由字体链保证是 SC（UI-VISUAL §4.2）。
+  - **检查**（G2）：代码里引用的键在中英两张表里都有，两边的占位名一致；同一个 ID 的中英文名只在来源里出现一次，CSV 里没有手写的地名。
 
 ## 9 实现与性能（WP-35）
 
