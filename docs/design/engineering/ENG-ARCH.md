@@ -63,7 +63,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 **原则**：旧网页代码只留在 git 基线里，主分支上整体删除，不保留 legacy 目录。
 
-1. **基线**（已建）：清理前的整棵树已提交为基线（`node_modules/`、`dist/`、`.venv/`、`output/`、`test-results/`、`.playwright-cli/` 和照片贴图目录不在库里），标签 `baseline-map`，分支 `legacy/web`；远端是 GitHub 上的 `Wendystar0628/UESTC_RPG`。之后的步骤见 §6 第 1 步。
+1. **基线**（已建）：清理前的整棵树已提交为基线（`node_modules/`、`dist/`、`.venv/`、`output/`、`test-results/`、`.playwright-cli/` 和照片贴图目录不在库里），标签 `baseline-map`；远端是 GitHub 上的 `Wendystar0628/UESTC_RPG`（§6）。之后的步骤见 §6 第 1 步。
 2. **主分支**：网页栈、照片贴图和网页工具链已删除（清单见本节末尾）；按 §2 搭 Godot 项目。能复用的数据和算法按下面三张表处理；待迁移的数据和脚本暂留原位（`data/`、`public/data/`、`scripts/data/`、`scripts/assets/prepare_building_profiles.py`、`requirements.txt`），由 WP-08 迁到 `pipeline/`。
 3. **读旧代码**：各包需要参考时用 `git show baseline-map:src/scene/architecture.ts` 读出来，不要把旧文件拷回工作树。
 
@@ -103,7 +103,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 **重写**（不移植实现，可以看旧代码了解意图）：`batches.ts`、`materials.ts`、`appearance.ts`、`CampusScene.tsx`、`SceneRuntime.tsx`、`CameraController.tsx`、`CampusLandscape.tsx`（树冠）、`MapGeometry.tsx`、`quality.ts`。分别由 WP-02、WP-04、WP-01、WP-06、WP-23、WP-32 按 Godot 重做。
 
-**删除**（只在 `legacy/web` 分支里保留）：
+**删除**（只在标签 `baseline-map` 里保留）：
 
 - 地图功能：`src/app/`、`src/ui/`、`src/scene/annotations/`、`src/data/search.ts`、`buildingEnvelope.ts`、`cameraState.ts`、`MapGeometry.tsx` 的拾取和高亮、严格高度模式、`styles.css`、`lucide-react`（SYS-VIEW §1）。界面里的平面地图（SYS-ATLAS）从世界模型重新烘焙，不移植旧网页的搜索、地点卡片、路径规划和拾取（INV-1）。
 - 网页工具链：`package.json`、`package-lock.json`、`node_modules/`、`tsconfig.json`、`tsconfig.tsbuildinfo`、`vite.config.ts`、`playwright.config.ts`、`index.html`、`public/`、`dist/`、`tests/`（上表迁移的断言除外）、`test-results/`、`.playwright-cli/`。
@@ -1992,22 +1992,30 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
 ## 6 git 工作树流程
 
+**远端与分支**（D-166）：
+
+- 远端 `origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签（`baseline-map`、`contracts-v1` 等）。不开 PR，不推送任何别的分支，不对 `main` 强推。
+- 本地分支只用来隔离并行施工：每个写代码的子代理一个工作树、一个本地临时分支 `wp/<xx>-<slug>`。分支在本地提交、从不推送，合进 `main` 后立即删除。
+- **并发规模**：常态同时运行十几个 Opus 代理，可以分属两个账号，都在本机同一个仓库上工作。任何时刻只有一个主代理；合并队列、`main` 上的提交和推送只由它做。
+- **什么时候开工作树**：同一时刻有两个以上代理要写代码、编译或导入时，每个写代码的代理各开一个工作树。
+  - 只有一个代理写代码时（例如主代理自己做 WP-00、改共享文件或小修），直接在主检出（`E:\Project\UESTC_RPG`）的 `main` 上做：同样先过与改动相关的门禁，再提交、推送。
+  - 只改文档、不编译的代理在主检出里改，由主代理分派（CORE-CONVENTIONS §7.6），两个代理不同时改同一个文件。
+
 工作树之间靠"每个工作树一个 `override.cfg` + 复制 `.godot` 做种子"隔离。
 
 引擎路径一律从环境变量 `UESTC_GODOT` 读命令行版 exe，默认 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`。门禁比对 `--version` 的输出与 `tools/godot-version.txt`。
 
-1. **主代理初始化仓库**（D0）：
-   - 写 `.gitignore`：`.godot/`、`override.cfg`、`**/bin/`、`**/obj/`、`output/`、`build/`，以及旧版的 `node_modules/`、`dist/`、`.venv/`、`test-results/`、`.playwright-cli/` 和照片贴图目录。
-   - 写 `.gitattributes`：`* text=auto eol=lf`，图片、字体、`.res`、`.glb` 标为 binary；音频走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
-   - `git init`，提交网页版基线，打标签 `baseline-map`，建分支 `legacy/web`（§1）。
-   - 在主分支上删除网页栈，搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj）。在主检出里跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。
-   - 完成 WP-00 后，打标签 `contracts-v1`。
-2. **每个工作包开一个工作树**，由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，展开就是：
+1. **仓库现状与 D0**：
+   - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档和待迁移的数据与脚本（§1）。
+   - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
+   - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
+   - WP-00 在主检出的 `main` 上搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。完成后打标签 `contracts-v1` 并推送。
+2. **开工作树**：由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，从当前 `main` 拉本地分支，展开就是：
 
    ```powershell
    $G  = $env:UESTC_GODOT
    $WT = '..\UESTC_RPG.wt\WP-18'
-   git worktree add $WT -b wp/18-south contracts-v1
+   git worktree add $WT -b wp/18-south main
    robocopy game\.godot "$WT\game\.godot" /MIR /XD shader_cache    # 用主检出的导入缓存做种子；退出码小于 8 都算成功
    @"
    [application]
@@ -2021,12 +2029,18 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 不要用目录联接共享 `.godot`：导入产物的文件名是"文件名-路径 md5"，两个分支内容不同时会互相覆盖。复制种子后，引擎发现修改时间不同会再比对 md5，内容一致就不重新导入。
    - `--import` 的含义是"启动编辑器，等资源导入完成后退出"。导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。
 3. **日常开发**：
-   - 小步提交，每天对 `main` 做一次 rebase；rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
+   - 在自己的分支上小步提交，不推送，不碰 `main`。主代理通知 `main` 有新的合入时，在工作树里 `git rebase main` 跟上；rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
    - 代理只走命令行，不在编辑器里打开或重存场景；场景尽量由代码生成。
    - 截图类门禁（G7、G9）必须在交互式会话的窗口模式下跑，窗口不能最小化；无界面模式用的是空渲染器，不能截图，也不编译着色器。截图取共享 GPU 锁，同时最多 2 个工作包在跑；性能门禁（G10）取独占锁（ENG-PERF §12.5）。
    - `gate.ps1` 先跑 `--bake=all` 把共享缓存（`UESTC_BAKE_CACHE`）按哈希增量补齐；截图类门禁、基准和 G10 再带 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰（追加方式见 ENG-GATES §1）。各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
-   - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务，持有独占 GPU 锁时，其他工作树不得运行它们。
-4. **合并**：主代理维护一条合并队列，每个工作包依次经过 rebase、全部门禁、squash 合并。每次合入后，主代理在主检出跑一次 `--headless --import`，更新工作树种子。
+   - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务。十几个工作树并行时，同时运行的重 CPU 任务不超过 max(2, 逻辑核数 / 8) 个，用 `..\UESTC_RPG.wt\.locks\` 下的计数锁排队（初值，P0 按本机实测调整，§9）；持有独占 GPU 锁时，其他工作树一律不得运行它们。
+4. **合并**（主代理的合并队列，一次合一个）：
+   1. 子代理回报完成后，主代理在它的工作树里 `git rebase main`；
+   2. 跑 `scripts\gate.ps1 -Wp <WP-xx>`，必过的门禁全部通过（CORE-CONVENTIONS §8.3）；
+   3. 回到主检出，`git merge --squash wp/<xx>-<slug>`，提交为一个提交，首行写 `WP-xx: <一句话说明>`；
+   4. `git push origin main`；
+   5. 删本地分支：工作包做完了就 `git worktree remove` 再 `git branch -D`；还要继续做，就在工作树里 `git switch -C wp/<xx>-<slug> main`，从新的 `main` 重建分支，保留 `.godot` 和编译缓存；
+   6. 在主检出跑一次 `--headless --import` 更新工作树种子，并通知其他工作树 rebase。
    - 内核包按这个顺序合入：WP-08 → WP-34 → WP-01 → WP-50 → WP-04 → WP-02 → WP-46 → WP-03 → WP-05 → WP-09 → WP-06 → WP-07 → WP-43 → WP-27。WP-50（存档，与 WP-34 同为 P0，容器版本 1 和第一份金档在 P0 交付）排在 WP-01 之后；WP-46（地图服务，要 WP-02 的整图卸载接口）排在 WP-02 之后、WP-43 之前（SYS-SAVE §15、SYS-MAPS §16）。
    - 其余包靠桩就能运行，门禁通过就可以合入，不必等内核。
 5. **冲突规则**：
@@ -2156,3 +2170,4 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 后台烘焙期间的 GC 暂停（§4、§7） | P0 测第 2 代回收的暂停；WP-02 | 生成代码用 `ArrayPool` 和预分配缓冲；暂停上限在 P0 标定 |
 | 首次运行到转为实时的时间（§4） | P0 在空缓存目录上实测；WP-02、WP-49 | ≤ 25 s（开发机），底图 8 线程 ≤ 20 s |
 | 本机缓存烘满后的实际体积（§4） | P0 全图烘满后量；WP-02 | 一张图约 0.8–1.4 GB；默认上限 2.5 GB |
+| 十几个工作树并行时重 CPU 任务的并发上限（§6） | P0 在本机同时开 12 个工作树编译、导入、烘焙，看总耗时与内存；WP-00 | max(2, 逻辑核数 / 8) 个 |

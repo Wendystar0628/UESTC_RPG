@@ -218,7 +218,7 @@ gates: [G1, G2, G3, G4, G5]
 
 ### 3.7 其他命名
 
-- **工作树**：`..\UESTC_RPG.wt\<WP-xx>\`；分支 `wp/<xx>-<slug>`（例 `wp/18-south`）；`user://` 的目录名 `UESTC_WPxx`（ENG-ARCH §6）。
+- **工作树**：`..\UESTC_RPG.wt\<WP-xx>\`；本地临时分支 `wp/<xx>-<slug>`（例 `wp/18-south`），合进 `main` 后即删，不推送；`user://` 的目录名 `UESTC_WPxx`（ENG-ARCH §6）。
 - **截图**：放 `output/render-review/`，命名"包-视角.png"或"包-Qn.png"；非默认状态依次加季节、钟点、天气、预设，名字与命令行取值相同，例如 `WP-18-V6-winter-2100-snow.png`（ENG-GATES §5）。
 - **存档文件**：`saves/<slot>/g<6 位代号>.sav`，如 `s1/g000041.sav`（SYS-SAVE §1）。
 - **启动集**：每张图一个 `boot_<地图>.pck`，包内路径 `res://bake/<地图>/boot/`；其余烘焙产物是本机缓存 `user://cache/bake/<地图>/` 里的 `.tbin`（D-165，ENG-ARCH §4）。
@@ -519,7 +519,7 @@ UESTC_RPG/
 
 - 合入前运行 `scripts\gate.ps1 -Wp <WP-xx>`：G1–G10、G16 必须通过，再加与本包相关的 G12–G15、G17–G21。改地图数据跑 G18；改开放室内、楼梯、门、碰撞跑 G19；带 `[SaveSection]` 跑 G20；出声的跑 G21 的对应子项（ENG-WP §1、ENG-WP §4）。
 - 截图类门禁（G7、G9）在已登录的交互式会话里、窗口模式下跑，窗口不能最小化；脚本自己排 GPU 锁，不绕过；截图与基准一律不开声音（ENG-GATES §1、ENG-ARCH §6）。
-- 工作树流程按 ENG-ARCH §6：每包一个工作树，小步提交，每天对 `main` rebase；合并队列依次做 rebase、全部门禁、squash 合并。
+- git 流程按 ENG-ARCH §6（D-166）：远端只有 `main` 和标签。并行写代码时每个代理一个工作树和本地临时分支，小步提交、不推送、不碰 `main`，主代理通知有新合入时 `git rebase main`；主代理的合并队列一次合一个：rebase → 全部门禁 → squash 合进 `main` → `git push origin main` → 删本地分支。只有一个代理写代码时，直接在主检出的 `main` 上做，同样先过门禁再提交、推送。
 - 完成后按 ENG-GATES §5 的格式回报，截图放 `output/render-review/`。
 
 ### 8.4 文件操作

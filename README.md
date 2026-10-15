@@ -4,6 +4,6 @@
 
 - 开发文档：[docs/design/README.md](docs/design/README.md)
 - Godot C# API 参考：[docs/godot-api/README.md](docs/godot-api/README.md)
-- 清理前的网页版地图：标签 `baseline-map`、分支 `legacy/web`
+- 清理前的网页版地图：标签 `baseline-map`
 
 地图数据来自 OpenStreetMap，© OpenStreetMap contributors，按 ODbL 授权。

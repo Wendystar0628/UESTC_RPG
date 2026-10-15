@@ -18,13 +18,13 @@ gates: [G1, G3, G5]
 > **读者**：主代理（编排者），以及每个子代理（开工前只读自己那一行和 §4 的通用简报）。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)
 
-正式开发预计同时开 20 个以上 Opus 子代理。本表把工作拆成 54 个包（WP-00 至 WP-53）。WP-00 由主代理先做，约 1 天；完成后，其余 53 个包可以在同一天开工。最大的几个包还可以再拆（见 §3），并行度能到 80 左右。
+正式开发常态同时运行十几个 Opus 代理（可分属两个账号），git 流程按 ENG-ARCH §6（D-166）。本表把工作拆成 54 个包（WP-00 至 WP-53）。WP-00 由主代理先做，约 1 天；完成后，其余 53 个包可以在同一天开工。最大的几个包还可以再拆（见 §3），并行度能到 80 左右。
 
 ## 1 阶段与闸口
 
 | 阶段 | 内容 | 闸口 |
 | --- | --- | --- |
-| D0 | 主代理完成 WP-00：在已有的 git 基线上（标签 `baseline-map`、分支 `legacy/web`，网页栈已从主分支删除，ENG-ARCH §1）搭好下面列出的 Godot 骨架，冻结契约 v1（含多地图、平面地图、开始页、存档、外围、室内、音频、界面契约，以及规则集、观者状态与按原因计的输入占用，ENG-ARCH §3、ENG-ROADMAP §6），合入全部桩，搭好门禁骨架（`scripts\gate.ps1`），建好 `ownership.json`、`budgets.json`（含 `maps.qingshuihe` 一节，ENG-BUDGET §8）和 `third_party.json` | `dotnet build -warnaserror` 通过；`--headless --import` 的日志里没有 `ERROR`；`-- --gate=registry --map=*` 的退出码为 0；窗口模式运行桩场景能截图（启动经 `IAppFlow` 的桩，直接走 `--title=0` 的路径） |
+| D0 | 主代理完成 WP-00：在已有的仓库上（清理前的基线在标签 `baseline-map`，网页栈已从 `main` 删除，ENG-ARCH §1）搭好下面列出的 Godot 骨架，冻结契约 v1（含多地图、平面地图、开始页、存档、外围、室内、音频、界面契约，以及规则集、观者状态与按原因计的输入占用，ENG-ARCH §3、ENG-ROADMAP §6），合入全部桩，搭好门禁骨架（`scripts\gate.ps1`），建好 `ownership.json`、`budgets.json`（含 `maps.qingshuihe` 一节，ENG-BUDGET §8）和 `third_party.json` | `dotnet build -warnaserror` 通过；`--headless --import` 的日志里没有 `ERROR`；`-- --gate=registry --map=*` 的退出码为 0；窗口模式运行桩场景能截图（启动经 `IAppFlow` 的桩，直接走 `--title=0` 的路径） |
 | D1 起 | WP-01 至 WP-53 全部开工，各自在自己的工作树里，先基于桩跑起来。WP-33 的遮挡调优排在 P2 才交付，但 D1 就开始搭框架。WP-47 基于桩开工，楼块先画包围盒方块；WP-48b 在单色底图的桩上做界面；WP-49 开工前，其他包照旧经 `IAppFlow` 的桩启动 | — |
 | D1–D2 | **金样闸口**（ART-MODELING §6）：WP-09 交出部件内核，WP-10 至 WP-13 交出首批部件；交出 ART-MODELING §6 的前 4 个金样：石材科研楼（WP-09 与 WP-14）、宿舍（WP-14）、树组（WP-23：一株插片型银杏、一株云团型樱花或桂花，加灌木球）、街道道具套件（WP-13）。每件金样另交秋 17:30、夏 12:50、冬 21:00 雪夜（`--weather=snow`）三张截图。同期：WP-37 交出"4 季 × 12 关键帧"的色板联表（按 ART-STYLE §3 的影色规则推导，并过 SYS-TIME §8 的影色自检）；WP-34 和 WP-42 在桩上做到"能拖时间、能换季、能在银杏大道上走"。另有：<br>- WP-51、WP-52、WP-31c 交出室内金样：学知苑 1 栋一、二层（走廊、4 人间、开水间、楼梯平台铁栅门），附三张时季截图与楼梯行走测试（WLD-INTERIORS §18）；<br>- WP-50 与 WP-34 同为 P0：容器版本 1 和第一份金档在 P0 交付（SYS-SAVE §15）；<br>- WP-53 交出总线树、`IAcousticEnv` 与 `IFoleyService` 的桩，以及首批声音的方向样（界面音原型、一段床、一组脚步），P0 听评（SYS-AUDIO §21.1）；<br>- WP-35 交出 `ui.json` 的令牌、Theme 生成器和两个界面着色器，组件画廊出两套主题的样张（UI-VISUAL §13）。<br>这段时间里，各区包只做布局、覆盖层、认领和体量，不做立面细节 | 主代理和风格负责人评审金样、色板联表、室内金样和声音方向样，通过后发布金样截图；评审要改契约的，按只增不改追加（契约 v1.1 在 D1 结束时发布，§5 第 3 条） |
 | D2 起 | 各区包开始做细节。南区（WP-18）和北部生活区（WP-20）先交第一版，通过评审后，其余区按同一标准推进。精选室内按 WLD-INTERIORS §18 的顺序推进：I1 每区先做一处，让 R1–R5 穿过室内；I2 其余开放处、关门提示、门口光、简化室内；I3 核显调优、G19 每晚全量、安装体积 | 风格质检横向比对 |
@@ -161,8 +161,8 @@ gates: [G1, G3, G5]
 主代理派工时，把下面整段发给子代理，只替换尖括号里的内容：
 
 ```
-你是清水河校区三渲二观光作品的子代理，负责 <WP-xx 名称>。
-项目路径是 E:\Project\UESTC_RPG，你的工作树在 ..\UESTC_RPG.wt\<WP-xx>，分支是 wp/<xx>-<slug>。
+你是《电光年华》（校园题材的独立 RPG，当前阶段做世界与观光模式）的子代理，负责 <WP-xx 名称>。
+项目路径是 E:\Project\UESTC_RPG，你的工作树在 ..\UESTC_RPG.wt\<WP-xx>，分支是本地临时分支 wp/<xx>-<slug>：只在上面小步提交，不推送、不合并、不碰 main；主代理通知 main 有新合入时执行 git rebase main。
 引擎是 Godot 4.7.2-stable .NET 版，只做 PC（Windows），代码全部用 C#，着色器用 Godot 着色语言。不写 GDScript。
 命令行版引擎的路径从环境变量 UESTC_GODOT 读（默认 E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe）。
 工作树里的 game\override.cfg 已经把 user:// 指到 UESTC_<WP-xx>，不要改它，也不要提交它。
@@ -225,7 +225,7 @@ game/gen 下的代码是纯 .NET：只引用契约、部件、世界模型（只
 ## 5 主代理的职责
 
 1. 完成 WP-00，然后发派工简报。
-2. 维护合并队列。每次合入后在主检出跑一次 `--headless --import`，更新工作树的 `.godot` 种子（ENG-ARCH §6）。
+2. 维护合并队列，一次合一个：rebase → 全部门禁 → squash 合进 `main` → `git push origin main` → 删本地分支。每次合入后在主检出跑一次 `--headless --import`，更新工作树的 `.godot` 种子，并通知各工作树 rebase（ENG-ARCH §6）。远端只有 `main` 和标签；任何时刻只有一个主代理。
 3. 收集契约修改申请，在 D1 结束时发布 v1.1；之后契约只增不改。天气与画质契约，以及多地图、平面地图、开始页、存档、外围、室内、音频与界面契约（ENG-ARCH §3），以及 ENG-ROADMAP §6 的规则集、观者状态与输入占用预留，都在 v1 里一起冻结。全局着色器参数（`project.godot` 的 Shader Globals，含 `map_rect`、`edge_fog`、`shaft`、`interior_light`）、着色器白名单（`ownership.json` 里 `game/style/shaders/` 的逐文件归属，含 `ui_panel`、`ui_screen`、`map_base`、`cine_cloud`）、程序集引用和 NuGet 包的申请也由主代理统一处理。
 4. 主持金样评审，指定一名风格负责人。风格负责人可以由一个 Opus 子代理担任，只做审图，不写代码。
    风格负责人同时负责每周的 4 × 12 时季联表、"季 × 天气"联表的打分和英雄帧的评审（SYS-TIME §3.5、SYS-TIME §8，天气增补见 SYS-WEATHER §2，流畅预设的那一遍见 SYS-GRAPHICS §10；含第 12 张英雄帧"秋 17:30 太阳雨"、影色自检和室内金样）。另设声音的每周听评（G21h，SYS-AUDIO §22），可以由同一名负责人或另一个子代理担任。

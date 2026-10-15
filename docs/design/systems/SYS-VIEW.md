@@ -33,7 +33,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 
 | 内容 | 处理 |
 | --- | --- |
-| 整套 Vite + React + three.js 代码：`src/`、`public/`、`index.html`、`package.json` 与锁文件、`vite.config.ts`、`playwright.config.ts`、网页端测试、`dist/`、`node_modules/` | 在 git 基线（标签 `baseline-map`）和 `legacy/web` 分支里保留；主分支上整体删除，不留 legacy 目录 |
+| 整套 Vite + React + three.js 代码：`src/`、`public/`、`index.html`、`package.json` 与锁文件、`vite.config.ts`、`playwright.config.ts`、网页端测试、`dist/`、`node_modules/` | 在 git 基线（标签 `baseline-map`）里保留；主分支上整体删除，不留 legacy 目录 |
 | 可移植的算法：轮廓工具、边与斜接、扫描线、开间分层、地标屋顶的主轴求法、八角采光顶、落点算法、球场标线拟合等 | 清单见 ENG-ARCH §1。各包用 `git show baseline-map:<原路径>` 读出原文，改写成 C#，放进自己的目录；旧栈的几何与数据测试一并改写成 `dotnet test` |
 | Python 数据管线 `scripts/data/`、OSM 快照、`categories.json` 等管线输入 | 迁到 `pipeline/`（逐项见 ENG-ARCH §1）；输出写到 `game/data/` |
 | `campus.json` | 迁到 `game/data/maps/qingshuihe/campus.json`，格式留用，只增不改 |
@@ -299,7 +299,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 ## 交付验收
 
 - **WP-00**：
-  - 主分支只剩 Godot 工程骨架（`game/`、`pipeline/`、`scripts/`、`tools/`、`docs/`）；旧网页栈在 `baseline-map` 标签和 `legacy/web` 分支里能完整取回；
+  - 主分支只剩 Godot 工程骨架（`game/`、`pipeline/`、`scripts/`、`tools/`、`docs/`）；旧网页栈在标签 `baseline-map` 里能完整取回；
   - `dotnet build -warnaserror` 和 `--headless --import` 通过；
   - `--title=0` 时窗口启动后只有雾幕、画面和署名（新界面由 WP-35 接入）。
 - **WP-06**：
