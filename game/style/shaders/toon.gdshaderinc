@@ -27,6 +27,9 @@
 // 调色板取色（pal_fetch、pal_cur、pal_season、PAL_*）和共用雾函数都在 fog.gdshaderinc，天空着色器也要用
 #include "res://style/shaders/fog.gdshaderinc"
 
+// 灯光通道、窗灯与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_pool；WP-39），fx_glow、降水与倒影代理共用同一份
+#include "res://style/shaders/lamp.gdshaderinc"
+
 // OKLab 换算（ok_from_linear、ok_to_linear）在 fog.gdshaderinc 里，天空也要用
 
 // 明度乘 kl、彩度乘 kc（OKLab 的 a、b 同乘），再加 dl
@@ -139,13 +142,15 @@ struct ToonCtx {
 	int flags;     // 标志字节
 	float ao;      // 顶点 AO 字节：1 = 不遮蔽（GeometryBundle 缺省值），0 = 窄凹处最深；只推阈值
 	float spare;   // 备用字节
+	float pool_aa; // 路灯光斑边缘的过渡宽度（m）：max(fwidth(|p.xz|), 0.02)，在宏里统一控制流中算好
 };
 
-ToonCtx toon_ctx(vec3 vtx, vec3 n_v, mat4 inv_view, float d, float fw, float kappa, int cid, int flags, float ao, float spare) {
+ToonCtx toon_ctx(vec3 vtx, vec3 n_v, mat4 inv_view, float d, float fw, float kappa, int cid, int flags, float ao, float spare,
+		float pool_aa) {
 	vec3 wpos = (inv_view * vec4(vtx, 1.0)).xyz;
 	vec3 cam = inv_view[3].xyz;
 	vec3 n_w = normalize(mat3(inv_view) * n_v);
-	return ToonCtx(wpos, cam, n_w, length(wpos - cam), d, fw, kappa, cid, flags, ao, spare);
+	return ToonCtx(wpos, cam, n_w, length(wpos - cam), d, fw, kappa, cid, flags, ao, spare, pool_aa);
 }
 
 // 解析法线（ART-MODELING §7.6、ENG-PERF §2）：球取 P − C，柱减去轴向分量；都在视空间里算
@@ -205,68 +210,38 @@ float toon_cloud_shadow(vec3 wpos) {
 
 // ---------------------------------------------------------------------------
 // 窗灯（ENG-PERF §10.3）：亮灭只由窗号哈希、灯光通道和窗覆盖决定，与怎样到达这个钟点无关。
-// L2 窗带、光晕面片（fx_glow）、倒影代理都要用同一个哈希，所以放在这里。
+// 哈希、阈值、亮灭与冷暖用 lamp.gdshaderinc 的 lamp_hash01、lamp_window_*（与 fx_glow、C# 的 ScheduleMath 同一份）。
 // window_override（RGBA8，纹素 = (id % 256, id / 256)，归 WP-39）：R 亮灭（0 不覆盖、128 强制灭、255 强制亮），
 // G 冷暖（0 按哈希、128 强制暖、255 强制冷），B 窗帘（0 按哈希、128 无帘、255 拉上），A 保留。
-// 哈希常数和 θ = hash01(id·2+1)、冷暖 hash01(id·2+2) 与 WP-39 的 fx_glow 共用，G2 比对两边，不要改。
 // ---------------------------------------------------------------------------
-uint toon_hash_u(uint x) {
-	x ^= x >> 16u;
-	x *= 2146121005u;
-	x ^= x >> 15u;
-	x *= 2221713035u;
-	x ^= x >> 16u;
-	return x;
-}
 
-float toon_hash01(uint x) {
-	return float(toon_hash_u(x) >> 8u) / 16777216.0;
-}
-
-// light_channels：32×1 RGF，r = 通道值 L，g = 过渡宽度 Δ
-vec2 toon_channel(int ch) {
-	return texelFetch(light_channels, ivec2(clamp(ch, 0, 31), 0), 0).rg;
-}
-
-// 窗覆盖的三态：0 = 不覆盖，1 = 中值（128），2 = 满值（255）
-int toon_override_state(float v) {
-	return v >= 0.75 ? 2 : (v >= 0.25 ? 1 : 0);
-}
-
+// 外围的窗不读 window_override（标志位 TOON_F_OUTSKIRT），一律按哈希
 vec4 toon_window_override(int id, bool use_override) {
-	return use_override ? texelFetch(window_override, ivec2(id % 256, (id / 256) % 256), 0) : vec4(0.0);
+	return use_override ? lamp_window_override(id) : vec4(0.0);
 }
 
-// 亮灯阈值（与 WP-39 的 lamp_window_threshold 同一公式，G2 比对两边）：
-// 按房间成团（同一行每 3 格一间）加楼级偏置，暗窗一间间地出现，有的楼整体早亮、有的晚亮。
-// fract(均匀量 + 独立量) 仍是均匀分布，所以通道值 L 仍约等于亮窗比例。base = 窗号基址，cols = 每行格数。
-float toon_window_threshold(int id, int base, int cols) {
-	int local = max(id - base, 0);
-	int nc = max(cols, 1);
-	int row = local / nc;
-	int col = local - row * nc;
-	uint seg = uint(base) * 131u + uint(row) * 17u + uint(col / 3);
-	float room = fract(0.3 * toon_hash01(uint(id) * 2u + 1u) + toon_hash01(seg * 2u + 11u));
-	return clamp(room + 0.5 * (toon_hash01(uint(base) * 2u + 7u) - 0.5), 0.0, 1.0);
-}
-
-float toon_window_on(int id, int base, int cols, int ch, vec4 o) {
-	vec2 c = toon_channel(ch);
-	float th = toon_window_threshold(id, base, cols);
-	float on = smoothstep(th, th + max(c.y, 1e-3), c.x);
-	int r = toon_override_state(o.r);
-	return r == 2 ? 1.0 : (r == 1 ? 0.0 : on);
-}
-
-// 暖白与冷白约 2 : 1（ART-STYLE §8.1、SYS-TIME §3.2）；G 通道 128 强制暖、255 强制冷
-bool toon_window_cool(int id, vec4 o) {
-	int g = toon_override_state(o.g);
-	return g == 2 ? true : (g == 1 ? false : toon_hash01(uint(id) * 2u + 2u) >= 0.6667);
-}
-
-// 窗帘：B 通道 128 无帘、255 拉上；不覆盖时由调用方按哈希选
+// 窗帘：B 通道 0 = 按哈希（返回 0）、128 = 无帘（1）、255 = 拉上（2）
 int toon_window_curtain(vec4 o) {
-	return toon_override_state(o.b);
+	return o.b >= 0.75 ? 2 : (o.b >= 0.25 ? 1 : 0);
+}
+
+// ---------------------------------------------------------------------------
+// 路灯光斑（SYS-TIME §6、ENG-PERF §10.3；公共求值 lamp_pool 归 WP-39）：
+// 地面和 4 m 以下立面上的平涂光斑，影色与受光色都向灯照色（调色板行 1）靠，按该盏灯的色号相对 lamp.warm 着色。
+// 室内不画（室内灯另走室内光）。边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
+// ---------------------------------------------------------------------------
+void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
+	if ((c.flags & TOON_F_INTERIOR) != 0 || lamp_heff() >= LAMP_POOL_DAY_DEG.y) {
+		return;
+	}
+	vec2 pool = lamp_pool(c.wpos, c.pool_aa);
+	if (pool.y < 0.0 || pool.x <= 0.0) {
+		return;
+	}
+	vec3 tint = pal_cur(int(pool.y)) / max(pal_cur(PAL_LAMP_WARM), vec3(0.02));
+	vec3 lc = lamp * tint;
+	shade = mix(shade, lc, pool.x);
+	lit = mix(lit, max(lit, lc), pool.x);
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +289,9 @@ ToonCol toon_colors(ToonCtx c, ToonMat m) {
 	shade *= wk;
 	lamp *= wk;
 	toon_puddle(c, m, lit, shade);
+
+	// 路灯光斑：在湿润与积水之后，所以湿地面上的光斑也跟着暗、积水里也亮
+	toon_lamp_pool(c, lamp, lit, shade);
 
 	// 倒角带提亮（ART-STYLE §2.6）：按法线曲率判倒角带，只改明暗，不写 NORMAL
 	float bevel = smoothstep(2.0, 4.0, c.kappa) * step(1e-4, m.bevel_lit);
@@ -432,7 +410,8 @@ vec3 toon_point_light(vec3 n, vec3 l, float att, vec3 lampdiff, float push) {
 	vec3 tn_ldir = normalize(mix(normalize(mat3(VIEW_MATRIX) * key_dir), normalize(mat3(VIEW_MATRIX) * overcast_dir), toon_overcast())); \
 	float tn_d = dot(NORMAL, tn_ldir); \
 	float tn_fw = max(fwidth(tn_d), 1e-3); \
-	ToonCtx tctx = toon_ctx(VERTEX, NORMAL, INV_VIEW_MATRIX, tn_d, tn_fw, tn_kappa, v_cid, v_flags, v_ao, v_spare);
+	float tn_paa = max(fwidth(length((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xz)), 0.02); \
+	ToonCtx tctx = toon_ctx(VERTEX, NORMAL, INV_VIEW_MATRIX, tn_d, tn_fw, tn_kappa, v_cid, v_flags, v_ao, v_spare, tn_paa);
 
 #define TOON_FRAGMENT_END(T) \
 	if (toon_fade_discard(FRAGCOORD.xy)) { \

@@ -80,8 +80,8 @@ void fragment() {
 	int wbase = int(round(UV2.x));
 	int wid = wbase + pane.y * cols + pane.x;
 	vec4 wov = toon_window_override(wid, (tctx.flags & TOON_F_OUTSKIRT) == 0);
-	float on = toon_window_on(wid, wbase, cols, ch, wov);
-	bool cool = toon_window_cool(wid, wov);
+	float on = lamp_window_on(wid, wbase, cols, ch, wov);
+	bool cool = lamp_window_cool(wid, wov);
 	// 冷白窗的室内压低一点明度，夜里近看不成白块
 	vec3 lampc = cool ? pal_cur(PAL_WINDOW_COOL) * GLASS_COOL_ROOM : pal_cur(PAL_WINDOW_WARM);
 
@@ -115,7 +115,7 @@ void fragment() {
 
 	// 3. 斜条：一宽一窄，滤色叠在受光色和影色上；夜间暗窗减半，亮窗不叠
 	float night = smoothstep(-0.03, -0.12, sun_dir.y);
-	float hj = toon_hash01(uint(wid) * 2u + 3u) - 0.5;
+	float hj = lamp_hash01(uint(wid) * 2u + 3u) - 0.5;
 	float u = puv.x - puv.y * GLASS_STREAK_SLOPE + 0.12 * hj;
 	float fw = max(fwidth(u), 1e-4);
 	float a_wide = glass_band(u, 0.08, 0.10, fw) * 0.5;
@@ -128,13 +128,13 @@ void fragment() {
 	// 4. 窗灯：亮窗里是一间房（室内视差），玻璃本身的明暗退到很弱
 	if (on > 0.0) {
 		vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
-		float hd = toon_hash01(uint(wid) * 2u + 4u);
+		float hd = lamp_hash01(uint(wid) * 2u + 4u);
 		float depth = hd < 0.33 ? 3.0 : (hd < 0.66 ? 4.5 : 6.0);
-		float dx0 = 0.15 + 0.35 * toon_hash01(uint(wid) * 2u + 5u);
+		float dx0 = 0.15 + 0.35 * lamp_hash01(uint(wid) * 2u + 5u);
 		vec3 room = glass_room(puv, rd, depth, lampc, dx0, dx0 + 0.3);
 		// 一侧窗帘：在窗面上，透着灯光
 		int cs = toon_window_curtain(wov);
-		float cw = cs == 2 ? 1.01 : (cs == 1 ? 0.0 : 0.25 * step(0.55, toon_hash01(uint(wid) * 2u + 6u)));
+		float cw = cs == 2 ? 1.01 : (cs == 1 ? 0.0 : 0.25 * step(0.55, lamp_hash01(uint(wid) * 2u + 6u)));
 		float curtain = 1.0 - smoothstep(cw - 0.01, cw + 0.01, puv.x);
 		room = mix(room, lampc * 0.93, curtain);
 		float keep = fres * 0.5;
