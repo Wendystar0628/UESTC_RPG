@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 54.4k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 54.5k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -300,16 +300,16 @@
   - ART-STYLE §8.3 建筑固有色 · L603 · 1.2k
   - ART-STYLE §8.4 界面色 · L635 · 1.3k
   - ART-STYLE §8.5 色名登记与调色板纹理 · L660 · 1.4k
-  - ART-STYLE §8.6 天气色 · L685 · 1.1k
-- ART-STYLE §9 排除元素 · L704 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L706 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L732 · 599
-- ART-STYLE §10 材质速查 · L741 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L759 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L791 · 419
-- ART-STYLE §13 情绪弧线 · L804 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L829 · 1.9k
-- ART-STYLE §14 待验证（P0） · L849 · 2.1k
+  - ART-STYLE §8.6 天气色 · L687 · 1.1k
+- ART-STYLE §9 排除元素 · L706 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L708 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L734 · 599
+- ART-STYLE §10 材质速查 · L743 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L761 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L793 · 419
+- ART-STYLE §13 情绪弧线 · L806 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L831 · 1.9k
+- ART-STYLE §14 待验证（P0） · L851 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
