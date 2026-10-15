@@ -105,11 +105,11 @@ gates: []
 | INV-3 | 允许的界面以 UI-NAV 和 UI-VISUAL 登记的为准：时间（时间环）、季节、天气（天气格与一行预报，SYS-WEATHER §1）、速度、观察模式、小地图与大地图（含目录页与传送卡，SYS-ATLAS）、扉页（含首次运行的进度行）、开始页与存档页（SYS-TITLE、SYS-SAVE）、过场的放映层与字幕（SYS-TITLE）、操作说明与设置，以及几秒内淡出的临时提示。界面的视觉是信息与光：主色清蓝 #73C9F9，光只表示状态（UI-VISUAL）。漫游态唯一常驻的元素是小地图，可以关；按 U 全部隐藏，`--ui=0` 只留署名。3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱，追踪和传送也一样。界面音效按 SYS-AUDIO §11 登记，悬停默认无声，不加任何语音提示。OSM 署名常驻 | UI-NAV、UI-VISUAL、SYS-ATLAS、SYS-TITLE、SYS-AUDIO §11、SYS-VIEW §6 |
 | INV-4 | 场景里本来就有的字要保留，例如楼名题字、店招、路牌，一律用简体中文。校徽、红十字这类受专门规定保护的标志不原样使用，换成风格相近的原创图形（D-065） | ART-STYLE §11 |
 | INV-5 | 三渲二日式动画背景，清透干净：分阶明暗（建筑两阶，曲面道具与软物两阶半，植被三阶）；影子以明度为主、按材质推导，浅而透，不一律染蓝紫，不加接触暗影，透光的元素按逆光透射（ART-STYLE §2、ART-STYLE §3）；约 1.25 px（1080p）、随底色染色的细描线（ART-STYLE §4）；平涂贴图，斑驳只留在近处（ART-STYLE §6）；柔光在白天只让高光晕开，黄昏以后才叠全帧柔光（ART-STYLE §7）。画面设置有四档预设（流畅、均衡、精致、极致）加单项，风格底线不可关，实时阴影和西湖倒影只能降质量（SYS-GRAPHICS §2） | ART-STYLE、SYS-GRAPHICS |
-| INV-6 | 不出现 NPC 和他人，也不加学生剪影；人只以生活痕迹的形式出现。玩家自己的角色是唯一例外：旁观模式不显示任何角色，行走模式下玩家有自己的角色本体（D-182）。校史馆、博物馆的展陈里也不出现人物肖像，换成实物、文献、模型、风景照（WLD-INTERIORS §11）。声音里没有听得清的人声：人只以远处、听不清、来自看不见的地方的声音出现（SYS-AUDIO §8）。 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK §1、WLD-INTERIORS §11、SYS-AUDIO §8 |
+| INV-6 | 不出现 NPC 和他人，也不加学生剪影；人只以生活痕迹的形式出现。玩家自己的角色是唯一例外：旁观模式不显示任何角色，行走模式下玩家有自己的角色本体（D-182）。校史馆、博物馆的展陈里也不出现人物肖像，换成实物、文献、模型、风景照（WLD-INTERIORS §11）。声音里没有听得清的人声：人只以远处、听不清、来自看不见的地方的声音出现（SYS-AUDIO §8）。 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK §1、SYS-VIEW §2.7、WLD-INTERIORS §11、SYS-AUDIO §8 |
 | INV-7 | 日本元素只放开日常街景物件（例如成组售货机、背街的电线杆与架空线、自行车棚），分区与数量按 ART-AMBIENCE，室内同样适用（WLD-INTERIORS §8.5）；日式物件不替代中国校园的识别要素，主轴保持成电身份。日本的宗教符号、地标符号、日文文字和传统和式建筑构件不出现，场景里的字按 INV-4 一律用简体中文。声音允许黄昏远处的乌鸦叫和傍晚广播里的一段原创旋律；宣邦楼钟楼只敲单音铜钟（SYS-AUDIO §6.2、SYS-AUDIO §6.3） | ART-AMBIENCE、ART-STYLE §9、WLD-INTERIORS §8.5、SYS-AUDIO |
 | INV-8 | 世界状态有三个量：时刻 0–24 小时连续可调；季节四档可调；天气 8 格加自动（SYS-WEATHER §1）。世界时间在一个世界实例内单调向前，不能逆转：拨时间环只能顺时针，跳到下一次出现的那个钟点（SYS-TIME §1）。新游戏、读档都是换一个世界实例（`IWorldState.Instance` 加 1），不算时间倒流；开始页停着的时间、关着游戏的那段现实时间都不计入世界时间（SYS-TITLE §6、SYS-SAVE §6）。默认状态是新游戏的终态，也是新存档的初值：秋季 17:30、晴、自动天气、流逝 1×；新游戏过场从 17:05 正向推到这里（SYS-TITLE §6）。退出时自动保存，再进同一存档时，世界是退出时的落定状态（SYS-SAVE §5）。流逝模式有暂停、1×、10×、60×、360×、1440×。天气受季节约束：春夏秋降雨、冬季降雪，雷雨只在春夏；自动天气是只走验证过组合的前向随机过程（SYS-WEATHER §6），每个存档一个天气种子（SYS-SAVE）。换季一律正向转场。所有切换都自然过渡，不能硬切；每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
 | INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层里（WLD-TERRAIN）。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的任何风格化改动、设计增补（`add`）和删除（`hide`），都只能写在覆盖层里，并写明理由；覆盖层按图存放在 `game/data/maps/<地图>/overlay/`（SYS-MAPS §2.1） | MAP-QSH-ADDITIONS、ENG-ARCH §3、SYS-MAPS、WLD-TERRAIN |
-| INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件。用户触发的时间、季节、天气、跳转、传送过渡不算偶发事件，进场过场和返回标题也不算；过场期间不触发偶发事件（SYS-TITLE §7.2）。闪电（只做远处云内闪）是雷雨的持续氛围，彩虹是雨后初晴的天象状态，两者都不算偶发事件（SYS-WEATHER §5）。声音同样轻、慢、持续：一次性声按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个（SYS-AUDIO §7）；偶发事件本身无声，只有它引起的抖落、积雨、旗动有声；远雷是雷雨的持续氛围，跟云内闪同步，可以关（SYS-AUDIO §6） | SYS-MOTION、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO |
+| INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件；鸽群被行走身体惊动时的局部惊飞是定向例外，不算偶发事件（SYS-MOTION §6.1）。用户触发的时间、季节、天气、跳转、传送过渡不算偶发事件，进场过场和返回标题也不算；过场期间不触发偶发事件（SYS-TITLE §7.2）。闪电（只做远处云内闪）是雷雨的持续氛围，彩虹是雨后初晴的天象状态，两者都不算偶发事件（SYS-WEATHER §5）。声音同样轻、慢、持续：一次性声按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个（SYS-AUDIO §7）；偶发事件本身无声，只有它引起的抖落、积雨、旗动有声；远雷是雷雨的持续氛围，跟云内闪同步，可以关（SYS-AUDIO §6） | SYS-MOTION、SYS-MOTION §6.1、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO |
 | INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有厚度、倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级、越常被近看越密：主轴与地标、行走走廊和开放室内按贴脸标准，普通立面按中景标准，屋顶、背立面和只有飞行才到的位置只判底线和轮廓。校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）；关着的楼只做外壳、窗卡和简化室内，开放的室内才要求全精度（WLD-INTERIORS §5） | ART-FIDELITY、WLD-OUTSKIRTS、WLD-INTERIORS |
 | INV-12 | 满足性能预算与硬规则，包括：界面（主线程、画布渲染 CPU、大页磨砂的 GPU，UI-VISUAL §12）；行走碰撞；存档（快照主线程 p99 ≤ 0.3 ms，从关闭请求到进程结束 ≤ 1.5 s，SYS-SAVE §13）；音频（主线程平均 ≤ 0.35 ms，在播 3D 声源 ≤ 32，常驻 ≤ 96 MB，SYS-AUDIO §18）。安装目录上限 0.9 GB、分发压缩包上限 0.7 GB，几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165，ENG-GATES §2 的 G6） | ENG-BUDGET、ENG-PERF、UI-NAV §9、SYS-WALK §14、UI-VISUAL §12、SYS-SAVE §13、SYS-AUDIO §18 |
 
@@ -187,11 +187,11 @@ gates: []
 | --- | --- | --- | --- |
 | [WLD-DIORAMA](world/WLD-DIORAMA.md) 箱庭边界、截面与远景 | 箱庭外缘的地层截面、水柱截面、雾海与清水河银带、360° 远景卡片和雪山，以及它们随时段、季节、天气的变化 | WP-22 | G4、G5、G7、G8、G12、G13、G16 |
 | [WLD-INTERIORS](world/WLD-INTERIORS.md) 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算 | 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19 | WP-51、WP-52、WP-17、WP-31a、WP-31b、WP-31c | G5、G6、G8、G9、G15、G18、G19 |
-| [WLD-LIFE](world/WLD-LIFE.md) 动物、生活痕迹与街道家具 | 全校动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现 | WP-25、WP-13 | G4、G7、G8、G12、G13、G15、G18、G21 |
+| [WLD-LIFE](world/WLD-LIFE.md) 动物、生活痕迹与街道家具 | 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现 | WP-25、WP-13 | G4、G7、G8、G12、G13、G15、G18、G21 |
 | [WLD-OUTSKIRTS](world/WLD-OUTSKIRTS.md) 边界与外围：大箱庭、外围环境带、阻挡与提示 | 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算 | WP-47 | G2、G6、G7、G8、G9、G12、G13、G15、G16 |
 | [WLD-TERRAIN](world/WLD-TERRAIN.md) 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性 | 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能 | WP-08、WP-15 | G2、G5、G6、G8、G15 |
 | [WLD-VEGETATION](world/WLD-VEGETATION.md) 植被：树种与四季、银杏大道与水杉路、草坪与灌木 | 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现 | WP-23 | G2、G4、G5、G7、G8、G10、G12、G13、G15、G16、G17、G21 |
-| [WLD-WATER](world/WLD-WATER.md) 水体：动画式水面、西湖、东湖、河渠、喷泉 | 全校水面的动画式画法、倒影与反光带、四季与天气的水面、各湖与河渠、喷泉与池水，以及 Godot 实现 | WP-24 | G4、G7、G8、G10、G12、G13、G16、G17 |
+| [WLD-WATER](world/WLD-WATER.md) 水体：动画式水面、西湖、东湖、河渠、喷泉 | 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现 | WP-24 | G4、G7、G8、G10、G12、G13、G16、G17 |
 
 ### 7.4 地图：清水河 `maps/qingshuihe/`
 
@@ -215,12 +215,12 @@ gates: []
 | [SYS-AUDIO](systems/SYS-AUDIO.md) 音频：环境声、观者声、空间声学、界面音效与混音 | 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁 | WP-53 | G2、G4、G5、G6、G13、G14、G21 |
 | [SYS-GRAPHICS](systems/SYS-GRAPHICS.md) 画面设置：预设、单项、风格底线、自动推荐与自适应 | 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收 | WP-32 | G2、G5、G7、G8、G9、G10、G11、G12、G13、G14、G16、G17 |
 | [SYS-MAPS](systems/SYS-MAPS.md) 多地图：按图数据、`IMapService` 与切换 | 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁 | WP-46 | G2、G4、G5、G6、G7、G8、G13、G16 |
-| [SYS-MOTION](systems/SYS-MOTION.md) 动态与事件 | 两个时钟与一拍二，风、悬浮物、流体、生命体与微动的节奏，唯一的偶发事件、季节氛围与转场 | WP-26 | G4、G12、G13、G16、G21 |
+| [SYS-MOTION](systems/SYS-MOTION.md) 动态与事件 | 两个时钟与一拍二，风、悬浮物、流体、生命体与反应动物的节奏，唯一的偶发事件、季节氛围与转场 | WP-26 | G4、G12、G13、G16、G21 |
 | [SYS-SAVE](systems/SYS-SAVE.md) 存档与持久化：存档模型、存什么、格式与迁移、保存时机、加载与一致性、安全、契约与验收 | 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20 | WP-50 | G2、G4、G5、G10、G16、G20 |
 | [SYS-TIME](systems/SYS-TIME.md) 时间与季节系统：世界状态、美术日月、色彩脚本、过渡 | 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收 | WP-34、WP-37、WP-38、WP-39、WP-41 | G2、G7、G12、G13、G16 |
 | [SYS-TITLE](systems/SYS-TITLE.md) 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow` | 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式 | WP-49、WP-35d | G2、G7、G8、G10、G13、G14、G16 |
-| [SYS-VIEW](systems/SYS-VIEW.md) 观察模式、介质与开场 | 观察模式总述与旁观漫游、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档 | WP-06、WP-07、WP-01 | G1、G2、G7、G13、G16、G21 |
-| [SYS-WALK](systems/SYS-WALK.md) 行走模式：手感、可行走范围、边界、碰撞与角色控制器 | 行走模式的手感、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收 | WP-42、WP-43、WP-44 | G4、G8、G15、G16、G19、G21 |
+| [SYS-VIEW](systems/SYS-VIEW.md) 观察模式、介质与开场 | 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档 | WP-06、WP-07、WP-01 | G1、G2、G7、G13、G16、G21 |
+| [SYS-WALK](systems/SYS-WALK.md) 行走模式：手感、可行走范围、边界、碰撞与角色控制器 | 行走模式的手感、玩家身体、游泳、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收 | WP-42、WP-43、WP-44 | G4、G8、G15、G16、G19、G21 |
 | [SYS-WEATHER](systems/SYS-WEATHER.md) 天气：天气清单、画面规则、前向随机过程、过渡与验收 | 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收 | WP-45 | G2、G4、G10、G12、G13、G14、G16、G20、G21 |
 
 ### 7.6 界面 `ui/`
@@ -242,7 +242,7 @@ gates: []
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
 | [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列 | WP-00 | — |
 | [ENG-TEAM](engineering/ENG-TEAM.md) 多模型协作规程：分工、额度、通信与开发流程 | 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务 | WP-00 | — |
-| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：54 个工作包，可并行 53 个 | 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
+| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：55 个工作包，可并行 54 个 | 55 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
 
 ### 7.8 参考 `reference/`
 
@@ -301,7 +301,7 @@ gates: []
 | WP-05 | ART-STYLE | ART-SKYLIGHT、ENG-PERF、SYS-GRAPHICS、SYS-WEATHER、WLD-OUTSKIRTS、WLD-TERRAIN |
 | WP-06 | SYS-VIEW | ART-SKYLIGHT、ENG-GATES、ENG-ROADMAP、SYS-ATLAS、SYS-AUDIO、SYS-SAVE、SYS-TITLE、SYS-WALK、UI-NAV、WLD-OUTSKIRTS |
 | WP-07 | SYS-VIEW | ART-FIDELITY、ART-SKYLIGHT、ENG-PERF、ENG-ROADMAP、SYS-AUDIO、SYS-GRAPHICS、SYS-WALK、WLD-DIORAMA、WLD-INTERIORS、WLD-WATER |
-| WP-08 | TOOL-PREVIEW、WLD-TERRAIN | ENG-ARCH、MAP-QSH-TERRAIN、OPS-RELEASE、SYS-MAPS、SYS-VIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-VEGETATION |
+| WP-08 | TOOL-PREVIEW、WLD-TERRAIN | ENG-ARCH、MAP-QSH-TERRAIN、OPS-RELEASE、SYS-MAPS、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-VEGETATION、WLD-WATER |
 | WP-09 | ART-MODELING | ART-RENOVATION |
 | WP-10 | — | ART-FIDELITY、ART-MODELING、SYS-WALK、WLD-INTERIORS |
 | WP-11 | — | ART-MODELING、SYS-AUDIO、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
@@ -309,7 +309,7 @@ gates: []
 | WP-13 | ART-AMBIENCE、MAP-QSH-ADDITIONS、WLD-LIFE | ART-MODELING、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-RENOVATION、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-ATLAS、SYS-AUDIO、SYS-WALK、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN |
 | WP-14 | ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-RENOVATION | ART-AMBIENCE、ART-FIDELITY、ART-MODELING、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN |
 | WP-15 | WLD-TERRAIN | ART-AMBIENCE、ART-FIDELITY、ART-MODELING、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-RENOVATION、MAP-QSH-SOUTH、MAP-QSH-TERRAIN、MAP-QSH-WEST、SYS-AUDIO、SYS-MAPS、SYS-WALK、SYS-WEATHER、WLD-OUTSKIRTS、WLD-VEGETATION |
-| WP-16 | MAP-QSH-CORE、MAP-QSH-TERRAIN | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-LIBRARY、MAP-QSH-RENOVATION、MAP-QSH-WEST、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-16 | MAP-QSH-CORE、MAP-QSH-TERRAIN | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-LIBRARY、MAP-QSH-RENOVATION、MAP-QSH-WEST、SYS-WALK、WLD-INTERIORS、WLD-LIFE、WLD-TERRAIN、WLD-WATER |
 | WP-17 | MAP-QSH-LIBRARY、WLD-INTERIORS | ART-RENOVATION、MAP-QSH-CORE、SYS-AUDIO、SYS-WALK |
 | WP-18 | MAP-QSH-SOUTH、MAP-QSH-TERRAIN | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-RENOVATION、SYS-WALK、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-19 | MAP-QSH-TERRAIN、MAP-QSH-WEST | ART-AMBIENCE、ART-RENOVATION、MAP-QSH-ADDITIONS、MAP-QSH-RENOVATION、WLD-INTERIORS、WLD-TERRAIN |
@@ -318,14 +318,14 @@ gates: []
 | WP-22 | WLD-DIORAMA | SYS-MAPS、SYS-TIME、WLD-OUTSKIRTS、WLD-TERRAIN |
 | WP-23 | WLD-VEGETATION | ART-AMBIENCE、ART-FIDELITY、ART-MODELING、ART-STYLE、ENG-PERF、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-WALK、SYS-WEATHER、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-24 | WLD-WATER | ART-FIDELITY、ENG-PERF、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-SOUTH、MAP-QSH-TERRAIN、MAP-QSH-WEST、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-VIEW、SYS-WALK、SYS-WEATHER、WLD-OUTSKIRTS、WLD-TERRAIN |
-| WP-25 | WLD-LIFE | ART-AMBIENCE、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-TITLE、SYS-WEATHER、WLD-TERRAIN、WLD-VEGETATION |
+| WP-25 | WLD-LIFE | ART-AMBIENCE、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-MOTION、SYS-SAVE、SYS-TITLE、SYS-WEATHER、WLD-TERRAIN、WLD-VEGETATION |
 | WP-26 | SYS-MOTION | ENG-ROADMAP、MAP-QSH-ADDITIONS、MAP-QSH-CORE、MAP-QSH-SOUTH、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS、WLD-LIFE、WLD-VEGETATION、WLD-WATER |
 | WP-27 | ART-FIDELITY、ENG-GATES | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-PERF、ENG-ROADMAP、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、UI-NAV、UI-VISUAL、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-VEGETATION |
 | WP-28 | MAP-QSH-ADDITIONS | MAP-QSH-CENTER-EAST、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-WALK、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-29 | MAP-QSH-ADDITIONS | — |
 | WP-30 | MAP-QSH-ADDITIONS | MAP-QSH-CENTER-EAST、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-WALK、WLD-DIORAMA、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-31 | — | SYS-AUDIO |
-| WP-31a | WLD-INTERIORS | MAP-QSH-ADDITIONS、MAP-QSH-SOUTH、SYS-WALK |
+| WP-31a | WLD-INTERIORS | MAP-QSH-ADDITIONS、MAP-QSH-SOUTH、SYS-WALK、WLD-WATER |
 | WP-31b | WLD-INTERIORS | MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-WEST、SYS-WALK |
 | WP-31c | WLD-INTERIORS | ART-MODELING、MAP-QSH-ADDITIONS、MAP-QSH-NORTH、SYS-WALK |
 | WP-32 | SYS-GRAPHICS | ENG-BUDGET、ENG-GATES、ENG-PERF、SYS-SAVE、SYS-TITLE |
@@ -341,7 +341,7 @@ gates: []
 | WP-41 | SYS-TIME | ENG-GATES、SYS-AUDIO、SYS-GRAPHICS、SYS-TITLE、SYS-WEATHER、WLD-OUTSKIRTS |
 | WP-42 | SYS-WALK | ENG-GATES、ENG-PERF、ENG-ROADMAP、SYS-AUDIO、SYS-SAVE、SYS-VIEW、WLD-INTERIORS、WLD-LIFE、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-43 | SYS-WALK | ENG-GATES、ENG-PERF、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-AUDIO、SYS-MAPS、SYS-SAVE、WLD-INTERIORS、WLD-LIFE、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
-| WP-44 | SYS-WALK | ART-FIDELITY、ENG-GATES、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-ATLAS、SYS-MAPS、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
+| WP-44 | SYS-WALK | ART-FIDELITY、ENG-GATES、MAP-QSH-ADDITIONS、MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、SYS-ATLAS、SYS-MAPS、WLD-INTERIORS、WLD-LIFE、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-WATER |
 | WP-45 | SYS-WEATHER | ART-SKYLIGHT、ART-STYLE、ENG-GATES、ENG-PERF、MAP-QSH-ADDITIONS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-MOTION、SYS-TIME、WLD-OUTSKIRTS |
 | WP-45a | — | SYS-SAVE、WLD-VEGETATION |
 | WP-45b | — | WLD-VEGETATION、WLD-WATER |
@@ -361,6 +361,7 @@ gates: []
 | WP-53a | — | SYS-ATLAS、SYS-SAVE、SYS-TITLE |
 | WP-53b | — | MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、SYS-WEATHER |
 | WP-53d | — | SYS-WALK、SYS-WEATHER |
+| WP-54a | — | SYS-SAVE、SYS-VIEW、SYS-WALK |
 
 ## 9 文档依赖图
 

@@ -80,7 +80,7 @@ gates: [G4, G5, G20]
 | 世界时间 | 一条全局时间线，单调向前 | `WorldHours`（double）、`Instance`、`FlowTo` | 日历由 `WorldHours` 推出，不另起时钟 | ENG-ARCH §3、SYS-TIME §1、SYS-MAPS §5 |
 | 剧情显隐 | 物体显隐只看季节、时段、天气的变体掩码；生活痕迹的状态也只有这三种位 | `VariantTag` 可加 init 属性，`ChannelDecl.Source` 可加前缀（ENG-ARCH §8） | 掩码加剧情标志位，内核按 `IStoryState` 显隐，不重建格子 | WLD-LIFE §6.2、WLD-INTERIORS §9 第 4、5 条、ENG-ARCH §8 |
 | 开局 | 新游戏一律从本图默认状态（落金初灯）开局，起点、钟点、季节都取默认状态 | `ISaveService.NewGame` 的 `start` 参数、`map.json` 的 `newGameStart`（ENG-ARCH §8） | RPG 规则集给出起始图、出生点、开局时刻与季节；新游戏先定规则集，再调各段的 `CreateDefault` | SYS-TIME §0、SYS-TITLE §6、SYS-TITLE §12、SYS-MAPS §4.4 |
-| 工作包结构 | 54 个包，独占目录，子包共用原包的程序集 | `ownership.json`、ENG-WP §3 的拆法、通用简报 | RPG 包从 WP-54 起编号，每个子系统一个包、独占一个目录 | ENG-WP §2、ENG-WP §3、ENG-WP §4 |
+| 工作包结构 | 工作包以 ENG-WP §2 为准，独占目录，子包共用原包的程序集 | `ownership.json`、ENG-WP §3 的拆法、通用简报 | RPG 包从 WP-60 起编号，WP-54 至 WP-59 留给本阶段新增的包；每个子系统一个包、独占一个目录 | ENG-WP §2、ENG-WP §3、ENG-WP §4 |
 
 ## 3 现在写死、以后会挡路的地方
 
@@ -88,7 +88,7 @@ gates: [G4, G5, G20]
 
 | # | 现在的规定（保留，作为观光规则集的配置） | 以后的扩展方式 | 现在需要的最小预留 |
 | --- | --- | --- | --- |
-| 1 | 不出现任何人物或角色；观者没有身体、影子、脚印；展陈不出现人物肖像；过场里不出现人；声音里没有听得清的人声；生活痕迹允许"人刚离开"，不许"人还在"（INV-6，ENG-GATES §3 第 2、24 条，SYS-WALK §1，SYS-TITLE §13，WLD-INTERIORS §11，SYS-AUDIO §8，SYS-AUDIO §22 的 G21h；痕迹判据见 WLD-LIFE §2，ART-FIDELITY §3.4，ART-FIDELITY §6，MAP-QSH-ADDITIONS §4 第 6 条，WLD-INTERIORS §9 第 8 条） | RPG 规则集打开角色：玩家角色与 NPC 由实体层负责；对白走单独的总线和规则 | 规则集的内容规则 `Characters`、`ClearVoices`（§6 第 1 条）；实体层的目录与 ID 前缀占位（§6 第 6 条） |
+| 1 | 不出现 NPC 与他人；旁观模式观者没有身体、影子和脚印；行走模式玩家有自己的角色本体（D-182）；展陈不出现人物肖像；过场里不出现人；声音里没有听得清的人声；生活痕迹允许"人刚离开"，不许"人还在"（INV-6，ENG-GATES §3 第 2、24 条，SYS-WALK §1，SYS-TITLE §13，WLD-INTERIORS §11，SYS-AUDIO §8，SYS-AUDIO §22 的 G21h；痕迹判据见 WLD-LIFE §2，ART-FIDELITY §3.4，ART-FIDELITY §6，MAP-QSH-ADDITIONS §4 第 6 条，WLD-INTERIORS §9 第 8 条） | RPG 规则集打开角色：玩家角色与 NPC 由实体层负责；对白走单独的总线和规则 | 规则集的内容规则 `Characters`、`ClearVoices`（§6 第 1 条）；实体层的目录与 ID 前缀占位（§6 第 6 条） |
 | 2 | 没有可以点选的东西，没有准星；不在 3D 里拾取，3D 画面不叠加世界空间标记；会动的门走近自动推开，不加交互键（INV-1、INV-3，UI-NAV §1，UI-NAV §4.4，SYS-ATLAS §1，WLD-INTERIORS §4.1） | 近距离交互：交互键加界面提示，不恢复鼠标拾取；3D 里能不能出提示由 RPG 规则集定 | 规则集 `Interaction = InteractionRule.None`；E、I 两个键不分配给观光功能（§6 第 6 条）。交互接口不必现在加 |
 | 3 | 全片只有一个偶发事件（INV-10，SYS-MOTION §10，ENG-GATES §3 第 6 条） | 事件导演登记多个事件与触发器 | 偶发事件数据化，规则集列出允许的事件（§6 第 1、5 条） |
 | 4 | 只有旁观和行走两种观察模式（INV-2，ENG-ARCH §3 的 `ViewMode`，SYS-WALK §1） | `ViewMode` 末尾追加（例如第三人称跟随） | 规则集 `ViewModes`；枚举的穷举纪律（§6 第 4 条） |
@@ -99,7 +99,7 @@ gates: [G4, G5, G20]
 | 9 | 过场没有角色轨，没有对话和旁白配音（SYS-TITLE §8.2、SYS-TITLE §13） | 升 `format` 加轨 | 无 |
 | 10 | 碰撞与可走性不随状态变（ENG-BUDGET §7 第 WLD-WATER、WLD-LIFE、20 条，WLD-INTERIORS §10） | 剧情锁门只走运行时门体加锁状态，不改烘焙碰撞（WLD-INTERIORS §14） | 无；运行时门体是可走性随状态变的唯一通道（ENG-BUDGET §7 第 20 条） |
 | 11 | 静态内容全部烘焙进格子；生活痕迹是不可拿取的几何（ENG-BUDGET §7 第 3 条，WLD-LIFE §2，WLD-INTERIORS §9） | 可拿取的物品是运行时节点，像动物一样由 `[KernelNode]` 负责；场景物体的变化记在 `map:<id>/objects` 的差分（SYS-SAVE §2） | 无 |
-| 12 | 动态物体不参与碰撞，只有猫的软圆，由 WP-25 每帧交给 WP-42（SYS-WALK §12，WLD-LIFE §6.3） | 软障碍的来源泛化，NPC 也交软圆或胶囊 | 无 |
+| 12 | 动态物体不参与碰撞，也不推角色：控制器不读动物位置，会作出反应的动物自己让路，避不开时允许不超过 0.3 s 的短暂穿插（SYS-WALK §12，WLD-LIFE §1.1） | NPC 沿用同一份感知快照与让路规则 | 无 |
 | 13 | 只有一个观者：观者声、`IWalkTelemetry`、`Near.Dry` 总线都指玩家自己（SYS-AUDIO §9） | NPC 的脚步走 3D 发声器，观者声仍只指玩家 | 无 |
 | 14 | 文字只有中英两种，内联在 `LocalizedName(Zh, En)` 里（ENG-ARCH §3）；翻译表在界面包的 `game/hud/i18n/`（UI-NAV §8）；雾幕后不许新生成 MSDF 字形（ENG-BUDGET §7 第 9 条） | 文本键与文本库；对白的字形集在构建时收齐 | 目录占位 `game/data/text/`（§6 第 6 条） |
 | 15 | 同材质的两件物体相接不描：7 位材质 ID 不分物体（ART-STYLE §4.1、ART-STYLE §4.5） | 角色、道具的独立描边或选中描边用物体标记通道（`mat_table` 行 3 或另开通道） | 无 |

@@ -207,12 +207,13 @@ Sonnet 和 gpt-6.1-sol 跟旗舰差距不大。拿不准时先派它们，结果
 
 | 归属 | 包 |
 | --- | --- |
-| **Astra 侧** | WP-00、WP-01、WP-02（02a、02b）、WP-06、WP-07、WP-08、WP-09、WP-26、WP-27、WP-32、WP-33、WP-34、WP-36、WP-41、WP-42、WP-43、WP-44、WP-45a、WP-46、WP-47a、WP-48a、WP-48c、WP-49a、WP-50、WP-51a、WP-53a、WP-53c |
-| **Opus 侧** | WP-03、WP-04、WP-05、WP-10、WP-11、WP-12、WP-13、WP-14、WP-15、WP-16、WP-17、WP-18、WP-19、WP-20、WP-21、WP-22、WP-23、WP-24、WP-25、WP-28、WP-29、WP-30、WP-31a、WP-31b、WP-31c、WP-35、WP-37、WP-38、WP-39、WP-40、WP-45b、WP-47b、WP-48b、WP-49b、WP-51b、WP-52、WP-53b、WP-53d、WP-53e |
+| **Astra 侧** | WP-00、WP-01、WP-02（02a、02b）、WP-06、WP-07、WP-08、WP-09、WP-26、WP-27、WP-32、WP-33、WP-34、WP-36、WP-41、WP-42、WP-43、WP-44、WP-45a、WP-46、WP-47a、WP-48a、WP-48c、WP-49a、WP-50、WP-51a、WP-53a、WP-53c、WP-54a |
+| **Opus 侧** | WP-03、WP-04、WP-05、WP-10、WP-11、WP-12、WP-13、WP-14、WP-15、WP-16、WP-17、WP-18、WP-19、WP-20、WP-21、WP-22、WP-23、WP-24、WP-25、WP-28、WP-29、WP-30、WP-31a、WP-31b、WP-31c、WP-35、WP-37、WP-38、WP-39、WP-40、WP-45b、WP-47b、WP-48b、WP-49b、WP-51b、WP-52、WP-53b、WP-53d、WP-53e、WP-54b |
 
 - **谁施工**：Astra 侧的包由 Astra 派工和审查，施工按 §3.3 用 gpt-6-astra 或 gpt-6.1-sol 子代理；Opus 侧的包由二号会话的 Opus 子代理施工，主会话评审。
 - WP-49 的过场数据（`game/data/maps/*/cinematics`）归 49b：49a 先定过场 JSON 的格式和播放器，镜头路径、节奏与字幕由 49b 写（SYS-TITLE §8）。
 - WP-09 的部件内核归 Astra；金样的造型参数由主会话定（ART-MODELING §6）。
+- WP-54 的角色运行时归 54a（Astra 侧：内核挂载、动画图、相位锁、IK、第一人称拆件与接线），角色资产与动画集归 54b（Opus 侧：片段挑选、触地标注、可调参数定值，正式角色的造型立项后也归它）；两者经 `game/data/characters` 交接（ENG-WP §3）。WP-25 的反应动物归 Opus 侧，由二号会话派工；它用到的感知快照、调度、实例与动画的工程部分归 Astra（WP-00、WP-26 与内核）。
 - 新增的包按本节的归属逻辑定归属，按 §4.2 排波次（§5.8）。
 
 ### 4.2 开工顺序与合并顺序
