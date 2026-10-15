@@ -1622,14 +1622,14 @@
 
 ## ENG-STATUS · 施工状态
 
-`docs/design/engineering/ENG-STATUS.md` · 6.5k 字 · 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度
+`docs/design/engineering/ENG-STATUS.md` · 6.7k 字 · 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步
 
 - ENG-STATUS §0 结论 · L23 · 422
   - ★ ENG-STATUS §0.1 接入要点 · L29 · 222
 - ENG-STATUS §1 填写规则 · L35 · 911
-- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 1.3k
-- ENG-STATUS §3 活跃工作包 · L73 · 3.0k
+- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 1.5k
+- ENG-STATUS §3 活跃工作包 · L74 · 3.1k
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
