@@ -8,10 +8,9 @@ $layout = Get-UESTCLayout (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $target = Assert-UESTCChildPath (Join-Path $layout.Worktrees $Wp) $layout.Worktrees
 $branch = 'wp/' + $Wp.Substring(3).ToLowerInvariant() + '-' + $Slug
 if (Test-Path -LiteralPath $target) { throw "Refusing to touch an existing tree: $target" }
-& git -C $layout.Root show-ref --verify --quiet ('refs/heads/' + $branch)
-if ($LASTEXITCODE -eq 0) { throw "Local branch already exists: $branch" }
-& git -C $layout.Root rev-parse --verify main | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'Local main branch is required.' }
+$branchProbe = Invoke-UESTCGit $layout.Root @('show-ref', '--verify', '--quiet', ('refs/heads/' + $branch)) -SuccessExitCodes @(0, 1)
+if ($branchProbe.ExitCode -eq 0) { throw "Local branch already exists: $branch" }
+$null = Invoke-UESTCGit $layout.Root @('rev-parse', '--verify', 'main')
 $seed = Join-Path $layout.Primary 'game\.godot'
 $godot = Get-UESTCGodot
 if ($Plan) {
@@ -20,15 +19,14 @@ if ($Plan) {
 }
 if (-not $SkipInitialize -and -not (Test-Path -LiteralPath $godot -PathType Leaf)) { throw "Godot not found: $godot" }
 $null = [IO.Directory]::CreateDirectory($layout.Worktrees)
-& git -C $layout.Root worktree add $target -b $branch main
-if ($LASTEXITCODE -ne 0) { throw 'git worktree add failed; no existing worktree was changed.' }
+$null = Invoke-UESTCGit $layout.Root @('worktree', 'add', $target, '-b', $branch, 'main')
 # Only a newly created and validated destination is seeded; /E never deletes files.
 $destination = Assert-UESTCChildPath (Join-Path $target 'game\.godot') $target
 if (Test-Path -LiteralPath $seed -PathType Container) {
     $lease = Enter-UESTCResourceLock $layout.Locks Cpu
     try {
-        & robocopy $seed $destination /E /XD shader_cache /R:1 /W:1 /NFL /NDL /NJH /NJS
-        if ($LASTEXITCODE -ge 8) { throw "Seed copy failed: robocopy exit $LASTEXITCODE" }
+        $null = Invoke-UESTCProcess robocopy @($seed, $destination, '/E', '/XD', 'shader_cache', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS') `
+            $target (Join-Path $target 'output/build/worktree-seed.log') -SuccessExitCodes (0..7)
     } finally { Exit-UESTCResourceLock $lease }
 } else { Write-Warning "Import seed absent: $seed. First import will generate it locally." }
 $override = Join-Path $target 'game\override.cfg'

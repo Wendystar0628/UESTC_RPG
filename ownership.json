@@ -2616,6 +2616,154 @@
     {
       "pattern": "game/gen/zones/showcase-interiors/BannedSymbols.txt",
       "owner": "WP-00"
+    },
+    {
+      "pattern": "game/contracts/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/acoustics/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/ambience/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/buildings/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/collision/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/diorama/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/fauna/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/furniture/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/ground/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/interior-props/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/outskirts/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/traces/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/vegetation/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/walkable/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/water/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/world/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/interior/core/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/interior/shell/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/circulation/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/core/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/openings/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/roof/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/street/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/parts/_stubs/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/center-east/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/core/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/design-boundary/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/design-public/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/design-waterfront/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/library-interior/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/north/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/showcase-interiors/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/south/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/west/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "pipeline/map/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "scripts/gates/arch/*.packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "scripts/godot-api/ApiDump/*.packages.lock.json",
+      "owner": "WP-00"
     }
   ],
   "shaderWhitelist": [

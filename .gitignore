@@ -16,4 +16,4 @@ __pycache__/
 output/
 
 # 本地发布产物
-build/
+/build/

@@ -4,8 +4,11 @@ Set-StrictMode -Version Latest
 function Get-UESTCLayout {
     param([Parameter(Mandatory)][string]$Repository)
     $root = [IO.Path]::GetFullPath($Repository).TrimEnd('\', '/')
-    $common = (& git -C $root rev-parse --git-common-dir 2>$null | Select-Object -First 1)
-    if ($LASTEXITCODE -ne 0) { throw "Not a git worktree: $root" }
+    # Finish the native process before selecting the first line. No PowerShell
+    # native-error stream is involved, even when a caller redirects all streams.
+    $commonLines = @(Get-UESTCGitLines $root @('rev-parse', '--git-common-dir'))
+    if ($commonLines.Count -eq 0) { throw "Not a git worktree: $root (git returned no common directory)" }
+    $common = $commonLines[0]
     if (-not [IO.Path]::IsPathRooted($common)) { $common = Join-Path $root $common }
     $primary = Split-Path ([IO.Path]::GetFullPath($common)) -Parent
     $worktrees = Join-Path (Split-Path $primary -Parent) ((Split-Path $primary -Leaf) + '.wt')
@@ -148,9 +151,10 @@ function ConvertTo-UESTCProcessArgument {
 
 function Invoke-UESTCProcess {
     param([Parameter(Mandatory)][string]$Executable, [string[]]$Arguments = @(),
-        [Parameter(Mandatory)][string]$WorkingDirectory, [Parameter(Mandatory)][string]$Log,
-        [int]$TimeoutSeconds = 1800, [switch]$AllowFailure, [switch]$Visible)
-    $null = [IO.Directory]::CreateDirectory((Split-Path $Log -Parent))
+        [Parameter(Mandatory)][string]$WorkingDirectory, [string]$Log = '',
+        [int]$TimeoutSeconds = 1800, [switch]$AllowFailure, [switch]$Visible,
+        [int[]]$SuccessExitCodes = @(0), [Text.Encoding]$TextEncoding = $null)
+    if ($Log) { $null = [IO.Directory]::CreateDirectory((Split-Path $Log -Parent)) }
     $info = New-Object Diagnostics.ProcessStartInfo
     $info.FileName = $Executable
     $info.Arguments = (($Arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' ')
@@ -159,6 +163,10 @@ function Invoke-UESTCProcess {
     $info.CreateNoWindow = -not $Visible
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
+    if ($TextEncoding) {
+        $info.StandardOutputEncoding = $TextEncoding
+        $info.StandardErrorEncoding = $TextEncoding
+    }
     $process = New-Object Diagnostics.Process
     $process.StartInfo = $info
     $started = $false
@@ -171,19 +179,49 @@ function Invoke-UESTCProcess {
         while (-not $process.WaitForExit(500)) {
             if ([DateTime]::UtcNow -ge $deadline) { throw "Process timeout: $Executable" }
         }
-        $output = $stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()
-        [IO.File]::WriteAllText($Log, $output, (New-Object Text.UTF8Encoding $false))
-        $result = [pscustomobject]@{ ExitCode = $process.ExitCode; Output = $output; Log = $Log }
-        if (-not $AllowFailure -and $result.ExitCode -ne 0) { throw "Exit $($result.ExitCode): $Executable. See $Log" }
+        $stdoutText = $stdout.GetAwaiter().GetResult()
+        $stderrText = $stderr.GetAwaiter().GetResult()
+        $output = $stdoutText + $stderrText
+        if ($Log) { [IO.File]::WriteAllText($Log, $output, (New-Object Text.UTF8Encoding $false)) }
+        $result = [pscustomobject]@{ ExitCode = $process.ExitCode; StdOut = $stdoutText; StdErr = $stderrText; Output = $output; Log = $Log }
+        if (-not $AllowFailure -and $result.ExitCode -notin $SuccessExitCodes) {
+            $location = if ($Log) { " See $Log." } else { '' }
+            $diagnostic = if ($stderrText.Trim()) { $stderrText.Trim() } else { $stdoutText.Trim() }
+            $failure = New-Object InvalidOperationException("Exit $($result.ExitCode): $Executable.$location`n$diagnostic")
+            $failure.Data['ExitCode'] = $result.ExitCode
+            $failure.Data['StdOut'] = $stdoutText
+            $failure.Data['StdErr'] = $stderrText
+            throw $failure
+        }
         return $result
     } finally {
         if ($started -and -not $process.HasExited) {
             $process.Kill()
             $process.WaitForExit()
-            [IO.File]::WriteAllText($Log, ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()), (New-Object Text.UTF8Encoding $false))
+            if ($Log) { [IO.File]::WriteAllText($Log, ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()), (New-Object Text.UTF8Encoding $false)) }
         }
         $process.Dispose()
     }
+}
+
+function Invoke-UESTCGit {
+    param([Parameter(Mandatory)][string]$Repository, [string[]]$Arguments = @(),
+        [int[]]$SuccessExitCodes = @(0), [string]$Log = '')
+    $root = [IO.Path]::GetFullPath($Repository)
+    $result = Invoke-UESTCProcess git (@('-C', $root, '-c', 'core.quotepath=false') + $Arguments) $root $Log `
+        -SuccessExitCodes $SuccessExitCodes -TextEncoding ([Text.Encoding]::UTF8)
+    if ($result.StdErr.Trim()) {
+        # Git often sends ordinary progress and CRLF notices to stderr with exit 0.
+        # Preserve that diagnostic as a warning, never as a native ErrorRecord.
+        Write-Warning -Message ("git diagnostic (exit $($result.ExitCode)): " + $result.StdErr.Trim()) -WarningAction Continue
+    }
+    return $result
+}
+
+function Get-UESTCGitLines {
+    param([Parameter(Mandatory)][string]$Repository, [string[]]$Arguments = @())
+    $result = Invoke-UESTCGit $Repository $Arguments
+    $result.StdOut -split '\r?\n' | Where-Object { $_.Length -gt 0 }
 }
 
 function Get-UESTCGodot {

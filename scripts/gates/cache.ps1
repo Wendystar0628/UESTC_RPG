@@ -13,7 +13,7 @@ function Get-UESTCInputHash {
     $parts.Add($sdk.Output.Trim())
     if (Test-Path -LiteralPath $Godot) { $engine = Get-Item -LiteralPath $Godot; $parts.Add("$($engine.Length)|$($engine.LastWriteTimeUtc.Ticks)") }
     $parts.Add(($Changes -join "`n"))
-    $parts.Add((@(& git -C $Root status --porcelain=v1 --untracked-files=all) -join "`n"))
+    $parts.Add((Invoke-UESTCGit $Root @('status', '--porcelain=v1', '--untracked-files=all')).StdOut)
     foreach ($path in (Get-UESTCFiles $Root | Where-Object { $_ -notmatch '^docs/|\.md$' })) {
         $absolute = Join-Path $Root $path
         if (Test-Path -LiteralPath $absolute -PathType Leaf) { $parts.Add($path + '=' + (Get-FileHash -LiteralPath $absolute -Algorithm SHA256).Hash) }

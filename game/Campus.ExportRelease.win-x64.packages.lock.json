@@ -1,0 +1,434 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "Godot.SourceGenerators": {
+        "type": "Direct",
+        "requested": "[4.7.2, )",
+        "resolved": "4.7.2",
+        "contentHash": "Utbu3S+af5/+SVRUlSZZJb2M52mcL3RbHl5sW6lmvRkG2klS/KFjZ+6ldAmOlp1mTqvxZ+5QsEvl/Dis7a4ZMA=="
+      },
+      "GodotSharp": {
+        "type": "Direct",
+        "requested": "[4.7.2, )",
+        "resolved": "4.7.2",
+        "contentHash": "7lbJgYB1o96H23sX0idzwhnY0DbRx0oJucYKP9xGQv5IcghlXUuxUv/xTMV+I1mW3Wh9uDdtuwtpwNurk2y7Fw=="
+      },
+      "Microsoft.CodeAnalysis.BannedApiAnalyzers": {
+        "type": "Direct",
+        "requested": "[5.6.0, )",
+        "resolved": "5.6.0",
+        "contentHash": "Kcobt3pnOdO0A+6CKiMHZdTEluJpsfxiV20axtZdmfBQnDmiWTKPJADlgAfdTuKNAnVarrkJa0UEGwuOo91muw=="
+      },
+      "campus.contracts": {
+        "type": "Project"
+      },
+      "campus.gen.acoustics": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.ambience": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.buildings": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.collision": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.diorama": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.fauna": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.furniture": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.ground": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.interior": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.interior.shell": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.interiorprops": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.outskirts": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.circulation": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.core": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.openings": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.roof": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.street": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.parts.stubs": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )"
+        }
+      },
+      "campus.gen.traces": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.vegetation": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.walkable": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.water": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.world": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.centereast": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.core": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.designboundary": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.designpublic": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.designwaterfront": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.libraryinterior": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.north": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.showcaseinteriors": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.south": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.gen.zones.west": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.pipeline.map": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
+      }
+    },
+    "net10.0/win-x64": {}
+  }
+}

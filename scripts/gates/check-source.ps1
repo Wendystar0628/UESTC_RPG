@@ -1,14 +1,13 @@
 function Get-UESTCFiles {
     param([string]$Root)
-    @(& git -C $Root -c core.quotepath=false ls-files --cached --others --exclude-standard) | Sort-Object -Unique
+    Get-UESTCGitLines $Root @('ls-files', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
 }
 
 function Get-UESTCChanges {
     param([string]$Root, [string]$BaseRef)
-    $files = @(& git -C $Root -c core.quotepath=false diff --name-only --diff-filter=ACDMRTUXB "$BaseRef...HEAD")
-    if ($LASTEXITCODE -ne 0) { throw "Cannot compare $BaseRef...HEAD" }
-    $files += @(& git -C $Root -c core.quotepath=false diff --name-only HEAD)
-    $files += @(& git -C $Root -c core.quotepath=false ls-files --others --exclude-standard)
+    $files = @(Get-UESTCGitLines $Root @('diff', '--name-only', '--diff-filter=ACDMRTUXB', "$BaseRef...HEAD"))
+    $files += @(Get-UESTCGitLines $Root @('diff', '--name-only', 'HEAD'))
+    $files += @(Get-UESTCGitLines $Root @('ls-files', '--others', '--exclude-standard'))
     @($files | Where-Object { $_ } | Sort-Object -Unique)
 }
 
@@ -17,10 +16,9 @@ function Test-UESTCCommentOnlyChange {
     if ($Path -notmatch '\.(cs|gdshader|gdshaderinc|glsl|glslinc)$') { return $false }
     $absolute = Join-Path $Root $Path
     if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { return $false }
-    $base = (& git -C $Root merge-base $BaseRef HEAD).Trim()
-    if ($LASTEXITCODE -ne 0) { return $false }
-    if (-not @(& git -C $Root ls-tree -r --name-only $base -- $Path).Count) { return $false }
-    $before = (@(& git -C $Root show "${base}:$Path") -join "`n").Replace("`r`n", "`n")
+    $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
+    if (-not @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $base, '--', $Path)).Count) { return $false }
+    $before = (Invoke-UESTCGit $Root @('show', "${base}:$Path")).StdOut.Replace("`r`n", "`n")
     $after = [IO.File]::ReadAllText($absolute).Replace("`r`n", "`n")
     # Raw strings can contain quote/comment sequences; conservatively run the gates for them.
     if ($before.Contains('"""') -or $after.Contains('"""')) { return $false }
@@ -43,8 +41,7 @@ function Test-UESTCOwnership {
     $exceptions = New-Object 'Collections.Generic.List[string]'
     $initialPaths = @()
     if ($D0 -and $Wp -eq 'WP-00') {
-        $initialPaths = @(& git -C $Root ls-tree -r --name-only main)
-        if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect D0 base tree.' }
+        $initialPaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', 'main'))
     }
     foreach ($path in $Changes) {
         $owner = $null
@@ -58,7 +55,7 @@ function Test-UESTCOwnership {
         else { $failures.Add("Ownership: $path belongs to '$owner', requested $Wp") }
     }
     $files = @(Get-UESTCFiles $Root)
-    $tracked = @(& git -C $Root -c core.quotepath=false ls-files --cached)
+    $tracked = @(Get-UESTCGitLines $Root @('ls-files', '--cached'))
     $uids = @{}
     foreach ($path in $files) {
         $absolute = Join-Path $Root $path

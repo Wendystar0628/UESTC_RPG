@@ -20,11 +20,11 @@ $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
 $godot = Get-UESTCGodot
 $work = Join-Path $root 'output/build/gates'
-$branch = (& git -C $root branch --show-current).Trim()
+$branch = (Invoke-UESTCGit $root @('branch', '--show-current')).StdOut.Trim()
 if (-not $BaseRef) {
     $BaseRef = 'main'
     if ($branch -eq 'main') {
-        $upstream = (& git -C $root for-each-ref '--format=%(upstream:short)' refs/heads/main) -join ''
+        $upstream = (Invoke-UESTCGit $root @('for-each-ref', '--format=%(upstream:short)', 'refs/heads/main')).StdOut.Trim()
         if (-not $upstream.Trim()) { throw 'main has no upstream; supply -BaseRef with the last published commit.' }
         $BaseRef = $upstream.Trim()
     }
@@ -36,7 +36,7 @@ if ($D0 -and $Wp -ne 'WP-00') { throw '-D0 belongs to WP-00.' }
 $changes = @(Get-UESTCChanges $root $BaseRef)
 $runtimeChanges = @($changes | Where-Object { $_ -notmatch '^docs/|\.md$|^\.collab/' })
 if (-not ($D0 -or $Full -or $Smoke -or $Only.Count)) {
-    $existingBasePaths = @(& git -C $root ls-tree -r --name-only $BaseRef)
+    $existingBasePaths = @(Get-UESTCGitLines $root @('ls-tree', '-r', '--name-only', $BaseRef))
     $runtimeChanges = @($runtimeChanges | Where-Object {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
