@@ -73,6 +73,8 @@ gates: [G1, G2, G3, G4, G5, G6]
 | --- | --- | --- | --- |
 | `scripts/data/build_dataset.py` | `pipeline/` | WP-08 | Python OSM 管线整体迁移；输出写到 `game/data/maps/<地图>/`，脚本加 `--map`（SYS-MAPS §2.1） |
 | `data/raw/osm-campus.json` | `pipeline/raw/qingshuihe/` | WP-08 | OSM 快照；原始数据按图放 `pipeline/raw/<地图>/` |
+| `data/raw/osm-outskirts.json`、`data/raw/osm-outskirts.overpassql` | `pipeline/raw/qingshuihe/` | WP-47 | 外围的 Overpass 快照（2026-10-14）与查询语句，`outskirts.json` 由它生成（WLD-OUTSKIRTS §6） |
+| `data/building-levels.json` | `pipeline/` | WP-08 | OSM 缺少或记错高度与层数的建筑的补充数据，以及各类别的层高；管线据此算楼高，来源记在 `levelsBasis` |
 | `public/data/qingshuihe/campus.json` | `game/data/maps/qingshuihe/campus.json` | WP-08 | 格式留用，只增不改。实体 ID 的前缀 `qsh:` 是数据，不是地图 ID，保持不动（SYS-MAPS §2.1） |
 | `data/categories.json`、`data/place-enrichments.json` | `pipeline/` | WP-08 | 管线输入 |
 | `data/building-profiles.json`、`scripts/assets/prepare_building_profiles.py` | `pipeline/` | WP-08 | 留家族划分和照片引用，去掉材质键。家族划分由管线写进 `campus.json` 的建筑要素（新增字段，只增不改）；照片引用只供人工参考，不进导出包 |

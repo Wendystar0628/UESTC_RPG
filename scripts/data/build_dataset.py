@@ -1,7 +1,9 @@
 """Build the campus viewer's data from an OSM snapshot. Run --fetch to refresh it.
 
-Only source geometry is used. Roads without widths and buildings without heights
-are explicitly marked as estimates; no fabricated campus objects are added.
+Only source geometry is used. Roads without widths are marked as estimates.
+Building heights come from OSM tags, or from data/building-levels.json where OSM
+lacks or misrecords them (each entry records its basis); storey counts are turned
+into heights with per-category storey heights. No fabricated campus objects are added.
 """
 from __future__ import annotations
 
@@ -118,6 +120,10 @@ def main():
     cat_by_id = {c['id']: c for c in categories}
     enrichments = json.loads((ROOT / 'data/place-enrichments.json').read_text(encoding='utf-8'))
     enrichment_by_id = {e['sourceId']: e for e in enrichments['entries']}
+    # Heights and storey counts that OSM lacks or records wrongly, plus storey heights by category.
+    building_levels = json.loads((ROOT / 'data/building-levels.json').read_text(encoding='utf-8'))
+    floor_heights = building_levels['floorHeights']
+    levels_by_id = {e['sourceId']: e for e in building_levels['entries']}
     projector = Transformer.from_crs('EPSG:4326', 'EPSG:32648', always_xy=True)
     e0, n0 = projector.transform(*ORIGIN)
 
@@ -320,8 +326,17 @@ def main():
         tags, geometry = r['tags'], r['geometry']
         height_value = number(tags.get('height'))
         levels = number(tags.get('building:levels'))
+        levels_basis = 'osm' if levels else None
+        extra = levels_by_id.get(r['sourceId']) if r['kind'] == 'building' else None
+        if extra:
+            if extra.get('height'):
+                height_value = extra['height']
+            if extra.get('levels'):
+                levels, levels_basis = extra['levels'], extra['basis']
+        r['finalHeight'], r['finalLevels'], r['levelsBasis'] = height_value, levels, levels_basis
         status = 'source' if height_value else 'estimated' if levels else 'unknown'
-        render_height = height_value or levels * 3.3 if (height_value or levels) else 10.0
+        floor_height = floor_heights.get(r['category'], floor_heights['unknown'])
+        render_height = height_value or levels * floor_height if (height_value or levels) else 10.0
         if r['kind'] != 'building':
             render_height = 0
         render_geometry = geometry
@@ -345,7 +360,7 @@ def main():
         r['anchor'] = [round(anchor.x, 2), round(render_height, 2), round(anchor.y, 2)]
         r['bounds'] = [round(v, 2) for v in geometry.bounds]
         if polys:
-            features.append({'id': feature_id, 'entityId': r['entityId'], 'kind': r['kind'], 'polygons': polys, 'height': round(render_height, 2), 'heightStatus': status, 'category': r['category'], 'sport': tags.get('sport'), 'roadType': tags.get('highway'), 'widthEstimated': width is not None and not tags.get('width')})
+            features.append({'id': feature_id, 'entityId': r['entityId'], 'kind': r['kind'], 'polygons': polys, 'height': round(render_height, 2), 'heightStatus': status, 'levels': levels, 'levelsBasis': levels_basis, 'category': r['category'], 'sport': tags.get('sport'), 'roadType': tags.get('highway'), 'widthEstimated': width is not None and not tags.get('width')})
 
     def descendant_features(r):
         return [r['featureId']] + [fid for b in buildings if b.get('parent') is r for fid in descendant_features(b)]
@@ -373,7 +388,7 @@ def main():
         entity_bounds = [round(v, 2) for v in group_geometry.bounds]
         description = enrichment.get('description') or tags.get('description:zh') or tags.get('description') or ''
         priority = 3 if r['category'] == 'library' or name in ('品学楼', '立人楼', '主楼') else 2 if original_name and r['category'] in ('entrance', 'dining', 'research', 'medical', 'sport') else 1 if original_name else 0
-        entities.append({'id': r['entityId'], 'name': name, 'named': bool(original_name), 'aliases': aliases, 'category': r['category'], 'subcategory': r['subcategory'], 'icon': (subtype or category)['icon'], 'categoryBasis': r['categoryBasis'], 'kind': r['kind'], 'description': description, 'featureIds': entity_features, 'anchor': r['anchor'], 'bounds': entity_bounds, 'priority': priority, 'parentId': parent['entityId'] if parent else None, 'parentName': parent['tags'].get('name') if parent else None, 'locationStatus': 'point' if r['geometry'].geom_type == 'Point' else 'geometry', 'height': number(tags.get('height')), 'levels': number(tags.get('building:levels')), 'source': 'https://www.openstreetmap.org/' + r['sourceId'], 'updatedAt': elements[tuple([r['sourceId'].split('/')[0], int(r['sourceId'].split('/')[1])])].get('timestamp'), 'sourceTags': {k: tags[k] for k in ('building', 'amenity', 'leisure', 'sport', 'office', 'opening_hours', 'access', 'wheelchair', 'height', 'building:levels') if k in tags}})
+        entities.append({'id': r['entityId'], 'name': name, 'named': bool(original_name), 'aliases': aliases, 'category': r['category'], 'subcategory': r['subcategory'], 'icon': (subtype or category)['icon'], 'categoryBasis': r['categoryBasis'], 'kind': r['kind'], 'description': description, 'featureIds': entity_features, 'anchor': r['anchor'], 'bounds': entity_bounds, 'priority': priority, 'parentId': parent['entityId'] if parent else None, 'parentName': parent['tags'].get('name') if parent else None, 'locationStatus': 'point' if r['geometry'].geom_type == 'Point' else 'geometry', 'height': r.get('finalHeight'), 'levels': r.get('finalLevels'), 'levelsBasis': r.get('levelsBasis'), 'source': 'https://www.openstreetmap.org/' + r['sourceId'], 'updatedAt': elements[tuple([r['sourceId'].split('/')[0], int(r['sourceId'].split('/')[1])])].get('timestamp'), 'sourceTags': {k: tags[k] for k in ('building', 'amenity', 'leisure', 'sport', 'office', 'opening_hours', 'access', 'wheelchair', 'height', 'building:levels') if k in tags}})
         if r.get('categorySourceId'):
             entities[-1]['categorySourceId'] = r['categorySourceId']
         # Retain the tags that explain the additional source-based categories.
@@ -381,8 +396,8 @@ def main():
         if enrichment:
             entities[-1]['enrichment'] = {'reviewedAt': enrichments['reviewedAt'], 'evidence': enrichment['evidence'], 'memberSources': ['https://www.openstreetmap.org/' + p['sourceId'] for p in grouped if p is not r]}
     bounds = list(boundary.bounds)
-    stats = {'buildings': len(buildings), 'places': len(entities), 'namedPlaces': sum(e['named'] for e in entities), 'sourceHeights': sum(number(b['tags'].get('height')) is not None for b in buildings), 'levelHeights': sum(number(b['tags'].get('height')) is None and number(b['tags'].get('building:levels')) is not None for b in buildings), 'features': len(features), 'categories': dict(Counter(e['category'] for e in entities))}
-    payload = {'meta': {'name': '电子科技大学清水河校区', 'date': datetime.fromtimestamp(raw_path.stat().st_mtime, timezone.utc).date().isoformat(), 'source': URL, 'license': 'ODbL 1.0 · © OpenStreetMap contributors', 'origin': ORIGIN, 'crs': 'EPSG:32648', 'axes': 'x east, y up, z south', 'bounds': bounds, 'areaM2': round(boundary.area), 'stats': stats, 'issues': geometry_issues, 'heightNote': '来源高度按标签显示；层数按3.3米/层估算；未知高度统一以10米示意。地面为相对平面。'}, 'categories': categories, 'boundary': [[[round(x, 2), round(z, 2)] for x, z in boundary.exterior.coords]], 'features': features, 'entities': entities}
+    stats = {'buildings': len(buildings), 'places': len(entities), 'namedPlaces': sum(e['named'] for e in entities), 'sourceHeights': sum(number(b['tags'].get('height')) is not None for b in buildings), 'levelHeights': sum(number(b['tags'].get('height')) is None and number(b['tags'].get('building:levels')) is not None for b in buildings), 'features': len(features), 'supplementedLevels': sum(1 for b in buildings if b.get('levelsBasis') not in (None, 'osm')), 'categories': dict(Counter(e['category'] for e in entities))}
+    payload = {'meta': {'name': '电子科技大学清水河校区', 'date': datetime.fromtimestamp(raw_path.stat().st_mtime, timezone.utc).date().isoformat(), 'source': URL, 'license': 'ODbL 1.0 · © OpenStreetMap contributors', 'origin': ORIGIN, 'crs': 'EPSG:32648', 'axes': 'x east, y up, z south', 'bounds': bounds, 'areaM2': round(boundary.area), 'stats': stats, 'issues': geometry_issues, 'heightNote': '有实测高度的用实测值（OSM 标签，或 data/building-levels.json 补的值）；只有层数的按类别层高估算（data/building-levels.json 的 floorHeights）；OSM 缺层数或记错的楼按补充数据，来源记在 levelsBasis。地面为相对平面。'}, 'categories': categories, 'boundary': [[[round(x, 2), round(z, 2)] for x, z in boundary.exterior.coords]], 'features': features, 'entities': entities}
     assert entities and features and any(e['category'] == 'library' for e in entities), 'Expected campus objects missing'
     output = ROOT / 'public/data/qingshuihe/campus.json'
     output.parent.mkdir(parents=True, exist_ok=True)
