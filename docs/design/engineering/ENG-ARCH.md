@@ -323,7 +323,7 @@ game/data/maps/qingshuihe/lighting-schedule.json   WP-39  灯光时刻表
 game/data/maps/qingshuihe/backdrop.json   WP-22  截面、雾海、远景环、雪山的参数
 game/data/maps/qingshuihe/sky.json    WP-40  与地理有关的天空参数
 game/data/maps/qingshuihe/review.json   WP-27  本图的审查视角与路线（ENG-GATES §1）
-game/data/maps/qingshuihe/cinematics/   WP-49a  过场数据（SYS-TITLE §8.1）
+game/data/maps/qingshuihe/cinematics/   WP-49b  过场数据（SYS-TITLE §8.1；格式与播放器归 49a）
 game/data/maps/qingshuihe/audio/      WP-53b、WP-53c 按文件分（SYS-AUDIO §21.1）
 game/data/maps/qingshuihe/nav/        WP-44  路线与观景点的手写数据（WLD-INTERIORS §13）
 game/data/maps/qingshuihe/incidents.json   WP-26  偶发事件清单：事件 ID、路线实体、选树与选灯的规则引用、各版本开关；schema 同包（SYS-MOTION §10）

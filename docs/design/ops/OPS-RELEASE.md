@@ -22,7 +22,7 @@ gates: [G6]
 
 ### 分工
 
-- **WP-00（主代理）**：`version.txt`、构建信息的生成步骤、`project.godot` 里的正式目录名、根目录的 `LICENSE` 与 `README.md`；发版时改版本号、打标签、上传发布页；
+- **WP-00（Astra 搭建，版本号与发版由主代理 Opus 负责，ENG-TEAM）**：`version.txt`（初值 `0.1.0`）、构建信息的生成步骤、`project.godot` 里的正式目录名、根目录的 `LICENSE` 与 `README.md`；发版时改版本号、打标签、上传发布页；
 - **WP-01**：导出入口 `scripts/release/`；日志与诊断导出（ENG-PERF §12.6）；
 - **WP-02**：导出时打各图的启动集 `boot_<地图>.pck`，由导出入口调用；
 - **WP-08**：打地图数据包，外围部分由 WP-47 提供（§5）；
