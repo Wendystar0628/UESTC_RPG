@@ -1,0 +1,519 @@
+{
+  "version": 1,
+  "regions": [
+    {
+      "id": "core",
+      "name": {
+        "zh": "核心区",
+        "en": "Core"
+      }
+    },
+    {
+      "id": "south",
+      "name": {
+        "zh": "南区",
+        "en": "South"
+      }
+    },
+    {
+      "id": "west",
+      "name": {
+        "zh": "西区",
+        "en": "West"
+      }
+    },
+    {
+      "id": "northwest",
+      "name": {
+        "zh": "西北区",
+        "en": "Northwest"
+      }
+    },
+    {
+      "id": "north",
+      "name": {
+        "zh": "北部生活区",
+        "en": "North Residential"
+      }
+    },
+    {
+      "id": "center",
+      "name": {
+        "zh": "中部",
+        "en": "Central"
+      }
+    },
+    {
+      "id": "east",
+      "name": {
+        "zh": "东区",
+        "en": "East"
+      }
+    }
+  ],
+  "places": [
+    {
+      "id": "qsh:way:806848396",
+      "name": {
+        "zh": "图书馆",
+        "en": "Library"
+      },
+      "parent": "core"
+    },
+    {
+      "id": "qsh:relation:7849759",
+      "name": {
+        "zh": "西湖",
+        "en": "West Lake"
+      },
+      "parent": "core"
+    },
+    {
+      "id": "qsh:relation:7849760",
+      "name": {
+        "zh": "东湖",
+        "en": "East Lake"
+      },
+      "parent": "south"
+    },
+    {
+      "id": "qsh:way:217855275",
+      "name": {
+        "zh": "体育馆",
+        "en": "Gymnasium"
+      },
+      "parent": "south"
+    },
+    {
+      "id": "qsh:way:217855279",
+      "name": {
+        "zh": "游泳馆",
+        "en": "Swimming Hall"
+      },
+      "parent": "south"
+    },
+    {
+      "id": "qsh:way:808264788",
+      "name": {
+        "zh": "体育场",
+        "en": "Stadium"
+      },
+      "parent": "south"
+    },
+    {
+      "id": "qsh:way:217855231",
+      "name": {
+        "zh": "综合训练馆",
+        "en": "Training Hall"
+      },
+      "parent": "east"
+    },
+    {
+      "id": "qsh:relation:11583700",
+      "name": {
+        "zh": "田径场",
+        "en": "Athletics Field"
+      },
+      "parent": "east"
+    },
+    {
+      "id": "qsh:relation:11032065",
+      "name": {
+        "zh": "创新中心",
+        "en": "Innovation Center"
+      },
+      "parent": "west"
+    },
+    {
+      "id": "qsh:relation:17732622",
+      "name": {
+        "zh": "成电国际创新中心",
+        "en": "International Innovation Center"
+      },
+      "parent": "west"
+    },
+    {
+      "id": "qsh:relation:14153711",
+      "name": {
+        "zh": "六号科研楼",
+        "en": "Research Building 6"
+      },
+      "parent": "west"
+    },
+    {
+      "id": "qsh:relation:11031411",
+      "name": {
+        "zh": "电子科学技术研究院大楼",
+        "en": "Institute of Electronic Science and Technology"
+      },
+      "parent": "west"
+    },
+    {
+      "id": "qsh:relation:11665640",
+      "name": {
+        "zh": "四号科研楼",
+        "en": "Research Building 4"
+      },
+      "parent": "northwest"
+    },
+    {
+      "id": "qsh:relation:8426842",
+      "name": {
+        "zh": "五号科研楼",
+        "en": "Research Building 5"
+      },
+      "parent": "northwest"
+    },
+    {
+      "id": "qsh:way:570145228",
+      "name": {
+        "zh": "荟文楼",
+        "en": "Huiwen Building"
+      },
+      "parent": "northwest"
+    },
+    {
+      "id": "qsh:way:683651630",
+      "name": {
+        "zh": "电子科技大学医院",
+        "en": "University Hospital"
+      },
+      "parent": "northwest"
+    },
+    {
+      "id": "qsh:way:596973487",
+      "name": {
+        "zh": "银杏苑",
+        "en": "Yinxing Court"
+      },
+      "parent": "north"
+    },
+    {
+      "id": "qsh:way:544136506",
+      "name": {
+        "zh": "春晖苑",
+        "en": "Chunhui Court"
+      },
+      "parent": "north"
+    },
+    {
+      "id": "qsh:way:574644721",
+      "name": {
+        "zh": "思学苑",
+        "en": "Sixue Court"
+      },
+      "parent": "center"
+    },
+    {
+      "id": "qsh:relation:11127418",
+      "name": {
+        "zh": "基础实验大楼",
+        "en": "Basic Experiment Building"
+      },
+      "parent": "center"
+    },
+    {
+      "id": "qsh:relation:11334251",
+      "name": {
+        "zh": "一号科研实验楼",
+        "en": "Research Laboratory Building 1"
+      },
+      "parent": "center"
+    }
+  ],
+  "labels": [
+    {
+      "id": "region:core",
+      "kind": "region",
+      "ref": "core",
+      "at": [
+        -260,
+        80
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:south",
+      "kind": "region",
+      "ref": "south",
+      "at": [
+        0,
+        620
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:west",
+      "kind": "region",
+      "ref": "west",
+      "at": [
+        -610,
+        150
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:northwest",
+      "kind": "region",
+      "ref": "northwest",
+      "at": [
+        -250,
+        -490
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:north",
+      "kind": "region",
+      "ref": "north",
+      "at": [
+        140,
+        -650
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:center",
+      "kind": "region",
+      "ref": "center",
+      "at": [
+        270,
+        -170
+      ],
+      "priority": 100
+    },
+    {
+      "id": "region:east",
+      "kind": "region",
+      "ref": "east",
+      "at": [
+        650,
+        150
+      ],
+      "priority": 100
+    },
+    {
+      "id": "label:qsh:way:806848396",
+      "kind": "landmark",
+      "ref": "qsh:way:806848396",
+      "at": [
+        -193.44,
+        51.04
+      ],
+      "priority": 80
+    },
+    {
+      "id": "label:qsh:relation:7849759",
+      "kind": "place",
+      "ref": "qsh:relation:7849759",
+      "at": [
+        -410.45,
+        37.86
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:7849760",
+      "kind": "place",
+      "ref": "qsh:relation:7849760",
+      "at": [
+        127.0,
+        390.35
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:217855275",
+      "kind": "landmark",
+      "ref": "qsh:way:217855275",
+      "at": [
+        -233.28,
+        756.57
+      ],
+      "priority": 80
+    },
+    {
+      "id": "label:qsh:way:217855279",
+      "kind": "place",
+      "ref": "qsh:way:217855279",
+      "at": [
+        -103.12,
+        740.82
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:808264788",
+      "kind": "place",
+      "ref": "qsh:way:808264788",
+      "at": [
+        83.64,
+        771.79
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:217855231",
+      "kind": "landmark",
+      "ref": "qsh:way:217855231",
+      "at": [
+        548.05,
+        21.34
+      ],
+      "priority": 80
+    },
+    {
+      "id": "label:qsh:relation:11583700",
+      "kind": "place",
+      "ref": "qsh:relation:11583700",
+      "at": [
+        616.19,
+        216.09
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:11032065",
+      "kind": "landmark",
+      "ref": "qsh:relation:11032065",
+      "at": [
+        -561.78,
+        116.98
+      ],
+      "priority": 80
+    },
+    {
+      "id": "label:qsh:relation:17732622",
+      "kind": "landmark",
+      "ref": "qsh:relation:17732622",
+      "at": [
+        -780.27,
+        466.02
+      ],
+      "priority": 80
+    },
+    {
+      "id": "label:qsh:relation:14153711",
+      "kind": "place",
+      "ref": "qsh:relation:14153711",
+      "at": [
+        -692.97,
+        194.85
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:11031411",
+      "kind": "place",
+      "ref": "qsh:relation:11031411",
+      "at": [
+        -434.96,
+        -199.93
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:11665640",
+      "kind": "place",
+      "ref": "qsh:relation:11665640",
+      "at": [
+        -379.43,
+        -330.12
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:8426842",
+      "kind": "place",
+      "ref": "qsh:relation:8426842",
+      "at": [
+        -314.24,
+        -512.0
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:570145228",
+      "kind": "place",
+      "ref": "qsh:way:570145228",
+      "at": [
+        -254.57,
+        -608.49
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:683651630",
+      "kind": "place",
+      "ref": "qsh:way:683651630",
+      "at": [
+        -165.6,
+        -711.7
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:596973487",
+      "kind": "place",
+      "ref": "qsh:way:596973487",
+      "at": [
+        25.4,
+        -431.91
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:544136506",
+      "kind": "place",
+      "ref": "qsh:way:544136506",
+      "at": [
+        329.79,
+        -602.35
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:way:574644721",
+      "kind": "place",
+      "ref": "qsh:way:574644721",
+      "at": [
+        342.88,
+        -262.34
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:11127418",
+      "kind": "place",
+      "ref": "qsh:relation:11127418",
+      "at": [
+        20.97,
+        -35.67
+      ],
+      "priority": 60
+    },
+    {
+      "id": "label:qsh:relation:11334251",
+      "kind": "place",
+      "ref": "qsh:relation:11334251",
+      "at": [
+        -14.81,
+        -168.79
+      ],
+      "priority": 60
+    },
+    {
+      "id": "water:mist-sea",
+      "kind": "water",
+      "name": {
+        "zh": "雾海",
+        "en": "Sea of Mist"
+      },
+      "at": [
+        0,
+        1490
+      ],
+      "priority": 20
+    }
+  ]
+}
