@@ -1,0 +1,125 @@
+{
+ "schema": 1,
+ "entries": [
+  {
+   "token": "water.near.lit",
+   "id": 214,
+   "albedo": [
+    0.6902,
+    0.8392,
+    0.8039
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.near.shade",
+   "id": 215,
+   "albedo": [
+    0.6902,
+    0.8392,
+    0.8039
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "water.mid.lit",
+   "id": 216,
+   "albedo": [
+    0.5059,
+    0.7451,
+    0.698
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.mid.shade",
+   "id": 217,
+   "albedo": [
+    0.5059,
+    0.7451,
+    0.698
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "water.far.lit",
+   "id": 218,
+   "albedo": [
+    0.3451,
+    0.6745,
+    0.6471
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.far.shade",
+   "id": 219,
+   "albedo": [
+    0.3451,
+    0.6745,
+    0.6471
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "water.deep.lit",
+   "id": 220,
+   "albedo": [
+    0.1098,
+    0.4863,
+    0.5333
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.deep.shade",
+   "id": 221,
+   "albedo": [
+    0.1098,
+    0.4863,
+    0.5333
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "water.foam.lit",
+   "id": 222,
+   "albedo": [
+    0.9137,
+    0.9216,
+    0.9373
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.foam.shade",
+   "id": 223,
+   "albedo": [
+    0.9137,
+    0.9216,
+    0.9373
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  }
+ ]
+}
