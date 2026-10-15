@@ -1477,21 +1477,22 @@
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 9.2k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 10.7k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
-- ENG-TEAM §0 结论 · L34 · 1.9k
-  - ★ ENG-TEAM §0.1 接入要点 · L64 · 492
-- ENG-TEAM §1 谁擅长什么 · L75 · 675
-- ENG-TEAM §2 包的归属 · L93 · 681
-- ENG-TEAM §3 开工顺序 · L105 · 1.0k
-- ENG-TEAM §4 交接文件 · L118 · 1.0k
-- ENG-TEAM §5 审美与契约的交叉评审 · L139 · 434
-- ENG-TEAM §6 怎么开子代理 · L146 · 2.4k
-  - ENG-TEAM §6.1 Opus · L165 · 129
-  - ENG-TEAM §6.2 Astra · L171 · 593
-  - ENG-TEAM §6.3 旁路 Sol 会话 · L196 · 843
-- ENG-TEAM §7 待验证（P0） · L218 · 210
+- ENG-TEAM §0 结论 · L34 · 2.1k
+  - ★ ENG-TEAM §0.1 接入要点 · L65 · 574
+- ENG-TEAM §1 谁擅长什么 · L77 · 675
+- ENG-TEAM §2 包的归属 · L95 · 681
+- ENG-TEAM §3 开工顺序 · L107 · 1.0k
+- ENG-TEAM §4 交接文件 · L120 · 1.0k
+- ENG-TEAM §5 审美与契约的交叉评审 · L141 · 434
+- ENG-TEAM §6 怎么开子代理 · L148 · 3.6k
+  - ENG-TEAM §6.1 Opus · L167 · 129
+  - ENG-TEAM §6.2 Astra · L173 · 593
+  - ENG-TEAM §6.3 旁路 Sol 会话 · L198 · 843
+  - ENG-TEAM §6.4 Sonnet 会话（第二个 Claude 账号） · L220 · 1.2k
+- ENG-TEAM §7 待验证（P0） · L245 · 210
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 
