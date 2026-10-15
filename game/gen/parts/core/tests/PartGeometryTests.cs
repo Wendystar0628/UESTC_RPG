@@ -76,7 +76,7 @@ public sealed class PartGeometryTests
             frontArea += Vector3.Cross(P(mesh, b) - P(mesh, a), P(mesh, c) - P(mesh, a)).Length() / 2;
         }
         Near(10.5, frontArea, 1e-6);
-        Check(mesh.Ao!.Any(v => v > 0), "Reveals have no local AO.");
+        Check(mesh.Ao!.Any(v => v < 1), "Reveals have no local occlusion.");
         ClosedClockwise(geometry);
         // A door is represented by a notch that connects to the bottom boundary.
         ClosedClockwise(PartGeometryKernel.WallPanel(new([new(-2, 0), new(-0.6f, 0), new(-0.6f, 2.1f), new(0.6f, 2.1f), new(0.6f, 0), new(2, 0), new(2, 3), new(-2, 3)]), 0.3f, Material));

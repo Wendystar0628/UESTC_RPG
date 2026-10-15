@@ -117,7 +117,9 @@ public static partial class PartGeometryKernel
                 var edge = EdgeNormal(a, b); var normal = GeometryMath.Add(GeometryMath.Scale(u, edge.X), GeometryMath.Scale(v, edge.Y));
                 var p0 = GeometryMath.Point(a, origin, u, v, axis, 0); var p1 = GeometryMath.Point(b, origin, u, v, axis, 0);
                 var p2 = GeometryMath.Point(b, origin, u, v, axis, depth); var p3 = GeometryMath.Point(a, origin, u, v, axis, depth);
-                AddStrip(writer, p0, p1, p2, p3, normal, normal, normal, r == 0 ? 0 : PartStyleDefaults.OpeningAo);
+                // OpeningAo remains the authored occlusion strength; only reveals reduce visibility.
+                var visibility = r == 0 ? 1f : 1f - PartStyleDefaults.OpeningAo;
+                AddStrip(writer, p0, p1, p2, p3, normal, normal, normal, visibility);
             }
         }
         return writer.Finish();
@@ -128,12 +130,12 @@ public static partial class PartGeometryKernel
         for (var i = 0; i < vertices.Length; i++) vertices[i] = writer.Vertex(GeometryMath.Point(polygon.Vertices[i], origin, u, v, axis, depth), normal, polygon.Vertices[i]);
         for (var i = 0; i < polygon.Indices.Length; i += 3) writer.Triangle(vertices[polygon.Indices[i]], vertices[polygon.Indices[i + 1]], vertices[polygon.Indices[i + 2]], normal);
     }
-    private static void AddStrip(GeometryWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 lowerNormal, Vector3 upperNormal, Vector3 outward, float ao = 0)
+    private static void AddStrip(GeometryWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 lowerNormal, Vector3 upperNormal, Vector3 outward, float visibility = 1)
     {
         var length = (float)Math.Sqrt(GeometryMath.Dot(GeometryMath.Sub(b, a), GeometryMath.Sub(b, a)));
         var height = (float)Math.Sqrt(GeometryMath.Dot(GeometryMath.Sub(d, a), GeometryMath.Sub(d, a)));
-        writer.Quad(writer.Vertex(a, lowerNormal, Vector2.Zero, ao), writer.Vertex(b, lowerNormal, new(length, 0), ao),
-            writer.Vertex(c, upperNormal, new(length, height), ao), writer.Vertex(d, upperNormal, new(0, height), ao), outward);
+        writer.Quad(writer.Vertex(a, lowerNormal, Vector2.Zero, visibility), writer.Vertex(b, lowerNormal, new(length, 0), visibility),
+            writer.Vertex(c, upperNormal, new(length, height), visibility), writer.Vertex(d, upperNormal, new(0, height), visibility), outward);
     }
     private static Vector2 EdgeNormal(Vector2 a, Vector2 b)
     {

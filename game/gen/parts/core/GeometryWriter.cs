@@ -38,13 +38,14 @@ internal sealed class GeometryWriter(ToonSpec material)
     private readonly List<Vector3> normals = [];
     private readonly List<Vector2> uvs = [];
     private readonly List<int> indices = [];
-    private readonly List<float> ao = [];
+    private readonly List<float> ambientVisibility = [];
 
-    internal int Vertex(Vector3 position, Vector3 normal, Vector2 uv, float ambient = 0)
+    // GeometryBundle.Ao is visibility: 1 is unoccluded, 0 is fully occluded.
+    internal int Vertex(Vector3 position, Vector3 normal, Vector2 uv, float visibility = 1)
     {
         GeometryMath.Finite(position, nameof(position)); GeometryMath.Finite(normal, nameof(normal));
         if (positions.Count >= 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices; split it before baking.");
-        positions.Add(position); normals.Add(normal); uvs.Add(uv); ao.Add(ambient);
+        positions.Add(position); normals.Add(normal); uvs.Add(uv); ambientVisibility.Add(visibility);
         return positions.Count - 1;
     }
     internal void Triangle(int a, int b, int c, Vector3 outward)
@@ -73,7 +74,7 @@ internal sealed class GeometryWriter(ToonSpec material)
             min = new(Math.Min(min.X, point.X), Math.Min(min.Y, point.Y), Math.Min(min.Z, point.Z));
             max = new(Math.Max(max.X, point.X), Math.Max(max.Y, point.Y), Math.Max(max.Z, point.Z));
         }
-        var mesh = new GeometryBundle(new(material), p, n, indices.ToArray(), ao.ToArray(), uv);
+        var mesh = new GeometryBundle(new(material), p, n, indices.ToArray(), ambientVisibility.ToArray(), uv);
         mesh.ValidateVertexData();
         return new([mesh], new(min, max));
     }
