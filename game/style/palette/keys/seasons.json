@@ -1,0 +1,85 @@
+{
+  "format": "campus.palette.seasons/1",
+  "owner": "WP-37",
+  "doc": "SYS-TIME §3.3；ART-SKYLIGHT §4.4、§6；ART-STYLE §7.1",
+  "notes": [
+    "在秋季基准关键帧上用 OKLCH 叠增量，再按 derive.json 推导材质色（SYS-TIME §3.3）。秋季增量为 0。",
+    "scope 给出每个关键帧上增量的权重；表里没写的关键帧权重为 0，scope 为 all 时全部为 1。",
+    "sky.zenith 的增量按 skyFalloff 从地平线（0）到天顶（1）分配到 5 段上，太阳侧与背阳侧相同。",
+    "key 的 toward：主光色在 OKLab 里向目标色混合 amount × 权重；chroma：主光彩度乘 1 + (mul − 1) × 权重。",
+    "fog 的 toward 只混 a、b（abAmount × 权重），L 另加 dL；visibilityMul 乘起雾与剪影距离；hazeMul 乘霾带高度。",
+    "shade.dr 叠到影明度比 r 上，结果再夹到 limits.rMax（白天格的上限，保证 SYS-TIME §8 白天 ΔL ≥ 0.13）。",
+    "limits.zenithMinC：正午天顶彩度不低于 0.15（SYS-TIME §3.4 正午太平），季节增量把它压低时夹回。",
+    "overrides 是季节专属覆盖（手调），按关键帧直接替换色名的值。"
+  ],
+  "skyFalloff": [0.0, 0.15, 0.4, 0.7, 1.0],
+  "scopes": {
+    "all": "all",
+    "day":    { "sunrise": 0.15, "earlyMorning": 0.5, "morning": 0.9, "noon": 1.0, "afternoon": 0.9, "golden": 0.3, "sunset": 0.15 },
+    "noon":   { "earlyMorning": 0.2, "morning": 0.6, "noon": 1.0, "afternoon": 0.6 },
+    "sunsetSide": { "golden": 0.5, "sunset": 1.0, "blueHour": 0.3 },
+    "fogDay": { "sunrise": 0.4, "earlyMorning": 0.8, "morning": 1.0, "noon": 1.0, "afternoon": 1.0, "golden": 0.5, "sunset": 0.4, "blueHour": 0.2 }
+  },
+  "limits": { "rMax": { "day": 0.85 }, "zenithMinC": { "noon": 0.15 } },
+  "seasons": {
+    "spring": {
+      "name": "春",
+      "sky": { "zenith": { "dL": 0.04, "dC": -0.02, "dh": -8.0 }, "scope": "all" },
+      "key": [ { "op": "toward", "color": "#FFF2DC", "amount": 0.5, "scope": "day" } ],
+      "shade": { "ambientSky": { "dC": 0.0, "dh": -10.0 }, "dr": 0.02, "scope": "all" },
+      "fog": { "toward": "#EEF0EC", "abAmount": 0.6, "dL": 0.03, "visibilityMul": 1.0, "hazeMul": 1.0, "scope": "fogDay" },
+      "post": { "glowIntensityMul": 1.3 },
+      "lampPoolGain": 1.0,
+      "overrides": []
+    },
+    "summer": {
+      "name": "夏",
+      "sky": { "zenith": { "dL": -0.03, "dC": 0.03, "dh": 0.0 }, "scope": "all" },
+      "key": [
+        { "op": "toward", "color": "#FFF8EC", "amount": 1.0, "scope": "noon" },
+        { "op": "chroma", "mul": 1.2, "scope": "sunsetSide" }
+      ],
+      "shade": { "ambientSky": { "dC": 0.01, "dh": -15.0 }, "dr": 0.0, "scope": "all" },
+      "fog": { "toward": null, "abAmount": 0.0, "dL": 0.0, "visibilityMul": 1.5, "hazeMul": 0.7, "scope": "all" },
+      "post": { "glowIntensityMul": 1.0 },
+      "lampPoolGain": 1.0,
+      "overrides": [
+        {
+          "what": "积雨云（白天）", "keys": ["morning", "noon", "afternoon"],
+          "colors": { "sky.cloudLit": "#FFFFFF", "sky.cloudRim": "#F4F8FF", "sky.cloudBelly": "#A8B8D8", "sky.cloudDeep": "#7A88B0" },
+          "skyFx": { "cloudAmountAdd": 0.10 }
+        },
+        {
+          "what": "傍晚火烧云", "keys": ["golden"],
+          "colors": { "sky.cloudLit": "#FFD8A0", "sky.cloudRim": "#FFA860", "sky.cloudBelly": "#D88A98", "sky.cloudDeep": "#9A78A8" },
+          "skyFx": { "cloudAmountAdd": 0.15 }
+        },
+        {
+          "what": "傍晚火烧云", "keys": ["sunset"],
+          "colors": { "sky.cloudLit": "#FFB070", "sky.cloudRim": "#FF8048", "sky.cloudBelly": "#C8687E", "sky.cloudDeep": "#8A5A90" },
+          "skyFx": { "cloudAmountAdd": 0.15 }
+        }
+      ]
+    },
+    "autumn": {
+      "name": "秋",
+      "sky": { "zenith": { "dL": 0.0, "dC": 0.0, "dh": 0.0 }, "scope": "all" },
+      "key": [],
+      "shade": { "ambientSky": { "dC": 0.0, "dh": 0.0 }, "dr": 0.0, "scope": "all" },
+      "fog": { "toward": null, "abAmount": 0.0, "dL": 0.0, "visibilityMul": 1.0, "hazeMul": 1.0, "scope": "all" },
+      "post": { "glowIntensityMul": 1.0 },
+      "lampPoolGain": 1.0,
+      "overrides": []
+    },
+    "winter": {
+      "name": "冬",
+      "sky": { "zenith": { "dL": 0.05, "dC": -0.03, "dh": 0.0 }, "scope": "all" },
+      "key": [ { "op": "toward", "color": "#FFEACC", "amount": 1.0, "scope": "noon" } ],
+      "shade": { "ambientSky": { "dC": 0.0, "dh": 0.0 }, "dr": 0.04, "scope": "all" },
+      "fog": { "toward": "#E4E2EC", "abAmount": 0.6, "dL": 0.0, "visibilityMul": 1.0, "hazeMul": 1.4, "scope": "fogDay" },
+      "post": { "glowIntensityMul": 1.0 },
+      "lampPoolGain": 1.5,
+      "overrides": []
+    }
+  }
+}

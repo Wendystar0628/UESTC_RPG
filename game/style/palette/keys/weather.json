@@ -1,0 +1,36 @@
+{
+  "format": "campus.palette.weather/1",
+  "owner": "WP-37",
+  "doc": "SYS-WEATHER §0 第 2 条、§2、§3、§7；ART-STYLE §3.6、§8.6；ART-SKYLIGHT §4.6",
+  "status": "主线版只留接口：参数取文档的初值，细调在主线闸口之后（ENG-WP §2.1 WP-37 后置细节）。",
+  "notes": [
+    "顺序：关键帧 → 四季修正与季节专属覆盖 → 本文件的天气修正 → 转场雾幕 → 介质（SYS-TIME §3.1）。晴天（天气向量全 0）修正量为 0。",
+    "输入只读天气向量 WeatherVec（SYS-WEATHER §8）：g = Overcast，p = Precip，k = PrecipKind（0 雨 → 1 雪），wet = Wet。",
+    "雨后初晴没有专门的分量：洗净度 washed = Wet × (1 − Overcast) × (1 − Precip)，由此给出饱和 +0.08 与天色彩度 +0.03（假设，待契约确认）。",
+    "r 的软光下限按 r' = r + g × (max(r, rFloor.base + rFloor.perOvercast × g) − r) 连续接入；文档写法 max(r, 0.88 + 0.04g) 在 g = 0 时会把晴天也抬到 0.88，所以乘 g 接入（假设）。"
+  ],
+  "keyEv": { "overcast": -1.0, "heavyRainExtra": -0.3 },
+  "shade": {
+    "rFloor": { "base": 0.88, "perOvercast": 0.04 },
+    "ambientSkyTarget": { "token": "weather.overcast", "c": 0.022, "h": 320 }
+  },
+  "sky": {
+    "overcastToken": "weather.overcast",
+    "overcast": { "minL": 0.72, "minC": 0.02, "h": 320, "c": 0.022, "rainLDrop": 0.05 },
+    "snowOvercast": "#B8B4CC",
+    "nightRainMinZenithL": 0.30,
+    "washedChromaAdd": 0.03
+  },
+  "washedSatAdd": 0.08,
+  "rainVegetationChromaMul": 1.15,
+  "cloudAmount": "replace",
+  "glowBloomAdd": { "fog": 0.065, "rain": 0.065 },
+  "tokens": {
+    "weather.overcast": { "c": 0.022, "h": 320, "l": 0.78, "note": "珍珠粉紫，L ≥ 0.72，禁止中性灰；雨天 L 再降 0.05" },
+    "weather.snowOvercast": "#B8B4CC",
+    "weather.nightRain": { "c": 0.05, "h": 300, "l": 0.34, "note": "暖紫，天顶 L ≥ 0.30" },
+    "weather.cbBase": "#5A6090",
+    "weather.fog": "#E4DCE4",
+    "weather.washedSky": "当前格天色，彩度 +0.03"
+  }
+}

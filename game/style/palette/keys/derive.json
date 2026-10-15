@@ -1,0 +1,59 @@
+{
+  "format": "campus.palette.derive/1",
+  "owner": "WP-37",
+  "doc": "ART-STYLE §3.2、§3.4、§8.3；SYS-TIME §3.1",
+  "notes": [
+    "受光色：L_lit = m × (1 − (1 − L_a)^litLift)；(a, b)_lit = m × (satGain × (a, b)_a + tintK × (a, b)_key)；m = min(1, (key.intensity / adaptRef)^(1/3))。",
+    "vegetationTintK：植被（按英雄帧定色的那一套）对主光偏色更敏感（叶片半透明、透光，ART-STYLE §5.6），所以清晨偏淡、日落偏金橙；只影响受光，影由固有色推导、不受影响。",
+    "vegetationWarmCap：植被受光彩度上限 = 英雄帧受光彩度 × (1 − k × max(0, 低暖光度 − 英雄帧的低暖光度))；低暖光度 = (1 − smoothstep(altDeg, x)) × smoothstep(keyC, 主光彩度)。草和叶在任何帧都不比英雄帧更艳，低太阳暖主光时再收，傍晚的草是暖黄绿、不是荧光色；受光色相也只在英雄帧受光色相 ± hueMax 内随主光走，绿叶不转进橄榄；直接给固有色的（秋季草坪），英雄帧上的参考彩度取 固有彩度 × satGain × albedoChromaGain。",
+    "chromaCap：固有色彩度 ≥ minAlbedoC 的有彩材质，受光彩度不超过 影彩度 / ratio（保住身份色，SYS-TIME §8 影 C ≥ 0.6 × 受光 C）；只在日出日落的强色光下起作用，不改明度与色相。",
+    "litLift 与 tintK 按默认格的登记值 wall.lit #FFE4BE（固有色 #E4DDD0）反解：默认格 m = 1。",
+    "影色按 ART-STYLE §3.2 的公式；另加三条：C1 再乘 m（暗光下彩度随明度同比缩，白天 m = 1 不影响）；黄橙护栏的范围见 shade.yellowGuard；绿色护栏 shade.greenGuard：绿色材质的最短方向朝黄（色相减小）时改向青转，免得日出日落的粉橙天光把绿影转进橄榄（与「黄橙不往绿转」对称）。",
+    "室内：第 2 行按影色公式，r 换成 interior.rIn，ambient.sky 换成 interior.warm；第 3 行 = 受光色彩度 × interior.litChromaMul、色相向 interior.orangeHue 最多转 interior.litHueMax。",
+    "植被（vegetation.json）：固有色只反解明度，(a, b) 直接取该季英雄帧的受光值；其他帧的受光 (a, b) = m × (satGain / satGain_英雄帧 × 固有 + vegetationTintK × (主光 − 主光_英雄帧))，所以英雄帧上逐值等于 vegetation.json 的受光值，影按 ART-STYLE §3.2 从这个固有色推导。",
+    "frameTokens：WP-37 每帧写进调色板第 0 行的随帧色名（色号 0–31 由登记表分配）；weather.snowOvercast、weather.nightRain、weather.fog、weather.washedSky 只是天气修正的混合目标，求值器直接改写天空与雾的色带，不占纹理列。"
+  ],
+  "lit": {
+    "adaptRef": 0.7,
+    "tintK": 0.45,
+    "vegetationTintK": 0.45,
+    "vegetationWarmCap": { "k": 0.3, "altDeg": [6.0, 25.0], "keyC": [0.03, 0.09], "hueMax": 12.0, "albedoChromaGain": 1.1 },
+    "chromaCap": { "ratio": 0.62, "minAlbedoC": 0.08 }
+  },
+  "shade": {
+    "chromaMulMax": 0.03,
+    "neutralCEdge": [0.06, 0.015],
+    "yellowGuard": [60.0, 100.0],
+    "greenGuard": [100.0, 160.0],
+    "oliveZone": [100.0, 150.0],
+    "greenRange": [100.0, 160.0],
+    "scaleChromaWithLight": true
+  },
+  "interior": {
+    "rIn": 0.80,
+    "litChromaMul": 1.2,
+    "orangeHue": 55.0,
+    "litHueMax": 5.0
+  },
+  "deep": { "lMul": 0.88, "cMul": 0.95 },
+  "swatchL": { "ambient.sky": 0.75, "interior.warm": 0.80 },
+  "shadowReference": "#DCDCDC",
+  "materialClasses": {
+    "building":   { "rMat": 1.00, "kC": 1.10, "dhMax": 8.0,  "steps": "two" },
+    "ground":     { "rMat": 1.00, "kC": 1.10, "dhMax": 8.0,  "steps": "two" },
+    "metal":      { "rMat": 0.95, "kC": 1.10, "dhMax": 8.0,  "steps": "twoHalf" },
+    "vegetation": { "rMat": 0.92, "kC": 0.85, "dhMax": 15.0, "steps": "three" },
+    "flower":     { "rMat": 1.05, "kC": 0.85, "dhMax": 15.0, "steps": "three" },
+    "fabric":     { "rMat": 1.08, "kC": 1.10, "dhMax": 8.0,  "steps": "soft" },
+    "water":      { "rMat": 1.10, "kC": 1.10, "dhMax": 8.0,  "steps": "two" },
+    "snow":       { "rMat": 1.00, "kC": 1.10, "dhMax": 8.0,  "steps": "two" }
+  },
+  "frameTokens": [
+    "sun.light", "ambient.sky", "bounce.ground", "interior.warm", "line.warm", "line.cool",
+    "shaft.near", "shaft.far", "rim", "glass.glare", "shadow.1", "fog.sun", "fog.anti",
+    "sky.sun.0", "sky.sun.1", "sky.sun.2", "sky.sun.3", "sky.sun.4",
+    "sky.anti.0", "sky.anti.1", "sky.anti.2", "sky.anti.3", "sky.anti.4",
+    "sky.cloudLit", "sky.cloudRim", "sky.cloudBelly", "sky.cloudDeep", "sky.moon",
+    "weather.overcast", "weather.cbBase"
+  ]
+}

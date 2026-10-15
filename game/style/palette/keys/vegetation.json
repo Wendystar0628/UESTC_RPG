@@ -1,0 +1,49 @@
+{
+  "format": "campus.palette.vegetation/1",
+  "owner": "WP-37",
+  "doc": "WLD-VEGETATION §2.3；SYS-TIME §3.1、§3.3；ART-STYLE §8.2",
+  "notes": [
+    "各季的受光值取自 WLD-VEGETATION §2.3，按该季的英雄帧光照给出；脚本按 derive.json 的受光公式反解出季相固有色，其余关键帧的受光与影一律推导。",
+    "影一栏（WLD-VEGETATION 斜杠后的值）只作对照，不进本文件。",
+    "seasonal：叶、草、作物，四季锚点 spring / summer / autumn / winter，进调色板第 4–63 行的季相行（受光、影各一行）。",
+    "季节值写成 { \"albedo\": \"#…\" } 时直接给固有色，受光按一般材质推导（主光偏色全量），不按英雄帧定色；目前没有条目这样写。",
+    "constant：开花色与穗，固有色四季不变，按 heroSeason 那一季的英雄帧反解；bloom.capsule 放第 0 行，不占季相行。",
+    "crop.* 由 WP-04 登记、WP-37 定值（SYS-TIME §3.3、WLD-OUTSKIRTS §4.5）：春新苗、夏稻田浓绿、秋金色稻茬、冬霜灰；油菜花复用 bloom.yellow。"
+  ],
+  "heroFrames": { "spring": "earlyMorning", "summer": "afternoon", "autumn": "golden", "winter": "noon" },
+  "seasonal": [
+    { "token": "ginkgo",     "name": "银杏",             "class": "vegetation", "lit": { "spring": "#B8DC70", "summer": "#6AA04A", "autumn": "#FFD94A", "winter": "#F0CC50" }, "check": { "autumn": { "deep": "#9A6C03" } } },
+    { "token": "metaseq",    "name": "水杉",             "class": "vegetation", "lit": { "spring": "#A8D47A", "summer": "#5A9A4A", "autumn": "#D9784A", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "cherry",     "name": "樱花与紫薇的叶",   "class": "vegetation", "lit": { "spring": "#A8C86A", "summer": "#6E9E4E", "autumn": "#E07A45", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "maple",      "name": "红枫",             "class": "vegetation", "lit": { "spring": "#E0604A", "summer": "#A04A4E", "autumn": "#D8483A", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "willow",     "name": "垂柳",             "class": "vegetation", "lit": { "spring": "#C8E27A", "summer": "#7AAE4A", "autumn": "#C9D37A", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "plum",       "name": "美人梅的叶",       "class": "vegetation", "lit": { "spring": "#A04A5E", "summer": "#7E3E52", "autumn": "#A8584A", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "deciduous",  "name": "杏玉兰海棠蜡梅红梅栾树的叶", "class": "vegetation", "lit": { "spring": "#A8CC66", "summer": "#74A44C", "autumn": "#E8C060", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "jacaranda",  "name": "蓝花楹的叶",       "class": "vegetation", "lit": { "spring": "#A8C878", "summer": "#78AA5A", "autumn": "#B8C46A", "winter": "#A8B070" } },
+    { "token": "hibiscus",   "name": "木芙蓉的叶",       "class": "vegetation", "lit": { "spring": "#A8C870", "summer": "#6E9E50", "autumn": "#9CB060", "winter": "#8A7476" }, "winterBare": true },
+    { "token": "camphor",    "name": "香樟",             "class": "vegetation", "lit": { "spring": "#679553", "summer": "#518837", "autumn": "#5E8C4A", "winter": "#558341" } },
+    { "token": "camphor.red","name": "香樟老叶（只在春季用）", "class": "vegetation", "lit": { "spring": "#C8805A", "summer": "#C8805A", "autumn": "#C8805A", "winter": "#C8805A" } },
+    { "token": "nanmu",      "name": "楠木与桂花",       "class": "vegetation", "lit": { "spring": "#54804B", "summer": "#44753A", "autumn": "#4E7A45", "winter": "#46713D" } },
+    { "token": "palm",       "name": "棕榈",             "class": "vegetation", "lit": { "spring": "#4E7048", "summer": "#4E7048", "autumn": "#4E7048", "winter": "#4E7048" } },
+    { "token": "photinia",   "name": "红叶石楠",         "class": "vegetation", "lit": { "spring": "#C04A3A", "summer": "#6A8048", "autumn": "#B8423A", "winter": "#A04838" } },
+    { "token": "loropetalum","name": "红花檵木",         "class": "vegetation", "lit": { "spring": "#9C4A5E", "summer": "#9C4A5E", "autumn": "#9C4A5E", "winter": "#9C4A5E" } },
+    { "token": "hedge",      "name": "黄绿矮绿篱",       "class": "vegetation", "lit": { "spring": "#D5D56D", "summer": "#C8C860", "autumn": "#C8C860", "winter": "#BBBB53" } },
+    { "token": "grass",      "name": "草坪",             "class": "vegetation", "lit": { "spring": "#A8CC5E", "summer": "#8CBC4A", "autumn": "#CAC165", "winter": "#A8A878" }, "note": "秋季默认格受光 #CAC165（OKLCH 0.80 / 0.115 / 104）：大面积草坪不发芥末黄，落金的暖意靠主光和天光；影落在 #71823E 附近" },
+    { "token": "reed",       "name": "芦苇芒草蒲苇的叶", "class": "vegetation", "lit": { "spring": "#9CC060", "summer": "#6E9E4E", "autumn": "#C8B878", "winter": "#B0A078" } },
+    { "token": "lotus",      "name": "荷叶与残荷",       "class": "vegetation", "lit": { "spring": "#8CBC5A", "summer": "#3E8A5A", "autumn": "#8A7A4A", "winter": "#6A5A48" } },
+    { "token": "tree.bare",  "name": "裸枝笔触",         "class": "vegetation", "lit": { "spring": "#8A7476", "summer": "#8A7476", "autumn": "#8A7476", "winter": "#8A7476" } },
+    { "token": "crop",       "name": "外围作物",         "class": "vegetation", "lit": { "spring": "#A8C860", "summer": "#5E9A48", "autumn": "#D8B460", "winter": "#B4B0A0" } }
+  ],
+  "constant": [
+    { "token": "bloom.pink",    "name": "樱花、木芙蓉",     "class": "flower", "lit": "#F6C6D4", "heroSeason": "spring", "seasons": ["spring", "autumn"] },
+    { "token": "bloom.plum",    "name": "美人梅",           "class": "flower", "lit": "#E8789A", "heroSeason": "spring", "seasons": ["spring"] },
+    { "token": "bloom.white",   "name": "杏花、玉兰、白荷", "class": "flower", "lit": "#FAF6EE", "heroSeason": "spring", "seasons": ["spring", "summer"] },
+    { "token": "bloom.violet",  "name": "蓝花楹、鸢尾",     "class": "flower", "lit": "#8E86D8", "heroSeason": "spring", "seasons": ["spring"] },
+    { "token": "bloom.rose",    "name": "海棠、红梅、红花檵木", "class": "flower", "lit": "#E06A86", "heroSeason": "spring", "seasons": ["spring", "winter"] },
+    { "token": "bloom.crape",   "name": "紫薇",             "class": "flower", "lit": "#D07AC0", "heroSeason": "summer", "seasons": ["summer"] },
+    { "token": "bloom.yellow",  "name": "蜡梅、油菜花、桂花", "class": "flower", "lit": "#F2D04A", "heroSeason": "winter", "seasons": ["winter", "spring", "autumn"] },
+    { "token": "bloom.lotus",   "name": "荷花",             "class": "flower", "lit": "#F28AA8", "heroSeason": "summer", "seasons": ["summer"] },
+    { "token": "plume",         "name": "蒲苇芦苇芒草的穗", "class": "flower", "lit": "#EDE6D6", "heroSeason": "autumn", "seasons": ["autumn", "winter"] },
+    { "token": "bloom.capsule", "name": "栾树的蒴果",       "class": "vegetation", "lit": "#C0654A", "heroSeason": "autumn", "seasons": ["autumn", "winter"], "row0": true }
+  ]
+}

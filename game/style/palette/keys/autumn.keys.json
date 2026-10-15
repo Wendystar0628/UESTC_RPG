@@ -1,0 +1,471 @@
+{
+  "format": "campus.palette.keys/1",
+  "owner": "WP-37",
+  "doc": "SYS-TIME §3.1、§3.2；ART-STYLE §3、§8；ART-SKYLIGHT §4、§6",
+  "season": "autumn",
+  "notes": [
+    "秋季 12 张基准关键帧，按太阳高度定锚：altDeg 是示例钟点在秋季美术轨迹上的太阳高度（SYS-TIME §2 公式），side 是晨侧 dawn、昏侧 dusk，正午 noon 与深夜最低点 nadir 两侧共用。",
+    "25° 以上按正午归一：其他季节的高度 h 换算成秋季等效高度 x = 25 + (h − 25) / (H季 − 25) × (41 − 25)，所以正午键在任何季节都是正午。",
+    "slotDeg 是 SYS-TIME §3.1 的 19 键里最近的名义高度，只作对照；求值一律用 altDeg。黄金锚在 5.4753°（17:30 在公式上的值），保证秋 17:30 的默认状态逐值等于本帧。",
+    "sky.sun / sky.anti：5 段，从地平线到天顶，对应色名 sky.sun.0–4、sky.anti.0–4；夜间三帧的 sun 列是月侧。",
+    "skyStopsDeg：sky.sun / sky.anti 五段各自所在的仰角（度，地平线 0、天顶 90），天空着色器按仰角在相邻两段间插值；粉橙只落在 0–25° 的带里（主代理评审）。",
+    "ambientSky、interiorWarm 只用 a、b（OKLCH 的 c、h）；写进纹理时按 OKLCH (swatchL, c, h) 出示意色。",
+    "key.intensity 以正午为 1；受光明度 L_lit = m × (1 − (1 − L_a)^litLift)，m = min(1, (intensity / derive.lit.adaptRef)^(1/3))（见 derive.json）。",
+    "post.exposureEv 是整体曝光补偿（SYS-TIME §3.4 深夜 +0.7 EV；入夜 +0.2、夜晚 +0.35 为 WP-37 所加），由后期并进 CDL，不改调色板；夜间自检按 调色板 × 2^exposureEv 的上屏值判。",
+    "lights 一栏只是 SYS-TIME §3.2 的参考值，窗灯与路灯以 WP-39 的灯光时刻表为准，不进调色板。",
+    "fogLow 对应全局参数 fog_low（ENG-PERF §1.5）：topM 贴地雾高度上限（m）、density 贴地雾密度、lake 湖面雾强度；第四项预留。fog 的 hazeDeg 是霾带在地平线以上的度数。",
+    "line.darken 按 ART-STYLE §4.2 的线色公式取值；夜间帧按 SYS-TIME §3.4 \"描线比阴影暗 0.06–0.10\" 反解（主代理裁定）。",
+    "post 各项对应契约 ColorScriptSnapshot（IColorScriptFrame.Current）：line.darken → LineDarkness，glowBloom → Glow，glowIntensity、glowHdrThreshold、glowHdrScale，vignette.strength / tint，exposureEv → Exposure，cdl → CdlSlope / Offset / Power（三通道同值）/ Saturation；skyFx.stars → Stars，skyFx.cloudAmount → CloudCover；fog → Fog，fogLow → FogLow。",
+    "sky.moon：月盘与星星的颜色（ART-SKYLIGHT §5.3）：低悬偏暖 #FFF3D6，升高后银白；白天月亮在地平线以下，取 #F5F1E2 占位。"
+  ],
+  "skyStopsDeg": [0, 4, 12, 28, 90],
+  "keys": [
+    {
+      "id": "deepNight", "name": "深夜", "mood": "静谧、守夜、星河", "class": "night", "exampleClock": 0.5, "side": "nadir", "altDeg": -24.0, "slotDeg": -24,
+      "sky": {
+        "body": "moon",
+        "sun":  ["#6A6A8E", "#44507E", "#2E3A68", "#202852", "#161B3C"],
+        "anti": ["#5E5470", "#3A3E66", "#262D55", "#1B2146", "#161B3C"]
+      },
+      "key": {"source": "moon", "color": "#B8C8F0", "intensity": 0.18, "satGain": 0.9, "litLift": 1.3},
+      "shade": {"r": 0.82, "ambientSky": {"c": 0.045, "h": 268}, "wMin": 0.35},
+      "fog": {"sun": "#3E4470", "anti": "#3E4470", "startM": 250, "silhouetteM": 1200, "density": 0.9, "hazeDeg": 2.0},
+      "line": {"darken": 0.58, "warm": "#4C4050", "cool": "#3E4C6A"},
+      "colors": {
+        "bounce.ground": "#CFCFCF",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#E8EEFF",
+        "shaft.far": "#9AA8D8",
+        "rim": "#DCE4F8",
+        "glass.glare": "#E8EEFF",
+        "sky.cloudLit": "#5A6290",
+        "sky.cloudRim": "#B8C4EA",
+        "sky.cloudBelly": "#2A3058",
+        "sky.cloudDeep": "#20264A",
+        "sky.moon": "#EEF0FA"
+      },
+      "post": {
+        "exposureEv": 0.7,
+        "glowBloom": 0.15,
+        "glowIntensity": 0.3,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.12, "tint": [0.88, 0.9, 0.98]},
+        "cdl": {"slope": 1.0, "offset": 0.02, "power": 1.0, "saturation": 0.95}
+      },
+      "skyFx": {"stars": 1.0, "cloudAmount": 0.1},
+      "lights": {"windows": 0.1, "street": 1.0, "note": "图书馆和实验楼的灯岛"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "preDawn", "name": "黎明前", "mood": "清冷、等待", "class": "night", "exampleClock": 6.6667, "side": "dawn", "altDeg": -4.0253, "slotDeg": -3,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#E8B49A", "#B49AB4", "#7E86BC", "#4E62A4", "#2C3E80"],
+        "anti": ["#5A6290", "#4A578C", "#3E4C84", "#33427C", "#2C3E80"]
+      },
+      "key": {"source": "sky", "color": "#8C98D4", "intensity": 0.25, "satGain": 0.92, "litLift": 1.3},
+      "shade": {"r": 0.85, "ambientSky": {"c": 0.045, "h": 275}, "wMin": 0.35},
+      "fog": {"sun": "#A890A8", "anti": "#7C84B4", "startM": 120, "silhouetteM": 800, "density": 1.4, "hazeDeg": 3.0},
+      "line": {"darken": 0.7, "warm": "#4C4050", "cool": "#3E4C6A"},
+      "colors": {
+        "bounce.ground": "#CFCFCF",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#F4E4EC",
+        "shaft.far": "#D8A8B8",
+        "rim": "#C8CCE8",
+        "glass.glare": "#F0E0E8",
+        "sky.cloudLit": "#E8B0A8",
+        "sky.cloudRim": "#F4C8B0",
+        "sky.cloudBelly": "#6A6C9C",
+        "sky.cloudDeep": "#4A5084",
+        "sky.moon": "#F6EEE4"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.11,
+        "glowIntensity": 0.38,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.11, "tint": [0.9, 0.91, 0.96]},
+        "cdl": {"slope": 0.97, "offset": 0.03, "power": 1.0, "saturation": 0.98}
+      },
+      "skyFx": {"stars": 0.4, "cloudAmount": 0.15},
+      "lights": {"windows": 0.08, "street": 1.0},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "sunrise", "name": "日出", "mood": "苏醒、日照金山", "class": "lowSun", "exampleClock": 7.5833, "side": "dawn", "altDeg": 0.0, "slotDeg": 0,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#FFD58A", "#FFB27A", "#F0A0A0", "#B49CC8", "#5E70B0"],
+        "anti": ["#9AA2C8", "#E2B4C2", "#B8B4D6", "#8A9ACA", "#5E70B0"],
+        "antiNotes": "sky.anti.0 是地影，sky.anti.1 是维纳斯带"
+      },
+      "key": {"source": "sun", "color": "#FFB468", "intensity": 0.6, "satGain": 1.08, "litLift": 1.12},
+      "shade": {"r": 0.84, "ambientSky": {"c": 0.045, "h": 350}, "wMin": 0.08},
+      "fog": {"sun": "#F6C8A8", "anti": "#B4B2D2", "startM": 150, "silhouetteM": 1000, "density": 1.6, "hazeDeg": 3.5},
+      "line": {"darken": 0.14, "warm": "#4C3428", "cool": "#3A4A62"},
+      "colors": {
+        "bounce.ground": "#F0A878",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFF0D8",
+        "shaft.far": "#FF9E50",
+        "rim": "#FFC080",
+        "glass.glare": "#FFE8C8",
+        "sky.cloudLit": "#FFD8B0",
+        "sky.cloudRim": "#FFB070",
+        "sky.cloudBelly": "#A88AB8",
+        "sky.cloudDeep": "#7C74A8",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.064,
+        "glowIntensity": 0.49,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.92, 0.9, 0.94]},
+        "cdl": {"slope": 0.97, "offset": 0.025, "power": 1.0, "saturation": 1.02}
+      },
+      "skyFx": {"stars": 0.05, "cloudAmount": 0.2},
+      "lights": {"windows": 0.15, "street": 0.5, "note": "图书馆最先亮；路灯分批熄灭"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 1.0}
+    },
+    {
+      "id": "earlyMorning", "name": "清晨", "mood": "清冽、通透、露水", "class": "lowSun", "exampleClock": 8.5, "side": "dawn", "altDeg": 9.1286, "slotDeg": 12,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#FFF4DE", "#F6E6D2", "#D4E0EC", "#9EC4EA", "#5E96DA"],
+        "anti": ["#EEF2F4", "#D6E4F0", "#B0CEEE", "#86B2E4", "#5E96DA"]
+      },
+      "key": {"source": "sun", "color": "#FFF2E0", "intensity": 0.75, "satGain": 0.88, "litLift": 1.2},
+      "shade": {"r": 0.8, "ambientSky": {"c": 0.03, "h": 250}, "wMin": 0.0},
+      "fog": {"sun": "#F8F0E4", "anti": "#E8EEF4", "startM": 150, "silhouetteM": 900, "density": 1.3, "hazeDeg": 2.5},
+      "line": {"darken": 0.15, "warm": "#4A3426", "cool": "#344E5C"},
+      "colors": {
+        "bounce.ground": "#DCD0BC",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFFAF0",
+        "shaft.far": "#F4DCA8",
+        "rim": "#FFF0D8",
+        "glass.glare": "#FFF8EE",
+        "sky.cloudLit": "#FFF8EC",
+        "sky.cloudRim": "#FFE0B0",
+        "sky.cloudBelly": "#A8B4D4",
+        "sky.cloudDeep": "#8A96C0",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.01,
+        "glowIntensity": 0.6,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.9, 0.91, 0.95]},
+        "cdl": {"slope": 0.96, "offset": 0.03, "power": 1.0, "saturation": 1.01}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.2},
+      "lights": {"windows": 0.1, "street": 0.0},
+      "fogLow": {"topM": 6, "density": 0.6, "lake": 0.0}
+    },
+    {
+      "id": "morning", "name": "上午", "mood": "清爽、晨读", "class": "day", "exampleClock": 10.0, "side": "dawn", "altDeg": 25.4996, "slotDeg": 25,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#F8F0DC", "#D4E6EE", "#A2CCEC", "#6CA8E0", "#4682CC"],
+        "anti": ["#E4ECF2", "#BCD8EE", "#90BCE6", "#6098D8", "#4682CC"]
+      },
+      "key": {"source": "sun", "color": "#FFF0D6", "intensity": 0.9, "satGain": 1.04, "litLift": 1.28},
+      "shade": {"r": 0.83, "ambientSky": {"c": 0.03, "h": 236}, "wMin": 0.0},
+      "fog": {"sun": "#F2EEE2", "anti": "#E2ECF2", "startM": 350, "silhouetteM": 2000, "density": 0.8, "hazeDeg": 1.8},
+      "line": {"darken": 0.15, "warm": "#4A3628", "cool": "#33505C"},
+      "colors": {
+        "bounce.ground": "#D4C4A8",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFF8EC",
+        "shaft.far": "#F8D890",
+        "rim": "#FFEED0",
+        "glass.glare": "#FFF8EC",
+        "sky.cloudLit": "#FFFCF4",
+        "sky.cloudRim": "#FFF4DC",
+        "sky.cloudBelly": "#B8C8E0",
+        "sky.cloudDeep": "#96A8CC",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.0,
+        "glowIntensity": 0.6,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.9, 0.91, 0.95]},
+        "cdl": {"slope": 0.96, "offset": 0.03, "power": 1.0, "saturation": 1.0}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.3},
+      "lights": {"windows": 0.03, "street": 0.0},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "noon", "name": "正午", "mood": "澄澈、青春", "class": "day", "exampleClock": 12.8333, "side": "noon", "altDeg": 41.0, "slotDeg": 41,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#F2F4EE", "#C2DEF0", "#88C2EC", "#4E9AE2", "#2A6ECC"],
+        "anti": ["#EAF0F4", "#B4D4F0", "#7CB6E8", "#4A92DC", "#2A6ECC"]
+      },
+      "key": {"source": "sun", "color": "#FFF6E4", "intensity": 1.0, "satGain": 1.05, "litLift": 1.28},
+      "shade": {"r": 0.85, "ambientSky": {"c": 0.028, "h": 232}, "wMin": 0.0},
+      "fog": {"sun": "#D8E8F4", "anti": "#D8E8F4", "startM": 500, "silhouetteM": 3000, "density": 0.6, "hazeDeg": 1.5},
+      "line": {"darken": 0.15, "warm": "#4A3628", "cool": "#30505E"},
+      "colors": {
+        "bounce.ground": "#D2C6AE",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFFAF0",
+        "shaft.far": "#F8E0A0",
+        "rim": "#FFF4DC",
+        "glass.glare": "#FFFAF0",
+        "sky.cloudLit": "#FFFFFF",
+        "sky.cloudRim": "#FFF8EC",
+        "sky.cloudBelly": "#B4C6E2",
+        "sky.cloudDeep": "#92A6CE",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.0,
+        "glowIntensity": 0.6,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.9, 0.91, 0.95]},
+        "cdl": {"slope": 0.96, "offset": 0.03, "power": 1.0, "saturation": 1.0}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.32},
+      "lights": {"windows": 0.0, "street": 0.0, "note": "雪山可见"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "afternoon", "name": "午后", "mood": "慵懒、蝉鸣", "class": "day", "exampleClock": 15.0, "side": "dusk", "altDeg": 31.5896, "slotDeg": 25,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#FFF0D0", "#D2E2EA", "#9AC6EA", "#62A0DE", "#3A78C8"],
+        "anti": ["#E2EAF0", "#B8D4EE", "#88B8E6", "#5A96D8", "#3A78C8"]
+      },
+      "key": {"source": "sun", "color": "#FFE6BC", "intensity": 0.92, "satGain": 1.05, "litLift": 1.28},
+      "shade": {"r": 0.83, "ambientSky": {"c": 0.03, "h": 236}, "wMin": 0.0},
+      "fog": {"sun": "#EEE6D6", "anti": "#DCE4EE", "startM": 400, "silhouetteM": 2000, "density": 0.8, "hazeDeg": 2.0},
+      "line": {"darken": 0.15, "warm": "#4A3426", "cool": "#33505A"},
+      "colors": {
+        "bounce.ground": "#D8C0A0",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFF4DC",
+        "shaft.far": "#F8C878",
+        "rim": "#FFE8C4",
+        "glass.glare": "#FFF6E0",
+        "sky.cloudLit": "#FFFAF0",
+        "sky.cloudRim": "#FFEAC8",
+        "sky.cloudBelly": "#B8C2DC",
+        "sky.cloudDeep": "#96A2C8",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.0,
+        "glowIntensity": 0.6,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.91, 0.91, 0.94]},
+        "cdl": {"slope": 0.96, "offset": 0.03, "power": 1.0, "saturation": 1.01}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.3},
+      "lights": {"windows": 0.03, "street": 0.0},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "golden", "name": "黄金", "mood": "丰盛的暖、怅惘", "class": "default", "default": true, "exampleClock": 17.5, "side": "dusk", "altDeg": 5.4753, "slotDeg": 6,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#FFE1A0", "#F7B072", "#D9939C", "#8E98CE", "#4A62A8"],
+        "anti": ["#E3C3C0", "#C8BFD2", "#A9B4D6", "#7E90C4", "#4A62A8"]
+      },
+      "key": {"source": "sun", "color": "#FFD39C", "intensity": 0.8, "satGain": 1.06, "litLift": 1.1675},
+      "shade": {"r": 0.78, "ambientSky": {"c": 0.032, "h": 275}, "wMin": 0.0},
+      "fog": {"sun": "#F3D2A6", "anti": "#B8B6D6", "startM": 200, "silhouetteM": 800, "density": 1.0, "hazeDeg": 2.5},
+      "line": {"darken": 0.15, "warm": "#4A3426", "cool": "#35505A"},
+      "colors": {
+        "bounce.ground": "#D8B07C",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFF0C8",
+        "shaft.far": "#F4B53B",
+        "rim": "#FFD9A0",
+        "glass.glare": "#FFF4D6",
+        "sky.cloudLit": "#FFF3D0",
+        "sky.cloudRim": "#FFC27A",
+        "sky.cloudBelly": "#8C80B4",
+        "sky.cloudDeep": "#6A6898",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.02,
+        "glowIntensity": 0.6,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.1, "tint": [0.92, 0.9, 0.93]},
+        "cdl": {"slope": 0.97, "offset": 0.02, "power": 1.0, "saturation": 1.03}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.1},
+      "lights": {"windows": 0.4, "street": 0.6, "note": "17:22–17:40 窗灯 20% → 70%；初灯组 60%"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "sunset", "name": "日落", "mood": "燃烧、告别", "class": "lowSun", "exampleClock": 18.0833, "side": "dusk", "altDeg": 0.0, "slotDeg": 0,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#FFC879", "#F49A62", "#D97A7E", "#9A7FB0", "#4A5AA0"],
+        "anti": ["#8A92BE", "#D8A8B8", "#B4ACCF", "#8894C4", "#4A5AA0"],
+        "antiNotes": "sky.anti.0 是地影，sky.anti.1 是维纳斯带"
+      },
+      "key": {"source": "sun", "color": "#FF9A45", "intensity": 0.65, "satGain": 1.12, "litLift": 1.12},
+      "shade": {"r": 0.83, "ambientSky": {"c": 0.05, "h": 20}, "wMin": 0.08},
+      "fog": {"sun": "#F0B890", "anti": "#A8A4C8", "startM": 400, "silhouetteM": 3000, "density": 1.0, "hazeDeg": 3.0},
+      "line": {"darken": 0.14, "warm": "#4E3226", "cool": "#3A4660"},
+      "colors": {
+        "bounce.ground": "#F09060",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#FFE8C0",
+        "shaft.far": "#FF8838",
+        "rim": "#FFB070",
+        "glass.glare": "#FFE0B8",
+        "sky.cloudLit": "#FFC890",
+        "sky.cloudRim": "#FF9A58",
+        "sky.cloudBelly": "#B07898",
+        "sky.cloudDeep": "#7A6098",
+        "sky.moon": "#F5F1E2"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.064,
+        "glowIntensity": 0.49,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.11, "tint": [0.93, 0.89, 0.92]},
+        "cdl": {"slope": 0.97, "offset": 0.02, "power": 1.0, "saturation": 1.04}
+      },
+      "skyFx": {"stars": 0.0, "cloudAmount": 0.2},
+      "lights": {"windows": 0.6, "street": 0.8, "note": "初灯组全亮，其余分路段依次亮；雪山镶金边"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "blueHour", "name": "蓝调", "mood": "魔幻、交班", "class": "twilight", "exampleClock": 18.5, "side": "dusk", "altDeg": -1.6369, "slotDeg": -3,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#F2B48A", "#D99A9E", "#9C8EBE", "#5E6EAE", "#34478C"],
+        "anti": ["#8C94C0", "#7C88C0", "#6474B4", "#4A5CA0", "#34478C"]
+      },
+      "key": {"source": "sky", "color": "#8E9AD0", "intensity": 0.35, "satGain": 0.95, "litLift": 1.05},
+      "shade": {"r": 0.85, "ambientSky": {"c": 0.045, "h": 280}, "wMin": 0.2},
+      "fog": {"sun": "#C8A0A0", "anti": "#8C8CB8", "startM": 500, "silhouetteM": 3000, "density": 1.0, "hazeDeg": 2.5},
+      "line": {"darken": 0.35, "warm": "#45323A", "cool": "#34405E"},
+      "colors": {
+        "bounce.ground": "#CFCFCF",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#F8E0D8",
+        "shaft.far": "#D89090",
+        "rim": "#C8C8E8",
+        "glass.glare": "#F0DCE0",
+        "sky.cloudLit": "#F0B0A0",
+        "sky.cloudRim": "#F8C8A8",
+        "sky.cloudBelly": "#6E6CA0",
+        "sky.cloudDeep": "#50548C",
+        "sky.moon": "#FFF0D4"
+      },
+      "post": {
+        "exposureEv": 0.0,
+        "glowBloom": 0.083,
+        "glowIntensity": 0.44,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.11, "tint": [0.9, 0.9, 0.96]},
+        "cdl": {"slope": 0.97, "offset": 0.03, "power": 1.0, "saturation": 1.0}
+      },
+      "skyFx": {"stars": 0.1, "cloudAmount": 0.15},
+      "lights": {"windows": 0.7, "street": 1.0, "note": "无影蓝调：shadow_strength 0、key_strength≈0，画面只见影色"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "nightfall", "name": "入夜", "mood": "余温、第一颗星", "class": "night", "exampleClock": 19.25, "side": "dusk", "altDeg": -5.2831, "slotDeg": -6,
+      "sky": {
+        "body": "sun",
+        "sun":  ["#D08A7C", "#8E6E98", "#525C94", "#33407A", "#222C5E"],
+        "anti": ["#5E6690", "#4C5690", "#3A4682", "#2C3870", "#222C5E"]
+      },
+      "key": {"source": "sky", "color": "#9AA6D8", "intensity": 0.25, "satGain": 0.92, "litLift": 1.3, "note": "加低悬的暖月"},
+      "shade": {"r": 0.82, "ambientSky": {"c": 0.045, "h": 275}, "wMin": 0.35},
+      "fog": {"sun": "#7E6C88", "anti": "#5A5E8C", "startM": 400, "silhouetteM": 2000, "density": 1.0, "hazeDeg": 2.0},
+      "line": {"darken": 0.68, "warm": "#4C4050", "cool": "#3E4C6A"},
+      "colors": {
+        "bounce.ground": "#CFCFCF",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#E8E0F0",
+        "shaft.far": "#A0A0D0",
+        "rim": "#D0D4EC",
+        "glass.glare": "#E0E4F8",
+        "sky.cloudLit": "#9A88A8",
+        "sky.cloudRim": "#C8B0C0",
+        "sky.cloudBelly": "#3E4270",
+        "sky.cloudDeep": "#2E3460",
+        "sky.moon": "#FFF3D6"
+      },
+      "post": {
+        "exposureEv": 0.2,
+        "glowBloom": 0.115,
+        "glowIntensity": 0.36,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.12, "tint": [0.89, 0.9, 0.97]},
+        "cdl": {"slope": 0.97, "offset": 0.03, "power": 1.0, "saturation": 0.98}
+      },
+      "skyFx": {"stars": 0.6, "cloudAmount": 0.12},
+      "lights": {"windows": 0.75, "street": 1.0},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    },
+    {
+      "id": "night", "name": "夜晚", "mood": "灯火、安定", "class": "night", "exampleClock": 21.0, "side": "dusk", "altDeg": -14.0513, "slotDeg": -12,
+      "sky": {
+        "body": "moon",
+        "sun":  ["#6E78A4", "#4A5688", "#343F72", "#26305E", "#1C2448"],
+        "anti": ["#7A6A88", "#4E4E78", "#343A66", "#262D58", "#1C2448"],
+        "antiNotes": "sky.anti.0 是城市天光"
+      },
+      "key": {"source": "moon", "color": "#C4D0F2", "intensity": 0.2, "satGain": 0.9, "litLift": 1.3},
+      "shade": {"r": 0.82, "ambientSky": {"c": 0.045, "h": 268}, "wMin": 0.35},
+      "fog": {"sun": "#4A4E7A", "anti": "#4A4E7A", "startM": 300, "silhouetteM": 1500, "density": 0.9, "hazeDeg": 2.0},
+      "line": {"darken": 0.62, "warm": "#4C4050", "cool": "#3E4C6A"},
+      "colors": {
+        "bounce.ground": "#CFCFCF",
+        "interior.warm": {"c": 0.05, "h": 65},
+        "shaft.near": "#E8EEFF",
+        "shaft.far": "#9AA8D8",
+        "rim": "#DCE4F8",
+        "glass.glare": "#E8EEFF",
+        "sky.cloudLit": "#5E6690",
+        "sky.cloudRim": "#B8C4EA",
+        "sky.cloudBelly": "#2C3260",
+        "sky.cloudDeep": "#22284C",
+        "sky.moon": "#EEF2FA"
+      },
+      "post": {
+        "exposureEv": 0.35,
+        "glowBloom": 0.13,
+        "glowIntensity": 0.3,
+        "glowHdrThreshold": 0.85,
+        "glowHdrScale": 0.3,
+        "vignette": {"strength": 0.12, "tint": [0.88, 0.9, 0.98]},
+        "cdl": {"slope": 1.0, "offset": 0.02, "power": 1.0, "saturation": 0.95}
+      },
+      "skyFx": {"stars": 0.9, "cloudAmount": 0.1},
+      "lights": {"windows": 0.8, "street": 1.0, "note": "加店招"},
+      "fogLow": {"topM": 0, "density": 0.0, "lake": 0.0}
+    }
+  ]
+}
