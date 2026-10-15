@@ -34,7 +34,8 @@ contracts: [FeatureId, PartId, ModuleId, ZoneId, WpId, ChannelId, PaletteToken, 
   AtlasRegion, AtlasLayer, CustomPin, IUnlockPolicy, IAtlasService, AtlasSave, AppState, EnterKind,
   CinematicMode, EnterPath, EnterResult, EnterRequest, IAppFlow, SlotId, SlotKind, SaveScope, SaveReason,
   SlotHealth, SaveMeta, SlotInfo, SaveSectionAttribute, RestorePhase, LoadScope, CaptureContext,
-  RestoreContext, NewGameContext, ISaveSection, SaveStatus, SaveResult, LoadStatus, LoadResult, ISaveService,
+  RestoreContext, NewGameContext, ISaveSection, SaveStatus, SaveResult, LoadStatus, LoadResult, ReadOnlyReason,
+  SaveState, ISaveService,
   RulesetId, WorldControlMask, InteractionRule, RulesetDescriptor, IRuleset, IObserverState, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, NavNodeId, NavSpace, NavEdgeKind, NavFlags,
   DoorKind, DoorState, NavNode, NavEdge, NavPortal, NavFloorGraph, NavQuery, NavPath, INavGraph, AudioBuses,
   AudioGroup, BackgroundBehavior, SuddenSoundMode, AudioSettings, UiCue, MusicCue, DuckReason, AudioSnapshot,
@@ -441,13 +442,18 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 
 ## 3 关键接口（契约草案）
 
-契约由 WP-00 在 `game/contracts/`（`Campus.Contracts` 程序集）冻结为 v1。D1 结束时（开工后 24 小时内）收集一轮修改申请，发布 v1.1（ENG-WP §5 第 3 条）。之后**只增不改**：
+契约放在 `game/contracts/`（`Campus.Contracts` 程序集），分批定死（D-134，ENG-WP §5 第 3 条）：
 
-- C# 公开 API 由 Microsoft.CodeAnalysis.PublicApiAnalyzers 检查。v1.1 时冻结 `PublicAPI.Shipped.txt`，之后删除或改动公开 API 就编译失败。这个分析器跟踪整个程序集，所以契约必须单独成一个程序集。
-- JSON 格式（覆盖层、点位、灯光时刻表、调色板扩展等）写成 schema 文件，放在 `game/contracts/schemas/`，由脚本检查只增不删。
+- **候选**：WP-00 先交能编译的契约 v1 候选和全部桩（§5），各包照它开工。还没冻结的组仍可修改，改动一律向主代理申请，由主代理改。
+- **按组冻结**：契约按本节的代码块分组（如内容模块、相机与介质、存档、音频）。某一组的真实生产方与使用方在主线上接通（不再经桩）、相关核心专项通过（ENG-GATES §2）后，由主代理宣布冻结这一组，记进 ENG-STATUS §2。
+
+冻结了的组**只增不改**：
+
+- C# 公开 API 由 Microsoft.CodeAnalysis.PublicApiAnalyzers 检查。候选期的公开 API 记在 `PublicAPI.Unshipped.txt`；宣布冻结一组时，把这一组的条目移进 `PublicAPI.Shipped.txt`，之后删除或改动它们就编译失败。这个分析器跟踪整个程序集，所以契约必须单独成一个程序集。
+- JSON 格式（覆盖层、点位、灯光时刻表、调色板扩展等）写成 schema 文件，放在 `game/contracts/schemas/`，所在的组冻结后由脚本检查只增不删。
 - **枚举的穷举纪律**（ENG-ROADMAP §6 第 4 条）：枚举只在末尾追加值，JSON 按字符串存。会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob`、`InputLockReason`、`InteractionRule` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错；不写 `mode == ViewMode.Fly ? … : …` 这样的二值判断。读到不认识的枚举字符串，按 SYS-SAVE §3.5 当作不合法。G1 的 `-warnaserror` 把非穷举 switch 表达式的警告当错误，二值判断靠评审。
 
-世界状态、点位跳转、观察模式与碰撞（SYS-TIME、UI-NAV、SYS-WALK），天气与画面设置（SYS-WEATHER §8、SYS-GRAPHICS §8），以及界面（UI-VISUAL §11.11）、平面地图（SYS-ATLAS §11）、开始页（SYS-TITLE §7.4）、存档（SYS-SAVE §10）、多地图（SYS-MAPS §8）、外围（WLD-OUTSKIRTS §12.3）、室内（WLD-INTERIORS §15）、音频（SYS-AUDIO §19）、规则集与观者状态（ENG-ROADMAP §6）的契约都在开工前定下，直接写进 v1 草案。各文档里的契约片段以本节为准：门的契约名以本节为准，门的参数以 WLD-INTERIORS §4.1 为准；`IWeatherProcess.Capture`、`Restore` 是公开方法，供 WP-45a 自己的两个存档段调用，也让 G20 的续跑等价测试能经契约比对天气状态。
+世界状态、点位跳转、观察模式与碰撞（SYS-TIME、UI-NAV、SYS-WALK），天气与画面设置（SYS-WEATHER §8、SYS-GRAPHICS §8），以及界面（UI-VISUAL §11.11）、平面地图（SYS-ATLAS §11）、开始页（SYS-TITLE §7.4）、存档（SYS-SAVE §10）、多地图（SYS-MAPS §8）、外围（WLD-OUTSKIRTS §12.3）、室内（WLD-INTERIORS §15）、音频（SYS-AUDIO §19）、规则集与观者状态（ENG-ROADMAP §6）的契约都在开工前起草，直接写进契约 v1 候选。各文档里的契约片段以本节为准：门的契约名以本节为准，门的参数以 WLD-INTERIORS §4.1 为准；`IWeatherProcess.Capture`、`Restore` 是公开方法，供 WP-45a 自己的两个存档段调用，也让 G20 的续跑等价测试能经契约比对天气状态。
 
 契约程序集只用 `System.Numerics` 的 `Vector2`、`Vector3`、`Quaternion`、`Matrix4x4`，Godot 侧在边界处转换成 Godot 类型（§7"两套数学类型"）。坐标约定照 CORE-INDEX：x 向东、y 向上、z 向南。这和 Godot 一样是右手系、y 向上，−Z 方向就是北，数值不用换算。
 
@@ -514,7 +520,7 @@ public interface IContentModule
 }
 // 没有 mount：gen 里的内容没有挂载，动态物体归 Godot 侧包的 [KernelNode]（§2）
 
-public sealed class BuildContext           // 内核或烘焙器构造；完整定义由 WP-00 在 v1 冻结
+public sealed class BuildContext           // 内核或烘焙器构造；完整定义由 WP-00 在 v1 候选里给出
 {
     public required IWorldModel World { get; init; }   // 只读
     public required MapDescriptor Map { get; init; }   // 当前图的描述，纯数据（SYS-MAPS §8）
@@ -891,8 +897,9 @@ public interface ICameraRig
     ITransitHandle? ActiveTransit { get; }   // 进行中的跳转或传送，没有时为 null（SYS-AUDIO §19）
     float EdgeFog { get; }                   // 与全局参数 edge_fog 同一个值（WLD-OUTSKIRTS §8.3），音频据此压低远处的声音
 }
-public enum InputLockReason : byte { Atlas, Cinematic, MapTravel }   // 大地图（SYS-ATLAS §4.1）、开始页与过场的交还控制（SYS-TITLE §7.3）、
-                                                                     // 换图雾幕（SYS-MAPS §4.2）；只在末尾追加（以后加对话、剧情过场、菜单）
+public enum InputLockReason : byte { Atlas, Cinematic, MapTravel, Menu, Rebind }   // 大地图（SYS-ATLAS §4.1）、开始页与过场的交还控制（SYS-TITLE §7.3）、
+                                                                                   // 换图雾幕（SYS-MAPS §4.2）；Menu：设置卡、存档页、数据手册、确认对话框，Rebind：改键捕获（UI-NAV §5）；
+                                                                                   // 只在末尾追加（以后加对话、剧情过场）
 public enum EntryPath { Skylight, Door, WaterSurface }
 public enum TransitPreference : byte { Auto, Teleport }   // Auto 按距离选滑移、弧线或雾幕弧线（UI-NAV §7.1）；Teleport 是地图传送（SYS-ATLAS §11）
 public sealed record TransitOptions(EntryPath? Entry = null, Vector3? LandOn = null /* 行走落点 */)
@@ -1096,7 +1103,7 @@ public interface IViewControl
 namespace Campus.Contracts.Quality;
 
 public enum QualityPreset : byte { Smooth, Balanced, Fine, Ultra, Custom }       // 流畅、均衡、精致、极致、自定义
-public enum DeviceTier : byte { IgpuLow, IgpuHigh, DgpuMid, DgpuHigh }           // 核显低、核显高、独显中、独显高（ENG-BUDGET §2）
+public enum DeviceTier : byte { MinSpec, DgpuMid, DgpuHigh }                     // 最低配置（核显）、独显中、独显高（ENG-BUDGET §2，D-169）
 public enum ApplyClass : byte { Immediate, Amortized, UnderVeil, Restart }       // 即时、即时（分帧）、雾幕、重启（SYS-GRAPHICS §3），由轻到重
 public enum KnobKind : byte { Floor, StyleDefault, Performance }                 // 风格底线（有最差值）、风格默认（可关）、性能项（SYS-GRAPHICS §2）
 
@@ -1423,7 +1430,8 @@ public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null);   // Slo
 
 public interface IAppFlow                     // Kernel 服务（WP-49a），主线程；本身不逐帧运行，不直接读写任何 user:// 文件
 {
-    AppState State { get; }                   // Boot → Title → Entering → Playing → Leaving → Title；任何状态都能走到 Quitting
+    AppState State { get; }                   // Boot → Title → Entering → Playing → Leaving → Title；任何状态都能走到 Quitting；
+                                              // 退出时保存明确失败、观者选"返回游戏"，Quitting 回到 Playing（SYS-SAVE §4.4，D-171）
     long Rev { get; }
     event Action<AppState, AppState>? Changed; // (旧, 新)，值变才发
     EnterPath? Path { get; }                   // 只在 Entering 时有值
@@ -1546,6 +1554,13 @@ public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
 public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
 public enum LoadStatus : byte { Loaded, Recovered, Empty, Corrupt, NewerBuild, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
+public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE §1、SYS-SAVE §12）
+public sealed record SaveState(                                     // 保存状态（SYS-SAVE §4.6）：存档页、设置卡持续显示
+    SlotId? Slot,                   // 当前存档位
+    SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
+    string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
+    long? LastSavedAtUnix,          // 当前存档位最后一次成功保存的时间（最新可读一代 meta 的 savedAtUnix），只用于显示
+    ReadOnlyReason ReadOnly);
 
 public interface ISaveService                         // Kernel 服务（WP-50）；不加 Autoload
 {
@@ -1554,6 +1569,7 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     SlotId? Continue { get; }                         // 最近保存的可读存档位（SYS-SAVE §1）；没有就是 null
     SlotId? Active { get; }                           // 当前存档位：自动保存写到这里
     bool Busy { get; }                                // 后台写盘进行中
+    SaveState State { get; }                          // 保存状态（SYS-SAVE §4.6）；值变时也发 SlotsChanged
     event Action? SlotsChanged;                       // 在主线程发出
     void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE §4.1）；只在漫游态有效；Quit、ToTitle 不走这里
     Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁、预留的手动槽
@@ -1564,7 +1580,9 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
     Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
         // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE §5.5）
-    Task FlushForQuit(SaveReason r, TimeSpan timeout);   // r 只能是 Quit 或 ToTitle；超时就放弃这一代，旧代不受影响
+    Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
+        // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
+        // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE §4.4、SYS-SAVE §4.6，D-171）
     byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE §3.4）
 }
 // 文件结构：魔数 → 64 字节的头 → 未压缩的 meta JSON → Brotli 压缩的分段 JSON → WebP 缩略图，外加 SHA-256（SYS-SAVE §3.1）。
@@ -1871,7 +1889,7 @@ public interface IFoleyService                             // Kernel 服务（53
     FoleyStats Stats { get; }
     IReadOnlyList<FoleyEvent> RecentLog { get; }                 // 只在门禁构建里记录
 }
-// 闸机和门不出电子提示音，单车不响铃；3D 声源在播上限 32（核显档默认 24），不用 AudioStreamRandomizer，用自己的洗牌选择器（SYS-AUDIO）
+// 闸机和门不出电子提示音，单车不响铃；3D 声源在播上限 32（最低配置档默认 24），不用 AudioStreamRandomizer，用自己的洗牌选择器（SYS-AUDIO）
 ```
 
 ```csharp
@@ -1905,7 +1923,7 @@ public interface IBakeService      // Kernel 服务（WP-02，[KernelService(typ
   - 一律由代码生成（gen 里的纯 C# 生成器）。不用 GDScript 生成。
   - 确实需要外部模型时（例如雕像），先向主代理提交申请，批准后才能用 Blender 做少量手工英雄资产。导出 glTF 2.0（`.glb`），放在 `game/assets/hero/`，经 Godot 导入；导入设置里不生成材质（材质由内核按 `ToonSpec` 替换），开阴影网格和 LOD 生成。
 - **烘焙**（WP-02；本机烘焙，D-165）：几何类烘焙产物不随安装包发，由玩家机器上的 `IBakeService`（§3）调用与开发烘焙器同一个 `Build()` 生成：第一次需要时生成，写进本机缓存，之后照常从缓存读。"烘焙""TileBundle""缓存键"的含义不变，只是烘焙改在本机进行。
-  - **开发和 CI 的无界面烘焙器**照旧：`& $env:UESTC_GODOT --headless --path game -- --bake=all --map=qingshuihe`（`--map=*` 依次烘全部图），用来出参考哈希（`bake.manifest.json`）、给门禁预烘共享缓存（`scripts\gate.ps1`，ENG-GATES §1）。开发态 `-- --gen=live` 实时生成同一份 `Build()`，不读也不写缓存。
+  - **开发和 CI 的无界面烘焙器**照旧：`& $env:UESTC_GODOT --headless --path game -- --bake=all --map=qingshuihe`（`--map=*` 依次烘全部图），用来出参考哈希（`bake.manifest.json`）、按所选门禁的需要给共享缓存补烘（`scripts\gate.ps1`，§6 第 3 步、ENG-GATES §1）。开发态 `-- --gen=live` 实时生成同一份 `Build()`，不读也不写缓存。
   - **产物格式**（安全规则，D-165）：本机缓存和开发共享缓存都不用 Godot 资源格式：`user://` 下的 `.res`、`.tres` 能嵌脚本、读入即执行（SYS-SAVE §8 的威胁模型），所以 `ResourceLoader`、`ResourceSaver` 读写 `user://` 的全局禁令（§2）不设例外。
     - 用自定义的格包二进制格式 `.tbin`，即 `TileBundle`：头（魔数、格式版本、缓存键、长度）+ 各表面的顶点与索引缓冲（与引擎表面字典同一打包，ENG-PERF §5）+ 实例变换 + MultiMesh 缓冲 + 碰撞形状参数 + 统计 JSON（顶点、三角形、表面数、字节），整体 zstd（`FileAccess.OpenCompressed` 或 .NET 的 zstd，P0 定）。解析器逐段做边界检查，长度超限就拒收。
     - 读：工作线程上读文件 → 解压 → 用 `System.IO.Hashing.XxHash128` 算哈希，与启动集里 `res://bake/<地图>/boot/bake.manifest.json` 中这个缓存键的哈希比对，不符就删掉重烘（缓存键不在 manifest 里的文件按 ENG-PERF §5 处理） → 在同一工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（与 `--gen=live` 同一条路径），碰撞形状由参数在加载线程或主线程上创建（ENG-PERF §5）→ 主线程照常只挂载。
@@ -1999,7 +2017,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 地图 | `IMapService` 的桩读 `index.json`，只有 `qingshuihe`；启动时加载这张图、设好 `Context`、写 `map_rect`；`Travel` 到当前图只做 `SetPose` 并返回 `Arrived`，不卸载；真正的同图重载由 WP-46 交付（SYS-MAPS §16） |
 | 平面地图 | `IAtlasService` 的桩：标记只取 `waypoints.json` 的点位，`Travel` 一律按飞过去调 `ICameraRig.Transit`；底图桩是一张单色的校内用地。这样 WP-48b 第一天就能做界面，WP-36 可以并行做 `TransitKind.Teleport` |
 | 开始页与过场 | `IAppFlow` 的桩：直接走 `--title=0` 的路径，雾幕淡出后进入 Playing；`CinematicPlayer` 的桩：雾幕直达终点。WP-49 开工前其他包照旧能跑 |
-| 存档 | `ISaveService` 的桩：`Enabled = false`，三个存档位都是 `Empty`；`Request`、`SaveNow` 返回 `Disabled`；`NewGame` 只把已登记的各段设为 `CreateDefault`，并让 `Instance` 加 1；`Load` 不论 `Full`、`Preview` 都返回 `Empty`，`HasPendingPose` 恒为 false，`CompleteResume` 立即完成；`FlushForQuit` 立即完成，所以关窗口照常退出 |
+| 存档 | `ISaveService` 的桩：`Enabled = false`，三个存档位都是 `Empty`；`Request`、`SaveNow` 返回 `Disabled`；`NewGame` 只把已登记的各段设为 `CreateDefault`，并让 `Instance` 加 1；`Load` 不论 `Full`、`Preview` 都返回 `Empty`，`HasPendingPose` 恒为 false，`CompleteResume` 立即完成；`FlushForQuit` 立即返回 `Disabled`，所以关窗口照常退出；`State` 的 `ReadOnly` 为 `SaveOff` |
 | 规则集 | `IRuleset` 由 WP-00 随契约交付，读 `game/data/rulesets/sightseeing.json`，不另做桩 |
 | 外围 | O1、O2 按楼块包围盒画方块；`IWorldModel.Outskirts` 可以为 null，这时前沿线退化为校界外扩 `FallbackMargin`（WLD-OUTSKIRTS §12.3） |
 | 室内 | 开放清单里每栋楼一个方块桩提供者：每层一块楼板、开放入口处一个门洞、一部直跑楼梯，`Walkable`，让 WP-42、WP-07 第一天就能走进去；平面内核先给 0.5 m 栅格版的桩；导航图先用 WLD-INTERIORS §13 的桩图 |
@@ -2018,7 +2036,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
 部件按"编目先行"的方式管理：
 
-- `game/contracts/Parts/` 冻结所有共享部件的 ID 常量和参数 record（`PartCatalog`），受 PublicApiAnalyzers 保护。
+- `game/contracts/Parts/` 放所有共享部件的 ID 常量和参数 record（`PartCatalog`），随契约 v1 候选先交；部件包与区域包在主线上接通后按组冻结（§3），之后受 PublicApiAnalyzers 保护。
 - 区域包直接按 ID 放置部件，先显示成方块；部件包完成后，方块自动换成真模型。
 - 区域包需要特有部件时，在自己的目录里新建，ID 加上区名前缀。证明可以复用后，再申请提升为共享部件。
 
@@ -2026,7 +2044,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
 **远端与分支**（D-166）：
 
-- 远端 `origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签（`baseline-map`、`contracts-v1` 等）。不开 PR，不推送任何别的分支，不对 `main` 强推。
+- 远端 `origin` 是 GitHub 上的 `Wendystar0628/UESTC_RPG`，只有 `main` 和里程碑标签（`baseline-map`、`contracts-v1-rc` 等）。不开 PR，不推送任何别的分支，不对 `main` 强推。
 - 本地分支只用来隔离并行施工：每个写代码的子代理一个工作树、一个本地临时分支 `wp/<xx>-<slug>`。分支在本地提交、从不推送，合进 `main` 后立即删除。
 - **并发规模**：常态同时运行十几个 Opus 代理，可以分属两个账号，都在本机同一个仓库上工作。任何时刻只有一个主代理；合并队列、`main` 上的提交和推送只由它做。
 - **什么时候开工作树**：同一时刻有两个以上代理要写代码、编译或导入时，每个写代码的代理各开一个工作树。
@@ -2041,7 +2059,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
    - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档和待迁移的数据与脚本（§1）。
    - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
    - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
-   - WP-00 在主检出的 `main` 上搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。完成后打标签 `contracts-v1` 并推送。
+   - WP-00 在主检出的 `main` 上搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子。完成后打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。
    - WP-00 同时给主检出生成 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让主检出的开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
 2. **开工作树**：由 `scripts\wt\new.ps1 -Wp WP-18 -Slug south` 完成，从当前 `main` 拉本地分支，展开就是：
 
@@ -2093,7 +2111,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
 | 风险 | 对策 |
 | --- | --- |
-| 部件库成为瓶颈 | 编目和参数类型先冻结，方块桩先合入；区域可以先建私有部件；部件库拆成 5 个包 |
+| 部件库成为瓶颈 | 编目和参数类型随候选契约先交，方块桩先合入；区域可以先建私有部件；部件库拆成 5 个包 |
 | 风格不统一 | 场景里只允许经 `ToonSpec` 取得的卡通材质，着色器只用白名单；颜色只能用色名；先做金样（见 ART-MODELING §6），再放开并行；设一名风格负责人横向比对 |
 | 预算超支 | 每个部件必须声明各级细节的面数；按模块统计预算；单个格子先卡上限；G8 用烘焙统计预测；详见 ENG-BUDGET |
 | 合并冲突 | 目录独占加特性自动发现；共享文件只有一个写入者；契约只增不改（PublicApiAnalyzers）；`main` 有新合入时 rebase（§6）；代理不在编辑器里重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异） |
@@ -2139,7 +2157,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 外围楼块数据缺口大，程序化楼型观感不稳 | P0 截图定楼型；截面线与 O1 地面共点，两个包的采样用 G2 比对；ODbL 派生数据的提供义务按 WLD-OUTSKIRTS §6.4 |
 | 进楼卡顿、走进空楼、楼梯卡死 | 入口 25 m 整体预取、门口 1 m 软停、ENG-PERF §5 第 6 条（镜头在楼体里至少显示 I0）；楼梯斜面齐平与登阶层必需；G19（WLD-INTERIORS §6、WLD-INTERIORS §10） |
 | 会动的门打破"碰撞不随状态变" | 门扇只由观者位置触发，与钟点、季节、天气无关；运行时门体不进烘焙碰撞，转动期间没有碰撞；读档、切图时一律落到关好（§3） |
-| 音频把主线程余量吃光 | 音频主线程 ≤ 0.35 ms 从余量里划出，开发机余量只剩约 0.15 ms；核显档默认把 3D 声源上限降到 24、次要的床退成 2 个锚点；P0 在开发机和核显笔记本上实测（SYS-AUDIO §18.1） |
+| 音频把主线程余量吃光 | 音频主线程 ≤ 0.35 ms 从余量里划出，开发机余量只剩约 0.15 ms；最低配置档默认把 3D 声源上限降到 24、次要的床退成 2 个锚点；P0 在开发机和一台最低配置的笔记本上实测（SYS-AUDIO §18.1） |
 | 免费素材的许可不清，或不能随仓库公开 | 来源白名单、`licenses.json` 逐文件登记、G21a 入库检查；不许公开分发的素材放私有素材库（SYS-AUDIO §14） |
 
 ## 8 扩展点（RPG）
@@ -2162,7 +2180,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | --- | --- | --- | --- | --- |
 | 规则集 | §3 规则集与观者状态块 `RulesetId`、`RulesetDescriptor`、`IRuleset`；存档块 `SaveMeta.Ruleset` | 观光规则集 `sightseeing`（`game/data/rulesets/sightseeing.json`）：旁观与行走两种观察模式、世界控件全开、`all-unlocked`、一个偶发事件、过场只在 Title、Entering、Leaving；内容规则（无人物、无点选、无听得清的人声）只供门禁取判据；只在新游戏和读档时切换；各包读规则集，不在代码里写观光专属的常量 | RPG 另加一个规则集文件 `game/data/rulesets/<id>.json`；`RulesetDescriptor` 以 init 属性加字段，`InteractionRule` 末尾追加；门禁按规则集取判据 | 已写进 §3（ENG-ROADMAP §6 第 1 条） |
 | 观者位置 | §3 规则集与观者状态块 `IObserverState`；相机块 `ICameraRig.Pose`；§2 ArchUnitNET 规则（`Campus.Hud.Map`） | 第一人称下观者位置和镜头重合：`IObserverState`（脚位、眼位、朝向、所在空间 `NavSpace?`、观察模式）旁观时取镜头，行走时取 WP-42 的物理体；小地图的玩家箭头、`Proximity` 判定、进楼触发、存档 meta 的空间读它，"画面从哪看"（视锥、听者、流式选级）读 `ICameraRig` | 第三人称时 `IObserverState` 改由角色给出，读它的包不改 | 已写进 §3（ENG-ROADMAP §6 第 2 条） |
-| 输入占用 | §3 相机块 `ICameraRig.LockInput`、`InputLockReason` | 按原因计数的 `IDisposable LockInput(InputLockReason r)`，没有任何占用时才接受观者输入；现有原因：大地图、交还控制、换图（SYS-ATLAS §4.1、SYS-TITLE §7.3、SYS-MAPS §4.2） | `InputLockReason` 末尾追加对话、剧情过场、菜单 | 已写进 §3（ENG-ROADMAP §6 第 3 条） |
+| 输入占用 | §3 相机块 `ICameraRig.LockInput`、`InputLockReason` | 按原因计数的 `IDisposable LockInput(InputLockReason r)`，没有任何占用时才接受观者输入；现有原因：大地图、交还控制、换图、菜单与确认对话框、改键捕获（SYS-ATLAS §4.1、SYS-TITLE §7.3、SYS-MAPS §4.2、UI-NAV §5） | `InputLockReason` 末尾追加对话、剧情过场 | 已写进 §3（ENG-ROADMAP §6 第 3 条） |
 | 角色与实体 | §2 自动发现与程序集边界；`[KernelNode]`、`IRenderHost` | 没有角色与实体层，画面不出现人物（INV-6）；动态物体（动物、粒子）由各系统的 `[KernelNode]` 自管，经 `IRenderHost` 申请显示；`IRenderHost` 没有骨骼网格与动画的入口 | 新的 Kernel 服务 `ICharacterService`（角色）、`IAgentService`（NPC 与日程），目录 `game/entities/`，契约 `game/contracts/Entities/`；`IRenderHost` 加骨骼实例的方法，按包记账（ENG-PERF §12.2）；角色的声音用 `IAmbienceService.AddDynamic`、`MoveDynamic`；预算按账本另立（ENG-ROADMAP §5） | 只占名字：目录与实体 ID 前缀 `npc:`、`item:`、`quest:`（§2；ENG-ROADMAP §6 第 6 条）；接口不预留 |
 | 观察模式与镜头 | §3 世界状态块 `ViewMode { Fly, Walk }`；相机块 `ICameraRig`、`IViewControl`、`ModeSwitchVia` | 只有旁观和行走；观者没有可见的身体；镜头不自己动（INV-2） | `ViewMode` 末尾加第三人称跟随；`ICameraRig` 加带默认实现的跟随目标成员；行走的物理（SYS-WALK §12）作为角色的移动层复用 | 否 |
 | 材质与描线 | §3 风格块：7 位材质 ID，全场不超过 128 个（含剖切 ID）；`LineClass`、`ShadeSteps` | 场景材质已占去大部分 ID；`LineClass`、`ShadeSteps` 没有角色档 | 角色共用白名单里新增的一个蒙皮卡通着色器和少量材质 ID；`LineClass`、`ShadeSteps` 末尾追加角色档（ENG-ROADMAP §7 第 11 条） | 否 |
@@ -2201,7 +2219,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 切图的卸载泄漏（§7） | P0 实测同图重载 3 次，按 G16 的判据（显存、对象数 ±5%，旧 `IWorldModel` 的弱引用被回收）；WP-46 | 集中测试时同图重载（SYS-MAPS §13） |
 | 全局纹理换尺寸、雾幕里重新分配材质 ID（§7） | P0 各验一次换尺寸后的 RID 与编译计数、雾幕里重新分配材质 ID（SYS-MAPS §15）；WP-46、WP-04 | 包内路径按图分开，G6 查各 PCK 的路径不相交 |
 | 外围的程序化楼型观感（§7） | P0 截图定楼型；WP-47 | WLD-OUTSKIRTS的楼型 |
-| 音频的主线程开销（§7） | P0 在开发机和核显笔记本上实测（SYS-AUDIO §18.1）；WP-53a | 音频主线程 ≤ 0.35 ms；3D 声源上限 32，核显档默认 24；开发机主线程余量约 0.15 ms |
+| 音频的主线程开销（§7） | P0 在开发机和一台最低配置的笔记本上实测（SYS-AUDIO §18.1）；WP-53a | 音频主线程 ≤ 0.35 ms；3D 声源上限 32，最低配置档默认 24；开发机主线程余量约 0.15 ms |
 | 安装目录与分发压缩包的实测体积（§4） | P0 实测后统一核账（ENG-BUDGET §8、ENG-PERF §8）；主代理 | G6：安装目录 ≤ 0.9 GB，分发压缩包 ≤ 0.7 GB（全部图之和），音频单列不超过 165 MB |
 | 各类产物的单件生成耗时，以及全图预烘总时长（§4） | P0 在开发机单线程实测；WP-02 | L0 一格 ≤ 150 ms，碰撞一格 ≤ 50 ms，室内一层 ≤ 100 ms；开始页烘满全图 ≤ 4 min |
 | `.tbin` 在工作线程上的读写（zstd 解压、XxHash128、`MeshCreateFromSurfaces`）是否安全、耗时多少；zstd 用 `FileAccess.OpenCompressed` 还是 .NET 的实现（§4） | P0 验证；WP-02 | 工作线程上读、解压、校验、建网格，主线程只挂载；zstd 先用 `FileAccess.OpenCompressed` |

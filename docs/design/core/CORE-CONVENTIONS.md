@@ -177,7 +177,7 @@ gates: [G1, G2, G3, G4, G5]
 - **存档段 ID**：小写字母、数字、连字符（如 `"world"`）；按图的段在文件里展开为 `map:<id>/<段>`（ENG-ARCH §3）。
 - **全局着色器参数**：名字一律小写下划线、不带前缀（`weather_a`、`map_rect`）；C# 侧只用 `ShaderGlobals` 的常量（`ShaderGlobals.WeatherA`），不写字符串字面量（ENG-PERF §1.5、ENG-ARCH §3）。总线名同样只用 `AudioBuses` 的常量。
 - **JSON**：一律用 `ContractJson.Options`：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`；多态类型的类型字段写在每个对象的第一个字段（覆盖层是 `"op"`，碰撞体是 `"kind"`）；存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定相同，ID 类的 record struct 写成字符串（ENG-ARCH §3、SYS-SAVE §3.5）。
-- **命令行取值**：天气写连字符小写（`few-clouds`、`after-rain`）；季节写英文小写；预设 `smooth`、`balanced`、`fine`、`ultra`；设备档 `igpu-low` 等；`--quality-set` 的单项名是 `QualityKnob` 的 snake_case（ENG-GATES §1）。
+- **命令行取值**：天气写连字符小写（`few-clouds`、`after-rain`）；季节写英文小写；预设 `smooth`、`balanced`、`fine`、`ultra`；设备档 `dgpu-high` 等；`--quality-set` 的单项名是 `QualityKnob` 的 snake_case（ENG-GATES §1）。
 - **过场**：过场 ID 用 snake_case（`enter_new`），`map.json` 里的角色名用 camelCase（`enterNew`）（SYS-MAPS §3）。
 
 ### 3.5 色名
@@ -227,7 +227,7 @@ gates: [G1, G2, G3, G4, G5]
 
 以下写法现在就照做，以后加观察模式、规则集、RPG 子系统时才不用改既有语义（细则以 ENG-ROADMAP §3 的写法纪律和 ENG-ROADMAP §6.1 第 4 条为准）：
 
-- **枚举只追加、不重排、不删值**：契约冻结后，枚举只能在末尾追加；JSON 里按字符串存（ENG-ARCH §3）。`QualityKnob` 按序号置位存进 `QualityChange.Knobs`，重排会直接改变含义。
+- **枚举只追加、不重排、不删值**：所在的契约组冻结后（D-134），枚举只能在末尾追加；JSON 里按字符串存（ENG-ARCH §3）。`QualityKnob` 按序号置位存进 `QualityChange.Knobs`，重排会直接改变含义。
 - **穷举 `switch`，`default` 报告未知值**：会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错，不把未知值静默当成某个已知值。
 - **不做二值判断**：不写 `mode == ViewMode.Fly ? … : …` 这类写法；它会把以后追加的值静默归进某一边，编译器查不出。G1 的 `-warnaserror` 能挡住非穷举的 `switch` 表达式，二值判断靠评审（ENG-ROADMAP §6.1）。
 - **存档里的枚举按字符串存**：存档 DTO 的枚举按字符串写（SYS-SAVE §3.5）；读到不认识的枚举字符串，按"这一段不合法"处理，不猜。
@@ -513,7 +513,7 @@ UESTC_RPG/
 ### 8.2 改什么
 
 - **只改自己工作包的独占目录**（ENG-WP §2 的"独占目录"一列，`ownership.json`）；子包各自独占原包目录下的一个子目录（ENG-WP §3）。越界由 G3 拒绝。
-- **共享文件只由主代理改**（§5.1）。改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，在回报里提申请，经 WP-00 处理；契约在 v1.1 之后只增不改（ENG-ARCH §3、D-134）。
+- **共享文件只由主代理改**（§5.1）。改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，在回报里提申请，经 WP-00 处理。契约分批定死：WP-00 先交能编译的候选契约和桩（契约 v1 候选）；某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结这一组，之后只增不改（ENG-ARCH §3、D-134）。
 - **新模块用特性接入**（`[ContentModule]`、`[Part]`、`[KernelNode]`、`[KernelService]`、`[SaveSection]`、`[AmbientEmitter]`、`[InteriorProvider]`、`[MediumPresenter]`、`[QualityResponsive]`），不改注册表、不改主场景、不加 Autoload（ENG-ARCH §2）。
 - **代码边界**（细则以 ENG-ARCH §2 与 ENG-WP §4 的禁用清单为准）：
   - `game/gen` 是纯 .NET：只引用契约、部件、世界模型（只读），不引用 GodotSharp，不读文件，不读世界状态，不感知天气和画面设置；
@@ -536,7 +536,7 @@ UESTC_RPG/
 
 这四条对主代理和全部子代理都适用（D-149–D-152）：
 
-1. **下载**：需要的引擎、导出模板、SDK、素材、文档直接下载，不必请示。只用官方或可信来源，能校验哈希就校验；下载后说明下了什么、多大、放在哪。第三方插件登记进 `third_party.json`，音频素材登记进 `licenses.json`（ENG-ARCH §4）。
+1. **下载**：需要的引擎、导出模板、SDK、素材、文档直接下载，不必请示。只用官方或可信来源，能校验哈希就校验；下载后说明下了什么、多大、放在哪。第三方插件与代码只收 MIT、Apache、BSD、ISC、OFL 许可（ENG-WP §5），登记进 `third_party.json`；音频素材登记进 `licenses.json`（ENG-ARCH §4）。本作自己的许可见 OPS-RELEASE §7（D-170）。
 2. **临时文件**：不干扰开发的就留着，不必频繁删除；临时文件放会话临时目录或仓库里不进 git 的 `output/`，不放进项目的源码和文档目录。只在占用项目目录、影响构建时清理。
 3. **删除**：能不删就不删。要删时只用绝对路径，只删具体的文件；不用带通配符或相对路径的删除命令，也不写 `cd X; … rm …` 这类组合，因为 `cd` 一旦失败，删除就会落到当前目录上（可能是文档目录）。例如复制文件时要删掉复制来的 `.uid`（ENG-ARCH §6），就按绝对路径逐个删。
 4. **文档只记现行状态**：不写修订说明、用户原话和证据（D-152）；文档的增删改按 §7。
@@ -549,7 +549,7 @@ UESTC_RPG/
 
 ### 8.5 主代理的角色
 
-- **主代理**：开发期的编排者。先做 WP-00（骨架、契约 v1、桩）；之后发派工简报、维护合并队列，并审批三类事：契约变更（含全局着色器参数、着色器文件、程序集引用与 NuGet 包，§8.2）、开放室内清单 `interiors.json` 的增删（D-164）、预算余量（ENG-BUDGET §8 的"主代理余量"）（D-161）。
+- **主代理**：开发期的编排者。先做 WP-00（骨架、契约 v1 候选、桩）；之后发派工简报、维护合并队列，按组宣布契约冻结（§8.2、D-134），并审批三类事：契约变更（含全局着色器参数、着色器文件、程序集引用与 NuGet 包，§8.2）、开放室内清单 `interiors.json` 的增删（D-164）、预算余量（ENG-BUDGET §8 的"主代理余量"）（D-161）。
 - 文档里"须经 WP-00 审批"与"须经主代理审批"等价。
 - 共享文件只由主代理改（§5.1）；文档冲突报主代理，由主代理定案并登记进 CORE-DECISIONS（§7.6）。
 - 主代理维护 ENG-STATUS（当前施工状态），派工、合入和交接时更新；换会话或换账号接手时，先读它再对照 Git 核实（ENG-STATUS §1）。

@@ -103,7 +103,7 @@ game/data/
 - **本机烘焙**（D-165）：四类产物不随安装包发：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）、碰撞级 C、开放室内与简化室内的室内包和碰撞包、平面地图底图。它们在玩家机器上由与开发烘焙器同一个 `Build()` 生成，第一次需要时生成，写进本机缓存，之后照常从缓存读。查找顺序：启动集 → 本机缓存 → 本机烘焙（生成后写进缓存）。何时烘、后台预烘、按需生成与本机缓存的管理见 ENG-PERF §5、ENG-ARCH §3（`IBakeService`）。
 - **缓存键**：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`（ENG-PERF §5 的键在 ABI 之后加地图）。本机缓存目录 `user://cache/bake/<地图>/<ABI>/…`（导出版在 `%APPDATA%` 下）；开发和门禁用 `--bake-cache=<绝对路径>` 指到共享缓存（默认 `UESTC_BAKE_CACHE`）。各图互不覆盖。
 - **数据哈希只算本图里影响 `Build()` 的输入**：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`。改出生点、默认状态、过场、点位不重烘。
-- **烘焙命令**：`--bake=all --map=<id>` 是开发和 CI 的无界面烘焙器，用来出参考哈希、给门禁预烘缓存；`--map=*` 依次烘全部图。发布版运行时的本机烘焙由 `IBakeService` 调用同一个 `Build()`。
+- **烘焙命令**：`--bake=all --map=<id>` 是开发和 CI 的无界面烘焙器，用来出参考哈希、给带 `--bake-strict=1` 的检查补共享缓存；`--map=*` 依次烘全部图。`gate.ps1` 先按改动选出本次要跑的检查，再决定要不要准备烘焙数据：快检不烘，不带 `--bake-strict=1` 的检查缺什么按玩家路径现烘，带它的检查只把用到的图按哈希增量补进共享缓存；`--map=*` 只在集中测试或所选检查确实要全部图时跑（ENG-ARCH §6）。发布版运行时的本机烘焙由 `IBakeService` 调用同一个 `Build()`。
 - **启动集**：每张图一个 `boot_<地图>.pck`，随安装包发，包内路径 `res://bake/<地图>/boot/`。内容是 L4、遮挡体、外围 O2 常驻块与卡片版、常驻低精度地形高度，以及需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它）；另有**全图常驻的小数据**：派生数据纹理（岸线 SDF、灯表、`precip_occ` 等）、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表 `ambience.bake`（SYS-AUDIO）、导航图（WLD-INTERIORS）；以及参考哈希清单 `bake.manifest.json`（`res://bake/<地图>/boot/bake.manifest.json`）。每图 ≤ 60 MB，其中全图常驻小数据约 10–15 MB。这些小数据体积小，又是启动和第一次切到行走时就要的，所以随包发，不在本机烘焙；它们同样由开发烘焙器出（离线烘焙），随启动集挂载，LoadData 之后就能读。
 - **本机烘焙产物的位置**（按各自的键进缓存，同样在 ABI 之后加地图）：L0–L3 的 TileBundle，碰撞级 C，平面地图的底图与标注 `map/`（SYS-ATLAS），开放室内与简化室内的按层包和碰撞包 `interior/`（WLD-INTERIORS）。开放室内不另设 PCK。
 - **挂载**：某张图第一次进入时，在 LoadData 那一步 `ProjectSettings.LoadResourcePack(path, replaceFiles: false)` 挂上 `boot_<地图>.pck`，之后不卸载（Godot 没有卸载接口）。挂载只读目录表，常驻开销按很小计（§19）。G6 检查各 PCK 的路径集合两两不相交，否则同名文件会互相覆盖。
@@ -490,7 +490,7 @@ public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint Weat
 1. 截图默认串加 `--gate=maptravel` 启动，到 V1 就绪（ENG-GATES §1 的"截图方式"第 4 条）后记基线 B0：`RenderVideoMemUsed`、`RenderBufferMemUsed`、内核账里的实例数和字节、`ObjectCount`、`ObjectResourceCount`、`ObjectNodeCount`、`ObjectOrphanNodeCount`、物理 body 数、`GC.Collect()` 之后的托管堆、SURFACE、DRAW、Canvas 三项管线编译计数，再截一张图 S0。
 2. 连做 3 次 `Travel(qingshuihe, Cause = Test)`，每次到 V1 就绪后记 Bi、截 Si。
 
-`scripts\gate.ps1` 先补齐共享缓存，再给这个门禁追加 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，所以下面的耗时判据不含本机烘焙（D-165）。
+`scripts\gate.ps1` 先按改动选出本次要跑的检查，再决定要不要准备烘焙数据（ENG-ARCH §6）：选中这个门禁时，先把它用到的图按哈希增量补进共享缓存（`--bake=all --map=<id>`），再给它追加 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，所以下面的耗时判据不含本机烘焙（D-165）。
 
 **判据**：
 

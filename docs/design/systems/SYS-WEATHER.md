@@ -261,7 +261,7 @@ public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weath
 // IWeatherProcess 增 WeatherProcessState Capture(MapId map);               // 存档：一张图的天气过程的落定值，过渡中取终点（SYS-SAVE §4.2）
 //                    void Restore(MapId map, WeatherProcessState s);         // 读档：在遮挡下直接落到存档的状态，不做过渡、不调 Reset
 //   WeatherProcessState 的字段（图、epoch、片段号、选择、队列、钉住窗口、保持晴的期限、湿润与积水余量、离开时的世界时间）
-//   由 WP-45a 在 v1 里定，以 ENG-ARCH §3 为准。weather、map:<id>/weather 两个存档段（SYS-SAVE §2）是 WP-45a 的两个 ISaveSection<T> 小类，
+//   由 WP-45a 在这一组冻结前定（D-134），以 ENG-ARCH §3 为准。weather、map:<id>/weather 两个存档段（SYS-SAVE §2）是 WP-45a 的两个 ISaveSection<T> 小类，
 //   各自的 Capture / Restore 调上面这两个方法；G20 的续跑等价测试也经它们比对天气状态。
 //   Reset 只在新游戏和命令行新开时调用
 // 闪光事件（SYS-AUDIO §19，WP-40 实现）：
@@ -322,4 +322,4 @@ public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weath
 | 投影淡到 0 时设 `ShadowOpacity = 0`、`ShadowCasterMask` 置 0，这两项不是特化开关，切换不触发管线编译（§7"投影"） | P0 核实，看 G16 的编译计数，WP-03 | 按不是特化开关实现 |
 | 各天气相对晴天的帧时增量（§9"性能"） | 按 ENG-PERF §12.4 的"E1 夏夜雷雨"基准实测，WP-45 | 晴到多云 +0.05–0.15 ms；阴和雾约 0；小雨 +0.3 ms；大雨和雷雨 +0.6–0.8 ms；大雪 +0.3 ms |
 | 大雨的增量可能超过天气对晴天的 5% 总上限，届时收紧降水数量还是放宽上限（ENG-BUDGET §8） | P0 实测后定，WP-45 | 上限按 5%，降水数量按 §7 |
-| `WeatherProcessState` 的完整字段（§8） | WP-45a 在契约 v1 里定（ENG-ARCH §3） | ENG-ARCH §3 草案列出的字段 |
+| `WeatherProcessState` 的完整字段（§8） | WP-45a 在这一组冻结前定（ENG-ARCH §3，D-134） | ENG-ARCH §3 草案列出的字段 |

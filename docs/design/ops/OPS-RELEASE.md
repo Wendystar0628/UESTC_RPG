@@ -2,7 +2,7 @@
 id: OPS-RELEASE
 title: 发布与交付
 category: ops
-summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包和故障诊断
+summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-08, WP-35, WP-47, WP-50]
 depends: [ENG-ARCH, ENG-PERF, ENG-GATES]
@@ -14,13 +14,13 @@ gates: [G6]
 
 # OPS-RELEASE · 发布与交付
 
-> **范围**：本文规定对外交付的流程：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包，以及试玩时出了问题怎样交回诊断材料。
-> **不在本文**：构建信息的生成步骤（ENG-ARCH §4）；正式版目录名的设置（ENG-ARCH §2）；安装包的组成与体积（ENG-PERF §8、ENG-BUDGET §8）；导出门禁 G6（ENG-GATES §2）；日志的格式、上限与诊断摘要的字段（ENG-PERF §12.6）；存档的格式与失败处理（SYS-SAVE）；许可文本的内容（SYS-VIEW §6）。
+> **范围**：本文规定对外交付的流程：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩时出了问题怎样交回诊断材料，以及本作各部分按什么许可公开。
+> **不在本文**：构建信息的生成步骤（ENG-ARCH §4）；正式版目录名的设置（ENG-ARCH §2）；安装包的组成与体积（ENG-PERF §8、ENG-BUDGET §8）；导出门禁 G6（ENG-GATES §2）；日志的格式、上限与诊断摘要的字段（ENG-PERF §12.6）；存档的格式与失败处理（SYS-SAVE）；许可页与 `LICENSES.txt` 的文本内容（SYS-VIEW §6）。
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)
 
 ### 分工
 
-- **WP-00（主代理）**：`version.txt`、构建信息的生成步骤、`project.godot` 里的正式目录名；发版时改版本号、打标签、上传发布页；
+- **WP-00（主代理）**：`version.txt`、构建信息的生成步骤、`project.godot` 里的正式目录名、根目录的 `LICENSE` 与 `README.md`；发版时改版本号、打标签、上传发布页；
 - **WP-01**：导出入口 `scripts/release/`；日志与诊断导出（ENG-PERF §12.6）；
 - **WP-02**：导出时打各图的启动集 `boot_<地图>.pck`，由导出入口调用；
 - **WP-08**：打地图数据包，外围部分由 WP-47 提供（§5）；
@@ -34,6 +34,7 @@ gates: [G6]
 3. **一个公开版本** = `main` 上的标签 `v<版本>` + 分发压缩包 `UESTC-<版本>-win64.7z` + 地图数据包 `map-data-<版本>.zip`，三者版本号相同。
 4. **更新解压到新目录**，不覆盖旧目录；卸载程序和清理用户数据是两件事，分开做。
 5. **试玩出问题时交回诊断包**：默认只含日志和诊断摘要，存档由玩家另选。
+6. **许可分四类**：代码与脚本用 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据按 ODbL 1.0；第三方素材按各自许可（§7）。
 
 ## 1 版本号与构建信息
 
@@ -95,3 +96,18 @@ gates: [G6]
 | 游戏内界面打不开 | 手动打开 `%APPDATA%\UESTC\logs\`，把里面的文件发回 |
 
 - **试玩者交回**：诊断包，加一句话：在哪、做了什么、看到了什么。代理按诊断包里的提交号检出代码复现，结论写进回报（ENG-GATES §5）。
+
+## 7 许可
+
+本作各部分的许可如下（D-170）；对外的权威文本是仓库根目录的 `LICENSE` 和 `README.md` 的"许可"一段，由主代理维护。
+
+| 内容 | 许可 | 写在哪 |
+| --- | --- | --- |
+| 代码与脚本：C#、着色器、Python、PowerShell 与构建配置 | MIT | 根目录 `LICENSE` |
+| 原创美术、音频、文案与设计文档（含 `docs/design/`） | 保留所有权利 | `README.md` 的"许可"一段 |
+| 地图数据（© OpenStreetMap contributors）：快照、补充数据和由它们生成的派生数据 | ODbL 1.0；每个公开版本附地图数据包（§5） | `README.md`；地图数据包的 `README.txt` |
+| 第三方素材与代码：字体、音频、插件、移植的算法 | 按各自的许可 | `third_party.json`、`game/data/audio/licenses.json`；汇总进 `LICENSES.txt`（SYS-VIEW §6） |
+
+- **第三方的许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL（ENG-WP §5；C# 移植的 earcut 是 ISC，ENG-ARCH §1）；音频素材的来源与许可按 SYS-AUDIO §14 登记。
+- **不是校方作品**：`README.md` 开头写明这是个人创作，不是电子科技大学的官方作品，与学校没有关联；每个版本的发布说明也写这一句。场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §11）。
+- **说法一致**：`README.md` 的"许可"一段、许可页（SYS-VIEW §6）、安装包的 `LICENSES.txt` 和地图数据包的 `README.txt`，对同一类内容写同一种许可；改许可时先改 `LICENSE` 与 `README.md`，再同步其余几处。

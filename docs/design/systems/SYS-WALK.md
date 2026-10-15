@@ -520,7 +520,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 | 全局常驻（2 m 分类栅格 + 8 m 安全点网格） | 约 0.9 MB |
 | 本机烘焙一格 | 工作线程，不占主线程；≤ 50 ms（开发机单线程初值，P0 实测，§17） |
 
-**契约增量**（ENG-ARCH §3 照本节冻结，冻结后只增不改；`Vector2`、`Vector3`、`Matrix4x4` 都是 `System.Numerics` 的。`SurfaceTag` 的新值一律追加在末尾，`Invisible` 之后依次是 `Boundary`、`DoorClosed`）：
+**契约增量**（ENG-ARCH §3 照本节写入候选契约，这一组由主代理宣布冻结后只增不改，D-134；`Vector2`、`Vector3`、`Matrix4x4` 都是 `System.Numerics` 的。`SurfaceTag` 的新值一律追加在末尾，`Invisible` 之后依次是 `Boundary`、`DoorClosed`）：
 
 ```csharp
 // Campus.Contracts：纯 .NET，不引用 GodotSharp

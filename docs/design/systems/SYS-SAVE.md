@@ -575,7 +575,7 @@ user://saves/
 
 ## 10 C# 契约
 
-照 ENG-ARCH §3 的写法，由 WP-00 加进 v1，只增不改。
+照 ENG-ARCH §3 的写法，由 WP-00 加进契约 v1 候选；这一组由主代理宣布冻结后只增不改（D-134）。
 
 ```csharp
 // 存档与持久化（SYS-SAVE）。放在 game/contracts/Save/；Campus.Gen.* 不得引用（ENG-ARCH §2）
@@ -648,7 +648,7 @@ public sealed class RestoreContext
     public required int FromVersion { get; init; }   // 迁移前的版本，只用于日志；迁移已在后台做完
     public required bool Missing { get; init; }      // 文件里没有这一段，传进来的是 CreateDefault 的值
     public void Repair(string what) { … }            // 记一条校验修复（§5.6）
-    // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在 v1 里补全
+    // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在这一组冻结前补全（D-134）
 }
 public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start);
     // Start 默认取本图 map.json 的 newGameStart（清水河：秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；之后由 FlowTo 推到落金初灯（§5.5）

@@ -239,9 +239,17 @@ gates: []
 
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
-| [OPS-RELEASE](ops/OPS-RELEASE.md) 发布与交付 | 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包和故障诊断 | WP-00 | G6 |
+| [OPS-RELEASE](ops/OPS-RELEASE.md) 发布与交付 | 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可 | WP-00 | G6 |
 
-### 7.11 待用的文件夹
+### 7.11 提案 `proposals/`
+
+| 文档 | 规定什么 | 主责 | 门禁 |
+| --- | --- | --- | --- |
+| [RFC-ART-JP-AMBIENCE](proposals/RFC-ART-JP-AMBIENCE.md) 日式氛围元素目录 |  | — | — |
+| [RFC-ART-JP-CONFLICTS](proposals/RFC-ART-JP-CONFLICTS.md) 日式方向与现行规则的冲突 |  | — | — |
+| [RFC-ART-OLD-RENOVATION](proposals/RFC-ART-OLD-RENOVATION.md) 老旧建筑的风格化翻新规则 |  | — | — |
+
+### 7.12 待用的文件夹
 
 下列文件夹已建好，目前只有 README（编码规则和文件头模板）。新建文档后，重跑本脚本即可登记进上面的表。
 
@@ -255,7 +263,6 @@ gates: []
 | [issues/](issues/README.md) | ISS | 开发中发现的问题：现象、复现、影响范围、处理方式。修复后如果改变了设计，结果写进规格文档。 |
 | [localization/](localization/README.md) | L10N | 本地化：文本键、字体与字形、语言切换、翻译流程。 |
 | [narrative/](narrative/README.md) | NARR | 剧情、章节、事件脚本、对话与文本规范。 |
-| [proposals/](proposals/README.md) | RFC | 开发中临时发现的设计提案。评审通过后把结果合进对应的规格文档，提案标为 merged；未采纳的标 rejected。规格文档不引用提案。 |
 | [qa/](qa/README.md) | QA | 测试计划、回归清单、人工评审流程。门禁的权威定义仍在 ENG-GATES。 |
 
 ## 8 工作包与文档
@@ -401,6 +408,11 @@ graph LR
   end
   subgraph g_ops[运维]
     OPS_RELEASE["OPS-RELEASE"]
+  end
+  subgraph g_proposals[提案]
+    RFC_ART_JP_AMBIENCE["RFC-ART-JP-AMBIENCE"]
+    RFC_ART_JP_CONFLICTS["RFC-ART-JP-CONFLICTS"]
+    RFC_ART_OLD_RENOVATION["RFC-ART-OLD-RENOVATION"]
   end
   ART_STYLE --> ART_FIDELITY
   ART_MODELING --> ART_FIDELITY

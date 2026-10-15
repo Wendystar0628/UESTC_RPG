@@ -138,10 +138,10 @@ VRM 自带的许可信息逐文件登记，做法同音频素材（SYS-AUDIO §1
 
 | 项 | 现状 | 出处 |
 | --- | --- | --- |
-| 主线程余量 | 每帧主线程合计约 5.5 ms；音频的 0.35 ms 从余量里划出后，开发机只剩约 0.15 ms；核显档靠音频降级守住 | ENG-BUDGET §8、ENG-PERF §6 |
+| 主线程余量 | 每帧主线程合计约 5.5 ms；音频的 0.35 ms 从余量里划出后，开发机只剩约 0.15 ms；最低配置档靠音频降级守住 | ENG-BUDGET §8、ENG-PERF §6 |
 | 主线程上限 | CPU p95 ≤ 6 ms | ENG-BUDGET §2 |
 | 总账余量（三角形 / 主通道绘制 / 阴影绘制 / GPU 帧时） | 4% / 11% / 10% / 2% | ENG-BUDGET §8 |
-| 3D 声源 | 在播 ≤ 32（核显档默认 24） | ENG-BUDGET §7 第 21 条、SYS-AUDIO §18.1 |
+| 3D 声源 | 在播 ≤ 32（最低配置档默认 24） | ENG-BUDGET §7 第 21 条、SYS-AUDIO §18.1 |
 | 材质 ID | 全场 128 个 | SYS-MAPS §15 |
 | 安装目录与分发压缩包 | 安装目录 ≤ 0.9 GB，分发压缩包 ≤ 0.7 GB；几何类产物本机烘焙、不随包发（D-165） | ENG-GATES §2 的 G6、ENG-BUDGET §8 |
 
@@ -151,7 +151,7 @@ VRM 自带的许可信息逐文件登记，做法同音频素材（SYS-AUDIO §1
 | --- | --- | --- |
 | 角色、NPC 的主线程开销（动画求值、骨骼姿态、AI、交互查询）没有余量 | ① 动画按一拍二步进，远处降频，屏外不求值；② AI、日程、寻路在线程池里做纯 .NET 计算（ENG-BUDGET §7 第 16 条）；③ RPG 规则集单列一套主线程账（`budgets.json` 加 `rulesets.<id>` 一节，做法同 `maps.<id>`），原型实测后重订 ENG-PERF §6 的表 | ENG-BUDGET §8、ENG-PERF §6 |
 | 绘制调用与阴影绘制 | 转换时把一个角色合到 1–2 个材质；远处 NPC 用 MultiMesh 加顶点动画或替身（ENG-PERF §1.1 的容器规则）；角色只在近处投影 | ENG-PERF §1.1、ENG-PERF §10.1 |
-| GPU 帧时余量只有 2% | 人数随画面设置的新单项（末尾追加的 `QualityKnob`）缩放；核显档默认少放人 | SYS-GRAPHICS §8、ENG-BUDGET §2 |
+| GPU 帧时余量只有 2% | 人数随画面设置的新单项（末尾追加的 `QualityKnob`）缩放；最低配置档默认少放人 | SYS-GRAPHICS §8、ENG-BUDGET §2 |
 | 材质 ID 上限 | 角色共用白名单卡通着色器和少量材质 ID | SYS-MAPS §15 |
 | 3D 声源上限 | NPC 的声音进同一个仲裁池，不另开上限 | SYS-AUDIO §2.5 |
 | 显存与包体 | 角色贴图按 ENG-PERF §7 记账；VRM 原始文件不进导出包 | ENG-PERF §7、ENG-PERF §8 |
@@ -161,13 +161,13 @@ VRM 自带的许可信息逐文件登记，做法同音频素材（SYS-AUDIO §1
 
 ### 6.1 清单
 
-以下 6 条已采纳（D-160），由 WP-00 和相关包在 v1 冻结前交付，落实在 ENG-ARCH、SYS-MOTION、SYS-SAVE、SYS-MAPS、ENG-WP、CORE-CONVENTIONS（具体小节见末列）；契约以 ENG-ARCH §3 为准。判据：以后再补，会改变既有契约的语义、存档格式或目录归属的，才列在这里。
+以下 6 条已采纳（D-160），由 WP-00 写进契约 v1 候选、相关包在所在那组契约冻结前交付（ENG-ARCH §3），落实在 ENG-ARCH、SYS-MOTION、SYS-SAVE、SYS-MAPS、ENG-WP、CORE-CONVENTIONS（具体小节见末列）；契约以 ENG-ARCH §3 为准。判据：以后再补，会改变既有契约的语义、存档格式或目录归属的，才列在这里。
 
 | # | 预留 | 内容 | 负责 | 为什么在冻结前做 | 落实在 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 规则集 | 契约 `RulesetId`、`WorldControlMask`、`InteractionRule`、`RulesetDescriptor`、`IRuleset`（Kernel 服务，只读；只有新游戏和读档能切换）；数据 `game/data/rulesets/sightseeing.json`。v1 字段：`Id`；`ViewModes`（Fly、Walk）；`WorldControls`（`WorldControlMask`：`Clock`、`Season`、`Weather`、`Flow`，观光为 `All`）；`UnlockPolicy`（`all-unlocked`）；`Incidents`（允许的偶发事件 ID）；`CinematicStates`（Title、Entering、Leaving）；内容规则 `Characters = false`、`Interaction = InteractionRule.None`、`ClearVoices = false`（运行时不读，门禁按它取判据）。顺序：新游戏先定规则集，再调各段的 `CreateDefault`；读档先按 meta 的 `Ruleset` 定规则集，再进 `World` 阶段 | WP-00：契约、服务（放 `game/kernel/registry/`）、schema 和规则集文件。读它的包：WP-48c（解锁策略）、WP-06 与 WP-42（`IViewControl` 拒绝不在表里的模式）、WP-35（世界控件）、WP-26（事件清单）、WP-49a（过场状态）、WP-50（读档恢复）、WP-27（门禁判据） | meta 的 `Ruleset` 字符串要有定义；不定的话，观光禁令会散成各包代码里的常量和判断，以后每一处都要改语义 | ENG-ARCH §3（规则集契约）、ENG-ARCH §2（`game/data/rulesets/`、`game/kernel/registry/`）、ENG-WP §2（WP-00 行与读规则集的各行）、SYS-ATLAS §8、SYS-TITLE §7.1、SYS-TITLE §7.4、SYS-SAVE §5.1、SYS-SAVE §5.5、ENG-GATES §3 |
 | 2 | 观者状态 | 契约 `IObserverState`：观者的脚位、眼位、朝向、所在空间 `NavSpace?`、观察模式。旁观时就是镜头位置，行走时是 WP-42 的物理体。v1 读它的：小地图的玩家箭头（视锥仍读镜头）、底栏区域名、`Proximity` 的判定、行走进楼触发与门、存档 meta 的空间与区域 | WP-00（契约）；WP-06 实现（行走时取 WP-42 的数据）；读它的包：WP-48b、WP-48c、WP-07、WP-50 | 第一人称下观者与镜头重合；第三人称后两者分开，各包若直接读 `ICameraRig.Pose`，就要逐包排查、改语义。v1 只是换一个读取来源 | ENG-ARCH §3（`IObserverState`）、ENG-ARCH §2（`Campus.Hud.Map` 的依赖规则）、ENG-WP §2（WP-06 行）、SYS-ATLAS §3、SYS-ATLAS §8、SYS-ATLAS §11、SYS-SAVE §3.2、WLD-INTERIORS §4.1、WLD-INTERIORS §6.2 |
-| 3 | 输入占用按原因计 | `ICameraRig` 用 `IDisposable LockInput(InputLockReason r)` 占用输入，没有任何占用时才接受观者输入；不设布尔开关。v1 的原因 `InputLockReason { Atlas, Cinematic, MapTravel }`：大地图、开始页与过场、换图雾幕；以后在末尾追加对话、剧情过场、菜单 | WP-00（契约）；WP-06 实现；调用方 WP-48c、WP-49a、WP-46 | v1 已有三处占用：大地图（SYS-ATLAS §4.1）、开始页与过场（SYS-TITLE §7.3）、换图第 1、8 步（SYS-MAPS §4.2）。一个布尔量被几处开关会互相覆盖，RPG 还要再加几处；冻结后再改成计数，会改变已有调用的语义 | ENG-ARCH §3（相机块）、ENG-WP §2（WP-06 行）、SYS-ATLAS §4.1、SYS-ATLAS §11、SYS-TITLE §7.1、SYS-TITLE §7.3、SYS-MAPS §4.2 |
+| 3 | 输入占用按原因计 | `ICameraRig` 用 `IDisposable LockInput(InputLockReason r)` 占用输入，没有任何占用时才接受观者输入；不设布尔开关。v1 的原因 `InputLockReason { Atlas, Cinematic, MapTravel, Menu, Rebind }`：大地图、开始页与过场、换图雾幕、菜单（设置卡、存档页、数据手册、确认对话框）、改键捕获；以后在末尾追加对话、剧情过场 | WP-00（契约）；WP-06 实现；调用方 WP-48c、WP-49a、WP-46、WP-35 | v1 已有五种占用：大地图（SYS-ATLAS §4.1）、开始页与过场（SYS-TITLE §7.3）、换图第 1、8 步（SYS-MAPS §4.2）、菜单与改键捕获（UI-NAV §5）。一个布尔量被几处开关会互相覆盖，RPG 还要再加几处；冻结后再改成计数，会改变已有调用的语义 | ENG-ARCH §3（相机块）、ENG-WP §2（WP-06 行）、SYS-ATLAS §4.1、SYS-ATLAS §11、SYS-TITLE §7.1、SYS-TITLE §7.3、SYS-MAPS §4.2、UI-NAV §5 |
 | 4 | 枚举的穷举纪律 | 会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错；不写 `mode == ViewMode.Fly ? … : …` 这样的二值判断。读到不认识的枚举字符串，按 SYS-SAVE §3.5 当作不合法 | WP-00：写进简报（ENG-WP §4）和约定（CORE-CONVENTIONS）。G1 的 `-warnaserror` 已把非穷举 switch 表达式的警告当错误，二值判断靠评审 | "末尾追加"只有在消费方不假设闭集时才安全；二值判断会把新值静默当成旧值，编译器查不出 | CORE-CONVENTIONS §3.8、ENG-WP §4、ENG-ARCH §8（扩展方式第 1 条） |
 | 5 | 偶发事件数据化 | `game/data/maps/qingshuihe/incidents.json`：事件 ID、路线实体（银杏大道南段，加转向时间广场的一段）、选树与选灯的规则引用、各版本的开关。`IncidentDirector` 只跑规则集 `Incidents` 里登记的事件；灯光表里的事件序号由同一份文件烘出 | WP-26（文件与 schema）；WP-46 在按图目录里登记；WP-39 的灯光表烘焙读它 | G4 不许系统代码出现实体 ID 字面量，路线实体要有数据文件和按图目录里的位置；数据化以后，"只有一个偶发事件"就是清单长度，加图也不改代码 | SYS-MOTION §10.2、SYS-MOTION §10.7、ENG-ARCH §2、SYS-MAPS §2.1、ENG-WP §2（WP-26 行）、CORE-CONVENTIONS §5.2 |
 | 6 | 名字占位 | 目录：`game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<id>/entities/` 在 `ownership.json` 里记为 WP-00 的 RPG 预留，观光期不写入。实体 ID 前缀 `npc:`、`item:`、`quest:` 保留，G5 的前缀检查拒绝观光数据使用。存档预留段名含 `calendar`、`agents`。输入动作 `interact`（E）、`inventory`（I）的名字和键位不分配给观光功能 | WP-00；SYS-SAVE的预留表；UI-NAV快捷键表不占 E、I | 名字一旦被观光的包占用，以后要改目录、改 ID、改存档段名，代价都比现在留一行大；这几项都不写代码 | ENG-ARCH §2、SYS-SAVE §2、SYS-MAPS §2.1、UI-NAV §5、ENG-GATES §2（G5）、CORE-CONVENTIONS §3.1、CORE-CONVENTIONS §5.1、CORE-CONVENTIONS §5.2 |

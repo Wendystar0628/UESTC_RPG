@@ -31,8 +31,10 @@ def ok(code, sec):
 
 
 bad = []
+# 记录类文档（提案、问题、实验、决策记录）会引用尚未写进正文的小节，不查 § 引用，只查文件头和链接
+RECORDS = {'proposals', 'issues', 'experiments', 'decisions'}
 for code, d in docs.items():
-    t = d['text']
+    t = d['text'] if d['fm'].get('category') not in RECORDS else ''
     # 跨文档引用 "SYS-WEATHER §6.4"
     for m in re.finditer(r'(' + alt + r')\s*§\s*(\d+(?:\.\d+)*)', t):
         if not ok(m.group(1), m.group(2)):
@@ -57,7 +59,7 @@ for code, d in docs.items():
         for x in d['fm'].get(k) or []:
             if str(x) not in codes:
                 bad.append((code, 'fm-' + k, x))
-    for m in re.finditer(r'\]\(([^)#\s]+?\.md)(#[^)]*)?\)', t):
+    for m in re.finditer(r'\]\(([^)#\s]+?\.md)(#[^)]*)?\)', d['text']):
         tgt = os.path.normpath(os.path.join(os.path.dirname(d['path']), m.group(1)))
         if not m.group(1).startswith('http') and not os.path.exists(tgt):
             bad.append((code, 'link', m.group(1)))
