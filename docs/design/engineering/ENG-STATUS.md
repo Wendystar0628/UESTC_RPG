@@ -58,37 +58,37 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`d7bb772` WP-53a 音频内核的主线版。
-- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`。
+- 当前 `main`：`d4f46a5` WP-00 第 4 批共享契约与引擎接线。
+- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`，第 4 批共享契约 `d4f46a5`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`。
 - 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）。
-- 最近可运行入口：`4568685`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
+- 最近可运行入口：`d4f46a5`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景；90 帧窗口冒烟、Release 导出与导出版运行时通过，不代表完整主线旅程）。
 - 已冻结的契约组：尚无（v1 候选）。
 - 当前阶段：第一波（ENG-TEAM §3）。第二波前提里 WP-09、WP-14、WP-08 已合入，还差 WP-02。交接文件在 `E:\Project\UESTC_RPG.wt\.collab\`。
-- 高优先级插入项：地形分层 D-180 已登记；契约申请 contract-15（`ITerrain` 与平地桩）等 Astra；规范 WLD-TERRAIN 已合入 `874f89f`；分区方案 MAP-QSH-TERRAIN 在写（工作树 `DOC-terrain-map`）。
+- 高优先级插入项：地形分层 D-180 已登记；contract-15 阶段 0（`ITerrain`、统一采样布局与平地桩）已合入 `d4f46a5`；完整非平地 DTO/schema/评估器待下一批；规范 WLD-TERRAIN 已合入 `874f89f`；分区方案 MAP-QSH-TERRAIN 在写（工作树 `DOC-terrain-map`）。
+- 共享工程后续：contract-16 UI 底图桥、显式 world 加载上下文、存档恢复故障协议、BuildInfo 生产者 hash 留待 core5。
 - 已知问题：截图进程卡住会一直占 GPU 锁，截图脚本一律给每个 Godot 进程加 120 s 超时。
 
 ## 3 活跃工作包
 
 | 包 | 目标 | 工作树 | 分支 | 候选提交 | 状态 | 阻塞 | 下一步 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| WP-00 | 契约第 4 批：contract-5（实例池、precip 登记、WetSurface）、contract-7（同源状态与纹理登记）；处理 contract-11–14 | `..\UESTC_RPG.wt\WP-00` | `wp/00-core` | — | 施工中 | — | Astra 交 merge-WP-00-4，Opus 合入 |
-| WP-04 | 接 `lamp.gdshaderinc`、`IToonMaterialProvider`、D0RenderHost 接材质库 | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 阻塞 | 等 Astra 的 contract-12 第 6 条、IToonMaterialProvider、contract-8 第 1 条 | 上游进 main 后由 Opus 的子代理接通 |
-| WP-24 | 主线版已合入；接 contract-17 的白名单着色器与倒影代理 | `..\UESTC_RPG.wt\WP-24` | `wp/24-water` | — | 阻塞 | 等 contract-17（几何指定白名单着色器、倒影世界挂代理物体） | contract-17 合入后由 Opus 的子代理接通 |
-| WP-39 | 主线版已合入；接 contract-12 的灯具清单、窗格声明与光晕挂载 | `..\UESTC_RPG.wt\WP-39` | `wp/39-nightlight` | — | 阻塞 | 等 Astra 处理 contract-12 | contract-12 合入后由 Opus 的子代理接通 |
+| WP-04 | 接 `lamp.gdshaderinc`、`IToonMaterialProvider`、D0RenderHost 接材质库 | `..\UESTC_RPG.wt\WP-04` | `wp/04-toon` | — | 已派工 | — | WP-00-4 共享接口已合入，按交接改接真实接口、快检后交候选 |
+| WP-24 | 主线版已合入；接 contract-17 的白名单着色器与倒影代理 | `..\UESTC_RPG.wt\WP-24` | `wp/24-water` | — | 已派工 | — | WP-00-4 共享接口已合入，按交接改接真实接口、快检后交候选 |
+| WP-39 | 主线版已合入；接 contract-12 的灯具清单、窗格声明与光晕挂载 | `..\UESTC_RPG.wt\WP-39` | `wp/39-nightlight` | — | 已派工 | — | 按 WP-00-4 接灯具与窗格声明，复用 InstancePoolHost 挂光晕；快检后交候选 |
 | WP-40 | 全日天空主线版；修 17:30 云边锯齿 | `..\UESTC_RPG.wt\WP-40` | `wp/40-sky` | — | 施工中 | — | Opus 的子代理交候选，Opus 合入 |
-| WP-45b | 降水与湿润的主线版（评审已过） | `..\UESTC_RPG.wt\WP-45b` | `wp/45b-precip` | — | 阻塞 | 等 contract-5 的实例池与 `precip_wet` 白名单 | merge-WP-00-4 合入后接通、快检、合入 |
+| WP-45b | 降水与湿润的主线版（评审已过） | `..\UESTC_RPG.wt\WP-45b` | `wp/45b-precip` | — | 已派工 | — | WP-00-4 共享接口已合入，按交接改接真实接口、快检后交候选 |
 | WP-01 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-01` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-02a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-02a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-02b | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-02b` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-06 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-06` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-08 | 主线版已合入；继续 D-180 地形阶段 1 | `..\UESTC_RPG.wt\WP-08` | `wp/08-world` | — | 阻塞 | 等 merge-WP-00-4 地形接缝合入 | 上游合入后由 Astra 安排阶段 1 |
+| WP-08 | 主线版已合入；继续 D-180 地形阶段 1 | `..\UESTC_RPG.wt\WP-08` | `wp/08-world` | — | 已派工 | — | WP-00-4 已合入，由 Astra 安排阶段 1 |
 | WP-27 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-27` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-32 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-32` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-34 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-34` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
+| WP-34 | 世界时间主线版，已批准且前置已满足 | `..\UESTC_RPG.wt\WP-34` | `wp/34-time` | `75cc051` | 待合入 | — | 值班会话复跑 G1–G5 后合入 |
 | WP-42 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-42` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-43 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-43` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-44 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-44` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-45a | 天气核心主线版，已批准待前置合入 | `..\UESTC_RPG.wt\WP-45a` | `wp/45a-weather` | `2edfc00` | 阻塞 | 批准条件：merge-WP-00-4 已合入 main；当前未满足 | 每次巡检复查，满足后合入 |
+| WP-45a | 天气核心主线版，已批准且前置已满足 | `..\UESTC_RPG.wt\WP-45a` | `wp/45a-weather` | `2edfc00` | 待合入 | — | 值班会话复跑 G1–G5 后合入 |
 | WP-46 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-46` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-48c | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-48c` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
