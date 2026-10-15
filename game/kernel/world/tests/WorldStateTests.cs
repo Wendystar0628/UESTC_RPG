@@ -5,6 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.World;
 using GdUnit4;
+using WorldFlow = Campus.Contracts.Flow;
 
 namespace Campus.Tests.World;
 
@@ -255,6 +256,42 @@ public sealed class WorldStateTests
     }
 
     [TestCase]
+    public void WinterEarlyClockInitializesWithoutWeatherTransitions()
+    {
+        var weather = new RecordingWeather();
+        var world = new WorldStateService(weather);
+        var instance = world.Instance;
+        world.Freeze(6, Season.Winter, 240);
+        Equal(world.WorldHours, 6);
+        Equal(world.Clock, 6);
+        Equal(world.SeasonTarget, Season.Winter);
+        Equal(world.Instance, instance);
+        Equal(weather.Reseasons, 0);
+        Equal(weather.Resets, 0);
+        Equal(weather.Quiets, 0);
+        Equal(weather.Enters, 0);
+        Equal(weather.Steps.Count, 0);
+        Equal(weather.Calls.Count, 0);
+
+        // Boot owns Reset after Freeze; the first World tick supplies the initial season and offset.
+        weather.Reset(new WeatherBoot(1, WeatherKind.Snow));
+        var context = Context(new WorldPreset(6, Season.Winter, WeatherKind.Snow), false);
+        world.OnMapLoaded(context);
+        world.OnMapLoaded(context);
+        Equal(weather.Enters, 1);
+        Equal(weather.LastEnterHours, 6);
+        world.Tick(.0625);
+        Equal(weather.Steps.Count, 1);
+        var first = weather.Steps[0];
+        Equal(first.WorldHours, 6);
+        Equal(first.TargetHours, 6);
+        Equal(first.ClockOffset, 0);
+        Equal(first.Season, Season.Winter);
+        Equal(first.SunAltDeg, world.Sun.AltDeg);
+        Equal(weather.Reseasons, 0);
+    }
+
+    [TestCase]
     public void ApplyOrdersSeasonClockPinAndCapturesTheirCommonEndpoint()
     {
         var weather = new RecordingWeather();
@@ -327,7 +364,8 @@ public sealed class WorldStateTests
         world.Restore(dto, Restore());
         Equal(world.Instance, instance);
         Equal(world.WorldHours, 7);
-        Check(world.IsSettled && world.Omega == 0, "Restore left transition history.");
+        Check(!world.IsSettled && world.Omega == 0 && world.Transition == WorldTransition.None,
+            "Restore must clear transition history but remain unsettled until commit.");
         Throws<InvalidOperationException>(() => world.Tick(.1));
         world.CompleteRestore();
         Equal(world.Instance, instance + 1);
@@ -336,6 +374,129 @@ public sealed class WorldStateTests
         Throws<InvalidOperationException>(() => world.Freeze(1, Season.Spring, 0));
         Equal(weather.Resets, 0);
         Equal(weather.Quiets, 0);
+    }
+
+    [TestCase]
+    public void SaveMomentUsesTheSameFreshEndpointAsWorldCaptureWithoutStepping()
+    {
+        var weather = new RecordingWeather();
+        var world = CreateWorld(weather);
+        world.Tick(.0625);
+        world.Advance(1); // A HUD action after this frame's world/weather step.
+        world.SetSeason(Season.Winter);
+        var before = (world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
+            world.Rev, world.Instance, weather.Steps.Count);
+        var moment = world.GetSaveMoment();
+        var captured = world.Capture(default);
+        Equal(moment.WorldHours, captured.WorldHours);
+        Equal(moment.ClockOffset, captured.ClockOffset);
+        Equal(moment.Season, captured.SeasonTarget);
+        Equal(moment.FlowRate, captured.FlowRate);
+        Check(moment.WorldHours > world.WorldHours && moment.Season == Season.Winter,
+            "Save moment used the last frame instead of the new settled endpoint.");
+        Equal((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
+            world.Rev, world.Instance, weather.Steps.Count), before);
+        var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
+        world.FlowTo(18, 60);
+        var shared = world.Capture(in context);
+        Equal(shared.WorldHours, moment.WorldHours);
+        Equal(shared.ClockOffset, moment.ClockOffset);
+        Equal(shared.SeasonTarget, moment.Season);
+        Equal(shared.FlowRate, moment.FlowRate);
+        moment = world.GetSaveMoment();
+        Equal(moment.FlowRate, 0);
+        Near(ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24), 18);
+        Equal(weather.Steps.Count, before.Count);
+    }
+
+    [TestCase]
+    public void FailedRestoreFreezesUntilAFreshSuccessfulRestoreCommits()
+    {
+        var weather = new RecordingWeather();
+        var world = CreateWorld(weather);
+        var instance = world.Instance;
+        var failed = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
+        world.Restore(failed, Restore());
+        Throws<InvalidOperationException>(() => world.Tick(.1));
+        world.AbortRestore();
+        Check(world.RestoreFaulted && !world.IsSettled, "Restore failure must be explicit and block a settled save.");
+        var frozen = LiveReadings(world, weather);
+        for (var frame = 0; frame < 5; frame++) world.Tick(.1);
+        Equal(LiveReadings(world, weather), frozen);
+        Throws<InvalidOperationException>(() => world.Capture(default));
+        Throws<InvalidOperationException>(() => world.GetSaveMoment());
+        Throws<InvalidOperationException>(world.CompleteRestore);
+        Throws<JsonException>(() => world.Restore(failed with { WorldHours = double.NaN }, Restore()));
+        Check(world.RestoreFaulted, "An invalid retry must not clear the fault.");
+        var retry = new WorldSaveV1(11, .1, 1, Season.Summer, 60, 60, 120);
+        world.Restore(retry, Restore());
+        var prepared = LiveReadings(world, weather);
+        world.Tick(.1);
+        Equal(LiveReadings(world, weather), prepared);
+        Equal(world.Instance, instance);
+        Check(world.RestoreFaulted, "Preparing a retry must not resume a partially restored world.");
+        world.CompleteRestore();
+        Check(!world.RestoreFaulted && world.IsSettled, "Successful commit did not release the fault freeze.");
+        Equal(world.Instance, instance + 1);
+        Equal(world.Capture(default), retry);
+        world.Tick(.1);
+        Check(world.WorldHours > retry.WorldHours && world.AnimTime > retry.AnimTime,
+            "Successful recovery remained frozen.");
+        Equal(weather.Steps.Count, frozen.Steps + 1);
+    }
+
+    [TestCase]
+    public void AbortBeforeOrAfterWorldCommitRejectsAllControlsAndSaves()
+    {
+        foreach (var afterCommit in new[] { false, true })
+        {
+            var weather = new RecordingWeather();
+            var world = CreateWorld(weather);
+            if (afterCommit)
+            {
+                world.Restore(new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25), Restore());
+                world.CompleteRestore();
+            }
+            var moment = world.GetSaveMoment();
+            var instance = world.Instance;
+            world.AbortRestore();
+            world.AbortRestore();
+            Check(world.RestoreFaulted, "Abort must fault before Restore as well as after World commit.");
+            Equal(world.Instance, instance);
+            var frozen = LiveReadings(world, weather);
+            var calls = weather.Calls.Count;
+            Action[] controls =
+            [
+                () => world.SetClock(8),
+                () => world.SetClock(8, ClockSetMode.Drag),
+                () => world.Advance(1),
+                () => world.FlowTo(18, 60),
+                () => world.SetFlow(0),
+                () => world.SetSeason(Season.Winter),
+                () => world.SetWeather(WeatherKind.Rain),
+                () => world.SetWeatherIntensity(.8f),
+                world.SetWeatherAuto,
+                () => world.Apply(new WorldPreset(12, Season.Spring)),
+                world.ResetDefault,
+                () => world.Freeze(12, Season.Spring, 0),
+                () => world.GetSaveMoment(),
+                () => world.Capture(default),
+                () => world.Capture(new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment }),
+            ];
+            foreach (var control in controls) Throws<InvalidOperationException>(control);
+            Throws<InvalidOperationException>(world.CompleteRestore);
+            world.Tick(.1);
+            Equal(LiveReadings(world, weather), frozen);
+            Equal(weather.Calls.Count, calls);
+            var fresh = world.CreateDefault(new NewGameContext(5, new("test-world"), new WorldPreset(17.5, Season.Autumn)));
+            world.Restore(fresh, Restore());
+            Check(world.RestoreFaulted, "CreateDefault or Restore must not clear a failed transaction by itself.");
+            world.CompleteRestore();
+            Check(!world.RestoreFaulted, "A complete fresh new game must remain available from the fault screen.");
+            world.SetFlow(1);
+            world.Tick(.1);
+            Check(world.WorldHours > fresh.WorldHours, "Controls did not resume after successful new game recovery.");
+        }
     }
 
     [TestCase]
@@ -379,6 +540,10 @@ public sealed class WorldStateTests
     }
 
     private static RestoreContext Restore() => new() { Map = new("test-world"), FromVersion = 1, Missing = false };
+    private static (double Hours, double Clock, double Target, double Season, WorldFlow Flow, double Anim,
+        Body Sun, Body Moon, long Rev, long Instance, int Steps) LiveReadings(WorldStateService world, RecordingWeather weather) =>
+        (world.WorldHours, world.Clock, world.TargetHours, world.SeasonPos, world.Flow, world.AnimTime,
+            world.Sun, world.Moon, world.Rev, world.Instance, weather.Steps.Count);
     private static WorldStateService CreateWorld(RecordingWeather weather, IMotionSettings? motion = null)
     {
         var world = new WorldStateService(weather, motion);
@@ -418,7 +583,7 @@ public sealed class WorldStateTests
         public readonly List<WeatherTick> Steps = [];
         public readonly List<string> Calls = [];
         public int Reseasons, Resets, Quiets, Enters, Leaves;
-        public double PinFrom, PinTo, QuietTo;
+        public double PinFrom, PinTo, QuietTo, LastEnterHours;
         public WeatherKind PinnedKind;
         public float? PinnedIntensity;
         public WeatherSel Selection { get; private set; } = new(WeatherMode.Auto, WeatherKind.Clear, 0);
@@ -434,7 +599,7 @@ public sealed class WorldStateTests
         public void Quiet(double hours, double until) { Quiets++; QuietTo = until; Calls.Add("quiet"); }
         public void Pin(double hours, WeatherKind kind, float? intensity, double from, double to)
         { PinnedKind = kind; PinnedIntensity = intensity; PinFrom = from; PinTo = to; Calls.Add("pin"); }
-        public void Enter(MapId map, string profile, double hours) => Enters++;
+        public void Enter(MapId map, string profile, double hours) { Enters++; LastEnterHours = hours; }
         public void Leave(MapId map, double hours) => Leaves++;
         public WeatherProcessState Capture(MapId map) => throw new NotSupportedException();
         public void Restore(MapId map, WeatherProcessState state) => throw new NotSupportedException();

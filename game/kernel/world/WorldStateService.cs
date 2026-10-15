@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using WorldFlow = Campus.Contracts.Flow;
 
 namespace Campus.Kernel.World;
 
@@ -52,7 +53,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public Body Moon { get; private set; } = ArtEphemeris.Evaluate(17.5, 2).Moon;
     public float MoonPhase => 1;
     public float Omega { get; private set; }
-    public Flow Flow { get; private set; } = new(1);
+    public WorldFlow Flow { get; private set; } = new(1);
     public bool Scrubbing => _dragging && _dragIdle < 1;
     public WorldTransition Transition =>
         (TimeMoving ? WorldTransition.Time : WorldTransition.None) |
@@ -64,8 +65,9 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
     public uint WeatherSeed => weather.Seed;
     public double AnimTime { get; private set; } = 240;
+    public bool RestoreFaulted { get; private set; }
     public double Step12 => Math.Floor(AnimTime * _stepRate) / _stepRate;
-    public bool IsSettled => !TimeMoving && !SeasonMoving && !Scrubbing;
+    public bool IsSettled => !RestoreFaulted && !_restorePending && !TimeMoving && !SeasonMoving && !Scrubbing;
     public double SeasonFrom => _seasonFrom;
     public double SeasonTo => _seasonTo;
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
@@ -87,6 +89,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public void Tick(double delta, bool freezeAnimation = false)
     {
         if (!double.IsFinite(delta) || delta < 0) throw new ArgumentOutOfRangeException(nameof(delta));
+        if (RestoreFaulted) return;
         var dt = Math.Min(delta, .1); // Suspend/resume never advances a night in the first frame.
         if (_restorePending) throw new InvalidOperationException("CompleteRestore must commit the World phase before ticking.");
         var previousSun = Sun;
@@ -161,6 +164,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump)
     {
+        EnsureUsable();
         ValidateClock(hours);
         switch (mode)
         {
@@ -185,6 +189,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void Advance(double hours)
     {
+        EnsureUsable();
         if (!double.IsFinite(hours) || hours <= 0 || !double.IsFinite(_targetHours + hours))
             throw new ArgumentOutOfRangeException(nameof(hours));
         StartJump(_targetHours + hours);
@@ -193,6 +198,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void FlowTo(double clock, int rate)
     {
+        EnsureUsable();
         ValidateClock(clock);
         ValidateRate(rate);
         var stop = _targetHours + ForwardHours(clock, ArtEphemeris.Wrap(_targetHours + PlannedOffset, 24));
@@ -208,6 +214,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetFlow(int rate)
     {
+        EnsureUsable();
         ValidateRate(rate);
         if (rate > 0) _flowBeforePause = rate;
         else if (Flow.Rate > 0) _flowBeforePause = Flow.Rate;
@@ -219,6 +226,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetSeason(Season season)
     {
+        EnsureUsable();
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (season == SeasonTarget) return;
         _seasonFrom = SeasonPos;
@@ -244,6 +252,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetWeather(WeatherKind kind, float? intensity = null)
     {
+        EnsureUsable();
         ValidateWeather(kind, intensity);
         if (!IsNative(kind)) return;
         weather.Select(new WeatherSel(WeatherMode.Manual, kind, intensity ?? .5f));
@@ -252,6 +261,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetWeatherIntensity(float intensity)
     {
+        EnsureUsable();
         ValidateWeather(Weather.Kind, intensity);
         weather.Select(Weather with { Intensity = intensity });
         Rev++;
@@ -259,12 +269,14 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void SetWeatherAuto()
     {
+        EnsureUsable();
         weather.Select(Weather with { Mode = WeatherMode.Auto });
         Rev++;
     }
 
     public void Apply(WorldPreset preset)
     {
+        EnsureUsable();
         ValidatePreset(preset);
         SetSeason(preset.Season);
         SetClock(preset.Clock);
@@ -278,6 +290,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void ResetDefault()
     {
+        EnsureUsable();
         var rules = _rules ?? throw new InvalidOperationException("A map must be loaded before ResetDefault.");
         ValidatePreset(rules.Default);
         SetSeason(rules.Default.Season);
@@ -301,6 +314,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void Freeze(double clock, Season season, double anim)
     {
+        EnsureUsable();
         if (_initializationApplied || _restorePending)
             throw new InvalidOperationException("Freeze is a one-time boot initialization, not a runtime rewind.");
         ValidateClock(clock);
@@ -308,7 +322,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         if (!double.IsFinite(anim) || anim < 0) throw new ArgumentOutOfRangeException(nameof(anim));
         SetImmediate(new WorldSaveV1(clock, 0, (int)season, season, 0, 1, ArtEphemeris.Wrap(anim, 480)));
         _initializationApplied = true;
-        weather.Reseason(WorldHours, season, 0);
         Rev++;
     }
 
@@ -348,8 +361,19 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         _stepRate = stepRate;
     }
 
-    public WorldSaveV1 Capture(in CaptureContext context) => new(TargetHours, PlannedOffset,
-        (int)SeasonTarget, SeasonTarget, _flowStop.HasValue ? 0 : Flow.Rate, _flowBeforePause, AnimTime);
+    public WorldSaveMoment GetSaveMoment()
+    {
+        EnsureUsable();
+        return new(TargetHours, PlannedOffset, SeasonTarget, _flowStop.HasValue ? 0 : Flow.Rate);
+    }
+
+    public WorldSaveV1 Capture(in CaptureContext context)
+    {
+        EnsureUsable();
+        var moment = context.Moment ?? GetSaveMoment();
+        return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season,
+            moment.FlowRate, _flowBeforePause, AnimTime);
+    }
 
     public WorldSaveV1 CreateDefault(NewGameContext context)
     {
@@ -374,8 +398,25 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     {
         if (!_restorePending) throw new InvalidOperationException("No restored world is pending commit.");
         _restorePending = false;
+        RestoreFaulted = false;
         Instance++;
         Rev++;
+    }
+
+    public void AbortRestore()
+    {
+        // A failed transaction cannot later commit by accident. A new valid Restore must prepare it again.
+        _restorePending = false;
+        _requestSettled = false;
+        RestoreFaulted = true;
+    }
+
+    private void EnsureUsable()
+    {
+        if (RestoreFaulted)
+            throw new InvalidOperationException("World restore failed; complete a fresh load or new game before controls or capture.");
+        if (_restorePending)
+            throw new InvalidOperationException("CompleteRestore must commit the World phase before controls or capture.");
     }
 
     private void SetImmediate(WorldSaveV1 dto)
