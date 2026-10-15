@@ -2,7 +2,7 @@
 id: RFC-ART-OLD-RENOVATION
 title: 老旧建筑的风格化翻新规则
 category: proposals
-status: review
+status: merged
 domain: ART
 affects: [ART-STYLE, ART-MODELING, ART-FIDELITY, MAP-QSH-ADDITIONS, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-SOUTH, WLD-LIFE]
 owners: []
@@ -14,6 +14,8 @@ created: 2026-10-15
 > **范围**：本文提出校园老旧建筑的"全部翻新"规则：楼的位置、体量和身份特征不动，外观上显旧的东西全部换成与新楼同一套材质、配色和部件。内容包括动画背景的参照与取舍、材质与配色、删简留清单、窗与檐口与楼梯间与屋顶的改法、日式氛围与成电辨认、与现行规范的衔接，以及老宿舍、老教学楼、老食堂三个示例。
 > **不在本文**：楼的位置、体量与身份特征（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST、ART-MODELING §1）；明暗、影色、描线与调色板机制（ART-STYLE）；精度判据（ART-FIDELITY）；生活痕迹的摆放（WLD-LIFE）；室内（WLD-INTERIORS）。
 > **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-MODELING 风格化造型](../art/ART-MODELING.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)
+
+> **已合并**：本提案的结论已并入 ART-RENOVATION、ART-FIDELITY（D-173、D-174），以那里为准；本文只作调研记录保留。
 
 ## 作者已定（2026-10-15）
 

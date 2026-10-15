@@ -5,8 +5,8 @@ category: maps
 summary: 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
 owners: [WP-18]
 contributors: [WP-03, WP-04, WP-13, WP-15, WP-23, WP-24, WP-25, WP-26, WP-28, WP-30, WP-31a, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-53]
-depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
-related: [MAP-QSH-CORE, MAP-QSH-WEST, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, ENG-PERF, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
+depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
+related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, ENG-PERF, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/south.overlay.json"]
 gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
@@ -15,7 +15,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 
 > **范围**：本文规定南区（南门、主楼与森林公园、东湖、宣邦楼、立人楼、体育场馆、国际创新中心与科创餐厅、1–8 号楼、本区水道）的建筑与构筑物外观、受光与夜景、四季昼夜清单与天气要点、行走与开放入口、声音要点。§1–§10 写的是默认状态（秋 17:30）的样子，其他时段和季节见 §11，行走见 §12。
 > **不在本文**：树木与植被（WLD-VEGETATION，WP-23）、东湖水面（WLD-WATER，WP-24）、动物与生活痕迹（WLD-LIFE，WP-25）、光照（ART-SKYLIGHT，WP-03）、动态（SYS-MOTION，WP-26）、开放室内的楼板、楼梯与家具（WLD-INTERIORS，WP-31a）、南门外的外围街区（WLD-OUTSKIRTS，WP-47）。
-> **关联**：依赖 [CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；相关 [MAP-QSH-CORE 核心区](MAP-QSH-CORE.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-WP 工作包](../../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)（点位 UI-NAV §6）、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)（锚点 SYS-ATLAS §6）、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)。
+> **关联**：依赖 [CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ART-RENOVATION 老楼翻新](../../art/ART-RENOVATION.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；相关 [MAP-QSH-CORE 核心区](MAP-QSH-CORE.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[MAP-QSH-RENOVATION 清水河翻新清单](MAP-QSH-RENOVATION.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-WP 工作包](../../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)（点位 UI-NAV §6）、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)（锚点 SYS-ATLAS §6）、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)。
 
 ### 分工
 
@@ -172,7 +172,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 
 - **3.1 樱花林**：主楼背后（东北侧）和图书馆背后各有一片樱花小树林。树由 WP-23 种。
   - 默认状态（秋）：叶子橙红、半落，不开花。
-  - 春：盛开，粉白，枝下落一层花瓣（SYS-TIME §4，英雄帧 2）；开花樱树不在 ART-STYLE §9.1 第 9 条的排除之列。夜里不挂灯笼做夜樱，只靠路灯和月光照出来（同一条的和式构图排除）。
+  - 春：盛开，粉白，枝下落一层花瓣（SYS-TIME §4，英雄帧 2）；开花樱树允许（ART-STYLE §9.1 第 9 条）。夜里不挂提灯做夜樱，只靠路灯和月光照出来。
   - 夏：浓绿。冬：裸枝，枝头压一线雪。
   - **银杏大道樱花带**：沿银杏大道增补东京樱花与美人梅，连成一条粉色带（SYS-TIME §4）。
     - 种在银杏行道树外侧的绿带里，不占银杏的位置，不挡 V2 主轴线和 MAP-QSH-CORE §6.4 的视线。
@@ -244,7 +244,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
     - 时间只向前（SYS-TIME §1），指针只顺时针走。唯一会让钟点数字变小的是换季：为保持太阳在弧线上的位置，钟点会重算，这一步在换季雾幕里完成，指针在雾幕里直接落到新钟点，不倒着转（SYS-TIME §5）。
     - 钟面背光：太阳落到 0° 以下时用 2 s 亮起，暖白 `window.warm`，整夜不关，日出后关闭。蓝调里钟面亮起，就是 P09 的画面（UI-NAV §6，英雄帧 7）。
     - 实现：指针是两件小几何，属动态物体，由 WP-26 在主线程挂载，每帧在 `_Process` 里按世界钟点写入转角，排在 WorldState 之后（SYS-TIME §1 的每帧顺序）；本包只提供指针几何、转轴锚点和钟面背光的灯光通道，`build()` 不读世界状态。
-  - **钟声**（SYS-AUDIO §6.2）：07:00–22:00 整点敲单音铜钟，按 12 小时制敲 1–12 下，间隔 2.5 s，余音 6–8 s；夜里不敲。只在流逝 ≤ 10× 时敲，快进、拨表盘跨过的整点不补；不用旋律钟。发声点在钟室，全校听到的都是远处的钟，东湖西岸的草阶看台（P09）最清楚。
+  - **钟声**（SYS-AUDIO §6.2）：07:00–22:00 整点敲单音铜钟，按 12 小时制敲 1–12 下，间隔 2.5 s，余音 6–8 s；夜里不敲。只在流逝 ≤ 10× 时敲，快进、拨表盘跨过的整点不补；钟楼不放旋律。发声点在钟室，全校听到的都是远处的钟，东湖西岸的草阶看台（P09）最清楚。
   - **钟室铜钟**：钟室里加一口静止挂着的铜钟，几何归 WP-31a，看得见钟，钟声才对得上；整点时钟锤按一拍二轻敲（WP-26，必做，SYS-AUDIO §6.2），只做钟锤的小动作，钟体不摆。
 - **5.5 塔楼**：画成米灰石材框架加蓝灰玻璃，竖向肋条加强挺拔感。
 - **5.6 正楼入口**：
@@ -287,8 +287,8 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
   - 体育场 11,960 m²。
   - 跑道是砖橙红色，内场鲜绿，割草条纹清晰。跑道的长轴约为 NNW–SSE。
   - 主看台在跑道西侧，是一条连续的银白色"枕形"长罩棚，中段有一截淡金色的竖分块。对面是低矮的深色座席。
-  - 看台座椅的颜色（照片里中部黄、两侧淡紫灰）和 2025 年罩棚换板的样子可参考，按画面处理。
-- **7.4 桃园餐厅**：暖砂色的低层食堂，窗里亮着暖光。
+  - 罩棚板全部是新的银白板，钢桁架深灰；看台混凝土整片一色，没有污渍；座椅是新的，颜色可参考中部黄、两侧淡紫灰，按调色板压低彩度；看台上不挂横幅。铅球区、跳远区是新塑胶面（MAP-QSH-RENOVATION §4）。
+- **7.4 桃园餐厅**：暖砂色的低层食堂，窗里亮着暖光。按 ART-RENOVATION §7.3 的老食堂示例做新：暖砂面砖是新砖、单色；街廊里的门面不挂外机，排油烟管和燃气管不露在街廊立面上；店名用白色立体字，不挂灯箱广告（MAP-QSH-RENOVATION §4）。
   - 放在大平台西端的街廊里，门面朝街廊（§7.6；OSM 点位落在大平台范围内，§14）。门关着。
 - **7.5 体育运动中心石**：场馆前卧着一块粗凿的白石，上面是墨绿色行书"体育运动中心"。
 - **7.6 大平台**：体育馆、游泳馆、看台坐在一座 1.24 万 m² 的大平台上，就是 OSM 的"未命名 0526"。
@@ -314,8 +314,9 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 ## 9 南区中部的 1–8 号楼
 
 - **9.1** 宣邦楼以南、体育场以东，有 8 栋 1–3 层的低矮楼，按后勤与实训用房处理。OSM 的"未命名 9136"是一座公共卫生间。
-- **9.2** 按服务辅助建筑处理：较大的一层窗，不加装饰。外墙用什么颜色由画面决定：照片里是橙红配白色腰带和白圈编号，可参考（WLD-INTERIORS §16）。屋面按调色板取色。
+- **9.2** 按服务辅助建筑处理：较大的一层窗，不加装饰。主墙取浅色，橙红只作副色，用陶红墙带（ART-RENOVATION §3.3），白色腰带和白圈编号保留（WLD-INTERIORS §16）。屋面按调色板取色。
   - 8 栋楼和卫生间都不开放，只做外壳加窗卡（WLD-INTERIORS §5.1）。
+- **9.3 后勤小楼与后巷**：8 栋楼和卫生间算后勤小楼，可以用外挂钢楼梯、波纹铁皮雨棚、卷帘门，都是新的、干净的样子（MAP-QSH-ADDITIONS §3 第 12 条）；屋顶一排新的、统一支架的太阳能热水器（MAP-QSH-ADDITIONS §2.9）。楼间的服务路是日式街景的后巷：电线杆与架空线、砌块矮墙、橙色凸面镜按 MAP-QSH-ADDITIONS §2.16 落位，不进 MAP-QSH-CORE §6.4 的主视线。翻新条目见 MAP-QSH-RENOVATION §4。
 
 ## 10 本区的水道
 
@@ -339,6 +340,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 - [ ] 开放入口的门口表现（敞开门扇、地垫、开放牌、门口灯）在主楼前后门、宣邦楼山花门廊与钟楼侧门、体育馆与游泳馆的平台层入口、立人楼南门与东门都做到了（WLD-INTERIORS §4）；其余楼门关着，门玻璃里是门厅卡（WLD-INTERIORS §5.2）。
 - [ ] 过街楼门洞是可走的室外路面；大平台的台阶、顶面和平台下街廊可走。
 - [ ] 碰撞体都填了 `Foot`（SYS-AUDIO §9.3）；看台罩棚、门廊、过街楼门洞、平台下街廊等半室外写进声学覆盖层（`ac:` 条目，SYS-AUDIO §10.4）。
+- [ ] MAP-QSH-RENOVATION §4 的条目都已翻新、登记了覆盖层的 `hide` 与 `add`；看台罩棚、座椅和 1–8 号楼贴近看没有旧痕，按 ART-RENOVATION §8 的翻新验收通过。
 
 ## 定位、设计增补与近景要求
 
@@ -349,6 +351,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 - 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/south.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 照片和 OSM 只定结构，即体量、层数、平面、入口、交通核、道路、水体；材质、色彩、陈设、装饰、标识、生活痕迹按氛围处理，照片只作参考。可以新增校园里没有、但能加强氛围的元素，写进覆盖层（ID 以 `design:` 开头）并写明理由；现实里有、放进画面难看的东西（杂乱管线、临时围挡、刺眼的广告、过多的指示牌）可以删掉。
 - 视觉精度按 ART-FIDELITY 验收：镜头降到人眼高度、贴到墙上，看到的都必须是精致的建模。
+- **翻新**：本区建成较早的楼（主楼、体育场馆与大平台、桃园餐厅、1–8 号楼）和环境按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §4，孤儿楼群等待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174）。
 
 **本区身份特征**：
 
@@ -367,7 +370,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 - 东湖：沿环湖跑道设 4 处休息点；西岸做草阶看台，面朝宣邦楼，每 6–8 m 嵌一段小台阶（§12.6）；北岸做一道紫藤廊架；配救生圈立柱和驳岸置石；跑道里程标（§4.7）；亲水平台的涉水一级（§4.3）。
 - 体育区：场边小看台、单双杠区、置物横栏。
 - 桃园餐厅："得闲庐"门前的外摆桌椅。
-- 1–8 号楼：屋顶放一小排太阳能热水器。
+- 1–8 号楼：屋顶放一小排新的、统一支架的太阳能热水器；楼间后巷的日式街景物件（§9.3，MAP-QSH-ADDITIONS §2.16）。
 - 南门内侧：一处转角口袋绿地。
 
 **协作**：
@@ -405,7 +408,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 | 主楼屋顶空廊 | 剪影：栏杆女儿墙压在夜空前 | 同秋 | 同秋 | 现有设计 | 女儿墙顶积雪 |
 | 门前广场草坪、模纹花坛、国旗杆 | 灯下：旗杆底一盏地埋射灯 | 花坛换成春季花色；草坪嫩绿 #A8CC5E | 花坛最艳；草坪 #8CBC4A | 红黄模纹；草坪 #C9C46A | 草坪 70% 盖雪，花坛的模纹从雪里露出深色轮廓 |
 | 主楼两侧银杏林 | 剪影 | 新叶 #B8DC70 | 浓绿 #6AA04A | 金 #FFD94A | 裸枝，树下压着残留的金叶，雪中露金 |
-| 樱花林、主楼后海棠（§3.1） | 暗区：不做夜樱灯笼 | 樱花盛开，海棠开花（SYS-TIME §4） | 浓绿 | 樱叶橙红、半落 | 裸枝压雪 |
+| 樱花林、主楼后海棠（§3.1） | 暗区：不挂提灯做夜樱 | 樱花盛开，海棠开花（SYS-TIME §4） | 浓绿 | 樱叶橙红、半落 | 裸枝压雪 |
 | 银杏大道樱花带（§3.1） | 暗区 | 樱花与美人梅连成粉色带 | 绿 | 橙红 | 裸枝 |
 | 森林公园红枫（§3.2） | 暗区 | 新叶紫红 | 暗紫红 | 正红 | 裸枝，枝梢红褐 |
 | 孔雀之家 | 暗区；孔雀上栖架 | 同秋 | 同秋 | 现有设计 | 网笼顶一道道白线 |

@@ -6,7 +6,7 @@ summary: 建筑、植被、道具与室内的风格化比例和形体，固有�
 owners: [WP-09]
 contributors: [WP-10, WP-11, WP-12, WP-13, WP-14, WP-23, WP-31c, WP-37, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, SYS-TIME, WLD-INTERIORS]
-related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-WP, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS]
+related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-WP, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, ART-RENOVATION, ART-AMBIENCE]
 contracts: [IPartDef]
 data: []
 gates: [G2, G4, G5, G7, G12]
@@ -15,7 +15,7 @@ gates: [G2, G4, G5, G7, G12]
 
 > **范围**：本文规定建筑、植被、道具与室内的风格化比例和形体，固有色的约束，参数化部件库的写法，以及金样和跨包风格一致性的流程。时刻和季节都不换模型（SYS-TIME §0 第 5 条），造型规则对四季昼夜一样适用，四季昼夜一律视觉效果优先。
 > **不在本文**：精度判据与一票否决（ART-FIDELITY）；明暗、影色、描线与调色板（ART-STYLE）；树种与季相（WLD-VEGETATION、SYS-TIME §4）；室内的开放清单、类型库与预算（WLD-INTERIORS）；契约的定义（ENG-ARCH §3）。
-> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)
+> **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ART-FIDELITY 视觉精度](ART-FIDELITY.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)
 
 ### 分工
 
@@ -29,8 +29,8 @@ gates: [G2, G4, G5, G7, G12]
 - **身份特征**：每栋有名字的楼先列出 3–5 项，尺寸误差控制在 ±5% 以内。身份特征从下面几类里选：平面轮廓、层数、屋顶标志物、主入口、特色色或材质。
 - **其余构件**：允许 ±20–30% 的风格化调整。
 - **竖线**：保持笔直，不学 Fortnite 那种歪扭的造型。
-- **层数**：不改。层高最多加 8%。
-- **结构照资料，细节按氛围**：身份特征和结构（体量、层数、平面布局、入口、交通核、道路、水体）按照片和 OSM 定；材质、色彩、陈设、装饰、标识、生活痕迹以画面为准，照片只作参考。可以新增校园里没有、但能加强氛围的元素，也可以删掉现实里有、放进画面却难看的元素（MAP-QSH-ADDITIONS §5），新增的写进覆盖层，标明是设计新增（不是实景）并写明理由。
+- **层数**：不改。层高最多加 8%；翻新楼的层高不改（ART-RENOVATION §1.2）。
+- **结构照资料，细节按氛围**：身份特征和结构（体量、层数、平面布局、入口、交通核、道路、水体）按照片和 OSM 定；材质、色彩、陈设、装饰、标识、生活痕迹以画面为准，照片只作参考。可以新增校园里没有、但能加强氛围的元素，也可以删掉现实里有、放进画面却难看的元素（MAP-QSH-ADDITIONS §5），新增的写进覆盖层，标明是设计新增（不是实景）并写明理由。老楼按 ART-RENOVATION 全部翻新，外观上显旧的东西不保留（D-173）；日式日常街景元素按 ART-AMBIENCE 增补或改造。
 
 ## 2 现代混凝土和石材楼的比例规则
 
@@ -90,7 +90,8 @@ gates: [G2, G4, G5, G7, G12]
   1. 每件道具的固有色不超过 3 种，主色占 70% 以上；
   2. 30 m 以外不出现小于 4 px 的高对比碎件，碎件并进色块；
   3. 删掉难看的现实元素：杂乱管线、临时围挡、刺眼广告、施工网架、成片的指示牌（MAP-QSH-ADDITIONS §5）；
-  4. 软物（坐垫、靠枕、布袋、被子）用两阶半，明暗过渡带 ×2.2（ART-STYLE §2.1）。
+  4. 软物（坐垫、靠枕、布袋、被子）用两阶半，明暗过渡带 ×2.2（ART-STYLE §2.1）；
+  5. 状态全新：道具不锈、不褪色、不缺件，表面不画污渍和磨损（ART-FIDELITY §3.5、D-174）。
 - **密度**：生活痕迹成簇，即 ART-FIDELITY §3.4 的热点簇，簇外留白不少于 50%。室内参考咖啡馆那种填满的格架，只用在焦点区，总量受 WLD-INTERIORS §12 的室内预算约束；其余按 WLD-INTERIORS §9 的痕迹规则。不学参考场景那种全场铺满的道具密度。
 - **验收**：把道具在 30 m 处的截图填成单色剪影，仍然认得出是什么东西。
 
@@ -109,7 +110,7 @@ gates: [G2, G4, G5, G7, G12]
 
 1. **先定金样，再放开细节**。金样与主线并行做（ENG-WP §1、D-168）：P0 起做出 5 个金样（前 4 个按 ENG-WP §1 的金样一行交付：石材科研楼由 WP-09 与 WP-14 合作，宿舍由 WP-14，树组由 WP-23，街道道具套件由 WP-13），经金样评审（ENG-WP §1）通过后，其余工作包在主线闸口之后照着做细节：
    - 石材科研楼一栋，以六号科研楼为原型；
-   - 宿舍一栋，以学知苑六组团为原型；
+   - 宿舍一栋，以学知苑六组团为原型；旁边加一栋翻新对照楼（本科 A 型），按 ART-RENOVATION §7.1 翻新，与宿舍金样同评、同交下面的材料，作为翻新楼的样板（ART-RENOVATION §8）；
    - 树组一组：一株插片型（银杏）、一株云团型（樱花或桂花），加灌木球；
    - 街道道具套件一套；
    - 室内一处（WLD-INTERIORS）：学知苑 1 栋一、二层，含门厅、走廊、4 人间、开水间、楼梯平台的铁栅门，由 WP-51、WP-52、WP-31c 合作。
@@ -122,7 +123,7 @@ gates: [G2, G4, G5, G7, G12]
    整套金样另交一张"默认格室内"截图：图书馆回廊或宣邦楼中厅，秋 17:30，看室内暖影、窗格光柱和光斑。
 
    三张时季截图要回答三个问题：夏正午会不会发平（SYS-TIME §3.4 第一行），冬夜下雪时会不会死黑或丢掉轮廓，季节变化有没有破坏造型（例如冬季裸枝、积雪落在不该落的面上）。
-2. **每栋地标一页参考板**。内容包括：实景照片 3 张（正面、斜 45°、屋顶）、身份特征清单、金样截图（含三张时季对照），以及 2 张"不要这样"的反例。照片只用来定结构和身份特征，材质、色彩、陈设和标识按氛围处理（§1）。
+2. **每栋地标一页参考板**。内容包括：实景照片 3 张（正面、斜 45°、屋顶）、身份特征清单、金样截图（含三张时季对照），以及 2 张"不要这样"的反例；翻新楼的两张反例，一张是"做旧"，一张是"日式物件盖过身份特征"（ART-RENOVATION §6.3）。照片只用来定结构和身份特征，材质、色彩、陈设和标识按氛围处理（§1）。
 3. **参数化部件库是唯一入口**。
    - 檐口分 S、M、L 三档，分别为 0.3、0.6、1.0 m，每档约为上一档的 2 倍。
    - 倒角预设、栏杆、台阶、屋顶设备都从部件库取。
@@ -144,7 +145,7 @@ gates: [G2, G4, G5, G7, G12]
      - 和实景照片对比，3 秒内能否认出是哪栋楼；身份特征在四季和昼夜里都要认得出；
      - 室内与照片比（WLD-INTERIORS）：结构（层数、平面、入口、楼梯）3 秒认得出；材质、陈设、标识按氛围处理，不要求照抄；
      - 季节和时刻的颜色只从调色板取：建筑色按"关键帧 × 季节"推导，植被读季相行（SYS-TIME §3.1）。跨区横向比对时，同一季节、同一关键帧下，同类楼的色差仍在 §5 的容差内；
-     - 对照 ART-STYLE §9 的排除元素逐项检查。
+     - 对照 ART-STYLE §9 的排除元素和 ART-STYLE §9.1 的日本元素边界逐项检查；翻新楼另按 ART-RENOVATION §8 的翻新验收检查。
 7. **分批放开**：先让南区和北部生活区两个区按金样做完、通过评审，再放开其余区并行。另设一名风格质检，跨区横向比对。
 
 ## 7 待验证（P0）

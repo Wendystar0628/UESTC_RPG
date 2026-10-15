@@ -2,7 +2,7 @@
 id: RFC-ART-JP-AMBIENCE
 title: 日式氛围元素目录
 category: proposals
-status: review
+status: merged
 domain: ART
 affects: [CORE-INDEX, CORE-DECISIONS, ART-STYLE, ART-MODELING, MAP-QSH-ADDITIONS, MAP-QSH-NORTH, WLD-LIFE, WLD-VEGETATION, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, REF-PROMPT]
 owners: []
@@ -14,6 +14,8 @@ created: 2026-10-15
 > **范围**：本文列出能在清水河校区营造"日式日常街景"氛围的室外元素与声音：每条写明日本辨识度、放进中国校园的违和与化解、适合的区域、增补还是改造，以及三渲二的做法要点；末尾给出推荐优先做的 10 项。地图结构（楼的位置、道路、水体）不动，只增补或改造建筑与环境细节。
 > **不在本文**：明暗、影色、描线与调色板的规则（ART-STYLE）；造型比例与部件库（ART-MODELING）；各增补物的具体坐标与工作包分工（MAP-QSH-ADDITIONS 及各区文档）；室内的日式元素（WLD-INTERIORS §8.5）；声音的混音与许可流程（SYS-AUDIO）。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[CORE-DECISIONS 决策登记](../core/CORE-DECISIONS.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-MODELING 风格化造型](../art/ART-MODELING.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+
+> **已合并**：本提案的结论已并入 ART-AMBIENCE，以那里为准；本文只作调研记录保留。
 
 ## 作者已定（2026-10-15）
 

@@ -2,7 +2,7 @@
 id: RFC-ART-JP-CONFLICTS
 title: 日式方向与现行规则的冲突
 category: proposals
-status: review
+status: merged
 domain: ART
 affects: [CORE-INDEX, CORE-DECISIONS, ART-STYLE, ART-FIDELITY, ENG-GATES, WLD-INTERIORS, WLD-LIFE, WLD-OUTSKIRTS, WLD-DIORAMA, WLD-VEGETATION, MAP-QSH-ADDITIONS, MAP-QSH-NORTH, MAP-QSH-SOUTH, SYS-AUDIO, REF-PROMPT]
 owners: []
@@ -14,6 +14,8 @@ created: 2026-10-15
 > **范围**：本文盘点现行文档里与"地图细节走日式氛围"冲突的规定，按作者选定的边界 (a) 给出每处的改法和可以直接替换的规定草稿；声音单列一节（§4）。
 > **不在本文**：地图结构（不改，MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；边界 (b)(c) 的展开；增补物的最终数值与落位（评审通过后写进 MAP-QSH-ADDITIONS、WLD-LIFE 等）。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[CORE-DECISIONS 决策登记](../core/CORE-DECISIONS.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+
+> **已合并**：本提案的结论已并入 INV-7、D-064、D-103、D-104、D-175 及 ART-STYLE §9.1、SYS-AUDIO、WLD-INTERIORS §8.5、ENG-GATES §3 等各处，以那里为准；本文只作调研记录保留。
 
 ## 作者已定（2026-10-15）
 

@@ -5,8 +5,8 @@ category: maps
 summary: 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
 owners: [WP-21]
 contributors: [WP-13, WP-15, WP-23, WP-24, WP-25, WP-28, WP-30, WP-31b, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-51, WP-53b]
-depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-WATER, ART-FIDELITY, ART-MODELING, MAP-QSH-ADDITIONS, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
+depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-WATER, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
+related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, ART-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/center-east.overlay.json"]
 gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
@@ -16,7 +16,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 > **范围**：本文规定中部科研区与东区（科研楼群、雕像与石刻、品学楼、文科楼群、综合训练馆、球场、田径场、室外游泳池组团、东缘河岸）的建筑外观与身份特征、本区开放入口的门口表现、四季昼夜与天气要点、行走的挡路与碰撞，以及部件和碰撞体上的声音数据。
 > **不在本文**：品学楼与综合训练馆的室内（WLD-INTERIORS，WP-31b）；植被与季相（WLD-VEGETATION、SYS-TIME §4）；水面（WLD-WATER）；校车、单车、白猫（WLD-LIFE）；磨底河外的外围（WLD-OUTSKIRTS）；发声器的生成（SYS-AUDIO）；灯光时刻表（SYS-TIME §6）；锚点的位置与落点（SYS-ATLAS）。
-> **关联**：[CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)；相关：[MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[MAP-QSH-NORTH 北部生活区](MAP-QSH-NORTH.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ENG-WP 工作包](../../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)
+> **关联**：[CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ART-RENOVATION 老楼翻新](../../art/ART-RENOVATION.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)；相关：[MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[MAP-QSH-NORTH 北部生活区](MAP-QSH-NORTH.md)、[MAP-QSH-RENOVATION 清水河翻新清单](MAP-QSH-RENOVATION.md)、[ART-AMBIENCE 日式日常街景](../../art/ART-AMBIENCE.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ENG-WP 工作包](../../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)
 
 ### 分工
 
@@ -91,10 +91,11 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 中部科研区在走马河两岸。
 
-- **1.1 一号科研实验楼**：就是科 B 加科 C。信通学院在科研楼 B 区，C 区大厅也归信通使用；楼里有 6 层的部分。外观按科研楼家族处理：浅暖灰石材，加成组的窗或玻璃基座。
+- **1.1 一号科研实验楼**：就是科 B 加科 C。信通学院在科研楼 B 区，C 区大厅也归信通使用；楼里有 6 层的部分。外观按科研楼家族处理：浅暖灰石材，加成组的窗或玻璃基座。它和基础实验大楼都是早期建成的楼，按 ART-RENOVATION 翻新：窗框统一换新，立面不挂外机，屋面设备进围挡，石材分格整齐、没有水渍和色差（MAP-QSH-RENOVATION §3）。
 - **1.2 基础实验大楼、科研楼 B/C 区**：处理方式同上。
   - 基础实验大楼就是科 A（原一号科研楼），楼里集中了电子实验中心等基础实验中心。楼型是"コ"字加东侧一个透镜形的弧厅，门厅朝东，正对跨走马河的小桥（待验证，见 §10）。
   - 层数：基础实验大楼 5 层，科研楼 C 区 5 层（待验证，见 §10），一律按 5 层画。
+  - 基础实验大楼屋顶加一道高围网和一座塔屋水箱，与品学楼 C 区同一做法（MAP-QSH-ADDITIONS §2.16）。
   - 都不开放：门关着，门玻璃里是门厅卡，窗里是窗卡 `W-LAB : W-OFF` = 7 : 3（WLD-INTERIORS §5）。
   - 科研楼 C区和研究院大楼一带有一只白猫，由 WP-25 放置。
 - **1.3 麦克斯韦像**：
@@ -125,7 +126,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 - **2.3 门前**：浅灰铺装广场，排着方形树池。
   - **叠水喷泉**：门框正前方有一座多层深色花岗岩叠水喷泉，三层，直径约 6 m；位置约 (140, −65)（待验证，见 §10）。石台归本区，水面和落水归 WP-24（WLD-WATER §9）。石材颜色、叠水的层高可参考，按画面处理；画面上它在门框的书法横梁前，是 R5 走到门框下之前的一拍。
   - 门前的红色"梦想在成电启航"字牌属临时布置，不画。
-- **2.4 端部与屋顶**：右翼端部是一个弧形体量。深灰屋面上有一条玻璃脊式采光带和一些设备。
+- **2.4 端部与屋顶**：右翼端部是一个弧形体量。深灰屋面上有一条玻璃脊式采光带；多联机等设备收进深灰穿孔铝板设备围挡（MAP-QSH-ADDITIONS §2.9）。
 - **2.5 东侧**：有一条小溪和一座小桥。
   - 小溪按水深不到 0.3 m 做，整段登记为涉水区（SYS-WALK §9），见 §8。
 - **2.6 立面**：浅色框架配青灰窗组，围合成组团。
@@ -139,6 +140,13 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
   - 开放范围里没锁的房门和楼梯间防火门，观者走近自动推开，走过后由闭门器缓缓关上，带开门和关门声（WLD-INTERIORS §4.1、SYS-AUDIO）。
   - 室内由 WP-31b 实现；蓝窗帘、吊扇、灰色固定课桌这类细节可参考。本区负责入口、门洞和门口表现。
   - 这间阶梯教室的灯按教学楼曲线；22 时以后全楼只剩约 5% 的窗亮着，它固定是其中之一，夜里走到品学楼总能找到这一格亮灯。
+- **2.8 翻新**（MAP-QSH-RENOVATION §3）：品学楼按 ART-RENOVATION §7.2 的老教学楼示例翻新，身份特征不动（书法横梁门框与架空通道、叠水喷泉、回字形内院、斜放的门厅与半圆楼梯厅、浅色框架配青灰窗组、玻璃脊式采光带）：
+  - 主墙与框架是灰白墙面，窗间板浅米灰石材，勒脚深灰；窗框灰铝，玻璃一种颜色。
+  - 框架内的窗组做成带形窗，每层一条连续窗台；南立面每层一道通长雨庇（ART-AMBIENCE §2，即 MAP-QSH-ADDITIONS §3 第 3 条的水平挑板），西立面不属于身份特征的段落加竖向鳍片。
+  - 朝内院的单面廊做实心栏板、浅色扶手，廊顶板底白，黄昏把柱影铺进廊里。
+  - 半圆楼梯厅的折线玻璃幕是新的，形状不变；东侧封闭的疏散梯立面是一条竖向窗带，窗间用浅米灰石材板。
+  - 立面不挂外机，墙面没有线槽、旧标语牌和横幅；已有题字，不加屋顶构架和楼名大字（MAP-QSH-ADDITIONS §3 第 11 条）。
+  - C 区屋顶加一道高围网和一座塔屋水箱，只作远景和天际线轮廓，屋顶不开放（MAP-QSH-ADDITIONS §2.16、ART-AMBIENCE §2）；R5 往东走时，它是月出前的一块校舍剪影。
 
 ## 3 文科楼群
 
@@ -165,6 +173,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 - **4.1 综合训练馆**：一道银白色的大跨筒拱屋面。
   - **结构**（WLD-INTERIORS §16）：主馆是钢网架筒拱下的一层大空间，约 128 m（南北）× 85 m，拱顶有纵向的半透明采光带；南北两端各一栋 2 层附楼，东侧还有一栋小附楼；体育部办公室在附楼 205。
   - 2026 年暑期翻新过，分出多功能球场区、羽毛球区、独立乒乓区和封闭的啦啦操房；场地颜色和分区的片数可参考，按画面处理。
+  - 外壳的建成年代待核实，核实前按 MAP-QSH-RENOVATION §8 的口径做新：筒拱屋面板、采光带和附楼的窗框都是新件，屋面设备进围挡。
 - **4.2 网球场**：
   - 场心是蓝色，外区灰绿，白线。
   - 三片一组，每组被高大的柱状树墙围成一个"绿色房间"。树形像水杉，按落叶树处理，由 WP-23 负责。
@@ -179,7 +188,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
     - 开灯时是东区夜里的主光源：冷白光（`window.cool`）罩住场地，围网像一层发亮的纱（ART-FIDELITY §6 黄昏细节第 10 条的夜间版）；冬季光锥里看得见雪花。
     - 22:00 关灯以后，东区只剩月光和路灯。
 - **4.5 羽毛球场、排球场、乒乓球区**：用低饱和的绿和灰蓝，与篮球场、网球场区分开。
-- **4.6 田径场**：砖红色跑道（`brick`），内场草坪。器材室是一间小平房。
+- **4.6 田径场**：砖红色跑道（`brick`），内场草坪。器材室是一间小平房，算后勤小楼，门可以做成新的卷帘门，门头一块波纹铁皮雨棚（MAP-QSH-ADDITIONS §3 第 12 条），门牌写"体育器材室"。
   - 东区田径场**没有看台**。四周是铁丝围网和水杉；场边小看台按 MAP-QSH-ADDITIONS §2.10 设计，放一组 3 级铝座席加轻钢雨棚，长约 20 m，在西直道外侧，背对训练馆、正对东方的月出。主席台不做。
 - **4.7 开放室内：综合训练馆**（WLD-INTERIORS §2.13）：
   - 开放范围：北端附楼的进门大厅（无框玻璃门）→ 主馆地面全部（多功能球场区、羽毛球区、独立乒乓区、气排球场）→ 北附楼 2F 朝主馆开窗的内走廊（观景）。
@@ -194,7 +203,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 - **5.3 走马河东南段**：从立人楼以东流到东南角，水面由 WP-24 负责。沿河的护岸和小桥由你负责，画法同 MAP-QSH-WEST §10.4。
 - **5.4 室外游泳池组团**（WLD-INTERIORS §17）：
   - 位置：东区，约 x 630…700、z −197…−35，在 `qsh:way:949704496` 的范围里，归本区。
-  - 内容：4 个池子加 2 栋房。大房 `549782172`、小房 `549782171` 按更衣、淋浴、泵房、救生员室画，不开放，门关着，窗里是窗卡 `W-POOL`、`W-MECH`（WLD-INTERIORS §5.1）。
+  - 内容：4 个池子加 2 栋房。大房 `549782172`、小房 `549782171` 按更衣、淋浴、泵房、救生员室画，不开放，门关着，窗里是窗卡 `W-POOL`、`W-MECH`（WLD-INTERIORS §5.1）。两栋房算后勤小楼（MAP-QSH-ADDITIONS §3 第 12 条），建成年代待核实，核实前按 MAP-QSH-RENOVATION §8 的口径做新。
   - 池子：浅蓝池底、白色泳道线、池边防滑砖和一圈不锈钢扶梯；池水的水面由 WP-24 按 WLD-WATER §8 给出。池岸的躺椅、救生员高椅、遮阳伞可参考，按画面处理。
   - 行走：组团外一圈 2.2 m 透空围网，门锁着，能看不能进（§8）：池水深，进去只会触发回位（SYS-WALK §9）。旁观可以飞进去。
 
@@ -218,6 +227,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 - [ ] §7 的四季状态和夜间角色都成立；P14（秋 18:10）在推荐状态下好看（UI-NAV §6，SYS-TIME §8 的评分）；§7"天气要点"的雨帘、积水点和生活痕迹位置都已给出。
 - [ ] R5 东行望月（SYS-WALK §11）以 1× 步速走完没有卡点；品学楼 A 区大厅、阶梯教室、C 区一层和综合训练馆走得进去，入口有门口表现（WLD-INTERIORS §4）；关着的楼（科研楼 B/C 区、基础实验大楼、品学楼其余部分、文科楼）门关着，门里是门厅卡（§8）。
 - [ ] 碰撞体都填了 `Foot`；品学楼、训练馆的 `Acoustics()` 按 §9 声明（WP-31b 提供）（SYS-AUDIO §10.4）。
+- [ ] MAP-QSH-RENOVATION §3 的条目都已翻新、登记了覆盖层的 `hide` 与 `add`；品学楼翻新后 3 秒内认得出（书法横梁、叠水喷泉不变），按 ART-RENOVATION §8 的翻新验收通过。
 
 ## 定位、设计增补与近景要求
 
@@ -227,6 +237,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 - 下面"本区身份特征"表里的特征，以及本文写明的结构（体量、层数、平面布局、入口），视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来；写明"可参考，按画面需要处理"的细节按氛围处理。
 - 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/center-east.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头降到人眼高度、贴到墙上，看到的都必须是精致的建模。
+- **翻新**：本区建成较早的楼（品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房）和球场、围网、灯杆按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §3，待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174），球场和跑道的地面没有裂缝、补丁和褪色。
 
 **本区身份特征**：
 
@@ -242,6 +253,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 - 品学楼一带：10 处非机动车停放区，以及树下的长桌。
 - 一号科研楼屋顶：天线、测试塔，外加一处屋顶实验花园。
+- 品学楼 C 区、基础实验大楼屋顶：高围网与塔屋水箱（MAP-QSH-ADDITIONS §2.16）。
 - 运动区：场边小看台、篮球车、开放时间牌。
 - 楼与楼之间：边角运动角。
 - 银杏大道小桥上的桥头卧石和浮雕栏板，归 WP-28。

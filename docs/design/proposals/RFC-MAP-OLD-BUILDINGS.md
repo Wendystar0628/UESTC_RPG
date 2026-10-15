@@ -2,7 +2,7 @@
 id: RFC-MAP-OLD-BUILDINGS
 title: 清水河校区老旧建筑清单
 category: proposals
-status: review
+status: merged
 domain: MAP
 affects: [MAP-QSH-NORTH, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, MAP-QSH-WEST, MAP-QSH-CORE, MAP-QSH-ADDITIONS]
 owners: []
@@ -14,6 +14,8 @@ created: 2026-10-15
 > **范围**：本文列出清水河校区现实中建成较早、带陈旧元素的建筑和环境，逐项写明名称与位置、实体 ID、大致年代、老旧表现、严重程度，以及分区文档现在的写法，供风格化翻新取用。
 > **不在本文**：翻新的做法和规则（另一份调研负责）；各区建筑的现行外观规定（MAP-QSH-CORE、MAP-QSH-SOUTH、MAP-QSH-NORTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST）；增补物和禁做清单（MAP-QSH-ADDITIONS）。
 > **关联**：[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[MAP-QSH-WEST 西区与西北区](../maps/qingshuihe/MAP-QSH-WEST.md)、[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)
+
+> **已合并**：本提案的结论已并入 MAP-QSH-RENOVATION，以那里为准；本文只作调研记录保留。
 
 ## 作者已定（2026-10-15）
 

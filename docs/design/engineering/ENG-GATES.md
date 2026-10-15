@@ -243,7 +243,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 
 1. 出现 UI-NAV、UI-VISUAL、SYS-ATLAS、SYS-TITLE 登记的界面与署名以外的任何叠加：文字、图标、按钮、加载提示或操作提示，包括引擎启动画面上的标志（SYS-VIEW §3）；**3D 画面里**出现地点标签、选中描边、世界空间标记、光柱、路线线条或追踪标记，或者锚点实体发光、做传送特效（SYS-ATLAS §1）；`--ui=0` 下出现署名以外的任何叠加（小地图、开始页、放映层也不得出现）。开始页、存档页、放映层、过场字幕属于 UI-VISUAL、SYS-TITLE 登记的界面；扉页是三维静帧，不算加载提示；扉页下方首次运行的一行进度（ENG-ARCH §4）也是 SYS-TITLE 登记的界面，烘完就淡出。
 2. 画面里出现人、人影，或行驶中的车辆（过场里也不出现人，SYS-TITLE）；行走模式下画出观者的手、脚、影子或脚印（SYS-WALK §1）；展陈里出现人物肖像（WLD-INTERIORS §11）。声音的对应项见第 24 条。人物的几项属于观光规则集，判据取自 `sightseeing` 规则集的内容规则 `Characters = false`（ENG-ROADMAP §6 第 1 条）。
-3. 出现 ART-STYLE §9 列出的任何日本特有元素。
+3. 出现日本的宗教或地标符号、日文文字或传统和式建筑构件（ART-STYLE §9.1 第 1、5、9 条）；或者 ART-STYLE §9.1 放开的日式日常物件超出了它给的地点、数量和文字限定（ART-AMBIENCE、MAP-QSH-ADDITIONS §2.16）。
 4. 使用照片纹理，或出现灰黑色的阴影。
 5. 镜头原地转一圈时，某个方位的远景是空的；看到天空穿帮、黑洞，或里外翻转的面；剖切面闪烁；外围露出未建模的背面，或者截面线以外露出地面和空洞（WLD-OUTSKIRTS）。
 6. 偶发事件超过一种，或出现快速、突兀的动作。观者触发的过渡（改时间、换季、换天气、点位跳转、传送、模式切换、回位、应用画面设置、进场过场、返回标题、切图）不算偶发事件，也不算自动运镜，但时长和曲线必须符合 SYS-TIME §1、SYS-TIME §5，UI-NAV §7，SYS-WALK §5、SYS-WALK §9，SYS-GRAPHICS §4，SYS-ATLAS §7，SYS-TITLE §3–§5，SYS-MAPS §4。闪电是雷雨的持续氛围、彩虹是初晴的天象状态，都不算偶发事件（SYS-WEATHER §5）。偶发事件的数量属于观光规则集，允许的事件取自 `sightseeing` 规则集的 `Incidents`（ENG-ROADMAP §6 第 1、5 条）。
@@ -271,7 +271,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 - [ ] CORE-INDEX 的全局不变量 INV-1 至 INV-12 全部成立。
 - [ ] 风格符合 ART-STYLE，造型符合 ART-MODELING；从 V1、V4、V7 看，金样风格一致，四季各看一遍。
 - [ ] §1 的所有位置都满足视觉精度（ART-FIDELITY；基准是精致预设、1920×1080 原生，SYS-GRAPHICS §10；外围按最近可达距离判，WLD-OUTSKIRTS §4.1）。各区巡检的平均分不低于 20/25，且没有任何一项低于 3 分；历次集中测试轮换到的组合也满足这条。
-- [ ] 设计增补全部落实（MAP-QSH-ADDITIONS §7），并且没有踩到"不建议增补"的项（MAP-QSH-ADDITIONS §5）；夜间灯光符合 MAP-QSH-ADDITIONS §8。
+- [ ] 设计增补全部落实（MAP-QSH-ADDITIONS §7），并且没有踩到"不建议增补"的项（MAP-QSH-ADDITIONS §5）；夜间灯光符合 MAP-QSH-ADDITIONS §8。翻新清单（MAP-QSH-RENOVATION）全部落实，翻新楼按 ART-RENOVATION 验收，全校立面和地面没有做旧痕迹（D-174）。
 - [ ] ART-SKYLIGHT §8 的冷暖对照全部成立；太阳和月亮按美术轨迹运行（SYS-TIME §2），秋 17:30 的太阳正好是 5.5°、241°。
 - [ ] 大箱庭完整：外围 O0–O3、截面、雾海和 360° 远景（WLD-DIORAMA、WLD-OUTSKIRTS）；校界的缓停与提示、旁观的可达空间按 WLD-OUTSKIRTS §7–§9 工作。
 - [ ] 各区（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）、植被（WLD-VEGETATION）、水（WLD-WATER）、动物与家具（WLD-LIFE）、动态（SYS-MOTION）的验收项全部通过。

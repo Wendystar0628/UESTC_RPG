@@ -6,7 +6,7 @@ summary: 世界状态与美术日月、主光与阴影、天光、天空云星�
 owners: [WP-34, WP-03, WP-40]
 contributors: [WP-04, WP-05, WP-06, WP-07, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
-related: [WLD-DIORAMA, WLD-WATER, SYS-MOTION, SYS-VIEW, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
+related: [WLD-DIORAMA, WLD-WATER, SYS-MOTION, SYS-VIEW, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, ART-AMBIENCE]
 contracts: [IWorldState, Body, Flow, WorldTransition]
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
 gates: [G2, G7, G10, G12, G13, G16, G17]
@@ -15,7 +15,7 @@ gates: [G2, G7, G10, G12, G13, G16, G17]
 
 > **范围**：本文规定世界状态与美术日月轨迹、主光与阴影、天光、天空（云、星空、月亮）、雾与大气透视、全局光效和冷暖对照，以及天气对它们的修正。时刻（24 小时）和季节（四季）都可在界面上调节，每种组合都要好看，切换要自然过渡；四季和昼夜一律视觉效果优先，真实情况只作参考。文中数值是默认状态（秋 17:30，晴）的参考值或校验值，其他格来自关键帧（SYS-TIME §3）。
 > **不在本文**：远山和城市剪影（WLD-DIORAMA）；水面反光的着色（WLD-WATER）；动态节奏（SYS-MOTION）；时间和季节的界面（UI-NAV）；季节植被和季节粒子（SYS-TIME §4）；天气过程、降水、湿润与积水（SYS-WEATHER §6、SYS-WEATHER §7）。
-> **关联**：[CORE-INDEX 总览](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)
+> **关联**：[CORE-INDEX 总览](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)
 
 ### 分工
 
@@ -192,6 +192,7 @@ gates: [G2, G7, G10, G12, G13, G16, G17]
     - 雷雨（春夏）：积雨云塔带砧状顶，云底紫蓝约 #5A6090（`weather.cbBase`，ART-STYLE §8.6），云顶仍受光。
     - 雨后初晴：碎云向东退，云隙光画成平涂光带。
   - **漂移**：云的漂移 = f(世界时间) + g(`AnimTime`)，所以快进时云像延时摄影一样加速掠过，暂停时仍有极慢的飘动。世界时间只增不减，云不会倒走（SYS-TIME §1、SYS-WEATHER §7）。
+  - **飞机云**（ART-AMBIENCE §10）：夏、秋晴天和少云的下午可以有一两道，画在天空着色器里：细长的硬边白线，尾部慢慢散开变宽，颜色取当前格的云顶受光色，随云一起漂移。它是持续的天象状态，不画成划过天空的过程，不算偶发事件（INV-10）；阴、雨、雾天和夜里不出现。
   - **白天积云的三道阈值**（可选）：按"薄纱 / 团块 / 云核"三道硬阈值上色（约 0.55 / 0.75 / 0.97，加 aastep），朝太阳一侧阈值 +0.16，留出亮缝，缝边镶银边。只改天空着色器，不加参数。
 - **4.6 天气背景**：天气是第三个世界量（SYS-WEATHER）。晴是默认，也是自动天气里最常见的状态（约占四分之三，SYS-WEATHER §6.3）；其余天气按 SYS-WEATHER §2 的画面规则画，每一种都要好看，仍以画面为先，不按真实的日照率和雪山能见天数。阴天和雨都会出现；下雪只在冬季，雷雨只在春夏（SYS-WEATHER §1）。
   - **阴（亮阴）**：天色珍珠粉紫 `weather.overcast`，OKLab L ≥ 0.72，禁止中性灰；冬季的阴是"雪意"薰衣草灰 #B8B4CC（§4.10）。

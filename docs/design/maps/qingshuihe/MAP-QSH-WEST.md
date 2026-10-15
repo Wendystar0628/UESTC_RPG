@@ -5,8 +5,8 @@ category: maps
 summary: 西区与西北区各楼、石刻、湿地与西门桥头的外观、四季昼夜与天气、行走与开放入口、声音要点
 owners: [WP-19]
 contributors: [WP-12, WP-13, WP-15, WP-16, WP-23, WP-24, WP-25, WP-28, WP-30, WP-31b, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-53]
-depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
-related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
+depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
+related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/west.overlay.json"]
 gates: [G4, G5, G7, G9, G12, G15, G19, G21]
@@ -15,7 +15,7 @@ gates: [G4, G5, G7, G9, G12, G15, G19, G21]
 
 > **范围**：本文规定西区与西北区（六号科研楼、校训石、创新中心、经管楼、托幼园、四号与五号科研楼、研究院大楼、核磁共振中心、荟文楼、石刻、湿地公园与西门桥头）的建筑、石刻、桥梁与护岸外观，四季昼夜清单与天气要点，行走与开放入口，声音要点。§1–§10 写的是默认状态（秋 17:30）的样子，其他时段和季节见 §11，行走见 §12。
 > **不在本文**：树木、芦苇芒草与杏树（WLD-VEGETATION，WP-23）、季相与萤火虫（SYS-TIME §4，WP-38）、灯光时刻表（SYS-TIME §6，WP-39）、水面（WLD-WATER，WP-24）、白鹭与单车（WLD-LIFE，WP-25）、校门与校界栏杆（WLD-OUTSKIRTS，WP-30）、门外的外围街区（WLD-OUTSKIRTS，WP-47）、开放室内的楼板、楼梯与家具（WLD-INTERIORS，WP-31b）。
-> **关联**：依赖 [CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)（点位 UI-NAV §6）、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；相关 [WLD-DIORAMA 箱庭与远景](../../world/WLD-DIORAMA.md)、[MAP-QSH-CORE 核心区](MAP-QSH-CORE.md)、[MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-NORTH 北部生活区](MAP-QSH-NORTH.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)（锚点 SYS-ATLAS §6）、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)。
+> **关联**：依赖 [CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ART-RENOVATION 老楼翻新](../../art/ART-RENOVATION.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)（点位 UI-NAV §6）、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；相关 [WLD-DIORAMA 箱庭与远景](../../world/WLD-DIORAMA.md)、[MAP-QSH-CORE 核心区](MAP-QSH-CORE.md)、[MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-NORTH 北部生活区](MAP-QSH-NORTH.md)、[MAP-QSH-RENOVATION 清水河翻新清单](MAP-QSH-RENOVATION.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)（锚点 SYS-ATLAS §6）、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../../world/WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)。
 
 ### 分工
 
@@ -138,7 +138,7 @@ gates: [G4, G5, G7, G9, G12, G15, G19, G21]
 - **3.1 体量**：OSM 记 6 层，楼翼是矩形，立面有密集的竖窗棂。
 - **3.2 招牌**：主入口门框上方是红褐色书法"创新中心"四字；侧翼顶角还有一块小字招牌。
 - **3.3 连接**：楼与楼之间用深色玻璃楼梯井连接。
-- **3.4 屋顶**：有几间蓝色彩钢小构筑物。
+- **3.4 屋顶**：屋面设备收进深灰穿孔铝板设备围挡，只露顶部（MAP-QSH-ADDITIONS §2.9）；出屋面楼梯间与主楼同一种压顶，屋顶线只有这两种整块体量。屋顶不放彩钢板房（MAP-QSH-ADDITIONS §5 第 10 条），翻新条目见 MAP-QSH-RENOVATION §5。
 - **3.5 门前**：停车广场，边上一排杉树，由 WP-23 负责。
   - 以本条的"杉树"为准，不画雪松（REF-PROMPT写的"雪松"不采用）；按水杉或池杉这类落叶树画。
   - 四季状态：春季新绿，夏季浓绿，秋季锈红色（默认状态），冬季落叶成裸枝，枝头压一线雪。详见 §11。
@@ -215,7 +215,8 @@ gates: [G4, G5, G7, G9, G12, G15, G19, G21]
 
 - [ ] 六号科研楼的原创徽记、银色大字、水平百叶带和底层退后的玻璃幕墙都在，A区最高。
 - [ ] 校训石的尺度约 2 m × 6–7 m，红色行书清晰。
-- [ ] 创新中心的红褐色书法招牌和玻璃楼梯井都在。
+- [ ] 创新中心的红褐色书法招牌和玻璃楼梯井都在；屋顶没有彩钢板房，设备在围挡里。
+- [ ] MAP-QSH-RENOVATION §5 的条目都已翻新、登记了覆盖层的 `hide` 与 `add`，按 ART-RENOVATION §8 的翻新验收通过。
 - [ ] 托幼园的"键盘"立面清楚可读。
 - [ ] 四号科研楼有扇形草坪、放射小路和深蓝玻璃盒入口。
 - [ ] 湿地公园有石桥和栈道，西门桥头有车行桥和候车亭。
@@ -234,6 +235,7 @@ gates: [G4, G5, G7, G9, G12, G15, G19, G21]
 - 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/west.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 照片和 OSM 只定结构，即体量、层数、平面、入口、交通核、道路、水体；材质、色彩、陈设、装饰、标识、生活痕迹按氛围处理，照片只作参考。可以新增校园里没有、但能加强氛围的元素，写进覆盖层（ID 以 `design:` 开头）并写明理由；现实里有、放进画面难看的东西（杂乱管线、临时围挡、刺眼的广告、过多的指示牌）可以删掉。
 - 视觉精度按 ART-FIDELITY 验收：镜头降到人眼高度、贴到墙上，看到的都必须是精致的建模。
+- **翻新**：本区建成较早或年代待核实的楼（创新中心、研究院大楼、经管楼、荟文楼、核磁共振中心、孤儿楼 6151 与 6154）按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §5，待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174）。
 
 **本区身份特征**：
 
@@ -304,7 +306,7 @@ gates: [G4, G5, G7, G9, G12, G15, G19, G21]
 **天气要点**：规则见 SYS-WEATHER，这里只点名本区的地方，不给每个对象另加天气列。
 
 - **避雨处与雨帘**（SYS-WEATHER §3 第 5 条，做法见 MAP-QSH-ADDITIONS §9.1）：西门桥头候车亭的亭顶前后沿各一排雨帘，站牌灯箱从帘后照亮，逆光最清楚，是本区雨夜的主画面；光伏车棚是单坡，只在低的一侧滴水，帘最密；六号科研楼底层两层通高、向内退的玻璃幕墙前（§1.3）是一条干的檐下；四号科研楼深蓝玻璃盒入口的白色门框上沿也挂一排。六号 2F 室外连廊外侧有檐口，檐下按半室外处理（WLD-INTERIORS §2.0），檐口挂一排雨帘；连廊底下的车道门洞是干的。
-- **积水点**（本区只给位置，潜势由 WP-15 画，MAP-QSH-ADDITIONS §9.2）：新停车场沥青车道的低侧，水最后流进植草沟（MAP-QSH-ADDITIONS §2.4）；校训石前的广场靠路一侧；西门车行桥两端的桥头；水杉路人行道上被树根顶起的砖旁。湿地的雨水花园（MAP-QSH-ADDITIONS §2.7）下凹 0.25 m，雨天积成一片浅水，鸢尾和芒草立在水里，雨停后最晚干。湿地栈道和石桥只变湿变暗，不积水。
+- **积水点**（本区只给位置，潜势由 WP-15 画，MAP-QSH-ADDITIONS §9.2）：新停车场沥青车道的低侧，水最后流进植草沟（MAP-QSH-ADDITIONS §2.4）；校训石前的广场靠路一侧；西门车行桥两端的桥头；水杉路人行道的树池边。湿地的雨水花园（MAP-QSH-ADDITIONS §2.7）下凹 0.25 m，雨天积成一片浅水，鸢尾和芒草立在水里，雨停后最晚干。湿地栈道和石桥只变湿变暗，不积水。
 - **雾里要读得出的东西**：本区没有雾豁免的地标。六号科研楼 A 区高 41.5 m，正午雾顶压在 25–40 m 时 A 区楼顶露出雾面（SYS-WEATHER §2），是西区雾天的记号；红色徽记和银色大字在 C 区（§1.1），雾顶低于 C 区楼顶时才露出；招牌分区按 §14 核实后同步。晨雾先从湿地和红光右支渠的水面起，芦苇穗和石桥的拱从雾里露出来。水杉路隔湖望穹顶（P05）靠穹顶的雾豁免（MAP-QSH-CORE §7"天气要点"）。
 - **雨天的生活痕迹**（WP-25 放置，WLD-LIFE §2，本区给位置）：四号科研楼前露天自行车的车座套着塑料袋（SYS-WEATHER §2）；候车亭座椅上一把忘带走的折叠伞。
 - **推荐状态**：P10 校训石的推荐天气是雨后初晴（UI-NAV §6、SYS-WEATHER §2）。洗过的蓝天下雪山可见度 0.95，校训石的红字湿了以后更饱和，石前的积水映出晨空，前景樱花的叶缘有水珠高光点。

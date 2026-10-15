@@ -6,7 +6,7 @@ summary: 核心区图书馆、时间广场、日晷、博物馆外观与西湖�
 owners: [WP-16]
 contributors: [WP-13, WP-15, WP-17, WP-23, WP-24, WP-25, WP-26, WP-36, WP-38, WP-39, WP-43, WP-44, WP-48c, WP-51, WP-53b]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, MAP-QSH-LIBRARY, ART-MODELING, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
-related: [MAP-QSH-SOUTH, MAP-QSH-WEST, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-PERF, UI-NAV, SYS-WEATHER, UI-VISUAL, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
+related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-RENOVATION, ART-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-PERF, UI-NAV, SYS-WEATHER, UI-VISUAL, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/core.overlay.json", "game/data/maps/qingshuihe/lighting-schedule.json", "game/data/maps/qingshuihe/audio/manual_emitters.json"]
 gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
@@ -16,7 +16,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 
 > **范围**：本文规定核心区的图书馆外观与屋顶、入口台阶、时间广场与日晷、电子科技博物馆外观、西湖岸线构筑物、图书馆周边 14 个无主体块的外观和本区开放入口的门口表现，以及本区的四季昼夜、天气、行走、锚点与声音要点。
 > **不在本文**：图书馆与博物馆的室内（MAP-QSH-LIBRARY）；时刻与季节（SYS-TIME）；点位（UI-NAV §6）；行走规则（SYS-WALK）；天气规则（SYS-WEATHER）；界面的时间环（UI-VISUAL）；锚点与门口标记（SYS-ATLAS）；按图的数据目录（SYS-MAPS）；室内的开放清单与门的区分（WLD-INTERIORS）；声音规则（SYS-AUDIO）。
-> **关联**：[CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[MAP-QSH-LIBRARY 图书馆与博物馆室内](MAP-QSH-LIBRARY.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；另见 [MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[UI-VISUAL 界面视觉语言](../../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)
+> **关联**：[CORE-INDEX 总索引](../../README.md)、[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../../art/ART-SKYLIGHT.md)、[MAP-QSH-LIBRARY 图书馆与博物馆室内](MAP-QSH-LIBRARY.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](../../systems/SYS-TIME.md)、[SYS-WALK 行走](../../systems/SYS-WALK.md)、[WLD-INTERIORS 室内](../../world/WLD-INTERIORS.md)；另见 [MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[MAP-QSH-RENOVATION 清水河翻新清单](MAP-QSH-RENOVATION.md)、[ART-RENOVATION 老楼翻新](../../art/ART-RENOVATION.md)、[WLD-VEGETATION 植被](../../world/WLD-VEGETATION.md)、[WLD-WATER 水](../../world/WLD-WATER.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[SYS-MOTION 动态与事件](../../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)、[ENG-PERF 性能工程](../../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../../ui/UI-NAV.md)、[SYS-WEATHER 天气](../../systems/SYS-WEATHER.md)、[UI-VISUAL 界面视觉语言](../../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../../systems/SYS-ATLAS.md)、[SYS-MAPS 多地图](../../systems/SYS-MAPS.md)、[SYS-AUDIO 音频](../../systems/SYS-AUDIO.md)
 
 这里是全片的重心。图书馆是核心，西湖是与它对望的次主体。
 
@@ -86,7 +86,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 ## 1 图书馆外观
 
 - **1.1 体量**：米色石材的八角形环体。地上 5 层：1F 层高约 5.1 m、2F–5F 约 4.5 m（初值，§10）；核心约 84×83 m，外轮廓约 109×106 m；正中的方塔约 6 层，高出环体一截。
-  - 附属体量（WLD-INTERIORS §17）：北侧是 4 层 L 形的北辅楼（8403），楼身宽 17–20 m，比阅览楼低一截；它与阅览楼北立面之间围出北内院宁静苑（§1.9），内院南侧是窄 L 形的 3 层翼楼（8406）和 2 层低楼（8408）。东北是 3 层的东北连接体（8404）和连桥（8405），一楼外侧是品·悦吧店面（8407，§1.8）。西北有一条 4 层、3 m 宽的连廊（8409、8410）接北辅楼西端。东侧另有一栋独立平房（8399），是设备用房，门关着（初值，§10）。
+  - 附属体量（WLD-INTERIORS §17）：北侧是 4 层 L 形的北辅楼（8403），楼身宽 17–20 m，比阅览楼低一截；它与阅览楼北立面之间围出北内院宁静苑（§1.9），内院南侧是窄 L 形的 3 层翼楼（8406）和 2 层低楼（8408）。东北是 3 层的东北连接体（8404）和连桥（8405），一楼外侧是品·悦吧店面（8407，§1.8）。西北有一条 4 层、3 m 宽的连廊（8409、8410）接北辅楼西端。东侧另有一栋独立平房（8399），是设备用房，门关着（初值，§10）；它算后勤小楼，可以用 MAP-QSH-ADDITIONS §3 第 12 条的附属件，按新件做。
 - **1.2 正面方塔**：方塔朝向时间广场，从环体正中凸出。
   - 塔身嵌一条 6 层通高的竖向玻璃槽，槽里有 4 道竖棂。
   - 塔底的玻璃门在大台阶顶端，标高约二楼（+5.1 m）（§1.7）。
@@ -259,6 +259,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 - 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/core.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 按 WLD-INTERIORS §8.1，照片和 OSM 只定结构（体量、层数、平面、入口、交通核、道路、水体）；材质、色彩、陈设、装饰、标识按氛围做艺术化处理。可以新增校园里没有、但能加强氛围的元素，也可以删掉现实里有、放进画面难看的东西（杂乱的管线、临时围挡、刺眼的广告、过多的指示牌），都写进覆盖层并注明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头降到人眼高度、贴到墙上，看到的都必须是精致的建模。
+- **翻新**：图书馆、附属体和博物馆是石材主体，外观整洁，按 ART-RENOVATION 的翻新预设做新即可（石材分格整齐、屋面设备进围挡、没有水渍和色差），逐栋条目见 MAP-QSH-RENOVATION §6；立面、广场和栈道都不做旧（D-174）。
 
 **本区身份特征**：
 
