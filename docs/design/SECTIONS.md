@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 26.5k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 26.7k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L174 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L196 · 1.8k
 - CORE-DECISIONS §9 工程 · L216 · 3.3k
-- CORE-DECISIONS §10 流程 · L241 · 3.5k
-- CORE-DECISIONS §11 待对齐 · L268 · 61
+- CORE-DECISIONS §10 流程 · L241 · 3.7k
+- CORE-DECISIONS §11 待对齐 · L269 · 61
 
 ## CORE-GLOSSARY · 术语表
 
