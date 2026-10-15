@@ -1,3 +1,4 @@
+using Campus.Kernel.Renderer;
 using Godot;
 
 namespace Campus.Kernel.Post;
@@ -28,9 +29,11 @@ internal struct PostFrame
     public Color MediumColor;     // linear
     public float EdgeFog;
     public float Veil;
-    // Data textures (RenderingServer texture RIDs of the global ImageTextures)
-    public Rid Palette;
-    public Rid MatTable;
+    public Vector3 SunDir;        // sun_dir: real sun direction (sky side of the fog colour)
+    public Vector3 MoonDir;       // moon_dir
+    // Stand-in data textures (RenderingServer RIDs), used only while the registry has no producer for a name
+    public Rid FallbackPalette;
+    public Rid FallbackMatTable;
     // Finish pass (post_tiltshift_comp.glsl) and LUT (post_lut.glsl)
     public float TiltAmount;      // 0 until the tilt-shift blur dispatches land
     public float VignetteK;       // after the quality fade
@@ -41,12 +44,19 @@ internal struct PostFrame
     public float CdlSaturation;
 }
 
-/// <summary>Single-slot mailbox between the main thread and the render thread; struct copies, no allocation.</summary>
+/// <summary>
+/// Single-slot mailbox between the main thread and the render thread; struct copies, no allocation. It also carries
+/// the per-frame read leases of the global data textures (IGlobalDataTextureRegistry): the main thread acquires them
+/// before the frame is queued, the outline callback takes them over, uses them and disposes them after issuing its
+/// commands. Leases the render thread never took are disposed by the main thread when the next pair replaces them.
+/// </summary>
 internal sealed class PostFrameBox
 {
     private readonly object _gate = new();
     private PostFrame _frame;
     private bool _valid;
+    private GlobalDataTextureLease? _palette;
+    private GlobalDataTextureLease? _matTable;
 
     public void Write(in PostFrame frame)
     {
@@ -63,6 +73,33 @@ internal sealed class PostFrameBox
         {
             frame = _frame;
             return _valid;
+        }
+    }
+
+    /// <summary>Main thread: hands over this frame's leases (either may be null) and releases unclaimed older ones.</summary>
+    public void OfferLeases(GlobalDataTextureLease? palette, GlobalDataTextureLease? matTable)
+    {
+        GlobalDataTextureLease? oldPalette, oldMatTable;
+        lock (_gate)
+        {
+            oldPalette = _palette;
+            oldMatTable = _matTable;
+            _palette = palette;
+            _matTable = matTable;
+        }
+        oldPalette?.Dispose();
+        oldMatTable?.Dispose();
+    }
+
+    /// <summary>Render thread: takes ownership of the current leases; the caller disposes them.</summary>
+    public void TakeLeases(out GlobalDataTextureLease? palette, out GlobalDataTextureLease? matTable)
+    {
+        lock (_gate)
+        {
+            palette = _palette;
+            matTable = _matTable;
+            _palette = null;
+            _matTable = null;
         }
     }
 }

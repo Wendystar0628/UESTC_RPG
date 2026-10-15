@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
-using Campus.Kernel.Lighting;
+using Campus.Kernel.Renderer;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
@@ -25,7 +25,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private const float GlowLowSunDeg = 6f;            // levels 2–4 above, 3–5 below (ART-STYLE §7.1)
     private const float FlashBloom = 0.1f;             // thunderstorm flash frame (SYS-WEATHER §5)
     private const float SeasonVeilBloom = 0.1f;        // season-change veil (SYS-TIME §5)
-    private const float WeatherGroundFogTop = 12f;     // provisional mirror of weather_fog.y (ART-SKYLIGHT §6.6)
 
     private readonly PostFrameBox _box = new();
     private readonly OutlineEffect _outline = new();
@@ -36,13 +35,16 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private IColorScriptFrame? _colorScript;
     private IWorldState? _world;
     private IKeyLightState? _key;
+    private IWeatherRenderState? _weather;
+    private IMediumRenderState? _medium;
+    private IGlobalDataTextureRegistry? _textures;
     private ICameraRig? _rig;
     private IVeilState? _veil;
     private Camera3D? _camera;
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
-    private Rid _palette, _matTable;
+    private Rid _fallbackPalette, _fallbackMatTable;
     private bool _highGlow = true;
     private bool _bicubicApplied;
     private bool _vignetteOn = true;
@@ -71,9 +73,12 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _colorScript = Services.Get<IColorScriptFrame>();
         _world = Services.Get<IWorldState>();
         _key = Services.Get<IKeyLightState>();
+        _weather = Services.Get<IWeatherRenderState>();
+        _medium = Services.Get<IMediumRenderState>();
+        _textures = Services.Get<IGlobalDataTextureRegistry>();
         _rig = Services.Get<ICameraRig>();
-        _palette = PostDataTextures.Palette;     // writers keep their texture RIDs for the whole run
-        _matTable = PostDataTextures.MatTable;
+        _fallbackPalette = PostDataTextures.FallbackPalette;
+        _fallbackMatTable = PostDataTextures.FallbackMatTable;
         _veil = Services.Get<IVeilState>();
         if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
         // Startup-only pipeline switches (ENG-PERF §0 rule 10): set before warm-up, never toggled at runtime.
@@ -87,6 +92,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _camera = null;
         _environment = null;
         _lut = null;
+        _box.OfferLeases(null, null);   // release leases no callback took; no new post callbacks after this
         // GPU objects belong to the render thread; release them there before the rendering device shuts down.
         RenderingServer.CallOnRenderThread(Callable.From(ReleaseGpuResources));
     }
@@ -155,7 +161,8 @@ public partial class PostChain : Node, IQualityAware, IMapAware
 
     public override void _Process(double delta)
     {
-        if (_colorScript is null || _world is null || _key is null || _rig is null || _veil is null) return;
+        if (_colorScript is null || _world is null || _key is null || _weather is null || _medium is null
+            || _textures is null || _rig is null || _veil is null) return;
         var dt = (float)Math.Min(delta, 0.25);
         AttachToCamera();
         var environment = GetViewport().FindWorld3D()?.Environment;
@@ -163,7 +170,12 @@ public partial class PostChain : Node, IQualityAware, IMapAware
 
         var cs = _colorScript.Current;
         var weather = _world.WeatherNow;
-        var keyDir = _key.KeyDir;   // WP-03's key light, same value as the key_dir / key_strength globals
+        // Published render state: the same values written to key_dir / key_strength, weather_fog, medium and
+        // medium_color this frame (IKeyLightState, IWeatherRenderState, IMediumRenderState); never read back.
+        var keyDir = _key.KeyDir;
+        var weatherFog = _weather.WeatherFog;
+        var medium = _medium.Medium;
+        var mediumColor = _medium.MediumColor;
 
         var step = dt / FadeSeconds;
         _vignetteFade = Mathf.MoveToward(_vignetteFade, _vignetteOn ? 1f : 0f, step);
@@ -181,14 +193,16 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             DebugView = 0,
             Fog = new Vector4(cs.Fog.X, cs.Fog.Y, cs.Fog.Z, cs.Fog.W),
             FogLow = new Vector4(cs.FogLow.X, cs.FogLow.Y, cs.FogLow.Z, cs.FogLow.W),
-            WeatherFog = new Vector4(weather.Fog > 0f ? weather.Fog : 1f, WeatherGroundFogTop, weather.GroundFog, 0f),
+            WeatherFog = new Vector4(weatherFog.X, weatherFog.Y, weatherFog.Z, weatherFog.W),
             MapRect = _mapRect,
-            Medium = new Vector4(0f, 0f, 0f, 1f),
-            MediumColor = Colors.White,
+            Medium = new Vector4(medium.X, medium.Y, medium.Z, medium.W),
+            MediumColor = new Color(mediumColor.X, mediumColor.Y, mediumColor.Z),
             EdgeFog = _rig.EdgeFog,
             Veil = _veil.Opacity,
-            Palette = _palette,
-            MatTable = _matTable,
+            SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
+            MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
+            FallbackPalette = _fallbackPalette,
+            FallbackMatTable = _fallbackMatTable,
             TiltAmount = 0f,
             VignetteK = cs.Vignette * _vignetteFade,
             VignetteTint = new Vector3(cs.VignetteTint.X, cs.VignetteTint.Y, cs.VignetteTint.Z),
@@ -198,6 +212,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             CdlSaturation = cs.CdlSaturation,
         };
         _box.Write(frame);
+        // Read leases for this frame's outline callback (taken and disposed on the render thread).
+        _box.OfferLeases(_textures.TryAcquire(ShaderGlobals.Palette, out var palette) ? palette : null,
+            _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
 
         if (_environment is null) return;
         var bloom = cs.Glow + FlashBloom * frame.Flash

@@ -1,19 +1,14 @@
 using System.Text.Json;
-using Campus.Contracts;
-using Campus.Style.Palette.Keys;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// Texture RIDs of the two global data textures the compute passes bind: the palette (256×64, created and written
-/// every frame by WP-37's colour-script node) and mat_table (128×4, created once by WP-04's material library; row 0
-/// is the line table defined by WP-05). Compute shaders cannot read global shader parameters and the globals are
-/// never read back, so the RIDs come from their writers (contract-7 item 1).
-/// <para>Palette: WP-37's node publishes its live ImageTexture; the formal entry point is asked for in contract-7.
-/// mat_table: until WP-04's material library is on main, a stand-in where every ID uses the default line class
-/// and no bevel lift (the D0 materials all write the default ID 127 anyway).</para>
+/// Stand-ins for the two global data textures the compute passes bind, used only while
+/// IGlobalDataTextureRegistry has no producer for a name: the palette (registered by WP-37) and mat_table
+/// (registered by WP-04; row 0 is the line table defined by WP-05). The stand-in palette takes its fog and line
+/// columns from the D0 palette data; the stand-in mat_table gives every ID the default line class and no bevel lift.
+/// Lines are a style floor, so the outline keeps running on these rather than switching off.
 /// </summary>
 internal static class PostDataTextures
 {
@@ -28,13 +23,10 @@ internal static class PostDataTextures
     private static ImageTexture? _fallbackPalette;
     private static ImageTexture? _fallbackMatTable;
 
-    public static Rid Palette => Services.Get<IColorScriptFrame>() is PaletteNode palette
-        ? palette.Texture.GetRid()
-        : (_fallbackPalette ??= BuildFallbackPalette()).GetRid();
+    public static Rid FallbackPalette => (_fallbackPalette ??= BuildFallbackPalette()).GetRid();
 
-    public static Rid MatTable => (_fallbackMatTable ??= BuildFallbackMatTable()).GetRid();
+    public static Rid FallbackMatTable => (_fallbackMatTable ??= BuildFallbackMatTable()).GetRid();
 
-    // Only reached when the colour-script service is a stub (registry gate runs, unit hosts).
     private static ImageTexture BuildFallbackPalette()
     {
         var fog = Colors.Gainsboro;

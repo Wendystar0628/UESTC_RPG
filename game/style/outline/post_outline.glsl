@@ -26,7 +26,8 @@ VERSION_DEFINES
 //
 // Inputs from C#: inv_proj = RenderSceneData.GetCamProjection().Inverse() as is — that projection is already
 // the device one (y flipped, reverse-Z remapped). Debug views (line_a.w): 1 mask, 2 material ID, 3 normal,
-// 4 reconstructed world position, 5 fog amount (linear, for the fog parity test against fog.gdshaderinc).
+// 4 reconstructed world position, 5 fog amount, 6 fog colour (both linear, for the parity test against
+// fog.gdshaderinc).
 //
 // Edge criteria per neighbour (ENG-PERF §10.2):
 //   depth  : neighbour farther than the centre's plane predicts by > 1.5 % (plus a normal-quantisation term),
@@ -51,11 +52,13 @@ layout(set = 0, binding = 0, std140) uniform OutlineParams {
 	vec4 g_fog;          // fog
 	vec4 g_weather_fog;  // weather_fog
 	vec4 g_map_rect;     // map_rect
-	vec4 g_key_dir;      // xyz: key_dir, w: edge_fog
+	vec4 g_key_dir;      // xyz: key_dir (unused by the fog since b5348cd), w: edge_fog
 	vec4 g_medium;       // medium
 	vec4 g_medium_color; // medium_color (linear)
 	vec4 g_fog_low;      // fog_low
 	vec4 g_misc;         // x: veil, yzw: reserved
+	vec4 g_sun_dir;      // xyz: sun_dir (real sun direction, unquantised)
+	vec4 g_moon_dir;     // xyz: moon_dir
 } P;
 
 layout(set = 0, binding = 1) uniform sampler2D depth_tex;
@@ -75,14 +78,15 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 #define fog_low (P.g_fog_low)
 #define weather_fog (P.g_weather_fog)
 #define map_rect (P.g_map_rect)
-#define key_dir (P.g_key_dir.xyz)
 #define edge_fog (P.g_key_dir.w)
+#define sun_dir (P.g_sun_dir.xyz)
+#define moon_dir (P.g_moon_dir.xyz)
 #define medium (P.g_medium)
 #define medium_color (P.g_medium_color)
 #define veil (P.g_misc.x)
 // Godot re-imports a .glsl only when its own bytes change, not when an included file does: bump this stamp
 // whenever fog.glslinc is re-synced, or the old fog stays compiled in.
-// fog.glslinc mirror stamp: fog.gdshaderinc @ 92c31b4
+// fog.glslinc mirror stamp: fog.gdshaderinc @ main 2fb42da (WP-04 b5348cd)
 #include "fog.glslinc"
 #endif
 
@@ -540,12 +544,15 @@ void main() {
 		} else if (debug_view == 4) {
 			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
 			dbg = s.sky ? vec3(0.0) : vec3(fract(wp.y + 0.5), fract(wp.x * 0.1), fract(wp.z * 0.1));
-		} else {
+		} else if (debug_view == 5) {
 			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
 			dbg = s.sky ? vec3(1.0, 0.0, 0.0) : vec3(fog_eval(wp, P.inv_view[3].xyz).a);
+		} else {
+			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
+			dbg = s.sky ? vec3(1.0, 0.0, 0.0) : fog_eval(wp, P.inv_view[3].xyz).rgb;
 		}
 		// Squared so debug colours read roughly as sRGB on screen; the fog view stays linear for parity tests.
-		imageStore(color_image, c, vec4(debug_view == 5 ? dbg : dbg * dbg, 1.0));
+		imageStore(color_image, c, vec4(debug_view >= 5 ? dbg : dbg * dbg, 1.0));
 		return;
 	}
 

@@ -1,29 +1,32 @@
 // fog.glslinc — GLSL mirror of game/style/shaders/fog.gdshaderinc (WP-04), for the WP-05 compute passes.
-// Mirrors WP-04 commit 92c31b4 line for line (ART-SKYLIGHT §6.5): any change to fog.gdshaderinc is copied here,
-// and the sandbox parity test (same inputs, same fog amount and colour) is re-run.
+// The body below is a verbatim copy of fog.gdshaderinc at main 2fb42da (WP-04 b5348cd) from the include guard on
+// (only the guard name differs):
+// any change to fog.gdshaderinc is copied here, the mirror stamp in post_outline.glsl is bumped (Godot re-imports
+// a .glsl only when its own bytes change), and the sandbox parity test (fog amount and colour per pixel) is re-run.
 //
 // Compute shaders cannot read global shader parameters. The includer therefore declares, BEFORE including this
 // file, the same names the material side reads, filled each frame by C# from the same state that writes the
-// globals (ENG-PERF §1.5) — usually as macros onto its uniform buffer:
-//   fog, fog_low, weather_fog, map_rect, medium (vec4), medium_color (vec4, linear rgb), key_dir (vec3),
-//   veil, edge_fog (float), and `sampler2D palette` bound to the palette's RD texture through its sRGB view
-//   (RenderingServer.TextureGetRdTexture(rid, true)), so texelFetch returns linear values like the
-//   source_color global does on the material side.
+// globals (ENG-PERF §1.5) — as macros onto its uniform buffer:
+//   fog, fog_low, weather_fog, map_rect, medium (vec4), medium_color (vec4, linear rgb),
+//   sun_dir, moon_dir (vec3), veil, edge_fog (float), and `sampler2D palette` bound to the palette's RD texture
+//   through its sRGB view (RenderingServer.TextureGetRdTexture(rid, true)), so texelFetch returns linear values
+//   like the source_color global does on the material side.
 //
 // Signatures (same as fog.gdshaderinc):
 //   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)
 //   vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt)   exempt 0..1 (per-instance fog_exempt on the
 //                                                                     material side; compute passes have no instance and use 0)
 //   vec3 fog_desaturate(vec3 c, float dist)
-//   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)   height-integrated fog distance (also the fog_desaturate dist)
-//   vec3 fog_sky(vec3 dir_w)
+//   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)
+//   vec3 fog_sky(vec3 dir_w), float sky_side_weight(vec3 dir), vec3 sky_column_lab(int base, float e),
+//   vec3 sky_gradient(vec3 dir, float w_sun), vec3 sky_haze_color(float w_sun)
 
 #ifndef FOG_GLSLINC
 #define FOG_GLSLINC
 
 // ---------------------------------------------------------------------------
-// Palette (ART-STYLE §8.5, ENG-PERF §1.5): 256x64 RGBA8, sRGB bytes, read with texelFetch.
-// Row 0 current colours, row 1 lamp-lit, row 2 interior shade, row 3 interior lit, rows 4-63 seasonal.
+// 调色板（ART-STYLE §8.5、ENG-PERF §1.5）：256×64 RGBA8，存 sRGB 字节，texelFetch 取。
+// 行 0 当前色，行 1 灯照色，行 2 室内影色，行 3 室内受光色，行 4–63 季相行。
 // ---------------------------------------------------------------------------
 const int PAL_ROW_CUR = 0;
 const int PAL_ROW_LAMP = 1;
@@ -31,15 +34,15 @@ const int PAL_ROW_IN_SHADE = 2;
 const int PAL_ROW_IN_LIT = 3;
 const int PAL_ROW_SEASON0 = 4;
 
+// 表面色名成对登记：影的色号 = 受光的色号 + 1；顶点 COLOR.r 写受光的色号（暂定，待主代理确认）。
 const int PAL_SHADE_OFFSET = 1;
 
-// Column numbers of the single colour names in row 0, identical to fog.gdshaderinc and game/style/palette/core.json
-// (per-frame names 0-31, retired 32-39, weather and emissive constants 40-63, surface pairs from 64). Generated
-// from the registry later.
+// 第 0 行的单色色名的色号，与 game/style/palette/core.json 一致（布局：随帧色名 0–31，退役 32–39，
+// 天气色与发光常量 40–63，表面色对从 64 起、受光偶数、影 = 受光 + 1）。以后由登记表生成，内容代码不写这些数。
 const int PAL_SUN_LIGHT = 0;
-const int PAL_AMBIENT_SKY = 1;
+const int PAL_AMBIENT_SKY = 1;      // 只用 a、b，着色器不拿它着色
 const int PAL_BOUNCE_GROUND = 2;
-const int PAL_INTERIOR_WARM = 3;
+const int PAL_INTERIOR_WARM = 3;    // 只用 a、b，着色器不拿它着色
 const int PAL_LINE_WARM = 4;
 const int PAL_LINE_COOL = 5;
 const int PAL_SHAFT_NEAR = 6;
@@ -51,15 +54,15 @@ const int PAL_WINDOW_COOL = 11;
 const int PAL_SHADOW_1 = 12;
 const int PAL_FOG_SUN = 13;
 const int PAL_FOG_ANTI = 14;
-const int PAL_SKY_SUN0 = 15;
-const int PAL_SKY_ANTI0 = 20;
-const int PAL_SKY_CLOUD_LIT = 25;
+const int PAL_SKY_SUN0 = 15;        // 15–19：朝主光一侧，地平线到天顶
+const int PAL_SKY_ANTI0 = 20;       // 20–24：背主光一侧，地平线到天顶
+const int PAL_SKY_CLOUD_LIT = 25;   // 云的受光、亮边、云腹、暗部（WP-40 天空、WP-49b 云卡）
 const int PAL_SKY_CLOUD_RIM = 26;
 const int PAL_SKY_CLOUD_BELLY = 27;
 const int PAL_SKY_CLOUD_DEEP = 28;
-const int PAL_SKY_MOON = 29;
-// 30-31 spare; 32-39 reserved for retired colour names, never referenced.
-const int PAL_WEATHER_OVERCAST = 40;
+const int PAL_SKY_MOON = 29;         // 月盘与星星（WP-40）
+// 30–31 留作余量；32–39 是退役色名（shadow.contact、line.building、line.tree、shadow.interior）的保留号，不得引用。
+const int PAL_WEATHER_OVERCAST = 40;      // 40–63：天气色与发光常量
 const int PAL_WEATHER_SNOW_OVERCAST = 41;
 const int PAL_WEATHER_NIGHT_RAIN = 42;
 const int PAL_WEATHER_CB_BASE = 43;
@@ -72,7 +75,9 @@ const int PAL_LAMP_WARM = 51;
 const int PAL_LAMP_AMBER = 52;
 const int PAL_LAMP_COOL = 53;
 
-// The sRGB texture view decodes on fetch (see header), matching the material side's source_color.
+// 纹理存 sRGB 字节。globals.gdshaderinc 给 palette 声明了 source_color；P0 沙盒实测（Godot 4.7.2，Forward+）：
+// 全局采样器上的 source_color 生效，texelFetch 读出的已是线性值，所以这里不再手工解码（ART-STYLE §14 一项）。
+// 若以后去掉该提示，把下面改成 true。
 const bool PAL_MANUAL_SRGB = false;
 
 vec3 toon_srgb_decode(vec3 c) {
@@ -90,6 +95,7 @@ vec3 pal_cur(int col) {
 	return pal_fetch(col, PAL_ROW_CUR);
 }
 
+// 季相行：横向 256 个季节样本，横坐标 = s / 4；手工取两样本线性插值，冬 → 春循环衔接。
 vec3 pal_season(int row, float s) {
 	float x = fract(s * 0.25) * 256.0 - 0.5;
 	float x0 = floor(x);
@@ -99,52 +105,174 @@ vec3 pal_season(int row, float s) {
 	return mix(pal_fetch(i0, row), pal_fetch(i1, row), f);
 }
 
-const float FOG_SIL_ALPHA = 0.9;
-const float FOG_RATE = 2.3;
-const float FOG_DESAT = 0.25;
-const float FOG_VEIL_GAIN = 0.8;
-const float FOG_VEIL_NEAR = 20.0;
-const float FOG_EDGE_GAIN = 0.6;
-const float FOG_WEATHER_SIL_MIN = 600.0;
-const float FOG_SCALE_HEIGHT = 200.0;
+const float FOG_SIL_ALPHA = 0.9;     // 剪影距离处雾量的上限，远处仍能和天空分开
+const float FOG_RATE = 2.3;          // 起雾到剪影之间的指数速率
+const float FOG_DESAT = 0.25;        // 200 m 起的降饱和量（ART-SKYLIGHT §6.2）
+const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)；主要效果靠 fog_range 里的距离收拢（ART-SKYLIGHT §6.4）
+const float FOG_VEIL_NEAR = 20.0;    // 全幕雾幕时剪影距离收到的位置（m）
+const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS §8.3）
+const float FOG_WEATHER_SIL_MIN = 600.0;   // 雾天剪影距离不低于 600 m（ART-SKYLIGHT §6.6）
+const float FOG_SCALE_HEIGHT = 200.0;     // 大气的标高（m）：视线越高，等效雾程越短；俯瞰箱庭时不被整片雾盖住
 
-const float FOG_SKY_E1 = 0.07;
-const float FOG_SKY_E2 = 0.20;
-const float FOG_SKY_E3 = 0.45;
-
+// 天气的雾密度倍率；没写入时（0）按 1 处理
 float fog_weather_mult() {
 	return weather_fog.x > 0.0 ? weather_fog.x : 1.0;
 }
 
-float fog_key_side(vec3 dir_w) {
-	vec2 k = key_dir.xz;
-	vec2 v = dir_w.xz;
-	float lk = length(k);
-	float lv = length(v);
-	if (lk < 1e-4 || lv < 1e-4) {
-		return 0.5;
-	}
-	return smoothstep(-0.35, 1.0, dot(v / lv, k / lk));
+// ---------------------------------------------------------------------------
+// OKLab（线性 sRGB ↔ OKLab）：天空色带的插值、toon 的植被深影、透光色、倒角提亮都用它
+// ---------------------------------------------------------------------------
+vec3 ok_from_linear(vec3 c) {
+	float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+	float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+	float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+	l = pow(max(l, 0.0), 1.0 / 3.0);
+	m = pow(max(m, 0.0), 1.0 / 3.0);
+	s = pow(max(s, 0.0), 1.0 / 3.0);
+	return vec3(
+			0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+			1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+			0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
 }
 
-vec3 fog_sky_column(int base, float e) {
-	e = clamp(e, 0.0, 1.0);
-	vec3 c = pal_cur(base);
-	c = mix(c, pal_cur(base + 1), clamp(e / FOG_SKY_E1, 0.0, 1.0));
-	c = mix(c, pal_cur(base + 2), clamp((e - FOG_SKY_E1) / (FOG_SKY_E2 - FOG_SKY_E1), 0.0, 1.0));
-	c = mix(c, pal_cur(base + 3), clamp((e - FOG_SKY_E2) / (FOG_SKY_E3 - FOG_SKY_E2), 0.0, 1.0));
-	c = mix(c, pal_cur(base + 4), clamp((e - FOG_SKY_E3) / (1.0 - FOG_SKY_E3), 0.0, 1.0));
-	return c;
+vec3 ok_to_linear(vec3 o) {
+	float l = o.x + 0.3963377774 * o.y + 0.2158037573 * o.z;
+	float m = o.x - 0.1055613458 * o.y - 0.0638541728 * o.z;
+	float s = o.x - 0.0894841775 * o.y - 1.2914855480 * o.z;
+	l = l * l * l;
+	m = m * m * m;
+	s = s * s * s;
+	return max(vec3(
+			4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+			-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+			-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s), vec3(0.0));
+}
+
+// ---------------------------------------------------------------------------
+// 天空色带与定侧（ART-SKYLIGHT §4.1–§4.3；天空着色器 sky.gdshader 与雾、玻璃映天共用这一份）
+// ---------------------------------------------------------------------------
+const float SKY_STOP_DEG[5] = { 0.0, 4.0, 12.0, 28.0, 90.0 };   // 五段的仰角（度），所有帧相同
+const float SKY_SIDE_SUN_DEG = 60.0;      // 与参照天体的方位差 ≤ 60° 全用太阳侧
+const float SKY_SIDE_ANTI_DEG = 90.0;     // ≥ 90° 全用背阳侧
+const float SKY_NIGHT_SIDE_FROM = -6.0;   // 太阳从 −6° 降到 −13° 时，参照天体换成月亮
+const float SKY_NIGHT_SIDE_TO = -13.0;
+const float SKY_HAZE_MIN_DEG = 0.5;       // 霾带高度 fog.y（度）的防越界
+const float SKY_HAZE_MAX_DEG = 8.0;
+const float SKY_FOG_MIX = 0.8;            // 雾天整片天向雾色靠拢的程度
+
+float sky_alt_deg(vec3 d) {
+	return degrees(asin(clamp(d.y, -1.0, 1.0)));
+}
+
+vec3 sky_sun_vec() {
+	return length(sun_dir) > 0.5 ? normalize(sun_dir) : vec3(0.0, -1.0, 0.0);
+}
+
+vec3 sky_moon_vec() {
+	return length(moon_dir) > 0.5 ? normalize(moon_dir) : vec3(0.0, -1.0, 0.0);
+}
+
+// 0 白天参照太阳 → 1 夜里参照月亮（只混权重，不插值方向）
+float sky_night_k() {
+	return 1.0 - smoothstep(SKY_NIGHT_SIDE_TO, SKY_NIGHT_SIDE_FROM, sky_alt_deg(sky_sun_vec()));
+}
+
+// 视线水平方向与某个天体的方位差 → 该天体一侧的权重
+float sky_side_of(vec3 dir, vec3 body) {
+	vec2 v = dir.xz;
+	vec2 b = body.xz;
+	float lv = length(v);
+	float lb = length(b);
+	if (lv < 1e-4 || lb < 1e-4) {
+		return 0.5;
+	}
+	float ang = degrees(acos(clamp(dot(v / lv, b / lb), -1.0, 1.0)));
+	return 1.0 - smoothstep(SKY_SIDE_SUN_DEG, SKY_SIDE_ANTI_DEG, ang);
+}
+
+// 太阳侧权重：白天参照真实太阳 sun_dir（不量化、不钳高度），入夜后换成 moon_dir
+float sky_side_weight(vec3 dir) {
+	return mix(sky_side_of(dir, sky_sun_vec()), sky_side_of(dir, sky_moon_vec()), sky_night_k());
+}
+
+// Fritsch–Butland 切线：单调三次，段与段之间不起折痕、不过冲
+vec3 sky_fb_tangent(vec3 d0, vec3 d1, float h0, float h1) {
+	vec3 p = d0 * d1;
+	vec3 den = (2.0 * h1 + h0) * d1 + (h1 + 2.0 * h0) * d0;
+	den += (vec3(1.0) - abs(sign(den))) * 1e-6;
+	return 3.0 * (h0 + h1) * p / den * step(vec3(0.0), p);
+}
+
+vec3 sky_hermite(vec3 y0, vec3 y1, vec3 m0, vec3 m1, float h, float t) {
+	float t2 = t * t;
+	float t3 = t2 * t;
+	return (2.0 * t3 - 3.0 * t2 + 1.0) * y0 + (t3 - 2.0 * t2 + t) * h * m0
+			+ (-2.0 * t3 + 3.0 * t2) * y1 + (t3 - t2) * h * m1;
+}
+
+// 一列天空色带（base = PAL_SKY_SUN0 或 PAL_SKY_ANTI0）在仰角 e（度）处的 OKLab 值
+vec3 sky_column_lab(int base, float e) {
+	vec3 y0 = ok_from_linear(pal_cur(base));
+	vec3 y1 = ok_from_linear(pal_cur(base + 1));
+	vec3 y2 = ok_from_linear(pal_cur(base + 2));
+	vec3 y3 = ok_from_linear(pal_cur(base + 3));
+	vec3 y4 = ok_from_linear(pal_cur(base + 4));
+	float h0 = SKY_STOP_DEG[1] - SKY_STOP_DEG[0];
+	float h1 = SKY_STOP_DEG[2] - SKY_STOP_DEG[1];
+	float h2 = SKY_STOP_DEG[3] - SKY_STOP_DEG[2];
+	float h3 = SKY_STOP_DEG[4] - SKY_STOP_DEG[3];
+	vec3 d0 = (y1 - y0) / h0;
+	vec3 d1 = (y2 - y1) / h1;
+	vec3 d2 = (y3 - y2) / h2;
+	vec3 d3 = (y4 - y3) / h3;
+	vec3 m1 = sky_fb_tangent(d0, d1, h0, h1);
+	vec3 m2 = sky_fb_tangent(d1, d2, h1, h2);
+	vec3 m3 = sky_fb_tangent(d2, d3, h2, h3);
+	e = clamp(e, 0.0, 90.0);
+	if (e < SKY_STOP_DEG[1]) {
+		return sky_hermite(y0, y1, d0, m1, h0, e / h0);
+	} else if (e < SKY_STOP_DEG[2]) {
+		return sky_hermite(y1, y2, m1, m2, h1, (e - SKY_STOP_DEG[1]) / h1);
+	} else if (e < SKY_STOP_DEG[3]) {
+		return sky_hermite(y2, y3, m2, m3, h2, (e - SKY_STOP_DEG[2]) / h2);
+	}
+	return sky_hermite(y3, y4, m3, d3, h3, (e - SKY_STOP_DEG[3]) / h3);
+}
+
+// 霾带高度（度），来自关键帧 fog.y
+float sky_haze_deg() {
+	return clamp(fog.y, SKY_HAZE_MIN_DEG, SKY_HAZE_MAX_DEG);
+}
+
+// 雾天的程度：weather_fog.x 是雾密度倍率（晴为 1）
+float sky_fog_weather_k() {
+	return smoothstep(1.0, 3.0, weather_fog.x);
+}
+
+// 地平线的霾色 = 远景雾色（fog.sun / fog.anti 按太阳侧权重混），雾天向 weather.fog 靠
+vec3 sky_haze_color(float w_sun) {
+	vec3 c = mix(pal_cur(PAL_FOG_ANTI), pal_cur(PAL_FOG_SUN), w_sun);
+	return mix(c, pal_cur(PAL_WEATHER_FOG), sky_fog_weather_k());
+}
+
+// 天空渐变（不含云和日月盘）：五段色带 + 地平线霾带 + 雾天整片靠拢
+vec3 sky_gradient(vec3 dir, float w_sun) {
+	float e = sky_alt_deg(dir);
+	vec3 c = ok_to_linear(mix(sky_column_lab(PAL_SKY_ANTI0, e), sky_column_lab(PAL_SKY_SUN0, e), w_sun));
+	float hz = exp2(-max(e, 0.0) / (0.5 * sky_haze_deg()));
+	c = mix(c, sky_haze_color(w_sun), e < 0.0 ? 1.0 : hz);
+	float fk = sky_fog_weather_k() * SKY_FOG_MIX * mix(1.0, 0.55, smoothstep(0.0, 40.0, e));
+	return mix(c, pal_cur(PAL_WEATHER_FOG), fk);
 }
 
 vec3 fog_sky(vec3 dir_w) {
 	vec3 d = normalize(dir_w);
-	float w = fog_key_side(d);
-	return mix(fog_sky_column(PAL_SKY_ANTI0, d.y), fog_sky_column(PAL_SKY_SUN0, d.y), w);
+	return sky_gradient(d, sky_side_weight(d));
 }
 
-const float FOG_EXEMPT_START = 200.0;
-const float FOG_EXEMPT_SIL = 800.0;
+// 起雾距离与剪影距离（关键帧给 fog.z、fog.w，天气倍率把两者拉近）
+const float FOG_EXEMPT_START = 200.0;   // 地标豁免：起雾距离下限（ART-SKYLIGHT §6.6）
+const float FOG_EXEMPT_SIL = 800.0;     // 地标豁免：剪影距离下限
 
 vec2 fog_range(float exempt) {
 	float m = fog_weather_mult();
@@ -153,16 +281,16 @@ vec2 fog_range(float exempt) {
 	float k = clamp(exempt, 0.0, 1.0);
 	sil = mix(sil, max(sil, FOG_EXEMPT_SIL), k);
 	start = mix(start, max(start, FOG_EXEMPT_START), k);
-	// Veil (ART-SKYLIGHT §6.4): start and silhouette distances close in from far to near; the 2D veil layer only
-	// completes the cover at the end. Applied last, so landmark exemption does not resist the veil.
+	// 雾幕（ART-SKYLIGHT §6.4）：起雾与剪影距离一起由远到近收拢，远处先沉、近处后沉；
+	// 全幕时一路收到镜头前，2D 雾幕层只在最后补满。地标豁免不抵抗雾幕，所以放在最后。
 	float v = clamp(veil, 0.0, 1.0);
 	sil = (sil - FOG_VEIL_NEAR) * (1.0 - v) * (1.0 - v) + FOG_VEIL_NEAR;
 	start = min(start * (1.0 - v), sil * 0.5);
 	return vec2(start, max(sil, start + 1.0));
 }
 
-// Equivalent fog distance: the view ray integrated over exp(-y / scale height), expressed as a ground-level
-// horizontal distance. Level views are unchanged; looking down from height the fog path gets shorter.
+// 等效雾程：沿视线按 exp(−y / 标高) 积分，换算成"贴地水平视线"的距离。
+// 贴地平视时约等于实际距离，所以关键帧给的起雾、剪影距离照旧成立；从高处俯瞰时雾程变短。
 float fog_equiv_dist(vec3 world_pos, vec3 cam_pos) {
 	float dist = length(world_pos - cam_pos);
 	float lo = max(min(world_pos.y, cam_pos.y), 0.0);
@@ -186,6 +314,7 @@ vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
 	vec3 dir = dist > 1e-4 ? ray / dist : vec3(0.0, 0.0, -1.0);
 	vec2 rg = fog_range(exempt);
 
+	// 密度：关键帧标量 × 雾幕 × 边缘雾（只在朝外一侧加浓）
 	float dens = max(fog.x, 0.0) * (1.0 + FOG_VEIL_GAIN * clamp(veil, 0.0, 1.0));
 	vec2 ctr = map_rect.xy + 0.5 / max(map_rect.zw, vec2(1e-6));
 	vec2 outward = cam_pos.xz - ctr;
@@ -197,21 +326,23 @@ vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
 		dens *= 1.0 + FOG_EDGE_GAIN * edge_fog * w;
 	}
 
+	// 距离雾：起雾距离以内为 0，到剪影距离约 0.81，再往远趋近 0.9
 	float t = max(fog_equiv_dist(world_pos, cam_pos) - rg.x, 0.0) / (rg.y - rg.x);
-	// Under the veil the cap and the haze band open up, so at veil = 1 the 3D fog sinks everything by itself.
+	// 雾幕时上限与霾带一起放开，veil = 1 时 3D 雾自己沉到底，2D 雾幕层只作保险
 	float vv = clamp(veil, 0.0, 1.0);
 	float a = mix(FOG_SIL_ALPHA, 1.0, vv) * (1.0 - exp(-FOG_RATE * t * dens));
 
-	float h_avg = max(0.5 * (cam_pos.y + world_pos.y), 0.0);
-	a *= mix(mix(0.55, 1.0, exp(-h_avg / max(fog.y, 1.0))), 1.0, vv);
-
+	// 贴地雾：关键帧（fog_low.x 雾顶高、fog_low.y 密度，清晨与日出）与天气（weather_fog.y 雾顶高、weather_fog.z 密度）取并；
+	// 湖面雾（fog_low.z）只在水面上，由水面着色器按同一个量加，这里不算
 	float g_top = max(max(fog_low.x, weather_fog.y), 0.1);
 	float g_dens = 1.0 - (1.0 - clamp(fog_low.y, 0.0, 1.0)) * (1.0 - clamp(weather_fog.z, 0.0, 1.0));
 	float a_g = g_dens * (1.0 - smoothstep(0.0, g_top, world_pos.y)) * (1.0 - exp(-dist / 40.0));
 	a = 1.0 - (1.0 - a) * (1.0 - a_g);
 
-	vec3 col = mix(pal_cur(PAL_FOG_ANTI), pal_cur(PAL_FOG_SUN), fog_key_side(dir));
+	// 雾色：与天空地平线的霾色同源同规则（太阳侧权重、雾天向 weather.fog 靠），远景剪影与天空无缝
+	vec3 col = sky_haze_color(sky_side_weight(dir));
 
+	// 介质：楼里、地下、水下（medium.z 混合度，medium.w 能见度）
 	vec4 res = vec4(col, clamp(a, 0.0, 1.0));
 	if (medium.z > 0.0) {
 		float a_m = 1.0 - exp(-dist / max(medium.w, 0.5));

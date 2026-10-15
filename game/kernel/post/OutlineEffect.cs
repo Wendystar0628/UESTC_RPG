@@ -1,3 +1,4 @@
+using Campus.Kernel.Renderer;
 using Godot;
 using Godot.Collections;
 
@@ -13,7 +14,7 @@ namespace Campus.Kernel.Post;
 public partial class OutlineEffect : CompositorEffect
 {
     private const string ShaderPath = "res://style/outline/post_outline.glsl";
-    private const int UboFloats = 88;   // layout of OutlineParams in post_outline.glsl
+    private const int UboFloats = 96;   // layout of OutlineParams in post_outline.glsl
 
     private static readonly StringName Context = "wp05_outline";
     private static readonly StringName MaskName = "line_mask";
@@ -95,13 +96,32 @@ public partial class OutlineEffect : CompositorEffect
     public override void _RenderCallback(int effectCallbackType, RenderData renderData)
     {
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostSky) return;
-        if (Inputs is null || !Inputs.TryRead(out var frame)) return;
+        if (Inputs is null) return;
+        Inputs.TakeLeases(out var paletteLease, out var matTableLease);
+        try
+        {
+            if (Inputs.TryRead(out var frame)) Render(frame, renderData, paletteLease, matTableLease);
+        }
+        finally
+        {
+            // After issuing the commands (IGlobalDataTextureRegistry lease protocol).
+            paletteLease?.Dispose();
+            matTableLease?.Dispose();
+        }
+    }
+
+    private void Render(in PostFrame frame, RenderData renderData, GlobalDataTextureLease? paletteLease,
+        GlobalDataTextureLease? matTableLease)
+    {
         if (!EnsureResources() || _rd is null) return;
         if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers) return;
         var size = buffers.GetInternalSize();
         if (size.X <= 0 || size.Y <= 0) return;
-        var matTable = RenderingServer.TextureGetRdTexture(frame.MatTable);
-        var palette = RenderingServer.TextureGetRdTexture(frame.Palette, true);   // sRGB view: linear on fetch
+        // RD RIDs are looked up again every frame: a producer's SetImage may replace the RD texture.
+        var matTable = matTableLease is not null ? matTableLease.GetRdTextureOnRenderThread(false)
+            : RenderingServer.TextureGetRdTexture(frame.FallbackMatTable);
+        var palette = paletteLease is not null ? paletteLease.GetRdTextureOnRenderThread(true)   // sRGB view: linear on fetch
+            : RenderingServer.TextureGetRdTexture(frame.FallbackPalette, true);
         if (!matTable.IsValid || !palette.IsValid) return;
 
         // Own intermediate texture: dropped with the context whenever the buffers are reconfigured; size-checked too.
@@ -175,6 +195,8 @@ public partial class OutlineEffect : CompositorEffect
         Put(76, new Vector4(f.MediumColor.R, f.MediumColor.G, f.MediumColor.B, 0));
         Put(80, f.FogLow);
         Put(84, new Vector4(f.Veil, 0, 0, 0));
+        Put(88, new Vector4(f.SunDir.X, f.SunDir.Y, f.SunDir.Z, 0));
+        Put(92, new Vector4(f.MoonDir.X, f.MoonDir.Y, f.MoonDir.Z, 0));
         System.Buffer.BlockCopy(_ubo, 0, _uboBytes, 0, _uboBytes.Length);
     }
 
