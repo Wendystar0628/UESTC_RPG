@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 27.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 27.6k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L174 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L196 · 1.8k
 - CORE-DECISIONS §9 工程 · L216 · 3.3k
-- CORE-DECISIONS §10 流程 · L241 · 4.1k
-- CORE-DECISIONS §11 待对齐 · L270 · 61
+- CORE-DECISIONS §10 流程 · L241 · 4.6k
+- CORE-DECISIONS §11 待对齐 · L272 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -299,17 +299,17 @@
   - ART-STYLE §8.2 大面积色与跳色的分工 · L584 · 1.1k
   - ART-STYLE §8.3 建筑固有色 · L603 · 1.2k
   - ART-STYLE §8.4 界面色 · L635 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L660 · 1.4k
-  - ART-STYLE §8.6 天气色 · L687 · 1.1k
-- ART-STYLE §9 排除元素 · L706 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L708 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L734 · 599
-- ART-STYLE §10 材质速查 · L743 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L761 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L793 · 419
-- ART-STYLE §13 情绪弧线 · L806 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L831 · 1.9k
-- ART-STYLE §14 待验证（P0） · L851 · 2.1k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L660 · 1.5k
+  - ART-STYLE §8.6 天气色 · L688 · 1.1k
+- ART-STYLE §9 排除元素 · L707 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L709 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L735 · 599
+- ART-STYLE §10 材质速查 · L744 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L762 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L794 · 419
+- ART-STYLE §13 情绪弧线 · L807 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L832 · 1.9k
+- ART-STYLE §14 待验证（P0） · L852 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
@@ -886,10 +886,10 @@
   - MAP-QSH-TERRAIN §7.4 连接：台缘、台口与路 · L442 · 1.7k
   - MAP-QSH-TERRAIN §7.5 受影响的元素与点位 · L471 · 445
   - MAP-QSH-TERRAIN §7.6 验收镜头 · L479 · 97
-- MAP-QSH-TERRAIN §8 运动场与体育区 · L483 · 1.9k
+- MAP-QSH-TERRAIN §8 运动场与体育区 · L483 · 2.0k
   - MAP-QSH-TERRAIN §8.1 设计意图 · L485 · 378
   - MAP-QSH-TERRAIN §8.2 地形操作 · L490 · 945
-  - MAP-QSH-TERRAIN §8.3 连接与受影响的元素 · L501 · 509
+  - MAP-QSH-TERRAIN §8.3 连接与受影响的元素 · L501 · 560
   - MAP-QSH-TERRAIN §8.4 验收镜头 · L508 · 79
 - MAP-QSH-TERRAIN §9 食堂与商业街 · L512 · 673
   - MAP-QSH-TERRAIN §9.1 设计意图 · L514 · 307
@@ -1625,19 +1625,19 @@
 
 ## ENG-STATUS · 施工状态
 
-`docs/design/engineering/ENG-STATUS.md` · 9.5k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
+`docs/design/engineering/ENG-STATUS.md` · 10.1k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步、待派工队列、待处理流水线、调研入队流水线、Q-nnn、排队、可派、已派
 
 - ENG-STATUS §0 结论 · L23 · 569
   - ★ ENG-STATUS §0.1 接入要点 · L30 · 287
 - ENG-STATUS §1 填写规则 · L37 · 932
 - ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L61 · 2.9k
-- ENG-STATUS §3 活跃工作包 · L85 · 3.1k
-- ENG-STATUS §4 待派工队列 · L113 · 1.2k
+- ENG-STATUS §3 活跃工作包 · L85 · 3.5k
+- ENG-STATUS §4 待派工队列 · L116 · 1.3k
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 31.3k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+`docs/design/engineering/ENG-TEAM.md` · 32.1k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
 关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、普通速度、service_tier、主会话移交、交接单、HANDOVER.md、goal 模式、get_usage、完成度调研、持续调研、调研入队流水线、待派工队列、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
 - ENG-TEAM §0 结论 · L37 · 3.2k
@@ -1654,36 +1654,36 @@
   - ENG-TEAM §3.2 总指挥只做什么 · L169 · 465
   - ENG-TEAM §3.3 Astra 名下交给 6.1-sol 子代理的包 · L183 · 588
   - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L197 · 110
-- ENG-TEAM §4 包的归属与开工顺序 · L202 · 2.2k
+- ENG-TEAM §4 包的归属与开工顺序 · L202 · 2.4k
   - ENG-TEAM §4.1 包的归属 · L204 · 1.2k
-  - ENG-TEAM §4.2 开工顺序与合并顺序 · L219 · 1.1k
-- ENG-TEAM §5 开发流程 · L232 · 6.4k
-  - ENG-TEAM §5.1 全流程一览 · L236 · 610
-  - ENG-TEAM §5.2 派工 · L250 · 1.2k
-  - ENG-TEAM §5.3 施工与回报 · L273 · 779
-  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L292 · 639
-  - ENG-TEAM §5.5 批准与合并 · L304 · 1.3k
-  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L325 · 502
-  - ENG-TEAM §5.7 契约申请与共享工程文件 · L336 · 475
-  - ENG-TEAM §5.8 调研入队流水线 · L344 · 808
-- ENG-TEAM §6 会话通信与工作交接 · L360 · 5.2k
-  - ENG-TEAM §6.1 交接目录与文件 · L364 · 1.6k
-  - ENG-TEAM §6.2 命名与写法 · L388 · 304
-  - ENG-TEAM §6.3 任务单与请求文件的格式 · L395 · 534
-  - ENG-TEAM §6.4 消息与流水 · L413 · 714
-  - ENG-TEAM §6.5 唤醒脚本 · L432 · 1.4k
-  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L459 · 542
-- ENG-TEAM §7 账号与额度管理 · L472 · 2.0k
-  - ENG-TEAM §7.1 主账号（主会话） · L476 · 133
-  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L481 · 757
-  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L499 · 209
-  - ENG-TEAM §7.4 主会话移交 · L505 · 765
-- ENG-TEAM §8 旁路任务与长期值班 · L527 · 4.4k
-  - ENG-TEAM §8.1 Sol 值班会话 · L531 · 720
-  - ENG-TEAM §8.2 完成度调研 · L547 · 1.7k
-  - ENG-TEAM §8.3 Sol 旁路会话 · L589 · 828
-  - ENG-TEAM §8.4 怎么开子代理 · L609 · 1.1k
-- ENG-TEAM §9 待验证（P0） · L636 · 229
+  - ENG-TEAM §4.2 开工顺序与合并顺序 · L219 · 1.2k
+- ENG-TEAM §5 开发流程 · L233 · 6.7k
+  - ENG-TEAM §5.1 全流程一览 · L237 · 610
+  - ENG-TEAM §5.2 派工 · L251 · 1.5k
+  - ENG-TEAM §5.3 施工与回报 · L279 · 779
+  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L298 · 639
+  - ENG-TEAM §5.5 批准与合并 · L310 · 1.3k
+  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L331 · 502
+  - ENG-TEAM §5.7 契约申请与共享工程文件 · L342 · 475
+  - ENG-TEAM §5.8 调研入队流水线 · L350 · 832
+- ENG-TEAM §6 会话通信与工作交接 · L366 · 5.2k
+  - ENG-TEAM §6.1 交接目录与文件 · L370 · 1.6k
+  - ENG-TEAM §6.2 命名与写法 · L394 · 304
+  - ENG-TEAM §6.3 任务单与请求文件的格式 · L401 · 534
+  - ENG-TEAM §6.4 消息与流水 · L419 · 714
+  - ENG-TEAM §6.5 唤醒脚本 · L438 · 1.4k
+  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L465 · 542
+- ENG-TEAM §7 账号与额度管理 · L478 · 2.3k
+  - ENG-TEAM §7.1 主账号（主会话） · L482 · 133
+  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L487 · 1.1k
+  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L508 · 209
+  - ENG-TEAM §7.4 主会话移交 · L514 · 765
+- ENG-TEAM §8 旁路任务与长期值班 · L536 · 4.4k
+  - ENG-TEAM §8.1 Sol 值班会话 · L540 · 720
+  - ENG-TEAM §8.2 完成度调研 · L556 · 1.7k
+  - ENG-TEAM §8.3 Sol 旁路会话 · L598 · 828
+  - ENG-TEAM §8.4 怎么开子代理 · L618 · 1.1k
+- ENG-TEAM §9 待验证（P0） · L645 · 229
 
 ## ENG-WP · 工作包派工单：55 个工作包，可并行 54 个
 
