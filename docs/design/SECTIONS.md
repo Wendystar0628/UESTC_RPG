@@ -1466,18 +1466,18 @@
 
 ## ENG-STATUS · 施工状态
 
-`docs/design/engineering/ENG-STATUS.md` · 6.5k 字 · 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度
+`docs/design/engineering/ENG-STATUS.md` · 6.6k 字 · 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步
 
 - ENG-STATUS §0 结论 · L23 · 387
   - ★ ENG-STATUS §0.1 接入要点 · L29 · 222
 - ENG-STATUS §1 填写规则 · L35 · 914
-- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 569
-- ENG-STATUS §3 活跃工作包 · L69 · 3.9k
+- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L59 · 791
+- ENG-STATUS §3 活跃工作包 · L69 · 3.7k
 
 ## ENG-TEAM · 双模型协作：Opus 与 Astra 的分工
 
-`docs/design/engineering/ENG-TEAM.md` · 10.7k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
+`docs/design/engineering/ENG-TEAM.md` · 10.8k 字 · Claude Opus 与 GPT-6 Astra 两个主力模型的分工、包的归属、开工分波、交接文件与开子代理的方法
 关键词：双模型、协作、Opus、Astra、Codex、GPT-6 Astra、分工、工程负责人、主代理、审美评审、开工分波、第一波、第二波、交接、.collab、合并请求、契约申请、merged.log、spawn_agent、子代理
 
 - ENG-TEAM §0 结论 · L34 · 2.1k
@@ -1487,12 +1487,12 @@
 - ENG-TEAM §3 开工顺序 · L107 · 1.0k
 - ENG-TEAM §4 交接文件 · L120 · 1.0k
 - ENG-TEAM §5 审美与契约的交叉评审 · L141 · 434
-- ENG-TEAM §6 怎么开子代理 · L148 · 3.6k
+- ENG-TEAM §6 怎么开子代理 · L148 · 3.7k
   - ENG-TEAM §6.1 Opus · L167 · 129
   - ENG-TEAM §6.2 Astra · L173 · 593
   - ENG-TEAM §6.3 旁路 Sol 会话 · L198 · 843
-  - ENG-TEAM §6.4 Sonnet 会话（第二个 Claude 账号） · L220 · 1.2k
-- ENG-TEAM §7 待验证（P0） · L245 · 210
+  - ENG-TEAM §6.4 Sonnet 会话（第二个 Claude 账号） · L220 · 1.3k
+- ENG-TEAM §7 待验证（P0） · L246 · 210
 
 ## ENG-WP · 工作包派工单：54 个工作包，可并行 53 个
 

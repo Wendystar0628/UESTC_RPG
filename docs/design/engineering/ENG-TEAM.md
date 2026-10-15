@@ -219,7 +219,7 @@ codex exec -s danger-full-access -C <目录> -m gpt-6.1-sol -c model_reasoning_e
 
 ### 6.4 Sonnet 会话（第二个 Claude 账号）
 
-**是什么**：作者用另一个 Claude 账号（额度比主账号少得多）在本机后台启动的 Claude Code CLI 会话，会话名 `project-09`，工作目录在本项目下。它只用 Sonnet，专做 Sonnet 级任务，按性价比使用。
+**是什么**：作者用另一个 Claude 账号（Pro 账号 wendystar1145，额度比主账号少得多）在本机后台启动的 Claude Code CLI 会话，会话名 `project-09`，工作目录 `E:\Project`。它只用 Sonnet，专做 Sonnet 级任务，按性价比使用。
 
 **派什么**：§6 表里的"简单任务"，以及不在主线关键路径上的边缘任务：
 - 调研与资料整理（结论写成报告，供 Opus 定案）；
@@ -232,7 +232,8 @@ codex exec -s danger-full-access -C <目录> -m gpt-6.1-sol -c model_reasoning_e
 **怎么省额度**：
 - 一次一张任务单，小任务合并成一张批量单；
 - 任务单写明只读哪几节（给 `SECTIONS.md` 的小节或文件行号），不让它通读大文档；
-- 不开子代理；不跑完整门禁，代码类任务只跑 `gate.ps1 -Wp <包> -Only G1,G2,G3,G4`；
+- 默认不开子代理；任务单里写明可以并发时，可以开 Sonnet 子代理并行处理，或几张任务单同时做，每张各用自己的工作树，互不碰同一文件；
+- 不跑完整门禁，代码类任务只跑 `gate.ps1 -Wp <包> -Only G1,G2,G3,G4`；
 - 额度快用完时，先在回报里说明并停下，Opus 改派 Sol 会话或自己的子代理。
 
 **交接用文件，通知用消息**：
