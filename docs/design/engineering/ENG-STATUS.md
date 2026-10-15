@@ -58,8 +58,8 @@ gates: []
 
 ## 2 当前 main、可运行入口与已冻结契约
 
-- 当前 `main`：`5864341` WP-08 世界模型与离线地图管线的主线版。
-- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`。
+- 当前 `main`：`d7bb772` WP-53a 音频内核的主线版。
+- 已合入的主线版：WP-00（D0 骨架 `9c7e28a`，共享修补 `9d481f3`，第一波接线契约 `4568685`）、WP-49b `182f291`、WP-03 `de88536`、WP-37 `0b5be3c`、WP-35 `5ee112b`、WP-09 `3af35c3`、WP-39 `9348404`、WP-51a `8fd87a5`、WP-05 `bb92dc2`、WP-04 `2fb42da`、WP-14（主线版 `cb7a8b0`，部件来源修正 `63645b3`）、WP-48b `bd03484`、WP-35 第二版 `d0e22dc`、WP-15 `89dc0be`、WP-24 `c4d1205`、WP-48a `e5a3947`、WP-08 `5864341`、WP-53a `d7bb772`。
 - 已合入的地形规范：DOC-terrain-spec `874f89f`（WLD-TERRAIN 与相关文档接入）。
 - 最近可运行入口：`4568685`，`$env:UESTC_GODOT --path game -- --title=0`（D0 桩场景，工程体块占位）。
 - 已冻结的契约组：尚无（v1 候选）。
@@ -94,5 +94,5 @@ gates: []
 | WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-50 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-50` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-51a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-51a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-53a | 音频核心主线版，已批准待顺序合入 | `..\UESTC_RPG.wt\WP-53a` | `wp/53a-audio-core` | `4a47fe6` | 阻塞 | 批准要求在 WP-08、WP-45a 之后；WP-45a 尚未合入 | WP-45a 合入后合入 |
+| WP-53a | 主线版已合入；正式 Boot 音频联调 | `..\UESTC_RPG.wt\WP-53a` | `wp/53a-audio-core` | — | 阻塞 | 实际初始化、Ready 与换图运行待 WP-01 正式 Boot | WP-01 接通后联调；素材由 53e 后续接入 |
 | DOC-terrain-map | 清水河分区地形方案 MAP-QSH-TERRAIN | `..\UESTC_RPG.wt\DOC-terrain-map` | `doc/terrain-map` | — | 施工中 | — | Opus 评审后合入 |
