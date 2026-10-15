@@ -3,6 +3,7 @@ id: WLD-OUTSKIRTS
 title: 边界与外围：大箱庭、外围环境带、阻挡与提示
 category: world
 summary: 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算
+keywords: [外围, 校外, 校界, 边界, 前沿线, 截面线, 大箱庭, 外围环境带, O0–O3, 最近可达距离, d_min, outskirts.json, outskirts.overlay.json, IOutskirtsModel, OutskirtsBlock, SurfaceTag.Boundary, 校外暂未开放, 前方暂未开放, 行走阻挡, 飞行阻挡, 缓停, 推回, 缓冲带, 软地板, 可达空间, 活动范围, edge_fog, 边缘雾, 看街长椅, 河渠格栅]
 owners: [WP-47]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, ART-STYLE, WLD-DIORAMA, SYS-VIEW, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-WALK, SYS-MAPS]
@@ -15,6 +16,7 @@ gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
 
 > **范围**：本文规定大箱庭的范围（校界、前沿线、截面线）与截面精度，外围环境带 O0–O3 的内容、精度、灯光与季节，外围的保留、删除与新增，行走和旁观在边界处的阻挡、推回与提示，以及外围的数据管线、许可、预算与验收。校界以外的内容、活动范围（SYS-VIEW §2.3）和校界收口（SYS-WALK §7）的细则以本文为准。
 > **不在本文**：截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS §2.14）；行走控制器与碰撞数据（SYS-WALK）；活动范围的契约字段与按图数据（SYS-MAPS）；声音的实现（SYS-AUDIO）。
+> **查阅**：先读 §0；校界、前沿线与截面线看 §3；外围分层与精度判定看 §4；数据管线与覆盖层看 §6；行走阻挡看 §7；飞行阻挡与 `edge_fog` 看 §8；提示文案看 §9；预算与各包增量看 §11、§12
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[WLD-INTERIORS 室内](WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE.md)
 
 ### 分工
@@ -46,11 +48,26 @@ WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
 6. **数据**：Overpass 取外围数据 → `pipeline/outskirts/` → `outskirts.json`。楼块用程序化楼型，地标和风格化改动写进覆盖层。派生数据按 ODbL，署名与校内相同。
 7. **预算**：WP-47 领三角形 6%、绘制调用 5%、阴影绘制调用 3%、GPU 3%。额度来自主代理余量（ENG-BUDGET §8）和 WP-22。之后 GPU 余量只剩 2%，P0 实测后核账（§15）。
 8. **由此定下的三件事**：
-   - 截面只有在离地约 300 m 以上、俯角约 50° 以上时才看得到（§3.4），精度按 L2；
+   - 截面只有在离地约 300 m 以上、俯角 48° 以上时才看得到（§3.4），精度按 L2；
    - V9 和 P15 是高空斜俯（§13.1）；
    - P07 的位姿落在西源大道上空，要复核构图（UI-NAV §6）。
 
-## 1 参考做法
+### 0.1 接入要点
+
+- **在校界上做栏杆、校门、闸机、车道抬杆或河渠格栅**：碰撞表面类型一律登记 `SurfaceTag.Boundary`，不用校内挡路物的 `Barrier`；碰撞顶栏杆 2.2 m，闸机、抬杆、格栅 1.5 m；河渠穿过处用格栅或节制闸，隐形墙只允许校门处一段（§7.1、§7.3、§12.3）
+- **行走控制器靠近校界**：离 `Boundary` 0.6 m 内按 smoothstep 衰减朝外的水平速度，切向和竖直速度不变；顶住 0.8 s 出"校外暂未开放"并发 `IWalkTelemetry` 接触事件；校内其他挡路物不做缓停；安全点不放在离校界 1 m 以内，越界回位只作兜底，G15 统计应为 0（§7.2、§7.5）
+- **旁观相机的活动范围**：可达空间按 §8.1（水平 d_F ≤ 0.9 × max(0, h − 30 m)、离中心 ≤ 3 km；前沿线以外的软地板 = 屋顶净空 + 40 m；上限 2000 m），参数只写在 `map.json` 的 `roam`（`RoamLimits`）一处，不在代码里另写常数（§4.1、§8.1、§8.4）
+- **缓冲带、推回和 `edge_fog`**：只在旁观模式、`IAppFlow` 的 Playing 状态作用，不锁输入；`edge_fog` 只由 WP-06 在相机那一步写，其他包只读（着色器读全局参数，音频读 `ICameraRig.EdgeFog`）（§8.2、§8.3）
+- **定审查视角、点位、锚点、过场终点或跳转路径**：位姿必须在可达空间内且不在缓冲带里（G2 检查）；跳转途中不施加推回，弧线越界时抬高弧顶（§8.5、§13.1）
+- **读档、换图或 `--pose` 出生**：位姿不在可达空间里就近投影进去，不播推回动画；`--pose` 不合法或在缓冲带里时以非零退出码结束（§8.4、§10）
+- **给外围的表面定精度或验收**：按最近可达距离 d_min 套 ENG-BUDGET §3 的级别表，不按校内精度区的距离；外围整体是 K5，O0 按 K3，底线 B1–B13 在任何距离都成立；d_min 由管线写进 `outskirts.json`，生成器和检查只读结果（§4.1、§4.2）
+- **画截面或远景（WP-22）**：截面沿截面线挤出，和 O1 地面共用 `IOutskirtsModel.CutLine` 上的点；截面精度按 L2；近层卡片只画 1.5–3 km 的楼群和高架剪影，不画街道（§3.4、§4.2、§12.2）
+- **运行时要用外围数据**：经 `IWorldModel.Outskirts`（`IOutskirtsModel`，WP-08 解析，没有外围的图为 null）读前沿线、截面线、距离场与软地板；平面地图和声景的烘焙器直接读 `outskirts.json`；校界仍在 `campus.json`（§6.2、§8.4、§12.3）
+- **在外围加或改内容**：地标、风格化改动和氛围新增写进 `outskirts.overlay.json`（WP-47 独占，ID 以 `design:` 开头、写明理由），不改 OSM 快照；外围不画车流、不加动态，不用霓虹、彩色灯和 LED 屏（§4.4、§4.6、§5.3、§6.3）
+- **外围的灯与地面覆盖**：灯接 WP-39 的时刻表，不新增灯光通道；O0 的灯进 `lamp_grid`、`lamp_table`，O1、O2 只画光晕和路面灯带；O0 读 `ground_mask`、`ground_mask2`，O1、O2 和截面上缘按顶点标志读顶点潜势；不新增着色器（§4.4、§4.5、§11.3）
+- **出边界提示**：行走顶住校界出"校外暂未开放"，旁观到水平边缘出"前方暂未开放"；"前方不可前往 · F 切换旁观可穿过"只用于校内阻挡，不用在校界（§9）
+
+## 1 参考做法：挡路与精度的共同规律
 
 **共同规律**：用看得见、场景里本来就有的东西挡路；越界时减速、推回；只配一句很短的提示。外围的精度只做到玩家实际能靠近的距离。
 
@@ -76,7 +93,7 @@ WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
 
 ### 2.3 结构要点
 
-下面几条是外围的结构，WLD-DIORAMA §1 与此一致；细节按 §5 处理，03 里写的立面颜色只作参考，按画面需要处理。
+下面几条是外围的结构，WLD-DIORAMA §1 与此一致；细节按 §5 处理，现实街区的立面颜色只作参考，按画面需要处理。
 
 - **东北边**紧贴的是科新南路，外侧是蓉昌高速 G4217 和互通匝道；**东角**是互通匝道。
 - **绕城高速 G4202 主线**在东南 220–440 m 外，是高架，不紧贴东缘。

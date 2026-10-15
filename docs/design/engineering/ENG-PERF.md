@@ -3,6 +3,7 @@ id: ENG-PERF
 title: 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 category: engineering
 summary: 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+keywords: [着色器白名单, 全局着色器参数, 全局数据纹理, ShaderGlobals, globals.gdshaderinc, 合批, 自动实例化, MultiMesh, 绘制调用口径, 管线预热, 管线编译计数, 顶点格式, 抖动淡化, 遮挡剔除, 渲染图层, TileBundle, 流式加载, 卡帧, 本机烘焙缓存, .tbin, 零分配, 显存账, PSSM 阴影, 方向量化, 灯光通道, 后期链, 描线, 设备档, 自动调节画质, 性能基准]
 owners: [WP-01, WP-02]
 contributors: [WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-32, WP-33, WP-34, WP-37, WP-38, WP-39, WP-40, WP-42, WP-43, WP-45, WP-46, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
@@ -15,7 +16,8 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 
 > **范围**：本文规定性能的实现方法：绘制管线与合批、着色器白名单、全局参数与数据纹理登记表、编译与预热、填充率、剔除、流式加载、主线程与 C#、内存与显存、安装包与本机烘焙缓存、植被、阴影光照与后期、设备档与自适应、测量与门禁。引擎锁定 Godot 4.7.2-stable .NET（C#、Forward+、Windows、默认 D3D12），只做 PC，当前只做观光模式；目标是视觉精度的底线处处成立、细节按精度区分级（ART-FIDELITY §0）、绝不卡帧。
 > **不在本文**：预算数值与硬规则（ENG-BUDGET）、契约（ENG-ARCH §3）、画面设置的单项与预设数值（SYS-GRAPHICS）、门禁的登记与完整判据（ENG-GATES）、美术与内容设计（ART-STYLE、ART-SKYLIGHT、WLD-VEGETATION、WLD-WATER 等）。ENG-BUDGET给出预算和硬规则，本文给出实现方法；两者冲突时，预算数值和硬规则以 ENG-BUDGET为准，实现方法与全局参数登记以本文为准（D-133）。
-> **读者**：所有子代理都要读 §0 和 §14。内核与系统包（WP-01、02、03、05、23、24、27、32、33、34、37、38、39、40、42、43、46、47、48、49、50、51、53）必须精读与自己相关的小节。
+> **查阅**：先读 §0；着色器白名单与全局参数登记看 §1.4、§1.5；预热与编译看 §2；图层与剔除看 §4；流式与本机烘焙看 §5；阴影、灯光与后期看 §10；画面设置与自动调节看 §11；交付自检看 §14
+> **读者**：按需查阅。其他包接入时先看 §0.1；给场景加内容时查 §1.1（容器选型）、§1.4（着色器）和 §4（图层）；写着色器或要读世界状态时查 §1.5、§2；内核与流式（WP-01、02、43、51）读 §1、§5–§8 里与自己相关的小节；材质与后期（WP-04、05）读 §2、§3、§10.2；阴影、灯光与倒影（WP-03、24、39）读 §10.1、§10.3、§10.4；植被、飘落与降水（WP-23、38、45）读 §9；剔除（WP-33）读 §4；界面与平面地图（WP-35、48）查 §1.4 的画布着色器和 §2 的二维预热；画面设置与自动调节（WP-32）读 §11；测量与门禁（WP-27）读 §12；任何包交付前对照 §14 自检。
 > **API 参考**：[docs/godot-api/README.md](../../godot-api/README.md)，写代码时以它的签名为准。
 > **关联**：[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-WP 工作包](ENG-WP.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)
 
@@ -25,12 +27,27 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 2. **场景只用白名单里的着色器**（§1.4），共用 `toon.gdshaderinc`。材质特性靠"调色板 + 顶点标志位 + 全局参数"在着色器内分支实现，不在运行时新建 Shader、改 `render_mode` 或 `#define`。雾幕散去（有开始页时是标题页转为实时，SYS-TITLE §1.1）之后，管线编译计数（SURFACE、DRAW、Canvas）不得再增长（G16）。
 3. **PC 的瓶颈在两头**：CPU 一侧是 Forward+ 每次绘制的提交和剔除开销；GPU 一侧是"同一份几何要走很多遍"（深度预通道、颜色通道、4 级阴影）和后期的填充。所以合批靠离线合并、自动实例化和 MultiMesh（§1），阴影只能靠减少投影物省钱（§10.1）。
 4. **阴影用引擎原生的 4 级 PSSM**，自写的只剩方向量化、阴影方向高度钳、主光强度、退光线和日月交接（§10.1）。描线、边缘光、移轴、光斑、倒影、窗灯和路灯光斑自己实现（§10.2–§10.4）。不用 SSAO、SSIL、SSR、SDFGI、体积雾、反射探针和 Environment 雾。
-5. **不透明通道里的 discard 只用于镂空类和抖动淡化**（ENG-BUDGET §7 第 8 条）。透明管线只留给水的透明变体、近景透明窗、粒子、光晕、光柱和细尘；贴面贴花留在不透明通道（ART-MODELING §7.5）。
+5. **不透明通道里的 discard 只用于镂空类和抖动淡化**（ENG-BUDGET §7 第 8 条）。透明物只有近景透明窗（同屏不超过 32 块）、水的透明变体（可选）、粒子、光晕、光柱、细尘和介质覆盖层；贴面贴花留在不透明通道（ART-MODELING §7.5），透明的 `toon_decal` 只作备选（§1.4），启用时彼此不重叠、按 `render_priority` 排在最前（§1.6）。
 6. **主线程只挂载，不生成。** 几何全部烘焙成 TileBundle：发布版在玩家机器上本机烘焙（D-165），第一次需要时由工作线程调同一个 `Build()` 生成并写进本机缓存，之后从缓存读（§5）；本机缓存是自定义的 `.tbin`，由读缓存的工作线程任务读入、校验，并在同一工作线程上创建 GPU 资源，不经 `ResourceLoader`（读取路径以 ENG-ARCH §4 为准）；`ResourceLoader.LoadThreadedRequest` 只读 `res://` 里的启动集等资源；主线程只调少量 RenderingServer 接口，每帧最多激活 1 格，不超过 1.0 ms（§5）。
 7. **保证绝不卡帧、不穿地的六条不变量**，详见 §5：L4 常驻；父格要等 4 个子格都"加载、挂载、管线就绪"才隐藏；按字节 LRU 淘汰；看门狗；碰撞数据没有就绪就冻结物理（行走模式）；镜头在楼体里至少显示 I0、进开放室内前未就绪就在门槛前 1 m 软停（第 6 条，WLD-INTERIORS §6.4）。另有两条全局约束：雾幕之后管线编译计数不增（§2）；主线程从不生成几何（第 6 条）。
 8. **预算按"场景"核算，不按"格"平均。** 银杏大道这类热点地段按 E1 视角核算。
 9. **测量分两类**：吞吐量（`ViewportGetMeasuredRenderTimeGpu/Cpu` 的毫秒，用来判断回归）和体验（帧间隔、掉帧和卡顿，用来判断是否达标）。PC 上 GPU 计时一律可用。
 10. **任何调参都不能触发管线重编译。** 会改特化常量或管线键的设置（阴影开关、PCSS 的有无、软影滤波档位、16 位深度、MSAA、TAA、Compositor 的 `Needs*` 缓冲、深度预通道、Environment 的 `*Enabled`）只在启动时定，四个画面预设相同，不做成选项；画面设置按即时、雾幕、重启三类生效（§11.7、SYS-GRAPHICS §3），启动预热覆盖所有可达的组合；改时间、换季、换天气、切换观察模式和介质只改全局参数和全局纹理（§1.5）。
+
+### 0.1 接入要点
+
+- **要给内容上材质**：只经 `ToonSpec` 和调色板色名取卡通材质（ENG-ARCH §3）；不建 StandardMaterial3D，不自己新建 Shader 或 ShaderMaterial；逐物体的变化放顶点色号、`INSTANCE_CUSTOM` 或 instance uniform，不逐物体建材质、不用材质覆盖；运行时换材质只许换成预热过的变体（§1.1、§1.6、§2）
+- **要用或新增着色器、顶点格式**：只用 §1.4 白名单里的文件，共用 `toon.gdshaderinc`；新增着色器文件或顶点格式（登记的只有 VF-A 至 VF-D）要主代理批准；运行时只改参数值，不新建 Shader，不改 `render_mode`、`#define` 或特化开关；可开关、按状态出现的节点启动时就放进树里，让预热编到（§1.4、§2）
+- **着色器要读时间、季节、天气、介质或画面设置**：只读 §1.5 登记表里的全局参数和全局数据纹理，每项只有一个写入方；要新增时先登记进 §1.5 的表（它是唯一的登记来源：主代理据此改 `project.godot`，WP-01 据此生成 `globals.gdshaderinc` 和 C# 名字常量）；C# 侧用 `static readonly StringName` 常量写入，不用 `GlobalShaderParameterGet` 读回（§1.5、§6）
+- **要在场景里显示东西**：经内核的 `IRenderHost` 申请，不自己建 RenderingServer 实例或 MeshInstance3D（ENG-ARCH §2）；按 §1.1 选容器：同种部件共用 Mesh RID 与材质 RID，每格同种超过约 64 个时用 MultiMesh（统一格式、不用实例色、`MultimeshSetBuffer` 整块写入）；只有动态物体走场景节点（§1.1、§1.2）
+- **要生成几何或碰撞**：写成确定性的 `Build()`（`Campus.Gen.*`，不引用 GodotSharp，超越函数用 `DetMath`，不用 §5 列出的禁用 API，每个表面不超过 65 536 个顶点），由内核在工作线程上调用；主线程只挂载、不生成几何；`Build()` 不读世界状态和画面设置；工作线程上不调场景树、`RenderingServer.Instance*` 和 PhysicsServer3D 的 body 接口，gen 里不用 `Parallel`、`Task.Run`（§5、§6、§14）
+- **要分级或淡入淡出**：几何的淡入淡出在 `toon.gdshaderinc` 里按 4×4 Bayer 抖动做（instance uniform `fade_t0`，0.25 s；MultiMesh 不能逐实例淡化，改在 vertex() 里缩到 0）；visibility range 的 `fadeMode` 一律 Disabled，不用它自带的淡化；同级网格 LOD 只换索引、不换顶点，跨级持续存在的面保持同一法线、色号和材质 ID，剪影与投影构件留到不足 1 px，小件的线先于几何淡出（§1.2、§2）
+- **写逐帧代码或着色器**：逐帧路径零托管分配（不用 LINQ、闭包、装箱、字符串拼接，`GetNode` 只在 `_Ready` 里调）；调用引擎 API 一律批量；计时只用 `Campus.Kernel.Frame` 的计时作用域；着色器不用 `TIME` 和 `LIGHT_COLOR`，按距离的判断用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`（§6、§14）
+- **内容要投影或接收阴影**：投影物放在相机可见的图层上，按 §4 的图层登记选层，要新层向主代理申请；草、插片、粒子、光晕不投影，植被和远处体量用 `ShadowsOnly` 代理（第 5 层）；场景里只有 WP-03 的 KeyLight 一盏方向光，阴影的特化开关运行时一律不动，light() 以外要主光方向时读 `key_dir`（§4、§10.1）
+- **要让东西随时刻亮灯**：接进 WP-39 在按图的 `lighting-schedule.json` 里登记的 32 个灯光通道，亮度由着色器读 `light_channels` 和按哈希的阈值算出，CPU 不逐盏写；路灯光斑走 `lamp_grid`、`lamp_table`，只有重点灯用 OmniLight3D：全校不超过 32 盏，不投影，`LightCullMask` 排除第 2 层（§10.3）
+- **本包有受画面设置影响的内容**：在自己的 `[KernelNode]` 上用 `[QualityResponsive]` 声明负责或只读的单项，只经 `IQualityService` 接收，不读 `graphics.cfg`；按即时、雾幕、重启三类落到引擎上，有视觉变化的项淡化完成、不硬切，密度类用 `VisibleInstanceCount` 前缀抽稀；本包的风格底线在每个预设的最差值配置下仍在（§11.7、§11.3）
+- **要释放资源或经历切图**：只释放自己的实例和 TileBundle（`FreeRid` 加 `Dispose()`），不释放共享的材质、图集和数据纹理；全图纹理与包围盒从 `map_rect`、`MapDescriptor.Bounds` 换算，不写死"全校"；跨图常驻的节点只经 `IMapAware` 换数据（§7、§14）
+- **交付前**：逐条对照 §14 的性能自检清单，并通过 G8 静态预算（§12.5）
 
 ## 1 绘制管线与合批（WP-02，WP-01 配合）
 
@@ -79,7 +96,7 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 - **前缀**只是快捷写法（`MeshLod.Prefix`）：三角形按件和重要度排好序，低一级截掉排在后面的整件，只用于独立的叶片、小件和合并块里的整栋楼。
 - **建筑的主线版**只用 L0+–L4 语义级别（ENG-BUDGET §3），不给同级网格 LOD；同级内部的简化后做。
 
-网格 LOD 的默认阈值 1 px，运行时可调 `Viewport.MeshLodThreshold`。同级简化在 gen 里按语义自己写（下文"跨级不跳线、不跳明暗"第 2 条），结果确定，能过 `--bake-verify`。`ImporterMesh.GenerateLods`、`SurfaceTool.GenerateLod` 属于 GodotSharp，纯 .NET 的 gen 调不到，不用；部件库和树冠云确实要二次误差简化时，经主代理批准引入 meshoptimizer 的 .NET 绑定，产物同样要逐字节一致（G6）。建筑一律不用自动简化，以免破坏轮廓和倒角高光。阴影通道用主相机选出的同一级 LOD。
+网格 LOD 的默认阈值 1 px，运行时可调 `Viewport.MeshLodThreshold`。同级简化在 gen 里按语义自己写（本节"跨级不跳线、不跳明暗"第 2 条），结果确定，能过 `--bake-verify`。`ImporterMesh.GenerateLods`、`SurfaceTool.GenerateLod` 属于 GodotSharp，纯 .NET 的 gen 调不到，不用；部件库和树冠云确实要二次误差简化时，经主代理批准引入 meshoptimizer 的 .NET 绑定，产物同样要逐字节一致（G6）。建筑一律不用自动简化，以免破坏轮廓和倒角高光。阴影通道用主相机选出的同一级 LOD。
 
 **跨级不跳线、不跳明暗**（ART-MODELING §7.7；跳变检测见 ART-FIDELITY §8 第 4 条）：语义级别 L0+–L4 之间有 0.25 s 的抖动过渡（§2），同级网格 LOD 却是一帧内换索引、没有淡化；三渲二里线和两阶明暗一跳就很显眼。所以：
 
@@ -100,7 +117,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | 统计 | 读法 | 口径 |
 | --- | --- | --- |
 | 主通道绘制调用 | `Viewport.GetRenderInfo(Viewport.RenderInfoType.Visible, Viewport.RenderInfo.DrawCallsInFrame)` | 不透明、运动、透明三张列表里，每个自动实例化连续段记 1 次；深度预通道不重复计数，所以实际提交给 GPU 的约为"不透明 × 2 + 透明" |
-| 阴影绘制调用 | 同上，`RenderInfoType.Shadow` | 各级阴影合计 |
+| 阴影绘制调用 | `Viewport.GetRenderInfo`，类型取 `RenderInfoType.Shadow`，项取 `RenderInfo.DrawCallsInFrame` | 各级阴影合计 |
 | 三角形 | `RenderInfo.PrimitivesInFrame`，或 `Performance.Monitor.RenderTotalPrimitivesInFrame` | 带 LOD 的表面按所选那级的索引数计，**不乘 MultiMesh 的实例数**；不带 LOD 的表面按顶点数 × 实例数；间接绘制不计 |
 | 界面 | `RenderInfoType.Canvas` | 不计入主通道 |
 
@@ -119,7 +136,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `fog.gdshaderinc` | WP-04（天空色带的部分由 WP-40 以需求提交） | 共用雾函数：地平线天色、200 m 降饱和、800 m 剪影、贴地雾与湖雾、介质混合；天气只修正它的输入（`weather_fog`），签名不变；旁观边缘雾按 `edge_fog` 只在朝外一侧加浓：密度 ×(1 + 0.6 × `edge_fog` × w)（WLD-OUTSKIRTS §8.3）；另有一份逐行对应的 GLSL 版 `fog.glslinc` 给计算着色器 |
 | `motion_wind.gdshaderinc` | WP-26 | 风场相位与三层摆动（§9），与 C# 的 `IWindField.Sample` 同一公式 |
 
-**空间着色器与其他**（共 25 个：空间与天空着色器 22 个、画布着色器 3 个；常驻 23 个，另有 1 个桩、1 个可选；主代理可再合并）：
+**空间着色器与其他**（共 25 个：空间与天空着色器 22 个、画布着色器 3 个；常驻 22 个，另有 1 个桩（`toon_stub`）、2 个可选或备选（`water_clear`、`toon_decal`）；主代理可再合并）：
 
 | 文件 | 归属 | 用途 | 通道 |
 | --- | --- | --- | --- |
@@ -127,7 +144,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `toon_cut.gdshader` | WP-04（WP-07 以需求提交） | 剖切变体：`cull_disabled`，背面输出剖切色、法线朝向相机、ROUGHNESS 写剖切 ID（SYS-VIEW §5）；开放楼内当前层与 ±1 层的室内壳（WLD-INTERIORS §6.3） | 不透明 |
 | `toon_glass.gdshader` | WP-04 | 窗玻璃：室内映射、斜条高光、窗灯；关着的门的门厅卡图层、窗卡号查层号表（WLD-INTERIORS §5） | 不透明 |
 | `toon_glass_near.gdshader` | WP-04 | 开放楼室内一侧的朝里玻璃与开放入口的门玻璃（同屏不超过 32 块，WLD-INTERIORS §4、WLD-INTERIORS §8.3） | 透明 |
-| `toon_decal.gdshader` | WP-04 | 透明的预投影网格贴花，`depth_draw_never`，不投影；只作备选：事件贴花、地面标线和落叶堆一律做成不透明的贴面几何（`toon_static` 的贴花分支，ART-FIDELITY §6），P0 后用不上就从白名单删去（§16） | 透明 |
+| `toon_decal.gdshader` | WP-04 | 透明的预投影网格贴花，`depth_draw_never`，不投影；只作备选：事件贴花、地面标线和落叶堆一律做成不透明的贴面几何（`toon_static` 的贴花分支，ART-FIDELITY §6），P0 后用不上就从白名单删去（§16） | 透明（备选） |
 | `toon_stub.gdshader` | WP-00 | 桩（ENG-ARCH §5），WP-04 交付后删除 | 不透明 |
 | `veg_trunk.gdshader` | WP-23 | 树干、团块、绿篱；同一着色器也给 `ShadowsOnly` 代理用（instance uniform 打开噪声挖洞） | 不透明 |
 | `veg_card.gdshader` | WP-23 | 叶片插片：alpha scissor、`cull_disabled`、风、季相、开花 | 不透明 |
@@ -135,7 +152,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `veg_grass.gdshader` | WP-23 | 草和 20 m 内的地面实例叶 | 不透明 |
 | `veg_lotus.gdshader` | WP-38 | 荷：叶、柄、花、莲蓬合成一个网格，尺寸随季节 | 不透明 |
 | `water.gdshader` | WP-24 | 默认不透明水面（不读深度和屏幕纹理）；雨点环、阴天水色是它的天气分支；按到岸距离三道硬边色带、倒影碎片与 5 级色块化、四芒星闪点（WLD-WATER） | 不透明 |
-| `water_clear.gdshader` | WP-24 | 可选：需要真实交界泡沫时的透明变体 | 透明 |
+| `water_clear.gdshader` | WP-24 | 可选：需要真实交界泡沫时的透明变体 | 透明（可选） |
 | `reflect_flat.gdshader` | WP-24 | 倒影世界里的平涂 REFLECT 代理，丢弃水面以下的片元 | 不透明（倒影世界） |
 | `fx_fall.gdshader` | WP-38 | 飘落池：落叶、花瓣、雪团，位置由 `anim_time` 解析算出（雪花由 `precip` 画） | 不透明（alpha scissor，双面） |
 | `precip.gdshader` | WP-45 | 降水池：雨丝、雪花、溅落、檐滴共用（§9）。`blend_premul_alpha`、`unshaded`、`depth_draw_never`，写 `FOG`；含太阳雨的受光着色（逆光雨丝染暖金，SYS-WEATHER §3） | 透明 |
@@ -254,7 +271,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | 0 | 当前色：256 个色号在当前时刻和季节下的颜色 | `texelFetch`，按顶点 COLOR 里的色号取列 |
 | 1 | 灯照色：同一色号在路灯光斑里的颜色。光斑里用它替换影色，画面仍然只有两阶 | `texelFetch` |
 | 2 | 室内影色：同一色号在室内的暖影，按 ART-STYLE §3.4 推导 | `texelFetch`，顶点 COLOR 的"室内"位为 1 时用 |
-| 3 | 室内受光色（同上）：窗光斑里的受光色，再乘 `interior_light.x`（WLD-INTERIORS §8.2） | `texelFetch`，同上 |
+| 3 | 室内受光色（按 ART-STYLE §3.4 推导）：窗光斑里的受光色，再乘 `interior_light.x`（WLD-INTERIORS §8.2） | `texelFetch`，顶点 COLOR 的"室内"位为 1 时用 |
 | 4–63 | 季相行：每行一个植被色号，横向是 256 个季节样本 | `texture()` 沿季节轴线性过滤，横坐标 = s_i / 4（s_i 是逐株错相后的局部季节，§9）；`repeat_enable` 让冬 → 春自然衔接 |
 
 - **CPU 求值**：WP-37 的关键帧表按"太阳高度 × 晨昏 × 四季"组织（19 键 × 4 季）。C# 每帧用双精度在 OKLab 里插值，插值规则照 SYS-TIME §3.1，再叠加天气修正量（SYS-WEATHER §0 第 2 条），合计不超过 0.3 ms。结果写进复用的 `byte[]`，经同一个 `Image.SetData` 后 `ImageTexture.Update(image)`，不每帧 new。
@@ -281,7 +298,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 
 - 不透明物体的绘制顺序交给引擎：有深度预通道，颜色通道的过度绘制接近 1，按材质排序比按距离排序更省。不用手工排大顺序。
 - 全场 ShaderMaterial 实例尽量少，目标不超过 48 个（§16）：材质 RID 在排序键里，每多一种材质就多切开一段自动实例化。逐物体的颜色变化走顶点上的色号，不建新材质。
-- 透明物只有：近景透明窗（同屏不超过 32 块）、贴花、水的透明变体（可选）、粒子、光晕、光柱和介质覆盖层。贴花彼此不重叠，按 `render_priority` 排在最前；加法混合的面片之间不讲顺序。
+- 透明物只有：近景透明窗（同屏不超过 32 块）、水的透明变体（可选）、粒子、光晕、光柱、细尘和介质覆盖层。贴面贴花留在不透明通道（ART-MODELING §7.5，做法见 §2）；透明的 `toon_decal` 只作备选（§1.4），启用时彼此不重叠，按 `render_priority` 排在最前；加法混合的面片之间不讲顺序。
 - 天空由引擎在不透明之后画，只填补没被遮挡的像素。
 
 ## 2 着色器与编译（WP-04、WP-05、WP-01）
@@ -312,7 +329,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
    - **覆盖所有可达的画面设置**（SYS-GRAPHICS §3）：预热表取"四个预设和所有单项取值能到达的组合"的并集——SMAA 和 FXAA 两套后期、移轴 1/2 和 1/4 两种分辨率的计算管线、描线的全部变体、光斑、2 级和 4 级 PSSM、FSR1 放大与原生两种缓冲配置。光柱与细尘、降水池、檐滴、云卡这类可开关、按天气或按状态出现的节点启动时就在树里（隐藏的节点也会被预编译），一起编到。雾幕类设置只重建缓冲、不换帧缓冲格式，所以不需要重新预热（§11.7）。
    - **何时散开**：等 SURFACE 和 MESH 计数连续 10 帧不增、Specialization 计数连续 30 帧不增、`PipelineCompilationsCanvas` 连续 10 帧不增，再撤掉阵列和预热层，转为实时（有开始页时，扉页以 1.2 s 交叉淡化成实时的 T0，SYS-TITLE §1.1 第 8 步；`--title=0` 时散开雾幕）；最长等 5 s，超时记警告并照常继续。扉页阶段停满 4 s 仍未转为实时才亮等待灯（SYS-TITLE §1.1）。
 4. **TileBundle 的统计 JSON 里列出本格用到的组合**。流式管理器挂载前查预热表，查不到就是烘焙错误（G5、G8 报出），不在运行时临时编译。所以 §5 第 2 条里的"管线就绪"是静态可判定的。
-5. **运行时只改值**：材质参数（`SetShaderParameter`）、instance uniform、全局参数。换材质只允许换成预热过的（剖切变体；可选的淡化变体，见下文"discard"）。
+5. **运行时只改值**：材质参数（`SetShaderParameter`）、instance uniform、全局参数。换材质只允许换成预热过的（剖切变体；可选的淡化变体，见本节"discard 与抖动淡化"）。
 6. **门禁**（G16）：每次雾幕淡出之后（开场、换季、远距离跳转、传送、切图、读档、画面设置的雾幕）SURFACE 和 DRAW 计数不增，界面的 `PipelineCompilationsCanvas` 也不增，运行中新生成的 MSDF 字形为 0；"前推 24 小时""四季轮换""天气巡回""预设轮换""过场体验"跑完 DRAW 为 0（§12.4）；Specialization 只记录不判。MESH 计数由加载线程产生（加载网格时编译），不卡主线程，只记录。**计数基线**：`--title=1` 时从"标题页转为实时"那一刻算起；`--title=0` 时在开场雾幕淡出时（SYS-TITLE §11.2）。切图只预热新图新出现的组合（SYS-MAPS §4.2 的 Warm 步），之后同样不增。
 7. **无界面模式不编译着色器**，着色器错误只有窗口模式才会暴露，所以 G5 要加一次短时间的窗口冒烟运行（ENG-GATES §2）。
 
@@ -421,7 +438,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 - 各块的 ArrayMesh 和它们的变换；
 - 本格的 MultiMesh（静态部分）；
 - 统计 JSON：顶点数、三角形数、表面数、字节数（含各级 LOD 索引）、各包归属、用到的管线组合（§2）、包围盒。
-- 遮挡体不在 TileBundle 里，每图一份常驻、在启动集里（§4）；碰撞是独立的碰撞级 C（下文）。开放室内另成室内包（下文），关着的楼的 I0 兜底层放在 L0 的 TileBundle 里、默认隐藏（WLD-INTERIORS §5.3）。
+- 遮挡体不在 TileBundle 里，每图一份常驻、在启动集里（§4）；碰撞是独立的碰撞级 C（见本节"碰撞级 C"）。开放室内另成室内包（见本节"室内包"），关着的楼的 I0 兜底层放在 L0 的 TileBundle 里、默认隐藏（WLD-INTERIORS §5.3）。
 
 **表面打包**：烘焙器按引擎的表面字典自己打包字节（`ARRAY_FLAG_COMPRESS_ATTRIBUTES`，20 B/顶点），`aabb` 一律写本格的统一格包围盒，让相邻格的量化网格对齐，避免接缝。64 m 格的位置量化步长约 1 mm。打包结果与引擎 `AddSurfaceFromArrays` 的输出由门禁比对（§12.5）。启动集的 `.res` 用哪个接口把打包好的表面存进 ArrayMesh，P0 原型定；`.tbin` 里存的就是这份打包字节，读入后经 `RenderingServer.MeshCreateFromSurfaces` 建网格。
 
@@ -496,7 +513,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 - **取消**：跳转被打断或改道时（UI-NAV §7.4），删掉旧目的地未发出的请求，在途的照常完成；同一时间只保留一个目的地。
 - 跳转帧、传送帧不计入自适应画质的统计（§11.3）。
 
-**音频素材**（SYS-AUDIO §15）：全部后台加载，主线程只做"加载完成后建节点"，计入挂载的 1.0 ms。环境床按"当前季节 + 目标季节"常驻，其余季节在换季雾幕前 5 s 用 `LoadThreadedRequest` 预载；开放室内的房间底噪跟着上面的室内入口预取走。声学网格、声景场与发声器表（`ambience.bake`）是全图常驻数据，与 2 m 分类栅格同类：开发期烘焙，与 `precip_occ` 同一个烘焙挂点（WP-53c、53b 的算法），随启动集 `boot_<图>.pck` 发布（D-165），不在本机烘焙、不进 TileBundle，首帧之后空闲时加载，烘焙的缓存键只依赖几何。
+**音频素材**（SYS-AUDIO §15）：全部后台加载，主线程只做"加载完成后建节点"，计入挂载的 1.0 ms。环境床按"当前季节 + 目标季节"常驻，其余季节在换季雾幕前 5 s 用 `LoadThreadedRequest` 预载；开放室内的房间底噪跟着本节"室内包"的入口预取走。声学网格、声景场与发声器表（`ambience.bake`）是全图常驻数据，与 2 m 分类栅格同类：开发期烘焙，与 `precip_occ` 同一个烘焙挂点（WP-53c、53b 的算法），随启动集 `boot_<图>.pck` 发布（D-165），不在本机烘焙、不进 TileBundle，首帧之后空闲时加载，烘焙的缓存键只依赖几何。
 
 **确定性**：
 
@@ -513,7 +530,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 
 **本机缓存**（D-165；服务是 `IBakeService`，`[KernelService]`，WP-02，契约见 ENG-ARCH §3）：
 
-- **位置**：`user://cache/bake/<地图>/<ABI>/…`（导出版在 `%APPDATA%` 下），其下按上面的键排列。`--bake-cache=<绝对路径>` 覆盖；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑。
+- **位置**：`user://cache/bake/<地图>/<ABI>/…`（导出版在 `%APPDATA%` 下），其下按本节"缓存键"一段的键排列。`--bake-cache=<绝对路径>` 覆盖；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑。
 - **格式**（安全规则）：本机缓存不用 Godot 资源格式。`user://` 下的 `.res`/`.tres` 能嵌脚本、读入即执行（SYS-SAVE §8 的威胁模型），所以 `ResourceLoader`、`ResourceSaver` 一律不得读写 `user://`，不设例外。缓存用自定义的格包二进制格式 `.tbin`：头（魔数、格式版本、缓存键、长度）+ 各表面的顶点与索引缓冲（与"表面打包"同一份打包字节）+ 实例变换 + MultiMesh 缓冲 + 碰撞形状参数 + 统计 JSON，整体 zstd（`FileAccess.OpenCompressed` 或 .NET 的 zstd）。解析器逐段做边界检查，长度超限就拒收。开发共享缓存（`UESTC_BAKE_CACHE`）和 `--bake=all` 也写同一种 `.tbin`。
 - **读**：工作线程上读文件 → 解压 → 用 `System.IO.Hashing.XxHash128` 算哈希，与随包的 `res://bake/<地图>/boot/bake.manifest.json` 里这个缓存键的哈希比对，不符就删掉、自动重建一次（见下文"损坏、校验失败与终态"）。缓存键不在 manifest 里的文件（`--seed` 覆盖、开发构建）只在开发构建或带 `--seed` 时接受，按 `cache.index` 的哈希校验，其余情况一律重烘 → 在同一工作线程上用 `RenderingServer.MeshCreateFromSurfaces` 建网格（与 `--gen=live` 同一条路径），碰撞形状由参数创建 → 主线程照常只挂载。
 - **写**：先写 tmp，`Flush` 后改名。每图一份 `cache.index`（键、字节、最后使用时间），只用于 LRU 和统计，不作信任依据；信任依据是随包的 `bake.manifest.json`。
@@ -545,7 +562,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 - **先卸后装**：显存峰值是"最大的一张图 + 全局常驻"，不是两张图之和（§7）。
 - **同图重载**：`--gate=maptravel` 对同一张图卸载再装载 3 次，判泄漏、计数和弱引用（SYS-MAPS §13，并进 G16）。全局节点（天空、植被系统、水、灯光、天气、界面、平面地图）跨图常驻，只经 `IMapAware` 换数据，不得跨图持有格子句柄或纹理内容。
 
-**预取**：用平滑后的速度（时间常数 0.3 s）外推 +0.5、+1.5、+3 s 的位置，并夹在活动范围之内。路径已知时改用上面的"已知目的地预取"。
+**预取**：用平滑后的速度（时间常数 0.3 s）外推 +0.5、+1.5、+3 s 的位置，并夹在活动范围之内。路径已知时改用本节的"已知目的地预取"。
 
 **速度降级**：
 
@@ -637,8 +654,8 @@ Godot 在 D3D12/Vulkan 上没有"上下文丢失"这一类事件；设备移除�
 | 预设 | 纹理 | 几何 | 渲染目标与阴影图（不含约 70 MB 固定开销） | 合计 |
 | --- | --- | --- | --- | --- |
 | 极致 | ≤ 384 MB（四档同一套纹理） | ≤ 1 GB | ≤ 450 MB（1440p）；≤ 700 MB（4K） | ≤ 3 GB |
-| 精致 | 同上 | ≤ 600 MB | ≤ 300 MB；≤ 450 MB（4K） | ≤ 1.8 GB |
-| 均衡、流畅 | 同上 | ≤ 400 MB | ≤ 200 MB | ≤ 1.2 GB（核显占系统内存） |
+| 精致 | ≤ 384 MB | ≤ 600 MB | ≤ 300 MB；≤ 450 MB（4K） | ≤ 1.8 GB |
+| 均衡、流畅 | ≤ 384 MB | ≤ 400 MB | ≤ 200 MB | ≤ 1.2 GB（核显占系统内存） |
 
 纹理没有质量选项，四档相同，上限 384 MB；美术需要更多纹理时由主代理按 ENG-BUDGET §2 重定（§16）。进程内存（不含显存）：精致、极致不超过 4 GB，均衡、流畅不超过 3 GB；核显的显存从系统内存里划，两者合计不超过约 4.2 GB。
 
@@ -993,7 +1010,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 **楼内、地下和水下**：
 
-- 楼内：阴影本来就每帧重渲，不需要"停止更新"；竖缝窗的光条由第 1 级给出。镜头在开放室内时（WLD-INTERIORS §6.3、WLD-INTERIORS §8.3），介质服务把第一级阴影范围缩到 8–12 m，0.5 s 内过渡，出楼恢复（改级联分割和阴影距离都是即时类、不编译，SYS-GRAPHICS §3 登记为"介质覆盖"），窗格光斑才不糊；同时把阴影方向的最低高度抬到 14°（见上"方向量化"第 2 条）。室内只有墙和楼板投影，家具、踢脚、窗框内侧、灯片不投影；玻璃不投影，所以窗格光斑是真实阴影的结果。
+- 楼内：阴影本来就每帧重渲，不需要"停止更新"；竖缝窗的光条由第 1 级给出。镜头在开放室内时（WLD-INTERIORS §6.3、WLD-INTERIORS §8.3），介质服务把第一级阴影范围缩到 8–12 m，0.5 s 内过渡，出楼恢复（改级联分割和阴影距离都是即时类、不编译，SYS-GRAPHICS §3 登记为"介质覆盖"），窗格光斑才不糊；同时把阴影方向的最低高度抬到 14°（§10.1"方向量化"第 2 条）。室内只有墙和楼板投影，家具、踢脚、窗框内侧、灯片不投影；玻璃不投影，所以窗格光斑是真实阴影的结果。
 - 地下和水下：相机 `CullMask` 去掉地上各层，被隐藏的层的影子随之消失；同时 `shadow_strength` 和 `ShadowOpacity` 设 0，倒影视口设 `UpdateMode.Disabled`，关闭光斑和移轴。回到地面时借 0.25 s 的介质过渡恢复，不用补渲。
 
 **验收**（配合 SYS-TIME §8 的无硬切检测和门禁 G13）：
@@ -1006,7 +1023,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 **显存**：8192² × 16 位 = 128 MB（极致）；4096² 为 32 MB（精致）；2048² 为 8 MB（均衡、流畅）。没有前一版副本。
 
-**开销**：夏正午满叶（晴）时 4 级全量重渲的 GPU 时间，是 P0 的头号测量项；份额按 ENG-BUDGET §2 的 22%，在精致预设下核算。超出时依次收紧：小件投影距离、植被代理密度、第 4 级的 max_distance。白天阴雨不省阴影（见上"天气"第 4 条）。
+**开销**：夏正午满叶（晴）时 4 级全量重渲的 GPU 时间，是 P0 的头号测量项；份额按 ENG-BUDGET §2 的 22%，在精致预设下核算。超出时依次收紧：小件投影距离、植被代理密度、第 4 级的 max_distance。白天阴雨不省阴影（§10.1"天气"第 4 条）。
 
 ### 10.2 后期链（WP-05）
 
@@ -1018,7 +1035,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 | 2 | 不透明物体：卡通材质，雾在材质里算 | 引擎 | — |
 | 3 | 天空：贵的云放进 half-res 通道 | 引擎 + `sky.gdshader` | — |
 | 4 | Compositor `PostSky`：描线（两次 dispatch：线遮罩 → 斑点去除、帐篷抗锯齿与合成）、屏幕空间边缘光，雨天的远雨幕带、雷雨的闪光帧加深 | `post_outline.glsl` | 0.3–0.5 ms |
-| 5 | 透明物体：近景透明窗、贴花、水的透明变体、粒子（含降水池）、光晕、室外软边光柱、室内棱柱光柱、细尘、介质覆盖层 | 引擎 | — |
+| 5 | 透明物体：近景透明窗、水的透明变体（可选）、粒子（含降水池）、光晕、室外软边光柱、室内棱柱光柱、细尘、介质覆盖层；贴面贴花在第 2 步的不透明物体里，备选的 `toon_decal` 启用时排在本步最前（§1.6） | 引擎 | — |
 | 6 | Compositor `PostTransparent`：移轴（1/2 或 1/4 分辨率可分离模糊，按屏幕 y 与深度合成，混合上限 0.25）、高光肩部、暗角（并进移轴合成那次 dispatch，+0.02 ms 量级）、主光可见度与光斑 | `post_tiltshift_*.glsl`、`post_flare.glsl` | 0.3–0.5 ms |
 | 7 | 内置 Glow：白天只晕高光，黄昏以后叠全帧柔光（两路取值见下"柔光"；质量高 / 标准） | 引擎 | 0.3–0.5 ms |
 | 8 | Tonemap Linear | 引擎 | — |
@@ -1083,7 +1100,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 **窗灯光晕**：不用屏幕空间模糊。用 MultiMesh 面片（`fx_glow`），离立面 2 cm，边长为窗宽的 1.5 倍，加法混合，250 m 外淡出，满足 ART-STYLE §7.5 的"半径不超过窗宽的一半"。`INSTANCE_CUSTOM` 存窗号、通道、阈值；亮度由着色器读 `light_channels` 和 `window_override` 算出，没亮的窗在 vertex() 里塌缩成 0 面积，不占光栅化。每盏灯每帧零 CPU 开销。夜间亮窗比例最高到 0.85（SYS-TIME §6），GPU 帧时计入 ENG-BUDGET §8 的"天空与特效"。归 WP-39。
 
-**光柱**（ART-STYLE §7.6、ART-SKYLIGHT §7 第 5、9 项）：都走 `fx_glow` 的分支，玩家可以关（风格默认，见上）。
+**光柱**（ART-STYLE §7.6、ART-SKYLIGHT §7 第 5、9 项）：都走 `fx_glow` 的分支，玩家可以关（风格默认，见本节"移轴、光斑、光柱、暗角可关"）。
 
 - **室外软边光柱**：沿 −`key_dir` 的开口圆柱或扁片（底半径 0.8–3 m），`blend_add`、`unshaded`、`depth_draw_never`、`fog_disabled`；软边 `pow(abs(dot(N, V)), 1.6)`；读 `hint_depth_texture` 在 1.4 m 内软化交界；沿轴呼吸 ±18%；显示空间峰值 0.15–0.22；颜色近窗处偏白 `shaft.near`，往远处变成主光的高彩色 `shaft.far`。**近镜 1.2 → 5.5 m 淡入**、**视线与光柱轴夹角 < 30° 时 × mix(1, 0.4, fwd²)** 是必需项（17:30 光柱接近水平、正在人眼高度），参数读全局参数 `shaft`。放置点由 WP-23 / WP-39 的生成器按"树冠缝、楼缝朝太阳"挑选，每屏不超过 8 根；按太阳高度 2°–30° 淡入。
 - **室内棱柱光柱**：每块受光窗格一根棱柱（WLD-INTERIORS §8.3）：片元只做解析求交和 2 次噪声，不采阴影图（空间着色器读不到方向光阴影图），家具遮挡忽略，由生成器按楼板和梁切开棱柱；每间房的棱柱合成 1 次绘制，同屏最多 3 组，屏幕覆盖率 ≤ 0.6 屏（P0 实测）；镜头在楼内时整体 × `interior_light.y`（0.55），计入室内主通道的绘制额度（WLD-INTERIORS §12）。

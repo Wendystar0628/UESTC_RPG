@@ -3,6 +3,7 @@ id: SYS-TITLE
 title: "开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`"
 category: systems
 summary: "规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式"
+keywords: [开始页, 标题页, 主菜单, 扉页, 启动序列, 启动失败页, T0, 云隙望穹, 片名块, 新游戏过场, 继续过场, 开场动画, 返回标题, 跳过过场, 安全落点, 开场过场设置, 过场专属元素, 云卡, 放映层, 标题卡, IAppFlow, AppState, EnterRequest, CinematicPlayer, CinematicDef, cine_cloud.gdshader, enter_new.json, "game/data/maps/qingshuihe/cinematics/"]
 owners: [WP-49, WP-35d]
 contributors: [WP-01, WP-02, WP-06, WP-25, WP-27, WP-32, WP-34, WP-39, WP-41, WP-46, WP-50, WP-53a]
 depends: [ENG-ARCH, ENG-PERF, SYS-TIME, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
@@ -16,6 +17,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 
 > **范围**：本文规定冷启动序列与扉页、开始页（T0 镜头、菜单、片名块）、新游戏与继续的进场过场、返回标题、跳过与安全落点、`IAppFlow` 状态机、过场数据格式与 `CinematicPlayer`、云卡着色器、过场的流式预取与门禁增项。
 > **不在本文**：存档格式、读档与保存时机（SYS-SAVE）；地图加载与切换（SYS-MAPS）；界面令牌、放映层与开始页的视觉细则（UI-VISUAL）；声音与开场音乐的内容（SYS-AUDIO）；世界时间与 `FlowTo` 的实现（SYS-TIME）。
+> **查阅**：先读 §0；启动序列、扉页与启动失败页看 §1；开始页的 T0 与菜单看 §2；新游戏、继续与返回标题的分镜看 §3、§4；跳过与设置项开场过场看 §5；`IAppFlow` 的状态、各状态下的约定与契约看 §7；过场数据格式与 `CinematicPlayer` 看 §8；预算与门禁增项看 §11
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)；[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
 
 **分工**：WP-49 开始页与进场演出（49a 流程与播放器、49b 标题美术）；WP-35d 开始页与存档页的界面部分（与 WP-49 配合，视觉按 UI-VISUAL）。WP-01、02、06、25、27、32、34、39、41、46、50 各有增量，WP-53 留音频挂点（§14）。
@@ -29,7 +31,21 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 5. **跳过是"把同一条世界轨在雾幕下跑完"**：按住 Esc 0.8 s；雾幕里按顺序执行剩下的世界提示、落到终点位姿、等就绪、散开。完整、简短、关、任意时刻跳过，新游戏的终态都相同（§5）。
 6. **时间仍然不可逆**：新游戏、读另一个存档都是换世界实例（`IWorldState.Instance` 加 1），不是倒流；同一实例里只有正向流逝。开始页停着的时间、关着游戏的时间都不计入世界时间（§6）。
 7. **实现是一台状态机加一个数据驱动的播放器**：`IAppFlow`（Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting）是 Kernel 服务，不加 Autoload；`CinematicPlayer` 在相机那一步（−1100）逐帧驱动镜头，过场是文本 JSON，可审查、可在 Movie Maker 下逐帧复现；云卡只多一个白名单着色器 `cine_cloud.gdshader`（§7–§9）。
-8. **不出现人物，过场期间不触发偶发事件**；Title、Entering、Leaving 三个状态里没有自动保存、没有小地图和 HUD、自适应画质冻结。音频只留挂点，内容由 SYS-AUDIO 定义（§8.6）。开场音乐按 SYS-AUDIO：委托或自制的原创钢琴或弦乐小品，1–2 分钟；做好之前不放，开始页只放高空远景床（风、远处城市的宽底子），过场里只有环境声。
+8. **不出现人物，过场期间不触发偶发事件**；Title、Entering 两个状态里没有自动保存，Leaving 只在开始时保存一次（返回标题那次，§7.2）；这三个状态都没有小地图和 HUD、自适应画质冻结。音频只留挂点，内容由 SYS-AUDIO 定义（§8.6）。开场音乐按 SYS-AUDIO：委托或自制的原创钢琴或弦乐小品，1–2 分钟；做好之前不放，开始页只放高空远景床（风、远处城市的宽底子），过场里只有环境声。
+
+### 0.1 接入要点
+
+- **要做只在过场里出现的东西**（云卡、云隙光、归鸟、沿路亮灯这类）：只在 Title、Entering、Leaving 三个状态里存在；不写世界状态（钟点、季节、天气、灯光通道的终值），不影响存档；只用白名单着色器和已登记的资源；交还控制前淡出或撤销，跳过时立刻撤销；不算偶发事件，也不在游戏里复用（§3.3）
+- **给过场提供钩子**（例如 WP-39 的灯光提示）：只在 Entering 生效，只改先后、不改终值，撤销后各值与不覆盖时完全相同（§3.3）
+- **系统行为要随应用状态变化**：读 `IAppFlow.State`、订阅 `Changed`；Boot、Title、Entering、Leaving 下不触发偶发事件，HUD 与小地图隐藏，自适应画质冻结，活动范围与边界推回不作用；自动保存只在 Playing 里有（Leaving 只在开始时存一次）（§7.2）
+- **开始页和过场期间要动镜头或读输入**：Boot、Title、Entering、Leaving 期间 `IAppFlow` 持有 `LockInput(InputLockReason.Cinematic)`，镜头只由 `CinematicPlayer` 经 `ICameraRig.SetPose` 驱动，WP-06 的相机不积分输入；开始页菜单和按住跳过走界面输入（§7.1、§7.4、§8.3）
+- **用雾幕或在雾幕下换东西**：雾幕原因用 `VeilReason`，冷启动 `Boot`，跳过、雾幕直达、返回标题 `Cinematic`；WP-01 的雾幕服务要支持扉页这种内容和保持不透明直到条件满足；扉页与雾幕同在 layer 5，三维画面与预热层（layer 4）在下，放映层 9、界面 10、署名 11 在上（§1.1、§7.4）
+- **新加着色器组合、界面组件或大页**：要进扉页后面的预热（三维按 ENG-PERF §2 的阵列，二维画进预热样片，存档页、设置卡各页、大地图预建并隐藏）；转为实时之后 SURFACE、DRAW、Canvas 三项管线编译计数和新生成的 MSDF 字形都不得增长（§1.1、§11.2）
+- **内容会出现在 T0 或过场路径上**：外围街区与 O2 楼顶按 T0 的实际观看距离验收；过场沿途按所在精度区验收（南门、主楼、银杏大道、图书馆是 K1），不因镜头贴近另提标准；沿途几何改动后，过场路径离楼体、地形、树干不小于 3 m 的检查要照样通过（§2.1、§3.1、§8.4）
+- **在 `map.json` 里登记过场或 T0**：`cinematics` 的角色名只用 `enterNew`、`enterNewShort`、`enterContinue`、`leave`，都可缺省（缺省走雾幕直达）；`title` 写 T0 位姿与云卡布局名，缺省时用默认图的 T0；过场文件放 `game/data/maps/<地图>/cinematics/`，扉页放 `game/assets/title/<地图>/`（§8.1、§12）
+- **执行过场的音频提示**：`audio` 轨只有 `title.start`、`title.fadeIn`、`title.fadeOut`、`duck`、`amb.altitude` 五种，经 `IAudioService.Cine` 执行；跳过时按时间顺序立即执行，淡出照给时长、不硬切（§8.2、§8.6）
+- **实现 `IWorldControl.FlowTo`**：以 `rate` 正向流逝到下一次出现的 `clock` 正好停住；`rate` 只取 `Flow` 的六档，否则抛 `ArgumentOutOfRangeException`；停点在 `FramePriority.WorldState` 那一步夹住（§7.4）
+- **写时间单调或跳过终态的测试**：单调只在同一实例内查，以 `IWorldState.Instance` 区分；新游戏、读另一个存档位、冷启动预览各换一次实例，按"继续"进入正在预览的存档位不换（§6、§11.2）
 
 ## 1 启动序列（SYS-VIEW §3 的启动流程以本节为准）
 
@@ -144,7 +160,7 @@ ELECTRIC YEARS                          ← 思源黑体 SC Light 36，字距 +0
 | 首次启动（没有任何存档） | 预览世界：秋 17:30、晴（新游戏的终态） | "继续"禁用，焦点在"新游戏" | 菜单下方一行等宽小字"已按本机推荐：极致 · RTX 4080 · 设置 › 画面"，数据取 `IQualityService.Recommended` 和显卡名（SYS-GRAPHICS §5）；只在首次启动或重新检测之后显示 |
 | 再次启动 | 最近存档的世界状态，流逝停住 | 焦点在"继续" | 推荐画质变了时，用 UI-NAV §4.9 的临时提示告知一次 |
 | 最近的存档损坏 | 按 SYS-SAVE 退到上一代或另一个存档位；全部不可用时同"首次启动" | 损坏的存档位在存档页显示"无法读取"和原因，原文件不删（SYS-SAVE） | — |
-| 存档来自更新的版本 | 按 SYS-SAVE 的只读规则 | 同上 | — |
+| 存档来自更新的版本 | 按 SYS-SAVE 的只读规则 | 与损坏的存档位相同：在存档页显示"无法读取"和原因，原文件不删（SYS-SAVE） | — |
 
 - **菜单进场**（转为实时之后）：菜单项淡入并上移 4 px，每项错开 40 ms；"减少动态效果"开启时只淡入。
 - 开始页的停留时间不限；停着时不触发保存，也不推进世界时间。
@@ -179,8 +195,8 @@ ELECTRIC YEARS                          ← 思源黑体 SC Light 36，字距 +0
 | 轨 | 时间（s） | 内容 | 样式 |
 | --- | --- | --- | --- |
 | 字幕 1 | 8.0–12.0 | 秋。冷空气刚过境，一年里少有的通透晴日。 | UI-VISUAL的 `subtitle`（思源黑体 SC Regular 26，字距 +0.06 em），最多 2 行；淡入 200 ms、淡出 300 ms，相邻两条交叉 120 ms |
-| 字幕 2 | 17.5–22.0 | 落日的金光，斜铺过整座校园。 | 同上 |
-| 字幕 3 | 27.0–31.5 | 白昼和灯火，正在交接。 | 同上 |
+| 字幕 2 | 17.5–22.0 | 落日的金光，斜铺过整座校园。 | 同字幕 1 |
+| 字幕 3 | 27.0–31.5 | 白昼和灯火，正在交接。 | 同字幕 1 |
 | 时间读数 | 7.0–34.0 | 等宽"17:07 · AUTUMN · CLEAR"，钟点按世界分钟更新 | UI-VISUAL的 `data`（JetBrains Mono 13），n-25，下黑边左侧；30.0 s 停在 17:30 |
 | 标题卡 | 36.5–41.3 | 片名"电 光 年 华"；发丝线与等宽小字"序章 · 落金初灯 · 清水河" | 片名用 UI-VISUAL的 `display-2`（思源黑体 SC Light 72，字距 +0.40 em）；逐字量化出现，每字错开 60 ms，同时一条发丝线从左向右画出（400 ms）；停留 2.4 s；整体淡出 600 ms，不反向播放 |
 
@@ -296,7 +312,7 @@ ELECTRIC YEARS                          ← 思源黑体 SC Light 36，字距 +0
 | 情形 | 世界时间怎么变 | 为什么不算倒流 |
 | --- | --- | --- |
 | 新游戏 | 建一个新的世界实例（SYS-SAVE 的新游戏，`IWorldState.Instance` 加 1），从秋 17:05 起，之后只以 60×（或更高倍率，在遮罩下）正向流逝到 17:30，交还时转 1× | 新游戏是一条新的时间线，与旧存档不在同一个实例里 |
-| 跳过、简短、关 | 同一条世界轨，只是倍率不同（360× 或 1440×），仍然只向前 | 同上 |
+| 跳过、简短、关 | 同一条世界轨，只是倍率不同（360× 或 1440×），仍然只向前 | 同新游戏：是一条新的时间线，与旧存档不在同一个实例里 |
 | 继续 | 世界时间不动；开始页上 `SetFlow(0)` 只是暂停流逝，交还时恢复原倍率 | 暂停不是倒退 |
 | 从存档页读另一个存档位 | 换世界实例，`Instance` 加 1 | 读档是换实例（SYS-SAVE） |
 | 冷启动时恢复最近存档做 T0 预览（§1.1 第 6 步） | 换世界实例，`Instance` 加 1；只恢复地图、世界段和天气段，视角段留作继续的终点 | 读档是换实例（SYS-SAVE）；之后按"继续"不再换实例 |
@@ -605,7 +621,7 @@ game/data/maps/qingshuihe/cinematics/
 
 "过场体验"：体验模式下（垂直同步开、窗口有焦点），新游戏完整版和继续各播 5 次（继续按旁观、行走两种存档轮换），再各跳过一次。判据：没有超过 50 ms 的帧；掉帧率符合 ENG-BUDGET §2 当前预设的指标；"过场流式欠账"为 0；跑完 SURFACE、DRAW、Canvas 三项编译计数都为 0（G16）。
 
-### 11.4 其他
+### 11.4 静态预算、性能回归与自适应画质
 
 - **G8 静态预算**：位置清单加 T0（按 ENG-BUDGET §2 的四种世界状态各算一次）和新游戏路径上每 0.25 s 的采样点（秋黄昏一种）。
 - **G10 性能回归**：视角加 T0（默认状态）。
@@ -646,7 +662,8 @@ game/data/maps/qingshuihe/cinematics/
 | WP-49a 流程与播放器 | `IAppFlow`（`game/flow`）；`CinematicPlayer`（`game/camera/cinematic`）；四个过场文件（`game/data/maps/qingshuihe/cinematics/`）；§8.4 的检查；预取请求（§10）；跳过与安全落点；与 SYS-SAVE、SYS-MAPS 的衔接；扉页下方首次运行的进度行（§1.1，D-165，读 `IBakeService.Progress`） |
 | WP-49b 标题美术 | T0 构图与云卡布局；`cine_cloud.gdshader`；扉页 8 个变体的出图脚本与美术处理（`game/assets/title/`）；分镜的截图定稿；过场专属元素里的归鸟 |
 | WP-35d 开始页与存档页 | 开始页（片名块、菜单、首次启动的推荐行）、存档页、数据手册、放映层（黑边、字幕、时间读数、标题卡、跳过环、等待灯）；设置项"开场过场"；设置卡的"返回标题"；视觉按 UI-VISUAL |
-| WP-01 | 启动序列（§1）、扉页作为雾幕内容、预热层（layer 4）、`--title`、`--cine` 的解析 || WP-02 | 路径预取、LRU 钉住、前瞻检查与"过场流式欠账"记录 |
+| WP-01 | 启动序列（§1）、扉页作为雾幕内容、预热层（layer 4）、`--title`、`--cine` 的解析 |
+| WP-02 | 路径预取、LRU 钉住、前瞻检查与"过场流式欠账"记录 |
 | WP-06 | Title、Entering、Leaving 下相机不积分输入，由 `SetPose` 外部驱动 |
 | WP-25 | 白鹭的飞行姿态（只给过场用） |
 | WP-27、WP-41 | G2、G7、G13、G14、G16 的增项；截图机在集中测试时出扉页变体；"过场体验"脚本 |
@@ -662,7 +679,7 @@ game/data/maps/qingshuihe/cinematics/
 | 待验证 | 验证前用的初值 | 验证方法 · 负责 |
 | --- | --- | --- |
 | 启动时长（§1.2） | 窗口出现 → 扉页：热启动 ≤ 1.0 s、冷启动 ≤ 1.5 s；→ 转为实时：热启动 ≤ 3.5 s、冷启动 ≤ 9 s | P0 在开发机和一台最低配置的笔记本上实测；WP-01 |
-| 首次运行到转为实时，含底图本机烘焙（§1.2，D-165） | 清空本机缓存后启动，在开发机和一台最低配置的笔记本上实测；WP-01、WP-02、WP-49a | ≤ 25 s；底图 8 线程 ≤ 20 s |
+| 首次运行到转为实时，含底图本机烘焙（§1.2，D-165） | ≤ 25 s；底图 8 线程 ≤ 20 s | 清空本机缓存后启动，在开发机和一台最低配置的笔记本上实测；WP-01、WP-02、WP-49a |
 | T0 的构图（§2.1） | 以图书馆为目标、方位 200°、仰角 9°、距离 3400 m；偏航 12°、俯仰 −1°；垂直视场角 38° | 按截图在方位 ±10°、距离 ±30% 内调整，同步扉页静帧与 ENG-GATES §1 的 T0 位姿；WP-49b |
 | 分镜的坐标与时刻（§3.1、§3.4、§4.1） | 各分镜表的值 | 按截图和 §8.4 的路径检查定稿；WP-49b |
 | `CinematicPlayer` 的主线程开销（§8.3） | 每帧 ≤ 0.05 ms，不分配托管内存 | P0 实测；WP-49a |

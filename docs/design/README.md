@@ -3,6 +3,7 @@ id: CORE-INDEX
 title: 《电光年华》开发文档总索引
 category: core
 summary: 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+keywords: [总索引, 作品定位, 电光年华, 当前范围, 主线, 全局不变量, INV, 坐标约定, 阅读路径, 文档地图, 工作包矩阵, 依赖图, 清水河]
 owners: [WP-00]
 contributors: []
 depends: []
@@ -16,14 +17,22 @@ gates: []
 
 > **范围**：本文规定作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定和阅读路径，并给出全部文档的地图、工作包矩阵和依赖图。
 > **不在本文**：已定决策的登记（CORE-DECISIONS）；文档编码与写法（CORE-CONVENTIONS §7）；术语（CORE-GLOSSARY）；工作包（ENG-WP）；门禁（ENG-GATES）；扩展路线（ENG-ROADMAP）。
+> **查阅**：先读 §0；作品定位看 §1；当前范围与主线看 §2；全局不变量看 §3；坐标与数据看 §4；文档怎么组织看 §5；怎么查文档看 §6；文档地图看 §7；工作包与文档的对应看 §8
 > **关联**：[CORE-DECISIONS 决策登记](core/CORE-DECISIONS.md)、[CORE-CONVENTIONS 约定](core/CORE-CONVENTIONS.md)、[CORE-GLOSSARY 术语表](core/CORE-GLOSSARY.md)、[ENG-WP 工作包](engineering/ENG-WP.md)、[ENG-GATES 验收门禁](engineering/ENG-GATES.md)、[ENG-ARCH 工程架构](engineering/ENG-ARCH.md)、[ENG-ROADMAP 扩展路线](engineering/ENG-ROADMAP.md)
 
 ## 0 结论
 
 - 《电光年华》（*Electric Years*）是一部校园题材的独立 RPG，第一张地图是电子科技大学清水河校区。当前阶段做它的世界与观光模式，RPG 玩法以后按 ENG-ROADMAP 的扩展点接入（§1、§2）。
 - 本目录 `docs/design/` 是唯一的开发依据。每份文档的文件名就是它的编码（例如 SYS-WEATHER），文件头写明主责工作包、依赖和门禁；引用写成"编码 §小节"（CORE-CONVENTIONS §7）。
-- 新会话、新子代理先读本文，再按 §6 的阅读路径读下去。§7 的文档地图、§8 的工作包矩阵和 §9 的依赖图都由各文档的文件头生成。
+- 子代理开工只读开工手册 ENG-ONBOARD（经仓库根的 `CLAUDE.md` 自动载入）和自己的派工行，其余文档按需查（§6，D-178）；主代理和新会话从本文读起。§7 的文档地图、§8 的工作包矩阵和 §9 的依赖图都由各文档的文件头生成，全部小节的目录在 `SECTIONS.md`。
 - `docs/godot-api/` 是 Godot 4.7.2 C# API 参考，写代码前先查它。文档只记录现行状态，不保留修订记录（D-152）。
+
+### 0.1 接入要点
+
+- **任何包**：遵守 §3 的全局不变量 INV-1–INV-12，它们优先于各文档的细则。
+- **主线阶段**：只交主线版，主线的定义见 §2（D-168）。
+- **坐标与数据**：按 §4，细则见 CORE-CONVENTIONS §1。
+- **找文档**：§7 的文档地图每份一行；全部小节见 `SECTIONS.md`；查法见 ENG-ONBOARD §4。
 
 ## 1 作品定位
 
@@ -130,27 +139,24 @@ gates: []
 - **只写现行规则**：不写修订记录、用户原话和调研证据。
 - **新增文档**：放进对应文件夹，写文件头和范围块，再在 §7 登记一行。细则见 CORE-CONVENTIONS §7.7。
 - **冲突**：按 CORE-CONVENTIONS §7.6 的层级判定。REF-PROMPT 是作品描述的备份，与拆分文档冲突时以拆分文档为准（D-153）。
+- **便于查阅**：每份规范文档带 `keywords`、范围块的"查阅"行、§0 结论和 §0 末尾的"接入要点"；小节目录 `docs/design/SECTIONS.md` 列出全部小节的行号与字数，由 `scripts/docs/gen_index.py` 生成（CORE-CONVENTIONS §7.2，D-178）。
 
 ## 6 阅读路径
 
-1. **所有子代理必读**：
-   - 共识层：本文、CORE-DECISIONS、CORE-CONVENTIONS、CORE-GLOSSARY。
-   - 风格与工程：ART-STYLE、ART-FIDELITY、ART-MODELING、ENG-ARCH、ENG-BUDGET、ENG-PERF。
-   - 世界状态：SYS-TIME（至少 §0、§1、§4）、SYS-WEATHER（至少 §0、§2、§3）、SYS-GRAPHICS（至少 §0、§2）。
-   - 派工：ENG-WP 里自己那一行，以及 ENG-WP §4 的通用简报。
-   - 其余系统文档至少读各自的 §0 结论：UI-VISUAL、SYS-ATLAS、SYS-TITLE、SYS-SAVE、SYS-MAPS、WLD-OUTSKIRTS、WLD-INTERIORS、SYS-AUDIO。
-   - SYS-MAPS §2 要整节读：所有按图的数据都在 `game/data/maps/qingshuihe/` 下。
-2. **写 Godot 代码的包**：以 [../godot-api/](../godot-api/README.md) 里的签名为准，不凭记忆写 API。模型记忆里混着 Godot 3 和 4 的旧写法，这是最常见的错误来源。
-3. **按工作包读**：自己工作包的专属文件，即 ENG-WP 表里"额外必读"一列；§8 的矩阵列出每个包是哪些文档的主责、在哪些文档里有增量。
-4. **建模和内容包**：
-   - 读 MAP-QSH-ADDITIONS 里与自己相关的小节，以及 MAP-QSH-ADDITIONS §7 的分工表。
-   - 区域包和部件包还要读 SYS-WALK §6–§8 和 SYS-WALK §13（碰撞体）。
-   - 有开放室内的包（WP-17、WP-31a–c）和区域包，读 WLD-INTERIORS，至少 §0、§4、§10、§14。
-   - 外围包（WP-47）和与校界有关的包（WP-06、WP-22、WP-30、WP-42、WP-44），读 WLD-OUTSKIRTS。
-   - 填碰撞体时同时填 `Foot` 材质（SYS-AUDIO §9.3）。有声音的部件（售货机、空调外机、广播喇叭、雨棚等）实现 `Sounds()` 插座（SYS-AUDIO §4.2）。
-   - 有存档段的包读 SYS-SAVE §2 和 SYS-SAVE §10。
-5. **主代理与改文档的人**：CORE-CONVENTIONS §7–§8、ENG-WP §5、CORE-DECISIONS §0。
-6. **准备做 RPG 时**：ENG-ROADMAP 全文、ENG-ARCH 末尾的"扩展点（RPG）"一节、SYS-SAVE §10、SYS-ATLAS §11。
+文档按需查，不要求开工前通读（D-178）。
+
+1. **子代理**：开工只读开工手册 ENG-ONBOARD（仓库根的 `CLAUDE.md` 会自动引入它）、ENG-WP §2 与 ENG-WP §2.1 里本包的两行，以及派工简报。其余按 ENG-ONBOARD §4 查：
+   - 先在小节目录 `docs/design/SECTIONS.md` 里按关键词或编码定位，再只读需要的小节；
+   - 碰到别的系统，先看那份文档 §0 末尾的"接入要点"；按要做的事查哪里，见 ENG-ONBOARD §4.2。
+2. **写 Godot 代码的包**：以 [../godot-api/](../godot-api/README.md) 里的签名为准，不凭记忆写 API（D-145）。模型记忆里混着 Godot 3 和 4 的旧写法，这是最常见的错误来源。
+3. **按包类型的常用起点**（需要时查，不是通读清单）：
+   - 区域包与部件包：MAP-QSH-ADDITIONS §7 的分工表和本区的 MAP-QSH 文档；碰撞体与可行走数据 SYS-WALK §6–§8、SYS-WALK §13；碰撞体的 `Foot` 材质与有声部件的 `Sounds()` 插座 SYS-AUDIO §9.3、SYS-AUDIO §4.2。
+   - 有开放室内的包（WP-17、WP-31a–c）和区域包：WLD-INTERIORS §0、§4、§10、§14。
+   - 外围包（WP-47）和与校界有关的包（WP-06、WP-22、WP-30、WP-42、WP-44）：WLD-OUTSKIRTS §0。
+   - 有存档段的包：SYS-SAVE §2、SYS-SAVE §10。
+   - §8 的矩阵列出每个包是哪些文档的主责、在哪些文档里有增量。
+4. **主代理与改文档的人**：先读本文和 ENG-STATUS；改文档按 CORE-CONVENTIONS §7–§8、ENG-WP §5、CORE-DECISIONS §0。
+5. **准备做 RPG 时**：ENG-ROADMAP 全文、ENG-ARCH 末尾的"扩展点（RPG）"一节、SYS-SAVE §10、SYS-ATLAS §11。
 
 ## 7 文档地图
 
@@ -227,10 +233,11 @@ gates: []
 | [ENG-ARCH](engineering/ENG-ARCH.md) 工程架构：模块边界、接口契约与并行开发流程 | 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程 | WP-00 | G1、G2、G3、G4、G5、G6 |
 | [ENG-BUDGET](engineering/ENG-BUDGET.md) 性能预算与硬规则 | 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置 | WP-00 | G4、G5、G6、G8、G10、G11、G13、G14、G15、G16、G17、G20、G21 |
 | [ENG-GATES](engineering/ENG-GATES.md) 验收：门禁、审查视角、近景巡检、回报格式 | 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式 | WP-27 | G1、G2、G3、G4、G5、G6、G7、G8、G9、G10、G11、G12、G13、G14、G15、G16、G17、G18、G19、G20、G21 |
+| [ENG-ONBOARD](engineering/ENG-ONBOARD.md) 子代理开工手册 | 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报 | WP-00 | — |
 | [ENG-PERF](engineering/ENG-PERF.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
 | [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口和活跃工作包的进度 | WP-00 | — |
-| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：54 个工作包，可并行 53 个 | 54 个工作包的划分、独占目录、必读、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
+| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：54 个工作包，可并行 53 个 | 54 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
 
 ### 7.8 参考 `reference/`
 
@@ -277,11 +284,11 @@ gates: []
 
 ## 8 工作包与文档
 
-主责与增量取自各文档文件头的 `owners`、`contributors`；独占目录、必读与交付以 ENG-WP 为准。
+主责与增量取自各文档文件头的 `owners`、`contributors`；独占目录、起读与交付以 ENG-WP 为准。
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-STATUS、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS |
+| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ONBOARD、ENG-ROADMAP、ENG-STATUS、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |
@@ -408,6 +415,7 @@ graph LR
     ENG_ARCH["ENG-ARCH"]
     ENG_BUDGET["ENG-BUDGET"]
     ENG_GATES["ENG-GATES"]
+    ENG_ONBOARD["ENG-ONBOARD"]
     ENG_PERF["ENG-PERF"]
     ENG_ROADMAP["ENG-ROADMAP"]
     ENG_STATUS["ENG-STATUS"]
@@ -493,6 +501,9 @@ graph LR
   WLD_OUTSKIRTS --> ENG_GATES
   WLD_INTERIORS --> ENG_GATES
   SYS_AUDIO --> ENG_GATES
+  CORE_CONVENTIONS --> ENG_ONBOARD
+  ENG_ARCH --> ENG_ONBOARD
+  ENG_WP --> ENG_ONBOARD
   ENG_ARCH --> ENG_PERF
   ENG_BUDGET --> ENG_PERF
   SYS_TIME --> ENG_PERF

@@ -3,6 +3,7 @@ id: SYS-SAVE
 title: "存档与持久化：存档模型、存什么、格式与迁移、保存时机、加载与一致性、安全、契约与验收"
 category: systems
 summary: "规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20"
+keywords: [存档, 保存, 读档, 自动保存, 存档位, 世界线, 存档段, 段版本, 存档迁移, 金档, 落定快照, 安全时刻, 续跑等价, 世界实例, 校验修复, 存档损坏, 单实例锁, 设置文件安全, 退出保存, ISaveService, SaveSectionAttribute, ISaveSection, SaveReason, LoadScope, RestorePhase, SaveMeta, IWorldState.Instance, FlushForQuit, CompleteResume, "user://saves/"]
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a]
 depends: [ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
@@ -16,6 +17,7 @@ gates: [G2, G4, G5, G10, G16, G20]
 
 > **范围**：本文规定存档服务 `ISaveService`：存档位与世界线、各存档段存什么、文件格式与版本迁移、保存时机与可靠性、读档流程与"状态一致"的定义、关游戏期间不计时、损坏与版本不兼容、设置类文件的安全读写、契约、帧顺序里的存档一步、命令行，以及 G20 门禁。
 > **不在本文**：各段的字段由各自的包负责（例如平面地图段见 SYS-ATLAS §12）；开始页与继续过场的流程（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）；音频设置的内容（SYS-AUDIO）。
+> **查阅**：先读 §0；各存档段存什么、恢复阶段与顺序看 §2；文件格式、DTO 约定与版本迁移看 §3；保存时机、安全时刻与退出流程看 §4；读档顺序与世界实例看 §5；设置类文件的安全读写看 §8；契约签名与一段的写法示例看 §10；G20 看 §14
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-MAPS 多地图](SYS-MAPS.md)；[CORE-INDEX 总索引](../README.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS.md)
 
 **分工**：WP-50 存档与持久化，独占 `game/kernel/save`，P0 交付。WP-00、01、02、06、26、27、32、34、35、36、42、43、45、46、48、49、53 各有增量（§15）。
@@ -36,7 +38,7 @@ gates: [G2, G4, G5, G10, G16, G20]
    - 关键动作落定后；
    - 窗口失焦时。
 
-   两次之间至少隔 30 s，只在安全时刻拍快照。Godot 在 Windows 上收不到关机消息，所以定时保存是唯一的兜底（§4）。
+   定时、落定、失焦这几类请求两次之间至少隔 30 s，在安全时刻拍快照，最多顺延 60 s 后拍强制快照；退出、返回标题、新游戏交还控制不限频、立即执行（§4.1、§4.2）。Godot 在 Windows 上收不到关机消息，所以定时保存是唯一的兜底（§4）。
 5. **一致性**：
    - 读档后的状态等于存档那一刻的"落定状态"；
    - 在安全时刻拍的存档，读档后给相同输入，世界和天气与没退出时逐帧一致（续跑等价，§5.3）；
@@ -45,6 +47,21 @@ gates: [G2, G4, G5, G10, G16, G20]
 6. **两点代价**：
    - 断电、强杀进程、系统关机时收不到退出信号，最多丢最近 5 分钟（定时保存的间隔）；
    - "状态一致"指世界的落定状态。正在进行的过渡、偶发事件、打开着的面板不续播：读档后过渡直接落到终点，界面回到界面态。做到"连过渡中途都续上"代价很高，收益很小，不做。
+
+### 0.1 接入要点
+
+- **有要跨读档保留的状态**：在本包的 `[KernelService]` 或 `[KernelNode]` 类上实现 `ISaveSection<T>` 并标 `[SaveSection]`，写明 Id、Owner、Version、Phase、Order，由注册器自动发现；不自己读写 `user://`，不加 Autoload（§2、§10）
+- **决定一段存什么**：只存读档后重建不出来的落定状态；音频状态、打开的面板、偶发事件计时、流式与画质统计、`user://cache/bake/` 都不进存档，读档后各自重建（§2、§5.3）
+- **定义段的数据**：每段一个只读 `sealed record`，只放基础类型、`System.Numerics` 向量、契约里的枚举和 ID；本包自写源生成的 `JsonSerializerContext`，约定与 `ContractJson.Options` 相同；不放 `object`、`JsonElement`、Godot 类型，不用开放多态（§3.5）
+- **段的字段有任何增减**（哪怕只加一个可选字段）：`[SaveSection]` 的 `Version` 加 1，并实现 `Migrate(fromVersion, JsonNode)` 迁到下一版；迁移是纯函数，在后台线程调用，不碰 Godot、不读服务状态（§3.6）
+- **实现 `Capture` 与 `Restore`**：`Capture` 在主线程、任何时刻都给出落定值（过渡中取终点，空中或水里取最近的安全点），不做 I/O，全部段合计 p99 ≤ 0.3 ms；有过渡进行时让 `IsSettled` 返回 false；`Restore` 立即生效、不做过渡，核对数组长度与数值范围，每修一处调 `RestoreContext.Repair()`（§4.2、§5.6、§9）
+- **存档里要引用别的数据**：只存 ID，不存文件路径；ID 不复用，改名不改身份；确需换 ID 时由负责那份数据的包提交本图目录的 `id-remap.json`，引用它的段各升一次 `v`（§3.6、§9）
+- **关键动作落定、要触发一次保存**：调 `ISaveService.Request`，原因用 `Settled`、`MapChanged`、`FocusLost` 等，由存档服务合并、限频、等安全时刻，只在漫游态有效；`SaveNow` 只用于新游戏交还控制、门禁和预留的手动槽（§4.1、§10）
+- **看到 `IWorldState.Instance` 变了**：做平滑、带回差或保留历史的系统（钟点弹簧、天气插值、界面主题回差、窗灯错开、植被近池、声音平滑量等）把内部状态直接设成新世界的值，不做过渡；`WorldHours` 的单调只在同一实例内比较（§5.2）
+- **读写档案级设置文件**（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）：先查文本里有没有 `Object(` 等写法，再 `ConfigFile.Parse`，只接受 bool、int、float、String；写 `.tmp`、`Flush(true)` 后 `File.Replace`；不用 `ConfigFile.Save`、`DirAccess.Rename`（§8）
+- **任何代码读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档段的实现里也不用 ConfigFile、`GD.StrToVar`、`GD.BytesToVar*`、`FileAccess.GetVar`、Godot 的 `Json` 和不带 `JsonTypeInfo` 的 `JsonSerializer` 重载（G4，§9）
+- **界面要显示存档或保存结果**：只经 `ISaveService`（`Slots`、`State`、`Thumbnail`、`SlotsChanged`）读，不自己解析 `.sav`；失败原因用 `save.error.*` 文案键（§4.6、§10）
+- **想用现实时间**：系统时钟只能在 `Campus.Kernel.Save` 里读、只写进 meta 的 `savedAtUnix`；世界状态不读它，读档也不补关着游戏的那段时间（§6）
 
 ## 1 存档模型
 
@@ -236,7 +253,7 @@ user://saves/
 
   G2 比对两套约定的输出一致。
 - **DTO**：每段一个 `sealed record`，只读，只放基础类型、`System.Numerics` 向量、契约里的枚举和 ID。不放 `object`、`JsonElement`、Godot 类型，也不用开放的多态。
-- **缺字段要报错**：字段标为必需（P0 核对 .NET 8 源生成下的行为，§17）；同一版本里出现未知字段也报错（`JsonUnmappedMemberHandling.Disallow`）；读到本构建不认识的枚举字符串同样报错（ENG-ROADMAP §6 第 4 条）。这三种情况都按"这一段不合法"处理（§7）。
+- **缺字段要报错**：字段标为必需（P0 核对 .NET 10 源生成下的行为，§17）；同一版本里出现未知字段也报错（`JsonUnmappedMemberHandling.Disallow`）；读到本构建不认识的枚举字符串同样报错（ENG-ROADMAP §6 第 4 条）。这三种情况都按"这一段不合法"处理（§7）。
 - **浮点**：double 和 float 按最短往返格式写。NaN 和 ∞ 写不进 JSON，序列化会抛异常：快照里出现它们就是 bug，由 G20 抓。
 - **只用带 `JsonTypeInfo` 的重载**：存档代码不用反射式序列化（G4）。如果全工程的 JSON 以后都改成源生成，可以在 csproj 设 `JsonSerializerIsReflectionEnabledByDefault=false`（待定，§17）。
 
@@ -893,7 +910,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
 | 待验证 | 验证前用的初值 | 验证方法 · 负责 |
 | --- | --- | --- |
 | 缩略图分两帧抓（§3.4） | 第 N 帧在存档那一步隐藏界面根节点，第 N+1 帧 `GetImage()` 拿到第 N 帧不带界面的画面 | P0 在引擎里核对；WP-50 |
-| 源生成下"缺字段要报错"（§3.5） | 字段标为必需 | P0 核对 .NET 8 源生成下的行为；WP-50 |
+| 源生成下"缺字段要报错"（§3.5） | 字段标为必需 | P0 核对 .NET 10 源生成下的行为；WP-50 |
 | 全工程关闭反射式 JSON（§3.5） | 不设 `JsonSerializerIsReflectionEnabledByDefault=false` | 全工程的 JSON 都改成源生成之后由 WP-00 决定 |
 | 读档的主线程恢复（§13） | 观光档 ≤ 2 ms | P0 实测；WP-50 |
 | 系统关机、注销时的保存（§4.4） | 不处理 WM_QUERYENDSESSION，靠每 5 分钟的定时保存兜底 | P2 评估是否子类化窗口过程、接住后同步保存；WP-01、WP-50 |

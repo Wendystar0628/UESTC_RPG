@@ -3,6 +3,7 @@ id: OPS-RELEASE
 title: 发布与交付
 category: ops
 summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
+keywords: [发布, 发版, 交付, 版本号, version.txt, 构建信息, 导出, 导出入口, scripts/release, 分发压缩包, 安装包, UESTC-<版本>-win64.7z, 地图数据包, map-data-<版本>.zip, ODbL, 正式用户目录, '%APPDATA%\UESTC', 安装, 更新, 升级, 卸载, 清理用户数据, 诊断包, 导出诊断, 试玩反馈, 许可, MIT, LICENSE, 发布页, 干净环境验证]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-08, WP-35, WP-47, WP-50]
 depends: [ENG-ARCH, ENG-PERF, ENG-GATES]
@@ -16,6 +17,7 @@ gates: [G6]
 
 > **范围**：本文规定对外交付的流程：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩时出了问题怎样交回诊断材料，以及本作各部分按什么许可公开。
 > **不在本文**：构建信息的生成步骤（ENG-ARCH §4）；正式版目录名的设置（ENG-ARCH §2）；安装包的组成与体积（ENG-PERF §8、ENG-BUDGET §8）；导出门禁 G6（ENG-GATES §2）；日志的格式、上限与诊断摘要的字段（ENG-PERF §12.6）；存档的格式与失败处理（SYS-SAVE）；许可页与 `LICENSES.txt` 的文本内容（SYS-VIEW §6）。
+> **查阅**：先读 §0；版本号与构建信息看 §1；用户数据目录看 §2；导出与发布的步骤看 §3；安装、更新与卸载看 §4；地图数据包看 §5；故障与诊断看 §6；许可看 §7
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)
 
 ### 分工
@@ -35,6 +37,19 @@ gates: [G6]
 4. **更新解压到新目录**，不覆盖旧目录；卸载程序和清理用户数据是两件事，分开做。
 5. **试玩出问题时交回诊断包**：默认只含日志和诊断摘要，存档由玩家另选。
 6. **许可分四类**：代码与脚本用 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据按 ODbL 1.0；第三方素材按各自许可（§7）。
+
+### 0.1 接入要点
+
+- **要显示或记录版本**：只读构建信息 `<版本>+<提交>`（来自 `version.txt` 加当前提交），别处不另写版本号；`version.txt` 只由主代理在发版时改（§1）
+- **判断存档能不能读**：只看存档自己的各层版本号，构建信息只用于显示和定位问题（§1）
+- **要读写用户数据**：正式版的 `user://` 是 `%APPDATA%\UESTC\`，不带版本号、不改名；开发态用 `UESTC_DEV`、`UESTC_WPxx`；门禁和基准不读任何 `user://` 文件（§2）
+- **改了导出配置、用户目录或存档格式**：要再走一遍干净环境验证；在回报里点明改了哪一项，由主代理安排（§3）
+- **打启动集或地图数据包**：启动集 `boot_<地图>.pck` 由 WP-02 打、导出入口 `scripts/release/` 调用；地图数据包由 WP-08 打，外围部分由 WP-47 提供，内容与安装包里的是同一份字节（§3、§5）
+- **写日志**：本机路径写成 `user://…`，不写出 Windows 用户名；日志与诊断摘要的字段以 ENG-PERF §12.6 为准（§6）
+- **复现试玩问题**：按诊断包或存档里的提交号检出代码复现，结论写进回报（§6、ENG-GATES §5）
+- **引入第三方素材或代码**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL；登记进 `third_party.json` 或 `game/data/audio/licenses.json`，汇总进 `LICENSES.txt`（§7）
+- **写许可页、`LICENSES.txt` 或数据包说明**：与 `README.md` 的"许可"一段对同一类内容写同一种许可，并指向本版本的 `map-data-<版本>.zip`（§5、§7）
+- **场景或文案涉及学校标识**：本作不是校方作品；校徽、红十字换成原创图形（§7）
 
 ## 1 版本号与构建信息
 

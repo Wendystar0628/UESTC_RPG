@@ -3,6 +3,7 @@ id: SYS-TIME
 title: 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 category: systems
 summary: 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+keywords: [世界状态, 钟点, 季节, 世界时间, 世界实例, 流逝倍率, 落金初灯, 默认状态, IWorldState, IWorldControl, WorldPreset, WorldTransition, ClockSetMode, FlowTo, 美术太阳, 美术月亮, 主光交接, 退光线, 色彩脚本, 调色板关键帧, 季相行, 英雄帧, 四季内容, 换季转场, 改时间, 延时摄影快进, 每帧顺序, 灯光时刻表, lighting-schedule.json, 有效太阳高度]
 owners: [WP-34, WP-37, WP-38, WP-39, WP-41]
 contributors: [WP-03, WP-04, WP-22, WP-26, WP-35, WP-40, WP-45, WP-46, WP-47]
 depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-WEATHER]
@@ -16,6 +17,7 @@ gates: [G2, G7, G12, G13, G16]
 
 > **范围**：本文规定世界状态（钟点、季节、天气）与控制契约、美术太阳与月亮、色彩脚本、四季内容、改时间、换季与换天气的过渡、灯光与生活痕迹的时刻表，以及时间季节的验收。
 > **不在本文**：天气的过程、画面规则与验收见 SYS-WEATHER；动态节奏、偶发事件与转场的动态一侧见 SYS-MOTION；画面设置见 SYS-GRAPHICS；时间环与界面主题见 UI-NAV、UI-VISUAL；新游戏与开始页见 SYS-TITLE；存档与世界实例见 SYS-SAVE；按图的默认状态见 SYS-MAPS。
+> **查阅**：先读 §0；`IWorldState`、`IWorldControl` 契约与每帧顺序看 §1；日月轨迹与主光交接看 §2；调色板与色彩脚本看 §3；季节内容及植被、覆雪的实现看 §4；改时间、换季与同时转场看 §5；灯光时刻表看 §6；验收与出图看 §8
 > **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)；[WLD-VEGETATION 植被](../world/WLD-VEGETATION.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)
 
 ### 分工
@@ -33,7 +35,7 @@ gates: [G2, G7, G12, G13, G16]
 
 时刻和季节都能在界面上调，每一种组合都要好看，切换自然过渡、不能硬切；所有表现以视觉效果为先，真实数据只作参考（CORE-INDEX）。
 
-1. **默认状态**：秋季 17:30、1×、晴、自动天气，天气保持晴到秋季黄昏带结束（约 19:36，SYS-WEATHER §6.6）。它是**新游戏的终态和新存档的初值**（SYS-SAVE §5.5）：新游戏的过场从秋 17:05 以 60× 正向推到 17:30 停住，交还控制时转 1×，所以任何种子下新游戏交还那一刻的画面都相同（SYS-TITLE §3、SYS-TITLE §6）。默认状态的叙事和基准视角都作为新游戏过场的终点。"落金初灯"是默认状态的名字。
+1. **默认状态**：秋季 17:30、1×、晴、自动天气，天气保持晴到秋季黄昏带结束（约 19:36，SYS-WEATHER §6.6）。它是**新游戏的终态和新存档的初值**（SYS-SAVE §5.5）：新游戏的过场从秋 17:05 正向推到 17:30 停住（完整版以 60× 推进，简短版、关与跳过的倍率按 §1），交还控制时转 1×，所以任何种子下新游戏交还那一刻的画面都相同（SYS-TITLE §3、SYS-TITLE §6）。默认状态的叙事和基准视角都作为新游戏过场的终点。"落金初灯"是默认状态的名字。
    - **按图**：默认状态是每张图的 `world.default`（SYS-MAPS §3）；清水河的就是上面这一组，名字"落金初灯"。新游戏从起始图的默认状态开始；新游戏一律从落金初灯开始（SYS-SAVE）。
    - **开始页**显示最近存档的世界状态，流逝停住（`IAppFlow` 冻结），`AnimTime` 照走（SYS-TITLE §7.2）；没有存档时显示预览世界，即新游戏的终态。
 2. **世界状态有三个量**：
@@ -48,8 +50,23 @@ gates: [G2, G7, G12, G13, G16]
 5. **季节变化全部做成连续参数**，靠"阈值生长"表现：插片缩放、插片换成枝条笔触、地面遮罩阈值、按法线方向覆雪。不换模型，不重建格子，不切特化开关、不新增管线编译。天气同样只改参数（SYS-WEATHER §0）。
 6. **过渡要有美感**：
    - 改时间：像延时摄影一样向前快进到下一次出现的那个钟点，最长 3 s。
-   - 换季：约 4 s 的正向转场，依次是扬起、雾幕、落定，同时有一阵风从西湖向东推过全校。
+   - 换季：正向转场，相邻一季约 4 s、隔一季 5.5 s（以 §5 为准），依次是扬起、雾幕、落定，同时有一阵风从西湖向东推过全校。
    - 换天气：天气向量连续插值，按 SYS-WEATHER §6.5 的编排过渡，不硬切。
+
+### 0.1 接入要点
+
+- **要读钟点、季节、日月或天气**：C# 只经 `IWorldState` 读（Kernel 服务，WP-34），不自己写计时器；着色器不读 C# 对象，只读 WorldState 写的全局着色器参数（§1）
+- **要改时间、季节、天气或套用推荐状态**：只经 `IWorldControl`；时间只向前（`SetClock` 跳到下一次出现、`Advance`、`FlowTo`），换季一律正向转场；读档经存档段 `world` 恢复，不经 `IWorldControl`；`Freeze` 只给测试构建（§1）
+- **节点每帧要用本帧的世界状态**：用 `ProcessPriority` 排在 WorldState（−1000）之后，取值与 ENG-ARCH §3 的 `FramePriority` 表一致，任何两步不得同值（§1"每帧顺序"）
+- **要写全局着色器参数**：用 `RenderingServer.GlobalShaderParameterSet`，参数先登记进 ENG-PERF §1.5 的登记表（项目设置 Shader Globals）；数组做成数据纹理；禁止从脚本读回全局参数（§1）
+- **着色器要用时间**：禁用内置 `TIME`，周期动画读 `anim_time`（`AnimTime`，480 s 循环，与世界时间无关）；`Engine.TimeScale` 固定为 1，暂停不用 `SceneTree.Paused`（§1；SYS-MOTION §1.6）
+- **内容随时刻、季节、天气变化**：不换模型、不重建格子、不切特化开关、不新增管线编译；颜色从全局调色板纹理读（当前行与季相行），季节变化走连续参数、阈值生长和地面遮罩（§3.1、§4"实现"）
+- **要用新的颜色（色名、季相色）**：由 WP-04 登记进调色板、WP-37 定值，所有着色器读同一张调色板纹理；季相行已排满 60 行（§3.1、§3.3）
+- **要加光源或用主光**：只有一盏主光（DirectionalLight3D，WP-03 驱动，日月轮流担任），颜色和强度经调色板与全局参数进卡通材质，不改灯的颜色属性（§2）
+- **有灯、窗、屏幕要随时刻亮灭**：接进 WP-39 的灯光通道，时刻表写在 `game/data/maps/<地图>/lighting-schedule.json`，不新增灯光通道；按太阳高度求值的灯类曲线用有效太阳高度 h_eff（§6）
+- **界面要显示世界状态或天气**：经 HudModel 的 0.1 s 采样读，不直接读 WorldState；界面主题由 `UiThemeClock` 写 `ui_night`，WorldState 不写（§1"界面读数"）
+- **世界实例换了（读档、新游戏）**：`IWorldState.Instance` 变化的那一帧，自己的过渡直接落到新值，不做过渡；不跨实例比较 `WorldHours`（§1）
+- **内容要进时季验收**：在窗口模式下用默认命令行串截图，等流式队列为空、管线编译计数不再增长再存；"前推 24 小时""四季轮换""天气巡回"跑完 DRAW 编译计数为 0（§8）
 
 ## 1 世界状态与控制（WP-34）
 
@@ -240,7 +257,7 @@ public interface IWorldControl
 - **不需要手调 4 × 19 套**：只手调秋季的 12 张基准关键帧（§3.2），再加四季的修正量（§3.3）和少量季节专属覆盖。其余颜色按 ART-STYLE §8.3 和 ART-STYLE §3.2 的规则推导：
   - 受光色 = 固有色 × 主光色 × 饱和增益；
   - 影色：明度 L = 受光 L × r × r_mat；彩度 ×1.1（植被 ×0.85，增彩上限 +0.03）；色相从**固有色**出发向 `ambient.sky` 的色相小转，最多 8°（植被 15°），黄、橙不往绿转，非绿色材质的影不落橄榄区；中性材质（固有色彩度 < 0.06）再混入天光色，权重至少 w_min（ART-STYLE §3.2）。
-  - 室内：调色板行 2（室内影色）同上推导，r_in = 0.80，`ambient.sky` 换成 `interior.warm`；行 3（室内受光色）= 固有色 × 主光色、彩度 ×1.2、色相向橙最多转 5°（ART-STYLE §3.4）。
+  - 室内：调色板行 2（室内影色）按上一条"影色"的规则推导，r_in = 0.80，`ambient.sky` 换成 `interior.warm`；行 3（室内受光色）= 固有色 × 主光色、彩度 ×1.2、色相向橙最多转 5°（ART-STYLE §3.4）。
   - 约束（WP-37 自检，§8）：浅色面的影 L 白天 ≥ 0.74、默认格 ≥ 0.68；有彩材质的影保住身份色。
 - **叠加顺序**：关键帧（§3.2）→ 四季修正与季节专属覆盖（§3.3）→ **天气修正量**（SYS-WEATHER §2、SYS-WEATHER §7）→ 转场雾幕（§5）→ 介质（SYS-VIEW §5）。
   - 天气修正量按天气向量（SYS-WEATHER §8）连续插值，晴天为 0。主要几项：阴天主光 −1.0 EV、大雨 −1.3 EV；影明度比 r 取 max(r, 0.88 + 0.04 × 阴度)（软光，影浅），`ambient.sky` 向 `weather.overcast` 的色相混合阴度那么多（满阴约 C 0.022 / h 320）；雨后初晴饱和 +0.08；关键帧里的"云量"由天气改写（SYS-WEATHER §2）。
@@ -513,7 +530,7 @@ public interface IWorldControl
   - 每张图都要等流式加载队列为空、`Performance` 的管线编译计数不再增长之后再存（门禁 G7，ENG-GATES §2）。
   - "前推 24 小时""四季轮换""天气巡回"三条脚本和天气录像用 Movie Maker 出帧序列：`--write-movie out.png --fixed-fps 60 --quit-after N`，再加"流式屏障"（各环都就绪才推进下一帧），保证同一构建、同一种子下帧序列可复现（门禁 G13）。无硬切检测就在这串帧上算。
   - 天气录像另录：跳转和拨时间环的一次过渡、快进经过降水、换季替换、手动 ↔ 自动、过渡途中打断，以及"减少动态效果"下的同样几条（SYS-WEATHER §9）。
-- **无硬切检测**：过渡期间，相邻两帧的平均 OKLab ΔE 不超过 2，最大局部 ΔE 不超过 6，有雾幕遮罩的区间除外；闪电帧打标记另判（SYS-WEATHER §5、SYS-WEATHER §9）。阴影方向变化按 ENG-PERF §10.1 的方向量化规则检查：慢变时只在跨过量化步时转灯；快速变化时连续转动；日月换向只发生在 `shadow_strength` = 0 的帧。时间只向前：帧序列里 `WorldHours` 不得减小，太阳在弧线上的位置不得倒退（换季时 u 保持不变，§5）。单调性只在同一个世界实例里检查，实例切换的那一帧以 `Instance` 区分（SYS-SAVE §5.2）；新游戏过场里的 60× 前推按同一条世界轨检查，跳过的终态与完整播放逐位相同（SYS-TITLE §11.2 的 G2）。
+- **无硬切检测**：过渡期间，相邻两帧的平均 OKLab ΔE 不超过 2，最大局部 ΔE 不超过 6，有雾幕遮罩的区间除外；闪电帧打标记另判（SYS-WEATHER §5、SYS-WEATHER §9）。阴影方向变化按 ENG-PERF §10.1 的方向量化规则检查：慢变时只在跨过量化步时转灯；快速变化时连续转动；日月换向只发生在 `shadow_strength` = 0 的帧。时间只向前：帧序列里 `WorldHours` 不得减小，太阳在弧线上的位置不得倒退（换季时 u 保持不变，§5）。单调性只在同一个世界实例里检查，实例切换的那一帧以 `Instance` 区分（SYS-SAVE §5.2）；新游戏过场里的前推（完整版 60×，简短版、关与跳过的倍率按 §1）按同一条世界轨检查，跳过的终态与完整播放逐位相同（SYS-TITLE §11.2 的 G2）。
 - **管线编译判据**：雾幕之后（有开始页时从标题页转为实时那一刻起），`Performance.Monitor.PipelineCompilationsSurface`、`PipelineCompilationsDraw` 和 `PipelineCompilationsCanvas` 的计数不得再增长；"前推 24 小时""四季轮换""天气巡回"三条脚本跑完，DRAW 编译计数为 0。改时间、换季、换天气只改参数值和全局纹理的内容，不切任何特化开关（ENG-GATES §2）。
 - **调色板逐行自检**，即影色自检，按 ART-STYLE §3 做（推导规则 ART-STYLE §3.2，夜间与阴雨 ART-STYLE §3.6）。白天和黄昏的影只查明度和身份色，不查"偏蓝紫"；只有夜间判蓝紫：
   - 中性材质（固有色彩度 < 0.06）的影色相落在当前 `ambient.sky` 色相 ±30° 内；

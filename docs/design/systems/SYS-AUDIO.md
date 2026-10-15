@@ -3,6 +3,7 @@ id: SYS-AUDIO
 title: "音频：环境声、观者声、空间声学、界面音效与混音"
 category: systems
 summary: "声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁"
+keywords: [音频, 声音, 环境声, 声景, 观者声, 脚步声, 空间声学, 混响, 混音, 音频总线, 界面音效, 开场音乐, 音量设置, 远雷, 钟声, 校园广播, 人迹声, 素材许可, IAudioService, IAmbienceService, IFoleyService, IAcousticEnv, IWalkTelemetry, AudioBuses, FootMat, AmbientEmitter, SoundSocketDecl, audio.cfg, licenses.json, G21]
 owners: [WP-53]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-07, WP-11, WP-13, WP-15, WP-17, WP-24, WP-25, WP-26, WP-27, WP-28, WP-30, WP-31, WP-35, WP-36, WP-38, WP-39, WP-40, WP-41, WP-42, WP-43, WP-45, WP-46, WP-48, WP-49, WP-51]
 depends: [SYS-MOTION, SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
@@ -15,6 +16,7 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 
 > **范围**：本文规定全部声音：音频内核与混音（总线、五组音量、声部池），环境声景与天气声，远雷、钟声与广播，观者声（脚步、门、飞行风），空间声学（窄处脚步更明显），界面音效，开场音乐的挂点，素材与许可，以及契约、帧顺序、预算与 G21 门禁。声音只读世界状态，要和画面、所处环境对得上；同一动作在不同地方听起来不一样。
 > **不在本文**：雾幕与介质判定（SYS-VIEW，WP-01、WP-07）；自动门的状态机与参数（WLD-INTERIORS §4.1）；界面的视觉与动效（UI-VISUAL）；过场的编排（SYS-TITLE）；切图流程（SYS-MAPS）；画面设置（SYS-GRAPHICS，声音不是画面单项）。
+> **查阅**：先读 §0；契约签名看 §19；各包要为音频补的增量看 §21.2；发声器与数据文件位置看 §4.2；脚步材质 `FootMat` 看 §9.3；房间与门户声明看 §10.4；素材许可与入库看 §14；帧顺序看 §20
 > **关联**：[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间与季节](SYS-TIME.md)、[SYS-WALK 行走模式](SYS-WALK.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[CORE-INDEX 总览](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
 
 ### 分工
@@ -33,10 +35,25 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 7. **"窄处脚步更明显"来自四个机制**：近墙早期反射、混响能量、室内底噪低、小房间低频模态。用"4 m 声学网格 + 房间与门户 + 行走射线细化 + 声源侧混响区"实现，听者所在空间用 A/B 两个空间槽交叉切换。原型里同一段脚步，走廊比广场的 400 ms 响度高 +3.6 dB（§10）。
 8. **界面音效**按 UI-VISUAL的动效频率分级：高频事件默认无声，低频编排配短而轻的玻璃质感音，悬停默认无声（§11）。开场音乐只留挂点，原创作品做好之前，开始页只放高空环境床（§12）。
 9. **素材**：CC0 优先，其次是 Sonniss GDC 这类可随游戏发布的免费包；CC BY 允许，但要署名；NC、ND、BBC、BY-SA、GPL 一律不用；素材走 Git LFS，入库脚本统一标定响度、真峰值和循环接缝（§14）。
-10. **预算**：主线程平均 ≤ 0.35 ms、p95 ≤ 0.5 ms，从 ENG-PERF §6 的"余量 ≥ 0.5 ms"里划出，划完开发机余量约 0.15 ms；最低配置档默认把在播 3D 声源上限降到 24、次要的床退成 2 个锚点，守住同一个数（§18.1）；在播 3D 声源 ≤ 32；混音线程 ≤ 一个核的 10%；常驻内存 ≤ 96 MB；导出包里音频单列 ≤ 165 MB（实际 125–165 MB），G6 的导出总上限为 1.8 GB（§18.2）；GPU 为 0。
+10. **预算**：主线程平均 ≤ 0.35 ms、p95 ≤ 0.5 ms，从 ENG-PERF §6 主线程表的余量里划出（计入音频之前 ≥ 0.5 ms），划完开发机余量约 0.15 ms；最低配置档默认把在播 3D 声源上限降到 24、次要的床退成 2 个锚点，守住同一个数（§18.1）；在播 3D 声源 ≤ 32；混音线程 ≤ 一个核的 10%；常驻内存 ≤ 96 MB；导出包里音频单列 ≤ 165 MB（实际 125–165 MB），它计入 G6 的安装目录上限 0.9 GB 和分发压缩包上限 0.7 GB（§18.2）；GPU 为 0。
 11. **帧顺序**：音频占 `FramePriority.Acoustics = −590`（介质之后、流式之前）和 `FramePriority.Audio = 50`（系统之后、界面之前）两步，与 `Map = −1300`、`StreamMount = 900`、`Save = 1000` 都不冲突，和 ENG-ARCH §3 的统一表一致（§20）。
 12. **门禁 G21 声音**分十项：素材入库、混音响度、加速不爆发、转场不爆音、设置有效、确定性、预算、覆盖与"对得上"、观者声、空间声学。声音门禁复用 Movie Maker 的录像流水线，同一组参数两次录音逐字节相同（§22）。
 13. **设置**存进 `user://audio.cfg`（ENG-ARCH §2 的读写方表已登记），只有 53a 读写，读值只接受基本类型，与 `graphics.cfg` 同一做法（§13）。
+
+### 0.1 接入要点
+
+- **要发出任何声音**：只经 `IAudioService`（界面音、音乐、压低）、`IAmbienceService`（同步提示、动态发声器）、`IFoleyService`（交互音）三个服务；不创建 `AudioStreamPlayer`、`AudioStreamPlayer2D`、`AudioStreamPlayer3D`，不调 `AudioServer.Set*`、`AddBus*`、`RemoveBus*`；`AudioListener3D` 只由 WP-06 的相机创建（§2.1、§16）
+- **画面里有要配声的一次性变化**（偶发事件的抖落、雪团落地、动物的小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec` 排队，同一批带同一个 `Group`，被转场打断时用 `CancelCues` 整批取消；远雷由 WP-40 经 `ILightningFeed` 发闪光事件，不调 `Cue`（§6.1、§6.4）
+- **有会移动的发声物**（天鹅、猫等动物）：所属包的 `[KernelNode]` 在 `_Ready` 里调 `IAmbienceService.AddDynamic`，每帧调 `MoveDynamic`，位置在 `Systems`（0）那一步之中或之前更新；不另设特性（§4.2、§20）
+- **部件自带声音**（售货机、空调外机、广播喇叭、铁皮雨棚、变压器、雨水箅）：在部件定义里实现 `IPartDef.Sounds(p)` 插座，返回 `SoundSocketDecl`（默认 `[]`），插座随 `PlacedPart` 的变换走，区域包不另摆发声器（§4.2、§19）
+- **要从世界数据批量生成环境声发声器**：在 gen 程序集里写带 `[AmbientEmitter]` 特性的 `IAmbientEmitterSource`（纯函数，在烘焙器里跑），ID 以 `amb:` 开头、本图内唯一；不在场景里手摆发声器节点，本图的手工点归 53b 的 `manual_emitters.json`，不超过十个、每条写理由（§4.2、§19）
+- **建碰撞体**（地面高度场、坡道与楼梯、箱体、楼板、墙、柱、树干）：填 `Foot`（`FootMat`），楼梯另填 `StairSpec`；材质在生成几何的同一组参数里决定；世界里 `Auto` 的面积必须为 0，回退要在数据里显式写出；碰撞记录只加 init 属性，不改构造参数（§9.3、§19）
+- **声明开放室内**：在 `IInteriorProvider.Acoustics()` 里按 §10.4 的类别表声明房间、门户和室内档案 `AmbienceProfileId`，自动门的门户写门 ID（`AcousticPortalDecl.Door`），关着的楼不声明门户；声学用的 `Area3D` 由 `kernel/collision`（WP-43）代建，提供者不自己建（§4.5、§10.4、§10.6）
+- **音频要读你的状态**（灯光通道、介质、雾幕、闪电、脚下覆盖物、门的开度）：在自己的契约里提供只读的 C# 值（`IChannelReader`、`IMediumState`、`IVeilState`、`ILightningFeed`、`IGroundCover`、`IInteriorDoors`），着色器里也用到的量与全局参数同源；音频不读回全局参数，也不写任何世界状态（§2.1、§2.2、§19）
+- **声音里要用随机**（选样、概率触发、音高与音量的抖动）：只用契约的 `StableHash` 和 `Rng`；不用 `AudioStreamRandomizer`、`AudioStreamPlaylist.Shuffle`，不给 `AudioServer.PlaybackSpeedScale` 赋值，这几项由 BannedApi 拦截（§9.6、§16、§17）
+- **加入任何音频素材**（含委托的音乐、合成的音）：先在 `game/data/audio/licenses.json` 登记一条（来源、作者、许可与版本、下载日期、页面快照、SHA-256、署名文本、改动记录），没有记录不许入库；许可只收白名单里的，NC、ND、BBC、BY-SA、GPL 一律不用；`*.wav`、`*.ogg` 走 Git LFS，经 53e 的 `pipeline/audio/` 入库（§14.1、§14.2、§14.3）
+- **做界面、传送与过场**：控件事件映射到 `UiCue` 后调 `PlayUi`（当场发声；临时提示和自动保存不配提示音）；传送开始时 `PlayUi(TeleportConfirm)`、到达时 `TeleportArrive`；压低用 `Duck(DuckReason…)`；过场的 `audio` 轨只用 `title.start`、`title.fadeIn`、`title.fadeOut`、`duck`、`amb.altitude`（§7.2、§11、§12）
+- **消费会追加值的音频枚举**（`DuckReason`、`AudioGroup`、`FoleyKind` 等）：写穷举的 `switch`，`default` 分支拒绝或报错（§19）
 
 ## 2 总体架构
 
@@ -1486,7 +1503,7 @@ public interface IChannelReader { float Value(ChannelId id); }                  
 - `pipeline/audio/`（53e）；
 - `game/style/shaders/` 下没有文件；不新增全局着色器参数。
 
-**额外必读**：本文，以及 SYS-MOTION、SYS-VIEW §5、SYS-TIME、UI-NAV、SYS-WALK、SYS-WEATHER，UI-VISUAL（动效语言）、SYS-TITLE（音频挂点）、SYS-SAVE（读档与换实例）、SYS-MAPS、WLD-OUTSKIRTS（行走阻挡与飞行阻挡）、WLD-INTERIORS（门的区分与自动门 WLD-INTERIORS §4.1、开放高处）。
+**起读**：先读本文 §0 和 §19（契约），再从本子包的章节读起：53a §2、§3、§7.1、§11–§13，53b §4–§8，53c §10，53d §9，53e §14、§15；预算、帧顺序与门禁是各子包共用的，在 §18、§20、§22。碰到外部规则时再查对应文档：时段与美术太阳 SYS-TIME；风场、偶发事件与季节权重 SYS-MOTION；介质 SYS-VIEW §5；行走控制器与碰撞语义 SYS-WALK；天气向量 SYS-WEATHER；设置卡 UI-NAV；动效语言 UI-VISUAL；音频挂点 SYS-TITLE；读档与换实例 SYS-SAVE；换图 SYS-MAPS；行走阻挡与飞行阻挡 WLD-OUTSKIRTS；门的区分、开放高处与自动门 WLD-INTERIORS（自动门在 WLD-INTERIORS §4.1）。
 
 | 子包 | 交付 | 依赖 | 规模 |
 | --- | --- | --- | --- |
@@ -1545,7 +1562,7 @@ public interface IChannelReader { float Value(ChannelId id); }                  
 - **一票否决**（并入 ENG-GATES §3）：清晰的人声；可辨认的近处车辆开过（画面里没有行驶的车）；加速时的一次性声爆发；室外的数字静音；循环接缝的咔哒；天气残留的声音（雨停后还有雨落声）；声音硬切（直接切静音、在有声的槽上改参数造成的瞬态）。
 - **其他门禁的增补**：G4 加 §16 的规则；G6 加"音频清单完整、许可在白名单内"和音频体积单列；G13 与 G21d 共用录像；G14 加"声音"页的键盘可达与读屏名字；G2 加 `IGroundCover` 的 CPU 与着色器比对，以及钟声、广播的排程测试（10× 以上为 0，跨整点不补）。
 - **截图门禁不需要声音**：G7、G9、G12 一律 `--audio=off`。
-- **与 ENG-GATES一致**：ENG-GATES §2 的 G21 一行按这张表的十个子项登记（G21a–G21j，名称相同），方法与判据以本表为准；何时运行同上表，分档按 ENG-GATES §2 的测试节奏（D-167）：G21a–G21j 都在集中测试时全量跑，G21g 随 G10，G21h 含听评与语音识别；G2 里的声音单元测试照常随快检。
+- **与 ENG-GATES一致**：ENG-GATES §2 的 G21 一行按这张表的十个子项登记（G21a–G21j，名称相同），方法与判据以本表为准；何时运行按本表的"何时"一列，分档按 ENG-GATES §2 的测试节奏（D-167）：G21a–G21j 都在集中测试时全量跑，G21g 随 G10，G21h 含听评与语音识别；G2 里的声音单元测试照常随快检。
 
 ## 25 待验证（P0）
 

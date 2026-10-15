@@ -3,6 +3,7 @@ id: MAP-QSH-RENOVATION
 title: 清水河翻新清单
 category: maps
 summary: 清水河校区要翻新的楼与环境：逐条的实体、优先级、翻新部位和所用规则，以及待核实楼的做法
+keywords: [翻新清单, 逐栋翻新, 翻新条目, 条目号, 翻新优先级, 高中低档, 部位代号, 楼型, 翻新对照楼, 待核实的楼, 核实前的口径, 缺立面近景, 不列入的楼, 2015 年以后的新楼, 宿舍屋面设备, 组团门禁, 商业街店招, 全校环境翻新, 老楼翻新理由, 翻新施工顺序]
 owners: [WP-14]
 contributors: [WP-13, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21]
 depends: [CORE-INDEX, ART-RENOVATION, ART-MODELING, MAP-QSH-ADDITIONS]
@@ -16,6 +17,7 @@ gates: [G5, G7, G9, G12]
 
 > **范围**：本文列出清水河校区按 ART-RENOVATION 翻新的楼与环境：按区分组，每条写明实体 ID、名称、优先级、要翻新的部位和所用的翻新规则；另列待核实的楼及核实前的做法、不列入的新楼，以及覆盖层登记、分工与验收。
 > **不在本文**：翻新规则本身（ART-RENOVATION）；楼的位置、体量与身份特征（MAP-QSH-CORE、MAP-QSH-SOUTH、MAP-QSH-NORTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST）；增补物、日式街景物件的落位与禁做清单（MAP-QSH-ADDITIONS）；生活痕迹的数量与摆放（WLD-LIFE）；室内（WLD-INTERIORS）。
+> **查阅**：先读 §0；优先级、条目号、部位代号与楼型看 §1；各区逐栋条目看 §2–§6；全校环境看 §7；待核实的楼看 §8；不列入的新楼看 §9；覆盖层登记、分工与验收看 §10
 > **关联**：[CORE-INDEX 总索引](../../README.md)、[ART-RENOVATION 老楼翻新](../../art/ART-RENOVATION.md)、[ART-MODELING 风格化造型](../../art/ART-MODELING.md)、[MAP-QSH-ADDITIONS 设计增补](MAP-QSH-ADDITIONS.md)；相关：[ART-STYLE 风格基础](../../art/ART-STYLE.md)、[ART-FIDELITY 视觉精度](../../art/ART-FIDELITY.md)、[ART-AMBIENCE 日式日常街景](../../art/ART-AMBIENCE.md)、[MAP-QSH-NORTH 北部生活区](MAP-QSH-NORTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](MAP-QSH-CENTER-EAST.md)、[MAP-QSH-SOUTH 南区](MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](MAP-QSH-WEST.md)、[MAP-QSH-CORE 核心区](MAP-QSH-CORE.md)、[WLD-LIFE 动物与生活痕迹](../../world/WLD-LIFE.md)、[ENG-WP 工作包](../../engineering/ENG-WP.md)、[ENG-GATES 验收门禁](../../engineering/ENG-GATES.md)
 
 ## 0 结论
@@ -30,7 +32,19 @@ gates: [G5, G7, G9, G12]
 5. **登记**：翻新按 WP-14 的翻新预设生成；数据里有、要删的东西登记为覆盖层的 `hide`，预设之外加的构件登记为 `add`，理由写本文的条目号（§10.1）。
 6. 2015 年以后建成的楼不列入（§9），按各区文档的新楼外观施工，同样不做旧。
 
-## 1 读法
+### 0.1 接入要点
+
+- **施工本区的老楼（WP-16、WP-18–WP-21）**：按 §2–§6 里本区的条目做；数据里有、要删的登记所在区覆盖层的 `hide`，预设之外加的构件按条目成组登记 `add`，ID 以 `design:` 开头，理由写"老楼翻新 <条目号>：<部位>"（§10.1）
+- **在覆盖层、区文档或回报里提到某栋翻新楼**：按条目号引用；条目号定下后不改、不复用（§1.2）
+- **翻新碰到身份特征**：不改；身份特征本身显旧时只换新材料，颜色家族、位置和比例不变，身份特征以各区文档的"本区身份特征"表为准（§1.4）
+- **做 §8 列出的待核实的楼**：核实前按 §8.1 的口径做新，优先级按低；核实后改本文原位，再施工（§8.1、§10.3）
+- **2015 年以后建成的楼**：不登记翻新条目，按区文档的新楼外观做，同样不做旧（§9）
+- **需要窗、栏板、格栅、围挡、管廊、雨棚**：从部件库取，区包不自己写几何常量（§10.2）
+- **主线阶段（D-168）**：老楼一律直接用 WP-14 的翻新预设，不逐栋精修；细节阶段先做翻新对照楼，再按高、中、低逐条补部位（§10.3）
+- **写区文档的交付验收**：列一项"本文条目都已翻新、登记了覆盖层"；本区至少一个近景巡检点落在高档条目上（§10.4）
+- **WP-13、WP-15 的环境条目**：V-02、V-06 归 WP-13，V-03、V-04、V-07 的地面归 WP-15；区内的部分归所在区的包（§7、§10.2）
+
+## 1 优先级、条目号、部位代号与楼型
 
 ### 1.1 优先级
 

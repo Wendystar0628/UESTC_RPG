@@ -3,6 +3,7 @@ id: ENG-ARCH
 title: 工程架构：模块边界、接口契约与并行开发流程
 category: engineering
 summary: 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用写法, BannedApiAnalyzers, ArchUnitNET, 确定性, DetMath, StableHash, 自动发现, 特性注册, ContentModule, KernelNode, KernelService, Autoload, 契约, 契约冻结, PublicApiAnalyzers, ContractJson, 桩, 占位实现, 资源管线, 本机烘焙, .tbin, 缓存键, 工作树, git 流程, 合并队列, net10.0]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, ENG-GATES, ENG-WP, ENG-PERF]
@@ -58,8 +59,35 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 > **范围**：本文规定 Godot 工程的目录结构与归属、程序集边界与禁用写法、确定性规则、自动发现、全部 C# 契约（§3 是契约的权威来源）、帧顺序、资源管线、桩、git 工作树流程和主要风险。所有子代理都按这里的约定写代码，让 20–40 个子代理同时工作也不互相覆盖。
 > **不在本文**：各系统的行为细则以各自的文档为准（例如门的参数 WLD-INTERIORS §4.1、天气 SYS-WEATHER）；全局参数登记表见 ENG-PERF §1.5；预算见 ENG-BUDGET；门禁判据见 ENG-GATES；工作包分工见 ENG-WP；以后的扩展路线见 ENG-ROADMAP。
-> **读者与技术栈**：所有子代理都读 §1–§4，主代理另读 §5–§7。引擎是 Godot 4.7.2-stable .NET 版，只做 PC（Windows），渲染器 Forward+；代码全部用 C#，着色器用 Godot 着色语言（`.gdshader`、`.gdshaderinc`），计算着色器用 GLSL（`.glsl`）；§3 的 Godot 侧写法以 [引擎 C# API 参考](../../godot-api/README.md) 的签名为准。
+> **查阅**：先读 §0；目录归属、程序集边界、禁用写法与自动发现看 §2；契约签名看 §3；资源管线与本机烘焙看 §4；桩看 §5；git 工作树流程看 §6；风险与待验证项看 §7、§9；RPG 扩展点看 §8
+> **读者与技术栈**：写代码的子代理先看 §0 的接入要点，再按"查阅"一行查要用的那一节；主代理另查 §5–§7 的桩、合并队列与风险。引擎是 Godot 4.7.2-stable .NET 版，目标框架 net10.0（D-177），只做 PC（Windows），渲染器 Forward+；代码全部用 C#，着色器用 Godot 着色语言（`.gdshader`、`.gdshaderinc`），计算着色器用 GLSL（`.glsl`）；§3 的 Godot 侧写法以 [引擎 C# API 参考](../../godot-api/README.md) 的签名为准。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-GATES 验收门禁](ENG-GATES.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)
+
+## 0 结论
+
+1. **目录即归属**：Godot 项目在 `game/`（`res://`）；每条路径归一个包，记在 `ownership.json`，越界的改动由 G3 拒绝；`project.godot`、csproj、契约、`ownership.json` 等共享文件只有主代理能改（§2、§6 第 5 步）。
+2. **程序集分层**：契约 `Campus.Contracts` 和生成器 `Campus.Gen.*` 是纯 .NET，不引用 GodotSharp；Godot 侧代码都在主程序集 `Campus`；内容程序集互不依赖，其余限制由 ArchUnitNET 规则检查（§2"程序集边界"）。
+3. **特性接入**：新模块、节点、服务、存档段打上对应特性就自动注册，不改共享文件；Autoload 只有 `Boot` 和 `Kernel`（§2"自动发现"）。
+4. **确定性**：随机、哈希和 gen 里的超越函数一律用契约的 `Rng`、`StableHash`、`DetMath`；禁用写法由 BannedApiAnalyzers 和 G4 正则挡住；同一 ABI 下本机烘焙与 CI 参考逐字节一致（§2）。
+5. **契约以 §3 为准**：其他文档里的契约片段与 §3 不符时按 §3；改契约向主代理申请，按组冻结后只增不改，由 PublicApiAnalyzers 检查（§3、D-134）。
+6. **几何在本机烘焙**：几何一律由 gen 的 `Build()` 生成（经批准的英雄资产除外）；L0–L3 格包等在玩家机器上第一次需要时烘焙进本机缓存，用自定义 `.tbin`，不用 Godot 资源格式；L4 和全图常驻小数据随启动集发；贴图是 PNG 源图加 Godot 导入（§4、D-165）。
+7. **桩先合入**：WP-00 随契约 v1 候选交一套能跑的桩，各包第一天就能运行和截图（§5）。
+8. **一个代理一个工作树**：多个代理同时写代码时，各用一个工作树和本地分支 `wp/<xx>-<slug>`，不推送；合并由主代理排队，一次一个（§6）。
+9. **目标框架 net10.0**：引擎锁定 Godot 4.7.2-stable .NET 版，契约语言版本 C# 14；D0 跑通构建到导出版启动的全链路，不通时报作者（§3、§7、D-177）。
+
+### 0.1 接入要点
+
+- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；共享文件（`project.godot`、`*.csproj`、`Directory.*.props`、契约、`ownership.json`、`docs/design/` 等）向主代理申请（§2、§6 第 5 步）
+- **写纯 .NET 代码（契约、gen、烘焙子任务）**：不引用 GodotSharp，不碰文件路径，数据由内核读成字节交来；gen 不引用其他内容程序集，不依赖运行时接口（清单见 §2"ArchUnitNET 规则"）
+- **内核、风格、音频以外的 Godot 侧包要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经 `IAudioService` 等音频服务；不自己创建 `MeshInstance3D`、`ShaderMaterial`、`AudioStreamPlayer`（§2）
+- **接入新模块、节点、服务或存档段**：打 `[ContentModule]`、`[Part]`、`[InteriorProvider]`、`[KernelNode]`、`[KernelService]`、`[QualityResponsive]`、`[SaveSection]` 等特性，由注册器自动发现；不加 Autoload，不改 `main.tscn`（§2"自动发现"）
+- **写随机、计时、哈希、三角函数或色值**：禁用清单以 §2 的 BannedApiAnalyzers 和 G4 正则为准；随机用 `Rng`，种子用 `StableHash`，gen 与烘焙子任务的超越函数用 `DetMath`，遍历字典先排序；不写十六进制色值、着色器 `TIME`、`.gd`、手写 `uid://`（§2）
+- **读写 `user://`**：每个文件只有一个读写方；任何代码都不得用 `ResourceLoader`、`ResourceSaver` 读写 `user://`（§2）
+- **用到契约**：签名查 §3 对应的块；会追加值的枚举写穷举 `switch`；JSON 一律用 `ContractJson.Options`（§3）
+- **要改契约，或加全局着色器参数、着色器文件、程序集引用、NuGet 包**：向主代理申请，由主代理改（§3、D-134）
+- **依赖的包还没交付**：照桩开发；本区特有的部件建在自己目录里，ID 加区名前缀，证明能复用再申请提升（§5）
+- **加贴图、模型、字体或音频**：区域包不自带大于 512² 的贴图，向 WP-04 申请图集槽位或数组层；外部模型先经主代理批准，放 `game/assets/hero/`；每个资源登记许可、脚本、哈希和体积（§4）
+- **多个代理并行写代码时**：用 `scripts\wt\new.ps1` 开工作树，在本地分支小步提交，不推送、不碰 `main`；主代理通知后 `git rebase main`；只走命令行，不在编辑器里重存场景（§6）
 
 ## 1 旧网页栈怎么处理
 
@@ -88,13 +116,13 @@ gates: [G1, G2, G3, G4, G5, G6]
 | 旧文件 | 留什么 | 改写到 | 归属 |
 | --- | --- | --- | --- |
 | `src/scene/geometry.ts` | 轮廓工具：点在环内、点在足迹内、环的整理 | `game/gen/world/` | WP-08 |
-| 同上，`THREE.Shape` 的三角剖分 | 不留，在 C# 里移植 earcut 代替（ISC 许可，登记 `third_party.json`） | `game/gen/parts/core/` | WP-09 |
+| `src/scene/geometry.ts` 里 `THREE.Shape` 的三角剖分 | 不留，在 C# 里移植 earcut 代替（ISC 许可，登记 `third_party.json`） | `game/gen/parts/core/` | WP-09 |
 | `src/scene/architecture.ts` | 边、斜接、扫描线和开间分层算法 | `game/gen/buildings/` | WP-14。斜接和扫描线需要共享时，提升到 `parts/core` |
 | `src/scene/landmarkRoofs.ts` | 曲面算法（主成分分析求主轴） | `game/gen/zones/south/` | WP-18 |
 | `src/scene/libraryRoof.ts` | 八角采光顶 | `game/gen/zones/core/` | WP-16 |
 | `src/scene/landscape.ts` | 落点算法：固定种子、排除区网格、间距网格、聚簇噪声 | `game/gen/vegetation/` | WP-23 |
 | `src/scene/SportsMarkings.tsx` 的 `createSportsMarkings` | 球场标线拟合 | `game/gen/ground/` | WP-15 |
-| `tests/architecture.test.ts`、`landmarkRoofs.test.ts`、`landscape.test.ts`、`sportsMarkings.test.ts` | 断言：几何有限、有索引、朝向正确、面数上限、确定性 | 对应包的 `tests/` | 同上 |
+| `tests/architecture.test.ts`、`landmarkRoofs.test.ts`、`landscape.test.ts`、`sportsMarkings.test.ts` | 断言：几何有限、有索引、朝向正确、面数上限、确定性 | 对应包的 `tests/` | WP-14、WP-18、WP-23、WP-15（依次对应四个测试文件） |
 | `tests/map.test.ts` 的 "data and space" 一组 | 数据不变量：校区范围、足迹的洞、东北轴向、竖直高度 | `game/gen/world/tests/` | WP-08 |
 
 改写规则：
@@ -362,7 +390,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 | `Campus.Gen.Tests`、`Campus.Tests` | 各包的 `tests/` | 被测程序集、gdUnit4Net | — |
 
 - 每个 gen 目录一个 csproj，D0 由 WP-00 全部建好（§6 第 1 步）。`Campus.csproj` 用通配引用 `gen/**/*.csproj`，另引用 `pipeline/map` 的 `Campus.Pipeline.Map`，并用 `Compile Remove` 去掉 `contracts/`、`gen/`、`**/tests/`。新增文件不改任何共享文件；需要新增程序集引用时，向主代理申请。ENG-WP §3 拆出的子包共用原包的程序集，不新建 csproj。例外：WP-51 有两个程序集（`gen/interior/core`、`gen/interior/shell`），WP-53 有两个（`gen/acoustics`、`gen/ambience`），都由 WP-00 在 D0 建好；`showcase-interiors` 下的 south、west-east、north 三个子目录共用一个程序集。
-- `Campus.Pipeline.Map` 是纯 .NET 类库，随包程序集一起发：本机烘焙要在发布版里调用它（D-165），主程序集引用它，它也受下文的确定性禁用写法约束。`pipeline/outskirts`、`pipeline/audio` 是 Python 脚本，不进导出包，共用 `pipeline/requirements.txt` 的环境（§1）。
+- `Campus.Pipeline.Map` 是纯 .NET 类库，随包程序集一起发：本机烘焙要在发布版里调用它（D-165），主程序集引用它，它也受 §2"BannedApiAnalyzers"里的确定性禁用写法约束。`pipeline/outskirts`、`pipeline/audio` 是 Python 脚本，不进导出包，共用 `pipeline/requirements.txt` 的环境（§1）。
 - 测试统一用 gdUnit4Net，经 `dotnet test` 运行。纯 .NET 的测试默认不启动引擎；需要引擎的测试标 `[RequireGodotRuntime]`，由 `gate.ps1` 把 `UESTC_GODOT` 指向的引擎交给测试适配器。各包的测试源码放在自己目录的 `tests/` 里，分别编进 `Campus.Gen.Tests`（gen 和契约的测试）和 `Campus.Tests`（Godot 侧的测试），用测试所在目录区分归属。存档容器、校验与迁移链写成不碰 GodotSharp 的纯 C# 类（`game/kernel/save/format/`），也用 `dotnet test` 直接跑（SYS-SAVE §14）。
 - `build()` 拿不到世界状态：`BuildContext`（§3）里没有 `IWorldState`，gen 程序集也引用不到内核。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和天气类全局参数表达（ENG-BUDGET §7）。`build()` 也拿不到画面设置：烘焙产物不随预设变（SYS-GRAPHICS §0 第 4 条）。`build()` 能拿到的地图信息只有 `BuildContext.Map`（`MapDescriptor`，纯数据）。
 
@@ -412,10 +440,10 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 
 **确定性**（G2 的"同一输入哈希一致"靠这几条保证）：
 
-- 种子 = `StableHash.Hash32(世界种子, featureId, partId, 用途)`，与生成顺序无关（ENG-PERF §5）。世界种子取 `BuildContext.Map.Seed`（SYS-MAPS §3）。凡是"放不放、选哪种"的判断，一律用整数哈希；三角函数只用来算坐标，且一律用 `DetMath`（上文 BannedApiAnalyzers）。
+- 种子 = `StableHash.Hash32(世界种子, featureId, partId, 用途)`，与生成顺序无关（ENG-PERF §5）。世界种子取 `BuildContext.Map.Seed`（SYS-MAPS §3）。凡是"放不放、选哪种"的判断，一律用整数哈希；三角函数只用来算坐标，且一律用 `DetMath`（§2"BannedApiAnalyzers"）。
 - 生成器里不依赖 `Dictionary`、`HashSet` 的遍历顺序；需要遍历时先按 ID 排序。
 - 一个 `build()` 内部不做并行的浮点归约。
-- **跨机器逐字节一致**（D-165）：同一 ABI 下，本机烘焙的产物与 CI 参考烘焙逐字节一致，按每个文件的内容哈希比。靠上面的种子规则、`DetMath` 和 BannedApiAnalyzers 的禁用写法保证；G6 在集中测试时用 `--bake-verify` 抽样比对，并全图逐字节比对（ENG-GATES §2）。
+- **跨机器逐字节一致**（D-165）：同一 ABI 下，本机烘焙的产物与 CI 参考烘焙逐字节一致，按每个文件的内容哈希比。靠本节的种子规则、`DetMath` 和 BannedApiAnalyzers 的禁用写法保证；G6 在集中测试时用 `--bake-verify` 抽样比对，并全图逐字节比对（ENG-GATES §2）。
 - 天气过程的每次抽取用计数器子流 `StableHash(种子, mapId, epoch, 片段号, 尝试号, 用途)`（种子每个存档一个，SYS-MAPS §5），与补队列的时机和帧率无关（SYS-WEATHER §6.4）。运行时的确定性是：同一钟点、同一哈希的东西结果相同；同一构建 + 同一种子 + 同一串输入得到同样的画面。时间不能逆转，所以不要求"倒回去复现"。
 - **读档**：读档是换一个世界实例（`IWorldState.Instance` 加 1），不算倒回去。续跑等价：同一构建下，在安全时刻拍的存档读回后给相同输入，世界和天气与没退出时逐帧一致（SYS-SAVE §5.3）；过渡和偶发事件不续播，声景不进存档（SYS-AUDIO）。
 - **音频**（SYS-AUDIO §17）：音频的随机一律用契约的 `Rng` 与 `StableHash`：音频种子 = StableHash(`--seed`, "audio")，每个发声器、每个排程槽一条子流；Movie Maker 下同一组参数两次录音逐字节相同。
@@ -425,15 +453,15 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 | 特性 | 标在 | 所在程序集 | 在哪里运行 |
 | --- | --- | --- | --- |
 | `[ContentModule("zone.south", Owner = "WP-18")]`；例：`[ContentModule("interior.shell", Owner = "WP-51b")]` | 实现 `IContentModule` 的类，文件名 `*Module.cs`；可带 `Map`，没写就继承程序集的 `MapScope` | gen | 线程池或烘焙器（纯函数） |
-| `[Part("opening.window.casement", Owner = "WP-10")]` | 实现 `IPartDef<TParams>` 的类 | `gen/parts` | 同上 |
-| `[InteriorProvider("interior.library", Owner = "WP-17")]` | 实现 `IInteriorProvider` 的类（按层，WLD-INTERIORS §15）；可带 `Map` | gen | 同上 |
+| `[Part("opening.window.casement", Owner = "WP-10")]` | 实现 `IPartDef<TParams>` 的类 | `gen/parts` | 线程池或烘焙器（纯函数） |
+| `[InteriorProvider("interior.library", Owner = "WP-17")]` | 实现 `IInteriorProvider` 的类（按层，WLD-INTERIORS §15）；可带 `Map` | gen | 线程池或烘焙器（纯函数） |
 | `[AmbientEmitter("ambience.water", Owner = "WP-53b")]` | 实现 `IAmbientEmitterSource` 的类；输出进本图的 `ambience.bake`。部件的声音插座走 `IPartDef.Sounds()`，室内的声学走 `IInteriorProvider.Acoustics()`，不另设特性；动态发声器在运行时注册（SYS-AUDIO §19） | gen | 烘焙器（纯函数） |
 | `[MediumPresenter("medium.interior", Owner = "WP-07")]` | 实现 `IMediumPresenter` 的类 | 主程序集 | 主线程 |
 | `[KernelNode("systems.water", Owner = "WP-24")]` | Godot 侧包的根节点（`Node` 子类）。内核按 ID 顺序实例化，挂到 `main.tscn` 的内核根节点下；动态物体由它负责。可带 `Map`：带 `Map` 的在该图 Mount 时实例化、Unload 时释放；不带的跨图常驻，需要换数据的实现 `IMapAware`（SYS-MAPS §7） | 主程序集 | 主线程 |
 | `[KernelService(typeof(IWorldState), Owner = "WP-34")]`；例：`[KernelService(typeof(IAtlasService), Owner = "WP-48c")]` | 服务的实现类。注册成 Kernel 的服务，用 `Kernel.Get<IWorldState>()` 取 | 主程序集 | 主线程 |
 | `[QualityResponsive(Owns = [...], Reads = [...])]` | 实现 `IQualityAware` 的 `[KernelNode]` 类（SYS-GRAPHICS §8）。G5 核对每个 `QualityKnob` 恰有一个 `Owns`，且与 `KnobSpec.OwnerWp` 一致 | 主程序集 | 主线程，`FramePriority.Quality` 那一步 |
 | `[SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]` | 实现 `ISaveSection<T>` 的 `[KernelService]` 或 `[KernelNode]` 类；`Scope = SaveScope.PerMap` 的段在文件里展开为 `map:<id>/<段>`。G5 查 `Phase` 与 SYS-SAVE §2 的表一致、`Order` 不重复、`Owner` 与 `ownership.json` 一致（SYS-SAVE §10） | 主程序集 | 主线程：`Capture` 在 `FramePriority.Save` 那一步，`Restore` 在读档那一帧的同一步；迁移函数在后台线程 |
-| `[assembly: MapScope("qingshuihe")]` | 各区程序集，由 WP-00 写进 csproj（见上文 `MapScope`） | gen | 注册时求模块归属 |
+| `[assembly: MapScope("qingshuihe")]` | 各区程序集，由 WP-00 写进 csproj（见 §2 的 `MapScope` 条） | gen | 注册时求模块归属 |
 | `res://style/palette/ext/*.json` | 调色板扩展，一包一个文件 | — | 启动时用 `ResourceLoader.ListDirectory` 扫描 |
 | `res://data/maps/<地图>/overlay/*.overlay.json`、`overlay/interior/*.interior.json` | 覆盖层，一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
 
@@ -459,7 +487,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 
 契约程序集只用 `System.Numerics` 的 `Vector2`、`Vector3`、`Quaternion`、`Matrix4x4`，Godot 侧在边界处转换成 Godot 类型（§7"两套数学类型"）。坐标约定照 CORE-INDEX：x 向东、y 向上、z 向南。这和 Godot 一样是右手系、y 向上，−Z 方向就是北，数值不用换算。
 
-以下是草案：方法体省略为 `{ … }`；没有展开的类型（`ModuleBudget`、`PartBudget`、`PartGeometry`、`LightEmitter`、`Footprint2D`、`InspectionProbe`、`WorldFeature`、`WorldNetwork`、`PolygonRings`、`Polyline`、`OverlayGeometry`、`BuildingFamily`、`FacadePreset`、`DesignKind`、`PostOverride`、`IRuntimeContext`）由 WP-00 在 v1 里定义。契约程序集的语言版本是 C# 12（net8.0 的默认值）。
+以下是草案：方法体省略为 `{ … }`；没有展开的类型（`ModuleBudget`、`PartBudget`、`PartGeometry`、`LightEmitter`、`Footprint2D`、`InspectionProbe`、`WorldFeature`、`WorldNetwork`、`PolygonRings`、`Polyline`、`OverlayGeometry`、`BuildingFamily`、`FacadePreset`、`DesignKind`、`PostOverride`、`IRuntimeContext`）由 WP-00 在 v1 里定义。契约程序集的语言版本是 C# 14（net10.0 的默认值）。
 
 ```csharp
 // 基础类型：标识符都是字符串包装，JSON 里就是字符串
@@ -639,7 +667,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     long Instance { get; }                  // 世界实例号。启动后第一次得到世界状态为 1，此后每次 Load、LoadFile、NewGame 加 1；
                                             // 切图不变（SYS-SAVE §5.2、SYS-MAPS §5）。做平滑、带回差或保留历史的系统，看到它变了就直接落到新值
     double WorldHours { get; }              // 世界时间（h）：同一世界实例内单调递增，只增不减；暂停时不动
-    double Clock { get; }                   // 美术钟点 0–24 h = (WorldHours + offset) mod 24（offset 见下文）
+    double Clock { get; }                   // 美术钟点 0–24 h = (WorldHours + offset) mod 24（offset 见 §3"世界时间与天气的语义"）
     double SeasonPos { get; }               // 旧网页版的 season：0–4，连续，循环；0 春 1 夏 2 秋 3 冬
     Season SeasonTarget { get; }
     Body Sun { get; }
@@ -663,7 +691,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
 public enum ClockSetMode { Drag, Jump }
 public interface IWorldControl              // 没有任何让世界时间倒退的方法；读档由 WP-34 自己的 world 存档段恢复，不经过 IWorldControl（SYS-SAVE §10）
 {
-    void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump);   // 跳到"下一次出现"的 hours（见下文）
+    void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump);   // 跳到"下一次出现"的 hours（见 §3"世界时间与天气的语义"）
     void Advance(double hours);                                // 前推 hours 小时（> 0，否则抛 ArgumentOutOfRangeException）：句点键 +1 h、脚本"前推 24 小时"
     void FlowTo(double clock, int rate);                       // SYS-TITLE §6、§7.4：以 rate 正向流逝，到下一次出现的 clock 正好停住（流逝变为 0）；
                                                                // clock 取 [0, 24)，"下一次出现"与 SetClock 同一语义；rate 必须是 Flow 的取值之一，否则抛 ArgumentOutOfRangeException；
@@ -674,8 +702,8 @@ public interface IWorldControl              // 没有任何让世界时间倒退
     void SetWeather(WeatherKind kind, float? intensity = null);   // 进入手动；不合季节的格不生效（界面先用 IsNative 判断并提示）
     void SetWeatherIntensity(float intensity);
     void SetWeatherAuto();
-    void Apply(WorldPreset p);                                 // 应用一组状态，例如点位推荐（见下文）
-    void ResetDefault();                                       // "回到本图默认状态"：清水河上就是"回到落金初灯"（见下文，SYS-MAPS §5）
+    void Apply(WorldPreset p);                                 // 应用一组状态，例如点位推荐（见 §3"世界时间与天气的语义"）
+    void ResetDefault();                                       // "回到本图默认状态"：清水河上就是"回到落金初灯"（见 §3"世界时间与天气的语义"、SYS-MAPS §5）
     void Freeze(double clock, Season season, double anim);     // 只给测试构建（--clock、--season、--anim）：启动时设初值，WorldHours 从 clock 起算
 }
 
@@ -808,7 +836,7 @@ public interface IWindField                 // WP-26
   - `ui_night` 的写入方是 WP-35：`UiThemeClock` 按太阳高度带回差锁存，切换时 0.6 s 扫描前沿走完（UI-VISUAL §11.6）；它是界面层唯一可写的全局参数。
   - 数据纹理 `mat_table`（128×4 RGBA8，最近邻，WP-04 持有、WP-05 共读，启动时写入）里含描线的线表，WP-05 不另持线表；`window_override` 为 256×256（全校立面约 5.8 万个开间，WLD-INTERIORS §12）；不做接触影，没有 `contact_spheres`。
 
-**补充**：
+**实现约定**（模块文件名、几何打包、网格 LOD、引擎锁定、JSON 读写）：
 
 - `Build` 写在 gen 里实现 `IContentModule` 的类中（`*Module.cs`）。Godot 侧包的根节点写在 `*Node.cs` 里，标 `[KernelNode]`。
 - `GeometryBundle` 里的 float 数据由内核统一打包：开发态实时生成时由内核打包，平时由烘焙（开发烘焙器或本机烘焙）打包（§4）。格式是 `ARRAY_FLAG_COMPRESS_ATTRIBUTES`，每顶点 20 B：位置 4×u16（按格包围盒归一化，第 4 分量存切线角度）、八面体法线 2×u16、UV 2×u16、COLOR RGBA8（色号、AO、标志）。每个表面不超过 65 536 个顶点；相邻格写统一的格包围盒，避免量化接缝（ENG-BUDGET §7、ENG-PERF §1）。
@@ -816,7 +844,7 @@ public interface IWindField                 // WP-26
 - 部件仍按语义级别（L0、L1）分别给几何；每级几何内部可以另给网格 LOD（`GeometryBundle.Lods`：每级是误差加这一级的索引数组），由内核写进 `AddSurfaceFromArrays` 的 `lods` 字典（键是误差，值是该级的索引数组）。截取索引前缀只是 `MeshLod.Prefix` 这一种快捷写法，限于整件拿掉独立小件（ENG-PERF §1.2）。建筑的主线版只用语义级别，同级内部的网格 LOD 后做。
 - 引擎锁定为 Godot 4.7.2-stable .NET 版（`tools/godot-version.txt`；csproj 写 `Sdk="Godot.NET.Sdk/4.7.2"`）。升级要经主代理评审（ENG-WP §5）。
 - 容器怎么选（按块合并的 ArrayMesh、MultiMesh、独立实例），见 ENG-PERF §1。
-- JSON 一律用契约程序集里的 `ContractJson.Options` 读写：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`。多态类型（覆盖层操作、碰撞体）的类型字段必须写在每个对象的第一个字段（.NET 8 的 System.Text.Json 要求）。存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定与 `ContractJson.Options` 一致，ID 类的 record struct 写成字符串；存读档不得用不带 `JsonTypeInfo` 的重载（SYS-SAVE §3.5）。`map.json`、`interiors.json`、`markers.json`、过场 JSON 的 schema 放在 `game/contracts/schemas/`。
+- JSON 一律用契约程序集里的 `ContractJson.Options` 读写：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`。多态类型（覆盖层操作、碰撞体）的类型字段必须写在每个对象的第一个字段（System.Text.Json 的默认要求；不开 AllowOutOfOrderMetadataProperties）。存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定与 `ContractJson.Options` 一致，ID 类的 record struct 写成字符串；存读档不得用不带 `JsonTypeInfo` 的重载（SYS-SAVE §3.5）。`map.json`、`interiors.json`、`markers.json`、过场 JSON 的 schema 放在 `game/contracts/schemas/`。
 
 **窗灯**：每扇窗有一个随机阈值，灯光通道的值超过阈值时这扇窗就亮。通道值由灯光时刻表按"建筑类别 × 灯种"驱动（SYS-TIME §6，共 32 个通道），由 WP-03 每帧写进 32×1 的全局数据纹理，不增加任何绘制调用；窗号基址放在顶点属性里（`GeometryBundle.Uv2`）。同一钟点、同一哈希的窗，亮灭结果相同；阴雨天通道按有效太阳高度求值，灯会提前亮（SYS-WEATHER §7）。窗覆盖纹理为 256×256；开放室内的房间灯按房间哈希读本楼的通道，不要求与窗灯逐间对应（WLD-INTERIORS §5.1、WLD-INTERIORS §6.3）；每个开放入口在灯表里登记一盏门口灯（WLD-INTERIORS §4）。
 
@@ -1099,7 +1127,7 @@ public interface IViewControl
     ViewMode Mode { get; }
     Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via);
 }
-// IContentModule.Collide、IPartDef.Collision 两个默认方法和 IInteriorProvider.CollisionStorey 见上文，照 SYS-WALK §13
+// IContentModule.Collide、IPartDef.Collision 两个默认方法和 IInteriorProvider.CollisionStorey 分别在 §3 的内容模块块、部件块、室内块里，照 SYS-WALK §13
 ```
 
 ```csharp
@@ -1212,7 +1240,7 @@ public sealed class QualityResponsiveAttribute : Attribute   // 标在 Godot 侧
 // 任何包都不读 user://graphics.cfg，只经 IQualityService 和 IQualityAware 接收设置（SYS-GRAPHICS §8）
 ```
 
-**界面、多地图、平面地图、开始页、存档、规则集与观者状态、外围、导航图与音频的契约块**（下面各块都在 `Campus.Contracts` 程序集里，纯 .NET，向量用 `System.Numerics`，只增不改；冻结后枚举只能在末尾追加，JSON 按字符串存，消费方守上文的穷举纪律）：
+**界面、多地图、平面地图、开始页、存档、规则集与观者状态、外围、导航图与音频的契约块**（下面各块都在 `Campus.Contracts` 程序集里，纯 .NET，向量用 `System.Numerics`，只增不改；冻结后枚举只能在末尾追加，JSON 按字符串存，消费方守 §3 开头的枚举穷举纪律）：
 
 ```csharp
 // 界面、雾幕与只读状态（UI-VISUAL §11.11、SYS-TITLE §7.4、SYS-AUDIO §19）；命名空间 Campus.Contracts
@@ -1301,7 +1329,7 @@ public sealed record MapDescriptor(
 // 归属：类上不写 Map 时继承程序集的 MapScope；两者都没有 = 通用模块
 [AttributeUsage(AttributeTargets.Assembly)]
 public sealed class MapScopeAttribute(string map) : Attribute { public string Map { get; } = map; }
-// ContentModuleAttribute、InteriorProviderAttribute、KernelNodeAttribute 各增 public string Map { get; set; } = ""（见上文）
+// ContentModuleAttribute、InteriorProviderAttribute、KernelNodeAttribute 各增 public string Map { get; set; } = ""（定义在 §3 内容模块块、室内块；KernelNode 的用法见 §2"自动发现"）
 
 public interface IMapContext                 // 纯数据；场景 RID 和物理空间留在 Godot 侧的 kernel/map
 {
@@ -1341,7 +1369,7 @@ public interface IMapAware                   // [KernelNode] 可选实现；雾�
 }
 public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint WeatherEpoch, double LeftAtHours);
 // 存档只需记：MapId CurrentMap、各图的 MapVisit；段的格式由 SYS-SAVE定（按图的段名是 "map:<id>/…"）
-// 其他契约里与多地图有关的部分（见上文）：IWeatherProcess.Enter/Leave；FramePriority.Map；ResetDefault 即"回到本图默认状态"；ShaderGlobals.MapRect
+// 其他契约里与多地图有关的部分（在 §3 世界状态块和全局着色器参数）：IWeatherProcess.Enter/Leave；FramePriority.Map；ResetDefault 即"回到本图默认状态"；ShaderGlobals.MapRect
 ```
 
 ```csharp
@@ -1419,7 +1447,7 @@ public sealed record AtlasSave(
     IReadOnlyDictionary<string, UnlockState> Unlock,             // 只存与策略初值不同的项；观光期为空
     IReadOnlyList<string> VisitedAnchors);
 // [SaveSection("atlas", Owner = "WP-48c", Version = 1, Scope = SaveScope.PerMap, Phase = RestorePhase.Content, Order = 40)]（SYS-SAVE §2）
-// 相机契约里与传送有关的部分（TransitPreference、TransitOptions.Prefer、TransitKind.Teleport）在上文的相机块
+// 相机契约里与传送有关的部分（TransitPreference、TransitOptions.Prefer、TransitKind.Teleport）在 §3 相机块
 ```
 
 ```csharp
@@ -1593,7 +1621,7 @@ public interface ISaveService                         // Kernel 服务（WP-50�
 // 文件结构：魔数 → 64 字节的头 → 未压缩的 meta JSON → Brotli 压缩的分段 JSON → WebP 缩略图，外加 SHA-256（SYS-SAVE §3.1）。
 // 序列化只用 System.Text.Json 源生成；各包的 DTO 用自己的 JsonSerializerContext，约定与 ContractJson.Options 一致，
 // ID 类的 record struct 写成字符串（SYS-SAVE §3.5）。其他契约里与存档有关的部分（IWorldState.Instance、FramePriority.Save、
-// WeatherSeed 与 WeatherBoot.Seed 的含义、IWeatherProcess.Capture/Restore）见上文
+// WeatherSeed 与 WeatherBoot.Seed 的含义、IWeatherProcess.Capture/Restore）在 §3 世界状态块
 // 规则集的先后（SYS-SAVE §5.1、SYS-SAVE §5.5）：新游戏先定规则集，再调各段的 CreateDefault；
 // 读档先按 meta 的 Ruleset 定规则集，再进 World 阶段
 ```
@@ -1654,7 +1682,7 @@ public interface IOutskirtsModel                             // WP-08 解析 out
     float SoftFloor(float x, float z);                      // 屋顶净空 + 40 m（8 m 网格，外扩一格取最大）
     // 道路横断面、轨道与站台、水系、用地、树点、灯位、地标、水柱交点：字段由 WP-47 定，经主代理并入
 }
-// 与外围有关的 IWorldModel.Outskirts、RoamLimits 与 MapEnvironment 的字段、SurfaceTag.Boundary 见上文
+// 与外围有关的 IWorldModel.Outskirts、RoamLimits 与 MapEnvironment 的字段、SurfaceTag.Boundary 分别在 §3 覆盖层块、多地图块、碰撞块
 ```
 
 ```csharp
@@ -1689,7 +1717,7 @@ public interface INavGraph                  // 小地图的路线预览（SYS-AT
 
 ```csharp
 // 音频（照 SYS-AUDIO §19，WP-53；放在 game/contracts/Audio/）
-// VeilReason、IVeilState、IMediumState、ILightningFeed、IChannelReader 在上文各自的块里；
+// VeilReason、IVeilState、IMediumState、ILightningFeed、IChannelReader 在 §3 相机块（IMediumState）和界面块（其余）里；
 // 碰撞记录的 Foot、Stair、FootMatHalfMeter、Patches 在碰撞块里
 namespace Campus.Contracts.Audio;
 using System.Numerics;
@@ -1763,7 +1791,7 @@ public sealed record AmbientEmitterDecl(
 public sealed class AmbientEmitterAttribute(string id) : Attribute { public string Id { get; } = id; public string Owner { get; set; } = ""; }
 public interface IAmbientEmitterSource { IEnumerable<AmbientEmitterDecl> Emit(BuildContext ctx); }   // gen 里，纯函数，在烘焙器里跑
 
-// 部件自带的声音插座：IPartDef.Sounds() 默认方法见上文
+// 部件自带的声音插座：IPartDef.Sounds() 默认方法在 §3 部件块
 public sealed record SoundSocketDecl(string Id, SoundSetId Set, Matrix4x4 Local, float RefDb, float AudibleRadius,
     SeasonMask Seasons = SeasonMask.All, NightRule Night = NightRule.Any, WeatherMask Weather = WeatherMask.All, byte Priority = 2);
 
@@ -1821,7 +1849,7 @@ public sealed record AcousticPortalDecl(string RoomA, string? RoomB /* null = �
     string? Door = null /* 自动门的门 ID（DoorLeafDecl.Id），开度读 IInteriorDoors.OpenOf，关好时门户馈送降到 −80 dB（SYS-AUDIO §10.4） */);
 public sealed record AcousticsDecl(IReadOnlyList<AcousticRoomDecl> Rooms, IReadOnlyList<AcousticPortalDecl> Portals)
 { public static readonly AcousticsDecl Empty = new([], []); }
-// IInteriorProvider.Acoustics(ctx, id) 默认方法见上文；按层提供的室内照样实现：房间按层声明，Box3 带 y 区间
+// IInteriorProvider.Acoustics(ctx, id) 默认方法在 §3 室内块；按层提供的室内照样实现：房间按层声明，Box3 带 y 区间
 
 // ===== 观者声（53d）与它的输入 =====
 public enum FootMat : byte
@@ -1986,17 +2014,17 @@ public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
   - 碰撞级 C 每格单独一个 `.tbin`（同一种格式，只装碰撞形状参数和统计），与 TileBundle 分开，只在行走模式下加载（WP-43，SYS-WALK §13）。
   - 岸线 SDF、路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
   - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 GPU 锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
-  - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各按下文自己的键。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`fidelity.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
+  - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各有自己的键（§4"其他烘焙子任务"）。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`fidelity.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
     - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与工作树路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
     - 内核里的表面打包和 `.tbin` 读写代码不算模块代码：改了它们的输出字节，就提高 ABI 里的格式版本。
   - **缓存位置**：
     - 开发和 CI：仓库外的共享缓存目录，路径从环境变量 `UESTC_BAKE_CACHE` 读，默认 `E:\Project\UESTC_RPG.cache\bake\`，按图分子目录 `<UESTC_BAKE_CACHE>\<地图>\`，各图互不覆盖。各工作树共用，按区单独烘焙；产物不进 git。
-    - 玩家：`user://cache/bake/<地图>/<ABI>/…`，即导出版的 `%APPDATA%` 下，文件布局与缓存键同上。只有 `IBakeService` 读写这里，用 `.tbin`，不经 `ResourceLoader`、`ResourceSaver`（§2）。
+    - 玩家：`user://cache/bake/<地图>/<ABI>/…`，即导出版的 `%APPDATA%` 下，文件布局与缓存键与开发共享缓存相同。只有 `IBakeService` 读写这里，用 `.tbin`，不经 `ResourceLoader`、`ResourceSaver`（§2）。
     - `--bake-cache=<绝对路径>` 换缓存目录。默认是 `user://cache/bake/`；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑（ENG-GATES §1）。
   - **缓存文件与校验**：写盘先写 tmp，`Flush` 后改名。读到长度超限、解析越界或哈希与 manifest 不符的文件时，删掉它，自动重建一次；新产物就绪前同样按 manifest 校验，仍不符就以 `BakeState.Failed` 结束，不再循环重烘（ENG-PERF §5"损坏、校验失败与终态"）；`cache.index` 只用于 LRU，不作信任依据。
   - **查找顺序**：启动集（`res://bake/<地图>/boot/`）→ 本机缓存 → 本机烘焙（生成后写进缓存）。
   - **失效**：缓存键里已含代码哈希和数据哈希，游戏更新或开发中改了输入以后自然不命中。失效粒度就是现行键的实际行为：
-    - 数据哈希每图一份：上面任何一项输入变了（哪怕只改了一条覆盖层），本图的全部格子、室内包、碰撞级 C 都换键重烘；
+    - 数据哈希每图一份：缓存键里列出的任何一项数据输入变了（哪怕只改了一条覆盖层），本图的全部格子、室内包、碰撞级 C 都换键重烘；
     - 代码哈希按模块：只改了一个内容模块自己的代码，只有这个模块的产物重烘；改了共享生成依赖，所有用到它的模块一起重烘；
     - 先保证这条简单而正确的规则。只有全图失效确实拖慢了制作，才把数据输入细分到模块，细分时由 G2 证明依赖没有漏算；不建逐实体的增量构建。
     - 启动时删掉 `user://cache/bake/<地图>/` 下不是当前 ABI 的目录；同一 ABI 下旧键的文件不专门清理，按"最久未用"淘汰。
@@ -2005,7 +2033,7 @@ public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
   - **什么时候烘**（预算和队列细则见 ENG-PERF §5）：
     - 首次运行（或缓存清空、版本更新以后）：扉页期间，先烘起始视角（T0 或命令行位姿）周围按 ENG-PERF §5 的环要用的格（L2–L3 与外围），再烘平面地图底图；扉页下方显示一行进度，例如"首次运行 · 正在本机生成校园 37%"，用数据字体，烘完就淡出（WP-49，SYS-TITLE §1）。目标初值（开发机）：首次运行到转为实时 ≤ 25 s，底图 8 线程 ≤ 20 s；以后的启动仍是冷启动 ≤ 9 s、热启动 ≤ 3.5 s。
     - 后台预烘：进开始页起，按与起始点的距离由近到远烘满全图，顺序是 L3 → L2 → L1 → L0 → 碰撞 C → 开放室内 → 简化室内。线程数：扉页和开始页期间取 max(1, 逻辑核数 − 2)，进 Playing 后降到 max(1, 逻辑核数 / 4)；线程优先级低于正常，排在按需请求之后。初值：开发机在开始页烘满全图 ≤ 4 min。`--bake-bg=0` 关闭后台预烘，门禁和基准都关。
-    - 全图常驻的小数据随启动集同步挂上，不在本机烘焙（见下文"导出与随包内容"）。
+    - 全图常驻的小数据随启动集同步挂上，不在本机烘焙（见 §4"导出与随包内容"）。
     - 按需：流式请求的文件不在缓存里时，生成任务进与加载同样的四个队列（碰撞 → 已知目的地 → 室内入口预取 → 常规）；在工作线程上调 `Build()`、打包表面、写缓存，再把同一个 TileBundle 直接交给挂载，不再从盘上读一遍。同时在途的生成任务不超过 max(2, 逻辑核数 − 2)，与加载请求的"在途 ≤ 3"分开计。
     - 不出空洞、不穿地靠现有的流式不变量：父格等子格（缺 L0 时显示最近的已就绪祖先）、碰撞未就绪冻结物理、室内包没就绪时按进楼衔接原有的未就绪规则（ENG-PERF §5 第 2、5、6 条）。
     - 切图：`Travel` 的 LoadData 挂上 `boot_<地图>.pck`；起始点周围在缓存里没有时，在雾幕下烘。Movie Maker、读档、过场都是流式屏障，本机烘焙同样算在屏障里。
@@ -2049,11 +2077,11 @@ public sealed record FidelityRaiseOp(string Id, string Reason, FidelityZone To,
   - `*.wav`、`*.ogg` 进 Git LFS；只许随游戏发布、不许公开分发的素材在仓库公开时放私有素材库；
   - 每个文件在 `game/data/audio/licenses.json` 登记来源与许可，署名页由它自动生成；音频在导出包里单列，不超过 165 MB。
 - **资源清单**：每个资源都要登记许可证、生成脚本、哈希和体积：自产资源登记在所在目录的 `manifest.json`（`game/assets/style/` 归 WP-04，`game/assets/hud/` 归 WP-35，`game/assets/title/` 归 WP-49b，`game/assets/maps/` 归 WP-27），音频登记在 `licenses.json`（WP-53e），第三方登记在 `third_party.json`。门禁拒收任何以照片为来源的资源。界面资源清单里没有银杏、书签、纸纹意象（UI-VISUAL §13）。
-- **导出过滤器**：`export_presets.cfg` 要显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` 等非资源文件（是否必需，由 P0 的导出验证确认，§7），排除 `gates/` 下的数据文件和全部 `tests/`，以及门禁夹具图（如果做，SYS-MAPS §15）。`gates/` 的 C# 代码仍编进主程序集，因为 G10 要在导出的 release 版里回放路线；不带门禁参数时它不启用。G6 的上限是安装目录 ≤ 0.9 GB、分发压缩包 ≤ 0.7 GB（上文"导出与随包内容"，ENG-PERF §8）。
+- **导出过滤器**：`export_presets.cfg` 要显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` 等非资源文件（是否必需，由 P0 的导出验证确认，§7），排除 `gates/` 下的数据文件和全部 `tests/`，以及门禁夹具图（如果做，SYS-MAPS §15）。`gates/` 的 C# 代码仍编进主程序集，因为 G10 要在导出的 release 版里回放路线；不带门禁参数时它不启用。G6 的上限是安装目录 ≤ 0.9 GB、分发压缩包 ≤ 0.7 GB（§4"导出与随包内容"、ENG-PERF §8）。
 - **构建信息**（WP-00 建生成步骤，WP-01 读出并写日志）：版本号只有一个来源，仓库根的 `version.txt`（一行 `主.次.修订`，主代理维护，发版时改）。`Campus.csproj` 的构建步骤读它和当前提交（`git rev-parse --short=12 HEAD`；工作区有未提交的改动时加 `-dirty`，拿不到 Git 时写 `nogit`），生成 `BuildInfo.g.cs`，内容是：
   - `Version`（版本号）、`Commit`（提交）、`Build`（`<版本>+<提交>`）；
   - `Kind`：按构建配置，`Debug` 为 `dev`，`ExportDebug`、`ExportRelease` 为 `export`；
-  - 各模块的代码哈希（上文"缓存键"）。
+  - 各模块的代码哈希（§4"缓存键"）。
   - **谁读它**：显示版本的界面、`SaveMeta.Build`、日志第一行与诊断摘要（ENG-PERF §12.6）、`output/perf/` 报告、分发压缩包名 `UESTC-<版本>-win64.7z` 一律读它，别处不另写版本号。对外发布的构建必须来自干净的提交（`Commit` 不带 `-dirty`）；导出、发布与更新的步骤见 OPS-RELEASE。
 
 ## 5 接口先定、桩先合入
@@ -2181,7 +2209,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 字体与题字的许可 | 只用 OFL 字体（界面是思源黑体 SC、Inter、JetBrains Mono），界面字体不改文件；原作字迹须先确认许可 |
 | `.uid` 缺失或重复 | `.uid` 与源文件同目录、一起提交；复制文件时删掉复制来的 `.uid`；代码只用 `res://` 路径（UID 失效时引擎退回按路径解析，只打印警告）；G3 检查缺失和重复 |
 | 工作树共用 `user://` | 所有工作树的项目设置相同，会共用同一个 `user://`，日志和运行时着色器缓存互相干扰。每个工作树生成 `override.cfg`，把 `custom_user_dir_name` 设成 `UESTC_WPxx`；主检出设成 `UESTC_DEV`，不碰正式版的 `UESTC`（§2、§6） |
-| .NET 8 于 2026-11-10 停止支持 | Godot 4.7.2 默认目标是 net8.0。P0 原型验证能否改用 net10.0（需要另装 SDK 时从官方来源直接下载，下完说明，CORE-CONVENTIONS §8.4）；`global.json` 锁 SDK 版本 |
+| Godot 4.7.2 在 net10.0 下的全链路 | 项目目标定为 net10.0（D-177）；Godot 4.7.2 的 C# 模板默认仍是 net8.0。D0 在 net10.0 下跑通 `dotnet build` → `--headless --import` → `--export-release` → 导出版启动；不通时报作者决定，不自行退回 net8.0；`global.json` 锁 SDK 10.0.402 |
 | 无界面模式不编译着色器 | 着色器错误只有在窗口模式下才会暴露。G5 加一次短时间的窗口冒烟运行；G7 也在窗口模式下跑 |
 | 导出版里的反射与程序集加载 | 编译器会丢掉没用到的程序集引用，导出后反射可能扫不到模块。注册器按构建时生成的程序集清单显式加载；P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，确认导出版注册结果与编辑器一致 |
 | 导出模板未下载 | .NET 导出模板约 1.2 GB，第一次做 G6 导出前从官方来源直接下载，下完说明（CORE-CONVENTIONS §8.4） |
@@ -2266,7 +2294,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 | --- | --- | --- |
 | 导出版里的反射与程序集加载：注册结果是否与编辑器一致（§2、§7） | P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，比对两边的注册结果；WP-00 | 注册器按构建时生成的程序集清单逐个显式加载 |
 | JSON 的导出行为：导出包里能否读到 `data/*.json`（§4、§7） | P0 的导出验证；WP-00、WP-02 | 导出过滤器显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` |
-| 能否改用 net10.0（.NET 8 于 2026-11-10 停止支持，§7） | P0 原型验证；需要另装 SDK 时从官方来源直接下载，下完说明（CORE-CONVENTIONS §8.4）；主代理 | net8.0，`global.json` 锁 SDK 版本 |
+| Godot 4.7.2 在 net10.0 下的全链路是否可用（§7） | D0 跑通 §7 所列四步（`dotnet build` → `--headless --import` → `--export-release` → 导出版启动）；主代理 | net10.0，`global.json` 锁 SDK 10.0.402 |
 | gdUnit4Net 5.1（RC）下需要引擎的测试怎么托管（§2、§7） | P0 验证 `[RequireGodotRuntime]` 经 `gate.ps1` 把 `UESTC_GODOT` 交给测试适配器的做法；WP-00、WP-27 | 按 §2 的写法；转正式版后由主代理换版本（ENG-WP §5） |
 | 40 个工作树同时导入、编译的磁盘占用与耗时（§7） | D0 在主检出和一个工作树上实测；主代理 | 每个工作树 0.1–0.3 GB，首次导入在分钟级以内；重 CPU 任务按 §6 第 3 步排队 |
 | L2 是否用半八面体替身（§4） | P0 选型（ENG-PERF）；WP-02 | 选用时这类烘焙要窗口和 GPU，排进 GPU 锁（ENG-PERF §12.5）；只在开发期出，随启动集发布，不在玩家机器上烘 |

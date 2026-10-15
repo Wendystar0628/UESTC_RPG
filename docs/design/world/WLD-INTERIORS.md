@@ -3,6 +3,7 @@ id: WLD-INTERIORS
 title: "室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算"
 category: world
 summary: "第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19"
+keywords: [楼内, 开放室内, 开放清单, interiors.json, IInteriorProvider, InteriorLayout, EntranceDecl, 开放入口, 自动门, DoorLeafDecl, IInteriorDoors, DoorClosed, 此处暂不开放, 封口, 门厅卡, 窗卡, 简化室内, I0 兜底层, 室内加载, 平面内核, GenericInteriorProvider, 室内类型库, 楼梯碰撞, SlopedWallCollider, 关门换位, 开放屋顶, 导航图, INavGraph, 室内色名, G19]
 owners: [WP-51, WP-52, WP-17, WP-31a, WP-31b, WP-31c]
 contributors: [WP-00, WP-02, WP-03, WP-04, WP-07, WP-08, WP-10, WP-11, WP-12, WP-13, WP-14, WP-16, WP-18, WP-19, WP-20, WP-21, WP-26, WP-27, WP-33, WP-35, WP-36, WP-37, WP-39, WP-42, WP-43, WP-44, WP-48, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, MAP-QSH-CORE, MAP-QSH-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-LIFE, SYS-VIEW, ART-FIDELITY, ART-MODELING, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
@@ -15,6 +16,7 @@ gates: [G5, G6, G8, G9, G15, G18, G19]
 
 > **范围**：本文规定第一批 15 处开放室内与 3 处开放高处（范围、入口、交通核、主要空间），门的开与关（含楼里的自动门），关着的楼的外壳、窗卡、门厅卡与简化室内，室内加载与进楼衔接，平面生成器与类型库，室内风格与生活痕迹，楼梯、门洞与碰撞，导航图与路线，扩展步骤，以及室内的契约增量、预算、工作包与 G19 验收。
 > **不在本文**：图书馆与博物馆室内的陈设细则（MAP-QSH-LIBRARY）；各楼的外观（MAP-QSH-CORE、MAP-QSH-SOUTH–MAP-QSH-CENTER-EAST、ART-FIDELITY）；行走控制器与角色参数（SYS-WALK）；介质与楼内呈现（SYS-VIEW）；声音与空间声学（SYS-AUDIO）；地图图层与门口传送（SYS-ATLAS）；契约全文以 ENG-ARCH §3 为准。
+> **查阅**：先读 §0；开放清单与入口看 §2；门的开关与自动门看 §4；窗卡、门厅卡与简化室内看 §5；加载与进楼看 §6；楼梯、门洞与碰撞看 §10；新开一栋楼看 §14；契约、工作包与 G19 看 §15、§18、§19
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-LIBRARY 图书馆与博物馆室内](../maps/qingshuihe/MAP-QSH-LIBRARY.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[MAP-QSH-WEST 西区与西北区](../maps/qingshuihe/MAP-QSH-WEST.md)、[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST.md)、[WLD-LIFE 动物与生活痕迹](WLD-LIFE.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ART-MODELING 风格化造型](../art/ART-MODELING.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)；另见 [WLD-DIORAMA 箱庭与远景](WLD-DIORAMA.md)、[WLD-WATER 水体](WLD-WATER.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)。
 
 **照片和 OSM 只定结构**：体量、层数、平面布局、入口、交通核、道路、水体按资料做；材质、色彩、陈设、装饰、标识、生活痕迹按氛围做艺术化处理。本文里写"可参考"的细节，都按画面需要取舍，不照抄；新增的氛围元素写进覆盖层，注明是设计新增和理由；现实里有、放进画面难看的东西可以删掉（杂乱管线、临时围挡、刺眼的广告、过多的指示牌）。细则见 §8.1。
@@ -42,6 +44,21 @@ gates: [G5, G6, G8, G9, G15, G18, G19]
    - **风格**：室内用暖影、窗格光柱和光斑把画面灌满光（§8.2、§8.3）；进入室内时阴影方向的最低高度从 4° 抬到 14°，是 P0 原型核实项（§6.3）。
 10. **扩展**：再开一栋楼只要在开放清单里加一项、注册一个提供者或加一条楼型配置、补门的表现、补声学声明、进 G19；契约和流式架构都不改，门厅卡、窗卡、简化室内被完整室内无缝替换（§14）。
 11. **门禁 G19 路径与连通**：开放室内各层可达，没有"进得去出不来"，门对位，楼梯可走，可走性与时刻无关，进楼零等待，自动门在观者到达前开到位（§19）。
+
+### 0.1 接入要点
+
+- **判断一栋楼能不能进、某处能不能走**：只有开放清单 `interiors.json` 里注册了 `IInteriorProvider` 的 15 处开放部分和 §3 的三处高处可走；清单外的楼行走模式下进不去、不加载室内，其余屋顶门锁着；不自己加可走的室内或屋顶（§2.0、§3、§13）
+- **要新开一栋楼或扩大开放范围**：按 §14 的六步做（清单加项、注册提供者或加楼型配置、补门的表现、补声学声明、进 G19、按需补点位与路线），不改契约和流式架构；清单的增删须经主代理审批（§2.0、§14）
+- **做门或判断一扇门属于哪类**：开放入口的门固定敞开、不做开门动画；能进的房门和开放路线上的楼梯间防火门、走廊玻璃门是自动门，登记为 `InteriorLayout.Doors` 的 `DoorLeafDecl`，观者走近推开、闭门器关上，不加交互键；封口和锁着的门是静态几何，表面类型 `DoorClosed`，顶住 0.8 s 出"此处暂不开放"（§4、§4.1、§10）
+- **要读自动门的开度或阶段（声音、声学门户、运行时门体）**：读 `IInteriorDoors`（`OpenOf`、`PhaseOf`、`Changed`），不自己推算；门的状态不进存档，读档、切图时全部直接落到关好、不放声音（§4.1、§15）
+- **有随钟点、季节、天气变化的东西**：门、卷帘、封口和烘焙碰撞都不随世界状态变，营业状态只用灯光、店招和门帘的透光表现；自动门的静止状态同样在 `build()` 时定死（§4.1、§10）
+- **画关着的楼的窗、门和楼里**：窗里一律是窗卡（WP-51 定内容、WP-04 出图，窗位类型由 WP-14 写进顶点属性），关着的门玻璃里是门厅卡，门后不做实体门厅；简化室内和 I0 兜底层由 WP-51b 的内容模块 `interior.shell` 统一生成，区域包不另做（§5、§7.1）
+- **区域包与 WP-14 做楼的外观**：每栋楼的入口都登记进覆盖层和室内索引（关着的记 `EntranceDecl.Open = false`）；立面开间网格和窗位类型调平面内核 `Campus.Gen.Interior` 取，内墙窗洞才与立面对齐；层数修正写进本区覆盖层的 `HeightOp`；无主体块的外观、窗卡选型和入口登记归 §17 表里的包（§2.0、§5.2、§7.1、§17）
+- **区域包的楼进了开放清单**：立面和窗灯不改（从外面看仍是窗卡），只在入口锚点上换 WP-13 的入口部件（敞开门扇、地垫、开放牌），并在灯表登记一盏门口灯（WP-39）；门洞碰撞由 WP-43 按 `EntranceDecl.Open` 开洞（§4、§14 第 3 步）
+- **写室内碰撞**：3 级以上的梯段做一整块斜面（26–34°，门禁上限 40°），坡顶与平台齐平、坡底埋进下层 ≥ 0.2 m，登阶层必须开；宽于 0.2 m 的梯井栏杆用 `SlopedWallCollider`；可走路线上的单扇门门洞 1.1 m；封口 `DoorClosed` 顶 ≥ 1.5 m；碰撞体都填 `Foot`（§10）
+- **要知道观者在哪栋楼哪层、开放入口在哪**：读室内索引 `IInteriorIndex`（`Get`、`EntrancesNear`）和 `MediumAt` 返回的楼与层；入口位置一律读 `EntranceDecl`，不复制 §2.17 的初值表（§2.17、§15）
+- **点位跳转或传送的目的地在室内**：`Entry = Door`，从最近的开放入口进门，按"已知目的地预取"插入室内包和碰撞，未就绪时雾幕最多多停 1.2 s；新点位从 P24 往后编（§2.17、§6.2、§15）
+- **在室内加家具、痕迹或绘制量**：家具和生活痕迹用 WP-52 的部件与房间模板，痕迹不参与碰撞、不出现"人还在"；楼内视角室内 ≤ 80 万三角形、≤ 250 次绘制（大厅、中庭、场馆 ≤ 100 万三角形），不新增白名单着色器（§7.5、§9、§12、§15）
 
 ## 1 为什么不全量开放
 
@@ -226,7 +243,7 @@ gates: [G5, G6, G8, G9, G15, G18, G19]
 - **细节**：院子分三块，外廊栏杆有两种；黑板、桌椅、窗帘颜色可参考，按画面需要处理。
 - **负责**：WP-31a。
 
-### 2.16 汇总
+### 2.16 开放清单汇总
 
 | # | 开放处 | 开放楼层 | 约面积（m²） | 开放入口 | 新点位 | 负责 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -948,7 +965,7 @@ public interface INavGraph
 | 中东 MAP-QSH-CENTER-EAST | 品学楼门框前有一座多层叠水喷泉（MAP-QSH-CENTER-EAST §2.3） |
 | 中东 MAP-QSH-CENTER-EAST | 文科楼不是 6–8 层：约 15–16 层的塔楼，加 4–6 层圆角退台裙楼和一个钢网架玻璃顶中庭；状态是"建成、正在搬入" |
 | 中东 MAP-QSH-CENTER-EAST | 综合训练馆是钢网架筒拱的一层大空间，南北两端各一栋 2 层附楼；东区田径场没有看台 |
-| 03（由 WLD-OUTSKIRTS负责） | 东北紧贴科新南路、蓉昌高速 G4217 和互通匝道；绕城高速 G4202 主线在东南 220–440 m |
+| 外围（由 WLD-OUTSKIRTS 负责） | 东北紧贴科新南路、蓉昌高速 G4217 和互通匝道；绕城高速 G4202 主线在东南 220–440 m |
 
 **只作参考、按画面需要处理的细节**：图书馆回廊栏杆的木格栅、中厅地面条带、绿罩台灯、校训木匾的位置、闸机造型；主楼柱厅的主题墙与服务柜台；校史馆展陈；宣邦楼全部室内；体育馆座椅颜色；1–8 号楼外墙用什么颜色（由画面决定）；朝阳一楼翻新后的样子；宿舍窗帘颜色；商业街店招与外摆；训练馆场地分区的片数。
 

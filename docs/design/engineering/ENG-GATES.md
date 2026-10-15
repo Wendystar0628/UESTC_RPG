@@ -3,6 +3,7 @@ id: ENG-GATES
 title: 验收：门禁、审查视角、近景巡检、回报格式
 category: engineering
 summary: 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+keywords: [门禁, 验收, 测试, 自查, 测试节奏, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁编号, G1–G21, 审查视角, 截图默认串, 命令行参数, 用户参数, 截图方式, 截图就绪, 流式屏障, 录像, 时季抽样, 巡检点轮换, 一票否决, 全局清单, 回报格式, 回报模板, 截图命名, review.json, output/render-review, GPU 锁]
 owners: [WP-27]
 contributors: [WP-00, WP-01, WP-02, WP-06, WP-32, WP-35, WP-36, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-50, WP-53]
 depends: [CORE-INDEX, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
@@ -13,9 +14,40 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 ---
 # ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-> **范围**：本文规定审查视角与命令行参数（§1）、合入门禁 G1–G21（§2，各文档 front matter 的 `gates` 字段以这里的编号为准）、一票否决（§3）、收尾的全局清单（§4）和回报格式（§5）。所有子代理用它自查，WP-27 照它实现自动化，P3 阶段的质检子代理照它审查。
+> **范围**：本文规定审查视角与命令行参数（§1）、合入门禁 G1–G21（§2，各文档 front matter 的 `gates` 字段以这里的编号为准）、一票否决（§3）、收尾的全局清单（§4）和回报格式（§5）。准备合入时查 §2 的测试三档与 `gate.ps1`，写完成回报时查 §5；WP-27 照它实现自动化，P3 阶段的质检子代理照它审查。
 > **不在本文**：各门禁引用的判据细则在对应的系统文档里（例如 SYS-TIME §8、SYS-WEATHER §9、UI-VISUAL §13、WLD-INTERIORS §19、SYS-AUDIO §22）；预算数值见 ENG-BUDGET，工作包分工见 ENG-WP。
+> **查阅**：先读 §0；测试三档与 `gate.ps1` 的用法看 §2；各门禁的内容与何时运行看 §2；命令行参数、审查视角与截图方式看 §1；一票否决看 §3；回报格式与截图命名看 §5；收尾的全局清单看 §4；待标定的判据看 §6
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ART-MODELING 风格化造型](../art/ART-MODELING.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-WP 工作包](ENG-WP.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP.md)
+
+## 0 结论
+
+1. **门禁编号以本文为准**：合入门禁共 G1–G21，子项写作 G19a、G21b 这样的形式；各文档 front matter 的 `gates` 字段只用这些编号，全局不变量 INV-1 至 INV-12 不是门禁（§2）。
+2. **测试分三档**（D-167），按最小必要原则跑，不设每天、每周的固定任务：
+   - **快检**：每次合入 `main` 前（直接在 `main` 上做时每次推送前）跑编译、改动涉及的单元测试、归属与无界面注册检查，几分钟内跑完，不占 GPU 锁；
+   - **核心专项**：改动碰到核心体验时，在一段工作做完、准备合入时跑一次，只有启动与主线冒烟、行走不穿地、存档不丢不坏三类；
+   - **集中测试**：大量开发之后由主代理发起，全部门禁全量跑完、统一修复（§2）。
+3. **统一入口 `scripts\gate.ps1 -Wp WP-xx`**：默认跑快检，按 `git diff main...HEAD` 的改动决定加不加核心专项；只改 `docs/`、注释或说明文字时不跑门禁；结果按输入的内容哈希缓存，输入没变就沿用（§2）。
+4. **开发中看效果不算门禁**：用 `--pose` 截几张自己看，不走 GPU 锁，也不跑全套视角（§2）。
+5. **审查视角与路线**：V1–V11、E1–E7、T0、F1–F4、P00–P23、W1–W14 定义在 §1 的视角表，数据在本图的 `review.json` 与 `waypoints.json`；截图默认串是秋 17:30、晴、精致、界面隐藏、无声，出默认状态的截图只换 `--pose`（§1）。
+6. **命令行只认 §1 的两张参数表**：未知参数以非零退出码结束；门禁和基准只由命令行决定，不读 `user://`（§1）。
+7. **截图有固定做法**：窗口模式、D3D12、用 `--gpu-index` 选登记的独显并断言显卡名，等流式加载与管线编译稳定后再存图；录像用 Movie Maker 加流式屏障（§1 的"截图方式"）。
+8. **一票否决 24 条**，满足任意一条直接判不通过；集中测试时全面检查，平时只要求不违反（§3）。
+9. **回报有固定格式**：每个子代理完成后按 §5 的模板逐行回报，截图放 `output/render-review/`，引用条目只写编号（§5）。
+10. **收尾与标定**：收尾阶段由主代理逐项检查全局清单（§4）；截图就绪判据、像素容差和各项阈值的初值待 P0 标定（§6）。
+
+### 0.1 接入要点
+
+- **准备合入 `main`**：跑 `scripts\gate.ps1 -Wp WP-xx`，快检必须通过；改动碰到启动与主线、行走与碰撞、存档时，入口会加跑核心专项；其余门禁留到集中测试（§2）
+- **只改了 `docs/`、注释或与运行无关的说明文字**：不跑任何门禁（§2）
+- **只想看效果**：用 `--pose` 截几张自己看，不走 GPU 锁、不跑全套视角，不算门禁（§2）
+- **要跑指定门禁**：`-Only G7,G9` 只跑指定门禁，`-Smoke` 只跑主线冒烟，`-Full` 跑集中测试的全量；集中测试由主代理发起（§2）
+- **在 front matter 写 `gates`**：只用 §2 门禁表里的编号 G1–G21，子项写作 G19a，不写 INV 编号（§2）
+- **交付门禁检查或测试接口**：接进 `scripts\gate.ps1` 这同一个入口，由 WP-27 接线（§2）
+- **需要新的命令行参数**：`Boot` 只认 §1 两张表里的参数，其余以非零退出码结束；解析归 WP-01，用法归 WP-27（§1）
+- **截图或录像**：用截图默认串，只换 `--pose`；窗口模式、D3D12、`--gpu-index` 选登记的独显，一律 `--audio=off`，按"截图方式"等就绪后存图（§1）
+- **写完成回报**：照 §5 的模板逐行填；"门禁"一行先写运行的命令再写结果；时季矩阵、天气与画质、存档、声音几行不涉及时写"不涉及"；引用条目只写编号（§5）
+- **存放截图**：放 `output/render-review/`，命名为"包-视角.png"或"包-Qn.png"，非默认状态依次加季节、钟点、天气、预设（§5）
+- **任何改动**：不得命中 §3 的一票否决，其中包括违反 ENG-BUDGET §7 的硬规则、关掉本包前后的差值超出额度（§3 第 10 条）
 
 ## 1 审查视角
 
@@ -28,7 +60,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 
 | 参数 | 截图默认值 | 含义 |
 | --- | --- | --- |
-| `--pose` | `V1` | 位姿或路线编号，见下表。在当前图里解析（SYS-MAPS §11）；位姿不在可达空间里、或落在 30 m 缓冲带里时，以非零退出码结束（WLD-OUTSKIRTS §13.1）；`T0` 只在 `--title=1` 时有效 |
+| `--pose` | `V1` | 位姿或路线编号，见本节的视角表。在当前图里解析（SYS-MAPS §11）；位姿不在可达空间里、或落在 30 m 缓冲带里时，以非零退出码结束（WLD-OUTSKIRTS §13.1）；`T0` 只在 `--title=1` 时有效 |
 | `--clock` | `17.5` | 美术钟点，单位小时，取 [0, 24)（SYS-TIME §1）。世界时间从这一钟点起单调递增 |
 | `--season` | `autumn` | `spring`、`summer`、`autumn`、`winter` |
 | `--anim` | `240` | 动画时钟 `anim_time`，单位秒，取 [0, 480)。风、水、"一拍二"都按它走，与世界时间无关（SYS-TIME §0 第 2 条）。截图时冻结在这个值；录像和基准里按帧号推进 |
@@ -64,7 +96,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12, G13, G14, G15, G16, G
 
 | 参数 | 含义 |
 | --- | --- |
-| `--shots=<编号,…>` | 一次启动按顺序截多张，例如 `--shots=V1,V2,E1`；每张都按下面的"截图方式"等就绪。另有两个组名（SYS-TITLE §1.3、SYS-TITLE §11.2）：`T0`（`--title=1 --pose=T0 --ui=0`）、`FRONTIS`（出 8 个扉页变体） |
+| `--shots=<编号,…>` | 一次启动按顺序截多张，例如 `--shots=V1,V2,E1`；每张都按本节的"截图方式"等就绪。另有两个组名（SYS-TITLE §1.3、SYS-TITLE §11.2）：`T0`（`--title=1 --pose=T0 --ui=0`）、`FRONTIS`（出 8 个扉页变体） |
 | `--out=<绝对路径>` | 截图或基准结果写到这里（`--shots` 时是目录），写完退出 |
 | `--frames=<N>` | 基准或路线录制的帧数 |
 | `--bench=1` | 基准模式：锁死画面设置和设备档（ENG-PERF §12.4）。默认 `--quality=fine`，开发机另跑 `--quality=ultra`（SYS-GRAPHICS §6） |

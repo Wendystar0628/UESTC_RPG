@@ -3,6 +3,7 @@ id: CORE-DECISIONS
 title: 决策登记
 category: core
 summary: 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+keywords: [决策, 已定, D 编号, 决策登记, 生效, 待原型验证, 细则所在, 推翻决策, ADR]
 owners: []
 contributors: []
 depends: [CORE-INDEX]
@@ -14,9 +15,10 @@ gates: []
 
 # CORE-DECISIONS · 决策登记
 
-> **范围**：本文登记全项目已经定下的决策，每条一句结论，附适用范围、细则所在的小节和状态。所有子代理开工前通读，用来确认哪些事已定、定成什么样、细则去哪里看。
+> **范围**：本文登记全项目已经定下的决策，每条一句结论，附适用范围、细则所在的小节和状态。需要确认一件事定了没有、定成什么样、细则去哪里看时，按 D 编号或关键词查本文，不必开工前通读。
 > **不在本文**：数值、规则、契约与验收的细则，以"细则所在"指向的文档为准；决策的来由与过程不写进文档，需要留背景与取舍的重大决策另写 ADR（CORE-CONVENTIONS §7.3）；术语见 CORE-GLOSSARY，约定见 CORE-CONVENTIONS，RPG 扩展路线见 ENG-ROADMAP。
 > **新增决策**：由主代理登记进本文，再改相关文档；子代理只读本文，发现文档与本文不一致时报主代理，不自行改动。
+> **查阅**：先读 §0；按 D 编号 grep；按领域找：作品与范围看 §1，世界与地图看 §2，时间季节天气看 §3，美术看 §4，界面看 §5，存档看 §6，音频看 §7，性能与画面设置看 §8，工程看 §9，流程看 §10
 > **关联**：[CORE-INDEX 总览](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
 
 ## 0 用法
@@ -27,6 +29,12 @@ gates: []
   - 待原型验证：方向已定，数值或做法以 P0 原型、看图、听评或实测为准；验证前按细则文档里的初值施工。
 - **细则所在**：写"编码 §x.y"，例如"SYS-WEATHER §6.4"；不变量写"INV-6"。本文与细则文档有出入时，以细则文档为准，并报主代理登记进 §11。
 
+### 0.1 接入要点
+
+- **想知道一件事定了没有**：按 D 编号或关键词 grep 本文；数值与做法以"细则所在"指向的文档为准（§0）。
+- **发现文档与本文不一致**：报主代理，不自行改动（范围块）。
+- **需要一个新决定**：在回报里提出，由主代理登记进本文，再改相关文档（CORE-CONVENTIONS §7.8）。
+
 ## 1 作品定位与范围
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
@@ -35,9 +43,9 @@ gates: []
 | D-002 | 观察方式只有两种：旁观飞行（默认，穿透一切）和《我的世界》式行走；不做环绕、俯视、导览和自动运镜 | 观光模式 | INV-2；SYS-VIEW §2；SYS-WALK §0 | 生效 |
 | D-003 | 不出现任何人物或角色：人只以生活痕迹出现，展陈不放人物肖像，声音里没有听得清的人声，观者没有身体、影子和脚印 | 全项目 | INV-6；SYS-WALK §1；WLD-INTERIORS §11；SYS-AUDIO §8 | 生效 |
 | D-004 | 只做 PC（Windows）；手机、网页、触屏不做 | 全项目 | INV-1；SYS-VIEW §2.2；ENG-ARCH §1 | 生效 |
-| D-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；ENG-WP §4；ENG-PERF §13 | 生效 |
+| D-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；ENG-ONBOARD §1；ENG-PERF §13 | 生效 |
 | D-006 | 视觉效果最优先：四季、昼夜、天象、花期、天气以画面好看为准，真实数据只作参考和"认得出是成电"的身份特征 | 全项目 | CORE-INDEX §1；SYS-TIME §0 | 生效 |
-| D-007 | 不是地图复刻：照片和 OSM 只定结构（体量、层数、平面、入口、交通核、道路、水体），材质、色彩、陈设、标识、生活痕迹按氛围艺术化处理 | 全部内容包 | CORE-INDEX §1；INV-9；ENG-WP §4 | 生效 |
+| D-007 | 不是地图复刻：照片和 OSM 只定结构（体量、层数、平面、入口、交通核、道路、水体），材质、色彩、陈设、标识、生活痕迹按氛围艺术化处理 | 全部内容包 | CORE-INDEX §1；INV-9；ENG-ONBOARD §1 | 生效 |
 | D-008 | 可以新增校园里没有的氛围元素，也可以删掉现实里有、放进画面难看的元素（杂乱管线、临时围挡、刺眼广告、施工网架、过多指示牌）；增删一律写进覆盖层并写明理由 | 全部内容包 | INV-9；MAP-QSH-ADDITIONS §0；MAP-QSH-ADDITIONS §5；WLD-OUTSKIRTS §5 | 生效 |
 | D-009 | 视觉精度分两层：底线（比例对、有厚度倒角和收边、没有光秃拉伸体块、不穿帮不跳变）对任何位置、任何距离都成立，含只有飞行才到的地方；细节密度按精度区 K1–K5 分级，越常被近看越密；外围按最近可达距离判定，关着的楼只做外壳、窗卡和简化室内 | 全部建模包 | INV-11；ART-FIDELITY §0；WLD-OUTSKIRTS §4.1；WLD-INTERIORS §5 | 待原型验证（方向已定，判定距离和分数线在 P0 校准） |
 | D-010 | RPG（入学到毕业）方向暂缓，只留架构接口（存档段与迁移、地图服务、解锁策略 `proximity`、多地图、门的锁状态），重新提出之前不展开设计 | 全项目 | ENG-ROADMAP；ENG-ARCH §8 | 生效 |
@@ -160,7 +168,7 @@ gates: []
 | D-097 | 设置类文件（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）读值只接受基本类型 | 设置 | SYS-SAVE §8 | 生效 |
 | D-098 | 自定义标记存进存档，ID 用本图内递增的整数，不用 `Guid.NewGuid`；存档以外只存筛选偏好 | 平面地图 | SYS-ATLAS §4.6；SYS-ATLAS §12 | 生效 |
 | D-099 | 门禁、`--shots`、`--bench` 下默认不写存档（`--save=off`） | 门禁 | SYS-SAVE §12；ENG-GATES §1 | 生效 |
-| D-100 | 存档按以后的 RPG 可扩展：各系统用 `[SaveSection]` 声明自己的段，字段有增减就升版本并写迁移函数 | 有状态的包 | SYS-SAVE §3.6；SYS-SAVE §10；ENG-WP §4 | 生效 |
+| D-100 | 存档按以后的 RPG 可扩展：各系统用 `[SaveSection]` 声明自己的段，字段有增减就升版本并写迁移函数 | 有状态的包 | SYS-SAVE §3.6；SYS-SAVE §10；ENG-ONBOARD §3.2 | 生效 |
 
 ## 7 音频
 
@@ -178,7 +186,7 @@ gates: []
 | D-110 | 脚步默认安静、可调；闸机和门不出电子提示音，单车不响铃；飞行风声实时合成 | 观者声 | SYS-AUDIO §9.1；SYS-AUDIO §9.8；SYS-AUDIO §9.9 | 生效 |
 | D-111 | 门的声音：开放楼入口门固定敞开，没有开关声；能推开的门推开时一声，停在开位和回关途中无声，关好落锁一声；电梯不出"叮" | 开放室内 | SYS-AUDIO §9.8；WLD-INTERIORS §4.1 | 生效 |
 | D-112 | 同一动作在不同地方听起来不同（窄处脚步更明显），用"4 m 声学网格 + 房间与门户 + 行走射线细化 + 声源侧混响区"实现，不上 Steam Audio | 空间声学 | SYS-AUDIO §10.1；SYS-AUDIO §10.2 | 生效 |
-| D-113 | 不用 `AudioStreamRandomizer`，改用自研的洗牌选择器；不给 `AudioStreamPlaylist.Shuffle` 和 `AudioServer.PlaybackSpeedScale` 赋值 | 音频实现 | SYS-AUDIO §9.6；ENG-WP §4 | 生效 |
+| D-113 | 不用 `AudioStreamRandomizer`，改用自研的洗牌选择器；不给 `AudioStreamPlaylist.Shuffle` 和 `AudioServer.PlaybackSpeedScale` 赋值 | 音频实现 | SYS-AUDIO §9.6；ENG-ONBOARD §3.3 | 生效 |
 | D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §8；SYS-AUDIO §11；INV-3 | 生效 |
 | D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §7.1；INV-10 | 生效 |
 | D-116 | 音频预算：主线程平均 ≤ 0.35 ms（从帧时余量里划出），在播 3D 声源 ≤ 32（核显档默认 24），常驻 ≤ 96 MB，导出包里音频单列 ≤ 165 MB | 性能 | SYS-AUDIO §18 | 生效 |
@@ -211,22 +219,23 @@ gates: []
 | D-131 | 工作包共 54 个（WP-00 至 WP-53），以 ENG-WP为准 | 全项目 | ENG-WP §2 | 生效 |
 | D-132 | 门禁是 G1–G21，以 ENG-GATES §2 为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §2；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
 | D-133 | 权威文档分工：契约以 ENG-ARCH §3 为准，帧顺序以 ENG-ARCH为准，全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET为准（性能的实现做法以 ENG-PERF为准），门禁以 ENG-GATES为准，工作包以 ENG-WP为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET §7；ENG-GATES §2；ENG-WP §2 | 生效 |
-| D-134 | 契约分批定死：WP-00 先交能编译的候选契约和桩；某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结这一组，之后只增不改；改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，一律向主代理申请；共享文件只由主代理改 | 全项目 | ENG-WP §4；ENG-WP §5；ENG-ARCH §5 | 生效 |
+| D-134 | 契约分批定死：WP-00 先交能编译的候选契约和桩；某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结这一组，之后只增不改；改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，一律向主代理申请；共享文件只由主代理改 | 全项目 | ENG-ONBOARD §3.1；ENG-WP §5；ENG-ARCH §5 | 生效 |
 | D-135 | 帧顺序 17 步，任何两步不同值：Map −1300、Quality −1200、Camera −1100（含 `CinematicPlayer`）、WorldState −1000、KeyLight −900、Palette −800、Channels −700、Motion −650、SeasonFx −640、Medium −600、Acoustics −590、Stream −500、Systems 0、Audio 50、Hud 100、StreamMount 900、Save 1000 | 全项目 | ENG-ARCH §3；SYS-TIME §1；SYS-MAPS §9；SYS-AUDIO §20 | 生效 |
 | D-136 | 流式拆成两步：`Stream`（−500）只做选级与请求，`StreamMount`（900）做挂载与碰撞入树 | 内核 | ENG-PERF §5；ENG-ARCH §3 | 生效 |
 | D-137 | 地图 ID 一律写 `MapId("qingshuihe")`，不用 "qsh"；实体 ID 的 `qsh:` 前缀是 OSM 数据的写法，不是地图 ID | 全项目 | SYS-MAPS §2.1；SYS-ATLAS §9；CORE-INDEX §4 | 生效 |
 | D-138 | 服务命名：`IMapService` 管地图加载与切换（WP-46），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（WP-48），两者不得混名 | 全项目 | SYS-MAPS §8；SYS-ATLAS §11 | 生效 |
-| D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §7；ENG-WP §4 | 生效 |
+| D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §7；ENG-ONBOARD §3.2 | 生效 |
 | D-140 | 门的契约是 `DoorLeafDecl`、`DoorPhase`、`IInteriorDoors`；状态机在 WP-07 的 `FramePriority.Medium` 那一步，运行时门体归 WP-43；`TriggerM` 1.5 m、推开 0.55 s、闭门器 2.5–3.5 s | 开放室内 | WLD-INTERIORS §4.1；ENG-ARCH §3 | 生效 |
 | D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §2.4；ENG-PERF §8；WLD-INTERIORS §6.1 | 生效 |
 | D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
 | D-143 | 全局参数（含 `map_rect`、`edge_fog`、`shaft`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；ENG-WP §5 | 生效 |
 | D-144 | 坐标单位米，x 向东、y 向上、z 向南；方位角是罗盘方位，从正北顺时针；数据坐标直接当 Godot 世界坐标用 | 全项目 | CORE-INDEX §4 | 生效 |
-| D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | CORE-INDEX §6；ENG-WP §4 | 生效 |
+| D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | ENG-ONBOARD §4.3；CORE-INDEX §6 | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、不开声音 | 门禁 | ENG-GATES §1 | 生效 |
 | D-147 | 新增的设计物体写进覆盖层，ID 以 `design:` 开头；覆盖层按图放在 `game/data/maps/<地图>/overlay/` | 内容包 | CORE-INDEX §4；ENG-ARCH §3；SYS-MAPS §2.1 | 生效 |
 | D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指门禁 G1–G21；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
 | D-160 | v1 冻结前做 ENG-ROADMAP §6 的六条预留：规则集（`RulesetDescriptor`、`IRuleset`，观光为 `sightseeing`）、观者状态 `IObserverState`、按原因计数的输入占用 `LockInput(InputLockReason)`、枚举穷举纪律、偶发事件数据化（`incidents.json`）、RPG 名字占位（目录、实体 ID 前缀、存档段名、E 与 I 键）；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §6；ENG-ARCH §2；ENG-ARCH §3；ENG-WP §2；CORE-CONVENTIONS §3.8 | 生效 |
+| D-177 | 目标框架用 net10.0（C# 14）：.NET 8 于 2026-11-10 停止支持；SDK 10.0.402 由 `global.json` 锁定（`rollForward: latestPatch`）；Godot 4.7.2 的 C# 模板默认是 net8.0，D0 在 net10.0 下跑通编译、导入、导出与导出版启动，不通时报作者决定，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §1；ENG-WP §5；ENG-ARCH §7 | 待原型验证 |
 
 ## 10 流程
 
@@ -251,6 +260,7 @@ gates: []
 | D-174 | 全校建筑立面和地面都不做旧（不做流挂、墙根脏带、修补色块、锈、沥青裂缝与补丁、油渍、路缘缺口），只留天气湿痕和季节落物；生活感靠干净的生活痕迹 | 全部内容包 | ART-FIDELITY；ART-RENOVATION | 生效 |
 | D-175 | 日式日常街景按"主轴留给成电，次路与后巷给日式"分区；传统和式建筑构件和教室推拉门不用；店头布篷、卷帘门、外挂钢楼梯、波纹铁皮雨棚只用在商业街和后勤小楼；黄昏有 2–3 只静止的乌鸦剪影，夜里和雨天不出现，不画成群飞过 | 全项目 | ART-AMBIENCE；MAP-QSH-ADDITIONS §2.16；WLD-LIFE | 生效 |
 | D-176 | 视觉精度与性能预算的关系：底线全图必须满足，不拿来换预算；细节密度在性能预算之内按精度区取舍，只有飞行才到的位置只判底线；屋顶只省贴近才看得到的细节，不省俯视构成；去粗糙按"最低合格构件"建模，倒角配自定义法线和着色器提亮，平面用硬边法线、曲面用软边法线，法线描线用软阈值 | 全部建模包 | ART-FIDELITY §0；ART-MODELING；ENG-PERF；ENG-BUDGET | 生效 |
+| D-178 | 子代理按需查阅文档：开工只读开工手册 ENG-ONBOARD（经仓库根的 `CLAUDE.md` 自动载入）、ENG-WP 本包的两行和派工简报，其余文档按 ENG-ONBOARD §4 的查阅指引按需查；每份规范文档带 `keywords`、范围块的"查阅"行、§0 结论和 §0 末尾的"接入要点"；小节目录 `docs/design/SECTIONS.md` 由 `scripts/docs/gen_index.py` 生成 | 全部工作包与文档 | ENG-ONBOARD；ENG-WP §2；ENG-WP §4；CORE-CONVENTIONS §7.1；CORE-CONVENTIONS §7.2 | 生效 |
 | D-161 | "主代理"是开发期的编排者：先做 WP-00；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）；文档里"须经 WP-00 审批"与"须经主代理审批"等价 | 全项目 | CORE-CONVENTIONS §8.5；CORE-GLOSSARY §14；ENG-WP §5 | 生效 |
 
 ## 11 待对齐

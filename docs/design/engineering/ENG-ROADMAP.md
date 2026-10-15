@@ -3,6 +3,7 @@ id: ENG-ROADMAP
 title: 扩展路线：从观光到 RPG
 category: engineering
 summary: 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留
+keywords: [扩展路线, 从观光到 RPG, RPG 扩展, 扩展点, 扩展原则, 规则集, sightseeing, 观光规则集, 观光禁令, 观者状态, 输入占用按原因计, 枚举的穷举纪律, 二值判断, 偶发事件数据化, 名字占位, RPG 预留目录, 实体 ID 前缀, 存档预留段名, v1 冻结前的预留, 写法纪律, 帧顺序草案, RPG 子系统挂点, 角色资产, VRoid, VRM, 规则集预算, RPG 开工前待办, 必需段组]
 owners: [WP-00]
 contributors: [WP-06, WP-07, WP-26, WP-27, WP-35, WP-39, WP-42, WP-46, WP-48b, WP-48c, WP-49a, WP-50]
 depends: [CORE-INDEX, ENG-ARCH, ENG-WP, SYS-SAVE, SYS-MAPS]
@@ -16,7 +17,32 @@ gates: [G4, G5, G20]
 
 > **范围**：本文只规定架构上的扩展点和"现在不能写死什么"：观光版已经留了哪些口子，哪些观光规则要做成规则集的配置，v1 冻结前必须加的最小预留。不设计 RPG 玩法。
 > **不在本文**：契约签名与冻结（ENG-ARCH §3，以及 ENG-ARCH 末尾的"扩展点（RPG）"一节）；各系统细则（各系统文档）；预算数值（ENG-BUDGET、ENG-PERF）；工作包划分（ENG-WP）。本文列出的契约名、数据路径以 ENG-ARCH §3、SYS-MAPS §2.1 为准，所以 front matter 的 `contracts`、`data` 留空。
+> **查阅**：先读 §0；扩展原则看 §1；已留的扩展点看 §2；现在写死的规定与写法纪律看 §3；RPG 子系统的挂点与帧顺序草案看 §4；预算余量与风险看 §5；v1 冻结前的预留看 §6；RPG 开工前待办看 §7
 > **关联**：[CORE-INDEX 总览](../README.md)、[ENG-ARCH 工程架构](ENG-ARCH.md)、[ENG-WP 工作包](ENG-WP.md)、[SYS-SAVE 存档](../systems/SYS-SAVE.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION.md)、[ENG-BUDGET 性能预算](ENG-BUDGET.md)、[ENG-PERF 性能工程](ENG-PERF.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO.md)
+
+## 0 结论
+
+1. 观光是 RPG 的子集：同一套世界、渲染、地图服务、存档和音频；观光是关掉一部分功能的规则集 `sightseeing`，RPG 是另一个规则集，不另做一套引擎（§1 第 1 条）。
+2. 新功能只用四种方式进来：加服务、加数据、加存档段、在枚举末尾追加值；不改既有契约的语义，不加 Autoload（§1 第 2 条）。
+3. 观光的禁令是配置，不是代码：无人物、无点选、一个偶发事件、两种观察模式、过场只在开始页前后，都写进 `sightseeing` 规则集；规则集化只改规则写在哪，观光规则一条不放松（§1 第 3、4 条）。
+4. 观光版已经留好的 17 类扩展点（多地图、存档段、解锁策略、开放室内、导航图、偶发事件、音频总线、画面设置等）和以后怎么接，列在 §2。
+5. 现在写死的 25 条规定在观光版里全部保留，看作观光规则集的内容；多数以后只增即可，需要最小预留的写在 §3 表的末列。
+6. 写法纪律现在就照做：不写观光专属常量、分清观者与镜头、枚举不做二值判断、换世界实例时直接落到新值（§3 末尾的写法纪律）。
+7. RPG 可能新增的子系统只定挂点，服务名和帧顺序值是草案，以 ENG-ARCH 为准；人物走 VRM 离线转换，运行时不用 VRM 插件和 MToon（§4）。
+8. 观光版没给角色与 NPC 留预算：开发机主线程余量约 0.15 ms，GPU 帧时余量 2%；RPG 规则集在 `budgets.json` 里单列一套账，不挤占观光各包的额度（§1 第 6 条、§5）。
+9. v1 冻结前只做 6 条预留（D-160）：规则集、观者状态、输入占用按原因计、枚举的穷举纪律、偶发事件数据化、名字占位，由 WP-00 写进契约 v1 候选；判据是以后再补会改变既有契约的语义、存档格式或目录归属（§1 第 7 条、§6.1）。
+10. 其余扩展以后只增即可（§6.2）；RPG 开工前待办不阻塞观光版（§7）。
+
+### 0.1 接入要点
+
+- **要用解锁策略名、偶发事件 ID、允许的观察模式这类观光规则**：读规则集，不在代码里写常量（§3 写法纪律、§6.1 第 1 条）
+- **要知道观者在哪**（玩家箭头、所在区域、解锁判定、进楼触发）：读 `IObserverState`；"画面从哪看"（视锥、听者、流式选级）读 `ICameraRig`（§3 写法纪律、§6.1 第 2 条）
+- **要临时接管输入**（大地图、开始页与过场、换图雾幕、菜单、改键捕获）：经 `ICameraRig.LockInput(InputLockReason)` 占用，不设布尔开关；没有任何占用时才接受观者输入（§6.1 第 3 条）
+- **消费会追加值的枚举**：写穷举的 `switch`，`default` 分支拒绝或报错，不写二值判断（§6.1 第 4 条）
+- **做平滑、带回差或保留历史的系统**：读档、新游戏换世界实例时直接落到新值（§3 写法纪律）
+- **要加新功能**：只用加服务、加数据、加存档段、枚举末尾追加四种方式；不改既有契约的语义，不加 Autoload（§1 第 2 条）
+- **碰到 RPG 预留的名字**：`game/entities/` 等预留目录观光期不写入；实体 ID 前缀 `npc:`、`item:`、`quest:`，存档预留段名（SYS-SAVE §2），E、I 两个键和 `interact`、`inventory` 两个动作名都不给观光功能用（§6.1 第 6 条）
+- **加 `FramePriority` 常量**：ENG-PERF §6、SYS-TIME §1、SYS-MAPS §9、SYS-AUDIO §20 的表同步改（§4）
 
 ## 1 扩展原则
 
@@ -119,7 +145,7 @@ gates: [G4, G5, G20]
 | NPC 与日程 | `IAgentService`（登记、日程、决策） | `game/entities/agents/`；全局数据 `game/data/npcs/`，按图的出生点与日程覆盖 `game/data/maps/<id>/entities/` | `agents`：只存偏离日程的状态，按日程推得出的不存 | 日程与决策在 `Agents`（−300）；寻路在线程池；移动在 `_PhysicsProcess` | `INavGraph`（`NpcOnly`）与 NavigationServer3D（WLD-INTERIORS §13）；软障碍（SYS-WALK §12 的泛化）；流式加载（只在已挂载的格里实例化，ENG-PERF §5）；开放室内（WLD-INTERIORS）；灯光时刻表（SYS-TIME §6，生活节律一致）；动态发声器（WLD-LIFE §6.3）与人迹声规则（SYS-AUDIO §8）；节奏规则（SYS-MOTION §2） |
 | 事件与触发器 | `IEventDirector`（由 `IncidentDirector` 泛化） | `game/systems/events/`，或在 `game/systems/motion/` 里扩展；数据由 `game/data/maps/<id>/incidents.json`（§6 第 5 条）扩成事件表 | `flags`（一次性事件）；偶发事件照旧不存（SYS-SAVE §2） | 判定在 `Story`（−950）；画面表现照旧在 Motion（−650），经通道与全局参数 | SYS-MOTION §10 的触发条件与转场冷却（SYS-MOTION §12）；`MapPortal` 的触发盒（SYS-MAPS §8）；`IAppFlow`；任务；`IAmbienceService.Cue` 的批号（SYS-MOTION §10.7）；天气钉住 `Pin`（SYS-WEATHER §6.6）：剧情事件要求的天气与钉住的先后在 RPG 立项时定 |
 | 本地化与文本 | `ITextService`（键 → 文本，缺键回退） | `game/data/text/<语言>/`；界面自己的翻译表照旧在 `game/hud/i18n/` | 无：语言在 `settings.cfg` | 不逐帧 | UI-NAV §8 的 `TranslationServer`；`LocalizedName`（以 init 属性加文本键）；字体与 MSDF（UI-VISUAL §11.8）：G16 不许雾幕后新生成字形，对白的字形集要离线收齐（ENG-BUDGET §7 第 9 条）；文本输入（自定义标记的备注、任务日志）：界面现在没有文本框（UI-NAV §5），`CustomPin.Note` 观光期不开放（SYS-ATLAS §4.6） |
-| 存档扩展 | `ISaveService`（不变） | `game/kernel/save/`（不变） | 上面各段；手动槽 `m1`–`m9` | Save（1000） | 所有段；金档与迁移链（SYS-SAVE §3.6）；G20；`Content` 阶段内按 `Order` 恢复（SYS-SAVE §2） |
+| 存档扩展 | `ISaveService`（不变） | `game/kernel/save/`（不变） | 本表各子系统的段；手动槽 `m1`–`m9` | Save（1000） | 所有段；金档与迁移链（SYS-SAVE §3.6）；G20；`Content` 阶段内按 `Order` 恢复（SYS-SAVE §2） |
 | 日历 | `ICalendar`（由 `WorldHours` 推出学年、学期、周、日期，可驱动季节） | `game/kernel/world/`（WP-34 的扩展） | `calendar`：日历原点与偏移，日期本身由 `WorldHours` 推出 | WorldState（−1000）里，与季节同一步 | SYS-TIME §1 的季节（RPG 规则集下由日历推进，换季仍是正向过渡）；SYS-TIME §6 的时刻表（加"日类型"维）；WLD-INTERIORS §9 第 10 条的时间痕迹；规则集的 `WorldControls` |
 
 **角色资产的倾向**：人物用 VRoid Studio 制作、导出 VRM，由 `pipeline/character/` 离线转成本项目的网格、骨架与动画资源，材质换成白名单里的卡通着色器（按 ART-STYLE 的分阶明暗与描线）。运行时不用 VRM 插件，也不用 MToon。理由：
@@ -168,7 +194,7 @@ VRM 自带的许可信息逐文件登记，做法同音频素材（SYS-AUDIO §1
 | 1 | 规则集 | 契约 `RulesetId`、`WorldControlMask`、`InteractionRule`、`RulesetDescriptor`、`IRuleset`（Kernel 服务，只读；只有新游戏和读档能切换）；数据 `game/data/rulesets/sightseeing.json`。v1 字段：`Id`；`ViewModes`（Fly、Walk）；`WorldControls`（`WorldControlMask`：`Clock`、`Season`、`Weather`、`Flow`，观光为 `All`）；`UnlockPolicy`（`all-unlocked`）；`Incidents`（允许的偶发事件 ID）；`CinematicStates`（Title、Entering、Leaving）；内容规则 `Characters = false`、`Interaction = InteractionRule.None`、`ClearVoices = false`（运行时不读，门禁按它取判据）。顺序：新游戏先定规则集，再调各段的 `CreateDefault`；读档先按 meta 的 `Ruleset` 定规则集，再进 `World` 阶段 | WP-00：契约、服务（放 `game/kernel/registry/`）、schema 和规则集文件。读它的包：WP-48c（解锁策略）、WP-06 与 WP-42（`IViewControl` 拒绝不在表里的模式）、WP-35（世界控件）、WP-26（事件清单）、WP-49a（过场状态）、WP-50（读档恢复）、WP-27（门禁判据） | meta 的 `Ruleset` 字符串要有定义；不定的话，观光禁令会散成各包代码里的常量和判断，以后每一处都要改语义 | ENG-ARCH §3（规则集契约）、ENG-ARCH §2（`game/data/rulesets/`、`game/kernel/registry/`）、ENG-WP §2（WP-00 行与读规则集的各行）、SYS-ATLAS §8、SYS-TITLE §7.1、SYS-TITLE §7.4、SYS-SAVE §5.1、SYS-SAVE §5.5、ENG-GATES §3 |
 | 2 | 观者状态 | 契约 `IObserverState`：观者的脚位、眼位、朝向、所在空间 `NavSpace?`、观察模式。旁观时就是镜头位置，行走时是 WP-42 的物理体。v1 读它的：小地图的玩家箭头（视锥仍读镜头）、底栏区域名、`Proximity` 的判定、行走进楼触发与门、存档 meta 的空间与区域 | WP-00（契约）；WP-06 实现（行走时取 WP-42 的数据）；读它的包：WP-48b、WP-48c、WP-07、WP-50 | 第一人称下观者与镜头重合；第三人称后两者分开，各包若直接读 `ICameraRig.Pose`，就要逐包排查、改语义。v1 只是换一个读取来源 | ENG-ARCH §3（`IObserverState`）、ENG-ARCH §2（`Campus.Hud.Map` 的依赖规则）、ENG-WP §2（WP-06 行）、SYS-ATLAS §3、SYS-ATLAS §8、SYS-ATLAS §11、SYS-SAVE §3.2、WLD-INTERIORS §4.1、WLD-INTERIORS §6.2 |
 | 3 | 输入占用按原因计 | `ICameraRig` 用 `IDisposable LockInput(InputLockReason r)` 占用输入，没有任何占用时才接受观者输入；不设布尔开关。v1 的原因 `InputLockReason { Atlas, Cinematic, MapTravel, Menu, Rebind }`：大地图、开始页与过场、换图雾幕、菜单（设置卡、存档页、数据手册、确认对话框）、改键捕获；以后在末尾追加对话、剧情过场 | WP-00（契约）；WP-06 实现；调用方 WP-48c、WP-49a、WP-46、WP-35 | v1 已有五种占用：大地图（SYS-ATLAS §4.1）、开始页与过场（SYS-TITLE §7.3）、换图第 1、8 步（SYS-MAPS §4.2）、菜单与改键捕获（UI-NAV §5）。一个布尔量被几处开关会互相覆盖，RPG 还要再加几处；冻结后再改成计数，会改变已有调用的语义 | ENG-ARCH §3（相机块）、ENG-WP §2（WP-06 行）、SYS-ATLAS §4.1、SYS-ATLAS §11、SYS-TITLE §7.1、SYS-TITLE §7.3、SYS-MAPS §4.2、UI-NAV §5 |
-| 4 | 枚举的穷举纪律 | 会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错；不写 `mode == ViewMode.Fly ? … : …` 这样的二值判断。读到不认识的枚举字符串，按 SYS-SAVE §3.5 当作不合法 | WP-00：写进简报（ENG-WP §4）和约定（CORE-CONVENTIONS）。G1 的 `-warnaserror` 已把非穷举 switch 表达式的警告当错误，二值判断靠评审 | "末尾追加"只有在消费方不假设闭集时才安全；二值判断会把新值静默当成旧值，编译器查不出 | CORE-CONVENTIONS §3.8、ENG-WP §4、ENG-ARCH §8（扩展方式第 1 条） |
+| 4 | 枚举的穷举纪律 | 会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错；不写 `mode == ViewMode.Fly ? … : …` 这样的二值判断。读到不认识的枚举字符串，按 SYS-SAVE §3.5 当作不合法 | WP-00：写进开工手册（ENG-ONBOARD §3.2）和约定（CORE-CONVENTIONS）。G1 的 `-warnaserror` 已把非穷举 switch 表达式的警告当错误，二值判断靠评审 | "末尾追加"只有在消费方不假设闭集时才安全；二值判断会把新值静默当成旧值，编译器查不出 | CORE-CONVENTIONS §3.8、ENG-ONBOARD §3.2、ENG-ARCH §8（扩展方式第 1 条） |
 | 5 | 偶发事件数据化 | `game/data/maps/qingshuihe/incidents.json`：事件 ID、路线实体（银杏大道南段，加转向时间广场的一段）、选树与选灯的规则引用、各版本的开关。`IncidentDirector` 只跑规则集 `Incidents` 里登记的事件；灯光表里的事件序号由同一份文件烘出 | WP-26（文件与 schema）；WP-46 在按图目录里登记；WP-39 的灯光表烘焙读它 | G4 不许系统代码出现实体 ID 字面量，路线实体要有数据文件和按图目录里的位置；数据化以后，"只有一个偶发事件"就是清单长度，加图也不改代码 | SYS-MOTION §10.2、SYS-MOTION §10.7、ENG-ARCH §2、SYS-MAPS §2.1、ENG-WP §2（WP-26 行）、CORE-CONVENTIONS §5.2 |
 | 6 | 名字占位 | 目录：`game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<id>/entities/` 在 `ownership.json` 里记为 WP-00 的 RPG 预留，观光期不写入。实体 ID 前缀 `npc:`、`item:`、`quest:` 保留，G5 的前缀检查拒绝观光数据使用。存档预留段名含 `calendar`、`agents`。输入动作 `interact`（E）、`inventory`（I）的名字和键位不分配给观光功能 | WP-00；SYS-SAVE的预留表；UI-NAV快捷键表不占 E、I | 名字一旦被观光的包占用，以后要改目录、改 ID、改存档段名，代价都比现在留一行大；这几项都不写代码 | ENG-ARCH §2、SYS-SAVE §2、SYS-MAPS §2.1、UI-NAV §5、ENG-GATES §2（G5）、CORE-CONVENTIONS §3.1、CORE-CONVENTIONS §5.1、CORE-CONVENTIONS §5.2 |
 

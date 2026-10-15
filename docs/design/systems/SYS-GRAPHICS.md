@@ -3,6 +3,7 @@ id: SYS-GRAPHICS
 title: 画面设置：预设、单项、风格底线、自动推荐与自适应
 category: systems
 summary: 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
+keywords: [画面设置, 画质, 画面预设, 设备档, 流畅, 均衡, 精致, 极致, 单项, 风格底线, 风格默认, 自动调节画质, 自适应, 首次分档, 渲染比例, 超采样, 雾幕类设置, 画面页, 显存估算, IQualityService, IQualityAware, QualityResponsive, QualityKnob, QualityView, KnobSpec, quality-presets.json, graphics.cfg, engine_override.cfg, reset-graphics.cmd, 预设轮换]
 owners: [WP-32]
 contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-35, WP-38, WP-41, WP-45, WP-47]
 depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
@@ -16,6 +17,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 
 > **范围**：本文规定画面设置：设备档与四档预设、各单项的取值与生效方式、不随画质关掉的风格底线、应用流程、首次分档与自动调节、`graphics.cfg` 与命令行、契约、画面页的内容与验收。
 > **不在本文**：画面页的视觉（UI-VISUAL §8.5）；声音设置（SYS-AUDIO §13）；设备档的预算与帧率目标（ENG-BUDGET §2）；自动调节的控制律（ENG-PERF §11.3）；开放室内的介质呈现（WLD-INTERIORS）。
+> **查阅**：先读 §0；预设取值看 §1；风格底线看 §2；单项、生效方式与负责方看 §3、§7；分档与自动调节看 §5；`graphics.cfg` 与命令行看 §6；契约与 `[QualityResponsive]` 看 §8；验收看 §10
 > **分工**：WP-32 主责（32a 画面设置、32b 分档与自适应），WP-35 做画面页；各单项的负责方见 §3、§7。
 > **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)；另见 [CORE-INDEX](../README.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ART-FIDELITY](../art/ART-FIDELITY.md)、[SYS-TIME](SYS-TIME.md)、[UI-NAV](../ui/UI-NAV.md)、[UI-VISUAL](../ui/UI-VISUAL.md)、[SYS-TITLE](SYS-TITLE.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)、[WLD-OUTSKIRTS](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS](../world/WLD-INTERIORS.md)、[SYS-AUDIO](SYS-AUDIO.md)、[OPS-RELEASE](../ops/OPS-RELEASE.md)
 
@@ -25,10 +27,25 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
    - **设备档**是硬件分类（独显高、独显中、最低配置，ENG-BUDGET §2），由首次分档得出，只决定推荐哪个预设、帧率目标和自适应的预算。最低配置是近两年的核显轻薄本：酷睿 Ultra 第一代（Arc 核显）或 Radeon 780M 同级及以上、16 GB 双通道内存、SSD；更旧更弱的核显（UHD 6xx、Vega 8、Iris Xe、680M 等）不做适配，不另设档（D-169）；
    - **画面预设**是一组单项取值，玩家能选、能改。极致 ↔ 独显高，精致 ↔ 独显中，均衡 ↔ 最低配置；流畅不对应设备档，是重场景和自动调节时的兜底预设，玩家也可以手动选。改动任何单项，预设显示为"自定义"。
 2. **风格底线不做开关**（§2）：描线、分阶明暗与按材质的影色、柔光（高光晕开）、平涂贴图、实时阴影、西湖倒影等在任何画质下都保留，低画质只降渲染比例、阴影图、距离和密度，不降画风和近景建模。
-3. **单项按生效代价分三类**：即时（只改数值）、雾幕（要重建渲染缓冲，点"应用"后在 0.3 s 雾幕里批量生效）、重启。**会清空管线的设置不做成选项**，四档统一取值，所以切换设置永远不触发管线编译。
+3. **单项按生效代价分四类**（契约 `ApplyClass`，§8）：即时（只改数值）、分帧（即时生效，分多帧重写完成，每帧不超过 0.3 ms，如细节距离，§3）、雾幕（要重建渲染缓冲，点"应用"后在 0.3 s 雾幕里批量生效）、重启。**会清空管线的设置不做成选项**，四档统一取值，所以切换设置永远不触发管线编译。
 4. **画面设置只改运行时的选级和引擎参数**：不改烘焙产物、碰撞、世界状态和种子，也不按预设各烘一套，所以本机烘焙缓存跨画质共用（SYS-MAPS §2.4，D-165）。生成器（`game/gen`）完全不感知画面设置。
 5. **自动调节画质默认开**：只往下调，永远不超过玩家所选；玩家手动改过的项被锁定，自动调节跳过它。
 6. **画面设置不影响声音**：声音的设置在 UI-NAV §4.6 的"声音"页（SYS-AUDIO §13），存 `user://audio.cfg`，与本文件互不相干。
+
+### 0.1 接入要点
+
+- **系统要响应画面设置**：在实现 `IQualityAware` 的 `[KernelNode]` 上标 `[QualityResponsive]`，`Owns` 列自己负责落到引擎上的单项（每项恰有一个负责方，G5 核对），`Reads` 列只读的项；设置经 `IQualityAware.ApplyQuality()` 送达（§7、§8）
+- **要读画面设置**：只经 `IQualityService` 和 `IQualityAware.ApplyQuality()`，任何包都不读 `user://graphics.cfg`；着色器要的细节系数、植被密度、草半径读全局参数 `quality`（vec4，WP-32 写）（§8）
+- **做会画进画面的东西**：风格底线（描线、分阶明暗与按材质的影色、柔光、平涂贴图、雾、天空、调色板与 LUT、窗灯与路灯光斑、季节内容、一拍二、剖切与介质呈现）不做开关，任何预设、手动值、自适应级别都不能关；实时阴影、西湖倒影只能降到最差值（§2）
+- **要给低画质省开销**：只降渲染比例、阴影图、距离和密度，不降画风和近景建模；季节内容只降密度、不缺席（§0、§2）
+- **要新增画面单项**：在 `QualityKnob` 末尾追加（契约只增不改），写好 `KnobSpec`（负责方、生效类、种类、最差值）和预设表 `game/data/quality-presets.json` 里的取值（§7、§8）
+- **要新增引擎设置、后期效果或着色器变体**：会清空管线的设置不做成选项；切换任何设置都不得触发管线编译，新的可达组合要进启动预热的并集（§3）
+- **负责一个会被自动调节的单项**：每级降档在 0.5–1 s 内淡化完成，不硬切（G13）；分帧生效的每帧不超过 0.3 ms；玩家手动改过的项被锁定，自动调节跳过它（§3、§5）
+- **负责雾幕类单项**：在雾幕全黑时按负责方顺序执行（WP-32 → WP-03 → WP-05 → WP-04 → WP-02），不编译管线（§4）
+- **界面或其他包要改画面设置**：只调 `IQualityService.Plan()`、`Apply()`；跳转、传送、换季、切图、读档、过场等遮挡期间返回 `Deferred`，结束后再执行（§4）
+- **生成器与烘焙**：`game/gen` 完全不感知画面设置，不按预设各烘一套；画面设置不改烘焙产物、碰撞、世界状态和种子（§0）
+- **要临时改画面相关的引擎参数（如开放室内的阴影第一级范围）**：作为介质覆盖自己记，不登记 `Owns`，也不进 `QualityView`（§3"介质覆盖"、§7）
+- **门禁、截图、基准要指定画质**：用命令行 `--quality`、`--quality-set`、`--adaptive`、`--tier`，不读 `user://`；视觉基准是 `--quality=fine --adaptive=0`（§6、§10）
 
 ## 1 预设
 
@@ -105,7 +122,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 | 粒子 | 降水与粒子密度 | 50% / 75% / 100% | 即 | 降水池、飘落池的 `VisibleInstanceCount`（萤火虫不降，它只占 1 次绘制） | WP-45（WP-38 只读，按同一密度设飘落池） |
 | 帧率 | 自动调节画质 | 开 / 关 | 即 | §5 | WP-32 |
 | 高级 | 图形接口 | D3D12（默认）/ Vulkan | 启 | 写 `user://engine_override.cfg`，经项目设置 `application/config/project_settings_override` 读取；`OS.SetRestartOnExit` 后退出 | WP-32 |
-| 高级 | 显卡选择 | 双显卡笔记本上选独显 / 核显 | 启 | 同上，对应 `--gpu-index` | WP-32 |
+| 高级 | 显卡选择 | 双显卡笔记本上选独显 / 核显 | 启 | 同"图形接口"一行，对应 `--gpu-index` | WP-32 |
 
 **固定不做选项的引擎设置**（四档统一，保证切换不编译管线）：
 

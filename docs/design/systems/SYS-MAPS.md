@@ -3,6 +3,7 @@ id: SYS-MAPS
 title: "多地图：按图数据、`IMapService` 与切换"
 category: systems
 summary: "按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁"
+keywords: [多地图, 换图, 切图, 地图服务, 按图数据, 按图与全局, 先卸后装, 切换 8 步, 同图重载, 天气按图, 进图补算, 地图归属, 本图默认状态, 单图半径, 启动集 PCK, IMapService, IMapContext, IMapAware, MapScope, MapDescriptor, MapId, MapVisit, MapTravelRequest, IMapTransition, map.json, index.json, map_rect, "boot_<地图>.pck", FramePriority.Map, "--gate=maptravel"]
 owners: [WP-46]
 contributors: [WP-00, WP-01, WP-02, WP-08, WP-15, WP-22, WP-23, WP-24, WP-26, WP-27, WP-34, WP-35, WP-36, WP-39, WP-40, WP-43, WP-44, WP-45, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUTSKIRTS]
@@ -15,6 +16,7 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 
 > **范围**：本文规定多地图架构：按图存放的数据与目录，`map.json`（`MapDescriptor`），`IMapService` 的加载与切换（一个 World3D，先卸后装，8 步），时间与季节全局、天气按图，全局参数 `map_rect`，以及同图重载门禁。现在只有一张图 `qingshuihe`，架构从第一天起按多张图写。
 > **不在本文**：平面地图的标记、解锁与传送（SYS-ATLAS的 `IAtlasService`）；活动范围的公式与外围数据（WLD-OUTSKIRTS）；开放室内的清单与加载（WLD-INTERIORS）；存档的段格式（SYS-SAVE）；开始页与过场（SYS-TITLE）；音频换图的细节（SYS-AUDIO §2.7）。
+> **查阅**：先读 §0；目录、按图与全局的划分、本机烘焙缓存与启动集看 §2；`map.json` 的字段看 §3；切换 8 步、规则与各入口看 §4；时间、天气在切图时怎样看 §5；模块归属与 `MapScope` 看 §7；契约签名看 §8；`map_rect` 看 §10
 > **关联**：[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间与季节](SYS-TIME.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)；[CORE-INDEX 总览](../README.md)、[WLD-DIORAMA 箱庭与远景](../world/WLD-DIORAMA.md)、[ENG-GATES 验收](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走模式](SYS-WALK.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
 
 ### 分工与约定
@@ -32,6 +34,19 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 5. **世界状态是混合方案**：`WorldHours`、季节、`AnimTime` 全局共享，切图时世界时间照常向前；天气按图各自一份前向过程，进图时把队列补算到当前世界时间，补算是微秒级（SYS-WEATHER §6.5），不在后台模拟没去的图（§5）。
 6. **地图服务这一版就交付**：只有一张图时，`Travel` 到当前图就是"同图重载"。用它跑泄漏门禁（§13），把"以为只有一张图"的隐藏写法提前逼出来。
 7. **几个新登记**：帧顺序 `FramePriority.Map = −1300`，与 ENG-ARCH §3 的 17 步表统一（§9）；全局参数 `map_rect`，清水河取全图数据纹理的覆盖范围 ±1280 m（§10）；命令行 `--map`、`--spawn`、`--gate=maptravel`（§11）；单图半径不超过 8 km（§12）。
+
+### 0.1 接入要点
+
+- **读本图的数据文件**：路径一律由 `IMapContext.DataRoot` 拼出，启动集产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§7、§8）
+- **要给每张图加数据或资源**：数据放 `game/data/maps/<地图>/` 下本包自己的文件或子目录，资源放各资源目录的 `<地图>/` 子目录，归属不变；`map.json` 归 WP-46，字段增改须经主代理批准（§2.1、§3）
+- **写内容模块、室内提供者或区内部件**：区代码靠所在程序集的 `MapScope` 归属（WP-00 写进 csproj），各区包自己不写；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§7）
+- **全局常驻的 `[KernelNode]` 用到按图的数据**：实现 `IMapAware`，在 `OnMapUnloading` 释放本图的实例、纹理内容和缓存，在 `OnMapLoaded` 按新图重建；不得跨图持有 `IWorldModel`、`FeatureId`、格子句柄或纹理内容，G16 的同图重载用弱引用查这一条（§4.3、§8、§13）
+- **节点只属于某张图**：`[KernelNode]` 写 `Map`，Mount 时实例化、Unload 时释放（§7）
+- **写全图数据纹理或采样它**：一律按全局参数 `map_rect` 换算（着色器用 `map_uv()`、`in_map()`，范围外取"无数据"的默认值），不按"全校"隐式换算；C# 侧栅格从 `MapDescriptor.DataRect` 换算；纹理在 `OnMapLoaded` 里重建（§10）
+- **设置罩住整张图的 `CustomAabb`**：切图时重设，罩箱庭内容的用 `MapDescriptor.Bounds`，跟相机走的用 `Center` ± `Roam.MaxRadius`（§3、§10）
+- **在切图途中被调用**：`IMapService.Context` 在 Unload 到 Mount 之间为 null，要判空；`Current`、`Context` 在 `FramePriority.Map`（−1300）那一步换，同一帧里各系统看到同一张图（§8、§9）
+- **同图内移动**（点位跳转、传送、回位）：交给 `ICameraRig.Transit` 和 `IAtlasService`，不调 `IMapService.Travel`；只有目标在别的图时才 `Travel`（§4.3）
+- **依赖时间或天气**：切图时 `WorldHours`、季节照常向前，`IWorldState.Instance` 不变，不要把切图当成换实例；天气按图各一份，进图时补算，不在后台模拟没去的图（§5）
 
 ## 2 数据模型与目录
 

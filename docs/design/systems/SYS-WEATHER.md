@@ -3,6 +3,7 @@ id: SYS-WEATHER
 title: 天气：天气清单、画面规则、前向随机过程、过渡与验收
 category: systems
 summary: 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
+keywords: [天气, 天气格, 自动天气, 手动天气, 天气向量, WeatherNow, WeatherKind, WeatherVec, WeatherSpan, IWeatherProcess, WeatherProcessState, ILightningFeed, LightningFlash, 前向随机过程, 前瞻队列, 天气预报, 天气种子, 天气修正量, 太阳雨, 雨的可读性, 闪电, 彩虹, 降水池, precip.gdshader, precip_occ, 湿润, 积水, 地面遮罩 2, refl_lamps, 天气巡回]
 owners: [WP-45]
 contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-15, WP-23, WP-24, WP-25, WP-26, WP-27, WP-34, WP-35, WP-36, WP-37, WP-38, WP-39, WP-40, WP-41, WP-46, WP-47, WP-50, WP-53b, WP-53d]
 depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME]
@@ -16,6 +17,7 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
 
 > **范围**：本文规定天气这个世界量：天气格与内部状态、每种天气的画面与声音规则、雨的可读性、与四季昼夜的配合、闪电与彩虹、自动天气的前向随机过程、各系统的实现参数、状态与契约、存档里的天气段和验收。
 > **不在本文**：钟点、季节与调色板关键帧（SYS-TIME）；天气格与预报行的界面样式（UI-NAV、UI-VISUAL）；天气声的素材与混音（SYS-AUDIO）；画面设置的"降水与粒子密度"一项（SYS-GRAPHICS）；存档容器与恢复顺序（SYS-SAVE）；按图的过程如何随切图调度（SYS-MAPS）。
+> **查阅**：先读 §0；天气格与季节合法性看 §1；每种天气的画面与声音看 §2；雨的可读性看 §3；自动天气的过程、种子与进图补算看 §6；各系统的实现参数看 §7；契约、全局参数、存档段与命令行看 §8；验收看 §9
 > **分工**：WP-45 主责（45a 过程与剧本、45b 降水与湿润），其余各包的增量见 §10。
 > **关联**：[ART-STYLE 风格基础](../art/ART-STYLE.md)、[ART-SKYLIGHT 天空光照大气](../art/ART-SKYLIGHT.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-TIME 时间季节](SYS-TIME.md)；另见 [CORE-INDEX](../README.md)、[SYS-MOTION](SYS-MOTION.md)、[SYS-VIEW](SYS-VIEW.md)、[ENG-GATES](../engineering/ENG-GATES.md)、[ENG-BUDGET](../engineering/ENG-BUDGET.md)、[UI-NAV](../ui/UI-NAV.md)、[SYS-GRAPHICS](SYS-GRAPHICS.md)、[UI-VISUAL](../ui/UI-VISUAL.md)、[SYS-SAVE](SYS-SAVE.md)、[SYS-MAPS](SYS-MAPS.md)、[WLD-OUTSKIRTS](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS](../world/WLD-INTERIORS.md)、[SYS-AUDIO](SYS-AUDIO.md)
 
@@ -27,6 +29,21 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
 4. **验证单位是"状态 × 关键帧 × 季节"的静态格和"转移边 × 光段 × 季节"的动态格**（§9）。任何随机拼接出的画面，要么是验过的静态格，要么是验过的过渡录像里的同类帧，所以都好看。
 5. **只新增一个白名单着色器** `precip.gdshader`（雨丝、溅落、檐滴共用），其余并入现有的 toon、雾、天空、水 include 和描线计算通道。
 6. 天气种子每个存档一个，每张地图一份前向过程，进图时补算到当前世界时间（§6.4、§6.5）；读档后天气与没退出时逐帧一致（SYS-SAVE）。天气有声音，声音和画面读同一组参数（§2、SYS-AUDIO）。太阳雨不是新的天气格，而是"雨 → 雨后初晴"这条转移边的开头（§2）。
+
+### 0.1 接入要点
+
+- **要让表现随天气变化**：只读 `IWorldState.WeatherNow`（天气向量）和天气类全局参数（`weather_a`、`weather_b`、`weather_fog`、`cloud`、`lightning`、`snow_fx`、`overcast_dir`），不自己判断天气格、不另设天气计时；换天气不增删节点、不切特化开关（§0、§8）
+- **要加天气效果的着色器代码**：并入现有的 toon、雾、天空、水 include 和描线计算通道，新增的白名单着色器只有 `precip.gdshader` 一个（§0、§7）
+- **要显示或改天气**：读 `Weather`、`WeatherAhead`（界面经 HudModel 采样），改只经 `IWorldControl` 的 `SetWeather`、`SetWeatherIntensity`、`SetWeatherAuto`、`Apply`；本季有没有某种天气用 `IsNative` 判断（§1、§8）
+- **要用雨丝、雪花、溅落**：都在 WP-45b 的降水池里，不另开粒子；数量乘画面设置的"降水与粒子密度"，读 `precip_occ` 让檐下、连廊下、屋里无雨（§7）
+- **室外表面要有湿润、积水、积雪**：湿润变暗乘材质线表里的响应值，`ROUGHNESS` 不能动（它存的是材质 ID）；积水读地面遮罩 2；积雪 = max(季节基线, 天气累积)；雨停后干净，不做旧、不留水渍（§7）
+- **CPU 侧要判断地面湿不湿、有没有积水**：经 `IGroundCover`（WP-38 实现，复用 WP-45b 的公共函数），与着色器同一套阈值，不另写判定（§7）
+- **有灯要在湿地面和积水里拉出倒影**：一、二级灯进共用灯条表 `refl_lamps`，水面和湿地面共用，不另设灯条数组（§7）
+- **做外围或开放室内**：外围 O0 读地面遮罩 2，有积水和灯条倒影；O1、O2 只做湿润变暗和掠射天光带；室内无雨，开放入口的地垫雨天变深（§2"外围在雨雾中"、§7）
+- **要按天气出声**：只读 `WeatherNow` 和 CPU 侧数据（`precip_occ`、地面遮罩 2、檐滴点表），不读回全局参数；远雷只听 `ILightningFeed`（§8）
+- **有与天气相关的随机抽取**：用天气种子的计数器子流 StableHash(种子, mapId, epoch, 片段号, 尝试号, 用途)，与帧率和补队列的时机无关，不另取熵（§6.4）
+- **切图或读档涉及天气**：切图时 WP-46 在雾幕里调 `IWeatherProcess.Leave`、`Enter`；读档经 `weather`、`map:<id>/weather` 两段的 `Restore` 直接落定，不调 `Reset`，也不重新"保持晴"（§6.5、§8）
+- **截图、录像或门禁要指定天气**：用命令行 `--weather`、`--weather-intensity`、`--weather-seed`、`--weather-queue`、`--sunshower`，不合季节的组合以非零退出码结束；"天气巡回"跑完管线编译计数为 0（§8、§9）
 
 ## 1 天气清单与界面格
 
@@ -200,7 +217,7 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
 
 ### 6.6 固定点
 
-- **新游戏**：新时间线从秋 17:05、晴、自动天气起，保持晴到秋季黄昏带结束（约 19:36）；进场过场以 60× 推到 17:30 停住，交还控制时转 1×（SYS-TITLE §6）。完整、简短、关、跳过都按同一条世界轨走，所以任何种子下新游戏交还控制时的画面都相同。第一段天气最早在交还控制（17:30）后约 2.3 h 出现，中位 9.8 h。
+- **新游戏**：新时间线从秋 17:05、晴、自动天气起，保持晴到秋季黄昏带结束（约 19:36）；进场过场推到 17:30 停住（完整版以 60× 推进，简短版、关和跳过的倍率按 SYS-TIME §1），交还控制时转 1×（SYS-TITLE §6）。完整、简短、关、跳过都按同一条世界轨走，所以任何种子下新游戏交还控制时的画面都相同。第一段天气最早在交还控制（17:30）后约 2.3 h 出现，中位 9.8 h。
   - **"保持晴"是清水河默认状态的一部分**：`map.json` 的 `world.quietUntilDusk = true`（SYS-MAPS §3），意思是默认状态的天气是"自动 + 保持晴到本季黄昏带结束"。新游戏的起始图套用本图默认状态；以后别的图写 false 就不保持晴。
   - **读档不重新"保持晴"**：保持晴的窗口本身存在存档里，到点自然结束（SYS-SAVE §5.4）。读档时也不调用 `IWeatherProcess.Reset`。
 - **回到落金初灯**：换到秋季（正向换季转场）+ 快进到下一个 17:30（已在 17:22–17:40 之间就不动）+ 流逝恢复 1× + 自动天气 + 保持晴到黄昏带结束；种子不变。这是清水河上的语义；对其他地图泛化为"回到本图默认状态"（`IWorldControl.ResetDefault()` 读当前图的 `world.default`，`quietUntilDusk` 为真时才保持晴，SYS-MAPS §5）。它是同一实例里的正向转场，不换实例（SYS-TITLE §6）。

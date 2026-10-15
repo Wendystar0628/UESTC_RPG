@@ -1,7 +1,8 @@
-"""由各文档的文件头重新生成 docs/design/README.md 的 §7 文档地图、§8 工作包与文档、§9 文档依赖图。
+"""由各文档的文件头重新生成 docs/design/README.md 的 §7 文档地图、§8 工作包与文档、§9 文档依赖图，
+以及小节目录 docs/design/SECTIONS.md。
 
 用法：python -I scripts/docs/gen_index.py
-README 里从 "## 7 文档地图" 开始到文件末尾的内容会被整体替换，§0–§6 手写部分不动。
+README 里从 "## 7 文档地图" 开始到文件末尾的内容会被整体替换，§0–§6 手写部分不动；SECTIONS.md 整个重写。
 依赖：PyYAML。
 """
 import os, re, glob, sys
@@ -27,7 +28,7 @@ def load():
     docs = {}
     for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
         rel = os.path.relpath(p, D).replace(chr(92), '/')
-        if os.path.basename(rel) == 'README.md':
+        if os.path.basename(rel) == 'README.md' or rel == 'SECTIONS.md':
             continue
         t = open(p, encoding='utf-8').read()
         m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', t, re.S)
@@ -104,7 +105,7 @@ def build(docs):
         for w in wps(d.get('contributors')):
             wp.setdefault(w, {'own': [], 'contrib': []})['contrib'].append(d['id'])
     out += ['## 8 工作包与文档', '',
-            '主责与增量取自各文档文件头的 `owners`、`contributors`；独占目录、必读与交付以 ENG-WP 为准。', '',
+            '主责与增量取自各文档文件头的 `owners`、`contributors`；独占目录、起读与交付以 ENG-WP 为准。', '',
             '| 工作包 | 主责文档 | 有增量的文档 |', '| --- | --- | --- |']
     for w in sorted(wp, key=wpkey):
         out.append('| %s | %s | %s |' % (w, '、'.join(sorted(set(wp[w]['own']))) or '—',
@@ -130,6 +131,79 @@ def build(docs):
     return NL.join(out)
 
 
+SECTIONS = os.path.join(D, 'SECTIONS.md')
+RECORDS = {'decisions', 'proposals', 'issues', 'experiments'}
+HEAD = re.compile(r'^(#{2,3})\s+(.*?)\s*$')
+
+
+def kchars(n):
+    return '%.1fk' % (n / 1000) if n >= 1000 else str(n)
+
+
+def outline(text):
+    """返回 [(级别, 编号, 标题, 行号, 字数)]；字数到下一个同级或更高级标题为止，跳过代码块里的 #。"""
+    lines = text.split(NL)
+    heads, fence = [], False
+    for i, l in enumerate(lines):
+        if l.lstrip().startswith('```'):
+            fence = not fence
+            continue
+        m = None if fence else HEAD.match(l)
+        if m:
+            heads.append((len(m.group(1)), i, m.group(2)))
+    offs = [0]
+    for l in lines:
+        offs.append(offs[-1] + len(l) + 1)
+    out = []
+    for k, (lv, i, title) in enumerate(heads):
+        end = len(lines)
+        for lv2, i2, _ in heads[k + 1:]:
+            if lv2 <= lv:
+                end = i2
+                break
+        m = re.match(r'(\d+(?:\.\d+)*[a-z]?)\s+(.*)', title)
+        num, name = (m.group(1), m.group(2)) if m else ('', title)
+        out.append((lv, num, name, i + 1, offs[end] - offs[i]))
+    return out
+
+
+def build_sections():
+    """小节目录：每份规范文档的每个 ##、### 小节一行，带行号和字数，供 grep 定位（ENG-ONBOARD §4.1）。"""
+    items = []
+    for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
+        rel = os.path.relpath(p, D).replace(chr(92), '/')
+        if rel == 'SECTIONS.md' or (os.path.basename(rel) == 'README.md' and rel != 'README.md'):
+            continue
+        t = open(p, 'rb').read().decode('utf-8').replace('\r\n', NL)
+        m = re.match(r'^---\n(.*?)\n---\n', t, re.S)
+        if not m:
+            continue
+        fm = yaml.safe_load(m.group(1))
+        if fm.get('category') in RECORDS:
+            continue
+        items.append((CAT_ORDER.index(fm.get('category')) if fm.get('category') in CAT_ORDER else 99,
+                      0 if rel == 'README.md' else 1, rel, fm, t))
+    items.sort(key=lambda x: (x[0], x[1], x[2]))
+    out = ['# 小节目录', '',
+           '> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；'
+           '★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（ENG-ONBOARD §4.1）。'
+           '行号以生成时为准，原文改过以后可能差几行，以标题文字为准。', '']
+    for _, _, rel, fm, t in items:
+        code = str(fm.get('id'))
+        out += ['## %s · %s' % (code, fm.get('title', '')), '',
+                '`docs/design/%s` · %s 字 · %s' % (rel, kchars(len(t)), fm.get('summary', ''))]
+        kw = fm.get('keywords') or []
+        if kw:
+            out.append('关键词：' + '、'.join(map(str, kw)))
+        out.append('')
+        for lv, num, name, line, size in outline(t):
+            star = '★ ' if '接入要点' in name else ''
+            sec = ' §' + num if num else ''
+            out.append('%s- %s%s%s %s · L%d · %s' % ('  ' if lv == 3 else '', star, code, sec, name, line, kchars(size)))
+        out.append('')
+    return NL.join(out)
+
+
 def main():
     docs = load()
     t = open(README, 'rb').read().decode('utf-8')
@@ -138,6 +212,9 @@ def main():
         sys.exit('README 里找不到 "%s"' % MARK)
     open(README, 'wb').write((t[:i] + build(docs)).encode('utf-8'))
     print('docs', len(docs), '-> README §7–§9 regenerated')
+    s = build_sections()
+    open(SECTIONS, 'wb').write(s.encode('utf-8'))
+    print('SECTIONS.md', s.count(NL + '- ') + s.count(NL + '  - '), 'sections,', len(s), 'chars')
 
 
 if __name__ == '__main__':

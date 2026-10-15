@@ -3,6 +3,7 @@ id: SYS-ATLAS
 title: "平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁"
 category: systems
 summary: "规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收"
+keywords: [平面地图, 小地图, 大地图, 底图, 地图标记, 锚点, 传送点, 导览亭, 导览桩, 传送, 雾幕瞬移, 飞过去, 传送卡, 传送落点, 目录页, 追踪, 自定义标记, 解锁策略, 区域名, 地名标注, atlasRect, G18 地图一致性, IAtlasService, IUnlockPolicy, MarkerId, AtlasSave, map_base.gdshader, markers.json, labels.json, atlas.overlay.json]
 owners: [WP-48]
 contributors: [WP-01, WP-04, WP-06, WP-13, WP-27, WP-35, WP-36, WP-39, WP-44, WP-51, WP-53a]
 depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
@@ -16,6 +17,7 @@ gates: [G2, G13, G14, G15, G16, G18]
 
 > **范围**：本文规定平面地图的全部内容：底图的烘焙与上色、小地图、大地图、标记类型、锚点实体、传送的流程与落点、解锁策略、按图数据、实现与性能、契约、存档段与设置项，以及 G18 地图一致性门禁。
 > **不在本文**：地图加载与切换 `IMapService`（SYS-MAPS）；点位与"飞过去"的跳转过渡（UI-NAV §7）；界面令牌、`map.*` 色值与画面布局（UI-VISUAL）；开放室内的清单与入口（WLD-INTERIORS）；外围与截面线（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）。
+> **查阅**：先读 §0；小地图与大地图界面看 §3–§4；标记类型与数据来源看 §5、§9；锚点实体与登记看 §6；传送时序与落点看 §7；契约看 §11；各包交付看 §13；G18 验收看 §14.1
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](SYS-WALK.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-MAPS 多地图](SYS-MAPS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[SYS-SAVE 存档](SYS-SAVE.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
 
 **分工**：WP-48 平面地图、标记与传送，分三个子包（各包交付见 §13）：
@@ -55,6 +57,21 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
     - 没有路径规划，只显示预先设计的推荐路线；
     - 没有在 3D 里拾取；
     - 传送卡只有名称、缩略图、推荐状态和按钮，不是网页地图那种地点卡片（INV-1）。
+
+### 0.1 接入要点
+
+- **想在 3D 画面里标出地点、路线、选中或追踪**：不许；这些只画在小地图和大地图上。场景里与地图对应的只有导览亭和导览桩，不发光、不做特效、点它没有反应（§1、§6）
+- **要知道玩家在哪、在哪个区**：观者的位置、朝向和所在空间读 `IObserverState`，区域名用 `IAtlasService.RegionAt()` 查；视锥这类"画面从哪看"的量读 `ICameraRig.Pose`，不拿它当观者位置（§3、§11）
+- **要从界面发起传送或飞过去**：一律调 `IAtlasService.Travel`，界面不直接调 `ICameraRig.Transit`；同图只走 `ICameraRig.Transit`，目标在别的图上时才走 `IMapService.Travel`（§7.1、§11）
+- **新增锚点**：在本图 `overlay/atlas.overlay.json` 加一条 `add`（ID 写 `design:anchor:Axx`，`Props` 写形态、朝向、编号并写明理由），`atlas/markers.json` 的锚点条目引用这个 ID 并写 `Fly`、`Stand`；两处位置相差不超过 0.5 m（§6、§9、§14.1）
+- **做导览亭、导览桩部件（WP-13）**：形态与尺度照 §6 的表，阻挡碰撞由部件参数生成（SYS-WALK §13），按 `atlas.overlay.json` 摆放；牌面与铭牌贴图由 WP-48a 渲染、经 WP-04 进图集（§2.1），场景里的字只用简体中文（§6、§13）
+- **新增观景点**：在 `waypoints.json` 加点位（WP-36，UI-NAV §6），观景点标记引用它的 ID，不在 `atlas/` 里复制位姿（§5、§9）
+- **新增可进入的室内**：在开放清单 `interiors.json` 登记，入口给出门外点 `Outside`；门口标记和楼轮廓高亮由 `IAtlasService` 按清单自动生成，`atlas/markers.json` 和底图都不用改（§5）
+- **新增推荐路线**：路线标记的数据来自 `nav/routes.json`（SYS-WALK §11）与 WLD-INTERIORS 的新路线，折线取 WP-44 的导航图（§5）
+- **改了覆盖层、campus.json、outskirts.json，或挪了被标记的实体**：底图按世界模型哈希在本机自动重烘，不用改地图数据；但锚点、地标、设施、门口标记与实体相差要不超过 0.5 m，G18 会核对（§2.1、§14.1）
+- **要显示区域名或地点名（含楼名）**：从 `atlas/labels.json` 的区域与地点表取，那是唯一来源，不另写一份（§2.5）
+- **新增可传送标记**：通知 WP-27 出缩略图（`thumbs/`）；`Stand` 要过 SYS-WALK §15 的落地检查，`Fly` 处的介质必须是空气（§7.3、§10）
+- **新增单键快捷键**：大地图打开期间只认 M、G、N、Esc 和地图页内的键，其余不响应；大地图打开时以 `InputLockReason.Atlas` 占用观者输入（§4.1、§4.7）
 
 ## 1 允许什么、禁止什么
 
@@ -97,7 +114,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | 名称 | 尺寸 | 范围 | 每纹素 | 通道 | 显存（含 mip） |
 | --- | --- | --- | --- | --- | --- |
 | `map_sdf_a` | 2048² | 校界外扩 64 m 的方框，约 ±1056 m | 约 1.03 m | R 水，G 绿地，B 道路，A 建筑 | 约 21 MB |
-| `map_sdf_b` | 1024² | 同上 | 约 2.06 m | R 区域与地点编号（最近邻，向外膨胀 2 纹素），G 要素类别（普通建筑、地标、广场、运动场、桥与栈道，最近邻，膨胀），B 运动场与广场的 SDF，A 校界 SDF | 约 5.3 MB |
+| `map_sdf_b` | 1024² | 同 `map_sdf_a` | 约 2.06 m | R 区域与地点编号（最近邻，向外膨胀 2 纹素），G 要素类别（普通建筑、地标、广场、运动场、桥与栈道，最近邻，膨胀），B 运动场与广场的 SDF，A 校界 SDF | 约 5.3 MB |
 | `map_sdf_out` | 1024² | `map_rect` 以内，清水河 ±1280 m | 2.5 m | R 外围街区，G 外围道路，B 外围水体，A 箱庭外缘 | 约 5.3 MB |
 | `map_sdf_ring` | 896² | 整个地图页 `atlasRect`，清水河 ±1536 m；着色器只在 `map_rect` 以外取用 | 约 3.4 m（纹素密度约为 `map_sdf_out` 的一半） | 同 `map_sdf_out` | 约 4.3 MB |
 | `map_glyphs` | 1024² | — | — | 地标线描图集，MSDF 格式（§2.5） | 约 5.3 MB |
@@ -461,9 +478,9 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | **导览桩**（补空） | 深灰钢方柱，截面 0.2×0.2 m，顶面朝观者 30° 斜切。<br>斜面嵌一块 0.18×0.14 m 的蚀刻铝牌：编号（例如"A08"）、地名，以及以本桩为中心约 200 m 的线刻平面（同一份 SDF 导出，单色）。<br>桩身朝路一侧离地 0.85 m 嵌一盏暖色小灯，乳白灯罩，直径 4 cm。<br>下面一块 0.3 m 见方的深灰石材底座 | 高 1.05 m | 剪影；斜面受光，铝牌映出一点天光 | 灯源：小灯三级、暖色，地面留一块直径约 1.5 m 的小光斑；初灯组，整夜亮。<br>四季：斜面接季，冬季斜面积一层雪，铝牌露出半截 | 作用相当于星穹铁道的时空锚点、鸣潮的共鸣信标，但只是一根低矮的指示桩 |
 
 - **碰撞**（`walk` 列，MAP-QSH-ADDITIONS §7）：
-  - 导览亭：阻挡，侧柱用 `CylinderShape3D`，牌面用薄 `BoxShape3D`；
-  - 导览桩：阻挡，用 `CylinderShape3D`。
-  - 都由 WP-13 用部件参数生成（SYS-WALK §13）。
+  - 导览亭：阻挡，两根侧柱各一条 `PostCollider`，牌面一条薄 `BoxCollider`；
+  - 导览桩：阻挡，一条 `PostCollider`。
+  - 都由 WP-13 在部件的 `IPartDef.Collision()` 里用部件参数生成，只交契约里的碰撞记录；Godot 形状由碰撞流式在运行时建（SYS-WALK §13）。
 - **放置**：
   - 在主网的大拍节点或节点旁（SYS-WALK §10），离路缘 1.5 m 以上，不挡主人流；
   - 牌面或斜面朝向广场或主要来人方向；
@@ -618,7 +635,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - 改标记层的 `Position`；
   - 改箭头的 `Rotation`。
 - **标记层重画**：缩放变化超过 3%、标记集合变化或追踪状态变化时才重画（≤ 10 Hz）。
-  - "随镜头"模式下，图标要逐个反向旋转保持正立，标记层每帧重画；可见图标 ≤ 40 个，用 `DrawTextureRectRegion` 从一张图集里取，计入下面的预算。
+  - "随镜头"模式下，图标要逐个反向旋转保持正立，标记层每帧重画；可见图标 ≤ 40 个，用 `DrawTextureRectRegion` 从一张图集里取，计入本节"预算"表。
 - **区域名**：10 Hz 读 `IAtlasService.RegionAt()`，变了才改 `Text`。
 - **这是 UI-NAV §9 和 ENG-BUDGET §7 第 4 条的登记例外**：小地图和大地图可以逐帧写着色器参数和变换（`Position`、`Rotation`、`Scale`），以及"随镜头"模式下标记层的重画；仍然不逐帧改文字、尺寸和主题。原因是小地图要跟着镜头平滑移动，10 Hz 会一顿一顿的。
 
@@ -833,7 +850,7 @@ G18 地图一致性判据的核心是"标记与覆盖层实体相差不超过 0.
 - **主题**：越过主题回差时，大地图和其余大页在同一次扫描前沿里切换，没有一帧是一半新一半旧；小地图默认固定深屏，交班前后逐像素不变（底图本身随季节的微小变化除外）；设成"常驻件：随主题"时，小地图与大页在同一次前沿里切换。
 - **读屏**：小地图、目录项、卡片按钮都有可读的名字；到达时 live region 写入"已到达：……"。
 
-### 14.3 其他门禁的增量
+### 14.3 G2、G13、G15、G16 与 F4 的地图增量
 
 - **G2**：
   - 解锁策略的单元测试：`all-unlocked` 全部 `Unlocked`；`proximity` 的进出半径防抖；

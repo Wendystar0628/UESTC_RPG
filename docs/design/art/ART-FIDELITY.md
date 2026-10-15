@@ -3,6 +3,7 @@ id: ART-FIDELITY
 title: 视觉精度标准：处处不粗糙，细节按区分级
 category: art
 summary: 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度
+keywords: [视觉精度, 精度区, 精度分区, K1, K2, K3, K4, K5, 判定距离, d_K, 底线清单, B1–B13, 不粗糙, 细节密度, 一票否决, 贴脸距离, L0+ 专用几何, 热点簇, 事件贴花, 倒角表, 不做旧, 立面密度, 可读规则, 近景巡检点, 人工评分, 裸面检测, 跳变检测, 行走走廊, 走廊加密]
 owners: [WP-27]
 contributors: [WP-04, WP-07, WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-44, WP-47, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ENG-BUDGET, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, WLD-OUTSKIRTS, WLD-INTERIORS]
@@ -15,6 +16,7 @@ gates: [G2, G7, G8, G9, G12, G13, G15, G17, G19]
 
 > **范围**：本文规定视觉精度的底线（对任何位置、任何距离都成立，包括只有旁观飞行才到的地方）、五个精度区 K1–K5 的细节密度和判定距离、一票否决清单和验收方法，以及行走走廊的加密标准和外围街区的分级精度。底线和各区的标准对任何时刻、季节、天气都不放宽。
 > **不在本文**：风格、配色与描线（ART-STYLE）；造型比例、部件库与最低合格构件（ART-MODELING）；细节级别与预算（ENG-BUDGET）；门禁的定义与执行（ENG-GATES）；穿楼、入地的运行时实现（SYS-VIEW §5）；室内的开放清单与类型库（WLD-INTERIORS）。
+> **查阅**：先读 §0；精度区的范围、判定距离与数据看 §0.1、§0.4；各区取用哪些细节看 §0.3；底线 B1–B13 看 §2.0；立面、窗、地面的密度与不做旧看 §3；贴脸细节看 §4；一票否决看 §7；巡检点与验收看 §8
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](ART-STYLE.md)、[ART-MODELING 风格化造型](ART-MODELING.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[SYS-TIME 时间季节](../systems/SYS-TIME.md)、[SYS-WALK 行走](../systems/SYS-WALK.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)；[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH.md)、[WLD-WATER 水](../world/WLD-WATER.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS.md)、[ENG-ARCH 工程架构与契约](../engineering/ENG-ARCH.md)、[ENG-WP 工作包](../engineering/ENG-WP.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[ART-RENOVATION 老楼翻新](ART-RENOVATION.md)、[ART-AMBIENCE 日式日常街景](ART-AMBIENCE.md)
 
 ### 分工
@@ -98,6 +100,21 @@ gates: [G2, G7, G8, G9, G12, G13, G15, G17, G19]
 - **数据**：校内的立面段、屋顶和 2 m 地面栅格各写一个精度区，形态照外围 `OutskirtsBlock.FacadeLevel / RoofLevel` 的样子；生成器（WP-14、WP-15、WP-13 的摆放）只读结果。人工提级写进按图存放的精度区覆盖层。字段和覆盖层的格式以 ENG-ARCH §3 为准。
 - **谁用**：G9 按区抽样、按区定分数线（ENG-GATES §2）；G8 的静态预算按区出小计，看 L0+ 专用几何和热点簇是否集中在 K1、K2；§8 第 3 条的自动检查按区判构件类别和深度层。
 - **预算**：ENG-BUDGET §2 的预设上限和 §8 的分包份额都不因分区而变；建筑、地表、家具几个包按本节在各区之间分配自己的份额（ENG-BUDGET）。
+
+### 0.5 接入要点
+
+- **要知道某个表面属于哪个精度区**：读 WP-44 导出的精度区数据（`IWorldModel.Fidelity`，数据在 `fidelity.json`，字段见 ENG-ARCH §3），不自己判断；常被看到的面被判低了，在精度区覆盖层里提级并写理由，只能提不能降（§0.2、§0.4）
+- **交付任何建模或内容**：底线 B1–B13 对任何位置、距离、画面预设、时刻季节天气都成立，逐条自查；只有飞行才到的位置也要过底线（§2.0）
+- **决定某处做多密的细节**：按所在区查取用表；L0+ 专用几何（胶条、螺栓、把手、微构件、2–5 mm 小倒角）只在 K1、K2 生成，几何铺装块只放 K1 的英雄机位和热点簇（§0.3、§4）
+- **做建筑立面**：普通楼至少 8 类构件，地标楼和 K1 的楼 10 类全有；K1、K3 每个 10 m × 一层的单元 3 个深度层、6 个可读构件、2 种材质、1 处不重复变化，K4 背立面 2 个深度层、4 个可读构件（§3.1、§3.2）
+- **铺地面、摆物件**：K3 的可走地面每 100 m² 至少 3 处事件贴花，K1、K2 至少 5 处；物件成簇、簇外留白不少于 50%；热点簇 8–15 件只放 K1 的英雄机位和点位前景，K2 只在节奏锚点（§3.4、§9.3）
+- **画任何痕迹**：建筑立面、地面和道具不做旧，只留天气湿痕和季节落物（§3.5）
+- **定倒角半径**：取部件库的倒角表；R ≥ 10 mm 的几档是底线 B3，所有精度区都做（§3.5）
+- **做贴花**：不用 Godot 的 `Decal` 节点；井盖、海报、标线、落叶堆做成贴面几何，线类记"不描"、不投影（§6）
+- **设巡检点**：每个内容包在本区设 Q1–Q8，作为内容模块的 `Probes` 登记，按精度区分配，其中 3 个行走可达（§8）
+- **按像素或距离判条款**：基准是精致预设、1920×1080 原生、自动调节关；低预设按细节系数和渲染比例换算，结构性条款不换算（§1）
+- **做外围街区**：按最近可达距离 d_min 定级，数值以 WLD-OUTSKIRTS §4 为准（§10）
+- **想知道"不粗糙"在建模上怎么做到**：最低合格构件按 ART-MODELING §7.8，法线按 ART-MODELING §7.6；本文只判结果（§0）
 
 ## 1 换算基准
 
@@ -558,7 +575,7 @@ gates: [G2, G7, G8, G9, G12, G13, G15, G17, G19]
   - 不违反 §7 第 4 条（10×10 m 的空地面）；
   - 不违反 §7 第 13 条（细节突然出现或消失），逐帧跑 §8 第 4 条的跳变检测。慢走最容易暴露细节跳变；
   - 没有卡点（ENG-GATES §2 G15）。
-- **室内串联路线**：W6–W14（SYS-WALK §11 的 R6–R14）由巡游机器人在集中测试时跑一遍并录像，检查同上：没有卡点、每 30–50 m 有一拍（WLD-INTERIORS §19）。
+- **室内串联路线**：W6–W14（SYS-WALK §11 的 R6–R14）由巡游机器人在集中测试时跑一遍并录像，检查项与 W1–W5 相同：没有卡点、每 30–50 m 有一拍（WLD-INTERIORS §19）。
 - **随机抽查**：G9 在 K1、K2 抽到落在走廊里的随机点时，改用 1.62 m 眼高，按本节的加密标准判（ENG-GATES §2）。
 
 ## 10 外围分级精度（WLD-OUTSKIRTS）

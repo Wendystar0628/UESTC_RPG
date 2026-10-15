@@ -3,6 +3,7 @@ id: CORE-GLOSSARY
 title: 术语表
 category: core
 summary: 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+keywords: [术语, 术语表, 名词解释, 同名异义, 缩写, 别名]
 owners: []
 contributors: []
 depends: [CORE-INDEX]
@@ -16,6 +17,7 @@ gates: []
 
 > **范围**：本文把各文档里的专有说法统一解释一遍，按领域分组，每条一两句，并给出细则所在的小节。
 > **不在本文**：规则和数值本身（以每条指向的文档为准）；编号写法与跨文档约定（CORE-CONVENTIONS）；已定决策（CORE-DECISIONS）；RPG 扩展点（ENG-ROADMAP）。
+> **查阅**：先读 §0；遇到不懂的词直接 grep；按领域找：世界状态看 §2，天气看 §3，美术看 §4，箱庭与外围看 §5，室内看 §6，观察与行走看 §7，平面地图看 §8，开始页与存档看 §9，多地图看 §10，界面看 §11，音频看 §12，画面与性能看 §13，工程与流程看 §14，一词多义看 §15
 > **关联**：[CORE-INDEX 总览](../README.md)、[CORE-DECISIONS 决策登记](CORE-DECISIONS.md)、[CORE-CONVENTIONS 约定](CORE-CONVENTIONS.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)
 
 ## 0 用法
@@ -23,6 +25,11 @@ gates: []
 - 每条的写法：**术语**（代码名或别名，如有）：解释。括号里是细则所在的小节，引用写法见 CORE-CONVENTIONS §7.3。
 - 解释只帮读懂；与细则不一致时以细则为准，并报给主代理。
 - 一个词有几种意思的，见 §15；编号前缀（P、V、E、A、R、G、INV、O、D 等）的速查见 CORE-CONVENTIONS §3.2。
+
+### 0.1 接入要点
+
+- **遇到不懂的专有说法**：grep 本文；解释只帮读懂，规则以每条指向的小节为准（§0）。
+- **一个词有几种意思**：看 §15，写文档时按那里的"写法"一栏写全称。
 
 ## 1 作品与默认状态
 
@@ -370,6 +377,11 @@ gates: []
 ## 14 工程与流程
 
 - **工作包**（WP）：派给一个子代理的工作单元，WP-00 至 WP-53，各有独占目录、交付条目和额度；大包可以拆成子包，如 WP-31a（ENG-WP §2、ENG-WP §3）。
+- **开工手册**（ENG-ONBOARD）：子代理开工时唯一要通读的文档，经仓库根的 `CLAUDE.md` 自动载入：开工环境、硬规则、查资料的方法与路由、完成与回报（D-178）。
+- **接入要点**：每份规范文档 §0 的最后一个小节，写其他包碰到本文管的东西时必须遵守的规则，每条一行并指向细则（CORE-CONVENTIONS §7.2）。
+- **查阅行**：范围块里的 `> **查阅**：` 一行，说明本文什么内容在哪一节（CORE-CONVENTIONS §7.2）。
+- **小节目录**（`SECTIONS.md`）：`docs/design/SECTIONS.md`，由 `scripts/docs/gen_index.py` 生成，每份文档的每一节一行，带行号与字数，供按关键词定位（ENG-ONBOARD §4.1）。
+- **起读**：ENG-WP 主表里"起读文档""起读小节"两栏，列一个包最该先看的文档与小节；是起点，不是通读清单（ENG-WP §2）。
 - **主代理**：开发期的编排者：先做 WP-00，再发派工简报，维护合并队列，处理契约与共享文件的申请，维护开发文档和决策登记；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）。"须经 WP-00 审批"与"须经主代理审批"等价（CORE-CONVENTIONS §8.5、D-161、ENG-WP §5、CORE-DECISIONS §0）。
 - **独占目录**：一个工作包唯一能改的目录，登记在 `ownership.json`；越界 G3 拒绝（ENG-WP §2、ENG-ARCH §2）。
 - **契约**：`Campus.Contracts` 程序集里的接口、record、枚举和 JSON schema。分批定死：WP-00 先交能编译的候选契约和桩（契约 v1 候选）；某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结这一组，之后只增不改（ENG-ARCH §3、D-134）。
@@ -423,7 +435,7 @@ gates: []
 | 通道 | ① 灯光通道（`ChannelDecl`，SYS-TIME §6）；② 渲染通道（主通道、阴影通道、颜色通道）；③ 调色板纹理的行不叫通道 | 灯光写"灯光通道" |
 | 门户 | ① 室内平面的开口 `PortalDecl`（门、楼梯口、中庭口、窗、封口、电梯停靠，ENG-ARCH §3）；② 声学门户 `AcousticPortalDecl`（SYS-AUDIO §10.4） | 契约里枚举分别叫 `PortalKind` 与 `AcousticPortalKind` |
 | 区 / 区域 | ① 区（zone，`zones.json`、`ZoneId`、各区工作包）；② 地图区域（region，`labels.json` 与 8 m 区域栅格，SYS-ATLAS） | 地图语境写"区域" |
-| 通用 | ① 通用模块（没有 `MapScope` 的 gen 模块）；② 通用提供者 `GenericInteriorProvider`；③ ENG-WP §4 的通用简报 | 写全称 |
+| 通用 | ① 通用模块（没有 `MapScope` 的 gen 模块）；② 通用提供者 `GenericInteriorProvider`；③ ENG-WP §4 的派工简报模板 | 写全称 |
 | 继续 | ① 开始页的"继续"按钮；② 继续过场（SYS-TITLE §4.1） | 过场写"继续过场" |
 | 清水河 | ① 校区名；② 地图 ID `qingshuihe`；③ 截面线外的那条河（清水河银带） | 地图写 ID，河写"清水河（河）" |
 | INV、G、O、E、L、I、P 的编号 | 见 CORE-CONVENTIONS §3.3 | — |
