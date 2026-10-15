@@ -1673,7 +1673,7 @@
   - ENG-TEAM §6.4 消息与流水 · L419 · 714
   - ENG-TEAM §6.5 唤醒脚本 · L438 · 1.4k
   - ENG-TEAM §6.6 上下文重置后怎么接着做 · L465 · 542
-- ENG-TEAM §7 账号与额度管理 · L478 · 2.3k
+- ENG-TEAM §7 账号与额度管理 · L478 · 2.4k
   - ENG-TEAM §7.1 主账号（主会话） · L482 · 133
   - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L487 · 1.1k
   - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L508 · 209
