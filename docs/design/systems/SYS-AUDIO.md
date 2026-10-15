@@ -95,7 +95,7 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
   - `[KernelService]`：`IAudioService`（53a）、`IAmbienceService`（53b）、`IAcousticEnv`（53c）、`IFoleyService`（53d）；
   - `[KernelNode]`：`audio`（53a，池里的全部播放器挂在它下面）、`audio.ambience`、`audio.acoustics`、`audio.foley`，由内核按 ID 顺序实例化；
   - 依赖的只读服务由各包注册：`IVeilState`（WP-01）、`IMediumState`（WP-07）、`IInteriorDoors`（WP-07，WLD-INTERIORS）、`ILightningFeed`（WP-40）、`IChannelReader`（WP-03、WP-39）、`IGroundCover`（WP-38）、`IWalkTelemetry`（WP-42）。
-- **听者**：`AudioListener3D` 由 WP-06 挂在主相机下并 `MakeCurrent()`。西湖倒影的镜像相机在独立的 World3D 里，不会被当成听者。行走模式的第三人称（SYS-VIEW §2.7）里，听者放在头部支点（物理眼位的插值），朝向取相机，免得脚步落在镜头前方、偏到一边；听者仍由 WP-06 的相机代码创建。发声位置不跟相机走：脚步、划水的位置取物理事件里的接触点。
+- **听者**：`AudioListener3D` 由 WP-06 的相机代码创建并 `MakeCurrent()`；西湖倒影的镜像相机在独立的 World3D 里，不当作听者。第一人称下听者与相机重合；第三人称（SYS-VIEW §2.7）时，位置在身体的头部支点（物理眼位的插值），朝向跟随相机。水下滤波等介质判断按听者点另查，不能直接套用第三人称镜头的介质；所需契约以 Astra 落地的源码为准（contract-23）。发声位置不跟相机走：脚步、划水的位置取物理事件里的接触点。
 
 ### 2.2 输入：只读世界状态
 
@@ -107,9 +107,9 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 | `WeatherNow` | 同上（SYS-WEATHER §8） | 雨、雪、雾、风暴、湿润、积水、新雪、彩虹 |
 | `Flow.Rate`、`Transition`、`Scrubbing` | 同上 | 速率节制与转场（§7） |
 | `ViewMode`、`AnimTime`、`Instance` | 同上 | 脚步还是飞行风；喷泉 8 s 的起伏和风的相位；换世界实例时直接落到新值（SYS-SAVE） |
-| `Pose`、`Speed`、`ActiveTransit`、`EdgeFog` | `ICameraRig`（WP-06、WP-36） | 听者位置、离地高度、飞行风、跳转；飞到活动范围边缘时外面变闷（WLD-OUTSKIRTS） |
+| `Pose`、`Speed`、`ActiveTransit`、`EdgeFog` | `ICameraRig`（WP-06、WP-36） | 听者朝向（位置按 §2.1）、离地高度、飞行风、跳转；飞到活动范围边缘时外面变闷（WLD-OUTSKIRTS） |
 | `IWindField.Sample(x, z, anim)` | WP-26 | 风床与叶声的阵风包络，与画面同一阵风 |
-| `IMediumState` | WP-07（新增只读服务） | 室内、地下、水下、雾海；混合度与画面的 0.25 s 过渡对齐 |
+| 听者点的介质与混合度 | 以 Astra 落地的源码为准（contract-23） | 室内、地下、水下、雾海；第三人称按头部支点另查，不直接套镜头的 `IMediumState`；声音的平滑见 §10.9 |
 | `IVeilState` | WP-01（新增） | 雾幕期间的压低与"换场" |
 | `IChannelReader` | WP-03、WP-39（新增） | 灯亮才有人迹 |
 | `ILightningFeed` | WP-40（新增） | 远雷 |
@@ -981,7 +981,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 | 状态 | 处理 | 时间 |
 | --- | --- | --- |
-| 水下（镜头在水下，含游泳时长时间停在水下，SYS-VIEW §5.3） | World 低通从 20 kHz 对数渐变到 300–500 Hz；岸上声 −10 dB；听者槽换成 Underwater；不发脚步；水下床、偶尔的气泡。只按镜头的介质，镜头在空气里而身体在水里时不做水下滤波；半入水时按 `IMediumState` 的混合度 | 跟随 `IMediumState` 的混合度进入和退出，声音用 0.6–1.0 s，不绑定任何下沉计时；停多久都不重新起播水下床 |
+| 水下（听者点在水下，含游泳时持续停在水下） | World 低通从 20 kHz 对数渐变到 300–500 Hz；岸上声 −10 dB；听者槽换成 Underwater；不发脚步；水下床、偶尔的气泡。位置与介质按 §2.1 的听者点另查，半入水也按该点的混合度；第一人称与相机重合，第三人称镜头在水线另一侧时不能拿镜头介质代替 | 跟随听者点的介质混合度进入和退出，声音用 0.6–1.0 s，不绑定任何下沉计时；停多久都不重新起播水下床 |
 | 地下（只在旁观） | World 低通约 200 Hz、−20 dB；不加混响；土层的低沉闷响 | 0.25 s |
 | 雾海 | World 低通 2–3 kHz、−6 到 −10 dB；很轻的白噪和风；远景声消失 | 0.25 s |
 | 室内（介质 Interior） | 透射低通 600–2000 Hz、−6 到 −18 dB（按 `Indoor` 和到门户的距离）；房间底噪淡入；飞行气流 −12 dB | 声音用 0.6–1.0 s |
@@ -990,7 +990,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 | 雾 | 物理上几乎没有影响；视觉优先，远处声源低通再降 10%、`Out.Echo` −2 dB，配合"朦胧" | 跟天气向量 |
 | 夏季满叶 | 远处声源（> 80 m）高频再降一点（树冠散射）；冬季裸枝时更清楚 | 跟季节 |
 
-- **介质的接法**：读 WP-07 的只读服务 `IMediumState`（当前介质、起点、目标、混合度，与全局参数 `medium` 同源），不读回全局参数。雪量要能在 CPU 侧用与着色器同一个公式算出 `snow`，由 WP-38 / WP-45 提供 C# 求值函数（同 `IGroundCover` 的做法）。
+- **介质的接法**：按听者点查询当前介质、起点、目标与混合度；第三人称不能直接复用镜头的 `IMediumState`，所需契约以 Astra 落地的源码为准（contract-23），不读回全局参数。雪量要能在 CPU 侧用与着色器同一个公式算出 `snow`，由 WP-38 / WP-45 提供 C# 求值函数（同 `IGroundCover` 的做法）。
 
 ## 11 界面音效
 
@@ -1526,7 +1526,7 @@ public interface IChannelReader { float Value(ChannelId id); }                  
 | --- | --- | --- |
 | WP-00 | `game/contracts/Audio/` 的候选契约与桩（冻结时机按 D-134）；`game/gen/acoustics`、`game/gen/ambience` 两个 csproj；`FramePriority.Acoustics`、`Audio`；特性表加 `[AmbientEmitter]`；`IPartDef.Sounds`、`IInteriorProvider.Acoustics` 两个默认方法；碰撞记录的 init 属性 `Foot`、`Stair`、`FootMatHalfMeter`、`Patches`；ArchUnit 与 BannedApi 规则（§16）；`.gitattributes` 的 LFS 条目（统一维护） | 0.2k |
 | WP-01 | Boot 解析 `--audio*`、`--amb*`、`--gate=acoustics`；`IVeilState`（加 `MapTravel`）；扉页与开场序列里"音频就绪"作为转实时、雾幕淡出的条件之一；`project.godot` 的 `mix_rate = 48000`（统一维护方改） | 0.1k |
-| WP-06 | `AudioListener3D` 挂在相机下并设为当前，第三人称时放在头部支点、朝向取相机（§2.1）；`ICameraRig.ActiveTransit`、`EdgeFog` | < 0.1k |
+| WP-06 | `AudioListener3D` 由相机代码创建并设为当前，第一人称与相机重合，第三人称放在身体头部支点、朝向取相机，介质按听者点另查（§2.1）；`ICameraRig.ActiveTransit`、`EdgeFog` | < 0.1k |
 | WP-36、WP-48c | 跳转、传送开始时 `PlayUi(TeleportConfirm)`，到达时 `TeleportArrive`；雾幕原因写 `Teleport` 或 `Transit` | < 0.1k |
 | WP-42 | 实现 `IWalkTelemetry`；步相 φ 与视角晃动共用；游泳遥测与划相 ψ（入水、出水、划水的边沿事件，连续的泳速与浸深，contract-21）；主楼电梯门的开度写通道并发 `ElevatorDoor` 事件 | 0.15k |
 | WP-43 | 碰撞 body 的 meta 加 `"foot"`；碰撞格带半米材质栅格与点状特征；按室内房间代建声学 `Area3D`（专用物理层，登记进层分配表）；声学射线的掩码排除 `Invisible`、`Barrier`、`Boundary` | 0.15k |

@@ -330,7 +330,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS.md` · 77.4k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS.md` · 77.5k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -343,7 +343,7 @@
   - WLD-INTERIORS §2.2 电子科技博物馆（WP-17） · L110 · 501
   - WLD-INTERIORS §2.3 主楼 B2（WP-31a） · L120 · 712
   - WLD-INTERIORS §2.4 宣邦楼（WP-31a） · L133 · 760
-  - WLD-INTERIORS §2.5 体育馆与游泳馆（WP-31a） · L144 · 1.0k
+  - WLD-INTERIORS §2.5 体育馆与游泳馆（WP-31a） · L144 · 1.1k
   - WLD-INTERIORS §2.6 六号科研楼（WP-31b） · L159 · 472
   - WLD-INTERIORS §2.7 电子科学技术研究院大楼（WP-31b） · L167 · 390
   - WLD-INTERIORS §2.8 学知苑 1 栋（WP-31c） · L175 · 604
@@ -482,7 +482,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 37.6k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN.md` · 37.7k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -521,14 +521,14 @@
   - WLD-TERRAIN §5.6 高墙（增强阶段） · L383 · 209
   - WLD-TERRAIN §5.7 防护 · L388 · 172
   - WLD-TERRAIN §5.8 谁来做 · L394 · 155
-- WLD-TERRAIN §6 水体 · L399 · 3.0k
+- WLD-TERRAIN §6 水体 · L399 · 3.1k
   - WLD-TERRAIN §6.1 常水位 · L401 · 532
   - WLD-TERRAIN §6.2 岸型 · L408 · 892
   - WLD-TERRAIN §6.3 涉水带与浅滩 · L420 · 301
   - WLD-TERRAIN §6.4 湖盆 · L427 · 186
   - WLD-TERRAIN §6.5 河渠 · L433 · 258
   - WLD-TERRAIN §6.6 穿出校界 · L440 · 199
-  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L446 · 632
+  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L446 · 680
 - WLD-TERRAIN §7 可走性与碰撞 · L454 · 3.0k
   - WLD-TERRAIN §7.1 坡度分级 · L456 · 648
   - WLD-TERRAIN §7.2 与控制器的配合 · L471 · 371
@@ -594,7 +594,7 @@
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
-`docs/design/world/WLD-WATER.md` · 27.7k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
+`docs/design/world/WLD-WATER.md` · 27.8k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
 关键词：水体、水面、开放泳区、西湖、东湖、河渠、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、涉水涟漪、入水水花、灯的竖条倒影、refl_lamps、reflect_tex、reflect_vp、reflect_lake、西湖喷泉、叠水喷泉、游泳池池水、冬季浅滩、漂浮物、河渠中线、water.gdshader
 
   - WLD-WATER 分工 · L23 · 792
@@ -606,17 +606,17 @@
 - WLD-WATER §4 河渠 · L236 · 1.7k
 - WLD-WATER §5 主楼喷泉（可选） · L265 · 145
 - WLD-WATER §6 截面水柱的水色 · L269 · 470
-- WLD-WATER §7 Godot 实现 · L283 · 6.8k
+- WLD-WATER §7 Godot 实现 · L283 · 6.9k
   - WLD-WATER §7.1 水面材质（默认不透明） · L287 · 2.0k
-  - WLD-WATER §7.2 倒影接口 · L311 · 2.1k
-  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L333 · 1.5k
-  - WLD-WATER §7.4 透明变体（只在需要时） · L343 · 194
-  - WLD-WATER §7.5 水下 · L349 · 378
-  - WLD-WATER §7.6 多地图（SYS-MAPS） · L355 · 420
-- WLD-WATER §8 游泳馆与室外游泳池的池水 · L362 · 743
-- WLD-WATER §9 品学楼门前叠水喷泉 · L377 · 916
-- WLD-WATER WP-24 交付验收 · L388 · 1.3k
-- WLD-WATER §10 待验证（P0） · L415 · 804
+  - WLD-WATER §7.2 倒影接口 · L311 · 2.2k
+  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L334 · 1.5k
+  - WLD-WATER §7.4 透明变体（只在需要时） · L344 · 194
+  - WLD-WATER §7.5 水下 · L350 · 378
+  - WLD-WATER §7.6 多地图（SYS-MAPS） · L356 · 420
+- WLD-WATER §8 游泳馆与室外游泳池的池水 · L363 · 767
+- WLD-WATER §9 品学楼门前叠水喷泉 · L378 · 916
+- WLD-WATER WP-24 交付验收 · L389 · 1.3k
+- WLD-WATER §10 待验证（P0） · L416 · 804
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
@@ -983,15 +983,15 @@
 
 ## SYS-AUDIO · 音频：环境声、观者声、空间声学、界面音效与混音
 
-`docs/design/systems/SYS-AUDIO.md` · 112.9k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
+`docs/design/systems/SYS-AUDIO.md` · 113.0k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
   - SYS-AUDIO 分工 · L22 · 121
 - SYS-AUDIO §0 结论 · L27 · 4.5k
   - ★ SYS-AUDIO §0.1 接入要点 · L43 · 2.4k
-- SYS-AUDIO §2 总体架构 · L59 · 8.7k
+- SYS-AUDIO §2 总体架构 · L59 · 8.8k
   - SYS-AUDIO §2.1 一个内核、三条管线 · L61 · 2.6k
-  - SYS-AUDIO §2.2 输入：只读世界状态 · L100 · 1.2k
+  - SYS-AUDIO §2.2 输入：只读世界状态 · L100 · 1.3k
   - SYS-AUDIO §2.3 混音公式与平滑 · L122 · 991
   - SYS-AUDIO §2.4 发声器的四种形态 · L142 · 604
   - SYS-AUDIO §2.5 声源池、仲裁与虚拟化 · L153 · 1.6k
@@ -1269,7 +1269,7 @@
 
 ## SYS-VIEW · 观察模式、介质与开场
 
-`docs/design/systems/SYS-VIEW.md` · 28.2k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
+`docs/design/systems/SYS-VIEW.md` · 28.3k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
 关键词：旁观模式、第一人称、观察模式、飞行速度档、视场角、鼠标灵敏度、初始位置、第三人称、命令行参数、--pose、--title=0、镜头不会自己动、自动运镜、启动预热、引擎启动画面、介质呈现、剖切变体、楼里、地下、水下、半入水、雾海、ICameraRig、Pose、IMediumState、MediumKind、medium_overlay.gdshader、OSM 署名、LICENSES.txt、旧网页栈归档
 
   - SYS-VIEW 分工 · L23 · 348
@@ -1297,7 +1297,7 @@
 
 ## SYS-WALK · 行走模式：手感、可行走范围、边界、碰撞与角色控制器
 
-`docs/design/systems/SYS-WALK.md` · 55.4k 字 · 行走模式的手感、玩家身体、游泳、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
+`docs/design/systems/SYS-WALK.md` · 55.8k 字 · 行走模式的手感、玩家身体、游泳、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
 关键词：行走模式、游泳、角色控制器、手感参数、模式切换、可行走范围、可行走遮罩、边界收口、隐形墙、校界缓停、软墙提示、安全点、回位、涉水、玩家身体、开放泳区、碰撞级 C、碰撞就绪、自动登阶、电梯关门换位、推荐路线、步相、WalkClass、SurfaceTag、Collider、ICollisionWorld、IViewControl、IWalkTelemetry、walkable.overlay.json、routes.json
 
   - SYS-WALK 分工 · L23 · 350
@@ -1307,18 +1307,18 @@
 - SYS-WALK §2 手感参数 · L76 · 1.6k
 - SYS-WALK §3 视角与舒适度 · L105 · 966
 - SYS-WALK §4 键位 · L126 · 771
-- SYS-WALK §5 模式切换（WP-42） · L146 · 2.2k
+- SYS-WALK §5 模式切换（WP-42） · L146 · 2.3k
 - SYS-WALK §6 可行走范围（WP-44） · L190 · 2.3k
 - SYS-WALK §7 边界收口（WP-44，各区配合） · L213 · 2.9k
 - SYS-WALK §8 楼内（WP-17、WP-31a–c、WP-51、WP-07） · L250 · 6.2k
-- SYS-WALK §9 水、游泳、回位与安全点（WP-42、WP-44） · L332 · 2.3k
-- SYS-WALK §10 行走走廊与节奏（配合 ART-FIDELITY） · L374 · 1.5k
-- SYS-WALK §11 推荐路线 · L411 · 3.0k
-- SYS-WALK §12 角色控制器（WP-42） · L438 · 7.0k
-- SYS-WALK §13 碰撞数据（WP-43） · L525 · 10.9k
-- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L656 · 828
-- SYS-WALK §15 验收 · L669 · 3.0k
-- SYS-WALK §17 待验证（P0） · L708 · 1.7k
+- SYS-WALK §9 水、游泳、回位与安全点（WP-42、WP-44） · L332 · 2.5k
+- SYS-WALK §10 行走走廊与节奏（配合 ART-FIDELITY） · L375 · 1.5k
+- SYS-WALK §11 推荐路线 · L412 · 3.0k
+- SYS-WALK §12 角色控制器（WP-42） · L439 · 7.0k
+- SYS-WALK §13 碰撞数据（WP-43） · L526 · 10.9k
+- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L657 · 828
+- SYS-WALK §15 验收 · L670 · 3.0k
+- SYS-WALK §17 待验证（P0） · L709 · 1.7k
 
 ## SYS-WEATHER · 天气：天气清单、画面规则、前向随机过程、过渡与验收
 
@@ -1637,7 +1637,7 @@
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 32.1k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+`docs/design/engineering/ENG-TEAM.md` · 32.2k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
 关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、普通速度、service_tier、主会话移交、交接单、HANDOVER.md、goal 模式、get_usage、完成度调研、持续调研、调研入队流水线、待派工队列、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
 - ENG-TEAM §0 结论 · L37 · 3.2k
@@ -1656,7 +1656,7 @@
   - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L197 · 110
 - ENG-TEAM §4 包的归属与开工顺序 · L202 · 2.4k
   - ENG-TEAM §4.1 包的归属 · L204 · 1.2k
-  - ENG-TEAM §4.2 开工顺序与合并顺序 · L219 · 1.2k
+  - ENG-TEAM §4.2 开工顺序与合并顺序 · L219 · 1.3k
 - ENG-TEAM §5 开发流程 · L233 · 6.7k
   - ENG-TEAM §5.1 全流程一览 · L237 · 610
   - ENG-TEAM §5.2 派工 · L251 · 1.5k
@@ -1693,7 +1693,7 @@
 - ENG-WP §0 结论 · L25 · 1.7k
   - ★ ENG-WP §0.1 接入要点 · L39 · 737
 - ENG-WP §1 阶段与闸口 · L52 · 6.6k
-- ENG-WP §2 工作包一览 · L96 · 84.9k
+- ENG-WP §2 工作包一览 · L96 · 85.0k
   - ENG-WP §2.1 各包主线版的范围 · L167 · 14.0k
   - ENG-WP §2.2 细节阶段待办 · L236 · 3.1k
   - ENG-WP §2.3 候选包 · L273 · 255
