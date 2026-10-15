@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 51.5k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 51.6k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -1228,10 +1228,10 @@
 
 ## UI-VISUAL · 界面视觉语言：令牌、字体、形状、材质、图标、组件、画面布局、动效与实现
 
-`docs/design/ui/UI-VISUAL.md` · 74.2k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
+`docs/design/ui/UI-VISUAL.md` · 74.3k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
 关键词：界面视觉、色彩令牌、主题色、清蓝、晶白、深屏、深色主题、昼夜交班、常驻件、界面字体、切角、发丝线、过孔灯、衍射光边、焦点环、界面图标、窗口图标、动效母题、界面动画、减少动态效果、辉光、等待灯、界面缩放、ui.json、ui_theme.tres、ui_panel.gdshader、ui_screen.gdshader、ui_night、IMotionSettings、IPaletteProbe
 
-  - UI-VISUAL 分工 · L22 · 318
+  - UI-VISUAL 分工 · L22 · 376
 - UI-VISUAL §0 结论 · L31 · 3.9k
   - ★ UI-VISUAL §0.1 接入要点 · L47 · 2.1k
 - UI-VISUAL §1 设计原则 · L62 · 1.8k
@@ -1243,10 +1243,10 @@
   - UI-VISUAL §2.2 色彩分工 · L120 · 800
   - UI-VISUAL §2.3 界面色与场景色不冲突的七条规则 · L135 · 547
   - UI-VISUAL §2.4 高调画面上的面板与常驻件 · L145 · 1.1k
-- UI-VISUAL §3 令牌 · L159 · 10.1k
+- UI-VISUAL §3 令牌 · L159 · 10.2k
   - UI-VISUAL §3.1 清蓝阶梯（OKLCH，sRGB 色域内） · L163 · 1.2k
   - UI-VISUAL §3.2 中性：冷灰阶梯（H 248–262，C ≤ 0.022） · L184 · 662
-  - UI-VISUAL §3.3 专用色：墨、深屏底、夜字、暖色点 · L203 · 640
+  - UI-VISUAL §3.3 专用色：墨、深屏底、夜字、暖色点 · L203 · 650
   - UI-VISUAL §3.4 语义色 · L216 · 375
   - UI-VISUAL §3.5 两套主题的语义令牌 · L227 · 1.4k
   - UI-VISUAL §3.6 昼夜切换 · L253 · 994
@@ -1307,9 +1307,9 @@
 - UI-VISUAL §10 减少动态效果与无障碍 · L1001 · 1.4k
   - UI-VISUAL §10.1 "减少动态效果"下的替代 · L1003 · 847
   - UI-VISUAL §10.2 无障碍 · L1028 · 551
-- UI-VISUAL §11 Godot 实现 · L1040 · 12.6k
+- UI-VISUAL §11 Godot 实现 · L1040 · 12.7k
   - UI-VISUAL §11.1 分层与 `hdr_2d` · L1042 · 662
-  - UI-VISUAL §11.2 目录与类 · L1052 · 1.7k
+  - UI-VISUAL §11.2 目录与类 · L1052 · 1.8k
   - UI-VISUAL §11.3 `ui.json` 与 Theme 的生成 · L1084 · 1.2k
   - UI-VISUAL §11.4 StyleBox、切角与发丝线 · L1097 · 1.1k
   - UI-VISUAL §11.5 两个界面着色器（白名单） · L1115 · 1.4k

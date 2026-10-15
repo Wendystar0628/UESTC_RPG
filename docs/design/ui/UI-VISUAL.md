@@ -22,7 +22,7 @@ gates: [G4, G5, G14, G16]
 ### 分工
 
 - **WP-35** 界面：35a 界面主体与快捷键；35b 设置与"画面"页；35c 字体、图标、可访问性与中英文；35d 开始页与存档页的界面部分（与 WP-49、WP-50 配合）。
-- **WP-04** 登记界面色名（`ext/ui.json`）。
+- **WP-35** 登记界面色名（`ext/ui.json` 归 WP-35）；引用场景色名（如 `ui.now = window.warm`）时以 WP-04 的色名登记表为准。
 - **WP-01** 负责雾幕、扉页后的预热和署名层。
 - **WP-27** 负责 G14 与组件画廊的截图比对。
 - **WP-48b** 的小地图、大地图按本文的令牌和组件出图（SYS-ATLAS）。
@@ -46,7 +46,7 @@ gates: [G4, G5, G14, G16]
 
 ### 0.1 接入要点
 
-- **要给界面元素取色**：只用 `game/style/palette/ext/ui.json` 里的色名，经 `UiPalette` 这一个入口读；代码和着色器里不写十六进制色值（G4）；缺色名时由 WP-04 登记进 `ui.json`，不在别处另写色值（§3.8、§11.2、§11.3）
+- **要给界面元素取色**：只用 `game/style/palette/ext/ui.json` 里的色名，经 `UiPalette` 这一个入口读；代码和着色器里不写十六进制色值（G4）；缺色名时由 WP-35 登记进 `ui.json`，不在别处另写色值（§3.8、§11.2、§11.3）
 - **要画面板、卡片、按钮或文字**：用 `UiThemeBuilder` 生成的那一个 Theme，控件上设 `ThemeTypeVariation` 选类型变体；不写零散的 `theme_override_*`，不另存共享 `.tres`；随主题变的颜色一律走 `ui_panel` 着色器按 `ui_night` 取日、夜两值，Theme 里的颜色只作兜底（§11.3、§11.6）
 - **要用界面着色器或材质**：界面层只用白名单里的 `ui_panel.gdshader`（不读屏幕）和 `ui_screen.gdshader`（读屏幕的整页揭示与磨砂），地图底图的 `map_base.gdshader` 归 SYS-ATLAS；材质经 `UiMaterials` 向 `Campus.Style` 的材质库申请；单个控件的效果用 instance uniform，全局参数只读 `ui_night`、`anim_time`、`step_rate`，不新增；着色器里不用 `TIME`，颜色 uniform 加 `source_color`（§11.1、§11.5）
 - **做压在实景上的常驻小件**：默认固定深屏，材质写 instance uniform `pin_night = 1`；大页和确认对话框随主题；开始页、放映层不随主题、不读 `ui_night`（§3.6、§11.6）
@@ -210,7 +210,7 @@ gates: [G4, G5, G14, G16]
 | `ui.screen.raised` | #243145 | 深屏的凸起面：键帽、拨码钮、推子帽 |
 | `ui.screen.sunk` | #080F1C | 深屏的凹面 |
 | `ui.nighttext` | #E5F2FD | 深屏正文 |
-| `ui.now` | = `window.warm` #FFE0A8 | 唯一暖色点。晶白上加 1.5 px 墨描边（暖色本身对晶白只有 1.22:1，靠描边达到 13.8:1）；深屏上不描边，可带 ≤ 4 px 辉光 |
+| `ui.now` | = `window.warm` #FFE0A8 | 唯一暖色点。晶白上加 1.5 px 墨描边（暖色本身对晶白只有 1.22:1，靠描边达到 13.8:1）；深屏上不描边，也不加辉光（辉光只用主色一种色相，§9.8） |
 | `ui.iris.a` / `ui.iris.b` | 深屏 #8DDDE7 / #B8B7F0；晶白 #1D97A3 / #6C68A9 | 衍射光边两侧的冷色色散（偏青、偏紫），强度 ≤ 0.35，不出现暖色（§5.6） |
 
 ### 3.4 语义色
@@ -1056,7 +1056,7 @@ game/hud/                          Campus.Hud（WP-35）
 ├─ HudRoot.cs                      [KernelNode("hud")]，CanvasLayer 10，搭控件树、挂 Theme
 ├─ HudModel.cs                     [KernelService]，10 Hz 采样（UI-NAV §9）
 ├─ style/
-│  ├─ UiTokens.cs                  尺寸、切角、字号、时长、交错常量（不含色值）
+│  ├─ UiTokens.cs                  读 `game/hud/style/ui_metrics.json`：尺寸、切角、字号、线宽、阴影几何、地图几何、时长、交错（不含色值，参数集中在这一个数据文件里，便于评审调值）
 │  ├─ UiPalette.cs                 读 res://style/palette/ext/ui.json（唯一的取色入口）
 │  ├─ UiThemeBuilder.cs            生成 Theme 与类型变体；--ui-export-theme 时另存 ui_theme.tres
 │  ├─ UiMaterials.cs               向 Campus.Style 的材质库申请 ui_panel / ui_screen 材质
@@ -1261,7 +1261,7 @@ public interface IPaletteProbe
 
 **WP-35 交付清单**（与 ENG-WP 的 WP-35 一行一致）：
 
-- [ ] `ext/ui.json` 的三段令牌已登记（与 WP-04 配合），`UiThemeBuilder` 生成 Theme，`ui_theme.tres` 导出物与生成器一致。
+- [ ] `ext/ui.json` 的三段令牌已登记（WP-35），`UiThemeBuilder` 生成 Theme，`ui_theme.tres` 导出物与生成器一致。
 - [ ] `ui_panel.gdshader`、`ui_screen.gdshader` 进白名单；`hdr_2d` 关。
 - [ ] §7 的全部组件进 `UiGallery`，六种状态 × 两套主题截图通过。
 - [ ] `UiThemeClock` 写 `ui_night`，交班扫过达标（第 3 条）；常驻件经 `pin_night` 固定深屏，"常驻件：随主题"的设置可用。

@@ -603,7 +603,7 @@ w     = max(w_min, smoothstep(0.06, 0.015, C_a))      // 中性材质 w → 1
 
 ### 8.4 界面色
 
-界面允许存在（UI-NAV、UI-VISUAL），它的色名由 WP-04 登记为 `ui.*`，写进 `game/style/palette/ext/ui.json`。取值、对比度和用法以 UI-VISUAL §3 为准，这里只登记规则。
+界面允许存在（UI-NAV、UI-VISUAL），它的色名由 WP-35 登记为 `ui.*`，写进 `game/style/palette/ext/ui.json`（这个文件归 WP-35）。取值、对比度和用法以 UI-VISUAL §3 为准，这里只登记规则。
 
 界面是信息、数据、芯片与光的主题，主色清蓝 #73C9F9（UI-VISUAL）；`ui.*` 一律按 UI-VISUAL §3.8 登记。
 
