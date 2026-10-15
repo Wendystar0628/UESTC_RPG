@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "origin": [0, 0],
+    "crs": "EPSG:32648",
+    "bounds": [0, 0, 10, 10]
+  },
+  "boundary": [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]]],
+  "features": [
+    {
+      "id": "fixture-source-building",
+      "entityId": "fixture-building",
+      "kind": "building",
+      "polygons": [[[[2, 2], [8, 2], [8, 8], [2, 8], [2, 2]]]],
+      "height": 7.0,
+      "levels": 2.0
+    }
+  ],
+  "entities": [
+    {
+      "id": "fixture-building",
+      "name": "整数楼层回归样例",
+      "kind": "building",
+      "featureIds": ["fixture-source-building"],
+      "bounds": [2, 2, 8, 8],
+      "height": 7.0,
+      "levels": 2e0
+    }
+  ]
+}

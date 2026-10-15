@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Pipeline.Map</RootNamespace></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../game/contracts/Campus.Contracts.csproj" /><ProjectReference Include="../../game/gen/world/Campus.Gen.World.csproj" /></ItemGroup>
+  <ItemGroup><AdditionalFiles Include="../../scripts/gates/arch/BannedSymbols.Common.txt;../../scripts/gates/arch/BannedSymbols.Deterministic.txt" /></ItemGroup>
+</Project>

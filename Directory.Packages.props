@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="TngTech.ArchUnitNET" Version="0.13.4" />
+    <PackageVersion Include="gdUnit4.api" Version="5.1.0-rc5" />
+    <PackageVersion Include="gdUnit4.test.adapter" Version="3.1.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageVersion Include="GodotSharp" Version="4.7.2" Condition="'$(MSBuildProjectName)' != 'Campus'" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
+  </ItemGroup>
+</Project>

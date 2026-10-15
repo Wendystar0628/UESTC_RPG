@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "defaultMap": "qingshuihe",
+  "maps": [
+    {
+      "id": "qingshuihe",
+      "dir": "res://data/maps/qingshuihe/"
+    }
+  ]
+}

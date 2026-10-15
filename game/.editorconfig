@@ -1,0 +1,9 @@
+root = true
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+[*.cs]
+# PascalCase namespaces follow assembly responsibilities; G1 checks this explicitly.
+# Folder names are intentionally lower-case, and contract groups share the published namespace.
+dotnet_diagnostic.IDE0130.severity = none

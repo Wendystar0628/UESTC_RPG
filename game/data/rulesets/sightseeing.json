@@ -1,0 +1,20 @@
+{
+  "id": "sightseeing",
+  "viewModes": [
+    "fly",
+    "walk"
+  ],
+  "worldControls": "all",
+  "unlockPolicy": "all-unlocked",
+  "incidents": [
+    "late-returner"
+  ],
+  "cinematicStates": [
+    "title",
+    "entering",
+    "leaving"
+  ],
+  "characters": false,
+  "interaction": "none",
+  "clearVoices": false
+}

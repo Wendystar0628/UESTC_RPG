@@ -1,0 +1,1244 @@
+{
+  "version": 1,
+  "allowedLicenses": [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "OFL-1.1"
+  ],
+  "entries": [
+    {
+      "name": "CycleDetection",
+      "version": "2.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": null,
+      "commitStatus": "NOT_DECLARED_UPSTREAM",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/CycleDetection.2.0.0.nupkg",
+        "nuspec": "CycleDetection.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/cycledetection/2.0.0/cycledetection.2.0.0.nupkg",
+      "repository": null,
+      "sha256": "475bd389741bb249a1badf7f0386c5383dbb0ad4807978f883dd5229d2e8dcf3",
+      "sha512": "075ecc79e072cdaa33dba596815fd49c582690f855d404bd6e3574384ed74b699c70015b914b74453c5b281b6237f0ac6c7c314050691b0a5dc66e96d8abaf11",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 83171
+    },
+    {
+      "name": "Godot.NET.Sdk",
+      "version": "4.7.2",
+      "kind": "nuget",
+      "scopes": [
+        "project-sdk"
+      ],
+      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Godot.NET.Sdk.4.7.2.nupkg",
+        "nuspec": "Godot.NET.Sdk.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/godot.net.sdk/4.7.2/godot.net.sdk.4.7.2.nupkg",
+      "repository": "https://github.com/godotengine/godot/tree/master/modules/mono/editor/Godot.NET.Sdk",
+      "sha256": "679fe9c6736ca1943b06732ac5113f50c248ea0280593ff7db08814b72057acb",
+      "sha512": "a82840739200e4015ac02e58f9d7825fcdf7879f39b5d06bc8d93776f326d8557bd653318b847ae4bf1ec558f32f78014797b02bb0f205852647860747476c23",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 19976
+    },
+    {
+      "name": "Godot.SourceGenerators",
+      "version": "4.7.2",
+      "kind": "nuget",
+      "scopes": [
+        "game/packages.lock.json"
+      ],
+      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Godot.SourceGenerators.4.7.2.nupkg",
+        "nuspec": "Godot.SourceGenerators.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/godot.sourcegenerators/4.7.2/godot.sourcegenerators.4.7.2.nupkg",
+      "repository": "https://github.com/godotengine/godot/tree/master/modules/mono/editor/Godot.NET.Sdk/Godot.SourceGenerators",
+      "sha256": "d6f51b66fa17550bcfcbc38aae340e71f1c7298b24236df0935e4edcd67454be",
+      "sha512": "b8834a41d5e1ffbed7347a3b11b81051290be4802a2e70f3792386023dc26a0c9fd0a4f7d638ab4e8f5ac9fa90e47830ae9b167e279b31524e6bd3724642760d",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 58771
+    },
+    {
+      "name": "GodotSharp",
+      "version": "4.7.2",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "game/packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/GodotSharp.4.7.2.nupkg",
+        "nuspec": "GodotSharp.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/godotsharp/4.7.2/godotsharp.4.7.2.nupkg",
+      "repository": "https://github.com/godotengine/godot/tree/master/modules/mono/glue/GodotSharp/GodotSharp",
+      "sha256": "fa2c16e6ce6b8d3c8901bbcaff159565dc73267ef840687d201521e08f65e0e9",
+      "sha512": "6535ebb0297d487e791a40cda7b70097c65043b2e90246b737ebc07bd66edbd0dc9ae19916a4f975e6cde3c613bce607e274e7d6f1beb19cf60547114a3ce89b",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 3235160
+    },
+    {
+      "name": "GodotSharpEditor",
+      "version": "4.7.2",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/GodotSharpEditor.4.7.2.nupkg",
+        "nuspec": "GodotSharpEditor.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/godotsharpeditor/4.7.2/godotsharpeditor.4.7.2.nupkg",
+      "repository": "https://github.com/godotengine/godot/tree/master/modules/mono/glue/GodotSharp/GodotSharpEditor",
+      "sha256": "5f6f6bc263de6c343cc174364e828ef3d13ba845dd14e049fa83677b6a075acb",
+      "sha512": "ea9d777d3f6b004acdd82786e8e19d4fb9b4f611f6e20aad7d93a7774d7e8e562f1596dab79c1ceab6db63a61e2d716521acea282906a61f3403ec383a4f52ec",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 190861
+    },
+    {
+      "name": "Humanizer.Core",
+      "version": "2.14.1",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "3ebc38de585fc641a04b0e78ed69468453b0f8a1",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Humanizer.Core.2.14.1.nupkg",
+        "nuspec": "Humanizer.Core.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg",
+      "repository": "https://github.com/Humanizr/Humanizer",
+      "sha256": "117be88dd74fbbef492a0386f4d4908144df5aad51a4e630eda7710cf28327aa",
+      "sha512": "cb3a8653f1ca34b67d52fafa92f49cdf0615fd2e4efc8be4948516e5617b32e8af18b63cc12e486672cf92dec3d4a5bc12dd849e5d08dcbce0daf196336e17b3",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 538179
+    },
+    {
+      "name": "JetBrains.Annotations",
+      "version": "2026.2.0",
+      "kind": "nuget",
+      "scopes": [
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": null,
+      "commitStatus": "NOT_DECLARED_UPSTREAM",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/JetBrains.Annotations.2026.2.0.nupkg",
+        "nuspec": "JetBrains.Annotations.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/jetbrains.annotations/2026.2.0/jetbrains.annotations.2026.2.0.nupkg",
+      "repository": "https://github.com/JetBrains/JetBrains.Annotations.git",
+      "sha256": "e34f42b24add688097529946b3db0da657d325f604965955c08430a0359f7669",
+      "sha512": "b355ce7eb2662193a4d76a189b2f3dcc85f0a2d6e023b80efa8ab8dccef8c48264b2c4f2d7a7c97b77f3e48babc6a3ec465e8fe0e7ffee2071d32fe5b4cbbda1",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 230439
+    },
+    {
+      "name": "Microsoft.Bcl.AsyncInterfaces",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.Bcl.AsyncInterfaces.9.0.0.nupkg",
+        "nuspec": "Microsoft.Bcl.AsyncInterfaces.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.bcl.asyncinterfaces/9.0.0/microsoft.bcl.asyncinterfaces.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "06c5cd3961207c5ab7633ed54ed2ba9bfa2fe3f7ab46ac81ce2796488a667355",
+      "sha512": "6d8a7692c491e6e07ac6a39ae0dc83da004e785adcda7f05016a21efcd4c34c0dc3e3935cac0fb0cda6feebeec40e5df745253e85fecc97edf37896652c9fe45",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 97963
+    },
+    {
+      "name": "Microsoft.CodeAnalysis",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis/5.0.0/microsoft.codeanalysis.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "9c07db267f2615642e83151847b8d73a5deea5c667719e7c8aca287d0fa1db7d",
+      "sha512": "4e85f37192dc1c0f6f4f87b503a8cd69f00fb93263e28b1fa89724e7ad817bc072bf34bbf2963d23e49d3b9ca8d8ac246b4973fbe84e5b2a56d5075fd53b51e3",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 31673
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.Analyzers",
+      "version": "3.11.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "f2384e61845314d0e8ad74cc0fe67d1bd4e9f102",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.Analyzers.3.11.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.Analyzers.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.analyzers/3.11.0/microsoft.codeanalysis.analyzers.3.11.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn-analyzers",
+      "sha256": "850da5e84e8f3b89bb8be66c7c5944c7ef7752c2cfa38218df00e4346d75fd2c",
+      "sha512": "b4ff522f32caef65c2131961f0a5dfaca6d4eb272664bdc4c4697f6b7325ecb372d9469a9bb8058e3526773c936243174f27240871e9cf1edb0fa04cba687c06",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 1605871
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.BannedApiAnalyzers",
+      "version": "5.6.0",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "game/contracts/packages.lock.json",
+        "game/gen/acoustics/packages.lock.json",
+        "game/gen/ambience/packages.lock.json",
+        "game/gen/buildings/packages.lock.json",
+        "game/gen/collision/packages.lock.json",
+        "game/gen/diorama/packages.lock.json",
+        "game/gen/fauna/packages.lock.json",
+        "game/gen/furniture/packages.lock.json",
+        "game/gen/ground/packages.lock.json",
+        "game/gen/interior-props/packages.lock.json",
+        "game/gen/interior/core/packages.lock.json",
+        "game/gen/interior/shell/packages.lock.json",
+        "game/gen/outskirts/packages.lock.json",
+        "game/gen/parts/_stubs/packages.lock.json",
+        "game/gen/parts/circulation/packages.lock.json",
+        "game/gen/parts/core/packages.lock.json",
+        "game/gen/parts/openings/packages.lock.json",
+        "game/gen/parts/roof/packages.lock.json",
+        "game/gen/parts/street/packages.lock.json",
+        "game/gen/traces/packages.lock.json",
+        "game/gen/vegetation/packages.lock.json",
+        "game/gen/walkable/packages.lock.json",
+        "game/gen/water/packages.lock.json",
+        "game/gen/world/packages.lock.json",
+        "game/gen/zones/center-east/packages.lock.json",
+        "game/gen/zones/core/packages.lock.json",
+        "game/gen/zones/design-boundary/packages.lock.json",
+        "game/gen/zones/design-public/packages.lock.json",
+        "game/gen/zones/design-waterfront/packages.lock.json",
+        "game/gen/zones/library-interior/packages.lock.json",
+        "game/gen/zones/north/packages.lock.json",
+        "game/gen/zones/showcase-interiors/packages.lock.json",
+        "game/gen/zones/south/packages.lock.json",
+        "game/gen/zones/west/packages.lock.json",
+        "game/packages.lock.json",
+        "pipeline/map/packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "c0573ed0a7dc3e3b4d2e70da47f97cc51a35524f",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.BannedApiAnalyzers.5.6.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.BannedApiAnalyzers.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.bannedapianalyzers/5.6.0/microsoft.codeanalysis.bannedapianalyzers.5.6.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "f2ef6b5cbd7ec027d87293e51a98c91a689fc96761fa803f7a85863f379c638c",
+      "sha512": "152eccbc3dcbf4eb8cd29123ea98afe367682977494fe152486a60cb76e0a880c793c25234b9b5e285d6babd1f48eaa883d672ab34ad27e0633f3f5f344386d5",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 2037788
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.CSharp",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.CSharp.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.CSharp.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.csharp/5.0.0/microsoft.codeanalysis.csharp.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "72d042910185a47ff14f9ad1137c626eef58c4f0f5d3c46e0b86b8676e64a06f",
+      "sha512": "c304ff089390c90ef62dda2ecbb8234bfdd58bdda16c00285376347bfea66f7f7e569eda5ebdcfc6e043ef753642b2b5cf3813cafdd086f24fad05f4122592f1",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 17670053
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.CSharp.Workspaces",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.CSharp.Workspaces.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.CSharp.Workspaces.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.csharp.workspaces/5.0.0/microsoft.codeanalysis.csharp.workspaces.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "c9655c2edfdfd82a2e39f172f7aea094676d485cbe45c82b53575df54b652ff4",
+      "sha512": "172d01371728f5bed70bb2ca75382af8a93ad8729aa7210cd392cde6e6b736de8f678a737c0021fbd0e0fd55b86927e5818a22430fe68e7a2d814b8cf4d3fa2b",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 2051930
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.Common",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.Common.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.Common.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.common/5.0.0/microsoft.codeanalysis.common.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "83800bbc148dc8712649bd65e5316d596ef31248919a1a8bc785d666ef6caf65",
+      "sha512": "b8ae72b254c94365339f3625b6d16e0c26bfe8aaee3756905bf64d1451ef2becb203aabbbd9e68d0148fbcb8fe0a89b5fd1ef0189d3b7363b494f71b0eb99077",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 7089852
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.PublicApiAnalyzers",
+      "version": "5.6.0",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/contracts/packages.lock.json"
+      ],
+      "commit": "c0573ed0a7dc3e3b4d2e70da47f97cc51a35524f",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.PublicApiAnalyzers.5.6.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.PublicApiAnalyzers.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.publicapianalyzers/5.6.0/microsoft.codeanalysis.publicapianalyzers.5.6.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "d3ea70f5682d7538e628e8bfff90632649e7702d9e4ebf365c643ed82ee1e510",
+      "sha512": "52055fa52fd21689fee50bc5dd88de839c908d5835145f762bd837cb5c08c8bac110509fa20309f79fc695cbd15cc1f3c8b78ea2f58e592ffd6818a29e6cbd01",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 951120
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.VisualBasic",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.VisualBasic.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.VisualBasic.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.visualbasic/5.0.0/microsoft.codeanalysis.visualbasic.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "78c25037b1593e3a757c203e605645b0965f54903b0083844bf2c80166e7338d",
+      "sha512": "8c6ad34721e051761dd221f5c05e2cbee1a707fde43deaeafa221b68bab95e936fdbede16d93f2c8395afa4fd8969babebef59b03a0fd329a1ae26db8172e660",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 12654411
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.VisualBasic.Workspaces",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.VisualBasic.Workspaces.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.VisualBasic.Workspaces.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.visualbasic.workspaces/5.0.0/microsoft.codeanalysis.visualbasic.workspaces.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "c93f4b6a5b6fcb35d30b4d8dd1552be26532deb2d83b290a15dcf58b01413a83",
+      "sha512": "b2059ade652d08721f3dc482c8a2a4b2b64d9589e62967a2bdb65d10dacf2d32505e22970a315c5586b146f1817187804044b927ade2574dd756f892909c8ca9",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 1931023
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.Workspaces.Common",
+      "version": "5.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "6c4a46a31302167b425d5e0a31ea83c9a9aa1d09",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeAnalysis.Workspaces.Common.5.0.0.nupkg",
+        "nuspec": "Microsoft.CodeAnalysis.Workspaces.Common.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codeanalysis.workspaces.common/5.0.0/microsoft.codeanalysis.workspaces.common.5.0.0.nupkg",
+      "repository": "https://github.com/dotnet/roslyn",
+      "sha256": "062af97b5804860410eaea509952901c028b45f7a702eeb40c0ccdba936766c4",
+      "sha512": "cdb289c889055bed81c7979097f21604b99b3d3a68f7f53201bb7cbda5535eca22e046255eb25fb42459994b26c903fba60dea28c891e9cccf7548d369d36484",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 8439467
+    },
+    {
+      "name": "Microsoft.CodeCoverage",
+      "version": "18.0.1",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ef89ad17b5252e082698557246e61c98bef7a5d5",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.CodeCoverage.18.0.1.nupkg",
+        "nuspec": "Microsoft.CodeCoverage.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.codecoverage/18.0.1/microsoft.codecoverage.18.0.1.nupkg",
+      "repository": "https://github.com/microsoft/vstest",
+      "sha256": "1bacb98b21d9dd1dac8652c25bfb93bac8a8fd4a9c9d64fbf57f9401bc6f0d06",
+      "sha512": "d1bcebcfebd1e3d13f8ed741c925da2523cfe299709cc1c4daab3225981926e0dd20eb4b505b3022755aee4af1215cf6babe8a25915d4cf5ebdd63177e09c336",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 10065448
+    },
+    {
+      "name": "Microsoft.NET.Test.Sdk",
+      "version": "18.0.1",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ef89ad17b5252e082698557246e61c98bef7a5d5",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.NET.Test.Sdk.18.0.1.nupkg",
+        "nuspec": "Microsoft.NET.Test.Sdk.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.net.test.sdk/18.0.1/microsoft.net.test.sdk.18.0.1.nupkg",
+      "repository": "https://github.com/microsoft/vstest",
+      "sha256": "d1cdffae9f5d8b4c3b1395267d187a3ebae6dc07b28bc34e8f96e6da2ea3021d",
+      "sha512": "71fa67e085b443e7a6203f1e528712ef17e6c306200ff257e52fb309903697b81c633c59d6fbdf71d64770a92ecc21f880c6c162a719aad067f6e65ad1625152",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 39745
+    },
+    {
+      "name": "Microsoft.TestPlatform.AdapterUtilities",
+      "version": "18.0.1",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ef89ad17b5252e082698557246e61c98bef7a5d5",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.TestPlatform.AdapterUtilities.18.0.1.nupkg",
+        "nuspec": "Microsoft.TestPlatform.AdapterUtilities.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.adapterutilities/18.0.1/microsoft.testplatform.adapterutilities.18.0.1.nupkg",
+      "repository": "https://github.com/microsoft/vstest",
+      "sha256": "2c4e71b3273be4445f955fc40380380d5fa36b62c06f4291fc33e29c01be0202",
+      "sha512": "570c23a2cb9b56e1fd58e4b06dd7a6b5b72a78aa738a12c43c6d27f043d68864384d56ac250dcf493fd02ea60a7cb1daa9150c9fb585dddea5dfcd4546717439",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 652551
+    },
+    {
+      "name": "Microsoft.TestPlatform.ObjectModel",
+      "version": "18.0.1",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ef89ad17b5252e082698557246e61c98bef7a5d5",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.TestPlatform.ObjectModel.18.0.1.nupkg",
+        "nuspec": "Microsoft.TestPlatform.ObjectModel.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.objectmodel/18.0.1/microsoft.testplatform.objectmodel.18.0.1.nupkg",
+      "repository": "https://github.com/microsoft/vstest",
+      "sha256": "a096d2ed2678e91cf2390fa00b2b16eea251cbb57c4654156b977cb9a8dbf753",
+      "sha512": "a9929cb12e6637b18cc2da5dfad45f02de039a0f3255bb56926f6219fa98d8634e1b6a96f79347eb37ff16b4cb5d3892eeb07bcea8a158611c4aca4e6922bc4d",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 1665637
+    },
+    {
+      "name": "Microsoft.TestPlatform.TestHost",
+      "version": "18.0.1",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "ef89ad17b5252e082698557246e61c98bef7a5d5",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Microsoft.TestPlatform.TestHost.18.0.1.nupkg",
+        "nuspec": "Microsoft.TestPlatform.TestHost.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.testhost/18.0.1/microsoft.testplatform.testhost.18.0.1.nupkg",
+      "repository": "https://github.com/microsoft/vstest",
+      "sha256": "39761fe6f838a620ebd74bded1b6766526fe9dbdf23a21dac8957772ee6c315e",
+      "sha512": "497d459d803ccdc36ffe56d62b71a32e7031f778da966c87c903158be4cd580eb547ac7390b30da42ddfa2d6dfa4385e5c2161c32ff5acaa142f268e39ed2312",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 3260813
+    },
+    {
+      "name": "Mono.Cecil",
+      "version": "0.11.6",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": null,
+      "commitStatus": "NOT_DECLARED_UPSTREAM",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Mono.Cecil.0.11.6.nupkg",
+        "nuspec": "Mono.Cecil.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/mono.cecil/0.11.6/mono.cecil.0.11.6.nupkg",
+      "repository": null,
+      "sha256": "d2a23832aaa948ba9a01acc42b5726e34c5f995958f1b30d45c0e7c70b3a72d5",
+      "sha512": "1c5932246b23c9f317690a25ce3e1416d168d885871063d2f604cf997ed9e99d41bccdd0e22d4be6e4a5ea729d06bd92cc543686dbbd75ab0199db60e0912fb4",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 707868
+    },
+    {
+      "name": "Newtonsoft.Json",
+      "version": "13.0.4",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "4e13299d4b0ec96bd4df9954ef646bd2d1b5bf2a",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/Newtonsoft.Json.13.0.4.nupkg",
+        "nuspec": "Newtonsoft.Json.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/newtonsoft.json/13.0.4/newtonsoft.json.13.0.4.nupkg",
+      "repository": "https://github.com/JamesNK/Newtonsoft.Json",
+      "sha256": "f09081d457405baf35a973fa0c50d6bf272ed683f2568c5a620a49da952f6529",
+      "sha512": "6d1faff84ff227a83b195dae5f0d8ead44a36187e32e438b0bc243e24092db79ac2daa672ad7493c1240ef97f01c7fbe12b21f7de22acd82132f102eaf82805c",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 2484726
+    },
+    {
+      "name": "System.Composition",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.9.0.0.nupkg",
+        "nuspec": "System.Composition.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition/9.0.0/system.composition.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "15e84e910daed69f26434ff09f7719fb6e078e14cb75c93c55961603509c81b3",
+      "sha512": "6967322bdd27202847cb1abbae943cdc16efb7fb7d9755fac90b64bce0da67eac99581d4315a528e2d185c86535f956571644255115d78463bebb0423b3b9e6b",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 46104
+    },
+    {
+      "name": "System.Composition.AttributedModel",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.AttributedModel.9.0.0.nupkg",
+        "nuspec": "System.Composition.AttributedModel.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.attributedmodel/9.0.0/system.composition.attributedmodel.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "6bbcbb1face3fa499892594d1c0e34d83a157d8f486aa0b73a8cacf15ce5db83",
+      "sha512": "a18b90ce522f3b7d46c52953a3a34253e4672bd7556f59b5e7804d13b5469bd3d4c8933e46b390b2cf1c35b323fa221655ca7a5519f2265049dcc7f3628d7800",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 102149
+    },
+    {
+      "name": "System.Composition.Convention",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.Convention.9.0.0.nupkg",
+        "nuspec": "System.Composition.Convention.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.convention/9.0.0/system.composition.convention.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "b70e2f13925143ad2e6d36416f1a0c3e1b63390082dd7a031541fb3473bba3c5",
+      "sha512": "dde7e1c67ffb85023d90dcba33a514c16acc242cdd059678864612dcc531a97c86750dac2c2593a17d672e79eb45869f71d45230e6369da30f36544010a0c018",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 159143
+    },
+    {
+      "name": "System.Composition.Hosting",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.Hosting.9.0.0.nupkg",
+        "nuspec": "System.Composition.Hosting.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.hosting/9.0.0/system.composition.hosting.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "a0ec54f833c411f302b8d2e05bac12919a74258e6062de381493675adfbdebbb",
+      "sha512": "ccb3c66cc630eb2d86a0d0637283e7bd7b7bc1224cfea206d5f5360e8f240ce6c34d85871ba7c53a1ba5495897d08a768fea867ae0844aa12cc02446fb10efc0",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 170564
+    },
+    {
+      "name": "System.Composition.Runtime",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.Runtime.9.0.0.nupkg",
+        "nuspec": "System.Composition.Runtime.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.runtime/9.0.0/system.composition.runtime.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "03221ef9d8b54eac1405b489fec27c43cb73b274cdf9505d270e0af31673e37b",
+      "sha512": "3fbefb6813c8c262ef2f443c98f03b4628a899f8ea2d36e95ffc732a993b61324b72f3c3313bd121f345a209c4a5f25844b69d07299a04853cd6f5b73336589c",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 116629
+    },
+    {
+      "name": "System.Composition.TypedParts",
+      "version": "9.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "9d5a6a9aa463d6d10b0b0ba6d5982cc82f363dc3",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.Composition.TypedParts.9.0.0.nupkg",
+        "nuspec": "System.Composition.TypedParts.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.composition.typedparts/9.0.0/system.composition.typedparts.9.0.0.nupkg",
+      "repository": "https://github.com/dotnet/runtime",
+      "sha256": "1797e94d4b3746bef23ff372233afe5e7e4d7535d7a7caeb8c19c5f540415288",
+      "sha512": "edbee6927e07d35e3d8cd283d6d651506da09a4b333733ba600195fb112cc5d7c853ee522e1c56458269aa6d732b328d773a4a516f77a3210519c4eea0dbea1a",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 179565
+    },
+    {
+      "name": "System.IO.Hashing",
+      "version": "10.0.0",
+      "kind": "nuget",
+      "scopes": [
+        "central-version"
+      ],
+      "commit": "b0f34d51fccc69fd334253924abd8d6853fad7aa",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.IO.Hashing.10.0.0.nupkg",
+        "nuspec": "System.IO.Hashing.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.io.hashing/10.0.0/system.io.hashing.10.0.0.nupkg",
+      "repository": "https://github.com/dotnet/dotnet",
+      "sha256": "ceaddb68822c43591a638095974be99037196f664dc13ef00b4c03ab310de682",
+      "sha512": "8fd6f0d775c60607645a1e7959ec36ad3056b9486c265d55f1e1824ce4550e602ca19fe5df31c21b7eee9f691de990bfd5880e66d6efcdeac8ceba098db44b3b",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 207907
+    },
+    {
+      "name": "System.ValueTuple",
+      "version": "4.6.2",
+      "kind": "nuget",
+      "scopes": [
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "84b081710c66cc560b77d4de38cee493c3a38e9d",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/System.ValueTuple.4.6.2.nupkg",
+        "nuspec": "System.ValueTuple.nuspec",
+        "declaration": "MIT"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/system.valuetuple/4.6.2/system.valuetuple.4.6.2.nupkg",
+      "repository": "https://github.com/dotnet/maintenance-packages",
+      "sha256": "76fd0e366a2b90655fd15d557b0b79504197748358cb578fe3193f6d97bdd9aa",
+      "sha512": "b0c7e728801ea4439abf8e220944001025572c0d7f4d5342dfb83e9b1a3af74fc11621f36ee1cf16f77227a31d103e022fb8aae8dee49656cc5158b9fe758988",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 86474
+    },
+    {
+      "name": "TngTech.ArchUnitNET",
+      "version": "0.13.4",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "1ab5943d761d48f86b42f45ef047130dc9aff1c6",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "Apache-2.0",
+      "licenseEvidence": {
+        "archive": "output/downloads/TngTech.ArchUnitNET.0.13.4.nupkg",
+        "nuspec": "TngTech.ArchUnitNET.nuspec",
+        "declaration": "Apache-2.0"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/tngtech.archunitnet/0.13.4/tngtech.archunitnet.0.13.4.nupkg",
+      "repository": "https://github.com/TNG/ArchUnitNET",
+      "sha256": "1212391b1c3aefb249cb3adb026c2b49ada958db7fa740650c61958127423fa8",
+      "sha512": "d975c2722e97ed5a6056b7efe14823926cef9bf394c747cf0629e25de84bee200ce04e7acf732f7e6222394f110b10e71ba3d7ece246eb99e6e986d6d1f2721e",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 386280
+    },
+    {
+      "name": "gdUnit4.api",
+      "version": "5.1.0-rc5",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "d4ac9e9bf61f0a958d10d392ffeb5594a3fd620f",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/gdUnit4.api.5.1.0-rc5.nupkg",
+        "nuspec": "gdUnit4.api.nuspec",
+        "declaration": "LICENSE"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/gdunit4.api/5.1.0-rc5/gdunit4.api.5.1.0-rc5.nupkg",
+      "repository": "https://github.com/MikeSchulze/gdUnit4Net",
+      "sha256": "4043a051f948056ea4309eb12aec24720330b422be6b42362186e7b877c16d87",
+      "sha512": "b80069ab350bcfd6f9e28d598f0475fac73edc15796662ad2641722853ffd91c542421f7200bcbc91b65e24a755bf6b5f9b39a6cffe51f380243a8d17f55b40e",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 474598
+    },
+    {
+      "name": "gdUnit4.test.adapter",
+      "version": "3.1.1",
+      "kind": "nuget",
+      "scopes": [
+        "central-version",
+        "game/Campus.Gen.Tests.packages.lock.json",
+        "game/Campus.Tests.packages.lock.json",
+        "scripts/gates/arch/packages.lock.json"
+      ],
+      "commit": "73160d4547b766b99c9dbc0f6421a5d446c1735d",
+      "commitStatus": "NUSPEC_DECLARED",
+      "license": "MIT",
+      "licenseEvidence": {
+        "archive": "output/downloads/gdUnit4.test.adapter.3.1.1.nupkg",
+        "nuspec": "gdUnit4.test.adapter.nuspec",
+        "declaration": "LICENSE"
+      },
+      "source": "https://api.nuget.org/v3-flatcontainer/gdunit4.test.adapter/3.1.1/gdunit4.test.adapter.3.1.1.nupkg",
+      "repository": "https://github.com/MikeSchulze/gdUnit4Net",
+      "sha256": "892b7009bd86d8bfaee6bacb69e40ca92393cb19af0f13bdd923e88de0108007",
+      "sha512": "dff48024fa2fe7fba6e1d6be94dacf7615f8ec0ea98dd899d46559e4c2fee6bd9218e3c651a0f749faf3403340caff74e47447c4156cddc52d4901dfff6c9dfc",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE",
+      "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context",
+      "bytes": 146036
+    },
+    {
+      "name": "gdUnit4",
+      "version": "6.2.2",
+      "commit": "0127a55f4543dfc24746f6e5c7ba6f94105d51f2",
+      "kind": "godot-editor-plugin",
+      "license": "MIT",
+      "source": "https://codeload.github.com/godot-gdunit-labs/gdUnit4/zip/refs/tags/v6.2.2",
+      "release": "https://github.com/godot-gdunit-labs/gdUnit4/releases/tag/v6.2.2",
+      "sha256": "ddb44730ffb9cd77fd70d283753450759b00c5016143d7572bf63625f64d5433",
+      "sha512": "61319b5843d9f841cba9e6221d850aa9b8843946c063c3d3cb43ef89c4bc483146ac54d85e28af530f250e2edc0415da3ce1a92f055b10ac3f1a4bfc2d76290c",
+      "hashStatus": "COMPUTED_FROM_OFFICIAL_TAG_ARCHIVE",
+      "bytes": 473541,
+      "path": "game/addons/gdUnit4",
+      "licenseFile": "game/addons/gdUnit4/LICENSE",
+      "modified": false,
+      "installedFileCount": 272,
+      "installedBytes": 1161604,
+      "languagePolicy": "Vendored upstream GDScript and C# bridge are third-party plugin code, not project-authored gameplay code.",
+      "compatibility": {
+        "targetGodot": "4.7.2.stable.mono",
+        "upstreamReadmeVersions": [
+          "4.5",
+          "4.5.1",
+          "4.5.2",
+          "4.6",
+          "4.6.1",
+          "4.6.2",
+          "4.6.3",
+          "4.7",
+          "4.7.1"
+        ],
+        "readmeEvidence": "https://github.com/godot-gdunit-labs/gdUnit4/blob/v6.2.2/README.md",
+        "loaderMinimumHex": "0x40200",
+        "loaderEvidence": "game/addons/gdUnit4/src/dotnet/GdUnit4CSharpApiLoader.gd",
+        "patchCompatibility": "4.7 family declared; 4.7.2 is not individually enumerated in the upstream README",
+        "runtimeValidation": "IMPORT_PASS_EDITOR_PLUGIN_EXECUTION_NOT_RUN",
+        "dotnetApi": "5.1.0-rc5",
+        "dotnetAdapter": "3.1.1"
+      },
+      "validation": {
+        "godotImport": "PASS_RECORDED_D0_RUN",
+        "editorTestInspectorAndRunner": "NOT_RUN",
+        "relatedDotnetTests": "PASS_RECORDED_D0_RUN",
+        "scope": "Import succeeded; dotnet tests validate the NuGet API/adapter path, not complete editor plugin execution."
+      },
+      "validationEvidence": [
+        "output/logs/import.log",
+        "output/logs/gen-tests.log",
+        "output/logs/runtime-tests-1.log"
+      ]
+    },
+    {
+      "name": "Godot .NET Windows x64 export templates",
+      "version": "4.7.2-stable",
+      "kind": "external-build-tool",
+      "commit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt",
+      "thirdPartyNoticesUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt",
+      "source": "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_export_templates.tpz",
+      "release": "https://github.com/godotengine/godot-builds/releases/tag/4.7.2-stable",
+      "bytes": 1202598411,
+      "sha256": "92f8681e349ef1f90891b792da95e3b2b0bd1ed610b78018c58feb2d87e15a9d",
+      "sha512": "bb5c41d72370ed743660361f6228006f808ab04ca33abdc545d740b044f3fe057f32ae8cb7873a1bc86ddcd82ae683b9f6dfdfe4179852f2c0f1acde2ff6bd5a",
+      "hashStatus": "VERIFIED_OFFICIAL_SHA512_AND_RELEASE_SHA256",
+      "archive": "output/downloads/Godot_v4.7.2-stable_mono_export_templates.tpz",
+      "installation": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono",
+      "scope": "Windows x64 only; full official archive retained",
+      "installedFiles": [
+        {
+          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\version.txt",
+          "bytes": 18,
+          "sha256": "66796c18ef62c6e4a56a5c7412735b1a1bf805b010585d54b5569642e24373e2"
+        },
+        {
+          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_debug_x86_64_console.exe",
+          "bytes": 188928,
+          "sha256": "f78703ba3a05dd51a3464f8c90d4c72f54f95d5a8669993e7a5c3ce522b30c52"
+        },
+        {
+          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_debug_x86_64.exe",
+          "bytes": 103418880,
+          "sha256": "4526aac3ac47c65de66f99f715f56b35a2e2e4446fcb23e6d280a830cd97fdea"
+        },
+        {
+          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_release_x86_64_console.exe",
+          "bytes": 188928,
+          "sha256": "7895a7873947deaff6c8c859c1f77be051023413035048e2db74ceba07a65017"
+        },
+        {
+          "path": "E:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64\\editor_data\\export_templates\\4.7.2.stable.mono\\windows_release_x86_64.exe",
+          "bytes": 109513728,
+          "sha256": "16e0ec3cfd398b938f514de95ff2474b532b5061ada78f92226dba3f7584d55d"
+        }
+      ],
+      "runtimeValidation": "D0_EXPORT_AND_EXPORTED_STARTUP_PASS",
+      "validation": {
+        "scope": "Windows x64 D0 skeleton only",
+        "export": "PASS",
+        "exportedHeadlessRegistry": "PASS",
+        "exportedD3d12WindowAndScreenshot": "PASS",
+        "fullProductionG6": "NOT_CLAIMED"
+      },
+      "validationEvidence": [
+        "output/logs/export-2.log",
+        "output/logs/exported-registry-1.log",
+        "output/logs/exported-window-1.log",
+        "output/render-review/D0-export-first/V1.png"
+      ]
+    },
+    {
+      "name": "Source Han Sans SC",
+      "version": "2.005R",
+      "kind": "font",
+      "managedBy": "manual",
+      "provider": "WP-35",
+      "license": "OFL-1.1",
+      "source": "https://github.com/adobe-fonts/source-han-sans/releases/download/2.005R/09_SourceHanSansSC.zip",
+      "release": "https://github.com/adobe-fonts/source-han-sans/releases/tag/2.005R",
+      "bytes": 95177106,
+      "sha256": "ef7364f7ac2564be1ae9c1d74276de2653fe38b73449070398c4fc0b7e032ff1",
+      "hashStatus": "PROVIDER_REPORTED_NOT_VERIFIED_IN_THIS_WORKTREE",
+      "sourceMetadataStatus": "OFFICIAL_RELEASE_URL_AND_ASSET_SIZE_VERIFIED",
+      "archiveName": "09_SourceHanSansSC.zip",
+      "modifiedByProvider": false,
+      "installedInThisWorktree": false,
+      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "intendedPath": "game/assets/hud/fonts/",
+      "gitStorage": "ordinary-git-binary-not-lfs",
+      "evidence": {
+        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
+        "sections": [
+          "3",
+          "2026-10-16 01:22:16 Opus decision item 3"
+        ],
+        "providerDownloadDirectory": "WP-35/output/downloads/",
+        "providerExtractedDirectory": "WP-35/output/fonts/",
+        "providerWorktreeReadByThisAgent": false
+      },
+      "sourceMetadataSha256MatchesProvider": true,
+      "selectedWeights": [
+        "Light",
+        "Regular",
+        "Medium"
+      ],
+      "selectedFormat": "OTF"
+    },
+    {
+      "name": "Inter",
+      "version": "4.1",
+      "kind": "font",
+      "managedBy": "manual",
+      "provider": "WP-35",
+      "license": "OFL-1.1",
+      "source": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+      "release": "https://github.com/rsms/inter/releases/tag/v4.1",
+      "bytes": 33707794,
+      "sha256": "9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e",
+      "hashStatus": "PROVIDER_REPORTED_NOT_VERIFIED_IN_THIS_WORKTREE",
+      "sourceMetadataStatus": "OFFICIAL_RELEASE_URL_AND_ASSET_SIZE_VERIFIED",
+      "archiveName": "Inter-4.1.zip",
+      "modifiedByProvider": false,
+      "installedInThisWorktree": false,
+      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "intendedPath": "game/assets/hud/fonts/",
+      "gitStorage": "ordinary-git-binary-not-lfs",
+      "evidence": {
+        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
+        "sections": [
+          "3",
+          "2026-10-16 01:22:16 Opus decision item 3"
+        ],
+        "providerDownloadDirectory": "WP-35/output/downloads/",
+        "providerExtractedDirectory": "WP-35/output/fonts/",
+        "providerWorktreeReadByThisAgent": false
+      },
+      "selectedWeights": [
+        "Light",
+        "Regular",
+        "Medium"
+      ],
+      "selectedFormat": "TTF"
+    },
+    {
+      "name": "JetBrains Mono",
+      "version": "2.304",
+      "kind": "font",
+      "managedBy": "manual",
+      "provider": "WP-35",
+      "license": "OFL-1.1",
+      "source": "https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip",
+      "release": "https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304",
+      "bytes": 5622857,
+      "sha256": "6f6376c6ed2960ea8a963cd7387ec9d76e3f629125bc33d1fdcd7eb7012f7bbf",
+      "hashStatus": "PROVIDER_REPORTED_NOT_VERIFIED_IN_THIS_WORKTREE",
+      "sourceMetadataStatus": "OFFICIAL_RELEASE_URL_AND_ASSET_SIZE_VERIFIED",
+      "archiveName": "JetBrainsMono-2.304.zip",
+      "modifiedByProvider": false,
+      "installedInThisWorktree": false,
+      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "intendedPath": "game/assets/hud/fonts/",
+      "gitStorage": "ordinary-git-binary-not-lfs",
+      "evidence": {
+        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
+        "sections": [
+          "3",
+          "2026-10-16 01:22:16 Opus decision item 3"
+        ],
+        "providerDownloadDirectory": "WP-35/output/downloads/",
+        "providerExtractedDirectory": "WP-35/output/fonts/",
+        "providerWorktreeReadByThisAgent": false
+      },
+      "selectedWeights": [
+        "Regular",
+        "Medium"
+      ],
+      "selectedFormat": "TTF"
+    }
+  ],
+  "nugetClosure": {
+    "lockFiles": [
+      "game/Campus.Gen.Tests.packages.lock.json",
+      "game/Campus.Tests.packages.lock.json",
+      "game/contracts/packages.lock.json",
+      "game/gen/acoustics/packages.lock.json",
+      "game/gen/ambience/packages.lock.json",
+      "game/gen/buildings/packages.lock.json",
+      "game/gen/collision/packages.lock.json",
+      "game/gen/diorama/packages.lock.json",
+      "game/gen/fauna/packages.lock.json",
+      "game/gen/furniture/packages.lock.json",
+      "game/gen/ground/packages.lock.json",
+      "game/gen/interior-props/packages.lock.json",
+      "game/gen/interior/core/packages.lock.json",
+      "game/gen/interior/shell/packages.lock.json",
+      "game/gen/outskirts/packages.lock.json",
+      "game/gen/parts/_stubs/packages.lock.json",
+      "game/gen/parts/circulation/packages.lock.json",
+      "game/gen/parts/core/packages.lock.json",
+      "game/gen/parts/openings/packages.lock.json",
+      "game/gen/parts/roof/packages.lock.json",
+      "game/gen/parts/street/packages.lock.json",
+      "game/gen/traces/packages.lock.json",
+      "game/gen/vegetation/packages.lock.json",
+      "game/gen/walkable/packages.lock.json",
+      "game/gen/water/packages.lock.json",
+      "game/gen/world/packages.lock.json",
+      "game/gen/zones/center-east/packages.lock.json",
+      "game/gen/zones/core/packages.lock.json",
+      "game/gen/zones/design-boundary/packages.lock.json",
+      "game/gen/zones/design-public/packages.lock.json",
+      "game/gen/zones/design-waterfront/packages.lock.json",
+      "game/gen/zones/library-interior/packages.lock.json",
+      "game/gen/zones/north/packages.lock.json",
+      "game/gen/zones/showcase-interiors/packages.lock.json",
+      "game/gen/zones/south/packages.lock.json",
+      "game/gen/zones/west/packages.lock.json",
+      "game/packages.lock.json",
+      "pipeline/map/packages.lock.json",
+      "scripts/gates/arch/packages.lock.json"
+    ],
+    "lockFilePatterns": [
+      "packages.lock.json",
+      "*.packages.lock.json"
+    ],
+    "status": "LOCKFILES_INCLUDED",
+    "policy": "Read every lockfile independently without modifying it. Run this script after restoring all projects to include every resolved transitive package; missing lockfiles are not license validation success."
+  },
+  "audio": {
+    "manifest": "game/data/audio/licenses.json",
+    "owner": "WP-53e",
+    "assetsDownloadedInD0": false
+  },
+  "validation": {
+    "scope": "D0 skeleton; complete production gates belong to the mainline work packages",
+    "targetFramework": "net10.0",
+    "sdk": "10.0.402",
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "tests": {
+      "pureDotnet": 22,
+      "runtimeIntegration": 3,
+      "architectureAndRegistry": 7
+    },
+    "gates": {
+      "G1": "Passed",
+      "G2": "Passed",
+      "G3": "Passed",
+      "G4": "Passed",
+      "G5": "Passed",
+      "G5Smoke": "Passed",
+      "G6": "Passed",
+      "D0ExportRuntime": "Passed"
+    },
+    "finalGate": {
+      "status": "PASSED",
+      "generatedAt": "2026-10-15T18:21:02.7828891Z",
+      "report": "output/build/gates/WP-00-result.json",
+      "sha256": "5235e00d71a9b82925ceed4f0f1262735665b6445ab2d17eb8cdf6426fb4d4f3"
+    },
+    "editorScreenshot": "output/render-review/WP-00-editor-smoke/V1.png",
+    "exportScreenshot": "output/render-review/WP-00-export-smoke/V1.png",
+    "exportDirectoryBytes": 202062868,
+    "fullProductionG6": "NOT_CLAIMED"
+  }
+}

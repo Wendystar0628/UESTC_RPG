@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uestc-rpg.local/schemas/interiors.schema.json",
+  "title": "Open interior catalog",
+  "description": "D0 candidate catalog; an entry may claim multiple merged world features.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "interiors"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "interiors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "featureIds",
+          "name",
+          "scope",
+          "providerId",
+          "openFloors",
+          "entrances",
+          "seals",
+          "owner"
+        ],
+        "properties": {
+          "featureIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "sourceFeatureIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "name": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "zh",
+              "en"
+            ],
+            "properties": {
+              "zh": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "zh",
+              "en"
+            ],
+            "properties": {
+              "zh": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "providerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "openFloors": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -32768,
+              "maximum": 32767
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "entrances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "featureId",
+                "doorCenter",
+                "facingDeg",
+                "outsideLanding",
+                "insideLanding",
+                "clearWidth",
+                "open"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "featureId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "doorCenter": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "facingDeg": {
+                  "type": "number"
+                },
+                "outsideLanding": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "insideLanding": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "clearWidth": {
+                  "type": "number",
+                  "minimum": 1.1
+                },
+                "open": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "seals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "building",
+                "storey",
+                "a",
+                "b",
+                "kind",
+                "reason"
+              ],
+              "properties": {
+                "building": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "storey": {
+                  "type": "integer"
+                },
+                "a": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "b": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "kind": {
+                  "enum": [
+                    "IronGate",
+                    "FireDoor",
+                    "GlassPartition",
+                    "FoldingGate",
+                    "RollerShutter",
+                    "ShelfWall"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^WP-[0-9]{2}[a-z]?$"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+// ENG-ARCH 2. Production assemblies only; test oracles may use platform math.
+T:System.Random;Use Campus.Contracts.Rng.
+T:Godot.RandomNumberGenerator;Use Campus.Contracts.Rng.
+M:Godot.GD.Randf;Use the seeded contract generator.
+M:Godot.GD.Randi;Use the seeded contract generator.
+M:Godot.GD.RandRange(System.Double,System.Double);Use the seeded contract generator.
+M:Godot.GD.RandRange(System.Int32,System.Int32);Use the seeded contract generator.
+P:System.DateTime.Now;Use the world clock.
+P:System.DateTime.UtcNow;Use the world clock.
+P:System.DateTimeOffset.Now;Use the world clock.
+P:System.DateTimeOffset.UtcNow;Use the world clock.
+P:System.Environment.TickCount;Timing is owned by the kernel.
+P:System.Environment.TickCount64;Timing is owned by the kernel.
+T:System.Threading.Timer;Timing is owned by the kernel.
+M:Godot.Time.GetDatetimeDictFromSystem(System.Boolean);Use the world clock.
+M:Godot.Time.GetDatetimeStringFromSystem(System.Boolean,System.Boolean);Use the world clock.
+M:System.String.GetHashCode;Use StableHash for stable identifiers.
+M:System.String.GetHashCode(System.StringComparison);Use StableHash for stable identifiers.
+M:System.Guid.NewGuid;Use a persisted incrementing ID.
+T:Godot.StandardMaterial3D;Materials must come from ToonSpec.
+T:Godot.OrmMaterial3D;Materials must come from ToonSpec.
+M:Godot.Shader.#ctor;Use the approved shader library.
+M:Godot.RenderingServer.GlobalShaderParameterGet(Godot.StringName);Never read back shader globals.
+M:Godot.RenderingServerInstance.GlobalShaderParameterGet(Godot.StringName);Never read back shader globals.
+M:Godot.Engine.set_TimeScale(System.Double);Engine time scale remains one.
+M:Godot.Engine.SetTimeScale(System.Double);Engine time scale remains one.
+M:Godot.EngineInstance.SetTimeScale(System.Double);Engine time scale remains one.
+T:Godot.AudioStreamRandomizer;Use deterministic sound selection.
+M:Godot.AudioStreamPlaylist.set_Shuffle(System.Boolean);Playlist shuffle is nondeterministic.
+M:Godot.AudioStreamPlaylist.SetShuffle(System.Boolean);Playlist shuffle is nondeterministic.
+M:Godot.AudioServer.set_PlaybackSpeedScale(System.Single);Do not change playback speed globally.
+M:Godot.AudioServer.SetPlaybackSpeedScale(System.Single);Do not change playback speed globally.
+M:Godot.AudioServerInstance.SetPlaybackSpeedScale(System.Single);Do not change playback speed globally.

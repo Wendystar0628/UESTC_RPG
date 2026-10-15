@@ -1,0 +1,1251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cinematic.schema.json",
+  "title": "Cinematic timeline format 1",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "map": {
+      "$ref": "#/$defs/mapId"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "enterNew",
+        "enterNewShort",
+        "enterContinue",
+        "leave"
+      ]
+    },
+    "duration": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "camera": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/cameraSeg"
+      },
+      "description": "Capture $current once at playback start. Leading idle time is allowed; keep that pose until the first camera segment starts."
+    },
+    "world": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/worldCue"
+      }
+    },
+    "masks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/maskSeg"
+      }
+    },
+    "captions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/captionCue"
+      }
+    },
+    "extras": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/extraCue"
+      }
+    },
+    "audio": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/audioCue"
+      }
+    },
+    "end": {
+      "$ref": "#/$defs/end"
+    }
+  },
+  "required": [
+    "format",
+    "id",
+    "map",
+    "kind",
+    "duration",
+    "camera",
+    "world",
+    "masks",
+    "captions",
+    "extras",
+    "audio",
+    "end"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "mapId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+    },
+    "vector2": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "vector3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "name": {
+      "type": "object",
+      "properties": {
+        "zh": {
+          "type": "string"
+        },
+        "en": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "zh",
+        "en"
+      ],
+      "additionalProperties": false
+    },
+    "pose": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/vector3"
+        },
+        "yawDeg": {
+          "type": "number"
+        },
+        "pitchDeg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "fovDeg": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 180
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "yawDeg",
+        "pitchDeg"
+      ],
+      "additionalProperties": false
+    },
+    "stand": {
+      "type": "object",
+      "properties": {
+        "feet": {
+          "$ref": "#/$defs/vector3"
+        },
+        "yawDeg": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "feet",
+        "yawDeg"
+      ],
+      "additionalProperties": false
+    },
+    "box3": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/vector3"
+        },
+        "max": {
+          "$ref": "#/$defs/vector3"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "rect": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/vector2"
+        },
+        "max": {
+          "$ref": "#/$defs/vector2"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "worldPreset": {
+      "type": "object",
+      "properties": {
+        "clock": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 24
+        },
+        "season": {
+          "type": "string",
+          "enum": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter"
+          ]
+        },
+        "weather": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clear",
+                "fewClouds",
+                "cloudy",
+                "overcast",
+                "fog",
+                "lightRain",
+                "rain",
+                "thunderstorm",
+                "afterRain",
+                "snow",
+                "afterSnow"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "clock",
+        "season"
+      ],
+      "additionalProperties": false
+    },
+    "slotId": {
+      "type": "string",
+      "pattern": "^(s[1-3]|m[1-9])$"
+    },
+    "cameraPoint": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vector3"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "in": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vector3"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "out": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vector3"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "anchor"
+          ],
+          "properties": {
+            "anchor": {
+              "type": "string",
+              "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+            },
+            "p": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "required": [
+            "p"
+          ],
+          "properties": {
+            "p": {
+              "$ref": "#/$defs/vector3"
+            },
+            "anchor": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "cameraLook": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "ahead",
+            "target"
+          ]
+        },
+        "lead": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pitchBias": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/vector3"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "settle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/lookSettle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "blendIn": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Seconds from segment start to blend preceding orientation into this mode with smootherstep; normal angular-rate limits still apply."
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "ahead"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "lead"
+            ],
+            "properties": {
+              "lead": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "target"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/vector3"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fovKey": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "number",
+          "minimum": 0
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 180
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "anchor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "$userFov",
+                "$dest"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "$dest reads the saved destination FOV; null destination FOV falls back to the user setting."
+        }
+      },
+      "required": [
+        "t"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "value"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 180
+            },
+            "anchor": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "required": [
+            "anchor"
+          ],
+          "properties": {
+            "anchor": {
+              "type": "string",
+              "enum": [
+                "$userFov",
+                "$dest"
+              ]
+            },
+            "value": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "orbit": {
+      "type": "object",
+      "properties": {
+        "center": {
+          "$ref": "#/$defs/vector3"
+        },
+        "radius0": {
+          "type": "number",
+          "minimum": 0
+        },
+        "radius1": {
+          "type": "number",
+          "minimum": 0
+        },
+        "azimuth0": {
+          "type": "number"
+        },
+        "azimuth1": {
+          "type": "number"
+        },
+        "height0": {
+          "type": "number"
+        },
+        "height1": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "center",
+        "radius0",
+        "radius1",
+        "azimuth0",
+        "azimuth1",
+        "height0",
+        "height1"
+      ],
+      "additionalProperties": false
+    },
+    "cameraSeg": {
+      "type": "object",
+      "properties": {
+        "t0": {
+          "type": "number",
+          "minimum": 0
+        },
+        "t1": {
+          "type": "number",
+          "minimum": 0
+        },
+        "path": {
+          "type": "string",
+          "enum": [
+            "hold",
+            "bezier",
+            "orbit",
+            "transit"
+          ]
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cameraPoint"
+          }
+        },
+        "look": {
+          "$ref": "#/$defs/cameraLook"
+        },
+        "fov": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fovKey"
+          }
+        },
+        "ease": {
+          "anyOf": [
+            {
+              "oneOf": [
+                {
+                  "const": "smootherstep"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "arriveAt": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "orbit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/orbit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "path",
+        "points",
+        "look",
+        "fov"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "path": {
+                "const": "hold"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "points": {
+                "minItems": 1,
+                "maxItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "path": {
+                "const": "bezier"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "points": {
+                "minItems": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "path": {
+                "const": "orbit"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "orbit"
+            ],
+            "properties": {
+              "orbit": {
+                "$ref": "#/$defs/orbit"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "path": {
+                "const": "transit"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "points": {
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "required": [
+                    "anchor"
+                  ],
+                  "properties": {
+                    "anchor": {
+                      "type": "string",
+                      "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+                    },
+                    "p": {
+                      "type": "null"
+                    },
+                    "in": {
+                      "type": "null"
+                    },
+                    "out": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              "orbit": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "The first camera segment may start after zero: preserve playback-start $current pose until then. Later segments remain adjacent. transit uses exactly two resolved anchors and UI-NAV 7.1 arc clearance and arc-length speed law, with cinematic segment timing; no world-axis handles."
+    },
+    "worldCue": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cue": {
+          "type": "string",
+          "enum": [
+            "newTimeline",
+            "restoreSlot",
+            "flowTo",
+            "setFlow"
+          ]
+        },
+        "clock": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 24
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rate": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                10,
+                60,
+                360,
+                1440
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "slot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/slotId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "t",
+        "cue"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "cue": {
+                "const": "flowTo"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "clock",
+              "rate"
+            ],
+            "properties": {
+              "clock": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 24
+              },
+              "rate": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  10,
+                  60,
+                  360,
+                  1440
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cue": {
+                "const": "setFlow"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rate"
+            ],
+            "properties": {
+              "rate": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  10,
+                  60,
+                  360,
+                  1440
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "maskSeg": {
+      "type": "object",
+      "properties": {
+        "t0": {
+          "type": "number",
+          "minimum": 0
+        },
+        "t1": {
+          "type": "number",
+          "minimum": 0
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "letterbox",
+            "cloudCover",
+            "veil"
+          ]
+        },
+        "layer": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hold": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "until": {
+                  "type": "string",
+                  "enum": [
+                    "path15s",
+                    "destReady",
+                    "titleReady"
+                  ]
+                },
+                "maxWait": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "until",
+                "maxWait"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fadeIn": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "fadeOut": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "cloudCover"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "layer"
+            ],
+            "properties": {
+              "layer": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "letterbox"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "hold": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "t0/t1 bound the whole envelope; full opacity is [t0 + fadeIn, t1 - fadeOut]. Fade durations must fit that envelope (semantic validation). Hold pauses timeline time at full cover, up to maxWait real seconds. Only cloudCover and veil fully cover the view. The active envelope is [t0,t1): t1 is excluded, including when fadeOut is zero."
+    },
+    "captionCue": {
+      "type": "object",
+      "properties": {
+        "t0": {
+          "type": "number",
+          "minimum": 0
+        },
+        "t1": {
+          "type": "number",
+          "minimum": 0
+        },
+        "style": {
+          "type": "string",
+          "enum": [
+            "subtitle",
+            "clock",
+            "titleCard",
+            "place"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "style",
+        "key"
+      ],
+      "additionalProperties": false
+    },
+    "extraCue": {
+      "type": "object",
+      "properties": {
+        "t0": {
+          "type": "number",
+          "minimum": 0
+        },
+        "t1": {
+          "type": "number",
+          "minimum": 0
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "lampCue",
+            "birds"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "t0",
+        "t1",
+        "kind",
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "audioCue": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cue": {
+          "type": "string",
+          "enum": [
+            "title.start",
+            "title.fadeIn",
+            "title.fadeOut",
+            "duck",
+            "amb.altitude"
+          ]
+        },
+        "seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "db": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "t",
+        "cue",
+        "seconds"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "cue": {
+                "const": "duck"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "db"
+            ],
+            "properties": {
+              "db": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cue": {
+                "const": "amb.altitude"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "weight"
+            ],
+            "properties": {
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "end": {
+      "type": "object",
+      "properties": {
+        "pose": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+            },
+            {
+              "$ref": "#/$defs/pose"
+            }
+          ]
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "fly",
+                "walk"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "flow": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                10,
+                60,
+                360,
+                1440
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "titleCard": {
+          "type": "boolean"
+        },
+        "firstGuide": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pose"
+      ],
+      "additionalProperties": false
+    },
+    "lookSettle": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "type": "string",
+          "pattern": "^\\$(title|current|waypoint:[A-Za-z0-9_-]+|dest|destApproach)$"
+        },
+        "from": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.6
+        }
+      },
+      "required": [
+        "anchor"
+      ],
+      "additionalProperties": false,
+      "description": "At normalized progress from in [t0, arriveAt or t1], smoothly settle into anchor orientation using smootherstep; 0.6 uses the final 40 percent. Does not move position."
+    }
+  },
+  "$comment": "Only full cloudCover/veil intervals permit position discontinuities, direct orientation settlement, and seam velocity/angular-rate exemptions. Fade ramps and letterbox do not qualify. Validate times, fade sums, segment adjacency and visible seam continuity semantically; do not exempt visible paths."
+}

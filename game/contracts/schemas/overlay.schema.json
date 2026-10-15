@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:campus:contracts:overlay:v1",
+  "title": "Campus world overlay v1 candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "zone",
+    "owner",
+    "ops"
+  ],
+  "properties": {
+    "zone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "pattern": "^WP-[0-9]{2}[a-z]?$"
+    },
+    "map": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ops": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operation"
+      }
+    }
+  },
+  "$defs": {
+    "vector2": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "ring": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/vector2"
+      }
+    },
+    "rings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outer",
+        "holes"
+      ],
+      "properties": {
+        "outer": {
+          "$ref": "#/$defs/ring"
+        },
+        "holes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ring"
+          }
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "points"
+      ],
+      "properties": {
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/vector2"
+          }
+        }
+      }
+    },
+    "geometry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "rings"
+          ],
+          "properties": {
+            "type": {
+              "const": "polygon"
+            },
+            "rings": {
+              "$ref": "#/$defs/rings"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "line"
+          ],
+          "properties": {
+            "type": {
+              "const": "polyline"
+            },
+            "line": {
+              "$ref": "#/$defs/line"
+            }
+          }
+        }
+      ]
+    },
+    "operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "target",
+            "rings",
+            "level",
+            "reason"
+          ],
+          "properties": {
+            "op": {
+              "const": "reshape"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rings": {
+              "$ref": "#/$defs/rings"
+            },
+            "level": {
+              "enum": [
+                "minor",
+                "design"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "target",
+            "reason"
+          ],
+          "properties": {
+            "op": {
+              "const": "height"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "height": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "storeys": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "height"
+              ],
+              "properties": {
+                "height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            {
+              "required": [
+                "storeys"
+              ],
+              "properties": {
+                "storeys": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "target",
+            "family"
+          ],
+          "properties": {
+            "op": {
+              "const": "style"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "family": {
+              "type": "string",
+              "minLength": 1
+            },
+            "facade": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "target",
+            "reason"
+          ],
+          "properties": {
+            "op": {
+              "const": "hide"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
+            "id",
+            "kind",
+            "geometry",
+            "reason"
+          ],
+          "properties": {
+            "op": {
+              "const": "add"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^design:.+"
+            },
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "geometry": {
+              "$ref": "#/$defs/geometry"
+            },
+            "height": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "props": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$comment": "JSON metadata order is enforced by ContractJson: op is first in operations; type is first in geometry. JSON Schema object validation cannot enforce property order."
+}

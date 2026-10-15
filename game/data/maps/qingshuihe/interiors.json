@@ -1,0 +1,594 @@
+{
+  "version": 1,
+  "interiors": [
+    {
+      "featureIds": [
+        "qsh:way:806848396",
+        "qsh:way:806848404",
+        "qsh:way:806848407"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:806848395",
+        "osm:way:806848391",
+        "osm:way:806848392",
+        "osm:way:806848393",
+        "osm:way:806848394",
+        "osm:way:806848404",
+        "osm:way:806848407"
+      ],
+      "name": {
+        "zh": "图书馆",
+        "en": "Library"
+      },
+      "scope": {
+        "zh": "1F 中厅与品·悦吧；2F 门厅与回廊；3F–5F 回廊；5F 西窗带；2F、3F 露台",
+        "en": "1F atrium and cafe; 2F entrance and gallery; 3F–5F galleries; 5F west windows; 2F and 3F terraces"
+      },
+      "providerId": "interior.stub.library",
+      "openFloors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "entrances": [
+        {
+          "id": "lib.main",
+          "featureId": "qsh:way:806848396",
+          "doorCenter": [
+            -154.6,
+            5.1,
+            80
+          ],
+          "facingDeg": 127,
+          "outsideLanding": [
+            -152.6,
+            5.1,
+            81.5
+          ],
+          "insideLanding": [
+            -156.9959,
+            5.1,
+            78.1946
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-17"
+    },
+    {
+      "featureIds": [
+        "qsh:way:806848402"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:806848401"
+      ],
+      "name": {
+        "zh": "电子科技博物馆",
+        "en": "Museum of Electronic Science and Technology"
+      },
+      "scope": {
+        "zh": "单层全展线",
+        "en": "Single-floor exhibition route"
+      },
+      "providerId": "interior.stub.museum",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-17"
+    },
+    {
+      "featureIds": [
+        "qsh:way:687370085"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:687370085"
+      ],
+      "name": {
+        "zh": "主楼 B2",
+        "en": "Main Building B2"
+      },
+      "scope": {
+        "zh": "1F 柱厅、2F 校史馆；屋顶空廊",
+        "en": "1F column hall; 2F university history exhibition; rooftop colonnade"
+      },
+      "providerId": "interior.stub.main-b2",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "b2.rear",
+          "featureId": "qsh:way:687370085",
+          "doorCenter": [
+            -322.2,
+            2.6,
+            465.3
+          ],
+          "facingDeg": 37,
+          "outsideLanding": [
+            -320.8,
+            2.6,
+            463.3
+          ],
+          "insideLanding": [
+            -324.0054,
+            2.6,
+            467.6959
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        },
+        {
+          "id": "b2.front",
+          "featureId": "qsh:way:687370085",
+          "doorCenter": [
+            -346.3,
+            2.6,
+            497.6
+          ],
+          "facingDeg": 216,
+          "outsideLanding": [
+            -347.8,
+            2.6,
+            499.6
+          ],
+          "insideLanding": [
+            -344.5366,
+            2.6,
+            495.1729
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31a"
+    },
+    {
+      "featureIds": [
+        "qsh:way:844548980"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:844548980",
+        "osm:way:1157144625"
+      ],
+      "name": {
+        "zh": "宣邦楼",
+        "en": "Xuanbang Building"
+      },
+      "scope": {
+        "zh": "中厅 1F–2F；钟楼楼梯、钟室、灯笼观景环",
+        "en": "1F–2F atrium; clock tower stairs, clock room and lantern gallery"
+      },
+      "providerId": "interior.stub.xuanbang",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "xb.clock",
+          "featureId": "qsh:way:844548980",
+          "doorCenter": [
+            181.5,
+            0,
+            556
+          ],
+          "facingDeg": 132,
+          "outsideLanding": [
+            183.3,
+            0,
+            557.6
+          ],
+          "insideLanding": [
+            179.2706,
+            0,
+            553.9926
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31a"
+    },
+    {
+      "featureIds": [
+        "qsh:way:217855275",
+        "qsh:way:217855279"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:217855275",
+        "osm:way:217855279"
+      ],
+      "name": {
+        "zh": "体育馆与游泳馆",
+        "en": "Gymnasium and Swimming Pool"
+      },
+      "scope": {
+        "zh": "体育馆环厅、看台、场地；游泳馆门厅、池岸",
+        "en": "Gymnasium concourse, stands and court; pool entrance hall and poolside"
+      },
+      "providerId": "interior.stub.sports",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "gym.deck",
+          "featureId": "qsh:way:217855275",
+          "doorCenter": [
+            -184.7,
+            5,
+            791.8
+          ],
+          "facingDeg": 127,
+          "outsideLanding": [
+            -182.7,
+            5,
+            793.3
+          ],
+          "insideLanding": [
+            -187.0959,
+            5,
+            789.9946
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31a"
+    },
+    {
+      "featureIds": [
+        "qsh:way:779496166",
+        "qsh:relation:14153711",
+        "qsh:way:779496169"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:779496166",
+        "osm:relation:14153711",
+        "osm:way:779496169"
+      ],
+      "name": {
+        "zh": "六号科研楼",
+        "en": "Research Building Six"
+      },
+      "scope": {
+        "zh": "C 区 1F 门厅、公式台阶、2F 连廊及 B 区 2F 一小段公共区",
+        "en": "C block entrance hall and formula stairs; 2F bridge and a short public section of B block"
+      },
+      "providerId": "interior.stub.research-six",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "six.c.east",
+          "featureId": "qsh:way:779496166",
+          "doorCenter": [
+            -588.3,
+            0,
+            230
+          ],
+          "facingDeg": 77,
+          "outsideLanding": [
+            -585.8,
+            0,
+            229.4
+          ],
+          "insideLanding": [
+            -591.2231,
+            0,
+            230.6749
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31b"
+    },
+    {
+      "featureIds": [
+        "qsh:relation:11031411"
+      ],
+      "sourceFeatureIds": [
+        "osm:relation:11031411"
+      ],
+      "name": {
+        "zh": "电子科学技术研究院大楼",
+        "en": "Institute of Electronic Science and Technology"
+      },
+      "scope": {
+        "zh": "1F 大厅、工训车间、暗室控制室",
+        "en": "1F lobby, engineering workshop and anechoic chamber control room"
+      },
+      "providerId": "interior.stub.research-institute",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31b"
+    },
+    {
+      "featureIds": [
+        "qsh:way:217855218"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:217855218"
+      ],
+      "name": {
+        "zh": "学知苑 1 栋",
+        "en": "Xuezhi Residence 1"
+      },
+      "scope": {
+        "zh": "1F–2F 公共部分与一间 4 人间；2F–3F 楼梯口封闭",
+        "en": "1F–2F public areas and one four-bed dormitory; stairs to 3F closed"
+      },
+      "providerId": "interior.stub.xuezhi-1",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "xz1.hall",
+          "featureId": "qsh:way:217855218",
+          "doorCenter": [
+            147.9,
+            1,
+            -490.7
+          ],
+          "facingDeg": 156,
+          "outsideLanding": [
+            148.9,
+            1,
+            -488.4
+          ],
+          "insideLanding": [
+            146.6798,
+            1,
+            -493.4406
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31c"
+    },
+    {
+      "featureIds": [
+        "qsh:way:596973487"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:950008615",
+        "osm:way:596973487",
+        "osm:way:950008616"
+      ],
+      "name": {
+        "zh": "银杏苑",
+        "en": "Yinxing Dining Hall"
+      },
+      "scope": {
+        "zh": "1F 银桦、室外扶梯、2F 紫荆、3F 芙蓉一角",
+        "en": "1F Yinhua, outdoor escalator, 2F Zijing and one corner of 3F Furong"
+      },
+      "providerId": "interior.stub.yinxing",
+      "openFloors": [
+        1,
+        2,
+        3
+      ],
+      "entrances": [
+        {
+          "id": "yx.2f",
+          "featureId": "qsh:way:596973487",
+          "doorCenter": [
+            38.1,
+            5,
+            -415.7
+          ],
+          "facingDeg": 201,
+          "outsideLanding": [
+            37.2,
+            5,
+            -413.4
+          ],
+          "insideLanding": [
+            39.1751,
+            5,
+            -418.5007
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31c"
+    },
+    {
+      "featureIds": [
+        "qsh:way:552816777",
+        "qsh:way:852606258",
+        "qsh:way:217855263"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:552816777",
+        "osm:way:852606257",
+        "osm:way:852606258",
+        "osm:way:217855263"
+      ],
+      "name": {
+        "zh": "学生活动中心与成电会堂",
+        "en": "Student Center and Chengdian Hall"
+      },
+      "scope": {
+        "zh": "门厅、会堂与一间排练厅；楼上不开放",
+        "en": "Entrance hall, auditorium and one rehearsal room; upper floors closed"
+      },
+      "providerId": "interior.stub.student-center",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31c"
+    },
+    {
+      "featureIds": [
+        "qsh:way:603368212"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:603368212"
+      ],
+      "name": {
+        "zh": "商业街",
+        "en": "Commercial Street"
+      },
+      "scope": {
+        "zh": "一层步行街、一家茶饮店与一家快递驿站",
+        "en": "1F shopping arcade, one tea shop and one parcel station"
+      },
+      "providerId": "interior.stub.commercial",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31c"
+    },
+    {
+      "featureIds": [
+        "qsh:relation:11043352",
+        "qsh:relation:11043354"
+      ],
+      "sourceFeatureIds": [
+        "osm:relation:11043352",
+        "osm:relation:11043354"
+      ],
+      "name": {
+        "zh": "品学楼",
+        "en": "Pinxue Building"
+      },
+      "scope": {
+        "zh": "A 区大厅及 2F 楼梯平台、一间阶梯教室；C 区一层",
+        "en": "A block lobby and 2F stair landing, one lecture room; C block 1F"
+      },
+      "providerId": "interior.stub.pinxue",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [
+        {
+          "id": "px.a.hall",
+          "featureId": "qsh:relation:11043352",
+          "doorCenter": [
+            146.5,
+            0,
+            -84.9
+          ],
+          "facingDeg": 216,
+          "outsideLanding": [
+            145,
+            0,
+            -82.9
+          ],
+          "insideLanding": [
+            148.2634,
+            0,
+            -87.3271
+          ],
+          "clearWidth": 1.1,
+          "open": true
+        }
+      ],
+      "seals": [],
+      "owner": "WP-31b"
+    },
+    {
+      "featureIds": [
+        "qsh:way:217855231"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:949704500",
+        "osm:way:949704502"
+      ],
+      "name": {
+        "zh": "综合训练馆",
+        "en": "Comprehensive Training Hall"
+      },
+      "scope": {
+        "zh": "主馆、北附楼门厅与 2F 内走廊",
+        "en": "Main hall, north annex lobby and 2F interior corridor"
+      },
+      "providerId": "interior.stub.training",
+      "openFloors": [
+        1,
+        2
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31b"
+    },
+    {
+      "featureIds": [
+        "qsh:way:544136506"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:848026389"
+      ],
+      "name": {
+        "zh": "朝阳餐厅",
+        "en": "Chaoyang Dining Hall"
+      },
+      "scope": {
+        "zh": "1F 就餐区与档口前；2F 暂不开放",
+        "en": "1F dining and serving areas; 2F closed"
+      },
+      "providerId": "interior.stub.chaoyang",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31c"
+    },
+    {
+      "featureIds": [
+        "qsh:way:814133732"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:814133732"
+      ],
+      "name": {
+        "zh": "立人楼",
+        "en": "Liren Building"
+      },
+      "scope": {
+        "zh": "B 区一层外廊、部分教室与南门门厅",
+        "en": "B block 1F exterior corridor, selected classrooms and south entrance hall"
+      },
+      "providerId": "interior.stub.liren",
+      "openFloors": [
+        1
+      ],
+      "entrances": [],
+      "seals": [],
+      "owner": "WP-31a"
+    }
+  ]
+}

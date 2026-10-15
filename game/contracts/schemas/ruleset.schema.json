@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RulesetDescriptor candidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "viewModes", "worldControls", "unlockPolicy", "incidents", "cinematicStates", "characters", "interaction", "clearVoices"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9-]{1,32}$"},
+    "viewModes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["fly", "walk"]}},
+    "worldControls": {"enum": ["none", "clock", "season", "weather", "flow", "all"]},
+    "unlockPolicy": {"enum": ["all-unlocked", "proximity"]},
+    "incidents": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "cinematicStates": {"type": "array", "uniqueItems": true, "items": {"enum": ["boot", "title", "entering", "playing", "leaving", "quitting"]}},
+    "characters": {"type": "boolean"},
+    "interaction": {"const": "none"},
+    "clearVoices": {"type": "boolean"}
+  },
+  "allOf": [{"if": {"properties": {"id": {"const": "sightseeing"}}}, "then": {"properties": {"characters": {"const": false}, "clearVoices": {"const": false}, "incidents": {"maxItems": 1}}}}]
+}

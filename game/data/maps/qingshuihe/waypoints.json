@@ -1,0 +1,568 @@
+{
+  "version": 1,
+  "waypoints": [
+    {
+      "id": "P00",
+      "name": {
+        "zh": "全景·箱庭",
+        "en": "Campus Panorama"
+      },
+      "group": "overview",
+      "fly": {
+        "position": [
+          -641,
+          928,
+          1283
+        ],
+        "yawDeg": 20,
+        "pitchDeg": -35,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 17.5,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P01",
+      "name": {
+        "zh": "日晷·望穹顶",
+        "en": "Sundial and Dome"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -52,
+          1.7,
+          192
+        ],
+        "yawDeg": 315,
+        "pitchDeg": 8,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -52,
+          0.08,
+          192
+        ],
+        "yawDeg": 315
+      },
+      "entry": null,
+      "recommend": {
+        "clock": 17.666666666666668,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P02",
+      "name": {
+        "zh": "图书馆正门",
+        "en": "Library Entrance"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -92,
+          3,
+          127
+        ],
+        "yawDeg": 307,
+        "pitchDeg": 10,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 18,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P03",
+      "name": {
+        "zh": "八角采光顶",
+        "en": "Octagonal Skylight"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -193,
+          158,
+          111
+        ],
+        "yawDeg": 0,
+        "pitchDeg": -68,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 18.666666666666668,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P04",
+      "name": {
+        "zh": "图书馆中庭",
+        "en": "Library Atrium"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -205,
+          1.7,
+          63
+        ],
+        "yawDeg": 45,
+        "pitchDeg": 18,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -205,
+          0.08,
+          63
+        ],
+        "yawDeg": 45
+      },
+      "entry": "skylight",
+      "recommend": {
+        "clock": 17.333333333333332,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P05",
+      "name": {
+        "zh": "西湖·隔湖望馆",
+        "en": "Library across West Lake"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -520,
+          18,
+          170
+        ],
+        "yawDeg": 70,
+        "pitchDeg": -4,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 15.5,
+        "season": "summer",
+        "weather": null
+      }
+    },
+    {
+      "id": "P06",
+      "name": {
+        "zh": "西湖·栈桥逆光",
+        "en": "West Lake Boardwalk"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -340,
+          2.5,
+          60
+        ],
+        "yawDeg": 245,
+        "pitchDeg": 3,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 17.25,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P07",
+      "name": {
+        "zh": "南门·主轴线",
+        "en": "South Gate Axis"
+      },
+      "group": "south",
+      "fly": {
+        "position": [
+          -550,
+          5,
+          755
+        ],
+        "yawDeg": 33,
+        "pitchDeg": 3,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 12.5,
+        "season": "winter",
+        "weather": "afterSnow"
+      }
+    },
+    {
+      "id": "P08",
+      "name": {
+        "zh": "银杏大道",
+        "en": "Ginkgo Avenue"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -20,
+          1.7,
+          200
+        ],
+        "yawDeg": 35,
+        "pitchDeg": 6,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -20,
+          0.08,
+          200
+        ],
+        "yawDeg": 35
+      },
+      "entry": null,
+      "recommend": {
+        "clock": 16.833333333333332,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P09",
+      "name": {
+        "zh": "东湖·宣邦楼",
+        "en": "Xuanbang across East Lake"
+      },
+      "group": "south",
+      "fly": {
+        "position": [
+          -20,
+          4,
+          420
+        ],
+        "yawDeg": 102,
+        "pitchDeg": 6,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 18.5,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P10",
+      "name": {
+        "zh": "校训石·六号楼",
+        "en": "Motto Stone and Research Building Six"
+      },
+      "group": "west",
+      "fly": {
+        "position": [
+          -515,
+          1.7,
+          250
+        ],
+        "yawDeg": 290,
+        "pitchDeg": 9,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -515,
+          0.08,
+          250
+        ],
+        "yawDeg": 290
+      },
+      "entry": null,
+      "recommend": {
+        "clock": 7.333333333333333,
+        "season": "spring",
+        "weather": "afterRain"
+      }
+    },
+    {
+      "id": "P11",
+      "name": {
+        "zh": "湿地·萤火",
+        "en": "Wetland Fireflies"
+      },
+      "group": "north",
+      "fly": {
+        "position": [
+          -190,
+          3,
+          -300
+        ],
+        "yawDeg": 250,
+        "pitchDeg": -3,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 21.5,
+        "season": "summer",
+        "weather": null
+      }
+    },
+    {
+      "id": "P13",
+      "name": {
+        "zh": "学知苑·灯火",
+        "en": "Xuezhi Lights"
+      },
+      "group": "north",
+      "fly": {
+        "position": [
+          60,
+          45,
+          -300
+        ],
+        "yawDeg": 20,
+        "pitchDeg": -12,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 19,
+        "season": "winter",
+        "weather": "snow"
+      }
+    },
+    {
+      "id": "P14",
+      "name": {
+        "zh": "东区·月出",
+        "en": "East Campus Moonrise"
+      },
+      "group": "east",
+      "fly": {
+        "position": [
+          380,
+          30,
+          160
+        ],
+        "yawDeg": 65,
+        "pitchDeg": 2,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 18.166666666666668,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P15",
+      "name": {
+        "zh": "箱庭截面",
+        "en": "Diorama Edge"
+      },
+      "group": "edge",
+      "fly": {
+        "position": [
+          -1640,
+          775,
+          262
+        ],
+        "yawDeg": 90,
+        "pitchDeg": -62,
+        "fovDeg": null
+      },
+      "stand": null,
+      "entry": null,
+      "recommend": {
+        "clock": 19.5,
+        "season": "summer",
+        "weather": null
+      }
+    },
+    {
+      "id": "P16",
+      "name": {
+        "zh": "图书馆·五楼西窗",
+        "en": "Library Fifth-Floor West Windows"
+      },
+      "group": "core",
+      "fly": {
+        "position": [
+          -232,
+          20.2,
+          52
+        ],
+        "yawDeg": 265,
+        "pitchDeg": -4,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -232,
+          18.58,
+          52
+        ],
+        "yawDeg": 265
+      },
+      "entry": "door",
+      "recommend": {
+        "clock": 17.5,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P17",
+      "name": {
+        "zh": "主楼·屋顶空廊",
+        "en": "Main Building Rooftop Colonnade"
+      },
+      "group": "south",
+      "fly": {
+        "position": [
+          -340,
+          36,
+          486
+        ],
+        "yawDeg": 215,
+        "pitchDeg": -6,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -340,
+          34.38,
+          486
+        ],
+        "yawDeg": 215
+      },
+      "entry": "door",
+      "recommend": {
+        "clock": 17.666666666666668,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P18",
+      "name": {
+        "zh": "宣邦楼·钟楼灯笼",
+        "en": "Clock Tower Lantern Gallery"
+      },
+      "group": "south",
+      "fly": {
+        "position": [
+          174.5,
+          58,
+          551
+        ],
+        "yawDeg": 270,
+        "pitchDeg": -8,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          174.5,
+          56.38,
+          551
+        ],
+        "yawDeg": 270
+      },
+      "entry": "door",
+      "recommend": {
+        "clock": 18.5,
+        "season": "autumn",
+        "weather": null
+      }
+    },
+    {
+      "id": "P19",
+      "name": {
+        "zh": "体育馆·看台顶排",
+        "en": "Gymnasium Upper Stand"
+      },
+      "group": "south",
+      "fly": {
+        "position": [
+          -275,
+          15,
+          757
+        ],
+        "yawDeg": 90,
+        "pitchDeg": -15,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -275,
+          13.38,
+          757
+        ],
+        "yawDeg": 90
+      },
+      "entry": "door",
+      "recommend": {
+        "clock": 20.5,
+        "season": "summer",
+        "weather": null
+      }
+    },
+    {
+      "id": "P20",
+      "name": {
+        "zh": "六号楼·公式台阶",
+        "en": "Research Building Six Formula Stairs"
+      },
+      "group": "west",
+      "fly": {
+        "position": [
+          -598,
+          1.7,
+          230
+        ],
+        "yawDeg": 270,
+        "pitchDeg": 10,
+        "fovDeg": null
+      },
+      "stand": {
+        "feet": [
+          -598,
+          0.08,
+          230
+        ],
+        "yawDeg": 270
+      },
+      "entry": "door",
+      "recommend": {
+        "clock": 8,
+        "season": "spring",
+        "weather": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:campus:contracts:palette-registry:v1",
+  "title": "Campus palette registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "entries"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "id",
+        "albedo",
+        "materialClass",
+        "seasonal",
+        "role"
+      ],
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "albedo": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "description": "Normalized sRGB red, green, blue; not current-frame evaluated colour. For seasonal entries this is reference-only; actual seasonal values come from WP-37 keys/vegetation.json."
+        },
+        "materialClass": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "description": "Extensible material classification key; not a fixed enum."
+        },
+        "seasonal": {
+          "type": "boolean"
+        },
+        "row": {
+          "type": ["integer", "null"],
+          "minimum": 4,
+          "maximum": 63,
+          "description": "Required seasonal row 4-63 when seasonal is true; otherwise absent or null."
+        },
+        "role": {
+          "enum": [
+            "frame",
+            "retired",
+            "lit",
+            "shade",
+            "weather",
+            "emissive"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "seasonal": { "const": true } } },
+          "then": {
+            "required": ["row"],
+            "properties": { "row": { "type": "integer", "minimum": 4, "maximum": 63 } }
+          },
+          "else": { "properties": { "row": { "type": "null" } } }
+        }
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "role": {
+              "const": "frame"
+            },
+            "id": {
+              "minimum": 0,
+              "maximum": 31
+            }
+          }
+        },
+        {
+          "properties": {
+            "role": {
+              "const": "retired"
+            },
+            "id": {
+              "minimum": 32,
+              "maximum": 39
+            }
+          }
+        },
+        {
+          "properties": {
+            "role": {
+              "const": "lit"
+            },
+            "id": {
+              "minimum": 64,
+              "maximum": 254,
+              "multipleOf": 2
+            }
+          }
+        },
+        {
+          "properties": {
+            "role": {
+              "const": "shade"
+            },
+            "id": {
+              "minimum": 65,
+              "maximum": 255,
+              "not": {
+                "multipleOf": 2
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "role": { "const": "weather" },
+            "id": { "minimum": 40, "maximum": 63 }
+          }
+        },
+        {
+          "properties": {
+            "role": { "const": "emissive" },
+            "id": { "minimum": 40, "maximum": 63 }
+          }
+        }
+      ]
+    }
+  },
+  "$comment": "PaletteRegistry performs cross-entry validation: unique token and id, and every surface Lit at even id >=64 has a Shade at id+1. IDs 40-63 are for weather and emissive entries. Schema validates individual entries."
+}

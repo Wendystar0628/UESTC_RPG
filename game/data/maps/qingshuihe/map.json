@@ -1,0 +1,80 @@
+{
+  "id": "qingshuihe",
+  "name": {
+    "zh": "清水河校区",
+    "en": "Qingshuihe Campus"
+  },
+  "kind": "outdoor",
+  "version": 1,
+  "seed": 1,
+  "dataRect": {
+    "min": [
+      -1280,
+      -1280
+    ],
+    "max": [
+      1280,
+      1280
+    ]
+  },
+  "roam": {
+    "heightFactor": 0.9,
+    "heightStart": 30,
+    "maxRadius": 3000,
+    "floorY": -28,
+    "ceilY": 2000,
+    "buffer": 30,
+    "softFloorClearance": 40,
+    "fallbackMargin": 150,
+    "pushRate": 1.5,
+    "pushMax": 15,
+    "edgeFogMax": 1.6
+  },
+  "defaultSpawn": "P00",
+  "spawns": [],
+  "world": {
+    "time": "shared",
+    "default": {
+      "clock": 17.5,
+      "season": "autumn",
+      "weather": "clear"
+    },
+    "defaultName": {
+      "zh": "落金初灯",
+      "en": "Golden Hour"
+    },
+    "quietUntilDusk": true,
+    "weatherProfile": "chengdu",
+    "sunProfile": "default",
+    "fixed": null,
+    "newGameStart": {
+      "clock": 17.083333333333332,
+      "season": "autumn",
+      "weather": "clear"
+    }
+  },
+  "env": {
+    "sky": "sky.json",
+    "backdrop": "backdrop.json",
+    "outskirts": null,
+    "reflectLakes": [
+      "qsh:relation:7849759",
+      "qsh:relation:7849760"
+    ]
+  },
+  "title": {
+    "t0": {
+      "position": [
+        -1240.2,
+        495.0,
+        2928.1
+      ],
+      "yawDeg": 13,
+      "pitchDeg": -2.5,
+      "fovDeg": 38
+    },
+    "cloudLayout": "qingshuihe"
+  },
+  "cinematics": {},
+  "portals": []
+}

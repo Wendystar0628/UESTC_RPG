@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Gen.InteriorProps</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../contracts/Campus.Contracts.csproj" />
+    <ProjectReference Include="../parts/core/Campus.Gen.Parts.Core.csproj" />
+    <ProjectReference Include="../interior/core/Campus.Gen.Interior.csproj" />
+  </ItemGroup>
+</Project>

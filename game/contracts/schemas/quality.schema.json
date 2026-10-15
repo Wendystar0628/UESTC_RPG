@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QualityProfile v1",
+  "description": "Serialized Campus.Contracts.Quality.QualityProfile. graphics.cfg uses its own ConfigFile format.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preset",
+    "overrides",
+    "adaptive"
+  ],
+  "properties": {
+    "preset": {
+      "type": "string",
+      "enum": [
+        "smooth",
+        "balanced",
+        "fine",
+        "ultra",
+        "custom"
+      ]
+    },
+    "overrides": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "displayMode",
+          "windowSize",
+          "vSync",
+          "frameCap",
+          "vrr",
+          "renderScale",
+          "fsrSharpness",
+          "antiAliasing",
+          "anisotropy",
+          "shadowQuality",
+          "shadowDistance",
+          "smallCasters",
+          "glowQuality",
+          "tiltShift",
+          "lensFlare",
+          "lightShafts",
+          "detailScale",
+          "meshLodThreshold",
+          "geometricLeaves",
+          "foliageDensity",
+          "grassRadius",
+          "reflectionInterval",
+          "particleDensity",
+          "adaptive",
+          "graphicsApi",
+          "gpuIndex",
+          "vignette"
+        ]
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "adaptive": {
+      "type": "boolean"
+    },
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "default": 1
+    }
+  }
+}

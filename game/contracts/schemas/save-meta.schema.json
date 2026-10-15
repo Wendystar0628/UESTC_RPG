@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "save-meta.schema.json",
+  "title": "Save metadata format 1",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": 1
+    },
+    "build": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slot": {
+      "$ref": "#/$defs/slotId"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "manual"
+      ]
+    },
+    "gen": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "playSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "map": {
+      "$ref": "#/$defs/mapId"
+    },
+    "worldHours": {
+      "type": "number",
+      "minimum": 0
+    },
+    "clock": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 24
+    },
+    "season": {
+      "type": "string",
+      "enum": [
+        "spring",
+        "summer",
+        "autumn",
+        "winter"
+      ]
+    },
+    "weather": {
+      "type": "string",
+      "enum": [
+        "clear",
+        "fewClouds",
+        "cloudy",
+        "overcast",
+        "fog",
+        "lightRain",
+        "rain",
+        "thunderstorm",
+        "afterRain",
+        "snow",
+        "afterSnow"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "fly",
+        "walk"
+      ]
+    },
+    "pose": {
+      "$ref": "#/$defs/pose"
+    },
+    "space": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "building": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "floor": {
+              "type": "integer",
+              "minimum": -32768,
+              "maximum": 32767
+            }
+          },
+          "required": [
+            "building",
+            "floor"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "region": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "placeKey": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "savedAtUnix": {
+      "type": "integer"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "quit",
+        "toTitle",
+        "interval",
+        "focusLost",
+        "settled",
+        "mapChanged",
+        "newGame",
+        "manual",
+        "checkpoint",
+        "test"
+      ]
+    },
+    "ruleset": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/slotId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hasThumb": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "format",
+    "build",
+    "slot",
+    "kind",
+    "gen",
+    "line",
+    "playSeconds",
+    "map",
+    "worldHours",
+    "clock",
+    "season",
+    "weather",
+    "mode",
+    "pose",
+    "savedAtUnix",
+    "reason"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "mapId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"
+    },
+    "vector2": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "vector3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "name": {
+      "type": "object",
+      "properties": {
+        "zh": {
+          "type": "string"
+        },
+        "en": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "zh",
+        "en"
+      ],
+      "additionalProperties": false
+    },
+    "pose": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "$ref": "#/$defs/vector3"
+        },
+        "yawDeg": {
+          "type": "number"
+        },
+        "pitchDeg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "fovDeg": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 180
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "yawDeg",
+        "pitchDeg"
+      ],
+      "additionalProperties": false
+    },
+    "stand": {
+      "type": "object",
+      "properties": {
+        "feet": {
+          "$ref": "#/$defs/vector3"
+        },
+        "yawDeg": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "feet",
+        "yawDeg"
+      ],
+      "additionalProperties": false
+    },
+    "box3": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/vector3"
+        },
+        "max": {
+          "$ref": "#/$defs/vector3"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "rect": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/vector2"
+        },
+        "max": {
+          "$ref": "#/$defs/vector2"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "worldPreset": {
+      "type": "object",
+      "properties": {
+        "clock": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 24
+        },
+        "season": {
+          "type": "string",
+          "enum": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter"
+          ]
+        },
+        "weather": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "clear",
+                "fewClouds",
+                "cloudy",
+                "overcast",
+                "fog",
+                "lightRain",
+                "rain",
+                "thunderstorm",
+                "afterRain",
+                "snow",
+                "afterSnow"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "clock",
+        "season"
+      ],
+      "additionalProperties": false
+    },
+    "slotId": {
+      "type": "string",
+      "pattern": "^(s[1-3]|m[1-9])$"
+    }
+  }
+}

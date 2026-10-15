@@ -1,0 +1,72 @@
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Campus.Contracts;
+
+/// <summary>Plan coordinates are (world X, world Z), in metres; rings omit the repeated closing vertex.</summary>
+[method: JsonConstructor]
+public sealed record PolygonRings(IReadOnlyList<Vector2> Outer, IReadOnlyList<IReadOnlyList<Vector2>> Holes)
+{
+    public PolygonRings(IReadOnlyList<Vector2> outer) : this(outer, []) { }
+}
+public sealed record Polyline(IReadOnlyList<Vector2> Points);
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(PolygonGeometry), "polygon")]
+[JsonDerivedType(typeof(PolylineGeometry), "polyline")]
+public abstract record OverlayGeometry;
+public sealed record PolygonGeometry(PolygonRings Rings) : OverlayGeometry;
+public sealed record PolylineGeometry(Polyline Line) : OverlayGeometry;
+
+// Open-ended vocabulary keys. New building/appearance families are data additions, not enum renumbering.
+public readonly record struct BuildingFamily(string Value);
+public readonly record struct FacadePreset(string Value);
+public readonly record struct DesignKind(string Value);
+public enum FeatureSource { Osm, OsmOverlay, Design }
+
+public sealed record WorldFeature(FeatureId Id, FeatureSource Source, DesignKind Kind, OverlayGeometry Geometry)
+{
+    public string? Name { get; init; }
+    public ZoneId? Zone { get; init; }
+    public float? Height { get; init; }
+    public int? Storeys { get; init; }
+    public BuildingFamily? Family { get; init; }
+    public FacadePreset? Facade { get; init; }
+    public Box3 Bounds { get; init; }
+    public JsonElement? Props { get; init; }
+}
+
+public sealed record NetworkLine(FeatureId Id, Polyline Line, float Width = 0f)
+{
+    public JsonElement? Props { get; init; }
+}
+public sealed record NetworkTree(FeatureId Id, Vector3 Position, string? Species = null);
+public sealed record WorldNetwork(
+    IReadOnlyList<NetworkLine> Roads,
+    IReadOnlyList<NetworkLine> Waterways,
+    IReadOnlyList<NetworkLine> Bridges,
+    IReadOnlyList<NetworkLine> Culverts,
+    IReadOnlyList<NetworkTree> Trees)
+{
+    public static WorldNetwork Empty { get; } = new([], [], [], [], []);
+}
+
+public interface IWorldModel
+{
+    IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
+    WorldNetwork Network { get; }
+    ISpatialIndex Spatial { get; }
+    IInteriorIndex Interiors { get; }
+    IOutskirtsModel? Outskirts { get; }
+    IFidelityModel? Fidelity { get; }
+}
+public interface ISpatialIndex
+{
+    IReadOnlyList<FeatureId> Query(Box3 box);
+    float GroundY(float x, float z);
+    CameraMedium MediumAt(Vector3 p);
+    float? SupportY(float x, float z, float yHint);
+    WalkClass WalkClassAt(float x, float z);
+    Vector3? NearestSafe(Vector3 p, float maxDist);
+}
