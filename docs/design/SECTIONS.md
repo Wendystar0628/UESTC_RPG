@@ -782,14 +782,14 @@
 
 ## SYS-ATLAS · 平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁
 
-`docs/design/systems/SYS-ATLAS.md` · 45.0k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
+`docs/design/systems/SYS-ATLAS.md` · 45.2k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
 关键词：平面地图、小地图、大地图、底图、地图标记、锚点、传送点、导览亭、导览桩、传送、雾幕瞬移、飞过去、传送卡、传送落点、目录页、追踪、自定义标记、解锁策略、区域名、地名标注、atlasRect、G18 地图一致性、IAtlasService、IUnlockPolicy、MarkerId、AtlasSave、map_base.gdshader、markers.json、labels.json、atlas.overlay.json
 
 - SYS-ATLAS §0 结论 · L30 · 2.9k
   - ★ SYS-ATLAS §0.1 接入要点 · L61 · 1.4k
 - SYS-ATLAS §1 允许什么、禁止什么 · L76 · 491
-- SYS-ATLAS §2 底图（WP-48a 烘焙，WP-48b 上色） · L89 · 7.6k
-  - SYS-ATLAS §2.1 来源：世界模型，不是原始 OSM · L91 · 2.9k
+- SYS-ATLAS §2 底图（WP-48a 烘焙，WP-48b 上色） · L89 · 7.8k
+  - SYS-ATLAS §2.1 来源：世界模型，不是原始 OSM · L91 · 3.1k
   - SYS-ATLAS §2.2 上色：`map_base.gdshader` · L144 · 1.7k
   - SYS-ATLAS §2.3 外围、校界与箱庭外缘 · L183 · 1.2k
   - SYS-ATLAS §2.4 季节与昼夜：只做轻微变化 · L195 · 354
@@ -909,7 +909,7 @@
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
-`docs/design/systems/SYS-GRAPHICS.md` · 21.9k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
+`docs/design/systems/SYS-GRAPHICS.md` · 22.0k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
 关键词：画面设置、画质、画面预设、设备档、流畅、均衡、精致、极致、单项、风格底线、风格默认、自动调节画质、自适应、首次分档、渲染比例、超采样、雾幕类设置、画面页、显存估算、IQualityService、IQualityAware、QualityResponsive、QualityKnob、QualityView、KnobSpec、quality-presets.json、graphics.cfg、engine_override.cfg、reset-graphics.cmd、预设轮换
 
 - SYS-GRAPHICS §0 结论 · L24 · 2.1k

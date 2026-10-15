@@ -93,7 +93,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 - **输入**：
   - SYS-MAPS的按图数据：`campus.json`，加上 `overlay/` 下的全部覆盖层，即 `reshape`、`height`、`hide`、`add`（ENG-ARCH §3）；
   - 外围数据 `outskirts.json`（WLD-OUTSKIRTS）：O0、O1 的街区轮廓、道路边线、河道，以及截面线（即箱庭外缘，进 `map_sdf_out.A`）；
-  - 地图页范围取 `atlas/markers.json` 的 `atlasRect`（清水河 ±1536 m，§2.3）；全分辨率 SDF 的范围取 `map.json` 的 `dataRect`（SYS-MAPS），也就是全局参数 `map_rect` 的值（±1280 m）。
+  - 地图页范围取 `atlas/markers.json` 的 `atlasRect`（清水河 ±1536 m，§2.3）；全分辨率的 `map_sdf_a` 覆盖校界外扩 64 m 的方框（约 ±1056 m），外圈的 `map_sdf_out` 取 `map.json` 的 `dataRect`（SYS-MAPS），也就是全局参数 `map_rect` 的值（±1280 m）；每张纹理实际覆盖的 rect 逐张写进 `map.manifest.json`。没有真实分区边界时，`RegionAt` 返回 Unknown，不用 Voronoi 一类的近似伪造分区。
 - 各区为了画面增删的元素（新增的广场、栈道、桥，删掉的临时围挡、杂乱的小建筑等）都按覆盖层后的结果进图，原始 OSM 里被 `hide` 的要素不画。
 - **画进底图的要素**：水体、绿地、道路、广场与铺装、运动场、建筑、桥、栈道、校界、箱庭外缘，以及外围的街区、道路、河道。
 - **不画进底图的**：家具、树（不画树点，绿地只用点阵表示）、灯具、生活痕迹。

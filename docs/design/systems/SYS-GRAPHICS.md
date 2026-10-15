@@ -122,7 +122,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 | 粒子 | 降水与粒子密度 | 50% / 75% / 100% | 即 | 降水池、飘落池的 `VisibleInstanceCount`（萤火虫不降，它只占 1 次绘制） | WP-45（WP-38 只读，按同一密度设飘落池） |
 | 帧率 | 自动调节画质 | 开 / 关 | 即 | §5 | WP-32 |
 | 高级 | 图形接口 | D3D12（默认）/ Vulkan | 启 | 写 `user://engine_override.cfg`，经项目设置 `application/config/project_settings_override` 读取；`OS.SetRestartOnExit` 后退出 | WP-32 |
-| 高级 | 显卡选择 | 双显卡笔记本上选独显 / 核显 | 启 | 同"图形接口"一行，对应 `--gpu-index` | WP-32 |
+| 高级 | 显卡选择 | 双显卡笔记本上选独显 / 核显；主线阶段不可选，显示"引擎默认" | 启 | Godot 只能用启动参数 `--gpu-index` 选显卡，没有对应的工程设置，所以不写进 `engine_override.cfg`；以后由 WP-01 的启动器在引擎启动前传参 | WP-32 |
 
 **固定不做选项的引擎设置**（四档统一，保证切换不编译管线）：
 
@@ -216,7 +216,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
   - `--tier=min-spec|dgpu-mid|dgpu-high`（最低配置、独显中、独显高）：只设设备档、跳过检测；只给 `--tier` 时预设取该档的推荐预设；
   - 优先级：命令行 > `graphics.cfg` > 自动推荐 > 默认值。门禁和基准只由命令行决定，不读 `user://`。
 - **截图默认串**追加 `--quality=fine --adaptive=0`；默认串末尾另有 `--map=qingshuihe --title=0 --save=off --audio=off`（ENG-GATES §1、SYS-AUDIO §17；截图和基准一律不出声，只有声音门禁显式给 `--audio=on`）。基准默认 `--quality=fine`，开发机另跑 `--quality=ultra`。
-- **恢复画面设置**（游戏外入口，WP-32 随包提供）：引擎在任何 C# 代码运行之前就读 `engine_override.cfg`，图形接口或显卡选择写坏时游戏可能起不来，游戏里的画面页和启动失败页（SYS-TITLE §1.1）都打不开。所以安装目录根下随包放一个 `reset-graphics.cmd`（界面和说明里叫"恢复画面设置"），不依赖 Godot 和 .NET：
+- **恢复画面设置**（游戏外入口，WP-32 随包提供）：引擎在任何 C# 代码运行之前就读 `engine_override.cfg`，图形接口写坏时游戏可能起不来，游戏里的画面页和启动失败页（SYS-TITLE §1.1）都打不开。所以安装目录根下随包放一个 `reset-graphics.cmd`（界面和说明里叫"恢复画面设置"），不依赖 Godot 和 .NET：
   - 把正式版 user 目录 `%APPDATA%\UESTC\`（ENG-ARCH §2）下的 `engine_override.cfg` 和 `graphics.cfg` 改名为 `<原名>.reset-<日期时间>`，不删除，留给诊断；
   - 只动这两个文件：存档、`settings.cfg`、`input.cfg`、`audio.cfg`、日志和本机烘焙缓存都不碰；
   - 下次启动按默认值走：D3D12、引擎默认的显卡，重新做首次分档并采用推荐预设（§5）；
