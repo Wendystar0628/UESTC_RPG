@@ -12,6 +12,7 @@ public sealed class AppFlowStub(ICameraRig camera, IVeilService veil, ISaveServi
 {
     private BootFlowRequest? _bootRequest;
     private IDisposable? _bootInput;
+    public bool WillRestoreWorld => _bootRequest?.Slot is not null || _bootRequest?.LoadFile is not null;
     public AppState State { get; private set; } = AppState.Boot;
     public long Rev { get; private set; }
     public event Action<AppState, AppState>? Changed;

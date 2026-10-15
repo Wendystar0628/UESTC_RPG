@@ -29,7 +29,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         return Sun.AltDeg; // D0 deliberately exposes a settled, fixed celestial state.
     }
-    public Flow Flow { get; private set; } = new(1);
+    public Campus.Contracts.Flow Flow { get; private set; } = new(1);
     public bool Scrubbing => false;
     public WorldTransition Transition => WorldTransition.None;
     public ViewMode ViewMode { get; private set; } = ViewMode.Fly;
@@ -86,7 +86,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
         EnsureControlsAvailable();
         ValidateRate(rate);
         SetClock(clock);
-        Flow = new Flow(0);
+        Flow = new Campus.Contracts.Flow(0);
     }
 
     public void SetSeason(Season s)
@@ -102,7 +102,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
     {
         EnsureControlsAvailable();
         ValidateRate(rate);
-        Flow = new Flow(rate);
+        Flow = new Campus.Contracts.Flow(rate);
         Rev++;
     }
 
@@ -164,8 +164,8 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
         _clockOffset = 0;
         SeasonTarget = season;
         AnimTime = anim % 480;
-        Flow = new Flow(0);
-        weather.Reseason(WorldHours, season, 0);
+        Flow = new Campus.Contracts.Flow(0);
+        // Boot initialization only: the startup owner resets/enters weather after these values exist.
         Rev++;
     }
 
@@ -203,7 +203,7 @@ public sealed class WorldStateStub(IWeatherProcess weather, IRuleset ruleset) : 
         WorldHours = moment.WorldHours;
         _clockOffset = moment.ClockOffset;
         SeasonTarget = moment.Season;
-        Flow = new Flow(moment.FlowRate);
+        Flow = new Campus.Contracts.Flow(moment.FlowRate);
         _restorePending = true;
         // Keep the fault latch until the coordinator successfully commits all World sections.
     }

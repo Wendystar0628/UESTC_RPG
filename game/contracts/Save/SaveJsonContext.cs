@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Campus.Contracts.Atlas;
 
@@ -9,5 +10,5 @@ namespace Campus.Contracts.Save;
 [JsonSerializable(typeof(AtlasSave))]
 internal partial class SaveJsonContext : JsonSerializerContext
 {
-    public static SaveJsonContext Contract { get; } = new(ContractJson.Options);
+    public static SaveJsonContext Contract { get; } = new(new JsonSerializerOptions(ContractJson.Options));
 }

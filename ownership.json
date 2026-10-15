@@ -228,10 +228,6 @@
       "owner": "WP-05"
     },
     {
-      "pattern": "game/style/outline/post_tiltshift_comp.glsl.uid",
-      "owner": "WP-05"
-    },
-    {
       "pattern": "game/style/shaders/diorama_section.gdshader.uid",
       "owner": "WP-22"
     },
@@ -337,10 +333,6 @@
     },
     {
       "pattern": "game/style/outline/post_tiltshift_blur.glsl",
-      "owner": "WP-05"
-    },
-    {
-      "pattern": "game/style/outline/post_tiltshift_comp.glsl",
       "owner": "WP-05"
     },
     {
@@ -866,10 +858,6 @@
     {
       "pattern": "game/kernel/world/packages.lock.json",
       "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/outline/post_lut.glsl.uid",
-      "owner": "WP-05"
     },
     {
       "pattern": "game/style/outline/post_outline.glsl",
@@ -1434,10 +1422,6 @@
     {
       "pattern": "game/hud/i18n/packages.lock.json",
       "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/outline/post_lut.glsl",
-      "owner": "WP-05"
     },
     {
       "pattern": "pipeline/walk/packages.lock.json",
@@ -2830,10 +2814,8 @@
     "game/style/outline/fog.glslinc",
     "game/style/outline/post_flare.glsl",
     "game/style/outline/post_fxaa.glsl",
-    "game/style/outline/post_lut.glsl",
     "game/style/outline/post_outline.glsl",
     "game/style/outline/post_tiltshift_blur.glsl",
-    "game/style/outline/post_tiltshift_comp.glsl",
     "game/style/shaders/bake_impostor.gdshader",
     "game/style/shaders/cine_cloud.gdshader",
     "game/style/shaders/diorama_far.gdshader",

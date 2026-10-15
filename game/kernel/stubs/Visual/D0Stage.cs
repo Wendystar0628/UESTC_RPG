@@ -12,6 +12,7 @@ using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Stubs.AudioUi;
 using Campus.Kernel.Stubs.Foundation;
+using Campus.Systems.Weather;
 using Godot;
 using N = System.Numerics;
 using AppBoot = Campus.Kernel.Boot.Boot;
@@ -80,9 +81,7 @@ public partial class D0Stage : Node3D
         maps.LoadFromBytes(indexBytes, Read(entry.Dir + "map.json"), world, campus.Geo, campus.Center,
             campus.Bounds, campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints);
         var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
-        var weather = registry.Get<IWeatherProcess>();
-        weather.Reset(new WeatherBoot(context.Descriptor.Seed));
-        weather.Enter(context.Descriptor.Id, context.Descriptor.World.WeatherProfile, registry.Get<IWorldState>().Clock);
+        InitializeWorld(context);
         var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
             .ToDictionary(r => r.Id, r => (IInteriorProvider)registry.Create(r.Type), StringComparer.Ordinal);
         var buildContext = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = context.Descriptor.Seed };
@@ -189,6 +188,23 @@ public partial class D0Stage : Node3D
         return bytes;
     }
 
+    private static void InitializeWorld(IMapContext context)
+    {
+        var defaults = context.Descriptor.World.Default;
+        var clock = double.Parse(AppBoot.Value("clock", defaults.Clock.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
+        var season = Enum.Parse<Season>(AppBoot.Value("season", defaults.Season.ToString()), true);
+        var anim = double.Parse(AppBoot.Value("anim", "240"), CultureInfo.InvariantCulture);
+        var weatherBoot = WeatherBootOptions.Parse(AppBoot.Arguments, context.Descriptor.Seed, season);
+
+        // Freeze supplies this fresh world's initial values before any map-aware node can enter weather.
+        // It is not a clock jump or a season transition. The first normal World Step binds the empty
+        // weather timeline to this season before applying WeatherBoot (including winter snow).
+        Services.Get<IWorldControl>().Freeze(clock, season, anim);
+        var weather = Services.Get<IWeatherProcess>();
+        weather.Reset(weatherBoot);
+        weather.Enter(context.Descriptor.Id, context.Descriptor.World.WeatherProfile, Services.Get<IWorldState>().WorldHours);
+    }
+
     private void ApplyInitialArguments(IReadOnlyList<Waypoint> waypoints)
     {
         if (_rig is null) return;
@@ -199,10 +215,6 @@ public partial class D0Stage : Node3D
             if (selected is not null) _rig.SetPose(selected.Fly);
             else if (poseId != "V1") throw new ArgumentException($"Unknown D0 pose: {poseId}");
         }
-        var clock = double.Parse(AppBoot.Value("clock", "17.5"), CultureInfo.InvariantCulture);
-        var season = Enum.Parse<Season>(AppBoot.Value("season", "autumn"), true);
-        var anim = double.Parse(AppBoot.Value("anim", "240"), CultureInfo.InvariantCulture);
-        Services.Get<IWorldControl>().Freeze(clock, season, anim);
         Services.Get<IWorldControl>().SetFlow(int.Parse(AppBoot.Value("flow", "0"), CultureInfo.InvariantCulture));
         if (AppBoot.Value("mode", "fly") == "walk") Services.Get<IViewControl>().SetMode(ViewMode.Walk, ModeSwitchVia.Key).GetAwaiter().GetResult();
     }

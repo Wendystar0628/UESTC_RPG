@@ -73,7 +73,15 @@ if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
 function Invoke-LockedProcess {
     param([string]$Name, [string]$Executable, [string[]]$Arguments, [string]$Kind = 'Cpu', [switch]$Visible)
     $lease = Enter-UESTCResourceLock $layout.Locks $Kind
-    try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible }
+    try {
+        try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible }
+        catch {
+            # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
+            if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
+            Write-Warning "Godot import exited 0xC0000005; retrying once. Original log preserved: $(Join-Path $work "$Name.log")"
+            Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible
+        }
+    }
     finally { Exit-UESTCResourceLock $lease }
 }
 function Assert-GodotVersion {

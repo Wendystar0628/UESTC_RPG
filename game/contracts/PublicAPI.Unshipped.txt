@@ -76,6 +76,7 @@ Campus.Contracts.AppFlow.IAppBootFlow
 Campus.Contracts.AppFlow.IAppBootFlow.CompleteBoot() -> System.Threading.Tasks.Task!
 Campus.Contracts.AppFlow.IAppBootFlow.PrepareBoot(Campus.Contracts.AppFlow.BootFlowRequest! request) -> System.Threading.Tasks.Task<Campus.Contracts.MapId>!
 Campus.Contracts.AppFlow.IAppBootFlow.PrepareWorld() -> System.Threading.Tasks.Task!
+Campus.Contracts.AppFlow.IAppBootFlow.WillRestoreWorld.get -> bool
 Campus.Contracts.AppFlow.IAppExit
 Campus.Contracts.AppFlow.IAppExit.FinishQuit() -> System.Threading.Tasks.Task!
 Campus.Contracts.AppFlow.IAppFlow

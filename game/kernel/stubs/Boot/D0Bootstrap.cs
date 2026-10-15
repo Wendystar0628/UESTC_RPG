@@ -61,12 +61,9 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
             campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints.Waypoints);
         var context = maps.Context ?? throw new InvalidDataException("D0 map context was not configured.");
 
-        // Initial bootstrap only. New-game resets and load restores remain owned by the save/startup orchestration.
-        // Weather must have an active map before any later Freeze/Reseason call asks for its current process.
-        var state = registry.Get<IWorldState>();
-        var weather = registry.Get<IWeatherProcess>();
-        weather.Reset(new WeatherBoot(ReadSeed(boot, "weather-seed", context.Descriptor.Seed)));
-        weather.Enter(entry.Id, context.Descriptor.World.WeatherProfile, state.WorldHours);
+        // This participant only prepares fallback map data. The normal kernel startup is the sole
+        // owner of initial Freeze -> weather Reset/Enter, after map selection and before Travel.
+        // Existing saves use Restore; do not create a second timeline or freeze again in this adapter.
 
         var providers = registry.ForMap(entry.Id.Value).Where(registration => registration.Kind == "interior")
             .ToDictionary(registration => registration.Id,
@@ -96,6 +93,7 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
         }
         if (registry.Get<ISaveService>() is SaveServiceStub save)
         {
+            var state = registry.Get<IWorldState>();
             var restore = registry.Get<IWorldRestore>();
             save.BeginNewInstance = _ =>
             {

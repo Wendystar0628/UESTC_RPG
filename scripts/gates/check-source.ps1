@@ -101,7 +101,20 @@ function Test-UESTCSourceBoundaries {
         $indexText = Get-Content -Raw -Encoding UTF8 -LiteralPath $indexPath
         $mapIds = @([regex]::Matches($indexText, '"id"\s*:\s*"([^"/]+)"') | ForEach-Object { $_.Groups[1].Value })
     }
-    foreach ($path in (Get-UESTCFiles $Root)) {
+    $files = @(Get-UESTCFiles $Root)
+    $formalGlsl = @($files | Where-Object {
+        $_ -match '^(game|pipeline)/.*\.glsl$' -and $_ -notmatch '(^|/)(addons|output|obj|bin|\.godot)/' -and
+            (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf)
+    })
+    if ($formalGlsl.Count -gt 1) {
+        $failures.Add("Formal GLSL entry limit is one: $($formalGlsl -join ', ')")
+    }
+    foreach ($path in $formalGlsl) {
+        if ($path -cne 'game/style/outline/post_outline.glsl') {
+            $failures.Add("Unapproved formal GLSL entry: $path; only game/style/outline/post_outline.glsl is allowed")
+        }
+    }
+    foreach ($path in $files) {
         if ($path -notmatch '^(game|pipeline)/' -or $path -match '^game/addons/|/(obj|bin)/') { continue }
         $file = Join-Path $Root $path
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
