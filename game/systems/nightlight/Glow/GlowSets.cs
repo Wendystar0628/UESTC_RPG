@@ -25,27 +25,15 @@ public sealed record GlowSet(GlowKind Kind, int Count, float[] Buffer, Box3 Boun
     public const int Stride = 16;
 }
 
-/// <summary>
-/// 一个立面的窗格布局（与申请里的 WindowFacadeDecl 同字段；契约合入后由它直接换过来）。
-/// Origin 是列 0、行 0 窗洞的左下角，Right、Up 为单位向量，Right × Up 指向室外；
-/// 窗号 = BaseId + 行 × TotalColumns + ColumnStart + 列。
-/// </summary>
-public sealed record WindowFacade(
-    int BaseId, int TotalColumns, int Slot, int ColumnStart, int Columns, int Rows,
-    Vector3 Origin, Vector3 Right, Vector3 Up, float Pitch, float Width, float Height,
-    IReadOnlyList<float> SillY)
-{
-    /// <summary>立面内留空的局部格号（行 × Columns + 列），例如门位。</summary>
-    public IReadOnlyList<int> Skip { get; init; } = [];
-    /// <summary>外围的楼：窗号在外围专用段，着色器跳过窗覆盖。</summary>
-    public bool Outskirts { get; init; }
-}
+/// <summary>窗光晕的输入统计：通道不在目录里、窗台高度缺行的声明不进光晕（给日志和门禁看）。</summary>
+public sealed record WindowGlowReport(int Windows, int UnknownChannel, int BadFacade);
 
 public static class GlowSets
 {
     public const float WindowStandOff = 0.02f;   // 离立面 2 cm
     public const float WindowHaloRatio = 0.25f;  // 每边外扩 = 窗宽 × 0.25：面片边长 1.5 倍窗宽，光晕半径不超过窗宽的一半（ART-STYLE §7.5）
     public const int OutskirtsFlag = 1;
+    public const int OutskirtsFirstId = 65536;   // 外围的窗号专用段（contract-12 第 1 节），着色器跳过窗覆盖
 
     /// <summary>灯头光晕：实例原点在灯头，基为单位阵；custom = (灯号, 光晕半径, 0, 0)。</summary>
     public static GlowSet Lamps(IReadOnlyList<LampRecord> lamps)
@@ -66,19 +54,33 @@ public static class GlowSets
         return new(GlowKind.Lamp, lamps.Count, buffer, lamps.Count > 0 ? new Box3(min, max) : default);
     }
 
-    /// <summary>窗灯光晕：每扇窗一个面片，基 = (Right × 宽, Up × 高, 法线)；custom = (窗号, 楼基址, 槽位 + 32 × 楼窗网格总列数, 标志)。</summary>
-    public static GlowSet Windows(IReadOnlyList<WindowFacade> facades)
+    /// <summary>
+    /// 窗灯光晕：每扇窗一个面片，基 = (Right × 宽, Up × 高, 法线)；custom = (窗号, 楼基址, 槽位 + 32 × 楼窗网格总列数, 标志)。
+    /// 输入是灯具清单里的立面窗格（WindowFacadeDecl）与不规则单窗（WindowDecl），顺序不影响画面。
+    /// </summary>
+    public static GlowSet Windows(IReadOnlyList<WindowFacadeDecl> facades, IReadOnlyList<WindowDecl> loose, out WindowGlowReport report)
     {
         ArgumentNullException.ThrowIfNull(facades);
-        var total = 0;
-        foreach (var f in facades) total += Math.Max(f.Columns, 0) * Math.Max(f.Rows, 0) - f.Skip.Count;
-        var buffer = new float[Math.Max(total, 0) * GlowSet.Stride];
+        ArgumentNullException.ThrowIfNull(loose);
+        int unknownChannel = 0, badFacade = 0;
+        var total = loose.Count;
+        foreach (var f in facades) total += Math.Max(f.Columns, 0) * Math.Max(f.Rows, 0);
+        var buffer = new float[total * GlowSet.Stride];
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
         var n = 0;
+        void Add(int id, int baseId, int slot, int totalColumns, Vector3 center, Vector3 right, Vector3 up, Vector3 normal, float sx, float sy)
+        {
+            Write(buffer, n++, right * sx, up * sy, normal, center,
+                new Vector4(id, baseId, slot + 32f * totalColumns, id >= OutskirtsFirstId ? OutskirtsFlag : 0));
+            min = Vector3.Min(min, center - new Vector3(sx + sy));
+            max = Vector3.Max(max, center + new Vector3(sx + sy));
+        }
         foreach (var f in facades)
         {
-            if (f.SillY.Count < f.Rows) throw new ArgumentException($"Facade at base {f.BaseId} needs one sill height per row.", nameof(facades));
+            var slot = LightChannelCatalog.Slot(f.Channel);
+            if (slot < 0) { unknownChannel++; continue; }
+            if (f.SillY.Count < f.Rows || f.Width <= 0f || f.Height <= 0f) { badFacade++; continue; }
             var right = Vector3.Normalize(f.Right);
             var up = Vector3.Normalize(f.Up);
             var normal = Vector3.Normalize(Vector3.Cross(right, up));
@@ -92,13 +94,23 @@ public static class GlowSets
                     if (skip is not null && skip.Contains(r * f.Columns + c)) continue;
                     var id = f.BaseId + r * f.TotalColumns + f.ColumnStart + c;
                     var center = f.Origin + right * (c * f.Pitch + f.Width * 0.5f) + up * (f.SillY[r] + f.Height * 0.5f) + normal * WindowStandOff;
-                    Write(buffer, n++, right * sx, up * sy, normal, center,
-                        new Vector4(id, f.BaseId, f.Slot + 32f * f.TotalColumns, f.Outskirts ? OutskirtsFlag : 0));
-                    min = Vector3.Min(min, center - new Vector3(sx + sy));
-                    max = Vector3.Max(max, center + new Vector3(sx + sy));
+                    Add(id, f.BaseId, slot, f.TotalColumns, center, right, up, normal, sx, sy);
                 }
         }
+        foreach (var w in loose)
+        {
+            var slot = LightChannelCatalog.Slot(w.Channel);
+            if (slot < 0) { unknownChannel++; continue; }
+            if (w.Width <= 0f || w.Height <= 0f) { badFacade++; continue; }
+            var right = Vector3.Normalize(w.Right);
+            var up = Vector3.Normalize(w.Up);
+            var normal = Vector3.Normalize(Vector3.Cross(right, up));
+            var margin = w.Width * WindowHaloRatio;
+            Add(w.Id, w.BaseId, slot, w.TotalColumns, w.Center + normal * WindowStandOff, right, up, normal,
+                w.Width + 2f * margin, w.Height + 2f * margin);
+        }
         if (n * GlowSet.Stride != buffer.Length) Array.Resize(ref buffer, n * GlowSet.Stride);
+        report = new(n, unknownChannel, badFacade);
         return new(GlowKind.Window, n, buffer, n > 0 ? new Box3(min, max) : default);
     }
 

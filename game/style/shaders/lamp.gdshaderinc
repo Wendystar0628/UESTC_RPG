@@ -4,8 +4,8 @@
 #include "res://style/shaders/globals.gdshaderinc"
 
 // ---------------------------------------------------------------------------
-// 灯光通道、窗与灯表的公共求值（WP-39）。与 toon.gdshaderinc、precip.gdshader 里的同名函数逐字一致，
-// C# 一侧（ScheduleMath、LampTable）用同一套常数；G2 用同一组输入比对。并入公共 include 之前各自保留一份。
+// 灯光通道、窗与灯表的公共求值（WP-39）。toon（WP-04）、fx_glow（WP-39）、precip（WP-45b）都 include 本文件，
+// C# 一侧（ScheduleMath、LampTable）用同一套常数；G2 用同一组输入比对。只含函数与常量，不定义 uniform、varying。
 // ---------------------------------------------------------------------------
 const int LAMP_SLOT_CUE = 23;            // lamp.cue：过场初灯追镜头接管的银杏大道一线
 const int LAMP_SLOT_AVIATION = 26;       // lamp.aviation：慢明灭
@@ -16,10 +16,25 @@ const float LAMP_RAMP_FROM = 0.6;        // 刚亮时的亮度（SYS-TIME §6）
 const float LAMP_RAMP_FULL_DEG = -4.0;   // 太阳到 −4° 时亮度升到 1.0
 const float LAMP_ALWAYS_DEG = 89.0;      // θ ≥ 89° 表示常亮
 const float LAMP_POOL_TOP_M = 4.0;       // 光斑只照到 4 m 以下的立面
-const float LAMP_POOL_SOFT = 0.14;       // 光斑边缘的柔边，占半径的比例（平涂、一阶，边缘不硬切）
-const float LAMP_POOL_DUSK = 0.2;        // 黄金时段（h_eff 5° 以上）光斑的可见度：灯头先亮，地面只在影里隐约
-const vec2 LAMP_POOL_FADE_DEG = vec2(-1.5, 5.0);  // h_eff 从 5° 降到 −1.5°（蓝调）时光斑淡到完整
-const vec2 LAMP_POOL_DAY_DEG = vec2(6.5, 10.0);   // h_eff 高于 10° 时白天不画光斑
+const vec2 LAMP_POOL_DAY_DEG = vec2(6.5, 10.0);   // h_eff 高于 10° 时白天不画光斑（toon 用 .y 提前跳过）
+
+// ---------------------------------------------------------------------------
+// 路灯光斑的观感参数（集中在这里，看图定值）。光斑分两阶：亮芯 + 收边的外圈，台阶边界只留抗锯齿宽度。
+// 光是加在表面上的，不替换底色：亮芯加该材质的灯照色（调色板行 1，即固有色 × 灯色）× 强度；
+// 外圈只沿灯色抬亮底色（加光方向 = 底色 × 灯色），不往灰白里混：草在外圈仍是绿、更亮更暖，铺装是偏暖的浅色。
+// 强度随环境变暗升起：环境暗度读调色板第 0 行的 shadow.1（中性参考面当前的影色），黄昏弱、入夜满。
+// ---------------------------------------------------------------------------
+const float LAMP_POOL_GAIN = 0.55;       // 入夜满强度时亮芯加上的灯照量（× 灯照色，线性）
+const float LAMP_POOL_CORE = 0.58;       // 亮芯半径占灯具标记光斑半径（Range）的比例
+const float LAMP_POOL_OUTER = 0.8;       // 外圈外沿占光斑半径的比例（亮芯之外只留一道收边）
+const float LAMP_POOL_RIM = 0.28;        // 外圈加光的亮度相对亮芯
+const float LAMP_POOL_CORE_SAT = 0.85;   // 亮芯里灯色（相对 lamp.warm）的彩度保留；琥珀灯靠它不发橙
+const float LAMP_POOL_CHROMA_CAP = 0.62; // 加光的彩度上限（偏离亮度的最大分量 / 亮度）：中性材质约 0.45 不受影响，草、银杏不再刷成黄漆
+const float LAMP_POOL_SOFT = 0.02;       // 两道台阶边缘的柔边，占半径的比例（再加像素抗锯齿宽度）
+const float LAMP_POOL_DUSK = 0.15;       // 黄昏（环境最亮时）的强度比例
+const vec2 LAMP_POOL_ENV_Y = vec2(0.15, 0.40);    // shadow.1 影色的线性亮度从 0.40（黄昏）降到 0.15（入夜）时，强度从 DUSK 升到 1
+const int LAMP_PAL_ENV = 12;             // shadow.1，与 fog.gdshaderinc 的 PAL_SHADOW_1 一致
+const int LAMP_PAL_WARM = 51;            // lamp.warm，与 fog.gdshaderinc 的 PAL_LAMP_WARM 一致：行 1 的灯照色按它推
 
 uint lamp_hash_u(uint x) {
 	x ^= x >> 16u;
@@ -138,18 +153,49 @@ float lamp_level(LampData l, float h_eff) {
 	return on * ramp * keep * l.energy;
 }
 
-// 光斑的可见度随天色：灯头和窗灯可以先亮，地面光斑要等环境暗下来才出来（阴雨天按 h_eff 一起提前）
-float lamp_pool_visibility(float h_eff) {
-	float day = 1.0 - smoothstep(LAMP_POOL_DAY_DEG.x, LAMP_POOL_DAY_DEG.y, h_eff);
-	float dusk = 1.0 - smoothstep(LAMP_POOL_FADE_DEG.x, LAMP_POOL_FADE_DEG.y, h_eff);
-	return day * mix(LAMP_POOL_DUSK, 1.0, dusk);
+float lamp_luma(vec3 c) {
+	return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// 地面与 4 m 以下立面的光斑：返回 (强度 0–1，已乘天色可见度, 色号；无灯时为 −1)。aa 是光斑边缘的过渡宽度（m）：
-// 片元里传 max(fwidth(length(p.xz)), 0.02)，vertex() 里传一个常数。
-vec2 lamp_pool(vec3 p, float aa) {
+// 保亮度降彩度：sat = 1 原样，0 为同亮度的灰
+vec3 lamp_desat(vec3 c, float sat) {
+	return mix(vec3(lamp_luma(c)), c, sat);
+}
+
+// 保亮度把彩度压到上限以内：彩度低的颜色原样通过，只压高彩度的
+vec3 lamp_chroma_cap(vec3 c, float cap) {
+	float y = max(lamp_luma(c), 1e-4);
+	vec3 d = c - vec3(y);
+	float ch = max(max(abs(d.r), abs(d.g)), abs(d.b)) / y;
+	return vec3(y) + d * min(1.0, cap / max(ch, 1e-4));
+}
+
+// 环境暗度 0–1：黄昏最亮时 0，入夜 1。读调色板 shadow.1 影色的线性亮度（阴雨天调色板更暗，跟着提前）。
+// 光斑、降水的灯锥与雪花提亮等"随天色变强的灯光效果"共用这一个系数，不各自计时
+float lamp_env_dark() {
+	float env = lamp_luma(texelFetch(palette, ivec2(LAMP_PAL_ENV, 0), 0).rgb);
+	return 1.0 - smoothstep(LAMP_POOL_ENV_Y.x, LAMP_POOL_ENV_Y.y, env);
+}
+
+// 光斑的强度随环境：白天（h_eff 10° 以上）不画；之后按环境暗度从黄昏的 DUSK 升到入夜的 1。
+// 降水的灯锥（WP-45b 的 precip）也乘这个值
+float lamp_pool_visibility(float h_eff) {
+	float day = 1.0 - smoothstep(LAMP_POOL_DAY_DEG.x, LAMP_POOL_DAY_DEG.y, h_eff);
+	return day * mix(LAMP_POOL_DUSK, 1.0, lamp_env_dark());
+}
+
+// 一处的光斑：core = 亮芯权重，rim = 外圈权重（两者都已乘灯的亮度与环境强度，互斥，台阶处按抗锯齿宽度过渡），
+// col = 主导那盏灯的色号（无灯时为 −1）。多盏灯重叠时取最亮的一盏，不叠加。
+struct LampPool {
+	float core;
+	float rim;
+	int col;
+};
+
+LampPool lamp_pool_eval(vec3 p, float aa) {
+	LampPool q = LampPool(0.0, 0.0, -1);
 	if (!in_map(p)) {
-		return vec2(0.0, -1.0);
+		return q;
 	}
 	ivec2 gs = textureSize(lamp_grid, 0);
 	ivec2 cell = clamp(ivec2(floor(map_uv(p) * vec2(gs))), ivec2(0), gs - ivec2(1));
@@ -158,7 +204,6 @@ vec2 lamp_pool(vec3 p, float aa) {
 	float gain = max(lamp_channel(LAMP_SLOT_POOL_GAIN).x, 0.0);
 	float h_eff = lamp_heff();
 	float best = 0.0;
-	float col = -1.0;
 	for (int k = 0; k < 4; k++) {
 		int id = int(ids[k] + 0.5) - 1;
 		if (id < 0) {
@@ -170,18 +215,56 @@ vec2 lamp_pool(vec3 p, float aa) {
 			continue;
 		}
 		float top = max(min(l.head, LAMP_POOL_TOP_M), 1.0);
-		float hp = p.y - l.base.y;
-		float v = 1.0 - smoothstep(top - 0.5, top, hp);
-		float r = l.radius * sqrt(gain);
+		float v = 1.0 - smoothstep(top - 0.5, top, p.y - l.base.y);
+		float r = l.radius * sqrt(gain) * LAMP_POOL_OUTER;
+		float rc = l.radius * sqrt(gain) * LAMP_POOL_CORE;
 		float d = length(p.xz - l.base.xz);
-		float m = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - aa, r + aa, d);
-		float s = m * v * lv;
+		float outer = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - aa, r + aa, d);
+		float inner = 1.0 - smoothstep(rc * (1.0 - LAMP_POOL_SOFT) - aa, rc + aa, d);
+		float w = lv * v;
+		float s = w * mix(LAMP_POOL_RIM * outer, 1.0, inner);
 		if (s > best) {
 			best = s;
-			col = float(l.col);
+			q = LampPool(w * inner, w * (outer - inner), l.col);
 		}
 	}
-	return vec2(best * lamp_pool_visibility(h_eff), col);
+	float vis = lamp_pool_visibility(h_eff);
+	q.core *= vis;
+	q.rim *= vis;
+	return q;
+}
+
+// 地面与 4 m 以下立面的光斑：返回 (强度 0–1, 色号；无灯时为 −1)。强度是两阶的：亮芯 1、外圈 LAMP_POOL_RIM，
+// 已乘灯的亮度与环境强度。aa 是光斑边缘的过渡宽度（m）：片元里传 max(fwidth(length(p.xz)), 0.02)，vertex() 里传一个常数。
+vec2 lamp_pool(vec3 p, float aa) {
+	LampPool q = lamp_pool_eval(p, aa);
+	return vec2(q.core + LAMP_POOL_RIM * q.rim, float(q.col));
+}
+
+// 外圈的加光：方向 = 底色 × 灯色（只沿灯色抬亮底色，不混灰白），亮度 = y
+vec3 lamp_rim_lift(vec3 base, vec3 lc, float y) {
+	vec3 c = lamp_chroma_cap(max(base * lc, vec3(0.0)), LAMP_POOL_CHROMA_CAP);
+	return c * (y / max(lamp_luma(c), 1e-4));
+}
+
+// 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
+// lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
+// 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
+void lamp_pool_shade(vec3 p, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
+	LampPool q = lamp_pool_eval(p, aa);
+	if (q.col < 0 || q.core + q.rim <= 0.0) {
+		return;
+	}
+	vec3 warm = texelFetch(palette, ivec2(LAMP_PAL_WARM, 0), 0).rgb;
+	vec3 lc = texelFetch(palette, ivec2(clamp(q.col, 0, 255), 0), 0).rgb;
+	vec3 tint = lamp_desat(lc / max(warm, vec3(0.02)), LAMP_POOL_CORE_SAT);
+	vec3 core = lamp_chroma_cap(lamp_lit * tint, LAMP_POOL_CHROMA_CAP);
+	vec3 core_add = LAMP_POOL_GAIN * q.core * core;
+	float y_rim = LAMP_POOL_GAIN * LAMP_POOL_RIM * q.rim * lamp_luma(core);
+	vec3 rim_lit = lamp_rim_lift(lit, lc, y_rim);
+	vec3 rim_shade = lamp_rim_lift(shade, lc, y_rim);
+	lit += core_add + rim_lit;
+	shade += core_add + rim_shade;
 }
 
 

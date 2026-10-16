@@ -5,6 +5,7 @@ using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Lighting;
 using Campus.Systems.Nightlight.Cue;
+using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Schedule;
 using GdUnit4;
@@ -159,7 +160,7 @@ public sealed class NightlightTests
     {
         var lamp = new LampRecord(new Vector3(12.5f, 1.25f, -40f), 6.1f, 5.2f, 51, 0.75f, 23, 6.37f, 0.4321f, 7, 0.9f);
         var data = LampTable.PackTable([lamp]);
-        // 与 fx_glow 的 lamp_fetch 同一解码
+        // 与 lamp.gdshaderinc 的 lamp_fetch 同一解码
         var col = (int)(data[4] % 256f);
         var energy = MathF.Floor(data[4] / 256f) / 100f;
         var slot = (int)(data[5] % 32f);
@@ -189,6 +190,28 @@ public sealed class NightlightTests
             if (ScheduleMath.WindowThreshold(i, baseId, 20) < 0.5f) below++;
         }
         Near(0.5f, below / (float)n, 0.05f, "half of the windows below θ = 0.5");
+    }
+
+    [TestCase]
+    public void WindowGlowFollowsTheInventoryDeclarations()
+    {
+        var dorm = LightChannelCatalog.Id(1);
+        var facade = new WindowFacadeDecl(1000, 12, dorm, 4, 3, 2, new Vector3(10f, 0f, 5f), Vector3.UnitX, Vector3.UnitY,
+            3.6f, 1.8f, 1.6f, [0.9f, 4.1f])
+        {
+            Skip = [1],
+        };
+        var loose = new WindowDecl(70000, 70000, 6, LightChannelCatalog.Id(6), new Vector3(0f, 3f, 0f), Vector3.UnitZ, Vector3.UnitY, 1f, 2f);
+        var unknown = new WindowDecl(5, 0, 4, new ChannelId("window.nowhere"), Vector3.Zero, Vector3.UnitX, Vector3.UnitY, 1f, 1f);
+        var set = GlowSets.Windows([facade], [loose, unknown], out var report);
+        True(set.Kind == GlowKind.Window && set.Count == 6 && report.UnknownChannel == 1 && report.BadFacade == 0, $"5 facade cells + 1 loose window, got {set.Count}");
+        // 第一格：窗号 = 基址 + 行 × 总列数 + 列起点 + 列；custom.z = 槽位 + 32 × 总列数（与玻璃的 UV2.y 同一写法）
+        True(set.Buffer[12] == 1004f && set.Buffer[13] == 1000f && set.Buffer[14] == 1 + 32f * 12 && set.Buffer[15] == 0f, "first facade cell custom data");
+        // 留空的局部格 1 被跳过：第二个实例是列 2
+        True(set.Buffer[GlowSet.Stride + 12] == 1006f, "skipped cell is not emitted");
+        var last = (set.Count - 1) * GlowSet.Stride;
+        True(set.Buffer[last + 12] == 70000f && set.Buffer[last + 15] == GlowSets.OutskirtsFlag, "outskirts window carries the skip-override flag");
+        Near(4.1f + 0.8f, set.Buffer[3 * GlowSet.Stride + 7], 1e-4f, "second-row centre height");
     }
 
     [TestCase]

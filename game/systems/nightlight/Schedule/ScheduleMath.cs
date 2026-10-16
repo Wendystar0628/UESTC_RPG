@@ -47,7 +47,7 @@ public static class ScheduleMath
     /// <summary>把 32 位哈希映射到 [0, 1)，取高 24 位，与着色器的 hash01 一致。</summary>
     public static float Unit(uint hash) => (hash >> 8) / 16777216f;
 
-    /// <summary>与 toon.gdshaderinc 的 toon_hash_u 同一常数（窗阈值、窗冷暖）；fx_glow 抄同一份，G2 比对。</summary>
+    /// <summary>与 lamp.gdshaderinc 的 lamp_hash_u 同一常数（窗阈值、窗冷暖）；toon、fx_glow 都 include 它，G2 比对。</summary>
     public static uint ShaderHash(uint x)
     {
         unchecked
@@ -62,7 +62,7 @@ public static class ScheduleMath
     }
 
     /// <summary>
-    /// 窗的亮灯阈值，与 toon_window_threshold、fx_glow 的 lamp_window_threshold 一致：
+    /// 窗的亮灯阈值，与 lamp.gdshaderinc 的 lamp_window_threshold 一致：
     /// 同一层相邻 3 个开间阈值相近（灯按房间成团亮灭），fract(均匀 + 独立量) 仍是均匀分布；整栋楼再加 ±0.25 的偏置。
     /// </summary>
     public static float WindowThreshold(int windowId, int baseId, int columns)

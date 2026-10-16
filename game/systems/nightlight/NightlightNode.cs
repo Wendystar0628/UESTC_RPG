@@ -4,9 +4,12 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
+using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Systems.Nightlight.Cue;
+using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Schedule;
 using Campus.Systems.Nightlight.Windows;
@@ -20,10 +23,13 @@ namespace Campus.Systems.Nightlight;
 /// 夜景灯光的时刻表节点（WP-39；SYS-TIME §6、MAP-QSH-ADDITIONS §8、ENG-PERF §10.3）。
 /// 每帧在 FramePriority.Channels 按钟点、有效太阳高度 h_eff 与季节求 32 个通道的 (L, Δ)，经 WP-03 的
 /// ILightChannelSink 写进 light_channels；按图读时刻表、建灯表（lamp_table、lamp_grid）、管窗覆盖（window_override），
-/// 写全局参数 shaft。注册 id 与 WP-03 的桩相同，合入后自动替掉桩。
+/// 写全局参数 shaft。灯具与窗格读 WP-02 的全图清单 ILightInventory，清单的 Rev 变了就重建灯表和光晕；
+/// 灯头光晕与窗光晕各挂一个内核实例池（IInstancePoolHost）。注册 id 与 WP-03 的桩相同，合入后自动替掉桩。
+/// 同一个节点也是过场"灯光提示"钩子 ILampCueHook 的实现（contract-12 第 4 节），替掉 WP-00 的桩。
 /// </summary>
 [KernelNode("light-schedule", Owner = "WP-39")]
-public partial class NightlightNode : Node, IMapAware
+[KernelService(typeof(ILampCueHook), Owner = "WP-39")]
+public partial class NightlightNode : Node, IMapAware, ILampCueHook
 {
     private const string ScheduleFile = "lighting-schedule.json";
     private const string ExtrasFile = "cinematics/extras.json";
@@ -36,11 +42,18 @@ public partial class NightlightNode : Node, IMapAware
 
     private readonly N.Vector2[] _channels = new N.Vector2[LightChannelCatalog.Count];
     private readonly WindowOverrides _windows = new();
+    private readonly GlowMount _lampGlow = new(GlowKind.Lamp, "nightlight.glow.lamp");
+    private readonly GlowMount _windowGlow = new(GlowKind.Window, "nightlight.glow.window");
     private ScheduleEvaluator? _schedule;
     private IWorldState? _world;
     private ILightChannelSink? _sink;
     private IColorScriptFrame? _colors;
     private IAppFlow? _flow;
+    private ILightInventory? _inventory;
+    private IInstancePoolHost? _pools;
+    private IShaderMaterialSource? _materials;
+    private IMapContext? _map;
+    private long _inventoryRev = long.MinValue;
     private Image? _overrideImage;
     private ImageTexture? _overrideTexture;
     private ImageTexture? _tableTexture;
@@ -60,16 +73,28 @@ public partial class NightlightNode : Node, IMapAware
         _sink = Services.Get<ILightChannelSink>();
         _colors = Services.Get<IColorScriptFrame>();
         _flow = Services.Get<IAppFlow>();
+        _inventory = Services.Get<ILightInventory>();
+        _pools = Services.Get<IInstancePoolHost>();
+        _materials = Services.Get<IShaderMaterialSource>();
         EnsureOverrideTexture();
+    }
+
+    public override void _ExitTree()
+    {
+        _lampGlow.Free();
+        _windowGlow.Free();
     }
 
     public void OnMapUnloading(MapId from)
     {
         EndCue();
         _schedule = null;
+        _map = null;
         _cueDefs = [];
         Lamps = [];
         _windows.ClearAll();
+        _lampGlow.Free();
+        _windowGlow.Free();
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -86,8 +111,9 @@ public partial class NightlightNode : Node, IMapAware
             if (schedule.Spec(slot).Id != LightChannelCatalog.Id(slot))
                 throw new InvalidDataException($"{ScheduleFile} slot {slot} is '{schedule.Spec(slot).Id.Value}', catalog says '{LightChannelCatalog.Id(slot).Value}'.");
         _schedule = schedule;
+        _map = ctx;
         _cueDefs = ReadCues(ctx);
-        RebuildLamps(ctx, schedule);
+        RebuildFromInventory(ctx, schedule);
         _windows.ClearAll();
         EnsureOverrideTexture();
     }
@@ -95,12 +121,14 @@ public partial class NightlightNode : Node, IMapAware
     public override void _Process(double delta)
     {
         if (_schedule is null || _world is null || _sink is null) return;
+        // 后台烘焙补完、换图后清单 Rev 加 1：重建灯表与光晕（与清单的顺序无关）
+        if (_map is not null && _inventory is not null && _inventory.Rev != _inventoryRev) RebuildFromInventory(_map, _schedule);
         if (_world.Instance != _instance)
         {
             _instance = _world.Instance;
             EndCue();
         }
-        if (_cue is not null && _flow?.State != AppState.Entering) EndCue();
+        if (_cue is not null && !CueAllowed()) EndCue();
         var weather = _world.WeatherNow;
         var gain = _colors?.Current.LampPoolGain ?? 1f;
         var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta, _world.Instance);
@@ -116,14 +144,19 @@ public partial class NightlightNode : Node, IMapAware
     }
 
     // ------------------------------------------------------------------
-    // 过场"灯光提示"钩子（SYS-TITLE §3.3）：WP-49a 的 CinematicPlayer 调用；只在 Entering 生效，
-    // 只改灯光通道纹理（lamp.cue、sys.cue 两个槽位），撤销后各值与不覆盖时完全相同。签名随契约申请定稿。
+    // 过场"灯光提示"钩子 ILampCueHook（SYS-TITLE §3.3）：WP-49a 的 CinematicPlayer 调用；只在 Entering 生效，
+    // 只改灯光通道纹理（lamp.cue、sys.cue 两个槽位），撤销后各值与不覆盖时完全相同。
+    // Seek 在 FramePriority.Camera 调，早于本节点的 Channels，所以同一帧就按新前沿求值；钩子自己不计时。
     // ------------------------------------------------------------------
+
+    bool ILampCueHook.Begin(string cueRef, float targetSunAltDeg) => BeginCue(cueRef, targetSunAltDeg);
+    void ILampCueHook.Seek(double timelineSeconds) => SeekCue(timelineSeconds);
+    void ILampCueHook.End() => EndCue();
 
     /// <summary>开始覆盖：cueRef 是 extras.json 里 lampCue 的 ref；targetSunDeg 是过场终点钟点的有效太阳高度（判"本该亮着"的灯）。</summary>
     public bool BeginCue(string cueRef, float targetSunDeg)
     {
-        if (_schedule is null || _flow?.State != AppState.Entering) return false;
+        if (_schedule is null || !CueAllowed()) return false;
         var def = _cueDefs.FirstOrDefault(d => d.Ref == cueRef);
         if (def is null) return false;
         _cue = new LampCue(def, targetSunDeg);
@@ -135,8 +168,20 @@ public partial class NightlightNode : Node, IMapAware
     public void SeekCue(double timelineSeconds)
     {
         if (_schedule is null || _cue is null) return;
-        if (_flow?.State != AppState.Entering) { EndCue(); return; }
+        if (!CueAllowed()) { EndCue(); return; }
         _schedule.Cue = _cue.At(timelineSeconds);
+    }
+
+    /// <summary>只有进入过场（Entering）时覆盖生效；别的状态一律不覆盖。</summary>
+    private bool CueAllowed()
+    {
+        if (_flow is null) return false;
+        return _flow.State switch
+        {
+            AppState.Entering => true,
+            AppState.Boot or AppState.Title or AppState.Playing or AppState.Leaving or AppState.Quitting => false,
+            _ => throw new InvalidOperationException($"Unhandled AppState {_flow.State} for the lamp cue."),
+        };
     }
 
     /// <summary>撤销覆盖（到点、跳过、交还控制、换实例都走这里）。</summary>
@@ -157,11 +202,12 @@ public partial class NightlightNode : Node, IMapAware
         return extras.Refs.Values.OfType<LampCueDef>().OrderBy(d => d.Ref, StringComparer.Ordinal).ToArray();
     }
 
-    private void RebuildLamps(IMapContext ctx, ScheduleEvaluator schedule)
+    private void RebuildFromInventory(IMapContext ctx, ScheduleEvaluator schedule)
     {
-        // 全图的灯具标记要等契约申请里的灯具清单（各内容模块 Build() 的 LightEmitter 汇总，WP-13 起）接进来；
-        // 在那之前灯表为空，光斑、灯头光晕都不画，地面读到的是"无灯"。
-        IReadOnlyList<LightEmitter> emitters = [];
+        // 全图的灯具标记与窗格声明：WP-02 汇总各内容模块 Build() 的输出（含外围）。清单是桩或空时灯表为空，
+        // 光斑、灯头光晕、窗光晕都不画，地面读到的是"无灯"。
+        _inventoryRev = _inventory?.Rev ?? 0;
+        IReadOnlyList<LightEmitter> emitters = _inventory?.Lamps ?? [];
         var palette = TryPalette();
         var lamps = LampSetBuilder.Build(emitters, schedule,
             token => palette is not null && palette.TryGet(token, out var entry) ? entry.Id : null,
@@ -178,8 +224,17 @@ public partial class NightlightNode : Node, IMapAware
         else _gridTexture.SetImage(gridImage);
         RenderingServer.GlobalShaderParameterSet(ShaderNames.LampTable, _tableTexture);
         RenderingServer.GlobalShaderParameterSet(ShaderNames.LampGrid, _gridTexture);
-        GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} lamps={report.Accepted} cue={report.CueLamps} grid={size.Width}x{size.Height} " +
-            $"overflowCells={overflow} skipped(channel={report.UnknownChannel}, notLamp={report.NotLamp}, color={report.UnknownColor}, dup={report.Duplicates})");
+
+        var windowSet = GlowSets.Windows(_inventory?.Facades ?? [], _inventory?.Windows ?? [], out var windowReport);
+        if (_pools is not null && _materials is not null)
+        {
+            ShaderMaterial Material() => _materials.Create(ShaderId.FxGlow);
+            _lampGlow.Upload(_pools, Material, GlowSets.Lamps(lamps));
+            _windowGlow.Upload(_pools, Material, windowSet);
+        }
+        GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} rev={_inventoryRev} lamps={report.Accepted} cue={report.CueLamps} grid={size.Width}x{size.Height} " +
+            $"overflowCells={overflow} skipped(channel={report.UnknownChannel}, notLamp={report.NotLamp}, color={report.UnknownColor}, dup={report.Duplicates}) " +
+            $"windows={windowReport.Windows} skipped(channel={windowReport.UnknownChannel}, facade={windowReport.BadFacade})");
     }
 
     private static PaletteRegistry? TryPalette()
