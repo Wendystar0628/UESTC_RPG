@@ -33,6 +33,11 @@ const float LAMP_POOL_CHROMA_CAP = 0.62; // 加光的彩度上限（偏离亮度
 const float LAMP_POOL_SOFT = 0.02;       // 两道台阶边缘的柔边，占半径的比例（再加像素抗锯齿宽度）
 const float LAMP_POOL_DUSK = 0.15;       // 黄昏（环境最亮时）的强度比例
 const vec2 LAMP_POOL_ENV_Y = vec2(0.15, 0.40);    // shadow.1 影色的线性亮度从 0.40（黄昏）降到 0.15（入夜）时，强度从 DUSK 升到 1
+// 竖直面（墙、台阶立面）上的光斑是扇贝形：以灯头为顶点向下张开的光罩与墙面相交，灯下最亮、往下变宽变暗、上沿是弧；
+// 到灯脚高度时宽度正好等于地面光斑，亮芯、外圈两阶照旧。
+const float LAMP_WALL_SPREAD = 0.75;     // 光罩半径 ∝ 深度^它：1 是直边锥（贴墙灯成 V 形），越小上沿越圆、扇贝越高
+const float LAMP_WALL_FOOT = 0.5;        // 竖直面在灯脚高度处的亮度（灯头下为 1，线性变暗）
+const float LAMP_WALL_NY = 0.6;          // 面法线的 |y| 低于它按竖直面画
 const int LAMP_PAL_ENV = 12;             // shadow.1，与 fog.gdshaderinc 的 PAL_SHADOW_1 一致
 const int LAMP_PAL_WARM = 51;            // lamp.warm，与 fog.gdshaderinc 的 PAL_LAMP_WARM 一致：行 1 的灯照色按它推
 
@@ -192,7 +197,9 @@ struct LampPool {
 	int col;
 };
 
-LampPool lamp_pool_eval(vec3 p, float aa) {
+// wall = 竖直面：光斑半径随灯头以下的深度从 0 张到灯脚高度的地面半径（按 LAMP_WALL_SPREAD，灯脚以下不再变宽），亮度从 1 线性降到 LAMP_WALL_FOOT；
+// 只受 4 m 封顶。aa_wall 是竖直面上沿弧线的过渡宽度（含竖向像素尺寸）。地面一支与原来相同。
+LampPool lamp_pool_eval_surface(vec3 p, float aa, bool wall, float aa_wall) {
 	LampPool q = LampPool(0.0, 0.0, -1);
 	if (!in_map(p)) {
 		return q;
@@ -214,13 +221,25 @@ LampPool lamp_pool_eval(vec3 p, float aa) {
 		if (lv <= 0.0) {
 			continue;
 		}
-		float top = max(min(l.head, LAMP_POOL_TOP_M), 1.0);
-		float v = 1.0 - smoothstep(top - 0.5, top, p.y - l.base.y);
 		float r = l.radius * sqrt(gain) * LAMP_POOL_OUTER;
 		float rc = l.radius * sqrt(gain) * LAMP_POOL_CORE;
+		float v;
+		float e = aa;
+		if (wall) {
+			float h = max(l.head, 0.5);
+			float k = clamp((l.base.y + h - p.y) / h, 0.0, 1.0);   // 0 = 灯头高度，1 = 灯脚高度及以下
+			float g = pow(k, LAMP_WALL_SPREAD);
+			r *= g;
+			rc *= g;
+			v = mix(1.0, LAMP_WALL_FOOT, k) * (1.0 - smoothstep(LAMP_POOL_TOP_M - 0.5, LAMP_POOL_TOP_M, p.y - l.base.y));
+			e = aa_wall;
+		} else {
+			float top = max(min(l.head, LAMP_POOL_TOP_M), 1.0);
+			v = 1.0 - smoothstep(top - 0.5, top, p.y - l.base.y);
+		}
 		float d = length(p.xz - l.base.xz);
-		float outer = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - aa, r + aa, d);
-		float inner = 1.0 - smoothstep(rc * (1.0 - LAMP_POOL_SOFT) - aa, rc + aa, d);
+		float outer = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - e, r + e, d);
+		float inner = 1.0 - smoothstep(rc * (1.0 - LAMP_POOL_SOFT) - e, rc + e, d);
 		float w = lv * v;
 		float s = w * mix(LAMP_POOL_RIM * outer, 1.0, inner);
 		if (s > best) {
@@ -232,6 +251,11 @@ LampPool lamp_pool_eval(vec3 p, float aa) {
 	q.core *= vis;
 	q.rim *= vis;
 	return q;
+}
+
+// 不分朝向的光斑（降水的灯锥、雪花在 vertex() 里也用）：一律按地面一支求
+LampPool lamp_pool_eval(vec3 p, float aa) {
+	return lamp_pool_eval_surface(p, aa, false, aa);
 }
 
 // 地面与 4 m 以下立面的光斑：返回 (强度 0–1, 色号；无灯时为 −1)。强度是两阶的：亮芯 1、外圈 LAMP_POOL_RIM，
@@ -250,8 +274,15 @@ vec3 lamp_rim_lift(vec3 base, vec3 lc, float y) {
 // 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
 // lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
 // 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
+// 竖直面按面法线判（由 p 的屏幕导数求，只在片元里调用；toon 进来前的分支只看材质标志与全局太阳高度，同一三角形内一致）。
 void lamp_pool_shade(vec3 p, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
-	LampPool q = lamp_pool_eval(p, aa);
+	vec3 px = dFdx(p);
+	vec3 py = dFdy(p);
+	vec3 n = cross(px, py);
+	float nl = length(n);
+	bool wall = nl > 1e-12 && abs(n.y) < LAMP_WALL_NY * nl;
+	float aa_wall = max(aa, max(abs(px.y), abs(py.y)));
+	LampPool q = lamp_pool_eval_surface(p, aa, wall, aa_wall);
 	if (q.col < 0 || q.core + q.rim <= 0.0) {
 		return;
 	}
