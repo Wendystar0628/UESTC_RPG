@@ -158,7 +158,7 @@ public static class GroundMasks
         var set = new GroundMaskSet(rect, metersPerPixel, TerrainMetersPerPixel);
         var layout = GroundLayout.Of(ctx.World);
         PaintSurfaces(set, layout, section, terrain ?? FlatTerrain.Instance);
-        PaintBuildings(set, ctx.World);
+        PaintBuildings(set, layout);
         PaintTrees(set, ctx.World);
         return set;
     }
@@ -217,23 +217,18 @@ public static class GroundMasks
         _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
     };
 
-    /// <summary>Building footprints plus the eave overhang: no snow and no rain underneath.</summary>
-    private static void PaintBuildings(GroundMaskSet set, IWorldModel world)
+    /// <summary>
+    /// Building footprints plus the eave overhang: no snow and no rain underneath. Footprints are the layout's building
+    /// shapes, one per source polygon with its own holes, so every part of a multi-part building is covered and an
+    /// inner courtyard stays open.
+    /// </summary>
+    private static void PaintBuildings(GroundMaskSet set, GroundLayout layout)
     {
-        foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        foreach (var shape in layout.Shapes)
         {
-            if (feature.Kind.Value != "building" || feature.Geometry is not PolygonGeometry polygon) continue;
-            var shape = new GroundShape
-            {
-                Kind = SurfaceKind.Water,
-                Id = feature.Id,
-                Rings = [GroundSources.Clean(polygon.Rings.Outer), .. polygon.Rings.Holes.Select(h => GroundSources.Clean(h))],
-                Min = new(feature.Bounds.Min.X, feature.Bounds.Min.Z),
-                Max = new(feature.Bounds.Max.X, feature.Bounds.Max.Z)
-            };
-            if (shape.Rings![0].Length < 3) continue;
-            var min = shape.Rings[0].Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(EaveOverhang + 1f);
-            var max = shape.Rings[0].Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(EaveOverhang + 1f);
+            if (shape.Kind != SurfaceKind.Building) continue;
+            var min = shape.Min - new Vector2(EaveOverhang + 1f);
+            var max = shape.Max + new Vector2(EaveOverhang + 1f);
             var (x0, z0) = set.Pixel(min);
             var (x1, z1) = set.Pixel(max);
             for (var pz = Math.Max(z0, 0); pz <= Math.Min(z1, set.Height - 1); pz++)

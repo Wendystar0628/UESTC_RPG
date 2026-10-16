@@ -372,6 +372,8 @@ internal sealed class TestWorld : IWorldModel
 
     public static TestWorld Empty() => new([], WorldNetwork.Empty);
 
+    public static TestWorld Of(IEnumerable<WorldFeature> features, WorldNetwork? network = null) => new(features, network ?? WorldNetwork.Empty);
+
     public static TestWorld Street()
     {
         var features = new List<WorldFeature>

@@ -58,13 +58,16 @@ internal static class GroundClassifier
     public static string RoadType(JsonElement? props) =>
         Text(props, "roadType") ?? Text(props, "highway") ?? "";
 
-    /// <summary>Returns null for features that leave the lawn untouched (buildings, POIs, green areas).</summary>
-    public static SurfaceKind? KindOf(WorldFeature feature)
+    /// <summary>
+    /// Surface class of one source record from its kind and its own props; null for kinds that leave the lawn untouched
+    /// (POIs, green areas). Buildings return <see cref="SurfaceKind.Building"/>: a footprint, not paving.
+    /// </summary>
+    public static SurfaceKind? KindOf(string kind, JsonElement? props)
     {
-        switch (feature.Kind.Value)
+        switch (kind)
         {
             case "road":
-                return RoadKind(RoadType(feature.Props));
+                return RoadKind(RoadType(props));
             case "parking":
                 return SurfaceKind.Parking;
             case "water":
@@ -72,7 +75,7 @@ internal static class GroundClassifier
             case "building":
                 return SurfaceKind.Building;
             case "sport":
-                return Text(feature.Props, "sport") switch
+                return Text(props, "sport") switch
                 {
                     "running" => SurfaceKind.Track,
                     "soccer" => SurfaceKind.Turf,

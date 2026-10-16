@@ -1,42 +1,27 @@
 using System.Numerics;
+using System.Text.Json;
 using Campus.Contracts;
 
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// The only place that reads the world model's feature and network records. When WorldFeature gains per-source
-/// parts, only this adapter changes: everything downstream works on <see cref="GroundShape"/> and <see cref="RoadLine"/>.
-/// Output order is stable (sorted by feature ID), so builds are deterministic.
+/// The only place that reads the world model's feature and network records: everything downstream works on
+/// <see cref="GroundShape"/> and <see cref="RoadLine"/>.
+/// A feature with <see cref="WorldFeature.Parts"/> is read part by part and its aggregate geometry is never built: each
+/// part's surface kind comes from its own source record (<c>kind</c> in the part's props, else the parent's kind),
+/// the type properties (roadType, sport, width) from that same record, and the shapes from the part's own geometry.
+/// A multi-polygon part gives one shape per polygon, each with its own holes, so a hole stays a hole and polygons
+/// never flip each other's inside. A feature without parts is read from its own kind, props and geometry.
+/// Output order is stable (feature ID, part source ID, polygon order), so builds are deterministic.
 /// </summary>
 internal static class GroundSources
 {
     public static (List<GroundShape> Shapes, List<RoadLine> Roads) Read(IWorldModel world)
     {
         var shapes = new List<GroundShape>();
-        var polygonIds = new HashSet<FeatureId>();
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-        {
-            if (GroundClassifier.KindOf(feature) is not { } kind) continue;
-            switch (feature.Geometry)
-            {
-                case PolygonGeometry polygon:
-                    if (Polygon(feature.Id, kind, polygon.Rings) is { } shape)
-                    {
-                        shapes.Add(shape);
-                        if (kind != SurfaceKind.Building) polygonIds.Add(feature.Id);
-                    }
-                    break;
-                case PolylineGeometry when kind == SurfaceKind.Building:
-                    break;
-                case PolylineGeometry polyline:
-                    var type = GroundClassifier.RoadType(feature.Props);
-                    var width = GroundClassifier.Width(feature.Props, type, 0f);
-                    if (Capsule(feature.Id, kind, polyline.Line.Points, width) is { } capsule) shapes.Add(capsule);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unsupported ground geometry for {feature.Id.Value}.");
-            }
-        }
+            foreach (var source in Sources(feature))
+                AddSurfaces(shapes, feature.Id, source);
 
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
@@ -58,6 +43,54 @@ internal static class GroundSources
                     SurfaceKind.Carriageway, new PolygonRings(fillets[k])) is { } fillet)
                 shapes.Add(fillet);
         return (shapes, roads);
+    }
+
+    /// <summary>One source record of a feature; <see cref="Label"/> names it in error messages.</summary>
+    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry);
+
+    private static IEnumerable<Source> Sources(WorldFeature feature)
+    {
+        if (feature.Parts.Count == 0)
+        {
+            yield return new("its geometry", feature.Kind.Value, feature.Props, feature.Geometry);
+            yield break;
+        }
+        foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
+            yield return new("part " + part.SourceId, PartKind(feature, part), part.Props ?? feature.Props, part.Geometry);
+    }
+
+    /// <summary>
+    /// Kind of one part: its source record's own "kind", else the parent feature's kind (the world model's part filter
+    /// and the building planner use the same rule). An entity whose own kind is poi can still own building parts.
+    /// </summary>
+    private static string PartKind(WorldFeature feature, WorldFeaturePart part) =>
+        GroundClassifier.Text(part.Props, "kind") ?? feature.Kind.Value;
+
+    private static void AddSurfaces(List<GroundShape> shapes, FeatureId id, Source source)
+    {
+        if (GroundClassifier.KindOf(source.Kind, source.Props) is not { } kind) return;
+        switch (source.Geometry)
+        {
+            case PolygonGeometry polygon:
+                if (Polygon(id, kind, polygon.Rings) is { } shape) shapes.Add(shape);
+                break;
+            case MultiPolygonGeometry multi:
+                foreach (var rings in multi.Polygons)
+                    if (Polygon(id, kind, rings) is { } piece) shapes.Add(piece);
+                break;
+            case PolylineGeometry when kind == SurfaceKind.Building:
+                break;   // a footprint needs an area
+            case PolylineGeometry polyline:
+                var type = GroundClassifier.RoadType(source.Props);
+                var width = GroundClassifier.Width(source.Props, type, 0f);
+                if (Capsule(id, kind, polyline.Line.Points, width) is { } capsule) shapes.Add(capsule);
+                break;
+            case PointGeometry:
+                break;   // an entity known only by its anchor has no extent to shape the ground
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported ground geometry {source.Geometry.GetType().Name} in {source.Label} of {id.Value} (kind {source.Kind}).");
+        }
     }
 
     private static GroundShape? Polygon(FeatureId id, SurfaceKind kind, PolygonRings rings)
