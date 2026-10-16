@@ -40,7 +40,8 @@ const vec2 LAMP_POOL_ENV_Y = vec2(0.15, 0.40);    // shadow.1 影色的线性亮
 // 到灯脚高度时宽度正好等于地面光斑，亮芯、外圈两阶照旧。
 const float LAMP_WALL_SPREAD = 0.75;     // 光罩半径 ∝ 深度^它：1 是直边锥（贴墙灯成 V 形），越小上沿越圆、扇贝越高
 const float LAMP_WALL_FOOT = 0.5;        // 竖直面在灯脚高度处的亮度（灯头下为 1，线性变暗）
-const float LAMP_WALL_NY = 0.6;          // 面法线的 |y| 低于它按竖直面画
+const vec2 LAMP_WALL_NY = vec2(0.5, 0.7);    // 世界法线 n.y 在这一段里地面一支与竖直面一支按 smoothstep 混合：低于 .x 全按竖直面，高于 .y 全按地面
+const vec2 LAMP_DOWN_NY = vec2(-0.3, -0.1);  // 朝下的面不受光斑：n.y 低于 .x 不画，到 .y 渐入（檐口与雨棚底面、球底、扶手下沿）
 const int LAMP_PAL_ENV = 12;             // shadow.1，与 fog.gdshaderinc 的 PAL_SHADOW_1 一致
 const int LAMP_PAL_WARM = 51;            // lamp.warm，与 fog.gdshaderinc 的 PAL_LAMP_WARM 一致：行 1 的灯照色按它推
 
@@ -234,9 +235,17 @@ struct LampPool {
 	int col;
 };
 
-// wall = 竖直面：光斑半径随灯头以下的深度从 0 张到灯脚高度的地面半径（按 LAMP_WALL_SPREAD，灯脚以下不再变宽），亮度从 1 线性降到 LAMP_WALL_FOOT；
-// 只受 4 m 封顶。aa_wall 是竖直面上沿弧线的过渡宽度（含竖向像素尺寸）。地面一支与原来相同。
-LampPool lamp_pool_eval_surface(vec3 p, float aa, bool wall, float aa_wall) {
+// 一盏灯在一支上的 (亮芯, 外圈, 比较用的亮度)：d = 到灯脚的水平距离，r、rc = 外圈、亮芯半径，e = 边缘过渡宽度，w = 灯的亮度 × 这一支的亮度
+vec3 lamp_pool_branch(float d, float r, float rc, float e, float w) {
+	float outer = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - e, r + e, d);
+	float inner = 1.0 - smoothstep(rc * (1.0 - LAMP_POOL_SOFT) - e, rc + e, d);
+	return vec3(w * inner, w * (outer - inner), w * mix(LAMP_POOL_RIM * outer, 1.0, inner));
+}
+
+// wall_t = 竖直面一支的权重（0 = 地面，1 = 竖直面，之间两支按权重混合，每盏灯分别混合后再取最亮的一盏）。
+// 竖直面一支：光斑半径随灯头以下的深度从 0 张到灯脚高度的地面半径（按 LAMP_WALL_SPREAD，灯脚以下不再变宽），亮度从 1 线性降到 LAMP_WALL_FOOT；
+// 只受 4 m 封顶。aa_wall 是竖直面上沿弧线的过渡宽度（含竖向像素尺寸）。地面一支照到灯头高度（不超过 4 m）。
+LampPool lamp_pool_eval_surface(vec3 p, float aa, float wall_t, float aa_wall) {
 	LampPool q = LampPool(0.0, 0.0, -1);
 	if (!in_map(p)) {
 		return q;
@@ -260,28 +269,23 @@ LampPool lamp_pool_eval_surface(vec3 p, float aa, bool wall, float aa_wall) {
 		}
 		float r = l.radius * sqrt(gain) * LAMP_POOL_OUTER;
 		float rc = l.radius * sqrt(gain) * LAMP_POOL_CORE;
-		float v;
-		float e = aa;
-		if (wall) {
+		float d = length(p.xz - l.base.xz);
+		vec3 c = vec3(0.0);
+		if (wall_t < 1.0) {
+			float top = max(min(l.head, LAMP_POOL_TOP_M), 1.0);
+			float v = 1.0 - smoothstep(top - 0.5, top, p.y - l.base.y);
+			c = lamp_pool_branch(d, r, rc, aa, lv * v);
+		}
+		if (wall_t > 0.0) {
 			float h = max(l.head, 0.5);
 			float k = clamp((l.base.y + h - p.y) / h, 0.0, 1.0);   // 0 = 灯头高度，1 = 灯脚高度及以下
 			float g = pow(k, LAMP_WALL_SPREAD);
-			r *= g;
-			rc *= g;
-			v = mix(1.0, LAMP_WALL_FOOT, k) * (1.0 - smoothstep(LAMP_POOL_TOP_M - 0.5, LAMP_POOL_TOP_M, p.y - l.base.y));
-			e = aa_wall;
-		} else {
-			float top = max(min(l.head, LAMP_POOL_TOP_M), 1.0);
-			v = 1.0 - smoothstep(top - 0.5, top, p.y - l.base.y);
+			float v = mix(1.0, LAMP_WALL_FOOT, k) * (1.0 - smoothstep(LAMP_POOL_TOP_M - 0.5, LAMP_POOL_TOP_M, p.y - l.base.y));
+			c = mix(c, lamp_pool_branch(d, r * g, rc * g, aa_wall, lv * v), wall_t);
 		}
-		float d = length(p.xz - l.base.xz);
-		float outer = 1.0 - smoothstep(r * (1.0 - LAMP_POOL_SOFT) - e, r + e, d);
-		float inner = 1.0 - smoothstep(rc * (1.0 - LAMP_POOL_SOFT) - e, rc + e, d);
-		float w = lv * v;
-		float s = w * mix(LAMP_POOL_RIM * outer, 1.0, inner);
-		if (s > best) {
-			best = s;
-			q = LampPool(w * inner, w * (outer - inner), l.col);
+		if (c.z > best) {
+			best = c.z;
+			q = LampPool(c.x, c.y, l.col);
 		}
 	}
 	float vis = lamp_pool_visibility(h_eff);
@@ -292,7 +296,7 @@ LampPool lamp_pool_eval_surface(vec3 p, float aa, bool wall, float aa_wall) {
 
 // 不分朝向的光斑（降水的灯锥、雪花在 vertex() 里也用）：一律按地面一支求
 LampPool lamp_pool_eval(vec3 p, float aa) {
-	return lamp_pool_eval_surface(p, aa, false, aa);
+	return lamp_pool_eval_surface(p, aa, 0.0, aa);
 }
 
 // 地面与 4 m 以下立面的光斑：返回 (强度 0–1, 色号；无灯时为 −1)。强度是两阶的：亮芯 1、外圈 LAMP_POOL_RIM，
@@ -311,40 +315,20 @@ vec3 lamp_rim_lift(vec3 base, vec3 lc, float y) {
 // 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
 // lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
 // 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
-// 过渡版本：竖直面按面法线判（由 p 的屏幕导数求，只在片元里调用；toon 进来前的分支只看材质标志与全局太阳高度，同一三角形内一致）。
-// toon 改调下面带 n_w 的版本后删除。
-void lamp_pool_shade(vec3 p, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
-	vec3 px = dFdx(p);
-	vec3 py = dFdy(p);
-	vec3 n = cross(px, py);
-	float nl = length(n);
-	bool wall = nl > 1e-12 && abs(n.y) < LAMP_WALL_NY * nl;
-	float aa_wall = max(aa, max(abs(px.y), abs(py.y)));
-	LampPool q = lamp_pool_eval_surface(p, aa, wall, aa_wall);
-	if (q.col < 0 || q.core + q.rim <= 0.0) {
-		return;
-	}
-	vec3 warm = texelFetch(palette, ivec2(LAMP_PAL_WARM, 0), 0).rgb;
-	vec3 lc = texelFetch(palette, ivec2(clamp(q.col, 0, 255), 0), 0).rgb;
-	vec3 tint = lamp_desat(lc / max(warm, vec3(0.02)), LAMP_POOL_CORE_SAT);
-	vec3 core = lamp_chroma_cap(lamp_lit * tint, LAMP_POOL_CHROMA_CAP);
-	vec3 core_add = LAMP_POOL_GAIN * q.core * core;
-	float y_rim = LAMP_POOL_GAIN * LAMP_POOL_RIM * q.rim * lamp_luma(core);
-	vec3 rim_lit = lamp_rim_lift(lit, lc, y_rim);
-	vec3 rim_shade = lamp_rim_lift(shade, lc, y_rim);
-	lit += core_add + rim_lit;
-	shade += core_add + rim_shade;
-}
-
-// 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
-// lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
-// 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
-// n_w = 世界法线（toon 传 c.n_w，含插值与解析法线），|n_w.y| 低于 LAMP_WALL_NY 按竖直面画：按着色法线判，圆柱、弧墙上的光斑边缘不出折面。
+// n_w = 世界法线（toon 传 c.n_w，含插值与解析法线）：n.y 在 LAMP_WALL_NY 一段里地面一支与竖直面一支平滑混合，
+// 曲面上明暗随法线连续变化，平地（n.y = 1）、平墙（n.y = 0）只走各自一支；朝下的面按 LAMP_DOWN_NY 不受光斑。
 // 竖直面上沿弧线的过渡宽度另取 fwidth(p.y)，只在片元里调用（toon 进来前的分支只看材质标志与全局太阳高度）。
 void lamp_pool_shade(vec3 p, vec3 n_w, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
-	bool wall = abs(n_w.y) < LAMP_WALL_NY * length(n_w);
-	float aa_wall = max(aa, fwidth(p.y));
-	LampPool q = lamp_pool_eval_surface(p, aa, wall, aa_wall);
+	float aa_wall = max(aa, fwidth(p.y));   // 导数在提前返回之前取
+	float ny = n_w.y / max(length(n_w), 1e-6);
+	float facing = smoothstep(LAMP_DOWN_NY.x, LAMP_DOWN_NY.y, ny);
+	if (facing <= 0.0) {
+		return;
+	}
+	float wall_t = 1.0 - smoothstep(LAMP_WALL_NY.x, LAMP_WALL_NY.y, ny);
+	LampPool q = lamp_pool_eval_surface(p, aa, wall_t, aa_wall);
+	q.core *= facing;
+	q.rim *= facing;
 	if (q.col < 0 || q.core + q.rim <= 0.0) {
 		return;
 	}
