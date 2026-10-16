@@ -64,6 +64,10 @@ public sealed class UiMaterials
     public ShaderMaterial? Reveal { get; }
     public ShaderMaterial? Frost { get; }
 
+    /// <summary>是不是这里发出的界面材质（ui_panel 四种 kind 与 ui_screen 两种 mode）。</summary>
+    public bool Owns(Material? material) =>
+        material is not null && (Array.IndexOf(_panel, material) >= 0 || material == Reveal || material == Frost);
+
     private static void WritePanelNumbers(ShaderMaterial m, UiTokens t)
     {
         m.SetShaderParameter("corner_minor", t.F("metrics", "shape", "cornerMinor"));

@@ -32,7 +32,6 @@ public partial class TitleMenu : Control
         var menu = new TitleMenu { _kit = kit, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         parent.AddChild(menu);
         menu.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        menu.Build();
         return menu;
     }
 
@@ -76,12 +75,21 @@ public partial class TitleMenu : Control
         }
     }
 
+    /// <summary>打开时才建，<see cref="Close"/> 时释放：离开开始页以后它不再占实例参数槽（<see cref="UiKit.Holders"/>）。</summary>
     public void Open()
     {
+        if (_items.Count == 0) Build();
         Visible = true;
         Sync();
         var focus = _continue.Off ? _items[1] : _continue;
         focus.GrabFocus();
+    }
+
+    public void Close()
+    {
+        Visible = false;
+        foreach (var child in GetChildren()) child.QueueFree();
+        _items.Clear();
     }
 
     public void Sync()

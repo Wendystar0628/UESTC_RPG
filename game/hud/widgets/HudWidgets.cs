@@ -39,6 +39,8 @@ public partial class WeatherStrip : Control
         return strip;
     }
 
+    public override void _ExitTree() => _model.Changed -= Sync;
+
     private void Build()
     {
         var cell = _kit.Tokens.Size("weatherCell");
@@ -214,6 +216,8 @@ public partial class SpeedBar : Control
         return bar;
     }
 
+    public override void _ExitTree() => _model.Changed -= Sync;
+
     public static int Gear(float speed) => Math.Clamp((int)Math.Round(1 + 15 * Math.Log(Math.Max(speed, 0.01) / 0.5) / Math.Log(400)), 1, 16);
 
     public void Sync()
@@ -280,6 +284,8 @@ public partial class TimeStrip : Control
         strip.Sync();
         return strip;
     }
+
+    public override void _ExitTree() => _model.Changed -= Sync;
 
     public void Sync()
     {

@@ -55,6 +55,8 @@ public partial class TimeCard : Control
         return card;
     }
 
+    public override void _ExitTree() => _model.Changed -= Sync;
+
     private void Build()
     {
         var k = _kit;

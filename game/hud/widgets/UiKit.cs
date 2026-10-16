@@ -53,8 +53,12 @@ public sealed class UiKit
 
     private void Remember(CanvasItem item)
     {
-        foreach (var weak in _pinned)
-            if (weak.TryGetTarget(out var existing) && existing == item) return;
+        // 常驻件随进出开始页重建，顺手剔掉已经释放的旧件
+        for (var i = _pinned.Count - 1; i >= 0; i--)
+        {
+            if (!_pinned[i].TryGetTarget(out var existing) || !GodotObject.IsInstanceValid(existing)) _pinned.RemoveAt(i);
+            else if (existing == item) return;
+        }
         _pinned.Add(new WeakReference<CanvasItem>(item));
     }
 
@@ -173,4 +177,17 @@ public sealed class UiKit
     }
 
     public float Width(Label label) => label.GetCombinedMinimumSize().X;
+
+    /// <summary>
+    /// 子树里占着实例参数槽的件数：挂着界面材质、没在排队释放的 CanvasItem（含滚动条这类内部子节点）。
+    /// 引擎在材质挂上时就从全局参数池分配槽，隐藏、摘材质、清参数、移出场景树都不归还，只有释放节点才归还；
+    /// 所以隐藏的大页不留件，打开时再建（UI-VISUAL §11.5）。
+    /// </summary>
+    public int Holders(Node root)
+    {
+        if (root.IsQueuedForDeletion()) return 0;
+        var count = root is CanvasItem item && Materials.Owns(item.Material) ? 1 : 0;
+        foreach (var child in root.GetChildren(includeInternal: true)) count += Holders(child);
+        return count;
+    }
 }

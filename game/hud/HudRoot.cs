@@ -15,6 +15,8 @@ namespace Campus.Hud;
 /// 界面根（UI-VISUAL §11.2、UI-NAV §3、§5）：CanvasLayer 10，搭控件树、挂唯一的 Theme。
 /// 漫游态（鼠标被捕获）只留小地图槽位和临时提示；界面态（鼠标可见）四角出现，4 秒没有操作后淡出；
 /// 大页（设置卡、存档页）打开时占用观者输入；开始页只在 IAppFlow 的 Title 状态出现。
+/// 不显示的页不留件（引擎只在释放节点时归还实例参数槽，<see cref="UiKit.Holders"/>）：大页与开始页打开时建、关上就释放，
+/// 四角的常驻件在进入漫游时建、回到开始页时释放。
 /// </summary>
 [KernelNode("hud", Owner = "WP-35")]
 public partial class HudRoot : CanvasLayer
@@ -29,11 +31,8 @@ public partial class HudRoot : CanvasLayer
     private IAppFlow? _flow;
     private IAudioService? _audio;
     private UiThemeClock _clock = null!;
-    private Control _root = null!, _corners = null!, _topRight = null!, _minimapSlot = null!;
-    private TimeCard _timeCard = null!;
-    private TimeStrip _timeStrip = null!;
-    private WeatherStrip _weather = null!;
-    private SpeedBar _speed = null!;
+    private Control _root = null!, _corners = null!, _minimapSlot = null!;
+    private Resident? _resident;
     private Toast _toast = null!;
     private SettingsCard _settingsCard = null!;
     private SavePage _savePage = null!;
@@ -93,16 +92,6 @@ public partial class HudRoot : CanvasLayer
         _root.AddChild(_corners);
         _corners.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        _speed = SpeedBar.Create(_kit, _corners, _model);
-        _speed.ModePicked += mode => _ = SetMode(mode);
-        _weather = WeatherStrip.Create(_kit, _corners, _model, _control);
-        _weather.Toast += text => _toast.Show(text, "weather_auto");
-        _timeCard = TimeCard.Create(_kit, _corners, _model, _control, Services.Get<IPaletteProbe>(), ResetName);
-        _timeCard.Toast += text => _toast.Show(text);
-        _timeStrip = TimeStrip.Create(_kit, _corners, _model);
-        _timeStrip.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ToggleTime(true); };
-        BuildTopRight();
-
         _title = TitleMenu.Create(_kit, _root);
         _title.SavesRequested += () => OpenSaves(fromTitle: true);
         _title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
@@ -145,9 +134,48 @@ public partial class HudRoot : CanvasLayer
             case "saves": OpenSaves(fromTitle: true); break;
             case "title": _clean = _galleryTitle = true; _title.Open(); break;
             case "hud": break;
+            case "census": _ = Census(3); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
     }
+
+    /// <summary>
+    /// --ui-gallery=census：数界面占着实例参数槽的件数（<see cref="UiKit.Holders"/>）。先在漫游中数一次，再经 IAppFlow 回到开始页
+    /// （没有 IAppFlow 时像 --ui-gallery=title 一样把开始页压在画面上），然后把设置卡、存档页各开关 <paramref name="cycles"/> 次，
+    /// 每步记一行日志，最后走正常退出。
+    /// </summary>
+    private async Task Census(int cycles)
+    {
+        try
+        {
+            for (var i = 0; i < 600 && !Playing; i++) await NextFrame();
+            for (var i = 0; i < 10; i++) await NextFrame();
+            CensusLine("playing");
+            if (_flow is not null) await _flow.ReturnToTitle();
+            else { _clean = _galleryTitle = true; _title.Open(); }
+            for (var i = 0; i < 10; i++) await NextFrame();
+            CensusLine($"title ({_flow?.State.ToString() ?? "no flow"})");
+            for (var i = 1; i <= cycles; i++)
+            {
+                OpenSettings(SettingsPage.Graphics, fromTitle: true);
+                await NextFrame();
+                CensusLine($"settings open #{i}");
+                CloseSettings();
+                OpenSaves(fromTitle: true);
+                await NextFrame();
+                CensusLine($"saves open #{i}");
+                CloseSaves();
+                await NextFrame();
+                CensusLine($"closed #{i}");
+            }
+        }
+        catch (Exception error) { GD.PushError($"UI census failed: {error}"); }
+        RequestQuit();
+    }
+
+    private SignalAwaiter NextFrame() => ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+    private void CensusLine(string step) => GD.Print($"UI census - {step}: {_kit.Holders(_root)} items hold shader instance slots");
 
     private static string? Argument(string name)
     {
@@ -179,18 +207,45 @@ public partial class HudRoot : CanvasLayer
         if (view.X <= 0) return;
         var edge = _kit.Tokens.Space("screenEdge");
         _minimapSlot.Position = new Vector2(edge, edge);
-        _speed.Position = new Vector2(edge, view.Y - 36 - _speed.Size.Y);
-        _timeCard.Position = new Vector2(view.X - edge - _timeCard.Size.X, view.Y - 36 - _timeCard.Size.Y);
-        _timeStrip.Position = new Vector2(view.X - edge - _timeStrip.Size.X, view.Y - 36 - _timeStrip.Size.Y);
-        _weather.Position = new Vector2(_timeCard.Position.X - 12 - _weather.Size.X, view.Y - 36 - _weather.Size.Y);
-        _topRight.Position = new Vector2(view.X - edge - _topRight.Size.X, edge);
+        if (_resident is not { } r) return;
+        r.Speed.Position = new Vector2(edge, view.Y - 36 - r.Speed.Size.Y);
+        r.Time.Position = new Vector2(view.X - edge - r.Time.Size.X, view.Y - 36 - r.Time.Size.Y);
+        r.Strip.Position = new Vector2(view.X - edge - r.Strip.Size.X, view.Y - 36 - r.Strip.Size.Y);
+        r.Weather.Position = new Vector2(r.Time.Position.X - 12 - r.Weather.Size.X, view.Y - 36 - r.Weather.Size.Y);
+        r.TopRight.Position = new Vector2(view.X - edge - r.TopRight.Size.X, edge);
     }
 
-    private void BuildTopRight()
+    // ---------------- 四角的常驻件：进入漫游时建，回到开始页时释放（开始页上它们本来就不显示，不该占实例参数槽） ----------------
+    private sealed record Resident(SpeedBar Speed, WeatherStrip Weather, TimeCard Time, TimeStrip Strip, Control TopRight);
+
+    private void BuildResident()
+    {
+        if (_resident is not null) return;
+        var speed = SpeedBar.Create(_kit, _corners, _model);
+        speed.ModePicked += mode => _ = SetMode(mode);
+        var weather = WeatherStrip.Create(_kit, _corners, _model, _control);
+        weather.Toast += text => _toast.Show(text, "weather_auto");
+        var time = TimeCard.Create(_kit, _corners, _model, _control, Services.Get<IPaletteProbe>(), ResetName);
+        time.Toast += text => _toast.Show(text);
+        var strip = TimeStrip.Create(_kit, _corners, _model);
+        strip.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ToggleTime(true); };
+        _resident = new Resident(speed, weather, time, strip, BuildTopRight());
+        Layout();
+    }
+
+    private void ReleaseResident()
+    {
+        if (_resident is null) return;
+        foreach (var child in _corners.GetChildren()) child.QueueFree();
+        _resident = null;
+        _weatherHeld = false;
+    }
+
+    private Control BuildTopRight()
     {
         var size = _kit.Tokens.Size("hudIconButton");
-        _topRight = new Control { Size = new Vector2(size * 3 + 16, size), MouseFilter = Control.MouseFilterEnum.Ignore };
-        _corners.AddChild(_topRight);
+        var topRight = new Control { Size = new Vector2(size * 3 + 16, size), MouseFilter = Control.MouseFilterEnum.Ignore };
+        _corners.AddChild(topRight);
         (string Icon, string Tip, Action Act)[] buttons =
         [
             ("save", "hud.button.saves", () => OpenSaves(fromTitle: false)),
@@ -200,12 +255,13 @@ public partial class HudRoot : CanvasLayer
         for (var i = 0; i < buttons.Length; i++)
         {
             var (icon, tip, act) = buttons[i];
-            var b = _kit.Button(_topRight, ButtonStyle.Icon, "", new Rect2(i * (size + 8), 0, size, size), padX: 8, icon: icon, iconMax: 24, pin: true, padY: 8,
+            var b = _kit.Button(topRight, ButtonStyle.Icon, "", new Rect2(i * (size + 8), 0, size, size), padX: 8, icon: icon, iconMax: 24, pin: true, padY: 8,
                 pressed: act);
             b.TooltipText = UiKit.T(tip);
             b.BaseFill = "surface.panel";
             b.Refresh();
         }
+        return topRight;
     }
 
     // ---------------- 状态 ----------------
@@ -220,17 +276,21 @@ public partial class HudRoot : CanvasLayer
         switch (state)
         {
             case AppState.Title:
+                ReleaseResident();
                 if (!_title.Visible) _title.Open();
                 _corners.Visible = _minimapSlot.Visible = false;
                 break;
             case AppState.Playing:
-                _title.Visible = _galleryTitle;
+                BuildResident();
+                if (!_galleryTitle) _title.Close();
                 break;
-            case AppState.Boot:
             case AppState.Entering:
             case AppState.Leaving:
+                BuildResident();   // 进出都在雾幕下，建在这里不露出建页那一帧
+                goto case AppState.Quitting;
+            case AppState.Boot:
             case AppState.Quitting:
-                _title.Visible = false;
+                _title.Close();
                 if (_settingsCard.Visible) CloseSettings();
                 if (_savePage.Visible) CloseSaves();
                 break;
@@ -242,14 +302,14 @@ public partial class HudRoot : CanvasLayer
 
     private void SyncCorners()
     {
-        if (!Playing) { _corners.Visible = false; _minimapSlot.Visible = false; return; }
+        if (!Playing || _resident is not { } r) { _corners.Visible = false; _minimapSlot.Visible = false; return; }
         var ui = InterfaceState && !_clean;
         _minimapSlot.Visible = !_clean && !BigPage;
         _corners.Visible = ui && !_savePage.Visible;
-        _speed.Visible = !_settingsCard.Visible;
-        _timeCard.Visible = _timeOpen;
-        _weather.Visible = _timeOpen && _model.Allows(WorldControlMask.Weather);
-        _timeStrip.Visible = !_timeOpen;
+        r.Speed.Visible = !_settingsCard.Visible;
+        r.Time.Visible = _timeOpen;
+        r.Weather.Visible = _timeOpen && _model.Allows(WorldControlMask.Weather);
+        r.Strip.Visible = !_timeOpen;
     }
 
     public override void _Process(double delta)
@@ -451,7 +511,7 @@ public partial class HudRoot : CanvasLayer
             // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV §4.10）
             if (!_weatherHeld) return false;
             _weatherHeld = false;
-            if (_weatherHold < 0.6f) _weather.Next();
+            if (_weatherHold < 0.6f) _resident?.Weather.Next();
             return true;
         }
         if (!e.Pressed) return false;
@@ -484,7 +544,7 @@ public partial class HudRoot : CanvasLayer
                 return true;
             case "toggle_flow":
                 if (!_model.Allows(WorldControlMask.Flow)) return false;
-                _control.SetFlow(_model.FlowRate == 0 ? _timeCard.LastFlow : 0);
+                _control.SetFlow(_model.FlowRate == 0 ? _resident?.Time.LastFlow ?? 1 : 0);
                 _model.Poke();
                 _toast.Show(UiKit.T(_model.World.Flow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.Flow.Rate == 0 ? "pause" : null);
                 return true;

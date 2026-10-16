@@ -45,11 +45,14 @@ public partial class SavePage : Control
         if (_cards.Count > 0) _cards[_selected].Hit.GrabFocus();
     }
 
+    /// <summary>关页即释放内容（隐藏的件照样占实例参数槽，<see cref="UiKit.Holders"/>），下次打开照常重建。</summary>
     public void Close()
     {
         Visible = false;
         _lock?.Dispose();
         _lock = null;
+        foreach (var child in GetChildren()) child.QueueFree();
+        _cards.Clear();
     }
 
     private static IDisposable? TryLock()

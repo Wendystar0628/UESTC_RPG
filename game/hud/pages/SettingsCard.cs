@@ -14,7 +14,8 @@ public enum SettingsPage : byte { Keys, General, Graphics, Sound, Rebind, Licens
 /// <summary>
 /// 设置卡（UI-VISUAL §8.5、UI-NAV §4.6、SYS-GRAPHICS §9）：贴左的大页，620×1016，切角 14，随主题；不压暗，右侧 2/3 留给实景。
 /// 页：键位、设置、画面（按 KnobSpec 生成，只经 IQualityService）、声音（只经 IAudioService）、改键、许可；底部"返回标题""退出"。
-/// 打开期间经 ICameraRig.LockInput(Menu) 占用观者输入；在开场雾幕或扉页之后预建并隐藏。
+/// 打开期间经 ICameraRig.LockInput(Menu) 占用观者输入。内容在打开时才建、关上就释放：引擎只在释放节点时归还
+/// 实例参数槽（<see cref="UiKit.Holders"/>），隐藏的大页不该和 3D 流式实例抢同一个池；画面页没应用的改动跨开关保留。
 /// </summary>
 public partial class SettingsCard : Control
 {
@@ -31,6 +32,7 @@ public partial class SettingsCard : Control
     ];
 
     private readonly Dictionary<SettingsPage, Control> _pages = [];
+    private readonly HashSet<SettingsPage> _filled = [];
     private readonly List<TechButton> _tabs = [];
     private readonly Dictionary<QualityKnob, float> _pending = [];
     private UiKit _kit = null!;
@@ -38,13 +40,15 @@ public partial class SettingsCard : Control
     private HudSettings _settings = null!;
     private Panel _tabBar = null!;
     private ScrollContainer _scroll = null!;
-    private Label _applyStatus = null!;
-    private TechButton _apply = null!, _toTitle = null!;
+    private Label? _applyStatus;
+    private TechButton? _apply;
+    private TechButton _toTitle = null!;
     private Segmented? _preset;
     private IDisposable? _lock;
     private SettingsPage _page = SettingsPage.Graphics;
     private string? _rebindAction;
     private IDisposable? _rebindLock;
+    private bool _built;
 
     public event Action? CloseRequested;
     public event Action? QuitRequested;
@@ -65,7 +69,6 @@ public partial class SettingsCard : Control
             Visible = false,
         };
         parent.AddChild(card);
-        card.Build();
         return card;
     }
 
@@ -73,6 +76,7 @@ public partial class SettingsCard : Control
 
     private void Build()
     {
+        _built = true;
         var k = _kit;
         var chamfer = k.Tokens.Chamfer("page");
         var frost = k.Materials.Frost is { } frostMaterial && _settings.Frost && !_settings.ReduceTransparency;
@@ -125,20 +129,10 @@ public partial class SettingsCard : Control
         _scroll.AddChild(stack);
         foreach (var page in Order)
         {
+            // 各页的内容在第一次切到它时才填（Fill），开卡只付当前这一页的代价
             var content = new Control { CustomMinimumSize = new Vector2(width + 8, 0), MouseFilter = MouseFilterEnum.Pass, Visible = false };
             stack.AddChild(content);
             _pages[page] = content;
-            var height = page switch
-            {
-                SettingsPage.Keys => BuildKeys(content, width),
-                SettingsPage.General => BuildGeneral(content, width),
-                SettingsPage.Graphics => BuildGraphics(content, width),
-                SettingsPage.Sound => BuildSound(content, width),
-                SettingsPage.Rebind => BuildRebind(content, width),
-                SettingsPage.Licenses => BuildLicenses(content, width),
-                _ => throw new InvalidOperationException("Unknown settings page."),
-            };
-            content.CustomMinimumSize = new Vector2(width + 8, height);
         }
 
         var footY = Size.Y - 64;
@@ -160,6 +154,7 @@ public partial class SettingsCard : Control
 
     public void Open(SettingsPage page, bool fromTitle)
     {
+        if (!_built) Build();
         Show(page);
         _toTitle.Off = fromTitle;
         _toTitle.OffReason = UiKit.T("settings.to_title.off");
@@ -185,6 +180,39 @@ public partial class SettingsCard : Control
         Visible = false;
         _lock?.Dispose();
         _lock = null;
+        Release();
+    }
+
+    /// <summary>释放全部内容（排队到帧末，删在本帧绘制之前）；下次打开重建。</summary>
+    private void Release()
+    {
+        foreach (var child in GetChildren()) child.QueueFree();
+        _pages.Clear();
+        _filled.Clear();
+        _tabs.Clear();
+        _rebindRows.Clear();
+        _preset = null;
+        _applyStatus = null;
+        _apply = null;
+        _built = false;
+    }
+
+    private void Fill(SettingsPage page)
+    {
+        if (!_filled.Add(page)) return;
+        var content = _pages[page];
+        var width = Size.X - 48;
+        var height = page switch
+        {
+            SettingsPage.Keys => BuildKeys(content, width),
+            SettingsPage.General => BuildGeneral(content, width),
+            SettingsPage.Graphics => BuildGraphics(content, width),
+            SettingsPage.Sound => BuildSound(content, width),
+            SettingsPage.Rebind => BuildRebind(content, width),
+            SettingsPage.Licenses => BuildLicenses(content, width),
+            _ => throw new InvalidOperationException("Unknown settings page."),
+        };
+        content.CustomMinimumSize = new Vector2(width + 8, height);
     }
 
     private static IDisposable? TryLock(InputLockReason reason)
@@ -196,6 +224,7 @@ public partial class SettingsCard : Control
     private void Show(SettingsPage page)
     {
         _page = page;
+        Fill(page);
         foreach (var (p, content) in _pages) content.Visible = p == page;
         for (var i = 0; i < _tabs.Count; i++) _tabs[i].Selected = Order[i] == page;
         var tab = _tabs[Array.IndexOf(Order, page)];
@@ -321,7 +350,7 @@ public partial class SettingsCard : Control
         }
         clear.Pressed += () => { try { Svc<IBakeService>().Clear(); } catch (InvalidOperationException) { } SyncStorage(); };
         SyncStorage();
-        VisibilityChanged += SyncStorage;
+        page.VisibilityChanged += SyncStorage;
         y += 40;
         Row(page, y, UiKit.T("settings.save"));
         var save = _kit.Text(page, "", "data", "text.2", new Vector2(ControlX, y + 11));
@@ -342,7 +371,7 @@ public partial class SettingsCard : Control
             catch (InvalidOperationException) { save.Text = "—"; }
         }
         SyncSave();
-        VisibilityChanged += SyncSave;
+        page.VisibilityChanged += SyncSave;
         return y + 56;
     }
 
@@ -355,7 +384,7 @@ public partial class SettingsCard : Control
         float y = 8;
         _preset = Segmented.Create(_kit, page, new Vector2(8, y), [112, 112, 114, 112, 122],
             [UiKit.T("quality.preset.smooth"), UiKit.T("quality.preset.balanced"), UiKit.T("quality.preset.fine"), UiKit.T("quality.preset.ultra"), UiKit.T("quality.preset.custom")],
-            false, selected: (int)quality.Requested.Preset);
+            false, selected: (int)(_planned?.Preset ?? quality.Requested.Preset));
         _preset.Changed += i =>
         {
             if ((QualityPreset)i == QualityPreset.Custom) return;
@@ -375,7 +404,7 @@ public partial class SettingsCard : Control
             {
                 if (!specs.TryGetValue(knob, out var spec)) continue;
                 Row(page, y, UiKit.T(spec.LabelKey));
-                KnobControl(page, new Vector2(ControlX, y + 2), spec, quality.Effective.Requested(knob));
+                KnobControl(page, new Vector2(ControlX, y + 2), spec, _pending.TryGetValue(knob, out var pending) ? pending : quality.Effective.Requested(knob));
                 if (spec.Apply is ApplyClass.UnderVeil or ApplyClass.Restart)
                     Parts.Tag(_kit, page, new Vector2(width - 48, y + 8), UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.veil"), spec.Apply == ApplyClass.UnderVeil);
                 y += 40;
@@ -389,6 +418,7 @@ public partial class SettingsCard : Control
             pressed: () => _ = ApplyPending());
         _apply.OffReason = UiKit.T("quality.apply.nothing");
         _apply.Off = true;
+        if (_planned is { } planned) ShowPlan(quality.Plan(planned));   // 上次关卡时没应用的改动
         return y + 60;
     }
 
@@ -440,15 +470,20 @@ public partial class SettingsCard : Control
 
     private void Plan(QualityProfile next)
     {
-        var quality = Svc<IQualityService>();
-        var plan = quality.Plan(next);
+        var plan = Svc<IQualityService>().Plan(next);
         _planned = next;
+        ShowPlan(plan);
+        if (plan.Heaviest is not (ApplyClass.UnderVeil or ApplyClass.Restart) && plan.Rejected.Count == 0) _ = ApplyPending();
+    }
+
+    private void ShowPlan(ApplyPlan plan)
+    {
+        if (_applyStatus is null || _apply is null) return;
         var veil = plan.Heaviest == ApplyClass.UnderVeil;
         var restart = plan.Heaviest == ApplyClass.Restart;
         _applyStatus.Text = plan.Deltas.Count == 0 && _pending.Count == 0 ? ""
             : UiKit.T(restart ? "quality.pending.restart" : veil ? "quality.pending.veil" : "quality.pending.now", ("n", $"{Math.Max(plan.Deltas.Count, _pending.Count)}"));
         _apply.Off = plan.Rejected.Count > 0;
-        if (!veil && !restart && plan.Rejected.Count == 0) _ = ApplyPending();
     }
 
     private async Task ApplyPending()
@@ -457,6 +492,7 @@ public partial class SettingsCard : Control
         var result = await Svc<IQualityService>().Apply(next, ApplyOrigin.User);
         _pending.Clear();
         _planned = null;
+        if (_applyStatus is null || _apply is null) return;   // 等应用的这段时间里卡已经关了，或画面页还没填
         _applyStatus.Text = result.Status switch
         {
             ApplyStatus.Applied => result.RestartPending ? UiKit.T("quality.result.restart") : "",
