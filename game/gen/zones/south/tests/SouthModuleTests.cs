@@ -286,6 +286,36 @@ public sealed class SouthModuleTests
             "the east lake's water ring comes from its own part in both views");
     }
 
+    [TestCase]
+    public void WindowTablePublishesWithTheSouthDeclarations()
+    {
+        // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map with the zone's
+        // real declarations, then the zone describes its windows from the published snapshot. The map loads as above.
+        var data = DataRoot();
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Select(p => "overlay/" + Path.GetFileName(p)))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
+        var module = new SouthModule();
+        var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
+        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
+        {
+            WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-18") : null;
+            var prepass = new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+            var layouts = module.DescribeWindowLayouts(view, 1);
+            var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
+            var south = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
+            Require(south.Length == layouts.Sum(l => l.Grids.Count) && south.All(a => a.Columns > 0 && a.Rows > 0),
+                $"{name}: every south grid is allocated with cells ({south.Length} of {layouts.Sum(l => l.Grids.Count)})");
+            Require(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity, $"{name}: the table fits ({snapshot.WindowCount})");
+            var metadata = module.DescribeWindows(new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+            var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
+                .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
+            Require(ids.Length > 0 && ids.All(id => south.Any(a => id >= a.BaseId && id < a.BaseId + a.Count)), $"{name}: the zone's windows lie in its own blocks");
+        }
+    }
+
     /// <summary>The loaded world with every multi-source entity's Geometry replaced by its parts' bounding rectangle.</summary>
     private sealed class EnvelopeWorld(IWorldModel inner) : IWorldModel
     {
