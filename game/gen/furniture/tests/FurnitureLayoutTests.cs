@@ -346,7 +346,7 @@ public sealed class FurnitureLayoutTests
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" });
         var square = new WorldFeature(new("design:furniture-test-square"), FeatureSource.Design, new("road"), new PolygonGeometry(new PolygonRings(ring, []))) { Props = props };
-        var world = new WalkWorld(open, null, square);
+        IWorldModel world = new TreedWorld(new WalkWorld(open, null, square), SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"square at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
@@ -641,7 +641,7 @@ public sealed class FurnitureLayoutTests
         { Props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" }) };
         var walkProps = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
-        var world = new MadeWorld(open, [walk], [square]);
+        IWorldModel world = new TreedWorld(new MadeWorld(open, [walk], [square]), SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"square with a walk through it at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
@@ -1207,6 +1207,32 @@ public sealed class FurnitureLayoutTests
             foreach (var f in features) all[f.Id] = f;
             return all;
         }
+    }
+
+    /// <summary>Trees 1.5 m outside the made-up 12 × 10 m square's edges (a plaza bench's back stands against planting, Opus review 13c2c).</summary>
+    private static IReadOnlyList<NetworkTree> SquareTrees(Vector2 spot)
+    {
+        var list = new List<NetworkTree>();
+        var n = 0;
+        for (var x = -6f; x <= 6.01f; x += 3f)
+            foreach (var z in new[] { -6.5f, 6.5f }) list.Add(new NetworkTree(new($"design:furniture-test-tree-{n++}"), new Vector3(spot.X + x, 0f, spot.Y + z)));
+        for (var z = -3f; z <= 3.01f; z += 3f)
+            foreach (var x in new[] { -7.5f, 7.5f }) list.Add(new NetworkTree(new($"design:furniture-test-tree-{n++}"), new Vector3(spot.X + x, 0f, spot.Y + z)));
+        return list;
+    }
+
+    /// <summary>The world with made-up trees added to its network.</summary>
+    private sealed class TreedWorld(IWorldModel inner, IReadOnlyList<NetworkTree> trees) : IWorldModel
+    {
+        private readonly WorldNetwork _network = inner.Network with { Trees = [.. inner.Network.Trees, .. trees] };
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
+        public WorldNetwork Network => _network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
     }
 
     private sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel

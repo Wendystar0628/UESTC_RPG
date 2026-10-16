@@ -115,6 +115,16 @@ internal sealed class StreetSite
             }
     }
 
+    /// <summary>True when a tree stands, or a registered tree row runs, within <paramref name="reach"/> of <paramref name="p"/> (planting to back a bench onto).</summary>
+    public bool PlantingNear(Vector2 p, float reach)
+    {
+        foreach (var tree in Near(_trees, p))
+            if (Vector2.Distance(p, tree) <= reach) return true;
+        foreach (var (line, offset) in Near(_rows, p))
+            if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) <= reach) return true;
+        return false;
+    }
+
     /// <summary>True when a disc keeps <see cref="FurnitureStyle.RowClear"/> off every registered tree row.</summary>
     public bool OffRows(Vector2 p, float radius)
     {

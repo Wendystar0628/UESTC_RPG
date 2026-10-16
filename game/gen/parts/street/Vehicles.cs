@@ -64,7 +64,7 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
 {
     public ParkedBicyclePart() => Lods = Levels.Of<VehicleParams>(Build, LodLevel.L0, LodLevel.L1);
     public IReadOnlyDictionary<LodLevel, Func<VehicleParams, PartGeometry>> Lods { get; }
-    public PartBudget Budget { get; } = new(640, 130);
+    public PartBudget Budget { get; } = new(960, 130);
 
     public Box3 Bounds(VehicleParams p)
     {
@@ -103,14 +103,14 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
             var at = Xf.XUp.Then(Xf.Move(0, axle.Y, axle.X));
             if (near)
             {
-                var ring = new Vector2[10];
+                var ring = new Vector2[WheelRingSegments];
                 for (var i = 0; i < ring.Length; i++)
                 {
                     var a = 2.0 * Math.PI * i / ring.Length;
                     ring[i] = new((float)((r - t) * DetMath.Cos(a)), (float)((r - t) * DetMath.Sin(a)));
                 }
                 b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(2 * t, 2 * t, 0), ring, S.Pole(S.Tyre), closed: true, baseY: -t), at);
-                b.AddLathe(Shapes.Creased(new(0, -0.012f), new(r - 2 * t + 0.004f, -0.012f), new(r - 2 * t + 0.004f, 0.012f), new(0, 0.012f)), 10, S.Pole(S.GreyMetal), at);
+                b.AddLathe(Shapes.Creased(new(0, -0.012f), new(r - 2 * t + 0.004f, -0.012f), new(r - 2 * t + 0.004f, 0.012f), new(0, 0.012f)), WheelRingSegments, S.Pole(S.GreyMetal), at);
             }
             else b.AddLathe(Shapes.Creased(new(0, -0.025f), new(r, -0.025f), new(r, 0.025f), new(0, 0.025f)), 6, S.Pole(S.Tyre), at);
         }
@@ -165,6 +165,9 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
 
     /// <summary>Side-view points (z, y) of the frame for a bike of these sizes: axles, bottom bracket, seat, head tube, bar.</summary>
     private readonly record struct BikeFrame(Vector2 Front, Vector2 Rear, Vector2 Crank, Vector2 SeatTop, Vector2 Saddle, Vector2 HeadLow, Vector2 HeadTop, Vector2 Bar);
+
+    /// <summary>L0 tyre ring and hub disc segments (Opus review 13c2c: a round wheel up close); L1 and below keep their own.</summary>
+    private const int WheelRingSegments = 24;
 
     private static BikeFrame Frame(VehicleParams p)
     {

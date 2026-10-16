@@ -694,17 +694,21 @@ public static partial class FurniturePlanner
             // On the plaza first, its back to the plaza's outer edge, facing in (Opus review 17:28, 13c2b rework): the plaza's edges
             // within NodePlazaReach, nearest first.
             var plaza = site.PavingEdgesNear(node.At, S.NodePlazaReach, S.NodeStep).Where(e => e.Road is null).ToList();
-            foreach (var edge in plaza)
+            foreach (var tier in new[] { 0, 1, 2 })
             {
-                if (placed.Count >= S.NodeBenches) break;
-                var (fit, reason) = PlazaSlot(site, edge.Edge, edge.Inward, S.Bench);
-                if (fit is not { } bench)
+                foreach (var edge in plaza)
                 {
-                    why["on the plaza: " + reason!] = why.GetValueOrDefault("on the plaza: " + reason!) + 1;
-                    continue;
+                    if (placed.Count >= S.NodeBenches) break;
+                    if (tier > 0 && placed.Count > 0) break;
+                    var (fit, reason) = PlazaSlot(site, edge.Edge, edge.Inward, S.Bench, tier);
+                    if (fit is not { } bench)
+                    {
+                        why["on the plaza: " + reason!] = why.GetValueOrDefault("on the plaza: " + reason!) + 1;
+                        continue;
+                    }
+                    if (placed.Any(q => Vector2.Distance(q, bench.Centre) < S.NodeBenchGap)) continue;
+                    Seat(bench);
                 }
-                if (placed.Any(q => Vector2.Distance(q, bench.Centre) < S.NodeBenchGap)) continue;
-                Seat(bench);
             }
             // Then at the edge of a walk 4 m or wider, its back to the edge (13c2b 21:05); else off the paving, facing it (13c1).
             var candidates = site.PavingEdgesNear(node.At, S.NodeReach, S.NodeStep);
@@ -872,13 +876,25 @@ public static partial class FurniturePlanner
     }
 
     /// <summary>
+    /// Behind a plaza bench's back (Opus review 13c2c): open ground, not paving, road, water or a building within the wall clearance,
+    /// that is lawn or planting (the ground the plaza's outer edge meets), checked 1 m and <see cref="FurnitureStyle.PlazaBackPlanting"/> m out;
+    /// or a tree or tree row right there.
+    /// </summary>
+    private static bool BackedOnGreen(StreetSite site, Vector2 back, Vector2 inward)
+    {
+        if (site.PlantingNear(back, S.PlazaBackPlanting)) return true;
+        var out1 = back - inward * 1f;
+        return !site.OnPavedGround(out1) && site.Blocker(out1, 0.2f, outlineClear: S.PlazaWallClear) is null;
+    }
+
+    /// <summary>
     /// A bench standing on a plaza's paving (Opus review 17:28), the way a kiosk does: its back <see cref="FurnitureStyle.PlazaBenchClear"/>
     /// inside the paving edge at <paramref name="edge"/> and parallel to it, facing into the paving (<paramref name="inward"/>). Its footprint
     /// and its sitters' feet are wholly on paving and off every walk's strip (benches leave the walk to walkers), and the walk benches'
     /// rules hold: free of outlines, trees, rows and placed things, <see cref="FurnitureStyle.RoadSetback"/> off carriageways, no carriageway
     /// <see cref="FurnitureStyle.FaceClear"/> ahead. It stands on the paving, a plinth only where the paving is steeper than 5%.
     /// </summary>
-    private static (WalkFit? Fit, string? Reason) PlazaSlot(StreetSite site, Vector2 edge, Vector2 inward, FurnitureParams p)
+    private static (WalkFit? Fit, string? Reason) PlazaSlot(StreetSite site, Vector2 edge, Vector2 inward, FurnitureParams p, int tier = 0)
     {
         var centre = edge + inward * (S.PlazaBenchClear + p.Depth * 0.5f);
         var tangent = new Vector2(inward.Y, -inward.X);
@@ -893,6 +909,12 @@ public static partial class FurniturePlanner
         for (var u = -1; u <= 1; u++)
             for (var v = -1; v <= 1; v++)
                 if (!site.OnPlaza(feet + tangent * (u * p.Width * 0.5f) + inward * (v * (p.Depth + S.FeetReach) * 0.5f))) return (null, "on a walk, not a plaza");
+        // Backed onto planting, never onto bare paving or a wall (Opus review 13c2c): a tree or tree row behind either end or the middle.
+        var behind = -inward * (p.Depth * 0.5f + S.PlazaBenchClear);
+        // Tier 0: backed on lawn or planting. Tier 1 (no such edge): beside a tree, a tree or row within PlazaBesideTree. Tier 2 (no tree
+        // either): any plaza edge, which is still 1.5 m off every wall. The bench never backs onto a building.
+        if (tier == 0 && !new[] { ends.Item1, centre, ends.Item2 }.All(q => BackedOnGreen(site, q + behind, inward))) return (null, "no planting or lawn behind its back");
+        if (tier == 1 && !site.PlantingNear(centre, S.PlazaBesideTree)) return (null, "no tree beside it");
         if (site.NearWalkLine([ends.Item1, centre, ends.Item2], ends.Item3 + S.PlazaWalkLineClear)) return (null, "across a walk line");
         if (site.Blocker(ends.Item1, ends.Item2, ends.Item3, outlineClear: S.PlazaWallClear, walksPass: true) is { } blocker) return (null, $"blocked by {blocker}");
         // At least PlazaPass of free paving ahead of the sitters' feet: people pass in front.

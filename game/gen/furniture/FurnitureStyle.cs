@@ -218,12 +218,19 @@ public static class FurnitureStyle
     /// A plaza node bench (Opus review 13c2b rework): on the plaza's paving, back to its outer edge, facing in, with at least
     /// <see cref="PlazaPass"/> of free paving in front of its sitters' feet; a walk line the plaza carries does not count against it
     /// (the bench only keeps <see cref="PlazaWalkLineClear"/> off the line itself, so it never sits across a way). Its back may stand
-    /// <see cref="PlazaWallClear"/> off a building wall that is the plaza's edge. The plaza's edges are searched within
+    /// <see cref="PlazaWallClear"/> (at least 1.5 m) off any building wall. The plaza's edges are searched within
     /// <see cref="NodePlazaReach"/> of the node, nearest first; narrower walks (under <see cref="NodeWalkMin"/>) still take none.
     /// </summary>
     public const float PlazaPass = 2.5f;
     public const float PlazaWalkLineClear = 0.3f;
-    public const float PlazaWallClear = 0.3f;
+    public const float PlazaWallClear = 1.5f;
+    /// <summary>
+    /// A plaza bench's back stands against planting (Opus review 13c2c): a tree or a registered tree row within this far behind its back
+    /// at one of its two ends or its middle. A plaza edge with none takes no bench, so a bench never backs onto bare paving or a wall.
+    /// </summary>
+    public const float PlazaBackPlanting = 4f;
+    /// <summary>A plaza with no edge backed by planting takes one bench beside a tree: a tree or row within this far of the bench's middle.</summary>
+    public const float PlazaBesideTree = 7f;
     public const float NodePlazaReach = 40f;
     /// <summary>A plaza bench is not set against a bank: the ground this far round it rises at most this much above its paving.</summary>
     public const float PlazaBankReach = 0.6f;
