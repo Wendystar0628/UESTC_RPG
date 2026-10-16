@@ -83,7 +83,7 @@ public sealed class LibraryShellTests
         var allocation = numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey);
         foreach (var lod in Levels)
         {
-            var build = new CoreBuild(palette) { WindowNumbering = numbering };
+            var build = new CoreBuild(palette) { WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
             shell.Build(build, lod);
             var output = build.Finish(lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
@@ -140,7 +140,7 @@ public sealed class LibraryShellTests
         var allocation = numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey);
         Require(allocation.BaseId == 707, "a generic block in front moves the library base");
         var module = new CoreModule();
-        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering };
+        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var output = module.Build(ctx, CoreTiles.Of(shell.Anchor, LodLevel.L0), LodLevel.L0);
         var glassIds = new SortedSet<int>();
         foreach (var g in output.Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
@@ -164,7 +164,7 @@ public sealed class LibraryShellTests
     {
         var world = RealWorld();
         var shell = Shell(world);
-        var build = new CoreBuild(null);
+        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var glass = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear).ToArray();
         Require(glass.Length > 0 && glass.All(g => g.Uv is null && g.Uv2 is null), "no base is invented without a snapshot");

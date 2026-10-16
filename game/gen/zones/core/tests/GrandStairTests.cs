@@ -45,7 +45,7 @@ public sealed class GrandStairTests
     {
         var world = RealWorld();
         var (stair, shell) = Pieces(world);
-        var build = new CoreBuild(null);
+        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
         stair.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
         var door = output.Parts.Single(p => p.Part.Value == PartCatalog.DoorGlass);
@@ -57,7 +57,7 @@ public sealed class GrandStairTests
         Require(output.Emitters is null or { Count: 0 }, "no lamp marker of the zone's own");
         // No glass in the door bay below the door transom: the doorway is open.
         var bay = shell.EntranceDoor!.Value;
-        var lib = new CoreBuild(null);
+        var lib = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
         shell.Build(lib, LodLevel.L0);
         var across = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, bay.Outward));
         foreach (var g in lib.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Parts;
 
 namespace Campus.Gen.Zones.Core.Framework;
 
@@ -48,16 +49,30 @@ public sealed class CoreBuild(PaletteRegistry? palette)
     public WindowNumberingSnapshot? WindowNumbering { get; init; }
 
     /// <summary>
+    /// The map's part LOD capabilities (BuildContext.PartLods). Null only where no part is placed: <see cref="Finish"/> cannot
+    /// tell which levels a part builds without it, and does not assume.
+    /// </summary>
+    public PartLodCatalog? PartLods { get; init; }
+
+    /// <summary>
     /// The tile's output at <paramref name="lod"/>. Placed parts the baker cannot build at that level are left out (small street
     /// furniture such as the bench registers L0 and L1 only), so a piece may place its dressing without checking each part.
+    /// A placed part the catalog does not know, or any placed part with no catalog, is an error, not a part to pass through.
     /// </summary>
     public ContentOutput Finish(LodLevel lod)
     {
         var meshes = Mesh.Finish();
         if (Bundles.Count > 0) meshes = [.. meshes, .. Bundles];
-        var parts = Parts.Where(p => PartLods.Supports(p.Part, lod)).ToArray();
+        var parts = BuildableAt(lod);
         if (meshes.Count == 0 && parts.Length == 0 && Emitters.Count == 0) return ContentOutput.Empty;
         return new ContentOutput(meshes, parts, Emitters.Count == 0 ? null : Emitters.ToArray());
+    }
+
+    private PlacedPart[] BuildableAt(LodLevel lod)
+    {
+        if (Parts.Count == 0) return [];
+        var catalog = PartLods ?? throw new InvalidOperationException("Placed parts need BuildContext.PartLods to know which levels the baker can build.");
+        return Parts.Where(p => catalog.Supports(p.Part, lod)).ToArray();
     }
 }
 

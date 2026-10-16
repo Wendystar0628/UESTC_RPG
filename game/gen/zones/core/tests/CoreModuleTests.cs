@@ -108,11 +108,12 @@ public sealed class CoreModuleTests
         var world = RealWorld();
         var module = new CoreModule();
         var ctx = Context(world, Palette());
-        // The oracle is the part definitions themselves, not the zone's own table.
+        // The oracle is the part definitions themselves; the context carries the catalogue captured from them (contract-36).
         var bench = new Campus.Gen.Parts.Street.BenchPart().Lods.Keys.ToArray();
         Require(bench.SequenceEqual([LodLevel.L0, LodLevel.L1]), "the bench builds at L0 and L1 only");
-        Require(PartLods.Of(new PartId(PartCatalog.Bench))!.SetEquals(bench), "the zone's table reads the bench's levels");
-        Require(PartLods.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2), "the street lamp builds at L2");
+        var catalog = ctx.PartLods ?? throw new InvalidOperationException("the fixture context carries the part catalogue");
+        Require(catalog.SupportedLods(new PartId(PartCatalog.Bench)).SequenceEqual(bench), "the catalogue reads the bench's levels");
+        Require(catalog.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2), "the street lamp builds at L2");
 
         var plaza = CoreSite.Pieces(world)[0];
         var near = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
@@ -123,12 +124,24 @@ public sealed class CoreModuleTests
             foreach (var tile in CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
                 foreach (var part in module.Build(ctx, tile, lod).Parts)
                 {
-                    var levels = PartLods.Of(part.Part) ?? throw new InvalidOperationException($"{part.Part.Value} is not a registered part.");
-                    Require(levels.Contains(lod), $"{lod} {tile}: {part.Part.Value} has no {lod} builder");
+                    Require(catalog.Supports(part.Part, lod), $"{lod} {tile}: {part.Part.Value} has no {lod} builder");
                     Require(part.Part.Value != PartCatalog.Bench, $"{lod} {tile}: no bench");
                 }
         var far = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L2), LodLevel.L2);
         Require(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps, "the rim lamps (L0 to L2) stay at L2");
+    }
+
+    [TestCase]
+    public void PlacedPartsAreCheckedAgainstTheContextCatalogueOnly()
+    {
+        // contract-36: a missing catalogue is "not supplied" and an unknown part is an error; neither passes the part through.
+        var world = RealWorld();
+        var plaza = CoreSite.Pieces(world)[0];
+        var tile = CoreTiles.Of(plaza.Anchor, LodLevel.L0);
+        var bare = new BuildContext { World = world, Map = null!, WorldSeed = 1u };
+        Require(Raises<InvalidOperationException>(() => new CoreModule().Build(bare, tile, LodLevel.L0)), "placed parts without BuildContext.PartLods are refused");
+        var empty = new BuildContext { World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
+        Require(Raises<KeyNotFoundException>(() => new CoreModule().Build(empty, tile, LodLevel.L0)), "a part the catalogue does not know is refused");
     }
 
     [TestCase]
@@ -309,12 +322,20 @@ public sealed class CoreModuleTests
         if (!condition) throw new InvalidOperationException("Expected: " + what);
     }
 
+    private static bool Raises<TException>(Action action) where TException : Exception
+    {
+        try { action(); }
+        catch (TException) { return true; }
+        return false;
+    }
+
     private static BuildContext Context(IWorldModel world, PaletteRegistry? palette = null) => new()
     {
         World = world,
         Map = null!,
         WorldSeed = 1u,
         Palette = palette,
+        PartLods = PartLodFixture.Catalog,
     };
 
     private static IWorldModel RealWorld()
