@@ -12,10 +12,13 @@ public sealed class RoofPartsTests
 {
     private static readonly Assembly Roof = typeof(RoofGallery).Assembly;
 
+    /// <summary>Roof and facade parts only; the interior equipment in the Mep namespace has its own suite.</summary>
+    private static IEnumerable<Type> RoofParts() => Roof.GetTypes().Where(t => t.Namespace == typeof(RoofGallery).Namespace && t.GetCustomAttribute<PartAttribute>() is not null);
+
     [TestCase]
     public void RegisteredPartsMatchTheirCatalogueEntries()
     {
-        var parts = Roof.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null).ToArray();
+        var parts = RoofParts().ToArray();
         Check(parts.Length == 11, $"Expected 11 roof parts; found {parts.Length}.");
         foreach (var type in parts)
         {
@@ -31,7 +34,7 @@ public sealed class RoofPartsTests
     [TestCase]
     public void CatalogueDefaultsBuildClosedAtEveryLevelWithinBudget()
     {
-        foreach (var type in Roof.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
+        foreach (var type in RoofParts())
         {
             var entry = PartCatalog.Find(new(type.GetCustomAttribute<PartAttribute>()!.Id))!;
             var part = Activator.CreateInstance(type)!;
@@ -59,7 +62,7 @@ public sealed class RoofPartsTests
     [TestCase]
     public void ReviewSamplesAreClosedBoundedAndWithinBudget()
     {
-        var budgets = Roof.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
+        var budgets = RoofParts()
             .ToDictionary(t => t.GetCustomAttribute<PartAttribute>()!.Id, t => (PartBudget)t.GetProperty("Budget")!.GetValue(Activator.CreateInstance(t))!);
         foreach (var sample in RoofGallery.CreateSamples())
             foreach (var level in Enum.GetValues<LodLevel>())
@@ -137,8 +140,10 @@ public sealed class RoofPartsTests
                 if (!entry.TryGetProperty("token", out var token)) continue;
                 tokens.Add(token.GetString()!);
                 if (Path.GetFileName(file) != "WP-12.json") continue;
-                Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251, $"{token.GetString()} lies outside WP-12's ids 248–251.");
+                Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255, $"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.");
                 // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING §5).
+                // Fire red is the small saturated identity colour (WLD-INTERIORS §8.4) and is exempt.
+                if (token.GetString()!.StartsWith("equip.fireRed.", StringComparison.Ordinal)) continue;
                 var albedo = entry.GetProperty("albedo").EnumerateArray().Select(v => v.GetDouble()).ToArray();
                 Check(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05, $"{token.GetString()} has intrinsic chroma above 0.05.");
             }

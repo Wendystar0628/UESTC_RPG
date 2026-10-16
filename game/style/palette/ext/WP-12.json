@@ -4,6 +4,8 @@
     {"token": "equip.fence.lit", "id": 248, "albedo": [0.314464, 0.393515, 0.497084], "materialClass": "metal", "seasonal": false, "role": "lit"},
     {"token": "equip.fence.shade", "id": 249, "albedo": [0.314464, 0.393515, 0.497084], "materialClass": "metal", "seasonal": false, "role": "shade"},
     {"token": "equip.grey.lit", "id": 250, "albedo": [0.688321, 0.741741, 0.790041], "materialClass": "metal", "seasonal": false, "role": "lit"},
-    {"token": "equip.grey.shade", "id": 251, "albedo": [0.688321, 0.741741, 0.790041], "materialClass": "metal", "seasonal": false, "role": "shade"}
+    {"token": "equip.grey.shade", "id": 251, "albedo": [0.688321, 0.741741, 0.790041], "materialClass": "metal", "seasonal": false, "role": "shade"},
+    {"token": "equip.fireRed.lit", "id": 254, "albedo": [0.656184, 0.259853, 0.295443], "materialClass": "metal", "seasonal": false, "role": "lit"},
+    {"token": "equip.fireRed.shade", "id": 255, "albedo": [0.656184, 0.259853, 0.295443], "materialClass": "metal", "seasonal": false, "role": "shade"}
   ]
 }

@@ -157,6 +157,8 @@ internal sealed class PartBuilder
 /// <summary>Vertex flag bits of the VF-A COLOR byte (ENG-PERF §1.5).</summary>
 internal static class VertexFlag
 {
+    /// <summary>Interior surface: shade from palette row 2, lit from row 3 times the light-patch gain (WLD-INTERIORS §8.2).</summary>
+    public const byte Interior = 1;
     public const byte NoShadow = 8;
 }
 
