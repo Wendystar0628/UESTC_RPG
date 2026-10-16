@@ -309,9 +309,17 @@ public static class TerrainOverlayJson
                 break;
             case TerrainCorridorOp c:
                 Reference(c.Road, "road"); Range(c.CrossFall, -0.02, 0.02, "crossFall"); Range(c.Shoulder, 0.5, 1, "shoulder");
+                double firstStation = 0;
+                if (c.Range is { } stationRange)
+                {
+                    Minimum(stationRange.S0, 0, "range.s0"); Finite(stationRange.S1, "range.s1");
+                    if (stationRange.S1 <= stationRange.S0)
+                        throw new ArgumentException("Corridor range must be a nonempty interval with s1 > s0.");
+                    firstStation = stationRange.S0;
+                }
                 ArgumentNullException.ThrowIfNull(c.Anchors);
-                if (c.Anchors.Count < 2 || c.Anchors[0] is null || c.Anchors[0].S != 0)
-                    throw new ArgumentException("Corridor needs at least two anchors, starting at s=0.");
+                if (c.Anchors.Count < 2 || c.Anchors[0] is null || c.Anchors[0].S != firstStation)
+                    throw new ArgumentException("Corridor needs at least two anchors, starting at range.s0 or zero when range is absent.");
                 double previous = -1;
                 foreach (var anchor in c.Anchors)
                 {
@@ -319,13 +327,15 @@ public static class TerrainOverlayJson
                     if (anchor.S <= previous) throw new ArgumentException("Corridor anchor stations must strictly increase.");
                     previous = anchor.S;
                 }
+                if (c.Range is { } authoredRange && c.Anchors[^1].S != authoredRange.S1)
+                    throw new ArgumentException("Corridor last anchor must equal range.s1.");
                 ArgumentNullException.ThrowIfNull(c.Steps);
                 double previousEnd = -1;
                 foreach (var step in c.Steps)
                 {
                     ArgumentNullException.ThrowIfNull(step); Reference(step.Structure, "steps.structure");
                     Minimum(step.S0, 0, "steps.s0"); Finite(step.S1, "steps.s1");
-                    if (step.S1 <= step.S0 || step.S1 > c.Anchors[^1].S || step.S0 < previousEnd)
+                    if (step.S1 <= step.S0 || step.S0 < firstStation || step.S1 > c.Anchors[^1].S || step.S0 < previousEnd)
                         throw new ArgumentException("Step intervals must be ordered, nonoverlapping and inside the authored corridor span.");
                     previousEnd = step.S1;
                 }

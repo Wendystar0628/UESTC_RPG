@@ -130,16 +130,24 @@ public sealed record TerrainLakeOp(string Id, string Reason, FeatureId Water, do
 public sealed record TerrainPadOp(string Id, string Reason, FeatureId Feature, double Grade, double? PadY = null,
     double Apron = 0.8, TerrainPadEdge? Edge = null, int Priority = 50) : TerrainOp(Id, Reason, Priority);
 
-// S is cumulative metres along the resolved ordered road centreline. At least two anchors start at S=0
-// and strictly increase through the actual full line length. The compiler checks that final length and
-// feasibility; smoothing cannot move fixed anchors. Automatic flat defaults use two generated zero-height
-// endpoints. The DTO parser never invents a continuation or accepts a one-point constant profile.
+/// <summary>Absolute metres along the resolved source road in its original point order; never rebased to a clipped fragment.</summary>
+/// <remarks>Requires finite 0 &lt;= S0 &lt; S1. Source-road length, real zone containment and overlap checks belong to WP-08.</remarks>
+public sealed record TerrainStationRange(double S0, double S1);
+
+// S is cumulative metres along the resolved source road's original ordered centreline.
+// With no Range, anchors run from zero through the actual full length as before. With Range,
+// first/last anchors equal S0/S1 and all steps remain inside it. The compiler builds one final profile
+// per source road from all authored intervals and automatic gaps; it never fits independent profiles
+// then splices them. Fixed anchors cannot move. Unknown zone geometry is not verified containment.
 public sealed record TerrainCorridorOp(string Id, string Reason, FeatureId Road, IReadOnlyList<TerrainAnchor> Anchors,
     double CrossFall, double Shoulder, int Priority = 50,
     IReadOnlyList<TerrainCorridorStep> Steps = null!) : TerrainOp(Id, Reason, Priority)
 {
     // The null constructor default represents omission only; an explicit JSON null is rejected before construction.
     public IReadOnlyList<TerrainCorridorStep> Steps { get; init; } = Steps ?? [];
+    /// <summary>Optional explicit authoring interval. Null/omitted preserves the full-source-road contract.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TerrainStationRange? Range { get; init; }
 }
 
 // Along the same ordered centreline, S0 through S1 is handled by the named real stair structure.

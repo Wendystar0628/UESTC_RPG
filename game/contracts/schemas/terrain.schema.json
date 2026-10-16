@@ -1149,27 +1149,7 @@
           "items": {
             "$ref": "#/$defs/anchor"
           },
-          "minItems": 2,
-          "prefixItems": [
-            {
-              "type": "object",
-              "properties": {
-                "s": {
-                  "const": 0
-                },
-                "y": {
-                  "type": "number",
-                  "minimum": -5,
-                  "maximum": 10
-                }
-              },
-              "required": [
-                "s",
-                "y"
-              ],
-              "additionalProperties": false
-            }
-          ]
+          "minItems": 2
         },
         "crossFall": {
           "type": "number",
@@ -1187,6 +1167,16 @@
             "$ref": "#/$defs/corridorStep"
           },
           "default": []
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/stationRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -1200,7 +1190,43 @@
         "shoulder"
       ],
       "additionalProperties": false,
-      "$comment": "Stations strictly increase, beginning at zero and ending at the real ordered centreline length. Compiler validates length and feasibility; fixed anchors cannot be moved by smoothing. Steps are ordered nonoverlapping intervals inside the authored span, each naming a real stair structure; like bridges they do not clamp the terrain or participate in corridor longitudinal grade limits. Structure existence, extent and connections are compiler checks."
+      "$comment": "Stations are absolute metres on the resolved source road in original point order. Omitted/null range keeps zero-to-full-length anchors; explicit range requires first/last anchor stations equal s0/s1 and steps inside that range. The DTO parser checks strict ordering and range.s1 > range.s0. WP-08 validates source length, real zone influence containment, resolved-source overlaps, endpoint Y/crossFall compatibility, and one final road profile with automatic gaps. Range never proves solver support or permits silent clipping of other operations. Step structure existence, extent and connections remain compiler checks.",
+      "if": {
+        "required": [
+          "range"
+        ],
+        "properties": {
+          "range": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "anchors": {
+            "prefixItems": [
+              {
+                "type": "object",
+                "properties": {
+                  "s": {
+                    "const": 0
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -5,
+                    "maximum": 10
+                  }
+                },
+                "required": [
+                  "s",
+                  "y"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      }
     },
     "corridorStep": {
       "type": "object",
@@ -1327,6 +1353,27 @@
           "$ref": "#/$defs/endBeforeCrossing"
         }
       ]
+    },
+    "stationRange": {
+      "type": "object",
+      "properties": {
+        "s0": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "s1": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        }
+      },
+      "required": [
+        "s0",
+        "s1"
+      ],
+      "additionalProperties": false,
+      "$comment": "Parser additionally requires s1 > s0. Values are source-road absolute stations, not local offsets."
     }
   }
 }

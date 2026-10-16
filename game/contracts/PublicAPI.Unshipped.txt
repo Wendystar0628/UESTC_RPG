@@ -4632,6 +4632,8 @@ Campus.Contracts.TerrainCorridorOp.CrossFall.get -> double
 Campus.Contracts.TerrainCorridorOp.CrossFall.init -> void
 Campus.Contracts.TerrainCorridorOp.Deconstruct(out string! Id, out string! Reason, out Campus.Contracts.FeatureId Road, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainAnchor!>! Anchors, out double CrossFall, out double Shoulder, out int Priority, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainCorridorStep!>! Steps) -> void
 Campus.Contracts.TerrainCorridorOp.Equals(Campus.Contracts.TerrainCorridorOp? other) -> bool
+Campus.Contracts.TerrainCorridorOp.Range.get -> Campus.Contracts.TerrainStationRange?
+Campus.Contracts.TerrainCorridorOp.Range.init -> void
 Campus.Contracts.TerrainCorridorOp.Road.get -> Campus.Contracts.FeatureId
 Campus.Contracts.TerrainCorridorOp.Road.init -> void
 Campus.Contracts.TerrainCorridorOp.Shoulder.get -> double
@@ -4830,6 +4832,15 @@ Campus.Contracts.TerrainSlopeOp.Y0.get -> double
 Campus.Contracts.TerrainSlopeOp.Y0.init -> void
 Campus.Contracts.TerrainSlopeOp.Y1.get -> double
 Campus.Contracts.TerrainSlopeOp.Y1.init -> void
+Campus.Contracts.TerrainStationRange
+Campus.Contracts.TerrainStationRange.<Clone>$() -> Campus.Contracts.TerrainStationRange!
+Campus.Contracts.TerrainStationRange.Deconstruct(out double S0, out double S1) -> void
+Campus.Contracts.TerrainStationRange.Equals(Campus.Contracts.TerrainStationRange? other) -> bool
+Campus.Contracts.TerrainStationRange.S0.get -> double
+Campus.Contracts.TerrainStationRange.S0.init -> void
+Campus.Contracts.TerrainStationRange.S1.get -> double
+Campus.Contracts.TerrainStationRange.S1.init -> void
+Campus.Contracts.TerrainStationRange.TerrainStationRange(double S0, double S1) -> void
 Campus.Contracts.TerrainTerraceOp
 Campus.Contracts.TerrainTerraceOp.Deconstruct(out string! Id, out string! Reason, out Campus.Contracts.Polyline! Front, out System.Numerics.Vector2 Inward, out double FrontY, out int Tiers, out double Riser, out double Tread, out System.Collections.Generic.IReadOnlyList<double>! StairAt, out int Priority) -> void
 Campus.Contracts.TerrainTerraceOp.Equals(Campus.Contracts.TerrainTerraceOp? other) -> bool
@@ -6832,6 +6843,9 @@ override Campus.Contracts.TerrainSlopeOp.<Clone>$() -> Campus.Contracts.TerrainS
 override Campus.Contracts.TerrainSlopeOp.Equals(object? obj) -> bool
 override Campus.Contracts.TerrainSlopeOp.GetHashCode() -> int
 override Campus.Contracts.TerrainSlopeOp.ToString() -> string!
+override Campus.Contracts.TerrainStationRange.Equals(object? obj) -> bool
+override Campus.Contracts.TerrainStationRange.GetHashCode() -> int
+override Campus.Contracts.TerrainStationRange.ToString() -> string!
 override Campus.Contracts.TerrainTerraceOp.<Clone>$() -> Campus.Contracts.TerrainTerraceOp!
 override Campus.Contracts.TerrainTerraceOp.Equals(object? obj) -> bool
 override Campus.Contracts.TerrainTerraceOp.GetHashCode() -> int
@@ -7551,6 +7565,8 @@ static Campus.Contracts.TerrainSide.operator !=(Campus.Contracts.TerrainSide? le
 static Campus.Contracts.TerrainSide.operator ==(Campus.Contracts.TerrainSide? left, Campus.Contracts.TerrainSide? right) -> bool
 static Campus.Contracts.TerrainSlopeOp.operator !=(Campus.Contracts.TerrainSlopeOp? left, Campus.Contracts.TerrainSlopeOp? right) -> bool
 static Campus.Contracts.TerrainSlopeOp.operator ==(Campus.Contracts.TerrainSlopeOp? left, Campus.Contracts.TerrainSlopeOp? right) -> bool
+static Campus.Contracts.TerrainStationRange.operator !=(Campus.Contracts.TerrainStationRange? left, Campus.Contracts.TerrainStationRange? right) -> bool
+static Campus.Contracts.TerrainStationRange.operator ==(Campus.Contracts.TerrainStationRange? left, Campus.Contracts.TerrainStationRange? right) -> bool
 static Campus.Contracts.TerrainTerraceOp.operator !=(Campus.Contracts.TerrainTerraceOp? left, Campus.Contracts.TerrainTerraceOp? right) -> bool
 static Campus.Contracts.TerrainTerraceOp.operator ==(Campus.Contracts.TerrainTerraceOp? left, Campus.Contracts.TerrainTerraceOp? right) -> bool
 static Campus.Contracts.TerrainUnderpassCrossing.operator !=(Campus.Contracts.TerrainUnderpassCrossing? left, Campus.Contracts.TerrainUnderpassCrossing? right) -> bool
