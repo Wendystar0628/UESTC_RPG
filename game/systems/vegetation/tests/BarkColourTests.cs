@@ -7,10 +7,10 @@ using GdUnit4;
 namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
-/// The bark pair (tree.bark, colour IDs 252–253, ext/WP-23.json) evaluated by the WP-37 colour script. The max-011 reviews
-/// set two lit targets, autumn 17:30 #8A7B70 and noon #8C8076 (warm grey-brown, low chroma), and asked for the albedo that
-/// best serves both: the registered albedo is the least-squares OKLab compromise, so each frame lands near its target
-/// (17:30 a little warmer) and the shade is whatever ART-STYLE §3 derives from it.
+/// The bark pair (tree.bark, colour IDs 252–253, ext/WP-23.json) evaluated by the WP-37 colour script. The albedo has OKLab
+/// chroma ~0.048, hue ~62: below ~0.06 the script treats a material as neutral and mixes its shade towards ambient.sky
+/// (ART-STYLE §3.2, w = smoothstep(0.06, 0.015, C)), which painted the trunks under the 17:30 canopy blue-violet (0q). With
+/// that chroma the shade keeps the bark hue. Lit targets are the 0q renders: autumn 17:30 #9F703E and noon #9F7E5E.
 /// </summary>
 [TestSuite]
 public sealed class BarkColourTests
@@ -23,7 +23,7 @@ public sealed class BarkColourTests
     {
         var (script, registry) = Load();
         var composer = new PaletteComposer(script, registry);
-        foreach (var (clock, target) in new[] { (17.5, "#8A7B70"), (12.0, "#8C8076") })
+        foreach (var (clock, target) in new[] { (17.5, "#9F703E"), (12.0, "#9F7E5E") })
         {
             composer.ComposeCurrent(script.EvaluateWorld(clock, (double)Season.Autumn, null, default));
             var lit = Hex(composer, registry, MotherModels.Bark);
@@ -34,6 +34,11 @@ public sealed class BarkColourTests
             // Warm grey-brown: red over blue at every frame, never the neutral cool grey the first albedo gave at noon.
             if (!(litLab.A > 0.0 && litLab.B >= 0.0)) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, not warm");
             var shade = Oklab.Parse(Hex(composer, registry, MotherModels.BarkShade));
+            // The shade keeps the bark's own warm hue (0q): never pulled to the sky's blue-violet, and not grey.
+            var shadeHue = Math.Atan2(shade.B, shade.A) * 180.0 / Math.PI;
+            var shadeChroma = Math.Sqrt(shade.A * shade.A + shade.B * shade.B);
+            if (shadeHue < 35.0 || shadeHue > 85.0 || shadeChroma < 0.025)
+                throw new InvalidOperationException($"tree.bark shade at {clock} has hue {shadeHue:F0}, chroma {shadeChroma:F3}; want a warm 35–85 hue and C >= 0.025");
             // ART-STYLE §3: shade by lightness (r 0.78 on the default frame), never darker than the trunk reads as wood.
             if (shade.L >= litLab.L * 0.88 || shade.L <= litLab.L * 0.65)
                 throw new InvalidOperationException($"tree.bark shade L {shade.L:F3} against lit L {litLab.L:F3} at {clock}");
