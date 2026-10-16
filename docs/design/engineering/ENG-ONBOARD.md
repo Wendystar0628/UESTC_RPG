@@ -73,7 +73,7 @@ gates: []
 - **工作树配置**：工作树里的 `game\override.cfg` 已经把 `user://` 指到 `UESTC_<WP-xx>`。不要改它，也不要提交它。
 - **当前施工状态**：看 ENG-STATUS，里面有哪些包在做、各自做到哪一步。
 - **多模型协作**（ENG-TEAM，D-179）：
-  - 主会话的 Opus 是唯一的主代理，管画面、风格、内容与判断；Astra 是工程负责人，管架构、契约与共享工程文件；二号会话开子代理承担 Opus 侧包的施工；值班执行者（只改文档的合并交 luna，其余与巡检交 Grok，没回复退回 Sol，D-198）做合并执行、施工状态与巡检，Sol 旁路会话做调研（ENG-TEAM-ROLES §1、ENG-TEAM-COMMS §5）。
+  - 主会话的 Opus 是唯一的主代理，管画面、风格、内容与判断；Astra 是工程负责人，管架构、契约与共享工程文件；二号会话开子代理承担 Opus 侧包的施工；值班执行者（只改文档的合并交 Gemini，其余与巡检交 Grok，没回复退回 Sol，D-198、D-202）做合并执行、施工状态与巡检，Sol 旁路会话做调研（ENG-TEAM-ROLES §1、ENG-TEAM-COMMS §5）。
   - 你向派你的一方回报：二号会话派的子代理找二号会话，Astra 派的找 Astra 主线程，主会话派的找主会话（ENG-TEAM §0.1）。
   - 单 Claude 账户模式下（ENG-TEAM-QUOTA §4），Claude 侧的子代理都由主会话派，向主会话回报。
   - 合并请求、契约申请、任务单和合并日志都在 `E:\Project\UESTC_RPG.wt\.collab\`（ENG-TEAM-COMMS §1）。开始下一步之前看一眼 `merged.log`，`main` 变了就 rebase。

@@ -25,8 +25,8 @@ gates: []
 1. **参与者**（§1，D-179）：作者提出要求、最终拍板。协作的会话分属三个账号：
    - 主账号的 Opus **主会话**是总指挥；
    - **二号会话**（第二个 Claude 账号，Max 20x）开 Opus 与 Sonnet 子代理，承担 Opus 侧的施工；
-   - **Astra**（GPT-6 Astra，xhigh，本机 Codex）是工程指挥：定契约与工程方案、拆单派工、审查与集成，尽量不亲自施工；施工默认交它开的 gpt-6.1-sol 子代理；
-   - **Sol 会话**（gpt-6.1-sol）有两个固定会话：值班会话是值班执行者没回复时的接手者（ENG-TEAM-COMMS §5，D-198），旁路会话按任务单开子代理，两个都用普通速度（GPT 侧只有 gpt-6-luna 用快速模式，D-197），做完成度调研与旁路活。
+   - **Astra**（GPT-6 Astra，xhigh，Codex 应用里的会话）是工程指挥：定契约与工程方案、拆单派工、审查与集成，尽量不亲自施工；施工默认交它开的 gpt-6.1-sol 子代理；
+   - **Sol 会话**（gpt-6.1-sol）有两个固定会话，都开在 Codex 应用里（D-203）：值班会话是值班执行者没回复时的接手者（ENG-TEAM-COMMS §5，D-198），旁路会话按任务单开子代理，两个都用普通速度（GPT 侧只有 gpt-6-luna 用快速模式，D-197），做完成度调研与旁路活。
 2. **主代理只有一个，就是主会话**（§1.1，ENG-ARCH §6，D-166）：合并队列、`main` 的提交与推送、ENG-STATUS、`docs/design/` 的修改、与作者沟通，都由它决定。不需要判断的执行部分交值班执行者（ENG-TEAM-COMMS §5，D-198）；`main` 同一时刻只有一个执行人。
 3. **按模型能力分工，视觉风格只由 Opus 侧做**（§2）：Opus 管审美、判断与变通；Sonnet 做语言与看图；Astra 管架构判断与工程指挥；gpt-6.1-sol 能力接近 Astra、性价比高得多，是工程施工的默认模型。GPT 模型不做任何审美工作；玩家看得见、听得见的结果，参数和取舍都由主会话评审定值。
 4. **按难度选模型，总指挥只做判断**（§3）：主会话只做评审定值、设计定案、派工与合入决定、与作者沟通；主账号不开新的子代理，所有并发的 Opus 子代理都在二号会话的账号上跑（仅双账号模式，ENG-TEAM-QUOTA §6.1）；不需要审美的活默认先派 Sol。包内的实现路径由施工模型自己规划。
@@ -47,13 +47,13 @@ gates: []
 | 主会话的子代理 | 主账号 | Opus | Agent 工具，后台 | 按包取名，如 `wp24-water` | 只做完名下已在施工的包；主账号不开新的子代理（仅双账号模式，ENG-TEAM-QUOTA §6.1） | 主会话 |
 | 二号会话 | wendystar1145（Max 20x） | 由作者在 CLI 里设定 | 后台 Claude Code CLI，工作目录 `E:\Project`，权限 bypass | `project-09` | 收任务单、开子代理施工、初步核对、转达评审意见 | 主会话 |
 | 二号会话的子代理 | wendystar1145 | Opus 或 Sonnet，按任务单 | Agent 工具，后台 | 按包取名，如 `wp10-openings` | Opus：Opus 侧包的施工、质感移植的实现、需要 Opus 的文档撰写；Sonnet：补 GPT 短板的活 | 二号会话 |
-| Astra | Codex 账号 | gpt-6-astra，xhigh | 本机 Codex CLI 会话 | — | 工程指挥：WP-00、契约与共享工程文件的定案、Astra 侧包的拆单派工与架构审查、集成取舍、写合并请求；尽量不亲自施工（§3.3） | 主会话 |
+| Astra | Codex 账号 | gpt-6-astra，xhigh | Codex 应用里的会话，用 `codex queue` 发（ENG-TEAM-COMMS §4） | "UESTC_RPG主线开发"，thread `01a14616-1410-7403-9eae-6d2956af50af`；开工说明 `.collab/CODEX-BOOT.md` | 工程指挥：WP-00、契约与共享工程文件的定案、Astra 侧包的拆单派工与架构审查、集成取舍、写合并请求；尽量不亲自施工（§3.3） | 主会话 |
 | Astra 的子代理 | Codex 账号 | 默认 gpt-6.1-sol；gpt-6-astra 只用于 §3.3 列出的少数情形 | `spawn_agent` | `task_name` 写包号，如 `wp-02a` | Astra 侧包的施工 | Astra 主线程 |
-| Sol 值班会话 | Codex 账号 | gpt-6.1-sol，high，普通速度 | `codex exec resume`，被值班唤醒脚本叫醒（ENG-TEAM-COMMS §5） | thread `01a14132-0184-7ce1-89b8-b3e472a5af73`；任务单 `tasks/sol-001.md` | Grok 或 luna 没回复时接手合并执行、施工状态与巡检（ENG-TEAM-COMMS §5） | 主会话 |
+| Sol 值班会话 | Codex 账号 | gpt-6.1-sol，high，普通速度 | Codex 应用里的会话，值班唤醒脚本退回时用 `codex queue` 发进（ENG-TEAM-COMMS §5） | "Sol值班会话"，thread `01a14634-61f1-7622-be49-c63705d46a3a`；任务单 `tasks/sol-001.md` | Grok 或 luna 没回复时接手合并执行、施工状态与巡检（ENG-TEAM-COMMS §5） | 主会话 |
 | Grok 值班执行者 | 作者的 Grok 订阅 | Grok 4.7，合并 high、任务单与定时巡检 medium | `grok --prompt-file … -r <会话>`，后台无界面，被值班唤醒脚本调用（ENG-TEAM-COMMS §5） | 会话号存在 `tools/duty/grok_session.txt`；职责说明 `tools/duty/ROLE-grok.md` | 合并执行（首选）、sol 任务单、定时巡检 | 主会话 |
 | Gemini 快速杂活 | 作者的 Antigravity | Gemini 3.8 Flash High | `agentapi send-message` 发进作者开着的 Antigravity 会话，作者能实时看到；脚本 `tools/duty/gemini_run.py` 发出并等它做完（ENG-TEAM-COMMS §5） | 会话号在 `tools/duty/gemini_conversation.txt`；职责说明 `tools/duty/ROLE-gemini.md` | 只改文档的合并、主会话直接派的简单快速小活 | 主会话 |
-| luna 批量苦力 | Codex 账号 | gpt-6-luna，medium，快速模式 | `codex exec` 每次新开线程，或在 Codex 会话里 `spawn_agent` | 职责说明 `tools/duty/ROLE-luna.md` | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra |
-| Sol 旁路会话 | Codex 账号 | gpt-6.1-sol，xhigh，普通速度 | `codex exec resume`，被旁路唤醒脚本按任务单叫醒，一次一张（ENG-TEAM-COMMS §5） | thread `01a14176-abbf-7862-98ba-137e2ad1686f`；角色说明 `side/ROLE.md` | 按任务单开子代理，做完成度调研与旁路活：调研、补信息、数据转换与核对、按确切文字打文档补丁、批量的旁路工程活 | 主会话 |
+| luna 批量苦力 | Codex 账号 | gpt-6-luna，medium，快速模式 | Codex 应用里的会话，用 `codex queue` 发；或在 Codex 会话里 `spawn_agent` 开 luna 子代理 | "Luna会话"，会话号在 `tools/duty/luna_thread.txt`；职责说明 `tools/duty/ROLE-luna.md` | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra |
+| Sol 旁路会话 | Codex 账号 | gpt-6.1-sol，xhigh，普通速度 | Codex 应用里的会话，旁路唤醒脚本按任务单用 `codex queue` 发进，一次一张（ENG-TEAM-COMMS §5） | "Sol旁路会话"，thread `01a14633-e0a8-78c0-a508-1d9b7904ac14`；角色说明 `side/ROLE.md` | 按任务单开子代理，做完成度调研与旁路活：调研、补信息、数据转换与核对、按确切文字打文档补丁、批量的旁路工程活 | 主会话 |
 
 单 Claude 账户模式下（ENG-TEAM-QUOTA §4），表中的二号会话和它的子代理不设，Opus 与 Sonnet 子代理都由主会话开，向主会话回报；其余各行不变。
 
@@ -69,7 +69,7 @@ gates: []
 - 与作者沟通。
 
 **执行交出去**：
-- 上面不需要判断的执行部分，即按批准合入、跑门禁、提交推送、写 `merged.log`、维护 ENG-STATUS、巡检，由值班执行者（只改文档的合并交 luna，其余与巡检交 Grok，没回复退回 Sol，D-198）做（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §1）。
+- 上面不需要判断的执行部分，即按批准合入、跑门禁、提交推送、写 `merged.log`、维护 ENG-STATUS、巡检，由值班执行者（只改文档的合并交 Gemini，其余与巡检交 Grok，没回复退回 Sol，D-198、D-202）做（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §1）。
 - `main` 同一时刻只有一个执行人。值班执行者合并时，主会话和其他会话都不碰主检出的暂存区。
 - 设计文档的撰写可以派出去：需要 Opus 的撰写交二号会话的 Opus 子代理；Sol 只在任务单给出确切文字时按文打补丁。改动都在工作树里做，经批准合入。
 
@@ -164,7 +164,7 @@ gates: []
 | 数据核对与盘点 | JSON 能否解析、id 是否唯一、引用是否存在、`licenses.json` 是否覆盖每个素材、文件编码；按给定条件 grep 出清单 | 不改数据，只报结果 |
 | 机械 git | 没有冲突的 `rebase main`、按清单 cherry-pick、合入后重建工作树分支、列出落后或已合并的工作树 | 一遇冲突就停下报告，不解冲突 |
 
-- **谁开、怎么开**：拿到这件杂活的一方直接开（D-190），不必经 Astra 转手。GPT 侧的新活一律派进 Codex 应用里开着的会话，作者在应用里能看到（D-203）：在 Astra 或 Sol 会话里用 `spawn_agent` 开 luna 子代理；或者往作者开好的 luna 会话里发，`codex queue --thread <会话号> --message <内容>`，会话号记在 `E:\Project\UESTC_RPG.wt\.collab\tools\duty\luna_thread.txt`。不再用 `codex exec` 在后台另起看不见的线程。
+- **谁开、怎么开**：拿到这件杂活的一方直接开（D-190），不必经 Astra 转手。GPT 侧的新活一律派进 Codex 应用里开着的会话，作者在应用里能看到（D-203）：在 Astra 或 Sol 会话里用 `spawn_agent` 开 luna 子代理；或者往作者开好的 luna 会话里发，`codex queue --thread <会话号> --message <内容>`，会话号记在 `E:\Project\UESTC_RPG.wt\.collab\tools\duty\luna_thread.txt`。不用 `codex exec` 在后台另起看不见的线程。
 - **速度**：luna 默认用快速模式，命令里加 `-c 'service_tier="priority"'`（D-197）。
 - **怎么选**：一件、几分钟能完的交 Gemini；成批的、要跑很久的交 luna；两者都要判断的，回到 Sonnet 或 Sol。
 - 派单写清清单、模板和完成标准，以及能写哪些文件；一次做不对就改派 gpt-6.1-sol medium 或 Sonnet medium，不在原档上重试。

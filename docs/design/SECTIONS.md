@@ -1640,28 +1640,28 @@
 
 ## ENG-TEAM-COMMS · 协作分册：交接与通信
 
-`docs/design/engineering/ENG-TEAM-COMMS.md` · 9.0k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
+`docs/design/engineering/ENG-TEAM-COMMS.md` · 9.5k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
 关键词：.collab、交接目录、合并请求、评审请求、契约申请文件、任务单、max-000、max-backlog、sol-001、旁路单、调研单、merged.log、流水、notes、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、sol_duty_watch、sol_side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
 
-- ENG-TEAM-COMMS §0 结论 · L23 · 554
+- ENG-TEAM-COMMS §0 结论 · L23 · 582
   - ★ ENG-TEAM-COMMS §0.1 接入要点 · L31 · 69
 - ENG-TEAM-COMMS §1 交接目录与文件 · L35 · 1.8k
 - ENG-TEAM-COMMS §2 命名与写法 · L62 · 498
 - ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L70 · 776
-- ENG-TEAM-COMMS §4 消息与流水 · L97 · 1.6k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L126 · 2.1k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L155 · 563
+- ENG-TEAM-COMMS §4 消息与流水 · L97 · 2.0k
+- ENG-TEAM-COMMS §5 唤醒脚本 · L128 · 2.1k
+- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L157 · 563
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
-`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.3k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
+`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.4k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
 关键词：值班、值班执行者、Sol 值班会话、sol-001、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、sol-002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
 
-- ENG-TEAM-DUTY §0 结论 · L23 · 698
+- ENG-TEAM-DUTY §0 结论 · L23 · 706
   - ★ ENG-TEAM-DUTY §0.1 接入要点 · L34 · 69
-- ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 846
+- ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 899
 - ENG-TEAM-DUTY §2 完成度调研 · L54 · 1.8k
-- ENG-TEAM-DUTY §3 Sol 旁路会话 · L95 · 874
+- ENG-TEAM-DUTY §3 Sol 旁路会话 · L95 · 904
 - ENG-TEAM-DUTY §4 怎么开子代理 · L115 · 1.1k
 - ENG-TEAM-DUTY §5 Codex 侧怎么省 · L143 · 484
 - ENG-TEAM-DUTY §6 待验证（P0） · L158 · 227
@@ -1706,13 +1706,13 @@
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
-`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
+`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.9k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
 关键词：参与者、会话、作者、主会话、总指挥、主代理、决定权、执行人、二号会话、project-09、wendystar1145、Astra、gpt-6-astra、gpt-6.1-sol、gpt-6-luna、Grok 值班执行者、luna 机械值班、模型能力、GPT 不做审美、视觉风格归属、事归谁、七问、推理强度、Opus 与 Sonnet 的分界、补 GPT 短板、简单少量的活、派单最少写、升级先找失败原因、子代理生命周期、恢复还是新开
 
 - ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
   - ★ ENG-TEAM-ROLES §0.1 接入要点 · L35 · 69
-- ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.0k
-  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 518
+- ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.2k
+  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 526
 - ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.5k
   - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L84 · 803
   - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L93 · 485

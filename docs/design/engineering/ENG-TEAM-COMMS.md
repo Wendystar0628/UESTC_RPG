@@ -25,7 +25,7 @@ gates: []
 1. **经文件交接，消息只在事件发生时发**（§1、§4）：交接目录是 `E:\Project\UESTC_RPG.wt\.collab\`。任务单和请求文件是交接的唯一依据，任何一方上下文重置，都照它们接着做（§6）。
 2. **文件只追加、不改写**（§2）：每条带时间，路径写绝对路径；不预判时间，只写做到哪一步。
 3. **批准行有固定格式**（§3）：单独成行，行首就是"批准合入："，唤醒脚本按行首匹配。
-4. **值班与旁路各由一个唤醒脚本叫醒**（§5）：值班唤醒脚本按批准行、新任务单和定时叫醒值班执行者；旁路唤醒脚本按 `side/cards/` 下的新任务单叫醒 Sol 旁路会话，一次一张。值班执行者按难度分：只改文档的合并交 gpt-6-luna，其余合并、sol 任务单与定时巡检交 Grok，没有回复或出错就退回 Sol 值班会话（D-198）。
+4. **值班与旁路各由一个唤醒脚本叫醒**（§5）：值班唤醒脚本按批准行、新任务单和定时叫醒值班执行者；旁路唤醒脚本按 `side/cards/` 下的新任务单叫醒 Sol 旁路会话，一次一张。值班执行者按难度分：只改文档的合并交 Gemini 3.8 Flash High（不可用时 gpt-6-luna），其余合并、sol 任务单与定时巡检交 Grok，没有回复或出错就退回 Sol 值班会话（D-198）。
 5. **下属会话与子代理不向作者出选项或确认框**（§4）：要确认的事写进任务单或请求文件并通知主会话，主会话能据项目信息判断的直接定，只有属于作者的决定才转问作者。
 
 ### 0.1 接入要点
@@ -121,11 +121,13 @@ gates: []
 - 需要确认时，写进任务单或请求文件，并通知主会话：二号会话发跨会话消息，Sol 写 `notes/sol-to-opus.md`，Astra 写 `notes/astra-to-opus.md`；子代理交给派它的一方，由它写进单子并转达。
 - 主会话能据项目信息判断的直接定；只有属于作者的决定，才转问作者。
 
-**GPT 侧新活派进 Codex 应用**（D-203）：主会话、唤醒脚本给 GPT 模型（Astra、Sol、luna）派的新活，一律发进 Codex 应用里开着的会话：`codex queue --thread <会话号> --message <内容>`，作者在应用里能看到全过程。Astra 用现有会话；luna 用作者在应用里开好的 luna 会话（会话号在 `tools/duty/luna_thread.txt`）；要新的 Sol 会话，请作者在应用里开好再登记。不再用 `codex exec` 在后台另起线程。已经在跑的后台会话（Sol 值班、Sol 旁路）照旧，不迁。
+**Codex 侧会话都在 Codex 应用里**（D-203）：Astra、Sol 值班、Sol 旁路和 luna 都是作者在 Codex 应用里开着的会话，会话号见 ENG-TEAM-ROLES §1。主会话、唤醒脚本给它们派活，一律发进对应会话：`codex queue --thread <会话号> --message <内容>`，作者在应用里能看到全过程。脚本用 `tools/duty/codex_app_run.py` 发，它在消息末尾附一个任务号，要求会话做完在 `notes/codex-app-done.md` 追加"[任务号] 一句话结果"，看到这一行才算这一轮结束。模型、推理档和速度跟着会话走，在应用里设。要新的会话，请作者在应用里开好再登记会话号。不用 `codex exec` 另起或续跑后台线程。
+
+**要当轮生效的消息走引导信箱**：会话正在跑时，`codex queue` 的消息要等这一轮结束才送到。要它当轮就看到，用 `python -I tools/duty/codex_app_steer.py <会话号> <消息文件> [等待秒数]`：会话在跑，就把信放进 `steer/<会话号>.md`，钩子 `tools/hooks/uestc-steer.cjs`（PostToolUse）在它下一次工具调用后把信送进当前这一轮，只送一次，送完挪进 `steer/delivered/`；等待超时没被取走就撤回、改为排队；会话空闲就直接排队，马上开新一轮。只在确实要马上改变对方手上的事时用，平常照常排队。
 
 ## 5 唤醒脚本
 
-值班与旁路各由一个唤醒脚本叫醒，两个脚本都每 20 秒查一次，消息从标准输入传入。旁路唤醒脚本用 `codex exec resume` 叫醒固定的 Sol 旁路会话；值班唤醒脚本按下表把事交给值班执行者，退回时用 `codex exec resume` 叫醒固定的 Sol 值班会话。
+值班与旁路各由一个唤醒脚本叫醒，两个脚本都每 20 秒查一次。旁路唤醒脚本把任务单发进 Sol 旁路会话；值班唤醒脚本按下表把事交给值班执行者，退回时发进 Sol 值班会话。发进 Codex 会话都用 `tools/duty/codex_app_run.py`（§4）。
 
 | 脚本 | 启动 | 叫醒谁 | 什么时候叫醒 |
 | --- | --- | --- | --- |
@@ -140,17 +142,17 @@ gates: []
 | 否则：`tasks/` 下新的 `sol-*.md`（`sol-001.md` 除外） | 交 Grok（medium）读单执行 |
 | 否则：距上次唤醒满 30 分钟 | 交 Grok（medium）做定时巡检：已批未合、条件已满足的候选照 `sol-001.md` 顺手合入 |
 
-**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（每次新开 Codex 线程，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
+**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（发进 luna 会话，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
 
 值班唤醒脚本不启动调研：调研单写进 `side/cards/`，由旁路唤醒脚本交出。
 
 **旁路唤醒脚本**按文件名顺序，从 `side/cards/` 里取一张还没交出的单，叫醒旁路会话，消息里写明任务单路径，并要求照 `side/ROLE.md` 执行；这一轮结束后再取下一张。一次只交一张。
 
-- **叫醒的命令**：值班唤醒脚本退回 Sol 值班会话时用 `codex exec -s danger-full-access -C "E:\Project\UESTC_RPG" resume <thread_id> -m gpt-6.1-sol -c model_reasoning_effort=high --json -o <输出文件> -`，不带 `service_tier`，用普通速度；旁路唤醒脚本相同，只是推理档用 xhigh。
+- **叫醒的命令**：发进 Codex 会话一律 `python -I tools/duty/codex_app_run.py <会话号> <提示文件> [超时秒数]`；Gemini 用 `python -I tools/duty/gemini_run.py <会话号> <提示文件> [超时秒数]`；Grok 用 `grok --prompt-file <提示文件> -r <会话> -m grok-4.7 --reasoning-effort <档>`。档位与速度在 Codex 应用里按会话设：Sol 值班 high、Sol 旁路 xhigh，都是普通速度；luna 快速模式。
 - **每轮只做被叫醒的事**：值班执行者只处理消息里写的事和巡检；旁路会话只做交给它的那一张单，做完写状态和流水就结束本轮。
 - **记录**：
-  - `tools/sol_duty/`：`watch.log` 记每次唤醒；`seen.txt`、`cards.txt` 记已经处理过的批准行和任务单；`last.md`、`events.jsonl`、`stderr.log` 是值班执行者最近一轮的输出。
-  - `tools/sol_side/`：`runner.log` 记每张单的唤醒与"本单结束"；`done.txt` 记已经交出的单；`<单号>.last.md`、`<单号>.events.jsonl`、`<单号>.stderr.log` 是每张单的输出。
+  - `tools/sol_duty/`：`watch.log` 记每次唤醒；`seen.txt`、`cards.txt` 记已经处理过的批准行和任务单；每轮发给执行者的提示与结果在 `tools/duty/runs/`。
+  - `tools/sol_side/`：`runner.log` 记每张单的唤醒与"本单结束"；`done.txt` 记已经交出的单；`<单号>.prompt.md`、`<单号>.out.txt` 是每张单发出的提示和完成行。
 
 ## 6 上下文重置后怎么接着做
 

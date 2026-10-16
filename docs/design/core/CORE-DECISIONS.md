@@ -285,7 +285,7 @@ gates: []
 | D-200 | 改结构、改编号时全局替换：文档拆分、合并、重编号或改名时，所有引用一次改到新位置，docs 内外同一批改掉，不留旧编号对照、兼容段或迁移说明；记忆同样照此更新 | 全部文档与记忆 | CORE-CONVENTIONS §7.3 | 生效 |
 | D-201 | 不过度工程化与高效来信：本项目是个人实验作品，各方（GPT 模型尤其）不写证据溯源、来源链、哈希校验、proof/verification 脚本与 handoff 证据目录，不自己加门禁、检查脚本、测试脚手架或全量回归，只跑任务单要求的检查；Codex 侧由本项目钩子每条提示前提醒并拦下证据、校验类文件与哈希命令。写给主会话的来信标【需定】【待审】【知会】，一条一件事、5 行内，只有前两级叫醒主会话；合并请求与契约申请用六行短头部，证据只给路径；纯工程判断由 Astra 自己定 | 全项目 | ENG-TEAM-ROLES §2.2a；ENG-TEAM-COMMS §3、§4；ENG-ONBOARD §3.7 | 生效 |
 | D-202 | 最便宜的两档按活的形状分：一件、小、要快的活（只改文档的合并、按确切文字改一处、查一处、追加状态、跑一次给定命令）交 Gemini 3.8 Flash High，经 agentapi 发进作者开着的 Antigravity 会话，作者能实时看到，结果写进 notes/gemini-to-opus.md；量大、重复的苦力活交 gpt-6-luna；Gemini 不可用时由 luna 接手 | Claude 与 Codex 两侧 | ENG-TEAM-ROLES §1、§3.1；ENG-TEAM-COMMS §5 | 生效 |
-| D-203 | GPT 侧新活派进 Codex 应用：主会话与唤醒脚本给 Astra、Sol、luna 派的新活，一律用 codex queue 发进作者在 Codex 应用里开着的会话，作者能看到全过程；不再用 codex exec 在后台另起线程；已经在跑的后台会话（Sol 值班、Sol 旁路）照旧不迁 | Codex 侧 | ENG-TEAM-ROLES §3.1；ENG-TEAM-COMMS §4 | 生效 |
+| D-203 | Codex 侧会话都开在 Codex 应用里：Astra、Sol 值班、Sol 旁路和 luna 都是作者在 Codex 应用里开着的会话，作者能看到全过程；主会话与唤醒脚本给它们派活，一律用 codex queue 发进对应会话，脚本经 codex_app_run.py 发出并等完成行；不用 codex exec 另起或续跑后台线程；要新会话由作者在应用里开好再登记 | Codex 侧 | ENG-TEAM-ROLES §1、§3.1；ENG-TEAM-COMMS §4、§5 | 生效 |
 | D-161 | "主代理"是开发期的编排者，由 Opus 担任；WP-00 由 Astra 做、主代理验收合入（D-179）；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）；文档里"须经 WP-00 审批"与"须经主代理审批"等价 | 全项目 | CORE-CONVENTIONS §8.5；CORE-GLOSSARY §14；ENG-WP §5 | 生效 |
 
 ## 11 待对齐
