@@ -15,9 +15,18 @@ public sealed class ParamAttribute : Attribute
     public double Min { get; set; }
     public double Max { get; set; }
 }
-public interface IPartDef<TParams> where TParams : notnull
+/// <summary>Parameter-independent part capabilities. The composition boundary freezes this list before workers run.</summary>
+public interface IPartDef
+{
+    IReadOnlyList<LodLevel> SupportedLods { get; }
+}
+
+public interface IPartDef<TParams> : IPartDef where TParams : notnull
 {
     IReadOnlyDictionary<LodLevel, Func<TParams, PartGeometry>> Lods { get; }
+    /// <summary>Existing generic definitions need no new member; each read returns a validated numeric-order copy of this object's Lods keys.</summary>
+    IReadOnlyList<LodLevel> IPartDef.SupportedLods => Parts.PartLodCatalog.FreezeLods(
+        Lods?.Keys ?? throw new InvalidOperationException("A part definition must supply its LOD builders."));
     Box3 Bounds(TParams p);
     IReadOnlyDictionary<string, Matrix4x4> Sockets => new Dictionary<string, Matrix4x4>();
     PartBudget Budget { get; }

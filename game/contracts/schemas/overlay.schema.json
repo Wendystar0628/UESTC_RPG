@@ -327,6 +327,37 @@
           "additionalProperties": false,
           "required": [
             "op",
+            "target",
+            "sourceId",
+            "reason"
+          ],
+          "properties": {
+            "op": {
+              "const": "hidePart"
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact existing entity ID; aliases are rejected."
+            },
+            "sourceId": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^\\S(?:.*\\S)?$",
+              "description": "Exact canonical SourceId of one current part of target; no normalization or aliases."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "op",
             "id",
             "kind",
             "geometry",

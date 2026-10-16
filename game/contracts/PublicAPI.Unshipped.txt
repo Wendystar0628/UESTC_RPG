@@ -1266,6 +1266,8 @@ Campus.Contracts.BuildContext.Map.get -> Campus.Contracts.Maps.MapDescriptor!
 Campus.Contracts.BuildContext.Map.init -> void
 Campus.Contracts.BuildContext.Palette.get -> Campus.Contracts.PaletteRegistry?
 Campus.Contracts.BuildContext.Palette.init -> void
+Campus.Contracts.BuildContext.PartLods.get -> Campus.Contracts.Parts.PartLodCatalog?
+Campus.Contracts.BuildContext.PartLods.init -> void
 Campus.Contracts.BuildContext.Seeded(Campus.Contracts.FeatureId feature, Campus.Contracts.PartId part, string! purpose) -> Campus.Contracts.Rng
 Campus.Contracts.BuildContext.SourceInputs.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>!
 Campus.Contracts.BuildContext.SourceInputs.init -> void
@@ -1276,6 +1278,20 @@ Campus.Contracts.BuildContext.World.get -> Campus.Contracts.IWorldModel!
 Campus.Contracts.BuildContext.World.init -> void
 Campus.Contracts.BuildContext.WorldSeed.get -> uint
 Campus.Contracts.BuildContext.WorldSeed.init -> void
+Campus.Contracts.BuildDiagnostic
+Campus.Contracts.BuildDiagnostic.BuildDiagnostic() -> void
+Campus.Contracts.BuildDiagnostic.BuildDiagnostic(Campus.Contracts.DiagnosticLevel Level, string! Code, string! Message, Campus.Contracts.FeatureId? Feature = null) -> void
+Campus.Contracts.BuildDiagnostic.Code.get -> string!
+Campus.Contracts.BuildDiagnostic.Code.init -> void
+Campus.Contracts.BuildDiagnostic.Deconstruct(out Campus.Contracts.DiagnosticLevel Level, out string! Code, out string! Message, out Campus.Contracts.FeatureId? Feature) -> void
+Campus.Contracts.BuildDiagnostic.Equals(Campus.Contracts.BuildDiagnostic other) -> bool
+Campus.Contracts.BuildDiagnostic.Feature.get -> Campus.Contracts.FeatureId?
+Campus.Contracts.BuildDiagnostic.Feature.init -> void
+Campus.Contracts.BuildDiagnostic.Level.get -> Campus.Contracts.DiagnosticLevel
+Campus.Contracts.BuildDiagnostic.Level.init -> void
+Campus.Contracts.BuildDiagnostic.Message.get -> string!
+Campus.Contracts.BuildDiagnostic.Message.init -> void
+Campus.Contracts.BuildDiagnostic.Validate() -> void
 Campus.Contracts.BuildInputSnapshot
 Campus.Contracts.BuildInputSnapshot.Entries.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>!
 Campus.Contracts.BuildInputSnapshot.Require(string! key) -> System.ReadOnlyMemory<byte>
@@ -1822,6 +1838,8 @@ Campus.Contracts.ContentOutput
 Campus.Contracts.ContentOutput.<Clone>$() -> Campus.Contracts.ContentOutput!
 Campus.Contracts.ContentOutput.ContentOutput(System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBundle!>! Meshes, System.Collections.Generic.IReadOnlyList<Campus.Contracts.PlacedPart!>! Parts, System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>? Emitters = null, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Footprint2D!>? Occupancy = null) -> void
 Campus.Contracts.ContentOutput.Deconstruct(out System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBundle!>! Meshes, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.PlacedPart!>! Parts, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>? Emitters, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.Footprint2D!>? Occupancy) -> void
+Campus.Contracts.ContentOutput.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.BuildDiagnostic>!
+Campus.Contracts.ContentOutput.Diagnostics.init -> void
 Campus.Contracts.ContentOutput.Emitters.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LightEmitter!>?
 Campus.Contracts.ContentOutput.Emitters.init -> void
 Campus.Contracts.ContentOutput.Entrances.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>!
@@ -1850,6 +1868,10 @@ Campus.Contracts.DesignKind.Equals(Campus.Contracts.DesignKind other) -> bool
 Campus.Contracts.DesignKind.Value.get -> string!
 Campus.Contracts.DesignKind.Value.init -> void
 Campus.Contracts.DetMath
+Campus.Contracts.DiagnosticLevel
+Campus.Contracts.DiagnosticLevel.Error = 2 -> Campus.Contracts.DiagnosticLevel
+Campus.Contracts.DiagnosticLevel.Info = 0 -> Campus.Contracts.DiagnosticLevel
+Campus.Contracts.DiagnosticLevel.Warning = 1 -> Campus.Contracts.DiagnosticLevel
 Campus.Contracts.DoorEvent
 Campus.Contracts.DoorEvent.Building.get -> Campus.Contracts.FeatureId
 Campus.Contracts.DoorEvent.Building.init -> void
@@ -2210,6 +2232,16 @@ Campus.Contracts.HideOp.Reason.get -> string!
 Campus.Contracts.HideOp.Reason.init -> void
 Campus.Contracts.HideOp.Target.get -> Campus.Contracts.FeatureId
 Campus.Contracts.HideOp.Target.init -> void
+Campus.Contracts.HidePartOp
+Campus.Contracts.HidePartOp.Deconstruct(out Campus.Contracts.FeatureId Target, out string! SourceId, out string! Reason) -> void
+Campus.Contracts.HidePartOp.Equals(Campus.Contracts.HidePartOp? other) -> bool
+Campus.Contracts.HidePartOp.HidePartOp(Campus.Contracts.FeatureId Target, string! SourceId, string! Reason) -> void
+Campus.Contracts.HidePartOp.Reason.get -> string!
+Campus.Contracts.HidePartOp.Reason.init -> void
+Campus.Contracts.HidePartOp.SourceId.get -> string!
+Campus.Contracts.HidePartOp.SourceId.init -> void
+Campus.Contracts.HidePartOp.Target.get -> Campus.Contracts.FeatureId
+Campus.Contracts.HidePartOp.Target.init -> void
 Campus.Contracts.ICameraPoseValidator
 Campus.Contracts.ICameraPoseValidator.IsLegal(Campus.Contracts.Pose pose, bool outsideBuffer) -> bool
 Campus.Contracts.ICameraPoseValidator.Legalize(Campus.Contracts.Pose pose) -> Campus.Contracts.Pose
@@ -2345,6 +2377,8 @@ Campus.Contracts.IPaletteProbe
 Campus.Contracts.IPaletteProbe.SampleHorizon(Campus.Contracts.Season season, Campus.Contracts.WeatherVec weather, System.Span<System.Numerics.Vector3> srgb24) -> void
 Campus.Contracts.IPaletteRegistrySource
 Campus.Contracts.IPaletteRegistrySource.Registry.get -> Campus.Contracts.PaletteRegistry!
+Campus.Contracts.IPartDef
+Campus.Contracts.IPartDef.SupportedLods.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LodLevel>!
 Campus.Contracts.IPartDef<TParams>
 Campus.Contracts.IPartDef<TParams>.Bounds(TParams p) -> Campus.Contracts.Box3
 Campus.Contracts.IPartDef<TParams>.Budget.get -> Campus.Contracts.PartBudget!
@@ -2393,6 +2427,9 @@ Campus.Contracts.ITerrain.HeightAt(float x, float z) -> float
 Campus.Contracts.ITerrain.IsFlat(Campus.Contracts.TileKey tile) -> bool
 Campus.Contracts.ITerrain.PadY(Campus.Contracts.FeatureId feature) -> float
 Campus.Contracts.ITerrain.WaterY(Campus.Contracts.FeatureId water) -> float?
+Campus.Contracts.ITerrainBankSource
+Campus.Contracts.ITerrainBankSource.BankTopY(string! id, double station) -> float
+Campus.Contracts.ITerrainBankSource.Banks.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainBankSpan!>!
 Campus.Contracts.ITransitDriver
 Campus.Contracts.ITransitDriver.Destination.get -> Campus.Contracts.Pose?
 Campus.Contracts.ITransitDriver.IsReady.get -> bool
@@ -3574,6 +3611,10 @@ Campus.Contracts.Parts.PartCatalogEntry.Owner.init -> void
 Campus.Contracts.Parts.PartCatalogEntry.ParameterType.get -> System.Type!
 Campus.Contracts.Parts.PartCatalogEntry.ParameterType.init -> void
 Campus.Contracts.Parts.PartCatalogEntry.PartCatalogEntry(Campus.Contracts.PartId Id, Campus.Contracts.WpId Owner, System.Type! ParameterType, object! Defaults) -> void
+Campus.Contracts.Parts.PartLodCatalog
+Campus.Contracts.Parts.PartLodCatalog.PartLodCatalog(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Campus.Contracts.PartId, Campus.Contracts.IPartDef!>>! definitions) -> void
+Campus.Contracts.Parts.PartLodCatalog.SupportedLods(Campus.Contracts.PartId id) -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LodLevel>!
+Campus.Contracts.Parts.PartLodCatalog.Supports(Campus.Contracts.PartId id, Campus.Contracts.LodLevel lod) -> bool
 Campus.Contracts.Parts.RailingParams
 Campus.Contracts.Parts.RailingParams.Deconstruct(out float Width, out float Height, out float Depth, out float PostSpacing) -> void
 Campus.Contracts.Parts.RailingParams.Equals(Campus.Contracts.Parts.RailingParams? other) -> bool
@@ -4519,6 +4560,18 @@ Campus.Contracts.TerrainBankKind.Soft = 1 -> Campus.Contracts.TerrainBankKind
 Campus.Contracts.TerrainBankKind.Steps = 2 -> Campus.Contracts.TerrainBankKind
 Campus.Contracts.TerrainBankKind.Swale = 4 -> Campus.Contracts.TerrainBankKind
 Campus.Contracts.TerrainBankKind.Wetland = 3 -> Campus.Contracts.TerrainBankKind
+Campus.Contracts.TerrainBankSpan
+Campus.Contracts.TerrainBankSpan.Bridges.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>!
+Campus.Contracts.TerrainBankSpan.CoreFrom.get -> double
+Campus.Contracts.TerrainBankSpan.CoreTo.get -> double
+Campus.Contracts.TerrainBankSpan.Id.get -> string!
+Campus.Contracts.TerrainBankSpan.Kind.get -> Campus.Contracts.TerrainBankKind
+Campus.Contracts.TerrainBankSpan.Length.get -> double
+Campus.Contracts.TerrainBankSpan.Roads.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>!
+Campus.Contracts.TerrainBankSpan.Shore.get -> Campus.Contracts.Polyline!
+Campus.Contracts.TerrainBankSpan.TerrainBankSpan(string! id, System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>! waters, System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>! roads, System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>! bridges, Campus.Contracts.Polyline! shore, double coreFrom, double coreTo, double transitionLength, Campus.Contracts.TerrainBankKind kind) -> void
+Campus.Contracts.TerrainBankSpan.TransitionLength.get -> double
+Campus.Contracts.TerrainBankSpan.Waters.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.FeatureId>!
 Campus.Contracts.TerrainBasinOp
 Campus.Contracts.TerrainBasinOp.Deconstruct(out string! Id, out string! Reason, out Campus.Contracts.TerrainShape! Shape, out double Height, out Campus.Contracts.TerrainProfile Profile, out int Priority) -> void
 Campus.Contracts.TerrainBasinOp.Equals(Campus.Contracts.TerrainBasinOp? other) -> bool
@@ -6217,6 +6270,7 @@ override Campus.Contracts.BoxCollider.<Clone>$() -> Campus.Contracts.BoxCollider
 override Campus.Contracts.BoxCollider.Equals(object? obj) -> bool
 override Campus.Contracts.BoxCollider.GetHashCode() -> int
 override Campus.Contracts.BoxCollider.ToString() -> string!
+override Campus.Contracts.BuildDiagnostic.GetHashCode() -> int
 override Campus.Contracts.BuildingFamily.GetHashCode() -> int
 override Campus.Contracts.CameraMedium.GetHashCode() -> int
 override Campus.Contracts.ChannelDecl.Equals(object? obj) -> bool
@@ -6370,6 +6424,10 @@ override Campus.Contracts.HideOp.<Clone>$() -> Campus.Contracts.HideOp!
 override Campus.Contracts.HideOp.Equals(object? obj) -> bool
 override Campus.Contracts.HideOp.GetHashCode() -> int
 override Campus.Contracts.HideOp.ToString() -> string!
+override Campus.Contracts.HidePartOp.<Clone>$() -> Campus.Contracts.HidePartOp!
+override Campus.Contracts.HidePartOp.Equals(object? obj) -> bool
+override Campus.Contracts.HidePartOp.GetHashCode() -> int
+override Campus.Contracts.HidePartOp.ToString() -> string!
 override Campus.Contracts.InputActionEvent.GetHashCode() -> int
 override Campus.Contracts.InspectionProbe.Equals(object? obj) -> bool
 override Campus.Contracts.InspectionProbe.GetHashCode() -> int
@@ -6907,6 +6965,7 @@ override sealed Campus.Contracts.FidelityRaiseOp.Equals(Campus.Contracts.Fidelit
 override sealed Campus.Contracts.HeightFieldCollider.Equals(Campus.Contracts.Collider? other) -> bool
 override sealed Campus.Contracts.HeightOp.Equals(Campus.Contracts.OverlayOp? other) -> bool
 override sealed Campus.Contracts.HideOp.Equals(Campus.Contracts.OverlayOp? other) -> bool
+override sealed Campus.Contracts.HidePartOp.Equals(Campus.Contracts.OverlayOp? other) -> bool
 override sealed Campus.Contracts.InteriorConfigOp.Equals(Campus.Contracts.InteriorOverlayOp? other) -> bool
 override sealed Campus.Contracts.MultiPolygonGeometry.Equals(Campus.Contracts.OverlayGeometry? other) -> bool
 override sealed Campus.Contracts.Parts.BalconyParams.Equals(Campus.Contracts.Parts.BoxPartParams? other) -> bool
@@ -7038,6 +7097,8 @@ static Campus.Contracts.Box3.operator !=(Campus.Contracts.Box3 left, Campus.Cont
 static Campus.Contracts.Box3.operator ==(Campus.Contracts.Box3 left, Campus.Contracts.Box3 right) -> bool
 static Campus.Contracts.BoxCollider.operator !=(Campus.Contracts.BoxCollider? left, Campus.Contracts.BoxCollider? right) -> bool
 static Campus.Contracts.BoxCollider.operator ==(Campus.Contracts.BoxCollider? left, Campus.Contracts.BoxCollider? right) -> bool
+static Campus.Contracts.BuildDiagnostic.operator !=(Campus.Contracts.BuildDiagnostic left, Campus.Contracts.BuildDiagnostic right) -> bool
+static Campus.Contracts.BuildDiagnostic.operator ==(Campus.Contracts.BuildDiagnostic left, Campus.Contracts.BuildDiagnostic right) -> bool
 static Campus.Contracts.BuildInputSnapshot.Empty.get -> Campus.Contracts.BuildInputSnapshot!
 static Campus.Contracts.BuildInputSnapshot.Freeze(System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>! source) -> Campus.Contracts.BuildInputSnapshot!
 static Campus.Contracts.BuildingFamily.operator !=(Campus.Contracts.BuildingFamily left, Campus.Contracts.BuildingFamily right) -> bool
@@ -7184,6 +7245,8 @@ static Campus.Contracts.HeightOp.operator !=(Campus.Contracts.HeightOp? left, Ca
 static Campus.Contracts.HeightOp.operator ==(Campus.Contracts.HeightOp? left, Campus.Contracts.HeightOp? right) -> bool
 static Campus.Contracts.HideOp.operator !=(Campus.Contracts.HideOp? left, Campus.Contracts.HideOp? right) -> bool
 static Campus.Contracts.HideOp.operator ==(Campus.Contracts.HideOp? left, Campus.Contracts.HideOp? right) -> bool
+static Campus.Contracts.HidePartOp.operator !=(Campus.Contracts.HidePartOp? left, Campus.Contracts.HidePartOp? right) -> bool
+static Campus.Contracts.HidePartOp.operator ==(Campus.Contracts.HidePartOp? left, Campus.Contracts.HidePartOp? right) -> bool
 static Campus.Contracts.InputActionEvent.operator !=(Campus.Contracts.InputActionEvent left, Campus.Contracts.InputActionEvent right) -> bool
 static Campus.Contracts.InputActionEvent.operator ==(Campus.Contracts.InputActionEvent left, Campus.Contracts.InputActionEvent right) -> bool
 static Campus.Contracts.InspectionProbe.operator !=(Campus.Contracts.InspectionProbe? left, Campus.Contracts.InspectionProbe? right) -> bool
@@ -7690,6 +7753,8 @@ virtual Campus.Contracts.TerrainShape.PrintMembers(System.Text.StringBuilder! bu
 ~override Campus.Contracts.Body.ToString() -> string
 ~override Campus.Contracts.Box3.Equals(object obj) -> bool
 ~override Campus.Contracts.Box3.ToString() -> string
+~override Campus.Contracts.BuildDiagnostic.Equals(object obj) -> bool
+~override Campus.Contracts.BuildDiagnostic.ToString() -> string
 ~override Campus.Contracts.BuildingFamily.Equals(object obj) -> bool
 ~override Campus.Contracts.BuildingFamily.ToString() -> string
 ~override Campus.Contracts.CameraMedium.Equals(object obj) -> bool

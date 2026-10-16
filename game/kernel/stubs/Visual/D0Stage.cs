@@ -104,6 +104,7 @@ public partial class D0Stage : Node3D
             Map = context.Descriptor,
             World = world,
             WorldSeed = context.Descriptor.Seed,
+            PartLods = BuildInputAssembly.CapturePartLods(registry, entry.Id),
             InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal),
             SourceInputs = mapInputs.Entries,
             GlobalInputs = Services.GlobalBuildInputs,

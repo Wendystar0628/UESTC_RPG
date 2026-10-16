@@ -87,6 +87,7 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
             Map = context.Descriptor,
             World = world,
             WorldSeed = ReadSeed(boot, "seed", context.Descriptor.Seed),
+            PartLods = BuildInputAssembly.CapturePartLods(registry, entry.Id),
             InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal),
             SourceInputs = mapInputs.Entries,
             GlobalInputs = Services.GlobalBuildInputs,

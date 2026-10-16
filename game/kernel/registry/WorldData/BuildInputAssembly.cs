@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using Campus.Contracts;
+using Campus.Contracts.Parts;
 using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Maps;
@@ -30,6 +31,26 @@ public static class BuildInputAssembly
             bytes.Add(key, input);
         }
         return BuildInputSnapshot.Freeze(bytes);
+    }
+
+    /// <summary>
+    /// Capture the current map's registered part capabilities once on the composition/main thread.
+    /// This creates only existing pure CPU part definitions, reads no reflected properties and runs no builders.
+    /// Publish the returned immutable catalog in every BuildContext for this map; workers never use the registry.
+    /// </summary>
+    public static PartLodCatalog CapturePartLods(ServiceRegistry registry, MapId map)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("Map identity is required.", nameof(map));
+        var definitions = new List<KeyValuePair<PartId, IPartDef>>();
+        foreach (var entry in registry.ForMap(map.Value).Where(entry => entry.Kind == "part")
+            .OrderBy(entry => entry.Id, StringComparer.Ordinal))
+        {
+            if (registry.Create(entry.Type) is not IPartDef definition)
+                throw new InvalidOperationException($"Registered part '{entry.Id}' ({entry.Type.FullName}) must implement IPartDef.");
+            definitions.Add(new(new PartId(entry.Id), definition));
+        }
+        return new PartLodCatalog(definitions);
     }
 
     /// <summary>Capture existing content-module capabilities after map filtering, on the composition thread.</summary>

@@ -48,6 +48,8 @@ public sealed class BuildContext
     public required uint WorldSeed { get; init; }
     /// <summary>Single immutable map-wide campus window allocation, prepared before window metadata or geometry. Null is for legacy/no-window fixtures only.</summary>
     public WindowNumberingSnapshot? WindowNumbering { get; init; }
+    /// <summary>Map-filtered immutable part LOD capabilities, captured before worker publication. Null means not supplied, never complete or universally supported.</summary>
+    public Parts.PartLodCatalog? PartLods { get; init; }
     private IReadOnlyDictionary<string, IInteriorProvider> _interiorProviders =
         new ReadOnlyDictionary<string, IInteriorProvider>(new SortedDictionary<string, IInteriorProvider>(StringComparer.Ordinal));
     /// <summary>
@@ -109,6 +111,9 @@ public sealed record ContentOutput(
     IReadOnlyList<Footprint2D>? Occupancy = null)
 {
     public static ContentOutput Empty { get; } = new([], []);
+    /// <summary>Deterministic in-memory diagnostics. The collector validates and reports them separately from bake artifacts and hashes.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<BuildDiagnostic> Diagnostics { get; init; } = [];
     /// <summary>Static instance streams sharing frozen prototypes. Consumers must pack/mount these or explicitly reject them.</summary>
     public IReadOnlyList<GeometryInstanceStream> Instances { get; init; } = [];
     public IReadOnlyList<EntranceDecl> Entrances { get; init; } = [];
