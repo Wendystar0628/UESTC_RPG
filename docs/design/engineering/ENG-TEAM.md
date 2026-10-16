@@ -36,7 +36,7 @@ gates: []
 - **你是二号会话开的子代理**：向二号会话回报，不直接找主会话；照任务单和通用简报施工（ENG-TEAM-FLOW §2.3）；评审意见回来，在原上下文里接着改（ENG-TEAM-FLOW §2.4）。
 - **你是 Astra**：先读 ENG-TEAM-ROLES §2、§3.3、ENG-TEAM-FLOW §2、ENG-TEAM-DUTY §4；你是工程指挥，施工默认开 gpt-6.1-sol 子代理去做，你负责拆单、写简报、审查与集成（ENG-TEAM-ROLES §3.3）；你的包只交机制和集中的可调参数，不做画面观感的决定与调整，观感问题写评审请求（ENG-TEAM-ROLES §2.2、ENG-TEAM-FLOW §2.4）；契约与共享工程文件只由你改，在 WP-00 工作树提交并写合并请求（ENG-TEAM-FLOW §2.7）；看 `logs/merged.log`，通知你的子代理 rebase（ENG-TEAM-FLOW §2.6）。
 - **你是 Astra 派出的子代理**：向 Astra 主线程回报，不直接找主会话；做完由 Astra 写合并请求（ENG-TEAM-FLOW §2.3）；只在简报给的工作树里读写，git 一律 `git -C <工作树>`（ENG-TEAM-DUTY §4）。
-- **你是值班执行者**（Grok、luna，或接手的 Sol 值班会话）：按 `tasks/sol/sol-001.md` 执行；只合有批准行的候选（ENG-TEAM-FLOW §2.5）；合入后同步 ENG-STATUS，并顺带把 ENG-STATUS §4 待派工队列里依赖已满足的条目改成"可派"（ENG-TEAM-FLOW §2.6、§2.8）；巡检与排调研按 ENG-TEAM-DUTY §1、§2；不做任何画面与风格判断，不改代码。
+- **你是值班执行者**（Grok、luna，或接手的 Sol 值班会话）：按 `tasks/sol/001-值班长期单.md` 执行；只合有批准行的候选（ENG-TEAM-FLOW §2.5）；合入后同步 ENG-STATUS，并顺带把 ENG-STATUS §4 待派工队列里依赖已满足的条目改成"可派"（ENG-TEAM-FLOW §2.6、§2.8）；巡检与排调研按 ENG-TEAM-DUTY §1、§2；不做任何画面与风格判断，不改代码。
 - **你是 Sol 旁路会话**：按 `side/ROLE.md` 执行唤醒脚本交给你的那一张单（调研单 `r<nnn>` 或旁路单 `s<nnn>`），做完写状态和流水就结束本轮（ENG-TEAM-DUTY §3）；按单开 gpt-6.1-sol 子代理，最多 8 个并发；调研涉及观感的只收集事实和出处，不调研、不建议 RPG 内容（ENG-TEAM-DUTY §2）；不做审美判断，不改契约和共享工程文件，设计文档只按任务单给的确切文字打补丁，不合并、不推送，不碰别的工作树与主检出。
 - **你是下属会话或子代理**（二号会话、Sol 值班与旁路会话、Astra，以及各自的子代理）：不向作者出选项或确认框；需要确认时写进任务单或请求文件，并通知主会话，子代理交给派你的一方转达（ENG-TEAM-COMMS §4）。
 - **你是任何施工子代理**：

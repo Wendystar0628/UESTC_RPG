@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 33.9k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 34.2k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 10.0k
-- CORE-DECISIONS §11 待对齐 · L295 · 61
+- CORE-DECISIONS §10 流程 · L243 · 10.3k
+- CORE-DECISIONS §11 待对齐 · L296 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -1652,51 +1652,51 @@
 
 ## ENG-TEAM-COMMS · 协作分册：交接与通信
 
-`docs/design/engineering/ENG-TEAM-COMMS.md` · 12.8k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
-关键词：.collab、archive、logs、结案即挪走、谁读什么、.ignore、交接目录、合并请求、评审请求、契约申请文件、任务单、max-000、max-backlog、sol-001、旁路单、调研单、logs/merged.log、流水、notes、收件箱、一条一个文件、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、sol_duty_watch、sol_side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
+`docs/design/engineering/ENG-TEAM-COMMS.md` · 13.1k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
+关键词：.collab、archive、logs、结案即挪走、谁读什么、.ignore、交接目录、合并请求、评审请求、契约申请文件、任务单、施工单、值班单、文件命名、编号-主题、二号会话长期角色、待派活清单、值班长期单、旁路单、调研单、logs/merged.log、流水、notes、收件箱、一条一个文件、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、duty_watch、side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
 
-- ENG-TEAM-COMMS §0 结论 · L23 · 842
+- ENG-TEAM-COMMS §0 结论 · L23 · 838
   - ★ ENG-TEAM-COMMS §0.1 接入要点 · L33 · 69
 - ENG-TEAM-COMMS §1 交接目录与文件 · L37 · 4.2k
   - ENG-TEAM-COMMS §1.1 结案即挪走与谁读什么 · L71 · 1.3k
-- ENG-TEAM-COMMS §2 命名与写法 · L85 · 521
-- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L93 · 961
-- ENG-TEAM-COMMS §4 消息与流水 · L121 · 2.3k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L153 · 2.2k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L182 · 601
+- ENG-TEAM-COMMS §2 命名与写法 · L85 · 817
+- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L95 · 961
+- ENG-TEAM-COMMS §4 消息与流水 · L123 · 2.3k
+- ENG-TEAM-COMMS §5 唤醒脚本 · L155 · 2.2k
+- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L184 · 590
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
-`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.7k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
-关键词：值班、值班执行者、Sol 值班会话、sol-001、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、sol-002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
+`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.8k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
+关键词：值班、值班执行者、Sol 值班会话、值班长期单、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、值班单 002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
 
 - ENG-TEAM-DUTY §0 结论 · L23 · 706
   - ★ ENG-TEAM-DUTY §0.1 接入要点 · L34 · 69
 - ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 1.1k
 - ENG-TEAM-DUTY §2 完成度调研 · L55 · 1.8k
-- ENG-TEAM-DUTY §3 Sol 旁路会话 · L96 · 934
+- ENG-TEAM-DUTY §3 Sol 旁路会话 · L96 · 944
 - ENG-TEAM-DUTY §4 怎么开子代理 · L116 · 1.2k
 - ENG-TEAM-DUTY §5 Codex 侧怎么省 · L144 · 484
 - ENG-TEAM-DUTY §6 待验证（P0） · L159 · 232
 
 ## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
 
-`docs/design/engineering/ENG-TEAM-FLOW.md` · 15.2k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
-关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、max 单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
+`docs/design/engineering/ENG-TEAM-FLOW.md` · 15.3k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
+关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
 
 - ENG-TEAM-FLOW §0 结论 · L23 · 685
   - ★ ENG-TEAM-FLOW §0.1 接入要点 · L31 · 69
 - ENG-TEAM-FLOW §1 包的归属与开工顺序 · L35 · 2.5k
   - ENG-TEAM-FLOW §1.1 包的归属 · L37 · 1.2k
   - ENG-TEAM-FLOW §1.2 开工顺序与合并顺序 · L52 · 1.3k
-- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.7k
-  - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 616
+- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.8k
+  - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 617
   - ENG-TEAM-FLOW §2.2 派工 · L84 · 1.7k
   - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 796
-  - ENG-TEAM-FLOW §2.4 评审：审美与契约的交叉评审 · L132 · 655
+  - ENG-TEAM-FLOW §2.4 评审：审美与契约的交叉评审 · L132 · 660
   - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 2.6k
   - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L171 · 615
-  - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L182 · 489
+  - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L182 · 494
   - ENG-TEAM-FLOW §2.8 调研入队流水线 · L190 · 1.2k
   - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L208 · 1.1k
   - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L224 · 892
@@ -1715,7 +1715,7 @@
 - ENG-TEAM-QUOTA §5 额度见底时冻结 · L95 · 196
 - ENG-TEAM-QUOTA §6 仅双账号模式 · L101 · 1.1k
   - ENG-TEAM-QUOTA §6.1 主账号（主会话） · L105 · 205
-  - ENG-TEAM-QUOTA §6.2 二号会话的账号 · L110 · 768
+  - ENG-TEAM-QUOTA §6.2 二号会话的账号 · L110 · 762
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
@@ -1776,8 +1776,8 @@
 `docs/design/reference/REF-SPEND-AUDIT.md` · 3.7k 字 · 实现占比、浪费证据与节省建议
 关键词：额度、实现、测试、审计、协调、轮询、重复门禁
 
-- REF-SPEND-AUDIT §0 结论 · L23 · 507
-  - ★ REF-SPEND-AUDIT §0.1 接入要点 · L31 · 217
+- REF-SPEND-AUDIT §0 结论 · L23 · 506
+  - ★ REF-SPEND-AUDIT §0.1 接入要点 · L31 · 216
 - REF-SPEND-AUDIT §1 方法与范围 · L35 · 649
 - REF-SPEND-AUDIT §2 分类消耗 · L45 · 375
 - REF-SPEND-AUDIT §3 浪费与必要性 · L58 · 1.1k
