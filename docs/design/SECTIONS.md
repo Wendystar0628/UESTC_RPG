@@ -396,24 +396,24 @@
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
-`docs/design/world/WLD-LIFE.md` · 27.9k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
+`docs/design/world/WLD-LIFE.md` · 28.0k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
 关键词：动物、鸟、校园猫、鸽群、反应动物、黄昏乌鸦、季节性动物、生活痕迹、生活感、共享单车、电动车、晾晒、黑天鹅、季节生活痕迹、雨天生活痕迹、小心地滑、停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、日夜两套、变体掩码、state_bits、show_ratio
 
   - WLD-LIFE 分工 · L23 · 1.9k
 - WLD-LIFE §0 结论 · L61 · 2.7k
   - ★ WLD-LIFE §0.1 接入要点 · L75 · 1.4k
-- WLD-LIFE §1 动物 · L91 · 4.7k
-  - WLD-LIFE §1.1 反应动物：猫、鸽群与水禽 · L137 · 1.8k
-- WLD-LIFE §2 生活痕迹 · L157 · 3.7k
-- WLD-LIFE §3 停着的车 · L231 · 1.3k
-- WLD-LIFE §4 街道家具 · L252 · 2.8k
-- WLD-LIFE §5 行走模式下的碰撞 · L301 · 2.1k
-- WLD-LIFE §6 Godot 实现 · L336 · 3.9k
-  - WLD-LIFE §6.1 容器 · L340 · 782
-  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L352 · 1.8k
-  - WLD-LIFE §6.3 动物 · L370 · 1.3k
-- WLD-LIFE WP-25 交付验收 · L385 · 1.5k
-- WLD-LIFE §7 待验证（P0） · L408 · 710
+- WLD-LIFE §1 动物 · L91 · 4.8k
+  - WLD-LIFE §1.1 反应动物：猫、鸽群与水禽 · L138 · 1.8k
+- WLD-LIFE §2 生活痕迹 · L158 · 3.7k
+- WLD-LIFE §3 停着的车 · L232 · 1.3k
+- WLD-LIFE §4 街道家具 · L253 · 2.8k
+- WLD-LIFE §5 行走模式下的碰撞 · L302 · 2.1k
+- WLD-LIFE §6 Godot 实现 · L337 · 3.9k
+  - WLD-LIFE §6.1 容器 · L341 · 782
+  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L353 · 1.8k
+  - WLD-LIFE §6.3 动物 · L371 · 1.3k
+- WLD-LIFE WP-25 交付验收 · L386 · 1.5k
+- WLD-LIFE §7 待验证（P0） · L409 · 710
 
 ## WLD-OUTSKIRTS · 边界与外围：大箱庭、外围环境带、阻挡与提示
 
@@ -620,7 +620,7 @@
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
-`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 43.7k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
+`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 43.8k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
 关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json、功能开敞面、过渡绿地、空间记录
 
 - MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.7k
@@ -647,7 +647,7 @@
 - MAP-QSH-ADDITIONS §4 参照与转译规则 · L304 · 1.2k
 - MAP-QSH-ADDITIONS §5 不建议增补 · L330 · 1.2k
 - MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L352 · 833
-- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L374 · 7.4k
+- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L374 · 7.6k
 - MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L419 · 6.3k
   - MAP-QSH-ADDITIONS §8.1 照度三级 · L431 · 674
   - MAP-QSH-ADDITIONS §8.2 颜色 · L443 · 479
