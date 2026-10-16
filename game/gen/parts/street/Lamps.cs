@@ -189,8 +189,8 @@ public sealed class StreetLampPart : IPartDef<LampParams>
 /// <summary>
 /// Entrance lamp fixture (门口灯, WLD-INTERIORS §4): a wall lantern with a light back plate, a dark housing and frosted lenses on
 /// the front (−Z) and the underside. Origin is the bottom centre; the back face lies on +Z (the wall). Visual only: it hangs
-/// above head height on the wall, whose collider stands in for it. The marker rides the building's interior light channel,
-/// which the placer passes in (the entrance's <c>EntranceDecl.LightChannel</c>).
+/// above head height on the wall, whose collider stands in for it. Door lamps are lamp fixtures in the lamp table on the
+/// first-lamp group (on at dusk, on all night, never half off); no window or interior channel (WP-39, max-104).
 /// </summary>
 [Part(PartCatalog.EntranceLamp, Owner = "WP-13")]
 public sealed class EntranceLampPart : IPartDef<LampParams>
@@ -205,13 +205,12 @@ public sealed class EntranceLampPart : IPartDef<LampParams>
         return Levels.Padded(new(-p.Width * 0.5f, -0.008f, -p.Depth * 0.5f - 0.008f), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f));
     }
 
-    /// <summary>Lamp-inventory marker in front of and below the lantern: grade two (entrances, MAP-QSH-ADDITIONS §8.1).</summary>
-    public static LightEmitter Emitter(LampParams p, Matrix4x4 at, ChannelId channel)
+    /// <summary>Lamp-inventory marker in front of and below the lantern: first-lamp group, grade-two energy (entrances, MAP-QSH-ADDITIONS §8.1).</summary>
+    public static LightEmitter Emitter(LampParams p, Matrix4x4 at)
     {
         Validate(p);
-        var (_, energy, _) = StreetLampPart.Marker(LampGrade.Two);
         var y0 = p.Height * (1 - S.DoorLampHousingRatio) * 0.5f;
-        return new(channel, Xf.Point(at, new(0, y0 - S.MarkerDrop, -p.Depth * 0.5f - 0.04f)), S.LampWarm, energy, S.DoorLampRange);
+        return new(S.FirstGroup, Xf.Point(at, new(0, y0 - S.MarkerDrop, -p.Depth * 0.5f - 0.04f)), S.LampWarm, S.GradeTwoEnergy, S.DoorLampRange);
     }
 
     private PartGeometry Build(LampParams p, LodLevel lod)

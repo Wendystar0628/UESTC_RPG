@@ -43,7 +43,7 @@ public static class StreetGallery
             Sample("entrance-mat", "开放入口地垫", PartCatalog.EntranceMat, new EntranceMatPart(), new PanelParams(1.6f, 0.025f, 1f)),
             Sample("open-sign-stand", "绿色开放牌（落地）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.45f, 1.3f, 0.32f) { Variation = 1 }),
             Sample("open-sign-wall", "绿色开放牌（贴墙）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.42f, 0.24f, 0.02f)),
-            Sample("entrance-lamp", "门口灯灯具", PartCatalog.EntranceLamp, new EntranceLampPart(), doorLamp) with { Emitters = at => [EntranceLampPart.Emitter(doorLamp, at, StreetStyle.FirstGroup)] },
+            Sample("entrance-lamp", "门口灯灯具", PartCatalog.EntranceLamp, new EntranceLampPart(), doorLamp) with { Emitters = at => [EntranceLampPart.Emitter(doorLamp, at)] },
         ]);
     }
 

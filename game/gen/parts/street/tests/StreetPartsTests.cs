@@ -173,8 +173,9 @@ public sealed class StreetPartsTests
         var arm = new LampParams(1.7f, 7f, 0.5f) { Variation = 1 };
         var marker = StreetLampPart.Emitter(arm, Matrix4x4.Identity);
         Check(marker.Position.Z < -1f && marker.Channel.Value == "lamp.street", "The single-arm marker hangs under the head, out over the road.");
-        var door = EntranceLampPart.Emitter(new LampParams(0.25f, 0.25f, 0.15f), Matrix4x4.Identity, new("lamp.canopy"));
-        Check(door.Channel.Value == "lamp.canopy" && door.Position.Z < -0.075f, "The door lamp marker takes the placer's channel and sits in front.");
+        var door = EntranceLampPart.Emitter(new LampParams(0.25f, 0.25f, 0.15f), Matrix4x4.Identity);
+        Check(door.Channel.Value == "lamp.first" && door.Energy == StreetStyle.GradeTwoEnergy && door.Position.Z < -0.075f,
+            "The door lamp marker is a first-lamp-group fixture at grade-two energy and sits in front.");
     }
 
     [TestCase]
