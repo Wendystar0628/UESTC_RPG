@@ -5,7 +5,8 @@ namespace Campus.Gen.Zones.South.Ordinary;
 
 /// <summary>
 /// The south zone's ordinary buildings stay with WP-14's facade rules (MAP-QSH-SOUTH §8, §9): the innovation centre, the Kechuang
-/// canteen, the orphan blocks 6152, 6194 and 6195, buildings 1–8 with the public toilet, the stand and the sports platform.
+/// canteen, the orphan blocks 6152, 6194 and 6195, and buildings 1–8 with the public toilet (the sports platform and the stand are
+/// <see cref="Sports.PlatformSite"/>'s and <see cref="Sports.GrandstandSite"/>'s).
 /// Their storeys, heights and families are set in south.overlay.json; this site claims nothing and builds nothing, it only
 /// registers the zone's inspection probes on them (MAP-QSH-SOUTH Q5, Q6, Q8 (a)), from their OSM footprints.
 /// </summary>

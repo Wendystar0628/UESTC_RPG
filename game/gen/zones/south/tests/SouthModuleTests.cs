@@ -51,7 +51,7 @@ public sealed class SouthModuleTests
     {
         var world = World();
         var module = new SouthModule();
-        Require(module.Claims.Count == 6, "gate, front steps, Xuanbang, Liren's connector, the gym and the natatorium are claimed");
+        Require(module.Claims.Count == 8, "gate, front steps, Xuanbang, Liren's connector, the gym, the natatorium, the sports platform and the stand are claimed");
         foreach (var claim in module.Claims.OfType<FeatureClaim>())
         {
             Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
@@ -317,7 +317,8 @@ public sealed class SouthModuleTests
     public void WindowLayoutsDeclareEveryFacadeClaimWithItsGrids()
     {
         var layouts = new SouthModule().DescribeWindowLayouts(World(), 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        Require(layouts.Count == 6, "gate, front steps, Xuanbang, the Liren connector and the two venues are declared");
+        Require(layouts.Count == 8, "gate, front steps, Xuanbang, the Liren connector, the two venues, the platform and the stand are declared");
+        Require(layouts[Sports.GrandstandSite.Feature].Count == 0, "the stand has no glass: its declaration is empty");
         Require(!layouts.ContainsKey(MainBuilding.MainBuildingSite.B2), "B2 keeps WP-14's generic windows");
         void Grid(string feature, string key, int? columns, int rows)
         {
@@ -337,7 +338,45 @@ public sealed class SouthModuleTests
         Grid(Liren.LirenSite.Connector, "east-link", null, 2);
         Grid(Sports.GymSite.Feature, "ring-hall", null, 2);
         Grid(Sports.NatatoriumSite.Feature, "glass-band", null, 1);
-        Require(layouts.Values.Sum(g => g.Count) == 13, "thirteen grids in all");
+        Grid(Sports.PlatformSite.Feature, "arcade-shops", null, 1);
+        Require(layouts.Values.Sum(g => g.Count) == 14, "fourteen grids in all");
+    }
+
+    /// <summary>A06 on the deck (SYS-ATLAS §6): x, z and the panel's bearing, the main session's pick, 29 m from the old anchor.</summary>
+    private static readonly Vector2 A06Spot = new(-166.5f, 734f);
+    private const float A06Yaw = 99f;
+
+    [TestCase]
+    public void PlatformDeckCarriesA06AndOpensOnlyWhereStairsLand()
+    {
+        var ctx = Context();
+        var p = Sports.PlatformSite.PlanOf(ctx.World);
+        Require(p.Decks.Count == 1, "one deck: A06 moves onto it, no terrace is added");
+        Require(SouthTune.Sports.PlatformTop == 5.0f && MathF.Abs(p.Top - p.Y - SouthTune.Sports.PlatformTop) < 1e-4f, "the deck top, A06's y, is the 5.0 m platform storey");
+        // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
+        // on the deck and at least 3 m from the deck's edges and the parapets' inner faces. The anchor data stays as it is until
+        // Astra moves it after the merge.
+        var stadium = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
+        var a = A06Yaw * MathF.PI / 180f;
+        var face = new Vector2(DetMath.Sin(a), -DetMath.Cos(a));
+        var side = new Vector2(-face.Y, face.X);
+        var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => A06Spot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
+        Require(corners.All(c => Framework.PlanMath.Inside(p.Decks[0], c)), "A06 stands on the deck");
+        var parapet = SouthTune.Platform.ParapetInset + SouthTune.Platform.ParapetDepth * 0.5f;
+        var clearance = corners.Min(c => p.Edges.Min(e => DistanceToSegment(c, e.A, e.B) - (e.Free ? parapet : 0f)));
+        Require(clearance >= 3f, $"A06 keeps {clearance:0.00} m from the deck edges and parapets");
+        var turn = Framework.PlanMath.Turn(SouthSite.Bearing(stadium - A06Spot) - A06Yaw);
+        Require(MathF.Abs(turn) < 5f, $"A06 faces the stadium ({turn:0.0}° off)");
+        Require(p.Stairs.Count == 2 && p.Bays.Count > 20 && p.Columns.Count > 20, $"two stairs, {p.Bays.Count} shop bays, {p.Columns.Count} columns");
+        Require(p.Edges.Count(e => !e.Free) > 10 && p.Edges.Count(e => e.Free) > 20, "the edges against the venues stay open, the rest are guarded");
+        var module = new SouthModule();
+        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        Require(colliders.OfType<SlabCollider>().Count(slab => MathF.Abs(slab.Y - p.Top) < 0.01f) == 1, "the deck top is walkable");
+        var walls = colliders.OfType<WallCollider>().ToArray();
+        foreach (var stair in p.Stairs)
+            Require(!walls.Any(w => Covers(w, stair.Frame.P(0, -0.3f), p.Top + 0.8f)), $"a stair lands through an open parapet at {stair.Frame.Origin}");
+        var edge = p.Edges.First(e => e.Free && e.Length > 10f && !p.Stairs.Any(s => Vector2.Distance(s.Frame.Origin, e.Mid) < 12f));
+        Require(walls.Any(w => Covers(w, edge.Mid - edge.Out * 0.2f, p.Top + 1.2f)), "a free edge carries a parapet to 1.5 m");
     }
 
     [TestCase]

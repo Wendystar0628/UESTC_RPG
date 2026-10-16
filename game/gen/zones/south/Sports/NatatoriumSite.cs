@@ -12,7 +12,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// <summary>
 /// Natatorium (MAP-QSH-SOUTH §7.2; WLD-INTERIORS §2.5): a low white elliptical dome, which the facade rules cannot make, so this
 /// site claims it. A short white skirt, the dome, its dark glass band near the top as a clerestory drum under a white cap
-/// (at night the band carries the pool's glow on the venue curve), the ochre-red paving ring round the foot, and the
+/// (at night the band carries the pool's glow on the venue curve), a light concrete apron round the foot, and the
 /// platform-storey entrance hall on the platform side, closed until WP-31a registers the pool's entrance.
 /// The ellipse is fitted to the footprint's area and second moments. The glass band is one grid (contract-29), a column per facet.
 /// </summary>
@@ -126,11 +126,12 @@ public sealed class NatatoriumSite : SouthSite
         // The crown inside the drum, so the band never shows sky through its back.
         b.Add(Solids.Lathe([new(S.PoolDrum, S.PoolGlassFoot - 0.2f), new(S.PoolDrum * 0.6f, S.PoolGlassFoot + 0.2f), new(0, S.PoolGlassFoot + 0.3f)], segments / 2, L.DomeWhite, p.A, p.B, capBottom: false), at);
         if (b.Detail == SiteDetail.Mass) return;
-        // Plinth line, the skirt's cornice and the ochre-red paving ring round the foot (§7.2).
+        // Plinth line, the skirt's cornice and the light concrete apron round the foot (§7.2's ochre-red ring read as a running
+        // track beside the stadium; 18c2 review).
         var e = 1f / p.A;
         b.Add(Solids.Lathe([new(1f + 0.25f * e, -0.1f), new(1f + 0.25f * e, 0.35f), new(1f, 0.45f)], segments, L.Granite with { Normal = ToonNormal.Smooth }, p.A, p.B, capBottom: false, capTop: false), at);
         b.Add(Solids.Lathe([new(1f + 0.3f * e, 1.55f), new(1f + 0.3f * e, 1.85f), new(0.99f, 2.0f)], segments, L.StoneTrim with { Normal = ToonNormal.Smooth }, p.A, p.B, capBottom: true, capTop: false), at);
-        b.Add(Solids.Lathe([new(1f + S.PoolRing, 0.03f), new(1f + 0.25f * e, 0.03f)], segments, L.RingPaving, p.A, p.B, capBottom: false, capTop: false), at);
+        b.Add(Solids.Lathe([new(1f + S.PoolRing, 0.03f), new(1f + 0.25f * e, 0.03f)], segments, L.Apron, p.A, p.B, capBottom: false, capTop: false), at);
         Meridians(b, p, y, b.Detail == SiteDetail.Full ? S.PoolRibs : S.PoolRibs / 2);
         // Mullions between the glass facets and a slim sill ring.
         for (var i = 0; i < p.Bays; i++)

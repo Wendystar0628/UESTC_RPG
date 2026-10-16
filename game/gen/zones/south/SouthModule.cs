@@ -133,8 +133,8 @@ public sealed class SouthModule : IContentModule, IWindowMetadataSource
 
 /// <summary>
 /// The south zone's sites in a fixed order. 18a: gate and entrance axis, main building, forest park; 18b: Xuanbang, Liren,
-/// east lake; 18c: the gym and natatorium, the west lawn by the innovation centre, the ordinary buildings' probes (their
-/// massing stays WP-14's) and the plaza inside the gate.
+/// east lake; 18c: the gym and natatorium, the sports platform, the stand, the west lawn by the innovation centre, the ordinary
+/// buildings' probes (their massing stays WP-14's) and the plaza inside the gate.
 /// </summary>
 public static class SouthSites
 {
@@ -149,6 +149,8 @@ public static class SouthSites
         new EastLake.EastLakeSite(),
         new Sports.GymSite(),
         new Sports.NatatoriumSite(),
+        new Sports.PlatformSite(),
+        new Sports.GrandstandSite(),
         new Innovation.WestLawnSite(),
         new Ordinary.OrdinaryBuildingsSite(),
         new Gate.GatePlazaSite(),

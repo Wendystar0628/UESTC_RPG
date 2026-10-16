@@ -102,8 +102,37 @@ public static class SouthTune
         public static readonly ToonSpec Vent = S("equip.grey", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
         /// <summary>Natatorium (§7.2): the low white dome, read by its two light steps (ART-STYLE §3), smooth normals.</summary>
         public static readonly ToonSpec DomeWhite = S("wall.greyWhite") with { Normal = ToonNormal.Smooth };
-        /// <summary>The ochre-red ring paving round the natatorium's foot: the terracotta band, no outline.</summary>
-        public static readonly ToonSpec RingPaving = S("band.terracotta", ToonFx.Mottle, LineClass.None);
+        /// <summary>
+        /// The light concrete apron round the natatorium's foot (18c2 review: the ochre-red ring read as a running track next to
+        /// the stadium): the kerb's light grey, no outline.
+        /// </summary>
+        public static readonly ToonSpec Apron = S("ground.curb", ToonFx.Mottle, LineClass.None);
+        /// <summary>
+        /// Sports platform (§7.6): the deck's top paving and joints, and the warm sand shop block under it (§7.4). The soffit,
+        /// fascia and blank sign boards take <see cref="White"/>, the columns <see cref="DomeWhite"/>, so the venue cells stay
+        /// inside the draw-call budget.
+        /// </summary>
+        public static readonly ToonSpec DeckPaving = S("ground.paver", ToonFx.Mottle, LineClass.None);
+        public static readonly ToonSpec DeckJoint = S("ground.concrete", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec Sand = S("tile.canteen", ToonFx.Mottle);
+        /// <summary>
+        /// Stand (§7.3): one light concrete throughout, seats new and low in chroma: muted yellow in the middle, pale lilac grey to
+        /// the sides (the palette has no seat colours: the yellow marking and the grey-pink umbrella are borrowed), the low seats
+        /// opposite dark grey. The canopy is new silver-white panels (the gym's curved metal) with a pale gold middle section.
+        /// </summary>
+        public static readonly ToonSpec StandConcrete = S("ground.curb", ToonFx.BevelLift);
+        /// <summary>Rows read by lit treads and shaded risers, with no outline per row (the 18a review's hatching on the grand steps).</summary>
+        public static readonly ToonSpec TierRiser = S("ground.curb", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec SeatYellow = S("ground.markingYellow", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec SeatLilac = S("umbrella.graypink", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec SeatDark = S("roof.grey", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec CanopyGold = new(new("panel.paleGold.lit"), new("panel.paleGold.shade"))
+        {
+            Fx = ToonFx.Rim | ToonFx.AnisoBand,
+            Steps = ShadeSteps.TwoHalf,
+            Normal = ToonNormal.Smooth,
+            Wet = 0.85f,
+        };
     }
 
     /// <summary>
@@ -115,7 +144,7 @@ public static class SouthTune
     public static class Windows
     {
         public static readonly ChannelId Research = new("window.lab"), Teaching = new("window.teach"), Hall = new("interior.public");
-        public static readonly ChannelId AllNight = new("window.allnight"), Venue = new("window.venue");
+        public static readonly ChannelId AllNight = new("window.allnight"), Venue = new("window.venue"), General = new("window.general");
         public const byte Classroom = 1, Corridor = 3, Stair = 4, Office = 5, Lab = 6, Gym = 13, Pool = 14;
     }
 
@@ -351,10 +380,85 @@ public static class SouthTune
             [new(0.47f, 14.2f), new(0.47f, 14.5f), new(0.42f, 14.85f), new(0.30f, 15.25f), new(0.15f, 15.5f), new(0f, 15.6f)];
         /// <summary>Meridian ribs on the dome from the skirt's cornice to the glass band (thin white lines that give the dome its structure).</summary>
         public const int PoolRibs = 32;
-        /// <summary>The ochre-red paving ring round the foot, as a fraction of the semi-axes.</summary>
+        /// <summary>The light concrete apron round the foot, as a fraction of the semi-axes.</summary>
         public const float PoolRing = 0.1f;
         /// <summary>Platform-storey entrance hall on the side facing the platform (closed until WP-31a registers it).</summary>
         public const float PoolDoorBearing = 172f, PoolEntryWidth = 9f, PoolEntryHeight = 4.2f, PoolEntryDepth = 2.6f;
+    }
+
+    /// <summary>
+    /// Sports platform (大平台, MAP-QSH-SOUTH §7.6, 初值): the deck over qsh:way:601600526, its top at
+    /// <see cref="Sports.PlatformTop"/>. Under the deck a round-column street arcade runs along every free edge; behind it the closed
+    /// shops (§7.4, WLD-INTERIORS §5.2) fill a core block. Service roads keep running under the deck between the core and the gym
+    /// and the stand. Heights are above the ground at the footprint's centroid.
+    /// </summary>
+    public static class Platform
+    {
+        /// <summary>Deck: slab under the top paving, the edge fascia band and its projection.</summary>
+        public const float Slab = 0.75f, Fascia = 1.0f, FasciaProud = 0.12f;
+        /// <summary>Parapet panels (栏板, §7.6): 1.1 m solid, collision to 1.5 m from the railing part (SYS-WALK §7).</summary>
+        public const float Parapet = 1.1f, ParapetDepth = 0.22f, ParapetInset = 0.2f;
+        /// <summary>Arcade columns along the free edges: round, at most this pitch, set in from the edge.</summary>
+        public const float ColumnRadius = 0.36f, ColumnPitch = 7.2f, ColumnInset = 1.3f, ColumnEnd = 1.6f;
+        /// <summary>Deck joints: a light grid on the top paving.</summary>
+        public const float JointPitch = 7.2f, JointWidth = 0.12f;
+        /// <summary>Probe distance outside an edge: an edge whose outside is a venue or another deck is not free.</summary>
+        public const float AbutProbe = 0.8f;
+
+        /// <summary>
+        /// The closed shop block under the deck: the footprint set in 7 m from its edges (the arcade depth), simplified, kept west
+        /// of the service roads that run under the deck along the stand.
+        /// </summary>
+        public static readonly Vector2[] Core =
+        [
+            new(-187.0f, 805.0f), new(-176.0f, 792.0f), new(-168.0f, 772.0f), new(-165.5f, 760.5f), new(-158.0f, 774.0f), new(-144.0f, 774.0f),
+            new(-123.0f, 788.6f), new(-94.2f, 793.9f), new(-79.0f, 789.6f), new(-64.2f, 779.3f), new(-52.0f, 762.5f), new(-43.0f, 760.5f),
+            new(-43.0f, 812.6f), new(-66.2f, 818.0f), new(-81.8f, 842.7f), new(-113.2f, 833.7f), new(-144.0f, 834.8f), new(-148.2f, 820.0f),
+            new(-156.1f, 811.8f), new(-168.8f, 806.0f), new(-179.5f, 813.4f),
+        ];
+        /// <summary>Shopfront bays on the core: target width, glazing sill and head, sign band; a closed door every second bay.</summary>
+        public const float ShopBay = 4.6f, ShopSill = 0.45f, ShopHead = 3.2f, SignBottom = 3.35f, SignTop = 4.05f, Pilaster = 0.5f;
+        public const float DoorWidth = 1.8f, DoorHeight = 2.5f;
+
+        /// <summary>Grand steps (一组宽大台阶) in the south edge's notch: two flights and a landing, centred on the notch edge.</summary>
+        public static readonly Vector2 GrandStairAt = new(-54.35f, 822.0f);
+        public const float GrandStairWidth = 13f, StairTread = 0.32f, StairLanding = 2.4f;
+        public const int RisersPerFlight = 16;
+        /// <summary>The OSM steps at the north tip (osm:way:988857939): their top centre and the direction they run down.</summary>
+        public static readonly Vector2 NorthStairTop = new(-178.9f, 714.9f), NorthStairDown = new(-0.684f, -0.730f);
+        public const float NorthStairWidth = 3.0f;
+    }
+
+    /// <summary>
+    /// The stand (看台, qsh:way:217855276, MAP-QSH-SOUTH §7.3, 初值): a C of tiers round the west half of the track, sampled on rays
+    /// from the track's centre (angles in degrees from +x toward +z, so 180 is west); each ray's nearest and farthest crossings of
+    /// the footprint are the front and back of the tiers. The rows rise at most <see cref="Slope"/> and stop at <see cref="TopMax"/>,
+    /// so the deep main stand on the west is the tallest and the curved ends fall away. The pillow canopy covers the main stand.
+    /// </summary>
+    public static class Stand
+    {
+        public const float StationStep = 1.5f, MinDepth = 6f;
+        /// <summary>Front wall over the apron, the cross walk behind it, the back concourse and its solid parapet.</summary>
+        public const float Front = 1.1f, FrontWalk = 1.4f, Concourse = 3.0f, Parapet = 1.1f;
+        public const int Rows = 22;
+        public const float Slope = 0.5f, TopMax = 12.0f;
+        /// <summary>Pillow canopy (枕形罩棚): angle range and end taper, back overhang, reach over the rake, thickness, lift.</summary>
+        public const float CanopyFrom = 140f, CanopyTo = 215f, CanopyEnd = 14f;
+        public const float CanopyBack = 1.2f, CanopyReach = 0.8f, CanopyThickness = 4.4f, CanopyBackRise = 4.4f, CanopyFrontRise = 5.6f;
+        /// <summary>The lens: the belly's depth against the top's, and the roundness of the edges (lower is fuller).</summary>
+        public const float CanopyBelly = 0.75f, CanopyRound = 0.42f;
+        public const int CanopySamples = 10;
+        /// <summary>The pale gold middle section and its vertical division seams; the yellow seat block under it.</summary>
+        public const float GoldFrom = 172f, GoldTo = 190f, YellowFrom = 160f, YellowTo = 202f;
+        /// <summary>Dark grey steel: a column and a raking strut every this many stations, on the back concourse.</summary>
+        public const int SupportEvery = 4;
+        public const float Column = 0.5f;
+        /// <summary>Concourse portals in the back wall at the platform level (where the deck meets the stand), closed.</summary>
+        public const float PortalPitch = 12f, PortalWidth = 3.2f, PortalHeight = 3.0f;
+
+        /// <summary>The low dark seats across the track (§7.3, design:south-stadium-east-seats): rows, depth, rise and walls.</summary>
+        public const int LowRows = 5;
+        public const float LowRow = 0.8f, LowRise = 0.4f, LowFront = 0.45f, LowWalk = 0.9f, LowBack = 1.2f;
     }
 
     /// <summary>
