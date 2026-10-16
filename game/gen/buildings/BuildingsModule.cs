@@ -105,7 +105,8 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     }
 
     /// <summary>
-    /// Wall colliders along the skin (SYS-WALK §13); the entrance span is DoorClosed: closed buildings stay closed (WLD-INTERIORS §5.2).
+    /// Wall colliders along the skin (SYS-WALK §13); each entrance span is DoorClosed: closed buildings stay closed
+    /// (WLD-INTERIORS §5.2). The WP-11 landings, slopes and steps in front of the doors bring their own colliders.
     /// Collision cells are fixed 64 m cells.
     /// </summary>
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
@@ -125,21 +126,16 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
                 {
                     var a = skin.Points[e];
                     var b = skin.Points[(e + 1) % skin.Count];
+                    var d = skin.Dir[e];
                     var inward = -skin.Normal[e] * 0.15f;
-                    if (fi == plan.EntranceFacade)
+                    var start = a;
+                    foreach (var door in plan.Entrances.Where(x => x.Facade == fi).Select(plan.DoorOf).OrderBy(o => o.U0))
                     {
-                        var door = plan.Openings[fi].First(o => o.Kind == BayKind.Door);
-                        var d = skin.Dir[e];
-                        var p0 = a + d * door.U0;
-                        var p1 = a + d * door.U1;
-                        Add(a, p0, SurfaceTag.Wall);
-                        Add(p0, p1, SurfaceTag.DoorClosed);
-                        Add(p1, b, SurfaceTag.Wall);
+                        Add(start, a + d * door.U0, SurfaceTag.Wall);
+                        Add(a + d * door.U0, a + d * door.U1, SurfaceTag.DoorClosed);
+                        start = a + d * door.U1;
                     }
-                    else
-                    {
-                        Add(a, b, SurfaceTag.Wall);
-                    }
+                    Add(start, b, SurfaceTag.Wall);
 
                     void Add(Vector2 p, Vector2 q, SurfaceTag tag)
                     {
@@ -148,6 +144,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
                     }
                 }
             }
+            foreach (var entrance in plan.Entrances) list.AddRange(EntranceKit.Colliders(EntranceKit.Pieces(plan, entrance)));
         }
         return list;
     }

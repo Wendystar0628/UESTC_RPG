@@ -11,6 +11,14 @@ public enum BayKind : byte { Window, Stair, Toilet, Corridor, Door, Blank }
 public readonly record struct Opening(int Bay, int Row, float U0, float U1, float Y0, float Y1, BayKind Kind);
 
 /// <summary>
+/// One entrance door: the Door opening at (Bay, Row) of Openings[Facade]. Anchor is the interior index's EntranceDecl it
+/// was opened for (WLD-INTERIORS §15), null for the generic door. With Landing, WP-14 builds the WP-11 landing at the door
+/// floor, the connection down to GroundY in front of it (WLD-TERRAIN §4.3) and the canopy at CanopyY; without, the
+/// outside landing is a deck or porch of another package and the door stands alone.
+/// </summary>
+public sealed record PlanEntrance(int Facade, int Bay, int Row, string? Anchor, bool Landing, float GroundY, float CanopyY);
+
+/// <summary>
 /// The bays of one footprint edge, read from the WP-51a facade grid (FacadeGridGenerator). Bay indices are contiguous
 /// over all rings (ColumnStart + bay = FacadeBay.Index) and are the columns of the building-wide window grid.
 /// Bounds are the bay boundaries in footprint u (glass plane); Widths the kernel's opening widths (0 when blank).
@@ -65,9 +73,6 @@ public sealed class BuildingPlan
     /// <summary>Window sill and head heights per storey (absolute Y).</summary>
     public required float[] SillY { get; init; }
     public required float[] HeadY { get; init; }
-    public required float DoorHeadY { get; init; }
-    public required float ThresholdY { get; init; }
-    public required float CanopyY { get; init; }
     public required IReadOnlyList<FacadeLayout> Facades { get; init; }
     /// <summary>Openings per facade (same order as Facades), in skin u.</summary>
     public required IReadOnlyList<Opening[]> Openings { get; init; }
@@ -81,8 +86,14 @@ public sealed class BuildingPlan
     /// <summary>Columns of the building window grid (all bays of all rings, blank ones included).</summary>
     public required int TotalColumns { get; init; }
     public required Vector2 Axis { get; init; }
-    public required int EntranceFacade { get; init; }
-    public required int EntranceBay { get; init; }
+    /// <summary>The entrance doors: one at each interior-index anchor the building takes, else the generic door (or none).</summary>
+    public required IReadOnlyList<PlanEntrance> Entrances { get; init; }
+
+    /// <summary>The door opening of an entrance.</summary>
+    public Opening DoorOf(PlanEntrance e) => Openings[e.Facade].First(o => o.Kind == BayKind.Door && o.Bay == e.Bay && o.Row == e.Row);
+
+    /// <summary>Index of an entrance's door in Openings[e.Facade] (for its precision zone).</summary>
+    public int DoorIndex(PlanEntrance e) => Array.FindIndex(Openings[e.Facade], o => o.Kind == BayKind.Door && o.Bay == e.Bay && o.Row == e.Row);
 
     public TileKey Tile(LodLevel lod) => TileOf(Centroid, lod);
 
@@ -140,7 +151,12 @@ public sealed class BuildingPlan
         var ys = new List<float> { PlinthTopY, WallTopY };
         for (var k = 1; k < Storeys; k++) ys.Add(FloorY(k));
         for (var k = 0; k < Storeys; k++) { ys.Add(SillY[k]); ys.Add(HeadY[k]); }
-        if (EntranceFacade >= 0) ys.Add(DoorHeadY);
+        foreach (var e in Entrances)
+        {
+            var door = DoorOf(e);
+            ys.Add(door.Y0);
+            ys.Add(door.Y1);
+        }
         if (Profile.RoofEdge == RoofEdge.Parapet) ys.Add(RoofY);
         ys.RemoveAll(y => y < PlinthTopY - 1e-4f || y > WallTopY + 1e-4f);
         ys.Sort();

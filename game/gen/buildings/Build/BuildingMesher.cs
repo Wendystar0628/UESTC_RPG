@@ -12,7 +12,8 @@ namespace Campus.Gen.Buildings.Build;
 /// chamfered corners with custom normals, plinth, string courses, openings (reveal with AO and sill from the
 /// wall; WP-10 frames, doors and curtains with OpeningGlass glass, see FacadeOpenings), cornice or parapet with
 /// the WP-12 coping and lightning strip, roof with stair-core penthouses and a fenced WP-12 plant enclosure (see
-/// RoofParts), entrance (surround, canopy, steps), pilasters, downpipes and AC grilles. Surfaces that persist across
+/// RoofParts), entrances (surround, canopy, the WP-11 landing with its slope or steps, see EntranceKit), pilasters,
+/// downpipes and AC grilles. Surfaces that persist across
 /// levels keep their normals, colours and material classes.
 /// </summary>
 public sealed class BuildingMesher
@@ -65,7 +66,7 @@ public sealed class BuildingMesher
                 RoofEdge();
                 Roof();
                 Penthouses();
-                Entrance();
+                Entrances();
                 Pilasters();
                 if (Full) Downpipes();
                 if (_prof.AcGrilles) Grilles();
@@ -237,18 +238,13 @@ public sealed class BuildingMesher
         var top = _p.PlinthTopY;
         var profile = Profile.Of([P(o, _p.SunkY), P(o, top - 0.02f), P(o - 0.02f, top), P(0f, top)], 1);
         for (var r = 0; r < _p.RingCount; r++)
-            Prims.Sweep(_sink, _plinth, _p.SkinAt(r), profile, DoorGap(r), new Vector2(0f, _p.SunkY));
+            Prims.Sweep(_sink, _plinth, _p.SkinAt(r), profile, DoorGaps(r), new Vector2(0f, _p.SunkY));
     }
 
-    /// <summary>The entrance opening on ring r as a gap in plinth sweeps (skin u), or null.</summary>
-    private SweepGap? DoorGap(int ring)
-    {
-        if (_p.EntranceFacade < 0) return null;
-        var fl = _p.Facades[_p.EntranceFacade];
-        if (fl.Ring != ring) return null;
-        var door = _p.Openings[_p.EntranceFacade].First(o => o.Kind == BayKind.Door);
-        return new SweepGap(fl.Edge, door.U0, door.U1);
-    }
+    /// <summary>The doors on ring r that cut the plinth (threshold below its top line), as gaps in its sweep (skin u).</summary>
+    private SweepGap[] DoorGaps(int ring) =>
+        [.. _p.Entrances.Where(e => _p.Facades[e.Facade].Ring == ring && _p.DoorOf(e).Y0 < _p.PlinthTopY)
+            .Select(e => new SweepGap(_p.Facades[e.Facade].Edge, _p.DoorOf(e).U0, _p.DoorOf(e).U1))];
 
     private void StringCourses()
     {
@@ -463,15 +459,19 @@ public sealed class BuildingMesher
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Entrance: surround, canopy and steps on the landing (L0/L1).
+    // Entrances: surround, canopy, and the WP-11 landing with its steps or slope (EntranceKit) (L0/L1).
     // ---------------------------------------------------------------------------------------------
-    private void Entrance()
+    private void Entrances()
     {
-        if (_p.EntranceFacade < 0) return;
-        var fl = _p.Facades[_p.EntranceFacade];
+        foreach (var e in _p.Entrances) Entrance(e);
+    }
+
+    private void Entrance(PlanEntrance e)
+    {
+        var fl = _p.Facades[e.Facade];
         var skin = _p.SkinAt(fl.Ring);
         var f = EdgeFrame.Of(skin, fl.Edge);
-        var door = _p.Openings[_p.EntranceFacade].First(o => o.Kind == BayKind.Door);
+        var door = _p.DoorOf(e);
         var uMin = 0.15f;
         var uMax = skin.Length[fl.Edge] - 0.15f;
         var w = 0.22f;
@@ -479,31 +479,19 @@ public sealed class BuildingMesher
         f.Box(_sink, _stone, door.U0 - w, door.U0, 0f, 0.07f, door.Y0, door.Y1 + w);
         f.Box(_sink, _stone, door.U1, door.U1 + w, 0f, 0.07f, door.Y0, door.Y1 + w);
         f.Box(_sink, _stone, door.U0, door.U1, 0f, 0.07f, door.Y1, door.Y1 + w);
+        // A door onto a deck or porch of another package stands alone: that package roofs and floors its landing.
+        if (!e.Landing) return;
         // Canopy: white aluminium edge, 0.3 m thick, ~2.2 m deep.
         var cu0 = MathF.Max(uMin, door.U0 - 1.0f);
         var cu1 = MathF.Min(uMax, door.U1 + 1.0f);
-        var cy = _p.CanopyY;
+        var cy = e.CanopyY;
         var depth = _p.Small ? 1.2f : 2.2f;
         var canopy = Full
             ? Profile.Of([new(0f, cy, 0f, 0.35f), new(depth, cy), new(depth, cy + 0.28f), new(depth - 0.02f, cy + 0.3f), new(0f, cy + 0.3f)], 3)
             : Profile.Of([new(0f, cy, 0f, 0.35f), new(depth, cy), new(depth, cy + 0.3f), new(0f, cy + 0.3f)]);
         f.Bar(_sink, _trim with { Family = Families.WallWarmWhite }, cu0, cu1, canopy);
-        // Landing step from the threshold (ground-floor level) down to the pad: 0.15 m risers, 0.3 m treads.
-        var steps = Math.Max(1, (int)MathF.Round((_p.ThresholdY - _p.BaseY) / 0.15f));
-        var rise = (_p.ThresholdY - _p.BaseY) / steps;
-        var lu0 = MathF.Max(uMin, door.U0 - 0.8f);
-        var lu1 = MathF.Min(uMax, door.U1 + 0.8f);
-        var s = 0f;
-        for (var i = 0; i < steps; i++)
-        {
-            var top = _p.ThresholdY - i * rise;
-            var s1 = i == 0 ? 1.4f : s + 0.3f;
-            if (Full)
-                f.Bar(_sink, _stone, lu0, lu1, Profile.Of([new(s, _p.SunkY), new(s1, _p.SunkY), new(s1, top - 0.015f), new(s1 - 0.015f, top), new(s, top)], 2));
-            else
-                f.Box(_sink, _stone, lu0, lu1, s, s1, _p.SunkY, top, bottom: false);
-            s = s1;
-        }
+        // Landing at the threshold and the steps or slope down to the outside ground: WP-11 parts.
+        EntranceKit.Build(_sink, EntranceKit.Pieces(_p, e), _lod);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -531,8 +519,10 @@ public sealed class BuildingMesher
             if (pier < 0.85f) continue;
             for (var m = every; m < layout.Bays; m += every)
             {
-                if (fi == _p.EntranceFacade && (m == _p.EntranceBay || m == _p.EntranceBay + 1)) continue;
                 var uc = layout.BoundarySkin(m);
+                // None beside a door: not on its bay's boundaries, nor within 0.6 m of an off-centre anchor door.
+                if (_p.Entrances.Any(e => e.Facade == fi && (m == e.Bay || m == e.Bay + 1 ||
+                    (uc > _p.DoorOf(e).U0 - 0.6f && uc < _p.DoorOf(e).U1 + 0.6f)))) continue;
                 Pilaster(f, uc - 0.28f, uc + 0.28f, _p.PlinthTopY, top);
             }
         }

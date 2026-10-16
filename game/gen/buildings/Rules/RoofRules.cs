@@ -34,6 +34,13 @@ public static class RoofRules
     public const float RoofMargin = 0.8f;
     /// <summary>Only roofs at least this large (m²) carry a plant enclosure.</summary>
     public const float PlantFromArea = 400f;
+    /// <summary>
+    /// Colour family of the fence boards in place of WP-12's dark blue-grey fence steel (equip.fence), which read as a hole
+    /// in the roof from mid distance: the light grey aluminium of the frames (core frame.alu), one value step above the roof
+    /// slab (roof.grey) and one below the plant casings (equip.grey), so the louvred fence reads as light metal and the
+    /// plant still shows above it (main-session review, 2026-10-16 12:35).
+    /// </summary>
+    public const string FenceBoard = "frame.alu";
 
     /// <summary>
     /// What the enclosure holds: dormitories run air-source heat pumps (no solar heaters, MAP-QSH-ADDITIONS §2.9),

@@ -96,8 +96,11 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
     public void Enclosure(PlanRing ring, Vector2 centre, float baseY)
     {
         if (Level(Fence) is { } fenceLevel)
-            Place(EquipmentFencePart.Along(ring.Points, true, Defaults<RailingParams>(PartCatalog.EquipmentFence), fenceLevel),
-                Matrix4x4.CreateTranslation(0f, baseY, 0f));
+        {
+            var at = Matrix4x4.CreateTranslation(0f, baseY, 0f);
+            foreach (var mesh in EquipmentFencePart.Along(ring.Points, true, Defaults<RailingParams>(PartCatalog.EquipmentFence), fenceLevel).Meshes)
+                sink.Append(FenceBoards(mesh), at);
+        }
         var (tank, pumps) = RoofRules.Plant(plan.Style, Full);
         var units = Units(tank, pumps);
         var axis = plan.Axis;
@@ -124,6 +127,12 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
         };
         if (Part(Antenna, PartCatalog.Antenna, p) is { } mast) Place(mast, Frame(plan.Axis, spot, baseY));
     }
+
+    /// <summary>The fence's board surface in RoofRules.FenceBoard instead of the part's fence steel; posts and cap rail unchanged.</summary>
+    private static GeometryBundle FenceBoards(GeometryBundle mesh) =>
+        mesh.Material.Spec.Lit == RoofStyle.Lit(RoofStyle.FenceSteel)
+            ? mesh with { Material = new ToonRef(mesh.Material.Spec with { Lit = RoofStyle.Lit(RoofRules.FenceBoard), Shade = RoofStyle.Shade(RoofRules.FenceBoard) }) }
+            : mesh;
 
     /// <summary>The units of an enclosure, tank first (its ladder faces the heat pumps), at their PartCatalog sizes.</summary>
     private static List<(bool Tank, EquipmentParams Params)> Units(bool tank, int pumps)

@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
 using Campus.Gen.Buildings.Build;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Plan;
@@ -23,7 +24,7 @@ public sealed class BuildingsTests
         var plan = set.Plans[0];
         Require(plan.Storeys == 6, "storeys from data");
         Require(plan.TotalColumns >= 20, "bays on all four facades");
-        Require(plan.EntranceFacade >= 0, "an entrance on the longest facade");
+        Require(plan.Entrances.Count == 1 && plan.Entrances[0].Anchor is null, "the generic entrance on the longest facade");
         Require(set.WindowCount == plan.TotalColumns * plan.Storeys, "window block covers the building grid");
         var bundles = new BuildingsModule().BuildOne(plan, set.Blocks[0], LodLevel.L0);
         var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
@@ -212,7 +213,9 @@ public sealed class BuildingsTests
         var hero = BuildingSet.For(World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K3, FidelityZone.K1), features), 2u);
         var module = new BuildingsModule();
         static bool Pump(GeometryBundle b) => b.Material.Spec.Lit.Value == "equip.grey.lit";
-        static bool Fence(GeometryBundle b) => b.Material.Spec.Lit.Value == "equip.fence.lit" && b.Material.Spec.Line == LineClass.Building;
+        // The fence boards in the light metal grey of RoofRules.FenceBoard (the board class: building line, no effects).
+        static bool Fence(GeometryBundle b) => b.Material.Spec.Lit.Value == Rules.RoofRules.FenceBoard + ".lit" &&
+            b.Material.Spec.Line == LineClass.Building && b.Material.Spec.Fx == ToonFx.None;
         static bool Strip(GeometryBundle b) => b.Material.Spec.Lit.Value == "roof.silverMetal.lit" && b.Material.Spec.Fx.HasFlag(ToonFx.Rim);
         static bool Tank(GeometryBundle b) => b.Material.Spec.Lit.Value == "roof.silverMetal.lit" && b.Material.Spec.Fx == ToonFx.BevelLift;
         static int Tris(IEnumerable<GeometryBundle> bs) => bs.Sum(b => b.Index.Length / 3);
@@ -223,6 +226,8 @@ public sealed class BuildingsTests
             var near = module.BuildOne(simple, plain.Blocks[i], LodLevel.L0);
             var nearFull = module.BuildOne(full, hero.Blocks[i], LodLevel.L0);
             Require(near.Any(Fence) && near.Any(Pump) && near.Any(Strip), $"{simple.Key}: fenced plant and lightning strip");
+            Require(!near.Concat(nearFull).Any(b => b.Material.Spec.Lit.Value == "equip.fence.lit" && b.Material.Spec.Line == LineClass.Building),
+                $"{simple.Key}: no dark fence steel left on the boards");
             Require((simple.Style == Rules.BuildingStyle.Research) == near.Any(Tank), $"{simple.Key}: a water tank beside teaching plant only");
             Require(Tris(nearFull.Where(Pump)) > Tris(near.Where(Pump)), $"{simple.Key}: a K1 roof carries more and finer units");
             Require(Tris(nearFull.Where(Strip)) > Tris(near.Where(Strip)), $"{simple.Key}: K1 strip on supports, elsewhere one rod");
@@ -240,6 +245,103 @@ public sealed class BuildingsTests
                         b.Position[3 * v + 1] >= simple.RoofY - 1e-3f, $"{simple.Key}: plant stands on the roof, clear of the parapet");
                 }
         }
+    }
+
+    [TestCase]
+    public void OrdinaryBuildingsKeepTheirOpeningsAndNumbers()
+    {
+        // Buildings without an entrance anchor keep 14-2b's layout cell for cell: openings, window numbers and cards (hash
+        // of that layout taken on b66d4df). Anchored buildings only move their door; their window blocks never change.
+        var features = new[]
+        {
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", new PolygonRings(LShape(100, 0)), 4, 15.6f, "research"),
+            Feature("t:court", Courtyard(0, 100), 3, 12f, "teaching"), Feature("t:hall", Rect(200, 0, 40, 30), 1, 9f, "sport"),
+            Feature("t:small", Rect(300, 0, 5, 6), 1, 3f, "service"),
+        };
+        var plain = BuildingSet.For(World(features), 4u);
+        Require(LayoutHash(plain) == "f3e3eb7b1d0265df", $"14-2b layout of ordinary buildings ({LayoutHash(plain)})");
+        var anchored = BuildingSet.For(World(new Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
+        Require(anchored.Blocks.SequenceEqual(plain.Blocks), "an entrance anchor leaves every window block as it was");
+        Require(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), ""),
+            "the other buildings keep their layout");
+    }
+
+    [TestCase]
+    public void DoorsOpenAtTheEntranceAnchors()
+    {
+        var index = new Entrances(
+            Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f),                          // off the bay centre, at the floor
+            Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f),             // raised onto a porch
+            Anchor("t:low", "low.mid", new(220f, 2.0f, 0f), 0f),                                // no door height under the next floor
+            Anchor("t:wing", "wing.east", new(320f, 0f, 8f), 90f));                             // opens into the taller block next door
+        var features = new[]
+        {
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research"),
+            Feature("t:low", Rect(200, 0, 40, 16), 4, 13.2f, "teaching"), Feature("t:wing", Rect(300, 0, 20, 16), 3, 10.5f, "teaching"),
+            Feature("t:block", Rect(320, 0, 20, 16), 5, 18f, "teaching"),
+        };
+        var world = World(index, features);
+        var set = BuildingSet.For(world, 2u);
+        var generic = BuildingSet.For(World(features), 2u);
+        var module = new BuildingsModule();
+        foreach (var (plan, i) in set.Plans.Select((p, i) => (p, i)))
+        {
+            var decls = FacadeOpenings.Declarations(plan, set.Blocks[i]);
+            Require(decls.Select(d => d.Id).Distinct().Count() == decls.Count && decls.All(d => d.Id >= set.Blocks[i].Base && d.Id < set.Blocks[i].Base + set.Blocks[i].Count),
+                $"{plan.Key}: every opening keeps a unique number inside its block");
+            foreach (var lod in Levels) foreach (var b in module.BuildOne(plan, set.Blocks[i], lod)) b.ValidateVertexData();
+        }
+        var dorm = set.Plans.Single(p => p.Key == "t:dorm");
+        var entrance = dorm.Entrances.Single();
+        Require(entrance.Anchor == "dorm.south" && entrance.Row == 0 && entrance.Landing, "the dorm's door moved to its anchor, with a landing");
+        var door = dorm.DoorOf(entrance);
+        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 1e-4f, "an anchor at the pad takes the building's floor (WLD-TERRAIN §4.3)");
+        Require(Vector2.Distance(GlassCentre(dorm, entrance), new Vector2(21.3f, 0f)) <= Rules.EntranceRules.AnchorTolerance, "door within G18's 0.5 m of its anchor");
+        Require(!dorm.Openings[entrance.Facade].Any(o => o.Row == 0 && o.Kind != BayKind.Door && o.U0 < door.U1 + Rules.EntranceRules.Pier && o.U1 > door.U0 - Rules.EntranceRules.Pier),
+            "no window crowds the door");
+        var old = generic.Plans.Single(p => p.Key == "t:dorm");
+        Require(old.Entrances.Single().Facade != entrance.Facade || old.Entrances.Single().Bay != entrance.Bay, "the generic door is gone");
+        var lab = set.Plans.Single(p => p.Key == "t:lab").Entrances.Single();
+        var labDoor = set.Plans.Single(p => p.Key == "t:lab").DoorOf(lab);
+        Require(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < 1e-4f && labDoor.Y1 - labDoor.Y0 >= 2f,
+            "a raised anchor opens a door at its floor, onto the porch, without a landing");
+        Require(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0, "no WP-14 landing under a porch");
+        foreach (var key in new[] { "t:low", "t:wing" })
+        {
+            var plan = set.Plans.Single(p => p.Key == key);
+            Require(plan.Entrances.Single().Anchor is null && Layout(set, key) == Layout(generic, key), $"{key}: the anchor is left alone and the generic door stays");
+        }
+        // Collision: one closed door span per entrance, the walls either side.
+        var colliders = module.Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
+        Require(colliders.Any(w => MathF.Abs(Vector2.Distance(w.A, w.B) - (door.U1 - door.U0)) < 1e-3f), "the anchor door is the closed span");
+    }
+
+    [TestCase]
+    public void EntranceLandingsFollowTheOutsideGround()
+    {
+        // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN §4.3, §5.1).
+        var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
+            new Falling(-1f, 0.9f), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 20, 40, 16), 4, 15.6f, "research"));
+        var set = BuildingSet.For(world, 2u);
+        var dorm = set.Plans.Single(p => p.Key == "t:dorm");
+        var steps = EntranceKit.Pieces(dorm, dorm.Entrances.Single());
+        Require(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps]),
+            "landing, guard railings on its sides (over 1.0 m) and one flight");
+        var flight = (StairParams)steps[3].Params;
+        Require(MathF.Abs(flight.Height - 1.05f) < 1e-3f && flight.Steps == 7 && flight.Variation == 0, $"1.05 m in 7 risers with cheek walls ({flight.Steps})");
+        var sink = new Mesh.MeshSink(null);
+        EntranceKit.Build(sink, steps, LodLevel.L0);
+        Require(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit"), "handrails from 0.6 m (WP-11)");
+        foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod)) b.ValidateVertexData();
+        var colliders = new BuildingsModule().Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0));
+        Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }), "the flight walks as one stair ramp");
+        Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Ground), "the landing is walkable");
+        Require(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.Barrier && w.Y1 - w.Y0 >= 1.5f) == 2, "its railings cannot be climbed over");
+        var lab = set.Plans.Single(p => p.Key == "t:lab");
+        var slope = EntranceKit.Pieces(lab, lab.Entrances.Single());
+        Require(slope.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Ramp]), "0.15 m: landing and a kerbed slope, no step");
+        var ramp = (RampParams)slope[1].Params;
+        Require(ramp.Height / ramp.Depth <= 1f / 12f + 1e-4f && ramp.Variation == 1, "the slope is 1:12 or gentler");
     }
 
     [TestCase]
@@ -500,6 +602,48 @@ public sealed class BuildingsTests
     }
 
     // ---------------------------------------------------------------- fixtures
+    /// <summary>Every opening of every plan with its number and card, in plan order (feature, key, facade, bay, row).</summary>
+    private static string Layout(BuildingSet set, string? key = null)
+    {
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < set.Plans.Count; i++)
+        {
+            var (plan, block) = (set.Plans[i], set.Blocks[i]);
+            if (key is not null && plan.Key != key) continue;
+            sb.Append(ci, $"P {plan.Key} base={block.Base} cols={block.Columns} rows={block.Rows}\n");
+            for (var fi = 0; fi < plan.Facades.Count; fi++)
+                foreach (var o in plan.Openings[fi])
+                {
+                    var n = FacadeOpenings.Number(plan, block, plan.Facades[fi], o);
+                    sb.Append(ci, $"  {fi} b{o.Bay} r{o.Row} {o.Kind} {o.U0:R} {o.U1:R} {o.Y0:R} {o.Y1:R} #{n} {FacadeOpenings.Card(plan, o, n)}\n");
+                }
+        }
+        return sb.ToString();
+    }
+
+    private static string LayoutHash(BuildingSet set) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Layout(set))))[..16];
+
+    /// <summary>Plan position of an entrance door's centre on the glass plane (where the interior index puts it).</summary>
+    private static Vector2 GlassCentre(BuildingPlan plan, PlanEntrance e)
+    {
+        var door = plan.DoorOf(e);
+        var skin = plan.SkinAt(plan.Facades[e.Facade].Ring);
+        var edge = plan.Facades[e.Facade].Edge;
+        return skin.Points[edge] + skin.Dir[edge] * ((door.U0 + door.U1) * 0.5f) - skin.Normal[edge] * plan.Reveal;
+    }
+
+    /// <summary>An open entrance of a feature: door centre (floor height in Y), facing yaw (0 north, 90 east), outside landing 2.5 m out.</summary>
+    private static (string Feature, EntranceDecl Door) Anchor(string feature, string id, Vector3 centre, float yawDeg, float? outsideY = null)
+    {
+        var yaw = yawDeg * (float.Pi / 180f);
+        var facing = new Vector3(DetMath.Sin(yaw), 0f, -DetMath.Cos(yaw));
+        var outside = centre + facing * 2.5f;
+        outside.Y = outsideY ?? centre.Y;
+        return (feature, new EntranceDecl(id, outside, centre - facing * 3f, 1.1f, true) { Center = centre, YawDeg = yawDeg });
+    }
+
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
@@ -566,6 +710,12 @@ public sealed class BuildingsTests
 
     private static TestWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id), null);
 
+    private static TestWorld World(Entrances entrances, params WorldFeature[] features) =>
+        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances };
+
+    private static TestWorld World(Entrances entrances, ITerrain terrain, params WorldFeature[] features) =>
+        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances, Terrain = terrain };
+
     private static TestWorld World(ZonedFidelity fidelity, params WorldFeature[] features)
     {
         var map = features.ToDictionary(f => f.Id);
@@ -593,15 +743,37 @@ public sealed class BuildingsTests
         public PolygonRings Boundary { get; } = new([new(-1000, -1000), new(1000, -1000), new(1000, 1000), new(-1000, 1000)]);
         public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features;
         public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial { get; } = new Flat();
-        public IInteriorIndex Interiors { get; } = new NoInteriors();
+        public ISpatialIndex Spatial { get; } = new Flat(features);
+        public IInteriorIndex Interiors { get; init; } = new NoInteriors();
+        public ITerrain Terrain { get; init; } = FlatTerrain.Default;
         public IOutskirtsModel? Outskirts => null;
         public IFidelityModel? Fidelity { get; } = fidelity;
     }
 
-    private sealed class Flat : ISpatialIndex
+    /// <summary>The open entrances of the fixture's features (the interior index's EntranceDecl).</summary>
+    private sealed class Entrances(params (string Feature, EntranceDecl Door)[] doors) : IInteriorIndex
     {
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
+        public InteriorIndexEntry? Get(FeatureId id) => doors.Any(d => d.Feature == id.Value)
+            ? new(id, [], [.. doors.Where(d => d.Feature == id.Value).Select(d => d.Door)], true, "test")
+            : null;
+        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [.. doors.Select(d => d.Door).Where(d => Vector3.Distance(d.Center, p) <= r)];
+    }
+
+    /// <summary>Level at 0 (pads too) north of <paramref name="edge"/> (z), <paramref name="drop"/> lower south of it.</summary>
+    private sealed class Falling(float edge, float drop) : ITerrain
+    {
+        public bool IsFlat(TileKey tile) => false;
+        public float HeightAt(float x, float z) => z < edge ? -drop : 0f;
+        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
+        public float PadY(FeatureId feature) => 0f;
+        public float? WaterY(FeatureId water) => null;
+        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
+    }
+
+    /// <summary>Flat ground; every fixture feature is a candidate of every query (the planner tests containment itself).</summary>
+    private sealed class Flat(IReadOnlyDictionary<FeatureId, WorldFeature> features) : ISpatialIndex
+    {
+        public IReadOnlyList<FeatureId> Query(Box3 box) => [.. features.Keys.OrderBy(k => k.Value, StringComparer.Ordinal)];
         public float GroundY(float x, float z) => 0f;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
         public float? SupportY(float x, float z, float yHint) => 0f;

@@ -90,8 +90,9 @@ public static class Prims
     /// <summary>
     /// Sweeps a section profile around a ring. Edge faces use the edge normal; plan-chamfer corner faces
     /// interpolate from the incoming to the outgoing edge normal. Segments of zero length or flipped edges are skipped.
+    /// <paramref name="gaps"/> leave spans of edges open (non-overlapping), each closed by end caps.
     /// </summary>
-    public static void Sweep(MeshSink sink, in Face faceIn, PlanRing ring, Profile profile, SweepGap? gap = null, Vector2? capClosure = null)
+    public static void Sweep(MeshSink sink, in Face faceIn, PlanRing ring, Profile profile, IReadOnlyList<SweepGap>? gaps = null, Vector2? capClosure = null)
     {
         var face = faceIn;
         var pts = profile.Points;
@@ -133,14 +134,20 @@ public static class Prims
                 var a1 = o1[2 * next];
                 if (Vector2.Dot(a0 - b0, ring.Dir[i]) <= 1e-4f && Vector2.Dot(a1 - b1, ring.Dir[i]) <= 1e-4f) continue;
                 var n = ring.Normal[i];
-                if (gap is { } g && g.Edge == i)
+                var cuts = gaps?.Where(g => g.Edge == i).OrderBy(g => g.U0).ToArray() ?? [];
+                if (cuts.Length > 0)
                 {
-                    // Two pieces either side of the gap; the cut lines are perpendicular to the edge.
+                    // Pieces between the gaps; the cut lines are perpendicular to the edge.
                     var o = ring.Points[i];
                     var d = ring.Dir[i];
                     Vector2 At(Vector2 onLine, float u) => onLine + d * (u - Vector2.Dot(onLine - o, d));
-                    EdgeQuad(b0, At(b0, g.U0), b1, At(b1, g.U0));
-                    EdgeQuad(At(a0, g.U1), a0, At(a1, g.U1), a1);
+                    var (s0, s1) = (b0, b1);
+                    foreach (var g in cuts)
+                    {
+                        EdgeQuad(s0, At(s0, g.U0), s1, At(s1, g.U0));
+                        (s0, s1) = (At(a0, g.U1), At(a1, g.U1));
+                    }
+                    EdgeQuad(s0, a0, s1, a1);
                     continue;
                 }
                 EdgeQuad(b0, a0, b1, a1);
@@ -156,7 +163,7 @@ public static class Prims
                 }
             }
         }
-        if (gap is { } gg) GapCaps(sink, face, ring, profile, gg, capClosure);
+        foreach (var gg in gaps ?? []) GapCaps(sink, face, ring, profile, gg, capClosure);
     }
 
     /// <summary>End caps of a swept section at a gap: the section polygon (plus an optional closing point on the wall).</summary>
