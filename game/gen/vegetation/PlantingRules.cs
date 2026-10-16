@@ -19,9 +19,9 @@ public sealed record GrovePlanting(int Target, float AreaPerTree, IReadOnlyList<
     IReadOnlyList<PlantingArea> Areas, IReadOnlyList<PlantingArea> WashNear);
 
 /// <summary>
-/// One map's planting rules: <c>game/data/vegetation/maps/&lt;map&gt;.planting.json</c>. Places are found by name in the
-/// world model (road names, feature names), so generic code never carries an entity ID. Callers read the bytes;
-/// generators never perform IO.
+/// One map's planting rules: <c>game/data/maps/&lt;map&gt;/vegetation/planting.json</c>, read through
+/// <see cref="VegetationInputs.PlantingKey"/>. Places are found by name in the world model (road names, feature names),
+/// so generic code never carries an entity ID. Callers read the bytes; generators never perform IO.
 /// </summary>
 public sealed record PlantingRules(IReadOnlyList<RoadPlanting> Roads, float OsmNear, string OsmDefault, GrovePlanting Groves)
 {

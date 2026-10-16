@@ -21,7 +21,7 @@ public sealed class PlantingTests
     {
         var root = FindRepository();
         var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
-        var rules = PlantingRules.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "maps", "qingshuihe.planting.json")), species);
+        var rules = PlantingRules.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json")), species);
         var data = Path.Combine(root, "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);

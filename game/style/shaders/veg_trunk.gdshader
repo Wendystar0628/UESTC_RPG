@@ -187,7 +187,7 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 	return v + o;
 }
 
-// 片元取色：照 toon_colors 的室外分支（天光渐变、地面反光、200 m 降饱和、深影、透光、暖边），
+// 片元取色：照 toon_colors 的室外分支（天光渐变、地面反光、路灯光斑、200 m 降饱和、深影、透光、暖边），
 // 颜色由调用方从季相行给出；植被不做湿润变暗和倒角提亮（WLD-VEGETATION §9.4）。
 // t_grad < 0 时不加冠内梯度（木质部分）。
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
@@ -200,6 +200,8 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	float day = smoothstep(-0.02, 0.05, sun_dir.y);
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day;
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
+	// 路灯光斑（WP-39，与 toon 同一个函数）：树干与 4 m 以下的树冠接路灯的暖光，夜里不只剩调色板的月光色
+	toon_lamp_pool(c, lamp, lit, shade);
 	float fd = fog_equiv_dist(c.wpos, c.cam);
 	lit = fog_desaturate(lit, fd);
 	shade = fog_desaturate(shade, fd);

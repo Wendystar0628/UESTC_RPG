@@ -188,7 +188,7 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 	return v + o;
 }
 
-// 片元取色：照 toon_colors 的室外分支（天光渐变、地面反光、200 m 降饱和、深影、透光、暖边），
+// 片元取色：照 toon_colors 的室外分支（天光渐变、地面反光、路灯光斑、200 m 降饱和、深影、透光、暖边），
 // 颜色由调用方从季相行给出；植被不做湿润变暗和倒角提亮（WLD-VEGETATION §9.4）。
 // t_grad < 0 时不加冠内梯度（木质部分）。
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
@@ -201,6 +201,8 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	float day = smoothstep(-0.02, 0.05, sun_dir.y);
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day;
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
+	// 路灯光斑（WP-39，与 toon 同一个函数）：树干与 4 m 以下的树冠接路灯的暖光，夜里不只剩调色板的月光色
+	toon_lamp_pool(c, lamp, lit, shade);
 	float fd = fog_equiv_dist(c.wpos, c.cam);
 	lit = fog_desaturate(lit, fd);
 	shade = fog_desaturate(shade, fd);
@@ -236,13 +238,20 @@ const float VEG_INNER_KEEP = 0.3;          // 内部插片留下的比例（按�
 const float VEG_INNER_SIZE = 0.75;         // 留下的内部插片的尺寸
 const float VEG_CARD_DL = 0.03;            // 插片的明度起伏（OKLab L，±，一簇一个值），内部不画轮廓，只靠它读出叶簇
 // 外轮廓碎边（max-011 评审③）：团块在外轮廓一圈按树种稳定的噪声剪掉像素（alpha scissor），描线跟着剪后的轮廓走
-const float VEG_EDGE_RIM0 = 0.3;           // rim 从这里起进入碎边带
-const float VEG_EDGE_RIM1 = 0.82;          // rim 到这里碎边最深
-const float VEG_EDGE_DEPTH = 0.62;         // 带内最深处剪掉的比例
+const float VEG_EDGE_RIM0 = 0.3;           // 远处：rim 从这里起进入碎边带
+const float VEG_EDGE_RIM1 = 0.82;          // 远处：rim 到这里碎边最深
+const float VEG_EDGE_DEPTH = 0.62;         // 远处：带内最深处剪掉的比例
 const float VEG_EDGE_CELL = 0.42;          // 噪声格（m），乘树种叶卡的格子系数；约一个叶团大小
-const float VEG_EDGE_NEAR = 0.5;           // 近处（L0+ 以内）的碎边强度，叶卡已打碎轮廓
 const float VEG_EDGE_FAR = 1.0;            // L0 以外的碎边强度
 const float VEG_EDGE_CONTRAST = 2.2;       // 噪声对比
+// 近处（L0+ 以内，max-011 23b 评审）：只剪最外面一圈轮廓带，带内不出孔。噪声沿"朝轮廓的方向"取（外壳法线去掉视线分量），
+// 同一条朝轮廓的径向线上取值相同，剪的比例又朝轮廓单调变大，所以剪掉的部分总连着轮廓。
+// 冠底（外壳法线朝下）从树下仰看时大片斜对镜头，不是轮廓，不剪；冠底的轮廓由叶卡打碎。
+const float VEG_EDGE_NEAR = 0.35;          // 近处的碎边强度，叶卡已打碎轮廓
+const float VEG_EDGE_NEAR_RIM0 = 0.72;     // 近处：rim 从这里起进入碎边带（只剩最外一圈）
+const float VEG_EDGE_NEAR_RIM1 = 0.95;     // 近处：rim 到这里碎边最深
+const float VEG_EDGE_NEAR_SPAN = 3.0;      // 缺口沿轮廓的疏密：按这个冠半径（m）铺噪声格
+const vec2 VEG_EDGE_NEAR_DOWN = vec2(0.3, 0.7);     // 外壳法线朝下的分量从前者到后者，近处碎边从全剪退到不剪
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 8–15 插片自己的叶形种子
@@ -530,12 +539,22 @@ void fragment() {
 	if (mass) {
 		// 外轮廓碎边（max-011 评审③）：外壳法线侧对镜头的一圈按噪声剪掉，轮廓读成叶团的锯齿边。本体不投影（投影走代理），
 		// 所以这里的距离就是主相机到片元的距离（视空间长度），不会在阴影通道里按灯算。
-		float rim = 1.0 - abs(dot(normalize(NORMAL), VIEW));
+		vec3 n = normalize(NORMAL);
+		float facing = dot(n, VIEW);
+		float rim = 1.0 - abs(facing);
 		// 片元里没有树高，按 12 m 的树取 L0 的切换距离（ENG-PERF §9），乘细节系数
 		float l0 = VEG_LOD_L0 * max(quality.x, 0.5);
-		float edge = mix(VEG_EDGE_NEAR, VEG_EDGE_FAR, smoothstep(l0 * 0.6, l0, length(VERTEX)));
-		float cut = VEG_EDGE_DEPTH * edge * smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim);
-		float e = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, v_row, sp.leaf_card) - cut;
+		float far_k = smoothstep(l0 * 0.6, l0, length(VERTEX));
+		// 远处：按世界坐标噪声在 rim 带里剪（23b 定稿）
+		float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim);
+		float e_far = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, v_row, sp.leaf_card) - cut;
+		// 近处：缺口噪声取朝轮廓的方向，按树错开（v_tint 是每株一个值）；冠底不剪
+		float down = -(mat3(INV_VIEW_MATRIX) * n).y;
+		float cut_near = VEG_EDGE_DEPTH * VEG_EDGE_NEAR * smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, rim)
+				* (1.0 - smoothstep(VEG_EDGE_NEAR_DOWN.x, VEG_EDGE_NEAR_DOWN.y, down));
+		vec3 toward = mat3(INV_VIEW_MATRIX) * normalize(n - facing * VIEW + vec3(0.0, 1e-5, 0.0));
+		float e_near = veg_edge_noise(toward * VEG_EDGE_NEAR_SPAN + vec3(53.1 * v_tint.x, 41.7 * v_tint.y, 29.3 * (v_tint.x + v_tint.y)), v_row, sp.leaf_card) - cut_near;
+		float e = mix(e_near, e_far, far_k);
 		ALPHA = clamp(e / max(fwidth(e), 1e-4) + 0.5, 0.0, 1.0);
 	} else {
 		// v_bits 是 flat 的，同一个图元内分支一致，fwidth 不受影响
