@@ -88,6 +88,49 @@
       ],
       "additionalProperties": false
     },
+    "terrainDefaults": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "lakeBankSlope": {
+              "type": "string",
+              "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+            },
+            "lakeMaxDepth": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3.4028234663852886e+38
+            },
+            "channelBankSlope": {
+              "type": "string",
+              "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+            },
+            "channelDepth": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3.4028234663852886e+38
+            },
+            "corridorShoulder": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3.4028234663852886e+38
+            }
+          },
+          "required": [
+            "lakeBankSlope",
+            "lakeMaxDepth",
+            "channelBankSlope",
+            "channelDepth",
+            "corridorShoulder"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "defaultSpawn": {
       "type": "string",
       "minLength": 1

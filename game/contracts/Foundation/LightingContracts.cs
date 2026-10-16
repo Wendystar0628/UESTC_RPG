@@ -23,6 +23,8 @@ public sealed record WindowDecl(int Id, int BaseId, int TotalColumns, ChannelId 
 /// <summary>WP-02's map-wide baked lighting inventory, ready after Mount and before MapAware.OnMapLoaded.</summary>
 public interface ILightInventory
 {
+    /// <summary>The same numbering snapshot used to bake these declarations. Formal inventories publish it atomically with their current map data.</summary>
+    WindowNumberingSnapshot? WindowNumbering => null;
     long Rev { get; } // Increments when a map changes or further baked inventory is incorporated.
     IReadOnlyList<LightEmitter> Lamps { get; } // Includes outskirts. Consumers must not depend on list order.
     IReadOnlyList<WindowFacadeDecl> Facades { get; }

@@ -2038,6 +2038,11 @@
       "owner": "WP-46"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/map.json",
+      "owner": "WP-46",
+      "maintainers": ["WP-00"]
+    },
+    {
       "pattern": "game/data/maps/*/sky.json",
       "owner": "WP-40"
     },

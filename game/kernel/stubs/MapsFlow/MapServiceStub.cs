@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Maps;
 
 namespace Campus.Kernel.Stubs;
 
@@ -9,7 +10,7 @@ namespace Campus.Kernel.Stubs;
 public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = null) : IMapService
 {
     private readonly IMapRuntime _runtime = runtime ?? new MapRuntimeStub();
-    private IReadOnlyList<Waypoint> _waypoints = [];
+    private MapCatalogEntry? _catalogEntry;
     private IMapContext? _configuredContext;
     private MapTransitionStub? _transition;
     private Func<Task>? _nextFrame;
@@ -52,8 +53,10 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
             throw new InvalidDataException("Map bake root must be an absolute res:// directory.");
         ArgumentNullException.ThrowIfNull(world);
         var descriptor = map.Complete(geo, center, bounds, tileMin, tileMax);
-        _waypoints = Array.AsReadOnly(waypoints.ToArray());
-        var pose = ResolvePose(descriptor, descriptor.DefaultSpawn);
+        var catalogEntry = new MapCatalogEntry(descriptor, entry.Dir, bakeRoot,
+            Array.AsReadOnly(waypoints.ToArray()));
+        var pose = catalogEntry.ResolveSpawn(descriptor.DefaultSpawn).Fly;
+        _catalogEntry = catalogEntry;
         Default = map.Id;
         Current = map.Id;
         Maps = Array.AsReadOnly(new[] { descriptor });
@@ -74,7 +77,7 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         Pose pose;
         try
         {
-            pose = r.Pose ?? ResolvePose(context.Descriptor, r.Spawn ?? context.Descriptor.DefaultSpawn);
+            pose = r.Pose ?? ResolveSpawn(r.Target, r.Spawn).Fly;
         }
         catch (ArgumentException)
         {
@@ -151,10 +154,17 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         }
     }
 
-    public Pose ResolvePose(MapDescriptor map, string id) =>
-        map.Spawns.FirstOrDefault(s => s.Id == id)?.Fly ??
-        _waypoints.FirstOrDefault(w => w.Id == id)?.Fly ??
-        throw new ArgumentException($"Unknown spawn or waypoint: {id}", nameof(id));
+    public MapSpawn ResolveSpawn(MapId map, string? spawn = null)
+    {
+        var entry = _catalogEntry
+            ?? throw new InvalidOperationException("The D0 map catalogue has not been initialized.");
+        if (map != entry.Descriptor.Id)
+            throw new ArgumentException($"Unknown map: {map.Value}.", nameof(map));
+        return entry.ResolveSpawn(spawn ?? entry.Descriptor.DefaultSpawn);
+    }
+
+    // Kept for existing D0 callers; all lookups now share the initialized catalogue's resolution rules.
+    public Pose ResolvePose(MapDescriptor map, string id) => ResolveSpawn(map.Id, id).Fly;
 }
 
 internal sealed record MapContextStub(MapDescriptor Descriptor, IWorldModel World,

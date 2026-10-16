@@ -83,9 +83,16 @@ public partial class D0Stage : Node3D
         var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
         InitializeWorld(context);
         var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
-            .ToDictionary(r => r.Id, r => (IInteriorProvider)registry.Create(r.Type), StringComparer.Ordinal);
-        var buildContext = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = context.Descriptor.Seed };
-        var interiors = await Task.Run(() => D0InteriorSetup.Build(interiorsBytes, buildContext, providers));
+            .ToDictionary(r => r.Id, r => registry.CreateInteriorProvider(r.Type, entry.Id), StringComparer.Ordinal);
+        var bindings = D0InteriorSetup.Configure(interiorsBytes, providers);
+        var buildContext = new BuildContext
+        {
+            Map = context.Descriptor,
+            World = world,
+            WorldSeed = context.Descriptor.Seed,
+            InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal)
+        };
+        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(buildContext, bindings));
         ((InteriorIndexStub)registry.Get<IInteriorIndex>()).Configure(interiors.Entries);
         ((NavGraphStub)registry.Get<INavGraph>()).Configure(interiors.NavNodes, interiors.NavEdges, interiors.NavPortals);
         var colliders = campus.Colliders.Concat(interiors.Colliders).ToArray();

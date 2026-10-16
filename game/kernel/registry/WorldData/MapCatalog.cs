@@ -106,6 +106,11 @@ public sealed class MapCatalog
         if (file.DataRect is null || file.Roam is null || file.World is null || file.Env is null ||
             file.Spawns is null || file.Cinematics is null || file.Portals is null || string.IsNullOrWhiteSpace(file.DefaultSpawn))
             throw new InvalidDataException("Missing map fields.");
+        if (file.TerrainDefaults is { } defaults)
+        {
+            try { TerrainOverlayJson.ValidateTerrainDefaults(defaults); }
+            catch (ArgumentException error) { throw new InvalidDataException("Invalid map terrain defaults.", error); }
+        }
         ValidateRect(file.DataRect.Min, file.DataRect.Max);
         var size = file.DataRect.Max - file.DataRect.Min;
         if (size.X % 64f != 0 || size.Y % 64f != 0) throw new InvalidDataException("Data rectangle dimensions must be multiples of 64 metres.");

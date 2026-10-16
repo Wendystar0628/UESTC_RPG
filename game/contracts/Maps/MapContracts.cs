@@ -48,6 +48,7 @@ public sealed record MapDescriptor(
     IReadOnlyList<MapPortal> Portals)
 {
     public MapTitle? Title { get; init; }                        // 没写时开始页用默认图的 T0
+    public TerrainDefaults? TerrainDefaults { get; init; }
 }
 
 public interface IMapContext                 // 纯数据；场景 RID 和物理空间留在 Godot 侧的 kernel/map
@@ -81,6 +82,16 @@ public interface IMapService                 // Kernel 服务（WP-46）
     IMapContext? Context { get; }            // Unload 到 Mount 之间为 null
     IMapTransition? Transition { get; }
     event Action<MapId, MapTravelCause>? Arrived;   // Main thread, after successful Spawn; subscribers must not block the transition.
+    /// <summary>
+    /// Resolves authored spawn data from the initialized catalogue for the requested map, independently
+    /// of Current/Context. Null selects that map's DefaultSpawn; named spawns precede its waypoints.
+    /// This lookup does not load files, move the camera or legalize the destination against active-map bounds.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The catalogue has not been initialized.</exception>
+    /// <exception cref="ArgumentException">The map or spawn/waypoint ID is unknown.</exception>
+    /// <exception cref="NotSupportedException">The implementation does not support catalogue spawn lookup.</exception>
+    MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
+        throw new NotSupportedException("This map service does not support catalogue spawn lookup.");
     IMapTransition Travel(MapTravelRequest r);   // 跨图切换走雾幕加载；同图内移动交给 ICameraRig.Transit 和 IAtlasService
 }
 public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用

@@ -67,12 +67,14 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
 
         var providers = registry.ForMap(entry.Id.Value).Where(registration => registration.Kind == "interior")
             .ToDictionary(registration => registration.Id,
-                registration => (IInteriorProvider)registry.Create(registration.Type), StringComparer.Ordinal);
+                registration => registry.CreateInteriorProvider(registration.Type, entry.Id), StringComparer.Ordinal);
+        var bindings = D0InteriorSetup.Configure(interiorBytes, providers);
         var build = new BuildContext
         {
             Map = context.Descriptor,
             World = world,
             WorldSeed = ReadSeed(boot, "seed", context.Descriptor.Seed),
+            InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal),
             SourceInputs = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
             {
                 ["map.json"] = mapBytes,
@@ -81,7 +83,7 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
                 ["waypoints.json"] = waypointBytes
             }
         };
-        var interiors = await Task.Run(() => D0InteriorSetup.Build(interiorBytes, build, providers));
+        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(build, bindings));
         if (registry.Get<IInteriorIndex>() is InteriorIndexStub interiorIndex) interiorIndex.Configure(interiors.Entries);
         if (registry.Get<INavGraph>() is NavGraphStub navigation) navigation.Configure(interiors.NavNodes, interiors.NavEdges, interiors.NavPortals);
         if (registry.Get<ICollisionWorld>() is CollisionWorldStub collision) collision.Configure(campus.Colliders.Concat(interiors.Colliders));

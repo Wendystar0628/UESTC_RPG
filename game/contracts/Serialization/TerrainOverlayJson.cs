@@ -215,6 +215,17 @@ public static class TerrainOverlayJson
         }
     }
 
+    /// <summary>Checks explicit map-level parameters for automatic operations; does not validate world geometry.</summary>
+    public static void ValidateTerrainDefaults(Maps.TerrainDefaults data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        Ratio(data.LakeBankSlope, "terrainDefaults.lakeBankSlope");
+        Positive(data.LakeMaxDepth, "terrainDefaults.lakeMaxDepth");
+        Ratio(data.ChannelBankSlope, "terrainDefaults.channelBankSlope");
+        Positive(data.ChannelDepth, "terrainDefaults.channelDepth");
+        Positive(data.CorridorShoulder, "terrainDefaults.corridorShoulder");
+    }
+
     private static void ValidateOperation(TerrainOp op)
     {
         switch (op)

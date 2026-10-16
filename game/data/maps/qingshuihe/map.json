@@ -7,6 +7,13 @@
   "kind": "outdoor",
   "version": 1,
   "seed": 1,
+  "terrainDefaults": {
+    "lakeBankSlope": "1:5",
+    "lakeMaxDepth": 1.5,
+    "channelBankSlope": "1:4",
+    "channelDepth": 1.2,
+    "corridorShoulder": 0.75
+  },
   "dataRect": {
     "min": [
       -1280,

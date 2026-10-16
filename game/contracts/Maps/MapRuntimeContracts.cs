@@ -33,6 +33,10 @@ public interface IMapStreamState
     bool DestinationReady { get; }
     string? Error { get; }
     MapStreamDestination? Destination { get; } // Prefetch sets this; Unload clears it. Collision/interior consumers request the same destination.
+    /// <summary>True while the latest prefetch still needs destination residency. After successful arrival this becomes false;
+    /// Destination and DestinationReady keep the latest result until the next request or unload. Consumers only pin an active destination.
+    /// Legacy implementations conservatively keep their destination pinned.</summary>
+    bool HasPendingDestination => Destination is not null;
     void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null);
 }
 

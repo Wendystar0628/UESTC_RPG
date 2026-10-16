@@ -52,6 +52,46 @@ public sealed class ServiceRegistry
         finally { _constructing.Remove(implementation); }
     }
 
+    /// <summary>
+    /// Creates one fresh, map-owned instance of an interior provider selected by ForMap.
+    /// Call on the main thread before worker publication; configure once, then keep the instance for that map's jobs.
+    /// This is not a general transient-service API and never adds the provider to the global instance cache.
+    /// </summary>
+    public IInteriorProvider CreateInteriorProvider(Type implementation, MapId map)
+    {
+        ArgumentNullException.ThrowIfNull(implementation);
+        if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("A map ID is required.", nameof(map));
+        if (!implementation.IsClass || implementation.IsAbstract || implementation.ContainsGenericParameters ||
+            !typeof(IInteriorProvider).IsAssignableFrom(implementation) ||
+            !ForMap(map.Value).Any(entry => entry.Kind == "interior" && entry.Type == implementation))
+            throw new InvalidOperationException($"Interior provider {implementation.FullName} is not registered for map {map.Value}.");
+        if (typeof(Godot.GodotObject).IsAssignableFrom(implementation) ||
+            implementation.IsDefined(typeof(KernelNodeAttribute), false) ||
+            implementation.IsDefined(typeof(KernelServiceAttribute), false))
+            throw new InvalidOperationException($"Map-owned interior creation cannot construct an engine node or service: {implementation.FullName}.");
+        if (!_constructing.Add(implementation))
+            throw new InvalidOperationException($"Circular interior provider dependency: {implementation.FullName}");
+        try
+        {
+            var constructor = implementation.GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
+                ?? throw new InvalidOperationException($"No public constructor: {implementation.FullName}");
+            var args = constructor.GetParameters().Select(parameter =>
+            {
+                if (typeof(IInteriorProvider).IsAssignableFrom(parameter.ParameterType))
+                    throw new InvalidOperationException($"Interior provider {implementation.Name} must read other providers through BuildContext.InteriorProviders, not constructor injection.");
+                var dependency = _instances.ContainsKey(parameter.ParameterType) || _serviceTypes.ContainsKey(parameter.ParameterType)
+                    ? Get(parameter.ParameterType)
+                    : parameter.HasDefaultValue ? parameter.DefaultValue
+                    : throw new InvalidOperationException($"Unresolved {parameter.ParameterType.Name} for {implementation.Name}");
+                if (dependency is IInteriorProvider)
+                    throw new InvalidOperationException($"Interior provider {implementation.Name} cannot capture a globally cached interior dependency.");
+                return dependency;
+            }).ToArray();
+            return (IInteriorProvider)constructor.Invoke(args);
+        }
+        finally { _constructing.Remove(implementation); }
+    }
+
     /// <summary>Forget a constructed instance and every alias to it. Its owner must dispose/free it first.</summary>
     public void Release(Type implementation)
     {

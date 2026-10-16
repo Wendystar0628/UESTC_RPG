@@ -7,6 +7,43 @@ namespace Campus.Contracts;
 public sealed record WorldModelLoadInputs(MapDescriptor Descriptor, WalkBakeData? Walk = null,
     IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy = null)
 {
+    private readonly IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? _zoneBoundaries;
+
+    /// <summary>Preloaded zones.json boundaries; null means missing, an empty dictionary means provided with no zones.
+    /// Snapshotting preserves geometry without asserting topology or completing terrain validation.</summary>
+    public IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? ZoneBoundaries
+    {
+        get => _zoneBoundaries;
+        init => _zoneBoundaries = SnapshotZones(value);
+    }
+
+    private static IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? SnapshotZones(
+        IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? source)
+    {
+        if (source is null) return null;
+        var copy = new SortedDictionary<ZoneId, IReadOnlyList<PolygonRings>>(
+            Comparer<ZoneId>.Create((left, right) => StringComparer.Ordinal.Compare(left.Value, right.Value)));
+        foreach (var (zone, polygons) in source)
+        {
+            ArgumentNullException.ThrowIfNull(polygons);
+            copy.Add(zone, Array.AsReadOnly(polygons.Select(SnapshotPolygon).ToArray()));
+        }
+        return new ReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>(copy);
+    }
+
+    private static PolygonRings SnapshotPolygon(PolygonRings polygon)
+    {
+        ArgumentNullException.ThrowIfNull(polygon);
+        ArgumentNullException.ThrowIfNull(polygon.Outer);
+        ArgumentNullException.ThrowIfNull(polygon.Holes);
+        var holes = polygon.Holes.Select(ring =>
+        {
+            ArgumentNullException.ThrowIfNull(ring);
+            return (IReadOnlyList<System.Numerics.Vector2>)Array.AsReadOnly(ring.ToArray());
+        }).ToArray();
+        return new(Array.AsReadOnly(polygon.Outer.ToArray()), Array.AsReadOnly(holes));
+    }
+
     public MapDescriptor Descriptor { get; } = Descriptor ?? throw new ArgumentNullException(nameof(Descriptor));
     public WalkBakeData? Walk { get; } = Walk;
     // Copy the resolved map claims ledger once. Later mutations of the caller's dictionary cannot affect a load.

@@ -46,6 +46,31 @@ public sealed class BuildContext
     public required IWorldModel World { get; init; }
     public required MapDescriptor Map { get; init; }
     public required uint WorldSeed { get; init; }
+    /// <summary>Single immutable map-wide campus window allocation, prepared before window metadata or geometry. Null is for legacy/no-window fixtures only.</summary>
+    public WindowNumberingSnapshot? WindowNumbering { get; init; }
+    private IReadOnlyDictionary<string, IInteriorProvider> _interiorProviders =
+        new ReadOnlyDictionary<string, IInteriorProvider>(new SortedDictionary<string, IInteriorProvider>(StringComparer.Ordinal));
+    /// <summary>
+    /// This map's isolated interior instances, keyed by original provider ID. The initializer copies and sorts the mapping.
+    /// Configure providers before publishing the context; never reconfigure a provider while this map's jobs can still run.
+    /// Empty preserves legacy contexts without open interiors. Workers must not fall back to the global registry.
+    /// </summary>
+    public IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders
+    {
+        get => _interiorProviders;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            var snapshot = new SortedDictionary<string, IInteriorProvider>(StringComparer.Ordinal);
+            foreach (var pair in value)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key)) throw new ArgumentException("Interior provider IDs must be non-empty.", nameof(value));
+                ArgumentNullException.ThrowIfNull(pair.Value);
+                snapshot.Add(pair.Key, pair.Value);
+            }
+            _interiorProviders = new ReadOnlyDictionary<string, IInteriorProvider>(snapshot);
+        }
+    }
     /// <summary>Immutable palette registration supplied by the kernel/baker; its fingerprint belongs in the bake key. Null keeps token-based material grouping.</summary>
     public PaletteRegistry? Palette { get; init; }
     /// <summary>Optional complete CPU catalog supplied by the caller; include all entries in the bake fingerprint.
