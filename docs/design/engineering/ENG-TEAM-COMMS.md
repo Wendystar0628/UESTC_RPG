@@ -121,6 +121,8 @@ gates: []
 - 需要确认时，写进任务单或请求文件，并通知主会话：二号会话发跨会话消息，Sol 写 `notes/sol-to-opus.md`，Astra 写 `notes/astra-to-opus.md`；子代理交给派它的一方，由它写进单子并转达。
 - 主会话能据项目信息判断的直接定；只有属于作者的决定，才转问作者。
 
+**GPT 侧新活派进 Codex 应用**（D-203）：主会话、唤醒脚本给 GPT 模型（Astra、Sol、luna）派的新活，一律发进 Codex 应用里开着的会话：`codex queue --thread <会话号> --message <内容>`，作者在应用里能看到全过程。Astra 用现有会话；luna 用作者在应用里开好的 luna 会话（会话号在 `tools/duty/luna_thread.txt`）；要新的 Sol 会话，请作者在应用里开好再登记。不再用 `codex exec` 在后台另起线程。已经在跑的后台会话（Sol 值班、Sol 旁路）照旧，不迁。
+
 ## 5 唤醒脚本
 
 值班与旁路各由一个唤醒脚本叫醒，两个脚本都每 20 秒查一次，消息从标准输入传入。旁路唤醒脚本用 `codex exec resume` 叫醒固定的 Sol 旁路会话；值班唤醒脚本按下表把事交给值班执行者，退回时用 `codex exec resume` 叫醒固定的 Sol 值班会话。
@@ -134,11 +136,11 @@ gates: []
 
 | 发现 | 做什么 |
 | --- | --- |
-| `requests/*.md` 或 `tasks/*.md` 里新的行首"批准合入："行 | 新批准行全是"门禁：只跑 check_docs.py"的，交 gpt-6-luna；其余交 Grok（high）。消息里列出新的批准行（文件和内容），要求照 `sol-001.md` 合并并巡检 |
+| `requests/*.md` 或 `tasks/*.md` 里新的行首"批准合入："行 | 新批准行全是"门禁：只跑 check_docs.py"的，交 Gemini 3.8 Flash High（不可用时 gpt-6-luna）；其余交 Grok（high）。消息里列出新的批准行（文件和内容），要求照 `sol-001.md` 合并并巡检 |
 | 否则：`tasks/` 下新的 `sol-*.md`（`sol-001.md` 除外） | 交 Grok（medium）读单执行 |
 | 否则：距上次唤醒满 30 分钟 | 交 Grok（medium）做定时巡检：已批未合、条件已满足的候选照 `sol-001.md` 顺手合入 |
 
-**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类纯机械的交 gpt-6-luna（每次新开 Codex 线程，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
+**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（每次新开 Codex 线程，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
 
 值班唤醒脚本不启动调研：调研单写进 `side/cards/`，由旁路唤醒脚本交出。
 

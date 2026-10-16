@@ -51,7 +51,8 @@ gates: []
 | Astra 的子代理 | Codex 账号 | 默认 gpt-6.1-sol；gpt-6-astra 只用于 §3.3 列出的少数情形 | `spawn_agent` | `task_name` 写包号，如 `wp-02a` | Astra 侧包的施工 | Astra 主线程 |
 | Sol 值班会话 | Codex 账号 | gpt-6.1-sol，high，普通速度 | `codex exec resume`，被值班唤醒脚本叫醒（ENG-TEAM-COMMS §5） | thread `01a14132-0184-7ce1-89b8-b3e472a5af73`；任务单 `tasks/sol-001.md` | Grok 或 luna 没回复时接手合并执行、施工状态与巡检（ENG-TEAM-COMMS §5） | 主会话 |
 | Grok 值班执行者 | 作者的 Grok 订阅 | Grok 4.7，合并 high、任务单与定时巡检 medium | `grok --prompt-file … -r <会话>`，后台无界面，被值班唤醒脚本调用（ENG-TEAM-COMMS §5） | 会话号存在 `tools/duty/grok_session.txt`；职责说明 `tools/duty/ROLE-grok.md` | 合并执行（首选）、sol 任务单、定时巡检 | 主会话 |
-| luna 机械值班 | Codex 账号 | gpt-6-luna，medium，快速模式 | `codex exec` 每次新开线程，被值班唤醒脚本调用（ENG-TEAM-COMMS §5） | 职责说明 `tools/duty/ROLE-luna.md` | 只改文档的合并（批准行写了"只跑 check_docs.py"的） | 主会话 |
+| Gemini 快速杂活 | 作者的 Antigravity | Gemini 3.8 Flash High | `agentapi send-message` 发进作者开着的 Antigravity 会话，作者能实时看到；脚本 `tools/duty/gemini_run.py` 发出并等它做完（ENG-TEAM-COMMS §5） | 会话号在 `tools/duty/gemini_conversation.txt`；职责说明 `tools/duty/ROLE-gemini.md` | 只改文档的合并、主会话直接派的简单快速小活 | 主会话 |
+| luna 批量苦力 | Codex 账号 | gpt-6-luna，medium，快速模式 | `codex exec` 每次新开线程，或在 Codex 会话里 `spawn_agent` | 职责说明 `tools/duty/ROLE-luna.md` | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra |
 | Sol 旁路会话 | Codex 账号 | gpt-6.1-sol，xhigh，普通速度 | `codex exec resume`，被旁路唤醒脚本按任务单叫醒，一次一张（ENG-TEAM-COMMS §5） | thread `01a14176-abbf-7862-98ba-137e2ad1686f`；角色说明 `side/ROLE.md` | 按任务单开子代理，做完成度调研与旁路活：调研、补信息、数据转换与核对、按确切文字打文档补丁、批量的旁路工程活 | 主会话 |
 
 单 Claude 账户模式下（ENG-TEAM-QUOTA §4），表中的二号会话和它的子代理不设，Opus 与 Sonnet 子代理都由主会话开，向主会话回报；其余各行不变。
@@ -148,7 +149,11 @@ gates: []
 - Sonnet 的候选在观感上两次评审不过，再改派 Opus，不先升推理档。
 - 换模型就是新开子代理（§3.5）。下一单改用 Sonnet 时，靠任务单的"接续"段交接，不恢复原来的 Opus 子代理。
 
-**最便宜一档：gpt-6-luna**（D-194）：只做照清单执行、结果能机械核对、出错也不会扩散的杂活，不做任何判断。Claude 侧不设这一档，不用 Haiku。luna 的花费几乎可以忽略，并发不设上限。
+**最便宜的两档**（D-194、D-202）：只做照清单执行、结果能机械核对、出错也不会扩散的活，不做任何判断。Claude 侧不设这一档，不用 Haiku。
+- **简单快速档：Gemini 3.8 Flash High**（作者的 Antigravity）：一件、小、要快的活。例如只改文档的合并、按确切文字改一处文档、查一处、追加一条状态、跑一次给定命令并报结果。派法：把任务写成 UTF-8 提示文件，用 `python -I E:\Project\UESTC_RPG.wt\.collab\tools\duty\gemini_run.py <会话号> <提示文件>` 发进作者开着的 Antigravity 会话并等它做完；结果它写进 `notes/gemini-to-opus.md`。Antigravity 没开或发不出去，就改派 luna。
+- **批量苦力档：gpt-6-luna**：量大、重复、照清单的活。例如成批替换引用、全仓数据核对与盘点、成批截图与拼图、成批状态整理。luna 的花费几乎可以忽略，并发不设上限。
+
+两档能做的类别：
 
 | 类别 | 做什么 | 不做什么 |
 | --- | --- | --- |
@@ -159,11 +164,12 @@ gates: []
 | 数据核对与盘点 | JSON 能否解析、id 是否唯一、引用是否存在、`licenses.json` 是否覆盖每个素材、文件编码；按给定条件 grep 出清单 | 不改数据，只报结果 |
 | 机械 git | 没有冲突的 `rebase main`、按清单 cherry-pick、合入后重建工作树分支、列出落后或已合并的工作树 | 一遇冲突就停下报告，不解冲突 |
 
-- **谁开、怎么开**：拿到这件杂活的一方直接开（D-190），不必经 Astra 转手。可以在 Astra 或 Sol 会话里用 `spawn_agent` 开 luna 子代理，也可以直接新开一个 Codex 线程：`codex exec -s danger-full-access -C "E:\Project\UESTC_RPG" -m gpt-6-luna -c model_reasoning_effort=medium -c 'service_tier="priority"' --json -o <输出文件> -`，任务从标准输入传，提示文件存成 UTF-8。
+- **谁开、怎么开**：拿到这件杂活的一方直接开（D-190），不必经 Astra 转手。GPT 侧的新活一律派进 Codex 应用里开着的会话，作者在应用里能看到（D-203）：在 Astra 或 Sol 会话里用 `spawn_agent` 开 luna 子代理；或者往作者开好的 luna 会话里发，`codex queue --thread <会话号> --message <内容>`，会话号记在 `E:\Project\UESTC_RPG.wt\.collab\tools\duty\luna_thread.txt`。不再用 `codex exec` 在后台另起看不见的线程。
 - **速度**：luna 默认用快速模式，命令里加 `-c 'service_tier="priority"'`（D-197）。
+- **怎么选**：一件、几分钟能完的交 Gemini；成批的、要跑很久的交 luna；两者都要判断的，回到 Sonnet 或 Sol。
 - 派单写清清单、模板和完成标准，以及能写哪些文件；一次做不对就改派 gpt-6.1-sol medium 或 Sonnet medium，不在原档上重试。
 - 等待、轮询和定时重跑索引这类活，交脚本做，不占任何模型。
-- 试用阶段放三类：只改文档的合并、截图采集与拼图、数据核对与盘点。三类都跑顺了，再按上表放开其余几类。
+- 试用阶段：Gemini 先接只改文档的合并和主会话派的小活；luna 先接截图采集与拼图、数据核对与盘点。跑顺了再按上表放开其余几类。
 
 **推理强度按难度选**：子代理不一律开 xhigh，每张单按难度选一档，写进派单（见下文"派单最少写"）。每升一档，费用和用时都明显上涨，完成度的提升却越来越小，所以够用就停。
 

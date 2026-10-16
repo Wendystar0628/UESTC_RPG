@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 32.3k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 32.8k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 8.4k
-- CORE-DECISIONS §11 待对齐 · L289 · 61
+- CORE-DECISIONS §10 流程 · L243 · 8.9k
+- CORE-DECISIONS §11 待对齐 · L291 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -1640,7 +1640,7 @@
 
 ## ENG-TEAM-COMMS · 协作分册：交接与通信
 
-`docs/design/engineering/ENG-TEAM-COMMS.md` · 8.6k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
+`docs/design/engineering/ENG-TEAM-COMMS.md` · 9.0k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
 关键词：.collab、交接目录、合并请求、评审请求、契约申请文件、任务单、max-000、max-backlog、sol-001、旁路单、调研单、merged.log、流水、notes、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、sol_duty_watch、sol_side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
 
 - ENG-TEAM-COMMS §0 结论 · L23 · 554
@@ -1648,9 +1648,9 @@
 - ENG-TEAM-COMMS §1 交接目录与文件 · L35 · 1.8k
 - ENG-TEAM-COMMS §2 命名与写法 · L62 · 498
 - ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L70 · 776
-- ENG-TEAM-COMMS §4 消息与流水 · L97 · 1.3k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L124 · 1.9k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L153 · 563
+- ENG-TEAM-COMMS §4 消息与流水 · L97 · 1.6k
+- ENG-TEAM-COMMS §5 唤醒脚本 · L126 · 2.1k
+- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L155 · 563
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
@@ -1706,25 +1706,25 @@
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
-`docs/design/engineering/ENG-TEAM-ROLES.md` · 13.9k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
+`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
 关键词：参与者、会话、作者、主会话、总指挥、主代理、决定权、执行人、二号会话、project-09、wendystar1145、Astra、gpt-6-astra、gpt-6.1-sol、gpt-6-luna、Grok 值班执行者、luna 机械值班、模型能力、GPT 不做审美、视觉风格归属、事归谁、七问、推理强度、Opus 与 Sonnet 的分界、补 GPT 短板、简单少量的活、派单最少写、升级先找失败原因、子代理生命周期、恢复还是新开
 
 - ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
   - ★ ENG-TEAM-ROLES §0.1 接入要点 · L35 · 69
-- ENG-TEAM-ROLES §1 参与者与会话 · L39 · 2.7k
-  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L61 · 518
-- ENG-TEAM-ROLES §2 按模型能力分工 · L79 · 2.5k
-  - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L83 · 803
-  - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L92 · 485
-  - ENG-TEAM-ROLES §2.2a 不过度工程化（各方都适用，GPT 模型尤其） · L101 · 550
-  - ENG-TEAM-ROLES §2.3 事归谁 · L109 · 247
-  - ENG-TEAM-ROLES §2.4 交叉的地方 · L115 · 219
-- ENG-TEAM-ROLES §3 模型等级与任务划分 · L121 · 6.5k
-  - ENG-TEAM-ROLES §3.1 按七问选施工模型 · L125 · 4.2k
-  - ENG-TEAM-ROLES §3.2 总指挥只做什么 · L198 · 495
-  - ENG-TEAM-ROLES §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L212 · 674
-  - ENG-TEAM-ROLES §3.4 包内的实现路径由施工模型规划 · L227 · 110
-  - ENG-TEAM-ROLES §3.5 子代理的生命周期：能恢复就不新开 · L232 · 998
+- ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.0k
+  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 518
+- ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.5k
+  - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L84 · 803
+  - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L93 · 485
+  - ENG-TEAM-ROLES §2.2a 不过度工程化（各方都适用，GPT 模型尤其） · L102 · 550
+  - ENG-TEAM-ROLES §2.3 事归谁 · L110 · 247
+  - ENG-TEAM-ROLES §2.4 交叉的地方 · L116 · 219
+- ENG-TEAM-ROLES §3 模型等级与任务划分 · L122 · 7.0k
+  - ENG-TEAM-ROLES §3.1 按七问选施工模型 · L126 · 4.6k
+  - ENG-TEAM-ROLES §3.2 总指挥只做什么 · L204 · 495
+  - ENG-TEAM-ROLES §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L218 · 674
+  - ENG-TEAM-ROLES §3.4 包内的实现路径由施工模型规划 · L233 · 110
+  - ENG-TEAM-ROLES §3.5 子代理的生命周期：能恢复就不新开 · L238 · 998
 
 ## ENG-TEAM · 多模型协作规程：总纲与分册索引
 
