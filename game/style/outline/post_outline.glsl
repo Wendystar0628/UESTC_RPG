@@ -23,7 +23,7 @@ VERSION_DEFINES
 //   mask      : reads depth + normal_roughness (7-bit material ID in alpha) + mat_table row 0, writes a RG8 mask
 //               R = line coverage (sub-pixel widths drawn as coverage),
 //               G = material ID of the side the line takes its colour from (bits 0-6) + convex-lit flag (bit 7).
-//   composite : isolated-speck removal (fewer than 3 line pixels in 3x3 -> dropped), +-0.5 px tent filter,
+//   composite : fragment filter (3x3 count and 5x5 ring, below) and the +-0.5 px tent filter,
 //               line colour = own base darkened + warm/cool tint + fog (ART-STYLE §4.2), mixed into the colour
 //               buffer in place; convex bright line on the lit side (ART-STYLE §4.7); screen-space rim (interface).
 //
@@ -43,6 +43,29 @@ VERSION_DEFINES
 //   ID     : material IDs differ (material boundary / object boundary).
 // Widths follow ART-STYLE §4.3 by linear depth (outer 1.25 px at 1080p, crease x0.8, ID x0.6, 0 beyond 400 m),
 // scaled by internal_height / 1080 with a minimum width for lines whose nominal width is >= 1 px.
+//
+// Ported from the reference scenes' line passes (render/太阳雨中的小渔港, edge pass S8 and line pass _8; the same code in
+// render/被自然收回的街角), so far-away thin parts draw clean lines or none instead of dashes and specks:
+//   speck rule      : a silhouette pixel draws only where the occluder continues along the edge on at least one side,
+//   thin-part fade  : the reference fades a part's ink by its projected size (smoothstep(4, 9) px of its bounding
+//                     radius, per object); with no per-object data here the mask measures the foreground's thickness
+//                     across a silhouette, and the width of a part between two other materials, and fades the lines
+//                     of a part about one pixel thick toward THIN_KEEP (steady along the edge, so no dashes),
+//   fragment filter : a line pixel keeps its ink only if the line leaves the 5x5 window around it (the reference
+//                     counts line pixels in that window; see the composite pass for why the ring is counted here);
+//                     the convex bright line (ART-STYLE §4.7) follows the same rule on its own flags.
+
+// ---- Tuning (max-110 110b; values for the main session to set, all in one place)
+const float THIN_KEEP = 0.3;        // ink left on a thin part (1 = no fade, 0 = thin parts draw no line)
+const float THIN_FULL_PX = 1.0;     // foreground thickness (1080p px) at or below which a part counts as fully thin
+const float THIN_NONE_PX = 2.0;     // thickness (1080p px) from which a part is outlined normally
+const float THIN_DEPTH_REL = 0.02;  // relative depth step behind a part's plane that counts as background
+const float STRIP_FULL_PX = 2.0;    // width (1080p px) of a part between two other materials at or below which its
+const float STRIP_NONE_PX = 3.0;    // material and crease lines fade fully, and from which they are drawn normally
+const float BRIGHT_RING_LO = 0.5;   // convex bright line: flagged pixels on the 5x5 ring for no lift ...
+const float BRIGHT_RING_HI = 2.0;   // ... and for the full lift (a lone flagged bevel pixel would flash as a dash)
+const float FRAG_RING_LO = 0.5;     // fragment filter: line pixels on the 5x5 window's outer ring for no ink ...
+const float FRAG_RING_HI = 2.0;     // ... and for full ink (a line through the window marks >= 2 of them)
 
 #if defined(PASS_MASK) || defined(PASS_COMPOSITE)
 
@@ -281,8 +304,9 @@ const float RING2_D = 1.5;
 // Edge strengths between centre s0 and neighbour at c: x depth (silhouette), y normal crease, z material ID.
 // All are already restricted to the case where the centre is the nearer side. w: 1 if convex and the centre is
 // the more lit face (candidate for the bright line), else 0.
-vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c) {
+vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c, out float qz) {
 	Surf q = fetch_surf(c);
+	qz = q.sky ? 1e9 : q.z;
 	if (q.sky) {
 		// Background is sky: a pure silhouette.
 		return vec4(1.0, 0.0, 0.0, 0.0);
@@ -359,6 +383,59 @@ vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c) {
 	return vec4(e_depth, e_crease, e_id, convex_lit);
 }
 
+// True if pixel p lies behind the plane of s0 by the depth step of a silhouette (the same plane test as e_depth in
+// edge_strengths, a little stricter), so a part standing in front of a nearby surface counts as well as one
+// against the sky, while a plane seen at a grazing angle does not.
+bool behind_plane(Surf s0, ivec2 p) {
+	float d = texelFetch(depth_tex, p, 0).r;
+	if (d <= 0.0) {
+		return true;
+	}
+	vec3 q = view_pos(p, d);
+	if (-q.z > s0.z * 1.03 + 0.1) {
+		return true;   // far behind whatever the normal says (a round rod's silhouette normal is edge-on)
+	}
+	float pn0 = dot(s0.pos, s0.nrm);
+	float pnq = dot(q, s0.nrm);
+	return pn0 * pnq > 0.0 && 1.0 - pn0 / pnq > THIN_DEPTH_REL;
+}
+
+uint id_at(ivec2 p) {
+	return decode_id(texelFetch(normal_roughness_tex, clamp_px(p), 0).w);
+}
+
+// Width in pixels of the run of material id through p across dir, counted up to n pixels each way.
+float id_width(ivec2 p, ivec2 dir, uint id, int n) {
+	float w = 1.0;
+	for (int i = 1; i <= n; i++) {
+		if (id_at(p + dir * i) != id) {
+			break;
+		}
+		w += 1.0;
+	}
+	for (int i = 1; i <= n; i++) {
+		if (id_at(p - dir * i) != id) {
+			break;
+		}
+		w += 1.0;
+	}
+	return w;
+}
+
+// Foreground thickness in internal pixels at p across a silhouette that lies in direction dir: walks toward -dir
+// until the background shows again. 0 if p itself is background, 99 if the foreground goes on for more than n px.
+float thickness(Surf s0, ivec2 p, ivec2 dir, int n) {
+	if (behind_plane(s0, p)) {
+		return 0.0;
+	}
+	for (int i = 1; i <= n; i++) {
+		if (behind_plane(s0, clamp_px(p - dir * i))) {
+			return float(i);
+		}
+	}
+	return 99.0;
+}
+
 void main() {
 	ivec2 c = ivec2(gl_GlobalInvocationID.xy);
 	if (any(greaterThanEqual(c, ivec2(P.size.xy)))) {
@@ -378,12 +455,70 @@ void main() {
 	}
 
 	vec4 e1[8];
+	float qz[8];
 	float any_edge = 0.0;
 	float convex_lit = 0.0;
 	for (int k = 0; k < RING1; k++) {
-		e1[k] = edge_strengths(s0, l0, clamp_px(c + RING1_OFS[k]));
-		any_edge = max(any_edge, max(e1[k].x, max(e1[k].y, e1[k].z)));
+		e1[k] = edge_strengths(s0, l0, clamp_px(c + RING1_OFS[k]), qz[k]);
 		convex_lit = max(convex_lit, e1[k].w);
+	}
+
+	// Speck rule and thin parts, on the four axis neighbours. sil_keep carries the result to the silhouettes found by
+	// the diagonal and second-ring taps of this pixel.
+	int probe = int(min(ceil(THIN_NONE_PX * P.line_a.y), 4.0));
+	float sil_keep = 1.0;
+	for (int k = 0; k < 4; k++) {
+		if (e1[k].x <= 0.0) {
+			continue;
+		}
+		ivec2 dir = RING1_OFS[k];
+		ivec2 perp = ivec2(dir.y, dir.x);
+		// Speck rule (reference S8): the occluder must continue along the edge on at least one side, or a lone pixel
+		// (a raster dropout of a thin rod, a leaf tip) would print as a dark dot.
+		float jump = qz[k] - s0.z;
+		float z1 = -view_pos(clamp_px(c + perp), texelFetch(depth_tex, clamp_px(c + perp), 0).r).z;
+		float z2 = -view_pos(clamp_px(c - perp), texelFetch(depth_tex, clamp_px(c - perp), 0).r).z;
+		if (abs(z1 - s0.z) >= 0.5 * jump && abs(z2 - s0.z) >= 0.5 * jump) {
+			e1[k].x = 0.0;
+			sil_keep = 0.0;
+			continue;
+		}
+		// Thin part: the thickest of this pixel and its two neighbours along the edge, so a part whose rasterised
+		// thickness flickers between one and two pixels keeps a steady line instead of turning into dashes.
+		float t = max(thickness(s0, c, dir, probe), max(thickness(s0, clamp_px(c + perp), dir, probe),
+				thickness(s0, clamp_px(c - perp), dir, probe)));
+		float keep = mix(THIN_KEEP, 1.0, smoothstep(THIN_FULL_PX, THIN_NONE_PX, t / P.line_a.y));
+		e1[k].x *= keep;
+		sil_keep = min(sil_keep, keep);
+	}
+	for (int k = 4; k < RING1; k++) {
+		e1[k].x *= sil_keep;
+	}
+	// The same for material lines: a narrow part between two other materials (a coping seen from above, a bracket, a
+	// far rail, a band) is all line when it is a pixel or two wide. Measured as the widest of this pixel and its
+	// neighbours of the same material along the edge, so a part whose width flickers keeps a steady line.
+	float strip_keep = 1.0;
+	int strip_probe = int(min(ceil(STRIP_NONE_PX * P.line_a.y), 4.0));
+	for (int k = 0; k < 4; k += 2) {
+		if (max(max(e1[k].z, e1[k].y), max(e1[k + 1].z, e1[k + 1].y)) <= 0.0) {
+			continue;
+		}
+		ivec2 dir = RING1_OFS[k];
+		ivec2 perp = ivec2(dir.y, dir.x);
+		float w = id_width(c, dir, s0.id, strip_probe);
+		if (id_at(c + perp) == s0.id) {
+			w = max(w, id_width(clamp_px(c + perp), dir, s0.id, strip_probe));
+		}
+		if (id_at(c - perp) == s0.id) {
+			w = max(w, id_width(clamp_px(c - perp), dir, s0.id, strip_probe));
+		}
+		strip_keep = min(strip_keep, mix(THIN_KEEP, 1.0, smoothstep(STRIP_FULL_PX, STRIP_NONE_PX, w / P.line_a.y)));
+	}
+	for (int k = 0; k < RING1; k++) {
+		e1[k].yz *= strip_keep;
+	}
+	for (int k = 0; k < RING1; k++) {
+		any_edge = max(any_edge, max(e1[k].x, max(e1[k].y, e1[k].z)));
 	}
 
 	float bright_ok = bevel_lift(s0.id) > 0.0 ? 1.0 : 0.0;
@@ -415,10 +550,11 @@ void main() {
 	// Second ring only where a line is wider than one internal pixel (close range, high internal resolution).
 	if (max(w_outer, max(w_crease, w_id)) > 1.0) {
 		for (int k = 0; k < RING2; k++) {
-			vec4 e = edge_strengths(s0, l0, clamp_px(c + RING2_OFS[k]));
-			cov = max(cov, e.x * box_cov(w_outer, RING2_D));
-			cov = max(cov, e.y * box_cov(w_crease, RING2_D));
-			cov = max(cov, e.z * box_cov(w_id, RING2_D));
+			float qz2;
+			vec4 e = edge_strengths(s0, l0, clamp_px(c + RING2_OFS[k]), qz2);
+			cov = max(cov, e.x * sil_keep * box_cov(w_outer, RING2_D));
+			cov = max(cov, e.y * strip_keep * box_cov(w_crease, RING2_D));
+			cov = max(cov, e.z * strip_keep * box_cov(w_id, RING2_D));
 		}
 	}
 
@@ -522,12 +658,24 @@ void main() {
 	}
 	float m0 = m[4];
 
-	// Isolated speck removal: fewer than 3 line pixels in the 3x3 block are dropped.
+	// Fragment filter (after the reference line pass _8, which keeps a pixel only when its 5x5 window holds enough
+	// line pixels): here the count is taken on the window's outer ring, so a line keeps its ink when it runs at
+	// least 2 px out of the pixel and a speck or a short dash inside the window goes, whatever the line's width
+	// (an area count would also cut thin lines where their rasterised width drops to one row). Line ends taper.
 	float cov;
 	ivec2 src = c;   // pixel whose depth / ID the line colour is taken from
 	uint src_id = g[4] & 127u;
 	if (m0 > 0.0) {
-		cov = count >= 3 ? mix(m0, tent, P.line_a.z) : 0.0;
+		float ring = 0.0;
+		for (int dy = -2; dy <= 2; dy++) {
+			for (int dx = -2; dx <= 2; dx++) {
+				if (max(abs(dx), abs(dy)) == 2) {
+					ring += imageLoad(line_mask, clamp_px(c + ivec2(dx, dy))).r > LINE_PIXEL ? 1.0 : 0.0;
+				}
+			}
+		}
+		// The 3x3 rule (fewer than 3 line pixels -> dropped) still takes dotted lines whose dots the ring would see.
+		cov = count >= 3 ? mix(m0, tent, P.line_a.z) * smoothstep(FRAG_RING_LO, FRAG_RING_HI, ring) : 0.0;
 	} else if (count >= 2) {
 		// Skirt pixel next to a line: only the tent's spill, coloured from its own base but fogged and tinted
 		// by the line pixel it spills from.
@@ -597,6 +745,20 @@ void main() {
 			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
 			float fog_a = fog_eval(wp, P.inv_view[3].xyz).a;
 			float lift = bevel_lift(s.id) * P.key_light.w * (1.0 - smoothstep(BRIGHT_FAR0, BRIGHT_FAR1, s.z)) * (1.0 - fog_a);
+			if (lift > 0.0) {
+				// Same continuity rule as the dark lines: flagged pixels must run on past the 5x5 window, or a bevel
+				// that rasterises only now and then prints as a row of light dashes.
+				float flags = 0.0;
+				for (int dy = -2; dy <= 2; dy++) {
+					for (int dx = -2; dx <= 2; dx++) {
+						if (max(abs(dx), abs(dy)) == 2) {
+							uint gk = uint(round(imageLoad(line_mask, clamp_px(c + ivec2(dx, dy))).g * 255.0));
+							flags += (gk & 128u) != 0u ? 1.0 : 0.0;
+						}
+					}
+				}
+				lift *= smoothstep(BRIGHT_RING_LO, BRIGHT_RING_HI, flags);
+			}
 			if (lift > 0.0) {
 				vec3 lab = linear_to_oklab(max(rgb, vec3(0.0)));
 				lab.x += lift;
