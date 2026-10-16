@@ -10,6 +10,17 @@
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
     <Compile Remove="gdunit4_testadapter_v*/**/*.cs" />
   </ItemGroup>
+  <Target Name="EnsureGdUnitTestRunner" BeforeTargets="CoreCompile"
+          Condition="'$(Configuration)' == 'Debug' And '$(DesignTimeBuild)' != 'true' And '@(PackageReference-&gt;WithMetadataValue('Identity', 'gdUnit4.api'))' != ''">
+    <Exec Command="powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/setup/install-test-runner.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot;" />
+    <PropertyGroup>
+      <_CampusGdUnitRunnerSource>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', 'gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs'))</_CampusGdUnitRunnerSource>
+    </PropertyGroup>
+    <ItemGroup>
+      <Compile Remove="@(Compile)" Condition="'%(Compile.FullPath)' == '$(_CampusGdUnitRunnerSource)'" />
+      <Compile Include="gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs" Condition="Exists('gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs')" />
+    </ItemGroup>
+  </Target>
   <Target Name="GenerateBuildInformation" BeforeTargets="CoreCompile">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" /></ItemGroup>

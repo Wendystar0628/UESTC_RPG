@@ -18,6 +18,14 @@ public sealed class VeilServiceStub : IVeilService
     public float Opacity { get; private set; }
     public VeilReason Reason { get; private set; } = VeilReason.Boot;
     public VeilContent Content { get; private set; } = VeilContent.Fog;
+    // D0 compatibility only: no readiness timing or UI-acceptance claim is made by this stub.
+    public bool Waiting => false;
+    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness) => kind switch
+    {
+        VeilWaitKind.Readiness or VeilWaitKind.BootFrontispiece => new Observation(),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+    private sealed class Observation : IDisposable { public void Dispose() { } }
     public event Action? Changed;
 
     public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog)

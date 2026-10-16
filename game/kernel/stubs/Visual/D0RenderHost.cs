@@ -27,6 +27,7 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
     private readonly Dictionary<ulong, Entry> _roots = [];
     private readonly Dictionary<ShaderId, ShaderMaterial> _shaderMaterials = [];
     private IReflectionWorld? _reflection;
+    private PaletteCatalog? _catalog;
     private ulong _next;
     private bool _disposed;
 
@@ -48,6 +49,9 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
             throw new NotSupportedException("D0RenderHost mounts GeometryBundle only. PlacedPart generation and mounting belong to the WP-01 render host.");
 
         var materials = Services.Get<IToonMaterialProvider>();
+        // Pure RGB fallback never resolves a catalog. Mixed batches capture it once for indexed surfaces only.
+        var hasIndexedGeometry = content.Meshes.Any(geometry => materials is not FallbackToonMaterialProvider || geometry.Shader is not null);
+        var catalog = hasIndexedGeometry ? (_catalog ??= Services.Get<IPaletteCatalogSource>().Catalog) : null;
         if (_reflection is null)
         {
             _reflection = Services.Get<IReflectionWorld>();
@@ -62,12 +66,12 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
         {
             foreach (var geometry in content.Meshes)
             {
-                geometry.ValidateVertexData();
-                if (geometry.Index.Length == 0) continue;
                 var useD0Rgb = materials is FallbackToonMaterialProvider && geometry.Shader is null;
+                geometry.ValidateVertexData(useD0Rgb ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
+                if (geometry.Index.Length == 0) continue;
                 var spec = useD0Rgb ? geometry.Material.Spec : ApprovedD0Spec(geometry.Material.Spec);
                 var material = geometry.Shader is { } shader ? ResolveShaderMaterial(shader) : materials.Get(spec);
-                var mesh = Upload(geometry, spec, materials, useD0Rgb);
+                var mesh = Upload(geometry, spec, materials, useD0Rgb, catalog);
                 var instance = new MeshInstance3D
                 {
                     Mesh = mesh,
@@ -110,13 +114,13 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
         _ => spec
     };
 
-    private static ArrayMesh Upload(GeometryBundle source, ToonSpec spec, IToonMaterialProvider materials, bool useD0Rgb)
+    private static ArrayMesh Upload(GeometryBundle source, ToonSpec spec, IToonMaterialProvider materials, bool useD0Rgb, PaletteCatalog? catalog)
     {
         var mesh = new ArrayMesh();
         try
         {
             GeometrySurfaceUpload.Append(mesh, source, materials, materialSpec: spec,
-                useD0Rgb: useD0Rgb, compressAttributes: source.Uv2 is null);
+                useD0Rgb: useD0Rgb, compressAttributes: source.Uv2 is null, catalog: useD0Rgb ? null : catalog);
             return mesh;
         }
         catch { mesh.Dispose(); throw; }

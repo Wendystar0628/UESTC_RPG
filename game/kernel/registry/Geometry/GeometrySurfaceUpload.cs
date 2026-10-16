@@ -10,15 +10,15 @@ namespace Campus.Kernel.Renderer;
 public static class GeometrySurfaceUpload
 {
     public static int Append(ArrayMesh target, GeometryBuffer source, IToonMaterialProvider materials,
-        PaletteToken? tint = null)
+        PaletteToken? tint = null, PaletteCatalog? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        if (source.PaletteEncodingVersion != PaletteLayout.LegacyEncodingVersion ||
-            source.ColorIndices is not null || source.DecalBaseColorIndices is not null)
-            throw new NotSupportedException("This uploader supports palette encoding 1 only; encoding-2 data cannot be discarded.");
         return Append(target, new SurfaceView
         {
             Spec = source.Material.Spec,
+            Encoding = source.PaletteEncodingVersion,
+            ColorIndices = source.ColorIndices,
+            DecalBaseColorIndices = source.DecalBaseColorIndices,
             Position = source.Position,
             Normal = source.Normal,
             Index = source.Index,
@@ -32,19 +32,22 @@ public static class GeometrySurfaceUpload
             Custom1 = source.Custom1,
             Custom2 = source.Custom2,
             Lods = source.Lods.Select(lod => new LodView(lod.Error, lod.Index))
-        }, materials, tint, false, false);
+        }, materials, tint, false, false, catalog);
     }
 
     /// <summary>Caller exclusively owns source arrays during this upload; no extra GeometryBuffer.Freeze occurs.</summary>
     public static int Append(ArrayMesh target, GeometryBundle source, IToonMaterialProvider materials,
         PaletteToken? tint = null, ToonSpec? materialSpec = null, bool useD0Rgb = false,
-        bool compressAttributes = false)
+        bool compressAttributes = false, PaletteCatalog? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        source.ValidateVertexData();
+        source.ValidateVertexData(catalog is null ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
         return Append(target, new SurfaceView
         {
             Spec = materialSpec ?? source.Material.Spec,
+            Encoding = catalog is null ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion,
+            ColorIndices = Memory(source.ColorIndices),
+            DecalBaseColorIndices = Memory(source.DecalBaseColorIndices),
             Position = source.Position,
             Normal = source.Normal,
             Index = source.Index,
@@ -58,15 +61,33 @@ public static class GeometrySurfaceUpload
             Custom1 = Memory(source.Custom1),
             Custom2 = Memory(source.Custom2),
             Lods = (source.Lods ?? []).Select(lod => new LodView(lod.Error, lod.Index))
-        }, materials, tint, useD0Rgb, compressAttributes);
+        }, materials, tint, useD0Rgb, compressAttributes, catalog);
     }
 
     private static int Append(ArrayMesh target, SurfaceView source, IToonMaterialProvider materials,
-        PaletteToken? tint, bool useD0Rgb, bool compressAttributes)
+        PaletteToken? tint, bool useD0Rgb, bool compressAttributes, PaletteCatalog? catalog)
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(materials);
         ArgumentNullException.ThrowIfNull(source.Spec);
+        switch (source.Encoding)
+        {
+            case PaletteLayout.LegacyEncodingVersion:
+                if (source.ColorIndices is not null || source.DecalBaseColorIndices is not null)
+                    throw new NotSupportedException("Encoding 1 cannot carry logical-index arrays.");
+                break;
+            case PaletteLayout.EncodingVersion:
+                if (catalog is null || useD0Rgb)
+                    throw new NotSupportedException("Encoding 2 requires a complete catalog and the indexed-color upload path.");
+                break;
+            default: throw new NotSupportedException($"Unknown palette encoding {source.Encoding}.");
+        }
+        catalog?.Validate(source.Spec);
+        if (catalog is not null && tint is { } token)
+        {
+            var index = catalog.Resolve(token);
+            catalog.Validate(source.Spec with { Lit = token, Shade = catalog.Get(new PaletteIndex(index.Value + 1)).Token });
+        }
         var count = source.Position.Length / 3;
         if (count < 3 || source.Index.Length == 0)
             throw new ArgumentException("A native surface needs at least three vertices and one triangle.", nameof(source));
@@ -90,8 +111,12 @@ public static class GeometrySurfaceUpload
         var positions = new Vector3[count];
         var normals = new Vector3[count];
         var colors = new Color[count];
-        var defaultId = !useD0Rgb && (tint.HasValue || source.ColorIds is null)
-            ? materials.PaletteId(tint ?? source.Spec.Lit) : (byte)0;
+        var defaultId = default(PaletteIndex);
+        if (!useD0Rgb && (tint.HasValue || (source.ColorIds is null && source.ColorIndices is null)))
+            defaultId = catalog is null ? new PaletteIndex(materials.PaletteId(tint ?? source.Spec.Lit))
+                : catalog.Resolve(tint ?? source.Spec.Lit);
+        if (source.Encoding == PaletteLayout.LegacyEncodingVersion && defaultId.Value >= PaletteLayout.LegacyCapacity)
+            throw new NotSupportedException("An encoding-1 surface cannot use a bank-1 fallback or tint.");
         var p = source.Position.Span;
         var n = source.Normal.Span;
         for (var i = 0; i < count; i++)
@@ -104,12 +129,15 @@ public static class GeometrySurfaceUpload
                     source.ColorIds is { } ids ? ids.Span[i] : null);
                 continue;
             }
-            var color = tint.HasValue ? defaultId : At(source.ColorIds, i, defaultId);
+            var color = tint.HasValue ? defaultId : source.ColorIndices is { } logical ? Registered(logical.Span[i])
+                : source.ColorIds is { } legacy ? new PaletteIndex(legacy.Span[i]) : defaultId;
             // Match WP-02's established AO byte truncation, then use the existing native UNORM8 input bias.
             var ao = (byte)Math.Clamp(At(source.Ao, i, 1f) * 255f, 0f, 255f);
-            colors[i] = new(PaletteEncoding.Unorm8Input(color), PaletteEncoding.Unorm8Input(ao),
-                PaletteEncoding.Unorm8Input(At(source.Flags, i, (byte)0)),
-                PaletteEncoding.Unorm8Input(At(source.Reserved, i, (byte)0)));
+            PaletteIndex? decalBase = source.DecalBaseColorIndices is { } backgrounds ? Registered(backgrounds.Span[i]) : null;
+            var rgba = PaletteEncoding.EncodeColor(color, ao, At(source.Flags, i, (byte)0),
+                At(source.Reserved, i, (byte)0), decalBase);
+            colors[i] = new(PaletteEncoding.Unorm8Input(rgba.R), PaletteEncoding.Unorm8Input(rgba.G),
+                PaletteEncoding.Unorm8Input(rgba.B), PaletteEncoding.Unorm8Input(rgba.A));
         }
 
         using var arrays = new Godot.Collections.Array();
@@ -133,6 +161,13 @@ public static class GeometrySurfaceUpload
             throw new InvalidOperationException("Godot rejected the complete geometry surface.");
         return surface;
 
+        PaletteIndex Registered(ushort value)
+        {
+            var index = new PaletteIndex(value);
+            _ = catalog!.Get(index);
+            return index;
+        }
+
         void SetCustom(Mesh.ArrayType channel, ReadOnlyMemory<float>? data, Mesh.ArrayFormat shift)
         {
             if (data is not { } values) return;
@@ -155,6 +190,9 @@ public static class GeometrySurfaceUpload
     private sealed class SurfaceView
     {
         public required ToonSpec Spec { get; init; }
+        public required int Encoding { get; init; }
+        public ReadOnlyMemory<ushort>? ColorIndices { get; init; }
+        public ReadOnlyMemory<ushort>? DecalBaseColorIndices { get; init; }
         public required ReadOnlyMemory<float> Position { get; init; }
         public required ReadOnlyMemory<float> Normal { get; init; }
         public required ReadOnlyMemory<int> Index { get; init; }

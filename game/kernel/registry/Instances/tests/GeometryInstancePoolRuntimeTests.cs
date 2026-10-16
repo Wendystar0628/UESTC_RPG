@@ -144,6 +144,45 @@ public sealed class GeometryInstancePoolRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
+    public void CatalogPoolsUploadBothBanksWithoutReinterpretingTheirFrozenVersion()
+    {
+        var legacy = new PaletteRegistry([
+            new(new("fixture.first.lit"), 64, new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.first.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
+            new(new("fixture.edge.lit"), 254, new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.edge.shade"), 255, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
+        var catalog = new PaletteCatalog(legacy, new PaletteEntryV2[] {
+            new(new("fixture.high.lit"), new(256), new(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.high.shade"), new(257), new(.5f), "fixture", false, PaletteRole.Shade),
+            new(new("fixture.last.lit"), new(510), new(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.last.shade"), new(511), new(.5f), "fixture", false, PaletteRole.Shade) });
+        using var fixture = Fixture.Create(catalog);
+        var frozen = GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec) with
+        {
+            ColorIds = null,
+            ColorIndices = [255, 256, 510, 511],
+            Flags = [4, 5, 6, 15],
+            Reserved = null,
+            DecalBaseColorIndices = [511, 255, 256, 511]
+        }, PaletteLayout.EncodingVersion);
+        var pool = fixture.Host.Mount(Spec("catalog", Prototype(frozen)));
+        var mesh = (ArrayMesh)FindPool(fixture.Host, "catalog").Multimesh.Mesh;
+        using var arrays = mesh.SurfaceGetArrays(0);
+        var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
+        for (var i = 0; i < 4; i++)
+        {
+            var flags = (byte)Byte(colors[i].B);
+            Check(PaletteEncoding.DecodeColor((byte)Byte(colors[i].R), flags).Value == frozen.ColorIndices!.Value.Span[i] &&
+                PaletteEncoding.DecodeDecalBase((byte)Byte(colors[i].A), flags).Value == frozen.DecalBaseColorIndices!.Value.Span[i] &&
+                (flags & 15) == frozen.Flags!.Value.Span[i], "A geometry pool lost bank bits or changed semantic flags.");
+        }
+        Check(frozen.PaletteEncodingVersion == PaletteLayout.EncodingVersion, "The host changed its prototype encoding.");
+        pool.Free();
+    }
+
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
     public void UnsupportedGeometryAndFailedPreparationNeverPublishPartialPools()
     {
         using var fixture = Fixture.Create();
@@ -296,7 +335,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         public RecordingSource Source { get; } = new();
         public Node3D Parent => _parent!;
         public InstancePoolHost Host => _host!;
-        public static Fixture Create()
+        public static Fixture Create(PaletteCatalog? catalog = null)
         {
             var fixture = new Fixture();
             try
@@ -307,7 +346,7 @@ public sealed class GeometryInstancePoolRuntimeTests
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
-                fixture._host = new InstancePoolHost(fixture.Provider, fixture.Source);
+                fixture._host = new InstancePoolHost(fixture.Provider, fixture.Source, catalog);
                 fixture._parent.AddChild(fixture._host);
                 return fixture;
             }

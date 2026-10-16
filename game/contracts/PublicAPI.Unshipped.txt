@@ -2450,10 +2450,12 @@ Campus.Contracts.IUiSurfaceState.SettingsPage.get -> string?
 Campus.Contracts.IVeilService
 Campus.Contracts.IVeilService.Cover(Campus.Contracts.VeilReason reason, float seconds, Campus.Contracts.VeilContent content = Campus.Contracts.VeilContent.Fog) -> System.Threading.Tasks.Task!
 Campus.Contracts.IVeilService.HoldUntil(Campus.Contracts.VeilReason reason, System.Func<bool>! ready, float maxWaitSeconds) -> void
+Campus.Contracts.IVeilService.ObserveReadinessWait(Campus.Contracts.VeilWaitKind kind = Campus.Contracts.VeilWaitKind.Readiness) -> System.IDisposable!
 Campus.Contracts.IVeilService.Reveal(Campus.Contracts.VeilReason reason, float seconds) -> System.Threading.Tasks.Task!
 Campus.Contracts.IVeilState
 Campus.Contracts.IVeilState.Opacity.get -> float
 Campus.Contracts.IVeilState.Reason.get -> Campus.Contracts.VeilReason
+Campus.Contracts.IVeilState.Waiting.get -> bool
 Campus.Contracts.IViewControl
 Campus.Contracts.IViewControl.Mode.get -> Campus.Contracts.ViewMode
 Campus.Contracts.IViewControl.SetMode(Campus.Contracts.ViewMode m, Campus.Contracts.ModeSwitchVia via) -> System.Threading.Tasks.Task<Campus.Contracts.ModeSwitchResult>!
@@ -5066,6 +5068,9 @@ Campus.Contracts.VeilReason.Respawn = 5 -> Campus.Contracts.VeilReason
 Campus.Contracts.VeilReason.Season = 3 -> Campus.Contracts.VeilReason
 Campus.Contracts.VeilReason.Teleport = 2 -> Campus.Contracts.VeilReason
 Campus.Contracts.VeilReason.Transit = 1 -> Campus.Contracts.VeilReason
+Campus.Contracts.VeilWaitKind
+Campus.Contracts.VeilWaitKind.BootFrontispiece = 1 -> Campus.Contracts.VeilWaitKind
+Campus.Contracts.VeilWaitKind.Readiness = 0 -> Campus.Contracts.VeilWaitKind
 Campus.Contracts.ViewMode
 Campus.Contracts.ViewMode.Fly = 0 -> Campus.Contracts.ViewMode
 Campus.Contracts.ViewMode.Walk = 1 -> Campus.Contracts.ViewMode

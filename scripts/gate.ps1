@@ -16,6 +16,113 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
 . (Join-Path $PSScriptRoot 'gates/cache.ps1')
 . (Join-Path $PSScriptRoot 'gates/select-service-window.ps1')
+function ConvertTo-UESTCG2RelativePath {
+    param([string]$Base, [string]$Path)
+    if ([IO.Path]::IsPathRooted($Path)) { throw 'Absolute Compile/change paths require explicit repository mapping.' }
+    $parts = New-Object 'Collections.Generic.List[string]'
+    foreach ($part in (($Base.Replace('\','/') + '/' + $Path.Replace('\','/')) -split '/')) {
+        if (-not $part -or $part -eq '.') { continue }
+        if ($part -eq '..') {
+            if (-not $parts.Count -or $parts[$parts.Count-1] -match '[*?]') { throw 'Compile path escapes the repository or traverses a glob.' }
+            $parts.RemoveAt($parts.Count-1)
+        } else {
+            if ($part.Contains(':')) { throw 'Absolute Compile paths require MSBuild evaluation.' }
+            $parts.Add($part)
+        }
+    }
+    return ($parts -join '/')
+}
+
+function Get-UESTCG2CompileScope {
+    param([string]$Root, [string]$Project)
+    $globs = New-Object 'Collections.Generic.List[string]'
+    $roots = New-Object 'Collections.Generic.List[string]'
+    $fallback = New-Object 'Collections.Generic.List[string]'
+    try {
+        $xml = New-Object Xml.XmlDocument
+        $xml.XmlResolver = $null
+        $xml.Load((Join-Path $Root $Project))
+        $defaults = @($xml.SelectNodes("//*[local-name()='EnableDefaultCompileItems']"))
+        if ($defaults.Count -ne 1 -or $defaults[0].InnerText.Trim() -ine 'false' -or
+            @($defaults[0].SelectNodes('ancestor-or-self::*[@Condition]')).Count) {
+            $fallback.Add('EnableDefaultCompileItems is not unconditionally false')
+        }
+        if (@($xml.SelectNodes("//*[local-name()='Import' or local-name()='Choose']")).Count) {
+            $fallback.Add('Explicit Import/Choose may change Compile items')
+        }
+        if (@($xml.SelectNodes('//@*|//text()') | Where-Object { $_.Value -match '[\$@%]\(' }).Count) {
+            $fallback.Add('Unevaluated MSBuild expression in project metadata')
+        }
+        $items = @($xml.SelectNodes("//*[local-name()='Compile']"))
+        if (-not $items.Count) { $fallback.Add('No explicit Compile Include items') }
+        $base = ($Project.Replace('\','/') -replace '/[^/]+$', '')
+        foreach ($item in $items) {
+            if (-not $item.HasAttribute('Include') -or $item.HasAttribute('Remove') -or
+                $item.HasAttribute('Update') -or $item.HasAttribute('Exclude') -or
+                @($item.SelectNodes('ancestor-or-self::*[@Condition]')).Count) {
+                $fallback.Add('Conditional/Remove/Update/Exclude Compile items require evaluation')
+            }
+            foreach ($include in ($item.GetAttribute('Include') -split ';')) {
+                $include = $include.Trim()
+                if (-not $include) { continue }
+                try {
+                    if ($include -match '[\$@%]\(|%[0-9a-fA-F]{2}|[\[\]{}]') { throw 'MSBuild expression or escaped Compile path' }
+                    $glob = ConvertTo-UESTCG2RelativePath $base $include
+                    $globs.Add($glob)
+                    $segments = @($glob -split '/')
+                    $limit = $segments.Count - 1
+                    for ($i=0; $i -lt $segments.Count; $i++) {
+                        if ($segments[$i] -ieq 'tests' -or $segments[$i] -match '[*?]') { $limit=$i; break }
+                    }
+                    $production = if ($limit -gt 0) { ($segments[0..($limit-1)] -join '/') } else { '' }
+                    if (-not $roots.Contains($production)) { $roots.Add($production) }
+                } catch { $fallback.Add("Compile Include '$include': $($_.Exception.Message)") }
+            }
+        }
+    } catch { $fallback.Add("Cannot statically read project: $($_.Exception.Message)") }
+    return [pscustomobject]@{ Project=$Project; CompileGlobs=$globs.ToArray(); ProductionRoots=$roots.ToArray();
+        ConservativeReasons=$fallback.ToArray() }
+}
+
+function Get-UESTCG2ProjectSelection {
+    param([string]$Root, [string[]]$Changes, [string[]]$Files, [bool]$ForceAll=$false)
+    $normalizedChanges = @($Changes | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
+    $normalizedFiles = @($Files | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
+    # Shared dependency/project edits retain the existing conservative all-project policy.
+    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/|\.(props|targets|csproj|sln|slnx)$|^global\.json$' })
+    foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
+        $scope = Get-UESTCG2CompileScope $Root $project
+        $reasons = New-Object 'Collections.Generic.List[string]'
+        if ($ForceAll) { $reasons.Add('D0/full/explicit G2 selection') }
+        foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
+        foreach ($reason in $scope.ConservativeReasons) { $reasons.Add("Conservative selection: $reason") }
+        foreach ($path in $normalizedChanges) {
+            foreach ($production in $scope.ProductionRoots) {
+                if (-not $production -or $path -ieq $production -or $path.StartsWith($production+'/', [StringComparison]::OrdinalIgnoreCase)) {
+                    $reasons.Add("Compile-derived production root '$production': $path")
+                    break
+                }
+            }
+        }
+        $patterns = @($scope.CompileGlobs | ForEach-Object {
+            $pattern = [regex]::Escape($_).Replace('\*\*/','(?:.*/)?').Replace('\*\*','.*').Replace('\*','[^/]*').Replace('\?','[^/]')
+            New-Object Text.RegularExpressions.Regex ('^'+$pattern+'$'), ([Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        })
+        $compileFiles = @($normalizedFiles | Where-Object {
+            $file = $_
+            foreach ($pattern in $patterns) {
+                if ($pattern.IsMatch($file) -and (Test-Path -LiteralPath (Join-Path $Root $file) -PathType Leaf)) { return $true }
+            }
+            return $false
+        })
+        [pscustomobject]@{ Name=[IO.Path]::GetFileNameWithoutExtension($project); Project=$project;
+            Selected=($reasons.Count -gt 0); Reasons=$reasons.ToArray();
+            CompileGlobs=$scope.CompileGlobs; ProductionRoots=$scope.ProductionRoots;
+            CompileFileCount=$compileFiles.Count;
+            HasCompileFiles=($compileFiles.Count -gt 0 -or $scope.ConservativeReasons.Count -gt 0) }
+    }
+}
+
 $root = Split-Path $PSScriptRoot -Parent
 $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
@@ -65,6 +172,8 @@ $cacheIds = @('G1','G2','G3','G4')
 if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
 $scope = if ($D0) { 'D0' } elseif ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; CpuLimit = [Math]::Max(2,[Math]::Floor([Environment]::ProcessorCount/8.0)); Bake = 'No pre-bake in D0/quick/core; centralized bake gates not implemented' }
+$g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $changes @(Get-UESTCFiles $root) ([bool]($D0 -or $Full -or $Only.Count))) } else { @() }
+$planObject['G2Selection'] = $g2Selection
 $planObject['Stage'] = $mainStage
 $planObject['ServiceWindow'] = [ordered]@{ Impact=$serviceImpact; D0WindowInG5=$serviceWindowPlan.D0WindowInG5; RequireFormalCore=$serviceWindowPlan.RequireFormalCore; CacheG5=$serviceWindowPlan.CacheG5 }
 if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
@@ -160,17 +269,13 @@ foreach ($id in $selected) {
             }
             'G2' {
                 $settings = Write-TestSettings
-                $tests = @()
-                $all = $D0 -or $Full -or $Only.Count -or @($changes | Where-Object { $_ -match '^game/contracts/|\.(props|csproj|sln)$|^global\.json$' }).Count
-                if ($all -or @($changes | Where-Object { $_ -match '^game/gen/|^pipeline/' }).Count) { $tests += 'Campus.Gen.Tests' }
-                if ($all -or @($changes | Where-Object { $_ -match '^game/(kernel|camera|systems|audio|hud|flow)/' }).Count) { $tests += 'Campus.Tests' }
                 $runCount = 0
                 $notes = @()
-                foreach ($test in $tests) {
-                    $project = Join-Path $game "$test.csproj"
-                    $testPaths = if ($test -eq 'Campus.Gen.Tests') { '^(game/(contracts|gen)/.*?/tests/|game/contracts/tests/)' } else { '^game/(kernel|camera|systems|audio|hud|flow)/.*?/tests/' }
-                    $present = @(Get-UESTCFiles $root | Where-Object { $_ -match $testPaths -and $_ -match '\.cs$' })
-                    if (-not $present.Count) { $notes += "${test}: Skipped (no authored tests yet)"; continue }
+                foreach ($selection in @($g2Selection | Where-Object { $_.Selected })) {
+                    $test = $selection.Name
+                    $project = Join-Path $root $selection.Project
+                    $notes += "${test}: " + ($selection.Reasons -join '; ')
+                    if (-not $selection.HasCompileFiles) { $notes += "${test}: Skipped (no files match explicit Compile Include)"; continue }
                     # Native rendering/resource-lifetime tests are run explicitly with a GPU lease.
                     # Ordinary merge quick checks remain headless CPU checks (D-167).
                     $null = Invoke-LockedProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter','TestCategory!=NativeRender','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
