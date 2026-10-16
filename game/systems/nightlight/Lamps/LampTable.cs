@@ -11,7 +11,7 @@ public readonly record struct LampRecord(
     Vector3 Base,          // 灯脚处的地面点（x, 地面高度, z）
     float HeadHeight,      // 灯头离地高度（m），光晕与灯锥从这里出
     float Radius,          // 地面光斑半径（m），冬夜再乘 sys.poolGain
-    int ColorColumn,       // 调色板第 0 行的色号（灯色）
+    int ColorColumn,       // 调色板色号 0–511（灯色，bank 1 为 256 起）
     float Energy,          // 级别：一级 1.0、二级 0.75、三级 0.5（MAP-QSH-ADDITIONS §8.1）
     int Slot,              // 灯光通道槽位
     float ThresholdDeg,    // 开灯阈值（太阳高度，度）：h_eff 低于它就亮；≥ 89° 为常亮
@@ -25,7 +25,7 @@ public readonly record struct LampRecord(
 /// <summary>
 /// lamp_table（N×2 RGBA32F）与 lamp_grid（map_rect 上 8 m 一格，RGBA32F，每格 4 个灯号）的打包。
 /// 编码与 fx_glow、toon.gdshaderinc、precip 里的解码一致：
-///   行 0 = (x, y_base, z, r)；行 1 = (色号 + 256 × 能量百分比, 槽位 + 32 × 灯头分米 + 32768 × 事件序号, θ, κ)；
+///   行 0 = (x, y_base, z, r)；行 1 = (色号低字节 + 256 × 能量百分比 + 32768 × bank, 槽位 + 32 × 灯头分米 + 32768 × 事件序号, θ, κ)；
 ///   lamp_grid 每个分量 = 灯号 + 1，0 为空，有灯的分量排在前面。
 /// </summary>
 public static class LampTable
@@ -46,9 +46,9 @@ public static class LampTable
         return new(w, h);
     }
 
-    /// <summary>行 1 第一个分量：色号与能量百分比。</summary>
+    /// <summary>行 1 第一个分量：色号与能量百分比；bank 位在 bit 15（PaletteEncoding.PackLampColor）。色号 0–255 的结果与旧编码逐位相同。</summary>
     public static float PackColor(int column, float energy) =>
-        Math.Clamp(column, 0, 255) + 256f * MathF.Round(Math.Clamp(energy, 0f, 1f) * 100f);
+        PaletteEncoding.PackLampColor(new PaletteIndex(Math.Clamp(column, 0, PaletteLayout.Capacity - 1)), energy);
 
     /// <summary>行 1 第二个分量：槽位、灯头高度（分米，0–1023）与事件序号。</summary>
     public static float PackSlot(int slot, float headHeight, int sequence) =>

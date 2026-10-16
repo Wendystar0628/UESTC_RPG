@@ -210,7 +210,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         IReadOnlyList<LightEmitter> emitters = _inventory?.Lamps ?? [];
         var palette = TryPalette();
         var lamps = LampSetBuilder.Build(emitters, schedule,
-            token => palette is not null && palette.TryGet(token, out var entry) ? entry.Id : null,
+            token => palette is not null && palette.TryGet(token, out var entry) ? entry.Index.Value : null,
             (x, z) => ctx.World.Spatial.GroundY(x, z), LampSeed ^ ctx.Descriptor.Seed, _cueDefs, out var report);
         Lamps = lamps;
         var rect = ctx.Descriptor.DataRect;
@@ -237,9 +237,10 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
             $"windows={windowReport.Windows} skipped(channel={windowReport.UnknownChannel}, facade={windowReport.BadFacade})");
     }
 
-    private static PaletteRegistry? TryPalette()
+    // 完整色表（旧 0–255 + ext-v2 bank 1）：灯色号可以是 256–511。
+    private static PaletteCatalog? TryPalette()
     {
-        try { return Services.Get<PaletteRegistry>(); }
+        try { return Services.Get<IPaletteCatalogSource>().Catalog; }
         catch (InvalidOperationException) { return null; }
     }
 
