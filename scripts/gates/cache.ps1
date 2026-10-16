@@ -8,7 +8,7 @@ function Get-UESTCStringHash {
 function Get-UESTCInputHash {
     param([string]$Root, [string]$Wp, [string]$BaseRef, [string]$Configuration, [string]$Godot, [string[]]$Changes)
     $parts = New-Object 'Collections.Generic.List[string]'
-    $parts.Add("gate-cache-v1|$Wp|$BaseRef|$Configuration|$Godot")
+    $parts.Add("gate-cache-v2-service-window|$Wp|$BaseRef|$Configuration|$Godot")
     $sdk = Invoke-UESTCProcess dotnet @('--version') $Root (Join-Path $Root 'output/build/gates/cache-sdk.log')
     $parts.Add($sdk.Output.Trim())
     if (Test-Path -LiteralPath $Godot) { $engine = Get-Item -LiteralPath $Godot; $parts.Add("$($engine.Length)|$($engine.LastWriteTimeUtc.Ticks)") }

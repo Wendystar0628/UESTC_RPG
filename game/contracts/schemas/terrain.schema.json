@@ -1,0 +1,1332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "terrain.schema.json",
+  "title": "Terrain overlay stage-1 candidate",
+  "$comment": "Candidate only. op and nested shape/type discriminators must be first JSON fields (checked by the source-generated parser). Fixed order: regional (priority,id), line-shaped (priority,id), water constraints, pads, corridors. No hidden regional type sorting. Polygon topology, real entity/zone ownership, full influence bounds, un-clamped height/gradient, structural coverage and water-level matching require WP-08 compilation checks.",
+  "type": "object",
+  "properties": {
+    "zone": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "map": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ops": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/platform"
+          },
+          {
+            "$ref": "#/$defs/mound"
+          },
+          {
+            "$ref": "#/$defs/basin"
+          },
+          {
+            "$ref": "#/$defs/slope"
+          },
+          {
+            "$ref": "#/$defs/terrace"
+          },
+          {
+            "$ref": "#/$defs/channel"
+          },
+          {
+            "$ref": "#/$defs/lake"
+          },
+          {
+            "$ref": "#/$defs/pad"
+          },
+          {
+            "$ref": "#/$defs/corridor"
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "zone",
+    "owner",
+    "ops"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "vector2": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number",
+        "minimum": -3.4028234663852886e+38,
+        "maximum": 3.4028234663852886e+38
+      }
+    },
+    "ring": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/vector2"
+      },
+      "minItems": 3
+    },
+    "polygonRings": {
+      "type": "object",
+      "properties": {
+        "outer": {
+          "$ref": "#/$defs/ring"
+        },
+        "holes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ring"
+          }
+        }
+      },
+      "required": [
+        "outer",
+        "holes"
+      ],
+      "additionalProperties": false
+    },
+    "polyline": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vector2"
+          },
+          "minItems": 2
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "additionalProperties": false
+    },
+    "side": {
+      "type": "object",
+      "properties": {
+        "fill": {
+          "type": "string",
+          "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+        },
+        "cut": {
+          "type": "string",
+          "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "fill",
+        "cut"
+      ],
+      "additionalProperties": false
+    },
+    "bank": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/wetBank"
+        },
+        {
+          "$ref": "#/$defs/swaleBank"
+        }
+      ]
+    },
+    "bed": {
+      "type": "object",
+      "properties": {
+        "maxDepth": {
+          "type": "number",
+          "minimum": 1.2,
+          "maximum": 1.8
+        },
+        "shelf": {
+          "type": "string",
+          "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])",
+          "default": "1:7"
+        }
+      },
+      "required": [
+        "maxDepth"
+      ],
+      "additionalProperties": false
+    },
+    "anchor": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "y": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "s",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "weir": {
+      "type": "object",
+      "properties": {
+        "s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "drop": {
+          "type": "number",
+          "minimum": 0.3,
+          "maximum": 0.6
+        },
+        "kind": {
+          "enum": [
+            "weir",
+            "gate",
+            "culvert"
+          ]
+        },
+        "structure": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "upstream": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "downstream": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "s",
+        "drop",
+        "kind",
+        "structure",
+        "upstream",
+        "downstream"
+      ],
+      "additionalProperties": false
+    },
+    "padEdge": {
+      "type": "object",
+      "properties": {
+        "structureId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "enum": [
+            "edgeBand",
+            "terrace"
+          ]
+        },
+        "riser": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "tread": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "tiers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "structureId",
+        "kind",
+        "riser",
+        "tread",
+        "tiers"
+      ],
+      "additionalProperties": false
+    },
+    "circle": {
+      "type": "object",
+      "properties": {
+        "shape": {
+          "const": "circle"
+        },
+        "center": {
+          "$ref": "#/$defs/vector2"
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        }
+      },
+      "required": [
+        "shape",
+        "center",
+        "radius"
+      ],
+      "additionalProperties": false
+    },
+    "ellipse": {
+      "type": "object",
+      "properties": {
+        "shape": {
+          "const": "ellipse"
+        },
+        "center": {
+          "$ref": "#/$defs/vector2"
+        },
+        "radii": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 3.4028234663852886e+38
+          }
+        },
+        "yawDeg": {
+          "type": "number",
+          "minimum": -1.7976931348623157e+308,
+          "maximum": 1.7976931348623157e+308
+        }
+      },
+      "required": [
+        "shape",
+        "center",
+        "radii",
+        "yawDeg"
+      ],
+      "additionalProperties": false
+    },
+    "polygonGeometry": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "polygon"
+        },
+        "rings": {
+          "$ref": "#/$defs/polygonRings"
+        }
+      },
+      "required": [
+        "type",
+        "rings"
+      ],
+      "additionalProperties": false
+    },
+    "polylineGeometry": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "polyline"
+        },
+        "line": {
+          "$ref": "#/$defs/polyline"
+        }
+      },
+      "required": [
+        "type",
+        "line"
+      ],
+      "additionalProperties": false
+    },
+    "platform": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "platform"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 300
+        },
+        "rings": {
+          "$ref": "#/$defs/polygonRings"
+        },
+        "y": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        },
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "fillet": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 1.7976931348623157e+308
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "rings",
+        "y",
+        "side",
+        "fillet"
+      ],
+      "additionalProperties": false
+    },
+    "mound": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "mound"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 100
+        },
+        "shape": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/circle"
+            },
+            {
+              "$ref": "#/$defs/ellipse"
+            }
+          ]
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "profile": {
+          "enum": [
+            "hermite"
+          ],
+          "default": "hermite"
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "shape",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "basin": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "basin"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 100
+        },
+        "shape": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/circle"
+            },
+            {
+              "$ref": "#/$defs/ellipse"
+            }
+          ]
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "profile": {
+          "enum": [
+            "hermite"
+          ],
+          "default": "hermite"
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "shape",
+        "height"
+      ],
+      "additionalProperties": false
+    },
+    "slope": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "slope"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 200
+        },
+        "geometry": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/polygonGeometry"
+            },
+            {
+              "$ref": "#/$defs/polylineGeometry"
+            }
+          ]
+        },
+        "y0": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        },
+        "y1": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        },
+        "crossFall": {
+          "type": "number",
+          "minimum": -1.7976931348623157e+308,
+          "maximum": 1.7976931348623157e+308
+        },
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "fillet": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 1.7976931348623157e+308
+        },
+        "from": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vector2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/vector2"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1.7976931348623157e+308
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "geometry",
+        "y0",
+        "y1",
+        "crossFall",
+        "side",
+        "fillet"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "geometry": {
+                "properties": {
+                  "type": {
+                    "const": "polygon"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "$ref": "#/$defs/vector2"
+              },
+              "to": {
+                "$ref": "#/$defs/vector2"
+              },
+              "width": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "geometry": {
+                "properties": {
+                  "type": {
+                    "const": "polyline"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "width"
+            ],
+            "properties": {
+              "width": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1.7976931348623157e+308
+              },
+              "from": {
+                "type": "null"
+              },
+              "to": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "$comment": "Polygon from/to must be distinct points; clamp projection on their axis. MultiPolygon/Point geometry is not supported in stage 1."
+    },
+    "terrace": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "terrace"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 300
+        },
+        "front": {
+          "$ref": "#/$defs/polyline"
+        },
+        "inward": {
+          "$ref": "#/$defs/vector2"
+        },
+        "frontY": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        },
+        "tiers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "riser": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "tread": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "stairAt": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1.7976931348623157e+308
+          }
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "front",
+        "inward",
+        "frontY",
+        "tiers",
+        "riser",
+        "tread",
+        "stairAt"
+      ],
+      "additionalProperties": false
+    },
+    "channel": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "channel"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 50
+        },
+        "water": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "depth": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "bank": {
+          "$ref": "#/$defs/bank"
+        },
+        "waterY": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -5,
+              "maximum": 10
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weirs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/weir"
+          }
+        },
+        "line": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/polyline"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "width": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1.7976931348623157e+308
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dry": {
+          "type": "boolean",
+          "default": false
+        },
+        "crossings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/crossing"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "water",
+        "depth",
+        "bank",
+        "waterY",
+        "weirs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "line"
+            ],
+            "properties": {
+              "line": {
+                "type": "object"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "width"
+            ],
+            "properties": {
+              "width": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1.7976931348623157e+308
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "dry"
+            ],
+            "properties": {
+              "dry": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "line",
+              "width"
+            ],
+            "properties": {
+              "water": {
+                "type": "null"
+              },
+              "waterY": {
+                "type": "null"
+              },
+              "line": {
+                "$ref": "#/$defs/polyline"
+              },
+              "width": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1.7976931348623157e+308
+              },
+              "weirs": {
+                "maxItems": 0
+              },
+              "bank": {
+                "$ref": "#/$defs/swaleBank"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "water": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "waterY": {
+                "type": "number",
+                "minimum": -5,
+                "maximum": 10
+              },
+              "bank": {
+                "$ref": "#/$defs/wetBank"
+              },
+              "crossings": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "$comment": "Wet channels require a real constant-level water entity. Explicit dry=true requires water=null and waterY=null, line/width/depth and no water-level weirs; null alone never implies dry. Crossings are closed underpass/end-before alternatives and require actual named road mapping at compile time. Swale inner/outer are symmetric section stages, not left/right or guessed road-facing directions. Weir structure/upstream/downstream must resolve to distinct entities and Drop must match water levels. Stage 1 dry channels use Swale only, while wet channels and lakes reject Swale. Nonempty Crossings is dry-only; wet channels use their actual network bridge/culvert and Weirs mappings."
+    },
+    "lake": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "lake"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 50
+        },
+        "water": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "waterY": {
+          "type": "number",
+          "minimum": -5,
+          "maximum": 10
+        },
+        "bank": {
+          "$ref": "#/$defs/wetBank"
+        },
+        "bed": {
+          "$ref": "#/$defs/bed"
+        },
+        "wade": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/polygonRings"
+          }
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "water",
+        "waterY",
+        "bank",
+        "bed",
+        "wade"
+      ],
+      "additionalProperties": false,
+      "$comment": "The evaluator retains every referenced true water part and each part's holes. Per-shore-segment bank arrays are not yet part of this contract."
+    },
+    "pad": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "pad"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 50
+        },
+        "feature": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "grade": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 6
+        },
+        "padY": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": -5,
+              "maximum": 10
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "apron": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308,
+          "default": 0.8
+        },
+        "edge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/padEdge"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "feature",
+        "grade"
+      ],
+      "additionalProperties": false
+    },
+    "corridor": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "const": "corridor"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^design:terrain:[a-z0-9-]+(?![\\s\\S])"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "zone": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 50
+        },
+        "road": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anchor"
+          },
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "s": {
+                  "const": 0
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": -5,
+                  "maximum": 10
+                }
+              },
+              "required": [
+                "s",
+                "y"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "crossFall": {
+          "type": "number",
+          "minimum": -0.02,
+          "maximum": 0.02
+        },
+        "shoulder": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/corridorStep"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason",
+        "zone",
+        "road",
+        "anchors",
+        "crossFall",
+        "shoulder"
+      ],
+      "additionalProperties": false,
+      "$comment": "Stations strictly increase, beginning at zero and ending at the real ordered centreline length. Compiler validates length and feasibility; fixed anchors cannot be moved by smoothing. Steps are ordered nonoverlapping intervals inside the authored span, each naming a real stair structure; like bridges they do not clamp the terrain or participate in corridor longitudinal grade limits. Structure existence, extent and connections are compiler checks."
+    },
+    "corridorStep": {
+      "type": "object",
+      "properties": {
+        "s0": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "s1": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        },
+        "structure": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "s0",
+        "s1",
+        "structure"
+      ],
+      "additionalProperties": false
+    },
+    "wetBank": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "hard",
+            "soft",
+            "steps",
+            "wetland"
+          ]
+        },
+        "slope": {
+          "type": "string",
+          "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "kind",
+        "slope"
+      ],
+      "additionalProperties": false
+    },
+    "swaleBank": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "swale"
+        },
+        "inner": {
+          "type": "string",
+          "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+        },
+        "outer": {
+          "oneOf": [
+            {
+              "type": "number",
+              "const": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^1:(?!0+(?:\\.0+)?$)[0-9]+(?:\\.[0-9]+)?(?![\\s\\S])"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "inner"
+      ],
+      "additionalProperties": false,
+      "$comment": "Symmetric section independent of line direction: inner rises from ditch-bottom edge to crest; outer falls from crest to surrounding terrain. Numeric 0 or omission means no outer segment. Left/right overrides are not part of stage 1."
+    },
+    "underpassCrossing": {
+      "type": "object",
+      "properties": {
+        "road": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "at": {
+          "$ref": "#/$defs/vector2"
+        }
+      },
+      "required": [
+        "road",
+        "at"
+      ],
+      "additionalProperties": false,
+      "$comment": "At locates the nearest real intersection of the named road centreline with this channel line; projection is permitted only within 1.0 m. No valid intersection means failure. Road profile remains unchanged; channel bed passes under, with its buried portion hidden."
+    },
+    "endBeforeCrossing": {
+      "type": "object",
+      "properties": {
+        "road": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "endBefore": {
+          "const": true
+        }
+      },
+      "required": [
+        "road",
+        "endBefore"
+      ],
+      "additionalProperties": false,
+      "$comment": "Not an underpass. Resolve the real road half-width, stop 1.0 m before its edge, use a semicircular end cap, and recover the ditch bed to ground over the final 2.0 m. Missing/ambiguous actual road mapping fails; widths cannot be authored as a bypass."
+    },
+    "crossing": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/underpassCrossing"
+        },
+        {
+          "$ref": "#/$defs/endBeforeCrossing"
+        }
+      ]
+    }
+  }
+}

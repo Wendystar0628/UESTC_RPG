@@ -59,6 +59,7 @@ public static class ShaderNames
 
 public static class InstanceShaderNames
 {
+    public static readonly StringName FigCtx = new("fig_ctx");
     public static readonly StringName FadeT0 = new("fade_t0");
     public static readonly StringName RetreatBias = new("retreat_bias");
     public static readonly StringName ShadowProxy = new("shadow_proxy");

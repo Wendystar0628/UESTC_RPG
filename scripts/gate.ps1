@@ -15,6 +15,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
 . (Join-Path $PSScriptRoot 'gates/cache.ps1')
+. (Join-Path $PSScriptRoot 'gates/select-service-window.ps1')
 $root = Split-Path $PSScriptRoot -Parent
 $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
@@ -53,9 +54,20 @@ elseif ($runtimeChanges.Count) {
     if (@($changes | Where-Object { $_ -match '^game/(camera/walk|kernel/collision|gen/(collision|walkable))/' }).Count) { $selected.Add('G15Core') }
     if (@($changes | Where-Object { $_ -match '^game/kernel/save/|^game/contracts/Save/' }).Count) { $selected.Add('G20Core') }
 }
+# Service replacement is a required G5 subcheck, including explicitly selected G5.
+$mainStage = Get-UESTCMainStage $root
+$serviceImpact = if ($selected.Contains('G5')) { Get-UESTCServiceWindowImpact $root $BaseRef $changes } else { [pscustomobject]@{ Required=$false; ChangedCode=@(); Reasons=@() } }
+$serviceWindowPlan = Select-UESTCServiceWindow $selected.ToArray() $mainStage $serviceImpact.Required ([bool]$D0) ([bool]$Full) ([bool]$Smoke)
+$selected.Clear()
+foreach ($gateId in $serviceWindowPlan.Gates) { $selected.Add($gateId) }
+$d0WindowEvidence = $null
+$cacheIds = @('G1','G2','G3','G4')
+if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
 $scope = if ($D0) { 'D0' } elseif ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; CpuLimit = [Math]::Max(2,[Math]::Floor([Environment]::ProcessorCount/8.0)); Bake = 'No pre-bake in D0/quick/core; centralized bake gates not implemented' }
-if ($Plan) { $planObject | ConvertTo-Json -Depth 6; return }
+$planObject['Stage'] = $mainStage
+$planObject['ServiceWindow'] = [ordered]@{ Impact=$serviceImpact; D0WindowInG5=$serviceWindowPlan.D0WindowInG5; RequireFormalCore=$serviceWindowPlan.RequireFormalCore; CacheG5=$serviceWindowPlan.CacheG5 }
+if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
 $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
@@ -123,7 +135,7 @@ function Write-TestSettings {
 foreach ($id in $selected) {
     Write-Host "[$id] $scope"
     try {
-        if ($cacheable -and $id -in @('G1','G2','G3','G4','G5') -and $cacheEntries.ContainsKey($id)) {
+        if ($cacheable -and $id -in $cacheIds -and $cacheEntries.ContainsKey($id)) {
             $entry = $cacheEntries[$id]
             $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root }
             if ($binaryHash -and $entry.InputHash -eq $inputHash -and $entry.BinaryHash -eq $binaryHash) {
@@ -181,12 +193,39 @@ foreach ($id in $selected) {
                 $detail = 'Headless registry checked for all maps.'
                 $d0Report = [regex]::Match($r.Output, '(?m)^G5_D0_REGISTRY_RESULT[ \t]+(.+)$')
                 if ($d0Report.Success) { $detail = ConvertFrom-Json -InputObject $d0Report.Groups[1].Value }
+                if ($serviceWindowPlan.D0WindowInG5) {
+                    $registryEvidence = $detail
+                    $d0WindowEvidence = Invoke-WindowProbe 'd0-service-window' $godot
+                    $detail = [pscustomobject]@{ Scope='D0 registry plus service-replacement window only'; Registry=$registryEvidence; Window=$d0WindowEvidence; FullMainline='NotImplemented'; Trigger=$serviceImpact.Reasons }
+                }
             }
             'G5Smoke' {
-                Assert-GodotVersion
-                $detail = Invoke-WindowProbe 'editor-smoke' $godot
-                if (-not $D0) { $status = 'NotImplemented'; $detail += '; full mainline journey and close/save/resume scenario await WP-27/WP-49/WP-50.' }
-                else { $detail += '; D0 stub-window scope, not the full mainline journey.' }
+                if ($mainStage -eq 'D0') {
+                    Assert-GodotVersion
+                    if (-not $d0WindowEvidence) { $d0WindowEvidence = Invoke-WindowProbe 'd0-service-window' $godot }
+                    $status = 'NotImplemented'
+                    $detail = [pscustomobject]@{ Scope='Full mainline requested, but current scene is D0'; D0Window=$d0WindowEvidence; Missing='WP-27 mainline/close/save/resume journey' }
+                } elseif ($mainStage -eq 'KernelStage') {
+                    $coreScript = Join-Path $PSScriptRoot 'gates/core-smoke.ps1'
+                    if (Test-Path -LiteralPath $coreScript -PathType Leaf) {
+                        . $coreScript
+                        if (-not (Get-Command Invoke-UESTCMainlineSmoke -ErrorAction SilentlyContinue)) {
+                            $status = 'NotImplemented'
+                            $detail = 'WP-27 core smoke entry point is not implemented; D0 fallback is forbidden.'
+                        } else {
+                            Assert-GodotVersion
+                            $detail = Invoke-UESTCMainlineSmoke -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map
+                            if ($detail.Status -notin @('Passed','Failed','NotImplemented')) { throw 'WP-27 returned an invalid core status.' }
+                            $status = $detail.Status
+                        }
+                    } else {
+                        $status = 'NotImplemented'
+                        $detail = 'Formal KernelStage requires WP-27 core-smoke.ps1; D0 screenshot fallback is forbidden.'
+                    }
+                } else {
+                    $status = 'NotImplemented'
+                    $detail = 'Main scene root script is not recognized; refusing to substitute a D0 window for core coverage.'
+                }
             }
             'G6' {
                 Assert-GodotVersion
@@ -208,7 +247,7 @@ foreach ($id in $selected) {
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }
         }
         $results.Add([pscustomobject]@{ Gate=$id; Status=$status; Scope=$scope; Detail=$detail })
-        if ($cacheable -and $status -eq 'Passed' -and $id -in @('G1','G2','G3','G4','G5')) {
+        if ($cacheable -and $status -eq 'Passed' -and $id -in $cacheIds) {
             $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root }
             $cacheEntries[$id] = [pscustomobject]@{ Gate=$id; InputHash=$inputHash; BinaryHash=$binaryHash; Detail=$detail }
         }

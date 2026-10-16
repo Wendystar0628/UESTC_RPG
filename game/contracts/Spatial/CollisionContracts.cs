@@ -28,6 +28,8 @@ public sealed record WallCollider(Vector2 A, Vector2 B, float HalfT, float Y0, f
 public sealed record RampCollider(Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3, float Thick, SurfaceTag Tag) : Collider(Tag)  // 台阶坡面、桥面
 {
     public StairSpec? Stair { get; init; }               // 楼梯的踏步规格，供脚步声（SYS-AUDIO §9.3）
+    /// <summary>Explicit visible tread origin/frame. Null preserves legacy collision-only ramps.</summary>
+    public StairFrame? Treads { get; init; }
 }
 public sealed record PostCollider(Vector2 C, float R, float Y0, float Y1, SurfaceTag Tag) : Collider(Tag);     // 树干、灯杆
 public sealed record BoxCollider(Matrix4x4 At, Vector3 Half, SurfaceTag Tag) : Collider(Tag);                // 长椅、花池
@@ -52,6 +54,8 @@ public interface ICollisionWorld             // WP-43，Godot 侧实现
     bool Ready(Vector3 p, float r);          // ENG-PERF §5 第 5 条用它判断
     SweepHit? Sweep(Vector3 from, Vector3 to, float r, float h);
     SupportHit? SupportY(float x, float z, float yHint);
+    /// <summary>Mounted analytical tread data near the support layer, or null when unavailable. Callers retain Ready/leg-reach checks.</summary>
+    StairHit? StairAt(Vector3 p, float yHint) => null;
 }
 
 public enum ModeSwitchVia { Key, Ui, DoubleSpace }        // 没有触屏输入

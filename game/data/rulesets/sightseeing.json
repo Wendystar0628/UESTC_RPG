@@ -15,6 +15,7 @@
     "leaving"
   ],
   "characters": false,
+  "playerBody": true,
   "interaction": "none",
   "clearVoices": false
 }

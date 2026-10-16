@@ -12,6 +12,7 @@
     "incidents": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "cinematicStates": {"type": "array", "uniqueItems": true, "items": {"enum": ["boot", "title", "entering", "playing", "leaving", "quitting"]}},
     "characters": {"type": "boolean"},
+    "playerBody": {"type": "boolean", "default": false},
     "interaction": {"const": "none"},
     "clearVoices": {"type": "boolean"}
   },

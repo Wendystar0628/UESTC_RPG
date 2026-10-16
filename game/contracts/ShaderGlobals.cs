@@ -61,6 +61,9 @@ public static class ShaderGlobals
 /// <summary>Per-instance shader parameter names; these are not global uniforms.</summary>
 public static class InstanceShaderParameters
 {
+    /// <summary>Player body context: indoor blend, wetness, snow and reserved zero; produced by WP-54a and written by its figure host.</summary>
+    public const string FigCtx = "fig_ctx";
+
     /// <summary>Signed fade start on FadeClock; zero means no active fade.</summary>
     public const string FadeT0 = "fade_t0";
 

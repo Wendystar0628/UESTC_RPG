@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Campus.Contracts.Maps;
 
 namespace Campus.Contracts;
@@ -116,13 +117,27 @@ public sealed class FlatTerrain : ITerrain
 }
 
 /// <summary>Per-zone terrain input. Bytes are read by the kernel and interpreted by the WP-08 evaluator.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record TerrainOverlayFile(ZoneId Zone, WpId Owner, IReadOnlyList<TerrainOp> Ops)
 {
     public MapId? Map { get; init; }
 }
 
-/// <summary>Shared terrain operation header. Concrete operation DTOs and their op discriminator are a subsequent contract addition.</summary>
-/// <remarks>ID starts with design:terrain:, reason is required, priority is 0-99 and only sorts within a composition class.</remarks>
+/// <summary>Shared terrain operation header. The legacy constructor default remains 50; concrete defaults are type-specific.</summary>
+/// <remarks>Priority is a non-negative int32 and sorts only inside the fixed composition group, then ordinal Id.
+/// Regional operations share one group: there is no hidden type sort after priority. Height is relative amplitude;
+/// Y, Y0/Y1, FrontY, PadY and WaterY are absolute world elevations.</remarks>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "op", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+[JsonDerivedType(typeof(TerrainPlatformOp), "platform")]
+[JsonDerivedType(typeof(TerrainMoundOp), "mound")]
+[JsonDerivedType(typeof(TerrainBasinOp), "basin")]
+[JsonDerivedType(typeof(TerrainSlopeOp), "slope")]
+[JsonDerivedType(typeof(TerrainTerraceOp), "terrace")]
+[JsonDerivedType(typeof(TerrainChannelOp), "channel")]
+[JsonDerivedType(typeof(TerrainLakeOp), "lake")]
+[JsonDerivedType(typeof(TerrainPadOp), "pad")]
+[JsonDerivedType(typeof(TerrainCorridorOp), "corridor")]
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public abstract record TerrainOp(string Id, string Reason, int Priority = 50)
 {
     public required ZoneId Zone { get; init; }

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:campus:contracts:palette-extension:v2",
+  "title": "Campus palette extension v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "entries"],
+  "properties": {
+    "schema": { "const": 2 },
+    "entries": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token", "index", "albedo", "materialClass", "seasonal", "role"],
+      "properties": {
+        "token": { "type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$" },
+        "index": { "type": "integer", "minimum": 256, "maximum": 511 },
+        "albedo": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "type": "number", "minimum": 0, "maximum": 1 },
+          "description": "Normalized sRGB metadata, not a current-frame evaluated colour."
+        },
+        "materialClass": { "type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$" },
+        "seasonal": { "const": false },
+        "row": { "type": "null" },
+        "role": { "enum": ["lit", "shade"] }
+      },
+      "oneOf": [
+        { "properties": { "role": { "const": "lit" }, "index": { "multipleOf": 2 } } },
+        { "properties": { "role": { "const": "shade" }, "index": { "not": { "multipleOf": 2 } } } }
+      ]
+    }
+  },
+  "$comment": "PaletteCatalog also validates uniqueness across legacy/extensions and complete adjacent Lit/Shade pairs. Allocation authority: 256-319 WP-52/interior, 320-383 zone landmarks, 384-447 WP-23/WP-38/non-seasonal vegetation, 448-511 reserved. This schema does not grant an allocation or new seasonal rows. Schema 1 remains unchanged."
+}

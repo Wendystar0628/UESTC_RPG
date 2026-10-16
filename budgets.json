@@ -647,6 +647,26 @@
       "minimumTierSecondaryBedAnchors": 2,
       "gpuCost": 0,
       "status": "INITIAL_NOT_MEASURED"
+    },
+    {
+      "owners": ["WP-54a"],
+      "mainThreadP95MsMax": 0.08,
+      "chargedTo": "mainThreadReserve",
+      "renderCostsChargedTo": "WP-54b",
+      "status": "P0_INITIAL_NOT_MEASURED",
+      "source": "ENG-WP WP-54a; final allocation follows the native P0 measurement"
+    },
+    {
+      "owners": ["WP-54b"],
+      "mainTrianglesMax": 15000,
+      "mainDrawCallsMax": 4,
+      "shadowTrianglesPerCascadeMax": 15000,
+      "shadowDrawCallsPerCascadeMax": 4,
+      "gpuMsMax": 0.10,
+      "assetBytesMax": 4194304,
+      "chargedTo": "reserve",
+      "status": "P0_INITIAL_NOT_MEASURED",
+      "source": "ENG-WP WP-54b; provisional absolute P0 limits, not measured usage or a new percentage allocation"
     }
   ],
   "uiGpu": {

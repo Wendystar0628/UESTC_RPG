@@ -112,7 +112,8 @@ public partial class D0Stage : Node3D
             throw new InvalidDataException("RPG entity prefixes are reserved in sightseeing data.");
         var priorities = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(f => f.IsLiteral).Select(f => (int)f.GetRawConstantValue()!).ToArray();
-        if (priorities.Length != 17 || priorities.Distinct().Count() != priorities.Length)
+        if (priorities.Length != 18 || priorities.Distinct().Count() != priorities.Length ||
+            FramePriority.Animate <= FramePriority.Systems || FramePriority.Animate >= FramePriority.Audio)
             throw new InvalidDataException("Frame priority registry is incomplete or ambiguous.");
         var knobs = registry.Get<IQualityService>().Knobs.Select(k => k.Knob).ToArray();
         if (knobs.Distinct().Count() != Enum.GetValues<QualityKnob>().Length)
@@ -196,7 +197,9 @@ public partial class D0Stage : Node3D
         var clock = double.Parse(AppBoot.Value("clock", defaults.Clock.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
         var season = Enum.Parse<Season>(AppBoot.Value("season", defaults.Season.ToString()), true);
         var anim = double.Parse(AppBoot.Value("anim", "240"), CultureInfo.InvariantCulture);
-        var weatherBoot = WeatherBootOptions.Parse(AppBoot.Arguments, context.Descriptor.Seed, season);
+        var seed = uint.Parse(AppBoot.Value("seed", context.Descriptor.Seed.ToString(CultureInfo.InvariantCulture)),
+            CultureInfo.InvariantCulture);
+        var weatherBoot = WeatherBootOptions.Parse(AppBoot.Arguments, seed, season);
 
         // Freeze supplies this fresh world's initial values before any map-aware node can enter weather.
         // It is not a clock jump or a season transition. The first normal World Step binds the empty

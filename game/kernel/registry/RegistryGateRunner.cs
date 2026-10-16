@@ -88,7 +88,8 @@ public static class RegistryGateRunner
         }
         var priorities = typeof(FramePriority).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Where(field => field.IsLiteral).Select(field => (int)field.GetRawConstantValue()!).ToArray();
-        if (priorities.Length != 17 || priorities.Distinct().Count() != priorities.Length)
+        if (priorities.Length != 18 || priorities.Distinct().Count() != priorities.Length ||
+            FramePriority.Animate <= FramePriority.Systems || FramePriority.Animate >= FramePriority.Audio)
             throw new InvalidDataException("Frame priority registry is incomplete or ambiguous.");
         var knobs = Enum.GetValues<QualityKnob>();
         if (knobs.Distinct().Count() != knobs.Length || knobs.Select(knob => (int)knob).Where((value, indexValue) => value != indexValue).Any())

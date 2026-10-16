@@ -48,6 +48,9 @@ public sealed class BuildContext
     public required uint WorldSeed { get; init; }
     /// <summary>Immutable palette registration supplied by the kernel/baker; its fingerprint belongs in the bake key. Null keeps token-based material grouping.</summary>
     public PaletteRegistry? Palette { get; init; }
+    /// <summary>Optional complete CPU catalog supplied by the caller; include all entries in the bake fingerprint.
+    /// Null means no full catalog was supplied. A legacy-only catalog does not claim extensions or GPU readiness.</summary>
+    public PaletteCatalog? Catalog { get; init; }
     /// <summary>
     /// Ownership query supplied from the current map's formally resolved claims ledger, after map filtering
     /// and conflict checks. Never infer ownership from module names, directories or feature-ID prefixes.
@@ -118,7 +121,15 @@ public sealed record GeometryBundle(
     // VF-A COLOR RGBA8: ColorIds, quantized Ao, Flags, Reserved. Each byte array has one entry per vertex.
     // Missing ColorIds uses Material.Spec.Lit; missing Ao means 1; missing Flags and Reserved mean 0.
     public byte[]? ColorIds { get; init; }
-    // Bit values: 1 interior, 2 outskirts, 4 decal, 8 no shadow. Upper four bits remain reserved.
+    /// <summary>Encoding-2 logical indices 0..511, one per vertex; mutually exclusive with ColorIds.
+    /// Requires an explicitly opted-in renderer/baker and a complete palette catalog for token validation.</summary>
+    public ushort[]? ColorIndices { get; init; }
+    /// <summary>Encoding-2 decal background indices 0..511, one per vertex, only on an all-decal surface.
+    /// Requires Flags' decal bit on every vertex and Reserved=null; the packer writes A's low byte and B's bit 5.
+    /// Glass/window types and all other Reserved meanings stay unchanged.</summary>
+    public ushort[]? DecalBaseColorIndices { get; init; }
+    // Input bit values: 1 interior, 2 outskirts, 4 decal, 8 no shadow. Upper input bits remain reserved.
+    // Encoding-2 bank bits are produced by the packer, never supplied through this array.
     public byte[]? Flags { get; init; }
     // VF-B glass window-type byte: 0 unspecified; 1-15 respectively W-CLS, W-LEC, W-COR,
     // W-STR, W-OFF, W-LAB, W-CLEAN, W-DORM, W-WC, W-CAN, W-SHOP, W-MED, W-GYM, W-POOL, W-MECH.
@@ -138,9 +149,19 @@ public sealed record GeometryBundle(
     public float[]? Custom1 { get; init; }
     public float[]? Custom2 { get; init; }
 
-    /// <summary>Checks array dimensions, finite values, AO range, flag bits, and triangle indices; throws ArgumentException on invalid data.</summary>
-    public void ValidateVertexData()
+    /// <summary>Checks legacy vertex data; invalid data throws ArgumentException. Encoding-2 arrays throw
+    /// NotSupportedException until the caller explicitly selects a supported encoding in the overload.</summary>
+    public void ValidateVertexData() => ValidateVertexData(PaletteLayout.LegacyEncodingVersion);
+
+    /// <summary>Explicit format opt-in. Existing callers use encoding 1 and reject either new array,
+    /// even when its values fit in a byte. Only fully connected upload/bake paths may opt into encoding 2.</summary>
+    public void ValidateVertexData(int paletteEncodingVersion)
     {
+        if (paletteEncodingVersion is not (PaletteLayout.LegacyEncodingVersion or PaletteLayout.EncodingVersion))
+            throw new ArgumentOutOfRangeException(nameof(paletteEncodingVersion));
+        if (paletteEncodingVersion == PaletteLayout.LegacyEncodingVersion &&
+            (ColorIndices is not null || DecalBaseColorIndices is not null))
+            throw new NotSupportedException("This path has not opted into palette encoding 2; new colour arrays must not be ignored.");
         ArgumentNullException.ThrowIfNull(Position);
         ArgumentNullException.ThrowIfNull(Normal);
         ArgumentNullException.ThrowIfNull(Index);
@@ -151,6 +172,8 @@ public sealed record GeometryBundle(
         RequireLength(Uv, checked(count * 2), nameof(Uv));
         RequireLength(Uv2, checked(count * 2), nameof(Uv2));
         RequireLength(ColorIds, count, nameof(ColorIds));
+        RequireLength(ColorIndices, count, nameof(ColorIndices));
+        RequireLength(DecalBaseColorIndices, count, nameof(DecalBaseColorIndices));
         RequireLength(Flags, count, nameof(Flags));
         RequireLength(Reserved, count, nameof(Reserved));
         RequireLength(Custom0, checked(count * 4), nameof(Custom0));
@@ -167,6 +190,17 @@ public sealed record GeometryBundle(
             throw new ArgumentException("Ao values must be finite and in [0, 1].", nameof(Ao));
         if (Flags is not null && Flags.Any(value => (value & 0xf0) != 0))
             throw new ArgumentException("Flags may only use interior=1, outskirts=2, decal=4 and no-shadow=8.", nameof(Flags));
+        if (ColorIds is not null && ColorIndices is not null)
+            throw new ArgumentException("ColorIds and ColorIndices are mutually exclusive.", nameof(ColorIndices));
+        if (ColorIndices is not null && ColorIndices.Any(value => value >= PaletteLayout.Capacity))
+            throw new ArgumentException("ColorIndices must be in [0, 511].", nameof(ColorIndices));
+        if (DecalBaseColorIndices is not null)
+        {
+            if (Reserved is not null || Flags is null || Flags.Any(value => (value & PaletteEncoding.DecalFlag) == 0))
+                throw new ArgumentException("DecalBaseColorIndices requires an all-decal surface and Reserved=null.", nameof(DecalBaseColorIndices));
+            if (DecalBaseColorIndices.Any(value => value >= PaletteLayout.Capacity))
+                throw new ArgumentException("DecalBaseColorIndices must be in [0, 511].", nameof(DecalBaseColorIndices));
+        }
         RequireIndices(Index, count, nameof(Index));
         if (Lods is not null)
             foreach (var lod in Lods)

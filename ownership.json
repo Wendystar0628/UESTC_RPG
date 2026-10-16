@@ -2,6 +2,122 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/style/shaders/veg_common.gdshaderinc",
+      "owner": "WP-23"
+    },
+    {
+      "pattern": "game/style/shaders/veg_common.gdshaderinc.uid",
+      "owner": "WP-23"
+    },
+    {
+      "pattern": "game/entities/character/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/entities/character/**/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/entities/character/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/entities/character/**/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/entities/character/**",
+      "owner": "WP-54a"
+    },
+    {
+      "pattern": "game/kernel/figure/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/kernel/figure/**/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/kernel/figure/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/kernel/figure/**/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/kernel/figure/**",
+      "owner": "WP-54a"
+    },
+    {
+      "pattern": "pipeline/character/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "pipeline/character/**/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "pipeline/character/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "pipeline/character/**/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "pipeline/character/**",
+      "owner": "WP-54b"
+    },
+    {
+      "pattern": "game/assets/characters/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/assets/characters/**/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/assets/characters/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/assets/characters/**/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/assets/characters/**",
+      "owner": "WP-54b"
+    },
+    {
+      "pattern": "game/data/characters/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/characters/**/*.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/characters/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/characters/**/packages.lock.json",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/characters/**",
+      "owner": "WP-54b"
+    },
+    {
+      "pattern": "game/style/shaders/toon_figure.gdshader",
+      "owner": "WP-04"
+    },
+    {
+      "pattern": "game/style/shaders/toon_figure.gdshader.uid",
+      "owner": "WP-04"
+    },
+    {
       "pattern": "game/data/maps/qingshuihe/overlay/terrain/core.terrain.json",
       "owner": "WP-16"
     },
@@ -27,6 +143,16 @@
     },
     {
       "pattern": "scripts/gates/native-render.ps1",
+      "owner": "WP-27",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "scripts/gates/cache.ps1",
+      "owner": "WP-27",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "scripts/gates/select-service-window.ps1",
       "owner": "WP-27",
       "maintainers": ["WP-00"]
     },
@@ -2856,6 +2982,8 @@
     "game/style/shaders/toon.gdshaderinc",
     "game/style/shaders/toon_cut.gdshader",
     "game/style/shaders/toon_decal.gdshader",
+    "game/style/shaders/toon_figure.gdshader",
+    "game/style/shaders/veg_common.gdshaderinc",
     "game/style/shaders/toon_glass.gdshader",
     "game/style/shaders/toon_glass_near.gdshader",
     "game/style/shaders/toon_static.gdshader",

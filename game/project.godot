@@ -434,7 +434,7 @@ shaft={
 }
 interior_light={
 "type": "vec4",
-"value": Vector4(1.35, 0.55, 0, 0)
+"value": Vector4(1.27, 0.55, 0, 0)
 }
 palette={
 "type": "sampler2D",

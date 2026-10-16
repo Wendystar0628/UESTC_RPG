@@ -16,6 +16,8 @@ public sealed record RulesetDescriptor(
     IReadOnlyList<AppState> CinematicStates)
 {
     public bool Characters { get; init; }
+    /// <summary>Permits the player presentation independently of NPCs; runtime release/body gates still apply.</summary>
+    public bool PlayerBody { get; init; }
     public InteractionRule Interaction { get; init; }
     public bool ClearVoices { get; init; }
 }

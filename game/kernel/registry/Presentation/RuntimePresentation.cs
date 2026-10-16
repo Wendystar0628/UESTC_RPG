@@ -4,8 +4,15 @@ using Godot;
 
 namespace Campus.Kernel.Renderer;
 
+/// <summary>Requested deformation path; declaration alone does not establish renderer support or warm readiness.</summary>
+public enum WarmDeformation : byte { None = 0, Skin4 = 1 }
+
 /// <summary>The actual uploaded vertex format, instance mode and primitive topology requested for a material.</summary>
-public readonly record struct WarmDrawLayout(ulong Format, bool Instanced, BakedPrimitive Primitive = BakedPrimitive.Triangles);
+public readonly record struct WarmDrawLayout(ulong Format, bool Instanced, BakedPrimitive Primitive = BakedPrimitive.Triangles)
+{
+    /// <summary>Skin4 requires four bone influences and an actual skin/skeleton binding; unsupported consumers must reject it.</summary>
+    public WarmDeformation Deformation { get; init; } = WarmDeformation.None;
+}
 
 /// <summary>A borrowed material for visible prewarming, identified by exactly one ToonSpec or ShaderId.</summary>
 public sealed record ToonWarmMaterial

@@ -7,10 +7,10 @@ public enum ToonFx
     Mottle = 16, DetailTiling = 32, BevelLift = 64
 }
 public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylinder }
-public enum LineClass { Building, Tree, Fine, None }
+public enum LineClass { Building, Tree, Fine, None, Figure }
 public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }
 // Append new kinds only. The material library selects its shader from Kind, not from Fx.
-public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus }
+public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus, Figure }
 
 /// <summary>
 /// Lit and Shade are registered as a pair: Shade palette ID = Lit palette ID + 1.
