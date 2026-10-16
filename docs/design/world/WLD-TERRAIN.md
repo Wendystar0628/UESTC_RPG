@@ -187,6 +187,7 @@ gates: [G2, G5, G6, G8, G15]
 - **干沟剖面与过路**：`bank.kind="swale"` 时用 `inner`、可选 `outer`，不写 slope。inner 从沟底边缘升到岸顶，outer 从岸顶落回周围地面；岸顶就是地面时 outer 省略或写 0，序列化时省略。两侧对称，与 line 点序和附近道路无关。`crossings` 两种写法：`{road,at:[x,z]}` 定位真实道路中线与沟线的交点，取距 at 最近且在 1 m 内的真实交点，否则报错；沟在路下连续，路下段不渲染，涵口端墙由区包放部件。`{road,endBefore:true}` 表示在路缘外 1 m 收头、不下穿，端部为半圆，最后 2 m 沟底抬回地面。
 - **台阶接段**：`corridor.steps[]` 的元素为 `{s0,s1,structure}`，引用真实台阶实体并验证区间和两端接合；同桥段，不钳制该段高度场，也不参与走廊纵坡限幅，不能只写一个免检区间。
 - **自动生成的默认操作**：每栋楼生成 pad（§4.3）；每条道路生成 corridor，自动平地纵断面用两个零标高端点、shoulder 为 0.75 m；湖生成 lake，bank.slope 为 1:5、bed.maxDepth 为 1.5 m；河渠生成 channel，bank.slope 为 1:4、depth 为 1.2 m。湖的 waterY 为岸顶 −0.5 m，河渠仍为硬质驳岸、水面比岸顶低 1.2 m（§6.1）。这些设计默认值只用于自动生成，手写操作照各自参数执行；引用同一实体的手写操作替换默认值。
+- **自动默认参数的保存**：各图 `map.json.terrainDefaults` 用 `lakeBankSlope`、`lakeMaxDepth`、`channelBankSlope`、`channelDepth`、`corridorShoulder` 对应上一条的五个自动参数。清水河显式登记为 `1:5`、1.5 m、`1:4`、1.2 m、0.75 m；提供对象时五键须齐全，数值通过严格校验。未提供时不由JSON解析器暗补这些值，手写操作仍照各自参数执行。
 - 字段与 JSON 边界由严格 schema 校验；示意坐标如下：
 
 ```json

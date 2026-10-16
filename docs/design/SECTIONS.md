@@ -482,7 +482,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 40.2k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN.md` · 40.4k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -498,64 +498,64 @@
   - WLD-TERRAIN §2.4 遮挡高度 · L117 · 325
   - WLD-TERRAIN §2.5 坡度类 · L124 · 519
   - WLD-TERRAIN §2.6 全图范围与零带 · L140 · 566
-- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 9.9k
+- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 10.1k
   - WLD-TERRAIN §3.1 文件与归属 · L149 · 614
   - WLD-TERRAIN §3.2 公共字段 · L157 · 440
-  - WLD-TERRAIN §3.3 操作词表 · L171 · 3.5k
-  - WLD-TERRAIN §3.4 合成顺序与优先级 · L206 · 550
-  - WLD-TERRAIN §3.5 坡度包络：坡度上限由构造保证 · L218 · 1.2k
-  - WLD-TERRAIN §3.6 确定性写法 · L231 · 737
-  - WLD-TERRAIN §3.7 读取接口 · L243 · 1.8k
-  - WLD-TERRAIN §3.8 校验与门禁 · L272 · 989
-- WLD-TERRAIN §4 贴地 · L289 · 3.2k
-  - WLD-TERRAIN §4.1 先平后贴 · L291 · 779
-  - WLD-TERRAIN §4.2 道路与铺装 · L307 · 864
-  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L319 · 1.0k
-  - WLD-TERRAIN §4.4 树与道具落地 · L330 · 561
-- WLD-TERRAIN §5 竖直落差 · L341 · 2.4k
-  - WLD-TERRAIN §5.1 连接规则 · L343 · 661
-  - WLD-TERRAIN §5.2 台阶 · L359 · 270
-  - WLD-TERRAIN §5.3 坡道 · L367 · 165
-  - WLD-TERRAIN §5.4 台缘带（v1 的挡墙） · L373 · 549
-  - WLD-TERRAIN §5.5 退台 · L383 · 203
-  - WLD-TERRAIN §5.6 高墙（增强阶段） · L389 · 209
-  - WLD-TERRAIN §5.7 防护 · L394 · 172
-  - WLD-TERRAIN §5.8 谁来做 · L400 · 155
-- WLD-TERRAIN §6 水体 · L405 · 3.5k
-  - WLD-TERRAIN §6.1 常水位 · L407 · 532
-  - WLD-TERRAIN §6.2 岸型 · L414 · 1.2k
-  - WLD-TERRAIN §6.3 涉水带与浅滩 · L428 · 404
-  - WLD-TERRAIN §6.4 湖盆 · L435 · 186
-  - WLD-TERRAIN §6.5 河渠 · L441 · 258
-  - WLD-TERRAIN §6.6 穿出校界 · L448 · 199
-  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L454 · 680
-- WLD-TERRAIN §7 可走性与碰撞 · L462 · 3.0k
-  - WLD-TERRAIN §7.1 坡度分级 · L464 · 648
-  - WLD-TERRAIN §7.2 与控制器的配合 · L479 · 371
-  - WLD-TERRAIN §7.3 碰撞带 · L486 · 516
-  - WLD-TERRAIN §7.4 瓦片接缝 · L496 · 472
-  - WLD-TERRAIN §7.5 不卡脚、不穿地 · L505 · 621
-  - WLD-TERRAIN §7.6 其他读地面高度的地方 · L521 · 334
-- WLD-TERRAIN §8 三渲二着色与描线 · L528 · 2.6k
-  - WLD-TERRAIN §8.1 为什么坡面容易脏 · L530 · 262
-  - WLD-TERRAIN §8.2 规则 · L534 · 1.1k
-  - WLD-TERRAIN §8.3 描线 · L551 · 582
-  - WLD-TERRAIN §8.4 材质 ID 与表面 · L566 · 182
-  - WLD-TERRAIN §8.5 换级与粗级法线 · L571 · 171
-  - WLD-TERRAIN §8.6 与季节和光照的关系 · L576 · 222
-- WLD-TERRAIN §9 LOD、分辨率与性能 · L582 · 2.3k
-  - WLD-TERRAIN §9.1 分级 · L584 · 494
-  - WLD-TERRAIN §9.2 几何误差与裙边 · L597 · 371
-  - WLD-TERRAIN §9.3 量化范围与对角线 · L603 · 208
-  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L608 · 593
-  - WLD-TERRAIN §9.5 预算 · L615 · 624
-- WLD-TERRAIN §10 分阶段施工 · L626 · 2.0k
-  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L628 · 510
-  - WLD-TERRAIN §10.2 P0 样板区（约 2–4 天，高优先级） · L636 · 267
-  - WLD-TERRAIN §10.3 主线铺开（约 1–2 周） · L643 · 254
-  - WLD-TERRAIN §10.4 增强（按需） · L649 · 90
-  - WLD-TERRAIN §10.5 各包的改动面 · L653 · 848
-- WLD-TERRAIN §11 待验证（P0） · L671 · 1.5k
+  - WLD-TERRAIN §3.3 操作词表 · L171 · 3.7k
+  - WLD-TERRAIN §3.4 合成顺序与优先级 · L207 · 550
+  - WLD-TERRAIN §3.5 坡度包络：坡度上限由构造保证 · L219 · 1.2k
+  - WLD-TERRAIN §3.6 确定性写法 · L232 · 737
+  - WLD-TERRAIN §3.7 读取接口 · L244 · 1.8k
+  - WLD-TERRAIN §3.8 校验与门禁 · L273 · 989
+- WLD-TERRAIN §4 贴地 · L290 · 3.2k
+  - WLD-TERRAIN §4.1 先平后贴 · L292 · 779
+  - WLD-TERRAIN §4.2 道路与铺装 · L308 · 864
+  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L320 · 1.0k
+  - WLD-TERRAIN §4.4 树与道具落地 · L331 · 561
+- WLD-TERRAIN §5 竖直落差 · L342 · 2.4k
+  - WLD-TERRAIN §5.1 连接规则 · L344 · 661
+  - WLD-TERRAIN §5.2 台阶 · L360 · 270
+  - WLD-TERRAIN §5.3 坡道 · L368 · 165
+  - WLD-TERRAIN §5.4 台缘带（v1 的挡墙） · L374 · 549
+  - WLD-TERRAIN §5.5 退台 · L384 · 203
+  - WLD-TERRAIN §5.6 高墙（增强阶段） · L390 · 209
+  - WLD-TERRAIN §5.7 防护 · L395 · 172
+  - WLD-TERRAIN §5.8 谁来做 · L401 · 155
+- WLD-TERRAIN §6 水体 · L406 · 3.5k
+  - WLD-TERRAIN §6.1 常水位 · L408 · 532
+  - WLD-TERRAIN §6.2 岸型 · L415 · 1.2k
+  - WLD-TERRAIN §6.3 涉水带与浅滩 · L429 · 404
+  - WLD-TERRAIN §6.4 湖盆 · L436 · 186
+  - WLD-TERRAIN §6.5 河渠 · L442 · 258
+  - WLD-TERRAIN §6.6 穿出校界 · L449 · 199
+  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L455 · 680
+- WLD-TERRAIN §7 可走性与碰撞 · L463 · 3.0k
+  - WLD-TERRAIN §7.1 坡度分级 · L465 · 648
+  - WLD-TERRAIN §7.2 与控制器的配合 · L480 · 371
+  - WLD-TERRAIN §7.3 碰撞带 · L487 · 516
+  - WLD-TERRAIN §7.4 瓦片接缝 · L497 · 472
+  - WLD-TERRAIN §7.5 不卡脚、不穿地 · L506 · 621
+  - WLD-TERRAIN §7.6 其他读地面高度的地方 · L522 · 334
+- WLD-TERRAIN §8 三渲二着色与描线 · L529 · 2.6k
+  - WLD-TERRAIN §8.1 为什么坡面容易脏 · L531 · 262
+  - WLD-TERRAIN §8.2 规则 · L535 · 1.1k
+  - WLD-TERRAIN §8.3 描线 · L552 · 582
+  - WLD-TERRAIN §8.4 材质 ID 与表面 · L567 · 182
+  - WLD-TERRAIN §8.5 换级与粗级法线 · L572 · 171
+  - WLD-TERRAIN §8.6 与季节和光照的关系 · L577 · 222
+- WLD-TERRAIN §9 LOD、分辨率与性能 · L583 · 2.3k
+  - WLD-TERRAIN §9.1 分级 · L585 · 494
+  - WLD-TERRAIN §9.2 几何误差与裙边 · L598 · 371
+  - WLD-TERRAIN §9.3 量化范围与对角线 · L604 · 208
+  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L609 · 593
+  - WLD-TERRAIN §9.5 预算 · L616 · 624
+- WLD-TERRAIN §10 分阶段施工 · L627 · 2.0k
+  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L629 · 510
+  - WLD-TERRAIN §10.2 P0 样板区（约 2–4 天，高优先级） · L637 · 267
+  - WLD-TERRAIN §10.3 主线铺开（约 1–2 周） · L644 · 254
+  - WLD-TERRAIN §10.4 增强（按需） · L650 · 90
+  - WLD-TERRAIN §10.5 各包的改动面 · L654 · 848
+- WLD-TERRAIN §11 待验证（P0） · L672 · 1.5k
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
