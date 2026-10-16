@@ -68,6 +68,21 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     public int SkylightColumn { get; }
     public int WindowCount => Columns * Rows;
 
+    /// <summary>
+    /// The front door bay in the glass slot (16c places the door there): bottom centre on the slot's glass plane, the
+    /// horizontal outward normal, and the bay's width and height up to the door transom. Null when the slot has no door.
+    /// </summary>
+    public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? EntranceDoor
+    {
+        get
+        {
+            var o = _openings.FirstOrDefault(x => x.Door is not null);
+            if (o?.Door is not { } d) return null;
+            float a = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * d.First / o.Cells, b = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (d.First + d.Count) / o.Cells;
+            return (o.Face.At((a + b) * 0.5f, -o.Depth, o.Hole.Y0), o.Face.N, b - a, d.Top - o.Hole.Y0, o.Face, o.Depth);
+        }
+    }
+
     // ------------------------------------------------------------------ windows
 
     public ClaimedWindowLayout WindowLayout => new(CoreFeatures.Library, [new WindowGridSpec(WindowKey, Columns, Rows)]);
@@ -100,8 +115,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             foreach (var (y0, y1, row) in o.Rows)
                 for (var c = 0; c < o.Cells; c++)
                 {
-                    float a = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * c / o.Cells, b = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (c + 1) / o.Cells;
-                    yield return (o.Column + c, row, o.Face.At((a + b) * 0.5f, -o.Depth, (y0 + y1) * 0.5f), -o.Face.T, up, b - a, y1 - y0);
+                    float a = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * c / o.Cells, b = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (c + 1) / o.Cells, g = o.GlassBottom(c, y0);
+                    yield return (o.Column + c, row, o.Face.At((a + b) * 0.5f, -o.Depth, (g + y1) * 0.5f), -o.Face.T, up, b - a, y1 - g);
                 }
         var sky = (LibraryRoof.SkylightBaseY(Plan) + LibraryRoof.SkylightApexY(Plan)) * 0.5f;
         yield return (SkylightColumn, 5, new Vector3(Plan.Centre.X, sky, Plan.Centre.Y), Vector3.UnitX, -Vector3.UnitZ, S.SkylightAcross, S.SkylightAcross);
@@ -166,8 +181,11 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                     float y0 = MathF.Max(piece.Y0, plan.SecondFloorY), y1 = piece.Y1 - S.SlotTopGap;
                     var rows = StoreyRows(y0, y1);
                     var cells = S.SlotMullions + 1;
-                    yield return new(f, OpeningKind.Slot, new((length - S.SlotWidth) * 0.5f, (length + S.SlotWidth) * 0.5f, y0, y1), cells, rows,
+                    // The 2F front door (16c) opens the slot's middle cells below the door transom.
+                    var door = MathF.Abs(y0 - plan.SecondFloorY) < 0.01f ? ((cells - S.DoorCells) / 2, S.DoorCells, y0 + S.SlotDoorHeight) : ((int, int, float)?)null;
+                    var slot = new Opening(f, OpeningKind.Slot, new((length - S.SlotWidth) * 0.5f, (length + S.SlotWidth) * 0.5f, y0, y1), cells, rows,
                         allocate(cells, rows.Select(r => r.Row)), S.CardReading);
+                    yield return slot with { Door = door };
                     break;
                 }
             case BlockKind.Tower or BlockKind.FrontTower or BlockKind.Core:
@@ -195,8 +213,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     {
         var mesh = build.Mesh;
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
-        var glass = new GlassSink(S.WindowGlass, build.Palette, windowBase, S.LibraryWindowChannel) { Columns = Columns };
-        var clear = new GlassSink(S.ClearGlass, build.Palette, windowBase, S.LibraryWindowChannel) { Columns = Columns };
+        var glass = new GlassSink(S.WindowGlass, build.Palette, windowBase, Columns, S.LibraryWindowChannel);
+        var clear = new GlassSink(S.ClearGlass, build.Palette, windowBase, Columns, S.LibraryWindowChannel);
         var landmark = new CoreMesh(build.Palette);
         Walls(mesh, lod);
         foreach (var o in _openings)

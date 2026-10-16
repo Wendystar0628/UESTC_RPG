@@ -26,6 +26,10 @@ public enum CoreMaterial : byte
     Roof,
     /// <summary>Sheet-metal roofs and eaves: rim and anisotropic band, building line.</summary>
     Sheet,
+    /// <summary>Lawn on built terraces: the ground lawn's response (WP-15), no outline on the turf.</summary>
+    Lawn,
+    /// <summary>Clipped hedges: smooth normals, soft steps, the tree line class.</summary>
+    Foliage,
 }
 
 /// <summary>How one face is painted: material class, colour family (palette name without .lit/.shade) and VF-A flags.</summary>
@@ -85,6 +89,28 @@ public sealed class CoreMesh(PaletteRegistry? palette)
                 var (c, nc) = Point(g, g.Index[t + 2], at);
                 Tri(p, a, b, c, na, nb, nc);
             }
+    }
+
+    /// <summary>
+    /// Adds a catalogue part's geometry with its own surfaces kept apart: each bundle is repainted with the zone paint its
+    /// material maps to, and keeps its per-vertex decal and no-shadow flags (handrails, small trims).
+    /// </summary>
+    public void Add(PartGeometry geometry, Matrix4x4 at, Func<ToonSpec, Paint> paintOf)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        ArgumentNullException.ThrowIfNull(paintOf);
+        foreach (var g in geometry.Meshes)
+        {
+            var paint = paintOf(g.Material.Spec);
+            for (var t = 0; t + 2 < g.Index.Length; t += 3)
+            {
+                var flags = (byte)(paint.Flags | ((g.Flags?[g.Index[t]] ?? 0) & (VertexFlags.Decal | VertexFlags.NoShadow)));
+                var (a, na) = Point(g, g.Index[t], at);
+                var (b, nb) = Point(g, g.Index[t + 1], at);
+                var (c, nc) = Point(g, g.Index[t + 2], at);
+                Tri(paint with { Flags = flags }, a, b, c, na, nb, nc);
+            }
+        }
     }
 
     public IReadOnlyList<GeometryBundle> Finish()

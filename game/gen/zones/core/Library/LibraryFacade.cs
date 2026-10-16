@@ -38,6 +38,16 @@ public sealed record Opening(Face Face, OpeningKind Kind, Rect Hole, int Cells, 
     int Column, byte Card)
 {
     public float Depth => Kind == OpeningKind.Slot ? S.SlotDepth : S.Reveal;
+
+    /// <summary>
+    /// The front door's bay (16c): cells First … First + Count − 1 of the first row are open below Top (the slot's door
+    /// transom); their glass is only the light above it. Null for every other opening.
+    /// </summary>
+    public (int First, int Count, float Top)? Door { get; init; }
+
+    /// <summary>The glass span of cell <paramref name="cell"/> in row entry (y0, y1): above the door transom in the door bay.</summary>
+    public float GlassBottom(int cell, float y0) =>
+        Door is { } d && y0 <= Hole.Y0 + 1e-3f && cell >= d.First && cell < d.First + d.Count ? d.Top : y0;
 }
 
 /// <summary>Pure writers for walls, bands and glazed openings on a <see cref="Face"/>.</summary>
@@ -124,19 +134,27 @@ public static class LibraryFacade
         foreach (var (y0, y1, row) in o.Rows)
             for (var c = 0; c < o.Cells; c++)
             {
-                float a = h.U0 + (h.U1 - h.U0) * c / o.Cells, b = h.U0 + (h.U1 - h.U0) * (c + 1) / o.Cells;
-                glass.Pane(f.At(a, depth, y0), f.At(b, depth, y0), f.At(b, depth, y1), f.At(a, depth, y1), f.N, o.Column + c, row, o.Card);
+                float a = h.U0 + (h.U1 - h.U0) * c / o.Cells, b = h.U0 + (h.U1 - h.U0) * (c + 1) / o.Cells, g = o.GlassBottom(c, y0);
+                glass.Pane(f.At(a, depth, g), f.At(b, depth, g), f.At(b, depth, y1), f.At(a, depth, y1), f.N, o.Column + c, row, o.Card);
             }
-        // Frame ring and mullions stand proud of the glass by the frame depth.
+        // Frame ring and mullions stand proud of the glass by the frame depth; the door bay has no sill bar and its
+        // inner mullions start at the door transom (the door part frames the opening below).
         float s0 = depth, s1 = depth + S.FrameDepth, w = S.FrameFace, m = S.MullionFace * 0.5f;
+        float U(int c) => h.U0 + (h.U1 - h.U0) * c / o.Cells;
         Box(mesh, frame, f, h.U0, h.U0 + w, s0, s1, h.Y0, h.Y1);
         Box(mesh, frame, f, h.U1 - w, h.U1, s0, s1, h.Y0, h.Y1);
         Box(mesh, frame, f, h.U0 + w, h.U1 - w, s0, s1, h.Y1 - w, h.Y1);
-        Box(mesh, frame, f, h.U0 + w, h.U1 - w, s0, s1, h.Y0, h.Y0 + w);
+        if (o.Door is { } door)
+        {
+            Box(mesh, frame, f, h.U0 + w, U(door.First), s0, s1, h.Y0, h.Y0 + w);
+            Box(mesh, frame, f, U(door.First + door.Count), h.U1 - w, s0, s1, h.Y0, h.Y0 + w);
+        }
+        else
+            Box(mesh, frame, f, h.U0 + w, h.U1 - w, s0, s1, h.Y0, h.Y0 + w);
         for (var c = 1; c < o.Cells; c++)
         {
-            var u = h.U0 + (h.U1 - h.U0) * c / o.Cells;
-            Box(mesh, frame, f, u - m, u + m, s0, s1 + (o.Kind == OpeningKind.Slot ? 0.08f : 0f), h.Y0 + w, h.Y1 - w);
+            var bottom = MathF.Min(o.GlassBottom(c - 1, h.Y0), o.GlassBottom(c, h.Y0));
+            Box(mesh, frame, f, U(c) - m, U(c) + m, s0, s1 + (o.Kind == OpeningKind.Slot ? 0.08f : 0f), bottom > h.Y0 ? bottom : h.Y0 + w, h.Y1 - w);
         }
         if (lod != LodLevel.L0) return;
         foreach (var y in Transoms(o))

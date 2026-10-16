@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Zones.Core.Axis;
+using Campus.Gen.Zones.Core.Entrance;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
 
@@ -73,6 +74,9 @@ public static class CoreSite
         new FeatureClaim(CoreFeatures.PlazaRingSteps, Aspects.Massing),
         new FeatureClaim(CoreFeatures.Sundial, Aspects.Massing | Aspects.Props),
         new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        // The entrance piece dresses the library's open front door (WLD-INTERIORS §4), in place of WP-13's generic kit.
+        new FeatureClaim(CoreFeatures.Library, Aspects.Props),
     ];
 
     public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
@@ -83,13 +87,16 @@ public static class CoreSite
 
     private static IReadOnlyList<ICorePiece> Create(IWorldModel world)
     {
+        var library = LibraryShell.From(world);
         ICorePiece?[] pieces =
         [
             // 16a: the axis and the time plaza.
             TimePlaza.From(world),
             Sundial.From(world),
             // 16b onward: library shell, surrounding blocks, museum, West Lake structures.
-            LibraryShell.From(world),
+            library,
+            // 16c: the grand stair (8398) and the 2F front door in the shell's glass slot.
+            GrandStair.From(world, library),
         ];
         return pieces.OfType<ICorePiece>().ToArray();
     }

@@ -118,6 +118,58 @@ public static class Shapes
         FlatPolygon(mesh, paint, [a - side, b - side, b + side, a + side], surface, lift);
     }
 
+    /// <summary>
+    /// A clipped hedge from plan point a to b standing on <paramref name="y"/>, as a row of overlapping soft cushions
+    /// (half ellipsoids about 1.1 m apart and well overlapped, the loropetalum's cloud crown): smooth normals, soft vegetation shading, no
+    /// long extruded box. Each cushion starts <see cref="CoreStyle.Sink"/> below its base so it never floats.
+    /// </summary>
+    public static void Hedge(CoreMesh mesh, in Paint paint, Vector2 a, Vector2 b, float y, float width, float height, int rings, int sides)
+    {
+        var d = b - a; var length = d.Length();
+        if (length < 0.05f) return;
+        var along = d / length;
+        var count = Math.Max(1, (int)MathF.Round(length / 1.1f));
+        var pitch = length / count;
+        for (var k = 0; k < count; k++)
+        {
+            var c = a + along * (pitch * (k + 0.5f));
+            Cushion(mesh, paint, new(c.X, y, c.Y), along, pitch * 0.75f, width * 0.5f, height, rings, sides);
+        }
+    }
+
+    /// <summary>
+    /// A half ellipsoid with semi-axes <paramref name="ra"/> along <paramref name="along"/>, <paramref name="rb"/> across
+    /// and <paramref name="h"/> up from its base centre, with a short vertical skirt below the base.
+    /// </summary>
+    public static void Cushion(CoreMesh mesh, in Paint paint, Vector3 centre, Vector2 along, float ra, float rb, float h, int rings, int sides)
+    {
+        var u = new Vector3(along.X, 0, along.Y);
+        var v = new Vector3(-along.Y, 0, along.X);
+        var ring = Circle(sides);
+        Vector3 P(int i, Vector2 c)
+        {
+            if (i < 0) return centre + u * (ra * c.X) + v * (rb * c.Y) - Vector3.UnitY * CoreStyle.Sink;
+            var phi = Tau * 0.25f * i / rings;
+            float cp = DetMath.Cos(phi), sp = DetMath.Sin(phi);
+            return centre + u * (ra * cp * c.X) + v * (rb * cp * c.Y) + Vector3.UnitY * (h * sp);
+        }
+        Vector3 N(int i, Vector2 c)
+        {
+            var phi = Tau * 0.25f * Math.Max(i, 0) / rings;
+            float cp = DetMath.Cos(phi), sp = DetMath.Sin(phi);
+            return Normalize(u * (cp * c.X / ra) + v * (cp * c.Y / rb) + Vector3.UnitY * (sp / h));
+        }
+        for (var i = -1; i < rings; i++)
+            for (var j = 0; j < sides; j++)
+            {
+                Vector2 c0 = ring[j], c1 = ring[(j + 1) % sides];
+                if (i + 1 == rings)
+                    mesh.Tri(paint, P(i, c0), P(i, c1), P(i + 1, c0), N(i, c0), N(i, c1), N(i + 1, c0));
+                else
+                    mesh.Quad(paint, P(i, c0), P(i, c1), P(i + 1, c1), P(i + 1, c0), N(i, c0), N(i, c1), N(i + 1, c1), N(i + 1, c0));
+            }
+    }
+
     /// <summary>Row-vector frame whose local +Y is <paramref name="up"/> and local +Z leans toward <paramref name="forward"/>.</summary>
     public static Matrix4x4 Frame(Vector3 origin, Vector3 up, Vector3 forward)
     {

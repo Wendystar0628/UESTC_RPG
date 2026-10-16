@@ -118,8 +118,10 @@ public sealed class LibraryShellTests
         var world = RealWorld();
         var shell = Shell(world);
         var layouts = new CoreModule().DescribeWindowLayouts(world, 1u);
-        Require(layouts.Count == 1, $"one claimed facade declares windows ({layouts.Count})");
-        var layout = layouts[0];
+        var windowed = layouts.Where(l => l.Grids.Count > 0).ToArray();
+        Require(windowed.Length == 1, $"one claimed facade declares windows ({windowed.Length})");
+        Require(layouts.Single(l => l.Feature == CoreFeatures.LibraryStair).Grids.Count == 0, "the claimed stair base declares an empty set");
+        var layout = windowed[0];
         Require(layout.Feature == CoreFeatures.Library && world.Features.ContainsKey(layout.Feature), "the declaration targets the library entity in this world");
         Require(CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == layout.Feature && (c.Aspects & Aspects.Facade) != 0), "the zone claims the library facade");
         Require(layout.Grids.Count == 1, "a single grid covers every source part");

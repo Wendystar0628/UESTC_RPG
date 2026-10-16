@@ -79,6 +79,10 @@ public sealed class LibraryPlan
     }
 
     public float SecondFloorY => StoreyY(1);
+
+    /// <summary>The front tower's face above the 2F terrace, toward the plaza: the glass slot and the front door are on it.</summary>
+    public WallPiece? EntranceFace => Pieces.Where(p => p.Block.Kind == BlockKind.FrontTower && p.Length >= 8f && MathF.Abs(p.Y0 - SecondFloorY) < 0.01f)
+        .OrderByDescending(p => p.Length).FirstOrDefault();
     public float TerraceY => StoreyY(S.LibraryStoreys.Length - 1);
     public float RoofY => StoreyY(S.LibraryStoreys.Length);
     public float SkylightRadius => S.SkylightAcross * 0.5f / DetMath.Cos(Shapes.Tau / 16f);

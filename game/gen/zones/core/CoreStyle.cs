@@ -134,6 +134,8 @@ public static partial class CoreStyle
         CoreMaterial.Metal => Steel,
         CoreMaterial.Cloth => FlagWhite,
         CoreMaterial.Wall or CoreMaterial.Trim or CoreMaterial.Roof or CoreMaterial.Sheet => BuildingFamily(material),
+        CoreMaterial.Lawn => TerraceLawn,
+        CoreMaterial.Foliage => BoxHedge,
         _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Unknown core material."),
     };
 
@@ -149,6 +151,8 @@ public static partial class CoreStyle
             CoreMaterial.Metal => spec with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f },
             CoreMaterial.Cloth => spec with { Translucency = 0.5f, Line = LineClass.Fine, Wet = 0.3f },
             CoreMaterial.Wall or CoreMaterial.Trim or CoreMaterial.Roof or CoreMaterial.Sheet => BuildingSpec(material, spec),
+            CoreMaterial.Lawn => spec with { Line = LineClass.None, Wet = 0.4f },
+            CoreMaterial.Foliage => spec with { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree, Wet = 0.3f },
             _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Unknown core material."),
         };
     }

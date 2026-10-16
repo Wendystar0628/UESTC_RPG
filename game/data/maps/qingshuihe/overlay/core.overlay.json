@@ -44,6 +44,31 @@
       "geometry": { "type": "point", "position": [-84.77, 0, 165.81] },
       "height": 0.8,
       "reason": "设计增补：时间广场外圈路灯下的第三张长椅，同 design:core-plaza-bench-1。"
+    },
+    {
+      "op": "reshape",
+      "target": "qsh:way:806848398",
+      "rings": {"outer": [[-142.29, 72.06], [-159.05, 93.94], [-143.02, 106.22], [-126.26, 84.34]], "holes": []},
+      "level": "design",
+      "reason": "构筑物定形（MAP-QSH-CORE §1.7）：大台阶基座 8398 按二楼正门的门轴对称重整为 27.56×20.2 m 的整块：中间两跑大台阶、两侧草坪台地、再外两侧侧梯与实心石护墙，后沿 3.45 m 顶平台接图书馆裙房平台。OSM 轮廓只画了台阶与台地（前块 18.5 m 宽，偏门轴 0.9 m），两侧侧梯在 OSM 侧路（842083674、842083676）上、未进轮廓；后沿与 OSM 同线，前沿与 OSM 相差 0.1 m 内，宽度两侧各补到后条宽。几何由 WP-16 的大台阶块生成。"
+    },
+    {
+      "op": "add",
+      "id": "design:core-library-camphor-1",
+      "kind": "tree",
+      "geometry": { "type": "point", "position": [-126.21, 0, 79.34] },
+      "height": 14.0,
+      "props": { "species": "camphor", "planter": "WP-23" },
+      "reason": "实物登记（MAP-QSH-CORE §1.7）：大台阶两边各一株大冠香樟，这是东北侧一株，在侧梯石护墙外 4 m、台阶脚后 3 m，冠下留出侧梯脚与路。只给位置，树由 WP-23 种（WLD-VEGETATION 图书馆入口台地）。夜间剪影；春老叶少量转红，夏浓荫，秋冬常绿。"
+    },
+    {
+      "op": "add",
+      "id": "design:core-library-camphor-2",
+      "kind": "tree",
+      "geometry": { "type": "point", "position": [-147.83, 0, 107.58] },
+      "height": 14.0,
+      "props": { "species": "camphor", "planter": "WP-23" },
+      "reason": "实物登记：大台阶西南侧的一株大冠香樟，与 design:core-library-camphor-1 对称，同上。"
     }
   ]
 }
