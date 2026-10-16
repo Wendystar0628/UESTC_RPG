@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "farClip": 12000,
+  "fogSea": {
+    "topY": -16,
+    "outerRadius": 10000,
+    "riseTopY": -1,
+    "segments": 256,
+    "edgeBank": {
+      "height": 2.4,
+      "inside": 240,
+      "outside": 460,
+      "jitter": 0.5,
+      "waveLength": 380,
+      "wander": 140
+    }
+  },
+  "cityRings": [
+    {
+      "id": "near",
+      "radius": 3000,
+      "parallax": 0.3,
+      "haze": 0.6,
+      "rowHaze": 0.07,
+      "depth": 460,
+      "rows": 3,
+      "baseY": -70
+    },
+    {
+      "id": "mid",
+      "radius": 5000,
+      "parallax": 0.6,
+      "haze": 0.78,
+      "rowHaze": 0.05,
+      "depth": 640,
+      "rows": 3,
+      "baseY": -90
+    }
+  ],
+  "sectors": [
+    {
+      "from": 200,
+      "to": 250,
+      "near": { "fill": 0.6, "towerShare": 0.7, "low": [18, 36], "high": [48, 78] },
+      "mid": { "fill": 0.66, "towerShare": 0.6, "low": [16, 30], "high": [43, 72] }
+    },
+    {
+      "from": 250,
+      "to": 300,
+      "near": { "fill": 0.5, "towerShare": 0.18, "low": [12, 24], "high": [34, 53] },
+      "mid": { "fill": 0.54, "towerShare": 0.2, "low": [10, 20], "high": [32, 50] }
+    },
+    {
+      "from": 300,
+      "to": 340,
+      "near": { "fill": 0.6, "towerShare": 0.62, "low": [16, 32], "high": [44, 73] },
+      "mid": { "fill": 0.62, "towerShare": 0.55, "low": [14, 28], "high": [41, 70] }
+    },
+    {
+      "from": 340,
+      "to": 20,
+      "near": { "fill": 0.68, "towerShare": 0.72, "low": [20, 40], "high": [53, 88] },
+      "mid": { "fill": 0.74, "towerShare": 0.78, "low": [22, 44], "high": [63, 115] }
+    },
+    {
+      "from": 20,
+      "to": 110,
+      "near": { "fill": 0.66, "towerShare": 0.66, "low": [18, 38], "high": [49, 85] },
+      "mid": { "fill": 0.72, "towerShare": 0.7, "low": [20, 40], "high": [58, 106] }
+    },
+    {
+      "from": 110,
+      "to": 160,
+      "near": { "fill": 0.36, "towerShare": 0.28, "low": [10, 22], "high": [32, 51] },
+      "mid": { "fill": 0.5, "towerShare": 0.32, "low": [12, 24], "high": [36, 59] }
+    },
+    {
+      "from": 160,
+      "to": 200,
+      "near": { "fill": 0.54, "towerShare": 0.58, "low": [16, 30], "high": [42, 71] },
+      "mid": { "fill": 0.58, "towerShare": 0.5, "low": [14, 28], "high": [40, 67] }
+    }
+  ],
+  "farRing": {
+    "radius": 7000,
+    "parallax": 1.0,
+    "depth": 1500,
+    "rows": 8,
+    "skirtY": -2600,
+    "stepDeg": 0.5,
+    "fineStepDeg": 0.12,
+    "visualScale": 2.0,
+    "hills": [
+      { "azimuth": 0, "elevationDeg": 0.62 },
+      { "azimuth": 30, "elevationDeg": 0.42 },
+      { "azimuth": 70, "elevationDeg": 0.5 },
+      { "azimuth": 110, "elevationDeg": 0.3 },
+      { "azimuth": 150, "elevationDeg": 0.16 },
+      { "azimuth": 185, "elevationDeg": 0.1 },
+      { "azimuth": 215, "elevationDeg": 0.38 },
+      { "azimuth": 240, "elevationDeg": 0.86 },
+      { "azimuth": 262, "elevationDeg": 1.2 },
+      { "azimuth": 285, "elevationDeg": 1.32 },
+      { "azimuth": 310, "elevationDeg": 1.0 },
+      { "azimuth": 335, "elevationDeg": 0.78 }
+    ],
+    "mountains": [
+      {
+        "name": "九顶山狮子王峰",
+        "azimuth": 355,
+        "distanceKm": 88,
+        "trueElevationDeg": 2.6,
+        "peaks": [
+          { "offsetDeg": 0, "height": 1.0, "halfWidthDeg": 6.1 },
+          { "offsetDeg": -5.5, "height": 0.78, "halfWidthDeg": 5.2 },
+          { "offsetDeg": 4.8, "height": 0.84, "halfWidthDeg": 4.6 },
+          { "offsetDeg": 9.5, "height": 0.6, "halfWidthDeg": 4.9 },
+          { "offsetDeg": -10.5, "height": 0.52, "halfWidthDeg": 5.5 }
+        ]
+      },
+      {
+        "name": "西岭雪山大雪塘",
+        "azimuth": 272,
+        "distanceKm": 90,
+        "trueElevationDeg": 2.8,
+        "peaks": [
+          { "offsetDeg": 0, "height": 1.0, "halfWidthDeg": 5.2 },
+          { "offsetDeg": -4.2, "height": 0.74, "halfWidthDeg": 4.3 },
+          { "offsetDeg": 3.8, "height": 0.7, "halfWidthDeg": 4.1 },
+          { "offsetDeg": -8.0, "height": 0.5, "halfWidthDeg": 4.6 }
+        ]
+      },
+      {
+        "name": "四姑娘山幺妹峰",
+        "azimuth": 292,
+        "distanceKm": 106,
+        "trueElevationDeg": 2.7,
+        "peaks": [
+          { "offsetDeg": 0, "height": 1.0, "halfWidthDeg": 3.8 },
+          { "offsetDeg": -2.6, "height": 0.86, "halfWidthDeg": 3.2 },
+          { "offsetDeg": -4.8, "height": 0.76, "halfWidthDeg": 2.9 },
+          { "offsetDeg": -6.8, "height": 0.66, "halfWidthDeg": 2.9 },
+          { "offsetDeg": 3.4, "height": 0.58, "halfWidthDeg": 3.8 }
+        ]
+      }
+    ]
+  },
+  "snow": {
+    "visibility": [0.75, 0.95, 0.8, 0.5],
+    "snowline": [0.42, 0.7, 0.46, 0.12]
+  }
+}
