@@ -1,10 +1,12 @@
 using System.Numerics;
+using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Gen.Parts.Stubs;
 using Campus.Kernel.Stubs;
 using Campus.Kernel.Stubs.AudioUi;
 using Campus.Kernel.Stubs.Foundation;
@@ -146,6 +148,63 @@ public sealed class AtlasServiceTests
         var door = test.Atlas.Find(new("door:test-door"))!;
         Check(door.At == new Vector2(10, 10) && door.Teleport?.Stand?.Feet == entrance.Outside, "Door marker copied an incorrect location.");
         Check(door.Teleport!.Fly.Position.Y == 9 && door.Teleport.Stand!.YawDeg == 0, "Door viewing direction is wrong.");
+    }
+
+    [TestCase]
+    public void RealCampusAndD0InteriorIndexProduceUniqueAtlasDoorMarkers()
+    {
+        var repository = new DirectoryInfo(AppContext.BaseDirectory);
+        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "game", "data", "maps", "qingshuihe", "campus.json")))
+            repository = repository.Parent;
+        if (repository is null) throw new InvalidOperationException("Real campus data not found.");
+        var root = Path.Combine(repository.FullName, "game", "data", "maps", "qingshuihe");
+        var interiorBytes = File.ReadAllBytes(Path.Combine(root, "interiors.json"));
+        using var catalog = JsonDocument.Parse(interiorBytes);
+        var items = catalog.RootElement.GetProperty("interiors").EnumerateArray().ToArray();
+        var open = items.SelectMany(item => item.GetProperty("featureIds").EnumerateArray())
+            .Select(id => new FeatureId(id.GetString()!)).ToHashSet();
+        var authoredDoorIds = items.SelectMany(item => item.GetProperty("entrances").EnumerateArray())
+            .Where(door => door.GetProperty("open").GetBoolean())
+            .Select(door => door.GetProperty("id").GetString()!).ToHashSet(StringComparer.Ordinal);
+        var campus = D0CampusLoader.FromBytes(File.ReadAllBytes(Path.Combine(root, "campus.json")), open);
+        var interiorIndex = new InteriorIndexStub();
+        var world = new StubWorldModel(new StubSpatialIndex(), interiorIndex, new StubFidelityModel());
+        world.Configure(campus);
+        var mapFile = JsonSerializer.Deserialize<MapFile>(File.ReadAllBytes(Path.Combine(root, "map.json")), ContractJson.Options)!;
+        var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
+        var providers = typeof(BoxInteriorProviderStub).Assembly.GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && typeof(IInteriorProvider).IsAssignableFrom(type))
+            .Select(type => (Type: type, Registration: type.GetCustomAttribute<InteriorProviderAttribute>()))
+            .Where(item => item.Registration is not null)
+            .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
+        var built = D0InteriorSetup.Build(interiorBytes,
+            new BuildContext { Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
+        interiorIndex.Configure(built.Entries);
+        var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
+            .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
+        Check(campus.SourceEntityCount > 400 && built.Entries.Count == open.Count,
+            "Regression did not assemble the complete campus and registered interior index.");
+        Check(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1,
+            "Regression no longer exercises multiple generated fallback entrances.");
+        Check(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length,
+            "D0 interior provider reused an entrance ID across different building features.");
+        var atlas = new AtlasService(new Camera(), new Observer(), new Rules("all-unlocked"));
+        atlas.LoadMap(new Context(descriptor, world),
+            JsonSerializer.Deserialize<AtlasMarkerFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "markers.json")), ContractJson.Options)!,
+            JsonSerializer.Deserialize<AtlasLabelFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "labels.json")), ContractJson.Options)!,
+            JsonSerializer.Deserialize<WaypointFile>(File.ReadAllBytes(Path.Combine(root, "waypoints.json")), ContractJson.Options)!);
+        Check(atlas.Markers.Count(marker => marker.Kind == MarkerKind.Interior) == doors.Length,
+            "Atlas silently discarded an entrance from the real interior index.");
+        foreach (var item in doors)
+        {
+            var marker = atlas.Find(new("door:" + item.Door.Id));
+            Check(marker is not null && marker.Feature == item.Feature
+                && marker.At == new Vector2(item.Door.Center.X, item.Door.Center.Z)
+                && marker.Teleport?.Stand?.Feet == item.Door.Outside,
+                "A real interior marker lost its owner, center, or outside landing.");
+        }
+        foreach (var id in authoredDoorIds)
+            Check(atlas.Find(new("door:" + id)) is not null, "An authored entrance ID changed during fallback repair.");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

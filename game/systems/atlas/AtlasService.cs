@@ -107,8 +107,14 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var marker in visible)
         {
-            if (string.IsNullOrWhiteSpace(marker.Id.Value) || !ids.Add(marker.Id.Value) || !Finite(marker.At) || marker.MinZoomBand > 4)
-                throw new JsonException("Atlas marker IDs must be unique and coordinates finite.");
+            if (string.IsNullOrWhiteSpace(marker.Id.Value)) throw new JsonException("Atlas marker ID is empty.");
+            if (!ids.Add(marker.Id.Value))
+            {
+                var first = visible.First(item => item.Id == marker.Id);
+                throw new JsonException($"Duplicate Atlas marker ID '{marker.Id.Value}' from features '{first.Feature?.Value}' and '{marker.Feature?.Value}'.");
+            }
+            if (!Finite(marker.At) || marker.MinZoomBand > 4)
+                throw new JsonException($"Atlas marker '{marker.Id.Value}' has invalid coordinates or zoom band.");
             if (marker.Teleport is not null && !Travelable(marker.Kind)) throw new JsonException("This marker kind cannot travel.");
             if (marker.Kind == MarkerKind.Anchor && (marker.Form is null || marker.Feature is null || marker.Teleport is null))
                 throw new JsonException("An anchor needs a form, a world feature, and a teleport destination.");
