@@ -241,7 +241,12 @@ gates: []
 | [ENG-PERF](engineering/ENG-PERF.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
 | [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列 | WP-00 | — |
-| [ENG-TEAM](engineering/ENG-TEAM.md) 多模型协作规程：分工、额度、通信与开发流程 | 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务 | WP-00 | — |
+| [ENG-TEAM-COMMS](engineering/ENG-TEAM-COMMS.md) 协作分册：交接与通信 | .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续 | WP-00 | — |
+| [ENG-TEAM-DUTY](engineering/ENG-TEAM-DUTY.md) 协作分册：值班与旁路 | 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省 | WP-00 | — |
+| [ENG-TEAM-FLOW](engineering/ENG-TEAM-FLOW.md) 协作分册：包的归属与开发流程 | 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线 | WP-00 | — |
+| [ENG-TEAM-QUOTA](engineering/ENG-TEAM-QUOTA.md) 协作分册：账号与额度 | 额度排程口径，Claude 侧按 Opus 当量的并发公式与记账，Codex 账号与速度，单 Claude 账户模式，额度见底时冻结，仅双账号模式的规则 | WP-00 | — |
+| [ENG-TEAM-ROLES](engineering/ENG-TEAM-ROLES.md) 协作分册：参与者与分工 | 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期 | WP-00 | — |
+| [ENG-TEAM](engineering/ENG-TEAM.md) 多模型协作规程：总纲与分册索引 | 多模型协作规程的总纲：五份分册各自的结论、按角色的接入要点与分册索引 | WP-00 | — |
 | [ENG-WP](engineering/ENG-WP.md) 工作包派工单：56 个工作包，可并行 55 个 | 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
 
 ### 7.8 参考 `reference/`
@@ -294,7 +299,7 @@ gates: []
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ONBOARD、ENG-ROADMAP、ENG-STATUS、ENG-TEAM、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ONBOARD、ENG-ROADMAP、ENG-STATUS、ENG-TEAM、ENG-TEAM-COMMS、ENG-TEAM-DUTY、ENG-TEAM-FLOW、ENG-TEAM-QUOTA、ENG-TEAM-ROLES、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |
@@ -431,6 +436,11 @@ graph LR
     ENG_ROADMAP["ENG-ROADMAP"]
     ENG_STATUS["ENG-STATUS"]
     ENG_TEAM["ENG-TEAM"]
+    ENG_TEAM_COMMS["ENG-TEAM-COMMS"]
+    ENG_TEAM_DUTY["ENG-TEAM-DUTY"]
+    ENG_TEAM_FLOW["ENG-TEAM-FLOW"]
+    ENG_TEAM_QUOTA["ENG-TEAM-QUOTA"]
+    ENG_TEAM_ROLES["ENG-TEAM-ROLES"]
     ENG_WP["ENG-WP"]
   end
   subgraph g_reference[参考]
@@ -541,6 +551,22 @@ graph LR
   ENG_WP --> ENG_TEAM
   ENG_ARCH --> ENG_TEAM
   ENG_ONBOARD --> ENG_TEAM
+  ENG_TEAM --> ENG_TEAM_COMMS
+  ENG_TEAM_ROLES --> ENG_TEAM_COMMS
+  ENG_TEAM_FLOW --> ENG_TEAM_COMMS
+  ENG_TEAM --> ENG_TEAM_DUTY
+  ENG_TEAM_ROLES --> ENG_TEAM_DUTY
+  ENG_TEAM_FLOW --> ENG_TEAM_DUTY
+  ENG_TEAM_COMMS --> ENG_TEAM_DUTY
+  ENG_TEAM --> ENG_TEAM_FLOW
+  ENG_TEAM_ROLES --> ENG_TEAM_FLOW
+  ENG_WP --> ENG_TEAM_FLOW
+  ENG_ARCH --> ENG_TEAM_FLOW
+  ENG_TEAM --> ENG_TEAM_QUOTA
+  ENG_TEAM_ROLES --> ENG_TEAM_QUOTA
+  ENG_TEAM_FLOW --> ENG_TEAM_QUOTA
+  ENG_TEAM --> ENG_TEAM_ROLES
+  ENG_WP --> ENG_TEAM_ROLES
   ENG_ARCH --> ENG_WP
   ENG_BUDGET --> ENG_WP
   SYS_TIME --> ENG_WP
