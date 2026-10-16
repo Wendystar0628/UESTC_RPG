@@ -53,10 +53,13 @@ VERSION_DEFINES
 //                     of a part about one pixel thick toward THIN_KEEP (steady along the edge, so no dashes),
 //   fragment filter : a line pixel keeps its ink only if the line leaves the 5x5 window around it (the reference
 //                     counts line pixels in that window; see the composite pass for why the ring is counted here);
-//                     the convex bright line (ART-STYLE §4.7) follows the same rule on its own flags.
+//                     the convex bright line (ART-STYLE §4.7) follows the same rule on its own flags,
+//   foliage depth   : card canopies outline clump against clump by the reference's foliage depth step (0.07 of 1/z
+//                     there, FOLIAGE_DEPTH_REL here, on both sides of the pair), fading out with distance; the speck
+//                     rule and the filters above keep the crowns clean.
 
 // ---- Tuning (max-110 110b; values for the main session to set, all in one place)
-const float THIN_KEEP = 0.3;        // ink left on a thin part (1 = no fade, 0 = thin parts draw no line)
+const float THIN_KEEP = 0.45;       // ink left on a thin part (1 = no fade, 0 = thin parts draw no line)
 const float THIN_FULL_PX = 1.0;     // foreground thickness (1080p px) at or below which a part counts as fully thin
 const float THIN_NONE_PX = 2.0;     // thickness (1080p px) from which a part is outlined normally
 const float THIN_DEPTH_REL = 0.02;  // relative depth step behind a part's plane that counts as background
@@ -64,6 +67,10 @@ const float STRIP_FULL_PX = 2.0;    // width (1080p px) of a part between two ot
 const float STRIP_NONE_PX = 3.0;    // material and crease lines fade fully, and from which they are drawn normally
 const float BRIGHT_RING_LO = 0.5;   // convex bright line: flagged pixels on the 5x5 ring for no lift ...
 const float BRIGHT_RING_HI = 2.0;   // ... and for the full lift (a lone flagged bevel pixel would flash as a dash)
+const float FOLIAGE_DEPTH_REL = 0.05; // card canopies: depth step between clumps, as a share of the nearer 1/z
+const float FOLIAGE_INNER_GAIN = 1.0; // ink of those inner clump lines (the outer contour is always full)
+const float FOLIAGE_FADE0 = 30.0;     // inner clump lines fade out between these distances (m), so far crowns
+const float FOLIAGE_FADE1 = 80.0;     // read by their contour and do not fill with scribbles
 const float FRAG_RING_LO = 0.5;     // fragment filter: line pixels on the 5x5 window's outer ring for no ink ...
 const float FRAG_RING_HI = 2.0;     // ... and for full ink (a line through the window marks >= 2 of them)
 
@@ -422,6 +429,28 @@ float id_width(ivec2 p, ivec2 dir, uint id, int n) {
 	return w;
 }
 
+float inv_z(ivec2 p) {
+	float d = texelFetch(depth_tex, p, 0).r;
+	return d <= 0.0 ? 0.0 : 1.0 / max(-view_pos(p, d).z, 1e-4);
+}
+
+// Depth step from the centre c (linear depth z0) to c + dir inside one card canopy, after the reference's foliage
+// edge test (S8): the linear extrapolations of 1/z from either side of the pair both miss the other side by more
+// than FOLIAGE_DEPTH_REL of the nearer 1/z, and the centre is the nearer side. 1/z is linear in screen space on any
+// plane, so cards seen at a grazing angle and the fake clump normals play no part; only one clump standing in front
+// of another, or one tree's crown in front of the next, draws.
+float foliage_step(ivec2 c, ivec2 dir, float z0) {
+	float wc = 1.0 / max(z0, 1e-4);
+	float wq = inv_z(clamp_px(c + dir));
+	if (wq >= wc) {
+		return 0.0;
+	}
+	float thr = FOLIAGE_DEPTH_REL * wc;
+	float miss_c = abs(wq - (2.0 * wc - inv_z(clamp_px(c - dir))));
+	float miss_q = abs(wc - (2.0 * wq - inv_z(clamp_px(c + dir * 2))));
+	return smoothstep(thr, 1.4 * thr, miss_c) * smoothstep(thr, 1.4 * thr, miss_q);
+}
+
 // Foreground thickness in internal pixels at p across a silhouette that lies in direction dir: walks toward -dir
 // until the background shows again. 0 if p itself is background, 99 if the foreground goes on for more than n px.
 float thickness(Surf s0, ivec2 p, ivec2 dir, int n) {
@@ -461,6 +490,17 @@ void main() {
 	for (int k = 0; k < RING1; k++) {
 		e1[k] = edge_strengths(s0, l0, clamp_px(c + RING1_OFS[k]), qz[k]);
 		convex_lit = max(convex_lit, e1[k].w);
+	}
+
+	// Card canopies (only the outer contour against other materials): their own cards never outline each other by
+	// the solid criteria, but a clump in front of another clump does, by the foliage depth step.
+	if ((l0.flags & LF_OUTER_ONLY) != 0u && s0.z < FOLIAGE_FADE1) {
+		float gain = FOLIAGE_INNER_GAIN * (1.0 - smoothstep(FOLIAGE_FADE0, FOLIAGE_FADE1, s0.z));
+		for (int k = 0; k < 4; k++) {
+			if (id_at(c + RING1_OFS[k]) == s0.id) {
+				e1[k].x = max(e1[k].x, gain * foliage_step(c, RING1_OFS[k], s0.z));
+			}
+		}
 	}
 
 	// Speck rule and thin parts, on the four axis neighbours. sil_keep carries the result to the silhouettes found by
