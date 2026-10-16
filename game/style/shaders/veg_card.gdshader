@@ -6,6 +6,8 @@
 // 插片 3–5 张一簇（簇心压进团块），一簇同去同留、同明度；团块在外轮廓一圈按树种稳定的噪声剪成叶团锯齿边（max-011 评审③④）。
 // 人能站到冠下的树另有一层冠底叶簇，只在近处出，从树下仰看时冠底读成松软的叶团（max-011 23c3）。
 // 叶卡在主线版由本着色器按层号程序化画出（层号 = Campus.Gen.Vegetation.CardShape），细节版换成 Texture2DArray 的同号层。
+// 远近池交接（23c2c）：近池 L1 与远池替身在 135–165 m 按 Bayer 抖动互补交接，林下地被在绘制距离前抖动淡出（植被公共段 veg_pool_code）；
+// 远处的碎边、叶形和团块法线按像素收拢，远处的树读成干净的绿色体块。
 // 顶点数据见 MotherModels：插片 CUSTOM0 = (插片中心, h2)，CUSTOM1 = (枝梢锚点, h3)，CUSTOM2 = (团心, 重要度序)；
 // 团块 CUSTOM0 = (团心, 团块哈希)，CUSTOM1 = (枝梢锚点, 开花哈希)，CUSTOM2 = (所属小球的球心, −1)。
 shader_type spatial;
@@ -56,6 +58,7 @@ const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相
 const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
+const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
 	float seed;       // 稳定种子（实体 ID 哈希）
@@ -235,7 +238,8 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	lit = fog_desaturate(lit, fd);
 	shade = fog_desaturate(shade, fd);
 	lamp = fog_desaturate(lamp, fd);
-	float bw = max(m.band, 1e-3);
+	// 明暗档边按屏幕导数放宽（23c2c）：远处一个像素里 N·L 跨过整条带时不出锯齿、不闪；近处 fw 小，仍是 m.band
+	float bw = max(max(m.band, VEG_BAND_AA * c.fw), 1e-3);
 	float push = TOON_AO_PUSH * (1.0 - clamp(c.ao, 0.0, 1.0));
 	float deep_mix = 0.0;
 	if (m.steps == TOON_STEPS_THREE) {
@@ -249,6 +253,53 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
 }
+// 远近池交接与淡出（WLD-VEGETATION §11.4、ENG-PERF §9，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
+// visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
+// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Gen.Vegetation.VegFade 分桶）。
+// 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
+// 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
+// 距离乘细节系数 quality.x（WLD-VEGETATION §11.8）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
+const vec2 VEG_POOL_FADE = vec2(135.0, 165.0);   // 近池 ↔ 远池替身的过渡带（m）；= VegFade.NearFadeStart/End
+const bool VEG_CLOUD_READY = false;              // 树冠云（L3，并入格子几何）还没有：替身一直画到远处，不淡出
+const vec2 VEG_CLOUD_FADE = vec2(360.0, 440.0);  // 替身 ↔ 树冠云的过渡带（m）；= VegFade.CloudFadeStart/End
+const vec2 VEG_UNDER_FADE = vec2(85.0, 100.0);   // 林下地被的淡出带（m），终点 = Understorey.DrawDistance
+const int VEG_VARIANT_UNDER = 2;                 // 外观变体位 1：林下地被（Understorey.UnderVariantBit）
+
+// cam 是主相机位置（vertex() 里的 MAIN_CAM_INV_VIEW_MATRIX[3].xyz）。编码成一个 flat 值：[0, 1] 近池（丢 b < v），[2, 3] 远池淡入（丢 b ≥ v − 2），[4, 5] 远池淡出（丢 b < v − 4）
+float veg_pool_code(vec3 cam, vec3 origin, VegInst inst, bool far_pool, bool shadow_pass) {
+	if (shadow_pass) {
+		return 0.0;
+	}
+	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
+	float q = max(quality.x, 0.5);
+	if ((inst.variant & VEG_VARIANT_UNDER) != 0) {
+		return smoothstep(VEG_UNDER_FADE.x, VEG_UNDER_FADE.y, d);
+	}
+	float t_in = smoothstep(VEG_POOL_FADE.x * q, VEG_POOL_FADE.y * q, d);
+	if (!far_pool) {
+		return t_in;
+	}
+	if (VEG_CLOUD_READY && d > 0.5 * (VEG_POOL_FADE.y + VEG_CLOUD_FADE.x) * q) {
+		return 4.0 + smoothstep(VEG_CLOUD_FADE.x * q, VEG_CLOUD_FADE.y * q, d);
+	}
+	return 2.0 + t_in;
+}
+
+bool veg_pool_discard(vec2 frag_xy, float code) {
+	if (code <= 0.0) {
+		return false;
+	}
+	int ix = int(mod(frag_xy.x, 4.0));
+	int iy = int(mod(frag_xy.y, 4.0));
+	float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;
+	if (code < 1.5) {
+		return b < code;
+	}
+	if (code < 3.5) {
+		return b >= code - 2.0;
+	}
+	return b < code - 4.0;
+}
 // ===========================================================================
 // 植被公共段结束
 // ===========================================================================
@@ -259,6 +310,9 @@ const float VEG_LOD_L1 = 40.0;
 const float VEG_KEEP_L0 = 0.4;             // L0 留下的插片比例（MotherModels.CardCount 的前缀）
 const float VEG_KEEP_L1 = 0.0556;          // L1 留下的插片比例
 const float VEG_COVER_GROW = 1.5;          // 远处按像素外扩叶形的上限，保住树冠覆盖率（§11.1）
+// 远处叶卡化简（23c2c）：一张插片在屏幕上只剩几个像素时，叶形的细节逐像素闪烁；按 UV 的像素导数从前者到后者，叶形换成一个圆润的叶团
+// （覆盖率与叶簇相近）。枝条笔触、棕榈扇叶不换
+const vec2 VEG_CARD_SIMPLE = vec2(0.1, 0.25);
 // 叶卡集中在外轮廓一圈（max-011 评审）：rim = 1 − |外壳法线·视线|，轮廓处为 1、正对镜头为 0
 const float VEG_RIM_IN = 0.2;              // rim 低于它算树冠内部
 const float VEG_RIM_OUT = 0.55;            // rim 高于它算外轮廓一圈，插片全尺寸
@@ -272,6 +326,9 @@ const float VEG_EDGE_DEPTH = 0.62;         // 远处：带内最深处剪掉的�
 const float VEG_EDGE_CELL = 0.42;          // 噪声格（m），乘树种叶卡的格子系数；约一个叶团大小
 const float VEG_EDGE_FAR = 1.0;            // L0 以外的碎边强度
 const float VEG_EDGE_CONTRAST = 2.2;       // 噪声对比
+// 远处碎边按像素收（23c2c）：噪声格在屏幕上小于几个像素时，逐像素的剪切会随镜头移动闪烁、出锯齿。按噪声格的像素宽，从前者到后者
+// 把剪切量从 0 放到满（1080p、60° 视角下约 80 m 以内满剪，200 m 以外不剪），远处的树冠轮廓只剩团块本身的外形，读成干净的体块
+const vec2 VEG_EDGE_PX = vec2(2.0, 5.0);
 // 近处（L0+ 以内，max-011 23b 评审）：只剪最外面一圈轮廓带，带内不出孔。噪声沿"朝轮廓的方向"取（外壳法线去掉视线分量），
 // 同一条朝轮廓的径向线上取值相同，剪的比例又朝轮廓单调变大，所以剪掉的部分总连着轮廓。
 // 冠底（外壳法线朝下）从树下仰看时大片斜对镜头，rim 整片偏高，按 rim 定带会在冠底剪出大块。冠底改按屏幕上离轮廓的距离定带
@@ -287,6 +344,10 @@ const float VEG_EDGE_FAR_UNDER_W = 1.2;    // 远处冠底的碎边带宽（m，
 // 整冠仍是一个光，每个团块各有受光面与影面，树冠读成一团一团。团块自己的法线由团心（CUSTOM2.xyz，经 toon 的 v_center 传到片元，
 // 树冠不用 toon 的解析法线）指向片元，底部压扁 0.7。外壳法线仍烘在 NORMAL 里，叶卡的去留、外轮廓碎边照旧按外壳法线算。
 const float VEG_CLUMP_NORMAL = 0.75;      // 团块自己的法线所占的比例
+// 远处团块法线减半（23c2c）：远处一株树只有十几个像素，每个团块各分明暗会碎成斑点；从前者（m）到后者，团块法线的比例乘到 VEG_CLUMP_FAR，
+// 整株读成一个受光面加一个影面的绿色体块
+const vec2 VEG_CLUMP_FADE = vec2(150.0, 400.0);
+const float VEG_CLUMP_FAR = 0.45;
 // 逆光一侧团块外缘的透光亮边（110c 第二轮，参考的边缘透光）：按团块自己的 rim 和视线朝太阳的程度加大透光，走 toon 的 BACKLIGHT，
 // 所以只在背光面出现、被别的物体挡住时不透光
 const float VEG_TRANS_RIM = 3.0;          // 外缘透光的加大倍数
@@ -308,9 +369,9 @@ const float VEG_UNDER_PULL = 1.3;          // 拉近的距离，按插片半径�
 const float VEG_UNDER_DL = 0.035;          // 冠底叶簇的明度起伏（OKLab L，±，一簇一个值）：仰看时一簇簇分得开，又不花
 const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片放大这么多（MotherModels.UnderCardScale），叶形按叶柄端缩回原大，不让卡片的直边切出叶形
 
-// toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
+// toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 插片自己的叶形种子
-varying flat int v_row;
+varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
 varying flat float v_seed;
 varying flat vec2 v_tint;
 varying float v_s;
@@ -346,8 +407,10 @@ void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	mat3 inv3 = inverse(mat3(MODEL_MATRIX));
 	vec3 dir_m = normalize(inv3 * vec3(wind.x, 0.0, wind.y) + vec3(1e-5, 0.0, 0.0));
-	v_row = inst.row;
 	v_tint = veg_tint_noise(origin);
+	// 远池替身的团块 CUSTOM2.w = −2（MotherModels.FarStandIn）
+	float fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, CUSTOM2.w < -1.5, IN_SHADOW_PASS);
+	v_row = (inst.row & 63) | (int(round(fade * 1000.0)) << 6);
 	if (CUSTOM2.w < 0.0) {
 		// 团块与小球：NORMAL 是烘好的外壳法线，不再混合。季节值加团块哈希和高度的小偏移：树顶和向阳面先变（§9.4、§11.6）；
 		// 叶量按 smoothstep(0.15, 0.6, A) 向所属小球的球心收缩（§9.2）；云团型开花时小球按哈希换花色（§9.3）
@@ -604,11 +667,15 @@ float veg_edge_noise(vec3 wp, int row, int layer) {
 }
 
 void fragment() {
+	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
+		discard;
+	}
 	// 背面也用外壳法线（引擎给背面翻过一次法线，这里翻回来）
 	if (!FRONT_FACING) {
 		NORMAL = -NORMAL;
 	}
-	VegSpecies sp = veg_species(v_row);
+	int row = v_row & 63;
+	VegSpecies sp = veg_species(row);
 	bool mass = (v_bits & 64) != 0;
 	// 团块自己的法线（视空间）：团心指向片元，底部按世界的 y 压扁 0.7（树只绕竖轴转，模型的 y 就是世界的 y）
 	vec3 clump_w = mat3(INV_VIEW_MATRIX) * (VERTEX - v_center);
@@ -633,20 +700,28 @@ void fragment() {
 		// 团块外缘在远处也剪最外一圈，强度照近处（0.35），不在冠内剪出大洞
 		float clump_band = VEG_EDGE_CLUMP * smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, 1.0 - abs(dot(clump, VIEW)));
 		band_far = max(band_far, clump_band * VEG_EDGE_NEAR / VEG_EDGE_FAR);
-		float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * band_far;
-		float e_far = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, v_row, sp.leaf_card) - cut;
+		float px_k = smoothstep(VEG_EDGE_PX.x, VEG_EDGE_PX.y, VEG_EDGE_CELL / max(px_m, 1e-4));
+		float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * band_far * px_k;
+		// 不剪时噪声整体抬过阈值，不留零星的孔
+		float e_far = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, row, sp.leaf_card) - cut + 0.5 * (1.0 - px_k);
 		// 近处：缺口噪声取朝轮廓的方向，按树错开（v_tint 是每株一个值）
 		float band_near = mix(smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, rim), (1.0 - smoothstep(0.0, VEG_EDGE_NEAR_UNDER_W, to_edge)) * under_rim, down);
 		band_near = max(band_near, clump_band);
 		float cut_near = VEG_EDGE_DEPTH * VEG_EDGE_NEAR * band_near;
 		vec3 toward = mat3(INV_VIEW_MATRIX) * normalize(n - facing * VIEW + vec3(0.0, 1e-5, 0.0));
-		float e_near = veg_edge_noise(toward * VEG_EDGE_NEAR_SPAN + vec3(53.1 * v_tint.x, 41.7 * v_tint.y, 29.3 * (v_tint.x + v_tint.y)), v_row, sp.leaf_card) - cut_near;
+		float e_near = veg_edge_noise(toward * VEG_EDGE_NEAR_SPAN + vec3(53.1 * v_tint.x, 41.7 * v_tint.y, 29.3 * (v_tint.x + v_tint.y)), row, sp.leaf_card) - cut_near;
 		float e = mix(e_near, e_far, far_k);
 		ALPHA = clamp(e / max(fwidth(e), 1e-4) + 0.5, 0.0, 1.0);
 	} else {
 		// v_bits 是 flat 的，同一个图元内分支一致，fwidth 不受影响
 		vec2 uv = (v_bits & 128) != 0 ? vec2(0.5, 0.0) + (UV - vec2(0.5, 0.0)) * VEG_UNDER_FIT : UV;
-		float d = veg_card_sdf(v_bits & 15, uv, float((v_bits >> 8) & 255) / 256.0);
+		int layer = v_bits & 15;
+		float d = veg_card_sdf(layer, uv, float((v_bits >> 8) & 255) / 256.0);
+		if (layer != VEG_CARD_TWIG && layer != VEG_CARD_FROND) {
+			float uv_px = max(fwidth(uv.x), fwidth(uv.y));
+			float blob = (length((uv - vec2(0.5, 0.5)) / vec2(0.42, 0.46)) - 1.0) * 0.42;
+			d = mix(d, blob, smoothstep(VEG_CARD_SIMPLE.x, VEG_CARD_SIMPLE.y, uv_px));
+		}
 		float fw = max(fwidth(d), 1e-4);
 		// 远处按像素外扩，叶形不至于在远距离上变稀（主线版代替保覆盖率的 mip，§11.1）
 		d -= fw * (0.35 + min(fw * 30.0, VEG_COVER_GROW));
@@ -655,7 +730,8 @@ void fragment() {
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	// 着色用团块法线：外壳法线与团块自己的法线混合（棕榈扇叶用自己的法线）
 	if (sp.leaf_card != VEG_CARD_FROND) {
-		NORMAL = normalize(mix(normalize(NORMAL), clump, VEG_CLUMP_NORMAL));
+		float clump_k = VEG_CLUMP_NORMAL * mix(1.0, VEG_CLUMP_FAR, smoothstep(VEG_CLUMP_FADE.x, VEG_CLUMP_FADE.y, length(VERTEX)));
+		NORMAL = normalize(mix(normalize(NORMAL), clump, clump_k));
 	}
 	TOON_FRAGMENT_BEGIN
 	vec3 lit;

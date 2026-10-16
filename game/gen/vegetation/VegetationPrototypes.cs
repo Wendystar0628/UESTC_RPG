@@ -15,8 +15,8 @@ public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
 /// <summary>
 /// Frozen prototypes of the vegetation pools and the per-tree instance record. One prototype per mother model (species ×
 /// variant) and pool, built once per palette and shared by every tile stream and by the runtime pools: the near levels are
-/// the mother models (wood surface, then crown surface); the far pool's mainline stand-in is a plain trunk with the L1 merged
-/// masses as bare icosahedra (the L2 stand-in decided in WLD-VEGETATION §11.5 replaces it in the detail version); the shadow proxy is
+/// the mother models (wood surface, then crown surface); the far pool's mainline stand-in is <see cref="MotherModels.FarStandIn"/>
+/// (the L2 stand-in decided in WLD-VEGETATION §11.5 replaces it in the detail version); the shadow proxy is
 /// <see cref="MotherModels.ShadowProxy"/>. The instance record is the 3×4 transform (uniform scale, yaw, trunk foot) plus
 /// INSTANCE_CUSTOM (<see cref="PlantedTree.Custom"/>, §11.2).
 /// </summary>
@@ -118,11 +118,14 @@ public static class VegetationPrototypes
                 var proxy = MotherModels.ShadowProxy(species, variant, palette);
                 return new GeometryPrototype(id, [GeometryBuffer.Freeze(proxy)], Pad(BoundsOf(proxy.Position)));
             case VegPool.Far:
-                // Mainline stand-in: a five-sided trunk to the crown base and the L1 merged masses as bare icosahedra (no
-                // cards, no branches), about 130 triangles.
+                // The far stand-in (MotherModels.FarStandIn, 23c2c): a five-sided trunk and the L1 merged masses at icosphere
+                // level 0, tagged so veg_card / veg_trunk cross-fade it against the near pool's L1; stemless balls have no wood.
                 var l1 = Get(species, variant, VegPool.L1, palette);
-                return new GeometryPrototype(id, [GeometryBuffer.Freeze(FarTrunk(species, variant, palette)),
-                    GeometryBuffer.Freeze(FarCrown(species, variant, palette))], l1.Bounds);
+                var (farWood, farCrown) = MotherModels.FarStandIn(species, variant, palette);
+                var far = new List<GeometryBuffer>(2);
+                if (farWood.Index.Length > 0) far.Add(GeometryBuffer.Freeze(farWood));
+                far.Add(GeometryBuffer.Freeze(farCrown));
+                return new GeometryPrototype(id, far, l1.Bounds);
             case VegPool.L0Plus:
             case VegPool.L0:
             case VegPool.L1:
@@ -136,106 +139,6 @@ public static class VegetationPrototypes
             default:
                 throw new ArgumentOutOfRangeException(nameof(pool), pool, "Unknown vegetation pool.");
         }
-    }
-
-    /// <summary>Far stand-in trunk: one five-sided tube from the buried foot to the first point at the crown base, open top.</summary>
-    private static GeometryBundle FarTrunk(SpeciesInfo species, int variant, PaletteRegistry palette)
-    {
-        const int Sides = 5;
-        var plan = new TreePlan(species, variant);
-        var limb = plan.Limbs.First(l => l.Level == 0);
-        var top = limb.Points.FindIndex(p => p.Y >= plan.BranchY);
-        if (top <= 0) top = limb.Points.Count - 1;
-        Vector3[] ring = [limb.Points[0], limb.Points[top]];
-        float[] radius = [limb.Radii[0], limb.Radii[top]];
-        var axis = Vector3.Normalize(ring[1] - ring[0]);
-        var normal0 = Vector3.Normalize(Vector3.Cross(axis, MathF.Abs(axis.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX));
-        var binormal = Vector3.Cross(axis, normal0);
-        var position = new List<float>();
-        var normal = new List<float>();
-        for (var i = 0; i < 2; i++)
-            for (var s = 0; s < Sides; s++)
-            {
-                var a = s * 6.2831853f / Sides;
-                var radial = normal0 * DetMath.Cos(a) + binormal * DetMath.Sin(a);
-                var p = ring[i] + radial * radius[i];
-                position.AddRange([p.X, p.Y, p.Z]);
-                normal.AddRange([radial.X, radial.Y, radial.Z]);
-            }
-        var index = new List<int>();
-        // Same winding as the near trunks (MotherModels.WriteTube).
-        for (var s = 0; s < Sides; s++)
-        {
-            var a = s;
-            var b = (s + 1) % Sides;
-            index.AddRange([a, a + Sides, b, b, a + Sides, b + Sides]);
-        }
-        const int count = 2 * Sides;
-        var c0 = new float[count * 4];
-        for (var i = 0; i < count; i++) c0[i * 4 + 3] = -1f;
-        var bundle = new GeometryBundle(new ToonRef(MotherModels.WoodSpec()), [.. position], [.. normal], [.. index],
-            Enumerable.Repeat(1f, count).ToArray())
-        {
-            ColorIds = Enumerable.Repeat(palette.Get(MotherModels.Bark).Id, count).ToArray(),
-            Reserved = Enumerable.Repeat(palette.Get(MotherModels.Whitewash).Id, count).ToArray(),
-            Custom0 = c0,
-            Custom1 = new float[count * 4],
-            Custom2 = new float[count * 4]
-        };
-        bundle.ValidateVertexData();
-        return bundle;
-    }
-
-    /// <summary>
-    /// The far stand-in's crown (WLD-VEGETATION §11.5 candidate A, mainline cut): the L1 merged masses as level-0
-    /// icosahedra with the bottom squashed like the near masses, smooth crown-shell normals, mass channels only
-    /// (CUSTOM2.w = −1, so veg_card never shrinks them), the same vertex layout as the near crown.
-    /// </summary>
-    private static GeometryBundle FarCrown(SpeciesInfo species, int variant, PaletteRegistry palette)
-    {
-        var plan = new TreePlan(species, variant);
-        var shell = new CrownShell(plan);
-        var leaf = palette.Get(species.LeafLit).Id;
-        var sphere = Icosphere.Get(0);
-        var position = new List<float>();
-        var normal = new List<float>();
-        var c0 = new List<float>();
-        var c1 = new List<float>();
-        var c2 = new List<float>();
-        var index = new List<int>();
-        var blobs = plan.MergedBlobs(MotherModels.MaxMassesL1);
-        foreach (var blob in blobs)
-        {
-            var first = position.Count / 3;
-            foreach (var d in sphere.Vertices)
-            {
-                var p = d * blob.Radius;
-                if (p.Y < 0f) p.Y *= 0.7f;
-                p += blob.Center;
-                var n = shell.Normal(p);
-                position.AddRange([p.X, p.Y, p.Z]);
-                normal.AddRange([n.X, n.Y, n.Z]);
-                c0.AddRange([blob.Center.X, blob.Center.Y, blob.Center.Z, blob.Hash]);
-                c1.AddRange([blob.Anchor.X, blob.Anchor.Y, blob.Anchor.Z, blob.BloomHash]);
-                c2.AddRange([blob.Center.X, blob.Center.Y, blob.Center.Z, -1f]);
-            }
-            // Same winding as the near masses (MotherModels.WriteBlob).
-            for (var t = 0; t < sphere.Index.Length; t += 3)
-                index.AddRange([first + sphere.Index[t], first + sphere.Index[t + 2], first + sphere.Index[t + 1]]);
-        }
-        var count = position.Count / 3;
-        var bundle = new GeometryBundle(new ToonRef(MotherModels.CrownSpec(species)), [.. position], [.. normal], [.. index],
-            Enumerable.Repeat(1f, count).ToArray(), new float[count * 2])
-        {
-            ColorIds = Enumerable.Repeat(leaf, count).ToArray(),
-            Reserved = Enumerable.Repeat((byte)128, count).ToArray(),
-            Flags = Enumerable.Repeat((byte)8, count).ToArray(),
-            Custom0 = [.. c0],
-            Custom1 = [.. c1],
-            Custom2 = [.. c2]
-        };
-        bundle.ValidateVertexData();
-        return bundle;
     }
 
     private static Box3 BoundsOf(float[] position)

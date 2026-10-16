@@ -282,6 +282,52 @@ public static class MotherModels
         return w.Bundle(WoodSpec(), flags: 0);
     }
 
+    /// <summary>Sides of the far stand-in's trunk (ENG-PERF §9: L2 is 150–300 triangles or fewer).</summary>
+    public const int FarTrunkSides = 5;
+
+    /// <summary>
+    /// Vertex tag of the far stand-in in CUSTOM2.w (veg_card, veg_trunk: veg_pool_code): its wood carries 1 (near wood 0),
+    /// its masses −2 (near masses −1). The shaders cross-fade the far stand-in against the near pool's L1 by it.
+    /// </summary>
+    public const float FarWoodTag = 1f, FarMassTag = -2f;
+
+    /// <summary>
+    /// The far-pool stand-in of a mother model (WLD-VEGETATION §11.4–§11.5 candidate A, mainline cut; max-011 23c2c): a
+    /// five-sided trunk from the buried foot to the crown base, and the L1 merged masses as level-0 lumpy icospheres sampled
+    /// on the same surface as the L1 masses (so the two meet in the cross-fade band with the same bulk, normals, colour and
+    /// crown gradient), no cards and no branches; about 130 triangles. Stemless balls (shrubs) have no wood. Wood is drawn
+    /// with veg_trunk; the crown with veg_card in the same vertex layout as the near crown. Both carry the far tags
+    /// (<see cref="FarWoodTag"/>, <see cref="FarMassTag"/>). The crown casts no shadow (the far pool has none).
+    /// </summary>
+    public static (GeometryBundle Wood, GeometryBundle Crown) FarStandIn(SpeciesInfo species, int variant, PaletteRegistry palette)
+    {
+        ArgumentNullException.ThrowIfNull(species);
+        ArgumentNullException.ThrowIfNull(palette);
+        if (variant is < 0 or >= TreeForms.Variants)
+            throw new ArgumentOutOfRangeException(nameof(variant), variant, "Mother-model variants are 0–3.");
+        var plan = new TreePlan(species, variant);
+        var shell = new CrownShell(plan);
+        var ids = IdsOf(species, palette);
+        var wood = new MeshWriter(withUv: false);
+        var crown = new MeshWriter(withUv: true);
+        var limb = TreeForms.IsBall(plan.Form.Id) ? null : plan.Limbs.FirstOrDefault(l => l.Level == 0);
+        if (limb is { Points.Count: >= 2 })
+        {
+            var top = limb.Points.FindIndex(p => p.Y >= plan.BranchY);
+            if (top <= 0) top = limb.Points.Count - 1;
+            WriteTube(wood, [limb.Points[0], limb.Points[top]], [limb.Radii[0], limb.Radii[top]], FarTrunkSides, 0f, 0f,
+                cap: false, trunk: true, ids, FarWoodTag);
+        }
+        // A palm's crown is its fronds (cards): the stand-in swells the head mass to about the frond reach instead.
+        var palm = plan.Form.Id == "palm";
+        foreach (var (blob, index, scale, _) in BlobsFor(plan, VegLevel.L1))
+        {
+            var s = palm ? MathF.Max(scale, (blob.Radius * 0.6f + plan.Form.CardSize) * 0.8f / MathF.Max(blob.Radius, 0.1f)) : scale;
+            WriteBlob(crown, plan, shell, blob, index, s, detail: 0, ids, FarMassTag);
+        }
+        return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8));
+    }
+
     private static Ids IdsOf(SpeciesInfo species, PaletteRegistry palette) =>
         new(palette.Get(species.LeafLit).Id, palette.Get(Bark).Id, palette.Get(Whitewash).Id);
 
@@ -425,7 +471,7 @@ public static class MotherModels
     }
 
     private static void WriteTube(MeshWriter w, List<Vector3> points, List<float> radii, int sides, float flare,
-        float flarePhase, bool cap, bool trunk, Ids ids)
+        float flarePhase, bool cap, bool trunk, Ids ids, float tag = 0f)
     {
         var n = points.Count;
         var tangent = Vector3.Normalize(points[1] - points[0]);
@@ -452,7 +498,7 @@ public static class MotherModels
                     r *= 1f + flare * k * k * (1f + 0.35f * DetMath.Cos(5f * a + flarePhase));
                 }
                 w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, trunk ? ids.Whitewash : (byte)0,
-                    new Vector4(0f, 0f, 0f, -1f), Vector4.Zero, Vector4.Zero, Vector2.Zero);
+                    new Vector4(0f, 0f, 0f, -1f), Vector4.Zero, new Vector4(0f, 0f, 0f, tag), Vector2.Zero);
             }
         }
         for (var i = 0; i < n - 1; i++)
@@ -478,7 +524,8 @@ public static class MotherModels
     // neighbouring masses never start their own light and shade (max-011 review).
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void WriteBlob(MeshWriter w, TreePlan plan, CrownShell shell, Blob blob, int index, float scale, int detail, Ids ids)
+    private static void WriteBlob(MeshWriter w, TreePlan plan, CrownShell shell, Blob blob, int index, float scale, int detail, Ids ids,
+        float tag = -1f)
     {
         var sphere = Icosphere.Get(detail);
         var bumps = Bumps(plan, blob, index);
@@ -491,7 +538,7 @@ public static class MotherModels
             var depth = Math.Clamp(shell.Depth(p) / MathF.Max(0.1f, shell.Diameter * 0.15f), 0f, 1f);
             var ao = 1f - MassAoDepth * depth * depth * (3f - 2f * depth);
             w.Add(p, n, ao, ids.Leaf, Gradient(plan, p, n), new Vector4(blob.Center, blob.Hash),
-                new Vector4(blob.Anchor, blob.BloomHash), new Vector4(blob.Center, -1f), Vector2.Zero);
+                new Vector4(blob.Anchor, blob.BloomHash), new Vector4(blob.Center, tag), Vector2.Zero);
         }
         // Icosphere winding faces outward with a counter-clockwise front; D0 meshes take the opposite order.
         for (var t = 0; t < sphere.Index.Length; t += 3)

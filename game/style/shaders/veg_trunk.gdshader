@@ -1,7 +1,8 @@
 // veg_trunk.gdshader：树干与枝（tree.bark，下半截可刷白）；同一着色器也画 ShadowsOnly 投影代理（木质加 L1 团块）（WP-23）
 // 规格：WLD-VEGETATION §1、§9、§11；ENG-PERF §1.4、§9；ART-STYLE §2.1（植被三阶）。
 // 看得见的树冠团块在 veg_card 里（max-011：团块与叶卡同一面）；这里的团块只出现在投影代理上，挖洞、随叶量收缩。
-// 顶点数据见 Campus.Gen.Vegetation.MotherModels：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）。
+// 顶点数据见 Campus.Gen.Vegetation.MotherModels：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；
+// 远池替身的木质 CUSTOM2.w = 1，与近池 L1 在 135–165 m 按 Bayer 抖动互补交接（植被公共段 veg_pool_code，23c2c）。
 // 每株量读 INSTANCE_CUSTOM（§11.2），树种量读全局纹理 tree_species（§11.6）；按距离的判断只用 MAIN_CAM_INV_VIEW_MATRIX。
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
@@ -54,6 +55,7 @@ const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相
 const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
+const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
 	float seed;       // 稳定种子（实体 ID 哈希）
@@ -233,7 +235,8 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	lit = fog_desaturate(lit, fd);
 	shade = fog_desaturate(shade, fd);
 	lamp = fog_desaturate(lamp, fd);
-	float bw = max(m.band, 1e-3);
+	// 明暗档边按屏幕导数放宽（23c2c）：远处一个像素里 N·L 跨过整条带时不出锯齿、不闪；近处 fw 小，仍是 m.band
+	float bw = max(max(m.band, VEG_BAND_AA * c.fw), 1e-3);
 	float push = TOON_AO_PUSH * (1.0 - clamp(c.ao, 0.0, 1.0));
 	float deep_mix = 0.0;
 	if (m.steps == TOON_STEPS_THREE) {
@@ -247,6 +250,53 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
 }
+// 远近池交接与淡出（WLD-VEGETATION §11.4、ENG-PERF §9，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
+// visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
+// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Gen.Vegetation.VegFade 分桶）。
+// 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
+// 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
+// 距离乘细节系数 quality.x（WLD-VEGETATION §11.8）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
+const vec2 VEG_POOL_FADE = vec2(135.0, 165.0);   // 近池 ↔ 远池替身的过渡带（m）；= VegFade.NearFadeStart/End
+const bool VEG_CLOUD_READY = false;              // 树冠云（L3，并入格子几何）还没有：替身一直画到远处，不淡出
+const vec2 VEG_CLOUD_FADE = vec2(360.0, 440.0);  // 替身 ↔ 树冠云的过渡带（m）；= VegFade.CloudFadeStart/End
+const vec2 VEG_UNDER_FADE = vec2(85.0, 100.0);   // 林下地被的淡出带（m），终点 = Understorey.DrawDistance
+const int VEG_VARIANT_UNDER = 2;                 // 外观变体位 1：林下地被（Understorey.UnderVariantBit）
+
+// cam 是主相机位置（vertex() 里的 MAIN_CAM_INV_VIEW_MATRIX[3].xyz）。编码成一个 flat 值：[0, 1] 近池（丢 b < v），[2, 3] 远池淡入（丢 b ≥ v − 2），[4, 5] 远池淡出（丢 b < v − 4）
+float veg_pool_code(vec3 cam, vec3 origin, VegInst inst, bool far_pool, bool shadow_pass) {
+	if (shadow_pass) {
+		return 0.0;
+	}
+	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
+	float q = max(quality.x, 0.5);
+	if ((inst.variant & VEG_VARIANT_UNDER) != 0) {
+		return smoothstep(VEG_UNDER_FADE.x, VEG_UNDER_FADE.y, d);
+	}
+	float t_in = smoothstep(VEG_POOL_FADE.x * q, VEG_POOL_FADE.y * q, d);
+	if (!far_pool) {
+		return t_in;
+	}
+	if (VEG_CLOUD_READY && d > 0.5 * (VEG_POOL_FADE.y + VEG_CLOUD_FADE.x) * q) {
+		return 4.0 + smoothstep(VEG_CLOUD_FADE.x * q, VEG_CLOUD_FADE.y * q, d);
+	}
+	return 2.0 + t_in;
+}
+
+bool veg_pool_discard(vec2 frag_xy, float code) {
+	if (code <= 0.0) {
+		return false;
+	}
+	int ix = int(mod(frag_xy.x, 4.0));
+	int iy = int(mod(frag_xy.y, 4.0));
+	float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;
+	if (code < 1.5) {
+		return b < code;
+	}
+	if (code < 3.5) {
+		return b >= code - 2.0;
+	}
+	return b < code - 4.0;
+}
 // ===========================================================================
 // 植被公共段结束
 // ===========================================================================
@@ -255,9 +305,9 @@ const float VEG_WHITEWASH_Y = 1.2;         // 刷白高度（m，WLD-VEGETATION 
 const float VEG_HOLE_CELL = 0.75;          // 投影代理挖洞的噪声格（m）
 const float VEG_HOLE_COVER = 0.42;         // 投影代理挖掉的比例
 
-// toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个：标志位合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
+// toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：标志位合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
 varying flat int v_bits;      // 位 0 团块（否则木质），位 1 刷白，位 2 团块开花
-varying flat int v_row;
+varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
 varying flat vec2 v_tint;
 varying float v_s;
 varying float v_ly;
@@ -286,7 +336,6 @@ void vertex() {
 	bool wood = CUSTOM0.w < 0.0;
 	float hb = wood ? 0.0 : CUSTOM0.w;
 	int bits = (wood ? 0 : 1) | ((inst.variant & 1) << 1);
-	v_row = inst.row;
 	v_ly = VERTEX.y;
 	if (!wood) {
 		// 团块的季节值再加团块哈希和高度的小偏移：树顶和向阳面先变（§9.4、§11.6）
@@ -303,17 +352,23 @@ void vertex() {
 	v_s = s;
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	v_tint = veg_tint_noise(origin);
+	// 远池替身的木质 CUSTOM2.w = 1（MotherModels.FarStandIn）；投影代理只进阴影通道，不淡化
+	float fade = veg_pool_code(MAIN_CAM_INV_VIEW_MATRIX[3].xyz, origin, inst, wood && CUSTOM2.w > 0.5, IN_SHADOW_PASS);
+	v_row = (inst.row & 63) | (int(round(fade * 1000.0)) << 6);
 	vec3 dir_m = normalize(inverse(mat3(MODEL_MATRIX)) * vec3(wind.x, 0.0, wind.y) + vec3(1e-5, 0.0, 0.0));
 	VERTEX = veg_wind(VERTEX, origin, dir_m, inst, sp, hb, wood ? 0.0 : 1.0, 0.0);
 	TOON_VERTEX
 }
 
 void fragment() {
+	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
+		discard;
+	}
 	if (shadow_proxy > 0.5 && (v_bits & 1) != 0 && veg_hole((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz)) {
 		discard;
 	}
 	TOON_FRAGMENT_BEGIN
-	VegSpecies sp = veg_species(v_row);
+	VegSpecies sp = veg_species(v_row & 63);
 	vec3 lit;
 	vec3 shade;
 	vec3 lamp;

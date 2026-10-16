@@ -16,14 +16,15 @@ public enum UnderKind : byte { PitCover = 0, Shrub = 1, Hedge = 2, Tuft = 3 }
 /// Size on its own axes (x along Yaw, y up, z across), so one clipped ball serves as a cushion, a shrub, a hedge module or a
 /// tussock. Position is the foot (on the soil of a pit, else on the terrain). Yaw turns about +Y the way the trees' Yaw does
 /// (local x goes to (cos, 0, −sin)); hedge modules lay their x along the edge. Custom is the INSTANCE_CUSTOM block of
-/// WLD-VEGETATION §11.2 with the drawn height in w.
+/// WLD-VEGETATION §11.2 with the drawn height in w; its appearance variant carries <see cref="Understorey.UnderVariantBit"/>,
+/// so veg_card and veg_trunk fade the plant out before its draw distance (23c2c).
 /// </summary>
 public sealed record GroundPlant(string Key, SpeciesInfo Species, int Variant, Vector3 Position, float Yaw, Vector3 Size, UnderKind Kind,
     float Seed, float WindPos)
 {
     public float Height => TreeForms.HeightOf(Species, Variant) * Size.Y;
 
-    public Vector4 Custom => new(Seed, Species.Row * 16, WindPos, Height);
+    public Vector4 Custom => new(Seed, Species.Row * 16 + Understorey.UnderVariantBit, WindPos, Height);
 }
 
 /// <summary>All understorey plants of one map, in a stable order (pit cover, borders, tussocks).</summary>
@@ -57,6 +58,16 @@ public static class Understorey
 
     /// <summary>Draw distance (m) for shrubs, hedge modules and pit cover (max-011 21:01 review: 150 m to 100 m); the consumer's near pool reads it.</summary>
     public const float DrawDistance = 100f;
+
+    /// <summary>
+    /// Appearance-variant bit of INSTANCE_CUSTOM.y (row × 16 + variant) set on every understorey plant (23c2c): the veg
+    /// shaders fade it out with Bayer dither from <see cref="FadeStart"/> to <see cref="DrawDistance"/> (VEG_UNDER_FADE),
+    /// so it never pops at the draw distance. Bit 0 is the trees' whitewash.
+    /// </summary>
+    public const int UnderVariantBit = 2;
+
+    /// <summary>Start of the understorey fade (m); it ends at <see cref="DrawDistance"/> (veg_* VEG_UNDER_FADE).</summary>
+    public const float FadeStart = 85f;
 
     /// <summary>Draw distance (m) for tussocks, when <see cref="TuftsEnabled"/>.</summary>
     public const float TuftDrawDistance = 45f;

@@ -227,13 +227,23 @@ public sealed partial class VegetationRuntime : Node, IMapAware
             }
         }
 
-        /// <summary>A visible pool holds its own level's trees; the shadow proxy holds every near tree (L0+, L0, L1).</summary>
+        /// <summary>
+        /// A near pool holds its own level's trees; the far pool every tree in the far pool's range, so the cross-fade band is
+        /// in both (23c2c); the shadow proxy holds every near tree (L0+, L0, L1).
+        /// </summary>
         private IEnumerable<int> Members(VegPool pool)
         {
             for (var i = 0; i < Buckets.Count; i++)
             {
                 var level = Buckets.Level(i);
-                if (pool == VegPool.Shadow ? level <= (byte)VegPool.L1 : level == (byte)pool) yield return i;
+                var member = pool switch
+                {
+                    VegPool.L0Plus or VegPool.L0 or VegPool.L1 => level == (byte)pool,
+                    VegPool.Far => Buckets.Far(i),
+                    VegPool.Shadow => level <= (byte)VegPool.L1,
+                    _ => throw new ArgumentOutOfRangeException(nameof(pool), pool, "Unknown vegetation pool.")
+                };
+                if (member) yield return i;
             }
         }
 

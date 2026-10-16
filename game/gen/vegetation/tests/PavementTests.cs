@@ -252,6 +252,26 @@ public sealed class PavementTests
             throw new InvalidOperationException($"{layout.Avoided.Count} trees give way, {bare.Avoided.Count} did before, {inPits} stand in the pits");
     }
 
+    [TestCase]
+    public void APitNamingItsSpeciesGetsOneTreeOfIt()
+    {
+        // WP-29 29a's pocket-garden pits (public.overlay.json, 160bdfa): round beds at a point with radius, perPit 1, props.species,
+        // stone = site (WP-29 draws the frame). Fixture IDs on the campus data alone, so the test does not meet the real 29a pits.
+        static string Pit(string id, float x, float z, string species, float radius) =>
+            "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"point\",\"position\":[" + F(x) + ",0," + F(z) +
+            "]},\"height\":0.2,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"species\":\"" + species + "\",\"radius\":" + F(radius) +
+            ",\"kerb\":0.16,\"soilAbove\":0.15,\"stone\":\"site\"},\"reason\":\"Fixture: a 29a pocket-garden pit.\"}";
+        var pits = new[] { ("design:fixture-29a-dangui-tree", -109.27f, -370.82f, "maple", 0.85f), ("design:fixture-29a-canteen-tree", -14.07f, -327.98f, "camphor", 1.0f) };
+        var world = Load(false, ("fixture-29a-pits.overlay.json", Overlay(pits.Select(t => Pit(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5)).ToArray())));
+        var layout = Plant(world);
+        foreach (var (id, x, z, species, radius) in pits)
+        {
+            var planted = layout.Trees.Where(t => Vector2.Distance(new(t.Position.X, t.Position.Z), new(x, z)) <= radius).ToList();
+            if (planted.Count != 1 || planted[0].Key != id || planted[0].Species.Id != species || planted[0].Source != PlantSource.Pit)
+                throw new InvalidOperationException($"{id}: {string.Join(", ", planted.Select(t => $"{t.Key} {t.Species.Id} {t.Source}"))}; one {species} expected");
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>The walk is filed (or not) as a network line and as a feature of its ID in this world: the precondition of a case.</summary>
