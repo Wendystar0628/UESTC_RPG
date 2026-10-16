@@ -6,6 +6,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using T = Campus.Gen.Zones.South.SouthTune.Gate;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
+using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
 namespace Campus.Gen.Zones.South.Gate;
 
@@ -14,12 +15,16 @@ namespace Campus.Gen.Zones.South.Gate;
 /// pillar on each traffic island beside the carriageway, barrier arms down across the carriageway, QR turnstiles closed in
 /// the two pedestrian lanes, the low granite name wall to the left seen from the street, and the forecourt's stone spheres,
 /// bollards and yellow no-parking grid. In walk mode the gate is the campus boundary: every gap is under 0.5 m and the
-/// closure is a 2.2 m Boundary collider (§1.2, WLD-OUTSKIRTS §7.1).
+/// closure is a 2.2 m Boundary collider (§1.2, WLD-OUTSKIRTS §7.1). At night the guard-house windows are the gate's two small
+/// lights (§11): they declare one grid on the all-night channel.
 /// The OSM relation is a "building" in the source data, so this site claims it and WP-14 must not extrude it.
 /// </summary>
 public sealed class SouthGateSite : SouthSite
 {
     public const string Feature = "qsh:relation:8407525";
+    /// <summary>The guard houses' window grid (contract-29): three watch windows per house, one row per house.</summary>
+    public const string HouseKey = "guard-houses";
+    private const int HouseColumns = 3;
 
     private static readonly PlanFrame Frame = PlanFrame.Along((T.HouseWest + T.HouseEast) * 0.5f, T.HouseEast - T.HouseWest);
     private static readonly float HouseX = Vector2.Distance(T.HouseWest, T.HouseEast) * 0.5f;
@@ -68,23 +73,66 @@ public sealed class SouthGateSite : SouthSite
         if (b.Detail != SiteDetail.Mass)
             b.Add(PartGeometryKernel.BeveledBox(roof - 0.5f, 0.04f, roof - 0.5f, 0.01f, L.RoofSlab), f.At(0, y + h + T.HouseRoof, 0));
         if (b.Detail == SiteDetail.Mass) return;
-        var half = s * 0.5f;
-        // Street face and lane face are the watch windows; the campus face carries the door.
-        Pane(b, f, 0, half, false, 3.6f, y);
-        Pane(b, f, -side * half, 0, true, 3.0f, y);
-        Pane(b, f, side * 0.9f, -half, false, 2.0f, y);
-        Door(b, f, -side * 1.6f, -half, y);
+        // Glass: numbered panes once the map's window numbering is in the context (lit all night), plain glass without one.
+        var numbered = Allocation(b.Context);
+        foreach (var pane in Panes(side)) Pane(b, f, pane, y, numbered is null);
+        if (numbered is { } allocation) WindowNumbers.Panes(b, Openings(y).Where(o => o.Row == (side < 0 ? 0 : 1)), allocation, W.AllNight, W.Office);
+        Door(b, f, -side * 1.6f, -T.HouseSize * 0.5f, y);
     }
 
-    /// <summary>A window on a house face: dark glass in an aluminium surround over a stone sill. Turned panes sit on ±X faces.</summary>
-    private static void Pane(SiteBuilder b, PlanFrame f, float x, float z, bool turned, float width, float y)
+    /// <summary>
+    /// The watch windows of one guard house in grid-column order: street face, lane face (turned onto the ±X face toward the
+    /// lanes), campus face beside the door. Local to the house's frame.
+    /// </summary>
+    private static (float X, float Z, bool Turned, float Width)[] Panes(int side)
     {
+        var half = T.HouseSize * 0.5f;
+        return [(0, half, false, 3.6f), (-side * half, 0, true, 3.0f), (side * 0.9f, -half, false, 2.0f)];
+    }
+
+    /// <summary>
+    /// The guard-house windows as the gate's one grid (contract-29): row 0 the west house, row 1 the east one, columns as in
+    /// <see cref="Panes"/>; each pane's bottom centre on the glass plane just proud of the stone face.
+    /// </summary>
+    internal static GlazedOpening[] Openings(float y) =>
+    [
+        .. new[] { -1, 1 }.SelectMany((side, row) => Panes(side).Select((p, column) =>
+        {
+            var f = Frame.Shift(side * HouseX, 0);
+            var outward = p.Turned ? MathF.Sign(p.X) : MathF.Sign(p.Z);
+            var at = p.Turned ? f.P(p.X + outward * PaneZ, p.Z) : f.P(p.X, p.Z + outward * PaneZ);
+            var normal = (p.Turned ? f.U : f.W) * outward;
+            return new GlazedOpening(column, row, new(at.X, y + T.HouseWindowSill, at.Y), new(normal.X, 0, normal.Y), p.Width, T.HouseWindowHead - T.HouseWindowSill);
+        })),
+    ];
+
+    /// <summary>Numbered panes stand this far in front of the stone face; the plain glass box sits between them and the wall.</summary>
+    private const float PaneZ = 0.03f;
+
+    /// <summary>The guard-house grid's allocation (null without a snapshot), checked against its six windows.</summary>
+    private static WindowAllocation? Allocation(BuildContext ctx, bool required = false)
+    {
+        var feature = new FeatureId(Feature);
+        var allocation = required ? WindowNumbers.Required(ctx, feature, HouseKey) : WindowNumbers.Allocation(ctx, feature, HouseKey);
+        if (allocation is { } a) WindowNumbers.Fit(HouseColumns, 2, feature, HouseKey, a);
+        return allocation;
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) => [(new(Feature), new(HouseKey, HouseColumns, 2))];
+
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows) =>
+        WindowNumbers.Declare(windows, Openings(ctx.World.Terrain.HeightAt(Frame.Origin.X, Frame.Origin.Y)), Allocation(ctx, true)!.Value, W.AllNight);
+
+    /// <summary>A window on a house face: dark glass in an aluminium surround over a stone sill. Turned panes sit on ±X faces.</summary>
+    private static void Pane(SiteBuilder b, PlanFrame f, (float X, float Z, bool Turned, float Width) pane, float y, bool glass)
+    {
+        var (x, z, turned, width) = pane;
         float y0 = y + T.HouseWindowSill, y1 = y + T.HouseWindowHead, h = y1 - y0;
         var outward = turned ? MathF.Sign(x) : MathF.Sign(z);
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);
-        b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
+        if (glass) b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y1, 0.04f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y0 - 0.06f, 0.04f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.StoneTrim), At(0, y0 - 0.13f, 0.08f));

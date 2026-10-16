@@ -235,6 +235,19 @@ public static class Solids
         return new([.. a.Meshes, .. b.Meshes], a.Bounds);
     }
 
+    /// <summary>
+    /// Rigid placement (row-vector convention) that stands a kernel box (origin at its base centre, height along local Y) on the
+    /// segment from <paramref name="a"/> to <paramref name="c"/>, its depth (local Z) along <paramref name="normal"/> made square to
+    /// the segment: slanted mullions on a drum, seams down a roof.
+    /// </summary>
+    public static Matrix4x4 Along(Vector3 a, Vector3 c, Vector3 normal)
+    {
+        var u = Unit(c - a);
+        var n = Unit(normal - u * (normal.X * u.X + normal.Y * u.Y + normal.Z * u.Z));
+        var s = new Vector3(u.Y * n.Z - u.Z * n.Y, u.Z * n.X - u.X * n.Z, u.X * n.Y - u.Y * n.X);
+        return new(s.X, s.Y, s.Z, 0, u.X, u.Y, u.Z, 0, n.X, n.Y, n.Z, 0, a.X, a.Y, a.Z, 1);
+    }
+
     /// <summary>Outward normal of a symmetric hull section at point j (perpendicular to the averaged section tangent).</summary>
     private static Vector2 SectionNormal(Vector2[] s, int j)
     {

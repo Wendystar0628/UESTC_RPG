@@ -9,8 +9,8 @@ namespace Campus.Gen.Zones.South;
 /// WP-18 south zone (MAP-QSH-SOUTH): the landmark sites listed in <see cref="SouthSites.All"/>, filed into cells.
 /// Generic buildings stay with WP-14; this module claims only the features it builds itself and adds identity parts
 /// (portico, roof gallery, gate furniture) next to the generic massing. Pure .NET: reads the world model and terrain only.
-/// As the zone's one window metadata source (contract-29) it declares a complete, possibly empty, grid set for every
-/// Facade-claimed feature, gathered from its sites; B2 and the other main-building wings stay WP-14's generic windows.
+/// As the zone's one window metadata source (contract-29) it declares a complete grid set for every Facade-claimed feature,
+/// gathered from its sites; B2 and the other main-building wings, and every other WP-14 building, keep generic windows.
 /// </summary>
 [ContentModule("zone.south", Owner = "WP-18")]
 public sealed class SouthModule : IContentModule, IWindowMetadataSource
@@ -132,8 +132,9 @@ public sealed class SouthModule : IContentModule, IWindowMetadataSource
 }
 
 /// <summary>
-/// The south zone's sites in a fixed order. 18a: gate and entrance axis, main building, forest park; 18b and 18c append
-/// their own entries (east lake, Xuanbang, Liren; sports venues, innovation centre) after these.
+/// The south zone's sites in a fixed order. 18a: gate and entrance axis, main building, forest park; 18b: Xuanbang, Liren,
+/// east lake; 18c: the gym and natatorium, the west lawn by the innovation centre, and the ordinary buildings' probes (their
+/// massing stays WP-14's).
 /// </summary>
 public static class SouthSites
 {
@@ -146,5 +147,9 @@ public static class SouthSites
         new Xuanbang.XuanbangSite(),
         new Liren.LirenSite(),
         new EastLake.EastLakeSite(),
+        new Sports.GymSite(),
+        new Sports.NatatoriumSite(),
+        new Innovation.WestLawnSite(),
+        new Ordinary.OrdinaryBuildingsSite(),
     ]);
 }

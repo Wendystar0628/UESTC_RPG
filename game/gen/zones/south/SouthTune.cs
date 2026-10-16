@@ -81,17 +81,41 @@ public static class SouthTune
         /// <summary>Hexagonal pavilion (§4.5): red-brown columns, dark grey tiles.</summary>
         public static readonly ToonSpec RedTimber = S("band.terracotta", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec Tiles = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
+
+        /// <summary>
+        /// Gym (§7.1): the silver-grey roof and the bulging rib ring are one curved metal, two-and-a-half steps with rim and
+        /// anisotropic band like the statue's bronze (ART-STYLE §2, §5); smooth normals so the drum reads round, not faceted.
+        /// </summary>
+        public static readonly ToonSpec Silver = new(new("roof.silverMetal.lit"), new("roof.silverMetal.shade"))
+        {
+            Fx = ToonFx.Rim | ToonFx.AnisoBand,
+            Steps = ShadeSteps.TwoHalf,
+            Normal = ToonNormal.Smooth,
+            Wet = 0.85f,
+        };
+        /// <summary>The gym's ochre-brown base band: the warm brown family, smooth round.</summary>
+        public static readonly ToonSpec Ochre = S("base.warmBrown", ToonFx.Mottle) with { Normal = ToonNormal.Smooth };
+        /// <summary>Brown horizontal louvres in front of the tea glass (§7.1).</summary>
+        public static readonly ToonSpec Louvre = S("panel.brown", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
+        /// <summary>Light blue-grey roof vent caps (§7.1): WP-12's equipment grey.</summary>
+        public static readonly ToonSpec Vent = S("equip.grey", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
+        /// <summary>Natatorium (§7.2): the low white dome, read by its two light steps (ART-STYLE §3), smooth normals.</summary>
+        public static readonly ToonSpec DomeWhite = S("wall.greyWhite") with { Normal = ToonNormal.Smooth };
+        /// <summary>The ochre-red ring paving round the natatorium's foot: the terracotta band, no outline.</summary>
+        public static readonly ToonSpec RingPaving = S("band.terracotta", ToonFx.Mottle, LineClass.None);
     }
 
     /// <summary>
     /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS §5.1, 1 classroom,
-    /// 3 corridor, 4 stair, 6 lab) of each grid the zone declares (初值). Xuanbang follows the research curve, Liren the teaching
-    /// curve (MAP-QSH-SOUTH §11), the main building's porch glass the public-hall channel.
+    /// 3 corridor, 4 stair, 5 office, 6 lab, 13 gym, 14 pool) of each grid the zone declares (初值). Xuanbang follows the research
+    /// curve, Liren the teaching curve (MAP-QSH-SOUTH §11), the porch glass of the main building and Xuanbang the public-hall
+    /// channel, the gate's guard houses the all-night channel (manned, §1.2), the two venues the venue-light channel.
     /// </summary>
     public static class Windows
     {
         public static readonly ChannelId Research = new("window.lab"), Teaching = new("window.teach"), Hall = new("interior.public");
-        public const byte Classroom = 1, Corridor = 3, Stair = 4, Lab = 6;
+        public static readonly ChannelId AllNight = new("window.allnight"), Venue = new("window.venue");
+        public const byte Classroom = 1, Corridor = 3, Stair = 4, Office = 5, Lab = 6, Gym = 13, Pool = 14;
     }
 
     /// <summary>
@@ -245,6 +269,74 @@ public static class SouthTune
     {
         public const float GroundStorey = 3.85f, Storey = 3.75f, Parapet = 0.87f;
         public const float BridgeFloor = 11.7f, Soffit = 10.9f, ColumnSize = 1.1f, ColumnInset = 1.2f;
+    }
+
+    /// <summary>
+    /// Sports venues (MAP-QSH-SOUTH §7.1, §7.2; WLD-INTERIORS §2.5), 初值. Plans are fitted to the OSM footprints: the gym's circle
+    /// by area about its centroid, the natatorium's ellipse by the footprint's second moments. Heights are above the ground at
+    /// the plan's centre.
+    /// </summary>
+    public static class Sports
+    {
+        /// <summary>The platform storey (大平台二层) of both venues' public entrances (WLD-INTERIORS §2.5, gym.deck in interiors.json).</summary>
+        public const float PlatformTop = 5.0f;
+
+        /// <summary>Gym drum to 26 m (§7.1): ochre base band to the platform storey, tea glass ring hall, silver rib ring, roof.</summary>
+        public const float GymTop = 26f;
+        /// <summary>Insets from the fitted radius: base band, glass ring; the rib ring bulges out to about the footprint.</summary>
+        public const float GymBaseInset = 2.2f, GymGlassInset = 3.0f;
+        public const float GymGlassTop = 13.0f, GymTransom = 9.0f, GymBay = 3.6f;
+        /// <summary>Slanted dark mullions (§7.1): each leans this far round the drum over the glass height.</summary>
+        public const float GymMullionLean = 1.6f;
+        /// <summary>Brown louvre blades under the rib ring, heights above the ground.</summary>
+        public static readonly float[] GymLouvres = [11.75f, 12.1f, 12.45f];
+        /// <summary>
+        /// The bulging rib ring and its rolled edge turned down (§7.1): (radius offset from the fitted radius, height) from its
+        /// foot behind the glass top over the bulge and round the roll to the roof's edge.
+        /// </summary>
+        public static readonly Vector2[] GymRibProfile =
+            [new(-3.3f, 12.9f), new(-2.5f, 14.0f), new(-1.1f, 15.6f), new(0f, 17.4f), new(0.35f, 19.0f), new(0.25f, 20.5f), new(-0.35f, 21.6f), new(-1.4f, 22.35f), new(-2.6f, 22.6f)];
+        public const int GymRibs = 72;
+        /// <summary>Each rib is a slim fin standing proud of the smooth band, outlined so the ring reads as ribbed metal.</summary>
+        public const float GymRibDepth = 0.14f, GymRibWidth = 0.24f;
+        /// <summary>Roof dish (§7.1): broad and almost flat in the middle, (fraction of the fitted radius, height) from the edge in.</summary>
+        public static readonly Vector2[] GymRoofProfile =
+            [new(0.952f, 22.62f), new(0.90f, 23.5f), new(0.80f, 24.55f), new(0.66f, 25.35f), new(0.48f, 25.8f), new(0.28f, 25.97f), new(0f, 26.0f)];
+        public const int GymSeams = 48;
+        /// <summary>Two rings of vent caps: fraction of the fitted radius and count.</summary>
+        public static readonly (float Ring, int Count)[] GymVents = [(0.36f, 10), (0.62f, 16)];
+        /// <summary>The platform-storey public entrance (gym.deck, bearing 127°) and the field-level closed doors.</summary>
+        public const float GymDoorBearing = 127f, GymDoorWidth = 3.0f, GymDoorHeight = 3.3f;
+        public static readonly float[] GymServiceDoors = [37f, 217f, 307f];
+
+        /// <summary>
+        /// Natatorium (§7.2): a low white elliptical dome, its dark glass band near the top as a short clerestory drum under a cap.
+        /// Profile (fraction of the fitted semi-axes, height): skirt, dome, then the drum foot.
+        /// </summary>
+        public static readonly Vector2[] PoolDomeProfile =
+            [new(1f, -0.1f), new(1f, 1.6f), new(0.985f, 3.0f), new(0.955f, 4.8f), new(0.90f, 6.7f), new(0.82f, 8.5f), new(0.72f, 10.1f), new(0.60f, 11.4f), new(0.47f, 12.3f), new(0.455f, 12.4f)];
+        public const float PoolDrum = 0.44f, PoolGlassFoot = 12.4f, PoolGlassTop = 14.2f, PoolBay = 3.0f;
+        /// <summary>The white lid over the glass band: an overhanging rim, then a flat crown to 15.6 m.</summary>
+        public static readonly Vector2[] PoolCapProfile =
+            [new(0.47f, 14.2f), new(0.47f, 14.5f), new(0.42f, 14.85f), new(0.30f, 15.25f), new(0.15f, 15.5f), new(0f, 15.6f)];
+        /// <summary>Meridian ribs on the dome from the skirt's cornice to the glass band (thin white lines that give the dome its structure).</summary>
+        public const int PoolRibs = 32;
+        /// <summary>The ochre-red paving ring round the foot, as a fraction of the semi-axes.</summary>
+        public const float PoolRing = 0.1f;
+        /// <summary>Platform-storey entrance hall on the side facing the platform (closed until WP-31a registers it).</summary>
+        public const float PoolDoorBearing = 172f, PoolEntryWidth = 9f, PoolEntryHeight = 4.2f, PoolEntryDepth = 2.6f;
+    }
+
+    /// <summary>
+    /// The west lawn by the innovation centre (MAP-QSH-ADDITIONS §0 R6, 初值): a transition green between the boundary and the
+    /// north–south footpath, regrouped as a low grass mound (south.terrain.json) with a stone seat-wall arc on its crest facing
+    /// north-east over the Zouma river to the core's research blocks.
+    /// </summary>
+    public static class Lawn
+    {
+        public static readonly Vector2 Crest = new(-785.5f, 343.0f);
+        public const float SeatRadius = 3.2f, SeatHeight = 0.45f, SeatThickness = 0.45f, SeatFrom = 0f, SeatTo = 100f;
+        public const int SeatChords = 6;
     }
 
     /// <summary>East lake shore (§4).</summary>

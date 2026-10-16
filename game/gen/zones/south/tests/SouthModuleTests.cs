@@ -28,7 +28,7 @@ public sealed class SouthModuleTests
     {
         var world = World();
         var module = new SouthModule();
-        Require(module.Claims.Count == 4, "gate, front steps, Xuanbang and Liren's connector are claimed");
+        Require(module.Claims.Count == 6, "gate, front steps, Xuanbang, Liren's connector, the gym and the natatorium are claimed");
         foreach (var claim in module.Claims.OfType<FeatureClaim>())
         {
             Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
@@ -204,31 +204,143 @@ public sealed class SouthModuleTests
         var hill = data.Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:south-hongfeng");
         Require(hill.Shape is TerrainEllipse { YawDeg: 75 } e && e.Center == new Vector2(-352, 238) && e.Radii == new Vector2(42, 34), "hill ellipse");
         Require(data.Ops.OfType<TerrainPlatformOp>().Single().Rings.Outer.Count == 12, "hill-top platform ring");
-        Require(data.Ops.Count == 3 && data.Ops.All(o => o.Priority is 50 or 60), "three operations keep their priorities");
+        Require(data.Ops.Count == 4 && data.Ops.All(o => o.Priority is 50 or 60), "four operations keep their priorities");
+        var lawn = data.Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:south-west-lawn");
+        Require(lawn.Height <= 1.5 && lawn.Shape is TerrainEllipse le && MathF.Min(le.Radii.X, le.Radii.Y) >= 7.5 * lawn.Height, "the west-lawn mound keeps R6's limits (h ≤ 1.5 m, R ≥ 7.5 h)");
     }
 
     [TestCase]
     public void WindowLayoutsDeclareEveryFacadeClaimWithItsGrids()
     {
         var layouts = new SouthModule().DescribeWindowLayouts(World(), 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        Require(layouts.Count == 4, "gate, front steps, Xuanbang and the Liren connector are declared");
-        Require(layouts[Gate.SouthGateSite.Feature].Count == 0, "the gate declares no windows");
+        Require(layouts.Count == 6, "gate, front steps, Xuanbang, the Liren connector and the two venues are declared");
         Require(!layouts.ContainsKey(MainBuilding.MainBuildingSite.B2), "B2 keeps WP-14's generic windows");
         void Grid(string feature, string key, int? columns, int rows)
         {
             var grid = layouts[feature].Single(g => g.Key == key);
             Require(grid.Rows == rows && grid.Columns > 0 && (columns is null || grid.Columns == columns), $"{feature} / {key} is {grid.Columns}x{grid.Rows}");
         }
+        Grid(Gate.SouthGateSite.Feature, "guard-houses", 3, 2);
         Grid(MainBuilding.MainBuildingSite.FrontSteps, "front-porch", 5, 1);
         Grid(MainBuilding.MainBuildingSite.FrontSteps, "rear-porch", 1, 1);
         Grid(Xuanbang.XuanbangSite.Feature, "main", null, 8);
         Grid(Xuanbang.XuanbangSite.Feature, "tower", null, 18);
         Grid(Xuanbang.XuanbangSite.Feature, "clock-shaft", 8, SouthTune.Xuanbang.SlitRows);
         Grid(Xuanbang.XuanbangSite.Feature, "clock-portals", 4, 1);
+        Grid(Xuanbang.XuanbangSite.Feature, "portico", 3, 2);
         Grid(Liren.LirenSite.Connector, "piers", null, 4);
         Grid(Liren.LirenSite.Connector, "bridge", null, 1);
         Grid(Liren.LirenSite.Connector, "east-link", null, 2);
-        Require(layouts.Values.Sum(g => g.Count) == 9, "nine grids in all");
+        Grid(Sports.GymSite.Feature, "ring-hall", null, 2);
+        Grid(Sports.NatatoriumSite.Feature, "glass-band", null, 1);
+        Require(layouts.Values.Sum(g => g.Count) == 13, "thirteen grids in all");
+    }
+
+    [TestCase]
+    public void SportsVenuesKeepTheirProfilesAndTheDeckDoorway()
+    {
+        var ctx = Context();
+        var module = new SouthModule();
+        var items = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
+        var gym = Sports.GymSite.PlanOf(ctx.World);
+        var pool = Sports.NatatoriumSite.PlanOf(ctx.World);
+        Require(gym.Radius is > 57f and < 62f && gym.Bays > 90, $"gym drum radius {gym.Radius}, {gym.Bays} bays");
+        Require(pool.A >= pool.B && pool.B > 35f && pool.A < 60f, $"natatorium ellipse {pool.A} × {pool.B}");
+        float Top(Vector2 centre, float radius) => items.Where(i => Vector2.Distance(i.Anchor, centre) < radius).Max(i => MaxY(i.Mesh!));
+        var gymTop = Top(gym.Centre, gym.Radius);
+        Require(gymTop > SouthTune.Sports.GymTop - 0.1f && gymTop < SouthTune.Sports.GymTop + 1.2f, $"gym roof at 26 m, vent caps above it ({gymTop})");
+        var poolTop = Top(pool.Frame.Origin, pool.B);
+        Require(poolTop is > 14.5f and < 16f, $"natatorium a low dome near 15 m ({poolTop})");
+        // The platform-storey doorway (gym.deck) is open between the platform and the door head; the drum is walled elsewhere.
+        var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().ToArray();
+        var deck = gym.Centre + Framework.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
+        Require(!walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop + 1.5f)), "the gym's deck doorway is open");
+        Require(walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop - 1f)), "the drum is closed below the platform storey");
+        var back = gym.Centre - Framework.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
+        Require(walls.Any(w => Covers(w, back, SouthTune.Sports.PlatformTop + 1.5f)), "the drum is closed opposite the door");
+    }
+
+    [TestCase]
+    public void EveryDeclaredGridIsValidOnTheRealMap()
+    {
+        // The map as the kernel loads it: every authored overlay, not only the south one. One invalid grid withholds the whole table.
+        var data = DataRoot();
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Select(p => "overlay/" + Path.GetFileName(p)))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
+        // The contract only promises an aggregate query envelope in WorldFeature.Geometry (the D0 world model gives a bounding
+        // rectangle): the sites must read footprints from the parts, so the same declarations hold over such a view.
+        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
+        {
+            var layouts = new SouthModule().DescribeWindowLayouts(view, 1);
+            var grids = layouts.SelectMany(l => l.Grids.Select(g => $"{l.Feature.Value}/{g.Key} {g.Columns}x{g.Rows}")).ToArray();
+            Require(layouts.All(l => l.Grids.All(g => g.Columns > 0 && g.Rows > 0)), $"{name}: every declared grid has cells: {string.Join(", ", grids)}");
+            Require(layouts.All(l => l.Grids.Select(g => g.Key).Distinct(StringComparer.Ordinal).Count() == l.Grids.Count), $"{name}: keys are unique per feature");
+        }
+        Require(new SouthModule().DescribeWindowLayouts(new EnvelopeWorld(world), 1).SequenceEqual(new SouthModule().DescribeWindowLayouts(world, 1), LayoutComparer.Instance),
+            "the envelope view declares the same grids");
+        var lake = ((PolygonGeometry)world.Features[new(EastLake.EastLakeSite.Lake)].Geometry).Rings;
+        Require(EastLake.EastLakeSite.Water(new EnvelopeWorld(world)).Outer.SequenceEqual(lake.Outer) && EastLake.EastLakeSite.Water(world).Outer.SequenceEqual(lake.Outer),
+            "the east lake's water ring comes from its own part in both views");
+    }
+
+    /// <summary>The loaded world with every multi-source entity's Geometry replaced by its parts' bounding rectangle.</summary>
+    private sealed class EnvelopeWorld(IWorldModel inner) : IWorldModel
+    {
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => p.Value.Parts.Count == 0 ? p.Value : p.Value with
+        {
+            Geometry = Envelope(p.Value.Parts.SelectMany(part => part.Geometry switch
+            {
+                PolygonGeometry g => g.Rings.Outer,
+                MultiPolygonGeometry m => m.Polygons.SelectMany(r => r.Outer),
+                _ => [],
+            }).ToArray()),
+        });
+        public WorldNetwork Network => inner.Network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
+
+        private static OverlayGeometry Envelope(Vector2[] points)
+        {
+            if (points.Length == 0) return new PointGeometry(Vector3.Zero);
+            float x0 = points.Min(p => p.X), x1 = points.Max(p => p.X), z0 = points.Min(p => p.Y), z1 = points.Max(p => p.Y);
+            return new PolygonGeometry(new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]));
+        }
+    }
+
+    private sealed class LayoutComparer : IEqualityComparer<ClaimedWindowLayout>
+    {
+        public static readonly LayoutComparer Instance = new();
+        public bool Equals(ClaimedWindowLayout? a, ClaimedWindowLayout? b) => a is not null && b is not null && a.Feature == b.Feature && a.Grids.SequenceEqual(b.Grids);
+        public int GetHashCode(ClaimedWindowLayout l) => l.Feature.GetHashCode();
+    }
+
+    [TestCase]
+    public void GuardHouseAndPorticoGlassIsNumberedOutward()
+    {
+        var world = World();
+        var houses = Gate.SouthGateSite.Openings(0f);
+        Require(houses.Length == 6 && houses.Select(o => (o.Column, o.Row)).Distinct().Count() == 6, "six guard-house windows, one cell each");
+        foreach (var o in houses)
+        {
+            // One-sided glass: each pane must face away from its own house's centre.
+            var house = o.Row == 0 ? SouthTune.Gate.HouseWest : SouthTune.Gate.HouseEast;
+            var d = new Vector2(o.Origin.X, o.Origin.Z) - house;
+            Require(Vector2.Dot(d, new(o.Outward.X, o.Outward.Z)) > 2.5f, $"guard-house pane ({o.Column}, {o.Row}) faces out of its house");
+        }
+        var f = Xuanbang.XuanbangSite.Rings(world);
+        var porticoes = Xuanbang.XuanbangSite.Porticoes(f);
+        Require(porticoes.Count == 1, "one pediment portico on the main front");
+        var glass = Xuanbang.XuanbangSite.PorticoOpenings(porticoes[0], 0.45f, 0);
+        Require(glass.Length == 6 && glass.Count(o => o.Row == 1) == 3, "three doors and three arched windows");
+        Require(glass.All(o => Vector2.Dot(new(o.Outward.X, o.Outward.Z), porticoes[0].W) > 0.99f), "the hall glass faces out through the colonnade");
+        Require(glass.Where(o => o.Row == 1).All(o => o.Origin.Y > 0.45f + SouthTune.Xuanbang.DoorSpring), "the windows sit above the doors");
     }
 
     [TestCase]

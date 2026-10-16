@@ -69,11 +69,16 @@ public sealed class EastLakeSite : SouthSite
         Pavilion(b, b.Ground(K.Pavilion));
     }
 
-    /// <summary>The lake's water area: outer ring and island holes (WP-24 draws the surface on the same polygon).</summary>
+    /// <summary>
+    /// The lake's water area: outer ring and island holes (WP-24 draws the surface on the same polygon). Read from its own source
+    /// part; the entity's Geometry is only an aggregate envelope in some world models.
+    /// </summary>
     internal static PolygonRings Water(IWorldModel world) =>
-        world.Features.TryGetValue(new(Lake), out var lake) && lake.Geometry is PolygonGeometry g
+        world.Features.TryGetValue(new(Lake), out var lake) && (lake.Parts.FirstOrDefault(p => p.SourceId == LakePart)?.Geometry ?? lake.Geometry) is PolygonGeometry g
             ? g.Rings
             : throw new InvalidOperationException($"East lake {Lake} is missing or not a single polygon.");
+
+    private const string LakePart = "osm:relation:7849760";
 
     internal static bool InWater(PolygonRings water, Vector2 p) => PlanMath.Inside(water.Outer, p) && !water.Holes.Any(h => PlanMath.Inside(h, p));
 

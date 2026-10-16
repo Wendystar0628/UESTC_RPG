@@ -24,6 +24,16 @@
       "reason": "土方平衡：红枫丘东尾，长而缓（约 1:8），经东南脚接林下小路（MAP-QSH-TERRAIN §4.2、§4.3 盘山小路起点约 (−300, 288)）"
     },
     {
+      "op": "mound",
+      "id": "design:terrain:south-west-lawn",
+      "zone": "south",
+      "shape": { "shape": "ellipse", "center": [-785.5, 343.0], "radii": [8.5, 8.5], "yawDeg": 0.0 },
+      "height": 1.0,
+      "profile": "hermite",
+      "priority": 50,
+      "reason": "空地重组（MAP-QSH-ADDITIONS §0 R6）：国际创新中心西侧过渡绿地里的一处缓草丘，高 1.0 m、半径 8.5 m（R ≥ 7.5 h，草坡类约 1:5），丘顶放弧形石坐墙（design:south-west-lawn-seat）；离校界不少于 20 m，不进零带，东缘让开南北小路"
+    },
+    {
       "op": "platform",
       "id": "design:terrain:south-hongfeng-top",
       "zone": "south",

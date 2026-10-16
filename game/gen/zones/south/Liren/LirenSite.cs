@@ -74,10 +74,10 @@ public sealed class LirenSite : SouthSite
 
     /// <summary>The connector's parts and, for each, the volumes its faces may lie against (the void under the bridge is open).</summary>
     internal sealed record Footprints(IReadOnlyList<IReadOnlyList<Vector2>> Piers, IReadOnlyList<Vector2> Bridge, IReadOnlyList<Vector2> Link,
-        IReadOnlyList<Vector2> A, IReadOnlyList<Vector2> B)
+        IReadOnlyList<IReadOnlyList<Vector2>> A, IReadOnlyList<IReadOnlyList<Vector2>> B)
     {
-        public IReadOnlyList<IReadOnlyList<Vector2>> PierNeighbours => [A, B, Link];
-        public IReadOnlyList<IReadOnlyList<Vector2>> LinkNeighbours => [A, B];
+        public IReadOnlyList<IReadOnlyList<Vector2>> PierNeighbours => [.. A, .. B, Link];
+        public IReadOnlyList<IReadOnlyList<Vector2>> LinkNeighbours => [.. A, .. B];
         public IReadOnlyList<IReadOnlyList<Vector2>> BridgeNeighbours => Piers;
     }
 
@@ -91,12 +91,27 @@ public sealed class LirenSite : SouthSite
             MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer).ToArray(),
             _ => throw new InvalidOperationException($"Liren part {source} is missing."),
         };
-        IReadOnlyList<Vector2> Outer(string id) => world.Features.TryGetValue(new(id), out var f) && f.Geometry is PolygonGeometry g
-            ? g.Rings.Outer : throw new InvalidOperationException($"Liren block {id} is missing or not a polygon.");
         var bridge = Polygons(BridgePart)[0];
         var piers = Polygons(PierPart);
         var link = Polygons(LinkPart)[0];
-        return new(piers, bridge, link, Outer(BlockA), Outer(BlockB));
+        return new(piers, bridge, link, Block(world, BlockA), Block(world, BlockB));
+    }
+
+    /// <summary>
+    /// A neighbouring block's footprint: the outer rings of its own source parts. An entity's Geometry is only its aggregate
+    /// query envelope (a bounding rectangle in some world models), which would swallow the connector and hide every face.
+    /// </summary>
+    internal static IReadOnlyList<IReadOnlyList<Vector2>> Block(IWorldModel world, string id)
+    {
+        if (!world.Features.TryGetValue(new(id), out var f)) throw new InvalidOperationException($"Liren block {id} is missing.");
+        static IEnumerable<IReadOnlyList<Vector2>> Outers(OverlayGeometry? g) => g switch
+        {
+            PolygonGeometry p => [p.Rings.Outer],
+            MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
+            _ => [],
+        };
+        var rings = f.Parts.Count > 0 ? f.Parts.SelectMany(p => Outers(p.Geometry)).ToArray() : Outers(f.Geometry).ToArray();
+        return rings.Length > 0 ? rings : throw new InvalidOperationException($"Liren block {id} has no polygon footprint.");
     }
 
     /// <summary>An edge lying against one of the given volumes is not dressed.</summary>
