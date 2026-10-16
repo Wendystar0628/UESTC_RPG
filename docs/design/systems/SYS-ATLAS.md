@@ -5,7 +5,7 @@ category: systems
 summary: "规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收"
 keywords: [平面地图, 小地图, 大地图, 底图, 地图标记, 锚点, 传送点, 导览亭, 导览桩, 传送, 雾幕瞬移, 飞过去, 传送卡, 传送落点, 目录页, 追踪, 自定义标记, 解锁策略, 区域名, 地名标注, atlasRect, G18 地图一致性, IAtlasService, IUnlockPolicy, MarkerId, AtlasSave, map_base.gdshader, markers.json, labels.json, atlas.overlay.json]
 owners: [WP-48]
-contributors: [WP-01, WP-04, WP-06, WP-13, WP-27, WP-35, WP-36, WP-39, WP-44, WP-51, WP-53a]
+contributors: [WP-01, WP-04, WP-06, WP-13, WP-27, WP-35, WP-36, WP-39, WP-44, WP-51, WP-53a, WP-55]
 depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
 related: [SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, SYS-SAVE, SYS-AUDIO, ENG-ROADMAP]
 contracts: [IAtlasService, IUnlockPolicy, MarkerId, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, PinShape, TeleportSpec, AtlasMarker, AtlasRegion, AtlasLayer, CustomPin, AtlasSave, TransitPreference]
@@ -25,7 +25,7 @@ gates: [G2, G13, G14, G15, G16, G18]
 - 48b 小地图与大地图界面（`game/hud/map`）；
 - 48c 标记、锚点、传送与解锁服务（`game/systems/atlas`）。
 
-WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、WP-53a 各有增量（§13）。
+WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、WP-53a、WP-55 各有增量（§13）。
 
 ## 0 结论
 
@@ -42,7 +42,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 4. **大地图**：
    - 按 M 打开，按 G 直接打开它的"目录"页，点位目录（UI-NAV §4.5）就是这一页；
    - 有图层筛选、图例、传送卡、自定义标记（上限 50）和追踪（§4）。
-5. **可传送的标记只有四类**：锚点、观景点、可进入室内的门口、路线起点。地标、设施和自定义标记只能追踪（§5）。
+5. **可传送的标记只有四类**：锚点、观景点、可进入室内的门口、路线起点。地标、设施、共享单车停放点和自定义标记只能追踪（§5）。
    - "可进入的室内"图层由 WLD-INTERIORS的开放清单驱动（经它的室内索引读入口），以后清单里加一栋楼，地图上自动出现它的门口标记和轮廓高亮，不用改地图数据。
    - 观景点是 P00–P23，其中 P16–P23 是 WLD-INTERIORS新增的室内与高处点位。
 6. **锚点 13 个**：大节点 6 个"导览亭"（MAP-QSH-ADDITIONS §2.13），牌面就是烘焙出的底图；补空 7 个"导览桩"，是低矮的金属立桩配一盏暖色小灯。不用银杏，不用蓝色全息（§6）。
@@ -67,6 +67,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 - **做导览亭、导览桩部件（WP-13）**：形态与尺度照 §6 的表，阻挡碰撞由部件参数生成（SYS-WALK §13），按 `atlas.overlay.json` 摆放；牌面与铭牌贴图由 WP-48a 渲染、经 WP-04 进图集（§2.1），场景里的字只用简体中文（§6、§13）
 - **新增观景点**：在 `waypoints.json` 加点位（WP-36，UI-NAV §6），观景点标记引用它的 ID，不在 `atlas/` 里复制位姿（§5、§9）
 - **新增可进入的室内**：在开放清单 `interiors.json` 登记，入口给出门外点 `Outside`；门口标记和楼轮廓高亮由 `IAtlasService` 按清单自动生成，`atlas/markers.json` 和底图都不用改（§5）
+- **新增共享单车停放点**：由所在的区包按 WLD-LIFE §3.5 登记；停放点标记由 `IAtlasService` 按 WP-55 的停放点数据自动生成，`atlas/markers.json` 不用改；停放点不是锚点，不可传送（§5）
 - **新增推荐路线**：路线标记的数据来自 `nav/routes.json`（SYS-WALK §11）与 WLD-INTERIORS 的新路线，折线取 WP-44 的导航图（§5）
 - **改了覆盖层、campus.json、outskirts.json，或挪了被标记的实体**：底图按世界模型哈希在本机自动重烘，不用改地图数据；但锚点、地标、设施、门口标记与实体相差要不超过 0.5 m，G18 会核对（§2.1、§14.1）
 - **要显示区域名或地点名（含楼名）**：从 `atlas/labels.json` 的区域与地点表取，那是唯一来源，不另写一份（§2.5）
@@ -359,7 +360,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 ### 4.3 图层、筛选与图例
 
-- 左栏"图层"页是一组开关：锚点、观景点、可进入的室内、路线、地标、设施、我的标记，另加"外围街区"。
+- 左栏"图层"页是一组开关：锚点、观景点、可进入的室内、路线、地标、设施、停放点、我的标记，另加"外围街区"。
 - 默认：设施和地标关，其余开。每行写当前图里的数量。
 - 筛选偏好存 `user://settings.cfg`（§12），不进存档。
 - 图层下面是图例，写明各类标记的图标和状态：可前往、此处、追踪中、未解锁（RPG 预留，观光模式下这一行灰显）。
@@ -391,7 +392,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | 标记 | 按钮 |
 | --- | --- |
 | 锚点、观景点、可进入的室内、路线 | 【传送】（主按钮）、【飞过去】、【追踪】 |
-| 地标、设施 | 【追踪】 |
+| 地标、设施、停放点 | 【追踪】 |
 | 自定义标记 | 【追踪】、形状切换、【删除】 |
 | 当前就在这里（20 m 以内） | 【传送】【飞过去】灰显，写"此处" |
 
@@ -444,6 +445,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | 路线 | R1–R5，加 WLD-INTERIORS新增的 R6–R14（室内串联路线） | 走线起点：一枚过孔接一段 45° 折线（UI-VISUAL）；选中或追踪时画出整条折线 | 是，到起点 | 路线第一个节点 | SYS-WALK §11 的路线表与 WLD-INTERIORS的新路线；折线取导航图（WP-44） | Z1 | 只在追踪时画折线 |
 | 地标 | 约 12 | 地标线描加名字 | 否，只能追踪 | — | `atlas/markers.json` 列实体 ID | Z1 | 不显示 |
 | 设施 | 约 40 | 按用途：餐饮、医疗、直饮水、休息点、快递、超市、咖啡、书店 | 否，只能追踪 | — | 世界模型的类别，加 MAP-QSH-ADDITIONS §2.13 摆放的直饮水台和休息点；`atlas/markers.json` 可增删 | Z3 | 不显示 |
+| 停放点 | P0 先 3 处，铺开后校门、宿舍区、教学区、图书馆、食堂、体育区每区 1–2 处（WLD-LIFE §3.5） | 单车图标，与停放点站牌上的图标同形 | 否，只能追踪 | — | WP-55 的停放点数据（区包登记），运行时生成，不写进 `atlas/markers.json` | Z2 | 显示 |
 | 自定义 | 每图 ≤ 50 | 6 种形状 | 否，只能追踪 | — | 存档（§12） | Z0 | 显示 |
 | 任务（预留） | — | — | — | — | 以后的 RPG | — | — |
 
@@ -461,6 +463,10 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - 清单里加一栋楼，地图上就自动多出它的门口和高亮，`atlas/markers.json` 和底图都不用改。
   - G18 照样核对这些标记与门的位置（§14）；门对位、门外节点接路网归 WLD-INTERIORS的 G19。
 - **观景点**：室内与高处的新观景点就是 WLD-INTERIORS的 P16–P23，清单写在 UI-NAV §6；本文件不另编号。目录页的分组不变。
+- **共享单车停放点的标记由停放点数据驱动**（SYS-WALK §16、WLD-LIFE §3.5）：
+  - 地图加载时，`IAtlasService` 读 WP-55 的停放点数据，为每处停放点生成一枚停放点标记，位置取站牌，名称取停放点的编号；区包增删停放点，地图上自动跟着变，`atlas/markers.json` 和底图都不用改；
+  - 用来在大地图上找车、安排自己的路线：可以追踪，不可传送，也不是锚点；不做路径规划，不显示各点的可借车数和计费；
+  - 标记类别与 ID 的写法以 Astra 落地的源码为准（`MarkerKind` 只在末尾追加）；G18 照样核对标记与站牌相差不超过 0.5 m。
 
 ## 6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点）
 
@@ -801,7 +807,7 @@ public sealed record AtlasSave(
 | --- | --- |
 | **WP-48a** 底图烘焙与地标贴图 | 底图烘焙器（引用 `Campus.Gen.World`；代码放进随包程序集，由 `IBakeService` 本机调用，D-165；`pipeline/map/` 只留控制台入口）：精确矢量 SDF、外围纹理、区域与地点栅格、`labels.bake`、`map.manifest.json`；`atlas/labels.json` 初稿；地标线描 SVG 与 MSDF 图集；导览亭牌面、导览桩铭牌的贴图（场景调色板，交 WP-04 进图集）；`--bake=map` 接进 ENG-ARCH §4 的烘焙流程 |
 | **WP-48b** 小地图与大地图界面 | `game/hud/map/`：小地图、大地图（图层、目录、传送卡、自定义标记、追踪、按键）；`game/style/shaders/map_base.gdshader`；地图相关的设置项；读屏名字；预建与预热 |
-| **WP-48c** 标记、锚点、传送与解锁服务 | `game/systems/atlas/`：`IAtlasService`、`all-unlocked` 与 `proximity` 两个策略的实现、开放清单驱动的室内标记、存档段（自定义标记用整数 ID）；`atlas/markers.json`、`overlay/atlas.overlay.json`；传送时的 `PlayUi` 两声；G18 检查器（与 WP-27 合作） |
+| **WP-48c** 标记、锚点、传送与解锁服务 | `game/systems/atlas/`：`IAtlasService`、`all-unlocked` 与 `proximity` 两个策略的实现、开放清单驱动的室内标记、停放点数据驱动的共享单车停放点标记、存档段（自定义标记用整数 ID）；`atlas/markers.json`、`overlay/atlas.overlay.json`；传送时的 `PlayUi` 两声；G18 检查器（与 WP-27 合作） |
 | WP-13 | 导览亭、导览桩两个部件及其碰撞（§6），按 `atlas.overlay.json` 摆放；不另做单独的导览牌部件 |
 | WP-36 | `TransitKind.Teleport` 与 `TransitPreference`：传送时序（§7.2）、到达保证、落点规则 |
 | WP-35 | 左上角槽位与全屏页槽位；不做单独的点位目录抽屉（由 48b 的目录页承担）；设置表新增 §12 的四项；临时提示新增"小地图"一条 |
@@ -813,6 +819,7 @@ public sealed record AtlasSave(
 | WP-01 | 雾幕或扉页期间预热 `map_base`、创建地图纹理；`--bake=map`、`--gate=atlas` 的命令行解析；雾幕原因 `VeilReason.Teleport` |
 | WP-51 | 开放清单 `interiors.json` 与室内索引里每个入口的门外点、门内点（WLD-INTERIORS），以及开放范围的一句话说明（中英），供门口标记和传送卡使用 |
 | WP-53a | 传送的 `TeleportConfirm`、`TeleportArrive`，大地图开合的 `PageOpen`、`PageClose` 与压低；传送雾幕里声景换场（SYS-AUDIO） |
+| WP-55 | 共享单车停放点的数据（编号、站牌位置、登记范围），供 48c 生成停放点标记（§5，SYS-WALK §16） |
 
 - 规模估计：48a 约 0.9k 行；48b 约 1.6k 行；48c 约 0.8k 行。
 

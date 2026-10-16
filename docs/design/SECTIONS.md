@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 43.5k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 43.6k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -28,8 +28,8 @@
   - CORE-INDEX §7.10 运维 `ops/` · L259 · 173
   - CORE-INDEX §7.11 提案 `proposals/` · L265 · 420
   - CORE-INDEX §7.12 待用的文件夹 · L274 · 896
-- CORE-INDEX §8 工作包与文档 · L290 · 9.3k
-- CORE-INDEX §9 文档依赖图 · L366 · 12.1k
+- CORE-INDEX §8 工作包与文档 · L290 · 9.4k
+- CORE-INDEX §9 文档依赖图 · L368 · 12.1k
 
 ## CORE-CONVENTIONS · 约定
 
@@ -81,22 +81,22 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 28.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 28.5k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
   - ★ CORE-DECISIONS §0.1 接入要点 · L32 · 172
-- CORE-DECISIONS §1 作品定位与范围 · L38 · 1.5k
-- CORE-DECISIONS §2 世界与地图 · L54 · 3.9k
-- CORE-DECISIONS §3 时间、季节、天气 · L85 · 2.4k
-- CORE-DECISIONS §4 美术风格 · L110 · 2.2k
-- CORE-DECISIONS §5 界面 · L131 · 2.8k
-- CORE-DECISIONS §6 存档 · L160 · 1.2k
-- CORE-DECISIONS §7 音频 · L175 · 2.0k
-- CORE-DECISIONS §8 性能与画面设置 · L197 · 1.8k
-- CORE-DECISIONS §9 工程 · L217 · 3.3k
-- CORE-DECISIONS §10 流程 · L242 · 4.6k
-- CORE-DECISIONS §11 待对齐 · L273 · 61
+- CORE-DECISIONS §1 作品定位与范围 · L38 · 2.0k
+- CORE-DECISIONS §2 世界与地图 · L55 · 3.9k
+- CORE-DECISIONS §3 时间、季节、天气 · L86 · 2.4k
+- CORE-DECISIONS §4 美术风格 · L111 · 2.2k
+- CORE-DECISIONS §5 界面 · L132 · 2.8k
+- CORE-DECISIONS §6 存档 · L161 · 1.2k
+- CORE-DECISIONS §7 音频 · L176 · 2.0k
+- CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
+- CORE-DECISIONS §9 工程 · L218 · 3.3k
+- CORE-DECISIONS §10 流程 · L243 · 4.6k
+- CORE-DECISIONS §11 待对齐 · L274 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -303,7 +303,7 @@
   - ART-STYLE §8.6 天气色 · L693 · 1.1k
 - ART-STYLE §9 排除元素 · L712 · 2.6k
   - ART-STYLE §9.1 日本元素的边界 · L714 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L740 · 599
+  - ART-STYLE §9.2 其他排除项 · L740 · 631
 - ART-STYLE §10 材质速查 · L749 · 694
 - ART-STYLE §11 场景内的文字与标识（属于背景美术） · L767 · 1.0k
 - ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L799 · 419
@@ -396,24 +396,24 @@
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
-`docs/design/world/WLD-LIFE.md` · 26.3k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
+`docs/design/world/WLD-LIFE.md` · 27.9k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
 关键词：动物、鸟、校园猫、鸽群、反应动物、黄昏乌鸦、季节性动物、生活痕迹、生活感、共享单车、电动车、晾晒、黑天鹅、季节生活痕迹、雨天生活痕迹、小心地滑、停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、日夜两套、变体掩码、state_bits、show_ratio
 
-  - WLD-LIFE 分工 · L23 · 1.8k
-- WLD-LIFE §0 结论 · L61 · 2.5k
-  - ★ WLD-LIFE §0.1 接入要点 · L75 · 1.2k
-- WLD-LIFE §1 动物 · L90 · 4.7k
-  - WLD-LIFE §1.1 反应动物：猫、鸽群与水禽 · L136 · 1.8k
-- WLD-LIFE §2 生活痕迹 · L156 · 3.8k
-- WLD-LIFE §3 停着的车 · L232 · 326
-- WLD-LIFE §4 街道家具 · L242 · 2.8k
-- WLD-LIFE §5 行走模式下的碰撞 · L291 · 2.0k
-- WLD-LIFE §6 Godot 实现 · L325 · 3.9k
-  - WLD-LIFE §6.1 容器 · L329 · 754
-  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L341 · 1.8k
-  - WLD-LIFE §6.3 动物 · L359 · 1.3k
-- WLD-LIFE WP-25 交付验收 · L374 · 1.4k
-- WLD-LIFE §7 待验证（P0） · L396 · 646
+  - WLD-LIFE 分工 · L23 · 1.9k
+- WLD-LIFE §0 结论 · L61 · 2.7k
+  - ★ WLD-LIFE §0.1 接入要点 · L75 · 1.4k
+- WLD-LIFE §1 动物 · L91 · 4.7k
+  - WLD-LIFE §1.1 反应动物：猫、鸽群与水禽 · L137 · 1.8k
+- WLD-LIFE §2 生活痕迹 · L157 · 3.7k
+- WLD-LIFE §3 停着的车 · L231 · 1.3k
+- WLD-LIFE §4 街道家具 · L252 · 2.8k
+- WLD-LIFE §5 行走模式下的碰撞 · L301 · 2.1k
+- WLD-LIFE §6 Godot 实现 · L336 · 3.9k
+  - WLD-LIFE §6.1 容器 · L340 · 782
+  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L352 · 1.8k
+  - WLD-LIFE §6.3 动物 · L370 · 1.3k
+- WLD-LIFE WP-25 交付验收 · L385 · 1.5k
+- WLD-LIFE §7 待验证（P0） · L408 · 710
 
 ## WLD-OUTSKIRTS · 边界与外围：大箱庭、外围环境带、阻挡与提示
 
@@ -940,50 +940,50 @@
 
 ## SYS-ATLAS · 平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁
 
-`docs/design/systems/SYS-ATLAS.md` · 45.2k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
+`docs/design/systems/SYS-ATLAS.md` · 45.9k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
 关键词：平面地图、小地图、大地图、底图、地图标记、锚点、传送点、导览亭、导览桩、传送、雾幕瞬移、飞过去、传送卡、传送落点、目录页、追踪、自定义标记、解锁策略、区域名、地名标注、atlasRect、G18 地图一致性、IAtlasService、IUnlockPolicy、MarkerId、AtlasSave、map_base.gdshader、markers.json、labels.json、atlas.overlay.json
 
-- SYS-ATLAS §0 结论 · L30 · 2.9k
-  - ★ SYS-ATLAS §0.1 接入要点 · L61 · 1.4k
-- SYS-ATLAS §1 允许什么、禁止什么 · L76 · 491
-- SYS-ATLAS §2 底图（WP-48a 烘焙，WP-48b 上色） · L89 · 7.8k
-  - SYS-ATLAS §2.1 来源：世界模型，不是原始 OSM · L91 · 3.1k
-  - SYS-ATLAS §2.2 上色：`map_base.gdshader` · L144 · 1.7k
-  - SYS-ATLAS §2.3 外围、校界与箱庭外缘 · L183 · 1.2k
-  - SYS-ATLAS §2.4 季节与昼夜：只做轻微变化 · L195 · 354
-  - SYS-ATLAS §2.5 文字与标注 · L206 · 1.4k
-- SYS-ATLAS §3 小地图（WP-48b） · L229 · 2.4k
-- SYS-ATLAS §4 大地图（WP-48b） · L305 · 4.8k
-  - SYS-ATLAS §4.1 布局与开合 · L307 · 2.1k
-  - SYS-ATLAS §4.2 缩放与平移 · L343 · 451
-  - SYS-ATLAS §4.3 图层、筛选与图例 · L360 · 199
-  - SYS-ATLAS §4.4 目录页（G） · L367 · 369
-  - SYS-ATLAS §4.5 传送卡 · L377 · 691
-  - SYS-ATLAS §4.6 自定义标记与追踪 · L402 · 471
-  - SYS-ATLAS §4.7 大地图内的按键 · L417 · 473
-- SYS-ATLAS §5 标记类型 · L437 · 2.0k
-- SYS-ATLAS §6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点） · L465 · 3.2k
-- SYS-ATLAS §7 传送流程（WP-48c 调用，WP-36 实现过渡） · L517 · 2.8k
-  - SYS-ATLAS §7.1 两种方式 · L519 · 702
-  - SYS-ATLAS §7.2 传送的时序 · L530 · 923
-  - SYS-ATLAS §7.3 落点 · L547 · 675
-  - SYS-ATLAS §7.4 预取与到达保证 · L559 · 202
-  - SYS-ATLAS §7.5 打断与边界情况 · L567 · 232
-- SYS-ATLAS §8 解锁策略（WP-48c） · L575 · 698
-- SYS-ATLAS §9 多地图下的数据（WP-48c，与 SYS-MAPS一致） · L590 · 1.7k
-- SYS-ATLAS §10 实现与性能（WP-48b、WP-48c） · L615 · 2.4k
-- SYS-ATLAS §11 C# 契约（照 ENG-ARCH §3 的写法；纯 .NET，只增不改） · L678 · 5.4k
-- SYS-ATLAS §12 存档里存什么、设置里存什么 · L770 · 978
-- SYS-ATLAS §13 各包的分工 · L798 · 1.7k
-- SYS-ATLAS §14 验收 · L819 · 2.9k
-  - SYS-ATLAS §14.1 G18 地图一致性（ENG-GATES §2） · L821 · 1.3k
-  - SYS-ATLAS §14.2 G14 界面门禁的地图部分（G14 的总则见 UI-VISUAL与 ENG-GATES §2，这里只列地图部分） · L841 · 983
-  - SYS-ATLAS §14.3 G2、G13、G15、G16 与 F4 的地图增量 · L853 · 661
-- SYS-ATLAS §16 待验证（P0） · L872 · 592
+- SYS-ATLAS §0 结论 · L30 · 3.1k
+  - ★ SYS-ATLAS §0.1 接入要点 · L61 · 1.5k
+- SYS-ATLAS §1 允许什么、禁止什么 · L77 · 491
+- SYS-ATLAS §2 底图（WP-48a 烘焙，WP-48b 上色） · L90 · 7.8k
+  - SYS-ATLAS §2.1 来源：世界模型，不是原始 OSM · L92 · 3.1k
+  - SYS-ATLAS §2.2 上色：`map_base.gdshader` · L145 · 1.7k
+  - SYS-ATLAS §2.3 外围、校界与箱庭外缘 · L184 · 1.2k
+  - SYS-ATLAS §2.4 季节与昼夜：只做轻微变化 · L196 · 354
+  - SYS-ATLAS §2.5 文字与标注 · L207 · 1.4k
+- SYS-ATLAS §3 小地图（WP-48b） · L230 · 2.4k
+- SYS-ATLAS §4 大地图（WP-48b） · L306 · 4.8k
+  - SYS-ATLAS §4.1 布局与开合 · L308 · 2.1k
+  - SYS-ATLAS §4.2 缩放与平移 · L344 · 451
+  - SYS-ATLAS §4.3 图层、筛选与图例 · L361 · 203
+  - SYS-ATLAS §4.4 目录页（G） · L368 · 369
+  - SYS-ATLAS §4.5 传送卡 · L378 · 695
+  - SYS-ATLAS §4.6 自定义标记与追踪 · L403 · 471
+  - SYS-ATLAS §4.7 大地图内的按键 · L418 · 473
+- SYS-ATLAS §5 标记类型 · L438 · 2.5k
+- SYS-ATLAS §6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点） · L471 · 3.2k
+- SYS-ATLAS §7 传送流程（WP-48c 调用，WP-36 实现过渡） · L523 · 2.8k
+  - SYS-ATLAS §7.1 两种方式 · L525 · 702
+  - SYS-ATLAS §7.2 传送的时序 · L536 · 923
+  - SYS-ATLAS §7.3 落点 · L553 · 675
+  - SYS-ATLAS §7.4 预取与到达保证 · L565 · 202
+  - SYS-ATLAS §7.5 打断与边界情况 · L573 · 232
+- SYS-ATLAS §8 解锁策略（WP-48c） · L581 · 698
+- SYS-ATLAS §9 多地图下的数据（WP-48c，与 SYS-MAPS一致） · L596 · 1.7k
+- SYS-ATLAS §10 实现与性能（WP-48b、WP-48c） · L621 · 2.4k
+- SYS-ATLAS §11 C# 契约（照 ENG-ARCH §3 的写法；纯 .NET，只增不改） · L684 · 5.4k
+- SYS-ATLAS §12 存档里存什么、设置里存什么 · L776 · 978
+- SYS-ATLAS §13 各包的分工 · L804 · 1.8k
+- SYS-ATLAS §14 验收 · L826 · 2.9k
+  - SYS-ATLAS §14.1 G18 地图一致性（ENG-GATES §2） · L828 · 1.3k
+  - SYS-ATLAS §14.2 G14 界面门禁的地图部分（G14 的总则见 UI-VISUAL与 ENG-GATES §2，这里只列地图部分） · L848 · 983
+  - SYS-ATLAS §14.3 G2、G13、G15、G16 与 F4 的地图增量 · L860 · 661
+- SYS-ATLAS §16 待验证（P0） · L879 · 592
 
 ## SYS-AUDIO · 音频：环境声、观者声、空间声学、界面音效与混音
 
-`docs/design/systems/SYS-AUDIO.md` · 113.0k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
+`docs/design/systems/SYS-AUDIO.md` · 113.5k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
   - SYS-AUDIO 分工 · L22 · 121
@@ -1022,7 +1022,7 @@
   - SYS-AUDIO §7.1 按真实秒排程（RateGovernor） · L546 · 1.1k
   - SYS-AUDIO §7.2 转场 · L566 · 1.3k
 - SYS-AUDIO §8 人迹声：确保不出现清晰人声 · L587 · 2.0k
-- SYS-AUDIO §9 观者声 · L625 · 14.4k
+- SYS-AUDIO §9 观者声 · L625 · 14.8k
   - SYS-AUDIO §9.1 范围与原则 · L627 · 401
   - SYS-AUDIO §9.2 步相与步频 · L634 · 1.9k
   - SYS-AUDIO §9.3 `FootMat` 与 `SurfaceTag` · L665 · 3.3k
@@ -1030,40 +1030,40 @@
   - SYS-AUDIO §9.5 分层 · L727 · 728
   - SYS-AUDIO §9.6 变体与随机化参数 · L744 · 2.3k
   - SYS-AUDIO §9.7 位置固定的微变化 · L786 · 425
-  - SYS-AUDIO §9.8 交互音的范围 · L795 · 2.6k
-  - SYS-AUDIO §9.9 飞行风声：实时合成 · L817 · 785
-  - SYS-AUDIO §9.10 控制器事件 `IWalkTelemetry` · L829 · 902
-- SYS-AUDIO §10 空间声学 · L836 · 12.7k
-  - SYS-AUDIO §10.1 "窄处脚步更明显"的原理与参数 · L838 · 2.1k
-  - SYS-AUDIO §10.2 方案组合：不上 Steam Audio · L866 · 636
-  - SYS-AUDIO §10.3 声学网格（随启动集发布，全图常驻） · L879 · 981
-  - SYS-AUDIO §10.4 房间与门户 · L887 · 1.6k
-  - SYS-AUDIO §10.5 射线细化（只在行走模式） · L913 · 958
-  - SYS-AUDIO §10.6 预设与声源侧混响区 · L923 · 3.0k
-  - SYS-AUDIO §10.7 听者空间槽与交叉切换 · L955 · 1.1k
-  - SYS-AUDIO §10.8 遮挡与室内外传声 · L970 · 1.2k
-  - SYS-AUDIO §10.9 介质与天气的消音感 · L980 · 1.0k
-- SYS-AUDIO §11 界面音效 · L995 · 2.2k
-- SYS-AUDIO §12 开场音乐 · L1037 · 1.0k
-- SYS-AUDIO §13 设置：五组音量与减少干扰 · L1050 · 1.3k
-- SYS-AUDIO §14 素材策略与许可 · L1074 · 2.9k
-  - SYS-AUDIO §14.1 来源白名单 · L1076 · 1.2k
-  - SYS-AUDIO §14.2 处理流程（53e 的 `pipeline/audio/`） · L1093 · 1.1k
-  - SYS-AUDIO §14.3 版本库：Git LFS · L1110 · 275
-  - SYS-AUDIO §14.4 署名页 · L1116 · 308
-- SYS-AUDIO §15 格式与导入 · L1123 · 1.6k
-- SYS-AUDIO §16 Godot 4.7 实现要点与引擎坑 · L1148 · 3.6k
-- SYS-AUDIO §17 确定性与 Movie Maker 录音 · L1184 · 928
-- SYS-AUDIO §18 性能预算与包体 · L1192 · 2.6k
-  - SYS-AUDIO §18.1 CPU · L1194 · 1.6k
-  - SYS-AUDIO §18.2 内存与包体 · L1214 · 937
-- SYS-AUDIO §19 C# 契约 · L1231 · 15.7k
-- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1469 · 2.0k
-- SYS-AUDIO §21 工作包 · L1497 · 5.5k
-  - SYS-AUDIO §21.1 WP-53 音频 · L1499 · 2.8k
-  - SYS-AUDIO §21.2 其他包的增量 · L1523 · 2.7k
-- SYS-AUDIO §22 验收：G21 声音 · L1551 · 4.2k
-- SYS-AUDIO §25 待验证（P0） · L1571 · 995
+  - SYS-AUDIO §9.8 交互音的范围 · L795 · 2.9k
+  - SYS-AUDIO §9.9 飞行风声：实时合成 · L818 · 785
+  - SYS-AUDIO §9.10 控制器事件 `IWalkTelemetry` · L830 · 1.0k
+- SYS-AUDIO §10 空间声学 · L837 · 12.7k
+  - SYS-AUDIO §10.1 "窄处脚步更明显"的原理与参数 · L839 · 2.1k
+  - SYS-AUDIO §10.2 方案组合：不上 Steam Audio · L867 · 636
+  - SYS-AUDIO §10.3 声学网格（随启动集发布，全图常驻） · L880 · 981
+  - SYS-AUDIO §10.4 房间与门户 · L888 · 1.6k
+  - SYS-AUDIO §10.5 射线细化（只在行走模式） · L914 · 958
+  - SYS-AUDIO §10.6 预设与声源侧混响区 · L924 · 3.0k
+  - SYS-AUDIO §10.7 听者空间槽与交叉切换 · L956 · 1.1k
+  - SYS-AUDIO §10.8 遮挡与室内外传声 · L971 · 1.2k
+  - SYS-AUDIO §10.9 介质与天气的消音感 · L981 · 1.0k
+- SYS-AUDIO §11 界面音效 · L996 · 2.2k
+- SYS-AUDIO §12 开场音乐 · L1038 · 1.0k
+- SYS-AUDIO §13 设置：五组音量与减少干扰 · L1051 · 1.3k
+- SYS-AUDIO §14 素材策略与许可 · L1075 · 2.9k
+  - SYS-AUDIO §14.1 来源白名单 · L1077 · 1.2k
+  - SYS-AUDIO §14.2 处理流程（53e 的 `pipeline/audio/`） · L1094 · 1.1k
+  - SYS-AUDIO §14.3 版本库：Git LFS · L1111 · 275
+  - SYS-AUDIO §14.4 署名页 · L1117 · 308
+- SYS-AUDIO §15 格式与导入 · L1124 · 1.6k
+- SYS-AUDIO §16 Godot 4.7 实现要点与引擎坑 · L1149 · 3.6k
+- SYS-AUDIO §17 确定性与 Movie Maker 录音 · L1185 · 928
+- SYS-AUDIO §18 性能预算与包体 · L1193 · 2.6k
+  - SYS-AUDIO §18.1 CPU · L1195 · 1.6k
+  - SYS-AUDIO §18.2 内存与包体 · L1215 · 937
+- SYS-AUDIO §19 C# 契约 · L1232 · 15.7k
+- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1470 · 2.0k
+- SYS-AUDIO §21 工作包 · L1498 · 5.5k
+  - SYS-AUDIO §21.1 WP-53 音频 · L1500 · 2.8k
+  - SYS-AUDIO §21.2 其他包的增量 · L1524 · 2.7k
+- SYS-AUDIO §22 验收：G21 声音 · L1552 · 4.2k
+- SYS-AUDIO §25 待验证（P0） · L1572 · 995
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
@@ -1150,45 +1150,45 @@
 
 ## SYS-SAVE · 存档与持久化：存档模型、存什么、格式与迁移、保存时机、加载与一致性、安全、契约与验收
 
-`docs/design/systems/SYS-SAVE.md` · 52.9k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
+`docs/design/systems/SYS-SAVE.md` · 54.0k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
 关键词：存档、保存、读档、自动保存、存档位、世界线、存档段、段版本、存档迁移、金档、落定快照、安全时刻、续跑等价、世界实例、校验修复、存档损坏、单实例锁、设置文件安全、退出保存、ISaveService、SaveSectionAttribute、ISaveSection、SaveReason、LoadScope、RestorePhase、SaveMeta、IWorldState.Instance、FlushForQuit、CompleteResume、user://saves/
 
-- SYS-SAVE §0 结论 · L25 · 3.1k
-  - ★ SYS-SAVE §0.1 接入要点 · L51 · 1.9k
-- SYS-SAVE §1 存档模型 · L66 · 1.6k
-- SYS-SAVE §2 存什么、不存什么 · L106 · 4.2k
-- SYS-SAVE §3 文件格式与版本迁移 · L172 · 4.9k
-  - SYS-SAVE §3.1 容器 · L174 · 518
-  - SYS-SAVE §3.2 meta · L192 · 1.2k
-  - SYS-SAVE §3.3 正文：分段 JSON · L214 · 955
-  - SYS-SAVE §3.4 缩略图 · L238 · 510
-  - SYS-SAVE §3.5 序列化约定 · L250 · 796
-  - SYS-SAVE §3.6 版本与迁移 · L263 · 931
-- SYS-SAVE §4 保存时机与可靠性 · L281 · 6.3k
-  - SYS-SAVE §4.1 时机 · L283 · 1.1k
-  - SYS-SAVE §4.2 安全时刻与落定快照 · L305 · 814
-  - SYS-SAVE §4.3 写盘流程（线程池） · L327 · 562
-  - SYS-SAVE §4.4 退出流程 · L338 · 1.4k
-  - SYS-SAVE §4.5 Godot 与 Windows 的几个坑 · L358 · 1.5k
-  - SYS-SAVE §4.6 保存状态与失败反馈 · L377 · 939
-- SYS-SAVE §5 加载流程与一致性 · L388 · 5.6k
-  - SYS-SAVE §5.1 加载流程 · L390 · 2.1k
-  - SYS-SAVE §5.2 世界实例：`IWorldState.Instance` · L429 · 855
-  - SYS-SAVE §5.3 "状态一致"的定义 · L449 · 618
-  - SYS-SAVE §5.4 天气 · L467 · 440
-  - SYS-SAVE §5.5 新游戏 · L477 · 775
-  - SYS-SAVE §5.6 校验修复 · L493 · 790
-- SYS-SAVE §6 关着游戏的那段现实时间不计 · L510 · 524
-- SYS-SAVE §7 存档损坏与版本不兼容 · L523 · 1.0k
-- SYS-SAVE §8 设置类文件只接受基本类型 · L547 · 1.3k
-- SYS-SAVE §9 安全：为什么禁止用 Resource 和 ConfigFile 存档 · L568 · 1.6k
-- SYS-SAVE §10 C# 契约 · L599 · 9.5k
-- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L769 · 994
-- SYS-SAVE §12 命令行 · L790 · 1.2k
-- SYS-SAVE §13 性能实测 · L806 · 2.5k
-- SYS-SAVE §14 验收：G20 · L852 · 2.8k
-- SYS-SAVE §15 工作包 · L883 · 2.7k
-- SYS-SAVE §17 待验证（P0） · L917 · 476
+- SYS-SAVE §0 结论 · L25 · 3.2k
+  - ★ SYS-SAVE §0.1 接入要点 · L52 · 2.0k
+- SYS-SAVE §1 存档模型 · L67 · 1.6k
+- SYS-SAVE §2 存什么、不存什么 · L107 · 4.5k
+- SYS-SAVE §3 文件格式与版本迁移 · L178 · 4.9k
+  - SYS-SAVE §3.1 容器 · L180 · 518
+  - SYS-SAVE §3.2 meta · L198 · 1.2k
+  - SYS-SAVE §3.3 正文：分段 JSON · L220 · 955
+  - SYS-SAVE §3.4 缩略图 · L244 · 510
+  - SYS-SAVE §3.5 序列化约定 · L256 · 796
+  - SYS-SAVE §3.6 版本与迁移 · L269 · 931
+- SYS-SAVE §4 保存时机与可靠性 · L287 · 6.4k
+  - SYS-SAVE §4.1 时机 · L289 · 1.1k
+  - SYS-SAVE §4.2 安全时刻与落定快照 · L311 · 955
+  - SYS-SAVE §4.3 写盘流程（线程池） · L334 · 562
+  - SYS-SAVE §4.4 退出流程 · L345 · 1.4k
+  - SYS-SAVE §4.5 Godot 与 Windows 的几个坑 · L365 · 1.5k
+  - SYS-SAVE §4.6 保存状态与失败反馈 · L384 · 939
+- SYS-SAVE §5 加载流程与一致性 · L395 · 5.8k
+  - SYS-SAVE §5.1 加载流程 · L397 · 2.1k
+  - SYS-SAVE §5.2 世界实例：`IWorldState.Instance` · L436 · 855
+  - SYS-SAVE §5.3 "状态一致"的定义 · L456 · 658
+  - SYS-SAVE §5.4 天气 · L475 · 440
+  - SYS-SAVE §5.5 新游戏 · L485 · 775
+  - SYS-SAVE §5.6 校验修复 · L501 · 877
+- SYS-SAVE §6 关着游戏的那段现实时间不计 · L519 · 524
+- SYS-SAVE §7 存档损坏与版本不兼容 · L532 · 1.0k
+- SYS-SAVE §8 设置类文件只接受基本类型 · L556 · 1.3k
+- SYS-SAVE §9 安全：为什么禁止用 Resource 和 ConfigFile 存档 · L577 · 1.6k
+- SYS-SAVE §10 C# 契约 · L608 · 9.5k
+- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L778 · 994
+- SYS-SAVE §12 命令行 · L799 · 1.2k
+- SYS-SAVE §13 性能实测 · L815 · 2.5k
+- SYS-SAVE §14 验收：G20 · L861 · 3.0k
+- SYS-SAVE §15 工作包 · L893 · 2.9k
+- SYS-SAVE §17 待验证（P0） · L928 · 476
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
@@ -1269,56 +1269,57 @@
 
 ## SYS-VIEW · 观察模式、介质与开场
 
-`docs/design/systems/SYS-VIEW.md` · 28.3k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
+`docs/design/systems/SYS-VIEW.md` · 29.0k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
 关键词：旁观模式、第一人称、观察模式、飞行速度档、视场角、鼠标灵敏度、初始位置、第三人称、命令行参数、--pose、--title=0、镜头不会自己动、自动运镜、启动预热、引擎启动画面、介质呈现、剖切变体、楼里、地下、水下、半入水、雾海、ICameraRig、Pose、IMediumState、MediumKind、medium_overlay.gdshader、OSM 署名、LICENSES.txt、旧网页栈归档
 
   - SYS-VIEW 分工 · L23 · 348
-- SYS-VIEW §0 结论 · L32 · 2.6k
-  - ★ SYS-VIEW §0.1 接入要点 · L46 · 1.3k
-- SYS-VIEW §1 旧网页栈的归档（WP-00） · L62 · 1.6k
-- SYS-VIEW §2 旁观者漫游（WP-06） · L88 · 8.8k
-  - SYS-VIEW §2.1 操作 · L92 · 2.0k
-  - SYS-VIEW §2.2 触屏操作 · L127 · 30
-  - SYS-VIEW §2.3 活动范围 · L132 · 1.6k
-  - SYS-VIEW §2.4 初始位置 · L153 · 869
-  - SYS-VIEW §2.5 镜头不会自己动 · L163 · 2.1k
-  - SYS-VIEW §2.6 操作说明与提示 · L191 · 340
-  - SYS-VIEW §2.7 行走模式 · L200 · 1.7k
-- SYS-VIEW §3 启动与开场（WP-01；流程以 SYS-TITLE §1 为准） · L229 · 2.9k
-- SYS-VIEW §4 环境痕迹与平面地图的分工 · L260 · 758
-- SYS-VIEW §5 介质呈现：镜头在楼里、地下、水下、雾海里时（WP-07） · L273 · 5.0k
-  - SYS-VIEW §5.1 楼里 · L295 · 1.7k
-  - SYS-VIEW §5.2 地下 · L318 · 502
-  - SYS-VIEW §5.3 水下 · L329 · 772
-  - SYS-VIEW §5.4 雾海 · L340 · 281
-- SYS-VIEW §6 署名、窗口标题与图标（WP-01） · L348 · 1.8k
-- SYS-VIEW 交付验收 · L368 · 1.7k
-- SYS-VIEW §7 待验证（P0） · L397 · 644
+- SYS-VIEW §0 结论 · L32 · 2.8k
+  - ★ SYS-VIEW §0.1 接入要点 · L47 · 1.4k
+- SYS-VIEW §1 旧网页栈的归档（WP-00） · L64 · 1.6k
+- SYS-VIEW §2 旁观者漫游（WP-06） · L90 · 9.2k
+  - SYS-VIEW §2.1 操作 · L94 · 2.0k
+  - SYS-VIEW §2.2 触屏操作 · L129 · 30
+  - SYS-VIEW §2.3 活动范围 · L134 · 1.6k
+  - SYS-VIEW §2.4 初始位置 · L155 · 869
+  - SYS-VIEW §2.5 镜头不会自己动 · L165 · 2.1k
+  - SYS-VIEW §2.6 操作说明与提示 · L193 · 340
+  - SYS-VIEW §2.7 行走模式 · L202 · 2.1k
+- SYS-VIEW §3 启动与开场（WP-01；流程以 SYS-TITLE §1 为准） · L239 · 2.9k
+- SYS-VIEW §4 环境痕迹与平面地图的分工 · L270 · 758
+- SYS-VIEW §5 介质呈现：镜头在楼里、地下、水下、雾海里时（WP-07） · L283 · 5.0k
+  - SYS-VIEW §5.1 楼里 · L305 · 1.7k
+  - SYS-VIEW §5.2 地下 · L328 · 502
+  - SYS-VIEW §5.3 水下 · L339 · 772
+  - SYS-VIEW §5.4 雾海 · L350 · 281
+- SYS-VIEW §6 署名、窗口标题与图标（WP-01） · L358 · 1.8k
+- SYS-VIEW 交付验收 · L378 · 1.7k
+- SYS-VIEW §7 待验证（P0） · L407 · 772
 
 ## SYS-WALK · 行走模式：手感、可行走范围、边界、碰撞与角色控制器
 
-`docs/design/systems/SYS-WALK.md` · 55.8k 字 · 行走模式的手感、玩家身体、游泳、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
+`docs/design/systems/SYS-WALK.md` · 59.7k 字 · 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
 关键词：行走模式、游泳、角色控制器、手感参数、模式切换、可行走范围、可行走遮罩、边界收口、隐形墙、校界缓停、软墙提示、安全点、回位、涉水、玩家身体、开放泳区、碰撞级 C、碰撞就绪、自动登阶、电梯关门换位、推荐路线、步相、WalkClass、SurfaceTag、Collider、ICollisionWorld、IViewControl、IWalkTelemetry、walkable.overlay.json、routes.json
 
-  - SYS-WALK 分工 · L23 · 350
-- SYS-WALK §0 结论 · L30 · 3.5k
-  - ★ SYS-WALK §0.1 接入要点 · L42 · 2.1k
-- SYS-WALK §1 两种模式的关系 · L60 · 1.8k
-- SYS-WALK §2 手感参数 · L76 · 1.6k
-- SYS-WALK §3 视角与舒适度 · L105 · 966
-- SYS-WALK §4 键位 · L126 · 771
-- SYS-WALK §5 模式切换（WP-42） · L146 · 2.3k
-- SYS-WALK §6 可行走范围（WP-44） · L190 · 2.3k
-- SYS-WALK §7 边界收口（WP-44，各区配合） · L213 · 2.9k
-- SYS-WALK §8 楼内（WP-17、WP-31a–c、WP-51、WP-07） · L250 · 6.2k
-- SYS-WALK §9 水、游泳、回位与安全点（WP-42、WP-44） · L332 · 2.5k
-- SYS-WALK §10 行走走廊与节奏（配合 ART-FIDELITY） · L375 · 1.5k
-- SYS-WALK §11 推荐路线 · L412 · 3.0k
-- SYS-WALK §12 角色控制器（WP-42） · L439 · 7.0k
-- SYS-WALK §13 碰撞数据（WP-43） · L526 · 10.9k
-- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L657 · 828
-- SYS-WALK §15 验收 · L670 · 3.0k
-- SYS-WALK §17 待验证（P0） · L709 · 1.7k
+  - SYS-WALK 分工 · L23 · 414
+- SYS-WALK §0 结论 · L31 · 4.0k
+  - ★ SYS-WALK §0.1 接入要点 · L44 · 2.4k
+- SYS-WALK §1 两种模式的关系 · L64 · 1.9k
+- SYS-WALK §2 手感参数 · L81 · 1.6k
+- SYS-WALK §3 视角与舒适度 · L110 · 966
+- SYS-WALK §4 键位 · L131 · 921
+- SYS-WALK §5 模式切换（WP-42） · L152 · 2.3k
+- SYS-WALK §6 可行走范围（WP-44） · L197 · 2.3k
+- SYS-WALK §7 边界收口（WP-44，各区配合） · L220 · 2.9k
+- SYS-WALK §8 楼内（WP-17、WP-31a–c、WP-51、WP-07） · L257 · 6.2k
+- SYS-WALK §9 水、游泳、回位与安全点（WP-42、WP-44） · L339 · 2.5k
+- SYS-WALK §10 行走走廊与节奏（配合 ART-FIDELITY） · L382 · 1.5k
+- SYS-WALK §11 推荐路线 · L419 · 3.0k
+- SYS-WALK §12 角色控制器（WP-42） · L446 · 7.1k
+- SYS-WALK §13 碰撞数据（WP-43） · L534 · 10.9k
+- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L665 · 828
+- SYS-WALK §15 验收 · L678 · 3.2k
+- SYS-WALK §16 骑行（WP-42、WP-55） · L718 · 2.5k
+- SYS-WALK §17 待验证（P0） · L759 · 1.9k
 
 ## SYS-WEATHER · 天气：天气清单、画面规则、前向随机过程、过渡与验收
 
@@ -1347,44 +1348,44 @@
 
 ## UI-NAV · 界面、点位跳转与操作说明
 
-`docs/design/ui/UI-NAV.md` · 51.7k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
+`docs/design/ui/UI-NAV.md` · 52.6k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
 关键词：界面交互、快捷键、键位、改键、输入优先级、界面态、漫游态、鼠标捕获、自动隐藏、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、首次引导、点位、跳转点、Waypoint、LocalizedName、waypoints.json、跳转、飞过去、无障碍、读屏、文本键、翻译表、地名来源、settings.cfg、input.cfg
 
   - UI-NAV 分工 · L22 · 194
-- UI-NAV §0 结论 · L28 · 2.7k
-  - ★ UI-NAV §0.1 接入要点 · L36 · 1.8k
-- UI-NAV §1 允许什么、禁止什么 · L51 · 954
-- UI-NAV §2 视觉风格（WP-35；以 UI-VISUAL 为准） · L69 · 1.3k
-- UI-NAV §3 布局 · L81 · 2.3k
-- UI-NAV §4 组件 · L129 · 14.2k
-  - UI-NAV §4.1 时间环（时间） · L133 · 2.0k
-  - UI-NAV §4.2 季节 · L175 · 461
-  - UI-NAV §4.3 速度 · L185 · 462
-  - UI-NAV §4.4 观察模式 · L199 · 543
-  - UI-NAV §4.5 点位目录（大地图的目录页） · L214 · 504
-  - UI-NAV §4.6 操作说明与设置 · L225 · 3.7k
-  - UI-NAV §4.7 首次进入 · L281 · 268
-  - UI-NAV §4.8 到达标题 · L289 · 521
-  - UI-NAV §4.9 临时提示 · L301 · 1.2k
-  - UI-NAV §4.10 天气格 · L322 · 2.5k
-  - UI-NAV §4.11 小地图（摘要） · L375 · 669
-  - UI-NAV §4.12 大地图（摘要） · L387 · 645
-  - UI-NAV §4.13 开始页、存档页与放映层（摘要） · L398 · 664
-- UI-NAV §5 鼠标捕获、界面态与快捷键（WP-35，WP-06 配合） · L408 · 5.2k
-- UI-NAV §6 点位清单（WP-36，`game/data/maps/qingshuihe/waypoints.json`） · L506 · 6.6k
-- UI-NAV §7 跳转过渡（WP-36） · L597 · 4.2k
-  - UI-NAV §7.1 跳转方式 · L599 · 1.0k
-  - UI-NAV §7.2 镜头朝向 · L619 · 155
-  - UI-NAV §7.3 到达 · L628 · 321
-  - UI-NAV §7.4 打断 · L635 · 285
-  - UI-NAV §7.5 预取与速度律豁免 · L643 · 697
-  - UI-NAV §7.6 减少动态效果 · L659 · 236
-  - UI-NAV §7.7 为什么飞过去，又为什么有传送 · L663 · 388
-  - UI-NAV §7.8 传送（地图） · L669 · 1.1k
-- UI-NAV §8 无障碍与语言（WP-35） · L688 · 3.6k
-- UI-NAV §9 实现与性能（WP-35） · L725 · 5.9k
-- UI-NAV §10 验收 · L784 · 1.3k
-- UI-NAV §12 待验证（P0） · L805 · 1.0k
+- UI-NAV §0 结论 · L28 · 2.8k
+  - ★ UI-NAV §0.1 接入要点 · L36 · 1.9k
+- UI-NAV §1 允许什么、禁止什么 · L52 · 1.1k
+- UI-NAV §2 视觉风格（WP-35；以 UI-VISUAL 为准） · L71 · 1.3k
+- UI-NAV §3 布局 · L83 · 2.3k
+- UI-NAV §4 组件 · L131 · 14.4k
+  - UI-NAV §4.1 时间环（时间） · L135 · 2.0k
+  - UI-NAV §4.2 季节 · L177 · 461
+  - UI-NAV §4.3 速度 · L187 · 462
+  - UI-NAV §4.4 观察模式 · L201 · 543
+  - UI-NAV §4.5 点位目录（大地图的目录页） · L216 · 504
+  - UI-NAV §4.6 操作说明与设置 · L227 · 3.8k
+  - UI-NAV §4.7 首次进入 · L283 · 268
+  - UI-NAV §4.8 到达标题 · L291 · 521
+  - UI-NAV §4.9 临时提示 · L303 · 1.4k
+  - UI-NAV §4.10 天气格 · L330 · 2.5k
+  - UI-NAV §4.11 小地图（摘要） · L383 · 669
+  - UI-NAV §4.12 大地图（摘要） · L395 · 645
+  - UI-NAV §4.13 开始页、存档页与放映层（摘要） · L406 · 664
+- UI-NAV §5 鼠标捕获、界面态与快捷键（WP-35，WP-06 配合） · L416 · 5.6k
+- UI-NAV §6 点位清单（WP-36，`game/data/maps/qingshuihe/waypoints.json`） · L517 · 6.6k
+- UI-NAV §7 跳转过渡（WP-36） · L608 · 4.2k
+  - UI-NAV §7.1 跳转方式 · L610 · 1.0k
+  - UI-NAV §7.2 镜头朝向 · L630 · 155
+  - UI-NAV §7.3 到达 · L639 · 321
+  - UI-NAV §7.4 打断 · L646 · 285
+  - UI-NAV §7.5 预取与速度律豁免 · L654 · 697
+  - UI-NAV §7.6 减少动态效果 · L670 · 236
+  - UI-NAV §7.7 为什么飞过去，又为什么有传送 · L674 · 388
+  - UI-NAV §7.8 传送（地图） · L680 · 1.1k
+- UI-NAV §8 无障碍与语言（WP-35） · L699 · 3.6k
+- UI-NAV §9 实现与性能（WP-35） · L736 · 5.9k
+- UI-NAV §10 验收 · L795 · 1.3k
+- UI-NAV §12 待验证（P0） · L816 · 1.0k
 
 ## UI-VISUAL · 界面视觉语言：令牌、字体、形状、材质、图标、组件、画面布局、动效与实现
 
@@ -1625,7 +1626,7 @@
 
 ## ENG-STATUS · 施工状态
 
-`docs/design/engineering/ENG-STATUS.md` · 12.8k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
+`docs/design/engineering/ENG-STATUS.md` · 13.2k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步、待派工队列、待处理流水线、调研入队流水线、Q-nnn、排队、可派、已派
 
 - ENG-STATUS §0 结论 · L23 · 569
@@ -1633,7 +1634,7 @@
 - ENG-STATUS §1 填写规则 · L37 · 932
 - ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L61 · 5.1k
 - ENG-STATUS §3 活跃工作包 · L94 · 3.3k
-- ENG-STATUS §4 待派工队列 · L123 · 2.0k
+- ENG-STATUS §4 待派工队列 · L123 · 2.4k
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
@@ -1654,7 +1655,7 @@
   - ENG-TEAM §3.2 总指挥只做什么 · L174 · 465
   - ENG-TEAM §3.3 Astra 名下交给 6.1-sol 子代理的包 · L188 · 716
   - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L202 · 110
-- ENG-TEAM §4 包的归属与开工顺序 · L207 · 2.4k
+- ENG-TEAM §4 包的归属与开工顺序 · L207 · 2.5k
   - ENG-TEAM §4.1 包的归属 · L209 · 1.2k
   - ENG-TEAM §4.2 开工顺序与合并顺序 · L224 · 1.3k
 - ENG-TEAM §5 开发流程 · L238 · 7.0k
@@ -1685,22 +1686,22 @@
   - ENG-TEAM §8.4 怎么开子代理 · L636 · 1.1k
 - ENG-TEAM §9 待验证（P0） · L663 · 229
 
-## ENG-WP · 工作包派工单：55 个工作包，可并行 54 个
+## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP.md` · 105.5k 字 · 55 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP.md` · 109.0k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.7k
   - ★ ENG-WP §0.1 接入要点 · L39 · 737
 - ENG-WP §1 阶段与闸口 · L52 · 6.6k
-- ENG-WP §2 工作包一览 · L96 · 85.7k
-  - ENG-WP §2.1 各包主线版的范围 · L167 · 14.0k
-  - ENG-WP §2.2 细节阶段待办 · L236 · 3.2k
-  - ENG-WP §2.3 候选包 · L274 · 255
-- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L282 · 3.9k
-- ENG-WP §4 子代理通用简报模板 · L307 · 630
-- ENG-WP §5 主代理的职责 · L325 · 3.2k
-- ENG-WP §6 待验证（P0） · L345 · 1.2k
+- ENG-WP §2 工作包一览 · L96 · 89.2k
+  - ENG-WP §2.1 各包主线版的范围 · L168 · 14.5k
+  - ENG-WP §2.2 细节阶段待办 · L240 · 3.3k
+  - ENG-WP §2.3 候选包 · L279 · 255
+- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L287 · 3.9k
+- ENG-WP §4 子代理通用简报模板 · L312 · 630
+- ENG-WP §5 主代理的职责 · L330 · 3.2k
+- ENG-WP §6 待验证（P0） · L350 · 1.2k
 
 ## REF-PROMPT · 完整提示词（备份）
 

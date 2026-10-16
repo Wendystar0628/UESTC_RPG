@@ -5,7 +5,7 @@ category: systems
 summary: "规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20"
 keywords: [存档, 保存, 读档, 自动保存, 存档位, 世界线, 存档段, 段版本, 存档迁移, 金档, 落定快照, 安全时刻, 续跑等价, 世界实例, 校验修复, 存档损坏, 单实例锁, 设置文件安全, 退出保存, ISaveService, SaveSectionAttribute, ISaveSection, SaveReason, LoadScope, RestorePhase, SaveMeta, IWorldState.Instance, FlushForQuit, CompleteResume, "user://saves/"]
 owners: [WP-50]
-contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a]
+contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
 depends: [ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
 related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP, CORE-CONVENTIONS]
 contracts: [ISaveService, ISaveSection, SaveSectionAttribute, SlotId, SlotKind, SaveScope, SaveReason, SlotHealth, SaveMeta, SlotInfo, RestorePhase, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState, ReadOnlyReason]
@@ -20,7 +20,7 @@ gates: [G2, G4, G5, G10, G16, G20]
 > **查阅**：先读 §0；各存档段存什么、恢复阶段与顺序看 §2；文件格式、DTO 约定与版本迁移看 §3；保存时机、安全时刻与退出流程看 §4；读档顺序与世界实例看 §5；设置类文件的安全读写看 §8；契约签名与一段的写法示例看 §10；G20 看 §14
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH.md)、[SYS-TIME 时间季节](SYS-TIME.md)、[SYS-WEATHER 天气](SYS-WEATHER.md)、[SYS-MAPS 多地图](SYS-MAPS.md)；[CORE-INDEX 总索引](../README.md)、[SYS-MOTION 动态与事件](SYS-MOTION.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF.md)、[UI-NAV 界面与跳转](../ui/UI-NAV.md)、[SYS-WALK 行走](SYS-WALK.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS.md)、[SYS-TITLE 开始页与过场](SYS-TITLE.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS.md)、[SYS-AUDIO 音频](SYS-AUDIO.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS.md)
 
-**分工**：WP-50 存档与持久化，独占 `game/kernel/save`，P0 交付。WP-00、01、02、06、25、26、27、32、34、35、36、42、43、45、46、48、49、53、54a 各有增量（§15）。
+**分工**：WP-50 存档与持久化，独占 `game/kernel/save`，P0 交付。WP-00、01、02、06、25、26、27、32、34、35、36、42、43、45、46、48、49、53、54a、55 各有增量（§15）。
 
 ## 0 结论
 
@@ -47,6 +47,7 @@ gates: [G2, G4, G5, G10, G16, G20]
 6. **两点代价**：
    - 断电、强杀进程、系统关机时收不到退出信号，最多丢最近 5 分钟（定时保存的间隔）；
    - "状态一致"指世界的落定状态。正在进行的过渡、偶发事件、打开着的面板不续播：读档后过渡直接落到终点，界面回到界面态。做到"连过渡中途都续上"代价很高，收益很小，不做。
+7. **共享单车**：首版读档一律恢复成步行，借的车视为已归还，不恢复骑姿；车辆的停放归属由 WP-55 的一段存，与 `view`、`walk`、`maps` 出自同一次落定（§2、§4.2）。
 
 ### 0.1 接入要点
 
@@ -54,7 +55,7 @@ gates: [G2, G4, G5, G10, G16, G20]
 - **决定一段存什么**：只存读档后重建不出来的落定状态；音频状态、打开的面板、偶发事件计时、流式与画质统计、`user://cache/bake/`、玩家身体的瞬态（湿度、姿态、平滑历史）、动物的反应状态都不进存档，读档后各自重建（§2、§5.3）
 - **定义段的数据**：每段一个只读 `sealed record`，只放基础类型、`System.Numerics` 向量、契约里的枚举和 ID；本包自写源生成的 `JsonSerializerContext`，约定与 `ContractJson.Options` 相同；不放 `object`、`JsonElement`、Godot 类型，不用开放多态（§3.5）
 - **段的字段有任何增减**（哪怕只加一个可选字段）：`[SaveSection]` 的 `Version` 加 1，并实现 `Migrate(fromVersion, JsonNode)` 迁到下一版；迁移是纯函数，在后台线程调用，不碰 Godot、不读服务状态（§3.6）
-- **实现 `Capture` 与 `Restore`**：`Capture` 在主线程、任何时刻都给出落定值（过渡中取终点，空中或水里取最近的岸上安全点，`view`、`walk`、`maps` 与 meta 指向同一个点），不做 I/O，全部段合计 p99 ≤ 0.3 ms；有过渡进行时让 `IsSettled` 返回 false；`Restore` 立即生效、不做过渡，核对数组长度与数值范围，每修一处调 `RestoreContext.Repair()`（§4.2、§5.6、§9）
+- **实现 `Capture` 与 `Restore`**：`Capture` 在主线程、任何时刻都给出落定值（过渡中取终点，空中、水里或骑行中取最近的岸上安全点，借的共享单车按已归还记，`view`、`walk`、`maps` 与 meta 指向同一个点），不做 I/O，全部段合计 p99 ≤ 0.3 ms；有过渡进行时让 `IsSettled` 返回 false；`Restore` 立即生效、不做过渡，核对数组长度与数值范围，每修一处调 `RestoreContext.Repair()`（§4.2、§5.6、§9）
 - **存档里要引用别的数据**：只存 ID，不存文件路径；ID 不复用，改名不改身份；确需换 ID 时由负责那份数据的包提交本图目录的 `id-remap.json`，引用它的段各升一次 `v`（§3.6、§9）
 - **关键动作落定、要触发一次保存**：调 `ISaveService.Request`，原因用 `Settled`、`MapChanged`、`FocusLost` 等，由存档服务合并、限频、等安全时刻，只在漫游态有效；`SaveNow` 只用于新游戏交还控制、门禁和预留的手动槽（§4.1、§10）
 - **看到 `IWorldState.Instance` 变了**：做平滑、带回差或保留历史的系统（钟点弹簧、天气插值、界面主题回差、窗灯错开、植被近池、声音平滑量等）把内部状态直接设成新世界的值，不做过渡；`WorldHours` 的单调只在同一实例内比较（§5.2）
@@ -118,7 +119,7 @@ user://saves/
 | `map:<id>/atlas` | 按图 | WP-48c | `Content` | 40 | SYS-ATLAS的 `AtlasSave`（SYS-ATLAS §11）：自定义标记（每图最多 50 个）、追踪目标、各标记的解锁状态、到过的锚点（观光规则集的策略是 `all-unlocked`，解锁表为空） | 底图、标记数据（`markers.json`）、筛选偏好（存在 `settings.cfg`，SYS-ATLAS） |
 | `progress` | 全局 | WP-36 | `Content` | 50 | 到过的点位（P00 起，含室内新增点 P16–P23，WLD-INTERIORS） | — |
 | `view` | 全局 | WP-06 | `Pose` | 60 | 观察模式、旁观位姿（位置、偏航、俯仰）、所在空间 `NavSpace`（楼的 FeatureId 与楼层，室外为空，WLD-INTERIORS）、16 档速度的当前档、切到行走前的飞行档 | 当前速度（读档时静止）、介质、视场角（来自设置）；跳转、传送、模式切换途中，存目的地或落点 |
-| `walk` | 全局 | WP-42 | `Pose` | 61 | 脚位、朝向与俯仰、潜行、5 档步速、16 槽安全点环 | 速度、土狼时间与跳跃缓冲、相机插值缓冲、泳态与水体引用；在空中、水里（涉水或游泳）、回位途中时，存最近的岸上安全点（§4.2） |
+| `walk` | 全局 | WP-42 | `Pose` | 61 | 脚位、朝向与俯仰、潜行、5 档步速、16 槽安全点环 | 速度、土狼时间与跳跃缓冲、相机插值缓冲、泳态与水体引用、骑行状态；在空中、水里（涉水或游泳）、骑行中、回位途中时，存最近的岸上安全点（§4.2） |
 
 - **三个阶段**：
   - `World`：世界与天气，在换图之前恢复，`IWorldState.Instance` 在这一阶段结束时加 1；
@@ -133,6 +134,11 @@ user://saves/
 - **玩家身体与人称**（SYS-WALK §1、SYS-VIEW §2.7）：身体没有要存的状态，现在不设段：读档后身体静止、干燥，脚 IK 与平滑历史清空。第一人称还是第三人称、第三人称距离是偏好，存在 `settings.cfg`（WP-35），不进存档。相机位姿照旧只由 `view` 段和 `walk` 段的脚位推出，第三人称的吊杆读档后从人称偏好重建。
 - **游泳**：泳态、水体引用和划相都不存。在水里保存，`walk` 段存最近的岸上安全点，`view` 段和 `maps` 段当前图的那一条、meta 的位姿与空间都写同一个点；读档总是站在岸上（§4.2）。
 - **动物**（WLD-LIFE §1.1）：猫、鸽群和水禽的反应、冷却、惊飞与让开都是瞬态，不设存档段，读档、切图后按栖地与当前世界状态重建。
+- **共享单车**（SYS-WALK §16）：首版读档一律恢复成步行，借的车视为已归还，不恢复骑姿。
+  - 车辆一段由 WP-55 负责，按图记每辆可借车的停放归属；段名、阶段、顺序、格式与版本由 Astra 定。
+  - 保存时正在骑或临停着的借车，按归还到借车时预留的来源回收槽记；人按本表 `walk` 一行，骑行中存最近的岸上安全点。`view`、`walk`、`maps`、meta 与车辆记录出自同一次落定；保存只记下这个结果，不挪动正在玩的人和车（§4.2）。
+  - 骑行的速度、踏频、曲柄与车轮的相位、骑姿和声音都不存。
+  - 旧档缺这一段时按基线初始化一次；停放点改了或删了，按版本迁移和校验修复处理，不重复补车（§3.6、§5.6）。
 
 **档案级文件**（跨存档共享，不进存档，§8）：
 
@@ -313,13 +319,14 @@ user://saves/
   - `world`：没有快进和换季转场。自动天气的自然演化不算过渡，因为它由队列和时间决定，读档后自然接得上；
   - `map:<id>/weather`：没有手动换天气或换季替换的过渡；
   - `view`：没有跳转、传送、降落或起飞；
-  - `walk`：着地、不在水里（涉水、游泳都算在水里）、不在回位途中；
+  - `walk`：着地、不在水里（涉水、游泳都算在水里）、不在骑行中、不在回位途中；
   - `maps`：没有正在换图；
   - 预留段由各自的负责包定义。
 - **顺延**：条件不满足就顺延，最多 60 s；到期后按"强制快照"拍。长时间游泳时同样最多顺延 60 s，到期拍强制快照，不无限挂起。
 - **落定快照**：每段的 `Capture` 必须在任何时刻都能给出落定值，所以退出时（`CaptureContext.Forced` 为真）也能存：
   - 过渡、快进、跳转、降落、换图进行中，取终点；
   - 行走时在空中或水里，取最近的岸上安全点（SYS-WALK §9；室内池取本层的池岸安全点，不取楼外）；`view`、`walk`、`maps` 三段与 meta 的位姿、空间都指向这同一个点。保存只记下这个点，不把正在游泳的角色真的挪到岸上；
+  - 骑行中或借着共享单车时：人在骑行中取最近的岸上安全点，已下车步行时取原地的步行站位；借的车按归还到来源回收槽记，车辆记录与 `view`、`walk`、`maps`、meta 出自这同一次决定。保存不把正在骑的人和车真的挪走（§2，SYS-WALK §16）；
   - 电梯"关门换位"途中（WLD-INTERIORS），取目的站；
   - 开放室内的自动门正在转动或停在开位，按关好记（§2）。
 - **快照的形式**：主线程在 `FramePriority.Save` 那一步调用各段的 `Capture`（§11），各段返回不可变的 DTO，不做任何 I/O。全部段合计 p99 不超过 0.3 ms。
@@ -461,7 +468,8 @@ user://saves/
   - 声景：散布声的具体时刻、变体选择、洗牌袋的位置，由世界状态和种子重新推出（SYS-AUDIO）；
   - 开放室内里自动开关的房门：读档后一律是关好的样子（§2）；
   - 玩家身体的姿态、湿度与平滑历史，第三人称的吊杆：读档后身体静止、干燥，吊杆按人称偏好重建（§2）；
-  - 动物的反应、冷却与惊飞：按栖地和当前世界状态重建（§2，WLD-LIFE §1.1）。
+  - 动物的反应、冷却与惊飞：按栖地和当前世界状态重建（§2，WLD-LIFE §1.1）；
+  - 骑行：读档后是步行，借的车已归还；骑姿、速度、踏频与相位不续（§2）。
 - **补丁更新后读旧档**：世界状态仍然一致，但画面可以不同，因为模型和调色板可能改了；已经生成的天气队列不变（§5.4）。
 
 ### 5.4 天气
@@ -505,6 +513,7 @@ user://saves/
 | 自定义标记落在地图范围以外，或超过 50 个 | 去掉多出来的 |
 | 存档里的地图已不存在 | 回到默认地图的默认出生点（SYS-MAPS） |
 | `map:<id>/objects` 里的 `FeatureId` 已不存在（预留） | 丢掉这一条 |
+| 共享单车记录里的停放点或槽位已不存在（停放点改了、删了，SYS-WALK §16） | 按 WP-55 的确定迁移挪到登记的备选点；不复制、不丢车，不按显示数量补车 |
 | 数值越界：档位、倍率不在合法取值里，钟点不在 [0, 24) | 取最近的合法值 |
 
 ## 6 关着游戏的那段现实时间不计
@@ -868,6 +877,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
 | **安全** | G4 的静态规则（§9）；运行时：把实验里的恶意 `.tres` 改名成 `.sav` 读一次，再分别读一份恶意的 `settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`（`audio.cfg` 与 SYS-AUDIO G21e 的设置文件安全测试是同一套） | 读前读后 `Performance.Monitor.ObjectCount` 不变；日志里没有被执行的输出；都按"损坏"或"退回默认值"处理 |
 | **读档顺序与预览** | 引擎里：`Preview` 读档后核对 `Pose` 阶段的段没有被恢复、`HasPendingPose` 为真；`CompleteResume` 后再 `Capture` 一次，与 `Full` 读同一份存档的结果相同；用门禁夹具图（SYS-MAPS，若做）存一份"当前图不是默认图"的档，读它 | `World` 阶段先于换图恢复，换图后的天气补算量为零；`Preview` + `CompleteResume` 与 `Full` 逐位相同；`CompleteResume` 不改 `Instance` |
 | **水中保存** | 在 P0 样板的湖与游泳馆池里：连续游泳超过 60 s 等定时保存；水中失焦、退出、返回标题各存一次；再分别读回 | 60 s 内必有一代写成，不无限顺延；`view`、`walk`、`maps` 三段与 meta 指向同一个岸上安全点，室内池的落在池岸、不在楼外；读回后站在岸上，没有泳态、旧水体和入水事件，等碰撞就绪才开物理 |
+| **骑行中保存** | 在 P0 功能样板上：骑行中、临停后步行时各存一次，骑行中失焦、退出各存一次；再分别读回 | `view`、`walk`、`maps` 三段与 meta 指向同一个合法的步行站位；读回是步行，借的车回到来源回收槽，各停放点的库存不多不少；没有骑姿、速度与相位；保存前后正在玩的人和车没被挪动 |
 | **锁与开关** | 同时开两个进程；门禁模式跑一整轮 | 第二个进程 `Enabled = false`，一个文件都不写；`--save=off` 下 `user://saves` 不被创建、不被修改 |
 | **保存失败时退出** | `--save=1 --save-dir=<临时目录>`，用测试构建的故障注入让写盘抛"磁盘已满"，再发 WM_CLOSE；三个选项各走一遍（重试前先撤掉注入） | 进程不静默退出，出现三选一，原因写对；重试后照常退出、新一代通过校验；返回游戏后回到 Playing，`State` 仍记着失败；仍然退出后旧代完好可读 |
 
@@ -898,7 +908,8 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
   - **WP-34**：`world` 段；`Instance`；同一实例内 `WorldHours` 单调；换实例时直接落到新值；换季、`Apply`、"回到落金初灯"落定时 `Request(Settled)`。
   - **WP-45a**：`weather` 与 `map:<id>/weather` 两段（`World` 阶段），经 `IWeatherProcess.Capture`、`Restore`；种子每个存档一个；新游戏时 `Quiet`；读档时不 `Reset`。
   - **WP-06**：`view` 段（`Pose` 阶段；跳转、模式切换途中存目的地或落点；含 `NavSpace`）；读档位姿按 WLD-OUTSKIRTS的可达空间合法化；失焦时 `Request(FocusLost)`；`input.cfg` 按 §8 读写。
-  - **WP-42**：`walk` 段（`Pose` 阶段，安全点环）；恢复后碰撞就绪之前冻结物理；在水里时 `IsSettled` 为假，`Capture` 取最近的岸上安全点，与 WP-06、WP-46 的 `view`、`maps` 段写同一个点（§4.2）；不加泳态字段。
+  - **WP-42**：`walk` 段（`Pose` 阶段，安全点环）；恢复后碰撞就绪之前冻结物理；在水里时 `IsSettled` 为假，`Capture` 取最近的岸上安全点，与 WP-06、WP-46 的 `view`、`maps` 段写同一个点（§4.2）；不加泳态字段。骑行中同样 `IsSettled` 为假，`Capture` 取最近的岸上安全点，不加骑行字段（SYS-WALK §16）。
+  - **WP-55**：共享单车的车辆一段（段名、阶段、顺序与格式由 Astra 定）：按图记每辆可借车的停放归属；借的车按归还到来源回收槽记，与 `view`、`walk`、`maps` 出自同一次落定；旧档缺段按基线初始化，停放点改了按迁移与校验修复处理（§2、§4.2、§5.6）。
   - **WP-54a**：角色运行时不设存档段；`Instance` 变了、读档、切图时身体回到静止、干燥，清掉平滑历史（§2、§5.2）。
   - **WP-25**：动物的反应不设存档段，读档、切图后按栖地重建（§2）。
   - **WP-36**：`progress` 段；跳转到达时 `Request(Settled)`。

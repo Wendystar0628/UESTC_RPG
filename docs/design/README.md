@@ -220,7 +220,7 @@ gates: []
 | [SYS-TIME](systems/SYS-TIME.md) 时间与季节系统：世界状态、美术日月、色彩脚本、过渡 | 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收 | WP-34、WP-37、WP-38、WP-39、WP-41 | G2、G7、G12、G13、G16 |
 | [SYS-TITLE](systems/SYS-TITLE.md) 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow` | 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式 | WP-49、WP-35d | G2、G7、G8、G10、G13、G14、G16 |
 | [SYS-VIEW](systems/SYS-VIEW.md) 观察模式、介质与开场 | 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档 | WP-06、WP-07、WP-01 | G1、G2、G7、G13、G16、G21 |
-| [SYS-WALK](systems/SYS-WALK.md) 行走模式：手感、可行走范围、边界、碰撞与角色控制器 | 行走模式的手感、玩家身体、游泳、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收 | WP-42、WP-43、WP-44 | G4、G8、G15、G16、G19、G21 |
+| [SYS-WALK](systems/SYS-WALK.md) 行走模式：手感、可行走范围、边界、碰撞与角色控制器 | 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收 | WP-42、WP-43、WP-44 | G4、G8、G15、G16、G19、G21 |
 | [SYS-WEATHER](systems/SYS-WEATHER.md) 天气：天气清单、画面规则、前向随机过程、过渡与验收 | 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收 | WP-45 | G2、G4、G10、G12、G13、G14、G16、G20、G21 |
 
 ### 7.6 界面 `ui/`
@@ -242,7 +242,7 @@ gates: []
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
 | [ENG-STATUS](engineering/ENG-STATUS.md) 施工状态 | 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列 | WP-00 | — |
 | [ENG-TEAM](engineering/ENG-TEAM.md) 多模型协作规程：分工、额度、通信与开发流程 | 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务 | WP-00 | — |
-| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：55 个工作包，可并行 54 个 | 55 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
+| [ENG-WP](engineering/ENG-WP.md) 工作包派工单：56 个工作包，可并行 55 个 | 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责 | WP-00 | G1、G3、G5 |
 
 ### 7.8 参考 `reference/`
 
@@ -362,6 +362,8 @@ gates: []
 | WP-53b | — | MAP-QSH-CENTER-EAST、MAP-QSH-CORE、MAP-QSH-NORTH、SYS-WEATHER |
 | WP-53d | — | SYS-WALK、SYS-WEATHER |
 | WP-54a | — | SYS-SAVE、SYS-VIEW、SYS-WALK |
+| WP-54b | — | SYS-WALK |
+| WP-55 | — | SYS-ATLAS、SYS-SAVE、SYS-WALK、UI-NAV、WLD-LIFE |
 
 ## 9 文档依赖图
 
