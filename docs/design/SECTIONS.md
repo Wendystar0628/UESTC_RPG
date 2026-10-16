@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 54.6k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 54.7k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -294,22 +294,22 @@
 - ART-STYLE §5 高光、边缘光与透光 · L394 · 3.9k
 - ART-STYLE §6 贴图与笔触 · L445 · 1.4k
 - ART-STYLE §7 后期 · L468 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L537 · 9.0k
-  - ART-STYLE §8.1 风格色 · L539 · 2.8k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L584 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L603 · 1.2k
-  - ART-STYLE §8.4 界面色 · L635 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L660 · 1.6k
-  - ART-STYLE §8.6 天气色 · L690 · 1.1k
-- ART-STYLE §9 排除元素 · L709 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L711 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L737 · 599
-- ART-STYLE §10 材质速查 · L746 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L764 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L796 · 419
-- ART-STYLE §13 情绪弧线 · L809 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L834 · 1.9k
-- ART-STYLE §14 待验证（P0） · L854 · 2.1k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L537 · 9.2k
+  - ART-STYLE §8.1 风格色 · L539 · 2.9k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L587 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L606 · 1.2k
+  - ART-STYLE §8.4 界面色 · L638 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L663 · 1.6k
+  - ART-STYLE §8.6 天气色 · L693 · 1.1k
+- ART-STYLE §9 排除元素 · L712 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L714 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L740 · 599
+- ART-STYLE §10 材质速查 · L749 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L767 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L799 · 419
+- ART-STYLE §13 情绪弧线 · L812 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L837 · 1.9k
+- ART-STYLE §14 待验证（P0） · L857 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
@@ -1559,7 +1559,7 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 133.2k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF.md` · 133.3k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1569,7 +1569,7 @@
   - ENG-PERF §1.2 MultiMesh 与 RenderingServer 挂载的用法 · L74 · 3.6k
   - ENG-PERF §1.3 调用口径 · L113 · 716
   - ENG-PERF §1.4 着色器白名单 · L126 · 6.8k
-  - ENG-PERF §1.5 全局参数与数据纹理表 · L196 · 10.0k
+  - ENG-PERF §1.5 全局参数与数据纹理表 · L196 · 10.1k
   - ENG-PERF §1.6 排序与绘制顺序 · L306 · 373
 - ENG-PERF §2 着色器与编译（WP-04、WP-05、WP-01） · L313 · 7.0k
 - ENG-PERF §3 填充率与带宽（WP-05、WP-23） · L377 · 1.6k

@@ -253,7 +253,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `lamp_grid` | 8 m 网格，范围 = `map_rect`（清水河 2560 m，320×320），RGBA32F，最近邻 | 每格最多 4 个灯号；按图 | WP-39（烘焙） | 静态（切图时重建） |
 | `lamp_table` | N×2 RGBA32F | 每盏灯的位置、半径、灯照色号、所属通道、开灯阈值、事件序号；开放室内的每个入口登记一盏门口灯（WLD-INTERIORS §4）；按图 | WP-39（烘焙） | 静态（切图时重建） |
 | `tree_species` | 32×8 RGBA32F | 树种表：叶量 A、开花 B 的四季锚点，摆幅，枝条笔触的数组层号，色行号，是否落叶 | WP-38 | 启动时 |
-| `mat_table` | 128×4 RGBA8，最近邻 | 按材质 ID 查：行 0 = 线表（线色染色强度、线宽系数、擦除位、只描外轮廓、内部软线、不描、小件淡出距离）；行 1 = 明暗档、`half_level`、`band_soft`、湿润响应；行 2 = 透光系数 k_t、受光侧暖边系数、闪点系数；行 3 = 解析法线的方式（0 不用、1 球、2 柱）、倒角提亮的受光幅度、影里幅度（0 表示这个材质不提亮，也不画凸边亮线）、保留（ART-STYLE §2.5、ART-STYLE §2.6、ART-STYLE §4.5）。线表放在这张全局纹理里、不另建 RD 纹理：toon 着色器要读湿润响应，RD 纹理它读不到；计算着色器用 `RenderingServer.TextureGetRdTexture()` 读这一张 | WP-04 持有，WP-05 共读 | 启动时写入，静态 |
+| `mat_table` | 128×4 RGBA8，最近邻 | 按材质 ID 查：行 0 = 线表（线色染色强度、线宽系数、擦除位、只描外轮廓、内部软线、不描、小件淡出距离）；行 1 = 明暗档、`half_level`、`band_soft`、湿润响应；行 2 = 透光系数 k_t、受光侧暖边系数、闪点系数；A 通道存自发光通道号（ToonSpec.Emissive 对应的灯光通道，0 表示无，槽位号以 slot+1 存储）；行 3 = 解析法线的方式（0 不用、1 球、2 柱）、倒角提亮的受光幅度、影里幅度（0 表示这个材质不提亮，也不画凸边亮线）、保留（ART-STYLE §2.5、ART-STYLE §2.6、ART-STYLE §4.5）。线表放在这张全局纹理里、不另建 RD 纹理：toon 着色器要读湿润响应，RD 纹理它读不到；计算着色器用 `RenderingServer.TextureGetRdTexture()` 读这一张 | WP-04 持有，WP-05 共读 | 启动时写入，静态 |
 | `ground_mask` | 全图（范围 = `map_rect`）RGBA8，不压缩 | R 银杏落叶潜势、G 其他落叶与花瓣、B 积雪潜势、A 保留（§9） | WP-15（R、G 由 WP-23 生成） | 静态（切图时重建） |
 | `terrain_height` | 全图（范围 = `map_rect`）RF，8 m 格距（清水河 320²，约 400 KB） | 地形高度（飘落池落地）：数据来自 WP-08 的地形评估器（`ITerrain.HeightAt`），LoadData 时在后台按 8 m 格点求值一次；范围外取 0（WLD-TERRAIN §9.4） | WP-15：纹理的创建、上传与全局参数写入归 ground 系统（`game/systems/ground`） | 静态（切图时重建） |
 | `reflect_tex` | 倒影 SubViewport 的 ViewportTexture | 倒影 | WP-24 | 按预设的刷新间隔（每 2–4 帧，SYS-GRAPHICS §1） |

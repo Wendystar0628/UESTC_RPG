@@ -573,8 +573,11 @@ w     = max(w_min, smoothstep(0.06, 0.015, C_a))      // 中性材质 w → 1
 | `uestc.techblue` | #1961A0 | 科技蓝，辅助色 | 固有色常量 |
 | `uestc.gold` | #DCAB79 | 70 周年"银杏金"，只用于校庆遗留物 | 固有色常量 |
 | `sign.green` | 约 #4FBF7A，发光 | 门斗闸机的通行箭头、"安全出口"灯（MAP-QSH-LIBRARY §3.8）。只做点状小光源，不做大面积 | 常量 |
+| `sign.exitGreen` | #3FA56B（色号54） | “安全出口”灯牌面绿；只经牌面顶点的 ColorIds 引用 | 常量 |
 | `firefly` | #DFFF8A，发光 | 夏夜萤火虫（SYS-TIME §4、SYS-MOTION §11） | 常量 |
 | `water.poolGlow` | 约 #8FD8E0，发光 | 游泳馆玻璃带透出的池水青光（MAP-QSH-SOUTH） | 随灯光时刻表 |
+
+- `sign.exitGreen` 不能用作 ToonSpec 的 Lit/Shade；亮时显示常量本身，灭时由该常量推出暗色。
 
 天空、雾和水面的色值，见 ART-SKYLIGHT、WLD-WATER 和 SYS-TIME §3.2。季节专属的色名（樱粉、荷粉、蜡梅黄、雪及雪影等）由 WP-37、WP-38 按 §6.3 先登记再使用，取值以 SYS-TIME §3.3、SYS-TIME §4 和 WLD-VEGETATION §2 为准。天气色名见 §8.6。
 
