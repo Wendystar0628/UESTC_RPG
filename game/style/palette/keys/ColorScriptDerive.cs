@@ -25,7 +25,7 @@ public readonly record struct MaterialColors(Lab Lit, Lab Shade, Lab ShadeIn, La
 /// <summary>Lit/shade derivation of ART-STYLE §3.2, §3.4, §8.3 with the WP-37 rules in derive.json.</summary>
 public sealed class Deriver
 {
-    private readonly record struct ClassParams(double RMat, double KC, double DhMax);
+    private readonly record struct ClassParams(double RMat, double KC, double DhMax, bool Three);
 
     private readonly Dictionary<string, ClassParams> _classes = new(StringComparer.Ordinal);
     private readonly double _adaptRef, _tintK, _vegTintK, _capRatio, _capMinC, _chromaMulMax, _neutral0, _neutral1;
@@ -77,7 +77,8 @@ public sealed class Deriver
         SwatchLAmbient = derive.GetProperty("swatchL").GetProperty("ambient.sky").GetDouble();
         SwatchLInterior = derive.GetProperty("swatchL").GetProperty("interior.warm").GetDouble();
         foreach (var p in derive.GetProperty("materialClasses").EnumerateObject())
-            _classes[p.Name] = new ClassParams(p.Value.GetProperty("rMat").GetDouble(), p.Value.GetProperty("kC").GetDouble(), p.Value.GetProperty("dhMax").GetDouble());
+            _classes[p.Name] = new ClassParams(p.Value.GetProperty("rMat").GetDouble(), p.Value.GetProperty("kC").GetDouble(), p.Value.GetProperty("dhMax").GetDouble(),
+                p.Value.GetProperty("steps").GetString() == "three");
     }
 
     public bool HasClass(string cls) => _classes.ContainsKey(cls);
@@ -161,7 +162,8 @@ public sealed class Deriver
         var r = rOverride ?? f.V[R];
         var (cs, hs) = ambientOverride ?? f.Ambient;
         var ca = albedo.Chroma;
-        var l = lit.L * r * mc.RMat;
+        // 三阶类（植被、花）的影：明度差 1 − r × r_mat 再乘本帧的 vegDepth（室内行不乘）
+        var l = mc.Three && rOverride is null ? lit.L * (1.0 - (1.0 - r * mc.RMat) * f.V[VegDepth]) : lit.L * r * mc.RMat;
         var c1 = Math.Min(ca * mc.KC, ca + _chromaMulMax);
         if (_scaleChroma) c1 *= LightM(f);
         var h1 = ca > 1e-6 ? RotateHue(albedo.Hue, hs, mc.DhMax) : hs;
@@ -185,13 +187,14 @@ public sealed class Deriver
         var shade = Shade(albedo, lit, f, cls);
         lit = CapLitChroma(albedo, lit, shade);
         if (hero is { Guard: true }) lit = FloorHeroChroma(albedo, lit, shade, hero);
-        var shadeIn = Shade(albedo, lit, f, cls, _rIn, f.InteriorWarm);
-        var litIn = InteriorLit(lit, shadeIn);
         if (vegChromaMul != 1.0 && hero is not null)
         {
-            lit = Oklab.FromLch(lit.L, lit.Chroma * vegChromaMul, lit.Hue);
-            shade = Oklab.FromLch(shade.L, shade.Chroma * vegChromaMul, shade.Hue);
+            // 放大后越出色域的只降彩度（明度、色相不动），不交给写纹理时的逐通道截断；室内两行随后从放大后的受光色推导
+            lit = Oklab.GamutMap(Oklab.FromLch(lit.L, lit.Chroma * vegChromaMul, lit.Hue));
+            shade = Oklab.GamutMap(Oklab.FromLch(shade.L, shade.Chroma * vegChromaMul, shade.Hue));
         }
+        var shadeIn = Shade(albedo, lit, f, cls, _rIn, f.InteriorWarm);
+        var litIn = InteriorLit(lit, shadeIn);
         return new(lit, shade, shadeIn, litIn);
     }
 

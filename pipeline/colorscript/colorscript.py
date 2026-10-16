@@ -281,6 +281,8 @@ class Frame:
         self.intensity = 1.0
         self.sat_gain = 1.0
         self.lit_lift = 1.0
+        self.veg_chroma = 1.0   # key.vegChroma：植被受光与影的彩度倍率
+        self.veg_depth = 1.0    # shade.vegDepth：三阶类（植被、花）影的明度差倍率
         self.r = 0.8
         self.ambient: Tuple[float, float] = (0.03, 275.0)   # (C, h)
         self.w_min = 0.0
@@ -322,10 +324,12 @@ def frame_from_key(k: Dict[str, Any]) -> Frame:
     f.intensity = float(key["intensity"])
     f.sat_gain = float(key["satGain"])
     f.lit_lift = float(key["litLift"])
+    f.veg_chroma = float(key.get("vegChroma", 1.0))
     sh = k["shade"]
     f.r = float(sh["r"])
     f.ambient = (float(sh["ambientSky"]["c"]), float(sh["ambientSky"]["h"]))
     f.w_min = float(sh["wMin"])
+    f.veg_depth = float(sh.get("vegDepth", 1.0))
     f.line_darken = float(k["line"]["darken"])
     f.line_warm = ok.hex_to_oklab(k["line"]["warm"])
     f.line_cool = ok.hex_to_oklab(k["line"]["cool"])
@@ -514,7 +518,11 @@ def derive_shade(src: Sources, albedo: ok.Lab, lit: ok.Lab, f: Frame, cls: str,
     r = f.r if r_override is None else r_override
     c_s, h_s = f.ambient if ambient_override is None else ambient_override
     La, Ca, ha = ok.lab_to_lch(albedo)
-    L = lit[0] * r * mc["rMat"]
+    # 三阶类（植被、花）的影：明度差 1 − r × r_mat 再乘本帧的 vegDepth（室内行不乘）
+    if mc["steps"] == "three" and r_override is None:
+        L = lit[0] * (1.0 - (1.0 - r * mc["rMat"]) * f.veg_depth)
+    else:
+        L = lit[0] * r * mc["rMat"]
     C1 = min(Ca * mc["kC"], Ca + sp["chromaMulMax"])
     if sp.get("scaleChromaWithLight", False):
         C1 *= _light_m(src, f)
@@ -639,6 +647,13 @@ def derive_material(src: Sources, token: str, name: str, cls: str, albedo: ok.La
     lit = cap_lit_chroma(src, albedo, lit, shade)
     if hero is not None and hero.guard:
         lit = floor_hero_chroma(src, albedo, lit, shade, hero)
+    if hero is not None and f.veg_chroma != 1.0:
+        # 关键帧的植被彩度倍率（与 C# Deriver.Material 的 vegChromaMul 同一步）：受光与影一起放大，越出色域的只降彩度；
+        # 室内两行随后从放大后的受光色推导
+        Ll, Cl, hl = ok.lab_to_lch(lit)
+        Ls, Cs, hs = ok.lab_to_lch(shade)
+        lit = ok.gamut_map_lab(ok.lch_to_lab((Ll, Cl * f.veg_chroma, hl)))
+        shade = ok.gamut_map_lab(ok.lch_to_lab((Ls, Cs * f.veg_chroma, hs)))
     s_in, l_in = derive_interior(src, albedo, lit, f, cls)
     deep = derive_deep(src, shade) if src.derive["materialClasses"][cls]["steps"] == "three" else None
     return MaterialResult(token, name, cls, albedo, lit, shade, s_in, l_in, deep, meta)
@@ -861,7 +876,7 @@ class DayCurve:
         c, h = f.ab_colors["interior.warm"]
         _, a, b = ok.lch_to_lab((1.0, c, h))
         out += [("interior.warm.a", "scalar", a), ("interior.warm.b", "scalar", b)]
-        for name, v in (("intensity", f.intensity), ("satGain", f.sat_gain), ("litLift", f.lit_lift),
+        for name, v in (("intensity", f.intensity), ("satGain", f.sat_gain), ("litLift", f.lit_lift), ("vegChroma", f.veg_chroma), ("vegDepth", f.veg_depth),
                         ("r", f.r), ("wMin", f.w_min), ("line.darken", f.line_darken)):
             out.append((name, "scalar", v))
         for k2, v in sorted(f.fog_scalars.items()):
@@ -953,6 +968,7 @@ def frame_at(src: Sources, curve: DayCurve, season: str, clock: float) -> Frame:
     a, b = vals["interior.warm.a"], vals["interior.warm.b"]
     f.ab_colors = {"interior.warm": (math.hypot(a, b), math.degrees(math.atan2(b, a)) % 360.0)}
     f.intensity, f.sat_gain, f.lit_lift = vals["intensity"], vals["satGain"], vals["litLift"]
+    f.veg_chroma, f.veg_depth = vals["vegChroma"], vals["vegDepth"]
     f.r, f.w_min, f.line_darken = vals["r"], vals["wMin"], vals["line.darken"]
     f.fog_scalars = {k[4:]: v for k, v in vals.items() if k.startswith("fog.") and not k[4:].split(".")[0] in ("sun", "anti")}
     f.fog_low = {k[7:]: v for k, v in vals.items() if k.startswith("fogLow.")}

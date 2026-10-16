@@ -30,7 +30,7 @@ class ColorScriptTest(unittest.TestCase):
     def test_default_grid_matches_registered(self):
         gold = self.grid["materials"][("autumn", "golden")]
         self.assertLess(de(gold["wall"].lit, ok.hex_to_oklab("#FFE4BE")), 0.5)      # ART-STYLE §8.1 wall.lit
-        self.assertLess(de(gold["wall"].shade, ok.hex_to_oklab("#A1A6BB")), 0.5)    # wall.shade
+        self.assertLess(de(gold["wall"].shade, ok.hex_to_oklab("#8796B1")), 0.5)    # wall.shade（默认格 r 0.72，max-110 110d）
         self.assertLess(de(gold["wall"].shade_in, ok.hex_to_oklab("#C3A78C")), 0.5)  # 室内影（ART-STYLE §3.4）
         self.assertLess(de(gold["ginkgo"].shade, ok.hex_to_oklab("#B78102")), 1.0)
         self.assertLess(de(gold["ginkgo"].deep, ok.hex_to_oklab("#9A6C03")), 2.0)   # ginkgo.deep 校验值

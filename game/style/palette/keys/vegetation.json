@@ -29,7 +29,7 @@
     { "token": "photinia",   "name": "红叶石楠",         "class": "vegetation", "lit": { "spring": "#C04A3A", "summer": "#6A8048", "autumn": "#B8423A", "winter": "#A04838" } },
     { "token": "loropetalum","name": "红花檵木",         "class": "vegetation", "lit": { "spring": "#9C4A5E", "summer": "#9C4A5E", "autumn": "#9C4A5E", "winter": "#9C4A5E" } },
     { "token": "hedge",      "name": "黄绿矮绿篱",       "class": "vegetation", "lit": { "spring": "#D5D56D", "summer": "#C8C860", "autumn": "#C8C860", "winter": "#BBBB53" } },
-    { "token": "grass",      "name": "草坪",             "class": "vegetation", "lit": { "spring": "#A8CC5E", "summer": "#8CBC4A", "autumn": "#CAC165", "winter": "#A8A878" }, "note": "秋季默认格受光 #CAC165（OKLCH 0.80 / 0.115 / 104）：大面积草坪不发芥末黄，落金的暖意靠主光和天光；影落在 #71823E 附近" },
+    { "token": "grass",      "name": "草坪",             "class": "vegetation", "lit": { "spring": "#A8CC5E", "summer": "#8CBC4A", "autumn": "#BAC76E", "winter": "#A8A878" }, "note": "秋季默认格受光 #BAC76E（OKLCH 0.80 / 0.115 / 116；默认格再乘关键帧的 vegChroma）：大面积草坪不发芥末黄，落金的暖意靠主光和天光" },
     { "token": "reed",       "name": "芦苇芒草蒲苇的叶", "class": "vegetation", "lit": { "spring": "#9CC060", "summer": "#6E9E4E", "autumn": "#C8B878", "winter": "#B0A078" } },
     { "token": "lotus",      "name": "荷叶与残荷",       "class": "vegetation", "lit": { "spring": "#8CBC5A", "summer": "#3E8A5A", "autumn": "#8A7A4A", "winter": "#6A5A48" } },
     { "token": "tree.bare",  "name": "裸枝笔触",         "class": "vegetation", "lit": { "spring": "#8A7476", "summer": "#8A7476", "autumn": "#8A7476", "winter": "#8A7476" } },

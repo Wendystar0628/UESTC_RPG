@@ -30,7 +30,9 @@ public static class FrameLayout
     public const int Vignette = 99, VignetteTint = 100; // 3 components
     public const int CdlSlope = 103, CdlOffset = 104, CdlPower = 105, CdlSaturation = 106;
     public const int LampPoolGain = 107;
-    public const int Count = 108;
+    public const int VegChroma = 108;      // key.vegChroma：植被受光与影的彩度倍率（缺省 1），与雨天的倍率相乘
+    public const int VegDepth = 109;       // shade.vegDepth：三阶类（植被、花）影的明度差倍率（缺省 1）
+    public const int Count = 110;
 
     /// <summary>Scalars interpolated in log2 (SYS-TIME §3.1: light intensity and fog density in the log domain).</summary>
     public static bool IsLog(int i) => i is Intensity or FogDensity or FogStart or FogSilhouette;
@@ -160,9 +162,11 @@ public sealed class ColorScriptData
         v[FrameLayout.Intensity] = key.GetProperty("intensity").GetDouble();
         v[FrameLayout.SatGain] = key.GetProperty("satGain").GetDouble();
         v[FrameLayout.LitLift] = key.GetProperty("litLift").GetDouble();
+        v[FrameLayout.VegChroma] = key.TryGetProperty("vegChroma", out var vegChroma) ? vegChroma.GetDouble() : 1.0;
         var shade = k.GetProperty("shade");
         v[FrameLayout.R] = shade.GetProperty("r").GetDouble();
         v[FrameLayout.WMin] = shade.GetProperty("wMin").GetDouble();
+        v[FrameLayout.VegDepth] = shade.TryGetProperty("vegDepth", out var vegDepth) ? vegDepth.GetDouble() : 1.0;
         SetAb(v, FrameLayout.AmbientA, shade.GetProperty("ambientSky"));
         var line = k.GetProperty("line");
         v[FrameLayout.LineDarken] = line.GetProperty("darken").GetDouble();

@@ -78,15 +78,17 @@ const float TOON_BOUNCE = 0.15;      // 朝下面的地面暖反光
 // RE_IndirectDiffuse_Toon 与 lights_fragment_end 补丁（暖边、硬高光、半球天光），"小渔港""街角"的 OC_RIM 同式。
 // 全部是风格底线：只多几次 OKLab 换算，没有贴图采样，不加 varying（高光与云影合用一个槽）；室内、夜间、阴雨按门控退回原样。
 // ---------------------------------------------------------------------------
-// 明暗层次：影的明度差 ΔL = 受光 L − 影 L 按材质类放大。参考里影 = 固有色 × 半球天光，线性亮度比约 0.3–0.45，
-// 折成 OKLab 明度比约 0.70；默认格 r = 0.78 时 ΔL × 1.4 正好落到 0.69。
-// 分量依次是两阶（建筑、地面）、两阶半（曲面道具、金属）、软物、植被三阶；1 = 不动。白天、晴天满量，夜间与阴天退回 1。
-const vec4 TOON_PORT_DEPTH = vec4(1.40, 1.35, 1.20, 1.0);
-// 影压深时彩度跟着放大（× 1 + CK·(depth − 1)），影是有颜色的深，不是发灰的深
+// 明暗层次：影的明度差 ΔL = 受光 L − 影 L 按材质类缩放。整体的压深在 WP-37 关键帧的影明度比 r 里（max-110 110d：
+// 参考里影 = 固有色 × 半球天光，折成 OKLab 明度比约 0.70，默认格 r 取 0.72），这里只留按材质的相对分级：
+// 分量依次是两阶（建筑、地面）、两阶半（曲面道具、金属）、软物、植被三阶；1 = 照调色板。软物比建筑浅；
+// 植被三阶的影深浅由调色板的 vegDepth 定（树冠由 veg_* 自己拼色，同样照调色板）。白天、晴天满量，夜间与阴天退回 1。
+const vec4 TOON_PORT_DEPTH = vec4(1.0, 1.0, 0.85, 1.0);
+// 影的明度差缩放时彩度同向（× 1 + CK·(depth − 1)），影是有颜色的深，不是发灰的深
 const float TOON_PORT_SHADE_CK = 0.5;
 // 影色冷暖（半球天光：参考的 HemisphereLight 天色 / 地色按法线 y 混合）：
-// 影的 OKLab a、b 加上 mix(地色方向 × GND_C, 天色方向 × SKY_C, 0.5 + 0.5·n.y)：朝上偏 ambient.sky、朝下偏 bounce.ground，
-// 竖直面各一半；明度随法线 y 加 HEMI_L·n.y（天比地亮）。
+// 影的 OKLab a、b 加上 天色方向 × SKY_C × (0.5 + 0.5·n.y) + 地色方向 × GND_C × max(−n.y, 0)：朝上与竖直的影偏 ambient.sky（冷），
+// 只有朝下的面（檐底、冠底、雨篷底）偏 bounce.ground（暖）。竖直面不混地色：天色偏紫时，紫加暖会混成发灰的藕色。
+// 明度随法线 y 加 HEMI_L·n.y（天比地亮）。
 const float TOON_HEMI_SKY_C = 0.018;
 const float TOON_HEMI_GND_C = 0.025;
 const float TOON_HEMI_L = 0.04;       // 影的明度随法线 y：朝上 +、朝下 −（OKLab L）
@@ -379,7 +381,7 @@ vec3 toon_port_shade(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, float k) {
 	sky /= max(length(sky), 1e-4);
 	gnd /= max(length(gnd), 1e-4);
 	float ny = clamp(c.n_w.y, -1.0, 1.0);
-	so.yz += k * mix(TOON_HEMI_GND_C * gnd, TOON_HEMI_SKY_C * sky, 0.5 + 0.5 * ny);
+	so.yz += k * (TOON_HEMI_SKY_C * (0.5 + 0.5 * ny) * sky + TOON_HEMI_GND_C * max(-ny, 0.0) * gnd);
 	so.x += k * TOON_HEMI_L * ny;
 	return ok_to_linear(so);
 }

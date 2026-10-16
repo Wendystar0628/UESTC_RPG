@@ -50,7 +50,8 @@ public sealed class ColorScript
         var f = EvaluateAt(a, h, sideA);
         if (t > 1e-9) f = DayCurve.Blend(f, EvaluateAt(b, h, ArtSun.Altitude(clock, b).Side), t);
         WeatherCorrection.Apply(Data.Weather, f, weather, h > -2.0);
-        return new WorldFrame(f, ArtSun.ToAutumnX(h, a), h, a, b, t, WeatherCorrection.VegetationChromaMul(Data.Weather, weather));
+        return new WorldFrame(f, ArtSun.ToAutumnX(h, a), h, a, b, t,
+            f.V[VegChroma] * WeatherCorrection.VegetationChromaMul(Data.Weather, weather));
     }
 
     /// <summary>IPaletteProbe: 24 whole-hour horizon colours, average of the sun-side and anti-sun horizon bands.</summary>

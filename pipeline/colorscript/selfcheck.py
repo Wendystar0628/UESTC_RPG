@@ -77,8 +77,8 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
                 okk = Ls >= 0.74 and 0.13 <= dL <= 0.20
                 out.append(("PASS" if okk else "FAIL", s, k, "浅色面（白天）", t, f"影 L{Ls:.3f}（≥ 0.74）ΔL {dL:.3f}（0.13–0.20）"))
             elif strict_default:
-                okk = Ls >= 0.68 and 0.18 <= dL <= 0.24
-                out.append(("PASS" if okk else "FAIL", s, k, "浅色面（默认格）", t, f"影 L{Ls:.3f}（≥ 0.68）ΔL {dL:.3f}（0.18–0.24）"))
+                okk = Ls >= 0.62 and 0.18 <= dL <= 0.30
+                out.append(("PASS" if okk else "FAIL", s, k, "浅色面（默认格）", t, f"影 L{Ls:.3f}（≥ 0.62）ΔL {dL:.3f}（0.18–0.30）"))
             else:
                 out.append(("INFO", s, k, "浅色面", t, f"影 L{Ls:.3f} ΔL {dL:.3f}（本类帧文档无限值）"))
         # 5 夜间
