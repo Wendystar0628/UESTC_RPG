@@ -6,8 +6,9 @@ namespace Campus.Gen.Ground;
 /// <summary>
 /// Turns the tile's distance fields into ground geometry.
 /// <list type="bullet">
-/// <item>Each lattice cell is split along its (0,0)-(1,1) diagonal; fields are linear on each triangle, so clipping a
-/// triangle by "field &lt; iso" is exact and neighbouring regions share their boundary vertices exactly.</item>
+/// <item>Each lattice cell is split along its anti-diagonal, (1,0)-(0,1) (<see cref="CellSplit"/>, the diagonal of the
+/// collision height field); fields are linear on each triangle, so clipping a triangle by "field &lt; iso" is exact and
+/// neighbouring regions share their boundary vertices exactly.</item>
 /// <item>Cells whose four corners resolve to the same surface merge into quadtree blocks. A block's outline keeps
 /// every lattice vertex used by its neighbours, so there are no T-junction cracks.</item>
 /// <item>Where a contour separates two surfaces of different height, the higher side emits a vertical face
@@ -213,9 +214,9 @@ internal sealed class GroundMesher
         for (var k = 0; k < ring.Count; k++) Skirt(surface, ring[k], ring[(k + 1) % ring.Count]);
         if (ring.Count == 4)
         {
-            // Same (0,0)-(1,1) diagonal as the fine cells and the collision height field.
-            Top(surface, ring[0], ring[1], ring[2], Up, Up, Up);
-            Top(surface, ring[0], ring[2], ring[3], Up, Up, Up);
+            // Corners in ring order 00, 10, 11, 01: the anti-diagonal 10-01, as the fine cells and the collision height field.
+            Top(surface, ring[0], ring[1], ring[3], Up, Up, Up);
+            Top(surface, ring[1], ring[2], ring[3], Up, Up, Up);
             return;
         }
         var cx = _f.X(i0) + size * _f.Cell * 0.5f;
@@ -335,8 +336,7 @@ internal sealed class GroundMesher
             {
                 var u = (float)i / size;
                 var w = (float)j / size;
-                // Lower triangle (u >= w): corners 00, 10, 11; upper: 00, 11, 01 — the cell diagonal convention.
-                var plane = u >= w ? f00 + u * (f10 - f00) + w * (f11 - f10) : f00 + w * (f01 - f00) + u * (f11 - f01);
+                var plane = CellSplit.Lerp(f00, f10, f01, f11, u, w);
                 var value = _f.Get(i0 + i, j0 + j, field);
                 if (isos is null)
                 {
@@ -355,20 +355,24 @@ internal sealed class GroundMesher
     }
 
     /// <summary>
-    /// Clips an affine block as its two triangles. Their outlines keep every lattice vertex used by neighbouring leaves,
-    /// so crossings on shared edges are computed from the same two lattice values as the neighbour's.
+    /// Clips an affine block as its two triangles, split along the anti-diagonal 10-01. Their outlines keep every lattice
+    /// vertex used by neighbouring leaves, so crossings on shared edges are computed from the same two lattice values as
+    /// the neighbour's. Both outlines run in the ring order 00, 10, 11, 01 (the winding of the cells and uniform blocks).
     /// </summary>
     private void Macro(int i0, int j0, int size)
     {
-        var lower = new List<Vert>();
-        var upper = new List<Vert>();
+        var lower = new List<Vert>();   // corners 00, 10, 01: bottom edge, the diagonal, left edge
+        var upper = new List<Vert>();   // corners 10, 11, 01: right edge, top edge, the diagonal
         void Walk(List<Vert> list, int i, int j) { if (_used[j * _f.S + i]) list.Add(Lattice(i, j)); }
         for (var k = 0; k < size; k++) Walk(lower, i0 + k, j0);
-        for (var k = 0; k < size; k++) Walk(lower, i0 + size, j0 + k);
-        lower.Add(Lattice(i0 + size, j0 + size));
-        for (var k = 0; k < size; k++) Walk(upper, i0 + size - k, j0 + size);
-        for (var k = 0; k < size; k++) Walk(upper, i0, j0 + size - k);
-        upper.Add(Lattice(i0, j0));
+        lower.Add(Lattice(i0 + size, j0));
+        lower.Add(Lattice(i0, j0 + size));
+        for (var k = 1; k < size; k++) Walk(lower, i0, j0 + size - k);
+        upper.Add(Lattice(i0 + size, j0));
+        for (var k = 1; k < size; k++) Walk(upper, i0 + size, j0 + k);
+        upper.Add(Lattice(i0 + size, j0 + size));
+        for (var k = 1; k < size; k++) Walk(upper, i0 + size - k, j0 + size);
+        upper.Add(Lattice(i0, j0 + size));
         Polygon(lower, Varying(lower));
         Polygon(upper, Varying(upper));
     }
@@ -389,8 +393,9 @@ internal sealed class GroundMesher
         var c10 = Lattice(i + 1, j);
         var c11 = Lattice(i + 1, j + 1);
         var c01 = Lattice(i, j + 1);
-        Triangle(c00, c10, c11, _code[j * _f.S + i] ^ _code[j * _f.S + i + 1] | _code[j * _f.S + i] ^ _code[(j + 1) * _f.S + i + 1]);
-        Triangle(c00, c11, c01, _code[j * _f.S + i] ^ _code[(j + 1) * _f.S + i + 1] | _code[j * _f.S + i] ^ _code[(j + 1) * _f.S + i]);
+        // Anti-diagonal 10-01: triangles 00-10-01 and 10-11-01, each with the codes that differ from its first corner.
+        Triangle(c00, c10, c01, _code[j * _f.S + i] ^ _code[j * _f.S + i + 1] | _code[j * _f.S + i] ^ _code[(j + 1) * _f.S + i]);
+        Triangle(c10, c11, c01, _code[j * _f.S + i + 1] ^ _code[(j + 1) * _f.S + i + 1] | _code[j * _f.S + i + 1] ^ _code[(j + 1) * _f.S + i]);
     }
 
     private Vert Lattice(int i, int j)

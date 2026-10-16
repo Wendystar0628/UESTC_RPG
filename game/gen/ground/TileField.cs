@@ -40,7 +40,7 @@ internal sealed class TileField
 
     /// <summary>
     /// Samples all fields of one tile. The lawn tone field is sampled every <paramref name="toneCell"/> metres and is
-    /// linear on that coarser lattice's triangles (same diagonal), so tone contours can be resolved per tone cell.
+    /// linear on that coarser lattice's triangles (same anti-diagonal, <see cref="CellSplit"/>), so tone contours can be resolved per tone cell.
     /// </summary>
     public static TileField Build(GroundLayout layout, GroundTile tile, GroundSection section, TerrainGrid terrain,
         uint seed = 0u, float toneCell = 0f)
@@ -108,9 +108,7 @@ internal sealed class TileField
                     var u = (float)(i - i0) / m;
                     var w = (float)(j - j0) / m;
                     float T(int a, int b) => v[((j0 + b * m) * field.S + i0 + a * m) * Count + Tone];
-                    v[(j * field.S + i) * Count + Tone] = u >= w
-                        ? T(0, 0) + u * (T(1, 0) - T(0, 0)) + w * (T(1, 1) - T(1, 0))
-                        : T(0, 0) + w * (T(0, 1) - T(0, 0)) + u * (T(1, 1) - T(0, 1));
+                    v[(j * field.S + i) * Count + Tone] = CellSplit.Lerp(T(0, 0), T(1, 0), T(0, 1), T(1, 1), u, w);
                 }
         }
         // No contour may pass (almost) exactly through a lattice point: a contour lying on a lattice line would never be

@@ -6,7 +6,8 @@ namespace Campus.Gen.Ground;
 /// Walking collision for the ground (SYS-WALK 13): one 65 x 65 height field per 64 m cell, 1 m spacing, heights in cm,
 /// sampled from the same lattice and the same surface rules as the visible L0 mesh; plus the 0.5 m footstep grid
 /// (128 x 128 bytes, SYS-AUDIO 9.3). Row-major with x fastest: index = z * 65 + x (HeightMapShape3D map_data order).
-/// Triangulation diagonal of each 1 m cell: (0, 0)-(1, 1), the same diagonal the L0 mesh uses (to be verified in P0).
+/// Triangulation diagonal of each 1 m cell: the anti-diagonal (1, 0)-(0, 1) (<see cref="CellSplit"/>), as measured on Godot
+/// 4.7.2's Jolt height-field shape and the same diagonal the L0 mesh uses.
 /// </summary>
 public static class GroundCollision
 {
@@ -43,7 +44,7 @@ public static class GroundCollision
         };
     }
 
-    /// <summary>Height of the collision surface at a world point, interpolated on the same diagonal split.</summary>
+    /// <summary>Height of the collision surface at a world point, interpolated on the same (anti-)diagonal split.</summary>
     public static float SampleHeight(HeightFieldCollider collider, float x, float z)
     {
         ArgumentNullException.ThrowIfNull(collider);
@@ -54,9 +55,6 @@ public static class GroundCollision
         var fx = Math.Clamp(lx - i, 0f, 1f);
         var fz = Math.Clamp(lz - j, 0f, 1f);
         float H(int a, int b) => collider.HeightsCm[(j + b) * Samples + i + a] * 0.01f;
-        // Diagonal (0,0)-(1,1): lower-right triangle when fx >= fz.
-        return fx >= fz
-            ? H(0, 0) + fx * (H(1, 0) - H(0, 0)) + fz * (H(1, 1) - H(1, 0))
-            : H(0, 0) + fz * (H(0, 1) - H(0, 0)) + fx * (H(1, 1) - H(0, 1));
+        return CellSplit.Lerp(H(0, 0), H(1, 0), H(0, 1), H(1, 1), fx, fz);
     }
 }

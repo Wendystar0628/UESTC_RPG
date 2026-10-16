@@ -31,8 +31,8 @@ public sealed class FlatTerrain : IGroundTerrain
 }
 
 /// <summary>
-/// One tile's terrain samples, interpolated on the grid triangles with the (0,0)-(1,1) diagonal, the same split the
-/// collision height field uses; every ground vertex takes its base height from here ("draping").
+/// One tile's terrain samples, interpolated on the grid triangles with the anti-diagonal (1,0)-(0,1) (<see cref="CellSplit"/>),
+/// the same split the collision height field uses; every ground vertex takes its base height from here ("draping").
 /// </summary>
 internal sealed class TerrainGrid
 {
@@ -87,9 +87,7 @@ internal sealed class TerrainGrid
         var fu = Math.Clamp(u - i, 0f, 1f);
         var fw = Math.Clamp(w - j, 0f, 1f);
         float H(int a, int b) => _cm[(j + b) * Count + i + a] * 0.01f;
-        return fu >= fw
-            ? H(0, 0) + fu * (H(1, 0) - H(0, 0)) + fw * (H(1, 1) - H(1, 0))
-            : H(0, 0) + fw * (H(0, 1) - H(0, 0)) + fu * (H(1, 1) - H(0, 1));
+        return CellSplit.Lerp(H(0, 0), H(1, 0), H(0, 1), H(1, 1), fu, fw);
     }
 }
 
