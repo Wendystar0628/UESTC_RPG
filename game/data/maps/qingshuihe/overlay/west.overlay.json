@@ -2,54 +2,5 @@
   "zone": "west",
   "owner": "WP-19",
   "map": "qingshuihe",
-  "ops": [
-    {
-      "op": "hide",
-      "target": "qsh:way:779496166",
-      "reason": "按 Opus 2026-10-16 13:06 定案，删除六号科研楼重复实体壳 qsh:way:779496166，保留 qsh:relation:14153711 及其带内院的来源 osm:relation:10807930；不改写原始 OSM 数据。"
-    },
-    {
-      "op": "hidePart",
-      "target": "qsh:relation:11665640",
-      "sourceId": "osm:relation:11334254",
-      "reason": "按 Opus 2026-10-16 定案，只删四号科研楼的两个重复来源部件，保留文档登记的 11334255、11665641；A 区、B 区不变；不改写原始 OSM 数据。"
-    },
-    {
-      "op": "hidePart",
-      "target": "qsh:relation:11665640",
-      "sourceId": "osm:relation:11665642",
-      "reason": "按 Opus 2026-10-16 定案，只删四号科研楼的两个重复来源部件，保留文档登记的 11334255、11665641；A 区、B 区不变；不改写原始 OSM 数据。"
-    },
-    {"op": "height", "target": "qsh:relation:11334253", "height": 19.5, "storeys": 5, "reason": "四号科研楼 C 区：5 层（OSM 记 2 层，WLD-INTERIORS §16、MAP-QSH-WEST 数据定位）；按科研楼层高 3.9 m 取 19.5 m，三个部件同高。楼本体与扇形草坪、深蓝玻璃盒入口留给 19b"},
-    {"op": "height", "target": "qsh:relation:8426842", "height": 19.5, "storeys": 5, "reason": "五号科研楼：按 5 层（OSM 无层数，MAP-QSH-WEST 数据定位），19.5 m，与四号 C 区同一层线。楼本体留给 19b"},
-    {"op": "height", "target": "qsh:way:682336066", "height": 11.7, "storeys": 3, "reason": "立人托幼公园：按 3 层（WLD-INTERIORS §16、MAP-QSH-WEST 数据定位），11.7 m；OSM 估的 2 层与 4 层部件统一到 3 层，键盘立面的三排彩色玻璃一层一排。楼本体留给 19c"},
-    {"op": "style", "target": "qsh:relation:11334255", "family": "research", "facade": "research.stoneFrame"},
-    {"op": "style", "target": "qsh:relation:11665641", "family": "research", "facade": "research.stoneFrame"},
-    {"op": "style", "target": "qsh:relation:11334253", "family": "research", "facade": "research.stoneFrame"},
-    {"op": "style", "target": "qsh:relation:8426842", "family": "research", "facade": "research.stoneFrame"},
-    {"op": "style", "target": "qsh:relation:11031411", "family": "research"},
-    {"op": "style", "target": "qsh:way:603368216", "family": "research"},
-    {"op": "style", "target": "qsh:relation:11032065", "family": "research"},
-    {"op": "style", "target": "qsh:way:795677483", "family": "research"},
-    {"op": "style", "target": "qsh:way:795677482", "family": "research"},
-    {"op": "style", "target": "qsh:way:570145228", "family": "office"},
-    {"op": "style", "target": "qsh:way:779496151", "family": "research"},
-    {"op": "style", "target": "qsh:way:779496154", "family": "research"},
-    {
-      "op": "add",
-      "id": "design:west-six-forecourt",
-      "kind": "road",
-      "geometry": {"type": "polygon", "rings": {"outer": [[-589.29, 223.04], [-574.28, 219.58], [-566.68, 221.42], [-550.11, 217.59], [-545.54, 226.29], [-545.05, 239.52], [-561.62, 243.34], [-571.14, 233.22], [-586.14, 236.69]], "holes": []}},
-      "props": {"roadType": "pedestrian", "entrance": "six.c.east", "night": "门口灯下与校训石草坪灯下", "seasons": "接季：铺装接落叶、樱花瓣与积雪；靠服务路一侧是积水点"},
-      "reason": "设计增补：六号科研楼 C 区东门（开放入口 six.c.east）前到校训石的门前广场（MAP-QSH-WEST §12 主网「六号科研楼（含校训石前的广场）」）。原地是草坪，东门 13 m 内只有平行立面的 2.5 m 步道 osm:way:1061419176，门前没有硬面；补一条 14 m 宽的入口铺装从石材立面线伸到步道，再在步道外接一块约 22 × 17 m 的广场，把校训石围在中间、留出石前 3 m 的看字位（巡检点 Q1）。地垫、开放牌落在铺装上；广场不碰服务路 osm:way:635473031，离 P10 落点约 30 m，不进 P10 前景的石与楼叠影"
-    },
-    {
-      "op": "add",
-      "id": "design:west-a10-plaza",
-      "kind": "road",
-      "geometry": {"type": "polygon", "rings": {"outer": [[-241.01, -156.46], [-240.7, -160.29], [-234.31, -162.62], [-232.35, -161.31], [-231.25, -158.31], [-231.92, -156.04], [-238.31, -153.72]], "holes": []}},
-      "props": {"roadType": "pedestrian", "anchor": "A10", "night": "导览桩暖色小灯下；广场西侧与栈道两侧贴水处是暗区", "seasons": "接季：铺装接落叶、杏花瓣与积雪"},
-      "reason": "设计增补：给导览桩 A10 落脚（MAP-QSH-WEST §12 锚点表）。原锚点 (−205, −330) 落在湿地低地中间，10 m 内没有人行硬面；按锚点表的节点「湿地栈道南口」和 MAP-QSH-TERRAIN §6.4「落在栈道口的园路上（0 m），不落进湿地低地」，把小广场放在栈道南口：湿地环路 osm:way:544166204 与石桥引道 osm:way:692240859 的交点 (−239.8, −155.1) 东侧，长轴朝 250°，约 9.8 × 7 m，切角。导览桩立在广场东缘 (−232.5, −159.6)、朝 250° 看芦苇荡，暖色小灯落在铺装上；广场把桩和水隔开约 8 m，西侧栈道与石桥两边贴水的暗处不进灯，留给萤火虫（§10.1、P11）。地形覆盖层 design:terrain:west-wetland-low 在这里留洞，广场保持 0 m"
-    }
-  ]
+  "ops": []
 }

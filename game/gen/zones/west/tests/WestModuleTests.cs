@@ -210,7 +210,10 @@ public sealed class WestModuleTests
     {
         var data = DataDirectory();
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Select(p => "overlay/" + Path.GetFileName(p)))
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
+                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
@@ -372,6 +375,8 @@ public sealed class WestModuleTests
     {
         var data = DataDirectory();
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json", "overlay/west.overlay.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "west.d"), "*.json").Order(StringComparer.Ordinal)
+                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
