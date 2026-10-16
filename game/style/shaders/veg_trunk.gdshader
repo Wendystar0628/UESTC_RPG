@@ -35,6 +35,19 @@ const float VEG_LEAD_TOP = 0.04;           // 树顶、向阳面先变（按 t0�
 const float VEG_LIT_SHIFT = 0.08;          // 影 → 受光的阈值从全场的 −0.03 挪到植被的 0.05（ENG-PERF §9）
 const float VEG_TOP_LIFT = 0.06;           // 冠顶亮：受光 L +0.06（§1.3）
 const float VEG_GRAD_SHADE = 0.04;         // 冠内梯度在影里的连续项（L，±0.02）
+// 四阶软色阶（max-110 110c）：照参考小渔港树叶的 soft 色阶（N·L 约 0.1 / 0.4 处分出 0.32 / 0.68 / 1），树冠在受光面里多一档
+// "半受光"（toon 的半受光档，N·L 低于 TOON_THR_HALF 的一侧），每个团块读出 受光 / 半受光 / 影 / 深影 四块；木质部分不加
+const float VEG_HALF_LEVEL = 0.55;         // 半受光档：影 → 受光 的这个比例
+const float VEG_LIT_LIFT = 0.09;           // 树冠受光档整体提亮（OKLab L，110c 第三轮），明暗拉开、整冠平均亮度不低于改前
+// 树冠暗面按材质（max-110 110c 第二、三轮），按受光色的色相分三类；深影由影色推导，一起变。
+// 绿叶、红叶：参考树冠的暗面偏青蓝，不是同色压暗，OKLab 的 b（黄 → 蓝）往蓝推、L 再压，得青绿、紫红；
+// 黄橙类（主角银杏）：暗面往琥珀、橙走，色相向红转约 12°，彩度不降且不低于受光彩度的 0.44 倍（ART-STYLE §3 护栏下限），不往冷推
+const float VEG_SHADE_COOL = 0.03;         // 绿叶、红叶影色 OKLab b 往蓝推的量
+const float VEG_SHADE_DEEPEN = 0.07;       // 绿叶影色 L 再压的比例
+const float VEG_DEEPEN_RED = 0.05;         // 红叶影色 L 再压的比例
+const float VEG_DEEPEN_WARM = 0.04;        // 黄橙类影色 L 再压的比例
+const float VEG_WARM_SHADE_HUE = 0.21;     // 黄橙类影色色相往红转（rad，约 12°）
+const float VEG_WARM_SHADE_CMIN = 0.44;    // 黄橙类影色彩度下限：受光彩度的这个倍数
 const float VEG_HUE_JITTER = 0.10;         // 世界坐标色相噪声 ±0.10 rad ≈ ±6°（ART-MODELING §3）
 const float VEG_L_JITTER = 0.04;           // 世界坐标明度噪声 ±4%
 const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相邻的树颜色接近
@@ -193,8 +206,22 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
 	if (t_grad >= 0.0) {
 		float t = t_grad + 0.32 * dot(c.n_w, normalize(key_dir));
-		lit = ok_adjust(lit, 1.0, 1.0, VEG_TOP_LIFT * smoothstep(0.62, 0.82, t));
+		lit = ok_adjust(lit, 1.0, 1.0, VEG_LIT_LIFT + VEG_TOP_LIFT * smoothstep(0.62, 0.82, t));
 		shade = ok_adjust(shade, 1.0, 1.0, VEG_GRAD_SHADE * (clamp(t, 0.0, 1.0) - 0.5));
+		// 按受光色的色相分类：黄橙类 35°–115°，红叶类 −45°–35°，其余算绿叶类
+		vec3 lo = ok_from_linear(lit);
+		float hl = atan(lo.z, lo.y);
+		bool warm = hl > 0.6 && hl < 2.0;
+		bool red = hl <= 0.6 && hl > -0.8;
+		vec3 so = ok_from_linear(shade);
+		so.x *= 1.0 - (warm ? VEG_DEEPEN_WARM : (red ? VEG_DEEPEN_RED : VEG_SHADE_DEEPEN));
+		if (warm) {
+			float hs = atan(so.z, so.y) - VEG_WARM_SHADE_HUE;
+			so.yz = max(length(so.yz), VEG_WARM_SHADE_CMIN * length(lo.yz)) * vec2(cos(hs), sin(hs));
+		} else {
+			so.z -= VEG_SHADE_COOL;
+		}
+		shade = ok_to_linear(so);
 	}
 	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y;
 	float day = smoothstep(-0.02, 0.05, sun_dir.y);
@@ -218,7 +245,7 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 		trans = ok_adjust(lit, 1.0, 1.2, 0.08) * m.k_t * trans_k * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
 	}
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
-	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, 1.0, push, 1.0);
+	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
 }
 // ===========================================================================
 // 植被公共段结束
