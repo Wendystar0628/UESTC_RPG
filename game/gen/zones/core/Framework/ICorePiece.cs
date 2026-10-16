@@ -47,12 +47,17 @@ public sealed class CoreBuild(PaletteRegistry? palette)
     /// <summary>The map's window allocation (BuildContext.WindowNumbering, map already checked); null only in fixtures.</summary>
     public WindowNumberingSnapshot? WindowNumbering { get; init; }
 
-    public ContentOutput Finish()
+    /// <summary>
+    /// The tile's output at <paramref name="lod"/>. Placed parts the baker cannot build at that level are left out (small street
+    /// furniture such as the bench registers L0 and L1 only), so a piece may place its dressing without checking each part.
+    /// </summary>
+    public ContentOutput Finish(LodLevel lod)
     {
         var meshes = Mesh.Finish();
         if (Bundles.Count > 0) meshes = [.. meshes, .. Bundles];
-        if (meshes.Count == 0 && Parts.Count == 0 && Emitters.Count == 0) return ContentOutput.Empty;
-        return new ContentOutput(meshes, Parts.ToArray(), Emitters.Count == 0 ? null : Emitters.ToArray());
+        var parts = Parts.Where(p => PartLods.Supports(p.Part, lod)).ToArray();
+        if (meshes.Count == 0 && parts.Length == 0 && Emitters.Count == 0) return ContentOutput.Empty;
+        return new ContentOutput(meshes, parts, Emitters.Count == 0 ? null : Emitters.ToArray());
     }
 }
 

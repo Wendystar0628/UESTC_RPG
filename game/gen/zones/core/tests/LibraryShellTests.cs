@@ -85,7 +85,7 @@ public sealed class LibraryShellTests
         {
             var build = new CoreBuild(palette) { WindowNumbering = numbering };
             shell.Build(build, lod);
-            var output = build.Finish();
+            var output = build.Finish(lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             var clear = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.GlassNear).ToArray();
             Require(glass.Length >= 1 && clear.Length >= 1, $"{lod}: window glass and clear glass bundles");
@@ -166,7 +166,7 @@ public sealed class LibraryShellTests
         var shell = Shell(world);
         var build = new CoreBuild(null);
         shell.Build(build, LodLevel.L0);
-        var glass = build.Finish().Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear).ToArray();
+        var glass = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear).ToArray();
         Require(glass.Length > 0 && glass.All(g => g.Uv is null && g.Uv2 is null), "no base is invented without a snapshot");
         var wrong = Numbering(shell, shell.Columns + 1);
         Require(Throws(() => shell.Build(new CoreBuild(null) { WindowNumbering = wrong }, LodLevel.L0)), "an allocation of another size is refused");

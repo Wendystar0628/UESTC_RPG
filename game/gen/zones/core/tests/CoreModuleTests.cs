@@ -102,6 +102,35 @@ public sealed class CoreModuleTests
     }
 
     [TestCase]
+    public void L2CellsCarryNoPartThatOnlyBuildsAtL0AndL1()
+    {
+        var world = RealWorld();
+        var module = new CoreModule();
+        var ctx = Context(world, Palette());
+        // The oracle is the part definitions themselves, not the zone's own table.
+        var bench = new Campus.Gen.Parts.Street.BenchPart().Lods.Keys.ToArray();
+        Require(bench.SequenceEqual([LodLevel.L0, LodLevel.L1]), "the bench builds at L0 and L1 only");
+        Require(PartLods.Of(new PartId(PartCatalog.Bench))!.SetEquals(bench), "the zone's table reads the bench's levels");
+        Require(PartLods.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2), "the street lamp builds at L2");
+
+        var plaza = CoreSite.Pieces(world)[0];
+        var near = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
+        Require(near.Parts.Any(p => p.Part.Value == PartCatalog.Bench), "the plaza cell still seats its benches at L0");
+        var l2Tiles = CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, LodLevel.L2)).Distinct().ToArray();
+        Require(l2Tiles.Length > 0, "the zone has L2 cells");
+        foreach (var lod in new[] { LodLevel.L2, LodLevel.L3, LodLevel.L4 })
+            foreach (var tile in CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
+                foreach (var part in module.Build(ctx, tile, lod).Parts)
+                {
+                    var levels = PartLods.Of(part.Part) ?? throw new InvalidOperationException($"{part.Part.Value} is not a registered part.");
+                    Require(levels.Contains(lod), $"{lod} {tile}: {part.Part.Value} has no {lod} builder");
+                    Require(part.Part.Value != PartCatalog.Bench, $"{lod} {tile}: no bench");
+                }
+        var far = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L2), LodLevel.L2);
+        Require(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps, "the rim lamps (L0 to L2) stay at L2");
+    }
+
+    [TestCase]
     public void GnomonPointsTrueNorthAtTheLatitude()
     {
         var sundial = (Sundial)CoreSite.Pieces(RealWorld())[1];

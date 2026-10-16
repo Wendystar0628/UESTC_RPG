@@ -35,7 +35,7 @@ public sealed class CoreModule : IContentModule, IWindowMetadataSource
         var build = new CoreBuild(ctx.Palette) { WindowNumbering = CoreSite.Numbering(ctx) };
         foreach (var piece in CoreSite.Pieces(ctx.World))
             if (CoreTiles.Of(piece.Anchor, lod) == tile) piece.Build(build, lod);
-        return build.Finish();
+        return build.Finish(lod);
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)

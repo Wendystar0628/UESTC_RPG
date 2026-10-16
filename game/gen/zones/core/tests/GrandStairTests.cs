@@ -47,7 +47,7 @@ public sealed class GrandStairTests
         var (stair, shell) = Pieces(world);
         var build = new CoreBuild(null);
         stair.Build(build, LodLevel.L0);
-        var output = build.Finish();
+        var output = build.Finish(LodLevel.L0);
         var door = output.Parts.Single(p => p.Part.Value == PartCatalog.DoorGlass);
         var p = (DoorParams)door.Params;
         Require(p.OpenAngleDeg >= 89f && p.Leaves == 4 && p.Width / p.Leaves * 2 > 1.1f, "two inner leaves fixed open, clear width over 1.1 m");
@@ -60,7 +60,7 @@ public sealed class GrandStairTests
         var lib = new CoreBuild(null);
         shell.Build(lib, LodLevel.L0);
         var across = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, bay.Outward));
-        foreach (var g in lib.Finish().Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
+        foreach (var g in lib.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
             for (var v = 0; v < g.Position.Length / 3; v++)
             {
                 var q = new Vector3(g.Position[3 * v], g.Position[3 * v + 1], g.Position[3 * v + 2]) - bay.Origin;
