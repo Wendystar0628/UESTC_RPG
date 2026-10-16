@@ -267,6 +267,69 @@
    "rel_db": 0
   },
   {
+   "id": "foot_metalcover_walk",
+   "mode": "step",
+   "srcs": [
+    "365411",
+    "50724"
+   ],
+   "n": 8,
+   "rel_db": 1
+  },
+  {
+   "id": "foot_steelplate_walk",
+   "mode": "step",
+   "srcs": [
+    "232692",
+    "556715",
+    "50723"
+   ],
+   "n": 8,
+   "rel_db": 1
+  },
+  {
+   "id": "foot_rubbermat_walk",
+   "mode": "step",
+   "srcs": [
+    "613723",
+    "454916"
+   ],
+   "n": 8,
+   "rel_db": -2,
+   "lp": 5000
+  },
+  {
+   "id": "foot_epoxy_walk",
+   "mode": "step",
+   "srcs": [
+    "712084",
+    "454916"
+   ],
+   "n": 8,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_sportwood_walk",
+   "mode": "step",
+   "srcs": [
+    "472673",
+    "119914"
+   ],
+   "n": 8,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_pooldeck_walk",
+   "mode": "step",
+   "srcs": [
+    "338106",
+    "51148"
+   ],
+   "n": 8,
+   "rel_db": 0,
+   "hp": 60
+  },
+  {
    "id": "bird_sparrow",
    "mode": "phrase",
    "srcs": [

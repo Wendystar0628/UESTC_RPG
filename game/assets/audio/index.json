@@ -1349,6 +1349,55 @@
    "ref_lufs_m": -30.0
   },
   {
+   "id": "foot_epoxy_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_epoxy_walk_01.wav",
+     "duration_ms": 349,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_epoxy_walk_02.wav",
+     "duration_ms": 461,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_epoxy_walk_03.wav",
+     "duration_ms": 301,
+     "lufs_m": -31.95
+    },
+    {
+     "file": "foley/foot_epoxy_walk_04.wav",
+     "duration_ms": 291,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_epoxy_walk_05.wav",
+     "duration_ms": 413,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_epoxy_walk_06.wav",
+     "duration_ms": 477,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_epoxy_walk_07.wav",
+     "duration_ms": 271,
+     "lufs_m": -30.18
+    },
+    {
+     "file": "foley/foot_epoxy_walk_08.wav",
+     "duration_ms": 483,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
    "id": "foot_grass_walk",
    "kind": "foot",
    "mono": true,
@@ -1496,6 +1545,55 @@
    "ref_lufs_m": -28.5
   },
   {
+   "id": "foot_metalcover_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_metalcover_walk_01.wav",
+     "duration_ms": 189,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_02.wav",
+     "duration_ms": 401,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_03.wav",
+     "duration_ms": 197,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_04.wav",
+     "duration_ms": 605,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_05.wav",
+     "duration_ms": 205,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_06.wav",
+     "duration_ms": 605,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_07.wav",
+     "duration_ms": 157,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_metalcover_walk_08.wav",
+     "duration_ms": 529,
+     "lufs_m": -29.0
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
+  },
+  {
    "id": "foot_metalgrate_walk",
    "kind": "foot",
    "mono": true,
@@ -1592,6 +1690,104 @@
    ],
    "rel_db": 1,
    "ref_lufs_m": -29.0
+  },
+  {
+   "id": "foot_pooldeck_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_pooldeck_walk_01.wav",
+     "duration_ms": 183,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_02.wav",
+     "duration_ms": 207,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_03.wav",
+     "duration_ms": 195,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_04.wav",
+     "duration_ms": 359,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_05.wav",
+     "duration_ms": 155,
+     "lufs_m": -33.32
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_06.wav",
+     "duration_ms": 201,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_07.wav",
+     "duration_ms": 231,
+     "lufs_m": -30.72
+    },
+    {
+     "file": "foley/foot_pooldeck_walk_08.wav",
+     "duration_ms": 205,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_rubbermat_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_rubbermat_walk_01.wav",
+     "duration_ms": 461,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_02.wav",
+     "duration_ms": 175,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_03.wav",
+     "duration_ms": 291,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_04.wav",
+     "duration_ms": 191,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_05.wav",
+     "duration_ms": 477,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_06.wav",
+     "duration_ms": 205,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_07.wav",
+     "duration_ms": 483,
+     "lufs_m": -32.0
+    },
+    {
+     "file": "foley/foot_rubbermat_walk_08.wav",
+     "duration_ms": 241,
+     "lufs_m": -32.0
+    }
+   ],
+   "rel_db": -2,
+   "ref_lufs_m": -32.0
   },
   {
    "id": "foot_rubbertrack_walk",
@@ -1839,6 +2035,55 @@
    "ref_lufs_m": -29.0
   },
   {
+   "id": "foot_sportwood_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_sportwood_walk_01.wav",
+     "duration_ms": 239,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_02.wav",
+     "duration_ms": 231,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_03.wav",
+     "duration_ms": 231,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_04.wav",
+     "duration_ms": 199,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_05.wav",
+     "duration_ms": 269,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_06.wav",
+     "duration_ms": 319,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_07.wav",
+     "duration_ms": 247,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_sportwood_walk_08.wav",
+     "duration_ms": 245,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
    "id": "foot_stairs_hard_down",
    "kind": "foot",
    "mono": true,
@@ -1954,6 +2199,55 @@
    ],
    "rel_db": 0,
    "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_steelplate_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_steelplate_walk_01.wav",
+     "duration_ms": 605,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_02.wav",
+     "duration_ms": 273,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_03.wav",
+     "duration_ms": 531,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_04.wav",
+     "duration_ms": 437,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_05.wav",
+     "duration_ms": 293,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_06.wav",
+     "duration_ms": 449,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_07.wav",
+     "duration_ms": 431,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_steelplate_walk_08.wav",
+     "duration_ms": 259,
+     "lufs_m": -29.0
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
   },
   {
    "id": "foot_stonepaving_walk",

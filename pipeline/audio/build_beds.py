@@ -58,7 +58,7 @@ def _process(r, raw_dir, out_dir):
     for _ in range(2):
         loop = A.limit(loop, tgt + crest)
         loop, _, tp = A.normalize_to(loop, tgt, tp_limit=-1.0)
-    loop = A.rotate_best_seam(loop)
+    loop = A.rotate_best_seam(loop, tries=r.get("seam_tries", 600))
     path = os.path.join(out_dir, "beds", f'{r["id"]}.ogg')
     q = r.get("q", 5 if loop.shape[1] == 2 else 4)
     A.write_ogg(path, loop, q)

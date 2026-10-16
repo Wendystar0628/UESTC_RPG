@@ -169,14 +169,16 @@
    "id": "bed_insect_cicada_02",
    "src": "852877",
    "len": 150,
-   "note": "白天蝉与蟋蟀"
+   "note": "白天蝉与蟋蟀",
+   "seam_tries": 30000
   },
   {
    "id": "bed_insect_cicada_03",
    "src": "118982",
    "len": 50,
    "xf": 3,
-   "note": "蝉长鸣"
+   "note": "蝉长鸣",
+   "seam_tries": 30000
   },
   {
    "id": "bed_insect_cicada_04",

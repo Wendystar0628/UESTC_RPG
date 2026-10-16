@@ -92,6 +92,10 @@
    "sha256": "aaa427f76b94388ca9b331185e0cd6ec815bfd679fbb97d1eef0b9e2f2211f5d",
    "attribution": "",
    "used_in": [
+    "foley/foot_sportwood_walk_01.wav",
+    "foley/foot_sportwood_walk_03.wav",
+    "foley/foot_sportwood_walk_05.wav",
+    "foley/foot_sportwood_walk_07.wav",
     "foley/foot_woodfloor_walk_03.wav",
     "foley/foot_woodfloor_walk_07.wav"
    ]
@@ -430,6 +434,26 @@
    ]
   },
   {
+   "id": "fs-232692",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/Ottomaani138/sounds/232692/",
+   "title": "footsteps_steel.wav",
+   "author": "Ottomaani138",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/232692.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "footsteps_steel.wav",
+   "sha256": "24711efe2374e624627eec52fa95f02be4a07b84d81abf08b2ae68bd67f6b8d9",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_steelplate_walk_02.wav",
+    "foley/foot_steelplate_walk_05.wav",
+    "foley/foot_steelplate_walk_08.wav"
+   ]
+  },
+  {
    "id": "fs-235186",
    "source": "Freesound",
    "url": "https://freesound.org/people/magnesium1/sounds/235186/",
@@ -482,6 +506,27 @@
    "attribution": "",
    "used_in": [
     "beds/bed_insect_cicada_01.ogg"
+   ]
+  },
+  {
+   "id": "fs-338106",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/SpliceSound/sounds/338106/",
+   "title": "Footsteps, barefoot on wet tile.wav",
+   "author": "SpliceSound",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/338106.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Footsteps, barefoot on wet tile.wav",
+   "sha256": "2fe6a155022b7d24d02705389fc7b0c91f7c956fd0309541261fefa1f39718ee",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_pooldeck_walk_01.wav",
+    "foley/foot_pooldeck_walk_03.wav",
+    "foley/foot_pooldeck_walk_05.wav",
+    "foley/foot_pooldeck_walk_07.wav"
    ]
   },
   {
@@ -577,6 +622,27 @@
    "attribution": "",
    "used_in": [
     "beds/bed_frog_pond_01.ogg"
+   ]
+  },
+  {
+   "id": "fs-365411",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/RutgerMuller/sounds/365411/",
+   "title": "Japan_Matsudo_Stepping_on_Small_Manhole_Cover.wav",
+   "author": "RutgerMuller",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/365411.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Japan_Matsudo_Stepping_on_Small_Manhole_Cover.wav",
+   "sha256": "4c76540557ee89a3eb104b4232b5b3f81f789a6cf6ad080a49590670da30ed85",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_metalcover_walk_01.wav",
+    "foley/foot_metalcover_walk_03.wav",
+    "foley/foot_metalcover_walk_05.wav",
+    "foley/foot_metalcover_walk_07.wav"
    ]
   },
   {
@@ -1098,6 +1164,31 @@
    ]
   },
   {
+   "id": "fs-454916",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/qwaston/sounds/454916/",
+   "title": "Footsteps Interior Collection",
+   "author": "qwaston",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/454916.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Footsteps Interior Collection",
+   "sha256": "23933719db8ad80d81690e2655dba09b0250711736a4bba2bca8885e469d211f",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_epoxy_walk_02.wav",
+    "foley/foot_epoxy_walk_04.wav",
+    "foley/foot_epoxy_walk_06.wav",
+    "foley/foot_epoxy_walk_08.wav",
+    "foley/foot_rubbermat_walk_01.wav",
+    "foley/foot_rubbermat_walk_03.wav",
+    "foley/foot_rubbermat_walk_05.wav",
+    "foley/foot_rubbermat_walk_07.wav"
+   ]
+  },
+  {
    "id": "fs-457318",
    "source": "Freesound",
    "url": "https://freesound.org/people/Stek59/sounds/457318/",
@@ -1150,6 +1241,27 @@
    "used_in": [
     "foley/foot_concrete_walk_03.wav",
     "foley/foot_concrete_walk_06.wav"
+   ]
+  },
+  {
+   "id": "fs-472673",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/tvilgiat/sounds/472673/",
+   "title": "Footsteps in Gym",
+   "author": "tvilgiat",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/472673.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Footsteps in Gym",
+   "sha256": "9b08722afe4faf8e470534b6728f1cfca31046c6b8651e952f992166f75e2b67",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_sportwood_walk_02.wav",
+    "foley/foot_sportwood_walk_04.wav",
+    "foley/foot_sportwood_walk_06.wav",
+    "foley/foot_sportwood_walk_08.wav"
    ]
   },
   {
@@ -1287,6 +1399,46 @@
    ]
   },
   {
+   "id": "fs-50723",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/RutgerMuller/sounds/50723/",
+   "title": "Footsteps Metallic Muffled.wav",
+   "author": "RutgerMuller",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/50723.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Footsteps Metallic Muffled.wav",
+   "sha256": "de5579f58ceeb82598e6985d022bd17905a9b169d5662211ccb3b7752e974e8b",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_steelplate_walk_03.wav",
+    "foley/foot_steelplate_walk_06.wav"
+   ]
+  },
+  {
+   "id": "fs-50724",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/RutgerMuller/sounds/50724/",
+   "title": "Footsteps Metallic Muffled Louder.wav",
+   "author": "RutgerMuller",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/50724.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Footsteps Metallic Muffled Louder.wav",
+   "sha256": "4d5b96379099ad28ed8ff9cf6ce0c4504b91b3b4a7dd37b3c6d8f85e0860fabc",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_metalcover_walk_02.wav",
+    "foley/foot_metalcover_walk_04.wav",
+    "foley/foot_metalcover_walk_06.wav",
+    "foley/foot_metalcover_walk_08.wav"
+   ]
+  },
+  {
    "id": "fs-50725",
    "source": "Freesound",
    "url": "https://freesound.org/people/RutgerMuller/sounds/50725/",
@@ -1312,6 +1464,27 @@
     "foley/foot_terrazzo_walk_04.wav",
     "foley/foot_terrazzo_walk_06.wav",
     "foley/foot_terrazzo_walk_08.wav"
+   ]
+  },
+  {
+   "id": "fs-51148",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/RutgerMuller/sounds/51148/",
+   "title": "Fast Wet Footsteps in Small Shower Cabin.wav",
+   "author": "RutgerMuller",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/51148.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Fast Wet Footsteps in Small Shower Cabin.wav",
+   "sha256": "f29eb1193c562bc6bee3c2a63400ca2f6efc18b1ed4c706f528cb9b34440f78f",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_pooldeck_walk_02.wav",
+    "foley/foot_pooldeck_walk_04.wav",
+    "foley/foot_pooldeck_walk_06.wav",
+    "foley/foot_pooldeck_walk_08.wav"
    ]
   },
   {
@@ -1686,6 +1859,26 @@
    ]
   },
   {
+   "id": "fs-556715",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/NachtmahrTV/sounds/556715/",
+   "title": "Walking on Metal Floor",
+   "author": "NachtmahrTV",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/556715.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Walking on Metal Floor",
+   "sha256": "1717655202b84733662636173a4834b942c2c63f922d93044c8bade78122e2fe",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_steelplate_walk_01.wav",
+    "foley/foot_steelplate_walk_04.wav",
+    "foley/foot_steelplate_walk_07.wav"
+   ]
+  },
+  {
    "id": "fs-571090",
    "source": "Freesound",
    "url": "https://freesound.org/people/TRP/sounds/571090/",
@@ -1884,6 +2077,10 @@
    "sha256": "3631e56627a1a223388ce1c1200238761c774f6bdb90aaa25cefa1118febe6fd",
    "attribution": "",
    "used_in": [
+    "foley/foot_rubbermat_walk_02.wav",
+    "foley/foot_rubbermat_walk_04.wav",
+    "foley/foot_rubbermat_walk_06.wav",
+    "foley/foot_rubbermat_walk_08.wav",
     "foley/foot_rubbertrack_walk_01.wav",
     "foley/foot_rubbertrack_walk_03.wav",
     "foley/foot_rubbertrack_walk_05.wav",
@@ -2332,6 +2529,27 @@
    "attribution": "",
    "used_in": [
     "beds/bed_bird_sparrows_01.ogg"
+   ]
+  },
+  {
+   "id": "fs-712084",
+   "source": "Freesound",
+   "url": "https://freesound.org/people/areniporgen/sounds/712084/",
+   "title": "Steps on concrete, indoor",
+   "author": "areniporgen",
+   "license": "CC0 1.0",
+   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "downloaded": "2026-10-17",
+   "snapshot": "pipeline/audio/snapshots/712084.json",
+   "retrieved_as": "freesound-hq-preview-ogg-48k",
+   "original_name": "Steps on concrete, indoor",
+   "sha256": "c7789ad25832c2625549e2ecf7558caa5a0e046b00b08b48b45b0261f82e056a",
+   "attribution": "",
+   "used_in": [
+    "foley/foot_epoxy_walk_01.wav",
+    "foley/foot_epoxy_walk_03.wav",
+    "foley/foot_epoxy_walk_05.wav",
+    "foley/foot_epoxy_walk_07.wav"
    ]
   },
   {
@@ -3622,8 +3840,8 @@
   },
   {
    "path": "beds/bed_insect_cicada_02.ogg",
-   "sha256": "936fe0341f271c09c199e979c791d908580ea55fe8bee1b1dd0e22cb6cf85dd9",
-   "bytes": 3350128,
+   "sha256": "7174c25bb24abf833491c8db81202daf178713e5e030cd54d5c26cfbe02c1379",
+   "bytes": 3353510,
    "source_ids": [
     "fs-852877"
    ],
@@ -3631,8 +3849,8 @@
   },
   {
    "path": "beds/bed_insect_cicada_03.ogg",
-   "sha256": "6a75528785f38ec321425a6c42359eddd297b8cff1b9efe0e7561382322b5305",
-   "bytes": 875248,
+   "sha256": "b3b6de7f117ca6b72eb787c4e6c856adf2cccd0ea52ff11c6650c03879719c46",
+   "bytes": 875614,
    "source_ids": [
     "fs-118982"
    ],
@@ -4449,6 +4667,78 @@
    "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
   },
   {
+   "path": "foley/foot_epoxy_walk_01.wav",
+   "sha256": "f3092fd6accb3efa172b258b8e19252648f3a2b0003b96393685433b5e6cbc31",
+   "bytes": 33548,
+   "source_ids": [
+    "fs-712084"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_02.wav",
+   "sha256": "f113f84ff462992c87ada49849cc112bb99b99c01dc293754f990d3314b52a28",
+   "bytes": 44300,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_03.wav",
+   "sha256": "d65254241991048f198f5da673f94ed211760ed0d21a980ecead1d501c0e5631",
+   "bytes": 28940,
+   "source_ids": [
+    "fs-712084"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_04.wav",
+   "sha256": "c34702415874e86b02099311f067fbf54967df799a2a8c113d7367fa5ce8ec5a",
+   "bytes": 27980,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_05.wav",
+   "sha256": "2535415f273267bebd88bb28544cfe079c8f78bd513647185559eefff6164a35",
+   "bytes": 39692,
+   "source_ids": [
+    "fs-712084"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_06.wav",
+   "sha256": "bde8009417e7ed5fd5d32316a4dcddd70d1bfbd44984fe95d55a3b510d23e594",
+   "bytes": 45836,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_07.wav",
+   "sha256": "057082663d175b86325d7293b5ca2b60021bd93a48f9ef4c168cece0751cd1fc",
+   "bytes": 26060,
+   "source_ids": [
+    "fs-712084"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_epoxy_walk_08.wav",
+   "sha256": "971a5768297abd8529d679af2beb661e87468f66c707ba54662ad8df9638d5d5",
+   "bytes": 46412,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
    "path": "foley/foot_grass_walk_01.wav",
    "sha256": "731973c512f6d8645c12b76831eec1cf9cbecf1490310cab1f83922b93ab3fde",
    "bytes": 31628,
@@ -4665,6 +4955,78 @@
    "processing": "按瞬态从原片切出单个事件；高通 80 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
   },
   {
+   "path": "foley/foot_metalcover_walk_01.wav",
+   "sha256": "f888b6fa554848aa4fb9426e11ea902d1c2d87137b81e946986fcf70a419fe18",
+   "bytes": 18188,
+   "source_ids": [
+    "fs-365411"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_02.wav",
+   "sha256": "43bca692f967a4800fa2db1e0a7f6702a77c7e981cce55f7a00580fc113cdaa0",
+   "bytes": 38540,
+   "source_ids": [
+    "fs-50724"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_03.wav",
+   "sha256": "ed858af7e2efb32bf2eac34556bad6be857d4becc6b8145fff2ac9b4b8ce7a26",
+   "bytes": 18956,
+   "source_ids": [
+    "fs-365411"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_04.wav",
+   "sha256": "9d30d89ed03ef2743bc12a33bcff3100fb94106b9f9093370ba97d3ccf678ffd",
+   "bytes": 58124,
+   "source_ids": [
+    "fs-50724"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_05.wav",
+   "sha256": "fa5560f96b99e1a8a463e1fcb0e270b64469c4df95883fe59561afda55fe5d65",
+   "bytes": 19724,
+   "source_ids": [
+    "fs-365411"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_06.wav",
+   "sha256": "850daac8714f1789670541eb8662b5612c0129266e8801b545bfc5d052b26840",
+   "bytes": 58124,
+   "source_ids": [
+    "fs-50724"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_07.wav",
+   "sha256": "063c1612eb5f4b89dee51e8af8a9868b5213c90f875842537d399e548b862787",
+   "bytes": 15116,
+   "source_ids": [
+    "fs-365411"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_metalcover_walk_08.wav",
+   "sha256": "f0c78cc0d60f64a7fb1d4833550aa2599d36d6659146b8e78cf78a7e48d4c800",
+   "bytes": 50828,
+   "source_ids": [
+    "fs-50724"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
    "path": "foley/foot_metalgrate_walk_01.wav",
    "sha256": "f21d34ccc3862d2df606175cb5a9aaa9b74eae5469dd623dcc20a6e863aeb854",
    "bytes": 49868,
@@ -4807,6 +5169,150 @@
     "fs-50725"
    ],
    "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 9000 Hz；变调 -1.5 半音；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_01.wav",
+   "sha256": "66651c724403a2f52e45e422fe2d29ecd01e2cfdbcab8dac61f5356cce4c7f81",
+   "bytes": 17612,
+   "source_ids": [
+    "fs-338106"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_02.wav",
+   "sha256": "9abaf58770ffbde9f8659b2495f784500389df1e9e5754bcbf13343c5427755a",
+   "bytes": 19916,
+   "source_ids": [
+    "fs-51148"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_03.wav",
+   "sha256": "7f22203848d1cb4d654aaa9577d3514b114c120f83f065ad9c88bbb893dd77fe",
+   "bytes": 18764,
+   "source_ids": [
+    "fs-338106"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_04.wav",
+   "sha256": "5b811ff18023a6ce823fb71bb677cc499a273a6a756bffae28dfb86cbfce41b9",
+   "bytes": 34508,
+   "source_ids": [
+    "fs-51148"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_05.wav",
+   "sha256": "9af81e5881930e7009852b6615e59d2a6bbcd173d9fb1f99e26cb34588ceedd2",
+   "bytes": 14924,
+   "source_ids": [
+    "fs-338106"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_06.wav",
+   "sha256": "5fd03c57479a046cc4e3296af6b1d801b5ddec68e7562b93cdd6afe0af1bae05",
+   "bytes": 19340,
+   "source_ids": [
+    "fs-51148"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_07.wav",
+   "sha256": "5e4c6a265ddbde35d6408891771a2303823fc6f141340c2e457623d3c3d3a64e",
+   "bytes": 22220,
+   "source_ids": [
+    "fs-338106"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_pooldeck_walk_08.wav",
+   "sha256": "b3a490e06f1a2fef56cc1263a6d6e85d2779a1e2c1e7d8a1693e13977580fbdb",
+   "bytes": 19724,
+   "source_ids": [
+    "fs-51148"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_01.wav",
+   "sha256": "70da5d43f16da1f07a0023c1bddb558c1477db67c6161363764908e4a603e5c5",
+   "bytes": 44300,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_02.wav",
+   "sha256": "498264fd4906586c7c854e6e8b1bf9cc7461e22137af24d32e9225c0f83a0b8d",
+   "bytes": 16844,
+   "source_ids": [
+    "fs-613723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_03.wav",
+   "sha256": "f4596bdee43a52bc6e2d59b7e0b9e72e2c6c4fe72e0ca50546d21f6c7cbdf7d9",
+   "bytes": 27980,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_04.wav",
+   "sha256": "877564609da32e5a8fbe8ae90058589d41eb6da654e024b1db239dd4975814d8",
+   "bytes": 18380,
+   "source_ids": [
+    "fs-613723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_05.wav",
+   "sha256": "f6cf4863c8118813a5c968488b80699fcffc73a4280ba192278399e0c891e233",
+   "bytes": 45836,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_06.wav",
+   "sha256": "fbb17a82de6b76d605056a14f6b1cb39620fcac9a4e4854f39d89bf1ff0ba2fc",
+   "bytes": 19724,
+   "source_ids": [
+    "fs-613723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_07.wav",
+   "sha256": "99105ef51e84d4abaebe29a0314c418ad31a0a0730be01a51a5f23c6c06b70bd",
+   "bytes": 46412,
+   "source_ids": [
+    "fs-454916"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_rubbermat_walk_08.wav",
+   "sha256": "1f6581f64b7d9de7e595dd13289e47928e7527e267e36b7c65ff9549d22f3b76",
+   "bytes": 23180,
+   "source_ids": [
+    "fs-613723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；低通 5000 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
   },
   {
    "path": "foley/foot_rubbertrack_walk_01.wav",
@@ -5169,6 +5675,78 @@
    "processing": "按瞬态从原片切出单个事件；高通 60 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
   },
   {
+   "path": "foley/foot_sportwood_walk_01.wav",
+   "sha256": "ff3f22ddf72194ac0956215b2aab6645975e743b5469e0c8831e0e09d08a407e",
+   "bytes": 22988,
+   "source_ids": [
+    "fs-119914"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_02.wav",
+   "sha256": "4ed90520d384bcf084580fe2e44e73c39203243ba2ad7fce711319b9545ddc79",
+   "bytes": 22220,
+   "source_ids": [
+    "fs-472673"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_03.wav",
+   "sha256": "2067d17e5a0a514298973212b4179ca73ba94d7aa07c1a561c8fc3050683d58f",
+   "bytes": 22220,
+   "source_ids": [
+    "fs-119914"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_04.wav",
+   "sha256": "2c32596b13ea4b4ee76453a6735a194c7bd11c84d565e09746de446cb254c2b6",
+   "bytes": 19148,
+   "source_ids": [
+    "fs-472673"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_05.wav",
+   "sha256": "2a9155c8ce4adc1cd1c8f7e52fe93a6a147557d37c530f00628382f53100e0a9",
+   "bytes": 25868,
+   "source_ids": [
+    "fs-119914"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_06.wav",
+   "sha256": "15771ade32582b43dada426bf57ac9ec3b21c810090333cee91688c0920a0110",
+   "bytes": 30668,
+   "source_ids": [
+    "fs-472673"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_07.wav",
+   "sha256": "fec2ea789d733212069cfd7aebaa6ace0e8ecdc5c7c758578680094f58591929",
+   "bytes": 23756,
+   "source_ids": [
+    "fs-119914"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_sportwood_walk_08.wav",
+   "sha256": "ef6aa766b3ddf8c7fe7291db2f82cad5444e39d336d990b466a7ad206db5b3de",
+   "bytes": 23564,
+   "source_ids": [
+    "fs-472673"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
    "path": "foley/foot_stairs_hard_down_01.wav",
    "sha256": "ccc48f7fbfa8f0e94bb5c8f88439dc858ddfc44bc4664a066be62a6ca2e112e0",
    "bytes": 19724,
@@ -5327,6 +5905,78 @@
    "bytes": 28940,
    "source_ids": [
     "fs-210573"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_01.wav",
+   "sha256": "8288533c525f41071820e814e92330271154eb662aae8aa919057c5c80083993",
+   "bytes": 58124,
+   "source_ids": [
+    "fs-556715"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_02.wav",
+   "sha256": "67294dfd0e437966bf82d3322753b516456346ad59bda4d50eefdf9267e119a8",
+   "bytes": 26252,
+   "source_ids": [
+    "fs-232692"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_03.wav",
+   "sha256": "fc4fab2aefb0013ae0470bb613807d71df7fe1455bb85dc0c56332551522d155",
+   "bytes": 51020,
+   "source_ids": [
+    "fs-50723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_04.wav",
+   "sha256": "dd72fefe701cdfd90273c64a779aabfece40a34f0d200e7c50ee761986eb3015",
+   "bytes": 41996,
+   "source_ids": [
+    "fs-556715"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_05.wav",
+   "sha256": "de385ef78b3209f7ba5804902e582e5c0dddbd811f402b166af442bd0ab0b876",
+   "bytes": 28172,
+   "source_ids": [
+    "fs-232692"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_06.wav",
+   "sha256": "5ffe7c6962545e19423817aea92db50385d8cf7f78a3b3cb176115636083648f",
+   "bytes": 43148,
+   "source_ids": [
+    "fs-50723"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_07.wav",
+   "sha256": "2dc25581a31a0ea7405d5ed28c0b39812fbf07b137cfc3b585ff2f240abb5c7f",
+   "bytes": 41420,
+   "source_ids": [
+    "fs-556715"
+   ],
+   "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
+  },
+  {
+   "path": "foley/foot_steelplate_walk_08.wav",
+   "sha256": "eeb090b3d54aa213da973e135b254ddc660fcbcd72c607ee1e1a993452253215",
+   "bytes": 24908,
+   "source_ids": [
+    "fs-232692"
    ],
    "processing": "按瞬态从原片切出单个事件；高通 70 Hz；起 2 ms、尾 45 ms 淡变并补 30 ms 静音；LUFS-M（400 ms 窗补零）对齐到组目标；48 kHz 单声道 16 bit WAV"
   },
