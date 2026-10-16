@@ -134,18 +134,49 @@ public static class NorthTune
     }
 
     /// <summary>
+    /// Terrace levels of north.terrain.json (MAP-QSH-TERRAIN §7.2, §7.3), mirrored here for the authored heights that sit
+    /// on them. The terrain file is the only source of the ground; these constants never replace a HeightAt query.
+    /// </summary>
+    public static class Terrain
+    {
+        public const float Upper = 3.0f, Lower = 1.5f;
+    }
+
+    /// <summary>
     /// Inspection probes of 20a (MAP-QSH-NORTH 近景巡检点): Q1 outside 学知一组团's open gate at eye height (walk, K1),
     /// Q4 against 学知苑 1 栋's ground floor at 0.5 m (首层贴墙, N-01), Q6 45° down over the 学知一 courtyard from about 40 m.
-    /// Heights are on the flat stub; recheck against the terrace (+3.0, MAP-QSH-TERRAIN §7.5) once the evaluator lands.
+    /// All three stand on the upper terrace (MAP-QSH-TERRAIN §7.5): eye heights are terrace + 1.62 m, so they float 3 m
+    /// above the flat stub until the WP-08 evaluator lands.
     /// </summary>
     public static class Probes
     {
-        public static readonly Vector3 GateEye = new(100.4f, 1.62f, -468.9f);
+        public static readonly Vector3 GateEye = new(100.4f, Terrain.Upper + 1.62f, -468.9f);
         public static readonly Vector2 GateLook = new(0.934f, 0.358f);
-        public static readonly Vector3 WallEye = new(130.7f, 1.62f, -482.7f);
+        public static readonly Vector3 WallEye = new(130.7f, Terrain.Upper + 1.62f, -482.7f);
         public static readonly Vector2 WallLook = new(-0.386f, -0.922f);
-        public static readonly Vector3 CourtEye = new(146f, 30f, -431f);
+        public static readonly Vector3 CourtEye = new(146f, Terrain.Upper + 30f, -431f);
         public static readonly Vector2 CourtLook = new(0.57f, -0.82f);
+    }
+
+    /// <summary>
+    /// 学知一 courtyard stay point (20a-2; D-185, MAP-QSH-ADDITIONS §0 R6): one gently bowed seat wall on the lawn in front of
+    /// 学知苑 1 栋's east wing, 8 m off its sunset-facing wall (front face toward about 235°, R1), facing the courtyard, the
+    /// open gate and the hill (design:terrain:north-xz1-court-hill). Granite body sunk into the ground, a warm wood seat with
+    /// a small overhang (ART-FIDELITY §0: chamfered, capped). Plan points are world (x, z); the bow is a quadratic curve
+    /// through <see cref="SeatMid"/>. 初值。
+    /// </summary>
+    public static class Court
+    {
+        public static readonly Vector2 SeatStart = new(159.35f, -478.81f), SeatMid = new(162.44f, -475.48f), SeatEnd = new(164.55f, -471.46f);
+        public const int SeatSegments = 12;
+        /// <summary>Stone body: width, height above the apron, chamfer, and how far it is sunk below the terrain.</summary>
+        public const float BodyWidth = 0.42f, BodyHeight = 0.38f, BodyBevel = 0.025f, Sink = 0.1f;
+        /// <summary>Wood seat on top: width (0.04 m overhang each side), thickness, chamfer; held back from each stone end.</summary>
+        public const float SeatWidth = 0.5f, SeatThickness = 0.07f, SeatBevel = 0.015f, SeatHoldBack = 0.15f;
+        /// <summary>Paver apron on the courtyard side where feet rest; its top is flush with WP-15 paving (GroundSection.PavingY,
+        /// 0.15 m over the terrain, 5 cm above the lawn), and the seat stands 0.45 m above it.</summary>
+        public const float ApronWidth = 1.5f, ApronThickness = 0.08f, PavingLevel = 0.15f;
+        public static readonly ToonSpec Apron = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
     }
 
     /// <summary>

@@ -122,6 +122,8 @@ public static class NorthSites
         // 20a
         .. NorthTune.Clusters.Select(c => (NorthSite)new Clusters.ClusterSite(c)),
         new Xuezhi.HallEntranceSite(),
+        // 20a-2
+        new Xuezhi.CourtyardSite(),
         // 20b, 20c: append here.
     ]);
 }

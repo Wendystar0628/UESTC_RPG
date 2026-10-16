@@ -15,8 +15,8 @@ namespace Campus.Gen.Zones.North.Xuezhi;
 /// building's massing, storeys and windows stay with WP-14; the interior is WP-31c's. This site adds the entrance the
 /// interior is entered through: a granite landing at the raised ground floor reaching past the teleport landing, 6–8 steps
 /// down to the courtyard with cheek walls and handrails, and a vestibule block (门斗) whose through doorway carries the
-/// double glass leaves fixed open against its reveals, a canopy, the mat, the green open sign and the door lamp.
-/// The door centre, facing and floor level come from the interior index (the `xz1.hall` EntranceDecl), so the porch and
+/// double glass leaves fixed open against its reveals, and a canopy. The open-entrance set (mat, green open sign, door
+/// lamp) is placed by WP-13 for every open entrance, not here (main session 12:15). The door centre, facing and floor level come from the interior index (the `xz1.hall` EntranceDecl), so the porch and
 /// WP-31c's hall meet at the same doorway; WP-43 opens the facade wall there by EntranceDecl.Open.
 /// </summary>
 public sealed class HallEntranceSite : NorthSite
@@ -62,7 +62,8 @@ public sealed class HallEntranceSite : NorthSite
         }
         if (best is not { } f) return null;
         var ground = world.Terrain.HeightAt(f.P(0, H.WallFace + H.LandingDepth + 2f).X, f.P(0, H.WallFace + H.LandingDepth + 2f).Y);
-        var floor = MathF.Max(entrance.Center.Y, ground + 0.3f);
+        // The floor follows the terrace (+3.0 → 4.0, MAP-QSH-TERRAIN §7.5) even while the shared entrance still reads 1.0.
+        var floor = MathF.Max(entrance.Center.Y, ground + H.FloorRaise);
         var risers = Math.Clamp((int)MathF.Round((floor - ground) / 0.15f), H.MinRisers, H.MaxRisers);
         return new(f, ground, floor, risers, entrance);
     }
@@ -111,11 +112,6 @@ public sealed class HallEntranceSite : NorthSite
             b.Add(PartGeometryKernel.BeveledBox(0.05f, H.DoorHeight - 0.1f, leaf, 0.01f, L.Stainless), f.At(x, floor + 0.02f, z));
             b.Add(PartGeometryKernel.BeveledBox(0.02f, H.DoorHeight - 0.4f, leaf - 0.16f, 0, L.Glass), f.At(x - side * 0.02f, floor + 0.2f, z));
         }
-
-        // Open-entrance presentation (WLD-INTERIORS §4): mat, open sign beside the door, door lamp under the canopy; WP-13 parts.
-        b.Place(PartCatalog.EntranceMat, new PanelParams(1.8f, 0.03f, 1.2f), f.At(0, floor, front + 0.8f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), f.At(H.DoorWidth * 0.5f + 0.55f, floor + 1.45f, front + 0.02f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), f.At(0, floor + H.DoorHeight + 0.2f, front + 0.6f));
     }
 
     public override void Collide(SiteColliders c)
