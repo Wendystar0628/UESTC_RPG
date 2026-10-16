@@ -14,6 +14,41 @@ public sealed class ToonLibraryRuntimeTests
 {
     private static readonly WarmDrawLayout Layout = new(1, false);
 
+    [TestCase]
+    public void SurfacePatternMaterialKeyRetainsEveryProfileField()
+    {
+        var spec = new ToonSpec(new("test.lit"), new("test.shade"))
+        {
+            SurfacePattern = new(9, new(2, 1), new(.01f, .02f))
+        };
+        var keyType = typeof(ToonLibrary).GetNestedType("MaterialClass", BindingFlags.NonPublic)!;
+        var method = keyType.GetMethod("Of", BindingFlags.Public | BindingFlags.Static)!;
+        object Key(ToonSpec value) => method.Invoke(null, [value])!;
+        var key = Key(spec);
+        Require(key.Equals(Key(spec with { Lit = new("other.lit"), Shade = new("other.shade") })), "Colour-only changes must still share a material class.");
+        foreach (var pattern in new[] { spec.SurfacePattern.Value with { Layer = 10 },
+            spec.SurfacePattern.Value with { PeriodMeters = new(3, 1) },
+            spec.SurfacePattern.Value with { JointMeters = new(.01f, .03f) } })
+            Require(!key.Equals(Key(spec with { SurfacePattern = pattern })), "Material cache identity dropped a surface-profile field.");
+        Require(!key.Equals(Key(spec with { SurfacePattern = null })), "Pattern and legacy classes collapsed.");
+    }
+
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task PendingSurfacePatternsCannotReuseAnAlreadyCachedPlainMaterial()
+    {
+        await using var fixture = new Fixture();
+        var plain = fixture.Library.Get(fixture.Spec);
+        var count = ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count;
+        var refused = false;
+        try { fixture.Library.Get(fixture.Spec with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) }); }
+        catch (NotSupportedException) { refused = true; }
+        Require(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain) &&
+            ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count == count,
+            "Unconnected surface patterns must fail before cache lookup/allocation, leaving plain materials intact.");
+    }
+
     [TestCase(Timeout = 20000)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]

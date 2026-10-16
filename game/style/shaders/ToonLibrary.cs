@@ -243,6 +243,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private ToonEntry Resolve(ToonSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        if (spec.SurfacePattern is not null)
+            throw new NotSupportedException("Surface-pattern resources and toon_static consumption are not implemented; T03 must connect them before use.");
         var key = MaterialClass.Of(spec);
         lock (_gate)
         {
@@ -462,9 +464,10 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     /// <summary>材质类：ToonSpec 里决定着色器、明暗档和线表的字段；颜色字段不在内。</summary>
     private readonly record struct MaterialClass(ToonKind Kind, ShadeSteps Steps, float Band, ToonNormal Normal,
-        LineClass Line, ToonFx Fx, PaletteToken? Backface, ChannelId? Emissive, float Translucency, float Wet)
+        LineClass Line, ToonFx Fx, PaletteToken? Backface, ChannelId? Emissive, float Translucency, float Wet,
+        SurfacePatternSpec? SurfacePattern)
     {
         public static MaterialClass Of(ToonSpec s) =>
-            new(s.Kind, s.Steps, s.Band, s.Normal, s.Line, s.Fx, s.Backface, s.Emissive, s.Translucency, s.Wet);
+            new(s.Kind, s.Steps, s.Band, s.Normal, s.Line, s.Fx, s.Backface, s.Emissive, s.Translucency, s.Wet, s.SurfacePattern);
     }
 }
