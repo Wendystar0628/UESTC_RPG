@@ -741,13 +741,13 @@
 
 ## MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
-`docs/design/maps/qingshuihe/MAP-QSH-NORTH.md` · 33.8k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
+`docs/design/maps/qingshuihe/MAP-QSH-NORTH.md` · 33.9k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
 关键词：北部生活区、学生活动中心、成电会堂、赭红圆鼓、校医院、院名灯牌、商业街、玻璃拱顶步行街、店招、宿舍组团、学知苑、硕丰苑、博翰苑、留学生组团、本科楼A型、本科楼B型、组团闸机、学知一组团、阳台晾晒、银杏苑、芙蓉餐厅、思学苑、春晖苑、朝阳餐厅、西北餐厅、室外扶梯罩棚、风雨连廊、丹桂路、博士公寓、north.overlay.json
 
   - MAP-QSH-NORTH 分工 · L23 · 1.1k
   - MAP-QSH-NORTH 实现 · L43 · 634
 - MAP-QSH-NORTH §0 结论 · L52 · 2.2k
-  - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 1.1k
+  - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 1.2k
 - MAP-QSH-NORTH 数据定位 · L77 · 4.3k
   - MAP-QSH-NORTH 地标与服务 · L79 · 1.8k
   - MAP-QSH-NORTH 店面与餐厅点位 · L101 · 1.3k
