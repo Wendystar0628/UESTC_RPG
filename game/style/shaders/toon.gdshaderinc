@@ -11,7 +11,9 @@
 //   void vertex()   { TOON_VERTEX }
 //   void fragment() {
 //       TOON_FRAGMENT_BEGIN                          // 得到 tctx（片元上下文）、tmat（材质表一行）
-//       ToonCol tcol = toon_colors(tctx, tmat);      // 调色板取色、天光渐变、地面反光、湿润、倒角提亮、降饱和
+//       ToonCol tcol = toon_colors(tctx, tmat);      // 调色板取色、天光渐变、地面反光、湿润、倒角提亮、自发光、降饱和
+//       // 颜色不按色号取第 0 行时（例如植被按季相行取样），自己取好受光色、影色、灯照色再调
+//       // ToonCol tcol = toon_colors_from(tctx, tmat, lit, shade, lamp);
 //       ...                                          // 本着色器自己的改色（例如玻璃的斜条、眩光、窗灯）
 //       TOON_FRAGMENT_END(tcol)                      // 写 ALBEDO、ROUGHNESS（材质 ID）、EMISSION、BACKLIGHT、FOG 和传给 light() 的量
 //   }
@@ -67,6 +69,24 @@ const float TOON_WET_DARKEN = 0.28;  // 湿润变暗：受光色和影色 × (1 
 const float TOON_SKY_GRAD = 0.06;    // 影里随法线 y 的天光渐变（约 ±0.03 L）
 const float TOON_BOUNCE = 0.15;      // 朝下面的地面暖反光
 
+// 自发光（ToonSpec.Emissive，ART-STYLE §8.1）：亮时整面取色名本身的颜色，不分阶、不吃主光与湿润，描线照常。
+// 色名本身的颜色由灯照色（调色板行 1，不随时刻）去掉暖灯染色还原：行 1 = M × (L, a + K·a_lamp, b + K·b_lamp)，
+// M、K 与 WP-37 的 ColorScriptDerive.LampLit、derive.json 的 lit.tintK 一致，行 1 的规则改了要同步。
+const float TOON_EMIT_ROW1_M = 0.95;     // 行 1 的明度系数
+const float TOON_EMIT_ROW1_TINT = 0.45;  // 行 1 的暖灯染色系数
+const float TOON_EMIT_KL = 1.0;          // 自发光明度：L × KL + DL，再封顶 LMAX（不过曝成纯白）
+const float TOON_EMIT_DL = 0.03;
+const float TOON_EMIT_LMAX = 0.92;
+const float TOON_EMIT_KC = 1.1;          // 自发光彩度倍数（OKLab 的 a、b）
+// 顶点色号落在 40–63（天气色与发光常量，ART-STYLE §8.5）：单色常量，没有影色对，也没有行 1–3。
+// 自发光牌面按色名引用发光常量（例如 sign.exitGreen），亮时就是常量本身，不再调；
+// 灭时由常量推出暗的一对：明度 × OFF_KL、彩度 × OFF_KC，受光乘主光色 sun.light，影按 shadow.1 与其参照面之比。
+const int TOON_CONST_FIRST = 40;
+const int TOON_CONST_LAST = 63;
+const float TOON_EMIT_OFF_KL = 0.7;
+const float TOON_EMIT_OFF_KC = 0.6;
+const float TOON_SHADOW1_REF = 0.729;    // shadow.1 的参照面：OKLab L 0.90 的中性灰，线性值 0.9³
+
 // 材质 uniform：材质库按 ToonSpec 分配的 7 位材质 ID（0 = 未分配）
 uniform int mat_id : hint_range(0, 127) = 0;
 
@@ -101,7 +121,7 @@ float toon_overcast() {
 // ---------------------------------------------------------------------------
 // 材质表 mat_table（128×4 RGBA8，最近邻；行 0 线表归 WP-05 的布局）
 //   行 1：R 明暗档；G half_level×255；B 过渡带（两阶、三阶存固定半宽 ×1000，两阶半、软物存 fwidth 倍数 ×50）；A 湿润响应×255
-//   行 2：R 透光 k_t×255；G 受光侧暖边 k_rim×255；B 闪点系数×255；A 保留
+//   行 2：R 透光 k_t×255；G 受光侧暖边 k_rim×255；B 闪点系数×255；A 自发光通道（槽位 + 1，0 = 不自发光）
 //   行 3：R 解析法线（0 不用、1 球、2 柱）；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 保留
 // ---------------------------------------------------------------------------
 struct ToonMat {
@@ -115,6 +135,7 @@ struct ToonMat {
 	int nmode;
 	float bevel_lit;
 	float bevel_shade;
+	int emit_slot;     // 自发光的灯光通道槽位，−1 = 不自发光
 };
 
 ToonMat toon_mat(int id) {
@@ -125,7 +146,7 @@ ToonMat toon_mat(int id) {
 	bool fw_band = steps == TOON_STEPS_TWO_HALF || steps == TOON_STEPS_SOFT;
 	float band = fw_band ? r1.b * 255.0 / 50.0 : r1.b * 255.0 / 1000.0;
 	return ToonMat(steps, r1.g, band, r1.a, r2.r, r2.g, r2.b,
-			int(round(r3.r * 255.0)), r3.g * 0.25, r3.b * 0.25);
+			int(round(r3.r * 255.0)), r3.g * 0.25, r3.b * 0.25, int(round(r2.a * 255.0)) - 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +270,33 @@ void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
 }
 
 // ---------------------------------------------------------------------------
+// 自发光（ToonSpec.Emissive；SYS-TIME §6、ENG-PERF §10.3）：亮度读材质登记的灯光通道，随时刻表亮灭。
+// 灯具槽位的 L 是保留比例 ×(1 + Δ)，夹到 0–1；"熄一半"这类时段整面按比例变暗（不按块挑亮灭）。
+// ---------------------------------------------------------------------------
+float toon_emissive_level(ToonMat m) {
+	if (m.emit_slot < 0) {
+		return 0.0;
+	}
+	return clamp(lamp_channel(m.emit_slot).x, 0.0, 1.0);
+}
+
+bool toon_is_const(int cid) {
+	return cid >= TOON_CONST_FIRST && cid <= TOON_CONST_LAST;
+}
+
+// 色名本身的颜色：发光常量直接取第 0 行；表面色对由灯照色去掉暖灯染色还原，再按 KL、DL、KC 调亮调艳，明度封顶 LMAX
+vec3 toon_emissive_color(ToonCtx c, vec3 lamp_lit) {
+	if (toon_is_const(c.cid)) {
+		return pal_cur(c.cid);
+	}
+	vec3 o = ok_from_linear(lamp_lit) / TOON_EMIT_ROW1_M;
+	o.yz -= TOON_EMIT_ROW1_TINT * ok_from_linear(pal_cur(PAL_LAMP_WARM)).yz;
+	o.x = min(o.x * TOON_EMIT_KL + TOON_EMIT_DL, TOON_EMIT_LMAX);
+	o.yz *= TOON_EMIT_KC;
+	return ok_to_linear(o);
+}
+
+// ---------------------------------------------------------------------------
 // 取色与片元里的明暗量
 // ---------------------------------------------------------------------------
 struct ToonCol {
@@ -265,20 +313,17 @@ struct ToonCol {
 	float gain;        // 受光增益（室内光斑增益）
 };
 
-ToonCol toon_colors(ToonCtx c, ToonMat m) {
+// 给定颜色的取色入口（contract-24 第 2 条）：lit、shade、lamp 是调用方取好的受光色、影色、灯照色（线性），
+// 例如植被按局部季节从季相行取样（WLD-VEGETATION §9.4）。其后的处理与 toon_colors 完全相同：
+// 天光渐变、地面反光、湿润与积水（按 mat_table 的湿润响应，不湿的材质登记 Wet = 0）、路灯光斑、倒角提亮
+// （只给登记了 BevelLift 的材质）、自发光、200 m 降饱和、明暗档、透光、暖边；室内标志位照旧乘光斑增益。
+ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) {
 	bool interior = (c.flags & TOON_F_INTERIOR) != 0;
-	vec3 lit;
-	vec3 shade;
-	float gain = 1.0;
-	if (interior) {
-		shade = pal_fetch(c.cid, PAL_ROW_IN_SHADE);
-		lit = pal_fetch(c.cid, PAL_ROW_IN_LIT);
-		gain = interior_light.x;
-	} else {
-		lit = pal_fetch(c.cid, PAL_ROW_CUR);
-		shade = pal_fetch(c.cid + PAL_SHADE_OFFSET, PAL_ROW_CUR);
-	}
-	vec3 lamp = pal_fetch(c.cid, PAL_ROW_LAMP);
+	float gain = interior ? interior_light.x : 1.0;
+
+	// 自发光的颜色取湿润之前的灯照色：亮着的灯牌不因下雨变暗
+	float emit_k = toon_emissive_level(m);
+	vec3 emit_c = emit_k > 0.0 ? toon_emissive_color(c, lamp) : vec3(0.0);
 
 	// 影里的两条连续项（ART-STYLE §3.3）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
 	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y;
@@ -302,6 +347,13 @@ ToonCol toon_colors(ToonCtx c, ToonMat m) {
 	if (bevel > 0.0) {
 		lit = ok_adjust(lit, 1.0, 1.0, m.bevel_lit * bevel);
 		shade = ok_adjust(shade, 1.0, 1.0, m.bevel_shade * bevel);
+	}
+
+	// 自发光：受光色、影色、灯照色一起换成色名本身的颜色，"受光 − 影"归零，不再分阶，也不吃点光
+	if (emit_k > 0.0) {
+		lit = mix(lit, emit_c, emit_k);
+		shade = mix(shade, emit_c, emit_k);
+		lamp = mix(lamp, emit_c, emit_k);
 	}
 
 	// 200 m 起降饱和（雾函数的一段，作用在受光色和影色上）
@@ -334,7 +386,35 @@ ToonCol toon_colors(ToonCtx c, ToonMat m) {
 	// 受光侧暖边：rim × 受光色 × k_rim
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 
+	// 自发光亮着时没有透光、暖边和深影
+	if (emit_k > 0.0) {
+		trans *= 1.0 - emit_k;
+		rim *= 1.0 - emit_k;
+		deep_mix *= 1.0 - emit_k;
+	}
+
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, half_level, push, gain);
+}
+
+// 按色号取色：室外取调色板行 0 的受光、影，室内取行 3（室内受光色）、行 2（室内影色）；灯照色取行 1。
+// 发光常量（40–63）没有这些行，灭时的一对由常量推出（见 TOON_EMIT_OFF_*）。
+ToonCol toon_colors(ToonCtx c, ToonMat m) {
+	if (toon_is_const(c.cid)) {
+		vec3 e = ok_adjust(pal_cur(c.cid), TOON_EMIT_OFF_KL, TOON_EMIT_OFF_KC, 0.0);
+		return toon_colors_from(c, m, e * pal_cur(PAL_SUN_LIGHT), e * pal_cur(PAL_SHADOW_1) / TOON_SHADOW1_REF,
+				e * pal_cur(PAL_LAMP_WARM));
+	}
+	bool interior = (c.flags & TOON_F_INTERIOR) != 0;
+	vec3 lit;
+	vec3 shade;
+	if (interior) {
+		shade = pal_fetch(c.cid, PAL_ROW_IN_SHADE);
+		lit = pal_fetch(c.cid, PAL_ROW_IN_LIT);
+	} else {
+		lit = pal_fetch(c.cid, PAL_ROW_CUR);
+		shade = pal_fetch(c.cid + PAL_SHADE_OFFSET, PAL_ROW_CUR);
+	}
+	return toon_colors_from(c, m, lit, shade, pal_fetch(c.cid, PAL_ROW_LAMP));
 }
 
 // EMISSION：影（植被深影按 L ×0.88、C ×0.95 由影色算出）+ 闪光帧 + 额外自发光

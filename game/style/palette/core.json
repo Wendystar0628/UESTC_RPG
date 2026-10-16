@@ -554,6 +554,18 @@
    "role": "emissive"
   },
   {
+   "token": "sign.exitGreen",
+   "id": 54,
+   "albedo": [
+    0.2471,
+    0.6471,
+    0.4196
+   ],
+   "materialClass": "emissive",
+   "seasonal": false,
+   "role": "emissive"
+  },
+  {
    "token": "snow.lit",
    "id": 64,
    "albedo": [

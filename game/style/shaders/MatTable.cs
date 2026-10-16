@@ -7,7 +7,7 @@ namespace Campus.Style.Materials;
 /// <list type="bullet">
 /// <item>行 0 线表（WP-05 的布局）：R 线宽系数（值/255×2）、G 线色染色强度、B 标志位（1 擦除、2 只描外轮廓、4 内部软线、8 不描）、A 小件淡出终点（值×2 m）</item>
 /// <item>行 1：R 明暗档（ShadeSteps 原值）、G half_level、B 过渡带（两阶与三阶存固定半宽×1000，两阶半与软物存 fwidth 倍数×50）、A 湿润响应</item>
-/// <item>行 2：R 透光 k_t、G 受光侧暖边 k_rim、B 闪点系数、A 保留</item>
+/// <item>行 2：R 透光 k_t、G 受光侧暖边 k_rim、B 闪点系数、A 自发光通道（灯光通道槽位 + 1；0 = 不自发光）</item>
 /// <item>行 3：R 解析法线（0 不用、1 球、2 柱）、G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L）、A 保留</item>
 /// </list>
 /// toon.gdshaderinc 的 toon_mat() 按同一布局解码。
@@ -28,6 +28,7 @@ public static class MatTable
     public const float LineWidth = 1.0f;
     public const float LineTint = 0.22f;
     public const float FineFadeEndMeters = 60f;   // 小件线淡出的终点（ART-STYLE §4.1）
+    public const int LastEmissiveSlot = 29;       // 可作自发光的最后一个灯光通道槽位：30 sys.cue、31 sys.poolGain 不是亮度
 
     public const int ByteCount = Width * Height * 4;
 
@@ -79,7 +80,21 @@ public static class MatTable
     private static (int, int, int, int) Row2(ToonSpec spec)
     {
         var rim = spec.Fx.HasFlag(ToonFx.Rim) ? (spec.Fx.HasFlag(ToonFx.AnisoBand) ? RimMetal : RimDefault) : 0f;
-        return Bytes(Byte(spec.Translucency), Byte(rim), 0, 0);
+        return Bytes(Byte(spec.Translucency), Byte(rim), 0, EmissiveByte(spec.Emissive));
+    }
+
+    /// <summary>
+    /// 自发光通道：槽位 + 1，0 表示不自发光。只收灯光通道的窗灯与灯具槽位（ENG-PERF §10.3）；
+    /// sys.cue、sys.poolGain 不是亮度，未登记的通道名直接报错。
+    /// </summary>
+    public static int EmissiveByte(ChannelId? channel)
+    {
+        if (channel is not { } id) return 0;
+        var slot = LightChannelCatalog.Slot(id);
+        if (slot < 0) throw new ArgumentException($"Emissive channel '{id.Value}' is not in LightChannelCatalog.", nameof(channel));
+        if (slot > LastEmissiveSlot)
+            throw new ArgumentException($"Emissive channel '{id.Value}' (slot {slot}) is a system slot, not a light level.", nameof(channel));
+        return slot + 1;
     }
 
     private static (int, int, int, int) Row3(ToonSpec spec)
