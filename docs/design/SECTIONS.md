@@ -1523,17 +1523,17 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-`docs/design/engineering/ENG-GATES.md` · 56.9k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+`docs/design/engineering/ENG-GATES.md` · 57.4k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
 
 - ENG-GATES §0 结论 · L22 · 1.9k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 850
 - ENG-GATES §1 审查视角 · L52 · 14.6k
-- ENG-GATES §2 门禁与测试节奏 · L195 · 29.0k
-- ENG-GATES §3 一票否决 · L273 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L302 · 2.6k
-- ENG-GATES §5 回报格式 · L328 · 1.4k
-- ENG-GATES §6 待验证（P0） · L357 · 1.8k
+- ENG-GATES §2 门禁与测试节奏 · L195 · 29.5k
+- ENG-GATES §3 一票否决 · L274 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L303 · 2.6k
+- ENG-GATES §5 回报格式 · L329 · 1.4k
+- ENG-GATES §6 待验证（P0） · L358 · 1.8k
 
 ## ENG-ONBOARD · 子代理开工手册
 
@@ -1555,7 +1555,7 @@
   - ENG-ONBOARD §4.2 按要做的事查哪里 · L199 · 2.5k
   - ENG-ONBOARD §4.3 Godot API · L272 · 223
   - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L278 · 219
-- ENG-ONBOARD §5 完成与回报 · L286 · 427
+- ENG-ONBOARD §5 完成与回报 · L286 · 461
 - ENG-ONBOARD §6 改文档时 · L297 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
