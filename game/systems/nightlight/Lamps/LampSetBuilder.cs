@@ -11,6 +11,7 @@ public sealed record LampSetReport(int Accepted, int UnknownChannel, int NotLamp
 /// <summary>
 /// 把各内容包给出的灯具标记（LightEmitter：灯头位置、所属通道、色名、级别、光斑半径）整理成灯表。
 /// 灯号按灯脚坐标排序，与标记的给出顺序无关；两个阈值都按灯脚坐标的稳定哈希生成，同一份输入结果逐位相同。
+/// 只收灯具类通道的标记；挂窗户类通道的不进灯表（计入 NotLamp）。开放入口的门口灯是灯具，挂 lamp.first（门口灯组）。
 /// </summary>
 public static class LampSetBuilder
 {

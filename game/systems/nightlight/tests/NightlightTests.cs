@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Lighting;
+using Campus.Kernel.World;
 using Campus.Systems.Nightlight.Cue;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Lamps;
@@ -213,6 +214,64 @@ public sealed class NightlightTests
         True(set.Buffer[last + 12] == 70000f && set.Buffer[last + 15] == GlowSets.OutskirtsFlag, "outskirts window carries the skip-override flag");
         Near(4.1f + 0.8f, set.Buffer[3 * GlowSet.Stride + 7], 1e-4f, "second-row centre height");
     }
+
+    [TestCase]
+    public void EntranceLampsStayFullFromDuskToDawn()
+    {
+        var s = Default();
+        var first = s.SlotOf(new ChannelId("lamp.first"));
+        var warm = new PaletteToken("lamp.warm");
+        // 门口灯组：照 WP-13 的 EntranceLampPart.Emitter 挂 lamp.first、二级 0.75、暖色、光斑 2.4 m；旧写法挂楼的室内通道（窗户类）
+        var emitters = Enumerable.Range(0, 48).Select(i =>
+            new LightEmitter(new ChannelId("lamp.first"), new Vector3(i * 9.7f, 2.45f, i * -5.3f), warm, 0.75f, 2.4f)).ToList();
+        emitters.Add(new LightEmitter(new ChannelId("interior.public"), new Vector3(-50f, 2.45f, 0f), warm, 0.75f, 2.4f));
+        var lamps = LampSetBuilder.Build(emitters, s, _ => 51, (_, _) => 0f, 1u, [], out var report);
+        True(report.Accepted == 48 && report.NotLamp == 1, $"48 entrance lamps registered, the window-channel one dropped; got {report}");
+        True(lamps.All(l => l.Slot == first && l.ThresholdDeg is >= 4f and <= 8f && l.Energy == 0.75f), "entrance lamps ride the first-light group");
+        // 秋季一整天每 5 分钟：太阳高于阈值时不亮；低于阈值后亮着，保留比例满（1:00–5:30 也不按哈希熄一半）
+        var output = new Vector2[32];
+        int dayOff = 0, nightOn = 0;
+        for (var minute = 0; minute < 24 * 60; minute += 5)
+        {
+            var clock = minute / 60.0;
+            var sun = ArtEphemeris.Evaluate(clock, (double)Season.Autumn).Sun.AltDeg;
+            s.Evaluate(At(clock, sun), output);
+            foreach (var l in lamps)
+            {
+                var (on, keep) = LampState(l, sun, output[l.Slot]);
+                if (sun > l.ThresholdDeg + 0.1f) { True(on == 0f, $"entrance lamp lit by day at {clock:F2} h ({sun:F1}°)"); dayOff++; }
+                else if (sun < l.ThresholdDeg - 0.1f) { True(on == 1f && keep == 1f, $"entrance lamp not full at {clock:F2} h ({sun:F1}°)"); nightOn++; }
+            }
+        }
+        True(dayOff > 0 && nightOn > 0, "the day covers both lit and unlit samples");
+        // 17:40（3.7°）门口灯已全部亮起
+        var dusk = ArtEphemeris.Evaluate(17 + 40 / 60.0, (double)Season.Autumn).Sun.AltDeg;
+        True(lamps.All(l => l.ThresholdDeg > dusk), "every entrance lamp is lit by 17:40");
+    }
+
+    [TestCase]
+    public void WindowChannelsStayWindows()
+    {
+        var s = Default();
+        var output = new Vector2[32];
+        s.Evaluate(At(23.0, -30f), output);
+        // 窗户类通道仍按亮窗比例求值（不乘 1 + Δ），楼内公共区 22:30 后 0.3
+        var interior = s.SlotOf(new ChannelId("interior.public"));
+        True(s.Spec(interior).Kind == ChannelClass.Window && s.GroupOf(interior) is null, "interior.public stays a window channel");
+        Near(0.3f, output[interior].X, 1e-4f, "interior.public after 22:30");
+        for (var slot = 0; slot < 12; slot++)
+            True(s.Spec(slot).Kind == ChannelClass.Window && output[slot].X <= s.Spec(slot).Cap + 1e-6f, $"window slot {slot} keeps its cap");
+        // 窗户类通道上的窗格声明照常进窗光晕
+        var facade = new WindowFacadeDecl(2000, 4, new ChannelId("interior.public"), 0, 4, 1, Vector3.Zero, Vector3.UnitX, Vector3.UnitY,
+            3f, 1.5f, 1.5f, [1f]);
+        var set = GlowSets.Windows([facade], [], out var report);
+        True(set.Count == 4 && report.UnknownChannel == 0 && set.Buffer[14] == interior + 32f * 4, "window-channel facades still glow as windows");
+    }
+
+    /// <summary>与 lamp.gdshaderinc 的 lamp_level 同一写法：开灯（太阳高度低于 θ）与保留比例（smoothstep(κ, κ + Δ, L)）。</summary>
+    private static (float On, float Keep) LampState(LampRecord l, float heff, Vector2 channel) =>
+        (1f - ScheduleMath.SmoothStep(l.ThresholdDeg - 0.08f, l.ThresholdDeg + 0.08f, heff),
+         ScheduleMath.SmoothStep(l.Keep, l.Keep + Math.Max(channel.Y, 1e-3f), channel.X));
 
     [TestCase]
     public void CueLampsFollowTheRouteOrder()
