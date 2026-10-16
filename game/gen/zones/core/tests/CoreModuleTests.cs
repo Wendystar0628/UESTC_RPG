@@ -185,23 +185,25 @@ public sealed class CoreModuleTests
     [TestCase]
     public void OverlayParsesStrictly()
     {
-        // Every key of core.overlay.json maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
+        // Every key of the core overlay maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
         var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "core.overlay.json");
         var strict = new JsonSerializerOptions(ContractJson.Options)
         {
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             RespectNullableAnnotations = true,
         };
-        var file = JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(path), strict)!;
-        Require(file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe", "zone, owner and map");
-        foreach (var op in file.Ops.OfType<AddOp>())
+        var files = new[] { path }.Concat(Directory.GetFiles(Path.Combine(Path.GetDirectoryName(path)!, "core.d"), "*.json").Order(StringComparer.Ordinal))
+            .Select(file => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(file), strict)!).ToArray();
+        Require(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe"), "zone, owner and map");
+        var operations = files.SelectMany(file => file.Ops).ToArray();
+        foreach (var op in operations.OfType<AddOp>())
         {
             Require(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal), $"core design ID {op.Id.Value}");
             Require(op.Reason.Length > 10, $"{op.Id.Value} has a reason");
         }
-        Require(file.Ops.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
+        Require(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
             .SequenceEqual(GinkgoWalks.Concat(GinkgoSidewalks.Select(s => s.Kept))), "the ginkgo walks and the kept sidewalk ends are the overlay's only added roads");
-        Require(file.Ops.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden)), "the two ginkgo sidewalks are the overlay's only hides");
+        Require(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden)), "the two ginkgo sidewalks are the overlay's only hides");
     }
 
     [TestCase]
