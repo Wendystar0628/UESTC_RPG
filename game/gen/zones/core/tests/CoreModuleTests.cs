@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
@@ -167,7 +168,115 @@ public sealed class CoreModuleTests
         }
     }
 
+    [TestCase]
+    public void OverlayParsesStrictly()
+    {
+        // Every key of core.overlay.json maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
+        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "core.overlay.json");
+        var strict = new JsonSerializerOptions(ContractJson.Options)
+        {
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+            RespectNullableAnnotations = true,
+        };
+        var file = JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(path), strict)!;
+        Require(file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe", "zone, owner and map");
+        foreach (var op in file.Ops.OfType<AddOp>())
+        {
+            Require(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal), $"core design ID {op.Id.Value}");
+            Require(op.Reason.Length > 10, $"{op.Id.Value} has a reason");
+        }
+        Require(file.Ops.OfType<AddOp>().Count(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry) == GinkgoWalks.Length, "the ginkgo walks are the overlay's only added roads");
+    }
+
+    [TestCase]
+    public void GinkgoWalksKeepOffWallsAndWaterAndJoinExistingWalks()
+    {
+        // max-108 0h-a: the walks between the 7 m and 14 m ginkgo rows keep their paved edge 3 m or more off every building and
+        // water outline and waterway, and each end lies on the paving of an existing walk, so no end is a stub.
+        const float half = 1.25f;
+        var world = RealWorld();
+        var avenue = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:544688571").Line.Points;
+        var walks = world.Network.Roads.Where(r => Prop(r.Props, "highway")?.GetString() is "footway" or "path" or "pedestrian").ToArray();
+        foreach (var id in GinkgoWalks)
+        {
+            var feature = world.Features[new(id)];
+            Require(feature.Kind.Value == "road" && feature.Zone?.Value == "core", $"{id}: a core road feature");
+            Require(Prop(feature.Props, "roadType")?.GetString() == "footway" && Prop(feature.Props, "width")?.GetSingle() == 2 * half, $"{id}: a 2.5 m footway");
+            var line = ((PolylineGeometry)feature.Geometry).Line.Points;
+            var min = line.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(20f);
+            var max = line.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(20f);
+            var outlines = Outlines(world, "building").Concat(Outlines(world, "water"))
+                .Where(r => r.Outer.Any(q => q.X >= min.X && q.X <= max.X && q.Y >= min.Y && q.Y <= max.Y)).ToArray();
+            for (var s = 0f; s <= Length(line); s += 0.5f)
+            {
+                var p = At(line, s);
+                var wall = outlines.Min(r => PlanGeometry.Contains(r, p) ? 0f
+                    : r.Holes.Aggregate(PlanGeometry.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h))));
+                Require(wall - half >= 3f, $"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})");
+                var river = world.Network.Waterways.Min(w => PolylineDistance(p, w.Line.Points) - w.Width * 0.5f);
+                Require(river - half >= 3f, $"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})");
+                var offset = PolylineDistance(p, avenue);
+                Require(MathF.Abs(offset - 10.5f) < 0.15f, $"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}");
+            }
+            foreach (var end in new[] { line[0], line[^1] })
+                Require(walks.Any(w => PolylineDistance(end, w.Line.Points) <= half + MathF.Max(w.Width, 2f) * 0.5f),
+                    $"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving");
+        }
+    }
+
     // ---------------------------------------------------------------- fixtures
+
+    private static readonly string[] GinkgoWalks = ["design:core-ginkgo-walk-west", "design:core-ginkgo-walk-east"];
+
+    private static JsonElement? Prop(JsonElement? props, string key) =>
+        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(key, out var value) ? value : null;
+
+    /// <summary>Polygons of one kind, part by part where a feature has parts (a part's own kind wins, as the world model reads it).</summary>
+    private static IEnumerable<PolygonRings> Outlines(IWorldModel world, string kind)
+    {
+        static IEnumerable<PolygonRings> Of(OverlayGeometry g) => g switch
+        {
+            PolygonGeometry polygon => [polygon.Rings],
+            MultiPolygonGeometry multi => multi.Polygons,
+            _ => [],
+        };
+        foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            if (feature.Parts.Count == 0)
+            {
+                if (feature.Kind.Value == kind) foreach (var rings in Of(feature.Geometry)) yield return rings;
+                continue;
+            }
+            foreach (var part in feature.Parts)
+                if ((Prop(part.Props, "kind")?.GetString() ?? feature.Kind.Value) == kind)
+                    foreach (var rings in Of(part.Geometry)) yield return rings;
+        }
+    }
+
+    private static float Length(IReadOnlyList<Vector2> line)
+    {
+        var length = 0f;
+        for (var i = 1; i < line.Count; i++) length += Vector2.Distance(line[i - 1], line[i]);
+        return length;
+    }
+
+    private static Vector2 At(IReadOnlyList<Vector2> line, float s)
+    {
+        for (var i = 1; i < line.Count; i++)
+        {
+            var span = Vector2.Distance(line[i - 1], line[i]);
+            if (s <= span || i == line.Count - 1) return Vector2.Lerp(line[i - 1], line[i], span > 0f ? MathF.Min(1f, s / span) : 0f);
+            s -= span;
+        }
+        return line[^1];
+    }
+
+    private static float PolylineDistance(Vector2 p, IReadOnlyList<Vector2> line)
+    {
+        var best = float.MaxValue;
+        for (var i = 1; i < line.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line[i - 1], line[i]));
+        return MathF.Sqrt(best);
+    }
 
     private static string Describe(Claim claim) => claim switch
     {
