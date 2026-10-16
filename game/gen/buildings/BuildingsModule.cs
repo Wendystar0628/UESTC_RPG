@@ -30,10 +30,11 @@ public sealed class BuildingsModule : IContentModule
     public IReadOnlyList<Claim> Claims { get; } = [];
 
     /// <summary>
-    /// Upper bounds per 64 m cell, measured over the whole campus (heaviest cell: L0 ≈ 101k, L1 ≈ 66k triangles;
-    /// campus L0 ≈ 4.8M, L1 ≈ 3.0M, L2 ≈ 0.18M, L3 ≈ 0.14M). Draw calls: six material classes per merged block.
+    /// Upper bounds per level cell, measured over the whole campus with the WP-10 openings (heaviest cell: L0 ≈ 624k,
+    /// L1 ≈ 141k triangles; campus L0 ≈ 24.7M, L1 ≈ 4.1M, L2 ≈ 0.18M). Draw calls: ten material classes per merged
+    /// block (the six of the shell plus sash, curtain fabric, curtain rail and door astragal).
     /// </summary>
-    public ModuleBudget Budget { get; } = new(TrianglesL0: 120_000, TrianglesL1: 72_000, DrawCalls: 24);
+    public ModuleBudget Budget { get; } = new(TrianglesL0: 640_000, TrianglesL1: 150_000, DrawCalls: 40);
 
     public IReadOnlyList<ChannelDecl> Channels { get; } = LightSlots.Declared
         .Select(c => new ChannelDecl(new ChannelId(c.Name), ChannelKind.Scalar, 0f, 1f, ChannelRate.Continuous, c.Name))
@@ -57,13 +58,16 @@ public sealed class BuildingsModule : IContentModule
         ArgumentNullException.ThrowIfNull(ctx);
         var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
         var meshes = new List<GeometryBundle>();
+        var windows = new List<WindowDecl>();
         for (var i = 0; i < set.Plans.Count; i++)
         {
             var plan = set.Plans[i];
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
             meshes.AddRange(BuildOne(plan, set.Blocks[i], lod));
+            // The light inventory needs each window once: declared with the L0 cell only.
+            if (lod == LodLevel.L0) windows.AddRange(FacadeOpenings.Declarations(plan, set.Blocks[i]));
         }
-        return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []);
+        return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []) { LooseWindows = windows };
     }
 
     /// <summary>One building at one level, as its own bundles (the baker merges per material and block).</summary>

@@ -64,7 +64,7 @@ public static class BuildingPlanner
         }
     }
 
-    public static BuildingPlan? Plan(BuildingSource src, ISpatialIndex spatial, uint worldSeed)
+    public static BuildingPlan? Plan(BuildingSource src, ISpatialIndex spatial, uint worldSeed, IFidelityModel? fidelity = null)
     {
         var feature = src.Feature;
         var outerClean = PlanRing.Clean(src.Rings.Outer, hole: false);
@@ -284,11 +284,48 @@ public static class BuildingPlanner
             Grid = grid,
             Facades = facades,
             Openings = openings,
+            OpeningZones = fidelity is null ? [] : Zones(fidelity.Facades(feature.Id), rings, facades, openings),
             TotalColumns = column,
             Axis = axis,
             EntranceFacade = entranceFacade,
             EntranceBay = entranceBay,
         };
+    }
+
+    /// <summary>
+    /// Zone of each opening from the facade segments of the exported fidelity data (ENG-ARCH §3: one or more segments
+    /// per footprint edge, A → B along the ring). An opening takes the segment its centre lies on (parallel, within
+    /// OpeningRules.ZoneMatchDistance of the footprint line); row 0 takes the segment's ground band. No segment: K3.
+    /// </summary>
+    private static FidelityZone[][] Zones(IReadOnlyList<FacadeSegment> segments, IReadOnlyList<PlanRing> rings,
+        IReadOnlyList<FacadeLayout> facades, IReadOnlyList<Opening[]> openings)
+    {
+        var zones = new FidelityZone[facades.Count][];
+        for (var fi = 0; fi < facades.Count; fi++)
+        {
+            var f = facades[fi];
+            var ring = rings[f.Ring];
+            var dir = ring.Dir[f.Edge];
+            zones[fi] = new FidelityZone[openings[fi].Length];
+            for (var k = 0; k < openings[fi].Length; k++)
+            {
+                var o = openings[fi][k];
+                var centre = ring.Points[f.Edge] + dir * ((o.U0 + o.U1) * 0.5f + f.SkinShift);
+                FacadeSegment? best = null;
+                var bestDistance = OpeningRules.ZoneMatchDistance;
+                foreach (var s in segments)
+                {
+                    var ab = s.B - s.A;
+                    var length = ab.Length();
+                    if (length < 1e-3f || MathF.Abs(Vector2.Dot(ab / length, dir)) < 0.95f) continue;
+                    var t = Math.Clamp(Vector2.Dot(centre - s.A, ab) / (length * length), 0f, 1f);
+                    var distance = Vector2.Distance(centre, s.A + ab * t);
+                    if (distance < bestDistance) { best = s; bestDistance = distance; }
+                }
+                zones[fi][k] = best is null ? FidelityZone.K3 : o.Row == 0 ? best.GroundBand : best.Zone;
+            }
+        }
+        return zones;
     }
 
     /// <summary>

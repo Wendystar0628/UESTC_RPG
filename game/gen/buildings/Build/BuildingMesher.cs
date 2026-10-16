@@ -9,31 +9,30 @@ namespace Campus.Gen.Buildings.Build;
 
 /// <summary>
 /// Generates one building at one detail level (ART-MODELING §7.8 minimum components):
-/// chamfered corners with custom normals, plinth, string courses, four-part openings
-/// (reveal with AO, sill, frame, recessed glass), cornice or parapet with coping and drip,
-/// roof with stair-core penthouses, entrance (surround, canopy, steps), pilasters, downpipes and AC grilles.
-/// Surfaces that persist across levels keep their normals, colours and material classes.
+/// chamfered corners with custom normals, plinth, string courses, openings (reveal with AO and sill from the
+/// wall; WP-10 frames, doors and curtains with OpeningGlass glass, see FacadeOpenings), cornice or parapet with
+/// coping and drip, roof with stair-core penthouses, entrance (surround, canopy, steps), pilasters, downpipes and
+/// AC grilles. Surfaces that persist across levels keep their normals, colours and material classes.
 /// </summary>
 public sealed class BuildingMesher
 {
-    private const float GlassRecess = 0.05f;   // frame face in front of the glass
     private const float ParapetInner = -0.24f; // parapet inner face, relative to the wall plane
 
     private readonly BuildingPlan _p;
-    private readonly WindowBlock _block;
     private readonly LodLevel _lod;
     private readonly MeshSink _sink;
     private readonly FacadeProfile _prof;
+    private readonly FacadeOpenings _openings;
     private readonly bool _parapetOk;
     private readonly Face _wall, _trim, _plinth, _roof, _metal, _grille, _grilleBlade, _accent, _stone;
 
     public BuildingMesher(BuildingPlan plan, WindowBlock block, LodLevel lod, MeshSink sink)
     {
         _p = plan;
-        _block = block;
         _lod = lod;
         _sink = sink;
         _prof = plan.Profile;
+        _openings = new FacadeOpenings(plan, block, lod, sink);
         _wall = new Face(MaterialKind.Wall, _prof.Wall);
         _accent = new Face(MaterialKind.Wall, _prof.Accent ?? _prof.Wall);
         _trim = new Face(MaterialKind.Trim, _prof.Trim);
@@ -159,7 +158,7 @@ public sealed class BuildingMesher
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Openings: reveal (AO), sill, frame, glass (L0/L1).
+    // Openings (L0/L1): reveal (AO) and sill here; frame, door, curtain and glass from WP-10 parts.
     // ---------------------------------------------------------------------------------------------
     private void Openings()
     {
@@ -171,42 +170,18 @@ public sealed class BuildingMesher
             {
                 var frame = EdgeFrame.Of(skin, e);
                 var layout = _p.Facades[fi];
-                foreach (var o in _p.Openings[fi]) Opening(frame, layout, o);
+                var openings = _p.Openings[fi];
+                for (var k = 0; k < openings.Length; k++) Opening(frame, layout, openings[k], _p.ZoneOf(fi, k));
             }
         }
     }
 
-    private void Opening(EdgeFrame f, FacadeLayout layout, Opening o)
+    private void Opening(EdgeFrame f, FacadeLayout layout, Opening o, FidelityZone zone)
     {
-        var sG = -_p.Reveal;
         var isDoor = o.Kind == BayKind.Door;
-        Reveal(f, o.U0, o.U1, o.Y0, o.Y1, sG, isDoor);
+        Reveal(f, o.U0, o.U1, o.Y0, o.Y1, -_p.Reveal, isDoor);
         if (!isDoor) Sill(f, o.U0, o.U1, o.Y0);
-        // Frame: outer edge pressed 5 mm into the reveal, glass recessed behind the frame face.
-        var fw = isDoor ? 0.11f : _prof.Frame;
-        var sF = sG + GlassRecess;
-        var u0 = o.U0 + fw;
-        var u1 = o.U1 - fw;
-        var y0 = o.Y0 + (isDoor ? 0.06f : fw);
-        var y1 = o.Y1 - fw;
-        FrameRing(f, o.U0 - 0.005f, o.U1 + 0.005f, o.Y0 - 0.005f, o.Y1 + 0.005f, u0, u1, y0, y1, sF, sG);
-        if (Full)
-        {
-            var wide = o.U1 - o.U0 > _prof.MullionFrom || isDoor;
-            if (wide) Bar(f, (u0 + u1) * 0.5f - 0.04f, (u0 + u1) * 0.5f + 0.04f, y0, y1, sF - 0.008f, sG);
-            if (_prof.Transom && !isDoor && y1 - y0 > 1.3f)
-            {
-                var yt = y0 + (y1 - y0) * 0.72f;
-                Bar(f, u0, u1, yt - 0.035f, yt + 0.035f, sF - 0.012f, sG);
-            }
-            if (isDoor)
-            {
-                var yt = y1 - 0.42f;
-                Bar(f, u0, u1, yt - 0.04f, yt + 0.04f, sF - 0.012f, sG);
-            }
-        }
-        // Glass spans the whole opening on the glass plane, so the shell stays closed behind the (non-casting) frame.
-        Glass(f, layout, o, o.U0, o.U1, o.Y0, o.Y1, sG);
+        _openings.Fill(f, layout, o, zone);
     }
 
     private void Reveal(EdgeFrame f, float u0, float u1, float y0, float y1, float sG, bool door)
@@ -239,65 +214,6 @@ public sealed class BuildingMesher
         {
             f.Box(_sink, _trim, u0 - 0.07f, u1 + 0.07f, 0f, 0.07f, y - 0.14f, y);
         }
-    }
-
-    /// <summary>Frame ring on the glass plane: front face plus (L0) inner returns back to the glass.</summary>
-    private void FrameRing(EdgeFrame f, float ou0, float ou1, float oy0, float oy1, float iu0, float iu1, float iy0, float iy1, float sF, float sG)
-    {
-        var o = f.Out;
-        // front: left and right full height, top and bottom between them
-        f.Panel(_sink, _metal, ou0, iu0, sF, oy0, oy1, o, new(ou0, oy0), new(iu0, oy1));
-        f.Panel(_sink, _metal, iu1, ou1, sF, oy0, oy1, o, new(iu1, oy0), new(ou1, oy1));
-        f.Panel(_sink, _metal, iu0, iu1, sF, oy0, iy0, o, new(iu0, oy0), new(iu1, iy0));
-        f.Panel(_sink, _metal, iu0, iu1, sF, iy1, oy1, o, new(iu0, iy1), new(iu1, oy1));
-        if (!Full) return;
-        var a = f.Along;
-        var up = Vector3.UnitY;
-        _sink.Quad(_metal, new V(f.At(iu0, sF, iy0), a, default), new V(f.At(iu0, sG, iy0), a, default), new V(f.At(iu0, sG, iy1), a, default), new V(f.At(iu0, sF, iy1), a, default));
-        _sink.Quad(_metal, new V(f.At(iu1, sF, iy0), -a, default), new V(f.At(iu1, sG, iy0), -a, default), new V(f.At(iu1, sG, iy1), -a, default), new V(f.At(iu1, sF, iy1), -a, default));
-        _sink.Quad(_metal, new V(f.At(iu0, sF, iy1), -up, default), new V(f.At(iu1, sF, iy1), -up, default), new V(f.At(iu1, sG, iy1), -up, default), new V(f.At(iu0, sG, iy1), -up, default));
-        _sink.Quad(_metal, new V(f.At(iu0, sF, iy0), up, default), new V(f.At(iu1, sF, iy0), up, default), new V(f.At(iu1, sG, iy0), up, default), new V(f.At(iu0, sG, iy0), up, default));
-    }
-
-    /// <summary>Mullion or transom: front face and two sides back to the glass.</summary>
-    private void Bar(EdgeFrame f, float u0, float u1, float y0, float y1, float sF, float sG)
-    {
-        var tall = y1 - y0 > u1 - u0;
-        f.Panel(_sink, _metal, u0, u1, sF, y0, y1, f.Out, new(u0, y0), new(u1, y1));
-        if (tall)
-        {
-            var a = f.Along;
-            _sink.Quad(_metal, new V(f.At(u0, sF, y0), -a, default), new V(f.At(u0, sG, y0), -a, default), new V(f.At(u0, sG, y1), -a, default), new V(f.At(u0, sF, y1), -a, default));
-            _sink.Quad(_metal, new V(f.At(u1, sF, y0), a, default), new V(f.At(u1, sG, y0), a, default), new V(f.At(u1, sG, y1), a, default), new V(f.At(u1, sF, y1), a, default));
-        }
-        else
-        {
-            var up = Vector3.UnitY;
-            _sink.Quad(_metal, new V(f.At(u0, sF, y1), up, default), new V(f.At(u1, sF, y1), up, default), new V(f.At(u1, sG, y1), up, default), new V(f.At(u0, sG, y1), up, default));
-            _sink.Quad(_metal, new V(f.At(u0, sF, y0), -up, default), new V(f.At(u1, sF, y0), -up, default), new V(f.At(u1, sG, y0), -up, default), new V(f.At(u0, sG, y0), -up, default));
-        }
-    }
-
-    /// <summary>
-    /// Glass quad: UV = window-grid cell (floor = column, row), UV2 = (building window base, channel + 32 × columns),
-    /// spare byte = window card type. Window number = base + row × columns + column.
-    /// </summary>
-    private void Glass(EdgeFrame f, FacadeLayout layout, Opening o, float u0, float u1, float y0, float y1, float s)
-    {
-        var col = layout.ColumnStart + o.Bay;
-        var id = _block.Base + o.Row * _p.TotalColumns + col;
-        var card = _p.CardOf(o.Kind, StableHash.Hash32(_p.Seed, "card", id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        // Glass casts shadows: it is the only closure of the hollow shell, otherwise low sun leaks through the windows.
-        var face = new Face(MaterialKind.Glass, Families.Glass, 0, (byte)card,
-            new Vector2(_block.Base, _prof.Channel + 32f * _p.TotalColumns));
-        const float m = 0.002f;
-        var cx0 = col + m;
-        var cx1 = col + 1 - m;
-        var ry0 = o.Row + m;
-        var ry1 = o.Row + 1 - m;
-        _sink.Quad(face,
-            new V(f.At(u0, s, y0), f.Out, new(cx0, ry0)), new V(f.At(u1, s, y0), f.Out, new(cx1, ry0)),
-            new V(f.At(u1, s, y1), f.Out, new(cx1, ry1)), new V(f.At(u0, s, y1), f.Out, new(cx0, ry1)));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -701,6 +617,6 @@ public sealed class BuildingMesher
     {
         foreach (var (fi, f, layout, _) in FacadeFrames())
             foreach (var o in _p.Openings[fi])
-                Glass(f, layout, o, o.U0, o.U1, o.Y0, o.Y1, 0.012f);
+                _openings.FlatGlass(f, layout, o, 0.012f);
     }
 }

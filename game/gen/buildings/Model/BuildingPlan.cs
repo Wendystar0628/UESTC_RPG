@@ -71,6 +71,11 @@ public sealed class BuildingPlan
     public required IReadOnlyList<FacadeLayout> Facades { get; init; }
     /// <summary>Openings per facade (same order as Facades), in skin u.</summary>
     public required IReadOnlyList<Opening[]> Openings { get; init; }
+    /// <summary>
+    /// Precision zone of each opening (parallel to Openings), read from the exported fidelity data (IFidelityModel):
+    /// the ground-floor row takes its facade segment's ground band. Empty without fidelity data: everything is K3.
+    /// </summary>
+    public IReadOnlyList<FidelityZone[]> OpeningZones { get; init; } = [];
     /// <summary>Columns of the building window grid (all bays of all rings, blank ones included).</summary>
     public required int TotalColumns { get; init; }
     public required Vector2 Axis { get; init; }
@@ -85,6 +90,9 @@ public sealed class BuildingPlan
         var size = TileSize * (1 << (int)lod);
         return new TileKey((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));
     }
+
+    public FidelityZone ZoneOf(int facade, int opening) =>
+        facade < OpeningZones.Count ? OpeningZones[facade][opening] : FidelityZone.K3;
 
     public PlanRing SkinAt(int ring) => ring == 0 ? SkinOuter : SkinHoles[ring - 1];
     public PlanRing FootAt(int ring) => ring == 0 ? Outer : Holes[ring - 1];

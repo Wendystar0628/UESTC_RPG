@@ -99,6 +99,137 @@ public sealed class BuildingsTests
     }
 
     [TestCase]
+    public void PartGlassKeepsTheWindowNumbersAndCards()
+    {
+        var world = World(
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"),
+            Feature("t:hall", Rect(100, 0, 40, 30), 1, 9f, "sport"),
+            Feature("t:plant", Rect(200, 0, 20, 12), 2, 8f, "utility"));
+        var set = BuildingSet.For(world, 5u);
+        var module = new BuildingsModule();
+        for (var b = 0; b < set.Plans.Count; b++)
+        {
+            var plan = set.Plans[b];
+            var block = set.Blocks[b];
+            // Expected cells straight from the plan, with the encoding the mainline glass used.
+            var expected = new Dictionary<int, byte>();
+            for (var fi = 0; fi < plan.Facades.Count; fi++)
+                foreach (var o in plan.Openings[fi])
+                {
+                    var id = block.Base + o.Row * plan.TotalColumns + plan.Facades[fi].ColumnStart + o.Bay;
+                    var hash = StableHash.Hash32(plan.Seed, "card", id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    expected.Add(id, (byte)plan.CardOf(o.Kind, hash));
+                }
+            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3 })
+            {
+                var seen = new HashSet<int>();
+                foreach (var g in module.BuildOne(plan, block, lod).Where(x => x.Material.Spec.Kind == ToonKind.Glass))
+                    for (var i = 0; i < g.Position.Length / 3; i++)
+                    {
+                        Require(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns,
+                            $"{plan.Key} {lod}: UV2 is (BaseId, slot + 32 × columns)");
+                        var id = block.Base + (int)MathF.Floor(g.Uv![2 * i + 1]) * plan.TotalColumns + (int)MathF.Floor(g.Uv[2 * i]);
+                        Require(expected.TryGetValue(id, out var card) && g.Reserved![i] == card, $"{plan.Key} {lod}: window {id} keeps its cell and card");
+                        seen.Add(id);
+                    }
+                Require(seen.SetEquals(expected.Keys), $"{plan.Key} {lod}: every opening has glass");
+            }
+        }
+    }
+
+    private static bool Sash(GeometryBundle b) => b.Material.Spec.Lit.Value == "frame.alu.lit" && b.Material.Spec.Fx == ToonFx.Rim;
+    private static bool Fabric(GeometryBundle b) => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Steps == ShadeSteps.TwoHalf;
+
+    [TestCase]
+    public void K1AndK2OpeningsTakeTheWp10Parts()
+    {
+        // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH §3 FacadeSegment).
+        var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
+        var set = BuildingSet.For(world, 1u);
+        var plan = set.Plans[0];
+        for (var fi = 0; fi < plan.Facades.Count; fi++)
+            for (var k = 0; k < plan.Openings[fi].Length; k++)
+                Require(plan.ZoneOf(fi, k) == (plan.Openings[fi][k].Row == 0 ? FidelityZone.K2 : FidelityZone.K3), "ground floor in the K2 band, the rest K3");
+        var module = new BuildingsModule();
+        var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0);
+        var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1);
+        Require(near.Any(Sash), "K2 windows carry the WP-10 two-level sashes at L0");
+        Require(near.Any(Fabric), "K2 room windows hang WP-10 curtains at L0");
+        Require(!mid.Any(Sash) && !mid.Any(Fabric), "L1 keeps the simplified frame ring only");
+        // Without window gaskets the dark steel is only the astragal between the entrance leaves (two boxes).
+        var dark = near.Where(b => b.Material.Spec.Lit.Value == "equip.fence.lit").Sum(b => b.Index.Length / 3);
+        Require(Rules.OpeningRules.Gaskets || dark <= 24, "window gaskets follow OpeningRules.Gaskets");
+        Require(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base)),
+            "no part glass keeps WP-10's placeholder numbering");
+    }
+
+    [TestCase]
+    public void K3OpeningsTakeTheSimpleWindow()
+    {
+        var world = World(
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"),
+            Feature("t:hall", Rect(100, 0, 40, 30), 1, 9f, "sport"),
+            Feature("t:lab", Rect(200, 0, 48, 16), 5, 21f, "research"),
+            Feature("t:canteen", Rect(300, 0, 40, 24), 2, 9.5f, "dining"));
+        var set = BuildingSet.For(world, 3u);
+        var module = new BuildingsModule();
+        for (var i = 0; i < set.Plans.Count; i++)
+        {
+            var plan = set.Plans[i];
+            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1 })
+            {
+                var levelMax = 0;
+                for (var fi = 0; fi < plan.Facades.Count; fi++)
+                {
+                    var layout = plan.Facades[fi];
+                    var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
+                    foreach (var o in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
+                    {
+                        var sink = new Mesh.MeshSink(null);
+                        new Build.FacadeOpenings(plan, set.Blocks[i], lod, sink).Fill(frame, layout, o, FidelityZone.K3);
+                        levelMax = Math.Max(levelMax, sink.Triangles - 2);
+                    }
+                }
+                Require(levelMax is >= 16 and <= 60, $"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})");
+            }
+            var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0);
+            Require(!near.Any(Sash) && !near.Any(Fabric), $"{plan.Key}: K3 has no sashes, handles or curtains");
+            Require(near.All(b => b.Material.Spec.Lit.Value != "equip.fence.lit" || b.Index.Length / 3 <= 24), $"{plan.Key}: no window gaskets");
+        }
+    }
+
+    [TestCase]
+    public void WindowDeclarationsMatchTheGlass()
+    {
+        var world = World(Feature("t:a", LShape(0, 0), 4, 15.6f, "teaching"));
+        var set = BuildingSet.For(world, 2u);
+        var plan = set.Plans[0];
+        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 2u };
+        var output = new BuildingsModule().Build(ctx, plan.Tile(LodLevel.L0), LodLevel.L0);
+        var decls = output.LooseWindows;
+        Require(decls.Count == plan.Openings.Sum(o => o.Length), "one declaration per opening");
+        Require(decls.Select(d => d.Id).Distinct().Count() == decls.Count, "window numbers are unique");
+        var fi = 0;
+        for (var r = 0; r < plan.RingCount; r++)
+        {
+            var skin = plan.SkinAt(r);
+            for (var e = 0; e < skin.Count; e++, fi++)
+                foreach (var o in plan.Openings[fi])
+                {
+                    var id = set.Blocks[0].Base + o.Row * plan.TotalColumns + plan.Facades[fi].ColumnStart + o.Bay;
+                    var d = decls.Single(x => x.Id == id);
+                    var outward = new Vector3(skin.Normal[e].X, 0, skin.Normal[e].Y);
+                    Require(Vector3.Distance(Vector3.Cross(d.Right, d.Up), outward) < 1e-4f, "Right × Up points out of the facade");
+                    var mid = skin.Points[e] + skin.Dir[e] * ((o.U0 + o.U1) * 0.5f) - skin.Normal[e] * plan.Reveal;
+                    Require(Vector3.Distance(d.Center, new Vector3(mid.X, (o.Y0 + o.Y1) * 0.5f, mid.Y)) < 1e-3f, "centred on the opening's glass");
+                    Require(MathF.Abs(d.Width - (o.U1 - o.U0)) < 1e-4f && d.BaseId == set.Blocks[0].Base && d.TotalColumns == plan.TotalColumns,
+                        "size and numbering as the glass");
+                }
+        }
+        Require(new BuildingsModule().Build(ctx, plan.Tile(LodLevel.L1), LodLevel.L1).LooseWindows.Count == 0, "declared with the L0 cell only");
+    }
+
+    [TestCase]
     public void WindowNumbersFollowFeatureOrder()
     {
         var world = World(
@@ -216,9 +347,31 @@ public sealed class BuildingsTests
             Props = JsonDocument.Parse("{\"category\":\"" + category + "\"}").RootElement.Clone(),
         };
 
-    private static TestWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id));
+    private static TestWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id), null);
 
-    private sealed class TestWorld(IReadOnlyDictionary<FeatureId, WorldFeature> features) : IWorldModel
+    private static TestWorld World(ZonedFidelity fidelity, params WorldFeature[] features)
+    {
+        var map = features.ToDictionary(f => f.Id);
+        fidelity.Features = map;
+        return new(map, fidelity);
+    }
+
+    /// <summary>Every footprint edge one segment: Zone above the ground band, GroundBand within it.</summary>
+    private sealed class ZonedFidelity(FidelityZone zone, FidelityZone ground) : IFidelityModel
+    {
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; set; } = new Dictionary<FeatureId, WorldFeature>();
+        public string InputHash => "test";
+        public IReadOnlyList<FacadeSegment> Facades(FeatureId building)
+        {
+            var ring = ((PolygonGeometry)Features[building].Geometry).Rings.Outer;
+            return [.. ring.Select((a, i) => new FacadeSegment(building, i, a, ring[(i + 1) % ring.Count], zone, ground))];
+        }
+        public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K4);
+        public FidelityZone GroundAt(float x, float z) => FidelityZone.K3;
+        public float WalkDistanceAt(float x, float z) => 0f;
+    }
+
+    private sealed class TestWorld(IReadOnlyDictionary<FeatureId, WorldFeature> features, IFidelityModel? fidelity) : IWorldModel
     {
         public PolygonRings Boundary { get; } = new([new(-1000, -1000), new(1000, -1000), new(1000, 1000), new(-1000, 1000)]);
         public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features;
@@ -226,7 +379,7 @@ public sealed class BuildingsTests
         public ISpatialIndex Spatial { get; } = new Flat();
         public IInteriorIndex Interiors { get; } = new NoInteriors();
         public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity => null;
+        public IFidelityModel? Fidelity { get; } = fidelity;
     }
 
     private sealed class Flat : ISpatialIndex

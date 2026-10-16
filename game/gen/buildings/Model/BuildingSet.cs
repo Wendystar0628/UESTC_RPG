@@ -69,7 +69,7 @@ public sealed class BuildingSet
         {
             // A source footprint shared by two entities is built once, by the first entity in ordinal order.
             if (!seen.Add(src.Key)) continue;
-            var plan = BuildingPlanner.Plan(src, world.Spatial, worldSeed);
+            var plan = BuildingPlanner.Plan(src, world.Spatial, worldSeed, world.Fidelity);
             if (plan is null) continue;
             plans.Add(plan);
             blocks.Add(new WindowBlock(plan.Id, plan.Key, next, plan.TotalColumns, plan.Storeys));

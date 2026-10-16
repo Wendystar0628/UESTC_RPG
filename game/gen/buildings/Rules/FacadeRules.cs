@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Parts;
 
 namespace Campus.Gen.Buildings.Rules;
 
@@ -68,9 +69,9 @@ public sealed record FacadeProfile(
     WindowCard Card)
 {
     public float Reveal { get; init; } = 0.3f;
-    public float Frame { get; init; } = 0.13f;
-    /// <summary>Windows wider than this get a central mullion.</summary>
+    /// <summary>Windows wider than this get two or more light columns (OpeningRules.Grid).</summary>
     public float MullionFrom { get; init; } = 1.35f;
+    /// <summary>Windows taller than OpeningRules.TransomFrom get a transom row.</summary>
     public bool Transom { get; init; }
     /// <summary>Pilaster every N piers on long facades; 0 = none.</summary>
     public int PilasterEvery { get; init; }
@@ -81,6 +82,10 @@ public sealed record FacadeProfile(
     public float PlinthProjection { get; init; } = 0.05f;
     /// <summary>Secondary mix for the window cards: (card, weight) by window hash.</summary>
     public (WindowCard Card, int Weight)[] CardMix { get; init; } = [];
+    /// <summary>WP-10 part (PartCatalog ID) filling the window openings; doors take <see cref="PartCatalog.Door"/>.</summary>
+    public string Window { get; init; } = PartCatalog.WindowCasement;
+    /// <summary>Room windows get WP-10 curtains (OpeningPlacement.Curtain picks which, and their state and colour).</summary>
+    public bool Curtains { get; init; } = true;
 }
 
 public static class FacadeRules
@@ -105,14 +110,15 @@ public static class FacadeRules
 
     private static readonly FacadeProfile Sports = new(BuildingStyle.Sports, 8f, 4.5f, 0.78f, 1.8f, 0.6f, 0.6f, RoofEdge.Cornice,
         Families.WallGreyWhite, Families.WallWarmWhite, Families.BaseWarmBrown, Families.RoofSilverMetal, null, LightSlots.Gym, WindowCard.Gym)
-;
+    { Window = PartCatalog.WindowRibbon, Curtains = false };
 
     private static readonly FacadeProfile Service = new(BuildingStyle.Service, 3.6f, 3.8f, 0.6f, 1.9f, 0.9f, 1.0f, RoofEdge.Parapet,
         Families.WallGreyWhite, Families.WallWarmWhite, Families.RoofGrey, Families.RoofGrey, null, LightSlots.General, WindowCard.Office)
     { CardMix = [(WindowCard.Office, 6), (WindowCard.Mechanical, 2), (WindowCard.Shop, 2)] };
 
     private static readonly FacadeProfile Canteen = new(BuildingStyle.Canteen, 4.5f, 4.2f, 0.7f, 2.4f, 0.6f, 0.75f, RoofEdge.Cornice,
-        Families.TileCanteen, Families.WallWarmWhite, Families.BaseWarmBrown, Families.RoofGrey, null, LightSlots.Canteen, WindowCard.Canteen);
+        Families.TileCanteen, Families.WallWarmWhite, Families.BaseWarmBrown, Families.RoofGrey, null, LightSlots.Canteen, WindowCard.Canteen)
+    { Window = PartCatalog.WindowRibbon };
 
     private static readonly FacadeProfile Residential = new(BuildingStyle.Residential, 3.0f, 3.4f, 0.45f, 1.6f, 0.95f, 1.0f, RoofEdge.Parapet,
         Families.WallCreamCoffee, Families.WallWarmWhite, Families.BaseWarmBrown, Families.RoofGrey, Families.BandTerracotta, LightSlots.Dorm, WindowCard.Dorm)
@@ -120,7 +126,7 @@ public static class FacadeRules
 
     private static readonly FacadeProfile Utility = new(BuildingStyle.Utility, 4.0f, 4.6f, 0.38f, 1.2f, 1.6f, 1.6f, RoofEdge.Parapet,
         Families.WallGreyWhite, Families.WallWarmWhite, Families.RoofGrey, Families.RoofGrey, null, LightSlots.General, WindowCard.Mechanical)
-    { StringCourses = false };
+    { StringCourses = false, Window = PartCatalog.WindowHigh, Curtains = false };
 
     private static readonly FacadeProfile Medical = Academic with
     {
@@ -144,6 +150,8 @@ public static class FacadeRules
         Card = WindowCard.Office,
         PilasterEvery = 0,
         CardMix = [(WindowCard.Classroom, 6), (WindowCard.Office, 4)],
+        Window = PartCatalog.CurtainWall,
+        Curtains = false,
     };
 
     /// <summary>
