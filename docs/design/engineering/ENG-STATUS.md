@@ -125,7 +125,7 @@ gates: []
 | WP-44 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-44` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-45a | 共同保存与首次天气绑定已合入；真实容器联调 | `..\UESTC_RPG.wt\WP-45a` | `wp/45a-weather` | — | 阻塞 | G20 与原生天气画面待 WP-01/50 联合验证 | 联合核对真实容器往返、故障隔离与原生天气画面，不记完整 G20 通过 |
 | WP-46 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-46` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
-| WP-48c | 三处锚点已迁；A01广场已交、锚点待迁 | `..\UESTC_RPG.wt\WP-48c` | `wp/48c-atlas-state` | — | 阻塞 | A01新坐标待Astra候选；正式底图/传送/窗口待WP-01/46 | A01迁至−500.64/687.00、朝35°后复核台座/铺装；A05等WP-30；G18未验，坐标规范等另Sol单 |
+| WP-48c | A01/A08迁移候选合并复跑失败 | `..\UESTC_RPG.wt\WP-48c` | `wp/48c-atlas-state` | `544f868` | 阻塞 | G2家具测试固定4亭/排除A01，与迁移后A01可摆亭冲突；squash已撤回 | Opus协调WP-13/Astra衔接后重交；sol-021前置未满足，正式底图/传送/G18仍待后续 |
 | WP-49a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-49a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-50 | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-50` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
 | WP-51a | 主线版（ENG-WP §2.1）；Astra 负责 | `..\UESTC_RPG.wt\WP-51a` | 由 Astra 建 | — | 已派工 | — | Astra 的子代理施工，Astra 审后写合并请求 |
