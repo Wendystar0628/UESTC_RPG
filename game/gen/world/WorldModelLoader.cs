@@ -132,7 +132,10 @@ public static class WorldModelLoader
         var roads = new EffectiveRoadNetwork(originalNetwork, prefix, features);
         var overlayWrites = new Dictionary<string, List<OverlayWrite>>(StringComparer.Ordinal);
         var interiorOverlays = new List<InteriorOverlayFile>();
-        foreach (var pair in input.Where(p => p.Key.StartsWith("overlay/", StringComparison.Ordinal)))
+        var splitGroups = input.Keys.Select(FeatureOverlayShardGroup).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        foreach (var pair in input.Where(p => p.Key.StartsWith("overlay/", StringComparison.Ordinal))
+            .OrderBy(p => FeatureOverlayShardGroup(p.Key) ?? p.Key, StringComparer.Ordinal)
+            .ThenBy(p => p.Key, StringComparer.Ordinal))
         {
             if (pair.Key.StartsWith("overlay/interior/", StringComparison.Ordinal) && pair.Key.EndsWith(".interior.json", StringComparison.Ordinal))
             {
@@ -145,8 +148,14 @@ public static class WorldModelLoader
                 }
                 interiorOverlays.Add(overlay);
             }
-            else if (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) && pair.Key is not "overlay/outskirts.overlay.json" and not "overlay/walkable.overlay.json" and not "overlay/fidelity.overlay.json")
-                ApplyOverlay(map, pair.Key, pair.Value, features, aliases, overlayWrites, options.ClaimedBy, roads);
+            else if (FeatureOverlayShardGroup(pair.Key) is not null || IsLegacyFeatureOverlay(pair.Key))
+            {
+                var overlay = Deserialize<OverlayFile>(pair.Key, pair.Value);
+                CheckMap(map, overlay.Map, pair.Key);
+                if (splitGroups.Contains(pair.Key) && overlay.Ops.Count != 0)
+                    throw new WorldDataException(pair.Key, "ops", $"A non-empty legacy overlay cannot coexist with split overlay directory '{pair.Key[..^".overlay.json".Length]}.d/'.");
+                ApplyOverlay(pair.Key, overlay, features, aliases, overlayWrites, options.ClaimedBy, roads);
+            }
         }
         var network = roads.Publish(features);
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
@@ -183,13 +192,42 @@ public static class WorldModelLoader
 
     private sealed record OverlayWrite(string File, WpId Owner, string Target);
 
+    // Only root-level feature groups opt into splitting. Dedicated overlay formats keep their own loaders.
+    private static bool IsDedicatedOverlayGroup(string group) =>
+        group is "interior" or "terrain" or "outskirts" or "walkable" or "fidelity";
+
+    private static string? FeatureOverlayShardGroup(string file)
+    {
+        if (!file.StartsWith("overlay/", StringComparison.Ordinal)) return null;
+        var relative = file["overlay/".Length..];
+        var separator = relative.IndexOf('/');
+        if (separator < 3 || !relative[..separator].EndsWith(".d", StringComparison.Ordinal)) return null;
+        var group = relative[..(separator - 2)];
+        var child = relative[(separator + 1)..];
+        return !IsDedicatedOverlayGroup(group) && child.EndsWith(".json", StringComparison.Ordinal) && !child.Contains('/')
+            ? "overlay/" + group + ".overlay.json" : null;
+    }
+
+    private static bool IsLegacyFeatureOverlay(string file)
+    {
+        if (!file.EndsWith(".overlay.json", StringComparison.Ordinal)) return false;
+        var segments = file["overlay/".Length..].Split('/');
+        if (segments.Take(segments.Length - 1).Any(segment => segment.EndsWith(".d", StringComparison.Ordinal))) return false;
+        var group = segments[0];
+        if (segments.Length == 1) group = group[..^".overlay.json".Length];
+        return !IsDedicatedOverlayGroup(group);
+    }
+
     private static void RegisterWrite(string entity, string target, string file, WpId owner,
         Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy)
     {
         if (!writes.TryGetValue(entity, out var previous)) writes[entity] = previous = [];
+        var splitGroup = FeatureOverlayShardGroup(file);
         foreach (var write in previous)
         {
             if (write.File == file) continue;
+            // Same-owner shards retain the legacy logical file's sequential writes, without losing real error paths.
+            if (splitGroup is not null && splitGroup == FeatureOverlayShardGroup(write.File) && owner == write.Owner) continue;
             var explicitlyClaimed = claimedBy is not null && claimedBy.TryGetValue(new(entity), out var claimant)
                 && (claimant == owner || claimant == write.Owner);
             if (!explicitlyClaimed)
@@ -213,12 +251,10 @@ public static class WorldModelLoader
         return roam;
     }
 
-    private static void ApplyOverlay(MapId map, string file, string text, SortedDictionary<string, WorldFeature> features,
+    private static void ApplyOverlay(string file, OverlayFile overlay, SortedDictionary<string, WorldFeature> features,
         Dictionary<string, List<string>> aliases, Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy,
         EffectiveRoadNetwork roads)
     {
-        var overlay = Deserialize<OverlayFile>(file, text);
-        CheckMap(map, overlay.Map, file);
         for (var i = 0; i < overlay.Ops.Count; i++)
         {
             try

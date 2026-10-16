@@ -394,6 +394,115 @@ public sealed class WorldModelTests
         }
     }
 
+    [TestCase]
+    public void SplitOverlaysKeepLegacyContentOperationOrderAndDerivedQueries()
+    {
+        var batches = new OverlayOp[][]
+        {
+            [new HeightOp(new("fixture:relation:1"), 24, 6, "fixture height"),
+                new HeightOp(new("fixture:relation:1"), null, 3, "fixture storeys")],
+            [new StyleOp(new("fixture:relation:1"), new("fixture-style"), null),
+                new HideOp(new("fixture:source:way:20"), "fixture removal"),
+                new AddOp(new("design:split-fixture"), new("building"), new PointGeometry(new(15, 0, 15)), 4, null, "fixture addition")]
+        };
+        var legacy = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.overlay.json"] = Overlay(batches.SelectMany(batch => batch).ToArray()) };
+        var split = new Dictionary<string, string>
+        {
+            ["campus.json"] = Campus,
+            ["overlay/test.d/02-detail.json"] = Overlay(batches[1]),
+            ["overlay/test.d/01-shape.json"] = Overlay(batches[0])
+        };
+        var expected = WorldModelLoader.Load(new("test"), legacy).World;
+        var actual = WorldModelLoader.Load(new("test"), split).World;
+        Require(JsonSerializer.Serialize(expected.Features, ContractJson.Options) == JsonSerializer.Serialize(actual.Features, ContractJson.Options), "Split files changed the effective fixture features.");
+        Require(actual.Features[new("fixture:relation:1")].Height == 12, "Operations within a shard were reordered.");
+        foreach (var point in new[] { new Vector3(-5, 10, -5), new Vector3(5, 14, 5), new Vector3(-9, -1, 3) })
+            Require(expected.Spatial.MediumAt(point) == actual.Spatial.MediumAt(point) &&
+                expected.Spatial.WalkClassAt(point.X, point.Z) == actual.Spatial.WalkClassAt(point.X, point.Z), "Split files changed a derived spatial query.");
+        split["overlay/test.overlay.json"] = Overlay([]);
+        var placeholder = WorldModelLoader.Load(new("test"), split).World;
+        Require(JsonSerializer.Serialize(actual.Features, ContractJson.Options) == JsonSerializer.Serialize(placeholder.Features, ContractJson.Options), "Empty legacy placeholder changed split output.");
+    }
+
+    [TestCase]
+    public void SplitOverlaysUseOrdinalFilenamesAtTheLegacyGroupsVirtualPosition()
+    {
+        var files = new Dictionary<string, string>
+        {
+            ["campus.json"] = Campus,
+            ["overlay/a.d/a.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 40, null, "last ordinal shard")]),
+            ["overlay/a.more.overlay.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 19, null, "before virtual a.overlay")]),
+            ["overlay/a.d/B.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 30, null, "first ordinal shard")])
+        };
+        var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-08") } };
+        var world = WorldModelLoader.Load(new("test"), files, options).World;
+        Require(world.Features[new("fixture:relation:1")].Height == 40, "Shard or virtual group ordering is not Ordinal.");
+        files["overlay/a.more.d/01.json"] = files["overlay/a.more.overlay.json"];
+        files.Remove("overlay/a.more.overlay.json");
+        Require(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 40, "Split groups use their physical directory order.");
+    }
+
+    [TestCase]
+    public void SplitOverlaysRejectNonEmptyLegacyCoexistence()
+    {
+        var files = new Dictionary<string, string>
+        {
+            ["campus.json"] = Campus,
+            ["overlay/test.overlay.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 20, null, "legacy")]),
+            ["overlay/test.d/01.json"] = Overlay([])
+        };
+        var error = OverlayError(files);
+        Require(error.File == "overlay/test.overlay.json" && error.Entry == "ops" && error.Message.Contains("overlay/test.d/", StringComparison.Ordinal), "Legacy/shard coexistence did not fail explicitly.");
+    }
+
+    [TestCase]
+    public void SplitOverlaysKeepRealMapOperationAndConflictErrorSources()
+    {
+        var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = "{" };
+        Require(OverlayError(files).File == "overlay/test.d/01.json", "Malformed shard lost its filename.");
+        files["overlay/test.d/01.json"] = Overlay([], map: "another-map");
+        var mapError = OverlayError(files);
+        Require(mapError.File == "overlay/test.d/01.json" && mapError.Entry == "map", "Shard map validation lost its source.");
+        files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), -1, null, "invalid")]);
+        var operationError = OverlayError(files);
+        Require(operationError.File == "overlay/test.d/01.json" && operationError.Entry == "ops[0]", "Shard operation validation lost its source.");
+        files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 20, null, "first")], "WP-14");
+        files["overlay/test.d/02.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "second")], "WP-15");
+        var conflict = OverlayError(files);
+        Require(conflict.File == "overlay/test.d/02.json" && new[] { "overlay/test.d/01.json", "overlay/test.d/02.json", "WP-14", "WP-15" }.All(text => conflict.Message.Contains(text, StringComparison.Ordinal)), "Shard conflict lost a real filename or owner.");
+        var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") } };
+        Require(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 30, "Different shard owners did not respect a real claim.");
+        files.Remove("overlay/test.d/02.json");
+        files["overlay/other.d/01.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "same owner across groups")], "WP-14");
+        var crossGroup = OverlayError(files);
+        Require(crossGroup.Message.Contains("Overlay conflict", StringComparison.Ordinal) &&
+            new[] { "overlay/other.d/01.json", "overlay/test.d/01.json" }.All(path => crossGroup.Message.Contains(path, StringComparison.Ordinal)), "Matching owners across split groups bypassed the conflict rule or lost their real paths.");
+    }
+
+    [TestCase]
+    public void SplitOverlaysReadOnlyDirectJsonChildrenAndLeaveDedicatedFormatsAlone()
+    {
+        var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = Overlay([]) };
+        foreach (var path in new[] { "overlay/test.d/nested/02.json", "overlay/test.d/nested/03.overlay.json", "overlay/test.d/04.txt",
+            "overlay/test.d/05.JSON", "overlay/terrain.d/01.json", "overlay/interior.d/01.json", "overlay/outskirts.d/01.json",
+            "overlay/walkable.d/01.json", "overlay/fidelity.d/01.json", "overlay/terrain/test.d/01.json", "overlay/interior/test.d/01.json",
+            "overlay/terrain/test.overlay.json", "overlay/outskirts.overlay.json", "overlay/walkable.overlay.json", "overlay/fidelity.overlay.json" })
+            files[path] = "not a feature overlay";
+        files["overlay/interior/test.interior.json"] = """{"zone":"test","owner":"WP-08","ops":[]}""";
+        var world = WorldModelLoader.Load(new("test"), files).World;
+        Require(world.Features.Count == Load().World.Features.Count && ((WorldModelSnapshot)world).InteriorOverlays.Count == 1, "Feature splitting consumed a dedicated format or nested/non-JSON file.");
+    }
+
+    private static string Overlay(IReadOnlyList<OverlayOp> operations, string owner = "WP-08", string map = "test") =>
+        JsonSerializer.Serialize(new OverlayFile(new("test"), new(owner), operations) { Map = new(map) }, ContractJson.Options);
+
+    private static WorldDataException OverlayError(IReadOnlyDictionary<string, string> files)
+    {
+        try { WorldModelLoader.Load(new("test"), files); }
+        catch (WorldDataException error) { return error; }
+        throw new InvalidOperationException("Invalid feature overlay was accepted.");
+    }
+
     private static Dictionary<string, string> RealFiles()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
