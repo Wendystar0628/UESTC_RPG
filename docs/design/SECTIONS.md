@@ -81,22 +81,22 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 27.6k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 28.0k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
   - ★ CORE-DECISIONS §0.1 接入要点 · L32 · 172
 - CORE-DECISIONS §1 作品定位与范围 · L38 · 1.5k
-- CORE-DECISIONS §2 世界与地图 · L54 · 3.5k
-- CORE-DECISIONS §3 时间、季节、天气 · L84 · 2.4k
-- CORE-DECISIONS §4 美术风格 · L109 · 2.2k
-- CORE-DECISIONS §5 界面 · L130 · 2.8k
-- CORE-DECISIONS §6 存档 · L159 · 1.2k
-- CORE-DECISIONS §7 音频 · L174 · 2.0k
-- CORE-DECISIONS §8 性能与画面设置 · L196 · 1.8k
-- CORE-DECISIONS §9 工程 · L216 · 3.3k
-- CORE-DECISIONS §10 流程 · L241 · 4.6k
-- CORE-DECISIONS §11 待对齐 · L272 · 61
+- CORE-DECISIONS §2 世界与地图 · L54 · 3.9k
+- CORE-DECISIONS §3 时间、季节、天气 · L85 · 2.4k
+- CORE-DECISIONS §4 美术风格 · L110 · 2.2k
+- CORE-DECISIONS §5 界面 · L131 · 2.8k
+- CORE-DECISIONS §6 存档 · L160 · 1.2k
+- CORE-DECISIONS §7 音频 · L175 · 2.0k
+- CORE-DECISIONS §8 性能与画面设置 · L197 · 1.8k
+- CORE-DECISIONS §9 工程 · L217 · 3.3k
+- CORE-DECISIONS §10 流程 · L242 · 4.6k
+- CORE-DECISIONS §11 待对齐 · L273 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -559,38 +559,38 @@
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION.md` · 41.6k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION.md` · 42.6k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
-- WLD-VEGETATION §0 结论 · L44 · 2.2k
-  - ★ WLD-VEGETATION §0.1 接入要点 · L57 · 1.1k
-- WLD-VEGETATION §1 卡通树冠的画法 · L71 · 2.9k
-- WLD-VEGETATION §2 树种与四季 · L121 · 7.2k
-  - WLD-VEGETATION §2.1 落叶树：状态、叶量与开花 · L131 · 2.0k
-  - WLD-VEGETATION §2.2 常绿树与灌木 · L159 · 697
-  - WLD-VEGETATION §2.3 色名与四季色值 · L172 · 4.0k
-- WLD-VEGETATION §3 线性种植 · L221 · 1.2k
-- WLD-VEGETATION §4 片区种植 · L251 · 2.5k
-  - WLD-VEGETATION §4.1 外围（WLD-OUTSKIRTS） · L280 · 1.1k
-- WLD-VEGETATION §5 草坪 · L297 · 1.2k
-- WLD-VEGETATION §6 落叶、花瓣与积雪（地面覆盖） · L315 · 1.2k
-- WLD-VEGETATION §7 水生植物 · L337 · 1.2k
-- WLD-VEGETATION §8 提供给 SYS-MOTION 的参数 · L361 · 648
-- WLD-VEGETATION §9 季相参数 · L372 · 4.3k
-- WLD-VEGETATION §10 行走模式下的碰撞 · L431 · 791
-- WLD-VEGETATION §11 Godot 实现 · L446 · 10.3k
-  - WLD-VEGETATION §11.1 插片与团块的着色 · L453 · 1.4k
-  - WLD-VEGETATION §11.2 每株与每插片的数据 · L466 · 1.2k
-  - WLD-VEGETATION §11.3 阴影通道与 MAIN_CAM 门禁 · L492 · 943
-  - WLD-VEGETATION §11.4 近池与远池 · L503 · 1.4k
-  - WLD-VEGETATION §11.5 L2 替身：两条候选 · L520 · 697
-  - WLD-VEGETATION §11.6 季节数据通道 · L532 · 2.1k
-  - WLD-VEGETATION §11.7 地面遮罩与覆雪 · L568 · 786
-  - WLD-VEGETATION §11.8 画面设置（SYS-GRAPHICS） · L577 · 1.4k
-- WLD-VEGETATION §12 声音的接口（SYS-AUDIO） · L594 · 627
-- WLD-VEGETATION WP-23 交付验收 · L604 · 1.1k
-- WLD-VEGETATION §13 待验证（P0） · L624 · 668
+- WLD-VEGETATION §0 结论 · L44 · 2.4k
+  - ★ WLD-VEGETATION §0.1 接入要点 · L57 · 1.2k
+- WLD-VEGETATION §1 卡通树冠的画法 · L72 · 2.9k
+- WLD-VEGETATION §2 树种与四季 · L122 · 7.2k
+  - WLD-VEGETATION §2.1 落叶树：状态、叶量与开花 · L132 · 2.0k
+  - WLD-VEGETATION §2.2 常绿树与灌木 · L160 · 697
+  - WLD-VEGETATION §2.3 色名与四季色值 · L173 · 4.0k
+- WLD-VEGETATION §3 线性种植 · L222 · 1.2k
+- WLD-VEGETATION §4 片区种植 · L252 · 2.5k
+  - WLD-VEGETATION §4.1 外围（WLD-OUTSKIRTS） · L281 · 1.1k
+- WLD-VEGETATION §5 草坪 · L298 · 2.0k
+- WLD-VEGETATION §6 落叶、花瓣与积雪（地面覆盖） · L326 · 1.2k
+- WLD-VEGETATION §7 水生植物 · L348 · 1.2k
+- WLD-VEGETATION §8 提供给 SYS-MOTION 的参数 · L372 · 648
+- WLD-VEGETATION §9 季相参数 · L383 · 4.3k
+- WLD-VEGETATION §10 行走模式下的碰撞 · L442 · 791
+- WLD-VEGETATION §11 Godot 实现 · L457 · 10.3k
+  - WLD-VEGETATION §11.1 插片与团块的着色 · L464 · 1.4k
+  - WLD-VEGETATION §11.2 每株与每插片的数据 · L477 · 1.2k
+  - WLD-VEGETATION §11.3 阴影通道与 MAIN_CAM 门禁 · L503 · 943
+  - WLD-VEGETATION §11.4 近池与远池 · L514 · 1.4k
+  - WLD-VEGETATION §11.5 L2 替身：两条候选 · L531 · 697
+  - WLD-VEGETATION §11.6 季节数据通道 · L543 · 2.1k
+  - WLD-VEGETATION §11.7 地面遮罩与覆雪 · L579 · 786
+  - WLD-VEGETATION §11.8 画面设置（SYS-GRAPHICS） · L588 · 1.4k
+- WLD-VEGETATION §12 声音的接口（SYS-AUDIO） · L605 · 627
+- WLD-VEGETATION WP-23 交付验收 · L615 · 1.1k
+- WLD-VEGETATION §13 待验证（P0） · L635 · 668
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
@@ -620,44 +620,44 @@
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
-`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 42.2k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
-关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json
+`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 43.7k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
+关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json、功能开敞面、过渡绿地、空间记录
 
-- MAP-QSH-ADDITIONS §0 通用规则 · L22 · 2.6k
-  - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L52 · 921
-- MAP-QSH-ADDITIONS §1 中国高校"有设计感"的常见手法 · L65 · 519
-- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L82 · 15.1k
-  - MAP-QSH-ADDITIONS §2.1 宿舍组团内外 · L86 · 944
-  - MAP-QSH-ADDITIONS §2.2 食堂与商业街前 · L98 · 948
-  - MAP-QSH-ADDITIONS §2.3 普通道路和路口 · L109 · 861
-  - MAP-QSH-ADDITIONS §2.4 停车场 · L120 · 650
-  - MAP-QSH-ADDITIONS §2.5 河渠两岸（红光右支渠、走马河、磨底河） · L130 · 916
-  - MAP-QSH-ADDITIONS §2.6 湖岸 · L141 · 775
-  - MAP-QSH-ADDITIONS §2.7 大片草坪 · L151 · 664
-  - MAP-QSH-ADDITIONS §2.8 楼与楼之间的空地 · L162 · 657
-  - MAP-QSH-ADDITIONS §2.9 屋顶 · L172 · 903
-  - MAP-QSH-ADDITIONS §2.10 运动区周边 · L185 · 553
-  - MAP-QSH-ADDITIONS §2.11 围墙和校界 · L195 · 1.0k
-  - MAP-QSH-ADDITIONS §2.12 桥 · L207 · 544
-  - MAP-QSH-ADDITIONS §2.13 步行服务设施（配合 SYS-WALK §10） · L217 · 1.7k
-  - MAP-QSH-ADDITIONS §2.14 外围街道带（WLD-OUTSKIRTS） · L229 · 1.2k
-  - MAP-QSH-ADDITIONS §2.15 钟与广播（SYS-AUDIO） · L248 · 548
-  - MAP-QSH-ADDITIONS §2.16 日式日常街景物件（ART-STYLE §9.1、ART-AMBIENCE） · L257 · 2.1k
-- MAP-QSH-ADDITIONS §3 让普通楼宇有设计感 · L278 · 1.5k
-- MAP-QSH-ADDITIONS §4 参照与转译规则 · L295 · 1.2k
-- MAP-QSH-ADDITIONS §5 不建议增补 · L321 · 1.2k
-- MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L343 · 833
-- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L365 · 7.2k
-- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L408 · 6.3k
-  - MAP-QSH-ADDITIONS §8.1 照度三级 · L420 · 674
-  - MAP-QSH-ADDITIONS §8.2 颜色 · L432 · 479
-  - MAP-QSH-ADDITIONS §8.3 初灯组 · L441 · 549
-  - MAP-QSH-ADDITIONS §8.4 调度表 · L448 · 2.9k
-  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L495 · 896
-- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L506 · 2.3k
-  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L510 · 1.2k
-  - MAP-QSH-ADDITIONS §9.2 积水点 · L531 · 945
-- MAP-QSH-ADDITIONS §10 待验证（P0） · L541 · 658
+- MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.6k
+  - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L58 · 1.1k
+- MAP-QSH-ADDITIONS §1 中国高校"有设计感"的常见手法 · L72 · 519
+- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L89 · 15.3k
+  - MAP-QSH-ADDITIONS §2.1 宿舍组团内外 · L93 · 944
+  - MAP-QSH-ADDITIONS §2.2 食堂与商业街前 · L105 · 948
+  - MAP-QSH-ADDITIONS §2.3 普通道路和路口 · L116 · 861
+  - MAP-QSH-ADDITIONS §2.4 停车场 · L127 · 650
+  - MAP-QSH-ADDITIONS §2.5 河渠两岸（红光右支渠、走马河、磨底河） · L137 · 916
+  - MAP-QSH-ADDITIONS §2.6 湖岸 · L148 · 775
+  - MAP-QSH-ADDITIONS §2.7 大片草坪 · L158 · 822
+  - MAP-QSH-ADDITIONS §2.8 楼与楼之间的空地 · L171 · 657
+  - MAP-QSH-ADDITIONS §2.9 屋顶 · L181 · 903
+  - MAP-QSH-ADDITIONS §2.10 运动区周边 · L194 · 553
+  - MAP-QSH-ADDITIONS §2.11 围墙和校界 · L204 · 1.0k
+  - MAP-QSH-ADDITIONS §2.12 桥 · L216 · 544
+  - MAP-QSH-ADDITIONS §2.13 步行服务设施（配合 SYS-WALK §10） · L226 · 1.7k
+  - MAP-QSH-ADDITIONS §2.14 外围街道带（WLD-OUTSKIRTS） · L238 · 1.2k
+  - MAP-QSH-ADDITIONS §2.15 钟与广播（SYS-AUDIO） · L257 · 548
+  - MAP-QSH-ADDITIONS §2.16 日式日常街景物件（ART-STYLE §9.1、ART-AMBIENCE） · L266 · 2.1k
+- MAP-QSH-ADDITIONS §3 让普通楼宇有设计感 · L287 · 1.5k
+- MAP-QSH-ADDITIONS §4 参照与转译规则 · L304 · 1.2k
+- MAP-QSH-ADDITIONS §5 不建议增补 · L330 · 1.2k
+- MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L352 · 833
+- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L374 · 7.4k
+- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L419 · 6.3k
+  - MAP-QSH-ADDITIONS §8.1 照度三级 · L431 · 674
+  - MAP-QSH-ADDITIONS §8.2 颜色 · L443 · 479
+  - MAP-QSH-ADDITIONS §8.3 初灯组 · L452 · 549
+  - MAP-QSH-ADDITIONS §8.4 调度表 · L459 · 2.9k
+  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L506 · 896
+- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L517 · 2.3k
+  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L521 · 1.2k
+  - MAP-QSH-ADDITIONS §9.2 积水点 · L542 · 945
+- MAP-QSH-ADDITIONS §10 待验证（P0） · L552 · 658
 
 ## MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
@@ -1687,20 +1687,20 @@
 
 ## ENG-WP · 工作包派工单：55 个工作包，可并行 54 个
 
-`docs/design/engineering/ENG-WP.md` · 104.8k 字 · 55 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP.md` · 105.5k 字 · 55 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.7k
   - ★ ENG-WP §0.1 接入要点 · L39 · 737
 - ENG-WP §1 阶段与闸口 · L52 · 6.6k
-- ENG-WP §2 工作包一览 · L96 · 85.0k
+- ENG-WP §2 工作包一览 · L96 · 85.7k
   - ENG-WP §2.1 各包主线版的范围 · L167 · 14.0k
-  - ENG-WP §2.2 细节阶段待办 · L236 · 3.1k
-  - ENG-WP §2.3 候选包 · L273 · 255
-- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L281 · 3.9k
-- ENG-WP §4 子代理通用简报模板 · L306 · 630
-- ENG-WP §5 主代理的职责 · L324 · 3.2k
-- ENG-WP §6 待验证（P0） · L344 · 1.2k
+  - ENG-WP §2.2 细节阶段待办 · L236 · 3.2k
+  - ENG-WP §2.3 候选包 · L274 · 255
+- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L282 · 3.9k
+- ENG-WP §4 子代理通用简报模板 · L307 · 630
+- ENG-WP §5 主代理的职责 · L325 · 3.2k
+- ENG-WP §6 待验证（P0） · L345 · 1.2k
 
 ## REF-PROMPT · 完整提示词（备份）
 
