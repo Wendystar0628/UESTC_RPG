@@ -61,8 +61,10 @@ public sealed class VegetationInputsTests
         var module = new VegetationModule();
         var tree = VegetationInputs.Layout(ctx).Layout.Trees.First(t => t.Source == PlantSource.Road);
         var cell = new TileKey((int)MathF.Floor(tree.Position.X / 64f), (int)MathF.Floor(tree.Position.Z / 64f));
-        if (!module.Tiles(ctx).Contains(cell) || module.Collide(ctx, cell).Count == 0 || module.Build(ctx, cell, LodLevel.L0).Instances.Count != 0)
-            throw new InvalidOperationException("tiles, trunk colliders or the empty build disagree with the layout");
+        if (!module.Tiles(ctx).Contains(cell) || module.Collide(ctx, cell).Count == 0)
+            throw new InvalidOperationException("tiles or trunk colliders disagree with the layout");
+        // The instance streams carry palette colour IDs: a context without the palette fails instead of building nothing.
+        Expect<InvalidOperationException>(() => module.Build(ctx, cell, LodLevel.L0));
         var grid = new GroundMaskGrid(new MapRect(new(tree.Position.X - 32f, tree.Position.Z - 32f), new(tree.Position.X + 32f, tree.Position.Z + 32f)), 64, 64, 1f);
         var mask1 = Enumerable.Repeat((byte)77, grid.ByteCount).ToArray();
         var mask2 = Enumerable.Repeat((byte)77, grid.ByteCount).ToArray();
