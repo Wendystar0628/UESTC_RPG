@@ -2784,7 +2784,7 @@ APP.demo('triage', {
 const SEGS = [
   { k: 'D0', name: 'D0', astra: ['WP-00'], opus: ['WP-37', 'WP-04', 'WP-05', 'WP-35', 'WP-49b'], astraNote: 'WP-00：骨架、契约 v1 候选、全部桩、门禁骨架、建工作树的脚本、ownership.json、budgets.json、third_party.json，以及 net10.0 全链路验证（D-177）；内部可以开子代理分做契约组和桩', opusNote: '不依赖代码骨架的美术基础：WP-37 秋季 12 张关键帧与四季增量；WP-04 卡通着色器与材质库草案；WP-05 描线与后期着色器；WP-35 ui.json 令牌与 Theme 规格；WP-49b 过场数据与云卡着色器。各在自己的工作树里写，D0 合入后 rebase 再接上', cond: 'WP-00 合进 main，打标签 contracts-v1-rc' },
   { k: 'W1', name: '第一波', astra: ['WP-01', 'WP-02a', 'WP-02b', 'WP-06', 'WP-08', 'WP-09', 'WP-27', 'WP-32', 'WP-34', 'WP-42', 'WP-43', 'WP-44', 'WP-45a', 'WP-46', 'WP-48a', 'WP-48c', 'WP-49a', 'WP-50', 'WP-51a', 'WP-53a'], opus: ['WP-03', 'WP-04', 'WP-05', 'WP-14', 'WP-15', 'WP-24', 'WP-35', 'WP-37', 'WP-39', 'WP-40', 'WP-45b', 'WP-48b', 'WP-49b'], cond: 'WP-08、WP-02、WP-09、WP-14 的主线版合进 main：真实的世界数据、烘焙、部件内核和建筑生成器都可用', gate: ['WP-08', 'WP-02a', 'WP-02b', 'WP-09', 'WP-14'] },
-  { k: 'W2', name: '第二波', astra: ['WP-07', 'WP-26', 'WP-33', 'WP-36', 'WP-41', 'WP-47a', 'WP-53c'], opus: ['WP-10', 'WP-11', 'WP-12', 'WP-13', 'WP-16', 'WP-17', 'WP-18', 'WP-19', 'WP-20', 'WP-21', 'WP-22', 'WP-23', 'WP-25', 'WP-28', 'WP-29', 'WP-30', 'WP-31a', 'WP-31b', 'WP-31c', 'WP-38', 'WP-47b', 'WP-51b', 'WP-52', 'WP-53b', 'WP-53d', 'WP-53e'], cond: '—' },
+  { k: 'W2', name: '第二波', astra: ['WP-07', 'WP-26', 'WP-33', 'WP-36', 'WP-41', 'WP-47a', 'WP-53c', 'WP-54a'], opus: ['WP-10', 'WP-11', 'WP-12', 'WP-13', 'WP-16', 'WP-17', 'WP-18', 'WP-19', 'WP-20', 'WP-21', 'WP-22', 'WP-23', 'WP-25', 'WP-28', 'WP-29', 'WP-30', 'WP-31a', 'WP-31b', 'WP-31c', 'WP-38', 'WP-47b', 'WP-51b', 'WP-52', 'WP-53b', 'WP-53d', 'WP-53e', 'WP-54b'], cond: 'WP-54a/b 须 contract-21、22、23 落地，按 D-183 排在建模包之后' },
   { k: 'G', name: '主线闸口', astra: [], opus: [], gateNote: '各包的主线版全部合进 main → G5 主线冒烟通过 → 第一次集中测试（ENG-WP §1）', cond: '—' }
 ];
 const KORDER = ['WP-08', 'WP-34', 'WP-01', 'WP-50', 'WP-04', 'WP-02', 'WP-46', 'WP-03', 'WP-05', 'WP-09', 'WP-06', 'WP-07', 'WP-43', 'WP-27'];
@@ -2802,7 +2802,7 @@ APP.page({
 <li><b>谁施工</b>：Astra 侧的包由 Astra 派工和审查，施工按 §3.3 用 gpt-6-astra 或 gpt-6.1-sol 子代理；Opus 侧的包由二号会话的 Opus 子代理施工，主会话评审。</li>
 <li>WP-49 的过场数据（game/data/maps/*/cinematics）归 49b：49a 先定过场 JSON 的格式和播放器，镜头路径、节奏与字幕由 49b 写（SYS-TITLE §8）。</li>
 <li>WP-09 的部件内核归 Astra；金样的造型参数由主会话定（ART-MODELING §6）。</li>
-<li>${hl('玩家角色拆成两半')}：WP-54a 角色运行时归 Astra 侧（内核挂载、动画图、相位锁、IK、第一人称拆件与接线）；WP-54b 角色资产与动画集归 Opus 侧（片段挑选、触地标注、可调参数定值，正式角色的造型立项后也归它）。两边经 game/data/characters 交接（ENG-WP §3）。它们是本阶段新增的包，还没排进下一节的开工分段，所以图里暂时看不到。</li>
+<li>${hl('玩家角色拆成两半')}：WP-54a 角色运行时归 Astra 侧（内核挂载、动画图、相位锁、IK、第一人称拆件与接线）；WP-54b 角色资产与动画集归 Opus 侧（片段挑选、触地标注、可调参数定值，正式角色的造型立项后也归它）。两边经 game/data/characters 交接（ENG-WP §3）。它们已排进下一节的第二波：54a 在 Astra 侧，54b 在 Opus 侧；前提是 contract-21、22、23 落地，按 D-183 排在建模包之后。</li>
 <li>WP-25 的反应动物归 Opus 侧，由二号会话派工；它用到的感知快照、调度、实例与动画这些工程部分归 Astra（WP-00、WP-26 与内核）。</li>
 <li>新增的包按本节的归属逻辑定归属，按 §4.2 排波次（§5.8）。</li>
 </ul>
