@@ -17,7 +17,9 @@ namespace Campus.Systems.Vegetation;
 /// shared prototypes of every pool; the main thread then asks the kernel's instance pools (<see cref="IInstancePoolHost"/>)
 /// for one pool per mother model and pool: L0+, L0, L1 and far on layer 4 without shadows, and the ShadowsOnly proxy on
 /// layer 5 holding the near trees. At most 10 Hz the trees are re-bucketed by camera distance (<see cref="VegetationBuckets"/>)
-/// and the changed pools rewrite their whole buffer, visible count and bounds. A new world instance re-buckets at once.
+/// and the changed pools rewrite their whole buffer, visible count and bounds. A pool left with no tree is parked: its bounds move far below the ground, since an empty
+/// pool whose bounds still meet the camera or a shadow cascade costs its draw calls in that pass (max-011 0n-2).
+/// A new world instance re-buckets at once.
 /// No engine instance is made here.
 /// </summary>
 [KernelNode("systems.vegetation", Owner = "WP-23")]
@@ -169,6 +171,9 @@ public sealed partial class VegetationRuntime : Node, IMapAware
         private readonly IInstancePool?[] _pools = new IInstancePool?[PoolCount];
         private readonly float[] _scratch;
 
+        /// <summary>Bounds of a pool holding no tree: far below the ground, outside every camera and shadow cascade.</summary>
+        private static readonly Aabb Parked = new(new Vector3(0f, -100000f, 0f), Vector3.One);
+
         public Mother(string key, float[] records, GeometryPrototype[] prototypes)
         {
             _key = key;
@@ -186,11 +191,10 @@ public sealed partial class VegetationRuntime : Node, IMapAware
 
         public void Mount(IInstancePoolHost host, MapId map)
         {
-            var all = Union(Enumerable.Range(0, _bounds.Length));
             for (var p = 0; p < PoolCount; p++)
             {
                 var shadow = (VegPool)p == VegPool.Shadow;
-                var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{(VegPool)p}", VegetationPrototypes.Owner, _prototypes[p], Buckets.Count, all,
+                var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{(VegPool)p}", VegetationPrototypes.Owner, _prototypes[p], Buckets.Count, Parked,
                     shadow ? ProxyLayer : VisibleLayer,
                     shadow ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.Off)
                 { Map = map };
@@ -208,7 +212,12 @@ public sealed partial class VegetationRuntime : Node, IMapAware
                 if (_pools[p] is not { } pool) continue;
                 var members = Members((VegPool)p).ToArray();
                 pool.VisibleCount = 0;
-                if (members.Length == 0) continue;
+                if (members.Length == 0)
+                {
+                    // An empty pool still costs its draw calls in every pass its bounds meet; parked out of every view it costs none.
+                    pool.SetAabb(Parked);
+                    continue;
+                }
                 Array.Clear(_scratch);
                 for (var k = 0; k < members.Length; k++)
                     _records.AsSpan(members[k] * Stride, Stride).CopyTo(_scratch.AsSpan(k * Stride, Stride));
