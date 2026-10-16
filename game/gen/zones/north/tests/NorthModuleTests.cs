@@ -169,7 +169,11 @@ public sealed class NorthModuleTests
                     var (shape, height) = op is TerrainMoundOp m ? (m.Shape, m.Height) : (((TerrainBasinOp)op).Shape, ((TerrainBasinOp)op).Height);
                     var ellipse = (TerrainEllipse)shape;
                     var steepest = 1.5 * height / Math.Min(ellipse.Radii.X, ellipse.Radii.Y);
-                    Require(height <= 1.5 && steepest <= 1.0 / 3 + 1e-6, $"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3"); break;
+                    Require(height <= 1.5 && steepest <= 1.0 / 3 + 1e-6, $"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3");
+                    // The courtyard hill is an activity lawn (Opus 13:32, R6): short radius at least 7.5 × height (1:5).
+                    if (op.Id == "design:terrain:north-xz1-court-hill")
+                        Require(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - 1e-6, $"{op.Id}: activity hill no steeper than 1:5");
+                    break;
                 case TerrainSlopeOp s:
                     Require(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / ((PolylineGeometry)s.Geometry).Line.Points.Zip(((PolylineGeometry)s.Geometry).Line.Points.Skip(1), Vector2.Distance).Sum() <= 0.0501,
                         $"{op.Id}: the 通学坡 stays at or below 5 %"); break;
@@ -233,6 +237,30 @@ public sealed class NorthModuleTests
         Require(checkedJunctions > 1000, "the whole network's junctions were checked");
     }
 
+    /// <summary>
+    /// Main session 2026-10-16 15:0x: 未命名建筑 5561 must not straddle a terrace edge (it showed a 1.4 m step, over the
+    /// 1.2 m allowed without a structure). Its whole footprint stands on one level and every terrace crest keeps 6 m off it.
+    /// </summary>
+    [TestCase]
+    public void Building5561StandsOnOneLevelClearOfTheTerraceEdge()
+    {
+        var footprint = Framework.Plan.BuildingRings(World().Features[new("qsh:way:550365561")]).Single();
+        foreach (var terrace in Terrain().Ops.OfType<TerrainPlatformOp>())
+        {
+            var ring = terrace.Rings.Outer;
+            var inside = footprint.Count(p => Framework.Plan.Contains(ring, p));
+            Require(inside == 0 || inside == footprint.Count, $"5561 straddles {terrace.Id}");
+            var clear = float.MaxValue;
+            for (var i = 0; i < footprint.Count; i++)
+                for (var j = 0; j < ring.Count; j++)
+                {
+                    Vector2 a0 = footprint[i], a1 = footprint[(i + 1) % footprint.Count], b0 = ring[j], b1 = ring[(j + 1) % ring.Count];
+                    clear = Framework.Plan.Intersect(a0, a1, b0, b1) is null ? MathF.Min(clear, MathF.Min(DistanceToSegment(a0, b0, b1), DistanceToSegment(b0, a0, a1))) : 0f;
+                }
+            Require(clear >= 6f, $"{terrace.Id}: crest {clear:0.00} m from 5561, at least 6 m");
+        }
+    }
+
     private static double Grade(IReadOnlyList<TerrainAnchor> a, int i) => (a[i + 1].Y - a[i].Y) / (a[i + 1].S - a[i].S);
 
     /// <summary>Authored profile at a station (anchors interpolate linearly; nodes sit on anchors or inside straight pieces); 0 without a corridor.</summary>
@@ -255,8 +283,12 @@ public sealed class NorthModuleTests
         yield return line[^1];
     }
 
+    /// <summary>
+    /// 20a-3 (Opus 13:32): the seat wall stands at the courtyard walk facing the hill and the lawn, a paved pad joins it to
+    /// the walk, and its back keeps 8 m off every dormitory window.
+    /// </summary>
     [TestCase]
-    public void CourtyardSeatWallStandsOnTheLawnBesideTheHill()
+    public void CourtyardSeatWallFacesTheHillFromTheWalk()
     {
         var world = World();
         var registered = (PolylineGeometry)world.Features[new("design:north-xz1-seatwall")].Geometry;
@@ -264,17 +296,33 @@ public sealed class NorthModuleTests
         var hill = (TerrainEllipse)Terrain().Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:north-xz1-court-hill").Shape;
         var yaw = hill.YawDeg * Math.PI / 180;
         var path = CourtyardSite.Path(NorthTune.Court.SeatSegments);
-        var hall = Framework.Plan.BuildingRings(world.Features[new(NorthTune.Hall.Feature)]).First();
+        var front = CourtyardSite.Front();
+        var mid = (NorthTune.Court.SeatStart + NorthTune.Court.SeatEnd) * 0.5f;
+        Require(Vector2.Dot(front, Vector2.Normalize(hill.Center - mid)) > 0.9f, "the seat faces the hill");
+        var walk = world.Network.Roads.Single(r => r.Id.Value == NorthTune.Court.Walk);
+        float ToWalk(Vector2 p) => Enumerable.Range(0, walk.Line.Points.Count - 1).Min(i => DistanceToSegment(p, walk.Line.Points[i], walk.Line.Points[i + 1]));
+        Require(ToWalk(mid + front) < ToWalk(mid), "the walk lies in front of the seat");
+        // The pad's straight edge runs along the walk's paving edge, 2 cm short of it, over the whole length of the wall.
+        var pad = CourtyardSite.PadOutline();
+        var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - NorthTune.Court.SeatStart, front) - NorthTune.Court.PadReach) < 0.01f).ToArray();
+        Require(edge.Length == 2, "the pad has one straight edge toward the walk");
+        foreach (var p in edge)
+            Require(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < 0.05f, $"pad corner {p} meets the walk's edge");
+        var buildings = world.Features.Values.SelectMany(Framework.Plan.BuildingRings)
+            .Where(ring => ring.Any(q => Vector2.Distance(q, mid) < 60f)).ToArray();
+        Require(buildings.Length > 0, "dormitories around the courtyard found");
         foreach (var p in path)
         {
             double dx = p.X - hill.Center.X, dz = p.Y - hill.Center.Y;
             double along = dx * Math.Sin(yaw) - dz * Math.Cos(yaw), across = dx * Math.Cos(yaw) + dz * Math.Sin(yaw);
-            Require(along * along / (hill.Radii.X * hill.Radii.X) + across * across / (hill.Radii.Y * hill.Radii.Y) > 1.2, $"{p} is on level lawn off the hill");
+            Require(along * along / (hill.Radii.X * hill.Radii.X) + across * across / (hill.Radii.Y * hill.Radii.Y) > 1.2, $"{p} is on level ground off the hill");
             foreach (var road in world.Network.Roads)
                 for (var i = 0; i + 1 < road.Line.Points.Count; i++)
-                    Require(DistanceToSegment(p, road.Line.Points[i], road.Line.Points[i + 1]) > road.Width * 0.5f + 0.75f + 1.5f, $"{p} keeps clear of {road.Id.Value}");
-            for (var i = 0; i < hall.Count; i++)
-                Require(DistanceToSegment(p, hall[i], hall[(i + 1) % hall.Count]) > 6f, $"{p} keeps the hall's grading band clear");
+                    Require(DistanceToSegment(p, road.Line.Points[i], road.Line.Points[i + 1]) > road.Width * 0.5f + NorthTune.Court.BodyWidth, $"{p} stands off the paving of {road.Id.Value}");
+            foreach (var ring in buildings)
+                for (var i = 0; i < ring.Count; i++)
+                    Require(DistanceToSegment(p, ring[i], ring[(i + 1) % ring.Count]) - NorthTune.Court.BodyWidth * 0.5f >= 8f + NorthTune.Hall.WallFace,
+                        $"{p} keeps 8 m off the windows");
         }
     }
 

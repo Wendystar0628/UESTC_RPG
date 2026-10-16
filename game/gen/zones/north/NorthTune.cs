@@ -159,24 +159,30 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 学知一 courtyard stay point (20a-2; D-185, MAP-QSH-ADDITIONS §0 R6): one gently bowed seat wall on the lawn in front of
-    /// 学知苑 1 栋's east wing, 8 m off its sunset-facing wall (front face toward about 235°, R1), facing the courtyard, the
-    /// open gate and the hill (design:terrain:north-xz1-court-hill). Granite body sunk into the ground, a warm wood seat with
-    /// a small overhang (ART-FIDELITY §0: chamfered, capped). Plan points are world (x, z); the bow is a quadratic curve
-    /// through <see cref="SeatMid"/>. 初值。
+    /// 学知一 courtyard stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS §0 R6): one gently bowed seat wall at the
+    /// courtyard walk (the cluster road's north-east leg toward 银杏大道), on its south-east side. It faces north-west across
+    /// the walk to the hill (design:terrain:north-xz1-court-hill) and the lawn behind it; at its back is the lawn in front of
+    /// the south dormitory, whose windows stay 10 m off. A paved pad fills the space between the wall and the walk's edge, so
+    /// the seat is reached from the walk without crossing grass. Granite body sunk into the ground, a warm wood seat with a
+    /// small overhang (ART-FIDELITY §0: chamfered, capped). Plan points are world (x, z); the bow is a quadratic curve through
+    /// <see cref="SeatMid"/>, bulging away from the walk so the wall gathers the view. 初值。
     /// </summary>
     public static class Court
     {
-        public static readonly Vector2 SeatStart = new(159.35f, -478.81f), SeatMid = new(162.44f, -475.48f), SeatEnd = new(164.55f, -471.46f);
+        /// <summary>The courtyard walk the pad joins: 学知一组团 inner road, 5 m.</summary>
+        public const string Walk = "qsh:source:way:552816773";
+        public static readonly Vector2 SeatStart = new(212.25f, -455.74f), SeatMid = new(215.95f, -458.18f), SeatEnd = new(219.0f, -461.39f);
         public const int SeatSegments = 12;
-        /// <summary>Stone body: width, height above the apron, chamfer, and how far it is sunk below the terrain.</summary>
+        /// <summary>Stone body: width, height above the pad, chamfer, and how far it is sunk below the terrain.</summary>
         public const float BodyWidth = 0.42f, BodyHeight = 0.38f, BodyBevel = 0.025f, Sink = 0.1f;
         /// <summary>Wood seat on top: width (0.04 m overhang each side), thickness, chamfer; held back from each stone end.</summary>
         public const float SeatWidth = 0.5f, SeatThickness = 0.07f, SeatBevel = 0.015f, SeatHoldBack = 0.15f;
-        /// <summary>Paver apron on the courtyard side where feet rest; its top is flush with WP-15 paving (GroundSection.PavingY,
-        /// 0.15 m over the terrain, 5 cm above the lawn), and the seat stands 0.45 m above it.</summary>
-        public const float ApronWidth = 1.5f, ApronThickness = 0.08f, PavingLevel = 0.15f;
-        public static readonly ToonSpec Apron = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
+        /// <summary>Paver pad in front of the wall, out to a straight edge <see cref="PadReach"/> from the chord toward the walk,
+        /// stopping 2 cm short of the walk's carriageway: 1.5 m deep at the wall ends, 2.0 m at the middle. Its top is at
+        /// WP-15 paving level (GroundSection.PavingY, 0.15 m over the terrain, 5 cm above the lawn) plus <see cref="PadLift"/>,
+        /// so where it laps over the kerb stone it covers it instead of flickering against it; the seat stands 0.45 m above it.</summary>
+        public const float PadReach = 1.69f, PadThickness = 0.08f, PavingLevel = 0.15f, PadLift = 0.01f;
+        public static readonly ToonSpec Pad = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
     }
 
     /// <summary>

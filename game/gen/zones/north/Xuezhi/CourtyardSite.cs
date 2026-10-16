@@ -9,10 +9,11 @@ using L = Campus.Gen.Zones.North.NorthTune.Look;
 namespace Campus.Gen.Zones.North.Xuezhi;
 
 /// <summary>
-/// The 学知一 courtyard's stay point (20a-2; D-185, MAP-QSH-ADDITIONS §0 R6, registered as design:north-xz1-seatwall): a
-/// gently bowed granite seat wall with a wood seat, on the lawn between 学知苑 1 栋's east wing and the courtyard road. The
-/// courtyard hill and the rain garden are terrain operations in north.terrain.json; this site adds only the wall. It sits on
-/// level ground, so its base is the lowest ground under its path and the body is sunk below it (WLD-TERRAIN §4.1 带厚度的小实体).
+/// The 学知一 courtyard's stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS §0 R6, registered as
+/// design:north-xz1-seatwall): a gently bowed granite seat wall with a wood seat beside the courtyard walk, facing the hill
+/// across it, with a paved pad joining it to the walk. The courtyard hill and the rain garden are terrain operations in
+/// north.terrain.json; this site adds the wall and its pad. Both sit on level ground, so their base is the lowest ground under
+/// the wall's path and the body is sunk below it (WLD-TERRAIN §4.1 带厚度的小实体).
 /// </summary>
 public sealed class CourtyardSite : NorthSite
 {
@@ -34,6 +35,33 @@ public sealed class CourtyardSite : NorthSite
         return points;
     }
 
+    /// <summary>Unit plan direction from the chord toward the walk: the sweep's positive lateral (t.z, −t.x).</summary>
+    internal static Vector2 Front()
+    {
+        var t = Vector2.Normalize(C.SeatEnd - C.SeatStart);
+        return new(t.Y, -t.X);
+    }
+
+    /// <summary>
+    /// The pad's plan outline, counter-clockwise and convex: the wall's front face (1 cm inside the stone, hidden under it)
+    /// along the bow, then straight across at <see cref="C.PadReach"/> from the chord.
+    /// </summary>
+    internal static Vector2[] PadOutline()
+    {
+        var path = Path(C.SeatSegments);
+        var front = Front();
+        var face = new Vector2[path.Length];
+        for (var i = 0; i < path.Length; i++)
+        {
+            var t = Vector2.Normalize(path[Math.Min(i + 1, path.Length - 1)] - path[Math.Max(i - 1, 0)]);
+            face[i] = path[i] + new Vector2(t.Y, -t.X) * (C.BodyWidth * 0.5f - 0.01f);
+        }
+        Vector2 Edge(Vector2 p) => p + front * (C.PadReach - Vector2.Dot(p - C.SeatStart, front));
+        Vector2[] ring = [.. face, Edge(face[^1]), Edge(face[0])];
+        if (Plan.SignedArea2(ring) < 0) Array.Reverse(ring);
+        return ring;
+    }
+
     /// <summary>Base level: the lowest ground under the path, so the body never floats on a slope.</summary>
     internal static float Base(Func<Vector2, float> ground, IReadOnlyList<Vector2> path) => path.Min(ground);
 
@@ -47,15 +75,10 @@ public sealed class CourtyardSite : NorthSite
         if (b.Detail == SiteDetail.Mass) return;
         var seat = PartGeometryKernel.BeveledRectangleProfile(C.SeatWidth, C.SeatThickness, C.SeatBevel);
         b.Add(PartGeometryKernel.Sweep(seat, Path(C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
-        // The apron runs along the courtyard side (toward about 235°), butting the stone body. The sweep's positive lateral is
-        // (t.z, −t.x), which with z south lies to the left of the walking direction, so the courtyard side is negative.
-        var slab = PartGeometryKernel.BeveledRectangleProfile(C.ApronWidth, C.ApronThickness, 0.01f);
-        var shift = new Vector2(-(C.BodyWidth * 0.5f + C.ApronWidth * 0.5f), 0);
-        var apron = new SweepProfile(slab.Points.Select(p => p + shift).ToArray(), slab.Normals);
-        b.Add(PartGeometryKernel.Sweep(apron, path, C.Apron, baseY: g + C.PavingLevel - C.ApronThickness), Matrix4x4.Identity);
+        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(), C.PadThickness, 0.01f, C.Pad, g + C.PavingLevel + C.PadLift - C.PadThickness), Matrix4x4.Identity);
     }
 
-    /// <summary>One box per chord, body and seat together: 0.45 m above the apron, a prop the player can step onto.</summary>
+    /// <summary>One box per chord, body and seat together: 0.45 m above the pad, a prop the player can step onto.</summary>
     public override void Collide(SiteColliders c)
     {
         var path = Path(C.SeatSegments);
