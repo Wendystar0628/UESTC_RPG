@@ -96,20 +96,24 @@ def in_gamut(lin: Rgb, eps: float = 1e-7) -> bool:
     return all(-eps <= c <= 1.0 + eps for c in lin)
 
 
+def gamut_map_lab(lab: Lab) -> Lab:
+    """越出 sRGB 色域时只降彩度、不动 L（ART-STYLE §3.2 末行），二分到 1e-6；在色域内原样返回。"""
+    if in_gamut(oklab_to_linear(lab)):
+        return lab
+    L, c, h = lab_to_lch(lab)
+    L = min(1.0, max(0.0, L))
+    lo, hi = 0.0, c
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        if in_gamut(oklab_to_linear(lch_to_lab((L, mid, h)))):
+            lo = mid
+        else:
+            hi = mid
+    return lch_to_lab((L, lo, h))
+
+
 def oklab_to_srgb_clipped(lab: Lab) -> Rgb:
-    """越出 sRGB 色域时只降彩度、不动 L（ART-STYLE §3.2 末行），二分到 1e-6。"""
-    lin = oklab_to_linear(lab)
-    if not in_gamut(lin):
-        L, c, h = lab_to_lch(lab)
-        L = min(1.0, max(0.0, L))
-        lo, hi = 0.0, c
-        for _ in range(40):
-            mid = 0.5 * (lo + hi)
-            if in_gamut(oklab_to_linear(lch_to_lab((L, mid, h)))):
-                lo = mid
-            else:
-                hi = mid
-        lin = oklab_to_linear(lch_to_lab((L, lo, h)))
+    lin = oklab_to_linear(gamut_map_lab(lab))
     return tuple(linear_to_srgb(min(1.0, max(0.0, c))) for c in lin)  # type: ignore[return-value]
 
 

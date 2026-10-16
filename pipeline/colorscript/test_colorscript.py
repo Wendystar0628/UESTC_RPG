@@ -35,6 +35,67 @@ class ColorScriptTest(unittest.TestCase):
         self.assertLess(de(gold["ginkgo"].shade, ok.hex_to_oklab("#B78102")), 1.0)
         self.assertLess(de(gold["ginkgo"].deep, ok.hex_to_oklab("#9A6C03")), 2.0)   # ginkgo.deep 校验值
 
+    def _golden_material(self, token, hex_albedo, cls):
+        f = next(x for x in self.grid["frames"]["autumn"] if x.id == "golden")
+        return cs.derive_material(self.src, token, token, cls, ok.hex_to_oklab(hex_albedo), f)
+
+    def test_interior_lit_raises_lightness_only(self):
+        """ART-STYLE §3.4：室内受光（光斑目标色）只抬 L，上限 litLMax；C 取受光色的 C、不放大；色相不变。
+        第 3 行反算着色器增益，toon 合成后正好落在目标色上；第 2 行没有增益项。"""
+        ip = self.src.derive["interior"]
+        checked = 0
+        for (season, key), mats in self.grid["materials"].items():
+            for token, m in mats.items():
+                if "variantOf" in m.meta:
+                    continue                                  # 变体在受光、影上做同一偏移，不重新推导
+                L, C, h = ok.lab_to_lch(m.lit)
+                patch = cs.interior_patch(self.src, m.lit)
+                Lp, Cp, hp = ok.lab_to_lch(patch)
+                msg = f"{season} {key} {token}"
+                self.assertLessEqual(Lp, ip["litLMax"] + 1e-9, msg)
+                self.assertAlmostEqual(Lp, min(ip["litLMax"], L * ip["litGain"]), places=9, msg=msg)
+                self.assertLessEqual(Cp, C + 1e-9, msg)       # 色域内取原 C，越出色域只降彩度
+                if C > 0.01 and Cp > 0.01:
+                    self.assertAlmostEqual(ok.hue_diff(h, hp), 0.0, places=4, msg=msg)
+                self.assertTrue(ok.in_gamut(ok.oklab_to_linear(m.lit_in)), msg)
+                self.assertLess(de(cs.interior_composite(self.src, m.shade_in, m.lit_in), patch), 1e-4, msg)
+                checked += 1
+        self.assertGreater(checked, 1000)
+
+    def test_interior_lit_high_chroma_colours_do_not_flare(self):
+        """消防红、砖红：室内受光的 C 不超过原受光色的 C，L ≤ 0.9；着色器合成后的光斑色相与受光色相一致。"""
+        for token, albedo, cls in (("equip.fireRed", "#A7424B", "metal"), ("brick", "#C2573D", "ground")):
+            m = self._golden_material(token, albedo, cls)
+            L, C, h = ok.lab_to_lch(m.lit)
+            Lc, Cc, hc = ok.lab_to_lch(cs.interior_composite(self.src, m.shade_in, m.lit_in))
+            self.assertLessEqual(Cc, C + 1e-6, token)
+            self.assertLessEqual(Lc, 0.9 + 1e-6, token)
+            self.assertGreater(Lc, L, token)                  # 抬了 L
+            self.assertAlmostEqual(ok.hue_diff(h, hc), 0.0, places=3, msg=token)
+            self.assertLessEqual(ok.lab_to_lch(m.lit_in)[0], 0.9 + 1e-6, token)   # 第 3 行存的色在影与目标之间，L 同样不超 0.9
+
+    def test_interior_lit_low_chroma_colours_keep_their_chroma(self):
+        """低彩度色：光斑色的 C、色相与受光色一致，只有 L 抬到 min(0.9, L × 增益)。"""
+        for token in ("roof.grey", "frame.alu", "stone.beige", "wall", "glass"):
+            m = self.grid["materials"][("autumn", "golden")][token]
+            L, C, h = ok.lab_to_lch(m.lit)
+            Lc, Cc, hc = ok.lab_to_lch(cs.interior_composite(self.src, m.shade_in, m.lit_in))
+            self.assertAlmostEqual(Cc, C, delta=1e-4, msg=token)
+            self.assertAlmostEqual(ok.hue_diff(h, hc), 0.0, delta=0.05, msg=token)
+            self.assertAlmostEqual(Lc, min(0.9, L * 1.27), delta=1e-4, msg=token)
+
+    def test_interior_shade_has_no_gain_term(self):
+        """第 2 行室内影色没有光增益项：彩度只有影色规则的 ×1.1（上限 +chromaMulMax），不随窗光放大。"""
+        cap = self.src.derive["shade"]["chromaMulMax"]
+        for (season, key), mats in self.grid["materials"].items():
+            warm_c = next(f for f in self.grid["frames"][season] if f.id == key).ab_colors["interior.warm"][0]
+            for token, m in mats.items():
+                if "variantOf" in m.meta:
+                    continue
+                Ca = ok.lab_to_lch(m.albedo)[1]
+                Cs = ok.lab_to_lch(m.shade_in)[1]
+                self.assertLessEqual(Cs, max(Ca + cap, warm_c) + 1e-9, f"{season} {key} {token}")
+
     def test_default_state_is_golden_keyframe(self):
         """秋 17:30 沿一天插值的结果逐值等于黄金关键帧（默认状态"落金初灯"）。"""
         curve = cs.day_curves(self.src, self.grid["frames"])["autumn"]

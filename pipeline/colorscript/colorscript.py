@@ -527,14 +527,32 @@ def derive_shade(src: Sources, albedo: ok.Lab, lit: ok.Lab, f: Frame, cls: str,
     return (L, a, b)
 
 
+def interior_patch(src: Sources, lit: ok.Lab) -> ok.Lab:
+    """窗光斑里的目标色（ART-STYLE §3.4）：在 OKLab 里只抬 L，L = min(litLMax, L_受光 × litGain)；
+    C 取原受光色的 C、不随增益放大；色相不变。越出色域只降彩度。"""
+    ip = src.derive["interior"]
+    L, C, h = ok.lab_to_lch(lit)
+    return ok.gamut_map_lab(ok.lch_to_lab((min(ip["litLMax"], L * ip["litGain"]), C, h)))
+
+
+def interior_composite(src: Sources, shade_in: ok.Lab, lit_in: ok.Lab) -> ok.Lab:
+    """toon 在室内按 影 + g × (受光 − 影) 合成光斑里的颜色（线性 RGB，g = interior_light.x，默认格 shaderGain）。"""
+    g = src.derive["interior"]["shaderGain"]
+    s = ok.oklab_to_linear(ok.gamut_map_lab(shade_in))
+    t = ok.oklab_to_linear(lit_in)
+    return ok.linear_to_oklab(tuple(si + g * (ti - si) for si, ti in zip(s, t)))  # type: ignore[arg-type]
+
+
 def derive_interior(src: Sources, albedo: ok.Lab, lit: ok.Lab, f: Frame, cls: str) -> Tuple[ok.Lab, ok.Lab]:
+    """第 2 行室内影色、第 3 行室内受光色。第 3 行存的是反算过着色器增益的色：
+    着色器合成 影 + g × (受光 − 影) 之后，光斑里的颜色正好是 interior_patch 的目标色。"""
     ip = src.derive["interior"]
     warm = f.ab_colors["interior.warm"]
     shade_in = derive_shade(src, albedo, lit, f, cls, r_override=ip["rIn"], ambient_override=warm)
-    L, C, h = ok.lab_to_lch(lit)
-    d = ok.hue_diff(h, ip["orangeHue"])
-    h2 = (h + math.copysign(min(ip["litHueMax"], abs(d)), d)) % 360.0 if C > 1e-6 else h
-    lit_in = ok.lch_to_lab((L, C * ip["litChromaMul"], h2))
+    s = ok.oklab_to_linear(ok.gamut_map_lab(shade_in))
+    t = ok.oklab_to_linear(interior_patch(src, lit))
+    g = ip["shaderGain"]
+    lit_in = ok.linear_to_oklab(tuple(si + (ti - si) / g for si, ti in zip(s, t)))  # type: ignore[arg-type]
     return shade_in, lit_in
 
 

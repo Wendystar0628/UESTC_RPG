@@ -626,6 +626,7 @@ def grid_json(src: cs.Sources, grid: dict) -> dict:
                 "notes": f.notes,
                 "materials": {t: {"lit": ok.oklab_to_hex(m.lit), "shade": ok.oklab_to_hex(m.shade),
                                   "interiorShade": ok.oklab_to_hex(m.shade_in), "interiorLit": ok.oklab_to_hex(m.lit_in),
+                                  "interiorPatch": ok.oklab_to_hex(cs.interior_composite(src, m.shade_in, m.lit_in)),
                                   **({"deep": ok.oklab_to_hex(m.deep)} if m.deep is not None else {})}
                               for t, m in mats.items()},
             }

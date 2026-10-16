@@ -30,7 +30,7 @@ public sealed class Deriver
     private readonly double _yellowLo, _yellowHi, _greenLo, _greenHi;
     private readonly bool _scaleChroma;
     private readonly double _warmK, _warmAlt0, _warmAlt1, _warmC0, _warmC1, _hueMax, _albedoGain;
-    private readonly double _rIn, _litChromaMul, _orangeHue, _litHueMax;
+    private readonly double _rIn, _litGain, _litLMax, _shaderGain;
     public double SwatchLAmbient { get; }
     public double SwatchLInterior { get; }
 
@@ -62,9 +62,9 @@ public sealed class Deriver
         _scaleChroma = shade.GetProperty("scaleChromaWithLight").GetBoolean();
         var interior = derive.GetProperty("interior");
         _rIn = interior.GetProperty("rIn").GetDouble();
-        _litChromaMul = interior.GetProperty("litChromaMul").GetDouble();
-        _orangeHue = interior.GetProperty("orangeHue").GetDouble();
-        _litHueMax = interior.GetProperty("litHueMax").GetDouble();
+        _litGain = interior.GetProperty("litGain").GetDouble();
+        _litLMax = interior.GetProperty("litLMax").GetDouble();
+        _shaderGain = interior.GetProperty("shaderGain").GetDouble();
         SwatchLAmbient = derive.GetProperty("swatchL").GetProperty("ambient.sky").GetDouble();
         SwatchLInterior = derive.GetProperty("swatchL").GetProperty("interior.warm").GetDouble();
         foreach (var p in derive.GetProperty("materialClasses").EnumerateObject())
@@ -162,15 +162,39 @@ public sealed class Deriver
         var shade = Shade(albedo, lit, f, cls);
         lit = CapLitChroma(albedo, lit, shade);
         var shadeIn = Shade(albedo, lit, f, cls, _rIn, f.InteriorWarm);
-        var d = Oklab.HueDiff(lit.Hue, _orangeHue);
-        var h2 = lit.Chroma > 1e-6 ? lit.Hue + Math.CopySign(Math.Min(_litHueMax, Math.Abs(d)), d) : lit.Hue;
-        var litIn = Oklab.FromLch(lit.L, lit.Chroma * _litChromaMul, h2);
+        var litIn = InteriorLit(lit, shadeIn);
         if (vegChromaMul != 1.0 && hero is not null)
         {
             lit = Oklab.FromLch(lit.L, lit.Chroma * vegChromaMul, lit.Hue);
             shade = Oklab.FromLch(shade.L, shade.Chroma * vegChromaMul, shade.Hue);
         }
         return new(lit, shade, shadeIn, litIn);
+    }
+
+    /// <summary>
+    /// Window-patch target colour (ART-STYLE §3.4): only L is raised (L × litGain, capped at litLMax); C is the lit colour's C,
+    /// not scaled by the gain, and the hue is unchanged. Out-of-gamut targets lose chroma only.
+    /// </summary>
+    public Lab InteriorPatch(Lab lit) =>
+        Oklab.GamutMap(Oklab.FromLch(Math.Min(_litLMax, lit.L * _litGain), lit.Chroma, lit.Hue));
+
+    /// <summary>
+    /// Palette row 3. toon composites interior light as shade + g × (lit − shade) in linear RGB with g = interior_light.x, so the
+    /// row stores shade + (target − shade) / g: with the default gain the composite lands exactly on <see cref="InteriorPatch"/>.
+    /// </summary>
+    public Lab InteriorLit(Lab lit, Lab shadeIn)
+    {
+        var (sr, sg, sb) = Oklab.ToLinear(Oklab.GamutMap(shadeIn));
+        var (tr, tg, tb) = Oklab.ToLinear(InteriorPatch(lit));
+        return Oklab.FromLinear(sr + (tr - sr) / _shaderGain, sg + (tg - sg) / _shaderGain, sb + (tb - sb) / _shaderGain);
+    }
+
+    /// <summary>What toon draws inside a full-strength window patch for the given rows 2 and 3 (default gain).</summary>
+    public Lab InteriorComposite(Lab shadeIn, Lab litIn)
+    {
+        var (sr, sg, sb) = Oklab.ToLinear(Oklab.GamutMap(shadeIn));
+        var (lr, lg, lb) = Oklab.ToLinear(litIn);
+        return Oklab.FromLinear(sr + _shaderGain * (lr - sr), sg + _shaderGain * (lg - sg), sb + _shaderGain * (lb - sb));
     }
 
     /// <summary>Lamp-pool colour (palette row 1, mainline placeholder): albedo under the warm window/lamp light.</summary>

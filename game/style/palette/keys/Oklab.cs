@@ -95,23 +95,24 @@ public static class Oklab
     private static bool InGamut((double R, double G, double B) c) =>
         c.R >= -1e-7 && c.R <= 1.0000001 && c.G >= -1e-7 && c.G <= 1.0000001 && c.B >= -1e-7 && c.B <= 1.0000001;
 
-    /// <summary>Out-of-gamut colours lose chroma only, never lightness (ART-STYLE §3.2).</summary>
+    /// <summary>Out-of-gamut colours lose chroma only, never lightness (ART-STYLE §3.2); in-gamut colours come back unchanged.</summary>
+    public static Lab GamutMap(Lab c)
+    {
+        if (InGamut(ToLinear(c))) return c;
+        var l = Math.Clamp(c.L, 0.0, 1.0);
+        var hue = c.Hue;
+        double lo = 0, hi = c.Chroma;
+        for (var i = 0; i < 32; i++)
+        {
+            var mid = 0.5 * (lo + hi);
+            if (InGamut(ToLinear(FromLch(l, mid, hue)))) lo = mid; else hi = mid;
+        }
+        return FromLch(l, lo, hue);
+    }
+
     public static (double R, double G, double B) ToSrgbClipped(Lab c)
     {
-        var lin = ToLinear(c);
-        if (!InGamut(lin))
-        {
-            var l = Math.Clamp(c.L, 0.0, 1.0);
-            var chroma = c.Chroma;
-            var hue = c.Hue;
-            double lo = 0, hi = chroma;
-            for (var i = 0; i < 32; i++)
-            {
-                var mid = 0.5 * (lo + hi);
-                if (InGamut(ToLinear(FromLch(l, mid, hue)))) lo = mid; else hi = mid;
-            }
-            lin = ToLinear(FromLch(l, lo, hue));
-        }
+        var lin = ToLinear(GamutMap(c));
         return (LinearToSrgb(Math.Clamp(lin.R, 0, 1)), LinearToSrgb(Math.Clamp(lin.G, 0, 1)), LinearToSrgb(Math.Clamp(lin.B, 0, 1)));
     }
 
