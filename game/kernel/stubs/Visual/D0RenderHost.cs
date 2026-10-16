@@ -72,6 +72,8 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
                 var spec = useD0Rgb ? geometry.Material.Spec : ApprovedD0Spec(geometry.Material.Spec);
                 var material = geometry.Shader is { } shader ? ResolveShaderMaterial(shader) : materials.Get(spec);
                 var mesh = Upload(geometry, spec, materials, useD0Rgb, catalog);
+                if (!useD0Rgb)
+                    materials.TrackLayout(material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh), Instanced: false));
                 var instance = new MeshInstance3D
                 {
                     Mesh = mesh,

@@ -25,7 +25,6 @@ namespace Campus.Kernel.Stubs.Visual;
 public partial class D0Stage : Node3D
 {
     private Camera3D? _camera;
-    private ColorRect? _veilRect;
     private Control? _debugPanel;
     private Label? _readout;
     private CameraRigStub? _rig;
@@ -184,6 +183,13 @@ public partial class D0Stage : Node3D
         D0CollisionMount.Mount(this, colliders);
         _camera = new Camera3D { Current = true, Near = 0.05f, Far = 8000f };
         AddChild(_camera);
+        registry.Add(_camera);
+        if (registry.Get<IVeilPresentation>() is FallbackVeilPresentation)
+        {
+            var cover = new D0VeilPresentation(palette.ColorOf(new("d0.fog")));
+            AddChild(cover);
+            registry.Add<IVeilPresentation>(cover);
+        }
         var nodes = new List<Node>();
         foreach (var registration in registry.ForMap(entry.Id.Value).Where(r => r.Kind == "node"))
         {
@@ -204,7 +210,11 @@ public partial class D0Stage : Node3D
         ApplyInitialArguments(waypoints);
         BuildDebugUi(palette);
         _veil = (VeilServiceStub)registry.Get<IVeilService>();
+        var materialWarmup = new D0MaterialWarmup(registry.Get<MaterialWarmup>(), _veil,
+            registry.Get<IToonMaterialProvider>(), registry.Get<IVeilPresentation>());
+        AddChild(materialWarmup);
         GD.Print($"D0 world ready: {campus.SourceEntityCount} entities / {interiors.Entries.Count} interior entities / {colliders.Length} colliders");
+        await materialWarmup.WaitUntilReady();
         await ((AppFlowStub)registry.Get<IAppFlow>()).Initialize();
         _ready = true;
     }
@@ -251,13 +261,6 @@ public partial class D0Stage : Node3D
 
     private void BuildDebugUi(Campus.Style.Stubs.D0MaterialLibrary palette)
     {
-        if (!Services.Services.Entries.Any(r => r.Kind == "node" && r.Id == "post.veil" && !r.IsStub))
-        {
-            var veilLayer = new CanvasLayer { Layer = 5 };
-            _veilRect = new ColorRect { Color = palette.ColorOf(new("d0.fog")), MouseFilter = Control.MouseFilterEnum.Ignore };
-            veilLayer.AddChild(_veilRect); AddChild(veilLayer);
-            _veilRect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        }
         var attribution = new CanvasLayer { Layer = 11 }; AddChild(attribution);
         attribution.AddChild(new Label { Text = "© OpenStreetMap contributors", Position = new(24, 1020), Modulate = palette.ColorOf(new("d0.text")) });
         if (AppBoot.Value("ui") != "debug" && Services.Services.Entries.Any(r => r.Kind == "node" && r.Id == "hud" && !r.IsStub))
@@ -289,11 +292,6 @@ public partial class D0Stage : Node3D
     }
     public override void _Process(double delta)
     {
-        _veil?.Advance(delta);
-        if (_veilRect is not null && _veil is not null)
-        {
-            var color = _veilRect.Color; color.A = _veil.Opacity; _veilRect.Color = color;
-        }
         if (_camera is null || _rig is null) return;
         if (_ready)
         {

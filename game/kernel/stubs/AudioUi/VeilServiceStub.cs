@@ -14,6 +14,14 @@ public sealed class VeilServiceStub : IVeilService
     private float _duration;
     private Func<bool>? _ready;
     private float _holdRemaining;
+    private Func<bool>? _materialReady;
+
+    public bool IsTransitioning => _transition is not null;
+    /// <summary>The last explicit Cover/Reveal intent, retained while material readiness suspends a reveal.</summary>
+    public bool WantsRevealed { get; private set; }
+
+    /// <summary>D0 composition binds actual renderer readiness; ordinary hold timeouts cannot override it.</summary>
+    public void ConfigureMaterialReadiness(Func<bool>? ready) => _materialReady = ready;
 
     public float Opacity { get; private set; }
     public VeilReason Reason { get; private set; } = VeilReason.Boot;
@@ -73,12 +81,13 @@ public sealed class VeilServiceStub : IVeilService
         _transition?.TrySetCanceled();
         Reason = reason;
         _target = target;
+        WantsRevealed = target == 0f;
         _start = Opacity;
         _elapsed = 0f;
         _duration = seconds;
-        _transition = new TaskCompletionSource();
+        _transition = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var task = _transition.Task;
-        if (seconds == 0f && (target == 1f || _ready is null)) Complete();
+        if (seconds == 0f && (target == 1f || (_ready is null && _materialReady?.Invoke() != false))) Complete();
         else Changed?.Invoke();
         return task;
     }
@@ -88,6 +97,18 @@ public sealed class VeilServiceStub : IVeilService
     {
         if (!double.IsFinite(deltaSeconds) || deltaSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(deltaSeconds));
+
+        if (_materialReady?.Invoke() == false)
+        {
+            if (Opacity < 1f)
+            {
+                Opacity = 1f;
+                _start = 1f;
+                _elapsed = 0f;
+                Changed?.Invoke();
+            }
+            if (_target == 0f) return;
+        }
 
         if (_ready is not null && Opacity >= 1f)
         {
