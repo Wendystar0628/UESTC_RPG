@@ -33,7 +33,7 @@ public sealed class GrandStairTests
         foreach (var c in corners)
             Require(ring.Min(p => Vector2.Distance(p, c)) < 0.15f, $"footprint corner {c} is in the overlay outline");
         // The axis is the front door's (interiors.json lib.main, WLD-INTERIORS §2.17).
-        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open);
+        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var centre = new Vector2(entrance.Center.X, entrance.Center.Z);
         var offAxis = MathF.Abs(Vector2.Dot(centre - stair.Origin, stair.Across));
         Require(offAxis < 0.6f, $"the door centre is {offAxis} m off the stair axis");
@@ -107,7 +107,7 @@ public sealed class GrandStairTests
         WpId? ClaimedBy(FeatureId feature, Aspects aspects) =>
             CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == feature && (c.Aspects & aspects) == aspects) ? zone : null;
         Require(ClaimedBy(CoreFeatures.Library, Aspects.Props) is null, "the zone leaves the library's props unclaimed");
-        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open);
+        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var layout = Campus.Gen.Furniture.FurniturePlanner.Build(world, ClaimedBy);
         Require(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3, "WP-13 places mat, sign and lamp at the front door");
     }

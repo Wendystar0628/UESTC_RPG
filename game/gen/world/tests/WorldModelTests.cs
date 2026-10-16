@@ -75,11 +75,12 @@ public sealed class WorldModelTests
         if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
         var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
         var campus = File.ReadAllText(Path.Combine(data, "campus.json"));
+        var interiors = File.ReadAllText(Path.Combine(data, "interiors.json"));
         var result = WorldModelLoader.Load(new("qingshuihe"), new Dictionary<string, string>
         {
             ["campus.json"] = campus,
             ["network.json"] = File.ReadAllText(Path.Combine(data, "network.json")),
-            ["interiors.json"] = File.ReadAllText(Path.Combine(data, "interiors.json"))
+            ["interiors.json"] = interiors
         });
         using var original = JsonDocument.Parse(campus);
         foreach (var entity in original.RootElement.GetProperty("entities").EnumerateArray())
@@ -87,7 +88,15 @@ public sealed class WorldModelTests
         var sourceParts = result.World.Features.Values.SelectMany(f => f.Parts).ToArray();
         Require(sourceParts.Length == 1261 && sourceParts.Select(p => p.SourceId).Distinct(StringComparer.Ordinal).Count() == 1261, "Source geometry was lost or duplicated.");
         Require(result.World.Network.Bridges.Count == 77 && result.World.Network.Culverts.Count == 15 && result.World.Network.Trees.Count == 146, "Network snapshot incomplete.");
-        Require(result.World.Interiors.EntrancesNear(Vector3.Zero, 3000).Count == 9, "Authored interior entrances were lost.");
+        using var authoredInteriors = JsonDocument.Parse(interiors);
+        var expectedEntrances = authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray()
+            .SelectMany(interior => interior.GetProperty("entrances").EnumerateArray())
+            .Select(entrance => entrance.GetProperty("id").GetString()!)
+            .OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        var actualEntrances = result.World.Interiors.EntrancesNear(Vector3.Zero, 3000)
+            .Select(entrance => entrance.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        Require(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
+            actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal), "Authored interior entrances were lost or duplicated.");
         Require(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0, "Map coordinate frame is wrong.");
     }
 

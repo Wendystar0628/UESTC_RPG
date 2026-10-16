@@ -37,22 +37,44 @@
           "id": "lib.main",
           "featureId": "qsh:way:806848396",
           "doorCenter": [
-            -154.6,
+            -155.1983,
             5.1,
-            80
+            79.5477
           ],
           "facingDeg": 127,
           "outsideLanding": [
-            -152.6,
+            -153.1983,
             5.1,
-            81.5
+            81.0477
           ],
           "insideLanding": [
-            -156.9959,
+            -157.5942,
             5.1,
-            78.1946
+            77.7423
           ],
           "clearWidth": 1.1,
+          "open": true
+        },
+        {
+          "id": "lib.cafe",
+          "featureId": "qsh:way:806848396",
+          "doorCenter": [
+            -141.7213,
+            0.15,
+            25.7275
+          ],
+          "facingDeg": 81.5,
+          "outsideLanding": [
+            -139.2484,
+            0.15,
+            25.3600
+          ],
+          "insideLanding": [
+            -144.6887,
+            0.15,
+            26.1685
+          ],
+          "clearWidth": 1.8,
           "open": true
         }
       ],
@@ -78,7 +100,52 @@
       "openFloors": [
         1
       ],
-      "entrances": [],
+      "entrances": [
+        {
+          "id": "museum.main",
+          "featureId": "qsh:way:806848402",
+          "doorCenter": [
+            -285.6727,
+            0.15,
+            93.7475
+          ],
+          "facingDeg": 172.3,
+          "outsideLanding": [
+            -285.3364,
+            0.15,
+            96.2248
+          ],
+          "insideLanding": [
+            -286.0762,
+            0.15,
+            90.7748
+          ],
+          "clearWidth": 1.8,
+          "open": true
+        },
+        {
+          "id": "museum.lake",
+          "featureId": "qsh:way:806848402",
+          "doorCenter": [
+            -314.4268,
+            0.15,
+            73.8090
+          ],
+          "facingDeg": 262.8,
+          "outsideLanding": [
+            -316.9073,
+            0.15,
+            74.1205
+          ],
+          "insideLanding": [
+            -311.4502,
+            0.15,
+            73.4351
+          ],
+          "clearWidth": 1.8,
+          "open": true
+        }
+      ],
       "seals": [],
       "owner": "WP-17"
     },
