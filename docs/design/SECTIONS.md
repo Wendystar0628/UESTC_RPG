@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 55.3k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 55.4k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -290,26 +290,26 @@
   - ART-STYLE §3.5 哪些材质有色调变化 · L278 · 346
   - ART-STYLE §3.6 夜间与阴雨 · L290 · 321
   - ART-STYLE §3.7 示例 · L296 · 1.1k
-- ART-STYLE §4 描线 · L317 · 6.1k
-- ART-STYLE §5 高光、边缘光与透光 · L396 · 4.0k
-- ART-STYLE §6 贴图与笔触 · L447 · 1.4k
-- ART-STYLE §7 后期 · L470 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L539 · 9.2k
-  - ART-STYLE §8.1 风格色 · L541 · 2.9k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L589 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L608 · 1.2k
-  - ART-STYLE §8.4 界面色 · L640 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L665 · 1.6k
-  - ART-STYLE §8.6 天气色 · L695 · 1.1k
-- ART-STYLE §9 排除元素 · L714 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L716 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L742 · 631
-- ART-STYLE §10 材质速查 · L751 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L769 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L801 · 419
-- ART-STYLE §13 情绪弧线 · L814 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L839 · 1.9k
-- ART-STYLE §14 待验证（P0） · L859 · 2.1k
+- ART-STYLE §4 描线 · L317 · 6.2k
+- ART-STYLE §5 高光、边缘光与透光 · L397 · 4.1k
+- ART-STYLE §6 贴图与笔触 · L449 · 1.4k
+- ART-STYLE §7 后期 · L472 · 5.7k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L541 · 9.2k
+  - ART-STYLE §8.1 风格色 · L543 · 2.9k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L591 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L610 · 1.2k
+  - ART-STYLE §8.4 界面色 · L642 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L667 · 1.6k
+  - ART-STYLE §8.6 天气色 · L697 · 1.1k
+- ART-STYLE §9 排除元素 · L716 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L718 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L744 · 631
+- ART-STYLE §10 材质速查 · L753 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L771 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L803 · 419
+- ART-STYLE §13 情绪弧线 · L816 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L841 · 1.9k
+- ART-STYLE §14 待验证（P0） · L861 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
