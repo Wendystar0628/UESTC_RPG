@@ -69,6 +69,33 @@ const float TOON_WET_DARKEN = 0.28;  // 湿润变暗：受光色和影色 × (1 
 const float TOON_SKY_GRAD = 0.06;    // 影里随法线 y 的天光渐变（约 ±0.03 L）
 const float TOON_BOUNCE = 0.15;      // 朝下面的地面暖反光
 
+// ---------------------------------------------------------------------------
+// 质感移植（max-110 110a，样板取值，交主会话定值）。参照"午后打烊的花房咖啡馆"的 RE_Direct_Toon、
+// RE_IndirectDiffuse_Toon 与 lights_fragment_end 补丁（暖边、硬高光、半球天光），"小渔港""街角"的 OC_RIM 同式。
+// 全部是风格底线：只多几次 OKLab 换算，没有贴图采样，不加 varying（高光与云影合用一个槽）；室内、夜间、阴雨按门控退回原样。
+// ---------------------------------------------------------------------------
+// 明暗层次：影的明度差 ΔL = 受光 L − 影 L 按材质类放大。参考里影 = 固有色 × 半球天光，线性亮度比约 0.3–0.45，
+// 折成 OKLab 明度比约 0.70；默认格 r = 0.78 时 ΔL × 1.4 正好落到 0.69。
+// 分量依次是两阶（建筑、地面）、两阶半（曲面道具、金属）、软物、植被三阶；1 = 不动。白天、晴天满量，夜间与阴天退回 1。
+const vec4 TOON_PORT_DEPTH = vec4(1.40, 1.35, 1.20, 1.0);
+// 影压深时彩度跟着放大（× 1 + CK·(depth − 1)），影是有颜色的深，不是发灰的深
+const float TOON_PORT_SHADE_CK = 0.5;
+// 影色冷暖（半球天光：参考的 HemisphereLight 天色 / 地色按法线 y 混合）：
+// 影的 OKLab a、b 加上 mix(地色方向 × GND_C, 天色方向 × SKY_C, 0.5 + 0.5·n.y)：朝上偏 ambient.sky、朝下偏 bounce.ground，
+// 竖直面各一半；明度随法线 y 加 HEMI_L·n.y（天比地亮）。
+const float TOON_HEMI_SKY_C = 0.018;
+const float TOON_HEMI_GND_C = 0.025;
+const float TOON_HEMI_L = 0.04;       // 影的明度随法线 y：朝上 +、朝下 −（OKLab L）
+// 向阳轮廓暖边（参考 uRim 默认 0.35，作用于全部卡通材质）：已登记 k_rim 的材质乘 GAIN；没登记的按材质类给底值，
+// 分量顺序同 TOON_PORT_DEPTH；朝上的面（地面、屋面）不加底值，免得远处掠射的地面整片发亮。
+const float TOON_RIM_GAIN = 1.5;
+const vec4 TOON_RIM_FLOOR = vec4(0.15, 0.20, 0.20, 0.0);
+// 硬卡通高光（参考 uSpec / uSpecSize：smoothstep(size ± fwidth, N·H) × 主光色 × 0.22 × 强度）：
+// 只给 mat_table 行 3 A 登记了强度的材质（金属件，ToonFx.AnisoBand），只在曲面上（法线曲率 κ 过 KAPPA），影里没有。
+const float TOON_SPEC_SIZE = 0.975;
+const float TOON_SPEC_K = 0.75;       // 参考 0.22 × 主光强度 3.3 ≈ 0.73，HDR 超过 1 的部分交给柔光
+const vec2 TOON_SPEC_KAPPA = vec2(0.5, 2.0);
+
 // 自发光（ToonSpec.Emissive，ART-STYLE §8.1）：亮时整面取色名本身的颜色，不分阶、不吃主光与湿润，描线照常。
 // 色名本身的颜色由灯照色（调色板行 1，不随时刻）去掉暖灯染色还原：行 1 = M × (L, a + K·a_lamp, b + K·b_lamp)，
 // M、K 与 WP-37 的 ColorScriptDerive.LampLit、derive.json 的 lit.tintK 一致，行 1 的规则改了要同步。
@@ -118,7 +145,7 @@ varying vec3 v_diff;       // 受光 − 影
 varying vec4 v_band;       // x 过渡带半宽，y 半受光档，z 遮蔽推阈值，w 受光增益（室内光斑增益）
 varying vec3 v_rim;        // 受光侧暖边色 × k_rim
 varying vec3 v_lampdiff;   // 灯照色 − 影（点光分支）
-varying float v_cloud;     // 地面云影乘子
+varying vec4 v_spec_cloud; // xyz 硬卡通高光色 × 遮罩（light() 里再乘阈值化阴影与主光强度）；w 地面云影乘子。合用一个槽：植被着色器已用满 32 个 varying
 
 float toon_id_rough(int id) {
 	return float(clamp(id, 0, 127)) / 127.0;
@@ -132,7 +159,7 @@ float toon_overcast() {
 // 材质表 mat_table（128×4 RGBA8，最近邻；行 0 线表归 WP-05 的布局）
 //   行 1：R 明暗档；G half_level×255；B 过渡带（两阶、三阶存固定半宽 ×1000，两阶半、软物存 fwidth 倍数 ×50）；A 湿润响应×255
 //   行 2：R 透光 k_t×255；G 受光侧暖边 k_rim×255；B 闪点系数×255；A 自发光通道（槽位 + 1，0 = 不自发光）
-//   行 3：R 解析法线（0 不用、1 球、2 柱）；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 保留
+//   行 3：R 解析法线（0 不用、1 球、2 柱）；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 硬卡通高光强度
 // ---------------------------------------------------------------------------
 struct ToonMat {
 	int steps;
@@ -146,6 +173,7 @@ struct ToonMat {
 	float bevel_lit;
 	float bevel_shade;
 	int emit_slot;     // 自发光的灯光通道槽位，−1 = 不自发光
+	float k_spec;      // 硬卡通高光强度，0 = 没有
 };
 
 ToonMat toon_mat(int id) {
@@ -156,7 +184,12 @@ ToonMat toon_mat(int id) {
 	bool fw_band = steps == TOON_STEPS_TWO_HALF || steps == TOON_STEPS_SOFT;
 	float band = fw_band ? r1.b * 255.0 / 50.0 : r1.b * 255.0 / 1000.0;
 	return ToonMat(steps, r1.g, band, r1.a, r2.r, r2.g, r2.b,
-			int(round(r3.r * 255.0)), r3.g * 0.25, r3.b * 0.25, int(round(r2.a * 255.0)) - 1);
+			int(round(r3.r * 255.0)), r3.g * 0.25, r3.b * 0.25, int(round(r2.a * 255.0)) - 1, r3.a);
+}
+
+// 按材质类取 vec4 参数的一个分量（顺序：两阶、两阶半、软物、植被三阶）
+float toon_by_steps(vec4 v, int steps) {
+	return steps == TOON_STEPS_TWO ? v.x : (steps == TOON_STEPS_TWO_HALF ? v.y : (steps == TOON_STEPS_SOFT ? v.z : v.w));
 }
 
 // ---------------------------------------------------------------------------
@@ -318,6 +351,38 @@ struct ToonCol {
 	float gain;        // 受光增益（室内光斑增益）
 };
 
+// 明暗层次与影色冷暖（max-110 110a，参数见 TOON_PORT_DEPTH、TOON_HEMI_*）：在调色板给的受光、影上改影色，受光色不动。
+// 参考里影 = 固有色 × 半球天光（天色、地色按法线 y 混合），受光 = 影 + 主光；这里按色名的受光、影对做同样的事：
+// 先把 ΔL 按材质类放大，再按法线 y 给影加天色或地色的色相与少量明度。k 是白天 × 晴天的门控（夜间、阴雨退回原影色）。
+// 植被、树干的着色器自己拼 ToonCol 的，要用时调这一个函数。
+vec3 toon_port_shade(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, float k) {
+	if (k <= 0.0) {
+		return shade;
+	}
+	vec3 lo = ok_from_linear(lit);
+	vec3 so = ok_from_linear(shade);
+	float depth = mix(1.0, toon_by_steps(TOON_PORT_DEPTH, m.steps), k);
+	so.x = lo.x - max(lo.x - so.x, 0.0) * depth - min(lo.x - so.x, 0.0);
+	so.yz *= 1.0 + TOON_PORT_SHADE_CK * (depth - 1.0);
+	vec2 sky = ok_from_linear(pal_cur(PAL_AMBIENT_SKY)).yz;
+	vec2 gnd = ok_from_linear(pal_cur(PAL_BOUNCE_GROUND)).yz;
+	sky /= max(length(sky), 1e-4);
+	gnd /= max(length(gnd), 1e-4);
+	float ny = clamp(c.n_w.y, -1.0, 1.0);
+	so.yz += k * mix(TOON_HEMI_GND_C * gnd, TOON_HEMI_SKY_C * sky, 0.5 + 0.5 * ny);
+	so.x += k * TOON_HEMI_L * ny;
+	return ok_to_linear(so);
+}
+
+// 硬卡通高光（max-110 110a）：sp = N·H、spw = fwidth(sp)，都在 TOON_FRAGMENT_BEGIN 的统一控制流里算好
+vec3 toon_spec(ToonCtx c, ToonMat m, float sp, float spw) {
+	if (m.k_spec <= 0.0 || (c.flags & TOON_F_INTERIOR) != 0) {
+		return vec3(0.0);
+	}
+	float mask = smoothstep(TOON_SPEC_SIZE - spw, TOON_SPEC_SIZE + spw, sp) * smoothstep(TOON_SPEC_KAPPA.x, TOON_SPEC_KAPPA.y, c.kappa);
+	return pal_cur(PAL_SUN_LIGHT) * (TOON_SPEC_K * m.k_spec * mask * (1.0 - toon_overcast()));
+}
+
 // 给定颜色的取色入口（contract-24 第 2 条）：lit、shade、lamp 是调用方取好的受光色、影色、灯照色（线性），
 // 例如植被按局部季节从季相行取样（WLD-VEGETATION §9.4）。其后的处理与 toon_colors 完全相同：
 // 天光渐变、地面反光、湿润与积水（按 mat_table 的湿润响应，不湿的材质登记 Wet = 0）、路灯光斑、倒角提亮
@@ -330,9 +395,12 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	float emit_k = toon_emissive_level(c, m);
 	vec3 emit_c = emit_k > 0.0 ? toon_emissive_color(c, lamp) : vec3(0.0);
 
+	// 明暗层次与影色冷暖（max-110 110a）：室外、白天、晴天
+	float day = smoothstep(-0.02, 0.05, sun_dir.y);
+	shade = toon_port_shade(c, m, lit, shade, interior ? 0.0 : day * (1.0 - toon_overcast()));
+
 	// 影里的两条连续项（ART-STYLE §3.3）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
 	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y;
-	float day = smoothstep(-0.02, 0.05, sun_dir.y);
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day * (interior ? 0.0 : 1.0);
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
 
@@ -388,8 +456,9 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 		trans = ok_adjust(lit, 1.0, 1.2, 0.08) * m.k_t * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
 	}
 
-	// 受光侧暖边：rim × 受光色 × k_rim
-	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
+	// 受光侧暖边：rim × 受光色 × k_rim；登记的 k_rim 乘 TOON_RIM_GAIN，没登记的按材质类给底值（朝上的面与室内不给）
+	float rim_floor = toon_by_steps(TOON_RIM_FLOOR, m.steps) * (1.0 - smoothstep(0.55, 0.85, c.n_w.y)) * (interior ? 0.0 : 1.0);
+	vec3 rim = pal_cur(PAL_RIM) * lit * max(m.k_rim * TOON_RIM_GAIN, rim_floor);
 
 	// 自发光亮着时没有透光、暖边和深影
 	if (emit_k > 0.0) {
@@ -446,7 +515,7 @@ vec3 toon_emission(ToonCol t, ToonCtx c) {
 // light()：方向光（主光）与点光（重点灯）
 // ---------------------------------------------------------------------------
 vec3 toon_key_light(vec3 n, vec3 l, vec3 v, mat3 view3, float att, vec3 backlight,
-		vec3 diff, vec4 band, vec3 rimcol, float wy, float cloud_k) {
+		vec3 diff, vec4 band, vec3 rimcol, vec3 spec, float wy, float cloud_k) {
 	// 阴、雨、雪时按天光方向判明暗（SYS-WEATHER §7），带宽放到 0.06；主光方向本身不变
 	float g = toon_overcast();
 	vec3 ld = normalize(mix(l, normalize(view3 * overcast_dir), g));
@@ -475,6 +544,9 @@ vec3 toon_key_light(vec3 n, vec3 l, vec3 v, mat3 view3, float att, vec3 backligh
 	float nv = clamp(dot(n, v), 0.0, 1.0);
 	float rm = smoothstep(0.32, 0.55, pow(1.0 - nv, 3.0)) * clamp(dot(n, l) + 0.2, 0.0, 1.0);
 	res += rimcol * rm * sh_key * k;
+
+	// 硬卡通高光（max-110 110a）：遮罩在 fragment() 里算好，这里只乘阈值化阴影与主光强度
+	res += spec * sh_key * k;
 	return res;
 }
 
@@ -509,6 +581,8 @@ vec3 toon_point_light(vec3 n, vec3 l, float att, vec3 lampdiff, float push) {
 	float tn_d = dot(NORMAL, tn_ldir); \
 	float tn_fw = max(fwidth(tn_d), 1e-3); \
 	float tn_paa = max(fwidth(length((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xz)), 0.02); \
+	float tn_sp = dot(NORMAL, normalize(normalize(mat3(VIEW_MATRIX) * key_dir) + VIEW)); \
+	float tn_spw = max(fwidth(tn_sp), 1e-3); \
 	ToonCtx tctx = toon_ctx(VERTEX, NORMAL, INV_VIEW_MATRIX, tn_d, tn_fw, tn_kappa, v_cid, v_flags, v_ao, v_spare, tn_paa);
 
 #define TOON_FRAGMENT_END(T) \
@@ -526,11 +600,11 @@ vec3 toon_point_light(vec3 n, vec3 l, float att, vec3 lampdiff, float push) {
 	v_band = vec4(T.bw, T.half_level, T.push, T.gain); \
 	v_rim = T.rim; \
 	v_lampdiff = T.lamp - T.shade; \
-	v_cloud = toon_cloud_shadow(tctx.wpos);
+	v_spec_cloud = vec4(toon_spec(tctx, tmat, tn_sp, tn_spw), toon_cloud_shadow(tctx.wpos));
 
 #define TOON_LIGHT \
 	if (LIGHT_IS_DIRECTIONAL) { \
-		DIFFUSE_LIGHT += toon_key_light(NORMAL, LIGHT, VIEW, mat3(VIEW_MATRIX), ATTENUATION, BACKLIGHT, v_diff, v_band, v_rim, v_wy, v_cloud); \
+		DIFFUSE_LIGHT += toon_key_light(NORMAL, LIGHT, VIEW, mat3(VIEW_MATRIX), ATTENUATION, BACKLIGHT, v_diff, v_band, v_rim, v_spec_cloud.xyz, v_wy, v_spec_cloud.w); \
 	} else { \
 		DIFFUSE_LIGHT += toon_point_light(NORMAL, LIGHT, ATTENUATION, v_lampdiff, v_band.z); \
 	}
