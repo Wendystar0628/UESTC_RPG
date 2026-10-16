@@ -73,6 +73,7 @@ gates: []
 - **多模型协作**（ENG-TEAM，D-179）：
   - 主会话的 Opus 是唯一的主代理，管画面、风格、内容与判断；Astra 是工程负责人，管架构、契约与共享工程文件；二号会话开子代理承担 Opus 侧包的施工；Sol 会话做合并执行、施工状态、巡检与调研（ENG-TEAM §1）。
   - 你向派你的一方回报：二号会话派的子代理找二号会话，Astra 派的找 Astra 主线程，主会话派的找主会话（ENG-TEAM §0.1）。
+  - 单 Claude 账户模式下（ENG-TEAM §7.5），Claude 侧的子代理都由主会话派，向主会话回报。
   - 合并请求、契约申请、任务单和合并日志都在 `E:\Project\UESTC_RPG.wt\.collab\`（ENG-TEAM §6.1）。开始下一步之前看一眼 `merged.log`，`main` 变了就 rebase。
 
 ## 3 硬规则
