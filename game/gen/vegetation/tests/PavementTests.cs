@@ -21,16 +21,16 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class PavementTests
 {
-    private const int CampusTrees = 3142;
+    private const int CampusTrees = 2258;
 
-    /// <summary>Planting order with every overlay: 3142 plus the 67 ginkgo the hide of the two OSM sidewalks (0h) gives back along the avenue; it includes that hide and is merged in the same batch as 0h.</summary>
-    private const int OverlaidTrees = 3209;
+    /// <summary>Planting order with every overlay: 2258 plus the trees the hide of the two OSM sidewalks (0h) gives back along the avenue (23d: one ginkgo row each side, 6 m apart).</summary>
+    private const int OverlaidTrees = 2328;
 
-    /// <summary>The layout of the campus data alone (no overlays), as 23c1 fixed it in VegetationInputsTests.</summary>
-    internal const string BareFingerprint = "7456706a925937f6dcebbb74931f978ae8c010f397c99bf3bc27fe76a123d52f";
+    /// <summary>The layout of the campus data alone (no overlays); refixed by 23d (the avenue thinned to one ginkgo row each side).</summary>
+    internal const string BareFingerprint = "94e2842de8f1fd7762a43347af67f29306d4d13ae7bf403586e7dd4e6d417ea5";
 
-    /// <summary>The layout of the campus data with every authored overlay of the map, the world as the kernel loads it (refixed after 0j with the hide of 0h, merged in the same batch as 0h).</summary>
-    private const string OverlaidFingerprint = "3ab4bd7c71ecaf42c73e4b21ce886408402e1c7373067d6fb8afe2141258f352";
+    /// <summary>The layout of the campus data with every authored overlay of the map, the world as the kernel loads it (refixed by 23d with the thinned avenue).</summary>
+    private const string OverlaidFingerprint = "c28a30f1130c615f9f2652ba6a896d8523de5d4df5e6f07cb70fa0db5c9924d7";
 
     /// <summary>
     /// The centre line of 0h-b's second Dangui Road walk (design:north-dangui-walk-w2, 021ba14), copied as a fixture so the case is

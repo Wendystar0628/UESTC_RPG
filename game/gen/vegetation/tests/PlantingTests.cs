@@ -29,19 +29,20 @@ public sealed class PlantingTests
     }
 
     [TestCase]
-    public void TheCampusIsPlantedAndTheAvenueHasFourRows()
+    public void TheCampusIsPlantedAndTheAvenueHasOneRowEachSide()
     {
         var (world, species, rules) = Data.Value;
         var a = Planting.Build(world, species, rules, 1u);
         var b = Planting.Build(world, species, rules, 1u);
         if (!a.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id)).SequenceEqual(b.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id))))
             throw new InvalidOperationException("two builds differ");
-        // WLD-VEGETATION §3: four rows, about 1600 ginkgos (rows × length / spacing; cross streets, crossing paths and
-        // buildings take some out); a spring band of cherry and flowering plum outside them.
+        // The avenue (max-011 23d): one ginkgo row each side of the road, 6 m apart, so it reads as an avenue and not as a
+        // grove (rows × length / spacing; cross streets, crossing paths and buildings take some out); a spring band of
+        // cherry and flowering plum outside them.
         var avenue = a.Trees.Where(t => t.Source == PlantSource.Road && t.Species.Id == "ginkgo").ToList();
-        if (avenue.Count is < 1100 or > 1800) throw new InvalidOperationException($"{avenue.Count} avenue ginkgos");
-        if (avenue.Select(t => t.Key.Split(':')[3] + t.Key.Split(':')[4]).Distinct().Count() != 4)
-            throw new InvalidOperationException("the avenue does not have four rows");
+        if (avenue.Count is < 250 or > 500) throw new InvalidOperationException($"{avenue.Count} avenue ginkgos");
+        if (avenue.Select(t => t.Key.Split(':')[3] + t.Key.Split(':')[4]).Distinct().Count() != 2)
+            throw new InvalidOperationException("the avenue does not have one row each side");
         var band = a.Trees.Where(t => t.Source == PlantSource.Band).ToList();
         if (band.Count < 100 || band.Any(t => t.Species.Id is not ("cherry" or "plum"))) throw new InvalidOperationException($"band of {band.Count}");
         if (a.Count(PlantSource.Grove) < 600) throw new InvalidOperationException($"only {a.Count(PlantSource.Grove)} grove trees");

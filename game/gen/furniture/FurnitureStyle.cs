@@ -40,12 +40,12 @@ public static class FurnitureStyle
     // ---- Roads (13b mainline: the ginkgo avenue and two representative secondary roads; the rest of the network follows) ----
     /// <remarks>
     /// The roads and their tiers are decided here; the row offsets are only the fallback. The placement reads the real offsets from the
-    /// map's <see cref="PlantingKey"/> build input (WP-23's planting rule: the avenue's two ginkgo rows and its spring band, one row on
+    /// map's <see cref="PlantingKey"/> build input (WP-23's planting rule: the avenue's ginkgo row and its spring band each side, one row on
     /// each secondary road, <see cref="PlantingRows"/>) and uses these when the input cannot say, with a warning diagnostic.
     /// </remarks>
     public static IReadOnlyList<RoadRule> Roads { get; } = Array.AsReadOnly<RoadRule>(
     [
-        new("银杏大道", RoadTier.Main, [7f, 14f, 17.5f]),
+        new("银杏大道", RoadTier.Main, [7f, 13f]),
         new("水杉路", RoadTier.Secondary, [5f]),
         // The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two nodes, where the walks end:
         // the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.

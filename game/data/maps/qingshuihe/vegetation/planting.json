@@ -16,10 +16,10 @@
     {
       "name": "银杏大道",
       "species": ["ginkgo"],
-      "rows": [{ "offset": 7.0 }, { "offset": 14.0, "stagger": true }],
-      "spacing": 3.6,
+      "rows": [{ "offset": 7.0 }],
+      "spacing": 6.0,
       "wash": false,
-      "band": { "species": ["cherry", "plum"], "offset": 17.5, "spacing": 7.0 }
+      "band": { "species": ["cherry", "plum"], "offset": 13.0, "spacing": 7.0 }
     },
     { "name": "水杉路", "species": ["metaseq"], "rows": [{ "offset": 5.0 }], "spacing": 5.5, "wash": true },
     { "name": "丹桂路", "species": ["osmanthus"], "rows": [{ "offset": 4.5 }], "spacing": 5.0, "wash": false }

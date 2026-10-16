@@ -21,7 +21,7 @@ public sealed class VegetationInputsTests
     /// tree count and a SHA-256 over every tree's key, species, variant, position, yaw, scale, wash and source, in order.
     /// Hard pavement has taken trees since (23c2a): the fingerprint is of the order before they gave way, which PavementTests checks.
     /// </summary>
-    private const int CampusTrees = 3142;
+    private const int CampusTrees = 2258;
     private const string CampusFingerprint = PavementTests.BareFingerprint;
 
     private static readonly Lazy<(string Root, IWorldModel World)> Data = new(() =>

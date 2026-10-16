@@ -215,12 +215,16 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void TreeRowsComeFromThePlantingInputAndFallBackWithOneWarning()
     {
-        // The rows are read from the map's frozen planting rules, not copied: the real file gives the avenue's two rows and its band,
+        // The rows are read from the map's frozen planting rules, not copied: the real file gives the avenue's rows and its band,
         // and one row on each secondary road, with nothing to warn about.
         var (roads, diagnostics) = PlantingRows.Resolve(Inputs());
         Check(diagnostics.Count == 0, "warnings on the real planting file: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
         Check(roads.Select(r => r.Name).SequenceEqual(FurnitureStyle.Roads.Select(r => r.Name)) && roads.Select(r => r.Tier).SequenceEqual(FurnitureStyle.Roads.Select(r => r.Tier)), "the roads or their tiers changed");
-        Check(roads[0].Rows.SequenceEqual([7f, 14f, 17.5f]) && roads[1].Rows.SequenceEqual([5f]) && roads[2].Rows.SequenceEqual([4.5f]), "rows differ from the planting file");
+        // Expected offsets are parsed from the same file here (WP-23 owns the values and may change them): every row, then the band.
+        var file = JsonNode.Parse(PlantingBytes.Value)!["roads"]!.AsArray();
+        float[] Offsets(int i) => [.. file[i]!["rows"]!.AsArray().Select(r => r!["offset"]!.GetValue<float>()),
+            .. file[i]!["band"] is JsonNode band ? [band["offset"]!.GetValue<float>()] : Array.Empty<float>()];
+        Check(Enumerable.Range(0, 3).All(i => roads[i].Rows.SequenceEqual(Offsets(i))) && roads[0].Rows.Count >= 2, "rows differ from the planting file");
         // A changed offset is read back; a road the file leaves out keeps its fallback and is warned about once.
         var edited = Edit(root => root["roads"]![1]!["rows"] = new JsonArray(new JsonObject { ["offset"] = 6.5f }));
         Check(PlantingRows.Resolve(Inputs(edited)).Roads[1].Rows.SequenceEqual([6.5f]), "an edited offset is not read");

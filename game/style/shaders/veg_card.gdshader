@@ -43,6 +43,8 @@ const float VEG_GRAD_SHADE = 0.04;         // 冠内梯度在影里的连续项�
 // "半受光"（toon 的半受光档，N·L 低于 TOON_THR_HALF 的一侧），每个团块读出 受光 / 半受光 / 影 / 深影 四块；木质部分不加
 const float VEG_HALF_LEVEL = 0.55;         // 半受光档：影 → 受光 的这个比例
 const float VEG_LIT_LIFT = 0.09;           // 树冠受光档整体提亮（OKLab L，110c 第三轮），明暗拉开、整冠平均亮度不低于改前
+// 提亮按受光色的明度留余量（23d）：受光色本身已很亮的（秋银杏 L 约 0.89）不再提亮，受光面不冲成黄白；绿叶、红叶（L 0.6–0.7）照旧
+const vec2 VEG_LIFT_ROOM = vec2(0.72, 0.9);   // 受光色 OKLab L 从前者到后者，提亮（含冠顶亮）从满降到 0
 // 树冠暗面按材质（max-110 110c 第二、三轮），按受光色的色相分三类；深影由影色推导，一起变。
 // 绿叶、红叶：参考树冠的暗面偏青蓝，不是同色压暗，OKLab 的 b（黄 → 蓝）往蓝推、L 再压，得青绿、紫红；
 // 黄橙类（主角银杏）：暗面往琥珀、橙走，色相向红转约 12°，彩度不降且不低于受光彩度的 0.44 倍（ART-STYLE §3 护栏下限），不往冷推
@@ -58,6 +60,7 @@ const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相
 const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
+const float VEG_TRANS_FILL = 0.55;         // 透光最多把逆光影面补到 影 → 透光色 的这个比例（23d）
 const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
@@ -211,7 +214,8 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
 	if (t_grad >= 0.0) {
 		float t = t_grad + 0.32 * dot(c.n_w, normalize(key_dir));
-		lit = ok_adjust(lit, 1.0, 1.0, VEG_LIT_LIFT + VEG_TOP_LIFT * smoothstep(0.62, 0.82, t));
+		float room = 1.0 - smoothstep(VEG_LIFT_ROOM.x, VEG_LIFT_ROOM.y, ok_from_linear(lit).x);
+		lit = ok_adjust(lit, 1.0, 1.0, (VEG_LIT_LIFT + VEG_TOP_LIFT * smoothstep(0.62, 0.82, t)) * room);
 		shade = ok_adjust(shade, 1.0, 1.0, VEG_GRAD_SHADE * (clamp(t, 0.0, 1.0) - 0.5));
 		// 按受光色的色相分类：黄橙类 35°–115°，红叶类 −45°–35°，其余算绿叶类
 		vec3 lo = ok_from_linear(lit);
@@ -246,9 +250,12 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 		float bwd = mix(bw, max(bw, TOON_BAND_OVERCAST), toon_overcast());
 		deep_mix = 1.0 - smoothstep(TOON_THR_DEEP - bwd, TOON_THR_DEEP + bwd, c.d - push);
 	}
+	// 透光（23d）：只补影 → 透光色之间的差（不在影色上整份叠加受光色），逆光的影面最多补到 VEG_TRANS_FILL，团块仍分得出受光面与影面，
+	// 也不越过受光色、不进辉光阈值
 	vec3 trans = vec3(0.0);
 	if (m.k_t * trans_k > 0.0) {
-		trans = ok_adjust(lit, 1.0, 1.2, 0.08) * m.k_t * trans_k * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
+		vec3 gap = max(ok_adjust(lit, 1.0, 1.2, 0.08) - shade, vec3(0.0));
+		trans = gap * min(m.k_t * trans_k * TOON_TRANS_K, VEG_TRANS_FILL) / TOON_TRANS_K * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
 	}
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
@@ -353,14 +360,16 @@ const float VEG_CLUMP_FAR = 0.45;
 const float VEG_TRANS_RIM = 3.0;          // 外缘透光的加大倍数
 // 逆光外缘亮边（110c 第三轮）：照参考的 ocTranslucent（back = (−V·L)^2.5，thru = 0.45 + 0.55·max(−N·L, 0)），只取团块外缘一圈，
 // 不乘阴影：林荫里树冠都在别的树冠的投影里，走 BACKLIGHT 的透光读不出来（与 ART-STYLE §5.6"被挡住不透光"不一致，交主会话定）
-const float VEG_RIM_GLOW = 0.6;           // 外缘亮边强度（乘受光色），近处
+const float VEG_RIM_GLOW = 0.45;          // 外缘亮边强度：影面往受光色补的比例，近处（23d：原为在受光色上整份叠加的 0.6）
+const vec2 VEG_RIM_GLOW_AWAY = vec2(-0.25, 0.15);  // 片元法线·主光从前者到后者，亮边从满到 0：只出在背光的影面上（23d）
 // 外缘亮边按到主相机的距离淡出（110c-4）：从上往下俯瞰时满树都是逆光外缘，远处整片发光；树下人视（60 m 内）不变
-const float VEG_RIM_GLOW_FAR = 0.2;       // 远处的外缘亮边强度
+const float VEG_RIM_GLOW_FAR = 0.15;      // 远处的外缘亮边强度
 const vec2 VEG_RIM_GLOW_FADE = vec2(60.0, 150.0);  // 从前者（m）到后者，强度从 VEG_RIM_GLOW 平滑降到 VEG_RIM_GLOW_FAR
 const vec2 VEG_TRANS_RIM_BAND = vec2(0.55, 0.9);   // 团块 rim 从前者到后者，透光从不加到加满
 // 团块外缘碎边（max-110 110c）：近处碎边另按每个团块自己的法线取 rim（团块各自的外轮廓一圈），团块外缘的折线轮廓也读成叶团锯齿边，
 // 前面的团块咬进后面的团块，团与团之间分出层次；规则照 23c1 的近处碎边（强度 0.35、只剪最外一圈），远处同样强度
 const float VEG_EDGE_CLUMP = 1.0;          // 团块外缘碎边的强度系数（乘在近处碎边上）
+const vec2 VEG_EDGE_CLUMP_SHELL = vec2(0.5, 0.8);  // 外壳 rim 从前者到后者，团块外缘碎边从 0 到满：只在树冠外轮廓一带出（23d）
 // 冠底叶卡（max-011 23c3）：人能站到冠下的树（冠底高于 MotherModels.UnderClearance）在最低的团块底面补一层叶簇。
 // CUSTOM2.w = 1 + 序（画到 L0）或 2 + 序（只在 L0+，云团型）；不受外轮廓一圈的限制，从下面看保持全尺寸；
 // 顶点沿主相机视线朝镜头拉近（屏幕上的位置不变，只改深度），盖住簇心压进去的那块团块底面。
@@ -698,7 +707,9 @@ void fragment() {
 		// 远处：按世界坐标噪声在 rim 带里剪（23b 定稿）
 		float band_far = mix(smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim), (1.0 - smoothstep(0.0, VEG_EDGE_FAR_UNDER_W, to_edge)) * under_rim, down);
 		// 团块外缘在远处也剪最外一圈，强度照近处（0.35），不在冠内剪出大洞
-		float clump_band = VEG_EDGE_CLUMP * smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, 1.0 - abs(dot(clump, VIEW)));
+		// 只在树冠外轮廓一带剪（23d）：冠内团块的外缘不剪，前面的团块后面没有别的团块时，不在冠内开出带描线的透镜形大洞
+		float clump_band = VEG_EDGE_CLUMP * smoothstep(VEG_EDGE_NEAR_RIM0, VEG_EDGE_NEAR_RIM1, 1.0 - abs(dot(clump, VIEW)))
+				* smoothstep(VEG_EDGE_CLUMP_SHELL.x, VEG_EDGE_CLUMP_SHELL.y, rim);
 		band_far = max(band_far, clump_band * VEG_EDGE_NEAR / VEG_EDGE_FAR);
 		float px_k = smoothstep(VEG_EDGE_PX.x, VEG_EDGE_PX.y, VEG_EDGE_CELL / max(px_m, 1e-4));
 		float cut = VEG_EDGE_DEPTH * VEG_EDGE_FAR * band_far * px_k;
@@ -768,7 +779,9 @@ void fragment() {
 				* smoothstep(VEG_TRANS_RIM_BAND.x, VEG_TRANS_RIM_BAND.y, 1.0 - abs(dot(clump, VIEW))) * key_strength * smoothstep(-0.02, 0.05, sun_dir.y);
 		// 本体不投影（投影走代理），片元的视空间长度就是到主相机的距离（与外轮廓碎边同理）；MAIN_CAM_INV_VIEW_MATRIX 只在 vertex() 里有
 		float glow_dist = length(VERTEX);
-		tcol.extra += tcol.lit * mix(VEG_RIM_GLOW, VEG_RIM_GLOW_FAR, smoothstep(VEG_RIM_GLOW_FADE.x, VEG_RIM_GLOW_FADE.y, glow_dist)) * glow;
+		// 只在背光的影面上把影色往受光色补（23d），不在受光色上再叠一份：逆光外缘读成亮边，受光面不冲白，团块明暗留住
+		float away = 1.0 - smoothstep(VEG_RIM_GLOW_AWAY.x, VEG_RIM_GLOW_AWAY.y, dot(NORMAL, lv));
+		tcol.extra += max(tcol.lit - tcol.shade, vec3(0.0)) * mix(VEG_RIM_GLOW, VEG_RIM_GLOW_FAR, smoothstep(VEG_RIM_GLOW_FADE.x, VEG_RIM_GLOW_FADE.y, glow_dist)) * glow * away;
 	}
 	TOON_FRAGMENT_END(tcol)
 	v_band.z += VEG_LIT_SHIFT;

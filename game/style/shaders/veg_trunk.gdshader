@@ -40,6 +40,8 @@ const float VEG_GRAD_SHADE = 0.04;         // 冠内梯度在影里的连续项�
 // "半受光"（toon 的半受光档，N·L 低于 TOON_THR_HALF 的一侧），每个团块读出 受光 / 半受光 / 影 / 深影 四块；木质部分不加
 const float VEG_HALF_LEVEL = 0.55;         // 半受光档：影 → 受光 的这个比例
 const float VEG_LIT_LIFT = 0.09;           // 树冠受光档整体提亮（OKLab L，110c 第三轮），明暗拉开、整冠平均亮度不低于改前
+// 提亮按受光色的明度留余量（23d）：受光色本身已很亮的（秋银杏 L 约 0.89）不再提亮，受光面不冲成黄白；绿叶、红叶（L 0.6–0.7）照旧
+const vec2 VEG_LIFT_ROOM = vec2(0.72, 0.9);   // 受光色 OKLab L 从前者到后者，提亮（含冠顶亮）从满降到 0
 // 树冠暗面按材质（max-110 110c 第二、三轮），按受光色的色相分三类；深影由影色推导，一起变。
 // 绿叶、红叶：参考树冠的暗面偏青蓝，不是同色压暗，OKLab 的 b（黄 → 蓝）往蓝推、L 再压，得青绿、紫红；
 // 黄橙类（主角银杏）：暗面往琥珀、橙走，色相向红转约 12°，彩度不降且不低于受光彩度的 0.44 倍（ART-STYLE §3 护栏下限），不往冷推
@@ -55,6 +57,7 @@ const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相
 const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
+const float VEG_TRANS_FILL = 0.55;         // 透光最多把逆光影面补到 影 → 透光色 的这个比例（23d）
 const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
@@ -208,7 +211,8 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
 	if (t_grad >= 0.0) {
 		float t = t_grad + 0.32 * dot(c.n_w, normalize(key_dir));
-		lit = ok_adjust(lit, 1.0, 1.0, VEG_LIT_LIFT + VEG_TOP_LIFT * smoothstep(0.62, 0.82, t));
+		float room = 1.0 - smoothstep(VEG_LIFT_ROOM.x, VEG_LIFT_ROOM.y, ok_from_linear(lit).x);
+		lit = ok_adjust(lit, 1.0, 1.0, (VEG_LIT_LIFT + VEG_TOP_LIFT * smoothstep(0.62, 0.82, t)) * room);
 		shade = ok_adjust(shade, 1.0, 1.0, VEG_GRAD_SHADE * (clamp(t, 0.0, 1.0) - 0.5));
 		// 按受光色的色相分类：黄橙类 35°–115°，红叶类 −45°–35°，其余算绿叶类
 		vec3 lo = ok_from_linear(lit);
@@ -243,9 +247,12 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 		float bwd = mix(bw, max(bw, TOON_BAND_OVERCAST), toon_overcast());
 		deep_mix = 1.0 - smoothstep(TOON_THR_DEEP - bwd, TOON_THR_DEEP + bwd, c.d - push);
 	}
+	// 透光（23d）：只补影 → 透光色之间的差（不在影色上整份叠加受光色），逆光的影面最多补到 VEG_TRANS_FILL，团块仍分得出受光面与影面，
+	// 也不越过受光色、不进辉光阈值
 	vec3 trans = vec3(0.0);
 	if (m.k_t * trans_k > 0.0) {
-		trans = ok_adjust(lit, 1.0, 1.2, 0.08) * m.k_t * trans_k * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
+		vec3 gap = max(ok_adjust(lit, 1.0, 1.2, 0.08) - shade, vec3(0.0));
+		trans = gap * min(m.k_t * trans_k * TOON_TRANS_K, VEG_TRANS_FILL) / TOON_TRANS_K * (1.0 - smoothstep(0.6, 0.8, toon_overcast()));
 	}
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);

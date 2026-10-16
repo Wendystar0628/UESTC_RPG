@@ -69,13 +69,14 @@ public static class MotherModels
     /// <summary>
     /// Card budget per crown type at L0+, L0 and L1 (ENG-PERF §9); lower levels take the top-ranked prefix. Every type keeps
     /// the same fractions (L0 ≈ 40%, L1 ≈ 5.6% of L0+), because veg_card shrinks the extra cards by those two fractions
-    /// (VEG_KEEP_L0, VEG_KEEP_L1) before the level swaps.
+    /// (VEG_KEEP_L0, VEG_KEEP_L1) before the level swaps. Card crowns take the low end of the 1500–2000 band (23d), so their
+    /// near masses can be finer icospheres within the L0+ ceiling.
     /// </summary>
     public static int CardCount(CrownType crown, VegLevel level) => (crown, level) switch
     {
-        (CrownType.Card, VegLevel.L0Plus) => 1800,
-        (CrownType.Card, VegLevel.L0) => 720,
-        (CrownType.Card, VegLevel.L1) => 100,
+        (CrownType.Card, VegLevel.L0Plus) => 1500,
+        (CrownType.Card, VegLevel.L0) => 600,
+        (CrownType.Card, VegLevel.L1) => 84,
         (CrownType.Mixed, VegLevel.L0Plus) => 900,
         (CrownType.Mixed, VegLevel.L0) => 360,
         (CrownType.Mixed, VegLevel.L1) => 50,
@@ -96,6 +97,18 @@ public static class MotherModels
     /// exposed balls (the ones that make the silhouette) go back to icosphere level 2 within it.
     /// </summary>
     public const int CloudTrianglesL0Outline = 3500;
+
+    /// <summary>
+    /// Card and mixed crowns at L0 (15–40 m; ENG-PERF §9: 3–4k): every mass is at least icosphere level 1 (23d: a bare
+    /// icosahedron shows straight edges and corners at 15 m), and the most exposed step up to level 2 within this.
+    /// </summary>
+    public const int CardTrianglesL0 = 4000;
+
+    /// <summary>
+    /// A mass face is left out when all its corners lie this far inside one other mass (a fraction of that mass's radius,
+    /// on top of the faceting of a level-1 icosphere), so wind sway and the per-mass leaf-amount lead never open it (23d).
+    /// </summary>
+    public const float HiddenMargin = 0.06f;
 
     /// <summary>L1 target (ENG-PERF §9: 0.6–0.9k); L1 merges its masses down to this many.</summary>
     public const int MaxMassesL1 = 6;
@@ -224,37 +237,68 @@ public static class MotherModels
         var hosts = drawn.Select(c => c.Owner).ToHashSet();
 
         var blobs = BlobsFor(plan, level);
+        // Near levels draw only the faces of each mass that no other mass swallows (23d), so the triangles go to the
+        // outline: every mass can be a finer icosphere within the same budget.
+        var hidden = level == VegLevel.L1 ? null : new HiddenFaces(plan, blobs);
+        int Total() => wood.Triangles + crown.Triangles + (hidden?.Cost(blobs) ?? CostOf(blobs));
+        // Fits the masses under a triangle limit: the least exposed step down one icosphere level (not below minDetail; cores
+        // last), and only when none can step down does the least exposed free non-core mass go (which may unhide faces of others).
+        void Fit(int limit, int minDetail)
+        {
+            List<int> Order() => ByExposure(plan, blobs).Concat(Enumerable.Range(0, blobs.Count).Where(i => blobs[i].Blob.Core)).ToList();
+            var order = Order();
+            while (Total() > limit)
+            {
+                var step = order.FindIndex(i => blobs[i].Detail > minDetail);
+                if (step >= 0)
+                {
+                    var (blob, index, scale, detail) = blobs[order[step]];
+                    blobs[order[step]] = (blob, index, scale, detail - 1);
+                    continue;
+                }
+                var free = order.FindIndex(i => !blobs[i].Blob.Core && !hosts.Contains(blobs[i].Index));
+                if (free < 0) break;
+                blobs.RemoveAt(order[free]);
+                hidden?.Reset(blobs);
+                order = Order();
+            }
+        }
         if (level == VegLevel.L0Plus)
         {
             // Keep the hard ceiling: the least exposed masses step down to icosphere level 1 (they barely show), and only
             // if that is not enough do free non-core masses go, least exposed first.
-            int Total() => wood.Triangles + crown.Triangles + Cost(blobs);
-            const int ceiling = MaxTrianglesL0Plus - 100;
-            if (Total() > ceiling)
-                foreach (var i in ByExposure(plan, blobs))
-                {
-                    if (Total() <= ceiling) break;
-                    var (blob, index, scale, detail) = blobs[i];
-                    if (detail > 1) blobs[i] = (blob, index, scale, 1);
-                }
-            if (Total() > ceiling) Prune(plan, blobs, hosts, ceiling - wood.Triangles - crown.Triangles, minDetail: 1);
+            Fit(MaxTrianglesL0Plus - 100, minDetail: 1);
         }
-        else if (level == VegLevel.L0 && species.Crown == CrownType.Cloud)
+        else if (level == VegLevel.L0)
         {
-            Prune(plan, blobs, hosts, CloudTrianglesL0 - wood.Triangles - crown.Triangles, minDetail: 0);
-            // Cores first (the big balls of each cloud), then the other balls from the most exposed down.
+            var cloud = species.Crown == CrownType.Cloud;
+            if (cloud)
+            {
+                Prune(plan, blobs, hosts, CloudTrianglesL0 - wood.Triangles - crown.Triangles, minDetail: 0, () => hidden?.Cost(blobs) ?? CostOf(blobs));
+                hidden?.Reset(blobs);
+            }
+            // Cores first (the big masses), then the others from the most exposed down, step up to icosphere level 2 while
+            // the outline allowance lasts (cloud crowns 3.5k; card and mixed crowns the top of the 3–4k L0 band), after the
+            // least exposed card and mixed masses stepped down to the icosahedron if level 1 alone does not fit.
+            var limit = cloud ? CloudTrianglesL0Outline : CardTrianglesL0;
+            if (!cloud) Fit(limit, minDetail: 0);
             var order = ByExposure(plan, blobs);
             order.Reverse();
             order.InsertRange(0, Enumerable.Range(0, blobs.Count).Where(i => blobs[i].Blob.Core));
             foreach (var i in order)
             {
                 var (blob, index, scale, detail) = blobs[i];
-                var extra = Icosphere.Get(2).Index.Length / 3 - Icosphere.Get(detail).Index.Length / 3;
-                if (wood.Triangles + crown.Triangles + Cost(blobs) + extra > CloudTrianglesL0Outline) break;
+                if (detail >= 2) continue;
                 blobs[i] = (blob, index, scale, 2);
+                if (Total() > limit)
+                {
+                    blobs[i] = (blob, index, scale, detail);
+                    break;
+                }
             }
         }
-        foreach (var (blob, index, scale, detail) in blobs) WriteBlob(crown, plan, shell, blob, index, scale, detail, ids);
+        foreach (var (blob, index, scale, detail) in blobs)
+            WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: hidden?.Kept(index, detail));
 
         var woodBundle = wood.Bundle(WoodSpec(), flags: 0);
         var crownBundle = crown.Bundle(CrownSpec(species), flags: 8);
@@ -342,16 +386,15 @@ public static class MotherModels
         float H2, float H3, Vector3 Anchor, Vector3 BlobCenter, int Owner, int Cluster);
 
     /// <summary>
-    /// Icosphere level of one mass: cloud balls 2 at L0+ and 1 below (ENG-PERF §9); card and mixed masses sit under
-    /// cards, so L0+ uses 1 and L0 drops the non-core ones to the bare icosahedron. L1 uses merged masses at level 1.
+    /// Icosphere level of one mass: 2 at L0+ and 1 at L0 (ENG-PERF §9; 23d: card and mixed masses as well, with their
+    /// hidden faces left out, so the near outline is round instead of faceted); L0 then steps the most exposed up to 2
+    /// within its allowance. L1 uses merged masses at level 1.
     /// </summary>
-    private static int BlobDetail(CrownType crown, VegLevel level, bool core) => (crown, level) switch
+    private static int BlobDetail(VegLevel level) => level switch
     {
-        (CrownType.Card, VegLevel.L0Plus) => 1,
-        (_, VegLevel.L0Plus) => 2,
-        (CrownType.Cloud, _) => 1,
-        (_, VegLevel.L0) => core ? 1 : 0,
-        _ => 1
+        VegLevel.L0Plus => 2,
+        VegLevel.L0 or VegLevel.L1 => 1,
+        _ => throw new ArgumentOutOfRangeException(nameof(level), level, "Unknown vegetation level.")
     };
 
     /// <summary>Masses drawn at a level, with their plan index, radius scale and detail (L1 keeps the enlarged core masses).</summary>
@@ -369,13 +412,99 @@ public static class MotherModels
         for (var i = 0; i < plan.Blobs.Count; i++)
         {
             var blob = plan.Blobs[i];
-            list.Add((blob, i, 1f, BlobDetail(crown, level, blob.Core)));
+            list.Add((blob, i, 1f, BlobDetail(level)));
         }
         return list;
     }
 
-    private static int Cost(List<(Blob Blob, int Index, float Scale, int Detail)> blobs) =>
+    private static int CostOf(List<(Blob Blob, int Index, float Scale, int Detail)> blobs) =>
         blobs.Sum(b => Icosphere.Get(b.Detail).Index.Length / 3);
+
+    /// <summary>
+    /// The faces of each near mass that no other mass hides (23d). A face is hidden when all three corners lie inside one
+    /// other mass of the same set, at least <see cref="HiddenMargin"/> of its radius plus a level-1 facet below its lumpy
+    /// surface. Kept faces are cached per mass and detail; Reset after masses were pruned (they hide nothing any more).
+    /// </summary>
+    private sealed class HiddenFaces
+    {
+        private readonly TreePlan _plan;
+        private readonly Dictionary<int, Vector4[]> _bumps = [];
+        private readonly Dictionary<(int Index, int Detail), int[]> _kept = [];
+        private List<(Blob Blob, int Index)> _set = [];
+
+        public HiddenFaces(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs)
+        {
+            _plan = plan;
+            Reset(blobs);
+        }
+
+        public void Reset(List<(Blob Blob, int Index, float Scale, int Detail)> blobs)
+        {
+            _set = blobs.Select(b => (b.Blob, b.Index)).ToList();
+            foreach (var (blob, index) in _set)
+                if (!_bumps.ContainsKey(index)) _bumps[index] = Bumps(_plan, blob, index);
+            _kept.Clear();
+        }
+
+        public int Cost(List<(Blob Blob, int Index, float Scale, int Detail)> blobs) => blobs.Sum(b => Kept(b.Index, b.Detail).Length);
+
+        /// <summary>Kept faces of a mass, as offsets into its icosphere's index list (multiples of 3).</summary>
+        public int[] Kept(int index, int detail)
+        {
+            if (_kept.TryGetValue((index, detail), out var cached)) return cached;
+            var blob = _set.First(b => b.Index == index).Blob;
+            var sphere = Icosphere.Get(detail);
+            var bumps = _bumps[index];
+            var corners = sphere.Vertices.Select(d => Surface(blob.Center, blob.Radius, blob.Lump, bumps, d)).ToArray();
+            var inside = new int[corners.Length];
+            for (var v = 0; v < corners.Length; v++)
+            {
+                inside[v] = -1;
+                for (var o = 0; o < _set.Count; o++)
+                {
+                    if (_set[o].Index == index || !Swallows(_set[o].Blob, _bumps[_set[o].Index], corners[v])) continue;
+                    inside[v] = o;
+                    break;
+                }
+            }
+            var kept = new List<int>(sphere.Index.Length / 3);
+            for (var t = 0; t < sphere.Index.Length; t += 3)
+            {
+                // Corners may sit in different masses: the face is hidden only if the first corner's mass holds all three.
+                var o = inside[sphere.Index[t]];
+                var hidden = o >= 0;
+                for (var k = 1; hidden && k < 3; k++)
+                {
+                    var v = sphere.Index[t + k];
+                    hidden = inside[v] == o || (inside[v] >= 0 && Swallows(_set[o].Blob, _bumps[_set[o].Index], corners[v]));
+                }
+                if (!hidden) kept.Add(t);
+            }
+            var result = kept.ToArray();
+            _kept[(index, detail)] = result;
+            return result;
+        }
+
+        /// <summary>Whether p lies inside the drawn surface of mass o by the margin (the inverse of <see cref="Surface"/>).</summary>
+        private static bool Swallows(Blob o, Vector4[] bumps, Vector3 p)
+        {
+            var q = p - o.Center;
+            // The lumpy surface never reaches past (1 + 1.05·lump) radii (and the squashed bottom less): far points are outside.
+            if (q.LengthSquared() > o.Radius * o.Radius * (1f + 1.05f * o.Lump) * (1f + 1.05f * o.Lump)) return false;
+            if (q.Y < 0f) q.Y /= 0.7f;
+            var length = q.Length();
+            if (length < 1e-4f) return true;
+            var d = q / length;
+            var sum = 0f;
+            foreach (var b in bumps)
+            {
+                var k = Math.Clamp((Vector3.Dot(d, new Vector3(b.X, b.Y, b.Z)) - 0.78f) / 0.22f, 0f, 1f);
+                sum += k * k * (3f - 2f * k) * b.W;
+            }
+            var r = o.Radius * (1f + o.Lump * (Math.Min(sum, 1.4f) - 0.35f));
+            return length < r * (1f - FacetSag) - HiddenMargin * o.Radius;
+        }
+    }
 
     /// <summary>Non-core masses, least exposed first: exposure is the share of a mass's surface outside every other mass.</summary>
     private static List<int> ByExposure(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs)
@@ -403,9 +532,10 @@ public static class MotherModels
     /// mass adds nothing but triangles), then steps the least exposed of the rest down one icosphere level, not below
     /// minDetail (L0+ keeps level 1: a bare icosahedron would leave its cards hovering over the flat faces up close).
     /// </summary>
-    private static void Prune(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs, HashSet<int> hosts, int budget, int minDetail)
+    private static void Prune(TreePlan plan, List<(Blob Blob, int Index, float Scale, int Detail)> blobs, HashSet<int> hosts, int budget, int minDetail,
+        Func<int> cost)
     {
-        while (Cost(blobs) > budget)
+        while (cost() > budget)
         {
             var free = ByExposure(plan, blobs).Where(i => !hosts.Contains(blobs[i].Index)).ToList();
             if (free.Count == 0) break;
@@ -413,7 +543,7 @@ public static class MotherModels
         }
         foreach (var i in ByExposure(plan, blobs))
         {
-            if (Cost(blobs) <= budget) break;
+            if (cost() <= budget) break;
             var (blob, index, scale, detail) = blobs[i];
             if (detail > minDetail) blobs[i] = (blob, index, scale, detail - 1);
         }
@@ -525,7 +655,7 @@ public static class MotherModels
     // ---------------------------------------------------------------------------------------------------------
 
     private static void WriteBlob(MeshWriter w, TreePlan plan, CrownShell shell, Blob blob, int index, float scale, int detail, Ids ids,
-        float tag = -1f)
+        float tag = -1f, int[]? faces = null)
     {
         var sphere = Icosphere.Get(detail);
         var bumps = Bumps(plan, blob, index);
@@ -541,8 +671,13 @@ public static class MotherModels
                 new Vector4(blob.Anchor, blob.BloomHash), new Vector4(blob.Center, tag), Vector2.Zero);
         }
         // Icosphere winding faces outward with a counter-clockwise front; D0 meshes take the opposite order.
-        for (var t = 0; t < sphere.Index.Length; t += 3)
-            w.Tri(first + sphere.Index[t], first + sphere.Index[t + 2], first + sphere.Index[t + 1]);
+        if (faces is null)
+        {
+            for (var t = 0; t < sphere.Index.Length; t += 3)
+                w.Tri(first + sphere.Index[t], first + sphere.Index[t + 2], first + sphere.Index[t + 1]);
+            return;
+        }
+        foreach (var t in faces) w.Tri(first + sphere.Index[t], first + sphere.Index[t + 2], first + sphere.Index[t + 1]);
     }
 
     private static Vector4[] Bumps(TreePlan plan, Blob blob, int index)
