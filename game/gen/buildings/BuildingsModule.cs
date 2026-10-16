@@ -155,40 +155,73 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
     {
         var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
-        var list = new List<Collider>();
-        foreach (var plan in set.Plans)
-        {
-            if (!Unclaimed(ctx, plan) || plan.Tile(LodLevel.L0) != tile) continue;
-            var y0 = plan.SunkY;
-            var y1 = plan.EdgeTopY;
-            var fi = 0;
-            for (var r = 0; r < plan.RingCount; r++)
-            {
-                var skin = plan.SkinAt(r);
-                for (var e = 0; e < skin.Count; e++, fi++)
-                {
-                    var a = skin.Points[e];
-                    var b = skin.Points[(e + 1) % skin.Count];
-                    var d = skin.Dir[e];
-                    var inward = -skin.Normal[e] * 0.15f;
-                    var start = a;
-                    foreach (var door in plan.Entrances.Where(x => x.Facade == fi).Select(plan.DoorOf).OrderBy(o => o.U0))
-                    {
-                        Add(start, a + d * door.U0, SurfaceTag.Wall);
-                        Add(a + d * door.U0, a + d * door.U1, SurfaceTag.DoorClosed);
-                        start = a + d * door.U1;
-                    }
-                    Add(start, b, SurfaceTag.Wall);
+        return set.Plans.Where(plan => Unclaimed(ctx, plan) && plan.Tile(LodLevel.L0) == tile)
+            .SelectMany(plan => CollideOne(ctx, plan)).ToList();
+    }
 
-                    void Add(Vector2 p, Vector2 q, SurfaceTag tag)
-                    {
-                        if (Vector2.Distance(p, q) < 0.05f) return;
-                        list.Add(new WallCollider(p + inward, q + inward, 0.15f, y0, y1, tag) { Foot = Contracts.Audio.FootMat.Concrete });
-                    }
+    /// <summary>The colliders of one building in world coordinates, in the order <see cref="Collide"/> lists them; no render mesh is built.</summary>
+    private static List<Collider> CollideOne(BuildContext ctx, BuildingPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        var list = new List<Collider>();
+        var y0 = plan.SunkY;
+        var y1 = plan.EdgeTopY;
+        var fi = 0;
+        for (var r = 0; r < plan.RingCount; r++)
+        {
+            var skin = plan.SkinAt(r);
+            for (var e = 0; e < skin.Count; e++, fi++)
+            {
+                var a = skin.Points[e];
+                var b = skin.Points[(e + 1) % skin.Count];
+                var d = skin.Dir[e];
+                var inward = -skin.Normal[e] * 0.15f;
+                var start = a;
+                foreach (var door in plan.Entrances.Where(x => x.Facade == fi).Select(plan.DoorOf).OrderBy(o => o.U0))
+                {
+                    Add(start, a + d * door.U0, SurfaceTag.Wall);
+                    Add(a + d * door.U0, a + d * door.U1, SurfaceTag.DoorClosed);
+                    start = a + d * door.U1;
+                }
+                Add(start, b, SurfaceTag.Wall);
+
+                void Add(Vector2 p, Vector2 q, SurfaceTag tag)
+                {
+                    if (Vector2.Distance(p, q) < 0.05f) return;
+                    list.Add(new WallCollider(p + inward, q + inward, 0.15f, y0, y1, tag) { Foot = Contracts.Audio.FootMat.Concrete });
                 }
             }
-            foreach (var entrance in plan.Entrances) list.AddRange(EntranceKit.Colliders(EntranceKit.Pieces(plan, entrance)));
         }
+        foreach (var entrance in plan.Entrances) list.AddRange(EntranceKit.Colliders(EntranceKit.Pieces(plan, entrance)));
         return list;
     }
+
+    /// <summary>
+    /// Read-only provenance of one level cell, for the G15 trace gate (never part of a published Build or Collide): each
+    /// formal building of the cell as its own output and colliders, tagged <c>building/{feature}/{part key}</c>. Same
+    /// selection, window blocks (the map's published allocation) and geometry as <see cref="Build"/> and
+    /// <see cref="Collide"/>; nothing is numbered, claimed, simplified or cached here, and the tags are never written out.
+    /// Colliders are the building's own, whatever the level: at a coarser level they are the union of its L0 cells' ones.
+    /// </summary>
+    public IReadOnlyList<BuildingSourceTrace> TraceSources(BuildContext ctx, TileKey tile, LodLevel lod)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        WindowNumberingSnapshot? numbering = null;
+        var traces = new List<BuildingSourceTrace>();
+        foreach (var plan in set.Plans)
+        {
+            if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
+            var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
+            traces.Add(new BuildingSourceTrace($"building/{plan.Id.Value}/{plan.Key}", plan.Id, plan.Key,
+                new ContentOutput(BuildOne(plan, block, lod), []), CollideOne(ctx, plan)));
+        }
+        return traces;
+    }
 }
+
+/// <summary>
+/// One building of a level cell with the geometry and colliders it alone produced (<see cref="BuildingsModule.TraceSources"/>).
+/// <paramref name="SourceId"/> is <c>building/{Feature.Value}/{PartKey}</c>: stable, unique in a map, independent of visit order.
+/// </summary>
+public sealed record BuildingSourceTrace(string SourceId, FeatureId Feature, string PartKey, ContentOutput Output, IReadOnlyList<Collider> Colliders);
