@@ -3,6 +3,7 @@
 // 团块和叶卡是同一个表面、同一个材质 ID，描线只在树冠外轮廓出线；法线全部来自一个平滑外壳（生成时烘进 NORMAL），
 // 整冠读成一块受光面加一条影带。alpha scissor，留在不透明通道；双面。
 // 插片朝向 = mix(外壳法线, 主相机视线, 0.5)，侧对镜头时缩小；只在外轮廓一圈保持全尺寸，朝向镜头的内部插片只留少数。
+// 插片 3–5 张一簇（簇心压进团块），一簇同去同留、同明度；团块在外轮廓一圈按树种稳定的噪声剪成叶团锯齿边（max-011 评审③④）。
 // 叶卡在主线版由本着色器按层号程序化画出（层号 = Campus.Gen.Vegetation.CardShape），细节版换成 Texture2DArray 的同号层。
 // 顶点数据见 MotherModels：插片 CUSTOM0 = (插片中心, h2)，CUSTOM1 = (枝梢锚点, h3)，CUSTOM2 = (团心, 重要度序)；
 // 团块 CUSTOM0 = (团心, 团块哈希)，CUSTOM1 = (枝梢锚点, 开花哈希)，CUSTOM2 = (所属小球的球心, −1)。
@@ -233,10 +234,18 @@ const float VEG_RIM_IN = 0.2;              // rim 低于它算树冠内部
 const float VEG_RIM_OUT = 0.55;            // rim 高于它算外轮廓一圈，插片全尺寸
 const float VEG_INNER_KEEP = 0.3;          // 内部插片留下的比例（按插片哈希）
 const float VEG_INNER_SIZE = 0.75;         // 留下的内部插片的尺寸
-const float VEG_CARD_DL = 0.03;            // 插片的明度起伏（OKLab L，±），内部不画轮廓，只靠它读出叶簇
+const float VEG_CARD_DL = 0.03;            // 插片的明度起伏（OKLab L，±，一簇一个值），内部不画轮廓，只靠它读出叶簇
+// 外轮廓碎边（max-011 评审③）：团块在外轮廓一圈按树种稳定的噪声剪掉像素（alpha scissor），描线跟着剪后的轮廓走
+const float VEG_EDGE_RIM0 = 0.3;           // rim 从这里起进入碎边带
+const float VEG_EDGE_RIM1 = 0.82;          // rim 到这里碎边最深
+const float VEG_EDGE_DEPTH = 0.62;         // 带内最深处剪掉的比例
+const float VEG_EDGE_CELL = 0.42;          // 噪声格（m），乘树种叶卡的格子系数；约一个叶团大小
+const float VEG_EDGE_NEAR = 0.5;           // 近处（L0+ 以内）的碎边强度，叶卡已打碎轮廓
+const float VEG_EDGE_FAR = 1.0;            // L0 以外的碎边强度
+const float VEG_EDGE_CONTRAST = 2.2;       // 噪声对比
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
-varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切）
+varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 8–15 插片自己的叶形种子
 varying flat int v_row;
 varying flat float v_seed;
 varying flat vec2 v_tint;
@@ -298,7 +307,9 @@ void vertex() {
 			leafy = k;
 		}
 		int layer = twig ? sp.twig_card : (bloom ? sp.bloom_card : sp.leaf_card);
-		v_bits = (layer & 15) | ((bloom && !twig) ? 16 : 0) | (twig ? 32 : 0);
+		// 一簇共用 h2（同落、同明度、同去留）；叶形各张不同，种子取每张自己的 h3
+		int shape = int(CUSTOM1.w * 255.0) & 255;
+		v_bits = (layer & 15) | ((bloom && !twig) ? 16 : 0) | (twig ? 32 : 0) | (shape << 8);
 		v_seed = h2;
 		v_s = s;
 
@@ -483,17 +494,52 @@ float veg_card_sdf(int layer, vec2 uv, float seed) {
 	return min(d, veg_seg(p, vec2(0.0), vec2(0.0, 0.1), 0.014, 0.01));
 }
 
+// 碎边噪声：世界坐标的三维值噪声，两级叠加，按树种行错开；格子随叶卡形状（细叶小、阔叶大）
+float veg_edge_noise(vec3 wp, int row, int layer) {
+	float cell = VEG_EDGE_CELL * (layer == VEG_CARD_NEEDLE || layer == VEG_CARD_STRAND ? 0.75 : (layer == VEG_CARD_FAN || layer == VEG_CARD_PALMATE ? 1.15 : 1.0));
+	uint salt = uint(max(row, 0)) * 2246822519u + 97u;
+	float n = 0.0;
+	float w = 0.65;
+	vec3 g = wp / cell;
+	for (int o = 0; o < 2; o++) {
+		vec3 i = floor(g);
+		vec3 f = g - i;
+		f = f * f * (3.0 - 2.0 * f);
+		float v = 0.0;
+		for (int k = 0; k < 8; k++) {
+			vec3 c = i + vec3(float(k & 1), float((k >> 1) & 1), float(k >> 2));
+			uint h = (uint(int(c.x) * 73856093) ^ uint(int(c.y) * 19349663) ^ uint(int(c.z) * 83492791)) + salt;
+			float wk = mix(1.0 - f.x, f.x, float(k & 1)) * mix(1.0 - f.y, f.y, float((k >> 1) & 1)) * mix(1.0 - f.z, f.z, float(k >> 2));
+			v += wk * lamp_hash01(h);
+		}
+		n += w * v;
+		w = 0.35;
+		g = g * 2.3 + vec3(17.1, 5.3, 11.7);
+	}
+	// 值噪声的和挤在 0.5 附近，拉开对比，剪切比例才跟 cut 接近线性
+	return clamp((n - 0.5) * VEG_EDGE_CONTRAST + 0.5, 0.0, 1.0);
+}
+
 void fragment() {
 	// 背面也用外壳法线（引擎给背面翻过一次法线，这里翻回来）
 	if (!FRONT_FACING) {
 		NORMAL = -NORMAL;
 	}
+	VegSpecies sp = veg_species(v_row);
 	bool mass = (v_bits & 64) != 0;
 	if (mass) {
-		ALPHA = 1.0;
+		// 外轮廓碎边（max-011 评审③）：外壳法线侧对镜头的一圈按噪声剪掉，轮廓读成叶团的锯齿边。本体不投影（投影走代理），
+		// 所以这里的距离就是主相机到片元的距离（视空间长度），不会在阴影通道里按灯算。
+		float rim = 1.0 - abs(dot(normalize(NORMAL), VIEW));
+		// 片元里没有树高，按 12 m 的树取 L0 的切换距离（ENG-PERF §9），乘细节系数
+		float l0 = VEG_LOD_L0 * max(quality.x, 0.5);
+		float edge = mix(VEG_EDGE_NEAR, VEG_EDGE_FAR, smoothstep(l0 * 0.6, l0, length(VERTEX)));
+		float cut = VEG_EDGE_DEPTH * edge * smoothstep(VEG_EDGE_RIM0, VEG_EDGE_RIM1, rim);
+		float e = veg_edge_noise((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, v_row, sp.leaf_card) - cut;
+		ALPHA = clamp(e / max(fwidth(e), 1e-4) + 0.5, 0.0, 1.0);
 	} else {
 		// v_bits 是 flat 的，同一个图元内分支一致，fwidth 不受影响
-		float d = veg_card_sdf(v_bits & 15, UV, v_seed);
+		float d = veg_card_sdf(v_bits & 15, UV, float((v_bits >> 8) & 255) / 256.0);
 		float fw = max(fwidth(d), 1e-4);
 		// 远处按像素外扩，叶形不至于在远距离上变稀（主线版代替保覆盖率的 mip，§11.1）
 		d -= fw * (0.35 + min(fw * 30.0, VEG_COVER_GROW));
@@ -501,7 +547,6 @@ void fragment() {
 	}
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	TOON_FRAGMENT_BEGIN
-	VegSpecies sp = veg_species(v_row);
 	vec3 lit;
 	vec3 shade;
 	vec3 lamp;

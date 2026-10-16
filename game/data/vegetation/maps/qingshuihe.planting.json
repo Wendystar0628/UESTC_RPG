@@ -1,0 +1,51 @@
+{
+  "format": "campus.vegetation.planting/1",
+  "owner": "WP-23",
+  "doc": "WLD-VEGETATION §2、§3、§4、§5.3；WLD-TERRAIN §4.4",
+  "notes": [
+    "本图的种植规则：线性种植按道路名取 network.json 的道路中心线（名字是数据，不写实体 ID）；片区按地名找锚点要素，在它的包络外扩 radius 内换用 mix 里的树种。",
+    "roads.rows.offset 是树列离道路中心线的距离（m，两侧对称）；spacing 是同一列的株距；stagger 让外列错开半个株距；band 是银杏大道最外列外侧的春季粉带（§3）。",
+    "osmTrees：OSM 树点按离它最近的线性种植道路取树种（near 以内），取不到时用 default（§3 的 OSM 行道树一条）。",
+    "groves：绿地里的片植，落点算法移植自 landscape.ts（ENG-ARCH §1）：绿地按面积的 0.84 次方加权，大草坪内部按聚簇噪声留空（§5.3），树冠不压楼、水、路、球场和停车场。",
+    "groves.mix 是缺省树种比例，areas 按地名覆盖；银杏只出现在 §2 登记的位置（银杏大道、主楼两侧、学生活动中心门前）。",
+    "washNear：这些地名附近的片植树干下半截刷白（§1.7）；水杉路整条刷白。"
+  ],
+  "roads": [
+    {
+      "name": "银杏大道",
+      "species": ["ginkgo"],
+      "rows": [{ "offset": 7.0 }, { "offset": 14.0, "stagger": true }],
+      "spacing": 3.6,
+      "wash": false,
+      "band": { "species": ["cherry", "plum"], "offset": 17.5, "spacing": 7.0 }
+    },
+    { "name": "水杉路", "species": ["metaseq"], "rows": [{ "offset": 5.0 }], "spacing": 5.5, "wash": true },
+    { "name": "丹桂路", "species": ["osmanthus"], "rows": [{ "offset": 4.5 }], "spacing": 5.0, "wash": false }
+  ],
+  "osmTrees": { "near": 15.0, "default": "camphor" },
+  "groves": {
+    "target": 1120,
+    "areaPerTree": 400.0,
+    "mix": {
+      "camphor": 0.5, "nanmu": 0.1, "osmanthus": 0.08, "koelreuteria": 0.08, "maple": 0.06, "cherry": 0.06,
+      "magnolia": 0.04, "crabapple": 0.04, "jacaranda": 0.03, "willow": 0.03, "wintersweet": 0.01, "redplum": 0.01
+    },
+    "areas": [
+      { "name": "主楼", "radius": 70.0, "mix": { "ginkgo": 0.5, "cherry": 0.3, "crabapple": 0.1, "camphor": 0.1 } },
+      { "name": "图书馆", "radius": 60.0, "mix": { "camphor": 0.5, "cherry": 0.4, "crabapple": 0.1 } },
+      { "name": "电子科技博物馆", "radius": 45.0, "mix": { "metaseq": 0.6, "camphor": 0.4 } },
+      { "name": "西湖", "radius": 40.0, "mix": { "metaseq": 0.4, "willow": 0.35, "camphor": 0.25 } },
+      { "name": "东湖", "radius": 40.0, "mix": { "willow": 0.35, "camphor": 0.25, "magnolia": 0.15, "crape": 0.15, "palm": 0.1 } },
+      { "name": "湿地公园", "radius": 60.0, "mix": { "apricot": 0.5, "willow": 0.3, "camphor": 0.2 } },
+      { "name": "荟文楼", "radius": 40.0, "mix": { "willow": 0.5, "camphor": 0.5 } },
+      { "name": "学生活动中心", "radius": 40.0, "mix": { "willow": 0.35, "ginkgo": 0.3, "palm": 0.2, "camphor": 0.15 } },
+      { "name": "芙蓉餐厅", "radius": 30.0, "mix": { "hibiscus": 0.7, "camphor": 0.3 } },
+      { "name": "银桦餐厅", "radius": 30.0, "mix": { "magnolia": 0.5, "plum": 0.5 } },
+      { "name": "创新中心", "radius": 40.0, "mix": { "metaseq": 0.7, "camphor": 0.3 } },
+      { "name": "四号科研楼", "radius": 40.0, "mix": { "metaseq": 0.7, "camphor": 0.3 } },
+      { "name": "网球场", "radius": 25.0, "mix": { "metaseq": 0.8, "camphor": 0.2 } },
+      { "name": "田径场", "radius": 60.0, "mix": { "camphor": 0.3, "maple": 0.2, "koelreuteria": 0.2, "osmanthus": 0.15, "cherry": 0.15 } }
+    ],
+    "washNear": [{ "name": "银杏苑", "radius": 60.0 }, { "name": "东湖", "radius": 25.0 }]
+  }
+}

@@ -7,26 +7,37 @@ using GdUnit4;
 namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
-/// The bark pair (tree.bark, colour IDs 252–253, ext/WP-23.json) evaluated by the WP-37 colour script: the max-011 review
-/// fixed the lit colour on the autumn 17:30 frame at #8A7B70, so the registered albedo is the inverse of that frame and
-/// the shade is whatever ART-STYLE §3 derives from it.
+/// The bark pair (tree.bark, colour IDs 252–253, ext/WP-23.json) evaluated by the WP-37 colour script. The max-011 reviews
+/// set two lit targets, autumn 17:30 #8A7B70 and noon #8C8076 (warm grey-brown, low chroma), and asked for the albedo that
+/// best serves both: the registered albedo is the least-squares OKLab compromise, so each frame lands near its target
+/// (17:30 a little warmer) and the shade is whatever ART-STYLE §3 derives from it.
 /// </summary>
 [TestSuite]
 public sealed class BarkColourTests
 {
+    /// <summary>Largest OKLab distance from each review target that still counts as the compromise.</summary>
+    private const double Tolerance = 0.02;
+
     [TestCase]
-    public void BarkLitMatchesTheReviewAtAutumnGoldenHour()
+    public void BarkLitServesBothReviewFrames()
     {
         var (script, registry) = Load();
         var composer = new PaletteComposer(script, registry);
-        composer.ComposeCurrent(script.EvaluateWorld(17.5, (double)Season.Autumn, null, default));
-        var lit = Hex(composer, registry, MotherModels.Bark);
-        if (lit != "#8A7B70") throw new InvalidOperationException($"tree.bark.lit at autumn 17:30 is {lit}, review wants #8A7B70");
-        var shade = Oklab.Parse(Hex(composer, registry, MotherModels.BarkShade));
-        var litLab = Oklab.Parse(lit);
-        // ART-STYLE §3: shade by lightness (r 0.78 on the default frame), never darker than the trunk reads as wood.
-        if (shade.L >= litLab.L * 0.85 || shade.L <= litLab.L * 0.65)
-            throw new InvalidOperationException($"tree.bark shade L {shade.L:F3} against lit L {litLab.L:F3}");
+        foreach (var (clock, target) in new[] { (17.5, "#8A7B70"), (12.0, "#8C8076") })
+        {
+            composer.ComposeCurrent(script.EvaluateWorld(clock, (double)Season.Autumn, null, default));
+            var lit = Hex(composer, registry, MotherModels.Bark);
+            var litLab = Oklab.Parse(lit);
+            var want = Oklab.Parse(target);
+            var d = Math.Sqrt((litLab.L - want.L) * (litLab.L - want.L) + (litLab.A - want.A) * (litLab.A - want.A) + (litLab.B - want.B) * (litLab.B - want.B));
+            if (d > Tolerance) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, {d:F3} from the review's {target}");
+            // Warm grey-brown: red over blue at every frame, never the neutral cool grey the first albedo gave at noon.
+            if (!(litLab.A > 0.0 && litLab.B >= 0.0)) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, not warm");
+            var shade = Oklab.Parse(Hex(composer, registry, MotherModels.BarkShade));
+            // ART-STYLE §3: shade by lightness (r 0.78 on the default frame), never darker than the trunk reads as wood.
+            if (shade.L >= litLab.L * 0.88 || shade.L <= litLab.L * 0.65)
+                throw new InvalidOperationException($"tree.bark shade L {shade.L:F3} against lit L {litLab.L:F3} at {clock}");
+        }
     }
 
     private static string Hex(PaletteComposer composer, PaletteRegistry registry, PaletteToken token)

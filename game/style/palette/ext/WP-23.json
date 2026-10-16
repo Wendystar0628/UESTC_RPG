@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "entries": [
-    {"token": "tree.bark.lit", "id": 252, "albedo": [0.419833, 0.429017, 0.466209], "materialClass": "building", "seasonal": false, "role": "lit"},
-    {"token": "tree.bark.shade", "id": 253, "albedo": [0.419833, 0.429017, 0.466209], "materialClass": "building", "seasonal": false, "role": "shade"}
+    {"token": "tree.bark.lit", "id": 252, "albedo": [0.429833, 0.414017, 0.428709], "materialClass": "building", "seasonal": false, "role": "lit"},
+    {"token": "tree.bark.shade", "id": 253, "albedo": [0.429833, 0.414017, 0.428709], "materialClass": "building", "seasonal": false, "role": "shade"}
   ]
 }

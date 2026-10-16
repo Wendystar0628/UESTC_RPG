@@ -102,6 +102,23 @@ public static class MotherModels
     /// <summary>Card half-diagonal cap as a fraction of the crown diameter, so small crowns keep their cards inside the 5% band.</summary>
     public const float CardSizeOfDiameter = 0.035f;
 
+    /// <summary>Cards per cluster (max-011 review ④: 3–5, no lone card).</summary>
+    public const int ClusterMin = 3;
+    public const int ClusterMax = 5;
+
+    /// <summary>
+    /// How deep a cluster's centre sits inside the outer crown mass, as a fraction of the card radius (half diagonal): at
+    /// least 30% (max-011 review ④), so each cluster grows out of the outline instead of hovering on it.
+    /// </summary>
+    public const float ClusterPressMin = 0.3f;
+    public const float ClusterPressMax = 0.55f;
+
+    /// <summary>Spread of the cards around their cluster centre, in card edges (tangential), so they overlap into one clump.</summary>
+    public const float ClusterSpread = 0.45f;
+
+    /// <summary>Depth of a level-1 icosphere's faces below its smooth lumpy surface, as a fraction of the mass radius.</summary>
+    public const float FacetSag = 0.05f;
+
     /// <summary>Crown-mass AO by depth below the shell: 1 on the shell, 1 − this deep in the crown (pushes the terminator only).</summary>
     public const float MassAoDepth = 0.15f;
 
@@ -150,7 +167,10 @@ public static class MotherModels
         var palm = species.Form == "palm";
         var cardTarget = palm ? (level switch { VegLevel.L0Plus => 20, VegLevel.L0 => 16, _ => 10 }) : CardCount(species.Crown, level);
         var allCards = palm ? PalmFronds(plan, 20) : PlaceCards(plan, shell, CardCount(species.Crown, VegLevel.L0Plus));
-        var drawn = allCards.Take(cardTarget).ToList();
+        // Lower levels keep whole clusters: the prefix ends on the cluster that crosses the card target.
+        var take = Math.Min(cardTarget, allCards.Count);
+        while (take < allCards.Count && take > 0 && allCards[take].Cluster == allCards[take - 1].Cluster) take++;
+        var drawn = allCards.Take(take).ToList();
         foreach (var card in drawn) WriteCard(crown, plan, shell, card, ids);
         var cards = crown.Cards;
         // Masses that carry a drawn card stay, so no card is left floating where its mass was dropped.
@@ -220,9 +240,13 @@ public static class MotherModels
 
     private readonly record struct Ids(byte Leaf, byte Bark, byte Whitewash);
 
-    /// <summary>One leaf card; Owner is the plan mass it sits on (that mass is never pruned while the card is drawn).</summary>
+    /// <summary>
+    /// One leaf card; Owner is the plan mass it sits on (that mass is never pruned while the card is drawn). Cards of one
+    /// cluster share Cluster, the first card's index (their importance rank), H2 (they shed and fold away together) and
+    /// the winter anchor; H3 stays per card (bloom and the card's own leaf shape).
+    /// </summary>
     private sealed record Card(Vector3 Center, Vector3 Normal, Vector3 U, Vector3 V, float Width, float Height,
-        float H2, float H3, Vector3 Anchor, Vector3 BlobCenter, int Owner);
+        float H2, float H3, Vector3 Anchor, Vector3 BlobCenter, int Owner, int Cluster);
 
     /// <summary>
     /// Icosphere level of one mass: cloud balls 2 at L0+ and 1 below (ENG-PERF §9); card and mixed masses sit under
@@ -458,19 +482,21 @@ public static class MotherModels
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Cards (WLD-VEGETATION §11.2, max-011 review): every card sits on the outermost crown mass along a ray aimed at
-    // the crown shell, at most CardReach × diameter outside it, facing the shell normal; veg_card then keeps them at
-    // full size only on the silhouette ring. Directions follow a Halton sequence, so every prefix (the lower levels)
-    // still covers the whole crown evenly.
+    // Cards (WLD-VEGETATION §11.2, max-011 reviews): cards come in clusters of 3–5. A cluster's centre sits on the
+    // outermost crown mass along a ray aimed at the crown shell, pressed into it by at least 30% of the card radius,
+    // and its cards overlap around that centre facing the shell normal, so each clump grows out of the outline and none
+    // hovers alone. veg_card keeps them at full size only on the silhouette ring. Cluster directions follow a Halton
+    // sequence, so every prefix of whole clusters (the lower levels) still covers the whole crown evenly.
     // ---------------------------------------------------------------------------------------------------------
 
     private static List<Card> PlaceCards(TreePlan plan, CrownShell shell, int total)
     {
-        var cards = new List<Card>(total);
+        var cards = new List<Card>(total + ClusterMax);
         var crown = plan.Species.Crown;
         var bottom = plan.CrownCenter.Y - plan.CrownRy;
-        var reach = CardReach * shell.Diameter;
         var bumps = plan.Blobs.Select((b, i) => Bumps(plan, b, i)).ToArray();
+        var aspect = plan.Species.Card == CardShape.Strand ? 1.8f : 1f;
+        var spread = 0.5f * MathF.Sqrt(1f + aspect * aspect);
         for (var i = 1; cards.Count < total && i <= total * 4; i++)
         {
             var z = 1f - 2f * Halton(i, 2);
@@ -482,19 +508,36 @@ public static class MotherModels
             var target = shell.EllipsoidPoint(d);
             var origin = shell.Center + (target - shell.Center) * 2f;
             if (!OuterHit(plan, bumps, origin, shell.Center - origin, out var hit, out var owner)) continue;
-            var n = shell.Normal(hit);
-            var aspect = plan.Species.Card == CardShape.Strand ? 1.8f : 1f;
-            var spread = 0.5f * MathF.Sqrt(1f + aspect * aspect);
             var size = MathF.Min(plan.Form.CardSize * plan.Range(0.85f, 1.2f), CardSizeOfDiameter * shell.Diameter / spread);
-            // Centre on the mass surface or up to 0.3 card inside it: silhouette cards then overlap the mass edge instead
-            // of hovering beside it, and a corner (half diagonal ≤ 3.5% of the diameter) stays inside the 5% band.
-            var center = hit + n * plan.Range(-0.3f * size, MathF.Min(0f, 0.8f * reach - spread * size));
-            var droop = plan.Form.Droop;
-            if (crown == CrownType.Cloud && center.Y < bottom + plan.CrownRy * 0.6f) droop = MathF.Max(droop, 0.7f);
-            var (u, v) = Frame(n, plan.Next() * 6.2831853f, droop);
+            var radius = spread * size;
+            // The cluster centre is pressed into the owning mass along its radial direction at the hit (so the clump stays
+            // in that mass even where the shell normal grazes it), measured from the drawn faceted mass, which lies up to
+            // FacetSag of the mass radius inside the smooth lump. A card corner then reaches at most (1 − press) card radii
+            // out, well inside the 5% band; the cards themselves face the shell.
             var blob = plan.Blobs[owner];
+            var m = Vector3.Normalize(hit - blob.Center + new Vector3(0f, 1e-6f, 0f));
+            var clusterCenter = hit - m * (radius * plan.Range(ClusterPressMin, ClusterPressMax) + blob.Radius * FacetSag);
             var anchor = blob.Anchor + plan.RandomDirection() * plan.Range(0f, 0.3f);
-            cards.Add(new Card(center, n, u, v, size, size * aspect, plan.Next(), plan.Next(), anchor, blob.Center, owner));
+            var h2 = plan.Next();
+            var cluster = cards.Count;
+            var members = plan.Count(ClusterMin, ClusterMax);
+            var tangent = Vector3.Normalize(Vector3.Cross(MathF.Abs(m.Y) < 0.95f ? Vector3.UnitY : Vector3.UnitX, m));
+            var bitangent = Vector3.Cross(m, tangent);
+            var turn = plan.Next() * 6.2831853f;
+            for (var k = 0; k < members; k++)
+            {
+                // Members ring the centre (the first one on it), never further out than the centre itself.
+                var a = turn + k * 6.2831853f / members;
+                var r = k == 0 ? 0f : size * ClusterSpread * plan.Range(0.6f, 1f);
+                var center = clusterCenter + (tangent * DetMath.Cos(a) + bitangent * DetMath.Sin(a)) * r
+                    - m * (radius * plan.Range(0f, 0.15f) + r * r / MathF.Max(0.2f, 2f * blob.Radius));
+                var cn = shell.Normal(center);
+                var droop = plan.Form.Droop;
+                if (crown == CrownType.Cloud && center.Y < bottom + plan.CrownRy * 0.6f) droop = MathF.Max(droop, 0.7f);
+                var (u, v) = Frame(cn, plan.Next() * 6.2831853f, droop);
+                var card = size * plan.Range(0.88f, 1.08f);
+                cards.Add(new Card(center, cn, u, v, card, card * aspect, h2, plan.Next(), anchor, blob.Center, owner, cluster));
+            }
         }
         return cards;
     }
@@ -553,7 +596,7 @@ public static class MotherModels
             var normal = Vector3.Normalize(Vector3.Cross(side, along));
             var center = head.Center + along * (size * 0.5f + head.Radius * 0.6f);
             // Fronds keep their own plane normal: veg_card turns each frond about it.
-            cards.Add(new Card(center, normal, side, along, size, size, plan.Next(), plan.Next(), head.Center, head.Center, 0));
+            cards.Add(new Card(center, normal, side, along, size, size, plan.Next(), plan.Next(), head.Center, head.Center, 0, i));
         }
         return cards;
     }
@@ -586,8 +629,9 @@ public static class MotherModels
     private static void WriteCard(MeshWriter w, TreePlan plan, CrownShell shell, Card card, Ids ids)
     {
         var first = w.VertexCount;
-        // Palm fronds are few and all needed at every level, so they never shrink in the level bands.
-        var importance = plan.Form.Id == "palm" ? 0f : w.Cards / (float)Math.Max(1, CardCapacity(plan));
+        // Palm fronds are few and all needed at every level, so they never shrink in the level bands. A cluster shares the
+        // rank of its first card, so the level bands fold whole clusters away.
+        var importance = plan.Form.Id == "palm" ? 0f : card.Cluster / (float)Math.Max(1, CardCapacity(plan));
         var t0 = Gradient(plan, card.Center, plan.Form.Id == "palm" ? card.Normal : shell.Normal(card.Center));
         ReadOnlySpan<Vector2> corners = [new(0f, 0f), new(1f, 0f), new(1f, 1f), new(0f, 1f)];
         foreach (var uv in corners)

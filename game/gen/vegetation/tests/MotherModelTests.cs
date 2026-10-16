@@ -154,6 +154,36 @@ public sealed class MotherModelTests
     }
 
     [TestCase]
+    public void CardsComeInPressedClusters()
+    {
+        // max-011 review ④: cards come 3–5 to a cluster at every level (a level keeps whole clusters), the cards of a
+        // cluster share their rank and h2, and the cluster's first card (its centre) sits inside a crown mass (measured on
+        // the L0+ masses, the finest outline; lower levels draw the same masses with fewer vertices).
+        var (table, palette) = Data.Value;
+        foreach (var s in table.Species.Where(s => s.Form != "palm"))
+            foreach (var level in new[] { VegLevel.L0Plus, VegLevel.L0, VegLevel.L1 })
+            {
+                var model = MotherModels.Build(s, 0, level, palette);
+                var masses = MassSpheres(MotherModels.Build(s, 0, VegLevel.L0Plus, palette));
+                var c0 = model.Crown.Custom0!;
+                var c2 = model.Crown.Custom2!;
+                var clusters = Enumerable.Range(0, model.Cards).GroupBy(i => c2[i * 16 + 3]).ToList();
+                foreach (var cluster in clusters)
+                {
+                    var cards = cluster.ToList();
+                    if (cards.Count is < MotherModels.ClusterMin or > MotherModels.ClusterMax)
+                        throw new InvalidOperationException($"{s.Id}/{level}: a cluster of {cards.Count} cards");
+                    if (cards.Select(i => c0[i * 16 + 3]).Distinct().Count() != 1)
+                        throw new InvalidOperationException($"{s.Id}/{level}: cluster cards differ in h2");
+                    var centre = new Vector3(c0[cards[0] * 16], c0[cards[0] * 16 + 1], c0[cards[0] * 16 + 2]);
+                    var outside = masses.Min(m => Vector3.Distance(centre, m.Center) - m.Radius);
+                    if (outside > 0f)
+                        throw new InvalidOperationException($"{s.Id}/{level}: cluster centre {outside:F3} m outside every crown mass (diameter {model.CrownDiameter:F1})");
+                }
+            }
+    }
+
+    [TestCase]
     public void CrownSharesOneShellNormal()
     {
         // max-011: where two masses meet on the outside of the crown, their vertices carry nearly the same normal (the
