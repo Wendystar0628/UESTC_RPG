@@ -18,6 +18,8 @@ public sealed record EntranceDecl(string Id, Vector3 Outside, Vector3 Inside, fl
     // Outside：门外落点（门外 2.5 m），供地图传送（SYS-ATLAS §7.3）；Inside：门内 3 m 的点
     public Vector3 Center { get; init; }       // 门中心（SYS-ATLAS 的室内门口标记、G18 的 ≤ 0.5 m 比对，WLD-INTERIORS §15）
     public float YawDeg { get; init; }         // 门外法线的方位角，0 = 北、90 = 东，与点位偏航同一约定（WLD-INTERIORS §2.17）
+    /// <summary>Absolute world Y of the doorway top in metres; zero means unknown, never a relative height.</summary>
+    public float HeadY { get; init; }
 }
 public sealed record ElevatorDecl(string Id, int StoreyA, int StoreyB, Box3 CabA, Box3 CabB);   // 关门换位两站（WLD-INTERIORS §3）
 

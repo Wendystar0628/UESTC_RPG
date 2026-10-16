@@ -107,20 +107,20 @@
           "id": "b2.rear",
           "featureId": "qsh:way:687370085",
           "doorCenter": [
-            -322.2,
+            -320.6779,
             2.6,
-            465.3
+            463.2164
           ],
           "facingDeg": 37,
           "outsideLanding": [
-            -320.8,
+            -319.2779,
             2.6,
-            463.3
+            461.2164
           ],
           "insideLanding": [
-            -324.0054,
+            -322.4833,
             2.6,
-            467.6959
+            465.6123
           ],
           "clearWidth": 1.1,
           "open": true
@@ -129,20 +129,20 @@
           "id": "b2.front",
           "featureId": "qsh:way:687370085",
           "doorCenter": [
-            -346.3,
+            -346.5434,
             2.6,
-            497.6
+            499.9265
           ],
           "facingDeg": 216,
           "outsideLanding": [
-            -347.8,
+            -348.0434,
             2.6,
-            499.6
+            501.9265
           ],
           "insideLanding": [
-            -344.5366,
+            -344.7800,
             2.6,
-            495.1729
+            497.4994
           ],
           "clearWidth": 1.1,
           "open": true
@@ -250,12 +250,11 @@
     },
     {
       "featureIds": [
-        "qsh:way:779496166",
         "qsh:relation:14153711",
         "qsh:way:779496169"
       ],
       "sourceFeatureIds": [
-        "osm:way:779496166",
+        "osm:relation:10807930",
         "osm:relation:14153711",
         "osm:way:779496169"
       ],
@@ -275,7 +274,7 @@
       "entrances": [
         {
           "id": "six.c.east",
-          "featureId": "qsh:way:779496166",
+          "featureId": "qsh:relation:14153711",
           "doorCenter": [
             -588.3,
             0,
@@ -346,6 +345,7 @@
         {
           "id": "xz1.hall",
           "featureId": "qsh:way:217855218",
+          "heightRef": "pad",
           "doorCenter": [
             147.9,
             1,

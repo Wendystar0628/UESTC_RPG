@@ -1170,6 +1170,8 @@ Campus.Contracts.Bake.CollisionTile.StatisticsJson.get -> string!
 Campus.Contracts.Bake.CollisionTile.Tile.get -> Campus.Contracts.TileKey
 Campus.Contracts.Bake.IBakeCommand
 Campus.Contracts.Bake.IBakeCommand.Run(Campus.Contracts.Startup.BootContext! context) -> System.Threading.Tasks.Task<int>!
+Campus.Contracts.Bake.IBakeContextSource
+Campus.Contracts.Bake.IBakeContextSource.GetPreparedContext(Campus.Contracts.Maps.IMapContext! context, string! moduleId) -> Campus.Contracts.BuildContext!
 Campus.Contracts.Bake.IBakeHandle
 Campus.Contracts.Bake.IBakeHandle.Collision.get -> Campus.Contracts.Bake.CollisionTile?
 Campus.Contracts.Bake.IBakeHandle.Error.get -> string?
@@ -1934,6 +1936,8 @@ Campus.Contracts.EntranceDecl.ClearWidth.init -> void
 Campus.Contracts.EntranceDecl.Deconstruct(out string! Id, out System.Numerics.Vector3 Outside, out System.Numerics.Vector3 Inside, out float ClearWidth, out bool Open) -> void
 Campus.Contracts.EntranceDecl.EntranceDecl(string! Id, System.Numerics.Vector3 Outside, System.Numerics.Vector3 Inside, float ClearWidth, bool Open) -> void
 Campus.Contracts.EntranceDecl.Equals(Campus.Contracts.EntranceDecl? other) -> bool
+Campus.Contracts.EntranceDecl.HeadY.get -> float
+Campus.Contracts.EntranceDecl.HeadY.init -> void
 Campus.Contracts.EntranceDecl.Id.get -> string!
 Campus.Contracts.EntranceDecl.Id.init -> void
 Campus.Contracts.EntranceDecl.Inside.get -> System.Numerics.Vector3
@@ -2754,6 +2758,7 @@ Campus.Contracts.Maps.IMapContext
 Campus.Contracts.Maps.IMapContext.BakeRoot.get -> string!
 Campus.Contracts.Maps.IMapContext.DataRoot.get -> string!
 Campus.Contracts.Maps.IMapContext.Descriptor.get -> Campus.Contracts.Maps.MapDescriptor!
+Campus.Contracts.Maps.IMapContext.SourceInputs.get -> Campus.Contracts.BuildInputSnapshot!
 Campus.Contracts.Maps.IMapContext.World.get -> Campus.Contracts.IWorldModel!
 Campus.Contracts.Maps.IMapDataParticipant
 Campus.Contracts.Maps.IMapDataParticipant.Prepare(Campus.Contracts.Maps.IMapContext! context) -> System.Threading.Tasks.Task!

@@ -54,6 +54,8 @@ public sealed record MapDescriptor(
 public interface IMapContext                 // 纯数据；场景 RID 和物理空间留在 Godot 侧的 kernel/map
 {
     MapDescriptor Descriptor { get; }
+    /// <summary>The same frozen map-relative input bytes used to parse World. Empty is only a compatibility default for old stubs/fixtures.</summary>
+    BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
     IWorldModel World { get; }               // 切图后失效，任何节点都不得跨图持有
     string DataRoot { get; }                 // "res://data/maps/qingshuihe/"
     string BakeRoot { get; }                 // "res://bake/qingshuihe/boot/"（启动集根目录）；本机缓存由 IBakeService 管（§4）

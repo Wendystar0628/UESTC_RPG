@@ -45,7 +45,12 @@ public class MapDataSource
     /// <summary>CPU-only resource preparation, shared by live travel and the pre-composition bake command.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
-        var files = ReadWorldFiles(entry); // Mount the startup pack before reading its resident walk data.
+        var worldFiles = ReadWorldFiles(entry); // Mount the startup pack before reading its resident walk data.
+        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
+        foreach (var pair in worldFiles) files.Add(pair.Key, pair.Value);
+        // Preserve the bake caller's existing all-map-JSON input coverage, but capture it BEFORE world parsing.
+        // Global assets and BakeRoot products are separate scopes. The bake hasher still selects only its dependencies.
+        ReadJsonDirectory(entry.DataRoot, "", files);
         return new(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"));
     }
 
@@ -61,7 +66,8 @@ public class MapDataSource
     {
         if (!DirAccess.DirExistsAbsolute(root + relative)) return;
         foreach (var name in DirAccess.GetFilesAt(root + relative).Order(StringComparer.Ordinal))
-            if (name.EndsWith(".json", StringComparison.Ordinal)) output[relative + name] = ReadRequired(root + relative + name);
+            if (name.EndsWith(".json", StringComparison.Ordinal) && !output.ContainsKey(relative + name))
+                output[relative + name] = ReadRequired(root + relative + name);
         foreach (var name in DirAccess.GetDirectoriesAt(root + relative).Order(StringComparer.Ordinal))
         {
             MapCatalog.ValidateRelative(name);

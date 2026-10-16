@@ -7,9 +7,20 @@ using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Maps;
 
-/// <summary>Detached CPU input. Walk bytes come from BakeRoot and never masquerade as DataRoot input.</summary>
+/// <summary>One frozen map input version. Walk bytes come from BakeRoot and never masquerade as DataRoot input.</summary>
 public sealed record MapLoadInput(MapCatalogEntry Entry,
-    IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files, ReadOnlyMemory<byte> WalkBytes);
+    IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files, ReadOnlyMemory<byte> WalkBytes)
+{
+    private BuildInputSnapshot _sourceInputs = BuildInputSnapshot.Freeze(Files);
+    /// <summary>The original positional constructor and deconstruction remain available; map bytes freeze at construction.</summary>
+    public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files
+    {
+        get => _sourceInputs.Entries;
+        init => _sourceInputs = BuildInputSnapshot.Freeze(value);
+    }
+    /// <summary>with { WalkBytes = ... } shares this exact snapshot; with { Files = ... } freezes only the new record's inputs.</summary>
+    public BuildInputSnapshot SourceInputs => _sourceInputs;
+}
 
 public static class MapWorldLoading
 {
@@ -45,8 +56,15 @@ public static class MapWorldLoading
         return loaded;
     }
 
-    public static IMapContext CreateContext(MapCatalogEntry entry, WorldModelLoadResult loaded)
+    /// <summary>Compatibility path for old fixtures; formal loading must use the snapshot overload.</summary>
+    public static IMapContext CreateContext(MapCatalogEntry entry, WorldModelLoadResult loaded) =>
+        CreateContext(entry, loaded, BuildInputSnapshot.Empty);
+
+    public static IMapContext CreateContext(MapCatalogEntry entry, WorldModelLoadResult loaded, BuildInputSnapshot sourceInputs)
     {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(loaded);
+        ArgumentNullException.ThrowIfNull(sourceInputs);
         var descriptor = entry.Descriptor with { Geo = loaded.Geo, Center = loaded.Center };
         if (descriptor.Env.Outskirts is not null)
         {
@@ -61,7 +79,7 @@ public static class MapWorldLoading
                 TileMax = new((int)MathF.Ceiling(max.X / 64f) - 1, (int)MathF.Ceiling(max.Y / 64f) - 1)
             };
         }
-        return new MapContext(descriptor, loaded.World, entry.DataRoot, entry.BakeRoot);
+        return new MapContext(descriptor, loaded.World, entry.DataRoot, entry.BakeRoot) { SourceInputs = sourceInputs };
     }
 
     public static WalkBakeData? ReadWalk(MapLoadInput input)

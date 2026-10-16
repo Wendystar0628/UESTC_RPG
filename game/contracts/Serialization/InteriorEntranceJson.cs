@@ -8,7 +8,8 @@ public static class InteriorEntranceJson
 {
     /// <summary>
     /// Missing heightRef and "absolute" preserve authored coordinates without querying terrain.
-    /// "pad" adds terrain.PadY(feature) once to all three Y coordinates; authored floor offsets remain intact.
+    /// "pad" adds terrain.PadY(feature) once to all three Y coordinates and any known headY.
+    /// Missing or zero headY remains unknown (zero); a resolved known headY must not collide with that sentinel.
     /// The result contains no height reference. Call only on raw catalog records, never on a resolved EntranceDecl.
     /// </summary>
     /// <remarks>
@@ -23,7 +24,7 @@ public static class InteriorEntranceJson
         foreach (var property in entrance.EnumerateObject())
         {
             if (property.Name is not ("id" or "featureId" or "doorCenter" or "facingDeg" or
-                "outsideLanding" or "insideLanding" or "clearWidth" or "open" or "heightRef"))
+                "outsideLanding" or "insideLanding" or "clearWidth" or "open" or "heightRef" or "headY"))
                 throw new JsonException($"Unknown entrance field: {property.Name}.");
             if (!seen.Add(property.Name)) throw new JsonException($"Duplicate entrance field: {property.Name}.");
         }
@@ -37,6 +38,7 @@ public static class InteriorEntranceJson
         var center = Vector(Required(entrance, "doorCenter"), "doorCenter");
         var width = Number(Required(entrance, "clearWidth"), "clearWidth");
         var yaw = Number(Required(entrance, "facingDeg"), "facingDeg");
+        var headY = entrance.TryGetProperty("headY", out var head) ? Number(head, "headY") : 0f;
         if (width < 1.1f) throw new JsonException($"Entrance '{id}' clearWidth must be at least 1.1 m.");
         var open = Required(entrance, "open");
         if (open.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
@@ -61,11 +63,17 @@ public static class InteriorEntranceJson
                 outside = Raise(outside, padY, id, "outsideLanding");
                 inside = Raise(inside, padY, id, "insideLanding");
                 center = Raise(center, padY, id, "doorCenter");
+                if (headY != 0)
+                {
+                    headY += padY;
+                    if (!float.IsFinite(headY) || headY == 0)
+                        throw new JsonException($"Entrance '{id}' resolved headY must be finite and nonzero; zero is reserved for unknown.");
+                }
                 break;
             default:
                 throw new JsonException($"Unknown heightRef '{heightRef}' for entrance '{id}'; expected 'absolute' or 'pad'.");
         }
-        return new(id, outside, inside, width, open.GetBoolean()) { Center = center, YawDeg = yaw };
+        return new(id, outside, inside, width, open.GetBoolean()) { Center = center, YawDeg = yaw, HeadY = headY };
     }
 
     private static JsonElement Required(JsonElement value, string name) => value.TryGetProperty(name, out var field)

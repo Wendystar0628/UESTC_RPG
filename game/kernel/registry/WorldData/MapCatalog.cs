@@ -192,6 +192,8 @@ public sealed record MapCatalogEntry(MapDescriptor Descriptor, string DataRoot, 
     IReadOnlyList<Waypoint> Waypoints)
 {
     public IMapContext CreateContext(WorldModelLoadResult loaded) => MapWorldLoading.CreateContext(this, loaded);
+    public IMapContext CreateContext(WorldModelLoadResult loaded, BuildInputSnapshot sourceInputs) =>
+        MapWorldLoading.CreateContext(this, loaded, sourceInputs);
 
     public MapSpawn ResolveSpawn(string id)
     {

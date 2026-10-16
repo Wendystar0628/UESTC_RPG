@@ -124,7 +124,12 @@
                   "type": "string",
                   "enum": ["absolute", "pad"],
                   "default": "absolute",
-                  "description": "Y reference for outsideLanding, insideLanding and doorCenter together. pad adds the corresponding feature PadY once; absolute preserves authored coordinates."
+                  "description": "Y reference for outsideLanding, insideLanding, doorCenter and a nonzero headY. pad adds the corresponding feature PadY once; absolute preserves authored coordinates. Missing or zero headY stays unknown."
+                },
+                "headY": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Doorway top Y in the record heightRef. Missing or zero means unknown and is never offset. A nonzero value resolves to absolute EntranceDecl.HeadY; a known resolved value must be finite and nonzero."
                 },
                 "doorCenter": {
                   "type": "array",
