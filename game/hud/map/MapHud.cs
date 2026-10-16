@@ -70,6 +70,7 @@ public partial class MapHud : Node, IMapAware
     private Vector2 _lastFeet;
     private long _instance = -1;
     private float _speed;
+    private bool _resetMinimapView = true;
     private float _regionClock;
     private string? _regionShown;
     private string? _regionCandidate;
@@ -259,6 +260,8 @@ public partial class MapHud : Node, IMapAware
             AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
             _ => throw new InvalidOperationException(_flow.State.ToString()),
         };
+        // 离开 Playing 期间（标题页、进出过场）机位会动而 Instance 不变；回到 Playing 的第一帧要重置一次
+        if (!playing) _resetMinimapView = true;
         if (!playing && _open) Close(restoreRoam: false);
         if (_pending is { } pending && pending.Done.IsCompleted) FinishTravel();
 
@@ -273,13 +276,16 @@ public partial class MapHud : Node, IMapAware
     {
         var feet = _observer.Feet;
         var at = new Vector2(feet.X, feet.Z);
-        if (_world.Instance != _instance)
+        if (_world.Instance != _instance || _resetMinimapView)
         {
-            // 新的世界实例（读档、新游戏）：平滑量直接落到新值（ENG-ARCH §2）
+            // 新的世界实例（读档、新游戏），或不连续地回到 Playing（同一世界继续）：
+            // 平滑量与标记参考直接落到新值，与冷启动恢复同一起点（ENG-ARCH §2）
             _instance = _world.Instance;
             _lastFeet = at;
             _speed = 0;
             _halfWidth.Snap(TargetHalfWidth(0));
+            _resetMinimapView = false;
+            _minimap.Markers.Invalidate();
         }
         var v = dt > 0 ? (at - _lastFeet).Length() / dt : 0;
         _lastFeet = at;
