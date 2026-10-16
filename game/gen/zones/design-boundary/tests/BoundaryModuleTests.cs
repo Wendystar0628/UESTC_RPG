@@ -326,6 +326,8 @@ public sealed class BoundaryModuleTests
     {
         var data = DataDirectory();
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json", "overlay/boundary.overlay.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "boundary.d"), "*.json").Order(StringComparer.Ordinal)
+                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
