@@ -42,8 +42,14 @@ public sealed class FurnitureLayoutTests
         // Rest stops only where a walk takes a bench (Opus review 12:15): the avenue's north half and Shuisha Road's walk.
         Check(a.Count(FurnitureKind.Bench) >= 8, $"{a.Count(FurnitureKind.Bench)} benches");
         Check(a.Count(FurnitureKind.Bin) * 2 >= a.Count(FurnitureKind.Bench) - 2 && a.Count(FurnitureKind.Bin) <= a.Count(FurnitureKind.Bench), "a bin at every other rest stop");
-        // SYS-ATLAS §6: six kiosks and seven posts, less A01 (on a carriageway) and A05 (in water) until their gate plazas land.
-        Check(a.Count(FurnitureKind.AtlasKiosk) == 4 && a.Count(FurnitureKind.AtlasPost) == 7, "four kiosks and seven posts");
+        // SYS-ATLAS §6: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
+        // moving an anchor (WP-48c) never needs a new number here.
+        var landings = AnchorLandings(World.Value);
+        var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
+        var posts = landings.Count(l => l.Form == "post" && l.Landing == Landing.Open);
+        Check(kiosks + posts > 0, "no anchor lands on open ground");
+        Check(a.Count(FurnitureKind.AtlasKiosk) == kiosks && a.Count(FurnitureKind.AtlasPost) == posts,
+            $"{a.Count(FurnitureKind.AtlasKiosk)} kiosks and {a.Count(FurnitureKind.AtlasPost)} posts for {kiosks} and {posts} anchors on open ground");
         Check(a.Count(FurnitureKind.BusStop) == 2, $"{a.Count(FurnitureKind.BusStop)} shuttle stops");
         var open = World.Value.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open).Select(e => e.Id).Distinct().Count();
         Check(new[] { FurnitureKind.EntranceMat, FurnitureKind.OpenSign, FurnitureKind.EntranceLamp }.All(k => a.Count(k) == open), $"one kit at each of {open} open entrances");
@@ -93,26 +99,39 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
     {
-        // Opus 12:38: until the gate plazas land (18c3, WP-30) A01 lands on a carriageway and A05 in water; neither gets a kiosk.
+        // An anchor whose point lands on a carriageway, in water or in a building gets nothing, and the layout says so in one log
+        // line. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
         var world = World.Value;
         var layout = FurniturePlanner.Build(world);
         Console.WriteLine("furniture log: " + string.Join(" | ", layout.Log));
-        foreach (var (id, where) in new[] { ("A01", "on a carriageway"), ("A05", "in water") })
+        var landings = AnchorLandings(world);
+        foreach (var (feature, form, _, landing) in landings)
         {
-            Check(!layout.Items.Any(i => i.Key == "anchor:design:anchor:" + id), $"{id} placed");
-            Check(layout.Log.Count(l => l == $"anchor design:anchor:{id} (kiosk) not placed: its point lands {where}") == 1, $"{id} not logged as {where}");
+            var id = feature.Id.Value;
+            var placed = layout.Items.Any(i => i.Key == "anchor:" + id);
+            var left = layout.Log.Where(l => l.StartsWith($"anchor {id} ", StringComparison.Ordinal) && l.Contains("not placed", StringComparison.Ordinal)).ToList();
+            if (landing == Landing.Open)
+            {
+                Check(placed, $"{id} lands on open ground but is not placed");
+                Check(left.Count == 0, $"{id} is placed but logged as not placed");
+                continue;
+            }
+            Check(!placed, $"{id} placed, though its point lands {Where(landing)}");
+            Check(left.SequenceEqual([$"anchor {id} ({form}) not placed: its point lands {Where(landing)}"]), $"{id} not logged once as {Where(landing)}");
         }
-        // A building: the same anchor moved onto a building's centre is left out too, and nothing else changes.
+        Check(layout.Log.Count(l => l.Contains("not placed", StringComparison.Ordinal)) == landings.Count(l => l.Landing != Landing.Open), "a log line without a left-out anchor");
+        // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
         var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
             .First(b => PlanGeometry.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanGeometry.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
-        var a02 = world.Features[new("design:anchor:A02")];
-        var ring = ((PolygonGeometry)a02.Geometry).Rings.Outer;
-        var shift = building.Centre - ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
-        var moved = a02 with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
+        var anchor = landings.First(l => l.Landing == Landing.Open);
+        var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
+        var shift = building.Centre - anchor.Centre;
+        var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
         var indoors = FurniturePlanner.Build(new FeatureWorld(world, moved));
-        Check(!indoors.Items.Any(i => i.Key == "anchor:design:anchor:A02"), "a kiosk stands in a building");
-        Check(indoors.Log.Contains("anchor design:anchor:A02 (kiosk) not placed: its point lands in a building"), "the building fallback is not logged");
+        var name = anchor.Feature.Id.Value;
+        Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
+        Check(indoors.Log.Contains($"anchor {name} ({anchor.Form}) not placed: its point lands in a building"), "the building fallback is not logged");
         Check(indoors.Items.Count == layout.Items.Count - 1, "the building fallback changed other furniture");
     }
 
@@ -350,6 +369,34 @@ public sealed class FurnitureLayoutTests
         var l0 = Level(LodLevel.L0)!;
         return (l0.Meshes.Sum(m => m.Index.Length / 3), Level(LodLevel.L1)?.Meshes.Sum(m => m.Index.Length / 3) ?? 0, l0.Meshes.Count);
     }
+
+    /// <summary>
+    /// Every kiosk and post anchor of the world in ID order, with its footprint centre and what that point lands on: the data the
+    /// planner places by, so the tests' expectations follow the anchor data.
+    /// </summary>
+    private static List<(WorldFeature Feature, string Form, Vector2 Centre, Landing Landing)> AnchorLandings(IWorldModel world)
+    {
+        var site = new StreetSite(world);
+        var found = new List<(WorldFeature, string, Vector2, Landing)>();
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            if (feature.Geometry is not PolygonGeometry { Rings.Outer: { Count: >= 3 } ring }) continue;
+            if (feature.Props is not { ValueKind: JsonValueKind.Object } props || !props.TryGetProperty("form", out var value) || value.ValueKind != JsonValueKind.String) continue;
+            var form = value.GetString();
+            if (form is not ("kiosk" or "post")) continue;
+            var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+            found.Add((feature, form, centre, site.LandingAt(centre)));
+        }
+        return found;
+    }
+
+    private static string Where(Landing landing) => landing switch
+    {
+        Landing.Carriageway => "on a carriageway",
+        Landing.Water => "in water",
+        Landing.Building => "in a building",
+        _ => throw new ArgumentOutOfRangeException(nameof(landing), landing, "Open ground is not a fallback."),
+    };
 
     private static Vector2 Front(Matrix4x4 at) => Vector2.Normalize(new(-at.M31, -at.M33));
 
