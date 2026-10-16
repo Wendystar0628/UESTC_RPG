@@ -150,7 +150,7 @@ gates: []
 - 换模型就是新开子代理（§3.5）。下一单改用 Sonnet 时，靠任务单的"接续"段交接，不恢复原来的 Opus 子代理。
 
 **最便宜的两档**（D-194、D-202）：只做照清单执行、结果能机械核对、出错也不会扩散的活，不做任何判断。Claude 侧不设这一档，不用 Haiku。
-- **简单快速档：Gemini 3.8 Flash High**（作者的 Antigravity）：一件、小、要快的活。例如只改文档的合并、按确切文字改一处文档、查一处、追加一条状态、跑一次给定命令并报结果。派法：把任务写成 UTF-8 提示文件，用 `python -I E:\Project\UESTC_RPG.wt\.collab\tools\duty\gemini_run.py <会话号> <提示文件>` 发进作者开着的 Antigravity 会话并等它做完；结果它写进 `notes/gemini-to-opus.md`。Antigravity 没开或发不出去，就改派 luna。
+- **简单快速档：Gemini 3.8 Flash High**（作者的 Antigravity）：一件、小、要快的活。例如只改文档的合并、按确切文字改一处文档、查一处、追加一条状态、跑一次给定命令并报结果。派法：把任务写成 UTF-8 提示文件，用 `python -I E:\Project\UESTC_RPG.wt\.collab\tools\duty\gemini_run.py <会话号> <提示文件>` 发进作者开着的 Antigravity 会话并等它做完；结果它在主会话收件箱 `notes/opus/` 新建一个来信文件（发件方 `gemini`）。Antigravity 没开或发不出去，就改派 luna。
 - **批量苦力档：gpt-6-luna**：量大、重复、照清单的活。例如成批替换引用、全仓数据核对与盘点、成批截图与拼图、成批状态整理。luna 的花费几乎可以忽略，并发不设上限。
 
 两档能做的类别：

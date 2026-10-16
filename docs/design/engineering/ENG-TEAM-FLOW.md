@@ -139,7 +139,7 @@ gates: []
 
 **画面相关的契约**：`ToonSpec`、调色板与 `IPaletteProbe`、着色器全局参数、`ui.json` 令牌、过场 JSON 的格式，由 Astra 起草；主会话确认字段够用、命名与美术文档一致，然后才冻结（D-134）。
 
-**Opus 侧的包需要工程支持时**：遇到性能结构、线程、确定性、契约的问题，在 `requests/contract-<序号>.md` 或 `notes/opus-to-astra.md` 里找 Astra。
+**Opus 侧的包需要工程支持时**：遇到性能结构、线程、确定性、契约的问题，在 `requests/contract-<序号>.md` 或 Astra 的收件箱 `notes/astra/` 里找 Astra。
 
 ### 2.5 批准与合并
 
@@ -153,13 +153,13 @@ gates: []
 1. `git status --short` 必须为空；不空就停下，写进文件末尾并通知主会话，不动别人的改动。
 2. `git merge --squash <候选提交>`；有冲突就 `git reset --merge` 撤回，停下报告。
 3. 跑门禁：默认 `scripts\gate.ps1 -Wp <包号> -Only G1,G2,G3,G4,G5`，批准行另写了组合就照写的跑；只改文档的跑 `scripts\docs\check_docs.py`，要求 problems 0。资源有改动时 G1 会在主检出跑 `--headless --import`，同时更新工作树的导入种子。
-   - **省掉重复的两项**（D-206）：一批里每条候选都在自己的工作树里 rebase 到交候选时的最新 `main` 并跑过快检、结果是通过（请求或回报的门禁行写明），而且 squash 时没有解冲突，就跳过 G1 的格式检查（`-SkipFormat`）和 G4 的依赖规则检查（`-Only G1,G2,G3,G5`）；编译、G2、G3、G5 照跑。有一条不满足，整批照常全跑。`-SkipFormat` 由 WP-27 加上之前，先只省 G4。
+   - **省掉重复的两项**（D-206）：一批里每条候选都在自己的工作树里 rebase 到交候选时的最新 `main` 并跑过快检、结果是通过（请求或回报的门禁行写明），而且 squash 时没有解冲突，就跳过 G1 的格式检查（`-SkipFormat`）和 G4 的依赖规则检查（`-Only G1,G2,G3,G5`）；编译、G2、G3、G5 照跑。有一条不满足，整批照常全跑。
    - 失败：`git reset --merge` 撤回，把失败项、关键报错行、日志路径写到文件末尾，通知主会话，停下。不修代码。
    - 等 GPU 锁超过 15 分钟：查卡死的进程并报告，不绕过锁。
 4. 提交：首行 `WP-xx: <一句话>` 或 `文档：<一句话>`；正文几条要点，只从请求文件或回报里取，末尾写"候选 <提交>。门禁 … 通过。"；结尾加 `Co-Authored-By: GPT-6.1 Sol <noreply@openai.com>` 和 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` 两行。
 5. `git push origin main`：只推 `main`，不推分支，不强推。
 6. 往 `logs/merged.log` 追加一行（格式见 ENG-TEAM-COMMS §1）。
-7. 该包工作树若干净，`git -C <工作树> switch -C <分支名> main`，从新的 `main` 重建分支。值班执行者不删分支和工作树；文档类的临时工作树（`SN-*`、`DOC-*`）合入后保留；包整体做完以后的清理由主会话定。
+7. 用完的工作树当场删（D-166）：值班执行者运行 `bash E:/Project/UESTC_RPG.wt/.collab/tools/duty/cleanup_worktrees.sh <工作树目录名>`，删掉刚合入的这个工作树和它的本地分支。脚本只删同时满足这几条的：不在长期留用名单 `tools/duty/keep_worktrees.txt` 里、没有未提交改动和新文件、内容已全在 `main`、没有别的在途请求提到它；不满足就留着，结果写进流水。长期留用的滚动文档分支 `DOC-rolling` 不删，照上面"滚动文档分支"一段重建。同包的下一张单由新的子代理用 `scripts\wt\new.ps1` 开新的工作树。不交候选的临时工作树（试验、沙盒、对照）由建它的代理用完当场 `git worktree remove --force` 加 `git branch -D`。不巡检、不挪到别处。
 8. 在文件末尾追加"已合入：main=<短号>，<时间>，<执行者>"，并通知主会话；然后把这份请求文件挪进 `archive/requests/`（目标已有同名文件就停下报告，不覆盖；长期批准的 `merge-DOC-rolling.md` 例外，一直留在 `requests/`；批准行写在任务单里的不挪，任务单由主会话写"结案"后挪进 `archive/tasks/<类>/`）。
 
 **合并的其他规矩**：
@@ -200,7 +200,7 @@ gates: []
 | 5 入队 | 主会话 | 按分配结果，每侧各入一条或一组 Q-nnn，写事项、来源、落到、依赖与优先级，状态“排队”；派往必须写 Astra 或二号会话，不写“待定” | ENG-STATUS §4 待派工队列 |
 
 **入队以后**：
-Astra 侧条目由主会话写进 `notes/opus-to-astra.md` 通知 Astra 排期；Opus 侧条目由主会话写成 max 单交二号会话。两侧都按 D-183 和并发余量派工。
+Astra 侧条目由主会话写进 Astra 的收件箱 `notes/astra/` 通知 Astra 排期；Opus 侧条目由主会话写成 max 单交二号会话。两侧都按 D-183 和并发余量派工。
 - **改"可派"**：依赖满足就改成"可派"，由值班执行者在每次合入后检查（§2.6）。
 - **派工**：主会话先按 D-183 将建模包排在系统新功能之前，再按优先级与二号会话的并发余量（ENG-TEAM-QUOTA §2），从"可派"条目里派工，派出后在条目里写任务单号，再照 §2.2 走开发流程。
 - **移除**：条目完成后从队列移除。

@@ -3,13 +3,13 @@ id: MAP-QSH-SOUTH
 title: 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 category: maps
 summary: 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
-keywords: [南区, 南门, 校名墙, 主楼, 主轴线, 屋顶空廊, 过街楼, 主楼泛光, 森林公园, 孔雀之家, 东湖岸线, 环湖跑道, 里程标, 六角亭, 亲水平台, 荷角, 吴立人像, 宣邦楼, 钟楼, 电子管穹顶, 交班的钟, 钟面指针, 立人楼, 体育馆, 游泳馆, 体育运动中心大平台, 看台罩棚, 国际创新中心, 1–8 号楼, south.overlay.json]
+keywords: [南区, 南门, 校名墙, 主楼, 主轴线, 屋顶空廊, 过街楼, 主楼泛光, 森林公园, 孔雀之家, 东湖岸线, 环湖跑道, 里程标, 六角亭, 亲水平台, 荷角, 吴立人像, 宣邦楼, 钟楼, 电子管穹顶, 交班的钟, 钟面指针, 立人楼, 体育馆, 游泳馆, 体育运动中心大平台, 看台罩棚, 国际创新中心, 1–8 号楼, overlay/south.d]
 owners: [WP-18]
 contributors: [WP-03, WP-04, WP-13, WP-15, WP-23, WP-24, WP-25, WP-26, WP-28, WP-30, WP-31a, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, ENG-PERF, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/south.overlay.json"]
+data: ["game/data/maps/qingshuihe/overlay/south.d/"]
 gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 ---
 # MAP-QSH-SOUTH · 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
@@ -46,7 +46,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 ### 实现
 
 - 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC（ENG-ARCH）。
-- 代码在 `game/gen/zones/south/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/south.overlay.json`（ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/south/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/south.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元按 SYS-WALK §13 的形状映射，由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）：栏杆、驳岸、闸机、隐形墙每段一个 `BoxShape3D`，顶取 max(视觉高度, 1.5 m)；台阶、坡道、桥面用斜放的 `BoxShape3D` 或 8 顶点 `ConvexPolygonShape3D`；柱子、杆件用 `CylinderShape3D`；长椅、基座、置石用 `BoxShape3D`。
@@ -54,7 +54,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 ## 0 结论
 
 1. **分工**：WP-18（可拆 18a 南门、主楼与森林公园，18b 东湖、宣邦楼与立人楼，18c 体育场馆与国际创新中心）做本区建筑与构筑物的外观和雕像本体、它们的碰撞图元、本区灯具的灯光通道登记、开放入口的门口表现、关着的楼的入口登记，以及孤儿楼 6152、6194、6195 的外观（"分工"）。
-2. **代码边界**：代码在 `game/gen/zones/south/`，纯 .NET、不依赖其他区，只交付几何和材质键；轮廓调整写进 `south.overlay.json`，新增的设计物 ID 以 `design:` 开头并写明理由（"实现"、"定位、设计增补与近景要求"）。
+2. **代码边界**：代码在 `game/gen/zones/south/`，纯 .NET、不依赖其他区，只交付几何和材质键；轮廓调整写进 `overlay/south.d/` 里本包的分片，新增的设计物 ID 以 `design:` 开头并写明理由（"实现"、"定位、设计增补与近景要求"）。
 3. **主轴与受光**：南门到主楼方位约 33°–37°，是全校主轴，与银杏大道同向；主楼正面朝西南，默认状态迎着落日（"数据定位"后的"朝向"，§2.7）。
 4. **尺度**：主楼正面长 365 m、高 46.1 m，B2 8 层居中最高；宣邦楼北塔 73.85 m 是全校最高点，钟楼 66.65 m，顶上是电子管穹顶（§2.1–§2.2、§5.2、§5.4）。
 5. **钟面**：四面金属钟面，指针按世界钟点连续转、只顺时针走；日落后背光亮起、整夜不关（§5.4）。
@@ -377,7 +377,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 下面"本区身份特征"表里的特征，以及 §1–§10 中描述实物形制（体量、层数、屋顶标志物、主入口、特色色或材质）的条目，视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来。
-- 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/south.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/south.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 照片和 OSM 只定结构，即体量、层数、平面、入口、交通核、道路、水体；材质、色彩、陈设、装饰、标识、生活痕迹按氛围处理，照片只作参考。可以新增校园里没有、但能加强氛围的元素，写进覆盖层（ID 以 `design:` 开头）并写明理由；现实里有、放进画面难看的东西（杂乱管线、临时围挡、刺眼的广告、过多的指示牌）可以删掉。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象、主轴（南门—主楼—银杏大道、东湖主岸线）和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：本区建成较早的楼（主楼、体育场馆与大平台、桃园餐厅、1–8 号楼）和环境按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §4，孤儿楼群等待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174）。

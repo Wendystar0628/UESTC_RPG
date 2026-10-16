@@ -3,13 +3,13 @@ id: MAP-QSH-CORE
 title: 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 category: maps
 summary: 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
-keywords: [核心区, 图书馆外观, 八角采光顶, 穹顶, 方塔玻璃槽, 竖缝窗, 大台阶, 二楼正门, 品·悦吧店面, 宁静苑, 无主体块, 时间广场, 旗杆, 十二时辰刻度, 日晷, 晷针, 博物馆外观, 柱廊环, 西湖, 折线栈桥, 白色拱桥, 湖心岛观景平台, 西湖喷泉, 箱涵, 天鹅屋, 入水口荷花, 草阶看台, core.overlay.json]
+keywords: [核心区, 图书馆外观, 八角采光顶, 穹顶, 方塔玻璃槽, 竖缝窗, 大台阶, 二楼正门, 品·悦吧店面, 宁静苑, 无主体块, 时间广场, 旗杆, 十二时辰刻度, 日晷, 晷针, 博物馆外观, 柱廊环, 西湖, 折线栈桥, 白色拱桥, 湖心岛观景平台, 西湖喷泉, 箱涵, 天鹅屋, 入水口荷花, 草阶看台, overlay/core.d]
 owners: [WP-16]
 contributors: [WP-13, WP-15, WP-17, WP-23, WP-24, WP-25, WP-26, WP-36, WP-38, WP-39, WP-43, WP-44, WP-48c, WP-51, WP-53b]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, MAP-QSH-LIBRARY, ART-MODELING, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-RENOVATION, ART-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-PERF, UI-NAV, SYS-WEATHER, UI-VISUAL, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/core.overlay.json", "game/data/maps/qingshuihe/lighting-schedule.json", "game/data/maps/qingshuihe/audio/manual_emitters.json"]
+data: ["game/data/maps/qingshuihe/overlay/core.d/", "game/data/maps/qingshuihe/lighting-schedule.json", "game/data/maps/qingshuihe/audio/manual_emitters.json"]
 gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 ---
 
@@ -51,7 +51,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 
 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC。
 
-- 代码在 `game/gen/zones/core/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/core.overlay.json`（ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/core/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/core.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元按 SYS-WALK §13 的形状映射，由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）：栏杆、护岸每段一个 `BoxShape3D`，顶取 max(视觉高度, 1.5 m)；台阶、坡道、桥面用斜放的 `BoxShape3D` 或 8 顶点 `ConvexPolygonShape3D`；杆件用 `CylinderShape3D`；长椅、花池、石台用 `BoxShape3D`。碰撞体同时填脚步材质 `Foot`（§9，SYS-AUDIO §9.3）。
@@ -289,7 +289,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 本节"本区身份特征"表里的特征，以及 §1–§5 中描述实物（而不是设计新增物）的条目，视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来。
-- 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/core.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/core.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 按 WLD-INTERIORS §8.1，照片和 OSM 只定结构（体量、层数、平面、入口、交通核、道路、水体）；材质、色彩、陈设、装饰、标识按氛围做艺术化处理。可以新增校园里没有、但能加强氛围的元素，也可以删掉现实里有、放进画面难看的东西（杂乱的管线、临时围挡、刺眼的广告、过多的指示牌），都写进覆盖层并注明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象、主轴（银杏大道南段—时间广场—图书馆、西湖主岸线）和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：图书馆、附属体和博物馆是石材主体，外观整洁，按 ART-RENOVATION 的翻新预设做新即可（石材分格整齐、屋面设备进围挡、没有水渍和色差），逐栋条目见 MAP-QSH-RENOVATION §6；立面、广场和栈道都不做旧（D-174）。

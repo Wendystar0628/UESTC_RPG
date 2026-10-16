@@ -95,22 +95,14 @@ gates: [G1, G2, G3, G4, G5, G6]
 **原则**：旧网页代码只留在 git 基线里，主分支上整体删除，不保留 legacy 目录。
 
 1. **基线**（已建）：清理前的整棵树已提交为基线（`node_modules/`、`dist/`、`.venv/`、`output/`、`test-results/`、`.playwright-cli/` 和照片贴图目录不在库里），标签 `baseline-map`；远端是 GitHub 上的 `Wendystar0628/UESTC_RPG`（§6）。之后的步骤见 §6 第 1 步。
-2. **主分支**：网页栈、照片贴图和网页工具链已删除（清单见本节末尾）；按 §2 搭 Godot 项目。能复用的数据和算法按下面三张表处理；待迁移的数据和脚本暂留原位（`data/`、`public/data/`、`scripts/data/`、`scripts/assets/prepare_building_profiles.py`、`requirements.txt`），由 WP-08 迁到 `pipeline/`。
+2. **主分支**：网页栈、照片贴图和网页工具链已删除（清单见本节末尾）；按 §2 搭 Godot 项目。能复用的数据和算法按下面三张表处理；仍待迁移的只有外围快照 `data/raw/osm-outskirts.json` 和 `data/raw/osm-outskirts.overpassql`，由 WP-47 迁到 `pipeline/raw/qingshuihe/`；其余数据与脚本已在 `pipeline/`。
 3. **读旧代码**：各包需要参考时用 `git show baseline-map:src/scene/architecture.ts` 读出来，不要把旧文件拷回工作树。
 
 **数据：迁到新位置**
 
 | 旧位置 | 新位置 | 归属 | 说明 |
 | --- | --- | --- | --- |
-| `scripts/data/build_dataset.py` | `pipeline/` | WP-08 | Python OSM 管线整体迁移；输出写到 `game/data/maps/<地图>/`，脚本加 `--map`（SYS-MAPS §2.1） |
-| `data/raw/osm-campus.json` | `pipeline/raw/qingshuihe/` | WP-08 | OSM 快照；原始数据按图放 `pipeline/raw/<地图>/` |
 | `data/raw/osm-outskirts.json`、`data/raw/osm-outskirts.overpassql` | `pipeline/raw/qingshuihe/` | WP-47 | 外围的 Overpass 快照（2026-10-14）与查询语句，`outskirts.json` 由它生成（WLD-OUTSKIRTS §6） |
-| `data/building-levels.json` | `pipeline/` | WP-08 | OSM 缺少或记错高度与层数的建筑的补充数据，以及各类别的层高；管线据此算楼高，来源记在 `levelsBasis` |
-| `public/data/qingshuihe/campus.json` | `game/data/maps/qingshuihe/campus.json` | WP-08 | 格式留用，只增不改。实体 ID 的前缀 `qsh:` 是数据，不是地图 ID，保持不动（SYS-MAPS §2.1） |
-| `data/categories.json`、`data/place-enrichments.json` | `pipeline/` | WP-08 | 管线输入 |
-| `data/building-profiles.json`、`scripts/assets/prepare_building_profiles.py` | `pipeline/` | WP-08 | 留家族划分和照片引用，去掉材质键。家族划分由管线写进 `campus.json` 的建筑要素（新增字段，只增不改）；照片引用只供人工参考，不进导出包 |
-| `data/` 下的照片参考清单（`campus-photo-references.json`、`campus-life-references.json`） | `pipeline/` | WP-08 | 只作人工参考 |
-| `requirements.txt` | `pipeline/requirements.txt` | WP-08 | `.venv/` 不进库；WP-04、WP-37、WP-44 的 Python 脚本共用这个环境，加依赖向 WP-08 申请 |
 
 **算法：改写成 C#**（只移植算法，不移植 three 的数据结构）
 
@@ -195,7 +187,7 @@ UESTC_RPG/
 │  ├─ gates/                 WP-27  截图机、路线回放、巡检的引擎内驱动，只在带门禁参数时启用；gates/matrix 归 WP-41
 │  ├─ data/                  运行时 JSON（按图的数据都在 maps/ 下，SYS-MAPS §2.1）：
 │  │  ├─ maps/index.json     WP-46  地图清单、默认地图
-│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<区>.overlay.json、walkable、outskirts、atlas、fidelity，
+│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<组>.d/ 分片目录与旧 <组>.overlay.json 空壳、walkable、outskirts、fidelity，
 │  │  │                      以及 overlay/interior/<区>.interior.json、overlay/terrain/<区>.terrain.json）；outskirts.json；fidelity.json；interiors.json；waypoints.json；lighting-schedule.json；
 │  │  │                      backdrop.json；sky.json；review.json；cinematics/<id>.json；atlas/（markers.json、labels.json）；
 │  │  │                      audio/（声景与声学的本图数据）；nav/（routes.json、views.json）；incidents.json（偶发事件清单）；
@@ -254,7 +246,8 @@ game/style/shaders/<系统>_*           对应系统包（文件名以 ENG-PERF 
                                       toon_stub.gdshader WP-00（桩，§5）；bake_impostor.gdshader WP-23（只在替身烘焙器里用）；
                                       globals.gdshaderinc WP-01；其余 toon_*（含 toon_cut）与 fog.gdshaderinc 只归 WP-04（每个文件一个负责方）
 game/style/palette/keys               WP-37  日相与季节关键帧、调色板合成器（SYS-TIME §3）
-game/style/palette/ext/<包>.json      各包自己的调色板扩展，一包一个文件（界面令牌 ui.json 归 WP-35，UI-VISUAL §3.8）
+game/style/palette/ext/<包>.json      各包自己的调色板扩展（色号 0–255，schema 1），一包一个文件（界面令牌 ui.json 归 WP-35，UI-VISUAL §3.8）
+game/style/palette/ext-v2/<包>.json   各包自己的 bank 1 色表（色号 256–511，schema 2），一包一个文件，归属同 ext/（ART-STYLE §8.5）
 game/style/outline                    WP-05  描线 CompositorEffect 与计算着色器
 game/camera/                          WP-06  旁观相机与输入分发（transit、walk、cinematic 除外）；可达空间与推回、写 edge_fog（WLD-OUTSKIRTS §8）
 game/camera/transit                   WP-36  点位跳转与传送的过渡（UI-NAV §7、SYS-ATLAS §7）
@@ -311,11 +304,11 @@ game/gates/                           WP-27  （matrix 子目录除外）
 game/gates/matrix                     WP-41
 game/data/maps/index.json、game/data/maps/*/map.json   WP-46  地图清单与 MapDescriptor 的手写部分（SYS-MAPS §3；字段增改经主代理）
 game/data/maps/qingshuihe/campus.json、network.json、zones.json   WP-08
-game/data/maps/qingshuihe/overlay/<zone>.overlay.json   每个区一个文件，由该区工作包独占
+game/data/maps/qingshuihe/overlay/<zone>.d/   各区通用覆盖层，按包分片；本区工作包写自己的分片，旧 <zone>.overlay.json 只留空壳（§3 覆盖层的规则）
 game/data/maps/qingshuihe/overlay/walkable.overlay.json   WP-44  可行走区域，ID 以 walk: 开头
 game/data/maps/qingshuihe/overlay/fidelity.overlay.json、fidelity.json   WP-44  精度区的 K1 名单与人工提级（ID 以 fid: 开头）、划分结果（§3）
 game/data/maps/qingshuihe/overlay/outskirts.overlay.json、outskirts.json   WP-47  外围覆盖层与外围数据（WLD-OUTSKIRTS §6）
-game/data/maps/qingshuihe/overlay/atlas.overlay.json、atlas/markers.json   WP-48c  锚点实体与标记（SYS-ATLAS §9）
+game/data/maps/qingshuihe/overlay/atlas.d/、atlas/markers.json   WP-48c  锚点实体与标记（SYS-ATLAS §9）
 game/data/maps/qingshuihe/atlas/labels.json   WP-48a  标注（初稿由烘焙器生成，人工校订）
 game/data/maps/qingshuihe/overlay/interior/<区>.interior.json   各区精修室内的包独占本区一份（WLD-INTERIORS §14）
 game/data/maps/qingshuihe/overlay/terrain/<区>.terrain.json   地形覆盖层，一个文件只归一个包（WLD-TERRAIN §3.1；清水河的文件与包的对应见 MAP-QSH-TERRAIN）
@@ -465,7 +458,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 | `[SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]` | 实现 `ISaveSection<T>` 的 `[KernelService]` 或 `[KernelNode]` 类；`Scope = SaveScope.PerMap` 的段在文件里展开为 `map:<id>/<段>`。G5 查 `Phase` 与 SYS-SAVE §2 的表一致、`Order` 不重复、`Owner` 与 `ownership.json` 一致（SYS-SAVE §10） | 主程序集 | 主线程：`Capture` 在 `FramePriority.Save` 那一步，`Restore` 在读档那一帧的同一步；迁移函数在后台线程 |
 | `[assembly: MapScope("qingshuihe")]` | 各区程序集，由 WP-00 写进 csproj（见 §2 的 `MapScope` 条） | gen | 注册时求模块归属 |
 | `res://style/palette/ext/*.json` | 调色板扩展，一包一个文件 | — | 启动时用 `ResourceLoader.ListDirectory` 扫描 |
-| `res://data/maps/<地图>/overlay/*.overlay.json`、`overlay/interior/*.interior.json`、`overlay/terrain/*.terrain.json` | 覆盖层，一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
+| `res://data/maps/<地图>/overlay/<组>.d/*.json`、`overlay/*.overlay.json`、`overlay/interior/*.interior.json`、`overlay/terrain/*.terrain.json` | 覆盖层，通用的按包分片、专属格式一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
 
 - **Autoload 只有两个**，D0 冻结：`Boot`（WP-01，解析命令行参数）和 `Kernel`（WP-00，服务定位器）。需要新的全局对象时，用 `[KernelService]` 注册成 Kernel 的服务，不往 `project.godot` 里加条目。`IMapService`、`IAtlasService`、`IAppFlow`、`ISaveService`、`IAudioService` 等一律如此。
 - **build 与 mount 分开**：生成在纯 .NET 里，可以在线程池或烘焙器里跑（发布版的本机烘焙就在工作线程上调 `Build()`，D-165）；Godot 侧的挂载和动态物体只在主线程。gen 里的内容包没有挂载：随时间动的东西一律通过通道（`ChannelDecl`、`PlacedPart.Emitter`）和着色器（风场、`anim_time`）表达，需要节点的动态物体由 Godot 侧包的 `[KernelNode]` 负责（SYS-MOTION）。开放室内里会动的门扇同样如此：gen 只声明门扇（`DoorLeafDecl`），转动与运行时门体由 WP-07、WP-43 负责（§3）。
@@ -478,7 +471,7 @@ scripts/godot-api/、tools/、version.txt、global.json、ownership.json、budge
 
 - **候选**：WP-00 先交能编译的契约 v1 候选和全部桩（§5），各包照它开工。还没冻结的组仍可修改，改动一律向主代理申请，由主代理改。
 - **按组冻结**：契约按本节的代码块分组（如内容模块、相机与介质、存档、音频）。某一组的真实生产方与使用方在主线上接通（不再经桩）、相关核心专项通过（ENG-GATES §2）后，由主代理宣布冻结这一组，记进 ENG-STATUS §2。
-- **待同步**：玩家身体、游泳与反应动物的契约增量（contract-21、contract-22、contract-23：运动与感知快照、水域查询与游泳遥测、栖地与环境查询、动态实例与动画、角色服务与人称、楼梯解析查询等）以 Astra 落地的源码为准，落地时由 Astra 同步进本节；在那之前本节不写这些签名（SYS-WALK §12、SYS-VIEW §2.7、SYS-MOTION §6.1）。
+- **契约 21–23 的增量**（玩家身体、游泳、反应动物）：以源码为准，签名与未落地项写在本节观察模式与碰撞契约块之后。
 
 冻结了的组**只增不改**：
 
@@ -622,6 +615,10 @@ public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }   // 建筑两阶、
 public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus }
     // 材质库按它选白名单着色器（ENG-PERF §1.4）；只在末尾追加
 
+// 室外表面图样（可选）：Period 是含缝的单块 U/V 重复周期（米），Joint 是对应轴上以块边界为中心的缝带总宽（0 ≤ J < P），
+// Layer 是 WP-04 登记的稳定层号（直缝或错缝由层定义，错缝的行组织不改 Period）。方向与相位只存在于生产者给的连续米 UV 里，
+// 不成为材质键，也不按来源或朝向建 GPU 材质
+public readonly record struct SurfacePatternSpec(ushort Layer, Vector2 PeriodMeters, Vector2 JointMeters);
 public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
     // 顶点只存一个色号字节，按 Lit 解释：Lit 与 Shade 必须成对登记，Shade 的色号 = Lit 的色号 + 1；
     // PlacedPart.Tint 也按 Lit 解释；G5 校验色名成对
@@ -639,8 +636,14 @@ public sealed record ToonSpec(PaletteToken Lit, PaletteToken Shade)
     public ShadeSteps Steps { get; init; } = ShadeSteps.Two;   // 写进 mat_table 行 1（ENG-PERF §1.5）
     public float Translucency { get; init; }             // 透光系数 k_t，0 = 不透光；写进 mat_table 行 2（ART-STYLE §5.6）
     public float Wet { get; init; } = 0.6f;              // 湿润响应：沥青 1、玻璃 0；写进 mat_table 行 1 的 A（SYS-WEATHER §7）
+    public SurfacePatternSpec? SurfacePattern { get; init; }   // 默认 null：所有顶点通道保持原有含义；非空时见下面的约定
 }
 public readonly record struct ToonRef(ToonSpec Spec);   // 值语义，按内容比较；内核按它查材质缓存
+// SurfacePattern 的约定：只用于普通 ToonKind.Static、没有 Shader 与 Variant 覆盖的室外直接几何；材质类身份含它的全部字段；
+// 非空时 Uv 是已定向、已锚定的连续米坐标（不能逐顶点 fract 重置相位），Uv2 = (gate, K)：每个三角形的三个顶点一致（基础索引和所有 LOD 索引都查），
+// gate 精确为 0 或 1，K 精确为 0–5，gate 为 1 只许 K 取 1–3，(0,0) 表示明确不上图样的面，K4、K5 的 gate 必须为 0；
+// 实际 K 由内容消费者按精度区数据给，未知 K 不沿用 K3；Uv2 保持 fp32，与压缩入口互斥。不复用玻璃、水、植被、贴花、室内与 Custom0–2 的已有语义。
+// 没有接通图样的材质库、实例池和烘焙入口对非空 SurfacePattern 明确拒绝，不丢字段后成功
 // Godot 侧：WP-04 的材质库（Campus.Style）把 ToonSpec 映射到白名单着色器的 ShaderMaterial，
 // 并分配 7 位材质 ID（全场不超过 128 个，含剖切 ID），写进 ROUGHNESS；描线和 toon 都按 ID 查全局数据纹理 mat_table
 // （描线的线表是 mat_table 的行 0，ART-STYLE §4、ENG-PERF §10.2）。影色由固有色按 ART-STYLE §3 推导，
@@ -868,12 +871,14 @@ public enum OverlayLevel { Minor, Design }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "op")]
 [JsonDerivedType(typeof(ReshapeOp), "reshape")] [JsonDerivedType(typeof(HeightOp), "height")]
-[JsonDerivedType(typeof(StyleOp), "style")] [JsonDerivedType(typeof(HideOp), "hide")] [JsonDerivedType(typeof(AddOp), "add")]
+[JsonDerivedType(typeof(StyleOp), "style")] [JsonDerivedType(typeof(HideOp), "hide")] [JsonDerivedType(typeof(HidePartOp), "hidePart")]
+[JsonDerivedType(typeof(AddOp), "add")]
 public abstract record OverlayOp;
 public sealed record ReshapeOp(FeatureId Target, PolygonRings Rings, OverlayLevel Level, string Reason) : OverlayOp;
 public sealed record HeightOp(FeatureId Target, float? Height, int? Storeys, string Reason) : OverlayOp;
 public sealed record StyleOp(FeatureId Target, BuildingFamily Family, FacadePreset? Facade) : OverlayOp;
 public sealed record HideOp(FeatureId Target, string Reason) : OverlayOp;
+public sealed record HidePartOp(FeatureId Target, string SourceId, string Reason) : OverlayOp;   // 删实体里的一个来源部件；Target 必须是精确的当前实体 ID，不收别名
 public sealed record AddOp(FeatureId Id /* 必须以 design: 开头 */, DesignKind Kind,
     OverlayGeometry Geometry,                                      // 多边形环或折线
     float? Height, JsonElement? Props, string Reason) : OverlayOp;
@@ -944,7 +949,16 @@ public interface ISpatialIndex
 覆盖层的规则：
 
 - 轮廓调整在 4 m 以内算轻微（`Minor`）。超过 4 m，或者新增设计物体，必须写明理由；门禁会生成差异报告，供主代理审阅。
-- 两个覆盖层改同一个要素时报错，除非其中一个已经认领了该要素。
+- 两个覆盖层改同一个要素时报错，除非其中一个已经认领了该要素；同一个包的几片改同一个要素不算冲突。
+- **覆盖层按包分片**：通用 feature 覆盖层（各区、`atlas`、`boundary`、`public`、`waterfront`）每组一个目录 `overlay/<组>.d/`，目录里每个包或每张子单一个分片，文件名 `<四位序号>-wp-<包号>-<短名>.json`，内容仍是一个 `OverlayFile`（`zone`、`owner`、`ops`）。组里原有的条目在 `0000-wp-<包号>-base.json` 底稿里，旧的 `<组>.overlay.json` 只留元数据、`ops` 为空。新条目写进本包自己的分片，序号接在该目录现有最大值之后，不追加到底稿和旧文件。加载规则（WP-08）：
+  - 目录只认直接子文件，不读子目录；文件名和组名都按 Ordinal 排序，分片组按旧 `<组>.overlay.json` 的位置参与组间排序，每片内的 `ops` 顺序不变；
+  - 旧文件没有分片目录时照旧读取；旧文件 `ops` 非空而同组有分片时报错，不静默覆盖也不重复执行；空 `ops` 的旧文件可与分片并存；
+  - 每一片各自过 `map`、`owner`、操作与冲突检查，报错指向真实分片路径；
+  - 只适用通用 feature 覆盖层；`walkable`、`fidelity`、`outskirts`、`terrain`、`interior`、声学覆盖层都有专属格式，不分片。
+- **`hidePart` 删来源部件**：楼等实体由多个来源部件（`WorldFeature.Parts`）聚合而成，要去掉其中一个来源用 `hidePart`（`Target` 是精确的当前实体 ID，不收别名；`SourceId` 必须唯一匹配当前 `Parts`），不用整实体的 `hide`。拒绝空理由、未知来源、重复删除和删掉最后一片；被删来源的别名一并移除，其余部件的全部字段、洞与多片保持，几何、高度、层数、包围盒按原算法重算。旧 `hide` 仍整个实体删除。
+- **覆盖层与有效路网**：加载器先读原 `network.json`，所有覆盖层处理完后只发布一份有效 `WorldNetwork`。覆盖层新增的 `footway`、`path`、`pedestrian` 折线按原 ID、点序、宽度和属性进有效 `Roads`，与原路一视同仁；摆长椅、避树、可行走范围都读这一份，不另写一套。真实的面（多边形与洞）留在 `Features`，不伪装成中心线。`hide` 一条原路只接受无歧义的纯 road：同 ID 单来源的 Feature 与 Road 一起删，或确无校园来源的独立 road 只删 Road；命名路、混合来源、多来源、面，以及与桥、水道、涵洞交叉身份的一律拒绝；不用 `sourceRoad` 去隐藏原车行道。要替换与原路重叠的片段时：精确 `hide` 整条原路，再 `add` 保留的各段和新连接，并把地形覆盖层里对它的引用一起迁到新 ID，不自动裁切、吸附或重定向旧 ID。`hidePart` 的目标来源若被 `Roads` 引用而不能安全删除，同样拒绝。
+- **楼的双轮廓**：源数据预处理保住父子楼共享边界的原顶点，所以楼的物理轮廓比旧轮廓多出一些点。每个 `WorldFeaturePart` 因此带两种用途的轮廓：`Geometry` 是详细的物理轮廓，物理、地形、垫层和共享边界一律读它；可选的 `FacadeGeometry` 是按旧算法派生的立面轮廓（只在与 `Geometry` 不同时附带），墙面、门窗、柱及对应碰撞一律读立面轮廓，经 WP-08 的统一入口 `PlanGeometry.FacadeGeometryOf(part)`（缺省回到 `part.Geometry`）和 `PlanGeometry.FacadePolygonsOf(feature)`（按当前 `Parts` 顺序聚合，`Parts` 为空时读作者现有的 `Geometry`）。区包不自己读 `Props` 或 JSON，不各自定共线容差，入口也不再简化、合并或重排。同一栋楼的墙面网格、门洞、窗口声明和碰撞必须共用同一份立面布局，不能只改可见网格。`hidePart` 随部件删立面轮廓，`reshape` 与 `add` 用作者新给的几何。
+- **生成器按 `Parts` 逐来源读取**：带 `Parts` 的实体逐部件读，不碰父实体的聚合几何；部件的类型取 `part.props.kind`，缺省取父实体的 `kind`；`roadType`、`sport`、`width` 取部件自己的来源记录，不读实体记录；多片部件每片各成一个形状、各带自己的洞，不合并成一个奇偶形状；同一父实体下混了几类（poi 下挂建筑、停车场、运动场、道路）按部件分别归类；父实体是 `poi` 也要按部件类型取楼，不按父类型筛掉整个实体。没有 `Parts` 的实体（设计增补、`reshape` 之后）走单来源路径。遇到不支持的几何抛异常并写明实体、来源部件、几何类型和 `kind`，不跳过。
 - 照片和 OSM 只定结构，细节按氛围做艺术化处理；为画面新增的元素（`add`）和删掉的难看元素（`hide`）都写进本图的覆盖层，在 `Reason` 里注明属于设计处理并写明理由（CORE-INDEX 的作品定位）。覆盖层按图存放，WP-08 只扫当前图的目录。
 - 地形覆盖层（`overlay/terrain/`）只写地形操作，每条带 `design:terrain:` 开头的 ID 和理由；合成顺序、坡度包络、确定性写法和校验见 WLD-TERRAIN §3，差异报告与普通覆盖层一起生成。
 
@@ -1163,6 +1177,221 @@ public interface IViewControl
 }
 // IContentModule.Collide、IPartDef.Collision 两个默认方法和 IInteriorProvider.CollisionStorey 分别在 §3 的内容模块块、部件块、室内块里，照 SYS-WALK §13
 ```
+
+玩家身体、游泳与反应动物的契约增量（contract-21、contract-22、contract-23）：签名以源码为准，下面按已合入的源码写；放在观察模式与碰撞契约之后。除另注命名空间外，均属 Campus.Contracts；向量使用 System.Numerics，FootSide、StairSpec 使用 Campus.Contracts.Audio。SYS-WALK §12、SYS-VIEW §2.7、SYS-MOTION §6.1 引用这些签名。
+
+**玩家身体、游泳与玩家感知的公共契约**
+
+玩家身体、相机、水运动与动物感知共用 WP-42 发布的 IWalkSnapshot，不各自推导另一份物理状态。快照在固定物理步末尾、主线程发布；Stamp.Tick 与 IWalkTelemetry 使用同一计数，Stamp.Continuity 在不连续放置时改变。Feet 是当前竖直碰撞圆柱的底面中心，PhysicalEye 是未插值的物理眼位，Velocity 是实际获准的运动速度；重定位不转换成速度。身体是否显示不改变物理状态和动物感知。
+
+```csharp
+public readonly record struct WalkStamp(
+    MapId Map, long MapRevision, long WorldInstance, ulong Continuity, ulong Tick);
+public enum WalkPresence : byte { Absent, Pending, Live }
+public enum WalkMotion : byte { Ground, Air, Wade, SurfaceSwim, ExitCandidate }
+public enum WalkPosture : byte { Standing, Crouching, Swimming }
+[Flags]
+public enum WalkHold : ushort
+{
+    None = 0, CollisionNotReady = 1, WaterNotReady = 2,
+    MapTransition = 4, PhysicsPaused = 8, PlacementInvalid = 16
+}
+public enum WalkTransition : byte { None, Landing, SafetyReturn, Elevator }
+public enum WalkReset : byte
+{
+    None, ModeChanged, Teleport, SafetyReturn, Elevator, MapChanged,
+    Restore, NewGame, Resume, DataReload
+}
+public readonly record struct WalkBodyShape(float Radius, float Height);
+public readonly record struct WalkSupport(
+    Vector3 Point, Vector3 Normal, SurfaceTag Tag, NavSpace? Space);
+public readonly record struct WalkWaterContact(
+    FeatureId Water, string VolumeId, string? SwimAreaId, float SurfaceY,
+    float FeetDepth, float ColumnDepth, WaterAccess Access, string? ExitId);
+```
+
+WalkSnapshot 的完整字段定义与两个公共成员在 `game/contracts/Spatial/WalkSnapshot.cs`：
+
+```csharp
+public readonly record struct WalkSnapshot(
+    WalkStamp Stamp, ViewMode Mode, WalkPresence Presence,
+    Vector3 Feet, Vector3 PhysicalEye, float YawDeg, float PitchDeg,
+    Vector3 Velocity, WalkMotion Motion, WalkPosture Posture,
+    WalkBodyShape Shape, WalkHold Hold, WalkTransition Transition,
+    WalkReset Reset, bool Grounded, NavSpace? Space, WalkSupport? Support,
+    float StepPhase, FootSide? NextFoot, float StrokePhase, bool Stroking,
+    WalkWaterContact? Water)
+{
+    public bool Perceptible { get; }
+    public bool CanInterpolateFrom(in WalkSnapshot previous);
+}
+public interface IWalkSnapshot
+{
+    WalkSnapshot Previous { get; }
+    WalkSnapshot Current { get; }
+    float Fraction { get; }
+}
+```
+
+上面的 WalkSnapshot 代码块列签名，成员实现以源码为准。只有 Mode=Walk 且 Presence=Live 时 Perceptible 为真；Fly 不可感知。Absent、Pending 的位置、形状、支撑和相位不能用作有效物理状态。消费者只在 CanInterpolateFrom 返回真时插值连续量：地图、地图修订、世界实例、连续代际一致，tick 连续，两份快照均无 Reset/Hold，姿态和形状相同。离散状态、空间、形状和水体身份始终读 Current。不能插值时 Fraction=1；不连续放置立即令 Previous=Current，包括在物理步外调用 Warp。
+
+StepPhase 是 IWalkTelemetry 的步相 φ，漂浮游泳不推进它；StrokePhase 由物理游动行程推进，待机动画和渲染帧率不能产生划水事件。FeetDepth=max(SurfaceY−Feet.Y,0)；ColumnDepth 是水面到可站立支撑或池底的深度。约 0.75 m 的泳姿脚浸深不能拿来比较 1.05/0.95 m 的入泳、出泳阈值。
+
+**水域查询与水运动事件**
+
+WP-08 提供当前地图的有限水体查询，与可见水面的流式驻留无关。水面高度取 ITerrain.WaterY，BottomY 是底部高度；泳区权限必须指向明确的 SwimAreaId。空间与垂直范围共同限定命中，不能因 Space=null 忽略上下水体边界，也不能用全图纹理、倒影湖号或零水位代替查询结果。
+
+```csharp
+public enum WaterQueryStatus : byte { NotReady, NoWater, Ready, Invalid }
+public enum WaterAccess : byte { Forbidden, WadeOnly, SurfaceSwim }
+public enum WaterBottomKind : byte { Terrain, Plane }
+public enum WaterExitKind : byte { SoftBank, SubmergedSteps, PoolSteps }
+public readonly record struct WaterQuery(Vector3 Position, NavSpace? Space = null);
+public readonly record struct WaterSample(
+    Vector3 Position, FeatureId Water, string VolumeId, string? SwimAreaId,
+    NavSpace? Space, float SurfaceY, float BottomY,
+    WaterBottomKind BottomKind, float MinY, float MaxY, WaterAccess Access)
+{
+    public float ColumnDepth { get; }
+    public float DepthAtPoint { get; }
+    public void Validate();
+}
+public readonly record struct WaterQueryResult
+{
+    public WaterQueryResult(WaterQueryStatus status, WaterSample? sample = null,
+        float? segmentT = null, string? diagnosticCode = null);
+    public WaterQueryStatus Status { get; }
+    public WaterSample? Sample { get; }
+    public float? SegmentT { get; }
+    public string? DiagnosticCode { get; }
+}
+public sealed record WaterExitDecl(
+    string Id, string VolumeId, WaterExitKind Kind, Box3 Approach,
+    Pose DryFeet, NavSpace? DrySpace, float ClearWidth);
+public interface IWaterTraversalQuery
+{
+    MapId Map { get; }
+    long DataRevision { get; }
+    WaterQueryResult Sample(in WaterQuery query);
+    WaterQueryResult Trace(Vector3 from, Vector3 to, NavSpace? space = null);
+    WaterQueryStatus ExitsNear(in WaterQuery query, float radius,
+        Span<WaterExitDecl> buffer, out int written);
+}
+```
+
+WaterSample、WaterQueryResult 的构造与校验实现见 `game/contracts/Spatial/WaterTraversal.cs`。默认结果为 NotReady。只有 Ready 携带有效 Sample；其余状态不得携带 Sample 或 SegmentT。Trace 返回最早有效水体交点，Ready 的 SegmentT 在 [0,1]，不绕过实体碰撞、不授予未登记泳区的权限。ExitsNear 按距离、再按出口 ID 的 ordinal 顺序写入最近出口，最多 buffer.Length 个；Ready 且 written=0 表示附近没有出口，NotReady/Invalid 时 written=0。WaterExitDecl 是运行时查询值，本类型不规定数据文件格式或路径。P0 出口限软岸或可走台阶，竖直池梯不作为可通过出口。
+
+```csharp
+public sealed record WaterMotionProfile(
+    WalkBodyShape SwimmingShape, float FeetBelowSurface, float EyeAboveFeet,
+    float EnterColumnDepth, float ExitColumnDepth,
+    float Speed, float SprintSpeed, float StrokeDistance);
+public enum WaterMotionEventKind : byte { Enter, Exit, Stroke }
+public readonly record struct WaterMotionEvent(
+    WalkStamp Stamp, ushort Ordinal, WaterMotionEventKind Kind,
+    FeatureId Water, string VolumeId, Vector3 Position,
+    float FeetDepth, float NormalSpeed, float TangentSpeed);
+public interface IWaterMotionEvents
+{
+    event Action<WaterMotionEvent>? Emitted;
+}
+```
+
+泳姿物理资料由 WP-42 持有，不依赖身体模型：初值圆柱半径 0.40 m、高 0.90 m，脚点在水面下 0.75 m，逻辑眼位在脚点上 0.87 m；可站立水深 ≥1.05 m 入泳，≤0.95 m 且有支撑、有净空、命中已登记出口才出泳。泳速 1.4 m/s，疾跑 2.2 m/s，不受滚轮步速档影响；批准泳区内、有支撑的 0.3–1.05 m 深涉水可慢走，泳区外沿用原浅涉水权限。
+
+水事件在同 tick 的 Current 发布之后、主线程同步发出，发布方不留事件积压。NormalSpeed、TangentSpeed 是实测 m/s，供消费者决定强度，不是艺术音量。冻结不发运动边沿；传送、恢复与切图静默重建接触，消费者丢弃旧连续代际的事件。旧 WaterEnter/Exit/Sink 保持原语义，每个消费者只选一条水事件通路，避免双播。水中存档仍使用同一次岸上落定快照，首版不新增泳态存档段。
+
+**身体呈现、人称、样式与帧顺序**
+
+```csharp
+public enum WalkPerson : byte { First, Third }
+public interface ICharacterService
+{
+    bool Present { get; }
+    WalkPerson Person { get; }
+    float Fade { get; }
+    Vector3 HeadAnchor { get; }
+}
+public enum LineClass { Building, Tree, Fine, None, Figure }
+public enum ToonKind
+{
+    Static, Glass, GlassNear, Cut, VegTrunk, VegCard,
+    VegImpostor, VegGrass, Lotus, Figure
+}
+```
+
+ICharacterService 归 WP-54a，仅报告呈现，不控制物理身体。Present 包含获准的 Walk→Fly 转换呈现尾段；物理模式与镜头不等待淡出，稳定 Fly 无身体。Fade 在 [0,1]；HeadAnchor 是由控制器插值眼位得到的稳定逻辑头支点，不取动画头骨；Present=false 时 HeadAnchor 无定义。动物感知读 IWalkSnapshot，不读 Present。第三人称听者位置用逻辑头支点、朝向跟相机，介质按听者点另查。P0 身体不进水面倒影。
+
+以下分别追加在现有 RulesetDescriptor、FramePriority、InstanceShaderParameters 内，不另建同名类型：
+
+```csharp
+// game/contracts/Foundation/Rulesets.cs · RulesetDescriptor
+public bool PlayerBody { get; init; }
+// game/contracts/World/WorldContracts.cs · FramePriority
+public const int Animate = 20;
+// game/contracts/ShaderGlobals.cs · InstanceShaderParameters
+public const string FigCtx = "fig_ctx";
+```
+
+PlayerBody 是独立于 NPC Characters 的玩家呈现权限，实际显示仍受身体开关及运行状态限制。Animate 在 Systems=0 之后、Audio=50 之前推进 WP-54a 的动画和 IK，不回写物理或本帧较早的相机。fig_ctx 是逐实例参数，四分量依次为室内混合、湿身、覆雪、保留零，不是 global uniform；由 WP-54a 产生、角色宿主写入。
+
+**楼梯解析查询**
+
+```csharp
+public readonly record struct StairFrame(
+    Vector3 Nosing0, Vector3 Run, Vector3 Up, float Width)
+{
+    public void Validate(StairSpec spec);
+}
+public readonly record struct StairHit(
+    Vector3 Nosing0, Vector3 Run, Vector3 Up, StairSpec Spec)
+{
+    public float Width { get; init; }
+}
+// game/contracts/Spatial/CollisionContracts.cs · RampCollider
+public StairSpec? Stair { get; init; }
+public StairFrame? Treads { get; init; }
+// 同文件 · ICollisionWorld
+StairHit? StairAt(Vector3 p, float yHint) => null;
+```
+
+StairFrame.Nosing0 是第一块可见踏面前上缘的左端点，不是埋地碰撞坡的 P0；Run 是水平单位上楼方向，Up=+Y，Width 是实际梯宽。CollisionTile 内使用格内坐标，挂载后为世界坐标。第 k 级沿 Run 占 [k×TreadM,(k+1)×TreadM)，高程为 Nosing0.Y+k×RiserM。Treads=null 保留旧的纯碰撞坡；StairAt 无可用解析信息时返回 null。调用方仍需检查碰撞就绪、横向边界、踏步编号与腿长，不从碰撞坡猜可见踏面。
+
+**动态实例与蒙皮预热边界**
+
+game/contracts/RuntimeBridge/RegistrationAttributes.cs 的显示接口仍为：
+
+```csharp
+public readonly record struct RenderHandle(ulong Value);
+public interface IRenderHost
+{
+    RenderHandle Mount(ContentOutput content, WpId owner);
+    void Unmount(RenderHandle handle);
+}
+```
+
+该接口不提供动物实例的逐 tick 变换、动作状态、动画相位或骨架姿态更新。静态 GeometryInstanceStream 和内核现有 IInstancePool 不等同于 contract-22 的稳定 AnimalId 动态显示与动画接口。
+
+蒙皮预热请求类型属于 Campus.Kernel.Renderer，定义在 `game/kernel/registry/Presentation/RuntimePresentation.cs`，不是纯 .NET 的 Campus.Contracts：
+
+```csharp
+public enum WarmDeformation : byte { None = 0, Skin4 = 1 }
+public readonly record struct WarmDrawLayout(
+    ulong Format, bool Instanced,
+    Campus.Contracts.Bake.BakedPrimitive Primitive =
+        Campus.Contracts.Bake.BakedPrimitive.Triangles)
+{
+    public WarmDeformation Deformation { get; init; } = WarmDeformation.None;
+}
+```
+
+Skin4 表示四影响并实际绑定 Skin/Skeleton 的预热请求；类型存在不表示上传、骨架绑定或预热消费者已经支持它。现有 MaterialWarmup 拒绝非 None 的 Deformation，也拒绝带 Bones/Weights 的静态样片。IWalkSnapshot、IWaterTraversalQuery、IWaterMotionEvents、ICharacterService 目前保留桩实现，不能据公共签名宣布生产链路接通或契约组冻结。
+
+**仍未落地的源码项**
+
+- contract-22 B–E：栖地/分层环境查询、稳定 AnimalId 动态实例与动画更新、刺激与动物动作事件、行为调度交接，尚无对应公共契约。现有 IRenderHost 只有 Mount/Unmount；IInstancePool 是内核侧固定容量 MultiMesh 接口，不补写成上述契约。
+- contract-23 C3/C4：toon_figure 已登记但文件缺失，ToonLibrary.MaterialFor 未处理 Figure；fig_ctx 有常量和语义但没有写入方；VF-E 骨索引/权重布局、上传、角色宿主和真实蒙皮预热尚未实现。WarmDrawLayout.Skin4 仅为请求声明。
+- contract-21/23 已有的物理、水域、身体签名仍含桩；本节不将这些签名等同于 WP-08/42/54a 的生产能力完成。
 
 ```csharp
 // 画面设置（照 SYS-GRAPHICS §8 冻结，只增不改）
@@ -1506,8 +1735,10 @@ public interface IAppFlow                     // Kernel 服务（WP-49a），主
     Task<EnterResult> Enter(EnterRequest r);   // 只在 Title 接受
     Task ReturnToTitle();                      // 只在 Playing 接受；先保存（SYS-SAVE）
     void Skip();                               // 输入层在按住 Esc 0.8 s 后调用；跳过后的终态与完整播放一致（SYS-TITLE §5）
-    Task Quit();                               // 任何状态（SYS-TITLE §7.1）
+    Task Quit();                               // 任何状态（SYS-TITLE §7.1）；唯一公开的退出入口
 }
+// 退出顺序：IAppFlow.Quit 允许离开当前状态后，由 IAppExit.FinishQuit 交给启动层统一收尾：先停止并销毁 producer 与后期节点，
+// 再释放普通的自有服务，再 await 全局数据纹理登记处的 ShutdownAsync()（已发布纹理的释放权归登记处，创建方不重复 Dispose，ENG-PERF §1.5），最后 Quit
 
 // 启动边界（game/contracts/AppFlow/AppBootContracts.cs）：与 IAppFlow 同一实例，只在启动时由内核调用，顺序见 SYS-TITLE §1.4
 public sealed record BootFlowRequest(bool ShowTitle = true, SlotId? Slot = null, string? LoadFile = null, MapId? Map = null,
@@ -2201,7 +2432,7 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 引擎路径一律从环境变量 `UESTC_GODOT` 读命令行版 exe，默认 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`。门禁比对 `--version` 的输出与 `tools/godot-version.txt`。
 
 1. **仓库现状与 D0**：
-   - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档和待迁移的数据与脚本（§1）。
+   - 仓库已建好：清理前的整棵树在标签 `baseline-map`；`main` 上是开发文档、`pipeline/` 和仍待迁移的外围快照（§1）。
    - `.gitattributes` 已有 `* text=auto eol=lf` 和图片、`.res`、`.glb`、`.pck`、音频的 binary 标记；WP-00 补字体的 binary 标记，音频改走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）。
    - `.gitignore` 已有 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`；WP-00 按需补 `build/`。
    - WP-00 由 Astra 在工作树 `..\UESTC_RPG.wt\WP-00`（分支 `wp/00-core`）里搭好 ENG-WP §1 列出的 Godot 骨架（含全部 gen 目录的 csproj），经主代理的合并队列进 `main`（主会话批准，值班执行者执行合并，ENG-TEAM-FLOW §2.5、§2.7）。合入后在主检出跑一次 `--headless --import`，生成的 `.godot` 留作工作树的种子，再打标签 `contracts-v1-rc`（契约 v1 候选，§3）并推送。之后共享工程文件的改动也由 Astra 在同一个工作树里提交、经合并队列进 `main`。
@@ -2236,12 +2467,13 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 
      各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
    - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务。十几个工作树并行时，同时运行的重 CPU 任务不超过 max(2, 逻辑核数 / 8) 个，用 `..\UESTC_RPG.wt\.locks\` 下的计数锁排队（初值，P0 按本机实测调整，§9）；持有独占 GPU 锁时，其他工作树一律不得运行它们。
+   - **公平票据**：请求资源（CPU、GPU 共享、GPU 独占）先在独立的登记锁下取一个单调递增的票号，再竞争准入；较早的等待请求会阻挡后到、资源集合有交集的请求，资源不相交的可以继续。CPU 加 GPU 的组合请求拿不到全套资源时释放已占的局部槽位，不占着 CPU 等 GPU；GPU 独占先排空在跑的作业并阻止新的 CPU 与 GPU 请求。容量保持 CPU 为 max(2, 逻辑核数 / 8)、GPU 共享 2。超时、取消和进程退出会释放请求句柄，失效的文件不当活队列，计数器损坏时拒绝而不是悄悄归零。旧脚本发起的 CPU 请求不认识票据，可以绕过新的排队（新旧互斥仍安全），所以脚本更新后各工作树要 rebase、用新进程发起作业，才有统一的公平保证；在跑的旧作业正常结束，不杀进程、不删锁文件。
 4. **合并**（主代理的合并队列，一次合一个；主会话批准，值班执行者执行合并，ENG-TEAM-FLOW §2.5）：
    1. 施工方交候选之前，先在自己的工作树里 `git rebase main`，再跑 `scripts\gate.ps1 -Wp <WP-xx>`（按改动跑快检，碰到核心专项的输入时加跑核心专项，ENG-GATES §2），全部通过（CORE-CONVENTIONS §8.3）；
    2. 主会话评审通过后，在合并请求或任务单末尾写批准行；
    3. 值班执行者在主检出 `git merge --squash <候选提交>`，在主检出再跑一遍门禁，提交为一个提交，首行写 `WP-xx: <一句话说明>`；有冲突或门禁不过就撤回并报告，由施工方 rebase 后重交；
    4. 值班执行者 `git push origin main`；
-   5. 重建分支：工作树干净时，值班执行者在工作树里 `git switch -C wp/<xx>-<slug> main`，从新的 `main` 重建分支，保留 `.godot` 和编译缓存；工作包整体做完以后，`git worktree remove` 与 `git branch -D` 由主会话决定；
+   5. 删掉用完的工作树：合入后值班执行者当场删掉这个工作树和它的本地分支（ENG-TEAM-FLOW §2.6 第 7 步，`cleanup_worktrees.sh` 只删干净、内容已全在 `main` 的）；同包的下一张单开新的工作树；
    6. 资源有改动时，门禁 G1 在主检出跑 `--headless --import`，同时更新工作树种子；值班执行者在 `logs/merged.log` 记一行并写明需要谁 rebase，各派工方通知名下的工作树（ENG-TEAM-FLOW §2.6）。
    - 内核包按这个顺序合入：WP-08 → WP-34 → WP-01 → WP-50 → WP-04 → WP-02 → WP-46 → WP-03 → WP-05 → WP-09 → WP-06 → WP-07 → WP-43 → WP-27。WP-50（存档，与 WP-34 同为 P0，容器版本 1 和第一份金档在 P0 交付）排在 WP-01 之后；WP-46（地图服务，要 WP-02 的整图卸载接口）排在 WP-02 之后、WP-43 之前（SYS-SAVE §15、SYS-MAPS §16）。
    - 其余包靠桩就能运行，门禁通过就可以合入，不必等内核。

@@ -3,13 +3,13 @@ id: SYS-ATLAS
 title: "平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁"
 category: systems
 summary: "规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收"
-keywords: [平面地图, 小地图, 大地图, 底图, 地图标记, 锚点, 传送点, 导览亭, 导览桩, 传送, 雾幕瞬移, 飞过去, 传送卡, 传送落点, 目录页, 追踪, 自定义标记, 解锁策略, 区域名, 地名标注, atlasRect, G18 地图一致性, IAtlasService, IUnlockPolicy, MarkerId, AtlasSave, map_base.gdshader, markers.json, labels.json, atlas.overlay.json]
+keywords: [平面地图, 小地图, 大地图, 底图, 地图标记, 锚点, 传送点, 导览亭, 导览桩, 传送, 雾幕瞬移, 飞过去, 传送卡, 传送落点, 目录页, 追踪, 自定义标记, 解锁策略, 区域名, 地名标注, atlasRect, G18 地图一致性, IAtlasService, IUnlockPolicy, MarkerId, AtlasSave, map_base.gdshader, markers.json, labels.json, overlay/atlas.d]
 owners: [WP-48]
 contributors: [WP-01, WP-04, WP-06, WP-13, WP-27, WP-35, WP-36, WP-39, WP-44, WP-51, WP-53a, WP-55]
 depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
 related: [SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, SYS-SAVE, SYS-AUDIO, ENG-ROADMAP]
 contracts: [IAtlasService, IUnlockPolicy, MarkerId, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, PinShape, TeleportSpec, AtlasMarker, AtlasRegion, AtlasLayer, CustomPin, AtlasSave, TransitPreference]
-data: ["game/data/maps/qingshuihe/atlas/", "game/data/maps/qingshuihe/overlay/atlas.overlay.json", "game/assets/maps/qingshuihe/thumbs/"]
+data: ["game/data/maps/qingshuihe/atlas/", "game/data/maps/qingshuihe/overlay/atlas.d/", "game/assets/maps/qingshuihe/thumbs/"]
 gates: [G2, G13, G14, G15, G16, G18]
 ---
 
@@ -63,8 +63,8 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 - **想在 3D 画面里标出地点、路线、选中或追踪**：不许；这些只画在小地图和大地图上。场景里与地图对应的只有导览亭和导览桩，不发光、不做特效、点它没有反应（§1、§6）
 - **要知道玩家在哪、在哪个区**：观者的位置、朝向和所在空间读 `IObserverState`，区域名用 `IAtlasService.RegionAt()` 查；视锥这类"画面从哪看"的量读 `ICameraRig.Pose`，不拿它当观者位置（§3、§11）
 - **要从界面发起传送或飞过去**：一律调 `IAtlasService.Travel`，界面不直接调 `ICameraRig.Transit`；同图只走 `ICameraRig.Transit`，目标在别的图上时才走 `IMapService.Travel`（§7.1、§11）
-- **新增锚点**：在本图 `overlay/atlas.overlay.json` 加一条 `add`（ID 写 `design:anchor:Axx`，`Props` 写形态、朝向、编号并写明理由），`atlas/markers.json` 的锚点条目引用这个 ID 并写 `Fly`、`Stand`；两处位置相差不超过 0.5 m（§6、§9、§14.1）
-- **做导览亭、导览桩部件（WP-13）**：形态与尺度照 §6 的表，阻挡碰撞由部件参数生成（SYS-WALK §13），按 `atlas.overlay.json` 摆放；牌面与铭牌贴图由 WP-48a 渲染、经 WP-04 进图集（§2.1），场景里的字只用简体中文（§6、§13）
+- **新增锚点**：在本图 `overlay/atlas.d/` 加一条 `add`（ID 写 `design:anchor:Axx`，`Props` 写形态、朝向、编号并写明理由），`atlas/markers.json` 的锚点条目引用这个 ID 并写 `Fly`、`Stand`；两处位置相差不超过 0.5 m（§6、§9、§14.1）
+- **做导览亭、导览桩部件（WP-13）**：形态与尺度照 §6 的表，阻挡碰撞由部件参数生成（SYS-WALK §13），按 `overlay/atlas.d/` 摆放；牌面与铭牌贴图由 WP-48a 渲染、经 WP-04 进图集（§2.1），场景里的字只用简体中文（§6、§13）
 - **新增观景点**：在 `waypoints.json` 加点位（WP-36，UI-NAV §6），观景点标记引用它的 ID，不在 `atlas/` 里复制位姿（§5、§9）
 - **新增可进入的室内**：在开放清单 `interiors.json` 登记，入口给出门外点 `Outside`；门口标记和楼轮廓高亮由 `IAtlasService` 按清单自动生成，`atlas/markers.json` 和底图都不用改（§5）
 - **新增共享单车停放点**：由所在的区包按 WLD-LIFE §3.5 登记；停放点标记由 `IAtlasService` 按 WP-55 的停放点数据自动生成，`atlas/markers.json` 不用改；停放点不是锚点，不可传送（§5）
@@ -264,6 +264,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 - W 用临界阻尼弹簧跟随（阻尼比 1，响应约 0.6 s），不跳变。
 - 界面态下，鼠标在小地图上滚动滚轮，可以乘一个手动倍率 ×0.5–×2，只在本次运行中有效。
+- **重新进入 Playing 时重置派生状态**：不连续地进入 `Playing`（从任何非 `Playing` 状态回来，例如标题页"继续"回到同一个世界，世界实例不换、也不读档）时，小地图的派生状态重置一次：按当前脚下位置清掉弹簧速度，半宽直接落到当前状态的目标半宽（`TargetHalfWidth`），再让标记参考失效重建一次；之后照旧用上面的 0.6 s 弹簧和 3% 重画规则。这样同世界重新进入与冷启动恢复从同一个派生状态开始，首帧逐帧一致。重置不改布局、尺寸、颜色、曲线和存档。
 
 **显隐与透明度**：
 
@@ -439,7 +440,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 | 类型 | 数量（清水河） | 图标（UI-VISUAL图标体系） | 可传送 | 落点 | 数据来源 | 最低显示档 | 小地图 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 锚点 | 13（6 亭 + 7 桩） | 光学基准点：环加中心点加四根刻线；导览亭外加一圈细方框 | 是 | 旁观 `Fly`；行走 `Stand`（§6） | `atlas/markers.json`；实体在 `overlay/atlas.overlay.json`（§9） | Z0 | 显示 |
+| 锚点 | 13（6 亭 + 7 桩） | 光学基准点：环加中心点加四根刻线；导览亭外加一圈细方框 | 是 | 旁观 `Fly`；行走 `Stand`（§6） | `atlas/markers.json`；实体在 `overlay/atlas.d/`（§9） | Z0 | 显示 |
 | 观景点 | P00–P23，共 24 个，其中 P16–P23 是 WLD-INTERIORS新增的室内与高处点位（UI-NAV §6） | 取景框；仅旁观的加旁观图标 | 是 | 照点位的 `Fly`、`Stand`、`Entry` | 引用 `waypoints.json`，不复制位姿 | Z1 | 不显示 |
 | 可进入的室内 | 每个开放入口一枚（第一批 15 处，约 28 枚，含学知一组团的闸机；以 WLD-INTERIORS §2.16、WLD-INTERIORS §2.17 的入口为准） | 门加箭头；所在楼的轮廓用 `map.interior` 高亮 | 是，到门口 | WLD-INTERIORS给出的门外落点 `Stand`；`Fly` 在门外后上方（§7.3） | WLD-INTERIORS的开放清单与室内索引，运行时生成，不写进 `atlas/markers.json` | Z2 | 显示 |
 | 路线 | R1–R5，加 WLD-INTERIORS新增的 R6–R14（室内串联路线） | 走线起点：一枚过孔接一段 45° 折线（UI-VISUAL）；选中或追踪时画出整条折线 | 是，到起点 | 路线第一个节点 | SYS-WALK §11 的路线表与 WLD-INTERIORS的新路线；折线取导航图（WP-44） | Z1 | 只在追踪时画折线 |
@@ -493,7 +494,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - 相邻锚点之间约 250–450 m。
 - **夜里认得出**：导览桩的暖色小灯在远处是一个低亮度的点，与 MAP-QSH-ADDITIONS §8"初灯"的语言一致；白天靠它所在的大拍节点和地标来认（SYS-WALK §6 的 weenie 原则）。
 - **登记**：
-  - 每个锚点在 `atlas.overlay.json` 里有一条 `add` 操作，ID 是 `design:anchor:A01`……，`Props` 写形态（亭或桩）、朝向和编号，并写明理由（ENG-ARCH §3）；
+  - 每个锚点在 `overlay/atlas.d/` 里有一条 `add` 操作，ID 是 `design:anchor:A01`……，`Props` 写形态（亭或桩）、朝向和编号，并写明理由（ENG-ARCH §3）；
   - `atlas/markers.json` 的锚点条目引用这个 ID，G18 核对两者相差不超过 0.5 m。
 
 **锚点表**（坐标是按各区文件的 OSM 锚点推出的初值，y 取地面；最终由 WP-48c 与 WP-44 按截图和 SYS-WALK §15 的落地检查定，§16）：
@@ -518,6 +519,11 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - `Stand` 在锚点侧前方约 2 m，面向它朝向的广场；
   - `Fly` 默认在锚点后方 8 m、上方 6 m，俯仰 −12°。
   - 两者都写进 `atlas/markers.json`，可以逐个调整。
+- **锚点挪位的自审**：锚点的实际位置要从上表的初值挪动时（因铺装、楼或路网变化放不下亭座或 `Stand`），三条都满足就直接改数据，不用先问主代理：
+  - 离表中位置不超过 30 m；
+  - 底座和 `Stand` 都完整落在人行铺装上（门内广场这类能走车的铺装也算，只要不在行车道上）；
+  - 离行车道、水和墙都 ≥ 3 m，按生产用的 float32 坐标核算。
+  只改 `atlas/markers.json` 和 `overlay/atlas.d/` 里该锚点的位置与 `Fly`、`Stand`，`Fly` 的 y 与 pitch 保持不变，挪动后 §14.1 的 0.5 m 对位仍成立；回报里列出新旧坐标和位移。三条有一条不满足的，不自己往外找，把该处 30 m 范围的俯视图和路网图层报给主代理，由设计增补补一块铺装，再把锚点放上去。
 - **不另设导览牌**：导览设施只有这 13 个锚点；图书馆前由 A02、商业街北口由 A05、博物馆前由导览桩 A07 承担。
 
 ## 7 传送流程（WP-48c 调用，WP-36 实现过渡）
@@ -602,7 +608,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | --- | --- | --- | --- |
 | `game/data/maps/qingshuihe/atlas/markers.json` | 缩放区间与缩放档；地图页范围 `atlasRect`（清水河 ±1536 m，§2.3；全分辨率部分的范围取 `map.json` 的 `dataRect`，不在这里另写）；锚点（ID、名称、形态、位置、`Fly`、`Stand`、引用的覆盖层 ID）；地标、设施的增删和优先级；隐藏清单 | WP-48c | 进 |
 | `game/data/maps/qingshuihe/atlas/labels.json` | 标注：文字（中英）或名字来源的 `ref`、类别、锚点或折线、优先级；区域与地点表（区域名、地点名的唯一来源，§2.5） | WP-48a 生成初稿，人工校订 | 进 |
-| `game/data/maps/qingshuihe/overlay/atlas.overlay.json` | 锚点实体的 `add` 操作，`design:anchor:A01`…（§6）；覆盖层照 SYS-MAPS的规则放在本图的 `overlay/` 下 | WP-48c | 进 |
+| `game/data/maps/qingshuihe/overlay/atlas.d/` | 锚点实体的 `add` 操作，`design:anchor:A01`…（§6）；覆盖层照 SYS-MAPS的规则放在本图的 `overlay/` 下 | WP-48c | 进 |
 | `game/data/maps/qingshuihe/waypoints.json` | 点位 P00–P23，观景点标记引用这里 | WP-36（UI-NAV §6） | 进 |
 | `game/data/maps/qingshuihe/interiors.json` 与室内索引 | 开放清单与入口（WLD-INTERIORS），运行时生成可进入室内的门口标记 | 清单：主代理（格式与 schema 归 WP-51，条目由负责包填写，SYS-MAPS §2.1）；室内索引：WP-51 | 进 |
 | 本机缓存 `user://cache/bake/qingshuihe/<ABI>/map/<哈希>/` | `map_sdf_a`、`map_sdf_b`、`map_sdf_out`、`map_sdf_ring`、`map_glyphs`、`labels.bake`（每种界面语言一份，§2.5）、8 m 区域栅格、`map.manifest.json` | WP-48a 的烘焙器（本机烘焙） | 不进，也不随包发（ENG-ARCH §4、SYS-MAPS §2.4） |
@@ -807,8 +813,8 @@ public sealed record AtlasSave(
 | --- | --- |
 | **WP-48a** 底图烘焙与地标贴图 | 底图烘焙器（引用 `Campus.Gen.World`；代码放进随包程序集，由 `IBakeService` 本机调用，D-165；`pipeline/map/` 只留控制台入口）：精确矢量 SDF、外围纹理、区域与地点栅格、`labels.bake`、`map.manifest.json`；`atlas/labels.json` 初稿；地标线描 SVG 与 MSDF 图集；导览亭牌面、导览桩铭牌的贴图（场景调色板，交 WP-04 进图集）；`--bake=map` 接进 ENG-ARCH §4 的烘焙流程 |
 | **WP-48b** 小地图与大地图界面 | `game/hud/map/`：小地图、大地图（图层、目录、传送卡、自定义标记、追踪、按键）；`game/style/shaders/map_base.gdshader`；地图相关的设置项；读屏名字；预建与预热 |
-| **WP-48c** 标记、锚点、传送与解锁服务 | `game/systems/atlas/`：`IAtlasService`、`all-unlocked` 与 `proximity` 两个策略的实现、开放清单驱动的室内标记、停放点数据驱动的共享单车停放点标记、存档段（自定义标记用整数 ID）；`atlas/markers.json`、`overlay/atlas.overlay.json`；传送时的 `PlayUi` 两声；G18 检查器（与 WP-27 合作） |
-| WP-13 | 导览亭、导览桩两个部件及其碰撞（§6），按 `atlas.overlay.json` 摆放；不另做单独的导览牌部件 |
+| **WP-48c** 标记、锚点、传送与解锁服务 | `game/systems/atlas/`：`IAtlasService`、`all-unlocked` 与 `proximity` 两个策略的实现、开放清单驱动的室内标记、停放点数据驱动的共享单车停放点标记、存档段（自定义标记用整数 ID）；`atlas/markers.json`、`overlay/atlas.d/`；传送时的 `PlayUi` 两声；G18 检查器（与 WP-27 合作） |
+| WP-13 | 导览亭、导览桩两个部件及其碰撞（§6），按 `overlay/atlas.d/` 摆放；不另做单独的导览牌部件 |
 | WP-36 | `TransitKind.Teleport` 与 `TransitPreference`：传送时序（§7.2）、到达保证、落点规则 |
 | WP-35 | 左上角槽位与全屏页槽位；不做单独的点位目录抽屉（由 48b 的目录页承担）；设置表新增 §12 的四项；临时提示新增"小地图"一条 |
 | WP-06 | 输入动作 `map`（M）、`atlas_index`（G）、`minimap`（N），按 `physical_keycode` 绑定，可改键；实现按原因计数的 `ICameraRig.LockInput`，大地图打开期间由 WP-48c 以 `InputLockReason.Atlas` 占用观者输入 |
@@ -834,7 +840,7 @@ G18 地图一致性判据的核心是"标记与覆盖层实体相差不超过 0.
 | 子项 | 判据 |
 | --- | --- |
 | **底图哈希** | `map.manifest.json` 里的世界模型哈希和烘焙代码哈希，与当前的 campus.json、全部覆盖层、outskirts.json 和烘焙器代码一致；不一致就失败，并提示重烘 |
-| **标记与实体** | 每个锚点标记与 `atlas.overlay.json` 里的 `design:anchor:*` 一一对应，位置相差 ≤ 0.5 m；地标、设施标记与所引用实体的登记点相差 ≤ 0.5 m；室内门口标记与 WLD-INTERIORS室内索引里同一入口的门中心相差 ≤ 0.5 m，开放清单里每个开放入口都恰有一枚门口标记 |
+| **标记与实体** | 每个锚点标记与 `overlay/atlas.d/` 里的 `design:anchor:*` 一一对应，位置相差 ≤ 0.5 m；地标、设施标记与所引用实体的登记点相差 ≤ 0.5 m；室内门口标记与 WLD-INTERIORS室内索引里同一入口的门中心相差 ≤ 0.5 m，开放清单里每个开放入口都恰有一枚门口标记 |
 | **观景点** | 观景点标记引用的 ID 在 `waypoints.json` 里都存在，P00–P23 一个不缺；标记位置等于点位 `Fly` 的 (x, z)（引用，不复制，所以应当完全相等） |
 | **落点** | 每个可传送标记：`Fly` 位姿处 `MediumAt()` 是空气；`Stand` 落在可行走遮罩上（SYS-WALK §6）；锚点和门口的 `Fly` 在 WLD-OUTSKIRTS的可达空间内、不在缓冲带里。真实落地由 G15 检查 |
 | **页面范围** | 地图页等于 `atlas/markers.json` 的 `atlasRect`，并且包住 `map.json` 的 `dataRect`；箱庭外缘（截面线）被页边裁掉的长度写进报告，大于 0 时报警（只报警，§2.3）；`map_sdf_out` 与 `map_sdf_ring` 在 ±1280 m 边线上的零值线相差 ≤ 0.5 m |

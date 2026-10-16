@@ -266,7 +266,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
   - 天气（SYS-WEATHER §7）：阴影强度再乘 (1 − 0.8 × 阴度)，白天不低于 0.2；最终强度低于 0.01 时（无影蓝调、雨夜无月影、地下、水下） `ShadowOpacity` 和 `ShadowCasterMask` 置 0，阴影通道空跑（ENG-PERF §10.1）。
   - 引擎每帧重渲全部级联，**没有降低远级更新率的接口**。
   - 自写、用全局参数实现的：方向量化（δ ≈ 0.01°，带回差，只在跨过一步时转灯；快速变化时连续转动）；阴影方向高度钳 4°（介质为室内时目标抬到 14°，0.5 s 过渡、出楼还原，ENG-PERF §10.1；取值见 §11）；主光强度 smoothstep(−2°, 4°, h)；退光线（全局参数 `retreat_y`，宣邦楼穹顶的 instance uniform 偏置 +6 m）；无影蓝调里的日月交接（全局 `shadow_strength`，月影最强 0.45）。
-- **调色板**（ENG-PERF §1.5）：256×64 RGBA8 的 ImageTexture，登记为全局 `sampler2D`，由 CPU 在 OKLab 里求值后每帧整张 `Update()`（64 KB，PC 上可以忽略）。3D 调色纹理保持静态 32³，时段变化只走 CDL 参数，CDL 每帧烘进运行时 LUT。
+- **调色板**（ENG-PERF §1.5）：256×68 RGBA8 的 ImageTexture，登记为全局 `sampler2D`，由 CPU 在 OKLab 里求值后每帧整张 `Update()`（68 KB，PC 上可以忽略）。3D 调色纹理保持静态 32³，时段变化只走 CDL 参数，CDL 每帧烘进运行时 LUT。
 - **后期**（ENG-PERF §10.2）：Compositor 在 POST_SKY 画描线和屏幕空间边缘光，在 POST_TRANSPARENT 画移轴和光斑；之后是内置 Glow（柔光）、Tonemap Linear、内置 LUT、抗锯齿。抗锯齿随预设：精致、极致 SMAA 1x，均衡、流畅 FXAA（SYS-GRAPHICS §1），不用 TAA、MSAA。描线按内部分辨率换算线宽，并设最小宽度（ENG-PERF §10.2）。移轴、镜头光斑、光柱、暗角是风格默认，玩家可以关，关时 0.5 s 淡出（SYS-GRAPHICS §2）。
   - 风格"清透"（ART-STYLE §4、ART-STYLE §7）：描线约 1.25 px（1080p）、随底色染色的细线，两次 dispatch（线遮罩 → 去斑点、抗锯齿与合成），仍算一个文件；高光肩部和暗角并进移轴合成那次 dispatch（+0.02 ms 量级）；柔光白天只让高光晕开，17:30 默认格只留 0–0.04（默认 0.02）的全屏柔光；超采样默认不做（§2）。1440p 下后期合计约 1.3–2.4 ms，按 §2 的 15% 核算，P0 实测。
 - **光柱**（ENG-PERF §10.2）：软边加法体，画在透明阶段，不投影。室外沿太阳方向的开口圆柱或扁片，每屏 ≤ 8 根，计入"天空与特效"；室内每块受光窗格一根棱柱，每间房合成 1 次绘制、细尘 1 次，同屏 ≤ 3 组，屏幕覆盖率 ≤ 0.6 屏（P0 实测），计入楼内视角额度（§2）；细尘 MultiMesh 每屏 ≤ 600 粒。光柱可以关（风格默认）。
@@ -297,7 +297,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
      - **重启**：图形接口、显卡选择。
    - 启动预热覆盖四个预设和所有单项取值能到达的组合的并集（ENG-PERF §2），所以玩家怎么切都不再编译管线。
    - 时间、季节、天气、介质只经全局着色器参数和全局纹理传入（ENG-PERF §1.5）。天气用到的节点（降水池、檐滴）启动时就在树里，运行时只改 `VisibleInstanceCount`、instance uniform、`ShadowOpacity` 和 `ShadowCasterMask`（SYS-WEATHER §7）。
-   - 门禁：每次雾幕淡出之后（含画面设置的雾幕；`--title=1` 时从标题页转为实时那一刻起），`Performance` 的 SURFACE、DRAW 和 Canvas 管线编译计数不再增长，新生成的 MSDF 字形为 0（G16）。界面着色器、MSDF 字形和大页控件在开场雾幕或扉页后预热或预建（UI-VISUAL §11.9）。
+   - 门禁：每次雾幕淡出之后（含画面设置的雾幕；`--title=1` 时从标题页转为实时那一刻起），`Performance` 的 SURFACE、DRAW 和 Canvas 管线编译计数不再增长，新生成的 MSDF 字形为 0（G16）。界面着色器和 MSDF 字形在开场雾幕或扉页后预热，大页按需创建、关闭即释放（UI-VISUAL §11.9）。
 10. **版本锁定**：Godot 4.7.2-stable .NET（`tools/godot-version.txt`；csproj 写 `Sdk="Godot.NET.Sdk/4.7.2"`）。升级要经主代理评审；升级时必须重跑表面字节格式的比对门禁（ENG-PERF §12.5）。
 11. **内容几何不得依赖时刻、季节和天气**：`Build()` 不得读取世界状态（钟点、季节、天气、观察模式；`BuildContext` 里没有 `IWorldState`，ENG-ARCH §3）。季节和天气的差异只能做成着色器参数（叶量、开花、覆雪、地面遮罩阈值、湿润与积水，ENG-PERF §9），天气要的烘焙数据（`precip_occ`、地面遮罩 2、檐滴点）与天气状态无关，所以改时间、换季、换天气不会让任何烘焙产物（含本机缓存）失效。
 12. **碰撞数据**本机烘焙（D-165），与可见几何用同一套参数生成，不拿可见网格当 ConcavePolygonShape3D；每格一个碰撞 `.tbin`（碰撞级 C，只存形状参数，SYS-WALK §13），存在本机缓存里。生成在工作线程上；读缓存的工作线程任务只读 `.tbin`、由参数创建形状；碰撞 body 只在主线程创建、删除和入树，入树前用 shape owner 加完全部形状（Jolt 对已在空间里的 body 逐个加形状是 O(n²)）。开放室内的碰撞按楼、按层各一个包，按房间簇拆成 ≤ 250 个形状的 body，每帧入树 1 个、≤ 0.3 ms（WLD-INTERIORS §6.1）；自动门的门扇不进烘焙碰撞，关好时由运行时门体恢复一块薄盒（WLD-INTERIORS §4.1）；外围没有碰撞数据。
@@ -375,12 +375,12 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 | 包 | 主线程每帧 | 内存 | 说明 |
 | --- | --- | --- | --- |
 | WP-34 世界状态、WP-37 调色板求值 | 合计 ≤ 0.35 ms（调色板求值 ≤ 0.3 ms）/ ≤ 0.5 ms | 调色板纹理 64 KB，另有 CPU 侧的 Image 一份 | `ProcessPriority` −1000、−800（SYS-TIME §1） |
-| WP-35 界面 | 脚本与排版平均 ≤ 0.2 ms / ≤ 0.3 ms；画布渲染 CPU ≤ 0.3 ms / ≤ 0.5 ms（单列，在 ENG-PERF §6 的"渲染 CPU"里）；每秒刷新 ≤ 10 次 | 可见且在处理的 Control ≤ 400，预建隐藏的另计、总数 ≤ 700；字体约 30–50 MB 整包常驻，计入进程内存（ENG-PERF §8） | 漫游态只有小地图（SYS-ATLAS §10）；按 UI-VISUAL §12 |
+| WP-35 界面 | 脚本与排版平均 ≤ 0.2 ms / ≤ 0.3 ms；画布渲染 CPU ≤ 0.3 ms / ≤ 0.5 ms（单列，在 ENG-PERF §6 的"渲染 CPU"里）；每秒刷新 ≤ 10 次 | 可见且在处理的 Control ≤ 400，预建隐藏的（现只有大地图）另计、总数 ≤ 700；字体约 30–50 MB 整包常驻，计入进程内存（ENG-PERF §8） | 漫游态只有小地图（SYS-ATLAS §10）；按 UI-VISUAL §12 |
 | WP-36 点位跳转 | 计入相机那一步 | — | 预取只是给加载队列插队，不另占挂载预算 |
 | WP-54a 角色运行时（动画、IK、地面查询、可见性） | P0 初值，原型验证后定：p95 ≤ 0.08 ms / ≤ 0.15 ms，从本节下方的主线程余量里拨；超支时先让 IK 隔帧更新，再降看不见的下身的动画频率 | P0 初值，原型验证后定：网格与动画 ≤ 8 MB | 只在行走模式下；帧顺序在角色动画一步（contract-23，以 Astra 落地的源码为准） |
 | WP-42、WP-43 行走与碰撞 | 控制器加查询：P0 原型重定（预计 0.05–0.3 ms，p95）；碰撞格入树每帧最多 1 格、≤ 0.3 ms，计入流式挂载的 1.0 ms | 加载环内的碰撞 `.tbin` ≤ 1.3 MB（Jolt 内部结构另计，P0 实测）；全局常驻约 0.9 MB（C# 数组） | 只在行走模式下加载碰撞格（SYS-WALK §13） |
 | WP-45 天气（过程、天气向量插值、降水池参数、檐滴槽位） | ≤ 0.1 ms；补齐 24 h 前瞻队列是微秒级（SYS-WEATHER §6.1） | 显存约 5 MB（`cloud_noise` 1 MB、`precip_occ` 约 3.3 MB、`refl_lamps`），另加地面遮罩 2（与 `ground_mask` 同尺寸，RGBA8 不压缩） | 在 WorldState（−1000）推进钟点和季节之后求天气向量（SYS-WEATHER §8） |
-| WP-32 画面设置与自动调节 | 平时约 0：只在设置或自动调节变化时，于 `FramePriority.Quality`（−1200）那一步分发；细节距离改动后的分帧重写每帧 ≤ 0.3 ms（SYS-GRAPHICS §3），计入流式挂载的 1.0 ms | `graphics.cfg` 可忽略 | 画面页在雾幕或扉页后预建并隐藏（UI-VISUAL §11.9） |
+| WP-32 画面设置与自动调节 | 平时约 0：只在设置或自动调节变化时，于 `FramePriority.Quality`（−1200）那一步分发；细节距离改动后的分帧重写每帧 ≤ 0.3 ms（SYS-GRAPHICS §3），计入流式挂载的 1.0 ms | `graphics.cfg` 可忽略 | 画面页随设置卡按需创建、关闭即释放（UI-VISUAL §11.9） |
 | WP-48 平面地图（SYS-ATLAS） | 小地图平均 ≤ 0.02 ms（"随镜头"模式 ≤ 0.05 ms）；大地图打开时 ≤ 0.15 ms，界面合计仍 ≤ 0.2 ms；`IAtlasService` ≤ 0.01 ms | 地图纹理约 41 MB 显存（含外圈约 4 MB，§2）；标记、标注、8 m 区域栅格约 0.2 MB | Control：小地图 ≤ 12、大地图 ≤ 120，计入界面的 400；`IAtlasService` 在 `FramePriority.Systems` 那一步，不新增帧顺序值（SYS-ATLAS §10） |
 | WP-46 地图服务（SYS-MAPS） | 平时约 0；切图的 Unload、Mount 在雾幕里，不计帧预算 | 内存峰值 = 最大的一张图 + 全局常驻（先卸后装，SYS-MAPS §12） | `FramePriority.Map = −1300`；热切图 ≤ 5 s |
 | WP-02 本机烘焙（`IBakeService`，D-165） | 主线程约 0：生成只在工作线程上做，主线程只挂载，计入流式挂载的 1.0 ms；工作线程数：扉页和开始页期间 max(1, 逻辑核数 − 2)，进 Playing 后 max(1, 逻辑核数 / 4)，优先级低于正常、排在按需请求之后；同时在途的生成任务 ≤ max(2, 逻辑核数 − 2) | 磁盘：本机缓存一张图烘满约 0.8–1.4 GB，默认上限 2.5 GB（见下"本机缓存预算"）；生成用 `ArrayPool` 和预分配缓冲 | 单件生成耗时初值（开发机单线程，P0 实测）：L0 一格 ≤ 150 ms、碰撞一格 ≤ 50 ms、室内一层 ≤ 100 ms；ENG-PERF §5 |
@@ -530,7 +530,7 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 | `rendering/lights_and_shadows/positional_shadow/atlas_16_bits` | `false` | 本项目没有点光阴影；设为 false 时，引擎启动就把 16 位和 32 位两种阴影格式的管线都编好，万一位深被改也不再编译。阴影深度本身仍固定 16 位（SYS-GRAPHICS §3） |
 | `rendering/limits/cluster_builder/max_clustered_elements` | 512（默认） | 重点 OmniLight3D 不超过 32 盏，不用引擎 Decal 和反射探针 |
 | `rendering/shading/overrides/force_vertex_shading` | `false`（默认） | 否则 light() 不执行 |
-| `rendering/limits/global_shader_variables/buffer_size` | 65536（默认） | 37 个全局参数加约 14 张全局纹理（ENG-PERF §1.5），远低于上限 |
+| `rendering/limits/global_shader_variables/buffer_size` | 131072（默认 65536 的两倍，每个缓冲 2 MiB） | 这是实例着色器参数池的容量：3D 流式实例和界面控件的实例参数槽都从这里分配，高峰容量需要 131072（实测在 65536 时出过 "Too many instances using shader instance variables"）；这是容量修正，不是泄漏修复，隐藏的界面页不该占槽（UI-VISUAL §11.9） |
 
 **剔除**
 

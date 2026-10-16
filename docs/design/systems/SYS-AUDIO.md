@@ -1050,7 +1050,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ## 13 设置：五组音量与减少干扰
 
-设置卡加一页"声音"（UI-NAV §4.6；界面由 WP-35 做）。声音页约 30 个 Control，和画面页一样随设置卡在扉页或开场雾幕后面**预建并隐藏**，打开时不建控件（UI-NAV §9、UI-VISUAL §11.9）。设置存进 `user://audio.cfg`，只有 53a 读写，与 `graphics.cfg` 归 WP-32 的做法相同；读取按 SYS-SAVE"设置类文件只接受基本类型"的流程：先查文本里有没有 `Object(` 之类的写法，再按登记表只取 bool、int、float、String。它登记在 ENG-ARCH §2 的读写方表和 SYS-SAVE的档案级文件里，换存档位时它不变。不并进 `settings.cfg`：开机时音频要比界面更早拿到音量。
+设置卡加一页"声音"（UI-NAV §4.6；界面由 WP-35 做）。声音页约 30 个 Control，和画面页一样随设置卡**按需创建、关闭即释放**，不预建隐藏（UI-NAV §9、UI-VISUAL §11.9）。设置存进 `user://audio.cfg`，只有 53a 读写，与 `graphics.cfg` 归 WP-32 的做法相同；读取按 SYS-SAVE"设置类文件只接受基本类型"的流程：先查文本里有没有 `Object(` 之类的写法，再按登记表只取 bool、int、float、String。它登记在 ENG-ARCH §2 的读写方表和 SYS-SAVE的档案级文件里，换存档位时它不变。不并进 `settings.cfg`：开机时音频要比界面更早拿到音量。
 
 | 设置 | 取值 | 默认 |
 | --- | --- | --- |
@@ -1113,6 +1113,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 - `*.wav`、`*.ogg`（以及母带的 `*.flac`）走 Git LFS；`.gitattributes` 统一维护（ENG-ARCH §2）。
 - **仓库公开时**：Sonniss 这类不许"作为音效"再分发的素材，导入后的文件同样是可以直接取出的声音，不能进公开仓库——放私有素材库，构建时同步进来；或者公开仓库只用 CC0、CC BY 和合成的素材。随游戏的导出包发布不受这条限制。
 - 文件名：`<声音集>_<序号>.wav`，声音集 ID 与 `sets/*.json` 一致。
+- **声音集 id 以入库清单为准**：`game/assets/audio/index.json` 是已入库素材的清单（床 `bed_*`、脚步 `foot_<材质>_walk`、鸟 `bird_<角色>` 等），声音集 id 先以它为准；53b 的 `sets` 和 53d 的 `foley_banks` 建的时候对齐它，要改名由那两单提出，改名后重跑入库管线。
 
 ### 14.4 署名页
 
@@ -1543,7 +1544,7 @@ public interface IChannelReader { float Value(ChannelId id); }                  
 | WP-40 | `ILightningFeed`（减少动态效果时照发 `Visible = false` 的事件） | < 0.1k |
 | WP-45 | 45b 不做远雷（远雷归 WP-40 与 53b，§6.1）；`WeatherNow`、`precip_occ` 与檐滴点表在 CPU 侧可读；积水与湿润的公共函数 | < 0.1k |
 | WP-17、WP-31a–c、WP-51 | 各开放室内的 `Acoustics()`（类别表 §10.4）与室内档案 ID，自动门的门户写门 ID；WP-31a 在钟室加一口静止的铜钟（静态几何，WLD-INTERIORS §3）；WP-51 给简化室内和平面内核生成的普通房间声明通用的 Room、Corridor、Stair | 各 < 0.05k |
-| WP-35 | 设置卡的"声音"页（约 30 个 Control，随设置卡预建，UI-VISUAL §11）；组件事件到 `UiCue` 的映射；数据手册与许可页读 `licenses.json` 生成音频署名；依赖白名单加 `IAudioService` | 0.2k |
+| WP-35 | 设置卡的"声音"页（约 30 个 Control，随设置卡按需创建，UI-VISUAL §11.9）；组件事件到 `UiCue` 的映射；数据手册与许可页读 `licenses.json` 生成音频署名；依赖白名单加 `IAudioService` | 0.2k |
 | WP-49 | 过场 `audio` 轨的提示，以及跳过时的执行顺序 | < 0.1k |
 | WP-46 | 切图时 `IMapAware` 的时序（§2.7）；`VeilReason.MapTravel` | < 0.1k |
 | WP-27、WP-41 | G21 的编排：Movie Maker 录音脚本（复用 G13 的录像流水线）、BS.1770 分析、日志判据、语音识别；集中测试的听评集（P00–P15 加英雄帧 × 4 种状态 × 60 s） | 0.3k |

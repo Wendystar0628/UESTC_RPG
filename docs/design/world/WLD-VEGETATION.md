@@ -568,7 +568,7 @@ P0 用 E1 和银杏大道、西湖岸的视角，在 150 m 切换距离上对比
 
 | 纹理 | 规格 | 内容 |
 | --- | --- | --- |
-| 调色板 | 256×64 RGBA8，线性过滤、循环寻址；`ImageTexture` 每帧整张 `Update()`；sRGB 的解码方式按 ART-STYLE §8.5 | 第 0、1 行用 `texelFetch`；季相行（第 4–63 行）用 `texture()` 按 x = s_i / 4 取样，沿季节轴硬件插值、首尾相接（SYS-TIME §3.1） |
+| 调色板 | 256×68 RGBA8，线性过滤、循环寻址；`ImageTexture` 每帧整张 `Update()`；sRGB 的解码方式按 ART-STYLE §8.5 | 第 0、1 行用 `texelFetch`；季相行（第 4–63 行）用 `texture()` 按 x = s_i / 4 取样，沿季节轴硬件插值、首尾相接（SYS-TIME §3.1） |
 | 树种表 `tree_species` | 32×8（最多 32 个树种），`Image.Format.Rgbaf`（RGBA32F），最近邻 | 每行一个树种：A、B 的四季锚点，摆幅，枝条笔触的层号，叶色行号，花色行号，是否落叶，树冠类型（插片、云团、混合，§1.1）。透光系数 k_t 和明暗档不在这里，在全局纹理 `mat_table` 里按材质 ID 查（ART-STYLE §2.5） |
 
 - 树种表的源数据是 JSON（`game/data/vegetation/species.json`，WP-23 维护，取值就是 §2 的表），启动时由 WP-38 的 C# 转成纹理，只写一次。

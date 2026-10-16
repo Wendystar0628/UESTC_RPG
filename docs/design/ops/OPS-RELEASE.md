@@ -70,6 +70,7 @@ gates: [G6]
 2. **导出**：运行导出入口 `scripts/release/`，一条命令依次完成：`dotnet build` → `--headless --import` → `--export-release` → 各图启动集与 `bake.manifest.json` → 写入构建信息与 `LICENSES.txt` → 7-Zip 打包 `UESTC-<版本>-win64.7z`（LZMA2，`-mx=9`，ENG-PERF §8）→ 附上 WP-08 打好的 `map-data-<版本>.zip`（§5）。产物放仓库里不进 git 的 `build/`。
 3. **检查**：G6 通过（安装目录与压缩包体积、`--bake-verify`，ENG-GATES §2），压缩包与数据包的文件名版本号与 `version.txt` 一致。
 4. **发布**：在这个提交上打标签 `v<版本>` 并推送；在 GitHub 仓库的发布页（对应这个标签）上传压缩包和地图数据包，说明里写版本号、构建信息和 §4 的更新方法。
+- **导出会改 `project.godot`**：Godot 导出时把等于引擎默认值的项从 `project.godot` 里删掉，其中 `rendering/lights_and_shadows/directional_shadow/16_bits=true` 会被删（引擎规范化，不是误改）。导出之后（以及在主检出跑过导出类门禁之后）要把这个文件恢复到提交的版本，保留显式的 `16_bits=true`，不要把导出改过的 `project.godot` 提交。
 - **首次外发前走一遍干净环境**：在一个没装 .NET SDK、Godot、没有 `UESTC_*` 环境变量的普通 Windows 账户里：解压 → 启动（首次运行在扉页期间本机烘焙）→ 走一段、保存、退出 → 把下一版解压到另一个目录启动 → "继续"读到刚才的存档。以后改了导出配置、用户目录或存档格式，再走一遍。
 
 ## 4 安装、更新与卸载

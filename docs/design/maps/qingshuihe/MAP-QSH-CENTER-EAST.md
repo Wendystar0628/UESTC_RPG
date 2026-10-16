@@ -3,13 +3,13 @@ id: MAP-QSH-CENTER-EAST
 title: 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 category: maps
 summary: 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
-keywords: [中部科研区, 东区, 基础实验大楼, 一号科研实验楼, 科研楼B区, 科研楼C区, 麦克斯韦像, 方程石, 林为干院士像, 科研楼碑, 银杏大道跨河小桥, 品学楼, 第一教学楼, 书法横梁门框, 架空通道, 叠水喷泉石台, 文科楼群, 友谊树, 综合训练馆, 筒拱, 网球场树墙, 绿色房间, 球场标线, 球场围网, 高杆灯, 田径场, 器材室, 室外游泳池组团, 东区月出, center-east.overlay.json]
+keywords: [中部科研区, 东区, 基础实验大楼, 一号科研实验楼, 科研楼B区, 科研楼C区, 麦克斯韦像, 方程石, 林为干院士像, 科研楼碑, 银杏大道跨河小桥, 品学楼, 第一教学楼, 书法横梁门框, 架空通道, 叠水喷泉石台, 文科楼群, 友谊树, 综合训练馆, 筒拱, 网球场树墙, 绿色房间, 球场标线, 球场围网, 高杆灯, 田径场, 器材室, 室外游泳池组团, 东区月出, overlay/center-east.d]
 owners: [WP-21]
 contributors: [WP-13, WP-15, WP-23, WP-24, WP-25, WP-28, WP-30, WP-31b, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-51, WP-53b]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-WATER, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, ART-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/center-east.overlay.json"]
+data: ["game/data/maps/qingshuihe/overlay/center-east.d/"]
 gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 ---
 
@@ -48,7 +48,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC。
 
-- 代码在 `game/gen/zones/center-east/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/center-east.overlay.json`（ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/center-east/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/center-east.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。围网段这类重复件按部件放置交付，由烘焙器按每格数量选容器：同种超过约 64 个用 MultiMesh，更少的（例如高杆灯）用独立实例（ENG-PERF §1）。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元的形状见 §8 末尾"碰撞体"一段（SYS-WALK §13），由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）。
@@ -56,7 +56,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 ## 0 结论
 
 1. **分工**：WP-21 做本区的建筑、雕像与石刻、跨走马河小桥、品学楼东侧小溪与小桥、叠水喷泉石台、球场围网、灯杆、器材室与改色地面、游泳池组团外观，以及这些构件的碰撞图元和 `Foot`；室内、植被、水面、生活痕迹、外围和发声器归别的包（"分工"）。
-2. **代码边界**：代码在 `game/gen/zones/center-east/`，纯 .NET、不依赖其他区，只交付几何和材质键；轮廓调整写进 `center-east.overlay.json`，超过 4 m 或新增的设计物要写理由（"实现"、"定位、设计增补与近景要求"）。
+2. **代码边界**：代码在 `game/gen/zones/center-east/`，纯 .NET、不依赖其他区，只交付几何和材质键；轮廓调整写进 `overlay/center-east.d/` 里本包的分片，超过 4 m 或新增的设计物要写理由（"实现"、"定位、设计增补与近景要求"）。
 3. **身份特征**：品学楼的书法横梁门框与门前叠水喷泉、文科楼十五六层的塔楼与圆角退台、训练馆银白筒拱、网球场三片一组的树墙"绿色房间"、麦克斯韦像旁的方程石，都要认得出（§1.3、§2.2–§2.3、§3.2、§4.1–§4.2）。
 4. **层数与翻新**：基础实验大楼和科研楼 C 区按 5 层；品学楼 C 区外观升到约 19 m，写 `HeightOp`；早期建成的楼和球场、围网、灯杆按 ART-RENOVATION 翻新，立面和地面不做旧（§1.2、§2.1、§2.8）。
 5. **文科楼**：画成"建成、正在搬入"，不开放；全校不画施工网架（§3.3）。
@@ -262,7 +262,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 下面"本区身份特征"表里的特征，以及本文写明的结构（体量、层数、平面布局、入口），视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来；写明"可参考，按画面需要处理"的细节按氛围处理。
-- 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/center-east.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/center-east.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：本区建成较早的楼（品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房）和球场、围网、灯杆按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §3，待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174），球场和跑道的地面没有裂缝、补丁和褪色。
 

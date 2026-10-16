@@ -41,7 +41,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 - **开始页和过场期间要动镜头或读输入**：Boot、Title、Entering、Leaving 期间 `IAppFlow` 持有 `LockInput(InputLockReason.Cinematic)`，镜头只由 `CinematicPlayer` 经 `ICameraRig.SetPose` 驱动，WP-06 的相机不积分输入；开始页菜单和按住跳过走界面输入（§7.1、§7.4、§8.3）
 - **要在启动时做准备**：实现 `IBootParticipant`（实现在已注册的服务或节点上，不单独注册），在 `BeforeMap`、`AfterMapWarm`、`BeforeReveal` 里选一个阶段；不揭幕、不放输入；读档只由 `IAppBootFlow.PrepareWorld` 做（§1.4）
 - **用雾幕或在雾幕下换东西**：雾幕原因用 `VeilReason`，冷启动 `Boot`，跳过、雾幕直达、返回标题 `Cinematic`；WP-01 的雾幕服务要支持扉页这种内容和保持不透明直到条件满足；扉页与雾幕同在 layer 5，三维画面与预热层（layer 4）在下，放映层 9、界面 10、署名 11 在上（§1.1、§7.4）
-- **新加着色器组合、界面组件或大页**：要进扉页后面的预热（三维按 ENG-PERF §2 的阵列，二维画进预热样片，存档页、设置卡各页、大地图预建并隐藏）；转为实时之后 SURFACE、DRAW、Canvas 三项管线编译计数和新生成的 MSDF 字形都不得增长（§1.1、§11.2）
+- **新加着色器组合、界面组件或大页**：要进扉页后面的预热（三维按 ENG-PERF §2 的阵列，二维画进预热样片，大地图预建并隐藏；存档页、设置卡各页按需创建、关闭即释放，不预建）；转为实时之后 SURFACE、DRAW、Canvas 三项管线编译计数和新生成的 MSDF 字形都不得增长（§1.1、§11.2）
 - **内容会出现在 T0 或过场路径上**：外围街区与 O2 楼顶按 T0 的实际观看距离验收；过场沿途按所在精度区验收（南门、主楼、银杏大道、图书馆是 K1），不因镜头贴近另提标准；沿途几何改动后，过场路径离楼体、地形、树干不小于 3 m 的检查要照样通过（§2.1、§3.1、§8.4）
 - **在 `map.json` 里登记过场或 T0**：`cinematics` 的角色名只用 `enterNew`、`enterNewShort`、`enterContinue`、`leave`，都可缺省（缺省走雾幕直达）；`title` 写 T0 位姿与云卡布局名，缺省时用默认图的 T0；过场文件放 `game/data/maps/<地图>/cinematics/`，扉页放 `game/assets/title/<地图>/`（§8.1、§12）
 - **执行过场的音频提示**：`audio` 轨只有 `title.start`、`title.fadeIn`、`title.fadeOut`、`duck`、`amb.altitude` 五种，经 `IAudioService.Cine` 执行；跳过时按时间顺序立即执行，淡出照给时长、不硬切（§8.2、§8.6）
@@ -58,7 +58,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 | 1 主场景第一帧 | 雾幕层（layer 5）在 0.3 s 内换上**扉页静帧**；界面层同时画出片名块（§2.3），菜单还不出现；OSM 署名照常 | Boot 解析命令行；`IAppFlow` 进入 Boot；读各存档位的 meta（SYS-SAVE，未压缩、只读这一段），选出"最近存档位"和扉页变体（§1.3）；声音的 Master 组在 −∞，音频内核在扉页后面启动（SYS-AUDIO） | WP-01、WP-49a、WP-53a |
 | 2 地图与常驻数据 | 扉页 | `IMapService.Travel(Boot)` 的数据与挂载阶段（SYS-MAPS）：挂启动集 `boot_<地图>.pck`、解析世界数据、同步加载 L4 与遮挡体、建全局数据纹理（ENG-PERF §8 第 2–4 步） | WP-46、WP-01、WP-02 |
 | 3 三维预热 | 扉页 | ENG-PERF §2 的预热阵列，另加 `cine_cloud` 云卡、外围环境（WLD-OUTSKIRTS）的组合；判据同 ENG-PERF §2 | WP-01 |
-| 4 二维预热 | 扉页 | 在扉页**之下**的预热层（layer 4）以正常不透明度画一张"预热样片"：UI-VISUAL 的两个界面着色器 × 各绘制类型（四边形、线、贴图、位图字、MSDF 字、`CanvasGroup`、`BackBufferCopy`）、开始页与放映层的全部组件，以及 SYS-ATLAS 的 `map_base` 两种用法 × 两套主题；存档页、设置卡各页（含画面页、声音页）、大地图（SYS-ATLAS）**预建并隐藏**；直到 `Performance.Monitor.PipelineCompilationsCanvas` 连续 10 帧不增，然后撤掉预热层 | WP-01（预热层）、WP-35（样片内容） |
+| 4 二维预热 | 扉页 | 在扉页**之下**的预热层（layer 4）以正常不透明度画一张"预热样片"：UI-VISUAL 的两个界面着色器 × 各绘制类型（四边形、线、贴图、位图字、MSDF 字、`CanvasGroup`、`BackBufferCopy`）、开始页与放映层的全部组件，以及 SYS-ATLAS 的 `map_base` 两种用法 × 两套主题；大地图（SYS-ATLAS）**预建并隐藏**（存档页、设置卡各页含画面页、声音页不预建，按需创建、关闭即释放，UI-VISUAL §11.9）；直到 `Performance.Monitor.PipelineCompilationsCanvas` 连续 10 帧不增，然后撤掉预热层 | WP-01（预热层）、WP-35（样片内容） |
 | 5 首次分档（只在首次启动，或显卡、驱动、输出分辨率变了） | 扉页 | 镜头放到 V1（即 P00），按 SYS-GRAPHICS §5 测速，不超过 2.5 s；V1 的各环正好是新游戏过场的终点，留着复用 | WP-32b |
 | 6 世界与 T0 | 扉页 | 有存档：让存档服务恢复最近存档位的地图、世界段和天气段（SYS-SAVE），视角段只读出、留作继续的终点；没有存档：建"预览世界"（新游戏的终态，秋 17:30、晴，§6）。`IAppFlow` 记下存档里的流逝倍率，然后 `SetFlow(0)`；镜头放到 T0，等 T0 的各环就绪（只需 L2–L4 和外围，§2.1；缓存里没有的，首次运行时在这里现烘，见下面的"首次运行"） | WP-49a、WP-50、WP-34 |
 | 7 空跑 | 扉页 | 各系统空跑 30 帧让 JIT 先编译（ENG-PERF §6）；`CinematicPlayer` 把 `enter_new` 前 2 s 在内存里空算一遍（不写镜头）；存档序列化空跑一次（SYS-SAVE） | 各包 |
@@ -617,7 +617,7 @@ game/data/maps/qingshuihe/cinematics/
 | --- | --- | --- |
 | T0（开始页） | 不超过 V1 在同一世界状态下的 GPU、绘制调用 | 只要 L2–L4、外围和云卡 |
 | 云卡 | 绘制调用 ≤ 4，三角形 ≤ 8k，GPU ≤ 0.15 ms（开发机 1080p） | §9 |
-| 开始页界面 | 可见的 Control ≤ 60；整个界面仍按 UI-VISUAL 的节点上限（预建隐藏的另计） | 大页预建 |
+| 开始页界面 | 可见的 Control ≤ 60；整个界面仍按 UI-VISUAL 的节点上限（预建隐藏的另计） | 大页按需创建 |
 | 过场帧 | 与 Playing 在同一位置的预算相同（ENG-BUDGET §2） | 自适应冻结，不靠降画质过关 |
 | `CinematicPlayer` | 主线程 ≤ 0.05 ms / 帧，不分配 | §8.3 |
 | 启动 | §1.2 | — |

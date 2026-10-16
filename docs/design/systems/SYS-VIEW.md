@@ -69,7 +69,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 | --- | --- |
 | 整套 Vite + React + three.js 代码：`src/`、`public/`、`index.html`、`package.json` 与锁文件、`vite.config.ts`、`playwright.config.ts`、网页端测试、`dist/`、`node_modules/` | 在 git 基线（标签 `baseline-map`）里保留；主分支上整体删除，不留 legacy 目录 |
 | 可移植的算法：轮廓工具、边与斜接、扫描线、开间分层、地标屋顶的主轴求法、八角采光顶、落点算法、球场标线拟合等 | 清单见 ENG-ARCH §1。各包用 `git show baseline-map:<原路径>` 读出原文，改写成 C#，放进自己的目录；旧栈的几何与数据测试一并改写成 `dotnet test` |
-| Python 数据管线 `scripts/data/`、OSM 快照、`categories.json` 等管线输入 | 迁到 `pipeline/`（逐项见 ENG-ARCH §1）；输出写到 `game/data/` |
+| Python 数据管线、OSM 快照、`categories.json` 等管线输入 | 在 `pipeline/`（外围快照的迁移见 ENG-ARCH §1）；输出写到 `game/data/` |
 | `campus.json` | 迁到 `game/data/maps/qingshuihe/campus.json`，格式留用，只增不改 |
 | 照片纹理：`public/assets/materials-v1/`、`data/raw/materials/` 和两个旧贴图脚本 | 不迁移，只留在归档里（ART-STYLE §6.1） |
 | `lucide-react` 等前端依赖 | 随归档删除；新界面的图标自绘（UI-NAV §2、UI-VISUAL §6） |
@@ -248,7 +248,7 @@ gates: [G1, G2, G7, G13, G16, G21]
    | 项 | 做法 |
    | --- | --- |
    | 加载常驻的 L4，加载并挂载初始位置附近的格子 | 开场就是一次 `IMapService.Travel(Boot)`：按 SYS-MAPS §4.2 的 LoadData、Mount、Warm，直到"加载、挂载、管线就绪"（ENG-PERF §5 第 2 条）；起始图 = `--map` > 最近存档的图 > 默认图（SYS-MAPS §4.4）。SYS-TITLE §1.1 第 2 步 |
-   | 预热管线 | 三维：白名单里的每个着色器变体各画一次，包括 §5.1 的剖切变体、降水用的 `precip.gdshader`（SYS-WEATHER §7）、云卡 `cine_cloud` 和外围环境（WLD-OUTSKIRTS），覆盖四个预设和所有单项取值能到达的组合的并集（SYS-GRAPHICS §3），直到 `PipelineCompilationsSurface`、`PipelineCompilationsDraw` 不再增长（SYS-TITLE §1.1 第 3 步）。二维：`ui_panel`、`ui_screen` 两个着色器 × 各绘制类型各画一次，大页（设置卡与画面页、存档页、开始页菜单、大地图的卡片）预建并隐藏，界面代码路径空跑一遍，之后 `PipelineCompilationsCanvas` 不再增长（UI-VISUAL §11.9，SYS-TITLE §1.1 第 4 步） |
+   | 预热管线 | 三维：白名单里的每个着色器变体各画一次，包括 §5.1 的剖切变体、降水用的 `precip.gdshader`（SYS-WEATHER §7）、云卡 `cine_cloud` 和外围环境（WLD-OUTSKIRTS），覆盖四个预设和所有单项取值能到达的组合的并集（SYS-GRAPHICS §3），直到 `PipelineCompilationsSurface`、`PipelineCompilationsDraw` 不再增长（SYS-TITLE §1.1 第 3 步）。二维：`ui_panel`、`ui_screen` 两个着色器 × 各绘制类型各画一次，大地图的卡片预建并隐藏（设置卡与画面页、存档页、开始页菜单按需创建、关闭即释放，不预建），界面代码路径空跑一遍，之后 `PipelineCompilationsCanvas` 不再增长（UI-VISUAL §11.9，SYS-TITLE §1.1 第 4 步） |
    | 首次分档与推荐预设 | 按 SYS-GRAPHICS §5 在 2.5 s 内完成，结果写进 `user://graphics.cfg`；观者手动选过预设的，下次启动不覆盖。SYS-TITLE §1.1 第 5 步 |
    | 天气种子 | 有可继续的存档时，种子和已生成的队列来自存档；新游戏时由 `ISaveService.NewGame` 取一次熵（`--weather-seed` 覆盖），并保持晴到秋季黄昏带结束（SYS-WEATHER §6.4、SYS-WEATHER §6.6，SYS-SAVE §5.4） |
    | 读取 `settings.cfg`、`input.cfg`、`graphics.cfg` | 在 Boot 里读（UI-NAV §4.6、SYS-GRAPHICS §6），另加 `user://audio.cfg`（SYS-AUDIO）。读值时只接受基本类型，读之前先查文本里有没有 `Object(` 这类对象构造（SYS-SAVE §8） |

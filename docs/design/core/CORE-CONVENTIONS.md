@@ -131,7 +131,7 @@ gates: [G1, G2, G3, G4, G5]
 | 环境发声器 | `amb:` 开头，本图内唯一 | — | G5 查重 | ENG-ARCH §3（音频块） |
 | RPG 预留前缀 | `npc:`、`item:`、`quest:` | — | 观光数据不得使用 | ENG-ROADMAP §6.1 第 6 条 |
 
-- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<区>.overlay.json`，一区一个文件，由该区工作包独占。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
+- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<组>.d/`，通用覆盖层按包分片，每个包只写自己的 `<四位序号>-wp-<包号>-<短名>.json`（加载规则见 ENG-ARCH §3 覆盖层的规则）；旧的 `<组>.overlay.json` 只留空壳，不再追加。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
 
 ### 3.2 编号体系
 
@@ -200,9 +200,9 @@ gates: [G1, G2, G3, G4, G5]
 
 ### 3.5 色名
 
-- 色名是唯一的取色途径：色名 → 色号（0–255，固定，只增不改）→ 调色板纹理的一列（ART-STYLE §8.5）。内容代码只写色名（`ToonSpec` 等的 `PaletteToken`），代码和着色器里不写十六进制色值（G4 正则）。
+- 色名是唯一的取色途径：色名 → 色号（0–511，固定，只增不改；0–255 是 bank 0，256–511 是 bank 1）→ 调色板纹理的一列（ART-STYLE §8.5）。内容代码只写色名（`ToonSpec` 等的 `PaletteToken`），代码和着色器里不写十六进制色值（G4 正则）。
 - **写法**：小写，用点分层，`<对象>.<状态或用途>`，例如 `wall.lit`、`wall.shade`、`ginkgo.deep`、`window.warm`、`sign.green`；一段内多个词用驼峰（`water.poolGlow`）。后缀 `.lit`、`.shade`、`.deep` 分别是受光、影、深影（ART-STYLE §8.1、ART-STYLE §2.1）。
-- **登记**：WP-04 维护核心表（`game/style/palette/`）；其他包写 `game/style/palette/ext/<包>.json`，一包一个文件；色名重复或色号冲突由 G5 报（ART-STYLE §8.5）。
+- **登记**：WP-04 维护核心表（`game/style/palette/`）；其他包的色名写 `game/style/palette/ext/<包>.json`（色号 0–255，schema 1）；色号 256–511 的新色名写 `game/style/palette/ext-v2/<包>.json`（schema 2），两个目录都是一包一个文件、各包只写自己的那份（`ownership.json` 按包归属），两种格式不混读；色名重复或色号冲突由 G5 报（ART-STYLE §8.5）。
 - **界面色**：前缀 `ui.`，阶梯写 `ui.blue.400`、`ui.neutral.25`；只登记在 `ext/ui.json`，不分色号、不进调色板纹理；地图色在 `ui.json` 的 `map` 段（UI-VISUAL §3、UI-VISUAL §3.8）。
 - **室内色名**约 22 个，登记在 `ext/interior.json`，与室外分开计数（WLD-INTERIORS §8.4）。
 - **退役色名**（`shadow.contact`、`line.building`、`line.tree`、`shadow.interior`；室内影色在调色板第 2 行）色号保留、不分配给别的色名，新代码不得引用（ART-STYLE §8.1，G5）。
@@ -329,10 +329,10 @@ UESTC_RPG/
 | --- | --- |
 | `map.json` | WP-46（字段增改经主代理） |
 | `campus.json`、`network.json`、`zones.json` | WP-08 |
-| `overlay/<区>.overlay.json` | 该区工作包 |
+| `overlay/<组>.d/`（各区、`public`、`waterfront`、`boundary`） | 各包只写自己的分片；`0000-wp-<包号>-base.json` 是历史底稿，归对应区包 |
 | `overlay/walkable.overlay.json` | WP-44 |
 | `overlay/outskirts.overlay.json`、`outskirts.json` | WP-47 |
-| `overlay/atlas.overlay.json`、`atlas/markers.json` | WP-48c；`atlas/labels.json` 归 WP-48a |
+| `overlay/atlas.d/`、`atlas/markers.json` | WP-48c；`atlas/labels.json` 归 WP-48a |
 | `overlay/interior/<区>.interior.json` | 各区精修室内的包 |
 | `overlay/terrain/<区>.terrain.json` | 一个文件只归一个包（文件与包的对应见 MAP-QSH-TERRAIN，写法见 WLD-TERRAIN §3） |
 | `interiors.json` | 开放室内清单：主代理（schema 与格式归 WP-51，条目由负责包经回报提交，增删由主代理审批，D-164） |

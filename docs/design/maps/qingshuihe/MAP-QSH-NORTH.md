@@ -3,13 +3,13 @@ id: MAP-QSH-NORTH
 title: 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 category: maps
 summary: 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
-keywords: [北部生活区, 学生活动中心, 成电会堂, 赭红圆鼓, 校医院, 院名灯牌, 商业街, 玻璃拱顶步行街, 店招, 宿舍组团, 学知苑, 硕丰苑, 博翰苑, 留学生组团, 本科楼A型, 本科楼B型, 组团闸机, 学知一组团, 阳台晾晒, 银杏苑, 芙蓉餐厅, 思学苑, 春晖苑, 朝阳餐厅, 西北餐厅, 室外扶梯罩棚, 风雨连廊, 丹桂路, 博士公寓, north.overlay.json]
+keywords: [北部生活区, 学生活动中心, 成电会堂, 赭红圆鼓, 校医院, 院名灯牌, 商业街, 玻璃拱顶步行街, 店招, 宿舍组团, 学知苑, 硕丰苑, 博翰苑, 留学生组团, 本科楼A型, 本科楼B型, 组团闸机, 学知一组团, 阳台晾晒, 银杏苑, 芙蓉餐厅, 思学苑, 春晖苑, 朝阳餐厅, 西北餐厅, 室外扶梯罩棚, 风雨连廊, 丹桂路, 博士公寓, overlay/north.d]
 owners: [WP-20]
 contributors: [WP-03, WP-13, WP-15, WP-23, WP-25, WP-30, WP-31c, WP-36, WP-38, WP-39, WP-43, WP-44, WP-47, WP-48c, WP-51, WP-52, WP-53b]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-CENTER-EAST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/north.overlay.json"]
+data: ["game/data/maps/qingshuihe/overlay/north.d/"]
 gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 ---
 
@@ -44,7 +44,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC。
 
-- 代码在 `game/gen/zones/north/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/north.overlay.json`（ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/north/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/north.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。宿舍的阳台、外机、窗模块这类重复件按部件放置交付，由烘焙器按每格数量选容器：同种超过约 64 个用 MultiMesh，更少的用独立实例（ENG-PERF §1）。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元的形状见 §8 末尾"碰撞体"一段（SYS-WALK §13），由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）。
@@ -52,7 +52,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 ## 0 结论
 
 1. **分工**：WP-20（可拆 20a 学知苑与留学生组团、20b 硕丰苑与博翰苑、20c 餐厅、商业街、学生活动中心与校医院）做本区全部建筑外观、阳台、屋顶设备、组团大门、商业街店面与招牌、餐厅入口，闸机、围栏、风雨连廊的碰撞图元，开放入口的门口表现，以及无主体块 6735、4499、5247 的外观（"分工"）。
-2. **代码边界**：代码在 `game/gen/zones/north/`，纯 .NET、不依赖其他区；阳台、外机、窗模块这类重复件按部件放置交付；轮廓调整写进 `north.overlay.json`（"实现"）。
+2. **代码边界**：代码在 `game/gen/zones/north/`，纯 .NET、不依赖其他区；阳台、外机、窗模块这类重复件按部件放置交付；轮廓调整写进 `overlay/north.d/` 里本包的分片（"实现"）。
 3. **身份特征**：学生活动中心的赭红圆鼓与竖排楼名、商业街玻璃拱顶下的三层亮街、宿舍 A/B 型配色与开敞阳台、芙蓉餐厅的豆沙粉墙、朝阳餐厅的外挂楼梯与大挑檐、银杏苑带拱形罩棚的室外扶梯（§1.2–§1.3、§3.1、§4.2–§4.3、§5.1、§5.3、§5.7）。
 4. **层数**：学生活动中心至少 3 层、银杏苑 3 层、春晖苑 2 层，OSM 记的层数不对；2026-07 交付的博士公寓不在数据里，不新增（"数据定位"、§4.11）。
 5. **翻新**：老楼全部翻新、不做旧；宿舍外机进机位格栅，商业街和食堂的外机收进屋面围挡；屋面热泵进设备围挡、保温管收成管廊；晾晒按干净版（§3.6、§4.2–§4.6、§4.10、§5.8）。
@@ -334,7 +334,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 下面"本区身份特征"表里的特征，以及本文写明的结构（体量、层数、平面布局、入口），视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来；写明"可参考，按画面需要处理"的细节按氛围处理。
-- 轮廓需要调整时，写进本区的覆盖层文件 `game/data/maps/qingshuihe/overlay/north.overlay.json`（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/north.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：本区的老楼和环境按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §2，待核实的楼见 MAP-QSH-RENOVATION §8。立面和地面都不做旧（D-174）。
 
