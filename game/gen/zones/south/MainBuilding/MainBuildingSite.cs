@@ -223,10 +223,7 @@ public sealed class MainBuildingSite : SouthSite
         b.Add(PartGeometryKernel.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), F.At(Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), F.At(Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
-        // Entrance presentation (WLD-INTERIORS §4): mat, open sign, door lamp; WP-13 parts, boxes until they land.
-        b.Place(PartCatalog.EntranceMat, new PanelParams(2.4f, 0.03f, 1.4f), F.At(Xc, floor, M.BackWall + 1.1f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), F.At(Xc + M.DoorWidth * 0.5f + 0.7f, floor + 1.45f, M.BackWall + 0.02f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), F.At(Xc, floor + M.DoorSpring + M.DoorWidth * 0.5f + 0.5f, M.BackWall + 0.1f));
+        // The mat, open sign and door lamp are WP-13's, placed on the b2.front entrance anchor (WLD-INTERIORS §0).
     }
 
     // ---- Roof gallery (空廊, §2.3): a covered walkway ring of square columns, railing between the outer columns ----
@@ -349,9 +346,7 @@ public sealed class MainBuildingSite : SouthSite
         else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), R.At(0, floor, RearGlassZ));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), R.At(side * 1.85f, floor, blockFront + 0.04f));
-        b.Place(PartCatalog.EntranceMat, new PanelParams(1.8f, 0.03f, 1.2f), R.At(0, floor, blockFront + 0.9f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), R.At(1.85f + 0.95f, floor + 1.45f, blockFront + 0.02f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), R.At(0, floor + 4.2f, blockFront + 0.1f));
+        // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS §0).
     }
 
     public override void Collide(SiteColliders c)

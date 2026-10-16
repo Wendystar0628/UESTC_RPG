@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Parts;
 
 namespace Campus.Gen.Zones.South;
 
@@ -155,6 +156,30 @@ public static class SouthTune
         public const float GridX0 = -4.5f, GridX1 = 4.75f, GridZ0 = 1.2f, GridZ1 = 9.0f, GridPitch = 1.6f, GridLine = 0.15f;
     }
 
+    /// <summary>
+    /// The plaza inside the gate (design:south-a01-plaza, 初值): its 18 × 12 m paving is the overlay polygon, drawn by WP-15. Local
+    /// frame from <see cref="Gate.GatePlazaSite.FrameOf"/>: x across toward the north-west lawn (±6 m), z along the axis toward the
+    /// campus (±9 m). A planter across the far end and two benches in front of it, facing back toward the kiosk and the gate.
+    /// </summary>
+    public static class Plaza
+    {
+        /// <summary>Top of WP-15's paving above the ground (GroundSection.PavingY): furniture stands on it.</summary>
+        public const float PavingTop = 0.15f;
+        public static readonly FurnitureParams PlanterSize = new(6.4f, 0.45f, 1.6f);
+        public const float PlanterAlong = 7.0f;
+        /// <summary>WP-13's street bench (FurnitureStyle.Bench), its back 0.7 m in front of the planter.</summary>
+        public static readonly FurnitureParams BenchSize = new(1.8f, 0.8f, 0.62f);
+        public const float BenchAlong = 5.2f;
+        public static readonly float[] BenchAcross = [-1.9f, 1.9f];
+        /// <summary>
+        /// The A01 kiosk spot the plaza keeps free (WP-48c registers the anchor, WP-13 places the kiosk): 3.95 m from the nearest
+        /// carriageway edge, facing 35°. From 3 m in front of its face, looking 215°, the west guard house and the name wall stand
+        /// behind and beside the panel.
+        /// </summary>
+        public static readonly Vector2 KioskSpot = new(-500.64f, 687.0f);
+        public const float KioskYaw = 35f;
+    }
+
     /// <summary>Entrance axis between the gate and the main building (§2.5).</summary>
     public static class Axis
     {
@@ -256,6 +281,11 @@ public static class SouthTune
         public static readonly Vector2[] DomeProfile =
             [new(1f, 0), new(1f, 0.14f), new(0.98f, 0.28f), new(0.92f, 0.44f), new(0.8f, 0.6f), new(0.63f, 0.75f), new(0.42f, 0.87f), new(0.21f, 0.955f), new(0.06f, 0.995f), new(0, 1f)];
         public const float PortalWidth = 3.2f, PortalSpring = 4.4f;
+        /// <summary>
+        /// Floor and door threshold above the ground: the top of WP-15's paving (GroundSection.PavingY), so the side door's forecourt
+        /// (design:south-clock-forecourt in south.overlay.json) runs level into the doorway.
+        /// </summary>
+        public const float Threshold = 0.15f;
         /// <summary>A pair of narrow windows per storey on every face.</summary>
         public const float SlitWidth = 0.9f, SlitHeight = 2.6f, SlitGap = 1.3f, SlitFirst = 8.4f, SlitPitch = 4.0f;
         public const int SlitRows = 9;

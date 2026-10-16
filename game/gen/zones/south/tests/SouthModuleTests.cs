@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using GdUnit4;
@@ -114,6 +115,87 @@ public sealed class SouthModuleTests
         }
         Require(boundary.All(c => c is not BoxCollider box || box.Half.Y * 2 >= 1.5f), "boundary boxes reach 1.5 m");
     }
+
+    [TestCase]
+    public void EntranceKitsAreLeftToTheStreetFurniture()
+    {
+        // WLD-INTERIORS §0: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
+        string[] kit = [PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp];
+        var placed = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part is not null).Select(i => i.Part!.Part.Value).ToArray();
+        Require(!placed.Any(kit.Contains), $"the zone places no entrance kit ({string.Join(", ", placed.Where(kit.Contains))})");
+        Require(!new SouthModule().Claims.OfType<FeatureClaim>().Any(c => (c.Aspects & Aspects.Props) != 0), "no Props claim keeps WP-13 off the zone's entrances");
+    }
+
+    [TestCase]
+    public void GateBollardsAreCrashBollardsInTheirOwnColours()
+    {
+        // §1.4: yellow-and-black; a tint or a material would paint the black stripe yellow as well (13b, 12:00).
+        var bollards = new SouthModule().ItemsFor(Context(), LodLevel.L0).Select(i => i.Part).Where(p => p?.Part.Value == PartCatalog.Bollard).ToArray();
+        Require(bollards.Length == 6, $"three bollards off each island nose ({bollards.Length})");
+        Require(bollards.All(p => p!.Tint is null && p.Params is ColumnParams { Variation: 1 } c && c.Material == new ColumnParams().Material), "variation 1, no tint, no material");
+    }
+
+    [TestCase]
+    public void ClockSideDoorOpensOntoAPavedForecourt()
+    {
+        // 13b review: an open doorway stands on paving at least the door width + 1 m wide and 2 m deep, tied to the nearest paving.
+        var world = World();
+        var court = world.Features[new("design:south-clock-forecourt")];
+        var walk = world.Features[new("design:south-clock-walk")];
+        Require(court.Kind.Value == "road" && Text(court, "roadType") == "pedestrian" && Text(walk, "roadType") == "footway", "plaza paving and a footway, drawn by WP-15");
+        var door = world.Interiors.Get(new(Xuanbang.XuanbangSite.Feature))!.Entrances.Single(e => e.Id == "xb.clock");
+        var yaw = door.YawDeg * MathF.PI / 180f;
+        var outward = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+        var across = new Vector2(-outward.Y, outward.X);
+        var centre = new Vector2(door.Center.X, door.Center.Z);
+        var ring = ((PolygonGeometry)court.Geometry).Rings;
+        var u = ring.Outer.Select(p => Vector2.Dot(p - centre, across)).ToArray();
+        var v = ring.Outer.Select(p => Vector2.Dot(p - centre, outward)).ToArray();
+        var half = SouthTune.Xuanbang.PortalWidth * 0.5f + 0.5f;
+        Require(u.Min() <= -half && u.Max() >= half, $"forecourt {u.Max() - u.Min():0.0} m wide, the door {SouthTune.Xuanbang.PortalWidth} m");
+        Require(MathF.Abs(v.Min()) < 0.5f && v.Max() >= 2f, $"forecourt from the door face ({v.Min():0.00}) out to {v.Max():0.0} m");
+        var line = ((PolylineGeometry)walk.Geometry).Line.Points;
+        var parking = (PolygonGeometry)world.Features[new("qsh:way:1383996369")].Geometry;
+        Require(PlanGeometry.Contains(ring, line[0]) && PlanGeometry.Contains(parking.Rings, line[^1]), "the walk runs from the forecourt onto the parking by the road");
+        Require(SouthTune.Xuanbang.Threshold == 0.15f, "the threshold is level with WP-15's paving top");
+    }
+
+    [TestCase]
+    public void GatePlazaGivesA01ItsFooting()
+    {
+        var world = World();
+        var plaza = world.Features[new(Gate.GatePlazaSite.Feature)];
+        Require(plaza.Kind.Value == "road" && Text(plaza, "roadType") == "pedestrian", "plaza paving, drawn by WP-15 with its kerbs and edging");
+        var (frame, across, along) = Gate.GatePlazaSite.FrameOf(world)!.Value;
+        Require(MathF.Abs(along * 2f - 18f) < 0.1f && MathF.Abs(across * 2f - 12f) < 0.1f, $"about 18 × 12 m ({along * 2f:0.0} × {across * 2f:0.0})");
+        Require(MathF.Abs(SouthSite.Bearing(frame.W) - 36.8f) < 1f, $"the long side runs along the main axis ({SouthSite.Bearing(frame.W):0.0}°)");
+        var ring = ((PolygonGeometry)plaza.Geometry).Rings;
+        // WP-13's kiosk (2 × 0.8 m) on the spot the plaza keeps for A01: on the paving, at least 3 m from every carriageway edge.
+        var yaw = SouthTune.Plaza.KioskYaw * MathF.PI / 180f;
+        var face = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+        var side = new Vector2(-face.Y, face.X);
+        var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => SouthTune.Plaza.KioskSpot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
+        Require(corners.All(p => PlanGeometry.Contains(ring, p)), "the kiosk stands on the plaza");
+        var lanes = world.Network.Roads.Where(r => Text(r.Props, "highway") is "residential" or "service" or "tertiary" or "secondary" or "unclassified").ToArray();
+        var clearance = corners.Min(p => lanes.Min(r => PolylineDistance(p, r.Line.Points) - r.Width * 0.5f));
+        Require(clearance >= 3f, $"the kiosk stands {clearance:0.00} m from the nearest carriageway edge");
+        // The planter and benches stay on the paving and clear of the kiosk and the space in front of its panel.
+        var items = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part?.Part.Value is PartCatalog.Bench or PartCatalog.Planter).ToArray();
+        Require(items.Length == 3, $"a planter and two benches ({items.Length})");
+        Require(items.All(i => PlanGeometry.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, SouthTune.Plaza.KioskSpot) > 6f), "furniture on the plaza, clear of the kiosk");
+    }
+
+    private static float PolylineDistance(Vector2 p, IReadOnlyList<Vector2> line)
+    {
+        var best = float.MaxValue;
+        for (var i = 0; i + 1 < line.Count; i++) best = MathF.Min(best, DistanceToSegment(p, line[i], line[i + 1]));
+        return best;
+    }
+
+    private static string? Text(WorldFeature feature, string name) => Text(feature.Props, name);
+
+    private static string? Text(System.Text.Json.JsonElement? props, string name) =>
+        props is { ValueKind: System.Text.Json.JsonValueKind.Object } p && p.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String ? value.GetString() : null;
 
     [TestCase]
     public void SitesStayInsideTheSouthZone()

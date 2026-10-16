@@ -1,7 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
@@ -264,8 +263,7 @@ public sealed class GymSite : SouthSite
 
     /// <summary>
     /// The platform-storey public entrance in facet 0 (gym.deck): an aluminium portal with the leaves fixed open against the
-    /// jambs (SYS-WALK §8), a glass lobby screen inside, a flat canopy over the landing and the entrance presentation (mat,
-    /// open sign, door lamp; WLD-INTERIORS §4).
+    /// jambs (SYS-WALK §8), a glass lobby screen inside and a flat canopy over the landing.
     /// </summary>
     private static void Entrance(SiteBuilder b, Plan p, float y)
     {
@@ -286,9 +284,7 @@ public sealed class GymSite : SouthSite
         GridFacade.Box(b, f, -w * 0.5f - 1.4f, w * 0.5f + 1.4f, floor + h + 0.6f, floor + h + 0.85f, 0.1f, 2.6f, L.StoneTrim, 0.02f);
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 1.1f) - 0.08f, side * (w * 0.5f + 1.1f) + 0.08f, floor, floor + h + 0.6f, 2.3f, 2.46f, L.Metal, 0.01f);
-        b.Place(PartCatalog.EntranceMat, new PanelParams(2.4f, 0.03f, 1.4f), f.At(0, floor, 1.0f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), f.At(w * 0.5f + 0.6f, floor + 1.45f, 0.22f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), f.At(0, floor + h + 0.35f, 0.24f));
+        // The mat, open sign and door lamp are WP-13's, placed on the gym.deck entrance anchor (WLD-INTERIORS §0).
     }
 
     private static float BearingAngle(float bearing)

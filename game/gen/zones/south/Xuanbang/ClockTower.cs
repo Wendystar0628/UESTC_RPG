@@ -1,7 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
@@ -122,7 +121,12 @@ internal static class ClockTower
             b.Add(PartGeometryKernel.BeveledBox(2 * hx, X.ShaftTop, 2 * hz, 0, L.Beige), f.At(0, y, 0));
         else
         {
-            b.Add(PartGeometryKernel.BeveledBox(2 * hx + 0.3f, 1.3f, 2 * hz + 0.3f, bevel, L.Granite), f.At(0, y - 0.1f, 0));
+            // Floor slab up to the threshold, level with the forecourt paving, so the side door opens straight onto it; the granite
+            // base course stands under the quoins and, with the face skirts, either side of each portal.
+            b.Add(PartGeometryKernel.BeveledBox(2 * hx + 0.3f, X.Threshold + 0.1f, 2 * hz + 0.3f, bevel, L.Granite), f.At(0, y - 0.1f, 0));
+            foreach (var sx in new[] { -1f, 1f })
+                foreach (var sz in new[] { -1f, 1f })
+                    b.Add(PartGeometryKernel.BeveledBox(X.Quoin + 0.3f, 1.3f, X.Quoin + 0.3f, bevel, L.Granite), f.At(sx * hx, y - 0.1f, sz * hz));
             foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y, shaft is null, portals is null);
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
@@ -217,7 +221,7 @@ internal static class ClockTower
                     b.Add(PartGeometryKernel.BeveledBox(X.SlitWidth + 0.24f, 0.1f, 0.22f, 0.015f, L.BeigeTrim),
                         g.At(side * (X.SlitGap * 0.5f + X.SlitWidth * 0.5f), y + X.SlitFirst + r * X.SlitPitch - 0.1f, 0.42f));
         }
-        // Portal infill: a glazed door, open on the door face (leaves back, mat, sign, lamp), closed elsewhere.
+        // Portal infill: a glazed door, open on the door face (leaves back; mat, sign and lamp are WP-13's), closed elsewhere.
         var arch = Shapes.RoundArch(0, 0, X.PortalWidth, X.PortalSpring, segments);
         if (!door)
         {
@@ -230,9 +234,6 @@ internal static class ClockTower
         b.Add(PartGeometryKernel.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));
-        b.Place(PartCatalog.EntranceMat, new PanelParams(1.8f, 0.03f, 1.2f), g.At(0, y, 1.0f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), g.At(X.PortalWidth * 0.5f + 0.75f, y + 1.45f, 0.37f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), g.At(0, y + X.PortalSpring + X.PortalWidth * 0.5f + 0.75f, 0.58f));
     }
 
     /// <summary>A dial on a stage face: pale disc, dark bezel ring, hour marks and the pivot boss (no hands: WP-26).</summary>

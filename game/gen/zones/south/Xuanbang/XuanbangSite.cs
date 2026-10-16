@@ -306,10 +306,7 @@ public sealed class XuanbangSite : SouthSite
             b.Add(PartGeometryKernel.BeveledBox(X.DoorWidth, 0.12f, 0.12f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.06f, frame));
             foreach (var side in new[] { -1f, 1f })
                 b.Add(PartGeometryKernel.BeveledBox(0.06f, X.DoorSpring - 0.1f, 1.5f, 0.012f, L.DarkFrame), p.At(x + side * (X.DoorWidth * 0.5f - 0.05f), floor, 0.55f));
-            // Entrance presentation (WLD-INTERIORS §4): mat, open sign, door lamp; WP-13 parts, boxes until they land.
-            b.Place(PartCatalog.EntranceMat, new PanelParams(2.4f, 0.03f, 1.4f), p.At(x, floor, 1.3f));
-            b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), p.At(x + X.DoorWidth * 0.5f + 0.55f, floor + 1.45f, 0.52f));
-            b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), p.At(x, floor + X.DoorSpring + X.DoorWidth * 0.5f + 0.45f, 0.55f));
+            // The mat, open sign and door lamp are WP-13's, placed on the entrance anchor (WLD-INTERIORS §0).
         }
     }
 

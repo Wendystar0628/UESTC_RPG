@@ -228,7 +228,10 @@ public sealed class SouthGateSite : SouthSite
         }
     }
 
-    /// <summary>Forecourt (§1.4): stone spheres before the guard houses, bollards off the island noses, yellow grid lines.</summary>
+    /// <summary>
+    /// Forecourt (§1.4): stone spheres before the guard houses, yellow-and-black crash bollards off the island noses (WP-13's
+    /// variation 1 in its own colours: a tint or material would paint the black stripe yellow too), yellow grid lines.
+    /// </summary>
     private static void Forecourt(SiteBuilder b, float y)
     {
         if (b.Detail == SiteDetail.Mass) return;
@@ -239,10 +242,10 @@ public sealed class SouthGateSite : SouthSite
                 var x = side * (HouseX + T.HouseSize * 0.5f - 0.3f - k * T.SpherePitch);
                 b.Place(PartCatalog.StoneSphere, sphere, Frame.At(x, y, T.SphereRowZ));
             }
-        var bollard = new ColumnParams(0.18f, 0.8f, 0.18f) { Material = L.Marking };
+        var bollard = new ColumnParams(0.18f, 0.8f, 0.18f) { Variation = 1 };
         foreach (var x in new[] { T.IslandWestX, T.IslandEastX })
             foreach (var d in new[] { -0.6f, 0f, 0.6f })
-                b.Place(PartCatalog.Bollard, bollard, Frame.At(x + d, y, T.IslandZ + T.IslandLength * 0.5f + 0.7f), new PaletteToken("ground.markingYellow.lit"));
+                b.Place(PartCatalog.Bollard, bollard, Frame.At(x + d, y, T.IslandZ + T.IslandLength * 0.5f + 0.7f));
         GridLines(b, y);
     }
 
