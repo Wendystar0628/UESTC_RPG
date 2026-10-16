@@ -29,6 +29,7 @@ internal sealed class StreetSite
     private readonly Dictionary<(int, int), List<NetworkLine>> _bridges = [];
     private readonly Dictionary<(int, int), List<Vector2>> _trees = [];
     private readonly Dictionary<(int, int), List<(Vector2 P, float R)>> _occupied = [];
+    private readonly List<PolygonRings> _parking = [];
 
     public StreetSite(IWorldModel world)
     {
@@ -44,6 +45,7 @@ internal sealed class StreetSite
                     var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                     var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
                     Index(_outlines, min, max, new Outline(kind, rings, min, max));
+                    if (kind == "parking") _parking.Add(rings);
                 }
             foreach (var (props, geometry) in RoadSources(feature))
             {
@@ -80,6 +82,9 @@ internal sealed class StreetSite
 
     /// <summary>Walks a bench may line and face (WP-15 paves them as walks or pedestrian plazas); steps and cycleways are not.</summary>
     public static bool Strollable(NetworkLine line) => RoadType(line.Props) is "footway" or "path" or "pedestrian";
+
+    /// <summary>True for a pedestrian network line (a walk or steps), the lines a plaza may carry.</summary>
+    public static bool IsPedestrian(NetworkLine line) => Pedestrian(RoadType(line.Props));
 
     /// <summary>Pedestrian paving types: the strollable walks and steps.</summary>
     private static bool Pedestrian(string? type) => type is "footway" or "path" or "pedestrian" or "steps";
@@ -230,6 +235,34 @@ internal sealed class StreetSite
     }
 
     /// <summary>
+    /// True when <paramref name="p"/> lies on plaza paving: a pedestrian polygon (a square, a paved road area), not a walk's strip, which
+    /// belongs to walkers (and whose round end the strip test allows is lawn where WP-15 cuts the walk square).
+    /// </summary>
+    public bool OnPlaza(Vector2 p)
+    {
+        foreach (var paving in NearAll(_paving, p))
+            if (paving.Rings is { } rings && PlanGeometry.Contains(rings, p)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// True when <paramref name="p"/> lies on pedestrian paving that WP-15 paves for certain: a plaza polygon, or a walk's strip short of
+    /// the line's ends (a strip's round end is lawn where the walk is cut square; a walk going on past a junction paves it itself).
+    /// </summary>
+    public bool OnPavedGround(Vector2 p)
+    {
+        foreach (var paving in NearAll(_paving, p))
+        {
+            if (paving.Rings is { } rings) { if (PlanGeometry.Contains(rings, p)) return true; continue; }
+            var line = paving.Line!;
+            var (q, _) = NearestOn(p, line);
+            if (Vector2.DistanceSquared(q, line[0]) < 1e-6f || Vector2.DistanceSquared(q, line[^1]) < 1e-6f) continue;
+            if (Vector2.Distance(p, q) <= paving.Half) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Spots on the edges of pedestrian paving within <paramref name="reach"/> of <paramref name="p"/>: the edge point and the unit normal
     /// into the paving, found by sampling the ground every <paramref name="step"/> and keeping the points just off the paving (no
     /// further than a step), nearest first (ties by position), one per 0.5 m of edge.
@@ -264,21 +297,31 @@ internal sealed class StreetSite
     /// <see cref="FurnitureStyle.OutlineClear"/>, off every road surface (the own road's included, so bends cannot swallow it) and
     /// bridge, clear of trees and of the things already placed.
     /// </summary>
-    /// <remarks><paramref name="beside"/> is a walk the thing stands at the edge of: it only has to stay off that walk's surface.</remarks>
+    /// <remarks>
+    /// <paramref name="beside"/> is a walk the thing stands at the edge of: it only has to stay off that walk's surface; with
+    /// <paramref name="onBeside"/> it stands on that walk (a node bench at a wide walk's edge) and the walk does not block it at all.
+    /// </remarks>
     public bool Free(Vector2 p, float radius, NetworkLine? beside = null) => Blocker(p, radius, beside) is null;
 
     /// <summary>What keeps a disc from being <see cref="Free(Vector2, float, NetworkLine?)"/>: the first of "outside the campus", "an outline", "a road", "a bridge", "a tree" or "another item"; null when nothing does.</summary>
-    public string? Blocker(Vector2 p, float radius, NetworkLine? beside = null)
+    /// <remarks>
+    /// <paramref name="outlineClear"/> replaces <see cref="FurnitureStyle.OutlineClear"/> for building outlines (a plaza bench backed onto
+    /// a wall); with <paramref name="walksPass"/> pedestrian lines (walks, steps) do not block: a plaza carrying a walk line (Opus review
+    /// 13c2b rework).
+    /// </remarks>
+    public string? Blocker(Vector2 p, float radius, NetworkLine? beside = null, bool onBeside = false, float? outlineClear = null, bool walksPass = false)
     {
         if (!PlanGeometry.Contains(World.Boundary, p)) return "the campus edge";
-        var keep = radius + FurnitureStyle.OutlineClear;
         foreach (var o in Near(_outlines, p))
         {
+            var keep = radius + (o.Kind == "building" && outlineClear is { } wall ? wall : FurnitureStyle.OutlineClear);
             if (p.X < o.Min.X - keep || p.X > o.Max.X + keep || p.Y < o.Min.Y - keep || p.Y > o.Max.Y + keep) continue;
             if (PlanGeometry.Contains(o.Rings, p) || Edge(o.Rings, p) < keep) return $"a {o.Kind} outline";
         }
         foreach (var road in Near(_roads, p))
         {
+            if (onBeside && ReferenceEquals(road, beside)) continue;
+            if (walksPass && IsPedestrian(road)) continue;
             var r = HalfWidth(road) + (ReferenceEquals(road, beside) ? 0f : FurnitureStyle.RoadClear) + radius;
             if (LineDistanceSquared(p, road.Line.Points) < r * r) return "a road surface";
         }
@@ -298,12 +341,41 @@ internal sealed class StreetSite
         return null;
     }
 
+    /// <summary>True when a pedestrian line's centre line passes within <paramref name="clear"/> of any of <paramref name="points"/>.</summary>
+    public bool NearWalkLine(IReadOnlyList<Vector2> points, float clear)
+    {
+        foreach (var p in points)
+            foreach (var road in Near(_roads, p))
+                if (IsPedestrian(road) && LineDistanceSquared(p, road.Line.Points) < clear * clear) return true;
+        return false;
+    }
+
+    /// <summary>Parking areas (their outlines), in feature-ID order: where parked cars stand.</summary>
+    public IReadOnlyList<PolygonRings> ParkingLots => _parking;
+
+    /// <summary>What crowds a disc inside an area the outlines do not cover (a parking lot): "a tree" or "another item", or null.</summary>
+    public string? Clutter(Vector2 p, float radius)
+    {
+        foreach (var tree in Near(_trees, p))
+            if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return "a tree";
+        var (cx, cz) = Key(p);
+        for (var dx = -1; dx <= 1; dx++)
+            for (var dz = -1; dz <= 1; dz++)
+                if (_occupied.TryGetValue((cx + dx, cz + dz), out var list) && list.Any(o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap))
+                    return "another item";
+        return null;
+    }
+
+    /// <summary>Pedestrian network lines (footways, paths, pedestrian streets, steps), in ID order: where walkers reach a kerb.</summary>
+    public IEnumerable<NetworkLine> PedestrianLines() =>
+        World.Network.Roads.Where(r => Pedestrian(RoadType(r.Props)) && r.Line.Points.Count >= 2).OrderBy(r => r.Id.Value, StringComparer.Ordinal);
+
     /// <summary>A long footprint (bench, bin) as a capsule from <paramref name="a"/> to <paramref name="b"/>: both ends and the middle are free.</summary>
     public bool Free(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) => Blocker(a, b, radius, beside) is null;
 
     /// <summary>What keeps a capsule from being <see cref="Free(Vector2, Vector2, float, NetworkLine?)"/> (see <see cref="Blocker(Vector2, float, NetworkLine?)"/>).</summary>
-    public string? Blocker(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) =>
-        Blocker(a, radius, beside) ?? Blocker((a + b) * 0.5f, radius, beside) ?? Blocker(b, radius, beside);
+    public string? Blocker(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null, bool onBeside = false, float? outlineClear = null, bool walksPass = false) =>
+        Blocker(a, radius, beside, onBeside, outlineClear, walksPass) ?? Blocker((a + b) * 0.5f, radius, beside, onBeside, outlineClear, walksPass) ?? Blocker(b, radius, beside, onBeside, outlineClear, walksPass);
 
     public void Occupy(Vector2 a, Vector2 b, float radius)
     {

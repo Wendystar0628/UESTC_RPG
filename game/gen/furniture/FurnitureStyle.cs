@@ -18,7 +18,11 @@ public enum RoadTier
 /// A road that gets street furniture, by its name in the network (names are map data, never entity IDs). <paramref name="Rows"/>
 /// are the planted tree rows' offsets from its centre line (both sides), kept clear by benches and bins.
 /// </summary>
-public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows, IReadOnlyList<RestNode>? Nodes = null);
+public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows, IReadOnlyList<RestNode>? Nodes = null)
+{
+    /// <summary>Kerb ramps where the road's walks reach its kerb (13c2b, Opus review 16:23: the osmanthus road's junctions).</summary>
+    public bool KerbRamps { get; init; }
+}
 
 /// <summary>
 /// A rest node of a road (Opus review 16:23): a place on the map (a plaza edge, a junction) where the road's rest stops stand, instead
@@ -45,8 +49,119 @@ public static class FurnitureStyle
         new("水杉路", RoadTier.Secondary, [5f]),
         // The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two nodes, where the walks end:
         // the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.
-        new("丹桂路", RoadTier.Secondary, [4.5f], [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]),
+        new("丹桂路", RoadTier.Secondary, [4.5f], [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]) { KerbRamps = true },
     ]);
+
+    // ---- Kerb ramps (13c2b): where a walk reaches a ramped road's kerb, at its end or where it crosses ----
+    public static RampParams KerbRamp { get; } = new(1.5f, 0.15f, 1.05f);
+    /// <summary>A walk's end this far beyond the kerb (or short of it) counts as reaching it.</summary>
+    public const float RampKerbReach = 2.5f;
+    /// <summary>Two ramps on one kerb keep at least this far apart; the first one stands.</summary>
+    public const float RampGap = 4f;
+    /// <summary>
+    /// A ramp leads onto pedestrian paving: this far behind the kerb must be paving (a walk or a plaza), else it slides along the kerb by up
+    /// to <see cref="RampSlide"/> to find it, else it is left out.
+    /// </summary>
+    public const float RampWalkBehind = 0.6f;
+    public const float RampSlide = 4.5f;
+
+    // ---- Signposts and drinking fountains (Opus review 13c2b 21:05). Interim rules, all of them here: when WP-44's walk: points ----
+    // ---- land, the points replace them. Both keep to "no piling up": rather too few than too many.                              ----
+    /// <summary>
+    /// A signpost stands at a junction of the effective network's pedestrian lines where at least <see cref="SignpostBranches"/>
+    /// branches meet (line ends within <see cref="JunctionSnap"/> of one another, a line running through counting two) and a landmark lies
+    /// within <see cref="SignpostLandmarkReach"/>: beside the paving nearest the junction (within <see cref="SignpostReach"/>), facing it.
+    /// One to a line of sight: none within <see cref="SignpostSpacing"/> of another, the junctions with more branches and then the nearer
+    /// landmark going first. Landmarks are the features whose subcategory or category is listed here.
+    /// </summary>
+    public static SignParams Signpost { get; } = new(1.2f, 2.6f, 0.12f) { Variation = 1 };
+    public const int SignpostBranches = 3;
+    public const float JunctionSnap = 1.5f;
+    public const float SignpostLandmarkReach = 50f;
+    public const float SignpostSpacing = 80f;
+    public const float SignpostReach = 6f;
+    public static IReadOnlyList<string> LandmarkSubcategories { get; } = Array.AsReadOnly(new[] { "landmark" });
+    public static IReadOnlyList<string> LandmarkCategories { get; } = Array.AsReadOnly(new[] { "library" });
+    /// <summary>
+    /// One drinking fountain for each sports venue and teaching building with a main entrance (an open entrance of the interior index; of
+    /// several, the first by ID): beside the paving <see cref="FountainNear"/>–<see cref="FountainFar"/> in front of the door, nearest
+    /// first, facing the paving.
+    /// </summary>
+    public static EquipmentParams Fountain { get; } = new(0.6f, 1.1f, 0.45f);
+    public const float FountainNear = 10f;
+    public const float FountainFar = 20f;
+    public static IReadOnlyList<string> FountainCategories { get; } = Array.AsReadOnly(new[] { "sport", "teaching" });
+
+    // ---- Vending groups, delivery lockers and shared-bicycle bays (13c2c): where people use them, a few clusters, blank between ----
+    // ---- (WLD-LIFE §3.5, §4.5; ART-AMBIENCE §1.3 rule 4: one theme a place, things in a cluster; "no piling up": rather too few). ----
+    /// <summary>
+    /// A vending group is <see cref="VendingMin"/>–<see cref="VendingMax"/> machines side by side, <see cref="VendingSideGap"/> apart, on one
+    /// paved bay, every other group holding one low-saturation odd machine (WLD-LIFE §4.5). Groups stand at the dormitory cluster gates
+    /// (the open gate first, then by ID), then at the canteens and the sports venues (<see cref="VendingCategories"/>: by the first open
+    /// entrance, else the side of the building nearest the network); none within <see cref="VendingSpacing"/> of another (one to a line of
+    /// sight) and none within <see cref="MainAxisClear"/> of a main road (ART-AMBIENCE §1.2: no vending groups on the main axis).
+    /// </summary>
+    public static EquipmentParams Vending { get; } = new(1f, 1.85f, 0.78f);
+    public const int VendingMin = 2;
+    public const int VendingMax = 3;
+    public const float VendingSideGap = 0.06f;
+    public const float VendingSpacing = 150f;
+    public const float MainAxisClear = 40f;
+    public static IReadOnlyList<string> VendingCategories { get; } = Array.AsReadOnly(new[] { "dining", "sport" });
+    /// <summary>
+    /// Service things (vending groups, lockers, bays) stand off the edge of the paving or the carriageway nearest their site, within
+    /// <see cref="ServiceReach"/> of it, facing the edge, on a bay that leaves <see cref="ServiceFront"/> of standing room in front; a bay's
+    /// painted frame reaches to <see cref="FurnitureStyle.WalkGap"/> off the edge instead.
+    /// </summary>
+    public const float ServiceReach = 14f;
+    public const float ServiceFront = 1.2f;
+    /// <summary>
+    /// At a cluster gate they stay outside the cluster's outline by this much (the fence, hedge, turnstiles and guard house stand inside
+    /// it, MAP-QSH-NORTH §4.7) and at least <see cref="GateKeep"/> off the gate point, so the way through stays clear.
+    /// </summary>
+    public const float GateOutside = 0.8f;
+    public const float GateKeep = 4f;
+    /// <summary>
+    /// Delivery lockers: WLD-LIFE §4.5 keeps them to two places. Their two places (the west gate's clinic wicket, inside West Gate 2) are
+    /// not in the map data yet (WP-30's gates), so on the mainline they stand at the first <see cref="LockerSites"/> gates that hold a
+    /// vending group, beside it: the dormitory gate is where deliveries are picked up. WP-30's gate points replace them.
+    /// </summary>
+    public static EquipmentParams Locker { get; } = new(2.4f, 2f, 0.6f);
+    public const int LockerSites = 2;
+    /// <summary>
+    /// Shared-bicycle bays (WLD-LIFE §3.5: the zones register them later; P0 starts with a few): at the open cluster gates, then at the
+    /// first open entrance of the teaching buildings, libraries and canteens (<see cref="BayCategories"/>), then the map's bicycle parking points
+    /// (<see cref="BaySubcategories"/>); at a door <see cref="BayNear"/>–
+    /// <see cref="BayFar"/> out from the door and in front of it; none within <see cref="BaySpacing"/> of another. Each holds
+    /// <see cref="BayBikesMin"/>–<see cref="BayBikesMax"/> bikes on every other slot, front wheel to the back line: stand-ins for WP-55's
+    /// rentable stock, which the kernel mounts in their place once WP-55 lands (set both to zero then).
+    /// </summary>
+    public static RoofParams BikeBay { get; } = new(3.6f, 1.25f, 2f);
+    public static VehicleParams Bike { get; } = new(0.6f, 1.1f, 1.75f);
+    public static IReadOnlyList<string> BayCategories { get; } = Array.AsReadOnly(new[] { "teaching", "library", "dining" });
+    /// <summary>Then the points the map marks for parking bicycles (their subcategory), each a site like a gate's.</summary>
+    public static IReadOnlyList<string> BaySubcategories { get; } = Array.AsReadOnly(new[] { "bicycle" });
+    public const float BayNear = 6f;
+    public const float BayFar = 25f;
+    public const float BaySpacing = 100f;
+    public const int BayBikesMin = 2;
+    public const int BayBikesMax = 3;
+    public const float BayBikePitch = 1.2f;
+
+    // ---- Parked cars (WLD-LIFE §3.3: a few low-saturation cars in each car park, autumn evening) ----
+    /// <summary>Slots run along a lot's longest edge at this pitch, the cars' noses this far in from it, at most this many a lot.</summary>
+    public const float CarSlot = 2.6f;
+    public const float CarNoseIn = 0.6f;
+    public const int CarsPerLot = 3;
+    /// <summary>A slot holds a car when its hash falls under this share (sparse, WLD-LIFE §3.3).</summary>
+    public const float CarShare = 0.4f;
+    /// <summary>A car keeps this far inside its lot's outline; it is not parked where the ground drops more than this under it.</summary>
+    public const float CarLotMargin = 0.3f;
+    public const float CarMaxDrop = 0.2f;
+    /// <summary>A 64 m cell shows at most this many car looks (shape and colour): each is its own set of draws.</summary>
+    public const int CarLooksPerCell = 2;
+    public static VehicleParams Saloon { get; } = new(1.8f, 1.47f, 4.5f);
+    public static VehicleParams Hatch { get; } = new(1.72f, 1.52f, 4f) { Variation = 1 };
 
     /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: WP-23's planting rules.</summary>
     public const string PlantingKey = "vegetation/planting.json";
@@ -85,6 +200,34 @@ public static class FurnitureStyle
     public const float NodeReach = 20f;
     public const float NodeStep = 1f;
     public const float NodeBenchGap = 4f;
+    /// <summary>
+    /// A node bench may stand on a plaza's paving (Opus review 17:28), the kiosk's way: its back this far inside the paving edge and
+    /// parallel to it, facing into the plaza; tried before the bench beside the paving.
+    /// </summary>
+    public const float PlazaBenchClear = 0.35f;
+    /// <summary>
+    /// A node bench may stand on a walk at least <see cref="NodeWalkMin"/> wide (Opus review 13c2b 21:05): at its edge, its back this far
+    /// inside the paving edge and parallel to it, facing across the walk, and leaving at least <see cref="NodeWalkPass"/> clear in front of
+    /// its sitters' feet. Narrower walks take no bench on them (and WP-20 cuts no bays into them); tried after the plaza, before the
+    /// bench beside the paving.
+    /// </summary>
+    public const float NodeWalkMin = 4f;
+    public const float NodeWalkPass = 2.5f;
+    public const float WalkBenchClear = 0.15f;
+    /// <summary>
+    /// A plaza node bench (Opus review 13c2b rework): on the plaza's paving, back to its outer edge, facing in, with at least
+    /// <see cref="PlazaPass"/> of free paving in front of its sitters' feet; a walk line the plaza carries does not count against it
+    /// (the bench only keeps <see cref="PlazaWalkLineClear"/> off the line itself, so it never sits across a way). Its back may stand
+    /// <see cref="PlazaWallClear"/> off a building wall that is the plaza's edge. The plaza's edges are searched within
+    /// <see cref="NodePlazaReach"/> of the node, nearest first; narrower walks (under <see cref="NodeWalkMin"/>) still take none.
+    /// </summary>
+    public const float PlazaPass = 2.5f;
+    public const float PlazaWalkLineClear = 0.3f;
+    public const float PlazaWallClear = 0.3f;
+    public const float NodePlazaReach = 40f;
+    /// <summary>A plaza bench is not set against a bank: the ground this far round it rises at most this much above its paving.</summary>
+    public const float PlazaBankReach = 0.6f;
+    public const float PlazaBankRise = 0.15f;
     /// <summary>The bin stands on its own bay along the same walk edge, this clear gap from the bench: tried in this order, 2–4 m.</summary>
     public static IReadOnlyList<float> BinGaps { get; } = Array.AsReadOnly([2.5f, 3f, 3.5f, 2f, 4f]);
     public const float BinGapMin = 2f;

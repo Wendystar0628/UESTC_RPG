@@ -32,6 +32,14 @@ public static class Lettering
             [new(0.6f, 0.07f), new(0.97f, 0.07f)]],
         ['车'] = [[new(0.08f, 0.8f), new(0.92f, 0.8f)], [new(0.42f, 0.97f), new(0.18f, 0.43f), new(0.86f, 0.43f)],
             [new(0.55f, 0.66f), new(0.55f, 0.02f)], [new(0.05f, 0.2f), new(0.95f, 0.2f)]],
+        ['直'] = [[new(0.15f, 0.87f), new(0.85f, 0.87f)], [new(0.5f, 0.98f), new(0.5f, 0.74f)], [new(0.12f, 0.68f), new(0.12f, 0.04f), new(0.94f, 0.04f)],
+            [new(0.3f, 0.7f), new(0.3f, 0.16f)], [new(0.3f, 0.7f), new(0.76f, 0.7f), new(0.76f, 0.16f)], [new(0.3f, 0.16f), new(0.76f, 0.16f)],
+            [new(0.3f, 0.52f), new(0.76f, 0.52f)], [new(0.3f, 0.34f), new(0.76f, 0.34f)]],
+        ['饮'] = [[new(0.24f, 0.97f), new(0.05f, 0.64f)], [new(0.16f, 0.79f), new(0.36f, 0.79f), new(0.29f, 0.66f)], [new(0.16f, 0.64f), new(0.16f, 0.1f), new(0.31f, 0.21f)],
+            [new(0.58f, 0.97f), new(0.47f, 0.72f)], [new(0.53f, 0.8f), new(0.93f, 0.8f), new(0.85f, 0.66f)], [new(0.71f, 0.66f), new(0.67f, 0.4f), new(0.45f, 0.05f)],
+            [new(0.7f, 0.42f), new(0.96f, 0.05f)]],
+        ['水'] = [[new(0.5f, 0.97f), new(0.5f, 0.08f), new(0.4f, 0.15f)], [new(0.08f, 0.68f), new(0.38f, 0.68f), new(0.1f, 0.18f)],
+            [new(0.88f, 0.8f), new(0.6f, 0.57f)], [new(0.59f, 0.62f), new(0.95f, 0.08f)]],
     };
 
     public static bool Covers(string text) => text.All(c => c == ' ' || Glyphs.ContainsKey(c));
@@ -74,6 +82,32 @@ public static class Lettering
         Segment(builder, new(cx, bottom), new(cx, top - stroke * 0.5f), stroke, zFace, back, material);
         Segment(builder, new(cx, top), new(cx - head, top - head), stroke, zFace, back, material);
         Segment(builder, new(cx, top), new(cx + head, top - head), stroke, zFace, back, material);
+    }
+
+    /// <summary>
+    /// Bicycle pictogram (the shared-bicycle bay's icon, the same shape as its map marker, SYS-ATLAS §5) centred on (cx, cy):
+    /// two octagon wheels, the frame triangle, seat and bar; <paramref name="size"/> is its width.
+    /// </summary>
+    public static void Bicycle(PartBuilder builder, float cx, float cy, float size, float zFace, bool back, ToonSpec material)
+    {
+        var stroke = size * 0.07f; var r = size * 0.21f;
+        var rear = new Vector2(cx - size * 0.29f, cy - size * 0.1f); var front = new Vector2(cx + size * 0.29f, cy - size * 0.1f);
+        foreach (var hub in new[] { rear, front })
+            for (var i = 0; i < 8; i++)
+            {
+                var a0 = Math.PI * 2 * i / 8 + Math.PI / 8; var a1 = Math.PI * 2 * (i + 1) / 8 + Math.PI / 8;
+                Segment(builder, hub + new Vector2((float)(r * DetMath.Cos(a0)), (float)(r * DetMath.Sin(a0))),
+                    hub + new Vector2((float)(r * DetMath.Cos(a1)), (float)(r * DetMath.Sin(a1))), stroke, zFace, back, material);
+            }
+        var crank = new Vector2(cx - size * 0.02f, cy - size * 0.1f);
+        var seat = new Vector2(cx - size * 0.12f, cy + size * 0.2f);
+        var head = new Vector2(cx + size * 0.2f, cy + size * 0.16f);
+        Segment(builder, rear, crank, stroke, zFace, back, material);
+        Segment(builder, crank, seat, stroke, zFace, back, material);
+        Segment(builder, crank, head, stroke, zFace, back, material);
+        Segment(builder, head, front, stroke, zFace, back, material);
+        Segment(builder, seat - new Vector2(size * 0.07f, 0), seat + new Vector2(size * 0.07f, 0), stroke, zFace, back, material);
+        Segment(builder, head, head + new Vector2(-size * 0.06f, size * 0.07f), stroke, zFace, back, material);
     }
 
     /// <summary>

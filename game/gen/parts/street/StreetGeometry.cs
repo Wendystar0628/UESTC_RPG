@@ -180,6 +180,58 @@ public static class Shapes
         return builder.Add(piece, Xf.Move(0, -size.Y * 0.5f, 0).Then(then), flags);
     }
 
+    /// <summary>
+    /// A convex side profile, points (z, y) along the part's length and up, extruded across X from <paramref name="x0"/> to
+    /// <paramref name="x1"/> with single-band chamfers on both side faces (car bodies, cabins, arrow boards). Either winding is taken.
+    /// </summary>
+    public static PartBuilder AddProfile(this PartBuilder builder, IReadOnlyList<Vector2> profile, float x0, float x1, float bevel, ToonSpec material, byte flags = 0)
+    {
+        // The kernel extrudes a footprint (x, z) up Y; footprint (y, z) extruded up local Y, turned by XUp, runs across −X.
+        var ring = profile.Select(p => new Vector2(p.Y, p.X)).ToList();
+        var area = 0.0;
+        for (var i = 0; i < ring.Count; i++)
+        {
+            var a = ring[i]; var b = ring[(i + 1) % ring.Count];
+            area += (double)a.X * b.Y - (double)b.X * a.Y;
+        }
+        if (area < 0) ring.Reverse();
+        var piece = PartGeometryKernel.BeveledExtrude(ring, x1 - x0, bevel, material, -x1);
+        return builder.Add(piece, Xf.XUp, flags);
+    }
+
+    /// <summary>
+    /// A convex face outline, points (x, y) on the front plane, extruded along Z from <paramref name="z0"/> to <paramref name="z1"/>
+    /// with single-band chamfers on its front and back faces (arrow boards). Either winding is taken.
+    /// </summary>
+    public static PartBuilder AddPlate(this PartBuilder builder, IReadOnlyList<Vector2> outline, float z0, float z1, float bevel, ToonSpec material, byte flags = 0)
+    {
+        // Footprint (x, y) extruded up local Y, turned by RotX(−90): local Z becomes world Y, local Y becomes world −Z.
+        var ring = outline.ToList();
+        var area = 0.0;
+        for (var i = 0; i < ring.Count; i++)
+        {
+            var a = ring[i]; var b = ring[(i + 1) % ring.Count];
+            area += (double)a.X * b.Y - (double)b.X * a.Y;
+        }
+        if (area < 0) ring.Reverse();
+        var piece = PartGeometryKernel.BeveledExtrude(ring, z1 - z0, bevel, material, -z1);
+        return builder.Add(piece, Xf.RotX(-90f), flags);
+    }
+
+    /// <summary>A closed tetrahedron with flat faces (corners in any order): the flared wing of a kerb ramp.</summary>
+    public static PartGeometry Tetra(Vector3 a, Vector3 b, Vector3 c, Vector3 d, ToonSpec material)
+    {
+        var writer = new MeshWriter(material);
+        var centre = (a + b + c + d) * 0.25f;
+        foreach (var (p, q, r) in new[] { (a, b, c), (a, b, d), (a, c, d), (b, c, d) })
+        {
+            var n = Xf.Unit(Vector3.Cross(q - p, r - p));
+            if (Vector3.Dot(n, p - centre) < 0) n = -n;
+            writer.Triangle(writer.Vertex(p, n, Vector2.Zero), writer.Vertex(q, n, Vector2.Zero), writer.Vertex(r, n, Vector2.Zero), n);
+        }
+        return writer.Finish();
+    }
+
     /// <summary>Counterclockwise circle section with radial smooth normals, starting on the +lateral axis.</summary>
     public static SweepProfile Circle(float radius, int segments)
     {

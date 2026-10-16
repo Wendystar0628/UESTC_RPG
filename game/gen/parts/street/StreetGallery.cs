@@ -13,7 +13,7 @@ public sealed record StreetSample(string Id, string Label, PartId Part, BoxPartP
 }
 
 /// <summary>
-/// Review set for the part gallery and the tests: every WP-13 part of sub-task 13a at typical sizes and every variation,
+/// Review set for the part gallery and the tests: every WP-13 part (13a, then 13c2b) at typical sizes and every variation,
 /// in the row order the review screenshots use.
 /// </summary>
 public static class StreetGallery
@@ -44,8 +44,21 @@ public static class StreetGallery
             Sample("open-sign-stand", "绿色开放牌（落地）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.45f, 1.3f, 0.32f) { Variation = 1 }),
             Sample("open-sign-wall", "绿色开放牌（贴墙）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.42f, 0.24f, 0.02f)),
             Sample("entrance-lamp", "门口灯灯具", PartCatalog.EntranceLamp, new EntranceLampPart(), doorLamp) with { Emitters = at => [EntranceLampPart.Emitter(doorLamp, at)] },
+            // 13c2b.
+            Sample("car-saloon", "停着的轿车（三厢）", PartCatalog.ParkedCar, new ParkedCarPart(), new VehicleParams(1.8f, 1.47f, 4.5f) { Material = Body(StreetStyle.CarBodies[1]) }),
+            Sample("car-hatch", "停着的轿车（两厢）", PartCatalog.ParkedCar, new ParkedCarPart(), new VehicleParams(1.72f, 1.52f, 4f) { Variation = 1, Material = Body(StreetStyle.CarBodies[0]) }),
+            Sample("bicycle", "匿名共享单车", PartCatalog.ParkedBicycle, new ParkedBicyclePart(), new VehicleParams(0.6f, 1.1f, 1.75f)),
+            Sample("bike-bay", "共享单车停放点", PartCatalog.BicycleShelter, new BicycleBayPart(), new RoofParams(3.6f, 1.25f, 2f)),
+            Sample("vending", "售货机", PartCatalog.VendingMachine, new VendingMachinePart(), new EquipmentParams(1f, 1.85f, 0.78f)),
+            Sample("vending-odd", "售货机（低彩度混一台）", PartCatalog.VendingMachine, new VendingMachinePart(), new EquipmentParams(1f, 1.85f, 0.78f) { Variation = 1 }),
+            Sample("locker", "外卖柜", PartCatalog.DeliveryLocker, new DeliveryLockerPart(), new EquipmentParams(2.4f, 2f, 0.6f)),
+            Sample("fountain", "直饮水台", PartCatalog.DrinkingFountain, new DrinkingFountainPart(), new EquipmentParams(0.6f, 1.1f, 0.45f)),
+            Sample("signpost", "双柱指路牌", PartCatalog.Signpost, new SignpostPart(), new SignParams(1.2f, 2.6f, 0.12f) { Variation = 1 }),
+            Sample("kerb-ramp", "缘石坡道", StreetStyle.KerbRampId, new KerbRampPart(), new RampParams(1.5f, 0.15f, 1.2f)),
         ]);
     }
+
+    private static ToonSpec Body(string family) => new(StreetStyle.Lit(family), StreetStyle.Shade(family));
 
     /// <summary>Near-level geometry of every sample, in the same order (part gallery examples).</summary>
     public static IReadOnlyList<GalleryExample> CreateExamples() =>

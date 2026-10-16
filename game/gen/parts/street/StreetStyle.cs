@@ -224,6 +224,131 @@ public static class StreetStyle
     public const float SignPanelRatio = 0.42f;
     public const string OpenTitle = "开放";
 
+    // ---- 13c2b colours (all borrowed, ART-STYLE §8.5) ----
+    /// <summary>Low-saturation body colours of parked cars (WLD-LIFE §3.3), picked by the placer through the part's Material.</summary>
+    public static readonly string[] CarBodies = ["wall.greyWhite", "umbrella.grayblue", "roof.grey", "umbrella.beige", "umbrella.graygreen"];
+    /// <summary>Car glass: the dark sky-mirroring glass of the windows (the windows reflect the sky through the shader's glass class).</summary>
+    public const string CarGlass = "glass";
+    /// <summary>Tyres and grips: the darkest neutral, the same near-black the crash bollard borrows (switches with <see cref="HazardBlack"/>).</summary>
+    public const string Tyre = HazardBlack;
+    /// <summary>Unlit lamps of a parked car (WLD-LIFE §3.4: car lights never on): clear head lamps and red tail lamps.</summary>
+    public const string HeadLamp = "wall.greyWhite";
+    public const string TailLamp = "equip.fireRed";
+    /// <summary>Shared bicycle (WLD-LIFE §3.5, D-066): milk-white frame, electronic blue on the down tube and the number plate only, dark grey basket and lock box.</summary>
+    public const string BikeWhite = "wall";
+    public const string BikeBlue = "uestc.blue";
+    public const string BikeDark = DarkSteel;
+    /// <summary>Vending machine (WLD-LIFE §4.5): white body, blue pick-up panel; variation 1 is the low-saturation odd one of a group.</summary>
+    public const string VendingWhite = "wall.greyWhite";
+    public const string VendingOdd = "umbrella.graygreen";
+    /// <summary>Goods behind the window: a few clean, quiet colours, no brands, no lettering on the mainline.</summary>
+    public static readonly string[] Goods = ["equip.fireRed", "ground.markingYellow", "ground.turf", StreetBlue, "umbrella.beige", "wall.greyWhite"];
+    /// <summary>Cold-white screens and display backs (WLD-LIFE §4.5: they glow at night, counted with the shop signs).</summary>
+    public const string ScreenWhite = "wall.greyWhite";
+    public static readonly ChannelId ShopGroup = new("sign.shop");
+    /// <summary>Paint of the shared-bicycle bay's frame on the ground (white road marking).</summary>
+    public const string GroundPaint = "ground.marking";
+    /// <summary>Kerb ramp concrete and its yellow tactile warning strip (盲道提示砖).</summary>
+    public const string KerbConcrete = "ground.curb";
+    public const string TactileYellow = "ground.markingYellow";
+
+    // ---- Parked car (WLD-LIFE §3.3–§3.4, §5: one box, Metal; Opus review 13c2b 21:05) ----
+    /// <summary>The body's underside stands this high between the wheels (no skirt: the ground shows under the car).</summary>
+    public const float CarClearance = 0.15f;
+    /// <summary>Wheels: 0.65 m across, set this far in from the body side, under arches this much wider than the tyre.</summary>
+    public const float WheelRadius = 0.325f;
+    public const float WheelWidth = 0.2f;
+    public const float WheelInset = 0.025f;
+    public const float ArchRadius = 0.37f;
+    /// <summary>The arch's straight foot from the axle height down to the underside spans this much along the car.</summary>
+    public const float ArchFoot = 0.03f;
+    /// <summary>Light hub disc on the tyre's outer face, as a share of the wheel radius.</summary>
+    public const float HubRatio = 0.6f;
+    /// <summary>Mirrors reach the car's full width; the body side stands this far inside it.</summary>
+    public const float CarMirrorOut = 0.07f;
+    /// <summary>Chamfers of the lower body: the shoulder along the belt and the hood and boot edges, and the sill tucked under the doors.</summary>
+    public const float CarShoulder = 0.05f;
+    public const float CarSillTuck = 0.06f;
+    /// <summary>
+    /// The glasshouse stands this far in from the body side at the belt (a ledge that parts the belt line from the windows) and leans
+    /// in by this slope (dx/dy); its roof edge is rounded by this chamfer.
+    /// </summary>
+    public const float CarLedge = 0.11f;
+    public const float CarTumblehome = 0.22f;
+    public const float CarRoofEdge = 0.07f;
+    /// <summary>
+    /// Windows: panes lie this proud of the glasshouse; a body-colour strip this tall runs under the side glass, a rail this deep
+    /// over it, the A and C pillars and the windscreen surround are this wide and the B pillar this wide.
+    /// </summary>
+    public const float PaneProud = 0.006f;
+    public const float WindowSill = 0.045f;
+    public const float WindowRail = 0.045f;
+    public const float PillarA = 0.045f;
+    public const float PillarB = 0.09f;
+    /// <summary>Bumpers stand this proud of the nose and the tail, so a line parts them from the bonnet and the boot lid.</summary>
+    public const float CarBumper = 0.014f;
+    /// <summary>The side glass starts this far behind the windscreen's foot (the mirror sail).</summary>
+    public const float MirrorSail = 0.3f;
+
+    /// <summary>
+    /// The two body shapes. Heights are metres (the roof is the part's Height); positions along the car are shares of its length:
+    /// the cowl (windscreen foot) and the roof's front from the nose, the roof's rear and the rear window's foot from the tail, the
+    /// axles from their ends. Nose and Tail round the ends (along the car, off the top, off the sides, off the underside). The B
+    /// pillar stands at its share of the roof; the rear side glass ends <c>RearGlassTop</c> ahead of the roof's rear at its top and
+    /// <c>RearGlassFoot</c> ahead of it at its sill (negative: behind).
+    /// </summary>
+    public static CarShape Saloon { get; } = new(Belt: 0.93f, HoodNose: 0.77f, TailTop: 0.92f, Cowl: 0.3f, RoofFront: 0.49f, RoofRear: 0.267f, RearBase: 0.144f,
+        FrontAxle: 0.204f, RearAxle: 0.196f, Nose: new(0.3f, 0.16f, 0.18f, 0.07f), Tail: new(0.24f, 0.14f, 0.14f, 0.07f), BPillar: 0.42f, RearGlassTop: 0.1f, RearGlassFoot: -0.12f);
+
+    public static CarShape Hatch { get; } = new(Belt: 0.95f, HoodNose: 0.79f, TailTop: 0.95f, Cowl: 0.305f, RoofFront: 0.495f, RoofRear: 0.075f, RearBase: 0.035f,
+        FrontAxle: 0.2f, RearAxle: 0.165f, Nose: new(0.27f, 0.16f, 0.17f, 0.07f), Tail: new(0.12f, 0.09f, 0.12f, 0.07f), BPillar: 0.4f, RearGlassTop: 0.32f, RearGlassFoot: 0.12f);
+
+    // ---- Shared bicycle (WLD-LIFE §3.5; ART-MODELING §7.8: 300–600 / 60 a bike; no collision, §5) ----
+    public const float BikeWheelRadius = 0.33f;
+    public const float BikeTyre = 0.028f;
+    public const float BikeTube = 0.022f;
+    public const float BikeSaddleY = 0.86f;
+    public const float BikeBarY = 1.02f;
+
+    // ---- Vending machine and delivery locker (WLD-LIFE §4.5; §5: one box, Metal) ----
+    public const float VendingPlinth = 0.06f;
+    public const float VendingCanopy = 0.05f;
+    public const float VendingCanopyOut = 0.16f;
+    /// <summary>The window holds this many shelves of this many goods.</summary>
+    public const int VendingShelves = 3;
+    public const int VendingGoods = 5;
+    /// <summary>Compressor hum (WLD-LIFE §4.12, SYS-AUDIO §4.2): only within 4 m. The set waits for WP-53b's sound-set registry.</summary>
+    public const string VendingHumSet = "amb.vending.hum";
+    public const float VendingHumDb = 42f;
+    public const float VendingHumRadius = 4f;
+    public const int LockerColumns = 3;
+    public const int LockerRows = 5;
+
+    // ---- Drinking fountain (MAP-QSH-ADDITIONS §2.13: brushed steel, two push spouts, a drip tray, a "直饮水" plate, a green light) ----
+    public const float FountainTop = 0.05f;
+    public const string FountainTitle = "直饮水";
+
+    // ---- Signpost (MAP-QSH-ADDITIONS §2.13: two dark grey posts 2.6 m, 3–5 arrow boards 0.9 × 0.2 m, white text with pinyin) ----
+    public const float SignpostPost = 0.09f;
+    public const float SignpostBoardLength = 0.9f;
+    public const float SignpostBoardHeight = 0.2f;
+    public const float SignpostBoardDepth = 0.04f;
+    public const float SignpostBoardGap = 0.06f;
+    public const float SignpostTip = 0.12f;
+
+    // ---- Shared-bicycle bay (WLD-LIFE §3.5: a painted frame on the ground and a low standing sign, number and bicycle icon) ----
+    public const float BayLine = 0.08f;
+    public const float BaySlot = 0.6f;
+    public const float BaySignWidth = 0.42f;
+    public const float BaySignHeight = 1.25f;
+    public const float BaySignPanel = 0.46f;
+
+    // ---- Kerb ramp (丹桂路 junctions, 13c2b): a dropped kerb, 1:8 at most across the verge edge, flared sides ----
+    /// <summary>The kerb ramp's part ID. Not in PartCatalog yet (contract request with 13c2b): switch to the catalogue constant when it lands.</summary>
+    public const string KerbRampId = "street.curb-ramp";
+    public const float KerbRampFlare = 0.45f;
+    public const float TactileDepth = 0.3f;
+
     // ---- Lettering (ART-MODELING §7.8: vector type is a part constant at every level; §7.5: printed as face geometry) ----
     /// <summary>Print quads float this far off their face (reverse-Z D32F separates 1–2 mm within 400 m, ART-MODELING §7.5).</summary>
     public const float PrintLift = 0.0015f;

@@ -15,18 +15,28 @@ public sealed class StreetPartsTests
     [
         PartCatalog.StreetLamp, PartCatalog.Bench, PartCatalog.BinFour, PartCatalog.Bollard, PartCatalog.StoneSphere, PartCatalog.BusStop,
         PartCatalog.AtlasKiosk, PartCatalog.AtlasPost, PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp,
+        PartCatalog.ParkedCar, PartCatalog.ParkedBicycle, PartCatalog.BicycleShelter, PartCatalog.VendingMachine, PartCatalog.DeliveryLocker,
+        PartCatalog.DrinkingFountain, PartCatalog.Signpost, StreetStyle.KerbRampId,
     ];
+
+    /// <summary>A part whose catalogue entry is requested but not landed yet (13c2b contract request): its record and defaults.</summary>
+    private static readonly PartCatalogEntry KerbRamp = new(new(StreetStyle.KerbRampId), new("WP-13"), typeof(RampParams), new RampParams(1.5f, 0.15f, 1.2f));
+
+    private static PartCatalogEntry Entry(string id) =>
+        PartCatalog.Find(new(id)) ?? (id == StreetStyle.KerbRampId ? KerbRamp : throw new InvalidOperationException($"{id} is not catalogued."));
 
     [TestCase]
     public void RegisteredPartsMatchTheirCatalogueEntries()
     {
         var parts = Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null).ToArray();
         Check(parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id).Order(StringComparer.Ordinal).SequenceEqual(Parts.Order(StringComparer.Ordinal)),
-            $"13a registers exactly the eleven parts; found {string.Join(", ", parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id))}.");
+            $"13a and 13c2b register exactly their parts; found {string.Join(", ", parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id))}.");
+        // Once the kerb ramp's entry lands, the pending stand-in must go (switch StreetStyle.KerbRampId to the catalogue constant).
+        Check(PartCatalog.Find(new(StreetStyle.KerbRampId)) is null || PartCatalog.Find(new(StreetStyle.KerbRampId))!.ParameterType == typeof(RampParams), "The kerb ramp's catalogue entry takes another record.");
         foreach (var type in parts)
         {
             var attribute = type.GetCustomAttribute<PartAttribute>()!;
-            var entry = PartCatalog.Find(new(attribute.Id)) ?? throw new InvalidOperationException($"{attribute.Id} is not catalogued.");
+            var entry = Entry(attribute.Id);
             Check(attribute.Owner == "WP-13" && entry.Owner == new WpId("WP-13"), $"{attribute.Id} has the wrong owner.");
             Check(Contract(type).GetGenericArguments()[0] == entry.ParameterType, $"{attribute.Id} takes the wrong parameter record.");
         }
@@ -37,7 +47,7 @@ public sealed class StreetPartsTests
     {
         foreach (var type in Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
         {
-            var entry = PartCatalog.Find(new(type.GetCustomAttribute<PartAttribute>()!.Id))!;
+            var entry = Entry(type.GetCustomAttribute<PartAttribute>()!.Id);
             var part = Activator.CreateInstance(type)!;
             var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(part)!;
             var bounds = (Box3)type.GetMethod("Bounds")!.Invoke(part, [entry.Defaults])!;
@@ -101,12 +111,14 @@ public sealed class StreetPartsTests
         {
             var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall";
+            // Parked bicycles never collide (WLD-LIFE §5: they come and go, a collider would leave an invisible wall).
+            var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle";
             Check(visualOnly ? colliders.Count == 0 : colliders.Count > 0, $"{sample.Id} has the wrong collision class (MAP-QSH-ADDITIONS §7).");
             foreach (var collider in colliders)
             {
                 Check(collider.Foot != FootMat.Auto, $"{sample.Id} leaves a collider on Auto (G21).");
-                Check(collider.Tag == SurfaceTag.Prop, $"{sample.Id} collider is not a prop.");
+                // The kerb ramp is walked on: ground, not a prop.
+                Check(collider.Tag == (sample.Id == "kerb-ramp" ? SurfaceTag.Ground : SurfaceTag.Prop), $"{sample.Id} collider has the wrong surface tag.");
                 var (min, max) = Extent(collider);
                 var b = sample.Bounds;
                 // SYS-WALK §7: no more than 0.3 m beyond the visible object; posts may reach below grade.
@@ -228,12 +240,77 @@ public sealed class StreetPartsTests
         Check(new BollardPart().Budget.L0 <= 120 && new BusStopPart().Budget.L0 <= 400, "Bollard or stop budget above the review cap.");
     }
 
+    [TestCase]
+    public void TheParkedCarStandsOnBigWheelsUnderArchesWithNoSkirt()
+    {
+        // Opus review 13c2b 21:05: 0.65 m wheels showing under arches, the body's underside 0.15 m up with no dark skirt below it,
+        // about 1200 triangles near. Judged from the geometry of both body shapes.
+        var part = new ParkedCarPart();
+        foreach (var (p, shape) in new[] { (new VehicleParams(1.8f, 1.47f, 4.5f), StreetStyle.Saloon), (new VehicleParams(1.72f, 1.52f, 4f) { Variation = 1 }, StreetStyle.Hatch) })
+        {
+            var near = part.Lods[LodLevel.L0](p);
+            var counts = part.Lods.ToDictionary(l => l.Key, l => l.Value(p).Meshes.Sum(m => m.Index.Length / 3));
+            Console.WriteLine($"car variation {p.Variation}: L0 {counts[LodLevel.L0]}, L1 {counts[LodLevel.L1]}, L2 {counts[LodLevel.L2]} triangles");
+            Check(counts[LodLevel.L0] is > 900 and <= 1200 && counts[LodLevel.L1] <= 360 && counts[LodLevel.L2] < counts[LodLevel.L1], "car triangles off the review's 1200 and their proportion");
+            var body = near.Meshes.Where(m => m.Material.Spec.Lit.Value == StreetStyle.CarBodies[0] + ".lit" && m.Material.Spec.Fx.HasFlag(ToonFx.BevelLift)).ToList();
+            var tyres = near.Meshes.Where(m => m.Material.Spec.Lit.Value == StreetStyle.Tyre + ".lit" && m.Material.Spec.Normal == ToonNormal.Smooth).ToList();
+            Check(body.Count == 1 && tyres.Count == 1, "the car's body or tyres are not one surface each");
+            var bodyPoints = Enumerable.Range(0, body[0].Position.Length / 3).Select(i => P(body[0], i)).ToList();
+            var tyrePoints = Enumerable.Range(0, tyres[0].Position.Length / 3).Select(i => P(tyres[0], i)).ToList();
+            Check(bodyPoints.Min(q => q.Y) >= StreetStyle.CarClearance - 1e-4f, $"the body hangs to {bodyPoints.Min(q => q.Y):F3} m");
+            var diameter = tyrePoints.Max(q => q.Y) - tyrePoints.Min(q => q.Y);
+            Check(MathF.Abs(diameter - 2f * StreetStyle.WheelRadius) < 0.01f && tyrePoints.Min(q => q.Y) > -1e-3f, $"wheels {diameter:F3} m across");
+            // Over each axle the body rises in an arch, so the wheel shows whole from the side.
+            foreach (var axle in new[] { -p.Depth * 0.5f + shape.FrontAxle * p.Depth, p.Depth * 0.5f - shape.RearAxle * p.Depth })
+            {
+                var over = bodyPoints.Where(q => MathF.Abs(q.Z - axle) < 0.25f).Min(q => q.Y);
+                Check(over >= StreetStyle.WheelRadius + 0.2f, $"the body comes down to {over:F2} m over the axle at {axle:F2}");
+            }
+        }
+    }
+
+    [TestCase]
+    public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
+    {
+        // WLD-LIFE §4.12: of the street parts only the vending machine hums, within 4 m; every other part is silent.
+        foreach (var sample in StreetGallery.CreateSamples())
+        {
+            var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
+            var sounds = (IReadOnlyList<SoundSocketDecl>)Contract(type).GetMethod("Sounds")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
+            if (sample.Part.Value != PartCatalog.VendingMachine) { Check(sounds.Count == 0, $"{sample.Id} makes a sound."); continue; }
+            Check(sounds.Count == 1 && sounds[0].AudibleRadius <= 4f && sounds[0].Set.Value.Length > 0, $"{sample.Id}: the compressor socket is missing or carries too far.");
+            Check(sample.Bounds.Contains(new(sounds[0].Local.M41, sounds[0].Local.M42, sounds[0].Local.M43)), $"{sample.Id}: the compressor is outside the machine.");
+        }
+        // The shared bicycle's contact points (WP-54b's riding clips): seat above the cranks, grips left (−X) and right, axles on the wheels.
+        IPartDef<VehicleParams> bike = new ParkedBicyclePart();
+        var sockets = bike.Sockets;
+        Check(new[] { "seat", "grip.left", "grip.right", "pedal.left", "pedal.right", "axle.front", "axle.rear" }.All(sockets.ContainsKey), "The bicycle lacks a riding socket.");
+        Check(sockets["grip.left"].M41 < 0 && sockets["grip.right"].M41 > 0 && sockets["axle.front"].M43 < sockets["axle.rear"].M43, "The bicycle's sockets face the wrong way (front is −Z, a rider's left is −X).");
+        Check(sockets["seat"].M42 > sockets["pedal.left"].M42 + 0.4f, "The saddle is not above the pedals.");
+        // Sizes from MAP-QSH-ADDITIONS §2.13: the fountain's top at 1.1 m on 0.6 × 0.45, the signpost 2.6 m with 3–5 boards.
+        var fountain = new DrinkingFountainPart().Bounds(new EquipmentParams(0.6f, 1.1f, 0.45f));
+        Check(Math.Abs(fountain.Max.Y - 1.1f) < 0.01f, "The fountain's top is not at 1.1 m.");
+        Check(Lettering.Covers(StreetStyle.FountainTitle), "The fountain's plate has no glyphs.");
+        foreach (var boards in new[] { 0, 1, 2 })
+        {
+            var sign = new SignpostPart();
+            var geometry = sign.Lods[LodLevel.L0](new SignParams(1.2f, 2.6f, 0.12f) { Variation = boards });
+            ClosedClockwise(geometry, $"signpost {3 + boards} boards");
+            Check(geometry.Meshes.Sum(m => m.Index.Length / 3) <= sign.Budget.L0, $"signpost {3 + boards} boards is over its budget.");
+        }
+        // Body colours stay low-saturation and registered; a caller's Material picks one.
+        var car = new ParkedCarPart().Lods[LodLevel.L0](new VehicleParams(1.8f, 1.47f, 4.5f) { Material = new(new("umbrella.beige.lit"), new("umbrella.beige.shade")) });
+        Check(car.Meshes.Any(m => m.Material.Spec.Lit.Value == "umbrella.beige.lit"), "A caller's colour does not paint the car body.");
+        Check(StreetStyle.CarBodies.All(c => !c.Contains("fireRed", StringComparison.Ordinal)), "A car body uses a saturated colour.");
+    }
+
     private static Type Contract(Type type) => type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
 
     private static (Vector3 Min, Vector3 Max) Extent(Collider collider) => collider switch
     {
         PostCollider p => (new(p.C.X - p.R, p.Y0, p.C.Y - p.R), new(p.C.X + p.R, p.Y1, p.C.Y + p.R)),
         BoxCollider b => (new(b.At.M41 - b.Half.X, b.At.M42 - b.Half.Y, b.At.M43 - b.Half.Z), new(b.At.M41 + b.Half.X, b.At.M42 + b.Half.Y, b.At.M43 + b.Half.Z)),
+        RampCollider r => (Vector3.Min(Vector3.Min(r.P0, r.P1), Vector3.Min(r.P2, r.P3)), Vector3.Max(Vector3.Max(r.P0, r.P1), Vector3.Max(r.P2, r.P3))),
         _ => throw new InvalidOperationException($"Unexpected collider {collider.GetType().Name}."),
     };
 
