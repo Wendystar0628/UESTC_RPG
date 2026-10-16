@@ -1,0 +1,86 @@
+using Campus.Contracts;
+using Campus.Contracts.Audio;
+
+namespace Campus.Gen.Zones.DesignWaterfront;
+
+/// <summary>
+/// Every tunable value of the WP-28 bridges in one place (ENG-TEAM §5). Lengths in metres; heights are relative to the
+/// carriageway surface at the bridge ends (the road level, WLD-TERRAIN §4.2: "桥面标高等于两端路面").
+/// </summary>
+public static class WaterfrontTune
+{
+    /// <summary>Overlay kind of a bridge registration (waterfront.overlay.json): a point marker whose props name the network lines.</summary>
+    public const string BridgeKind = "bridge-deck";
+    /// <summary>Overlay kind of a bridge-head lying stone (MAP-QSH-ADDITIONS §2.12 桥头卧石).</summary>
+    public const string StoneKind = "bridge-stone";
+
+    // ---- Deck section ----
+    /// <summary>Walking bands sit at the WP-15 paving level above the carriageway (GroundSection.PavingY), so the approaches meet flush.</summary>
+    public const float PavingRise = 0.15f;
+    /// <summary>Default sidewalk on a carriage bridge that has no own footway lines (西门车行桥).</summary>
+    public const float DefaultSidewalk = 1.5f;
+    /// <summary>Kerb stone between carriageway and sidewalk.</summary>
+    public const float KerbWidth = 0.18f, KerbBevel = 0.015f;
+    /// <summary>Surfacing layer (asphalt, paving) on the slab.</summary>
+    public const float Surfacing = 0.06f;
+    /// <summary>Deck top (carriageway) to soffit.</summary>
+    public const float SlabDepth = 0.55f;
+    /// <summary>The stone parapet base overhangs the concrete fascia by this much: the drip and shadow line of the deck edge.</summary>
+    public const float BaseOverhang = 0.04f;
+
+    // ---- Railing (MAP-QSH-ADDITIONS §2.5 护栏细部: 灰白石望柱、两道不锈钢细横管) ----
+    /// <summary>Continuous stone base (地栿) under the posts: width and rise above the walking surface.</summary>
+    public const float BaseWidth = 0.34f, BaseRise = 0.14f, BaseDrop = 0.12f, BaseBevel = 0.02f;
+    /// <summary>Post: 0.25 m square, top 1.05 m above the walking surface (ART-FIDELITY §7 第 6 条, SYS-WALK §7 第 1 条).</summary>
+    public const float PostSize = 0.25f, PostTop = 1.05f, PostBevel = 0.02f, PostSpacing = 2.0f;
+    /// <summary>Plain square post head (望柱头做成素方，不雕兽): a slightly wider cap.</summary>
+    public const float CapSize = 0.29f, CapHeight = 0.08f, CapBevel = 0.015f;
+    /// <summary>Bridge-head posts at the four deck corners.</summary>
+    public const float HeadSize = 0.40f, HeadTop = 1.25f, HeadCap = 0.46f, HeadCapHeight = 0.10f;
+    /// <summary>Two stainless rails (φ48), through the posts; they cast no shadow (ART-MODELING §7.4 小件不投影).</summary>
+    public const float RailRadius = 0.024f, RailLow = 0.48f, RailHigh = 0.90f;
+    public const int RailSegments = 10;
+
+    // ---- Abutments ----
+    /// <summary>Abutment wall under each deck end at the bank line, set back onto the bank, down below any bed.</summary>
+    public const float AbutmentThick = 0.7f, AbutmentSetback = 0.15f, AbutmentBottom = -3.6f, AbutmentBevel = 0.03f;
+    /// <summary>The deck rests this far onto the bank behind each abutment (搭板); the rest of a long network bridge line is ground.</summary>
+    public const float BearingMargin = 0.9f;
+
+    // ---- Bridge-head stone (桥头卧石) ----
+    public const float StoneLength = 1.8f, StoneDepth = 0.75f, StoneHeight = 0.62f, StoneBevel = 0.06f;
+    /// <summary>Distance from the deck corner, outward and back along the approach, to the stone centre.</summary>
+    public const float StoneOutward = 1.6f, StoneBack = 2.4f;
+
+    // ---- Collision (SYS-WALK §7, §13; MAP-QSH-ADDITIONS §7 WP-28 行) ----
+    /// <summary>Deck ramps are cut every 2 m along the bridge; each is a sloped box this thick.</summary>
+    public const float RampStep = 2.0f, RampThick = 0.3f;
+    /// <summary>Railing barrier top above the walking surface: max(visual 1.05, 1.5).</summary>
+    public const float BarrierTop = 1.5f;
+    public const FootMat CarriageFoot = FootMat.Asphalt, WalkFoot = FootMat.StonePaving, RailFoot = FootMat.Metal, StoneFoot = FootMat.StonePaving;
+
+    // ---- Colours (palette names only; MAP-QSH-ADDITIONS §0 第 2 条) ----
+    public const string StoneWhite = "wall.greyWhite";
+    public const string Stainless = "roof.silverMetal";
+    public const string Concrete = "ground.concrete";
+    public const string Asphalt = "ground.asphalt";
+    public const string Paver = "ground.paver";
+    public const string Kerb = "ground.curb";
+
+    public static PaletteToken Lit(string family) => new(family + ".lit");
+    public static PaletteToken Shade(string family) => new(family + ".shade");
+
+    // ---- Material classes, matched to the WP-15 ground so deck and approach read as one surface ----
+    public static ToonSpec AsphaltSpec => new(Lit(Asphalt), Shade(Asphalt)) { Wet = 1f, Fx = ToonFx.Mottle };
+    public static ToonSpec PaverSpec => new(Lit(Paver), Shade(Paver)) { Wet = 0.6f, Fx = ToonFx.DetailTiling | ToonFx.Mottle };
+    public static ToonSpec KerbSpec => new(Lit(Kerb), Shade(Kerb)) { Wet = 0.6f, Fx = ToonFx.BevelLift | ToonFx.DetailTiling };
+    public static ToonSpec StoneSpec => new(Lit(StoneWhite), Shade(StoneWhite)) { Fx = ToonFx.BevelLift, Wet = 0.6f };
+    public static ToonSpec ConcreteSpec => new(Lit(Concrete), Shade(Concrete)) { Fx = ToonFx.BevelLift, Wet = 0.7f };
+    public static ToonSpec RailSpec => new(Lit(Stainless), Shade(Stainless)) { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
+
+    /// <summary>VF-A flag: never casts (ART-MODELING §7.4).</summary>
+    public const byte NoShadow = 8;
+
+    // ---- Budget (ENG-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
+    public const int BudgetTrianglesL0 = 24_000, BudgetTrianglesL1 = 12_000, BudgetDrawCalls = 8;
+}

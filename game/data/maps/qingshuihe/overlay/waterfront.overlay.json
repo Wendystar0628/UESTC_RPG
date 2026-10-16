@@ -1,0 +1,12 @@
+{
+  "zone": "waterfront",
+  "owner": "WP-28",
+  "map": "qingshuihe",
+  "ops": [
+    {"op": "add", "id": "design:waterfront-bridge-yinxing", "kind": "bridge-deck", "geometry": {"type": "point", "position": [82.0, 0.0, -8.5]}, "props": {"axis": "qsh:source:way:683646721", "carriage": true, "walks": ["qsh:source:way:988857960", "qsh:source:way:988857962"]}, "reason": "设计增补：银杏大道跨走马河的小桥（MAP-QSH-CENTER-EAST §1.7）。现实里是一座车行桥和两侧各一座人行桥并排，三块桥板中间各留一道窄缝，读成三座拼在一起的板桥；这里合成一座桥体：中间 6 m 车行道，两侧人行道高出 0.15 m 并以路缘石分开，外侧灰白石地栿、望柱和两道不锈钢细横管（MAP-QSH-ADDITIONS §2.5 护栏细部、§2.12）。路网三条线和它们的拓扑照旧，只改桥体与栏杆。桥两端斜交，端线顺着三条线的端点。默认状态望柱在桥面投出梳齿长影，横管顶面一条亮带，地栿顶接季；夜间灯下（路灯）；冬季横管顶一线积雪。walk：桥面可走（2 m 分段斜放盒），桥栏阻挡（碰撞顶 1.5 m）。"},
+    {"op": "add", "id": "design:waterfront-bridge-ximen", "kind": "bridge-deck", "geometry": {"type": "point", "position": [-233.15, 0.0, -400.07]}, "props": {"axis": "qsh:source:way:552816781", "carriage": true, "sidewalk": 1.5}, "reason": "设计增补：西门车行桥（MAP-QSH-WEST §10.3），进西门后第一座桥，是两座主桥之一（MAP-QSH-ADDITIONS §2.12）。OSM 只有一条 6 m 车道，桥上没有人走的地方；桥体两侧各加 1.5 m 人行道（高出 0.15 m、路缘石分开），外侧同银杏大道小桥的石栏。桥面平，取两端路面（MAP-QSH-TERRAIN §6.3）。默认状态与夜间、四季同银杏大道小桥。walk：桥面可走，桥栏阻挡。"},
+    {"op": "add", "id": "design:waterfront-bridge-library-north", "kind": "bridge-deck", "geometry": {"type": "point", "position": [-226.92, 0.0, -78.59]}, "props": {"axis": "qsh:source:way:544161584", "carriage": false}, "reason": "设计增补：西湖东北湾湖口跌水旁跨湿地溪的人行桥（2.5 m，MAP-QSH-TERRAIN §6.2），离湖口最近的一座人行小桥，也是全校人行小桥的样板：桥面与两头园路同为铺装面高，两侧同款石栏。默认状态与夜间、四季同银杏大道小桥。walk：桥面可走，桥栏阻挡。"},
+    {"op": "add", "id": "design:waterfront-stone-yinxing", "kind": "bridge-stone", "geometry": {"type": "point", "position": [74.46, 0.0, -4.29]}, "height": 0.62, "props": {"bridge": "design:waterfront-bridge-yinxing", "faceDeg": 210}, "reason": "设计增补：桥头卧石（MAP-QSH-ADDITIONS §2.12），粗凿白石，长 1.8 m，卧在银杏大道小桥南头西侧的草地上，刻字面朝 210°，迎着从主楼方向往北走来的人，也接得住傍晚低日（R1）。桥名的墨绿行书等场景文字图集（contract-26），先留白。默认状态斜光照出石面的起伏；夜间月光；冬季石顶积雪。walk：可跳上（高 0.62 m）。"},
+    {"op": "add", "id": "design:waterfront-stone-ximen", "kind": "bridge-stone", "geometry": {"type": "point", "position": [-238.37, 0.0, -411.91]}, "height": 0.62, "props": {"bridge": "design:waterfront-bridge-ximen", "faceDeg": 255}, "reason": "设计增补：桥头卧石（MAP-QSH-ADDITIONS §2.12），西门车行桥西头北侧，刻字面朝 255°，迎着从西门进来的人，也接傍晚低日（R1）。桥名留白，等场景文字图集（contract-26）。默认状态、夜间、四季同银杏大道小桥的卧石。walk：可跳上。"}
+  ]
+}
