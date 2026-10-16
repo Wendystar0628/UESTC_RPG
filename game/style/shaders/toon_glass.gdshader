@@ -9,6 +9,8 @@ shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
 
 #include "res://style/shaders/toon.gdshaderinc"
+// 窗卡与门厅卡的内容（WP-51b）：按窗位类型字节查 window_cards 表，程序化画出房间
+#include "res://style/shaders/window_card.gdshaderinc"
 
 const vec2 GLASS_PANE_M = vec2(1.6, 1.9);   // 窗格的名义尺寸（m），室内视差用
 const float GLASS_STREAK = 0.55;            // 斜条强度（40%–70%）
@@ -33,6 +35,21 @@ const float GLASS_ROOM_FURNITURE = 0.32;
 const float GLASS_COOL_ROOM = 0.8;           // 冷白窗室内的明度系数
 const float GLASS_SKY_LIFT = 0.35;          // 映天时把反射方向抬高一点，取更冷、更亮的天色
 const float GLASS_GLARE_GAIN = 1.25;        // 眩光的亮度（略超 1，让柔光抓住）
+const float GLASS_CARD_DAY_LUM = 0.34;      // 白天关灯的窗：窗卡房间的线性明度（WP-51b 窗卡）
+const float GLASS_CARD_DAY_MIX = 0.75;      // 白天房间基调取天光给定值的比例（其余取玻璃底色）
+const float GLASS_CARD_SHOW = 1.0;          // 关灯时窗卡露出的比例（之后照旧叠映天）
+const float GLASS_CARD_CURTAIN = 1.9;       // 白天窗帘、百叶受天光的明度（相对房间基调）
+const float GLASS_CARD_JITTER = 0.25;       // 亮窗逐扇的明度起伏（0.85–1.1）
+const float GLASS_CARD_WARM = 0.3;          // 白天室内的暖：向暖灯色相混的比例
+const float GLASS_CARD_CLOTH_TINT = 0.35;   // 亮窗窗帘带布色的比例
+
+// 窗帘布色：米、浅蓝、浅绿三种按窗号选，明度跟着传入的底色
+vec3 card_cloth(uint key, vec3 under) {
+	float l = dot(under, vec3(0.333));
+	float h = wc_h(key, 14u);
+	vec3 hue = h < 0.45 ? pal_cur(PAL_WINDOW_WARM) : (h < 0.8 ? pal_cur(PAL_WINDOW_COOL) : mix(pal_cur(PAL_WINDOW_COOL), pal_cur(PAL_SIGN_GREEN), 0.35));
+	return mix(under, hue * l / max(dot(hue, vec3(0.333)), 1e-4), 0.55);
+}
 
 float glass_band(float x, float c, float hw, float fw) {
 	return 1.0 - smoothstep(hw - fw, hw + fw, abs(x - c));
@@ -120,6 +137,29 @@ void fragment() {
 	vec3 up = cross(n, right);
 	float nv = clamp(dot(-vdir, n), 0.0, 1.0);
 
+	// 0. 窗卡（WLD-INTERIORS §5.1，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
+	bool carded = cols > 0;
+	float aa_m = max(length(fwidth(UV)) * GLASS_PANE_M.x * 0.7, 1e-4);
+	vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
+	float night = smoothstep(-0.03, -0.12, sun_dir.y);
+	vec3 card_glow = vec3(0.0);
+	// VF-B Reserved：低七位卡类型，高位表示当前 LOD 已有实体窗帘。
+	int card_byte = int(round(tctx.spare * 255.0));
+	bool card_screen_enabled = (card_byte & 128) == 0;
+	WCard wcard = wcard_fetch(card_byte & 127);
+	uint wkey = uint(wid) * 2u + 4u;
+	if (carded && on < 1.0) {
+		// 白天的室内是暖影（WLD-INTERIORS §8.2）。明度按天光给定值，不随玻璃底色（玻璃底色太深，房间读不出来）；夜里退回玻璃底色
+		vec3 warm = pal_cur(PAL_WINDOW_WARM);
+		vec3 day_room = mix(vec3(1.0), warm / max(dot(warm, vec3(0.333)), 1e-4), GLASS_CARD_WARM) * GLASS_CARD_DAY_LUM;
+		vec3 base = mix(mix(tcol.lit, day_room, GLASS_CARD_DAY_MIX), tcol.lit, night) * wcard.dayl;
+		vec3 cloth = card_cloth(wkey, base) * GLASS_CARD_CURTAIN;
+		vec3 room_off = wcard_room(wcard, puv, GLASS_PANE_M, rd, wkey, base, base * WC_FIX_DAY, cloth, 0.0, night, aa_m, toon_window_curtain(wov), card_screen_enabled, card_glow);
+		float ratio = dot(tcol.shade, vec3(0.333)) / max(dot(tcol.lit, vec3(0.333)), 1e-4);
+		tcol.lit = mix(tcol.lit, room_off, GLASS_CARD_SHOW);
+		tcol.shade = mix(tcol.shade, room_off * mix(1.0, ratio, 0.5), GLASS_CARD_SHOW);
+	}
+
 	// 1. 映天：反射方向的天空色带，掠射越强映得越多
 	vec3 rdir = reflect(vdir, n);
 	rdir.y = max(rdir.y, 0.0) * (1.0 - GLASS_SKY_LIFT) + GLASS_SKY_LIFT;
@@ -141,7 +181,6 @@ void fragment() {
 	tcol.lit = mix(tcol.lit, pal_cur(PAL_GLASS_GLARE) * GLASS_GLARE_GAIN, glare * (1.0 - 0.5 * on));
 
 	// 3. 斜条：一宽一窄，滤色叠在受光色和影色上；夜间暗窗减半，亮窗不叠；大面积玻璃只在稀疏的格子上画
-	float night = smoothstep(-0.03, -0.12, sun_dir.y);
 	bool loose = cols == 0;
 	vec2 suv = loose ? UV / GLASS_LOOSE_CELL : UV;
 	ivec2 scell = ivec2(floor(suv));
@@ -163,24 +202,34 @@ void fragment() {
 	tcol.lit += a * (vec3(1.0) - min(tcol.lit, vec3(1.0)));
 	tcol.shade += a * (vec3(1.0) - min(tcol.shade, vec3(1.0)));
 
-	// 4. 窗灯：亮窗里是一间房（室内视差），玻璃本身的明暗退到很弱
+	// 4. 窗灯：亮窗里是一间房（窗卡；没有窗格编码的大玻璃照旧用简化的房间盒），玻璃本身的明暗退到很弱
 	if (on > 0.0) {
-		vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
-		float hd = lamp_hash01(uint(wid) * 2u + 4u);
-		float depth = hd < 0.33 ? 3.0 : (hd < 0.66 ? 4.5 : 6.0);
-		float dx0 = 0.15 + 0.35 * lamp_hash01(uint(wid) * 2u + 5u);
-		vec3 room = glass_room(puv, rd, depth, lampc, dx0, dx0 + 0.3);
-		// 一侧窗帘：在窗面上，透着灯光
-		int cs = toon_window_curtain(wov);
-		float cw = cs == 2 ? 1.01 : (cs == 1 ? 0.0 : 0.25 * step(0.55, lamp_hash01(uint(wid) * 2u + 6u)));
-		float curtain = 1.0 - smoothstep(cw - 0.01, cw + 0.01, puv.x);
-		room = mix(room, lampc * 0.93, curtain);
+		vec3 room;
+		if (carded) {
+			float jit = 1.0 - 0.15 + GLASS_CARD_JITTER * wc_h(wkey, 13u);
+			vec3 lamp_room = (wcard.accent == WC_A_AMBER ? pal_cur(PAL_LAMP_AMBER) : lampc) * wcard.nightg * jit;
+			// 窗帘透灯：布的颜色带一点进灯光里
+			vec3 glow_cloth = mix(lamp_room, card_cloth(wkey, lamp_room), GLASS_CARD_CLOTH_TINT) * 0.95;
+			room = wcard_room(wcard, puv, GLASS_PANE_M, rd, wkey, lamp_room, lamp_room * WC_FIX_GAIN, glow_cloth, 1.0,
+					night, aa_m, toon_window_curtain(wov), card_screen_enabled, card_glow);
+		} else {
+			float hd = lamp_hash01(uint(wid) * 2u + 4u);
+			float depth = hd < 0.33 ? 3.0 : (hd < 0.66 ? 4.5 : 6.0);
+			float dx0 = 0.15 + 0.35 * lamp_hash01(uint(wid) * 2u + 5u);
+			room = glass_room(puv, rd, depth, lampc, dx0, dx0 + 0.3);
+			// 一侧窗帘：在窗面上，透着灯光
+			int cs = toon_window_curtain(wov);
+			float cw = cs == 2 ? 1.01 : (cs == 1 ? 0.0 : 0.25 * step(0.55, lamp_hash01(uint(wid) * 2u + 6u)));
+			float curtain = 1.0 - smoothstep(cw - 0.01, cw + 0.01, puv.x);
+			room = mix(room, lampc * 0.93, curtain);
+		}
 		float keep = fres * 0.5;
 		tcol.lit *= mix(1.0, keep, on);
 		tcol.shade *= mix(1.0, keep, on);
 		float dusk = 1.0 - smoothstep(-2.0, 14.0, h_sun);
 		tcol.extra = room * mix(GLASS_LAMP_DAY, GLASS_LAMP_NIGHT, dusk) * on * (1.0 - keep);
 	}
+	tcol.extra += card_glow * (1.0 - fres * 0.5);
 
 	TOON_FRAGMENT_END(tcol)
 }

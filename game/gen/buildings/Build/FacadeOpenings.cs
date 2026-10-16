@@ -96,12 +96,16 @@ public sealed class FacadeOpenings
         }
         Place(part, Defaults<WindowParams>(part) with { Width = w, Height = h, Columns = columns, Rows = rows }, Frame(f, o, sG),
             gaskets: OpeningRules.Gaskets, behind: OpeningRules.CullBehindGlass ? OpeningRules.BehindGlass : null);
+        var physicalCurtain = false;
         if (_p.Profile.Curtains && _lod <= OpeningRules.CurtainsUpTo && part != PartCatalog.CurtainWall && OpeningRules.Curtained(card) &&
             OpeningPlacement.Curtain(_p.Seed, number, w - 2f * OpeningRules.CurtainSideInset, h - OpeningRules.CurtainHeadInset) is { } curtain)
+        {
             Place(PartCatalog.Curtain, curtain,
                 Frame(f, o, sG + curtain.Depth * 0.5f + OpeningRules.CurtainGlassGap, (h - curtain.Height) * 0.5f),
                 level: _lod > OpeningRules.CurtainDetail ? _lod : OpeningRules.CurtainDetail);
-        Glass(f, layout, o, sG, card);
+            physicalCurtain = true;
+        }
+        Glass(f, layout, o, sG, card, physicalCurtain);
     }
 
     /// <summary>
@@ -185,9 +189,16 @@ public sealed class FacadeOpenings
         Glass(f, layout, o, s, Card(_p, o, Number(_p, _block, layout, o)));
 
     /// <summary>One window cell over the whole opening: it closes the hollow shell, so it casts shadow.</summary>
-    private void Glass(EdgeFrame f, FacadeLayout layout, Opening o, float s, WindowCard card) =>
-        _sink.Append(Tinted(OpeningGlass.Opening(o.U1 - o.U0, o.Y1 - o.Y0, _block.Base, layout.ColumnStart + o.Bay, o.Row, _p.TotalColumns,
-            _channel, (byte)card)), Frame(f, o, s));
+    private void Glass(EdgeFrame f, FacadeLayout layout, Opening o, float s, WindowCard card, bool physicalCurtain = false)
+    {
+        // WP-10 takes the logical card type. This fresh bundle is locally owned; encode this LOD's
+        // actual curtain presence only after creation, without changing the part's input contract.
+        var mesh = OpeningGlass.Opening(o.U1 - o.U0, o.Y1 - o.Y0, _block.Base, layout.ColumnStart + o.Bay, o.Row, _p.TotalColumns,
+            _channel, (byte)card);
+        if (physicalCurtain)
+            for (var i = 0; i < mesh.Reserved!.Length; i++) mesh.Reserved[i] |= WindowCardEncoding.PhysicalCurtainFlag;
+        _sink.Append(Tinted(mesh), Frame(f, o, s));
+    }
 
     /// <summary>A glass surface in the building's glass colour (FacadeProfile.Glass, a preset's 玻璃色); other surfaces as they are.</summary>
     private GeometryBundle Tinted(GeometryBundle mesh)

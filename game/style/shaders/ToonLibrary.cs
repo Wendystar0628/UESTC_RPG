@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Quality;
+using Campus.Gen.Interior.Shell.Cards;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -9,7 +10,7 @@ namespace Campus.Style.Materials;
 /// <summary>
 /// 卡通材质库（ENG-ARCH §3、ENG-PERF §1.4–§1.6），实现跨包的 <see cref="IToonMaterialProvider"/>：
 /// 按 <see cref="ToonSpec"/> 取白名单着色器的材质，分配 7 位材质 ID（1–111；0 未分配，112–127 留给 WP-05 的特殊线类），
-/// 生产全局数据纹理 mat_table（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 WP-37。
+/// 生产全局数据纹理 mat_table 与静态 window_cards（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 WP-37。
 /// </summary>
 /// <remarks>
 /// 预热：每个材质记着调用方实际登记过的绘制布局（<see cref="TrackLayout"/>）和已有绘制证据的布局。
@@ -25,6 +26,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     private const string ShaderDirectory = "res://style/shaders/";
     private static readonly StringName MatTableGlobal = new(ShaderGlobals.MatTable);
+    private static readonly StringName WindowCardsGlobal = new(ShaderGlobals.WindowCards);
     private static readonly StringName MatIdParameter = new("mat_id");
 
     private readonly object _gate = new();
@@ -39,6 +41,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private readonly Image _matImage;
     private readonly ImageTexture _matTexture;
     private IDisposable? _registration;
+    private IDisposable? _windowCardsRegistration;
     private ToonWarmBatch? _issued;
     private long _revision = 1;
     private int _nextId = FirstId;
@@ -46,7 +49,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     /// <param name="palettes">完整色表来源（WP-04 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
     /// <param name="source">白名单非卡通着色器的材质来源（veg_* 等由它建）。</param>
-    /// <param name="textures">全局数据纹理的登记处；mat_table 登记后释放权归它。</param>
+    /// <param name="textures">全局数据纹理的登记处；mat_table 与 window_cards 登记后释放权归它。</param>
     /// <param name="quality">画质服务：影响管线的项一变，已有的预热证据作废。</param>
     public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures,
         IQualityService? quality = null)
@@ -54,13 +57,52 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         ArgumentNullException.ThrowIfNull(palettes);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(textures);
+        if (OS.GetThreadCallerId() != OS.GetMainThreadId())
+            throw new InvalidOperationException("Toon data textures must be created on the main thread.");
         _catalog = palettes.Catalog;
         _source = source;
-        _matImage = Image.CreateFromData(MatTable.Width, MatTable.Height, false, Image.Format.Rgba8, _matBytes);
-        _matTexture = ImageTexture.CreateFromImage(_matImage);
-        // 登记成功后纹理的释放归登记处：本类此后只 Update，不 Dispose、不 FreeRid。
-        _registration = textures.RegisterOwned(ShaderGlobals.MatTable, _matTexture, _matTexture.GetRid());
-        RenderingServer.GlobalShaderParameterSet(MatTableGlobal, _matTexture);
+        Image? matImage = null;
+        ImageTexture? matTexture = null;
+        ImageTexture? cardTexture = null;
+        var matBound = false;
+        var cardsBound = false;
+        try
+        {
+            matImage = Image.CreateFromData(MatTable.Width, MatTable.Height, false, Image.Format.Rgba8, _matBytes);
+            matTexture = ImageTexture.CreateFromImage(matImage);
+            _registration = textures.RegisterOwned(ShaderGlobals.MatTable, matTexture, matTexture.GetRid());
+            RenderingServer.GlobalShaderParameterSet(MatTableGlobal, matTexture);
+            matBound = true;
+
+            // 静态表只上传一次。Image 是本地临时资源；登记成功后 GPU 纹理的释放权归 registry。
+            var packed = WindowCardTable.Pack();
+            var bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(packed.AsSpan()).ToArray();
+            using var cardImage = Image.CreateFromData(WindowCardTable.Width, WindowCardTable.Rows, false, Image.Format.Rgbaf, bytes);
+            cardTexture = ImageTexture.CreateFromImage(cardImage);
+            _windowCardsRegistration = textures.RegisterOwned(ShaderGlobals.WindowCards, cardTexture, cardTexture.GetRid());
+            RenderingServer.GlobalShaderParameterSet(WindowCardsGlobal, cardTexture);
+            cardsBound = true;
+            _matImage = matImage;
+            _matTexture = matTexture;
+        }
+        catch
+        {
+            // 失败前已交权的纹理只注销；未交权的纹理由本地释放，不能 double free。
+            try
+            {
+                if (cardsBound) RenderingServer.GlobalShaderParameterSet(WindowCardsGlobal, default(Variant));
+                if (matBound) RenderingServer.GlobalShaderParameterSet(MatTableGlobal, default(Variant));
+            }
+            finally
+            {
+                if (_windowCardsRegistration is not null) _windowCardsRegistration.Dispose();
+                else cardTexture?.Dispose();
+                _registration?.Dispose();
+                if (_registration is null) matTexture?.Dispose();
+                matImage?.Dispose();
+            }
+            throw;
+        }
         _quality = quality;
         if (_quality is not null) _quality.Changed += OnQualityChanged;
     }
@@ -352,14 +394,20 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         if (_quality is not null) _quality.Changed -= OnQualityChanged;
         try
         {
-            RenderingServer.GlobalShaderParameterSet(MatTableGlobal, default(Variant));
+            try { RenderingServer.GlobalShaderParameterSet(WindowCardsGlobal, default(Variant)); }
+            finally { RenderingServer.GlobalShaderParameterSet(MatTableGlobal, default(Variant)); }
         }
         finally
         {
-            try { _registration?.Dispose(); }
+            try
+            {
+                try { _windowCardsRegistration?.Dispose(); }
+                finally { _registration?.Dispose(); }
+            }
             finally
             {
                 _registration = null;
+                _windowCardsRegistration = null;
                 foreach (var material in owned)
                     if (GodotObject.IsInstanceValid(material)) material.Dispose();
                 if (GodotObject.IsInstanceValid(_matImage)) _matImage.Dispose();

@@ -48,6 +48,7 @@ public static class ShaderNames
     public static readonly StringName LampTable = new("lamp_table");
     public static readonly StringName TreeSpecies = new("tree_species");
     public static readonly StringName MatTable = new("mat_table");
+    public static readonly StringName WindowCards = new("window_cards");
     public static readonly StringName GroundMask = new("ground_mask");
     public static readonly StringName TerrainHeight = new("terrain_height");
     public static readonly StringName ReflectTex = new("reflect_tex");

@@ -49,6 +49,7 @@ public static class ShaderGlobals
     public const string LampTable = "lamp_table";
     public const string TreeSpecies = "tree_species";
     public const string MatTable = "mat_table";
+    public const string WindowCards = "window_cards";
     public const string GroundMask = "ground_mask";
     public const string TerrainHeight = "terrain_height";
     public const string ReflectTex = "reflect_tex";

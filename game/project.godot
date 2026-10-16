@@ -493,3 +493,7 @@ ground_mask2={
 "type": "sampler2D",
 "value": ""
 }
+window_cards={
+"type": "sampler2D",
+"value": ""
+}

@@ -14,6 +14,59 @@ public sealed class ToonLibraryRuntimeTests
 {
     private static readonly WarmDrawLayout Layout = new(1, false);
 
+    [TestCase(Timeout = 20000)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task RealGlassDrawsCardMaskAndUnboundOrUndersizedTableFallback()
+    {
+        await using var fixture = new Fixture();
+        var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Godot runtime required.");
+        var parent = new Node3D();
+        tree.Root.AddChild(parent);
+        using var mesh = new ArrayMesh();
+        using var tinyImage = Image.CreateFromData(1, 1, false, Image.Format.Rgbaf, new byte[16]);
+        using var tiny = ImageTexture.CreateFromImage(tinyImage);
+        try
+        {
+            parent.AddChild(new Camera3D { Current = true, Near = .05f, Far = 100f });
+            // Four real VF-B surfaces: office, physical curtain flag, invalid row, and existing cols=0 glass.
+            for (var i = 0; i < 4; i++)
+            {
+                var left = -1.5f + .8f * i;
+                var spare = i == 1 ? (byte)(5 | WindowCardEncoding.PhysicalCurtainFlag) : i == 2 ? (byte)31 : (byte)5;
+                var spec = fixture.Spec with { Kind = ToonKind.Glass };
+                var source = new GeometryBundle(new(spec),
+                    [left, -.5f, -3f, left + .7f, -.5f, -3f, left + .7f, .5f, -3f, left, .5f, -3f],
+                    [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2],
+                    Uv: [.01f, .01f, .99f, .01f, .99f, .99f, .01f, .99f],
+                    Uv2: [0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32])
+                { ColorIds = [64, 64, 64, 64], Reserved = [spare, spare, spare, spare] };
+                GeometrySurfaceUpload.Append(mesh, source, fixture.Library);
+            }
+            parent.AddChild(new MeshInstance3D { Mesh = mesh });
+            foreach (var state in new[] { "registered", "unbound", "undersized" })
+            {
+                if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
+                if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
+                for (var frame = 0; frame < 8; frame++)
+                    await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                if (System.Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root)
+                {
+                    var directory = Path.Combine(root, "output", "render-review");
+                    Directory.CreateDirectory(directory);
+                    using var image = parent.GetViewport().GetTexture().GetImage();
+                    Require(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok, "Save real glass smoke evidence.");
+                }
+            }
+            GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
+        }
+        finally
+        {
+            RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
+            parent.Free();
+        }
+    }
+
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
@@ -205,6 +258,9 @@ public sealed class ToonLibraryRuntimeTests
         var texture = ReadPrivate<ImageTexture>(library, "_matTexture");
         Require(fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out var lease), "The registered mat_table must be leaseable.");
         using var retained = lease ?? throw new InvalidOperationException("A successful acquire must return a lease.");
+        Require(fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out var cardLease), "The static window_cards table must be registered once by the library.");
+        using var retainedCards = cardLease ?? throw new InvalidOperationException("A successful acquire must return a card lease.");
+        var cardRid = retainedCards.TextureRid;
 
         library.Dispose();
         library.Dispose();
@@ -213,6 +269,8 @@ public sealed class ToonLibraryRuntimeTests
         Require(GodotObject.IsInstanceValid(borrowed) && GodotObject.IsInstanceValid(shader), "Borrowed material and its shader must stay owned by the caller.");
         Require(GodotObject.IsInstanceValid(texture), "A live reader lease must protect the registry-owned texture from library disposal.");
         Require(!fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out _), "Dispose must unregister mat_table before returning.");
+        Require(!fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out _), "Dispose must unregister window_cards before returning.");
+        Require(retainedCards.TextureRid == cardRid, "An existing window-card lease remains valid through producer disposal.");
         Require(fixture.Quality.SubscriberCount == 0, "Dispose must unsubscribe from quality changes.");
         fixture.Quality.ResetPipelines();
         Require(!library.CompleteWarm(inflight), "Dispose invalidates all inflight evidence.");
@@ -221,8 +279,45 @@ public sealed class ToonLibraryRuntimeTests
         RequireNoTrackedMaterials(library);
 
         retained.Dispose();
+        retainedCards.Dispose();
         await fixture.Textures.ShutdownAsync();
         Require(!GodotObject.IsInstanceValid(texture), "The registry must release the texture after the final lease ends.");
+    }
+
+    [TestCase(Timeout = 10000)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task ConstructorFailureRetiresRegisteredTexturesAndDisposesUntransferredTexture()
+    {
+        using var registry = new GlobalDataTextureRegistry();
+        var rejecting = new RejectCards(registry);
+        var rejected = false;
+        try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), rejecting); }
+        catch (InvalidOperationException error) when (error.Message == "reject window_cards") { rejected = true; }
+        Require(rejected, "Exercise failure after mat_table registration and card texture creation.");
+        Require(!registry.TryAcquire(ShaderGlobals.MatTable, out _), "A partially constructed library must unregister mat_table.");
+        Require(rejecting.Cards is not null && !GodotObject.IsInstanceValid(rejecting.Cards), "Rejected texture ownership stays local and must be disposed.");
+        await registry.ShutdownAsync();
+        Require(rejecting.Mat is not null && !GodotObject.IsInstanceValid(rejecting.Mat), "Previously transferred texture must be released by the registry.");
+    }
+
+    private sealed class RejectCards(GlobalDataTextureRegistry inner) : IGlobalDataTextureRegistry
+    {
+        public Texture2D? Mat { get; private set; }
+        public Texture2D? Cards { get; private set; }
+        public IDisposable RegisterOwned(string name, Texture2D texture, Rid rid)
+        {
+            if (name == ShaderGlobals.WindowCards)
+            {
+                Cards = texture;
+                throw new InvalidOperationException("reject window_cards");
+            }
+            Mat = texture;
+            return inner.RegisterOwned(name, texture, rid);
+        }
+        public bool TryAcquire(string name, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out GlobalDataTextureLease? lease) => inner.TryAcquire(name, out lease);
+        public Task ShutdownAsync() => inner.ShutdownAsync();
+        public void Dispose() => inner.Dispose();
     }
 
     private static void RequireOnly(ToonWarmBatch batch, Material material)

@@ -2,6 +2,14 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/style/shaders/window_card.gdshaderinc",
+      "owner": "WP-51b"
+    },
+    {
+      "pattern": "game/style/shaders/window_card.gdshaderinc.uid",
+      "owner": "WP-51b"
+    },
+    {
       "pattern": "game/style/shaders/veg_common.gdshaderinc",
       "owner": "WP-23"
     },
@@ -2993,6 +3001,7 @@
     "game/style/shaders/toon_decal.gdshader",
     "game/style/shaders/toon_figure.gdshader",
     "game/style/shaders/veg_common.gdshaderinc",
+    "game/style/shaders/window_card.gdshaderinc",
     "game/style/shaders/toon_glass.gdshader",
     "game/style/shaders/toon_glass_near.gdshader",
     "game/style/shaders/toon_static.gdshader",

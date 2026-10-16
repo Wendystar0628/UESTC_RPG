@@ -54,6 +54,7 @@ global uniform sampler2D cloud_noise : filter_linear_mipmap, repeat_enable;
 global uniform sampler2D precip_occ : filter_nearest, repeat_disable;
 global uniform sampler2D refl_lamps : filter_nearest, repeat_disable;
 global uniform sampler2D ground_mask2 : filter_nearest, repeat_disable;
+global uniform sampler2D window_cards : filter_nearest, repeat_disable;
 
 vec2 map_uv(vec3 world_position) {
     return (world_position.xz - map_rect.xy) * map_rect.zw;

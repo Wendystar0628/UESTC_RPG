@@ -40,7 +40,7 @@ public sealed class BuildingsTests
                 var row = (int)MathF.Floor(g.Uv[2 * i + 1]);
                 var id = block.Base + row * plan.TotalColumns + col;
                 Require(id >= block.Base && id < block.Base + block.Count, "window number inside the block");
-                Require(g.Reserved![i] is >= 1 and <= 15, "window card type in the spare byte");
+                Require((g.Reserved![i] & WindowCardEncoding.TypeMask) is >= 1 and <= 15, "window card type in the spare byte");
             }
     }
 
@@ -132,7 +132,7 @@ public sealed class BuildingsTests
                         Require(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns,
                             $"{plan.Key} {lod}: UV2 is (BaseId, slot + 32 × columns)");
                         var id = block.Base + (int)MathF.Floor(g.Uv![2 * i + 1]) * plan.TotalColumns + (int)MathF.Floor(g.Uv[2 * i]);
-                        Require(expected.TryGetValue(id, out var card) && g.Reserved![i] == card, $"{plan.Key} {lod}: window {id} keeps its cell and card");
+                        Require(expected.TryGetValue(id, out var card) && (g.Reserved![i] & WindowCardEncoding.TypeMask) == card, $"{plan.Key} {lod}: window {id} keeps its cell and card");
                         seen.Add(id);
                     }
                 Require(seen.SetEquals(expected.Keys), $"{plan.Key} {lod}: every opening has glass");
@@ -146,6 +146,45 @@ public sealed class BuildingsTests
     // WP-10 curtain fabric; the WP-12 heat-pump shrouds share its shading but not its colours.
     private static bool Fabric(GeometryBundle b) => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Steps == ShadeSteps.TwoHalf &&
         !b.Material.Spec.Lit.Value.StartsWith("equip.", StringComparison.Ordinal);
+
+    [TestCase]
+    public void PhysicalCurtainFlagMatchesActualPerOpeningGeometryAtEachLodAndZone()
+    {
+        var world = World(Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
+        var set = BuildingSet.For(world, 1u);
+        var plan = set.Plans[0];
+        var present = 0;
+        var absent = 0;
+        foreach (var zone in new[] { FidelityZone.K1, FidelityZone.K2, FidelityZone.K3 })
+            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3 })
+                for (var fi = 0; fi < plan.Facades.Count; fi++)
+                {
+                    var layout = plan.Facades[fi];
+                    var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
+                    foreach (var opening in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
+                    {
+                        var sink = new Mesh.MeshSink(null);
+                        var openings = new FacadeOpenings(plan, set.Blocks[0], lod, sink);
+                        if (lod <= LodLevel.L1) openings.Fill(frame, layout, opening, zone);
+                        else openings.FlatGlass(frame, layout, opening, -plan.Reveal);
+                        var meshes = sink.Finish();
+                        var actualCurtain = meshes.Any(Fabric);
+                        if (actualCurtain) present++; else absent++;
+                        Require(!actualCurtain || (zone <= FidelityZone.K2 && lod == LodLevel.L0), "Physical curtain remains confined to the existing near LOD/zone.");
+                        var glass = meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
+                        Require(glass.Length > 0, "Each opening still has glass.");
+                        var card = (byte)FacadeOpenings.Card(plan, opening, FacadeOpenings.Number(plan, set.Blocks[0], layout, opening));
+                        foreach (var mesh in glass)
+                            foreach (var encoded in mesh.Reserved!)
+                            {
+                                Require((encoded & WindowCardEncoding.TypeMask) == card, "Presence flag preserves the window card type.");
+                                Require(((encoded & WindowCardEncoding.PhysicalCurtainFlag) != 0) == actualCurtain,
+                                    $"{zone} {lod} bay {opening.Bay}: flag exactly matches actual curtain geometry.");
+                            }
+                    }
+                }
+        Require(present > 0 && absent > 0, "Exercise actual curtains and uncurtained openings, including distant LODs.");
+    }
 
     [TestCase]
     public void K1AndK2OpeningsTakeTheWp10Parts()

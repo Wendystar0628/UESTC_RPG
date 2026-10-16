@@ -7890,3 +7890,9 @@ virtual Campus.Contracts.TerrainShape.PrintMembers(System.Text.StringBuilder! bu
 ~override Campus.Contracts.WpId.ToString() -> string
 ~override Campus.Contracts.ZoneId.Equals(object obj) -> bool
 ~override Campus.Contracts.ZoneId.ToString() -> string
+
+Campus.Contracts.WindowCardEncoding
+const Campus.Contracts.WindowCardEncoding.TypeMask = 127 -> byte
+const Campus.Contracts.WindowCardEncoding.PhysicalCurtainFlag = 128 -> byte
+const Campus.Contracts.WindowCardEncoding.Lobby = 16 -> byte
+const Campus.Contracts.ShaderGlobals.WindowCards = "window_cards" -> string!
