@@ -1504,7 +1504,7 @@
 
 ## ENG-BUDGET · 性能预算与硬规则
 
-`docs/design/engineering/ENG-BUDGET.md` · 54.2k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
+`docs/design/engineering/ENG-BUDGET.md` · 54.7k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
 关键词：性能预算、预算、额度、份额、配额、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、主线程额度、硬规则、合入规则、细节级别、L0+、分块、四叉树、速度律、屏幕误差、近裁剪面、导出包体、本机缓存预算、工程设置、project.godot 设置
 
 - ENG-BUDGET §0 结论 · L23 · 2.4k
@@ -1516,10 +1516,10 @@
 - ENG-BUDGET §5 深度与近裁剪面 · L250 · 654
 - ENG-BUDGET §6 阴影、后期、倒影、灯光 · L258 · 2.7k
 - ENG-BUDGET §7 硬规则（违反任何一条都不能合入） · L278 · 7.5k
-- ENG-BUDGET §8 额度总账（`budgets.json`） · L316 · 10.9k
-- ENG-BUDGET §9 怎么测 · L434 · 4.0k
-- ENG-BUDGET §10 工程设置清单 · L467 · 7.0k
-- ENG-BUDGET §11 待验证（P0） · L569 · 2.8k
+- ENG-BUDGET §8 额度总账（`budgets.json`） · L316 · 11.5k
+- ENG-BUDGET §9 怎么测 · L451 · 4.0k
+- ENG-BUDGET §10 工程设置清单 · L484 · 7.0k
+- ENG-BUDGET §11 待验证（P0） · L586 · 2.8k
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
