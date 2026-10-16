@@ -288,7 +288,7 @@
         "sun":  ["#FFE1A0", "#F7B072", "#D9939C", "#8E98CE", "#4A62A8"],
         "anti": ["#E3C3C0", "#C8BFD2", "#A9B4D6", "#7E90C4", "#4A62A8"]
       },
-      "key": {"source": "sun", "color": "#FFD39C", "intensity": 0.8, "satGain": 1.06, "litLift": 1.1675, "vegChroma": 1.2},
+      "key": {"source": "sun", "color": "#FFD39C", "intensity": 0.8, "satGain": 1.06, "litLift": 1.1675, "vegChroma": 1.0},
       "shade": {"r": 0.72, "ambientSky": {"c": 0.045, "h": 262}, "wMin": 0.0, "vegDepth": 0.84},
       "fog": {"sun": "#F3D2A6", "anti": "#B8B6D6", "startM": 350, "silhouetteM": 1500, "density": 0.8, "hazeDeg": 2.0},
       "line": {"darken": 0.15, "warm": "#4A3426", "cool": "#35505A"},

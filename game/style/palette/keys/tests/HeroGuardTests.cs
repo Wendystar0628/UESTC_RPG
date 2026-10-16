@@ -43,12 +43,12 @@ public sealed class HeroGuardTests
             }
     }
 
-    // Same colours as the Python reference (pipeline/colorscript); at 21:00 the floor is held by the chromaCap, next to the reviewed #937F4F.
+    // Same colours as the Python reference (pipeline/colorscript); at 21:00 the floor is held by the chromaCap (values for the 23d autumn hero #EFC558).
     [TestCase]
     public void GinkgoMatchesTheReference()
     {
         var script = Script(false);
-        foreach (var (clock, hex) in new[] { (21.0, "#937F50"), (19.0, "#A4905F"), (6.5, "#A08C5B") })
+        foreach (var (clock, hex) in new[] { (21.0, "#887653"), (19.0, "#98845D"), (6.5, "#95815A") })
         {
             var actual = Oklab.ToHex(Lit(script, "ginkgo", Season.Autumn, clock).Lit);
             Check(actual == hex, $"ginkgo autumn {clock}: {actual}, expected {hex}.");

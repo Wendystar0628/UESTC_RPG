@@ -13,7 +13,7 @@
   ],
   "heroFrames": { "spring": "earlyMorning", "summer": "afternoon", "autumn": "golden", "winter": "noon" },
   "seasonal": [
-    { "token": "ginkgo",     "name": "银杏",             "class": "vegetation", "lit": { "spring": "#B8DC70", "summer": "#6AA04A", "autumn": "#FFD94A", "winter": "#F0CC50" }, "check": { "autumn": { "deep": "#9A6C03" } } },
+    { "token": "ginkgo",     "name": "银杏",             "class": "vegetation", "lit": { "spring": "#B8DC70", "summer": "#6AA04A", "autumn": "#EFC558", "winter": "#F0CC50" }, "check": { "autumn": { "deep": "#9A6C03" } } },
     { "token": "metaseq",    "name": "水杉",             "class": "vegetation", "lit": { "spring": "#A8D47A", "summer": "#5A9A4A", "autumn": "#D9784A", "winter": "#8A7476" }, "winterBare": true },
     { "token": "cherry",     "name": "樱花与紫薇的叶",   "class": "vegetation", "lit": { "spring": "#A8C86A", "summer": "#6E9E4E", "autumn": "#E07A45", "winter": "#8A7476" }, "winterBare": true },
     { "token": "maple",      "name": "红枫",             "class": "vegetation", "lit": { "spring": "#E0604A", "summer": "#A04A4E", "autumn": "#D8483A", "winter": "#8A7476" }, "winterBare": true },
