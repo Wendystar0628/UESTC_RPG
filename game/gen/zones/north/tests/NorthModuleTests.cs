@@ -176,9 +176,9 @@ public sealed class NorthModuleTests
         var ctx = Context();
         var module = new NorthModule();
         // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH §4.1); batched boxes anchor at their
-        // 64 m cell's centre, x 800 for that cell.
+        // 64 m cell's centre, x 800 for that cell. South edge: 博翰一组团's fence reaches z −73 by 4499 (cell centre −96).
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
-            Require(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -150, $"item at {item.Anchor} is in the north zone");
+            Require(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -64, $"item at {item.Anchor} is in the north zone");
     }
 
     /// <summary>
@@ -204,6 +204,91 @@ public sealed class NorthModuleTests
                 Require(PolylineDistance(p, line) - width * 0.5f >= 3f, $"deck corner {p} keeps 3 m off a road edge");
         }
     }
+
+    /// <summary>
+    /// Main session 18:26 (20b1 ③), applied by 20b2 to 硕丰苑 and 博翰苑: the main gate faces the highest-grade road beside
+    /// the cluster (within 15 m of its outline) — 丹桂路 and 银杏大道, then the other 6 m campus roads, then 5 m service
+    /// roads: it opens within <see cref="Faces"/> of such a road, or no vehicle gate is nearer one; and its guard house
+    /// stands on the right of the way in. 学知苑 and the international students' cluster (20a) stay as built until the main
+    /// session extends the rule to them.
+    /// </summary>
+    [TestCase]
+    public void MainGatesFaceTheHighestGradeRoadWithTheHouseOnTheRight()
+    {
+        var world = World();
+        foreach (var cluster in NorthTune.Clusters.Where(c => c.Key.StartsWith("sf", StringComparison.Ordinal) || c.Key.StartsWith("bh", StringComparison.Ordinal)))
+        {
+            var layout = ClusterLayout.Of(world, cluster)!;
+            var ring = Framework.Plan.OuterRing(world.Features[new(cluster.Id)])!;
+            var outline = Samples([.. ring, ring[0]]).ToArray();
+            var beside = world.Network.Roads.Where(r => outline.Min(p => PolylineDistance(p, r.Line.Points)) < 15f).ToArray();
+            var top = beside.Max(RoadGrade);
+            var best = beside.Where(r => RoadGrade(r) == top).ToArray();
+            var main = layout.MainGate!;
+            float ToBest(GateSpot g) => best.Min(r => PolylineDistance(g.Frame.Origin, r.Line.Points));
+            var nearest = layout.Gates.Where(g => g.Kind == GateKind.Vehicle).MinBy(ToBest)!;
+            Require(ToBest(main) <= MathF.Max(Faces, ToBest(nearest)),
+                $"{cluster.Name}: main gate at {main.Frame.Origin} is {ToBest(main):0.0} m from the grade-{top} road; the gate at {nearest.Frame.Origin} is {ToBest(nearest):0.0} m");
+            // Walking in faces −W; the right of a facing d is (−d.z, d.x), which for d = −W is +U (PlanFrame: W = (−U.z, U.x)).
+            var into = -main.Frame.W;
+            var house = main.Frame.P((main.HouseStart + main.HouseEnd) * 0.5f, NorthTune.Gate.HouseOut - NorthTune.Gate.HouseDepth * 0.5f);
+            Require(Vector2.Dot(house - main.Frame.Origin, new Vector2(-into.Y, into.X)) > 0, $"{cluster.Name}: guard house on the right of the way in");
+        }
+    }
+
+    /// <summary>
+    /// The 硕丰 and 博翰 guard houses (the main gates moved in 20b2 included) stand clear of every building footprint.
+    /// 学知八组团's house (20a) runs into a dormitory; it is reported to the main session with the rest of 学知苑's gates.
+    /// </summary>
+    [TestCase]
+    public void GuardHousesStandClearOfBuildings()
+    {
+        var world = World();
+        var rings = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
+        foreach (var cluster in NorthTune.Clusters.Where(c => c.Key.StartsWith("sf", StringComparison.Ordinal) || c.Key.StartsWith("bh", StringComparison.Ordinal)))
+        {
+            var g = ClusterLayout.Of(world, cluster)!.MainGate!;
+            var house = g.Frame.Rect(g.HouseStart, NorthTune.Gate.HouseOut - NorthTune.Gate.HouseDepth, g.HouseEnd, NorthTune.Gate.HouseOut);
+            foreach (var ring in rings.Where(r => r.Any(q => Vector2.Distance(q, g.Frame.Origin) < 150f)))
+            {
+                var crosses = Enumerable.Range(0, 4).Any(i => Enumerable.Range(0, ring.Count).Any(k =>
+                    Framework.Plan.Intersect(house[i], house[(i + 1) % 4], ring[k], ring[(k + 1) % ring.Count]) is not null));
+                Require(!crosses && !house.Any(p => Framework.Plan.Contains(ring, p)) && !ring.Any(p => Framework.Plan.Contains(house, p)),
+                    $"{cluster.Name}: guard house at {g.Frame.Origin} overlaps a building");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 20b2: 博翰苑 9 栋 and the WLD-INTERIORS §17 blocks (4499, 5247, 6735) carry their family and preset; an annex preset
+    /// names the family it was written for, and it matches.
+    /// </summary>
+    [TestCase]
+    public void LoneBuildingsCarryTheirFamilyAndPreset()
+    {
+        var world = World();
+        var game = Path.GetFullPath(Path.Combine(DataDirectory(), "..", "..", ".."));
+        using var table = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "gen", "zones", "north", "DormPresets.json")));
+        var presets = table.RootElement.GetProperty("presets").EnumerateArray().ToDictionary(p => p.GetProperty("key").GetString()!);
+        foreach (var s in NorthTune.Singles)
+        {
+            var feature = world.Features[new(s.Id)];
+            Require(feature.Family?.Value == s.Family && feature.Facade?.Value == s.Facade, $"{s.Id} ({s.Note}) carries {s.Family} / {s.Facade}");
+            if (presets[s.Facade].TryGetProperty("family", out var family))
+                Require(family.GetString() == s.Family, $"{s.Facade} was written for {family.GetString()}, not {s.Family}");
+        }
+    }
+
+    /// <summary>A gate whose origin (on the fence line) lies this close to a road's centreline opens onto it.</summary>
+    private const float Faces = 8f;
+
+    private static int RoadGrade(NetworkLine road) => Text(road.Props, "name") is "丹桂路" or "银杏大道" ? 3
+        : Text(road.Props, "highway") switch
+        {
+            "primary" or "secondary" or "tertiary" or "unclassified" or "residential" => 2,
+            "service" => 1,
+            _ => 0,
+        };
 
     [TestCase]
     public void TerrainOverlayParsesAndReferencesRealRoads()

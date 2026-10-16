@@ -61,9 +61,15 @@ public static class NorthTune
     /// 20a clusters: 学知苑 1–8 and the international students' cluster. Wall presets (§11 初值): 二组团 A 型暖米黄（原型），
     /// 六组团 B 型（原型），其余在暖米黄与浅奶咖之间分配，相邻组团尽量不同色；竖带一律陶红。
     /// 20b1 clusters: 硕丰苑 (MAP-QSH-NORTH §4.4): 1–20 栋 the renovated stone-beige master's dormitories, 21–28 and 30–33 栋
-    /// the newer grey-white ones, with the two small annexes 9803、9804 of their clusters. Main gates (初值) face the campus side:
-    /// 丹桂路 and the canteen square for 一、二, the only road for 四、五, the design drives for 三、十 (no road enters them).
-    /// 20b2 appends 博翰.
+    /// the newer grey-white ones, with the two small annexes 9803、9804 of their clusters.
+    /// 20b2 clusters: 博翰苑 (MAP-QSH-RENOVATION §8.3, §9): 一组团 1–6 栋 in the master's language, walled in cream coffee
+    /// to stand apart from the stone-beige 硕丰五 and grey-white 硕丰十 beside them; 二组团 7–8 栋 and the same-batch
+    /// 留学生 2 栋 (2015), cream coffee with warm-white window bands. 博翰苑 9 栋 stands inside 硕丰十's fence (<see cref="Singles"/>).
+    /// Main gates of 硕丰 and 博翰 (main session 18:26): the vehicle gate nearest the highest-grade road beside the cluster
+    /// (丹桂路 and 银杏大道 over the other 6 m campus roads over 5 m service roads), guard house on the right of the way in;
+    /// every other gate closed. Under that rule 20b2 moved 硕丰六's main gate to its west gate on 丹桂路 and 硕丰七's to its
+    /// north gate (the road out to 丹桂路); 三、十 keep their design drives (no road enters them), and 博翰二 gets one (its only
+    /// road in runs along 8 栋's gable, leaving no room for the house on the right).
     /// </summary>
     public static readonly Cluster[] Clusters =
     [
@@ -95,14 +101,37 @@ public static class NorthTune
             ["qsh:way:217855288", "qsh:way:217855289", "qsh:way:217855290", "qsh:way:217855291"]),
         new("qsh:way:596904659", "sf5", "硕丰五组团", new(533.8f, -352.5f), false, Facades.MasterStoneBeige,
             ["qsh:way:217855254", "qsh:way:217855253", "qsh:way:217855255", "qsh:way:217855252", "qsh:way:217855250"]),
-        new("qsh:way:848026374", "sf6", "硕丰六组团", new(133.6f, -812.7f), false, Facades.MasterGreyWhite,
+        new("qsh:way:848026374", "sf6", "硕丰六组团", new(102.1f, -905.5f), false, Facades.MasterGreyWhite,
             ["qsh:way:741650454", "qsh:way:741650453", "qsh:way:741650452", "qsh:way:779499804"]),
-        new("qsh:way:725234159", "sf7", "硕丰七组团", new(187.0f, -717.5f), false, Facades.MasterGreyWhite,
+        new("qsh:way:725234159", "sf7", "硕丰七组团", new(101.8f, -816.7f), false, Facades.MasterGreyWhite,
             ["qsh:way:779499805", "qsh:way:741650451", "qsh:way:741650450"]),
         new("qsh:way:848026373", "sf8", "硕丰八组团", new(41.8f, -848.9f), false, Facades.MasterGreyWhite,
             ["qsh:way:741650456", "qsh:way:741650455", "qsh:way:779499803"]),
         new("qsh:way:1061419119", "sf10", "硕丰苑十组团", new(662.0f, -345.4f), false, Facades.MasterGreyWhite,
             ["qsh:way:1466169449", "qsh:way:1466169451", "qsh:way:1466169450", "qsh:way:1466169448"]),
+        // 20b2: 博翰苑, all gates closed. 一组团's one road in opens onto 217855167; 二组团's one road in runs along 8 栋's
+        // gable, leaving no room for the guard house on the right, so its main gate is on the design drive from 217855186.
+        new("qsh:way:596904655", "bh1", "博翰一组团", new(463.4f, -216.4f), false, Facades.MasterCreamCoffee,
+            ["qsh:way:217855243", "qsh:way:217855234", "qsh:way:217855232", "qsh:way:217855233", "qsh:way:217855248",
+             "qsh:way:217855245", "qsh:way:217855239"]),
+        new("qsh:way:596904661", "bh2", "博翰二组团", new(620.4f, -194.7f), false, Facades.MasterCreamCoffeeWhite,
+            ["qsh:way:544136505", "qsh:way:544136504", "qsh:way:544160370"]),
+    ];
+
+    /// <summary>A building styled on its own, outside any cluster's building list.</summary>
+    public sealed record StyledBuilding(string Id, string Family, string Facade, string Note);
+
+    /// <summary>
+    /// Buildings handed to WP-14 with a family and a preset but no cluster of their own (20b2): 博翰苑 9 栋, and the three
+    /// blocks of WLD-INTERIORS §17, all closed — shell, window cards and the simplified interior only (INV-11); WP-14 keeps
+    /// its generic door, shut, so no entrance is registered. Families pick the window cards (WLD-INTERIORS §5.1).
+    /// </summary>
+    public static readonly StyledBuilding[] Singles =
+    [
+        new("qsh:way:544136503", "dormitory", Facades.MasterCreamCoffeeWhite, "博翰苑 9 栋，在硕丰苑十组团的围栏里，按博翰苑配色"),
+        new("qsh:way:949704499", "service", Facades.AnnexService, "无名 4499，社区活动室，2 层（数据记 teaching，改 service）"),
+        new("qsh:way:217855247", "utility", Facades.AnnexUtility, "无名 5247，配电房、水泵房，1 层，后勤小楼"),
+        new("qsh:way:683646735", "utility", Facades.AnnexHospital, "无名 6735，校医院附属或设备用房，2 层，外墙同校医院"),
     ];
 
     /// <summary>Facade preset keys written into north.overlay.json StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
@@ -118,6 +147,12 @@ public static class NorthTune
         public const string MasterStoneBeige = "dorm.master.stoneBeige";
         /// <summary>硕士楼语言的新楼，硕丰苑 21–28、30–33 栋：灰白墙、灰米石材窗间板与线脚，"墙色更新、更干净"（§4.4、§4.11）。</summary>
         public const string MasterGreyWhite = "dorm.master.greyWhite";
+        /// <summary>硕士楼语言，博翰苑 1–6 栋老楼翻新：浅奶咖墙、暖白线脚、无竖带（MAP-QSH-RENOVATION N-14、§8.3）。</summary>
+        public const string MasterCreamCoffee = "dorm.master.creamCoffee";
+        /// <summary>博翰苑 7–9 栋与留学生 2 栋（2015）：浅奶咖墙垛夹暖白窗带，更新、更干净（§4.4、§4.11）。</summary>
+        public const string MasterCreamCoffeeWhite = "dorm.master.creamCoffeeWhite";
+        /// <summary>附属小楼（WLD-INTERIORS §17）：4499 社区活动室、5247 配电房水泵房取博翰苑浅奶咖，6735 取校医院的浅灰。</summary>
+        public const string AnnexService = "annex.service.creamCoffee", AnnexUtility = "annex.utility.creamCoffee", AnnexHospital = "annex.utility.greyWhite";
         /// <summary>2015 年以后的新楼，按区文档新楼外观（MAP-QSH-RENOVATION §9），不写 StyleOp。</summary>
         public const string New = "";
     }
