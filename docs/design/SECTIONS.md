@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 45.1k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 45.4k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -15,21 +15,21 @@
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.3k
 - CORE-INDEX §5 文档怎么组织 · L135 · 764
 - CORE-INDEX §6 阅读路径 · L145 · 1.1k
-- CORE-INDEX §7 文档地图 · L163 · 10.3k
+- CORE-INDEX §7 文档地图 · L163 · 10.4k
   - CORE-INDEX §7.1 共识层 `core/` · L165 · 381
   - CORE-INDEX §7.2 美术方向 `art/` · L173 · 925
   - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.2k
   - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L196 · 1.7k
   - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.8k
   - CORE-INDEX §7.6 界面 `ui/` · L226 · 335
-  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 2.0k
-  - CORE-INDEX §7.8 参考 `reference/` · L252 · 261
-  - CORE-INDEX §7.9 工具 `tools/` · L259 · 178
-  - CORE-INDEX §7.10 运维 `ops/` · L265 · 173
-  - CORE-INDEX §7.11 提案 `proposals/` · L271 · 420
-  - CORE-INDEX §7.12 待用的文件夹 · L280 · 896
-- CORE-INDEX §8 工作包与文档 · L296 · 9.4k
-- CORE-INDEX §9 文档依赖图 · L374 · 12.8k
+  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 2.2k
+  - CORE-INDEX §7.8 参考 `reference/` · L253 · 261
+  - CORE-INDEX §7.9 工具 `tools/` · L260 · 178
+  - CORE-INDEX §7.10 运维 `ops/` · L266 · 173
+  - CORE-INDEX §7.11 提案 `proposals/` · L272 · 420
+  - CORE-INDEX §7.12 待用的文件夹 · L281 · 896
+- CORE-INDEX §8 工作包与文档 · L297 · 9.4k
+- CORE-INDEX §9 文档依赖图 · L375 · 12.9k
 
 ## CORE-CONVENTIONS · 约定
 
@@ -559,7 +559,7 @@
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION.md` · 43.1k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION.md` · 43.2k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
@@ -590,7 +590,7 @@
   - WLD-VEGETATION §11.8 画面设置（SYS-GRAPHICS） · L597 · 1.4k
 - WLD-VEGETATION §12 声音的接口（SYS-AUDIO） · L614 · 627
 - WLD-VEGETATION WP-23 交付验收 · L624 · 1.1k
-- WLD-VEGETATION §13 待验证（P0） · L644 · 668
+- WLD-VEGETATION §13 待验证（P0） · L644 · 661
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
@@ -1535,34 +1535,46 @@
 - ENG-GATES §5 回报格式 · L332 · 1.4k
 - ENG-GATES §6 待验证（P0） · L361 · 1.8k
 
+## ENG-ONBOARD-LOOKUP · 子代理开工手册：按要做的事查哪里
+
+`docs/design/engineering/ENG-ONBOARD-LOOKUP.md` · 3.5k 字 · 子代理按要做的事找资料的路由表：工程与流程、接入各系统、画面与内容三张表，每行给出该先看的文档与小节
+关键词：开工手册、查哪里、路由表、按任务查、先看哪份文档、接入要点、查阅、子代理
+
+- ENG-ONBOARD-LOOKUP §0 结论 · L23 · 269
+  - ★ ENG-ONBOARD-LOOKUP §0.1 接入要点 · L29 · 71
+- ENG-ONBOARD-LOOKUP §1 按要做的事查哪里 · L33 · 2.5k
+  - ENG-ONBOARD-LOOKUP §1.1 工程与流程 · L35 · 840
+  - ENG-ONBOARD-LOOKUP §1.2 接入各系统 · L59 · 874
+  - ENG-ONBOARD-LOOKUP §1.3 画面与内容 · L82 · 781
+
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 14.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
-关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
+`docs/design/engineering/ENG-ONBOARD.md` · 9.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+关键词：开工手册、子代理、必读、查阅、按需查、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md
 
-- ENG-ONBOARD §0 结论 · L26 · 783
-  - ★ ENG-ONBOARD §0.1 接入要点 · L45 · 69
-- ENG-ONBOARD §1 项目与当前阶段 · L49 · 603
-- ENG-ONBOARD §2 开工环境 · L64 · 1.0k
-- ENG-ONBOARD §3 硬规则 · L81 · 5.8k
-  - ENG-ONBOARD §3.1 改哪里 · L83 · 719
-  - ENG-ONBOARD §3.2 代码边界与接入方式 · L94 · 1.5k
-  - ENG-ONBOARD §3.3 禁用写法 · L124 · 1.4k
-  - ENG-ONBOARD §3.4 内容与画面的底线 · L153 · 587
-  - ENG-ONBOARD §3.5 文件操作 · L169 · 384
-  - ENG-ONBOARD §3.6 贴近主线，少给合并添活 · L180 · 1.0k
-  - ENG-ONBOARD §3.7 不过度工程化 · L192 · 270
-- ENG-ONBOARD §4 查资料 · L199 · 3.9k
-  - ENG-ONBOARD §4.1 文档在哪、怎么找 · L201 · 858
-  - ENG-ONBOARD §4.2 按要做的事查哪里 · L221 · 2.5k
-  - ENG-ONBOARD §4.3 Godot API · L294 · 223
-  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L300 · 219
-- ENG-ONBOARD §5 完成与回报 · L308 · 650
-- ENG-ONBOARD §6 改文档时 · L320 · 331
+- ENG-ONBOARD §0 结论 · L23 · 641
+  - ★ ENG-ONBOARD §0.1 接入要点 · L33 · 69
+- ENG-ONBOARD §1 项目与当前阶段 · L37 · 514
+- ENG-ONBOARD §2 开工环境 · L45 · 720
+- ENG-ONBOARD §3 硬规则 · L55 · 4.1k
+  - ENG-ONBOARD §3.1 改哪里 · L57 · 704
+  - ENG-ONBOARD §3.2 代码边界与接入方式 · L65 · 931
+  - ENG-ONBOARD §3.3 禁用写法 · L80 · 438
+  - ENG-ONBOARD §3.4 内容与画面的底线 · L89 · 530
+  - ENG-ONBOARD §3.5 文件操作 · L97 · 361
+  - ENG-ONBOARD §3.6 贴近主线，少给合并添活 · L107 · 823
+  - ENG-ONBOARD §3.7 不过度工程化 · L119 · 270
+- ENG-ONBOARD §4 查资料 · L126 · 1.3k
+  - ENG-ONBOARD §4.1 文档在哪、怎么找 · L128 · 725
+  - ENG-ONBOARD §4.2 按要做的事查哪里 · L137 · 128
+  - ENG-ONBOARD §4.3 Godot API · L141 · 223
+  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L147 · 200
+- ENG-ONBOARD §5 完成与回报 · L153 · 597
+- ENG-ONBOARD §6 改文档时 · L160 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 133.8k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF.md` · 133.7k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1640,21 +1652,22 @@
 
 ## ENG-TEAM-COMMS · 协作分册：交接与通信
 
-`docs/design/engineering/ENG-TEAM-COMMS.md` · 9.5k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
-关键词：.collab、交接目录、合并请求、评审请求、契约申请文件、任务单、max-000、max-backlog、sol-001、旁路单、调研单、merged.log、流水、notes、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、sol_duty_watch、sol_side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
+`docs/design/engineering/ENG-TEAM-COMMS.md` · 12.1k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
+关键词：.collab、archive、logs、结案即挪走、谁读什么、.ignore、交接目录、合并请求、评审请求、契约申请文件、任务单、max-000、max-backlog、sol-001、旁路单、调研单、logs/merged.log、流水、notes、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、sol_duty_watch、sol_side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
 
-- ENG-TEAM-COMMS §0 结论 · L23 · 582
-  - ★ ENG-TEAM-COMMS §0.1 接入要点 · L31 · 69
-- ENG-TEAM-COMMS §1 交接目录与文件 · L35 · 1.8k
-- ENG-TEAM-COMMS §2 命名与写法 · L62 · 498
-- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L70 · 831
-- ENG-TEAM-COMMS §4 消息与流水 · L98 · 2.0k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L129 · 2.1k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L158 · 563
+- ENG-TEAM-COMMS §0 结论 · L23 · 711
+  - ★ ENG-TEAM-COMMS §0.1 接入要点 · L32 · 69
+- ENG-TEAM-COMMS §1 交接目录与文件 · L36 · 4.0k
+  - ENG-TEAM-COMMS §1.1 结案即挪走与谁读什么 · L69 · 1.3k
+- ENG-TEAM-COMMS §2 命名与写法 · L83 · 498
+- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L91 · 961
+- ENG-TEAM-COMMS §4 消息与流水 · L119 · 2.0k
+- ENG-TEAM-COMMS §5 唤醒脚本 · L150 · 2.1k
+- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L179 · 591
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
-`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.5k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
+`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.6k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
 关键词：值班、值班执行者、Sol 值班会话、sol-001、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、sol-002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
 
 - ENG-TEAM-DUTY §0 结论 · L23 · 706
@@ -1664,11 +1677,11 @@
 - ENG-TEAM-DUTY §3 Sol 旁路会话 · L96 · 904
 - ENG-TEAM-DUTY §4 怎么开子代理 · L116 · 1.2k
 - ENG-TEAM-DUTY §5 Codex 侧怎么省 · L144 · 484
-- ENG-TEAM-DUTY §6 待验证（P0） · L159 · 227
+- ENG-TEAM-DUTY §6 待验证（P0） · L159 · 232
 
 ## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
 
-`docs/design/engineering/ENG-TEAM-FLOW.md` · 14.8k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
+`docs/design/engineering/ENG-TEAM-FLOW.md` · 15.0k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
 关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、max 单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
 
 - ENG-TEAM-FLOW §0 结论 · L23 · 685
@@ -1676,17 +1689,17 @@
 - ENG-TEAM-FLOW §1 包的归属与开工顺序 · L35 · 2.5k
   - ENG-TEAM-FLOW §1.1 包的归属 · L37 · 1.2k
   - ENG-TEAM-FLOW §1.2 开工顺序与合并顺序 · L52 · 1.3k
-- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.2k
-  - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 604
+- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.5k
+  - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 616
   - ENG-TEAM-FLOW §2.2 派工 · L84 · 1.7k
-  - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 791
+  - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 796
   - ENG-TEAM-FLOW §2.4 评审：审美与契约的交叉评审 · L132 · 654
-  - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 2.2k
-  - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L171 · 600
+  - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 2.4k
+  - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L171 · 615
   - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L182 · 489
   - ENG-TEAM-FLOW §2.8 调研入队流水线 · L190 · 1.2k
   - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L208 · 1.1k
-  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L224 · 887
+  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L224 · 892
 
 ## ENG-TEAM-QUOTA · 协作分册：账号与额度
 
@@ -1702,7 +1715,7 @@
 - ENG-TEAM-QUOTA §5 额度见底时冻结 · L95 · 196
 - ENG-TEAM-QUOTA §6 仅双账号模式 · L101 · 1.1k
   - ENG-TEAM-QUOTA §6.1 主账号（主会话） · L105 · 205
-  - ENG-TEAM-QUOTA §6.2 二号会话的账号 · L110 · 747
+  - ENG-TEAM-QUOTA §6.2 二号会话的账号 · L110 · 754
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
@@ -1712,7 +1725,7 @@
 - ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
   - ★ ENG-TEAM-ROLES §0.1 接入要点 · L35 · 69
 - ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.2k
-  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 526
+  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 531
 - ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.4k
   - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L84 · 803
   - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L93 · 485
@@ -1724,7 +1737,7 @@
   - ENG-TEAM-ROLES §3.2 总指挥只做什么 · L204 · 495
   - ENG-TEAM-ROLES §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L218 · 674
   - ENG-TEAM-ROLES §3.4 包内的实现路径由施工模型规划 · L233 · 110
-  - ENG-TEAM-ROLES §3.5 子代理的生命周期：默认新开，靠任务单交接 · L238 · 679
+  - ENG-TEAM-ROLES §3.5 子代理的生命周期：默认新开，靠任务单交接 · L238 · 684
 
 ## ENG-TEAM · 多模型协作规程：总纲与分册索引
 

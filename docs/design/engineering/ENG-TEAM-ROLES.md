@@ -49,7 +49,7 @@ gates: []
 | 二号会话的子代理 | wendystar1145 | Opus 或 Sonnet，按任务单 | Agent 工具，后台 | 按包取名，如 `wp10-openings` | Opus：Opus 侧包的施工、质感移植的实现、需要 Opus 的文档撰写；Sonnet：补 GPT 短板的活 | 二号会话 |
 | Astra | Codex 账号 | gpt-6-astra，xhigh | Codex 应用里的会话，用 `codex queue` 发（ENG-TEAM-COMMS §4） | "UESTC_RPG主线开发"，thread `01a14616-1410-7403-9eae-6d2956af50af`；开工说明 `.collab/CODEX-BOOT.md` | 工程指挥：WP-00、契约与共享工程文件的定案、Astra 侧包的拆单派工与架构审查、集成取舍、写合并请求；尽量不亲自施工（§3.3） | 主会话 |
 | Astra 的子代理 | Codex 账号 | 默认 gpt-6.1-sol；gpt-6-astra 只用于 §3.3 列出的少数情形 | `spawn_agent` | `task_name` 写包号，如 `wp-02a` | Astra 侧包的施工 | Astra 主线程 |
-| Sol 值班会话 | Codex 账号 | gpt-6.1-sol，high，普通速度 | Codex 应用里的会话，值班唤醒脚本退回时用 `codex queue` 发进（ENG-TEAM-COMMS §5） | "Sol值班会话"，thread `01a14634-61f1-7622-be49-c63705d46a3a`；任务单 `tasks/sol-001.md` | Grok 或 luna 没回复时接手合并执行、施工状态与巡检（ENG-TEAM-COMMS §5） | 主会话 |
+| Sol 值班会话 | Codex 账号 | gpt-6.1-sol，high，普通速度 | Codex 应用里的会话，值班唤醒脚本退回时用 `codex queue` 发进（ENG-TEAM-COMMS §5） | "Sol值班会话"，thread `01a14634-61f1-7622-be49-c63705d46a3a`；任务单 `tasks/sol/sol-001.md` | Grok 或 luna 没回复时接手合并执行、施工状态与巡检（ENG-TEAM-COMMS §5） | 主会话 |
 | Grok 值班执行者 | 作者的 Grok 订阅 | Grok 4.7，合并 high、任务单与定时巡检 medium | `grok --prompt-file … -r <会话>`，后台无界面，被值班唤醒脚本调用（ENG-TEAM-COMMS §5） | 会话号存在 `tools/duty/grok_session.txt`；职责说明 `tools/duty/ROLE-grok.md` | 合并执行（首选）、sol 任务单、定时巡检 | 主会话 |
 | Gemini 快速杂活 | 作者的 Antigravity | Gemini 3.8 Flash High | `agentapi send-message` 发进作者开着的 Antigravity 会话，作者能实时看到；脚本 `tools/duty/gemini_run.py` 发出并等它做完（ENG-TEAM-COMMS §5） | 会话号在 `tools/duty/gemini_conversation.txt`；职责说明 `tools/duty/ROLE-gemini.md` | 只改文档的合并、主会话直接派的简单快速小活 | 主会话 |
 | luna 批量苦力 | Codex 账号 | gpt-6-luna，medium，快速模式 | Codex 应用里的会话，用 `codex queue` 发；或在 Codex 会话里 `spawn_agent` 开 luna 子代理 | "Luna会话"，会话号在 `tools/duty/luna_thread.txt`；职责说明 `tools/duty/ROLE-luna.md` | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra |
@@ -69,7 +69,7 @@ gates: []
 - 与作者沟通。
 
 **执行交出去**：
-- 上面不需要判断的执行部分，即按批准合入、跑门禁、提交推送、写 `merged.log`、维护 ENG-STATUS、巡检，由值班执行者（只改文档的合并交 Gemini，其余与巡检交 Grok，没回复退回 Sol，D-198、D-202）做（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §1）。
+- 上面不需要判断的执行部分，即按批准合入、跑门禁、提交推送、写 `logs/merged.log`、维护 ENG-STATUS、巡检，由值班执行者（只改文档的合并交 Gemini，其余与巡检交 Grok，没回复退回 Sol，D-198、D-202）做（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §1）。
 - `main` 同一时刻只有一个执行人。值班执行者合并时，主会话和其他会话都不碰主检出的暂存区。
 - 设计文档的撰写可以派出去：需要 Opus 的撰写交二号会话的 Opus 子代理；Sol 只在任务单给出确切文字时按文打补丁。改动都在工作树里做，经批准合入。
 
@@ -250,6 +250,6 @@ gates: []
 
 其余返工也新开，任务单写明改什么、改哪里。
 
-**恢复以后先对齐现状**：接到任务先看 `merged.log` 和最新 `main`，`git rebase main`，再核对任务涉及的契约、数据与相关包的新提交；记得的旧版本不当现行依据。
+**恢复以后先对齐现状**：接到任务先看 `logs/merged.log` 和最新 `main`，`git rebase main`，再核对任务涉及的契约、数据与相关包的新提交；记得的旧版本不当现行依据。
 
 **记录**：任务单的"派出"行写明子代理的名字和类型；回报里的 token 数是交回时的上下文大小，用来判断还能不能恢复。

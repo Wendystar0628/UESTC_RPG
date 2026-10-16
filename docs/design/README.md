@@ -148,7 +148,7 @@ gates: []
 
 1. **子代理**：开工只读开工手册 ENG-ONBOARD（仓库根的 `CLAUDE.md` 会自动引入它）、ENG-WP §2 与 ENG-WP §2.1 里本包的两行，以及派工简报。其余按 ENG-ONBOARD §4 查：
    - 先在小节目录 `docs/design/SECTIONS.md` 里按关键词或编码定位，再只读需要的小节；
-   - 碰到别的系统，先看那份文档 §0 末尾的"接入要点"；按要做的事查哪里，见 ENG-ONBOARD §4.2。
+   - 碰到别的系统，先看那份文档 §0 末尾的"接入要点"；按要做的事查哪里，见 ENG-ONBOARD-LOOKUP §1。
 2. **写 Godot 代码的包**：以 [../godot-api/](../godot-api/README.md) 里的签名为准，不凭记忆写 API（D-145）。模型记忆里混着 Godot 3 和 4 的旧写法，这是最常见的错误来源。
 3. **按包类型的常用起点**（需要时查，不是通读清单）：
    - 区域包与部件包：MAP-QSH-ADDITIONS §7 的分工表和本区的 MAP-QSH 文档；碰撞体与可行走数据 SYS-WALK §6–§8、SYS-WALK §13；碰撞体的 `Foot` 材质与有声部件的 `Sounds()` 插座 SYS-AUDIO §9.3、SYS-AUDIO §4.2。
@@ -237,6 +237,7 @@ gates: []
 | [ENG-ARCH](engineering/ENG-ARCH.md) 工程架构：模块边界、接口契约与并行开发流程 | 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程 | WP-00 | G1、G2、G3、G4、G5、G6 |
 | [ENG-BUDGET](engineering/ENG-BUDGET.md) 性能预算与硬规则 | 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置 | WP-00 | G4、G5、G6、G8、G10、G11、G13、G14、G15、G16、G17、G20、G21 |
 | [ENG-GATES](engineering/ENG-GATES.md) 验收：门禁、审查视角、近景巡检、回报格式 | 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式 | WP-27 | G1、G2、G3、G4、G5、G6、G7、G8、G9、G10、G11、G12、G13、G14、G15、G16、G17、G18、G19、G20、G21 |
+| [ENG-ONBOARD-LOOKUP](engineering/ENG-ONBOARD-LOOKUP.md) 子代理开工手册：按要做的事查哪里 | 子代理按要做的事找资料的路由表：工程与流程、接入各系统、画面与内容三张表，每行给出该先看的文档与小节 | WP-00 | — |
 | [ENG-ONBOARD](engineering/ENG-ONBOARD.md) 子代理开工手册 | 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报 | WP-00 | — |
 | [ENG-PERF](engineering/ENG-PERF.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
@@ -299,7 +300,7 @@ gates: []
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ONBOARD、ENG-ROADMAP、ENG-STATUS、ENG-TEAM、ENG-TEAM-COMMS、ENG-TEAM-DUTY、ENG-TEAM-FLOW、ENG-TEAM-QUOTA、ENG-TEAM-ROLES、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ONBOARD、ENG-ONBOARD-LOOKUP、ENG-ROADMAP、ENG-STATUS、ENG-TEAM、ENG-TEAM-COMMS、ENG-TEAM-DUTY、ENG-TEAM-FLOW、ENG-TEAM-QUOTA、ENG-TEAM-ROLES、ENG-WP、OPS-RELEASE | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |
@@ -432,6 +433,7 @@ graph LR
     ENG_BUDGET["ENG-BUDGET"]
     ENG_GATES["ENG-GATES"]
     ENG_ONBOARD["ENG-ONBOARD"]
+    ENG_ONBOARD_LOOKUP["ENG-ONBOARD-LOOKUP"]
     ENG_PERF["ENG-PERF"]
     ENG_ROADMAP["ENG-ROADMAP"]
     ENG_STATUS["ENG-STATUS"]
@@ -527,6 +529,7 @@ graph LR
   CORE_CONVENTIONS --> ENG_ONBOARD
   ENG_ARCH --> ENG_ONBOARD
   ENG_WP --> ENG_ONBOARD
+  ENG_ONBOARD --> ENG_ONBOARD_LOOKUP
   ENG_ARCH --> ENG_PERF
   ENG_BUDGET --> ENG_PERF
   SYS_TIME --> ENG_PERF

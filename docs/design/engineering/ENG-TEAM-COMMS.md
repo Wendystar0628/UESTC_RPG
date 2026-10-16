@@ -3,7 +3,7 @@ id: ENG-TEAM-COMMS
 title: 协作分册：交接与通信
 category: engineering
 summary: .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
-keywords: [.collab, 交接目录, 合并请求, 评审请求, 契约申请文件, 任务单, max-000, max-backlog, sol-001, 旁路单, 调研单, merged.log, 流水, notes, 只追加, 不预判时间, 撞号, 批准行, 已合入行, 消息频率, 确认框, 转问作者, 等待不短轮询, 唤醒脚本, sol_duty_watch, sol_side_runner, 值班执行者, Grok 4.7, 上下文重置, HANDOVER.md]
+keywords: [.collab, archive, logs, 结案即挪走, 谁读什么, .ignore, 交接目录, 合并请求, 评审请求, 契约申请文件, 任务单, max-000, max-backlog, sol-001, 旁路单, 调研单, logs/merged.log, 流水, notes, 只追加, 不预判时间, 撞号, 批准行, 已合入行, 消息频率, 确认框, 转问作者, 等待不短轮询, 唤醒脚本, sol_duty_watch, sol_side_runner, 值班执行者, Grok 4.7, 上下文重置, HANDOVER.md]
 owners: [WP-00]
 contributors: []
 depends: [ENG-TEAM, ENG-TEAM-ROLES, ENG-TEAM-FLOW]
@@ -27,6 +27,7 @@ gates: []
 3. **批准行有固定格式**（§3）：单独成行，行首就是"批准合入："，唤醒脚本按行首匹配。
 4. **值班与旁路各由一个唤醒脚本叫醒**（§5）：值班唤醒脚本按批准行、新任务单和定时叫醒值班执行者；旁路唤醒脚本按 `side/cards/` 下的新任务单叫醒 Sol 旁路会话，一次一张。值班执行者按难度分：只改文档的合并交 Gemini 3.8 Flash High（不可用时 gpt-6-luna），其余合并、sol 任务单与定时巡检交 Grok，没有回复或出错就退回 Sol 值班会话（D-198）。
 5. **下属会话与子代理不向作者出选项或确认框**（§4）：要确认的事写进任务单或请求文件并通知主会话，主会话能据项目信息判断的直接定，只有属于作者的决定才转问作者。
+6. **在用的和结案的分开放，不用读的放进 `archive/`、`logs/`**（§1.1）：`tasks/<类>/` 与 `requests/` 下只放在用的和没合入的，搜索默认跳过 `archive/`、`logs/`；各角色读什么见 §1.1。
 
 ### 0.1 接入要点
 
@@ -38,26 +39,46 @@ gates: []
 
 | 路径（相对 `.collab\`） | 谁写 | 写什么 |
 | --- | --- | --- |
-| `requests/merge-<包号>-<序号>.md` | 包的负责方：Astra 主线程、主会话的子代理、Sol 旁路会话（代码类旁路单） | 合并请求：包号、工作树、分支、候选提交、已跑的检查与结果、关联的契约申请、截图路径、要主会话看的东西。末尾依次是主会话的评审与批准行、值班会话的合入记录 |
+| `requests/merge-<包号>-<序号>.md` | 包的负责方：Astra 主线程、主会话的子代理、Sol 旁路会话（代码类旁路单） | 合并请求：包号、工作树、分支、候选提交、已跑的检查与结果、关联的契约申请、截图路径、要主会话看的东西。末尾依次是主会话的评审与批准行、值班会话的合入记录。只放还没合入的：值班写完"已合入"后把它挪进 `archive/requests/`（长期批准的 `merge-DOC-rolling.md` 例外） |
 | `requests/contract-<序号>.md` | 任何代理 | 契约或共享工程文件的申请（ENG-TEAM-FLOW §2.7）。Astra 在末尾写结论和对应的提交 |
 | `requests/review-<包号>-<序号>.md` | Astra 主线程 | 请主会话做审美评审：截图或录像路径、可调参数在哪、各参数现在的值。主会话在末尾写结论或新值 |
-| `tasks/max-<nnn>.md` | 主会话建单，写评审与批准行；二号会话写"状态" | 二号会话的任务单（ENG-TEAM-FLOW §2.2）。`max-000.md` 是二号会话的长期角色单 |
-| `tasks/max-brief-common.md` | 主会话 | 二号会话子代理的通用简报，每张 max 单都附 |
-| `tasks/max-backlog.md` | 主会话维护 | 空缺活清单；二号会话按 ENG-TEAM-QUOTA §6.2 从上往下取未阻塞且无人施工的条目补位 |
-| `tasks/sol-001.md` | 主会话建单；值班执行者写"状态" | 值班执行者的长期任务单：合并执行、施工状态、巡检、通知、不许做的事 |
-| `tasks/sol-<nnn>.md`（其余） | 主会话 | 交给值班执行者的其他任务，例如 `sol-002.md` 完成度调研；值班执行者在末尾写"状态" |
+| `tasks/claude/max-<nnn>.md` | 主会话建单，写评审与批准行；施工子代理或主会话写一行现状 | Claude 侧施工单（ENG-TEAM-FLOW §2.2）：只放目标、范围、已定取值、交付标准、评审结论和一行现状；过程流水记到 `logs/tasks/<单号>.log.md`；批准行与它的"已合入"行留在单里。只放还在用的，结案后挪进 `archive/tasks/claude/` |
+| `tasks/claude/max-brief-common.md` | 主会话 | Claude 侧施工子代理的通用简报，每张 max 单都附 |
+| `tasks/claude/max-backlog.md` | 主会话维护 | 空缺活清单（待派队列）；流水记在 `logs/tasks/max-backlog.log.md` |
+| `tasks/sol/sol-001.md` | 主会话建单；值班执行者写"状态" | 值班执行者的长期任务单：合并执行、施工状态、巡检、通知、不许做的事 |
+| `tasks/sol/sol-<nnn>.md`（其余） | 主会话 | 交给值班执行者的其他任务，例如 `sol-002.md` 完成度调研；值班执行者在末尾写"状态"；结案后挪进 `archive/tasks/sol/` |
+| `tasks/astra/astra-*.md` | Astra | Astra 的计划与子单；结案后挪进 `archive/tasks/astra/` |
+| `tasks/misc/` | 主会话 | 其他任务单与简报（`sonnet-*.md`、`brief-*.md` 等）；结案后挪进 `archive/tasks/misc/` |
 | `side/ROLE.md` | 主会话 | Sol 旁路会话的角色说明：怎么被唤醒、两类任务单、边界 |
 | `side/cards/r<nnn>.md` | 值班执行者 | 调研单（ENG-TEAM-DUTY §2），模板是 `research/cards/r002.md` |
 | `side/cards/s<nnn>.md` | 主会话 | 旁路单（ENG-TEAM-DUTY §3）：在哪做、交付什么、能改什么；旁路会话在末尾写"状态" |
 | `research/INDEX.md` | 值班执行者追加；旁路会话做完标"待审"；主会话审计后改"Opus 审计"一列 | 调研索引：一单一行，单号、启动时间、阶段、方向、总览路径、Opus 审计状态（ENG-TEAM-DUTY §2） |
-| `research/<日期>-r<nnn>/` | Sol 旁路会话 | 各方向的报告与 `00-总览.md`；主会话在总览末尾写"Opus 审计" |
-| `notes/<发方>-to-<收方>.md` | 各自 | 流水与通知：`opus-to-astra`、`astra-to-opus`、`opus-to-max`、`max-to-opus`、`sol-to-opus`（§4） |
-| `merged.log` | 值班执行者 | 每合入一次追加一行：`<YYYY-MM-DD HH:MM:SS> main=<短号> <包号> 已合入：<一句话>。<需要谁 rebase>` |
+| `research/<日期>-r<nnn>/` | Sol 旁路会话 | 各方向的报告与 `00-总览.md`；主会话在总览末尾写"Opus 审计"。已审计且采纳项都已入队的挪进 `archive/research/`（INDEX 里的路径随之改） |
+| `notes/<发方>-to-<收方>.md` | 各自 | 流水与通知：`opus-to-astra`、`astra-to-opus`、`opus-to-max`、`max-to-opus`、`sol-to-opus`（§4）；脚本按行数监视，各留最近约 100 行，较早的轮转到 `logs/notes/<名>-<日期>.md` |
+| `logs/merged.log` | 值班执行者 | 每合入一次追加一行：`<YYYY-MM-DD HH:MM:SS> main=<短号> <包号> 已合入：<一句话>。<需要谁 rebase>` |
+| `logs/tasks/` | 各单的执行方与主会话 | 各任务单拆出的过程流水 `<单号>.log.md`（派出、交回、合入、值班状态行）；已结案大单的旧评审 `<单号>.history.md` |
+| `logs/duty/`、`logs/side/` | 唤醒脚本 | 值班脚本日志 `watch.log`、每轮输入输出 `runs/`；旁路脚本日志与每张单的输入输出 |
+| `archive/` | 挪入时 | 结案的任务单（`tasks/<类>/`）、已合入的请求（`requests/`）、已审计的调研（`research/`） |
+| `.ignore`、`README.md` | 主会话 | `.ignore` 让搜索默认跳过 `archive/`、`logs/`；`README.md` 是目录说明与"谁读什么" |
 | `tools/sol_duty_watch.sh` | 主会话 | 值班唤醒脚本（§5） |
-| `tools/sol_duty/` | 值班唤醒脚本 | 值班执行者的唤醒记录与日志 |
+| `tools/sol_duty/` | 值班唤醒脚本 | 值班唤醒脚本的状态：`seen.txt`、`cards.txt` 等 |
 | `tools/sol_side_runner.sh` | 主会话 | 旁路唤醒脚本（§5） |
-| `tools/sol_side/` | 旁路唤醒脚本 | 旁路会话的唤醒记录与每张单的日志 |
+| `tools/sol_side/` | 旁路唤醒脚本 | 旁路唤醒脚本的状态：`done.txt` |
 | `HANDOVER.md` | 主会话写，冻结与切换模式时追加 | 主会话交接单：进行中的事、模式切换记录（ENG-TEAM-QUOTA §4、§5） |
+
+### 1.1 结案即挪走与谁读什么
+
+- **在用的和结案的分开放**：`tasks/<类>/` 下只放还在用的任务单，结案的由主会话写"结案"后挪进 `archive/tasks/<类>/`；`requests/` 下只放还没合入的，值班合入并写完"已合入"后把请求文件挪进 `archive/requests/`。`archive/` 与 `logs/` 不用读，搜索默认跳过它们（`.collab/.ignore`），要查旧事点名路径搜。
+- **各角色读什么**（"末尾几行"指只读文件最后几十行；同样的表在 `.collab/README.md`）：
+
+| 角色 | 开工必读 | 每轮读 | 按需查 | 不用读 |
+| --- | --- | --- | --- | --- |
+| 主会话 | `HANDOVER.md`；`notes/` 各来信文件末尾 | 等待脚本带回的来信；新请求；`logs/merged.log` 末尾 | `tasks/<类>/` 里某张单；`research/INDEX.md` | `archive/`、`logs/` 其余内容 |
+| Claude 施工子代理 | 派工简报；自己的任务单与 `tasks/claude/max-brief-common.md`；ENG-ONBOARD | `logs/merged.log` 最近 24 小时（只看末尾，挑本包相关的） | ENG-WP 本包两行；相关契约申请 | 其他任务单、`notes/`、`archive/`、`logs/` 其余内容 |
+| Astra | `CODEX-BOOT.md`；ENG-ONBOARD | `notes/opus-to-astra.md` 末尾；`logs/merged.log` 末尾；自己相关的请求 | `tasks/astra/` 自己的计划；相关调研 | `archive/`、`logs/` 其余内容 |
+| Astra 的 Sol 子代理 | Astra 的简报；ENG-ONBOARD | `logs/merged.log` 末尾 | 简报点名的任务单、请求、契约申请 | `notes/`、`archive/`、`logs/` 其余内容 |
+| 值班执行者（Grok、Gemini、luna、Sol 值班） | `tools/duty/ROLE-<自己>.md`；`tasks/sol/sol-001.md` | 唤醒消息；消息点名的请求文件末尾；`logs/merged.log` 末尾 | `tasks/sol/sol-032.md` 等值班单 | `archive/`、`logs/` 旧内容、`research/` |
+| Sol 旁路会话 | `side/ROLE.md` | 唤醒消息点名的 `side/cards/<号>.md` | `research/INDEX.md` 与已有调研 | `tasks/`、`requests/`、`archive/`、`logs/` 其余内容 |
 
 ## 2 命名与写法
 
@@ -70,11 +91,11 @@ gates: []
 ## 3 任务单与请求文件的格式
 
 **max 任务单**：正文写 ENG-TEAM-FLOW §2.2 列的五项。末尾依次是：
-- **"状态"小节**：二号会话追加，一行一事，带时间：派出（子代理名与模型）、受阻（原因、需要谁定）、待评审（候选提交、截图路径、要定的问题）、已按评审修改。
+- **"状态"小节**：只留一行现状和一行指向 `logs/tasks/<单号>.log.md` 的流水。过程流水一行一事、带时间，写进那份日志：派出（子代理名与模型）、受阻（原因、需要谁定）、待评审（候选提交、截图路径、要定的问题）、已按评审修改、每次合入。
 - **"Opus 评审（时间）"小节**：主会话写，通过或逐条修改意见。
 - **批准行**。
 
-**sol 任务单**：正文写任务、做法和不许做的事；末尾"状态"小节由值班执行者追加，一行一事，带时间。
+**sol 任务单**：正文写任务、做法和不许做的事；末尾"状态"小节由值班执行者写现状一行，过程流水一行一事、带时间，写进 `logs/tasks/<单号>.log.md`（`sol-001.md` 的是 `logs/tasks/sol-001.log.md`）。
 
 **旁路单**：正文写在哪做、交付什么、能改什么、哪些不许做；末尾"状态"小节由旁路会话写过程与结果。调研单的写法见 ENG-TEAM-DUTY §2。
 
@@ -139,11 +160,11 @@ gates: []
 
 | 发现 | 做什么 |
 | --- | --- |
-| `requests/*.md` 或 `tasks/*.md` 里新的行首"批准合入："行 | 立即开一轮合并：把当时所有已批未合、条件已满足的候选成批合掉（含 `doc/rolling`）；有代码待合交 Grok（high），只有文档交 Gemini 3.8 Flash High（不可用时 gpt-6-luna）。叫醒消息写明这一轮同不同步 ENG-STATUS（每小时最多一次） |
-| 否则：`tasks/` 下新的 `sol-*.md`（`sol-001.md` 除外） | 交 Grok（medium）读单执行 |
+| `requests/*.md` 或 `tasks/<类>/*.md` 里新的行首"批准合入："行 | 立即开一轮合并：把当时所有已批未合、条件已满足的候选成批合掉（含 `doc/rolling`）；有代码待合交 Grok（high），只有文档交 Gemini 3.8 Flash High（不可用时 gpt-6-luna）。叫醒消息写明这一轮同不同步 ENG-STATUS（每小时最多一次） |
+| 否则：`tasks/sol/` 下新的 `sol-*.md`（`sol-001.md` 除外） | 交 Grok（medium）读单执行 |
 | 否则：距上次巡检满 60 分钟 | 交 Grok（medium）巡检；已批未合、条件已满足的顺手合入，到点就同步 ENG-STATUS |
 
-**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（发进 luna 会话，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
+**执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（发进 luna 会话，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`logs/merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
 
 值班唤醒脚本不启动调研：调研单写进 `side/cards/`，由旁路唤醒脚本交出。
 
@@ -152,8 +173,8 @@ gates: []
 - **叫醒的命令**：发进 Codex 会话一律 `python -I tools/duty/codex_app_run.py <会话号> <提示文件> [超时秒数]`；Gemini 用 `python -I tools/duty/gemini_run.py <会话号> <提示文件> [超时秒数]`；Grok 用 `grok --prompt-file <提示文件> -r <会话> -m grok-4.7 --reasoning-effort <档>`。档位与速度在 Codex 应用里按会话设：Sol 值班 high、Sol 旁路 xhigh，都是普通速度；luna 快速模式。
 - **每轮只做被叫醒的事**：值班执行者只处理消息里写的事和巡检；旁路会话只做交给它的那一张单，做完写状态和流水就结束本轮。
 - **记录**：
-  - `tools/sol_duty/`：`watch.log` 记每次唤醒；`seen.txt`、`cards.txt` 记已经处理过的批准行和任务单；每轮发给执行者的提示与结果在 `tools/duty/runs/`。
-  - `tools/sol_side/`：`runner.log` 记每张单的唤醒与"本单结束"；`done.txt` 记已经交出的单；`<单号>.prompt.md`、`<单号>.out.txt` 是每张单发出的提示和完成行。
+  - `tools/sol_duty/`：`seen.txt`、`cards.txt` 记已经处理过的批准行和任务单；`logs/duty/watch.log` 记每次唤醒，每轮发给执行者的提示与结果在 `logs/duty/runs/`。
+  - `tools/sol_side/done.txt` 记已经交出的单；`logs/side/`：`runner.log` 记每张单的唤醒与"本单结束"，`<单号>.prompt.md`、`<单号>.out.txt` 是每张单发出的提示和完成行。
 
 ## 6 上下文重置后怎么接着做
 
@@ -161,9 +182,9 @@ gates: []
 
 | 谁 | 先读 |
 | --- | --- |
-| 主会话 | 交接单 `HANDOVER.md` 的"进行中的事"；ENG-STATUS §2–§4；`merged.log`；`tasks/` 下各单的"状态"；发给主会话的流水 |
-| 二号会话 | `tasks/max-000.md` 与各张 `max-*.md` 的"状态"；`notes/opus-to-max.md` |
+| 主会话 | 交接单 `HANDOVER.md` 的"进行中的事"；ENG-STATUS §2–§4；`logs/merged.log`；`tasks/<类>/` 下各单的"状态"；发给主会话的流水 |
+| 二号会话 | `archive/tasks/claude/max-000.md` 与各张 `max-*.md` 的"状态"；`notes/opus-to-max.md` |
 | Astra | `requests/` 下自己的合并请求与契约申请；`notes/opus-to-astra.md` |
-| 值班执行者（含 Sol 值班会话） | `tasks/sol-001.md` 及其余 `sol-*.md` 的"状态" |
+| 值班执行者（含 Sol 值班会话） | `tasks/sol/sol-001.md` 及其余 `sol-*.md` 的"状态" |
 | Sol 旁路会话 | `side/ROLE.md`；`side/cards/` 下各单的"状态" |
 | 施工子代理 | 自己的任务单或简报、工作树里的 `git log` |

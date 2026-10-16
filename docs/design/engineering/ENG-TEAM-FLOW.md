@@ -71,13 +71,13 @@ gates: []
 
 | 步 | 谁做 | 产出 |
 | --- | --- | --- |
-| 1 派工 | 主会话（Opus 侧的包）；Astra（Astra 侧的包） | 任务单 `tasks/max-<nnn>.md` 附通用简报；或 Astra 给子代理的简报 |
+| 1 派工 | 主会话（Opus 侧的包）；Astra（Astra 侧的包） | 任务单 `tasks/claude/max-<nnn>.md` 附通用简报；或 Astra 给子代理的简报 |
 | 2 建工作树 | 派子代理的一方：二号会话或 Astra | `E:\Project\UESTC_RPG.wt\<WP-xx>` 或 `SN-<nnn>`，以及本地分支 |
 | 3 施工 | 施工子代理 | 分支上的候选提交、快检结果、截图 |
 | 4 回报与初步核对 | 子代理向派它的一方回报；二号会话核对交付，Astra 审架构 | 任务单"状态"里的待评审行；或合并请求、评审请求 |
 | 5 评审 | 主会话管审美与取值；Astra 管契约与架构 | 任务单末尾的"Opus 评审"小节；请求文件末尾的结论或新值 |
 | 6 批准 | 主会话 | 批准行 |
-| 7 合并执行 | 值班执行者 | `main` 上的 squash 提交、`merged.log` 一行、请求文件末尾的"已合入"行 |
+| 7 合并执行 | 值班执行者 | `main` 上的 squash 提交、`logs/merged.log` 一行、请求文件末尾的"已合入"行 |
 | 8 施工状态 | 值班执行者 | ENG-STATUS 的同步提交 |
 | 9 rebase 通知 | 二号会话、Astra 各自通知名下的子代理 | 各工作树 rebase 到新的 `main` |
 
@@ -85,14 +85,14 @@ gates: []
 
 **从待派工队列派**：调研审计采纳或新决定带来的工作，先进 ENG-STATUS §4 的待派工队列（§2.8）；按 §1.2 开工的包照波次派。主会话按优先级与二号会话的并发余量（ENG-TEAM-QUOTA §2），从"可派"条目里派工，派出后在条目里写任务单号。
 
-**Opus 侧的包**：主会话写任务单 `E:\Project\UESTC_RPG.wt\.collab\tasks\max-<nnn>.md`，一张单对应一件完整且工作量受控的事（D-184），再给二号会话发消息"新单 max-<nnn>"。单子里写：
+**Opus 侧的包**：主会话写任务单 `E:\Project\UESTC_RPG.wt\.collab\tasks\claude\max-<nnn>.md`，一张单对应一件完整且工作量受控的事（D-184），再给二号会话发消息"新单 max-<nnn>"。单子里写：
 - 目标；
 - 给子代理的完整简报：照 ENG-WP §4 的模板，写明工作树绝对路径、先读什么、主线版要做到哪；
 - 用 Opus 还是 Sonnet，或写明"二号会话自己做"；
 - 交付标准：截图、快检；
 - 评审方式。
 
-每张单都附通用简报 `tasks/max-brief-common.md`。简报只给目标、约束和交付标准，不规定步骤（ENG-TEAM-ROLES §3.4）。主会话派单要分批（ENG-TEAM-QUOTA §6.2）。
+每张单都附通用简报 `tasks/claude/max-brief-common.md`。简报只给目标、约束和交付标准，不规定步骤（ENG-TEAM-ROLES §3.4）。主会话派单要分批（ENG-TEAM-QUOTA §6.2）。
 
 **按工作量拆单（D-184）**：派工前先估工作量，在任务单写明“预计工作量：约 N 个 Opus 小时”。一张单交给一个子代理，上限约 2–3 个 Opus 小时，大致是一栋地标楼、3–5 栋普通楼、一类部件族或一个系统子功能。
 - 超过上限就拆成 `max-nnn-a`、`-b` 等子单，各自交候选、各自评审。
@@ -104,7 +104,7 @@ gates: []
 
 **Astra 侧的包**：Astra 用 `spawn_agent` 开子代理，简报照 ENG-WP §4 的模板，并写明 ENG-TEAM-DUTY §4 的"共用工作目录"注意事项；交给 gpt-6.1-sol 的包按 ENG-TEAM-ROLES §3.3。
 
-**Sol 的任务**：交值班执行者的活，主会话写任务单 `tasks/sol-<nnn>.md`，值班唤醒脚本发现新单就交给值班执行者读单执行；旁路活，主会话写旁路单 `side/cards/s<nnn>.md`，旁路唤醒脚本按顺序交给 Sol 旁路会话（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §3）。
+**Sol 的任务**：交值班执行者的活，主会话写任务单 `tasks/sol/sol-<nnn>.md`，值班唤醒脚本发现新单就交给值班执行者读单执行；旁路活，主会话写旁路单 `side/cards/s<nnn>.md`，旁路唤醒脚本按顺序交给 Sol 旁路会话（ENG-TEAM-COMMS §5、ENG-TEAM-DUTY §3）。
 
 **工作树**（ENG-ARCH §6）：谁派的子代理谁建。
 - 每个包一个工作树 `E:\Project\UESTC_RPG.wt\<WP-xx>`，分支 `wp/<xx>-<短名>`。D0 合入以后用 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File E:\Project\UESTC_RPG\scripts\wt\new.ps1 -Wp <WP-xx> -Slug <短名>` 建；D0 之前用 `git worktree add ..\UESTC_RPG.wt\<WP-xx> -b wp/<xx>-<短名> main`。
@@ -118,7 +118,7 @@ gates: []
 - 交候选之前跑快检 `scripts\gate.ps1 -Wp <WP-xx>`，碰到启动、行走、存档时加跑对应的核心专项（ENG-GATES §2）；截图存到工作树的 `output\render-review\`；
 - 结果看得见或听得见的，可调参数集中放一处（§2.4）；
 - 要改契约或共享工程文件，提契约申请（§2.7）；
-- 开始下一步之前看 `merged.log`，`main` 变了就 rebase（§2.6）。
+- 开始下一步之前看 `logs/merged.log`，`main` 变了就 rebase（§2.6）。
 
 **回报**：按 ENG-GATES §5 的格式，交给派你的一方。
 
@@ -149,7 +149,7 @@ gates: []
 
 **滚动文档分支**：主会话的零碎文档改动不各开候选，一律提交到 `doc/rolling`（工作树 `E:\Project\UESTC_RPG.wt\DOC-rolling`），请求文件 `requests/merge-DOC-rolling.md` 里的"滚动批准"行长期有效。每一轮合并里它比 `main` 多出提交，就记下头提交 T，整段 squash 合入（只跑 `check_docs.py`），提交首行写"文档：滚动合入"、正文逐条列这些提交的标题；合完若分支头仍是 T 就从新 `main` 重建分支，期间又有新提交就 `git rebase --onto main T`，工作树不干净就不动它、写一行状态。急的文档改动也可以单独开候选、写批准行。
 
-**合并执行**：唤醒脚本按上面的时机叫醒值班执行者（ENG-TEAM-COMMS §5）。值班执行者照 `tasks/sol-001.md` 的"合并执行"一节，在主检出 `E:\Project\UESTC_RPG` 上做（ENG-ARCH §6 第 4 步）：
+**合并执行**：唤醒脚本按上面的时机叫醒值班执行者（ENG-TEAM-COMMS §5）。值班执行者照 `tasks/sol/sol-001.md` 的"合并执行"一节，在主检出 `E:\Project\UESTC_RPG` 上做（ENG-ARCH §6 第 4 步）：
 1. `git status --short` 必须为空；不空就停下，写进文件末尾并通知主会话，不动别人的改动。
 2. `git merge --squash <候选提交>`；有冲突就 `git reset --merge` 撤回，停下报告。
 3. 跑门禁：默认 `scripts\gate.ps1 -Wp <包号> -Only G1,G2,G3,G4,G5`，批准行另写了组合就照写的跑；只改文档的跑 `scripts\docs\check_docs.py`，要求 problems 0。资源有改动时 G1 会在主检出跑 `--headless --import`，同时更新工作树的导入种子。
@@ -158,26 +158,26 @@ gates: []
    - 等 GPU 锁超过 15 分钟：查卡死的进程并报告，不绕过锁。
 4. 提交：首行 `WP-xx: <一句话>` 或 `文档：<一句话>`；正文几条要点，只从请求文件或回报里取，末尾写"候选 <提交>。门禁 … 通过。"；结尾加 `Co-Authored-By: GPT-6.1 Sol <noreply@openai.com>` 和 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` 两行。
 5. `git push origin main`：只推 `main`，不推分支，不强推。
-6. 往 `merged.log` 追加一行（格式见 ENG-TEAM-COMMS §1）。
+6. 往 `logs/merged.log` 追加一行（格式见 ENG-TEAM-COMMS §1）。
 7. 该包工作树若干净，`git -C <工作树> switch -C <分支名> main`，从新的 `main` 重建分支。值班执行者不删分支和工作树；文档类的临时工作树（`SN-*`、`DOC-*`）合入后保留；包整体做完以后的清理由主会话定。
-8. 在文件末尾追加"已合入：main=<短号>，<时间>，<执行者>"，并通知主会话。
+8. 在文件末尾追加"已合入：main=<短号>，<时间>，<执行者>"，并通知主会话；然后把这份请求文件挪进 `archive/requests/`（目标已有同名文件就停下报告，不覆盖；长期批准的 `merge-DOC-rolling.md` 例外，一直留在 `requests/`；批准行写在任务单里的不挪，任务单由主会话写"结案"后挪进 `archive/tasks/<类>/`）。
 
 **合并的其他规矩**：
-- **成批合入**：每轮从已批未合的候选里挑互不冲突的 3–5 条成批（文件不重叠、G3 owner 不交叉、前置条件已满足），各自 squash 成一个提交，按批准顺序叠起来，整批只跑一次 G1、G2、G4、G5，G3 按 owner 分跑；全过就整批推送，`merged.log` 每条一行。整批失败时定位到具体候选，只撤出那一条并报告，其余重跑一次后合入。内核包仍按 §1.2 的顺序合。
+- **成批合入**：每轮从已批未合的候选里挑互不冲突的 3–5 条成批（文件不重叠、G3 owner 不交叉、前置条件已满足），各自 squash 成一个提交，按批准顺序叠起来，整批只跑一次 G1、G2、G4、G5，G3 按 owner 分跑；全过就整批推送，`logs/merged.log` 每条一行。整批失败时定位到具体候选，只撤出那一条并报告，其余重跑一次后合入。内核包仍按 §1.2 的顺序合。
 - **一份输入一份证据**：见 ENG-TEAM-DUTY §5 第 2、3 条。
 - 交候选之前，施工方先 rebase 到最新的 `main`。squash 冲突时，值班执行者撤回并报告，由施工方 rebase 后重交。
 - 带条件的批准行由值班执行者在巡检时复查（ENG-TEAM-DUTY §1）。
 
 ### 2.6 合入以后：施工状态与 rebase
 
-**施工状态**：ENG-STATUS 每小时最多同步一次（D-204）。唤醒脚本在叫醒消息里写明这一轮同不同步；同步的那一轮整批合完以后，值班执行者同步 ENG-STATUS §2（当前 `main`、已合入列表）与 ENG-STATUS §3（删掉已合入的行或改状态），把上次同步之后合入的都记上。改完跑 `scripts/docs/gen_index.py` 和 `check_docs.py`（problems 0），单独提交一个"文档：ENG-STATUS 同步"并推送。实时的合入记录看 `merged.log`。ENG-STATUS 是值班执行者唯一可以自行改的设计文档。
+**施工状态**：ENG-STATUS 每小时最多同步一次（D-204）。唤醒脚本在叫醒消息里写明这一轮同不同步；同步的那一轮整批合完以后，值班执行者同步 ENG-STATUS §2（当前 `main`、已合入列表）与 ENG-STATUS §3（删掉已合入的行或改状态），把上次同步之后合入的都记上。改完跑 `scripts/docs/gen_index.py` 和 `check_docs.py`（problems 0），单独提交一个"文档：ENG-STATUS 同步"并推送。实时的合入记录看 `logs/merged.log`。ENG-STATUS 是值班执行者唯一可以自行改的设计文档。
 
 **待派工队列**：值班执行者同步施工状态时顺带检查 ENG-STATUS §4，把依赖已满足的条目改成"可派"（§2.8）。
 
 **rebase 通知**：
-- 值班执行者在 `merged.log` 那一行里写明需要谁 rebase。
+- 值班执行者在 `logs/merged.log` 那一行里写明需要谁 rebase。
 - 二号会话自己通知名下需要 rebase 的子代理，不经主会话转达；Astra 通知自己的子代理；主会话通知名下已在施工的子代理。
-- 任何施工方开始下一步之前都看一眼 `merged.log`；`main` 变了，就在自己的工作树里 `git rebase main`（ENG-ARCH §6 第 3 步）。
+- 任何施工方开始下一步之前都看一眼 `logs/merged.log`；`main` 变了，就在自己的工作树里 `git rebase main`（ENG-ARCH §6 第 3 步）。
 
 ### 2.7 契约申请与共享工程文件
 
@@ -209,7 +209,7 @@ Astra 侧条目由主会话写进 `notes/opus-to-astra.md` 通知 Astra 排期�
 
 开发是几道工序串起来的，每道之间都有一条队列：待派（主会话）→ 在施工（子代理）→ 待评审（主会话）→ 已批待合（Sol 值班）；另有等契约、接线与工程验收的（Astra）。某一条堆得太多，下游忙不过来，上游再快也只是在排队，还会让叠在未合候选上的单越叠越深、冲突越来越多。所以派工看的是整条流水线，不只是额度。
 
-**每次派工前看一眼各队列**（任务单"状态"、`requests/` 里未合的批准行、`merged.log`），按下面调节：
+**每次派工前看一眼各队列**（任务单"状态"、`requests/` 里未合的批准行、`logs/merged.log`），按下面调节：
 - **已批待合超过 6 条**：暂停新开施工单，只派解冲突、rebase 和清积压的活；值班照 §2.5 成批合。
 - **同一个上游压着 2 张以上下游**（一份契约、一次接线，或一张还没合的基点候选）：不再开依赖它的新单，把这个上游排到最前，必要时催一句。
 - **待评审超过 3 条**：主会话先评审，不开新单。
@@ -226,7 +226,7 @@ Astra 侧条目由主会话写进 `notes/opus-to-astra.md` 通知 Astra 排期�
 合并的工作量主要来自三处：多个包同时改同一个文件；测试把别的包会合法改动的东西锁死；上游改了含义，下游到合并时才发现。规则如下（D-199），子代理一侧的做法见 ENG-ONBOARD §3.6。
 
 **主会话**：
-- 派单或恢复子代理时，从 `merged.log` 里挑出最近 24 小时和这个包相关的合入，附在简报里。
+- 派单或恢复子代理时，从 `logs/merged.log` 里挑出最近 24 小时和这个包相关的合入，附在简报里。
 - 评审里定下的通用结论（对不止一个包有效的，例如"栏杆立杆不投影""楼的建模一律读立面轮廓"）当天写回对应的规范文档，不只留在任务单里。
 - 决策编号（D-nnn）由主会话统一分配；别的分支不往 CORE-DECISIONS 里加行。
 
