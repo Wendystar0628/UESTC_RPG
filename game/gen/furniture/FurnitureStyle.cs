@@ -1,3 +1,4 @@
+using System.Numerics;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Street;
@@ -17,7 +18,13 @@ public enum RoadTier
 /// A road that gets street furniture, by its name in the network (names are map data, never entity IDs). <paramref name="Rows"/>
 /// are the planted tree rows' offsets from its centre line (both sides), kept clear by benches and bins.
 /// </summary>
-public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows);
+public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows, IReadOnlyList<RestNode>? Nodes = null);
+
+/// <summary>
+/// A rest node of a road (Opus review 16:23): a place on the map (a plaza edge, a junction) where the road's rest stops stand, instead
+/// of along its line. <paramref name="At"/> is its plan position in map metres, <paramref name="Label"/> the name its log lines use.
+/// </summary>
+public sealed record RestNode(string Label, Vector2 At);
 
 /// <summary>
 /// Every tunable value of the WP-13 placement in one place (ENG-TEAM §5): which roads, spacings, offsets from the kerb, the
@@ -28,15 +35,21 @@ public static class FurnitureStyle
 {
     // ---- Roads (13b mainline: the ginkgo avenue and two representative secondary roads; the rest of the network follows) ----
     /// <remarks>
-    /// Row offsets mirror WP-23's planting rule for the same roads (the map's <c>vegetation/planting.json</c>: the avenue's two ginkgo rows
-    /// and its spring band, one row on each secondary road) until planted trees are readable from the world model.
+    /// The roads and their tiers are decided here; the row offsets are only the fallback. The placement reads the real offsets from the
+    /// map's <see cref="PlantingKey"/> build input (WP-23's planting rule: the avenue's two ginkgo rows and its spring band, one row on
+    /// each secondary road, <see cref="PlantingRows"/>) and uses these when the input cannot say, with a warning diagnostic.
     /// </remarks>
     public static IReadOnlyList<RoadRule> Roads { get; } = Array.AsReadOnly<RoadRule>(
     [
         new("银杏大道", RoadTier.Main, [7f, 14f, 17.5f]),
         new("水杉路", RoadTier.Secondary, [5f]),
-        new("丹桂路", RoadTier.Secondary, [4.5f]),
+        // The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two nodes, where the walks end:
+        // the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.
+        new("丹桂路", RoadTier.Secondary, [4.5f], [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]),
     ]);
+
+    /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: WP-23's planting rules.</summary>
+    public const string PlantingKey = "vegetation/planting.json";
 
     /// <summary>Lamp spacing along the road: grade one 25–30 m (ART-FIDELITY §6, kept regular on the avenue, §8.5), grade two 30–40 m.</summary>
     public const float MainLampSpacing = 27.5f;
@@ -64,6 +77,14 @@ public static class FurnitureStyle
     public const float FaceClear = 12f;
     /// <summary>Benches and bins keep this far off any carriageway's edge, out of the green strip between the kerb and the trees.</summary>
     public const float RoadSetback = 3f;
+    /// <summary>
+    /// A road's rest node (<see cref="RestNode"/>) takes up to this many benches, on the pedestrian paving within this reach of it, the
+    /// spots sampled every <see cref="NodeStep"/> and the benches at least <see cref="NodeBenchGap"/> apart. The rules are the walk benches'.
+    /// </summary>
+    public const int NodeBenches = 2;
+    public const float NodeReach = 20f;
+    public const float NodeStep = 1f;
+    public const float NodeBenchGap = 4f;
     /// <summary>The bin stands on its own bay along the same walk edge, this clear gap from the bench: tried in this order, 2–4 m.</summary>
     public static IReadOnlyList<float> BinGaps { get; } = Array.AsReadOnly([2.5f, 3f, 3.5f, 2f, 4f]);
     public const float BinGapMin = 2f;
@@ -79,6 +100,14 @@ public static class FurnitureStyle
     /// </summary>
     public const float AnchorPavingGap = 0.5f;
     public const float AnchorPavingReach = 10f;
+    /// <summary>
+    /// A kiosk whose apron does not touch paving stands whole on it (Opus review 14:20): its back edge this far inside the paving edge,
+    /// parallel to it, its face towards the paving. It may slide along the edge by up to <see cref="ApronSlide"/> to fit, and the
+    /// outline is checked every <see cref="ApronSample"/>.
+    /// </summary>
+    public const float ApronPavingClear = 0.5f;
+    public const float ApronSlide = 4.5f;
+    public const float ApronSample = 0.25f;
 
     /// <summary>Clearances from building, water, court and parking outlines; from other roads beyond their half width; from trees.</summary>
     public const float OutlineClear = 1.0f;

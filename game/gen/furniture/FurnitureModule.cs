@@ -16,7 +16,7 @@ namespace Campus.Gen.Furniture;
 [ContentModule("furniture", Owner = "WP-13")]
 public sealed class FurnitureModule : IContentModule
 {
-    private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, FurnitureLayout Layout)>> Cache = new();
+    private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, FurnitureLayout Layout)>> Cache = new();
     private static readonly object Sync = new();
 
     public IReadOnlyList<Claim> Claims { get; } = [];
@@ -47,7 +47,16 @@ public sealed class FurnitureModule : IContentModule
         }
         if (parts.Count == 0) return ContentOutput.Empty;
         var meshes = pads?.Finish(new(Vector3.Zero, Vector3.Zero)).Meshes ?? [];
-        return new ContentOutput(meshes, parts, emitters.Count > 0 ? emitters : null);
+        return new ContentOutput(meshes, parts, emitters.Count > 0 ? emitters : null) { Diagnostics = lod == LodLevel.L0 ? DiagnosticsFor(ctx, tile) : [] };
+    }
+
+    /// <summary>The layout's diagnostics, reported once: with the L0 output of the first cell of <see cref="Tiles"/>.</summary>
+    private static IReadOnlyList<BuildDiagnostic> DiagnosticsFor(BuildContext ctx, TileKey tile)
+    {
+        var layout = Layout(ctx);
+        if (layout.Diagnostics.Count == 0) return [];
+        var first = layout.Items.Select(i => Cell(i.Anchor, LodLevel.L0)).Min();
+        return first == (tile.X, tile.Z) ? layout.Diagnostics : [];
     }
 
     /// <summary>Colliders live in fixed 64 m cells, filed by their item's anchor.</summary>
@@ -64,12 +73,14 @@ public sealed class FurnitureModule : IContentModule
         lock (Sync)
         {
             var built = Cache.GetValue(ctx.World, _ => []);
-            foreach (var (claims, layout) in built)
-                if (ReferenceEquals(claims, ctx.ClaimedBy)) return layout;
-            var fresh = FurniturePlanner.Build(ctx.World, ctx.ClaimedBy);
-            built.Add((ctx.ClaimedBy, fresh));
-            // Anchors left out or left in place, once per layout, for the anchor data's review (WP-48c).
+            foreach (var (claims, inputs, layout) in built)
+                if (ReferenceEquals(claims, ctx.ClaimedBy) && ReferenceEquals(inputs, ctx.SourceInputs)) return layout;
+            var fresh = FurniturePlanner.Build(ctx.World, ctx.ClaimedBy, ctx.SourceInputs);
+            built.Add((ctx.ClaimedBy, ctx.SourceInputs, fresh));
+            // Anchors left out or left in place, once per layout, for the anchor data's review (WP-48c); the structured diagnostics
+            // travel with ContentOutput.Diagnostics, and stay visible here until the collector consumes them.
             foreach (var line in fresh.Log) Console.Error.WriteLine("[WP-13 furniture] " + line);
+            foreach (var diagnostic in fresh.Diagnostics) Console.Error.WriteLine($"[WP-13 furniture] {diagnostic.Level.ToString().ToLowerInvariant()} {diagnostic.Code}: {diagnostic.Message}");
             return fresh;
         }
     }

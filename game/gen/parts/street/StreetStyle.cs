@@ -19,6 +19,12 @@ public static class StreetStyle
     public const string Stainless = "roof.silverMetal";
     /// <summary>Dark grey steel (WP-12 blue-grey, lit #6E737B): bin frame, atlas kiosk and post, lamp housings, accent bands.</summary>
     public const string DarkSteel = "equip.fence";
+    /// <summary>
+    /// Black of the crash bollard's stripe (Opus review 13:46: the stripe read dark grey-blue in daylight). No registered pair is
+    /// black, so this borrows the darkest neutral one, <c>glass</c> (autumn 17:30 lit #525B52, shade #313E4E; <see cref="DarkSteel"/>
+    /// reads #6E737B). Proposed for bank 1: <c>hazard.black</c>, a warm near-black; switch the name here when it is registered.
+    /// </summary>
+    public const string HazardBlack = "glass";
     /// <summary>Light equipment grey (WP-12): bin rim band and the grey "other waste" door.</summary>
     public const string LightSteel = "equip.grey";
     /// <summary>Warm wood (WP-10, lit #A8744A): bench slats.</summary>

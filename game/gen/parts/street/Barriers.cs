@@ -61,7 +61,7 @@ public sealed class BollardPart : IPartDef<ColumnParams>
                     // One dark band: the stainless bollard's reflector ring, the crash bollard's black stripe between yellow.
                     var top = crash ? p.Height * S.CrashBandTop : p.Height - S.BollardBandDrop;
                     var y0 = top - (crash ? S.CrashBandHeight : S.BollardBandHeight);
-                    b.AddLathe(Shapes.Creased(new(0, y0), new(r + 0.004f, y0), new(r + 0.004f, top), new(0, top)), segments, S.Pole(S.DarkSteel), Matrix4x4.Identity);
+                    b.AddLathe(Shapes.Creased(new(0, y0), new(r + 0.004f, y0), new(r + 0.004f, top), new(0, top)), segments, S.Pole(crash ? S.HazardBlack : S.DarkSteel), Matrix4x4.Identity);
                     break;
                 }
             case 2:

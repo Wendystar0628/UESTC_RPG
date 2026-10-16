@@ -57,7 +57,7 @@ internal sealed class StreetSite
             IndexLine(_roads, road);
             if (Strollable(road)) IndexLine(_walks, road);
             if (Pedestrian(RoadType(road.Props)) && road.Line.Points.Count >= 2)
-                IndexPaving(new PolylineGeometry(road.Line), null, HalfWidth(road));
+                IndexPaving(new PolylineGeometry(road.Line), null, HalfWidth(road), road);
         }
         foreach (var bridge in world.Network.Bridges.OrderBy(r => r.Id.Value, StringComparer.Ordinal)) IndexLine(_bridges, bridge);
         foreach (var tree in world.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
@@ -175,31 +175,74 @@ internal sealed class StreetSite
     /// The nearest pedestrian paving to <paramref name="p"/> (walks, steps, paved road areas): the gap to it (0 on it) and the
     /// nearest point of its edge (<paramref name="p"/> itself on it). Null when none lies within about 32 m.
     /// </summary>
-    public (float Gap, Vector2 Edge)? PavingEdge(Vector2 p)
+    public (float Gap, Vector2 Edge)? PavingEdge(Vector2 p) => PavingEdgeFacing(p) is { } hit ? (hit.Gap, hit.Edge) : null;
+
+    /// <summary>
+    /// <see cref="PavingEdge"/> with the paving edge's direction: <c>Inward</c> is the unit normal of the edge at <c>Edge</c> pointing
+    /// into the paving, from the side <paramref name="p"/> is on (the zero vector when <paramref name="p"/> is on paving). A polygon's
+    /// edge gives its segment's normal, a walk's the line's normal at the nearest point; <c>Road</c> is the network walk whose strip it is
+    /// (null for a polygon or a paved road area).
+    /// </summary>
+    public (float Gap, Vector2 Edge, Vector2 Inward, NetworkLine? Road)? PavingEdgeFacing(Vector2 p)
     {
-        (float, Vector2)? best = null;
+        (float, Vector2, Vector2, NetworkLine?)? best = null;
         foreach (var paving in NearAll(_paving, p))
         {
-            float gap; Vector2 edge;
+            float gap; Vector2 edge, inward;
             if (paving.Line is { } line)
             {
-                var q = Nearest(p, line);
+                var (q, _) = NearestOn(p, line);
                 var d = Vector2.Distance(p, q);
-                if (d <= paving.Half) return (0f, p);
+                if (d <= paving.Half) return (0f, p, Vector2.Zero, paving.Road);
                 gap = d - paving.Half;
                 edge = q + (p - q) / d * paving.Half;
+                inward = (q - p) / d;
             }
             else
             {
                 var rings = paving.Rings!;
-                if (PlanGeometry.Contains(rings, p)) return (0f, p);
-                edge = rings.Holes.Select(h => Nearest(p, h, true)).Prepend(Nearest(p, rings.Outer, true))
-                    .MinBy(q => Vector2.DistanceSquared(p, q));
-                gap = Vector2.Distance(p, edge);
+                if (PlanGeometry.Contains(rings, p)) return (0f, p, Vector2.Zero, null);
+                (Vector2 Point, Vector2 Tangent) hit = default;
+                var bestD = float.MaxValue;
+                foreach (var ring in rings.Holes.Prepend(rings.Outer))
+                {
+                    var near = NearestOn(p, ring, true);
+                    var d = Vector2.DistanceSquared(p, near.Point);
+                    if (d >= bestD) continue;
+                    bestD = d;
+                    hit = near;
+                }
+                edge = hit.Point;
+                gap = MathF.Sqrt(bestD);
+                // The segment's normal on the far side from p: the way into the paving from where p stands.
+                var normal = new Vector2(-hit.Tangent.Y, hit.Tangent.X);
+                inward = Vector2.Dot(normal, edge - p) >= 0f ? normal : -normal;
             }
-            if (best is null || gap < best.Value.Item1) best = (gap, edge);
+            if (best is null || gap < best.Value.Item1) best = (gap, edge, inward, paving.Road);
         }
         return best;
+    }
+
+    /// <summary>
+    /// Spots on the edges of pedestrian paving within <paramref name="reach"/> of <paramref name="p"/>: the edge point and the unit normal
+    /// into the paving, found by sampling the ground every <paramref name="step"/> and keeping the points just off the paving (no
+    /// further than a step), nearest first (ties by position), one per 0.5 m of edge.
+    /// </summary>
+    public List<(Vector2 Edge, Vector2 Inward, NetworkLine? Road)> PavingEdgesNear(Vector2 p, float reach, float step)
+    {
+        var found = new SortedDictionary<(int, int), (float Distance, Vector2 Edge, Vector2 Inward, NetworkLine? Road)>();
+        var n = (int)MathF.Floor(reach / step);
+        for (var i = -n; i <= n; i++)
+            for (var k = -n; k <= n; k++)
+            {
+                var q = p + new Vector2(i * step, k * step);
+                if (PavingEdgeFacing(q) is not { Gap: > 0f } hit || hit.Gap > step) continue;
+                var distance = Vector2.Distance(hit.Edge, p);
+                if (distance > reach) continue;
+                var key = ((int)MathF.Round(hit.Edge.X * 2f), (int)MathF.Round(hit.Edge.Y * 2f));
+                if (!found.TryGetValue(key, out var old) || distance < old.Distance) found[key] = (distance, hit.Edge, hit.Inward, hit.Road);
+            }
+        return found.Values.OrderBy(f => f.Distance).ThenBy(f => f.Edge.X).ThenBy(f => f.Edge.Y).Select(f => (f.Edge, f.Inward, f.Road)).ToList();
     }
 
     public static string? RoadName(NetworkLine line)
@@ -216,39 +259,45 @@ internal sealed class StreetSite
     /// bridge, clear of trees and of the things already placed.
     /// </summary>
     /// <remarks><paramref name="beside"/> is a walk the thing stands at the edge of: it only has to stay off that walk's surface.</remarks>
-    public bool Free(Vector2 p, float radius, NetworkLine? beside = null)
+    public bool Free(Vector2 p, float radius, NetworkLine? beside = null) => Blocker(p, radius, beside) is null;
+
+    /// <summary>What keeps a disc from being <see cref="Free(Vector2, float, NetworkLine?)"/>: the first of "outside the campus", "an outline", "a road", "a bridge", "a tree" or "another item"; null when nothing does.</summary>
+    public string? Blocker(Vector2 p, float radius, NetworkLine? beside = null)
     {
-        if (!PlanGeometry.Contains(World.Boundary, p)) return false;
+        if (!PlanGeometry.Contains(World.Boundary, p)) return "the campus edge";
         var keep = radius + FurnitureStyle.OutlineClear;
         foreach (var o in Near(_outlines, p))
         {
             if (p.X < o.Min.X - keep || p.X > o.Max.X + keep || p.Y < o.Min.Y - keep || p.Y > o.Max.Y + keep) continue;
-            if (PlanGeometry.Contains(o.Rings, p) || Edge(o.Rings, p) < keep) return false;
+            if (PlanGeometry.Contains(o.Rings, p) || Edge(o.Rings, p) < keep) return $"a {o.Kind} outline";
         }
         foreach (var road in Near(_roads, p))
         {
             var r = HalfWidth(road) + (ReferenceEquals(road, beside) ? 0f : FurnitureStyle.RoadClear) + radius;
-            if (LineDistanceSquared(p, road.Line.Points) < r * r) return false;
+            if (LineDistanceSquared(p, road.Line.Points) < r * r) return "a road surface";
         }
         foreach (var bridge in Near(_bridges, p))
         {
             var r = HalfWidth(bridge) + 2f + radius;
-            if (LineDistanceSquared(p, bridge.Line.Points) < r * r) return false;
+            if (LineDistanceSquared(p, bridge.Line.Points) < r * r) return "a bridge";
         }
         foreach (var tree in Near(_trees, p))
-            if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return false;
+            if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return "a tree";
         var (cx, cz) = Key(p);
         for (var dx = -1; dx <= 1; dx++)
             for (var dz = -1; dz <= 1; dz++)
                 if (_occupied.TryGetValue((cx + dx, cz + dz), out var list) &&
                     list.Any(o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap))
-                    return false;
-        return true;
+                    return "another item";
+        return null;
     }
 
     /// <summary>A long footprint (bench, bin) as a capsule from <paramref name="a"/> to <paramref name="b"/>: both ends and the middle are free.</summary>
-    public bool Free(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) =>
-        Free(a, radius, beside) && Free((a + b) * 0.5f, radius, beside) && Free(b, radius, beside);
+    public bool Free(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) => Blocker(a, b, radius, beside) is null;
+
+    /// <summary>What keeps a capsule from being <see cref="Free(Vector2, Vector2, float, NetworkLine?)"/> (see <see cref="Blocker(Vector2, float, NetworkLine?)"/>).</summary>
+    public string? Blocker(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) =>
+        Blocker(a, radius, beside) ?? Blocker((a + b) * 0.5f, radius, beside) ?? Blocker(b, radius, beside);
 
     public void Occupy(Vector2 a, Vector2 b, float radius)
     {
@@ -380,16 +429,17 @@ internal sealed class StreetSite
 
     private sealed record Outline(string Kind, PolygonRings Rings, Vector2 Min, Vector2 Max);
 
-    /// <summary>A pedestrian paving surface: a polygon, or a centre line with a half width.</summary>
-    private sealed record Paving(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half);
+    /// <summary>A pedestrian paving surface: a polygon, or a centre line with a half width (<c>Road</c>: the network walk it is, when it is one).</summary>
+    private sealed record Paving(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, NetworkLine? Road = null);
 
     private static float Edge(PolygonRings rings, Vector2 p) =>
         rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
 
-    /// <summary>The nearest point to <paramref name="p"/> on a polyline (or, <paramref name="closed"/>, a ring).</summary>
-    private static Vector2 Nearest(Vector2 p, IReadOnlyList<Vector2> line, bool closed = false)
+    /// <summary>The nearest point to <paramref name="p"/> on a polyline (or ring) with the unit direction of the segment it lies on.</summary>
+    private static (Vector2 Point, Vector2 Tangent) NearestOn(Vector2 p, IReadOnlyList<Vector2> line, bool closed = false)
     {
         var best = line[0];
+        var tangent = Vector2.UnitX;
         var bestD = float.MaxValue;
         var count = closed ? line.Count + 1 : line.Count;
         for (var i = 1; i < count; i++)
@@ -401,8 +451,9 @@ internal sealed class StreetSite
             if (d >= bestD) continue;
             bestD = d;
             best = q;
+            if (len2 >= 1e-8f) tangent = ab / MathF.Sqrt(len2);
         }
-        return best;
+        return (best, tangent);
     }
 
     /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
@@ -422,7 +473,7 @@ internal sealed class StreetSite
         }
     }
 
-    private void IndexPaving(OverlayGeometry geometry, JsonElement? props, float half = 0f)
+    private void IndexPaving(OverlayGeometry geometry, JsonElement? props, float half = 0f, NetworkLine? road = null)
     {
         switch (geometry)
         {
@@ -438,7 +489,7 @@ internal sealed class StreetSite
                         ? MathF.Max(w.GetSingle(), 2f) : 2.5f) * 0.5f;
                 var pad = new Vector2(half);
                 Index(_paving, points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad,
-                    points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad, new Paving(null, points, half));
+                    points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad, new Paving(null, points, half, road));
                 break;
         }
     }

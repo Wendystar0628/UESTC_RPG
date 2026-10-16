@@ -31,6 +31,12 @@ public sealed record FurnitureLayout(IReadOnlyList<FurnitureItem> Items)
     /// </summary>
     public IReadOnlyList<string> Log { get; init; } = [];
 
+    /// <summary>
+    /// Deterministic build diagnostics in a stable order (ContentOutput.Diagnostics carries them out): a warning where the map's
+    /// planting input could not give a road's tree rows and the fallback stood in.
+    /// </summary>
+    public IReadOnlyList<BuildDiagnostic> Diagnostics { get; init; } = [];
+
     public int Count(FurnitureKind kind) => Items.Count(i => i.Kind == kind);
 }
 
@@ -68,19 +74,27 @@ public static class FurniturePlanner
     /// <summary>Half the stop board's thickness plus its clamp, for its clearance capsule.</summary>
     private const float StopHalfDepth = 0.15f;
 
-    public static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null)
+    /// <param name="world">The world model.</param>
+    /// <param name="claimedBy">The claims query (<see cref="BuildContext.ClaimedBy"/>); none means nothing is claimed.</param>
+    /// <param name="inputs">The map's preloaded source inputs (<see cref="BuildContext.SourceInputs"/>): the tree rows come from its <see cref="S.PlantingKey"/>.</param>
+    public static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
+        Build(world, claimedBy, inputs, S.Roads);
+
+    /// <summary><see cref="Build(IWorldModel, Func{FeatureId, Aspects, WpId?}?, IReadOnlyDictionary{string, ReadOnlyMemory{byte}}?)"/> for given road rules (the style's own for the module; tests give their own).</summary>
+    internal static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs, IReadOnlyList<RoadRule> rules)
     {
         ArgumentNullException.ThrowIfNull(world);
         claimedBy ??= (_, _) => null;
+        var (roads, diagnostics) = PlantingRows.Resolve(inputs, rules);
         var site = new StreetSite(world);
-        foreach (var rule in S.Roads) site.AddRows(world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name), rule.Rows);
+        foreach (var rule in roads) site.AddRows(world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name), rule.Rows);
         var items = new List<FurnitureItem>();
         var log = new List<string>();
         Anchors(site, items, log);
         Entrances(site, items, claimedBy);
         Stops(site, items);
-        for (var r = 0; r < S.Roads.Count; r++) Road(site, items, r, S.Roads[r]);
-        return new(items.AsReadOnly()) { Log = log.AsReadOnly() };
+        for (var r = 0; r < roads.Count; r++) Road(site, items, log, r, roads[r]);
+        return new(items.AsReadOnly()) { Log = log.AsReadOnly(), Diagnostics = diagnostics };
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -119,7 +133,7 @@ public static class FurniturePlanner
                         // comes from the overlay's groundY. An apron off the paving moves to its edge (a deck is paving already).
                         var ground = terrain.HeightAt(centre.X, centre.Y);
                         var deck = Number(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
-                        if (deck is null) centre = ToPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, log, feature.Id, form);
+                        if (deck is null) (centre, facing) = KioskOnPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, log, feature.Id);
                         var level = deck ?? terrain.PadY(feature.Id);
                         var plan = Frame(centre, facing, 0f);
                         var apron = Land.Pad(terrain, plan, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, level)!;
@@ -142,6 +156,48 @@ public static class FurniturePlanner
                     }
             }
         }
+    }
+
+    /// <summary>
+    /// A kiosk's apron (±<paramref name="halfWidth"/> across, ±<paramref name="halfDepth"/> along <paramref name="facing"/>) that does not touch
+    /// pedestrian paving yet (Opus review 14:20, 16:36): it stands whole on the nearest paving, its back edge <see cref="FurnitureStyle.ApronPavingClear"/>
+    /// inside the paving edge and parallel to it, its face towards the paving, where people stand: the data's yaw gives way. It slides
+    /// along the edge, in steps up to <see cref="FurnitureStyle.ApronSlide"/>, until the whole apron is on paving; where none fits (or
+    /// no paving lies within <see cref="FurnitureStyle.AnchorPavingReach"/>) it only moves to touch it, as <see cref="ToPaving"/> does, facing
+    /// its data yaw. The new centre and yaw are logged for the anchor data (WP-48c), which takes them over; an apron that touches paving
+    /// already stays as the data has it.
+    /// </summary>
+    private static (Vector2 Centre, Vector2 Facing) KioskOnPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<string> log, FeatureId id)
+    {
+        var right = new Vector2(-facing.Y, facing.X);
+        for (var i = -1; i <= 1; i++)
+            for (var k = -1; k <= 1; k++)
+                if (site.PavingEdgeFacing(centre + right * (i * halfWidth) + facing * (k * halfDepth)) is { Gap: <= 0f })
+                    return (centre, facing);
+        if (site.PavingEdgeFacing(centre) is { } hit && hit.Gap <= S.AnchorPavingReach)
+        {
+            var inward = hit.Inward;
+            var along = new Vector2(-inward.Y, inward.X);
+            foreach (var slide in Shifts(S.ApronSlide))
+            {
+                var at = hit.Edge + along * slide + inward * (S.ApronPavingClear + halfDepth);
+                if (Vector2.Distance(at, centre) > S.AnchorPavingReach || !OnPaving(site, at, inward, halfWidth, halfDepth)) continue;
+                log.Add($"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(YawDeg(inward))} (data {Fixed(YawDeg(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))");
+                return (at, inward);
+            }
+        }
+        return (ToPaving(site, centre, facing, halfWidth, halfDepth, log, id, "kiosk"), facing);
+    }
+
+    /// <summary>True when every point of a rectangle's outline (every <see cref="FurnitureStyle.ApronSample"/>) lies on pedestrian paving.</summary>
+    private static bool OnPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth)
+    {
+        var right = new Vector2(-facing.Y, facing.X);
+        for (var u = -halfWidth; u <= halfWidth + 1e-3f; u += S.ApronSample)
+            for (var v = -halfDepth; v <= halfDepth + 1e-3f; v += S.ApronSample)
+                if ((MathF.Abs(u) >= halfWidth - 1e-3f || MathF.Abs(v) >= halfDepth - 1e-3f) && site.PavingEdgeFacing(centre + right * u + facing * v) is not { Gap: <= 0f })
+                    return false;
+        return true;
     }
 
     /// <summary>
@@ -255,7 +311,7 @@ public static class FurniturePlanner
     // Roads: lamps at the tier's spacing; rest stops midway between lamps.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Road(StreetSite site, List<FurnitureItem> items, int r, RoadRule rule)
+    private static void Road(StreetSite site, List<FurnitureItem> items, List<string> log, int r, RoadRule rule)
     {
         var lines = site.World.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name).ToList();
         if (lines.Count == 0) return;
@@ -276,7 +332,8 @@ public static class FurniturePlanner
                 for (var k = 0; k < n; k++)
                     PlaceLamp(site, items, run, s0 + k * spacing, side, half, lamp, $"lamp:{r}:{c}:{Side(side)}:{Num(k)}");
             // Rest stops: every RestEvery lamp gaps on a side; the avenue's two sides alternate, a secondary road's sit opposite its lamps.
-            float[] restSides = main ? [1f, -1f] : [-lampSides[0]];
+            // A road with rest nodes (Opus review 16:23) has none along its line: its stops are at the nodes.
+            float[] restSides = rule.Nodes is null ? main ? [1f, -1f] : [-lampSides[0]] : [];
             foreach (var side in restSides)
             {
                 var phase = main && side < 0f ? S.RestEvery / 2 : 0;
@@ -291,6 +348,41 @@ public static class FurniturePlanner
                     if (bin) bins++;
                 }
             }
+        }
+        if (rule.Nodes is { } nodes) NodeStops(site, items, log, r, rule.Name, nodes);
+    }
+
+    /// <summary>
+    /// A road's rest stops at its nodes (Opus review 16:23): at each node, up to <see cref="FurnitureStyle.NodeBenches"/> benches on the
+    /// pedestrian paving within <see cref="FurnitureStyle.NodeReach"/> of it (a plaza's edge, a walk's), nearest first, each standing
+    /// just off the paving edge and facing the paving under the 13c1 rules (<see cref="PavingSlot"/>), <see cref="FurnitureStyle.NodeBenchGap"/>
+    /// apart. A node that takes none says why, in the layout log, and the rules stay as they are.
+    /// </summary>
+    private static void NodeStops(StreetSite site, List<FurnitureItem> items, List<string> log, int r, string road, IReadOnlyList<RestNode> nodes)
+    {
+        for (var n = 0; n < nodes.Count; n++)
+        {
+            var node = nodes[n];
+            var placed = new List<Vector2>();
+            var why = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            var candidates = site.PavingEdgesNear(node.At, S.NodeReach, S.NodeStep);
+            foreach (var edge in candidates)
+            {
+                if (placed.Count >= S.NodeBenches) break;
+                var (fit, reason) = PavingSlot(site, edge.Edge, edge.Inward, edge.Road, S.Bench, facesWalk: true);
+                if (fit is not { } bench)
+                {
+                    why[reason!] = why.GetValueOrDefault(reason!) + 1;
+                    continue;
+                }
+                if (placed.Any(q => Vector2.Distance(q, bench.Centre) < S.NodeBenchGap)) continue;
+                items.Add(Placed($"node:{r}:{Num(n)}:{Num(placed.Count)}:bench", FurnitureKind.Bench, PartCatalog.Bench, S.Bench, bench, BenchDef.Collision(S.Bench)));
+                site.Occupy(bench.Ends.A, bench.Ends.B, bench.Ends.R);
+                placed.Add(bench.Centre);
+            }
+            if (placed.Count == 0)
+                log.Add($"road {road} node {node.Label} has no bench: {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
+                    (why.Count == 0 ? "none of them on pedestrian paving" : string.Join(", ", why.Select(w => $"{w.Value} {w.Key}"))));
         }
     }
 
@@ -394,21 +486,44 @@ public static class FurniturePlanner
         if (path.Normal(at) is not { } n) return null;
         var whalf = StreetSite.HalfWidth(walk);
         var away = n * bside;
-        var facing = -away;
         var centre = path.At(at) + away * (whalf + S.WalkGap + p.Depth * 0.5f);
-        var tangent = new Vector2(-away.Y, away.X);
+        return Slot(site, centre, -away, p, facesWalk, walk).Fit;
+    }
+
+    /// <summary>
+    /// <see cref="WalkSlot"/> at a spot on the edge of any pedestrian paving (a plaza polygon, a footway's strip): the entity stands
+    /// just off <paramref name="edge"/>, <paramref name="inward"/> being the unit normal into the paving, and faces it
+    /// (<paramref name="walk"/>: the network walk the paving is, which the entity only has to stay off the surface of). A refusal
+    /// names the rule that refused it.
+    /// </summary>
+    private static (WalkFit? Fit, string? Reason) PavingSlot(StreetSite site, Vector2 edge, Vector2 inward, NetworkLine? walk, FurnitureParams p, bool facesWalk) =>
+        Slot(site, edge - inward * (S.WalkGap + p.Depth * 0.5f), inward, p, facesWalk, walk);
+
+    /// <summary>
+    /// The entity's slot at <paramref name="centre"/> facing <paramref name="facing"/> (towards the walk or paving), if it fits: free
+    /// of outlines, roads (<paramref name="beside"/> only off its surface), trees, the planted rows and placed things;
+    /// <see cref="FurnitureStyle.RoadSetback"/> off carriageways; a bench (<paramref name="facesWalk"/>) with no carriageway
+    /// <see cref="FurnitureStyle.FaceClear"/> ahead. Its bay reaches <see cref="FurnitureStyle.PadJoin"/> over the walk's edge and
+    /// <see cref="FurnitureStyle.BayBehind"/> behind it.
+    /// </summary>
+    private static (WalkFit? Fit, string? Reason) Slot(StreetSite site, Vector2 centre, Vector2 facing, FurnitureParams p, bool facesWalk, NetworkLine? beside)
+    {
+        var tangent = new Vector2(facing.Y, -facing.X);
         var reach = MathF.Max(0f, p.Width * 0.5f - p.Depth * 0.5f);
         var ends = (centre - tangent * reach, centre + tangent * reach, p.Depth * 0.5f + 0.05f);
-        if (!site.Free(ends.Item1, ends.Item2, ends.Item3, walk)) return null;
+        if (site.Blocker(ends.Item1, ends.Item2, ends.Item3, beside) is { } blocker) return (null, $"blocked by {blocker}");
         foreach (var q in new[] { ends.Item1, centre, ends.Item2 })
-            if (!site.OffRows(q, ends.Item3) || !site.OffCarriageways(q, ends.Item3, S.RoadSetback)) return null;
-        if (facesWalk && site.CarriagewayAhead(centre + facing * (p.Depth * 0.5f), facing, S.FaceClear)) return null;
+        {
+            if (!site.OffRows(q, ends.Item3)) return (null, "on a planted tree row");
+            if (!site.OffCarriageways(q, ends.Item3, S.RoadSetback)) return (null, $"closer than {Num(S.RoadSetback)} m to a carriageway");
+        }
+        if (facesWalk && site.CarriagewayAhead(centre + facing * (p.Depth * 0.5f), facing, S.FaceClear)) return (null, $"facing a carriageway within {Num(S.FaceClear)} m");
         // The bay, in the entity's frame (−Z towards the walk): from just over the walk's edge to behind the entity.
         var front = p.Depth * 0.5f + S.WalkGap + S.PadJoin;
         var back = p.Depth * 0.5f + S.BayBehind;
         var middle = centre + facing * ((front - back) * 0.5f);
-        if (Land.Pad(site.World.Terrain, Frame(middle, facing, 0f), p.Width * 0.5f + S.BayEnds, (front + back) * 0.5f) is not { } bay) return null;
-        return new(centre, facing, ends, bay);
+        if (Land.Pad(site.World.Terrain, Frame(middle, facing, 0f), p.Width * 0.5f + S.BayEnds, (front + back) * 0.5f) is not { } bay) return (null, "no ground for its bay");
+        return (new WalkFit(centre, facing, ends, bay), null);
     }
 
     private static FurnitureItem Placed(string key, FurnitureKind kind, string part, FurnitureParams p, WalkFit fit, IReadOnlyList<Collider> local)
@@ -490,6 +605,15 @@ public static class FurniturePlanner
 
     private static float? Number(JsonElement? props, string name) =>
         props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetSingle() : null;
+
+    /// <summary>The yaw in degrees (0 = north, 90 = east, [0, 360)) of a plan direction: the inverse of <see cref="Facing"/>.</summary>
+    private static float YawDeg(Vector2 facing)
+    {
+        var deg = DetMath.Atan2(facing.X, -facing.Y) * (180f / float.Pi);
+        return deg < 0f ? deg + 360f : deg;
+    }
+
+    private static string Fixed(float v) => v.ToString("F2", CultureInfo.InvariantCulture);
 
     private static string Side(float side) => side < 0f ? "r" : "l";
 

@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
@@ -14,6 +15,14 @@ namespace Campus.Gen.Furniture.Tests;
 public sealed class FurnitureLayoutTests
 {
     private static readonly Lazy<IWorldModel> World = new(Load);
+    private static readonly Lazy<byte[]> PlantingBytes = new(() => File.ReadAllBytes(Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "vegetation", "planting.json")));
+
+    /// <summary>The map's frozen source inputs as the loader supplies them: the real planting rules.</summary>
+    private static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs(byte[]? planting = null) =>
+        new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { [FurnitureStyle.PlantingKey] = planting ?? PlantingBytes.Value };
+
+    private static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
+        FurniturePlanner.Build(world, claimedBy, inputs ?? Inputs());
 
     private static IWorldModel Load()
     {
@@ -28,8 +37,8 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void TheMainRoadAndTwoSecondaryRoadsAreFurnishedDeterministically()
     {
-        var a = FurniturePlanner.Build(World.Value);
-        var b = FurniturePlanner.Build(World.Value);
+        var a = Build(World.Value);
+        var b = Build(World.Value);
         var lamps = a.Items.Where(i => i.Kind == FurnitureKind.StreetLamp).ToList();
         var disc = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 0);
         var arm = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 1);
@@ -61,10 +70,11 @@ public sealed class FurnitureLayoutTests
         // Opus review 12:15: a bench lines a walk and faces it, its bay joined to the walk, a passage of 1.2 m left in front; it
         // never faces a carriageway or sits in the strip between the kerb and the tree rows. Its bin stands 2–4 m away on its own bay.
         var world = World.Value;
-        var layout = FurniturePlanner.Build(world);
+        var layout = Build(world);
         var walks = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian").ToList();
         var lanes = world.Network.Roads.Where(Carriageway).ToList();
-        var benches = layout.Items.Where(i => i.Kind == FurnitureKind.Bench).ToList();
+        // Rest stops along walks; a rest node's benches (key "node:") stand at a plaza or walk end and are judged by their own test.
+        var benches = layout.Items.Where(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal)).ToList();
         foreach (var item in benches.Concat(layout.Items.Where(i => i.Kind == FurnitureKind.Bin)))
         {
             var p = (FurnitureParams)item.Part.Params;
@@ -102,7 +112,7 @@ public sealed class FurnitureLayoutTests
         // An anchor whose point lands on a carriageway, in water or in a building gets nothing, and the layout says so in one log
         // line. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
         var world = World.Value;
-        var layout = FurniturePlanner.Build(world);
+        var layout = Build(world);
         Console.WriteLine("furniture log: " + string.Join(" | ", layout.Log));
         var landings = AnchorLandings(world);
         foreach (var (feature, form, _, landing) in landings)
@@ -128,7 +138,7 @@ public sealed class FurnitureLayoutTests
         var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
         var shift = building.Centre - anchor.Centre;
         var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
-        var indoors = FurniturePlanner.Build(new FeatureWorld(world, moved));
+        var indoors = Build(new FeatureWorld(world, moved));
         var name = anchor.Feature.Id.Value;
         Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
         Check(indoors.Log.Contains($"anchor {name} ({anchor.Form}) not placed: its point lands in a building"), "the building fallback is not logged");
@@ -140,7 +150,7 @@ public sealed class FurnitureLayoutTests
     {
         // Opus review 12:15: a kiosk's apron or a post's foot touches pedestrian paving (≤ 0.5 m off it); the facing never changes.
         var world = World.Value;
-        var layout = FurniturePlanner.Build(world);
+        var layout = Build(world);
         var lines = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian" or "steps").ToList();
         var areas = new List<PolygonRings>();
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "road"))
@@ -156,7 +166,7 @@ public sealed class FurnitureLayoutTests
         foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
         {
             var feature = world.Features[new(item.Key["anchor:".Length..])];
-            Check(Vector2.Dot(Front(item.Part.At), FurniturePlanner.Facing(feature.Props!.Value.GetProperty("yawDeg").GetSingle())) > 0.999f, $"{item.Key} turned");
+            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} turned");
             if (feature.Props!.Value.TryGetProperty("groundY", out var deck) && deck.GetSingle() > 0.5f) continue;
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
@@ -181,12 +191,188 @@ public sealed class FurnitureLayoutTests
     }
 
     [TestCase]
+    public void TreeRowsComeFromThePlantingInputAndFallBackWithOneWarning()
+    {
+        // The rows are read from the map's frozen planting rules, not copied: the real file gives the avenue's two rows and its band,
+        // and one row on each secondary road, with nothing to warn about.
+        var (roads, diagnostics) = PlantingRows.Resolve(Inputs());
+        Check(diagnostics.Count == 0, "warnings on the real planting file: " + string.Join(" | ", diagnostics.Select(d => d.Message)));
+        Check(roads.Select(r => r.Name).SequenceEqual(FurnitureStyle.Roads.Select(r => r.Name)) && roads.Select(r => r.Tier).SequenceEqual(FurnitureStyle.Roads.Select(r => r.Tier)), "the roads or their tiers changed");
+        Check(roads[0].Rows.SequenceEqual([7f, 14f, 17.5f]) && roads[1].Rows.SequenceEqual([5f]) && roads[2].Rows.SequenceEqual([4.5f]), "rows differ from the planting file");
+        // A changed offset is read back; a road the file leaves out keeps its fallback and is warned about once.
+        var edited = Edit(root => root["roads"]![1]!["rows"] = new JsonArray(new JsonObject { ["offset"] = 6.5f }));
+        Check(PlantingRows.Resolve(Inputs(edited)).Roads[1].Rows.SequenceEqual([6.5f]), "an edited offset is not read");
+        var (kept, gap) = PlantingRows.Resolve(Inputs(Edit(root => root["roads"]!.AsArray().RemoveAt(2))));
+        Check(kept[2].Rows.SequenceEqual(FurnitureStyle.Roads[2].Rows) && gap.Count == 1 && gap[0].Level == DiagnosticLevel.Warning && gap[0].Code == PlantingRows.RoadCode && gap[0].Message.Contains("丹桂路", StringComparison.Ordinal),
+            "a road missing from the planting file is not warned about once");
+        // Nothing to read, or nothing readable: the fallback stands, with exactly one warning, and the layout still builds.
+        (IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? Inputs, string Code)[] unreadable =
+        [
+            (null, PlantingRows.MissingCode), (new Dictionary<string, ReadOnlyMemory<byte>>(), PlantingRows.MissingCode),
+            (Inputs([0x7B, 0x22]), PlantingRows.UnreadableCode), (Inputs("[]"u8.ToArray()), PlantingRows.UnreadableCode),
+        ];
+        foreach (var (inputs, code) in unreadable)
+        {
+            var (fallback, warnings) = PlantingRows.Resolve(inputs);
+            Check(fallback.Select(r => r.Rows).Zip(FurnitureStyle.Roads.Select(r => r.Rows), (a, b) => a.SequenceEqual(b)).All(same => same), "the fallback rows are not the style's");
+            Check(warnings.Count == 1 && warnings[0].Level == DiagnosticLevel.Warning && warnings[0].Code == code, $"{warnings.Count} diagnostics for {code}");
+            var layout = FurniturePlanner.Build(World.Value, null, inputs);
+            Check(layout.Diagnostics.SequenceEqual(warnings) && layout.Items.Count == Build(World.Value).Items.Count, "the fallback layout differs from the real one, whose rows are the same");
+        }
+        Check(Build(World.Value).Diagnostics.Count == 0, "the real layout warns");
+    }
+
+    [TestCase]
+    public void ChangingARowOffsetInThePlantingInputMovesTheBenches()
+    {
+        // A bench keeps RowClear off the planted rows, so moving a row onto an avenue bench forces that bench off its slot (or off
+        // the walk altogether); the other roads' benches stay where they were.
+        var world = World.Value;
+        var before = Build(world);
+        var avenue = world.Network.Roads.Where(l => StreetSite.RoadName(l) == FurnitureStyle.Roads[0].Name).ToList();
+        var bench = before.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal));
+        var offset = avenue.Min(l => Distance(bench.Anchor, l));
+        var moved = Build(world, null, Inputs(Edit(root => root["roads"]![0]!["rows"] = new JsonArray(new JsonObject { ["offset"] = offset }))));
+        Console.WriteLine($"{bench.Key} stood {offset:F2} m off the avenue's centre line; a row there: {(moved.Items.FirstOrDefault(i => i.Key == bench.Key) is { } m ? $"moved {Vector2.Distance(m.Anchor, bench.Anchor):F2} m" : "dropped")}");
+        var after = moved.Items.FirstOrDefault(i => i.Key == bench.Key);
+        Check(after is null || Vector2.Distance(after.Anchor, bench.Anchor) > 0.5f, $"{bench.Key} stands where it did, on a tree row");
+        // And the row it now keeps clear of is the new one: every bench of the avenue is off the offset line.
+        foreach (var item in moved.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin && i.Key.StartsWith("rest:0:", StringComparison.Ordinal)))
+            Check(MathF.Abs(avenue.Min(l => Distance(item.Anchor, l)) - offset) >= FurnitureStyle.RowClear, $"{item.Key} stands on the changed row");
+        foreach (var item in before.Items.Where(i => !i.Key.StartsWith("rest:0:", StringComparison.Ordinal) && !i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)))
+            Check(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < 1e-3f), $"{item.Key} moved with the avenue's rows");
+    }
+
+    /// <summary>The real planting rules, edited by <paramref name="change"/>, as the bytes the loader would supply.</summary>
+    private static byte[] Edit(Action<JsonNode> change)
+    {
+        var root = JsonNode.Parse(PlantingBytes.Value)!;
+        change(root);
+        return JsonSerializer.SerializeToUtf8Bytes(root);
+    }
+
+    [TestCase]
+    public void ARoadWithRestNodesHasItsBenchesAtTheNodesNotAlongItsLine()
+    {
+        // Opus review 16:23: a road with rest nodes has no rest stops along its line; its benches stand at the nodes, on the pedestrian
+        // paving there, facing it, under the walk benches' rules (3 m off carriageways, no carriageway 12 m ahead). Judged on the
+        // avenue with a node put where one of its own benches stands, so the spot is known to take a bench.
+        var world = World.Value;
+        var site = new StreetSite(world);
+        var baseline = Build(world);
+        var spot = baseline.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal)).Anchor;
+        var avenue = FurnitureStyle.Roads[0] with { Nodes = [new RestNode("test node", spot)] };
+        var layout = FurniturePlanner.Build(world, null, Inputs(), [avenue, FurnitureStyle.Roads[1], FurnitureStyle.Roads[2]]);
+        Check(!layout.Items.Any(i => i.Key.StartsWith("rest:0:", StringComparison.Ordinal)), "rest stops along a road with nodes");
+        Check(layout.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)) == baseline.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)), "the node rule changed the road's lamps");
+        var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        Console.WriteLine($"node benches at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")) + "; log: " + string.Join(" | ", layout.Log.Where(l => l.Contains("node", StringComparison.Ordinal))));
+        Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node");
+        Check(!layout.Log.Any(l => l.Contains("has no bench", StringComparison.Ordinal) && l.Contains("test node", StringComparison.Ordinal)), "a node with benches logs 'no bench'");
+        foreach (var bench in benches)
+        {
+            var facing = Front(bench.Part.At);
+            var p = (FurnitureParams)bench.Part.Params;
+            var front = bench.Anchor + facing * (p.Depth * 0.5f);
+            Check(Vector2.Distance(bench.Anchor, spot) <= FurnitureStyle.NodeReach + 0.1f, $"{bench.Key} is {Vector2.Distance(bench.Anchor, spot):F1} m from its node");
+            Check(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f }, $"{bench.Key} does not face pedestrian paving");
+            Check(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f), $"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway");
+            Check(!site.CarriagewayAhead(front, facing, FurnitureStyle.FaceClear), $"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m");
+            Check(bench.Pad is { } bay && MathF.Abs(bay.Top - bench.Part.At.M42) < 1e-4f, $"{bench.Key} is off its bay");
+        }
+        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the node's benches stand closer than the gap");
+    }
+
+    [TestCase]
+    public void TheOsmanthusRoadsNodesTakeBenchesOrSayWhyNot()
+    {
+        // The road's walks carry no benches (the design walks sit 7.5 m off the road: a bench on either side is too near the carriageway
+        // or looks at it); its two nodes take benches under the same rules or log why none fits, never by relaxing them.
+        var world = World.Value;
+        var layout = Build(world);
+        var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.Nodes is not null);
+        Check(index >= 0, "no road has rest nodes");
+        var rule = FurnitureStyle.Roads[index];
+        Check(!layout.Items.Any(i => i.Key.StartsWith($"rest:{index}:", StringComparison.Ordinal)), $"benches or bins along {rule.Name}");
+        for (var n = 0; n < rule.Nodes!.Count; n++)
+        {
+            var node = rule.Nodes[n];
+            var placed = layout.Items.Count(i => i.Key.StartsWith($"node:{index}:{n}:", StringComparison.Ordinal));
+            var says = layout.Log.Where(l => l.StartsWith($"road {rule.Name} node {node.Label} has no bench: ", StringComparison.Ordinal)).ToList();
+            Console.WriteLine($"{rule.Name} node {node.Label}: {placed} benches" + (says.Count > 0 ? "; " + says[0] : ""));
+            Check(placed > 0 ? says.Count == 0 : says.Count == 1 && says[0].Length > 60, $"node {node.Label}: {placed} benches and {says.Count} 'no bench' lines");
+        }
+    }
+
+    [TestCase]
+    public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
+    {
+        // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
+        // edge and its face towards the paving, and the layout logs the yaw (and centre) the anchor data should take over. Judged on
+        // a synthetic anchor: the first kiosk of the data moved to a grass notch inside the plaza near (120, -65) (A04's old spot).
+        var world = World.Value;
+        var site = new StreetSite(world);
+        var spot = new Vector2(120f, -65f);
+        Check(site.PavingEdgeFacing(spot) is { Gap: > 1f }, "the notch is not off the paving any more: pick another spot");
+        var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && Text(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First();
+        var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
+        var moved = original with { Geometry = new PolygonGeometry(new PolygonRings(ring, [])), Props = Edit(original.Props!.Value, "yawDeg", 90f) };
+        var layout = Build(new FeatureWorld(world, moved));
+        var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Log));
+        var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
+        Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; log: {layout.Log.Single(l => l.StartsWith($"anchor {moved.Id.Value} ", StringComparison.Ordinal) && l.Contains("turned onto", StringComparison.Ordinal))}");
+        var facing = Front(item.Part.At);
+        Check(Vector2.Dot(facing, FurniturePlanner.Facing(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f, "the log does not give the placement");
+        Check(Vector2.Dot(facing, FurniturePlanner.Facing(90f)) < 0.99f, "the yaw of the data stands, though the apron was off the paving");
+        var apron = item.Pad ?? throw new InvalidOperationException("no apron");
+        var right = new Vector2(-facing.Y, facing.X);
+        // The whole outline of the apron is on paving.
+        for (var u = -apron.HalfWidth; u <= apron.HalfWidth + 1e-3f; u += 0.25f)
+            foreach (var v in new[] { -apron.HalfDepth, apron.HalfDepth })
+                Check(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }, $"the apron's outline leaves the paving at ({u:F2}, {v:F2})");
+        for (var v = -apron.HalfDepth; v <= apron.HalfDepth + 1e-3f; v += 0.25f)
+            foreach (var u in new[] { -apron.HalfWidth, apron.HalfWidth })
+                Check(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }, $"the apron's side leaves the paving at ({u:F2}, {v:F2})");
+        // The back edge runs along the paving edge, 0.5 m inside it: stepping 0.7 m behind the back edge's middle reaches 0.2 m past the edge.
+        var back = item.Anchor - facing * apron.HalfDepth;
+        var behind = site.PavingEdgeFacing(back - facing * (FurnitureStyle.ApronPavingClear + 0.2f)) ?? throw new InvalidOperationException("no paving edge behind the kiosk");
+        Check(behind.Gap is > 0.05f and < 0.35f, $"the paving edge lies {behind.Gap + FurnitureStyle.ApronPavingClear:F2} m behind the back edge, not 0.5 m");
+        Check(Vector2.Dot(behind.Inward, facing) > 0.98f, "the back edge is not parallel to the paving edge, or the face looks at it");
+    }
+
+    private static (float Yaw, Vector2 Centre)? Turned(FurnitureLayout layout, string id)
+    {
+        var line = layout.Log.SingleOrDefault(l => l.StartsWith($"anchor {id} (kiosk) turned onto paving: ", StringComparison.Ordinal));
+        if (line is null) return null;
+        var m = System.Text.RegularExpressions.Regex.Match(line, @"yawDeg (-?\d+\.\d+) \(data -?\d+\.\d+\), centre \((-?\d+\.\d+), (-?\d+\.\d+)\) \(data");
+        Check(m.Success, "unreadable log line: " + line);
+        float F(int g) => float.Parse(m.Groups[g].Value, System.Globalization.CultureInfo.InvariantCulture);
+        return (F(1), new(F(2), F(3)));
+    }
+
+    /// <summary>The facing an anchor has in the layout: its data's yaw, or the yaw its "turned onto paving" log line gives.</summary>
+    private static Vector2 ExpectedFacing(FurnitureLayout layout, WorldFeature feature) =>
+        FurniturePlanner.Facing(Turned(layout, feature.Id.Value)?.Yaw ?? feature.Props!.Value.GetProperty("yawDeg").GetSingle());
+
+    private static string? Text(JsonElement? props, string name) =>
+        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    /// <summary>A copy of an anchor's props with one number replaced.</summary>
+    private static JsonElement Edit(JsonElement props, string name, float value)
+    {
+        var node = JsonNode.Parse(props.GetRawText())!;
+        node[name] = value;
+        return JsonSerializer.SerializeToElement(node);
+    }
+
+    [TestCase]
     public void AvenueLampsKeepTheirRhythm()
     {
         // MAP-QSH-ADDITIONS §8.5: the avenue's lamps keep a regular 25–30 m; only junctions may nudge one by a step or two.
         foreach (var side in new[] { ":l:", ":r:" })
         {
-            var row = FurniturePlanner.Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
+            var row = Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
             var gaps = row.Zip(row.Skip(1), (p, q) => Vector2.Distance(p.Anchor, q.Anchor)).ToList();
             Check(gaps.Count > 30, $"{gaps.Count} gaps on side {side}");
             var regular = gaps.Count(g => g is >= 24f and <= 31f);
@@ -199,7 +385,7 @@ public sealed class FurnitureLayoutTests
     {
         var world = World.Value;
         var outlines = world.Features.Values.Where(f => f.Kind.Value is "building" or "water").SelectMany(Polygons).ToList();
-        foreach (var item in FurniturePlanner.Build(world).Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
+        foreach (var item in Build(world).Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
         {
             var p = item.Anchor;
             Check(PlanGeometry.Contains(world.Boundary, p), $"{item.Key} outside the campus");
@@ -217,7 +403,7 @@ public sealed class FurnitureLayoutTests
     {
         // 8% everywhere: poles sink 0.05–0.3 m below the lawn level at their centre; benches and bins share a concrete plinth.
         var terrain = new Tilted(0.08f);
-        var gentle = FurniturePlanner.Build(new TerrainWorld(World.Value, terrain));
+        var gentle = Build(new TerrainWorld(World.Value, terrain));
         foreach (var lamp in gentle.Items.Where(i => i.Kind == FurnitureKind.StreetLamp))
         {
             var burial = terrain.HeightAt(lamp.Part.At.M41, lamp.Part.At.M43) + FurnitureStyle.LawnLift - lamp.Part.At.M42;
@@ -238,7 +424,7 @@ public sealed class FurnitureLayoutTests
             Check(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 1e-4f, $"{bench.Key}: the bin is off its own plinth");
         }
         // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
-        var flat = FurniturePlanner.Build(World.Value);
+        var flat = Build(World.Value);
         var top = FurnitureStyle.PavingLift + FurnitureStyle.PadProud;
         Check(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth), "plinths on flat ground");
         Check(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - top) < 1e-5f), "benches off their bays");
@@ -246,14 +432,14 @@ public sealed class FurnitureLayoutTests
         Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 1e-3f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 1e-5f) == kiosks.Count - 1,
             "kiosks: one on the A06 deck, the others on their pads");
         // 30%: no pole stands.
-        var steep = FurniturePlanner.Build(new TerrainWorld(World.Value, new Tilted(0.3f)));
+        var steep = Build(new TerrainWorld(World.Value, new Tilted(0.3f)));
         Check(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0, "poles on a 30% grade");
     }
 
     [TestCase]
     public void CollidersFollowThePartsWithTheirFootMaterial()
     {
-        foreach (var item in FurniturePlanner.Build(World.Value).Items)
+        foreach (var item in Build(World.Value).Items)
         {
             Check(item.Colliders.All(c => c.Foot != FootMat.Auto), $"{item.Key} leaves a collider on Auto (G21i)");
             foreach (var collider in item.Colliders)
@@ -280,7 +466,7 @@ public sealed class FurnitureLayoutTests
     public void AnchorsAndEntrancesFaceTheirData()
     {
         var world = World.Value;
-        var layout = FurniturePlanner.Build(world);
+        var layout = Build(world);
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
         {
             if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
@@ -293,7 +479,7 @@ public sealed class FurnitureLayoutTests
             // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
             Check(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + 0.1f, $"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint");
             var yaw = feature.Props!.Value.GetProperty("yawDeg").GetSingle();
-            Check(Vector2.Dot(Front(item.Part.At), FurniturePlanner.Facing(yaw)) > 0.999f, $"{item.Key} does not face {yaw}°");
+            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} does not face {yaw}° (or the yaw its log line gives)");
         }
         foreach (var door in world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open))
         {
@@ -310,7 +496,7 @@ public sealed class FurnitureLayoutTests
         var claimed = world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).First(e => e.Open);
         var owner = world.Features.Keys.First(f => world.Interiors.Get(f)?.Entrances.Any(e => e.Id == claimed.Id) == true);
         var building = world.Interiors.Get(owner)!.Feature;
-        var skipped = FurniturePlanner.Build(world, (f, a) => f == building && a == Aspects.Props ? new WpId("WP-18") : null);
+        var skipped = Build(world, (f, a) => f == building && a == Aspects.Props ? new WpId("WP-18") : null);
         Check(!skipped.Items.Any(i => i.Key.StartsWith($"door:{claimed.Id}:", StringComparison.Ordinal)), "kit placed on a claimed building");
         Check(skipped.Count(FurnitureKind.EntranceMat) == layout.Count(FurnitureKind.EntranceMat) - world.Interiors.Get(owner)!.Entrances.Count(e => e.Open), "claim skipped other kits");
     }
@@ -318,15 +504,7 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void ModuleTilesCarryEveryItemOnceWithinBudget()
     {
-        var rect = new MapRect(new(-1280f, -1280f), new(1280f, 1280f));
-        var map = new MapDescriptor(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
-            new GeoFrame(0d, 0d, 32648, new(-200f, -200f), new(200f, 200f)), Vector2.Zero,
-            new Box3(new(-1280f, -28f, -1280f), new(1280f, 2000f, 1280f)), rect,
-            new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f),
-            new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
-            new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-            new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        var ctx = new BuildContext { World = World.Value, Map = map, WorldSeed = 1u };
+        var ctx = Context(Inputs());
         var module = new FurnitureModule();
         var layout = FurnitureModule.Layout(ctx);
         var tiles = module.Tiles(ctx).ToList();
@@ -358,6 +536,35 @@ public sealed class FurnitureLayoutTests
         Check(heaviest <= module.Budget.TrianglesL0 && heaviestL1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls,
             $"heaviest cell L0 {heaviest}, L1 {heaviestL1}, draws {draws} over {module.Budget}");
         Console.WriteLine($"furniture module: {tiles.Count} cells, {parts} parts, {emitters} lamp markers, {colliders} colliders; heaviest cell L0 {heaviest} / L1 {heaviestL1} triangles, {draws} draws");
+    }
+
+    [TestCase]
+    public void TheFallbackWarningTravelsWithTheFirstCellOnly()
+    {
+        // Structured diagnostics (ContentOutput.Diagnostics) are reported once per layout: with the first cell's L0 output.
+        var module = new FurnitureModule();
+        var quiet = Context(Inputs());
+        Check(module.Tiles(quiet).All(t => module.Build(quiet, t, LodLevel.L0).Diagnostics.Count == 0), "warnings with the real planting input");
+        var ctx = Context(new Dictionary<string, ReadOnlyMemory<byte>>());
+        var tiles = module.Tiles(ctx).ToList();
+        var warned = tiles.Where(t => module.Build(ctx, t, LodLevel.L0).Diagnostics.Count > 0).ToList();
+        Check(warned.Count == 1 && warned[0] == tiles[0], $"{warned.Count} cells carry the warning");
+        var diagnostics = module.Build(ctx, tiles[0], LodLevel.L0).Diagnostics;
+        Check(diagnostics.Count == 1 && diagnostics[0].Code == PlantingRows.MissingCode && diagnostics[0].Level == DiagnosticLevel.Warning, "not one missing-input warning");
+        Check(tiles.All(t => module.Build(ctx, t, LodLevel.L1).Diagnostics.Count == 0), "warnings outside L0");
+    }
+
+    private static BuildContext Context(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> inputs)
+    {
+        var rect = new MapRect(new(-1280f, -1280f), new(1280f, 1280f));
+        var map = new MapDescriptor(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
+            new GeoFrame(0d, 0d, 32648, new(-200f, -200f), new(200f, 200f)), Vector2.Zero,
+            new Box3(new(-1280f, -28f, -1280f), new(1280f, 2000f, 1280f)), rect,
+            new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f),
+            new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
+            new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
+            new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+        return new BuildContext { World = World.Value, Map = map, WorldSeed = 1u, SourceInputs = inputs };
     }
 
     private static (int L0, int L1, int Meshes) Measure(PlacedPart part)
