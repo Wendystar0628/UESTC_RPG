@@ -68,6 +68,15 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         if (catalog is not null)
         {
             using var document = WorldModelLoader.Parse("interiors.json", catalog);
+            IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> closed;
+            try { closed = InteriorEntranceJson.ParseClosedEntrances(document.RootElement); }
+            catch (JsonException error) { throw new WorldDataException("interiors.json", error.Path ?? "entrances", error.Message, error); }
+            foreach (var pair in closed.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
+            {
+                if (!entries.TryGetValue(pair.Key, out var building))
+                    throw new WorldDataException("interiors.json", pair.Value[0].Id, $"Closed entrance feature '{pair.Key.Value}' has no building footprint.");
+                entries[pair.Key] = building with { Entrances = pair.Value };
+            }
             foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
             {
                 var provider = WorldModelLoader.Text(item, "providerId");

@@ -59,6 +59,99 @@ public sealed class D0EntranceHeightReferenceTests
     private static byte[] Bytes(string? heightRef) => Encoding.UTF8.GetBytes(Catalog.Replace("@HEIGHT@",
         heightRef is null ? "" : ",\"heightRef\":\"" + heightRef + "\"", StringComparison.Ordinal));
 
+    [TestCase]
+    public void ClosedOnlyD0BuildPublishesIndexWithoutProvidersOrWalkableContent()
+    {
+        var context = Context(new Dictionary<string, IInteriorProvider>());
+        var catalog = Encoding.UTF8.GetBytes(ClosedCatalog());
+        var bindings = D0InteriorSetup.Configure(catalog, context.InteriorProviders, context.World.Terrain);
+        Require(bindings.Count == 0, "Closed entrance configured a provider.");
+        var result = D0InteriorSetup.BuildConfigured(context, bindings, catalog);
+        var entry = result.Entries.Single();
+        Require(entry.Feature == Feature && !entry.Open && entry.ProviderId is null && entry.Storeys.Count == 2 &&
+            entry.Storeys[1].FloorY == 4 && entry.Entrances.Single().Center.Y == .15f,
+            "D0 lost closed entrance or original building storeys.");
+        Require(result.Content.Meshes.Count == 0 && result.Colliders.Count == 0 && result.NavNodes.Count == 0 &&
+            result.NavEdges.Count == 0 && result.NavPortals.Count == 0, "Closed register generated walkable content.");
+        var index = (InteriorIndexStub)context.World.Interiors;
+        index.Configure(result.Entries);
+        Require(index.Get(Feature) == entry && index.EntrancesNear(new(0, .15f, 0), 1).Single().Id == "entry.closed",
+            "D0 final configured index omitted closed registration.");
+        var again = D0InteriorSetup.BuildConfigured(context, bindings, catalog);
+        Require(ReferenceEquals(again.Entries.Single().Storeys, entry.Storeys) &&
+            again.Entries.Single().Entrances.Count == 1, "Existing closed index duplicated doors or replaced storeys.");
+        Require(D0InteriorSetup.Build(catalog, context, context.InteriorProviders).Entries.Single().Entrances.Count == 1,
+            "Legacy D0 Build omitted the closed register.");
+        var terrain = new ProbeTerrain();
+        using var pad = JsonDocument.Parse(ClosedCatalog(extra: ",\"heightRef\":\"pad\",\"headY\":2"));
+        var resolved = InteriorEntranceJson.ParseClosedEntrances(pad.RootElement, terrain)[Feature].Single();
+        Require(terrain.Calls == 1 && resolved.Center.Y == 2.15f && resolved.HeadY == 4,
+            "Closed parsing did not reuse explicit pad/headY semantics.");
+    }
+
+    [TestCase]
+    public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
+    {
+        var fallback = new LibraryInteriorStub();
+        var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = fallback };
+        var bindings = D0InteriorSetup.Configure(Bytes(null), sourceProviders);
+        var probe = new CountingProvider(fallback);
+        var context = Context(new Dictionary<string, IInteriorProvider> { [Provider] = probe });
+        var closedFeature = new FeatureId("fixture:closed");
+        var source = context.World.Features[Feature];
+        ((StubWorldModel)context.World).Configure([source, source with { Id = closedFeature }]);
+        var baseline = D0InteriorSetup.BuildConfigured(context, bindings, Bytes(null));
+        int baselineCalls = probe.Calls;
+        probe.Calls = 0;
+        using var closed = JsonDocument.Parse(ClosedCatalog(feature: closedFeature.Value));
+        var raw = closed.RootElement.GetProperty("closedEntrances").GetRawText();
+        var mixed = Encoding.UTF8.GetString(Bytes(null)).TrimEnd();
+        mixed = mixed[..^1] + ",\"closedEntrances\":" + raw + "}";
+        var result = D0InteriorSetup.BuildConfigured(context, bindings, Encoding.UTF8.GetBytes(mixed));
+        Require(probe.Calls == baselineCalls && result.Content.Meshes.Count == baseline.Content.Meshes.Count &&
+            result.Colliders.Count == baseline.Colliders.Count && result.NavNodes.SequenceEqual(baseline.NavNodes) &&
+            result.NavEdges.SequenceEqual(baseline.NavEdges) && result.NavPortals.SequenceEqual(baseline.NavPortals) &&
+            result.Entries.Single(entry => entry.Feature == Feature).Entrances.SequenceEqual(baseline.Entries.Single().Entrances) &&
+            result.Entries.Single(entry => entry.Feature == Feature).ProviderId == Provider &&
+            !result.Entries.Single(entry => entry.Feature == closedFeature).Open,
+            "Closed registration changed open provider generation or navigation.");
+    }
+
+    private sealed class CountingProvider(IInteriorProvider inner) : IInteriorProvider
+    {
+        public int Calls { get; set; }
+        public IReadOnlyList<FeatureId> FeatureIds => inner.FeatureIds;
+        public int Priority => inner.Priority;
+        public InteriorLayout Layout(BuildContext ctx, FeatureId id) { Calls++; return inner.Layout(ctx, id); }
+        public ContentOutput BuildStorey(BuildContext ctx, FeatureId id, int storey, InteriorDetail detail)
+        { Calls++; return inner.BuildStorey(ctx, id, storey, detail); }
+        public IReadOnlyList<Collider> CollisionStorey(BuildContext ctx, FeatureId id, int storey)
+        { Calls++; return inner.CollisionStorey(ctx, id, storey); }
+        public NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey) { Calls++; return inner.Nav(ctx, id, storey); }
+    }
+
+    [TestCase]
+    public void InvalidD0ClosedClaimsFailBeforeProviderGeneration()
+    {
+        var context = Context(new Dictionary<string, IInteriorProvider>());
+        foreach (var catalog in new[]
+        {
+            ClosedCatalog().Replace("\"open\":false", "\"open\":true", StringComparison.Ordinal),
+            ClosedCatalog(feature: "missing"),
+            ClosedCatalog(extra: ",\"heightRef\":\"unknown\""),
+            ClosedCatalog().Replace("}]}", "}," + ClosedCatalog().Split("\"closedEntrances\":[", StringSplitOptions.None)[1], StringComparison.Ordinal)
+        })
+            Throws<JsonException>(() => D0InteriorSetup.BuildConfigured(context,
+                [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog)));
+        var source = context.World.Features[Feature];
+        ((StubWorldModel)context.World).Configure([source with { Kind = new("water") }]);
+        Throws<JsonException>(() => D0InteriorSetup.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog())));
+    }
+
+    private static string ClosedCatalog(string feature = "fixture:building", string extra = "") =>
+        "{\"version\":1,\"interiors\":[],\"closedEntrances\":[{\"id\":\"entry.closed\",\"featureId\":\"" + feature +
+        "\",\"doorCenter\":[0,0.15,0],\"outsideLanding\":[0,0.15,-1],\"insideLanding\":[0,0.15,1],\"facingDeg\":0,\"clearWidth\":2.4,\"open\":false" + extra + "}]}";
+
     private static BuildContext Context(IReadOnlyDictionary<string, IInteriorProvider> providers)
     {
         var bounds = new Box3(new(-16, 0, -16), new(16, 8, 16));

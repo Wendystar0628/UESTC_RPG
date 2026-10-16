@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uestc-rpg.local/schemas/interiors.schema.json",
-  "title": "Open interior catalog",
+  "title": "Interior catalog and closed entrance register",
   "description": "D0 candidate catalog; an entry may claim multiple merged world features.",
   "type": "object",
   "additionalProperties": false,
@@ -99,73 +99,7 @@
           "entrances": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "id",
-                "featureId",
-                "doorCenter",
-                "facingDeg",
-                "outsideLanding",
-                "insideLanding",
-                "clearWidth",
-                "open"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "featureId": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "heightRef": {
-                  "type": "string",
-                  "enum": ["absolute", "pad"],
-                  "default": "absolute",
-                  "description": "Y reference for outsideLanding, insideLanding, doorCenter and a nonzero headY. pad adds the corresponding feature PadY once; absolute preserves authored coordinates. Missing or zero headY stays unknown."
-                },
-                "headY": {
-                  "type": "number",
-                  "default": 0,
-                  "description": "Doorway top Y in the record heightRef. Missing or zero means unknown and is never offset. A nonzero value resolves to absolute EntranceDecl.HeadY; a known resolved value must be finite and nonzero."
-                },
-                "doorCenter": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "minItems": 3,
-                  "maxItems": 3
-                },
-                "facingDeg": {
-                  "type": "number"
-                },
-                "outsideLanding": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "minItems": 3,
-                  "maxItems": 3
-                },
-                "insideLanding": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "minItems": 3,
-                  "maxItems": 3
-                },
-                "clearWidth": {
-                  "type": "number",
-                  "minimum": 1.1
-                },
-                "open": {
-                  "type": "boolean"
-                }
-              }
+              "$ref": "#/$defs/entrance"
             }
           },
           "seals": {
@@ -226,6 +160,98 @@
             "type": "string",
             "pattern": "^WP-[0-9]{2}[a-z]?$"
           }
+        }
+      }
+    },
+    "closedEntrances": {
+      "type": "array",
+      "description": "Entrance records for existing buildings outside the open interior catalog; no provider or open floors.",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/entrance"
+          },
+          {
+            "properties": {
+              "open": {
+                "const": false
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "entrance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "featureId",
+        "doorCenter",
+        "facingDeg",
+        "outsideLanding",
+        "insideLanding",
+        "clearWidth",
+        "open"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "featureId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "heightRef": {
+          "type": "string",
+          "enum": [
+            "absolute",
+            "pad"
+          ],
+          "default": "absolute",
+          "description": "Y reference for outsideLanding, insideLanding, doorCenter and a nonzero headY. pad adds the corresponding feature PadY once; absolute preserves authored coordinates. Missing or zero headY stays unknown."
+        },
+        "headY": {
+          "type": "number",
+          "default": 0,
+          "description": "Doorway top Y in the record heightRef. Missing or zero means unknown and is never offset. A nonzero value resolves to absolute EntranceDecl.HeadY; a known resolved value must be finite and nonzero."
+        },
+        "doorCenter": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "facingDeg": {
+          "type": "number"
+        },
+        "outsideLanding": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "insideLanding": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "clearWidth": {
+          "type": "number",
+          "minimum": 1.1
+        },
+        "open": {
+          "type": "boolean"
         }
       }
     }

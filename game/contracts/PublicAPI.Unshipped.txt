@@ -7273,6 +7273,7 @@ static Campus.Contracts.InspectionProbe.operator ==(Campus.Contracts.InspectionP
 static Campus.Contracts.InstanceStreamLayout.Write(System.Span<float> target, System.Numerics.Matrix4x4 at, System.Numerics.Vector4 custom) -> void
 static Campus.Contracts.InteriorConfigOp.operator !=(Campus.Contracts.InteriorConfigOp? left, Campus.Contracts.InteriorConfigOp? right) -> bool
 static Campus.Contracts.InteriorConfigOp.operator ==(Campus.Contracts.InteriorConfigOp? left, Campus.Contracts.InteriorConfigOp? right) -> bool
+static Campus.Contracts.InteriorEntranceJson.ParseClosedEntrances(System.Text.Json.JsonElement catalog, Campus.Contracts.ITerrain? terrain = null) -> System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>!>!
 static Campus.Contracts.InteriorEntranceJson.Parse(System.Text.Json.JsonElement entrance, Campus.Contracts.FeatureId feature, Campus.Contracts.ITerrain? terrain = null) -> Campus.Contracts.EntranceDecl!
 static Campus.Contracts.InteriorIndexEntry.operator !=(Campus.Contracts.InteriorIndexEntry? left, Campus.Contracts.InteriorIndexEntry? right) -> bool
 static Campus.Contracts.InteriorIndexEntry.operator ==(Campus.Contracts.InteriorIndexEntry? left, Campus.Contracts.InteriorIndexEntry? right) -> bool

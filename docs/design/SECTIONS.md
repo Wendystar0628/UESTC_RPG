@@ -330,7 +330,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS.md` · 77.6k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS.md` · 77.8k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -359,9 +359,9 @@
 - WLD-INTERIORS §3 开放的屋顶与高处（3 处） · L303 · 1.6k
 - WLD-INTERIORS §4 门的区分：开与关 · L321 · 3.9k
   - WLD-INTERIORS §4.1 楼里的门：走近推开，闭门器关上 · L343 · 2.0k
-- WLD-INTERIORS §5 关着的楼：外壳、窗卡、门厅卡与简化室内 · L358 · 1.9k
+- WLD-INTERIORS §5 关着的楼：外壳、窗卡、门厅卡与简化室内 · L358 · 2.1k
   - WLD-INTERIORS §5.1 外壳与窗卡 · L360 · 888
-  - WLD-INTERIORS §5.2 关着的门与门厅卡 · L370 · 397
+  - WLD-INTERIORS §5.2 关着的门与门厅卡 · L370 · 574
   - WLD-INTERIORS §5.3 旁观飞进关着的楼：简化室内 · L377 · 616
 - WLD-INTERIORS §6 加载与进楼衔接 · L387 · 3.1k
   - WLD-INTERIORS §6.1 整体加载、按层显示 · L389 · 1.0k

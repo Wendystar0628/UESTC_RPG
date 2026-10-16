@@ -109,7 +109,7 @@ public partial class D0Stage : Node3D
             GlobalInputs = Services.GlobalBuildInputs,
             GroundMaskContributors = groundContributors
         };
-        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(buildContext, bindings));
+        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(buildContext, bindings, mapInputs.Entries["interiors.json"]));
         ((InteriorIndexStub)registry.Get<IInteriorIndex>()).Configure(interiors.Entries);
         ((NavGraphStub)registry.Get<INavGraph>()).Configure(interiors.NavNodes, interiors.NavEdges, interiors.NavPortals);
         var colliders = campus.Colliders.Concat(interiors.Colliders).ToArray();

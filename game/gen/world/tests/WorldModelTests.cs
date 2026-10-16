@@ -91,14 +91,82 @@ public sealed class WorldModelTests
         using var authoredInteriors = JsonDocument.Parse(interiors);
         var expectedEntrances = authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray()
             .SelectMany(interior => interior.GetProperty("entrances").EnumerateArray())
+            .Concat(authoredInteriors.RootElement.TryGetProperty("closedEntrances", out var closed)
+                ? closed.EnumerateArray() : Enumerable.Empty<JsonElement>())
             .Select(entrance => entrance.GetProperty("id").GetString()!)
             .OrderBy(id => id, StringComparer.Ordinal).ToArray();
         var actualEntrances = result.World.Interiors.EntrancesNear(Vector3.Zero, 3000)
             .Select(entrance => entrance.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
         Require(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
             actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal), "Authored interior entrances were lost or duplicated.");
+        var annex = result.World.Interiors.Get(new("qsh:way:806848403"))!;
+        var annexDoor = annex.Entrances.Single();
+        Require(!annex.Open && annex.ProviderId is null && !annexDoor.Open && annexDoor.Id == "lib.north-annex" &&
+            annexDoor.Center == new Vector3(-143.7050f, .15f, -27.2100f) &&
+            annexDoor.Outside == new Vector3(-142.2069f, .15f, -29.2114f) &&
+            annexDoor.Inside == new Vector3(-145.5027f, .15f, -24.8083f) &&
+            annexDoor.YawDeg == 36.8f && annexDoor.ClearWidth == 2.4f,
+            "Approved north-annex closed entrance coordinates or availability changed.");
         Require(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0, "Map coordinate frame is wrong.");
     }
+
+    [TestCase]
+    public void ClosedRegisterPreservesBuildingStoreysAndAddsOnlyQueryableClosedDoors()
+    {
+        var baseline = Load().World.Interiors.Get(new("fixture:relation:1"))!;
+        var world = LoadClosed().World;
+        var entry = world.Interiors.Get(new("fixture:relation:1"))!;
+        Require(!entry.Open && entry.ProviderId is null && entry.Storeys.Count == baseline.Storeys.Count &&
+            entry.Storeys.Zip(baseline.Storeys).All(pair => pair.First.Index == pair.Second.Index &&
+                pair.First.FloorY == pair.Second.FloorY && pair.First.Height == pair.Second.Height &&
+                pair.First.Footprint.SequenceEqual(pair.Second.Footprint)), "Closed registration changed building availability or storeys.");
+        var entrance = entry.Entrances.Single();
+        Require(!entrance.Open && entrance.Center == new Vector3(-5, .15f, -5) &&
+            world.Interiors.EntrancesNear(entrance.Center, .1f).Single() == entrance, "Closed entrance was lost from spatial lookup.");
+        Require(Load().World.Interiors.EntrancesNear(Vector3.Zero, 100).Count == 0, "Missing closed register no longer defaults empty.");
+    }
+
+    [TestCase]
+    public void ClosedRegisterRejectsInvalidClaimsWithCatalogAndDoorDiagnostics()
+    {
+        foreach (var record in new[]
+        {
+            ClosedDoor.Replace("\"open\":false", "\"open\":true", StringComparison.Ordinal),
+            ClosedDoor.Replace("fixture:relation:1", "missing", StringComparison.Ordinal),
+            ClosedDoor.Replace("fixture:relation:1", "fixture:source:way:20", StringComparison.Ordinal),
+            ClosedDoor + "," + ClosedDoor,
+            ClosedDoor.Replace("\"open\":false", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal)
+        })
+        {
+            try { LoadClosed(record); throw new InvalidOperationException("Invalid closed entrance accepted."); }
+            catch (WorldDataException error)
+            { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Closed error lost its catalog or door ID."); }
+        }
+        const string open = """{"featureIds":["fixture:relation:1"],"providerId":"fixture.provider","entrances":[]}""";
+        try { LoadClosed(open: open); throw new InvalidOperationException("Open/closed feature overlap accepted."); }
+        catch (WorldDataException error) { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Lost overlap diagnostic."); }
+        const string otherOpen = """{"featureIds":["other"],"providerId":"fixture.provider","entrances":[{"id":"entry.closed","featureId":"other"}]}""";
+        try { LoadClosed(open: otherOpen); throw new InvalidOperationException("Cross-register duplicate ID accepted."); }
+        catch (WorldDataException error) { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Lost duplicate diagnostic."); }
+        foreach (var malformed in new[] { "null", "42", "{}" })
+        {
+            try { LoadClosed(malformed); throw new InvalidOperationException("Malformed closed record accepted."); }
+            catch (WorldDataException error)
+            { Require(error.File == "interiors.json" && error.Entry == "closedEntrances[0]", "Malformed closed record lost its catalog array path."); }
+        }
+    }
+
+    private const string ClosedDoor = """
+        {"id":"entry.closed","featureId":"fixture:relation:1","doorCenter":[-5,0.15,-5],
+         "outsideLanding":[-5,0.15,-6],"insideLanding":[-5,0.15,-4],"facingDeg":0,"clearWidth":2.4,"open":false}
+        """;
+
+    private static WorldModelLoadResult LoadClosed(string record = ClosedDoor, string open = "") =>
+        WorldModelLoader.Load(new("test"), new Dictionary<string, string>
+        {
+            ["campus.json"] = Campus,
+            ["interiors.json"] = "{\"version\":1,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
+        });
 
     [TestCase]
     public void ResidentWalkDataUsesExactDistanceAndRestoresGroundHeight()

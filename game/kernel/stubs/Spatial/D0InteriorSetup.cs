@@ -44,6 +44,7 @@ public static class D0InteriorSetup
         ArgumentNullException.ThrowIfNull(providers);
         using JsonDocument document = JsonDocument.Parse(interiorsBytes);
         if (document.RootElement.GetProperty("version").GetInt32() != 1) throw new JsonException("Unsupported interior catalog version.");
+        _ = InteriorEntranceJson.ParseClosedEntrances(document.RootElement, terrain);
         var bindings = new List<D0InteriorBinding>();
         var configurations = new List<(BoxInteriorProviderStub Stub, FeatureId[] Features, int[] Floors,
             IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances)>();
@@ -91,19 +92,42 @@ public static class D0InteriorSetup
     /// <summary>Legacy convenience for fresh, unpublished map-owned providers. Shared/global registry instances must not be passed.</summary>
     public static D0InteriorSetupResult Build(byte[] interiorsBytes, BuildContext context,
         IReadOnlyDictionary<string, IInteriorProvider> providers) =>
-        BuildCore(context, providers, Configure(interiorsBytes, providers, context.World.Terrain));
+        BuildCore(context, providers, Configure(interiorsBytes, providers, context.World.Terrain), interiorsBytes);
 
     /// <summary>Builds from already configured map-owned instances; this method never calls Configure.</summary>
-    public static D0InteriorSetupResult BuildConfigured(BuildContext context, IReadOnlyList<D0InteriorBinding> bindings)
+    public static D0InteriorSetupResult BuildConfigured(BuildContext context, IReadOnlyList<D0InteriorBinding> bindings,
+        ReadOnlyMemory<byte> interiorsBytes = default)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(bindings);
-        return BuildCore(context, context.InteriorProviders, bindings);
+        return BuildCore(context, context.InteriorProviders, bindings, interiorsBytes);
     }
 
     private static D0InteriorSetupResult BuildCore(BuildContext context,
-        IReadOnlyDictionary<string, IInteriorProvider> providers, IReadOnlyList<D0InteriorBinding> bindings)
+        IReadOnlyDictionary<string, IInteriorProvider> providers, IReadOnlyList<D0InteriorBinding> bindings,
+        ReadOnlyMemory<byte> interiorsBytes)
     {
+        // Reject the complete closed register before calling any provider or generating content.
+        var closedEntries = new List<InteriorIndexEntry>();
+        if (!interiorsBytes.IsEmpty)
+        {
+            using var document = JsonDocument.Parse(interiorsBytes);
+            var closed = InteriorEntranceJson.ParseClosedEntrances(document.RootElement, context.World.Terrain);
+            foreach (var pair in closed.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
+            {
+                if (!context.World.Features.TryGetValue(pair.Key, out var feature))
+                    throw new JsonException($"Closed entrance '{pair.Value[0].Id}' names missing feature '{pair.Key.Value}'.");
+                var storeys = BuildingStoreys(feature);
+                if (storeys.Count == 0)
+                    throw new JsonException($"Closed entrance '{pair.Value[0].Id}' feature '{pair.Key.Value}' has no building footprint.");
+                if (bindings.Any(binding => binding.FeatureIds.Contains(pair.Key)))
+                    throw new JsonException($"Closed entrance '{pair.Value[0].Id}' conflicts with configured interior '{pair.Key.Value}'.");
+                var existing = context.World.Interiors.Get(pair.Key);
+                if (existing is { Open: true } || existing?.ProviderId is not null)
+                    throw new JsonException($"Closed entrance '{pair.Value[0].Id}' conflicts with existing open interior '{pair.Key.Value}'.");
+                closedEntries.Add(new(pair.Key, existing?.Storeys ?? storeys, pair.Value, false, null));
+            }
+        }
         var meshes = new List<GeometryBundle>();
         var colliders = new List<Collider>();
         var entries = new List<InteriorIndexEntry>();
@@ -142,7 +166,34 @@ public static class D0InteriorSetup
                 }
             }
         }
+        entries.AddRange(closedEntries);
         return new(new(meshes, []), colliders, entries, nodes, edges, portals);
+    }
+
+    private static IReadOnlyList<StoreyInfo> BuildingStoreys(WorldFeature feature)
+    {
+        var parts = feature.Parts.Count == 0
+            ? new[] { new WorldFeaturePart("", feature.Geometry, feature.Height, feature.Storeys) }
+            : feature.Parts;
+        var storeys = new List<StoreyInfo>();
+        foreach (var part in parts)
+        {
+            var kind = part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared)
+                ? declared.GetString() : feature.Kind.Value;
+            if (kind != "building") continue;
+            IReadOnlyList<PolygonRings> polygons = part.Geometry switch
+            {
+                PolygonGeometry polygon => new[] { polygon.Rings },
+                MultiPolygonGeometry multi => multi.Polygons,
+                _ => []
+            };
+            var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? 3.6f) / 3.6f));
+            var height = (part.Height ?? count * 3.6f) / count;
+            foreach (var polygon in polygons)
+                for (var floor = 1; floor <= count; floor++)
+                    storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
+        }
+        return storeys.AsReadOnly();
     }
 
 }

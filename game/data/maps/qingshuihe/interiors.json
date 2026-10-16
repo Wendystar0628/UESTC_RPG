@@ -657,5 +657,17 @@
       "seals": [],
       "owner": "WP-31a"
     }
+  ],
+  "closedEntrances": [
+    {
+      "id": "lib.north-annex",
+      "featureId": "qsh:way:806848403",
+      "doorCenter": [-143.7050, 0.15, -27.2100],
+      "outsideLanding": [-142.2069, 0.15, -29.2114],
+      "insideLanding": [-145.5027, 0.15, -24.8083],
+      "facingDeg": 36.8,
+      "clearWidth": 2.4,
+      "open": false
+    }
   ]
 }

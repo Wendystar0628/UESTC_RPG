@@ -93,7 +93,7 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
             GlobalInputs = Services.GlobalBuildInputs,
             GroundMaskContributors = groundContributors
         };
-        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(build, bindings));
+        var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(build, bindings, mapInputs.Entries["interiors.json"]));
         if (registry.Get<IInteriorIndex>() is InteriorIndexStub interiorIndex) interiorIndex.Configure(interiors.Entries);
         if (registry.Get<INavGraph>() is NavGraphStub navigation) navigation.Configure(interiors.NavNodes, interiors.NavEdges, interiors.NavPortals);
         if (registry.Get<ICollisionWorld>() is CollisionWorldStub collision) collision.Configure(campus.Colliders.Concat(interiors.Colliders));

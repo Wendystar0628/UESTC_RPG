@@ -7,6 +7,58 @@ namespace Campus.Contracts;
 public static class InteriorEntranceJson
 {
     /// <summary>
+    /// Parse the optional closed entrance register without creating providers or opening buildings.
+    /// Validates IDs across both registers and rejects claims on an open-catalog feature.
+    /// The caller must prove every returned feature is an existing building before publishing.
+    /// </summary>
+    public static IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> ParseClosedEntrances(
+        JsonElement catalog, ITerrain? terrain = null)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var openFeatures = new HashSet<FeatureId>();
+        foreach (var interior in Required(catalog, "interiors").EnumerateArray())
+        {
+            var features = interior.GetProperty("featureIds").EnumerateArray()
+                .Select(value => new FeatureId(Text(value, "featureIds"))).ToHashSet();
+            openFeatures.UnionWith(features);
+            foreach (var entrance in interior.GetProperty("entrances").EnumerateArray())
+            {
+                var id = Text(Required(entrance, "id"), "id");
+                if (!ids.Add(id)) throw new JsonException($"Duplicate entrance ID: '{id}'.", id, null, null);
+                if (!features.Contains(new(Text(Required(entrance, "featureId"), "featureId"))))
+                    throw new JsonException($"Entrance '{id}' belongs to a feature outside its interior.", id, null, null);
+            }
+        }
+        var result = new Dictionary<FeatureId, List<EntranceDecl>>();
+        if (catalog.TryGetProperty("closedEntrances", out var closed))
+        {
+            if (closed.ValueKind != JsonValueKind.Array) throw new JsonException("closedEntrances must be an array.");
+            var index = 0;
+            foreach (var raw in closed.EnumerateArray())
+            {
+                var path = $"closedEntrances[{index++}]";
+                try
+                {
+                    if (raw.ValueKind != JsonValueKind.Object) throw new JsonException("A closed entrance must be an object.");
+                    var id = Text(Required(raw, "id"), "id");
+                    path = id;
+                    if (!ids.Add(id)) throw new JsonException($"Duplicate entrance ID: '{id}'.");
+                    var feature = new FeatureId(Text(Required(raw, "featureId"), "featureId"));
+                    if (openFeatures.Contains(feature))
+                        throw new JsonException($"Closed entrance '{id}' claims open interior feature '{feature.Value}'.");
+                    var entrance = Parse(raw, feature, terrain);
+                    if (entrance.Open) throw new JsonException($"Closed entrance '{id}' must have open=false.");
+                    if (!result.TryGetValue(feature, out var list)) result.Add(feature, list = []);
+                    list.Add(entrance);
+                }
+                catch (JsonException error) { throw new JsonException(error.Message, path, null, null, error); }
+            }
+        }
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>>(
+            result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EntranceDecl>)pair.Value.AsReadOnly()));
+    }
+
+    /// <summary>
     /// Missing heightRef and "absolute" preserve authored coordinates without querying terrain.
     /// "pad" adds terrain.PadY(feature) once to all three Y coordinates and any known headY.
     /// Missing or zero headY remains unknown (zero); a resolved known headY must not collide with that sentinel.

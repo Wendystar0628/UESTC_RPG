@@ -163,6 +163,10 @@ public sealed class AtlasServiceTests
         var items = catalog.RootElement.GetProperty("interiors").EnumerateArray().ToArray();
         var open = items.SelectMany(item => item.GetProperty("featureIds").EnumerateArray())
             .Select(id => new FeatureId(id.GetString()!)).ToHashSet();
+        var closed = catalog.RootElement.TryGetProperty("closedEntrances", out var closedRegister)
+            ? closedRegister.EnumerateArray().ToArray() : [];
+        var expectedIndexFeatures = open.Concat(closed.Select(door => new FeatureId(door.GetProperty("featureId").GetString()!)))
+            .Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
         var authoredDoorIds = items.SelectMany(item => item.GetProperty("entrances").EnumerateArray())
             .Where(door => door.GetProperty("open").GetBoolean())
             .Select(door => door.GetProperty("id").GetString()!).ToHashSet(StringComparer.Ordinal);
@@ -182,8 +186,12 @@ public sealed class AtlasServiceTests
         interiorIndex.Configure(built.Entries);
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
-        Check(campus.SourceEntityCount > 400 && built.Entries.Count == open.Count,
+        Check(campus.SourceEntityCount > 400 && built.Entries.Select(entry => entry.Feature)
+            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures),
             "Regression did not assemble the complete campus and registered interior index.");
+        Check(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
+            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(open.OrderBy(id => id.Value, StringComparer.Ordinal)),
+            "Closed registration changed the open interior feature set.");
         Check(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1,
             "Regression no longer exercises multiple generated fallback entrances.");
         Check(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length,
@@ -205,6 +213,14 @@ public sealed class AtlasServiceTests
         }
         foreach (var id in authoredDoorIds)
             Check(atlas.Find(new("door:" + id)) is not null, "An authored entrance ID changed during fallback repair.");
+        foreach (var door in closed)
+        {
+            var feature = new FeatureId(door.GetProperty("featureId").GetString()!);
+            var id = door.GetProperty("id").GetString()!;
+            var entry = built.Entries.Single(item => item.Feature == feature);
+            Check(!entry.Open && entry.ProviderId is null && entry.Entrances.Single(item => item.Id == id).Open == false &&
+                atlas.Find(new("door:" + id)) is null, "Closed registration gained an open interior marker or provider.");
+        }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
