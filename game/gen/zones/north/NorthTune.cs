@@ -47,6 +47,10 @@ public static class NorthTune
         /// <summary>Closed-lane cross. 借用：`maple`；WP-12 的 `equip.fireRed`（全校的红）进 main 后换。</summary>
         public static readonly ToonSpec CrossRed = S("maple", ToonFx.None, LineClass.None, 0.2f);
         public static readonly ToonSpec Wood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
+        /// <summary>Canal-bank railing: light painted steel, the north-gate plaza's (WP-30 30a, MAP-QSH-WEST §10.4 浅色栏杆), so the two runs read as one.</summary>
+        public static readonly ToonSpec LightSteel = S("wall.greyWhite", ToonFx.None, LineClass.Fine, 0.4f);
+        /// <summary>Canal-bank railing bars: same colour, no outline.</summary>
+        public static readonly ToonSpec LightBar = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.4f);
     }
 
     /// <summary>One dormitory cluster of this sub-ticket (MAP-QSH-NORTH 数据定位 · 宿舍组团; MAP-QSH-RENOVATION N-22).</summary>
@@ -70,12 +74,17 @@ public static class NorthTune
     /// every other gate closed. Under that rule 20b2 moved 硕丰六's main gate to its west gate on 丹桂路 and 硕丰七's to its
     /// north gate (the road out to 丹桂路); 三、十 keep their design drives (no road enters them), and 博翰二 gets one (its only
     /// road in runs along 8 栋's gable, leaving no room for the house on the right).
+    /// 20a-4 (main session 20:58) extends the rule to 学知二、六、八 and the international students' cluster, whose main gates
+    /// moved to the vehicle gate nearest 银杏大道 / 丹桂路: 学知二 to its east gate (6 m off 银杏大道), 学知六 to its south-east
+    /// gate (6 m off), 学知八 to its north-west gate (31 m from 银杏大道, the nearest); the international cluster's one road in leaves the
+    /// house a dormitory corner on its right, so it gets a design drive in its south-east corner (design:north-drive-intl, 21 m
+    /// from 丹桂路). 学知一's gate is the open walking route (P13, A11, WP-31c) and stays; 三、四、五、七 already follow the rule.
     /// </summary>
     public static readonly Cluster[] Clusters =
     [
         new("qsh:way:596904641", "xz1", "学知一组团", new(107.8f, -466.0f), true, Facades.ACreamCoffee,
             ["qsh:way:217855218", "qsh:way:217855220", "qsh:way:217855221"]),
-        new("qsh:way:603368217", "xz2", "学知二组团", new(184.3f, -407.9f), false, Facades.ADormYellow,
+        new("qsh:way:603368217", "xz2", "学知二组团", new(268.6f, -383.3f), false, Facades.ADormYellow,
             ["qsh:way:217855223", "qsh:way:217855224", "qsh:way:217855225", "qsh:way:217855226"]),
         new("qsh:way:596904652", "xz3", "学知三组团", new(364.2f, -424.1f), false, Facades.ADormYellow,
             ["qsh:way:217855227", "qsh:way:217855228", "qsh:way:217855207", "qsh:way:217855208"]),
@@ -83,13 +92,13 @@ public static class NorthTune
             ["qsh:way:217855209", "qsh:way:217855210", "qsh:way:217855211", "qsh:way:217855212"]),
         new("qsh:way:596904654", "xz5", "学知五组团", new(447.4f, -348.2f), false, Facades.ADormYellow,
             ["qsh:way:217855213", "qsh:way:217855214", "qsh:way:217855215", "qsh:way:217855216"]),
-        new("qsh:way:596904646", "xz6", "学知六组团", new(67.4f, -601.4f), false, Facades.B,
+        new("qsh:way:596904646", "xz6", "学知六组团", new(154.8f, -643.3f), false, Facades.B,
             ["qsh:way:217855219", "qsh:way:217855217", "qsh:way:217855222"]),
         new("qsh:way:596904651", "xz7", "学知七组团", new(198.8f, -613.9f), false, Facades.ADormYellow,
             ["qsh:way:544160373", "qsh:way:544136508", "qsh:way:544136509"]),
-        new("qsh:way:596904662", "xz8", "学知八组团", new(281.6f, -609.8f), false, Facades.ACreamCoffee,
+        new("qsh:way:596904662", "xz8", "学知八组团", new(201.3f, -606.8f), false, Facades.ACreamCoffee,
             ["qsh:way:544160372", "qsh:way:449705142", "qsh:way:544136507"]),
-        new("qsh:way:848026371", "intl", "留学生组团", new(-47.0f, -805.1f), false, Facades.New, []),
+        new("qsh:way:848026371", "intl", "留学生组团", new(48.0f, -838.5f), false, Facades.New, []),
         // 20b1: 硕丰苑, all gates closed.
         new("qsh:way:596904664", "sf1", "硕丰一组团", new(6.0f, -606.6f), false, Facades.MasterStoneBeige,
             ["qsh:way:217855292", "qsh:way:217855293", "qsh:way:217855294", "qsh:way:217855295"]),
@@ -122,8 +131,8 @@ public static class NorthTune
     public sealed record StyledBuilding(string Id, string Family, string Facade, string Note);
 
     /// <summary>
-    /// Buildings handed to WP-14 with a family and a preset but no cluster of their own (20b2): 博翰苑 9 栋, and the three
-    /// blocks of WLD-INTERIORS §17, all closed — shell, window cards and the simplified interior only (INV-11); WP-14 keeps
+    /// Buildings handed to WP-14 with a family and a preset but no cluster of their own (20b2): 博翰苑 9 栋, the three
+    /// blocks of WLD-INTERIORS §17, and (20a-4) 5232、5561、9693, all closed — shell, window cards and the simplified interior only (INV-11); WP-14 keeps
     /// its generic door, shut, so no entrance is registered. Families pick the window cards (WLD-INTERIORS §5.1).
     /// </summary>
     public static readonly StyledBuilding[] Singles =
@@ -132,6 +141,10 @@ public static class NorthTune
         new("qsh:way:949704499", "service", Facades.AnnexService, "无名 4499，社区活动室，2 层（数据记 teaching，改 service）"),
         new("qsh:way:217855247", "utility", Facades.AnnexUtility, "无名 5247，配电房、水泵房，1 层，后勤小楼"),
         new("qsh:way:683646735", "utility", Facades.AnnexHospital, "无名 6735，校医院附属或设备用房，2 层，外墙同校医院"),
+        // 20a-4 (main session): the three small blocks beside 博翰一组团 take 博翰's language; 5561 and 9693 are dormitories (data family unknown).
+        new("qsh:way:570145232", "service", Facades.AnnexService, "无名 5232，商业服务小楼，2 层，数据家族 service，外墙取博翰苑浅奶咖"),
+        new("qsh:way:550365561", "dormitory", Facades.MasterCreamCoffee, "无名 5561，3 层宿舍，数据家族 unknown 改 dormitory，博翰一组团旁，按博翰一组团的老楼翻新配色"),
+        new("qsh:way:544269693", "dormitory", Facades.MasterCreamCoffee, "无名 9693，2 层宿舍，数据家族 unknown 改 dormitory，同上"),
     ];
 
     /// <summary>Facade preset keys written into north.overlay.json StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
@@ -245,6 +258,30 @@ public static class NorthTune
         /// so where it laps over the kerb stone it covers it instead of flickering against it; the seat stands 0.45 m above it.</summary>
         public const float PadReach = 1.69f, PadThickness = 0.08f, PavingLevel = 0.15f, PadLift = 0.01f;
         public static readonly ToonSpec Pad = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
+    }
+
+    /// <summary>
+    /// Canal-bank railing along the 商业街 side of 红光右支渠北段 (20a-4; MAP-QSH-NORTH §8 碰撞体, MAP-QSH-TERRAIN §6: the bank is
+    /// a stone wall with a railing, 1.05 m at least, collision top 1.5 m). It starts where the north-gate plaza's railing
+    /// (WP-30 30a, design:boundary-north-a05-plaza, commit 04767c7) ends and runs south along the east bank to the street's far
+    /// end. Frame as the plaza's: <c>t</c> along the straight water edge (toward bearing 21.8°, so the run south into the campus
+    /// is toward negative t), <c>n</c> off the water toward the road. The railing language is the plaza's: 1.1 m, square posts at most 1.6 m apart, handrail and bottom
+    /// rail, 20 mm bars at 0.12 m, an end post a size heavier with a cap. The plaza's end post at <see cref="JointT"/> is shared:
+    /// this run starts flush on its campus-side face and carries on from its centre in collision, so there is neither gap nor overlap.
+    /// 初值。
+    /// </summary>
+    public static class Bank
+    {
+        /// <summary>A point on the straight water edge and its direction: the plaza's (<c>BoundaryTune.Plaza.EdgeOrigin</c>, <c>EdgeDirection</c>).</summary>
+        public static readonly Vector2 EdgeOrigin = new(-75.21f, -778.91f), EdgeDirection = new(0.37100f, -0.92863f);
+        /// <summary>The plaza railing's campus-side end: <c>BoundaryTune.Plaza.RailT0</c> and <c>RailN</c>. Its end post is <see cref="JointPost"/> thick.</summary>
+        public const float JointT = -24.6f, RailN = 0.35f, JointPost = 0.08f;
+        /// <summary>Where the run ends: 商业街's far end is at t −110.5; the end post stands just beyond it.</summary>
+        public const float EndT = -115f;
+        /// <summary>Same as the plaza: the railing stands on a 0.15 m paved walk; with the real bank top this follows the ground.</summary>
+        public const float PavingTop = 0.15f;
+        public const float Height = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f, BarSize = 0.02f, BarPitch = 0.12f;
+        public const float ColliderTop = 1.5f, ColliderHalf = 0.08f;
     }
 
     /// <summary>

@@ -128,6 +128,8 @@ public static class NorthSites
         new Shuofeng.RestDeckSite(),
         // 20b2 adds no site: 博翰's clusters are in NorthTune.Clusters above, the WLD-INTERIORS §17 blocks go to WP-14
         // through the overlay (NorthTune.Singles).
+        // 20a-4: the canal-bank railing from the north-gate plaza's (WP-30) up the 商业街 side
+        new Canal.CanalRailSite(),
         // 20c: append here.
     ]);
 }

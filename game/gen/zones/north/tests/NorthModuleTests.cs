@@ -22,6 +22,9 @@ public sealed class NorthModuleTests
         {
             Require(world.Features.ContainsKey(new(cluster.Id)), $"{cluster.Name} polygon exists");
             Require(world.Features.ContainsKey(new("design:north-gate-" + cluster.Key)), $"{cluster.Name} gate addition is registered");
+            // The registered gate point is the table's MainGate: moving a main gate moves both.
+            var at = ((PointGeometry)world.Features[new("design:north-gate-" + cluster.Key)].Geometry).Position;
+            Require(Vector2.Distance(new(at.X, at.Z), cluster.MainGate) < 0.05f, $"{cluster.Name} registered gate point is its MainGate");
             foreach (var building in cluster.Buildings)
                 Require(world.Features[new(building)].Facade?.Value == cluster.Facade, $"{building} carries the {cluster.Name} facade preset");
         }
@@ -206,17 +209,17 @@ public sealed class NorthModuleTests
     }
 
     /// <summary>
-    /// Main session 18:26 (20b1 ③), applied by 20b2 to 硕丰苑 and 博翰苑: the main gate faces the highest-grade road beside
-    /// the cluster (within 15 m of its outline) — 丹桂路 and 银杏大道, then the other 6 m campus roads, then 5 m service
-    /// roads: it opens within <see cref="Faces"/> of such a road, or no vehicle gate is nearer one; and its guard house
-    /// stands on the right of the way in. 学知苑 and the international students' cluster (20a) stay as built until the main
-    /// session extends the rule to them.
+    /// Main session 18:26 (20b1 ③), applied by 20b2 to 硕丰苑 and 博翰苑 and by 20a-4 (main session 20:58) to 学知苑 and the
+    /// international students' cluster: the main gate faces the highest-grade road beside the cluster (within 15 m of its
+    /// outline) — 丹桂路 and 银杏大道, then the other 6 m campus roads, then 5 m service roads: it opens within
+    /// <see cref="Faces"/> of such a road, or no vehicle gate is nearer one; and its guard house stands on the right of the
+    /// way in. 学知一组团's gate is the open walking route (P13, A11, WP-31c) and keeps its place.
     /// </summary>
     [TestCase]
     public void MainGatesFaceTheHighestGradeRoadWithTheHouseOnTheRight()
     {
         var world = World();
-        foreach (var cluster in NorthTune.Clusters.Where(c => c.Key.StartsWith("sf", StringComparison.Ordinal) || c.Key.StartsWith("bh", StringComparison.Ordinal)))
+        foreach (var cluster in NorthTune.Clusters.Where(c => !c.Open))
         {
             var layout = ClusterLayout.Of(world, cluster)!;
             var ring = Framework.Plan.OuterRing(world.Features[new(cluster.Id)])!;
@@ -237,15 +240,15 @@ public sealed class NorthModuleTests
     }
 
     /// <summary>
-    /// The 硕丰 and 博翰 guard houses (the main gates moved in 20b2 included) stand clear of every building footprint.
-    /// 学知八组团's house (20a) runs into a dormitory; it is reported to the main session with the rest of 学知苑's gates.
+    /// Every cluster's guard house stands clear of every building footprint (20a-4 moved 学知二、六、八 and the international
+    /// students' main gates; the latter two used to run into a dormitory).
     /// </summary>
     [TestCase]
     public void GuardHousesStandClearOfBuildings()
     {
         var world = World();
         var rings = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
-        foreach (var cluster in NorthTune.Clusters.Where(c => c.Key.StartsWith("sf", StringComparison.Ordinal) || c.Key.StartsWith("bh", StringComparison.Ordinal)))
+        foreach (var cluster in NorthTune.Clusters)
         {
             var g = ClusterLayout.Of(world, cluster)!.MainGate!;
             var house = g.Frame.Rect(g.HouseStart, NorthTune.Gate.HouseOut - NorthTune.Gate.HouseDepth, g.HouseEnd, NorthTune.Gate.HouseOut);
@@ -256,6 +259,67 @@ public sealed class NorthModuleTests
                 Require(!crosses && !house.Any(p => Framework.Plan.Contains(ring, p)) && !ring.Any(p => Framework.Plan.Contains(house, p)),
                     $"{cluster.Name}: guard house at {g.Frame.Origin} overlaps a building");
             }
+        }
+    }
+
+    /// <summary>
+    /// 20a-4: the international students' cluster has one road in, from the north-west corner, and its dormitory corner stands
+    /// at the guard house's right hand there; the main gate is on the design drive that joins the 6 m campus road beside it in
+    /// the south-east corner, and the north-west gate stays a closed lane without a house.
+    /// </summary>
+    [TestCase]
+    public void InternationalClusterMainGateIsOnItsDesignDrive()
+    {
+        var world = World();
+        var cluster = NorthTune.Clusters.Single(c => c.Key == "intl");
+        var drive = ((PolylineGeometry)world.Features[new("design:north-drive-intl")].Geometry).Line.Points;
+        var layout = ClusterLayout.Of(world, cluster)!;
+        var main = layout.MainGate!;
+        Require(PolylineDistance(main.Frame.Origin, drive) < 1.5f, "the main gate stands where the design drive crosses the fence");
+        Require(layout.Gates.Count(g => g.Kind == GateKind.Vehicle) == 2, "the drive adds a lane; the north-west lane stays");
+        var joins = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:630914106");
+        Require(PolylineDistance(drive[0], joins.Line.Points) < 0.5f, "the drive starts on the 6 m campus road it joins");
+        var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
+        foreach (var p in Samples(drive))
+            Require(walls.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) - 2.5f >= 0.5f), $"drive point {p} keeps its 5 m clear of the walls");
+    }
+
+    /// <summary>
+    /// 20a-4: the canal-bank railing carries on from the north-gate plaza's railing (WP-30 30a, 04767c7: water edge through
+    /// (−75.21, −778.91) toward (0.371, −0.92863), railing at 0.35 m off the water from t −24.6 to −11.4). It starts flush on the
+    /// plaza's end post and its collision on the post's centre, panel after panel without a gap or an overlap, runs past the
+    /// far end of the street (商业街 reaches t −110.5; the run heads south into the campus, toward negative t), and keeps clear of buildings and road edges.
+    /// </summary>
+    [TestCase]
+    public void CanalRailCarriesOnFromThePlazaRailing()
+    {
+        var ctx = Context();
+        var u = Vector2.Normalize(new Vector2(0.37100f, -0.92863f));
+        var w = new Vector2(-u.Y, u.X);
+        var joint = new Vector2(-75.21f, -778.91f) + u * -24.6f + w * 0.35f;
+        var panels = Canal.CanalRailSite.Panels;
+        Require(Vector2.Distance(Canal.CanalRailSite.Post(0), joint) < 0.01f, "the run starts at the plaza's end post");
+        var tEnd = Vector2.Dot(Canal.CanalRailSite.Post(panels) - new Vector2(-75.21f, -778.91f), u);
+        Require(tEnd < -110.5f - 1f, $"the run ends beyond the far end of 商业街 (t {tEnd})");
+        for (var k = 0; k < panels; k++)
+        {
+            var step = Vector2.Distance(Canal.CanalRailSite.Post(k), Canal.CanalRailSite.Post(k + 1));
+            Require(step <= NorthTune.Bank.PostPitch + 0.001f && step > 1f, $"panel {k} is a post pitch long ({step})");
+        }
+        var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
+            .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < 0.01f && MathF.Abs(Vector2.Dot(c.B - joint, w)) < 0.01f)
+            .OrderBy(c => Vector2.Dot(joint - c.A, u)).ToArray();
+        Require(walls.Length == panels, $"one collider per panel ({walls.Length} of {panels})");
+        Require(Vector2.Distance(walls[0].A, joint) < 0.01f, "the first collider starts on the plaza's end post");
+        for (var k = 0; k + 1 < walls.Length; k++)
+            Require(Vector2.Distance(walls[k].B, walls[k + 1].A) < 0.01f, $"colliders {k} and {k + 1} meet");
+        Require(walls.All(c => c.Y1 - c.Y0 >= NorthTune.Bank.ColliderTop), "the colliders reach 1.5 m");
+        var rings = ctx.World.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
+        foreach (var p in Samples([Canal.CanalRailSite.Post(0), Canal.CanalRailSite.Post(panels)]))
+        {
+            Require(rings.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) >= 8f), $"railing point {p} keeps 8 m off the buildings");
+            foreach (var road in ctx.World.Network.Roads)
+                Require(PolylineDistance(p, road.Line.Points) - road.Width * 0.5f >= 3f, $"railing point {p} keeps 3 m off the road edge of {road.Id.Value}");
         }
     }
 
