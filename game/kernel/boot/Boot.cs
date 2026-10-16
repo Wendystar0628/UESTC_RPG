@@ -5,30 +5,21 @@ namespace Campus.Kernel.Boot;
 
 public partial class Boot : Node
 {
-    private static readonly HashSet<string> Allowed = new(StringComparer.Ordinal)
-    {
-        "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
-        "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "weather-queue",
-        "quality", "quality-set", "adaptive", "bench", "tier", "without", "inspect", "shots", "frames", "out",
-        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "bake-verify", "title", "cine", "save", "slot",
-        "load", "save-dir", "save-at", "audio", "audio-fixed", "ui-theme", "motion", "ui-scale", "ui-gallery",
-        "ui-export-theme", "amb-solo", "amb-off", "amb-debug", "audio-probe", "audio-out", "preset"
-    };
+    public static BootArguments Options { get; private set; } = BootArguments.Parse([], true);
+    // D0 callers distinguish a missing option from a supplied one; formal defaults live in Options.
     public static IReadOnlyDictionary<string, string> Arguments { get; private set; } = new Dictionary<string, string>();
     public static bool Failed { get; private set; }
     public static string Value(string key, string fallback = "") => Arguments.TryGetValue(key, out var value) ? value : fallback;
-    public override void _Ready()
+    public override void _EnterTree()
     {
         GetTree().AutoAcceptQuit = false;
-        var arguments = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var arg in OS.GetCmdlineUserArgs())
+        Failed = false;
+        try
         {
-            if (!arg.StartsWith("--", StringComparison.Ordinal)) { Reject(arg); return; }
-            var pair = arg[2..].Split('=', 2);
-            if (!Allowed.Contains(pair[0]) || !arguments.TryAdd(pair[0], pair.Length == 2 ? pair[1] : "1"))
-            { Reject(arg); return; }
+            Options = BootArguments.Parse(OS.GetCmdlineUserArgs(), OS.IsDebugBuild());
+            Arguments = Options.ExplicitArguments.ToDictionary(key => key, key => Options.Value(key), StringComparer.Ordinal);
         }
-        Arguments = arguments;
+        catch (ArgumentException error) { Reject(error.Message); return; }
         var profile = Path.GetFileName(OS.GetUserDataDir().TrimEnd('/', '\\'));
         GD.Print($"Storage profile: {profile}");
         if (BuildInfo.Kind == "dev" && !profile.StartsWith("UESTC_", StringComparison.Ordinal))
