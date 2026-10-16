@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
@@ -48,7 +49,7 @@ public sealed class LibraryShellTests
             var buried = plan.Blocks.FirstOrDefault(b => !ReferenceEquals(b, piece.Block) && y > b.Y0 && y < b.Y1 && Inside(probe, b.Ring));
             Require(buried is null, $"{piece.Block.Kind} piece {piece.A}-{piece.B} y {piece.Y0}-{piece.Y1} is not buried in {buried?.Kind} {buried?.Source}");
         }
-        // interiors.json lib.main: door centre (−154.6, 80), facing 127°.
+        // The front tower's outer face centres on (−154.6, 80), facing 127°; lib.main's door centre is on the slot glass 0.75 m in.
         var door = plan.Pieces.Single(p => p.Block.Kind == BlockKind.FrontTower && p.Length > 8f && p.Y1 - p.Y0 > 6f);
         var centre = (door.A + door.B) * 0.5f;
         Require(Vector2.Distance(centre, new(-154.6f, 80f)) < 0.6f, $"front face centre {centre} at the lib.main door");
@@ -181,9 +182,62 @@ public sealed class LibraryShellTests
         var colliders = shell.Collide();
         Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider has a foot material");
         var plan = shell.Plan;
-        Require(colliders.OfType<SlabCollider>().Count() == 2, "the podium terrace is a slab");
+        Require(colliders.OfType<SlabCollider>().Count(s => s.Ring.Count > 4) == 2, "the podium terrace is a slab");
         Require(colliders.OfType<WallCollider>().Any(w => MathF.Abs(w.Y1 - plan.SecondFloorY) < 1e-3f), "low wall under the stair landing");
         Require(colliders.OfType<WallCollider>().Count(w => w.Y1 > plan.PadY + 200f) >= 12, "walls above the terrace run to 300 m");
+    }
+
+    [TestCase]
+    public void BothDoorsLeaveAClearWayThroughTheirBays()
+    {
+        var world = RealWorld();
+        var shell = Shell(world);
+        var plan = shell.Plan;
+        var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the 1F cafe door");
+        // lib.cafe: on the 1F floor of the podium face that starts at the 品·悦吧 store front, two open leaves clear 1.1 m.
+        Require(MathF.Abs(cafe.Origin.Y - plan.FloorY) < 1e-3f && plan.CafeFace is { Piece.Block.Kind: BlockKind.Podium }, "the cafe door is in the 1F podium");
+        var store = Plan.OuterRing(world.Features[CoreFeatures.CafeStore]);
+        Require(store.Min(p => Vector2.Distance(p, new(cafe.Origin.X, cafe.Origin.Z))) < 6f, "the cafe door is beside the store front");
+        Require(cafe.Width / CoreStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f, $"cafe door {cafe.Width} × {cafe.Height}");
+        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        shell.Build(build, LodLevel.L0);
+        var output = build.Finish(LodLevel.L0);
+        Require(output.Parts.Count(p => p.Part.Value == PartCatalog.DoorGlass) == 1, "the shell places the cafe's glass door");
+        var colliders = shell.Collide();
+        foreach (var bay in new[] { shell.EntranceDoor!.Value, cafe })
+        {
+            var o = new Vector2(bay.Origin.X, bay.Origin.Z);
+            var n = new Vector2(bay.Outward.X, bay.Outward.Z);
+            var across = new Vector2(-n.Y, n.X);
+            // No wall between 1.5 m outside and 1.5 m inside on the axis and ±0.45 m off it, between knee and head height.
+            foreach (var k in new[] { -0.45f, 0f, 0.45f })
+            {
+                Vector2 a = o + across * k + n * 1.5f, b = o + across * k - n * 1.5f;
+                foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < bay.Origin.Y + 1.8f && w.Y1 > bay.Origin.Y + 0.3f))
+                    Require(SegmentDistance(a, b, w.A, w.B) > w.HalfT, $"the way through the door at {bay.Origin} crosses a wall {w.A}–{w.B}");
+            }
+            Require(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < 1e-3f && Inside(o + n * 0.01f, s.Ring)), "the recess has a floor at the door's level");
+            // The face line is closed beside the bay: a wall 1 m to either side of the door's outer leaves.
+            foreach (var side in new[] { -1f, 1f })
+            {
+                var p = o + across * side * (bay.Width * 0.5f + 0.2f);
+                Require(colliders.OfType<WallCollider>().Any(w => SegmentDistance(p + n * 0.3f, p - n * 0.3f, w.A, w.B) <= w.HalfT), $"the fixed glass beside the door at {bay.Origin} is closed");
+            }
+        }
+    }
+
+    private static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+    {
+        static float Cross(Vector2 u, Vector2 v) => u.X * v.Y - u.Y * v.X;
+        static float PointSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            var ab = b - a;
+            var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(ab.LengthSquared(), 1e-12f), 0f, 1f);
+            return Vector2.Distance(p, a + ab * t);
+        }
+        float d1 = Cross(b - a, c - a), d2 = Cross(b - a, d - a), d3 = Cross(d - c, a - c), d4 = Cross(d - c, b - c);
+        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0f;
+        return MathF.Min(MathF.Min(PointSegment(a, c, d), PointSegment(b, c, d)), MathF.Min(PointSegment(c, a, b), PointSegment(d, a, b)));
     }
 
     [TestCase]

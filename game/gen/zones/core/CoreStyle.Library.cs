@@ -44,6 +44,14 @@ public static partial class CoreStyle
     /// <summary>Front tower: the glass slot (玻璃槽), recessed, with four mullions; door bay at 2F.</summary>
     public const float SlotWidth = 4.8f, SlotDepth = 0.75f, SlotTopGap = 1.4f, SlotDoorHeight = 3.1f;
     public const int SlotMullions = 4;
+    /// <summary>
+    /// 1F cafe door (lib.cafe, review): two podium modules of the podium face beside the 品·悦吧 store front, open from the
+    /// floor up to the ribbon's transom line, a pier between it and the rest of the ribbon.
+    /// </summary>
+    public const int CafeDoorCells = 2;
+    public const float CafeDoorPier = 0.9f;
+    /// <summary>Granite apron at the cafe door, level with its threshold: depth out from the face, margin past each jamb.</summary>
+    public const float CafeApronDepth = 2.4f, CafeApronMargin = 0.6f;
     /// <summary>Faces shorter than this get no openings (tower returns, short notches).</summary>
     public const float MinWindowFace = 3.2f;
 

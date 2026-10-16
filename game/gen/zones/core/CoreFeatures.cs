@@ -13,6 +13,8 @@ public static class CoreFeatures
     public static readonly FeatureId LibraryStair = new("qsh:way:806848398");
     public static readonly FeatureId Library = new("qsh:way:806848396");
     public static readonly FeatureId Museum = new("qsh:way:806848402");
+    /// <summary>品·悦吧 store front (8407) against the podium's north-east end: the 1F cafe door (lib.cafe) opens beside it.</summary>
+    public static readonly FeatureId CafeStore = new("qsh:way:806848407");
 
     /// <summary>Ring steps of the sunken plaza: registered so the axis corridor's steps interval names a real structure.</summary>
     public static readonly FeatureId PlazaRingSteps = new("design:core-plaza-ring-steps");

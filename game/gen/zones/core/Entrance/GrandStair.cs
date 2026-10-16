@@ -177,7 +177,11 @@ public sealed class GrandStair : ICorePiece
             Guard(mesh, side, lod);
         }
         if (lod <= LodLevel.L1) Door(build);
-        if (lod <= LodLevel.L2) ServiceDoors(build);
+        if (lod <= LodLevel.L2)
+        {
+            ServiceDoors(build);
+            Canopy(mesh, lod);
+        }
     }
 
     /// <summary>Catalogue steps in the stair's granite, with the side and middle handrails (variation 0; beyond L0 the handrails drop).</summary>
@@ -249,7 +253,8 @@ public sealed class GrandStair : ICorePiece
         var (w0, w1) = TerraceSpan(side);
         var wall = S.Wall(S.StairWall);
         Block(mesh, wall, tier.S0, tier.S1, w0, w1, Base, tier.Y, Faces.PlusS | Faces.MinusW | Faces.PlusW);
-        mesh.Quad(S.Lawn(S.TerraceLawn), At(tier.S0, w0, tier.Y - S.LawnDrop), At(tier.S0, w1, tier.Y - S.LawnDrop),
+        // The lawn top shares the hedges' foliage class, so each planted terrace is one batch (16d, L1 budget).
+        mesh.Quad(S.Foliage(S.TerraceLawn), At(tier.S0, w0, tier.Y - S.LawnDrop), At(tier.S0, w1, tier.Y - S.LawnDrop),
             At(tier.S1, w1, tier.Y - S.LawnDrop), At(tier.S1, w0, tier.Y - S.LawnDrop), Vector3.UnitY);
         float c = S.TerraceCoping, p = S.TerraceCopingProject, band = 0.3f;
         var trim = S.Trim(S.StairTrim);
@@ -378,6 +383,34 @@ public sealed class GrandStair : ICorePiece
             OpeningPlacement.Frame(d.Origin, d.Outward)));
     }
 
+    /// <summary>
+    /// The porch frame (门斗式外框, 16d) over the door: a flat canopy across the whole width of the front tower face on two
+    /// side piers standing on the terrace, so the 2F door reads under the 25 m glass tower at mid range. Over the slot the
+    /// canopy runs back into the recess to the glass (top and soffit only; the slot's reveals close its ends). L0 adds a
+    /// metal drip strip under the fascia.
+    /// </summary>
+    private void Canopy(CoreMesh mesh, LodLevel lod)
+    {
+        if (_door is not { } d) return;
+        var f = d.Face;
+        float y0 = CanopySoffit(d.Origin.Y, d.Height), y1 = y0 + S.CanopyThick;
+        var paint = S.Sheet(S.CanopyFamily);
+        LibraryFacade.Box(mesh, paint, f, 0f, f.Length, 0f, S.CanopyDepth, y0, y1);
+        foreach (var (a, b) in CanopyPiers(f.Length))
+            LibraryFacade.Box(mesh, paint, f, a, b, 0f, S.CanopyDepth, d.Origin.Y - S.Sink, y0);
+        var centre = Vector2.Dot(new Vector2(d.Origin.X, d.Origin.Z) - f.A, f.Along);
+        float u0 = centre - S.SlotWidth * 0.5f, u1 = centre + S.SlotWidth * 0.5f, s = -d.Depth;
+        mesh.Quad(paint, f.At(u0, s, y1), f.At(u1, s, y1), f.At(u1, 0f, y1), f.At(u0, 0f, y1), Vector3.UnitY);
+        mesh.Quad(paint, f.At(u0, s, y0), f.At(u1, s, y0), f.At(u1, 0f, y0), f.At(u0, 0f, y0), -Vector3.UnitY);
+        if (lod == LodLevel.L0)
+            LibraryFacade.Box(mesh, S.Metal("frame.alu"), f, -0.01f, f.Length + 0.01f, S.CanopyDepth - S.CanopyDrip, S.CanopyDepth + 0.01f, y0 - S.CanopyDrip, y0 + 0.02f);
+    }
+
+    private static float CanopySoffit(float floor, float doorHeight) => floor + doorHeight + S.CanopyGap;
+
+    /// <summary>The two piers' spans along the tower face, flush with its ends.</summary>
+    private static (float U0, float U1)[] CanopyPiers(float length) => [(0f, S.CanopyPier), (length - S.CanopyPier, length)];
+
     /// <summary>The two closed service doors (检修铁门) at the foot of the outer guard walls, into the plant rooms under the stair.</summary>
     private void ServiceDoors(CoreBuild build)
     {
@@ -434,6 +467,15 @@ public sealed class GrandStair : ICorePiece
         var service = new FireDoorPart();
         foreach (var (at, p) in ServiceDoorPlacements())
             list.AddRange(Placed.Colliders(service.Collision(p), at));
+        // The porch frame's two piers on the terrace (the canopy is out of reach).
+        if (_door is { } d)
+            foreach (var (u0, u1) in CanopyPiers(d.Face.Length))
+            {
+                var c = d.Face.At((u0 + u1) * 0.5f, 0f, 0f);
+                var tip = d.Face.At((u0 + u1) * 0.5f, S.CanopyDepth, 0f);
+                var high = CanopySoffit(d.Origin.Y, d.Height);
+                list.Add(new WallCollider(new(c.X, c.Z), new(tip.X, tip.Z), S.CanopyPier * 0.5f, d.Origin.Y - S.Sink, high, SurfaceTag.Wall) { Foot = FootMat.StonePaving });
+            }
         return list;
     }
 

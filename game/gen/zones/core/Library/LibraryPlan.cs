@@ -47,7 +47,7 @@ public sealed class LibraryPlan
     private const float Tolerance = 0.08f;
 
     private LibraryPlan(float padY, IReadOnlyList<Block> blocks, IReadOnlyList<WallPiece> pieces, Vector2 centre, float faceAngle,
-        IReadOnlyList<(Vector2 A, Vector2 B)> landing)
+        IReadOnlyList<(Vector2 A, Vector2 B)> landing, IReadOnlyList<Vector2>? store)
     {
         PadY = padY;
         Blocks = blocks;
@@ -55,6 +55,7 @@ public sealed class LibraryPlan
         Centre = centre;
         FaceAngle = faceAngle;
         Landing = landing;
+        CafeFace = store is null ? null : CafeFaceBeside(pieces, store, PadY + S.FloorAbovePad);
     }
 
     public float PadY { get; }
@@ -69,8 +70,11 @@ public sealed class LibraryPlan
     public float FaceAngle { get; }
     /// <summary>Podium edges the grand stair base (8398) stands against: no parapet and a low collider (16c lands here).</summary>
     public IReadOnlyList<(Vector2 A, Vector2 B)> Landing { get; }
-
-    /// <summary>Floor level of storey k (0 = 1F) of the ring; the front tower continues at 4.5 m.</summary>
+    /// <summary>
+    /// The podium face the 1F cafe door (lib.cafe) opens in: the outward ground-floor podium face that starts at a corner of
+    /// the 品·悦吧 store front (8407), and whether the door sits at its A end. Null without the store or such a face.
+    /// </summary>
+    public (WallPiece Piece, bool AtA)? CafeFace { get; }
     public float StoreyY(int k)
     {
         var y = FloorY;
@@ -131,7 +135,35 @@ public sealed class LibraryPlan
             foreach (var podium in blocks.Where(b => b.Kind == BlockKind.Podium))
                 foreach (var ring in Plan.Polygons(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry))
                     landing.AddRange(Shared(podium.Ring, ring.Outer));
-        return new LibraryPlan(padY, blocks, Exterior(blocks), centre, FaceAngleOf(cores[0], centre), landing);
+        var store = world.Features.TryGetValue(CoreFeatures.CafeStore, out var cafe) ? Plan.Polygons(cafe.Geometry).FirstOrDefault()?.Outer : null;
+        return new LibraryPlan(padY, blocks, Exterior(blocks), centre, FaceAngleOf(cores[0], centre), landing, store);
+    }
+
+    /// <summary>
+    /// Ground-floor podium faces whose outside is open (not inside the store) and that end within 1 m of a store corner; of
+    /// those the longest, the door going to the end at the store.
+    /// </summary>
+    private static (WallPiece, bool)? CafeFaceBeside(IReadOnlyList<WallPiece> pieces, IReadOnlyList<Vector2> store, float floor)
+    {
+        static float Near(Vector2 p, IReadOnlyList<Vector2> ring) => ring.Min(q => Vector2.Distance(p, q));
+        var best = pieces
+            .Where(p => p.Block.Kind == BlockKind.Podium && p.Y0 <= floor && !Inside((p.A + p.B) * 0.5f + p.Out * 0.5f, store))
+            .Select(p => (Piece: p, AtA: Near(p.A, store) <= Near(p.B, store), Gap: MathF.Min(Near(p.A, store), Near(p.B, store))))
+            .Where(c => c.Gap < 1f)
+            .OrderByDescending(c => c.Piece.Length).FirstOrDefault();
+        return best.Piece is null ? null : (best.Piece, best.AtA);
+    }
+
+    /// <summary>Even-odd point in polygon.</summary>
+    private static bool Inside(Vector2 p, IReadOnlyList<Vector2> ring)
+    {
+        var inside = false;
+        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
+        {
+            Vector2 a = ring[i], b = ring[j];
+            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
+        }
+        return inside;
     }
 
     // ------------------------------------------------------------------ exterior wall pieces

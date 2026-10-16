@@ -27,8 +27,8 @@ public readonly record struct Face(Vector2 A, Vector2 Along, Vector2 Out, float 
 /// <summary>Rectangle in a face: u from U0 to U1, y from Y0 to Y1.</summary>
 public readonly record struct Rect(float U0, float U1, float Y0, float Y1);
 
-/// <summary>What kind of opening a window run is (it decides frame, sill and glass).</summary>
-public enum OpeningKind { Ribbon, Podium, Square, Slit, Slot, Mech }
+/// <summary>What kind of opening a window run is (it decides frame, sill and glass); Entry is the 1F cafe door bay.</summary>
+public enum OpeningKind { Ribbon, Podium, Square, Slit, Slot, Mech, Entry }
 
 /// <summary>
 /// One glazed opening of the shell: its hole, its glass cells (Cells across, one window row per entry of Rows) and the
@@ -40,8 +40,8 @@ public sealed record Opening(Face Face, OpeningKind Kind, Rect Hole, int Cells, 
     public float Depth => Kind == OpeningKind.Slot ? S.SlotDepth : S.Reveal;
 
     /// <summary>
-    /// The front door's bay (16c): cells First … First + Count − 1 of the first row are open below Top (the slot's door
-    /// transom); their glass is only the light above it. Null for every other opening.
+    /// A door bay (16c front door in the slot, 16d cafe door): cells First … First + Count − 1 of the first row are open
+    /// below Top (the door transom); their glass is only the light above it. Null for every other opening.
     /// </summary>
     public (int First, int Count, float Top)? Door { get; init; }
 
@@ -138,23 +138,29 @@ public static class LibraryFacade
                 glass.Pane(f.At(a, depth, g), f.At(b, depth, g), f.At(b, depth, y1), f.At(a, depth, y1), f.N, o.Column + c, row, o.Card);
             }
         // Frame ring and mullions stand proud of the glass by the frame depth; the door bay has no sill bar and its
-        // inner mullions start at the door transom (the door part frames the opening below).
+        // inner mullions start at the door transom (the door part frames the opening below). L0 builds each bar as a box;
+        // L1 (mid range, where a 7 cm bar is an outline stroke) keeps only its front face.
         float s0 = depth, s1 = depth + S.FrameDepth, w = S.FrameFace, m = S.MullionFace * 0.5f;
         float U(int c) => h.U0 + (h.U1 - h.U0) * c / o.Cells;
-        Box(mesh, frame, f, h.U0, h.U0 + w, s0, s1, h.Y0, h.Y1);
-        Box(mesh, frame, f, h.U1 - w, h.U1, s0, s1, h.Y0, h.Y1);
-        Box(mesh, frame, f, h.U0 + w, h.U1 - w, s0, s1, h.Y1 - w, h.Y1);
+        void Bar(float u0, float u1, float front, float y0, float y1)
+        {
+            if (lod == LodLevel.L0) Box(mesh, frame, f, u0, u1, s0, front, y0, y1);
+            else Panel(mesh, frame, f, u0, u1, front, y0, y1, f.N);
+        }
+        Bar(h.U0, h.U0 + w, s1, h.Y0, h.Y1);
+        Bar(h.U1 - w, h.U1, s1, h.Y0, h.Y1);
+        Bar(h.U0 + w, h.U1 - w, s1, h.Y1 - w, h.Y1);
         if (o.Door is { } door)
         {
-            Box(mesh, frame, f, h.U0 + w, U(door.First), s0, s1, h.Y0, h.Y0 + w);
-            Box(mesh, frame, f, U(door.First + door.Count), h.U1 - w, s0, s1, h.Y0, h.Y0 + w);
+            Bar(h.U0 + w, U(door.First), s1, h.Y0, h.Y0 + w);
+            Bar(U(door.First + door.Count), h.U1 - w, s1, h.Y0, h.Y0 + w);
         }
         else
-            Box(mesh, frame, f, h.U0 + w, h.U1 - w, s0, s1, h.Y0, h.Y0 + w);
+            Bar(h.U0 + w, h.U1 - w, s1, h.Y0, h.Y0 + w);
         for (var c = 1; c < o.Cells; c++)
         {
             var bottom = MathF.Min(o.GlassBottom(c - 1, h.Y0), o.GlassBottom(c, h.Y0));
-            Box(mesh, frame, f, U(c) - m, U(c) + m, s0, s1 + (o.Kind == OpeningKind.Slot ? 0.08f : 0f), bottom > h.Y0 ? bottom : h.Y0 + w, h.Y1 - w);
+            Bar(U(c) - m, U(c) + m, s1 + (o.Kind == OpeningKind.Slot ? 0.08f : 0f), bottom > h.Y0 ? bottom : h.Y0 + w, h.Y1 - w);
         }
         if (lod != LodLevel.L0) return;
         foreach (var y in Transoms(o))
@@ -165,12 +171,12 @@ public static class LibraryFacade
             }
     }
 
-    /// <summary>Transom heights: between stacked window rows, and the podium's fixed top light.</summary>
+    /// <summary>Transom heights: between stacked window rows, the podium's fixed top light and every door bay's transom.</summary>
     private static IEnumerable<float> Transoms(Opening o)
     {
         for (var r = 1; r < o.Rows.Count; r++) yield return o.Rows[r].Y0;
         if (o.Kind == OpeningKind.Podium) yield return o.Hole.Y0 + S.PodiumTransom;
-        if (o.Kind == OpeningKind.Slot) yield return o.Hole.Y0 + S.SlotDoorHeight;
+        if (o.Door is { } door) yield return door.Top;
     }
 
     // ------------------------------------------------------------------ swept edges

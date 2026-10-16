@@ -70,6 +70,36 @@ public sealed class GrandStairTests
     }
 
     [TestCase]
+    public void CanopySpansTheTowerFaceOverTheDoor()
+    {
+        var (stair, shell) = Pieces(RealWorld());
+        var bay = shell.EntranceDoor!.Value;
+        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        stair.Build(build, LodLevel.L0);
+        var canopy = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec == CanopySpec).ToArray();
+        Require(canopy.Length > 0, "a canopy over the front door");
+        var points = canopy.SelectMany(m => Enumerable.Range(0, m.Position.Length / 3).Select(i => new Vector3(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]))).ToArray();
+        var f = bay.Face;
+        var along = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Along)).ToArray();
+        var outward = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Out)).ToArray();
+        Require(along.Min() < 0.05f && along.Max() > f.Length - 0.05f, $"the canopy spans the tower face ({along.Min()}…{along.Max()} of {f.Length})");
+        Require(MathF.Abs(outward.Max() - CoreStyle.CanopyDepth) < 0.02f && outward.Min() < -bay.Depth + 0.02f, "it projects in front of the face and runs back to the slot glass");
+        // Over the door bay the frame is only the canopy, its soffit clear of the door transom; the piers stand on the terrace.
+        var overDoor = points.Where(p => MathF.Abs(Vector2.Dot(new Vector2(p.X - bay.Origin.X, p.Z - bay.Origin.Z), f.Along)) < bay.Width).ToArray();
+        Require(overDoor.Min(p => p.Y) > bay.Origin.Y + bay.Height + 0.5f, "the canopy's soffit clears the door transom");
+        Require(points.Min(p => p.Y) < bay.Origin.Y, "the piers stand on the terrace");
+        Require(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - CoreStyle.CanopyPier * 0.5f) < 1e-4f && w.Y0 < bay.Origin.Y) == 2, "the piers collide");
+        foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
+        {
+            var coarse = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+            stair.Build(coarse, lod);
+            Require(coarse.Finish(lod).Meshes.Any(m => m.Material.Spec == CanopySpec), $"the canopy reads at {lod}");
+        }
+    }
+
+    private static ToonSpec CanopySpec => CoreStyle.Spec(CoreMaterial.Sheet, CoreStyle.CanopyFamily);
+
+    [TestCase]
     public void WpThirteenDressesTheLibraryFrontDoor()
     {
         var world = RealWorld();

@@ -54,6 +54,15 @@ public static partial class CoreStyle
     /// <summary>Service doors (检修铁门, closed) in the two outer guard walls, into the plant rooms under the stair.</summary>
     public const float ServiceDoorWidth = 1.2f, ServiceDoorHeight = 2.2f, ServiceDoorS = 6.2f;
 
+    // ---- Entrance porch frame over the 2F front door (门斗式外框, 16d, review): a flat canopy across the whole front tower
+    //      face on two side piers standing on the terrace, its soffit a metre over the door transom. The light frame round
+    //      a shaded porch is what reads as "the door" at mid range under the 25 m glass tower. ----
+    public const float CanopyDepth = 2.8f, CanopyGap = 1.0f, CanopyThick = 0.7f, CanopyPier = 0.45f;
+    /// <summary>Drip strip under the fascia's front edge (L0): height and projection.</summary>
+    public const float CanopyDrip = 0.05f;
+    /// <summary>The frame is the grey metal of the 5F eave (灰色金属), so it stands off the beige stone in shade and at noon.</summary>
+    public const string CanopyFamily = LibraryEave;
+
     // ---- Colours ----
     /// <summary>Treads, landings and cheek walls: light granite, the podium terrace's paving.</summary>
     public const string StairStone = "ground.curb";

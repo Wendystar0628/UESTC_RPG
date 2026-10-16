@@ -1,7 +1,9 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.Parts.Openings;
 using Campus.Gen.Zones.Core.Framework;
 using S = Campus.Gen.Zones.Core.CoreStyle;
 
@@ -72,15 +74,25 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     /// The front door bay in the glass slot (16c places the door there): bottom centre on the slot's glass plane, the
     /// horizontal outward normal, and the bay's width and height up to the door transom. Null when the slot has no door.
     /// </summary>
-    public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? EntranceDoor
+    public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? EntranceDoor =>
+        Bay(_openings.FirstOrDefault(x => x.Kind == OpeningKind.Slot && x.Door is not null));
+
+    /// <summary>The 1F cafe door bay (lib.cafe, 16d) in the same terms; the shell places its glass door itself.</summary>
+    public (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? CafeDoor =>
+        Bay(_openings.FirstOrDefault(x => x.Kind == OpeningKind.Entry && x.Door is not null));
+
+    private static (Vector3 Origin, Vector3 Outward, float Width, float Height, Face Face, float Depth)? Bay(Opening? o)
     {
-        get
-        {
-            var o = _openings.FirstOrDefault(x => x.Door is not null);
-            if (o?.Door is not { } d) return null;
-            float a = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * d.First / o.Cells, b = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (d.First + d.Count) / o.Cells;
-            return (o.Face.At((a + b) * 0.5f, -o.Depth, o.Hole.Y0), o.Face.N, b - a, d.Top - o.Hole.Y0, o.Face, o.Depth);
-        }
+        if (o?.Door is not { } d) return null;
+        var (a, b) = DoorSpan(o);
+        return (o.Face.At((a + b) * 0.5f, -o.Depth, o.Hole.Y0), o.Face.N, b - a, d.Top - o.Hole.Y0, o.Face, o.Depth);
+    }
+
+    /// <summary>The door cells' span along the face (u from, u to).</summary>
+    private static (float A, float B) DoorSpan(Opening o)
+    {
+        var d = o.Door!.Value;
+        return (o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * d.First / o.Cells, o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (d.First + d.Count) / o.Cells);
     }
 
     // ------------------------------------------------------------------ windows
@@ -138,8 +150,19 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                 {
                     float y0 = plan.FloorY + S.PodiumSill, y1 = y0 + S.PodiumHeight;
                     if (piece.Y0 > plan.FloorY + 0.01f || piece.Y1 < y1 + 0.3f || length < 2 * S.RibbonMargin + S.PodiumModule) yield break;
-                    var cells = Math.Max(1, (int)MathF.Round((length - 2 * S.RibbonMargin) / S.PodiumModule));
-                    yield return new(f, OpeningKind.Podium, new(S.RibbonMargin, length - S.RibbonMargin, y0, y1), cells, [(y0, y1, 0)], allocate(cells, [0]), S.CardReading);
+                    float u0 = S.RibbonMargin, u1 = length - S.RibbonMargin;
+                    // lib.cafe (16d): the end of the ribbon at the store front becomes a door bay from the floor up, the door
+                    // open to the ribbon's transom line, its light above; a pier, then the rest of the ribbon.
+                    if (plan.CafeFace is { } cafe && ReferenceEquals(cafe.Piece, piece) && length > 2 * S.RibbonMargin + (S.CafeDoorCells + 2) * S.PodiumModule + S.CafeDoorPier)
+                    {
+                        var width = S.CafeDoorCells * S.PodiumModule;
+                        var bay = cafe.AtA ? new Rect(u0, u0 + width, plan.FloorY, y1) : new Rect(u1 - width, u1, plan.FloorY, y1);
+                        yield return new Opening(f, OpeningKind.Entry, bay, S.CafeDoorCells, [(plan.FloorY, y1, 0)], allocate(S.CafeDoorCells, [0]), S.CardReading)
+                        { Door = (0, S.CafeDoorCells, y0 + S.PodiumTransom) };
+                        if (cafe.AtA) u0 = bay.U1 + S.CafeDoorPier; else u1 = bay.U0 - S.CafeDoorPier;
+                    }
+                    var cells = Math.Max(1, (int)MathF.Round((u1 - u0) / S.PodiumModule));
+                    yield return new(f, OpeningKind.Podium, new(u0, u1, y0, y1), cells, [(y0, y1, 0)], allocate(cells, [0]), S.CardReading);
                     break;
                 }
             case BlockKind.Wing:
@@ -225,6 +248,15 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         LibraryRoof.Skylight(Plan, mesh, landmark, clear, SkylightColumn, lod);
         if (lod <= LodLevel.L2) LibraryRoof.Vaults(Plan, mesh, lod);
         if (lod <= LodLevel.L1) LibraryRoof.Plant(Plan, build);
+        if (lod <= LodLevel.L1 && CafeDoor is { } cafe)
+            build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
+                new DoorParams(cafe.Width, cafe.Height, S.DoorDepth, S.DoorOpenDeg, S.DoorLeaves) { Foot = FootMat.Glass },
+                OpeningPlacement.Frame(cafe.Origin, cafe.Outward)));
+        if (lod <= LodLevel.L2 && _openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is { } entry)
+        {
+            var (u0, u1, depth) = Apron(entry);
+            LibraryFacade.Box(mesh, S.Roof(S.LibraryTerrace), entry.Face, u0, u1, 0f, depth, Plan.PadY - S.Sink, entry.Hole.Y0 + ApronLift);
+        }
         Mech(mesh, glass, lod);
         build.Bundles.AddRange(glass.Finish());
         build.Bundles.AddRange(clear.Finish());
@@ -252,7 +284,16 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             var f = Face.Of(piece);
             const float ext = 0.03f;
             if (piece.Y0 <= Plan.WallBaseY + 0.01f)
-                LibraryFacade.Box(mesh, trim, f, -ext, piece.Length + ext, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
+            {
+                // The plinth band breaks at a ground-floor door bay (lib.cafe).
+                var u = -ext;
+                foreach (var hole in _openings.Where(o => o.Door is not null && o.Face == f && o.Hole.Y0 < Plan.PlinthTopY).Select(o => o.Hole).OrderBy(h => h.U0))
+                {
+                    LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
+                    u = hole.U1;
+                }
+                LibraryFacade.Box(mesh, trim, f, u, piece.Length + ext, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
+            }
             if (piece.Block.Kind != BlockKind.Wing) continue;
             for (var k = 1; k < S.LibraryStoreys.Length - 1; k++)
             {
@@ -363,6 +404,11 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     /// Walls standing on the ground block from their foot to 300 m (the roof is out of reach, MAP-QSH-CORE §8.2), except
     /// the podium, whose walls stop 1.5 m above its terrace; walls rising from the terrace block from there up. The
     /// terrace is a stone slab (16c's stair lands on it), its parapet left open where the stair base stands.
+    /// <para>
+    /// Door bays (the 2F front door, the 1F cafe door) are left open in the face line: the recess has its jambs, a floor
+    /// level with the door's, the glass plane beside the door and the door's two fixed outer leaves as walls, and a lintel
+    /// over the two open leaves, so the clear way is the open leaves' width (WLD-INTERIORS §10).
+    /// </para>
     /// </summary>
     public IReadOnlyList<Collider> Collide()
     {
@@ -373,19 +419,69 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             var onGround = piece.Y0 <= Plan.WallBaseY + 0.01f;
             var onTerrace = MathF.Abs(piece.Y0 - Plan.SecondFloorY) < 0.01f;
             if (!onGround && !onTerrace) continue;
+            var face = Face.Of(piece);
+            var doors = _openings.Where(o => o.Door is not null && o.Face == face).ToArray();
             if (piece.Block.Kind == BlockKind.Podium)
             {
                 foreach (var (a, b, landing) in Split((piece.A, piece.B), Plan.Landing))
-                    list.Add(Wall(a, b, piece.Y0, landing ? Plan.SecondFloorY : Plan.SecondFloorY + 1.5f));
+                    foreach (var (p, q) in Open(face, a, b, doors))
+                        list.Add(Wall(p, q, piece.Y0, landing ? Plan.SecondFloorY : Plan.SecondFloorY + 1.5f));
+                foreach (var o in doors) list.AddRange(DoorBay(o, Plan.SecondFloorY + 1.5f));
+                foreach (var o in doors.Where(o => o.Kind == OpeningKind.Entry))
+                {
+                    var (u0, u1, depth) = Apron(o);
+                    Vector2 P(float u, float s) { var p = o.Face.At(u, s, 0f); return new(p.X, p.Z); }
+                    list.Add(new SlabCollider([P(u0, 0f), P(u1, 0f), P(u1, depth), P(u0, depth)], o.Hole.Y0 + ApronLift, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
+                }
                 continue;
             }
-            list.Add(Wall(piece.A, piece.B, piece.Y0, top));
+            foreach (var (p, q) in Open(face, piece.A, piece.B, doors)) list.Add(Wall(p, q, piece.Y0, top));
+            foreach (var o in doors) list.AddRange(DoorBay(o, top));
         }
         foreach (var podium in Plan.Blocks.Where(b => b.Kind == BlockKind.Podium))
             list.Add(new SlabCollider([.. podium.Ring], Plan.SecondFloorY, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
         return list;
+    }
 
-        static WallCollider Wall(Vector2 a, Vector2 b, float y0, float y1) => new(a, b, 0.15f, y0, y1, SurfaceTag.Wall) { Foot = FootMat.StonePaving };
+    private static WallCollider Wall(Vector2 a, Vector2 b, float y0, float y1) => new(a, b, 0.15f, y0, y1, SurfaceTag.Wall) { Foot = FootMat.StonePaving };
+
+    /// <summary>The apron's top stands this little proud of the threshold, clear of WP-15's paving at the same level.</summary>
+    private const float ApronLift = 0.01f;
+
+    /// <summary>The granite apron in front of the cafe door bay: its span along the face and its depth out from it.</summary>
+    private static (float U0, float U1, float Depth) Apron(Opening entry) =>
+        (entry.Hole.U0 - S.CafeApronMargin, entry.Hole.U1 + S.CafeApronMargin, S.CafeApronDepth);
+
+    /// <summary>The segment a → b of a face line without the holes of its door bays.</summary>
+    private static IEnumerable<(Vector2 A, Vector2 B)> Open(Face face, Vector2 a, Vector2 b, IReadOnlyList<Opening> doors)
+    {
+        float ua = Vector2.Dot(a - face.A, face.Along), ub = Vector2.Dot(b - face.A, face.Along);
+        var (lo, hi) = (MathF.Min(ua, ub), MathF.Max(ua, ub));
+        var u = lo;
+        foreach (var o in doors.OrderBy(o => o.Hole.U0))
+        {
+            if (o.Hole.U1 <= u || o.Hole.U0 >= hi) continue;
+            if (o.Hole.U0 - u > 0.05f) yield return (face.A + face.Along * u, face.A + face.Along * o.Hole.U0);
+            u = MathF.Max(u, o.Hole.U1);
+        }
+        if (hi - u > 0.05f) yield return (face.A + face.Along * u, face.A + face.Along * hi);
+    }
+
+    /// <summary>Colliders of one door bay up to <paramref name="top"/> (see <see cref="Collide"/>).</summary>
+    private static IEnumerable<Collider> DoorBay(Opening o, float top)
+    {
+        var f = o.Face;
+        var h = o.Hole;
+        float s = -o.Depth, y = h.Y0, doorTop = o.Door!.Value.Top;
+        var (d0, d1) = DoorSpan(o);
+        var leaf = (d1 - d0) / S.DoorLeaves;
+        Vector2 P(float u, float at) { var p = f.At(u, at, 0f); return new(p.X, p.Z); }
+        yield return new SlabCollider([P(h.U0, 0f), P(h.U1, 0f), P(h.U1, s), P(h.U0, s)], y, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving };
+        yield return Wall(P(h.U0, 0f), P(h.U0, s), y, top);
+        yield return Wall(P(h.U1, 0f), P(h.U1, s), y, top);
+        yield return Wall(P(h.U0, s), P(d0 + leaf, s), y, top);
+        yield return Wall(P(d1 - leaf, s), P(h.U1, s), y, top);
+        yield return Wall(P(d0 + leaf, s), P(d1 - leaf, s), doorTop, top);
     }
 
 }
