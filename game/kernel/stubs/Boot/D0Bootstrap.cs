@@ -80,7 +80,9 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
         // Canonical map-relative path only. No implicit lookup of the retired global planting path.
         const string plantingKey = "vegetation/planting.json";
         if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
-        var mapInputs = BuildInputSnapshot.Freeze(inputBytes);
+        var mapInputs = BackdropInputs.Freeze(context.Descriptor, context.DataRoot, inputBytes,
+            Godot.FileAccess.FileExists, path => Read(path));
+        context = maps.SetSourceInputs(mapInputs);
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var build = new BuildContext
         {

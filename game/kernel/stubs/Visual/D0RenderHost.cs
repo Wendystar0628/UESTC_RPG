@@ -165,7 +165,9 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
     {
         if (!_roots.Remove(handle.Value, out var entry)) return;
         foreach (var surface in entry.Surfaces) FreeReflectionProxy(surface);
-        if (entry.Root.IsInsideTree()) entry.Root.QueueFree();
+        // During parent exit a sibling can already be outside the tree while still parented.
+        // Free would synchronously remove it from that parent's locked child list.
+        if (entry.Root.IsInsideTree() || entry.Root.GetParent() is not null) entry.Root.QueueFree();
         else entry.Root.Free();
         foreach (var surface in entry.Surfaces) surface.Mesh.Dispose();
     }

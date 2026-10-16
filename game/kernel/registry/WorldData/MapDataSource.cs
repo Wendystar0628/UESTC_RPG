@@ -51,6 +51,9 @@ public class MapDataSource
         // Preserve the bake caller's existing all-map-JSON input coverage, but capture it BEFORE world parsing.
         // Global assets and BakeRoot products are separate scopes. The bake hasher still selects only its dependencies.
         ReadJsonDirectory(entry.DataRoot, "", files);
+        // Env.Backdrop is an authored relative path, not an extension convention. Preserve already read JSON bytes.
+        BackdropInputs.AddOptional(entry.Descriptor, entry.DataRoot, files,
+            Godot.FileAccess.FileExists, path => ReadRequired(path));
         return new(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"));
     }
 

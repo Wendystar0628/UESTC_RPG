@@ -90,6 +90,16 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         return transition;
     }
 
+    /// <summary>Publish the exact frozen D0 input version before any worker or map-aware node sees the context.</summary>
+    public IMapContext SetSourceInputs(BuildInputSnapshot inputs)
+    {
+        if (_configuredContext is not MapContextStub context || _transition is not null)
+            throw new InvalidOperationException("D0 inputs must be configured before travel.");
+        _configuredContext = context with { SourceInputs = inputs };
+        Context = _configuredContext;
+        return _configuredContext;
+    }
+
     private async Task CompleteTravel(MapTransitionStub transition, IMapContext context, Pose pose, ViewMode mode)
     {
         try
@@ -168,7 +178,10 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
 }
 
 internal sealed record MapContextStub(MapDescriptor Descriptor, IWorldModel World,
-    string DataRoot, string BakeRoot) : IMapContext;
+    string DataRoot, string BakeRoot) : IMapContext
+{
+    public BuildInputSnapshot SourceInputs { get; init; } = BuildInputSnapshot.Empty;
+}
 
 internal sealed class MapTransitionStub : IMapTransition
 {

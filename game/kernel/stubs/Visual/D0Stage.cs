@@ -96,7 +96,9 @@ public partial class D0Stage : Node3D
         // Canonical map-relative path only. No implicit lookup of the retired global planting path.
         const string plantingKey = "vegetation/planting.json";
         if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
-        var mapInputs = BuildInputSnapshot.Freeze(inputBytes);
+        var mapInputs = BackdropInputs.Freeze(context.Descriptor, context.DataRoot, inputBytes,
+            Godot.FileAccess.FileExists, path => Read(path));
+        context = maps.SetSourceInputs(mapInputs);
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var buildContext = new BuildContext
         {
@@ -196,13 +198,28 @@ public partial class D0Stage : Node3D
             var node = registry.Create(registration.Type) as Node
                 ?? throw new InvalidOperationException($"KernelNode must inherit Node: {registration.Type}");
             AddChild(node);
+            if (node is D0BackdropNode backdrop) backdrop.Configure(renderer, _camera);
             nodes.Add(node);
         }
+        // The resident worker adds a new cross-frame wait before material warmup exists. Cover and draw it now.
+        var initialVeil = registry.Get<IVeilService>();
+        var initialPresentation = registry.Get<IVeilPresentation>();
+        await initialVeil.Cover(VeilReason.Boot, 0f);
+        initialPresentation.Present(new VeilFrame(initialVeil.Opacity, VeilContent.Fog, null));
+        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        if (!initialPresentation.IsCovered) throw new InvalidOperationException("D0 resident build requires a drawn opaque boot cover.");
+        GD.Print("[WP-00][phase=backdrop-wait] covered=" + initialPresentation.IsCovered);
         foreach (var node in nodes)
         {
             if (node is IMapAware mapAware) mapAware.OnMapLoaded(context);
             if (node is IQualityAware qualityAware)
                 qualityAware.ApplyQuality(registry.Get<IQualityService>().Effective, new QualityChange(1, ulong.MaxValue, ApplyOrigin.Startup, true));
+        }
+        // All backdrop material/layout registrations must precede the real warm observation window.
+        foreach (var backdrop in nodes.OfType<D0BackdropNode>())
+        {
+            await backdrop.MountTask;
+            GD.Print("[WP-00][phase=backdrop-mounted] " + backdrop.Evidence + " covered=" + initialPresentation.IsCovered);
         }
         var rect = context.Descriptor.DataRect;
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.MapRect,
