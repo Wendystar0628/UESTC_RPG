@@ -29,8 +29,11 @@ public sealed class FurnitureLayoutTests
         var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetFileName(overlay)] = File.ReadAllText(overlay);
+        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
+                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Order(StringComparer.Ordinal))
+            files[Path.GetRelativePath(data, overlay).Replace('\\', '/')] = File.ReadAllText(overlay);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
@@ -709,8 +712,11 @@ public sealed class FurnitureLayoutTests
         var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetFileName(overlay)] = File.ReadAllText(overlay);
+        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
+                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Order(StringComparer.Ordinal))
+            files[Path.GetRelativePath(data, overlay).Replace('\\', '/')] = File.ReadAllText(overlay);
         var (line, feature) = DesignWalk(spot);
         var ops = new List<OverlayOp> { new AddOp(feature.Id, feature.Kind, feature.Geometry, null, feature.Props, "furniture test walk") };
         if (hide) ops.Add(new HideOp(feature.Id, "furniture test: hidden again"));
