@@ -1,0 +1,117 @@
+{
+ "schema": 2,
+ "entries": [
+  {
+   "token": "bronze.lit",
+   "index": 320,
+   "albedo": [0.3775, 0.3011, 0.1889],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "bronze.shade",
+   "index": 321,
+   "albedo": [0.3775, 0.3011, 0.1889],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "stone.black.lit",
+   "index": 322,
+   "albedo": [0.1853, 0.1967, 0.2157],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "stone.black.shade",
+   "index": 323,
+   "albedo": [0.1853, 0.1967, 0.2157],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "glass.tea.lit",
+   "index": 324,
+   "albedo": [0.4169, 0.3557, 0.2635],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "glass.tea.shade",
+   "index": 325,
+   "albedo": [0.4169, 0.3557, 0.2635],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "band.ochre.lit",
+   "index": 326,
+   "albedo": [0.5444, 0.296, 0.2036],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "band.ochre.shade",
+   "index": 327,
+   "albedo": [0.5444, 0.296, 0.2036],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "glass.deep.lit",
+   "index": 328,
+   "albedo": [0.1952, 0.2563, 0.3249],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "glass.deep.shade",
+   "index": 329,
+   "albedo": [0.1952, 0.2563, 0.3249],
+   "materialClass": "building",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "street.blue.lit",
+   "index": 448,
+   "albedo": [0.2424, 0.433, 0.6209],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "street.blue.shade",
+   "index": 449,
+   "albedo": [0.2424, 0.433, 0.6209],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "hazard.black.lit",
+   "index": 450,
+   "albedo": [0.135, 0.1312, 0.1236],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "hazard.black.shade",
+   "index": 451,
+   "albedo": [0.135, 0.1312, 0.1236],
+   "materialClass": "metal",
+   "seasonal": false,
+   "role": "shade"
+  }
+ ]
+}

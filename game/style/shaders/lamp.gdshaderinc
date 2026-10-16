@@ -2,6 +2,8 @@
 #define CAMPUS_LAMP_INCLUDED
 
 #include "res://style/shaders/globals.gdshaderinc"
+// 调色板取色只走 fog.gdshaderinc 的 pal_cur / pal_fetch（色号 0–511 → 纹素的同一条 bank 规则，contract-28）
+#include "res://style/shaders/fog.gdshaderinc"
 
 // ---------------------------------------------------------------------------
 // 灯光通道、窗与灯表的公共求值（WP-39）。toon（WP-04）、fx_glow（WP-39）、precip（WP-45b）都 include 本文件，
@@ -113,7 +115,8 @@ bool lamp_window_cool(int id, vec4 o) {
 	return lamp_hash01(uint(id) * 2u + 2u) >= 0.6667;
 }
 
-// lamp_table（N×2 RGBA32F）：行 0 = (x, y_base, z, r)；行 1 = (色号 + 256 × 能量%, 槽位 + 32 × 灯头分米 + 32768 × 事件序号, θ, κ)
+// lamp_table（N×2 RGBA32F）：行 0 = (x, y_base, z, r)；行 1 = (色号低字节 + 256 × 能量% + 32768 × bank, 槽位 + 32 × 灯头分米 + 32768 × 事件序号, θ, κ)
+// 行 1 的 x 是 PaletteEncoding.PackLampColor 的精确整数：bit 15 是色号的 bank（色号 256–511），能量% 只占 bit 8–14；bank 0 与旧值逐位相同。
 struct LampData {
 	vec3 base;      // 灯脚处的地面点
 	float radius;   // 光斑半径（m），未乘冬夜倍数
@@ -132,8 +135,10 @@ LampData lamp_fetch(int i) {
 	LampData l;
 	l.base = r0.xyz;
 	l.radius = r0.w;
-	l.col = int(mod(r1.x, 256.0));
-	l.energy = floor(r1.x / 256.0) / 100.0;
+	float bank = floor(r1.x / 32768.0);
+	float packed = r1.x - 32768.0 * bank;   // 色号低字节 + 256 × 能量%（PaletteEncoding.UnpackLampColor）
+	l.col = int(mod(packed, 256.0)) + 256 * int(bank);
+	l.energy = floor(packed / 256.0) / 100.0;
 	l.slot = int(mod(r1.y, 32.0));
 	l.head = mod(floor(r1.y / 32.0), 1024.0) * 0.1;
 	l.seq = floor(r1.y / 32768.0);
@@ -333,7 +338,7 @@ void lamp_pool_shade(vec3 p, vec3 n_w, float aa, vec3 lamp_lit, inout vec3 lit, 
 		return;
 	}
 	vec3 warm = texelFetch(palette, ivec2(LAMP_PAL_WARM, 0), 0).rgb;
-	vec3 lc = texelFetch(palette, ivec2(clamp(q.col, 0, 255), 0), 0).rgb;
+	vec3 lc = pal_cur(q.col);
 	vec3 tint = lamp_desat(lc / max(warm, vec3(0.02)), LAMP_POOL_CORE_SAT);
 	vec3 core = lamp_chroma_cap(lamp_lit * tint, LAMP_POOL_CHROMA_CAP);
 	vec3 core_add = LAMP_POOL_GAIN * q.core * core;

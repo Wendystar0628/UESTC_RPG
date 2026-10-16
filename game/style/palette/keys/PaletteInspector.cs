@@ -41,7 +41,7 @@ public partial class PaletteInspector : CanvasLayer
             StretchMode = TextureRect.StretchModeEnum.Scale,
             TextureFilter = CanvasItem.TextureFilterEnum.Nearest
         });
-        AddChild(new Label { Position = new Vector2(x0 + 16, y0 + 292), Text = "palette 256x64 (live ImageTexture): row 0 now | 1 lamp | 2-3 interior shade/lit | 4-63 seasonal rows, x = season 0..4" });
+        AddChild(new Label { Position = new Vector2(x0 + 16, y0 + 292), Text = "palette 256x68 (live ImageTexture): row 0 now | 1 lamp | 2-3 interior shade/lit | 4-63 seasonal rows, x = season 0..4 | 64-67 rows 0-3 of IDs 256-511" });
         AddChild(new Label { Position = new Vector2(x0 + 16, y0 + 324), Text = "sky: sun side | anti-sun" });
         AddChild(new TextureRect { Texture = _sunTexture, Position = new Vector2(x0 + 16, y0 + 352), Size = new Vector2(110, 340), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = CanvasItem.TextureFilterEnum.Linear });
         AddChild(new TextureRect { Texture = _antiTexture, Position = new Vector2(x0 + 132, y0 + 352), Size = new Vector2(110, 340), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, TextureFilter = CanvasItem.TextureFilterEnum.Linear });

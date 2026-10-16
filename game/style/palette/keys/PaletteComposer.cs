@@ -69,14 +69,17 @@ public sealed class ColorScript
 }
 
 /// <summary>
-/// Fills the 256×64 RGBA8 palette (ENG-PERF §1.5): row 0 current colours, row 1 lamp pools, rows 2–3 interior shade/lit,
-/// rows 4–63 seasonal rows along the season axis (256 samples). Bytes are sRGB. Seasonal rows refresh one family per call
-/// to <see cref="StepSeasonal"/> unless a full refresh is requested.
+/// Fills the 256×68 RGBA8 palette (ENG-PERF §1.5, contract-28 route B, layout <see cref="PaletteLayout.LayoutId"/>): row 0
+/// current colours, row 1 lamp pools, rows 2–3 interior shade/lit, rows 4–63 seasonal rows along the season axis
+/// (256 samples), rows 64–67 the same four rows for colour IDs 256–511 (bank 1). Colour IDs reach a texel only through
+/// <see cref="PaletteLayout.FrameTexel"/>, season samples only through the seasonal rows, so the first 256×64 bytes are the
+/// legacy layout byte for byte. Bytes are sRGB. Seasonal rows refresh one family per call to <see cref="StepSeasonal"/>
+/// unless a full refresh is requested.
 /// </summary>
 public sealed class PaletteComposer
 {
-    public const int Width = 256, Height = 64;
-    public byte[] Pixels { get; } = new byte[Width * Height * 4];
+    public const int Width = PaletteLayout.Width, Height = PaletteLayout.Height;
+    public byte[] Pixels { get; } = new byte[PaletteLayout.ByteCount];
 
     private sealed record Pair(int LitId, string Family, string Class, Lab Albedo, VegetationSet.Entry? Veg, VegetationSet.Variant? Variant = null);
     private sealed record SeasonalFamily(int LitId, int Row, VegetationSet.Entry Veg);
@@ -90,22 +93,27 @@ public sealed class PaletteComposer
     private int _cursor;
     public IReadOnlyList<string> Warnings { get; }
 
-    public PaletteComposer(ColorScript script, PaletteRegistry registry)
+    /// <summary>Bank 0 only: the legacy registry, every extension row stays empty.</summary>
+    public PaletteComposer(ColorScript script, PaletteRegistry registry) : this(script, PaletteCatalog.FromLegacy(registry)) { }
+
+    /// <summary>The complete catalog: legacy entries plus the schema-2 extension pairs (IDs 256–511, non-seasonal).</summary>
+    public PaletteComposer(ColorScript script, PaletteCatalog catalog)
     {
         _script = script;
         var warnings = new List<string>();
         _shadowReference = Oklab.Parse(script.Data.Derive.GetProperty("shadowReference").GetString()!);
         // Row 1 lamp light (mainline placeholder until the WP-39 rule): the warm streetlamp constant, else the warm window light.
-        _lampColor = registry.TryGet(new PaletteToken("lamp.warm"), out var lamp) || registry.TryGet(new PaletteToken("window.warm"), out lamp)
+        _lampColor = catalog.TryGet(new PaletteToken("lamp.warm"), out var lamp) || catalog.TryGet(new PaletteToken("window.warm"), out lamp)
             ? FromSrgb(lamp.Albedo) : new Lab(0.92, 0.01, 0.07);
-        foreach (var e in registry.Entries)
+        foreach (var e in catalog.Entries)
         {
+            var id = e.Index.Value;
             switch (e.Role)
             {
                 case PaletteRole.Frame:
                 case PaletteRole.Weather:
                 case PaletteRole.Emissive:
-                    _frame.Add((e.Id, e.Token.Value, FromSrgb(e.Albedo)));
+                    _frame.Add((id, e.Token.Value, FromSrgb(e.Albedo)));
                     break;
                 case PaletteRole.Retired:
                 case PaletteRole.Shade:
@@ -116,7 +124,7 @@ public sealed class PaletteComposer
                     if (script.Vegetation.Variants.TryGetValue(family, out var variant))
                     {
                         if (e.Seasonal) { warnings.Add($"palette: variant '{family}' is registered as seasonal; variants only fill row 0"); break; }
-                        _pairs.Add(new Pair(e.Id, family, e.MaterialClass, FromSrgb(e.Albedo), script.Vegetation.Entries[variant.Base], variant));
+                        _pairs.Add(new Pair(id, family, e.MaterialClass, FromSrgb(e.Albedo), script.Vegetation.Entries[variant.Base], variant));
                         break;
                     }
                     var cls = script.Deriver.HasClass(e.MaterialClass) ? e.MaterialClass : "building";
@@ -124,9 +132,9 @@ public sealed class PaletteComposer
                     if (e.Seasonal)
                     {
                         if (veg is null) { warnings.Add($"palette: seasonal family '{family}' has no vegetation anchors"); break; }
-                        _seasonal.Add(new SeasonalFamily(e.Id, e.Row ?? throw new InvalidDataException($"{e.Token.Value} needs a row"), veg));
+                        _seasonal.Add(new SeasonalFamily(id, e.Row ?? throw new InvalidDataException($"{e.Token.Value} needs a row"), veg));
                     }
-                    else _pairs.Add(new Pair(e.Id, family, cls, FromSrgb(e.Albedo), veg));
+                    else _pairs.Add(new Pair(id, family, cls, FromSrgb(e.Albedo), veg));
                     break;
                 default:
                     throw new InvalidDataException($"Unknown palette role {e.Role}.");
@@ -154,6 +162,13 @@ public sealed class PaletteComposer
         Pixels[i + 1] = Oklab.ToByte(g);
         Pixels[i + 2] = Oklab.ToByte(b);
         Pixels[i + 3] = 255;
+    }
+
+    /// <summary>One of the four colour-ID rows (current, lamp, interior shade, interior lit) of a logical colour ID 0–511.</summary>
+    private void PutFrame(int id, int frameRow, Lab c)
+    {
+        var (col, row) = PaletteLayout.FrameTexel(new PaletteIndex(id), frameRow);
+        Put(row, col, c);
     }
 
     private Lab FrameColor(string token, Lab constant, WorldFrame w)
@@ -209,7 +224,7 @@ public sealed class PaletteComposer
     public void ComposeCurrent(WorldFrame w)
     {
         var d = _script.Deriver;
-        foreach (var (id, token, constant) in _frame) Put(0, id, FrameColor(token, constant, w));
+        foreach (var (id, token, constant) in _frame) PutFrame(id, 0, FrameColor(token, constant, w));
         foreach (var p in _pairs)
         {
             var m = p.Veg is { } veg
@@ -233,13 +248,13 @@ public sealed class PaletteComposer
 
     private void WritePair(int litId, MaterialColors m, Lab lamp)
     {
-        Put(0, litId, m.Lit);
-        Put(0, litId + 1, m.Shade);
+        PutFrame(litId, 0, m.Lit);
+        PutFrame(litId + 1, 0, m.Shade);
         for (var c = litId; c <= litId + 1; c++)
         {
-            Put(1, c, lamp);
-            Put(2, c, m.ShadeIn);
-            Put(3, c, m.LitIn);
+            PutFrame(c, 1, lamp);
+            PutFrame(c, 2, m.ShadeIn);
+            PutFrame(c, 3, m.LitIn);
         }
     }
 
@@ -268,9 +283,9 @@ public sealed class PaletteComposer
             lit[s] = m.Lit;
             shade[s] = m.Shade;
         }
-        for (var i = 0; i < Width; i++)
+        for (var i = 0; i < PaletteLayout.SeasonSampleCount; i++)
         {
-            var sp = (i + 0.5) * 4.0 / Width;
+            var sp = (i + 0.5) * 4.0 / PaletteLayout.SeasonSampleCount;
             var a = (int)Math.Floor(sp) % 4;
             var b = (a + 1) % 4;
             var t = Oklab.Smootherstep(sp - Math.Floor(sp));

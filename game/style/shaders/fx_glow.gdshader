@@ -9,7 +9,7 @@
 //   灯：基 = 单位阵，原点 = 灯头；custom = (lamp_table 列号, 光晕半径 m, 0, 0)
 // 网格：1 × 1 的四边形，中心在原点、朝 +Z（QuadMesh 默认）。
 // 亮度全在这里按 light_channels、window_override、lamp_table 算，CPU 不逐盏更新；没亮的实例在 vertex() 里塌成 0 面积。
-// 颜色只取调色板第 0 行（色号），不写色值；不用 TIME；距离一律按 MAIN_CAM_INV_VIEW_MATRIX。
+// 颜色只取调色板第 0 行（色号，经 lamp.gdshaderinc 带进来的 pal_cur，含 bank 1），不写色值；不用 TIME；距离一律按 MAIN_CAM_INV_VIEW_MATRIX。
 shader_type spatial;
 render_mode blend_add, unshaded, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled, skip_vertex_transform;
 
@@ -110,7 +110,7 @@ void vertex() {
 			cv += normalize(-cv) * min(GLOW_LAMP_PULL, rs * 0.5);
 			q = VERTEX.xy * 2.0;
 			out_vertex = cv + vec3(VERTEX.xy * 2.0 * rs, 0.0);
-			color = texelFetch(palette, ivec2(clamp(l.col, 0, 255), 0), 0).rgb;
+			color = pal_cur(l.col);
 		} else {
 			level = 0.0;
 		}

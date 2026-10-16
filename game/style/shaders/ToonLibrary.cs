@@ -28,7 +28,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private static readonly StringName MatIdParameter = new("mat_id");
 
     private readonly object _gate = new();
-    private readonly PaletteRegistry _registry;
+    private readonly PaletteCatalog _catalog;
     private readonly IShaderMaterialSource _source;
     private readonly IQualityService? _quality;
     private readonly Dictionary<MaterialClass, ToonEntry> _byClass = [];
@@ -44,17 +44,17 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private int _nextId = FirstId;
     private bool _disposed;
 
-    /// <param name="palettes">色名登记表来源（WP-04 的正式实现，无 GPU）。</param>
+    /// <param name="palettes">完整色表来源（WP-04 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
     /// <param name="source">白名单非卡通着色器的材质来源（veg_* 等由它建）。</param>
     /// <param name="textures">全局数据纹理的登记处；mat_table 登记后释放权归它。</param>
     /// <param name="quality">画质服务：影响管线的项一变，已有的预热证据作废。</param>
-    public ToonLibrary(IPaletteRegistrySource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures,
+    public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures,
         IQualityService? quality = null)
     {
         ArgumentNullException.ThrowIfNull(palettes);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(textures);
-        _registry = palettes.Registry;
+        _catalog = palettes.Catalog;
         _source = source;
         _matImage = Image.CreateFromData(MatTable.Width, MatTable.Height, false, Image.Format.Rgba8, _matBytes);
         _matTexture = ImageTexture.CreateFromImage(_matImage);
@@ -75,8 +75,18 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     /// </summary>
     public Material Get(ToonSpec spec) => Resolve(spec).Material;
 
-    /// <summary>色名的色号（受光色名打包进顶点 COLOR.r；影 = 受光 + 1）。登记表不可变，线程安全。</summary>
-    public byte PaletteId(PaletteToken token) => _registry.Get(token).Id;
+    /// <summary>
+    /// 旧的 byte 色号（只作 legacy 用途：palette encoding 1 的写入方，受光色号写进顶点 COLOR.r，影 = 受光 + 1）。
+    /// 只认旧表 0–255；扩展色（256–511）在这里明确失败，不截断、不取模，新路径经 <see cref="IPaletteIndexResolver"/> 取完整色号。
+    /// 登记表不可变，线程安全。
+    /// </summary>
+    public byte PaletteId(PaletteToken token)
+    {
+        if (_catalog.LegacyRegistry.TryGet(token, out var entry)) return entry.Id;
+        if (_catalog.TryGet(token, out var extension))
+            throw new InvalidOperationException($"Palette token '{token.Value}' is extension index {extension.Index.Value}; the legacy byte PaletteId cannot carry it, resolve it through IPaletteIndexResolver.");
+        throw new KeyNotFoundException($"Palette token '{token.Value ?? "<null>"}' is not registered.");
+    }
 
     /// <summary>材质 ID（写进 ROUGHNESS 的 7 位值），会按需分配。</summary>
     public byte MaterialId(ToonSpec spec) => Resolve(spec).Id;
@@ -199,7 +209,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             if (_byClass.TryGetValue(key, out var found)) return found;
             if (OS.GetThreadCallerId() != OS.GetMainThreadId())
                 throw new InvalidOperationException("A new toon material class must be allocated on the main thread (mat_table update).");
-            _registry.Validate(spec);
+            _catalog.Validate(spec);
             if (_nextId > LastId)
                 throw new InvalidOperationException($"Material IDs exhausted ({FirstId}-{LastId}); merge ToonSpec classes before adding more.");
             var id = (byte)_nextId++;

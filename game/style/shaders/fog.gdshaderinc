@@ -22,14 +22,19 @@
 #define CAMPUS_FOG_INCLUDED
 
 // ---------------------------------------------------------------------------
-// 调色板（ART-STYLE §8.5、ENG-PERF §1.5）：256×64 RGBA8，存 sRGB 字节，texelFetch 取。
-// 行 0 当前色，行 1 灯照色，行 2 室内影色，行 3 室内受光色，行 4–63 季相行。
+// 调色板（ART-STYLE §8.5、ENG-PERF §1.5）：256×68 RGBA8，存 sRGB 字节，texelFetch 取。
+// 行 0 当前色，行 1 灯照色，行 2 室内影色，行 3 室内受光色，行 4–63 季相行；行 64–67 是色号 256–511（bank 1）的行 0–3。
+// 色号与季节样本是两个域（contract-28，PaletteLayout）：表面行 0–3 按色号取，列 = 色号 & 255、行 + 64 × bank；
+// 季相行 4–63 的横坐标是 256 个季节样本，不做 bank 映射。旧的 0–255 色号落在原来的纹素上。
 // ---------------------------------------------------------------------------
 const int PAL_ROW_CUR = 0;
 const int PAL_ROW_LAMP = 1;
 const int PAL_ROW_IN_SHADE = 2;
 const int PAL_ROW_IN_LIT = 3;
 const int PAL_ROW_SEASON0 = 4;
+const int PAL_ROW_SEASON_END = 63;
+const int PAL_BANK_ROWS = 64;       // bank 1 的表面行 = 行 + 64（PaletteLayout.FrameTexel）
+const int PAL_INDEX_MAX = 511;
 
 // 表面色名成对登记：影的色号 = 受光的色号 + 1；顶点 COLOR.r 写受光的色号（暂定，待主代理确认）。
 const int PAL_SHADE_OFFSET = 1;
@@ -83,8 +88,16 @@ vec3 toon_srgb_decode(vec3 c) {
 	return mix(lo, hi, step(vec3(0.04045), c));
 }
 
+// row 0–3：col 是色号 0–511；row 4–63：col 是季节样本 0–255。灯、光晕等别的着色器取色号也走这里，不另写解码。
 vec3 pal_fetch(int col, int row) {
-	vec3 c = texelFetch(palette, ivec2(clamp(col, 0, 255), clamp(row, 0, 63)), 0).rgb;
+	ivec2 t;
+	if (row < PAL_ROW_SEASON0) {
+		int id = clamp(col, 0, PAL_INDEX_MAX);
+		t = ivec2(id & 255, max(row, 0) + (id >> 8) * PAL_BANK_ROWS);
+	} else {
+		t = ivec2(clamp(col, 0, 255), min(row, PAL_ROW_SEASON_END));
+	}
+	vec3 c = texelFetch(palette, t, 0).rgb;
 	return PAL_MANUAL_SRGB ? toon_srgb_decode(c) : c;
 }
 

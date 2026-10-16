@@ -11,7 +11,7 @@ namespace Campus.Style.Palette.Keys;
 
 /// <summary>
 /// WP-37 colour-script evaluator (SYS-TIME §3, ENG-PERF §1.5). Runs at FramePriority.Palette: reads clock, season and
-/// weather from IWorldState, writes the 256×64 palette texture (global sampler <c>palette</c>) and the globals
+/// weather from IWorldState, writes the 256×68 palette texture (global sampler <c>palette</c>) and the globals
 /// <c>fog</c> and <c>fog_low</c>, and publishes IColorScriptFrame. Also implements IPaletteProbe for the time ring.
 /// <c>--inspect=palette</c> shows a debug overlay of the live texture.
 /// </summary>
@@ -25,7 +25,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     private const string ExtDir = "res://style/palette/ext";
 
     private readonly ColorScript _script;
-    private readonly PaletteRegistry _registry;
+    private readonly PaletteCatalog _catalog;
     private readonly PaletteComposer _composer;
     private readonly Image _image;
     private readonly ImageTexture _texture;
@@ -45,8 +45,8 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         ProcessPriority = FramePriority.Palette;
         _script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
             Read("vegetation.json"), Read("weather.json")));
-        (_registry, RegistrySource) = ResolveRegistry();
-        _composer = new PaletteComposer(_script, _registry);
+        (_catalog, RegistrySource) = ResolveCatalog();
+        _composer = new PaletteComposer(_script, _catalog);
         foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
         // Default state until the world is read: autumn 17:30, clear (SYS-TIME §0).
         var first = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
@@ -62,7 +62,8 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     }
 
     public ImageTexture Texture => _texture;
-    public PaletteRegistry Registry => _registry;
+    public PaletteRegistry Registry => _catalog.LegacyRegistry;
+    public PaletteCatalog Catalog => _catalog;
     public byte[] Pixels => _composer.Pixels;
     public double[] SkyStops => _script.Data.SkyStopsDeg;
 
@@ -71,6 +72,18 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         var bytes = Godot.FileAccess.GetFileAsBytes(KeysDir + name);
         if (bytes.Length == 0) throw new FileNotFoundException($"Missing colour-script data: {KeysDir + name}");
         return bytes;
+    }
+
+    /// <summary>
+    /// The complete catalog (IPaletteCatalogSource, legacy entries plus the ext-v2 bank-1 pairs) once its source is a
+    /// production registration; until then only the legacy registry below, so the bank-1 rows stay empty.
+    /// </summary>
+    private static (PaletteCatalog, string) ResolveCatalog()
+    {
+        var source = Services.Services.Entries.FirstOrDefault(e => e.Kind == "service" && e.Id == typeof(IPaletteCatalogSource).FullName);
+        if (source is { IsStub: false }) return (Services.Get<IPaletteCatalogSource>().Catalog, "service " + source.Type.Name);
+        var (registry, from) = ResolveRegistry();
+        return (PaletteCatalog.FromLegacy(registry), from);
     }
 
     /// <summary>
@@ -161,8 +174,9 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     /// <summary>Hex of a registry column in row 0 (debug and parity output only).</summary>
     public string HexOf(string token, int row = 0)
     {
-        if (!_registry.TryGet(new PaletteToken(token), out var e)) return "-";
-        var i = (row * PaletteComposer.Width + e.Id) * 4;
+        if (!_catalog.TryGet(new PaletteToken(token), out var e)) return "-";
+        var (col, texelRow) = PaletteLayout.FrameTexel(e.Index, row);
+        var i = (texelRow * PaletteComposer.Width + col) * 4;
         var p = _composer.Pixels;
         return string.Create(CultureInfo.InvariantCulture, $"#{p[i]:X2}{p[i + 1]:X2}{p[i + 2]:X2}");
     }

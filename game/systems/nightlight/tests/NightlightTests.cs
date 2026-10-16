@@ -161,9 +161,8 @@ public sealed class NightlightTests
     {
         var lamp = new LampRecord(new Vector3(12.5f, 1.25f, -40f), 6.1f, 5.2f, 51, 0.75f, 23, 6.37f, 0.4321f, 7, 0.9f);
         var data = LampTable.PackTable([lamp]);
-        // 与 lamp.gdshaderinc 的 lamp_fetch 同一解码
-        var col = (int)(data[4] % 256f);
-        var energy = MathF.Floor(data[4] / 256f) / 100f;
+        // 与 lamp.gdshaderinc 的 lamp_fetch 同一解码（bit 15 是色号的 bank，PaletteEncoding.UnpackLampColor）
+        var (col, energy) = ShaderLampColor(data[4]);
         var slot = (int)(data[5] % 32f);
         var head = MathF.Floor(data[5] / 32f) % 1024f * 0.1f;
         var seq = MathF.Floor(data[5] / 32768f);
@@ -171,6 +170,14 @@ public sealed class NightlightTests
         Near(0.75f, energy, 1e-6f, "energy");
         Near(6.1f, head, 1e-4f, "head height");
         Near(6.37f, data[6], 1e-6f, "theta");
+        foreach (var (index, e) in new[] { (51, 0.75f), (255, 1f), (256, 0f), (320, 0.42f), (511, 1f) })
+        {
+            var packed = PaletteEncoding.PackLampColor(new PaletteIndex(index), e);
+            var (sc, se) = ShaderLampColor(packed);
+            var (ci, ce) = PaletteEncoding.UnpackLampColor(packed);
+            True(sc == index && ci.Value == index, $"lamp colour {index} survives the bank-aware decode");
+            Near(ce, se, 1e-6f, $"lamp energy {e} decodes the same in the shader and the contract");
+        }
         Near(0.4321f, data[7], 1e-6f, "kappa");
         var rect = new MapRect(new Vector2(-64f, -64f), new Vector2(64f, 64f));
         var grid = LampTable.PackGrid([lamp], rect, out var size, out _);
@@ -266,6 +273,14 @@ public sealed class NightlightTests
             3f, 1.5f, 1.5f, [1f]);
         var set = GlowSets.Windows([facade], [], out var report);
         True(set.Count == 4 && report.UnknownChannel == 0 && set.Buffer[14] == interior + 32f * 4, "window-channel facades still glow as windows");
+    }
+
+    /// <summary>lamp.gdshaderinc 的 lamp_fetch 对行 1 x 的解码：bank = floor(x / 32768)，余下的是色号低字节 + 256 × 能量%。</summary>
+    private static (int Col, float Energy) ShaderLampColor(float x)
+    {
+        var bank = MathF.Floor(x / 32768f);
+        var packed = x - 32768f * bank;
+        return ((int)(packed % 256f) + 256 * (int)bank, MathF.Floor(packed / 256f) / 100f);
     }
 
     /// <summary>与 lamp.gdshaderinc 的 lamp_level 同一写法：开灯（太阳高度低于 θ）与保留比例（smoothstep(κ, κ + Δ, L)）。</summary>

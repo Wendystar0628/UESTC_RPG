@@ -51,6 +51,10 @@ const int TOON_F_INTERIOR = 1;   // 室内：影取行 2、受光取行 3 并乘
 const int TOON_F_OUTSKIRT = 2;   // 外围：窗跳过 window_override；季节覆盖潜势读顶点而不读全图纹理
 const int TOON_F_DECAL = 4;      // 贴面贴花：备用字节是底面色号；不投影
 const int TOON_F_NOSHADOW = 8;   // 小件不投影：阴影通道里塌成一点（ART-MODELING §7.4）
+// 高两位是色号的 bank（contract-28，PaletteEncoding.EncodeColor）：bit 4 主色色号 +256，bit 5 贴花底色色号 +256。
+// 低四位的语义不变；旧几何（palette encoding 1）这两位恒为 0，解出来的色号与原来逐个相同。
+const int TOON_F_COLOR_BANK = 16;
+const int TOON_F_DECAL_BANK = 32;
 
 // 明暗分阶（ART-STYLE §2.1）
 const int TOON_STEPS_TWO = 0;        // 建筑、地面、硬质大件
@@ -203,8 +207,8 @@ struct ToonCtx {
 	float d;       // N·L（片元里，含阴雨天的天光方向）
 	float fw;      // fwidth(N·L)，两阶半的过渡带用
 	float kappa;   // 法线曲率（1/m），判倒角带
-	int cid;       // 色号
-	int flags;     // 标志字节
+	int cid;       // 色号 0–511（低字节 + bank 位，见 TOON_F_COLOR_BANK）
+	int flags;     // 标志字节：低四位语义，bit 4、5 是色号的 bank
 	float ao;      // 顶点 AO 字节：1 = 不遮蔽（GeometryBundle 缺省值），0 = 窄凹处最深；只推阈值
 	float spare;   // 备用字节
 	float pool_aa; // 路灯光斑边缘的过渡宽度（m）：max(fwidth(|p.xz|), 0.02)，在宏里统一控制流中算好
@@ -216,6 +220,12 @@ ToonCtx toon_ctx(vec3 vtx, vec3 n_v, mat4 inv_view, float d, float fw, float kap
 	vec3 cam = inv_view[3].xyz;
 	vec3 n_w = normalize(mat3(inv_view) * n_v);
 	return ToonCtx(wpos, cam, n_w, length(wpos - cam), d, fw, kappa, cid, flags, ao, spare, pool_aa);
+}
+
+// 贴花的底面色号 0–511（只在 TOON_F_DECAL 时有意义）：备用字节是低字节，bit 5 是 bank（PaletteEncoding.DecodeDecalBase）。
+// 非贴花的备用字节（窗型、渐变、权重）不是色号，不经这里解。
+int toon_decal_base(ToonCtx c) {
+	return int(round(c.spare * 255.0)) + ((c.flags & TOON_F_DECAL_BANK) != 0 ? 256 : 0);
 }
 
 // 解析法线（ART-MODELING §7.6、ENG-PERF §2）：球取 P − C，柱减去轴向分量；都在视空间里算
@@ -560,8 +570,8 @@ vec3 toon_point_light(vec3 n, vec3 l, float att, vec3 lampdiff, float push) {
 // 宏：varying 只能在 vertex()、fragment() 本体里赋值
 // ---------------------------------------------------------------------------
 #define TOON_VERTEX \
-	v_cid = int(round(COLOR.r * 255.0)); \
 	v_flags = int(round(COLOR.b * 255.0)); \
+	v_cid = int(round(COLOR.r * 255.0)) + ((v_flags & TOON_F_COLOR_BANK) != 0 ? 256 : 0); \
 	v_ao = COLOR.g; \
 	v_spare = COLOR.a; \
 	v_wy = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y + retreat_bias; \

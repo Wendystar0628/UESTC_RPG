@@ -44,6 +44,26 @@ public sealed class ToonLibraryRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
+    public async Task ExtensionSpecsValidateAgainstTheCatalogButNeverThroughTheLegacyByte()
+    {
+        await using var fixture = new Fixture();
+        var library = fixture.Library;
+        var extension = new ToonSpec(new PaletteToken("ext.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.BevelLift };
+        Require(library.Get(extension) is ShaderMaterial, "A bank-1 Lit/Shade pair must pass the full-catalog ToonSpec check.");
+        Require(library.PaletteId(new PaletteToken("test.lit")) == 64, "The legacy byte entry must keep the old colour ID.");
+        var refused = false;
+        try { library.PaletteId(new PaletteToken("ext.lit")); }
+        catch (InvalidOperationException) { refused = true; }
+        Require(refused, "An extension token must fail explicitly through the legacy byte PaletteId, never truncate.");
+        var mismatched = false;
+        try { library.Get(new ToonSpec(new PaletteToken("test.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.Rim }); }
+        catch (ArgumentException) { mismatched = true; }
+        Require(mismatched, "A Lit/Shade pair across banks must be rejected.");
+    }
+
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
     public async Task QualityResetPrunesDisposedMaterialsAndRewarmsOnlyLiveOnes()
     {
         await using var fixture = new Fixture();
@@ -261,11 +281,14 @@ public sealed class ToonLibraryRuntimeTests
         }
     }
 
-    private sealed class Palettes : IPaletteRegistrySource
+    private sealed class Palettes : IPaletteCatalogSource
     {
-        public PaletteRegistry Registry { get; } = new([
+        public PaletteCatalog Catalog { get; } = new(new PaletteRegistry([
             new(new PaletteToken("test.lit"), 64, System.Numerics.Vector3.One, "test", false, PaletteRole.Lit),
             new(new PaletteToken("test.shade"), 65, System.Numerics.Vector3.Zero, "test", false, PaletteRole.Shade)
+        ]), [
+            new(new PaletteToken("ext.lit"), new PaletteIndex(256), System.Numerics.Vector3.One, "test", false, PaletteRole.Lit),
+            new(new PaletteToken("ext.shade"), new PaletteIndex(257), System.Numerics.Vector3.Zero, "test", false, PaletteRole.Shade)
         ]);
     }
 
