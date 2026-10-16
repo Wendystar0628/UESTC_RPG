@@ -2,11 +2,14 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
+using Campus.Gen.Zones.West.Four;
 using Campus.Gen.Zones.West.Framework;
 using Campus.Gen.Zones.West.Motto;
 using Campus.Gen.Zones.West.Six;
 using GdUnit4;
 using A = Campus.Gen.Zones.West.WestTune.A10;
+using F4 = Campus.Gen.Zones.West.WestTune.Four;
+using I = Campus.Gen.Zones.West.WestTune.Innovation;
 using M = Campus.Gen.Zones.West.WestTune.Motto;
 using S = Campus.Gen.Zones.West.WestTune.Six;
 
@@ -144,7 +147,8 @@ public sealed class WestModuleTests
             Require(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + 0.05f)),
                 $"the east doorway is open {d:0.00} m along its axis");
         }
-        var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
+        // 六号's shut doors (19b's entrance boxes and portal add their own DoorClosed fronts elsewhere in the zone).
+        var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed && (w.A.X + w.B.X) * 0.5f < -583f).ToArray();
         Require(shut.Length == S.ShutDoors.Length, $"one DoorClosed segment per shut entrance, got {shut.Length}");
         foreach (var door in S.ShutDoors)
             Require(shut.Any(w => Vector2.Distance((w.A + w.B) * 0.5f, door) < S.Recess + 0.6f), $"shut door {door} is DoorClosed");
@@ -245,6 +249,74 @@ public sealed class WestModuleTests
             TerrainChannelOp c => c.Line?.Points ?? [],
             _ => [],
         };
+    }
+
+    [TestCase]
+    public void OtherWestBuildingsGoToWp14WithTheirFamilies()
+    {
+        var world = World();
+        foreach (var (id, family) in new[]
+        {
+            ("qsh:relation:11334255", "research"), ("qsh:relation:11665641", "research"), ("qsh:relation:11334253", "research"),
+            ("qsh:relation:8426842", "research"), ("qsh:relation:11031411", "research"), ("qsh:way:603368216", "research"),
+            ("qsh:relation:11032065", "research"), ("qsh:way:795677483", "research"), ("qsh:way:795677482", "research"),
+            ("qsh:way:570145228", "office"), ("qsh:way:779496151", "research"), ("qsh:way:779496154", "research"),
+        })
+            Require(world.Features[new(id)].Family?.Value == family, $"{id} is styled {family} for WP-14");
+        foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, "qsh:relation:8426842" })
+            Require(world.Features[new(id)].Facade?.Value == "research.stoneFrame", $"{id} takes the stone-and-glass preset");
+        // 19b claims nothing: the bodies stay WP-14's, the zone only adds entrance boxes, shafts and the portal in front of them.
+        Require(new WestModule().Claims.OfType<FeatureClaim>().Count() == 3, "only 六号's three entities are claimed");
+    }
+
+    [TestCase]
+    public void FourGlassBoxesSitOnTheirStoneLinesAndAreShut()
+    {
+        var world = World();
+        var parts = new Dictionary<string, string> { [F4.EntityA] = "osm:relation:11334255", [F4.EntityB] = "osm:relation:11665641", [F4.EntityC] = "osm:relation:11334252" };
+        foreach (var box in F4.Boxes)
+        {
+            var ring = Six.SixSite.Plan(world, box.Entity, parts[box.Entity]).Outer;
+            var onLine = Enumerable.Range(0, ring.Count).Any(i => Near(ring[i], ring[(i + 1) % ring.Count], box.Door, 0.3f));
+            Require(onLine, $"四号 {box.Key}: the door lies on the block's stone line");
+            var out1 = PlanMath.Heading(box.Facing);
+            Require(!PlanMath.Inside(ring, box.Door + out1 * 2f) && PlanMath.Inside(ring, box.Door - out1 * 2f), $"四号 {box.Key}: the box faces out of the block");
+        }
+        var ctx = Context();
+        var module = new WestModule();
+        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        foreach (var box in F4.Boxes)
+            Require(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, box.Door) < F4.GlassDepth + 1f),
+                $"四号 {box.Key}: the glass box front is DoorClosed");
+        Require(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, I.MainDoor) < I.PortalDepth + 0.5f),
+            "创新中心: the main portal is DoorClosed");
+        // The seat wall runs inside the lawn, clear of the radial paths' gaps.
+        foreach (var arc in F4.SeatArcs)
+            Require(FourSite.SeatLine(arc).All(p => Vector2.Distance(p, F4.LawnCentre) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre))), "the seat wall is inset into the lawn");
+    }
+
+    [TestCase]
+    public void InnovationShaftsBridgeWingAndBar()
+    {
+        var world = World();
+        var feature = world.Features[new(I.Entity)];
+        var plans = feature.Parts.Select(p => p.Geometry).OfType<PolygonGeometry>().Select(g => g.Rings.Outer)
+            .Concat(feature.Parts.Select(p => p.Geometry).OfType<MultiPolygonGeometry>().SelectMany(m => m.Polygons.Select(r => r.Outer))).ToArray();
+        foreach (var (centre, length) in I.Shafts)
+        {
+            Require(plans.Any(r => PlanMath.Inside(r, centre)), $"shaft {centre} stands on a link of 创新中心");
+            var ends = new[] { centre + I.WingAxis * (length * 0.5f + 1.5f), centre - I.WingAxis * (length * 0.5f + 1.5f) };
+            Require(ends.All(e => plans.Any(r => PlanMath.Inside(r, e))), $"shaft {centre} reaches a building at both ends");
+        }
+    }
+
+    [TestCase]
+    public void FourFanLawnIsAShallowDish()
+    {
+        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
+        var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == "design:terrain:west-four-fan-lawn");
+        Require(dish.Height is 0.45 && dish.Shape is TerrainCircle { Radius: 32 } c && Vector2.Distance(c.Center, F4.LawnCentre) < 0.01f,
+            "the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN §10.2)");
     }
 
     // ---- helpers ----

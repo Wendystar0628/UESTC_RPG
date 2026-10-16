@@ -51,6 +51,21 @@ public static class WestTune
         public static readonly ToonSpec Silver = S("roof.silverMetal", ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.5f);
         /// <summary>The motto stone: one rough cream-white boulder (米白粗粝块面石, MAP-QSH-WEST §2.2), faceted normals.</summary>
         public static readonly ToonSpec CreamStone = S("wall", ToonFx.BevelLift);
+        /// <summary>
+        /// 深蓝玻璃 (19b): 四号's entrance boxes, the campus tech blue as glass (streaked, glaring), so the boxes read blue and
+        /// clear, not black. WP-04's glass.deep is an extension colour the byte palette path cannot carry yet; 初值, the main
+        /// session may move both glasses to it once extension indices resolve end to end.
+        /// </summary>
+        public static readonly ToonSpec BlueGlass = new(new("uestc.techblue.lit"), new("uestc.techblue.shade"))
+        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+        /// <summary>深色玻璃 (19b): 创新中心's stair shafts, the campus glass (dark teal grey).</summary>
+        public static readonly ToonSpec DarkGlass = Glass;
+        /// <summary>White door frames (白色门框) and seat-wall caps: grey-white with lifted bevels.</summary>
+        public static readonly ToonSpec WhiteFrame = S("wall.greyWhite", ToonFx.BevelLift);
+        /// <summary>The motto stone's pebble bed: rounded river pebbles in pale paver grey, mottled.</summary>
+        public static readonly ToonSpec Pebble = S("ground.paver", ToonFx.Mottle, LineClass.Fine, 0.9f);
+        /// <summary>Low clipped planting round the motto stone's bed (hedge), soft tree lines.</summary>
+        public static readonly ToonSpec Hedge = S("hedge", ToonFx.Mottle, LineClass.Tree, 0.5f);
     }
 
     /// <summary>
@@ -163,14 +178,113 @@ public static class WestTune
         /// <summary>Bearing its inscribed face looks along (toward P10).</summary>
         public const float Facing = 112f;
         public const float Length = 6.6f;
-        public const float Depth = 1.7f;
-        public const float Height = 2.05f;
+        public const float Depth = 1.85f;
+        public const float Height = 1.8f;
         /// <summary>Two lines "求实求真" / "大气大为" layout slots; blank until the scene text atlas (contract-26): 校训石正面"求实求真 大气大为".</summary>
         public const float CharacterSize = 0.56f;
         public const float CharacterPitch = 0.72f;
         public const float LineGap = 0.78f;
         /// <summary>Granite pad round the foot (石脚的分界线) and the low lawn-lamp spot on the P10 side, for WP-39.</summary>
         public const float PadMargin = 0.5f;
+
+        /// <summary>
+        /// 19b (Opus review 21:28): the stone no longer stands straight on the paving. It lies in an oval bed of river pebbles
+        /// held by a low granite kerb, with a crescent of low clipped planting round its back and ends; the front stays open
+        /// so the face reads from P10 and Q1. Margins of the kerb's centreline beyond the stone's half extents. 初值.
+        /// </summary>
+        public const float BedMarginX = 1.25f, BedMarginZ = 1.05f;
+        public const float KerbWidth = 0.22f, KerbHeight = 0.16f;
+        /// <summary>The pebble bed's crown above the paving (a low dome).</summary>
+        public const float PebbleCrown = 0.14f;
+        /// <summary>The planting crescent: its width, height, its sweep either side of straight back (degrees) and its gap to the kerb.</summary>
+        public const float HedgeWidth = 0.55f, HedgeHeight = 0.42f, HedgeSweep = 128f, HedgeGap = 0.12f;
+    }
+
+    /// <summary>
+    /// 四号科研楼 (MAP-QSH-WEST §6): the three courtyard blocks are WP-14's (family research, west.overlay.json style); this
+    /// zone adds what the rules cannot: each block's entrance, a two-storey deep-blue glass box in a white door frame with a
+    /// sign band (§6.3), shut (WLD-INTERIORS §5.2: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
+    /// on its outer arc (MAP-QSH-TERRAIN §10.2; the lawn's dish is west.terrain.json's basin).
+    /// </summary>
+    public static class Four
+    {
+        public const string EntityA = "qsh:relation:11334255";
+        public const string EntityB = "qsh:relation:11665641";
+        public const string EntityC = "qsh:relation:11334253";
+
+        /// <summary>
+        /// Door centres on each block's stone line toward the lawn, and the bearing the box faces: A's south face, B's
+        /// south-east face, C's east face (osm:relation:11334255 e2, 11665641 e1, 11334252 e1, mid-points). 初值.
+        /// </summary>
+        public static readonly (string Entity, string Key, Vector2 Door, float Facing)[] Boxes =
+        [
+            (EntityA, "a", new(-306.69f, -357.83f), 178.4f),
+            (EntityB, "b", new(-359.35f, -322.52f), 128.4f),
+            (EntityC, "c", new(-384.75f, -262.87f), 96.8f),
+        ];
+
+        /// <summary>Glass box: width along the face, how far it stands out, and its height (two storeys of WP-14's 4.2 m research storey).</summary>
+        public const float GlassWidth = 7.2f, GlassDepth = 3.6f, GlassHeight = 8.4f;
+        /// <summary>The white frame round it: member thickness, how far it stands proud of the glass, and the sign band on its head.</summary>
+        public const float FrameMember = 0.65f, FrameProud = 0.55f, SignBand = 1.15f;
+        /// <summary>Mullion pitch on the glass and the transom at the first-floor line.</summary>
+        public const float MullionPitch = 1.2f, Transom = 4.2f;
+        public const float DoorWidth = 2.4f, DoorHeight = 2.7f;
+        /// <summary>Granite landing in front of the box, 3 cm proud of WP-15's paving.</summary>
+        public const float LandingDepth = 2.4f, PavingTop = 0.15f;
+
+        /// <summary>
+        /// The fan lawn (osm:way:803693984–803693986): its outer arc is the lawn's edge along the ring road; the seat wall runs on
+        /// these edges, inset toward the dish centre, so the radial paths pass through its gaps. Points run along the arc. 初值.
+        /// </summary>
+        public static readonly Vector2[][] SeatArcs =
+        [
+            [new(-335f, -211f), new(-344f, -220f), new(-352f, -230f), new(-357f, -241f), new(-360f, -252f)],
+            [new(-361f, -259f), new(-360f, -271f), new(-359f, -282f), new(-357f, -291f), new(-353f, -300f)],
+            [new(-343f, -316f), new(-334f, -324f), new(-326f, -330f), new(-320f, -333f), new(-315f, -334f), new(-311f, -334.5f)],
+        ];
+        /// <summary>The dish centre the arcs are inset toward (MAP-QSH-TERRAIN §10.2: about (−324, −275), radius 32, 0.45 deep).</summary>
+        public static readonly Vector2 LawnCentre = new(-324f, -275f);
+        public const float LawnRadius = 32f, LawnDepth = 0.45f;
+        public const float SeatInset = 0.8f, SeatHeight = 0.45f, SeatWidth = 0.5f, SeatCap = 0.08f;
+    }
+
+    /// <summary>
+    /// 创新中心 (MAP-QSH-WEST §3, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are WP-14's
+    /// (research, with its rooftop plant enclosure and stair penthouses under the main coping); this zone builds the dark glass
+    /// stair shafts where the wings meet the bars (§3.3) and the main entrance frame on the east wing's face to the parking
+    /// square, with the slot for the red-brown calligraphy sign (§3.2) left blank until contract-26.
+    /// </summary>
+    public static class Innovation
+    {
+        public const string Entity = "qsh:relation:11032065";
+        /// <summary>The cross wings' long axis (north to south).</summary>
+        public static readonly Vector2 WingAxis = new(-0.5990f, 0.8007f);
+        /// <summary>
+        /// The four links between wings and bars (osm:way:795677485 / 795677486 necks): centre and the link's length along the
+        /// wing axis between the two buildings. The glass shaft is a little wider than the neck. 初值.
+        /// </summary>
+        public static readonly (Vector2 Centre, float Length)[] Shafts =
+        [
+            (new(-591.9f, 77.2f), 6.2f),
+            (new(-626.9f, 119.7f), 7.0f),
+            (new(-553.4f, 106.4f), 6.6f),
+            (new(-586.7f, 149.6f), 7.6f),
+        ];
+        public const float ShaftWidth = 5.2f, ShaftHeight = 19.4f, ShaftFin = 1.25f, ShaftLanding = 3.9f;
+
+        /// <summary>
+        /// Main entrance on the east wing's south-east face to the parking square (795677486 e8, 2 m north of its mid-point so the
+        /// portal's glass screen covers WP-14's own door and canopy there).
+        /// </summary>
+        public static readonly Vector2 MainDoor = new(-564.70f, 134.12f);
+        public const float MainFacing = 126.8f;
+        public const float PortalWidth = 9.0f, PortalHeight = 6.2f, PortalDepth = 3.4f, PortalMember = 0.7f;
+        /// <summary>The glass screen stands this far behind the portal's front, proud of anything WP-14 hangs on the wall.</summary>
+        public const float ScreenBack = 0.25f;
+        /// <summary>The sign slot on the portal head, for "创新中心" in red-brown calligraphy (blank until contract-26).</summary>
+        public const float SignHeight = 1.3f;
+        public const float DoorWidth = 2.6f, DoorHeight = 2.8f;
     }
 
     /// <summary>

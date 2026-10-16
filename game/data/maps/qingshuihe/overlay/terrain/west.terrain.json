@@ -94,6 +94,7 @@
       "crossFall": 0.0,
       "shoulder": 0.75,
       "reason": "道路走廊（MAP-QSH-TERRAIN §6.2–§6.3）：园路就是堤顶路，替换自动生成的平地走廊；s 67.9–85.9 与 334.2–352.2 是两端 18 m 的 5% 坡道，中段 +0.9。纵坡不超过 5%，南端在湖北岸接回 0，北端在西门车行桥头接回 0。"
-    }
+    },
+    {"op": "basin", "id": "design:terrain:west-four-fan-lawn", "zone": "west", "reason": "雨水与座坡（MAP-QSH-TERRAIN §10.2）：四号科研楼三栋白楼围着的扇形草坪 osm:way:803693984–803693989 做成中心低 0.45 m 的浅碟，中心约 (−324, −275)、半径约 32 m，按文档取圆；Hermite 剖面最陡约 1.6 %，放射小路 ≤ 5 % 汇向中轴铺装，从楼门口看是一座朝东的座坡。外弧的 0.45 m 台缘坐墙是本区几何（FourSite），立在草坪外缘的 0 m 上。", "shape": {"shape": "circle", "center": [-324.0, -275.0], "radius": 32.0}, "height": 0.45, "profile": "hermite", "priority": 400}
   ]
 }

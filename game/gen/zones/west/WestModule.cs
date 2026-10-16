@@ -133,8 +133,9 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource
 
 /// <summary>
 /// The west zone's sites in a fixed order. 19a: 六号科研楼 and the motto stone (the A10 plaza is overlay paving drawn by
-/// WP-15). 19b (四号、五号、研究院、创新中心、经管楼、荟文楼、6151/6154) and 19c (托幼园、湿地与西门桥头、石刻) append their
-/// own entries after these, in that order.
+/// WP-15). 19b: 四号's glass entrance boxes and lawn seat wall, 创新中心's stair shafts and main portal; the other 19b
+/// buildings (五号、研究院、核磁、经管楼与 7482、荟文楼、6151/6154) are WP-14's, styled in west.overlay.json. 19c (托幼园、
+/// 湿地与西门桥头、石刻) appends its own entries after these.
 /// </summary>
 public static class WestSites
 {
@@ -142,5 +143,7 @@ public static class WestSites
     [
         new Six.SixSite(),
         new Motto.MottoStoneSite(),
+        new Four.FourSite(),
+        new Innovation.InnovationSite(),
     ]);
 }
