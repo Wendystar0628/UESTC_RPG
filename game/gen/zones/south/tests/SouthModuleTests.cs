@@ -14,6 +14,22 @@ public sealed class SouthModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase]
+    public void ClockTowerFootprintAcceptsExtraAndCollinearPoints()
+    {
+        var quad = new List<Vector2> { new(0, 0), new(12, 8), new(5, 17), new(-7, 9) };
+        var (f0, hx0, hz0) = Xuanbang.ClockTower.FrameOf(quad);
+        Require(ReferenceEquals(Xuanbang.ClockTower.Quadrilateral(quad), quad), "four points pass through untouched");
+        var padded = new List<Vector2> { quad[0], (quad[0] + quad[1]) * 0.5f, quad[1], quad[2], (quad[2] + quad[3]) * 0.5f, quad[3], (quad[3] + quad[0]) * 0.5f };
+        var (f1, hx1, hz1) = Xuanbang.ClockTower.FrameOf(padded);
+        Require(f1.U == f0.U && f1.P(0, 0) == f0.P(0, 0) || (Vector2.Distance(f1.P(0, 0), f0.P(0, 0)) < 0.01f && Vector2.Distance(f1.U, f0.U) < 0.01f), "collinear points leave the frame unchanged");
+        Require(MathF.Abs(hx1 - hx0) < 0.01f && MathF.Abs(hz1 - hz0) < 0.01f, "collinear points leave the size unchanged");
+        var ragged = new List<Vector2> { new(0, 0), new(10, 0), new(11, 4), new(10, 8), new(0, 8), new(-1, 4) };
+        var (_, hx, hz) = Xuanbang.ClockTower.FrameOf(ragged);
+        var rect = Xuanbang.ClockTower.Quadrilateral(ragged);
+        Require(rect.Count == 4 && hx > 0 && hz > 0 && hx * hz * 4 >= 80f && hx * hz * 4 < 110f, $"non-rectangular footprint gets a bounding rectangle ({hx}, {hz})");
+    }
+
+    [TestCase]
     public void OverlayLoadsAndSetsTheMainBuildingHeights()
     {
         var world = World();

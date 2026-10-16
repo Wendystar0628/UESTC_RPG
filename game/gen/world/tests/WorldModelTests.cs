@@ -23,6 +23,76 @@ public sealed class WorldModelTests
         """;
 
     [TestCase]
+    public void FacadeFootprintsUseTheSameRingConversionAndKeepPhysicalGeometry()
+    {
+        var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
+        var first = root["features"]![0]!;
+        first["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[[[[-10,-10],[-2,-10],[-2,-2],[-10,-2],[-10,-10]]]]""");
+        first["polygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[[[[-10,-10],[-6,-10.02],[-2,-10],[-2,-2],[-10,-2],[-10,-10]]]]""");
+        var world = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = root.ToJsonString() }).World;
+        var feature = world.Features[new("fixture:relation:1")];
+        var part = feature.Parts[0];
+        Require(((PolygonGeometry)part.Geometry).Rings.Outer.Count == 5, "Physical source detail was simplified.");
+        var facade = ((PolygonGeometry)PlanGeometry.FacadeGeometryOf(part)).Rings;
+        Require(facade.Outer.SequenceEqual(new Vector2[] { new(-10, -10), new(-2, -10), new(-2, -2), new(-10, -2) }), "Facade coordinate order or conversion changed.");
+        Require(ReferenceEquals(PlanGeometry.FacadeGeometryOf(feature.Parts[1]), feature.Parts[1].Geometry), "Missing facade did not fall back to current physical geometry.");
+        Require(PlanGeometry.FacadePolygonsOf(feature).SelectMany(p => p.Outer).SequenceEqual(facade.Outer.Concat(((PolygonGeometry)feature.Parts[1].Geometry).Rings.Outer)), "Current part order changed.");
+    }
+
+    [TestCase]
+    public void FacadeFootprintsRejectPresentEmptyMalformedAndMismatchedValues()
+    {
+        foreach (var value in new[] { "null", "{}", "[]", "[[]]", "[[[[0,0],[1,1],[2,2]]]]", "[[[[0],[1,0],[0,1]]]]", "[[[[0,0],[1,0],[0,1]]],[[[2,2],[3,2],[2,3]]]]", "[[[[0,0],[4,0],[0,4]],[[1,1],[2,1],[1,2]]]]" })
+        {
+            var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
+            root["features"]![0]!["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse(value);
+            try
+            {
+                WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = root.ToJsonString() });
+                throw new InvalidOperationException("Malformed facade footprint accepted: " + value);
+            }
+            catch (WorldDataException error)
+            { Require(error.File == "campus.json" && error.Entry == "osm:way:10.facadePolygons", "Lost source facade error context."); }
+        }
+    }
+
+    [TestCase]
+    public void FacadeFootprintsFollowOverlayPartLifecycle()
+    {
+        var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
+        foreach (var raw in root["features"]!.AsArray()) raw!["facadePolygons"] = raw["polygons"]!.DeepClone();
+        WorldFeature Apply(string ops, string id = "fixture:relation:1") => WorldModelLoader.Load(new("test"), new Dictionary<string, string>
+        {
+            ["campus.json"] = root.ToJsonString(),
+            ["overlay/test.overlay.json"] = "{\"zone\":\"test\",\"owner\":\"WP-08\",\"ops\":[" + ops + "]}"
+        }).World.Features[new(id)];
+        var height = Apply("""{"op":"height","target":"fixture:relation:1","height":20,"reason":"test"}""");
+        Require(height.Parts.All(p => p.FacadeGeometry is not null && p.Height == 20), "Height discarded facade geometry.");
+        var style = Apply("""{"op":"style","target":"fixture:relation:1","family":"test"}""");
+        Require(style.Parts.All(p => p.FacadeGeometry is not null), "Style discarded facade geometry.");
+        var hidden = Apply("""{"op":"hidePart","target":"fixture:relation:1","sourceId":"osm:way:10","reason":"test"}""");
+        Require(hidden.Parts.Count == 1 && hidden.Parts[0].SourceId == "osm:way:11" && ReferenceEquals(PlanGeometry.FacadePolygonsOf(hidden)[0], ((PolygonGeometry)hidden.Parts[0].FacadeGeometry!).Rings), "Hidden part survived in facade aggregation.");
+        var reshaped = Apply("""{"op":"reshape","target":"fixture:relation:1","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]},"reason":"test"}""");
+        Require(reshaped.Parts.Count == 0 && ReferenceEquals(PlanGeometry.FacadePolygonsOf(reshaped)[0], ((PolygonGeometry)reshaped.Geometry).Rings), "Reshape resurrected stale source facade geometry.");
+        var added = Apply("""{"op":"add","id":"design:test","kind":"building","geometry":{"type":"polygon","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]}},"reason":"test"}""", "design:test");
+        Require(added.Parts.Count == 0 && ReferenceEquals(PlanGeometry.FacadePolygonsOf(added)[0], ((PolygonGeometry)added.Geometry).Rings), "Add ignored current authored geometry.");
+    }
+
+    [TestCase]
+    public void FacadeAggregationPreservesPolygonHoleAndPartOrderWithoutNormalization()
+    {
+        var first = new PolygonRings([new(3, 3), new(3, 0), new(0, 0), new(0, 3)], [new Vector2[] { new(1, 1), new(2, 1), new(1, 2) }]);
+        var second = new PolygonRings([new(6, 6), new(6, 4), new(4, 4), new(4, 6)]);
+        var physical = new PointGeometry(Vector3.Zero);
+        var part = new WorldFeaturePart("second-source", physical, null, null) { FacadeGeometry = new MultiPolygonGeometry([first, second]) };
+        var feature = new WorldFeature(new("fixture"), FeatureSource.Osm, new("building"), physical)
+        { Parts = [part, new("first-source", new PolygonGeometry(second), null, null)] };
+        var polygons = PlanGeometry.FacadePolygonsOf(feature);
+        Require(polygons.Count == 3 && ReferenceEquals(polygons[0], first) && ReferenceEquals(polygons[1], second) && ReferenceEquals(polygons[2], second), "Facade aggregation reordered or rebuilt rings.");
+        Require(PlanGeometry.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes), "Facade helper normalized input direction or holes.");
+    }
+
+    [TestCase]
     public void MultiWingEntitiesKeepTheirOwnHeightAndStableIdentity()
     {
         var result = Load();

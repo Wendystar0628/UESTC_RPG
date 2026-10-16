@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.CenterEast.Framework;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
@@ -79,7 +80,8 @@ public abstract class ResearchSite : CenterEastSite
     {
         if (!world.Features.TryGetValue(new(entity), out var feature))
             throw new InvalidOperationException($"Research building {entity} is missing from the world model.");
-        return feature.Parts.FirstOrDefault(p => p.SourceId == source)?.Geometry is PolygonGeometry g
+        // The facade outline (WP-08): the layout of faces, entrances and portal cells follows it, not the shared-edge physical outline.
+        return feature.Parts.FirstOrDefault(p => p.SourceId == source) is { } part && PlanGeometry.FacadeGeometryOf(part) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"Research part {source} is missing or not a single polygon.");
     }

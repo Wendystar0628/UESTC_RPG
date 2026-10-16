@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.West.Framework;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using S = Campus.Gen.Zones.West.WestTune.Six;
@@ -67,7 +68,7 @@ public sealed class SixSite : WestSite
     {
         if (!world.Features.TryGetValue(new(entity), out var feature))
             throw new InvalidOperationException($"六号科研楼 entity {entity} is missing from the world model.");
-        return feature.Parts.FirstOrDefault(p => p.SourceId == part)?.Geometry is PolygonGeometry g
+        return feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings
             : throw new InvalidOperationException($"六号科研楼 part {part} is missing or not a single polygon.");
     }

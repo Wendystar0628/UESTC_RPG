@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using T = Campus.Gen.Zones.South.SouthTune.Stand;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -42,9 +43,9 @@ public sealed class GrandstandSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");
-        var ring = Ring(feature.Parts.FirstOrDefault(p => p.SourceId == Part)?.Geometry ?? feature.Geometry)
+        var ring = Ring(feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? PlanGeometry.FacadeGeometryOf(src) : feature.Geometry)
             ?? throw new InvalidOperationException($"Stand {Feature} is not a polygon.");
-        var track = world.Features.TryGetValue(new(Track), out var t) ? Ring(t.Parts.Count > 0 ? t.Parts[0].Geometry : t.Geometry) : null;
+        var track = world.Features.TryGetValue(new(Track), out var t) ? Ring(t.Parts.Count > 0 ? PlanGeometry.FacadeGeometryOf(t.Parts[0]) : t.Geometry) : null;
         var centre = PlanMath.Centroid(track ?? ring);
         var y = world.Terrain.HeightAt(centre.X, centre.Y);
         var found = new List<Station>();

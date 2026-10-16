@@ -583,7 +583,7 @@ public static class Planting
         {
             foreach (var part in Parts(feature, kind))
             {
-                IEnumerable<PolygonRings> polygons = part.Geometry switch
+                IEnumerable<PolygonRings> polygons = PlanGeometry.FacadeGeometryOf(part) switch
                 {
                     PolygonGeometry polygon => [polygon.Rings],
                     MultiPolygonGeometry multi => multi.Polygons,

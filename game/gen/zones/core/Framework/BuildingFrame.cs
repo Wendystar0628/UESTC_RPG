@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.Core.Framework;
 
@@ -33,8 +34,8 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
     public Vector2 Centroid => Plan.Centroid(Footprints.Select(f => f.Outer));
 
     /// <summary>
-    /// Frame of a building feature from the world model. The footprints are its source parts when it has any
-    /// (a multi-wing entity keeps each wing), otherwise its own polygon geometry. PadY comes from the terrain (WP-08;
+    /// Frame of a building feature from the world model. The footprints are the facade outlines of its source parts when it has any
+    /// (a multi-wing entity keeps each wing; WP-08 keeps the physical shared-edge outline for terrain and pads), otherwise its own polygon geometry. PadY comes from the terrain (WP-08;
     /// the flat stub returns 0), never from a literal.
     /// </summary>
     public static BuildingFrame Of(IWorldModel world, FeatureId feature, IReadOnlyList<float> storeyHeights)
@@ -42,7 +43,7 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(feature, out var f))
             throw new KeyNotFoundException($"Core building '{feature.Value}' is missing from the world model.");
-        var rings = (f.Parts.Count > 0 ? f.Parts.Select(p => p.Geometry) : [f.Geometry]).SelectMany(Plan.Polygons).ToArray();
+        var rings = (f.Parts.Count > 0 ? f.Parts.Select(PlanGeometry.FacadeGeometryOf) : [f.Geometry]).SelectMany(Plan.Polygons).ToArray();
         if (rings.Length == 0) throw new InvalidOperationException($"Core building '{feature.Value}' has no footprint.");
         return new(feature, rings, world.Terrain.PadY(feature), storeyHeights);
     }

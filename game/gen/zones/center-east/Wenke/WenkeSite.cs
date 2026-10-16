@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
+using Campus.Gen.World;
 using Campus.Gen.Zones.CenterEast.Framework;
 using K = Campus.Gen.Zones.CenterEast.CenterEastTune.Wenke;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
@@ -74,7 +75,7 @@ public sealed class WenkeSite : CenterEastSite
     {
         if (!world.Features.TryGetValue(new(K.Entity), out var feature))
             throw new InvalidOperationException($"文科楼群 {K.Entity} is missing from the world model.");
-        IReadOnlyList<Vector2> Ring(string part) => feature.Parts.FirstOrDefault(p => p.SourceId == part)?.Geometry is PolygonGeometry g
+        IReadOnlyList<Vector2> Ring(string part) => feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"文科楼群 part {part} is missing or not a single polygon.");
         // Clipped (set-back) outlines first, then the rounding, which keeps sharp the corners where another block meets.

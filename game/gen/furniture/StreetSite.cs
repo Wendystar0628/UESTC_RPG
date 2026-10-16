@@ -595,7 +595,7 @@ internal sealed class StreetSite
         else
             geometries = feature.Parts.Where(part =>
                 (part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared) ? declared.GetString() : feature.Kind.Value) == kind)
-                .Select(part => part.Geometry);
+                .Select(PlanGeometry.FacadeGeometryOf);
         foreach (var geometry in geometries)
         {
             IEnumerable<PolygonRings> polygons = geometry switch

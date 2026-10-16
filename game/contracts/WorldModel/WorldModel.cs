@@ -33,6 +33,8 @@ public enum FeatureSource { Osm, OsmOverlay, Design }
 /// <summary>One source geometry of an entity, retaining its own height and storey count. SourceId is provenance, not a FeatureId.</summary>
 public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry, float? Height, int? Storeys)
 {
+    /// <summary>Optional source-derived facade layout; Geometry retains the detailed physical footprint.</summary>
+    public OverlayGeometry? FacadeGeometry { get; init; }
     public JsonElement? Props { get; init; }
 }
 

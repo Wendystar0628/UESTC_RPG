@@ -6,6 +6,7 @@ using Campus.Gen.Buildings.Mesh;
 using Campus.Gen.Buildings.Plan;
 using Campus.Gen.Buildings.Rules;
 using Campus.Gen.Interior;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Buildings.Model;
 
@@ -38,7 +39,7 @@ public static class BuildingPlanner
             foreach (var part in f.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
             {
                 if (PartKind(f, part) != BuildingKind.Value) continue;
-                foreach (var (key, rings) in Polygons(part.SourceId, part.Geometry))
+                foreach (var (key, rings) in Polygons(part.SourceId, PlanGeometry.FacadeGeometryOf(part)))
                     yield return new BuildingSource(f, key, rings, part.Height ?? f.Height, part.Storeys ?? f.Storeys, part.Props ?? f.Props);
             }
             yield break;

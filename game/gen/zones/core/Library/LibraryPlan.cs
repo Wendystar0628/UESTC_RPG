@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.Core.Framework;
 using S = Campus.Gen.Zones.Core.CoreStyle;
 
@@ -100,7 +101,7 @@ public sealed class LibraryPlan
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(CoreFeatures.Library, out var library) || library.Parts.Count == 0) return null;
         var parts = library.Parts.GroupBy(p => p.SourceId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.SelectMany(p => Plan.Polygons(p.Geometry)).Select(r => Ccw(r.Outer)).ToArray(), StringComparer.Ordinal);
+            .ToDictionary(g => g.Key, g => g.SelectMany(p => Plan.Polygons(PlanGeometry.FacadeGeometryOf(p))).Select(r => Ccw(r.Outer)).ToArray(), StringComparer.Ordinal);
         if (!parts.TryGetValue(CoreFeatures.LibraryCore, out var cores) || cores.Length != 1) return null;
         var padY = world.Terrain.PadY(CoreFeatures.Library);
         var floor = padY + S.FloorAbovePad;
@@ -137,7 +138,7 @@ public sealed class LibraryPlan
         var landing = new List<(Vector2, Vector2)>();
         if (world.Features.TryGetValue(CoreFeatures.LibraryStair, out var stair))
             foreach (var podium in blocks.Where(b => b.Kind == BlockKind.Podium))
-                foreach (var ring in Plan.Polygons(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry))
+                foreach (var ring in Plan.Polygons(stair.Parts.Count > 0 ? PlanGeometry.FacadeGeometryOf(stair.Parts[0]) : stair.Geometry))
                     landing.AddRange(Shared(podium.Ring, ring.Outer));
         var store = world.Features.TryGetValue(CoreFeatures.CafeStore, out var cafe) ? Plan.Polygons(cafe.Geometry).FirstOrDefault()?.Outer : null;
         return new LibraryPlan(padY, blocks, Exterior(blocks), centre, FaceAngleOf(cores[0], centre), landing, store);

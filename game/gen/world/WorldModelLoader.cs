@@ -91,7 +91,7 @@ public static class WorldModelLoader
             var storeys = OptionalFloat(raw, "levels");
             var part = new WorldFeaturePart(sourceId, Geometry(polygons), height,
                 storeys is > 0 ? (int)MathF.Ceiling(storeys.Value) : null)
-            { Props = raw.Clone() };
+            { FacadeGeometry = ReadFacadeGeometry(raw, sourceId, polygons), Props = raw.Clone() };
             if (!groups.TryGetValue(id, out var group)) groups[id] = group = [];
             group.Add((raw, part));
             Alias(aliases, sourceId, id);
@@ -351,6 +351,21 @@ public static class WorldModelLoader
         }
         throw new WorldDataException(file, id.Value, "Target feature does not exist (or was hidden).");
     }
+    private static OverlayGeometry? ReadFacadeGeometry(JsonElement raw, string sourceId, IReadOnlyList<PolygonRings> physical)
+    {
+        if (!raw.TryGetProperty("facadePolygons", out var value)) return null;
+        try
+        {
+            var polygons = value.EnumerateArray().Select(Rings).ToArray();
+            if (polygons.Length == 0) throw new ArgumentException("Empty facade footprint.");
+            if (polygons.Length != physical.Count || polygons.Where((polygon, i) => polygon.Holes.Count != physical[i].Holes.Count).Any())
+                throw new ArgumentException("Facade polygons and holes must correspond to the physical footprint.");
+            return Geometry(polygons);
+        }
+        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or IndexOutOfRangeException)
+        { throw new WorldDataException("campus.json", sourceId + ".facadePolygons", error.Message, error); }
+    }
+
     internal static OverlayGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
     internal static OverlayGeometry Normalize(OverlayGeometry geometry) => geometry switch
     {

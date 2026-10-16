@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -81,7 +82,7 @@ public sealed class XuanbangSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Xuanbang {Feature} is missing from the world model.");
-        IReadOnlyList<Vector2> Ring(string source) => feature.Parts.FirstOrDefault(p => p.SourceId == source)?.Geometry is PolygonGeometry g
+        IReadOnlyList<Vector2> Ring(string source) => feature.Parts.FirstOrDefault(p => p.SourceId == source) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"Xuanbang part {source} is missing or not a single polygon.");
         return new(Ring(MainPart), Ring(TowerPart), Ring(ClockPart));

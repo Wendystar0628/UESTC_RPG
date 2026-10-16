@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using P = Campus.Gen.Zones.South.SouthTune.Platform;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
@@ -65,14 +66,14 @@ public sealed class PlatformSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Platform {Feature} is missing from the world model.");
-        var deck = Ccw(OuterOf(feature.Parts.FirstOrDefault(p => p.SourceId == Part)?.Geometry ?? feature.Geometry)
+        var deck = Ccw(OuterOf(feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? PlanGeometry.FacadeGeometryOf(src) : feature.Geometry)
             ?? throw new InvalidOperationException($"Platform {Feature} is not a polygon."));
         var decks = new List<Vector2[]> { deck };
         var y = world.Terrain.HeightAt(PlanMath.Centroid(deck).X, PlanMath.Centroid(deck).Y);
 
         var closed = new List<Vector2[]>(decks);
         foreach (var id in Neighbours)
-            if (world.Features.TryGetValue(new(id), out var n) && OuterOf(n.Parts.Count > 0 ? n.Parts[0].Geometry : n.Geometry) is { } ring) closed.Add(ring);
+            if (world.Features.TryGetValue(new(id), out var n) && OuterOf(n.Parts.Count > 0 ? PlanGeometry.FacadeGeometryOf(n.Parts[0]) : n.Geometry) is { } ring) closed.Add(ring);
         var edges = new List<Edge>();
         foreach (var ring in decks)
             for (var i = 0; i < ring.Length; i++)

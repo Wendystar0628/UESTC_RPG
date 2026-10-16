@@ -1036,6 +1036,54 @@ public sealed class BuildingsTests
         Require(dorm.Facades.Where(f => f.Ring == 0).Max(f => f.Bays) == 10, "dormitory 36 m facade: ten 3.6 m bays");
     }
 
+    /// <summary>
+    /// Shared-boundary restoration (WP-08) gives a building part a detailed physical outline with extra collinear vertices and keeps
+    /// the legacy outline as its facade outline. The generic building's footprint, bay grid and window block must follow the facade
+    /// outline, vertex for vertex, so a part with a facade outline lays out exactly the windows the old data gave it.
+    /// </summary>
+    [TestCase]
+    public void GenericBuildingsLayWindowsOnTheFacadeOutlineOfAPart()
+    {
+        var world = RealCampus();
+        var checkedParts = 0;
+        var differing = 0;
+        foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+            foreach (var part in feature.Parts.Where(p => p.FacadeGeometry is not null).OrderBy(p => p.SourceId, StringComparer.Ordinal))
+            {
+                var sources = BuildingPlanner.Sources(feature).Where(s => s.Key == part.SourceId || s.Key.StartsWith(part.SourceId + "#", StringComparison.Ordinal)).ToArray();
+                if (sources.Length == 0) continue; // the part is not of the building kind
+                var facade = part.FacadeGeometry switch
+                {
+                    PolygonGeometry p => [p.Rings],
+                    MultiPolygonGeometry m => m.Polygons,
+                    _ => Array.Empty<PolygonRings>(),
+                };
+                Require(sources.Length == facade.Count, $"{part.SourceId}: one source per facade polygon");
+                for (var i = 0; i < sources.Length; i++)
+                {
+                    Require(sources[i].Rings.Outer.SequenceEqual(facade[i].Outer), $"{part.SourceId}: the footprint's outer ring is the facade ring");
+                    Require(sources[i].Rings.Holes.Count == facade[i].Holes.Count
+                        && sources[i].Rings.Holes.Zip(facade[i].Holes).All(h => h.First.SequenceEqual(h.Second)), $"{part.SourceId}: the footprint's holes are the facade holes");
+                    var reference = BuildingPlanner.Plan(sources[i] with { Rings = facade[i] }, world, 4u);
+                    var actual = BuildingPlanner.Plan(sources[i], world, 4u);
+                    Require((reference is null) == (actual is null), $"{part.SourceId}: the same footprint is built or skipped");
+                    if (actual is null || reference is null) continue;
+                    Require(actual.TotalColumns == reference.TotalColumns && actual.Grid.GridHash == reference.Grid.GridHash,
+                        $"{part.SourceId}: the window grid is the one of the facade outline");
+                    checkedParts++;
+                }
+                var detailed = part.Geometry switch
+                {
+                    PolygonGeometry p => [p.Rings],
+                    MultiPolygonGeometry m => m.Polygons,
+                    _ => Array.Empty<PolygonRings>(),
+                };
+                if (detailed.Count != facade.Count || detailed.Zip(facade).Any(t => !t.First.Outer.SequenceEqual(t.Second.Outer))) differing++;
+            }
+        Require(checkedParts >= 20, $"enough building parts with a facade outline are covered ({checkedParts})");
+        Require(differing > 0, "the detailed and the facade outlines do differ, so the guard has teeth");
+    }
+
     [TestCase]
     public void TriangulatorCoversPolygonWithHole()
     {

@@ -5807,6 +5807,8 @@ Campus.Contracts.WorldFeaturePart
 Campus.Contracts.WorldFeaturePart.<Clone>$() -> Campus.Contracts.WorldFeaturePart!
 Campus.Contracts.WorldFeaturePart.Deconstruct(out string! SourceId, out Campus.Contracts.OverlayGeometry! Geometry, out float? Height, out int? Storeys) -> void
 Campus.Contracts.WorldFeaturePart.Equals(Campus.Contracts.WorldFeaturePart? other) -> bool
+Campus.Contracts.WorldFeaturePart.FacadeGeometry.get -> Campus.Contracts.OverlayGeometry?
+Campus.Contracts.WorldFeaturePart.FacadeGeometry.init -> void
 Campus.Contracts.WorldFeaturePart.Geometry.get -> Campus.Contracts.OverlayGeometry!
 Campus.Contracts.WorldFeaturePart.Geometry.init -> void
 Campus.Contracts.WorldFeaturePart.Height.get -> float?

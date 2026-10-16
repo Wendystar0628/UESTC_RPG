@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using T = Campus.Gen.Zones.South.SouthTune.Liren;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -85,12 +86,15 @@ public sealed class LirenSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Connector), out var connector))
             throw new InvalidOperationException($"Liren connector {Connector} is missing from the world model.");
-        IReadOnlyList<IReadOnlyList<Vector2>> Polygons(string source) => connector.Parts.FirstOrDefault(p => p.SourceId == source)?.Geometry switch
-        {
-            PolygonGeometry g => [g.Rings.Outer],
-            MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer).ToArray(),
-            _ => throw new InvalidOperationException($"Liren part {source} is missing."),
-        };
+        // The facade outline (WP-08): wall hiding, columns, collision and window declarations all share this one layout.
+        IReadOnlyList<IReadOnlyList<Vector2>> Polygons(string source) => connector.Parts.FirstOrDefault(p => p.SourceId == source) is { } part
+            ? PlanGeometry.FacadeGeometryOf(part) switch
+            {
+                PolygonGeometry g => [g.Rings.Outer],
+                MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer).ToArray(),
+                _ => throw new InvalidOperationException($"Liren part {source} is missing."),
+            }
+            : throw new InvalidOperationException($"Liren part {source} is missing.");
         var bridge = Polygons(BridgePart)[0];
         var piers = Polygons(PierPart);
         var link = Polygons(LinkPart)[0];
@@ -110,7 +114,7 @@ public sealed class LirenSite : SouthSite
             MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
             _ => [],
         };
-        var rings = f.Parts.Count > 0 ? f.Parts.SelectMany(p => Outers(p.Geometry)).ToArray() : Outers(f.Geometry).ToArray();
+        var rings = f.Parts.Count > 0 ? f.Parts.SelectMany(p => Outers(PlanGeometry.FacadeGeometryOf(p))).ToArray() : Outers(f.Geometry).ToArray();
         return rings.Length > 0 ? rings : throw new InvalidOperationException($"Liren block {id} has no polygon footprint.");
     }
 

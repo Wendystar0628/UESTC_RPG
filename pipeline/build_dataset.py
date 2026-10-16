@@ -33,6 +33,26 @@ def polygons(geometry):
     return []
 
 
+def render_polygons(geometry, kind, has_parent=False, has_children=False):
+    # Independent ring simplification breaks shared parent/child interfaces. Keep the
+    # actual difference vertices for every level of a physical building family.
+    preserve_interfaces = kind == 'building' and (has_parent or has_children)
+    result = []
+    for p in polygons(geometry):
+        if p.area < .05:
+            continue
+        if not preserve_interfaces:
+            p = p.simplify(.08, preserve_topology=True)
+        result.append([[[round(x, 2), round(z, 2)] for x, z in ring.coords] for ring in [p.exterior, *p.interiors]])
+    return result
+
+
+def facade_polygons(geometry):
+    # Legacy facade layout is derived before centimetre quantization, from the same
+    # post-difference geometry as the physical footprint. Preserve ring/point order.
+    return render_polygons(geometry, 'building')
+
+
 def number(value):
     if not value:
         return None
@@ -360,12 +380,7 @@ def main():
             defaults = {'footway': 2.5, 'path': 2, 'steps': 2.5, 'cycleway': 3, 'service': 5, 'residential': 6, 'tertiary': 8, 'secondary': 10, 'pedestrian': 5}
             width = number(tags.get('width')) or defaults.get(tags.get('highway'), 4)
             render_geometry = render_geometry.buffer(width/2, cap_style=2, join_style=2).intersection(boundary)
-        polys = []
-        for p in polygons(render_geometry):
-            if p.area < .05:
-                continue
-            p = p.simplify(.08, preserve_topology=True)
-            polys.append([[[round(x, 2), round(z, 2)] for x, z in ring.coords] for ring in [p.exterior, *p.interiors]])
+        polys = render_polygons(render_geometry, r['kind'], r.get('parent') is not None, bool(children))
         feature_id = 'osm:' + r['sourceId'].replace('/', ':')
         r['featureId'] = feature_id
         anchor = geometry.representative_point() if geometry.area else geometry.interpolate(.5, normalized=True) if geometry.geom_type.endswith('LineString') else geometry.representative_point()
@@ -373,6 +388,9 @@ def main():
         r['bounds'] = [round(v, 2) for v in geometry.bounds]
         if polys:
             features.append({'id': feature_id, 'entityId': r['entityId'], 'kind': r['kind'], 'polygons': polys, 'height': round(render_height, 2), 'heightStatus': status, 'levels': levels, 'levelsBasis': levels_basis, 'category': r['category'], 'sport': tags.get('sport'), 'roadType': tags.get('highway'), 'widthEstimated': width is not None and not tags.get('width')})
+            facade = facade_polygons(render_geometry)
+            if facade != polys:
+                features[-1]['facadePolygons'] = facade
 
     def descendant_features(r):
         return [r['featureId']] + [fid for b in buildings if b.get('parent') is r for fid in descendant_features(b)]

@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -63,7 +64,7 @@ public sealed class GymSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Gym {Feature} is missing from the world model.");
-        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part)?.Geometry ?? feature.Geometry) is PolygonGeometry g
+        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? PlanGeometry.FacadeGeometryOf(src) : feature.Geometry) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"Gym {Feature} is not a single polygon.");
         var radius = MathF.Sqrt(MathF.Abs(Area(ring)) / MathF.PI);

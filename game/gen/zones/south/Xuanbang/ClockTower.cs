@@ -23,7 +23,7 @@ internal static class ClockTower
     /// <summary>Frame at the footprint centre: +X along the north-east-running faces, +Z towards the south-east door face.</summary>
     internal static (PlanFrame Frame, float HalfX, float HalfZ) FrameOf(IReadOnlyList<Vector2> ring)
     {
-        if (ring.Count != 4) throw new InvalidOperationException("The clock tower footprint is expected to be a quadrilateral.");
+        ring = Quadrilateral(ring);
         var centre = PlanMath.Centroid(ring);
         // The edge running closest to 42° (or 222°) gives +X; its neighbour gives the depth.
         var best = 0;
@@ -40,6 +40,63 @@ internal static class ClockTower
         if (MathF.Abs(PlanMath.Turn(SouthSite.Bearing(along) - X.ClockAxis)) > 90f) along = -along;
         var f = PlanFrame.Along(centre, along);
         return (f, Length(along) * 0.5f, Length(across) * 0.5f);
+    }
+
+    /// <summary>
+    /// The footprint as four corners: a four-point ring is returned untouched; otherwise collinear points are dropped, and
+    /// if the rest is still not four points the smallest-area bounding rectangle (edge-aligned) stands in.
+    /// </summary>
+    internal static IReadOnlyList<Vector2> Quadrilateral(IReadOnlyList<Vector2> ring)
+    {
+        if (ring.Count == 4) return ring;
+        if (ring.Count < 3) throw new InvalidOperationException("The clock tower footprint needs at least three points.");
+        var pts = new List<Vector2>(ring);
+        for (var again = true; again && pts.Count > 3;)
+        {
+            again = false;
+            for (var i = 0; i < pts.Count; i++)
+            {
+                var a = pts[(i + pts.Count - 1) % pts.Count];
+                var b = pts[i];
+                var c = pts[(i + 1) % pts.Count];
+                var ab = b - a;
+                var bc = c - b;
+                var cross = ab.X * bc.Y - ab.Y * bc.X;
+                var scale = Length(ab) * Length(bc);
+                if (scale < 1e-6f || MathF.Abs(cross) <= 1e-3f * scale)
+                {
+                    pts.RemoveAt(i);
+                    again = true;
+                    break;
+                }
+            }
+        }
+        if (pts.Count == 4) return pts;
+        var bestArea = float.MaxValue;
+        Vector2[]? best = null;
+        for (var i = 0; i < pts.Count; i++)
+        {
+            var e = pts[(i + 1) % pts.Count] - pts[i];
+            var len = Length(e);
+            if (len < 1e-6f) continue;
+            var u = e / len;
+            var w = new Vector2(-u.Y, u.X);
+            float u0 = float.MaxValue, u1 = float.MinValue, w0 = float.MaxValue, w1 = float.MinValue;
+            foreach (var p in pts)
+            {
+                var pu = Vector2.Dot(p, u);
+                var pw = Vector2.Dot(p, w);
+                u0 = MathF.Min(u0, pu); u1 = MathF.Max(u1, pu);
+                w0 = MathF.Min(w0, pw); w1 = MathF.Max(w1, pw);
+            }
+            var area = (u1 - u0) * (w1 - w0);
+            if (area < bestArea - 1e-4f)
+            {
+                bestArea = area;
+                best = [u * u0 + w * w0, u * u1 + w * w0, u * u1 + w * w1, u * u0 + w * w1];
+            }
+        }
+        return best ?? throw new InvalidOperationException("The clock tower footprint is degenerate.");
     }
 
     /// <summary>Faces as frames at the face centre on the footprint line, +Z outward; index 0 is the south-east (door) face.</summary>

@@ -6,6 +6,14 @@ namespace Campus.Gen.World;
 /// <summary>Plan geometry uses world X/Z, keeps holes, and omits closing duplicates.</summary>
 public static class PlanGeometry
 {
+    /// <summary>Facade layout follows the current source part, falling back to its physical geometry.</summary>
+    public static OverlayGeometry FacadeGeometryOf(WorldFeaturePart part) => part.FacadeGeometry ?? part.Geometry;
+
+    /// <summary>Current parts in their existing order, or the current authored geometry after reshape/add.</summary>
+    public static IReadOnlyList<PolygonRings> FacadePolygonsOf(WorldFeature feature) => feature.Parts.Count == 0
+        ? WorldModelLoader.Polygons(feature.Geometry).ToArray()
+        : feature.Parts.SelectMany(part => WorldModelLoader.Polygons(FacadeGeometryOf(part))).ToArray();
+
     public static IReadOnlyList<Vector2> OpenRing(IEnumerable<Vector2> input, bool outer = true)
     {
         var points = new List<Vector2>();
