@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Parts;
 
 namespace Campus.Gen.Parts.Street;
 
@@ -344,8 +345,8 @@ public static class StreetStyle
     public const float BaySignPanel = 0.46f;
 
     // ---- Kerb ramp (丹桂路 junctions, 13c2b): a dropped kerb, 1:8 at most across the verge edge, flared sides ----
-    /// <summary>The kerb ramp's part ID. Not in PartCatalog yet (contract request with 13c2b): switch to the catalogue constant when it lands.</summary>
-    public const string KerbRampId = "street.curb-ramp";
+    /// <summary>The kerb ramp's public catalogue ID.</summary>
+    public const string KerbRampId = PartCatalog.CurbRamp;
     public const float KerbRampFlare = 0.45f;
     public const float TactileDepth = 0.3f;
 

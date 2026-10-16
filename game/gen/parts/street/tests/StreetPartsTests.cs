@@ -16,14 +16,11 @@ public sealed class StreetPartsTests
         PartCatalog.StreetLamp, PartCatalog.Bench, PartCatalog.BinFour, PartCatalog.Bollard, PartCatalog.StoneSphere, PartCatalog.BusStop,
         PartCatalog.AtlasKiosk, PartCatalog.AtlasPost, PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp,
         PartCatalog.ParkedCar, PartCatalog.ParkedBicycle, PartCatalog.BicycleShelter, PartCatalog.VendingMachine, PartCatalog.DeliveryLocker,
-        PartCatalog.DrinkingFountain, PartCatalog.Signpost, StreetStyle.KerbRampId,
+        PartCatalog.DrinkingFountain, PartCatalog.Signpost, PartCatalog.CurbRamp,
     ];
 
-    /// <summary>A part whose catalogue entry is requested but not landed yet (13c2b contract request): its record and defaults.</summary>
-    private static readonly PartCatalogEntry KerbRamp = new(new(StreetStyle.KerbRampId), new("WP-13"), typeof(RampParams), new RampParams(1.5f, 0.15f, 1.2f));
-
     private static PartCatalogEntry Entry(string id) =>
-        PartCatalog.Find(new(id)) ?? (id == StreetStyle.KerbRampId ? KerbRamp : throw new InvalidOperationException($"{id} is not catalogued."));
+        PartCatalog.Find(new(id)) ?? throw new InvalidOperationException($"{id} is not catalogued.");
 
     [TestCase]
     public void RegisteredPartsMatchTheirCatalogueEntries()
@@ -31,8 +28,6 @@ public sealed class StreetPartsTests
         var parts = Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null).ToArray();
         Check(parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id).Order(StringComparer.Ordinal).SequenceEqual(Parts.Order(StringComparer.Ordinal)),
             $"13a and 13c2b register exactly their parts; found {string.Join(", ", parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id))}.");
-        // Once the kerb ramp's entry lands, the pending stand-in must go (switch StreetStyle.KerbRampId to the catalogue constant).
-        Check(PartCatalog.Find(new(StreetStyle.KerbRampId)) is null || PartCatalog.Find(new(StreetStyle.KerbRampId))!.ParameterType == typeof(RampParams), "The kerb ramp's catalogue entry takes another record.");
         foreach (var type in parts)
         {
             var attribute = type.GetCustomAttribute<PartAttribute>()!;
