@@ -25,6 +25,28 @@ public sealed class SouthModuleTests
     }
 
     [TestCase]
+    public void BuildingOneKeepsOnlyItsOneStoreySourcePartOnTheRealMap()
+    {
+        var data = DataRoot();
+        var one = new FeatureId("qsh:way:691679140");
+        var rawFiles = new Dictionary<string, string>(StringComparer.Ordinal) { ["campus.json"] = File.ReadAllText(Path.Combine(data, "campus.json")) };
+        var raw = WorldModelLoader.Load(new("qingshuihe"), rawFiles).World;
+        Require(raw.Features[one].Parts.Select(p => p.SourceId).Order(StringComparer.Ordinal)
+            .SequenceEqual(["osm:way:691679138", "osm:way:691679140"], StringComparer.Ordinal), "the raw map carries two source parts for building 1");
+        // The map as the kernel loads it: every authored overlay.
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Select(p => "overlay/" + Path.GetFileName(p)))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
+        Require(world.Features.ContainsKey(one), "hidePart keeps the entity itself");
+        var building = world.Features[one];
+        Require(building.Parts.Count == 1 && building.Parts[0].SourceId == "osm:way:691679140", "only the 1-storey source part is left");
+        Require(building.Height == 3.9f, "building 1 stands 3.9 m");
+        Require(building.Storeys == 1, "building 1 has one storey");
+    }
+
+    [TestCase]
     public void ClaimsNameExistingFeatures()
     {
         var world = World();
