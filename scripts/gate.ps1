@@ -6,7 +6,7 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full, [switch]$D0,
-    [switch]$Plan, [switch]$NoCache, [string]$BaseRef = '',
+    [switch]$Plan, [switch]$NoCache, [switch]$SkipFormat, [string]$BaseRef = '',
     [string]$Map = 'qingshuihe', [int]$Frames = 300,
     [ValidateSet('Debug','Release')][string]$Configuration = 'Debug')
 $ErrorActionPreference = 'Stop'
@@ -169,11 +169,13 @@ $selected.Clear()
 foreach ($gateId in $serviceWindowPlan.Gates) { $selected.Add($gateId) }
 $d0WindowEvidence = $null
 $cacheIds = @('G1','G2','G3','G4')
+if ($SkipFormat) { $cacheIds = @($cacheIds | Where-Object { $_ -ne 'G1' }) }
 if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
 $scope = if ($D0) { 'D0' } elseif ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; CpuLimit = [Math]::Max(2,[Math]::Floor([Environment]::ProcessorCount/8.0)); Bake = 'No pre-bake in D0/quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $changes @(Get-UESTCFiles $root) ([bool]($D0 -or $Full -or $Only.Count))) } else { @() }
 $planObject['G2Selection'] = $g2Selection
+$planObject['SkipFormat'] = [bool]$SkipFormat
 $planObject['Stage'] = $mainStage
 $planObject['ServiceWindow'] = [ordered]@{ Impact=$serviceImpact; D0WindowInG5=$serviceWindowPlan.D0WindowInG5; RequireFormalCore=$serviceWindowPlan.RequireFormalCore; CacheG5=$serviceWindowPlan.CacheG5 }
 if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
@@ -187,7 +189,10 @@ $cacheEntries = @{}
 if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
     try {
         $savedCache = Get-Content -Raw -Encoding UTF8 -LiteralPath $cachePath | ConvertFrom-Json
-        foreach ($entry in $savedCache.entries) { $cacheEntries[$entry.Gate] = $entry }
+        foreach ($entry in $savedCache.entries) {
+            if ($SkipFormat -and $entry.Gate -eq 'G1') { continue }
+            $cacheEntries[$entry.Gate] = $entry
+        }
     } catch { Write-Warning 'Unreadable gate cache ignored.' }
 }
 
@@ -260,12 +265,15 @@ foreach ($id in $selected) {
                 $naming = Test-UESTCSourceNaming $root
                 Assert-GodotVersion
                 $null = Invoke-LockedProcess 'G1-build' dotnet @('build',(Join-Path $game 'Campus.sln'),'-c',$Configuration,'-warnaserror')
-                $null = Invoke-LockedProcess 'G1-format' dotnet @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--exclude',(Join-Path $game 'addons'))
+                if (-not $SkipFormat) {
+                    $null = Invoke-LockedProcess 'G1-format' dotnet @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--exclude',(Join-Path $game 'addons'))
+                }
                 if ($importRequired) {
                     $r = Invoke-LockedProcess 'G1-import' $godot @('--headless','--path',$game,'--import')
                     Assert-CleanGodotLog $r
                 }
-                $detail = "Naming files=$($naming.CheckedFiles); build and first-party format verified; import=$importRequired"
+                $formatDetail = if ($SkipFormat) { 'format skipped' } else { 'first-party format verified' }
+                $detail = "Naming files=$($naming.CheckedFiles); build verified; $formatDetail; import=$importRequired"
             }
             'G2' {
                 $settings = Write-TestSettings
