@@ -73,7 +73,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
     public double ClockOffset => _offset;
     public double TargetHours => _flowStop ?? _targetHours;
-    public JsonTypeInfo<WorldSaveV1> TypeInfo => WorldSaveJson.Default.WorldSaveV1;
+    public JsonTypeInfo<WorldSaveV1> TypeInfo => WorldSaveJson.Contract.WorldSaveV1;
     private bool SeasonMoving => _seasonDuration > 0;
     private bool TimeMoving => _targetHours > WorldHours || _flowStop.HasValue;
 

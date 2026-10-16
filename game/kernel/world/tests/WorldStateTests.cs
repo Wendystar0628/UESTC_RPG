@@ -500,6 +500,37 @@ public sealed class WorldStateTests
     }
 
     [TestCase]
+    public void WorldSaveUsesIndependentContractOptionsAfterSharedOptionsAreLocked()
+    {
+        ContractJson.Options.MakeReadOnly(populateMissingResolver: true);
+        var world = CreateWorld(new RecordingWeather());
+        var typeInfo = world.TypeInfo;
+        Check(ContractJson.Options.IsReadOnly, "Shared contract options must be locked for this regression.");
+        Check(!ReferenceEquals(typeInfo.Options, ContractJson.Options),
+            "World source generation must own an independent copy of the shared options.");
+        var snapshot = world.Capture(default);
+        foreach (var (season, text) in new[]
+        {
+            (Season.Spring, "spring"), (Season.Summer, "summer"),
+            (Season.Autumn, "autumn"), (Season.Winter, "winter")
+        })
+        {
+            var dto = snapshot with { SeasonTarget = season, SeasonPos = (int)season };
+            var json = JsonSerializer.Serialize(dto, typeInfo);
+            using var document = JsonDocument.Parse(json);
+            Equal(document.RootElement.GetProperty("seasonTarget").GetString(), text);
+            Equal(document.RootElement.GetProperty("worldHours").GetDouble(), dto.WorldHours);
+            Equal(JsonSerializer.Deserialize(json, typeInfo), dto);
+            // Previously written PascalCase strings remain readable; new writes use the canonical casing.
+            var legacy = json.Replace($"\"{text}\"", $"\"{season}\"", StringComparison.Ordinal);
+            Equal(JsonSerializer.Deserialize(legacy, typeInfo), dto);
+        }
+        var autumn = JsonSerializer.Serialize(snapshot, typeInfo);
+        Throws<JsonException>(() => JsonSerializer.Deserialize(
+            autumn.Replace("\"autumn\"", "2", StringComparison.Ordinal), typeInfo));
+    }
+
+    [TestCase]
     public void JsonRoundTripIsStrictAndContinuesBitExactly()
     {
         var a = CreateWorld(new RecordingWeather());
@@ -520,7 +551,7 @@ public sealed class WorldStateTests
         }
         Throws<JsonException>(() => JsonSerializer.Deserialize(json[..^1] + ",\"unexpected\":1}", a.TypeInfo));
         Throws<JsonException>(() => JsonSerializer.Deserialize("{}", a.TypeInfo));
-        Throws<JsonException>(() => JsonSerializer.Deserialize(json.Replace("Autumn", "Unknown", StringComparison.Ordinal), a.TypeInfo));
+        Throws<JsonException>(() => JsonSerializer.Deserialize(json.Replace("\"autumn\"", "\"unknown\"", StringComparison.Ordinal), a.TypeInfo));
     }
 
     [TestCase]

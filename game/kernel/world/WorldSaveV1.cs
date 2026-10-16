@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Campus.Contracts;
 
@@ -17,4 +18,11 @@ public sealed record WorldSaveV1(
     UseStringEnumConverter = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     RespectRequiredConstructorParameters = true)]
 [JsonSerializable(typeof(WorldSaveV1))]
-internal partial class WorldSaveJson : JsonSerializerContext { }
+internal partial class WorldSaveJson : JsonSerializerContext
+{
+    public static WorldSaveJson Contract { get; } = new(new JsonSerializerOptions(ContractJson.Options)
+    {
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        RespectRequiredConstructorParameters = true
+    });
+}
