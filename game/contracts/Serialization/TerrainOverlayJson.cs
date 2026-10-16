@@ -193,7 +193,8 @@ public static class TerrainOverlayJson
         return JsonSerializer.SerializeToUtf8Bytes(data, Context.TerrainOverlayFile);
     }
 
-    /// <summary>Checks DTO shape and numeric boundaries only, not entity existence, topology, slope feasibility or zone geometry.</summary>
+    /// <summary>Checks DTO shape, numeric boundaries and same-channel chained-weir spacing, not entity existence,
+    /// world topology, slope feasibility, structural clearances or zone geometry.</summary>
     public static void Validate(TerrainOverlayFile data)
     {
         ArgumentNullException.ThrowIfNull(data);
@@ -288,6 +289,17 @@ public static class TerrainOverlayJson
                         throw new ArgumentException("A weir needs a distinct structure and two distinct water IDs, including this channel's water ID.");
                     _ = weir.Kind switch { TerrainWeirKind.Weir or TerrainWeirKind.Gate or TerrainWeirKind.Culvert => 0, _ => throw new ArgumentException("Unknown weir kind.") };
                 }
+                for (var i = 0; i < c.Weirs.Count; i++)
+                    for (var j = i + 1; j < c.Weirs.Count; j++)
+                    {
+                        var a = c.Weirs[i]; var b = c.Weirs[j];
+                        if (a.Kind != TerrainWeirKind.Weir || b.Kind != TerrainWeirKind.Weir ||
+                            a.Downstream != b.Upstream && b.Downstream != a.Upstream) continue;
+                        if (a.Structure == b.Structure)
+                            throw new ArgumentException("Chained weirs require distinct structures.");
+                        if (Math.Abs(a.S - b.S) < 1.5)
+                            throw new ArgumentException("Chained weirs require at least 1.5 m absolute station separation on this channel's centreline.");
+                    }
                 ArgumentNullException.ThrowIfNull(c.Crossings);
                 if (!c.Dry && c.Crossings.Count != 0) throw new ArgumentException("Stage 1 crossings are dry-channel-only; wet channels use their real network structures.");
                 foreach (var crossing in c.Crossings) Crossing(crossing);

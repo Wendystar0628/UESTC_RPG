@@ -837,6 +837,7 @@
         },
         "weirs": {
           "type": "array",
+          "$comment": "Two kind=weir records may form A->B->C on B's channel, using three independent constant-level water IDs. WaterY(B)=WaterY(A)-drop1=WaterY(C)+drop2; each drop remains 0.3-0.6 m. For each same-channel pair where a.downstream=b.upstream or the reverse, the parser requires distinct structures and abs(a.s-b.s)>=1.5 m. List order and centreline direction do not define flow; upstream/downstream do. This station spacing does not verify the clear water reach after structure thickness; actual water/structure registration and geometry remain compiler/data responsibilities. This pair rule applies only when both kinds are weir, not gate/culvert or unrelated parallel structures.",
           "items": {
             "$ref": "#/$defs/weir"
           }

@@ -26,6 +26,11 @@ public enum TerrainWeirKind : byte { Weir, Gate, Culvert }
 /// ordered centreline. Structure must exist with the matching kind and connect Upstream to Downstream;
 /// Drop must equal WaterY(Upstream) minus WaterY(Downstream). Reference/topology checks belong to WP-08.
 /// This record never creates water entities or introduces multiple levels inside one FeatureId.
+/// Each Drop remains 0.3–0.6 m. Two Weir-kind records may form A→B→C on B's channel, with B a separate
+/// constant-level water entity: WaterY(B) = WaterY(A) - drop1 = WaterY(C) + drop2.
+/// Such a pair requires distinct structures and at least 1.5 m absolute S separation on the same centreline.
+/// List order and centreline direction do not determine flow; Upstream/Downstream do. S separation alone
+/// does not prove a clear intermediate water reach after accounting for the structures' physical thickness.
 /// </summary>
 public sealed record TerrainWeir(double S, double Drop, TerrainWeirKind Kind,
     FeatureId Structure, FeatureId Upstream, FeatureId Downstream);
