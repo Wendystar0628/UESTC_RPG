@@ -874,6 +874,14 @@
             "$ref": "#/$defs/crossing"
           },
           "default": []
+        },
+        "wade": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/polygonRings"
+          },
+          "default": [],
+          "$comment": "Independent polygons retain their own outer rings and holes. Omission and [] mean no wading; null is forbidden. Only real surface wet channels may register wading. Surface-water resolution, whole-region containment and the shallow bed profile remain evaluator responsibilities."
         }
       },
       "required": [
@@ -945,6 +953,9 @@
                 "maximum": 1.7976931348623157e+308
               },
               "weirs": {
+                "maxItems": 0
+              },
+              "wade": {
                 "maxItems": 0
               },
               "bank": {

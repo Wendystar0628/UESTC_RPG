@@ -81,6 +81,8 @@ public sealed record TerrainTerraceOp(string Id, string Reason, Polyline Front, 
 /// A dry channel never adds a water-table entry or water constraint. Stage 1 Crossings are dry-channel-only;
 /// wet channels keep their existing network bridge/culvert and Weirs rules. Crossings use the two forms below;
 /// the compiler must resolve the named real road and its actual centreline/width, never infer an unrelated road.
+/// Wade contains independent polygons with their own holes; omission and an empty list both mean no wading.
+/// Only surface wet channels accept Wade. Resolving surface water and polygon containment belongs to WP-08.
 /// </summary>
 public sealed record TerrainChannelOp(string Id, string Reason,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] FeatureId? Water,
@@ -94,6 +96,18 @@ public sealed record TerrainChannelOp(string Id, string Reason,
     // unmatched init-only initializer with null when omitted. Explicit JSON null remains forbidden by the
     // non-nullable constructor parameter plus TerrainOverlayJson's RespectNullableAnnotations setting.
     public IReadOnlyList<TerrainCrossing> Crossings { get; init; } = Crossings ?? [];
+    public IReadOnlyList<PolygonRings> Wade { get; init; } = [];
+
+    // Keep the public constructor and its Deconstruct unchanged. Source generation can call this internal
+    // overload and bind both optional collections, without adding an ambiguous public optional overload.
+    [JsonConstructor]
+    internal TerrainChannelOp(string Id, string Reason, FeatureId? Water, double Depth, TerrainBank Bank,
+        double? WaterY, IReadOnlyList<TerrainWeir> Weirs, Polyline? Line = null, double? Width = null,
+        int Priority = 50, IReadOnlyList<TerrainCrossing> Crossings = null!, IReadOnlyList<PolygonRings> Wade = null!)
+        : this(Id, Reason, Water, Depth, Bank, WaterY, Weirs, Line, Width, Priority, Crossings)
+    {
+        this.Wade = Wade ?? [];
+    }
 }
 
 public abstract record TerrainCrossing(FeatureId Road);

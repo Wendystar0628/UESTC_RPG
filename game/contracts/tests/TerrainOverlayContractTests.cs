@@ -13,6 +13,7 @@ public sealed class TerrainOverlayContractTests
     {
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(Fixture));
         if (((TerrainChannelOp)parsed.Ops[5]).Crossings is not { Count: 0 } ||
+            ((TerrainChannelOp)parsed.Ops[5]).Wade is not { Count: 0 } ||
             ((TerrainCorridorOp)parsed.Ops[8]).Steps is not { Count: 0 })
             throw new InvalidOperationException("Omitted optional collections must retain their empty defaults.");
         var expected = new[] { 300, 100, 100, 200, 300, 50, 50, 50, 50 };
@@ -24,6 +25,7 @@ public sealed class TerrainOverlayContractTests
             if (op.EnumerateObject().First().Name != "op") throw new InvalidOperationException("Operation metadata must be first.");
         var roundTrip = TerrainOverlayJson.Parse(encoded);
         if (((TerrainChannelOp)roundTrip.Ops[5]).Crossings is not { Count: 0 } ||
+            ((TerrainChannelOp)roundTrip.Ops[5]).Wade is not { Count: 0 } ||
             ((TerrainCorridorOp)roundTrip.Ops[8]).Steps is not { Count: 0 })
             throw new InvalidOperationException("Empty optional collections failed to round-trip.");
         if (roundTrip.Ops[0] is not TerrainPlatformOp { Rings.Holes.Count: 1 } ||
@@ -47,14 +49,73 @@ public sealed class TerrainOverlayContractTests
         slope.Remove("from"); slope.Remove("to"); slope["width"] = 2;
         ops[1]!["priority"] = int.MaxValue;
         ops[5]!["crossings"] = new JsonArray();
+        ops[5]!["wade"] = new JsonArray();
         ops[8]!["steps"] = new JsonArray();
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString()));
         if (parsed.Ops[0].Priority != 1 || parsed.Ops[1].Priority != int.MaxValue ||
             parsed.Ops[3] is not TerrainSlopeOp { Geometry: PolylineGeometry, Width: 2, From: null, To: null })
             throw new InvalidOperationException("Authored priority or valid polyline slope changed.");
         if (((TerrainChannelOp)parsed.Ops[5]).Crossings is not { Count: 0 } ||
+            ((TerrainChannelOp)parsed.Ops[5]).Wade is not { Count: 0 } ||
             ((TerrainCorridorOp)parsed.Ops[8]).Steps is not { Count: 0 })
             throw new InvalidOperationException("Explicit empty arrays are valid and must not become null.");
+    }
+
+    [TestCase]
+    public void ChannelWadePreservesLegacyConstructorAndDeconstructSignatures()
+    {
+        var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(Fixture));
+        var source = (TerrainChannelOp)parsed.Ops[5];
+        var minimal = new TerrainChannelOp(source.Id, source.Reason, source.Water, source.Depth,
+            source.Bank, source.WaterY, source.Weirs)
+        {
+            Zone = source.Zone
+        };
+        var full = new TerrainChannelOp(source.Id, source.Reason, source.Water, source.Depth,
+            source.Bank, source.WaterY, source.Weirs, source.Line, source.Width, source.Priority, source.Crossings)
+        {
+            Zone = source.Zone
+        };
+        var (id, reason, water, depth, bank, waterY, weirs, line, width, priority, crossings) = full;
+        if (id != source.Id || reason != source.Reason || water != source.Water || depth != source.Depth ||
+            bank != source.Bank || waterY != source.WaterY || weirs != source.Weirs || line != source.Line ||
+            width != source.Width || priority != source.Priority || crossings != source.Crossings ||
+            minimal.Wade is not { Count: 0 } || full.Wade is not { Count: 0 })
+            throw new InvalidOperationException("Legacy channel construction or deconstruction changed.");
+    }
+
+    [TestCase]
+    public void ChannelWadeOmittedAndEmptyListsStayEmptyForWetAndDryChannels()
+    {
+        foreach (var dry in new[] { false, true })
+            foreach (var explicitEmpty in new[] { false, true })
+            {
+                var root = dry ? DryFixture() : JsonNode.Parse(Fixture)!.AsObject();
+                if (explicitEmpty) root["ops"]![5]!["wade"] = new JsonArray();
+                var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString()));
+                var roundTrip = TerrainOverlayJson.Parse(TerrainOverlayJson.ToUtf8Bytes(parsed));
+                if (((TerrainChannelOp)parsed.Ops[5]).Wade is not { Count: 0 } ||
+                    ((TerrainChannelOp)roundTrip.Ops[5]).Wade is not { Count: 0 })
+                    throw new InvalidOperationException("An omitted or empty channel Wade list became null or nonempty.");
+            }
+    }
+
+    [TestCase]
+    public void ChannelWadeRoundTripsIndependentPolygonsAndTheirHoles()
+    {
+        var root = JsonNode.Parse(Fixture)!.AsObject();
+        var wade = new JsonArray(root["ops"]![0]!["rings"]!.DeepClone(),
+            JsonNode.Parse("""{"outer":[[12,0],[16,0],[16,4],[12,4]],"holes":[[[13,1],[14,1],[13,2]]]}"""));
+        root["ops"]![5]!["wade"] = wade;
+        var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString()));
+        var encoded = TerrainOverlayJson.ToUtf8Bytes(parsed);
+        var roundTrip = TerrainOverlayJson.Parse(encoded);
+        var channel = (TerrainChannelOp)roundTrip.Ops[5];
+        var wire = JsonNode.Parse(encoded)!;
+        if (channel.Wade.Count != 2 || channel.Wade.Any(polygon => polygon.Holes.Count != 1) ||
+            !JsonNode.DeepEquals(wade, wire["ops"]![5]!["wade"]) ||
+            channel.Water != ((TerrainChannelOp)parsed.Ops[5]).Water || channel.WaterY != -0.5 || channel.Depth != 1.2)
+            throw new InvalidOperationException("Channel Wade polygons, holes, or existing water/depth fields changed.");
     }
 
     [TestCase]
@@ -231,6 +292,9 @@ public sealed class TerrainOverlayContractTests
         Reject(root => root["ops"]![5]!["dry"] = true);
         Reject(root => root["ops"]![5]!["crossings"] = null);
         Reject(root => root["ops"]![5]!["crossings"] = null, dry: true);
+        Reject(root => root["ops"]![5]!["wade"] = null);
+        Reject(root => root["ops"]![5]!["wade"] = null, dry: true);
+        Reject(root => root["ops"]![5]!["wade"] = new JsonArray(root["ops"]![0]!["rings"]!.DeepClone()), dry: true);
         Reject(root => root["ops"]![8]!["steps"] = null);
         Reject(root => root["ops"]![5]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""));
         Reject(root => root["ops"]![6]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""));

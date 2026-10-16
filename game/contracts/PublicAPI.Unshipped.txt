@@ -4626,6 +4626,8 @@ Campus.Contracts.TerrainChannelOp.Equals(Campus.Contracts.TerrainChannelOp? othe
 Campus.Contracts.TerrainChannelOp.Line.get -> Campus.Contracts.Polyline?
 Campus.Contracts.TerrainChannelOp.Line.init -> void
 Campus.Contracts.TerrainChannelOp.TerrainChannelOp(string! Id, string! Reason, Campus.Contracts.FeatureId? Water, double Depth, Campus.Contracts.TerrainBank! Bank, double? WaterY, System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainWeir!>! Weirs, Campus.Contracts.Polyline? Line = null, double? Width = null, int Priority = 50, System.Collections.Generic.IReadOnlyList<Campus.Contracts.TerrainCrossing!>! Crossings = null) -> void
+Campus.Contracts.TerrainChannelOp.Wade.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.PolygonRings!>!
+Campus.Contracts.TerrainChannelOp.Wade.init -> void
 Campus.Contracts.TerrainChannelOp.Water.get -> Campus.Contracts.FeatureId?
 Campus.Contracts.TerrainChannelOp.Water.init -> void
 Campus.Contracts.TerrainChannelOp.WaterY.get -> double?

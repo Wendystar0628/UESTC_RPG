@@ -266,6 +266,9 @@ public static class TerrainOverlayJson
                 if (c.Line is not null) { Line(c.Line); if (c.Width is null) throw new ArgumentException("An explicit channel line requires width."); }
                 if (c.Width is { } channelWidth) Positive(channelWidth, "width");
                 ArgumentNullException.ThrowIfNull(c.Weirs);
+                ArgumentNullException.ThrowIfNull(c.Wade);
+                if (c.Dry && c.Wade.Count != 0) throw new ArgumentException("A dry channel cannot register wade polygons.");
+                foreach (var polygon in c.Wade) Polygon(polygon);
                 if (c.Dry)
                 {
                     if (c.Water is not null || c.WaterY is not null || c.Line is null || c.Width is null || c.Weirs.Count != 0)
