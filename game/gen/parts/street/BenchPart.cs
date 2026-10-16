@@ -12,10 +12,10 @@ namespace Campus.Gen.Parts.Street;
 /// its top; variation 1 is backless, sittable from both sides, and Height is ignored (the seat is the top). Depth is the
 /// footprint: a backed bench's seat front lies on −Depth/2, a backless seat is centred.
 /// Collision (WLD-LIFE §5): the seat block, jumpable and standable, plus a thin block behind it for the backrest. The seat
-/// declaration is read off that same seat block (<see cref="Seating.FromBox"/>).
+/// declaration (<see cref="IPartDef{TParams}.Seats"/>, contract-33) is read off that same seat block (<see cref="Seating.FromBox"/>).
 /// </summary>
 [Part(PartCatalog.Bench, Owner = "WP-13")]
-public sealed class BenchPart : IPartDef<FurnitureParams>, ISeatedPart<FurnitureParams>
+public sealed class BenchPart : IPartDef<FurnitureParams>
 {
     public BenchPart() => Lods = Levels.Of<FurnitureParams>(Build, LodLevel.L0, LodLevel.L1);
     public IReadOnlyDictionary<LodLevel, Func<FurnitureParams, PartGeometry>> Lods { get; }

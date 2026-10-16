@@ -13,8 +13,11 @@ public enum RoadTier
     Secondary,
 }
 
-/// <summary>A road that gets street furniture, by its name in the network (names are map data, never entity IDs).</summary>
-public sealed record RoadRule(string Name, RoadTier Tier);
+/// <summary>
+/// A road that gets street furniture, by its name in the network (names are map data, never entity IDs). <paramref name="Rows"/>
+/// are the planted tree rows' offsets from its centre line (both sides), kept clear by benches and bins.
+/// </summary>
+public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows);
 
 /// <summary>
 /// Every tunable value of the WP-13 placement in one place (ENG-TEAM §5): which roads, spacings, offsets from the kerb, the
@@ -24,11 +27,15 @@ public sealed record RoadRule(string Name, RoadTier Tier);
 public static class FurnitureStyle
 {
     // ---- Roads (13b mainline: the ginkgo avenue and two representative secondary roads; the rest of the network follows) ----
+    /// <remarks>
+    /// Row offsets mirror WP-23's planting rule for the same roads (the map's <c>vegetation/planting.json</c>: the avenue's two ginkgo rows
+    /// and its spring band, one row on each secondary road) until planted trees are readable from the world model.
+    /// </remarks>
     public static IReadOnlyList<RoadRule> Roads { get; } = Array.AsReadOnly<RoadRule>(
     [
-        new("银杏大道", RoadTier.Main),
-        new("水杉路", RoadTier.Secondary),
-        new("丹桂路", RoadTier.Secondary),
+        new("银杏大道", RoadTier.Main, [7f, 14f, 17.5f]),
+        new("水杉路", RoadTier.Secondary, [5f]),
+        new("丹桂路", RoadTier.Secondary, [4.5f]),
     ]);
 
     /// <summary>Lamp spacing along the road: grade one 25–30 m (ART-FIDELITY §6, kept regular on the avenue, §8.5), grade two 30–40 m.</summary>
@@ -40,14 +47,38 @@ public static class FurnitureStyle
     public const float LampMaxShift = 4.5f;
     public const float ShiftStep = 1.5f;
 
-    /// <summary>Rest stops (bench, and a bin at every other one) sit midway between two lamps, every this many lamp gaps on a side.</summary>
+    /// <summary>
+    /// Rest stops (a bench, and a bin at every other one) belong to the lamp rhythm: midway between two lamps, every this many lamp
+    /// gaps on a side. Each lines the nearest walk on that side within <see cref="RestReach"/> of the road's centre line, sliding
+    /// along it by up to <see cref="RestSlide"/>; a slot with no walk that takes a bench stays empty.
+    /// </summary>
     public const int RestEvery = 4;
-    /// <summary>Gap between the kerb face and the bench's front edge (feet stay off the kerb).</summary>
-    public const float BenchKerbGap = 1.3f;
-    /// <summary>The bin stands beside the bench on the same front line, its centre this far along the road from the bench centre.</summary>
-    public const float BinAlong = 2.6f;
+    public const float RestReach = 20f;
+    public const float RestSlide = 6f;
+    /// <summary>A bench's front edge stands this far off the walk's edge, facing the walk (Opus review 12:15).</summary>
+    public const float WalkGap = 0.1f;
+    /// <summary>Sitters' feet reach this far onto the walk; the walk keeps at least <see cref="PassClear"/> clear beyond them.</summary>
+    public const float FeetReach = 0.5f;
+    public const float PassClear = 1.2f;
+    /// <summary>No carriageway within this distance ahead of a bench's front edge: it looks across the walk, never at traffic.</summary>
+    public const float FaceClear = 12f;
+    /// <summary>Benches and bins keep this far off any carriageway's edge, out of the green strip between the kerb and the trees.</summary>
+    public const float RoadSetback = 3f;
+    /// <summary>The bin stands on its own bay along the same walk edge, this clear gap from the bench: tried in this order, 2–4 m.</summary>
+    public static IReadOnlyList<float> BinGaps { get; } = Array.AsReadOnly([2.5f, 3f, 3.5f, 2f, 4f]);
+    public const float BinGapMin = 2f;
+    public const float BinGapMax = 4f;
+    /// <summary>A bench or bin keeps this far beyond its footprint off a planted tree row's line (a trunk and its root flare).</summary>
+    public const float RowClear = 0.6f;
     /// <summary>Shuttle-stop pole from the kerb face.</summary>
     public const float StopKerbGap = 0.7f;
+    /// <summary>
+    /// A kiosk's apron or a post's footprint must touch pedestrian paving, never more than this off it (Opus review 12:15): one that
+    /// does not touch moves the shortest way to the paving's edge, keeping its facing; by at most <see cref="AnchorPavingReach"/>,
+    /// beyond which the anchor stays and its data needs review (WP-48c).
+    /// </summary>
+    public const float AnchorPavingGap = 0.5f;
+    public const float AnchorPavingReach = 10f;
 
     /// <summary>Clearances from building, water, court and parking outlines; from other roads beyond their half width; from trees.</summary>
     public const float OutlineClear = 1.0f;
@@ -79,13 +110,15 @@ public static class FurnitureStyle
     public const string BayStone = "ground.paver";
     public const string PlinthStone = "ground.concrete";
     public const FootMat BayFoot = FootMat.BrickPaver;
-    /// <summary>The rest-stop bay runs from the back of the kerb to this far behind the bench, and this far past the group's ends.</summary>
+    /// <summary>
+    /// A bench's or bin's bay runs from <see cref="PadJoin"/> inside the walk's edge (so bay and walk read as one paving) to this
+    /// far behind the furniture, and this far past its ends.
+    /// </summary>
     public const float BayBehind = 0.4f;
     public const float BayEnds = 0.35f;
+    public const float PadJoin = 0.05f;
     /// <summary>The kiosk's apron reaches this far beyond its canopy on every side.</summary>
     public const float ApronMargin = 0.35f;
-    /// <summary>WP-15's kerb width: the bay starts at its back.</summary>
-    public const float KerbWidth = 0.15f;
     /// <summary>An anchor's groundY this far above the terrain is a deck that is not in the height field (SYS-ATLAS §6: A06).</summary>
     public const float DeckAbove = 0.5f;
 

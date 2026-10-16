@@ -3,33 +3,15 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Parts.Street;
 
-/// <summary>
-/// One sittable edge (ENG-WP §2.2: WP-54a "停留即坐" reads seat declarations). Coordinates are part-local metres, like the
-/// colliders: <see cref="From"/>–<see cref="To"/> is the front edge of the top face at sitting height, <see cref="Facing"/> the
-/// horizontal unit direction a sitter looks, <see cref="Depth"/> how far the face runs back from the edge, <see cref="Back"/>
-/// whether a backrest stands behind it. <see cref="Places"/> sitting positions are spread evenly along the edge.
-/// </summary>
-public sealed record SeatDecl(Vector3 From, Vector3 To, Vector3 Facing, float Depth, bool Back, int Places)
-{
-    public float Height => (From.Y + To.Y) * 0.5f;
-}
-
 /// <summary>Which side of a box's top face is the sitting edge, in the box's own frame (−Z is the front, as for parts).</summary>
 public enum SeatSide { Front, Back, Both }
 
 /// <summary>
-/// A part that declares seats. The declaration is computed from the same collider the part returns from Collision(), so the
-/// seat edge and the standable top face can never drift apart (ENG-WP §2.2, "与碰撞同源"). Promoted into the contracts by
-/// the WP-13 seat request; until then WP-54a reads it from this assembly.
-/// </summary>
-public interface ISeatedPart<in TParams>
-{
-    IReadOnlyList<SeatDecl> Seats(TParams p);
-}
-
-/// <summary>
-/// Seat declarations from collider boxes, for the bench and for anyone whose sittable top is a <see cref="BoxCollider"/>:
-/// stone tables and tree-pool rims (WP-29, WP-20), grass seat tiers (WP-11 StepsAlong, one box per tier).
+/// Contract seat declarations (<see cref="SeatDecl"/>, contract-33) from collider boxes, for the bench and for anyone whose
+/// sittable top is a <see cref="BoxCollider"/>: stone tables and tree-pool rims (WP-29, WP-20), grass seat tiers (WP-11
+/// StepsAlong, one box per tier). A part returns them from <see cref="IPartDef{TParams}.Seats"/>, computed from the same
+/// collider it returns from Collision(), so the seat edge and the standable top face can never drift apart (ENG-WP §2.2,
+/// "与碰撞同源"). The sitting height is the edge's From.Y and To.Y (equal for a level box).
 /// </summary>
 public static class Seating
 {

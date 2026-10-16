@@ -124,26 +124,35 @@ public sealed class StreetPartsTests
     [TestCase]
     public void BenchSeatsComeFromTheSeatCollider()
     {
-        var part = new BenchPart();
-        IPartDef<FurnitureParams> def = part;
+        // Read through the contract interface only: a shadow seat type would leave IPartDef on its default empty list (contract-33).
+        IPartDef<FurnitureParams> def = new BenchPart();
         var backed = new FurnitureParams(1.8f, 0.8f, 0.62f);
         var seat = (BoxCollider)def.Collision(backed)[0];
-        var seats = part.Seats(backed);
+        var seats = def.Seats(backed);
         Check(seats.Count == 1 && seats[0].Back && seats[0].Places == 2, "A 1.8 m backed bench declares one front edge with two places.");
         var top = seat.At.M42 + seat.Half.Y;
-        Check(Math.Abs(top - StreetStyle.SeatHeight) < 1e-5f && Math.Abs(seats[0].Height - top) < 1e-5f, "The seat edge lies on the seat collider top at 0.45 m.");
+        Check(Math.Abs(top - StreetStyle.SeatHeight) < 1e-5f && Math.Abs(seats[0].From.Y - top) < 1e-5f && Math.Abs(seats[0].To.Y - top) < 1e-5f,
+            "The seat edge lies on the seat collider top at 0.45 m.");
         Check(Math.Abs(seats[0].From.Z - (seat.At.M43 - seat.Half.Z)) < 1e-5f && seats[0].Facing == -Vector3.UnitZ, "The seat edge is the collider's front edge, facing −Z.");
         Check(seats[0].From.X < seats[0].To.X, "From is on the sitter's left.");
         Check(Math.Abs(seats[0].Depth - 2 * seat.Half.Z) < 1e-5f, "Seat depth is the collider depth.");
-        var backless = part.Seats(new FurnitureParams(1.6f, 0.45f, 0.5f) { Variation = 1 });
+        var backless = def.Seats(new FurnitureParams(1.6f, 0.45f, 0.5f) { Variation = 1 });
         Check(backless.Count == 2 && backless.All(s => !s.Back) && backless[0].Facing == -backless[1].Facing, "A backless bench seats both sides.");
         foreach (var s in backless)
             Check(Seating.Positions(s).All(p => Math.Abs(p.Y - StreetStyle.SeatHeight) < 1e-5f), "Sitting positions lie on the seat.");
         // Turned boxes (a placed tier, a rotated bench) keep the edge on the box's own front.
         var turned = new BoxCollider(Matrix4x4.CreateTranslation(0, 0.2f, 0) * DetMath.RotationY(float.Pi * 0.5f) * Matrix4x4.CreateTranslation(3, 0, 1), new(1f, 0.2f, 0.25f), SurfaceTag.Prop);
         var edge = Seating.FromBox(turned, SeatSide.Front).Single();
-        Check(Math.Abs(edge.Facing.X - -1f) < 1e-5f && Math.Abs(edge.Height - 0.4f) < 1e-5f, "A box turned a quarter faces −X.");
+        Check(Math.Abs(edge.Facing.X - -1f) < 1e-5f && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < 1e-5f, "A box turned a quarter faces −X.");
         Check(Seating.FromBox(new BoxCollider(Matrix4x4.CreateTranslation(0, 0.6f, 0), new(1, 0.6f, 0.3f), SurfaceTag.Prop), SeatSide.Front).Count == 0, "A 1.2 m top is not a seat.");
+        // Every street part reaches its seats through the contract: only the bench declares any, and nothing returns another seat type.
+        foreach (var sample in StreetGallery.CreateSamples())
+        {
+            var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
+            var declared = (IReadOnlyList<SeatDecl>)Contract(type).GetMethod("Seats")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
+            Check(sample.Part.Value == PartCatalog.Bench ? declared.Count > 0 : declared.Count == 0, $"{sample.Id} declares {declared.Count} seats through IPartDef.");
+        }
+        Check(!Street.GetTypes().Any(t => t.Name == nameof(SeatDecl)), "The street assembly still defines its own seat record.");
     }
 
     [TestCase]

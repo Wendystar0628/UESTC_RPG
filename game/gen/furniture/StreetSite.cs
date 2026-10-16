@@ -5,10 +5,15 @@ using Campus.Gen.World;
 
 namespace Campus.Gen.Furniture;
 
+/// <summary>What an anchor's point lands on (<see cref="StreetSite.LandingAt"/>).</summary>
+internal enum Landing : byte { Open, Carriageway, Water, Building }
+
 /// <summary>
 /// The world as the furniture placer sees it, indexed on a coarse grid: blocking outlines (buildings, water, courts, parking),
-/// road centre lines with their widths, bridges, network trees and the things already placed. Pure and deterministic: every
-/// list is filled in feature-ID order and grid lookups never depend on dictionary iteration order.
+/// road centre lines with their widths, the walks a bench can line (footways, paths, pedestrian streets), pedestrian paving
+/// (those walks and steps, and the paved road areas of the features), vehicle road areas, the planted tree rows along the
+/// furnished roads, bridges, network trees and the things already placed. Pure and deterministic: every list is filled in
+/// feature-ID order and grid lookups never depend on dictionary iteration order.
 /// </summary>
 internal sealed class StreetSite
 {
@@ -17,6 +22,10 @@ internal sealed class StreetSite
 
     private readonly Dictionary<(int, int), List<Outline>> _outlines = [];
     private readonly Dictionary<(int, int), List<NetworkLine>> _roads = [];
+    private readonly Dictionary<(int, int), List<NetworkLine>> _walks = [];
+    private readonly Dictionary<(int, int), List<Paving>> _paving = [];
+    private readonly Dictionary<(int, int), List<PolygonRings>> _lanes = [];
+    private readonly Dictionary<(int, int), List<(NetworkLine Line, float Offset)>> _rows = [];
     private readonly Dictionary<(int, int), List<NetworkLine>> _bridges = [];
     private readonly Dictionary<(int, int), List<Vector2>> _trees = [];
     private readonly Dictionary<(int, int), List<(Vector2 P, float R)>> _occupied = [];
@@ -25,14 +34,31 @@ internal sealed class StreetSite
     {
         World = world;
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
             foreach (var kind in Blocking)
                 foreach (var rings in Polygons(feature, kind))
                 {
                     var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                     var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-                    Index(_outlines, min, max, new Outline(rings, min, max));
+                    Index(_outlines, min, max, new Outline(kind, rings, min, max));
                 }
-        foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal)) IndexLine(_roads, road);
+            foreach (var (props, geometry) in RoadSources(feature))
+            {
+                var type = RoadType(props);
+                if (Pedestrian(type)) IndexPaving(geometry, props);
+                else if (CarriagewayType(type))
+                    foreach (var rings in geometry switch { PolygonGeometry polygon => [polygon.Rings], MultiPolygonGeometry multi => multi.Polygons, _ => [] })
+                        if (rings.Outer.Count >= 3)
+                            Index(_lanes, rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max), rings);
+            }
+        }
+        foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
+        {
+            IndexLine(_roads, road);
+            if (Strollable(road)) IndexLine(_walks, road);
+            if (Pedestrian(RoadType(road.Props)) && road.Line.Points.Count >= 2)
+                IndexPaving(new PolylineGeometry(road.Line), null, HalfWidth(road));
+        }
         foreach (var bridge in world.Network.Bridges.OrderBy(r => r.Id.Value, StringComparer.Ordinal)) IndexLine(_bridges, bridge);
         foreach (var tree in world.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
         {
@@ -45,6 +71,136 @@ internal sealed class StreetSite
 
     /// <summary>Half width of a network line's surface (the width WP-15 paves; never below a footpath's).</summary>
     public static float HalfWidth(NetworkLine line) => MathF.Max(line.Width, 2f) * 0.5f;
+
+    /// <summary>Walks a bench may line and face (WP-15 paves them as walks or pedestrian plazas); steps and cycleways are not.</summary>
+    public static bool Strollable(NetworkLine line) => RoadType(line.Props) is "footway" or "path" or "pedestrian";
+
+    /// <summary>Pedestrian paving types: the strollable walks and steps.</summary>
+    private static bool Pedestrian(string? type) => type is "footway" or "path" or "pedestrian" or "steps";
+
+    /// <summary>Road type as WP-15 reads it (GroundClassifier): <c>roadType</c>, else <c>highway</c>.</summary>
+    private static string? RoadType(JsonElement? props)
+    {
+        if (props is not { ValueKind: JsonValueKind.Object } p) return null;
+        foreach (var name in new[] { "roadType", "highway" })
+            if (p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
+        return null;
+    }
+
+    /// <summary>
+    /// Registers the planted tree rows along <paramref name="lines"/> (a furnished road), <paramref name="offsets"/> metres off its
+    /// centre line on both sides. Rows are kept clear as whole lines: a gap the planting leaves is not known here.
+    /// </summary>
+    public void AddRows(IEnumerable<NetworkLine> lines, IReadOnlyList<float> offsets)
+    {
+        foreach (var line in lines.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
+            foreach (var offset in offsets)
+            {
+                if (line.Line.Points.Count < 2) continue;
+                var pad = new Vector2(offset + 2f);
+                var min = line.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad;
+                var max = line.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad;
+                Index(_rows, min, max, (line, offset));
+            }
+    }
+
+    /// <summary>True when a disc keeps <see cref="FurnitureStyle.RowClear"/> off every registered tree row.</summary>
+    public bool OffRows(Vector2 p, float radius)
+    {
+        foreach (var (line, offset) in Near(_rows, p))
+            if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) < radius + FurnitureStyle.RowClear) return false;
+        return true;
+    }
+
+    /// <summary>True when a disc keeps <paramref name="clear"/> off every carriageway surface (beyond its half width).</summary>
+    public bool OffCarriageways(Vector2 p, float radius, float clear)
+    {
+        foreach (var road in Near(_roads, p))
+        {
+            if (!Carriageway(road)) continue;
+            var r = HalfWidth(road) + clear + radius;
+            if (LineDistanceSquared(p, road.Line.Points) < r * r) return false;
+        }
+        return true;
+    }
+
+    /// <summary>True when a carriageway surface lies within <paramref name="reach"/> ahead of <paramref name="p"/> along <paramref name="facing"/>.</summary>
+    public bool CarriagewayAhead(Vector2 p, Vector2 facing, float reach)
+    {
+        for (var d = 0f; d <= reach + 1e-3f; d += 0.5f)
+            if (!OffCarriageways(p + facing * d, 0f, 0f)) return true;
+        return false;
+    }
+
+    /// <summary>A walk near a point: the line, the nearest point on it and that point's arc length along the line.</summary>
+    public readonly record struct WalkPoint(NetworkLine Line, Vector2 Point, float Along, float Distance);
+
+    /// <summary>Strollable walks within <paramref name="reach"/> (≤ 32 m) of <paramref name="p"/>, nearest first (ties by ID).</summary>
+    public List<WalkPoint> Walks(Vector2 p, float reach)
+    {
+        var found = new List<WalkPoint>();
+        foreach (var line in NearAll(_walks, p))
+        {
+            var points = line.Line.Points;
+            WalkPoint? best = null;
+            var run = 0f;
+            for (var i = 1; i < points.Count; i++)
+            {
+                var a = points[i - 1]; var ab = points[i] - a;
+                var len = ab.Length();
+                if (len > 1e-4f)
+                {
+                    var t = Math.Clamp(Vector2.Dot(p - a, ab) / (len * len), 0f, 1f);
+                    var q = a + ab * t;
+                    var d = Vector2.Distance(p, q);
+                    if (best is null || d < best.Value.Distance) best = new(line, q, run + t * len, d);
+                }
+                run += len;
+            }
+            if (best is { } b && b.Distance <= reach) found.Add(b);
+        }
+        return found.OrderBy(w => w.Distance).ThenBy(w => w.Line.Id.Value, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>Distance from <paramref name="p"/> to the nearest strollable walk other than <paramref name="except"/> (a junction nearby).</summary>
+    public float OtherWalk(Vector2 p, NetworkLine except)
+    {
+        var best = float.MaxValue;
+        foreach (var line in NearAll(_walks, p))
+            if (!ReferenceEquals(line, except)) best = MathF.Min(best, MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)));
+        return best;
+    }
+
+    /// <summary>
+    /// The nearest pedestrian paving to <paramref name="p"/> (walks, steps, paved road areas): the gap to it (0 on it) and the
+    /// nearest point of its edge (<paramref name="p"/> itself on it). Null when none lies within about 32 m.
+    /// </summary>
+    public (float Gap, Vector2 Edge)? PavingEdge(Vector2 p)
+    {
+        (float, Vector2)? best = null;
+        foreach (var paving in NearAll(_paving, p))
+        {
+            float gap; Vector2 edge;
+            if (paving.Line is { } line)
+            {
+                var q = Nearest(p, line);
+                var d = Vector2.Distance(p, q);
+                if (d <= paving.Half) return (0f, p);
+                gap = d - paving.Half;
+                edge = q + (p - q) / d * paving.Half;
+            }
+            else
+            {
+                var rings = paving.Rings!;
+                if (PlanGeometry.Contains(rings, p)) return (0f, p);
+                edge = rings.Holes.Select(h => Nearest(p, h, true)).Prepend(Nearest(p, rings.Outer, true))
+                    .MinBy(q => Vector2.DistanceSquared(p, q));
+                gap = Vector2.Distance(p, edge);
+            }
+            if (best is null || gap < best.Value.Item1) best = (gap, edge);
+        }
+        return best;
+    }
 
     public static string? RoadName(NetworkLine line)
     {
@@ -59,7 +215,8 @@ internal sealed class StreetSite
     /// <see cref="FurnitureStyle.OutlineClear"/>, off every road surface (the own road's included, so bends cannot swallow it) and
     /// bridge, clear of trees and of the things already placed.
     /// </summary>
-    public bool Free(Vector2 p, float radius)
+    /// <remarks><paramref name="beside"/> is a walk the thing stands at the edge of: it only has to stay off that walk's surface.</remarks>
+    public bool Free(Vector2 p, float radius, NetworkLine? beside = null)
     {
         if (!PlanGeometry.Contains(World.Boundary, p)) return false;
         var keep = radius + FurnitureStyle.OutlineClear;
@@ -70,7 +227,7 @@ internal sealed class StreetSite
         }
         foreach (var road in Near(_roads, p))
         {
-            var r = HalfWidth(road) + FurnitureStyle.RoadClear + radius;
+            var r = HalfWidth(road) + (ReferenceEquals(road, beside) ? 0f : FurnitureStyle.RoadClear) + radius;
             if (LineDistanceSquared(p, road.Line.Points) < r * r) return false;
         }
         foreach (var bridge in Near(_bridges, p))
@@ -90,7 +247,8 @@ internal sealed class StreetSite
     }
 
     /// <summary>A long footprint (bench, bin) as a capsule from <paramref name="a"/> to <paramref name="b"/>: both ends and the middle are free.</summary>
-    public bool Free(Vector2 a, Vector2 b, float radius) => Free(a, radius) && Free((a + b) * 0.5f, radius) && Free(b, radius);
+    public bool Free(Vector2 a, Vector2 b, float radius, NetworkLine? beside = null) =>
+        Free(a, radius, beside) && Free((a + b) * 0.5f, radius, beside) && Free(b, radius, beside);
 
     public void Occupy(Vector2 a, Vector2 b, float radius)
     {
@@ -137,7 +295,24 @@ internal sealed class StreetSite
     {
         var type = line.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("highway", out var h) && h.ValueKind == JsonValueKind.String
             ? h.GetString() : null;
-        return type is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
+        return CarriagewayType(type);
+    }
+
+    private static bool CarriagewayType(string? type) =>
+        type is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
+
+    /// <summary>
+    /// What a point lands on, for an anchor's fallback (SYS-ATLAS §6 data still under review): a building's or water's outline,
+    /// a carriageway (a vehicle road's surface or paved area), else open ground. Checked in that order.
+    /// </summary>
+    public Landing LandingAt(Vector2 p)
+    {
+        foreach (var kind in new[] { "building", "water" })
+            foreach (var o in Near(_outlines, p))
+                if (o.Kind == kind && p.X >= o.Min.X && p.X <= o.Max.X && p.Y >= o.Min.Y && p.Y <= o.Max.Y && PlanGeometry.Contains(o.Rings, p))
+                    return kind == "building" ? Landing.Building : Landing.Water;
+        if (!OffCarriageways(p, 0f, 0f) || Near(_lanes, p).Any(rings => PlanGeometry.Contains(rings, p))) return Landing.Carriageway;
+        return Landing.Open;
     }
 
     /// <summary>Joins lines that share end points (within 1 m) into chains, in ID order, so a road split by a bridge stays one run.</summary>
@@ -203,10 +378,77 @@ internal sealed class StreetSite
         }
     }
 
-    private sealed record Outline(PolygonRings Rings, Vector2 Min, Vector2 Max);
+    private sealed record Outline(string Kind, PolygonRings Rings, Vector2 Min, Vector2 Max);
+
+    /// <summary>A pedestrian paving surface: a polygon, or a centre line with a half width.</summary>
+    private sealed record Paving(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half);
 
     private static float Edge(PolygonRings rings, Vector2 p) =>
         rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
+
+    /// <summary>The nearest point to <paramref name="p"/> on a polyline (or, <paramref name="closed"/>, a ring).</summary>
+    private static Vector2 Nearest(Vector2 p, IReadOnlyList<Vector2> line, bool closed = false)
+    {
+        var best = line[0];
+        var bestD = float.MaxValue;
+        var count = closed ? line.Count + 1 : line.Count;
+        for (var i = 1; i < count; i++)
+        {
+            var a = line[i - 1]; var ab = line[i % line.Count] - a;
+            var len2 = ab.LengthSquared();
+            var q = len2 < 1e-8f ? a : a + ab * Math.Clamp(Vector2.Dot(p - a, ab) / len2, 0f, 1f);
+            var d = Vector2.DistanceSquared(p, q);
+            if (d >= bestD) continue;
+            bestD = d;
+            best = q;
+        }
+        return best;
+    }
+
+    /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
+    private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
+    {
+        if (feature.Parts.Count == 0)
+        {
+            if (feature.Kind.Value == "road") yield return (feature.Props, feature.Geometry);
+            yield break;
+        }
+        foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
+        {
+            var props = part.Props ?? feature.Props;
+            var kind = part.Props is { ValueKind: JsonValueKind.Object } own && own.TryGetProperty("kind", out var k) && k.ValueKind == JsonValueKind.String
+                ? k.GetString() : feature.Kind.Value;
+            if (kind == "road") yield return (props, part.Geometry);
+        }
+    }
+
+    private void IndexPaving(OverlayGeometry geometry, JsonElement? props, float half = 0f)
+    {
+        switch (geometry)
+        {
+            case PolygonGeometry polygon:
+                IndexPaving(polygon.Rings);
+                break;
+            case MultiPolygonGeometry multi:
+                foreach (var rings in multi.Polygons) IndexPaving(rings);
+                break;
+            case PolylineGeometry { Line.Points: { Count: >= 2 } points }:
+                if (half <= 0f)
+                    half = (props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("width", out var w) && w.ValueKind == JsonValueKind.Number
+                        ? MathF.Max(w.GetSingle(), 2f) : 2.5f) * 0.5f;
+                var pad = new Vector2(half);
+                Index(_paving, points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad,
+                    points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad, new Paving(null, points, half));
+                break;
+        }
+    }
+
+    private void IndexPaving(PolygonRings rings)
+    {
+        if (rings.Outer.Count < 3) return;
+        Index(_paving, rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max),
+            new Paving(rings, null, 0f));
+    }
 
     private static float LineDistanceSquared(Vector2 p, IReadOnlyList<Vector2> line)
     {
@@ -263,4 +505,18 @@ internal sealed class StreetSite
 
     private static IEnumerable<T> Near<T>(Dictionary<(int, int), List<T>> grid, Vector2 p) =>
         grid.TryGetValue(Key(p), out var list) ? list : [];
+
+    /// <summary>Everything filed in the 3 × 3 cells around <paramref name="p"/>, each once, in cell then filing order.</summary>
+    private static List<T> NearAll<T>(Dictionary<(int, int), List<T>> grid, Vector2 p) where T : class
+    {
+        var (cx, cz) = Key(p);
+        var seen = new HashSet<T>(ReferenceEqualityComparer.Instance);
+        var result = new List<T>();
+        for (var dx = -1; dx <= 1; dx++)
+            for (var dz = -1; dz <= 1; dz++)
+                if (grid.TryGetValue((cx + dx, cz + dz), out var list))
+                    foreach (var item in list)
+                        if (seen.Add(item)) result.Add(item);
+        return result;
+    }
 }

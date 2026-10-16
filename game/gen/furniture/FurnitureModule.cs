@@ -68,6 +68,8 @@ public sealed class FurnitureModule : IContentModule
                 if (ReferenceEquals(claims, ctx.ClaimedBy)) return layout;
             var fresh = FurniturePlanner.Build(ctx.World, ctx.ClaimedBy);
             built.Add((ctx.ClaimedBy, fresh));
+            // Anchors left out or left in place, once per layout, for the anchor data's review (WP-48c).
+            foreach (var line in fresh.Log) Console.Error.WriteLine("[WP-13 furniture] " + line);
             return fresh;
         }
     }

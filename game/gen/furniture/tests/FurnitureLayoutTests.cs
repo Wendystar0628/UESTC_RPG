@@ -30,21 +30,135 @@ public sealed class FurnitureLayoutTests
     {
         var a = FurniturePlanner.Build(World.Value);
         var b = FurniturePlanner.Build(World.Value);
-        Check(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params))), "two builds differ");
-        Check(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count, "duplicate keys");
         var lamps = a.Items.Where(i => i.Kind == FurnitureKind.StreetLamp).ToList();
         var disc = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 0);
         var arm = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 1);
+        Console.WriteLine("furniture: " + string.Join(", ", Enum.GetValues<FurnitureKind>().Select(k => $"{k} {a.Count(k)}")) + $"; disc {disc}, arm {arm}");
+        Check(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params))), "two builds differ");
+        Check(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count, "duplicate keys");
         // The avenue is about 1.43 km: 52 slots a side at 27.5 m, less junctions and crossings; the two secondary roads 0.69 and 0.62 km at 35 m.
         Check(disc is >= 70 and <= 104, $"{disc} avenue lamps");
         Check(arm is >= 20 and <= 36, $"{arm} secondary lamps");
-        Check(a.Count(FurnitureKind.Bench) >= 20, $"{a.Count(FurnitureKind.Bench)} benches");
+        // Rest stops only where a walk takes a bench (Opus review 12:15): the avenue's north half and Shuisha Road's walk.
+        Check(a.Count(FurnitureKind.Bench) >= 8, $"{a.Count(FurnitureKind.Bench)} benches");
         Check(a.Count(FurnitureKind.Bin) * 2 >= a.Count(FurnitureKind.Bench) - 2 && a.Count(FurnitureKind.Bin) <= a.Count(FurnitureKind.Bench), "a bin at every other rest stop");
-        Check(a.Count(FurnitureKind.AtlasKiosk) == 6 && a.Count(FurnitureKind.AtlasPost) == 7, "six kiosks and seven posts (SYS-ATLAS §6)");
+        // SYS-ATLAS §6: six kiosks and seven posts, less A01 (on a carriageway) and A05 (in water) until their gate plazas land.
+        Check(a.Count(FurnitureKind.AtlasKiosk) == 4 && a.Count(FurnitureKind.AtlasPost) == 7, "four kiosks and seven posts");
         Check(a.Count(FurnitureKind.BusStop) == 2, $"{a.Count(FurnitureKind.BusStop)} shuttle stops");
         var open = World.Value.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open).Select(e => e.Id).Distinct().Count();
         Check(new[] { FurnitureKind.EntranceMat, FurnitureKind.OpenSign, FurnitureKind.EntranceLamp }.All(k => a.Count(k) == open), $"one kit at each of {open} open entrances");
-        Console.WriteLine("furniture: " + string.Join(", ", Enum.GetValues<FurnitureKind>().Select(k => $"{k} {a.Count(k)}")) + $"; disc {disc}, arm {arm}");
+    }
+
+    [TestCase]
+    public void BenchesLineAWalkAndBinsStandApart()
+    {
+        // Opus review 12:15: a bench lines a walk and faces it, its bay joined to the walk, a passage of 1.2 m left in front; it
+        // never faces a carriageway or sits in the strip between the kerb and the tree rows. Its bin stands 2–4 m away on its own bay.
+        var world = World.Value;
+        var layout = FurniturePlanner.Build(world);
+        var walks = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian").ToList();
+        var lanes = world.Network.Roads.Where(Carriageway).ToList();
+        var benches = layout.Items.Where(i => i.Kind == FurnitureKind.Bench).ToList();
+        foreach (var item in benches.Concat(layout.Items.Where(i => i.Kind == FurnitureKind.Bin)))
+        {
+            var p = (FurnitureParams)item.Part.Params;
+            var facing = Front(item.Part.At);
+            var front = item.Anchor + facing * (p.Depth * 0.5f);
+            var walk = walks.MinBy(w => Distance(front, w));
+            var edge = Distance(front, walk!) - Half(walk!);
+            Check(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f, $"{item.Key}: front {edge:F2} m off its walk's edge");
+            var toWalk = Vector2.Normalize(Nearest(front, walk!) - item.Anchor);
+            Check(Vector2.Dot(toWalk, facing) > 0.97f, $"{item.Key} does not face its walk");
+            Check(2f * Half(walk!) - FurnitureStyle.FeetReach >= FurnitureStyle.PassClear, $"{item.Key}: walk too narrow to pass");
+            var pad = item.Pad ?? throw new InvalidOperationException($"{item.Key} has no bay");
+            var padFront = new Vector2(pad.Frame.M41, pad.Frame.M43) + facing * pad.HalfDepth;
+            Check(Distance(padFront, walk!) < Half(walk!), $"{item.Key}: its bay does not reach the walk");
+            Check(MathF.Abs(pad.Top - item.Part.At.M42) < 1e-4f, $"{item.Key} is off its bay");
+            var radius = p.Depth * 0.5f;
+            foreach (var lane in lanes)
+                Check(Distance(item.Anchor, lane) - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f, $"{item.Key} stands in the kerbside strip of {lane.Id.Value}");
+            if (item.Kind != FurnitureKind.Bench) continue;
+            for (var d = 0f; d <= FurnitureStyle.FaceClear; d += 0.5f)
+                Check(lanes.All(l => Distance(front + facing * d, l) >= Half(l)), $"{item.Key} faces a carriageway {d:F1} m ahead");
+        }
+        foreach (var bin in layout.Items.Where(i => i.Kind == FurnitureKind.Bin))
+        {
+            var bench = benches.Single(i => i.Key == bin.Key.Replace(":bin", ":bench", StringComparison.Ordinal));
+            var gap = Vector2.Distance(bin.Anchor, bench.Anchor) - (FurnitureStyle.Bench.Width + FurnitureStyle.Bin.Width) * 0.5f;
+            Check(gap is >= FurnitureStyle.BinGapMin - 0.15f and <= FurnitureStyle.BinGapMax + 0.15f, $"{bin.Key} stands {gap:F2} m from its bench");
+            Check(!ReferenceEquals(bin.Pad, bench.Pad), $"{bin.Key} shares the bench's bay");
+        }
+    }
+
+    [TestCase]
+    public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
+    {
+        // Opus 12:38: until the gate plazas land (18c3, WP-30) A01 lands on a carriageway and A05 in water; neither gets a kiosk.
+        var world = World.Value;
+        var layout = FurniturePlanner.Build(world);
+        Console.WriteLine("furniture log: " + string.Join(" | ", layout.Log));
+        foreach (var (id, where) in new[] { ("A01", "on a carriageway"), ("A05", "in water") })
+        {
+            Check(!layout.Items.Any(i => i.Key == "anchor:design:anchor:" + id), $"{id} placed");
+            Check(layout.Log.Count(l => l == $"anchor design:anchor:{id} (kiosk) not placed: its point lands {where}") == 1, $"{id} not logged as {where}");
+        }
+        // A building: the same anchor moved onto a building's centre is left out too, and nothing else changes.
+        var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+            .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
+            .First(b => PlanGeometry.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanGeometry.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
+        var a02 = world.Features[new("design:anchor:A02")];
+        var ring = ((PolygonGeometry)a02.Geometry).Rings.Outer;
+        var shift = building.Centre - ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+        var moved = a02 with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
+        var indoors = FurniturePlanner.Build(new FeatureWorld(world, moved));
+        Check(!indoors.Items.Any(i => i.Key == "anchor:design:anchor:A02"), "a kiosk stands in a building");
+        Check(indoors.Log.Contains("anchor design:anchor:A02 (kiosk) not placed: its point lands in a building"), "the building fallback is not logged");
+        Check(indoors.Items.Count == layout.Items.Count - 1, "the building fallback changed other furniture");
+    }
+
+    [TestCase]
+    public void AnchorsStandOnOrBesidePaving()
+    {
+        // Opus review 12:15: a kiosk's apron or a post's foot touches pedestrian paving (≤ 0.5 m off it); the facing never changes.
+        var world = World.Value;
+        var layout = FurniturePlanner.Build(world);
+        var lines = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian" or "steps").ToList();
+        var areas = new List<PolygonRings>();
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "road"))
+        {
+            var sources = feature.Parts.Count == 0 ? [(feature.Props, feature.Geometry)] : feature.Parts.Select(p => (p.Props ?? feature.Props, p.Geometry)).ToList();
+            foreach (var (props, geometry) in sources)
+                if (RoadType(props) is "footway" or "path" or "pedestrian" or "steps")
+                    areas.AddRange(geometry switch { PolygonGeometry p => [p.Rings], MultiPolygonGeometry m => m.Polygons, _ => [] });
+        }
+        float Gap(Vector2 q) => MathF.Max(0f, MathF.Min(
+            lines.Select(l => Distance(q, l) - Half(l)).DefaultIfEmpty(float.MaxValue).Min(),
+            areas.Select(a => PlanGeometry.Contains(a, q) ? 0f : a.Holes.Append(a.Outer).Min(r => PlanGeometry.DistanceToRing(q, r))).DefaultIfEmpty(float.MaxValue).Min()));
+        foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
+        {
+            var feature = world.Features[new(item.Key["anchor:".Length..])];
+            Check(Vector2.Dot(Front(item.Part.At), FurniturePlanner.Facing(feature.Props!.Value.GetProperty("yawDeg").GetSingle())) > 0.999f, $"{item.Key} turned");
+            if (feature.Props!.Value.TryGetProperty("groundY", out var deck) && deck.GetSingle() > 0.5f) continue;
+            var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
+            var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+            if (Vector2.Distance(centre, item.Anchor) < 1e-3f && Gap(centre) > FurnitureStyle.AnchorPavingReach)
+            {
+                Console.WriteLine($"{item.Key}: no pedestrian paving within {FurnitureStyle.AnchorPavingReach} m, left for the anchor data");
+                continue;
+            }
+            var hw = item.Pad is { } apron ? apron.HalfWidth : ((SignParams)item.Part.Params).Width * 0.5f;
+            var hd = item.Pad is { } pad ? pad.HalfDepth : ((SignParams)item.Part.Params).Depth * 0.5f;
+            var gap = float.MaxValue;
+            for (var i = -1; i <= 1; i++)
+                for (var k = -1; k <= 1; k++)
+                    if (i != 0 || k != 0)
+                    {
+                        var q = Xf.Point(item.Part.At, new(i * hw, 0, k * hd));
+                        gap = MathF.Min(gap, Gap(new(q.X, q.Z)));
+                    }
+            Console.WriteLine($"{item.Key}: footprint {gap:F2} m off paving");
+            Check(gap <= FurnitureStyle.AnchorPavingGap + 0.1f, $"{item.Key}: footprint {gap:F2} m off pedestrian paving");
+        }
     }
 
     [TestCase]
@@ -102,7 +216,7 @@ public sealed class FurnitureLayoutTests
             Check(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete), $"{bench.Key}: plinth has no collider");
             Check(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0, $"{bench.Key}: empty plinth mesh");
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
-            Check(bin is null || MathF.Abs(bin.Part.At.M42 - plinth.Top) < 1e-4f, $"{bench.Key}: the bin is off the plinth");
+            Check(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 1e-4f, $"{bench.Key}: the bin is off its own plinth");
         }
         // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
         var flat = FurniturePlanner.Build(World.Value);
@@ -110,7 +224,8 @@ public sealed class FurnitureLayoutTests
         Check(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth), "plinths on flat ground");
         Check(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - top) < 1e-5f), "benches off their bays");
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
-        Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 1e-3f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 1e-5f) == 5, "kiosks: one on the A06 deck, five on their pads");
+        Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 1e-3f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 1e-5f) == kiosks.Count - 1,
+            "kiosks: one on the A06 deck, the others on their pads");
         // 30%: no pole stands.
         var steep = FurniturePlanner.Build(new TerrainWorld(World.Value, new Tilted(0.3f)));
         Check(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0, "poles on a 30% grade");
@@ -133,7 +248,8 @@ public sealed class FurnitureLayoutTests
                 FurnitureKind.BusStop => 2,
                 FurnitureKind.Bench => 3,
                 FurnitureKind.AtlasKiosk => 4,
-                FurnitureKind.Bin or FurnitureKind.OpenSign => 1,
+                FurnitureKind.Bin => 2,
+                FurnitureKind.OpenSign => 1,
                 FurnitureKind.EntranceMat or FurnitureKind.EntranceLamp => 0,
                 _ => throw new InvalidOperationException(),
             };
@@ -148,10 +264,15 @@ public sealed class FurnitureLayoutTests
         var layout = FurniturePlanner.Build(world);
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
         {
-            var item = layout.Items.Single(i => i.Key == "anchor:" + feature.Id.Value);
+            if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
+            {
+                Check(layout.Log.Any(l => l.StartsWith($"anchor {feature.Id.Value} ", StringComparison.Ordinal) && l.Contains("not placed", StringComparison.Ordinal)), $"{feature.Id.Value} missing without a log line");
+                continue;
+            }
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
-            Check(Vector2.Distance(centre, item.Anchor) < 0.05f, $"{item.Key} off its footprint");
+            // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
+            Check(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + 0.1f, $"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint");
             var yaw = feature.Props!.Value.GetProperty("yawDeg").GetSingle();
             Check(Vector2.Dot(Front(item.Part.At), FurniturePlanner.Facing(yaw)) > 0.999f, $"{item.Key} does not face {yaw}°");
         }
@@ -232,6 +353,25 @@ public sealed class FurnitureLayoutTests
 
     private static Vector2 Front(Matrix4x4 at) => Vector2.Normalize(new(-at.M31, -at.M33));
 
+    private static string? Highway(NetworkLine line) => RoadType(line.Props);
+
+    private static string? RoadType(JsonElement? props) =>
+        props is { ValueKind: JsonValueKind.Object } p && (p.TryGetProperty("roadType", out var t) || p.TryGetProperty("highway", out t)) && t.ValueKind == JsonValueKind.String ? t.GetString() : null;
+
+    private static bool Carriageway(NetworkLine line) => Highway(line) is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
+
+    private static float Half(NetworkLine line) => MathF.Max(line.Width, 2f) * 0.5f;
+
+    private static Vector2 Nearest(Vector2 p, NetworkLine line) =>
+        line.Line.Points.Zip(line.Line.Points.Skip(1), (u, v) =>
+        {
+            var d = v - u;
+            var t = d.LengthSquared() < 1e-8f ? 0f : Math.Clamp(Vector2.Dot(p - u, d) / d.LengthSquared(), 0f, 1f);
+            return u + d * t;
+        }).MinBy(q => Vector2.DistanceSquared(p, q));
+
+    private static float Distance(Vector2 p, NetworkLine line) => Vector2.Distance(p, Nearest(p, line));
+
     private static IEnumerable<Vector2> Corners(FurnitureItem item)
     {
         var p = (FurnitureParams)item.Part.Params;
@@ -256,6 +396,20 @@ public sealed class FurnitureLayoutTests
         public float PadY(FeatureId feature) => 0f;
         public float? WaterY(FeatureId water) => null;
         public TerrainFacts FactsAt(float x, float z) => new(grade, TerrainClass.Slope, 0f, 0f);
+    }
+
+    /// <summary>The world with one feature replaced.</summary>
+    private sealed class FeatureWorld(IWorldModel inner, WorldFeature feature) : IWorldModel
+    {
+        private readonly Dictionary<FeatureId, WorldFeature> _features = new(inner.Features) { [feature.Id] = feature };
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
+        public WorldNetwork Network => inner.Network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
     }
 
     private sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel
