@@ -120,9 +120,9 @@ public sealed class LibraryShellTests
         var shell = Shell(world);
         var layouts = new CoreModule().DescribeWindowLayouts(world, 1u);
         var windowed = layouts.Where(l => l.Grids.Count > 0).ToArray();
-        Require(windowed.Length == 1, $"one claimed facade declares windows ({windowed.Length})");
+        Require(windowed.Select(l => l.Feature.Value).SequenceEqual([CoreFeatures.Library.Value, CoreFeatures.Museum.Value]), $"the library and the museum declare windows ({windowed.Length})");
         Require(layouts.Single(l => l.Feature == CoreFeatures.LibraryStair).Grids.Count == 0, "the claimed stair base declares an empty set");
-        var layout = windowed[0];
+        var layout = windowed.Single(l => l.Feature == CoreFeatures.Library);
         Require(layout.Feature == CoreFeatures.Library && world.Features.ContainsKey(layout.Feature), "the declaration targets the library entity in this world");
         Require(CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == layout.Feature && (c.Aspects & Aspects.Facade) != 0), "the zone claims the library facade");
         Require(layout.Grids.Count == 1, "a single grid covers every source part");
@@ -150,9 +150,9 @@ public sealed class LibraryShellTests
                 var columns = (int)(g.Uv2![2 * v + 1] / 32f);
                 glassIds.Add((int)g.Uv2[2 * v] + (int)MathF.Floor(g.Uv![2 * v + 1]) * columns + (int)MathF.Floor(g.Uv[2 * v]));
             }
-        var windows = module.DescribeWindows(ctx).Windows;
+        var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == CoreStyle.LibraryWindowChannel).ToArray();
         var metaIds = new SortedSet<int>(windows.Select(w => w.Id));
-        Require(metaIds.Count == windows.Count, "one declaration per window");
+        Require(metaIds.Count == windows.Length, "one declaration per window");
         Require(windows.All(w => w.BaseId == allocation.BaseId && w.TotalColumns == shell.Columns && w.Channel == CoreStyle.LibraryWindowChannel), "declarations carry the allocation");
         Require(metaIds.Min >= allocation.BaseId && metaIds.Max < allocation.BaseId + allocation.Count, "IDs stay inside the library block");
         Require(glassIds.SetEquals(metaIds), $"decoded glass IDs ({glassIds.Count}) equal the declared windows ({metaIds.Count})");
@@ -251,20 +251,46 @@ public sealed class LibraryShellTests
         Require(north.Y < -0.9f, $"mechanical box on the north axis {north}");
     }
 
+    [TestCase]
+    public void CafeApronJoinsTheNearestFootwayWithAPavedLink()
+    {
+        var world = RealWorld();
+        var shell = Shell(world);
+        var walk = shell.CafeWalk ?? throw new InvalidOperationException("Expected: a paved link from the cafe apron");
+        var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the cafe door");
+        var face = cafe.Face;
+        float S(Vector2 p) => Vector2.Dot(p - face.A, face.Out);
+        Require(S(walk.A) > 0f && S(walk.A) < CoreStyle.CafeApronDepth, $"the link starts inside the apron ({S(walk.A):F2} m out)");
+        Require(S(walk.B) > S(walk.A) && Vector2.Distance(walk.A, walk.B) is > 0.5f and < CoreStyle.CafeWalkReach, $"the link runs out {Vector2.Distance(walk.A, walk.B):F2} m");
+        var walks = world.Network.Roads.Where(r => r.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("highway", out var h)
+            && h.GetString() is "footway" or "path" or "pedestrian").ToArray();
+        var reach = walks.Min(r => Enumerable.Range(1, r.Line.Points.Count - 1).Min(k => SegmentDistance(walk.B, walk.B, r.Line.Points[k - 1], r.Line.Points[k])) - (r.Width > 0f ? r.Width : 2f) * 0.5f);
+        Require(reach < 0f, $"the link ends on a footway ({reach:F2})");
+        var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && Inside((walk.A + walk.B) * 0.5f, c.Ring)).ToArray();
+        Require(slab.Length >= 1 && slab.All(c => c.Foot == FootMat.StonePaving), "the link is walkable stone paving");
+        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        shell.Build(build, LodLevel.L0);
+        var output = build.Finish(LodLevel.L0);
+        Require(output.Meshes.Any(m => m.Material.Spec.Lit.Value == CoreStyle.CafeWalkPaving + ".lit"), "pavers on the link");
+    }
+
     // ---------------------------------------------------------------- fixtures
 
     private static LibraryShell Shell(IWorldModel world) =>
         CoreSite.Pieces(world).OfType<LibraryShell>().SingleOrDefault() ?? throw new InvalidOperationException("Expected: library shell piece");
 
-    /// <summary>A stand-in for WP-14's allocation: a 101 × 7 generic block sorted before the library, one after it.</summary>
+    /// <summary>A stand-in for WP-14's allocation: a 101 × 7 generic block sorted before the library, the museum and one block after it.</summary>
     private static WindowNumberingSnapshot Numbering(LibraryShell shell, int libraryColumns)
     {
         var library = new WindowAllocation(CoreFeatures.Library, LibraryShell.WindowKey, 707, libraryColumns, LibraryShell.Rows);
+        var columns = CoreSite.Pieces(RealWorld()).OfType<Museum.MuseumShell>().Single().Columns;
+        var museum = new WindowAllocation(CoreFeatures.Museum, Museum.MuseumShell.WindowKey, 707 + library.Count, columns, Museum.MuseumShell.Rows);
         return new(new MapId("qingshuihe"), new string('a', 64),
         [
             new WindowAllocation(new FeatureId("qsh:way:0"), "generic", 0, 101, 7),
             library,
-            new WindowAllocation(new FeatureId("qsh:way:9"), "generic", 707 + library.Count, 10, 1),
+            museum,
+            new WindowAllocation(new FeatureId("qsh:way:9"), "generic", museum.BaseId + museum.Count, 10, 1),
         ]);
     }
 

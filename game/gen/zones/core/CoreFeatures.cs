@@ -32,4 +32,8 @@ public static class CoreFeatures
     public const string LibraryTowerSe = "osm:way:806848392";
     public const string LibraryTowerNw = "osm:way:806848393";
     public const string LibraryTowerSw = "osm:way:806848394";
+
+    /// <summary>Source parts of the museum entity: the hall body (8401) and the colonnade ring round it (8402, its hole is 8401).</summary>
+    public const string MuseumHall = "osm:way:806848401";
+    public const string MuseumRing = "osm:way:806848402";
 }

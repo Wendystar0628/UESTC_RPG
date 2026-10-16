@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Zones.Core.Library;
 
 namespace Campus.Gen.Zones.Core.Framework;
 
@@ -54,15 +55,36 @@ public sealed class CoreBuild(PaletteRegistry? palette)
     /// </summary>
     public PartLodCatalog? PartLods { get; init; }
 
+    private readonly List<GlassBatch> _glass = [];
+
     /// <summary>
-    /// The tile's output at <paramref name="lod"/>. Placed parts the baker cannot build at that level are left out (small street
+    /// One building's glass writer into the tile's shared batch for <paramref name="spec"/> (16d-2): every glazed building
+    /// of a cell shares one bundle per glass material, so the library and the museum in one L3 cell cost one window-glass
+    /// draw call. Each building keeps its own window base, grid width and channel per vertex.
+    /// </summary>
+    public GlassSink Glass(ToonSpec spec, int? windowBase, int columns, ChannelId channel)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        var batch = _glass.Find(b => b.Spec == spec);
+        if (batch is null)
+        {
+            batch = new GlassBatch(spec, Palette, windowBase is not null);
+            _glass.Add(batch);
+        }
+        return new GlassSink(batch, windowBase, columns, channel);
+    }
+
+    /// <summary>
+    /// The tile's output at <paramref name="lod"/>: the shared sink's bundles, then the shared glass batches in first-use order,
+    /// then the bundles pieces wrote themselves. Placed parts the baker cannot build at that level are left out (small street
     /// furniture such as the bench registers L0 and L1 only), so a piece may place its dressing without checking each part.
     /// A placed part the catalog does not know, or any placed part with no catalog, is an error, not a part to pass through.
     /// </summary>
     public ContentOutput Finish(LodLevel lod)
     {
         var meshes = Mesh.Finish();
-        if (Bundles.Count > 0) meshes = [.. meshes, .. Bundles];
+        var glass = _glass.SelectMany(b => b.Finish()).ToArray();
+        if (glass.Length > 0 || Bundles.Count > 0) meshes = [.. meshes, .. glass, .. Bundles];
         var parts = BuildableAt(lod);
         if (meshes.Count == 0 && parts.Length == 0 && Emitters.Count == 0) return ContentOutput.Empty;
         return new ContentOutput(meshes, parts, Emitters.Count == 0 ? null : Emitters.ToArray());

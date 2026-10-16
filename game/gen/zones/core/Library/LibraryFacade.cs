@@ -50,6 +50,12 @@ public sealed record Opening(Face Face, OpeningKind Kind, Rect Hole, int Cells, 
         Door is { } d && y0 <= Hole.Y0 + 1e-3f && cell >= d.First && cell < d.First + d.Count ? d.Top : y0;
 }
 
+/// <summary>Paints of a glazed opening: reveal (the wall's), sill (trim) and frame bars.</summary>
+public readonly record struct FacadePaints(Paint Wall, Paint Trim, Paint Frame)
+{
+    public static FacadePaints Library => new(S.Wall(S.LibraryWall), S.Trim(S.LibraryTrim), S.Metal(S.LibraryFrame));
+}
+
 /// <summary>Pure writers for walls, bands and glazed openings on a <see cref="Face"/>.</summary>
 public static class LibraryFacade
 {
@@ -104,13 +110,16 @@ public static class LibraryFacade
     /// mullions between the cells and transoms between the rows; L1 the frame ring and mullions. L2 and coarser: the
     /// wall stays closed and the glass lies a little proud of it, one pane per cell (L2) or per row (L3, L4).
     /// </summary>
-    public static void Window(CoreMesh mesh, GlassSink glass, Opening o, LodLevel lod)
+    public static void Window(CoreMesh mesh, GlassSink glass, Opening o, LodLevel lod) => Window(mesh, glass, o, lod, FacadePaints.Library);
+
+    /// <summary>The same opening in another building's paints (16d-2: the museum's granite reveals and dark frames).</summary>
+    public static void Window(CoreMesh mesh, GlassSink glass, Opening o, LodLevel lod, in FacadePaints paints)
     {
         var f = o.Face;
         var h = o.Hole;
-        var trim = S.Trim(S.LibraryTrim);
-        var wall = S.Wall(S.LibraryWall);
-        var frame = S.Metal(S.LibraryFrame);
+        var trim = paints.Trim;
+        var wall = paints.Wall;
+        var frame = paints.Frame;
         if (lod >= LodLevel.L2)
         {
             const float proud = 0.015f;

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -6,6 +7,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
 using Campus.Gen.Zones.Core.Framework;
 using S = Campus.Gen.Zones.Core.CoreStyle;
+using Shapes = Campus.Gen.Zones.Core.Framework.Shapes;
 
 namespace Campus.Gen.Zones.Core.Library;
 
@@ -56,7 +58,71 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     public static LibraryShell? From(IWorldModel world)
     {
         var plan = LibraryPlan.From(world);
-        return plan is null ? null : new LibraryShell(plan);
+        if (plan is null) return null;
+        var shell = new LibraryShell(plan) { _ground = world.Terrain.HeightAt };
+        shell.CafeWalk = shell.WalkFrom(world);
+        return shell;
+    }
+
+    /// <summary>Ground height under a plan point (the world's terrain; WP-08's evaluator or the flat stub).</summary>
+    private Surface _ground = (_, _) => 0f;
+
+    /// <summary>
+    /// The paved link from the cafe apron to the nearest footway (16d-2, review of 16d): from inside the apron's front edge
+    /// to the walk's edge, <see cref="CoreStyle.CafeWalkWidth"/> wide; null when the apron already meets a walk or none is in reach.
+    /// </summary>
+    public (Vector2 A, Vector2 B)? CafeWalk { get; private set; }
+
+    private (Vector2 A, Vector2 B)? WalkFrom(IWorldModel world)
+    {
+        if (_openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is not { } entry) return null;
+        var (u0, u1, depth) = Apron(entry);
+        var front = entry.Face.At((u0 + u1) * 0.5f, depth, 0f);
+        var p = new Vector2(front.X, front.Z);
+        (Vector2 Q, float Half, float Gap)? best = null;
+        foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
+        {
+            if (Highway(road.Props) is not ("footway" or "path" or "pedestrian")) continue;
+            var half = (road.Width > 0f ? road.Width : S.CafeWalkFallbackWidth) * 0.5f;
+            var line = road.Line.Points;
+            for (var k = 1; k < line.Count; k++)
+            {
+                Vector2 a = line[k - 1], b = line[k], ab = b - a;
+                var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(ab.LengthSquared(), 1e-9f), 0f, 1f);
+                var q = a + ab * t;
+                var gap = Vector2.Distance(p, q) - half;
+                if (best is null || gap < best.Value.Gap) best = (q, half, gap);
+            }
+        }
+        if (best is not { } hit || hit.Gap < 0.3f || hit.Gap > S.CafeWalkReach) return null;
+        var d = Vector2.Normalize(hit.Q - p);
+        return (p - d * S.CafeWalkInset, hit.Q - d * (hit.Half - S.CafeWalkOverlap));
+    }
+
+    private static string? Highway(JsonElement? props) =>
+        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("highway", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    /// <summary>
+    /// The cafe walk as WP-15 paves a footway: pavers at the paving level (terrain + 0.15, 5 cm over the lawn), a granite
+    /// edging band along each side and the 5 cm edge face down to the lawn.
+    /// </summary>
+    private void CafeWalkMesh(CoreMesh mesh)
+    {
+        if (CafeWalk is not { } w) return;
+        var along = Vector2.Normalize(w.B - w.A);
+        var side = new Vector2(-along.Y, along.X);
+        float half = S.CafeWalkWidth * 0.5f, band = S.CafeWalkEdging, lift = S.PavingLift + ApronLift * 0.5f;
+        Shapes.FlatStrip(mesh, S.Roof(S.CafeWalkPaving), w.A, w.B, S.CafeWalkWidth - 2 * band, _ground, lift);
+        foreach (var sign in new[] { -1f, 1f })
+        {
+            var o = side * (sign * (half - band * 0.5f));
+            Shapes.FlatStrip(mesh, S.Roof(S.CafeWalkEdge), w.A + o, w.B + o, band, _ground, lift);
+            var e = side * (sign * half);
+            Vector2 a = w.A + e, b = w.B + e;
+            var n = new Vector3(side.X * sign, 0f, side.Y * sign);
+            mesh.Quad(S.Roof(S.CafeWalkEdge), new(a.X, _ground(a.X, a.Y) + S.LawnLift - 0.02f, a.Y), new(b.X, _ground(b.X, b.Y) + S.LawnLift - 0.02f, b.Y),
+                new(b.X, _ground(b.X, b.Y) + lift, b.Y), new(a.X, _ground(a.X, a.Y) + lift, a.Y), n);
+        }
     }
 
     public string Id => "library-shell";
@@ -236,8 +302,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     {
         var mesh = build.Mesh;
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
-        var glass = new GlassSink(S.WindowGlass, build.Palette, windowBase, Columns, S.LibraryWindowChannel);
-        var clear = new GlassSink(S.ClearGlass, build.Palette, windowBase, Columns, S.LibraryWindowChannel);
+        var glass = build.Glass(S.WindowGlass, windowBase, Columns, S.LibraryWindowChannel);
+        var clear = build.Glass(S.ClearGlass, windowBase, Columns, S.LibraryWindowChannel);
         var landmark = new CoreMesh(build.Palette);
         Walls(mesh, lod);
         foreach (var o in _openings)
@@ -256,10 +322,9 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         {
             var (u0, u1, depth) = Apron(entry);
             LibraryFacade.Box(mesh, S.Roof(S.LibraryTerrace), entry.Face, u0, u1, 0f, depth, Plan.PadY - S.Sink, entry.Hole.Y0 + ApronLift);
+            CafeWalkMesh(mesh);
         }
         Mech(mesh, glass, lod);
-        build.Bundles.AddRange(glass.Finish());
-        build.Bundles.AddRange(clear.Finish());
         build.Bundles.AddRange(landmark.Finish());
     }
 
@@ -432,6 +497,13 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                     var (u0, u1, depth) = Apron(o);
                     Vector2 P(float u, float s) { var p = o.Face.At(u, s, 0f); return new(p.X, p.Z); }
                     list.Add(new SlabCollider([P(u0, 0f), P(u1, 0f), P(u1, depth), P(u0, depth)], o.Hole.Y0 + ApronLift, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
+                }
+                if (CafeWalk is { } w && doors.Any(o => o.Kind == OpeningKind.Entry))
+                {
+                    var along = Vector2.Normalize(w.B - w.A);
+                    var side = new Vector2(-along.Y, along.X) * (S.CafeWalkWidth * 0.5f);
+                    var mid = (w.A + w.B) * 0.5f;
+                    list.Add(new SlabCollider([w.A - side, w.B - side, w.B + side, w.A + side], _ground(mid.X, mid.Y) + S.PavingLift, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
                 }
                 continue;
             }

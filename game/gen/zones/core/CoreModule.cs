@@ -4,6 +4,7 @@ using Campus.Gen.Zones.Core.Axis;
 using Campus.Gen.Zones.Core.Entrance;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
+using Campus.Gen.Zones.Core.Museum;
 
 namespace Campus.Gen.Zones.Core;
 
@@ -75,6 +76,7 @@ public static class CoreSite
         new FeatureClaim(CoreFeatures.Sundial, Aspects.Massing | Aspects.Props),
         new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
         new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof),
     ];
 
     public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
@@ -95,6 +97,8 @@ public static class CoreSite
             library,
             // 16c: the grand stair (8398) and the 2F front door in the shell's glass slot.
             GrandStair.From(world, library),
+            // 16d-2: the museum (8401 hall body inside the 8402 colonnade ring).
+            MuseumShell.From(world),
         ];
         return pieces.OfType<ICorePiece>().ToArray();
     }
