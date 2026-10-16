@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 43.6k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 43.7k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -15,7 +15,7 @@
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.3k
 - CORE-INDEX §5 文档怎么组织 · L135 · 764
 - CORE-INDEX §6 阅读路径 · L145 · 1.1k
-- CORE-INDEX §7 文档地图 · L163 · 9.6k
+- CORE-INDEX §7 文档地图 · L163 · 9.7k
   - CORE-INDEX §7.1 共识层 `core/` · L165 · 381
   - CORE-INDEX §7.2 美术方向 `art/` · L173 · 925
   - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.2k
@@ -23,13 +23,13 @@
   - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.8k
   - CORE-INDEX §7.6 界面 `ui/` · L226 · 335
   - CORE-INDEX §7.7 工程 `engineering/` · L233 · 1.4k
-  - CORE-INDEX §7.8 参考 `reference/` · L247 · 171
-  - CORE-INDEX §7.9 工具 `tools/` · L253 · 178
-  - CORE-INDEX §7.10 运维 `ops/` · L259 · 173
-  - CORE-INDEX §7.11 提案 `proposals/` · L265 · 420
-  - CORE-INDEX §7.12 待用的文件夹 · L274 · 896
-- CORE-INDEX §8 工作包与文档 · L290 · 9.4k
-- CORE-INDEX §9 文档依赖图 · L368 · 12.1k
+  - CORE-INDEX §7.8 参考 `reference/` · L247 · 261
+  - CORE-INDEX §7.9 工具 `tools/` · L254 · 178
+  - CORE-INDEX §7.10 运维 `ops/` · L260 · 173
+  - CORE-INDEX §7.11 提案 `proposals/` · L266 · 420
+  - CORE-INDEX §7.12 待用的文件夹 · L275 · 896
+- CORE-INDEX §8 工作包与文档 · L291 · 9.4k
+- CORE-INDEX §9 文档依赖图 · L369 · 12.1k
 
 ## CORE-CONVENTIONS · 约定
 
@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 29.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 30.4k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 5.2k
-- CORE-DECISIONS §11 待对齐 · L278 · 61
+- CORE-DECISIONS §10 流程 · L243 · 6.5k
+- CORE-DECISIONS §11 待对齐 · L283 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 55.4k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 55.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -292,24 +292,24 @@
   - ART-STYLE §3.7 示例 · L296 · 1.1k
 - ART-STYLE §4 描线 · L317 · 6.2k
 - ART-STYLE §5 高光、边缘光与透光 · L397 · 4.1k
-- ART-STYLE §6 贴图与笔触 · L449 · 1.4k
-- ART-STYLE §7 后期 · L472 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L541 · 9.2k
-  - ART-STYLE §8.1 风格色 · L543 · 2.9k
-  - ART-STYLE §8.2 大面积色与跳色的分工 · L591 · 1.1k
-  - ART-STYLE §8.3 建筑固有色 · L610 · 1.2k
-  - ART-STYLE §8.4 界面色 · L642 · 1.3k
-  - ART-STYLE §8.5 色名登记与调色板纹理 · L667 · 1.6k
-  - ART-STYLE §8.6 天气色 · L697 · 1.1k
-- ART-STYLE §9 排除元素 · L716 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L718 · 2.0k
-  - ART-STYLE §9.2 其他排除项 · L744 · 631
-- ART-STYLE §10 材质速查 · L753 · 694
-- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L771 · 1.0k
-- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L803 · 419
-- ART-STYLE §13 情绪弧线 · L816 · 923
-- ART-STYLE WP-04 / WP-05 交付验收 · L841 · 1.9k
-- ART-STYLE §14 待验证（P0） · L861 · 2.1k
+- ART-STYLE §6 贴图与笔触 · L449 · 1.8k
+- ART-STYLE §7 后期 · L478 · 5.7k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L547 · 9.2k
+  - ART-STYLE §8.1 风格色 · L549 · 2.9k
+  - ART-STYLE §8.2 大面积色与跳色的分工 · L597 · 1.1k
+  - ART-STYLE §8.3 建筑固有色 · L616 · 1.2k
+  - ART-STYLE §8.4 界面色 · L648 · 1.3k
+  - ART-STYLE §8.5 色名登记与调色板纹理 · L673 · 1.6k
+  - ART-STYLE §8.6 天气色 · L703 · 1.1k
+- ART-STYLE §9 排除元素 · L722 · 2.6k
+  - ART-STYLE §9.1 日本元素的边界 · L724 · 2.0k
+  - ART-STYLE §9.2 其他排除项 · L750 · 631
+- ART-STYLE §10 材质速查 · L759 · 694
+- ART-STYLE §11 场景内的文字与标识（属于背景美术） · L777 · 1.0k
+- ART-STYLE §12 远近细节分级（以 ENG-BUDGET §3 和 ART-FIDELITY 为准） · L809 · 419
+- ART-STYLE §13 情绪弧线 · L822 · 923
+- ART-STYLE WP-04 / WP-05 交付验收 · L847 · 1.9k
+- ART-STYLE §14 待验证（P0） · L867 · 2.1k
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
@@ -1523,21 +1523,21 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-`docs/design/engineering/ENG-GATES.md` · 57.4k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+`docs/design/engineering/ENG-GATES.md` · 57.5k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
 
 - ENG-GATES §0 结论 · L22 · 1.9k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 850
 - ENG-GATES §1 审查视角 · L52 · 14.6k
-- ENG-GATES §2 门禁与测试节奏 · L195 · 29.5k
-- ENG-GATES §3 一票否决 · L274 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L303 · 2.6k
-- ENG-GATES §5 回报格式 · L329 · 1.4k
-- ENG-GATES §6 待验证（P0） · L358 · 1.8k
+- ENG-GATES §2 门禁与测试节奏 · L195 · 29.6k
+- ENG-GATES §3 一票否决 · L275 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L304 · 2.6k
+- ENG-GATES §5 回报格式 · L330 · 1.4k
+- ENG-GATES §6 待验证（P0） · L359 · 1.8k
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 12.3k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD.md` · 12.5k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
 
 - ENG-ONBOARD §0 结论 · L26 · 675
@@ -1555,8 +1555,8 @@
   - ENG-ONBOARD §4.2 按要做的事查哪里 · L200 · 2.5k
   - ENG-ONBOARD §4.3 Godot API · L273 · 223
   - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L279 · 219
-- ENG-ONBOARD §5 完成与回报 · L287 · 461
-- ENG-ONBOARD §6 改文档时 · L298 · 331
+- ENG-ONBOARD §5 完成与回报 · L287 · 610
+- ENG-ONBOARD §6 改文档时 · L299 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
@@ -1638,65 +1638,67 @@
 
 ## ENG-TEAM · 多模型协作规程：分工、额度、通信与开发流程
 
-`docs/design/engineering/ENG-TEAM.md` · 37.7k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
+`docs/design/engineering/ENG-TEAM.md` · 41.3k 字 · 作者、主会话、二号会话、Astra 与两个固定 Sol 会话的参与者表，按模型能力与任务难度的分工，包的归属与开工顺序，一个包从派工到合入的流程，.collab 交接与消息，三个账号的额度，值班、完成度调研与旁路任务
 关键词：多模型协作、协作规程、参与者、会话、账号、作者、主会话、总指挥、主代理、决定权、二号会话、project-09、wendystar1145、Max 20x、Opus、Sonnet、Astra、GPT-6 Astra、gpt-6-astra、gpt-6.1-sol、Sol 值班会话、Sol 旁路会话、旁路单、调研单、side/cards、ROLE.md、Codex、codex exec、thread、模型能力、视觉风格归属、审美、工程负责人、模型等级、任务难度、补 GPT 短板、包的归属、开工分波、D0、第一波、第二波、合并顺序、开发流程、派工、任务单、max 单、通用简报、建工作树、施工、回报、初步核对、评审、Opus 评审、交叉评审、可调参数、批准行、批准合入、带条件的批准行、合并执行、squash、施工状态、rebase 通知、契约申请、共享工程文件、合并请求、评审请求、.collab、merged.log、流水、消息频率、确认框、转问作者、唤醒脚本、sol_duty_watch、sol_side_runner、上下文重置、额度、5 小时窗口、并发公式、记账、快速模式、普通速度、service_tier、主会话移交、交接单、HANDOVER.md、goal 模式、get_usage、完成度调研、持续调研、调研入队流水线、待派工队列、调研索引、INDEX.md、00-总览、Opus 审计、巡检、spawn_agent、子代理、计数锁
 
-- ENG-TEAM §0 结论 · L37 · 3.5k
-  - ★ ENG-TEAM §0.1 接入要点 · L54 · 1.6k
-- ENG-TEAM §1 参与者与会话 · L71 · 2.1k
-  - ENG-TEAM §1.1 决定权与执行人 · L91 · 434
-- ENG-TEAM §2 按模型能力分工 · L109 · 1.8k
-  - ENG-TEAM §2.1 各模型的长处与短板 · L113 · 777
-  - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L122 · 457
-  - ENG-TEAM §2.3 事归谁 · L131 · 233
-  - ENG-TEAM §2.4 交叉的地方 · L137 · 205
-- ENG-TEAM §3 模型等级与任务划分 · L143 · 3.8k
-  - ENG-TEAM §3.1 按七问选施工模型 · L147 · 2.4k
-  - ENG-TEAM §3.2 总指挥只做什么 · L191 · 507
-  - ENG-TEAM §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L205 · 674
-  - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L220 · 110
-- ENG-TEAM §4 包的归属与开工顺序 · L225 · 2.5k
-  - ENG-TEAM §4.1 包的归属 · L227 · 1.2k
-  - ENG-TEAM §4.2 开工顺序与合并顺序 · L242 · 1.3k
-- ENG-TEAM §5 开发流程 · L256 · 7.0k
-  - ENG-TEAM §5.1 全流程一览 · L260 · 610
-  - ENG-TEAM §5.2 派工 · L274 · 1.5k
-  - ENG-TEAM §5.3 施工与回报 · L302 · 779
-  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L321 · 639
-  - ENG-TEAM §5.5 批准与合并 · L333 · 1.3k
-  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L354 · 502
-  - ENG-TEAM §5.7 契约申请与共享工程文件 · L365 · 475
-  - ENG-TEAM §5.8 调研入队流水线 · L373 · 1.2k
-- ENG-TEAM §6 会话通信与工作交接 · L391 · 5.4k
-  - ENG-TEAM §6.1 交接目录与文件 · L395 · 1.7k
-  - ENG-TEAM §6.2 命名与写法 · L420 · 501
-  - ENG-TEAM §6.3 任务单与请求文件的格式 · L428 · 534
-  - ENG-TEAM §6.4 消息与流水 · L446 · 714
-  - ENG-TEAM §6.5 唤醒脚本 · L465 · 1.4k
-  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L492 · 542
-- ENG-TEAM §7 账号与额度管理 · L505 · 4.9k
-  - ENG-TEAM §7.1 主账号（主会话） · L513 · 133
-  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L518 · 2.4k
-  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L551 · 231
-  - ENG-TEAM §7.4 主会话移交 · L557 · 765
-  - ENG-TEAM §7.5 单 Claude 账户模式 · L579 · 1.0k
-- ENG-TEAM §8 旁路任务与长期值班 · L599 · 4.5k
-  - ENG-TEAM §8.1 Sol 值班会话 · L603 · 720
-  - ENG-TEAM §8.2 完成度调研 · L619 · 1.7k
-  - ENG-TEAM §8.3 Sol 旁路会话 · L661 · 828
-  - ENG-TEAM §8.4 怎么开子代理 · L681 · 1.1k
-- ENG-TEAM §9 待验证（P0） · L709 · 229
+- ENG-TEAM §0 结论 · L37 · 3.7k
+  - ★ ENG-TEAM §0.1 接入要点 · L56 · 1.6k
+- ENG-TEAM §1 参与者与会话 · L73 · 2.1k
+  - ENG-TEAM §1.1 决定权与执行人 · L93 · 434
+- ENG-TEAM §2 按模型能力分工 · L111 · 1.8k
+  - ENG-TEAM §2.1 各模型的长处与短板 · L115 · 777
+  - ENG-TEAM §2.2 硬规则：GPT 模型不做审美工作 · L124 · 457
+  - ENG-TEAM §2.3 事归谁 · L133 · 233
+  - ENG-TEAM §2.4 交叉的地方 · L139 · 205
+- ENG-TEAM §3 模型等级与任务划分 · L145 · 6.1k
+  - ENG-TEAM §3.1 按七问选施工模型 · L149 · 3.8k
+  - ENG-TEAM §3.2 总指挥只做什么 · L220 · 507
+  - ENG-TEAM §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L234 · 674
+  - ENG-TEAM §3.4 包内的实现路径由施工模型规划 · L249 · 110
+  - ENG-TEAM §3.5 子代理的生命周期：能恢复就不新开 · L254 · 998
+- ENG-TEAM §4 包的归属与开工顺序 · L276 · 2.5k
+  - ENG-TEAM §4.1 包的归属 · L278 · 1.2k
+  - ENG-TEAM §4.2 开工顺序与合并顺序 · L293 · 1.3k
+- ENG-TEAM §5 开发流程 · L307 · 7.3k
+  - ENG-TEAM §5.1 全流程一览 · L311 · 610
+  - ENG-TEAM §5.2 派工 · L325 · 1.5k
+  - ENG-TEAM §5.3 施工与回报 · L353 · 779
+  - ENG-TEAM §5.4 评审：审美与契约的交叉评审 · L372 · 639
+  - ENG-TEAM §5.5 批准与合并 · L384 · 1.6k
+  - ENG-TEAM §5.6 合入以后：施工状态与 rebase · L406 · 502
+  - ENG-TEAM §5.7 契约申请与共享工程文件 · L417 · 475
+  - ENG-TEAM §5.8 调研入队流水线 · L425 · 1.2k
+- ENG-TEAM §6 会话通信与工作交接 · L443 · 5.6k
+  - ENG-TEAM §6.1 交接目录与文件 · L447 · 1.7k
+  - ENG-TEAM §6.2 命名与写法 · L472 · 501
+  - ENG-TEAM §6.3 任务单与请求文件的格式 · L480 · 534
+  - ENG-TEAM §6.4 消息与流水 · L498 · 825
+  - ENG-TEAM §6.5 唤醒脚本 · L518 · 1.4k
+  - ENG-TEAM §6.6 上下文重置后怎么接着做 · L545 · 542
+- ENG-TEAM §7 账号与额度管理 · L558 · 4.9k
+  - ENG-TEAM §7.1 主账号（主会话） · L566 · 133
+  - ENG-TEAM §7.2 二号会话的 Max 20x 账号 · L571 · 2.4k
+  - ENG-TEAM §7.3 Codex 账号（Astra 与 Sol） · L604 · 231
+  - ENG-TEAM §7.4 主会话移交 · L610 · 765
+  - ENG-TEAM §7.5 单 Claude 账户模式 · L632 · 1.0k
+- ENG-TEAM §8 旁路任务与长期值班 · L652 · 5.2k
+  - ENG-TEAM §8.1 Sol 值班会话 · L656 · 720
+  - ENG-TEAM §8.2 完成度调研 · L672 · 1.7k
+  - ENG-TEAM §8.3 Sol 旁路会话 · L714 · 828
+  - ENG-TEAM §8.4 怎么开子代理 · L734 · 1.1k
+  - ENG-TEAM §8.5 Codex 侧怎么省 · L762 · 678
+- ENG-TEAM §9 待验证（P0） · L780 · 229
 
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP.md` · 109.0k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP.md` · 109.1k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.7k
   - ★ ENG-WP §0.1 接入要点 · L39 · 737
 - ENG-WP §1 阶段与闸口 · L52 · 6.6k
-- ENG-WP §2 工作包一览 · L96 · 89.2k
-  - ENG-WP §2.1 各包主线版的范围 · L168 · 14.5k
+- ENG-WP §2 工作包一览 · L96 · 89.3k
+  - ENG-WP §2.1 各包主线版的范围 · L168 · 14.6k
   - ENG-WP §2.2 细节阶段待办 · L240 · 3.3k
   - ENG-WP §2.3 候选包 · L279 · 255
 - ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L287 · 3.9k
@@ -1709,6 +1711,18 @@
 `docs/design/reference/REF-PROMPT.md` · 12.6k 字 · 作品《电光年华》的完整描述，用作提示词，供通读全貌；不是施工文档
 
 - REF-PROMPT 提示词正文 · L20 · 12.1k
+
+## REF-SPEND-AUDIT · 近一天开发消耗与可省流程
+
+`docs/design/reference/REF-SPEND-AUDIT.md` · 3.6k 字 · 实现占比、浪费证据与节省建议
+关键词：额度、实现、测试、审计、协调、轮询、重复门禁
+
+- REF-SPEND-AUDIT §0 结论 · L23 · 495
+  - ★ REF-SPEND-AUDIT §0.1 接入要点 · L31 · 205
+- REF-SPEND-AUDIT §1 方法与范围 · L35 · 649
+- REF-SPEND-AUDIT §2 分类消耗 · L45 · 375
+- REF-SPEND-AUDIT §3 浪费与必要性 · L58 · 1.1k
+- REF-SPEND-AUDIT §4 建议（按节省排序） · L70 · 365
 
 ## TOOL-PREVIEW · 内容预览
 

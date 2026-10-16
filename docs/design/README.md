@@ -249,6 +249,7 @@ gates: []
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
 | [REF-PROMPT](reference/REF-PROMPT.md) 完整提示词（备份） | 作品《电光年华》的完整描述，用作提示词，供通读全貌；不是施工文档 | — | — |
+| [REF-SPEND-AUDIT](reference/REF-SPEND-AUDIT.md) 近一天开发消耗与可省流程 | 实现占比、浪费证据与节省建议 | — | — |
 
 ### 7.9 工具 `tools/`
 
@@ -434,6 +435,7 @@ graph LR
   end
   subgraph g_reference[参考]
     REF_PROMPT["REF-PROMPT"]
+    REF_SPEND_AUDIT["REF-SPEND-AUDIT"]
   end
   subgraph g_tools[工具]
     TOOL_PREVIEW["TOOL-PREVIEW"]
