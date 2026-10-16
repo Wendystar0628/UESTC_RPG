@@ -1194,7 +1194,15 @@
       "owner": "WP-02a"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-02a.json",
+      "owner": "WP-02a"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-02b.json",
+      "owner": "WP-02b"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-02b.json",
       "owner": "WP-02b"
     },
     {
@@ -1202,7 +1210,15 @@
       "owner": "WP-31a"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-31a.json",
+      "owner": "WP-31a"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-31b.json",
+      "owner": "WP-31b"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-31b.json",
       "owner": "WP-31b"
     },
     {
@@ -1210,7 +1226,15 @@
       "owner": "WP-31c"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-31c.json",
+      "owner": "WP-31c"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-32a.json",
+      "owner": "WP-32a"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-32a.json",
       "owner": "WP-32a"
     },
     {
@@ -1218,7 +1242,15 @@
       "owner": "WP-32b"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-32b.json",
+      "owner": "WP-32b"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-35a.json",
+      "owner": "WP-35a"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-35a.json",
       "owner": "WP-35a"
     },
     {
@@ -1226,7 +1258,15 @@
       "owner": "WP-35b"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-35b.json",
+      "owner": "WP-35b"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-35c.json",
+      "owner": "WP-35c"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-35c.json",
       "owner": "WP-35c"
     },
     {
@@ -1234,7 +1274,15 @@
       "owner": "WP-35d"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-35d.json",
+      "owner": "WP-35d"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-45a.json",
+      "owner": "WP-45a"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-45a.json",
       "owner": "WP-45a"
     },
     {
@@ -1242,7 +1290,15 @@
       "owner": "WP-45b"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-45b.json",
+      "owner": "WP-45b"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-47a.json",
+      "owner": "WP-47a"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-47a.json",
       "owner": "WP-47a"
     },
     {
@@ -1250,7 +1306,15 @@
       "owner": "WP-47b"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-47b.json",
+      "owner": "WP-47b"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-48a.json",
+      "owner": "WP-48a"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-48a.json",
       "owner": "WP-48a"
     },
     {
@@ -1258,7 +1322,15 @@
       "owner": "WP-48b"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-48b.json",
+      "owner": "WP-48b"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-48c.json",
+      "owner": "WP-48c"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-48c.json",
       "owner": "WP-48c"
     },
     {
@@ -1266,7 +1338,15 @@
       "owner": "WP-49a"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-49a.json",
+      "owner": "WP-49a"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-49b.json",
+      "owner": "WP-49b"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-49b.json",
       "owner": "WP-49b"
     },
     {
@@ -1274,7 +1354,15 @@
       "owner": "WP-51a"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-51a.json",
+      "owner": "WP-51a"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-51b.json",
+      "owner": "WP-51b"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-51b.json",
       "owner": "WP-51b"
     },
     {
@@ -1282,7 +1370,15 @@
       "owner": "WP-53a"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-53a.json",
+      "owner": "WP-53a"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-53b.json",
+      "owner": "WP-53b"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-53b.json",
       "owner": "WP-53b"
     },
     {
@@ -1290,11 +1386,23 @@
       "owner": "WP-53c"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-53c.json",
+      "owner": "WP-53c"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-53d.json",
       "owner": "WP-53d"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-53d.json",
+      "owner": "WP-53d"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-53e.json",
+      "owner": "WP-53e"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-53e.json",
       "owner": "WP-53e"
     },
     {
@@ -1374,7 +1482,15 @@
       "owner": "WP-00"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-00.json",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-01.json",
+      "owner": "WP-01"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-01.json",
       "owner": "WP-01"
     },
     {
@@ -1382,7 +1498,15 @@
       "owner": "WP-02"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-02.json",
+      "owner": "WP-02"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-03.json",
+      "owner": "WP-03"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-03.json",
       "owner": "WP-03"
     },
     {
@@ -1390,7 +1514,15 @@
       "owner": "WP-04"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-04.json",
+      "owner": "WP-04"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-05.json",
+      "owner": "WP-05"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-05.json",
       "owner": "WP-05"
     },
     {
@@ -1398,7 +1530,15 @@
       "owner": "WP-06"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-06.json",
+      "owner": "WP-06"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-07.json",
+      "owner": "WP-07"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-07.json",
       "owner": "WP-07"
     },
     {
@@ -1406,7 +1546,15 @@
       "owner": "WP-08"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-08.json",
+      "owner": "WP-08"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-09.json",
+      "owner": "WP-09"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-09.json",
       "owner": "WP-09"
     },
     {
@@ -1414,7 +1562,15 @@
       "owner": "WP-10"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-10.json",
+      "owner": "WP-10"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-11.json",
+      "owner": "WP-11"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-11.json",
       "owner": "WP-11"
     },
     {
@@ -1422,7 +1578,15 @@
       "owner": "WP-12"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-12.json",
+      "owner": "WP-12"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-13.json",
+      "owner": "WP-13"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-13.json",
       "owner": "WP-13"
     },
     {
@@ -1430,7 +1594,15 @@
       "owner": "WP-14"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-14.json",
+      "owner": "WP-14"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-15.json",
+      "owner": "WP-15"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-15.json",
       "owner": "WP-15"
     },
     {
@@ -1438,7 +1610,15 @@
       "owner": "WP-16"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-16.json",
+      "owner": "WP-16"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-17.json",
+      "owner": "WP-17"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-17.json",
       "owner": "WP-17"
     },
     {
@@ -1446,7 +1626,15 @@
       "owner": "WP-18"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-18.json",
+      "owner": "WP-18"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-19.json",
+      "owner": "WP-19"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-19.json",
       "owner": "WP-19"
     },
     {
@@ -1454,7 +1642,15 @@
       "owner": "WP-20"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-20.json",
+      "owner": "WP-20"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-21.json",
+      "owner": "WP-21"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-21.json",
       "owner": "WP-21"
     },
     {
@@ -1462,7 +1658,15 @@
       "owner": "WP-22"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-22.json",
+      "owner": "WP-22"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-23.json",
+      "owner": "WP-23"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-23.json",
       "owner": "WP-23"
     },
     {
@@ -1470,7 +1674,15 @@
       "owner": "WP-24"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-24.json",
+      "owner": "WP-24"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-25.json",
+      "owner": "WP-25"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-25.json",
       "owner": "WP-25"
     },
     {
@@ -1478,7 +1690,15 @@
       "owner": "WP-26"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-26.json",
+      "owner": "WP-26"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-27.json",
+      "owner": "WP-27"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-27.json",
       "owner": "WP-27"
     },
     {
@@ -1486,7 +1706,15 @@
       "owner": "WP-28"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-28.json",
+      "owner": "WP-28"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-29.json",
+      "owner": "WP-29"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-29.json",
       "owner": "WP-29"
     },
     {
@@ -1494,7 +1722,15 @@
       "owner": "WP-30"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-30.json",
+      "owner": "WP-30"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-31.json",
+      "owner": "WP-31"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-31.json",
       "owner": "WP-31"
     },
     {
@@ -1502,7 +1738,15 @@
       "owner": "WP-32"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-32.json",
+      "owner": "WP-32"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-33.json",
+      "owner": "WP-33"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-33.json",
       "owner": "WP-33"
     },
     {
@@ -1510,7 +1754,15 @@
       "owner": "WP-34"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-34.json",
+      "owner": "WP-34"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-35.json",
+      "owner": "WP-35"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-35.json",
       "owner": "WP-35"
     },
     {
@@ -1518,7 +1770,15 @@
       "owner": "WP-36"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-36.json",
+      "owner": "WP-36"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-37.json",
+      "owner": "WP-37"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-37.json",
       "owner": "WP-37"
     },
     {
@@ -1526,7 +1786,15 @@
       "owner": "WP-38"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-38.json",
+      "owner": "WP-38"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-39.json",
+      "owner": "WP-39"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-39.json",
       "owner": "WP-39"
     },
     {
@@ -1534,7 +1802,15 @@
       "owner": "WP-40"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-40.json",
+      "owner": "WP-40"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-41.json",
+      "owner": "WP-41"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-41.json",
       "owner": "WP-41"
     },
     {
@@ -1542,7 +1818,15 @@
       "owner": "WP-42"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-42.json",
+      "owner": "WP-42"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-43.json",
+      "owner": "WP-43"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-43.json",
       "owner": "WP-43"
     },
     {
@@ -1550,7 +1834,15 @@
       "owner": "WP-44"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-44.json",
+      "owner": "WP-44"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-45.json",
+      "owner": "WP-45"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-45.json",
       "owner": "WP-45"
     },
     {
@@ -1558,7 +1850,15 @@
       "owner": "WP-46"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-46.json",
+      "owner": "WP-46"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-47.json",
+      "owner": "WP-47"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-47.json",
       "owner": "WP-47"
     },
     {
@@ -1566,7 +1866,15 @@
       "owner": "WP-48"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-48.json",
+      "owner": "WP-48"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-49.json",
+      "owner": "WP-49"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-49.json",
       "owner": "WP-49"
     },
     {
@@ -1574,7 +1882,15 @@
       "owner": "WP-50"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-50.json",
+      "owner": "WP-50"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-51.json",
+      "owner": "WP-51"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-51.json",
       "owner": "WP-51"
     },
     {
@@ -1582,7 +1898,15 @@
       "owner": "WP-52"
     },
     {
+      "pattern": "game/style/palette/ext-v2/WP-52.json",
+      "owner": "WP-52"
+    },
+    {
       "pattern": "game/style/palette/ext/WP-53.json",
+      "owner": "WP-53"
+    },
+    {
+      "pattern": "game/style/palette/ext-v2/WP-53.json",
       "owner": "WP-53"
     },
     {
