@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.Zones.North.Framework;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
@@ -36,7 +37,8 @@ public sealed record FenceRun(IReadOnlyList<Vector2> Posts, IReadOnlyList<Vector
 
 /// <summary>
 /// The fence line of one cluster, computed once per world: the OSM polygon (which traces the kerb) resampled at the post
-/// pitch and pulled inside by <see cref="F.Inset"/>, further where a road runs alongside; gates where roads cross it; the
+/// pitch and pulled inside by <see cref="F.Inset"/>, further where a road runs alongside; gates where roads (or the
+/// cluster's design drive) cross it; the
 /// runs left after cutting the gates and the stretches inside buildings (their walls close the cluster there).
 /// </summary>
 public sealed class ClusterLayout
@@ -83,10 +85,9 @@ public sealed class ClusterLayout
         bool Near(Vector2 p) => p.X >= minX && p.X <= maxX && p.Y >= minZ && p.Y <= maxZ;
 
         var roads = new List<Road>();
-        foreach (var line in world.Network.Roads)
+        void AddRoad(IReadOnlyList<Vector2> pts, float width)
         {
-            var pts = line.Line.Points;
-            var half = (line.Width > 0 ? line.Width : F.DefaultRoadWidth) * 0.5f;
+            var half = (width > 0 ? width : F.DefaultRoadWidth) * 0.5f;
             for (var i = 0; i + 1 < pts.Count; i++)
                 if (Near(pts[i]) || Near(pts[i + 1]))
                 {
@@ -94,6 +95,11 @@ public sealed class ClusterLayout
                     if (dir != Vector2.Zero) roads.Add(new(pts[i], pts[i + 1], dir, half));
                 }
         }
+        foreach (var line in world.Network.Roads) AddRoad(line.Line.Points, line.Width);
+        // A cluster no network road enters gets a design drive in the overlay, tagged with the cluster (props.cluster).
+        foreach (var drive in world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry && Drives(f, cluster.Id))
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+            AddRoad(((PolylineGeometry)drive.Geometry).Line.Points, Width(drive.Props));
 
         // Resample the ring; inward normals are mitred at the original corners.
         var samples = new List<Sample>();
@@ -298,6 +304,12 @@ public sealed class ClusterLayout
         }
         return new(p, h);
     }
+
+    private static bool Drives(WorldFeature f, string cluster) =>
+        f.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("cluster", out var c) && c.ValueKind == JsonValueKind.String && c.GetString() == cluster;
+
+    private static float Width(JsonElement? props) =>
+        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("width", out var w) && w.ValueKind == JsonValueKind.Number ? w.GetSingle() : 0f;
 
     private static float Wrap(float s, float perimeter) => ((s % perimeter) + perimeter) % perimeter;
 

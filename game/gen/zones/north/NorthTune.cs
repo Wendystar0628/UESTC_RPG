@@ -59,7 +59,11 @@ public static class NorthTune
 
     /// <summary>
     /// 20a clusters: 学知苑 1–8 and the international students' cluster. Wall presets (§11 初值): 二组团 A 型暖米黄（原型），
-    /// 六组团 B 型（原型），其余在暖米黄与浅奶咖之间分配，相邻组团尽量不同色；竖带一律陶红。20b appends 硕丰、博翰.
+    /// 六组团 B 型（原型），其余在暖米黄与浅奶咖之间分配，相邻组团尽量不同色；竖带一律陶红。
+    /// 20b1 clusters: 硕丰苑 (MAP-QSH-NORTH §4.4): 1–20 栋 the renovated stone-beige master's dormitories, 21–28 and 30–33 栋
+    /// the newer grey-white ones, with the two small annexes 9803、9804 of their clusters. Main gates (初值) face the campus side:
+    /// 丹桂路 and the canteen square for 一、二, the only road for 四、五, the design drives for 三、十 (no road enters them).
+    /// 20b2 appends 博翰.
     /// </summary>
     public static readonly Cluster[] Clusters =
     [
@@ -80,6 +84,25 @@ public static class NorthTune
         new("qsh:way:596904662", "xz8", "学知八组团", new(281.6f, -609.8f), false, Facades.ACreamCoffee,
             ["qsh:way:544160372", "qsh:way:449705142", "qsh:way:544136507"]),
         new("qsh:way:848026371", "intl", "留学生组团", new(-47.0f, -805.1f), false, Facades.New, []),
+        // 20b1: 硕丰苑, all gates closed.
+        new("qsh:way:596904664", "sf1", "硕丰一组团", new(6.0f, -606.6f), false, Facades.MasterStoneBeige,
+            ["qsh:way:217855292", "qsh:way:217855293", "qsh:way:217855294", "qsh:way:217855295"]),
+        new("qsh:way:596904663", "sf2", "硕丰二组团", new(-2.1f, -491.8f), false, Facades.MasterStoneBeige,
+            ["qsh:way:217855296", "qsh:way:217855297", "qsh:way:217855298", "qsh:way:217855299"]),
+        new("qsh:way:596904658", "sf3", "硕丰三组团", new(389.6f, -568.0f), false, Facades.MasterStoneBeige,
+            ["qsh:way:596904656", "qsh:way:596904657", "qsh:way:217855287"]),
+        new("qsh:way:596904660", "sf4", "硕丰四组团", new(431.2f, -481.2f), false, Facades.MasterStoneBeige,
+            ["qsh:way:217855288", "qsh:way:217855289", "qsh:way:217855290", "qsh:way:217855291"]),
+        new("qsh:way:596904659", "sf5", "硕丰五组团", new(533.8f, -352.5f), false, Facades.MasterStoneBeige,
+            ["qsh:way:217855254", "qsh:way:217855253", "qsh:way:217855255", "qsh:way:217855252", "qsh:way:217855250"]),
+        new("qsh:way:848026374", "sf6", "硕丰六组团", new(133.6f, -812.7f), false, Facades.MasterGreyWhite,
+            ["qsh:way:741650454", "qsh:way:741650453", "qsh:way:741650452", "qsh:way:779499804"]),
+        new("qsh:way:725234159", "sf7", "硕丰七组团", new(187.0f, -717.5f), false, Facades.MasterGreyWhite,
+            ["qsh:way:779499805", "qsh:way:741650451", "qsh:way:741650450"]),
+        new("qsh:way:848026373", "sf8", "硕丰八组团", new(41.8f, -848.9f), false, Facades.MasterGreyWhite,
+            ["qsh:way:741650456", "qsh:way:741650455", "qsh:way:779499803"]),
+        new("qsh:way:1061419119", "sf10", "硕丰苑十组团", new(662.0f, -345.4f), false, Facades.MasterGreyWhite,
+            ["qsh:way:1466169449", "qsh:way:1466169451", "qsh:way:1466169450", "qsh:way:1466169448"]),
     ];
 
     /// <summary>Facade preset keys written into north.overlay.json StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
@@ -91,6 +114,10 @@ public static class NorthTune
         public const string ACreamCoffee = "dorm.a.creamCoffee";
         /// <summary>本科 B 型：米白竖横框、灰粉或浅砂窗间板、浅粉砂阳台栏板（§4.3）。</summary>
         public const string B = "dorm.b";
+        /// <summary>硕士楼，硕丰苑 1–20 栋老楼翻新：灰米石材墙、灰铝框、无竖带（§4.4，N-09–N-13）。</summary>
+        public const string MasterStoneBeige = "dorm.master.stoneBeige";
+        /// <summary>硕士楼语言的新楼，硕丰苑 21–28、30–33 栋：灰白墙、灰米石材窗间板与线脚，"墙色更新、更干净"（§4.4、§4.11）。</summary>
+        public const string MasterGreyWhite = "dorm.master.greyWhite";
         /// <summary>2015 年以后的新楼，按区文档新楼外观（MAP-QSH-RENOVATION §9），不写 StyleOp。</summary>
         public const string New = "";
     }
@@ -183,6 +210,22 @@ public static class NorthTune
         /// so where it laps over the kerb stone it covers it instead of flickering against it; the seat stands 0.45 m above it.</summary>
         public const float PadReach = 1.69f, PadThickness = 0.08f, PavingLevel = 0.15f, PadLift = 0.01f;
         public static readonly ToonSpec Pad = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
+    }
+
+    /// <summary>
+    /// 硕丰苑十组团 rest deck (20b1; D-185 R6, MAP-QSH-ADDITIONS §2.1 休憩平台, registered as design:north-sf10-deck): the
+    /// courtyard's one stay point, 12 × 8 m and 0.45 m high so its edge is the seat; deep grey steel frame, wood top in four
+    /// boards around a square pit holding a clipped shrub. Long side along 33、32 栋, 20 m and more off every wall. 初值。
+    /// </summary>
+    public static class Deck
+    {
+        public const string Feature = "design:north-sf10-deck";
+        public static readonly Vector2 Centre = new(716f, -354f), Along = new(-0.5736f, 0.8192f);
+        public const float Length = 12f, Width = 8f, Height = 0.45f, Sink = 0.1f;
+        /// <summary>Wood top: thickness, overhang past the steel frame, chamfer, and the gap between boards.</summary>
+        public const float Top = 0.07f, Overhang = 0.05f, TopBevel = 0.015f, Seam = 0.02f;
+        /// <summary>Square pit in the middle: clear size, steel kerb width; the shrub stands this far above the deck.</summary>
+        public const float Pit = 2.4f, Kerb = 0.08f, Shrub = 0.75f, ShrubBevel = 0.12f;
     }
 
     /// <summary>

@@ -1,0 +1,87 @@
+{
+  "about": "WP-20 北区宿舍立面预设的期望取值（max-103 20b1 第一项）。只是数据表：WP-14 把它映射进 game/gen/buildings/Rules/FacadePresets.cs，本包不读它。字段名与 FacadeLook 一一对应；accent 是 FacadeLook 还没有的字段，见 accentField。所有楼的家族都是 dormitory（WP-14 的 DormA/DormB 按格子哈希二选一，预设要盖住两者的差别，所以每项都给明确值）。层高按数据里 6 层 19.2 m 算，约 3.175 m/层：窗高 + 窗台不超过 层高 − 0.55 m（BuildingPlanner 的上限），下表都在上限以内，不靠截断。窗墙比 = glazing × windowHeight ÷ 层高，只作参考。颜色只用调色板已登记的色名。",
+  "accentField": "FacadeLook 加一个可空字段 Accent（与 Frame、Trim 同写法，Apply 里盖 FacadeProfile.Accent）。原因：宿舍家族开着 AccentSpandrels，窗列的窗间板取 Accent；不盖的话同一个预设会因 DormA/DormB 哈希不同，窗间板一会儿是 panel.pinkSand、一会儿是 panel.brown，A 型的陶红竖带出不来。要\"无竖带\"时把 accent 写成与 frame 同色，不靠 null。",
+  "presets": [
+    {
+      "key": "dorm.a.dormYellow",
+      "users": "学知二、三、五、七组团（MAP-QSH-RENOVATION N-02、N-03、N-05、N-07；二组团是 A 型原型）",
+      "glazing": 0.50,
+      "windowHeight": 1.60,
+      "sill": 1.00,
+      "groundSill": 1.00,
+      "glass": "glass",
+      "frame": "wall.dormYellow",
+      "trim": "wall",
+      "accent": "band.terracotta",
+      "window": "opening.window.casement",
+      "wwr": 0.25,
+      "basis": "MAP-QSH-NORTH §4.2：米黄墙（宿舍暖米黄墙）配陶红竖向墙带、白窗框、浅色带滴水窗台。寝室窗：开间 3.6 m 里 1.8 m 宽、1.6 m 高、窗台 1.0 m，是本科寝室的常见比例，墙多窗少，显得敦实；窗右侧还要留出 1.2 m 放机位格栅（窗与竖带之间，§4.2、MAP-QSH-ADDITIONS §3 第 4 条），所以窗宽不超过开间的一半。竖带取 band.terracotta 做窗列的窗间板：窗列与米黄墙垛一列隔一列，陶红露出约四分之一立面，远看是\"米黄墙上一道道陶红竖带\"，近看窗嵌在竖带里。线脚（窗台、压顶、腰线）取暖白 wall：§4.2 要浅色窗台、§4.6 要白色低女儿墙；暖白比 wall.greyWhite 更贴米黄的暖调。玻璃只有 glass 一个色名，寝室窗挂窗帘，用它即可。"
+    },
+    {
+      "key": "dorm.a.creamCoffee",
+      "users": "学知一、四、八组团（N-01、N-04、N-08）",
+      "glazing": 0.50,
+      "windowHeight": 1.60,
+      "sill": 1.00,
+      "groundSill": 1.00,
+      "glass": "glass",
+      "frame": "wall.creamCoffee",
+      "trim": "wall",
+      "accent": "band.terracotta",
+      "window": "opening.window.casement",
+      "wwr": 0.25,
+      "basis": "MAP-QSH-NORTH §4.5：老楼的另一种暖色外墙是浅奶咖；MAP-QSH-RENOVATION §11：竖带一律陶红。同一 A 型，只换主墙色，开窗与 dorm.a.dormYellow 完全相同，组团之间靠大块墙色区分（§4.5）。浅奶咖比米黄深、偏红，陶红竖带在上面对比弱一些，所以线脚仍用暖白 wall 把楼的横向分层拉出来，不加深竖带色。"
+    },
+    {
+      "key": "dorm.b",
+      "users": "学知六组团 20–22 栋（N-06，本科 B 型原型、宿舍金样）",
+      "glazing": 0.62,
+      "windowHeight": 1.75,
+      "sill": 0.85,
+      "groundSill": 1.00,
+      "glass": "glass",
+      "glassLater": "glass.deep",
+      "frame": "wall",
+      "trim": "wall.greyWhite",
+      "accent": "panel.pinkSand",
+      "window": "opening.window.casement",
+      "wwr": 0.34,
+      "basis": "MAP-QSH-NORTH §4.3：开间密集，米白色竖横框与灰粉或浅砂色的窗间板交替，深灰蓝色窗玻璃，阳台或开廊形成暗孔洞。窗加宽到开间的 0.62（2.2 m），米白墙垛收窄到约 1.4 m，读作\"竖框\"而不是墙面；仍留够 1.2 m 放机位格栅。窗高 1.75 m、窗台 0.85 m，开口比 A 型大一档，暗孔洞感更强。墙（竖横框）取暖白 wall 即米白；窗间板 panel.pinkSand 是灰粉偏砂的那一色，与原型的灰粉、浅砂两种窗间板都对得上；线脚取 wall.greyWhite，与米白同明度、略偏冷，横框与压顶不抢竖框。深灰蓝玻璃要等 bank 1 的 glass.deep（14-2d 评审定的那一批）进调色板，之前用 glass，进了以后只改这一项。"
+    },
+    {
+      "key": "dorm.master.stoneBeige",
+      "users": "硕丰苑 1–20 栋（硕丰一至五组团，N-09–N-13，老楼翻新）",
+      "glazing": 0.55,
+      "windowHeight": 1.80,
+      "sill": 0.80,
+      "groundSill": 0.90,
+      "glass": "glass",
+      "frame": "stone.beige",
+      "trim": "wall.greyWhite",
+      "accent": "stone.beige",
+      "window": "opening.window.casement",
+      "wwr": 0.31,
+      "basis": "MAP-QSH-NORTH §4.4：外墙灰米色石材质感、深色窗框，开敞阳台的金属栏杆后挂白窗帘，外机在深灰百叶格里；硕丰 1–20 栋窗框用灰铝框。墙取 stone.beige（调色板里唯一的灰米石色）；不要竖带，accent 写成同色，整面是一块安静的石材墙，与学知苑的彩色竖带拉开。开口比本科楼大一档、窗台低到 0.8 m：硕士楼是阳台门加窗，开口高、暗，主线还没有阳台构件，先用 1.8 m 高的窗把\"开口大、进深暗\"读出来。线脚取 wall.greyWhite，比石材墙浅一档，对应 N-09 的\"浅色石材门套\"和白色压顶。窗框不在预设字段里：WP-10 窗的框色本来就是 frame.alu 灰铝，正是 §4.4 要的深色灰铝框。外机格栅是 frame.alu 机身加 roof.grey 百叶，对得上\"深灰百叶格\"。"
+    },
+    {
+      "key": "dorm.master.greyWhite",
+      "users": "硕丰苑 21–28 栋（硕丰六、七、八组团）与 30–33 栋（硕丰苑十组团），2015 年以后的新楼（MAP-QSH-RENOVATION §9）",
+      "glazing": 0.55,
+      "windowHeight": 1.80,
+      "sill": 0.80,
+      "groundSill": 0.90,
+      "glass": "glass",
+      "frame": "wall.greyWhite",
+      "trim": "stone.beige",
+      "accent": "stone.beige",
+      "window": "opening.window.casement",
+      "wwr": 0.31,
+      "basis": "新楼不翻新，按区文档的新楼外观；区文档只写了硕士楼语言（§4.4），并在 §4.11 写明后建的博士公寓\"按硕士楼的语言画，墙色更新、更干净\"。所以开窗与 dorm.master.stoneBeige 完全相同（同一套语言），颜色反过来：主墙 wall.greyWhite 更新更干净，窗列的窗间板和线脚用 stone.beige，立面是灰白墙垛加一道道灰米石材竖带，新楼一眼看得出比 1–20 栋新，又是同一家。"
+    }
+  ],
+  "notInPreset": [
+    "A 型的白窗框：WP-10 窗框色现在固定是 frame.alu 灰铝，预设管不到；主线用灰铝框，白框等 WP-10 开放窗框色以后细节阶段再接。",
+    "硕士楼的开敞阳台（金属栏杆、晾衣杆、白窗帘）和 B 型的阳台暗孔洞、浅粉砂实体栏板：预设字段里没有阳台，主线不做；细节阶段由 WP-14 的阳台规则或部件补，晾晒归 WP-25。",
+    "B 型的深灰蓝玻璃：见 dorm.b 的 glassLater。"
+  ]
+}

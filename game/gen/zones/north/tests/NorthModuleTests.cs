@@ -27,6 +27,31 @@ public sealed class NorthModuleTests
         }
     }
 
+    /// <summary>
+    /// 20b1 第一项 (main session 16:07): every dorm preset key the overlay writes has its expected values in DormPresets.json,
+    /// which WP-14 maps into its FacadePresets; every colour named there is a registered palette family and every window a
+    /// catalogued part.
+    /// </summary>
+    [TestCase]
+    public void DormPresetTableCoversEveryOverlayKey()
+    {
+        var game = Path.GetFullPath(Path.Combine(DataDirectory(), "..", "..", ".."));
+        using var table = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "gen", "zones", "north", "DormPresets.json")));
+        using var palette = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "style", "palette", "core.json")));
+        var tokens = palette.RootElement.GetProperty("entries").EnumerateArray().Select(e => e.GetProperty("token").GetString()).ToHashSet();
+        var parts = typeof(Campus.Contracts.Parts.PartCatalog).GetFields().Where(f => f.IsLiteral).Select(f => f.GetValue(null) as string).ToHashSet();
+        var presets = table.RootElement.GetProperty("presets").EnumerateArray().ToDictionary(p => p.GetProperty("key").GetString()!);
+        foreach (var feature in World().Features.Values)
+            if (feature.Facade is { Value: { Length: > 0 } key })
+                Require(presets.ContainsKey(key), $"{feature.Id.Value}: preset {key} has no entry in DormPresets.json");
+        foreach (var (key, p) in presets)
+        {
+            foreach (var field in new[] { "glass", "frame", "trim", "accent" })
+                Require(tokens.Contains(p.GetProperty(field).GetString() + ".lit"), $"{key}.{field} is a registered colour family");
+            Require(parts.Contains(p.GetProperty("window").GetString()), $"{key}.window is a catalogued part");
+        }
+    }
+
     [TestCase]
     public void EveryClusterGetsAMainGateAndAClosedFence()
     {
@@ -150,8 +175,34 @@ public sealed class NorthModuleTests
     {
         var ctx = Context();
         var module = new NorthModule();
+        // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH §4.1); batched boxes anchor at their
+        // 64 m cell's centre, x 800 for that cell.
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
-            Require(item.Anchor.X is > -260 and < 760 && item.Anchor.Y is > -1000 and < -150, $"item at {item.Anchor} is in the north zone");
+            Require(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -150, $"item at {item.Anchor} is in the north zone");
+    }
+
+    /// <summary>
+    /// 20b1 (D-185 R6): the 硕丰苑十组团 rest deck is the registered polygon, lies inside its cluster, and keeps 8 m off every
+    /// wall and 3 m off every road edge, the cluster's design drive included.
+    /// </summary>
+    [TestCase]
+    public void RestDeckSitsInTheShuofengTenCourtyard()
+    {
+        var world = World();
+        var outline = Shuofeng.RestDeckSite.Outline();
+        var registered = ((PolygonGeometry)world.Features[new(NorthTune.Deck.Feature)].Geometry).Rings.Outer;
+        Require(registered.Count >= 4 && outline.All(p => registered.Any(q => Vector2.Distance(p, q) < 0.02f)), "overlay and tune agree on the deck");
+        var cluster = Framework.Plan.OuterRing(world.Features[new("qsh:way:1061419119")])!;
+        var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).Where(r => r.Any(q => Vector2.Distance(q, NorthTune.Deck.Centre) < 80f)).ToArray();
+        var roads = world.Network.Roads.Select(r => (r.Line.Points, r.Width))
+            .Append((((PolylineGeometry)world.Features[new("design:north-drive-sf10")].Geometry).Line.Points, 5f)).ToArray();
+        foreach (var p in outline)
+        {
+            Require(Framework.Plan.Contains(cluster, p), $"deck corner {p} is inside 硕丰苑十组团");
+            Require(walls.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) >= 8f), $"deck corner {p} keeps 8 m off the walls");
+            foreach (var (line, width) in roads)
+                Require(PolylineDistance(p, line) - width * 0.5f >= 3f, $"deck corner {p} keeps 3 m off a road edge");
+        }
     }
 
     [TestCase]

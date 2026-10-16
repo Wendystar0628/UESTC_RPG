@@ -124,6 +124,8 @@ public static class NorthSites
         new Xuezhi.HallEntranceSite(),
         // 20a-2
         new Xuezhi.CourtyardSite(),
-        // 20b, 20c: append here.
+        // 20b1 (its clusters are in NorthTune.Clusters above)
+        new Shuofeng.RestDeckSite(),
+        // 20b2, 20c: append here.
     ]);
 }

@@ -24,7 +24,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
 
     public NorthTune.Cluster Cluster { get; } = cluster;
 
-    public override string Id => "20a." + Cluster.Key;
+    public override string Id => "cluster." + Cluster.Key;
 
     /// <summary>Q1 (walk, K1) outside the open main gate and Q6 (45° down, K2–K3) over its courtyard.</summary>
     public override IReadOnlyList<InspectionProbe> Probes => Cluster.Open
