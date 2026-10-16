@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 32.8k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS.md` · 33.7k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -95,8 +95,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 8.9k
-- CORE-DECISIONS §11 待对齐 · L291 · 61
+- CORE-DECISIONS §10 流程 · L243 · 9.8k
+- CORE-DECISIONS §11 待对齐 · L294 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -292,7 +292,7 @@
   - ART-STYLE §3.7 示例 · L296 · 1.1k
 - ART-STYLE §4 描线 · L317 · 6.2k
 - ART-STYLE §5 高光、边缘光与透光 · L397 · 4.1k
-- ART-STYLE §6 贴图与笔触 · L449 · 1.8k
+- ART-STYLE §6 贴图与笔触 · L449 · 1.9k
 - ART-STYLE §7 后期 · L478 · 5.7k
 - ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L547 · 9.2k
   - ART-STYLE §8.1 风格色 · L549 · 2.9k
@@ -482,7 +482,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 40.4k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN.md` · 40.5k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -490,7 +490,7 @@
   - ★ WLD-TERRAIN §0.1 接入要点 · L43 · 1.6k
 - WLD-TERRAIN §1 设计原则 · L58 · 1.2k
   - WLD-TERRAIN §1.1 总骨架 · L60 · 197
-  - WLD-TERRAIN §1.2 规则 · L66 · 953
+  - WLD-TERRAIN §1.2 规则 · L66 · 1.0k
 - WLD-TERRAIN §2 高度预算与分层 · L81 · 2.6k
   - WLD-TERRAIN §2.1 分层 · L83 · 448
   - WLD-TERRAIN §2.2 主模数 · L96 · 210
@@ -559,7 +559,7 @@
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION.md` · 42.7k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION.md` · 43.1k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
@@ -573,28 +573,28 @@
 - WLD-VEGETATION §3 线性种植 · L222 · 1.2k
 - WLD-VEGETATION §4 片区种植 · L252 · 2.5k
   - WLD-VEGETATION §4.1 外围（WLD-OUTSKIRTS） · L281 · 1.1k
-- WLD-VEGETATION §5 草坪 · L298 · 2.0k
-- WLD-VEGETATION §6 落叶、花瓣与积雪（地面覆盖） · L326 · 1.2k
-- WLD-VEGETATION §7 水生植物 · L348 · 1.2k
-- WLD-VEGETATION §8 提供给 SYS-MOTION 的参数 · L372 · 648
-- WLD-VEGETATION §9 季相参数 · L383 · 4.3k
-- WLD-VEGETATION §10 行走模式下的碰撞 · L442 · 791
-- WLD-VEGETATION §11 Godot 实现 · L457 · 10.3k
-  - WLD-VEGETATION §11.1 插片与团块的着色 · L464 · 1.4k
-  - WLD-VEGETATION §11.2 每株与每插片的数据 · L477 · 1.2k
-  - WLD-VEGETATION §11.3 阴影通道与 MAIN_CAM 门禁 · L503 · 943
-  - WLD-VEGETATION §11.4 近池与远池 · L514 · 1.4k
-  - WLD-VEGETATION §11.5 L2 替身：两条候选 · L531 · 697
-  - WLD-VEGETATION §11.6 季节数据通道 · L543 · 2.1k
-  - WLD-VEGETATION §11.7 地面遮罩与覆雪 · L579 · 786
-  - WLD-VEGETATION §11.8 画面设置（SYS-GRAPHICS） · L588 · 1.4k
-- WLD-VEGETATION §12 声音的接口（SYS-AUDIO） · L605 · 627
-- WLD-VEGETATION WP-23 交付验收 · L615 · 1.1k
-- WLD-VEGETATION §13 待验证（P0） · L635 · 668
+- WLD-VEGETATION §5 草坪 · L298 · 2.5k
+- WLD-VEGETATION §6 落叶、花瓣与积雪（地面覆盖） · L335 · 1.2k
+- WLD-VEGETATION §7 水生植物 · L357 · 1.2k
+- WLD-VEGETATION §8 提供给 SYS-MOTION 的参数 · L381 · 648
+- WLD-VEGETATION §9 季相参数 · L392 · 4.3k
+- WLD-VEGETATION §10 行走模式下的碰撞 · L451 · 791
+- WLD-VEGETATION §11 Godot 实现 · L466 · 10.3k
+  - WLD-VEGETATION §11.1 插片与团块的着色 · L473 · 1.4k
+  - WLD-VEGETATION §11.2 每株与每插片的数据 · L486 · 1.2k
+  - WLD-VEGETATION §11.3 阴影通道与 MAIN_CAM 门禁 · L512 · 943
+  - WLD-VEGETATION §11.4 近池与远池 · L523 · 1.4k
+  - WLD-VEGETATION §11.5 L2 替身：两条候选 · L540 · 697
+  - WLD-VEGETATION §11.6 季节数据通道 · L552 · 2.1k
+  - WLD-VEGETATION §11.7 地面遮罩与覆雪 · L588 · 786
+  - WLD-VEGETATION §11.8 画面设置（SYS-GRAPHICS） · L597 · 1.4k
+- WLD-VEGETATION §12 声音的接口（SYS-AUDIO） · L614 · 627
+- WLD-VEGETATION WP-23 交付验收 · L624 · 1.1k
+- WLD-VEGETATION §13 待验证（P0） · L644 · 668
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
-`docs/design/world/WLD-WATER.md` · 27.8k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
+`docs/design/world/WLD-WATER.md` · 28.1k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
 关键词：水体、水面、开放泳区、西湖、东湖、河渠、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、涉水涟漪、入水水花、灯的竖条倒影、refl_lamps、reflect_tex、reflect_vp、reflect_lake、西湖喷泉、叠水喷泉、游泳池池水、冬季浅滩、漂浮物、河渠中线、water.gdshader
 
   - WLD-WATER 分工 · L23 · 792
@@ -603,20 +603,20 @@
 - WLD-WATER §1 动画式水面（所有水体通用） · L77 · 6.5k
 - WLD-WATER §2 西湖 · L189 · 1.4k
 - WLD-WATER §3 东湖 · L216 · 916
-- WLD-WATER §4 河渠 · L236 · 1.7k
-- WLD-WATER §5 主楼喷泉（可选） · L265 · 145
-- WLD-WATER §6 截面水柱的水色 · L269 · 470
-- WLD-WATER §7 Godot 实现 · L283 · 6.9k
-  - WLD-WATER §7.1 水面材质（默认不透明） · L287 · 2.0k
-  - WLD-WATER §7.2 倒影接口 · L311 · 2.2k
-  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L334 · 1.5k
-  - WLD-WATER §7.4 透明变体（只在需要时） · L344 · 194
-  - WLD-WATER §7.5 水下 · L350 · 378
-  - WLD-WATER §7.6 多地图（SYS-MAPS） · L356 · 420
-- WLD-WATER §8 游泳馆与室外游泳池的池水 · L363 · 767
-- WLD-WATER §9 品学楼门前叠水喷泉 · L378 · 916
-- WLD-WATER WP-24 交付验收 · L389 · 1.3k
-- WLD-WATER §10 待验证（P0） · L416 · 804
+- WLD-WATER §4 河渠 · L236 · 2.1k
+- WLD-WATER §5 主楼喷泉（可选） · L269 · 145
+- WLD-WATER §6 截面水柱的水色 · L273 · 470
+- WLD-WATER §7 Godot 实现 · L287 · 6.9k
+  - WLD-WATER §7.1 水面材质（默认不透明） · L291 · 2.0k
+  - WLD-WATER §7.2 倒影接口 · L315 · 2.2k
+  - WLD-WATER §7.3 数据通道：反光带、灯的竖条倒影、涟漪 · L338 · 1.5k
+  - WLD-WATER §7.4 透明变体（只在需要时） · L348 · 194
+  - WLD-WATER §7.5 水下 · L354 · 378
+  - WLD-WATER §7.6 多地图（SYS-MAPS） · L360 · 420
+- WLD-WATER §8 游泳馆与室外游泳池的池水 · L367 · 767
+- WLD-WATER §9 品学楼门前叠水喷泉 · L382 · 916
+- WLD-WATER WP-24 交付验收 · L393 · 1.3k
+- WLD-WATER §10 待验证（P0） · L420 · 804
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
@@ -1523,17 +1523,17 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-`docs/design/engineering/ENG-GATES.md` · 57.7k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+`docs/design/engineering/ENG-GATES.md` · 57.8k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
 
 - ENG-GATES §0 结论 · L22 · 1.9k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 850
 - ENG-GATES §1 审查视角 · L52 · 14.6k
-- ENG-GATES §2 门禁与测试节奏 · L195 · 29.8k
-- ENG-GATES §3 一票否决 · L276 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L305 · 2.6k
-- ENG-GATES §5 回报格式 · L331 · 1.4k
-- ENG-GATES §6 待验证（P0） · L360 · 1.8k
+- ENG-GATES §2 门禁与测试节奏 · L195 · 29.9k
+- ENG-GATES §3 一票否决 · L277 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L306 · 2.6k
+- ENG-GATES §5 回报格式 · L332 · 1.4k
+- ENG-GATES §6 待验证（P0） · L361 · 1.8k
 
 ## ENG-ONBOARD · 子代理开工手册
 
@@ -1647,28 +1647,28 @@
   - ★ ENG-TEAM-COMMS §0.1 接入要点 · L31 · 69
 - ENG-TEAM-COMMS §1 交接目录与文件 · L35 · 1.8k
 - ENG-TEAM-COMMS §2 命名与写法 · L62 · 498
-- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L70 · 776
-- ENG-TEAM-COMMS §4 消息与流水 · L97 · 2.0k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L128 · 2.1k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L157 · 563
+- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L70 · 831
+- ENG-TEAM-COMMS §4 消息与流水 · L98 · 2.0k
+- ENG-TEAM-COMMS §5 唤醒脚本 · L129 · 2.1k
+- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L158 · 563
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
-`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.4k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
+`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.5k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
 关键词：值班、值班执行者、Sol 值班会话、sol-001、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、sol-002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
 
 - ENG-TEAM-DUTY §0 结论 · L23 · 706
   - ★ ENG-TEAM-DUTY §0.1 接入要点 · L34 · 69
-- ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 899
-- ENG-TEAM-DUTY §2 完成度调研 · L54 · 1.8k
-- ENG-TEAM-DUTY §3 Sol 旁路会话 · L95 · 904
-- ENG-TEAM-DUTY §4 怎么开子代理 · L115 · 1.2k
-- ENG-TEAM-DUTY §5 Codex 侧怎么省 · L143 · 484
-- ENG-TEAM-DUTY §6 待验证（P0） · L158 · 227
+- ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 999
+- ENG-TEAM-DUTY §2 完成度调研 · L55 · 1.8k
+- ENG-TEAM-DUTY §3 Sol 旁路会话 · L96 · 904
+- ENG-TEAM-DUTY §4 怎么开子代理 · L116 · 1.2k
+- ENG-TEAM-DUTY §5 Codex 侧怎么省 · L144 · 484
+- ENG-TEAM-DUTY §6 待验证（P0） · L159 · 227
 
 ## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
 
-`docs/design/engineering/ENG-TEAM-FLOW.md` · 14.0k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
+`docs/design/engineering/ENG-TEAM-FLOW.md` · 14.8k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
 关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、max 单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
 
 - ENG-TEAM-FLOW §0 结论 · L23 · 685
@@ -1676,17 +1676,17 @@
 - ENG-TEAM-FLOW §1 包的归属与开工顺序 · L35 · 2.5k
   - ENG-TEAM-FLOW §1.1 包的归属 · L37 · 1.2k
   - ENG-TEAM-FLOW §1.2 开工顺序与合并顺序 · L52 · 1.3k
-- ENG-TEAM-FLOW §2 开发流程 · L66 · 9.5k
+- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.2k
   - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 604
   - ENG-TEAM-FLOW §2.2 派工 · L84 · 1.7k
   - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 791
   - ENG-TEAM-FLOW §2.4 评审：审美与契约的交叉评审 · L132 · 654
-  - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 1.5k
-  - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L166 · 515
-  - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L177 · 489
-  - ENG-TEAM-FLOW §2.8 调研入队流水线 · L185 · 1.2k
-  - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L203 · 1.1k
-  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L219 · 887
+  - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 2.2k
+  - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L171 · 600
+  - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L182 · 489
+  - ENG-TEAM-FLOW §2.8 调研入队流水线 · L190 · 1.2k
+  - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L208 · 1.1k
+  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L224 · 887
 
 ## ENG-TEAM-QUOTA · 协作分册：账号与额度
 

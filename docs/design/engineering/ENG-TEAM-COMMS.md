@@ -92,6 +92,7 @@ gates: []
 **批准行**：
 - 格式：`批准合入：<候选提交或说明>，Opus，<时间>`，后面可以接括号里的门禁组合或条件。
 - 写在合并请求或任务单的末尾，单独成行，行首就是"批准合入："，前面不加列表符号或空格。唤醒脚本按行首匹配，行首不对就叫不醒值班执行者。
+- 批准行一出现，值班就会把它和当时其他能合的一起合掉（ENG-TEAM-FLOW §2.5，D-204）。
 - 合入后，值班执行者在同一文件末尾追加"已合入：main=<短号>，<时间>，<执行者>"。
 
 ## 4 消息与流水
@@ -131,16 +132,16 @@ gates: []
 
 | 脚本 | 启动 | 叫醒谁 | 什么时候叫醒 |
 | --- | --- | --- | --- |
-| `tools/sol_duty_watch.sh` | `bash sol_duty_watch.sh <值班会话的 thread>` | 值班执行者（下表） | 新的批准行、新的 sol 任务单、定时巡检（下表） |
+| `tools/sol_duty_watch.sh` | `bash sol_duty_watch.sh <值班会话的 thread>` | 值班执行者（下表） | 新的批准行、新的 sol 任务单、每小时巡检（下表） |
 | `tools/sol_side_runner.sh` | `bash sol_side_runner.sh <旁路会话的 thread>` | Sol 旁路会话 | `side/cards/` 下有还没交出的任务单 |
 
 **值班唤醒脚本**按下面的顺序处理，一次只叫醒一轮：
 
 | 发现 | 做什么 |
 | --- | --- |
-| `requests/*.md` 或 `tasks/*.md` 里新的行首"批准合入："行 | 新批准行全是"门禁：只跑 check_docs.py"的，交 Gemini 3.8 Flash High（不可用时 gpt-6-luna）；其余交 Grok（high）。消息里列出新的批准行（文件和内容），要求照 `sol-001.md` 合并并巡检 |
+| `requests/*.md` 或 `tasks/*.md` 里新的行首"批准合入："行 | 立即开一轮合并：把当时所有已批未合、条件已满足的候选成批合掉（含 `doc/rolling`）；有代码待合交 Grok（high），只有文档交 Gemini 3.8 Flash High（不可用时 gpt-6-luna）。叫醒消息写明这一轮同不同步 ENG-STATUS（每小时最多一次） |
 | 否则：`tasks/` 下新的 `sol-*.md`（`sol-001.md` 除外） | 交 Grok（medium）读单执行 |
-| 否则：距上次唤醒满 30 分钟 | 交 Grok（medium）做定时巡检：已批未合、条件已满足的候选照 `sol-001.md` 顺手合入 |
+| 否则：距上次巡检满 60 分钟 | 交 Grok（medium）巡检；已批未合、条件已满足的顺手合入，到点就同步 ENG-STATUS |
 
 **执行者与退回**（D-198）：值班执行者是照 `sol-001.md` 做合并、施工状态与巡检的一方，按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，`tools/duty/gemini_run.py` 等它做完，D-202），Gemini 不可用时交 gpt-6-luna（发进 luna 会话，快速模式）；其余合并、任务单与定时巡检交 Grok 4.7（作者的 Grok 订阅，后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol 值班会话（gpt-6.1-sol，high，普通速度），由它先看 `git status`、`merged.log` 和通知末尾再接着做，已做完的不重做。三者都照 `sol-001.md` 与 ENG-TEAM-FLOW §2.5、ENG-TEAM-DUTY §5 做，通知都写 `notes/sol-to-opus.md`，开头注明是谁；同一时刻只有一个执行者在主检出上做。Grok 与 GPT 一样不做审美工作（ENG-TEAM-ROLES §2.2）。
 

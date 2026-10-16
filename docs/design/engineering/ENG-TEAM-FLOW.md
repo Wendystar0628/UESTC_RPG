@@ -145,10 +145,15 @@ gates: []
 
 **批准**：评审通过后，主会话在合并请求或任务单末尾写批准行（格式见 ENG-TEAM-COMMS §3）。批准行可以附"门禁：…"（例如 `-D0`、去掉 G3、只改文档只跑 `check_docs.py`）或补充条件（例如"merge-WP-00-4 已合入 `main` 之后再合"）。条件没满足就不合。
 
-**合并执行**：唤醒脚本发现新的批准行，叫醒值班执行者（ENG-TEAM-COMMS §5）。值班执行者照 `tasks/sol-001.md` 的"合并执行"一节，在主检出 `E:\Project\UESTC_RPG` 上做（ENG-ARCH §6 第 4 步）：
+**什么时候合**（D-204）：唤醒脚本一发现新的批准行，就叫醒值班执行者，把当时所有已批未合、条件已满足的候选成批合掉，不攒、不等时间窗；有前后依赖的先合基点，合完再看依赖它的。执行者正在合的时候新来的批准行，这一轮结束后马上开下一轮。
+
+**滚动文档分支**：主会话的零碎文档改动不各开候选，一律提交到 `doc/rolling`（工作树 `E:\Project\UESTC_RPG.wt\DOC-rolling`），请求文件 `requests/merge-DOC-rolling.md` 里的"滚动批准"行长期有效。每一轮合并里它比 `main` 多出提交，就记下头提交 T，整段 squash 合入（只跑 `check_docs.py`），提交首行写"文档：滚动合入"、正文逐条列这些提交的标题；合完若分支头仍是 T 就从新 `main` 重建分支，期间又有新提交就 `git rebase --onto main T`，工作树不干净就不动它、写一行状态。急的文档改动也可以单独开候选、写批准行。
+
+**合并执行**：唤醒脚本按上面的时机叫醒值班执行者（ENG-TEAM-COMMS §5）。值班执行者照 `tasks/sol-001.md` 的"合并执行"一节，在主检出 `E:\Project\UESTC_RPG` 上做（ENG-ARCH §6 第 4 步）：
 1. `git status --short` 必须为空；不空就停下，写进文件末尾并通知主会话，不动别人的改动。
 2. `git merge --squash <候选提交>`；有冲突就 `git reset --merge` 撤回，停下报告。
 3. 跑门禁：默认 `scripts\gate.ps1 -Wp <包号> -Only G1,G2,G3,G4,G5`，批准行另写了组合就照写的跑；只改文档的跑 `scripts\docs\check_docs.py`，要求 problems 0。资源有改动时 G1 会在主检出跑 `--headless --import`，同时更新工作树的导入种子。
+   - **省掉重复的两项**（D-206）：一批里每条候选都在自己的工作树里 rebase 到交候选时的最新 `main` 并跑过快检、结果是通过（请求或回报的门禁行写明），而且 squash 时没有解冲突，就跳过 G1 的格式检查（`-SkipFormat`）和 G4 的依赖规则检查（`-Only G1,G2,G3,G5`）；编译、G2、G3、G5 照跑。有一条不满足，整批照常全跑。`-SkipFormat` 由 WP-27 加上之前，先只省 G4。
    - 失败：`git reset --merge` 撤回，把失败项、关键报错行、日志路径写到文件末尾，通知主会话，停下。不修代码。
    - 等 GPU 锁超过 15 分钟：查卡死的进程并报告，不绕过锁。
 4. 提交：首行 `WP-xx: <一句话>` 或 `文档：<一句话>`；正文几条要点，只从请求文件或回报里取，末尾写"候选 <提交>。门禁 … 通过。"；结尾加 `Co-Authored-By: GPT-6.1 Sol <noreply@openai.com>` 和 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` 两行。
@@ -165,7 +170,7 @@ gates: []
 
 ### 2.6 合入以后：施工状态与 rebase
 
-**施工状态**：每次合入后，值班执行者同步 ENG-STATUS §2（当前 `main`、已合入列表）与 ENG-STATUS §3（删掉已合入的行或改状态）。改完跑 `scripts/docs/gen_index.py` 和 `check_docs.py`（problems 0），单独提交"文档：ENG-STATUS 同步 <包号> 合入"并推送。ENG-STATUS 是值班执行者唯一可以自行改的设计文档。
+**施工状态**：ENG-STATUS 每小时最多同步一次（D-204）。唤醒脚本在叫醒消息里写明这一轮同不同步；同步的那一轮整批合完以后，值班执行者同步 ENG-STATUS §2（当前 `main`、已合入列表）与 ENG-STATUS §3（删掉已合入的行或改状态），把上次同步之后合入的都记上。改完跑 `scripts/docs/gen_index.py` 和 `check_docs.py`（problems 0），单独提交一个"文档：ENG-STATUS 同步"并推送。实时的合入记录看 `merged.log`。ENG-STATUS 是值班执行者唯一可以自行改的设计文档。
 
 **待派工队列**：值班执行者同步施工状态时顺带检查 ENG-STATUS §4，把依赖已满足的条目改成"可派"（§2.8）。
 
