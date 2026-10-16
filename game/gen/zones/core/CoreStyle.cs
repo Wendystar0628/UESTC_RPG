@@ -8,7 +8,7 @@ namespace Campus.Gen.Zones.Core;
 /// angles degrees. Values marked "review" are mainline initial values awaiting the main session's call; the rest come
 /// from the cited documents. Colours are palette names only (ART-STYLE §8.5).
 /// </summary>
-public static class CoreStyle
+public static partial class CoreStyle
 {
     // ---- Ground surfaces this zone stands on. Mirrors WP-15 GroundSection (paving 0.15, lawn 0.10 above the terrain
     //      height, decal lift 4 mm); the zone cannot reference the ground assembly, keep the two in step. ----
@@ -133,6 +133,7 @@ public static class CoreStyle
         CoreMaterial.Inlay => BandStone,
         CoreMaterial.Metal => Steel,
         CoreMaterial.Cloth => FlagWhite,
+        CoreMaterial.Wall or CoreMaterial.Trim or CoreMaterial.Roof or CoreMaterial.Sheet => BuildingFamily(material),
         _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Unknown core material."),
     };
 
@@ -147,6 +148,7 @@ public static class CoreStyle
             CoreMaterial.Inlay => spec with { Fx = ToonFx.DetailTiling, Line = LineClass.None, Wet = 0.6f },
             CoreMaterial.Metal => spec with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f },
             CoreMaterial.Cloth => spec with { Translucency = 0.5f, Line = LineClass.Fine, Wet = 0.3f },
+            CoreMaterial.Wall or CoreMaterial.Trim or CoreMaterial.Roof or CoreMaterial.Sheet => BuildingSpec(material, spec),
             _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Unknown core material."),
         };
     }

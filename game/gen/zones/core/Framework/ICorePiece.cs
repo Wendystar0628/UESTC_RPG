@@ -40,10 +40,17 @@ public sealed class CoreBuild(PaletteRegistry? palette)
     public CoreMesh Mesh { get; } = new(palette);
     public List<PlacedPart> Parts { get; } = [];
     public List<LightEmitter> Emitters { get; } = [];
+    /// <summary>Bundles a piece writes itself (VF-B glass, landmark parts kept as their own instances), after the shared sink's.</summary>
+    public List<GeometryBundle> Bundles { get; } = [];
+    /// <summary>The registry the shared sink colours with, for pieces that write their own bundles.</summary>
+    public PaletteRegistry? Palette { get; } = palette;
+    /// <summary>The map's window allocation (BuildContext.WindowNumbering, map already checked); null only in fixtures.</summary>
+    public WindowNumberingSnapshot? WindowNumbering { get; init; }
 
     public ContentOutput Finish()
     {
         var meshes = Mesh.Finish();
+        if (Bundles.Count > 0) meshes = [.. meshes, .. Bundles];
         if (meshes.Count == 0 && Parts.Count == 0 && Emitters.Count == 0) return ContentOutput.Empty;
         return new ContentOutput(meshes, Parts.ToArray(), Emitters.Count == 0 ? null : Emitters.ToArray());
     }

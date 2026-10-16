@@ -20,4 +20,14 @@ public static class CoreFeatures
     public static readonly FeatureId Sundial = new("design:core-sundial");
     /// <summary>Benches under the plaza's rim lamps (MAP-QSH-CORE "本区设计增补"): design:core-plaza-bench-1, -2, ….</summary>
     public const string PlazaBenchPrefix = "design:core-plaza-bench-";
+
+    /// <summary>Source parts of the library entity (WorldFeaturePart.SourceId, MAP-QSH-CORE "数据定位").</summary>
+    public const string LibraryCore = "osm:way:806848395";
+    public const string LibraryWings = "osm:way:806848396";
+    public const string LibraryPodium = "osm:way:806848397";
+    public const string LibraryTowerNe = "osm:way:806848391";
+    /// <summary>The south-east corner block is the front square tower facing the time plaza (正面方塔).</summary>
+    public const string LibraryTowerSe = "osm:way:806848392";
+    public const string LibraryTowerNw = "osm:way:806848393";
+    public const string LibraryTowerSw = "osm:way:806848394";
 }

@@ -18,6 +18,14 @@ public enum CoreMaterial : byte
     Metal,
     /// <summary>Thin cloth (flags): translucent, fine line.</summary>
     Cloth,
+    /// <summary>Building walls (library shell and later blocks): bevel lift, building line.</summary>
+    Wall,
+    /// <summary>Copings, string courses, sills and plinth bands: bevel lift, fine line.</summary>
+    Trim,
+    /// <summary>Flat roofs and terrace decks: mottle, high wet response.</summary>
+    Roof,
+    /// <summary>Sheet-metal roofs and eaves: rim and anisotropic band, building line.</summary>
+    Sheet,
 }
 
 /// <summary>How one face is painted: material class, colour family (palette name without .lit/.shade) and VF-A flags.</summary>
