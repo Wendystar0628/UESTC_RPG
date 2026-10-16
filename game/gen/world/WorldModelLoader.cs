@@ -221,6 +221,42 @@ public static class WorldModelLoader
             try
             {
                 var op = overlay.Ops[i];
+                if (op is HidePartOp hidePart)
+                {
+                    RequireReason(hidePart.Reason);
+                    // Unlike legacy hide, this operation accepts only the exact current entity key, never a source alias.
+                    var entityId = hidePart.Target.Value;
+                    if (string.IsNullOrWhiteSpace(entityId) || !features.TryGetValue(entityId, out var current))
+                        throw new ArgumentException($"hidePart target must be an exact existing entity ID: '{entityId}'.");
+                    if (string.IsNullOrWhiteSpace(hidePart.SourceId) || hidePart.SourceId != hidePart.SourceId.Trim())
+                        throw new ArgumentException("hidePart sourceId must be the exact canonical source ID of one current part.");
+                    var matches = current.Parts.Count(part => string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal));
+                    if (matches != 1)
+                        throw new ArgumentException($"hidePart sourceId '{hidePart.SourceId}' must match exactly one part of '{entityId}'; found {matches}.");
+                    if (current.Parts.Count == 1)
+                        throw new ArgumentException("hidePart cannot remove the final part; use hide to remove the entity explicitly.");
+                    var remaining = current.Parts.Where(part => !string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal)).ToArray();
+                    // Match LoadCore's aggregation, preserving the remaining part records, polygon rings and holes.
+                    var geometry = Geometry(remaining.SelectMany(part => Polygons(part.Geometry)).ToArray());
+                    var height = remaining.Max(part => part.Height);
+                    var bounds = BoundsOf(geometry, height ?? 0);
+                    RegisterWrite(entityId, entityId, file, overlay.Owner, writes, claimedBy);
+                    features[entityId] = current with
+                    {
+                        Parts = Array.AsReadOnly(remaining),
+                        Geometry = geometry,
+                        Height = height,
+                        Storeys = remaining.Max(part => part.Storeys),
+                        Bounds = bounds,
+                        Source = FeatureSource.OsmOverlay
+                    };
+                    if (aliases.TryGetValue(hidePart.SourceId, out var sourceTargets))
+                    {
+                        sourceTargets.RemoveAll(mappedEntity => string.Equals(mappedEntity, entityId, StringComparison.Ordinal));
+                        if (sourceTargets.Count == 0) aliases.Remove(hidePart.SourceId);
+                    }
+                    continue;
+                }
                 if (op is AddOp add)
                 {
                     RequireReason(add.Reason);
