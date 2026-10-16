@@ -1,14 +1,14 @@
 // sky.gdshader：全日天空（WP-40）
 // 规格：ART-SKYLIGHT §4、§5.3；SYS-TIME §3.2；SYS-WEATHER §2、§5、§7；ENG-PERF §1.4、§1.5。
 // 主线版：五段渐变（太阳侧 / 背阳侧，夜间换月侧）、霾带、日盘与柔光、月盘（球面明暗与月晕）、星空、
-// 半分辨率云层（积云：1.5 km 高的云底平面 + 高度场团块，硬边三阶；层云：满覆盖、两阶、留亮缝）。
+// 半分辨率云层（四分之一分辨率通道只记轮廓朝向，给金边与下沿高光用；积云：1.5 km 高的云底平面 + 高度场团块，硬边三阶；层云：满覆盖、两阶、留亮缝）。
 // 颜色只读调色板纹理第 0 行（ENG-PERF §1.5 的行布局，色号与 game/style/palette/core.json 一致），着色器里不写颜色。
 // 不用内置 TIME；时间只读 anim_time、step_rate；日月方向读全局参数里的真实方向（sun_dir、moon_dir），不读 LIGHT0。
 // 当前帧的云量与阈值由 SkyNode 写进本材质的两个 uniform（云量来自 IColorScriptFrame，不从脚本读回全局参数）。
 // 后置细节（ENG-WP §2.1）：银河、城市天光方位、九项光效、远处雨幕与云内闪、彩虹、积雨云卡片。
 
 shader_type sky;
-render_mode use_half_res_pass;
+render_mode use_half_res_pass, use_quarter_res_pass;
 
 #include "res://style/shaders/globals.gdshaderinc"
 #include "res://style/shaders/fog.gdshaderinc"
@@ -74,7 +74,13 @@ const float CU_LIGHT_LIFT = 0.45;    // 低太阳时把光向上抬一点，团�
 const float CU_CAV_D = 110.0;        // 最暗处：沿法线往外探的距离（m）
 const float CU_CAV_EPS = 0.004;
 const float CU_T_LIT = 0.12;
-const float CU_BAND_W = 0.025;       // 阶与阶之间的过渡半宽（硬边，只够抗锯齿）
+const float CU_BAND_W = 0.025;       // 阶与阶之间的过渡半宽的下限（硬边，只够抗锯齿）
+// 阶的交界按像素抗锯齿（40b）：半分辨率里阶与阶的交界若是一像素一判的硬切（挡光、凹褶、云底与侧面），
+// 双线性放大后就是一级一级的台阶。所以每个交界都按"一个半分辨率像素里判据变多少"放成连续的过渡，
+// 再由双线性放大成全分辨率约 2 px 的干净柔边
+const float CU_TONE_AA = 1.0;        // 交界的过渡宽度（半分辨率像素）
+const float CU_TONE_GRAZE = 0.25;    // 估一像素在云面上走多远时 |n·视线| 的下限（越贴着视线的面走得越远）
+const float CU_TERM_PX = 2.0;        // 估受光交界（n·l）每像素变化量时，沿受光方向探出去的像素数
 const float CU_SHADOW_D1 = 160.0;    // 团块之间的自遮挡：朝光方向取两点
 const float CU_SHADOW_D2 = 480.0;
 const float CU_EDGE_PX = 1.0;        // 半分辨率里覆盖率从 0.5 走到 1（或 0）跨的像素数
@@ -82,7 +88,10 @@ const float CU_EDGE_SLACK = 0.002;   // 判"离云够近"时多放的一点密�
 const int CU_EDGE_SEARCH = 5;        // 没进云的光线：找最近点的三分搜索次数
 const float CU_EDGE_SHARP = 0.75;    // 全分辨率收边的过渡宽度（×覆盖率梯度，约 1 px）
 const float CU_RIM_PX = 1.3;         // 金边与下沿高光的宽度（全分辨率像素）
-const float CU_RIM_FAR = 0.45;       // 背向光源一侧的云，金边的强度
+const float CU_RIM_FAR = 0.45;
+// 金边与下沿高光"朝不朝光、是不是下沿"的判据（40b）：在四分之一分辨率通道里按云面的三维法线投到屏幕上求，
+// 双线性取样后是一片连续的场；不用覆盖率的屏幕梯度，那个梯度在半分辨率格子上按格子方向量化，亮边会断成一串点
+const float CU_RIM_Q_PX = 2.0;       // 四分之一分辨率里，离云多少像素以内还记下最近云面的朝向       // 背向光源一侧的云，金边的强度
 const float CU_BEHIND_M1 = 160.0;    // 判"后面还是云"的两个探点（m）
 const float CU_BEHIND_M2 = 450.0;
 const float CU_GRAZE_FROM = 0.06;    // |n·视线| 小于它的面不单独受光（轮廓细条交给金边）
@@ -294,36 +303,65 @@ float cu_inside(vec3 p, float lod, float flat_k) {
 	return cu_field(p.xz, lod) - cloud_thr - cu_prof(yb, flat_k) - CU_FAR_THIN * (1.0 - flat_k) / (1.0 - CU_FLAT_FAR);
 }
 
-// 三阶上色：受光 / 云腹 / 最暗处。背着光的面是云腹；被前面的团块挡住光、又背着光的地方压到最暗（前后团块分出层次）
-vec3 cu_tone(vec3 n, vec3 l, vec3 p, float lod, float flat_k, bool is_base, float graze, out float lit_k) {
+// 三阶上色：受光 / 云腹 / 最暗处。背着光的面是云腹；被前面的团块挡住光、又背着光的地方压到最暗（前后团块分出层次）。
+// w：一个半分辨率像素里云体函数大约变多少（密度单位），各个"在不在云里"的判据都按它放成约一像素宽的连续过渡
+float cu_soft_in(float f, float w) {
+	return smoothstep(-w, w, f);
+}
+
+// 云底平涂：云腹一阶；太阳贴着地平线时，云底的薄边被从下方点燃（火烧云）
+vec3 cu_tone_base(vec3 l, vec3 p, float lod, float flat_k, float w, out float lit_k) {
+	vec3 belly = pal_cur(PAL_SKY_CLOUD_BELLY);
+	vec3 lit = pal_cur(PAL_SKY_CLOUD_LIT);
+	float h = sky_alt_deg(l);
+	float under = smoothstep(-4.0, -1.0, h) * (1.0 - smoothstep(1.0, 4.5, h));
+	lit_k = 0.0;
+	if (under <= 0.0) {
+		return belly;
+	}
+	// 只点燃朝太阳的那一圈云底：往太阳方向走 CU_UNDER_REACH 就出了云底的地方
+	vec2 lh = normalize(l.xz + vec2(1e-5));
+	vec3 q = vec3(p.x + lh.x * CU_UNDER_REACH, CU_BASE + 1.0, p.z + lh.y * CU_UNDER_REACH);
+	float edge = 1.0 - cu_soft_in(cu_inside(q, lod, flat_k), w);
+	lit_k = under * edge;
+	return mix(belly, mix(lit, pal_cur(PAL_SKY_CLOUD_RIM), 0.4), lit_k * CU_UNDER_MIX);
+}
+
+// 侧面三阶。dt：沿受光方向走一个像素，n·l 大约变多少（受光交界的过渡宽度）
+vec3 cu_tone_side(vec3 n, vec3 l, vec3 p, float lod, float flat_k, float graze, float w, float dt, out float lit_k) {
 	vec3 deep = pal_cur(PAL_SKY_CLOUD_DEEP);
 	vec3 belly = pal_cur(PAL_SKY_CLOUD_BELLY);
 	vec3 lit = pal_cur(PAL_SKY_CLOUD_LIT);
-	lit_k = 0.0;
-	if (is_base) {
-		// 云底平涂：云腹一阶；太阳贴着地平线时，云底的薄边被从下方点燃（火烧云）
-		float h = sky_alt_deg(l);
-		float under = smoothstep(-4.0, -1.0, h) * (1.0 - smoothstep(1.0, 4.5, h));
-		// 只点燃朝太阳的那一圈云底：往太阳方向走 CU_UNDER_REACH 就出了云底的地方
-		vec2 lh = normalize(l.xz + vec2(1e-5));
-		vec3 q = vec3(p.x + lh.x * CU_UNDER_REACH, CU_BASE + 1.0, p.z + lh.y * CU_UNDER_REACH);
-		float edge = 1.0 - step(0.0, cu_inside(q, lod, flat_k));
-		lit_k = under * edge;
-		return mix(belly, mix(lit, pal_cur(PAL_SKY_CLOUD_RIM), 0.4), lit_k * CU_UNDER_MIX);
-	}
 	vec3 lw = normalize(l + vec3(0.0, CU_LIGHT_LIFT, 0.0));
 	float t = dot(n, lw);
 	// 受光：朝光、且朝光方向上没有别的团块挡着（被挡住的退成云腹，前后团块分出层次）
-	float occ = 0.0;
-	occ = max(occ, step(0.0, cu_inside(p + lw * CU_SHADOW_D1, lod, flat_k)));
-	occ = max(occ, step(0.0, cu_inside(p + lw * CU_SHADOW_D2, lod, flat_k)));
+	float occ = max(cu_soft_in(cu_inside(p + lw * CU_SHADOW_D1, lod, flat_k), w),
+		cu_soft_in(cu_inside(p + lw * CU_SHADOW_D2, lod, flat_k), w));
 	// 几乎贴着视线的面（轮廓上的细条）不单独受光，交给全分辨率的金边，免得半分辨率里断成碎点
-	lit_k = smoothstep(CU_T_LIT - CU_BAND_W, CU_T_LIT + CU_BAND_W, t) * (1.0 - occ) * graze;
+	float bw = max(CU_BAND_W, dt * CU_TONE_AA);
+	lit_k = smoothstep(CU_T_LIT - bw, CU_T_LIT + bw, t) * (1.0 - occ) * graze;
 	// 最暗处：背光一侧团块与团块相夹的褶（沿法线往外一点仍在云里，就是凹处），勾出花椰菜的大小层次
-	float cav = step(-CU_CAV_EPS, cu_inside(p + n * CU_CAV_D, lod, flat_k));
+	float cav = cu_soft_in(cu_inside(p + n * CU_CAV_D, lod, flat_k) + CU_CAV_EPS, w);
 	float deep_k = cav * (1.0 - lit_k);
 	vec3 c = mix(belly, deep, deep_k);
 	return mix(c, lit, lit_k);
+}
+
+// base_k：1 是云底平面，0 是侧面；云底的外沿按像素过渡到侧面，云底与侧面的交界不起台阶
+vec3 cu_tone(vec3 n, vec3 l, vec3 p, float lod, float flat_k, float base_k, float graze, float w_side, float w_base, float dt,
+		out float lit_k) {
+	vec3 c = vec3(0.0);
+	lit_k = 0.0;
+	if (base_k < 1.0) {
+		c = cu_tone_side(n, l, p, lod, flat_k, graze, w_side, dt, lit_k);
+	}
+	if (base_k > 0.0) {
+		float lk_b;
+		vec3 cb = cu_tone_base(l, p, lod, flat_k, w_base, lk_b);
+		c = mix(c, cb, base_k);
+		lit_k = mix(lit_k, lk_b, base_k);
+	}
+	return c;
 }
 
 // 云体函数的梯度（水平取密度的梯度，用低一级细节；竖直取剖面的导数）
@@ -335,7 +373,8 @@ vec3 cu_grad(vec3 p, float lod, float flat_k, float e) {
 
 // 返回预乘的颜色与"边缘覆盖率"：轮廓处 0.5，往里 1、往外 0，跨约两个半分辨率像素连续变化。
 // 全分辨率那一步双线性取样后在 0.5 处按约 1 px 收成硬边，金边与下沿高光也在那一步按覆盖率的梯度画
-vec4 cumulus(vec3 dir, vec3 cam, float pix, vec3 haze) {
+// geom_only：四分之一分辨率通道用，只求轮廓的朝向（金边、下沿高光的判据），sx、sy 是本通道一个像素的视线增量
+vec4 cumulus(vec3 dir, vec3 cam, float pix, vec3 haze, bool geom_only, vec3 sx, vec3 sy) {
 	if (cloud_cover <= 0.001 || cloud_thr >= 0.999 || dir.y < 0.012) {
 		return vec4(0.0);
 	}
@@ -393,7 +432,8 @@ vec4 cumulus(vec3 dir, vec3 cam, float pix, vec3 haze) {
 	} else if (hit < 0) {
 		// 没进云：离云还远的直接返回；近的在最近点两侧三分搜索，找准最近的一点
 		float pix_b = t_best * pix;
-		if (f_best < -(CU_EDGE_PX + 1.0) * pix_b / CU_SAFE_M - CU_EDGE_SLACK) {
+		float reach_px = geom_only ? CU_RIM_Q_PX : CU_EDGE_PX;
+		if (f_best < -(reach_px + 1.0) * pix_b / CU_SAFE_M - CU_EDGE_SLACK) {
 			return vec4(0.0);
 		}
 		float span = CU_STEP_MIN + t_best * CU_STEP_GROW;
@@ -434,26 +474,58 @@ vec4 cumulus(vec3 dir, vec3 cam, float pix, vec3 haze) {
 		cover = behind > 0.0 ? 1.0 : cover;
 	} else {
 		float f = cu_inside(p, lod, flat_k);
-		cover = clamp(0.5 + 0.5 * f / (glen * pix_m * CU_EDGE_PX), 0.0, 0.5);
+		cover = clamp(0.5 + 0.5 * f / (glen * pix_m * (geom_only ? CU_RIM_Q_PX : CU_EDGE_PX)), 0.0, 0.5);
 		if (cover <= 0.001) {
 			return vec4(0.0);
 		}
 	}
-	vec3 n = is_base ? vec3(0.0, -1.0, 0.0) : -grad / glen;
+	// 侧面的法线：云底的点也取它（云底外沿往侧面过渡时用）
+	vec3 n = -grad / glen;
+	if (geom_only) {
+		// 轮廓朝外的方向 = 法线投到屏幕上；光的屏幕方向 = dot(视线, 光) 增大的方向；上 = 视线 y 增大的方向
+		vec2 n_scr = vec2(dot(n, sx), dot(n, sy));
+		vec3 lq = sky_night_k() < 0.5 ? sky_sun_vec() : sky_moon_vec();
+		vec2 l_scr = vec2(dot(lq, sx), dot(lq, sy));
+		vec2 up_scr = vec2(sx.y, sy.y);
+		float nl = length(n_scr);
+		float facing_q = nl > 1e-6 && length(l_scr) > 1e-9 ? smoothstep(0.05, 0.55, dot(n_scr / nl, normalize(l_scr))) : 0.0;
+		float bottom_q = nl > 1e-6 && length(up_scr) > 1e-9 ? smoothstep(0.35, 0.8, -dot(n_scr / nl, normalize(up_scr))) : 0.0;
+		float wq = hit >= 0 ? 1.0 : clamp(0.5 + 0.5 * cu_inside(p, lod, flat_k) / (glen * pix_m * CU_RIM_Q_PX), 0.05, 1.0);
+		return vec4(vec3(facing_q, bottom_q, 0.0) * wq, wq);
+	}
+	// 一个半分辨率像素在云面上走多远（m）；云体函数在这段距离里变多少，就是各判据的过渡宽度
+	float step_side = pix_m / max(abs(dot(n, dir)), CU_TONE_GRAZE);
+	float w_side = glen * step_side * CU_TONE_AA;
+	float w_base = length(grad.xz) * pix_m / max(dir.y, 0.03) * CU_TONE_AA;
+	// 云底：离云底外沿（云体函数在云底平面上的零线）不到一个像素的，按像素过渡到侧面
+	float base_k = is_base ? smoothstep(0.0, max(w_base, 1e-6), cu_inside(p, lod, flat_k)) : 0.0;
 	vec3 s = sky_sun_vec();
 	vec3 m = sky_moon_vec();
 	float nk = sky_night_k();
+	vec3 lmain = nk < 0.5 ? s : m;
+	float graze = smoothstep(CU_GRAZE_FROM, CU_GRAZE_TO, abs(dot(n, dir)));
+	// 受光交界的过渡宽度：沿受光方向在云面上探出 CU_TERM_PX 个像素，看 n·l 变多少
+	float dt = 0.0;
+	if (base_k < 1.0) {
+		vec3 lw = normalize(lmain + vec3(0.0, CU_LIGHT_LIFT, 0.0));
+		vec3 tg = lw - n * dot(n, lw);
+		float tl = length(tg);
+		if (tl > 1e-3) {
+			vec3 p2 = p + tg / tl * step_side * CU_TERM_PX;
+			vec3 g2 = cu_grad(p2, lod + 1.0, flat_k, max(texel_m * 2.0, pix_m * 1.5));
+			vec3 n2 = -g2 / max(length(g2), 1e-7);
+			dt = abs(dot(n2, lw) - dot(n, lw)) / CU_TERM_PX;
+		}
+	}
 	vec3 col;
 	float lit_k;
-	vec3 lmain = nk < 0.5 ? s : m;
-	float graze = is_base ? 1.0 : smoothstep(CU_GRAZE_FROM, CU_GRAZE_TO, abs(dot(n, dir)));
 	if (nk <= 0.01 || nk >= 0.99) {
-		col = cu_tone(n, lmain, p, lod, flat_k, is_base, graze, lit_k);
+		col = cu_tone(n, lmain, p, lod, flat_k, base_k, graze, w_side, w_base, dt, lit_k);
 	} else {
 		float lk_s;
 		float lk_m;
-		vec3 cs = cu_tone(n, s, p, lod, flat_k, is_base, graze, lk_s);
-		vec3 cm = cu_tone(n, m, p, lod, flat_k, is_base, graze, lk_m);
+		vec3 cs = cu_tone(n, s, p, lod, flat_k, base_k, graze, w_side, w_base, dt, lk_s);
+		vec3 cm = cu_tone(n, m, p, lod, flat_k, base_k, graze, w_side, w_base, dt, lk_m);
 		col = mix(cs, cm, nk);
 		lit_k = mix(lk_s, lk_m, nk);
 	}
@@ -528,7 +600,7 @@ vec4 half_res_clouds(vec3 dir, float pix) {
 	}
 	float w_sun = sky_side_weight(dir);
 	vec3 haze = sky_haze_color(w_sun);
-	vec4 cu = cumulus(dir, POSITION, pix, haze);
+	vec4 cu = cumulus(dir, POSITION, pix, haze, false, vec3(0.0), vec3(0.0));
 	vec4 dk = overcast_deck(dir, POSITION, pix, haze, deck_amount());
 	return vec4(dk.rgb + (1.0 - dk.a) * cu.rgb, dk.a + (1.0 - dk.a) * cu.a);
 }
@@ -553,13 +625,14 @@ vec3 full_res_sky(vec3 dir, float pix) {
 
 // 全分辨率合成：半分辨率的覆盖率双线性取样后在 0.5 处按约 1 px 收成硬边；
 // 金边（夜里是月光的银边）与云底下沿的细高光按覆盖率的梯度画，宽度以全分辨率像素计，不随半分辨率起台阶
-vec3 composite_clouds(vec3 sky, vec3 dir, vec4 cl) {
+vec3 composite_clouds(vec3 sky, vec3 dir, vec4 cl, vec4 rq) {
 	float a_s = cl.a;
 	if (a_s <= 0.001) {
 		return sky;
 	}
 	vec3 col = cl.rgb / a_s;
-	vec2 g = vec2(dFdx(a_s), dFdy(a_s));
+	// 细导数：逐像素取差分。粗导数按 2×2 块取，轮廓距离一块一块跳，细亮边断成一串点（40b）
+	vec2 g = vec2(dFdxFine(a_s), dFdyFine(a_s));
 	float gl = length(g);
 	float w = clamp(gl * CU_EDGE_SHARP, 0.004, 0.5);
 	float a = smoothstep(0.5 - w, 0.5 + w, a_s);
@@ -572,12 +645,17 @@ vec3 composite_clouds(vec3 sky, vec3 dir, vec4 cl) {
 		float sd = dot(dir, l);
 		vec2 toward = vec2(dFdx(sd), dFdy(sd));
 		float facing = length(toward) > 1e-7 ? smoothstep(0.05, 0.55, dot(outward, normalize(toward))) : 0.0;
+		// 四分之一分辨率通道记下的朝向（连续）；只有层云缝边这类那里没记的轮廓，才退回覆盖率梯度
+		float q_k = smoothstep(0.02, 0.2, rq.a);
+		vec2 fb = rq.a > 1e-4 ? rq.rg / rq.a : vec2(0.0);
+		facing = mix(facing, fb.x, q_k);
 		float near_light = mix(CU_RIM_FAR, 1.0, smoothstep(-0.3, 0.8, sd));
 		float deck_k = 1.0 - 0.75 * deck_amount();
 		col = mix(col, pal_cur(PAL_SKY_CLOUD_RIM), band * facing * near_light * deck_k);
 		// 云底下沿的白色细高光：低太阳从下方照亮（ART-SKYLIGHT §4.5）
 		vec2 up = vec2(dFdx(dir.y), dFdy(dir.y));
 		float bottom = length(up) > 1e-7 ? smoothstep(0.35, 0.8, -dot(outward, normalize(up))) : 0.0;
+		bottom = mix(bottom, fb.y, q_k);
 		float low = 1.0 - smoothstep(CU_HL_SUN_FROM, CU_HL_SUN_TO, sky_alt_deg(l));
 		col = mix(col, pal_cur(PAL_SKY_CLOUD_LIT) * 1.06, band * bottom * low * mix(0.55, 1.0, near_light) * deck_k);
 	}
@@ -587,14 +665,23 @@ vec3 composite_clouds(vec3 sky, vec3 dir, vec4 cl) {
 void sky() {
 	vec3 dir = normalize(EYEDIR);
 	float pix = max(length(fwidth(EYEDIR)), 1e-5);
+	vec3 sx = dFdx(EYEDIR);
+	vec3 sy = dFdy(EYEDIR);
 	if (AT_CUBEMAP_PASS) {
 		// 卡通材质不读天空的环境光和反射（ENG-BUDGET §10）：辐照度图只给常量，云和天气每帧变也不让它变贵
 		COLOR = vec3(0.5);
+	} else if (AT_QUARTER_RES_PASS) {
+		vec4 q = vec4(0.0);
+		if (dir.y > 0.0 && deck_amount() < 0.999) {
+			q = cumulus(dir, POSITION, pix, vec3(0.0), true, sx, sy);
+		}
+		COLOR = q.rgb;
+		ALPHA = q.a;
 	} else if (AT_HALF_RES_PASS) {
 		vec4 o = half_res_clouds(dir, pix);
 		COLOR = o.rgb;
 		ALPHA = o.a;
 	} else {
-		COLOR = composite_clouds(full_res_sky(dir, pix), dir, HALF_RES_COLOR);
+		COLOR = composite_clouds(full_res_sky(dir, pix), dir, HALF_RES_COLOR, QUARTER_RES_COLOR);
 	}
 }
