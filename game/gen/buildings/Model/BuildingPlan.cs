@@ -76,6 +76,8 @@ public sealed class BuildingPlan
     /// the ground-floor row takes its facade segment's ground band. Empty without fidelity data: everything is K3.
     /// </summary>
     public IReadOnlyList<FidelityZone[]> OpeningZones { get; init; } = [];
+    /// <summary>Precision zone of the roof from the fidelity data (IFidelityModel.Roof); without data the default K4 (a).</summary>
+    public FidelityZone RoofZone { get; init; } = FidelityZone.K4;
     /// <summary>Columns of the building window grid (all bays of all rings, blank ones included).</summary>
     public required int TotalColumns { get; init; }
     public required Vector2 Axis { get; init; }

@@ -11,8 +11,9 @@ namespace Campus.Gen.Buildings.Build;
 /// Generates one building at one detail level (ART-MODELING §7.8 minimum components):
 /// chamfered corners with custom normals, plinth, string courses, openings (reveal with AO and sill from the
 /// wall; WP-10 frames, doors and curtains with OpeningGlass glass, see FacadeOpenings), cornice or parapet with
-/// coping and drip, roof with stair-core penthouses, entrance (surround, canopy, steps), pilasters, downpipes and
-/// AC grilles. Surfaces that persist across levels keep their normals, colours and material classes.
+/// the WP-12 coping and lightning strip, roof with stair-core penthouses and a fenced WP-12 plant enclosure (see
+/// RoofParts), entrance (surround, canopy, steps), pilasters, downpipes and AC grilles. Surfaces that persist across
+/// levels keep their normals, colours and material classes.
 /// </summary>
 public sealed class BuildingMesher
 {
@@ -23,6 +24,7 @@ public sealed class BuildingMesher
     private readonly MeshSink _sink;
     private readonly FacadeProfile _prof;
     private readonly FacadeOpenings _openings;
+    private readonly RoofParts _roofParts;
     private readonly bool _parapetOk;
     private readonly Face _wall, _trim, _plinth, _roof, _metal, _grille, _grilleBlade, _accent, _stone;
 
@@ -33,6 +35,7 @@ public sealed class BuildingMesher
         _sink = sink;
         _prof = plan.Profile;
         _openings = new FacadeOpenings(plan, block, lod, sink);
+        _roofParts = new RoofParts(plan, lod, sink);
         _wall = new Face(MaterialKind.Wall, _prof.Wall);
         _accent = new Face(MaterialKind.Wall, _prof.Accent ?? _prof.Wall);
         _trim = new Face(MaterialKind.Trim, _prof.Trim);
@@ -287,9 +290,19 @@ public sealed class BuildingMesher
         }
     }
 
-    /// <summary>Coping with a 60 mm lip and drip on both faces; parapet inner face down to the roof when the inner offset is valid.</summary>
+    /// <summary>
+    /// Coping on the parapet from its outer face s0 to the inner face, y0 to top: the WP-12 parapet cap (60 mm lip each
+    /// side, drip under the outer one near) with the lightning strip on it, and the parapet's inner face down to the roof.
+    /// Without a valid inner offset, or where the part cannot sweep a ring, WP-14's own coping profile.
+    /// </summary>
     private void Coping(float s0, float y0, float top)
     {
+        if (_parapetOk && _roofParts.Coping(s0, ParapetInner, y0, top, Materials.Spec(MaterialKind.Trim, _prof.Trim)))
+        {
+            SweepAll(_wall, Profile.Of([P(ParapetInner, y0), P(ParapetInner, _p.RoofY)]));
+            _roofParts.LightningStrip(s0, ParapetInner, top);
+            return;
+        }
         var lip = s0 + 0.06f;
         if (_parapetOk)
         {
@@ -310,11 +323,15 @@ public sealed class BuildingMesher
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Roof relief: stair-core penthouses every ~30 m and one plant enclosure (B7, ART-MODELING §2).
+    // Roof relief: stair-core penthouses every ~30 m, one fenced plant enclosure and on some tall roofs a mast at a
+    // corner (B7, ART-MODELING §2; the plant and mast are WP-12 parts, RoofParts).
     // ---------------------------------------------------------------------------------------------
     private void Penthouses()
     {
-        foreach (var (ring, height, plant) in RoofBoxes())
+        // Plant stands on the slab: the recessed roof inside the parapet, or the flat top where there is none.
+        var plantY = _lod >= LodLevel.L3 || !_parapetOk ? _p.EdgeTopY : _p.RoofY;
+        var boxes = RoofBoxes();
+        foreach (var (ring, height, plant, centre) in boxes)
         {
             var y0 = _p.RoofY - 0.05f;
             if (_lod >= LodLevel.L3 || !_parapetOk) y0 = MathF.Min(y0, _p.EdgeTopY - 0.05f);
@@ -323,8 +340,7 @@ public sealed class BuildingMesher
             ProfilePoint Q(float s, float y) => new(s, y, s == 0f ? c : 0f);
             if (plant)
             {
-                Prims.Sweep(_sink, _grille, ring, Profile.Of([Q(0f, y0), Q(0f, top)]));
-                Prims.Cap(_sink, _grille, ring, [], 0f, 0f, top, up: true);
+                _roofParts.Enclosure(ring, centre, plantY);
                 continue;
             }
             if (_lod <= LodLevel.L1)
@@ -344,12 +360,17 @@ public sealed class BuildingMesher
                 Prims.Cap(_sink, _roof, ring, [], 0f, 0f, top + 0.16f, up: true);
             }
         }
+        if (MastSpot(boxes) is { } mast) _roofParts.Mast(mast, plantY);
     }
 
-    /// <summary>Deterministic roof boxes inside the parapet: (ring, height above roof, is plant enclosure).</summary>
-    private List<(PlanRing Ring, float Height, bool Plant)> RoofBoxes()
+    /// <summary>
+    /// Deterministic roof boxes inside the parapet: (ring, height above roof, is the plant enclosure, centre). Penthouses
+    /// first; the enclosure takes the first candidate slot along the axis that keeps RoofRules.RoofMargin to the parapet,
+    /// courtyards and penthouses (its fence line is the ring; it has no height of its own).
+    /// </summary>
+    private List<(PlanRing Ring, float Height, bool Plant, Vector2 Centre)> RoofBoxes()
     {
-        var list = new List<(PlanRing, float, bool)>();
+        var list = new List<(PlanRing, float, bool, Vector2)>();
         if (_p.Small || _p.Storeys < 2 || _p.Area < 120f || _p.StoreyHeight > 6.5f) return list;
         var axis = _p.Axis;
         var perp = new Vector2(-axis.Y, axis.X);
@@ -363,29 +384,60 @@ public sealed class BuildingMesher
         }
         var length = amax - amin;
         var count = Math.Max(1, (int)MathF.Round(length / 30f));
-        var positions = new List<(float A, bool Plant)>();
-        for (var i = 0; i < count; i++) positions.Add((amin + length * (i + 0.5f) / count, false));
-        if (_p.Style != BuildingStyle.Dormitory && _p.Area > 400f)
-            positions.Add((count >= 2 ? amin + length / count : amin + length * 0.22f, true));
-        foreach (var (a, plant) in positions)
+        // Accepted boxes as (axis coordinate, across centre, half sizes) for the clearance test.
+        var taken = new List<(float A, float B, float HalfA, float HalfB)>();
+        for (var i = 0; i < count; i++) TryBox(amin + length * (i + 0.5f) / count, new Vector2(2.4f, 2.1f), false);
+        if (_p.Area > RoofRules.PlantFromArea && _roofParts.EnclosureHalf() is { } half)
+            foreach (var t in new[] { count >= 2 ? 1f / count : 0.22f, 0.22f, 0.78f, 0.5f })
+                if (TryBox(amin + length * t, half, true)) break;
+        return list;
+
+        bool TryBox(float a, Vector2 size, bool plant)
         {
             var span = Across(a, axis, perp);
-            if (span is null) continue;
+            if (span is null) return false;
             var (b0, b1) = span.Value;
-            var halfA = plant ? 1.5f : 2.4f;
-            var halfB = MathF.Min(plant ? 1.0f : 2.1f, (b1 - b0) * 0.5f - 1.0f);
-            if (halfB < (plant ? 0.7f : 1.2f)) continue;
+            var margin = plant ? RoofRules.RoofMargin : 0.6f;
+            var halfA = size.X;
+            var halfB = plant ? size.Y : MathF.Min(size.Y, (b1 - b0) * 0.5f - 1.0f);
+            if (plant ? (b1 - b0) * 0.5f - margin < halfB : halfB < 1.2f) return false;
             var bc = (b0 + b1) * 0.5f;
+            if (plant && taken.Any(t => MathF.Abs(t.A - a) < t.HalfA + halfA + margin && MathF.Abs(t.B - bc) < t.HalfB + halfB + margin)) return false;
             Vector2 At(float da, float db) => axis * (a + da) + perp * (bc + db);
             var corners = new[] { At(-halfA, -halfB), At(halfA, -halfB), At(halfA, halfB), At(-halfA, halfB) };
             if (PlanRing.SignedArea(corners) < 0f) Array.Reverse(corners);
             var ok = corners.Append(At(0f, 0f)).All(q =>
-                PlanRing.InsideFootprint(_p.Outer, _p.Holes, q) && PlanRing.DistanceToEdges(_p.Outer, _p.Holes, q) > 0.6f);
-            if (!ok) continue;
-            var height = plant ? 1.4f : MathF.Min(2.9f, MathF.Max(2.4f, _p.StoreyHeight - 0.4f));
-            list.Add((PlanRing.FromPoints(corners, false), height, plant));
+                PlanRing.InsideFootprint(_p.Outer, _p.Holes, q) && PlanRing.DistanceToEdges(_p.Outer, _p.Holes, q) > margin);
+            if (!ok) return false;
+            var height = MathF.Min(2.9f, MathF.Max(2.4f, _p.StoreyHeight - 0.4f));
+            list.Add((PlanRing.FromPoints(corners, false), height, plant, At(0f, 0f)));
+            taken.Add((a, bc, halfA, halfB));
+            return true;
         }
-        return list;
+    }
+
+    /// <summary>
+    /// Mast spot on a tall roof (RoofRules.MastFromStoreys, every other building by hash): inset from one outside corner
+    /// of the outer ring along its bisector, clear of the parapet and of every roof box. Null when none fits.
+    /// </summary>
+    private Vector2? MastSpot(List<(PlanRing Ring, float Height, bool Plant, Vector2 Centre)> boxes)
+    {
+        if (_p.Storeys < RoofRules.MastFromStoreys || (StableHash.Hash32(_p.Seed, "wp14.mast") & 1u) != 0u) return null;
+        var ring = _p.Outer;
+        var corners = Enumerable.Range(0, ring.Count).Where(i => ring.Convex[i] && ring.TurnCos[i] < 0.5f).ToArray();
+        if (corners.Length == 0) return null;
+        var first = (int)(StableHash.Hash32(_p.Seed, "wp14.mast.corner") % (uint)corners.Length);
+        for (var k = 0; k < corners.Length; k++)
+        {
+            var i = corners[(first + k) % corners.Length];
+            var inward = -(ring.Normal[(i + ring.Count - 1) % ring.Count] + ring.Normal[i]);
+            if (inward.LengthSquared() < 1e-6f) continue;
+            var spot = ring.Points[i] + Vector2.Normalize(inward) * RoofRules.MastInset;
+            if (!PlanRing.InsideFootprint(_p.Outer, _p.Holes, spot) || PlanRing.DistanceToEdges(_p.Outer, _p.Holes, spot) < 0.9f) continue;
+            if (boxes.Any(b => PlanRing.InsideFootprint(b.Ring, [], spot) || PlanRing.DistanceToEdges(b.Ring, [], spot) < 1.0f)) continue;
+            return spot;
+        }
+        return null;
     }
 
     /// <summary>Widest interval of the footprint along perp at axis coordinate a.</summary>
@@ -596,21 +648,11 @@ public sealed class BuildingMesher
         }
     }
 
+    /// <summary>L2 roof edge: the same coping as near (the part's far level) and the roof slab.</summary>
     private void EdgeCap(float s0)
     {
-        var top = _p.EdgeTopY;
-        var y0 = top - 0.15f;
-        if (_parapetOk)
-        {
-            SweepAll(_trim, Profile.Of([new(s0, y0), new(s0 + 0.06f, y0), new(s0 + 0.06f, top), new(ParapetInner - 0.06f, top), new(ParapetInner - 0.06f, top - 0.07f), new(ParapetInner, top - 0.07f)]));
-            SweepAll(_wall, Profile.Of([new(ParapetInner, top - 0.07f), new(ParapetInner, _p.RoofY)]));
-            Prims.Cap(_sink, _roof, _p.SkinOuter, _p.SkinHoles, ParapetInner, 0f, _p.RoofY, up: true);
-        }
-        else
-        {
-            SweepAll(_trim, Profile.Of([new(s0, y0), new(s0 + 0.06f, y0), new(s0 + 0.06f, top), new(0f, top)]));
-            Prims.Cap(_sink, _roof, _p.SkinOuter, _p.SkinHoles, 0f, 0f, top, up: true);
-        }
+        Coping(s0, _p.EdgeTopY - 0.15f, _p.EdgeTopY);
+        Roof();
     }
 
     private void FlatWindows()

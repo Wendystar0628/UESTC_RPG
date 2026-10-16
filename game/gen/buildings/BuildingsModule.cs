@@ -13,7 +13,7 @@ namespace Campus.Gen.Buildings;
 /// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
 /// </summary>
 [ContentModule("buildings", Owner = "WP-14")]
-public sealed class BuildingsModule : IContentModule
+public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource
 {
     private readonly IColorIds? _colorIds;
 
@@ -30,21 +30,24 @@ public sealed class BuildingsModule : IContentModule
     public IReadOnlyList<Claim> Claims { get; } = [];
 
     /// <summary>
-    /// Upper bounds per level cell, measured over the whole campus with the WP-10 openings (heaviest cell: L0 ≈ 624k,
-    /// L1 ≈ 141k triangles; campus L0 ≈ 24.7M, L1 ≈ 4.1M, L2 ≈ 0.18M). Draw calls: ten material classes per merged
-    /// block (the six of the shell plus sash, curtain fabric, curtain rail and door astragal).
+    /// Upper bounds per level cell, measured over the whole campus with the WP-10 openings and the WP-12 roof parts while
+    /// the exported fidelity data is still the all-K3 stub (heaviest cell: L0 ≈ 125.5k, L1 ≈ 123.3k triangles; campus
+    /// L0 ≈ 6.0M, L1 ≈ 3.6M, L2 ≈ 0.20M). Re-measure once WP-44 exports real zones: K1/K2 facades take the full parts.
+    /// Draw calls: about fourteen material classes per merged block (the six of the shell, sash, curtain fabric, curtain
+    /// rail and door astragal, and the roof plant's fence board, casing, curved shroud and pipe).
     /// </summary>
-    public ModuleBudget Budget { get; } = new(TrianglesL0: 640_000, TrianglesL1: 150_000, DrawCalls: 40);
+    public ModuleBudget Budget { get; } = new(TrianglesL0: 130_000, TrianglesL1: 130_000, DrawCalls: 40);
 
     public IReadOnlyList<ChannelDecl> Channels { get; } = LightSlots.Declared
         .Select(c => new ChannelDecl(new ChannelId(c.Name), ChannelKind.Scalar, 0f, 1f, ChannelRate.Continuous, c.Name))
         .ToArray();
 
     /// <summary>
-    /// Which buildings this module generates. Mainline: all of them, since no zone module is merged yet.
-    /// Once claims are visible to generic modules (contract request), buildings claimed for Massing or Facade are skipped.
+    /// Which buildings this module generates: those whose massing and facade no zone module has claimed (the map's
+    /// resolved claims ledger, BuildContext.ClaimedBy). A facade-claimed feature has no generic window block either.
     /// </summary>
-    public static bool Unclaimed(BuildContext ctx, BuildingPlan plan) => true;
+    public static bool Unclaimed(BuildContext ctx, BuildingPlan plan) =>
+        ctx.ClaimedBy(plan.Id, Aspects.Massing) is null && ctx.ClaimedBy(plan.Id, Aspects.Facade) is null;
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {
@@ -57,17 +60,40 @@ public sealed class BuildingsModule : IContentModule
     {
         ArgumentNullException.ThrowIfNull(ctx);
         var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        WindowNumberingSnapshot? numbering = null;
         var meshes = new List<GeometryBundle>();
         var windows = new List<WindowDecl>();
-        for (var i = 0; i < set.Plans.Count; i++)
+        foreach (var plan in set.Plans)
         {
-            var plan = set.Plans[i];
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
-            meshes.AddRange(BuildOne(plan, set.Blocks[i], lod));
+            // Glass reads the map's one allocation; nothing is numbered here.
+            var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
+            meshes.AddRange(BuildOne(plan, block, lod));
             // The light inventory needs each window once: declared with the L0 cell only.
-            if (lod == LodLevel.L0) windows.AddRange(FacadeOpenings.Declarations(plan, set.Blocks[i]));
+            if (lod == LodLevel.L0) windows.AddRange(FacadeOpenings.Declarations(plan, block));
         }
         return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []) { LooseWindows = windows };
+    }
+
+    /// <summary>
+    /// The map-wide window allocation (contract-29), called once per map by the kernel before any Build: WP-14's
+    /// generic grids with each claimed layout replacing its whole feature. Pure: no geometry, IO or cached state.
+    /// </summary>
+    public WindowNumberingSnapshot PrepareWindowNumbering(BuildContext prepass, IReadOnlyList<ClaimedWindowLayout> validatedLayouts) =>
+        WindowNumbering.Prepare(prepass, validatedLayouts);
+
+    /// <summary>
+    /// Every generic window of the map from the published snapshot, without geometry: the same declarations as the
+    /// L0 cells' LooseWindows. WP-14 declares no claimed layouts (DescribeWindowLayouts stays empty).
+    /// </summary>
+    public WindowMetadata DescribeWindows(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var numbering = WindowNumbering.For(context);
+        var windows = new List<WindowDecl>();
+        foreach (var plan in BuildingSet.For(context.World, context.WorldSeed).Plans)
+            if (Unclaimed(context, plan)) windows.AddRange(FacadeOpenings.Declarations(plan, WindowNumbering.BlockOf(numbering, plan)));
+        return new WindowMetadata([], windows);
     }
 
     /// <summary>One building at one level, as its own bundles (the baker merges per material and block).</summary>

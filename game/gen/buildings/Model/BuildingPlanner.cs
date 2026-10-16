@@ -285,6 +285,7 @@ public static class BuildingPlanner
             Facades = facades,
             Openings = openings,
             OpeningZones = fidelity is null ? [] : Zones(fidelity.Facades(feature.Id), rings, facades, openings),
+            RoofZone = fidelity?.Roof(feature.Id).Zone ?? FidelityZone.K4,
             TotalColumns = column,
             Axis = axis,
             EntranceFacade = entranceFacade,
