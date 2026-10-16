@@ -286,6 +286,8 @@ internal sealed class TreePlan
                 y += rc * 1.2f;
             }
         }
+        // Neighbouring masses step front and back along the crown radius, so their seams show a depth step (max-110 110c-4).
+        CrownStagger.Apply(this);
     }
 
     /// <summary>Radius of the leader-body masses as a fraction of the crown envelope at their height.</summary>

@@ -292,7 +292,10 @@ const float VEG_CLUMP_NORMAL = 0.75;      // 团块自己的法线所占的比�
 const float VEG_TRANS_RIM = 3.0;          // 外缘透光的加大倍数
 // 逆光外缘亮边（110c 第三轮）：照参考的 ocTranslucent（back = (−V·L)^2.5，thru = 0.45 + 0.55·max(−N·L, 0)），只取团块外缘一圈，
 // 不乘阴影：林荫里树冠都在别的树冠的投影里，走 BACKLIGHT 的透光读不出来（与 ART-STYLE §5.6"被挡住不透光"不一致，交主会话定）
-const float VEG_RIM_GLOW = 0.6;           // 外缘亮边强度（乘受光色）
+const float VEG_RIM_GLOW = 0.6;           // 外缘亮边强度（乘受光色），近处
+// 外缘亮边按到主相机的距离淡出（110c-4）：从上往下俯瞰时满树都是逆光外缘，远处整片发光；树下人视（60 m 内）不变
+const float VEG_RIM_GLOW_FAR = 0.2;       // 远处的外缘亮边强度
+const vec2 VEG_RIM_GLOW_FADE = vec2(60.0, 150.0);  // 从前者（m）到后者，强度从 VEG_RIM_GLOW 平滑降到 VEG_RIM_GLOW_FAR
 const vec2 VEG_TRANS_RIM_BAND = vec2(0.55, 0.9);   // 团块 rim 从前者到后者，透光从不加到加满
 // 团块外缘碎边（max-110 110c）：近处碎边另按每个团块自己的法线取 rim（团块各自的外轮廓一圈），团块外缘的折线轮廓也读成叶团锯齿边，
 // 前面的团块咬进后面的团块，团与团之间分出层次；规则照 23c1 的近处碎边（强度 0.35、只剪最外一圈），远处同样强度
@@ -687,7 +690,9 @@ void fragment() {
 		vec3 lv = normalize(mat3(VIEW_MATRIX) * key_dir);
 		float glow = pow(clamp(dot(-VIEW, lv), 0.0, 1.0), 2.5) * (0.45 + 0.55 * clamp(-dot(clump, lv), 0.0, 1.0))
 				* smoothstep(VEG_TRANS_RIM_BAND.x, VEG_TRANS_RIM_BAND.y, 1.0 - abs(dot(clump, VIEW))) * key_strength * smoothstep(-0.02, 0.05, sun_dir.y);
-		tcol.extra += tcol.lit * VEG_RIM_GLOW * glow;
+		// 本体不投影（投影走代理），片元的视空间长度就是到主相机的距离（与外轮廓碎边同理）；MAIN_CAM_INV_VIEW_MATRIX 只在 vertex() 里有
+		float glow_dist = length(VERTEX);
+		tcol.extra += tcol.lit * mix(VEG_RIM_GLOW, VEG_RIM_GLOW_FAR, smoothstep(VEG_RIM_GLOW_FADE.x, VEG_RIM_GLOW_FADE.y, glow_dist)) * glow;
 	}
 	TOON_FRAGMENT_END(tcol)
 	v_band.z += VEG_LIT_SHIFT;
