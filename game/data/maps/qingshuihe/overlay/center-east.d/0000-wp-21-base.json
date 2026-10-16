@@ -1,0 +1,232 @@
+{
+  "zone": "center-east",
+  "owner": "WP-21",
+  "map": "qingshuihe",
+  "ops": [
+    {"op": "height", "target": "qsh:relation:11043354", "height": 19.0, "storeys": 5, "reason": "品学楼 C 区：OSM 记 5 层 / 16 m，层高只有 3.2 m，太低；外观升到约 19 m（5 × 3.6 m 加女儿墙，MAP-QSH-CENTER-EAST §2.1、WLD-INTERIORS §2.0），比 A、B 区高出一截。C 区五座楼梯与设备塔原记 23.4 m，统一随本条取 19 m，屋顶轮廓留给细节阶段的高围网与塔屋水箱（MAP-QSH-ADDITIONS §2.16）"},
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-fountain",
+      "kind": "fountain",
+      "geometry": {"type": "point", "position": [142.38, 0.0, -58.1]},
+      "height": 0.8,
+      "props": {"shape": "rectangle", "axis": [0.1415, 0.9899], "tiers": [{"half": [5.5, 2.5], "waterHalf": [5.15, 2.15], "rimAbove": 0.3, "waterAbove": 0.24}, {"half": [4.0, 1.7], "waterHalf": [3.75, 1.45], "rimAbove": 0.55, "waterAbove": 0.49}, {"half": [2.5, 0.9], "waterHalf": [2.25, 0.65], "rimAbove": 0.8, "waterAbove": 0.74}], "source": "顶层池心一处平齐的涌泉，不设喷头", "baseY": "terrain", "flow": "always", "stone": "WP-21", "water": "WP-24", "night": "反天：水面映出架空通道的筒灯和门框剪影", "seasons": "冬不结冰、石沿顶一线雪；春漂花瓣；秋叠水边接落叶"},
+      "reason": "实物登记：品学楼门前叠水喷泉在 OSM 里没有要素（MAP-QSH-CENTER-EAST §2.3、§10）。位置按门框轴线定在门前广场那块 14.2 × 7.2 m 长方形草坪的中心 (142.38, −58.10)，门框正前方约 22 m，A04 导览亭（约 (122, −65)）在它西侧约 21 m。形式按主会话 10:01 评审改为低矮叠水：三级嵌套的长方形浅色石砌水池，长边顺着门框横梁（axis 是长边方向），底池 11 × 5 m，各层石沿高出草坪 0.30、0.55、0.80 m，薄水面逐级跌落约 0.3 m，整体贴着草坪，不做欧式多层喷泉。half 是石沿外缘的半长、半宽，waterHalf 是水面的半长、半宽（下层水面被上层石台盖住的部分不显示）。石台、池沿和碰撞归 WP-21，三层池面与落水归 WP-24（WLD-WATER §9）；各层高度是相对地面的值，地面取地形求值（台基 +1.5）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-tree-pits",
+      "kind": "tree-pit",
+      "geometry": {"type": "multiPolygon", "polygons": [{"outer": [[154.24, -75.11], [154.5, -73.33], [152.71, -73.08], [152.46, -74.86]], "holes": []}, {"outer": [[148.3, -74.27], [148.56, -72.48], [146.77, -72.23], [146.52, -74.01]], "holes": []}, {"outer": [[142.36, -73.42], [142.62, -71.63], [140.83, -71.38], [140.58, -73.16]], "holes": []}, {"outer": [[136.42, -72.57], [136.68, -70.79], [134.89, -70.53], [134.64, -72.31]], "holes": []}, {"outer": [[130.48, -71.72], [130.74, -69.94], [128.95, -69.68], [128.7, -71.46]], "holes": []}, {"outer": [[158.46, -45.61], [158.71, -43.83], [156.93, -43.58], [156.68, -45.36]], "holes": []}, {"outer": [[152.52, -44.77], [152.77, -42.98], [150.99, -42.73], [150.74, -44.51]], "holes": []}, {"outer": [[146.58, -43.92], [146.83, -42.13], [145.05, -41.88], [144.8, -43.66]], "holes": []}, {"outer": [[140.64, -43.07], [140.89, -41.29], [139.11, -41.03], [138.86, -42.81]], "holes": []}, {"outer": [[134.7, -42.22], [134.95, -40.44], [133.17, -40.18], [132.92, -41.96]], "holes": []}]},
+      "height": 0.42,
+      "props": {"plant": "tree", "perPit": 1, "size": 1.8, "kerb": 0.22, "soilAbove": 0.32, "stone": "site"},
+      "reason": "实物登记：门前浅灰铺装广场上排着的方形树池（MAP-QSH-CENTER-EAST §2.3），OSM 没有。门框轴线两侧各一排、每排 5 个，排距 29.8 m、间距 6 m，避开喷泉草坪、A04 落点与 A 区大厅门口；0.42 m 花岗岩池壁、土面接季（落叶、花瓣、积雪）；每池一棵树由 WP-23 种。夜间灯下（架空通道外的路灯）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-round-bed",
+      "kind": "tree-pit",
+      "geometry": {"type": "point", "position": [101.68, 0.0, -53.13]},
+      "height": 0.45,
+      "props": {"plant": "tree", "perPit": 1, "radius": 3.45, "seat": 0.45},
+      "reason": "设计增补：坡广场中段那块圆形草地（门前广场的圆洞）加一圈 0.45 m 花岗岩坐凳，围着一棵树，给上坡的人一个停留的位置（MAP-QSH-ADDITIONS §0 第 4 条）；坐面接季；夜间暗区。可跳上（walk：可跳上）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-ramp-seatwall-north",
+      "kind": "seat-wall",
+      "geometry": {"type": "polyline", "line": {"points": [[115.77, -69.36], [86.07, -65.12]]}},
+      "height": 0.45,
+      "props": {"thickness": 0.5, "bed": 1.2, "stepEvery": 6.0},
+      "reason": "设计增补（MAP-QSH-TERRAIN §10.2）：坡广场北侧一道随坡跌落的 0.45 m 花池坐墙，每 6 m 一段，按段跌落约 0.3 m（WLD-TERRAIN §5.4 的收头做法），墙后 1.2 m 种植池；单车停在坐墙外侧，坡上不停车（§10.4）。坐面接季；夜间灯下。可跳上。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-ramp-seatwall-south",
+      "kind": "seat-wall",
+      "geometry": {"type": "polyline", "line": {"points": [[120.1, -39.07], [90.4, -34.82]]}},
+      "height": 0.45,
+      "props": {"thickness": 0.5, "bed": 1.2, "stepEvery": 6.0},
+      "reason": "设计增补：坡广场南侧的花池坐墙，同 design:center-east-pinxue-ramp-seatwall-north。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-arc-end",
+      "kind": "facade-bay",
+      "geometry": {"type": "polygon", "rings": {"outer": [[156.26, 29.09], [156.68, 31.25], [157.53, 33.27], [158.8, 35.07], [160.41, 36.57], [162.3, 37.7], [164.38, 38.4], [166.56, 38.66], [168.75, 38.45]], "holes": []}},
+      "height": 19.85,
+      "props": {"wing": "qsh:relation:11043353", "sagitta": 3.5, "storeys": 5},
+      "reason": "轮廓轻微调整（≤ 4 m）：MAP-QSH-CENTER-EAST §2.4 的\"右翼端部是一个弧形体量\"。从门前广场看右翼是 B 区，最右端是 B 区西南转角斜放的门厅（osm:way:797290169）；在它朝西南的斜面外加一个外凸 3.5 m 的弧面玻璃体量，与门厅同高 19.5 m，每层一道白色楼板带。B 区本身不认领，仍由 WP-14 生成。位置是按文档字面的推定，待主会话确认。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-riverside-walk",
+      "kind": "road",
+      "geometry": {"type": "polyline", "line": {"points": [[178.0, 50.0], [215.0, 78.0], [262.0, 125.0]]}},
+      "props": {"roadType": "footway", "width": 3.0},
+      "reason": "设计增补（MAP-QSH-TERRAIN §10.1–§10.3）：走马河中段东北岸新增一条宽约 3 m 的河岸低步道，是品学楼台基退台花池的下一级（−0.7，见 center-east.terrain.json 的 design:terrain:center-east-riverside-walk），近水、背靠花池；两端接台基南侧退台花池下的 0 m 园路，不穿台基。默认状态傍晚走在楼影里，水面在左手边；夜间灯下。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-stair-1293455719-1",
+      "kind": "steps",
+      "geometry": {"type": "polyline", "line": {"points": [[242.0, 4.94], [243.63, 15.39]]}},
+      "height": 1.5,
+      "props": {"road": "qsh:source:way:1293455719", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN §5.8）"},
+      "reason": "实物登记（MAP-QSH-TERRAIN §10.3）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-stair-797875320-1",
+      "kind": "steps",
+      "geometry": {"type": "polyline", "line": {"points": [[115.5, -150.5], [125.19, -164.25]]}},
+      "height": 1.5,
+      "props": {"road": "qsh:source:way:797875320", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN §5.8）"},
+      "reason": "实物登记（MAP-QSH-TERRAIN §10.3）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-stair-797875320-2",
+      "kind": "steps",
+      "geometry": {"type": "polyline", "line": {"points": [[123.13, -144.33], [117.86, -148.59], [115.5, -150.5]]}},
+      "height": 1.5,
+      "props": {"road": "qsh:source:way:797875320", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN §5.8）"},
+      "reason": "实物登记（MAP-QSH-TERRAIN §10.3）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-stair-950008592-1",
+      "kind": "steps",
+      "geometry": {"type": "polyline", "line": {"points": [[242.0, 15.62], [243.63, 15.39]]}},
+      "height": 1.5,
+      "props": {"road": "qsh:source:way:950008592", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN §5.8）"},
+      "reason": "实物登记（MAP-QSH-TERRAIN §10.3）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-pinxue-stair-683646717-1",
+      "kind": "steps",
+      "geometry": {"type": "polyline", "line": {"points": [[156.55, 44.39], [158.86, 41.49]]}},
+      "height": 1.5,
+      "props": {"road": "qsh:source:way:683646717", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN §5.8）"},
+      "reason": "实物登记（MAP-QSH-TERRAIN §10.3）：品学楼台基南缘外推后，从小溪旁园路上台基的台阶移到 qsh:source:way:683646717 末段，穿过西南退台花池（center-east.terrain.json 的 design:terrain:center-east-pinxue-terrace-b-southwest）；台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台，坡道沿花池前缘向西）接回 0 m；是该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-a-lens-hall",
+      "kind": "facade-bay",
+      "geometry": {"type": "polygon", "rings": {"outer": [[14.26, -28.72], [21.98, -29.83], [18.73, -52.4], [11.01, -51.29], [9.72, -48.51], [8.91, -45.56], [8.59, -42.51], [8.78, -39.45], [9.46, -36.46], [10.62, -33.63], [12.24, -31.03]], "holes": []}},
+      "height": 5.5,
+      "props": {"building": "qsh:relation:11127418", "part": "osm:way:806848388", "sagitta": 3.9, "storeys": 1},
+      "reason": "轮廓轻微调整（≤ 4 m）：基础实验大楼东侧内院的透镜形弧厅（MAP-QSH-CENTER-EAST §1.2，门厅朝东，弧厅在门厅后面）。OSM 轮廓两端各有一个约 3 m 的小钩，主线版收成一道干净的圆弧（弦长 22.8 m、矢高 3.9 m），背靠东翼内墙，一层高的玻璃厅、白色檐带。楼由 WP-21 认领自建。夜间灯源（窗灯通宵约 0.3，后续接窗号）；屋面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-b-lens-hall",
+      "kind": "facade-bay",
+      "geometry": {"type": "polygon", "rings": {"outer": [[30.54, -138.96], [40.43, -140.38], [37.43, -161.27], [27.53, -159.84], [26.52, -157.24], [25.89, -154.52], [25.67, -151.73], [25.87, -148.95], [26.47, -146.22], [27.46, -143.61], [28.83, -141.17]], "holes": []}},
+      "height": 5.5,
+      "props": {"building": "qsh:relation:11127417", "part": "osm:way:806848381", "sagitta": 3.2, "storeys": 1},
+      "reason": "轮廓轻微调整（≤ 4 m）：科研楼 B 区东侧内院的透镜形弧厅，与基础实验大楼同一做法；OSM 两端的小钩收成一道圆弧（弦长 21.1 m、矢高 3.2 m），正对 B 区东门。楼由 WP-21 认领自建。夜间灯源；屋面接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-c-lens-hall",
+      "kind": "facade-bay",
+      "geometry": {"type": "polygon", "rings": {"outer": [[39.86, -186.57], [32.63, -185.53], [27.71, -219.78], [40.87, -221.67], [44.73, -218.21], [47.62, -213.9], [49.37, -209.01], [49.86, -203.85], [49.07, -198.72], [47.04, -193.94], [43.91, -189.81]], "holes": []}},
+      "height": 10.0,
+      "props": {"building": "qsh:way:806848385", "part": "osm:way:806848380", "sagitta": 9.5, "storeys": 2, "door": [49.87, -203.84]},
+      "reason": "轮廓轻微调整（≤ 4 m）：科研楼 C 区大厅（两层），夹在 C 区北楼与 B 区北翼之间，朝东的一面是一道外凸的弧形玻璃（OSM 是一条波浪折线，最外 x≈50.4，收成一道矢高 9.5 m 的圆弧，最外 49.9），C 区的门开在弧顶，朝麦克斯韦像那片草坪，门前雨棚和三级台阶（白猫在这里，WP-25）。楼由 WP-21 认领自建。默认状态傍晚弧面背光、玻璃映天；夜间灯源（大厅灯）；雨棚顶接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-a-roof",
+      "kind": "roof-fence",
+      "geometry": {"type": "polygon", "rings": {"outer": [[17.05, -73.98], [25.36, -75.17], [35.15, -7.07], [26.84, -5.88]], "holes": []}},
+      "height": 2.0,
+      "props": {"building": "qsh:relation:11127418", "fence": {"height": 2.0, "posts": 2.5, "infill": "横杆，只描框不描网"}, "tank": {"at": [23.65, -57.55], "size": [3.0, 3.8, 3.0], "stand": true}, "plant": "北翼中段一处 8 × 4.6 m 设备围挡", "access": "屋顶不开放"},
+      "reason": "老楼翻新加设计增补（MAP-QSH-RENOVATION E-03；MAP-QSH-ADDITIONS §2.16、§2.9）：基础实验大楼东翼屋面一圈 2 m 灰铝高围网（围网只描框），北端楼梯间旁一座钢架上的板格水箱（高出女儿墙顶 2.85 m，≤ 3 m），屋面设备收进深灰穿孔铝板围挡；只作从银杏大道和走马河看过来的天际线轮廓，屋顶不开放。默认状态剪影、箱顶接季；夜间剪影；冬季箱顶积雪。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-b-roof",
+      "kind": "antenna",
+      "geometry": {"type": "polygon", "rings": {"outer": [[34.07, -184.63], [44.86, -186.18], [54.9, -116.4], [44.11, -114.85]], "holes": []}},
+      "height": 3.5,
+      "props": {"building": "qsh:relation:11127417", "dishes": [{"at": [40.93, -175.61], "diameter": 2.4}, {"at": [42.35, -165.71], "diameter": 3.0}, {"at": [43.63, -156.8], "diameter": 1.8}], "facing": "东", "testTower": "待 WP-12 的 roof.test-tower 部件落地后补放（现在只有 D0 方盒桩）", "plant": "南翼一处 8 × 4.6 m 设备围挡", "access": "屋顶不开放"},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §2.9 科研楼天线，作为本校识别特征；MAP-QSH-RENOVATION E-02）：一号科研实验楼 B 区东段局部 6 层（加高的一层退进 1.2 m），它的屋面上三面白色抛物面天线（直径 2.4、3.0、1.8 m），锅面朝东，日出时最先被照成杏色；格构测试塔等部件落地后补；屋面设备进围挡。默认状态锅面受光（杏色碟子）；夜间剪影（锅面在月光下发灰）；冬季锅面积雪。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-ke-c-roof-garden",
+      "kind": "roof-garden",
+      "geometry": {"type": "polygon", "rings": {"outer": [[-11.36, -230.12], [10.41, -233.26], [12.32, -219.99], [-9.46, -216.86]], "holes": []}},
+      "height": 2.4,
+      "props": {"building": "qsh:way:806848385", "area": 295, "frame": "轻木构架，三排立柱加梁、上铺檩条", "planters": 14, "rainTank": true, "plant": "东端一处 8 × 4.6 m 设备围挡", "access": "屋顶不开放"},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §2.9 屋顶实验花园，100–300 m² 取上限，22 × 13.4 m）：一号科研实验楼 C 区北楼屋面一块轻木构架分区的实验花园，两排种植箱（灌木与地被相间）和一只雨水箱；从 B 区加高的东段和飞行时俯视是一块绿加木色。屋顶不开放。默认状态暗区；夜间暗区；四季：春夏绿、秋转黄、冬只剩木框和雪。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-maxwell-equation-stone",
+      "kind": "landscape-stone",
+      "geometry": {"type": "point", "position": [93.11, 0.0, -185.73]},
+      "height": 1.35,
+      "props": {"statue": "qsh:node:7878394896", "size": [2.4, 1.2], "faceBearing": 160, "faceTilt": 18, "inscription": "麦克斯韦方程组（四行）", "text": "主线是四条墨色线块，等场景文字图集（contract-26）换成方程"},
+      "reason": "实物登记：麦克斯韦像旁那块圆浑的景石，石上刻麦克斯韦方程组（MAP-QSH-CENTER-EAST §1.3，本区身份特征），OSM 没有。约 2.4 × 1.2 m、高 1.35 m 的浅色卵形景石，前面凿出一块后仰 18° 的平面刻字，放在像的右前方，刻面朝 R5 从桥上来的方向（广场东北角）。默认状态斜光照出石体的圆浑和刻面；夜间灯下（路边路灯侧照）；石顶接季，冬季顶上一线雪，刻面仍读得出。可跳上。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-maxwell-apron",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[89.92, -191.14], [98.03, -192.31], [99.28, -183.6], [91.17, -182.43]], "holes": []}},
+      "height": 0.05,
+      "props": {"statue": "qsh:node:7878394896", "material": "ground.paver", "kerb": 0.2, "joins": "qsh:source:way:572670136"},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §0 R6 的入口停点）：雕像草坪东缘一块 8.2 × 8.8 m 的花岗岩铺装台，东边贴着草坪边的步道 572670136，麦克斯韦像与方程石都站在上面，人可以走到像前读石；草坪中间照样留空。高出草面 5 cm，浅色石条收边。默认状态长影铺在台面上；夜间灯下；台面接季（落叶、花瓣、积雪）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-atrium-roof",
+      "kind": "atrium-roof",
+      "geometry": {"type": "polygon", "rings": {"outer": [[371.74, 101.67], [373.14, 106.06], [372.09, 111.35], [368.74, 116.75], [363.6, 121.42], [357.46, 124.65], [351.24, 125.96], [345.91, 125.15], [342.26, 122.33], [340.86, 117.94], [341.91, 112.65], [345.26, 107.25], [350.4, 102.58], [356.54, 99.35], [362.76, 98.04], [368.09, 98.85]], "holes": []}},
+      "height": 5.1,
+      "props": {"building": "qsh:way:883187548", "part": "osm:way:1431090638", "centre": [357.0, 112.0], "axis": [0.819, -0.574], "half": [18.0, 11.5], "rise": 4.5, "curb": 0.6, "ribs": 16, "rings": 2, "material": "glass", "frame": "frame.alu", "access": "屋顶不开放"},
+      "reason": "中庭外形（MAP-QSH-CENTER-EAST §3.2：中间是一个钢网架玻璃顶的中庭）：OSM 只有中部连接体 1431090638 的轮廓，没有屋顶形式。主线把中庭顶做成坐在连接体五层屋面上的一座椭圆低拱玻璃顶，长半轴 18 m、短半轴 11.5 m，拱高 4.5 m，下有 0.6 m 白色石沿，16 道经向肋加两道环肋（铝框色），不画施工网架（§3.3）。默认状态反天，拱顶映出黄昏天色；夜间反天（映出夜空和塔楼窗灯）；冬季拱顶积雪约一半。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-forecourt",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[392.56, 121.36], [408.45, 109.21], [416.1, 119.22], [400.21, 131.37]], "holes": []}},
+      "height": 0.17,
+      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "kerb": 0.2, "door": [400.26, 114.97], "doorFacing": 142.6},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §0 R6 的入口停点）：文科楼中庭东南入口（连接体朝东南的一面，夹在塔楼与南翼之间）门前一块 20 × 12.6 m 的花岗岩铺装，入口在草坪上原本没有铺地。门外 2.5 m 内不放任何东西；中庭门关着（§3.3），门厅卡归 WP-51。默认状态长影铺在台面上；夜间灯下；台面接季（落叶、花瓣、积雪）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-walk",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[413.49, 113.5], [448.93, 122.25], [448.07, 125.75], [412.63, 117.0]], "holes": []}},
+      "height": 0.17,
+      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "width": 3.6, "from": "design:center-east-wenke-forecourt", "to": "qsh:source:way:544161582 与 544161568 的路口 (452.5, 123.8)"},
+      "reason": "设计增补：从中庭门前铺装东侧到东边路口的一条 3.6 m 花岗岩步道，长约 36.5 m，两侧石条收边，把门前停点接到 R5 往网球场去的路口；由本区建成铺装（不进路网，不改纵断面）。默认状态长影；夜间灯下；接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-friendship-tree",
+      "kind": "tree",
+      "geometry": {"type": "point", "position": [424.0, 0, 136.0]},
+      "height": 12.0,
+      "props": {"species": "camphor", "planter": "WP-23", "look": "新移栽的大树，看上去刚移栽", "stakes": "WP-21：三根木杆斜撑到树干 2.6 m 高处，杆脚离树 1.7 m", "wrap": "WP-21：树干 0.25–2.3 m 缠绿布（umbrella.graygreen），半径 0.25 m", "trunkRadius": 0.22},
+      "reason": "实物登记：友谊树（MAP-QSH-CENTER-EAST §3.4、WLD-VEGETATION：常绿香樟，新移栽）在 OSM 里没有点位。位置定在文科楼中庭东南入口前的草坪上，门前铺装和步道的南侧，离门约 30 m、不在门轴线上；旁边是 P14 的建议落点 (429.0, 141.5)，朝 65° 看训练馆筒拱和月出，塔楼不挡这条视线。树由 WP-23 种，三根撑杆和绿布由本区画；WP-23 的树干半径请不超过 0.22 m，绿布才包得住。默认状态树冠深绿、撑杆成三道斜影；夜间灯下；四季按香樟（冬季冠顶积雪，绿布和木杆露在外面）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-friendship-stone",
+      "kind": "landscape-stone",
+      "geometry": {"type": "point", "position": [419.6, 0, 133.2]},
+      "height": 1.05,
+      "props": {"tree": "design:center-east-wenke-friendship-tree", "size": [1.9, 1.0], "faceBearing": 300, "faceTilt": 15, "material": "wall.greyWhite", "inlay": "金色原创徽记（uestc.gold，ART-STYLE §11）", "text": "主线是圆形金色浮雕：圆盘、外环与八角形，电路走线留细节阶段"},
+      "reason": "实物登记：友谊树旁的花岗岩景观石，嵌金色原创徽记（MAP-QSH-CENTER-EAST §3.4、ART-STYLE §11），OSM 没有。约 1.9 × 1.0 m、高 1.05 m 的浅灰圆浑景石，前面凿出一块后仰 15° 的平面，徽记嵌在面中，刻面朝 300°，对着从门前铺装和步道过来的人，黄昏侧受光（R1）。默认状态受光（徽记金边一线高光）；夜间灯下；石顶接季。不是刻字石，不计入校内刻字景观石的数量。"
+    }
+  ]
+}
