@@ -125,7 +125,10 @@ public sealed class BuildingMesher
                         var y1 = rows[j + 1];
                         var yc = (y0 + y1) * 0.5f;
                         if (openings.Any(o => o.U0 <= uc && uc <= o.U1 && o.Y0 <= yc && yc <= o.Y1)) continue;
-                        var face = accentColumn && yc > _p.PlinthTopY && yc < _p.RoofY - 0.3f ? _accent : _wall;
+                        // Apron only: the panel from the floor to the sill of a window of the column, the lintel stays wall.
+                        var accent = accentColumn && yc > _p.PlinthTopY && yc < _p.RoofY - 0.3f &&
+                            (!_prof.AccentApron || openings.Any(o => o.Kind == BayKind.Window && o.U0 <= uc && uc <= o.U1 && _p.FloorY(o.Row) <= yc && yc <= o.Y0));
+                        var face = accent ? _accent : _wall;
                         frame.Panel(_sink, face, u0, u1, 0f, y0, y1, frame.Out, new(u0, y0), new(u1, y1));
                     }
                 }

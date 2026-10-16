@@ -79,6 +79,8 @@ public sealed record FacadeProfile(
     public bool StringCourses { get; init; } = true;
     /// <summary>Spandrel and lintel cells of window columns take the accent colour (dormitory "窗间板").</summary>
     public bool AccentSpandrels { get; init; }
+    /// <summary>The accent takes only the apron under each window (floor to sill, as wide as the window); the lintel stays wall.</summary>
+    public bool AccentApron { get; init; }
     public float PlinthProjection { get; init; } = 0.05f;
     /// <summary>Secondary mix for the window cards: (card, weight) by window hash.</summary>
     public (WindowCard Card, int Weight)[] CardMix { get; init; } = [];
