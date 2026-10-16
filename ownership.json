@@ -258,6 +258,10 @@
       "owner": "WP-21"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/overlay/center-east.d/**",
+      "owner": "WP-21"
+    },
+    {
       "pattern": "game/gen/zones/showcase-interiors/north/packages.lock.json",
       "owner": "WP-00"
     },
@@ -267,6 +271,10 @@
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/waterfront.overlay.json",
+      "owner": "WP-28"
+    },
+    {
+      "pattern": "game/data/maps/qingshuihe/overlay/waterfront.d/**",
       "owner": "WP-28"
     },
     {
@@ -282,6 +290,10 @@
       "owner": "WP-30"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/overlay/boundary.d/**",
+      "owner": "WP-30"
+    },
+    {
       "pattern": "game/gen/interior-props/Campus.Gen.InteriorProps.csproj",
       "owner": "WP-00"
     },
@@ -290,11 +302,23 @@
       "owner": "WP-29"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/overlay/public.d/**",
+      "owner": "WP-29"
+    },
+    {
       "pattern": "game/data/maps/qingshuihe/overlay/north.overlay.json",
       "owner": "WP-20"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/overlay/north.d/**",
+      "owner": "WP-20"
+    },
+    {
       "pattern": "game/data/maps/qingshuihe/overlay/south.overlay.json",
+      "owner": "WP-18"
+    },
+    {
+      "pattern": "game/data/maps/qingshuihe/overlay/south.d/**",
       "owner": "WP-18"
     },
     {
@@ -306,7 +330,15 @@
       "owner": "WP-16"
     },
     {
+      "pattern": "game/data/maps/qingshuihe/overlay/core.d/**",
+      "owner": "WP-16"
+    },
+    {
       "pattern": "game/data/maps/qingshuihe/overlay/west.overlay.json",
+      "owner": "WP-19"
+    },
+    {
+      "pattern": "game/data/maps/qingshuihe/overlay/west.d/**",
       "owner": "WP-19"
     },
     {
@@ -579,6 +611,10 @@
     },
     {
       "pattern": "game/data/maps/*/overlay/atlas.overlay.json",
+      "owner": "WP-48c"
+    },
+    {
+      "pattern": "game/data/maps/*/overlay/atlas.d/**",
       "owner": "WP-48c"
     },
     {
