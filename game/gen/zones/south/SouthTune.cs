@@ -38,6 +38,38 @@ public static class SouthTune
         public static readonly ToonSpec Marking = S("ground.markingYellow", ToonFx.None, LineClass.None);
         public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
         { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+
+        /// <summary>Xuanbang: beige-grey stone walls, piers, columns and the clock tower (MAP-QSH-SOUTH §5.4–§5.6).</summary>
+        public static readonly ToonSpec Beige = S("stone.beige", ToonFx.BevelLift);
+        /// <summary>Xuanbang cornices, sills, capitals, dentils and pediment frames: the lighter stone, fine line.</summary>
+        public static readonly ToonSpec BeigeTrim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
+        /// <summary>Dark grey window frames (§5.6) with no outline, so mullions do not hatch the facade at distance (18a review).</summary>
+        public static readonly ToonSpec DarkFrame = S("roof.grey", ToonFx.None, LineClass.None);
+        /// <summary>Electron-tube dome (§5.9): dark grey metal; no other surface uses it, so the dome stays a bundle of its own.</summary>
+        public static readonly ToonSpec DomeMetal = S("roof.grey", ToonFx.BevelLift, LineClass.Building, 0.8f);
+        /// <summary>Clock dial bezels, hour marks and pivots.</summary>
+        public static readonly ToonSpec DialRim = S("roof.grey", ToonFx.BevelLift, LineClass.Fine, 0.7f);
+        /// <summary>Clock dial faces; the night backlight channel comes with the lighting list.</summary>
+        public static readonly ToonSpec Dial = S("wall.greyWhite", ToonFx.None, LineClass.Fine);
+        /// <summary>Liren: white throughout (§6.2), trims in WP-14's warm white so A, B and the gateway read as one building.</summary>
+        public static readonly ToonSpec White = S("wall.greyWhite", ToonFx.BevelLift);
+        public static readonly ToonSpec WhiteTrim = S("wall", ToonFx.BevelLift, LineClass.Fine);
+        public static readonly ToonSpec GreyPlinth = S("roof.grey", ToonFx.BevelLift);
+        /// <summary>East lake hard bank (§4.3): brick-red retaining wall, red sandstone coping, white stone balusters (fine line).</summary>
+        public static readonly ToonSpec BrickRed = S("brick", ToonFx.Mottle);
+        public static readonly ToonSpec Sandstone = S("band.terracotta", ToonFx.BevelLift);
+        public static readonly ToonSpec Baluster = S("wall.greyWhite", ToonFx.None, LineClass.Fine);
+        /// <summary>Steps and treads with no per-riser outline (18a review): they read by lit treads and shaded risers.</summary>
+        public static readonly ToonSpec StepStone = S("stone.beige", ToonFx.BevelLift, LineClass.None);
+        /// <summary>Rowing boats (§4.6): warm wood outside, lighter boards inside.</summary>
+        public static readonly ToonSpec BoatWood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
+        public static readonly ToonSpec BoatInside = S("panel.brown", ToonFx.None, LineClass.Fine);
+        /// <summary>Wu Liren statue (§4.9): bronze and polished black stone, stood in by door.wood and roof.grey until WP-04 registers them.</summary>
+        public static readonly ToonSpec Bronze = S("door.wood", ToonFx.BevelLift, LineClass.Building, 0.8f);
+        public static readonly ToonSpec DarkStone = S("roof.grey", ToonFx.BevelLift, LineClass.Building, 0.9f);
+        /// <summary>Hexagonal pavilion (§4.5): red-brown columns, dark grey tiles.</summary>
+        public static readonly ToonSpec RedTimber = S("band.terracotta", ToonFx.BevelLift, LineClass.Fine);
+        public static readonly ToonSpec Tiles = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
     }
 
     /// <summary>
@@ -136,5 +168,84 @@ public static class SouthTune
         public static readonly Vector2 HillTop = new(-352f, 238f);
         public const float PavilionSize = 4.2f, PavilionPost = 0.3f, PavilionEave = 2.9f, PavilionRoofRise = 1.5f;
         public const float SeatWallRadius = 5.4f, SeatWallHeight = 0.45f;
+    }
+
+    /// <summary>
+    /// Xuanbang (MAP-QSH-SOUTH §5, WLD-INTERIORS §2.4, §16). The zone builds all three parts: main wing and south annex 8
+    /// storeys to 35.7 m, tower 18 storeys to 73.85 m, clock tower 66.65 m. Footprints come from the world model.
+    /// </summary>
+    public static class Xuanbang
+    {
+        /// <summary>Main wing: 5.0 m ground storey + 7 × 4.2 m = 34.4 m wall top, cornice and parapet to 35.7 m.</summary>
+        public const float MainGround = 5.0f, MainStorey = 4.2f, MainBay = 3.9f, MainPier = 1.3f;
+        /// <summary>Tower: 5.0 m + 17 × 3.9 m = 71.3 m, cornice 0.9 m and parapet 1.65 m to 73.85 m.</summary>
+        public const float TowerGround = 5.0f, TowerStorey = 3.9f, TowerBay = 3.2f, TowerPier = 0.9f, TowerParapet = 1.65f;
+        /// <summary>The lake fronts face about 311°; the main front is the one front edge longer than MainFrontMin.</summary>
+        public const float FrontFacing = 311f, MainFrontMin = 60f, EndBlockMin = 10f, EndBlockMax = 14f;
+        /// <summary>Long axis of the slab (footprint edge running 41°).</summary>
+        public static readonly Vector2 SlabAxis = new(0.6577f, -0.7532f);
+
+        /// <summary>Pediment portico (§5.6), centred on the main front (初值): four columns, three arched doors behind.</summary>
+        public static readonly float[] PorticoColumns = [-9f, -3f, 3f, 9f];
+        public static readonly float[] Doors = [-6f, 0f, 6f];
+        public const float PorticoHalfWidth = 11.5f, PorticoDepth = 7.6f, PodiumRise = 0.45f, ColumnRadius = 0.78f, ColumnHeight = 13.2f;
+        public const float EntablatureHeight = 1.95f, PedimentRise = 4.2f;
+        public const float DoorWidth = 3.2f, DoorSpring = 3.4f, UpperWindowSill = 7.0f, UpperWindowWidth = 2.6f, UpperWindowSpring = 3.0f;
+        /// <summary>Small gables on the two projecting end blocks of the main wing (§5.7).</summary>
+        public const float EndGableRise = 2.6f;
+        /// <summary>Atrium skylight on the main wing (WLD-INTERIORS §16: the 2019 rendering's roof light), centre at the entity anchor.</summary>
+        public static readonly Vector2 Skylight = new(241.6f, 476.9f);
+        public const float SkylightSize = 14f, SkylightRise = 2.2f;
+
+        /// <summary>
+        /// Clock tower (§5.4, 初值): shaft to 46.0 m, cornice, setback dial stage to 54.6 m, cornice, lantern podium to the
+        /// lantern floor at 56.4 m (P18 eye 58.0 m), slit columns to 60.6 m, entablature, bullet dome 61.1–66.2 m, finial to 66.65 m.
+        /// </summary>
+        public const float ClockAxis = 42.3f;
+        public const float ShaftTop = 46.0f, StageTop = 54.6f, LanternFloor = 56.4f, LanternTop = 60.6f, DomeBase = 61.1f, DomeTop = 66.2f, Top = 66.65f;
+        public const float Quoin = 1.7f, StageInset = 1.6f, DialRadius = 2.5f, DialY = 50.7f, DialProud = 0.4f;
+        public const int LanternColumns = 20;
+        public const float LanternRadius = 4.3f, LanternColumn = 0.45f, CoreRadius = 1.7f, DomeRadius = 4.4f;
+        /// <summary>Bullet dome profile (an ogive on a short upright skirt), (radius, height) as fractions of DomeRadius and DomeTop − DomeBase.</summary>
+        public static readonly Vector2[] DomeProfile =
+            [new(1f, 0), new(1f, 0.14f), new(0.98f, 0.28f), new(0.92f, 0.44f), new(0.8f, 0.6f), new(0.63f, 0.75f), new(0.42f, 0.87f), new(0.21f, 0.955f), new(0.06f, 0.995f), new(0, 1f)];
+        public const float PortalWidth = 3.2f, PortalSpring = 4.4f;
+        /// <summary>A pair of narrow windows per storey on every face.</summary>
+        public const float SlitWidth = 0.9f, SlitHeight = 2.6f, SlitGap = 1.3f, SlitFirst = 8.4f, SlitPitch = 4.0f;
+        public const int SlitRows = 9;
+    }
+
+    /// <summary>
+    /// Liren corner gateway (§6.3, 初值): two pier blocks and a fourth-storey bridge over a three-storey void on square columns,
+    /// plus the two-storey east link. Storeys follow WP-14's A and B at 15.6 m: wall top 15.1 m, coping 16.57 m.
+    /// </summary>
+    public static class Liren
+    {
+        public const float GroundStorey = 3.85f, Storey = 3.75f, Parapet = 0.87f;
+        public const float BridgeFloor = 11.7f, Soffit = 10.9f, ColumnSize = 1.1f, ColumnInset = 1.2f;
+    }
+
+    /// <summary>East lake shore (§4).</summary>
+    public static class Lake
+    {
+        /// <summary>Liren-side hard bank: the rectilinear north edge of osm:relation:7849760, west to east (water to the south).</summary>
+        public static readonly Vector2[] HardBank =
+        [
+            new(105.86f, 299.29f), new(143.19f, 306.07f), new(144.75f, 297.54f), new(167.68f, 301.71f), new(166.68f, 307.16f), new(178.49f, 309.32f),
+            new(177.95f, 312.26f), new(182.08f, 313.01f), new(180.27f, 322.82f), new(222.79f, 330.57f), new(223.39f, 327.30f),
+        ];
+        /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK §7); balustrade line set back from the water.</summary>
+        public const float WallBottom = -1.1f, CopingTop = 0.12f, RailTop = 1.08f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
+        /// <summary>The wade step fills the middle of the bay's back edge (segment WadeSegment); its second tread is 0.15 m under the −0.5 m water.</summary>
+        public const int WadeSegment = 2;
+        public const float WadeWidth = 10f, Tread1 = -0.30f, Tread2 = -0.65f, Tread1Depth = 0.6f, Tread2Depth = 1.2f;
+        public const float BoatLength = 4.2f, BoatBeam = 1.35f, BoatDepth = 0.55f, BoatKeel = -0.80f;
+        /// <summary>Wu Liren statue (qsh:node:7867995301), facing the lake; the figure is 1.25 × a 2 m model, about 2.5 m.</summary>
+        public static readonly Vector2 Statue = new(199.79f, 292.15f);
+        public const float StatueFacing = 190f, StatueScale = 1.25f;
+        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN §5.2, +3.0 m once the terrain lands).</summary>
+        public static readonly Vector2 Pavilion = new(30f, 592f);
+        public const float PavilionFloor = 0.45f, PavilionPlatform = 3.4f, PavilionColumns = 2.5f, PavilionColumnHeight = 3.0f;
+        public const float LowerEave = 3.7f, LowerRise = 1.0f, DrumRadius = 2.0f, UpperEave = 2.75f, UpperRise = 1.8f;
     }
 }

@@ -12,6 +12,10 @@
     { "op": "height", "target": "qsh:way:687370088", "height": 21.55, "storeys": 5, "reason": "主楼 C1 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
     { "op": "height", "target": "qsh:way:687370090", "height": 21.55, "storeys": 5, "reason": "主楼 C2 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
     { "op": "height", "target": "qsh:way:687370089", "height": 21.55, "storeys": 5, "reason": "主楼 C3 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:relation:11185936", "height": 15.6, "storeys": 4, "reason": "立人楼 A 区：4 层（WLD-INTERIORS §16），与 B 区和转角门洞的墩体同一层线（MAP-QSH-SOUTH §6.2）" },
+    { "op": "height", "target": "qsh:way:814133732", "height": 15.6, "storeys": 4, "reason": "立人楼 B 区：4 层（WLD-INTERIORS §16，MAP-QSH-SOUTH §6.2）" },
+    { "op": "style", "target": "qsh:relation:11185936", "family": "modern" },
+    { "op": "style", "target": "qsh:way:814133732", "family": "modern" },
     {
       "op": "add",
       "id": "design:south-hongfeng-pavilion",
@@ -20,6 +24,15 @@
       "height": 4.7,
       "props": { "size": 4.2, "seatWall": { "radius": 5.4, "height": 0.45, "bearings": [-60, 60] }, "night": "暗区", "seasons": "接季：瓦面与坐墙顶面接落叶、花瓣与积雪" },
       "reason": "设计增补：红枫丘顶台上的小方亭与北缘 0.45 m 石坐墙，朝湖、朝馆，丘顶揭示的停留点（MAP-QSH-TERRAIN §1.2、§1.3 ②）；默认状态压在落日旁边成剪影，夜间暗区，四季接季"
+    },
+    {
+      "op": "add",
+      "id": "design:south-eastlake-wade-step",
+      "kind": "steps",
+      "geometry": { "type": "point", "position": [156.0, -0.65, 300.8] },
+      "height": 0.65,
+      "props": { "width": 10.0, "treads": [-0.30, -0.65], "waterDepth": 0.15, "night": "灯下", "seasons": "接季：两级踏面接落叶、花瓣与积雪" },
+      "reason": "设计增补：东湖亲水平台临水一边的涉水一级（MAP-QSH-SOUTH §4.3、§12.4，MAP-QSH-ADDITIONS §7）。立人楼一侧的湖湾里，平台下两级：第一级 −0.30 m 在水面上，第二级 −0.65 m 没入常水位 0.15 m，宽 10 m；涉水区由 WP-44 登记，两条木划船系在外侧。默认状态受光、接季；夜间灯下（步道灯）"
     }
   ]
 }

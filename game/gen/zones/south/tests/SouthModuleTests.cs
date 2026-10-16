@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Gen.Zones.South.Framework;
 using GdUnit4;
 
 namespace Campus.Gen.Zones.South.Tests;
@@ -26,7 +27,7 @@ public sealed class SouthModuleTests
     {
         var world = World();
         var module = new SouthModule();
-        Require(module.Claims.Count == 2, "gate and front steps are claimed");
+        Require(module.Claims.Count == 4, "gate, front steps, Xuanbang and Liren's connector are claimed");
         foreach (var claim in module.Claims.OfType<FeatureClaim>())
         {
             Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
@@ -119,7 +120,104 @@ public sealed class SouthModuleTests
         var ctx = Context();
         var module = new SouthModule();
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
-            Require(item.Anchor.X is > -1000 and < 1000 && item.Anchor.Y is > 150 and < 1000, $"item at {item.Anchor} is in the south zone");
+            Require(item.Anchor.X is > -1000 and < 1000 && item.Anchor.Y is > 90 and < 1000, $"item at {item.Anchor} is in the south zone");
+    }
+
+
+    [TestCase]
+    public void OverlaySetsLirenAndRegistersTheWadeStep()
+    {
+        var world = World();
+        foreach (var id in new[] { Liren.LirenSite.BlockA, Liren.LirenSite.BlockB })
+        {
+            Require(world.Features[new(id)].Storeys == 4, $"{id} has 4 storeys");
+            Require(world.Features[new(id)].Family?.Value == "modern", $"{id} is in the white family");
+        }
+        Require(world.Features.ContainsKey(new(EastLake.EastLakeSite.WadeStep)), "wade step design addition");
+    }
+
+    [TestCase]
+    public void XuanbangKeepsItsSkyline()
+    {
+        var ctx = Context();
+        var items = new SouthModule().ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
+        var f = Xuanbang.XuanbangSite.Rings(ctx.World);
+        float Top(IReadOnlyList<Vector2> ring) => items.Where(i => Near(ring, i.Anchor, 3f)).Max(i => MaxY(i.Mesh!));
+        Require(MathF.Abs(Top(f.Clock) - SouthTune.Xuanbang.Top) < 0.05f, $"clock tower top {Top(f.Clock)}");
+        Require(MathF.Abs(Top(f.Tower) - 73.85f) < 0.05f, $"tower top {Top(f.Tower)}");
+        var main = items.Where(i => Near(f.Main, i.Anchor, 1f) && !Near(f.Tower, i.Anchor, 3f) && !Near(f.Clock, i.Anchor, 3f)
+            && Vector2.Distance(i.Anchor, SouthTune.Xuanbang.Skylight) > 10f).Max(i => MaxY(i.Mesh!));
+        Require(main > 35.6f && main < 38.8f, $"main wing roof line {main} (35.7 m, gables up to 38.3 m)");
+        var all = items.Max(i => MaxY(i.Mesh!));
+        Require(all < 73.9f, $"the Xuanbang tower stays the highest point of the zone ({all})");
+    }
+
+    [TestCase]
+    public void LirenGatewayIsOpenUnderTheBridge()
+    {
+        var ctx = Context();
+        var module = new SouthModule();
+        var f = Liren.LirenSite.Rings(ctx.World);
+        var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Where(c => c.Tag is SurfaceTag.Wall or SurfaceTag.DoorClosed).ToArray();
+        var open = Framework.GridFacade.Edges(f.Bridge).Select(e => e.Info).First(e => Liren.LirenSite.Dress(e, f.BridgeNeighbours).Kind != Framework.EdgeKind.Hidden);
+        var centre = Framework.PlanMath.Centroid(f.Bridge);
+        for (var t = -14f; t <= 14f; t += 0.25f)
+        {
+            var p = centre + open.Frame.W * t;
+            Require(!walls.Any(c => Covers(c, p, 1.0f)), $"the gateway passage is clear at {p}");
+        }
+        Require(SouthTune.Liren.Soffit >= 10.5f, "the void is about three storeys high");
+    }
+
+    [TestCase]
+    public void HardBankBalustradeGuardsTheWaterButTheWadeStep()
+    {
+        var ctx = Context();
+        var module = new SouthModule();
+        var barriers = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Barrier).ToArray();
+        var water = EastLake.EastLakeSite.Water(ctx.World);
+        Require(EastLake.EastLakeSite.InWater(water, EastLake.EastLakeSite.WadeFrame.P(EastLake.EastLakeSite.WadeLength * 0.5f, 1f)), "the wade frame looks over the water");
+        Require(SouthTune.Lake.Tread2 < -0.5f && SouthTune.Lake.Tread2 > -0.8f, "the wade tread is under the -0.5 m water by less than 0.3 m");
+        Require(SouthTune.Lake.RailTop >= 1.05f, "balustrade at least 1.05 m");
+        foreach (var (f, l, i) in EastLake.EastLakeSite.BankSegments(water))
+        {
+            var openings = EastLake.EastLakeSite.Openings(i, l);
+            for (var u = 0.3f; u <= l - 0.3f; u += 0.25f)
+            {
+                var p = f.P(u, -SouthTune.Lake.RailSetback);
+                var inOpening = openings.Any(o => u > o.U0 + 0.5f && u < o.U1 - 0.5f);
+                var nearOpening = openings.Any(o => u > o.U0 - 0.5f && u < o.U1 + 0.5f);
+                var guarded = barriers.Any(w => w.Y1 >= 1.5f && Covers(w, p, 1.0f));
+                if (inOpening) Require(!guarded, $"the wade step at {p} is open");
+                else if (!nearOpening) Require(guarded, $"the bank at {p} is guarded");
+            }
+        }
+    }
+
+
+    private static bool Covers(Collider c, Vector2 p, float y) => c switch
+    {
+        BoxCollider box => InBox(box, p) && MathF.Abs(y - box.At.M42) <= box.Half.Y,
+        WallCollider wall => DistanceToSegment(p, wall.A, wall.B) <= wall.HalfT + 0.26f && y >= wall.Y0 && y <= wall.Y1,
+        PostCollider post => Vector2.Distance(p, post.C) <= post.R + 0.26f && y >= post.Y0 && y <= post.Y1,
+        _ => false,
+    };
+
+    private static bool Near(IReadOnlyList<Vector2> ring, Vector2 p, float margin) =>
+        p.X >= ring.Min(q => q.X) - margin && p.X <= ring.Max(q => q.X) + margin && p.Y >= ring.Min(q => q.Y) - margin && p.Y <= ring.Max(q => q.Y) + margin;
+
+    private static float MaxY(GeometryBundle mesh)
+    {
+        var y = float.MinValue;
+        for (var i = 1; i < mesh.Position.Length; i += 3) y = MathF.Max(y, mesh.Position[i]);
+        return y;
+    }
+
+    private static float MinY(GeometryBundle mesh)
+    {
+        var y = float.MaxValue;
+        for (var i = 1; i < mesh.Position.Length; i += 3) y = MathF.Min(y, mesh.Position[i]);
+        return y;
     }
 
     private static bool Covers(Collider c, Vector2 p) => c switch

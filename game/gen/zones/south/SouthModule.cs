@@ -107,5 +107,8 @@ public static class SouthSites
         new MainBuilding.EntranceAxisSite(),
         new MainBuilding.MainBuildingSite(),
         new ForestPark.ForestParkSite(),
+        new Xuanbang.XuanbangSite(),
+        new Liren.LirenSite(),
+        new EastLake.EastLakeSite(),
     ]);
 }
