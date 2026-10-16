@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.North.Clusters;
@@ -180,6 +181,78 @@ public sealed class NorthModuleTests
                 default: throw new InvalidOperationException($"{op.Id}: unexpected operation for 20a-2");
             }
         Require(file.Ops.OfType<TerrainPlatformOp>().Count() == 3, "upper terrace and the two lower wings");
+    }
+
+    /// <summary>
+    /// 20a-3: a road with no corridor keeps the automatic 0 m profile and would cut a trench across the terrace, so every
+    /// line road that runs onto a terrace carries anchors; every shared centreline vertex has one elevation; the authored
+    /// profile keeps to 5 %, and to 3 % within 10 m of a junction (WLD-TERRAIN §3.8, §4.2).
+    /// </summary>
+    [TestCase]
+    public void EveryRoadOnATerraceHasAnchorsAndJunctionsAgree()
+    {
+        var file = Terrain();
+        var roads = World().Network.Roads.Where(r => r.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("highway", out _)
+            && !(p.TryGetProperty("area", out var area) && area.GetString() == "yes")).ToArray();
+        var corridors = file.Ops.OfType<TerrainCorridorOp>().ToDictionary(c => c.Road);
+        var terraces = file.Ops.OfType<TerrainPlatformOp>().Select(p => p.Rings.Outer).ToArray();
+        foreach (var road in roads)
+            if (Samples(road.Line.Points).Any(p => terraces.Any(t => Framework.Plan.Contains(t, p))))
+                Require(corridors.ContainsKey(road.Id), $"{road.Id.Value} runs onto a terrace without corridor anchors");
+        foreach (var c in corridors.Values)
+            for (var i = 0; i + 1 < c.Anchors.Count; i++)
+                Require(Math.Abs(Grade(c.Anchors, i)) <= 0.05 + 1e-6, $"{c.Id}: piece at s {c.Anchors[i].S} is steeper than 5 %");
+
+        var junctions = new Dictionary<(long, long), List<(NetworkLine Road, double S)>>();
+        foreach (var road in roads)
+        {
+            var s = 0.0;
+            for (var i = 0; i < road.Line.Points.Count; i++)
+            {
+                if (i > 0) s += Vector2.Distance(road.Line.Points[i - 1], road.Line.Points[i]);
+                var p = road.Line.Points[i];
+                var key = ((long)Math.Round(p.X * 1000d), (long)Math.Round(p.Y * 1000d));
+                if (!junctions.TryGetValue(key, out var list)) junctions[key] = list = [];
+                if (!list.Any(e => e.Road.Id == road.Id)) list.Add((road, s));
+            }
+        }
+        var checkedJunctions = 0;
+        foreach (var (key, list) in junctions.Where(j => j.Value.Count > 1))
+        {
+            checkedJunctions++;
+            var first = Elevation(corridors, list[0].Road, list[0].S);
+            foreach (var (road, s) in list)
+            {
+                Require(Math.Abs(Elevation(corridors, road, s) - first) <= 1e-4, $"junction {key} of {road.Id.Value}: {Elevation(corridors, road, s):0.000} vs {first:0.000}");
+                if (!corridors.TryGetValue(road.Id, out var c)) continue;
+                for (var i = 0; i + 1 < c.Anchors.Count; i++)
+                    if (c.Anchors[i + 1].S > s - 10 && c.Anchors[i].S < s + 10)
+                        Require(Math.Abs(Grade(c.Anchors, i)) <= 0.03 + 1e-6, $"{c.Id}: steeper than 3 % within 10 m of the junction at s {s:0.0}");
+            }
+        }
+        Require(checkedJunctions > 1000, "the whole network's junctions were checked");
+    }
+
+    private static double Grade(IReadOnlyList<TerrainAnchor> a, int i) => (a[i + 1].Y - a[i].Y) / (a[i + 1].S - a[i].S);
+
+    /// <summary>Authored profile at a station (anchors interpolate linearly; nodes sit on anchors or inside straight pieces); 0 without a corridor.</summary>
+    private static double Elevation(Dictionary<FeatureId, TerrainCorridorOp> corridors, NetworkLine road, double s)
+    {
+        if (!corridors.TryGetValue(road.Id, out var c)) return 0;
+        var a = c.Anchors;
+        for (var i = 0; i + 1 < a.Count; i++)
+            if (s <= a[i + 1].S) return a[i].Y + (a[i + 1].Y - a[i].Y) * Math.Clamp((s - a[i].S) / (a[i + 1].S - a[i].S), 0, 1);
+        return a[^1].Y;
+    }
+
+    private static IEnumerable<Vector2> Samples(IReadOnlyList<Vector2> line)
+    {
+        for (var i = 0; i + 1 < line.Count; i++)
+        {
+            var steps = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(line[i], line[i + 1])));
+            for (var k = 0; k < steps; k++) yield return Vector2.Lerp(line[i], line[i + 1], (float)k / steps);
+        }
+        yield return line[^1];
     }
 
     [TestCase]
