@@ -684,7 +684,7 @@
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.5k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.6k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、core.overlay.json
 
   - MAP-QSH-CORE 分工 · L27 · 998
@@ -700,7 +700,7 @@
 - MAP-QSH-CORE §6 本区的构图关系 · L260 · 413
 - MAP-QSH-CORE WP-16 交付验收 · L268 · 929
 - MAP-QSH-CORE 定位、设计增补与近景要求 · L286 · 2.4k
-- MAP-QSH-CORE §7 季节与昼夜清单 · L332 · 4.8k
+- MAP-QSH-CORE §7 季节与昼夜清单 · L332 · 4.9k
 - MAP-QSH-CORE §8 行走 · L388 · 3.9k
   - MAP-QSH-CORE §8.1 主网路段（必须能走，SYS-WALK §6） · L392 · 335
   - MAP-QSH-CORE §8.2 能看不能进的地方与挡路物 · L407 · 792
@@ -760,7 +760,7 @@
 - MAP-QSH-NORTH §6 文化地标与丹桂路 · L310 · 205
 - MAP-QSH-NORTH WP-20 交付验收 · L317 · 807
 - MAP-QSH-NORTH 定位、设计增补与近景要求 · L331 · 2.2k
-- MAP-QSH-NORTH §7 季节与昼夜清单 · L374 · 3.8k
+- MAP-QSH-NORTH §7 季节与昼夜清单 · L374 · 3.9k
 - MAP-QSH-NORTH §8 行走 · L424 · 5.7k
 - MAP-QSH-NORTH §9 声音要点（SYS-AUDIO） · L495 · 780
 - MAP-QSH-NORTH §10 待验证（P0） · L506 · 942
@@ -1192,7 +1192,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.3k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.4k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
@@ -1560,7 +1560,7 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 133.3k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF.md` · 133.4k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
