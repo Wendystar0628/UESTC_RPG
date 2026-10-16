@@ -368,6 +368,16 @@ public sealed class BuildingsTests
         ("dorm.b", 0.62f, 1.75f, 0.85f, 1.00f, "glass", "wall", "wall.greyWhite", "panel.pinkSand", "opening.window.casement"),
         ("dorm.master.stoneBeige", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "stone.beige", "wall.greyWhite", "stone.beige", "opening.window.casement"),
         ("dorm.master.greyWhite", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "wall.greyWhite", "stone.beige", "stone.beige", "opening.window.casement"),
+        ("dorm.master.creamCoffee", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "wall.creamCoffee", "wall", "wall.creamCoffee", "opening.window.casement"),
+        ("dorm.master.creamCoffeeWhite", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "wall.creamCoffee", "wall", "wall", "opening.window.casement"),
+    ];
+
+    /// <summary>The three annex presets of the north zone (WP-20 DormPresets.json, WLD-INTERIORS §17) with the family each one lives in.</summary>
+    private static readonly (string Key, string Family, Rules.BuildingStyle Style, float Glazing, float WindowHeight, float Sill, float GroundSill, string Frame, string Trim, string Window)[] AnnexTable =
+    [
+        ("annex.service.creamCoffee", "service", Rules.BuildingStyle.Service, 0.60f, 2.00f, 0.90f, 0.90f, "wall.creamCoffee", "wall", "opening.window.casement"),
+        ("annex.utility.creamCoffee", "utility", Rules.BuildingStyle.Utility, 0.38f, 1.20f, 1.60f, 1.60f, "wall.creamCoffee", "wall", "opening.window.high"),
+        ("annex.utility.greyWhite", "utility", Rules.BuildingStyle.Utility, 0.45f, 1.40f, 1.20f, 1.40f, "wall.greyWhite", "wall", "opening.window.high"),
     ];
 
     [TestCase]
@@ -486,6 +496,80 @@ public sealed class BuildingsTests
             Require(after.Profile.Preset == k && after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before),
                 $"real campus: {before.Key} keeps its window grid under {k}");
         }
+    }
+
+    [TestCase]
+    public void NorthAnnexPresetsMatchTheTable()
+    {
+        var tokens = PaletteTokens();
+        foreach (var (key, _, _, glazing, windowHeight, sill, groundSill, frame, trim, window) in AnnexTable)
+        {
+            var look = Rules.FacadePresets.Find(new FacadePreset(key)) ?? throw new InvalidOperationException($"Expected: {key} is a known preset");
+            Require(look.Glazing == glazing && look.WindowHeight == windowHeight && look.Sill == sill && look.GroundSill == groundSill, $"{key}: the window's size");
+            Require(look.Glass == "glass" && look.Frame == frame && look.Trim == trim && look.Accent == frame && look.Window == window && look.AccentApron is null, $"{key}: colours and window part");
+            foreach (var family in new[] { frame, trim })
+                Require(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade"), $"{key}: {family} is in the palette");
+        }
+    }
+
+    [TestCase]
+    public void NorthPresetsReachTheRealBuildings()
+    {
+        // The zone pack keys these ways in north.overlay.json: each one takes its preset, keeps its family, opens its windows at the
+        // preset's height (the ground storey within 0.1 m) and shows the preset's wall; none of the five new keys is unknown any more.
+        var real = RealCampus();
+        var set = BuildingSet.For(real, 1u);
+        (string Way, string Key)[] keyed =
+        [
+            ("qsh:way:949704499", "annex.service.creamCoffee"), ("qsh:way:217855247", "annex.utility.creamCoffee"), ("qsh:way:683646735", "annex.utility.greyWhite"),
+            ("qsh:way:217855243", "dorm.master.creamCoffee"), ("qsh:way:544136505", "dorm.master.creamCoffeeWhite"),
+        ];
+        foreach (var (way, key) in keyed)
+        {
+            var plans = set.Plans.Where(p => p.Id.Value == way).ToArray();
+            Require(plans.Length > 0, $"{way} is a building of the real campus");
+            var look = Rules.FacadePresets.Find(new FacadePreset(key))!;
+            foreach (var plan in plans)
+            {
+                Require(plan.Profile.Preset == key && plan.Profile.Wall == look.Frame && plan.Profile.Trim == look.Trim, $"{way}: takes {key}");
+                Require(!BuildingsModule.UnknownPreset(plan).Any(), $"{way}: {key} is known");
+                var windows = plan.Openings.SelectMany(o => o).Where(o => o.Kind == BayKind.Window).ToArray();
+                // Upper storeys open at exactly the preset's height; the ground storey's sill is a little higher, which may take a few cm off the 6-storey blocks.
+                Require(windows.Length > 0 && windows.All(w => MathF.Abs(w.Y1 - w.Y0 - look.WindowHeight!.Value) < (w.Row == 0 ? 0.1f : 0.01f)),
+                    $"{way}: windows {look.WindowHeight} m high, got {string.Join(", ", windows.Select(w => (w.Y1 - w.Y0).ToString("0.000")).Distinct())}");
+            }
+        }
+        var table = AnnexTable.ToDictionary(r => r.Key);
+        foreach (var (way, key) in keyed.Where(k => table.ContainsKey(k.Key)))
+            Require(set.Plans.Where(p => p.Id.Value == way).All(p => p.Style == table[key].Style), $"{way}: stays in the {table[key].Family} family");
+    }
+
+    [TestCase]
+    public void NorthUnkeyedBlocksTakeTheBohanLanguage()
+    {
+        // 5232, 5561 and 9693 are not keyed in the overlay yet (WP-20): handed the keys as an overlay op would, each takes the
+        // preset over whatever family the data gives it, and not one window changes its number (contract-29).
+        var real = RealCampus();
+        var was = BuildingSet.For(real, 1u);
+        var keyOf = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["qsh:way:570145232"] = "dorm.master.creamCoffee",
+            ["qsh:way:550365561"] = "dorm.master.creamCoffee",
+            ["qsh:way:544269693"] = "dorm.master.creamCoffeeWhite",
+        };
+        var now = BuildingSet.For(new StyledWorld(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
+        Require(now.Blocks.SequenceEqual(was.Blocks), "every window block as before");
+        Require(Layout(now, where: p => !keyOf.ContainsKey(p.Id.Value)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id.Value)), "the other buildings cell for cell");
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < was.Plans.Count; i++)
+        {
+            var (before, after) = (was.Plans[i], now.Plans[i]);
+            if (!keyOf.TryGetValue(before.Id.Value, out var k)) continue;
+            seen.Add(before.Id.Value);
+            Require(after.Profile.Preset == k && after.Profile.Wall == Rules.Families.WallCreamCoffee, $"{before.Key} takes {k}");
+            Require(after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before), $"{before.Key} keeps its window grid");
+        }
+        Require(seen.Count == keyOf.Count, $"all three blocks planned ({seen.Count})");
     }
 
     private static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));

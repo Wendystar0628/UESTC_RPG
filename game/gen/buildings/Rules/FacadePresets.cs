@@ -126,7 +126,70 @@ public static class FacadePresets
     /// <summary>硕丰苑 21–33 栋, the newer blocks: the master language with the colours turned round, a 灰白 wall with 灰米石材 bands.</summary>
     public static readonly FacadeLook DormMasterGreyWhite = Master("dorm.master.greyWhite", Families.WallGreyWhite, Families.StoneBeige, Families.StoneBeige);
 
-    public static IReadOnlyList<FacadeLook> All { get; } = [ResearchStoneFrame, DormAYellow, DormACreamCoffee, DormB, DormMasterStoneBeige, DormMasterGreyWhite];
+    /// <summary>
+    /// 博翰苑 1–6 栋 (博翰一组团, old blocks renovated): the master language on a 浅奶咖 wall with 暖白 trims, no vertical band (the
+    /// accent is the frame's own colour). Also the wall language of the unnamed 5232 and 5561 beside it (MAP-QSH-RENOVATION Q-05, Q-06).
+    /// </summary>
+    public static readonly FacadeLook DormMasterCreamCoffee = Master("dorm.master.creamCoffee", Families.WallCreamCoffee, Families.WallWarmWhite, Families.WallCreamCoffee);
+
+    /// <summary>
+    /// 博翰苑 7–9 栋 and the two 留学生 blocks (the 2015 buildings, wall updated, cleaner): the same 浅奶咖 wall, the spandrels and
+    /// lintels of the window columns 暖白, so the facade reads as cream piers between warm-white window bands. The unnamed 9693 in
+    /// the 博翰二 cluster takes the 7–9 language (Q-10).
+    /// </summary>
+    public static readonly FacadeLook DormMasterCreamCoffeeWhite = Master("dorm.master.creamCoffeeWhite", Families.WallCreamCoffee, Families.WallWarmWhite, Families.WallWarmWhite);
+
+    // 博翰一组团附属 and 6735 (WP-20 DormPresets.json, WLD-INTERIORS §17). Not dormitories: the family (service, utility) stays the
+    // zone pack's and keeps its own curtains, string courses and window cards. The accent is written out to keep the table whole,
+    // though neither family paints it (AccentSpandrels is off there).
+
+    /// <summary>无名 4499 (社区活动室, 2 层, 门关着): the 博翰一 wall and trims, openings a step larger than a dormitory's (0.6 of the bay, 2.0 m).</summary>
+    public static readonly FacadeLook AnnexServiceCreamCoffee = new("annex.service.creamCoffee")
+    {
+        Glazing = 0.60f,
+        WindowHeight = 2.00f,
+        Sill = 0.90f,
+        GroundSill = 0.90f,
+        Glass = Families.Glass,
+        Frame = Families.WallCreamCoffee,
+        Trim = Families.WallWarmWhite,
+        Accent = Families.WallCreamCoffee,
+        Window = PartCatalog.WindowCasement,
+    };
+
+    /// <summary>无名 5247 (配电房、水泵房, 后勤小楼, 门关着): the utility family's own high windows, only the wall turned 浅奶咖 to join 4499.</summary>
+    public static readonly FacadeLook AnnexUtilityCreamCoffee = new("annex.utility.creamCoffee")
+    {
+        Glazing = 0.38f,
+        WindowHeight = 1.20f,
+        Sill = 1.60f,
+        GroundSill = 1.60f,
+        Glass = Families.Glass,
+        Frame = Families.WallCreamCoffee,
+        Trim = Families.WallWarmWhite,
+        Accent = Families.WallCreamCoffee,
+        Window = PartCatalog.WindowHigh,
+    };
+
+    /// <summary>无名 6735 (校医院西侧条楼, 门关着): 灰白 single-colour wall with warm-white coping, wider high windows so the 39 m strip does not close up.</summary>
+    public static readonly FacadeLook AnnexUtilityGreyWhite = new("annex.utility.greyWhite")
+    {
+        Glazing = 0.45f,
+        WindowHeight = 1.40f,
+        Sill = 1.20f,
+        GroundSill = 1.40f,
+        Glass = Families.Glass,
+        Frame = Families.WallGreyWhite,
+        Trim = Families.WallWarmWhite,
+        Accent = Families.WallGreyWhite,
+        Window = PartCatalog.WindowHigh,
+    };
+
+    public static IReadOnlyList<FacadeLook> All { get; } =
+    [
+        ResearchStoneFrame, DormAYellow, DormACreamCoffee, DormB, DormMasterStoneBeige, DormMasterGreyWhite,
+        DormMasterCreamCoffee, DormMasterCreamCoffeeWhite, AnnexServiceCreamCoffee, AnnexUtilityCreamCoffee, AnnexUtilityGreyWhite,
+    ];
 
     /// <summary>The preset of a key in <paramref name="presets"/> (default: <see cref="All"/>); null for no key or an unknown one.</summary>
     public static FacadeLook? Find(FacadePreset? key, IReadOnlyList<FacadeLook>? presets = null) =>
