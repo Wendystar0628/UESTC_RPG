@@ -42,6 +42,9 @@ internal struct PostFrame
     public Vector3 CdlOffset;
     public Vector3 CdlPower;
     public float CdlSaturation;
+    // Diagnostics (PostDiagSink): filled by the main thread only while the switch is on, otherwise 0.
+    public long DiagWorldInstance;   // IWorldState.Instance when the frame was gathered
+    public ulong DiagMainFrame;      // Engine.GetProcessFrames() when the frame was gathered
 }
 
 /// <summary>

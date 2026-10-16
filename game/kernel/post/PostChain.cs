@@ -29,6 +29,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private readonly PostFrameBox _box = new();
     private readonly OutlineEffect _outline = new();
     private readonly FinishEffect _finish = new();
+    private readonly PostDiagSink _diag = CreateDiagSink();
     private readonly Compositor _compositor = new();
     private readonly float[] _glowLevels = new float[7];
     private readonly float[] _glowTargets = new float[7];
@@ -60,8 +61,20 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         ProcessMode = ProcessModeEnum.Always;   // post keeps running under pause and veils
         _outline.Inputs = _box;
         _finish.Inputs = _box;
+        _finish.Diagnostics = _diag;
         _compositor.CompositorEffects = [_outline, _finish];
     }
+
+    // Read-only diagnostic hook (off by default). Environment variable UESTC_POST_DIAG: "1" logs the first sample, every
+    // change of world instance or LUT bake, and a heartbeat; "all" logs every frame. Lines: WP05_POST_DIAG {json}.
+    private static PostDiagSink CreateDiagSink()
+    {
+        var value = OS.GetEnvironment("UESTC_POST_DIAG");
+        return new PostDiagSink(value is "1" or "all", value == "all");
+    }
+
+    /// <summary>Latest immutable diagnostic snapshot of the finish pass; null while the switch is off or before one.</summary>
+    internal PostDiagSnapshot? DiagnosticsLatest => _diag.Latest;
 
     /// <summary>Tilt-shift, lens flare and light shafts: current switch state, for the passes that land later.</summary>
     internal bool TiltShiftOn => _tiltOn;
@@ -211,7 +224,13 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             CdlPower = new Vector3(cs.CdlPower.X, cs.CdlPower.Y, cs.CdlPower.Z),
             CdlSaturation = cs.CdlSaturation,
         };
+        if (_diag.Enabled)
+        {
+            frame.DiagWorldInstance = _world.Instance;
+            frame.DiagMainFrame = Engine.GetProcessFrames();
+        }
         _box.Write(frame);
+        if (_diag.Enabled && _diag.NextLogLine() is { } line) GD.Print(line);
         // Read leases for this frame's outline callback (taken and disposed on the render thread).
         _box.OfferLeases(_textures.TryAcquire(ShaderGlobals.Palette, out var palette) ? palette : null,
             _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
