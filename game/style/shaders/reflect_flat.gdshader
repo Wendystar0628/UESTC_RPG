@@ -1,7 +1,7 @@
 // reflect_flat.gdshader：倒影世界里的平涂 REFLECT 代理（WP-24；WLD-WATER §7.2，ENG-PERF §10.4）
 //
 // 只在倒影 SubViewport 的独立世界里用：没有光、不投影，颜色只读调色板行 0。
-// 顶点 COLOR 与 toon 相同（R 是受光色号，影 = 受光 + 1）；按主光方向分受光与影两块，倒影里的明暗与岸上一致。
+// 顶点 COLOR 与 toon 相同（R 是受光色号低字节，B 的 bank 位补第 9 位，影 = 受光 + 1）；按主光方向分受光与影两块，倒影里的明暗与岸上一致。
 // 取色与雾用 fog.gdshaderinc（WP-04），与岸上同源。
 // 倒影相机在水面以下，4.7 的 Camera3D 没有斜裁剪，所以丢弃水面以下的片元。
 shader_type spatial;
@@ -12,12 +12,17 @@ render_mode unshaded, cull_back, shadows_disabled, ambient_light_disabled;
 
 uniform float water_y = -10000.0;   // 当前做倒影的湖的水面高度，倒影节点在换湖时写入
 
+// 色号 0–511：COLOR.r 是低字节，COLOR.b 的 bank 位（16）是第 9 位，与 toon.gdshaderinc 的 v_cid 同一规则
+// （PaletteEncoding.DecodeColor，contract-28）。反射着色器不 include toon，常量在此镜像。
+const int REFLECT_F_COLOR_BANK = 16;   // = TOON_F_COLOR_BANK
+
 varying flat int v_cid;
 varying vec3 v_wpos;
 varying vec3 v_nrm;
 
 void vertex() {
-	v_cid = int(round(COLOR.r * 255.0));
+	int flags = int(round(COLOR.b * 255.0));
+	v_cid = int(round(COLOR.r * 255.0)) + ((flags & REFLECT_F_COLOR_BANK) != 0 ? 256 : 0);
 	v_wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_nrm = normalize(mat3(MODEL_MATRIX) * NORMAL);
 }
