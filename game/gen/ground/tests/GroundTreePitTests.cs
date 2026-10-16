@@ -328,8 +328,11 @@ public sealed class GroundTreePitTests
         var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json" }
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var path in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").OrderBy(p => p, StringComparer.Ordinal))
-            files["overlay/" + Path.GetFileName(path)] = File.ReadAllText(path);
+        foreach (var path in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
+                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).OrderBy(p => p, StringComparer.Ordinal))
+            files[Path.GetRelativePath(data, path).Replace('\\', '/')] = File.ReadAllText(path);
         return files;
     }
 
