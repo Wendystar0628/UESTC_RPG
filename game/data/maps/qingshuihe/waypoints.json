@@ -371,7 +371,14 @@
         "pitchDeg": 2,
         "fovDeg": null
       },
-      "stand": null,
+      "stand": {
+        "feet": [
+          429.0,
+          0.0,
+          141.5
+        ],
+        "yawDeg": 65.0
+      },
       "entry": null,
       "recommend": {
         "clock": 18.166666666666668,
