@@ -1,0 +1,506 @@
+{
+  "version": 1,
+  "atlasRect": {
+    "min": [
+      -1536,
+      -1536
+    ],
+    "max": [
+      1536,
+      1536
+    ]
+  },
+  "zoomMin": 0.4,
+  "zoomMax": 3,
+  "zoomBands": [
+    0.4,
+    0.6,
+    0.9,
+    1.4,
+    2.1
+  ],
+  "markers": [
+    {
+      "id": "A01",
+      "kind": "anchor",
+      "name": {
+        "zh": "南门",
+        "en": "South Gate"
+      },
+      "at": [
+        -495,
+        690
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A01",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            -499.58861,
+            6,
+            696.55322
+          ],
+          "yawDeg": 35,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -493.0337,
+            0,
+            688.93527
+          ],
+          "yawDeg": 35
+        }
+      },
+      "region": "south"
+    },
+    {
+      "id": "A02",
+      "kind": "anchor",
+      "name": {
+        "zh": "时间广场",
+        "en": "Time Square"
+      },
+      "at": [
+        -100,
+        168
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A02",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            -93.61092,
+            6,
+            172.81452
+          ],
+          "yawDeg": 307,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -100.99546,
+            0,
+            165.99773
+          ],
+          "yawDeg": 307
+        }
+      },
+      "region": "core"
+    },
+    {
+      "id": "A03",
+      "kind": "anchor",
+      "name": {
+        "zh": "东湖",
+        "en": "East Lake"
+      },
+      "at": [
+        -15,
+        395
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A03",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            -22.82518,
+            6,
+            393.33671
+          ],
+          "yawDeg": 102,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -13.25162,
+            0,
+            396.39397
+          ],
+          "yawDeg": 102
+        }
+      },
+      "region": "south"
+    },
+    {
+      "id": "A04",
+      "kind": "anchor",
+      "name": {
+        "zh": "品学楼",
+        "en": "Pinxue Building"
+      },
+      "at": [
+        120,
+        -65
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A04",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            112.0,
+            6,
+            -65.0
+          ],
+          "yawDeg": 90,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            122.0,
+            0,
+            -64.0
+          ],
+          "yawDeg": 90
+        }
+      },
+      "region": "center"
+    },
+    {
+      "id": "A05",
+      "kind": "anchor",
+      "name": {
+        "zh": "北门 · 商业街",
+        "en": "North Gate ? Shopping Street"
+      },
+      "at": [
+        -90,
+        -765
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A05",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            -92.07055,
+            6,
+            -772.72741
+          ],
+          "yawDeg": 165,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -90.44829,
+            0,
+            -762.80933
+          ],
+          "yawDeg": 165
+        }
+      },
+      "region": "north"
+    },
+    {
+      "id": "A06",
+      "kind": "anchor",
+      "name": {
+        "zh": "体育中心",
+        "en": "Sports Centre"
+      },
+      "at": [
+        -165,
+        705
+      ],
+      "icon": "anchor-kiosk",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A06",
+      "form": "kiosk",
+      "teleport": {
+        "fly": {
+          "position": [
+            -172.87846,
+            11,
+            703.61081
+          ],
+          "yawDeg": 100,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -163.20403,
+            5,
+            706.3321
+          ],
+          "yawDeg": 100
+        }
+      },
+      "region": "south"
+    },
+    {
+      "id": "A07",
+      "kind": "anchor",
+      "name": {
+        "zh": "西湖 · 博物馆",
+        "en": "West Lake ? Museum"
+      },
+      "at": [
+        -330,
+        95
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A07",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            -322.48246,
+            6,
+            92.26384
+          ],
+          "yawDeg": 250,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -332.22141,
+            0,
+            94.74435
+          ],
+          "yawDeg": 250
+        }
+      },
+      "region": "core"
+    },
+    {
+      "id": "A08",
+      "kind": "anchor",
+      "name": {
+        "zh": "校训石",
+        "en": "Motto Stone"
+      },
+      "at": [
+        -535,
+        255
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A08",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            -527.48246,
+            6,
+            257.73616
+          ],
+          "yawDeg": 290,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -536.53737,
+            0,
+            253.37627
+          ],
+          "yawDeg": 290
+        }
+      },
+      "region": "west"
+    },
+    {
+      "id": "A09",
+      "kind": "anchor",
+      "name": {
+        "zh": "研究院",
+        "en": "Research Institute"
+      },
+      "at": [
+        -470,
+        -130
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A09",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            -472.73616,
+            6,
+            -122.48246
+          ],
+          "yawDeg": 20,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -468.37627,
+            0,
+            -131.53737
+          ],
+          "yawDeg": 20
+        }
+      },
+      "region": "northwest"
+    },
+    {
+      "id": "A10",
+      "kind": "anchor",
+      "name": {
+        "zh": "湿地",
+        "en": "Wetland"
+      },
+      "at": [
+        -205,
+        -330
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A10",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            -197.48246,
+            6,
+            -332.73616
+          ],
+          "yawDeg": 250,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            -207.22141,
+            0,
+            -330.25565
+          ],
+          "yawDeg": 250
+        }
+      },
+      "region": "northwest"
+    },
+    {
+      "id": "A11",
+      "kind": "anchor",
+      "name": {
+        "zh": "银杏苑",
+        "en": "Yinxing Garden"
+      },
+      "at": [
+        70,
+        -470
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A11",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            76.12836,
+            6,
+            -464.8577
+          ],
+          "yawDeg": 310,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            69.1107,
+            0,
+            -472.05162
+          ],
+          "yawDeg": 310
+        }
+      },
+      "region": "north"
+    },
+    {
+      "id": "A12",
+      "kind": "anchor",
+      "name": {
+        "zh": "思学苑",
+        "en": "Sixue Garden"
+      },
+      "at": [
+        330,
+        -300
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A12",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            327.92945,
+            6,
+            -292.27259
+          ],
+          "yawDeg": 15,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            331.48356,
+            0,
+            -301.67303
+          ],
+          "yawDeg": 15
+        }
+      },
+      "region": "north"
+    },
+    {
+      "id": "A13",
+      "kind": "anchor",
+      "name": {
+        "zh": "东区",
+        "en": "East District"
+      },
+      "at": [
+        450,
+        110
+      ],
+      "icon": "anchor-post",
+      "priority": 100,
+      "minZoomBand": 0,
+      "feature": "design:anchor:A13",
+      "form": "post",
+      "teleport": {
+        "fly": {
+          "position": [
+            443.0718,
+            6,
+            114.0
+          ],
+          "yawDeg": 60,
+          "pitchDeg": -12
+        },
+        "stand": {
+          "feet": [
+            452.23205,
+            0,
+            109.86603
+          ],
+          "yawDeg": 60
+        }
+      },
+      "region": "east"
+    }
+  ],
+  "hidden": []
+}

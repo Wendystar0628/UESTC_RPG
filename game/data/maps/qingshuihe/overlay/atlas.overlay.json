@@ -1,0 +1,488 @@
+{
+  "zone": "atlas",
+  "owner": "WP-48c",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:anchor:A01",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -496.04858,
+              689.75408
+            ],
+            [
+              -494.41028,
+              690.90124
+            ],
+            [
+              -493.95142,
+              690.24592
+            ],
+            [
+              -495.58972,
+              689.09876
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 35,
+        "number": "A01",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A02",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -100.28236,
+              169.03936
+            ],
+            [
+              -99.07873,
+              167.44209
+            ],
+            [
+              -99.71764,
+              166.96064
+            ],
+            [
+              -100.92127,
+              168.55791
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 307,
+        "number": "A02",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A03",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -15.18335,
+              393.93869
+            ],
+            [
+              -15.59917,
+              395.89498
+            ],
+            [
+              -14.81665,
+              396.06131
+            ],
+            [
+              -14.40083,
+              394.10502
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 102,
+        "number": "A03",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A04",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              119.6,
+              -66.0
+            ],
+            [
+              119.6,
+              -64.0
+            ],
+            [
+              120.4,
+              -64.0
+            ],
+            [
+              120.4,
+              -66.0
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 90,
+        "number": "A04",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A05",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -89.1376,
+              -765.64519
+            ],
+            [
+              -91.06945,
+              -765.12755
+            ],
+            [
+              -90.8624,
+              -764.35481
+            ],
+            [
+              -88.93055,
+              -764.87245
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 165,
+        "number": "A05",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A06",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -165.22027,
+              703.94573
+            ],
+            [
+              -165.56757,
+              705.91535
+            ],
+            [
+              -164.77973,
+              706.05427
+            ],
+            [
+              -164.43243,
+              704.08465
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 2.6,
+      "props": {
+        "form": "kiosk",
+        "yawDeg": 100,
+        "number": "A06",
+        "groundY": 5
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。 体育中心设于 y=5 m 平台顶面。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A07",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -329.80774,
+              95.08965
+            ],
+            [
+              -329.91035,
+              94.80774
+            ],
+            [
+              -330.19226,
+              94.91035
+            ],
+            [
+              -330.08965,
+              95.19226
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 250,
+        "number": "A07",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A08",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -534.91035,
+              255.19226
+            ],
+            [
+              -534.80774,
+              254.91035
+            ],
+            [
+              -535.08965,
+              254.80774
+            ],
+            [
+              -535.19226,
+              255.08965
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 290,
+        "number": "A08",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A09",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -470.19226,
+              -129.91035
+            ],
+            [
+              -469.91035,
+              -129.80774
+            ],
+            [
+              -469.80774,
+              -130.08965
+            ],
+            [
+              -470.08965,
+              -130.19226
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 20,
+        "number": "A09",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A10",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -204.80774,
+              -329.91035
+            ],
+            [
+              -204.91035,
+              -330.19226
+            ],
+            [
+              -205.19226,
+              -330.08965
+            ],
+            [
+              -205.08965,
+              -329.80774
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 250,
+        "number": "A10",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A11",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              70.01849,
+              -469.78868
+            ],
+            [
+              70.21132,
+              -470.01849
+            ],
+            [
+              69.98151,
+              -470.21132
+            ],
+            [
+              69.78868,
+              -469.98151
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 310,
+        "number": "A11",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A12",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              329.81629,
+              -299.89393
+            ],
+            [
+              330.10607,
+              -299.81629
+            ],
+            [
+              330.18371,
+              -300.10607
+            ],
+            [
+              329.89393,
+              -300.18371
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 15,
+        "number": "A12",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    },
+    {
+      "op": "add",
+      "id": "design:anchor:A13",
+      "kind": "anchor",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              449.7951,
+              109.9451
+            ],
+            [
+              449.9451,
+              110.2049
+            ],
+            [
+              450.2049,
+              110.0549
+            ],
+            [
+              450.0549,
+              109.7951
+            ]
+          ],
+          "holes": []
+        }
+      },
+      "height": 1.05,
+      "props": {
+        "form": "post",
+        "yawDeg": 60,
+        "number": "A13",
+        "groundY": 0
+      },
+      "reason": "按 SYS-ATLAS §6 设置导览设施，补足主网节点导览；位置与落点为待 WP-44/G15 复核的设计初值。"
+    }
+  ]
+}
