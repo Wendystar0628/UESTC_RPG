@@ -51,12 +51,6 @@ public static partial class CoreStyle
     public const float DoorOpenDeg = 90f;
     /// <summary>Door frame depth on the slot's glass plane.</summary>
     public const float DoorDepth = 0.12f;
-    /// <summary>Entrance mat (地垫) on the terrace in front of the slot, and the free-standing open sign beside it.</summary>
-    public const float MatWidth = 2.6f, MatDepth = 1.5f, MatThickness = 0.03f;
-    public const float SignWidth = 0.5f, SignHeight = 1.25f, SignBase = 0.35f, SignSide = 3.4f, SignAhead = 0.9f;
-    /// <summary>Door lamp (门口灯) on the tower face beside the slot, and its height above the 2F floor.</summary>
-    public const float DoorLampWidth = 0.32f, DoorLampHeight = 0.42f, DoorLampDepth = 0.22f, DoorLampY = 3.0f, DoorLampSide = 0.9f;
-
     /// <summary>Service doors (检修铁门, closed) in the two outer guard walls, into the plant rooms under the stair.</summary>
     public const float ServiceDoorWidth = 1.2f, ServiceDoorHeight = 2.2f, ServiceDoorS = 6.2f;
 

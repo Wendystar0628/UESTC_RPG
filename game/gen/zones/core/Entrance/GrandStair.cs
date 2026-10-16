@@ -5,7 +5,6 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
-using Campus.Gen.Parts.Street;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
 using S = Campus.Gen.Zones.Core.CoreStyle;
@@ -101,8 +100,7 @@ public sealed class GrandStair : ICorePiece
 
     public string Id => "library-entrance";
     public Vector2 Anchor => At(FrontS * 0.5f, 0f);
-    public IReadOnlyList<Claim> Claims { get; } =
-        [new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof), new FeatureClaim(CoreFeatures.Library, Aspects.Props)];
+    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>On the door axis at the podium edge.</summary>
     public Vector2 Origin { get; }
@@ -370,8 +368,7 @@ public sealed class GrandStair : ICorePiece
 
     /// <summary>
     /// The front door (WLD-INTERIORS §4): WP-10's glass door over the slot's door bay, its two inner leaves fixed open at
-    /// 90°; the dark mat on the terrace in front, the green open sign beside it and the door lamp on the tower face with
-    /// WP-13's marker. The zone claims the library's props, so WP-13's generic entrance kit stays away from this door.
+    /// 90°. The entrance kit in front of it (mat, open sign, door lamp) is WP-13's, placed from the interior index.
     /// </summary>
     private void Door(CoreBuild build)
     {
@@ -379,23 +376,6 @@ public sealed class GrandStair : ICorePiece
         build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
             new DoorParams(d.Width, d.Height, S.DoorDepth, S.DoorOpenDeg, S.DoorLeaves) { Foot = FootMat.Glass },
             OpeningPlacement.Frame(d.Origin, d.Outward)));
-        var outward = new Vector2(d.Outward.X, d.Outward.Z);
-        var face = d.Origin + d.Outward * d.Depth;
-        var y = face.Y;
-        var mat = new Vector2(face.X, face.Z) + outward * (S.MatDepth * 0.5f + 0.15f);
-        build.Parts.Add(new PlacedPart(new PartId(PartCatalog.EntranceMat), new PanelParams(S.MatWidth, S.MatThickness, S.MatDepth),
-            Shapes.Facing(new(mat.X, y, mat.Y), outward)));
-        var along = new Vector2(-outward.Y, outward.X);
-        var sign = new Vector2(face.X, face.Z) + along * S.SignSide + outward * S.SignAhead;
-        // Free-standing sign (variation 1) facing the stair: its face is local −Z.
-        build.Parts.Add(new PlacedPart(new PartId(PartCatalog.OpenSign), new SignParams(S.SignWidth, S.SignHeight, S.SignBase) { Variation = 1 },
-            Shapes.Facing(new(sign.X, y, sign.Y), -outward)));
-        var lampAt = d.Face.At(Vector2.Dot(new Vector2(d.Origin.X, d.Origin.Z) - d.Face.A, d.Face.Along) + S.SlotWidth * 0.5f + S.DoorLampSide, 0f, y + S.DoorLampY);
-        var lamp = new LampParams(S.DoorLampWidth, S.DoorLampHeight, S.DoorLampDepth);
-        // The lantern's back (local +Z) lies on the tower face.
-        var lampFrame = Shapes.Facing(lampAt + d.Outward * (S.DoorLampDepth * 0.5f), -outward);
-        build.Parts.Add(new PlacedPart(new PartId(PartCatalog.EntranceLamp), lamp, lampFrame));
-        build.Emitters.Add(EntranceLampPart.Emitter(lamp, lampFrame));
     }
 
     /// <summary>The two closed service doors (检修铁门) at the foot of the outer guard walls, into the plant rooms under the stair.</summary>

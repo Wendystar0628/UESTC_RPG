@@ -41,7 +41,7 @@ public sealed class GrandStairTests
     }
 
     [TestCase]
-    public void FrontDoorOpensTheSlotAndCarriesTheEntranceSet()
+    public void FrontDoorOpensTheSlot()
     {
         var world = RealWorld();
         var (stair, shell) = Pieces(world);
@@ -52,9 +52,9 @@ public sealed class GrandStairTests
         var p = (DoorParams)door.Params;
         Require(p.OpenAngleDeg >= 89f && p.Leaves == 4 && p.Width / p.Leaves * 2 > 1.1f, "two inner leaves fixed open, clear width over 1.1 m");
         foreach (var part in new[] { PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp })
-            Require(output.Parts.Count(x => x.Part.Value == part) == 1, $"one {part}");
+            Require(output.Parts.All(x => x.Part.Value != part), $"no {part} of the zone's own (WP-13 places the entrance kit)");
         Require(output.Parts.Count(x => x.Part.Value == PartCatalog.DoorFire) == 2, "two closed service doors");
-        Require(output.Emitters!.Count == 1, "the door lamp carries WP-13's lamp marker");
+        Require(output.Emitters is null or { Count: 0 }, "no lamp marker of the zone's own");
         // No glass in the door bay below the door transom: the doorway is open.
         var bay = shell.EntranceDoor!.Value;
         var lib = new CoreBuild(null);
@@ -70,15 +70,16 @@ public sealed class GrandStairTests
     }
 
     [TestCase]
-    public void TheZoneDressesTheLibraryDoorInsteadOfTheGenericKit()
+    public void WpThirteenDressesTheLibraryFrontDoor()
     {
         var world = RealWorld();
         var zone = new WpId("WP-16");
         WpId? ClaimedBy(FeatureId feature, Aspects aspects) =>
             CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == feature && (c.Aspects & aspects) == aspects) ? zone : null;
+        Require(ClaimedBy(CoreFeatures.Library, Aspects.Props) is null, "the zone leaves the library's props unclaimed");
         var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open);
         var layout = Campus.Gen.Furniture.FurniturePlanner.Build(world, ClaimedBy);
-        Require(!layout.Items.Any(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)), "WP-13 leaves the library's front door to the zone");
+        Require(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3, "WP-13 places mat, sign and lamp at the front door");
     }
 
     [TestCase]

@@ -75,8 +75,6 @@ public static class CoreSite
         new FeatureClaim(CoreFeatures.Sundial, Aspects.Massing | Aspects.Props),
         new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
         new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        // The entrance piece dresses the library's open front door (WLD-INTERIORS §4), in place of WP-13's generic kit.
-        new FeatureClaim(CoreFeatures.Library, Aspects.Props),
     ];
 
     public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
