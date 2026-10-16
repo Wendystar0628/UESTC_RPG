@@ -1537,20 +1537,20 @@
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 14.0k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD.md` · 14.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
 
 - ENG-ONBOARD §0 结论 · L26 · 783
   - ★ ENG-ONBOARD §0.1 接入要点 · L45 · 69
 - ENG-ONBOARD §1 项目与当前阶段 · L49 · 603
 - ENG-ONBOARD §2 开工环境 · L64 · 1.0k
-- ENG-ONBOARD §3 硬规则 · L81 · 5.7k
+- ENG-ONBOARD §3 硬规则 · L81 · 5.8k
   - ENG-ONBOARD §3.1 改哪里 · L83 · 719
   - ENG-ONBOARD §3.2 代码边界与接入方式 · L94 · 1.5k
   - ENG-ONBOARD §3.3 禁用写法 · L124 · 1.4k
   - ENG-ONBOARD §3.4 内容与画面的底线 · L153 · 587
   - ENG-ONBOARD §3.5 文件操作 · L169 · 384
-  - ENG-ONBOARD §3.6 贴近主线，少给合并添活 · L180 · 926
+  - ENG-ONBOARD §3.6 贴近主线，少给合并添活 · L180 · 1.0k
   - ENG-ONBOARD §3.7 不过度工程化 · L192 · 270
 - ENG-ONBOARD §4 查资料 · L199 · 3.9k
   - ENG-ONBOARD §4.1 文档在哪、怎么找 · L201 · 858
@@ -1668,7 +1668,7 @@
 
 ## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
 
-`docs/design/engineering/ENG-TEAM-FLOW.md` · 13.9k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
+`docs/design/engineering/ENG-TEAM-FLOW.md` · 14.0k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
 关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、max 单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
 
 - ENG-TEAM-FLOW §0 结论 · L23 · 685
@@ -1676,7 +1676,7 @@
 - ENG-TEAM-FLOW §1 包的归属与开工顺序 · L35 · 2.5k
   - ENG-TEAM-FLOW §1.1 包的归属 · L37 · 1.2k
   - ENG-TEAM-FLOW §1.2 开工顺序与合并顺序 · L52 · 1.3k
-- ENG-TEAM-FLOW §2 开发流程 · L66 · 9.4k
+- ENG-TEAM-FLOW §2 开发流程 · L66 · 9.5k
   - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 604
   - ENG-TEAM-FLOW §2.2 派工 · L84 · 1.7k
   - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 791
@@ -1686,7 +1686,7 @@
   - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L177 · 489
   - ENG-TEAM-FLOW §2.8 调研入队流水线 · L185 · 1.2k
   - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L203 · 1.1k
-  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L219 · 773
+  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L219 · 887
 
 ## ENG-TEAM-QUOTA · 协作分册：账号与额度
 
