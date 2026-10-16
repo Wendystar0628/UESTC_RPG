@@ -45,7 +45,8 @@ public sealed class WestModuleTests
     {
         var world = World();
         var claims = new WestModule().Claims.OfType<FeatureClaim>().Select(c => c.Feature.Value).OrderBy(s => s, StringComparer.Ordinal).ToArray();
-        Require(claims.SequenceEqual(new[] { S.EntityC, S.EntityA, S.EntityB }.OrderBy(s => s, StringComparer.Ordinal)), $"六号's three entities are claimed: {string.Join(",", claims)}");
+        Require(claims.SequenceEqual(new[] { S.EntityC, S.EntityA, S.EntityB, WestTune.Shelter.Entity }.OrderBy(s => s, StringComparer.Ordinal)),
+            $"六号's three entities and the 19c bus shelter are claimed: {string.Join(",", claims)}");
         string[] Parts(string id) => world.Features[new(id)].Parts.Select(p => p.SourceId).OrderBy(s => s, StringComparer.Ordinal).ToArray();
         Require(Parts(S.EntityC).SequenceEqual(new[] { S.PartC, S.LinkBC, S.LinkAB, S.Tower }.OrderBy(s => s, StringComparer.Ordinal)), "the C entity holds the block, both links and the tower");
         Require(Parts(S.EntityA).SequenceEqual([S.PartA]) && Parts(S.EntityB).SequenceEqual([S.PartB]), "A and B are single blocks");
@@ -161,7 +162,8 @@ public sealed class WestModuleTests
     {
         var world = World();
         var layouts = new WestModule().DescribeWindowLayouts(world, 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        Require(layouts.Count == 3, $"three Facade-claimed features declare layouts, got {layouts.Count}");
+        Require(layouts.Count == 4, $"four Facade-claimed features declare layouts, got {layouts.Count}");
+        Require(layouts[WestTune.Shelter.Entity].Count == 0, "the bus shelter declares an empty window layout");
         Require(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == S.UpperA, "A: one grid over its upper floors");
         Require(layouts[S.EntityB].Single().Rows == S.UpperB && layouts[S.EntityC].Single().Rows == S.UpperC, "B and C: one grid each");
         Require(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0), "every grid has cells");
@@ -266,7 +268,7 @@ public sealed class WestModuleTests
         foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, "qsh:relation:8426842" })
             Require(world.Features[new(id)].Facade?.Value == "research.stoneFrame", $"{id} takes the stone-and-glass preset");
         // 19b claims nothing: the bodies stay WP-14's, the zone only adds entrance boxes, shafts and the portal in front of them.
-        Require(new WestModule().Claims.OfType<FeatureClaim>().Count() == 3, "only 六号's three entities are claimed");
+        Require(new WestModule().Claims.OfType<FeatureClaim>().Count() == 4, "only 六号's three entities and the 19c bus shelter are claimed");
     }
 
     [TestCase]

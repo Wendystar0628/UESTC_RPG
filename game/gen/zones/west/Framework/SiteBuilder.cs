@@ -8,7 +8,7 @@ namespace Campus.Gen.Zones.West.Framework;
 public enum SiteDetail { Full, Plain, Mass }
 
 /// <summary>One output of a site, filed under the cell of its plan anchor (world x, z).</summary>
-internal sealed record SiteItem(Vector2 Anchor, GeometryBundle? Mesh, PlacedPart? Part);
+internal sealed record SiteItem(Vector2 Anchor, GeometryBundle? Mesh, PlacedPart? Part, LightEmitter? Light = null);
 
 /// <summary>
 /// Collects a site's world-space geometry and placed catalogue parts for one level. Sites build in world space through
@@ -82,6 +82,12 @@ public sealed class SiteBuilder
     {
         ArgumentNullException.ThrowIfNull(parameters);
         _items.Add(new(new(at.M41, at.M43), null, new PlacedPart(new(part), parameters, at, tint)));
+    }
+    /// <summary>A lamp-inventory marker (contract-12) the site's own light fixture hands on; filed under its plan position.</summary>
+    public void Light(LightEmitter emitter)
+    {
+        ArgumentNullException.ThrowIfNull(emitter);
+        _items.Add(new(new(emitter.Position.X, emitter.Position.Z), null, null, emitter));
     }
 }
 

@@ -52,6 +52,7 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource
         ArgumentNullException.ThrowIfNull(ctx);
         var meshes = new List<GeometryBundle>();
         var parts = new List<PlacedPart>();
+        var lights = new List<LightEmitter>();
         foreach (var item in ItemsFor(ctx, lod))
         {
             if (lod != LodLevel.L4)
@@ -61,9 +62,10 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource
             }
             if (item.Mesh is { } mesh) meshes.Add(mesh);
             if (item.Part is { } part) parts.Add(part);
+            if (item.Light is { } light) lights.Add(light);
         }
-        if (meshes.Count == 0 && parts.Count == 0) return ContentOutput.Empty;
-        return new ContentOutput(MeshMerge.Merge(meshes), parts);
+        if (meshes.Count == 0 && parts.Count == 0 && lights.Count == 0) return ContentOutput.Empty;
+        return new ContentOutput(MeshMerge.Merge(meshes), parts, lights.Count == 0 ? null : lights);
     }
 
     /// <summary>Colliders live in fixed 64 m cells, filed by each collider's anchor.</summary>
@@ -145,5 +147,9 @@ public static class WestSites
         new Motto.MottoStoneSite(),
         new Four.FourSite(),
         new Innovation.InnovationSite(),
+        new Wetland.BoardwalkSite(),
+        new Wetland.LeveeStepsSite(),
+        new Bridgehead.ShelterSite(),
+        new Bridgehead.CarvingSite(),
     ]);
 }
