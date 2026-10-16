@@ -8,7 +8,9 @@
     "osmTrees：OSM 树点按离它最近的线性种植道路取树种（near 以内），取不到时用 default（§3 的 OSM 行道树一条）。",
     "groves：绿地里的片植，落点算法移植自 landscape.ts（ENG-ARCH §1）：绿地按面积的 0.84 次方加权，大草坪内部按聚簇噪声留空（§5.3），树冠不压楼、水、路、球场和停车场。",
     "groves.mix 是缺省树种比例，areas 按地名覆盖；银杏只出现在 §2 登记的位置（银杏大道、主楼两侧、学生活动中心门前）。",
-    "washNear：这些地名附近的片植树干下半截刷白（§1.7）；水杉路整条刷白。"
+    "washNear：这些地名附近的片植树干下半截刷白（§1.7）；水杉路整条刷白。",
+    "pits：覆盖层的树池（kind tree-pit）里没有树的，按 perPit 补种；square 是方池和种植带的树种（§2.1 栾树：方树池），round 是圆形树坛的树种；props.species 优先。池里已有树（OSM 点或规则树）的不补（max-011 18:06）。",
+    "understorey（max-011 23c2b）：pitCover 是树池里绕树的矮球地被（高 height，种植带上每 spacing 一个）；borders 是朝路或步道的绿地边（reach 以内有路）退进 inset 的林缘：每 run 米一段，share 的段种，其中 hedgeShare 的段是修剪绿篱（hedge 轮换），其余是成丛的灌木球（mix 按段取种）；tufts 是草坪边 edge 米内和绿地里树干周围的草丛（每 cell 米试一次、留 share；每株树 perTree 丛）。"
   ],
   "roads": [
     {
@@ -23,6 +25,16 @@
     { "name": "丹桂路", "species": ["osmanthus"], "rows": [{ "offset": 4.5 }], "spacing": 5.0, "wash": false }
   ],
   "osmTrees": { "near": 15.0, "default": "camphor" },
+  "pits": { "square": "koelreuteria", "round": "camphor" },
+  "understorey": {
+    "pitCover": { "species": "loropetalum", "height": 0.42, "spacing": 1.0 },
+    "borders": {
+      "spacing": 1.3, "inset": 1.2, "run": 16.0, "share": 0.3, "hedgeShare": 0.35, "reach": 5.0,
+      "hedge": ["boxhedge", "photinia"],
+      "mix": { "photinia": 0.35, "loropetalum": 0.3, "boxhedge": 0.35 }
+    },
+    "tufts": { "species": "grass", "cell": 2.5, "edge": 5.0, "share": 0.14, "perTree": 2 }
+  },
   "groves": {
     "target": 1120,
     "areaPerTree": 400.0,

@@ -418,7 +418,7 @@ public static class MotherModels
                     radii.Insert(2, radii[1] + (radii[2] - radii[1]) * f);
                 }
             }
-            var flare = limb.Level == 0 && plan.Form.Id != "shrub" ? level switch { VegLevel.L0Plus => 0.55f, VegLevel.L0 => 0.4f, _ => 0.2f } : 0f;
+            var flare = limb.Level == 0 && !TreeForms.IsBall(plan.Form.Id) ? level switch { VegLevel.L0Plus => 0.55f, VegLevel.L0 => 0.4f, _ => 0.2f } : 0f;
             var cap = limb.Level > 0 || plan.Form.Leader;
             WriteTube(w, points, radii, sides, flare, flarePhase, cap, limb.Level == 0, ids);
         }

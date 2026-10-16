@@ -80,12 +80,17 @@ public sealed class PavementTests
                      "design:north-dangui-walk-w1", "design:north-dangui-walk-w2", "design:north-dangui-walk-e1",
                      "design:south-clock-walk", "design:south-clock-forecourt", "design:south-a01-plaza" })
             if (census.Paving.All(p => p.Id != id)) throw new InvalidOperationException($"{id} is not read as pavement");
-        if (census.Pits.Count < 11) throw new InvalidOperationException($"{census.Pits.Count} tree pits in the overlays");
+        if (census.Pits.Count == 0) throw new InvalidOperationException("no tree pit read from the overlays");
         var layout = Plant(Overlaid.Value);
+        // Per tree (D-199): none stands on design pavement unless it stands in a tree pit (a pit set in a plaza, as WP-29's pocket gardens).
         foreach (var t in layout.Trees)
-            foreach (var pave in census.Paving.Where(p => p.Id.StartsWith("design:", StringComparison.Ordinal)))
-                if (census.Within(pave, new(t.Position.X, t.Position.Z), 0f))
+        {
+            var p = new Vector2(t.Position.X, t.Position.Z);
+            if (census.InPit(p)) continue;
+            foreach (var pave in census.Paving.Where(pv => pv.Id.StartsWith("design:", StringComparison.Ordinal)))
+                if (census.Within(pave, p, 0f))
                     throw new InvalidOperationException($"{t.Key} stands on {pave.Id}");
+        }
     }
 
     [TestCase]
@@ -290,14 +295,15 @@ public sealed class PavementTests
     private static PlantingLayout Verify(IWorldModel world, string fingerprint, string label)
     {
         var layout = Plant(world);
-        var before = layout.BeforeGivingWay();
+        // The planting order of the sources this rule was taken on; pit and design trees come after them (23c2b) and never give way.
+        var before = Original(layout.BeforeGivingWay());
         if (before.Count != (fingerprint == OverlaidFingerprint ? OverlaidTrees : CampusTrees) || Fingerprint(before) != fingerprint)
             throw new InvalidOperationException($"{label}: the planting order changed: {before.Count} trees, {Fingerprint(before)}");
         var census = Census.Of(world);
         var expected = before.Select((t, i) => (Index: i, Tree: t)).Where(e => census.GivesWay(new(e.Tree.Position.X, e.Tree.Position.Z))).ToList();
         if (!expected.Select(e => (e.Index, e.Tree.Key)).SequenceEqual(layout.Avoided.Select(a => (a.Index, a.Tree.Key))))
             throw new InvalidOperationException($"{label}: {layout.Avoided.Count} trees gave way, the census says {expected.Count}");
-        foreach (var t in layout.Trees)
+        foreach (var t in Original(layout.Trees))
         {
             var p = new Vector2(t.Position.X, t.Position.Z);
             if (census.Paving.Any(pave => census.Within(pave, p, 0f)) && !census.InPit(p)) throw new InvalidOperationException($"{label}: {t.Key} stands on pavement");
@@ -305,9 +311,16 @@ public sealed class PavementTests
         return layout;
     }
 
-    private static PlantingLayout Plant(IWorldModel world) => Planting.Build(world, Rules.Value.Species, Rules.Value.Rules, 1u);
+    /// <summary>The trees of the four rule sources (roads, band, OSM points, groves): the order the fingerprints cover.</summary>
+    internal static List<PlantedTree> Original(IEnumerable<PlantedTree> trees) => trees.Where(t => t.Source <= PlantSource.Grove).ToList();
 
-    private static IWorldModel Load(bool overlays, params (string Name, string Text)[] extra)
+    internal static PlantingLayout Plant(IWorldModel world) => Planting.Build(world, Rules.Value.Species, Rules.Value.Rules, 1u);
+
+    internal static (SpeciesTable Species, PlantingRules Rules) Data => Rules.Value;
+
+    internal static IWorldModel World(bool overlays) => overlays ? Overlaid.Value : Bare.Value;
+
+    internal static IWorldModel Load(bool overlays, params (string Name, string Text)[] extra)
     {
         var data = Path.Combine(Root, "game", "data", "maps", "qingshuihe");
         var names = new[] { "campus.json", "network.json", "interiors.json", "map.json" }.AsEnumerable();
@@ -317,7 +330,7 @@ public sealed class PavementTests
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
-    private static string Overlay(params string[] ops) =>
+    internal static string Overlay(params string[] ops) =>
         "{\"zone\":\"fixture\",\"owner\":\"WP-23\",\"map\":\"qingshuihe\",\"ops\":[" + string.Join(',', ops) + "]}";
 
     private static string Road(string id, string type, float width, IEnumerable<Vector2> points) =>
@@ -327,7 +340,7 @@ public sealed class PavementTests
         "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"road\",\"geometry\":{\"type\":\"polyline\",\"line\":{\"points\":" + points +
         "}},\"props\":{\"roadType\":\"" + type + "\",\"width\":" + F(width) + "},\"reason\":\"Fixture: a design walk.\"}";
 
-    private static string F(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    internal static string F(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     internal static string Fingerprint(IEnumerable<PlantedTree> trees)
     {
@@ -356,7 +369,7 @@ public sealed class PavementTests
     /// pedestrian, footway, path, steps and cycleway areas and lines of its features (parts of kind road, and design roads) and of
     /// its network.
     /// </summary>
-    private sealed class Census
+    internal sealed class Census
     {
         private static readonly string[] Paved = ["pedestrian", "footway", "path", "steps", "cycleway"];
 

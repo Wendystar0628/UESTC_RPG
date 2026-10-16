@@ -14,6 +14,8 @@ public sealed class MotherModelTests
 {
     private static readonly Lazy<(SpeciesTable Table, PaletteRegistry Palette)> Data = new(Load);
 
+    internal static PaletteRegistry Palette => Data.Value.Palette;
+
     private static (SpeciesTable, PaletteRegistry) Load()
     {
         var root = FindRepository();
@@ -290,10 +292,10 @@ public sealed class MotherModelTests
         foreach (var s in table.Species)
         {
             var m = MotherModels.Build(s, 0, VegLevel.L0, palette);
-            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > 0.05f && s.Form != "shrub")
+            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > 0.05f && !TreeForms.IsBall(s.Form))
                 throw new InvalidOperationException($"{s.Id}: trunk not buried {m.Bounds.Min.Y}");
-            // Clipped shrub balls sit a little lower than their nominal height (no stem, flattened top cluster).
-            if (m.Bounds.Max.Y < m.Height * (s.Form == "shrub" ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)
+            // Clipped shrub balls and tussocks sit a little lower than their nominal height (no stem, flattened top cluster).
+            if (m.Bounds.Max.Y < m.Height * (TreeForms.IsBall(s.Form) ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)
                 throw new InvalidOperationException($"{s.Id}: top {m.Bounds.Max.Y} for height {m.Height}");
             if (m.TrunkRadius <= 0f || m.BranchHeight <= 0f) throw new InvalidOperationException($"{s.Id}: collider data");
         }
