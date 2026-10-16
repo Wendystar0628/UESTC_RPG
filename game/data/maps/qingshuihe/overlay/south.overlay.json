@@ -1,0 +1,25 @@
+{
+  "zone": "south",
+  "owner": "WP-18",
+  "map": "qingshuihe",
+  "ops": [
+    { "op": "height", "target": "qsh:way:687370085", "height": 34.4, "storeys": 8, "reason": "主楼 B2 区：8 层，屋面层（屋顶空廊楼面）约 34.4 m（WLD-INTERIORS §2.17 的 P17），空廊柱列与檐口到 46.1 m 的总高（MAP-QSH-SOUTH §2.1–§2.3）；全楼统一层高约 4.28 m，让 365 m 长翼的层线连贯" },
+    { "op": "height", "target": "qsh:way:687370086", "height": 30.1, "storeys": 7, "reason": "主楼 B1 区：7 层，与 B2 同层高，中央最高、两侧逐级跌落（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370087", "height": 30.1, "storeys": 7, "reason": "主楼 B3 区：7 层，与 B1 对称（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370091", "height": 21.55, "storeys": 5, "reason": "主楼 A3 区：5 层，与 B 区同层高，层线连贯（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370092", "height": 21.55, "storeys": 5, "reason": "主楼 A1 区：5 层，与 B 区同层高（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370093", "height": 21.55, "storeys": 5, "reason": "主楼 A2 区：5 层，与 B 区同层高（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370088", "height": 21.55, "storeys": 5, "reason": "主楼 C1 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370090", "height": 21.55, "storeys": 5, "reason": "主楼 C2 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
+    { "op": "height", "target": "qsh:way:687370089", "height": 21.55, "storeys": 5, "reason": "主楼 C3 区：5 层，与 A 区对称（MAP-QSH-SOUTH §2.2）" },
+    {
+      "op": "add",
+      "id": "design:south-hongfeng-pavilion",
+      "kind": "pavilion",
+      "geometry": { "type": "point", "position": [-352.0, 7.5, 238.0] },
+      "height": 4.7,
+      "props": { "size": 4.2, "seatWall": { "radius": 5.4, "height": 0.45, "bearings": [-60, 60] }, "night": "暗区", "seasons": "接季：瓦面与坐墙顶面接落叶、花瓣与积雪" },
+      "reason": "设计增补：红枫丘顶台上的小方亭与北缘 0.45 m 石坐墙，朝湖、朝馆，丘顶揭示的停留点（MAP-QSH-TERRAIN §1.2、§1.3 ②）；默认状态压在落日旁边成剪影，夜间暗区，四季接季"
+    }
+  ]
+}
