@@ -75,8 +75,10 @@ internal sealed class GroundPaving
     /// <summary>UV2 of a patterned face: (gate, K). Gate 1 only in K1–K3; K4/K5 keep the averaged plain face.</summary>
     public (float Gate, float Zone) GateAt(Vector2 p)
     {
-        var zone = _fidelity?.GroundAt(p.X, p.Y) ?? FidelityZone.K3;
+        if (_fidelity is null) return (1, 3);
+        var zone = _fidelity.GroundAt(p.X, p.Y);
         var k = (byte)zone;
+        if (k == 0) return (0, 0);
         if (k is < 1 or > 5) throw new InvalidDataException($"Fidelity zone {k} at ({p.X}, {p.Y}) is outside K1–K5.");
         return (k <= 3 ? 1f : 0f, k);
     }
