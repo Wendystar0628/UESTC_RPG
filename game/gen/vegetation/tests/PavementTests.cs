@@ -23,11 +23,14 @@ public sealed class PavementTests
 {
     private const int CampusTrees = 3142;
 
+    /// <summary>Planting order with every overlay: 3142 plus the 67 ginkgo the hide of the two OSM sidewalks (0h) gives back along the avenue; it includes that hide and is merged in the same batch as 0h.</summary>
+    private const int OverlaidTrees = 3209;
+
     /// <summary>The layout of the campus data alone (no overlays), as 23c1 fixed it in VegetationInputsTests.</summary>
     internal const string BareFingerprint = "7456706a925937f6dcebbb74931f978ae8c010f397c99bf3bc27fe76a123d52f";
 
-    /// <summary>The layout of the campus data with every authored overlay of the map, the world as the kernel loads it (taken at 264275c).</summary>
-    private const string OverlaidFingerprint = "198972c4c24a47755ff5cccc9e3cc83ffbee8b8f9b80ba686118da752e549d3d";
+    /// <summary>The layout of the campus data with every authored overlay of the map, the world as the kernel loads it (refixed after 0j with the hide of 0h, merged in the same batch as 0h).</summary>
+    private const string OverlaidFingerprint = "3ab4bd7c71ecaf42c73e4b21ce886408402e1c7373067d6fb8afe2141258f352";
 
     /// <summary>
     /// The centre line of 0h-b's second Dangui Road walk (design:north-dangui-walk-w2, 021ba14), copied as a fixture so the case is
@@ -63,7 +66,7 @@ public sealed class PavementTests
         {
             var layout = Verify(world, fingerprint, label);
             if (layout.Avoided.Count == 0) throw new InvalidOperationException($"{label}: no tree gave way, so the check proved nothing");
-            Console.WriteLine($"pavement ({label}): {layout.Avoided.Count} of {CampusTrees} trees give way, {layout.Trees.Count} stay; "
+            Console.WriteLine($"pavement ({label}): {layout.Avoided.Count} of {layout.BeforeGivingWay().Count} trees give way, {layout.Trees.Count} stay; "
                 + string.Join(", ", layout.Avoided.GroupBy(a => a.Tree.Source).OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}")));
         }
     }
@@ -288,7 +291,7 @@ public sealed class PavementTests
     {
         var layout = Plant(world);
         var before = layout.BeforeGivingWay();
-        if (before.Count != CampusTrees || Fingerprint(before) != fingerprint)
+        if (before.Count != (fingerprint == OverlaidFingerprint ? OverlaidTrees : CampusTrees) || Fingerprint(before) != fingerprint)
             throw new InvalidOperationException($"{label}: the planting order changed: {before.Count} trees, {Fingerprint(before)}");
         var census = Census.Of(world);
         var expected = before.Select((t, i) => (Index: i, Tree: t)).Where(e => census.GivesWay(new(e.Tree.Position.X, e.Tree.Position.Z))).ToList();

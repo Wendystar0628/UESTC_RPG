@@ -18,12 +18,21 @@ public sealed class EffectiveRoadNetworkRealCampusTests
             feature.Kind.Value == "road" && feature.Geometry is PolylineGeometry && PedestrianType(feature.Props) && !Area(feature.Props))
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
         Require(expected.Length > 0, "The real current campus has no authored design centerlines.");
-        Require(previous.Roads.Count == 826 && loaded.Network.Roads.Count == previous.Roads.Count + expected.Length,
+        // Only an authored hide of an exact original road ID removes it; every other original road keeps its order and bytes.
+        var originalIds = previous.Roads.Select(road => road.Id.Value).ToHashSet(StringComparer.Ordinal);
+        var hidden = files.Where(pair => pair.Key.StartsWith("overlay/", StringComparison.Ordinal) && pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) &&
+                pair.Key is not "overlay/outskirts.overlay.json" and not "overlay/walkable.overlay.json" and not "overlay/fidelity.overlay.json")
+            .SelectMany(pair => JsonSerializer.Deserialize<OverlayFile>(pair.Value, ContractJson.Options)!.Ops.OfType<HideOp>())
+            .Select(op => op.Target.Value).Where(originalIds.Contains).ToHashSet(StringComparer.Ordinal);
+        Require(loaded.Network.Roads.All(road => !hidden.Contains(road.Id.Value)), "An explicitly hidden original road survived in the effective network.");
+        var kept = previous.Roads.Where(road => !hidden.Contains(road.Id.Value)).ToArray();
+        Require(previous.Roads.Count == 826 && loaded.Network.Roads.Count == kept.Length + expected.Length,
             "Unexpected original-road removal or design projection count.");
         Require(loaded.Network.Roads.Select(road => road.Id).Distinct().Count() == loaded.Network.Roads.Count, "Final road IDs repeat.");
-        Require(Canonical(loaded.Network.Roads.Take(previous.Roads.Count).ToArray()) == Canonical(previous.Roads), "Original road order or bytes changed without a hide.");
+        Require(Canonical(loaded.Network.Roads.Take(kept.Length).ToArray()) == Canonical(kept), "Original road order or bytes changed without a hide.");
         Require(Canonical(loaded.Network.Waterways) == Canonical(previous.Waterways) && Canonical(loaded.Network.Bridges) == Canonical(previous.Bridges) &&
             Canonical(loaded.Network.Culverts) == Canonical(previous.Culverts) && Canonical(loaded.Network.Trees) == Canonical(previous.Trees), "Other network categories changed.");
+        Require(loaded.Network.Roads.Skip(kept.Length).Select(road => road.Id).SequenceEqual(expected.Select(feature => feature.Id)), "Design road order changed.");
         foreach (var feature in expected)
         {
             var road = loaded.Network.Roads.Single(road => road.Id == feature.Id);
@@ -47,7 +56,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         var one = loaded.Features[new("qsh:way:691679140")];
         Require(one.Parts.Single().SourceId == "osm:way:691679140" && one.Height == 3.9f && one.Storeys == 1, "Building 1 hidePart data regressed.");
         Require(loaded.Features.ContainsKey(new("qsh:relation:14153711")) && !loaded.Features.ContainsKey(new("qsh:way:779496166")), "Research Building 6 hide data regressed.");
-        Console.WriteLine($"REAL_EFFECTIVE_ROADS original={previous.Roads.Count} design={expected.Length} final={loaded.Network.Roads.Count}");
+        Console.WriteLine($"REAL_EFFECTIVE_ROADS original={previous.Roads.Count} hidden={hidden.Count} design={expected.Length} final={loaded.Network.Roads.Count}");
         foreach (var feature in expected)
             Console.WriteLine($"REAL_DESIGN_ROAD id={feature.Id.Value} points={((PolylineGeometry)feature.Geometry).Line.Points.Count} width={feature.Props!.Value.GetProperty("width").GetSingle()}");
     }

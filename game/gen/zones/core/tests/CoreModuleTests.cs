@@ -198,7 +198,43 @@ public sealed class CoreModuleTests
             Require(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal), $"core design ID {op.Id.Value}");
             Require(op.Reason.Length > 10, $"{op.Id.Value} has a reason");
         }
-        Require(file.Ops.OfType<AddOp>().Count(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry) == GinkgoWalks.Length, "the ginkgo walks are the overlay's only added roads");
+        Require(file.Ops.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
+            .SequenceEqual(GinkgoWalks.Concat(GinkgoSidewalks.Select(s => s.Kept))), "the ginkgo walks and the kept sidewalk ends are the overlay's only added roads");
+        Require(file.Ops.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden)), "the two ginkgo sidewalks are the overlay's only hides");
+    }
+
+    [TestCase]
+    public void GinkgoSidewalksGiveWayToTheWalks()
+    {
+        // 0h follow-up (Opus 16:00 ① and 19:40): each OSM sidewalk running within 2.5 m of a ginkgo walk is hidden whole, from the
+        // features and from the road network; its ends off the walk come back as a kept piece in the original point order, width
+        // and type, joined to the walk's end. Nothing of the old sidewalk is lost: every stretch is under the walk or the kept piece.
+        var world = RealWorld();
+        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "network.json");
+        var original = JsonSerializer.Deserialize<WorldNetwork>(File.ReadAllBytes(path), ContractJson.Options)!;
+        foreach (var (hidden, walk, kept) in GinkgoSidewalks)
+        {
+            Require(world.Network.Roads.All(r => r.Id.Value != hidden) && !world.Features.ContainsKey(new(hidden)), $"{hidden} is gone from the roads and the features");
+            var old = original.Roads.Single(r => r.Id.Value == hidden);
+            var walkLine = world.Network.Roads.Single(r => r.Id.Value == walk).Line.Points;
+            var piece = world.Network.Roads.Single(r => r.Id.Value == kept);
+            Require(piece.Width == old.Width && Prop(piece.Props, "roadType")?.GetString() == Prop(old.Props, "highway")?.GetString()
+                && Prop(piece.Props, "footway")?.GetString() == Prop(old.Props, "footway")?.GetString(), $"{kept}: the old width and type");
+            var points = piece.Line.Points;
+            var joined = points[0] == walkLine[^1] ? points.Skip(1).ToArray() : points[^1] == walkLine[^1] ? points.Take(points.Count - 1).ToArray() : null;
+            Require(joined is { Length: >= 2 }, $"{kept}: one end is the walk's end");
+            var at = old.Line.Points.ToList().IndexOf(joined![0]);
+            Require(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
+                && (at == 0 || at + joined.Length == old.Line.Points.Count), $"{kept}: the old points in the old order, out to the old end");
+            var line = old.Line.Points;
+            for (var s = 0f; s <= Length(line); s += 0.5f)
+            {
+                var p = At(line, s);
+                // The kept piece leaves the old line only where it bends onto the walk's end (1.26 m at most).
+                Require(PolylineDistance(p, walkLine) <= 2.5f || PolylineDistance(p, points) <= 1.3f,
+                    $"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}");
+            }
+        }
     }
 
     [TestCase]
@@ -209,7 +245,9 @@ public sealed class CoreModuleTests
         const float half = 1.25f;
         var world = RealWorld();
         var avenue = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:544688571").Line.Points;
-        var walks = world.Network.Roads.Where(r => Prop(r.Props, "highway")?.GetString() is "footway" or "path" or "pedestrian").ToArray();
+        // Any other walk of the network counts, design or OSM: the kept sidewalk ends at the bridges are design roads.
+        var walks = world.Network.Roads.Where(r => !GinkgoWalks.Contains(r.Id.Value) &&
+            (Prop(r.Props, "roadType") ?? Prop(r.Props, "highway"))?.GetString() is "footway" or "path" or "pedestrian").ToArray();
         foreach (var id in GinkgoWalks)
         {
             var feature = world.Features[new(id)];
@@ -240,6 +278,13 @@ public sealed class CoreModuleTests
     // ---------------------------------------------------------------- fixtures
 
     private static readonly string[] GinkgoWalks = ["design:core-ginkgo-walk-west", "design:core-ginkgo-walk-east"];
+
+    /// <summary>The OSM sidewalks the ginkgo walks replace, each with its walk and the kept piece off the walk.</summary>
+    private static readonly (string Hidden, string Walk, string Kept)[] GinkgoSidewalks =
+    [
+        ("qsh:source:way:544161548", "design:core-ginkgo-walk-west", "design:core-ginkgo-sidewalk-west-bridge"),
+        ("qsh:source:way:544161558", "design:core-ginkgo-walk-east", "design:core-ginkgo-sidewalk-east-bridge"),
+    ];
 
     private static JsonElement? Prop(JsonElement? props, string key) =>
         props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(key, out var value) ? value : null;
