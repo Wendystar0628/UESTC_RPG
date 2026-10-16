@@ -30,7 +30,7 @@
 #include "res://style/shaders/fog.gdshaderinc"
 #include "res://style/shaders/precip_wet.gdshaderinc"
 
-// 灯光通道、窗灯与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_pool；WP-39），fx_glow、降水与倒影代理共用同一份
+// 灯光通道、窗灯与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_pool_shade；WP-39），fx_glow、降水与倒影代理共用同一份
 #include "res://style/shaders/lamp.gdshaderinc"
 
 // OKLab 换算（ok_from_linear、ok_to_linear）在 fog.gdshaderinc 里，天空也要用
@@ -86,6 +86,16 @@ const int TOON_CONST_LAST = 63;
 const float TOON_EMIT_OFF_KL = 0.7;
 const float TOON_EMIT_OFF_KC = 0.6;
 const float TOON_SHADOW1_REF = 0.729;    // shadow.1 的参照面：OKLab L 0.90 的中性灰，线性值 0.9³
+
+// 室内窗光斑的辉光（WLD-INTERIORS §8.2）：调色板第 3 行的受光明度封顶 0.9 不放开，改在光斑亮芯加一层无色提亮
+// K ×（1 − smoothstep(C0, C1, C)）× smoothstep(L0, L1, L)，C、L 是受光色的 OKLab 彩度与明度。
+// 浅色、低彩度的地面和墙在光斑里略超过 1，让后期辉光抓住；高彩度表面（消防红的门、砖红）不加，不发光也不变粉；
+// 深色表面（深色玻璃、深灰件）也不加，免得发灰发白。L0、L1 取 0、0.01 即退回只看彩度的原式。
+const float TOON_IN_GLOW_K = 0.12;
+const float TOON_IN_GLOW_C0 = 0.03;
+const float TOON_IN_GLOW_C1 = 0.12;
+const float TOON_IN_GLOW_L0 = 0.55;
+const float TOON_IN_GLOW_L1 = 0.75;
 
 // 材质 uniform：材质库按 ToonSpec 分配的 7 位材质 ID（0 = 未分配）
 uniform int mat_id : hint_range(0, 127) = 0;
@@ -251,22 +261,16 @@ int toon_window_curtain(vec4 o) {
 }
 
 // ---------------------------------------------------------------------------
-// 路灯光斑（SYS-TIME §6、ENG-PERF §10.3；公共求值 lamp_pool 归 WP-39）：
-// 地面和 4 m 以下立面上的平涂光斑，影色与受光色都向灯照色（调色板行 1）靠，按该盏灯的色号相对 lamp.warm 着色。
-// 室内不画（室内灯另走室内光）。边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
+// 路灯光斑（SYS-TIME §6、ENG-PERF §10.3；公共求值 lamp_pool_shade 归 WP-39）：
+// 地面和 4 m 以下立面上的两阶光斑（亮芯 + 收边外圈），灯光加在受光色和影色上、不替换底色，强度随环境变暗升起；
+// 观感参数都在 lamp.gdshaderinc 开头。室内不画（室内灯另走室内光）。
+// 边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
 // ---------------------------------------------------------------------------
 void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
 	if ((c.flags & TOON_F_INTERIOR) != 0 || lamp_heff() >= LAMP_POOL_DAY_DEG.y) {
 		return;
 	}
-	vec2 pool = lamp_pool(c.wpos, c.pool_aa);
-	if (pool.y < 0.0 || pool.x <= 0.0) {
-		return;
-	}
-	vec3 tint = pal_cur(int(pool.y)) / max(pal_cur(PAL_LAMP_WARM), vec3(0.02));
-	vec3 lc = lamp * tint;
-	shade = mix(shade, lc, pool.x);
-	lit = mix(lit, max(lit, lc), pool.x);
+	lamp_pool_shade(c.wpos, c.pool_aa, lamp, lit, shade);
 }
 
 // ---------------------------------------------------------------------------
@@ -316,7 +320,7 @@ struct ToonCol {
 // 给定颜色的取色入口（contract-24 第 2 条）：lit、shade、lamp 是调用方取好的受光色、影色、灯照色（线性），
 // 例如植被按局部季节从季相行取样（WLD-VEGETATION §9.4）。其后的处理与 toon_colors 完全相同：
 // 天光渐变、地面反光、湿润与积水（按 mat_table 的湿润响应，不湿的材质登记 Wet = 0）、路灯光斑、倒角提亮
-// （只给登记了 BevelLift 的材质）、自发光、200 m 降饱和、明暗档、透光、暖边；室内标志位照旧乘光斑增益。
+// （只给登记了 BevelLift 的材质）、自发光、200 m 降饱和、明暗档、透光、暖边；室内标志位照旧乘光斑增益，并加窗光斑辉光。
 ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) {
 	bool interior = (c.flags & TOON_F_INTERIOR) != 0;
 	float gain = interior ? interior_light.x : 1.0;
@@ -391,6 +395,15 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 		trans *= 1.0 - emit_k;
 		rim *= 1.0 - emit_k;
 		deep_mix *= 1.0 - emit_k;
+	}
+
+	// 室内窗光斑的无色提亮：折进受光色并除以增益，light() 乘过增益和主光强度后，光斑里正好多出 lift × 主光强度，
+	// 影一侧不变；透光、暖边在这之前算好，不受影响。自发光亮着时不加
+	if (interior) {
+		vec3 lo = ok_from_linear(lit);
+		float glow = TOON_IN_GLOW_K * (1.0 - smoothstep(TOON_IN_GLOW_C0, TOON_IN_GLOW_C1, length(lo.yz)))
+				* smoothstep(TOON_IN_GLOW_L0, TOON_IN_GLOW_L1, lo.x);
+		lit += vec3(glow * (1.0 - emit_k) / max(gain, 1e-3));
 	}
 
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, half_level, push, gain);
