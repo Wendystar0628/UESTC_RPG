@@ -122,7 +122,7 @@ gates: []
 
 **Claude 侧**（只在二号会话；主账号不开新的子代理，ENG-TEAM-QUOTA §6.1）：
 - 用 Agent 工具在后台开，指定模型 `model: "opus"` 或 `"sonnet"`；一个包一个，简报里写明工作树的绝对路径。
-- 评审不通过时恢复原子代理接着改（ENG-TEAM-ROLES §3.5）。
+- 评审不通过：交回后几分钟内的小返工恢复原子代理，其余新开子代理照任务单改（ENG-TEAM-ROLES §3.5）。
 - 单 Claude 账户模式下改由主会话开（ENG-TEAM-QUOTA §4），其余写法相同。
 
 **Codex 侧**（Astra 与 Sol 旁路会话）：用 Codex 的 collaboration 工具。

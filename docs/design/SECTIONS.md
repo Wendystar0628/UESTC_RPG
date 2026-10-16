@@ -1537,7 +1537,7 @@
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 13.9k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD.md` · 14.0k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、信息获取、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md、AGENTS.md
 
 - ENG-ONBOARD §0 结论 · L26 · 783
@@ -1557,7 +1557,7 @@
   - ENG-ONBOARD §4.2 按要做的事查哪里 · L221 · 2.5k
   - ENG-ONBOARD §4.3 Godot API · L294 · 223
   - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L300 · 219
-- ENG-ONBOARD §5 完成与回报 · L308 · 616
+- ENG-ONBOARD §5 完成与回报 · L308 · 650
 - ENG-ONBOARD §6 改文档时 · L320 · 331
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
@@ -1662,7 +1662,7 @@
 - ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 899
 - ENG-TEAM-DUTY §2 完成度调研 · L54 · 1.8k
 - ENG-TEAM-DUTY §3 Sol 旁路会话 · L95 · 904
-- ENG-TEAM-DUTY §4 怎么开子代理 · L115 · 1.1k
+- ENG-TEAM-DUTY §4 怎么开子代理 · L115 · 1.2k
 - ENG-TEAM-DUTY §5 Codex 侧怎么省 · L143 · 484
 - ENG-TEAM-DUTY §6 待验证（P0） · L158 · 227
 
@@ -1706,25 +1706,25 @@
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
-`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.9k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
+`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
 关键词：参与者、会话、作者、主会话、总指挥、主代理、决定权、执行人、二号会话、project-09、wendystar1145、Astra、gpt-6-astra、gpt-6.1-sol、gpt-6-luna、Grok 值班执行者、luna 机械值班、模型能力、GPT 不做审美、视觉风格归属、事归谁、七问、推理强度、Opus 与 Sonnet 的分界、补 GPT 短板、简单少量的活、派单最少写、升级先找失败原因、子代理生命周期、恢复还是新开
 
 - ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
   - ★ ENG-TEAM-ROLES §0.1 接入要点 · L35 · 69
 - ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.2k
   - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 526
-- ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.5k
+- ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.4k
   - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L84 · 803
   - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L93 · 485
-  - ENG-TEAM-ROLES §2.2a 不过度工程化（各方都适用，GPT 模型尤其） · L102 · 550
+  - ENG-TEAM-ROLES §2.2a 不过度工程化（各方都适用，GPT 模型尤其） · L102 · 521
   - ENG-TEAM-ROLES §2.3 事归谁 · L110 · 247
   - ENG-TEAM-ROLES §2.4 交叉的地方 · L116 · 219
-- ENG-TEAM-ROLES §3 模型等级与任务划分 · L122 · 7.0k
+- ENG-TEAM-ROLES §3 模型等级与任务划分 · L122 · 6.6k
   - ENG-TEAM-ROLES §3.1 按七问选施工模型 · L126 · 4.6k
   - ENG-TEAM-ROLES §3.2 总指挥只做什么 · L204 · 495
   - ENG-TEAM-ROLES §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L218 · 674
   - ENG-TEAM-ROLES §3.4 包内的实现路径由施工模型规划 · L233 · 110
-  - ENG-TEAM-ROLES §3.5 子代理的生命周期：能恢复就不新开 · L238 · 998
+  - ENG-TEAM-ROLES §3.5 子代理的生命周期：默认新开，靠任务单交接 · L238 · 679
 
 ## ENG-TEAM · 多模型协作规程：总纲与分册索引
 
