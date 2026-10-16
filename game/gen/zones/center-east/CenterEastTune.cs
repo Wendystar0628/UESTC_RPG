@@ -58,6 +58,28 @@ public static class CenterEastTune
         public static readonly ToonSpec LightTrim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>Roof-garden timber frames (轻木构架).</summary>
         public static readonly ToonSpec Timber = S("panel.brown", ToonFx.BevelLift, LineClass.Fine);
+        /// <summary>
+        /// The two bronze figures (§1.3–§1.4), after 吴立人像's accepted borrowing (18c1 review 1): the palette is full, so the
+        /// deep bronze borrows tree.bark until the 320–321 bronze pair is registered; the verdigris in the recesses (ART-STYLE
+        /// §10 青铜像) waits for that pair too. Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE §2, §5).
+        /// </summary>
+        public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
+        {
+            Fx = ToonFx.Rim | ToonFx.AnisoBand,
+            Steps = ShadeSteps.TwoHalf,
+            Normal = ToonNormal.Smooth,
+            Wet = 0.4f,
+        };
+        /// <summary>林为干像's dark pedestal (深色基座): the darkest neutral name, as 吴立人像's black stone (322–323 later).</summary>
+        public static readonly ToonSpec DarkStone = S("glass", ToonFx.BevelLift, LineClass.Building, 0.9f);
+        /// <summary>麦克斯韦像's light grey granite pedestal (浅灰花岗岩) and the stele's base.</summary>
+        public static readonly ToonSpec PaleGranite = S("wall.greyWhite", ToonFx.BevelLift);
+        /// <summary>The 科研楼 stele's rough-hewn white stone (粗凿白石, the campus stone-carving family).</summary>
+        public static readonly ToonSpec WhiteStone = S("wall", ToonFx.BevelLift);
+        /// <summary>The equation stone (圆浑的景石): warm natural stone with smooth normals, no bevel lift on a curved body.</summary>
+        public static readonly ToonSpec FieldStone = S("stone.beige", ToonFx.None) with { Normal = ToonNormal.Smooth };
+        /// <summary>Filled lines of a carved inscription: the darkest neutral (ink green-grey), no outline round each line.</summary>
+        public static readonly ToonSpec Ink = S("glass", ToonFx.None, LineClass.None, 0.9f);
     }
 
     /// <summary>
@@ -248,5 +270,77 @@ public static class CenterEastTune
         /// <summary>一号科研楼 roof garden (§2.9 屋顶实验花园) on 科 C's bar: a light timber frame over rows of planters.</summary>
         public static readonly Vector2 KeCGardenMin = new(21.5f, -229.4f), KeCGardenMax = new(43.5f, -216.0f);
         public const float GardenPostPitch = 3.14f, GardenFrameHeight = 2.4f;
+    }
+
+    /// <summary>
+    /// 中部科研区 monuments (MAP-QSH-CENTER-EAST §1.3–§1.5): 林为干像 and 麦克斯韦像 on the statue lawn east of 科 B/C, the
+    /// equation stone beside Maxwell and the 科研楼 stele by 银杏大道 between 科 A and 科 B. The OSM points move less than
+    /// 4 m (minor, no reshape); the equation stone and Maxwell's granite apron are design additions in center-east.overlay.json.
+    /// Facings are bearings (0 north, 90 east). The figures are sculpture volumes after 吴立人像 (18c1 review): clothes,
+    /// posture and hair as masses, the face one smooth volume with no features or likeness (CORE-INDEX §3). Inscriptions wait
+    /// for the scene text atlas (contract-26): the pedestal and stele faces stay blank, the equation stone carries four
+    /// filled line blocks where the four equations go (初值).
+    /// </summary>
+    public static class Monuments
+    {
+        public const string Lin = "qsh:node:5261487375", Maxwell = "qsh:node:7878394896", Stele = "qsh:node:7878386482";
+        /// <summary>The paved plaza in front of 科 B's door; its tree island on the door's axis carries 林为干像.</summary>
+        public const string Plaza = "qsh:source:relation:11583698";
+
+        /// <summary>
+        /// 林为干像 (§1.4): bronze bust in a suit on a dark pedestal at the east tip of the tree island, on 科 B's door axis
+        /// (research frame w = −143.8, 0.9 m from the OSM point), facing out along the axis to 银杏大道 with the big tree behind.
+        /// Bust scale 1.35 × a 2 m figure's head and shoulders.
+        /// </summary>
+        public static readonly Vector2 LinAt = new(89.80f, -158.19f);
+        public const float LinFacing = 81.8f, LinScale = 1.35f;
+        public const float LinPlinth = 0.25f, LinShaft = 1.2f, LinCap = 0.12f;
+        /// <summary>Granite kerb round the tree island (the plaza's hole), like the 品学楼 lawn panel's.</summary>
+        public const float IslandKerbWidth = 0.25f, IslandKerbTop = 0.2f;
+
+        /// <summary>
+        /// 麦克斯韦像 (§1.3): full-length bronze, frock coat, full beard, a scroll held to the chest, on a light grey granite
+        /// pedestal; at the OSM point near the lawn's east edge, turned south-east toward the plaza corner where R5 arrives.
+        /// Figure 1.25 × a 2 m model, about 2.5 m, as 吴立人像.
+        /// </summary>
+        public static readonly Vector2 MaxwellAt = new(93.84f, -188.77f);
+        public const float MaxwellFacing = 130f, MaxwellScale = 1.25f;
+        /// <summary>Top of the pedestal above the ground (base slab, die, cap; 5 cm sunk).</summary>
+        public const float MaxwellPedestalTop = 1.95f;
+
+        /// <summary>
+        /// Granite apron (stop point) round Maxwell and the stone, research-frame rectangle (u, w) from the lawn's east edge
+        /// where footway 572670136 runs; a few centimetres proud of the lawn with a light kerb.
+        /// </summary>
+        public static readonly Vector2 ApronMin = new(116.2f, -176.4f), ApronMax = new(124.4f, -167.6f);
+        /// <summary>Apron top above the terrain (2 cm over WP-15's paving level, 7 cm over the lawn) and its kerb.</summary>
+        public const float ApronTop = 0.17f, ApronKerb = 0.2f;
+
+        /// <summary>
+        /// Equation stone (§1.3 圆浑的景石): at Maxwell's front right ((−2.8, 1.4) in his frame), its dressed face turned to
+        /// the R5 approach. Length × depth × height, and the face: centre height, distance in front of the stone's axis, tilt
+        /// back from vertical.
+        /// </summary>
+        public static readonly Vector2 StoneAt = new(93.11f, -185.73f);
+        public const float StoneFacing = 160f;
+        public static readonly Framework.BoulderShape Stone = new(2.4f, 1.2f, 1.35f, 0.72f, 0.32f, 18f * (MathF.PI / 180f), -0.12f) { Rise = -0.22f };
+        /// <summary>Inscription lines (bottom to top, the four equations): length, and the line height and pitch on the face.</summary>
+        public static readonly float[] StoneLines = [0.95f, 0.78f, 0.42f, 0.66f];
+        public const float StoneLineHeight = 0.07f, StoneLinePitch = 0.15f, StoneLineBottom = -0.24f;
+
+        /// <summary>
+        /// 科研楼碑 (§1.5): a rough-hewn white stone wider than it is tall, its top falling away to one end, set straight into
+        /// the lawn at the 银杏大道 roadside: standing obliquely (斜立), face turned to the walker coming north from the bridge,
+        /// leaning back a little. No dressed plinth, so it reads as a campus stone and not a headstone.
+        /// </summary>
+        public static readonly Vector2 SteleAt = new(65.44f, -79.81f);
+        public const float SteleFacing = 145f, SteleLean = 6f;
+        public const float SteleThickness = 0.75f, SteleBevel = 0.12f, SteleSunk = 0.25f;
+        /// <summary>Face outline (x across, y up from the sunk foot) of the stone, convex, with a roughly cut, sloping top.</summary>
+        public static readonly Vector2[] SteleOutline =
+            [new(-1.55f, 0f), new(1.5f, 0f), new(1.62f, 0.42f), new(1.5f, 0.92f), new(1.12f, 1.3f), new(0.5f, 1.56f), new(-0.2f, 1.74f), new(-0.82f, 1.78f), new(-1.32f, 1.5f), new(-1.62f, 0.8f)];
+
+        /// <summary>WP-15's ground section above the terrain (GroundSection): lawns at 0.10 m, paving at 0.15 m.</summary>
+        public const float LawnLevel = 0.10f, PavingLevel = 0.15f;
     }
 }

@@ -164,6 +164,24 @@
       "height": 2.4,
       "props": {"building": "qsh:way:806848385", "area": 295, "frame": "轻木构架，三排立柱加梁、上铺檩条", "planters": 14, "rainTank": true, "plant": "东端一处 8 × 4.6 m 设备围挡", "access": "屋顶不开放"},
       "reason": "设计增补（MAP-QSH-ADDITIONS §2.9 屋顶实验花园，100–300 m² 取上限，22 × 13.4 m）：一号科研实验楼 C 区北楼屋面一块轻木构架分区的实验花园，两排种植箱（灌木与地被相间）和一只雨水箱；从 B 区加高的东段和飞行时俯视是一块绿加木色。屋顶不开放。默认状态暗区；夜间暗区；四季：春夏绿、秋转黄、冬只剩木框和雪。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-maxwell-equation-stone",
+      "kind": "landscape-stone",
+      "geometry": {"type": "point", "position": [93.11, 0.0, -185.73]},
+      "height": 1.35,
+      "props": {"statue": "qsh:node:7878394896", "size": [2.4, 1.2], "faceBearing": 160, "faceTilt": 18, "inscription": "麦克斯韦方程组（四行）", "text": "主线是四条墨色线块，等场景文字图集（contract-26）换成方程"},
+      "reason": "实物登记：麦克斯韦像旁那块圆浑的景石，石上刻麦克斯韦方程组（MAP-QSH-CENTER-EAST §1.3，本区身份特征），OSM 没有。约 2.4 × 1.2 m、高 1.35 m 的浅色卵形景石，前面凿出一块后仰 18° 的平面刻字，放在像的右前方，刻面朝 R5 从桥上来的方向（广场东北角）。默认状态斜光照出石体的圆浑和刻面；夜间灯下（路边路灯侧照）；石顶接季，冬季顶上一线雪，刻面仍读得出。可跳上。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-maxwell-apron",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[89.92, -191.14], [98.03, -192.31], [99.28, -183.6], [91.17, -182.43]], "holes": []}},
+      "height": 0.05,
+      "props": {"statue": "qsh:node:7878394896", "material": "ground.paver", "kerb": 0.2, "joins": "qsh:source:way:572670136"},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §0 R6 的入口停点）：雕像草坪东缘一块 8.2 × 8.8 m 的花岗岩铺装台，东边贴着草坪边的步道 572670136，麦克斯韦像与方程石都站在上面，人可以走到像前读石；草坪中间照样留空。高出草面 5 cm，浅色石条收边。默认状态长影铺在台面上；夜间灯下；台面接季（落叶、花瓣、积雪）。"
     }
   ]
 }

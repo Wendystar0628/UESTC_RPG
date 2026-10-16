@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Gen.Zones.CenterEast.Framework;
 
@@ -46,6 +47,20 @@ public static class PlanMath
             return new(sx / ring.Count, sz / ring.Count);
         }
         return new(cx / (3f * a), cz / (3f * a));
+    }
+
+    /// <summary>Plan unit vector of a bearing in degrees (0 north = −z, 90 east = +x).</summary>
+    public static Vector2 Heading(float bearing)
+    {
+        var a = bearing * (MathF.PI / 180f);
+        return new(DetMath.Sin(a), -DetMath.Cos(a));
+    }
+
+    /// <summary>A frame at <paramref name="origin"/> whose local +Z faces <paramref name="bearing"/> (local +X is then its left).</summary>
+    public static PlanFrame Facing(Vector2 origin, float bearing)
+    {
+        var w = Heading(bearing);
+        return new(origin, new(w.Y, -w.X));
     }
 
     /// <summary>Point in ring by crossings (boundary points may go either way).</summary>

@@ -6,6 +6,7 @@ using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.CenterEast.Pinxue;
 using Campus.Gen.Zones.CenterEast.Research;
 using GdUnit4;
+using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
 
@@ -252,6 +253,39 @@ public sealed class CenterEastModuleTests
                 default: throw new InvalidOperationException($"{op.Id}: unexpected operation for 21a");
             }
         Require(file.Ops.OfType<TerrainPadOp>().Count(p => p.PadY is 1.5) == 6, "the three wings, the frame entity and two plazas sit on the +1.5 platform");
+    }
+
+    [TestCase]
+    public void MonumentsStandAtTheirPointsAndLeaveTheDoorsClear()
+    {
+        var world = World();
+        Vector2 Point(string id) => world.Features[new(id)].Geometry is PointGeometry p ? new(p.Position.X, p.Position.Z) : throw new InvalidOperationException($"{id} is a point");
+        // The OSM points move by less than 4 m (a minor adjustment with no reshape, MAP-QSH-CENTER-EAST "定位").
+        foreach (var (id, at) in new[] { (M.Lin, M.LinAt), (M.Maxwell, M.MaxwellAt), (M.Stele, M.SteleAt) })
+            Require(Vector2.Distance(Point(id), at) < 4f, $"{id} stays within 4 m of its OSM point");
+        Require(StatueLawnSite.Island(world) is { } island && PlanMath.Inside(island, M.LinAt), "林为干像 stands on the plaza's tree island");
+        // The design additions agree with what is built.
+        Require(Vector2.Distance(Point("design:center-east-maxwell-equation-stone"), M.StoneAt) < 0.02f, "overlay and tune agree on the equation stone");
+        var apron = ((PolygonGeometry)world.Features[new("design:center-east-maxwell-apron")].Geometry).Rings.Outer;
+        Require(apron.Count == 4 && apron.Zip(StatueLawnSite.ApronRing).All(p => Vector2.Distance(p.First, p.Second) < 0.05f), "overlay and tune agree on the apron");
+        foreach (var at in new[] { M.MaxwellAt, M.StoneAt })
+            Require(PlanMath.Inside(StatueLawnSite.ApronRing, at), $"{at} stands on the apron");
+        // Every inscription line lies on the dressed face with stone round it.
+        foreach (var (x, y, length) in StatueLawnSite.StoneLines())
+            foreach (var (fx, fy) in new[] { (x - length * 0.5f, y), (x + length * 0.5f, y), (x - length * 0.5f, y + M.StoneLineHeight), (x + length * 0.5f, y + M.StoneLineHeight) })
+                Require(M.Stone.OnDressedFace(fx, fy, 0.04f), $"inscription corner ({fx}, {fy}) is on the dressed face");
+        // Colliders: filled foot, a top at every pedestal, and nothing in front of the three research doors.
+        var ctx = Context();
+        var module = new CenterEastModule([new StatueLawnSite(), new ResearchSteleSite()]);
+        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every monument collider fills its foot material");
+        var boxes = colliders.OfType<BoxCollider>().ToArray();
+        foreach (var (at, top) in new[] { (M.LinAt, StatueLawnSite.LinPedestalTop), (M.MaxwellAt, M.MaxwellPedestalTop), (M.StoneAt, M.Stone.Height - 0.08f) })
+            Require(boxes.Any(b => Vector2.Distance(new(b.At.M41, b.At.M43), at) < 0.6f && MathF.Abs(b.At.M42 + b.Half.Y - top) < 0.02f), $"the box at {at} reaches its top {top}");
+        var doors = new[] { ResearchSite.Frame.P(R.KeADoor.X, R.KeADoor.Y), ResearchSite.Frame.P(R.KeBDoor.X, R.KeBDoor.Y), new KeCSite().HallApex().Apex };
+        var clear = 2.5f + R.PortalDepth + 3 * R.TreadDepth;
+        foreach (var b in boxes)
+            Require(doors.All(d => Vector2.Distance(new(b.At.M41, b.At.M43), d) > clear + b.Half.X + b.Half.Z), "monuments keep 2.5 m clear outside the doors and their steps");
     }
 
     [TestCase]

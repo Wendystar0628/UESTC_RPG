@@ -146,7 +146,7 @@ public static class Shapes
     }
 
     /// <summary>Minimal writer with the kernel's winding rule: front faces clockwise seen from outside.</summary>
-    private sealed class Writer(ToonSpec material)
+    internal sealed class Writer(ToonSpec material)
     {
         private readonly List<float> _p = [], _n = [], _uv = [], _ao = [];
         private readonly List<int> _i = [];
