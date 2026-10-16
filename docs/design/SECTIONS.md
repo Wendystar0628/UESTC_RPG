@@ -623,7 +623,7 @@
 `docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 43.7k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
 关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json、功能开敞面、过渡绿地、空间记录
 
-- MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.6k
+- MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.7k
   - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L58 · 1.1k
 - MAP-QSH-ADDITIONS §1 中国高校"有设计感"的常见手法 · L72 · 519
 - MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L89 · 15.3k
