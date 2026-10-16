@@ -1,7 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.CenterEast.Framework;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
@@ -12,9 +11,9 @@ namespace Campus.Gen.Zones.CenterEast.Pinxue;
 /// <summary>
 /// 品学楼 forecourt (MAP-QSH-CENTER-EAST §2.3; MAP-QSH-TERRAIN §10): the light-grey paving is WP-15 ground and the trees
 /// are WP-23's (registered as tree pits in center-east.overlay.json). This site builds what is stone: the two rows of
-/// square tree pits, the kerbed lawn panel with the three dark granite tiers of the cascade fountain on the frame's axis
-/// (its water is WP-24's, WLD-WATER §9), the seat ring of the round bed and the planter seat walls stepping down both
-/// sides of the 5 % ramp, plus the entrance presentation at the A-wing hall door (px.a.hall).
+/// square tree pits, the kerbed lawn panel with the low three-tier stepped stone cascade on the frame's axis (its water is
+/// WP-24's, WLD-WATER §9), the seat ring of the round bed and the planter seat walls stepping down both
+/// sides of the 5 % ramp. The entrance kit at the A-wing hall door (px.a.hall: mat, open sign, door lamp) is WP-13's.
 /// </summary>
 public sealed class PinxueForecourtSite : CenterEastSite
 {
@@ -42,7 +41,6 @@ public sealed class PinxueForecourtSite : CenterEastSite
         Fountain(b);
         RoundBed(b);
         foreach (var x in P.RampWallX) RampWall(b, x);
-        HallEntrance(b);
     }
 
     // ---- Square tree pits ----
@@ -68,7 +66,7 @@ public sealed class PinxueForecourtSite : CenterEastSite
             }
     }
 
-    // ---- Lawn panel and the cascade fountain's stone tiers ----
+    // ---- Lawn panel and the stepped cascade's stone tiers ----
 
     /// <summary>The forecourt hole nearest a point (the lawn panel round the fountain, the round bed on the ramp).</summary>
     internal static IReadOnlyList<Vector2>? HoleNear(IWorldModel world, Vector2 point)
@@ -94,26 +92,45 @@ public sealed class PinxueForecourtSite : CenterEastSite
         b.Add(PartGeometryKernel.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
     }
 
+    /// <summary>The cascade's frame: centred on the lawn panel, X along the bar, +Z toward the forecourt.</summary>
+    internal static PlanFrame FountainFrame
+    {
+        get
+        {
+            var local = F.Local(P.Fountain);
+            return F.Shift(local.X, local.Y);
+        }
+    }
+
+    /// <summary>The three tiers bottom to top: plan half extents, coping width, rim and water heights above the lawn.</summary>
+    internal static IReadOnlyList<(Vector2 Half, float Coping, float Rim, float Water)> FountainTiers() =>
+    [
+        (P.BasinHalf, P.BasinCoping, P.BasinRim, P.BasinWater),
+        (P.MiddleHalf, P.TierCoping, P.MiddleRim, P.MiddleWater),
+        (P.TopHalf, P.TierCoping, P.TopRim, P.TopWater),
+    ];
+
+    /// <summary>
+    /// Each tier is a light stone coping wall round a dark pool floor; the next tier stands on that floor, so the stone
+    /// steps up in three low terraces and the water sheets fall about 0.3 m from rim to pool. The basin sinks 5 cm into
+    /// the lawn.
+    /// </summary>
     private static void Fountain(SiteBuilder b)
     {
-        var c = P.Fountain;
-        var g = b.Ground(c);
-        var n = b.Detail switch { SiteDetail.Full => 40, SiteDetail.Plain => 24, _ => 12 };
-        Matrix4x4 At(float y) => Matrix4x4.CreateTranslation(c.X, g + y, c.Y);
-        // Bottom basin: floor, a sittable rim wall (from 5 cm below the paving to the coping) and its coping.
-        b.Add(Shapes.Shaft(P.BasinRadius, P.BasinRadius, 0.2f, n, L.DarkGranite), At(-0.05f));
-        b.Add(Shapes.Ring(c, P.BasinRadius, P.BasinWall, P.BasinRim - 0.01f, n, L.DarkGranite), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
-        b.Add(Shapes.Ring(c, P.BasinRadius, P.BasinWall + 0.1f, 0.06f, n, L.DarkGranite, 0.01f), Matrix4x4.CreateTranslation(0, g + P.BasinRim - 0.06f, 0));
-        // Middle tier: pedestal, a flared bowl and its lip.
-        b.Add(Shapes.Shaft(0.55f, 0.45f, 1.05f, n, L.DarkGranite), At(0.1f));
-        b.Add(Shapes.Shaft(0.6f, P.MiddleRadius, 0.3f, n, L.DarkGranite), At(P.MiddleRim - 0.42f));
-        b.Add(Shapes.Ring(c, P.MiddleRadius - 0.06f, 0.14f, 0.12f, n, L.DarkGranite, 0.01f), Matrix4x4.CreateTranslation(0, g + P.MiddleRim - 0.12f, 0));
-        // Top tier: a slimmer pedestal, a small bowl, the spout.
-        b.Add(Shapes.Shaft(0.32f, 0.26f, 0.6f, n, L.DarkGranite), At(P.MiddleRim - 0.12f));
-        b.Add(Shapes.Shaft(0.3f, P.TopRadius, 0.22f, n, L.DarkGranite), At(P.TopRim - 0.32f));
-        b.Add(Shapes.Ring(c, P.TopRadius - 0.05f, 0.1f, 0.1f, n, L.DarkGranite, 0.01f), Matrix4x4.CreateTranslation(0, g + P.TopRim - 0.1f, 0));
-        if (b.Detail == SiteDetail.Mass) return;
-        b.Add(Shapes.Shaft(0.12f, 0.07f, P.SpoutTop - P.TopRim + 0.1f, Math.Max(8, n / 3), L.DarkGranite), At(P.TopRim - 0.1f));
+        var f = FountainFrame;
+        var g = b.Ground(P.Fountain);
+        var baseY = g - 0.05f;
+        foreach (var (half, coping, rim, water) in FountainTiers())
+        {
+            var floorY = g + water - P.PoolDepth;
+            float hx = half.X - coping * 0.5f, hz = half.Y - coping * 0.5f;
+            Vector2[] path = [f.P(-hx, -hz), f.P(hx, -hz), f.P(hx, hz), f.P(-hx, hz)];
+            var wall = PartGeometryKernel.BeveledRectangleProfile(coping, g + rim - baseY, b.Detail == SiteDetail.Mass ? 0f : 0.03f);
+            b.Add(PartGeometryKernel.Sweep(wall, path, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, baseY, 0));
+            float ix = 2 * (half.X - coping) + 0.02f, iz = 2 * (half.Y - coping) + 0.02f;
+            b.Add(PartGeometryKernel.BeveledBox(ix, floorY - baseY, iz, 0.01f, L.DarkGranite), f.At(0, baseY, 0));
+            baseY = floorY;
+        }
     }
 
     // ---- Round bed on the ramp: one tree in a 0.45 m granite seat ring ----
@@ -180,19 +197,6 @@ public sealed class PinxueForecourtSite : CenterEastSite
         }
     }
 
-    // ---- A-wing hall entrance (px.a.hall): mat, open sign and door lamp; the doorway itself is WP-14's and WP-31b's ----
-
-    private static void HallEntrance(SiteBuilder b)
-    {
-        if (b.Detail == SiteDetail.Mass) return;
-        var y = b.Context.World.Terrain.PadY(new(P.WingA));
-        var floor = y + 0.15f;
-        var x = Hall.Local(P.HallDoor).X;
-        b.Place(PartCatalog.EntranceMat, new PanelParams(2.0f, 0.03f, 1.3f), Hall.At(x, y, 1.0f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), Hall.At(x + 1.5f, floor + 1.45f, 0.3f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), Hall.At(x, floor + 2.9f, 0.3f));
-    }
-
     public override void Collide(SiteColliders c)
     {
         float Ground(Vector2 p) => c.Ground(p.X, p.Y);
@@ -202,9 +206,10 @@ public sealed class PinxueForecourtSite : CenterEastSite
             var local = F.Local(p);
             c.Box(F.At(local.X, g + P.TreePitHeight * 0.5f, local.Y), new(P.TreePitSize * 0.5f, P.TreePitHeight * 0.5f, P.TreePitSize * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
         }
+        // One box per tier up to its rim: the low copings can be stepped onto, as a seat edge would.
         var fg = Ground(P.Fountain);
-        c.Add(new PostCollider(P.Fountain, P.BasinRadius + P.BasinWall * 0.5f, fg - 0.05f, fg + P.BasinRim, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
-        c.Add(new PostCollider(P.Fountain, P.MiddleRadius, fg, fg + P.TopRim, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+        foreach (var (half, _, rim, _) in FountainTiers())
+            c.Box(FountainFrame.At(0, fg + (rim - 0.05f) * 0.5f, 0), new(half.X, (rim + 0.05f) * 0.5f, half.Y), SurfaceTag.Prop, FootMat.StonePaving);
         var bed = P.RoundBedRadius + P.SeatWidth * 0.5f;
         var rg = Ground(P.RoundBed);
         c.Add(new PostCollider(P.RoundBed, bed, rg - 0.1f, rg + P.SeatHeight, SurfaceTag.Prop) { Foot = FootMat.StonePaving });

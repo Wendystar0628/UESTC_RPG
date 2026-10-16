@@ -1,11 +1,11 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.CenterEast.Framework;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
+using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
 
 namespace Campus.Gen.Zones.CenterEast.Pinxue;
 
@@ -44,9 +44,106 @@ public sealed class PinxueFrameSite : CenterEastSite
         var y = BaseY(b.Context);
         Passage(b, y);
         foreach (var x in P.ColumnX) Column(b, x, y);
+        var bridges = Bridges(b.Context.World);
+        foreach (var box in bridges) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(P.Complex), box.Key));
         Beam(b, y);
-        foreach (var source in new[] { P.BridgeAC, P.BridgeBC }) LinkBridge(b, Bar(b.Context.World, source), y);
-        SideDoor(b, y);
+        foreach (var source in new[] { P.BridgeAC, P.BridgeBC }) LinkColumns(b, Bar(b.Context.World, source), y);
+    }
+
+    // ---- Windows (contract-29) ----
+
+    /// <summary>
+    /// The 品学楼 entity's own windows are the ribbon windows of its three bridges: the beam's back face toward the inner
+    /// plaza (its forecourt face carries the plaque) and both faces of the A–C and B–C bridges, one named grid per bridge,
+    /// a column per mullion cell and face, a row per storey. The wings' classroom windows belong to A, B and C (qsh:relation:
+    /// 11043352–11043354), which WP-14 builds and numbers.
+    /// </summary>
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
+    {
+        foreach (var box in Bridges(world))
+        {
+            var (bands, bays, faces) = Ribbon(box);
+            yield return (new(P.Complex), new(box.Key, bays * faces, bands.Count));
+        }
+    }
+
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        var y = BaseY(ctx);
+        foreach (var box in Bridges(ctx.World))
+        {
+            var allocation = WindowNumbers.Required(ctx, new(P.Complex), box.Key);
+            var (bands, bays, faces) = Ribbon(box);
+            WindowNumbers.Fit(bays * faces, bands.Count, new(P.Complex), box.Key, allocation);
+            WindowNumbers.Declare(windows, Openings(box, y), allocation, W.Teaching);
+        }
+    }
+
+    // ---- Bridges: one LOD-free description for geometry, collision and the window grids ----
+
+    /// <summary>
+    /// A two-storey bridge box between X0 and X1 (local), Z0 (back) to Z1 (front), from Bottom to Top above the platform;
+    /// a solid front keeps the forecourt face plain for the plaque.
+    /// </summary>
+    internal sealed record BridgeBox(string Key, PlanFrame Frame, float X0, float X1, float Z0, float Z1, float Bottom, float Top, bool FrontSolid);
+
+    private const float BridgeWall = 0.45f, Soffit = 0.6f, RibbonInset = 1.2f, MullionPitch = 1.8f;
+
+    /// <summary>The beam bridge over the passage and the A–C, B–C link bridges, read from the entity's parts.</summary>
+    internal static IReadOnlyList<BridgeBox> Bridges(IWorldModel world)
+    {
+        var len = Length + 0.4f; // the ends sink into A's and B's walls
+        var list = new List<BridgeBox> { new("beam", F, Axis - len * 0.5f, Axis + len * 0.5f, -P.FrameDepth, 0f, P.BeamBottom, P.BeamTop, true) };
+        foreach (var (key, source) in new[] { ("bridge-ac", P.BridgeAC), ("bridge-bc", P.BridgeBC) })
+        {
+            var (f, x0, x1, z0, z1) = Bar(world, source);
+            list.Add(new(key, f, x0 - 0.3f, x1 + 0.3f, z0, z1, P.BridgeBottom, P.BridgeTop, false));
+        }
+        return list;
+    }
+
+    /// <summary>A bridge's ribbon windows: one band (sill, head above the soffit) per 4 m storey, mullion cells per band, windowed faces.</summary>
+    internal static (IReadOnlyList<(float Sill, float Head)> Bands, int Bays, int Faces) Ribbon(BridgeBox box)
+    {
+        var h = box.Top - box.Bottom - Soffit;
+        var storeys = Math.Max(1, (int)MathF.Round((h + Soffit) / P.StoreyHeight));
+        var bands = new List<(float Sill, float Head)>();
+        for (var k = 0; k < storeys; k++)
+        {
+            float sill = k * P.StoreyHeight + 1.0f - Soffit, head = k * P.StoreyHeight + 3.1f - Soffit;
+            if (head > h - 0.3f) break;
+            bands.Add((sill, head));
+        }
+        var half = (box.X1 - box.X0) * 0.5f - RibbonInset;
+        return (bands, Math.Max(1, (int)MathF.Round(2 * half / MullionPitch)), box.FrontSolid ? 1 : 2);
+    }
+
+    /// <summary>The windowed faces in grid order (back first): outward sign along the frame's Z and the wall's centre line.</summary>
+    private static IEnumerable<(float Outward, float Zc)> Faces(BridgeBox box)
+    {
+        yield return (-1f, box.Z0 + BridgeWall * 0.5f);
+        if (!box.FrontSolid) yield return (1f, box.Z1 - BridgeWall * 0.5f);
+    }
+
+    /// <summary>One numbered pane per mullion cell, 1 cm in front of the ribbon glass; column = face × bays + cell, row = band.</summary>
+    internal static IEnumerable<GlazedOpening> Openings(BridgeBox box, float y)
+    {
+        var (bands, n, _) = Ribbon(box);
+        var f = box.Frame;
+        float half = (box.X1 - box.X0) * 0.5f - RibbonInset, xc = (box.X0 + box.X1) * 0.5f, cell = 2 * half / n;
+        var face = 0;
+        foreach (var (outward, zc) in Faces(box))
+        {
+            var normal = new Vector3(f.W.X * outward, 0, f.W.Y * outward);
+            var paneZ = zc - outward * 0.12f + outward * 0.03f;
+            for (var k = 0; k < bands.Count; k++)
+                for (var i = 0; i < n; i++)
+                {
+                    var p = f.P(xc - half + (i + 0.5f) * cell, paneZ);
+                    yield return new(face * n + i, k, new(p.X, y + box.Bottom + Soffit + bands[k].Sill, p.Y), normal, cell, bands[k].Head - bands[k].Sill);
+                }
+            face++;
+        }
     }
 
     // ---- Passage floor and columns ----
@@ -70,10 +167,9 @@ public sealed class PinxueFrameSite : CenterEastSite
 
     // ---- Beam bridge (storeys 3–4) with the inscription plaque ----
 
+    /// <summary>The beam bridge's plaque and soffit lights; the bridge box itself is one of <see cref="Bridges"/>.</summary>
     private static void Beam(SiteBuilder b, float y)
     {
-        var len = Length + 0.4f; // the ends sink into A's and B's walls
-        Bridge(b, F, Axis - len * 0.5f, Axis + len * 0.5f, -P.FrameDepth, 0f, y + P.BeamBottom, y + P.BeamTop, frontSolid: true);
         if (b.Detail == SiteDetail.Mass) return;
         // Plaque: a slightly proud stone panel with a fine frame; the calligraphy "求实求真 大气大为" waits for the
         // scene text atlas (contract-26 follow-up) and is not painted on as a texture here.
@@ -91,50 +187,47 @@ public sealed class PinxueFrameSite : CenterEastSite
     }
 
     /// <summary>
-    /// A two-storey bridge box between x0 and x1 (local), z0 (back) to z1 (front): soffit, walls 0.45 m thick, roof and
-    /// coping. Faces carry one ribbon window per storey with aluminium mullions; a solid front keeps the face plain.
+    /// A bridge box: soffit, walls 0.45 m thick, roof and coping. Each windowed face carries one ribbon window per storey
+    /// with aluminium mullions; with a window allocation every mullion cell gets its numbered pane in front of the glass.
     /// </summary>
-    internal static void Bridge(SiteBuilder b, PlanFrame f, float x0, float x1, float z0, float z1, float yBottom, float yTop, bool frontSolid)
+    private static void Bridge(SiteBuilder b, BridgeBox box, float y, WindowAllocation? allocation)
     {
-        float len = x1 - x0, xc = (x0 + x1) * 0.5f, depth = z1 - z0, wall = 0.45f, soffit = 0.6f;
-        b.Add(PartGeometryKernel.BeveledBox(len, soffit, depth, 0.03f, L.Wall), f.At(xc, yBottom, (z0 + z1) * 0.5f));
-        var h = yTop - yBottom - soffit;
-        b.Add(PartGeometryKernel.BeveledBox(len, 0.4f, depth - 2 * wall, 0.01f, L.RoofSlab), f.At(xc, yTop - 0.4f, (z0 + z1) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(len, 0.35f, depth + 0.2f, 0.03f, L.Trim), f.At(xc, yTop, (z0 + z1) * 0.5f));
-        if (frontSolid) b.Add(PartGeometryKernel.BeveledBox(len, h, wall, 0.03f, L.Wall), f.At(xc, yBottom + soffit, z1 - wall * 0.5f));
-        else WindowWall(b, f, xc, len, z1 - wall * 0.5f, yBottom, h, outward: 1f);
-        WindowWall(b, f, xc, len, z0 + wall * 0.5f, yBottom, h, outward: -1f);
+        var f = box.Frame;
+        float len = box.X1 - box.X0, xc = (box.X0 + box.X1) * 0.5f, depth = box.Z1 - box.Z0, zm = (box.Z0 + box.Z1) * 0.5f;
+        float yBottom = y + box.Bottom, yTop = y + box.Top, h = box.Top - box.Bottom - Soffit;
+        b.Add(PartGeometryKernel.BeveledBox(len, Soffit, depth, 0.03f, L.Wall), f.At(xc, yBottom, zm));
+        b.Add(PartGeometryKernel.BeveledBox(len, 0.4f, depth - 2 * BridgeWall, 0.01f, L.RoofSlab), f.At(xc, yTop - 0.4f, zm));
+        b.Add(PartGeometryKernel.BeveledBox(len, 0.35f, depth + 0.2f, 0.03f, L.Trim), f.At(xc, yTop, zm));
+        if (box.FrontSolid) b.Add(PartGeometryKernel.BeveledBox(len, h, BridgeWall, 0.03f, L.Wall), f.At(xc, yBottom + Soffit, box.Z1 - BridgeWall * 0.5f));
+        var (bands, n, _) = Ribbon(box);
+        foreach (var (outward, zc) in Faces(box)) WindowWall(b, f, xc, len, zc, yBottom, h, outward, bands, n);
+        if (allocation is { } a)
+        {
+            var (_, bays, faces) = Ribbon(box);
+            WindowNumbers.Fit(bays * faces, bands.Count, new(P.Complex), box.Key, a);
+            WindowNumbers.Panes(b, Openings(box, y), a, W.Teaching, W.Corridor);
+        }
         if (b.Detail == SiteDetail.Mass) return;
         // Soffit edge band: a crisp horizontal line under the bridge on both faces.
-        foreach (var (z, sign) in new[] { (z1, 1f), (z0, -1f) })
+        foreach (var (z, sign) in new[] { (box.Z1, 1f), (box.Z0, -1f) })
             b.Add(PartGeometryKernel.BeveledBox(len, 0.18f, 0.12f, 0.01f, L.Trim), f.At(xc, yBottom, z + sign * 0.05f));
     }
 
-    /// <summary>A wall slab with one ribbon window per 4 m storey; glass set 0.3 m back; mullions every 1.8 m.</summary>
-    private static void WindowWall(SiteBuilder b, PlanFrame f, float xc, float len, float zc, float yBottom, float h, float outward)
+    /// <summary>A wall slab with one ribbon window per band; glass set 0.3 m back (at every level, so no band reads as a hole); mullions every cell.</summary>
+    private static void WindowWall(SiteBuilder b, PlanFrame f, float xc, float len, float zc, float yBottom, float h, float outward,
+        IReadOnlyList<(float Sill, float Head)> bands, int n)
     {
-        const float wall = 0.45f, soffit = 0.6f, inset = 1.2f;
-        var storeys = Math.Max(1, (int)MathF.Round((h + soffit) / P.StoreyHeight));
-        var openings = new List<IReadOnlyList<Vector2>>();
-        float half = len * 0.5f - inset;
-        var bands = new List<(float Sill, float Head)>();
-        for (var k = 0; k < storeys; k++)
-        {
-            float sill = k * P.StoreyHeight + 1.0f - soffit, head = k * P.StoreyHeight + 3.1f - soffit;
-            if (head > h - 0.3f) break;
-            bands.Add((sill, head));
-            openings.Add([new(-half, sill), new(half, sill), new(half, head), new(-half, head)]);
-        }
-        var y = yBottom + soffit;
-        b.Add(PartGeometryKernel.WallPanel(len, h, wall, openings, L.Wall), f.At(xc, y, zc));
-        if (b.Detail == SiteDetail.Mass) return;
+        var half = len * 0.5f - RibbonInset;
+        var openings = bands.Select(band => (IReadOnlyList<Vector2>)[new(-half, band.Sill), new(half, band.Sill), new(half, band.Head), new(-half, band.Head)]).ToArray();
+        var y = yBottom + Soffit;
+        b.Add(PartGeometryKernel.WallPanel(len, h, BridgeWall, openings, L.Wall), f.At(xc, y, zc));
         var glassZ = zc - outward * 0.12f;
         foreach (var (sill, head) in bands)
         {
-            b.Add(PartGeometryKernel.BeveledBox(2 * half, head - sill, 0.04f, 0.005f, L.Glass), f.At(xc, y + sill, glassZ));
+            b.Add(PartGeometryKernel.BeveledBox(2 * half, head - sill, 0.04f, b.Detail == SiteDetail.Mass ? 0f : 0.005f, L.Glass), f.At(xc, y + sill, glassZ));
+            if (b.Detail == SiteDetail.Mass) continue;
             b.Add(PartGeometryKernel.BeveledBox(2 * half + 0.1f, 0.08f, 0.32f, 0.01f, L.Trim), f.At(xc, y + sill - 0.08f, zc + outward * 0.12f));
             if (b.Detail != SiteDetail.Full) continue;
-            var n = Math.Max(1, (int)MathF.Round(2 * half / 1.8f));
             for (var i = 1; i < n; i++)
                 b.Add(PartGeometryKernel.BeveledBox(0.08f, head - sill, 0.1f, 0.01f, L.Metal), f.At(xc - half + 2 * half * i / n, y + sill, glassZ + outward * 0.05f));
             b.Add(PartGeometryKernel.BeveledBox(2 * half, 0.07f, 0.1f, 0.01f, L.Metal), f.At(xc, y + sill + (head - sill) * 0.72f, glassZ + outward * 0.05f));
@@ -162,10 +255,10 @@ public sealed class PinxueFrameSite : CenterEastSite
         return (f, x0, x1, z0, z1);
     }
 
-    private static void LinkBridge(SiteBuilder b, (PlanFrame Frame, float X0, float X1, float Z0, float Z1) bar, float y)
+    /// <summary>A link bridge's round columns; the bridge box itself is one of <see cref="Bridges"/>.</summary>
+    private static void LinkColumns(SiteBuilder b, (PlanFrame Frame, float X0, float X1, float Z0, float Z1) bar, float y)
     {
-        var (f, x0, x1, z0, z1) = bar;
-        Bridge(b, f, x0 - 0.3f, x1 + 0.3f, z0, z1, y + P.BridgeBottom, y + P.BridgeTop, frontSolid: false);
+        var f = bar.Frame;
         var segments = b.Detail == SiteDetail.Full ? 16 : 8;
         foreach (var (x, z) in BridgeColumns(bar))
         {
@@ -183,35 +276,20 @@ public sealed class PinxueFrameSite : CenterEastSite
                 yield return (x0 + (x1 - x0) * t, z);
     }
 
-    // ---- Side door into A under the passage: entrance presentation (WLD-INTERIORS §4); the doorway is WP-31b's ----
-
-    private static PlanFrame SideDoorFrame => new(F.P(0, P.SideDoorZ), -F.W);
-
-    private static void SideDoor(SiteBuilder b, float y)
-    {
-        if (b.Detail == SiteDetail.Mass) return;
-        var d = SideDoorFrame;
-        var floor = y + 0.15f;
-        b.Place(PartCatalog.EntranceMat, new PanelParams(2.0f, 0.03f, 1.3f), d.At(0, y, 1.0f));
-        b.Place(PartCatalog.OpenSign, new SignParams(0.42f, 0.24f, 0.02f), d.At(1.55f, floor + 1.45f, 0.3f));
-        b.Place(PartCatalog.EntranceLamp, new LampParams(0.3f, 0.3f, 0.2f), d.At(0, floor + 2.9f, 0.3f));
-    }
-
     public override void Collide(SiteColliders c)
     {
         var y = BaseY(c.Context);
         var z = -P.FrameDepth * 0.5f;
         foreach (var x in P.ColumnX)
             c.Box(F.At(x, y + P.BeamBottom * 0.5f, z), new(P.ColumnSize * 0.5f + 0.05f, P.BeamBottom * 0.5f, P.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
-        c.Box(F.At(Axis, y + (P.BeamBottom + P.BeamTop) * 0.5f, z), new(Length * 0.5f, (P.BeamTop - P.BeamBottom) * 0.5f, P.FrameDepth * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
+        foreach (var box in Bridges(c.Context.World))
+            c.Box(box.Frame.At((box.X0 + box.X1) * 0.5f, y + (box.Bottom + box.Top) * 0.5f, (box.Z0 + box.Z1) * 0.5f),
+                new((box.X1 - box.X0) * 0.5f, (box.Top - box.Bottom) * 0.5f, (box.Z1 - box.Z0) * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
         foreach (var source in new[] { P.BridgeAC, P.BridgeBC })
         {
             var bar = Bar(c.Context.World, source);
-            var (f, x0, x1, z0, z1) = bar;
-            c.Box(f.At((x0 + x1) * 0.5f, y + (P.BridgeBottom + P.BridgeTop) * 0.5f, (z0 + z1) * 0.5f),
-                new((x1 - x0) * 0.5f, (P.BridgeTop - P.BridgeBottom) * 0.5f, (z1 - z0) * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
             foreach (var (x, zc) in BridgeColumns(bar))
-                c.Add(new PostCollider(f.P(x, zc), P.BridgeColumnRadius + 0.05f, y, y + P.BridgeBottom, SurfaceTag.Prop) { Foot = FootMat.Concrete });
+                c.Add(new PostCollider(bar.Frame.P(x, zc), P.BridgeColumnRadius + 0.05f, y, y + P.BridgeBottom, SurfaceTag.Prop) { Foot = FootMat.Concrete });
         }
     }
 }

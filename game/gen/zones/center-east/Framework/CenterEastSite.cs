@@ -24,6 +24,12 @@ public abstract class CenterEastSite
     /// <summary>Inspection probes this site contributes (MAP-QSH-CENTER-EAST Q1–Q8).</summary>
     public virtual IReadOnlyList<InspectionProbe> Probes => [];
 
+    /// <summary>Named window grids of this site's Facade-claimed features (contract-29), sized from the same layout the geometry uses.</summary>
+    public virtual IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) => [];
+
+    /// <summary>Positions of those windows, numbered from ctx.WindowNumbering; never builds geometry.</summary>
+    public virtual void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows) { }
+
     /// <summary>A probe looking along plan direction <paramref name="look"/>; yaw is the bearing (0 north, 90 east).</summary>
     protected static InspectionProbe Probe(string id, string feature, System.Numerics.Vector3 eye, System.Numerics.Vector2 look, float pitch, float distance) =>
         new(id, new(feature), new(eye, Bearing(look), pitch, 60f), distance);

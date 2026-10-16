@@ -15,6 +15,19 @@ public static class CenterEastTune
     public const int BudgetTrianglesL1 = 30_000;
     public const int BudgetDrawCalls = 16;
 
+    /// <summary>
+    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS §5.1: 3 corridor,
+    /// 5 office, 6 lab) of each grid the zone declares. The research blocks follow the lab curve with W-LAB : W-OFF = 7 : 3
+    /// (MAP-QSH-CENTER-EAST §1.2), 品学楼's frame beam and link bridges the teaching curve with corridor cards (初值).
+    /// </summary>
+    public static class Windows
+    {
+        public static readonly ChannelId Research = new("window.lab"), Teaching = new("window.teach");
+        public const byte Corridor = 3, Office = 5, Lab = 6;
+        /// <summary>Tenths of the research windows that show an office card instead of a lab.</summary>
+        public const int OfficeShare = 3;
+    }
+
     /// <summary>Materials (ART-STYLE §8 colour names only).</summary>
     public static class Look
     {
@@ -41,6 +54,10 @@ public static class CenterEastTune
         public static readonly ToonSpec Metal = S("frame.alu", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
         { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+        /// <summary>Research family trims (cornice, sills, portals, slab bands): grey-white against the warm stone.</summary>
+        public static readonly ToonSpec LightTrim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
+        /// <summary>Roof-garden timber frames (轻木构架).</summary>
+        public static readonly ToonSpec Timber = S("panel.brown", ToonFx.BevelLift, LineClass.Fine);
     }
 
     /// <summary>
@@ -84,13 +101,20 @@ public static class CenterEastTune
         public const float BridgeBottom = 4.0f, BridgeTop = 12.0f, BridgeColumnRadius = 0.3f;
 
         /// <summary>
-        /// Cascade fountain stone (§2.3; water by WP-24, WLD-WATER §9): three dark granite tiers on the frame's axis,
-        /// centred in the forecourt's rectangular lawn panel 18 m in front of the frame. Heights are above the forecourt.
+        /// Low stepped cascade (§2.3; water by WP-24, WLD-WATER §9; 10:01 review): three nested rectangular pools of light
+        /// stone, centred in the forecourt's 14.2 × 7.2 m lawn panel 22 m in front of the frame, long side along the bar.
+        /// Each tier's thin water sheet spills over its coping into the pool below. Halves are (along the bar, toward the
+        /// forecourt); heights are above the lawn and stay under 0.9 m so the cascade lies low on the grass (初值).
         /// </summary>
         public static readonly Vector2 Fountain = new(142.38f, -58.10f);
-        public const float BasinRadius = 2.85f, BasinWall = 0.35f, BasinRim = 0.55f, BasinWater = 0.45f;
-        public const float MiddleRadius = 1.75f, MiddleRim = 1.42f, MiddleWater = 1.36f;
-        public const float TopRadius = 0.9f, TopRim = 2.12f, TopWater = 2.06f, SpoutTop = 2.4f;
+        public static readonly Vector2 BasinHalf = new(5.5f, 2.5f);
+        public const float BasinCoping = 0.35f, BasinRim = 0.30f, BasinWater = 0.24f;
+        public static readonly Vector2 MiddleHalf = new(4.0f, 1.7f);
+        public const float MiddleRim = 0.55f, MiddleWater = 0.49f;
+        public static readonly Vector2 TopHalf = new(2.5f, 0.9f);
+        public const float TopRim = 0.80f, TopWater = 0.74f;
+        /// <summary>Coping width of the two upper tiers; every pool is this deep below its water line.</summary>
+        public const float TierCoping = 0.25f, PoolDepth = 0.14f;
         public const float PanelKerbWidth = 0.3f, PanelKerbHeight = 0.15f;
 
         /// <summary>Square tree pits (方形树池) in two rows either side of the axis, in the frame's local (x, z).</summary>
@@ -120,11 +144,109 @@ public static class CenterEastTune
         public const float ArcSagitta = 3.5f, ArcHeight = 19.5f;
         public const int ArcStoreys = 5;
 
-        /// <summary>A-wing hall entrance px.a.hall (interiors.json): door centre and the diagonal facade it sits in.</summary>
+        /// <summary>
+        /// A-wing hall entrance px.a.hall (interiors.json): door centre and the diagonal facade it sits in (the Q4 probe
+        /// stands there). The entrance kit at this door and at the side door under the passage is WP-13's (12:15 ruling).
+        /// </summary>
         public static readonly Vector2 HallDoor = new(146.5f, -84.9f);
         public static readonly Vector2 HallFacadeFrom = new(140.64f, -89.21f);
         public static readonly Vector2 HallFacadeTo = new(152.44f, -80.5f);
-        /// <summary>Side door into A under the passage (WLD-INTERIORS §2.12), on A's wall at the bar's centre line (初值).</summary>
-        public const float SideDoorZ = -3.45f;
+    }
+
+    /// <summary>
+    /// 中部科研区 (MAP-QSH-CENTER-EAST §1): 基础实验大楼 (科 A) and 一号科研实验楼 (科 B, 科 C), claimed and built by this zone
+    /// as the renovated research family: warm light stone frame over recessed glass, a glazed ground storey, windows
+    /// grouped in pairs by giant pilasters, grey-white cornice and sills, dark plinth (MAP-QSH-RENOVATION E-02, E-03).
+    /// All blocks share one plan direction; positions are in its local frame R (u along <see cref="Axis"/>, w = (−Axis.y,
+    /// Axis.x), roughly south), read from the OSM footprints in campus.json.
+    /// </summary>
+    public static class Research
+    {
+        public const string KeA = "qsh:relation:11127418";
+        public const string KeB = "qsh:relation:11127417";
+        public const string KeC = "qsh:way:806848385";
+        /// <summary>Parts: the コ-shaped main block, the west and middle blocks with their link strips, and the lens halls.</summary>
+        public const string KeAMain = "osm:way:806848386", KeAWest = "osm:way:806848387", KeAHall = "osm:way:806848388";
+        public const string KeBMain = "osm:way:806848375", KeBMiddle = "osm:way:806848378", KeBWest = "osm:way:806848379", KeBHall = "osm:way:806848381";
+        public const string KeCBar = "osm:way:806848376", KeCLink = "osm:way:806848377", KeCHall = "osm:way:806848380";
+
+        public static readonly Vector2 Axis = new(0.9898f, -0.1423f);
+
+        /// <summary>
+        /// Five storeys everywhere (§1.2: OSM's 6 and 1 levels are wrong): a 4.8 m glazed ground storey and four of 4.2 m,
+        /// cornice and parapet to 22.9 m. The ground floor stands 0.45 m above the pad, three risers at each entrance.
+        /// </summary>
+        public const float GroundStorey = 4.8f, Storey = 4.2f, FloorLevel = 0.45f;
+        public const int Storeys = 5;
+        public const float Bay = 3.9f, Pier = 1.1f, GroundSill = 1.0f, GroundWindow = 3.2f, Sill = 0.95f, Window = 2.4f;
+        public const int PilasterEvery = 2;
+        /// <summary>Edges at least this long that face away from the building's courtyards get the pilasters.</summary>
+        public const float FrontMin = 20f, CourtyardReach = 45f;
+
+        /// <summary>
+        /// Entrance portal on a block face (§1.2 门厅朝东): a 7.2 m opening cut through the two lower storeys up to the
+        /// second-floor sill (a two-storey glazed lobby bay that reads from the road), framed by grey-white jambs and a
+        /// deep head that is also the canopy; glass doors with mullioned glazing round them on the glass plane; three
+        /// risers out to the pad.
+        /// </summary>
+        public const float PortalHalfWidth = 3.6f, PortalJamb = 1.0f, PortalDepth = 1.6f, PortalHead = 1.2f;
+        public const int PortalStoreys = 2;
+        public const float DoorWidth = 3.0f, DoorHeight = 3.0f, TreadDepth = 0.38f;
+
+        /// <summary>科 A's door on the east face, where the footway from 银杏大道 arrives (local u, w).</summary>
+        public static readonly Vector2 KeADoor = new(37.2f, -34.2f);
+        /// <summary>科 B's door on the east face, on the axis of its lens hall, facing the statue lawn (初值).</summary>
+        public static readonly Vector2 KeBDoor = new(72.1f, -143.8f);
+
+        /// <summary>
+        /// Lens halls (透镜形弧厅): a glass hall whose back stands against a block and whose front is one circular arc.
+        /// Outline: the local polyline Back, closed by an arc from its last point to its first, bulging Sagitta metres away
+        /// from it. The OSM outlines carry small hooks at the arc ends that this mainline smooths away (初值).
+        /// </summary>
+        public static readonly Vector2[] KeAHallBack = [new(18.2f, -26.4f), new(26.0f, -26.4f), new(26.0f, -49.2f), new(18.2f, -49.2f)];
+        public const float KeAHallSagitta = 3.9f;
+        public static readonly Vector2[] KeBHallBack = [new(50.0f, -133.2f), new(60.0f, -133.2f), new(60.0f, -154.3f), new(50.0f, -154.3f)];
+        public const float KeBHallSagitta = 3.2f;
+        /// <summary>科 C's two-storey hall between C's bar and B's north arm, its arc facing the statue lawn: C 区大厅 and its door.</summary>
+        public static readonly Vector2[] KeCHallBack = [new(66.0f, -179.0f), new(58.7f, -179.0f), new(58.7f, -213.6f), new(72.0f, -213.6f)];
+        public const float KeCHallSagitta = 9.5f;
+        /// <summary>Hall heights to the coping: A and B one tall storey, C two storeys (OSM: 1, 1, 2 levels).</summary>
+        public const float HallStorey = 4.5f, HallAttic = 1.0f;
+        public const float HallDoorWidth = 2.4f, HallDoorHeight = 2.7f, HallCanopyDepth = 1.8f;
+
+        /// <summary>科 B's east wing rises one storey higher (§1.2 东段局部 6 层): a set-back attic storey over the east bar.</summary>
+        public static readonly Vector2 KeBAtticMin = new(60.0f, -177.9f), KeBAtticMax = new(70.9f, -107.4f);
+        public const float AtticStorey = 4.2f;
+
+        /// <summary>Stair penthouses on the roofs (B7 roof relief every 20–30 m), local centres; all 5.0 × 6.0 m, 3.4 m high.</summary>
+        public static readonly Vector2[] KeAStairs = [new(-38.0f, -63.3f), new(-38.0f, -9.6f), new(31.6f, -60.5f), new(-50.5f, -39.0f)];
+        public static readonly Vector2[] KeBStairs = [new(-40.0f, -170.4f), new(-40.0f, -116.3f), new(-0.8f, -144.4f), new(-54.5f, -144.7f)];
+        public static readonly Vector2[] KeCStairs = [new(5.0f, -222.7f), new(0.0f, -197.8f)];
+        public static readonly Vector2 StairSize = new(5.0f, 6.0f);
+        public const float StairHeight = 3.4f;
+
+        /// <summary>Plant enclosures (屋面设备进围挡, MAP-QSH-ADDITIONS §2.9): dark perforated fence round three heat pumps.</summary>
+        public static readonly Vector2[] KeAPlant = [new(0.0f, -63.3f)];
+        public static readonly Vector2[] KeBPlant = [new(10.0f, -116.3f)];
+        public static readonly Vector2[] KeCPlant = [new(60.0f, -222.7f)];
+        public static readonly Vector2 PlantSize = new(8.0f, 4.6f);
+        public const float PlantFence = 1.8f;
+
+        /// <summary>
+        /// 科 A's roof fence and tower tank (MAP-QSH-ADDITIONS §2.16): a 2 m grey aluminium bar fence round the east wing's
+        /// roof and a panel tank on a steel stand beside the stair penthouse; skyline only, the roof stays closed.
+        /// </summary>
+        public static readonly Vector2 KeAFenceMin = new(27.4f, -70.8f), KeAFenceMax = new(35.8f, -2.0f);
+        public const float KeAFenceHeight = 2.0f, KeAFencePosts = 2.5f;
+        public static readonly Vector2 KeATank = new(31.6f, -53.6f);
+        public static readonly Vector3 KeATankSize = new(3.0f, 3.8f, 3.0f);
+
+        /// <summary>一号科研楼 antennas (§2.9 科研楼天线): white dishes on 科 B's attic roof, facing east to catch the sunrise (初值).</summary>
+        public static readonly Vector2[] KeBDishes = [new(65.5f, -168.0f), new(65.5f, -158.0f), new(65.5f, -149.0f)];
+        public static readonly float[] KeBDishDiameters = [2.4f, 3.0f, 1.8f];
+
+        /// <summary>一号科研楼 roof garden (§2.9 屋顶实验花园) on 科 C's bar: a light timber frame over rows of planters.</summary>
+        public static readonly Vector2 KeCGardenMin = new(21.5f, -229.4f), KeCGardenMax = new(43.5f, -216.0f);
+        public const float GardenPostPitch = 3.14f, GardenFrameHeight = 2.4f;
     }
 }

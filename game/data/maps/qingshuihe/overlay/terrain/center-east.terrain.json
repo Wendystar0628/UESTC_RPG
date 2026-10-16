@@ -7,8 +7,8 @@
       "op": "platform",
       "id": "design:terrain:center-east-pinxue-base",
       "zone": "center-east",
-      "reason": "台基与座位（MAP-QSH-TERRAIN §10.1、§10.2）：品学楼 A、B、C 三区连同中央广场与门框架空通道坐在 +1.5 的学府台基上，与宿舍下台同高；北、东两侧 1:4 草坡（≤ 6 m）；东南凹角两段边的两级 0.75 m 退台花池见 design:terrain:center-east-pinxue-terrace-*。环按文档原样：南缘 z = 36 切过 B 区南端约 3 m，由 B 的垫层整地带兜住，南缘退台花池的走向待按 B 的轮廓重定。服务 F 通学镜头、R5 与 R14。",
-      "rings": {"outer": [[118.0, -95.0], [126.0, -172.0], [228.0, -172.0], [240.0, -132.0], [346.0, -132.0], [346.0, -25.0], [242.0, -25.0], [242.0, 36.0], [146.0, 36.0], [118.0, -35.0]], "holes": []},
+      "reason": "台基与座位（MAP-QSH-TERRAIN §10.1、§10.2）：品学楼 A、B、C 三区连同中央广场与门框架空通道坐在 +1.5 的学府台基上，与宿舍下台同高；北、东两侧 1:4 草坡（≤ 6 m）。南缘按主会话 10:01 评审外推：与 B 区南立面 (175.3, 39.3)–(236.6, 30.5) 平行、外放 1 m，盖住 B 区南端；西头在 (162.0, 42.2) 折向西北接 (146, 36)，把 B 区西南转角和弧形端部（最外约 (160.4, 36.6)）一起收进台基，离南边小溪 950008611（x 147–151、z 44–46）留出退台花池的位置。东南凹角两段与南缘、西南折边各有两级 0.75 m 退台花池（design:terrain:center-east-pinxue-terrace-*），台基读成连续的一圈。服务 F 通学镜头、R5 与 R14。",
+      "rings": {"outer": [[118.0, -95.0], [126.0, -172.0], [228.0, -172.0], [240.0, -132.0], [346.0, -132.0], [346.0, -25.0], [242.0, -25.0], [242.0, 30.74], [162.0, 42.22], [146.0, 36.0], [118.0, -35.0]], "holes": []},
       "y": 1.5,
       "side": {"fill": "1:4", "cut": "1:4"},
       "fillet": 2.0
@@ -18,13 +18,13 @@
       "id": "design:terrain:center-east-pinxue-terrace-east",
       "zone": "center-east",
       "reason": "台基与座位（MAP-QSH-TERRAIN §10.2）：台基东南凹角朝东一段（x 242）的两级 0.75 m 退台花池，退台深 2 m，前缘在台基边外 4 m、标高 0，与下沉草阶草坪相对；stairAt 是穿过花池的出入口台阶（东段：qsh:source:way:950008592、1293455719 两处，R14 东南角门走这里）；高度场只放平均坡面，花池墙是实体（WLD-TERRAIN §5.5、§5.8）。",
-      "front": {"points": [[246.0, 36.0], [246.0, -21.0]]},
+      "front": {"points": [[246.0, 30.74], [246.0, -21.0]]},
       "inward": [-1.0, 0.0],
       "frontY": 0.0,
       "tiers": 2,
       "riser": 0.75,
       "tread": 2.0,
-      "stairAt": [20.5, 26.0]
+      "stairAt": [15.24, 20.74]
     },
     {
       "op": "terrace",
@@ -38,6 +38,32 @@
       "riser": 0.75,
       "tread": 2.0,
       "stairAt": []
+    },
+    {
+      "op": "terrace",
+      "id": "design:terrain:center-east-pinxue-terrace-b-south",
+      "zone": "center-east",
+      "reason": "台基与座位（MAP-QSH-TERRAIN §10.2；主会话 10:01 评审）：外推后的台基南缘 (242, 30.74)–(162, 42.22)，与 B 区南立面平行，照东南凹角的写法做两级 0.75 m 退台花池，退台深 2 m，前缘在台基边外 4 m、标高 0，面向走马河和河岸低步道（design:center-east-riverside-walk 在前缘外约 5 m）；这一段没有出入口穿过。高度场只放平均坡面，花池墙是实体（WLD-TERRAIN §5.5、§5.8）。",
+      "front": {"points": [[242.57, 34.69], [162.57, 46.18]]},
+      "inward": [-0.1421, -0.9899],
+      "frontY": 0.0,
+      "tiers": 2,
+      "riser": 0.75,
+      "tread": 2.0,
+      "stairAt": []
+    },
+    {
+      "op": "terrace",
+      "id": "design:terrain:center-east-pinxue-terrace-b-southwest",
+      "zone": "center-east",
+      "reason": "台基与座位（MAP-QSH-TERRAIN §10.2；主会话 10:01 评审）：台基西南折边 (162, 42.22)–(146, 36)，在 B 区弧形端部的正前方，两级 0.75 m 退台花池接住弧面玻璃体量的底；前缘离南边小溪 950008611 至少 2.5 m。stairAt 是穿过花池的出入口台阶（qsh:source:way:683646717 末段，接台内的 950008593），构筑物见 design:center-east-pinxue-stair-683646717-1。",
+      "front": {"points": [[160.55, 45.95], [144.55, 39.73]]},
+      "inward": [0.3623, -0.9321],
+      "frontY": 0.0,
+      "tiers": 2,
+      "riser": 0.75,
+      "tread": 2.0,
+      "stairAt": [4.3]
     },
     {
       "op": "slope",
@@ -116,16 +142,17 @@
       "shoulder": 0.75,
       "steps": [{"s0": 7.43, "s1": 9.08, "structure": "design:center-east-pinxue-stair-950008592-1"}]
     },
+    {"op": "corridor", "id": "design:terrain:center-east-pinxue-entry-950008593", "zone": "center-east", "reason": "道路走廊（MAP-QSH-TERRAIN §10.2）：台基南缘外推后，这条路几乎全在台内（起点在台基边外 0.47 m，落在西南退台花池的上一级 +1.5 上），整段取台面 +1.5；上下台基的台阶移到相接的 qsh:source:way:683646717 末段。", "road": "qsh:source:way:950008593", "anchors": [{"s": 0.0, "y": 1.5}, {"s": 8.37, "y": 1.5}], "crossFall": 0.015, "shoulder": 0.75},
     {
       "op": "corridor",
-      "id": "design:terrain:center-east-pinxue-entry-950008593",
+      "id": "design:terrain:center-east-pinxue-entry-683646717",
       "zone": "center-east",
-      "reason": "连接（MAP-QSH-TERRAIN §10.3）：台基边缘的出入口，台外放不下 30 m 的 5% 坡，steps 区段由登记在 center-east.overlay.json 的台阶构筑物接上（10 级台阶并列 1:12 坡道，WLD-TERRAIN §5.1），走廊在该区段不钳制高度场。",
-      "road": "qsh:source:way:950008593",
-      "anchors": [{"s": 0.0, "y": 0.0}, {"s": 6.61, "y": 1.5}, {"s": 8.37, "y": 1.5}],
+      "reason": "连接（MAP-QSH-TERRAIN §10.3）：从南边小溪旁的园路上台基。台外放不下 30 m 的 5% 坡，末段 3.71 m 穿过西南退台花池（stairAt 4.3），由登记在 center-east.overlay.json 的台阶构筑物接上（10 级台阶并列 1:12 坡道，WLD-TERRAIN §5.1），走廊在该区段不钳制高度场；台阶顶接 qsh:source:way:950008593 的 +1.5。",
+      "road": "qsh:source:way:683646717",
+      "anchors": [{"s": 0.0, "y": 0.0}, {"s": 10.55, "y": 0.0}, {"s": 14.26, "y": 1.5}],
       "crossFall": 0.015,
       "shoulder": 0.75,
-      "steps": [{"s0": 0.0, "s1": 6.61, "structure": "design:center-east-pinxue-stair-950008593-1"}]
+      "steps": [{"s0": 10.55, "s1": 14.26, "structure": "design:center-east-pinxue-stair-683646717-1"}]
     },
     {
       "op": "platform",
