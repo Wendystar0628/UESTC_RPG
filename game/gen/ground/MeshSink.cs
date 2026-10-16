@@ -16,7 +16,7 @@ internal sealed class MeshSink
     public int Triangles { get; private set; }
 
     public void Triangle(GroundColor color, byte flags, Vector3 a, Vector3 b, Vector3 c,
-        Vector3 na, Vector3 nb, Vector3 nc, Vector3 facing)
+        Vector3 na, Vector3 nb, Vector3 nc, Vector3 facing, GroundFaceInput? input = null)
     {
         var cross = Vector3.Cross(b - a, c - a);
         if (cross.LengthSquared() < 1e-14f) return;
@@ -25,7 +25,10 @@ internal sealed class MeshSink
             (b, c) = (c, b);
             (nb, nc) = (nc, nb);
         }
-        var chunk = Current(GroundPalette.MaterialOf(color), flags, 3);
+        // T03 resolves a selected surface profile and metre UVs here, while source/role/direction remain available.
+        // Source IDs and directions never become GPU material or batching keys.
+        var material = input is { } face ? GroundPalette.MaterialOf(face.Surface, face.Role, color) : GroundPalette.MaterialOf(color);
+        var chunk = Current(material, flags, 3);
         var id = GroundPalette.Id(color);
         var ia = chunk.Vertex(a, na, id);
         var ib = chunk.Vertex(b, nb, id);

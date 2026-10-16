@@ -23,6 +23,8 @@ internal sealed class TileField
     public float Z0 { get; }
     public float Limit { get; }
     public float[] V { get; }
+    /// <summary>The same tile-local source set used by rasterisation; shared with the mesher without per-face copies.</summary>
+    public IReadOnlyList<GroundShape> Sources { get; private set; } = [];
     /// <summary>Fine cells per tone cell (a power of two), or 0 when this level has no lawn tones.</summary>
     public int ToneMacro { get; private set; }
 
@@ -71,7 +73,8 @@ internal sealed class TileField
         var nearest = new double[count];
         Array.Fill(core, limit);
         Array.Fill(nearest, double.MaxValue);
-        foreach (var shape in layout.Near(lo, hi))
+        field.Sources = layout.Near(lo, hi);
+        foreach (var shape in field.Sources)
         {
             if (shape.Kind != SurfaceKind.Pit)
             {

@@ -17,6 +17,60 @@ public sealed class GroundSourcesTests
     private const string Building = """{"kind":"building"}""";
 
     [TestCase]
+    public void FaceInputQueriesActualPositionAndKeepsAmbiguousSourcesUnresolved()
+    {
+        const string plaza = """{"kind":"road","roadType":"pedestrian"}""";
+        var world = TestWorld.Of([
+            Entity("fixture:plaza-a", "road", plaza, Part("source:a", plaza, Rect(0, 0, 10, 10))),
+            Entity("fixture:plaza-b", "road", plaza, Part("source:b", plaza, Rect(8, 0, 18, 10))),
+            Entity("fixture:plaza-far", "road", plaza, Part("source:far", plaza, Rect(30, 0, 40, 10)))]);
+        var layout = GroundLayout.Of(world);
+        var context = new GroundSourceContext(layout.Near(new(0, 0), new(64, 64)), GroundSection.Default, 0f);
+        var input = new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Top, context);
+        var a = input.SourcesAt(new(5, 5)).Single();
+        Check.True(a.Id.Value == "fixture:plaza-a" && a.PartSourceId == "source:a" && a.DirectionPath is null,
+            "The face must retain its real feature/part, without guessing an area paving axis.");
+        Check.True(input.SourcesAt(new(9, 5)).Select(shape => shape.Id.Value).SequenceEqual(["fixture:plaza-a", "fixture:plaza-b"]),
+            "Overlapping areas must remain multiple candidates, not select the first tile source.");
+        Check.True(!input.SourcesAt(new(25, 5)).Any(), "A gap must not inherit a distant source from the same tile.");
+        Check.True(input.SourcesAt(new(35, 5)).Single().PartSourceId == "source:far", "Queries must use the current face position.");
+    }
+
+    [TestCase]
+    public void WalkFaceInputRetainsTheOriginalPolylineWithoutInventingPhase()
+    {
+        Vector2[] points = [new(0, 20), new(10, 20), new(10, 30)];
+        var feature = new WorldFeature(new("fixture:walk"), FeatureSource.Osm, new("road"), new PolylineGeometry(new(points)))
+        { Props = Json("""{"roadType":"footway","width":2.5}""") };
+        var layout = GroundLayout.Of(TestWorld.Of([feature]));
+        var context = new GroundSourceContext(layout.Near(new(0, 0), new(64, 64)), GroundSection.Default, 0f);
+        var source = new GroundFaceInput(GroundSurface.Paver, GroundFaceRole.Top, context).SourcesAt(new(5, 20)).Single();
+        Check.True(source.Id == feature.Id && source.DirectionPath!.SequenceEqual(points) && ReferenceEquals(source.DirectionPath, source.Line),
+            "The batching input needs the source walk and ordered path, shared rather than copied for every face.");
+        Check.True(source.PartSourceId is null, "A network-independent feature must not invent a part identity.");
+    }
+
+    [TestCase]
+    public void PlazaTopAndKerbAreSeparateContentClassesWithoutFakeShaderDifferences()
+    {
+        var context = new GroundSourceContext([], GroundSection.Default, 0f);
+        var top = new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Top, context);
+        var face = new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Vertical, context);
+        Check.True(GroundPalette.MaterialOf(top.Surface, top.Role, GroundColor.Curb) == GroundMaterial.Plaza &&
+            GroundPalette.MaterialOf(face.Surface, face.Role, GroundColor.Curb) == GroundMaterial.Curb,
+            "Granite top and its no-pattern vertical faces must not lose their distinct content roles.");
+        var sink = new MeshSink();
+        sink.Triangle(GroundColor.Curb, GroundPalette.FlagNoShadow, new(0, 0, 0), new(1, 0, 0), new(0, 0, 1),
+            Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, top);
+        sink.Triangle(GroundColor.Curb, GroundPalette.FlagNoShadow, new(0, 0, 0), new(1, 0, 0), new(0, 1, 0),
+            Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, face);
+        var meshes = sink.Finish();
+        Check.True(meshes.Count == 2 && meshes[0].Material == meshes[1].Material &&
+            meshes.All(mesh => mesh.Material.Spec.SurfacePattern is null && mesh.ColorIds!.All(id => id == GroundPalette.Id(GroundColor.Curb))),
+            "Content classes split before batching; colour/Fx and GPU material sharing stay unchanged until T03 opts in.");
+    }
+
+    [TestCase]
     public void MultiPartParentKeepsEveryPolygonAndItsHoles()
     {
         // One entity, two source parts: a block around a courtyard and a separate annex. The parent's aggregate geometry

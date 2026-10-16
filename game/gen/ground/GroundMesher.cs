@@ -37,6 +37,7 @@ internal sealed class GroundMesher
     private readonly GroundSection _s;
     private readonly GroundLayout _layout;
     private readonly MeshSink _sink;
+    private readonly GroundSourceContext _sourceContext;
     private readonly bool _bevel;
     private readonly bool _bands;
     private readonly bool _pits;
@@ -69,6 +70,7 @@ internal sealed class GroundMesher
         _pavingY = steps == 0 ? section.RoadY : section.PavingY;
         _grassY = steps == 2 ? section.GrassY : _pavingY;
         _fieldTolerance = 0.03f * field.Cell;
+        _sourceContext = new(field.Sources, section, _fieldTolerance);
         _bands = GroundLod.HasBands(lod);
         _pits = _bands;   // the frame and the soil are resolved where kerbs are (L0, L1); beyond that a pit is under a pixel
         _t =
@@ -253,8 +255,8 @@ internal sealed class GroundMesher
         else return;
         var drop = new Vector3(0f, SkirtDepth, 0f);
         var color = GroundPalette.ColorOf(surface);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b, b - drop, Up, Up, Up, outward);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b - drop, a - drop, Up, Up, Up, outward);
+        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b, b - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
+        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b - drop, a - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
     }
 
     private const float SkirtDepth = 0.3f;
@@ -276,7 +278,8 @@ internal sealed class GroundMesher
                 if (GroundShadingRule.For(surface, slope) == GroundShading.Faceted) na = nb = nc = n;
             }
         }
-        _sink.Triangle(GroundPalette.ColorOf(surface), GroundPalette.FlagNoShadow, a, b, c, na, nb, nc, Up);
+        _sink.Triangle(GroundPalette.ColorOf(surface), GroundPalette.FlagNoShadow, a, b, c, na, nb, nc, Up,
+            new(surface, GroundFaceRole.Top, _sourceContext));
     }
 
     /// <summary>True when the base height inside the block stays within tolerance of its bilinear corner surface.</summary>
@@ -624,8 +627,8 @@ internal sealed class GroundMesher
         var pu1 = new Vector3((float)u.X, hu, (float)u.Z);
         var pw0 = new Vector3((float)w.X, lw, (float)w.Z);
         var pw1 = new Vector3((float)w.X, hw, (float)w.Z);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw0, pw1, nu, nw, nw, outward);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw1, pu1, nu, nw, nu, outward);
+        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw0, pw1, nu, nw, nw, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
+        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw1, pu1, nu, nw, nu, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
     }
 
     private Vector3 Point(Vert v, GroundSurface surface) =>

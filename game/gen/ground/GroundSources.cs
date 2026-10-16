@@ -108,7 +108,8 @@ internal static class GroundSources
     /// One source record of a feature; <see cref="Label"/> names it in error messages. <see cref="Entity"/> is the owning
     /// entity's record (its OSM tags), which a part's own record does not repeat.
     /// </summary>
-    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry, JsonElement? Entity = null);
+    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry,
+        JsonElement? Entity = null, string? PartSourceId = null);
 
     private static IEnumerable<Source> Sources(WorldFeature feature)
     {
@@ -118,7 +119,7 @@ internal static class GroundSources
             yield break;
         }
         foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
-            yield return new("part " + part.SourceId, PartKind(feature, part), part.Props ?? feature.Props, part.Geometry, feature.Props);
+            yield return new("part " + part.SourceId, PartKind(feature, part), part.Props ?? feature.Props, part.Geometry, feature.Props, part.SourceId);
     }
 
     /// <summary>
@@ -174,24 +175,32 @@ internal static class GroundSources
         if (GroundClassifier.KindOf(source.Kind, source.Props, source.Entity) is not { } kind) return;
         // Only a record that names a sport is a marked pitch; a pitch without a sport tag is plain grass (no white lines).
         var marked = kind == SurfaceKind.Turf && GroundClassifier.Text(source.Props, "sport") is { Length: > 0 };
+        void Add(GroundShape? shape)
+        {
+            if (shape is null) return;
+            shape.PartSourceId = source.PartSourceId;
+            if (shape.DirectionPath is null && source.Geometry is PolylineGeometry line)
+                shape.DirectionPath = Clean(line.Line.Points);
+            shapes.Add(shape);
+        }
         switch (source.Geometry)
         {
             case PolygonGeometry polygon:
-                if (Surface(id, kind, polygon.Rings, marked) is { } shape) shapes.Add(shape);
+                Add(Surface(id, kind, polygon.Rings, marked));
                 break;
             case MultiPolygonGeometry multi:
                 foreach (var rings in multi.Polygons)
-                    if (Surface(id, kind, rings, marked) is { } piece) shapes.Add(piece);
+                    Add(Surface(id, kind, rings, marked));
                 break;
             case PolylineGeometry when kind == SurfaceKind.Building:
                 break;   // a footprint needs an area
             case PolylineGeometry polyline when kind == SurfaceKind.Track:
-                if (SportGround.TrackLine(id, polyline.Line.Points, GroundClassifier.Number(source.Props, "width")) is { } track) shapes.Add(track);
+                Add(SportGround.TrackLine(id, polyline.Line.Points, GroundClassifier.Number(source.Props, "width")));
                 break;
             case PolylineGeometry polyline:
                 var type = GroundClassifier.RoadType(source.Props);
                 var width = GroundClassifier.Width(source.Props, type, 0f);
-                if (Capsule(id, kind, polyline.Line.Points, width) is { } capsule) shapes.Add(capsule);
+                Add(Capsule(id, kind, polyline.Line.Points, width));
                 break;
             case PointGeometry:
                 break;   // an entity known only by its anchor has no extent to shape the ground
@@ -235,6 +244,7 @@ internal static class GroundSources
             Kind = kind,
             Id = id,
             Line = points,
+            DirectionPath = points,
             HalfWidth = half,
             Min = min - new Vector2(half),
             Max = max + new Vector2(half)

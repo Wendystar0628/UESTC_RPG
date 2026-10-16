@@ -21,7 +21,7 @@ public enum GroundColor : byte
 /// share a material ID and the outline pass draws no line between them (lawn tones, paving kinds); the kerb has its
 /// own material so the kerb line is drawn (ART-MODELING 7.8).
 /// </summary>
-public enum GroundMaterial : byte { Asphalt, Curb, Paving, Lawn, Marking }
+public enum GroundMaterial : byte { Asphalt, Curb, Paving, Lawn, Marking, Plaza }
 
 /// <summary>
 /// Palette tokens and material specs for the ground. Colours live only in the palette data
@@ -65,6 +65,10 @@ public static class GroundPalette
         GroundColor.Marking or GroundColor.MarkingYellow => GroundMaterial.Marking,
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, "Unknown ground colour.")
     };
+
+    // Content identity is independent of colour and eventual GPU material deduplication.
+    internal static GroundMaterial MaterialOf(GroundSurface surface, GroundFaceRole role, GroundColor color) =>
+        surface == GroundSurface.Granite && role == GroundFaceRole.Top ? GroundMaterial.Plaza : MaterialOf(color);
 
     public static string Family(GroundColor color) => color switch
     {
@@ -143,6 +147,7 @@ public static class GroundPalette
     {
         GroundMaterial.Asphalt => Pair(GroundColor.Asphalt) with { Wet = 1f, Fx = ToonFx.Mottle },
         GroundMaterial.Curb => Pair(GroundColor.Curb) with { Wet = 0.6f, Fx = ToonFx.BevelLift | ToonFx.DetailTiling },
+        GroundMaterial.Plaza => Spec(GroundMaterial.Curb),
         GroundMaterial.Paving => Pair(GroundColor.Paver) with { Wet = 0.6f, Fx = ToonFx.DetailTiling | ToonFx.Mottle },
         GroundMaterial.Lawn => Pair(GroundColor.Grass) with { Wet = 0.4f },
         GroundMaterial.Marking => Pair(GroundColor.Marking) with { Wet = 0.8f, Line = LineClass.None },

@@ -38,6 +38,10 @@ internal sealed class GroundShape
 {
     public required SurfaceKind Kind { get; init; }
     public required FeatureId Id { get; init; }
+    /// <summary>Original part identity, when the source was a feature part. Set before publishing the layout.</summary>
+    public string? PartSourceId { get; set; }
+    /// <summary>Original centre-line order, not an inferred polygon axis or a selected paving phase.</summary>
+    public IReadOnlyList<Vector2>? DirectionPath { get; set; }
     public Vector2[][]? Rings { get; init; }
     public Vector2[]? Line { get; init; }
     public float HalfWidth { get; init; }
@@ -55,6 +59,50 @@ internal sealed class GroundShape
 
 /// <summary>A centre line of a carriageway or footpath from the road network; drives markings.</summary>
 internal sealed record RoadLine(FeatureId Id, Vector2[] Points, float Width, bool Carriageway, string Type);
+
+internal enum GroundFaceRole : byte { Top, Vertical, Skirt }
+
+/// <summary>CPU input at the mesher/batching boundary. Raw sources are queried at the face's actual position.</summary>
+internal readonly record struct GroundFaceInput(GroundSurface Surface, GroundFaceRole Role, GroundSourceContext Context)
+{
+    public IEnumerable<GroundShape> SourcesAt(Vector2 position) => Context.At(Surface, position);
+}
+
+/// <summary>
+/// Read-only view of the existing tile candidates. A query can yield zero or several sources; neither is a unique
+/// authored material/direction. T03 resolves its binding before constructing a profile or metre UVs.
+/// </summary>
+internal sealed class GroundSourceContext(IReadOnlyList<GroundShape> candidates, GroundSection section, float tolerance)
+{
+    public IEnumerable<GroundShape> At(GroundSurface surface, Vector2 position)
+    {
+        var margin = surface is GroundSurface.Curb or GroundSurface.Bevel ? section.CurbWidth : 0f;
+        margin += tolerance;
+        foreach (var shape in candidates)
+        {
+            if (!Matches(surface, shape.Kind) || position.X < shape.Min.X - margin || position.X > shape.Max.X + margin ||
+                position.Y < shape.Min.Y - margin || position.Y > shape.Max.Y + margin) continue;
+            if (Sdf.Shape(shape, position, margin + 1f) <= margin) yield return shape;
+        }
+    }
+
+    private static bool Matches(GroundSurface surface, SurfaceKind kind) => surface switch
+    {
+        GroundSurface.Granite or GroundSurface.PlazaBorder => kind == SurfaceKind.Plaza,
+        GroundSurface.Paver => kind == SurfaceKind.Walk,
+        GroundSurface.Asphalt => kind == SurfaceKind.Carriageway,
+        GroundSurface.Parking => kind == SurfaceKind.Parking,
+        GroundSurface.Curb or GroundSurface.Bevel => kind is SurfaceKind.Carriageway or SurfaceKind.Parking,
+        GroundSurface.Edging => kind is SurfaceKind.Plaza or SurfaceKind.Walk or SurfaceKind.Track or SurfaceKind.Turf or SurfaceKind.Court,
+        GroundSurface.Track => kind == SurfaceKind.Track,
+        GroundSurface.Turf => kind == SurfaceKind.Turf,
+        GroundSurface.Court => kind == SurfaceKind.Court,
+        GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil => kind == SurfaceKind.Pit,
+        GroundSurface.Water => kind == SurfaceKind.Water,
+        GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => false,
+        _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
+    };
+}
 
 /// <summary>Maps world-model kinds and OSM-style road types to ground surface classes.</summary>
 internal static class GroundClassifier
