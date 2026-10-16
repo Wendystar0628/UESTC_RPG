@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 54.7k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE.md` · 54.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -282,11 +282,11 @@
   - ★ ART-STYLE §0.1 接入要点 · L63 · 1.5k
 - ART-STYLE §1 总体风格与参照 · L78 · 2.2k
 - ART-STYLE §2 明暗分阶 · L119 · 5.6k
-- ART-STYLE §3 影子：明度为主，按材质定影色 · L195 · 5.3k
+- ART-STYLE §3 影子：明度为主，按材质定影色 · L195 · 5.5k
   - ART-STYLE §3.1 原则 · L199 · 656
   - ART-STYLE §3.2 推导规则 · L214 · 1.8k
   - ART-STYLE §3.3 天光与地面反光 · L257 · 370
-  - ART-STYLE §3.4 室内暖影 · L265 · 622
+  - ART-STYLE §3.4 室内暖影 · L265 · 763
   - ART-STYLE §3.5 哪些材质有色调变化 · L276 · 346
   - ART-STYLE §3.6 夜间与阴雨 · L288 · 321
   - ART-STYLE §3.7 示例 · L294 · 1.1k
@@ -330,7 +330,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS.md` · 77.5k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS.md` · 77.6k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -374,9 +374,9 @@
   - WLD-INTERIORS §7.3 房间类型（35 类） · L464 · 2.1k
   - WLD-INTERIORS §7.4 规范值与行走换算 · L508 · 1.1k
   - WLD-INTERIORS §7.5 部件（约 120 个，分 8 组） · L528 · 1.1k
-- WLD-INTERIORS §8 风格 · L546 · 5.4k
+- WLD-INTERIORS §8 风格 · L546 · 5.6k
   - WLD-INTERIORS §8.1 艺术化处理 · L548 · 365
-  - WLD-INTERIORS §8.2 明暗分阶与室内暖影 · L555 · 1.3k
+  - WLD-INTERIORS §8.2 明暗分阶与室内暖影 · L555 · 1.4k
   - WLD-INTERIORS §8.3 窗光斑与光（全片最重要的室内画面） · L571 · 1.6k
   - WLD-INTERIORS §8.4 室内色名 · L590 · 999
   - WLD-INTERIORS §8.5 中国高校识别要素与日式物件的分界 · L598 · 1.0k
@@ -728,7 +728,7 @@
 - MAP-QSH-LIBRARY §1 三条看进去的路径 · L152 · 1.2k
 - MAP-QSH-LIBRARY §2 中庭与回廊 · L169 · 799
 - MAP-QSH-LIBRARY §3 一楼中厅与 A、D 扇区（由中庭八字楼梯下来） · L183 · 1.5k
-- MAP-QSH-LIBRARY §4 室外光的延伸 · L211 · 1.6k
+- MAP-QSH-LIBRARY §4 室外光的延伸 · L211 · 1.7k
 - MAP-QSH-LIBRARY §5 视觉落点 · L239 · 1.2k
 - MAP-QSH-LIBRARY §6 室内的生活痕迹 · L261 · 317
 - MAP-QSH-LIBRARY WP-17 交付验收 · L275 · 998
@@ -1192,7 +1192,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.2k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME.md` · 41.3k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
@@ -1201,7 +1201,7 @@
 - SYS-TIME §1 世界状态与控制（WP-34） · L71 · 10.6k
 - SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.6k
 - SYS-TIME §3 色彩脚本（WP-37） · L250 · 8.6k
-  - SYS-TIME §3.1 组织方式 · L252 · 2.3k
+  - SYS-TIME §3.1 组织方式 · L252 · 2.4k
   - SYS-TIME §3.2 秋季基准关键帧 · L278 · 3.8k
   - SYS-TIME §3.3 四季修正与季节专属覆盖 · L304 · 974
   - SYS-TIME §3.4 难看时段的改造 · L323 · 516
@@ -1565,7 +1565,7 @@
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
   - ★ ENG-PERF §0.1 接入要点 · L37 · 2.4k
-- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L52 · 22.6k
+- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L52 · 22.7k
   - ENG-PERF §1.1 容器选型规则 · L54 · 1.1k
   - ENG-PERF §1.2 MultiMesh 与 RenderingServer 挂载的用法 · L74 · 3.6k
   - ENG-PERF §1.3 调用口径 · L113 · 716
