@@ -7,7 +7,8 @@ namespace Campus.Gen.Zones.DesignBoundary;
 /// Every tunable value of the campus boundary and its gates in one place, for review (ENG-TEAM §0.1): materials as colour
 /// names, the gate table, the fence and the gate dimensions. Coordinates are world (x, z) in metres from campus.json. Gate
 /// frames come from the data: origin where the gate road's centreline crosses the boundary ring, local X along the ring
-/// toward the guard-house side, local +Z out of the campus. Values marked "初值" await the main session's call.
+/// toward the guard-house side, local +Z out of the campus. Values marked "初值" await the main session's call. The ring
+/// fence (30b) runs everywhere else, opened at the gates, the grates and the side gates (Ring/BoundaryPlan).
 /// </summary>
 public static class BoundaryTune
 {
@@ -15,7 +16,7 @@ public static class BoundaryTune
     public const int BudgetTrianglesL1 = 16_000;
     public const int BudgetDrawCalls = 12;
 
-    /// <summary>Materials (ART-STYLE §8 colour names only, no new names in 30a).</summary>
+    /// <summary>Materials (ART-STYLE §8 colour names only, no new names in 30a or 30b).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
@@ -59,6 +60,8 @@ public static class BoundaryTune
     {
         /// <summary>Fence centreline inside the boundary ring (pillar half-width plus a little).</summary>
         public const float Inset = 0.3f;
+        /// <summary>Ring vertices closer than this to the previous kept one are dropped from a fence line (no cramped pillars).</summary>
+        public const float MinSegment = 1.2f;
         public const float PillarPitch = 3.6f, PillarSize = 0.5f, PillarHeight = 2.32f;
         public const float CapSize = 0.62f, CapHeight = 0.1f, CapTop = 0.05f;
         /// <summary>Last pillar of a run (收头): a little broader and taller, with a two-step cap.</summary>
@@ -97,34 +100,89 @@ public static class BoundaryTune
     }
 
     /// <summary>
-    /// One fence wing of a gate. Side −1 starts at the left pier's back corner, +1 at the guard house's far wall; the wing then
-    /// follows the ring away from the gate for Length metres. A Closure wing first runs straight out of the campus (local +Z)
-    /// from the house's front corner to the ring, standing a pillar there, and then follows the ring.
+    /// One campus gate. <paramref name="Road"/> is the network road through it (its crossing with the ring is the frame origin).
+    /// <paramref name="Closure"/>: the line beyond the guard house first runs straight out of the campus (local +Z) to the ring,
+    /// where the ring fence takes over (the north gate, whose ring jogs outward there). <paramref name="Forecourt"/> names the
+    /// overlay paving outside the line, when the ring leaves a pocket there; <paramref name="Bollards"/> stand on it (local x, z).
+    /// <paramref name="Mirror"/> puts the guard house on the street view's left (local −X) when the right is taken (东南口:
+    /// 走马河 leaves the campus 9 m to the right). <paramref name="Plaque"/>: the lone pier carries the name plaque (题字载体).
+    /// <paramref name="Wicket"/>: local x (before mirroring) of a footway beside the lone pier, closed by its own turnstile bank
+    /// (人行便门, MAP-QSH-ADDITIONS §2.11). <paramref name="Locker"/>: local (x, z) of a delivery locker inside, by the fence.
     /// </summary>
-    public sealed record Wing(int Side, float Length, bool Closure, bool Hedge);
-
-    /// <summary>
-    /// One campus gate. <paramref name="Road"/> is the network road through it (its crossing with the ring is the frame origin);
-    /// <paramref name="Forecourt"/> names the overlay paving outside the line, when the ring leaves a pocket there;
-    /// <paramref name="Bollards"/> stand on it (local x, z) to keep cars off.
-    /// </summary>
-    public sealed record GateSpec(string Key, string Name, string Road, Wing[] Wings, string? Forecourt, Vector2[] Bollards);
+    public sealed record GateSpec(string Key, string Name, string Road, bool Closure, string? Forecourt, Vector2[] Bollards,
+        bool Mirror = false, bool Plaque = true, float? Wicket = null, Vector2? Locker = null);
 
     /// <summary>
     /// 30a: the north gate (北门, `qsh:node:6784723438`) and the west gate (西门, the residential road 170 m before the 西门桥头
-    /// bridge). North: the ring jogs at the gate — inside, the road runs along the ring on its north-east kerb, so the left wing
-    /// follows the ring inward to its corner at the channel and a few metres on; outside, the road hugs the ring on its south-west
-    /// side, leaving an 8 × 13 m pocket of campus between the gate line and 天润路: the forecourt, closed by a wing running out to
-    /// 天润路 and turning south-west along it. West: the ring is straight; both wings follow it, hedge inside.
+    /// bridge). 30b: 西北门 (the service road between them, `563777250`), 西二门 (水杉路, footways on both sides: the left one
+    /// through a 便门 bank, the right one through the main bank) and 东南口 (the service road by 走马河's exit, house on the left).
+    /// The service gates keep the composition without a plaque: they read as the campus's back doors (初值).
     /// </summary>
     public static readonly GateSpec[] Gates =
     [
-        new("north", "北门", "qsh:source:way:723349795",
-        [new(-1, 32f, Closure: false, Hedge: false), new(1, 12f, Closure: true, Hedge: true)],
+        new("north", "北门", "qsh:source:way:723349795", Closure: true,
             "design:boundary-north-forecourt", [new(3.40f, 2.2f), new(3.58f, 5.2f), new(3.76f, 8.2f), new(3.94f, 11.2f)]),
-        new("west", "西门", "qsh:source:way:544161581",
-        [new(-1, 15f, Closure: false, Hedge: true), new(1, 15f, Closure: false, Hedge: true)], null, []),
+        new("west", "西门", "qsh:source:way:544161581", Closure: false, null, []),
+        new("northwest", "西北门", "qsh:source:way:563777250", Closure: false, null, [], Plaque: false),
+        new("west2", "西二门", "qsh:source:way:544277137", Closure: false, null, [], Wicket: -6.7f, Locker: new(13.2f, -0.86f)),
+        new("southeast", "东南口", "qsh:source:way:988857948", Closure: false, null, [], Mirror: true, Plaque: false),
     ];
+
+    /// <summary>
+    /// The south gate (WP-18, SouthTune.Gate): its two guard houses close the line, so the ring fence stops on their outer
+    /// walls. Copied from SouthTune.Gate (HouseWest, HouseEast, HouseSize); keep in step if 18 moves them.
+    /// </summary>
+    public static class SouthGate
+    {
+        public static readonly Vector2 HouseWest = new(-532.535f, 719.865f), HouseEast = new(-510.945f, 735.3575f);
+        public const float HouseSize = 5.6f;
+    }
+
+    /// <summary>
+    /// Every other road that crosses the ring is closed by a side gate (常闭侧门): two end pillars of the fence on the kerbs and a
+    /// pair of closed iron leaves in the fence's language (one leaf for a footway). Clearance beside the road edge to the pillar face.
+    /// </summary>
+    public static class SideGate
+    {
+        public const float Clear = 0.3f, Bottom = 0.08f, Rail = 0.05f, MidRail = 1.0f, Stile = 0.07f, Seam = 0.03f;
+        /// <summary>Roads up to this width get a single pedestrian leaf.</summary>
+        public const float FootwayWidth = 3f;
+    }
+
+    /// <summary>
+    /// A road that runs across a corner of the ring outside the campus (the cycleway round the north tip): the fence follows its
+    /// campus side, <paramref name="Clear"/> metres off its edge, instead of crossing it twice.
+    /// </summary>
+    public sealed record Detour(string Key, string Road, float Clear);
+
+    public static readonly Detour[] Detours = [new("north-tip", "qsh:source:way:723349816", 0.9f)];
+
+    /// <summary>
+    /// River grate (拦污格栅, WLD-OUTSKIRTS §7.3, MAP-QSH-ADDITIONS §2.11) wherever water crosses the ring: deep grey flat bars
+    /// across the full channel between the fence's end pillars on the two bank tops, from below the bed to 1.5 m above the bank,
+    /// held by a top beam and a waist rail. Collision 1.5 m above the bank top, Boundary.
+    /// </summary>
+    public static class Grate
+    {
+        /// <summary>Opening beyond each water edge (the end pillar's centre stands on the bank top here).</summary>
+        public const float Bank = 0.6f;
+        public const float Top = 1.5f, Foot = 2.2f, BarWidth = 0.02f, BarDepth = 0.07f, BarPitch = 0.11f;
+        public const float BeamHeight = 0.14f, BeamDepth = 0.16f, WaistY = 0.35f, WaistHeight = 0.08f;
+        /// <summary>Water crossings closer than this along the ring are one channel.</summary>
+        public const float Cluster = 30f;
+        /// <summary>Step along the fence line when looking for water that meets the ring without crossing it.</summary>
+        public const float Sample = 0.5f;
+    }
+
+    /// <summary>Hedge clearances: off road edges, off water, buildings and paving, trimmed back from the run ends.</summary>
+    public static class HedgeClear
+    {
+        public const float Road = 0.4f, Area = 0.3f, Trim = 0.35f, MinLength = 3.0f, Sample = 0.5f;
+        /// <summary>Ring runs shorter than this keep no hedge.</summary>
+        public const float MinRun = 6f;
+        /// <summary>Area kinds a hedge never stands in.</summary>
+        public static readonly string[] Kinds = ["building", "water", "road", "parking", "sport"];
+    }
 
     /// <summary>
     /// North waterside plaza (design:boundary-north-a05-plaza, 初值): 14 × 8.6 m of paving on the channel's east bank between the

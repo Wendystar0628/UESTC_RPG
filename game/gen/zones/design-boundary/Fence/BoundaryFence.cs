@@ -8,13 +8,16 @@ using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
 
 namespace Campus.Gen.Zones.DesignBoundary.Fence;
 
+/// <summary>What stands at one end of a fence run: nothing (it abuts a pier or a guard house), a plain pillar (a corner shared
+/// with the next run), or a broader end pillar with a two-step cap (收头, beside a side gate or on a grate's bank).</summary>
+public enum RunEnd { None, Pillar, EndPillar }
+
 /// <summary>
 /// One run of the boundary fence along a plan polyline (MAP-QSH-ADDITIONS §2.11): light grey stone pillars at every corner
 /// and at most every <see cref="F.PillarPitch"/>, deep grey iron panels between them (bottom rail, top rail, 25 mm bars at
-/// 0.14 m standing on a granite base course), and an optional clipped hedge on its own line inside. The free end of a run
-/// gets a broader end pillar with a two-step cap (收头); an end that abuts a gate pier or a guard house has no pillar.
+/// 0.14 m standing on a granite base course), and clipped hedge pieces on their own lines inside.
 /// </summary>
-public sealed record FenceRun(IReadOnlyList<Vector2> Line, bool StartPillar, bool EndPillar, IReadOnlyList<Vector2>? Hedge)
+public sealed record FenceRun(IReadOnlyList<Vector2> Line, RunEnd Start, RunEnd End, IReadOnlyList<IReadOnlyList<Vector2>> Hedges)
 {
     /// <summary>Pillar centres in order: every vertex plus even subdivisions of each straight piece.</summary>
     public IReadOnlyList<(Vector2 At, Vector2 Along, bool Pillar, bool End)> Posts()
@@ -32,11 +35,11 @@ public sealed record FenceRun(IReadOnlyList<Vector2> Line, bool StartPillar, boo
                 var first = i == 0 && k == 0;
                 var at = p + u * (length * k / panels);
                 var along = k == 0 && i > 0 ? Chord(Line[i - 1], q) : u;
-                posts.Add((at, along, !first || StartPillar, false));
+                posts.Add((at, along, !first || Start != RunEnd.None, first && Start == RunEnd.EndPillar));
             }
         }
         var last = Line[^1];
-        posts.Add((last, Unit(last - Line[^2]), EndPillar, EndPillar));
+        posts.Add((last, Unit(last - Line[^2]), End != RunEnd.None, End == RunEnd.EndPillar));
         return posts;
     }
 
@@ -84,13 +87,13 @@ public static class BoundaryFence
         }
         foreach (var (at, along, pillar, end) in posts)
             if (pillar) Pillar(b, at, along, end);
-        if (run.Hedge is { } hedge) Hedge(b, hedge);
+        foreach (var hedge in run.Hedges) Hedge(b, hedge);
     }
 
     private static float Half(bool end) => (end ? F.EndPillarSize : F.PillarSize) * 0.5f;
 
     /// <summary>A stone pillar on a granite foot, with a cap; the end pillar is broader and taller with a second cap step.</summary>
-    private static void Pillar(SiteBuilder b, Vector2 at, Vector2 along, bool end)
+    public static void Pillar(SiteBuilder b, Vector2 at, Vector2 along, bool end)
     {
         var y = b.Ground(at);
         var f = PlanFrame.Along(at, along);
@@ -143,22 +146,22 @@ public static class BoundaryFence
             var hi = MathF.Max(c.Ground(p), c.Ground(q));
             c.Wall(p, q, F.ColliderHalf, lo - 0.5f, hi + F.ColliderTop, SurfaceTag.Boundary, FootMat.Metal);
         }
-        if (run.Hedge is not { } hedge) return;
-        for (var i = 0; i + 1 < hedge.Count; i++)
-        {
-            Vector2 p = hedge[i], q = hedge[i + 1];
-            if (Vector2.Distance(p, q) < 0.05f) continue;
-            var lo = MathF.Min(c.Ground(p), c.Ground(q));
-            var hi = MathF.Max(c.Ground(p), c.Ground(q));
-            c.Wall(p, q, F.HedgeWidth * 0.5f, lo - 0.5f, hi + BoundaryTune.Gate.LowTop, SurfaceTag.Boundary, FootMat.Hedge);
-        }
+        foreach (var hedge in run.Hedges)
+            for (var i = 0; i + 1 < hedge.Count; i++)
+            {
+                Vector2 p = hedge[i], q = hedge[i + 1];
+                if (Vector2.Distance(p, q) < 0.05f) continue;
+                var lo = MathF.Min(c.Ground(p), c.Ground(q));
+                var hi = MathF.Max(c.Ground(p), c.Ground(q));
+                c.Wall(p, q, F.HedgeWidth * 0.5f, lo - 0.5f, hi + BoundaryTune.Gate.LowTop, SurfaceTag.Boundary, FootMat.Hedge);
+            }
     }
 
     /// <summary>
     /// A copy of a polyline offset <paramref name="distance"/> to the side where <paramref name="inside"/> holds on its last
-    /// segment, mitred at the vertices, its start pulled back along the line by <paramref name="trimStart"/>.
+    /// segment, mitred at the vertices, its ends pulled back along the line by <paramref name="trimStart"/> and <paramref name="trimEnd"/>.
     /// </summary>
-    public static IReadOnlyList<Vector2> Offset(IReadOnlyList<Vector2> line, float distance, Func<Vector2, bool> inside, float trimStart)
+    public static IReadOnlyList<Vector2> Offset(IReadOnlyList<Vector2> line, float distance, Func<Vector2, bool> inside, float trimStart, float trimEnd = 0f)
     {
         ArgumentNullException.ThrowIfNull(line);
         ArgumentNullException.ThrowIfNull(inside);
@@ -178,6 +181,7 @@ public static class BoundaryFence
             result[k] = line[k] + n * (sign * distance / cos);
         }
         if (trimStart > 0 && result.Length > 1) result[0] += FenceRun.Unit(result[1] - result[0]) * trimStart;
+        if (trimEnd > 0 && result.Length > 1) result[^1] += FenceRun.Unit(result[^2] - result[^1]) * trimEnd;
         return result;
     }
 }

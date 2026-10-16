@@ -7,8 +7,8 @@ namespace Campus.Gen.Zones.DesignBoundary;
 
 /// <summary>
 /// WP-30 campus boundary and gates (WLD-OUTSKIRTS §7, MAP-QSH-ADDITIONS §2.11): the sites listed in
-/// <see cref="BoundarySites.All"/>, filed into 64 m cells. 30a builds the north and west gates with a fence wing on each side
-/// and the waterside plaza inside the north gate; the full boundary run follows in a later sub-ticket. Every closure collider
+/// <see cref="BoundarySites.All"/>, filed into 64 m cells. 30a built the north and west gates and the waterside plaza inside
+/// the north gate; 30b adds 西北门, 西二门 and 东南口, and the fence all the way round with its side gates and river grates. Every closure collider
 /// is tagged <see cref="SurfaceTag.Boundary"/>. Pure .NET: reads the world model and the terrain only.
 /// </summary>
 [ContentModule("zone.boundary", Owner = "WP-30")]
@@ -109,9 +109,10 @@ public static class BoundarySites
 {
     public static IReadOnlyList<BoundarySite> All { get; } = Array.AsReadOnly<BoundarySite>(
     [
-        // 30a
+        // 30a (north, west) and 30b (northwest, west2, southeast)
         .. BoundaryTune.Gates.Select(g => (BoundarySite)new Gates.GateSite(g)),
         new Waterfront.NorthPlazaSite(),
-        // 30b (the boundary run, the remaining gates): append here.
+        // 30b: the fence all the way round, side gates, river grates
+        new Ring.RingFenceSite(),
     ]);
 }

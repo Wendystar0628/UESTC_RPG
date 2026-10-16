@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.World;
 using Campus.Gen.Zones.DesignBoundary.Framework;
 using Campus.Gen.Zones.DesignBoundary.Gates;
+using Campus.Gen.Zones.DesignBoundary.Ring;
 using Campus.Gen.Zones.DesignBoundary.Waterfront;
 using GdUnit4;
 using G = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Gate;
@@ -29,23 +30,73 @@ public sealed class BoundaryModuleTests
     {
         var world = World();
         var ring = new BoundaryRing(world.Boundary.Outer);
-        var expected = new Dictionary<string, Vector2> { ["north"] = new(-106.66f, -827.23f), ["west"] = new(-370.78f, -507.43f) };
+        var expected = new Dictionary<string, Vector2>
+        {
+            ["north"] = new(-106.66f, -827.23f),
+            ["west"] = new(-370.78f, -507.43f),
+            ["northwest"] = new(-195.71f, -733.83f),
+            ["west2"] = new(-619.65f, -192.53f),
+            ["southeast"] = new(602.32f, 581.34f),
+        };
         foreach (var spec in BoundaryTune.Gates)
         {
             var g = GateSite.Of(world, spec) ?? throw new InvalidOperationException($"{spec.Name} not resolved");
             Require(Vector2.Distance(g.Frame.Origin, expected[spec.Key]) < 0.2f, $"{spec.Name} origin {g.Frame.Origin}");
             Require(!ring.Contains(g.Frame.P(0, 2f)) && ring.Contains(g.Frame.P(0, -2f)), $"{spec.Name} +Z leaves the campus");
-            Require(g.Wings.Count == spec.Wings.Length, $"{spec.Name} wings");
-            foreach (var wing in g.Wings)
-            {
-                foreach (var p in wing.Line)
-                    Require(ring.Contains(p) || Near(ring, p, 0.05f), $"{spec.Name} fence point {p} stays inside the ring");
-                var posts = wing.Posts();
-                for (var i = 0; i + 1 < posts.Count; i++)
-                    Require(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + 0.01f, $"{spec.Name} pillar pitch at {posts[i].At}");
-                Require(posts[^1].End, $"{spec.Name} wing ends on an end pillar");
-            }
+            Require(g.OpeningLength > 2 * g.Carriage && g.OpeningLength < 40f, $"{spec.Name} opening {g.OpeningLength:F1} m");
+            var origin = ring.Arc(g.Frame.Origin);
+            Require(ring.Forward(g.OpeningStart, origin) < g.OpeningLength, $"{spec.Name} opening holds the gate road");
         }
+    }
+
+    [TestCase]
+    public void TheFenceRunsAllTheWayRound()
+    {
+        var world = World();
+        var plan = BoundaryPlan.Of(world)!;
+        var ring = plan.Ring;
+        // Openings tile the ring with runs between them: nothing overlaps, every gap is a run.
+        var covered = 0f;
+        for (var i = 0; i < plan.Openings.Count; i++)
+        {
+            var o = plan.Openings[i];
+            var next = plan.Openings[(i + 1) % plan.Openings.Count];
+            var gap = ring.Forward(ring.Fold(o.Start + o.Length), next.Start);
+            Require(gap < ring.Perimeter - 1f && gap >= 0.3f, $"opening {o.Key} overlaps or touches {next.Key} (gap {gap:F2} m)");
+            covered += o.Length;
+        }
+        Require(covered < ring.Perimeter * 0.05f, $"openings take {covered:F0} m of {ring.Perimeter:F0} m");
+        Require(plan.Openings.Count(o => o.Kind == OpeningKind.Gate) == BoundaryTune.Gates.Length + 1, "five gates of this package plus the south gate");
+        Require(plan.Openings.Count(o => o.Kind == OpeningKind.Grate) >= 5, "a grate at every river crossing");
+        foreach (var run in plan.Runs)
+        {
+            foreach (var p in run.Line)
+                Require(ring.Contains(p) || Near(ring, p, 0.35f), $"fence point {p} stays inside the ring");
+            var posts = run.Posts();
+            for (var i = 0; i + 1 < posts.Count; i++)
+                Require(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + 0.01f, $"pillar pitch at {posts[i].At}");
+            foreach (var hedge in run.Hedges)
+                foreach (var p in hedge) Require(ring.Contains(p), $"hedge point {p} inside the campus");
+        }
+    }
+
+    [TestCase]
+    public void EveryRoadAndChannelThroughTheRingMeetsAnOpening()
+    {
+        var world = World();
+        var plan = BoundaryPlan.Of(world)!;
+        var ring = plan.Ring;
+        bool Open(float s) => plan.Openings.Any(o => ring.Forward(o.Start, s) <= o.Length);
+        var detours = BoundaryTune.Detours.Select(d => d.Road).ToHashSet();
+        foreach (var road in world.Network.Roads.Where(r => !detours.Contains(r.Id.Value)))
+            for (var k = 0; k + 1 < road.Line.Points.Count; k++)
+                foreach (var s in ring.Crossings(road.Line.Points[k], road.Line.Points[k + 1]))
+                    Require(Open(s), $"road {road.Id.Value} crosses the ring at {ring.At(s)} through the fence");
+        foreach (var water in world.Features.Values.Where(f => f.Kind.Value == "water"))
+            foreach (var outer in Outers(water.Geometry))
+                for (var i = 0; i < outer.Count; i++)
+                    foreach (var s in ring.Crossings(outer[i], outer[(i + 1) % outer.Count]))
+                        Require(plan.Openings.Any(o => o.Kind == OpeningKind.Grate && ring.Forward(o.Start, s) <= o.Length), $"water {water.Id.Value} crosses the ring at {ring.At(s)} without a grate");
     }
 
     [TestCase]
@@ -56,26 +107,61 @@ public sealed class BoundaryModuleTests
         foreach (var spec in BoundaryTune.Gates)
         {
             var g = GateSite.Of(ctx.World, spec)!;
-            var f = g.Frame;
-            // Every line walked straight out across the gate, from 1 m beyond the left pier to 1 m beyond the guard house.
+            // Every line walked straight out across the gate, from 1 m beyond the left end to 1 m beyond the guard house.
             var ring = new BoundaryRing(ctx.World.Boundary.Outer);
-            for (var x = g.LeftPierX - G.PierSize * 0.5f - 1f; x <= g.HouseEnd + 1f; x += 0.1f)
+            for (var x = g.LeftEnd - 1f; x <= g.HouseEnd + 1f; x += 0.1f)
             {
                 // Only lines that start well inside the campus (north: the ring turns inward beside the left pier).
-                var start = f.P(x, -6f);
+                var start = g.P(x, -6f);
                 if (!ring.Contains(start) || Near(ring, start, 0.6f)) continue;
+                // Walk out until 0.4 m past the ring (the north gate's ring jogs out round its forecourt).
                 var blocked = false;
-                for (var z = -6f; z <= 0.4f && !blocked; z += 0.05f)
-                    blocked = colliders.Any(c => c.Tag == SurfaceTag.Boundary && Covers(c, f.P(x, z), 0.2f));
+                var outside = 0f;
+                for (var z = -6f; z <= 30f && !blocked && outside < 0.4f; z += 0.05f)
+                {
+                    blocked = colliders.Any(c => c.Tag == SurfaceTag.Boundary && Covers(c, g.P(x, z), 0.2f));
+                    outside = ring.Contains(g.P(x, z)) ? 0f : outside + 0.05f;
+                }
                 Require(blocked, $"{spec.Name}: a walker at local x {x:F2} can leave through the gate");
             }
-            // The wings are walled too, a few metres along.
-            foreach (var wing in g.Wings)
-            {
-                var mid = (wing.Line[0] + wing.Line[1]) * 0.5f;
-                Require(colliders.Any(c => c.Tag == SurfaceTag.Boundary && Covers(c, mid, 0f)), $"{spec.Name} wing at {mid} has a collider");
-            }
         }
+    }
+
+    [TestCase]
+    public void NothingWalksOutAnywhereAlongTheRing()
+    {
+        var ctx = Context();
+        var plan = BoundaryPlan.Of(ctx.World)!;
+        var ring = plan.Ring;
+        var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).Where(c => c.Tag == SurfaceTag.Boundary).ToArray();
+        // Bucket the colliders by 8 m cells of their plan extent.
+        var buckets = new Dictionary<(int, int), List<Collider>>();
+        foreach (var c in colliders)
+        {
+            var (min, max) = Extent(c);
+            for (var x = (int)MathF.Floor(min.X / 8f); x <= (int)MathF.Floor(max.X / 8f); x++)
+                for (var z = (int)MathF.Floor(min.Y / 8f); z <= (int)MathF.Floor(max.Y / 8f); z++)
+                {
+                    if (!buckets.TryGetValue((x, z), out var list)) buckets[(x, z)] = list = [];
+                    list.Add(c);
+                }
+        }
+        bool Hit(Vector2 p) => buckets.TryGetValue(((int)MathF.Floor(p.X / 8f), (int)MathF.Floor(p.Y / 8f)), out var list) && list.Any(c => Covers(c, p, 0.2f));
+        var gates = plan.Openings.Where(o => o.Kind == OpeningKind.Gate).ToArray();
+        var misses = new List<string>();
+        for (var s = 0f; s < ring.Perimeter; s += 0.25f)
+        {
+            // Gates are walked by NothingWalksOutThroughAGate (the south gate by WP-18's own test).
+            if (gates.Any(o => ring.Forward(o.Start - 1.5f, s) <= o.Length + 3f)) continue;
+            // Detours leave the corner behind the fence; their line is a run like any other.
+            if (plan.Detours.Any(d => ring.Forward(d.Start - 1f, s) <= d.Length + 2f)) continue;
+            var p = ring.At(s);
+            var n = ring.InwardAt(s);
+            var blocked = false;
+            for (var d = 2.5f; d >= -0.4f && !blocked; d -= 0.05f) blocked = Hit(p + n * d);
+            if (!blocked) misses.Add($"{p}");
+        }
+        Require(misses.Count == 0, $"{misses.Count} places along the ring can be walked through, first {string.Join(", ", misses.Take(5))}");
     }
 
     [TestCase]
@@ -145,6 +231,30 @@ public sealed class BoundaryModuleTests
         var a = Bytes(Context());
         var b = Bytes(Context());
         Require(a.Length > 0 && a.AsSpan().SequenceEqual(b), "two builds give the same bytes");
+    }
+
+    private static IEnumerable<IReadOnlyList<Vector2>> Outers(OverlayGeometry geometry) => geometry switch
+    {
+        PolygonGeometry p => [p.Rings.Outer],
+        MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
+        _ => [],
+    };
+
+    private static (Vector2 Min, Vector2 Max) Extent(Collider c)
+    {
+        switch (c)
+        {
+            case WallCollider w:
+                return (Vector2.Min(w.A, w.B) - new Vector2(w.HalfT), Vector2.Max(w.A, w.B) + new Vector2(w.HalfT));
+            case BoxCollider b:
+                {
+                    var r = MathF.Max(b.Half.X, b.Half.Z) * 1.5f;
+                    var o = new Vector2(b.At.M41, b.At.M43);
+                    return (o - new Vector2(r), o + new Vector2(r));
+                }
+            default:
+                return (Vector2.Zero, Vector2.Zero);
+        }
     }
 
     private static bool Near(BoundaryRing ring, Vector2 p, float d)

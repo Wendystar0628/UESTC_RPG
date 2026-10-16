@@ -5,12 +5,13 @@ namespace Campus.Gen.Zones.DesignBoundary.Framework;
 
 /// <summary>
 /// The campus boundary ring (campus.json `boundary`, through <see cref="IWorldModel.Boundary"/>) with the plan queries the
-/// gates and fences need: crossings, projections, walks along the ring and inset copies. Plain arithmetic and square roots
+/// gates and fences need: crossings, projections, arc positions and inset slices. Plain arithmetic and square roots
 /// only (D-165). Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
 /// </summary>
 public sealed class BoundaryRing
 {
     private readonly Vector2[] _p;
+    private readonly float[] _arc;
     private readonly float _side;
 
     public BoundaryRing(IReadOnlyList<Vector2> outer)
@@ -22,6 +23,9 @@ public sealed class BoundaryRing
         if (points.Count > 1 && Vector2.Distance(points[0], points[^1]) <= 0.05f) points.RemoveAt(points.Count - 1);
         if (points.Count < 3) throw new ArgumentException("The boundary ring needs at least three points.", nameof(outer));
         _p = [.. points];
+        _arc = new float[_p.Length];
+        for (var i = 1; i < _p.Length; i++) _arc[i] = _arc[i - 1] + Length(i - 1);
+        Perimeter = _arc[^1] + Length(_p.Length - 1);
         // Interior side: test a point just off the longest edge's midpoint.
         var longest = 0;
         for (var i = 1; i < _p.Length; i++) if (Length(i) > Length(longest)) longest = i;
@@ -66,6 +70,21 @@ public sealed class BoundaryRing
         return null;
     }
 
+    /// <summary>Arc positions where the segment p→q crosses the ring, in order along the segment (a vertex hit counts once).</summary>
+    public IReadOnlyList<float> Crossings(Vector2 p, Vector2 q)
+    {
+        var hits = new List<(float Along, float S)>();
+        for (var i = 0; i < _p.Length; i++)
+            if (Intersect(p, q, _p[i], _p[Wrap(i + 1)]) is { } hit)
+            {
+                var s = Arc(i, hit.U);
+                if (hits.Any(h => MathF.Abs(h.Along - hit.S) * Vector2.Distance(p, q) < 0.05f)) continue;
+                hits.Add((hit.S, s));
+            }
+        hits.Sort((a, b) => a.Along.CompareTo(b.Along));
+        return [.. hits.Select(h => h.S)];
+    }
+
     /// <summary>First crossing of the ray p + dir·s (s > 0) with the ring.</summary>
     public (Vector2 Point, int Edge, float T)? Ray(Vector2 p, Vector2 dir, float reach)
     {
@@ -102,48 +121,84 @@ public sealed class BoundaryRing
         return a + (b - a) * t;
     }
 
-    /// <summary>
-    /// The ring from (edge, t) for <paramref name="length"/> metres, in the direction that moves away from
-    /// <paramref name="away"/>, offset <paramref name="inset"/> metres toward the interior (mitred at corners).
-    /// </summary>
-    public IReadOnlyList<Vector2> Walk(int edge, float t, Vector2 away, float length, float inset)
+    /// <summary>Ring length; arc positions s run from vertex 0 in data order and wrap at this value.</summary>
+    public float Perimeter { get; }
+
+    /// <summary>Arc position of a point on edge i at parameter t.</summary>
+    public float Arc(int edge, float t) => _arc[Wrap(edge)] + Length(edge) * t;
+
+    /// <summary>Arc position of the ring point nearest p.</summary>
+    public float Arc(Vector2 p)
     {
-        var start = At(edge, t);
-        var forward = Vector2.Distance(At(edge, Math.Min(1f, t + 0.5f / Length(edge))), away);
-        var backward = Vector2.Distance(At(edge, Math.Max(0f, t - 0.5f / Length(edge))), away);
-        var step = forward >= backward ? 1 : -1;
-        var points = new List<Vector2> { start };
+        var (edge, t) = Project(p);
+        return Arc(edge, t);
+    }
+
+    /// <summary>An arc position folded into [0, Perimeter).</summary>
+    public float Fold(float s)
+    {
+        var r = s % Perimeter;
+        return r < 0 ? r + Perimeter : r;
+    }
+
+    /// <summary>Distance from a to b walking forward (increasing s) round the ring.</summary>
+    public float Forward(float a, float b) => Fold(b - a);
+
+    /// <summary>Edge and parameter of an arc position.</summary>
+    public (int Edge, float T) Locate(float s)
+    {
+        s = Fold(s);
+        var i = 0;
+        while (i + 1 < _p.Length && _arc[i + 1] <= s) i++;
+        return (i, Math.Clamp((s - _arc[i]) / Length(i), 0f, 1f));
+    }
+
+    public Vector2 At(float s)
+    {
+        var (edge, t) = Locate(s);
+        return At(edge, t);
+    }
+
+    /// <summary>Unit direction of the ring at s (forward).</summary>
+    public Vector2 Direction(float s)
+    {
+        var (a, b) = Edge(Locate(s).Edge);
+        return Vector2.Normalize(b - a);
+    }
+
+    /// <summary>Unit inward normal of the ring at s.</summary>
+    public Vector2 InwardAt(float s) => Inward(Locate(s).Edge);
+
+    /// <summary>
+    /// The ring from arc s0 forward for <paramref name="length"/> metres, offset <paramref name="inset"/> metres toward the
+    /// interior (mitred at the vertices, the mitre clamped at twice the inset).
+    /// </summary>
+    public IReadOnlyList<Vector2> Slice(float s0, float length, float inset)
+    {
+        var (edge, t) = Locate(s0);
+        var points = new List<Vector2> { At(edge, t) };
         var edges = new List<int> { edge };
         var left = length;
-        var cursor = start;
+        var toVertex = Length(edge) * (1f - t);
         var i = edge;
-        // Next vertex in the walking direction: edge end when stepping forward, edge start when stepping back.
-        var vertex = step > 0 ? Wrap(i + 1) : i;
-        for (var guard = 0; left > 1e-4f && guard < _p.Length; guard++)
+        for (var guard = 0; left > toVertex + 1e-4f && guard <= _p.Length; guard++)
         {
-            var target = _p[vertex];
-            var d = Vector2.Distance(cursor, target);
-            if (d >= left)
-            {
-                points.Add(cursor + (target - cursor) * (left / d));
-                edges.Add(i);
-                break;
-            }
-            left -= d;
-            cursor = target;
-            points.Add(cursor);
-            i = step > 0 ? vertex : Wrap(vertex - 1);
+            left -= toVertex;
+            i = Wrap(i + 1);
+            points.Add(_p[i]);
             edges.Add(i);
-            vertex = step > 0 ? Wrap(vertex + 1) : Wrap(vertex - 1);
+            toVertex = Length(i);
+            t = 0f;
         }
-        // A start on a vertex repeats it: keep the later copy, which carries the edge the walk continues on.
+        points.Add(At(i, Math.Min(1f, t + left / Length(i))));
+        edges.Add(i);
+        // A start or end on a vertex repeats it: keep the later copy, which carries the edge the slice continues on.
         for (var k = points.Count - 1; k > 0; k--)
             if (Vector2.Distance(points[k], points[k - 1]) < 0.01f) { points.RemoveAt(k - 1); edges.RemoveAt(k - 1); }
-        // Offset: each point moves along the mean inward normal of the edges meeting there (a mitre, clamped).
         var result = new Vector2[points.Count];
         for (var k = 0; k < points.Count; k++)
         {
-            var before = Inward(edges[Math.Max(0, k - 1)] == edges[k] || k == 0 ? edges[k] : edges[k - 1]);
+            var before = Inward(k == 0 ? edges[k] : edges[k - 1]);
             var after = Inward(edges[k]);
             var n = before + after;
             var len = n.Length();

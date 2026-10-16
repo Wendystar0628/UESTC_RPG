@@ -41,7 +41,8 @@ public sealed class NorthPlazaSite : BoundarySite
 
     /// <summary>
     /// Railing on the water side: square posts at most <see cref="P.PostPitch"/> apart, a handrail and a bottom rail, 20 mm bars
-    /// between them; the two end posts are a size heavier with a cap (收头). Stands on the paving.
+    /// between them; the two end posts are a size heavier, the gate-side one with a cap (收头); the campus-side one carries on
+    /// into WP-20's canal-bank railing (20a-4) and keeps no cap. Stands on the paving.
     /// </summary>
     private static void Railing(SiteBuilder b)
     {
@@ -60,7 +61,8 @@ public sealed class NorthPlazaSite : BoundarySite
             var end = k == 0 || k == panels;
             var size = end ? P.PostSize + 0.02f : P.PostSize;
             b.Box(L.LightSteel, at, u, size, size, y - 0.02f, y + P.RailHeight - 0.01f);
-            if (end && b.Detail == SiteDetail.Full)
+            // The campus-side end post (k = 0) is shared with WP-20's canal-bank railing, which carries on from it: no cap there.
+            if (end && k == panels && b.Detail == SiteDetail.Full)
                 b.Add(PartGeometryKernel.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, y + P.RailHeight, 0));
         }
         if (b.Detail == SiteDetail.Mass) return;
