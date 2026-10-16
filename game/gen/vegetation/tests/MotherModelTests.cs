@@ -110,11 +110,41 @@ public sealed class MotherModelTests
         {
             var cards = new[] { VegLevel.L0Plus, VegLevel.L0, VegLevel.L1 }
                 .Select(level => MotherModels.Build(table.Get(id), 0, level, palette))
-                .Select(m => m.Crown.Custom0!.Take(m.Cards * 4 * 4).ToArray()).ToArray();
+                .Select(m => m.Crown.Custom0!.Take((m.Cards - m.UnderCards) * 4 * 4).ToArray()).ToArray();
             for (var i = 1; i < cards.Length; i++)
                 if (cards[i].Length > cards[i - 1].Length || !cards[i].SequenceEqual(cards[i - 1].Take(cards[i].Length)))
                     throw new InvalidOperationException($"{id}: level {i} cards are not a prefix");
         }
+    }
+
+    [TestCase]
+    public void UnderCardsOnlyNearAndUnderTallCrowns()
+    {
+        // max-011 23c3: crowns one can stand under carry an underside layer at L0+ and, for card and mixed crowns, its leading
+        // share at L0 (a prefix of whole clusters); L1, low crowns and palms carry none. The layer faces down.
+        var (table, palette) = Data.Value;
+        foreach (var (id, throughL0) in new[] { ("ginkgo", true), ("camphor", true), ("koelreuteria", false) })
+        {
+            var s = table.Get(id);
+            var near = MotherModels.Build(s, 0, VegLevel.L0Plus, palette);
+            var mid = MotherModels.Build(s, 0, VegLevel.L0, palette);
+            var far = MotherModels.Build(s, 0, VegLevel.L1, palette);
+            if (near.UnderCards < MotherModels.ClusterMin * 8) throw new InvalidOperationException($"{id}: {near.UnderCards} underside cards at L0+");
+            if (far.UnderCards != 0) throw new InvalidOperationException($"{id}: underside cards at L1");
+            if (throughL0 ? mid.UnderCards == 0 || mid.UnderCards > near.UnderCards * 0.6f : mid.UnderCards != 0)
+                throw new InvalidOperationException($"{id}: {mid.UnderCards} of {near.UnderCards} underside cards at L0");
+            var first = near.Cards - near.UnderCards;
+            if (Vectors(near.Crown.Normal, 3).Skip(first * 4).Take(near.UnderCards * 4).Any(n => n.Y > -0.1f))
+                throw new InvalidOperationException($"{id}: an underside card does not face down");
+            if ((int)near.Crown.Custom2![first * 16 + 3] != (throughL0 ? 1 : 2))
+                throw new InvalidOperationException($"{id}: underside rank tier");
+            var a = near.Crown.Custom0!.Skip(first * 16).Take(mid.UnderCards * 16);
+            var b = mid.Crown.Custom0!.Skip((mid.Cards - mid.UnderCards) * 16).Take(mid.UnderCards * 16);
+            if (!a.SequenceEqual(b)) throw new InvalidOperationException($"{id}: L0 underside cards are not a prefix");
+        }
+        foreach (var id in new[] { "cherry", "photinia", "palm" })
+            if (MotherModels.Build(table.Get(id), 0, VegLevel.L0Plus, palette).UnderCards != 0)
+                throw new InvalidOperationException($"{id}: a low crown has underside cards");
     }
 
     [TestCase]
