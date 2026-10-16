@@ -7,6 +7,18 @@
       "op": "hide",
       "target": "qsh:way:779496166",
       "reason": "按 Opus 2026-10-16 13:06 定案，删除六号科研楼重复实体壳 qsh:way:779496166，保留 qsh:relation:14153711 及其带内院的来源 osm:relation:10807930；不改写原始 OSM 数据。"
+    },
+    {
+      "op": "hidePart",
+      "target": "qsh:relation:11665640",
+      "sourceId": "osm:relation:11334254",
+      "reason": "按 Opus 2026-10-16 定案，只删四号科研楼的两个重复来源部件，保留文档登记的 11334255、11665641；A 区、B 区不变；不改写原始 OSM 数据。"
+    },
+    {
+      "op": "hidePart",
+      "target": "qsh:relation:11665640",
+      "sourceId": "osm:relation:11665642",
+      "reason": "按 Opus 2026-10-16 定案，只删四号科研楼的两个重复来源部件，保留文档登记的 11334255、11665641；A 区、B 区不变；不改写原始 OSM 数据。"
     }
   ]
 }
