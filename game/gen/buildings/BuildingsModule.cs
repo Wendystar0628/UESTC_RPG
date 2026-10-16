@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Buildings.Build;
@@ -44,7 +45,8 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
 
     /// <summary>
     /// Which buildings this module generates: those whose massing and facade no zone module has claimed (the map's
-    /// resolved claims ledger, BuildContext.ClaimedBy). A facade-claimed feature has no generic window block either.
+    /// resolved claims ledger, BuildContext.ClaimedBy). A facade-claimed feature has no generic window block either, and
+    /// no WP-14 door, entrance parts or colliders at its interior-index anchors: the zone pack builds those doors.
     /// </summary>
     public static bool Unclaimed(BuildContext ctx, BuildingPlan plan) =>
         ctx.ClaimedBy(plan.Id, Aspects.Massing) is null && ctx.ClaimedBy(plan.Id, Aspects.Facade) is null;
@@ -63,16 +65,57 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         WindowNumberingSnapshot? numbering = null;
         var meshes = new List<GeometryBundle>();
         var windows = new List<WindowDecl>();
+        var notes = new List<BuildDiagnostic>();
         foreach (var plan in set.Plans)
         {
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
             // Glass reads the map's one allocation; nothing is numbered here.
             var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
             meshes.AddRange(BuildOne(plan, block, lod));
-            // The light inventory needs each window once: declared with the L0 cell only.
-            if (lod == LodLevel.L0) windows.AddRange(FacadeOpenings.Declarations(plan, block));
+            // The light inventory needs each window once: declared with the L0 cell only; so is the log.
+            if (lod != LodLevel.L0) continue;
+            windows.AddRange(FacadeOpenings.Declarations(plan, block));
+            notes.AddRange(DoorsAlone(ctx, plan));
+            notes.AddRange(UnknownPreset(plan));
         }
-        return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []) { LooseWindows = windows };
+        return meshes.Count == 0 ? ContentOutput.Empty : new ContentOutput(meshes, []) { LooseWindows = windows, Diagnostics = notes };
+    }
+
+    /// <summary>A facade preset key (WorldFeature.Facade) no WP-14 preset has: the family profile stays, logged as a warning.</summary>
+    public static IEnumerable<BuildDiagnostic> UnknownPreset(BuildingPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (plan.Feature.Facade is { Value: { Length: > 0 } key } && plan.Profile.Preset is null)
+            yield return new BuildDiagnostic(DiagnosticLevel.Warning, "wp14.preset.unknown",
+                $"Facade preset '{key}' of {plan.Id.Value} ({plan.Key}) is not a WP-14 preset: the {plan.Style} family profile stays.", plan.Id);
+    }
+
+    /// <summary>
+    /// The log list of the anchor doors a building opens without a landing (a porch or deck outside, EntranceRules.DeckAbove,
+    /// or an upper floor): one Info diagnostic each, naming the package expected to build what the door opens onto, read
+    /// from the claims and the zoning: the claimant of the block standing under the outside landing (its deck), else the zone
+    /// pack claiming the ground or props of this building, else the pack of the building's zone; undecided when none says.
+    /// </summary>
+    public static IEnumerable<BuildDiagnostic> DoorsAlone(BuildContext ctx, BuildingPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        ArgumentNullException.ThrowIfNull(plan);
+        var world = ctx.World;
+        var anchors = world.Interiors.Get(plan.Id)?.Entrances ?? [];
+        foreach (var e in plan.Entrances.Where(x => x.Anchor is not null && !x.Landing))
+        {
+            var decl = anchors.First(a => a.Id == e.Anchor);
+            var above = decl.Outside.Y - world.Terrain.HeightAt(decl.Outside.X, decl.Outside.Z);
+            var expected = BuildingPlanner.DeckUnder(world, plan.Id, new(decl.Outside.X, decl.Outside.Z), decl.Outside.Y) is { } deck
+                ? ctx.ClaimedBy(deck, Aspects.Massing) is { } builder ? $"{builder.Value}, which builds the deck block {deck.Value}"
+                    : $"no one yet: the deck block {deck.Value} is a plain WP-14 building"
+                : (ctx.ClaimedBy(plan.Id, Aspects.Ground) ?? ctx.ClaimedBy(plan.Id, Aspects.Props)) is { } around ? $"{around.Value}, which claims the ground round it"
+                : plan.Feature.Zone is { } zone ? $"the {zone.Value} zone pack (zoning)"
+                : "no one yet (undecided)";
+            yield return new BuildDiagnostic(DiagnosticLevel.Info, "wp14.door.alone", string.Create(CultureInfo.InvariantCulture,
+                $"Door {e.Anchor} of {plan.Id.Value} ({plan.Key}, storey {e.Row + 1}) opens alone, its outside landing {above:0.00} m above the terrain: porch or deck expected from {expected}."),
+                plan.Id);
+        }
     }
 
     /// <summary>

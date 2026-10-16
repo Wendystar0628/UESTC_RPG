@@ -186,8 +186,17 @@ public sealed class FacadeOpenings
 
     /// <summary>One window cell over the whole opening: it closes the hollow shell, so it casts shadow.</summary>
     private void Glass(EdgeFrame f, FacadeLayout layout, Opening o, float s, WindowCard card) =>
-        _sink.Append(OpeningGlass.Opening(o.U1 - o.U0, o.Y1 - o.Y0, _block.Base, layout.ColumnStart + o.Bay, o.Row, _p.TotalColumns,
-            _channel, (byte)card), Frame(f, o, s));
+        _sink.Append(Tinted(OpeningGlass.Opening(o.U1 - o.U0, o.Y1 - o.Y0, _block.Base, layout.ColumnStart + o.Bay, o.Row, _p.TotalColumns,
+            _channel, (byte)card)), Frame(f, o, s));
+
+    /// <summary>A glass surface in the building's glass colour (FacadeProfile.Glass, a preset's 玻璃色); other surfaces as they are.</summary>
+    private GeometryBundle Tinted(GeometryBundle mesh)
+    {
+        var spec = mesh.Material.Spec;
+        var lit = Materials.Lit(_p.Profile.Glass);
+        return spec.Kind != ToonKind.Glass || spec.Lit == lit ? mesh
+            : mesh with { Material = new ToonRef(spec with { Lit = lit, Shade = Materials.Shade(_p.Profile.Glass) }) };
+    }
 
     private Vector2 Uv2() => new(_block.Base, LightChannelCatalog.Slot(_channel) + 32f * _p.TotalColumns);
 
@@ -205,7 +214,7 @@ public sealed class FacadeOpenings
             _parts.Add((part, parameters, lod), geometry);
         }
         foreach (var mesh in geometry.Meshes)
-            if (gaskets || mesh.Material.Spec != OpeningStyle.Gasket) _sink.Append(mesh, at, glass, behind);
+            if (gaskets || mesh.Material.Spec != OpeningStyle.Gasket) _sink.Append(Tinted(mesh), at, glass, behind);
     }
 
     private static T Defaults<T>(string part) where T : BoxPartParams =>

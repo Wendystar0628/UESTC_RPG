@@ -86,6 +86,10 @@ public sealed record FacadeProfile(
     public string Window { get; init; } = PartCatalog.WindowCasement;
     /// <summary>Room windows get WP-10 curtains (OpeningPlacement.Curtain picks which, and their state and colour).</summary>
     public bool Curtains { get; init; } = true;
+    /// <summary>Colour family of the window and door glass.</summary>
+    public string Glass { get; init; } = Families.Glass;
+    /// <summary>The facade preset this profile carries (FacadePresets), null for the family's own.</summary>
+    public string? Preset { get; init; }
 }
 
 public static class FacadeRules

@@ -267,6 +267,61 @@ public sealed class BuildingsTests
     }
 
     [TestCase]
+    public void FacadePresetsChangeOnlyTheirBuilding()
+    {
+        // MAP-QSH-SOUTH §8.2 on one research block among ordinary buildings: larger glass in the same window cells; every
+        // window block, and every other building cell for cell, as before.
+        var preset = Rules.FacadePresets.ResearchStoneFrame;
+        var features = new[]
+        {
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", new PolygonRings(LShape(100, 0)), 4, 15.6f, "research"),
+            Feature("t:court", Courtyard(0, 100), 3, 12f, "teaching"), Feature("t:hall", Rect(200, 0, 40, 30), 1, 9f, "sport"),
+        };
+        var plain = BuildingSet.For(World(features), 4u);
+        var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value == "t:lab" ? f with { Facade = new FacadePreset(preset.Key) } : f)]), 4u);
+        Require(styled.Blocks.SequenceEqual(plain.Blocks), "every window block as before");
+        Require(Layout(styled, where: p => p.Key != "t:lab") == Layout(plain, where: p => p.Key != "t:lab"), "the other buildings cell for cell");
+        var (before, after) = (plain.Plans.Single(p => p.Key == "t:lab"), styled.Plans.Single(p => p.Key == "t:lab"));
+        Require(after.Profile.Preset == preset.Key && before.Profile.Preset is null && after.Style == before.Style, "the preset over the research family");
+        static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));
+        Require(Cells(after) == Cells(before), "the same window cells and kinds, so the same window numbers and cards");
+        static float Glazed(BuildingPlan p) => p.Openings.Sum(o => o.Sum(x => (x.U1 - x.U0) * (x.Y1 - x.Y0)));
+        Require(Glazed(after) > 1.6f * Glazed(before), $"more and larger glass: {Glazed(before):0} → {Glazed(after):0} m²");
+
+        // 玻璃色, 框架材质 and 窗型 reach the meshes at every level: a fixture preset with colours of its own.
+        var tinted = new Rules.FacadeLook("t.tinted") { Glass = "uestc.techblue", Frame = "wall.creamCoffee", Trim = "panel.brown", Window = PartCatalog.CurtainWall };
+        var lab = features[1] with { Facade = new FacadePreset(tinted.Key) };
+        foreach (var (name, world) in new[] { ("K3", World(lab)), ("K1", World(new ZonedFidelity(FidelityZone.K1, FidelityZone.K1), lab)) })
+        {
+            var plan = BuildingPlanner.Plan(BuildingPlanner.Sources(lab).Single(), world, 4u, [tinted])!;
+            var block = new WindowBlock(plan.Id, plan.Key, 0, plan.TotalColumns, plan.Storeys);
+            foreach (var lod in Levels)
+            {
+                var bundles = new BuildingsModule().BuildOne(plan, block, lod);
+                foreach (var b in bundles) b.ValidateVertexData();
+                var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
+                Require(lod == LodLevel.L4 || (glass.Length > 0 && glass.All(g => g.Material.Spec.Lit.Value == "uestc.techblue.lit")), $"{name} {lod}: glass in the preset's colour");
+                var walls = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Static && b.Material.Spec.Fx == (ToonFx.BevelLift | ToonFx.Mottle)).ToArray();
+                Require(walls.Length > 0 && walls.All(b => b.Material.Spec.Lit.Value == "wall.creamCoffee.lit"), $"{name} {lod}: the wall frame in the preset's colour");
+                Require(!bundles.Any(Fabric), $"{name} {lod}: curtain walls hang no curtains");
+            }
+        }
+        Require(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
+            BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null, "a key WP-14 does not know keeps the family, with a warning");
+
+        // The real campus with the innovation centre's five buildings on the preset (the StyleOps of south.overlay.json): no
+        // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
+        string[] innovation = ["qsh:relation:10807928", "qsh:relation:10807929", "qsh:relation:17732622", "qsh:way:779496164", "qsh:way:779496165"];
+        var real = RealCampus();
+        var withPreset = new StyledWorld(real, f => innovation.Contains(f.Id.Value) ? f with { Family = new BuildingFamily("research"), Facade = new FacadePreset(preset.Key) } : f);
+        var (was, now) = (BuildingSet.For(real, 1u), BuildingSet.For(withPreset, 1u));
+        Require(now.Blocks.SequenceEqual(was.Blocks), "real campus: every window block as before");
+        Require(Layout(now, where: p => !innovation.Contains(p.Id.Value)) == Layout(was, where: p => !innovation.Contains(p.Id.Value)), "real campus: the other buildings cell for cell");
+        var centre = now.Plans.Where(p => innovation.Contains(p.Id.Value)).ToArray();
+        Require(centre.Length >= 10 && centre.All(p => p.Profile.Preset == preset.Key && p.Style == Rules.BuildingStyle.Research), $"the centre's {centre.Length} footprints take the preset");
+    }
+
+    [TestCase]
     public void DoorsOpenAtTheEntranceAnchors()
     {
         var index = new Entrances(
@@ -314,6 +369,84 @@ public sealed class BuildingsTests
         // Collision: one closed door span per entrance, the walls either side.
         var colliders = module.Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
         Require(colliders.Any(w => MathF.Abs(Vector2.Distance(w.A, w.B) - (door.U1 - door.U0)) < 1e-3f), "the anchor door is the closed span");
+    }
+
+    [TestCase]
+    public void ClaimedFacadesOpenNoDoors()
+    {
+        // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
+        // landing, canopy and closed-door span with it (the zone pack builds that door).
+        var features = new[] { Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(200, 0, 40, 16), 4, 15.6f, "research") };
+        var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
+        var module = new BuildingsModule();
+        var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
+        var tile = dorm.Tile(LodLevel.L0);
+        Require(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed),
+            "unclaimed, WP-14 opens the anchor door");
+        foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
+        {
+            var ctx = Prepared(new BuildContext { World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? new WpId("WP-18") : null });
+            Require(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0,
+                $"{aspect} claimed: no door, landing, canopy or collider of WP-14");
+            Require(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0, "the neighbour stays");
+        }
+
+        // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): a closed-door
+        // span of WP-14 stands at exactly the open anchors of unclaimed features. The library (16b), Xuanbang's clock tower
+        // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
+        var real = RealCampus();
+        var rctx = new BuildContext { World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
+        var anchored = BuildingSet.For(real, 1u).Plans.SelectMany(p => p.Entrances.Where(e => e.Anchor is not null).Select(e => (Plan: p, Door: e))).ToArray();
+        foreach (var (plan, e) in anchored)
+        {
+            var mine = BuildingsModule.Unclaimed(rctx, plan);
+            var centre = GlassCentre(plan, e);
+            var spans = module.Collide(rctx, plan.Tile(LodLevel.L0)).OfType<WallCollider>()
+                .Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, centre) < 1f);
+            Require(spans == (mine ? 1 : 0), $"{e.Anchor} on {plan.Id.Value}: {(mine ? "WP-14's door" : "no WP-14 door")} ({spans} closed spans)");
+        }
+        foreach (var id in new[] { "lib.main", "xb.clock", "gym.deck" })
+            Require(anchored.Any(x => x.Door.Anchor == id && !BuildingsModule.Unclaimed(rctx, x.Plan)), $"{id}: claimed by its zone pack, WP-14 gives way");
+    }
+
+    [TestCase]
+    public void AnchorsSetTheDoorHeadAndLogDoorsAlone()
+    {
+        // contract-34: the anchor's HeadY is the door top (under the next slab); without one the family's door rise stays.
+        var dorm = Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence");
+        PlanEntrance? Door(float head, out BuildingPlan plan)
+        {
+            var (feature, decl) = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f);
+            plan = BuildingSet.For(World(new Entrances((feature, decl with { HeadY = head })), dorm), 2u).Plans.Single();
+            return plan.Entrances.SingleOrDefault(e => e.Anchor == "dorm.south");
+        }
+        var known = Door(2.6f, out var p1)!;
+        Require(MathF.Abs(p1.DoorOf(known).Y1 - 2.6f) < 1e-4f, "HeadY 2.6 is the door top");
+        var unknown = Door(0f, out var p0)!;
+        Require(MathF.Abs(p0.DoorOf(unknown).Y1 - (p0.FloorY(0) + Math.Clamp(p0.StoreyHeight - 1f, 2.1f, 2.4f))) < 1e-4f, "0 = unknown: the family's door rise");
+        var tall = Door(9f, out var p2)!;
+        Require(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 1e-4f, "never through the next slab");
+
+        // Doors alone (outside landing on a porch or deck) are logged with the package expected to build what they open onto.
+        var lab = Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research") with { Zone = new ZoneId("north") };
+        var porch = new Entrances(Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f));
+        var deck = Feature("t:deck", Rect(100, -6, 40, 6), 1, 1.2f, "service");
+        string Log(TestWorld w, Func<FeatureId, Aspects, WpId?> claims)
+        {
+            var ctx = new BuildContext { World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
+            var plan = BuildingSet.For(w, 2u).Plans.Single(p => p.Key == "t:lab");
+            return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "wp14.door.alone" && d.Feature == plan.Id).Message;
+        }
+        var byZone = Log(World(porch, lab), (_, _) => null);
+        Require(byZone.Contains("lab.porch", StringComparison.Ordinal) && byZone.Contains("1.20 m", StringComparison.Ordinal) && byZone.Contains("north zone pack", StringComparison.Ordinal), byZone);
+        var byDeck = Log(World(porch, lab, deck), (f, a) => f.Value == "t:deck" && a == Aspects.Massing ? new WpId("WP-21") : null);
+        Require(byDeck.Contains("WP-21, which builds the deck block t:deck", StringComparison.Ordinal), byDeck);
+        var nobody = Log(World(porch, lab with { Zone = null }), (_, _) => null);
+        Require(nobody.Contains("undecided", StringComparison.Ordinal), nobody);
+        var ctx0 = Prepared(Ctx(World(porch, lab), 2u));
+        var plan0 = BuildingSet.For(ctx0.World, 2u).Plans.Single();
+        Require(new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L0), LodLevel.L0).Diagnostics.Count == 1 &&
+            new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L1), LodLevel.L1).Diagnostics.Count == 0, "logged once, with the L0 cell");
     }
 
     [TestCase]
@@ -602,15 +735,15 @@ public sealed class BuildingsTests
     }
 
     // ---------------------------------------------------------------- fixtures
-    /// <summary>Every opening of every plan with its number and card, in plan order (feature, key, facade, bay, row).</summary>
-    private static string Layout(BuildingSet set, string? key = null)
+    /// <summary>Every opening of every plan (or of one key, or of those <paramref name="where"/> takes) with its number and card, in plan order.</summary>
+    private static string Layout(BuildingSet set, string? key = null, Func<BuildingPlan, bool>? where = null)
     {
         var ci = System.Globalization.CultureInfo.InvariantCulture;
         var sb = new System.Text.StringBuilder();
         for (var i = 0; i < set.Plans.Count; i++)
         {
             var (plan, block) = (set.Plans[i], set.Blocks[i]);
-            if (key is not null && plan.Key != key) continue;
+            if ((key is not null && plan.Key != key) || where?.Invoke(plan) == false) continue;
             sb.Append(ci, $"P {plan.Key} base={block.Base} cols={block.Columns} rows={block.Rows}\n");
             for (var fi = 0; fi < plan.Facades.Count; fi++)
                 foreach (var o in plan.Openings[fi])
@@ -686,6 +819,47 @@ public sealed class BuildingsTests
         WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
     };
 
+    /// <summary>The repository's campus as the kernel loads it: base data, interior index and every zone overlay.</summary>
+    private static IWorldModel RealCampus()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
+        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
+        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Select(p => "overlay/" + Path.GetFileName(p)))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        return Campus.Gen.World.WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
+    }
+
+    /// <summary>
+    /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its owner.
+    /// The other content modules (furniture, ground, vegetation, water) claim nothing.
+    /// </summary>
+    private static Func<FeatureId, Aspects, WpId?> RealClaims(IWorldModel world)
+    {
+        IContentModule[] zones = [new Campus.Gen.Zones.Core.CoreModule(), new Campus.Gen.Zones.South.SouthModule(),
+            new Campus.Gen.Zones.CenterEast.CenterEastModule(), new Campus.Gen.Zones.North.NorthModule()];
+        var owners = new Dictionary<(FeatureId, Aspects), WpId>();
+        foreach (var zone in zones)
+        {
+            var owner = new WpId(zone.GetType().GetCustomAttributes(typeof(ContentModuleAttribute), false).OfType<ContentModuleAttribute>().Single().Owner);
+            foreach (var claim in zone.Claims)
+            {
+                FeatureId[] claimed = claim switch
+                {
+                    FeatureClaim f => world.Features.ContainsKey(f.Feature) ? [f.Feature] : Array.Empty<FeatureId>(),
+                    AreaClaim a => [.. world.Features.Values.Where(f => f.Zone == a.Zone).Select(f => f.Id)],
+                    _ => throw new InvalidOperationException("Unknown claim kind."),
+                };
+                foreach (var feature in claimed)
+                    foreach (var aspect in Enum.GetValues<Aspects>().Where(a => (claim.Aspects & a) != 0)) owners.Add((feature, aspect), owner);
+            }
+        }
+        return (feature, aspect) => owners.TryGetValue((feature, aspect), out var owner) ? owner : null;
+    }
+
     private static ClaimedWindowLayout Layout(string feature, params (string Key, int Columns, int Rows)[] grids) =>
         new(new FeatureId(feature), [.. grids.Select(g => new WindowGridSpec(g.Key, g.Columns, g.Rows))]);
 
@@ -748,6 +922,19 @@ public sealed class BuildingsTests
         public ITerrain Terrain { get; init; } = FlatTerrain.Default;
         public IOutskirtsModel? Outskirts => null;
         public IFidelityModel? Fidelity { get; } = fidelity;
+    }
+
+    /// <summary>A loaded world with its features rewritten (as an overlay op would), everything else as loaded.</summary>
+    private sealed class StyledWorld(IWorldModel inner, Func<WorldFeature, WorldFeature> rewrite) : IWorldModel
+    {
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => rewrite(p.Value));
+        public WorldNetwork Network => inner.Network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
     }
 
     /// <summary>The open entrances of the fixture's features (the interior index's EntranceDecl).</summary>

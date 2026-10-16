@@ -66,9 +66,10 @@ public static class BuildingPlanner
 
     /// <summary>
     /// The plan of one footprint. Reads the world model only: the terrain pad and the ground in front of the doors
-    /// (ITerrain), the precision zones (IFidelityModel) and the open entrances (IInteriorIndex).
+    /// (ITerrain), the precision zones (IFidelityModel) and the open entrances (IInteriorIndex). The feature's facade
+    /// preset (WorldFeature.Facade, from <paramref name="presets"/>, default FacadePresets.All) goes over its family profile.
     /// </summary>
-    public static BuildingPlan? Plan(BuildingSource src, IWorldModel world, uint worldSeed)
+    public static BuildingPlan? Plan(BuildingSource src, IWorldModel world, uint worldSeed, IReadOnlyList<FacadeLook>? presets = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         var fidelity = world.Fidelity;
@@ -89,7 +90,7 @@ public static class BuildingPlanner
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
-        var profile = FacadeRules.ProfileFor(style, cluster);
+        var profile = FacadePresets.Apply(FacadeRules.ProfileFor(style, cluster), FacadePresets.Find(feature.Facade, presets));
         var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "wp14.building");
 
         // Facade bay grid from the WP-51a plan kernel: canonical rings (mm, fixed start vertex), bays on the glass
@@ -343,7 +344,8 @@ public static class BuildingPlanner
     /// the bay centre is within EntranceRules.BaySnap), at the storey of its floor. An anchor is left alone (to another part
     /// of the feature, or to the zone pack that builds that door) when no edge of this footprint takes it, its outside lies in
     /// another footprint, its floor leaves no door height under the next slab, or the door cannot stand within
-    /// EntranceRules.AnchorTolerance of it. Deck: the outside landing stands well above the terrain (a porch or deck).
+    /// EntranceRules.AnchorTolerance of it. The door top is the anchor's HeadY when the index gives one (else the family's
+    /// door rise), never above the next slab. Deck: the outside landing stands well above the terrain (a porch or deck).
     /// </summary>
     private static List<AnchorDoor> AnchorDoors(IWorldModel world, WorldFeature feature, IReadOnlyList<PlanRing> rings,
         IReadOnlyList<FacadeLayout> facades, IReadOnlyList<(float Min, float Max)> uRange, Func<int, float> floorY, int storeys,
@@ -376,7 +378,8 @@ public static class BuildingPlanner
             var y0 = MathF.Abs(e.Center.Y - floorY(row)) <= EntranceRules.FloorSnap ? floorY(row) : e.Center.Y;
             if (Indoors(world, centre + facing * EntranceRules.ExteriorProbe, y0)) continue;
             var room = (row + 1 < storeys ? floorY(row + 1) - EntranceRules.SlabDepth : wallTop - 0.3f) - y0;
-            var rise = MathF.Min(doorRise, room);
+            // The anchor's own doorway top (contract-34 HeadY, absolute; 0 = unknown) wins over the family's door rise.
+            var rise = MathF.Min(e.HeadY != 0f ? e.HeadY - y0 : doorRise, room);
             if (rise < MathF.Min(EntranceRules.MinDoorHeight, doorRise)) continue;
 
             var f = facades[fi];
@@ -416,6 +419,24 @@ public static class BuildingPlanner
                     PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) > y + EntranceRules.DeckAbove) return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// The building a door's outside landing stands on, as a deck: another feature's footprint over plan point
+    /// <paramref name="p"/> whose roof lies within EntranceRules.DeckAbove of the landing level <paramref name="y"/>.
+    /// </summary>
+    public static FeatureId? DeckUnder(IWorldModel world, FeatureId self, Vector2 p, float y)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        var box = new Box3(new Vector3(p.X - 0.5f, -1000f, p.Y - 0.5f), new Vector3(p.X + 0.5f, 1000f, p.Y + 0.5f));
+        foreach (var id in world.Spatial.Query(box).OrderBy(i => i.Value, StringComparer.Ordinal))
+        {
+            if (id == self || !world.Features.TryGetValue(id, out var f)) continue;
+            foreach (var src in Sources(f))
+                if (PlanRing.Contains(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanRing.Contains(h, p)) &&
+                    MathF.Abs(PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) - y) <= EntranceRules.DeckAbove) return id;
+        }
+        return null;
     }
 
     /// <summary>
