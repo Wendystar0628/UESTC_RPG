@@ -228,6 +228,7 @@ void vertex() {
 		vec3 bg = pc_background(vd);
 		float lbg = pow(max(pc_luma(bg), 1e-5), 1.0 / 3.0);
 		vec4 lamp = pc_lamp(p);
+		lamp.x *= lamp_env_dark();
 		vec3 kd = normalize(key_dir);
 		float fwd = clamp(dot(vd, kd), 0.0, 1.0);
 		float overcast = clamp(weather_a.y, 0.0, 1.0);
