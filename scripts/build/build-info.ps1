@@ -121,7 +121,12 @@ foreach($name in $hashNames) {
   $ordered=[string[]]@($relativeInputs);[Array]::Sort($ordered,[StringComparer]::Ordinal)
   $builder=[Text.StringBuilder]::new()
   foreach($relative in $ordered) {
-    [void]$builder.Append($relative).Append(':').Append((Get-FileHash -LiteralPath (Join-Path $rootPath $relative) -Algorithm SHA256).Hash).Append("`n")
+    $fileSha=[Security.Cryptography.SHA256]::Create()
+    try {
+      $stream=[IO.File]::OpenRead((Join-Path $rootPath $relative))
+      try{$fileHash=([BitConverter]::ToString($fileSha.ComputeHash($stream))).Replace('-','')}finally{$stream.Dispose()}
+    } finally {$fileSha.Dispose()}
+    [void]$builder.Append($relative).Append(':').Append($fileHash).Append("`n")
   }
   $sha=[Security.Cryptography.SHA256]::Create()
   try{$hash=([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($builder.ToString())))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
