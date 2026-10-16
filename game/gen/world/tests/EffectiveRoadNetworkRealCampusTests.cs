@@ -20,7 +20,9 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         Require(expected.Length > 0, "The real current campus has no authored design centerlines.");
         // Only an authored hide of an exact original road ID removes it; every other original road keeps its order and bytes.
         var originalIds = previous.Roads.Select(road => road.Id.Value).ToHashSet(StringComparer.Ordinal);
-        var hidden = files.Where(pair => pair.Key.StartsWith("overlay/", StringComparison.Ordinal) && pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) &&
+        var hidden = files.Where(pair => pair.Key.StartsWith("overlay/", StringComparison.Ordinal) &&
+                (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) || pair.Key.Split('/') is ["overlay", var group, _] &&
+                    group.EndsWith(".d", StringComparison.Ordinal) && group is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d") &&
                 pair.Key is not "overlay/outskirts.overlay.json" and not "overlay/walkable.overlay.json" and not "overlay/fidelity.overlay.json")
             .SelectMany(pair => JsonSerializer.Deserialize<OverlayFile>(pair.Value, ContractJson.Options)!.Ops.OfType<HideOp>())
             .Select(op => op.Target.Value).Where(originalIds.Contains).ToHashSet(StringComparer.Ordinal);
