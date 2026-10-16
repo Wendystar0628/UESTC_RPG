@@ -79,6 +79,20 @@
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )"
         }
+      },
+      "campus.gen.zones.designwaterfront": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )"
+        }
       }
     }
   }

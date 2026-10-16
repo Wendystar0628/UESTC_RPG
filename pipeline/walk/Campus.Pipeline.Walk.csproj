@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../game/contracts/Campus.Contracts.csproj;../../game/gen/world/Campus.Gen.World.csproj;../../game/gen/walkable/Campus.Gen.Walkable.csproj" />
+    <ProjectReference Include="../../game/gen/zones/design-waterfront/Campus.Gen.Zones.DesignWaterfront.csproj" />
   </ItemGroup>
 </Project>
