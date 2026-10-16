@@ -209,10 +209,11 @@ public static class GroundMasks
 
     private static byte SnowPotential(GroundSurface surface) => surface switch
     {
-        GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark or GroundSurface.Turf => 255,
+        // The soil of a pit holds snow like a lawn does (leaves and petals pile there too); its frame is stone.
+        GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark or GroundSurface.Turf or GroundSurface.PitSoil => 255,
         GroundSurface.Asphalt or GroundSurface.Parking => 51,
         GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Track or GroundSurface.Court or
-            GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver => 128,
+            GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver or GroundSurface.PitRim or GroundSurface.PitBevel => 128,
         GroundSurface.Water => 0,
         _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
     };

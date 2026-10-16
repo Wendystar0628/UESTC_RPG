@@ -11,7 +11,10 @@ internal sealed class TileField
     // Field slots per lattice point.
     // Tone: lawn tone noise in [0, 1]; LawnEdge: distance from the lawn to the nearest kerb, paving or building foot;
     // H: base height of the ground (designed terrain with flattened carriageways), not a threshold field.
-    public const int W = 0, A = 1, Car = 2, P = 3, Track = 4, Turf = 5, Court = 6, Plaza = 7, Tone = 8, LawnEdge = 9, H = 10, Count = 11;
+    // Pit: distance to the outer face of the nearest tree pit's frame; Core: the same distance plus that pit's frame thickness, so
+    // its zero contour is the frame's inner face; PitRim, PitSoil: that pit's frame top and soil top (heights, like H, not thresholds).
+    public const int W = 0, A = 1, Car = 2, P = 3, Track = 4, Turf = 5, Court = 6, Plaza = 7, Tone = 8, LawnEdge = 9, H = 10,
+        Pit = 11, Core = 12, PitRim = 13, PitSoil = 14, Count = 15;
 
     public int N { get; }
     public int S { get; }
@@ -52,7 +55,7 @@ internal sealed class TileField
         var limit = section.MaxIso + 3f * cell + 0.05f;
         var field = new TileField(n, cell, tile.X0, tile.Z0, limit);
         var count = field.S * field.S;
-        var kinds = new float[9][];
+        var kinds = new float[10][];
         for (var k = 0; k < kinds.Length; k++)
         {
             kinds[k] = new float[count];
@@ -60,8 +63,31 @@ internal sealed class TileField
         }
         var lo = new Vector2(field.X0 - limit, field.Z0 - limit);
         var hi = new Vector2(field.X0 + n * cell + limit, field.Z0 + n * cell + limit);
+        // Tree pits: the nearest pit at each lattice point decides its frame thickness and heights, so a pit's values
+        // are constant wherever its contours run and linear interpolation across a cell stays exact.
+        var core = new float[count];
+        var rim = new float[count];
+        var soil = new float[count];
+        var nearest = new double[count];
+        Array.Fill(core, limit);
+        Array.Fill(nearest, double.MaxValue);
         foreach (var shape in layout.Near(lo, hi))
-            field.Raster(kinds[(int)shape.Kind], shape);
+        {
+            if (shape.Kind != SurfaceKind.Pit)
+            {
+                field.Raster(kinds[(int)shape.Kind], shape, null);
+                continue;
+            }
+            var (rimTop, soilTop, kerb) = shape.PitHeights(section);
+            field.Raster(kinds[(int)SurfaceKind.Pit], shape, (k, d) =>
+            {
+                if (d >= nearest[k]) return;
+                nearest[k] = d;
+                core[k] = Sdf.Clamp(d + kerb, limit);
+                rim[k] = rimTop;
+                soil[k] = soilTop;
+            });
+        }
 
         var v = field.V;
         for (var k = 0; k < count; k++)
@@ -82,6 +108,10 @@ internal sealed class TileField
             v[o + Turf] = turf;
             v[o + Court] = court;
             v[o + Plaza] = plaza;
+            v[o + Pit] = kinds[(int)SurfaceKind.Pit][k];
+            v[o + Core] = core[k];
+            v[o + PitRim] = rim[k];
+            v[o + PitSoil] = soil[k];
             v[o + LawnEdge] = MathF.Min(MathF.Min(v[o + P], v[o + A] - section.CurbWidth), kinds[(int)SurfaceKind.Building][k]);
         }
         for (var j = 0; j < field.S; j++)
@@ -114,11 +144,11 @@ internal sealed class TileField
         // No contour may pass (almost) exactly through a lattice point: a contour lying on a lattice line would never be
         // cut, its step face would be lost and its pieces would leave pinholes. Values within a micrometre of a
         // threshold move ten micrometres outside. Same rule on both sides of a seam, so tiles still agree bit for bit.
-        float[] isos = [0f, section.CurbBevel, section.CurbWidth, -section.EdgingWidth, -section.PlazaBorder,
+        float[] isos = [0f, section.CurbBevel, -section.CurbBevel, section.CurbWidth, -section.EdgingWidth, -section.PlazaBorder,
             section.Lawn.EdgeBand, section.Lawn.Low, section.Lawn.High];
         for (var k = 0; k < v.Length; k++)
         {
-            if (k % Count == H) continue;
+            if (k % Count is H or PitRim or PitSoil) continue;
             foreach (var iso in isos)
                 if (MathF.Abs(v[k] - iso) < 1e-6f) v[k] = iso + 1e-5f;
         }
@@ -133,7 +163,7 @@ internal sealed class TileField
         return (Math.Max(lo, 0), Math.Min(hi, S - 1));
     }
 
-    private void Raster(float[] grid, GroundShape shape)
+    private void Raster(float[] grid, GroundShape shape, Action<int, float>? visit)
     {
         var r = Limit + shape.HalfWidth;
         var (i0, i1) = Range(X0, shape.Min.X - Limit, shape.Max.X + Limit);
@@ -150,6 +180,7 @@ internal sealed class TileField
                 {
                     var k = j * S + i;
                     var d = Sdf.Clamp((float)(dist[(j - j0) * w + (i - i0)] - shape.HalfWidth), Limit);
+                    visit?.Invoke(k, d);
                     if (d < grid[k]) grid[k] = d;
                 }
             return;
@@ -179,6 +210,7 @@ internal sealed class TileField
                 var raw = (float)dist[(j - j0) * w + (i - i0)];
                 var d = Sdf.Clamp(inside ? -raw : raw, Limit);
                 var k = j * S + i;
+                visit?.Invoke(k, d);
                 if (d < grid[k]) grid[k] = d;
             }
         }

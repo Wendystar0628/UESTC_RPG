@@ -164,7 +164,9 @@ public sealed class GroundSourcesTests
         var raw = RawPolygons(files["campus.json"]);
         var polygonShapes = shapes.Where(s => s.Rings is not null && !s.Id.Value.StartsWith("fillet:", StringComparison.Ordinal)).ToArray();
         var ground = new HashSet<string> { "road", "parking", "water", "building", "sport" };
-        Check.True(polygonShapes.Length == raw.Count(p => ground.Contains(p.Kind)), "Every ground polygon of every part gives exactly one shape.");
+        // A stadium or sports-centre outline without a sport tag only encloses other features and has no ground of its own.
+        Check.True(polygonShapes.Length == raw.Count(p => ground.Contains(p.Kind) && !p.Outline), "Every ground polygon of every part gives exactly one shape.");
+        Check.True(raw.Count(p => p.Outline) == 2, "The campus has one stadium outline and one sports-centre outline.");
 
         int Shapes(SurfaceKind kind) => polygonShapes.Count(s => s.Kind == kind);
         int Raw(Func<RawPolygon, bool> where) => raw.Count(where);
@@ -173,8 +175,9 @@ public sealed class GroundSourcesTests
             "Every building hole is kept as a ring of its footprint.");
         Check.True(Shapes(SurfaceKind.Parking) == Raw(p => p.Kind == "parking"), "Car parks.");
         Check.True(Shapes(SurfaceKind.Track) == Raw(p => p.Kind == "sport" && p.Sport == "running"), "Running tracks come from the part's own sport.");
-        Check.True(Shapes(SurfaceKind.Turf) == Raw(p => p.Kind == "sport" && p.Sport == "soccer"), "Pitches come from the part's own sport.");
-        Check.True(Shapes(SurfaceKind.Court) == Raw(p => p.Kind == "sport" && p.Sport is not ("running" or "soccer" or "swimming")), "Courts.");
+        Check.True(Shapes(SurfaceKind.Turf) == Raw(p => p.Kind == "sport" && !p.Outline && p.Sport is "soccer" or null),
+            "Football pitches, and pitches that name no sport, are turf (the campus has one: the ring-shaped athletics field).");
+        Check.True(Shapes(SurfaceKind.Court) == Raw(p => p.Kind == "sport" && p.Sport is not (null or "running" or "soccer" or "swimming")), "Courts.");
         Check.True(Shapes(SurfaceKind.Water) == Raw(p => p.Kind == "water" || (p.Kind == "sport" && p.Sport == "swimming")), "Lakes and pools.");
 
         // Cross-check the whole campus against the raw polygons with an independent even-odd test: parts, polygons and holes.
@@ -217,7 +220,7 @@ public sealed class GroundSourcesTests
 
     private sealed record Unsupported : OverlayGeometry;
 
-    private sealed record RawPolygon(string Kind, string? Sport, Vector2[][] Rings)
+    private sealed record RawPolygon(string Kind, string? Sport, bool Outline, Vector2[][] Rings)
     {
         public (Vector2 Min, Vector2 Max) Bounds { get; } = Extent(Rings[0]);
 
@@ -243,12 +246,18 @@ public sealed class GroundSourcesTests
     {
         var result = new List<RawPolygon>();
         using var document = JsonDocument.Parse(campusJson);
+        // The OSM leisure tag of every entity: a part's own record does not repeat it.
+        var leisure = document.RootElement.GetProperty("entities").EnumerateArray()
+            .Where(e => e.TryGetProperty("sourceTags", out var tags) && tags.TryGetProperty("leisure", out _))
+            .ToDictionary(e => e.GetProperty("id").GetString()!, e => e.GetProperty("sourceTags").GetProperty("leisure").GetString()!);
         foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
         {
             var kind = feature.GetProperty("kind").GetString()!;
             var sport = feature.TryGetProperty("sport", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
+            var owner = feature.TryGetProperty("entityId", out var entityId) && entityId.ValueKind == JsonValueKind.String ? entityId.GetString() : null;
+            var outline = kind == "sport" && sport is null && owner is not null && leisure.GetValueOrDefault(owner) is "stadium" or "sports_centre";
             foreach (var polygon in feature.GetProperty("polygons").EnumerateArray())
-                result.Add(new(kind, sport, polygon.EnumerateArray()
+                result.Add(new(kind, sport, outline, polygon.EnumerateArray()
                     .Select(ring => ring.EnumerateArray().Select(p => new Vector2(p[0].GetSingle(), p[1].GetSingle())).ToArray()).ToArray()));
         }
         return result;

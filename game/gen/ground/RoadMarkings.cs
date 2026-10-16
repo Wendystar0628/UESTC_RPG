@@ -6,10 +6,12 @@ namespace Campus.Gen.Ground;
 /// Dashed centre lines and zebra crossings derived from the road network (ART-AMBIENCE 6). Markings are flat decal
 /// quads lying on the asphalt; each quad belongs to the tile that contains its centre, so tiles never duplicate one.
 /// Every quad is checked against the exact carriageway field, so mismatched centre lines never paint over a kerb.
+/// Football pitches get their lines from the same quads (<see cref="AddPitches"/>), on the turf instead of the asphalt.
 /// </summary>
-internal sealed class RoadMarkings
+internal sealed partial class RoadMarkings
 {
-    public readonly record struct Quad(Vector2 A, Vector2 B, Vector2 C, Vector2 D, GroundColor Color);
+    /// <summary><paramref name="Level"/> is the height of the surface the quad lies on above the carriageway level.</summary>
+    public readonly record struct Quad(Vector2 A, Vector2 B, Vector2 C, Vector2 D, GroundColor Color, float Level = 0f);
 
     private readonly Dictionary<long, List<Quad>> _byTile = new();
 
@@ -25,7 +27,6 @@ internal sealed class RoadMarkings
     /// <summary>Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).</summary>
     public void Emit(GroundTile tile, MeshSink sink, GroundSection section, TerrainGrid terrain)
     {
-        var lift = section.RoadY + section.DecalLift;
         const byte flags = GroundPalette.FlagDecal | GroundPalette.FlagNoShadow;
         var x0 = (int)MathF.Floor(tile.X0 / GroundLod.TileSize);
         var z0 = (int)MathF.Floor(tile.Z0 / GroundLod.TileSize);
@@ -34,6 +35,7 @@ internal sealed class RoadMarkings
             for (var x = x0; x < x0 + span; x++)
                 foreach (var q in In(x, z))
                 {
+                    var lift = section.RoadY + section.DecalLift + q.Level;
                     // Lie on the (possibly sloping) road: split long strips into pieces of at most 1 m.
                     var pieces = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(q.A, q.B)));
                     for (var k = 0; k < pieces; k++)
@@ -111,6 +113,7 @@ internal sealed class RoadMarkings
                 result.AddStrip(p0, p1, spec.CentreLineWidth, GroundColor.Marking);
             }
         }
+        result.AddPitches(layout, section);
 
         return result;
     }
@@ -134,13 +137,13 @@ internal sealed class RoadMarkings
         }
     }
 
-    private void AddStrip(Vector2 p0, Vector2 p1, float width, GroundColor color)
+    private void AddStrip(Vector2 p0, Vector2 p1, float width, GroundColor color, float level = 0f)
     {
         var dir = p1 - p0;
         if (dir.LengthSquared() < 1e-6f) return;
         dir = Vector2.Normalize(dir);
         var side = new Vector2(-dir.Y, dir.X) * (width * 0.5f);
-        var quad = new Quad(p0 - side, p1 - side, p1 + side, p0 + side, color);
+        var quad = new Quad(p0 - side, p1 - side, p1 + side, p0 + side, color, level);
         var centre = (p0 + p1) * 0.5f;
         var key = Key((int)MathF.Floor(centre.X / GroundLod.TileSize), (int)MathF.Floor(centre.Y / GroundLod.TileSize));
         if (!_byTile.TryGetValue(key, out var list)) _byTile.Add(key, list = []);

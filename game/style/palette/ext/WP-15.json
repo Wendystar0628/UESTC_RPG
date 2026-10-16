@@ -20,6 +20,8 @@
     {"token": "ground.marking.lit", "id": 194, "albedo": [0.862745, 0.854902, 0.831373], "materialClass": "ground", "seasonal": false, "role": "lit"},
     {"token": "ground.marking.shade", "id": 195, "albedo": [0.862745, 0.854902, 0.831373], "materialClass": "ground", "seasonal": false, "role": "shade"},
     {"token": "ground.markingYellow.lit", "id": 196, "albedo": [0.823529, 0.721569, 0.4], "materialClass": "ground", "seasonal": false, "role": "lit"},
-    {"token": "ground.markingYellow.shade", "id": 197, "albedo": [0.823529, 0.721569, 0.4], "materialClass": "ground", "seasonal": false, "role": "shade"}
+    {"token": "ground.markingYellow.shade", "id": 197, "albedo": [0.823529, 0.721569, 0.4], "materialClass": "ground", "seasonal": false, "role": "shade"},
+    {"token": "ground.track.lit", "id": 198, "albedo": [0.623529, 0.341176, 0.270588], "materialClass": "ground", "seasonal": false, "role": "lit"},
+    {"token": "ground.track.shade", "id": 199, "albedo": [0.623529, 0.341176, 0.270588], "materialClass": "ground", "seasonal": false, "role": "shade"}
   ]
 }

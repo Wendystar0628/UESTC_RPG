@@ -28,7 +28,8 @@ internal sealed class GroundMesher
     }
 
     private const int TWater = 0, TRoad = 1, TBevel = 2, TCurb = 3, TCar = 4, TPaved = 5, TEdge = 6,
-        TTrack = 7, TTurf = 8, TCourt = 9, TPlaza = 10, TPlazaBorder = 11, TLawnEdge = 12, TLawnLow = 13, TLawnHigh = 14;
+        TTrack = 7, TTurf = 8, TCourt = 9, TPlaza = 10, TPlazaBorder = 11, TLawnEdge = 12, TLawnLow = 13, TLawnHigh = 14,
+        TPit = 15, TPitTop = 16, TPitCoreBevel = 17, TPitCore = 18;
 
     private static readonly Vector3 Up = Vector3.UnitY;
 
@@ -38,6 +39,7 @@ internal sealed class GroundMesher
     private readonly MeshSink _sink;
     private readonly bool _bevel;
     private readonly bool _bands;
+    private readonly bool _pits;
     private readonly Threshold[] _t;
     private readonly int _enabled;
     private readonly int _maxAffineLevel;
@@ -68,6 +70,7 @@ internal sealed class GroundMesher
         _grassY = steps == 2 ? section.GrassY : _pavingY;
         _fieldTolerance = 0.03f * field.Cell;
         _bands = GroundLod.HasBands(lod);
+        _pits = _bands;   // the frame and the soil are resolved where kerbs are (L0, L1); beyond that a pit is under a pixel
         _t =
         [
             new(TileField.W, 0f),
@@ -84,12 +87,18 @@ internal sealed class GroundMesher
             new(TileField.Plaza, _bands ? -section.PlazaBorder : 0f),
             new(TileField.LawnEdge, section.Lawn.EdgeBand),
             new(TileField.Tone, section.Lawn.Low),
-            new(TileField.Tone, section.Lawn.High)
+            new(TileField.Tone, section.Lawn.High),
+            new(TileField.Pit, 0f),
+            new(TileField.Pit, _bevel ? -section.CurbBevel : 0f),
+            new(TileField.Core, _bevel ? section.CurbBevel : 0f),
+            new(TileField.Core, 0f)
         ];
         // Disabled thresholds are never split on: a duplicate contour would steal the face tag of the real one.
         _enabled = (1 << _t.Length) - 1;
         if (!_bevel) _enabled &= ~(1 << TBevel);
         if (!_bands) _enabled &= ~((1 << TCurb) | (1 << TEdge) | (1 << TPlazaBorder));
+        if (!_pits) _enabled &= ~((1 << TPit) | (1 << TPitTop) | (1 << TPitCoreBevel) | (1 << TPitCore));
+        if (!_bevel) _enabled &= ~((1 << TPitTop) | (1 << TPitCoreBevel));
         if (!(section.Lawn.EdgeBand > 0f)) _enabled &= ~(1 << TLawnEdge);
         if (field.ToneMacro == 0) _enabled &= ~((1 << TLawnEdge) | (1 << TLawnLow) | (1 << TLawnHigh));
         if (lod != LodLevel.L0) _enabled &= ~(1 << TLawnEdge);
@@ -121,7 +130,7 @@ internal sealed class GroundMesher
             {
                 var c = _code[j * _f.S + i];
                 var uniform = c == _code[j * _f.S + i + 1] && c == _code[(j + 1) * _f.S + i] && c == _code[(j + 1) * _f.S + i + 1];
-                blocks[0][j * n + i] = uniform && Classify(c) != GroundSurface.Bevel ? c : -1;
+                blocks[0][j * n + i] = uniform && Classify(c) is not (GroundSurface.Bevel or GroundSurface.PitBevel) ? c : -1;
             }
         for (var l = 1; l <= levels; l++)
         {
@@ -201,11 +210,10 @@ internal sealed class GroundMesher
     {
         var surface = Classify(code);
         if (surface == GroundSurface.Water) return;
-        var offset = HeightOf(surface, 0f, 0f);
         var ring = new List<Vector3>();
         void Walk(int i, int j)
         {
-            if (_used[j * _f.S + i]) ring.Add(new(_f.X(i), _f.Get(i, j, TileField.H) + offset, _f.Z(j)));
+            if (_used[j * _f.S + i]) ring.Add(new(_f.X(i), LatticeHeight(surface, i, j), _f.Z(j)));
         }
         for (var k = 0; k < size; k++) Walk(i0 + k, j0);
         for (var k = 0; k < size; k++) Walk(i0 + size, j0 + k);
@@ -221,8 +229,8 @@ internal sealed class GroundMesher
         }
         var cx = _f.X(i0) + size * _f.Cell * 0.5f;
         var cz = _f.Z(j0) + size * _f.Cell * 0.5f;
-        var cy = 0.25f * (_f.Get(i0, j0, TileField.H) + _f.Get(i0 + size, j0, TileField.H) +
-                          _f.Get(i0, j0 + size, TileField.H) + _f.Get(i0 + size, j0 + size, TileField.H)) + offset;
+        var cy = 0.25f * (LatticeHeight(surface, i0, j0) + LatticeHeight(surface, i0 + size, j0) +
+                          LatticeHeight(surface, i0, j0 + size) + LatticeHeight(surface, i0 + size, j0 + size));
         var centre = new Vector3(cx, cy, cz);
         for (var k = 0; k < ring.Count; k++) Top(surface, centre, ring[k], ring[(k + 1) % ring.Count], Up, Up, Up);
     }
@@ -234,7 +242,7 @@ internal sealed class GroundMesher
     /// </summary>
     private void Skirt(GroundSurface surface, Vector3 a, Vector3 b)
     {
-        if (surface is GroundSurface.Water or GroundSurface.Bevel) return;
+        if (surface is GroundSurface.Water or GroundSurface.Bevel or GroundSurface.PitBevel) return;
         var x1 = _f.X(_f.N);
         var z1 = _f.Z(_f.N);
         Vector3 outward;
@@ -553,7 +561,7 @@ internal sealed class GroundMesher
             for (var k = 0; k < poly.Count; k++)
             {
                 points[k] = Point(poly[k], surface);
-                normals[k] = surface == GroundSurface.Bevel ? BevelNormal(poly[k]) : Up;
+                normals[k] = SurfaceNormal(surface, poly[k]);
             }
             for (var k = 0; k < poly.Count; k++) Skirt(surface, points[k], points[(k + 1) % poly.Count]);
             if (poly.Count == 3 || (_grid.IsFlat && !HasCollinear(poly)))
@@ -569,7 +577,7 @@ internal sealed class GroundMesher
                 var mean = Mean(poly);
                 var c = new Vert { X = poly.Average(v => v.X), Z = poly.Average(v => v.Z), Vals = mean };
                 var pc = Point(c, surface);
-                var nc = surface == GroundSurface.Bevel ? BevelNormal(c) : Up;
+                var nc = SurfaceNormal(surface, c);
                 for (var k = 0; k < poly.Count; k++)
                 {
                     var next = (k + 1) % poly.Count;
@@ -600,10 +608,10 @@ internal sealed class GroundMesher
         for (var f = 0; f < mid.Length; f++) mid[f] = 0.5f * (u.Vals[f] + w.Vals[f]);
         var other = (CodeOf(mid) & ~(1 << t)) | (~code & (1 << t));
         var neighbour = Classify(other);
-        var hu = HeightOf(surface, u.Vals[TileField.A], u.Vals[TileField.H]);
-        var hw = HeightOf(surface, w.Vals[TileField.A], w.Vals[TileField.H]);
-        var lu = HeightOf(neighbour, u.Vals[TileField.A], u.Vals[TileField.H]);
-        var lw = HeightOf(neighbour, w.Vals[TileField.A], w.Vals[TileField.H]);
+        var hu = HeightOf(surface, u.Vals);
+        var hw = HeightOf(surface, w.Vals);
+        var lu = HeightOf(neighbour, u.Vals);
+        var lw = HeightOf(neighbour, w.Vals);
         if (hu - lu < 1e-4f || hw - lw < 1e-4f) return;
         var field = _t[t].Field;
         // Outward from this (higher) side: up the field gradient when this side is inside (field below iso).
@@ -621,19 +629,53 @@ internal sealed class GroundMesher
     }
 
     private Vector3 Point(Vert v, GroundSurface surface) =>
-        new((float)v.X, HeightOf(surface, v.Vals[TileField.A], v.Vals[TileField.H]), (float)v.Z);
+        new((float)v.X, HeightOf(surface, v.Vals), (float)v.Z);
 
-    /// <summary>Base height plus the surface's offset in the street cross-section.</summary>
-    private float HeightOf(GroundSurface surface, float a, float h) => h + surface switch
+    /// <summary>Height of the surface at the lattice point (i, j).</summary>
+    private float LatticeHeight(GroundSurface surface, int i, int j) => HeightOf(surface, _f.V, (j * _f.S + i) * TileField.Count);
+
+    /// <summary>
+    /// Base height plus the surface's offset in the street cross-section, from the field values that start at
+    /// <paramref name="offset"/> in <paramref name="v"/> (a lattice row or one vertex). A pit's frame and soil take their
+    /// heights from the pit's own values; the chamfers slope 45 degrees over the bevel width from the frame top down to
+    /// its edge, outside and inside.
+    /// </summary>
+    private float HeightOf(GroundSurface surface, float[] v, int offset = 0)
     {
-        GroundSurface.Water => _s.BankBottomY,
-        GroundSurface.Asphalt or GroundSurface.Parking => _s.RoadY,
-        GroundSurface.Bevel => _s.PavingY - _s.CurbBevel + Math.Clamp(a, 0f, _s.CurbBevel),
-        GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Track or GroundSurface.Turf or GroundSurface.Court or
-            GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver => _pavingY,
-        GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => _grassY,
-        _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
+        var h = v[offset + TileField.H];
+        var bevel = _s.CurbBevel;
+        return h + surface switch
+        {
+            GroundSurface.Water => _s.BankBottomY,
+            GroundSurface.Asphalt or GroundSurface.Parking => _s.RoadY,
+            GroundSurface.Bevel => _s.PavingY - bevel + Math.Clamp(v[offset + TileField.A], 0f, bevel),
+            GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Track or GroundSurface.Turf or GroundSurface.Court or
+                GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver => _pavingY,
+            GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => _grassY,
+            GroundSurface.PitRim => v[offset + TileField.PitRim],
+            GroundSurface.PitSoil => v[offset + TileField.PitSoil],
+            GroundSurface.PitBevel => v[offset + TileField.PitRim] - bevel +
+                MathF.Min(Math.Clamp(-v[offset + TileField.Pit], 0f, bevel), Math.Clamp(v[offset + TileField.Core], 0f, bevel)),
+            _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
+        };
+    }
+
+    private Vector3 SurfaceNormal(GroundSurface surface, Vert v) => surface switch
+    {
+        GroundSurface.Bevel => BevelNormal(v),
+        GroundSurface.PitBevel => PitBevelNormal(v),
+        _ => Up
     };
+
+    /// <summary>Normal of a pit frame's chamfer: tilted outward on the outer top edge, toward the soil on the inner one.</summary>
+    private Vector3 PitBevelNormal(Vert v)
+    {
+        var g = Gradient(v, TileField.Pit);
+        if (g == Vector2.Zero) return Up;
+        var inner = v.Vals[TileField.Core] < -v.Vals[TileField.Pit];
+        var sign = inner ? -1f : 1f;
+        return Vector3.Normalize(Up + new Vector3(sign * g.X, 0f, sign * g.Y));
+    }
 
     private Vector3 BevelNormal(Vert v)
     {
@@ -688,6 +730,8 @@ internal sealed class GroundMesher
             TileField.Turf => Of(SurfaceKind.Turf),
             TileField.Court => Of(SurfaceKind.Court),
             TileField.Plaza => Of(SurfaceKind.Plaza),
+            // Core is Pit plus the frame thickness of the nearest pit: the same gradient.
+            TileField.Pit or TileField.Core => Of(SurfaceKind.Pit),
             _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown field.")
         };
     }
@@ -712,6 +756,15 @@ internal sealed class GroundMesher
         if (Has(TRoad)) return Has(TCar) ? GroundSurface.Asphalt : GroundSurface.Parking;
         if (_bevel && Has(TBevel)) return GroundSurface.Bevel;
         if (_bands && Has(TCurb)) return GroundSurface.Curb;
+        if (_pits && Has(TPit))
+        {
+            // A tree pit or planting strip is carved out of whatever lies round it: nothing is paved or sown inside it.
+            // Inside the outer face: a chamfer on the frame's outer top edge, the flat frame top, a chamfer on its inner
+            // top edge, then the sunken soil.
+            if (Has(TPitCore)) return GroundSurface.PitSoil;
+            if (_bevel && (Has(TPitCoreBevel) || !Has(TPitTop))) return GroundSurface.PitBevel;
+            return GroundSurface.PitRim;
+        }
         if (!Has(TPaved))
         {
             if (Has(TLawnEdge) || Has(TLawnLow)) return GroundSurface.GrassDark;
@@ -729,5 +782,17 @@ internal sealed class GroundMesher
     /// <summary>Surface at a lattice point (used by the collision height field and the footstep grid).</summary>
     public GroundSurface SurfaceAt(int i, int j) => Classify(_code[j * _f.S + i]);
 
-    public float HeightAt(int i, int j) => HeightOf(SurfaceAt(i, j), _f.Get(i, j, TileField.A), _f.Get(i, j, TileField.H));
+    public float HeightAt(int i, int j) => LatticeHeight(SurfaceAt(i, j), i, j);
+
+    /// <summary>
+    /// Height a walker stands at: the visible height, except inside a tree pit, where it is the paving level (the pit's
+    /// frame is a box collider when it is tall enough to block, and the walking height field never bumps up to it).
+    /// </summary>
+    public float WalkHeightAt(int i, int j)
+    {
+        var surface = SurfaceAt(i, j);
+        return surface is GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil
+            ? _f.Get(i, j, TileField.H) + _pavingY
+            : LatticeHeight(surface, i, j);
+    }
 }

@@ -12,16 +12,31 @@ namespace Campus.Gen.Ground;
 /// the type properties (roadType, sport, width) from that same record, and the shapes from the part's own geometry.
 /// A multi-polygon part gives one shape per polygon, each with its own holes, so a hole stays a hole and polygons
 /// never flip each other's inside. A feature without parts is read from its own kind, props and geometry.
+/// Centre lines come from the effective road network (<see cref="OwnedByNetwork"/>); areas are always laid as areas.
 /// Output order is stable (feature ID, part source ID, polygon order), so builds are deterministic.
 /// </summary>
 internal static class GroundSources
 {
     public static (List<GroundShape> Shapes, List<RoadLine> Roads) Read(IWorldModel world)
     {
+        // The network holds the effective centre lines (WP-08: original ways minus hidden ones, plus the authored
+        // footways, paths and pedestrian lines). A centre line is laid from there and only there: a polyline feature the
+        // network already owns is skipped below, so it is never laid twice or brought back after a hide.
+        var network = world.Network.Roads.Select(l => l.Id).ToHashSet();
         var shapes = new List<GroundShape>();
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            if (feature.Kind.Value == PitKind)
+            {
+                AddPits(shapes, feature);
+                continue;
+            }
             foreach (var source in Sources(feature))
+            {
+                if (OwnedByNetwork(feature, source, network)) continue;
                 AddSurfaces(shapes, feature.Id, source);
+            }
+        }
 
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
@@ -45,18 +60,21 @@ internal static class GroundSources
         return (shapes, roads);
     }
 
-    /// <summary>One source record of a feature; <see cref="Label"/> names it in error messages.</summary>
-    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry);
+    /// <summary>
+    /// One source record of a feature; <see cref="Label"/> names it in error messages. <see cref="Entity"/> is the owning
+    /// entity's record (its OSM tags), which a part's own record does not repeat.
+    /// </summary>
+    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry, JsonElement? Entity = null);
 
     private static IEnumerable<Source> Sources(WorldFeature feature)
     {
         if (feature.Parts.Count == 0)
         {
-            yield return new("its geometry", feature.Kind.Value, feature.Props, feature.Geometry);
+            yield return new("its geometry", feature.Kind.Value, feature.Props, feature.Geometry, feature.Props);
             yield break;
         }
         foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
-            yield return new("part " + part.SourceId, PartKind(feature, part), part.Props ?? feature.Props, part.Geometry);
+            yield return new("part " + part.SourceId, PartKind(feature, part), part.Props ?? feature.Props, part.Geometry, feature.Props);
     }
 
     /// <summary>
@@ -66,20 +84,66 @@ internal static class GroundSources
     private static string PartKind(WorldFeature feature, WorldFeaturePart part) =>
         GroundClassifier.Text(part.Props, "kind") ?? feature.Kind.Value;
 
-    private static void AddSurfaces(List<GroundShape> shapes, FeatureId id, Source source)
+    /// <summary>
+    /// True for a road drawn as a centre line whose effective copy lives in <c>Network.Roads</c>, so that copy is the one
+    /// laid (a capsule per line, in <see cref="Read"/>). Two cases, by ID and tags and never by comparing geometry:
+    /// the feature's ID is in the network, or it is an authored footway, path or pedestrian line (the classes WP-08
+    /// projects into the network) that the network lacks, which means it was hidden. Areas never match: a polygon or a
+    /// multi-polygon, holes included, is laid as the area it is, whatever the network holds under its ID.
+    /// </summary>
+    private static bool OwnedByNetwork(WorldFeature feature, Source source, HashSet<FeatureId> network)
     {
-        if (GroundClassifier.KindOf(source.Kind, source.Props) is not { } kind) return;
-        switch (source.Geometry)
+        if (source.Geometry is not PolylineGeometry || source.Kind != "road") return false;
+        if (network.Contains(feature.Id)) return true;
+        return feature.Source == FeatureSource.Design &&
+            GroundClassifier.RoadType(source.Props) is "footway" or "path" or "pedestrian" &&
+            GroundClassifier.Text(source.Props, "area") != "yes";
+    }
+
+    /// <summary>Overlay kind of a tree pit or planting strip.</summary>
+    internal const string PitKind = "tree-pit";
+
+    /// <summary>
+    /// Tree pits and planting strips: one pit shape per polygon of the feature, its frame heights from the record
+    /// (<c>height</c> is the frame top, <c>soilAbove</c> the soil top, <c>kerb</c> the frame thickness). A record whose
+    /// props say <c>stone: site</c> has its stone built by a site package, so the ground leaves it alone. A point (a
+    /// round bed) has no outline and is never the ground's.
+    /// </summary>
+    private static void AddPits(List<GroundShape> shapes, WorldFeature feature)
+    {
+        if (GroundClassifier.Text(feature.Props, "stone") == "site") return;
+        var profile = new PitProfile(feature.Height, GroundClassifier.Number(feature.Props, "soilAbove"), GroundClassifier.Number(feature.Props, "kerb"));
+        switch (feature.Geometry)
         {
             case PolygonGeometry polygon:
-                if (Polygon(id, kind, polygon.Rings) is { } shape) shapes.Add(shape);
+                if (Polygon(feature.Id, SurfaceKind.Pit, polygon.Rings, pit: profile) is { } shape) shapes.Add(shape);
                 break;
             case MultiPolygonGeometry multi:
                 foreach (var rings in multi.Polygons)
-                    if (Polygon(id, kind, rings) is { } piece) shapes.Add(piece);
+                    if (Polygon(feature.Id, SurfaceKind.Pit, rings, pit: profile) is { } piece) shapes.Add(piece);
+                break;
+        }
+    }
+
+    private static void AddSurfaces(List<GroundShape> shapes, FeatureId id, Source source)
+    {
+        if (GroundClassifier.KindOf(source.Kind, source.Props, source.Entity) is not { } kind) return;
+        // Only a record that names a sport is a marked pitch; a pitch without a sport tag is plain grass (no white lines).
+        var marked = kind == SurfaceKind.Turf && GroundClassifier.Text(source.Props, "sport") is { Length: > 0 };
+        switch (source.Geometry)
+        {
+            case PolygonGeometry polygon:
+                if (Surface(id, kind, polygon.Rings, marked) is { } shape) shapes.Add(shape);
+                break;
+            case MultiPolygonGeometry multi:
+                foreach (var rings in multi.Polygons)
+                    if (Surface(id, kind, rings, marked) is { } piece) shapes.Add(piece);
                 break;
             case PolylineGeometry when kind == SurfaceKind.Building:
                 break;   // a footprint needs an area
+            case PolylineGeometry polyline when kind == SurfaceKind.Track:
+                if (SportGround.TrackLine(id, polyline.Line.Points, GroundClassifier.Number(source.Props, "width")) is { } track) shapes.Add(track);
+                break;
             case PolylineGeometry polyline:
                 var type = GroundClassifier.RoadType(source.Props);
                 var width = GroundClassifier.Width(source.Props, type, 0f);
@@ -93,7 +157,11 @@ internal static class GroundSources
         }
     }
 
-    private static GroundShape? Polygon(FeatureId id, SurfaceKind kind, PolygonRings rings)
+    /// <summary>A polygon source as a ground shape; a running track polygon becomes a ring (<see cref="SportGround.TrackRing"/>).</summary>
+    private static GroundShape? Surface(FeatureId id, SurfaceKind kind, PolygonRings rings, bool marked) =>
+        kind == SurfaceKind.Track ? SportGround.TrackRing(id, rings) : Polygon(id, kind, rings, marked);
+
+    internal static GroundShape? Polygon(FeatureId id, SurfaceKind kind, PolygonRings rings, bool marked = false, PitProfile? pit = null)
     {
         var list = new List<Vector2[]>();
         var outer = Clean(rings.Outer);
@@ -107,7 +175,7 @@ internal static class GroundSources
         var min = outer[0];
         var max = outer[0];
         foreach (var p in outer) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-        return new GroundShape { Kind = kind, Id = id, Rings = list.ToArray(), Min = min, Max = max };
+        return new GroundShape { Kind = kind, Id = id, Rings = list.ToArray(), Min = min, Max = max, Marked = marked, Pit = pit };
     }
 
     private static GroundShape? Capsule(FeatureId id, SurfaceKind kind, IReadOnlyList<Vector2> line, float width)

@@ -6,7 +6,8 @@ namespace Campus.Gen.Ground;
 /// <summary>Final surface of a piece of ground after priority resolution (water first, lawn last).</summary>
 public enum GroundSurface : byte
 {
-    Water, Asphalt, Parking, Bevel, Curb, Edging, Track, Turf, Court, Granite, PlazaBorder, Paver, Grass, GrassLight, GrassDark
+    Water, Asphalt, Parking, Bevel, Curb, Edging, Track, Turf, Court, Granite, PlazaBorder, Paver, Grass, GrassLight, GrassDark,
+    PitRim, PitBevel, PitSoil
 }
 
 /// <summary>Colour slots used by ground geometry. Each slot is one Lit/Shade pair in the palette.</summary>
@@ -24,7 +25,8 @@ public enum GroundMaterial : byte { Asphalt, Curb, Paving, Lawn, Marking }
 
 /// <summary>
 /// Palette tokens and material specs for the ground. Colours live only in the palette data
-/// (game/style/palette/ext/WP-15.json, columns 178-197; grass, brick and base.warmBrown from the core table);
+/// (game/style/palette/ext/WP-15.json, columns 178-197 and the track pair 198-199 borrowed from the next segment;
+/// grass and base.warmBrown from the core table);
 /// this file only names them. Plazas share the granite of the kerbs; step faces under lawns use the core warm brown.
 /// </summary>
 public static class GroundPalette
@@ -49,7 +51,7 @@ public static class GroundPalette
         GroundColor.Marking => 194,
         GroundColor.MarkingYellow => 196,
         GroundColor.Grass => 150,
-        GroundColor.Track => 98,
+        GroundColor.Track => 198,
         GroundColor.Soil => 88,
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, "Unknown ground colour.")
     };
@@ -72,7 +74,7 @@ public static class GroundPalette
         GroundColor.Paver => "ground.paver",
         GroundColor.Court => "ground.court",
         GroundColor.Turf => "ground.turf",
-        GroundColor.Track => "brick",
+        GroundColor.Track => "ground.track",
         GroundColor.Grass => "grass",
         GroundColor.GrassLight => "ground.grassLight",
         GroundColor.GrassDark => "ground.grassDark",
@@ -86,7 +88,9 @@ public static class GroundPalette
     {
         GroundSurface.Asphalt => GroundColor.Asphalt,
         GroundSurface.Parking => GroundColor.Concrete,
-        GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Granite => GroundColor.Curb,
+        GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Granite or
+            GroundSurface.PitRim or GroundSurface.PitBevel => GroundColor.Curb,
+        GroundSurface.PitSoil => GroundColor.Soil,
         GroundSurface.Track => GroundColor.Track,
         GroundSurface.Turf => GroundColor.Turf,
         GroundSurface.Court => GroundColor.Court,
@@ -103,7 +107,7 @@ public static class GroundPalette
         GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => true,
         GroundSurface.Water or GroundSurface.Asphalt or GroundSurface.Parking or GroundSurface.Bevel or GroundSurface.Curb or
             GroundSurface.Edging or GroundSurface.Track or GroundSurface.Turf or GroundSurface.Court or GroundSurface.Granite or
-            GroundSurface.PlazaBorder or GroundSurface.Paver => false,
+            GroundSurface.PlazaBorder or GroundSurface.Paver or GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil => false,
         _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
     };
 
@@ -112,7 +116,9 @@ public static class GroundPalette
     {
         GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark or GroundSurface.Turf => GroundColor.Soil,
         GroundSurface.Asphalt or GroundSurface.Parking or GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or
-            GroundSurface.Track or GroundSurface.Court or GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver => GroundColor.Curb,
+            GroundSurface.Track or GroundSurface.Court or GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver or
+            GroundSurface.PitRim or GroundSurface.PitBevel => GroundColor.Curb,
+        GroundSurface.PitSoil => GroundColor.Soil,
         GroundSurface.Water => throw new ArgumentOutOfRangeException(nameof(upper), upper, "Water has no face."),
         _ => throw new ArgumentOutOfRangeException(nameof(upper), upper, "Unknown ground surface.")
     };
@@ -122,7 +128,9 @@ public static class GroundPalette
     {
         GroundSurface.Asphalt => FootMat.Asphalt,
         GroundSurface.Parking => FootMat.Concrete,
-        GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Granite or GroundSurface.PlazaBorder => FootMat.StonePaving,
+        GroundSurface.Bevel or GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Granite or GroundSurface.PlazaBorder or
+            GroundSurface.PitRim or GroundSurface.PitBevel => FootMat.StonePaving,
+        GroundSurface.PitSoil => FootMat.Soil,
         GroundSurface.Paver => FootMat.BrickPaver,
         GroundSurface.Track or GroundSurface.Court => FootMat.RubberTrack,
         GroundSurface.Turf or GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => FootMat.Grass,

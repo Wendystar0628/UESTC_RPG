@@ -5,7 +5,33 @@ using Campus.Contracts;
 namespace Campus.Gen.Ground;
 
 /// <summary>Source surface classes in field order. Each class gets one signed distance field per tile.</summary>
-internal enum SurfaceKind : byte { Water, Carriageway, Parking, Plaza, Walk, Court, Turf, Track, Building }
+internal enum SurfaceKind : byte { Water, Carriageway, Parking, Plaza, Walk, Court, Turf, Track, Building, Pit }
+
+/// <summary>
+/// One tree pit or planting strip as authored (<c>kind</c> tree-pit): the outline is the outer face of its stone frame.
+/// <c>kerb</c> is the frame's thickness. <c>height</c> and <c>soilAbove</c> are the authored frame top and soil top; the
+/// ground shows them only when <see cref="PitSpec.UseAuthoredHeights"/> is on, otherwise it draws the design heights of
+/// <see cref="PitSpec"/>. Null means "not given".
+/// </summary>
+internal sealed record PitProfile(float? Rim, float? Soil, float? Kerb)
+{
+    /// <summary>
+    /// Resolved (frame top, soil top, frame thickness) above the carriageway level. <paramref name="compact"/> is a
+    /// single pit (a box), as against a long planting strip: they have different design heights.
+    /// </summary>
+    public (float Rim, float Soil, float Kerb) Resolve(GroundSection section, bool compact)
+    {
+        var spec = section.Pits;
+        var datum = spec.Datum ?? section.PavingY;
+        var rim = spec.UseAuthoredHeights && Rim is { } given
+            ? datum + given
+            : section.PavingY + (compact ? spec.PitRimAbovePaving : spec.StripRimAbovePaving);
+        var soil = spec.UseAuthoredHeights && Soil is { } s ? datum + s : rim - spec.SoilBelowRim;
+        soil = MathF.Min(soil, rim - spec.MinSoilBelowRim);
+        var kerb = Math.Clamp(Kerb ?? spec.DefaultKerb, spec.MinKerb, spec.MaxKerb);
+        return (rim, soil, kerb);
+    }
+}
 
 /// <summary>One source shape: a polygon with holes, or a centre line with a half width (a chain of capsules).</summary>
 internal sealed class GroundShape
@@ -17,6 +43,14 @@ internal sealed class GroundShape
     public float HalfWidth { get; init; }
     public required Vector2 Min { get; init; }
     public required Vector2 Max { get; init; }
+    /// <summary>Turf only: the record names a sport (a football pitch), so its lines are drawn; an untagged pitch is plain grass.</summary>
+    public bool Marked { get; init; }
+    /// <summary>Pit only: the frame and soil heights of the pit.</summary>
+    public PitProfile? Pit { get; init; }
+
+    /// <summary>Pit only: (frame top, soil top, frame thickness) above the carriageway level, for this outline.</summary>
+    public (float Rim, float Soil, float Kerb) PitHeights(GroundSection section) =>
+        Pit!.Resolve(section, Max.X - Min.X <= section.Pits.CompactSide && Max.Y - Min.Y <= section.Pits.CompactSide);
 }
 
 /// <summary>A centre line of a carriageway or footpath from the road network; drives markings.</summary>
@@ -60,9 +94,11 @@ internal static class GroundClassifier
 
     /// <summary>
     /// Surface class of one source record from its kind and its own props; null for kinds that leave the lawn untouched
-    /// (POIs, green areas). Buildings return <see cref="SurfaceKind.Building"/>: a footprint, not paving.
+    /// (POIs, green areas, the frame of a stadium). Buildings return <see cref="SurfaceKind.Building"/>: a footprint, not
+    /// paving. <paramref name="entity"/> is the owning entity's record, which carries the OSM tags (<c>sourceTags</c>)
+    /// that a part's own record does not.
     /// </summary>
-    public static SurfaceKind? KindOf(string kind, JsonElement? props)
+    public static SurfaceKind? KindOf(string kind, JsonElement? props, JsonElement? entity = null)
     {
         switch (kind)
         {
@@ -78,14 +114,37 @@ internal static class GroundClassifier
                 return Text(props, "sport") switch
                 {
                     "running" => SurfaceKind.Track,
+                    "athletics" when Leisure(props, entity) == "track" => SurfaceKind.Track,
                     "soccer" => SurfaceKind.Turf,
                     "swimming" => SurfaceKind.Water,
+                    null or "" => UntaggedSport(Leisure(props, entity)),
                     _ => SurfaceKind.Court
                 };
             default:
                 return null;
         }
     }
+
+    /// <summary>
+    /// A sport record without a sport tag is read from its leisure tag: a track is a running track, and a stadium or a
+    /// sports centre only encloses the pitches, tracks and pools mapped inside it, so it has no surface of its own
+    /// (null: the lawn or whatever lies beneath shows). A pitch that names no sport is open turf, not a court: a court
+    /// needs a sport to say what is marked on it. Anything else untagged stays a court.
+    /// </summary>
+    private static SurfaceKind? UntaggedSport(string? leisure) => leisure switch
+    {
+        "track" => SurfaceKind.Track,
+        "stadium" or "sports_centre" => null,
+        "pitch" => SurfaceKind.Turf,
+        _ => SurfaceKind.Court
+    };
+
+    private static string? Leisure(JsonElement? props, JsonElement? entity) =>
+        Text(props, "leisure") ?? SourceTag(props, "leisure") ?? SourceTag(entity, "leisure");
+
+    private static string? SourceTag(JsonElement? record, string name) =>
+        record is { ValueKind: JsonValueKind.Object } r && r.TryGetProperty("sourceTags", out var tags) && tags.ValueKind == JsonValueKind.Object
+            ? Text(tags, name) : null;
 
     public static float Width(JsonElement? props, string type, float given) =>
         given > 0f && float.IsFinite(given) ? given : Number(props, "width") is { } w && w > 0f ? w : DefaultWidth(type);

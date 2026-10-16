@@ -108,7 +108,7 @@ public static class GroundShadingRule
             slope >= FacetSlope ? GroundShading.Faceted : GroundShading.Up,
         GroundSurface.Water or GroundSurface.Asphalt or GroundSurface.Parking or GroundSurface.Bevel or GroundSurface.Curb or
             GroundSurface.Edging or GroundSurface.Track or GroundSurface.Court or GroundSurface.Granite or
-            GroundSurface.PlazaBorder or GroundSurface.Paver => GroundShading.Up,
+            GroundSurface.PlazaBorder or GroundSurface.Paver or GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil => GroundShading.Up,
         _ => throw new ArgumentOutOfRangeException(nameof(surface), surface, "Unknown ground surface.")
     };
 }

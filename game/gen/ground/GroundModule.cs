@@ -70,5 +70,6 @@ public sealed class GroundModule : IContentModule
         return new ContentOutput(sink.Finish(), []);
     }
 
-    public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => [GroundCollision.Build(ctx, tile, _section, _terrain)];
+    public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>
+        [GroundCollision.Build(ctx, tile, _section, _terrain), .. GroundCollision.PitBoxes(ctx, tile, _section, _terrain)];
 }
