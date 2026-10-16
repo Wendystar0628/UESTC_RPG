@@ -149,7 +149,7 @@ public sealed class GroundEffectiveRoadsTests
             Check.True(laid[0].Line!.SequenceEqual(GroundSources.Clean(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f, $"{feature.Id.Value} is not laid along its network line.");
         }
         // No centre line is laid twice anywhere: every network road has exactly one capsule chain, and no other line shape shares its ID.
-        var chains = shapes.Where(s => s.Line is not null && s.Kind is SurfaceKind.Carriageway or SurfaceKind.Walk or SurfaceKind.Plaza).ToArray();
+        var chains = shapes.Where(s => s.Line is not null && s.Kind is SurfaceKind.Carriageway or SurfaceKind.Walk or SurfaceKind.Plaza && !s.Id.Value.Contains(":footprint:", StringComparison.Ordinal)).ToArray();
         Check.True(chains.GroupBy(s => s.Id).All(g => g.Count() == 1), "A road ID is laid as more than one centre line.");
         // An authored line of a class the network does not take (a design drive) is laid from its own feature, once.
         var outside = world.Features.Values.Count(f => f.Source == FeatureSource.Design && f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&

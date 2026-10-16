@@ -51,6 +51,7 @@ internal static class GroundSources
             // polygons exist it rounds their joins (buffered OSM ways meet with flat caps and leave notches at bends).
             if (Capsule(line.Id, kind, points, width) is { } capsule) shapes.Add(capsule);
         }
+        AddBridgeFootprints(world, roads, shapes);
         // Rounded kerbs at junction corners, as extra carriageway polygons merged by the union.
         var fillets = RoadGraph.Fillets(roads);
         for (var k = 0; k < fillets.Count; k++)
@@ -59,6 +60,49 @@ internal static class GroundSources
                 shapes.Add(fillet);
         return (shapes, roads);
     }
+
+    /// <summary>The deck's edge margin beyond the outermost lines (stone base, abutment bearing) that no lawn shows through.</summary>
+    private const float BridgeMargin = 0.6f;
+    /// <summary>The footprint runs this far past each end of the bridge's lines, onto the banks (the deck's bearing and its approach slab).</summary>
+    private const float BridgeEnd = 3f;
+
+    private static Vector2[] Extended(Vector2[] points)
+    {
+        var list = points.ToList();
+        var head = Vector2.Normalize(list[0] - list[1]);
+        var tail = Vector2.Normalize(list[^1] - list[^2]);
+        list[0] += head * BridgeEnd;
+        list[^1] += tail * BridgeEnd;
+        return list.ToArray();
+    }
+
+    /// <summary>
+    /// A registered bridge deck (WP-28's "bridge-deck" overlay point: its axis line, the footway lines it joins and the sidewalk it adds)
+    /// leaves no lawn inside its footprint (Opus review 28a): the land under it, where the deck meets the banks, is paved like a walk.
+    /// Over water the water stays. The network lines themselves are paved as ordinary roads along their whole length, so the stretch of
+    /// a bridge line that lies on land is road like any other.
+    /// </summary>
+    private static void AddBridgeFootprints(IWorldModel world, List<RoadLine> roads, List<GroundShape> shapes)
+    {
+        foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            if (feature.Kind.Value != "bridge-deck" || feature.Props is not { ValueKind: JsonValueKind.Object } props) continue;
+            var ids = new List<string>();
+            if (GroundClassifier.Text(props, "axis") is { } axis) ids.Add(axis);
+            if (props.TryGetProperty("walks", out var walks) && walks.ValueKind == JsonValueKind.Array)
+                foreach (var w in walks.EnumerateArray())
+                    if (w.ValueKind == JsonValueKind.String) ids.Add(w.GetString()!);
+            var sidewalk = props.TryGetProperty("sidewalk", out var sw) && sw.ValueKind == JsonValueKind.Number && sw.TryGetSingle(out var sv) ? sv : 0f;
+            foreach (var id in ids.Order(StringComparer.Ordinal))
+            {
+                var line = roads.FirstOrDefault(r => r.Id.Value == id);
+                if (line is null) continue;
+                var width = line.Width + (id == ids[0] ? 2f * sidewalk : 0f) + 2f * BridgeMargin;
+                if (Capsule(new FeatureId(feature.Id.Value + ":footprint:" + id), SurfaceKind.Walk, Extended(line.Points), width) is { } capsule) shapes.Add(capsule);
+            }
+        }
+    }
+
 
     /// <summary>
     /// One source record of a feature; <see cref="Label"/> names it in error messages. <see cref="Entity"/> is the owning
