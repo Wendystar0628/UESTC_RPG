@@ -196,6 +196,57 @@ public sealed class WorldModelTests
         Require(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - 150)) < 0.001f, "Real campus fallback margin missing.");
     }
 
+    [TestCase]
+    public void SyntheticBeatAnchorsLoadOverRealCampusWithoutBecomingBuildings()
+    {
+        // contract-25 / MAP-QSH-CORE 8.6: synthetic regression inputs, not an authored campus walk layout.
+        var files = RealFiles();
+        files["overlay/core-beat-fixture.overlay.json"] = """
+            {"zone":"core","owner":"WP-16","map":"qingshuihe","ops":[
+              {"op":"add","id":"walk:beat-fixture-point","kind":"beat","geometry":{"type":"point","position":[-100,0,168]},"reason":"Regression fixture: time-square walking beat; not an authored map placement."},
+              {"op":"add","id":"walk:beat-fixture-area","kind":"beat","geometry":{"type":"polygon","rings":{"outer":[[-331,94],[-329,94],[-329,96],[-331,96]],"holes":[]}},"reason":"Regression fixture: polygon beat area over real campus data."},
+              {"op":"add","id":"walk:beat-fixture-multi","kind":"beat","geometry":{"type":"multiPolygon","polygons":[{"outer":[[-110,160],[-108,160],[-108,162],[-110,162]],"holes":[]},{"outer":[[-106,160],[-104,160],[-104,162],[-106,162]],"holes":[]}]},"reason":"Regression fixture: multi-area beat anchor, not building massing."}
+            ]}
+            """;
+        var result = WorldModelLoader.Load(new("qingshuihe"), files);
+        foreach (var id in new[] { "walk:beat-fixture-point", "walk:beat-fixture-area", "walk:beat-fixture-multi" })
+        {
+            var anchor = result.World.Features[new(id)];
+            Require(anchor.Kind.Value == "beat" && anchor.Height is null && anchor.Parts.Count == 0, "Beat anchor acquired building semantics.");
+            Require(anchor.Source == FeatureSource.Design && anchor.Zone == new ZoneId("core"), "Beat anchor lost overlay provenance.");
+            Require(result.World.Interiors.Get(anchor.Id) is null, "Beat anchor created an interior.");
+        }
+        Require(result.World.Features[new("walk:beat-fixture-point")].Geometry is PointGeometry, "Point anchor shape changed.");
+        Require(result.World.Features[new("walk:beat-fixture-area")].Geometry is PolygonGeometry, "Area anchor shape changed.");
+        Require(result.World.Features[new("walk:beat-fixture-multi")].Geometry is MultiPolygonGeometry { Polygons.Count: 2 }, "Multi-area anchor lost a part.");
+    }
+
+    [TestCase]
+    public void WalkPrefixRejectsNonBeatGeometryAndVolume()
+    {
+        var point = new PointGeometry(Vector3.Zero);
+        var area = new PolygonGeometry(new([new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]));
+        var line = new PolylineGeometry(new([new(0, 0), new(1, 0)]));
+        var invalid = new AddOp[]
+        {
+            new(new("walk:invalid-building"), new("building"), area, 8, null, "negative fixture"),
+            new(new("walk:invalid-safe"), new("safe"), area, null, null, "negative fixture"),
+            new(new("walk:invalid-anchor-alias"), new("anchor"), point, null, null, "negative fixture"),
+            new(new("walk:invalid-line"), new("beat"), line, null, null, "negative fixture"),
+            new(new("walk:invalid-volume"), new("beat"), point, 2, null, "negative fixture"),
+            new(new("walk:"), new("beat"), point, null, null, "negative fixture")
+        };
+        foreach (var op in invalid)
+        {
+            var overlay = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-16"), [op]), ContractJson.Options);
+            try { Load(overlay); throw new InvalidOperationException($"Invalid walk add '{op.Id.Value}' was accepted."); }
+            catch (WorldDataException error)
+            {
+                Require(error.File == "overlay/test.overlay.json" && error.Message.Contains("walk: beat anchor", StringComparison.Ordinal), "Invalid walk add lost a precise validation error.");
+            }
+        }
+    }
+
     private static Dictionary<string, string> RealFiles()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

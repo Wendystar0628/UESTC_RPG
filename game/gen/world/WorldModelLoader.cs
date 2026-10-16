@@ -224,7 +224,12 @@ public static class WorldModelLoader
                 if (op is AddOp add)
                 {
                     RequireReason(add.Reason);
-                    if (!add.Id.Value.StartsWith("design:", StringComparison.Ordinal)) throw new ArgumentException("Added features require a design: identifier.");
+                    var designId = add.Id.Value.StartsWith("design:", StringComparison.Ordinal);
+                    var walkBeat = add.Id.Value.StartsWith("walk:", StringComparison.Ordinal) && add.Id.Value.Length > 5
+                        && add.Kind.Value == "beat" && add.Height is null
+                        && add.Geometry is PointGeometry or PolygonGeometry or MultiPolygonGeometry;
+                    if (!designId && !walkBeat)
+                        throw new ArgumentException("Added features require a design: identifier, or a walk: beat anchor with point/area geometry and no height.");
                     RegisterWrite(add.Id.Value, add.Id.Value, file, overlay.Owner, writes, claimedBy);
                     var geometry = Normalize(add.Geometry);
                     var feature = new WorldFeature(add.Id, FeatureSource.Design, add.Kind, geometry)
