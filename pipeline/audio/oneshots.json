@@ -1,0 +1,525 @@
+{
+ "ref_lufs_m": {
+  "step": -30.0,
+  "phrase": -22.0
+ },
+ "defaults": {
+  "step": {
+   "hp": 70
+  },
+  "phrase": {
+   "hp": 500
+  }
+ },
+ "sets": [
+  {
+   "id": "foot_asphalt_walk",
+   "mode": "step",
+   "srcs": [
+    "637556",
+    "648336"
+   ],
+   "n": 8,
+   "rel_db": -1
+  },
+  {
+   "id": "foot_concrete_walk",
+   "mode": "step",
+   "srcs": [
+    "459964",
+    "554380",
+    "813622"
+   ],
+   "n": 8,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_stonepaving_walk",
+   "mode": "step",
+   "srcs": [
+    "205817",
+    "682773",
+    "755062"
+   ],
+   "n": 8,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_brickpaver_walk",
+   "mode": "step",
+   "srcs": [
+    "154665",
+    "205817"
+   ],
+   "n": 8,
+   "rel_db": -0.5,
+   "skip": 3,
+   "pitch": 1.2,
+   "lp": 7500
+  },
+  {
+   "id": "foot_rubbertrack_walk",
+   "mode": "step",
+   "srcs": [
+    "613723",
+    "655367"
+   ],
+   "n": 8,
+   "rel_db": -3,
+   "lp": 4200,
+   "hp": 50,
+   "pitch": -0.8
+  },
+  {
+   "id": "foot_grass_walk",
+   "mode": "step",
+   "srcs": [
+    "377323",
+    "764531",
+    "521587"
+   ],
+   "n": 8,
+   "rel_db": -4,
+   "hp": 60
+  },
+  {
+   "id": "foot_soil_walk",
+   "mode": "step",
+   "srcs": [
+    "389454",
+    "511760",
+    "869611"
+   ],
+   "n": 8,
+   "rel_db": -3,
+   "hp": 60
+  },
+  {
+   "id": "foot_gravel_walk",
+   "mode": "step",
+   "srcs": [
+    "505831",
+    "395597",
+    "352870",
+    "556002",
+    "117627"
+   ],
+   "n": 8,
+   "rel_db": 1,
+   "hp": 80
+  },
+  {
+   "id": "foot_wooddeck_walk",
+   "mode": "step",
+   "srcs": [
+    "399309",
+    "758920"
+   ],
+   "n": 8,
+   "rel_db": 1.5
+  },
+  {
+   "id": "foot_metalgrate_walk",
+   "mode": "step",
+   "srcs": [
+    "398937",
+    "149454",
+    "698697"
+   ],
+   "n": 8,
+   "rel_db": 2
+  },
+  {
+   "id": "foot_terrazzo_walk",
+   "mode": "step",
+   "srcs": [
+    "50725",
+    "170506"
+   ],
+   "n": 8,
+   "rel_db": 0.5
+  },
+  {
+   "id": "foot_tile_walk",
+   "mode": "step",
+   "srcs": [
+    "595078",
+    "371011",
+    "170506"
+   ],
+   "n": 8,
+   "rel_db": 0.5,
+   "skip": 2,
+   "pitch": 0.8
+  },
+  {
+   "id": "foot_polishedstone_walk",
+   "mode": "step",
+   "srcs": [
+    "170506",
+    "50725",
+    "371011"
+   ],
+   "n": 8,
+   "rel_db": 1,
+   "skip": 4,
+   "pitch": -1.5,
+   "lp": 9000
+  },
+  {
+   "id": "foot_carpet_walk",
+   "mode": "step",
+   "srcs": [
+    "853599",
+    "732573",
+    "371018",
+    "371017"
+   ],
+   "n": 8,
+   "rel_db": -8,
+   "hp": 50
+  },
+  {
+   "id": "foot_woodfloor_walk",
+   "mode": "step",
+   "srcs": [
+    "536770",
+    "546362",
+    "523273",
+    "119914"
+   ],
+   "n": 8,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_snow_new_walk",
+   "mode": "step",
+   "srcs": [
+    "432285",
+    "613849",
+    "420555"
+   ],
+   "n": 8,
+   "rel_db": -1,
+   "hp": 60
+  },
+  {
+   "id": "foot_snow_packed_walk",
+   "mode": "step",
+   "srcs": [
+    "614137",
+    "420555",
+    "432285"
+   ],
+   "n": 8,
+   "rel_db": 1,
+   "skip": 4,
+   "hp": 80
+  },
+  {
+   "id": "foot_leaves_dry_walk",
+   "mode": "step",
+   "srcs": [
+    "218305",
+    "62974",
+    "530384"
+   ],
+   "n": 8,
+   "rel_db": 1.5,
+   "hp": 80
+  },
+  {
+   "id": "foot_splash_walk",
+   "mode": "step",
+   "srcs": [
+    "531566",
+    "531571"
+   ],
+   "n": 8,
+   "rel_db": 1,
+   "hp": 60
+  },
+  {
+   "id": "foot_stairs_hard_up",
+   "mode": "step",
+   "srcs": [
+    "383673"
+   ],
+   "n": 6,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_stairs_hard_down",
+   "mode": "step",
+   "srcs": [
+    "383661"
+   ],
+   "n": 6,
+   "rel_db": 0
+  },
+  {
+   "id": "foot_stairs_wood_walk",
+   "mode": "step",
+   "srcs": [
+    "210573"
+   ],
+   "n": 6,
+   "rel_db": 0
+  },
+  {
+   "id": "bird_sparrow",
+   "mode": "phrase",
+   "srcs": [
+    "628949",
+    "628951",
+    "383160",
+    "512805",
+    "670176"
+   ],
+   "n": 12,
+   "det_hp": 1500,
+   "det_lp": 9000,
+   "hp": 900
+  },
+  {
+   "id": "bird_blackbird",
+   "mode": "phrase",
+   "srcs": [
+    "725332",
+    "811988",
+    "188371"
+   ],
+   "n": 10,
+   "det_hp": 1000,
+   "det_lp": 9000,
+   "hp": 600,
+   "max_ms": 4500
+  },
+  {
+   "id": "bird_tit",
+   "mode": "phrase",
+   "srcs": [
+    "346066",
+    "849566",
+    "389404"
+   ],
+   "n": 10,
+   "det_hp": 2000,
+   "det_lp": 10000,
+   "hp": 1200,
+   "max_ms": 2500
+  },
+  {
+   "id": "bird_dove",
+   "mode": "phrase",
+   "srcs": [
+    "735366",
+    "795558",
+    "795719",
+    "818955"
+   ],
+   "n": 8,
+   "det_hp": 250,
+   "det_lp": 1600,
+   "hp": 200,
+   "max_ms": 4500,
+   "merge_ms": 300
+  },
+  {
+   "id": "bird_cuckoo",
+   "mode": "phrase",
+   "srcs": [
+    "506675",
+    "574121"
+   ],
+   "n": 4,
+   "det_hp": 400,
+   "det_lp": 2200,
+   "hp": 300,
+   "max_ms": 3000,
+   "merge_ms": 250
+  },
+  {
+   "id": "bird_crow",
+   "mode": "phrase",
+   "srcs": [
+    "476139",
+    "515290",
+    "386768"
+   ],
+   "n": 10,
+   "det_hp": 300,
+   "det_lp": 3500,
+   "hp": 250,
+   "lp": 7000,
+   "max_ms": 3000,
+   "merge_ms": 180
+  },
+  {
+   "id": "bird_owl",
+   "mode": "phrase",
+   "srcs": [
+    "745208",
+    "528623"
+   ],
+   "n": 4,
+   "det_hp": 200,
+   "det_lp": 900,
+   "hp": 150,
+   "max_ms": 3500,
+   "merge_ms": 300,
+   "drop": [
+    3
+   ],
+   "drop_reason": "ASR 在第 3 条里识别出 \"You stay quiet.\"（no_speech 0.11），疑似人声"
+  },
+  {
+   "id": "bird_magpierobin",
+   "mode": "phrase",
+   "srcs": [
+    "476338",
+    "402381"
+   ],
+   "n": 8,
+   "det_hp": 1500,
+   "det_lp": 9000,
+   "hp": 900,
+   "max_ms": 4000
+  },
+  {
+   "id": "bird_peacock",
+   "mode": "phrase",
+   "srcs": [
+    "675965"
+   ],
+   "n": 3,
+   "det_hp": 500,
+   "det_lp": 4000,
+   "hp": 300,
+   "max_ms": 3000
+  },
+  {
+   "id": "bird_heron",
+   "mode": "phrase",
+   "srcs": [
+    "825293"
+   ],
+   "n": 2,
+   "det_hp": 300,
+   "det_lp": 3000,
+   "hp": 250,
+   "max_ms": 3000
+  },
+  {
+   "id": "bird_swan",
+   "mode": "phrase",
+   "srcs": [
+    "574430"
+   ],
+   "n": 3,
+   "det_hp": 300,
+   "det_lp": 3500,
+   "hp": 250,
+   "max_ms": 3000
+  },
+  {
+   "id": "weather_thunder_distant",
+   "mode": "phrase",
+   "kind": "weather",
+   "dir": "weather",
+   "fmt": "ogg",
+   "srcs": [
+    "347562",
+    "107518",
+    "581232",
+    "238743"
+   ],
+   "n": 6,
+   "det_hp": 30,
+   "det_lp": 400,
+   "hp": 30,
+   "max_ms": 15000,
+   "merge_ms": 800,
+   "guard_snr": 12,
+   "snr_min": 12,
+   "ref_lufs_m": -24.0,
+   "rel_db": 0
+  },
+  {
+   "id": "cloth_walk",
+   "mode": "phrase",
+   "kind": "cloth",
+   "dir": "foley",
+   "srcs": [
+    "641383",
+    "641382",
+    "641381",
+    "481075"
+   ],
+   "n": 10,
+   "det_hp": 500,
+   "det_lp": 9000,
+   "hp": 250,
+   "max_ms": 1500,
+   "merge_ms": 120,
+   "min_ms": 120,
+   "rel_db": -6,
+   "ref_lufs_m": -34.0
+  },
+  {
+   "id": "cloth_jacket",
+   "mode": "phrase",
+   "kind": "cloth",
+   "dir": "foley",
+   "srcs": [
+    "555307",
+    "658410",
+    "475440"
+   ],
+   "n": 10,
+   "det_hp": 500,
+   "det_lp": 9000,
+   "hp": 250,
+   "max_ms": 1500,
+   "merge_ms": 120,
+   "min_ms": 120,
+   "rel_db": -6,
+   "ref_lufs_m": -34.0
+  },
+  {
+   "id": "drip_water",
+   "mode": "step",
+   "kind": "drip",
+   "dir": "props",
+   "srcs": [
+    "459983",
+    "416865"
+   ],
+   "n": 10,
+   "det_hp": 600,
+   "det_lp": 9000,
+   "hp": 300,
+   "prom": 12,
+   "snr_min": 14,
+   "max_ms": 500,
+   "min_ms": 60,
+   "min_gap_ms": 250,
+   "ref_lufs_m": -34.0
+  },
+  {
+   "id": "bird_duck",
+   "mode": "phrase",
+   "srcs": [
+    "124978",
+    "406334",
+    "518098"
+   ],
+   "n": 6,
+   "det_hp": 300,
+   "det_lp": 4000,
+   "hp": 250,
+   "max_ms": 3000,
+   "merge_ms": 200
+  }
+ ]
+}

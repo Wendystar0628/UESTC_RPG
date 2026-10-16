@@ -1,0 +1,3782 @@
+{
+ "animals/bird_blackbird_01.wav": {
+  "lang": "en",
+  "p": 0.23,
+  "segs": []
+ },
+ "animals/bird_blackbird_02.wav": {
+  "lang": "nn",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_blackbird_03.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": []
+ },
+ "animals/bird_blackbird_04.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": []
+ },
+ "animals/bird_blackbird_05.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": []
+ },
+ "animals/bird_blackbird_06.wav": {
+  "lang": "en",
+  "p": 0.55,
+  "segs": []
+ },
+ "animals/bird_blackbird_07.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": []
+ },
+ "animals/bird_blackbird_08.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_blackbird_09.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": []
+ },
+ "animals/bird_blackbird_10.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": []
+ },
+ "animals/bird_crow_01.wav": {
+  "lang": "en",
+  "p": 0.51,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Ask! Ask! Ask!",
+    "nsp": 0.57,
+    "lp": -0.59
+   }
+  ]
+ },
+ "animals/bird_crow_02.wav": {
+  "lang": "en",
+  "p": 0.6,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Sigh.",
+    "nsp": 0.94,
+    "lp": -0.9
+   }
+  ]
+ },
+ "animals/bird_crow_03.wav": {
+  "lang": "en",
+  "p": 0.64,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.71
+   }
+  ]
+ },
+ "animals/bird_crow_04.wav": {
+  "lang": "en",
+  "p": 0.6,
+  "segs": []
+ },
+ "animals/bird_crow_05.wav": {
+  "lang": "en",
+  "p": 0.64,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Sigh.",
+    "nsp": 0.94,
+    "lp": -0.94
+   }
+  ]
+ },
+ "animals/bird_crow_06.wav": {
+  "lang": "nn",
+  "p": 0.34,
+  "segs": []
+ },
+ "animals/bird_crow_07.wav": {
+  "lang": "en",
+  "p": 0.55,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+    "nsp": 0.81,
+    "lp": -0.13
+   }
+  ]
+ },
+ "animals/bird_crow_08.wav": {
+  "lang": "en",
+  "p": 0.59,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Sigh.",
+    "nsp": 0.94,
+    "lp": -0.92
+   }
+  ]
+ },
+ "animals/bird_crow_09.wav": {
+  "lang": "en",
+  "p": 0.61,
+  "segs": []
+ },
+ "animals/bird_crow_10.wav": {
+  "lang": "en",
+  "p": 0.63,
+  "segs": []
+ },
+ "animals/bird_cuckoo_01.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.43
+   }
+  ]
+ },
+ "animals/bird_cuckoo_02.wav": {
+  "lang": "en",
+  "p": 0.43,
+  "segs": []
+ },
+ "animals/bird_cuckoo_03.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.62
+   }
+  ]
+ },
+ "animals/bird_cuckoo_04.wav": {
+  "lang": "en",
+  "p": 0.69,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.78,
+    "lp": -0.68
+   }
+  ]
+ },
+ "animals/bird_dove_01.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Woof, woof.",
+    "nsp": 0.87,
+    "lp": -0.94
+   }
+  ]
+ },
+ "animals/bird_dove_02.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": []
+ },
+ "animals/bird_dove_03.wav": {
+  "lang": "en",
+  "p": 0.16,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Beep, beep, beep, beep, beep, beep.",
+    "nsp": 0.8,
+    "lp": -0.6
+   }
+  ]
+ },
+ "animals/bird_dove_04.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": []
+ },
+ "animals/bird_dove_05.wav": {
+  "lang": "en",
+  "p": 0.29,
+  "segs": []
+ },
+ "animals/bird_dove_06.wav": {
+  "lang": "nn",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 2.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 4.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 6.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 8.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 10.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 12.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 14.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 16.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 18.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 20.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 22.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 24.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   },
+   {
+    "t": 26.0,
+    "text": "Kjell Kronström",
+    "nsp": 0.81,
+    "lp": -0.19
+   }
+  ]
+ },
+ "animals/bird_dove_07.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.84
+   }
+  ]
+ },
+ "animals/bird_dove_08.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": []
+ },
+ "animals/bird_duck_01.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.49
+   }
+  ]
+ },
+ "animals/bird_duck_02.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.83,
+    "lp": -0.89
+   }
+  ]
+ },
+ "animals/bird_duck_03.wav": {
+  "lang": "en",
+  "p": 0.5,
+  "segs": []
+ },
+ "animals/bird_duck_04.wav": {
+  "lang": "en",
+  "p": 0.52,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Bye.",
+    "nsp": 0.9,
+    "lp": -0.87
+   }
+  ]
+ },
+ "animals/bird_duck_05.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_duck_06.wav": {
+  "lang": "en",
+  "p": 0.56,
+  "segs": []
+ },
+ "animals/bird_heron_01.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Ah!",
+    "nsp": 0.93,
+    "lp": -0.81
+   }
+  ]
+ },
+ "animals/bird_heron_02.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Ah!",
+    "nsp": 0.88,
+    "lp": -0.93
+   }
+  ]
+ },
+ "animals/bird_magpierobin_01.wav": {
+  "lang": "en",
+  "p": 0.23,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.86,
+    "lp": -0.82
+   }
+  ]
+ },
+ "animals/bird_magpierobin_02.wav": {
+  "lang": "nn",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_magpierobin_03.wav": {
+  "lang": "id",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "selamat menikmati",
+    "nsp": 0.77,
+    "lp": -0.17
+   }
+  ]
+ },
+ "animals/bird_magpierobin_04.wav": {
+  "lang": "nn",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_magpierobin_05.wav": {
+  "lang": "en",
+  "p": 0.21,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.98
+   }
+  ]
+ },
+ "animals/bird_magpierobin_06.wav": {
+  "lang": "en",
+  "p": 0.23,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.94
+   }
+  ]
+ },
+ "animals/bird_magpierobin_07.wav": {
+  "lang": "en",
+  "p": 0.18,
+  "segs": []
+ },
+ "animals/bird_magpierobin_08.wav": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": []
+ },
+ "animals/bird_owl_01.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": []
+ },
+ "animals/bird_owl_02.wav": {
+  "lang": "en",
+  "p": 0.27,
+  "segs": []
+ },
+ "animals/bird_owl_03.wav": {
+  "lang": "en",
+  "p": 0.47,
+  "segs": []
+ },
+ "animals/bird_peacock_01.wav": {
+  "lang": "en",
+  "p": 0.82,
+  "segs": []
+ },
+ "animals/bird_peacock_02.wav": {
+  "lang": "en",
+  "p": 0.74,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Oh no!",
+    "nsp": 0.65,
+    "lp": -0.85
+   }
+  ]
+ },
+ "animals/bird_peacock_03.wav": {
+  "lang": "en",
+  "p": 0.81,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Ah!",
+    "nsp": 0.68,
+    "lp": -0.96
+   }
+  ]
+ },
+ "animals/bird_sparrow_01.wav": {
+  "lang": "en",
+  "p": 0.17,
+  "segs": []
+ },
+ "animals/bird_sparrow_02.wav": {
+  "lang": "en",
+  "p": 0.19,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -1.0
+   }
+  ]
+ },
+ "animals/bird_sparrow_03.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -1.0
+   }
+  ]
+ },
+ "animals/bird_sparrow_04.wav": {
+  "lang": "en",
+  "p": 0.52,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.87
+   }
+  ]
+ },
+ "animals/bird_sparrow_05.wav": {
+  "lang": "nn",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Hello everyone!",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 2.0,
+    "text": "Today I will show you how to make a beautiful",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 5.0,
+    "text": "and beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 8.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 11.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 14.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 17.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 20.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 23.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   },
+   {
+    "t": 26.0,
+    "text": "I will show you how to make a beautiful flower pot.",
+    "nsp": 0.88,
+    "lp": -0.51
+   }
+  ]
+ },
+ "animals/bird_sparrow_06.wav": {
+  "lang": "en",
+  "p": 0.15,
+  "segs": []
+ },
+ "animals/bird_sparrow_07.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": []
+ },
+ "animals/bird_sparrow_08.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.91,
+    "lp": -0.63
+   }
+  ]
+ },
+ "animals/bird_sparrow_09.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.74
+   }
+  ]
+ },
+ "animals/bird_sparrow_10.wav": {
+  "lang": "en",
+  "p": 0.66,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.79
+   }
+  ]
+ },
+ "animals/bird_sparrow_11.wav": {
+  "lang": "en",
+  "p": 0.18,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.86,
+    "lp": -0.96
+   }
+  ]
+ },
+ "animals/bird_sparrow_12.wav": {
+  "lang": "en",
+  "p": 0.28,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.84
+   }
+  ]
+ },
+ "animals/bird_swan_01.wav": {
+  "lang": "ru",
+  "p": 0.21,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Субтитры сделал DimaTorzok",
+    "nsp": 0.8,
+    "lp": -0.33
+   }
+  ]
+ },
+ "animals/bird_swan_02.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": []
+ },
+ "animals/bird_swan_03.wav": {
+  "lang": "en",
+  "p": 0.46,
+  "segs": []
+ },
+ "animals/bird_tit_01.wav": {
+  "lang": "nn",
+  "p": 0.24,
+  "segs": []
+ },
+ "animals/bird_tit_02.wav": {
+  "lang": "nn",
+  "p": 0.24,
+  "segs": []
+ },
+ "animals/bird_tit_03.wav": {
+  "lang": "nn",
+  "p": 0.3,
+  "segs": []
+ },
+ "animals/bird_tit_04.wav": {
+  "lang": "nn",
+  "p": 0.22,
+  "segs": []
+ },
+ "animals/bird_tit_05.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.75
+   }
+  ]
+ },
+ "animals/bird_tit_06.wav": {
+  "lang": "nn",
+  "p": 0.21,
+  "segs": []
+ },
+ "animals/bird_tit_07.wav": {
+  "lang": "nn",
+  "p": 0.2,
+  "segs": []
+ },
+ "animals/bird_tit_08.wav": {
+  "lang": "nn",
+  "p": 0.28,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you for watching!",
+    "nsp": 0.84,
+    "lp": -0.77
+   }
+  ]
+ },
+ "animals/bird_tit_09.wav": {
+  "lang": "nn",
+  "p": 0.21,
+  "segs": []
+ },
+ "animals/bird_tit_10.wav": {
+  "lang": "nn",
+  "p": 0.2,
+  "segs": []
+ },
+ "beds/bed_bird_dawn_01.ogg": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.85,
+    "lp": -0.6
+   }
+  ]
+ },
+ "beds/bed_bird_dawn_02.ogg": {
+  "lang": "en",
+  "p": 0.19,
+  "segs": [
+   {
+    "t": 60.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.63
+   }
+  ]
+ },
+ "beds/bed_bird_sparrows_01.ogg": {
+  "lang": "pt",
+  "p": 0.2,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "E aí",
+    "nsp": 0.9,
+    "lp": -0.64
+   },
+   {
+    "t": 30.0,
+    "text": "E aí",
+    "nsp": 0.87,
+    "lp": -0.72
+   },
+   {
+    "t": 60.0,
+    "text": "E aí",
+    "nsp": 0.87,
+    "lp": -0.71
+   },
+   {
+    "t": 90.0,
+    "text": "E aí",
+    "nsp": 0.88,
+    "lp": -0.74
+   }
+  ]
+ },
+ "beds/bed_day_campus_01.ogg": {
+  "lang": "nn",
+  "p": 0.78,
+  "segs": []
+ },
+ "beds/bed_day_garden_01.ogg": {
+  "lang": "jw",
+  "p": 0.2,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Terima kasih telah menonton",
+    "nsp": 0.86,
+    "lp": -0.4
+   }
+  ]
+ },
+ "beds/bed_day_park_01.ogg": {
+  "lang": "jw",
+  "p": 0.58,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Terima kasih telah menonton",
+    "nsp": 0.74,
+    "lp": -0.38
+   },
+   {
+    "t": 30.0,
+    "text": "Terima kasih telah menonton.",
+    "nsp": 0.69,
+    "lp": -0.47
+   }
+  ]
+ },
+ "beds/bed_frog_pond_01.ogg": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.33
+   },
+   {
+    "t": 30.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.84
+   }
+  ]
+ },
+ "beds/bed_frog_pond_02.ogg": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": []
+ },
+ "beds/bed_hum_aircon_01.ogg": {
+  "lang": "nn",
+  "p": 0.54,
+  "segs": []
+ },
+ "beds/bed_hum_aircon_02.ogg": {
+  "lang": "nn",
+  "p": 0.47,
+  "segs": []
+ },
+ "beds/bed_hum_transformer_01.ogg": {
+  "lang": "en",
+  "p": 0.81,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.65,
+    "lp": -0.3
+   },
+   {
+    "t": 30.0,
+    "text": "Thank you.",
+    "nsp": 0.67,
+    "lp": -0.53
+   }
+  ]
+ },
+ "beds/bed_hum_transformer_02.ogg": {
+  "lang": "nn",
+  "p": 0.57,
+  "segs": []
+ },
+ "beds/bed_insect_cicada_01.ogg": {
+  "lang": "nn",
+  "p": 0.81,
+  "segs": []
+ },
+ "beds/bed_insect_cicada_02.ogg": {
+  "lang": "en",
+  "p": 0.2,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.25
+   },
+   {
+    "t": 30.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.27
+   },
+   {
+    "t": 60.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.3
+   },
+   {
+    "t": 90.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.33
+   }
+  ]
+ },
+ "beds/bed_insect_cicada_03.ogg": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.86,
+    "lp": -0.33
+   },
+   {
+    "t": 30.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.71,
+    "lp": -0.69
+   }
+  ]
+ },
+ "beds/bed_insect_cicada_04.ogg": {
+  "lang": "nn",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 60.0,
+    "text": "Undertexter av Nicolai Winther",
+    "nsp": 0.79,
+    "lp": -0.27
+   }
+  ]
+ },
+ "beds/bed_insect_cricket_01.ogg": {
+  "lang": "nn",
+  "p": 0.43,
+  "segs": []
+ },
+ "beds/bed_insect_cricket_02.ogg": {
+  "lang": "nn",
+  "p": 0.43,
+  "segs": []
+ },
+ "beds/bed_night_bugs_01.ogg": {
+  "lang": "nn",
+  "p": 0.64,
+  "segs": []
+ },
+ "beds/bed_night_city_01.ogg": {
+  "lang": "nn",
+  "p": 0.72,
+  "segs": []
+ },
+ "beds/bed_night_city_02.ogg": {
+  "lang": "nn",
+  "p": 0.9,
+  "segs": []
+ },
+ "beds/bed_night_summer_01.ogg": {
+  "lang": "nn",
+  "p": 0.65,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Norske Norske",
+    "nsp": 0.94,
+    "lp": -0.97
+   }
+  ]
+ },
+ "beds/bed_rain_ground_01.ogg": {
+  "lang": "nn",
+  "p": 0.59,
+  "segs": []
+ },
+ "beds/bed_rain_ground_02.ogg": {
+  "lang": "nn",
+  "p": 0.72,
+  "segs": []
+ },
+ "beds/bed_rain_heavy_01.ogg": {
+  "lang": "nn",
+  "p": 0.78,
+  "segs": []
+ },
+ "beds/bed_rain_heavy_02.ogg": {
+  "lang": "nn",
+  "p": 0.8,
+  "segs": []
+ },
+ "beds/bed_rain_leaves_01.ogg": {
+  "lang": "nn",
+  "p": 0.78,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp, Nettopp",
+    "nsp": 0.9,
+    "lp": -0.13
+   },
+   {
+    "t": 30.0,
+    "text": "Norske Norske",
+    "nsp": 0.92,
+    "lp": -0.95
+   }
+  ]
+ },
+ "beds/bed_rain_leaves_02.ogg": {
+  "lang": "nn",
+  "p": 0.83,
+  "segs": [
+   {
+    "t": 90.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.72,
+    "lp": -0.68
+   }
+  ]
+ },
+ "beds/bed_rain_light_01.ogg": {
+  "lang": "nn",
+  "p": 0.72,
+  "segs": []
+ },
+ "beds/bed_rain_light_02.ogg": {
+  "lang": "nn",
+  "p": 0.82,
+  "segs": []
+ },
+ "beds/bed_rain_medium_01.ogg": {
+  "lang": "nn",
+  "p": 0.84,
+  "segs": []
+ },
+ "beds/bed_rain_medium_02.ogg": {
+  "lang": "nn",
+  "p": 0.84,
+  "segs": []
+ },
+ "beds/bed_rain_roof_01.ogg": {
+  "lang": "nn",
+  "p": 0.58,
+  "segs": [
+   {
+    "t": 30.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.68,
+    "lp": -0.74
+   }
+  ]
+ },
+ "beds/bed_rain_roof_02.ogg": {
+  "lang": "nn",
+  "p": 0.78,
+  "segs": []
+ },
+ "beds/bed_snow_air_01.ogg": {
+  "lang": "nn",
+  "p": 0.81,
+  "segs": []
+ },
+ "beds/bed_snow_air_02.ogg": {
+  "lang": "nn",
+  "p": 0.85,
+  "segs": []
+ },
+ "beds/bed_water_ducks_01.ogg": {
+  "lang": "nn",
+  "p": 0.49,
+  "segs": []
+ },
+ "beds/bed_water_fountain_01.ogg": {
+  "lang": "nn",
+  "p": 0.94,
+  "segs": [
+   {
+    "t": 60.0,
+    "text": "The",
+    "nsp": 0.5,
+    "lp": -2.31
+   }
+  ]
+ },
+ "beds/bed_water_fountain_02.ogg": {
+  "lang": "nn",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 30.0,
+    "text": "Applaus",
+    "nsp": 0.56,
+    "lp": -0.49
+   }
+  ]
+ },
+ "beds/bed_water_fountain_03.ogg": {
+  "lang": "nn",
+  "p": 0.49,
+  "segs": []
+ },
+ "beds/bed_water_lake_02.ogg": {
+  "lang": "nn",
+  "p": 0.8,
+  "segs": [
+   {
+    "t": 90.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.68,
+    "lp": -0.76
+   }
+  ]
+ },
+ "beds/bed_water_lake_03.ogg": {
+  "lang": "nn",
+  "p": 0.72,
+  "segs": []
+ },
+ "beds/bed_water_stream_01.ogg": {
+  "lang": "nn",
+  "p": 0.49,
+  "segs": []
+ },
+ "beds/bed_water_stream_02.ogg": {
+  "lang": "nn",
+  "p": 0.65,
+  "segs": [
+   {
+    "t": 30.0,
+    "text": "The water is very clear and clear.",
+    "nsp": 0.72,
+    "lp": -0.6
+   },
+   {
+    "t": 35.0,
+    "text": "The water is very clear and clear.",
+    "nsp": 0.72,
+    "lp": -0.6
+   },
+   {
+    "t": 40.0,
+    "text": "The water is very clear and clear.",
+    "nsp": 0.72,
+    "lp": -0.6
+   },
+   {
+    "t": 45.0,
+    "text": "The water is very clear and clear.",
+    "nsp": 0.72,
+    "lp": -0.6
+   },
+   {
+    "t": 50.0,
+    "text": "The water is very clear and clear.",
+    "nsp": 0.72,
+    "lp": -0.6
+   }
+  ]
+ },
+ "beds/bed_water_stream_03.ogg": {
+  "lang": "nn",
+  "p": 0.81,
+  "segs": []
+ },
+ "beds/bed_wind_branches_01.ogg": {
+  "lang": "nn",
+  "p": 0.84,
+  "segs": [
+   {
+    "t": 90.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.75,
+    "lp": -0.57
+   }
+  ]
+ },
+ "beds/bed_wind_breeze_01.ogg": {
+  "lang": "nn",
+  "p": 0.45,
+  "segs": []
+ },
+ "beds/bed_wind_breeze_02.ogg": {
+  "lang": "nn",
+  "p": 0.66,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Norske Norske",
+    "nsp": 0.92,
+    "lp": -0.97
+   },
+   {
+    "t": 60.0,
+    "text": "Norske Norske",
+    "nsp": 0.91,
+    "lp": -0.98
+   }
+  ]
+ },
+ "beds/bed_wind_dryleaves_01.ogg": {
+  "lang": "nn",
+  "p": 0.67,
+  "segs": [
+   {
+    "t": 30.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.83,
+    "lp": -0.66
+   }
+  ]
+ },
+ "beds/bed_wind_reeds_01.ogg": {
+  "lang": "nn",
+  "p": 0.84,
+  "segs": []
+ },
+ "beds/bed_wind_reeds_02.ogg": {
+  "lang": "nn",
+  "p": 0.62,
+  "segs": []
+ },
+ "beds/bed_wind_trees_01.ogg": {
+  "lang": "nn",
+  "p": 0.82,
+  "segs": [
+   {
+    "t": 60.0,
+    "text": "Thank you for watching.",
+    "nsp": 0.69,
+    "lp": -0.62
+   }
+  ]
+ },
+ "bells/bell_strike_01.ogg": {
+  "lang": "en",
+  "p": 0.27,
+  "segs": []
+ },
+ "foley/cloth_jacket_01.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.96,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/cloth_jacket_02.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.95,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/cloth_jacket_03.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.6
+   }
+  ]
+ },
+ "foley/cloth_jacket_04.wav": {
+  "lang": "nn",
+  "p": 0.42,
+  "segs": []
+ },
+ "foley/cloth_jacket_05.wav": {
+  "lang": "nn",
+  "p": 0.41,
+  "segs": []
+ },
+ "foley/cloth_jacket_06.wav": {
+  "lang": "nn",
+  "p": 0.29,
+  "segs": []
+ },
+ "foley/cloth_jacket_07.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.97,
+    "lp": -0.53
+   }
+  ]
+ },
+ "foley/cloth_jacket_08.wav": {
+  "lang": "nn",
+  "p": 0.28,
+  "segs": []
+ },
+ "foley/cloth_jacket_09.wav": {
+  "lang": "nn",
+  "p": 0.47,
+  "segs": []
+ },
+ "foley/cloth_jacket_10.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.96,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/cloth_walk_01.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.74
+   }
+  ]
+ },
+ "foley/cloth_walk_02.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.75
+   }
+  ]
+ },
+ "foley/cloth_walk_03.wav": {
+  "lang": "en",
+  "p": 0.53,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.59
+   }
+  ]
+ },
+ "foley/cloth_walk_04.wav": {
+  "lang": "en",
+  "p": 0.3,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.34
+   }
+  ]
+ },
+ "foley/cloth_walk_05.wav": {
+  "lang": "en",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.5
+   }
+  ]
+ },
+ "foley/cloth_walk_06.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.58
+   }
+  ]
+ },
+ "foley/cloth_walk_07.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.35
+   }
+  ]
+ },
+ "foley/cloth_walk_08.wav": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.28
+   }
+  ]
+ },
+ "foley/cloth_walk_09.wav": {
+  "lang": "nn",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Hello everyone!",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 2.0,
+    "text": "Today I will show you how to make a",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 5.0,
+    "text": "delicious and delicious",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 7.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 9.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 11.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 13.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 15.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 17.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 19.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 21.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 23.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 25.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   },
+   {
+    "t": 27.0,
+    "text": "Japanese style",
+    "nsp": 0.9,
+    "lp": -0.77
+   }
+  ]
+ },
+ "foley/cloth_walk_10.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_01.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_02.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.35
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_03.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.38
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_04.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.74
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_05.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_06.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_07.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_asphalt_walk_08.wav": {
+  "lang": "en",
+  "p": 0.5,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.58
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_01.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_02.wav": {
+  "lang": "en",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.66
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_03.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_04.wav": {
+  "lang": "en",
+  "p": 0.36,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_05.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_06.wav": {
+  "lang": "en",
+  "p": 0.56,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_07.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_brickpaver_walk_08.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_01.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.52
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_02.wav": {
+  "lang": "ru",
+  "p": 0.28,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Продолжение следует...",
+    "nsp": 0.95,
+    "lp": -0.16
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_03.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.43
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_04.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.52
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_05.wav": {
+  "lang": "en",
+  "p": 0.43,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_06.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_07.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_carpet_walk_08.wav": {
+  "lang": "en",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.42
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_01.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.44
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_02.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.5
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_03.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.63
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_04.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_05.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_06.wav": {
+  "lang": "en",
+  "p": 0.46,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.39
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_07.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_concrete_walk_08.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.38
+   }
+  ]
+ },
+ "foley/foot_grass_walk_01.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.43
+   }
+  ]
+ },
+ "foley/foot_grass_walk_02.wav": {
+  "lang": "nn",
+  "p": 0.33,
+  "segs": []
+ },
+ "foley/foot_grass_walk_03.wav": {
+  "lang": "en",
+  "p": 0.57,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/foot_grass_walk_04.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.53
+   }
+  ]
+ },
+ "foley/foot_grass_walk_05.wav": {
+  "lang": "nn",
+  "p": 0.54,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Takk for ating med.",
+    "nsp": 0.89,
+    "lp": -0.84
+   }
+  ]
+ },
+ "foley/foot_grass_walk_06.wav": {
+  "lang": "en",
+  "p": 0.62,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/foot_grass_walk_07.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_grass_walk_08.wav": {
+  "lang": "nn",
+  "p": 0.52,
+  "segs": []
+ },
+ "foley/foot_gravel_walk_01.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_02.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_03.wav": {
+  "lang": "en",
+  "p": 0.64,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_04.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_05.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.68
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_06.wav": {
+  "lang": "en",
+  "p": 0.21,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.93,
+    "lp": -0.57
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_07.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_gravel_walk_08.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.65
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_01.wav": {
+  "lang": "en",
+  "p": 0.6,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_02.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_03.wav": {
+  "lang": "en",
+  "p": 0.36,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.86,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_04.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.9,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_05.wav": {
+  "lang": "nn",
+  "p": 0.5,
+  "segs": []
+ },
+ "foley/foot_leaves_dry_walk_06.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_07.wav": {
+  "lang": "en",
+  "p": 0.55,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.63
+   }
+  ]
+ },
+ "foley/foot_leaves_dry_walk_08.wav": {
+  "lang": "nn",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you for watching!",
+    "nsp": 0.88,
+    "lp": -0.59
+   }
+  ]
+ },
+ "foley/foot_metalgrate_walk_01.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": []
+ },
+ "foley/foot_metalgrate_walk_02.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_metalgrate_walk_03.wav": {
+  "lang": "en",
+  "p": 0.28,
+  "segs": []
+ },
+ "foley/foot_metalgrate_walk_04.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.84
+   }
+  ]
+ },
+ "foley/foot_metalgrate_walk_05.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_metalgrate_walk_06.wav": {
+  "lang": "en",
+  "p": 0.5,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.69
+   }
+  ]
+ },
+ "foley/foot_metalgrate_walk_07.wav": {
+  "lang": "en",
+  "p": 0.23,
+  "segs": []
+ },
+ "foley/foot_metalgrate_walk_08.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.8
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_01.wav": {
+  "lang": "en",
+  "p": 0.21,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.5
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_02.wav": {
+  "lang": "en",
+  "p": 0.3,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.38
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_03.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.59
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_04.wav": {
+  "lang": "en",
+  "p": 0.2,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_05.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_06.wav": {
+  "lang": "en",
+  "p": 0.46,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.95,
+    "lp": -0.43
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_07.wav": {
+  "lang": "en",
+  "p": 0.28,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_polishedstone_walk_08.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.89
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_01.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_02.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.53
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_03.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.45
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_04.wav": {
+  "lang": "en",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_05.wav": {
+  "lang": "en",
+  "p": 0.56,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.95,
+    "lp": -0.72
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_06.wav": {
+  "lang": "en",
+  "p": 0.56,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.44
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_07.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_rubbertrack_walk_08.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.44
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_01.wav": {
+  "lang": "en",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_02.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.38
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_03.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_04.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.66
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_05.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.6
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_06.wav": {
+  "lang": "en",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.95,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_07.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.44
+   }
+  ]
+ },
+ "foley/foot_snow_new_walk_08.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": []
+ },
+ "foley/foot_snow_packed_walk_01.wav": {
+  "lang": "en",
+  "p": 0.47,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_02.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.45
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_03.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_04.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.61
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_05.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.63
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_06.wav": {
+  "lang": "en",
+  "p": 0.49,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.52
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_07.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.95,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/foot_snow_packed_walk_08.wav": {
+  "lang": "en",
+  "p": 0.43,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/foot_soil_walk_01.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_soil_walk_02.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_soil_walk_03.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_soil_walk_04.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_soil_walk_05.wav": {
+  "lang": "en",
+  "p": 0.3,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.61
+   }
+  ]
+ },
+ "foley/foot_soil_walk_06.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.57
+   }
+  ]
+ },
+ "foley/foot_soil_walk_07.wav": {
+  "lang": "en",
+  "p": 0.57,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/foot_soil_walk_08.wav": {
+  "lang": "en",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.39
+   }
+  ]
+ },
+ "foley/foot_splash_walk_01.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.72
+   }
+  ]
+ },
+ "foley/foot_splash_walk_02.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.82
+   }
+  ]
+ },
+ "foley/foot_splash_walk_03.wav": {
+  "lang": "en",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.87,
+    "lp": -0.72
+   }
+  ]
+ },
+ "foley/foot_splash_walk_04.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.69
+   }
+  ]
+ },
+ "foley/foot_splash_walk_05.wav": {
+  "lang": "en",
+  "p": 0.45,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.46
+   }
+  ]
+ },
+ "foley/foot_splash_walk_06.wav": {
+  "lang": "en",
+  "p": 0.52,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.87,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_splash_walk_07.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.79
+   }
+  ]
+ },
+ "foley/foot_splash_walk_08.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.87,
+    "lp": -0.61
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_01.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_02.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_03.wav": {
+  "lang": "en",
+  "p": 0.36,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.48
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_04.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.68
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_05.wav": {
+  "lang": "en",
+  "p": 0.55,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.52
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_down_06.wav": {
+  "lang": "en",
+  "p": 0.51,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.66
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_01.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.65
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_02.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_03.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.64
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_04.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.34
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_05.wav": {
+  "lang": "en",
+  "p": 0.47,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_stairs_hard_up_06.wav": {
+  "lang": "en",
+  "p": 0.43,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.63
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_01.wav": {
+  "lang": "nn",
+  "p": 0.18,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Takk for ating mediet!",
+    "nsp": 0.9,
+    "lp": -0.92
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_02.wav": {
+  "lang": "nn",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Takk for at du så med.",
+    "nsp": 0.92,
+    "lp": -0.64
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_03.wav": {
+  "lang": "en",
+  "p": 0.18,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_04.wav": {
+  "lang": "nn",
+  "p": 0.29,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Takk for at du så med.",
+    "nsp": 0.92,
+    "lp": -0.66
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_05.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.71
+   }
+  ]
+ },
+ "foley/foot_stairs_wood_walk_06.wav": {
+  "lang": "en",
+  "p": 0.28,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.45
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_01.wav": {
+  "lang": "en",
+  "p": 0.35,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_02.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_03.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.87,
+    "lp": -0.33
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_04.wav": {
+  "lang": "en",
+  "p": 0.39,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_05.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.36
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_06.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_07.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_stonepaving_walk_08.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.45
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_01.wav": {
+  "lang": "en",
+  "p": 0.3,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.35
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_02.wav": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.42
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_03.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_04.wav": {
+  "lang": "en",
+  "p": 0.36,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.51
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_05.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.33
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_06.wav": {
+  "lang": "en",
+  "p": 0.24,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.81
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_07.wav": {
+  "lang": "en",
+  "p": 0.27,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_terrazzo_walk_08.wav": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_tile_walk_01.wav": {
+  "lang": "en",
+  "p": 0.31,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.56
+   }
+  ]
+ },
+ "foley/foot_tile_walk_02.wav": {
+  "lang": "en",
+  "p": 0.43,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.35
+   }
+  ]
+ },
+ "foley/foot_tile_walk_03.wav": {
+  "lang": "en",
+  "p": 0.5,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.9,
+    "lp": -0.55
+   }
+  ]
+ },
+ "foley/foot_tile_walk_04.wav": {
+  "lang": "en",
+  "p": 0.26,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.41
+   }
+  ]
+ },
+ "foley/foot_tile_walk_05.wav": {
+  "lang": "en",
+  "p": 0.3,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.31
+   }
+  ]
+ },
+ "foley/foot_tile_walk_06.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.49
+   }
+  ]
+ },
+ "foley/foot_tile_walk_07.wav": {
+  "lang": "en",
+  "p": 0.27,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.37
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_01.wav": {
+  "lang": "en",
+  "p": 0.53,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_02.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": []
+ },
+ "foley/foot_wooddeck_walk_03.wav": {
+  "lang": "en",
+  "p": 0.46,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.64
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_04.wav": {
+  "lang": "en",
+  "p": 0.4,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_05.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.88,
+    "lp": -0.51
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_06.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.78
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_07.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.43
+   }
+  ]
+ },
+ "foley/foot_wooddeck_walk_08.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_01.wav": {
+  "lang": "en",
+  "p": 0.33,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.62
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_02.wav": {
+  "lang": "en",
+  "p": 0.47,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.44
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_03.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.47
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_04.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.4
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_05.wav": {
+  "lang": "en",
+  "p": 0.42,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.9,
+    "lp": -0.54
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_06.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.67
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_07.wav": {
+  "lang": "en",
+  "p": 0.34,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.5
+   }
+  ]
+ },
+ "foley/foot_woodfloor_walk_08.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.36
+   }
+  ]
+ },
+ "music/broadcast_melody_dry.ogg": {
+  "lang": "jw",
+  "p": 0.27,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Terima kasih telah menonton",
+    "nsp": 0.8,
+    "lp": -0.19
+   },
+   {
+    "t": 30.0,
+    "text": "Terima kasih telah menonton!",
+    "nsp": 0.64,
+    "lp": -0.18
+   }
+  ]
+ },
+ "music/broadcast_melody_far.ogg": {
+  "lang": "en",
+  "p": 0.23,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.76,
+    "lp": -0.47
+   },
+   {
+    "t": 30.0,
+    "text": "© transcript Emily Beynon",
+    "nsp": 0.39,
+    "lp": -0.28
+   },
+   {
+    "t": 60.0,
+    "text": "Thank you.",
+    "nsp": 0.86,
+    "lp": -0.26
+   }
+  ]
+ },
+ "music/broadcast_melody_mid.ogg": {
+  "lang": "en",
+  "p": 0.19,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.77,
+    "lp": -0.43
+   },
+   {
+    "t": 30.0,
+    "text": "Thank you.",
+    "nsp": 0.66,
+    "lp": -0.4
+   }
+  ]
+ },
+ "props/drip_water_01.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.92,
+    "lp": -0.36
+   }
+  ]
+ },
+ "props/drip_water_02.wav": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.5
+   }
+  ]
+ },
+ "props/drip_water_03.wav": {
+  "lang": "en",
+  "p": 0.41,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.33
+   }
+  ]
+ },
+ "props/drip_water_04.wav": {
+  "lang": "en",
+  "p": 0.22,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.89,
+    "lp": -0.45
+   }
+  ]
+ },
+ "props/drip_water_05.wav": {
+  "lang": "en",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.91,
+    "lp": -0.46
+   }
+  ]
+ },
+ "props/drip_water_06.wav": {
+  "lang": "en",
+  "p": 0.38,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.51
+   }
+  ]
+ },
+ "props/drip_water_07.wav": {
+  "lang": "en",
+  "p": 0.44,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.43
+   }
+  ]
+ },
+ "props/drip_water_08.wav": {
+  "lang": "en",
+  "p": 0.48,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.94,
+    "lp": -0.46
+   }
+  ]
+ },
+ "props/drip_water_09.wav": {
+  "lang": "en",
+  "p": 0.61,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.93,
+    "lp": -0.39
+   }
+  ]
+ },
+ "props/drip_water_10.wav": {
+  "lang": "en",
+  "p": 0.52,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.96,
+    "lp": -0.47
+   }
+  ]
+ },
+ "weather/weather_thunder_distant_01.ogg": {
+  "lang": "nn",
+  "p": 0.32,
+  "segs": []
+ },
+ "weather/weather_thunder_distant_02.ogg": {
+  "lang": "en",
+  "p": 0.21,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thanks for watching!",
+    "nsp": 0.66,
+    "lp": -0.79
+   }
+  ]
+ },
+ "weather/weather_thunder_distant_03.ogg": {
+  "lang": "en",
+  "p": 0.37,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you.",
+    "nsp": 0.79,
+    "lp": -0.43
+   }
+  ]
+ },
+ "weather/weather_thunder_distant_04.ogg": {
+  "lang": "nn",
+  "p": 0.32,
+  "segs": [
+   {
+    "t": 0.0,
+    "text": "Thank you for watching!",
+    "nsp": 0.81,
+    "lp": -0.6
+   }
+  ]
+ },
+ "weather/weather_thunder_distant_05.ogg": {
+  "lang": "en",
+  "p": 0.25,
+  "segs": []
+ },
+ "weather/weather_thunder_distant_06.ogg": {
+  "lang": "nn",
+  "p": 0.22,
+  "segs": []
+ }
+}

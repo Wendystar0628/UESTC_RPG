@@ -1,0 +1,353 @@
+{
+ "beds": [
+  {
+   "id": "bed_rain_light_01",
+   "src": "200273",
+   "len": 75,
+   "note": "小雨 乡间"
+  },
+  {
+   "id": "bed_rain_light_02",
+   "src": "171980",
+   "len": 120,
+   "note": "小雨 城市"
+  },
+  {
+   "id": "bed_rain_medium_01",
+   "src": "217236",
+   "len": 120,
+   "note": "中雨 城市稳定"
+  },
+  {
+   "id": "bed_rain_medium_02",
+   "src": "637781",
+   "len": 80,
+   "note": "中雨 硬地面，细碎"
+  },
+  {
+   "id": "bed_rain_heavy_01",
+   "src": "454128",
+   "len": 150,
+   "note": "大雨 廊下满雨"
+  },
+  {
+   "id": "bed_rain_heavy_02",
+   "src": "700454",
+   "len": 120,
+   "note": "大雨 暴雨"
+  },
+  {
+   "id": "bed_rain_leaves_01",
+   "src": "719747",
+   "len": 120,
+   "note": "雨落树叶"
+  },
+  {
+   "id": "bed_rain_leaves_02",
+   "src": "451154",
+   "len": 100,
+   "note": "雨落树叶 较碎"
+  },
+  {
+   "id": "bed_rain_roof_01",
+   "src": "669487",
+   "len": 40,
+   "xf": 3,
+   "note": "雨落屋面"
+  },
+  {
+   "id": "bed_rain_roof_02",
+   "src": "527499",
+   "len": 45,
+   "xf": 3,
+   "note": "雨落棚顶"
+  },
+  {
+   "id": "bed_rain_ground_01",
+   "src": "454143",
+   "len": 28,
+   "xf": 3,
+   "note": "雨落铺装"
+  },
+  {
+   "id": "bed_rain_ground_02",
+   "src": "142936",
+   "len": 60,
+   "xf": 3,
+   "note": "小雨 市区地面"
+  },
+  {
+   "id": "bed_wind_trees_01",
+   "src": "858679",
+   "len": 70,
+   "hp": 30,
+   "note": "树冠微风"
+  },
+  {
+   "id": "bed_wind_breeze_01",
+   "src": "181250",
+   "len": 120,
+   "hp": 30,
+   "note": "微风"
+  },
+  {
+   "id": "bed_wind_breeze_02",
+   "src": "181253",
+   "len": 90,
+   "hp": 30,
+   "note": "微风"
+  },
+  {
+   "id": "bed_water_lake_01",
+   "src": "568819",
+   "len": 100,
+   "hp": 40,
+   "note": "湖岸轻拍"
+  },
+  {
+   "id": "bed_water_lake_02",
+   "src": "637945",
+   "len": 100,
+   "hp": 40,
+   "note": "湖岸轻拍 船边"
+  },
+  {
+   "id": "bed_water_lake_03",
+   "src": "523392",
+   "len": 100,
+   "hp": 40,
+   "note": "湖浪"
+  },
+  {
+   "id": "bed_water_fountain_01",
+   "src": "579803",
+   "len": 80,
+   "note": "喷泉"
+  },
+  {
+   "id": "bed_water_fountain_02",
+   "src": "418261",
+   "len": 40,
+   "xf": 3,
+   "note": "喷泉"
+  },
+  {
+   "id": "bed_water_fountain_03",
+   "src": "235186",
+   "len": 35,
+   "xf": 3,
+   "note": "街边小喷泉"
+  },
+  {
+   "id": "bed_water_stream_01",
+   "src": "197023",
+   "len": 110,
+   "note": "小溪"
+  },
+  {
+   "id": "bed_water_stream_02",
+   "src": "584270",
+   "len": 50,
+   "xf": 3,
+   "note": "溪水"
+  },
+  {
+   "id": "bed_water_stream_03",
+   "src": "472749",
+   "len": 50,
+   "xf": 3,
+   "note": "小溪"
+  },
+  {
+   "id": "bed_insect_cicada_01",
+   "src": "320113",
+   "len": 33,
+   "xf": 3,
+   "note": "蝉鸣"
+  },
+  {
+   "id": "bed_insect_cicada_02",
+   "src": "852877",
+   "len": 150,
+   "note": "白天蝉与蟋蟀"
+  },
+  {
+   "id": "bed_insect_cicada_03",
+   "src": "118982",
+   "len": 50,
+   "xf": 3,
+   "note": "蝉长鸣"
+  },
+  {
+   "id": "bed_insect_cicada_04",
+   "src": "571090",
+   "len": 90,
+   "note": "蝉近处嘶鸣"
+  },
+  {
+   "id": "bed_insect_cricket_01",
+   "src": "522299",
+   "len": 150,
+   "note": "夜里蟋蟀"
+  },
+  {
+   "id": "bed_insect_cricket_02",
+   "src": "574431",
+   "len": 60,
+   "xf": 3,
+   "note": "树蟋蟀"
+  },
+  {
+   "id": "bed_frog_pond_01",
+   "src": "364300",
+   "len": 50,
+   "xf": 3,
+   "note": "池塘蛙声"
+  },
+  {
+   "id": "bed_frog_pond_02",
+   "src": "135561",
+   "len": 45,
+   "xf": 3,
+   "note": "池塘蛙与蟾"
+  },
+  {
+   "id": "bed_night_city_01",
+   "src": "427841",
+   "len": 110,
+   "note": "城市安静的夜"
+  },
+  {
+   "id": "bed_night_bugs_01",
+   "src": "608835",
+   "len": 100,
+   "note": "夜 虫声"
+  },
+  {
+   "id": "bed_night_city_02",
+   "src": "384476",
+   "len": 150,
+   "note": "街区夜 远处车"
+  },
+  {
+   "id": "bed_day_garden_01",
+   "src": "518929",
+   "len": 110,
+   "note": "日间院落"
+  },
+  {
+   "id": "bed_day_campus_01",
+   "src": "443925",
+   "len": 60,
+   "xf": 3,
+   "note": "周六早上校园室外"
+  },
+  {
+   "id": "bed_day_park_01",
+   "src": "623600",
+   "len": 50,
+   "xf": 3,
+   "note": "周末公园"
+  },
+  {
+   "id": "bed_bird_dawn_01",
+   "src": "342462",
+   "len": 90,
+   "note": "清晨城市鸟群"
+  },
+  {
+   "id": "bed_bird_dawn_02",
+   "src": "457616",
+   "len": 120,
+   "note": "初夏清晨鸟群"
+  },
+  {
+   "id": "bed_bird_sparrows_01",
+   "src": "706495",
+   "len": 120,
+   "note": "麻雀群 黄昏归巢"
+  },
+  {
+   "id": "bed_wind_reeds_01",
+   "src": "795323",
+   "len": 120,
+   "hp": 30,
+   "note": "芦苇风"
+  },
+  {
+   "id": "bed_wind_reeds_02",
+   "src": "844604",
+   "len": 50,
+   "xf": 3,
+   "hp": 30,
+   "note": "芦苇风"
+  },
+  {
+   "id": "bed_wind_dryleaves_01",
+   "src": "457318",
+   "len": 35,
+   "xf": 3,
+   "hp": 30,
+   "note": "秋风干叶"
+  },
+  {
+   "id": "bed_wind_branches_01",
+   "src": "81794",
+   "len": 100,
+   "hp": 30,
+   "note": "风过枯枝，阵风"
+  },
+  {
+   "id": "bed_snow_air_01",
+   "src": "719961",
+   "len": 150,
+   "note": "雪夜空气 城市落雪"
+  },
+  {
+   "id": "bed_snow_air_02",
+   "src": "610317",
+   "len": 80,
+   "note": "雪落城市"
+  },
+  {
+   "id": "bed_hum_transformer_01",
+   "src": "641208",
+   "len": 50,
+   "xf": 3,
+   "note": "变压器嗡声 夜"
+  },
+  {
+   "id": "bed_hum_transformer_02",
+   "src": "453445",
+   "len": 25,
+   "xf": 2,
+   "note": "变压器嗡声 室内"
+  },
+  {
+   "id": "bed_hum_aircon_01",
+   "src": "192241",
+   "len": 20,
+   "xf": 2,
+   "note": "空调外机"
+  },
+  {
+   "id": "bed_hum_aircon_02",
+   "src": "192240",
+   "len": 30,
+   "xf": 2,
+   "note": "空调外机"
+  },
+  {
+   "id": "bed_night_summer_01",
+   "src": "835896",
+   "len": 70,
+   "note": "夏夜 空调外机 稀疏车流"
+  },
+  {
+   "id": "bed_water_ducks_01",
+   "src": "124978",
+   "len": 60,
+   "note": "水塘与水禽"
+  }
+ ]
+}

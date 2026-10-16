@@ -1,0 +1,2270 @@
+{
+ "schema": 1,
+ "generated": "2026-10-17",
+ "beds": [
+  {
+   "id": "bed_bird_dawn_01",
+   "file": "beds/bed_bird_dawn_01.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 63.0,
+   "lufs": -30.28,
+   "note": "清晨城市鸟群"
+  },
+  {
+   "id": "bed_bird_dawn_02",
+   "file": "beds/bed_bird_dawn_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.17,
+   "note": "初夏清晨鸟群"
+  },
+  {
+   "id": "bed_bird_sparrows_01",
+   "file": "beds/bed_bird_sparrows_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.0,
+   "note": "麻雀群 黄昏归巢"
+  },
+  {
+   "id": "bed_day_campus_01",
+   "file": "beds/bed_day_campus_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 60.0,
+   "lufs": -30.09,
+   "note": "周六早上校园室外"
+  },
+  {
+   "id": "bed_day_garden_01",
+   "file": "beds/bed_day_garden_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 110.0,
+   "lufs": -30.22,
+   "note": "日间院落"
+  },
+  {
+   "id": "bed_day_park_01",
+   "file": "beds/bed_day_park_01.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 50.0,
+   "lufs": -30.11,
+   "note": "周末公园"
+  },
+  {
+   "id": "bed_frog_pond_01",
+   "file": "beds/bed_frog_pond_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 35.0,
+   "lufs": -30.3,
+   "note": "池塘蛙声"
+  },
+  {
+   "id": "bed_frog_pond_02",
+   "file": "beds/bed_frog_pond_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 45.0,
+   "lufs": -30.27,
+   "note": "池塘蛙与蟾"
+  },
+  {
+   "id": "bed_hum_aircon_01",
+   "file": "beds/bed_hum_aircon_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 20.0,
+   "lufs": -30.1,
+   "note": "空调外机"
+  },
+  {
+   "id": "bed_hum_aircon_02",
+   "file": "beds/bed_hum_aircon_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 30.0,
+   "lufs": -30.04,
+   "note": "空调外机"
+  },
+  {
+   "id": "bed_hum_transformer_01",
+   "file": "beds/bed_hum_transformer_01.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 50.0,
+   "lufs": -30.0,
+   "note": "变压器嗡声 夜"
+  },
+  {
+   "id": "bed_hum_transformer_02",
+   "file": "beds/bed_hum_transformer_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 25.0,
+   "lufs": -30.1,
+   "note": "变压器嗡声 室内"
+  },
+  {
+   "id": "bed_insect_cicada_01",
+   "file": "beds/bed_insect_cicada_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 33.0,
+   "lufs": -30.38,
+   "note": "蝉鸣"
+  },
+  {
+   "id": "bed_insect_cicada_02",
+   "file": "beds/bed_insect_cicada_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 150.0,
+   "lufs": -30.32,
+   "note": "白天蝉与蟋蟀"
+  },
+  {
+   "id": "bed_insect_cicada_03",
+   "file": "beds/bed_insect_cicada_03.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 50.0,
+   "lufs": -30.0,
+   "note": "蝉长鸣"
+  },
+  {
+   "id": "bed_insect_cicada_04",
+   "file": "beds/bed_insect_cicada_04.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 63.0,
+   "lufs": -30.18,
+   "note": "蝉近处嘶鸣"
+  },
+  {
+   "id": "bed_insect_cricket_01",
+   "file": "beds/bed_insect_cricket_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 150.0,
+   "lufs": -30.21,
+   "note": "夜里蟋蟀"
+  },
+  {
+   "id": "bed_insect_cricket_02",
+   "file": "beds/bed_insect_cricket_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 60.0,
+   "lufs": -30.2,
+   "note": "树蟋蟀"
+  },
+  {
+   "id": "bed_night_bugs_01",
+   "file": "beds/bed_night_bugs_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 100.0,
+   "lufs": -30.36,
+   "note": "夜 虫声"
+  },
+  {
+   "id": "bed_night_city_01",
+   "file": "beds/bed_night_city_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 110.0,
+   "lufs": -30.06,
+   "note": "城市安静的夜"
+  },
+  {
+   "id": "bed_night_city_02",
+   "file": "beds/bed_night_city_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 105.0,
+   "lufs": -30.27,
+   "note": "街区夜 远处车"
+  },
+  {
+   "id": "bed_night_summer_01",
+   "file": "beds/bed_night_summer_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 70.0,
+   "lufs": -30.11,
+   "note": "夏夜 空调外机 稀疏车流"
+  },
+  {
+   "id": "bed_rain_ground_01",
+   "file": "beds/bed_rain_ground_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 28.0,
+   "lufs": -30.36,
+   "note": "雨落铺装"
+  },
+  {
+   "id": "bed_rain_ground_02",
+   "file": "beds/bed_rain_ground_02.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 60.0,
+   "lufs": -30.28,
+   "note": "小雨 市区地面"
+  },
+  {
+   "id": "bed_rain_heavy_01",
+   "file": "beds/bed_rain_heavy_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 150.0,
+   "lufs": -30.29,
+   "note": "大雨 廊下满雨"
+  },
+  {
+   "id": "bed_rain_heavy_02",
+   "file": "beds/bed_rain_heavy_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.0,
+   "note": "大雨 暴雨"
+  },
+  {
+   "id": "bed_rain_leaves_01",
+   "file": "beds/bed_rain_leaves_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.07,
+   "note": "雨落树叶"
+  },
+  {
+   "id": "bed_rain_leaves_02",
+   "file": "beds/bed_rain_leaves_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 100.0,
+   "lufs": -30.34,
+   "note": "雨落树叶 较碎"
+  },
+  {
+   "id": "bed_rain_light_01",
+   "file": "beds/bed_rain_light_01.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 75.0,
+   "lufs": -30.31,
+   "note": "小雨 乡间"
+  },
+  {
+   "id": "bed_rain_light_02",
+   "file": "beds/bed_rain_light_02.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 120.0,
+   "lufs": -30.36,
+   "note": "小雨 城市"
+  },
+  {
+   "id": "bed_rain_medium_01",
+   "file": "beds/bed_rain_medium_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.31,
+   "note": "中雨 城市稳定"
+  },
+  {
+   "id": "bed_rain_medium_02",
+   "file": "beds/bed_rain_medium_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 80.0,
+   "lufs": -30.38,
+   "note": "中雨 硬地面，细碎"
+  },
+  {
+   "id": "bed_rain_roof_01",
+   "file": "beds/bed_rain_roof_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 40.0,
+   "lufs": -30.25,
+   "note": "雨落屋面"
+  },
+  {
+   "id": "bed_rain_roof_02",
+   "file": "beds/bed_rain_roof_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 45.0,
+   "lufs": -30.32,
+   "note": "雨落棚顶"
+  },
+  {
+   "id": "bed_snow_air_01",
+   "file": "beds/bed_snow_air_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 150.0,
+   "lufs": -30.29,
+   "note": "雪夜空气 城市落雪"
+  },
+  {
+   "id": "bed_snow_air_02",
+   "file": "beds/bed_snow_air_02.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 80.0,
+   "lufs": -30.28,
+   "note": "雪落城市"
+  },
+  {
+   "id": "bed_water_ducks_01",
+   "file": "beds/bed_water_ducks_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 60.0,
+   "lufs": -30.17,
+   "note": "水塘与水禽"
+  },
+  {
+   "id": "bed_water_fountain_01",
+   "file": "beds/bed_water_fountain_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 80.0,
+   "lufs": -30.31,
+   "note": "喷泉"
+  },
+  {
+   "id": "bed_water_fountain_02",
+   "file": "beds/bed_water_fountain_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 40.0,
+   "lufs": -30.32,
+   "note": "喷泉"
+  },
+  {
+   "id": "bed_water_fountain_03",
+   "file": "beds/bed_water_fountain_03.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 24.5,
+   "lufs": -30.08,
+   "note": "街边小喷泉"
+  },
+  {
+   "id": "bed_water_lake_02",
+   "file": "beds/bed_water_lake_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 100.0,
+   "lufs": -30.23,
+   "note": "湖岸轻拍 船边"
+  },
+  {
+   "id": "bed_water_lake_03",
+   "file": "beds/bed_water_lake_03.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 100.0,
+   "lufs": -30.32,
+   "note": "湖浪"
+  },
+  {
+   "id": "bed_water_stream_01",
+   "file": "beds/bed_water_stream_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 110.0,
+   "lufs": -30.38,
+   "note": "小溪"
+  },
+  {
+   "id": "bed_water_stream_02",
+   "file": "beds/bed_water_stream_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 50.0,
+   "lufs": -30.38,
+   "note": "溪水"
+  },
+  {
+   "id": "bed_water_stream_03",
+   "file": "beds/bed_water_stream_03.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 50.0,
+   "lufs": -30.0,
+   "note": "小溪"
+  },
+  {
+   "id": "bed_wind_branches_01",
+   "file": "beds/bed_wind_branches_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 100.0,
+   "lufs": -30.26,
+   "note": "风过枯枝，阵风"
+  },
+  {
+   "id": "bed_wind_breeze_01",
+   "file": "beds/bed_wind_breeze_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.07,
+   "note": "微风"
+  },
+  {
+   "id": "bed_wind_breeze_02",
+   "file": "beds/bed_wind_breeze_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 90.0,
+   "lufs": -30.05,
+   "note": "微风"
+  },
+  {
+   "id": "bed_wind_dryleaves_01",
+   "file": "beds/bed_wind_dryleaves_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 35.0,
+   "lufs": -30.17,
+   "note": "秋风干叶"
+  },
+  {
+   "id": "bed_wind_reeds_01",
+   "file": "beds/bed_wind_reeds_01.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 120.0,
+   "lufs": -30.2,
+   "note": "芦苇风"
+  },
+  {
+   "id": "bed_wind_reeds_02",
+   "file": "beds/bed_wind_reeds_02.ogg",
+   "loop": true,
+   "channels": 2,
+   "duration_s": 50.0,
+   "lufs": -30.19,
+   "note": "芦苇风"
+  },
+  {
+   "id": "bed_wind_trees_01",
+   "file": "beds/bed_wind_trees_01.ogg",
+   "loop": true,
+   "channels": 1,
+   "duration_s": 70.0,
+   "lufs": -30.16,
+   "note": "树冠微风"
+  }
+ ],
+ "sets": [
+  {
+   "id": "bird_blackbird",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_blackbird_01.wav",
+     "duration_ms": 2718,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_02.wav",
+     "duration_ms": 3728,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_03.wav",
+     "duration_ms": 1214,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_04.wav",
+     "duration_ms": 1830,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_05.wav",
+     "duration_ms": 2070,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_06.wav",
+     "duration_ms": 1218,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_07.wav",
+     "duration_ms": 2126,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_08.wav",
+     "duration_ms": 1906,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_09.wav",
+     "duration_ms": 1244,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_blackbird_10.wav",
+     "duration_ms": 3668,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_crow",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_crow_01.wav",
+     "duration_ms": 2676,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_02.wav",
+     "duration_ms": 792,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_03.wav",
+     "duration_ms": 268,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_04.wav",
+     "duration_ms": 586,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_05.wav",
+     "duration_ms": 652,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_06.wav",
+     "duration_ms": 3108,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_07.wav",
+     "duration_ms": 570,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_08.wav",
+     "duration_ms": 672,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_09.wav",
+     "duration_ms": 554,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_crow_10.wav",
+     "duration_ms": 618,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_cuckoo",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_cuckoo_01.wav",
+     "duration_ms": 266,
+     "lufs_m": -31.13
+    },
+    {
+     "file": "animals/bird_cuckoo_02.wav",
+     "duration_ms": 2240,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_cuckoo_03.wav",
+     "duration_ms": 478,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_cuckoo_04.wav",
+     "duration_ms": 2278,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_dove",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_dove_01.wav",
+     "duration_ms": 1942,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_02.wav",
+     "duration_ms": 2810,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_03.wav",
+     "duration_ms": 2890,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_04.wav",
+     "duration_ms": 978,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_05.wav",
+     "duration_ms": 2240,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_06.wav",
+     "duration_ms": 4378,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_07.wav",
+     "duration_ms": 1284,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_dove_08.wav",
+     "duration_ms": 2330,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_duck",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_duck_01.wav",
+     "duration_ms": 310,
+     "lufs_m": -34.07
+    },
+    {
+     "file": "animals/bird_duck_02.wav",
+     "duration_ms": 2780,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_duck_03.wav",
+     "duration_ms": 402,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_duck_04.wav",
+     "duration_ms": 706,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_duck_05.wav",
+     "duration_ms": 972,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_duck_06.wav",
+     "duration_ms": 436,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_heron",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_heron_01.wav",
+     "duration_ms": 500,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_heron_02.wav",
+     "duration_ms": 352,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_magpierobin",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_magpierobin_01.wav",
+     "duration_ms": 1916,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_02.wav",
+     "duration_ms": 1666,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_03.wav",
+     "duration_ms": 4046,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_04.wav",
+     "duration_ms": 1880,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_05.wav",
+     "duration_ms": 1098,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_06.wav",
+     "duration_ms": 1328,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_07.wav",
+     "duration_ms": 1256,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_magpierobin_08.wav",
+     "duration_ms": 2576,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_owl",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_owl_01.wav",
+     "duration_ms": 1622,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_owl_02.wav",
+     "duration_ms": 1618,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_owl_03.wav",
+     "duration_ms": 1516,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_peacock",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_peacock_01.wav",
+     "duration_ms": 556,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_peacock_02.wav",
+     "duration_ms": 624,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_peacock_03.wav",
+     "duration_ms": 562,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_sparrow",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_sparrow_01.wav",
+     "duration_ms": 1175,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_02.wav",
+     "duration_ms": 1808,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_03.wav",
+     "duration_ms": 1344,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_04.wav",
+     "duration_ms": 1332,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_05.wav",
+     "duration_ms": 3068,
+     "lufs_m": -29.32
+    },
+    {
+     "file": "animals/bird_sparrow_06.wav",
+     "duration_ms": 706,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_07.wav",
+     "duration_ms": 1130,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_08.wav",
+     "duration_ms": 312,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_09.wav",
+     "duration_ms": 686,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_10.wav",
+     "duration_ms": 640,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_11.wav",
+     "duration_ms": 974,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_sparrow_12.wav",
+     "duration_ms": 386,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_swan",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_swan_01.wav",
+     "duration_ms": 1972,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_swan_02.wav",
+     "duration_ms": 676,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_swan_03.wav",
+     "duration_ms": 614,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "bird_tit",
+   "kind": "bird",
+   "mono": true,
+   "files": [
+    {
+     "file": "animals/bird_tit_01.wav",
+     "duration_ms": 1560,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_02.wav",
+     "duration_ms": 2142,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_03.wav",
+     "duration_ms": 1912,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_04.wav",
+     "duration_ms": 2032,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_05.wav",
+     "duration_ms": 1708,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_06.wav",
+     "duration_ms": 1966,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_07.wav",
+     "duration_ms": 2132,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_08.wav",
+     "duration_ms": 2260,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_09.wav",
+     "duration_ms": 1894,
+     "lufs_m": -22.0
+    },
+    {
+     "file": "animals/bird_tit_10.wav",
+     "duration_ms": 1522,
+     "lufs_m": -22.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -22.0
+  },
+  {
+   "id": "cloth_jacket",
+   "kind": "cloth",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/cloth_jacket_01.wav",
+     "duration_ms": 528,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_02.wav",
+     "duration_ms": 1000,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_03.wav",
+     "duration_ms": 294,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_04.wav",
+     "duration_ms": 558,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_05.wav",
+     "duration_ms": 826,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_06.wav",
+     "duration_ms": 1002,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_07.wav",
+     "duration_ms": 986,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_08.wav",
+     "duration_ms": 896,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_09.wav",
+     "duration_ms": 1552,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_jacket_10.wav",
+     "duration_ms": 530,
+     "lufs_m": -40.0
+    }
+   ],
+   "rel_db": -6,
+   "ref_lufs_m": -40.0
+  },
+  {
+   "id": "cloth_walk",
+   "kind": "cloth",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/cloth_walk_01.wav",
+     "duration_ms": 490,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_02.wav",
+     "duration_ms": 650,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_03.wav",
+     "duration_ms": 1066,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_04.wav",
+     "duration_ms": 564,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_05.wav",
+     "duration_ms": 331,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_06.wav",
+     "duration_ms": 670,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_07.wav",
+     "duration_ms": 264,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_08.wav",
+     "duration_ms": 320,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_09.wav",
+     "duration_ms": 740,
+     "lufs_m": -40.0
+    },
+    {
+     "file": "foley/cloth_walk_10.wav",
+     "duration_ms": 448,
+     "lufs_m": -40.0
+    }
+   ],
+   "rel_db": -6,
+   "ref_lufs_m": -40.0
+  },
+  {
+   "id": "drip_water",
+   "kind": "drip",
+   "mono": true,
+   "files": [
+    {
+     "file": "props/drip_water_01.wav",
+     "duration_ms": 125,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_02.wav",
+     "duration_ms": 111,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_03.wav",
+     "duration_ms": 129,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_04.wav",
+     "duration_ms": 463,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_05.wav",
+     "duration_ms": 223,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_06.wav",
+     "duration_ms": 95,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_07.wav",
+     "duration_ms": 147,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_08.wav",
+     "duration_ms": 107,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_09.wav",
+     "duration_ms": 119,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "props/drip_water_10.wav",
+     "duration_ms": 137,
+     "lufs_m": -34.0
+    }
+   ],
+   "rel_db": 0.0,
+   "ref_lufs_m": -34.0
+  },
+  {
+   "id": "foot_asphalt_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_asphalt_walk_01.wav",
+     "duration_ms": 279,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_02.wav",
+     "duration_ms": 163,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_03.wav",
+     "duration_ms": 265,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_04.wav",
+     "duration_ms": 171,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_05.wav",
+     "duration_ms": 209,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_06.wav",
+     "duration_ms": 171,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_07.wav",
+     "duration_ms": 181,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_asphalt_walk_08.wav",
+     "duration_ms": 155,
+     "lufs_m": -31.0
+    }
+   ],
+   "rel_db": -1,
+   "ref_lufs_m": -31.0
+  },
+  {
+   "id": "foot_brickpaver_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_brickpaver_walk_01.wav",
+     "duration_ms": 249,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_02.wav",
+     "duration_ms": 180,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_03.wav",
+     "duration_ms": 146,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_04.wav",
+     "duration_ms": 240,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_05.wav",
+     "duration_ms": 262,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_06.wav",
+     "duration_ms": 249,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_07.wav",
+     "duration_ms": 191,
+     "lufs_m": -30.5
+    },
+    {
+     "file": "foley/foot_brickpaver_walk_08.wav",
+     "duration_ms": 187,
+     "lufs_m": -30.5
+    }
+   ],
+   "rel_db": -0.5,
+   "ref_lufs_m": -30.5
+  },
+  {
+   "id": "foot_carpet_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_carpet_walk_01.wav",
+     "duration_ms": 211,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_02.wav",
+     "duration_ms": 323,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_03.wav",
+     "duration_ms": 343,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_04.wav",
+     "duration_ms": 199,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_05.wav",
+     "duration_ms": 219,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_06.wav",
+     "duration_ms": 291,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_07.wav",
+     "duration_ms": 299,
+     "lufs_m": -38.0
+    },
+    {
+     "file": "foley/foot_carpet_walk_08.wav",
+     "duration_ms": 193,
+     "lufs_m": -38.0
+    }
+   ],
+   "rel_db": -8,
+   "ref_lufs_m": -38.0
+  },
+  {
+   "id": "foot_concrete_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_concrete_walk_01.wav",
+     "duration_ms": 467,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_02.wav",
+     "duration_ms": 233,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_03.wav",
+     "duration_ms": 181,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_04.wav",
+     "duration_ms": 439,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_05.wav",
+     "duration_ms": 205,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_06.wav",
+     "duration_ms": 189,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_07.wav",
+     "duration_ms": 531,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_concrete_walk_08.wav",
+     "duration_ms": 205,
+     "lufs_m": -30.6
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_grass_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_grass_walk_01.wav",
+     "duration_ms": 329,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_02.wav",
+     "duration_ms": 203,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_03.wav",
+     "duration_ms": 155,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_04.wav",
+     "duration_ms": 315,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_05.wav",
+     "duration_ms": 275,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_06.wav",
+     "duration_ms": 153,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_07.wav",
+     "duration_ms": 443,
+     "lufs_m": -34.0
+    },
+    {
+     "file": "foley/foot_grass_walk_08.wav",
+     "duration_ms": 521,
+     "lufs_m": -34.0
+    }
+   ],
+   "rel_db": -4,
+   "ref_lufs_m": -34.0
+  },
+  {
+   "id": "foot_gravel_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_gravel_walk_01.wav",
+     "duration_ms": 321,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_gravel_walk_02.wav",
+     "duration_ms": 253,
+     "lufs_m": -29.96
+    },
+    {
+     "file": "foley/foot_gravel_walk_03.wav",
+     "duration_ms": 271,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_gravel_walk_04.wav",
+     "duration_ms": 229,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_gravel_walk_05.wav",
+     "duration_ms": 195,
+     "lufs_m": -29.18
+    },
+    {
+     "file": "foley/foot_gravel_walk_06.wav",
+     "duration_ms": 373,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_gravel_walk_07.wav",
+     "duration_ms": 267,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_gravel_walk_08.wav",
+     "duration_ms": 373,
+     "lufs_m": -29.0
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
+  },
+  {
+   "id": "foot_leaves_dry_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_leaves_dry_walk_01.wav",
+     "duration_ms": 259,
+     "lufs_m": -30.1
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_02.wav",
+     "duration_ms": 375,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_03.wav",
+     "duration_ms": 211,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_04.wav",
+     "duration_ms": 445,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_05.wav",
+     "duration_ms": 429,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_06.wav",
+     "duration_ms": 261,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_07.wav",
+     "duration_ms": 273,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_leaves_dry_walk_08.wav",
+     "duration_ms": 295,
+     "lufs_m": -28.5
+    }
+   ],
+   "rel_db": 1.5,
+   "ref_lufs_m": -28.5
+  },
+  {
+   "id": "foot_metalgrate_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_metalgrate_walk_01.wav",
+     "duration_ms": 519,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_02.wav",
+     "duration_ms": 447,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_03.wav",
+     "duration_ms": 351,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_04.wav",
+     "duration_ms": 507,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_05.wav",
+     "duration_ms": 245,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_06.wav",
+     "duration_ms": 253,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_07.wav",
+     "duration_ms": 521,
+     "lufs_m": -28.0
+    },
+    {
+     "file": "foley/foot_metalgrate_walk_08.wav",
+     "duration_ms": 379,
+     "lufs_m": -28.0
+    }
+   ],
+   "rel_db": 2,
+   "ref_lufs_m": -28.0
+  },
+  {
+   "id": "foot_polishedstone_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_polishedstone_walk_01.wav",
+     "duration_ms": 430,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_02.wav",
+     "duration_ms": 268,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_03.wav",
+     "duration_ms": 218,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_04.wav",
+     "duration_ms": 233,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_05.wav",
+     "duration_ms": 414,
+     "lufs_m": -31.05
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_06.wav",
+     "duration_ms": 273,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_07.wav",
+     "duration_ms": 262,
+     "lufs_m": -32.09
+    },
+    {
+     "file": "foley/foot_polishedstone_walk_08.wav",
+     "duration_ms": 277,
+     "lufs_m": -30.48
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
+  },
+  {
+   "id": "foot_rubbertrack_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_rubbertrack_walk_01.wav",
+     "duration_ms": 181,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_02.wav",
+     "duration_ms": 301,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_03.wav",
+     "duration_ms": 198,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_04.wav",
+     "duration_ms": 255,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_05.wav",
+     "duration_ms": 213,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_06.wav",
+     "duration_ms": 215,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_07.wav",
+     "duration_ms": 250,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_rubbertrack_walk_08.wav",
+     "duration_ms": 273,
+     "lufs_m": -33.0
+    }
+   ],
+   "rel_db": -3,
+   "ref_lufs_m": -33.0
+  },
+  {
+   "id": "foot_snow_new_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_snow_new_walk_01.wav",
+     "duration_ms": 237,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_02.wav",
+     "duration_ms": 225,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_03.wav",
+     "duration_ms": 167,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_04.wav",
+     "duration_ms": 235,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_05.wav",
+     "duration_ms": 293,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_06.wav",
+     "duration_ms": 283,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_07.wav",
+     "duration_ms": 227,
+     "lufs_m": -31.0
+    },
+    {
+     "file": "foley/foot_snow_new_walk_08.wav",
+     "duration_ms": 373,
+     "lufs_m": -31.0
+    }
+   ],
+   "rel_db": -1,
+   "ref_lufs_m": -31.0
+  },
+  {
+   "id": "foot_snow_packed_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_snow_packed_walk_01.wav",
+     "duration_ms": 251,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_02.wav",
+     "duration_ms": 329,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_03.wav",
+     "duration_ms": 171,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_04.wav",
+     "duration_ms": 333,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_05.wav",
+     "duration_ms": 463,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_06.wav",
+     "duration_ms": 155,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_07.wav",
+     "duration_ms": 389,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_snow_packed_walk_08.wav",
+     "duration_ms": 417,
+     "lufs_m": -29.0
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
+  },
+  {
+   "id": "foot_soil_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_soil_walk_01.wav",
+     "duration_ms": 197,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_02.wav",
+     "duration_ms": 227,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_03.wav",
+     "duration_ms": 179,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_04.wav",
+     "duration_ms": 195,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_05.wav",
+     "duration_ms": 231,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_06.wav",
+     "duration_ms": 191,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_07.wav",
+     "duration_ms": 239,
+     "lufs_m": -33.0
+    },
+    {
+     "file": "foley/foot_soil_walk_08.wav",
+     "duration_ms": 283,
+     "lufs_m": -33.0
+    }
+   ],
+   "rel_db": -3,
+   "ref_lufs_m": -33.0
+  },
+  {
+   "id": "foot_splash_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_splash_walk_01.wav",
+     "duration_ms": 361,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_02.wav",
+     "duration_ms": 201,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_03.wav",
+     "duration_ms": 275,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_04.wav",
+     "duration_ms": 185,
+     "lufs_m": -30.15
+    },
+    {
+     "file": "foley/foot_splash_walk_05.wav",
+     "duration_ms": 171,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_06.wav",
+     "duration_ms": 155,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_07.wav",
+     "duration_ms": 357,
+     "lufs_m": -29.0
+    },
+    {
+     "file": "foley/foot_splash_walk_08.wav",
+     "duration_ms": 159,
+     "lufs_m": -29.0
+    }
+   ],
+   "rel_db": 1,
+   "ref_lufs_m": -29.0
+  },
+  {
+   "id": "foot_stairs_hard_down",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_stairs_hard_down_01.wav",
+     "duration_ms": 205,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_down_02.wav",
+     "duration_ms": 191,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_down_03.wav",
+     "duration_ms": 173,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_down_04.wav",
+     "duration_ms": 179,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_down_05.wav",
+     "duration_ms": 197,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_down_06.wav",
+     "duration_ms": 251,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_stairs_hard_up",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_stairs_hard_up_01.wav",
+     "duration_ms": 191,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_up_02.wav",
+     "duration_ms": 187,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_up_03.wav",
+     "duration_ms": 155,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_up_04.wav",
+     "duration_ms": 185,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_up_05.wav",
+     "duration_ms": 163,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_hard_up_06.wav",
+     "duration_ms": 179,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_stairs_wood_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_stairs_wood_walk_01.wav",
+     "duration_ms": 373,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_wood_walk_02.wav",
+     "duration_ms": 475,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_wood_walk_03.wav",
+     "duration_ms": 313,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_wood_walk_04.wav",
+     "duration_ms": 533,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_wood_walk_05.wav",
+     "duration_ms": 329,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stairs_wood_walk_06.wav",
+     "duration_ms": 301,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_stonepaving_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_stonepaving_walk_01.wav",
+     "duration_ms": 257,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_02.wav",
+     "duration_ms": 261,
+     "lufs_m": -30.76
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_03.wav",
+     "duration_ms": 163,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_04.wav",
+     "duration_ms": 341,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_05.wav",
+     "duration_ms": 167,
+     "lufs_m": -30.28
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_06.wav",
+     "duration_ms": 157,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_07.wav",
+     "duration_ms": 189,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_stonepaving_walk_08.wav",
+     "duration_ms": 273,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "foot_terrazzo_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_terrazzo_walk_01.wav",
+     "duration_ms": 223,
+     "lufs_m": -31.33
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_02.wav",
+     "duration_ms": 175,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_03.wav",
+     "duration_ms": 171,
+     "lufs_m": -31.08
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_04.wav",
+     "duration_ms": 239,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_05.wav",
+     "duration_ms": 189,
+     "lufs_m": -31.65
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_06.wav",
+     "duration_ms": 273,
+     "lufs_m": -30.53
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_07.wav",
+     "duration_ms": 175,
+     "lufs_m": -32.62
+    },
+    {
+     "file": "foley/foot_terrazzo_walk_08.wav",
+     "duration_ms": 175,
+     "lufs_m": -29.88
+    }
+   ],
+   "rel_db": 0.5,
+   "ref_lufs_m": -29.5
+  },
+  {
+   "id": "foot_tile_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_tile_walk_01.wav",
+     "duration_ms": 340,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_tile_walk_02.wav",
+     "duration_ms": 181,
+     "lufs_m": -31.8
+    },
+    {
+     "file": "foley/foot_tile_walk_03.wav",
+     "duration_ms": 199,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_tile_walk_04.wav",
+     "duration_ms": 283,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_tile_walk_05.wav",
+     "duration_ms": 168,
+     "lufs_m": -32.76
+    },
+    {
+     "file": "foley/foot_tile_walk_06.wav",
+     "duration_ms": 159,
+     "lufs_m": -29.5
+    },
+    {
+     "file": "foley/foot_tile_walk_07.wav",
+     "duration_ms": 380,
+     "lufs_m": -29.5
+    }
+   ],
+   "rel_db": 0.5,
+   "ref_lufs_m": -29.5
+  },
+  {
+   "id": "foot_wooddeck_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_wooddeck_walk_01.wav",
+     "duration_ms": 235,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_02.wav",
+     "duration_ms": 353,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_03.wav",
+     "duration_ms": 259,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_04.wav",
+     "duration_ms": 371,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_05.wav",
+     "duration_ms": 171,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_06.wav",
+     "duration_ms": 255,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_07.wav",
+     "duration_ms": 521,
+     "lufs_m": -28.5
+    },
+    {
+     "file": "foley/foot_wooddeck_walk_08.wav",
+     "duration_ms": 293,
+     "lufs_m": -28.5
+    }
+   ],
+   "rel_db": 1.5,
+   "ref_lufs_m": -28.5
+  },
+  {
+   "id": "foot_woodfloor_walk",
+   "kind": "foot",
+   "mono": true,
+   "files": [
+    {
+     "file": "foley/foot_woodfloor_walk_01.wav",
+     "duration_ms": 303,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_02.wav",
+     "duration_ms": 453,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_03.wav",
+     "duration_ms": 239,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_04.wav",
+     "duration_ms": 249,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_05.wav",
+     "duration_ms": 267,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_06.wav",
+     "duration_ms": 357,
+     "lufs_m": -30.31
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_07.wav",
+     "duration_ms": 231,
+     "lufs_m": -30.0
+    },
+    {
+     "file": "foley/foot_woodfloor_walk_08.wav",
+     "duration_ms": 181,
+     "lufs_m": -30.0
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -30.0
+  },
+  {
+   "id": "weather_thunder_distant",
+   "kind": "weather",
+   "mono": true,
+   "files": [
+    {
+     "file": "weather/weather_thunder_distant_01.ogg",
+     "duration_ms": 9826,
+     "lufs_m": -24.11
+    },
+    {
+     "file": "weather/weather_thunder_distant_02.ogg",
+     "duration_ms": 11274,
+     "lufs_m": -24.07
+    },
+    {
+     "file": "weather/weather_thunder_distant_03.ogg",
+     "duration_ms": 1526,
+     "lufs_m": -24.22
+    },
+    {
+     "file": "weather/weather_thunder_distant_04.ogg",
+     "duration_ms": 2714,
+     "lufs_m": -24.06
+    },
+    {
+     "file": "weather/weather_thunder_distant_05.ogg",
+     "duration_ms": 3232,
+     "lufs_m": -24.27
+    },
+    {
+     "file": "weather/weather_thunder_distant_06.ogg",
+     "duration_ms": 2476,
+     "lufs_m": -24.12
+    }
+   ],
+   "rel_db": 0,
+   "ref_lufs_m": -24.0
+  }
+ ],
+ "music": [
+  {
+   "file": "music/broadcast_melody_dry.ogg",
+   "duration_s": 58.5,
+   "channels": 1,
+   "placeholder": true,
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+  },
+  {
+   "file": "music/broadcast_melody_mid.ogg",
+   "duration_s": 59.4,
+   "channels": 1,
+   "placeholder": true,
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+  },
+  {
+   "file": "music/broadcast_melody_far.ogg",
+   "duration_s": 60.7,
+   "channels": 1,
+   "placeholder": true,
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+  }
+ ],
+ "bells": [
+  {
+   "file": "bells/bell_strike_01.ogg",
+   "duration_s": 8.0,
+   "channels": 1,
+   "placeholder": true,
+   "note": "单音铜钟，占位"
+  }
+ ]
+}
