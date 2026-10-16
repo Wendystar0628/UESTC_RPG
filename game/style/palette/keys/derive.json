@@ -6,6 +6,7 @@
     "受光色：L_lit = m × (1 − (1 − L_a)^litLift)；(a, b)_lit = m × (satGain × (a, b)_a + tintK × (a, b)_key)；m = min(1, (key.intensity / adaptRef)^(1/3))。",
     "vegetationTintK：植被（按英雄帧定色的那一套）对主光偏色更敏感（叶片半透明、透光，ART-STYLE §5.6），所以清晨偏淡、日落偏金橙；只影响受光，影由固有色推导、不受影响。",
     "vegetationWarmCap：植被受光彩度上限 = 英雄帧受光彩度 × (1 − k × max(0, 低暖光度 − 英雄帧的低暖光度))；低暖光度 = (1 − smoothstep(altDeg, x)) × smoothstep(keyC, 主光彩度)。草和叶在任何帧都不比英雄帧更艳，低太阳暖主光时再收，傍晚的草是暖黄绿、不是荧光色；受光色相也只在英雄帧受光色相 ± hueMax 内随主光走，绿叶不转进橄榄；直接给固有色的（秋季草坪），英雄帧上的参考彩度取 固有彩度 × satGain × albedoChromaGain。",
+    "heroGuard：黄橙类英雄色（该季英雄帧受光色相在 hueRange 内、受光彩度 ≥ minHeroC，例如秋银杏、黄色落叶、水杉与樱叶的橙、桂花黄）的护栏，任何光照下都生效。① 色相不往绿越过英雄帧受光色相：hueMax 限幅之后，往绿（色相增大）的偏移 d 改成向暖侧转 warmMirror × d，夜里的秋叶读作压暗的暖金、不是橄榄绿；往红的偏移照旧。② 彩度保底：受光彩度不低于 min(chromaFloor × 英雄帧受光彩度, 本帧的 chromaCap)，放在 chromaCap 之后、但不越过它，任何时段影 C 都不低于受光 C × ratio。白天受光彩度都在保底之上，保底只在夜、蓝调、黎明前这类暗光或冷光下起作用。其他色名不受影响。",
     "chromaCap：固有色彩度 ≥ minAlbedoC 的有彩材质，受光彩度不超过 影彩度 / ratio（保住身份色，SYS-TIME §8 影 C ≥ 0.6 × 受光 C）；只在日出日落的强色光下起作用，不改明度与色相。",
     "litLift 与 tintK 按默认格的登记值 wall.lit #FFE4BE（固有色 #E4DDD0）反解：默认格 m = 1。",
     "影色按 ART-STYLE §3.2 的公式；另加三条：C1 再乘 m（暗光下彩度随明度同比缩，白天 m = 1 不影响）；黄橙护栏的范围见 shade.yellowGuard；绿色护栏 shade.greenGuard：绿色材质的最短方向朝黄（色相减小）时改向青转，免得日出日落的粉橙天光把绿影转进橄榄（与「黄橙不往绿转」对称）。",
@@ -18,6 +19,7 @@
     "tintK": 0.45,
     "vegetationTintK": 0.45,
     "vegetationWarmCap": { "k": 0.3, "altDeg": [6.0, 25.0], "keyC": [0.03, 0.09], "hueMax": 12.0, "albedoChromaGain": 1.1 },
+    "heroGuard": { "hueRange": [40.0, 100.0], "minHeroC": 0.04, "warmMirror": 0.5, "chromaFloor": 0.44 },
     "chromaCap": { "ratio": 0.62, "minAlbedoC": 0.08 }
   },
   "shade": {

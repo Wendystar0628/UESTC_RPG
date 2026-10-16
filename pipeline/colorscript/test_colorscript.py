@@ -96,6 +96,91 @@ class ColorScriptTest(unittest.TestCase):
                 Cs = ok.lab_to_lch(m.shade_in)[1]
                 self.assertLessEqual(Cs, max(Ca + cap, warm_c) + 1e-9, f"{season} {key} {token}")
 
+    def _veg_at(self, src, token, season, clock):
+        frames = cs.season_frames(src)
+        f = cs.frame_at(src, cs.day_curves(src, frames)[season], season, clock)
+        name, cls, alb, ref = cs.vegetation_albedos(src, frames)[season][token]
+        return cs.derive_material(src, token, name, cls, alb, f, meta={"vegetation": True}, hero=ref), ref
+
+    def test_hero_guard_yellow_never_greener(self):
+        """lit.heroGuard：银杏、黄色落叶在秋 21:00、19:00、06:30 的受光色相不往绿越过英雄帧色相，彩度不低于保底；
+        4 季 × 12 帧上所有黄橙英雄色同样不越过。"""
+        floor = self.src.derive["lit"]["heroGuard"]["chromaFloor"]
+        ratio = self.src.derive["lit"]["chromaCap"]["ratio"]
+        for token in ("ginkgo", "deciduous"):
+            for clock in (21.0, 19.0, 6.5):
+                m, ref = self._veg_at(self.src, token, "autumn", clock)
+                _, C, h = ok.lab_to_lch(m.lit)
+                msg = f"{token} {clock}"
+                self.assertTrue(ref.guard, msg)
+                self.assertLessEqual(ok.hue_diff(ref.h_ref, h), 1e-9, msg)
+                self.assertGreaterEqual(C, min(floor * ref.c_ref, math.hypot(m.shade[1], m.shade[2]) / ratio) - 1e-9, msg)
+        for (season, key), mats in self.grid["materials"].items():
+            for token, (_, _, _, ref) in self.grid["vegetation"][season].items():
+                if ref.guard:
+                    h = ok.lab_to_lch(mats[token].lit)[2]
+                    self.assertLessEqual(ok.hue_diff(ref.h_ref, h), 1e-9, f"{season} {key} {token}")
+
+    def test_hero_guard_ginkgo_night_value(self):
+        """秋 21:00 银杏受光：保底被本帧 chromaCap 限住，落在 #937F4F 附近。"""
+        m, _ = self._veg_at(self.src, "ginkgo", "autumn", 21.0)
+        self.assertEqual(ok.oklab_to_hex(m.lit), "#937F50")
+
+    def test_hero_guard_floor_within_chroma_cap(self):
+        """彩度保底在任何时段都不越过 chromaCap：固有彩度 ≥ minAlbedoC 的黄橙英雄色，受光 C ≤ 影 C / ratio
+        （4 季 × 12 关键帧，加每季 0:00–23:30 每半小时）。"""
+        cap = self.src.derive["lit"]["chromaCap"]
+        checked = 0
+
+        def check(m, msg):
+            if math.hypot(m.albedo[1], m.albedo[2]) >= cap["minAlbedoC"]:
+                self.assertLessEqual(math.hypot(m.lit[1], m.lit[2]), math.hypot(m.shade[1], m.shade[2]) / cap["ratio"] + 1e-9, msg)
+                return 1
+            return 0
+
+        for (season, key), mats in self.grid["materials"].items():
+            for token, (_, _, _, ref) in self.grid["vegetation"][season].items():
+                if ref.guard:
+                    checked += check(mats[token], f"{season} {key} {token}")
+        frames = self.grid["frames"]
+        curves = cs.day_curves(self.src, frames)
+        for season in cs.SEASONS:
+            for i in range(48):
+                f = cs.frame_at(self.src, curves[season], season, i / 2.0)
+                for token, (name, cls, alb, ref) in self.grid["vegetation"][season].items():
+                    if ref.guard:
+                        m = cs.derive_material(self.src, token, name, cls, alb, f, meta={"vegetation": True}, hero=ref)
+                        checked += check(m, f"{season} {i / 2.0} {token}")
+        self.assertGreater(checked, 500)
+
+    def test_hero_guard_leaves_other_tokens_unchanged(self):
+        """不在黄橙类里的色名（季相锚点按该季英雄帧判），关掉护栏前后的推导逐值相同；黄橙类就是下面这份清单。"""
+        import copy
+        off = cs.Sources()
+        off.derive = copy.deepcopy(off.derive)
+        off.derive["lit"]["heroGuard"]["minHeroC"] = 10.0
+        grid_off = cs.derive_grid(off)
+        guarded = {(s, t) for s in cs.SEASONS for t, (_, _, _, ref) in self.grid["vegetation"][s].items() if ref.guard}
+        expected = {("autumn", t) for t in ("ginkgo", "deciduous", "metaseq", "cherry", "crop", "reed", "lotus")}
+        expected |= {("winter", t) for t in ("ginkgo", "reed")}
+        expected |= {(s, t) for s in cs.SEASONS for t in ("bloom.yellow", "camphor.red")}
+        self.assertEqual(guarded, expected)
+        checked = 0
+        for (season, key), mats in self.grid["materials"].items():
+            for token, m in mats.items():
+                base = m.meta.get("variantOf", token)
+                if (season, base) in guarded:
+                    continue
+                b = grid_off["materials"][(season, key)][token]
+                for w in ("lit", "shade", "shade_in", "lit_in", "deep"):
+                    self.assertEqual(getattr(m, w), getattr(b, w), f"{season} {key} {token} {w}")
+                checked += 1
+        self.assertGreater(checked, 1000)
+        for token in ("grass", "willow", "maple", "camphor", "bloom.capsule"):
+            for clock in (21.0, 19.0, 6.5):
+                self.assertEqual(self._veg_at(self.src, token, "autumn", clock)[0].lit,
+                                 self._veg_at(off, token, "autumn", clock)[0].lit, f"{token} {clock}")
+
     def test_default_state_is_golden_keyframe(self):
         """秋 17:30 沿一天插值的结果逐值等于黄金关键帧（默认状态"落金初灯"）。"""
         curve = cs.day_curves(self.src, self.grid["frames"])["autumn"]

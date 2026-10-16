@@ -16,6 +16,8 @@ public sealed class HeroRef
     public double CRef { get; set; }
     public double HRef { get; set; }
     public double WarmRef { get; set; }
+    /// <summary>Yellow-orange hero colour (lit.heroGuard): hue never past HRef towards green, chroma floor in dim light.</summary>
+    public bool Guard { get; set; }
 }
 
 public readonly record struct MaterialColors(Lab Lit, Lab Shade, Lab ShadeIn, Lab LitIn);
@@ -30,6 +32,7 @@ public sealed class Deriver
     private readonly double _yellowLo, _yellowHi, _greenLo, _greenHi;
     private readonly bool _scaleChroma;
     private readonly double _warmK, _warmAlt0, _warmAlt1, _warmC0, _warmC1, _hueMax, _albedoGain;
+    private readonly double _guardLo, _guardHi, _guardMinC, _guardMirror, _guardFloor;
     private readonly double _rIn, _litGain, _litLMax, _shaderGain;
     public double SwatchLAmbient { get; }
     public double SwatchLInterior { get; }
@@ -51,6 +54,12 @@ public sealed class Deriver
         _warmC1 = warm.GetProperty("keyC")[1].GetDouble();
         _hueMax = warm.GetProperty("hueMax").GetDouble();
         _albedoGain = warm.GetProperty("albedoChromaGain").GetDouble();
+        var guard = lit.GetProperty("heroGuard");
+        _guardLo = guard.GetProperty("hueRange")[0].GetDouble();
+        _guardHi = guard.GetProperty("hueRange")[1].GetDouble();
+        _guardMinC = guard.GetProperty("minHeroC").GetDouble();
+        _guardMirror = guard.GetProperty("warmMirror").GetDouble();
+        _guardFloor = guard.GetProperty("chromaFloor").GetDouble();
         var shade = derive.GetProperty("shade");
         _chromaMulMax = shade.GetProperty("chromaMulMax").GetDouble();
         _neutral0 = shade.GetProperty("neutralCEdge")[0].GetDouble();
@@ -109,6 +118,7 @@ public sealed class Deriver
             hero.CRef = Math.Min(hero.CRef, albedo.Chroma * heroFrame.V[SatGain] * _albedoGain);
         hero.HRef = lit.Hue;
         hero.WarmRef = WarmLow(heroFrame, heroX);
+        hero.Guard = hero.CRef >= _guardMinC && hero.HRef >= _guardLo && hero.HRef <= _guardHi;
     }
 
     public double WarmLow(FrameVector f, double x) =>
@@ -120,7 +130,20 @@ public sealed class Deriver
         var h = lit.Hue;
         var d = Oklab.HueDiff(hero.HRef, h);
         if (Math.Abs(d) > _hueMax && hero.CRef > 1e-6) h = hero.HRef + Math.CopySign(_hueMax, d);
+        // 黄橙英雄色不往绿越过英雄帧色相：往绿（色相增大）的那段按 warmMirror 折回暖侧
+        if (hero.Guard && d > 0.0) h = hero.HRef - _guardMirror * Math.Min(d, _hueMax);
         return Oklab.FromLch(lit.L, Math.Min(lit.Chroma, cmax), h);
+    }
+
+    /// <summary>
+    /// Chroma floor of yellow-orange hero colours (lit.heroGuard): dim or cool light keeps them reading as gold. The floor never
+    /// passes this frame's chromaCap (shade C / ratio), so the shade keeps its identity share at every hour.
+    /// </summary>
+    private Lab FloorHeroChroma(Lab albedo, Lab lit, Lab shade, HeroRef hero)
+    {
+        var cmin = _guardFloor * hero.CRef;
+        if (albedo.Chroma >= _capMinC) cmin = Math.Min(cmin, shade.Chroma / _capRatio);
+        return lit.Chroma >= cmin ? lit : Oklab.FromLch(lit.L, cmin, lit.Hue);
     }
 
     private double RotateHue(double ha, double hs, double dhMax)
@@ -161,6 +184,7 @@ public sealed class Deriver
         if (hero is not null) lit = CapVegetation(lit, f, x, hero);
         var shade = Shade(albedo, lit, f, cls);
         lit = CapLitChroma(albedo, lit, shade);
+        if (hero is { Guard: true }) lit = FloorHeroChroma(albedo, lit, shade, hero);
         var shadeIn = Shade(albedo, lit, f, cls, _rIn, f.InteriorWarm);
         var litIn = InteriorLit(lit, shadeIn);
         if (vegChromaMul != 1.0 && hero is not null)

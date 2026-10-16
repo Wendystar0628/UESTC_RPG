@@ -452,6 +452,7 @@ class HeroRef:
         self.c_ref = 0.0
         self.h_ref = 0.0
         self.warm_ref = 0.0
+        self.guard = False      # 黄橙类英雄色（lit.heroGuard）
 
 
 def _tint_factor(src: Sources, albedo: ok.Lab) -> float:
@@ -606,7 +607,27 @@ def cap_vegetation_chroma(src: Sources, lit: ok.Lab, f: Frame, hero: HeroRef) ->
     d = ok.hue_diff(hero.h_ref, h)
     if abs(d) > cfg["hueMax"] and hero.c_ref > 1e-6:
         h = (hero.h_ref + math.copysign(cfg["hueMax"], d)) % 360.0
+    # 黄橙英雄色不往绿越过英雄帧色相：往绿（色相增大）的那段按 warmMirror 折回暖侧
+    if hero.guard and d > 0.0:
+        h = (hero.h_ref - src.derive["lit"]["heroGuard"]["warmMirror"] * min(d, cfg["hueMax"])) % 360.0
     return ok.lch_to_lab((L, min(C, cmax), h))
+
+
+def is_hero_guarded(src: Sources, hero: HeroRef) -> bool:
+    """黄橙类英雄色：该季英雄帧受光色相在 hueRange 内、受光彩度 ≥ minHeroC（lit.heroGuard）。"""
+    g = src.derive["lit"]["heroGuard"]
+    return hero.c_ref >= g["minHeroC"] and g["hueRange"][0] <= hero.h_ref <= g["hueRange"][1]
+
+
+def floor_hero_chroma(src: Sources, albedo: ok.Lab, lit: ok.Lab, shade: ok.Lab, hero: HeroRef) -> ok.Lab:
+    """黄橙英雄色的彩度保底：受光彩度不低于 min(chromaFloor × 英雄帧受光彩度, 本帧的 chromaCap)
+    （暗光、冷光下仍读作金色；保底不越过 chromaCap，任何时段影都保住身份色的彩度比）。"""
+    cmin = src.derive["lit"]["heroGuard"]["chromaFloor"] * hero.c_ref
+    cap = src.derive["lit"]["chromaCap"]
+    if math.hypot(albedo[1], albedo[2]) >= cap["minAlbedoC"]:
+        cmin = min(cmin, math.hypot(shade[1], shade[2]) / cap["ratio"])
+    L, C, h = ok.lab_to_lch(lit)
+    return lit if C >= cmin else ok.lch_to_lab((L, cmin, h))
 
 
 def derive_material(src: Sources, token: str, name: str, cls: str, albedo: ok.Lab, f: Frame,
@@ -616,6 +637,8 @@ def derive_material(src: Sources, token: str, name: str, cls: str, albedo: ok.La
         lit = cap_vegetation_chroma(src, lit, f, hero)
     shade = derive_shade(src, albedo, lit, f, cls)
     lit = cap_lit_chroma(src, albedo, lit, shade)
+    if hero is not None and hero.guard:
+        lit = floor_hero_chroma(src, albedo, lit, shade, hero)
     s_in, l_in = derive_interior(src, albedo, lit, f, cls)
     deep = derive_deep(src, shade) if src.derive["materialClasses"][cls]["steps"] == "three" else None
     return MaterialResult(token, name, cls, albedo, lit, shade, s_in, l_in, deep, meta)
@@ -647,6 +670,7 @@ def vegetation_albedos(src: Sources, frames: Dict[str, List[Frame]]) -> Dict[str
             ref.c_ref = min(ref.c_ref, math.hypot(alb[1], alb[2]) * hero_frame.sat_gain * gain)
         ref.h_ref = ok.lab_to_lch(lit_hero)[2]
         ref.warm_ref = warm_low(src, hero_frame)
+        ref.guard = is_hero_guarded(src, ref)
         return alb, ref
 
     for v in src.vegetation["seasonal"]:

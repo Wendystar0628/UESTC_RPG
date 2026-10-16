@@ -18,7 +18,7 @@ NEUTRAL_C_MAX = 0.06          # 中性材质：固有色彩度 < 0.06，标明�
 LINE_NIGHT = (0.06, 0.10)     # 夜间描线比影暗 0.06–0.10（SYS-TIME §3.4，主代理裁定以此为准）
 LIGHT_FACE_ALBEDO_L = 0.80    # 浅色面另要求固有色 L ≥ 0.80（ART-STYLE §6.3 大面积墙面）；0.78 左右的中明度墙受光刚过 0.85 时两条限值不可同时满足（假设）
 NEUTRAL_C_MIN = 0.012         # 影彩度低于它时色相无意义，按近中性灰处理
-IDENTITY_CLASSES = {"day", "default", "lowSun"}     # 身份色只在白天与晨昏判；蓝调和夜间由 w_min 有意拉向蓝紫，改判蓝紫
+IDENTITY_CLASSES = {"day", "default", "lowSun"}     # 身份色的色相只在白天与晨昏判；蓝调和夜间由 w_min 有意拉向蓝紫，改判蓝紫；彩度比所有时段都判
 DE_REGISTERED = 2.0           # 与登记值比对：OKLab ΔE × 100 ≤ 2 记为一致
 
 
@@ -55,13 +55,16 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
             d = abs(ok.hue_diff(hs, sky_h))
             lvl = "PASS" if d <= 30.0 else "FAIL"
             out.append((lvl, s, k, "中性影随天光", t, f"影 h{hs:.0f} 与天光 h{sky_h:.0f} 差 {d:.0f}°（≤ 30°）"))
-        # 2 有彩材质：身份色
-        if Ca >= 0.08 and f.cls in IDENTITY_CLASSES:
-            d = abs(ok.hue_diff(ha, hs))
+        # 2 有彩材质：身份色。彩度比在所有时段都判；色相只在白天与晨昏判
+        if Ca >= 0.08:
             ratio = Cs / Cl if Cl > 1e-6 else 1.0
-            ok_h, ok_c = d <= 20.0, ratio >= 0.6
-            lvl = "PASS" if (ok_h and ok_c) else "FAIL"
-            out.append((lvl, s, k, "身份色", t, f"影 h{hs:.0f} 与固有 h{ha:.0f} 差 {d:.0f}°（≤ 20°）；影 C/受光 C = {ratio:.2f}（≥ 0.6）"))
+            ok_c = ratio >= 0.6
+            if f.cls in IDENTITY_CLASSES:
+                d = abs(ok.hue_diff(ha, hs))
+                lvl = "PASS" if (d <= 20.0 and ok_c) else "FAIL"
+                out.append((lvl, s, k, "身份色", t, f"影 h{hs:.0f} 与固有 h{ha:.0f} 差 {d:.0f}°（≤ 20°）；影 C/受光 C = {ratio:.2f}（≥ 0.6）"))
+            else:
+                out.append(("PASS" if ok_c else "FAIL", s, k, "身份色彩度", t, f"影 C/受光 C = {ratio:.2f}（≥ 0.6）"))
         # 3 非绿色材质的影不落橄榄区（变体按基准色名的固有色相判类：草坪亮块仍是绿色材质）
         h_class = ok.lab_to_lch(mats[m.meta["variantOf"]].albedo)[2] if m.meta.get("variantOf") in mats else ha
         if not _in_range(h_class, *green) and Cs >= 0.02 and Ca >= 0.015:
