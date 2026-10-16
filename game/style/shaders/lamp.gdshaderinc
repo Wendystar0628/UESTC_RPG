@@ -7,6 +7,8 @@
 // 灯光通道、窗与灯表的公共求值（WP-39）。toon（WP-04）、fx_glow（WP-39）、precip（WP-45b）都 include 本文件，
 // C# 一侧（ScheduleMath、LampTable）用同一套常数；G2 用同一组输入比对。只含函数与常量，不定义 uniform、varying。
 // ---------------------------------------------------------------------------
+const int LAMP_SLOT_LAMP_FIRST = 12;     // 灯具类槽位 12–27（LightChannelCatalog）：L 是保留比例，开灯另按每盏灯的太阳高度阈值
+const int LAMP_SLOT_LAMP_LAST = 27;
 const int LAMP_SLOT_CUE = 23;            // lamp.cue：过场初灯追镜头接管的银杏大道一线
 const int LAMP_SLOT_AVIATION = 26;       // lamp.aviation：慢明灭
 const int LAMP_SLOT_SYS_CUE = 30;        // sys.cue：x = 1 表示覆盖生效，y = 覆盖期间判开灯用的目标太阳高度
@@ -16,6 +18,7 @@ const float LAMP_RAMP_FROM = 0.6;        // 刚亮时的亮度（SYS-TIME §6）
 const float LAMP_RAMP_FULL_DEG = -4.0;   // 太阳到 −4° 时亮度升到 1.0
 const float LAMP_ALWAYS_DEG = 89.0;      // θ ≥ 89° 表示常亮
 const float LAMP_POOL_TOP_M = 4.0;       // 光斑只照到 4 m 以下的立面
+const float LAMP_FIXTURE_REACH = 1.0;    // 灯具部件（灯罩、灯牌）离本灯灯头标记的最远距离（m），再远不算这盏灯的部件
 const vec2 LAMP_POOL_DAY_DEG = vec2(6.5, 10.0);   // h_eff 高于 10° 时白天不画光斑（toon 用 .y 提前跳过）
 
 // ---------------------------------------------------------------------------
@@ -138,8 +141,8 @@ LampData lamp_fetch(int i) {
 	return l;
 }
 
-// 单盏灯的亮度 0–1（不含光斑、光晕的形状）：按 h_eff 开灯、刚亮 0.6 → −4° 时 1.0、通道保留比例、级别
-float lamp_level(LampData l, float h_eff) {
+// 单盏灯的亮灭 0–1（不乘级别，不含光斑、光晕的形状）：按 h_eff 开灯、刚亮 0.6 → −4° 时 1.0、通道保留比例
+float lamp_on(LampData l, float h_eff) {
 	float h = h_eff;
 	if (l.slot == LAMP_SLOT_CUE) {
 		vec2 cue = lamp_channel(LAMP_SLOT_SYS_CUE);
@@ -155,7 +158,41 @@ float lamp_level(LampData l, float h_eff) {
 	}
 	vec2 c = lamp_channel(l.slot);
 	float keep = smoothstep(l.kappa, l.kappa + max(c.y, 1e-3), c.x);
-	return on * ramp * keep * l.energy;
+	return on * ramp * keep;
+}
+
+// 单盏灯的亮度 0–1：亮灭 × 级别
+float lamp_level(LampData l, float h_eff) {
+	return lamp_on(l, h_eff) * l.energy;
+}
+
+// 灯具部件（灯罩、灯牌）的自发光亮度 0–1，slot 是材质登记的灯光通道。窗灯类通道直接取 L；
+// 灯具类通道取灯表里灯头离 p 最近、且在 LAMP_FIXTURE_REACH 以内那盏灯的亮灭，与它的光斑、光晕同一个开灯阈值、
+// 保留阈值和过场覆盖：白天灯灭，灯罩也不亮。附近没有登记的灯时退回通道的 L。
+float lamp_fixture_level(vec3 p, int slot) {
+	float lv = clamp(lamp_channel(slot).x, 0.0, 1.0);
+	if (slot < LAMP_SLOT_LAMP_FIRST || slot > LAMP_SLOT_LAMP_LAST || !in_map(p)) {
+		return lv;
+	}
+	ivec2 gs = textureSize(lamp_grid, 0);
+	ivec2 cell = clamp(ivec2(floor(map_uv(p) * vec2(gs))), ivec2(0), gs - ivec2(1));
+	vec4 g = texelFetch(lamp_grid, cell, 0);
+	float ids[4] = float[4](g.x, g.y, g.z, g.w);
+	float h_eff = lamp_heff();
+	float best = LAMP_FIXTURE_REACH;
+	for (int k = 0; k < 4; k++) {
+		int id = int(ids[k] + 0.5) - 1;
+		if (id < 0) {
+			break;
+		}
+		LampData l = lamp_fetch(id);
+		float d = distance(p, l.base + vec3(0.0, l.head, 0.0));
+		if (d < best) {
+			best = d;
+			lv = lamp_on(l, h_eff);
+		}
+	}
+	return lv;
 }
 
 float lamp_luma(vec3 c) {
@@ -274,7 +311,8 @@ vec3 lamp_rim_lift(vec3 base, vec3 lc, float y) {
 // 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
 // lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
 // 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
-// 竖直面按面法线判（由 p 的屏幕导数求，只在片元里调用；toon 进来前的分支只看材质标志与全局太阳高度，同一三角形内一致）。
+// 过渡版本：竖直面按面法线判（由 p 的屏幕导数求，只在片元里调用；toon 进来前的分支只看材质标志与全局太阳高度，同一三角形内一致）。
+// toon 改调下面带 n_w 的版本后删除。
 void lamp_pool_shade(vec3 p, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
 	vec3 px = dFdx(p);
 	vec3 py = dFdy(p);
@@ -282,6 +320,30 @@ void lamp_pool_shade(vec3 p, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3
 	float nl = length(n);
 	bool wall = nl > 1e-12 && abs(n.y) < LAMP_WALL_NY * nl;
 	float aa_wall = max(aa, max(abs(px.y), abs(py.y)));
+	LampPool q = lamp_pool_eval_surface(p, aa, wall, aa_wall);
+	if (q.col < 0 || q.core + q.rim <= 0.0) {
+		return;
+	}
+	vec3 warm = texelFetch(palette, ivec2(LAMP_PAL_WARM, 0), 0).rgb;
+	vec3 lc = texelFetch(palette, ivec2(clamp(q.col, 0, 255), 0), 0).rgb;
+	vec3 tint = lamp_desat(lc / max(warm, vec3(0.02)), LAMP_POOL_CORE_SAT);
+	vec3 core = lamp_chroma_cap(lamp_lit * tint, LAMP_POOL_CHROMA_CAP);
+	vec3 core_add = LAMP_POOL_GAIN * q.core * core;
+	float y_rim = LAMP_POOL_GAIN * LAMP_POOL_RIM * q.rim * lamp_luma(core);
+	vec3 rim_lit = lamp_rim_lift(lit, lc, y_rim);
+	vec3 rim_shade = lamp_rim_lift(shade, lc, y_rim);
+	lit += core_add + rim_lit;
+	shade += core_add + rim_shade;
+}
+
+// 光斑着色（卡通材质在湿润、积水之后调用）：把灯光加在当前的受光色和影色上，不替换底色。
+// lamp_lit = 该材质的灯照色（调色板行 1，线性，已乘湿润变暗），即固有色在 lamp.warm 下的颜色；
+// 别的灯色按相对 lamp.warm 的比值换算。亮芯加灯照色；外圈按亮芯亮度的 LAMP_POOL_RIM 沿灯色抬亮底色，只做收边。
+// n_w = 世界法线（toon 传 c.n_w，含插值与解析法线），|n_w.y| 低于 LAMP_WALL_NY 按竖直面画：按着色法线判，圆柱、弧墙上的光斑边缘不出折面。
+// 竖直面上沿弧线的过渡宽度另取 fwidth(p.y)，只在片元里调用（toon 进来前的分支只看材质标志与全局太阳高度）。
+void lamp_pool_shade(vec3 p, vec3 n_w, float aa, vec3 lamp_lit, inout vec3 lit, inout vec3 shade) {
+	bool wall = abs(n_w.y) < LAMP_WALL_NY * length(n_w);
+	float aa_wall = max(aa, fwidth(p.y));
 	LampPool q = lamp_pool_eval_surface(p, aa, wall, aa_wall);
 	if (q.col < 0 || q.core + q.rim <= 0.0) {
 		return;
