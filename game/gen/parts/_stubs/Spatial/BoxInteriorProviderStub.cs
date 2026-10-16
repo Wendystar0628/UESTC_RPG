@@ -167,7 +167,7 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider
         if (entrances.Count == 0)
         {
             var center = new Vector3((feature.Bounds.Min.X + feature.Bounds.Max.X) / 2, feature.Bounds.Min.Y, feature.Bounds.Min.Z);
-            entrances = [new("stub-entry", center - new Vector3(0, 0, 2.5f), center + new Vector3(0, 0, 3), 2.4f, true)
+            entrances = [new(id.Value + "/stub-entry", center - new Vector3(0, 0, 2.5f), center + new Vector3(0, 0, 3), 2.4f, true)
                 { Center = center, YawDeg = 0 }];
         }
         float angle = entrances[0].YawDeg * (float.Pi / 180f);

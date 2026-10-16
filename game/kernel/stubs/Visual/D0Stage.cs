@@ -104,7 +104,9 @@ public partial class D0Stage : Node3D
             foreach (var attribute in registration.Type.GetCustomAttributes<SaveSectionAttribute>())
                 save.RegisterSection((ISaveSection)instance, attribute);
         }
-        ((AtlasServiceStub)registry.Get<IAtlasService>()).LoadFromBytes(entry.Id, waypointsBytes);
+        // Production atlas initializes through its map-aware node below; only the D0 fallback needs this fixture data.
+        if (registry.Get<IAtlasService>() is AtlasServiceStub atlasStub)
+            atlasStub.LoadFromBytes(entry.Id, waypointsBytes);
         foreach (var map in index.Maps) registry.ValidateMap(map.Id.Value);
         if (world.Features.Keys.Any(id => new[] { "npc:", "item:", "quest:" }.Any(prefix => id.Value.StartsWith(prefix, StringComparison.Ordinal))))
             throw new InvalidDataException("RPG entity prefixes are reserved in sightseeing data.");
