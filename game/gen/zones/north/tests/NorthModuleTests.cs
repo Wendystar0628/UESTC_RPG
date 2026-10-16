@@ -475,10 +475,13 @@ public sealed class NorthModuleTests
         const float offset = 7.5f, half = 1.25f, wallClear = 3f;
         string[] ids = ["design:north-dangui-walk-w1", "design:north-dangui-walk-w2", "design:north-dangui-walk-e1"];
         var strict = new JsonSerializerOptions(ContractJson.Options) { UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
-        var overlay = JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "north.overlay.json")), strict)
-            ?? throw new InvalidOperationException("north.overlay.json is empty");
-        Require(overlay.Zone.Value == "north" && overlay.Owner.Value == "WP-20", "overlay zone and owner");
-        var walks = overlay.Ops.OfType<AddOp>().Where(a => a.Id.Value.StartsWith("design:north-dangui-walk-", StringComparison.Ordinal)).ToArray();
+        var overlayRoot = Path.Combine(DataDirectory(), "overlay");
+        var overlays = new[] { Path.Combine(overlayRoot, "north.overlay.json") }
+            .Concat(Directory.GetFiles(Path.Combine(overlayRoot, "north.d"), "*.json").Order(StringComparer.Ordinal))
+            .Select(path => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(path), strict)
+                ?? throw new InvalidOperationException(path + " is empty")).ToArray();
+        Require(overlays.All(overlay => overlay.Zone.Value == "north" && overlay.Owner.Value == "WP-20"), "overlay zone and owner");
+        var walks = overlays.SelectMany(overlay => overlay.Ops).OfType<AddOp>().Where(a => a.Id.Value.StartsWith("design:north-dangui-walk-", StringComparison.Ordinal)).ToArray();
         Require(walks.Select(a => a.Id.Value).SequenceEqual(ids), "the three 丹桂路 walks, in order");
 
         var world = World();
@@ -705,6 +708,8 @@ public sealed class NorthModuleTests
     {
         var data = DataDirectory();
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json", "overlay/north.overlay.json" }
+            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "north.d"), "*.json").Order(StringComparer.Ordinal)
+                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
