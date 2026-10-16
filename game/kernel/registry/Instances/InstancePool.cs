@@ -1,31 +1,36 @@
+using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using Godot;
 
 namespace Campus.Kernel.Instances;
 
-/// <summary>Owns exactly one node, one MultiMesh, and one ArrayMesh; never owns the material.</summary>
+/// <summary>Owns one node, MultiMesh and multi-surface mesh. Materials belong to the provider or host cache.</summary>
 internal sealed class InstancePool(
-    InstancePoolHost host,
-    string id,
-    string ownerWp,
-    int capacity,
-    int meshTriangles,
-    bool castShadows,
-    MultiMeshInstance3D instance,
-    MultiMesh multiMesh,
-    ArrayMesh mesh) : IInstancePool
+    InstancePoolHost host, string id, string ownerWp, int capacity, int meshTriangles,
+    GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
+    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh, Func<bool>? preparation) : IInstancePool
 {
     private MultiMeshInstance3D? _instance = instance;
     private MultiMesh? _multiMesh = multiMesh;
     private ArrayMesh? _mesh = mesh;
+    private Func<bool>? _preparation = preparation;
+    private bool _materialReady = preparation is null;
     private bool _freed;
     private bool _hasBuffer;
     private int _visibleCount;
 
     public string Id { get; } = id;
     public string OwnerWp { get; } = ownerWp;
+    public MapId? Map { get; } = map;
     public int Capacity { get; } = capacity;
-    internal InstancePoolStatistics Statistics => new(Id, OwnerWp, Capacity, _visibleCount, meshTriangles, castShadows);
+    internal InstancePoolStatistics Statistics => new(Id, OwnerWp, Capacity, _visibleCount, meshTriangles,
+        shadows != GeometryInstance3D.ShadowCastingSetting.Off)
+    {
+        Map = Map,
+        SurfaceCount = surfaceCount,
+        Shadows = shadows,
+        MaterialReady = _materialReady
+    };
 
     public void WriteBuffer(ReadOnlySpan<float> data)
     {
@@ -39,32 +44,53 @@ internal sealed class InstancePool(
 
     public int VisibleCount
     {
-        get
-        {
-            RequireLive();
-            return _visibleCount;
-        }
+        get { RequireLive(); return _visibleCount; }
         set
         {
             RequireLive();
-            if (value < 0 || value > Capacity)
-                throw new ArgumentOutOfRangeException(nameof(value), "VisibleCount must be between zero and Capacity.");
+            if (value < 0 || value > Capacity) throw new ArgumentOutOfRangeException(nameof(value));
             if (value > 0 && !_hasBuffer)
                 throw new InvalidOperationException("Write the complete instance buffer before showing the pool.");
+            RefreshPreparation();
             _multiMesh!.VisibleInstanceCount = value;
             _visibleCount = value;
         }
+    }
+
+    internal void RefreshPreparation()
+    {
+        if (_freed || _preparation is null) return;
+        bool ready;
+        try { ready = _preparation(); }
+        catch
+        {
+            // A provider failure must not leave a previously warmed draw visible.
+            _instance!.Visible = false;
+            _materialReady = false;
+            throw;
+        }
+        if (ready == _materialReady) return;
+        _materialReady = ready;
+        _instance!.Visible = ready;
     }
 
     public void SetParameter(StringName name, Vector4 value)
     {
         RequireLive();
         ArgumentNullException.ThrowIfNull(name);
-        // The other registered instance uniforms are scalars; this API deliberately accepts only vec4.
         if (name != InstanceShaderNames.PrecipD && name != InstanceShaderNames.PrecipV && name != InstanceShaderNames.PrecipK)
-            throw new ArgumentException("The name is not a registered vec4 instance shader parameter.", nameof(name));
-        if (!value.IsFinite())
-            throw new ArgumentException("Instance shader parameters must be finite.", nameof(value));
+            throw new ArgumentException("The name is not a registered vec4 instance parameter.", nameof(name));
+        if (!value.IsFinite()) throw new ArgumentException("Instance parameters must be finite.", nameof(value));
+        _instance!.SetInstanceShaderParameter(name, value);
+    }
+
+    public void SetParameter(StringName name, float value)
+    {
+        RequireLive();
+        ArgumentNullException.ThrowIfNull(name);
+        if (name != InstanceShaderNames.ShadowProxy)
+            throw new ArgumentException("Only the registered shadow_proxy scalar is supported by instance pools.", nameof(name));
+        if (!float.IsFinite(value)) throw new ArgumentException("Instance parameters must be finite.", nameof(value));
         _instance!.SetInstanceShaderParameter(name, value);
     }
 
@@ -82,6 +108,8 @@ internal sealed class InstancePool(
         if (_freed) return;
         _freed = true;
         _visibleCount = 0;
+        _materialReady = false;
+        _preparation = null;
         host.Release(this);
         var ownedInstance = _instance;
         var ownedMultiMesh = _multiMesh;
@@ -93,9 +121,7 @@ internal sealed class InstancePool(
         {
             if (GodotObject.IsInstanceValid(ownedInstance))
             {
-                // Release native references before freeing resources. Material remains caller-owned.
                 ownedInstance!.Multimesh = null;
-                ownedInstance.MaterialOverride = null;
                 if (host.IsExiting) ownedInstance.QueueFree();
                 else ownedInstance.Free();
             }

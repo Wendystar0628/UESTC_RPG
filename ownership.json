@@ -2223,6 +2223,10 @@
       "owner": "WP-23"
     },
     {
+      "pattern": "game/data/maps/*/vegetation/**",
+      "owner": "WP-23"
+    },
+    {
       "pattern": "game/gen/zones/north/**",
       "owner": "WP-20"
     },

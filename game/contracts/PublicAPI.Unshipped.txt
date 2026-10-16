@@ -1254,6 +1254,10 @@ Campus.Contracts.BuildContext.CodeHash.get -> string!
 Campus.Contracts.BuildContext.CodeHash.init -> void
 Campus.Contracts.BuildContext.DataHash.get -> string!
 Campus.Contracts.BuildContext.DataHash.init -> void
+Campus.Contracts.BuildContext.GlobalInputs.get -> Campus.Contracts.BuildInputSnapshot!
+Campus.Contracts.BuildContext.GlobalInputs.init -> void
+Campus.Contracts.BuildContext.GroundMaskContributors.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.IGroundMaskContributor!>!
+Campus.Contracts.BuildContext.GroundMaskContributors.init -> void
 Campus.Contracts.BuildContext.InteriorProviders.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.IInteriorProvider!>!
 Campus.Contracts.BuildContext.InteriorProviders.init -> void
 Campus.Contracts.BuildContext.Map.get -> Campus.Contracts.Maps.MapDescriptor!
@@ -1270,6 +1274,9 @@ Campus.Contracts.BuildContext.World.get -> Campus.Contracts.IWorldModel!
 Campus.Contracts.BuildContext.World.init -> void
 Campus.Contracts.BuildContext.WorldSeed.get -> uint
 Campus.Contracts.BuildContext.WorldSeed.init -> void
+Campus.Contracts.BuildInputSnapshot
+Campus.Contracts.BuildInputSnapshot.Entries.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>!
+Campus.Contracts.BuildInputSnapshot.Require(string! key) -> System.ReadOnlyMemory<byte>
 Campus.Contracts.BuildingFamily
 Campus.Contracts.BuildingFamily.BuildingFamily() -> void
 Campus.Contracts.BuildingFamily.BuildingFamily(string! Value) -> void
@@ -1818,6 +1825,8 @@ Campus.Contracts.ContentOutput.Emitters.init -> void
 Campus.Contracts.ContentOutput.Entrances.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>!
 Campus.Contracts.ContentOutput.Entrances.init -> void
 Campus.Contracts.ContentOutput.Equals(Campus.Contracts.ContentOutput? other) -> bool
+Campus.Contracts.ContentOutput.Instances.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryInstanceStream!>!
+Campus.Contracts.ContentOutput.Instances.init -> void
 Campus.Contracts.ContentOutput.LooseWindows.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowDecl!>!
 Campus.Contracts.ContentOutput.LooseWindows.init -> void
 Campus.Contracts.ContentOutput.Meshes.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBundle!>!
@@ -1826,6 +1835,8 @@ Campus.Contracts.ContentOutput.Occupancy.get -> System.Collections.Generic.IRead
 Campus.Contracts.ContentOutput.Occupancy.init -> void
 Campus.Contracts.ContentOutput.Parts.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.PlacedPart!>!
 Campus.Contracts.ContentOutput.Parts.init -> void
+Campus.Contracts.ContentOutput.Seats.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.SeatDecl!>!
+Campus.Contracts.ContentOutput.Seats.init -> void
 Campus.Contracts.ContentOutput.Windows.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WindowFacadeDecl!>!
 Campus.Contracts.ContentOutput.Windows.init -> void
 Campus.Contracts.ContractJson
@@ -2058,6 +2069,28 @@ Campus.Contracts.Footprint2D.MinY.init -> void
 Campus.Contracts.Footprint2D.Rings.get -> Campus.Contracts.PolygonRings!
 Campus.Contracts.Footprint2D.Rings.init -> void
 Campus.Contracts.FramePriority
+Campus.Contracts.GeometryBuffer
+Campus.Contracts.GeometryBuffer.Ao.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.ColorIds.get -> System.ReadOnlyMemory<byte>?
+Campus.Contracts.GeometryBuffer.ColorIndices.get -> System.ReadOnlyMemory<ushort>?
+Campus.Contracts.GeometryBuffer.Custom0.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.Custom1.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.Custom2.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.DecalBaseColorIndices.get -> System.ReadOnlyMemory<ushort>?
+Campus.Contracts.GeometryBuffer.Flags.get -> System.ReadOnlyMemory<byte>?
+Campus.Contracts.GeometryBuffer.IgnoreOcclusionCulling.get -> bool
+Campus.Contracts.GeometryBuffer.Index.get -> System.ReadOnlyMemory<int>
+Campus.Contracts.GeometryBuffer.Lods.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryLodBuffer!>!
+Campus.Contracts.GeometryBuffer.Material.get -> Campus.Contracts.ToonRef
+Campus.Contracts.GeometryBuffer.Normal.get -> System.ReadOnlyMemory<float>
+Campus.Contracts.GeometryBuffer.PaletteEncodingVersion.get -> int
+Campus.Contracts.GeometryBuffer.Position.get -> System.ReadOnlyMemory<float>
+Campus.Contracts.GeometryBuffer.Reflect.get -> bool
+Campus.Contracts.GeometryBuffer.Reserved.get -> System.ReadOnlyMemory<byte>?
+Campus.Contracts.GeometryBuffer.Shader.get -> Campus.Contracts.ShaderId?
+Campus.Contracts.GeometryBuffer.Uv.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.Uv2.get -> System.ReadOnlyMemory<float>?
+Campus.Contracts.GeometryBuffer.Variant.get -> Campus.Contracts.VariantTag?
 Campus.Contracts.GeometryBundle
 Campus.Contracts.GeometryBundle.<Clone>$() -> Campus.Contracts.GeometryBundle!
 Campus.Contracts.GeometryBundle.Ao.get -> float[]?
@@ -2105,6 +2138,42 @@ Campus.Contracts.GeometryBundle.ValidateVertexData() -> void
 Campus.Contracts.GeometryBundle.ValidateVertexData(int paletteEncodingVersion) -> void
 Campus.Contracts.GeometryBundle.Variant.get -> Campus.Contracts.VariantTag?
 Campus.Contracts.GeometryBundle.Variant.init -> void
+Campus.Contracts.GeometryInstanceStream
+Campus.Contracts.GeometryInstanceStream.Bounds.get -> Campus.Contracts.Box3
+Campus.Contracts.GeometryInstanceStream.Count.get -> int
+Campus.Contracts.GeometryInstanceStream.Data.get -> System.ReadOnlyMemory<float>
+Campus.Contracts.GeometryInstanceStream.GeometryInstanceStream(string! id, Campus.Contracts.GeometryPrototype! prototype, System.ReadOnlyMemory<float> data, Campus.Contracts.Box3 bounds) -> void
+Campus.Contracts.GeometryInstanceStream.Id.get -> string!
+Campus.Contracts.GeometryInstanceStream.Prototype.get -> Campus.Contracts.GeometryPrototype!
+Campus.Contracts.GeometryLodBuffer
+Campus.Contracts.GeometryLodBuffer.Error.get -> float
+Campus.Contracts.GeometryLodBuffer.GeometryLodBuffer(float error, System.ReadOnlyMemory<int> index) -> void
+Campus.Contracts.GeometryLodBuffer.Index.get -> System.ReadOnlyMemory<int>
+Campus.Contracts.GeometryPrototype
+Campus.Contracts.GeometryPrototype.Bounds.get -> Campus.Contracts.Box3
+Campus.Contracts.GeometryPrototype.GeometryPrototype(string! id, System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBuffer!>! surfaces, Campus.Contracts.Box3 bounds) -> void
+Campus.Contracts.GeometryPrototype.Id.get -> string!
+Campus.Contracts.GeometryPrototype.Surfaces.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryBuffer!>!
+Campus.Contracts.GroundMaskChannels
+Campus.Contracts.GroundMaskChannels.CanopyShelter = 4 -> Campus.Contracts.GroundMaskChannels
+Campus.Contracts.GroundMaskChannels.GinkgoLeaves = 1 -> Campus.Contracts.GroundMaskChannels
+Campus.Contracts.GroundMaskChannels.None = 0 -> Campus.Contracts.GroundMaskChannels
+Campus.Contracts.GroundMaskChannels.OtherLeaves = 2 -> Campus.Contracts.GroundMaskChannels
+Campus.Contracts.GroundMaskGrid
+Campus.Contracts.GroundMaskGrid.ByteCount.get -> int
+Campus.Contracts.GroundMaskGrid.Deconstruct(out Campus.Contracts.Maps.MapRect! Rect, out int Width, out int Height, out float MetersPerPixel) -> void
+Campus.Contracts.GroundMaskGrid.Equals(Campus.Contracts.GroundMaskGrid other) -> bool
+Campus.Contracts.GroundMaskGrid.GroundMaskGrid() -> void
+Campus.Contracts.GroundMaskGrid.GroundMaskGrid(Campus.Contracts.Maps.MapRect! Rect, int Width, int Height, float MetersPerPixel) -> void
+Campus.Contracts.GroundMaskGrid.Height.get -> int
+Campus.Contracts.GroundMaskGrid.Height.init -> void
+Campus.Contracts.GroundMaskGrid.MetersPerPixel.get -> float
+Campus.Contracts.GroundMaskGrid.MetersPerPixel.init -> void
+Campus.Contracts.GroundMaskGrid.Rect.get -> Campus.Contracts.Maps.MapRect!
+Campus.Contracts.GroundMaskGrid.Rect.init -> void
+Campus.Contracts.GroundMaskGrid.Validate(int mask1Bytes, int mask2Bytes) -> void
+Campus.Contracts.GroundMaskGrid.Width.get -> int
+Campus.Contracts.GroundMaskGrid.Width.init -> void
 Campus.Contracts.HeightFieldCollider
 Campus.Contracts.HeightFieldCollider.Deconstruct(out Campus.Contracts.TileKey Tile, out short[]! HeightsCm, out Campus.Contracts.SurfaceTag Tag) -> void
 Campus.Contracts.HeightFieldCollider.Equals(Campus.Contracts.HeightFieldCollider? other) -> bool
@@ -2185,6 +2254,10 @@ Campus.Contracts.IFidelityModel.GroundAt(float x, float z) -> Campus.Contracts.F
 Campus.Contracts.IFidelityModel.InputHash.get -> string!
 Campus.Contracts.IFidelityModel.Roof(Campus.Contracts.FeatureId building) -> Campus.Contracts.RoofZone!
 Campus.Contracts.IFidelityModel.WalkDistanceAt(float x, float z) -> float
+Campus.Contracts.IGroundMaskContributor
+Campus.Contracts.IGroundMaskContributor.Channels.get -> Campus.Contracts.GroundMaskChannels
+Campus.Contracts.IGroundMaskContributor.Id.get -> string!
+Campus.Contracts.IGroundMaskContributor.Paint(Campus.Contracts.BuildContext! context, in Campus.Contracts.GroundMaskGrid grid, System.Span<byte> mask1, System.Span<byte> mask2) -> void
 Campus.Contracts.IInputRouter
 Campus.Contracts.IInputRouter.InterfaceMode.get -> bool
 Campus.Contracts.IInputRouter.InterfaceModeChanged -> System.Action<bool>?
@@ -2273,6 +2346,7 @@ Campus.Contracts.IPartDef<TParams>.Bounds(TParams p) -> Campus.Contracts.Box3
 Campus.Contracts.IPartDef<TParams>.Budget.get -> Campus.Contracts.PartBudget!
 Campus.Contracts.IPartDef<TParams>.Collision(TParams p) -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!
 Campus.Contracts.IPartDef<TParams>.Lods.get -> System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.LodLevel, System.Func<TParams, Campus.Contracts.PartGeometry!>!>!
+Campus.Contracts.IPartDef<TParams>.Seats(TParams p) -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.SeatDecl!>!
 Campus.Contracts.IPartDef<TParams>.Sockets.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Numerics.Matrix4x4>!
 Campus.Contracts.IPartDef<TParams>.Sounds(TParams p) -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Audio.SoundSocketDecl!>!
 Campus.Contracts.IRenderHost
@@ -2488,6 +2562,7 @@ Campus.Contracts.InspectionProbe.InspectionProbe(string! Id, Campus.Contracts.Fe
 Campus.Contracts.InspectionProbe.Pose.get -> Campus.Contracts.Pose
 Campus.Contracts.InspectionProbe.Pose.init -> void
 Campus.Contracts.InstanceShaderParameters
+Campus.Contracts.InstanceStreamLayout
 Campus.Contracts.InteractionRule
 Campus.Contracts.InteractionRule.None = 0 -> Campus.Contracts.InteractionRule
 Campus.Contracts.InteriorConfigOp
@@ -2506,6 +2581,7 @@ Campus.Contracts.InteriorDetail
 Campus.Contracts.InteriorDetail.Full = 2 -> Campus.Contracts.InteriorDetail
 Campus.Contracts.InteriorDetail.Proxy = 0 -> Campus.Contracts.InteriorDetail
 Campus.Contracts.InteriorDetail.Shell = 1 -> Campus.Contracts.InteriorDetail
+Campus.Contracts.InteriorEntranceJson
 Campus.Contracts.InteriorIndexEntry
 Campus.Contracts.InteriorIndexEntry.<Clone>$() -> Campus.Contracts.InteriorIndexEntry!
 Campus.Contracts.InteriorIndexEntry.Deconstruct(out Campus.Contracts.FeatureId Feature, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.StoreyInfo!>! Storeys, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>! Entrances, out bool Open, out string? ProviderId) -> void
@@ -4227,6 +4303,23 @@ Campus.Contracts.SeasonMask.Autumn = 4 -> Campus.Contracts.SeasonMask
 Campus.Contracts.SeasonMask.Spring = 1 -> Campus.Contracts.SeasonMask
 Campus.Contracts.SeasonMask.Summer = 2 -> Campus.Contracts.SeasonMask
 Campus.Contracts.SeasonMask.Winter = 8 -> Campus.Contracts.SeasonMask
+Campus.Contracts.SeatDecl
+Campus.Contracts.SeatDecl.<Clone>$() -> Campus.Contracts.SeatDecl!
+Campus.Contracts.SeatDecl.Back.get -> bool
+Campus.Contracts.SeatDecl.Back.init -> void
+Campus.Contracts.SeatDecl.Deconstruct(out System.Numerics.Vector3 From, out System.Numerics.Vector3 To, out System.Numerics.Vector3 Facing, out float Depth, out bool Back, out int Places) -> void
+Campus.Contracts.SeatDecl.Depth.get -> float
+Campus.Contracts.SeatDecl.Depth.init -> void
+Campus.Contracts.SeatDecl.Equals(Campus.Contracts.SeatDecl? other) -> bool
+Campus.Contracts.SeatDecl.Facing.get -> System.Numerics.Vector3
+Campus.Contracts.SeatDecl.Facing.init -> void
+Campus.Contracts.SeatDecl.From.get -> System.Numerics.Vector3
+Campus.Contracts.SeatDecl.From.init -> void
+Campus.Contracts.SeatDecl.Places.get -> int
+Campus.Contracts.SeatDecl.Places.init -> void
+Campus.Contracts.SeatDecl.SeatDecl(System.Numerics.Vector3 From, System.Numerics.Vector3 To, System.Numerics.Vector3 Facing, float Depth, bool Back, int Places) -> void
+Campus.Contracts.SeatDecl.To.get -> System.Numerics.Vector3
+Campus.Contracts.SeatDecl.To.init -> void
 Campus.Contracts.ShadeSteps
 Campus.Contracts.ShadeSteps.Soft = 2 -> Campus.Contracts.ShadeSteps
 Campus.Contracts.ShadeSteps.Three = 3 -> Campus.Contracts.ShadeSteps
@@ -5830,6 +5923,8 @@ const Campus.Contracts.InstanceShaderParameters.PrecipK = "precip_k" -> string!
 const Campus.Contracts.InstanceShaderParameters.PrecipV = "precip_v" -> string!
 const Campus.Contracts.InstanceShaderParameters.RetreatBias = "retreat_bias" -> string!
 const Campus.Contracts.InstanceShaderParameters.ShadowProxy = "shadow_proxy" -> string!
+const Campus.Contracts.InstanceStreamLayout.BytesPerInstance = 64 -> int
+const Campus.Contracts.InstanceStreamLayout.FloatsPerInstance = 16 -> int
 const Campus.Contracts.LightChannelCatalog.Count = 32 -> int
 const Campus.Contracts.PaletteEncoding.ColorBankFlag = 16 -> byte
 const Campus.Contracts.PaletteEncoding.DecalBaseBankFlag = 32 -> byte
@@ -6257,6 +6352,7 @@ override Campus.Contracts.Footprint2D.ToString() -> string!
 override Campus.Contracts.GeometryBundle.Equals(object? obj) -> bool
 override Campus.Contracts.GeometryBundle.GetHashCode() -> int
 override Campus.Contracts.GeometryBundle.ToString() -> string!
+override Campus.Contracts.GroundMaskGrid.GetHashCode() -> int
 override Campus.Contracts.HeightFieldCollider.<Clone>$() -> Campus.Contracts.HeightFieldCollider!
 override Campus.Contracts.HeightFieldCollider.Equals(object? obj) -> bool
 override Campus.Contracts.HeightFieldCollider.GetHashCode() -> int
@@ -6572,6 +6668,9 @@ override Campus.Contracts.SealOp.<Clone>$() -> Campus.Contracts.SealOp!
 override Campus.Contracts.SealOp.Equals(object? obj) -> bool
 override Campus.Contracts.SealOp.GetHashCode() -> int
 override Campus.Contracts.SealOp.ToString() -> string!
+override Campus.Contracts.SeatDecl.Equals(object? obj) -> bool
+override Campus.Contracts.SeatDecl.GetHashCode() -> int
+override Campus.Contracts.SeatDecl.ToString() -> string!
 override Campus.Contracts.SlabCollider.<Clone>$() -> Campus.Contracts.SlabCollider!
 override Campus.Contracts.SlabCollider.Equals(object? obj) -> bool
 override Campus.Contracts.SlabCollider.GetHashCode() -> int
@@ -6934,6 +7033,8 @@ static Campus.Contracts.Box3.operator !=(Campus.Contracts.Box3 left, Campus.Cont
 static Campus.Contracts.Box3.operator ==(Campus.Contracts.Box3 left, Campus.Contracts.Box3 right) -> bool
 static Campus.Contracts.BoxCollider.operator !=(Campus.Contracts.BoxCollider? left, Campus.Contracts.BoxCollider? right) -> bool
 static Campus.Contracts.BoxCollider.operator ==(Campus.Contracts.BoxCollider? left, Campus.Contracts.BoxCollider? right) -> bool
+static Campus.Contracts.BuildInputSnapshot.Empty.get -> Campus.Contracts.BuildInputSnapshot!
+static Campus.Contracts.BuildInputSnapshot.Freeze(System.Collections.Generic.IReadOnlyDictionary<string!, System.ReadOnlyMemory<byte>>! source) -> Campus.Contracts.BuildInputSnapshot!
 static Campus.Contracts.BuildingFamily.operator !=(Campus.Contracts.BuildingFamily left, Campus.Contracts.BuildingFamily right) -> bool
 static Campus.Contracts.BuildingFamily.operator ==(Campus.Contracts.BuildingFamily left, Campus.Contracts.BuildingFamily right) -> bool
 static Campus.Contracts.CameraMedium.operator !=(Campus.Contracts.CameraMedium left, Campus.Contracts.CameraMedium right) -> bool
@@ -7067,8 +7168,11 @@ static Campus.Contracts.Flow.operator !=(Campus.Contracts.Flow left, Campus.Cont
 static Campus.Contracts.Flow.operator ==(Campus.Contracts.Flow left, Campus.Contracts.Flow right) -> bool
 static Campus.Contracts.Footprint2D.operator !=(Campus.Contracts.Footprint2D? left, Campus.Contracts.Footprint2D? right) -> bool
 static Campus.Contracts.Footprint2D.operator ==(Campus.Contracts.Footprint2D? left, Campus.Contracts.Footprint2D? right) -> bool
+static Campus.Contracts.GeometryBuffer.Freeze(Campus.Contracts.GeometryBundle! source, int paletteEncodingVersion = 1) -> Campus.Contracts.GeometryBuffer!
 static Campus.Contracts.GeometryBundle.operator !=(Campus.Contracts.GeometryBundle? left, Campus.Contracts.GeometryBundle? right) -> bool
 static Campus.Contracts.GeometryBundle.operator ==(Campus.Contracts.GeometryBundle? left, Campus.Contracts.GeometryBundle? right) -> bool
+static Campus.Contracts.GroundMaskGrid.operator !=(Campus.Contracts.GroundMaskGrid left, Campus.Contracts.GroundMaskGrid right) -> bool
+static Campus.Contracts.GroundMaskGrid.operator ==(Campus.Contracts.GroundMaskGrid left, Campus.Contracts.GroundMaskGrid right) -> bool
 static Campus.Contracts.HeightFieldCollider.operator !=(Campus.Contracts.HeightFieldCollider? left, Campus.Contracts.HeightFieldCollider? right) -> bool
 static Campus.Contracts.HeightFieldCollider.operator ==(Campus.Contracts.HeightFieldCollider? left, Campus.Contracts.HeightFieldCollider? right) -> bool
 static Campus.Contracts.HeightOp.operator !=(Campus.Contracts.HeightOp? left, Campus.Contracts.HeightOp? right) -> bool
@@ -7079,8 +7183,10 @@ static Campus.Contracts.InputActionEvent.operator !=(Campus.Contracts.InputActio
 static Campus.Contracts.InputActionEvent.operator ==(Campus.Contracts.InputActionEvent left, Campus.Contracts.InputActionEvent right) -> bool
 static Campus.Contracts.InspectionProbe.operator !=(Campus.Contracts.InspectionProbe? left, Campus.Contracts.InspectionProbe? right) -> bool
 static Campus.Contracts.InspectionProbe.operator ==(Campus.Contracts.InspectionProbe? left, Campus.Contracts.InspectionProbe? right) -> bool
+static Campus.Contracts.InstanceStreamLayout.Write(System.Span<float> target, System.Numerics.Matrix4x4 at, System.Numerics.Vector4 custom) -> void
 static Campus.Contracts.InteriorConfigOp.operator !=(Campus.Contracts.InteriorConfigOp? left, Campus.Contracts.InteriorConfigOp? right) -> bool
 static Campus.Contracts.InteriorConfigOp.operator ==(Campus.Contracts.InteriorConfigOp? left, Campus.Contracts.InteriorConfigOp? right) -> bool
+static Campus.Contracts.InteriorEntranceJson.Parse(System.Text.Json.JsonElement entrance, Campus.Contracts.FeatureId feature, Campus.Contracts.ITerrain? terrain = null) -> Campus.Contracts.EntranceDecl!
 static Campus.Contracts.InteriorIndexEntry.operator !=(Campus.Contracts.InteriorIndexEntry? left, Campus.Contracts.InteriorIndexEntry? right) -> bool
 static Campus.Contracts.InteriorIndexEntry.operator ==(Campus.Contracts.InteriorIndexEntry? left, Campus.Contracts.InteriorIndexEntry? right) -> bool
 static Campus.Contracts.InteriorLayout.operator !=(Campus.Contracts.InteriorLayout? left, Campus.Contracts.InteriorLayout? right) -> bool
@@ -7303,6 +7409,8 @@ static Campus.Contracts.Save.SlotInfo.operator !=(Campus.Contracts.Save.SlotInfo
 static Campus.Contracts.Save.SlotInfo.operator ==(Campus.Contracts.Save.SlotInfo? left, Campus.Contracts.Save.SlotInfo? right) -> bool
 static Campus.Contracts.SealOp.operator !=(Campus.Contracts.SealOp? left, Campus.Contracts.SealOp? right) -> bool
 static Campus.Contracts.SealOp.operator ==(Campus.Contracts.SealOp? left, Campus.Contracts.SealOp? right) -> bool
+static Campus.Contracts.SeatDecl.operator !=(Campus.Contracts.SeatDecl? left, Campus.Contracts.SeatDecl? right) -> bool
+static Campus.Contracts.SeatDecl.operator ==(Campus.Contracts.SeatDecl? left, Campus.Contracts.SeatDecl? right) -> bool
 static Campus.Contracts.SlabCollider.operator !=(Campus.Contracts.SlabCollider? left, Campus.Contracts.SlabCollider? right) -> bool
 static Campus.Contracts.SlabCollider.operator ==(Campus.Contracts.SlabCollider? left, Campus.Contracts.SlabCollider? right) -> bool
 static Campus.Contracts.SlopedWallCollider.operator !=(Campus.Contracts.SlopedWallCollider? left, Campus.Contracts.SlopedWallCollider? right) -> bool
@@ -7595,6 +7703,8 @@ virtual Campus.Contracts.TerrainShape.PrintMembers(System.Text.StringBuilder! bu
 ~override Campus.Contracts.FeatureId.ToString() -> string
 ~override Campus.Contracts.Flow.Equals(object obj) -> bool
 ~override Campus.Contracts.Flow.ToString() -> string
+~override Campus.Contracts.GroundMaskGrid.Equals(object obj) -> bool
+~override Campus.Contracts.GroundMaskGrid.ToString() -> string
 ~override Campus.Contracts.InputActionEvent.Equals(object obj) -> bool
 ~override Campus.Contracts.InputActionEvent.ToString() -> string
 ~override Campus.Contracts.LightningFlash.Equals(object obj) -> bool

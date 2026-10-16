@@ -8,6 +8,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
 using Campus.Kernel.Collision.Stubs;
+using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Stubs.AudioUi;
@@ -78,19 +79,35 @@ public partial class D0Stage : Node3D
         var waypointsBytes = Read(entry.Dir + "waypoints.json");
         var waypoints = JsonSerializer.Deserialize<WaypointFile>(waypointsBytes, ContractJson.Options)!.Waypoints;
         var maps = (MapServiceStub)registry.Get<IMapService>();
-        maps.LoadFromBytes(indexBytes, Read(entry.Dir + "map.json"), world, campus.Geo, campus.Center,
+        var mapBytes = Read(entry.Dir + "map.json");
+        maps.LoadFromBytes(indexBytes, mapBytes, world, campus.Geo, campus.Center,
             campus.Bounds, campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints);
         var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
         InitializeWorld(context);
         var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
             .ToDictionary(r => r.Id, r => registry.CreateInteriorProvider(r.Type, entry.Id), StringComparer.Ordinal);
-        var bindings = D0InteriorSetup.Configure(interiorsBytes, providers);
+        var bindings = D0InteriorSetup.Configure(interiorsBytes, providers, world.Terrain);
+        var inputBytes = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        {
+            ["map.json"] = mapBytes,
+            ["campus.json"] = campusBytes,
+            ["interiors.json"] = interiorsBytes,
+            ["waypoints.json"] = waypointsBytes
+        };
+        // Canonical map-relative path only. No implicit lookup of the retired global planting path.
+        const string plantingKey = "vegetation/planting.json";
+        if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
+        var mapInputs = BuildInputSnapshot.Freeze(inputBytes);
+        var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var buildContext = new BuildContext
         {
             Map = context.Descriptor,
             World = world,
             WorldSeed = context.Descriptor.Seed,
-            InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal)
+            InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal),
+            SourceInputs = mapInputs.Entries,
+            GlobalInputs = Services.GlobalBuildInputs,
+            GroundMaskContributors = groundContributors
         };
         var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(buildContext, bindings));
         ((InteriorIndexStub)registry.Get<IInteriorIndex>()).Configure(interiors.Entries);

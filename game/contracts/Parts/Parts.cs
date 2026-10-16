@@ -23,6 +23,8 @@ public interface IPartDef<TParams> where TParams : notnull
     PartBudget Budget { get; }
     IReadOnlyList<Collider> Collision(TParams p) => [];
     IReadOnlyList<SoundSocketDecl> Sounds(TParams p) => [];
+    /// <summary>Part-local seat declarations sharing the collision source. The baker applies placement exactly once.</summary>
+    IReadOnlyList<SeatDecl> Seats(TParams p) => [];
 }
 public sealed record PlacedPart(
     PartId Part, object Params, Matrix4x4 At,

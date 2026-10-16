@@ -28,7 +28,18 @@ public static class D0InteriorSetup
     /// The returned bindings, not every globally registered provider's mutable FeatureIds, define this map's coverage.
     /// </summary>
     public static IReadOnlyList<D0InteriorBinding> Configure(ReadOnlyMemory<byte> interiorsBytes,
-        IReadOnlyDictionary<string, IInteriorProvider> providers)
+        IReadOnlyDictionary<string, IInteriorProvider> providers) => ConfigureCore(interiorsBytes, providers, null);
+
+    /// <summary>Resolve raw pad-relative entrances once against the explicitly supplied map terrain.</summary>
+    public static IReadOnlyList<D0InteriorBinding> Configure(ReadOnlyMemory<byte> interiorsBytes,
+        IReadOnlyDictionary<string, IInteriorProvider> providers, ITerrain terrain)
+    {
+        ArgumentNullException.ThrowIfNull(terrain);
+        return ConfigureCore(interiorsBytes, providers, terrain);
+    }
+
+    private static IReadOnlyList<D0InteriorBinding> ConfigureCore(ReadOnlyMemory<byte> interiorsBytes,
+        IReadOnlyDictionary<string, IInteriorProvider> providers, ITerrain? terrain)
     {
         ArgumentNullException.ThrowIfNull(providers);
         using JsonDocument document = JsonDocument.Parse(interiorsBytes);
@@ -63,14 +74,7 @@ public static class D0InteriorSetup
                 var feature = new FeatureId(entry.GetProperty("featureId").GetString() ?? throw new JsonException("Missing entrance feature ID."));
                 if (!features.Contains(feature)) throw new JsonException("Entrance belongs to a feature outside its interior.");
                 if (!entranceLists.TryGetValue(feature, out var list)) entranceLists.Add(feature, list = []);
-                float width = entry.GetProperty("clearWidth").GetSingle();
-                float yaw = entry.GetProperty("facingDeg").GetSingle();
-                if (!float.IsFinite(width) || width <= 0 || !float.IsFinite(yaw))
-                    throw new JsonException($"Interior {providerId} has invalid entrance dimensions.");
-                list.Add(new(entry.GetProperty("id").GetString() ?? throw new JsonException("Missing entrance ID."),
-                    Vector(entry.GetProperty("outsideLanding")), Vector(entry.GetProperty("insideLanding")),
-                    width, entry.GetProperty("open").GetBoolean())
-                { Center = Vector(entry.GetProperty("doorCenter")), YawDeg = yaw });
+                list.Add(InteriorEntranceJson.Parse(entry, feature, terrain));
                 authoredEntranceCount++;
             }
             if (provider is BoxInteriorProviderStub stub)
@@ -87,7 +91,7 @@ public static class D0InteriorSetup
     /// <summary>Legacy convenience for fresh, unpublished map-owned providers. Shared/global registry instances must not be passed.</summary>
     public static D0InteriorSetupResult Build(byte[] interiorsBytes, BuildContext context,
         IReadOnlyDictionary<string, IInteriorProvider> providers) =>
-        BuildCore(context, providers, Configure(interiorsBytes, providers));
+        BuildCore(context, providers, Configure(interiorsBytes, providers, context.World.Terrain));
 
     /// <summary>Builds from already configured map-owned instances; this method never calls Configure.</summary>
     public static D0InteriorSetupResult BuildConfigured(BuildContext context, IReadOnlyList<D0InteriorBinding> bindings)
@@ -141,11 +145,4 @@ public static class D0InteriorSetup
         return new(new(meshes, []), colliders, entries, nodes, edges, portals);
     }
 
-    private static Vector3 Vector(JsonElement value)
-    {
-        if (value.GetArrayLength() != 3) throw new JsonException("A spatial coordinate must contain three values.");
-        var values = value.EnumerateArray().Select(e => e.GetSingle()).ToArray();
-        if (values.Any(v => !float.IsFinite(v))) throw new JsonException("A spatial coordinate must be finite.");
-        return new(values[0], values[1], values[2]);
-    }
 }

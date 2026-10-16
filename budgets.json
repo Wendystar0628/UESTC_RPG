@@ -277,72 +277,92 @@
     {
       "owner": "WP-14",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 3,
       "mainDrawCallsPercent": 3,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 20,
+      "fineMainTrianglesMax": 500000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-16",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 3,
       "mainDrawCallsPercent": 3,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 3,
+      "fineMainTrianglesMax": 75000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-17",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 2,
       "mainDrawCallsPercent": 2,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 2,
+      "fineMainTrianglesMax": 50000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-18",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 8,
       "mainDrawCallsPercent": 6,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 8,
+      "fineMainTrianglesMax": 200000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-19",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 5,
       "mainDrawCallsPercent": 4,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 5,
+      "fineMainTrianglesMax": 125000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-20",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 9,
       "mainDrawCallsPercent": 7,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 9,
+      "fineMainTrianglesMax": 225000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-21",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 6,
       "mainDrawCallsPercent": 5,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 6,
+      "fineMainTrianglesMax": 150000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-28",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 1,
       "mainDrawCallsPercent": 1,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 1,
+      "fineMainTrianglesMax": 25000,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-29",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 0.5,
       "mainDrawCallsPercent": 0.5,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 0.5,
+      "fineMainTrianglesMax": 12500,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-30",
       "chargedTo": "buildings",
-      "mainTrianglesPercent": 0.5,
       "mainDrawCallsPercent": 1,
-      "includedInParent": true
+      "includedInParent": true,
+      "mainTrianglesPercentMax": 0.5,
+      "fineMainTrianglesMax": 12500,
+      "mainTrianglesAccounting": "SHARED_PER_VIEW_CEILING"
     },
     {
       "owner": "WP-38",
@@ -426,10 +446,9 @@
     "gpuFrame": 100
   },
   "buildingSubdivisionUnallocated": {
-    "mainTrianglesPercent": 0,
     "mainDrawCallsPercent": 5.5,
-    "status": "UNALLOCATED_WITHIN_BUILDINGS",
-    "note": "ENG-WP per-package rows total 38% triangles and 32.5% draw calls; no invented assignment for remaining building draw calls."
+    "status": "UNALLOCATED_DRAW_CALLS_WITHIN_BUILDINGS",
+    "note": "Draw-call suballocations remain 32.5% plus 5.5% unallocated. Main triangles use the explicit shared per-view pool; no additive triangle subdivision or unallocated triangle slice is implied."
   },
   "runtime": [
     {
@@ -649,7 +668,9 @@
       "status": "INITIAL_NOT_MEASURED"
     },
     {
-      "owners": ["WP-54a"],
+      "owners": [
+        "WP-54a"
+      ],
       "mainThreadP95MsMax": 0.08,
       "chargedTo": "mainThreadReserve",
       "renderCostsChargedTo": "WP-54b",
@@ -657,12 +678,14 @@
       "source": "ENG-WP WP-54a; final allocation follows the native P0 measurement"
     },
     {
-      "owners": ["WP-54b"],
+      "owners": [
+        "WP-54b"
+      ],
       "mainTrianglesMax": 15000,
       "mainDrawCallsMax": 4,
       "shadowTrianglesPerCascadeMax": 15000,
       "shadowDrawCallsPerCascadeMax": 4,
-      "gpuMsMax": 0.10,
+      "gpuMsMax": 0.1,
       "assetBytesMax": 4194304,
       "chargedTo": "reserve",
       "status": "P0_INITIAL_NOT_MEASURED",
@@ -907,5 +930,25 @@
     "audioDeductedMs": 0.35,
     "status": "INITIAL_NOT_MEASURED"
   },
-  "measurements": []
+  "measurements": [],
+  "buildingSubdivisionPolicy": {
+    "mainTriangles": {
+      "mode": "SHARED_PER_VIEW_POOL",
+      "chargedTo": "buildings",
+      "mainTrianglesPercent": 38,
+      "fineMainTrianglesMax": 950000,
+      "childCeilingsAreAdditive": false,
+      "childCeilingPercentSum": 55,
+      "actualPerViewAccounting": "Count each generated building surface once, after formal claims and visible LOD selection; enforce both its owner ceiling and the shared building pool.",
+      "claimsRequired": true,
+      "measurementStatus": "NOT_MEASURED",
+      "gate": "G8",
+      "note": "Owner ceilings are not reserved slices. No claim of simultaneous feasibility is made; retain modelling fidelity and report a measured shared-pool conflict."
+    },
+    "mainDrawCalls": {
+      "mode": "ADDITIVE_SUBALLOCATION",
+      "allocatedPercent": 32.5,
+      "unallocatedPercent": 5.5
+    }
+  }
 }

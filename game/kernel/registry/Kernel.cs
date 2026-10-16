@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Kernel.Maps;
 using Godot;
 
 namespace Campus.Kernel.Registry;
@@ -8,10 +9,18 @@ namespace Campus.Kernel.Registry;
 public partial class Kernel : Node
 {
     public static ServiceRegistry Services { get; private set; } = new();
+    private static Lazy<BuildInputSnapshot> _globalBuildInputs = new(() =>
+        throw new InvalidOperationException("Global build-input assets have not been initialized."));
+    /// <summary>One frozen global asset version for all maps and workers; no per-context reads or copies.</summary>
+    public static BuildInputSnapshot GlobalBuildInputs => _globalBuildInputs.Value;
     public static T Get<T>() where T : class => Services.Get<T>();
     public override void _Ready()
     {
         Services = new ServiceRegistry();
+        // Explicit composition-root asset manifest. Old pure fixtures can keep BuildInputSnapshot.Empty.
+        _globalBuildInputs = new(() => BuildInputAssembly.ReadRequiredGlobalInputs(
+            ["vegetation/species.json"], key => Godot.FileAccess.GetFileAsBytes("res://data/" + key)),
+            LazyThreadSafetyMode.ExecutionAndPublication);
         var bytes = Godot.FileAccess.GetFileAsBytes(ProjectSettings.GetSetting("campus/rulesets/default").AsString());
         var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(bytes, ContractJson.Options)
             ?? throw new InvalidDataException("Ruleset data is missing.");

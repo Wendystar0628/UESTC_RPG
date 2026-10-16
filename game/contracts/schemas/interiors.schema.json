@@ -120,6 +120,12 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "heightRef": {
+                  "type": "string",
+                  "enum": ["absolute", "pad"],
+                  "default": "absolute",
+                  "description": "Y reference for outsideLanding, insideLanding and doorCenter together. pad adds the corresponding feature PadY once; absolute preserves authored coordinates."
+                },
                 "doorCenter": {
                   "type": "array",
                   "items": {

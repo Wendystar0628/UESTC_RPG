@@ -85,6 +85,10 @@ public sealed class BuildContext
     /// <summary>Caller-preloaded immutable bytes keyed by forward-slash paths relative to DataRoot; generators never perform IO.</summary>
     public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> SourceInputs { get; init; } =
         new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal));
+    /// <summary>Inputs relative to game/data, frozen once by the asset loader and shared across contexts. No IO or per-tile copying.</summary>
+    public BuildInputSnapshot GlobalInputs { get; init; } = BuildInputSnapshot.Empty;
+    /// <summary>Read-only map-filtered optional content capabilities. The caller validates exclusive channel claims before any painting.</summary>
+    public IReadOnlyList<IGroundMaskContributor> GroundMaskContributors { get; init; } = [];
     /// <summary>Fingerprint of inputs affecting this build, computed by the caller. Empty only for development fixtures.</summary>
     public string DataHash { get; init; } = "";
     /// <summary>Fingerprint of this producer and its shared generation dependencies, computed by the caller.</summary>
@@ -105,9 +109,13 @@ public sealed record ContentOutput(
     IReadOnlyList<Footprint2D>? Occupancy = null)
 {
     public static ContentOutput Empty { get; } = new([], []);
+    /// <summary>Static instance streams sharing frozen prototypes. Consumers must pack/mount these or explicitly reject them.</summary>
+    public IReadOnlyList<GeometryInstanceStream> Instances { get; init; } = [];
     public IReadOnlyList<EntranceDecl> Entrances { get; init; } = [];
     public IReadOnlyList<WindowFacadeDecl> Windows { get; init; } = [];
     public IReadOnlyList<WindowDecl> LooseWindows { get; init; } = [];
+    /// <summary>Direct world-coordinate seat declarations sharing the collision source; no placement transform is pending.</summary>
+    public IReadOnlyList<SeatDecl> Seats { get; init; } = [];
 }
 
 public sealed record MeshLod(float Error, int[] Index)

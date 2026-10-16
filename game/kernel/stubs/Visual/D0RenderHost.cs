@@ -42,6 +42,8 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(content);
         ArgumentException.ThrowIfNullOrWhiteSpace(owner.Value);
+        if (content.Instances.Count != 0)
+            throw new NotSupportedException("D0RenderHost has no static instance-stream adapter; use the implemented WP-02 bake/render path.");
         if (content.Parts.Count != 0)
             throw new NotSupportedException("D0RenderHost mounts GeometryBundle only. PlacedPart generation and mounting belong to the WP-01 render host.");
 
@@ -110,60 +112,14 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
 
     private static ArrayMesh Upload(GeometryBundle source, ToonSpec spec, IToonMaterialProvider materials, bool useD0Rgb)
     {
-        var count = source.Position.Length / 3;
-        var vertices = new Vector3[count];
-        var normals = new Vector3[count];
-        var colors = new Color[count];
-        var defaultId = !useD0Rgb && source.ColorIds is null ? materials.PaletteId(spec.Lit) : (byte)0;
-        for (var i = 0; i < count; i++)
-        {
-            vertices[i] = new(source.Position[3 * i], source.Position[3 * i + 1], source.Position[3 * i + 2]);
-            normals[i] = new(source.Normal[3 * i], source.Normal[3 * i + 1], source.Normal[3 * i + 2]);
-            if (useD0Rgb)
-            {
-                colors[i] = ((FallbackToonMaterialProvider)materials).VertexColor(spec, source.ColorIds?[i]);
-                continue;
-            }
-            var ao = (byte)Math.Clamp((int)MathF.Round((source.Ao?[i] ?? 1f) * 255f), 0, 255);
-            colors[i] = new(EncodeByte(source.ColorIds?[i] ?? defaultId), EncodeByte(ao),
-                EncodeByte(source.Flags?[i] ?? 0), EncodeByte(source.Reserved?[i] ?? 0));
-        }
-
-        using var arrays = new Godot.Collections.Array();
-        arrays.Resize((int)Mesh.ArrayType.Max);
-        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-        arrays[(int)Mesh.ArrayType.Normal] = normals;
-        arrays[(int)Mesh.ArrayType.Index] = source.Index;
-        arrays[(int)Mesh.ArrayType.Color] = colors;
-        if (source.Uv is { } uv) arrays[(int)Mesh.ArrayType.TexUV] = Pairs(uv);
-        if (source.Uv2 is { } uv2) arrays[(int)Mesh.ArrayType.TexUV2] = Pairs(uv2);
-        // Godot compresses UV2 to UNorm16 with this flag; window IDs and negative reflection slots require float32.
-        var format = source.Uv2 is null ? Mesh.ArrayFormat.FlagCompressAttributes : (Mesh.ArrayFormat)0;
-        SetCustom(Mesh.ArrayType.Custom0, source.Custom0, Mesh.ArrayFormat.FormatCustom0Shift);
-        SetCustom(Mesh.ArrayType.Custom1, source.Custom1, Mesh.ArrayFormat.FormatCustom1Shift);
-        SetCustom(Mesh.ArrayType.Custom2, source.Custom2, Mesh.ArrayFormat.FormatCustom2Shift);
-        using var lods = new Godot.Collections.Dictionary();
-        if (source.Lods is { } levels)
-            foreach (var lod in levels.OrderBy(level => level.Error)) lods[lod.Error] = lod.Index;
         var mesh = new ArrayMesh();
-        try { mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, lods: lods, flags: format); }
-        catch { mesh.Dispose(); throw; }
-        return mesh;
-
-        void SetCustom(Mesh.ArrayType channel, float[]? values, Mesh.ArrayFormat shift)
+        try
         {
-            if (values is null) return;
-            arrays[(int)channel] = values;
-            format |= (Mesh.ArrayFormat)((ulong)Mesh.ArrayCustomFormat.RgbaFloat << (int)shift);
+            GeometrySurfaceUpload.Append(mesh, source, materials, materialSpec: spec,
+                useD0Rgb: useD0Rgb, compressAttributes: source.Uv2 is null);
+            return mesh;
         }
-    }
-
-    private static float EncodeByte(byte value) => (value + 0.5f) / 255f;
-    private static Vector2[] Pairs(float[] values)
-    {
-        var result = new Vector2[values.Length / 2];
-        for (var i = 0; i < result.Length; i++) result[i] = new(values[2 * i], values[2 * i + 1]);
-        return result;
+        catch { mesh.Dispose(); throw; }
     }
 
     private void CreateReflectionProxy(Surface surface)

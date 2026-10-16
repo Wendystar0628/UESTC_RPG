@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Godot;
 
 namespace Campus.Kernel.Instances;
@@ -36,11 +37,15 @@ public interface IInstancePool
     /// </summary>
     void WriteBuffer(ReadOnlySpan<float> data);
 
-    /// <summary>Visible prefix length, in [0, Capacity]. Initially zero; -1 is not accepted.</summary>
+    /// <summary>Requested prefix length in [0, Capacity]. Geometry pools remain hidden until their material layouts are warm.</summary>
     int VisibleCount { get; set; }
 
     /// <summary>Sets a registered vec4 instance uniform; scalar and unregistered names are rejected.</summary>
     void SetParameter(StringName name, Vector4 value);
+
+    /// <summary>Sets an approved scalar instance uniform. Initial vegetation support permits ShadowProxy only; unsupported hosts fail explicitly.</summary>
+    void SetParameter(StringName name, float value) =>
+        throw new NotSupportedException("This instance-pool implementation does not support scalar instance parameters.");
 
     void SetAabb(Aabb box);
 
@@ -55,6 +60,10 @@ public interface IInstancePoolHost
     /// The (OwnerWp, Id) pair must be unique among live pools.
     /// </summary>
     IInstancePool Mount(InstancePoolSpec spec);
+
+    /// <summary>Mounts a complete frozen multi-surface prototype using existing material providers. Requires an implemented native upload path.</summary>
+    IInstancePool Mount(GeometryInstancePoolSpec spec) =>
+        throw new NotSupportedException("This instance-pool implementation does not support complete geometry prototypes.");
 }
 
 /// <summary>Allocation and submitted geometry counts, not measured GPU memory or draw calls.</summary>
@@ -66,6 +75,13 @@ public sealed record InstancePoolStatistics(
     int MeshTriangles,
     bool CastShadows)
 {
+    /// <summary>Null denotes an explicitly global or legacy pool.</summary>
+    public MapId? Map { get; init; }
+    public int SurfaceCount { get; init; } = 1;
+    public GeometryInstance3D.ShadowCastingSetting Shadows { get; init; }
+    public bool MaterialReady { get; init; } = true;
+    /// <summary>CPU-submitted triangles eligible for visibility, not measured draw calls or GPU primitives.</summary>
+    public long ReadyVisibleTriangles => MaterialReady ? VisibleTriangles : 0;
     public long InstanceBufferBytes => (long)Capacity * 16 * sizeof(float);
     public long VisibleTriangles => (long)VisibleCount * MeshTriangles;
 }

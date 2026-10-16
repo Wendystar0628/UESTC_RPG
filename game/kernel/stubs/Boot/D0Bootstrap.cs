@@ -7,6 +7,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Collision.Stubs;
+using Campus.Kernel.Maps;
 using Campus.Kernel.Stubs.Foundation;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -68,20 +69,28 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
         var providers = registry.ForMap(entry.Id.Value).Where(registration => registration.Kind == "interior")
             .ToDictionary(registration => registration.Id,
                 registration => registry.CreateInteriorProvider(registration.Type, entry.Id), StringComparer.Ordinal);
-        var bindings = D0InteriorSetup.Configure(interiorBytes, providers);
+        var bindings = D0InteriorSetup.Configure(interiorBytes, providers, world.Terrain);
+        var inputBytes = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        {
+            ["map.json"] = mapBytes,
+            ["campus.json"] = campusBytes,
+            ["interiors.json"] = interiorBytes,
+            ["waypoints.json"] = waypointBytes
+        };
+        // Canonical map-relative path only. No implicit lookup of the retired global planting path.
+        const string plantingKey = "vegetation/planting.json";
+        if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
+        var mapInputs = BuildInputSnapshot.Freeze(inputBytes);
+        var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var build = new BuildContext
         {
             Map = context.Descriptor,
             World = world,
             WorldSeed = ReadSeed(boot, "seed", context.Descriptor.Seed),
             InteriorProviders = bindings.ToDictionary(binding => binding.ProviderId, binding => providers[binding.ProviderId], StringComparer.Ordinal),
-            SourceInputs = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-            {
-                ["map.json"] = mapBytes,
-                ["campus.json"] = campusBytes,
-                ["interiors.json"] = interiorBytes,
-                ["waypoints.json"] = waypointBytes
-            }
+            SourceInputs = mapInputs.Entries,
+            GlobalInputs = Services.GlobalBuildInputs,
+            GroundMaskContributors = groundContributors
         };
         var interiors = await Task.Run(() => D0InteriorSetup.BuildConfigured(build, bindings));
         if (registry.Get<IInteriorIndex>() is InteriorIndexStub interiorIndex) interiorIndex.Configure(interiors.Entries);

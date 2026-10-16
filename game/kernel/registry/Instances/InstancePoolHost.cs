@@ -1,25 +1,49 @@
 using Campus.Contracts;
+using Campus.Contracts.Maps;
+using Campus.Kernel.Materials;
+using Campus.Kernel.Renderer;
 using Godot;
+using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Instances;
 
-/// <summary>Kernel-owned dynamic instances, shared by all systems and mounted by the stage scanner.</summary>
+/// <summary>Kernel-owned dynamic instances, with map cleanup and the existing material/prewarm bridges.</summary>
 [KernelNode("kernel.instance-pools", Owner = "WP-00")]
 [KernelService(typeof(IInstancePoolHost), Owner = "WP-00")]
-public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost
+public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAware
 {
-    internal const int FloatsPerInstance = 16;
+    internal const int FloatsPerInstance = InstanceStreamLayout.FloatsPerInstance;
     private const uint ValidLayers = (1u << 20) - 1;
     private readonly Dictionary<(string OwnerWp, string Id), InstancePool> _pools = [];
+    private readonly List<InstancePool> _orderedPools = [];
+    private readonly Dictionary<ShaderId, ShaderMaterial> _shaderMaterials = [];
+    private IToonMaterialProvider? _materials;
+    private IShaderMaterialSource? _shaderSource;
+    private MapId? _activeMap;
     private bool _mounted;
     private bool _exiting;
     private long _nextNodeId;
 
+    public InstancePoolHost() { }
+    public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource)
+    {
+        ArgumentNullException.ThrowIfNull(materials);
+        ArgumentNullException.ThrowIfNull(shaderSource);
+        _materials = materials;
+        _shaderSource = shaderSource;
+    }
+
     public override void _EnterTree()
     {
         RequireMainThread();
+        ProcessPriority = FramePriority.StreamMount;
         _mounted = true;
         _exiting = false;
+    }
+
+    public override void _Process(double delta)
+    {
+        foreach (var pool in _orderedPools) pool.RefreshPreparation();
     }
 
     public override void _ExitTree()
@@ -27,27 +51,53 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost
         RequireMainThread();
         _mounted = false;
         _exiting = true;
-        // Snapshot before releasing: each release removes itself from the ownership ledger.
-        foreach (var pool in OrderedPools().ToArray()) pool.Free();
+        _activeMap = null;
+        try
+        {
+            foreach (var pool in _orderedPools.ToArray()) pool.Free();
+        }
+        finally
+        {
+            // Created shader materials are cached for this host lifetime; borrowed Toon materials are never disposed.
+            foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
+            _shaderMaterials.Clear();
+        }
     }
 
-    /// <summary>Stable per-owner/per-pool diagnostic snapshot; no mutable engine objects escape.</summary>
+    public void OnMapUnloading(MapId from)
+    {
+        RequireMainThread();
+        ValidateMapId(from);
+        if (_activeMap == from) _activeMap = null;
+        foreach (var pool in _orderedPools.Where(pool => pool.Map == from).ToArray()) pool.Free();
+    }
+
+    public void OnMapLoaded(IMapContext ctx)
+    {
+        RequireMounted();
+        ArgumentNullException.ThrowIfNull(ctx);
+        ArgumentNullException.ThrowIfNull(ctx.Descriptor);
+        var map = ctx.Descriptor.Id;
+        ValidateMapId(map);
+        if (_activeMap is { } active && active != map)
+            throw new InvalidOperationException("Unload the previous pool map before loading another map.");
+        _activeMap = map;
+    }
+
+    /// <summary>Stable CPU allocation/submission snapshot; warm readiness is separate from requested visibility.</summary>
     public IReadOnlyList<InstancePoolStatistics> GetStatistics()
     {
         RequireMainThread();
-        return OrderedPools().Select(pool => pool.Statistics).ToArray();
+        return _orderedPools.Select(pool => pool.Statistics).ToArray();
     }
 
     public IInstancePool Mount(InstancePoolSpec spec)
     {
-        RequireMainThread();
-        if (!_mounted || _exiting || !IsInsideTree() || IsQueuedForDeletion())
-            throw new InvalidOperationException("The instance-pool host must be mounted before its consumers.");
+        RequireMounted();
         ArgumentNullException.ThrowIfNull(spec);
-        ValidateSpec(spec);
-        var key = (spec.OwnerWp, spec.Id);
-        if (_pools.ContainsKey(key))
-            throw new InvalidOperationException($"Instance pool already mounted: {spec.OwnerWp}/{spec.Id}.");
+        ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
+        ValidateLegacy(spec);
+        RequireUnique(spec.OwnerWp, spec.Id);
 
         var vertices = new Vector3[spec.Position.Length / 3];
         var uv = new Vector2[vertices.Length];
@@ -62,121 +112,234 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost
         arrays[(int)Mesh.ArrayType.Vertex] = vertices;
         arrays[(int)Mesh.ArrayType.TexUV] = uv;
         arrays[(int)Mesh.ArrayType.Index] = spec.Index;
+        var mesh = new ArrayMesh();
+        try
+        {
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            if (mesh.GetSurfaceCount() != 1) throw new InvalidOperationException("Godot rejected the instance-pool surface.");
+            mesh.SurfaceSetMaterial(0, spec.Material);
+        }
+        catch { mesh.Dispose(); throw; }
+        // The legacy caller-supplied material stays borrowed; its established readiness contract is unchanged.
+        return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers,
+            spec.CastShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+            null, false, mesh, spec.Index.Length / 3, null);
+    }
 
-        ArrayMesh? mesh = null;
+    public IInstancePool Mount(GeometryInstancePoolSpec spec)
+    {
+        RequireMounted();
+        ArgumentNullException.ThrowIfNull(spec);
+        ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
+        ArgumentNullException.ThrowIfNull(spec.Prototype);
+        ValidateShadows(spec.Shadows);
+        RequireUnique(spec.OwnerWp, spec.Id);
+        if (spec.Map is { } map)
+        {
+            ValidateMapId(map);
+            if (_activeMap != map)
+                throw new InvalidOperationException("The pool map is not active; stale or pre-load mounts are rejected.");
+        }
+        var triangles = 0;
+        foreach (var surface in spec.Prototype.Surfaces)
+        {
+            if (surface.PaletteEncodingVersion != PaletteLayout.LegacyEncodingVersion ||
+                surface.ColorIndices is not null || surface.DecalBaseColorIndices is not null)
+                throw new NotSupportedException("Geometry pools do not yet support palette encoding 2.");
+            if (surface.Reflect || surface.Variant is not null)
+                throw new NotSupportedException("Geometry-pool reflection proxies and variant masks are not implemented.");
+            if (surface.Position.Length < 9 || surface.Index.Length == 0)
+                throw new ArgumentException("Every prototype surface must contain drawable triangles.", nameof(spec));
+            ArgumentNullException.ThrowIfNull(surface.Material.Spec);
+            if (surface.Shader is { } shader && !Enum.IsDefined(shader))
+                throw new ArgumentOutOfRangeException(nameof(spec), "Unknown surface shader.");
+            if (surface.Lods.Select(lod => lod.Error).Distinct().Count() != surface.Lods.Count)
+                throw new ArgumentException("Duplicate LOD errors cannot preserve every index buffer.", nameof(spec));
+            triangles = checked(triangles + surface.Index.Length / 3);
+        }
+
+        var provider = _materials ??= Services.Get<IToonMaterialProvider>();
+        var bindings = new PoolMaterialBinding[spec.Prototype.Surfaces.Count];
+        var mesh = new ArrayMesh();
+        try
+        {
+            for (var index = 0; index < spec.Prototype.Surfaces.Count; index++)
+            {
+                var surface = spec.Prototype.Surfaces[index];
+                var material = surface.Shader is { } shader
+                    ? ResolveShader(shader, provider) : provider.Get(surface.Material.Spec);
+                RequireSpatialMaterial(material);
+                var slot = GeometrySurfaceUpload.Append(mesh, surface, provider);
+                if (slot != index) throw new InvalidOperationException("Prototype material slots changed during upload.");
+                mesh.SurfaceSetMaterial(slot, material);
+                provider.TrackLayout(material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh, slot), Instanced: true));
+                bindings[index] = new(material, surface.Shader, surface.Material.Spec);
+            }
+        }
+        catch { mesh.Dispose(); throw; }
+
+        return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
+            spec.Map, spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling), mesh, triangles,
+            () => AreMaterialsReady(provider, bindings));
+    }
+
+    private IInstancePool Publish(string id, string owner, int capacity, Aabb bounds, uint layers,
+        GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, bool ignoreOcclusion,
+        ArrayMesh mesh, int triangles, Func<bool>? ready)
+    {
         MultiMesh? multiMesh = null;
         MultiMeshInstance3D? instance = null;
         try
         {
-            mesh = new ArrayMesh();
-            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            if (mesh.GetSurfaceCount() != 1)
-                throw new InvalidOperationException("Godot rejected the instance-pool mesh surface.");
-            // These three format properties must precede InstanceCount, which allocates the buffer.
             multiMesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
                 UseColors = false,
                 UseCustomData = true,
                 Mesh = mesh,
-                CustomAabb = spec.CustomAabb,
-                InstanceCount = spec.Capacity,
+                CustomAabb = bounds,
+                InstanceCount = capacity,
                 VisibleInstanceCount = 0
             };
-            if (multiMesh.InstanceCount != spec.Capacity)
-                throw new InvalidOperationException("Godot rejected the instance-pool capacity.");
+            if (multiMesh.InstanceCount != capacity) throw new InvalidOperationException("Godot rejected pool capacity.");
             instance = new MultiMeshInstance3D
             {
                 Name = $"InstancePool_{checked(++_nextNodeId)}",
                 Multimesh = multiMesh,
-                MaterialOverride = spec.Material,
-                Layers = spec.Layers,
-                CustomAabb = spec.CustomAabb,
-                CastShadow = spec.CastShadows
-                    ? GeometryInstance3D.ShadowCastingSetting.On
-                    : GeometryInstance3D.ShadowCastingSetting.Off
+                Layers = layers,
+                CustomAabb = bounds,
+                CastShadow = shadows,
+                IgnoreOcclusionCulling = ignoreOcclusion,
+                Visible = ready is null
             };
-            instance.SetMeta("owner_wp", spec.OwnerWp);
-            instance.SetMeta("instance_pool_id", spec.Id);
+            instance.SetMeta("owner_wp", owner);
+            instance.SetMeta("instance_pool_id", id);
+            if (map is { } mapId) instance.SetMeta("map_id", mapId.Value);
+            var pool = new InstancePool(this, id, owner, capacity, triangles, shadows, map,
+                mesh.GetSurfaceCount(), instance, multiMesh, mesh, ready);
+            pool.RefreshPreparation();
             AddChild(instance);
-            if (instance.GetParent() != this)
-                throw new InvalidOperationException("Godot rejected the instance-pool child node.");
-            var pool = new InstancePool(this, spec.Id, spec.OwnerWp, spec.Capacity,
-                spec.Index.Length / 3, spec.CastShadows, instance, multiMesh, mesh);
-            _pools.Add(key, pool);
+            if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
+            _pools.Add((owner, id), pool);
+            _orderedPools.Add(pool);
+            _orderedPools.Sort(static (a, b) =>
+            {
+                var ownerOrder = StringComparer.Ordinal.Compare(a.OwnerWp, b.OwnerWp);
+                return ownerOrder != 0 ? ownerOrder : StringComparer.Ordinal.Compare(a.Id, b.Id);
+            });
             return pool;
         }
         catch
         {
             if (GodotObject.IsInstanceValid(instance)) instance!.Free();
             multiMesh?.Dispose();
-            mesh?.Dispose();
+            mesh.Dispose();
             throw;
         }
     }
 
+    private ShaderMaterial ResolveShader(ShaderId shader, IToonMaterialProvider provider)
+    {
+        if (_shaderMaterials.TryGetValue(shader, out var cached)) return cached;
+        var material = (_shaderSource ??= Services.Get<IShaderMaterialSource>()).Create(shader);
+        try { RequireSpatialMaterial(material); provider.Track(shader, material); }
+        catch { material?.Dispose(); throw; }
+        _shaderMaterials.Add(shader, material);
+        return material;
+    }
+
+    private static bool AreMaterialsReady(IToonMaterialProvider provider, PoolMaterialBinding[] bindings)
+    {
+        foreach (var binding in bindings)
+            if (!GodotObject.IsInstanceValid(binding.Material) ||
+                !(binding.Shader is { } shader ? provider.IsReady(shader, binding.Material) : provider.IsReady(binding.Spec)))
+                return false;
+        return true;
+    }
+
+    private readonly record struct PoolMaterialBinding(Material Material, ShaderId? Shader, ToonSpec Spec);
+    internal bool IsExiting => _exiting;
     internal void Release(InstancePool pool)
     {
         _pools.Remove((pool.OwnerWp, pool.Id));
+        _orderedPools.Remove(pool);
     }
-
-    internal bool IsExiting => _exiting;
 
     internal static void RequireMainThread()
     {
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Instance-pool operations must run on the Godot main thread.");
     }
-
+    private void RequireMounted()
+    {
+        RequireMainThread();
+        if (!_mounted || _exiting || !IsInsideTree() || IsQueuedForDeletion())
+            throw new InvalidOperationException("The instance-pool host must be mounted before its consumers.");
+    }
+    private void RequireUnique(string owner, string id)
+    {
+        if (_pools.ContainsKey((owner, id))) throw new InvalidOperationException($"Instance pool already mounted: {owner}/{id}.");
+    }
     internal static void ValidateAabb(Aabb box)
     {
         if (!box.IsFinite() || !box.End.IsFinite() || box.Size.X < 0 || box.Size.Y < 0 || box.Size.Z < 0)
-            throw new ArgumentException("Instance-pool bounds must be finite with nonnegative size and finite endpoints.", nameof(box));
+            throw new ArgumentException("Pool bounds must be finite with nonnegative size and finite endpoints.", nameof(box));
     }
-
     internal static void ValidateFinite(ReadOnlySpan<float> data, string parameter)
     {
         foreach (var value in data)
-            if (!float.IsFinite(value))
-                throw new ArgumentException("Instance-pool data must contain only finite values.", parameter);
+            if (!float.IsFinite(value)) throw new ArgumentException("Pool data must be finite.", parameter);
     }
-
-    private IEnumerable<InstancePool> OrderedPools() => _pools.Values
-        .OrderBy(pool => pool.OwnerWp, StringComparer.Ordinal)
-        .ThenBy(pool => pool.Id, StringComparer.Ordinal);
-
-    private static void ValidateSpec(InstancePoolSpec spec)
+    private static void ValidateMapId(MapId map)
     {
-        if (string.IsNullOrWhiteSpace(spec.Id) || spec.Id.Length > 256 || spec.Id != spec.Id.Trim())
-            throw new ArgumentException("Pool Id must be nonempty, trimmed, and at most 256 characters.", nameof(spec));
-        var owner = spec.OwnerWp;
+        if (string.IsNullOrWhiteSpace(map.Value) || map.Value != map.Value.Trim())
+            throw new ArgumentException("Map ownership must identify a nonempty map.", nameof(map));
+    }
+    private static void ValidateShadows(GeometryInstance3D.ShadowCastingSetting shadows)
+    {
+        switch (shadows)
+        {
+            case GeometryInstance3D.ShadowCastingSetting.Off:
+            case GeometryInstance3D.ShadowCastingSetting.On:
+            case GeometryInstance3D.ShadowCastingSetting.DoubleSided:
+            case GeometryInstance3D.ShadowCastingSetting.ShadowsOnly: break;
+            default: throw new ArgumentOutOfRangeException(nameof(shadows));
+        }
+    }
+    private static void ValidateIdentityAndCapacity(string id, string owner, int capacity, uint layers, Aabb bounds)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.Length > 256 || id != id.Trim())
+            throw new ArgumentException("Pool Id must be nonempty, trimmed, and at most 256 characters.", nameof(id));
         if (owner is null || owner.Length is < 5 or > 6 || !owner.StartsWith("WP-", StringComparison.Ordinal) ||
             !char.IsAsciiDigit(owner[3]) || !char.IsAsciiDigit(owner[4]) ||
             (owner.Length == 6 && owner[5] is not (>= 'a' and <= 'z')))
-            throw new ArgumentException("OwnerWp must be a work-package ID such as WP-00 or WP-45b.", nameof(spec));
-        if (spec.Capacity <= 0 || spec.Capacity > System.Array.MaxLength / FloatsPerInstance)
-            throw new ArgumentOutOfRangeException(nameof(spec), "Capacity must fit one complete 16-float-per-instance buffer.");
-        if ((spec.Layers & ~ValidLayers) != 0)
-            throw new ArgumentOutOfRangeException(nameof(spec), "Only the 20 Godot render layers are valid.");
+            throw new ArgumentException("Owner must be a work-package ID such as WP-00 or WP-45b.", nameof(owner));
+        if (capacity <= 0 || capacity > System.Array.MaxLength / FloatsPerInstance)
+            throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must fit a complete 16-float buffer.");
+        if ((layers & ~ValidLayers) != 0) throw new ArgumentOutOfRangeException(nameof(layers));
+        ValidateAabb(bounds);
+    }
+    private static void RequireSpatialMaterial(Material material)
+    {
+        if (material is not ShaderMaterial shaderMaterial || !GodotObject.IsInstanceValid(material) ||
+            !GodotObject.IsInstanceValid(shaderMaterial.Shader) || shaderMaterial.Shader.GetMode() != Shader.Mode.Spatial)
+            throw new ArgumentException("Pools require a live spatial shader material.", nameof(material));
+    }
+    private static void ValidateLegacy(InstancePoolSpec spec)
+    {
         ArgumentNullException.ThrowIfNull(spec.Position);
         ArgumentNullException.ThrowIfNull(spec.Uv);
         ArgumentNullException.ThrowIfNull(spec.Index);
         if (spec.Position.Length < 9 || spec.Position.Length % 3 != 0)
             throw new ArgumentException("Position must contain at least three xyz vertices.", nameof(spec));
-        var vertexCount = spec.Position.Length / 3;
-        if (spec.Uv.Length != vertexCount * 2)
-            throw new ArgumentException("Uv must contain exactly one uv pair per vertex.", nameof(spec));
+        var count = spec.Position.Length / 3;
+        if (spec.Uv.Length != count * 2) throw new ArgumentException("Uv must contain one pair per vertex.", nameof(spec));
         if (spec.Index.Length == 0 || spec.Index.Length % 3 != 0)
             throw new ArgumentException("Index must contain complete triangles.", nameof(spec));
         ValidateFinite(spec.Position, nameof(spec.Position));
         ValidateFinite(spec.Uv, nameof(spec.Uv));
         foreach (var index in spec.Index)
-            if (index < 0 || index >= vertexCount)
-                throw new ArgumentOutOfRangeException(nameof(spec), "Triangle index lies outside Position.");
-        ValidateAabb(spec.CustomAabb);
-        if (!GodotObject.IsInstanceValid(spec.Material) || !GodotObject.IsInstanceValid(spec.Material.Shader))
-            throw new ArgumentException("Material must be a live ShaderMaterial with a live shader.", nameof(spec));
-        if (spec.Material.Shader.GetMode() != Shader.Mode.Spatial)
-            throw new ArgumentException("Instance pools require a spatial shader material.", nameof(spec));
+            if (index < 0 || index >= count) throw new ArgumentOutOfRangeException(nameof(spec), "Index is outside Position.");
+        RequireSpatialMaterial(spec.Material);
     }
 }

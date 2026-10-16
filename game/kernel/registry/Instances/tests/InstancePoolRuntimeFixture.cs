@@ -46,7 +46,7 @@ public static class InstancePoolRuntimeFixture
                 multiMesh.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D, "Buffer format is wrong.");
             Check(node.GetMeta("owner_wp").AsString() == spec.OwnerWp &&
                 node.GetMeta("instance_pool_id").AsString() == spec.Id, "Instance attribution was lost.");
-            Check(ReferenceEquals(node.MaterialOverride, material), "Material was replaced or cloned.");
+            Check(node.MaterialOverride is null && ReferenceEquals(mesh.SurfaceGetMaterial(0), material), "Borrowed surface material was replaced or cloned.");
             Throws<InvalidOperationException>(() => pool.VisibleCount = 1);
             Throws<ArgumentException>(() => pool.WriteBuffer(new float[16]));
             var buffer = new float[8192 * 16];
@@ -77,12 +77,12 @@ public static class InstancePoolRuntimeFixture
             pool.SetAabb(bounds);
             Check(multiMesh.CustomAabb == bounds && node.CustomAabb == bounds, "Bounds did not reach both engine objects.");
             Throws<ArgumentException>(() => pool.SetAabb(new Aabb(new(0, 0, 0), new(-1, 1, 1))));
-            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.FogExempt, new(0, 0, 0, 0)));
-            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.PrecipD, new(float.NaN, 0, 0, 1)));
+            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.FogExempt, new Vector4(0, 0, 0, 0)));
+            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.PrecipD, new Vector4(float.NaN, 0, 0, 1)));
             var displacement = new Vector4(1, 2, 3, 18);
             pool.SetParameter(InstanceShaderNames.PrecipD, displacement);
-            pool.SetParameter(InstanceShaderNames.PrecipV, new(0, -1, 0, .58f));
-            pool.SetParameter(InstanceShaderNames.PrecipK, new(0, 0, 0, 0));
+            pool.SetParameter(InstanceShaderNames.PrecipV, new Vector4(0, -1, 0, .58f));
+            pool.SetParameter(InstanceShaderNames.PrecipK, new Vector4(0, 0, 0, 0));
             Check(node.GetInstanceShaderParameter(InstanceShaderNames.PrecipD).AsVector4() == displacement,
                 "The registered vec4 did not reach the instance.");
             Throws<InvalidOperationException>(() => Task.Run(() => pool.VisibleCount = 1).GetAwaiter().GetResult());

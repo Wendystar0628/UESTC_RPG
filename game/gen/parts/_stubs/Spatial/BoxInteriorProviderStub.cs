@@ -108,7 +108,7 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider
             if (collider is RampCollider ramp) builder.AddSteps(ramp);
             else builder.Add(collider);
         }
-        return new([builder.Build(ctx.Toon(new(new("interior.wall.lit"), new("interior.wall.shade"))))], []);
+        return new([builder.Build(ctx.Toon(new(new("wall.lit"), new("wall.shade"))))], []);
     }
 
     /// <summary>0.5 m plan occupancy; excludes the upper-floor stair well.</summary>
