@@ -3111,6 +3111,10 @@
       "owner": "WP-00"
     },
     {
+      "pattern": ".ignore",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/flow/**",
       "owner": "WP-49a"
     },

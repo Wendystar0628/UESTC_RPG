@@ -1,0 +1,6 @@
+docs/godot-api/raw/
+data/raw/osm-campus.json
+pipeline/raw/
+public/data/
+game/data/maps/*/campus.json
+game/data/maps/*/network.json
