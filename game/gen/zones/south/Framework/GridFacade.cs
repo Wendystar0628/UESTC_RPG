@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.Parts.Openings;
 
 namespace Campus.Gen.Zones.South.Framework;
 
@@ -25,11 +26,26 @@ public readonly record struct GridEdgeInfo(int Index, Vector2 A, Vector2 B, Plan
     public float Facing => SouthSite.Bearing(Frame.W);
 }
 
-/// <summary>An edge's dressing; Cuts are ranges along it (local x) where nothing is built below Top (a portico stands there).</summary>
+/// <summary>
+/// An edge's dressing; Cuts are ranges along it (local x) where nothing is built below Top, a height above the block base (a
+/// portico stands there).
+/// </summary>
 public sealed record GridEdge(EdgeKind Kind)
 {
     public IReadOnlyList<(float U0, float U1, float Top)> Cuts { get; init; } = [];
 }
+
+/// <summary>
+/// One footprint edge in a block's pure layout: its dressing, corner convexity and window bays. A windowed edge owns the grid
+/// columns ColumnStart … ColumnStart + Bays − 1 of the block (canonical ring order); blank and hidden edges own none.
+/// </summary>
+public sealed record GridRun(GridEdgeInfo Info, GridEdge Edge, bool Convex0, bool Convex1, int Bays, float Pitch, int ColumnStart);
+
+/// <summary>A gridded block's layout: every edge in ring order, the block's window columns and its storey rows. Independent of LOD and terrain.</summary>
+public sealed record GridLayout(IReadOnlyList<GridRun> Runs, int Columns, int Rows);
+
+/// <summary>Where a gridded block's windows sit in the map-wide numbering: its named grid, the block's first column there, and the light.</summary>
+public sealed record GridNumbering(FeatureId Feature, string Key, int ColumnOffset, ChannelId Channel, byte Card);
 
 /// <summary>Proportions and materials of a gridded masonry block (see <see cref="GridFacade"/>). Heights are above the block base.</summary>
 public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, ToonSpec Glass, ToonSpec Frame, ToonSpec Roof)
@@ -75,21 +91,52 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
 /// </summary>
 public static class GridFacade
 {
-    public static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress)
+    /// <summary>Numbered panes stand this far in front of the glass core (and of the stone core at L3–L4).</summary>
+    private const float PaneZ = 0.03f;
+
+    /// <summary>The block's layout: the one source for geometry, collision and the window declarations.</summary>
+    public static GridLayout Layout(IReadOnlyList<Vector2> ring, GridStyle s, Func<GridEdgeInfo, GridEdge> dress)
+    {
+        ArgumentNullException.ThrowIfNull(ring);
+        ArgumentNullException.ThrowIfNull(dress);
+        var runs = new List<GridRun>();
+        var column = 0;
+        foreach (var (info, convex0, convex1) in Edges(ring))
+        {
+            var edge = dress(info);
+            var bays = 0;
+            var pitch = 0f;
+            if (edge.Kind is EdgeKind.Plain or EdgeKind.Front && Bays(info.Length, s, out var n, out var p)) (bays, pitch) = (n, p);
+            runs.Add(new(info, edge, convex0, convex1, bays, pitch, column));
+            column += bays;
+        }
+        return new(runs, column, s.Storeys);
+    }
+
+    /// <summary>True when cell (bay, storey) of a windowed run lies under a cut (the portico), so it carries no window.</summary>
+    public static bool Skipped(GridRun run, int bay, int storey, GridStyle s)
+    {
+        float x0 = bay * run.Pitch + s.Pier, x1 = (bay + 1) * run.Pitch;
+        return run.Edge.Cuts.Any(c => x1 > c.U0 && x0 < c.U1 && c.Top > s.SillOf(storey));
+    }
+
+    public static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, GridNumbering? numbering = null)
     {
         ArgumentNullException.ThrowIfNull(ring);
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
+        var layout = Layout(ring, s, dress);
         // Glass core (stone at the coarse levels, where window bands no longer read) and the roof slab inside the parapet.
         var footprint = new PolygonRings(ring);
         b.Add(PartGeometryKernel.Extrude(footprint, s.WallTop + 0.1f, coarse ? s.Wall : s.Glass, y0 - 0.1f), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Extrude(footprint, 0.25f, s.Roof, y0 + s.WallTop + 0.1f), Matrix4x4.Identity);
-        foreach (var (info, convex0, convex1) in Edges(ring))
+        if (numbering is not null && WindowNumbers.Allocation(b.Context, numbering.Feature, numbering.Key) is { } allocation)
+            Panes(b, layout, y0, s, numbering, allocation);
+        foreach (var lr in layout.Runs)
         {
-            var edge = dress(info);
+            var (info, edge) = (lr.Info, lr.Edge);
             if (edge.Kind == EdgeKind.Hidden) continue;
-            var run = new Edge(f: info.Frame, l: info.Length, cuts: edge.Cuts, c0: convex0, c1: convex1);
-            var l = info.Length;
+            var run = new Edge(f: info.Frame, l: info.Length, cuts: edge.Cuts, c0: lr.Convex0, c1: lr.Convex1, y0: y0);
             var bevel = detail == SiteDetail.Full;
             // Plinth, cornice (fascia and crown), parapet and coping: horizontal runs wrapping convex corners.
             run.Run(b, 0, s.PierDepth + 0.08f, y0 - 0.1f, s.PlinthHeight + 0.1f, s.Plinth, bevel);
@@ -101,18 +148,19 @@ public static class GridFacade
             run.Run(b, face - 0.32f, face, top + s.Cornice, s.Parapet - 0.12f, s.Wall, false);
             if (detail != SiteDetail.Mass)
                 run.Run(b, face - 0.38f, face + 0.06f, top + s.Cornice + s.Parapet - 0.12f, 0.12f, s.Trim, bevel);
-            if (edge.Kind == EdgeKind.Blank || !Bays(l, s, out var n, out var pitch))
+            if (lr.Bays == 0)
             {
                 run.Run(b, 0, s.PierDepth, y0 + s.PlinthHeight, s.WallTop - s.PlinthHeight, s.Wall, bevel, ignoreHeight: true);
                 continue;
             }
             // Piers; the last one is carried round a convex corner (the next edge starts flush, so nothing doubles).
             var f = info.Frame;
+            var (n, pitch) = (lr.Bays, lr.Pitch);
             for (var i = 0; i <= n; i++)
             {
                 var x0 = i * pitch;
-                var x1 = i * pitch + s.Pier + (i == n && convex1 ? s.PierDepth : 0);
-                var from = Clear(edge, x0, x1, y0 + s.PlinthHeight);
+                var x1 = i * pitch + s.Pier + (i == n && lr.Convex1 ? s.PierDepth : 0);
+                var from = Clear(edge, x0, x1, y0 + s.PlinthHeight, y0);
                 if (from >= top - 0.2f) continue;
                 Box(b, f, x0, x1, from, top, 0, s.PierDepth, s.Wall, bevel ? 0.035f : 0);
             }
@@ -136,13 +184,58 @@ public static class GridFacade
     /// <summary>Wall colliders along every built edge, outside the cut ranges (whoever builds there collides there).</summary>
     public static void Collide(SiteColliders c, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, FootMat foot)
     {
-        foreach (var (info, _, _) in Edges(ring))
+        foreach (var run in Layout(ring, s, dress).Runs)
         {
-            var edge = dress(info);
-            if (edge.Kind == EdgeKind.Hidden) continue;
+            if (run.Edge.Kind == EdgeKind.Hidden) continue;
             var z = s.PierDepth * 0.5f;
-            foreach (var (u0, u1) in Open(0, info.Length, edge.Cuts.Select(cut => (cut.U0, cut.U1))))
-                c.Wall(info.Frame.P(u0, z), info.Frame.P(u1, z), z + 0.1f, y0, y0 + s.Top, SurfaceTag.Wall, foot);
+            foreach (var (u0, u1) in Open(0, run.Info.Length, run.Edge.Cuts.Select(cut => (cut.U0, cut.U1))))
+                c.Wall(run.Info.Frame.P(u0, z), run.Info.Frame.P(u1, z), z + 0.1f, y0, y0 + s.Top, SurfaceTag.Wall, foot);
+        }
+    }
+
+    /// <summary>
+    /// The block's windows as facade declarations, one per windowed run, from the same layout as the panes: origin at the
+    /// lower-left corner of the run's first window on the outer facade surface (the pier face), Right along the edge (Right × Up
+    /// points out), one sill per storey; cells under a cut are skipped. Height is the upper storeys' window height.
+    /// </summary>
+    public static void Declare(ICollection<WindowFacadeDecl> facades, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress,
+        GridNumbering numbering, WindowAllocation allocation)
+    {
+        var layout = Layout(ring, s, dress);
+        WindowNumbers.Fit(layout, numbering, allocation);
+        var sills = Enumerable.Range(0, s.Storeys).Select(k => s.SillOf(k) - s.SillOf(0)).ToArray();
+        foreach (var run in layout.Runs.Where(r => r.Bays > 0))
+        {
+            var f = run.Info.Frame;
+            var origin = f.P(s.Pier, s.PierDepth);
+            var skip = new List<int>();
+            for (var k = 0; k < s.Storeys; k++)
+                for (var i = 0; i < run.Bays; i++)
+                    if (Skipped(run, i, k, s)) skip.Add(k * run.Bays + i);
+            var decl = new WindowFacadeDecl(allocation.BaseId, allocation.Columns, numbering.Channel, numbering.ColumnOffset + run.ColumnStart, run.Bays,
+                s.Storeys, new(origin.X, y0 + s.SillOf(0), origin.Y), new(f.U.X, 0, f.U.Y), Vector3.UnitY, run.Pitch, run.Pitch - s.Pier, s.Window, sills);
+            facades.Add(decl with { Skip = skip });
+        }
+    }
+
+    /// <summary>One numbered VF-B pane per window cell (WP-10 OpeningGlass), just proud of the core, at every level.</summary>
+    private static void Panes(SiteBuilder b, GridLayout layout, float y0, GridStyle s, GridNumbering numbering, WindowAllocation allocation)
+    {
+        WindowNumbers.Fit(layout, numbering, allocation);
+        foreach (var run in layout.Runs.Where(r => r.Bays > 0))
+        {
+            var f = run.Info.Frame;
+            var outward = new Vector3(f.W.X, 0, f.W.Y);
+            var width = run.Pitch - s.Pier;
+            for (var k = 0; k < s.Storeys; k++)
+                for (var i = 0; i < run.Bays; i++)
+                {
+                    if (Skipped(run, i, k, s)) continue;
+                    var p = f.P(s.Pier + (i + 0.5f) * run.Pitch - s.Pier * 0.5f, PaneZ);
+                    var pane = OpeningGlass.Grid(width, s.HeadOf(k) - s.SillOf(k), 1, 1, allocation.BaseId, numbering.ColumnOffset + run.ColumnStart + i, k,
+                        allocation.Columns, numbering.Channel, numbering.Card);
+                    b.Add(pane, OpeningPlacement.Frame(new(p.X, y0 + s.SillOf(k), p.Y), outward));
+                }
         }
     }
 
@@ -186,7 +279,7 @@ public static class GridFacade
             var xc = i * pitch + s.Pier + width * 0.5f;
             if (s.Ribs)
             {
-                var from = Clear(edge, xc - 0.12f, xc + 0.12f, y0 + s.PlinthHeight);
+                var from = Clear(edge, xc - 0.12f, xc + 0.12f, y0 + s.PlinthHeight, y0);
                 if (from < y0 + s.WallTop - 0.2f)
                     Box(b, f, xc - 0.11f, xc + 0.11f, from, y0 + s.WallTop, 0, s.PierDepth * 0.75f, s.Wall, detail == SiteDetail.Full ? 0.02f : 0);
                 continue;
@@ -196,7 +289,7 @@ public static class GridFacade
             {
                 if (k == 0 && edge.Kind == EdgeKind.Front && s.ArchedGround) continue;
                 float sill = y0 + s.SillOf(k), head = y0 + s.HeadOf(k);
-                if (Clear(edge, xc - width * 0.5f, xc + width * 0.5f, sill) > sill) continue;
+                if (Clear(edge, xc - width * 0.5f, xc + width * 0.5f, sill, y0) > sill) continue;
                 // A mullion and a transom in the dark window-frame colour, just proud of the glass.
                 Box(b, f, xc - 0.045f, xc + 0.045f, sill, head, 0.02f, 0.1f, s.Frame, 0);
                 Box(b, f, xc - width * 0.5f, xc + width * 0.5f, sill + (head - sill) * 0.68f, sill + (head - sill) * 0.68f + 0.08f, 0.02f, 0.1f, s.Frame, 0);
@@ -214,7 +307,7 @@ public static class GridFacade
             for (var i = 0; i < n; i++)
             {
                 var xc = i * pitch + s.Pier + width * 0.5f;
-                if (Clear(edge, xc - width * 0.5f, xc + width * 0.5f, y0 + sill) > y0 + sill) continue;
+                if (Clear(edge, xc - width * 0.5f, xc + width * 0.5f, y0 + sill, y0) > y0 + sill) continue;
                 var hole = width - 0.5f;
                 var spring = h - 0.18f - hole * 0.5f;
                 if (hole < 0.6f || spring < 0.4f) continue;
@@ -228,7 +321,7 @@ public static class GridFacade
         for (var i = 0; i <= n; i += s.PilasterEvery)
         {
             float x0 = i * pitch - 0.2f, x1 = i * pitch + s.Pier + 0.2f;
-            if (Clear(edge, x0, x1, p0) > p0) continue;
+            if (Clear(edge, x0, x1, p0, y0) > p0) continue;
             var d = s.PierDepth + 0.25f;
             var bevel = detail == SiteDetail.Full ? 0.03f : 0;
             Box(b, f, x0 - 0.1f, x1 + 0.1f, p0, p0 + 0.55f, 0, d + 0.08f, s.Trim, bevel);
@@ -241,22 +334,23 @@ public static class GridFacade
     /// One built edge: horizontal runs between depths z0…z1 (outward) wrap a convex corner by the rule "the edge ending
     /// there reaches out to z1, the edge starting there reaches back to z0", so a corner is filled exactly once.
     /// </summary>
-    private readonly struct Edge(PlanFrame f, float l, IReadOnlyList<(float U0, float U1, float Top)> cuts, bool c0, bool c1)
+    private readonly struct Edge(PlanFrame f, float l, IReadOnlyList<(float U0, float U1, float Top)> cuts, bool c0, bool c1, float y0)
     {
-        /// <summary>A run from y to y + h, split around cuts that reach above y (all cuts when ignoreHeight).</summary>
+        /// <summary>A run from y to y + h (absolute), split around cuts that reach above y (all cuts when ignoreHeight).</summary>
         public void Run(SiteBuilder b, float z0, float z1, float y, float h, ToonSpec material, bool bevel, bool ignoreHeight = false)
         {
-            var open = cuts.Where(c => ignoreHeight || c.Top > y + 0.01f).Select(c => (c.U0, c.U1));
+            var above = y - y0 + 0.01f;
+            var open = cuts.Where(c => ignoreHeight || c.Top > above).Select(c => (c.U0, c.U1));
             foreach (var (u0, u1) in Open(c0 ? -z0 : 0, l + (c1 ? z1 : 0), open))
                 Box(b, f, u0, u1, y, y + h, z0, z1, material, bevel ? MathF.Min(0.03f, h * 0.3f) : 0);
         }
     }
 
-    /// <summary>The lowest y at which an element spanning [x0, x1] may start: above every cut it overlaps.</summary>
-    private static float Clear(GridEdge edge, float x0, float x1, float y)
+    /// <summary>The lowest y (absolute) at which an element spanning [x0, x1] may start: above every cut it overlaps.</summary>
+    private static float Clear(GridEdge edge, float x0, float x1, float y, float y0)
     {
         foreach (var cut in edge.Cuts)
-            if (x1 > cut.U0 && x0 < cut.U1) y = MathF.Max(y, cut.Top);
+            if (x1 > cut.U0 && x0 < cut.U1) y = MathF.Max(y, y0 + cut.Top);
         return y;
     }
 

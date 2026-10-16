@@ -9,11 +9,13 @@ namespace Campus.Gen.Zones.South;
 /// WP-18 south zone (MAP-QSH-SOUTH): the landmark sites listed in <see cref="SouthSites.All"/>, filed into cells.
 /// Generic buildings stay with WP-14; this module claims only the features it builds itself and adds identity parts
 /// (portico, roof gallery, gate furniture) next to the generic massing. Pure .NET: reads the world model and terrain only.
+/// As the zone's one window metadata source (contract-29) it declares a complete, possibly empty, grid set for every
+/// Facade-claimed feature, gathered from its sites; B2 and the other main-building wings stay WP-14's generic windows.
 /// </summary>
 [ContentModule("zone.south", Owner = "WP-18")]
-public sealed class SouthModule : IContentModule
+public sealed class SouthModule : IContentModule, IWindowMetadataSource
 {
-    private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod), IReadOnlyList<SiteItem>>> Cache = new();
+    private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
 
     private readonly IReadOnlyList<SouthSite> _sites;
@@ -73,17 +75,51 @@ public sealed class SouthModule : IContentModule
         return colliders.Items.Where(i => Cell(i.Anchor, LodLevel.L0) == (tile.X, tile.Z)).Select(i => i.Collider).ToArray();
     }
 
-    /// <summary>All items of one level, built once per world, seed and level; every Build call on any tile agrees.</summary>
+    public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint worldSeed)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        // Every Facade-claimed feature of this map gets a declaration, empty when it has no windows (the gate).
+        var grids = new SortedDictionary<string, List<WindowGridSpec>>(StringComparer.Ordinal);
+        foreach (var claim in Claims.OfType<FeatureClaim>())
+            if ((claim.Aspects & Aspects.Facade) != 0 && world.Features.ContainsKey(claim.Feature) && !grids.TryAdd(claim.Feature.Value, []))
+                throw new InvalidOperationException($"{claim.Feature.Value} is claimed twice by the south sites.");
+        foreach (var site in _sites)
+            foreach (var (feature, grid) in site.WindowGrids(world))
+            {
+                if (!grids.TryGetValue(feature.Value, out var list))
+                    throw new InvalidOperationException($"{site.Id} declares windows for {feature.Value}, which the zone does not claim for Facade.");
+                if (list.Any(g => g.Key == grid.Key)) throw new InvalidOperationException($"{feature.Value} / {grid.Key} is declared twice.");
+                list.Add(grid);
+            }
+        return [.. grids.Select(p => new ClaimedWindowLayout(new(p.Key), [.. p.Value.OrderBy(g => g.Key, StringComparer.Ordinal)]))];
+    }
+
+    public WindowMetadata DescribeWindows(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (context.WindowNumbering is null)
+            throw new InvalidOperationException("Window positions are described only after BuildContext.WindowNumbering is assigned.");
+        var facades = new List<WindowFacadeDecl>();
+        var windows = new List<WindowDecl>();
+        foreach (var site in _sites) site.DescribeWindows(context, facades, windows);
+        return new(facades, windows);
+    }
+
+    /// <summary>
+    /// All items of one level, built once per world, seed, level and window numbering (its fingerprint, empty without one);
+    /// every Build call on any tile agrees.
+    /// </summary>
     internal IReadOnlyList<SiteItem> ItemsFor(BuildContext ctx, LodLevel lod)
     {
         lock (Sync)
         {
             var byKey = Cache.GetValue(ctx.World, _ => []);
-            if (byKey.TryGetValue((ctx.WorldSeed, lod), out var found) && ReferenceEquals(_sites, SouthSites.All)) return found;
+            var key = (ctx.WorldSeed, lod, ctx.WindowNumbering?.Fingerprint ?? "");
+            if (byKey.TryGetValue(key, out var found) && ReferenceEquals(_sites, SouthSites.All)) return found;
             var builder = new SiteBuilder(ctx, lod);
             foreach (var site in _sites) site.Build(builder);
             var items = builder.Items.ToArray();
-            if (ReferenceEquals(_sites, SouthSites.All)) byKey[(ctx.WorldSeed, lod)] = items;
+            if (ReferenceEquals(_sites, SouthSites.All)) byKey[key] = items;
             return items;
         }
     }

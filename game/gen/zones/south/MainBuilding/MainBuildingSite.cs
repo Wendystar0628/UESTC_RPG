@@ -8,6 +8,7 @@ using Campus.Gen.Parts.Roof;
 using Campus.Gen.Zones.South.Framework;
 using M = Campus.Gen.Zones.South.SouthTune.Main;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
+using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
 namespace Campus.Gen.Zones.South.MainBuilding;
 
@@ -22,11 +23,18 @@ public sealed class MainBuildingSite : SouthSite
 {
     public const string B2 = "qsh:way:687370085";
     public const string FrontSteps = "qsh:way:618752446";
+    /// <summary>Window grids of the claimed front-steps feature (contract-29); B2's own windows stay WP-14's.</summary>
+    public const string FrontPorchKey = "front-porch", RearPorchKey = "rear-porch";
 
     /// <summary>Front frame: X along B2's south-west facade, +Z outward toward the gate.</summary>
     private static readonly PlanFrame F = PlanFrame.Toward(M.FrontA, M.FrontB);
     /// <summary>Rear frame at b2.rear: X reversed, so +Z is outward from the north-east facade.</summary>
     private static readonly PlanFrame R = new(F.P(M.RearX, M.RearZ), -F.U);
+
+    /// <summary>The rear entrance block: front face out from the facade, its round-headed door.</summary>
+    private const float RearBlockFront = 2.6f, RearDoorWidth = 2.4f, RearDoorSpring = 2.7f;
+    /// <summary>Glass planes behind the openings: the portico back wall's and the rear block's, in their frames.</summary>
+    private const float FrontGlassZ = 0.45f, RearGlassZ = RearBlockFront - 0.15f;
 
     private static float Xc => (M.StepsX0 + M.StepsX1) * 0.5f;
     private static float Width => M.StepsX1 - M.StepsX0;
@@ -51,6 +59,52 @@ public sealed class MainBuildingSite : SouthSite
                 Probe("Q4", B2, new(plinth.X, 1.62f, plinth.Y), -F.W, -25f, 0.5f),
             ];
         }
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
+        [(new(FrontSteps), new(FrontPorchKey, FrontOpenings(0).Length, 1)), (new(FrontSteps), new(RearPorchKey, RearOpenings(0).Length, 1))];
+
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        var terrain = ctx.World.Terrain;
+        var front = FrontOpenings(terrain.HeightAt(F.P(Xc, M.StepsZ).X, F.P(Xc, M.StepsZ).Y) + M.FloorY);
+        var rear = RearOpenings(terrain.HeightAt(R.Origin.X, R.Origin.Y) + M.FloorY);
+        WindowNumbers.Declare(windows, front, Allocation(ctx, FrontPorchKey, front.Length, true)!.Value, W.Hall);
+        WindowNumbers.Declare(windows, rear, Allocation(ctx, RearPorchKey, rear.Length, true)!.Value, W.Hall);
+    }
+
+    /// <summary>
+    /// The portico back wall's glazed openings in grid-column order along the front (column 0 at the west end): the four arched
+    /// windows and the door's vestibule glass. Each pane is the opening's bounding rectangle; the wall hides its corners.
+    /// </summary>
+    private static GlazedOpening[] FrontOpenings(float floor)
+    {
+        var outward = new Vector3(F.W.X, 0, F.W.Y);
+        GlazedOpening At(float x, float sill, float width, float height)
+        {
+            var p = F.P(Xc + x, FrontGlassZ);
+            return new(0, 0, new(p.X, floor + sill, p.Y), outward, width, height);
+        }
+        var openings = M.ArchWindows.Select(x => At(x, M.ArchSill, M.ArchWidth, M.ArchSpring + M.ArchWidth * 0.5f))
+            .Append(At(0, 0, M.DoorWidth, M.DoorSpring + M.DoorWidth * 0.5f))
+            .OrderBy(o => F.Local(new(o.Origin.X, o.Origin.Z)).X).ToArray();
+        return [.. openings.Select((o, i) => o with { Column = i })];
+    }
+
+    /// <summary>The rear entrance block's door glass, one cell.</summary>
+    private static GlazedOpening[] RearOpenings(float floor)
+    {
+        var p = R.P(0, RearGlassZ);
+        return [new(0, 0, new(p.X, floor, p.Y), new(R.W.X, 0, R.W.Y), RearDoorWidth, RearDoorSpring + RearDoorWidth * 0.5f)];
+    }
+
+    /// <summary>A porch grid's allocation (null without a snapshot), checked against its opening count.</summary>
+    private static WindowAllocation? Allocation(BuildContext ctx, string key, int columns, bool required = false)
+    {
+        var feature = new FeatureId(FrontSteps);
+        var allocation = required ? WindowNumbers.Required(ctx, feature, key) : WindowNumbers.Allocation(ctx, feature, key);
+        if (allocation is { } a) WindowNumbers.Fit(columns, 1, feature, key, a);
+        return allocation;
     }
 
     public override void Build(SiteBuilder b)
@@ -148,10 +202,15 @@ public sealed class MainBuildingSite : SouthSite
         var centreZ = M.BackWall - depth * 0.5f;
         b.Add(PartGeometryKernel.WallPanel(face, depth, L.Stone), F.At(Xc, floor, centreZ));
         if (b.Detail == SiteDetail.Mass) return;
-        var glassZ = 0.45f;
+        var glassZ = FrontGlassZ;
+        // Glass: numbered panes once the map's window numbering is in the context, the plain arched glass without one.
+        var openings = FrontOpenings(floor);
+        var numbered = Allocation(b.Context, FrontPorchKey, openings.Length);
+        if (numbered is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
         foreach (var x in M.ArchWindows)
         {
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, L.Glass), F.At(Xc, floor, glassZ));
+            if (numbered is null)
+                b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, L.Glass), F.At(Xc, floor, glassZ));
             b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth + 0.4f, 0.12f, 0.35f, 0.02f, L.StoneTrim), F.At(Xc + x, floor + M.ArchSill - 0.12f, M.BackWall + 0.1f));
             if (b.Detail != SiteDetail.Full) continue;
             // Mullion, transom at the springing line and two glazing bars: the window reads as a window, not a hole.
@@ -160,7 +219,7 @@ public sealed class MainBuildingSite : SouthSite
                 b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), F.At(Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
         }
         // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK §8), stone threshold.
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), F.At(Xc, floor, glassZ));
+        if (numbered is null) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), F.At(Xc, floor, glassZ));
         b.Add(PartGeometryKernel.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), F.At(Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), F.At(Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
@@ -244,7 +303,7 @@ public sealed class MainBuildingSite : SouthSite
         var floor = y + M.FloorY;
         float lw = M.RearLandingWidth, ld = M.RearLandingDepth;
         // The entrance block spans 7.2 m and stands 2.9 m deep against the facade (z −0.3…2.6).
-        const float blockHalf = 3.6f, blockFront = 2.6f, blockTop = 4.8f;
+        const float blockHalf = 3.6f, blockFront = RearBlockFront, blockTop = 4.8f;
         var landingFront = blockFront + ld;
         b.Add(PartGeometryKernel.BeveledBox(lw, M.FloorY + 0.08f, landingFront + 0.3f, 0.03f, L.Stone), R.At(0, y - 0.1f, (landingFront - 0.3f) * 0.5f));
         b.Add(PartGeometryKernel.BeveledBox(lw + 0.06f, 0.14f, landingFront + 0.33f, 0.02f, L.StoneTrim), R.At(0, floor - 0.14f, (landingFront - 0.3f) * 0.5f));
@@ -258,7 +317,7 @@ public sealed class MainBuildingSite : SouthSite
             b.Add(PartGeometryKernel.BeveledBox(frontRun, 1.0f, 0.36f, 0.02f, L.Stone), R.At(side * (stepsHalf + frontRun * 0.5f), floor, landingFront - 0.18f));
         }
         // Entrance block with the door notch; glass screen near its front buries the generic ground-floor canopy.
-        var door = Shapes.RoundArch(0, 0, 2.4f, 2.7f, 14);
+        var door = Shapes.RoundArch(0, 0, RearDoorWidth, RearDoorSpring, 14);
         var outer = new List<Vector2> { new(-blockHalf, 0), door[0] };
         for (var i = door.Length - 1; i >= 2; i--) outer.Add(door[i]);
         outer.Add(door[1]);
@@ -285,7 +344,9 @@ public sealed class MainBuildingSite : SouthSite
         b.Add(Steps.Lods[b.Lod](lower), R.AtReversed(0, y, l1 + lower.Depth * 0.5f));
         if (b.Detail == SiteDetail.Mass) return;
         // Timber double door, leaves swung back flat against the block face; dark glass screen inside the arch.
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), R.At(0, floor, blockFront - 0.15f));
+        var openings = RearOpenings(floor);
+        if (Allocation(b.Context, RearPorchKey, openings.Length) is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
+        else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), R.At(0, floor, RearGlassZ));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), R.At(side * 1.85f, floor, blockFront + 0.04f));
         b.Place(PartCatalog.EntranceMat, new PanelParams(1.8f, 0.03f, 1.2f), R.At(0, floor, blockFront + 0.9f));

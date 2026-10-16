@@ -64,12 +64,34 @@ public static class SouthTune
         /// <summary>Rowing boats (§4.6): warm wood outside, lighter boards inside.</summary>
         public static readonly ToonSpec BoatWood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec BoatInside = S("panel.brown", ToonFx.None, LineClass.Fine);
-        /// <summary>Wu Liren statue (§4.9): bronze and polished black stone, stood in by door.wood and roof.grey until WP-04 registers them.</summary>
-        public static readonly ToonSpec Bronze = S("door.wood", ToonFx.BevelLift, LineClass.Building, 0.8f);
-        public static readonly ToonSpec DarkStone = S("roof.grey", ToonFx.BevelLift, LineClass.Building, 0.9f);
+        /// <summary>
+        /// Wu Liren statue (§4.9), deep bronze: the palette is full (ART-STYLE §8.5), so it borrows the nearest registered name.
+        /// tree.bark lights to about #8D7765 at autumn 17:30 (target #6F5B3E, ΔE_ok 0.10, the closest warm name; its shade is
+        /// derived as usual). Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE §2, §5).
+        /// </summary>
+        public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
+        {
+            Fx = ToonFx.Rim | ToonFx.AnisoBand,
+            Steps = ShadeSteps.TwoHalf,
+            Normal = ToonNormal.Smooth,
+            Wet = 0.4f,
+        };
+        /// <summary>Polished black stone pedestal: the darkest neutral name (C &lt; 0.06, ART-STYLE §3.1), lit about #525B52 at 17:30.</summary>
+        public static readonly ToonSpec DarkStone = S("glass", ToonFx.BevelLift, LineClass.Building, 0.9f);
         /// <summary>Hexagonal pavilion (§4.5): red-brown columns, dark grey tiles.</summary>
         public static readonly ToonSpec RedTimber = S("band.terracotta", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec Tiles = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
+    }
+
+    /// <summary>
+    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS §5.1, 1 classroom,
+    /// 3 corridor, 4 stair, 6 lab) of each grid the zone declares (初值). Xuanbang follows the research curve, Liren the teaching
+    /// curve (MAP-QSH-SOUTH §11), the main building's porch glass the public-hall channel.
+    /// </summary>
+    public static class Windows
+    {
+        public static readonly ChannelId Research = new("window.lab"), Teaching = new("window.teach"), Hall = new("interior.public");
+        public const byte Classroom = 1, Corridor = 3, Stair = 4, Lab = 6;
     }
 
     /// <summary>
@@ -243,6 +265,14 @@ public static class SouthTune
         /// <summary>Wu Liren statue (qsh:node:7867995301), facing the lake; the figure is 1.25 × a 2 m model, about 2.5 m.</summary>
         public static readonly Vector2 Statue = new(199.79f, 292.15f);
         public const float StatueFacing = 190f, StatueScale = 1.25f;
+        /// <summary>Top of the pedestal above the ground: the figure's base plate stands here.</summary>
+        public const float PedestalTop = 1.95f;
+        /// <summary>
+        /// Hook points kept for the detail pass (§4.9), statue frame (x left, y up from PedestalTop, z towards the lake), metres:
+        /// the seasonal leaf on the figure's left shoulder, and two in-ground uplights in front of the pedestal (lamp.statue).
+        /// </summary>
+        public static readonly Vector3 StatueLeaf = new(0.25f, 2.0f, 0f);
+        public static readonly Vector3[] StatueUplights = [new(-0.9f, -PedestalTop, 1.7f), new(0.9f, -PedestalTop, 1.7f)];
         /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN §5.2, +3.0 m once the terrain lands).</summary>
         public static readonly Vector2 Pavilion = new(30f, 592f);
         public const float PavilionFloor = 0.45f, PavilionPlatform = 3.4f, PavilionColumns = 2.5f, PavilionColumnHeight = 3.0f;

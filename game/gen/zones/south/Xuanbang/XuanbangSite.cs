@@ -7,6 +7,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
+using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
 namespace Campus.Gen.Zones.South.Xuanbang;
 
@@ -25,6 +26,8 @@ public sealed class XuanbangSite : SouthSite
 {
     public const string Feature = "qsh:way:844548980";
     public const string MainPart = "osm:way:844548980", TowerPart = "osm:way:987943106", ClockPart = "osm:way:1157144625";
+    /// <summary>Window grids (contract-29): main wing with the south annex, tower, clock-tower slits and portals.</summary>
+    public const string MainKey = "main", TowerKey = "tower", ShaftKey = "clock-shaft", PortalKey = "clock-portals";
 
     /// <summary>Main wing and annex: 5.0 m ground storey, seven of 4.2 m, cornice and parapet to 35.7 m.</summary>
     internal static readonly GridStyle MainStyle = new(L.Beige, L.BeigeTrim, L.Granite, L.Glass, L.DarkFrame, L.RoofSlab)
@@ -95,11 +98,47 @@ public sealed class XuanbangSite : SouthSite
         return new(EdgeKind.Front) { Cuts = [(c - X.PorticoHalfWidth, c + X.PorticoHalfWidth, PorticoTop)] };
     }
 
+    private static GridNumbering MainNumbering => new(new(Feature), MainKey, 0, W.Research, W.Lab);
+    private static GridNumbering TowerNumbering => new(new(Feature), TowerKey, 0, W.Research, W.Lab);
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
+    {
+        var f = Rings(world);
+        var main = GridFacade.Layout(f.Main, MainStyle, e => MainEdge(e, f));
+        var tower = GridFacade.Layout(f.Tower, TowerStyle, _ => new(EdgeKind.Plain));
+        FeatureId id = new(Feature);
+        return [(id, new(MainKey, main.Columns, main.Rows)), (id, new(TowerKey, tower.Columns, tower.Rows)),
+            (id, new(ShaftKey, ClockTower.ShaftColumns, X.SlitRows)), (id, new(PortalKey, ClockTower.PortalColumns, 1))];
+    }
+
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        var f = Rings(ctx.World);
+        float Ground(Vector2 p) => ctx.World.Terrain.HeightAt(p.X, p.Y);
+        GridFacade.Declare(facades, f.Main, Ground(PlanMath.Centroid(f.Main)), MainStyle, e => MainEdge(e, f), MainNumbering,
+            WindowNumbers.Required(ctx, MainNumbering.Feature, MainKey));
+        GridFacade.Declare(facades, f.Tower, Ground(PlanMath.Centroid(f.Tower)), TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering,
+            WindowNumbers.Required(ctx, TowerNumbering.Feature, TowerKey));
+        var y = Ground(PlanMath.Centroid(f.Clock));
+        WindowNumbers.Declare(windows, ClockTower.Slits(f.Clock, y), ClockAllocation(ctx, ShaftKey, true)!.Value, W.Research);
+        WindowNumbers.Declare(windows, ClockTower.Portals(f.Clock, y), ClockAllocation(ctx, PortalKey, true)!.Value, W.Research);
+    }
+
+    /// <summary>A clock-tower grid's allocation (null without a snapshot), checked against the tower's openings.</summary>
+    internal static WindowAllocation? ClockAllocation(BuildContext ctx, string key, bool required = false)
+    {
+        var feature = new FeatureId(Feature);
+        var allocation = required ? WindowNumbers.Required(ctx, feature, key) : WindowNumbers.Allocation(ctx, feature, key);
+        var (columns, rows) = key == ShaftKey ? (ClockTower.ShaftColumns, X.SlitRows) : (ClockTower.PortalColumns, 1);
+        if (allocation is { } a) WindowNumbers.Fit(columns, rows, feature, key, a);
+        return allocation;
+    }
+
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
         var y = b.Ground(PlanMath.Centroid(f.Main));
-        GridFacade.Build(b, f.Main, y, MainStyle, e => MainEdge(e, f));
+        GridFacade.Build(b, f.Main, y, MainStyle, e => MainEdge(e, f), MainNumbering);
         foreach (var (e, _, _) in GridFacade.Edges(f.Main))
         {
             if (MainEdge(e, f).Kind != EdgeKind.Front) continue;
@@ -107,7 +146,7 @@ public sealed class XuanbangSite : SouthSite
             else if (e.Length is > X.EndBlockMin and < X.EndBlockMax) EndGable(b, e, y);
         }
         Skylight(b, y);
-        GridFacade.Build(b, f.Tower, b.Ground(PlanMath.Centroid(f.Tower)), TowerStyle, _ => new(EdgeKind.Plain));
+        GridFacade.Build(b, f.Tower, b.Ground(PlanMath.Centroid(f.Tower)), TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
         ClockTower.Build(b, f.Clock, b.Ground(PlanMath.Centroid(f.Clock)));
     }
 

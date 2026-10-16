@@ -56,6 +56,57 @@ public static class Solids
     }
 
     /// <summary>
+    /// A lathe whose radius also varies round the axis: radius(angle, y) = profile radius × (1 + <paramref name="fold"/>(angle, y)),
+    /// for cloth that hangs in folds (the statue's coat skirt). Angle is in radians from local +X towards +Z. Normals come from
+    /// the surface grid itself (central differences), so the folds shade as soft ridges; both ends are capped flat.
+    /// </summary>
+    public static PartGeometry Draped(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx, float sz, Func<float, float, float> fold)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(fold);
+        if (profile.Count < 2) throw new ArgumentException("A lathe needs at least two profile points.", nameof(profile));
+        if (segments < 6) throw new ArgumentOutOfRangeException(nameof(segments));
+        var n = profile.Count;
+        var p = new Vector3[n, segments];
+        for (var k = 0; k < n; k++)
+            for (var i = 0; i < segments; i++)
+            {
+                var a = 2f * MathF.PI * i / segments;
+                var r = profile[k].X * (1f + fold(a, profile[k].Y));
+                p[k, i] = new(DetMath.Cos(a) * r * sx, profile[k].Y, DetMath.Sin(a) * r * sz);
+            }
+        var m = new Shapes.Writer(material);
+        var rings = new int[n][];
+        var arc = 0f;
+        for (var k = 0; k < n; k++)
+        {
+            if (k > 0) arc += Vector2.Distance(profile[k], profile[k - 1]);
+            rings[k] = new int[segments + 1];
+            for (var i = 0; i <= segments; i++)
+            {
+                var j = i % segments;
+                var around = p[k, (j + 1) % segments] - p[k, (j + segments - 1) % segments];
+                var up = p[Math.Min(n - 1, k + 1), j] - p[Math.Max(0, k - 1), j];
+                var normal = Unit(new(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X));
+                if (normal.X * p[k, j].X + normal.Z * p[k, j].Z < 0) normal = -normal;
+                rings[k][i] = m.Vertex(p[k, j], normal, new(2f * MathF.PI * profile[k].X * i / segments, arc));
+            }
+        }
+        for (var k = 0; k + 1 < n; k++)
+            for (var i = 0; i < segments; i++)
+                m.Quad(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i], m.Normal(rings[k][i]) + m.Normal(rings[k + 1][i + 1]));
+        foreach (var (k, sign) in new[] { (0, -1f), (n - 1, 1f) })
+        {
+            var normal = new Vector3(0, sign, 0);
+            var centre = m.Vertex(new(0, profile[k].Y, 0), normal, Vector2.Zero);
+            var ring = new int[segments];
+            for (var i = 0; i < segments; i++) ring[i] = m.Vertex(p[k, i], normal, new(p[k, i].X, p[k, i].Z));
+            for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);
+        }
+        return m.Finish();
+    }
+
+    /// <summary>
     /// A regular roof of <paramref name="sides"/> slopes: from the eave ring (circumradius <paramref name="eave"/>, y 0) up to
     /// a ring of radius <paramref name="top"/> at <paramref name="rise"/>, or to an apex when top is 0. The eave line turns up
     /// towards every corner by <paramref name="upturn"/> (a parabola along each side, level at mid-side). The slab is

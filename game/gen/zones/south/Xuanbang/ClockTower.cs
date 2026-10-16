@@ -6,6 +6,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
+using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
 namespace Campus.Gen.Zones.South.Xuanbang;
 
@@ -62,9 +63,57 @@ internal static class ClockTower
         }
     }
 
+    /// <summary>Window grids: two slit columns on each of the four faces (face index * 2, left then right), one portal per face.</summary>
+    internal const int ShaftColumns = 8, PortalColumns = 4;
+
+    /// <summary>Glass planes behind the slits and the portals, in the face frame (the wall is 0.7 m, centred on the footprint line).</summary>
+    private const float SlitGlassZ = -0.2f, PortalGlassZ = -0.15f;
+
+    /// <summary>The slit panes in grid order: column face * 2 + (0 left, 1 right), row = storey; 2 cm of each pane runs into the wall.</summary>
+    internal static IEnumerable<GlazedOpening> Slits(IReadOnlyList<Vector2> ring, float y)
+    {
+        var (f, hx, hz) = FrameOf(ring);
+        var index = 0;
+        foreach (var (g, _, _) in Faces(f, hx, hz))
+        {
+            var outward = new Vector3(g.W.X, 0, g.W.Y);
+            for (var r = 0; r < X.SlitRows; r++)
+                for (var c = 0; c < 2; c++)
+                {
+                    var p = g.P((c == 0 ? -1f : 1f) * (X.SlitGap * 0.5f + X.SlitWidth * 0.5f), SlitGlassZ);
+                    yield return new(index * 2 + c, r, new(p.X, y + X.SlitFirst + r * X.SlitPitch - 0.02f, p.Y), outward, X.SlitWidth + 0.04f, X.SlitHeight + 0.04f);
+                }
+            index++;
+        }
+    }
+
+    /// <summary>
+    /// The portal panes, one per face in face order: the glazed door's arch on the closed faces, the fanlight over the springing on
+    /// the open door face. The wall around the arch hides each pane's corners.
+    /// </summary>
+    internal static IEnumerable<GlazedOpening> Portals(IReadOnlyList<Vector2> ring, float y)
+    {
+        var (f, hx, hz) = FrameOf(ring);
+        var index = 0;
+        foreach (var (g, _, door) in Faces(f, hx, hz))
+        {
+            var p = g.P(0, PortalGlassZ);
+            var bottom = door ? X.PortalSpring : 0f;
+            yield return new(index++, 0, new(p.X, y + bottom, p.Y), new(g.W.X, 0, g.W.Y), X.PortalWidth, X.PortalSpring + X.PortalWidth * 0.5f - bottom);
+        }
+    }
+
     internal static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y)
     {
         var (f, hx, hz) = FrameOf(ring);
+        var shaft = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.ShaftKey);
+        var portals = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.PortalKey);
+        // Numbered panes once the map's window numbering is in the context; without one the faces keep their plain glass.
+        if (b.Detail != SiteDetail.Mass)
+        {
+            if (shaft is { } s) WindowNumbers.Panes(b, Slits(ring, y), s, W.Research, W.Stair);
+            if (portals is { } p) WindowNumbers.Panes(b, Portals(ring, y), p, W.Research, W.Corridor);
+        }
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
         var segments = detail switch { SiteDetail.Full => 40, SiteDetail.Plain => 24, _ => 16 };
@@ -74,7 +123,7 @@ internal static class ClockTower
         else
         {
             b.Add(PartGeometryKernel.BeveledBox(2 * hx + 0.3f, 1.3f, 2 * hz + 0.3f, bevel, L.Granite), f.At(0, y - 0.1f, 0));
-            foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y);
+            foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y, shaft is null, portals is null);
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
                     b.Add(PartGeometryKernel.BeveledBox(X.Quoin, X.ShaftTop - 1.2f, X.Quoin, bevel, L.Beige), f.At(sx * hx, y + 1.2f, sz * hz));
@@ -123,7 +172,7 @@ internal static class ClockTower
     /// One shaft face: a stone wall (centred on the footprint line, 0.7 m) with the arched portal notched into its foot and a
     /// pair of slit windows per storey; glass sits 0.55 m back; sills under the slits; an archivolt round the portal.
     /// </summary>
-    private static void Face(SiteBuilder b, PlanFrame g, float width, bool door, float y)
+    private static void Face(SiteBuilder b, PlanFrame g, float width, bool door, float y, bool slitGlass, bool portalGlass)
     {
         var detail = b.Detail;
         var segments = detail == SiteDetail.Full ? 16 : 8;
@@ -150,7 +199,8 @@ internal static class ClockTower
             b.Add(PartGeometryKernel.BeveledBox(skirt, 1.2f, 0.95f, detail == SiteDetail.Full ? 0.03f : 0, L.Granite), g.At(side * (width * 0.5f - skirt * 0.5f), y - 0.1f, 0.12f));
         if (detail == SiteDetail.Mass) return;
         var top = X.SlitFirst + (X.SlitRows - 1) * X.SlitPitch + X.SlitHeight;
-        b.Add(PartGeometryKernel.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, L.Glass), g.At(0, y + X.SlitFirst - 0.2f, -0.2f));
+        if (slitGlass)
+            b.Add(PartGeometryKernel.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, L.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
         // Archivolt round the portal and a keystone.
         var ring = Shapes.RoundArch(0, 0, X.PortalWidth + 0.9f, X.PortalSpring, segments);
         var hole = Shapes.RoundArch(0, -0.01f, X.PortalWidth, X.PortalSpring + 0.01f, segments);
@@ -171,12 +221,12 @@ internal static class ClockTower
         var arch = Shapes.RoundArch(0, 0, X.PortalWidth, X.PortalSpring, segments);
         if (!door)
         {
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(arch), 0.05f, L.Glass), g.At(0, y, -0.15f));
+            if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(arch), 0.05f, L.Glass), g.At(0, y, PortalGlassZ));
             b.Add(PartGeometryKernel.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
             return;
         }
         var fan = Shapes.RoundArch(0, X.PortalSpring - 0.01f, X.PortalWidth, 0.01f, segments);
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, L.Glass), g.At(0, y, -0.15f));
+        if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, L.Glass), g.At(0, y, PortalGlassZ));
         b.Add(PartGeometryKernel.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));

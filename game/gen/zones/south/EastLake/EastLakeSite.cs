@@ -231,26 +231,122 @@ public sealed class EastLakeSite : SouthSite
 
     // ---- Wu Liren statue (§4.9) ----
 
+    internal static PlanFrame StatueFrame => PlanMath.Facing(K.Statue, K.StatueFacing);
+
+    /// <summary>
+    /// Hook points for the detail pass (§4.9), world space: the seasonal leaf on the left shoulder (one season-masked instance
+    /// set, SYS-TIME §0 item 5) and the in-ground uplights in front of the pedestal (lamp.statue, off 1:00–5:30, §11).
+    /// </summary>
+    internal static (Vector3 Leaf, Vector3[] Uplights) StatueHooks(float y)
+    {
+        var f = StatueFrame;
+        Vector3 W(Vector3 local)
+        {
+            var p = f.P(local.X, local.Z);
+            return new(p.X, y + K.PedestalTop + local.Y, p.Y);
+        }
+        return (W(K.StatueLeaf), [.. K.StatueUplights.Select(W)]);
+    }
+
+    /// <summary>
+    /// Polished black stone pedestal (base slab, die, cap) and the bronze figure on it, facing the lake. The figure is a
+    /// sculpture's simplified volumes at 1.25 × a 2 m model: an overcoat cinched at the waist whose skirt hangs in folds, square shoulders and a
+    /// stand collar, trouser legs and shoes under the hem; the left arm hangs with the hand by the thigh, the right forearm is
+    /// bent across the waist holding a rolled document. The head is an ovoid with a hair mass only: no
+    /// features and no likeness (CORE-INDEX §3).
+    /// </summary>
     private static void WuLiren(SiteBuilder b, float y)
     {
-        var f = PlanMath.Facing(K.Statue, K.StatueFacing);
-        var bevel = b.Detail == SiteDetail.Full ? 0.03f : 0f;
+        var f = StatueFrame;
+        var detail = b.Detail;
+        var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
         b.Add(PartGeometryKernel.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
         b.Add(PartGeometryKernel.BeveledBox(1.3f, 1.5f, 1.3f, bevel, L.DarkStone), f.At(0, y + 0.25f, 0));
         b.Add(PartGeometryKernel.BeveledBox(1.5f, 0.2f, 1.5f, bevel, L.DarkStone), f.At(0, y + 1.75f, 0));
-        var foot = y + 1.95f;
         var s = K.StatueScale;
-        var segments = b.Detail switch { SiteDetail.Full => 24, SiteDetail.Plain => 14, _ => 8 };
+        var segments = detail switch { SiteDetail.Full => 48, SiteDetail.Plain => 28, _ => 16 };
+        var small = Math.Max(8, segments / 3);
+        var plate = 0.06f * s;
+        var foot = y + K.PedestalTop;
+        var body = foot + plate;
         Vector2 P(float r, float h) => new(r * s, h * s);
-        // A standing figure in a long coat: plinth slab, coat to the shoulders, neck and head, arms at the sides.
-        b.Add(PartGeometryKernel.BeveledBox(0.8f * s, 0.08f, 0.6f * s, 0, L.Bronze), f.At(0, foot, 0));
-        b.Add(Solids.Lathe([P(0.2f, 0), P(0.24f, 0.06f), P(0.27f, 0.5f), P(0.255f, 0.72f), P(0.215f, 1.0f), P(0.25f, 1.32f), P(0.3f, 1.5f),
-            P(0.29f, 1.58f), P(0.12f, 1.64f), P(0.075f, 1.7f)], segments, L.Bronze, 1f, 0.62f), f.At(0, foot + 0.08f, 0));
-        if (b.Detail == SiteDetail.Mass) return;
-        b.Add(Solids.Lathe([P(0.07f, 0), P(0.095f, 0.04f), P(0.11f, 0.12f), P(0.105f, 0.2f), P(0.08f, 0.26f), P(0, 0.29f)], segments, L.Bronze, 1f, 0.95f),
-            f.At(0, foot + 0.08f + 1.69f * s, 0.01f));
+        // Model point (x left, y up from the plate top, z forward) to a world placement origin.
+        Matrix4x4 At(float x, float h, float z) => f.At(x * s, body + h * s, z * s);
+        b.Add(Solids.Lathe([P(0.43f, 0), P(0.43f, 0.04f), P(0.41f, 0.06f)], segments, L.Bronze, 1f, 0.76f), f.At(0, foot, 0));
+        // Overcoat: hem flared, folds strongest at the hem and gone by the waist; ellipse section, square shoulders, collar base.
+        float[] heights = [0.3f, 0.36f, 0.48f, 0.62f, 0.76f, 0.88f, 0.97f, 1.05f, 1.22f, 1.38f, 1.46f, 1.52f, 1.56f, 1.59f];
+        float[] radii = [0.29f, 0.281f, 0.265f, 0.25f, 0.236f, 0.224f, 0.214f, 0.218f, 0.245f, 0.262f, 0.27f, 0.24f, 0.17f, 0.095f];
+        var coat = heights.Select((h, i) => P(radii[i], h)).ToArray();
+        float Fold(float a, float h)
+        {
+            var depth = 0.16f * Math.Clamp((0.95f * s - h) / (0.65f * s), 0f, 1f);
+            return depth * (0.6f * DetMath.Cos(6f * a) + 0.4f * DetMath.Cos(10f * a + 1.3f));
+        }
+        b.Add(Solids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold), At(0, 0, 0));
+        // Head on its neck: ovoid wider front to back than side to side.
+        b.Add(Shapes.Shaft(0.056f * s, 0.05f * s, 0.12f * s, small, L.Bronze), At(0, 1.55f, 0.012f));
+        b.Add(Solids.Lathe([P(0, 0), P(0.045f, 0.01f), P(0.075f, 0.05f), P(0.088f, 0.1f), P(0.092f, 0.15f), P(0.088f, 0.19f), P(0.07f, 0.225f),
+            P(0.04f, 0.245f), P(0, 0.252f)], small * 2, L.Bronze, 0.86f, 1f), At(0, 1.64f, 0.015f));
+        if (detail == SiteDetail.Mass) return;
+        // Stand collar.
+        b.Add(Solids.Lathe([P(0.1f, 0), P(0.122f, 0.04f), P(0.118f, 0.085f), P(0.098f, 0.095f)], small * 2, L.Bronze, 1f, 0.85f), At(0, 1.545f, 0.005f));
+        // Trouser legs and shoes under the hem.
         foreach (var side in new[] { -1f, 1f })
-            b.Add(Shapes.Shaft(0.07f * s, 0.078f * s, 0.78f * s, segments / 2, L.Bronze), f.At(side * 0.305f * s, foot + 0.08f + 0.72f * s, 0.02f));
+        {
+            b.Add(Shapes.Shaft(0.064f * s, 0.07f * s, 0.31f * s, small, L.Bronze), At(side * 0.105f, 0.05f, 0.01f));
+            b.Add(Solids.Lathe([P(0.05f, 0), P(0.056f, 0.025f), P(0.046f, 0.065f), P(0, 0.075f)], small, L.Bronze, 1f, 2.1f), At(side * 0.11f, 0, 0.055f));
+        }
+        // Arms in coat sleeves: shoulder, elbow, wrist; the hand continues the forearm.
+        Vector3 shoulderL = new(0.215f, 1.43f, 0f), elbowL = new(0.265f, 1.1f, 0.03f), wristL = new(0.275f, 0.83f, 0.075f);
+        Vector3 shoulderR = new(-0.215f, 1.43f, 0f), elbowR = new(-0.27f, 1.12f, 0.05f), wristR = new(-0.1f, 1.04f, 0.2f);
+        foreach (var (sh, el, wr) in new[] { (shoulderL, elbowL, wristL), (shoulderR, elbowR, wristR) })
+        {
+            Limb(b, f, body, s, sh, el, 0.085f, 0.07f, small);
+            Limb(b, f, body, s, el, wr, 0.07f, 0.068f, small);
+            b.Add(Solids.Lathe([P(0, 0), P(0.047f, 0.019f), P(0.066f, 0.066f), P(0.047f, 0.113f), P(0, 0.132f)], small, L.Bronze), At(el.X, el.Y - 0.066f, el.Z));
+            var along = Unit(wr - el);
+            Hand(b, f, body, s, wr - along * 0.03f, along, small);
+        }
+        // Rolled document held across the right hand, sticking out either side.
+        var grip = wristR + Unit(wristR - elbowR) * 0.075f;
+        Limb(b, f, body, s, grip - Vector3.UnitX * 0.15f, grip + Vector3.UnitX * 0.15f, 0.029f, 0.029f, small);
+        if (detail != SiteDetail.Full) return;
+        // Hair mass over the crown and back; the face stays one smooth volume (an outlined nose reads as an eye).
+        b.Add(Solids.Lathe([P(0.097f, 0), P(0.099f, 0.035f), P(0.087f, 0.085f), P(0.052f, 0.118f), P(0, 0.128f)], small * 2, L.Bronze, 0.9f, 1f), At(0, 1.765f, -0.006f));
+    }
+
+    /// <summary>A round limb or rod between two model points (x left, y up from the plate top, z forward), scaled by s.</summary>
+    private static void Limb(SiteBuilder b, PlanFrame f, float body, float s, Vector3 from, Vector3 to, float r0, float r1, int segments)
+    {
+        var axis = to - from;
+        var length = MathF.Sqrt(axis.X * axis.X + axis.Y * axis.Y + axis.Z * axis.Z) * s;
+        var y = Unit(axis);
+        b.Add(Shapes.Shaft(r0 * s, r1 * s, length, segments, L.Bronze), Orient(f, body, s, from, y));
+    }
+
+    /// <summary>A hand as a flattened ovoid along the given model direction, its wrist starting inside the sleeve end.</summary>
+    private static void Hand(SiteBuilder b, PlanFrame f, float body, float s, Vector3 wrist, Vector3 along, int segments) =>
+        b.Add(Solids.Lathe([new(0.036f * s, 0), new(0.038f * s, 0.05f * s), new(0.046f * s, 0.09f * s), new(0.04f * s, 0.15f * s), new(0.022f * s, 0.19f * s), new(0, 0.2f * s)],
+            segments, L.Bronze, 0.62f, 1f), Orient(f, body, s, wrist, along));
+
+    /// <summary>Rigid placement whose local Y runs along a model direction from a model point (statue frame, scaled by s).</summary>
+    private static Matrix4x4 Orient(PlanFrame f, float body, float s, Vector3 at, Vector3 direction)
+    {
+        Vector3 World(Vector3 v) => new(f.U.X * v.X + f.W.X * v.Z, v.Y, f.U.Y * v.X + f.W.Y * v.Z);
+        var y = Unit(World(direction));
+        var reference = MathF.Abs(y.Y) < 0.95f ? Vector3.UnitY : World(Vector3.UnitZ);
+        var x = Unit(Cross(y, reference));
+        var z = Cross(x, y);
+        var p = f.P(at.X * s, at.Z * s);
+        return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, p.X, body + at.Y * s, p.Y, 1);
+    }
+
+    private static Vector3 Cross(Vector3 a, Vector3 c) => new(a.Y * c.Z - a.Z * c.Y, a.Z * c.X - a.X * c.Z, a.X * c.Y - a.Y * c.X);
+
+    private static Vector3 Unit(Vector3 v)
+    {
+        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
+        return new(v.X / length, v.Y / length, v.Z / length);
     }
 
     // ---- Hexagonal double-eaved pavilion on the south-bank hill (§4.5, MAP-QSH-TERRAIN §5.2) ----

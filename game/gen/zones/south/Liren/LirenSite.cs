@@ -5,6 +5,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
 using T = Campus.Gen.Zones.South.SouthTune.Liren;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
+using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
 namespace Campus.Gen.Zones.South.Liren;
 
@@ -20,6 +21,8 @@ public sealed class LirenSite : SouthSite
     public const string Connector = "qsh:relation:11185938";
     public const string BlockA = "qsh:relation:11185936", BlockB = "qsh:way:814133732";
     public const string PierPart = "osm:way:814133734", BridgePart = "osm:way:814133733", LinkPart = "osm:way:814133736";
+    /// <summary>Window grids (contract-29): both pier blocks in one grid (in part order), the bridge storey and the east link.</summary>
+    public const string PierKey = "piers", BridgeKey = "bridge", LinkKey = "east-link";
 
     /// <summary>Pier blocks: storeys and cornice line as WP-14 builds A and B at 15.6 m (wall top 15.1, coping 16.57).</summary>
     internal static readonly GridStyle PierStyle = new(L.White, L.WhiteTrim, L.GreyPlinth, L.Glass, L.Metal, L.RoofSlab)
@@ -104,14 +107,48 @@ public sealed class LirenSite : SouthSite
         return new(e.Length < 4f ? EdgeKind.Blank : EdgeKind.Plain);
     }
 
+    /// <summary>Every gridded block of the connector with its place in the numbering, in grid order; y is the bridge storey's lift.</summary>
+    internal static IEnumerable<(IReadOnlyList<Vector2> Ring, GridStyle Style, Func<GridEdgeInfo, GridEdge> Dress, float Lift, GridNumbering Numbering)> Blocks(Footprints f)
+    {
+        var feature = new FeatureId(Connector);
+        var offset = 0;
+        foreach (var pier in f.Piers)
+        {
+            Func<GridEdgeInfo, GridEdge> dress = e => Dress(e, f.PierNeighbours);
+            yield return (pier, PierStyle, dress, 0f, new(feature, PierKey, offset, W.Teaching, W.Classroom));
+            offset += GridFacade.Layout(pier, PierStyle, dress).Columns;
+        }
+        yield return (f.Link, LinkStyle, e => Dress(e, f.LinkNeighbours), 0f, new(feature, LinkKey, 0, W.Teaching, W.Corridor));
+        yield return (f.Bridge, BridgeStyle, e => Dress(e, f.BridgeNeighbours), T.BridgeFloor, new(feature, BridgeKey, 0, W.Teaching, W.Corridor));
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
+    {
+        // Blocks sharing a key (the two piers) add their columns; every block of a key has the same storeys.
+        var grids = new SortedDictionary<string, (int Columns, int Rows)>(StringComparer.Ordinal);
+        foreach (var (ring, style, dress, _, numbering) in Blocks(Rings(world)))
+        {
+            var layout = GridFacade.Layout(ring, style, dress);
+            grids[numbering.Key] = grids.TryGetValue(numbering.Key, out var g) ? (g.Columns + layout.Columns, g.Rows) : (layout.Columns, layout.Rows);
+        }
+        return [.. grids.Select(p => (new FeatureId(Connector), new WindowGridSpec(p.Key, p.Value.Columns, p.Value.Rows)))];
+    }
+
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        var f = Rings(ctx.World);
+        var centre = PlanMath.Centroid(f.Bridge);
+        var y = ctx.World.Terrain.HeightAt(centre.X, centre.Y);
+        foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
+            GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
+    }
+
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
         var y = b.Ground(PlanMath.Centroid(f.Bridge));
-        foreach (var pier in f.Piers) GridFacade.Build(b, pier, y, PierStyle, e => Dress(e, f.PierNeighbours));
-        GridFacade.Build(b, f.Link, y, LinkStyle, e => Dress(e, f.LinkNeighbours));
-        // Bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
-        GridFacade.Build(b, f.Bridge, y + T.BridgeFloor, BridgeStyle, e => Dress(e, f.BridgeNeighbours));
+        // Piers, the east link and the bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
+        foreach (var (ring, style, dress, lift, numbering) in Blocks(f)) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
         var bridge = new PolygonRings(f.Bridge);
         b.Add(PartGeometryKernel.Extrude(bridge, T.BridgeFloor - T.Soffit, L.White, y + T.Soffit), Matrix4x4.Identity);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
