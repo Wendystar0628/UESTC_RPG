@@ -126,7 +126,7 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 #define veil (P.g_misc.x)
 // Godot re-imports a .glsl only when its own bytes change, not when an included file does: bump this stamp
 // whenever fog.glslinc is re-synced, or the old fog stays compiled in.
-// fog.glslinc mirror stamp: fog.gdshaderinc @ main d618f5a (WP-04 bank 1, PaletteLayout banked9-rows-v1)
+// fog.glslinc mirror stamp: fog.gdshaderinc @ main d618f5a + 0p FOG_SCALE_HEIGHT 120 (WP-04 bank 1, PaletteLayout banked9-rows-v1)
 #include "fog.glslinc"
 #endif
 

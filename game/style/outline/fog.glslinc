@@ -125,7 +125,7 @@ const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)
 const float FOG_VEIL_NEAR = 20.0;    // 全幕雾幕时剪影距离收到的位置（m）
 const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS §8.3）
 const float FOG_WEATHER_SIL_MIN = 600.0;   // 雾天剪影距离不低于 600 m（ART-SKYLIGHT §6.6）
-const float FOG_SCALE_HEIGHT = 200.0;     // 大气的标高（m）：视线越高，等效雾程越短；俯瞰箱庭时不被整片雾盖住
+const float FOG_SCALE_HEIGHT = 120.0;     // 大气的标高（m）：视线越高，等效雾程越短；俯瞰箱庭时不被整片雾盖住
 
 // 天气的雾密度倍率；没写入时（0）按 1 处理
 float fog_weather_mult() {
