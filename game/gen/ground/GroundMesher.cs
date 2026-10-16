@@ -70,7 +70,7 @@ internal sealed class GroundMesher
         _pavingY = steps == 0 ? section.RoadY : section.PavingY;
         _grassY = steps == 2 ? section.GrassY : _pavingY;
         _fieldTolerance = 0.03f * field.Cell;
-        _sourceContext = new(field.Sources, section, _fieldTolerance);
+        _sourceContext = new(field.Sources, section, _fieldTolerance, layout.Paving);
         _bands = GroundLod.HasBands(lod);
         _pits = _bands;   // the frame and the soil are resolved where kerbs are (L0, L1); beyond that a pit is under a pixel
         _t =

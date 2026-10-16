@@ -66,14 +66,30 @@ internal enum GroundFaceRole : byte { Top, Vertical, Skirt }
 internal readonly record struct GroundFaceInput(GroundSurface Surface, GroundFaceRole Role, GroundSourceContext Context)
 {
     public IEnumerable<GroundShape> SourcesAt(Vector2 position) => Context.At(Surface, position);
+
+    /// <summary>
+    /// Paving frame of a granite plaza top at this position, or null. Only the plaza body is patterned (not curbs,
+    /// vertical faces, skirts or borders). The first bound source covering the point (stable source order) gives the frame;
+    /// unbound plazas overlapping it are laid in the same grid, so the field has no seam along the triangulation.
+    /// </summary>
+    public PavingFrame? PavingAt(Vector2 position)
+    {
+        if (Surface != GroundSurface.Granite || Role != GroundFaceRole.Top || Context.Paving.Count == 0) return null;
+        foreach (var shape in SourcesAt(position))
+            if (Context.Paving.FrameOf(shape) is { } frame) return frame;
+        return null;
+    }
 }
 
 /// <summary>
 /// Read-only view of the existing tile candidates. A query can yield zero or several sources; neither is a unique
 /// authored material/direction. T03 resolves its binding before constructing a profile or metre UVs.
 /// </summary>
-internal sealed class GroundSourceContext(IReadOnlyList<GroundShape> candidates, GroundSection section, float tolerance)
+internal sealed class GroundSourceContext(IReadOnlyList<GroundShape> candidates, GroundSection section, float tolerance,
+    GroundPaving? paving = null)
 {
+    public GroundPaving Paving { get; } = paving ?? GroundPaving.Empty;
+
     public IEnumerable<GroundShape> At(GroundSurface surface, Vector2 position)
     {
         var margin = surface is GroundSurface.Curb or GroundSurface.Bevel ? section.CurbWidth : 0f;

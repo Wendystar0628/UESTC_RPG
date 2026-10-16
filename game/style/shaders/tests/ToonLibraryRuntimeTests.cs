@@ -49,6 +49,32 @@ public sealed class ToonLibraryRuntimeTests
             "Unconnected surface patterns must fail before cache lookup/allocation, leaving plain materials intact.");
     }
 
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task RegisteredSurfacePatternBuildsItsOwnToonStaticMaterialClass()
+    {
+        await using var fixture = new Fixture();
+        var plain = fixture.Library.Get(fixture.Spec);
+        var spec = fixture.Spec with
+        {
+            SurfacePattern = new(SurfacePatternLayers.StackBond, new(.6f, .6f), new(.006f, .006f))
+        };
+        var patterned = (ShaderMaterial)fixture.Library.Get(spec);
+        Require(!ReferenceEquals(plain, patterned) && ReferenceEquals(patterned, fixture.Library.Get(spec)) &&
+            fixture.Library.MaterialId(spec) != fixture.Library.MaterialId(fixture.Spec),
+            "A registered profile is its own cached material class with its own material ID.");
+        Require(patterned.Shader.ResourcePath == "res://style/shaders/toon_static.gdshader", "Patterns are drawn by toon_static only.");
+        Require((int)patterned.GetShaderParameter("pattern_layer") == SurfacePatternLayers.StackBond &&
+            ((Vector2)patterned.GetShaderParameter("pattern_period")).IsEqualApprox(new(.6f, .6f)) &&
+            ((Vector2)patterned.GetShaderParameter("pattern_joint")).IsEqualApprox(new(.006f, .006f)),
+            "Layer, period and joint reach the material uniforms.");
+        var refused = false;
+        try { fixture.Library.Get(spec with { Kind = ToonKind.Glass }); }
+        catch (ArgumentException) { refused = true; }
+        Require(refused, "Only the ordinary Static kind can carry a surface pattern.");
+    }
+
     [TestCase(Timeout = 20000)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]

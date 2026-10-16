@@ -19,6 +19,8 @@ internal sealed class GroundLayout
 
     public IReadOnlyList<GroundShape> Shapes { get; }
     public IReadOnlyList<RoadLine> Roads { get; }
+    /// <summary>Plaza sources that carry a surface pattern and their metre frames (Q-015); empty when none qualifies.</summary>
+    public GroundPaving Paving { get; private init; } = GroundPaving.Empty;
     public Vector2 Min { get; }
     public Vector2 Max { get; }
     public bool IsEmpty => Shapes.Count == 0;
@@ -103,7 +105,7 @@ internal sealed class GroundLayout
     private static GroundLayout Create(IWorldModel world)
     {
         var (shapes, roads) = GroundSources.Read(world);
-        return new GroundLayout(shapes, roads);
+        return new GroundLayout(shapes, roads) { Paving = GroundPaving.Build(world, shapes) };
     }
 
     private static (int X, int Z) Bin(Vector2 p) =>

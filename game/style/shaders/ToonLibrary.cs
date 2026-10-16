@@ -28,6 +28,9 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private static readonly StringName MatTableGlobal = new(ShaderGlobals.MatTable);
     private static readonly StringName WindowCardsGlobal = new(ShaderGlobals.WindowCards);
     private static readonly StringName MatIdParameter = new("mat_id");
+    private static readonly StringName PatternLayerParameter = new("pattern_layer");
+    private static readonly StringName PatternPeriodParameter = new("pattern_period");
+    private static readonly StringName PatternJointParameter = new("pattern_joint");
 
     private readonly object _gate = new();
     private readonly PaletteCatalog _catalog;
@@ -243,8 +246,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private ToonEntry Resolve(ToonSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        if (spec.SurfacePattern is not null)
-            throw new NotSupportedException("Surface-pattern resources and toon_static consumption are not implemented; T03 must connect them before use.");
+        // 图样的形状与层号在命中缓存之前校验：没登记的层不会借用已有的无图样材质。
+        SurfacePatternLayers.Validate(spec);
         var key = MaterialClass.Of(spec);
         lock (_gate)
         {
@@ -259,6 +262,13 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             var id = (byte)_nextId++;
             var material = MaterialFor(spec.Kind);
             material.SetShaderParameter(MatIdParameter, (int)id);
+            if (spec.SurfacePattern is { } pattern)
+            {
+                // 只有普通 Static（toon_static）能带图样，契约校验已拦住其余 Kind；参数随材质类，不随铺向与相位。
+                material.SetShaderParameter(PatternLayerParameter, (int)pattern.Layer);
+                material.SetShaderParameter(PatternPeriodParameter, new Vector2(pattern.PeriodMeters.X, pattern.PeriodMeters.Y));
+                material.SetShaderParameter(PatternJointParameter, new Vector2(pattern.JointMeters.X, pattern.JointMeters.Y));
+            }
             MatTable.WriteRows(_matBytes, id, spec);
             _matImage.SetData(MatTable.Width, MatTable.Height, false, Image.Format.Rgba8, _matBytes);
             _matTexture.Update(_matImage);

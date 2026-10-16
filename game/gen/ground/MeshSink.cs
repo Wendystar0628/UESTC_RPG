@@ -6,7 +6,9 @@ namespace Campus.Gen.Ground;
 /// <summary>
 /// Collects triangles per ground material, writes the colour slot's palette column into each vertex's colour byte,
 /// shares identical vertices and fixes winding so that front faces point along the intended normal (Godot uses
-/// clockwise front faces). Output order is stable: material, then flags, then chunk.
+/// clockwise front faces). Output order is stable: material, then paving profile, then flags, then chunk.
+/// Patterned plaza faces (Q-015) carry continuous metre UVs in their paving frame and UV2 = (gate, K), constant on each
+/// triangle; vertices are shared only between triangles with the same UV2.
 /// </summary>
 internal sealed class MeshSink
 {
@@ -25,14 +27,22 @@ internal sealed class MeshSink
             (b, c) = (c, b);
             (nb, nc) = (nc, nb);
         }
-        // T03 resolves a selected surface profile and metre UVs here, while source/role/direction remain available.
-        // Source IDs and directions never become GPU material or batching keys.
+        // The surface profile and metre UVs are resolved here, while source/role/direction remain available.
+        // Source IDs and directions never become GPU material or batching keys: only the profile does.
         var material = input is { } face ? GroundPalette.MaterialOf(face.Surface, face.Role, color) : GroundPalette.MaterialOf(color);
-        var chunk = Current(material, flags, 3);
+        PavingFrame? frame = null;
+        var gate = (Gate: 0f, Zone: 0f);
+        if (input is { } paved)
+        {
+            var centre = new Vector2((a.X + b.X + c.X) / 3f, (a.Z + b.Z + c.Z) / 3f);
+            frame = paved.PavingAt(centre);
+            if (frame is not null) gate = paved.Context.Paving.GateAt(centre);
+        }
+        var chunk = Current(material, frame?.Profile ?? GroundPaving.None, flags, 3);
         var id = GroundPalette.Id(color);
-        var ia = chunk.Vertex(a, na, id);
-        var ib = chunk.Vertex(b, nb, id);
-        var ic = chunk.Vertex(c, nc, id);
+        var ia = chunk.Vertex(a, na, id, frame, gate);
+        var ib = chunk.Vertex(b, nb, id, frame, gate);
+        var ic = chunk.Vertex(c, nc, id, frame, gate);
         chunk.Index.Add(ia);
         chunk.Index.Add(ib);
         chunk.Index.Add(ic);
@@ -50,9 +60,11 @@ internal sealed class MeshSink
         var result = new List<GeometryBundle>();
         foreach (var (key, list) in _chunks)
         {
-            var material = (GroundMaterial)(key >> 8);
+            var material = (GroundMaterial)(key >> 16);
+            var profile = (byte)((key >> 8) & 0xff);
             var flags = (byte)(key & 0xff);
             var spec = GroundPalette.Spec(material);
+            if (profile != GroundPaving.None) spec = spec with { SurfacePattern = GroundPaving.Spec(profile) };
             foreach (var chunk in list)
             {
                 if (chunk.Index.Count == 0) continue;
@@ -62,7 +74,9 @@ internal sealed class MeshSink
                 var bundle = new GeometryBundle(new ToonRef(spec), chunk.Position.ToArray(), chunk.Normal.ToArray(), chunk.Index.ToArray())
                 {
                     ColorIds = chunk.Colors.ToArray(),
-                    Flags = flagArray
+                    Flags = flagArray,
+                    Uv = profile != GroundPaving.None ? chunk.Uv.ToArray() : null,
+                    Uv2 = profile != GroundPaving.None ? chunk.Uv2.ToArray() : null
                 };
                 result.Add(bundle);
             }
@@ -70,9 +84,9 @@ internal sealed class MeshSink
         return result;
     }
 
-    private Chunk Current(GroundMaterial material, byte flags, int needed)
+    private Chunk Current(GroundMaterial material, byte profile, byte flags, int needed)
     {
-        var key = ((int)material << 8) | flags;
+        var key = ((int)material << 16) | (profile << 8) | flags;
         if (!_chunks.TryGetValue(key, out var list)) _chunks.Add(key, list = [new Chunk()]);
         var chunk = list[^1];
         if (chunk.Position.Count / 3 + needed > MaxVertices)
@@ -85,20 +99,30 @@ internal sealed class MeshSink
 
     private sealed class Chunk
     {
-        private readonly Dictionary<(Vector3, Vector3, byte), int> _map = new();
+        private readonly Dictionary<(Vector3, Vector3, byte, float, float, PavingFrame?), int> _map = new();
         public List<float> Position { get; } = [];
         public List<float> Normal { get; } = [];
         public List<byte> Colors { get; } = [];
+        public List<float> Uv { get; } = [];
+        public List<float> Uv2 { get; } = [];
         public List<int> Index { get; } = [];
 
-        public int Vertex(Vector3 p, Vector3 n, byte color)
+        /// <summary>One chunk holds one profile: either every vertex has a frame (UV, UV2) or none does.</summary>
+        public int Vertex(Vector3 p, Vector3 n, byte color, PavingFrame? frame, (float Gate, float Zone) gate)
         {
-            if (_map.TryGetValue((p, n, color), out var index)) return index;
+            var key = (p, n, color, gate.Gate, gate.Zone, frame);
+            if (_map.TryGetValue(key, out var index)) return index;
             index = Position.Count / 3;
             Position.Add(p.X); Position.Add(p.Y); Position.Add(p.Z);
             Normal.Add(n.X); Normal.Add(n.Y); Normal.Add(n.Z);
             Colors.Add(color);
-            _map.Add((p, n, color), index);
+            if (frame is not null)
+            {
+                var uv = frame.Uv(new(p.X, p.Z));
+                Uv.Add(uv.X); Uv.Add(uv.Y);
+                Uv2.Add(gate.Gate); Uv2.Add(gate.Zone);
+            }
+            _map.Add(key, index);
             return index;
         }
     }
