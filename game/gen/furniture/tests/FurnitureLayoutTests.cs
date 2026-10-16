@@ -305,6 +305,94 @@ public sealed class FurnitureLayoutTests
     }
 
     [TestCase]
+    public void ADesignWalkFiledAsFeatureAndAsNetworkLineHasItsNodeBenchesOnce()
+    {
+        // WP-08's effective network files a design walk twice under one ID: as the feature the overlay added and as a network line.
+        // The walk is one walk: whichever way it is filed (line only, feature only, both) its node gets the same benches, standing
+        // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
+        // ground, so it holds on a world with or without the effective network.
+        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var spot = OpenGround(open);
+        var (line, feature) = DesignWalk(spot);
+        var rules = NodeRules(spot);
+        FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(new WalkWorld(open, asLine, asFeature), null, Inputs(), rules);
+        List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        var none = Layout(null, null);
+        var both = Layout(line, feature);
+        var benches = Benches(both);
+        Console.WriteLine($"design walk at {spot}: {benches.Count} node benches " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
+        Check(Benches(none).Count == 0 && none.Log.Any(l => l.Contains("node open node has no bench", StringComparison.Ordinal)), "a node with no walk has benches or no log line");
+        Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node of a walk filed twice");
+        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the walk's node benches stand closer than the gap");
+        Check(both.Items.Count == none.Items.Count + benches.Count && !both.Log.Any(l => l.Contains("open node", StringComparison.Ordinal)), "the walk changed more than its node's benches");
+        var site = new StreetSite(new WalkWorld(open, line, feature));
+        foreach (var bench in benches)
+        {
+            var facing = Front(bench.Part.At);
+            var p = (FurnitureParams)bench.Part.Params;
+            var front = bench.Anchor + facing * (p.Depth * 0.5f);
+            var edge = Distance(front, line) - Half(line);
+            Check(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f, $"{bench.Key}: front {edge:F2} m off the walk's edge");
+            Check(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f, Road: { } walk } && walk.Id == line.Id, $"{bench.Key} does not face the walk");
+        }
+        foreach (var (name, filed) in new[] { ("line only", Layout(line, null)), ("feature only", Layout(null, feature)) })
+            Check(Benches(filed).Select(b => (b.Key, b.Anchor, b.Part.Params)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor, b.Part.Params))), $"the walk filed as {name} has other node benches than filed twice");
+        // The same through the loader: an overlay adds the walk (with and without a hide that takes it away again).
+        var shown = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: false), FlatTerrain.Default), null, Inputs(), rules);
+        var hidden = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: true), FlatTerrain.Default), null, Inputs(), rules);
+        Check(Benches(shown).Select(b => (b.Key, b.Anchor)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor))), "the loaded walk has other node benches than the walk filed by hand");
+        Check(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Log.SequenceEqual(none.Log), "a hidden design walk still gets furniture");
+    }
+
+    /// <summary>The avenue's rule with one rest node at <paramref name="spot"/> (the others as they are): the node's benches are keyed <c>node:0:0:</c>.</summary>
+    private static IReadOnlyList<RoadRule> NodeRules(Vector2 spot) =>
+        [FurnitureStyle.Roads[0] with { Nodes = [new RestNode("open node", spot)] }, FurnitureStyle.Roads[1], FurnitureStyle.Roads[2]];
+
+    /// <summary>A 16 m east–west design walk centred on <paramref name="spot"/>, as the network line and as the feature of one ID.</summary>
+    private static (NetworkLine Line, WorldFeature Feature) DesignWalk(Vector2 spot)
+    {
+        var id = new FeatureId("design:furniture-test-walk");
+        var points = new Polyline([spot + new Vector2(-8f, 0f), spot + new Vector2(8f, 0f)]);
+        var props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
+        return (new NetworkLine(id, points, 2.5f) { Props = props }, new WorldFeature(id, FeatureSource.Design, new("road"), new PolylineGeometry(points)) { Props = props });
+    }
+
+    /// <summary>The real world with an overlay that adds the made-up design walk, and takes it away again when <paramref name="hide"/>.</summary>
+    private static IWorldModel Loaded(Vector2 spot, bool hide)
+    {
+        var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json").Order(StringComparer.Ordinal))
+            files["overlay/" + Path.GetFileName(overlay)] = File.ReadAllText(overlay);
+        var (line, feature) = DesignWalk(spot);
+        var ops = new List<OverlayOp> { new AddOp(feature.Id, feature.Kind, feature.Geometry, null, feature.Props, "furniture test walk") };
+        if (hide) ops.Add(new HideOp(feature.Id, "furniture test: hidden again"));
+        files["overlay/zz-furniture-test.overlay.json"] = JsonSerializer.Serialize(new OverlayFile(new("furniture-test"), new("WP-13"), ops) { Map = new("qingshuihe") }, ContractJson.Options);
+        return WorldModelLoader.Load(new("qingshuihe"), files).World;
+    }
+
+    private static readonly Vector2[] Compass = [new(1f, 0f), new(-1f, 0f), new(0f, 1f), new(0f, -1f), new(0.7f, 0.7f), new(-0.7f, 0.7f), new(0.7f, -0.7f), new(-0.7f, -0.7f)];
+
+    /// <summary>The first spot (scanning west to east, north to south) with open ground all round: no outline, tree, road or paving near, inside the campus.</summary>
+    private static Vector2 OpenGround(IWorldModel world)
+    {
+        const float Clear = 30f;
+        var site = new StreetSite(world);
+        var lines = world.Network.Roads.Concat(world.Network.Bridges).ToList();
+        for (var x = -1200f; x <= 1200f; x += 24f)
+            for (var z = -1200f; z <= 1200f; z += 24f)
+            {
+                var p = new Vector2(x, z);
+                if (!PlanGeometry.Contains(world.Boundary, p) || site.Blocker(p, 14f) is not null || site.PavingEdgeFacing(p) is not null) continue;
+                if (!Compass.All(d => PlanGeometry.Contains(world.Boundary, p + d * Clear))) continue;
+                if (lines.Any(l => Distance(p, l) < Half(l) + Clear)) continue;
+                return p;
+            }
+        throw new InvalidOperationException("The map has no open ground for a made-up walk.");
+    }
+
+    [TestCase]
     public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
     {
         // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
@@ -660,6 +748,21 @@ public sealed class FurnitureLayoutTests
         public PolygonRings Boundary => inner.Boundary;
         public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
         public WorldNetwork Network => inner.Network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
+    }
+
+    /// <summary>The world with a walk filed the way the effective network files a design walk: as a network line, as a feature, or both (null leaves that stack alone).</summary>
+    private sealed class WalkWorld(IWorldModel inner, NetworkLine? line, WorldFeature? feature) : IWorldModel
+    {
+        private readonly Dictionary<FeatureId, WorldFeature> _features = feature is null ? new(inner.Features) : new(inner.Features) { [feature.Id] = feature };
+        private readonly WorldNetwork _network = line is null ? inner.Network : inner.Network with { Roads = [.. inner.Network.Roads, line] };
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
+        public WorldNetwork Network => _network;
         public ISpatialIndex Spatial => inner.Spatial;
         public IInteriorIndex Interiors => inner.Interiors;
         public IOutskirtsModel? Outskirts => inner.Outskirts;

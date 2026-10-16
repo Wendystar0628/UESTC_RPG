@@ -127,6 +127,9 @@ public static class WorldModelLoader
             Alias(aliases, pair.Key, pair.Key);
         }
         ApplyZones(input, features, aliases);
+        var originalNetwork = input.TryGetValue("network.json", out var networkText) ? Deserialize<WorldNetwork>("network.json", networkText) : WorldNetwork.Empty;
+        ValidateNetwork(originalNetwork);
+        var roads = new EffectiveRoadNetwork(originalNetwork, prefix, features);
         var overlayWrites = new Dictionary<string, List<OverlayWrite>>(StringComparer.Ordinal);
         var interiorOverlays = new List<InteriorOverlayFile>();
         foreach (var pair in input.Where(p => p.Key.StartsWith("overlay/", StringComparison.Ordinal)))
@@ -143,10 +146,9 @@ public static class WorldModelLoader
                 interiorOverlays.Add(overlay);
             }
             else if (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) && pair.Key is not "overlay/outskirts.overlay.json" and not "overlay/walkable.overlay.json" and not "overlay/fidelity.overlay.json")
-                ApplyOverlay(map, pair.Key, pair.Value, features, aliases, overlayWrites, options.ClaimedBy);
+                ApplyOverlay(map, pair.Key, pair.Value, features, aliases, overlayWrites, options.ClaimedBy, roads);
         }
-        var network = input.TryGetValue("network.json", out var networkText) ? Deserialize<WorldNetwork>("network.json", networkText) : WorldNetwork.Empty;
-        ValidateNetwork(network);
+        var network = roads.Publish(features);
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
         var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"));
         // The outskirts producer owns its document format; do not silently discard a supplied layer.
@@ -212,7 +214,8 @@ public static class WorldModelLoader
     }
 
     private static void ApplyOverlay(MapId map, string file, string text, SortedDictionary<string, WorldFeature> features,
-        Dictionary<string, List<string>> aliases, Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy)
+        Dictionary<string, List<string>> aliases, Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy,
+        EffectiveRoadNetwork roads)
     {
         var overlay = Deserialize<OverlayFile>(file, text);
         CheckMap(map, overlay.Map, file);
@@ -221,6 +224,16 @@ public static class WorldModelLoader
             try
             {
                 var op = overlay.Ops[i];
+                if (op is HideOp roadHide && roads.IsOriginalRoad(roadHide.Target.Value))
+                {
+                    RequireReason(roadHide.Reason);
+                    var removal = roads.PlanRoadHide(roadHide.Target.Value, features, file);
+                    RegisterWrite(removal.Road, roadHide.Target.Value, file, overlay.Owner, writes, claimedBy);
+                    if (removal.Entity is { } entity && entity != removal.Road)
+                        RegisterWrite(entity, roadHide.Target.Value, file, overlay.Owner, writes, claimedBy);
+                    roads.ApplyHide(removal, features, file, roadHide.Target.Value);
+                    continue;
+                }
                 if (op is HidePartOp hidePart)
                 {
                     RequireReason(hidePart.Reason);
@@ -233,6 +246,7 @@ public static class WorldModelLoader
                     var matches = current.Parts.Count(part => string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal));
                     if (matches != 1)
                         throw new ArgumentException($"hidePart sourceId '{hidePart.SourceId}' must match exactly one part of '{entityId}'; found {matches}.");
+                    roads.RequireNonRoadPartRemoval(entityId, hidePart.SourceId, file);
                     if (current.Parts.Count == 1)
                         throw new ArgumentException("hidePart cannot remove the final part; use hide to remove the entity explicitly.");
                     var remaining = current.Parts.Where(part => !string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal)).ToArray();
@@ -272,6 +286,7 @@ public static class WorldModelLoader
                     { Height = add.Height, Zone = overlay.Zone, Props = add.Props?.Clone(), Bounds = BoundsOf(geometry, add.Height ?? 0) };
                     if (!features.TryAdd(add.Id.Value, feature)) throw new ArgumentException("Added ID already exists.");
                     Alias(aliases, add.Id.Value, add.Id.Value);
+                    roads.RecordAdd(add.Id);
                     continue;
                 }
                 var target = op switch
@@ -291,7 +306,15 @@ public static class WorldModelLoader
                     if (!features.TryGetValue(key, out var current)) throw new WorldDataException(file, target.Value, "Target was already hidden.");
                     switch (op)
                     {
-                        case HideOp hide: RequireReason(hide.Reason); features.Remove(key); break;
+                        case HideOp hide:
+                            RequireReason(hide.Reason);
+                            if (roads.PlanFeatureHide(key, features, file) is { } removal)
+                            {
+                                if (removal.Road != key) RegisterWrite(removal.Road, target.Value, file, overlay.Owner, writes, claimedBy);
+                                roads.ApplyHide(removal, features, file, target.Value);
+                            }
+                            else features.Remove(key);
+                            break;
                         case HeightOp height:
                             RequireReason(height.Reason);
                             if (height.Height is <= 0 || height.Storeys is <= 0) throw new ArgumentException("Height and storeys must be positive.");

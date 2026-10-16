@@ -33,6 +33,9 @@ internal sealed class StreetSite
     public StreetSite(IWorldModel world)
     {
         World = world;
+        // The effective network (WP-08) publishes a design walk as a network line under its feature's ID and keeps the feature: the
+        // line is the walk, so the feature's polyline stays out of the paving below and the walk is filed once, as the line it is.
+        var published = world.Network.Roads.Select(r => r.Id.Value).ToHashSet(StringComparer.Ordinal);
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             foreach (var kind in Blocking)
@@ -45,7 +48,10 @@ internal sealed class StreetSite
             foreach (var (props, geometry) in RoadSources(feature))
             {
                 var type = RoadType(props);
-                if (Pedestrian(type)) IndexPaving(geometry, props);
+                if (Pedestrian(type))
+                {
+                    if (geometry is not PolylineGeometry || !published.Contains(feature.Id.Value)) IndexPaving(geometry, props);
+                }
                 else if (CarriagewayType(type))
                     foreach (var rings in geometry switch { PolygonGeometry polygon => [polygon.Rings], MultiPolygonGeometry multi => multi.Polygons, _ => [] })
                         if (rings.Outer.Count >= 3)
