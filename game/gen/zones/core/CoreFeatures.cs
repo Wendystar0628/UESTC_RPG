@@ -16,6 +16,16 @@ public static class CoreFeatures
     /// <summary>品·悦吧 store front (8407) against the podium's north-east end: the 1F cafe door (lib.cafe) opens beside it.</summary>
     public static readonly FeatureId CafeStore = new("qsh:way:806848407");
 
+    /// <summary>16e: the library's north blocks this zone builds (WLD-INTERIORS §17), each its own entity.</summary>
+    public static readonly FeatureId NorthAnnex = new("qsh:way:806848403");
+    public static readonly FeatureId CourtWing = new("qsh:way:806848406");
+    public static readonly FeatureId LowBlock = new("qsh:way:806848408");
+    public static readonly FeatureId NorthWestLink = new("qsh:way:806848409");
+    public static readonly FeatureId NorthWestJoint = new("qsh:way:806848410");
+    /// <summary>The north-east connector and bridge (8404, 8405, 16f): here only as blocks the north walls stand against.</summary>
+    public static readonly FeatureId NorthEastConnector = new("qsh:way:806848404");
+    public static readonly FeatureId NorthEastBridge = new("qsh:way:806848405");
+
     /// <summary>Ring steps of the sunken plaza: registered so the axis corridor's steps interval names a real structure.</summary>
     public static readonly FeatureId PlazaRingSteps = new("design:core-plaza-ring-steps");
     /// <summary>Sundial (real, not in OSM): registered with its position in core.overlay.json.</summary>

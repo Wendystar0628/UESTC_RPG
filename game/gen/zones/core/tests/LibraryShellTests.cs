@@ -120,7 +120,8 @@ public sealed class LibraryShellTests
         var shell = Shell(world);
         var layouts = new CoreModule().DescribeWindowLayouts(world, 1u);
         var windowed = layouts.Where(l => l.Grids.Count > 0).ToArray();
-        Require(windowed.Select(l => l.Feature.Value).SequenceEqual([CoreFeatures.Library.Value, CoreFeatures.Museum.Value]), $"the library and the museum declare windows ({windowed.Length})");
+        Require(windowed.Select(l => l.Feature.Value).SequenceEqual([CoreFeatures.Library.Value, CoreFeatures.Museum.Value, CoreFeatures.NorthAnnex.Value, CoreFeatures.CourtWing.Value, CoreFeatures.LowBlock.Value, CoreFeatures.NorthWestLink.Value, CoreFeatures.NorthWestJoint.Value]),
+            $"the library, the museum and the five north blocks declare windows ({windowed.Length})");
         Require(layouts.Single(l => l.Feature == CoreFeatures.LibraryStair).Grids.Count == 0, "the claimed stair base declares an empty set");
         var layout = windowed.Single(l => l.Feature == CoreFeatures.Library);
         Require(layout.Feature == CoreFeatures.Library && world.Features.ContainsKey(layout.Feature), "the declaration targets the library entity in this world");
@@ -148,9 +149,10 @@ public sealed class LibraryShellTests
             for (var v = 0; v < g.Position.Length / 3; v++)
             {
                 var columns = (int)(g.Uv2![2 * v + 1] / 32f);
+                if ((int)g.Uv2[2 * v] != allocation.BaseId) continue;
                 glassIds.Add((int)g.Uv2[2 * v] + (int)MathF.Floor(g.Uv![2 * v + 1]) * columns + (int)MathF.Floor(g.Uv[2 * v]));
             }
-        var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == CoreStyle.LibraryWindowChannel).ToArray();
+        var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == CoreStyle.LibraryWindowChannel && w.BaseId == allocation.BaseId).ToArray();
         var metaIds = new SortedSet<int>(windows.Select(w => w.Id));
         Require(metaIds.Count == windows.Length, "one declaration per window");
         Require(windows.All(w => w.BaseId == allocation.BaseId && w.TotalColumns == shell.Columns && w.Channel == CoreStyle.LibraryWindowChannel), "declarations carry the allocation");
@@ -285,12 +287,15 @@ public sealed class LibraryShellTests
         var library = new WindowAllocation(CoreFeatures.Library, LibraryShell.WindowKey, 707, libraryColumns, LibraryShell.Rows);
         var columns = CoreSite.Pieces(RealWorld()).OfType<Museum.MuseumShell>().Single().Columns;
         var museum = new WindowAllocation(CoreFeatures.Museum, Museum.MuseumShell.WindowKey, 707 + library.Count, columns, Museum.MuseumShell.Rows);
+        var annex = AnnexShellTests.Allocations(RealWorld(), museum.BaseId + museum.Count).ToArray();
+        var end = annex.Length == 0 ? museum.BaseId + museum.Count : annex[^1].BaseId + annex[^1].Count;
         return new(new MapId("qingshuihe"), new string('a', 64),
         [
             new WindowAllocation(new FeatureId("qsh:way:0"), "generic", 0, 101, 7),
             library,
             museum,
-            new WindowAllocation(new FeatureId("qsh:way:9"), "generic", museum.BaseId + museum.Count, 10, 1),
+            .. annex,
+            new WindowAllocation(new FeatureId("qsh:way:9"), "generic", end, 10, 1),
         ]);
     }
 

@@ -111,6 +111,24 @@
       "geometry": { "type": "polyline", "line": { "points": [[88.24, 1.14], [89.54, 10.28], [95.38, 20.07], [97.43, 26.3]] } },
       "props": { "roadType": "footway", "footway": "sidewalk", "width": 2.5 },
       "reason": "保留段与新连接：隐藏的 OSM 东侧人行道 qsh:source:way:544161558 不与设计步道重合的首段，与 design:core-ginkgo-walk-east 设计步道平行重合的部分已由设计步道取代。原点序、宽 2.5 m、footway（sidewalk）照原样：原第 1–3 点，自人行桥 qsh:source:way:988857962 桥头 (88.24, 1.14) 过住宅路 qsh:source:way:552968520（原路口点 (95.38, 20.07)）。末点改到设计步道的端点 (97.43, 26.3)（离原线 1.26 m），这一小段就是接到设计步道的新连接，路网从过河桥一路连到主楼。共 27.2 m。"
+    },
+    {
+      "op": "add",
+      "id": "design:core-quiet-garden-palm-1",
+      "kind": "tree",
+      "geometry": { "type": "point", "position": [-180.52, 0, -11.98] },
+      "height": 5.5,
+      "props": { "species": "palm", "planter": "WP-23" },
+      "reason": "实物登记（MAP-QSH-CORE §1.9）：北内院宁静苑的两株棕榈之一，种在西侧木边花池正中（花池由 WP-16 的宁静苑块按内院墙线排出，单测核对树位落在花池里）。只给位置，树由 WP-23 种。内院不开放，从一楼北面落地窗和三楼 G 区露台看得见树冠；常绿，四季不变，冬季叶面压薄雪。"
+    },
+    {
+      "op": "add",
+      "id": "design:core-quiet-garden-palm-2",
+      "kind": "tree",
+      "geometry": { "type": "point", "position": [-173.52, 0, -9.98] },
+      "height": 5.0,
+      "props": { "species": "palm", "planter": "WP-23" },
+      "reason": "实物登记：宁静苑的第二株棕榈，种在东侧木边花池正中，同 design:core-quiet-garden-palm-1。"
     }
   ]
 }

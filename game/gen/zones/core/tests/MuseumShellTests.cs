@@ -136,7 +136,8 @@ public sealed class MuseumShellTests
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             Require(glass.Length == 1, $"{lod}: one shared window-glass bundle ({glass.Length})");
             var bases = Enumerable.Range(0, glass[0].Uv2!.Length / 2).Select(i => glass[0].Uv2![2 * i]).Distinct().Order().ToArray();
-            Require(bases.SequenceEqual([numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey).BaseId, numbering.Get(CoreFeatures.Museum, MuseumShell.WindowKey).BaseId]),
+            var here = pieces.Where(p => p is IWindowedPiece && CoreTiles.Of(p.Anchor, lod) == CoreTiles.Of(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
+            Require(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order()),
                 $"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})");
             Require(output.Meshes.Count <= module.Budget.DrawCalls, $"{lod}: {output.Meshes.Count} bundles within {module.Budget.DrawCalls}");
         }
@@ -180,7 +181,7 @@ public sealed class MuseumShellTests
         var generic = new WindowAllocation(new FeatureId("qsh:way:0"), "generic", 0, 101, 7);
         var library = new WindowAllocation(CoreFeatures.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
         var museum = new WindowAllocation(CoreFeatures.Museum, MuseumShell.WindowKey, generic.Count + library.Count, museumColumns, MuseumShell.Rows);
-        return new(new MapId("qingshuihe"), new string('a', 64), [generic, library, museum]);
+        return new(new MapId("qingshuihe"), new string('a', 64), [generic, library, museum, .. AnnexShellTests.Allocations(RealWorld(), museum.BaseId + museum.Count)]);
     }
 
     private static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)

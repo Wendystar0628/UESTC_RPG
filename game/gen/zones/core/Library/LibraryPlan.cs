@@ -21,6 +21,10 @@ public enum BlockKind
     Tower,
     /// <summary>8392: the front square tower facing the time plaza, with the glass slot and the 2F door.</summary>
     FrontTower,
+    /// <summary>16e: one of the library's north blocks (8403, 8406, 8408, 8409, 8410), built by its AnnexShell.</summary>
+    Annex,
+    /// <summary>16e: a block that only covers walls standing against it (the library's own, 8404, 8405, 8407).</summary>
+    Neighbour,
 }
 
 /// <summary>A vertical prism of the shell: plan ring (counterclockwise in x, z) from Y0 to Y1.</summary>

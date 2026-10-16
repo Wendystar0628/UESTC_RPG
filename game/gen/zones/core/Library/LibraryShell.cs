@@ -279,6 +279,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                 }
             case BlockKind.Tower or BlockKind.FrontTower or BlockKind.Core:
                 break;
+            case BlockKind.Annex or BlockKind.Neighbour:
+                throw new InvalidOperationException("The north blocks (16e) are not part of the library plan.");
             default:
                 throw new ArgumentOutOfRangeException(nameof(piece), piece.Block.Kind, "Unknown block kind.");
         }
@@ -394,6 +396,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                     }
                 case BlockKind.Core:
                     break;
+                case BlockKind.Annex or BlockKind.Neighbour:
+                    throw new InvalidOperationException("The north blocks (16e) are not part of the library plan.");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(block), block.Kind, "Unknown block kind.");
             }

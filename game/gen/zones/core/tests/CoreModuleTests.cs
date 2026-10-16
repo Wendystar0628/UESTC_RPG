@@ -20,7 +20,8 @@ public sealed class CoreModuleTests
     {
         var world = RealWorld();
         var pieces = CoreSite.Pieces(world);
-        Require(pieces.Select(p => p.Id).SequenceEqual(["time-plaza", "sundial", "library-shell", "library-entrance", "museum"]), "plaza, sundial, library, its entrance and the museum in order");
+        Require(pieces.Select(p => p.Id).SequenceEqual(["time-plaza", "sundial", "library-shell", "library-entrance", "museum", "annex-northannex", "annex-courtwing", "annex-lowblock", "annex-link", "annex-joint", "quiet-garden"]),
+            "plaza, sundial, library, its entrance, the museum, the five north blocks and the quiet garden in order");
         foreach (var claim in CoreSite.Claims.OfType<FeatureClaim>())
             Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
         var declared = CoreSite.Claims.Select(Describe).Order(StringComparer.Ordinal).ToArray();

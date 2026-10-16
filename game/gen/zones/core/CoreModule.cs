@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
+using Campus.Gen.Zones.Core.Annex;
 using Campus.Gen.Zones.Core.Axis;
 using Campus.Gen.Zones.Core.Entrance;
 using Campus.Gen.Zones.Core.Framework;
@@ -77,6 +78,11 @@ public static class CoreSite
         new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
         new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
         new FeatureClaim(CoreFeatures.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.NorthAnnex, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.CourtWing, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.LowBlock, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.NorthWestLink, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreFeatures.NorthWestJoint, Aspects.Massing | Aspects.Facade | Aspects.Roof),
     ];
 
     public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
@@ -88,6 +94,7 @@ public static class CoreSite
     private static IReadOnlyList<ICorePiece> Create(IWorldModel world)
     {
         var library = LibraryShell.From(world);
+        var annex = AnnexSite.From(world, library);
         ICorePiece?[] pieces =
         [
             // 16a: the axis and the time plaza.
@@ -99,6 +106,9 @@ public static class CoreSite
             GrandStair.From(world, library),
             // 16d-2: the museum (8401 hall body inside the 8402 colonnade ring).
             MuseumShell.From(world),
+            // 16e: the library's north blocks (8403, 8406, 8408, 8409, 8410) and the 宁静苑 court they close.
+            .. AnnexShell.From(world, annex),
+            QuietGarden.From(world, annex),
         ];
         return pieces.OfType<ICorePiece>().ToArray();
     }
