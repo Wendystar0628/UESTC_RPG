@@ -1,4 +1,23 @@
 #nullable enable
+Campus.Contracts.SurfacePatternSpec
+Campus.Contracts.SurfacePatternSpec.SurfacePatternSpec() -> void
+Campus.Contracts.SurfacePatternSpec.SurfacePatternSpec(ushort Layer, System.Numerics.Vector2 PeriodMeters, System.Numerics.Vector2 JointMeters) -> void
+Campus.Contracts.SurfacePatternSpec.Layer.get -> ushort
+Campus.Contracts.SurfacePatternSpec.Layer.init -> void
+Campus.Contracts.SurfacePatternSpec.PeriodMeters.get -> System.Numerics.Vector2
+Campus.Contracts.SurfacePatternSpec.PeriodMeters.init -> void
+Campus.Contracts.SurfacePatternSpec.JointMeters.get -> System.Numerics.Vector2
+Campus.Contracts.SurfacePatternSpec.JointMeters.init -> void
+Campus.Contracts.SurfacePatternSpec.Deconstruct(out ushort Layer, out System.Numerics.Vector2 PeriodMeters, out System.Numerics.Vector2 JointMeters) -> void
+Campus.Contracts.SurfacePatternSpec.Equals(Campus.Contracts.SurfacePatternSpec other) -> bool
+~override Campus.Contracts.SurfacePatternSpec.Equals(object obj) -> bool
+override Campus.Contracts.SurfacePatternSpec.GetHashCode() -> int
+~override Campus.Contracts.SurfacePatternSpec.ToString() -> string
+static Campus.Contracts.SurfacePatternSpec.operator !=(Campus.Contracts.SurfacePatternSpec left, Campus.Contracts.SurfacePatternSpec right) -> bool
+static Campus.Contracts.SurfacePatternSpec.operator ==(Campus.Contracts.SurfacePatternSpec left, Campus.Contracts.SurfacePatternSpec right) -> bool
+Campus.Contracts.ToonSpec.SurfacePattern.get -> Campus.Contracts.SurfacePatternSpec?
+Campus.Contracts.ToonSpec.SurfacePattern.init -> void
+Campus.Contracts.ToonSpec.ValidateSurfacePattern() -> void
 Campus.Contracts.AddOp
 Campus.Contracts.AddOp.AddOp(Campus.Contracts.FeatureId Id, Campus.Contracts.DesignKind Kind, Campus.Contracts.OverlayGeometry! Geometry, float? Height, System.Text.Json.JsonElement? Props, string! Reason) -> void
 Campus.Contracts.AddOp.Deconstruct(out Campus.Contracts.FeatureId Id, out Campus.Contracts.DesignKind Kind, out Campus.Contracts.OverlayGeometry! Geometry, out float? Height, out System.Text.Json.JsonElement? Props, out string! Reason) -> void

@@ -42,6 +42,9 @@ public static class GeometrySurfaceUpload
     {
         ArgumentNullException.ThrowIfNull(source);
         source.ValidateVertexData(catalog is null ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
+        if (materialSpec is not null && materialSpec.SurfacePattern != source.Material.Spec.SurfacePattern)
+            throw new ArgumentException("A material override cannot remove or change the surface-pattern profile.", nameof(materialSpec));
+        materialSpec?.ValidateSurfacePattern();
         return Append(target, new SurfaceView
         {
             Spec = materialSpec ?? source.Material.Spec,
@@ -70,6 +73,9 @@ public static class GeometrySurfaceUpload
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(materials);
         ArgumentNullException.ThrowIfNull(source.Spec);
+        source.Spec.ValidateSurfacePattern();
+        if (useD0Rgb && source.Spec.SurfacePattern is not null)
+            throw new NotSupportedException("D0 RGB upload cannot consume surface patterns.");
         switch (source.Encoding)
         {
             case PaletteLayout.LegacyEncodingVersion:

@@ -16,6 +16,23 @@ public sealed class GeometryInstancePoolRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
+    public void SurfacePatternPrototypeIsRefusedBeforeAllocatingAnInstancePool()
+    {
+        using var fixture = Fixture.Create();
+        var surface = new GeometryBundle(new(fixture.Provider.FirstSpec with
+        {
+            SurfacePattern = new(7, new(2, 1), new(.01f, .01f))
+        }), [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2],
+            Uv: [0, 0, 1, 0, 0, 1], Uv2: [1, 2, 1, 2, 1, 2]);
+        var prototype = Prototype(GeometryBuffer.Freeze(surface));
+        Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("unsupported-pattern", prototype)));
+        Check(fixture.Host.GetChildCount() == 0 && fixture.Provider.Layouts.Count == 0 &&
+            fixture.Host.GetStatistics().Count == 0, "Rejected surface pattern allocated/tracked a partial instance pool.");
+    }
+
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
     public async Task FrozenMultiSurfaceGeometryRetainsNativeChannelsSlotsAndInstanceBytes()
     {
         using var fixture = Fixture.Create();

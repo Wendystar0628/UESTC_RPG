@@ -144,6 +144,7 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
     public void Validate(ToonSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        spec.ValidateSurfacePattern();
         var lit = Get(spec.Lit);
         var shade = Get(spec.Shade);
         if (lit.Role != PaletteRole.Lit || shade.Role != PaletteRole.Shade ||

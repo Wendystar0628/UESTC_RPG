@@ -10,6 +10,46 @@ namespace Campus.Kernel.Instances.Tests;
 public sealed class PaletteSurfaceUploadRuntimeTests
 {
     [TestCase]
+    public void FallbackRejectsPatternsBeforeTokenAndVertexColorShortcuts()
+    {
+        var fallback = new FallbackToonMaterialProvider(new RegistrySource(Catalog().LegacyRegistry));
+        var profile = Spec(64) with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) };
+        Throws<NotSupportedException>(() => fallback.Get(profile));
+        Throws<NotSupportedException>(() => fallback.VertexColor(profile, 64));
+        Throws<NotSupportedException>(() => fallback.Get(profile with { Lit = new("d0.ground"), Shade = new("d0.ground.shade") }));
+    }
+
+    [TestCase]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public void SurfacePatternUploadPreservesMetresAndRejectsProfileChangingOverrides()
+    {
+        var provider = new Provider();
+        var spec = Spec(64) with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) };
+        var source = Geometry() with { Material = new(spec), Uv = [-128.125f, .25f, -127.125f, .25f, -128.125f, 1.25f], Uv2 = [1, 3, 1, 3, 1, 3] };
+        using var mesh = new ArrayMesh();
+        GeometrySurfaceUpload.Append(mesh, source, provider, materialSpec: spec);
+        GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(source), provider);
+        for (var slot = 0; slot < 2; slot++)
+        {
+            using var arrays = mesh.SurfaceGetArrays(slot);
+            var uv = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
+            var gate = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
+            for (var vertex = 0; vertex < 3; vertex++)
+                Check(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
+                    gate[vertex] == new Vector2(1, 3), "Native upload lost metre UV or discrete UV2.");
+        }
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, materialSpec: Spec(64)));
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider,
+            materialSpec: spec with { SurfacePattern = spec.SurfacePattern.Value with { Layer = 8 } }));
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider,
+            materialSpec: spec with { Kind = ToonKind.Glass }));
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, compressAttributes: true));
+        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, useD0Rgb: true));
+        Check(mesh.GetSurfaceCount() == 2, "Rejected overrides published partial native surfaces.");
+    }
+
+    [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void ActualNativeUploadRetainsAllLegacyColorBytesAndIndependentDecalBanks()
@@ -130,5 +170,10 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         public bool IsReady(ShaderId shader, Material material) => false;
         public ToonWarmBatch CapturePendingWarm() => throw new NotSupportedException();
         public bool CompleteWarm(ToonWarmBatch batch) => throw new NotSupportedException();
+    }
+
+    private sealed class RegistrySource(PaletteRegistry registry) : IPaletteRegistrySource
+    {
+        public PaletteRegistry Registry { get; } = registry;
     }
 }

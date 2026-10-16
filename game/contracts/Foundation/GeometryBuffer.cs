@@ -94,6 +94,8 @@ public sealed class GeometryInstanceStream
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentNullException.ThrowIfNull(prototype);
+        if (prototype.Surfaces.Any(surface => surface.Material.Spec.SurfacePattern is not null))
+            throw new NotSupportedException("Surface patterns currently require direct world-coordinate geometry, not transformed instance streams.");
         if (data.Length % InstanceStreamLayout.FloatsPerInstance != 0)
             throw new ArgumentException("An instance stream must contain complete 16-float records.", nameof(data));
         foreach (float value in data.Span)

@@ -32,6 +32,7 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
     /// <summary>Preserves the existing D0 RGB path without inventing registry entries or silently accepting unknown names.</summary>
     public Color VertexColor(ToonSpec spec, byte? colorId)
     {
+        RejectSurfacePattern(spec);
         if (colorId is { } id)
         {
             var color = palettes.Registry.Get(id).Albedo;
@@ -50,7 +51,15 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
     private void Validate(ToonSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        RejectSurfacePattern(spec);
         if (D0Token(spec) is null) palettes.Registry.Validate(spec);
+    }
+
+    private static void RejectSurfacePattern(ToonSpec spec)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        if (spec.SurfacePattern is not null)
+            throw new NotSupportedException("The D0 fallback cannot consume surface patterns; install the completed WP-04 consumer.");
     }
 
     private static IReadOnlyDictionary<string, Color> ReadD0Colors()

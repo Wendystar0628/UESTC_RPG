@@ -134,6 +134,8 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         ArgumentNullException.ThrowIfNull(spec);
         ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
         ArgumentNullException.ThrowIfNull(spec.Prototype);
+        if (spec.Prototype.Surfaces.Any(surface => surface.Material.Spec.SurfacePattern is not null))
+            throw new NotSupportedException("Surface patterns currently require direct world-coordinate geometry, not instance pools.");
         ValidateShadows(spec.Shadows);
         RequireUnique(spec.OwnerWp, spec.Id);
         if (spec.Map is { } map)

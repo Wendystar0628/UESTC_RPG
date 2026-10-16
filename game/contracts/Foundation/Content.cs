@@ -189,6 +189,10 @@ public sealed record GeometryBundle(
     public float[]? Custom1 { get; init; }
     public float[]? Custom2 { get; init; }
 
+    // With Material.Spec.SurfacePattern: Uv is continuous, directed/anchored metres and Uv2 is
+    // (gate, fidelity K). Both UV2 components are constant on every base/LOD triangle and retain fp32.
+    // No channel is reinterpreted when the optional profile is absent.
+
     /// <summary>Checks legacy vertex data; invalid data throws ArgumentException. Encoding-2 arrays throw
     /// NotSupportedException until the caller explicitly selects a supported encoding in the overload.</summary>
     public void ValidateVertexData() => ValidateVertexData(PaletteLayout.LegacyEncodingVersion);
@@ -197,6 +201,8 @@ public sealed record GeometryBundle(
     /// even when its values fit in a byte. Only fully connected upload/bake paths may opt into encoding 2.</summary>
     public void ValidateVertexData(int paletteEncodingVersion)
     {
+        ArgumentNullException.ThrowIfNull(Material.Spec);
+        Material.Spec.ValidateSurfacePattern();
         if (paletteEncodingVersion is not (PaletteLayout.LegacyEncodingVersion or PaletteLayout.EncodingVersion))
             throw new ArgumentOutOfRangeException(nameof(paletteEncodingVersion));
         if (paletteEncodingVersion == PaletteLayout.LegacyEncodingVersion &&
@@ -249,6 +255,46 @@ public sealed record GeometryBundle(
                     throw new ArgumentException("Each mesh LOD needs a finite, non-negative error.", nameof(Lods));
                 RequireIndices(lod.Index, count, nameof(Lods));
             }
+        ValidateSurfacePatternVertices(count);
+    }
+
+    private void ValidateSurfacePatternVertices(int count)
+    {
+        if (Material.Spec.SurfacePattern is null) return;
+        if (Shader is not null || Variant is not null ||
+            Custom0 is not null || Custom1 is not null || Custom2 is not null || DecalBaseColorIndices is not null)
+            throw new ArgumentException("Surface patterns cannot reinterpret shader, variant, decal or custom payloads.");
+        // Existing VF-A semantic bits: interior=1 (above), decal=PaletteEncoding.DecalFlag.
+        const byte interiorFlag = 1;
+        if (Flags is not null && Flags.Any(value => (value & (interiorFlag | PaletteEncoding.DecalFlag)) != 0))
+            throw new ArgumentException("Surface patterns require ordinary outdoor, non-decal faces.", nameof(Flags));
+        if (Uv is null || Uv2 is null)
+            throw new ArgumentException("Surface patterns require metre UV and explicit gate/K UV2 on every vertex.");
+        for (var vertex = 0; vertex < count; vertex++)
+        {
+            var gate = Uv2[vertex * 2];
+            var zone = Uv2[vertex * 2 + 1];
+            if (gate is not (0f or 1f) || zone < 0f || zone > 5f || zone != (int)zone ||
+                (gate == 1f && zone is not (1f or 2f or 3f)))
+                throw new ArgumentException("Surface UV2 requires gate=0/1, integer K=0..5; enabled faces require K1..K3.", nameof(Uv2));
+        }
+        CheckTriangles(Index);
+        if (Lods is not null)
+            foreach (var lod in Lods) CheckTriangles(lod.Index);
+
+        void CheckTriangles(int[] indices)
+        {
+            for (var i = 0; i < indices.Length; i += 3)
+            {
+                var first = indices[i] * 2;
+                for (var corner = 1; corner < 3; corner++)
+                {
+                    var other = indices[i + corner] * 2;
+                    if (Uv2[first] != Uv2[other] || Uv2[first + 1] != Uv2[other + 1])
+                        throw new ArgumentException("Surface gate/K must be constant on every base and LOD triangle.", nameof(Uv2));
+                }
+            }
+        }
     }
 
     private static void RequireLength(Array? values, int expected, string name)

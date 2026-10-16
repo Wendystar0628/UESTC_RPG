@@ -38,6 +38,8 @@ public sealed class BakedSurface
         VariantTag? variant = null, bool ignoreOcclusionCulling = false)
     {
         ArgumentNullException.ThrowIfNull(material.Spec);
+        if (material.Spec.SurfacePattern is not null)
+            throw new NotSupportedException("Surface-pattern bake encoding, fp32 UV2 and its format ABI are not implemented.");
         if (!Enum.IsDefined(primitive)) throw new ArgumentOutOfRangeException(nameof(primitive));
         if (vertexCount is < 0 or > 65536) throw new ArgumentOutOfRangeException(nameof(vertexCount));
         if (vertexCount > 0 && vertexData.IsEmpty) throw new ArgumentException("A non-empty surface needs vertex bytes.", nameof(vertexData));
