@@ -260,6 +260,168 @@ public sealed class WeatherProcessTests
         Check(a.Capture(Map).LeftAtHours == 13, "Normal Leave should resume after Enter.");
     }
 
+    [TestCase]
+    public void CaptureAtUsesTheLatestMomentWithoutChangingLiveState()
+    {
+        var source = new Source(Profile);
+        var process = new WeatherProcess(source);
+        var boot = WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-queue"] = "clear:60,cloudy:120,clear:60" }, 73, Season.Autumn);
+        process.Reset(boot); process.Enter(Map, "test", 0); process.Step(Tick(0));
+        process.Step(Tick(.5) with { TargetHours = 1 });
+        var before = process.Capture(Map);
+        var beforeNow = process.Now;
+        var beforeSelection = process.Selection;
+        var beforeAhead = process.Ahead.ToArray();
+        bool beforeTransition = process.Transitioning;
+        var section = new WeatherMapSection(process, new TestMaps(), source);
+        var moment = new WorldSaveMoment(1.5, 0, Season.Autumn, 60);
+        var context = new CaptureContext(SaveReason.Quit, Map, true) { Moment = moment };
+        var saved = section.Capture(in context);
+        Check(saved.LeftAtHours == 1.5 && saved.Selection.Kind == WeatherKind.Cloudy,
+            "CaptureAt reused the old tick target instead of the HUD's latest save moment.");
+        double future = before.QueueFromHours + before.Queue.Sum(q => q.Minutes) / 60 + 48;
+        var later = new WorldSaveMoment(future, 0, Season.Autumn, 1440);
+        var futureSave = process.CaptureAt(Map, in later);
+        Check(futureSave.LeftAtHours == future, "Pure capture did not extend its private forecast.");
+        Check(SnapshotJson(before) == SnapshotJson(process.Capture(Map)), "CaptureAt changed live queue/counters/windows.");
+        Check(process.Now == beforeNow && process.Selection == beforeSelection && process.Ahead.SequenceEqual(beforeAhead) &&
+            process.Transitioning == beforeTransition && process.Seed == 73, "CaptureAt changed live weather or transition state.");
+        var resumed = Create(73, Season.Autumn, Profile);
+        resumed.Restore(Map, JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
+        for (int i = 0; i < 200; i++)
+        {
+            double hours = 1.5 + i * .137;
+            process.Step(Tick(hours)); resumed.Step(Tick(hours));
+            Equal(process, resumed);
+        }
+    }
+
+    [TestCase]
+    public void CaptureAtKeepsInactiveMapsFrozen()
+    {
+        var source = new Source(Profile);
+        var process = Create(27, Season.Autumn, Profile);
+        process.Step(Tick(12)); process.Leave(Map, 12);
+        var other = new MapId("weather-test-b");
+        process.Enter(other, "test", 12); process.Step(Tick(12));
+        string inactive = SnapshotJson(process.Capture(Map));
+        string active = SnapshotJson(process.Capture(other));
+        var moment = new WorldSaveMoment(150, 2, Season.Winter, 1440);
+        Check(inactive == SnapshotJson(process.CaptureAt(Map, in moment)), "Inactive map advanced or reseasoned to the global moment.");
+        var section = new WeatherMapSection(process, new TestMaps(other), source);
+        var context = new CaptureContext(SaveReason.Quit, Map, true) { Moment = moment };
+        Check(inactive == SnapshotJson(section.Capture(in context)), "Per-map save section ignored its frozen map time.");
+        Check(active == SnapshotJson(process.Capture(other)), "Inactive capture changed the active map.");
+    }
+
+    [TestCase]
+    public void CaptureAtSeasonProjectionIsPureAndResumesAtTheSameEndpoint()
+    {
+        var profile = Profile;
+        var process = Create(9, Season.Summer, profile);
+        process.Select(new(WeatherMode.Manual, WeatherKind.Thunderstorm, .8f));
+        process.Step(Tick(0, Season.Summer) with { RealDt = .1 });
+        string before = SnapshotJson(process.Capture(Map));
+        var beforeNow = process.Now;
+        var moment = new WorldSaveMoment(2, 1.25, Season.Winter, 0);
+        var saved = process.CaptureAt(Map, in moment);
+        Check(saved.LeftAtHours == 2 && saved.Season == Season.Winter && saved.ClockOffset == 1.25 &&
+            saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1,
+            "Save moment's season/offset were not applied to the private snapshot.");
+        Check(before == SnapshotJson(process.Capture(Map)) && process.Now == beforeNow && process.Transitioning,
+            "Season prediction changed live state or completed its blend.");
+        var resumed = Create(9, Season.Winter, profile);
+        resumed.Restore(Map, JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
+        process.Reseason(0, Season.Winter, 1.25);
+        for (int i = 0; i < 100; i++)
+        {
+            var tick = Tick(2 + i * .17, Season.Winter) with { ClockOffset = 1.25 };
+            process.Step(tick); resumed.Step(tick);
+            Equal(process, resumed);
+        }
+    }
+
+    [TestCase]
+    public void InitialQuietWaitsForWinterBindingAndPreservesBootWet()
+    {
+        var process = new WeatherProcess(new Source(Profile));
+        process.Reset(new(83, Wet: .37f));
+        process.Enter(Map, "test", 6);
+        double until = WeatherRules.QuietEnd(6, .75, Season.Winter);
+        process.Quiet(6, until);
+        Check(process.Ahead.Count == 0 && process.Transitioning, "Initial Quiet generated weather before binding the first season.");
+        var tick = Tick(6, Season.Winter) with { ClockOffset = .75, FlowRate = 0, RealDt = .1 };
+        process.Step(tick);
+        var saved = process.Capture(Map);
+        Check(saved.Season == Season.Winter && saved.ClockOffset == .75 && saved.QuietUntilHours == until,
+            "Initial Quiet used the placeholder autumn season or offset.");
+        Check(saved.Queue.All(q => WeatherRules.IsNative(q.Kind, Season.Winter)) && saved.WetOverride == .37f &&
+            process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Clear }, "Boot options overwrote Quiet or lost the explicit wet value.");
+        process.Step(tick with { RealDt = 2.8 });
+        Check(process.Transitioning && process.Now.Wet < .37f, "Initial Quiet shortened the three-second blend.");
+        process.Step(tick with { RealDt = .11 });
+        Check(!process.Transitioning && process.Now.Wet == .37f, "Initial Quiet did not settle after three real seconds.");
+    }
+
+    [TestCase]
+    public void InitialSnowPinWaitsForBindingAndKeepsTheFullBlend()
+    {
+        var process = new WeatherProcess(new Source(Profile));
+        process.Reset(new(84, Intensity: .8f, Wet: .37f));
+        process.Enter(Map, "test", 6);
+        process.Pin(6, WeatherKind.Snow, .4f, 5.5, 8);
+        Check(process.Ahead.Count == 0 && process.Transitioning, "Initial Pin must record its policy without generating autumn weather.");
+        var moment = new WorldSaveMoment(6, .25, Season.Winter, 0);
+        var projected = process.CaptureAt(Map, in moment);
+        Check(projected.Selection is { Kind: WeatherKind.Snow, Intensity: .8f } && projected.WetOverride == .37f &&
+            process.Ahead.Count == 0 && process.Now.Precip == 0 && process.Transitioning,
+            "Initial-policy CaptureAt consumed live pending state or omitted boot parameters.");
+        var tick = Tick(6, Season.Winter) with { ClockOffset = .25, FlowRate = 0, RealDt = .5 };
+        process.Step(tick);
+        Check(process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .8f } &&
+            process.Now.PrecipKind is > 0 and < 1 && process.Transitioning, "Initial snow Pin did not begin its real-time blend.");
+        process.Step(tick with { RealDt = 2.4 });
+        Check(process.Transitioning && process.Now.PrecipKind < 1, "Initial Pin settled before three seconds.");
+        process.Step(tick with { RealDt = .11 });
+        Check(!process.Transitioning && process.Now.PrecipKind == 1 &&
+            SnapshotJson(projected) == SnapshotJson(process.Capture(Map)), "Initial Pin's actual endpoint differs from its pure snapshot.");
+        process.Pin(6, WeatherKind.Clear, null, 6, 8);
+        process.Step(tick with { RealDt = .1 });
+        process.Step(tick with { RealDt = 2.8 });
+        Check(process.Transitioning && process.Now.PrecipKind > 0, "A normal initialized Pin lost its three-second blend.");
+        process.Step(tick with { RealDt = .11 });
+        Check(!process.Transitioning && process.Now.PrecipKind == 0, "Normal initialized Pin did not settle.");
+    }
+
+    [TestCase]
+    public void InitialDefaultsNeverDiscardExplicitWeatherQueueOrRemainingParameters()
+    {
+        var profile = Profile;
+        (WeatherBoot Boot, Season Season, WeatherKind First, double? Minutes)[] cases =
+        [
+            (new(85, WeatherKind.Snow, .82f, .27f), Season.Winter, WeatherKind.Snow, null),
+            (new(85, WeatherKind.Snow, .82f, .27f, 90), Season.Winter, WeatherKind.Snow, 90),
+            (new(85, Intensity: .82f, Wet: .27f, Queue: new[]
+            {
+                new WeatherQueueItem(WeatherKind.Cloudy, 30), new WeatherQueueItem(WeatherKind.Rain, 90),
+                new WeatherQueueItem(WeatherKind.AfterRain, 45)
+            }), Season.Autumn, WeatherKind.Cloudy, 30)
+        ];
+        foreach (var test in cases)
+        {
+            var process = new WeatherProcess(new Source(profile));
+            process.Reset(test.Boot); process.Enter(Map, "test", 6);
+            process.Quiet(6, WeatherRules.QuietEnd(6, 0, test.Season));
+            process.Step(Tick(6, test.Season));
+            var saved = process.Capture(Map);
+            Check(saved.Selection.Kind == test.First && saved.Selection.Intensity == .82f && saved.WetOverride == .27f &&
+                saved.QuietUntilHours == 0, "A map default consumed explicit boot weather or scalar arguments.");
+            if (test.Minutes is { } minutes)
+                Check(saved.Queue[0].Kind == test.First && saved.Queue[0].Minutes == minutes && saved.Queue[0].Intensity == .82f,
+                    "A default policy replaced the explicit queue/remaining duration.");
+        }
+    }
+
     private static WeatherProcess Create(uint seed, Season season, WeatherProfile profile)
     {
         var p = new WeatherProcess(new Source(profile));
@@ -275,6 +437,7 @@ public sealed class WeatherProcessTests
         Check(sa == sb, "Captured weather state differs.");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    private static string SnapshotJson(WeatherProcessState state) => JsonSerializer.Serialize(state, TestJson.Contract.WeatherProcessState);
     private static float Distance(WeatherVec a, WeatherVec b) => new[]
     {
         Math.Abs(a.Cloud - b.Cloud), Math.Abs(a.CloudType - b.CloudType), Math.Abs(a.Cb - b.Cb),
@@ -289,11 +452,11 @@ public sealed class WeatherProcessTests
         throw new InvalidOperationException("Invalid input was accepted.");
     }
     private sealed class Source(WeatherProfile profile) : IWeatherProfileSource { public WeatherProfile Load(string name) => profile; }
-    private sealed class TestMaps : IMapService
+    private sealed class TestMaps(MapId? current = null) : IMapService
     {
         public long Rev => 1;
         public MapId Default => Map;
-        public MapId Current => Map;
+        public MapId Current => current ?? Map;
         public IMapContext? Context => null;
         public IMapTransition? Transition => null;
         public IReadOnlyList<MapVisit> Visits => Array.Empty<MapVisit>();

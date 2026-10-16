@@ -23,7 +23,8 @@ public sealed class WeatherMapSection(WeatherProcess weather, IMapService maps, 
 {
     public JsonTypeInfo<WeatherProcessState> TypeInfo => WeatherJsonContext.Contract.WeatherProcessState;
     public bool IsSettled => !weather.Transitioning;
-    public WeatherProcessState Capture(in CaptureContext c) => weather.Capture(c.Map);
+    public WeatherProcessState Capture(in CaptureContext c) => c.Map == maps.Current && c.Moment is { } moment
+        ? weather.CaptureAt(c.Map, in moment) : weather.Capture(c.Map);
     public void Restore(WeatherProcessState dto, RestoreContext c)
     {
         if (dto.Map != c.Map) throw new InvalidDataException("Weather section belongs to a different map.");

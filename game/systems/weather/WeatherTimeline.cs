@@ -3,6 +3,9 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Weather;
 
+internal sealed record WeatherInitialPolicy(double WorldHours, double UntilHours,
+    WeatherKind? Kind = null, float? Intensity = null, double? FromHours = null);
+
 /// <summary>A whole event is committed at once: look-ahead refill cadence cannot consume random draws.</summary>
 internal sealed class WeatherTimeline(MapId map, WeatherProfile profile, Season season, double hours)
 {
@@ -22,6 +25,30 @@ internal sealed class WeatherTimeline(MapId map, WeatherProfile profile, Season 
     public float? PinIntensity;
     public double QuietUntil;
     public float? WetOverride;
+    public WeatherInitialPolicy? InitialPolicy;
+
+    public WeatherTimeline Copy()
+    {
+        var copy = new WeatherTimeline(Map, Profile, Season, Hours)
+        {
+            ClockOffset = ClockOffset,
+            Epoch = Epoch,
+            Segment = Segment,
+            Attempt = Attempt,
+            Selection = Selection,
+            PinFrom = PinFrom,
+            PinTo = PinTo,
+            PinKind = PinKind,
+            PinIntensity = PinIntensity,
+            QuietUntil = QuietUntil,
+            WetOverride = WetOverride,
+            InitialPolicy = InitialPolicy
+        };
+        // Preserve the canonical durations and already-normalized endpoints bit for bit.
+        copy.Queue.AddRange(Queue);
+        copy.Minutes.AddRange(Minutes);
+        return copy;
+    }
 
     public void Ensure(uint seed, double horizon)
     {

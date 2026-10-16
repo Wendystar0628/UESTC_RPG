@@ -20,7 +20,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
     public WeatherVec Now { get; private set; } = WeatherVectors.For(WeatherKind.Clear, 1);
     public IReadOnlyList<WeatherSpan> Ahead => _ahead;
     public uint Seed { get; private set; }
-    public bool Transitioning => _blendElapsed < 3 || _jumpTo.HasValue;
+    public bool Transitioning => _blendElapsed < 3 || _jumpTo.HasValue || _current?.InitialPolicy is not null;
 
     public bool IsNative(WeatherKind k, Season s) => WeatherRules.IsNative(k, s);
 
@@ -66,6 +66,8 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
             state.Season = t.Season;
             state.ClockOffset = t.ClockOffset;
         }
+        state.Hours = t.WorldHours;
+        if (ApplyInitialPolicy(state, _boot)) BeginBlend();
         state.Hours = t.WorldHours;
         if (_boot is { } boot)
         {
@@ -129,20 +131,8 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         WeatherRules.ValidateSeason(to);
         var state = Current(worldHours);
         if (worldHours < state.Hours) throw new ArgumentOutOfRangeException(nameof(worldHours));
-        state.Ensure(Seed, worldHours + 24);
-        var current = state.SelectionAt(worldHours);
-        var kind = WeatherRules.MapToSeason(current.Kind, to);
-        float intensity = current.Kind == WeatherKind.Thunderstorm && kind != current.Kind ? 1 : current.Intensity;
-        var oldSpan = state.At(worldHours);
         BeginBlend();
-        state.Hours = worldHours;
-        state.Season = to;
-        state.ClockOffset = clockOffset;
-        state.WetOverride = null;
-        state.Selection = current with { Kind = kind, Intensity = intensity };
-        if (state.PinKind is { } pin) state.PinKind = WeatherRules.MapToSeason(pin, to);
-        Restart(state, worldHours, kind, intensity, Math.Max(worldHours + WeatherRules.MinimumHours(kind), oldSpan.ToHours));
-        state.Ensure(Seed, worldHours + 24);
+        ReseasonTimeline(state, worldHours, to, clockOffset);
         Selection = state.SelectionAt(worldHours);
         RefreshAhead(state, worldHours);
     }
@@ -153,16 +143,13 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         ValidateHours(untilHours);
         if (untilHours < worldHours) throw new ArgumentOutOfRangeException(nameof(untilHours));
         var state = Current(worldHours);
+        if (state.Queue.Count == 0)
+        {
+            state.InitialPolicy = new(worldHours, untilHours);
+            return;
+        }
         BeginBlend();
-        state.Hours = worldHours;
-        state.Selection = new(WeatherMode.Auto, WeatherKind.Clear, 1);
-        state.PinFrom = state.PinTo = null;
-        state.PinKind = null;
-        state.PinIntensity = null;
-        state.WetOverride = null;
-        state.QuietUntil = untilHours;
-        Restart(state, worldHours, WeatherKind.Clear, 1, Math.Max(untilHours, worldHours + state.Profile.ClearGapHours));
-        state.Ensure(Seed, worldHours + 24);
+        QuietTimeline(state, worldHours, untilHours);
         Selection = state.Selection;
         RefreshAhead(state, worldHours);
     }
@@ -173,10 +160,25 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         if (!double.IsFinite(fromHours) || !double.IsFinite(toHours) || toHours <= fromHours || toHours <= worldHours)
             throw new ArgumentOutOfRangeException(nameof(toHours));
         var state = Current(worldHours);
-        if (!IsNative(k, state.Season)) throw new ArgumentException("Pinned weather is not native to the target season.", nameof(k));
+        _ = WeatherRules.DefaultIntensity(k);
         float strength = intensity ?? WeatherRules.DefaultIntensity(k);
         WeatherRules.ValidateIntensity(strength);
+        if (state.Queue.Count == 0)
+        {
+            state.InitialPolicy = new(worldHours, toHours, k, intensity, fromHours);
+            return;
+        }
+        if (!IsNative(k, state.Season)) throw new ArgumentException("Pinned weather is not native to the target season.", nameof(k));
         BeginBlend();
+        PinTimeline(state, worldHours, k, strength, fromHours, toHours);
+        Selection = state.SelectionAt(worldHours);
+        RefreshAhead(state, worldHours);
+    }
+
+    private void PinTimeline(WeatherTimeline state, double worldHours, WeatherKind k, float strength, double fromHours, double toHours)
+    {
+        if (!IsNative(k, state.Season)) throw new ArgumentException("Pinned weather is not native to the target season.", nameof(k));
+        WeatherRules.ValidateIntensity(strength);
         state.Hours = worldHours;
         state.Selection = new(WeatherMode.Auto, k, strength);
         state.QuietUntil = 0;
@@ -193,8 +195,6 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         state.Add(new(start, end, k, strength));
         ReturnToClear(state, end, k);
         state.Ensure(Seed, worldHours + 24);
-        Selection = state.SelectionAt(worldHours);
-        RefreshAhead(state, worldHours);
     }
 
     public void Enter(MapId map, string profile, double worldHours)
@@ -236,13 +236,44 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
     {
         if (!_maps.TryGetValue(map, out var state)) throw new ArgumentException("Weather map has not been entered.", nameof(map));
         double hours = state == _current && _jumpTo.HasValue ? _jumpTo.Value : state.Hours;
+        return Snapshot(state.Copy(), hours);
+    }
+
+    public WeatherProcessState CaptureAt(MapId map, in WorldSaveMoment moment)
+    {
+        if (!_maps.TryGetValue(map, out var state)) throw new ArgumentException("Weather map has not been entered.", nameof(map));
+        // An inactive map owns its frozen clock and season; a global save moment must not advance it.
+        if (state != _current) return Snapshot(state.Copy(), state.Hours);
+        ValidateHours(moment.WorldHours);
+        if (moment.WorldHours < state.Hours || !double.IsFinite(moment.ClockOffset) ||
+            moment.FlowRate is not (0 or 1 or 10 or 60 or 360 or 1440))
+            throw new ArgumentOutOfRangeException(nameof(moment));
+        WeatherRules.ValidateSeason(moment.Season);
+        var snapshot = state.Copy();
+        if (snapshot.Queue.Count == 0)
+        {
+            snapshot.Hours = moment.WorldHours;
+            snapshot.Season = moment.Season;
+            snapshot.ClockOffset = moment.ClockOffset;
+            ApplyInitialPolicy(snapshot, _boot);
+            if (_boot is { } boot) ApplyBoot(snapshot, boot);
+        }
+        else if (snapshot.Season != moment.Season || snapshot.ClockOffset != moment.ClockOffset)
+            ReseasonTimeline(snapshot, snapshot.Hours, moment.Season, moment.ClockOffset);
+        return Snapshot(snapshot, moment.WorldHours);
+    }
+
+    private WeatherProcessState Snapshot(WeatherTimeline state, double hours)
+    {
+        if (state.InitialPolicy is not null)
+            throw new InvalidOperationException("Initial weather policy needs the first Step or an active-map CaptureAt save moment.");
         state.Ensure(Seed, hours + 24);
         var settled = Vector(state, hours);
         int first = 0;
         while (first + 1 < state.Queue.Count && state.Queue[first + 1].ToHours < hours - 24) first++;
         var items = state.Queue.Skip(first).Select((span, i) => new WeatherQueueItem(span.Kind, state.Minutes[first + i]) { Intensity = span.Intensity }).ToArray();
         if (items.Length > 256) throw new InvalidDataException("Weather snapshot exceeds the 256-item queue limit.");
-        return new(map, state.Epoch, state.Segment, state.SelectionAt(hours), Array.AsReadOnly(items), state.Queue[first].FromHours,
+        return new(state.Map, state.Epoch, state.Segment, state.SelectionAt(hours), Array.AsReadOnly(items), state.Queue[first].FromHours,
             state.PinFrom, state.PinTo, state.PinKind, state.PinIntensity, state.QuietUntil, settled.Wet, settled.Puddle, hours)
         {
             Attempt = state.Attempt,
@@ -316,6 +347,55 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         _blendFrom = Now;
         _blendElapsed = 0;
         _jumpFrom = _jumpTo = null;
+    }
+
+    private bool ApplyInitialPolicy(WeatherTimeline state, WeatherBoot? boot)
+    {
+        if (state.InitialPolicy is not { } policy) return false;
+        // Explicit boot weather keeps every supplied parameter and overrides map defaults.
+        if (boot is { Kind: not null } || boot is { Queue: not null } || boot is { RemainingMinutes: not null })
+        {
+            state.InitialPolicy = null;
+            return false;
+        }
+        if (policy.Kind is { } kind)
+        {
+            float intensity = boot?.Intensity ?? policy.Intensity ?? WeatherRules.DefaultIntensity(kind);
+            PinTimeline(state, policy.WorldHours, kind, intensity, policy.FromHours!.Value, policy.UntilHours);
+        }
+        else QuietTimeline(state, policy.WorldHours, policy.UntilHours);
+        state.InitialPolicy = null;
+        return true;
+    }
+
+    private void QuietTimeline(WeatherTimeline state, double worldHours, double untilHours)
+    {
+        state.Hours = worldHours;
+        state.Selection = new(WeatherMode.Auto, WeatherKind.Clear, 1);
+        state.PinFrom = state.PinTo = null;
+        state.PinKind = null;
+        state.PinIntensity = null;
+        state.WetOverride = null;
+        state.QuietUntil = untilHours;
+        Restart(state, worldHours, WeatherKind.Clear, 1, Math.Max(untilHours, worldHours + state.Profile.ClearGapHours));
+        state.Ensure(Seed, worldHours + 24);
+    }
+
+    private void ReseasonTimeline(WeatherTimeline state, double worldHours, Season to, double clockOffset)
+    {
+        state.Ensure(Seed, worldHours + 24);
+        var current = state.SelectionAt(worldHours);
+        var kind = WeatherRules.MapToSeason(current.Kind, to);
+        float intensity = current.Kind == WeatherKind.Thunderstorm && kind != current.Kind ? 1 : current.Intensity;
+        var oldSpan = state.At(worldHours);
+        state.Hours = worldHours;
+        state.Season = to;
+        state.ClockOffset = clockOffset;
+        state.WetOverride = null;
+        state.Selection = current with { Kind = kind, Intensity = intensity };
+        if (state.PinKind is { } pin) state.PinKind = WeatherRules.MapToSeason(pin, to);
+        Restart(state, worldHours, kind, intensity, Math.Max(worldHours + WeatherRules.MinimumHours(kind), oldSpan.ToHours));
+        state.Ensure(Seed, worldHours + 24);
     }
 
     private static void Restart(WeatherTimeline state, double hours, WeatherKind kind, float intensity, double until)
