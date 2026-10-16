@@ -5,10 +5,13 @@ using Campus.Gen.World;
 using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.CenterEast.Pinxue;
 using Campus.Gen.Zones.CenterEast.Research;
+using Campus.Gen.Zones.CenterEast.Wenke;
 using GdUnit4;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
+using F = Campus.Gen.Zones.CenterEast.CenterEastTune.Friendship;
+using K = Campus.Gen.Zones.CenterEast.CenterEastTune.Wenke;
 
 namespace Campus.Gen.Zones.CenterEast.Tests;
 
@@ -46,7 +49,7 @@ public sealed class CenterEastModuleTests
         var world = World();
         var module = new CenterEastModule();
         var claims = module.Claims.OfType<FeatureClaim>().ToDictionary(c => c.Feature.Value, StringComparer.Ordinal);
-        Require(module.Claims.Count == 4 && claims.Count == 4, "品学楼's frame entity and the three research buildings are claimed, once each");
+        Require(module.Claims.Count == 5 && claims.Count == 5, "品学楼's frame entity, the three research buildings and 文科楼群 are claimed, once each");
         foreach (var claim in claims.Values)
         {
             Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
@@ -61,6 +64,10 @@ public sealed class CenterEastModuleTests
             var hall = site.Entity switch { R.KeA => R.KeAHall, R.KeB => R.KeBHall, _ => R.KeCHall };
             Require(Parts(site.Entity).SequenceEqual(site.Blocks.Select(b => b.Source).Append(hall).OrderBy(s => s, StringComparer.Ordinal)), $"{site.Id} builds every part of {site.Entity}");
         }
+        // 文科楼群: every building part is one of the site's blocks; the only other part is the site outline itself.
+        var wenke = world.Features[new(K.Entity)].Parts;
+        Require(wenke.Where(p => p.SourceId != "osm:way:883187548").Select(p => p.SourceId).OrderBy(s => s, StringComparer.Ordinal)
+            .SequenceEqual(K.Blocks.Select(b => b.Part).OrderBy(s => s, StringComparer.Ordinal)), "文科楼群's five buildings are the site's five blocks");
     }
 
     [TestCase]
@@ -301,6 +308,50 @@ public sealed class CenterEastModuleTests
         bool world(FeatureId id) => ctx.World.Features.ContainsKey(id);
     }
 
+    [TestCase]
+    public void WenkeStandsTerracedWithOneShutDoorAndAClearForecourt()
+    {
+        var ctx = Context();
+        var plan = WenkeSite.Footprints(ctx.World);
+        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs(PlanMath.SignedArea2(ring)) * 0.5f;
+        WenkeSite.Block Block(string part) => plan.Blocks.Single(b => b.Part == part);
+        Require(Block(K.Tower).Storeys == 15 && WenkeSite.Floor(15) + K.Parapet > 58f, "the tower stands fifteen storeys, about 60 m");
+        // The wings step back toward their tips: each top storey is smaller than its ground storey, with planted terraces between.
+        foreach (var part in new[] { K.South, K.West, K.North })
+        {
+            var block = Block(part);
+            Require(Area(block.Outlines[^1]) < 0.8f * Area(block.Outlines[0]), $"{part} steps back toward its tip");
+            Require(Enumerable.Range(1, block.Storeys - 1).Any(k => WenkeSite.Terraces(plan, block, k).Any()), $"{part} has terraces");
+        }
+        Require(Block(K.Tower).Rows.Skip(K.PanelStripFrom).All(r => r.Any(c => c.Kind == WenkeSite.CellKind.Panel)), "the yellow-green strip runs up the tower");
+        Require(plan.Blocks.All(b => b.Rows.All(r => r.Count(c => c.Kind == WenkeSite.CellKind.Window) > 0)), "every storey of every block shows glass");
+        // One shut entrance at the atrium porch; nothing but paving within 2.5 m outside it.
+        var module = new CenterEastModule([new WenkeSite(), new WenkeForecourtSite()]);
+        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every 文科楼 collider fills its foot material");
+        var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
+        Require(shut.Length == 1 && Vector2.Distance((shut[0].A + shut[0].B) * 0.5f, K.DoorAt) < K.PorchDepth + 0.5f, "one shut glass entrance at the atrium porch");
+        var outside = WenkeSite.Door.P(0, K.PorchDepth);
+        foreach (var box in colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Prop))
+            Require(Vector2.Distance(new(box.At.M41, box.At.M43), outside) > 2.5f + box.Half.X + box.Half.Z, "nothing stands within 2.5 m outside the door");
+        foreach (var post in colliders.OfType<PostCollider>())
+            Require(Vector2.Distance(post.C, outside) > 2.5f + post.R, "no stake within 2.5 m outside the door");
+        // The overlay registers what is built.
+        var world = ctx.World;
+        IReadOnlyList<Vector2> Outline(string id) => ((PolygonGeometry)world.Features[new(id)].Geometry).Rings.Outer;
+        Vector2 Point(string id) => world.Features[new(id)].Geometry is PointGeometry p ? new(p.Position.X, p.Position.Z) : throw new InvalidOperationException($"{id} is a point");
+        foreach (var (id, ring) in new[] { ("design:center-east-wenke-forecourt", WenkeForecourtSite.ForecourtRing), ("design:center-east-wenke-walk", WenkeForecourtSite.WalkRing) })
+            Require(Outline(id).Count == 4 && Outline(id).All(p => ring.Any(q => Vector2.Distance(p, q) < 0.05f)), $"{id} outline matches the built paving");
+        Require(Vector2.Distance(Point("design:center-east-wenke-friendship-tree"), F.TreeAt) < 0.02f, "overlay and tune agree on the friendship tree");
+        Require(Vector2.Distance(Point("design:center-east-wenke-friendship-stone"), F.StoneAt) < 0.02f, "overlay and tune agree on the stone");
+        var vault = Outline("design:center-east-wenke-atrium-roof");
+        Require(MathF.Abs(Area(vault) - MathF.PI * K.AtriumHalf.X * K.AtriumHalf.Y) < 0.05f * Area(vault), "the registered atrium roof matches the vault");
+        Require(PlanMath.Inside(Block(K.Hub).Outlines[^1], K.AtriumCentre), "the vault stands on the hub");
+        // The emblem sits on the stone's dressed face with stone round it.
+        foreach (var (x, y) in new[] { (-F.EmblemRadius, F.EmblemY), (F.EmblemRadius, F.EmblemY), (0f, F.EmblemY - F.EmblemRadius), (0f, F.EmblemY + F.EmblemRadius) })
+            Require(F.Stone.OnDressedFace(x, y, 0.03f), $"emblem edge ({x}, {y}) is on the dressed face");
+    }
+
     private static byte[] Bytes(BuildContext ctx)
     {
         var module = new CenterEastModule(CenterEastSites.All.ToArray());
@@ -342,11 +393,12 @@ public sealed class CenterEastModuleTests
         var world = World();
         var layouts = new CenterEastModule().DescribeWindowLayouts(world, 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
         string Keys(string feature) => string.Join(",", layouts[feature].Select(g => g.Key));
-        Require(layouts.Count == 4, $"four Facade-claimed features declare layouts, got {layouts.Count}");
+        Require(layouts.Count == 5, $"five Facade-claimed features declare layouts, got {layouts.Count}");
         Require(Keys(P.Complex) == "beam,bridge-ac,bridge-bc" && layouts[P.Complex].All(g => g.Rows == 2), $"品学楼 bridges: {Keys(P.Complex)}");
         Require(Keys(R.KeA) == "main,west" && Keys(R.KeB) == "attic,main,middle,west" && Keys(R.KeC) == "bar,link", "research grids by block");
         Require(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0 && g.Rows > 0), "every grid has cells");
         Require(layouts[R.KeB].Single(g => g.Key == "attic").Rows == 1 && layouts[R.KeA].All(g => g.Rows == R.Storeys), "five storeys, one attic row");
+        Require(Keys(K.Entity) == "hub,north,south,tower,west" && layouts[K.Entity].Single(g => g.Key == "tower").Rows == 15, $"文科楼 grids by block: {Keys(K.Entity)}");
         var envelope = new CenterEastModule().DescribeWindowLayouts(new EnvelopeWorld(world), 1);
         Require(envelope.All(l => l.Grids.SequenceEqual(layouts[l.Feature.Value])) && envelope.Count == layouts.Count, "the envelope view declares the same grids");
     }

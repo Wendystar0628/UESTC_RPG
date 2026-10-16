@@ -182,6 +182,51 @@
       "height": 0.05,
       "props": {"statue": "qsh:node:7878394896", "material": "ground.paver", "kerb": 0.2, "joins": "qsh:source:way:572670136"},
       "reason": "设计增补（MAP-QSH-ADDITIONS §0 R6 的入口停点）：雕像草坪东缘一块 8.2 × 8.8 m 的花岗岩铺装台，东边贴着草坪边的步道 572670136，麦克斯韦像与方程石都站在上面，人可以走到像前读石；草坪中间照样留空。高出草面 5 cm，浅色石条收边。默认状态长影铺在台面上；夜间灯下；台面接季（落叶、花瓣、积雪）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-atrium-roof",
+      "kind": "atrium-roof",
+      "geometry": {"type": "polygon", "rings": {"outer": [[371.74, 101.67], [373.14, 106.06], [372.09, 111.35], [368.74, 116.75], [363.6, 121.42], [357.46, 124.65], [351.24, 125.96], [345.91, 125.15], [342.26, 122.33], [340.86, 117.94], [341.91, 112.65], [345.26, 107.25], [350.4, 102.58], [356.54, 99.35], [362.76, 98.04], [368.09, 98.85]], "holes": []}},
+      "height": 5.1,
+      "props": {"building": "qsh:way:883187548", "part": "osm:way:1431090638", "centre": [357.0, 112.0], "axis": [0.819, -0.574], "half": [18.0, 11.5], "rise": 4.5, "curb": 0.6, "ribs": 16, "rings": 2, "material": "glass", "frame": "frame.alu", "access": "屋顶不开放"},
+      "reason": "中庭外形（MAP-QSH-CENTER-EAST §3.2：中间是一个钢网架玻璃顶的中庭）：OSM 只有中部连接体 1431090638 的轮廓，没有屋顶形式。主线把中庭顶做成坐在连接体五层屋面上的一座椭圆低拱玻璃顶，长半轴 18 m、短半轴 11.5 m，拱高 4.5 m，下有 0.6 m 白色石沿，16 道经向肋加两道环肋（铝框色），不画施工网架（§3.3）。默认状态反天，拱顶映出黄昏天色；夜间反天（映出夜空和塔楼窗灯）；冬季拱顶积雪约一半。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-forecourt",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[392.56, 121.36], [408.45, 109.21], [416.1, 119.22], [400.21, 131.37]], "holes": []}},
+      "height": 0.17,
+      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "kerb": 0.2, "door": [400.26, 114.97], "doorFacing": 142.6},
+      "reason": "设计增补（MAP-QSH-ADDITIONS §0 R6 的入口停点）：文科楼中庭东南入口（连接体朝东南的一面，夹在塔楼与南翼之间）门前一块 20 × 12.6 m 的花岗岩铺装，入口在草坪上原本没有铺地。门外 2.5 m 内不放任何东西；中庭门关着（§3.3），门厅卡归 WP-51。默认状态长影铺在台面上；夜间灯下；台面接季（落叶、花瓣、积雪）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-walk",
+      "kind": "paving",
+      "geometry": {"type": "polygon", "rings": {"outer": [[413.49, 113.5], [448.93, 122.25], [448.07, 125.75], [412.63, 117.0]], "holes": []}},
+      "height": 0.17,
+      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "width": 3.6, "from": "design:center-east-wenke-forecourt", "to": "qsh:source:way:544161582 与 544161568 的路口 (452.5, 123.8)"},
+      "reason": "设计增补：从中庭门前铺装东侧到东边路口的一条 3.6 m 花岗岩步道，长约 36.5 m，两侧石条收边，把门前停点接到 R5 往网球场去的路口；由本区建成铺装（不进路网，不改纵断面）。默认状态长影；夜间灯下；接季。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-friendship-tree",
+      "kind": "tree",
+      "geometry": {"type": "point", "position": [424.0, 0, 136.0]},
+      "height": 12.0,
+      "props": {"species": "camphor", "planter": "WP-23", "look": "新移栽的大树，看上去刚移栽", "stakes": "WP-21：三根木杆斜撑到树干 2.6 m 高处，杆脚离树 1.7 m", "wrap": "WP-21：树干 0.25–2.3 m 缠绿布（umbrella.graygreen），半径 0.25 m", "trunkRadius": 0.22},
+      "reason": "实物登记：友谊树（MAP-QSH-CENTER-EAST §3.4、WLD-VEGETATION：常绿香樟，新移栽）在 OSM 里没有点位。位置定在文科楼中庭东南入口前的草坪上，门前铺装和步道的南侧，离门约 30 m、不在门轴线上；旁边是 P14 的建议落点 (429.0, 141.5)，朝 65° 看训练馆筒拱和月出，塔楼不挡这条视线。树由 WP-23 种，三根撑杆和绿布由本区画；WP-23 的树干半径请不超过 0.22 m，绿布才包得住。默认状态树冠深绿、撑杆成三道斜影；夜间灯下；四季按香樟（冬季冠顶积雪，绿布和木杆露在外面）。"
+    },
+    {
+      "op": "add",
+      "id": "design:center-east-wenke-friendship-stone",
+      "kind": "landscape-stone",
+      "geometry": {"type": "point", "position": [419.6, 0, 133.2]},
+      "height": 1.05,
+      "props": {"tree": "design:center-east-wenke-friendship-tree", "size": [1.9, 1.0], "faceBearing": 300, "faceTilt": 15, "material": "wall.greyWhite", "inlay": "金色原创徽记（uestc.gold，ART-STYLE §11）", "text": "主线是圆形金色浮雕：圆盘、外环与八角形，电路走线留细节阶段"},
+      "reason": "实物登记：友谊树旁的花岗岩景观石，嵌金色原创徽记（MAP-QSH-CENTER-EAST §3.4、ART-STYLE §11），OSM 没有。约 1.9 × 1.0 m、高 1.05 m 的浅灰圆浑景石，前面凿出一块后仰 15° 的平面，徽记嵌在面中，刻面朝 300°，对着从门前铺装和步道过来的人，黄昏侧受光（R1）。默认状态受光（徽记金边一线高光）；夜间灯下；石顶接季。不是刻字石，不计入校内刻字景观石的数量。"
     }
   ]
 }
