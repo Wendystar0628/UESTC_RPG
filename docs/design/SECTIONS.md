@@ -482,7 +482,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 40.5k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN.md` · 40.6k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -498,10 +498,10 @@
   - WLD-TERRAIN §2.4 遮挡高度 · L117 · 325
   - WLD-TERRAIN §2.5 坡度类 · L124 · 519
   - WLD-TERRAIN §2.6 全图范围与零带 · L140 · 566
-- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 10.1k
+- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 10.2k
   - WLD-TERRAIN §3.1 文件与归属 · L149 · 614
   - WLD-TERRAIN §3.2 公共字段 · L157 · 440
-  - WLD-TERRAIN §3.3 操作词表 · L171 · 3.7k
+  - WLD-TERRAIN §3.3 操作词表 · L171 · 3.9k
   - WLD-TERRAIN §3.4 合成顺序与优先级 · L207 · 550
   - WLD-TERRAIN §3.5 坡度包络：坡度上限由构造保证 · L219 · 1.2k
   - WLD-TERRAIN §3.6 确定性写法 · L232 · 737
