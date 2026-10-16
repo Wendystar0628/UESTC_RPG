@@ -13,6 +13,13 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_d
 const vec2 GLASS_PANE_M = vec2(1.6, 1.9);   // 窗格的名义尺寸（m），室内视差用
 const float GLASS_STREAK = 0.55;            // 斜条强度（40%–70%）
 const float GLASS_STREAK_SLOPE = 0.75;      // 斜条方向：与竖直约成 37°
+// 大面积玻璃（连续的玻璃带、环厅、幕墙）的斜条只在稀疏的格子上出现，小窗每格都有：
+//   一格的面积（m²）由屏幕导数量出，达到 GLASS_SPARSE_AREA 算大面积；WP-14 普通窗一格至多约 5.1 m²（科研楼族），
+//   带形窗、幕墙族、体育馆环厅、科研楼石框网格都在 6.3 m² 以上。
+//   没有窗格编码的玻璃（列数 0）UV 是米、格子是 1 m 的瓷砖，一律算大面积，斜条改按 GLASS_LOOSE_CELL 见方的格子画。
+const float GLASS_SPARSE_AREA = 5.8;
+const float GLASS_SPARSE_STRIDE = 3.5;      // 大面积玻璃每行约 3.5 格一处斜条，相邻两处隔 2–6 格
+const float GLASS_LOOSE_CELL = 3.6;
 const float GLASS_REFLECT_MIN = 0.28;       // 正视时映天的比例
 const float GLASS_REFLECT_MAX = 0.85;       // 掠射时映天的比例
 const float GLASS_LAMP_DAY = 0.6;           // 白天亮窗的亮度（太阳高时）
@@ -29,6 +36,26 @@ const float GLASS_GLARE_GAIN = 1.25;        // 眩光的亮度（略超 1，让�
 
 float glass_band(float x, float c, float hw, float fw) {
 	return 1.0 - smoothstep(hw - fw, hw + fw, abs(x - c));
+}
+
+// 一格（UV 的单位格）的面积（m²）：平面上 UV 是位置的仿射函数，观察空间里像素脚印的面积比 UV 的面积比处处相同
+float glass_cell_area(vec2 uv, vec3 vpos) {
+	vec2 ux = dFdx(uv);
+	vec2 uy = dFdy(uv);
+	float det_uv = abs(ux.x * uy.y - ux.y * uy.x);
+	return length(cross(dFdx(vpos), dFdy(vpos))) / max(det_uv, 1e-12);
+}
+
+// 大面积玻璃上这一格画不画斜条：每行按 GLASS_SPARSE_STRIDE 分段（起点按行哈希错开），每段按哈希挑一格；
+// 不挑段里最后一格，所以两处之间至少隔一格
+bool glass_streak_pick(int col, uint row_key) {
+	float s = GLASS_SPARSE_STRIDE;
+	float phase = lamp_hash01(row_key) * s;
+	float k = floor((float(col) + phase) / s);
+	int c0 = int(ceil(k * s - phase));
+	int c1 = int(ceil((k + 1.0) * s - phase));
+	float h = lamp_hash01(lamp_hash_u(row_key) ^ uint(int(k)));
+	return col == c0 + int(floor(h * float(c1 - c0 - 1)));
 }
 
 // 室内视差：从窗面沿视线进房间，求与房间盒的交点，按面给明度
@@ -113,15 +140,26 @@ void fragment() {
 			* (1.0 - toon_overcast()) * (1.0 - smoothstep(1.0, 2.5, fog_weather_mult()));
 	tcol.lit = mix(tcol.lit, pal_cur(PAL_GLASS_GLARE) * GLASS_GLARE_GAIN, glare * (1.0 - 0.5 * on));
 
-	// 3. 斜条：一宽一窄，滤色叠在受光色和影色上；夜间暗窗减半，亮窗不叠
+	// 3. 斜条：一宽一窄，滤色叠在受光色和影色上；夜间暗窗减半，亮窗不叠；大面积玻璃只在稀疏的格子上画
 	float night = smoothstep(-0.03, -0.12, sun_dir.y);
-	float hj = lamp_hash01(uint(wid) * 2u + 3u) - 0.5;
-	float u = puv.x - puv.y * GLASS_STREAK_SLOPE + 0.12 * hj;
+	bool loose = cols == 0;
+	vec2 suv = loose ? UV / GLASS_LOOSE_CELL : UV;
+	ivec2 scell = ivec2(floor(suv));
+	vec2 spuv = fract(suv);
+	float sarea = glass_cell_area(UV, VERTEX);
+	uint shash = loose ? lamp_hash_u(uint(scell.x) * 2u + 1u) ^ uint(scell.y) : uint(wid) * 2u + 3u;
+	float hj = lamp_hash01(shash) - 0.5;
+	float u = spuv.x - spuv.y * GLASS_STREAK_SLOPE + 0.12 * hj;
 	float fw = max(fwidth(u), 1e-4);
 	float a_wide = glass_band(u, 0.08, 0.10, fw) * 0.5;
 	float a_thin = glass_band(u, 0.38, 0.03, fw);
 	float a = 1.0 - (1.0 - a_wide) * (1.0 - a_thin);
-	a *= GLASS_STREAK * (1.0 - 0.5 * night) * (1.0 - on);
+	float sparse = 1.0;
+	if (loose || sarea >= GLASS_SPARSE_AREA) {
+		uint row_key = lamp_hash_u(uint(wbase) * 2u + 9u) ^ (uint(scell.y) * 2654435769u);
+		sparse = glass_streak_pick(scell.x, row_key) ? 1.0 : 0.0;
+	}
+	a *= GLASS_STREAK * (1.0 - 0.5 * night) * (1.0 - on) * sparse;
 	tcol.lit += a * (vec3(1.0) - min(tcol.lit, vec3(1.0)));
 	tcol.shade += a * (vec3(1.0) - min(tcol.shade, vec3(1.0)));
 
