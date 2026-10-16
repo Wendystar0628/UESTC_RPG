@@ -1,0 +1,12 @@
+{
+  "zone": "west",
+  "owner": "WP-19",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "hide",
+      "target": "qsh:way:779496166",
+      "reason": "按 Opus 2026-10-16 13:06 定案，删除六号科研楼重复实体壳 qsh:way:779496166，保留 qsh:relation:14153711 及其带内院的来源 osm:relation:10807930；不改写原始 OSM 数据。"
+    }
+  ]
+}
