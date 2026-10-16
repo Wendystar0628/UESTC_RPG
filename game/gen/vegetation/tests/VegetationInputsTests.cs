@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
@@ -22,9 +19,10 @@ public sealed class VegetationInputsTests
     /// <summary>
     /// The whole-campus layout read from game/data/vegetation/maps/qingshuihe.planting.json before the move (23b, ceae168):
     /// tree count and a SHA-256 over every tree's key, species, variant, position, yaw, scale, wash and source, in order.
+    /// Hard pavement has taken trees since (23c2a): the fingerprint is of the order before they gave way, which PavementTests checks.
     /// </summary>
     private const int CampusTrees = 3142;
-    private const string CampusFingerprint = "7456706a925937f6dcebbb74931f978ae8c010f397c99bf3bc27fe76a123d52f";
+    private const string CampusFingerprint = PavementTests.BareFingerprint;
 
     private static readonly Lazy<(string Root, IWorldModel World)> Data = new(() =>
     {
@@ -39,8 +37,9 @@ public sealed class VegetationInputsTests
     public void TheMovedInputsPlantTheSameCampus()
     {
         var layout = VegetationInputs.Layout(Context(withPlanting: true)).Layout;
-        if (layout.Trees.Count != CampusTrees || Fingerprint(layout) != CampusFingerprint)
-            throw new InvalidOperationException($"layout changed by the move: {layout.Trees.Count} trees, {Fingerprint(layout)}");
+        var before = layout.BeforeGivingWay();
+        if (before.Count != CampusTrees || PavementTests.Fingerprint(before) != CampusFingerprint || layout.Trees.Count != CampusTrees - layout.Avoided.Count)
+            throw new InvalidOperationException($"layout changed by the move: {before.Count} trees, {PavementTests.Fingerprint(before)}");
     }
 
     [TestCase]
@@ -94,17 +93,6 @@ public sealed class VegetationInputsTests
             map[VegetationInputs.PlantingKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json"));
         return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
-
-    private static string Fingerprint(PlantingLayout layout)
-    {
-        var text = new StringBuilder();
-        foreach (var t in layout.Trees)
-            text.Append(string.Join('|', t.Key, t.Species.Id, t.Variant.ToString(CultureInfo.InvariantCulture), Bits(t.Position.X), Bits(t.Position.Y),
-                Bits(t.Position.Z), Bits(t.Yaw), Bits(t.Scale), t.Wash ? "1" : "0", ((int)t.Source).ToString(CultureInfo.InvariantCulture))).Append('\n');
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
-    }
-
-    private static string Bits(float value) => BitConverter.SingleToInt32Bits(value).ToString("x8", CultureInfo.InvariantCulture);
 
     private static void Expect<TException>(Action action) where TException : Exception
     {

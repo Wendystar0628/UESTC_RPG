@@ -24,10 +24,28 @@ public sealed record PlantedTree(string Key, SpeciesInfo Species, int Variant, V
     public float CrownRadius => TreeForms.Get(Species.Form).CrownRadius * Height * TreeForms.CrownScale(Variant);
 }
 
-/// <summary>All trees of one map, in a stable order (sources in enum order, then placement order).</summary>
+/// <summary>A tree the rules would have planted on hard pavement: it gives way. Index is its place in the planting order before the giving way.</summary>
+public sealed record AvoidedTree(int Index, PlantedTree Tree);
+
+/// <summary>
+/// All trees of one map, in a stable order (sources in enum order, then placement order). Avoided lists the trees that gave
+/// way to hard pavement (see <see cref="Planting"/>): they are not in Trees, and Trees is otherwise exactly the planting order.
+/// </summary>
 public sealed record PlantingLayout(IReadOnlyList<PlantedTree> Trees)
 {
+    public IReadOnlyList<AvoidedTree> Avoided { get; init; } = [];
+
     public int Count(PlantSource source) => Trees.Count(t => t.Source == source);
+
+    /// <summary>The planting order before pavement gave way: Trees with the Avoided ones put back in their places.</summary>
+    public IReadOnlyList<PlantedTree> BeforeGivingWay()
+    {
+        var all = new List<PlantedTree>(Trees.Count + Avoided.Count);
+        int kept = 0, given = 0;
+        while (kept < Trees.Count || given < Avoided.Count)
+            all.Add(given < Avoided.Count && Avoided[given].Index == all.Count ? Avoided[given++].Tree : Trees[kept++]);
+        return all.AsReadOnly();
+    }
 }
 
 /// <summary>
@@ -37,6 +55,9 @@ public sealed record PlantingLayout(IReadOnlyList<PlantedTree> Trees)
 /// groves on the green parcels. Every tree lands on the terrain: y = HeightAt(centre), and none stands where the grade
 /// exceeds 25% (WLD-TERRAIN §4.4). Trunks keep clear of buildings, water, courts, parking and road surfaces; crowns of
 /// groves keep clear too, and groves leave the interior of large lawns open where the cluster noise is low (§5.3).
+/// Hard pavement of the effective world (pedestrian areas, footway, path, steps and cycleway areas, and the design walks
+/// the overlays add) takes no tree except in a tree pit; a tree that would stand on it gives way last, so every other tree
+/// keeps its key, look and place (<see cref="PlantingLayout.Avoided"/>).
 /// </summary>
 public static class Planting
 {
@@ -45,6 +66,12 @@ public static class Planting
 
     /// <summary>Trunk clearance from building, water, court and parking outlines, and beyond a road's half width.</summary>
     public const float TrunkClearance = 0.8f;
+
+    /// <summary>Road types WP-15 paves as walks and plazas (GroundClassifier): hard pavement, no trunk on it or within <see cref="TrunkClearance"/> of it.</summary>
+    private static readonly string[] Paved = ["pedestrian", "footway", "path", "steps", "cycleway"];
+
+    /// <summary>The overlay kind of a tree pit (a design feature): a tree may stand in one although it lies on pavement.</summary>
+    public const string TreePitKind = "tree-pit";
 
     /// <summary>Gap kept between two crowns of grove trees (landscape.ts: 1.2 m).</summary>
     public const float CrownGap = 1.2f;
@@ -78,7 +105,7 @@ public static class Planting
         PlantRoads(site, species, rules, trees);
         PlantOsmTrees(site, species, rules, trees);
         PlantGroves(site, species, rules, trees);
-        return new PlantingLayout(trees.AsReadOnly());
+        return new PlantingLayout(trees.AsReadOnly()) { Avoided = site.Avoided.AsReadOnly() };
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -198,7 +225,8 @@ public static class Planting
         foreach (var point in site.World.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
         {
             var p = new Vector2(point.Position.X, point.Position.Z);
-            if (trees.Any(t => Vector2.Distance(new(t.Position.X, t.Position.Z), p) < SameTree)) continue;
+            if (trees.Any(t => Vector2.Distance(new(t.Position.X, t.Position.Z), p) < SameTree) ||
+                site.Avoided.Any(a => Vector2.Distance(new(a.Tree.Position.X, a.Tree.Position.Z), p) < SameTree)) continue;
             var id = rules.OsmDefault;
             var wash = false;
             var best = rules.OsmNear;
@@ -304,8 +332,11 @@ public static class Planting
         if (terrain.FactsAt(p.X, p.Y).Grade > MaxGrade) return false;
         var position = new Vector3(p.X, terrain.HeightAt(p.X, p.Y), p.Y);
         var tree = probe with { Position = position, Wash = wash, Source = source, WindPos = site.WindPos(p.X) };
-        trees.Add(tree);
         site.Occupy(p, crown * (crownClear ? StandOverlap : 1f));
+        // Pavement is tested last and the tree still counts as planted (its place stays taken, a grove's count and keys go on),
+        // so only the trees on pavement leave the layout and every other tree stays exactly as it was.
+        if (site.OnPavement(p)) site.Avoided.Add(new(trees.Count + site.Avoided.Count, tree));
+        else trees.Add(tree);
         return true;
     }
 
@@ -325,12 +356,23 @@ public static class Planting
 
     private sealed record Parcel(PolygonRings Rings, Vector2 Min, Vector2 Max, float Area);
 
+    /// <summary>One piece of hard pavement: an area, or a centre line with its half width. Min and Max box it (without the clearance).</summary>
+    private sealed record Pave(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, Vector2 Min, Vector2 Max);
+
+    /// <summary>A tree pit: an area, or a disc round Centre.</summary>
+    private sealed record Pit(PolygonRings? Rings, Vector2 Centre, float Radius)
+    {
+        public bool Holds(Vector2 p) => Rings is { } rings ? PlanGeometry.Contains(rings, p) : Vector2.Distance(p, Centre) <= Radius;
+    }
+
     /// <summary>The world as the planter sees it: blocking outlines and roads in a coarse grid, green parcels, occupied crowns.</summary>
     private sealed class Site
     {
         private const float Cell = 32f;
         private readonly Dictionary<(int, int), List<Parcel>> _blocking = [];
         private readonly Dictionary<(int, int), List<NetworkLine>> _roads = [];
+        private readonly Dictionary<(int, int), List<Pave>> _pavement = [];
+        private readonly List<Pit> _pits = [];
         private readonly Dictionary<(int, int), List<(Vector2 P, float R)>> _occupied = [];
         private readonly float _windMin;
         private readonly float _windSpan;
@@ -340,17 +382,32 @@ public static class Planting
             World = world;
             Seed = seed;
             var green = new List<Parcel>();
+            // The effective network (WP-08) publishes a design walk as a network line under its feature's ID and keeps the feature's
+            // polyline: line and polyline are one walk. The network is the effective source, so the walk is filed once, as the line.
+            var published = world.Network.Roads.Select(r => r.Id.Value).ToHashSet(StringComparer.Ordinal);
             foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             {
                 foreach (var kind in Blocking)
                     foreach (var rings in Polygons(feature, kind))
                         Index(_blocking, rings.Min, rings.Max, rings);
                 foreach (var rings in Polygons(feature, "green")) green.Add(rings);
+                // The effective world's hard pavement: the road areas and design walks of the features (the network's own
+                // centre lines are roads above), and the tree pits that may stand on it.
+                if (!(IsWalk(feature) && published.Contains(feature.Id.Value)))
+                    foreach (var (props, geometry) in RoadSources(feature)) IndexPavement(props, geometry);
+                if (feature.Kind.Value == TreePitKind) AddPits(feature);
             }
             Green = green;
             foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
             {
                 if (road.Line.Points.Count < 2) continue;
+                // A design walk is pavement, not a road: it takes the trunks that stand on it (tree pits excepted) and not the ones
+                // beside it, and a tree on it still counts as planted. Only the walk's own line is read, at the network's width.
+                if (world.Features.TryGetValue(road.Id, out var walk) && IsWalk(walk) && RoadType(road.Props) is { } type && Paved.Contains(type))
+                {
+                    IndexPavement(road.Props, new PolylineGeometry(road.Line), road.Width);
+                    continue;
+                }
                 var min = road.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(road.Width * 0.5f);
                 var max = road.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(road.Width * 0.5f);
                 Index(_roads, min, max, road);
@@ -363,6 +420,9 @@ public static class Planting
         public IWorldModel World { get; }
         public uint Seed { get; }
         public List<Parcel> Green { get; }
+
+        /// <summary>The trees that gave way to pavement so far, in planting order.</summary>
+        public List<AvoidedTree> Avoided { get; } = [];
 
         /// <summary>WLD-VEGETATION §11.2 z: 0 at the west edge of the campus, 1 at the east edge.</summary>
         public float WindPos(float x) => Math.Clamp((x - _windMin) / _windSpan, 0f, 1f);
@@ -383,6 +443,27 @@ public static class Planting
             {
                 var r = road.Width * 0.5f + clearance;
                 if (PolylineDistanceSquared(p, road.Line.Points) < r * r) return true;
+            }
+            return false;
+        }
+
+        /// <summary>True when a trunk at <paramref name="p"/> stands on hard pavement or within <see cref="TrunkClearance"/> of it, and not in a tree pit.</summary>
+        public bool OnPavement(Vector2 p)
+        {
+            if (_pits.Any(pit => pit.Holds(p))) return false;
+            foreach (var pave in Near(_pavement, p))
+            {
+                if (pave.Rings is { } rings)
+                {
+                    if (p.X < pave.Min.X - TrunkClearance || p.X > pave.Max.X + TrunkClearance ||
+                        p.Y < pave.Min.Y - TrunkClearance || p.Y > pave.Max.Y + TrunkClearance) continue;
+                    if (PlanGeometry.Contains(rings, p) || Edge(rings, p) < TrunkClearance) return true;
+                }
+                else
+                {
+                    var r = pave.Half + TrunkClearance;
+                    if (PolylineDistanceSquared(p, pave.Line!) < r * r) return true;
+                }
             }
             return false;
         }
@@ -414,6 +495,89 @@ public static class Planting
             return (boxes.Aggregate(new Vector2(float.MaxValue), (a, b) => Vector2.Min(a, b.Item1)),
                 boxes.Aggregate(new Vector2(float.MinValue), (a, b) => Vector2.Max(a, b.Item2)));
         }
+
+        /// <summary>The road sources of a feature: its parts of kind road, else its own geometry; each with the props that carry the road type.</summary>
+        private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
+        {
+            if (feature.Parts.Count == 0)
+            {
+                if (feature.Kind.Value == "road") yield return (feature.Props, feature.Geometry);
+                yield break;
+            }
+            foreach (var part in Parts(feature, "road")) yield return (part.Props ?? feature.Props, part.Geometry);
+        }
+
+        /// <summary>A feature that is just a polyline of its own (a design walk): the form in which the network line of its ID is also filed.</summary>
+        private static bool IsWalk(WorldFeature feature) => feature.Parts.Count == 0 && feature.Geometry is PolylineGeometry;
+
+        private void IndexPavement(JsonElement? props, OverlayGeometry geometry, float width = 0f)
+        {
+            var type = RoadType(props);
+            if (type is null || !Paved.Contains(type)) return;
+            switch (geometry)
+            {
+                case PolygonGeometry polygon:
+                    IndexPavement(polygon.Rings);
+                    break;
+                case MultiPolygonGeometry multi:
+                    foreach (var rings in multi.Polygons) IndexPavement(rings);
+                    break;
+                case PolylineGeometry { Line.Points: { Count: >= 2 } points }:
+                    var half = (width > 0f ? width : PavedWidth(props, type)) * 0.5f;
+                    var min = points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(half);
+                    var max = points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(half);
+                    Index(_pavement, min, max, new Pave(null, points, half, min, max));
+                    break;
+            }
+        }
+
+        private void IndexPavement(PolygonRings rings)
+        {
+            if (rings.Outer.Count < 3) return;
+            var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
+            var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
+            Index(_pavement, min, max, new Pave(rings, null, 0f, min, max));
+        }
+
+        /// <summary>Width of a paved line as WP-15 paves it (GroundClassifier): its own width, else the type's default.</summary>
+        private static float PavedWidth(JsonElement? props, string type) =>
+            Number(props, "width") is { } width and > 0f ? width : type switch
+            {
+                "path" => 2f,
+                "cycleway" => 3f,
+                "pedestrian" => 5f,
+                _ => 2.5f
+            };
+
+        /// <summary>A tree pit feature (design addition): square pits are areas; a round bed is a point with a radius, else half its size.</summary>
+        private void AddPits(WorldFeature feature)
+        {
+            switch (feature.Geometry)
+            {
+                case PolygonGeometry polygon:
+                    _pits.Add(new(polygon.Rings, default, 0f));
+                    break;
+                case MultiPolygonGeometry multi:
+                    foreach (var rings in multi.Polygons) _pits.Add(new(rings, default, 0f));
+                    break;
+                case PointGeometry point:
+                    var radius = Number(feature.Props, "radius") is { } r and > 0f ? r : Number(feature.Props, "size") is { } size and > 0f ? size * 0.5f : 0.9f;
+                    _pits.Add(new(null, new Vector2(point.Position.X, point.Position.Z), radius));
+                    break;
+            }
+        }
+
+        private static string? RoadType(JsonElement? props)
+        {
+            if (props is not { ValueKind: JsonValueKind.Object } p) return null;
+            foreach (var name in new[] { "roadType", "highway" })
+                if (p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
+            return null;
+        }
+
+        private static float? Number(JsonElement? props, string name) =>
+            props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number &&
+            value.TryGetSingle(out var number) && float.IsFinite(number) ? number : null;
 
         private static IEnumerable<Parcel> Polygons(WorldFeature feature, string kind)
         {
