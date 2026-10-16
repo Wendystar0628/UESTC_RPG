@@ -30,7 +30,7 @@
 #include "res://style/shaders/fog.gdshaderinc"
 #include "res://style/shaders/precip_wet.gdshaderinc"
 
-// 灯光通道、窗灯与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_pool_shade；WP-39），fx_glow、降水与倒影代理共用同一份
+// 灯光通道、窗灯、灯具亮灭与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_fixture_level、lamp_pool_shade；WP-39），fx_glow、降水与倒影代理共用同一份
 #include "res://style/shaders/lamp.gdshaderinc"
 
 // OKLab 换算（ok_from_linear、ok_to_linear）在 fog.gdshaderinc 里，天空也要用
@@ -264,24 +264,25 @@ int toon_window_curtain(vec4 o) {
 // 路灯光斑（SYS-TIME §6、ENG-PERF §10.3；公共求值 lamp_pool_shade 归 WP-39）：
 // 地面和 4 m 以下立面上的两阶光斑（亮芯 + 收边外圈），灯光加在受光色和影色上、不替换底色，强度随环境变暗升起；
 // 观感参数都在 lamp.gdshaderinc 开头。室内不画（室内灯另走室内光）。
-// 边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
+// 竖直面按世界法线 c.n_w 判（含插值与解析法线），曲面上光斑的分界是光滑的；边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
 // ---------------------------------------------------------------------------
 void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
 	if ((c.flags & TOON_F_INTERIOR) != 0 || lamp_heff() >= LAMP_POOL_DAY_DEG.y) {
 		return;
 	}
-	lamp_pool_shade(c.wpos, c.pool_aa, lamp, lit, shade);
+	lamp_pool_shade(c.wpos, c.n_w, c.pool_aa, lamp, lit, shade);
 }
 
 // ---------------------------------------------------------------------------
-// 自发光（ToonSpec.Emissive；SYS-TIME §6、ENG-PERF §10.3）：亮度读材质登记的灯光通道，随时刻表亮灭。
-// 灯具槽位的 L 是保留比例 ×(1 + Δ)，夹到 0–1；"熄一半"这类时段整面按比例变暗（不按块挑亮灭）。
+// 自发光（ToonSpec.Emissive；SYS-TIME §6、ENG-PERF §10.3）：亮度读材质登记的灯光通道，随时刻表亮灭（lamp_fixture_level，WP-39）。
+// 窗灯类通道取 L。灯具类通道（灯罩、灯牌）跟着灯头在 1 m 以内的那盏灯，与它的光斑、光晕同时亮灭：白天灯灭，灯罩也不亮；
+// 附近没有登记的灯时取 L（保留比例 ×(1 + Δ)，夹到 0–1，"熄一半"这类时段整面按比例变暗）。
 // ---------------------------------------------------------------------------
-float toon_emissive_level(ToonMat m) {
+float toon_emissive_level(ToonCtx c, ToonMat m) {
 	if (m.emit_slot < 0) {
 		return 0.0;
 	}
-	return clamp(lamp_channel(m.emit_slot).x, 0.0, 1.0);
+	return lamp_fixture_level(c.wpos, m.emit_slot);
 }
 
 bool toon_is_const(int cid) {
@@ -326,7 +327,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	float gain = interior ? interior_light.x : 1.0;
 
 	// 自发光的颜色取湿润之前的灯照色：亮着的灯牌不因下雨变暗
-	float emit_k = toon_emissive_level(m);
+	float emit_k = toon_emissive_level(c, m);
 	vec3 emit_c = emit_k > 0.0 ? toon_emissive_color(c, lamp) : vec3(0.0);
 
 	// 影里的两条连续项（ART-STYLE §3.3）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
