@@ -105,6 +105,7 @@ public static class PartCatalog
     public const string UtilityPole = "street.utility-pole";
     public const string StreetFence = "street.fence";
     public const string Drain = "street.drain";
+    public const string CurbRamp = "street.curb-ramp";
     public const string WallClock = "street.wall-clock";
     public const string NoticeBoard = "street.notice-board";
 
@@ -210,6 +211,7 @@ public static class PartCatalog
         new(new(UtilityPole), new("WP-13"), typeof(ColumnParams), new ColumnParams(0.25f, 6f, 0.25f)),
         new(new(StreetFence), new("WP-13"), typeof(RailingParams), new RailingParams(3f, 1.5f, 0.12f)),
         new(new(Drain), new("WP-13"), typeof(TrimParams), new TrimParams(2f, 0.12f, 0.3f)),
+        new(new(CurbRamp), new("WP-13"), typeof(RampParams), new RampParams(1.5f, 0.15f, 1.05f)),
         new(new(WallClock), new("WP-13"), typeof(SignParams), new SignParams(0.5f, 0.5f, 0.08f)),
         new(new(NoticeBoard), new("WP-13"), typeof(SignParams), new SignParams(1.8f, 2f, 0.15f)),
     ]);

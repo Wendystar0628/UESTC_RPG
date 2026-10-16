@@ -6064,6 +6064,7 @@ const Campus.Contracts.Parts.PartCatalog.CardReader = "interior.mep.card-reader"
 const Campus.Contracts.Parts.PartCatalog.CeilingFan = "interior.mep.ceiling-fan" -> string!
 const Campus.Contracts.Parts.PartCatalog.Column = "core.column" -> string!
 const Campus.Contracts.Parts.PartCatalog.ConvexMirror = "street.convex-mirror" -> string!
+const Campus.Contracts.Parts.PartCatalog.CurbRamp = "street.curb-ramp" -> string!
 const Campus.Contracts.Parts.PartCatalog.Curtain = "opening.curtain" -> string!
 const Campus.Contracts.Parts.PartCatalog.CurtainWall = "opening.curtain-wall" -> string!
 const Campus.Contracts.Parts.PartCatalog.DeliveryLocker = "street.delivery-locker" -> string!
