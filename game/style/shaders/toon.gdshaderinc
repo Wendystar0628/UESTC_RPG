@@ -26,6 +26,7 @@
 
 // 调色板取色（pal_fetch、pal_cur、pal_season、PAL_*）和共用雾函数都在 fog.gdshaderinc，天空着色器也要用
 #include "res://style/shaders/fog.gdshaderinc"
+#include "res://style/shaders/precip_wet.gdshaderinc"
 
 // 灯光通道、窗灯与路灯光斑的公共求值（lamp_channel、lamp_window_*、lamp_pool；WP-39），fx_glow、降水与倒影代理共用同一份
 #include "res://style/shaders/lamp.gdshaderinc"
@@ -188,9 +189,10 @@ bool toon_fade_discard(vec2 frag_xy) {
 // 天气挂点
 // ---------------------------------------------------------------------------
 // 湿润的暴露度（SYS-WEATHER §7）：公共函数归 WP-45b，要读地面遮罩 2 的建筑遮蔽和树冠遮蔽。
-// 主线版只分室内（0）与室外（1）。
+// 世界坐标、世界法线与室内/外围标志直接交给 WP-45b 的公共求值。
 float toon_wet_exposure(ToonCtx c) {
-	return (c.flags & TOON_F_INTERIOR) != 0 ? 0.0 : 1.0;
+	return precip_wet_exposure(c.wpos, c.n_w,
+			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0);
 }
 
 // wet = 湿润 × 暴露 × 材质响应（材质响应在 mat_table 行 1 的 A）
@@ -199,8 +201,10 @@ float toon_wet(ToonCtx c, ToonMat m) {
 }
 
 // 积水（SYS-WEATHER §7，公共函数归 WP-45b）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
-// precip_wet.gdshaderinc 进白名单前是空实现。
+// response 使用材质表行 1 的 A，已经由 toon_mat 解码为 m.wet。
 void toon_puddle(ToonCtx c, ToonMat m, inout vec3 lit, inout vec3 shade) {
+	precip_puddle_apply(c.wpos, c.cam, c.n_w,
+			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0, m.wet, lit, shade);
 }
 
 // 地面云影（SYS-WEATHER §7，云噪声归 WP-40）：主线版没有云影，恒为 1。
