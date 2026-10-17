@@ -31,6 +31,11 @@ public sealed class ShelterSite : WestSite
     /// <summary>Post positions along the back (local x), inset from the ends.</summary>
     internal static float[] PostsX => [.. Enumerable.Range(0, H.Posts).Select(i => 0.3f + i * (Length - 0.6f) / (H.Posts - 1))];
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
+        [new(Frame.Rect(-H.PlatformMargin, -0.25f, Length + H.PlatformMargin, H.Depth - 0.22f)),
+         new(Frame.Rect(-H.PlatformMargin, H.Depth - 0.24f, Length + H.PlatformMargin, H.Depth)),
+         new(Frame.Rect(-0.45f, -H.RoofBack, Length + 0.45f, H.Depth + H.RoofFront))];
+
     private const float PostZ = 0.25f;
 
     internal static float Ground(Func<float, float, float> ground)

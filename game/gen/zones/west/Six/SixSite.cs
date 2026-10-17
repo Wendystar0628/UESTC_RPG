@@ -39,6 +39,18 @@ public sealed class SixSite : WestSite
     public override IReadOnlyList<Claim> Claims =>
         [.. new[] { S.EntityA, S.EntityB, S.EntityC }.Select(e => (Claim)new FeatureClaim(new(e), Aspects.Massing | Aspects.Facade | Aspects.Roof))];
 
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        foreach (var block in Blocks)
+        {
+            var contours = new List<PolygonRings> { Plan(context.World, block.Entity, block.Part) };
+            if (block.Entity == S.EntityC)
+                contours.AddRange(new[] { S.LinkAB, S.LinkBC, S.Tower }.Select(part => Plan(context.World, S.EntityC, part)));
+            yield return SiteSourceTrace.Build(context, lod, $"{Id}/{block.Key}", new(block.Entity),
+                b => Build(b, block.Entity), c => Collide(c, block.Entity), contours);
+        }
+    }
+
     internal static GridStyle Style(int upper) => new(L.Stone, L.Trim, L.Stone, L.Glass, L.Metal, L.RoofSlab)
     {
         Bay = S.Bay,
@@ -137,11 +149,13 @@ public sealed class SixSite : WestSite
 
     // ---- Build ----
 
-    public override void Build(SiteBuilder b)
+    public override void Build(SiteBuilder b) => Build(b, null);
+
+    private static void Build(SiteBuilder b, string? entity)
     {
         var world = b.Context.World;
         var volumes = Volumes(world);
-        foreach (var k in Blocks)
+        foreach (var k in Blocks.Where(k => entity is null || k.Entity == entity))
         {
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(b.Context, k.Entity);
@@ -152,12 +166,17 @@ public sealed class SixSite : WestSite
             var roof = y + S.BaseHeight + style.RoofTop;
             Plant(b, S.Plants[Blocks.ToList().IndexOf(k)], roof);
         }
+        if (entity is not null && entity != S.EntityC)
+        {
+            foreach (var at in S.ShutDoors.Where(at => ShutEntity(b.Context.World, at) == entity)) ShutDoor(b, at);
+            return;
+        }
         var c = Plan(world, S.EntityC, S.PartC);
         var yc = BaseY(b.Context, S.EntityC);
         var (face, door) = EastFace(c);
         Vestibule(b, face, door, yc);
         Sign(b, face, yc + S.BaseHeight + Style(S.UpperC).Top);
-        foreach (var at in S.ShutDoors) ShutDoor(b, at);
+        foreach (var at in S.ShutDoors.Where(at => entity is null || ShutEntity(world, at) == entity)) ShutDoor(b, at);
         LinkAB(b, Plan(world, S.EntityC, S.LinkAB).Outer, yc);
         LinkBC(b, world, yc);
         Tower(b, Plan(world, S.EntityC, S.Tower).Outer, yc);
@@ -299,6 +318,9 @@ public sealed class SixSite : WestSite
         // The lobby card behind the shut glass (WLD-INTERIORS §5.2): hall light, gate standby lamps, floor index.
         b.Place(PartCatalog.InteriorCard, new PanelParams(S.ShutDoorWidth + 1.6f, S.ShutDoorHeight + 0.6f, 0.06f) { Variation = 1 }, f.AtReversed(x, y, z - 1.4f));
     }
+
+    private static string ShutEntity(IWorldModel world, Vector2 at) =>
+        Blocks.First(k => GridFacade.Edges(Plan(world, k.Entity, k.Part).Outer).Any(edge => On(edge.Item1, at, S.ShutDoorWidth) is not null)).Entity;
 
     /// <summary>The block face carrying a shut door, the door's local x on it and the block's base.</summary>
     internal static (GridEdgeInfo Face, float X, float Y) ShutFace(BuildContext ctx, Vector2 at)
@@ -495,12 +517,14 @@ public sealed class SixSite : WestSite
 
     // ---- Collision ----
 
-    public override void Collide(SiteColliders c)
+    public override void Collide(SiteColliders c) => Collide(c, null);
+
+    private static void Collide(SiteColliders c, string? entity)
     {
         var world = c.Context.World;
         var volumes = Volumes(world);
         var east = (Face: default(GridEdgeInfo), X: 0f);
-        foreach (var k in Blocks)
+        foreach (var k in Blocks.Where(k => entity is null || k.Entity == entity))
         {
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(c.Context, k.Entity);
@@ -529,6 +553,7 @@ public sealed class SixSite : WestSite
             foreach (var (x, f) in Columns(plan, style, volumes))
                 c.Box(f.At(x, y + S.BaseHeight * 0.5f, S.PierDepth * 0.5f - 0.1f), new(S.ColumnSize * 0.5f + 0.06f, S.BaseHeight * 0.5f, S.ColumnSize * 0.5f + 0.06f), SurfaceTag.Wall, FootMat.StonePaving);
         }
+        if (entity is not null && entity != S.EntityC) return;
         // Vestibule cheeks; the doorway between them stays open for WP-31b's hall (EntranceDecl.Open).
         var yc = BaseY(c.Context, S.EntityC);
         var vf = east.Face.Frame;

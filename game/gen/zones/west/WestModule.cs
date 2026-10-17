@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.West;
 /// Pure .NET: reads the world model and terrain only.
 /// </summary>
 [ContentModule("zone.west", Owner = "WP-19")]
-public sealed class WestModule : IContentModule, IWindowMetadataSource
+public sealed class WestModule : IContentModule, IWindowMetadataSource, IContentSourceTraceProvider
 {
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
@@ -77,6 +77,9 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource
         foreach (var site in _sites) site.Collide(colliders);
         return colliders.Items.Where(i => Cell(i.Anchor, LodLevel.L0) == (tile.X, tile.Z)).Select(i => i.Collider).ToArray();
     }
+
+    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level) =>
+        _sites.SelectMany(site => site.TraceSources(context, level));
 
     public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint worldSeed)
     {
