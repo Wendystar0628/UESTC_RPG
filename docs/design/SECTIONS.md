@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 45.4k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
+`docs/design/README.md` · 45.8k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
 
 - CORE-INDEX §0 结论 · L23 · 667
@@ -15,25 +15,25 @@
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.3k
 - CORE-INDEX §5 文档怎么组织 · L135 · 764
 - CORE-INDEX §6 阅读路径 · L145 · 1.1k
-- CORE-INDEX §7 文档地图 · L163 · 10.4k
-  - CORE-INDEX §7.1 共识层 `core/` · L165 · 381
-  - CORE-INDEX §7.2 美术方向 `art/` · L173 · 925
-  - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.2k
+- CORE-INDEX §7 文档地图 · L163 · 10.8k
+  - CORE-INDEX §7.1 共识层 `core/` · L165 · 393
+  - CORE-INDEX §7.2 美术方向 `art/` · L173 · 965
+  - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.3k
   - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L196 · 1.7k
-  - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.8k
-  - CORE-INDEX §7.6 界面 `ui/` · L226 · 335
-  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 2.2k
-  - CORE-INDEX §7.8 参考 `reference/` · L253 · 261
-  - CORE-INDEX §7.9 工具 `tools/` · L260 · 178
-  - CORE-INDEX §7.10 运维 `ops/` · L266 · 173
-  - CORE-INDEX §7.11 提案 `proposals/` · L272 · 420
+  - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.9k
+  - CORE-INDEX §7.6 界面 `ui/` · L226 · 350
+  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 2.3k
+  - CORE-INDEX §7.8 参考 `reference/` · L253 · 279
+  - CORE-INDEX §7.9 工具 `tools/` · L260 · 183
+  - CORE-INDEX §7.10 运维 `ops/` · L266 · 179
+  - CORE-INDEX §7.11 提案 `proposals/` · L272 · 459
   - CORE-INDEX §7.12 待用的文件夹 · L281 · 896
 - CORE-INDEX §8 工作包与文档 · L297 · 9.4k
 - CORE-INDEX §9 文档依赖图 · L375 · 12.9k
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS.md` · 37.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
+`docs/design/core/CORE-CONVENTIONS-约定.md` · 37.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
 关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性、文件头、front matter、keywords、范围块、查阅行、接入要点、小节引用、施工约定、文件操作、删除规则
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
@@ -59,11 +59,11 @@
   - CORE-CONVENTIONS §5.1 仓库 · L296 · 2.2k
   - CORE-CONVENTIONS §5.2 按图的数据 · L324 · 1.6k
   - CORE-CONVENTIONS §5.3 `user://` 下的文件 · L354 · 1.4k
-  - CORE-CONVENTIONS §5.4 文档目录 · L370 · 278
+  - CORE-CONVENTIONS §5.4 文档目录 · L370 · 286
 - CORE-CONVENTIONS §6 确定性 · L376 · 2.2k
 - CORE-CONVENTIONS §7 文档约定 · L400 · 5.5k
   - CORE-CONVENTIONS §7.1 文件头 · L402 · 1.2k
-  - CORE-CONVENTIONS §7.2 标题与范围块 · L442 · 727
+  - CORE-CONVENTIONS §7.2 标题与范围块 · L442 · 732
   - CORE-CONVENTIONS §7.3 编码、小节编号与引用 · L461 · 1.7k
   - CORE-CONVENTIONS §7.4 正文写法 · L493 · 372
   - CORE-CONVENTIONS §7.5 待验证（P0）节 · L501 · 172
@@ -81,7 +81,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS.md` · 34.2k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 34.3k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 400
@@ -100,7 +100,7 @@
 
 ## CORE-GLOSSARY · 术语表
 
-`docs/design/core/CORE-GLOSSARY.md` · 39.0k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/design/core/CORE-GLOSSARY-术语表.md` · 39.0k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - CORE-GLOSSARY §0 用法 · L23 · 287
@@ -123,7 +123,7 @@
 
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法
 
-`docs/design/art/ART-AMBIENCE.md` · 19.7k 字 · 日式日常街景元素的边界与分区，各元素的形、色、限定与三渲二做法，以及对应的鸟与声音
+`docs/design/art/ART-AMBIENCE-日式日常街景.md` · 19.8k 字 · 日式日常街景元素的边界与分区，各元素的形、色、限定与三渲二做法，以及对应的鸟与声音
 关键词：日式街景、日式氛围、日系、日本味、电线杆、架空线、自动售货机、售货机光岛、弯道凸面镜、驻轮场式车棚、屋顶围网、高架水箱、通长雨庇、推拉铝窗、象牙色窗帘、开放外廊、次路标线、让行牌、L 形边沟、砌块墙、樱花行道树、绣球、夏季绿帘、杆上防犯灯、便利店夜景、透明塑料伞、暖帘、防球网、外墙圆钟、电车道口
 
   - ART-AMBIENCE 分工 · L22 · 610
@@ -149,7 +149,7 @@
 
 ## ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
 
-`docs/design/art/ART-FIDELITY.md` · 38.4k 字 · 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度
+`docs/design/art/ART-FIDELITY-视觉精度标准.md` · 38.5k 字 · 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度
 关键词：视觉精度、精度区、精度分区、K1、K2、K3、K4、K5、判定距离、d_K、底线清单、B1–B13、不粗糙、细节密度、一票否决、贴脸距离、L0+ 专用几何、热点簇、事件贴花、倒角表、不做旧、立面密度、可读规则、近景巡检点、人工评分、裸面检测、跳变检测、行走走廊、走廊加密
 
   - ART-FIDELITY 分工 · L22 · 197
@@ -186,7 +186,7 @@
 
 ## ART-MODELING · 风格化造型规则：比例、形体、部件与风格一致性
 
-`docs/design/art/ART-MODELING.md` · 25.0k 字 · 建筑、植被、道具与室内的风格化比例和形体，固有色约束，部件库写法，每类对象的最低合格构件与法线规则，以及金样与跨包风格一致性流程
+`docs/design/art/ART-MODELING-风格化造型规则.md` · 25.1k 字 · 建筑、植被、道具与室内的风格化比例和形体，固有色约束，部件库写法，每类对象的最低合格构件与法线规则，以及金样与跨包风格一致性流程
 关键词：风格化造型、风格化比例、身份特征、比例表、重复上限、防摩尔纹、人体尺度锚点、树冠团块、道具、少粗圆干净、固有色、彩度上限、金样、参考板、参数化部件库、IPartDef、最低合格构件、三道门槛、收边构件、倒角做法、自定义法线、硬边法线、解析法线、修边条、贴面几何、换级不跳变、网格 LOD 简化、共同口号
 
   - ART-MODELING 分工 · L22 · 316
@@ -211,7 +211,7 @@
 
 ## ART-RENOVATION · 老楼翻新：全部翻新的规则
 
-`docs/design/art/ART-RENOVATION.md` · 18.8k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：材质配色、删简留、窗檐楼梯屋顶的改法、成电辨认与验收
+`docs/design/art/ART-RENOVATION-老楼翻新.md` · 18.9k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：材质配色、删简留、窗檐楼梯屋顶的改法、成电辨认与验收
 关键词：老楼翻新、翻新、翻修、翻新预设、翻新楼、全部翻新、旧痕、删简留、防盗网、窗套、窗楣、窗台滴水、勒脚、压顶檐口、管槽、管廊、护窗栏、伸出杆、颜色配额、色额、陶红墙带、浅奶咖墙、斑驳、顶点色、面砖、楼梯间窗带、叶影上墙、成电辨认、翻新对照楼
 
   - ART-RENOVATION 分工 · L22 · 483
@@ -255,7 +255,7 @@
 
 ## ART-SKYLIGHT · 天空、光照与大气
 
-`docs/design/art/ART-SKYLIGHT.md` · 31.8k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
+`docs/design/art/ART-SKYLIGHT-天空光照与大气.md` · 31.9k 字 · 世界状态与美术日月、主光与阴影、天光、天空云星月、雾与大气透视、光效清单与冷暖对照
 关键词：主光、日月交接、无影蓝调、阴影、shadow_strength、方向量化、天光、环境光、天光方向、退光线、retreat_y、天空着色器、sky shader、霾带、云、飞机云、星空、银河、月亮外观、雾、大气透视、共用雾函数、fog.gdshaderinc、边缘雾、光柱、镜头光斑、太阳雨、彩虹、闪电、冷暖对照
 
   - ART-SKYLIGHT 分工 · L22 · 1.0k
@@ -274,7 +274,7 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE.md` · 57.9k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE-风格基础.md` · 58.0k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
@@ -313,7 +313,7 @@
 
 ## WLD-DIORAMA · 箱庭边界、截面与远景
 
-`docs/design/world/WLD-DIORAMA.md` · 18.8k 字 · 箱庭外缘的地层截面、水柱截面、雾海与清水河银带、360° 远景卡片和雪山，以及它们随时段、季节、天气的变化
+`docs/design/world/WLD-DIORAMA-箱庭边界截面与远景.md` · 18.9k 字 · 箱庭外缘的地层截面、水柱截面、雾海与清水河银带、360° 远景卡片和雪山，以及它们随时段、季节、天气的变化
 关键词：箱庭边界、地层截面、剖面、截面上缘、地下水线、卵石层、河渠水柱截面、暗涵断面、雾海、雾海顶面、雾天雾海上升、清水河银带、深夜雾海微光、远景、远景卡片、背景、三层环形卡片、远景视差、色调层、坡向层、发光层、雪山、日照金山、雪线、雪山可见度、backdrop.json、diorama_section、diorama_far、Camera3D.Far
 
   - WLD-DIORAMA 分工 · L22 · 1.0k
@@ -330,7 +330,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS.md` · 77.8k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS-室内.md` · 78.1k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -396,7 +396,7 @@
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
-`docs/design/world/WLD-LIFE.md` · 28.5k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
+`docs/design/world/WLD-LIFE-动物生活痕迹与街道家具.md` · 28.7k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
 关键词：动物、鸟、校园猫、鸽群、反应动物、黄昏乌鸦、季节性动物、生活痕迹、生活感、共享单车、电动车、晾晒、黑天鹅、季节生活痕迹、雨天生活痕迹、小心地滑、停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、日夜两套、变体掩码、state_bits、show_ratio
 
   - WLD-LIFE 分工 · L23 · 1.9k
@@ -417,7 +417,7 @@
 
 ## WLD-OUTSKIRTS · 边界与外围：大箱庭、外围环境带、阻挡与提示
 
-`docs/design/world/WLD-OUTSKIRTS.md` · 39.0k 字 · 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算
+`docs/design/world/WLD-OUTSKIRTS-边界与外围.md` · 39.1k 字 · 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算
 关键词：外围、校外、校界、边界、前沿线、截面线、大箱庭、外围环境带、O0–O3、最近可达距离、d_min、outskirts.json、outskirts.overlay.json、IOutskirtsModel、OutskirtsBlock、SurfaceTag.Boundary、校外暂未开放、前方暂未开放、行走阻挡、飞行阻挡、缓停、推回、缓冲带、软地板、可达空间、活动范围、edge_fog、边缘雾、看街长椅、河渠格栅
 
   - WLD-OUTSKIRTS 分工 · L22 · 379
@@ -482,7 +482,7 @@
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN.md` · 41.5k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN-地形.md` · 41.8k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -505,10 +505,10 @@
   - WLD-TERRAIN §3.4 合成顺序与优先级 · L209 · 550
   - WLD-TERRAIN §3.5 坡度包络：坡度上限由构造保证 · L221 · 1.2k
   - WLD-TERRAIN §3.6 确定性写法 · L234 · 737
-  - WLD-TERRAIN §3.7 读取接口 · L246 · 1.8k
+  - WLD-TERRAIN §3.7 读取接口 · L246 · 1.9k
   - WLD-TERRAIN §3.8 校验与门禁 · L275 · 989
-- WLD-TERRAIN §4 贴地 · L292 · 3.2k
-  - WLD-TERRAIN §4.1 先平后贴 · L294 · 779
+- WLD-TERRAIN §4 贴地 · L292 · 3.3k
+  - WLD-TERRAIN §4.1 先平后贴 · L294 · 791
   - WLD-TERRAIN §4.2 道路与铺装 · L310 · 864
   - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L322 · 1.0k
   - WLD-TERRAIN §4.4 树与道具落地 · L333 · 561
@@ -547,10 +547,10 @@
   - WLD-TERRAIN §9.1 分级 · L588 · 494
   - WLD-TERRAIN §9.2 几何误差与裙边 · L601 · 371
   - WLD-TERRAIN §9.3 量化范围与对角线 · L607 · 208
-  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L612 · 593
+  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L612 · 605
   - WLD-TERRAIN §9.5 预算 · L619 · 624
 - WLD-TERRAIN §10 分阶段施工 · L630 · 2.0k
-  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L632 · 510
+  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L632 · 522
   - WLD-TERRAIN §10.2 P0 样板区（约 2–4 天，高优先级） · L640 · 267
   - WLD-TERRAIN §10.3 主线铺开（约 1–2 周） · L647 · 254
   - WLD-TERRAIN §10.4 增强（按需） · L653 · 90
@@ -559,7 +559,7 @@
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION.md` · 43.2k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION-植被.md` · 43.4k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
@@ -594,7 +594,7 @@
 
 ## WLD-WATER · 水体：动画式水面、西湖、东湖、河渠、喷泉
 
-`docs/design/world/WLD-WATER.md` · 28.5k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
+`docs/design/world/WLD-WATER-水体.md` · 28.6k 字 · 全校水面的动画式画法、倒影与反光带、四季与天气的水面、开放泳区与游泳的水面反馈、各湖与河渠、喷泉与池水，以及 Godot 实现
 关键词：水体、水面、开放泳区、西湖、东湖、河渠、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、涉水涟漪、入水水花、灯的竖条倒影、refl_lamps、reflect_tex、reflect_vp、reflect_lake、西湖喷泉、叠水喷泉、游泳池池水、冬季浅滩、漂浮物、河渠中线、water.gdshader
 
   - WLD-WATER 分工 · L23 · 792
@@ -620,7 +620,7 @@
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
-`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS.md` · 44.3k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
+`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md` · 44.5k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
 关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json、功能开敞面、过渡绿地、空间记录
 
 - MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.9k
@@ -661,7 +661,7 @@
 
 ## MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
-`docs/design/maps/qingshuihe/MAP-QSH-CENTER-EAST.md` · 28.7k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
+`docs/design/maps/qingshuihe/MAP-QSH-CENTER-EAST-中部与东区.md` · 28.8k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走、碰撞与声音数据
 关键词：中部科研区、东区、基础实验大楼、一号科研实验楼、科研楼B区、科研楼C区、麦克斯韦像、方程石、林为干院士像、科研楼碑、银杏大道跨河小桥、品学楼、第一教学楼、书法横梁门框、架空通道、叠水喷泉石台、文科楼群、友谊树、综合训练馆、筒拱、网球场树墙、绿色房间、球场标线、球场围网、高杆灯、田径场、器材室、室外游泳池组团、东区月出、overlay/center-east.d
 
   - MAP-QSH-CENTER-EAST 分工 · L23 · 1.1k
@@ -684,7 +684,7 @@
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE.md` · 30.6k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE-核心区.md` · 30.7k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、overlay/core.d
 
   - MAP-QSH-CORE 分工 · L27 · 998
@@ -713,7 +713,7 @@
 
 ## MAP-QSH-LIBRARY · 图书馆与博物馆室内
 
-`docs/design/maps/qingshuihe/MAP-QSH-LIBRARY.md` · 28.5k 字 · 图书馆开放范围的室内、三条看进去的路径、室内光与视觉落点，以及博物馆展厅、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-LIBRARY-图书馆与博物馆室内.md` · 28.7k 字 · 图书馆开放范围的室内、三条看进去的路径、室内光与视觉落点，以及博物馆展厅、行走与声音要点
 关键词：图书馆室内、中庭、回廊、八字楼梯、塔楼梯、交通核、开放范围、封口、门斗、闸机、二楼门厅、看进去的路径、品·悦吧室内、光条、顶棚波光、门口的叶、红桌、视觉落点、八瓣光、台灯、校训木匾、五楼西窗阅览带、北侧露台、博物馆展厅、环形展线、interior.library、core.interior.json、lib.main
 
   - MAP-QSH-LIBRARY 分工 · L39 · 683
@@ -741,7 +741,7 @@
 
 ## MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
-`docs/design/maps/qingshuihe/MAP-QSH-NORTH.md` · 33.9k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
+`docs/design/maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md` · 34.1k 字 · 北部生活区各建筑的外观与身份特征、开放入口门口表现、四季昼夜、天气、行走挡路、碰撞与声音数据
 关键词：北部生活区、学生活动中心、成电会堂、赭红圆鼓、校医院、院名灯牌、商业街、玻璃拱顶步行街、店招、宿舍组团、学知苑、硕丰苑、博翰苑、留学生组团、本科楼A型、本科楼B型、组团闸机、学知一组团、阳台晾晒、银杏苑、芙蓉餐厅、思学苑、春晖苑、朝阳餐厅、西北餐厅、室外扶梯罩棚、风雨连廊、丹桂路、博士公寓、overlay/north.d
 
   - MAP-QSH-NORTH 分工 · L23 · 1.1k
@@ -767,7 +767,7 @@
 
 ## MAP-QSH-RENOVATION · 清水河翻新清单
 
-`docs/design/maps/qingshuihe/MAP-QSH-RENOVATION.md` · 21.8k 字 · 清水河校区要翻新的楼与环境：逐条的实体、优先级、翻新部位和所用规则，以及待核实楼的做法
+`docs/design/maps/qingshuihe/MAP-QSH-RENOVATION-清水河翻新清单.md` · 21.9k 字 · 清水河校区要翻新的楼与环境：逐条的实体、优先级、翻新部位和所用规则，以及待核实楼的做法
 关键词：翻新清单、逐栋翻新、翻新条目、条目号、翻新优先级、高中低档、部位代号、楼型、翻新对照楼、待核实的楼、核实前的口径、缺立面近景、不列入的楼、2015 年以后的新楼、宿舍屋面设备、组团门禁、商业街店招、全校环境翻新、老楼翻新理由、翻新施工顺序
 
 - MAP-QSH-RENOVATION §0 结论 · L23 · 1.3k
@@ -800,7 +800,7 @@
 
 ## MAP-QSH-SOUTH · 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 
-`docs/design/maps/qingshuihe/MAP-QSH-SOUTH.md` · 40.0k 字 · 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-SOUTH-南区.md` · 40.2k 字 · 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
 关键词：南区、南门、校名墙、主楼、主轴线、屋顶空廊、过街楼、主楼泛光、森林公园、孔雀之家、东湖岸线、环湖跑道、里程标、六角亭、亲水平台、荷角、吴立人像、宣邦楼、钟楼、电子管穹顶、交班的钟、钟面指针、立人楼、体育馆、游泳馆、体育运动中心大平台、看台罩棚、国际创新中心、1–8 号楼、overlay/south.d
 
   - MAP-QSH-SOUTH 分工 · L22 · 1.2k
@@ -833,7 +833,7 @@
 
 ## MAP-QSH-TERRAIN · 分区地形：骨架、地标丘、揭示路线与各区地形操作
 
-`docs/design/maps/qingshuihe/MAP-QSH-TERRAIN.md` · 41.8k 字 · 清水河全图地形骨架与各区地形操作：分层分布、红枫丘、宿舍台原、揭示路线、常水位、点位标高、验收镜头与冲突处理
+`docs/design/maps/qingshuihe/MAP-QSH-TERRAIN-分区地形.md` · 42.0k 字 · 清水河全图地形骨架与各区地形操作：分层分布、红枫丘、宿舍台原、揭示路线、常水位、点位标高、验收镜头与冲突处理
 关键词：分区地形、地形骨架、红枫丘、地标丘、下沉时间广场、谷阶殿、落金沟、湖岸丘链、草阶看台台地、东湖亭丘、岛丘、品学楼台基、坡广场、宿舍台原、上台、下台、台口、台缘、通学坡、坡顶回望、缓波、看月台、堤上路、球场堤路、下沉草阶草坪、河岸低步道、渠堤、湿地低地、扇形草坪浅碟、中庭草丘、常水位表、湖口跌水、箱涵堰口、遮挡与揭示、地形验收镜头、terrain.json
 
   - MAP-QSH-TERRAIN 分工 · L23 · 549
@@ -913,7 +913,7 @@
 
 ## MAP-QSH-WEST · 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 
-`docs/design/maps/qingshuihe/MAP-QSH-WEST.md` · 27.3k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观、四季昼夜与天气、行走与开放入口、声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md` · 27.4k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观、四季昼夜与天气、行走与开放入口、声音要点
 关键词：西区、西北区、六号科研楼、基础与前沿研究院、公式台阶、2F室外连廊、校训石、创新中心、经管楼、三号科研实验楼、宾诺咖啡、立人托幼公园、键盘立面、四号科研楼、扇形草坪、深蓝玻璃盒入口、五号科研楼、电子科学技术研究院大楼、微波暗室、工程训练中心、荟文楼、综合楼、核磁共振中心、国防科技园石刻、湿地公园、湿地栈道、西门桥头、水杉路、孤儿楼 6151 与 6154、overlay/west.d
 
   - MAP-QSH-WEST 分工 · L22 · 783
@@ -940,7 +940,7 @@
 
 ## SYS-ATLAS · 平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁
 
-`docs/design/systems/SYS-ATLAS.md` · 46.5k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
+`docs/design/systems/SYS-ATLAS-平面地图与传送.md` · 46.6k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
 关键词：平面地图、小地图、大地图、底图、地图标记、锚点、传送点、导览亭、导览桩、传送、雾幕瞬移、飞过去、传送卡、传送落点、目录页、追踪、自定义标记、解锁策略、区域名、地名标注、atlasRect、G18 地图一致性、IAtlasService、IUnlockPolicy、MarkerId、AtlasSave、map_base.gdshader、markers.json、labels.json、overlay/atlas.d
 
 - SYS-ATLAS §0 结论 · L30 · 3.1k
@@ -983,7 +983,7 @@
 
 ## SYS-AUDIO · 音频：环境声、观者声、空间声学、界面音效与混音
 
-`docs/design/systems/SYS-AUDIO.md` · 113.7k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
+`docs/design/systems/SYS-AUDIO-音频.md` · 113.8k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
   - SYS-AUDIO 分工 · L22 · 121
@@ -1067,7 +1067,7 @@
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
-`docs/design/systems/SYS-GRAPHICS.md` · 22.0k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
+`docs/design/systems/SYS-GRAPHICS-画面设置.md` · 22.1k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
 关键词：画面设置、画质、画面预设、设备档、流畅、均衡、精致、极致、单项、风格底线、风格默认、自动调节画质、自适应、首次分档、渲染比例、超采样、雾幕类设置、画面页、显存估算、IQualityService、IQualityAware、QualityResponsive、QualityKnob、QualityView、KnobSpec、quality-presets.json、graphics.cfg、engine_override.cfg、reset-graphics.cmd、预设轮换
 
 - SYS-GRAPHICS §0 结论 · L24 · 2.1k
@@ -1086,7 +1086,7 @@
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-`docs/design/systems/SYS-MAPS.md` · 44.9k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
+`docs/design/systems/SYS-MAPS-多地图.md` · 45.0k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
 关键词：多地图、换图、切图、地图服务、按图数据、按图与全局、先卸后装、切换 8 步、同图重载、天气按图、进图补算、地图归属、本图默认状态、单图半径、启动集 PCK、IMapService、IMapContext、IMapAware、MapScope、MapDescriptor、MapId、MapVisit、MapTravelRequest、IMapTransition、map.json、index.json、map_rect、boot_<地图>.pck、FramePriority.Map、--gate=maptravel
 
   - SYS-MAPS 分工与约定 · L22 · 235
@@ -1119,7 +1119,7 @@
 
 ## SYS-MOTION · 动态与事件
 
-`docs/design/systems/SYS-MOTION.md` · 46.5k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与反应动物的节奏，唯一的偶发事件、季节氛围与转场
+`docs/design/systems/SYS-MOTION-动态与事件.md` · 46.6k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与反应动物的节奏，唯一的偶发事件、季节氛围与转场
 关键词：动态、两个时钟、动画时钟、AnimTime、anim_time、一拍二、step_rate、Step12、T12、480 s 回绕、内置 TIME、风场、阵风、IWindField、WindSample、wind、飘落池、萤火虫、解析运动、季节氛围、反应动物、根变换单一写者、偶发事件、晚归者、IncidentDirector、incidents.json、incident、转场、TransitionDirector、钟锤
 
   - SYS-MOTION 分工 · L23 · 861
@@ -1150,7 +1150,7 @@
 
 ## SYS-SAVE · 存档与持久化：存档模型、存什么、格式与迁移、保存时机、加载与一致性、安全、契约与验收
 
-`docs/design/systems/SYS-SAVE.md` · 54.0k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
+`docs/design/systems/SYS-SAVE-存档与持久化.md` · 54.1k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
 关键词：存档、保存、读档、自动保存、存档位、世界线、存档段、段版本、存档迁移、金档、落定快照、安全时刻、续跑等价、世界实例、校验修复、存档损坏、单实例锁、设置文件安全、退出保存、ISaveService、SaveSectionAttribute、ISaveSection、SaveReason、LoadScope、RestorePhase、SaveMeta、IWorldState.Instance、FlushForQuit、CompleteResume、user://saves/
 
 - SYS-SAVE §0 结论 · L25 · 3.2k
@@ -1192,7 +1192,7 @@
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME.md` · 41.6k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME-时间与季节.md` · 41.7k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
@@ -1215,7 +1215,7 @@
 
 ## SYS-TITLE · 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`
 
-`docs/design/systems/SYS-TITLE.md` · 44.0k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
+`docs/design/systems/SYS-TITLE-开始页与进入过场.md` · 44.2k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
 关键词：开始页、标题页、主菜单、扉页、启动序列、启动失败页、T0、云隙望穹、片名块、新游戏过场、继续过场、开场动画、返回标题、跳过过场、安全落点、开场过场设置、过场专属元素、云卡、放映层、标题卡、IAppFlow、AppState、EnterRequest、CinematicPlayer、CinematicDef、cine_cloud.gdshader、enter_new.json、game/data/maps/qingshuihe/cinematics/
 
 - SYS-TITLE §0 结论 · L25 · 3.2k
@@ -1269,7 +1269,7 @@
 
 ## SYS-VIEW · 观察模式、介质与开场
 
-`docs/design/systems/SYS-VIEW.md` · 29.0k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
+`docs/design/systems/SYS-VIEW-观察模式介质与开场.md` · 29.2k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
 关键词：旁观模式、第一人称、观察模式、飞行速度档、视场角、鼠标灵敏度、初始位置、第三人称、命令行参数、--pose、--title=0、镜头不会自己动、自动运镜、启动预热、引擎启动画面、介质呈现、剖切变体、楼里、地下、水下、半入水、雾海、ICameraRig、Pose、IMediumState、MediumKind、medium_overlay.gdshader、OSM 署名、LICENSES.txt、旧网页栈归档
 
   - SYS-VIEW 分工 · L23 · 348
@@ -1297,7 +1297,7 @@
 
 ## SYS-WALK · 行走模式：手感、可行走范围、边界、碰撞与角色控制器
 
-`docs/design/systems/SYS-WALK.md` · 60.1k 字 · 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
+`docs/design/systems/SYS-WALK-行走模式.md` · 60.2k 字 · 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
 关键词：行走模式、游泳、角色控制器、手感参数、模式切换、可行走范围、可行走遮罩、边界收口、隐形墙、校界缓停、软墙提示、安全点、回位、涉水、玩家身体、开放泳区、碰撞级 C、碰撞就绪、自动登阶、电梯关门换位、推荐路线、步相、WalkClass、SurfaceTag、Collider、ICollisionWorld、IViewControl、IWalkTelemetry、walkable.overlay.json、routes.json
 
   - SYS-WALK 分工 · L23 · 414
@@ -1323,7 +1323,7 @@
 
 ## SYS-WEATHER · 天气：天气清单、画面规则、前向随机过程、过渡与验收
 
-`docs/design/systems/SYS-WEATHER.md` · 26.0k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
+`docs/design/systems/SYS-WEATHER-天气.md` · 26.1k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
 关键词：天气、天气格、自动天气、手动天气、天气向量、WeatherNow、WeatherKind、WeatherVec、WeatherSpan、IWeatherProcess、WeatherProcessState、ILightningFeed、LightningFlash、前向随机过程、前瞻队列、天气预报、天气种子、天气修正量、太阳雨、雨的可读性、闪电、彩虹、降水池、precip.gdshader、precip_occ、湿润、积水、地面遮罩 2、refl_lamps、天气巡回
 
 - SYS-WEATHER §0 结论 · L24 · 2.0k
@@ -1348,7 +1348,7 @@
 
 ## UI-NAV · 界面、点位跳转与操作说明
 
-`docs/design/ui/UI-NAV.md` · 52.6k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
+`docs/design/ui/UI-NAV-界面与操作说明.md` · 52.7k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
 关键词：界面交互、快捷键、键位、改键、输入优先级、界面态、漫游态、鼠标捕获、自动隐藏、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、首次引导、点位、跳转点、Waypoint、LocalizedName、waypoints.json、跳转、飞过去、无障碍、读屏、文本键、翻译表、地名来源、settings.cfg、input.cfg
 
   - UI-NAV 分工 · L22 · 194
@@ -1389,7 +1389,7 @@
 
 ## UI-VISUAL · 界面视觉语言：令牌、字体、形状、材质、图标、组件、画面布局、动效与实现
 
-`docs/design/ui/UI-VISUAL.md` · 74.8k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
+`docs/design/ui/UI-VISUAL-界面视觉语言.md` · 74.9k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
 关键词：界面视觉、色彩令牌、主题色、清蓝、晶白、深屏、深色主题、昼夜交班、常驻件、界面字体、切角、发丝线、过孔灯、衍射光边、焦点环、界面图标、窗口图标、动效母题、界面动画、减少动态效果、辉光、等待灯、界面缩放、ui.json、ui_theme.tres、ui_panel.gdshader、ui_screen.gdshader、ui_night、IMotionSettings、IPaletteProbe
 
   - UI-VISUAL 分工 · L22 · 376
@@ -1487,7 +1487,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH.md` · 200.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 200.5k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.3k
@@ -1504,7 +1504,7 @@
 
 ## ENG-BUDGET · 性能预算与硬规则
 
-`docs/design/engineering/ENG-BUDGET.md` · 54.9k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
+`docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md` · 55.0k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
 关键词：性能预算、预算、额度、份额、配额、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、主线程额度、硬规则、合入规则、细节级别、L0+、分块、四叉树、速度律、屏幕误差、近裁剪面、导出包体、本机缓存预算、工程设置、project.godot 设置
 
 - ENG-BUDGET §0 结论 · L23 · 2.4k
@@ -1523,7 +1523,7 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
 
-`docs/design/engineering/ENG-GATES.md` · 58.5k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
+`docs/design/engineering/ENG-GATES-验收与门禁.md` · 58.6k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
 
 - ENG-GATES §0 结论 · L22 · 1.9k
@@ -1537,7 +1537,7 @@
 
 ## ENG-ONBOARD-LOOKUP · 子代理开工手册：按要做的事查哪里
 
-`docs/design/engineering/ENG-ONBOARD-LOOKUP.md` · 3.5k 字 · 子代理按要做的事找资料的路由表：工程与流程、接入各系统、画面与内容三张表，每行给出该先看的文档与小节
+`docs/design/engineering/ENG-ONBOARD-LOOKUP-开工手册查阅表.md` · 3.5k 字 · 子代理按要做的事找资料的路由表：工程与流程、接入各系统、画面与内容三张表，每行给出该先看的文档与小节
 关键词：开工手册、查哪里、路由表、按任务查、先看哪份文档、接入要点、查阅、子代理
 
 - ENG-ONBOARD-LOOKUP §0 结论 · L23 · 269
@@ -1549,7 +1549,7 @@
 
 ## ENG-ONBOARD · 子代理开工手册
 
-`docs/design/engineering/ENG-ONBOARD.md` · 9.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
+`docs/design/engineering/ENG-ONBOARD-子代理开工手册.md` · 9.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
 关键词：开工手册、子代理、必读、查阅、按需查、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md
 
 - ENG-ONBOARD §0 结论 · L23 · 641
@@ -1566,7 +1566,7 @@
   - ENG-ONBOARD §3.7 不过度工程化 · L119 · 270
 - ENG-ONBOARD §4 查资料 · L126 · 1.3k
   - ENG-ONBOARD §4.1 文档在哪、怎么找 · L128 · 725
-  - ENG-ONBOARD §4.2 按要做的事查哪里 · L137 · 128
+  - ENG-ONBOARD §4.2 按要做的事查哪里 · L137 · 136
   - ENG-ONBOARD §4.3 Godot API · L141 · 223
   - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L147 · 200
 - ENG-ONBOARD §5 完成与回报 · L153 · 597
@@ -1574,7 +1574,7 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF.md` · 138.4k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF-性能工程.md` · 138.6k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1592,7 +1592,7 @@
   - ENG-PERF §3.3 过度绘制 · L402 · 830
   - ENG-PERF §3.4 动态分辨率 · L414 · 526
 - ENG-PERF §4 剔除（WP-02、WP-33、WP-07） · L421 · 2.6k
-- ENG-PERF §5 流式加载（WP-02） · L462 · 13.9k
+- ENG-PERF §5 流式加载（WP-02） · L462 · 14.0k
 - ENG-PERF §6 主线程与 C#（WP-01） · L622 · 4.0k
 - ENG-PERF §7 内存与显存（WP-01、WP-02） · L678 · 3.0k
 - ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L722 · 4.9k
@@ -1623,7 +1623,7 @@
 
 ## ENG-ROADMAP · 扩展路线：从观光到 RPG
 
-`docs/design/engineering/ENG-ROADMAP.md` · 24.7k 字 · 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留
+`docs/design/engineering/ENG-ROADMAP-扩展路线.md` · 24.8k 字 · 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留
 关键词：扩展路线、从观光到 RPG、RPG 扩展、扩展点、扩展原则、规则集、sightseeing、观光规则集、观光禁令、观者状态、输入占用按原因计、枚举的穷举纪律、二值判断、偶发事件数据化、名字占位、RPG 预留目录、实体 ID 前缀、存档预留段名、v1 冻结前的预留、写法纪律、帧顺序草案、RPG 子系统挂点、角色资产、VRoid、VRM、规则集预算、RPG 开工前待办、必需段组
 
 - ENG-ROADMAP §0 结论 · L23 · 1.6k
@@ -1640,7 +1640,7 @@
 
 ## ENG-STATUS · 施工状态
 
-`docs/design/engineering/ENG-STATUS.md` · 37.2k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
+`docs/design/engineering/ENG-STATUS-施工状态.md` · 37.2k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
 关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步、待派工队列、待处理流水线、调研入队流水线、Q-nnn、排队、可派、已派
 
 - ENG-STATUS §0 结论 · L23 · 574
@@ -1652,14 +1652,14 @@
 
 ## ENG-TEAM-COMMS · 协作分册：交接与通信
 
-`docs/design/engineering/ENG-TEAM-COMMS.md` · 13.1k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
+`docs/design/engineering/ENG-TEAM-COMMS-交接与通信.md` · 13.2k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
 关键词：.collab、archive、logs、结案即挪走、谁读什么、.ignore、交接目录、合并请求、评审请求、契约申请文件、任务单、施工单、值班单、文件命名、编号-主题、二号会话长期角色、待派活清单、值班长期单、旁路单、调研单、logs/merged.log、流水、notes、收件箱、一条一个文件、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、duty_watch、side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
 
 - ENG-TEAM-COMMS §0 结论 · L23 · 838
   - ★ ENG-TEAM-COMMS §0.1 接入要点 · L33 · 69
 - ENG-TEAM-COMMS §1 交接目录与文件 · L37 · 4.2k
   - ENG-TEAM-COMMS §1.1 结案即挪走与谁读什么 · L71 · 1.3k
-- ENG-TEAM-COMMS §2 命名与写法 · L85 · 817
+- ENG-TEAM-COMMS §2 命名与写法 · L85 · 854
 - ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L95 · 961
 - ENG-TEAM-COMMS §4 消息与流水 · L123 · 2.3k
 - ENG-TEAM-COMMS §5 唤醒脚本 · L155 · 2.2k
@@ -1667,7 +1667,7 @@
 
 ## ENG-TEAM-DUTY · 协作分册：值班与旁路
 
-`docs/design/engineering/ENG-TEAM-DUTY.md` · 7.8k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
+`docs/design/engineering/ENG-TEAM-DUTY-值班与旁路.md` · 7.8k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
 关键词：值班、值班执行者、Sol 值班会话、值班长期单、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、值班单 002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
 
 - ENG-TEAM-DUTY §0 结论 · L23 · 706
@@ -1681,7 +1681,7 @@
 
 ## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
 
-`docs/design/engineering/ENG-TEAM-FLOW.md` · 15.3k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
+`docs/design/engineering/ENG-TEAM-FLOW-包的归属与开发流程.md` · 15.3k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
 关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
 
 - ENG-TEAM-FLOW §0 结论 · L23 · 685
@@ -1703,7 +1703,7 @@
 
 ## ENG-TEAM-QUOTA · 协作分册：账号与额度
 
-`docs/design/engineering/ENG-TEAM-QUOTA.md` · 6.7k 字 · 额度排程口径，Claude 侧按 Opus 当量的并发公式与记账，Codex 账号与速度，单 Claude 账户模式，额度见底时冻结，仅双账号模式的规则
+`docs/design/engineering/ENG-TEAM-QUOTA-账号与额度.md` · 6.8k 字 · 额度排程口径，Claude 侧按 Opus 当量的并发公式与记账，Codex 账号与速度，单 Claude 账户模式，额度见底时冻结，仅双账号模式的规则
 关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、Codex 额度、快速模式、普通速度、service_tier、单 Claude 账户模式、双账号模式、仅双账号模式、额度见底、冻结、切换账号、主账号、二号会话的账号、合计下限、空缺活清单补位、报额度、撞到 5 小时上限、API 官方定价
 
 - ENG-TEAM-QUOTA §0 结论 · L23 · 571
@@ -1719,7 +1719,7 @@
 
 ## ENG-TEAM-ROLES · 协作分册：参与者与分工
 
-`docs/design/engineering/ENG-TEAM-ROLES.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
+`docs/design/engineering/ENG-TEAM-ROLES-参与者与分工.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
 关键词：参与者、会话、作者、主会话、总指挥、主代理、决定权、执行人、二号会话、project-09、wendystar1145、Astra、gpt-6-astra、gpt-6.1-sol、gpt-6-luna、Grok 值班执行者、luna 机械值班、模型能力、GPT 不做审美、视觉风格归属、事归谁、七问、推理强度、Opus 与 Sonnet 的分界、补 GPT 短板、简单少量的活、派单最少写、升级先找失败原因、子代理生命周期、恢复还是新开
 
 - ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
@@ -1741,16 +1741,16 @@
 
 ## ENG-TEAM · 多模型协作规程：总纲与分册索引
 
-`docs/design/engineering/ENG-TEAM.md` · 4.8k 字 · 多模型协作规程的总纲：五份分册各自的结论、按角色的接入要点与分册索引
+`docs/design/engineering/ENG-TEAM-多模型协作规程.md` · 4.9k 字 · 多模型协作规程的总纲：五份分册各自的结论、按角色的接入要点与分册索引
 关键词：多模型协作、协作规程、总纲、分册索引、接入要点、按角色读、作者、主会话、二号会话、二号会话开的子代理、Astra、Astra 派出的子代理、值班执行者、Sol 值班会话、Sol 旁路会话、下属会话、施工子代理、不向作者出选项
 
 - ENG-TEAM §0 结论 · L23 · 2.8k
   - ★ ENG-TEAM §0.1 接入要点 · L32 · 2.1k
-- ENG-TEAM §1 分册索引 · L49 · 763
+- ENG-TEAM §1 分册索引 · L49 · 798
 
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP.md` · 109.4k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
+`docs/design/engineering/ENG-WP-工作包派工单.md` · 109.5k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
 关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.7k
@@ -1761,19 +1761,19 @@
   - ENG-WP §2.2 细节阶段待办 · L240 · 3.3k
   - ENG-WP §2.3 候选包 · L279 · 255
 - ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L287 · 3.9k
-- ENG-WP §4 子代理通用简报模板 · L312 · 630
+- ENG-WP §4 子代理通用简报模板 · L312 · 638
 - ENG-WP §5 主代理的职责 · L330 · 3.2k
 - ENG-WP §6 待验证（P0） · L350 · 1.2k
 
 ## REF-PROMPT · 完整提示词（备份）
 
-`docs/design/reference/REF-PROMPT.md` · 12.6k 字 · 作品《电光年华》的完整描述，用作提示词，供通读全貌；不是施工文档
+`docs/design/reference/REF-PROMPT-完整提示词备份.md` · 12.6k 字 · 作品《电光年华》的完整描述，用作提示词，供通读全貌；不是施工文档
 
 - REF-PROMPT 提示词正文 · L20 · 12.1k
 
 ## REF-SPEND-AUDIT · 近一天开发消耗与可省流程
 
-`docs/design/reference/REF-SPEND-AUDIT.md` · 3.7k 字 · 实现占比、浪费证据与节省建议
+`docs/design/reference/REF-SPEND-AUDIT-开发消耗与可省流程.md` · 3.7k 字 · 实现占比、浪费证据与节省建议
 关键词：额度、实现、测试、审计、协调、轮询、重复门禁
 
 - REF-SPEND-AUDIT §0 结论 · L23 · 506
@@ -1785,7 +1785,7 @@
 
 ## TOOL-PREVIEW · 内容预览
 
-`docs/design/tools/TOOL-PREVIEW.md` · 4.7k 字 · 开发构建里预览与回看内容：按实体定位、保留机位与时季天气、复制机位、重读数据
+`docs/design/tools/TOOL-PREVIEW-内容预览.md` · 4.7k 字 · 开发构建里预览与回看内容：按实体定位、保留机位与时季天气、复制机位、重读数据
 关键词：内容预览、预览、回看、看效果、开发构建、--focus、--pose-file、按实体定位、实体 ID、机位、复制机位、机位文件、last-pose.json、F5 重读数据、F6 复制机位、F7 重启、重启后恢复机位、校验不过、保留上一次有效画面、预览只读不写
 
   - TOOL-PREVIEW 分工 · L23 · 264
@@ -1798,7 +1798,7 @@
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/design/ops/OPS-RELEASE.md` · 8.0k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
+`docs/design/ops/OPS-RELEASE-发布与交付.md` · 8.1k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
 关键词：发布、发版、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、安装包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、升级、卸载、清理用户数据、诊断包、导出诊断、试玩反馈、许可、MIT、LICENSE、发布页、干净环境验证
 
   - OPS-RELEASE 分工 · L23 · 415
