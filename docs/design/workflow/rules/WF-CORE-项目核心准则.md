@@ -15,8 +15,9 @@ gates: []
 
 # WF-CORE · 项目核心准则
 
-> **范围**：本文只列核心准则，一条一句；细则以指向的小节为准。提醒钩子 `.collab/tools/hooks/uestc-guard.cjs` 在每条消息前把下面 §0 注入 Claude 与 Codex 的每个会话和子代理。
+> **范围**：本文只列核心准则，一条一句；细则以指向的小节为准。提醒钩子 `.collab/tools/hooks/uestc-guard.cjs` 把下面 §0 注入 Claude 与 Codex 的会话（每条消息前）和子代理（开工时一次）。
 > **查阅**：读 §0 即可；细则按每条后面的指向查。
+> **关联**：[WF-RULE 全员守则](WF-RULE-全员守则.md)、[WF-BUILD 施工边界与内容底线](WF-BUILD-施工边界与内容底线.md)、[WF-DOC 文档写法](WF-DOC-文档写法.md)、[WF-MODEL 模型选择与子代理](../collaboration/WF-MODEL-模型选择与子代理.md)、[WF-ROLE 参与者与分工](../collaboration/WF-ROLE-参与者与分工.md)、[WF-INDEX 协作总纲](../WF-INDEX-协作总纲.md)、[CORE-DECISIONS 决策登记](../../core/CORE-DECISIONS-决策登记.md)
 
 ## 0 结论
 
