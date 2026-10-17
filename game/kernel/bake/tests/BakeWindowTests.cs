@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
+using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
 
@@ -185,18 +186,26 @@ public sealed class BakeWindowTests
             var prepared = BakeWindowPreparation.Prepare(context, modules);
             return new(9, context.SourceInputs, "final-input", "atlas-input", new(), [], context.InteriorProviders, prepared);
         });
-        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, data,
+        Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
+        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
         _ = claims.Value;
+        var producer = map.CreateBuildContext("producer-code", "atlas-input");
+        ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
         var lighting = new LightInventoryDocument(1, BakeOptions.Abi, context.Map.Id, "hash", [], [], []) { WindowNumbering = loaded.Windows.Snapshot };
         map.CompletePreparation(new(lighting, new(1, BakeOptions.Abi, context.Map.Id, "hash", [])));
         var a = map.GetPreparedContext(mapContext, "source");
         var b = map.GetPreparedContext(mapContext, "provider");
         if (!ReferenceEquals(a, map.GetPreparedContext(mapContext, "source")) || !ReferenceEquals(a.WindowNumbering, b.WindowNumbering) ||
-            !ReferenceEquals(a.World, context.World) || !ReferenceEquals(a.SourceInputs, context.SourceInputs) || a.DataHash != "final-input" ||
+            !ReferenceEquals(a.World, context.World) || !ReferenceEquals(a.SourceInputs, context.SourceInputs) ||
+            !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) || a.DataHash != "final-input" ||
+            !ReferenceEquals(a.ClaimedBy, producer.ClaimedBy) || !ReferenceEquals(a.Catalog, producer.Catalog) ||
+            !ReferenceEquals(a.SourceInputs, producer.SourceInputs) || !ReferenceEquals(a.WindowNumbering, producer.WindowNumbering) ||
+            !ReferenceEquals(a.GlobalInputs, producer.GlobalInputs) || !ReferenceEquals(a.GroundMaskContributors, producer.GroundMaskContributors) ||
+            !ReferenceEquals(a.PartLods, producer.PartLods) || producer.CodeHash != "producer-code" || producer.DataHash != "atlas-input" ||
             a.CodeHash != "source-code" || b.CodeHash != "provider-code" || a.ClaimedBy(Feature, Aspects.Facade) != Owner ||
             !ReferenceEquals(a.GlobalInputs, globals) || !ReferenceEquals(b.GlobalInputs, globals) ||
             !ReferenceEquals(a.GroundMaskContributors, contributors) || !ReferenceEquals(b.GroundMaskContributors, contributors) ||
@@ -220,6 +229,58 @@ public sealed class BakeWindowTests
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
+    }
+
+    [TestCase]
+    public void UnloadedBuildStopsBeforeEncodingAndNeverPublishesItsOldHandle()
+    {
+        var context = Context();
+        var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs);
+        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", "fixture", snapshot);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var producer = new PausedProducer(started, release);
+        var map = new BakeService.MapBuild(mapContext, new Dictionary<string, BakeService.Module>(),
+            new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
+            new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, "data", "atlas", new(), [],
+                new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
+            context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
+        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
+        var cache = Path.Combine(root, "output", "bake-cancel", Guid.NewGuid().ToString("N"));
+        using var service = new BakeService(new(cache, true, false, false, true, false, false, false, 1, null));
+        var queue = new BakeQueue(1);
+        Exception? stopped = null;
+        try
+        {
+            var key = new BakeKey(context.Map.Id, "cancelled", "fixture");
+            var handle = queue.Ensure(key, BakePriority.Background, () =>
+            {
+                try { return service.Build(map, key); }
+                catch (Exception error) { stopped = error; throw; }
+            });
+            if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Build did not start.");
+            map.Active = false;
+            queue.ForgetMap(key.Map);
+            map.Lifetime.Cancel();
+            release.Set();
+            queue.Dispose();
+            if (stopped is not OperationCanceledException || handle.State != BakeState.Failed || handle.Product is not null ||
+                !queue.Failures.IsEmpty || Directory.Exists(cache))
+                throw new InvalidOperationException("An unloaded build entered encoding, published Ready, or wrote cache data.");
+        }
+        finally { release.Set(); queue.Dispose(); map.Lifetime.Dispose(); }
+    }
+
+    private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release) : IBakeProducer
+    {
+        public bool CanBuild(BakeKey key) => key.Module == "cancelled";
+        public object Build(BakeKey key, BuildContext context)
+        {
+            started.Set();
+            if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Build was not released.");
+            // Encoding this unsupported result would fail; cancellation must stop before the codec is called.
+            return new object();
+        }
     }
 
     private static Dictionary<string, BakeService.Module> Modules(Source source, Provider provider) => new(StringComparer.Ordinal)

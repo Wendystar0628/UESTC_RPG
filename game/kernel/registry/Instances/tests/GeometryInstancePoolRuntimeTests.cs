@@ -3,7 +3,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
-using Campus.Style.Stubs;
+using Campus.Style.Materials;
 using GdUnit4;
 using Godot;
 using N = System.Numerics;
@@ -370,8 +370,8 @@ public sealed class GeometryInstancePoolRuntimeTests
             try
             {
                 var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Godot scene tree required.");
-                fixture._first = new D0MaterialLibrary().Material;
-                fixture._second = new D0MaterialLibrary().Material;
+                fixture._first = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
+                fixture._second = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
@@ -394,7 +394,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         public List<ShaderMaterial> Created { get; } = [];
         public ShaderMaterial Create(ShaderId shader)
         {
-            var material = new D0MaterialLibrary().Material; // Construction stays inside the existing Style factory.
+            var material = new ShaderMaterialSource().Create(ShaderId.VegTrunk); // The real whitelist factory owns shader selection.
             Created.Add(material);
             return material;
         }

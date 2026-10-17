@@ -169,7 +169,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why)
     {
         ValidateStyle(style);
-        // A D0 immediate-completion driver is not a working WP-36 travel implementation.
+        // Travel requires a ready driver that evaluates the requested transition.
         if (transitDriver?.IsReady != true || !IsPlaying() || _context is null || _maps?.Context is null || _maps.Current != Map
             || MapTransitioning()) return Refuse(TravelRefusal.Unavailable, out why);
         if (_transit is not null || camera.ActiveTransit is { Done.IsCompleted: false }) return Refuse(TravelRefusal.Busy, out why);

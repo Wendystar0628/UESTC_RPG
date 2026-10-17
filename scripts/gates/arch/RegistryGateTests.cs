@@ -1,6 +1,8 @@
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using Godot;
 
 namespace Campus.Arch.Tests;
 
@@ -8,13 +10,15 @@ namespace Campus.Arch.Tests;
 public sealed class RegistryGateTests
 {
     [TestCase]
-    public void RealWorldReplacementDoesNotConstructOrCastTheD0Fallback()
+    public void DeclarationValidationDoesNotConstructRegisteredImplementations()
     {
         var registry = new ServiceRegistry();
         registry.Discover([typeof(ServiceRegistry).Assembly, typeof(ReplacementWorld).Assembly]);
         var chosen = registry.Entries.Single(entry => entry.Kind == "service" && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
-        RegistryGateRunner.ValidateConstructorGraph(registry, [typeof(IRuleset), typeof(PaletteCatalog), typeof(IRenderHost)]);
+        RegistryGateRunner.ValidateConstructorGraph(registry,
+            [typeof(IRuleset), typeof(IRulesetActivation), typeof(IAppExit), typeof(Camera3D),
+                typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer), typeof(PaletteCatalog)]);
         if (ReplacementWorld.Constructed) throw new InvalidOperationException("Declaration validation constructed the selected world implementation.");
     }
 

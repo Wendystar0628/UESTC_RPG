@@ -3,10 +3,9 @@ using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Maps;
 using Campus.Gen.Parts.Stubs;
 using Campus.Kernel.Registry;
-using Campus.Kernel.Stubs;
-using Campus.Kernel.Stubs.Foundation;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -77,7 +76,7 @@ public sealed class InteriorProviderScopeTests
     {
         var registry = RealProviderRegistry();
         var map = new MapId("fixture-map");
-        foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(MapServiceStub) })
+        foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(Campus.Kernel.Maps.MapService) })
         {
             var error = Throws<InvalidOperationException>(() => registry.CreateInteriorProvider(type, map));
             Require(error.Message.Contains(type.FullName!, StringComparison.Ordinal), "Rejected type was not identified in the error.");
@@ -126,7 +125,7 @@ public sealed class InteriorProviderScopeTests
             version = 1,
             interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openFloors = floors, entrances = Array.Empty<object>() } }
         });
-        var bindings = D0InteriorSetup.Configure(bytes, providers);
+        var bindings = InteriorAssembly.Configure(bytes, providers);
         Require(bindings.Count == 1 && bindings[0].FeatureIds.SequenceEqual([feature]) &&
             bindings[0].OpenFloors.SequenceEqual(floors), "Configure lost catalog feature/floor coverage.");
     }
@@ -137,7 +136,7 @@ public sealed class InteriorProviderScopeTests
         var bounds = new Box3(new(offset, 0f, offset), new(offset + 32f, 24f, offset + 40f));
         var ring = new PolygonRings([new(offset, offset), new(offset + 32f, offset),
             new(offset + 32f, offset + 40f), new(offset, offset + 40f)]);
-        var world = new StubWorldModel(new StubSpatialIndex(), new InteriorIndexStub(), new StubFidelityModel());
+        var world = new MutableWorldFixture();
         world.Configure([new WorldFeature(feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
         { Bounds = bounds, Height = 24f, Storeys = 6 }], boundary: ring);
         var descriptor = new MapDescriptor(map, new("测试地图", "Fixture"), MapKind.Outdoor, 1, 7,

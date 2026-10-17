@@ -52,21 +52,22 @@ public static class BootWorldOverrides
     }
 
     /// <summary>Only view/flow overrides remain after PrepareWorld. Never Freeze, Reset or reseason a live process here.</summary>
-    public static async Task ApplyView(BootArguments args, ServiceRegistry services, Func<string, byte[]> read, bool restoringWorld)
+    public static async Task ApplyView(BootArguments args, ServiceRegistry services,
+        bool restoringWorld, bool showTitle)
     {
-        if (restoringWorld || args.HasLoad || args.Title && !args.CaptureMode) return;
-        bool Applies(string key) => args.Title ? args.Has(key) : args.Values.ContainsKey(key);
+        if (restoringWorld || args.HasLoad || showTitle && !args.CaptureMode) return;
+        bool Applies(string key) => showTitle ? args.Has(key) : args.Values.ContainsKey(key);
         var context = services.Get<IMapService>().Context ?? throw new InvalidOperationException("View overrides require a loaded map.");
         var control = services.Get<IWorldControl>();
-        if (!args.Title || args.Has("flow")) control.SetFlow((int)Number(args, "flow", 1));
+        if (!showTitle || args.Has("flow")) control.SetFlow((int)Number(args, "flow", 1));
         if (args.Has("focus") || args.Has("pose-file"))
             throw new NotSupportedException("Content preview location provider is not yet connected.");
         var poseId = args.Value("pose");
         if (poseId.Length > 0)
         {
-            var titlePose = args.Title && poseId == "T0";
+            var titlePose = showTitle && poseId == "T0";
             var pose = titlePose ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
-                : ReviewPoseResolver.Resolve(poseId, context, read);
+                : ReviewPoseResolver.Resolve(poseId, context);
             if (!titlePose && !services.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
                 throw new ArgumentException($"Pose is outside the reachable space or inside its buffer: {poseId}.");
             services.Get<ICameraRig>().SetPose(pose);

@@ -1,12 +1,11 @@
 using System.Numerics;
-using Campus.Audio.Core.Stubs;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 
 namespace Campus.Kernel.Stubs.AudioUi;
 
 [KernelService(typeof(IAcousticEnv), Owner = "WP-00", IsStub = true)]
-public sealed class AcousticEnvStub(IMediumState medium) : IAcousticEnv
+public sealed class AcousticEnvStub(IMediumState medium, IAudioVoiceService voices) : IAcousticEnv
 {
     private bool _wasIndoor;
     private long _rev;
@@ -41,8 +40,9 @@ public sealed class AcousticEnvStub(IMediumState medium) : IAcousticEnv
         get
         {
             var rev = Rev;
-            var silent = new SendTap(D0AudioNode.DryBusIndex, -80f);
-            return new(D0AudioNode.DryBusIndex, silent, silent, silent, silent, 0f, rev);
+            var dry = voices.BusIndex(AudioBuses.NearDry);
+            var silent = new SendTap(dry, -80f);
+            return new(dry, silent, silent, silent, silent, 0f, rev);
         }
     }
     public long Rev { get { _ = Indoor; return _rev; } }

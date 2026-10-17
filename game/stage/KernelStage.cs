@@ -35,7 +35,17 @@ public partial class KernelStage : Node3D, IAppExit
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
     private int _frames;
-    public string Phase { get; private set; } = "compose";
+    private string _phase = "compose";
+    public string Phase
+    {
+        get => _phase;
+        private set
+        {
+            _phase = value;
+            if (AppBoot.Value("gate") is "save-close" or "save-resume")
+                GD.Print($"CORE_BOOT_PHASE {value} {FrameClock.MonotonicMilliseconds:R}");
+        }
+    }
     public string? Failure { get; private set; }
 
     public override async void _Ready()
@@ -113,6 +123,7 @@ public partial class KernelStage : Node3D, IAppExit
     private async Task StartWorld()
     {
         var options = AppBoot.Options;
+        var showTitle = options.Title && options.Value("cine") != "leave";
         var registry = Services.Services;
         var participants = _runtimeObjects.Distinct(ReferenceEqualityComparer.Instance).OfType<IBootParticipant>().OrderBy(item => item.Order)
             .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
@@ -132,7 +143,7 @@ public partial class KernelStage : Node3D, IAppExit
         Phase = "prepare-flow";
         var appBoot = registry.Get<IAppBootFlow>();
         var target = await appBoot.PrepareBoot(new BootFlowRequest(
-            ShowTitle: options.Title,
+            ShowTitle: showTitle,
             Slot: options.Has("slot") ? new SlotId("s" + options.Value("slot").TrimStart('s')) : null,
             LoadFile: options.Has("load") ? options.Value("load") : null,
             Map: options.Has("map") ? new MapId(options.Value("map")) : null,
@@ -153,8 +164,9 @@ public partial class KernelStage : Node3D, IAppExit
         // First classification measures the map's default overview (V1); PrepareWorld places T0 afterwards.
         var travel = maps.Travel(new MapTravelRequest(target, options.Value("spawn") is { Length: > 0 } spawn ? spawn : null,
             null, ViewMode.Fly, MapTravelCause.Boot));
-        if (await travel.Done != MapTravelResult.Arrived) throw new InvalidOperationException("Boot map travel failed.");
+        var travelled = await travel.Done;
         CheckStartupActive();
+        if (travelled != MapTravelResult.Arrived) throw new InvalidOperationException("Boot map travel failed.");
         await Initialize(BootPhase.AfterMapWarm);
         await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
         CheckStartupActive();
@@ -163,7 +175,7 @@ public partial class KernelStage : Node3D, IAppExit
         if (initialFlow is { } flowRate) registry.Get<IWorldControl>().SetFlow(flowRate);
         await appBoot.PrepareWorld();
         CheckStartupActive();
-        await BootWorldOverrides.ApplyView(options, registry, Read, appBoot.WillRestoreWorld);
+        await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
         CheckStartupActive();
         _view!.Sync();
         _mapRuntime!.Prefetch(registry.Get<ICameraRig>().Pose, registry.Get<ICameraRig>().Mode);
@@ -181,12 +193,23 @@ public partial class KernelStage : Node3D, IAppExit
         Phase = "reveal";
         readinessWait.Dispose(); // Preparation ended; the authored reveal duration is not loading.
         _statistics!.MarkRealtime();
-        await veil.Reveal(VeilReason.Boot, options.Title ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
+        await veil.Reveal(VeilReason.Boot, showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
         CheckStartupActive();
         await appBoot.CompleteBoot();
+        if (options.Has("cine"))
+        {
+            Phase = "named-cinematic";
+            await RunRequestedCinematic(options.Value("cine"));
+            CheckStartupActive();
+        }
         _ready = true;
         Phase = "realtime";
         GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
+        if (options.Value("gate") is "save-close" or "save-resume")
+        {
+            await RunCoreLifecycle(options.Value("gate"));
+            return;
+        }
         if (!options.Has("gate") && options.Has("shots") && !options.Has("frames")) { _finishing = true; _ = FinishRun(); }
 
         async Task Initialize(BootPhase phase)
@@ -201,6 +224,34 @@ public partial class KernelStage : Node3D, IAppExit
         }
     }
 
+    private async Task RunRequestedCinematic(string name)
+    {
+        var saves = Services.Get<ISaveService>();
+        switch (name)
+        {
+            case "enter_new":
+            case "enter_new_short":
+                var options = AppBoot.Options;
+                SlotId? selected = options.Has("save") && options.Value("save") != "off"
+                    ? new SlotId("s" + options.Value("save"))
+                    : options.Has("slot") ? new SlotId("s" + options.Value("slot").TrimStart('s')) : null;
+                var slot = selected ?? saves.Slots.FirstOrDefault(info => info.Health == SlotHealth.Empty)?.Slot
+                    ?? throw new InvalidOperationException("Named new-game playback requires an empty or explicitly selected slot.");
+                if (await _flow!.Enter(new(EnterKind.NewGame, slot)) != EnterResult.Entered)
+                    throw new InvalidOperationException("Named new-game playback failed.");
+                break;
+            case "enter_continue":
+                if (await _flow!.Enter(new(EnterKind.Continue, saves.Active ?? saves.Continue)) != EnterResult.Entered)
+                    throw new InvalidOperationException("Named continue playback requires a readable slot.");
+                break;
+            case "leave":
+                await _flow!.ReturnToTitle();
+                if (_flow.State != AppState.Title) throw new InvalidOperationException("Named return-to-title playback failed.");
+                break;
+            default: throw new ArgumentException("Unknown named cinematic: " + name);
+        }
+    }
+
     private void CheckStartupActive()
     {
         if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
@@ -210,7 +261,7 @@ public partial class KernelStage : Node3D, IAppExit
     {
         var report = RegistryGateRunner.Run(Services.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
             AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteCatalog), typeof(IAppExit), typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
-        GD.Print("G5_D0_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
+        GD.Print("G5_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
         GetTree().Quit();
     }
 
@@ -249,7 +300,7 @@ public partial class KernelStage : Node3D, IAppExit
         try
         {
             if (AppBoot.Options.Has("shots"))
-                await CaptureSequence.RunAsync(this, _contentReadiness!, AppBoot.Options, Read, _view!.Sync, () =>
+                await CaptureSequence.RunAsync(this, _contentReadiness!, AppBoot.Options, _view!.Sync, () =>
                 {
                     CheckStartupActive();
                     return _ready &&
@@ -266,7 +317,11 @@ public partial class KernelStage : Node3D, IAppExit
     }
     public override void _Notification(int what)
     {
-        if (what == NotificationWMCloseRequest) _ = CloseAsync();
+        if (what == NotificationWMCloseRequest)
+        {
+            if (_coreAwaitingClose) { _coreAwaitingClose = false; _coreCloseAt = FrameClock.MonotonicMilliseconds; }
+            _ = CloseAsync();
+        }
     }
     private async Task CloseAsync()
     {
@@ -319,6 +374,7 @@ public partial class KernelStage : Node3D, IAppExit
         _ready = false;
         _statistics = null;
         Phase = "shutdown-map";
+        TraceCoreClose(Phase);
         var failures = new List<Exception>();
         var textures = _runtimeObjects.OfType<IGlobalDataTextureRegistry>().SingleOrDefault();
         try
@@ -336,6 +392,7 @@ public partial class KernelStage : Node3D, IAppExit
         catch (Exception error) { failures.Add(error); }
 
         Phase = "shutdown-nodes";
+        TraceCoreClose(Phase);
         var children = GetChildren();
         Node[] owned;
         // Array<Node> is not IDisposable; its explicit untyped conversion provides deterministic disposal.
@@ -348,7 +405,13 @@ public partial class KernelStage : Node3D, IAppExit
         }
         // Reverse attachment releases presentation consumers before the stage camera/environment.
         foreach (var node in owned.Reverse())
-            try { RemoveChild(node); node.Free(); } catch (Exception error) { failures.Add(error); }
+            try
+            {
+                RemoveChild(node); node.Free();
+                TraceCoreClose("node:" + node.GetType().Name);
+            }
+            catch (Exception error) { failures.Add(error); }
+        TraceCoreClose("shutdown-services");
         foreach (var instance in _runtimeObjects)
         {
             if (instance is GodotObject || ReferenceEquals(instance, textures) || instance is not IDisposable disposable) continue;
@@ -356,9 +419,13 @@ public partial class KernelStage : Node3D, IAppExit
         }
         _runtimeObjects.Clear();
         Phase = "shutdown-textures";
+        TraceCoreClose(Phase);
         try { if (textures is not null) await textures.ShutdownAsync(); }
         catch (Exception error) { failures.Add(error); }
+        TraceCoreClose("shutdown-complete");
         foreach (var error in failures) GD.PushError("[WP-01][phase=shutdown] " + error);
+        if (_coreCloseAt is { } closeAt)
+            GD.Print($"CORE_SHUTDOWN_MS {FrameClock.MonotonicMilliseconds - closeAt:R}");
         GetTree().Quit(failures.Count == 0 ? exitCode : 2);
     }
     private void Fail(Exception error)

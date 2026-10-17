@@ -12,6 +12,8 @@ namespace Campus.Kernel.Renderer;
 public readonly record struct RenderAccount(WpId Owner, int Handles, int Surfaces, int Triangles);
 
 /// <summary>Dynamic geometry host; static streamed TileBundles belong to WP-02.</summary>
+[KernelService(typeof(IRenderHost), Owner = "WP-01")]
+[KernelNode("render-host", Owner = "WP-01")]
 public partial class RenderHost : Node3D, IRenderHost, IMapAware
 {
     private sealed class Entry(WpId owner, Node3D root)
@@ -184,7 +186,7 @@ public partial class RenderHost : Node3D, IRenderHost, IMapAware
         var mesh = new ArrayMesh();
         try
         {
-            GeometrySurfaceUpload.Append(mesh, source, _materials!, catalog, tint);
+            GeometrySurfaceUpload.Append(mesh, source, catalog, tint);
             return mesh;
         }
         catch { mesh.Dispose(); throw; }

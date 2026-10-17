@@ -5,6 +5,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Stream;
 
+[KernelNode("stream.mount", Owner = "WP-02b")]
 public partial class StreamMountNode : Node
 {
     private StreamMountQueue? _queue;

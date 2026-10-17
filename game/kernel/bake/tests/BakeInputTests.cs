@@ -5,9 +5,8 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Kernel.Maps;
-using Campus.Kernel.Stubs;
-using Campus.Kernel.Stubs.Foundation;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Kernel.Bake.Tests;
 
@@ -201,7 +200,7 @@ public sealed class BakeInputTests
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), [])
         { TerrainDefaults = new("1:5", 1.5f, "1:4", 1.2f, .75f) };
-        return new(descriptor, new StubWorldModel(new StubSpatialIndex(), new InteriorIndexStub(), new StubFidelityModel()), inputs);
+        return new(descriptor, new MutableWorldFixture(), inputs);
     }
     private static void Reject(Action action)
     {

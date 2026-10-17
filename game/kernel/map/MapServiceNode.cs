@@ -1,0 +1,20 @@
+using Campus.Contracts;
+using Campus.Contracts.Maps;
+using Services = Campus.Kernel.Registry.Kernel;
+using Godot;
+
+namespace Campus.Kernel.Maps;
+
+[KernelNode("map-service", Owner = "WP-46")]
+public partial class MapServiceNode : Node
+{
+    private MapService? _service;
+    public override void _Ready()
+    {
+        ProcessPriority = FramePriority.Map;
+        _service = Services.Get<IMapService>() as MapService
+            ?? throw new InvalidOperationException("The map frame driver requires the registered map service.");
+    }
+    public override void _Process(double delta) => _service?.Step();
+    public override void _ExitTree() => _service?.Dispose();
+}

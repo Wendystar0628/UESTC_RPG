@@ -1,9 +1,6 @@
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Contracts.Maps;
 using Campus.Gen.Walkable;
-using Campus.Gen.World;
-using Campus.Gen.Zones.DesignWaterfront;
 
 namespace Campus.Pipeline.Walk;
 
@@ -24,30 +21,7 @@ internal static class Program
             var map = new MapId(descriptor.RootElement.GetProperty("id").GetString() ?? throw new InvalidDataException("Map id is missing."));
             if (arguments.TryGetValue("--map", out var expectedMap) && map.Value != expectedMap)
                 throw new InvalidDataException("--map does not match the supplied data root.");
-            var rect = descriptor.RootElement.GetProperty("dataRect").Deserialize<MapRect>(ContractJson.Options)
-                ?? throw new InvalidDataException("Map dataRect is missing.");
-            var loaded = WorldModelLoader.Load(map, files);
-            var mapFile = descriptor.RootElement.Deserialize<MapFile>(ContractJson.Options)
-                ?? throw new InvalidDataException("Map descriptor is missing.");
-            var context = new BuildContext
-            {
-                Catalog = ReadCatalog(paletteRoot),
-                World = loaded.World,
-                Map = mapFile.Complete(loaded.Geo, loaded.Center,
-                    new(new(rect.Min.X, mapFile.Roam.FloorY, rect.Min.Y), new(rect.Max.X, mapFile.Roam.CeilY, rect.Max.Y)),
-                    new((int)MathF.Floor(rect.Min.X / 64f), (int)MathF.Floor(rect.Min.Y / 64f)),
-                    new((int)MathF.Ceiling(rect.Max.X / 64f) - 1, (int)MathF.Ceiling(rect.Max.Y / 64f) - 1)),
-                WorldSeed = mapFile.Seed,
-                SourceInputs = files
-            };
-            var waterfront = new WaterfrontModule();
-            var tiles = waterfront.Tiles(context).Distinct().OrderBy(tile => tile.Z).ThenBy(tile => tile.X).ToArray();
-            var occupancy = tiles.SelectMany(tile => waterfront.Build(context, tile, LodLevel.L0).Occupancy ?? []).ToArray();
-            var supports = tiles.SelectMany(tile => waterfront.Collide(context, tile)).OfType<RampCollider>()
-                .Where(ramp => ramp.Tag == SurfaceTag.Ground).ToArray();
-            var hash = WalkInputHash.Compute(files);
-            var product = WalkableBaker.Build(loaded.World, map, rect, loaded.Boundary, hash, occupancy, supports);
-            WalkBakeInputHash.RequireCurrent(product, files);
+            var product = WalkBakeGenerator.Build(files, ReadCatalog(paletteRoot));
             Directory.CreateDirectory(output);
             var destination = Path.Combine(output, "walk.bake.json");
             File.WriteAllBytes(destination, JsonSerializer.SerializeToUtf8Bytes(product, ContractJson.Options));
@@ -59,7 +33,7 @@ internal static class Program
             var report = new
             {
                 map = map.Value,
-                inputHash = hash,
+                inputHash = product.InputHash,
                 inputs = files.Keys.Order(StringComparer.Ordinal).ToArray(),
                 walkCells = product.Walk.Classes.Length,
                 classes = classCounts,

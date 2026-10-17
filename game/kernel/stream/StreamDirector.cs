@@ -13,6 +13,8 @@ using System.Collections.ObjectModel;
 namespace Campus.Kernel.Stream;
 
 /// <summary>Selection at -500; no instances or geometry are created in this phase.</summary>
+[KernelService(typeof(IMapStreamState), Owner = "WP-02b")]
+[KernelNode("stream.select", Owner = "WP-02b")]
 public partial class StreamDirector : Node, IMapAware, IMapStreamState
 {
     private readonly StreamSettings _settings = new();
@@ -70,7 +72,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
             ViewMode.Walk => _collision.Ready(destination.Position, 96),
             _ => throw new ArgumentOutOfRangeException(nameof(_destinationMode))
         }));
-    public string? Error { get; private set; }
+    private string? _error;
+    public string? Error => _error ?? _collision?.Error;
     public int MountedTiles => _groups.Values.Count(group => group.Mounted);
     public int VisibleTiles => _visibility.Drawn.Count;
     public bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
@@ -93,7 +96,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
     {
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
-        _context = context; Error = null; _speed.Reset(); _instance = _world.Instance;
+        _context = context; _error = null; _speed.Reset(); _instance = _world.Instance;
         _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _reflectionDirty = true;
@@ -118,7 +121,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         foreach (var bundle in _groups.Values.SelectMany(group => group.Bundles)
                      .Concat(_interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct()) bundle.DetachAll();
         _mapGeneration++;
-        _context = null; Error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
+        _context = null; _error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
         _destinationPlanned = false; _destinationConsumed = false;
         _destinationSequence++; _destinationTransition = null; _mapRequestSequence = _arrivedSequence = 0;
         _mount.RemoveMap(from);
@@ -138,7 +141,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         if (_context is null) throw new InvalidOperationException("A map must be mounted before destination prefetch.");
         if (space is null && _context.World.Spatial.MediumAt(destination.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
             space = new(building, checked((short)medium.Storey));
-        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); Error = null;
+        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); _error = null;
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _requests.Clear();
         var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn or MapStage.VeilOut } transition ? transition : null;
@@ -155,7 +158,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         if (_exiting) return;
         HarvestCatalog();
         _interiors?.Poll(Math.Max(0, _settings.MaximumPreparations - _preparing.Count - _interiors.Preparations));
-        if (_interiors?.Error is { } interiorError) Error ??= interiorError;
+        if (_interiors?.Error is { } interiorError) _error ??= interiorError;
         PollHandles();
         if (_context is null || _catalog is null || _tree is null) return;
         if (!_destinationConsumed && _destination is { } target && DestinationReady &&
@@ -268,7 +271,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
                 _groups.Add(tile, group);
             }
             var priority = tile == StreamTile.Root || _destinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
-            if (group.Error is not null && priority == BakePriority.KnownDestination) Error ??= group.Error;
+            if (group.Error is not null && priority == BakePriority.KnownDestination) _error ??= group.Error;
             group.Priority = priority;
             var distance = LodTree.Distance(pose.Position, tree.Bounds(tile));
             var toTile = tree.Bounds(tile).Center - pose.Position;
@@ -433,7 +436,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
     private void Fail(StreamTile tile, string error)
     {
         if (_groups.TryGetValue(tile, out var group)) group.Error = error;
-        if (tile == StreamTile.Root || _destinationRequired.Contains(tile)) Error ??= error;
+        if (tile == StreamTile.Root || _destinationRequired.Contains(tile)) _error ??= error;
         GD.PushError(error);
     }
     private static IContentModule CreateModule(Type type)
@@ -452,6 +455,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
     {
         _exiting = true;
         if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
+        if (_catalogTask is { } catalog)
+        {
+            _catalogTask = null;
+            _ = ObserveDiscardedCatalog(catalog);
+        }
         // Shutdown is under the veil and is allowed to wait; no GPU task survives engine teardown.
         foreach (var preparing in _preparing)
             try { preparing.Task.GetAwaiter().GetResult().Dispose(); } catch (Exception error) { GD.PushError(error.Message); }
@@ -463,6 +471,12 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         if (_reflections is not null) _reflections.Changed -= OnReflectionChanged;
         if (_maps is not null) _maps.Arrived -= OnMapArrived;
         _materials?.Dispose();
+    }
+    private static async Task ObserveDiscardedCatalog(Task<ModuleTileCatalog> catalog)
+    {
+        // Pure CPU results need no native release. Observe a late fault without touching an exited node or engine.
+        try { await catalog.ConfigureAwait(false); }
+        catch (Exception) { }
     }
     private sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup Group);
     private sealed record Preparing(StreamTile Tile, long Revision, Task<PreparedTile> Task, TileGroup Group);

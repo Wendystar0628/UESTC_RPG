@@ -3,14 +3,12 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
-using Campus.Kernel.Stubs.Foundation;
 using GdUnit4;
 
 namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
-/// Where the vegetation worker's BuildContext comes from: the D0 stub source takes the effective world (base files, every overlay,
-/// the frozen source snapshot and the registered claims); a formal source is used as is and fails loudly.
+/// The vegetation worker consumes the prepared production world and its frozen inputs as is.
 /// </summary>
 [TestSuite]
 public sealed class VegetationContextTests
@@ -19,26 +17,32 @@ public sealed class VegetationContextTests
     private const string DesignRoad = "design:center-east-riverside-walk";
 
     [TestCase]
-    public void D0StubSourceReadsTheEffectiveWorldNotTheFourBaseFiles()
+    public void PreparedSourcePreservesTheEffectiveWorldOverlaysAndClaims()
     {
         var fixture = Fixture.Load();
-        var source = new FailingSource(new NotSupportedException("stub"));
-        var reads = 0;
-        var resolve = VegetationContext.Resolve(fixture.Map, Module, source, sourceIsD0Stub: true, Palette(), BuildInputSnapshot.Empty,
-            new WorldModelLoaderAdapter(), () => { reads++; return (fixture.Input, fixture.Claims); });
-        Check(source.Calls == 0 && reads == 1, "The D0 branch asked the stub source or did not read the map inputs once.");
-        Check(!fixture.Map.World.Network.Roads.Any(road => road.Id.Value == DesignRoad),
-            "Fixture error: the base-only world already holds the design footway.");
-        var context = resolve();
-        Check(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad), "The overlay's design footway is missing from the world.");
+        var loaded = MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), fixture.Input, fixture.Claims);
+        var map = MapWorldLoading.CreateContext(fixture.Input.Entry, loaded, fixture.Input.SourceInputs);
+        var prepared = new BuildContext
+        {
+            World = map.World,
+            Map = map.Descriptor,
+            WorldSeed = map.Descriptor.Seed,
+            Catalog = Palette(),
+            SourceInputs = fixture.Input.SourceInputs.Entries,
+            ClaimedBy = fixture.Claims.Build(map.World).ClaimedBy
+        };
+        var source = new PreparedSource(prepared);
+        var context = VegetationContext.Resolve(map, Module, source)();
+        Check(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad), "The overlay's design footway is missing.");
         Check(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
-              context.SourceInputs.Keys.Any(path => path.StartsWith("overlay/center-east.d/", StringComparison.Ordinal)) &&
-              context.SourceInputs.ContainsKey("vegetation/planting.json"), "The context lost the frozen source snapshot.");
+            context.SourceInputs.Keys.Any(path => path.StartsWith("overlay/center-east.d/", StringComparison.Ordinal)) &&
+            context.SourceInputs.ContainsKey("vegetation/planting.json"), "The prepared source lost the frozen input version.");
         var (feature, aspect, owner) = fixture.Claims.Sources.Where(s => !s.Global)
             .SelectMany(s => s.Claims.OfType<FeatureClaim>().Select(c => (c.Feature, Aspect: Lowest(c.Aspects), s.Owner)))
             .First(c => context.World.Features.ContainsKey(c.Feature));
-        Check(context.ClaimedBy(feature, aspect) == owner, "The claims ledger was not carried into the context.");
-        Check(context.Map.Id == fixture.Map.Descriptor.Id && context.WorldSeed == fixture.Map.Descriptor.Seed, "Map identity or seed differs.");
+        Check(context.ClaimedBy(feature, aspect) == owner, "The prepared source lost registered claims.");
+        Check(ReferenceEquals(context, prepared) && source.Module == Module && ReferenceEquals(source.Context, map),
+            "Prepared context identity or source query changed.");
     }
 
     [TestCase]
@@ -51,8 +55,7 @@ public sealed class VegetationContextTests
             var thrown = false;
             try
             {
-                VegetationContext.Resolve(fixture.Map, Module, source, sourceIsD0Stub: false, Palette(), BuildInputSnapshot.Empty,
-                    new ThrowingLoader(), () => throw new InvalidOperationException("The map inputs were read on the formal branch."));
+                VegetationContext.Resolve(fixture.Map, Module, source);
             }
             catch (Exception error) when (ReferenceEquals(error, failure)) { thrown = true; }
             Check(thrown && source.Calls == 1, $"{failure.GetType().Name} from the formal source did not surface unchanged.");
@@ -76,27 +79,13 @@ public sealed class VegetationContextTests
             CodeHash = "code"
         };
         var source = new PreparedSource(prepared);
-        var context = VegetationContext.Resolve(fixture.Map, Module, source, sourceIsD0Stub: false, palette, BuildInputSnapshot.Empty,
-            new ThrowingLoader(), () => throw new InvalidOperationException("The map inputs were read on the formal branch."))();
+        var context = VegetationContext.Resolve(fixture.Map, Module, source)();
         Check(source.Module == Module && ReferenceEquals(source.Context, fixture.Map), "The prepared query used another map or module.");
         Check(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
               ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 && context.DataHash == "data" &&
               context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog), "The prepared context lost a field or replaced the palette snapshot.");
         var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
-        Check(ReferenceEquals(VegetationContext.Resolve(fixture.Map, Module, new PreparedSource(own), false, Palette(), BuildInputSnapshot.Empty,
-            new ThrowingLoader(), () => throw new InvalidOperationException())(), own), "A context with a palette must be returned as is.");
-    }
-
-    [TestCase]
-    public void TheD0BranchIsChosenByTheRegisteredSourceBeingAStubNotByCatchingErrors()
-    {
-        var stub = new ServiceRegistry();
-        stub.Discover([typeof(BakeContextSourceStub).Assembly]);
-        Check(VegetationContext.SourceIsD0Stub(stub), "The registered D0 stub was not recognised.");
-        var formal = new ServiceRegistry();
-        formal.Discover([typeof(FormalSource).Assembly]);
-        Check(!VegetationContext.SourceIsD0Stub(formal), "A formal source was taken for the D0 stub.");
-        Check(!VegetationContext.SourceIsD0Stub(new ServiceRegistry()), "A registry without the service counts as the D0 stub.");
+        Check(ReferenceEquals(VegetationContext.Resolve(fixture.Map, Module, new PreparedSource(own))(), own), "A context with a palette must be returned as is.");
     }
 
     private static Aspects Lowest(Aspects aspects) => Enum.GetValues<Aspects>().First(bit => (aspects & bit) != 0);
@@ -128,19 +117,7 @@ public sealed class VegetationContextTests
         }
     }
 
-    [KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
-    private sealed class FormalSource : IBakeContextSource
-    {
-        public BuildContext GetPreparedContext(IMapContext context, string moduleId) => throw new NotSupportedException();
-    }
-
-    private sealed class ThrowingLoader : IWorldModelLoader
-    {
-        public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) =>
-            throw new InvalidOperationException("A world was loaded on the formal branch.");
-    }
-
-    /// <summary>The real qingshuihe data: a base-only map context (what D0 holds), the full load input and the registered claims.</summary>
+    /// <summary>Real qingshuihe input and registered claims.</summary>
     private sealed record Fixture(IMapContext Map, MapLoadInput Input, MapClaimSnapshot Claims)
     {
         public static Fixture Load()

@@ -15,6 +15,7 @@ public sealed record EntranceInventoryDocument(int Schema, string Abi, MapId Map
 internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances);
 
 /// <summary>Runtime read-only inventory; map preparation publishes all three immutable tables together.</summary>
+[KernelService(typeof(ILightInventory), Owner = "WP-02a")]
 public sealed class BakeLightInventory : ILightInventory
 {
     private LightInventoryDocument _current = new(1, BakeOptions.Abi, default, "", [], [], []);
@@ -92,22 +93,6 @@ internal static class BakeMapMetadataCodec
         var facades = new List<WindowFacadeDecl>(data.Windows.Metadata.Facades);
         var windows = new List<WindowDecl>(data.Windows.Metadata.Windows);
         var entrances = new SortedDictionary<string, BakedEntrance>(StringComparer.Ordinal);
-        BuildContext Context(string codeHash) => new()
-        {
-            World = map.Context.World,
-            Map = map.Context.Descriptor,
-            WorldSeed = data.Seed,
-            Catalog = map.Catalog,
-            ClaimedBy = map.Claims.Value.ClaimedBy,
-            SourceInputs = data.Inputs,
-            DataHash = data.Hash,
-            CodeHash = codeHash,
-            InteriorProviders = data.InteriorProviders,
-            WindowNumbering = data.Windows.Snapshot,
-            GlobalInputs = map.GlobalInputs,
-            GroundMaskContributors = map.GroundMaskContributors,
-            PartLods = map.PartLods
-        };
         void Collect(string id, ContentOutput output, bool collectLegacyWindows = true, FeatureId? feature = null)
         {
             map.Collect(id, "metadata", output.Diagnostics, feature);
@@ -125,7 +110,7 @@ internal static class BakeMapMetadataCodec
         }
         foreach (var (id, module) in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            var context = Context(module.CodeHash);
+            var context = map.CreateBuildContext(module.CodeHash);
             foreach (var tile in module.Value.Tiles(context).Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z))
             {
                 if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
@@ -138,7 +123,7 @@ internal static class BakeMapMetadataCodec
         {
             var id = "interior." + binding.ProviderId;
             var interior = map.Interiors[id];
-            var context = Context(interior.CodeHash);
+            var context = map.CreateBuildContext(interior.CodeHash);
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
                 var layout = BakeService.ValidatedLayout(interior.Value, binding, context, feature);

@@ -7,6 +7,7 @@ using AppBoot = Campus.Kernel.Boot.Boot;
 namespace Campus.Kernel.Bake;
 
 /// <summary>Map lifecycle only; generation and disk access stay on bake workers.</summary>
+[KernelNode("bake", Owner = "WP-02a")]
 public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
 {
     private readonly BakeService _service;

@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Walkable;
 using Campus.Kernel.Registry;
+using Campus.Pipeline.Walk;
 using Godot;
 
 namespace Campus.Kernel.Maps;
@@ -42,22 +45,62 @@ public class MapDataSource
         return new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(files);
     }
 
-    /// <summary>CPU-only resource preparation, shared by live travel and the pre-composition bake command.</summary>
+    /// <summary>Capture map resources and development bake metadata on the engine thread before worker preparation.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
         var worldFiles = ReadWorldFiles(entry); // Mount the startup pack before reading its resident walk data.
         var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         foreach (var pair in worldFiles) files.Add(pair.Key, pair.Value);
-        // Preserve the bake caller's existing all-map-JSON input coverage, but capture it BEFORE world parsing.
+        // Capture the complete map input coverage before world parsing.
         // Global assets and BakeRoot products are separate scopes. The bake hasher still selects only its dependencies.
         ReadJsonDirectory(entry.DataRoot, "", files);
         // Env.Backdrop is an authored relative path, not an extension convention. Preserve already read JSON bytes.
         BackdropInputs.AddOptional(entry.Descriptor, entry.DataRoot, files,
             Godot.FileAccess.FileExists, path => ReadRequired(path));
-        return new(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"));
+        var input = new MapLoadInput(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"));
+        return OS.IsDebugBuild() ? input with
+        {
+            DevelopmentWalkPath = ProjectSettings.GlobalizePath(entry.BakeRoot + "walk.bake.json"),
+            DevelopmentWalkCatalog = Campus.Kernel.Registry.Kernel.Services.Get<PaletteCatalog>()
+        } : input;
     }
 
     public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimLedger.Capture(Campus.Kernel.Registry.Kernel.Services, map);
+
+    /// <summary>Prepare the frozen startup input on workers; exported games require their shipped startup product.</summary>
+    public virtual async Task<MapLoadInput> PrepareLoadInput(MapLoadInput input)
+    {
+        var destination = input.DevelopmentWalkPath;
+        var catalog = input.DevelopmentWalkCatalog;
+        var development = destination is not null;
+        var rebuild = await Task.Run(() =>
+        {
+            if (input.WalkBytes.IsEmpty)
+            {
+                if (!development)
+                    throw new InvalidDataException("Required resident walk data is missing: " + input.Entry.BakeRoot + "walk.bake.json");
+                return true;
+            }
+            try { WalkBakeInputHash.RequireCurrent(MapWorldLoading.ReadWalk(input), input.Files); }
+            catch (WalkBakeFreshnessException error) when (development && error.Failure == WalkBakeFreshnessFailure.StaleInputs)
+            { return true; }
+            return false;
+        });
+        if (!rebuild) return input;
+        if (catalog is null) throw new InvalidOperationException("Development walk preparation requires the map palette catalog.");
+        var prepared = await Task.Run(() =>
+        {
+            var product = WalkBakeGenerator.Build(input.Files, catalog);
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(product, ContractJson.Options);
+            var result = input with { WalkBytes = bytes };
+            WalkBakeInputHash.RequireCurrent(MapWorldLoading.ReadWalk(result), result.Files);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination!)!);
+            File.WriteAllBytes(destination!, bytes);
+            return result;
+        });
+        Console.WriteLine($"[walk][map={input.Entry.Descriptor.Id.Value}] prepared development startup product");
+        return prepared;
+    }
 
     public virtual void WriteMapRect(MapRect rect) => RenderingServer.GlobalShaderParameterSet(
         Campus.Kernel.Renderer.ShaderNames.MapRect,

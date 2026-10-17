@@ -116,10 +116,13 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
-    public void PendingBakeCodecRejectsPatternsInsteadOfDroppingTheProfile()
+    public void BakedStaticSurfaceRetainsAndValidatesThePatternProfile()
     {
         _ = new BakedSurface(new(Plain), 0, BakedPrimitive.Triangles, 0, 0, default, default, default, Bounds);
-        Throws<NotSupportedException>(() => new BakedSurface(new(Plain with { SurfacePattern = Pattern }),
+        var baked = new BakedSurface(new(Plain with { SurfacePattern = Pattern }),
+            0, BakedPrimitive.Triangles, 0, 0, default, default, default, Bounds);
+        Require(baked.Material.Spec.SurfacePattern == Pattern, "Baked material lost the static profile.");
+        Throws<ArgumentException>(() => new BakedSurface(new(Plain with { SurfacePattern = default(SurfacePatternSpec) }),
             0, BakedPrimitive.Triangles, 0, 0, default, default, default, Bounds));
     }
 

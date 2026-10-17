@@ -4,7 +4,11 @@ using Campus.Contracts.AppFlow;
 using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
-using Campus.Kernel.Stubs;
+using Campus.Kernel.Materials;
+using Campus.Kernel.Registry;
+using Campus.Kernel.World;
+using Campus.Style.Materials;
+using Campus.Systems.Weather;
 using GdUnit4;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -21,7 +25,7 @@ public sealed class HudLifetimeTests
         var settings = new HudSettings();
         settings.SetTheme(UiThemeMode.Light);
         settings.SetReduceMotion(ReduceMotionMode.On);
-        var world = new WorldStateStub(new WeatherProcessStub(), Services.Get<IRuleset>());
+        var world = new WorldStateService(new WeatherProcess(Services.Get<IWeatherProfileSource>()));
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
         var clock = new UiThemeClock(world, settings, motion, UiTokens.Load());
@@ -48,22 +52,36 @@ public sealed class HudLifetimeTests
     [RequireGodotRuntime]
     public async Task HudRootReentryRebuildsResidentsAndOwnsOnlyItsInputLayers()
     {
-        var registry = Services.Services;
-        var previousFlow = Services.Get<IAppFlow>();
-        var previousRouter = Services.Get<IInputRouter>();
+        var previousRegistry = Services.Services;
+        var servicesProperty = typeof(Services).GetProperty(nameof(Services.Services))!;
+        var registry = new ServiceRegistry();
         var flow = new Flow();
         var router = new Router();
-        var settings = Services.Get<HudSettings>();
-        var model = Services.Get<HudModel>();
-        _ = Services.Get<IMotionSettings>();
+        var settings = new HudSettings();
+        var world = new WorldStateService(new TestWeatherProcess());
+        var camera = new TestCameraRig(world);
+        var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());
+        var motion = new MotionPolicy(settings);
         var settingsBaseline = Subscribers(settings, "Changed");
         var modelBaseline = Subscribers(model, "Changed");
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
-        var hud = new HudRoot();
+        HudRoot? hud = null;
         try
         {
+            // The fixture supplies only explicit dependencies; it never constructs the production boot graph.
+            registry.Add(settings);
+            registry.Add(model);
+            registry.Add<IMotionSettings>(motion);
+            registry.Add<IWorldState>(world);
+            registry.Add<IWorldControl>(world);
+            registry.Add<ICameraRig>(camera);
+            registry.Add<IPaletteCatalogSource>(previousRegistry.Get<IPaletteCatalogSource>());
+            registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());
+            registry.Add<IPaletteProbe>(new Probe());
             registry.Add<IAppFlow>(flow);
             registry.Add<IInputRouter>(router);
+            servicesProperty.SetValue(null, registry);
+            hud = new HudRoot();
             parent.AddChild(hud);
             var root = hud.GetNode<Control>("Root");
             var corners = root.GetNode<Control>("Corners");
@@ -88,14 +106,19 @@ public sealed class HudLifetimeTests
         }
         finally
         {
-            hud.Free();
-            registry.Add(previousFlow);
-            registry.Add(previousRouter);
+            try
+            {
+                hud?.Free();
+                Check(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0, "Free retained HUD registrations.");
+            }
+            finally
+            {
+                servicesProperty.SetValue(null, previousRegistry);
+                // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
+                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+                await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
+            }
         }
-        Check(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0, "Free retained HUD registrations.");
-        // 保留同帧重入的检查，再让退树时 QueueFree 的四角走完实际释放。
-        await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
-        await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
     }
 
     private static int Subscribers(object source, string name) =>
@@ -104,6 +127,12 @@ public sealed class HudLifetimeTests
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private sealed class Probe : IPaletteProbe
+    {
+        public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
+            srgb24.Fill(System.Numerics.Vector3.Zero);
     }
 
     private sealed class Flow : IAppFlow

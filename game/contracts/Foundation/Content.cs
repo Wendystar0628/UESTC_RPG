@@ -36,6 +36,7 @@ public interface IContentModule
     /// L4 is the module's entire-map product and always uses TileKey(0, 0).
     /// </summary>
     ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod);
+    /// <summary>Returns world-coordinate collision primitives. The kernel localizes them to the C tile exactly once.</summary>
     IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => [];
     IReadOnlyList<ChannelDecl> Channels => [];
     IReadOnlyList<InspectionProbe> Probes => [];

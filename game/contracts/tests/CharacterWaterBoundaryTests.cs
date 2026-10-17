@@ -42,14 +42,13 @@ public sealed class CharacterWaterBoundaryTests
     }
 
     [TestCase]
-    public void OldRampAndCollisionProvidersRemainValidWhileVisibleTreadsRoundTrip()
+    public void VisibleTreadsRoundTripWithoutInventingMetadata()
     {
         var spec = new StairSpec(.15f, .3f, 10);
         var ramp = new RampCollider(new(0, -.2f, 0), new(1.4f, -.2f, 0),
             new(1.4f, 1.5f, 3), new(0, 1.5f, 3), .15f, SurfaceTag.Stair)
         { Foot = FootMat.Concrete, Stair = spec };
-        ICollisionWorld legacy = new LegacyCollision();
-        Check(legacy.StairAt(Vector3.Zero, 0) is null && ramp.Treads is null, "Legacy provider acquired invented stair geometry.");
+        Check(ramp.Treads is null, "A ramp acquired invented stair geometry.");
         string oldJson = JsonSerializer.Serialize<Collider>(ramp, ContractJson.Options);
         Check(!oldJson.Contains("treads", StringComparison.Ordinal), "Null tread metadata changed old collider JSON.");
         var frame = new StairFrame(new(0, .15f, .1f), Vector3.UnitZ, Vector3.UnitY, 1.4f);
@@ -89,12 +88,6 @@ public sealed class CharacterWaterBoundaryTests
         Grounded = true
     };
 
-    private sealed class LegacyCollision : ICollisionWorld
-    {
-        public bool Ready(Vector3 p, float r) => false;
-        public SweepHit? Sweep(Vector3 from, Vector3 to, float r, float h) => null;
-        public SupportHit? SupportY(float x, float z, float yHint) => null;
-    }
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);

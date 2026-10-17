@@ -11,7 +11,7 @@ public sealed class BootArgumentsTests
     {
         var options = BootArguments.Parse(["--frames=30"], true);
         if (options.Value("clock") != "17.5" || options.Has("clock") || options.ExplicitArguments.Count != 1)
-            throw new InvalidOperationException("Formal defaults became explicit D0 inputs.");
+            throw new InvalidOperationException("Implicit defaults became explicit inputs.");
     }
 
     [TestCase]

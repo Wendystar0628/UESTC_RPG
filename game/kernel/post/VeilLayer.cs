@@ -56,6 +56,8 @@ public partial class VeilLayer : CanvasLayer, IVeilPresentation
     private VeilContent _content;
     private float _stillIn;
     private bool _covered;
+    private bool _drawnOpaque;
+    private Vector2 _drawnSize;
 
     public VeilLayer()
     {
@@ -83,19 +85,28 @@ public partial class VeilLayer : CanvasLayer, IVeilPresentation
     }
 
     /// <summary>True only while what this layer drew in the last frame covers the whole viewport fully opaque.</summary>
-    public bool IsCovered => _covered;
+    public bool IsCovered => _drawnOpaque && CoversViewport() && _drawnSize == GetViewport().GetVisibleRect().Size;
+
+    internal void Configure(IColorScriptFrame colors, IWorldState world, IPaletteProbe probe)
+    {
+        if (IsInsideTree()) throw new InvalidOperationException("Configure veil presentation before mounting it.");
+        _colorScript = colors;
+        _world = world;
+        _probe = probe;
+    }
 
     public override void _Ready()
     {
-        _colorScript = Services.Get<IColorScriptFrame>();
-        _world = Services.Get<IWorldState>();
-        _probe = Services.Get<IPaletteProbe>();
+        _colorScript ??= Services.Get<IColorScriptFrame>();
+        _world ??= Services.Get<IWorldState>();
+        _probe ??= Services.Get<IPaletteProbe>();
         AddChild(_fog);
         AddChild(_still);
         _fog.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _still.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _fog.Visible = false;
         _still.Visible = false;
+        RenderingServer.Singleton.FramePostDraw += OnFrameDrawn;
     }
 
     public void Present(in VeilFrame frame) => Present(frame.Opacity, frame.Content, frame.Frontispiece);
@@ -105,6 +116,7 @@ public partial class VeilLayer : CanvasLayer, IVeilPresentation
         if (!float.IsFinite(opacity)) throw new ArgumentOutOfRangeException(nameof(opacity));
         _presented = true;
         _opacity = Mathf.Clamp(opacity, 0f, 1f);
+        if (_opacity < 1f) _drawnOpaque = false;
         _content = content;
         switch (content)
         {
@@ -162,6 +174,30 @@ public partial class VeilLayer : CanvasLayer, IVeilPresentation
         if (hasStill) _still.Modulate = new Color(1f, 1f, 1f, stillAlpha);
         _covered = fogAlpha >= 1f || (hasStill && stillAlpha >= 1f);
     }
+
+    private bool CoversViewport()
+    {
+        if (!IsInsideTree() || !Visible || !_covered) return false;
+        var viewport = GetViewport().GetVisibleRect();
+        return viewport.Size.X > 0f && viewport.Size.Y > 0f && (Covers(_fog) || Covers(_still));
+
+        bool Covers(TextureRect layer)
+        {
+            if (!layer.IsVisibleInTree() || layer.Texture is null || layer.Modulate.A < 1f || layer.SelfModulate.A < 1f)
+                return false;
+            var actual = layer.GetGlobalRect();
+            return actual.Position.X <= viewport.Position.X && actual.Position.Y <= viewport.Position.Y &&
+                actual.End.X >= viewport.End.X && actual.End.Y >= viewport.End.Y;
+        }
+    }
+
+    private void OnFrameDrawn()
+    {
+        _drawnOpaque = CoversViewport();
+        _drawnSize = GetViewport().GetVisibleRect().Size;
+    }
+
+    public override void _ExitTree() => RenderingServer.Singleton.FramePostDraw -= OnFrameDrawn;
 
     private void UpdateGradient(double delta)
     {

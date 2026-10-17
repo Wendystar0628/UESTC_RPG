@@ -1,0 +1,176 @@
+using System.Numerics;
+using System.Text.Json;
+using Campus.Contracts;
+using Campus.Contracts.Audio;
+
+namespace Campus.Gen.Collision;
+
+public sealed record CollisionModule(string Id, IContentModule Module);
+public sealed record CollisionInterior(string Id, IInteriorProvider Provider, IReadOnlyList<FeatureId> FeatureIds);
+public sealed record CollisionBuildingFootprint(string SourceId, PolygonRings Rings, float? Height, int? Storeys);
+
+/// <summary>Combines the registered pure generators. Call only from the bake worker.</summary>
+public sealed class CollisionTileBuilder(
+    IReadOnlyList<CollisionModule> modules,
+    Func<PlacedPart, IReadOnlyList<Collider>> partCollision)
+{
+    public IReadOnlyList<Collider> Build(BuildContext context, TileKey tile)
+    {
+        var interiors = CollisionInteriorProviders.Resolve(context);
+        var world = new List<Collider>();
+        foreach (var entry in modules.OrderBy(m => m.Id, StringComparer.Ordinal))
+        {
+            if (!entry.Module.Tiles(context).Contains(tile)) continue;
+            world.AddRange(entry.Module.Collide(context, tile));
+            foreach (var part in entry.Module.Build(context, tile, LodLevel.L0).Parts)
+                world.AddRange(partCollision(part).Select(c => CollisionGeometry.Transform(c, part.At)));
+        }
+        foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            var entry = context.World.Interiors.Get(feature.Id);
+            foreach (var footprint in BuildingFootprints(feature))
+            {
+                var origin = CollisionGeometry.Origin(tile);
+                var minimum = footprint.Rings.Outer.Aggregate(Vector2.Min) - new Vector2(.3f);
+                var maximum = footprint.Rings.Outer.Aggregate(Vector2.Max) + new Vector2(.3f);
+                if (maximum.X < origin.X || minimum.X > origin.X + CollisionGeometry.TileSize ||
+                    maximum.Y < origin.Z || minimum.Y > origin.Z + CollisionGeometry.TileSize) continue;
+                world.AddRange(BuildingWalls(footprint.Rings, context.World.Spatial, entry, footprint.Height)
+                    .Where(w => CollisionGeometry.IntersectsTile(w, tile)));
+            }
+        }
+        // The mainline uses floor batches inside C tiles; room-cluster residency is deferred.
+        foreach (var provider in interiors.OrderBy(i => i.Id, StringComparer.Ordinal))
+            foreach (var feature in provider.FeatureIds)
+            {
+                if (!provider.Provider.Walkable) continue;
+                var layout = provider.Provider.Layout(context, feature);
+                var tileOrigin = CollisionGeometry.Origin(tile);
+                if (layout.Bounds.Max.X < tileOrigin.X || layout.Bounds.Min.X > tileOrigin.X + 64 ||
+                    layout.Bounds.Max.Z < tileOrigin.Z || layout.Bounds.Min.Z > tileOrigin.Z + 64) continue;
+                foreach (var storey in layout.OpenStoreys.Order())
+                {
+                    world.AddRange(provider.Provider.CollisionStorey(context, feature, storey)
+                        .Where(c => CollisionGeometry.IntersectsTile(c, tile)));
+                    foreach (var part in provider.Provider.BuildStorey(context, feature, storey, InteriorDetail.Full).Parts)
+                        world.AddRange(partCollision(part).Select(c => CollisionGeometry.Transform(c, part.At))
+                            .Where(c => CollisionGeometry.IntersectsTile(c, tile)));
+                }
+            }
+        return CollisionGeometry.Localize(world, tile);
+    }
+
+    /// <summary>Parts replace the aggregate query envelope, including for mixed POI parents.</summary>
+    public static IReadOnlyList<CollisionBuildingFootprint> BuildingFootprints(WorldFeature feature)
+    {
+        var result = new List<CollisionBuildingFootprint>();
+        if (feature.Parts.Count > 0)
+        {
+            foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
+            {
+                string? kind = feature.Kind.Value;
+                if (part.Props is { ValueKind: JsonValueKind.Object } props &&
+                    props.TryGetProperty("kind", out var value) && value.ValueKind == JsonValueKind.String)
+                    kind = value.GetString();
+                if (kind == "building") Add(part.SourceId, part.Geometry, part.Height, part.Storeys);
+            }
+        }
+        else if (feature.Kind.Value == "building")
+            Add(feature.Id.Value, feature.Geometry, feature.Height, feature.Storeys);
+        return result;
+
+        void Add(string sourceId, OverlayGeometry geometry, float? height, int? storeys)
+        {
+            switch (geometry)
+            {
+                case PolygonGeometry polygon:
+                    result.Add(new(sourceId, polygon.Rings, height, storeys));
+                    break;
+                case MultiPolygonGeometry multi:
+                    foreach (var polygon in multi.Polygons) result.Add(new(sourceId, polygon, height, storeys));
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Wall thickness goes inside each ring; only declared open entrances cut the lower wall.</summary>
+    public static IReadOnlyList<WallCollider> BuildingWalls(PolygonRings polygon, ISpatialIndex spatial, InteriorIndexEntry? interior, float? buildingHeight = null)
+    {
+        const float halfThickness = 0.075f;
+        const float entranceHeight = 3.2f;
+        if (buildingHeight is { } height && (!float.IsFinite(height) || height < 0))
+            throw new ArgumentException("Building height must be finite and non-negative.", nameof(buildingHeight));
+        // SYS-WALK requires a roughly 300 m wall to keep closed roofs inaccessible.
+        // A taller source part may extend it; the parent envelope's height is never substituted.
+        var collisionHeight = MathF.Max(300f, buildingHeight ?? 0f);
+        var result = new List<WallCollider>();
+        AddRing(polygon.Outer, false);
+        foreach (var hole in polygon.Holes) AddRing(hole, true);
+        return result;
+
+        void AddRing(IReadOnlyList<Vector2> ring, bool hole)
+        {
+            if (ring.Count < 3) return;
+            var area = 0f;
+            for (var i = 0; i < ring.Count; i++) area += ring[i].X * ring[(i + 1) % ring.Count].Y - ring[(i + 1) % ring.Count].X * ring[i].Y;
+            for (var i = 0; i < ring.Count; i++)
+            {
+                var a = ring[i]; var b = ring[(i + 1) % ring.Count];
+                var length = Vector2.Distance(a, b);
+                if (length < 0.001f) continue;
+                var direction = (b - a) / length;
+                var inward = new Vector2(-direction.Y, direction.X) * ((area > 0) != hole ? 1 : -1);
+                var edgeGround = MathF.Min(spatial.GroundY(a.X, a.Y), spatial.GroundY(b.X, b.Y));
+                var bottom = MinimumExteriorGround(a, b, inward, spatial) - 2f;
+                var top = edgeGround + collisionHeight;
+                var cuts = new List<(float Start, float End, bool Open)>();
+                foreach (var door in interior?.Entrances ?? [])
+                {
+                    var center = new Vector2(door.Center.X, door.Center.Z);
+                    var t = Vector2.Dot(center - a, direction);
+                    var projected = a + direction * Math.Clamp(t, 0, length);
+                    if (Vector2.Distance(center, projected) > 0.5f || door.ClearWidth <= 0) continue;
+                    var start = Math.Clamp(t - door.ClearWidth / 2, 0, length);
+                    var end = Math.Clamp(t + door.ClearWidth / 2, 0, length);
+                    if (end > start) cuts.Add((start, end, door.Open && interior!.Open));
+                }
+                var breaks = cuts.SelectMany(c => new[] { c.Start, c.End }).Append(0f).Append(length).Distinct().Order().ToArray();
+                for (var j = 0; j < breaks.Length - 1; j++)
+                {
+                    var lo = breaks[j]; var hi = breaks[j + 1]; var midpoint = (lo + hi) / 2;
+                    var doors = cuts.Where(c => midpoint >= c.Start && midpoint <= c.End).ToArray();
+                    var open = doors.Length > 0 && doors.All(d => d.Open);
+                    var tag = doors.Length > 0 && !open ? SurfaceTag.DoorClosed : SurfaceTag.Wall;
+                    var start = a + direction * (lo == 0 ? -halfThickness : lo) + inward * halfThickness;
+                    var end = a + direction * (hi == length ? length + halfThickness : hi) + inward * halfThickness;
+                    var y0 = open ? edgeGround + entranceHeight : bottom;
+                    result.Add(new(start, end, halfThickness, y0, top, tag) { Foot = FootMat.Concrete });
+                }
+            }
+        }
+    }
+
+    private static float MinimumExteriorGround(Vector2 a, Vector2 b, Vector2 inward, ISpatialIndex spatial)
+    {
+        // GroundY is the map's authoritative terrain query. Sample its L0 one-metre lattice in the exterior 3 m band.
+        const float width = 3f;
+        var direction = Vector2.Normalize(b - a);
+        var length = Vector2.Distance(a, b);
+        var minimum = MathF.Min(spatial.GroundY(a.X, a.Y), spatial.GroundY(b.X, b.Y));
+        var min = Vector2.Min(a, b) - new Vector2(width);
+        var max = Vector2.Max(a, b) + new Vector2(width);
+        for (var z = (int)MathF.Floor(min.Y); z <= (int)MathF.Ceiling(max.Y); z++)
+            for (var x = (int)MathF.Floor(min.X); x <= (int)MathF.Ceiling(max.X); x++)
+            {
+                var offset = new Vector2(x, z) - a;
+                var along = Vector2.Dot(offset, direction);
+                var outside = -Vector2.Dot(offset, inward);
+                var closest = a + direction * Math.Clamp(along, 0, length);
+                if (outside < 0 || Vector2.DistanceSquared(new(x, z), closest) > width * width) continue;
+                var height = spatial.GroundY(x, z);
+                if (!float.IsFinite(height)) throw new InvalidOperationException("Building collision band has non-finite terrain.");
+                minimum = MathF.Min(minimum, height);
+            }
+        return minimum;
+    }
+}

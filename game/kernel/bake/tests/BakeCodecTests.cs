@@ -143,6 +143,58 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [RequireGodotRuntime]
+    public void CancelledCacheReaderLeavesItsIndexUntouchedWithoutWaitingForTheOwnerLock()
+    {
+        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
+        var directory = Path.Combine(root, "output", "bake-cancel", Guid.NewGuid().ToString("N"));
+        var cache = new BakeCacheStore(directory);
+        byte[] payload = [1, 2, 3, 4];
+        cache.Write("fixture", "first", payload);
+        var indexPath = Path.Combine(directory, "fixture", "cache.index");
+        var index = File.ReadAllBytes(indexPath);
+        var gate = typeof(BakeCacheStore).GetField("_sync", System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.NonPublic)!.GetValue(cache)!;
+        using var cancellation = new CancellationTokenSource();
+        using var started = new ManualResetEventSlim();
+        using var done = new ManualResetEventSlim();
+        Exception? stopped = null;
+        var worker = new Thread(() =>
+        {
+            started.Set();
+            try
+            {
+                cache.TryRead("fixture", "first", BakeCacheStore.Hash(payload), true,
+                cancellationToken: cancellation.Token);
+            }
+            catch (Exception error) { stopped = error; }
+            finally { done.Set(); }
+        });
+        try
+        {
+            lock (gate)
+            {
+                worker.Start();
+                if (!started.Wait(TimeSpan.FromSeconds(5)) || !SpinWait.SpinUntil(() =>
+                    (worker.ThreadState & ThreadState.WaitSleepJoin) != 0, TimeSpan.FromSeconds(5)))
+                    throw new TimeoutException("Cache reader did not wait for the index lock.");
+                cancellation.Cancel();
+                if (!done.Wait(TimeSpan.FromSeconds(1))) throw new TimeoutException("Cancelled reader still waited for the index lock.");
+            }
+            worker.Join();
+            if (stopped is not OperationCanceledException || !index.SequenceEqual(File.ReadAllBytes(indexPath)))
+                throw new InvalidOperationException("Cancelled cache read changed the index or suppressed cancellation.");
+            var writeCancelled = false;
+            try { cache.Write("fixture", "cancelled", payload, cancellationToken: cancellation.Token); }
+            catch (OperationCanceledException) { writeCancelled = true; }
+            if (!writeCancelled || !index.SequenceEqual(File.ReadAllBytes(indexPath)) ||
+                Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 1)
+                throw new InvalidOperationException("A cancelled cache write committed another product or index.");
+        }
+        finally { cancellation.Cancel(); if (worker.IsAlive) worker.Join(); }
+    }
+
+    [TestCase]
     public void NegativeTileParentsUseFloorDivision()
     {
         if (BakeRequestKeys.Parent(new(-1, -3), LodLevel.L1) != new TileKey(-1, -2))

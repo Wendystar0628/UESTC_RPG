@@ -7,10 +7,10 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>The single capture queue for both composition roots; every pose gets a fresh readiness barrier.</summary>
+/// <summary>The production capture queue; every pose gets a fresh readiness barrier.</summary>
 public static class CaptureSequence
 {
-    public static async Task RunAsync(Node host, ViewContentReadiness producers, BootArguments options, Func<string, byte[]> read,
+    public static async Task RunAsync(Node host, ViewContentReadiness producers, BootArguments options,
         Action syncCamera, Func<bool> contentReady, CancellationToken cancellationToken = default,
         Action<Pose>? validatePose = null)
     {
@@ -28,7 +28,7 @@ public static class CaptureSequence
             var pose = id == "T0"
                 ? options.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
                     : throw new ArgumentException("T0 requires --title=1.")
-                : ReviewPoseResolver.Resolve(id, context, read);
+                : ReviewPoseResolver.Resolve(id, context);
             if (id != "T0") validatePose?.Invoke(pose);
             await veil.Cover(VeilReason.Boot, 0);
             rig.SetPose(pose);

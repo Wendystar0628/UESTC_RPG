@@ -13,7 +13,7 @@ namespace Campus.Kernel.Registry;
 public sealed record RegistryGateReport(string Scope, int Maps, int Services, int Declarations,
     int Entities, int Schemas, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);
 
-/// <summary>Headless D0 declaration checks. Never constructs services, nodes, or preview geometry.</summary>
+/// <summary>Headless declaration checks. Never constructs services, nodes, or geometry.</summary>
 public static class RegistryGateRunner
 {
     public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, string requestedMap,
@@ -104,15 +104,15 @@ public static class RegistryGateRunner
             using var document = JsonDocument.Parse(stream);
             if (document.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException($"Schema is not a JSON object: {name}");
         }
-        return new("D0 declarations + constructor graph + map data; no runtime initialization", selected.Length,
+        return new("declarations + constructor graph + map data; runtime core reported separately", selected.Length,
             registry.Entries.Count(entry => entry.Kind == "service"), registry.Entries.Count, entityCount,
             schemas.Length, priorities.Length, knobs.Length,
             [
                 "WP-27/WP-08: evaluate runtime Claims against each loaded world, including generic FeatureClaim rejection and overlapping claims.",
                 "WP-27/WP-08/WP-44: overlay difference reports and fidelity input freshness/coverage.",
-                "WP-27/WP-32: selected IQualityService.Knobs values and complete QualityResponsive ownership; D0 window retains its catalog assertion.",
+                "WP-27/WP-32: selected IQualityService.Knobs values and complete QualityResponsive ownership on runtime consumers.",
                 "WP-27/owners: service/node startup, save TypeInfo/ownership, audio buses/emitters, UI theme and reserved-directory checks.",
-                "WP-27: provider FeatureIds/door-state equality and generated palette material usage; D0 window retains preview geometry assertions."
+                "WP-27: provider FeatureIds/door-state equality and generated palette material usage."
             ]);
     }
 

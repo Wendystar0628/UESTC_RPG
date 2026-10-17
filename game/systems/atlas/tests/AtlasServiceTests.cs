@@ -5,12 +5,10 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.Parts.Stubs;
 using Campus.Hud.Map;
-using Campus.Kernel.Stubs;
-using Campus.Kernel.Stubs.AudioUi;
-using Campus.Kernel.Stubs.Foundation;
 using Campus.Systems.Atlas;
 using GdUnit4;
 
@@ -198,7 +196,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
-    public void RealCampusAndD0InteriorIndexProduceUniqueAtlasDoorMarkers()
+    public void RealCampusAndInteriorAssemblyProduceUniqueAtlasDoorMarkers()
     {
         var repository = new DirectoryInfo(AppContext.BaseDirectory);
         while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "game", "data", "maps", "qingshuihe", "campus.json")))
@@ -217,10 +215,13 @@ public sealed class AtlasServiceTests
         var authoredDoorIds = items.SelectMany(item => item.GetProperty("entrances").EnumerateArray())
             .Where(door => door.GetProperty("open").GetBoolean())
             .Select(door => door.GetProperty("id").GetString()!).ToHashSet(StringComparer.Ordinal);
-        var campus = D0CampusLoader.FromBytes(File.ReadAllBytes(Path.Combine(root, "campus.json")), open);
-        var interiorIndex = new InteriorIndexStub();
-        var world = new StubWorldModel(new StubSpatialIndex(), interiorIndex, new StubFidelityModel());
-        world.Configure(campus);
+        var files = Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories)
+            .ToDictionary(path => Path.GetRelativePath(root, path).Replace('\\', '/'),
+                path => (ReadOnlyMemory<byte>)File.ReadAllBytes(path), StringComparer.Ordinal);
+        var campus = new WorldModelLoaderAdapter().Load(new("qingshuihe"), files);
+        var interiorIndex = new TestInteriorIndex();
+        var world = new MutableWorldFixture(interiorIndex);
+        world.Configure(campus.World.Features.Values, campus.World.Boundary);
         var mapFile = JsonSerializer.Deserialize<MapFile>(File.ReadAllBytes(Path.Combine(root, "map.json")), ContractJson.Options)!;
         var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
         var providers = typeof(BoxInteriorProviderStub).Assembly.GetTypes()
@@ -228,12 +229,12 @@ public sealed class AtlasServiceTests
             .Select(type => (Type: type, Registration: type.GetCustomAttribute<InteriorProviderAttribute>()))
             .Where(item => item.Registration is not null)
             .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
-        var built = D0InteriorSetup.Build(interiorBytes,
+        var built = InteriorAssembly.Build(interiorBytes,
             new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
         interiorIndex.Configure(built.Entries);
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
-        Check(campus.SourceEntityCount > 400 && built.Entries.Select(entry => entry.Feature)
+        Check(campus.World.Features.Count > 400 && built.Entries.Select(entry => entry.Feature)
             .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures),
             "Regression did not assemble the complete campus and registered interior index.");
         Check(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
@@ -242,7 +243,7 @@ public sealed class AtlasServiceTests
         Check(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1,
             "Regression no longer exercises multiple generated fallback entrances.");
         Check(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length,
-            "D0 interior provider reused an entrance ID across different building features.");
+            "Interior provider reused an entrance ID across different building features.");
         var atlas = new AtlasService(new Camera(), new Observer(), new Rules("all-unlocked"));
         atlas.LoadMap(new Context(descriptor, world),
             JsonSerializer.Deserialize<AtlasMarkerFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "markers.json")), ContractJson.Options)!,
@@ -276,14 +277,14 @@ public sealed class AtlasServiceTests
         internal Camera Camera { get; } = new();
         internal Driver Driver { get; } = new();
         internal Observer Observer { get; } = new();
-        internal InteriorIndexStub Interiors { get; } = new();
-        internal StubWorldModel World { get; }
+        internal TestInteriorIndex Interiors { get; } = new();
+        internal MutableWorldFixture World { get; }
         internal Context Context { get; }
         internal AtlasService Atlas { get; }
         internal SaveRecorder Saves { get; }
         internal Fixture(string policy = "all-unlocked")
         {
-            World = new(new StubSpatialIndex(), Interiors, new StubFidelityModel());
+            World = new(Interiors);
             var map = new MapDescriptor(new("test-map"), new("测试", "Test"), MapKind.Outdoor, 1, 1,
                 new(0, 0, 1, new(-1000), new(1000)), Vector2.Zero, new(new(-1000), new(1000)),
                 new(new(-1000), new(1000)), new(1, 30, 3000, -28, 2000, 30, 40, 150),
@@ -292,9 +293,9 @@ public sealed class AtlasServiceTests
                 new("test", "test", []), new Dictionary<string, string>(), []);
             Context = new(map, World);
             var maps = new TestMapService(Context, Camera);
-            Saves = new(maps);
+            Saves = new();
             Atlas = new(Camera, Observer, new Rules(policy), Driver);
-            Atlas.Connect(maps, new Flow(), new AudioServiceStub(), Saves);
+            Atlas.Connect(maps, new Flow(), new TestAudio(), Saves);
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
@@ -390,19 +391,32 @@ public sealed class AtlasServiceTests
     }
     private sealed class Lease(Action release) : IDisposable
     { private Action? _release = release; public void Dispose() { _release?.Invoke(); _release = null; } }
-    private sealed class SaveRecorder(IMapService maps) : ISaveService
+    private sealed class SaveRecorder : ISaveService
     {
-        private readonly SaveServiceStub _stub = new(maps);
+
         public int Requests { get; private set; }
         public void Request(SaveReason reason) { Check(reason == SaveReason.Settled, "Unexpected save reason."); Requests++; }
-        public bool Enabled => false; public IReadOnlyList<SlotInfo> Slots => _stub.Slots; public SlotId? Continue => null;
-        public SlotId? Active => null; public bool Busy => false; public SaveState State => _stub.State; public bool HasPendingPose => false;
+        public bool Enabled => false; public IReadOnlyList<SlotInfo> Slots => []; public SlotId? Continue => null;
+        public SlotId? Active => null; public bool Busy => false; public SaveState State => new(null, null, null, null, ReadOnlyReason.SaveOff); public bool HasPendingPose => false;
         public event Action? SlotsChanged { add { } remove { } }
-        public Task<SaveResult> SaveNow(SaveReason r) => _stub.SaveNow(r);
-        public Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full) => _stub.Load(s, scope);
-        public Task CompleteResume() => _stub.CompleteResume(); public Task<LoadResult> LoadFile(string path) => _stub.LoadFile(path);
-        public Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null) => _stub.NewGame(s, seed, start);
-        public Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout) => _stub.FlushForQuit(r, timeout);
+        public Task<SaveResult> SaveNow(SaveReason r) => throw new NotSupportedException();
+        public Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full) => throw new NotSupportedException();
+        public Task CompleteResume() => throw new NotSupportedException(); public Task<LoadResult> LoadFile(string path) => throw new NotSupportedException();
+        public Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null) => throw new NotSupportedException();
+        public Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout) => throw new NotSupportedException();
         public byte[]? Thumbnail(SlotId s) => null;
     }
+    private sealed class TestAudio : Campus.Contracts.Audio.IAudioService
+    {
+        public Campus.Contracts.Audio.AudioSettings Settings { get; } = new();
+        public Campus.Contracts.Audio.AudioSnapshot Snapshot => default!;
+        public event Action<Campus.Contracts.Audio.AudioSettings>? SettingsChanged { add { } remove { } }
+        public void ApplySettings(Campus.Contracts.Audio.AudioSettings settings) => throw new NotSupportedException();
+        public void PlayUi(Campus.Contracts.Audio.UiCue cue) { }
+        public void SetMusic(Campus.Contracts.Audio.MusicCue cue, float fadeSeconds = 1.5f) => throw new NotSupportedException();
+        public void Cine(string cue, float seconds, float db = 0f) => throw new NotSupportedException();
+        public void Duck(Campus.Contracts.Audio.DuckReason reason, float db, float attackSeconds, float releaseSeconds) { }
+        public void ReleaseDuck(Campus.Contracts.Audio.DuckReason reason) { }
+    }
+
 }

@@ -51,7 +51,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
 
     public override void _Ready() => _world = Services.Get<IWorldState>();
 
-    // Leaving the tree: the render host releases its own nodes with the stage (D0RenderHost disposes on TreeExiting), and the
+    // Leaving the tree: the render host releases its owned nodes when the stage exits, and the
     // stage is busy removing children, so only drop the references here; map unloads release through the host.
     public override void _ExitTree()
     {

@@ -1,8 +1,11 @@
 using System.Reflection;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Quality;
+using Campus.Kernel.Bake;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
 using Campus.Style.Materials;
 using GdUnit4;
 using Godot;
@@ -36,7 +39,7 @@ public sealed class ToonLibraryRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task PendingSurfacePatternsCannotReuseAnAlreadyCachedPlainMaterial()
+    public async Task UnregisteredSurfacePatternsCannotReuseAnAlreadyCachedPlainMaterial()
     {
         await using var fixture = new Fixture();
         var plain = fixture.Library.Get(fixture.Spec);
@@ -46,13 +49,13 @@ public sealed class ToonLibraryRuntimeTests
         catch (NotSupportedException) { refused = true; }
         Require(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain) &&
             ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count == count,
-            "Unconnected surface patterns must fail before cache lookup/allocation, leaving plain materials intact.");
+            "Unregistered surface layers must fail before cache lookup/allocation, leaving plain materials intact.");
     }
 
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task RegisteredSurfacePatternBuildsItsOwnToonStaticMaterialClass()
+    public async Task BakedSurfacePatternUploadsMetresGatesAndBindsItsToonStaticMaterial()
     {
         await using var fixture = new Fixture();
         var plain = fixture.Library.Get(fixture.Spec);
@@ -69,6 +72,39 @@ public sealed class ToonLibraryRuntimeTests
             ((Vector2)patterned.GetShaderParameter("pattern_period")).IsEqualApprox(new(.6f, .6f)) &&
             ((Vector2)patterned.GetShaderParameter("pattern_joint")).IsEqualApprox(new(.006f, .006f)),
             "Layer, period and joint reach the material uniforms.");
+        var source = new GeometryBundle(new(spec),
+            [0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+            [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2, 3, 4, 5],
+            Uv: [-128.125f, 64.25f, -127.125f, 64.25f, -128.125f, 65.25f, 20, 8, 21, 8, 20, 9],
+            Uv2: [1, 2, 1, 2, 1, 2, 0, 4, 0, 4, 0, 4])
+        { ColorIndices = [64, 64, 64, 64, 64, 64] };
+        var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
+        var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, bounds,
+            [BakeSurfacePacker.Pack(source, bounds, new Palettes().Catalog)]);
+        var restored = (TileBundle)TileBundleCodec.Decode("fixture/pattern", key, TileBundleCodec.Encode("fixture/pattern", bundle));
+        var scenario = RenderingServer.ScenarioCreate();
+        try
+        {
+            using var prepared = PreparedTile.Create(restored);
+            using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource());
+            var draw = prepared.Draws.Single();
+            var material = materials.Resolve(draw);
+            prepared.MountOne(0, scenario, material.GetRid());
+            Require(ReferenceEquals(material, patterned) && !draw.Instanced &&
+                RenderingServer.MeshSurfaceGetMaterial(draw.Mesh, 0) == patterned.GetRid(),
+                "The formal packed-tile upload must bind the complete profile through ToonLibrary.");
+            using var arrays = RenderingServer.MeshSurfaceGetArrays(draw.Mesh, 0);
+            var uv = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
+            var gate = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
+            var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
+            for (var vertex = 0; vertex < 6; vertex++)
+                Require(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
+                    gate[vertex] == new Vector2(source.Uv2![vertex * 2], source.Uv2[vertex * 2 + 1]) &&
+                    colors[vertex].R8 == 64,
+                    "Native static upload changed metre coordinates, per-face gate/K or logical palette colour.");
+        }
+        finally { RenderingServer.FreeRid(scenario); }
         var refused = false;
         try { fixture.Library.Get(spec with { Kind = ToonKind.Glass }); }
         catch (ArgumentException) { refused = true; }
@@ -102,7 +138,7 @@ public sealed class ToonLibraryRuntimeTests
                     Uv: [.01f, .01f, .99f, .01f, .99f, .99f, .01f, .99f],
                     Uv2: [0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32])
                 { ColorIndices = [64, 64, 64, 64], Reserved = [spare, spare, spare, spare] };
-                GeometrySurfaceUpload.Append(mesh, source, fixture.Library, new Palettes().Catalog);
+                GeometrySurfaceUpload.Append(mesh, source, new Palettes().Catalog);
             }
             parent.AddChild(new MeshInstance3D { Mesh = mesh });
             foreach (var state in new[] { "registered", "unbound", "undersized" })

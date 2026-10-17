@@ -2282,6 +2282,7 @@ Campus.Contracts.ICinematicSettings
 Campus.Contracts.ICinematicSettings.Changed -> System.Action?
 Campus.Contracts.ICinematicSettings.Mode.get -> Campus.Contracts.AppFlow.CinematicMode
 Campus.Contracts.ICollisionWorld
+Campus.Contracts.ICollisionWorld.Error.get -> string?
 Campus.Contracts.ICollisionWorld.Ready(System.Numerics.Vector3 p, float r) -> bool
 Campus.Contracts.ICollisionWorld.StairAt(System.Numerics.Vector3 p, float yHint) -> Campus.Contracts.StairHit?
 Campus.Contracts.ICollisionWorld.SupportY(float x, float z, float yHint) -> Campus.Contracts.SupportHit?

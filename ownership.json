@@ -594,10 +594,6 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/style/shaders/toon_stub.gdshader.uid",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/shaders/ui_screen.gdshader.uid",
       "owner": "WP-35a"
     },
@@ -927,10 +923,6 @@
     },
     {
       "pattern": "game/style/shaders/packages.lock.json",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/shaders/toon_stub.gdshader",
       "owner": "WP-00"
     },
     {
@@ -2999,10 +2991,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/data/d0/**",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/hud/map/**",
       "owner": "WP-48b"
     },
@@ -3333,7 +3321,6 @@
     "game/style/shaders/toon_glass.gdshader",
     "game/style/shaders/toon_glass_near.gdshader",
     "game/style/shaders/toon_static.gdshader",
-    "game/style/shaders/toon_stub.gdshader",
     "game/style/shaders/ui_panel.gdshader",
     "game/style/shaders/ui_screen.gdshader",
     "game/style/shaders/veg_card.gdshader",

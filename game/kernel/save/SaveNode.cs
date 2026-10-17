@@ -1,0 +1,204 @@
+using System.Reflection;
+using Campus.Contracts;
+using Campus.Contracts.AppFlow;
+using Campus.Contracts.Atlas;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Save;
+using Campus.Contracts.Startup;
+using RuntimeKernel = Campus.Kernel.Registry.Kernel;
+using Campus.Kernel.Renderer;
+using Campus.Kernel.Save.Format;
+using Godot;
+
+namespace Campus.Kernel.Save;
+
+[KernelNode("save", Owner = "WP-50")]
+public partial class SaveNode : Node, IBootParticipant
+{
+    private SaveService _save = null!;
+    private IMapRuntime _mapRuntime = null!;
+    private ICollisionWorld _collision = null!;
+    private IMapService? _maps;
+    private IVeilPresentation? _veilPresentation;
+    private readonly CancellationTokenSource _exit = new();
+    private TaskCompletionSource<byte[]?>? _capture;
+    private IDisposable? _hiddenHud;
+    private ulong _frame, _readbackAt, _drawFrame;
+    private bool _drawCovered, _exiting;
+    public string Id => "save";
+    public int Order => 50;
+
+    public override void _Ready()
+    {
+        ProcessPriority = FramePriority.Save;
+        _save = (SaveService)RuntimeKernel.Get<ISaveService>();
+        RenderingServer.FramePostDraw += OnFramePostDraw;
+    }
+
+    public async Task Initialize(BootPhase phase, BootContext context)
+    {
+        switch (phase)
+        {
+            case BootPhase.BeforeMap:
+                {
+                    var args = context.Arguments;
+                    var explicitWrite = args.TryGetValue("save", out var saveArg) && saveArg != "off";
+                    var enabled = saveArg != "off" && (!context.CaptureMode || explicitWrite) && (!args.ContainsKey("load") || explicitWrite);
+                    var slot = explicitWrite ? ParseSlot(saveArg!) : (SlotId?)null;
+                    var at = args.TryGetValue("save-at", out var value) ? int.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (int?)null;
+                    if (at < 0) throw new ArgumentException("save-at cannot be negative.");
+                    var seed = args.TryGetValue("weather-seed", out value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
+                    _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
+                    _collision = RuntimeKernel.Get<ICollisionWorld>();
+                    _maps = RuntimeKernel.Get<IMapService>();
+                    _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
+                    var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
+                        new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
+                            .Single(a => a.Id == e.Id && a.Scope == e.Scope),
+                            (ISaveSection)RuntimeKernel.Services.Create(e.Type))).ToArray();
+                    var bindings = new SaveRuntimeBindings(RuntimeKernel.Get<IWorldState>(), RuntimeKernel.Get<IMapService>(), RuntimeKernel.Get<ICameraRig>(),
+                        RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IVeilState>(),
+                        () => RuntimeKernel.Get<IAppFlow>().State, id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
+                        RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
+                        () => (long)Time.GetUnixTimeFromSystem());
+                    await _save.Initialize(new(context.SaveDirectory, context.Build, enabled, slot, at, seed), bindings, new(sections));
+                    if (!_exiting && _maps is not null) _maps.Arrived += OnMapArrived;
+                    break;
+                }
+            case BootPhase.AfterMapWarm: break;
+            case BootPhase.BeforeReveal: _save.WarmSerialization(); break;
+            default: throw new ArgumentOutOfRangeException(nameof(phase));
+        }
+    }
+
+    public override void _Process(double delta)
+    {
+        _frame++;
+        _save.Tick(delta);
+        if (_capture is null || _frame < _readbackAt) return;
+        var completion = _capture; _capture = null;
+        Image? image = null;
+        try
+        {
+            if (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Minimized)
+                image = GetViewport().GetTexture().GetImage();
+        }
+        catch (Exception) { /* Thumbnail failure must never prevent saving state. */ }
+        finally { _hiddenHud?.Dispose(); _hiddenHud = null; }
+        if (image is null) { completion.TrySetResult(null); return; }
+        _ = EncodeThumbnail(image, completion);
+    }
+
+    private Task<byte[]?> CaptureThumbnail()
+    {
+        if (DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Minimized) return Task.FromResult<byte[]?>(null);
+        if (_capture is not null) return _capture.Task;
+        _capture = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _hiddenHud = CapturePresentation.HideHud();
+        _readbackAt = _frame + 1;
+        return _capture.Task;
+    }
+
+    private static async Task EncodeThumbnail(Image image, TaskCompletionSource<byte[]?> completion)
+    {
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                using (image)
+                {
+                    var width = image.GetWidth(); var height = image.GetHeight();
+                    if (width < 1 || height < 1) return null;
+                    var cropWidth = Math.Min(width, height * 16 / 9);
+                    var cropHeight = Math.Min(height, width * 9 / 16);
+                    using var cropped = image.GetRegion(new Rect2I((width - cropWidth) / 2, (height - cropHeight) / 2, cropWidth, cropHeight));
+                    while (cropped.GetWidth() > 768) cropped.ShrinkX2();
+                    cropped.Resize(384, 216, Image.Interpolation.Lanczos);
+                    var bytes = cropped.SaveWebpToBuffer(true, .8f);
+                    return SaveContainer.ValidateThumbnail(bytes) ? bytes : null;
+                }
+            }).ConfigureAwait(false);
+            completion.TrySetResult(result);
+        }
+        catch (Exception) { completion.TrySetResult(null); }
+    }
+
+    private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
+    {
+        // Flow owns the actual cover and keeps it drawn through this whole restoration barrier.
+        // Pose was restored in this Save frame, after Camera's process step. Its same-frame draw is insufficient.
+        var poseFrame = _frame;
+        var cancellation = _exit.Token;
+        var readinessWait = new SaveReadinessObservation();
+        try
+        {
+            await InSaveFrame(() =>
+            {
+                // Boot has one observation spanning every startup dependency, with the frontispiece policy.
+                if (RuntimeKernel.Get<IAppFlow>().State != AppState.Boot)
+                    readinessWait.Attach(RuntimeKernel.Get<IVeilService>().ObserveReadinessWait());
+                _mapRuntime.Prefetch(pose, mode, space);
+                return true;
+            }, cancellation).ConfigureAwait(false);
+            while (!await InSaveFrame(() =>
+            {
+                if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
+                if (_drawFrame <= poseFrame || !_drawCovered || _veilPresentation?.IsCovered != true) return false;
+                // Prefetch invalidates previous warmth. Start only after the native camera had a later process+covered draw.
+                _mapRuntime.BeginWarm();
+                return true;
+            }, cancellation).ConfigureAwait(false)) { }
+            while (!await InSaveFrame(() =>
+            {
+                if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
+                if (_collision.Error is { } collisionError) throw new InvalidOperationException(collisionError);
+                return _mapRuntime.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady && (mode switch
+                {
+                    ViewMode.Fly => true,
+                    ViewMode.Walk => _collision.Ready(pose.Position, 64),
+                    _ => throw new ArgumentOutOfRangeException(nameof(mode))
+                });
+            }, cancellation).ConfigureAwait(false)) { }
+        }
+        finally { readinessWait.Dispose(); }
+    }
+
+    private Task<T> InSaveFrame<T>(Func<T> action, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        return _save.OnFrame(() => { cancellation.ThrowIfCancellationRequested(); return action(); }).WaitAsync(cancellation);
+    }
+
+    private void OnFramePostDraw()
+    {
+        if (_exiting) return;
+        _drawFrame = _frame;
+        _drawCovered = _veilPresentation?.IsCovered == true;
+    }
+
+    private void OnMapArrived(MapId map, MapTravelCause cause)
+    {
+        switch (cause)
+        {
+            case MapTravelCause.Boot: case MapTravelCause.LoadSave: case MapTravelCause.NewGame: break;
+            case MapTravelCause.Ui:
+            case MapTravelCause.Portal:
+            case MapTravelCause.Teleport:
+            case MapTravelCause.Test:
+                _save.Request(SaveReason.MapChanged); break;
+            default: throw new ArgumentOutOfRangeException(nameof(cause));
+        }
+    }
+
+    public override void _ExitTree()
+    {
+        _exiting = true;
+        RenderingServer.FramePostDraw -= OnFramePostDraw;
+        if (_maps is not null) _maps.Arrived -= OnMapArrived;
+        _exit.Cancel();
+        _hiddenHud?.Dispose(); _capture?.TrySetResult(null); _save?.Dispose();
+        _exit.Dispose();
+    }
+    private static SlotId ParseSlot(string value) => value switch
+    { "1" => new("s1"), "2" => new("s2"), "3" => new("s3"), _ => throw new ArgumentException("save must be off or 1..3.") };
+}

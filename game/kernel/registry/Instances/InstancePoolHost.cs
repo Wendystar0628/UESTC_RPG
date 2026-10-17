@@ -174,7 +174,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
                 var material = surface.Shader is { } shader
                     ? ResolveShader(shader, provider) : provider.Get(surface.Material.Spec);
                 RequireSpatialMaterial(material);
-                var slot = GeometrySurfaceUpload.Append(mesh, surface, provider, catalog: catalog);
+                var slot = GeometrySurfaceUpload.Append(mesh, surface, catalog: catalog);
                 if (slot != index) throw new InvalidOperationException("Prototype material slots changed during upload.");
                 mesh.SurfaceSetMaterial(slot, material);
                 provider.TrackLayout(material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh, slot), Instanced: true));

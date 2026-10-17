@@ -121,7 +121,7 @@ public static class BakeSurfacePacker
             else
             {
                 F32(attribute, offset, u); F32(attribute, offset + 4, v); offset += 8;
-                // VF-B window IDs and water metadata retain their original IEEE-754 bits.
+                // Window IDs, water metadata and surface-pattern gate/K pairs retain their fp32 values.
                 F32(attribute, offset, mesh.Uv2!.Value.Span[i * 2]); F32(attribute, offset + 4, mesh.Uv2.Value.Span[i * 2 + 1]); offset += 8;
             }
             foreach (var custom in customs)

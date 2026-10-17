@@ -31,9 +31,6 @@ internal struct PostFrame
     public float Veil;
     public Vector3 SunDir;        // sun_dir: real sun direction (sky side of the fog colour)
     public Vector3 MoonDir;       // moon_dir
-    // Stand-in data textures (RenderingServer RIDs), used only while the registry has no producer for a name
-    public Rid FallbackPalette;
-    public Rid FallbackMatTable;
     // Finish pass and LUT (versions tiltshift_comp and lut of post_outline.glsl)
     public float TiltAmount;      // 0 until the tilt-shift blur dispatches land
     public float VignetteK;       // after the quality fade
@@ -48,63 +45,95 @@ internal struct PostFrame
 }
 
 /// <summary>
-/// One immutable publication. Taking it transfers both leases to the outline callback, which releases them in finally.
+/// One immutable publication. The mailbox and active callbacks each retain a reference; the last return releases
+/// both producer leases, so repeated draws never need a second texture source.
 /// </summary>
-internal readonly record struct PostFrameBatch(PostFrame Frame, GlobalDataTextureLease? Palette,
-    GlobalDataTextureLease? MatTable) : IDisposable
+internal sealed class PostFrameBatch(PostFrame frame, GlobalDataTextureLease palette,
+    GlobalDataTextureLease matTable) : IDisposable
 {
+    private int _references = 1;
+    public PostFrame Frame { get; } = frame;
+    public GlobalDataTextureLease Palette { get; } = palette;
+    public GlobalDataTextureLease MatTable { get; } = matTable;
+
+    // Called only under the mailbox lock while its own reference is still held.
+    public void Retain() => Interlocked.Increment(ref _references);
+
     public void Dispose()
     {
-        Palette?.Dispose();
-        MatTable?.Dispose();
+        if (Interlocked.Decrement(ref _references) != 0) return;
+        Palette.Dispose();
+        MatTable.Dispose();
     }
 }
 
 /// <summary>
 /// Single-slot main-to-render mailbox for the active camera's PostSky -> PostTransparent sequence.
-/// PostSky takes the pending frame and leases together and latches only its frame for the next PostTransparent;
-/// Publish cannot change that latch. Without a new publication, another PostSky reuses the scalars with fallback
-/// textures. Replaced or cancelled publications release only leases the render thread has not taken.
+/// PostSky promotes pending input to current and borrows it for each draw, latching its frame for PostTransparent;
+/// Publish cannot change that latch. Current leases survive repeated draws until replacement or cancellation,
+/// and active callbacks keep their own references across either operation.
 /// </summary>
 internal sealed class PostFrameBox
 {
     private readonly object _gate = new();
-    private PostFrameBatch _latest;
-    private bool _valid, _closed;
+    private PostFrameBatch? _pending, _current;
+    private bool _closed;
     private PostFrame _finishFrame;
     private bool _finishValid;
 
-    /// <summary>Main thread: transfers ownership of this frame and its leases, even after Close.</summary>
+    /// <summary>Main thread: transfers leases even after Close; missing producers cancel pending input.</summary>
     public void Publish(in PostFrame frame, GlobalDataTextureLease? palette, GlobalDataTextureLease? matTable)
     {
-        var batch = new PostFrameBatch(frame, palette, matTable);
-        PostFrameBatch replaced;
+        PostFrameBatch? batch = null;
+        if (palette is not null && matTable is not null) batch = new PostFrameBatch(frame, palette, matTable);
+        else
+        {
+            palette?.Dispose();
+            matTable?.Dispose();
+        }
+        PostFrameBatch? replaced, cancelled = null;
         lock (_gate)
         {
-            replaced = _closed ? batch : _latest;
+            replaced = _closed ? batch : _pending;
             if (!_closed)
             {
-                _latest = batch;
-                _valid = true;
+                _pending = batch;
+                if (batch is null)
+                {
+                    cancelled = _current;
+                    _current = null;
+                }
             }
         }
-        replaced.Dispose();
+        replaced?.Dispose();
+        cancelled?.Dispose();
     }
 
     /// <summary>PostSky: takes the publication and selects the frame shared by both passes.</summary>
     public bool TryTake(out PostFrameBatch batch)
     {
+        PostFrameBatch? replaced = null;
         lock (_gate)
         {
-            batch = _latest;
-            // Preserve the existing repeated-draw behavior: keep scalars, but never retake owned leases.
-            // Without a new publication Outline uses the frame's fallback textures as before.
-            _latest = new PostFrameBatch(batch.Frame, null, null);
-            _finishValid = _valid;
-            if (!_finishValid) return false;
+            if (_pending is not null)
+            {
+                replaced = _current;
+                _current = _pending;
+                _pending = null;
+            }
+            if (_current is not { } current)
+            {
+                batch = null!;
+                _finishValid = false;
+                return false;
+            }
+            batch = current;
+            _finishValid = true;
+            batch.Retain();
             _finishFrame = batch.Frame;
-            return true;
         }
+        replaced?.Dispose();
+        return true;
     }
 
     /// <summary>PostTransparent: consumes only the frame selected by this draw's PostSky, never the pending frame.</summary>
@@ -119,17 +148,19 @@ internal sealed class PostFrameBox
         }
     }
 
-    /// <summary>Stops publication and cancels unclaimed input; taken batches remain owned by their callbacks.</summary>
+    /// <summary>Stops publication and returns pending/current ownership; active callbacks keep their references.</summary>
     public void Close()
     {
-        PostFrameBatch cancelled;
+        PostFrameBatch? pending, current;
         lock (_gate)
         {
             _closed = true;
-            cancelled = _latest;
-            _latest = default;
-            _valid = _finishValid = false;
+            pending = _pending;
+            current = _current;
+            _pending = _current = null;
+            _finishValid = false;
         }
-        cancelled.Dispose();
+        pending?.Dispose();
+        current?.Dispose();
     }
 }

@@ -74,7 +74,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 6. **几何在本机烘焙**：几何一律由 gen 的 `Build()` 生成（经批准的英雄资产除外）；L0–L3 格包等在玩家机器上第一次需要时烘焙进本机缓存，用自定义 `.tbin`，不用 Godot 资源格式；L4 和全图常驻小数据随启动集发；贴图是 PNG 源图加 Godot 导入（§4、D-165）。
 7. **生产入口唯一**：未交付能力可用显式桩；真实实现接入时，同批移除被替代的生产桩和旧执行入口。测试替身不带运行时注册，不能代替正式核心验收（§2、§5）。
 8. **同一主检出，一个文件一个写者**：所有代理在主检出 `main` 上直接改，按独占目录分工；构建与测试一次只跑一个，用锁排队（§6，D-211）。
-9. **目标框架 net10.0**：引擎锁定 Godot 4.7.2-stable .NET 版，契约语言版本 C# 14；D0 跑通构建到导出版启动的全链路，不通时报作者（§3、§7、D-177）。
+9. **目标框架 net10.0**：引擎锁定 Godot 4.7.2-stable .NET 版，契约语言版本 C# 14；正式启动链须跑通构建到导出版启动的全链路，不通时报作者（§3、§7、D-177）。
 
 ### 0.1 接入要点
 
@@ -440,43 +440,18 @@ UESTC_RPG/
   - 各模块的代码哈希（§4"缓存键"）。
   - **谁读它**：显示版本的界面、`SaveMeta.Build`、日志第一行与诊断摘要（ENG-PERF §12.6）、`output/perf/` 报告、分发压缩包名 `UESTC-<版本>-win64.7z` 一律读它，别处不另写版本号。对外发布的构建必须来自干净的提交（`Commit` 不带 `-dirty`）；导出、发布与更新的步骤见 OPS-RELEASE。
 
-## 5 接口先定、桩先交付
+## 5 未交付能力的占位边界
 
-WP-00 交付时自带一套能跑、但很简陋的桩（占位实现）。这样所有工作包第一天就能运行和截图：
+正式运行统一经 `KernelStage` 装配已交付的服务与节点。尚未交付的能力可以使用显式桩，其实际注册、行为与默认值以 `game/kernel/stubs/` 源码为准，不另维护逐类型的桩表。
 
-| 桩 | 行为 |
-| --- | --- |
-| 卡通材质 | 材质库对任何 `ToonSpec` 都返回同一个最简 ShaderMaterial（`toon_stub.gdshader`，颜色取受光色，Lambert 漫反射），也在白名单里 |
-| 部件 | 按包围盒画方块（`gen/parts/_stubs`） |
-| 世界状态 | 固定在秋季 17:30（`WorldHours` = 17.5），`AnimTime` = 240 s（即旧网页版的 t = 0.5），观察模式为旁观；`Instance` 固定为 1；`FlowTo` 直接把钟点设到终点 |
-| 天气 | `IWeatherProcess` 的桩：永远是晴的天气向量，`Ahead` 为空，`Select` 只改读数；天气类全局参数写晴的值；`Enter`、`Leave` 空实现，`Capture` 返回晴的状态，`Restore` 忽略 |
-| 画质 | `IQualityService` 的桩：设备档固定独显中，预设固定精致（SYS-GRAPHICS §1），`Plan` 返回空差异，`Apply` 直接返回 `Applied`；不做自动调节；启动时对每个 `[QualityResponsive]` 节点调用一次 `ApplyQuality` |
-| 地图 | `IMapService` 的桩读 `index.json`，只有 `qingshuihe`；启动时加载这张图、设好 `Context`、写 `map_rect`；`Travel` 到当前图只做 `SetPose` 并返回 `Arrived`，不卸载；真正的同图重载由 WP-46 交付（SYS-MAPS §16） |
-| 平面地图 | `IAtlasService` 的桩：标记只取 `waypoints.json` 的点位，`Travel` 一律按飞过去调 `ICameraRig.Transit`；底图桩是一张单色的校内用地。这样 WP-48b 第一天就能做界面，WP-36 可以并行做 `TransitKind.Teleport` |
-| 开始页与过场 | `IAppFlow` 的桩：直接走 `--title=0` 的路径，雾幕淡出后进入 Playing；`CinematicPlayer` 的桩：雾幕直达终点。WP-49 开工前其他包照旧能跑 |
-| 存档 | `ISaveService` 的桩：`Enabled = false`，三个存档位都是 `Empty`；`Request`、`SaveNow` 返回 `Disabled`；`NewGame` 只把已登记的各段设为 `CreateDefault`，并让 `Instance` 加 1；`Load` 不论 `Full`、`Preview` 都返回 `Empty`，`HasPendingPose` 恒为 false，`CompleteResume` 立即完成；`FlushForQuit` 立即返回 `Disabled`，所以关窗口照常退出；`State` 的 `ReadOnly` 为 `SaveOff` |
-| 规则集 | `IRuleset` 由 WP-00 随契约交付，读 `game/data/rulesets/sightseeing.json`，不另做桩 |
-| 外围 | O1、O2 按楼块包围盒画方块；`IWorldModel.Outskirts` 可以为 null，这时前沿线退化为校界外扩 `FallbackMargin`（WLD-OUTSKIRTS §12.3） |
-| 室内 | 开放清单里每栋楼一个方块桩提供者：每层一块楼板、开放入口处一个门洞、一部直跑楼梯，`Walkable`，让 WP-42、WP-07 第一天就能走进去；平面内核先给 0.5 m 栅格版的桩；导航图先用 WLD-INTERIORS §13 的桩图 |
-| 门 | `IInteriorDoors` 的桩：所有会动的门一律 `Open`，没有运行时门体，不发 `Changed` |
-| 音频 | `IAudioService` 建好总线树，`PlayUi` 空实现；`IAcousticEnv` 永远返回 Open（介质是 Interior 时 `Indoor` 为 1，否则为 0），`Routing` 只有干声，`Occlusion` 一律 Direct；`IFoleyService.Play` 空实现；`IGroundCover` 全 0；`IWalkTelemetry` 不发事件（SYS-AUDIO §21.1） |
-| 界面与雾幕 | `IMotionSettings.ReduceMotion` 读系统设置，其余为 false；`IPaletteProbe` 返回一条固定的秋季天色；`IVeilService` 用 WP-05 之前的一块全屏 ColorRect |
-| 太阳 | 一盏 DirectionalLight3D，固定在方位 241°、高度 5.5° |
-| 调色板 | 只有"秋 · 黄金"一张关键帧 |
-| 后期 | 没有 CompositorEffect；Environment 只设 Tonemap Linear |
-| 细节分级 | 全部内容当作一个 L0 格子，开发态实时生成，不烘焙 |
-| 相机 | 简易的 WASD 加鼠标捕获（Esc 释放）；`Transit()` 直接 `SetPose`；`LockInput` 照常按原因计数；`IObserverState` 的桩取镜头位置，`Space` 为 null；可达空间先按校界外扩 150 m（同 `RoamLimits.FallbackMargin`） |
-| 碰撞 | HeightMapShape3D 地面 + 楼体轮廓拉伸成的薄 BoxShape3D 墙段，直接从世界模型生成（SYS-WALK §13），行走第一天就能走 |
-| 界面 | 一个调试面板（Control）：时间前推按钮、季节按钮、天气格、模式切换 |
-| 介质 | 永远返回"在空气中"；`IMediumState` 同此 |
-| 门禁 | `scripts\gate.ps1 -Wp <WP-xx>` 的骨架，G1–G6 能跑 |
-| 精度区 | `IWorldModel.Fidelity` 的桩：立面段、屋顶、地面一律 K3，`WalkDistanceAt` 返回 15 m；WP-44 交出 `fidelity.json` 之前，生成器照 K3 做 |
-| 地形 | `IWorldModel.Terrain` 的平地桩：`HeightAt` 恒 0、`IsFlat` 恒真、`PadY` 恒 0、`FillTile` 全 0、`WaterY` 取 WP-24 现用的水面高；`ISpatialIndex.GroundY`、`SupportY` 经它取值。WP-08 交出评估器之前各包照桩接线，产物与平地相同（WLD-TERRAIN §10.1，contract-WP-08-地形求值与覆盖层） |
+- 依赖方按正式契约接线；桩只提供已声明的占位行为，不能把桩的 `Ready`、成功返回或截图当成该能力通过核心验收。
+- 真实实现接入时，同批撤掉对应生产桩、旧执行入口和旧断言，不保留两套生产路径（WF-RULE §10）。测试替身不带运行时注册。
+- 能力尚未实现或正式检查缺失时，如实标为未交付或 `NotImplemented`，不以占位结果代签；失败与恢复边界按负责系统的契约和 ENG-GATES §2 验收。
 
 部件按"编目先行"的方式管理：
 
 - `game/contracts/Parts/` 放所有共享部件的 ID 常量和参数 record（`PartCatalog`），随契约 v1 候选先交；部件包与区域包在主线上接通后按组冻结（§3），之后受 PublicApiAnalyzers 保护。
-- 区域包直接按 ID 放置部件，先显示成方块；部件包完成后，方块自动换成真模型。
+- 区域包按 ID 放置部件；未交付部件可用显式方块桩，真实部件接入时同批撤掉对应桩。
 - 区域包需要特有部件时，在自己的目录里新建，ID 加上区名前缀。证明可以复用后，再申请提升为共享部件。
 
 ## 6 构建与测试排队
@@ -523,7 +498,7 @@ WP-00 交付时自带一套能跑、但很简陋的桩（占位实现）。这�
 | 界面破坏画面 | 漫游态唯一常驻的是左上角的小地图，可以关，按 U、`--ui=0`、过场时隐藏；界面态的组件贴四角，不进画面中央 60%；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；常驻小部件固定用深屏，免得浅色面板在高调画面上消失；`--ui=0` 截图门禁（UI-NAV、UI-VISUAL §13、SYS-ATLAS §14.2） |
 | 字体与题字的许可 | 只用 OFL 字体（界面是思源黑体 SC、Inter、JetBrains Mono），界面字体不改文件；原作字迹须先确认许可 |
 | `.uid` 缺失或重复 | `.uid` 与源文件同目录、一起提交；复制文件时删掉复制来的 `.uid`；代码只用 `res://` 路径（UID 失效时引擎退回按路径解析，只打印警告）；G3 检查缺失和重复 |
-| Godot 4.7.2 在 net10.0 下的全链路 | 项目目标定为 net10.0（D-177）；Godot 4.7.2 的 C# 模板默认仍是 net8.0。D0 在 net10.0 下跑通 `dotnet build` → `--headless --import` → `--export-release` → 导出版启动；不通时报作者决定，不自行退回 net8.0；`global.json` 锁 SDK 10.0.402 |
+| Godot 4.7.2 在 net10.0 下的全链路 | 项目目标定为 net10.0（D-177）；Godot 4.7.2 的 C# 模板默认仍是 net8.0。正式启动链在 net10.0 下须跑通 `dotnet build` → `--headless --import` → `--export-release` → 导出版启动；不通时报作者决定，不自行退回 net8.0；`global.json` 锁 SDK 10.0.402 |
 | 无界面模式不编译着色器 | 着色器错误只有在窗口模式下才会暴露。G5 加一次短时间的窗口冒烟运行；G7 也在窗口模式下跑 |
 | 导出版里的反射与程序集加载 | 编译器会丢掉没用到的程序集引用，导出后反射可能扫不到模块。注册器按构建时生成的程序集清单显式加载；P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，确认导出版注册结果与编辑器一致 |
 | 导出模板未下载 | .NET 导出模板约 1.2 GB，第一次做 G6 导出前从官方来源直接下载，下完说明（WF-RULE §6） |
@@ -579,7 +554,7 @@ WP-00 交付时自带一套能跑、但很简陋的桩（占位实现）。这�
 | --- | --- | --- |
 | 导出版里的反射与程序集加载：注册结果是否与编辑器一致（§2、§7） | P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，比对两边的注册结果；WP-00 | 注册器按构建时生成的程序集清单逐个显式加载 |
 | JSON 的导出行为：导出包里能否读到 `data/*.json`（§4、§7） | P0 的导出验证；WP-00、WP-02 | 导出过滤器显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` |
-| Godot 4.7.2 在 net10.0 下的全链路是否可用（§7） | D0 跑通 §7 所列四步（`dotnet build` → `--headless --import` → `--export-release` → 导出版启动）；主代理 | net10.0，`global.json` 锁 SDK 10.0.402 |
+| Godot 4.7.2 在 net10.0 下的全链路是否可用（§7） | 正式启动链须跑通 §7 所列四步（`dotnet build` → `--headless --import` → `--export-release` → 导出版启动）；主代理 | net10.0，`global.json` 锁 SDK 10.0.402 |
 | gdUnit4Net 5.1（RC）下需要引擎的测试怎么托管（§2、§7） | P0 验证 `[RequireGodotRuntime]` 经 `gate.ps1` 把 `UESTC_GODOT` 交给测试适配器的做法；WP-00、WP-27 | 按 §2 的写法；转正式版后由主代理换版本（ENG-WP §5） |
 | L2 是否用半八面体替身（§4） | P0 选型（ENG-PERF）；WP-02 | 选用时这类烘焙要窗口和 GPU，排进 构建锁（ENG-PERF §12.5）；只在开发期出，随启动集发布，不在玩家机器上烘 |
 | 切图的卸载泄漏（§7） | P0 实测同图重载 3 次，按 G16 的判据（显存、对象数 ±5%，旧 `IWorldModel` 的弱引用被回收）；WP-46 | 集中测试时同图重载（SYS-MAPS §13） |

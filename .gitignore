@@ -18,5 +18,8 @@ output/
 # 本地发布产物
 /build/
 
+# 生产烘焙暂存与管线摘要
+/game/bake/
+
 # gdUnit4 runtime adapter injects its own temporary SceneTree runner.
 /game/gdunit4_testadapter_v*/

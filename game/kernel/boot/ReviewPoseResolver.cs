@@ -6,12 +6,14 @@ namespace Campus.Kernel.Boot;
 
 public static class ReviewPoseResolver
 {
-    public static Pose Resolve(string id, IMapContext context, Func<string, byte[]> read)
+    public static Pose Resolve(string id, IMapContext context)
     {
-        var points = JsonSerializer.Deserialize<WaypointFile>(read(context.DataRoot + "waypoints.json"), ContractJson.Options)
-            ?? throw new InvalidDataException("Waypoint file is empty.");
+        var points = context.SourceInputs.Entries.TryGetValue("waypoints.json", out var waypointBytes)
+            ? JsonSerializer.Deserialize<WaypointFile>(waypointBytes.Span, ContractJson.Options)
+                ?? throw new InvalidDataException("Waypoint file is empty.")
+            : new WaypointFile(1, []);
         if (Direct(id) is { } pose) return pose;
-        using var review = JsonDocument.Parse(read(context.DataRoot + "review.json"));
+        using var review = JsonDocument.Parse(context.SourceInputs.Require("review.json"));
         if (review.RootElement.GetProperty("version").GetInt32() != 1) throw new InvalidDataException("Unsupported review-pose version.");
         var candidates = review.RootElement.GetProperty("poses").EnumerateArray()
             .Where(item => item.GetProperty("id").GetString() == id).ToArray();

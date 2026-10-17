@@ -9,7 +9,7 @@ namespace Campus.Kernel.Renderer;
 /// </summary>
 public static class GeometrySurfaceUpload
 {
-    public static int Append(ArrayMesh target, GeometryBuffer source, IToonMaterialProvider materials, PaletteCatalog catalog,
+    public static int Append(ArrayMesh target, GeometryBuffer source, PaletteCatalog catalog,
         PaletteToken? tint = null)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -30,12 +30,12 @@ public static class GeometrySurfaceUpload
             Custom1 = source.Custom1,
             Custom2 = source.Custom2,
             Lods = source.Lods.Select(lod => new LodView(lod.Error, lod.Index))
-        }, materials, tint, false, false, catalog);
+        }, tint, false, catalog);
     }
 
     /// <summary>Caller exclusively owns source arrays during this upload; no extra GeometryBuffer.Freeze occurs.</summary>
-    public static int Append(ArrayMesh target, GeometryBundle source, IToonMaterialProvider materials, PaletteCatalog catalog,
-        PaletteToken? tint = null, ToonSpec? materialSpec = null, bool useD0Rgb = false,
+    public static int Append(ArrayMesh target, GeometryBundle source, PaletteCatalog catalog,
+        PaletteToken? tint = null, ToonSpec? materialSpec = null,
         bool compressAttributes = false)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -60,22 +60,17 @@ public static class GeometrySurfaceUpload
             Custom1 = Memory(source.Custom1),
             Custom2 = Memory(source.Custom2),
             Lods = (source.Lods ?? []).Select(lod => new LodView(lod.Error, lod.Index))
-        }, materials, tint, useD0Rgb, compressAttributes, catalog);
+        }, tint, compressAttributes, catalog);
     }
 
-    private static int Append(ArrayMesh target, SurfaceView source, IToonMaterialProvider materials,
-        PaletteToken? tint, bool useD0Rgb, bool compressAttributes, PaletteCatalog catalog)
+    private static int Append(ArrayMesh target, SurfaceView source,
+        PaletteToken? tint, bool compressAttributes, PaletteCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(target);
-        ArgumentNullException.ThrowIfNull(materials);
         ArgumentNullException.ThrowIfNull(source.Spec);
         source.Spec.ValidateSurfacePattern();
-        if (useD0Rgb && source.Spec.SurfacePattern is not null)
-            throw new NotSupportedException("D0 RGB upload cannot consume surface patterns.");
-        if (useD0Rgb && source.DecalBaseColorIndices is not null)
-            throw new NotSupportedException("D0 RGB upload cannot consume indexed decal backgrounds.");
         ArgumentNullException.ThrowIfNull(catalog);
-        if (!useD0Rgb) catalog.Validate(source.Spec);
+        catalog.Validate(source.Spec);
         if (tint is { } token)
         {
             var index = catalog.Resolve(token);
@@ -84,8 +79,6 @@ public static class GeometrySurfaceUpload
         var count = source.Position.Length / 3;
         if (count < 3 || source.Index.Length == 0)
             throw new ArgumentException("A native surface needs at least three vertices and one triangle.", nameof(source));
-        if (useD0Rgb && materials is not FallbackToonMaterialProvider)
-            throw new ArgumentException("D0 RGB conversion requires the explicit fallback material provider.", nameof(materials));
         if (compressAttributes && source.Uv2 is not null)
             throw new ArgumentException("UV2 must remain fp32; compressed attributes cannot be requested.", nameof(compressAttributes));
 
@@ -105,7 +98,7 @@ public static class GeometrySurfaceUpload
         var normals = new Vector3[count];
         var colors = new Color[count];
         var defaultId = default(PaletteIndex);
-        if (!useD0Rgb && (tint.HasValue || source.ColorIndices is null))
+        if (tint.HasValue || source.ColorIndices is null)
             defaultId = catalog.Resolve(tint ?? source.Spec.Lit);
         var p = source.Position.Span;
         var n = source.Normal.Span;
@@ -113,12 +106,6 @@ public static class GeometrySurfaceUpload
         {
             positions[i] = new(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
             normals[i] = new(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
-            if (useD0Rgb)
-            {
-                colors[i] = ((FallbackToonMaterialProvider)materials).VertexColor(source.Spec,
-                    source.ColorIndices is { } ids ? new PaletteIndex(ids.Span[i]) : null);
-                continue;
-            }
             var color = tint.HasValue ? defaultId : source.ColorIndices is { } logical ? Registered(logical.Span[i])
                 : defaultId;
             // Match WP-02's established AO byte truncation, then use the existing native UNORM8 input bias.

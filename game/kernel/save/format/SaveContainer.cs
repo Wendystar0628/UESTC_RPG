@@ -1,0 +1,239 @@
+using System.Buffers.Binary;
+using System.Buffers;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Campus.Contracts;
+using Campus.Contracts.Save;
+
+namespace Campus.Kernel.Save.Format;
+
+public sealed class SaveFormatException(string message, bool newerBuild = false) : Exception(message)
+{
+    public bool NewerBuild { get; } = newerBuild;
+}
+
+public sealed record RawSaveSection(int Version, byte[] Envelope);
+public sealed record SaveDocument(SaveMeta Meta, IReadOnlyDictionary<string, RawSaveSection> Sections, byte[]? Thumbnail);
+
+/// <summary>Version one is frozen. No engine types, reflection serialization, paths, or executable content.</summary>
+public static class SaveContainer
+{
+    public const int HeaderSize = 64;
+    public const int MaxFile = 20 * 1024 * 1024;
+    public const int MaxMeta = 16 * 1024;
+    public const int MaxCompressed = 16 * 1024 * 1024;
+    public const int MaxBody = 64 * 1024 * 1024;
+    public const int MaxThumbnail = 256 * 1024;
+    public const int CurrentFormat = 1;
+    private static ReadOnlySpan<byte> Magic => "UESTCSAV"u8;
+
+    public static byte[] Encode(SaveDocument document)
+    {
+        ValidateMeta(document.Meta);
+        var thumb = ValidateThumbnail(document.Thumbnail) ? document.Thumbnail : null;
+        var meta = JsonSerializer.SerializeToUtf8Bytes(document.Meta with { HasThumb = thumb is not null }, SaveFormatJsonContext.Strict.SaveMeta);
+        if (meta.Length > MaxMeta) throw new SaveFormatException("Save metadata exceeds 16 KiB.");
+        using var raw = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(raw))
+        {
+            writer.WriteStartObject(); writer.WriteNumber("format", CurrentFormat); writer.WriteStartObject("sections");
+            foreach (var (key, section) in document.Sections.OrderBy(p => p.Key, StringComparer.Ordinal))
+            {
+                ValidateSectionKey(key);
+                using var envelope = ParseJson(section.Envelope);
+                ValidateEnvelope(envelope.RootElement, out var version);
+                if (version != section.Version) throw new SaveFormatException("Section version does not match its envelope.");
+                writer.WritePropertyName(key);
+                writer.WriteRawValue(section.Envelope, skipInputValidation: false);
+            }
+            writer.WriteEndObject(); writer.WriteEndObject();
+        }
+        if (raw.Length > MaxBody) throw new SaveFormatException("Save body exceeds 64 MiB.");
+        using var compressed = new MemoryStream();
+        using (var brotli = new BrotliStream(compressed, CompressionLevel.Fastest, leaveOpen: true)) raw.WriteTo(brotli);
+        if (compressed.Length > MaxCompressed) throw new SaveFormatException("Compressed save exceeds 16 MiB.");
+        var bytes = new byte[checked(HeaderSize + meta.Length + (int)compressed.Length + (thumb?.Length ?? 0))];
+        Magic.CopyTo(bytes);
+        BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(8), 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(10), (ushort)(thumb is null ? 1 : 3));
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(12), (uint)meta.Length);
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), (uint)compressed.Length);
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(20), (uint)(thumb?.Length ?? 0));
+        BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(24), document.Meta.Gen);
+        meta.CopyTo(bytes, HeaderSize);
+        compressed.GetBuffer().AsSpan(0, (int)compressed.Length).CopyTo(bytes.AsSpan(HeaderSize + meta.Length));
+        thumb?.CopyTo(bytes, HeaderSize + meta.Length + (int)compressed.Length);
+        Hash(bytes).CopyTo(bytes, 32);
+        return bytes;
+    }
+
+    public static SaveDocument Decode(ReadOnlyMemory<byte> bytes, ulong? expectedGeneration = null, SlotId? expectedSlot = null)
+    {
+        try { return DecodeChecked(bytes, expectedGeneration, expectedSlot); }
+        catch (SaveFormatException) { throw; }
+        catch (Exception error) when (error is JsonException or InvalidDataException or FormatException or OverflowException or ArgumentException or InvalidOperationException)
+        { throw new SaveFormatException("Invalid save: " + error.Message); }
+    }
+
+    private static SaveDocument DecodeChecked(ReadOnlyMemory<byte> memory, ulong? expectedGeneration, SlotId? expectedSlot)
+    {
+        var bytes = memory.Span;
+        if (bytes.Length < HeaderSize || bytes.Length > MaxFile || !bytes[..8].SequenceEqual(Magic))
+            throw new SaveFormatException("Invalid save header or file size.");
+        var version = BinaryPrimitives.ReadUInt16LittleEndian(bytes[8..]);
+        var flags = BinaryPrimitives.ReadUInt16LittleEndian(bytes[10..]);
+        var ml = BinaryPrimitives.ReadUInt32LittleEndian(bytes[12..]);
+        var bl = BinaryPrimitives.ReadUInt32LittleEndian(bytes[16..]);
+        var tl = BinaryPrimitives.ReadUInt32LittleEndian(bytes[20..]);
+        var gen = BinaryPrimitives.ReadUInt64LittleEndian(bytes[24..]);
+        if (ml == 0 || ml > MaxMeta || bl == 0 || bl > MaxCompressed || tl > MaxThumbnail ||
+            (ulong)HeaderSize + ml + bl + tl != (ulong)bytes.Length || gen == 0 || expectedGeneration is { } eg && gen != eg)
+            throw new SaveFormatException("Invalid lengths or generation.");
+        if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
+            throw new SaveFormatException("SHA-256 mismatch.");
+        if (version > 1) throw new SaveFormatException("Newer container version.", newerBuild: true);
+        if (version != 1 || (flags & ~3) != 0 || (flags & 1) == 0 || ((flags & 2) != 0) != (tl != 0))
+            throw new SaveFormatException("Unsupported container flags.");
+        using var metaJson = ParseJson(memory.Slice(HeaderSize, (int)ml));
+        var meta = JsonSerializer.Deserialize(metaJson.RootElement, SaveFormatJsonContext.Strict.SaveMeta)
+            ?? throw new SaveFormatException("Missing metadata.");
+        if (meta.Format > CurrentFormat) throw new SaveFormatException("Newer body format.", newerBuild: true);
+        ValidateMeta(meta);
+        if (meta.Gen != gen || expectedSlot is { } es && meta.Slot != es || meta.HasThumb != (tl != 0))
+            throw new SaveFormatException("Metadata identity disagrees with the container.");
+        using var body = new MemoryStream();
+        var buffer = new byte[8192];
+        var compressed = memory.Span.Slice(HeaderSize + (int)ml, (int)bl);
+        var decoder = new BrotliDecoder();
+        try
+        {
+            var consumed = 0;
+            while (true)
+            {
+                var status = decoder.Decompress(compressed[consumed..], buffer, out var read, out var written);
+                consumed += read;
+                if (body.Length + written > MaxBody) throw new SaveFormatException("Decompressed body exceeds 64 MiB.");
+                body.Write(buffer, 0, written);
+                if (status == OperationStatus.Done)
+                {
+                    if (consumed != compressed.Length) throw new SaveFormatException("Trailing compressed content.");
+                    break;
+                }
+                if (status != OperationStatus.DestinationTooSmall || read == 0 && written == 0)
+                    throw new SaveFormatException("Incomplete or invalid Brotli stream.");
+            }
+        }
+        finally { decoder.Dispose(); }
+        using var json = ParseJson(body.ToArray());
+        var root = json.RootElement;
+        RequireMembers(root, ["format", "sections"]);
+        var format = root.GetProperty("format").GetInt32();
+        if (format > CurrentFormat) throw new SaveFormatException("Newer body format.", newerBuild: true);
+        if (format != meta.Format || format != CurrentFormat) throw new SaveFormatException("Body format mismatch.");
+        var sectionsElement = root.GetProperty("sections");
+        if (sectionsElement.ValueKind != JsonValueKind.Object) throw new SaveFormatException("sections must be an object.");
+        var sections = new SortedDictionary<string, RawSaveSection>(StringComparer.Ordinal);
+        foreach (var section in sectionsElement.EnumerateObject())
+        {
+            ValidateSectionKey(section.Name);
+            ValidateEnvelope(section.Value, out var sectionVersion);
+            sections.Add(section.Name, new(sectionVersion, Encoding.UTF8.GetBytes(section.Value.GetRawText())));
+        }
+        var thumbnail = tl == 0 ? null : memory.Slice(HeaderSize + (int)ml + (int)bl, (int)tl).ToArray();
+        if (!ValidateThumbnail(thumbnail)) thumbnail = null;
+        return new(meta, sections, thumbnail);
+    }
+
+    public static JsonDocument ParseJson(ReadOnlyMemory<byte> utf8)
+    {
+        var document = JsonDocument.Parse(utf8, new JsonDocumentOptions { MaxDepth = 64 });
+        try { CheckDuplicates(document.RootElement); return document; }
+        catch { document.Dispose(); throw; }
+    }
+
+    private static void CheckDuplicates(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in element.EnumerateObject())
+            {
+                if (!names.Add(property.Name)) throw new SaveFormatException("Duplicate JSON property: " + property.Name);
+                CheckDuplicates(property.Value);
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+            foreach (var item in element.EnumerateArray()) CheckDuplicates(item);
+    }
+
+    private static void ValidateEnvelope(JsonElement element, out int version)
+    {
+        RequireMembers(element, ["v", "data"]);
+        version = element.GetProperty("v").GetInt32();
+        if (version < 1 || element.GetProperty("data").ValueKind != JsonValueKind.Object)
+            throw new SaveFormatException("Invalid save section envelope.");
+    }
+
+    private static void RequireMembers(JsonElement element, string[] required)
+    {
+        if (element.ValueKind != JsonValueKind.Object) throw new SaveFormatException("Expected JSON object.");
+        var actual = element.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal).ToArray();
+        if (!actual.SequenceEqual(required.Order(StringComparer.Ordinal))) throw new SaveFormatException("Invalid JSON members.");
+    }
+
+    private static byte[] Hash(ReadOnlySpan<byte> bytes)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData(bytes[..32]); hash.AppendData(bytes[HeaderSize..]);
+        return hash.GetHashAndReset();
+    }
+
+    public static bool ValidateThumbnail(byte[]? bytes) => bytes is { Length: >= 12 and <= MaxThumbnail } &&
+        bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8) &&
+        BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(4)) + 8UL == (ulong)bytes.Length;
+
+    public static void ValidateSectionKey(string key)
+    {
+        var id = key;
+        if (key.StartsWith("map:", StringComparison.Ordinal))
+        {
+            var slash = key.IndexOf('/');
+            if (slash < 5 || !IsId(key[4..slash])) throw new SaveFormatException("Invalid per-map key.");
+            id = key[(slash + 1)..];
+        }
+        if (!IsId(id)) throw new SaveFormatException("Invalid section key.");
+    }
+
+    public static bool IsId(string? id) => !string.IsNullOrEmpty(id) && id.Length <= 128 &&
+        id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-');
+
+    private static void ValidateMeta(SaveMeta meta)
+    {
+        if (meta.Format != CurrentFormat || meta.Gen == 0 || meta.Line == 0 || meta.Line > meta.Gen ||
+            !ValidSlot(meta.Slot) || !IsId(meta.Map.Value) || !IsId(meta.Ruleset) || string.IsNullOrWhiteSpace(meta.Build) ||
+            !double.IsFinite(meta.PlaySeconds) || meta.PlaySeconds < 0 || !double.IsFinite(meta.WorldHours) ||
+            !double.IsFinite(meta.Clock) || meta.Clock < 0 || meta.Clock >= 24 ||
+            !float.IsFinite(meta.Pose.Position.X) || !float.IsFinite(meta.Pose.Position.Y) || !float.IsFinite(meta.Pose.Position.Z) ||
+            !float.IsFinite(meta.Pose.YawDeg) || !float.IsFinite(meta.Pose.PitchDeg) ||
+            !Enum.IsDefined(meta.Kind) || !Enum.IsDefined(meta.Mode) || !Enum.IsDefined(meta.Season) || !Enum.IsDefined(meta.Weather) ||
+            !Enum.IsDefined(meta.Reason)) throw new SaveFormatException("Invalid metadata fields.");
+    }
+
+    public static bool ValidSlot(SlotId slot) => slot.Value is "s1" or "s2" or "s3" or "m1" or "m2" or "m3" or "m4" or "m5" or "m6" or "m7" or "m8" or "m9";
+}
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
+[JsonSerializable(typeof(SaveMeta))]
+internal partial class SaveFormatJsonContext : JsonSerializerContext
+{
+    internal static SaveFormatJsonContext Strict { get; } = new(new JsonSerializerOptions(ContractJson.Options)
+    {
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        RespectRequiredConstructorParameters = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        PropertyNameCaseInsensitive = false
+    });
+}

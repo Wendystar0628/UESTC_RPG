@@ -4,6 +4,9 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Renderer;
 
+[KernelService(typeof(IVeilService), Owner = "WP-01")]
+[KernelService(typeof(IVeilState), Owner = "WP-01")]
+[KernelNode("veil-service", Owner = "WP-01")]
 public partial class VeilService : Node, IVeilService
 {
     private readonly VeilTimeline _timeline = new();

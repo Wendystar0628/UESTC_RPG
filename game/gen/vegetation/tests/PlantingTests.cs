@@ -123,8 +123,19 @@ public sealed class PlantingTests
         foreach (var c in colliders)
         {
             if (c.Foot != FootMat.Bark || c.Tag != SurfaceTag.Barrier) throw new InvalidOperationException("trunk material");
-            if (!(c.R > 0.05f && c.R < 1f && c.Y1 > c.Y0 + 0.5f) || c.C.X is < 0f or >= 64f || c.C.Y is < 0f or >= 64f)
+            if (!(c.R > 0.05f && c.R < 1f && c.Y1 > c.Y0 + 0.5f)
+                || (int)MathF.Floor(c.C.X / 64f) != tile.X || (int)MathF.Floor(c.C.Y / 64f) != tile.Z)
                 throw new InvalidOperationException($"post {c.C} r {c.R} y {c.Y0}–{c.Y1}");
+        }
+        foreach (var cell in new TileKey[] { new(3, 2), new(-4, -3) })
+        {
+            var moved = tree with { Position = new(cell.X * 64 + 12, tree.Position.Y, cell.Z * 64 + 24) };
+            var post = (PostCollider)TreeColliders.For(new([moved]), cell, world.Terrain).Single();
+            if (post.C != new Vector2(moved.Position.X, moved.Position.Z))
+                throw new InvalidOperationException("Tree collision did not retain world coordinates: " + cell);
+            var local = (PostCollider)Campus.Gen.Collision.CollisionGeometry.Localize([post], cell).Single();
+            if (local.C != new Vector2(12, 24))
+                throw new InvalidOperationException("The kernel did not localize the tree exactly once: " + cell);
         }
     }
 

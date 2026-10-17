@@ -114,7 +114,6 @@ function Get-UESTCMainStage {
         $id = [regex]::Match($resource.Value, '\bid="([^"]+)"').Groups[1].Value
         $path = [regex]::Match($resource.Value, '\bpath="([^"]+)"').Groups[1].Value
         if ($id -ne $scriptId) { continue }
-        if ($path -eq 'res://kernel/stubs/Visual/D0Stage.cs') { return 'D0' }
         if ($path -match '^res://.+/KernelStage\.cs$') { return 'KernelStage' }
         return 'Unknown'
     }
@@ -122,14 +121,10 @@ function Get-UESTCMainStage {
 }
 
 function Select-UESTCServiceWindow {
-    param([string[]]$Gates, [string]$Stage, [bool]$Affected, [bool]$D0, [bool]$Full, [bool]$Smoke)
+    param([string[]]$Gates, [bool]$Affected)
     $selected = New-Object 'Collections.Generic.List[string]'
     foreach ($gate in $Gates) { if (-not $selected.Contains($gate)) { $selected.Add($gate) } }
-    $withinG5 = $selected.Contains('G5') -and $Stage -eq 'D0' -and ($Affected -or $D0)
-    $formal = $selected.Contains('G5') -and $Stage -ne 'D0' -and $Affected
-    # The G5-owned probe subsumes an automatically selected D0 screenshot, but
-    # explicit full/core requests keep their separate, honest incomplete result.
-    if ($withinG5 -and -not ($Full -or $Smoke)) { $null = $selected.Remove('G5Smoke') }
+    $formal = $selected.Contains('G5') -and $Affected
     if ($formal -and -not $selected.Contains('G5Smoke')) { $selected.Add('G5Smoke') }
-    [pscustomobject]@{ Gates=$selected.ToArray(); D0WindowInG5=$withinG5; RequireFormalCore=$formal; CacheG5=-not ($withinG5 -or $formal) }
+    [pscustomobject]@{ Gates=$selected.ToArray(); RequireFormalCore=$formal; CacheG5=-not $formal }
 }

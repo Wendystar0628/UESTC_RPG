@@ -155,12 +155,15 @@ public sealed class PostDiagnosticsTests
         var currentReleased = 0;
         var lateReleased = 0;
         box.Publish(new PostFrame { DiagMainFrame = 1 },
-            new GlobalDataTextureLease(default, () => oldReleased++), null);
-        box.Publish(new PostFrame { DiagMainFrame = 2 }, null,
+            new GlobalDataTextureLease(default, () => oldReleased++),
+            new GlobalDataTextureLease(default, () => oldReleased++));
+        box.Publish(new PostFrame { DiagMainFrame = 2 },
+            new GlobalDataTextureLease(default, () => currentReleased++),
             new GlobalDataTextureLease(default, () => currentReleased++));
-        Require(oldReleased == 1 && currentReleased == 0, "Replacement must dispose the unclaimed older batch.");
-        Require(box.TryTake(out var batch) && batch.Frame.DiagMainFrame == 2 && batch.Palette is null,
-            "Only the current frame and its optional leases may be taken.");
+        Require(oldReleased == 2 && currentReleased == 0, "Replacement must dispose the unclaimed older batch.");
+        Require(box.TryTake(out var batch) && batch.Frame.DiagMainFrame == 2
+            && batch.Palette is not null && batch.MatTable is not null,
+            "Only the current frame and both of its producer leases may be taken.");
         try
         {
             box.Close();
@@ -171,26 +174,81 @@ public sealed class PostDiagnosticsTests
             Require(lateReleased == 1 && !box.TryTake(out _), "Late publication must release leases without reopening.");
         }
         finally { batch.Dispose(); box.Close(); }
-        Require(oldReleased == 1 && currentReleased == 1 && lateReleased == 1, "Release counts must remain exact.");
+        Require(oldReleased == 2 && currentReleased == 2 && lateReleased == 1, "Release counts must remain exact.");
     }
 
     [TestCase]
-    public void RepeatedDrawsReuseLastFrameWithoutRetakingLeases()
+    public void RepeatedDrawsRetainTheSameProducerLeasesUntilClose()
     {
         var box = new PostFrameBox();
         var released = 0;
         Require(!box.TryTake(out _) && !box.TryTakeFinish(out _), "An empty mailbox has no pass inputs.");
-        box.Publish(new PostFrame { DiagMainFrame = 1 }, new GlobalDataTextureLease(default, () => released++), null);
+        var palette = new GlobalDataTextureLease(default, () => released++);
+        var table = new GlobalDataTextureLease(default, () => released++);
+        box.Publish(new PostFrame { DiagMainFrame = 1 }, palette, table);
         Require(!box.TryTakeFinish(out _), "Finish must wait for Outline to select a frame.");
         Require(box.TryTake(out var batch), "Outline must select the publication.");
         batch.Dispose();
         Require(box.TryTakeFinish(out var finish) && finish.DiagMainFrame == 1, "Finish must consume the selected frame.");
-        Require(box.TryTake(out batch) && batch.Frame.DiagMainFrame == 1 && batch.Palette is null && batch.MatTable is null,
-            "A draw without a new publication must reuse scalars with fallback textures, without retaking leases.");
+        Require(box.TryTake(out batch) && batch.Frame.DiagMainFrame == 1
+            && ReferenceEquals(batch.Palette, palette) && ReferenceEquals(batch.MatTable, table),
+            "Repeated draws must retain the same complete publication and its real producer leases.");
         batch.Dispose();
-        Require(box.TryTakeFinish(out finish) && finish.DiagMainFrame == 1, "Finish must also run for repeated draws.");
+        Require(box.TryTakeFinish(out finish) && finish.DiagMainFrame == 1,
+            "Finish must also run for repeated draws.");
+        Require(released == 0, "The current publication must retain both leases between draws.");
         box.Close();
-        Require(released == 1, "Repeated draws and cancellation must not release a taken lease again.");
+        Require(released == 2, "Repeated draws and cancellation must not release taken leases again.");
+    }
+
+    [TestCase]
+    public void MissingProducerCancelsPendingInputAndReleasesPartialLeases()
+    {
+        var box = new PostFrameBox();
+        var released = 0;
+        box.Publish(default, new GlobalDataTextureLease(default, () => released++),
+            new GlobalDataTextureLease(default, () => released++));
+        box.Publish(default, new GlobalDataTextureLease(default, () => released++), null);
+        Require(released == 3 && !box.TryTake(out _) && !box.TryTakeFinish(out _),
+            "A missing material table must release the partial pair and cancel pending input.");
+        box.Publish(default, null, new GlobalDataTextureLease(default, () => released++));
+        Require(released == 4 && !box.TryTake(out _), "A missing palette must also cancel publication.");
+        box.Publish(default, null, null);
+        box.Close();
+        Require(released == 4, "Cancelling absent producers must not release any lease twice.");
+    }
+
+    [TestCase]
+    public void CurrentReplacementAndCancellationKeepActiveCallbacksAlive()
+    {
+        var box = new PostFrameBox();
+        var oldReleased = 0;
+        var nextReleased = 0;
+        var partialReleased = 0;
+        box.Publish(new PostFrame { DiagMainFrame = 1 },
+            new GlobalDataTextureLease(default, () => oldReleased++),
+            new GlobalDataTextureLease(default, () => oldReleased++));
+        Require(box.TryTake(out var oldDraw), "The first callback must retain the current publication.");
+        box.Publish(new PostFrame { DiagMainFrame = 2 },
+            new GlobalDataTextureLease(default, () => nextReleased++),
+            new GlobalDataTextureLease(default, () => nextReleased++));
+        Require(box.TryTake(out var nextDraw) && nextDraw.Frame.DiagMainFrame == 2,
+            "The next draw must promote the pending publication.");
+        try
+        {
+            Require(oldReleased == 0, "Replacement must not release the older active callback's leases.");
+            box.Publish(default, null, new GlobalDataTextureLease(default, () => partialReleased++));
+            Require(nextReleased == 0 && partialReleased == 1,
+                "Missing producers must retire current ownership and preserve the active callback.");
+            Require(box.TryTakeFinish(out var finish) && finish.DiagMainFrame == 2,
+                "Cancellation after PostSky must not change this draw's Finish frame.");
+            Require(!box.TryTake(out _) && !box.TryTakeFinish(out _),
+                "Missing producers must prevent future draws from reusing the retired publication.");
+            box.Close();
+        }
+        finally { oldDraw.Dispose(); nextDraw.Dispose(); box.Close(); }
+        Require(oldReleased == 2 && nextReleased == 2 && partialReleased == 1,
+            "Each real or partial publication must release its leases once after its final callback.");
     }
 
     private static void Require(bool condition, string message)

@@ -148,20 +148,9 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         _resetForCapture = false;
     }
 
-    /// <summary>
-    /// The build context the worker uses (<see cref="VegetationContext"/>): the prepared production context, or, on the D0 stub
-    /// source only, the kernel's own map loading over the map's frozen inputs and claims. Files are read here on the main
-    /// thread; the parse runs on the worker. A failing source throws; nothing falls back to another world.
-    /// </summary>
+    /// <summary>Capture the formal service's prepared map context before publishing work.</summary>
     private static Func<BuildContext> ContextFor(IMapContext map) => VegetationContext.Resolve(map, ModuleId,
-        Services.Get<IBakeContextSource>(), VegetationContext.SourceIsD0Stub(Services.Services),
-        Services.Get<PaletteCatalog>(), Services.GlobalBuildInputs, Services.Get<IWorldModelLoader>(), () =>
-        {
-            // D0 holds no map catalogue; the entry is the one this map's context was made from.
-            var entry = new MapCatalogEntry(map.Descriptor, map.DataRoot, map.BakeRoot, []);
-            var data = new MapDataSource();
-            return (data.ReadLoadInput(entry), data.ReadClaims(map.Descriptor.Id));
-        });
+        Services.Get<IBakeContextSource>());
 
     /// <summary>Worker: the module's L0 streams regrouped per mother model, and every pool's prototype built once.</summary>
     private static Mother[] Prepare(Func<BuildContext> contextFor)

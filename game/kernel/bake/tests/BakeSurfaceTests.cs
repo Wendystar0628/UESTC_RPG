@@ -126,6 +126,52 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    public void StaticPatternBatchAndCodecRetainProfilesMetresAndGateBoundaries()
+    {
+        var pattern = new SurfacePatternSpec(1, new(.6f, .75f), new(.006f, .012f));
+        var source = Geometry() with
+        {
+            Material = new(Geometry().Material.Spec with { SurfacePattern = pattern }),
+            Uv = [-128.125f, 64.25f, -64.125f, 64.25f, -128.125f, 128.25f],
+            Uv2 = [1, 2, 1, 2, 1, 2],
+            ColorIndices = [64, 64, 64]
+        };
+        var on = BakeSurfacePacker.Pack(source, Bounds(), Palette());
+        var off = BakeSurfacePacker.Pack(source with { Uv2 = [0, 4, 0, 4, 0, 4] }, Bounds(), Palette());
+        var frozen = BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), Palette());
+        if ((on.Format & (ulong)RenderingServer.ArrayFormat.FlagCompressAttributes) != 0 ||
+            (on.Format & (ulong)RenderingServer.ArrayFormat.FormatTexUV2) == 0 ||
+            !on.AttributeData.Span.SequenceEqual(frozen.AttributeData.Span))
+            throw new InvalidOperationException("Static patterns require the same fp32 UV/UV2 layout in mutable and frozen inputs.");
+        var merged = PackedSurfaceBatcher.Merge([on, off]).Single();
+        PackedSurfaceBatchTests.VerifySources([on, off], merged, 12, 8);
+        foreach (var changed in new[] { pattern with { Layer = 2 }, pattern with { PeriodMeters = new(.8f, .75f) },
+            pattern with { JointMeters = new(.008f, .012f) } })
+        {
+            var other = BakeSurfacePacker.Pack(source with { Material = new(source.Material.Spec with { SurfacePattern = changed }) }, Bounds(), Palette());
+            if (PackedSurfaceBatcher.Merge([on, other, off]).Count != 3)
+                throw new InvalidOperationException("Different pattern profiles were merged into one material class.");
+        }
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
+        var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [merged]);
+        var bytes = TileBundleCodec.Encode("fixture/pattern", bundle);
+        var restored = (TileBundle)TileBundleCodec.Decode("fixture/pattern", key, bytes);
+        var surface = restored.Surfaces.Single();
+        if (surface.Material != source.Material || !surface.AttributeData.Span.SequenceEqual(merged.AttributeData.Span) ||
+            !bytes.SequenceEqual(TileBundleCodec.Encode("fixture/pattern", restored)))
+            throw new InvalidOperationException("Pattern profile, metre UV, gate/K, colour or cache representation changed in transit.");
+        for (var vertex = 0; vertex < 6; vertex++)
+        {
+            var data = surface.AttributeData.Span.Slice(vertex * 20, 20);
+            if (BinaryPrimitives.ReadSingleLittleEndian(data[4..]) != source.Uv[vertex % 3 * 2] ||
+                BinaryPrimitives.ReadSingleLittleEndian(data[8..]) != source.Uv[vertex % 3 * 2 + 1] ||
+                BinaryPrimitives.ReadSingleLittleEndian(data[12..]) != (vertex < 3 ? 1f : 0f) ||
+                BinaryPrimitives.ReadSingleLittleEndian(data[16..]) != (vertex < 3 ? 2f : 4f) || data[0] != 64)
+                throw new InvalidOperationException("Pattern metres, per-face gate/K or palette index changed during packing/batching.");
+        }
+    }
+
+    [TestCase]
     [RequireGodotRuntime]
     [TestCategory("NativeRender")]
     public void NativeSurfaceDecoderPreservesUv2AndNormalDirections()

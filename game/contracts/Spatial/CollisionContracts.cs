@@ -51,6 +51,8 @@ public readonly record struct SweepHit(Vector3 Point, Vector3 Normal, float T, S
 public readonly record struct SupportHit(float Y, SurfaceTag Tag);
 public interface ICollisionWorld             // WP-43，Godot 侧实现
 {
+    /// <summary>Terminal failure of the active map's collision preparation or mounting; never a readiness result.</summary>
+    string? Error { get; }
     bool Ready(Vector3 p, float r);          // ENG-PERF §5 第 5 条用它判断
     SweepHit? Sweep(Vector3 from, Vector3 to, float r, float h);
     SupportHit? SupportY(float x, float z, float yHint);

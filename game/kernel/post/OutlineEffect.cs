@@ -108,18 +108,16 @@ public partial class OutlineEffect : CompositorEffect
         }
     }
 
-    private void Render(in PostFrame frame, RenderData renderData, GlobalDataTextureLease? paletteLease,
-        GlobalDataTextureLease? matTableLease)
+    private void Render(in PostFrame frame, RenderData renderData, GlobalDataTextureLease paletteLease,
+        GlobalDataTextureLease matTableLease)
     {
         if (!EnsureResources() || _rd is null) return;
         if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers) return;
         var size = buffers.GetInternalSize();
         if (size.X <= 0 || size.Y <= 0) return;
         // RD RIDs are looked up again every frame: a producer's SetImage may replace the RD texture.
-        var matTable = matTableLease is not null ? matTableLease.GetRdTextureOnRenderThread(false)
-            : RenderingServer.TextureGetRdTexture(frame.FallbackMatTable);
-        var palette = paletteLease is not null ? paletteLease.GetRdTextureOnRenderThread(true)   // sRGB view: linear on fetch
-            : RenderingServer.TextureGetRdTexture(frame.FallbackPalette, true);
+        var matTable = matTableLease.GetRdTextureOnRenderThread(false);
+        var palette = paletteLease.GetRdTextureOnRenderThread(true);   // sRGB view: linear on fetch
         if (!matTable.IsValid || !palette.IsValid) return;
 
         // Own intermediate texture: dropped with the context whenever the buffers are reconfigured; size-checked too.

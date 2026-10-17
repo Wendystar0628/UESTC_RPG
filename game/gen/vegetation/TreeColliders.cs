@@ -7,9 +7,8 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// Trunk colliders of the planted trees (WLD-VEGETATION §10, SYS-WALK §13): one vertical PostCollider per tree, the
 /// breast-height trunk radius from its mother model, from the lowest ground under the trunk minus 0.1 m up to the first
-/// scaffold branch, so one can walk under the crown. Barrier with the Bark contact material. Parameters are local to the
-/// 64 m collision cell (its origin is tile × 64), as CollisionTile stores them; the same trees and parameters as the
-/// visible geometry. Shrubs and the other plantings do not collide.
+/// scaffold branch, so one can walk under the crown. Barrier with the Bark contact material. Parameters are world
+/// coordinates, matching visible geometry; the kernel localizes the complete C tile once. Shrubs and the other plantings do not collide.
 /// </summary>
 public static class TreeColliders
 {
@@ -38,7 +37,7 @@ public static class TreeColliders
             var low = tree.Position.Y;
             foreach (var d in new[] { Vector2.UnitX, -Vector2.UnitX, Vector2.UnitY, -Vector2.UnitY })
                 low = MathF.Min(low, terrain.HeightAt(p.X + d.X * r, p.Y + d.Y * r));
-            colliders.Add(new PostCollider(p - origin, r, low - 0.1f, tree.Position.Y + trunk.Branch * tree.Scale, SurfaceTag.Barrier)
+            colliders.Add(new PostCollider(p, r, low - 0.1f, tree.Position.Y + trunk.Branch * tree.Scale, SurfaceTag.Barrier)
             { Foot = FootMat.Bark });
         }
         return colliders;

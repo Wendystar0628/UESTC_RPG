@@ -1,4 +1,5 @@
-using Campus.Style.Stubs;
+using Campus.Style.Materials;
+using Campus.Contracts;
 using GdUnit4;
 using Godot;
 
@@ -14,7 +15,7 @@ public sealed class InstancePoolRuntimeTests
     {
         if (Engine.GetMainLoop() is not SceneTree tree)
             throw new InvalidOperationException("The instance-pool test requires a Godot scene tree.");
-        using var material = new D0MaterialLibrary().Material;
+        using var material = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
         var parent = new Node3D();
         try
         {

@@ -5,6 +5,7 @@
     <PackageReference Include="gdUnit4.api" PrivateAssets="all" Condition="'$(Configuration)' == 'Debug'" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;**/tests/**/*.cs" />
     <ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" />
+    <Compile Include="../pipeline/walk/WalkBakeGenerator.cs" Link="kernel/bake/WalkBakeGenerator.cs" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">

@@ -1666,7 +1666,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 59.4k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 56.7k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、构建与测试排队、构建锁、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.4k
@@ -1686,11 +1686,11 @@
   - ENG-ARCH 覆盖层约束 · L343 · 342
   - ENG-ARCH 仍未落地项 · L349 · 511
 - ENG-ARCH §4 资源管线 · L355 · 10.6k
-- ENG-ARCH §5 接口先定、桩先交付 · L443 · 3.3k
-- ENG-ARCH §6 构建与测试排队 · L482 · 2.0k
-- ENG-ARCH §7 主要风险与对策 · L507 · 6.0k
-- ENG-ARCH §8 扩展点（RPG） · L558 · 1.1k
-- ENG-ARCH §9 待验证（P0） · L574 · 2.1k
+- ENG-ARCH §5 未交付能力的占位边界 · L443 · 575
+- ENG-ARCH §6 构建与测试排队 · L457 · 2.0k
+- ENG-ARCH §7 主要风险与对策 · L482 · 6.0k
+- ENG-ARCH §8 扩展点（RPG） · L533 · 1.1k
+- ENG-ARCH §9 待验证（P0） · L549 · 2.1k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
@@ -1715,13 +1715,13 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检
 
-`docs/design/engineering/ENG-GATES-验收与门禁.md` · 56.8k 字 · 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单
+`docs/design/engineering/ENG-GATES-验收与门禁.md` · 57.0k 字 · 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、review.json、output/render-review、构建锁
 
 - ENG-GATES §0 结论 · L22 · 1.7k
   - ★ ENG-GATES §0.1 接入要点 · L38 · 722
 - ENG-GATES §1 审查视角 · L51 · 14.8k
-- ENG-GATES §2 门禁与测试节奏 · L197 · 30.2k
+- ENG-GATES §2 门禁与测试节奏 · L197 · 30.4k
 - ENG-GATES §3 一票否决 · L281 · 3.2k
 - ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L310 · 2.6k
 - ENG-GATES §5 待验证（P0） · L336 · 1.8k

@@ -3,29 +3,6 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Kernel.Stubs.AudioUi;
 
-/// <summary>D0 silent audio service. Playback is supplied by WP-53.</summary>
-[KernelService(typeof(IAudioService), Owner = "WP-00", IsStub = true)]
-public sealed class AudioServiceStub : IAudioService
-{
-    public AudioSettings Settings { get; private set; } = new();
-    public event Action<AudioSettings>? SettingsChanged;
-    public AudioSnapshot Snapshot => new(0, 0, 0, 0, 0, -80f, 0);
-
-    public void ApplySettings(AudioSettings next)
-    {
-        ArgumentNullException.ThrowIfNull(next);
-        if (next == Settings) return;
-        Settings = next;
-        SettingsChanged?.Invoke(next);
-    }
-
-    public void PlayUi(UiCue cue) { }
-    public void SetMusic(MusicCue cue, float fadeSeconds = 1.5f) { }
-    public void Cine(string cue, float seconds, float db = 0f) { }
-    public void Duck(DuckReason reason, float db, float attackSeconds, float releaseSeconds) { }
-    public void ReleaseDuck(DuckReason reason) { }
-}
-
 [KernelService(typeof(IAmbienceService), Owner = "WP-00", IsStub = true)]
 public sealed class AmbienceServiceStub : IAmbienceService
 {

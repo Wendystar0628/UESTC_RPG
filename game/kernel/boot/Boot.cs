@@ -6,7 +6,7 @@ namespace Campus.Kernel.Boot;
 public partial class Boot : Node
 {
     public static BootArguments Options { get; private set; } = BootArguments.Parse([], true);
-    // D0 callers distinguish a missing option from a supplied one; formal defaults live in Options.
+    // Consumers distinguish explicit inputs from the effective defaults in Options.
     public static IReadOnlyDictionary<string, string> Arguments { get; private set; } = new Dictionary<string, string>();
     public static bool Failed { get; private set; }
     public static string Value(string key, string fallback = "") => Arguments.TryGetValue(key, out var value) ? value : fallback;

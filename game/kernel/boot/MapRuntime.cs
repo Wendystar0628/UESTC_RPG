@@ -9,10 +9,13 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Boot;
 
 /// <summary>Scene-side map lifetime. The map service owns transition ordering; this host owns engine nodes.</summary>
+[KernelService(typeof(IMapRuntime), Owner = "WP-01")]
+[KernelNode("map-runtime", Owner = "WP-01")]
 public partial class MapRuntime : Node, IMapRuntime
 {
     private readonly List<(Type Type, Node Node)> _scoped = [];
     private IMapStreamState? _stream;
+    private ICollisionWorld? _collision;
     private RenderHost? _renderer;
     private MaterialWarmup? _materials;
     private MapId? _loaded;
@@ -33,12 +36,13 @@ public partial class MapRuntime : Node, IMapRuntime
     public bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
     public bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true && _renderer?.PipelineReady == true && Error is null;
     public bool WarmReady { get; private set; }
-    public string? Error => _error ?? _materials?.Error ?? _stream?.Error ?? _renderer?.Error;
+    public string? Error => _error ?? _materials?.Error ?? _stream?.Error ?? _renderer?.Error ?? _collision?.Error;
 
     public override void _Ready()
     {
         ProcessPriority = FramePriority.StreamMount + 1;
         _stream = Services.Get<IMapStreamState>();
+        _collision = Services.Get<ICollisionWorld>();
         _renderer = Services.Get<IRenderHost>() as RenderHost
             ?? throw new InvalidOperationException("The stage requires its dynamic render host.");
         _materials = Services.Get<MaterialWarmup>();

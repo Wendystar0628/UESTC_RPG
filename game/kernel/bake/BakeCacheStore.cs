@@ -46,16 +46,20 @@ public sealed class BakeCacheStore
 
     public static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(XxHash128.Hash(bytes));
 
-    public byte[]? TryRead(string map, string identity, string? expectedHash, bool allowUnlisted, int maximumPayload = MaximumPayloadBytes)
+    public byte[]? TryRead(string map, string identity, string? expectedHash, bool allowUnlisted,
+        int maximumPayload = MaximumPayloadBytes, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var path = FilePath(map, identity);
         if (!File.Exists(path)) return null;
         try
         {
             var fileLimit = maximumPayload == MaximumProductBytes ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
             var bytes = DecodeFile(ReadBounded(path, fileLimit), maximumPayload);
+            cancellationToken.ThrowIfCancellationRequested();
             var hash = Hash(bytes);
-            lock (_sync)
+            EnterCache(cancellationToken);
+            try
             {
                 var index = Index(map);
                 var expected = expectedHash;
@@ -65,25 +69,33 @@ public sealed class BakeCacheStore
                 index.Entries[identity] = new(hash, new FileInfo(path).Length, ++_sequence);
                 SaveIndex(map, index);
             }
+            finally { Monitor.Exit(_sync); }
             return bytes;
         }
         catch (Exception error) when (error is IOException or JsonException or ArgumentException or OverflowException)
         {
-            lock (_sync)
+            cancellationToken.ThrowIfCancellationRequested();
+            EnterCache(cancellationToken);
+            try
             {
                 if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
                 Index(map).Entries.Remove(identity);
             }
+            finally { Monitor.Exit(_sync); }
             return null;
         }
     }
 
-    public void Write(string map, string identity, byte[] bytes, bool mapProduct = false)
+    public void Write(string map, string identity, byte[] bytes, bool mapProduct = false,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var encoded = EncodeFile(bytes);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!mapProduct && encoded.Length > MaximumCompressedTileBytes)
             throw new InvalidDataException("Compressed tile exceeds 8 MiB on disk; split the generated tile.");
-        lock (_sync)
+        EnterCache(cancellationToken);
+        try
         {
             var path = FilePath(map, identity);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -93,6 +105,20 @@ public sealed class BakeCacheStore
             var index = Index(map);
             index.Entries[identity] = new(Hash(bytes), encoded.Length, ++_sequence);
             SaveIndex(map, index);
+        }
+        finally { Monitor.Exit(_sync); }
+    }
+
+    private void EnterCache(CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.CanBeCanceled) { Monitor.Enter(_sync); return; }
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Monitor.TryEnter(_sync, 50)) continue;
+            if (!cancellationToken.IsCancellationRequested) return;
+            Monitor.Exit(_sync);
+            cancellationToken.ThrowIfCancellationRequested();
         }
     }
 
@@ -108,14 +134,16 @@ public sealed class BakeCacheStore
         }
     }
 
-    public void Remove(string map, string identity)
+    public void Remove(string map, string identity, CancellationToken cancellationToken = default)
     {
-        lock (_sync)
+        EnterCache(cancellationToken);
+        try
         {
             var path = FilePath(map, identity);
             if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
             Index(map).Entries.Remove(identity);
         }
+        finally { Monitor.Exit(_sync); }
     }
 
     public void RemoveOtherAbis(string map)

@@ -2,6 +2,8 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Stream;
+using Campus.Kernel.Bake;
+using Campus.Kernel.Registry;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -9,6 +11,73 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class StreamSchedulingTests
 {
+    [TestCase]
+    public void OffOriginModuleProducesOneWholeMapRootAndAnHonestEmptyBundleOnTheBakeWorker()
+    {
+        var context = new BuildContext
+        {
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+            Map = BackdropInputsTests.Descriptor(),
+            World = new TestWorldModel(),
+            WorldSeed = 1
+        };
+        var module = new RootModule();
+        var catalog = ModuleTileCatalog.Build(context, [new("fixture.root", module)]);
+        if (!catalog.Modules(StreamTile.Root).SequenceEqual(["fixture.root"]))
+            throw new InvalidOperationException("Off-origin discovery failed to produce one whole-map root.");
+        var key = BakeRequestKeys.Tile(context.Map.Id, "fixture.root", StreamTile.Root.Tile, LodLevel.L4);
+        var builder = new BakeGeometryBuilder(context.Catalog, new ServiceRegistry());
+        using var queue = new BakeQueue(1);
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var caller = Environment.CurrentManagedThreadId;
+        var handle = queue.Ensure(key, BakePriority.KnownDestination, () =>
+        {
+            entered.Set(); release.Wait();
+            return builder.Build(key, context, module, _ => { });
+        });
+        try
+        {
+            if (!entered.Wait(5000) || !ReferenceEquals(handle,
+                queue.Ensure(key, BakePriority.KnownDestination, () => throw new InvalidOperationException("Duplicate build."))))
+                throw new InvalidOperationException("A repeated root request created another bake operation.");
+            release.Set();
+            if (!SpinWait.SpinUntil(() => handle.State is BakeState.Ready or BakeState.Failed, 5000))
+                throw new InvalidOperationException("The actual bake worker did not finish.");
+            if (handle.State != BakeState.Ready || handle.Tile is not { } tile || tile.Surfaces.Count != 0 ||
+                tile.Key != key || tile.Tile != StreamTile.Root.Tile || tile.Level != LodLevel.L4 ||
+                module.Calls != 1 || module.Thread == caller || module.Tile != new TileKey(0, 0) || module.Level != LodLevel.L4)
+                throw new InvalidOperationException("Whole-map build identity, empty product or worker ownership changed.");
+        }
+        finally { release.Set(); }
+    }
+
+    [TestCase]
+    public void ActualBakeQueueKeepsFailuresAndDiscardsForgottenSameIdResults()
+    {
+        using var queue = new BakeQueue(1);
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var key = new BakeKey(new("fixture-map"), "fixture.root", "L4/0/0");
+        var old = queue.Ensure(key, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
+        try
+        {
+            if (!entered.Wait(5000)) throw new InvalidOperationException("Old worker did not start.");
+            queue.ForgetMap(key.Map);
+            var expected = new object();
+            var current = queue.Ensure(key, BakePriority.KnownDestination, () => expected);
+            release.Set();
+            if (!SpinWait.SpinUntil(() => current.State is BakeState.Ready or BakeState.Failed, 5000) ||
+                old.State != BakeState.Failed || current.State != BakeState.Ready || !ReferenceEquals(current.Product, expected))
+                throw new InvalidOperationException("An old same-ID worker replaced the current map product.");
+            var failed = queue.Ensure(key with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
+                () => throw new InvalidOperationException("Active build failure."));
+            if (!SpinWait.SpinUntil(() => failed.State == BakeState.Failed, 5000) ||
+                failed.Product is not null || failed.Error?.Contains("Active build failure.", StringComparison.Ordinal) != true)
+                throw new InvalidOperationException("An active build failure became a ready or empty product.");
+        }
+        finally { release.Set(); }
+    }
     [TestCase]
     public void RetirementBlocksVisualsButPreservesCollisionAndResumesAfterDrain()
     {
@@ -100,5 +169,16 @@ public sealed class StreamSchedulingTests
         public int Cancels;
         public bool Step(double budgetMilliseconds) { step(budgetMilliseconds); return true; }
         public void Cancel() => Cancels++;
+    }
+    private sealed class RootModule : IContentModule
+    {
+        public int Calls, Thread;
+        public TileKey Tile;
+        public LodLevel Level;
+        public IReadOnlyList<Claim> Claims => [];
+        public ModuleBudget Budget => new(0, 0, 0);
+        public IEnumerable<TileKey> Tiles(BuildContext context) => [new(79, -108), new(79, -108)];
+        public ContentOutput Build(BuildContext context, TileKey tile, LodLevel level)
+        { Calls++; Thread = Environment.CurrentManagedThreadId; Tile = tile; Level = level; return ContentOutput.Empty; }
     }
 }

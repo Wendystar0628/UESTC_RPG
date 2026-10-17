@@ -20,11 +20,3 @@ public sealed class CinemaPresenterStub : ICinemaPresenter
     public void Present(double timelineSeconds, float skipProgress, bool skipHintVisible, double waitingSeconds) { }
     public void End(CinematicEnd end, bool skipped) => Active = false;
 }
-
-/// <summary>D0 has no skip input measurement; WP-06 replaces this static state.</summary>
-[KernelService(typeof(ISkipInputState), Owner = "WP-00", IsStub = true)]
-public sealed class SkipInputStateStub : ISkipInputState
-{
-    public float Progress => 0f;
-    public bool HintVisible => false;
-}

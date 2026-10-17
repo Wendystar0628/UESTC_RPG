@@ -32,29 +32,37 @@ internal sealed class BakeGeometryBuilder
         _parts = parts;
     }
 
-    public TileBundle Build(BakeKey key, BuildContext context, IContentModule module, Action<IReadOnlyList<BuildDiagnostic>> collect)
+    public TileBundle Build(BakeKey key, BuildContext context, IContentModule module, Action<IReadOnlyList<BuildDiagnostic>> collect,
+        Action<string>? phase = null)
     {
         var request = BakeRequestKeys.Parse(key);
         if (request.Collision) throw new InvalidOperationException("Collision requests must use a collision producer.");
         RequireCatalog(context);
         var output = module.Build(context, request.Tile, request.Level);
-        return BuildOutput(key, context, output, request.Tile, request.Level, collect);
+        return BuildOutput(key, context, output, request.Tile, request.Level, collect, phase);
     }
 
-    public TileBundle BuildOutput(BakeKey key, BuildContext context, ContentOutput output, TileKey tile, LodLevel level, Action<IReadOnlyList<BuildDiagnostic>> collect)
+    public TileBundle BuildOutput(BakeKey key, BuildContext context, ContentOutput output, TileKey tile, LodLevel level,
+        Action<IReadOnlyList<BuildDiagnostic>> collect, Action<string>? phase = null)
     {
         RequireCatalog(context);
         collect(output.Diagnostics);
         var meshes = new List<GeometryBundle>(output.Meshes);
         foreach (var part in output.Parts)
         {
+            phase?.Invoke("part:" + part.Part.Value);
             if (!_parts.TryGetValue(part.Part.Value, out var build)) throw new InvalidDataException($"Unknown part: {part.Part.Value}");
             var geometry = build(part.Params, level);
             foreach (var mesh in geometry.Meshes) meshes.Add(Transform(mesh, part));
         }
+        phase?.Invoke("bounds");
         var bounds = Bounds(context, tile, level, meshes);
+        phase?.Invoke("surface-pack");
         var surfaces = meshes.Where(m => m.Position.Length > 0 && m.Index.Length > 0).Select(m => Pack(m, bounds)).ToArray();
-        return _instances.PackTile(key, tile, level, bounds, PackedSurfaceBatcher.Merge(surfaces), output.Instances);
+        phase?.Invoke("surface-batch");
+        var batched = PackedSurfaceBatcher.Merge(surfaces);
+        phase?.Invoke("instance-pack");
+        return _instances.PackTile(key, tile, level, bounds, batched, output.Instances);
     }
 
     internal static TileBundle Assemble(BakeKey key, TileKey tile, LodLevel level, Box3 bounds,

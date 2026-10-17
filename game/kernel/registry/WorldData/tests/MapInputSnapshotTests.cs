@@ -2,8 +2,6 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
-using Campus.Kernel.Stubs;
-using Campus.Kernel.Stubs.Foundation;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -82,7 +80,7 @@ public sealed class MapInputSnapshotTests
     }
     private static WorldModelLoadResult Loaded(MapCatalogEntry entry)
     {
-        var world = new StubWorldModel(new StubSpatialIndex(), new InteriorIndexStub(), new StubFidelityModel());
+        var world = new MutableWorldFixture();
         world.Configure([], boundary: new PolygonRings([new(-64, -64), new(64, -64), new(64, 64), new(-64, 64)]));
         return new(world, entry.Descriptor.Geo, entry.Descriptor.Center, entry.Descriptor.Bounds,
             entry.Descriptor.TileMin, entry.Descriptor.TileMax);

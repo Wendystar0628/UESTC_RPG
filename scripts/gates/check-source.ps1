@@ -34,7 +34,7 @@ function Test-UESTCGlob {
 }
 
 function Test-UESTCOwnership {
-    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef, [switch]$D0)
+    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
     $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
     $rules = @($ownership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
     $deletedPaths = @($Changes | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
@@ -48,11 +48,6 @@ function Test-UESTCOwnership {
         }
     }
     $failures = New-Object 'Collections.Generic.List[string]'
-    $exceptions = New-Object 'Collections.Generic.List[string]'
-    $initialPaths = @()
-    if ($D0 -and $Wp -eq 'WP-00') {
-        $initialPaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', 'main'))
-    }
     foreach ($path in $Changes) {
         $owner = $null
         $maintainers = @()
@@ -68,12 +63,7 @@ function Test-UESTCOwnership {
         if ($Wp -in $maintainers) { continue }
         if ($owner -eq $Wp -or ($Wp -eq 'WP-00' -and $owner -in @('shared','main')) -or
             ($Wp -cmatch '^WP-[0-9]{2}$' -and $owner -cmatch ('^' + [regex]::Escape($Wp) + '[a-z]$'))) { continue }
-        $initial = $false
-        if ($D0 -and $Wp -eq 'WP-00' -and $owner -and $path -notmatch '^docs/' -and 'game/project.godot' -notin $initialPaths) {
-            $initial = $path -notin $initialPaths
-        }
-        if ($initial) { $exceptions.Add("D0 initial file: $path (future owner: $owner)") }
-        else { $failures.Add("Ownership: $path belongs to '$owner', requested $Wp") }
+        $failures.Add("Ownership: $path belongs to '$owner', requested $Wp")
     }
     $files = @(Get-UESTCFiles $Root)
     $tracked = @(Get-UESTCGitLines $Root @('ls-files', '--cached'))
@@ -97,10 +87,10 @@ function Test-UESTCOwnership {
         if ($ignored) { continue }
         $uid = "$path.uid"
         if (-not (Test-Path -LiteralPath (Join-Path $Root $uid))) { $failures.Add("Missing UID: $uid; run G1 import") }
-        elseif (-not $D0 -and $uid -notin $tracked) { $failures.Add("UID not staged/tracked: $uid") }
+        elseif ($uid -notin $tracked) { $failures.Add("UID not staged/tracked: $uid") }
     }
     if ($failures.Count) { throw ($failures -join "`n") }
-    [pscustomobject]@{ CheckedPaths = $Changes.Count; InitialD0Exceptions = $exceptions.ToArray(); Uids = $uids.Count }
+    [pscustomobject]@{ CheckedPaths = $Changes.Count; Uids = $uids.Count }
 }
 
 function Test-UESTCSourceBoundaries {

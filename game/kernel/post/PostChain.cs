@@ -45,7 +45,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
-    private Rid _fallbackPalette, _fallbackMatTable;
     private bool _highGlow = true;
     private bool _bicubicApplied;
     private bool _vignetteOn = true;
@@ -90,8 +89,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _medium = Services.Get<IMediumRenderState>();
         _textures = Services.Get<IGlobalDataTextureRegistry>();
         _rig = Services.Get<ICameraRig>();
-        _fallbackPalette = PostDataTextures.FallbackPalette;
-        _fallbackMatTable = PostDataTextures.FallbackMatTable;
         _veil = Services.Get<IVeilState>();
         if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
         // Startup-only pipeline switches (ENG-PERF §0 rule 10): set before warm-up, never toggled at runtime.
@@ -214,8 +211,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             Veil = _veil.Opacity,
             SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
             MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
-            FallbackPalette = _fallbackPalette,
-            FallbackMatTable = _fallbackMatTable,
             TiltAmount = 0f,
             VignetteK = cs.Vignette * _vignetteFade,
             VignetteTint = new Vector3(cs.VignetteTint.X, cs.VignetteTint.Y, cs.VignetteTint.Z),

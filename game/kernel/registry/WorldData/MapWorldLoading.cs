@@ -20,6 +20,8 @@ public sealed record MapLoadInput(MapCatalogEntry Entry,
     }
     /// <summary>with { WalkBytes = ... } shares this exact snapshot; with { Files = ... } freezes only the new record's inputs.</summary>
     public BuildInputSnapshot SourceInputs => _sourceInputs;
+    internal string? DevelopmentWalkPath { get; init; }
+    internal PaletteCatalog? DevelopmentWalkCatalog { get; init; }
 }
 
 public static class MapWorldLoading

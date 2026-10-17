@@ -6,6 +6,7 @@ using Godot;
 namespace Campus.Kernel.Stream;
 
 /// <summary>The sole owner of the shared collision/visual mount budget.</summary>
+[KernelService(typeof(IStreamMountQueue), Owner = "WP-02b")]
 public sealed class StreamMountQueue : IStreamMountQueue
 {
     private readonly List<IStreamMountWork> _pending = [];

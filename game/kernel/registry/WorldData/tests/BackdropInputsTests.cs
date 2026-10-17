@@ -72,7 +72,7 @@ public sealed class BackdropInputsTests
         Check(Hash(original) != Hash(whitespace) && Hash(original) != Hash(nested) && Hash(nested) != Hash(nestedChanged),
             "Scope framing lost a key or raw-byte change.");
         Check(Hash(original) != Hash(BuildInputSnapshot.Empty), "An absent backdrop shares the present-input hash.");
-        // This proves the existing hash-append primitive only; D0 has no production DataHash/cache consumer.
+        // This checks the backdrop hash contribution; the bake tests cover its production cache identity.
     }
 
     [TestCase]
