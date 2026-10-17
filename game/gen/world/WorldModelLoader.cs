@@ -23,6 +23,7 @@ public sealed class WorldDataException(string file, string entry, string message
 {
     public string File { get; } = file;
     public string Entry { get; } = entry;
+    internal bool CanNarrowAutomaticRoad { get; init; }
 }
 
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>

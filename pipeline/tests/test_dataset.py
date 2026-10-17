@@ -27,10 +27,10 @@ class DatasetTests(unittest.TestCase):
         migrated = json.loads((ROOT / 'game/data/maps/qingshuihe/campus.json').read_bytes())
         # Entity/boundary goldens retain the pre-migration baseline. Feature geometry now
         # preserves source parent-family interfaces. Optional facade coordinates are
-        # checked separately; all other fields retain the prior golden.
+        # checked separately; water source tags and dam/weir kinds use the current source baseline.
         golden = {'entities': '77735dc7f66e1fdda61b0b469093be859865c13ccb56d51e59ecf645b1103757',
                   'boundary': '4fece2373778f8510feb2ae0e5158f118161533b77ff01e8d5d2de8962aae3dc',
-                  'features': '6307012d4ce9de0a2be509107affe89e8a33694621d4ce9ede71ad956b2e513e'}
+                  'features': '175f0bef7993369a08f502fa1173397dad515b7692df529dad942c371eadefaf'}
         for key, expected in golden.items():
             value = migrated[key]
             if key == 'features':
@@ -39,6 +39,20 @@ class DatasetTests(unittest.TestCase):
             self.assertEqual(expected, digest, key)
         metadata = json.loads((ROOT / 'pipeline/raw/qingshuihe/osm-campus.meta.json').read_bytes())
         self.assertEqual(metadata['retrievedDateUtc'], migrated['meta']['date'])
+
+    def test_water_tags_are_exact_source_values_and_do_not_guess_a_centreline(self):
+        raw = json.loads((ROOT / 'pipeline/raw/qingshuihe/osm-campus.json').read_bytes())
+        source = {f"osm:{entry['type']}:{entry['id']}": entry.get('tags', {}) for entry in raw['elements']}
+        campus = json.loads((ROOT / 'game/data/maps/qingshuihe/campus.json').read_bytes())
+        for feature in campus['features']:
+            expected = {key: source[feature['id']][key] for key in ('water', 'waterway') if key in source[feature['id']]}
+            self.assertEqual(expected, feature.get('sourceTags', {}), feature['id'])
+            if expected.get('waterway') in ('dam', 'weir'):
+                self.assertEqual(expected['waterway'], feature['kind'], feature['id'])
+        river = next(feature for feature in campus['features'] if feature['id'] == 'osm:way:851437317')
+        self.assertEqual({'water': 'river'}, river['sourceTags'])
+        network = json.loads((ROOT / 'game/data/maps/qingshuihe/network.json').read_bytes())
+        self.assertNotIn('qsh:source:way:851437317', {line['id'] for line in network['waterways']})
 
     def test_network_preserves_snapshot_counts(self):
         network = json.loads((ROOT / 'game/data/maps/qingshuihe/network.json').read_bytes())

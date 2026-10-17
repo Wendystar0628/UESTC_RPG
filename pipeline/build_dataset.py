@@ -240,6 +240,8 @@ def main():
             if geometry.intersection(boundary).area / geometry.area < .5:
                 continue
             kind = 'building'
+        elif tags.get('waterway') in ('dam', 'weir'):
+            kind = tags['waterway']
         elif tags.get('natural') == 'water' or tags.get('waterway'):
             kind = 'water'
         elif tags.get('highway') and geometry.geom_type != 'Point':
@@ -283,7 +285,7 @@ def main():
             child['parent'] = parent
     for r in records:
         tags = r['tags']
-        if r['kind'] in ('road', 'green', 'water') and not tags.get('name'):
+        if r['kind'] in ('road', 'green', 'water', 'dam', 'weir') and not tags.get('name'):
             r['entityId'] = None
         else:
             r['entityId'] = config['entityPrefix'] + ':' + r['sourceId'].replace('/', ':')
@@ -376,7 +378,7 @@ def main():
         if children:
             render_geometry = geometry.difference(unary_union([b['geometry'] for b in children]))
         width = None
-        if r['kind'] in ('road', 'water') and render_geometry.area == 0:
+        if r['kind'] in ('road', 'water', 'dam', 'weir') and render_geometry.area == 0:
             defaults = {'footway': 2.5, 'path': 2, 'steps': 2.5, 'cycleway': 3, 'service': 5, 'residential': 6, 'tertiary': 8, 'secondary': 10, 'pedestrian': 5}
             width = number(tags.get('width')) or defaults.get(tags.get('highway'), 4)
             render_geometry = render_geometry.buffer(width/2, cap_style=2, join_style=2).intersection(boundary)
@@ -388,6 +390,9 @@ def main():
         r['bounds'] = [round(v, 2) for v in geometry.bounds]
         if polys:
             features.append({'id': feature_id, 'entityId': r['entityId'], 'kind': r['kind'], 'polygons': polys, 'height': round(render_height, 2), 'heightStatus': status, 'levels': levels, 'levelsBasis': levels_basis, 'category': r['category'], 'sport': tags.get('sport'), 'roadType': tags.get('highway'), 'widthEstimated': width is not None and not tags.get('width')})
+            water_tags = {key: tags[key] for key in ('water', 'waterway') if key in tags}
+            if water_tags:
+                features[-1]['sourceTags'] = water_tags
             facade = facade_polygons(render_geometry)
             if facade != polys:
                 features[-1]['facadePolygons'] = facade
