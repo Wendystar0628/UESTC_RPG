@@ -108,8 +108,8 @@
   - ★ WF-ENTRY §0.1 接入要点 · L29 · 148
 - WF-ENTRY §1 主会话 · L35 · 1.1k
 - WF-ENTRY §2 子代理 · L65 · 1.4k
-- WF-ENTRY §3 Astra · L96 · 848
-- WF-ENTRY §4 Sol 会话 · L119 · 911
+- WF-ENTRY §3 Astra · L96 · 859
+- WF-ENTRY §4 Sol 会话 · L119 · 916
 
 ## WF-INDEX · 协作总纲
 
@@ -177,14 +177,14 @@
 
 ## WF-ROLE · 参与者与分工
 
-`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.1k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
+`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.2k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
 关键词：会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Astra、工程指挥、元规则、D-179
 
 - WF-ROLE §0 结论 · L23 · 552
   - ★ WF-ROLE §0.1 接入要点 · L31 · 223
 - WF-ROLE §1 会话与运行方式 · L37 · 334
 - WF-ROLE §2 模型的长处与短板 · L43 · 784
-- WF-ROLE §3 GPT 模型不做审美工作 · L54 · 415
+- WF-ROLE §3 GPT 模型不做审美工作 · L54 · 479
 - WF-ROLE §4 事归谁与交叉的地方 · L61 · 450
 - WF-ROLE §5 总指挥只做什么 · L69 · 756
 - WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L85 · 761
