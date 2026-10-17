@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 154
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 1.8k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L118 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.0k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L119 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -665,7 +665,7 @@
   - WLD-TERRAIN-APPLY §2.2 道路与铺装 · L69 · 321
   - WLD-TERRAIN-APPLY §2.3 楼宇：垫层、勒脚与入口 · L76 · 590
   - WLD-TERRAIN-APPLY §2.4 树与道具落地 · L85 · 319
-- WLD-TERRAIN-APPLY §3 可走性与碰撞 · L92 · 659
+- WLD-TERRAIN-APPLY §3 可走性与碰撞 · L92 · 665
 - WLD-TERRAIN-APPLY §4 地面着色与描线 · L101 · 881
 - WLD-TERRAIN-APPLY §5 待验证 · L121 · 347
 
@@ -1049,7 +1049,7 @@
 - MAP-QSH-SOUTH §1 南门 · L41 · 519
 - MAP-QSH-SOUTH §2 主楼 · L49 · 1.1k
 - MAP-QSH-SOUTH §3 过街楼、开放室内与周边 · L62 · 641
-- MAP-QSH-SOUTH §4 东湖 · L70 · 882
+- MAP-QSH-SOUTH §4 东湖 · L70 · 880
 - MAP-QSH-SOUTH §5 宣邦楼 · L81 · 1.3k
 - MAP-QSH-SOUTH §6 立人楼 · L97 · 358
 - MAP-QSH-SOUTH §7 体育场馆（沿西源大道从西到东） · L104 · 821
@@ -1064,8 +1064,8 @@
 `docs/maps/qingshuihe/MAP-QSH-TERRAIN-CHECKS-验收镜头冲突与点位标高.md` · 3.9k 字 · 地形验收用的 A–K 镜头、垫层与跳跃链等冲突检查结论、点位与锚点标高，以及地形待验证项
 关键词：地形验收镜头、冲突检查、垫层与楼体高差、点位标高、锚点标高、室内同位点、开始页与过场、地形求值
 
-- MAP-QSH-TERRAIN-CHECKS §0 结论 · L23 · 627
-  - ★ MAP-QSH-TERRAIN-CHECKS §0.1 接入要点 · L29 · 379
+- MAP-QSH-TERRAIN-CHECKS §0 结论 · L23 · 633
+  - ★ MAP-QSH-TERRAIN-CHECKS §0.1 接入要点 · L29 · 385
 - MAP-QSH-TERRAIN-CHECKS §1 验收镜头 · L37 · 677
 - MAP-QSH-TERRAIN-CHECKS §2 冲突检查的结论 · L55 · 517
 - MAP-QSH-TERRAIN-CHECKS §3 点位与锚点标高 · L63 · 534
@@ -1311,14 +1311,14 @@
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-`docs/systems/SYS-MAPS-多地图.md` · 10.9k 字 · 按图数据与全局的划分、先卸后装切图、时间全局天气按图、map_rect、单图半径
+`docs/systems/SYS-MAPS-多地图.md` · 10.8k 字 · 按图数据与全局的划分、先卸后装切图、时间全局天气按图、map_rect、单图半径
 关键词：多地图、换图、切图、地图服务、按图数据、先卸后装、同图重载、天气按图、进图补算、单图半径、启动集 PCK、本机烘焙缓存、IMapService、IMapAware、MapScope、MapDescriptor、map.json、map_rect
 
 - SYS-MAPS §0 结论 · L21 · 1.3k
   - ★ SYS-MAPS §0.1 接入要点 · L32 · 780
 - SYS-MAPS §1 数据归属 · L42 · 1.3k
-  - SYS-MAPS §1.1 按图与全局 · L44 · 742
-  - SYS-MAPS §1.2 本机烘焙缓存与启动集 · L62 · 569
+  - SYS-MAPS §1.1 按图与全局 · L44 · 737
+  - SYS-MAPS §1.2 本机烘焙缓存与启动集 · L62 · 564
 - SYS-MAPS §2 地图描述 `map.json` · L70 · 706
 - SYS-MAPS §3 切换 · L82 · 2.4k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L84 · 151
@@ -1327,7 +1327,7 @@
   - SYS-MAPS §3.4 入口 · L117 · 301
   - SYS-MAPS §3.5 同图重载门禁 · L126 · 153
 - SYS-MAPS §4 世界状态：时间与季节全局，天气按图 · L130 · 729
-- SYS-MAPS §5 相机、行走与安全点 · L148 · 440
+- SYS-MAPS §5 相机、行走与安全点 · L148 · 426
 - SYS-MAPS §6 归属与 `MapScope` · L159 · 600
 - SYS-MAPS §7 全局参数 `map_rect` · L167 · 691
 - SYS-MAPS §8 内存、包体与单图半径 · L177 · 346
@@ -1561,18 +1561,18 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.6k 字 · 可行走范围与遮罩、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
-关键词：可行走范围、可行走遮罩、边界收口、隐形墙、校界缓停、软墙提示、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳出口、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
+`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.6k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
+关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、软墙提示、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳出口、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 553
   - ★ SYS-WALK-BOUNDS §0.1 接入要点 · L31 · 292
-- SYS-WALK-BOUNDS §1 可行走范围 · L39 · 881
+- SYS-WALK-BOUNDS §1 可行走范围 · L39 · 850
 - SYS-WALK-BOUNDS §2 边界收口 · L58 · 1.2k
 - SYS-WALK-BOUNDS §3 楼内的门与电梯 · L86 · 623
-- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L100 · 1.0k
+- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L100 · 999
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L124 · 212
 - SYS-WALK-BOUNDS §6 推荐路线 · L130 · 193
-- SYS-WALK-BOUNDS §7 碰撞与就绪 · L134 · 1.3k
+- SYS-WALK-BOUNDS §7 碰撞与就绪 · L134 · 1.4k
 
 ## SYS-WALK · 行走模式：身体、手感、视角与切换
 
@@ -1724,7 +1724,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 9.0k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 8.9k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、程序集边界、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、DetMath、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、启动集、英雄资产、桩、占位、仓库脚本自成一体、架构导向、扩展方式、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L21 · 1.4k
@@ -1741,7 +1741,7 @@
   - ENG-ARCH 仓库脚本自成一体 · L104 · 101
   - ENG-ARCH 生命周期与发布 · L108 · 233
 - ENG-ARCH §3 契约 · L115 · 566
-- ENG-ARCH §4 资源与烘焙 · L124 · 1.0k
+- ENG-ARCH §4 资源与烘焙 · L124 · 925
 - ENG-ARCH §5 未交付能力的占位边界 · L135 · 359
 - ENG-ARCH §6 架构导向 · L144 · 514
 - ENG-ARCH §7 扩展点（RPG） · L156 · 448
@@ -1793,7 +1793,7 @@
 - ENG-CODE §0 结论 · L22 · 628
   - ★ ENG-CODE §0.1 接入要点 · L31 · 367
 - ENG-CODE §1 依赖方向 · L41 · 351
-- ENG-CODE §2 规则值与数据各一份 · L50 · 401
+- ENG-CODE §2 规则值与数据各一份 · L50 · 403
 - ENG-CODE §3 先复用，不复制 · L59 · 158
 - ENG-CODE §4 不留死代码 · L65 · 209
 - ENG-CODE §5 规模 · L72 · 160
@@ -1871,13 +1871,13 @@
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
-`docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md` · 3.7k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
+`docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md` · 3.6k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
 关键词：TileBundle、流式加载、本机烘焙缓存、tbin、启动集、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、泄漏门禁
 
-- ENG-PERF-STREAM §0 结论 · L22 · 541
-  - ★ ENG-PERF-STREAM §0.1 接入要点 · L29 · 239
-- ENG-PERF-STREAM §1 流式加载 · L35 · 1.5k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 644
+- ENG-PERF-STREAM §0 结论 · L22 · 512
+  - ★ ENG-PERF-STREAM §0.1 接入要点 · L29 · 210
+- ENG-PERF-STREAM §1 流式加载 · L35 · 1.4k
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 594
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 474
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 166
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L62 · 179
