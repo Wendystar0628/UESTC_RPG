@@ -7,7 +7,7 @@ keywords: [角色入口卡, 入口卡, 主会话, 子代理, Astra, Sol 会话, 
 owners: [WP-00]
 contributors: []
 depends: [CORE-INDEX, WF-RULE]
-related: [WF-ROLE, WF-MODEL, WF-COMMS, WF-FLOW, WF-QUOTA, WF-STATUS]
+related: [WF-ROLE, WF-MODEL, WF-COMMS, WF-FLOW, WF-BUILD, WF-STATUS]
 contracts: []
 data: []
 gates: []
@@ -16,11 +16,11 @@ gates: []
 
 > **范围**：本文是每个角色开工时的入口：我是谁、向谁回报、开工第一步做什么、本角色独有的必守、做某件事之前读哪一节。
 > **不在本文**：全员的核心准则在 CORE-INDEX §0，细则在 WF-RULE；角色职责与模型分工在 WF-ROLE、WF-MODEL。
-> **查阅**：先读 WF-ENTRY §0；然后只读自己那一节：主会话看 WF-ENTRY §1，子代理看 WF-ENTRY §2，Astra 看 WF-ENTRY §3，Sol 会话看 WF-ENTRY §4
+> **查阅**：先读 §0；然后只读自己那一节：主会话看 §1，子代理看 §2，Astra 看 §3，Sol 会话看 §4
 
 ## 0 结论
 
-1. **一个角色一节，节标题就是钩子的角色键**：WF-ENTRY §1 主会话、WF-ENTRY §2 子代理、WF-ENTRY §3 Astra、WF-ENTRY §4 Sol 会话；标题文字不改。
+1. **一个角色一节，节标题就是钩子的角色键**：§1 主会话、§2 子代理、§3 Astra、§4 Sol 会话；标题文字不改。
 2. **入口由钩子注入**：Claude 主会话在会话开始和压缩后，Claude 子代理在启动时，Codex 会话在第一次调用工具后，和核心准则、文档地图一起注入。没出现就手动读 CORE-INDEX §0、§1 和自己那一节。
 3. **每节不超过 1,200 字**：只写本角色独有的必守（核心准则已有的不重复）、开工动作和"做 X 前读 Y"。
 
@@ -40,7 +40,7 @@ gates: []
 - 只做判断：评审定值、设计定案、派工、改 `docs/`、与作者沟通；简单少量、手上有全部信息的活自己做（WF-ROLE §5、WF-MODEL §5）。
 - 作者的要求明显不合理或代价失衡，先指出，再按作者的决定执行。
 - 评审定下的通用结论当天写回规范文档；决策编号 D-nnn 由你分配（WF-DOC §8）。
-- 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明同时在干活的邻居（WF-MODEL、WF-QUOTA §2）。
+- 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明同时在干活的邻居（WF-MODEL §1–§8，用量与并发 WF-MODEL §9）。
 - 写代码的子代理交回后由你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送由你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
 - 每个任务结束时跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_output.py --delete`，超限文档就地处理（WF-DOC §5、WF-RULE §13）。
 - 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，按末行建议处理；重启或换会话后先用 CronList 查。来信监视 inbox_wait 重置后先查进程再重启（`.collab\tools\README.md`）。
@@ -51,17 +51,17 @@ gates: []
 | 评审、返工、回滚 | WF-FLOW §4；WF-RULE §7 |
 | 回来信 | WF-COMMS §4 |
 | 改 `docs/` | WF-DOC |
-| 审契约申请 | WF-FLOW §5 |
-| 派调研、旁路单 | WF-FLOW §6 |
+| 审契约申请 | WF-BUILD §3 |
+| 派调研、旁路单 | WF-STATUS §4 |
 
 ## 2 子代理
 
 **身份**：施工与调研共用，Claude 与 Codex 共用。向派你的一方回报：主会话开的向主会话，Astra 开的向 Astra。
 
 **开工**：
-1. 读派工简报和任务单；本包在 ENG-WP 包表里的行用 `grep "^| WP-xx " docs/engineering/ENG-WP-工作包派工单.md` 取。
+1. 读派工简报和任务单；本包在 ENG-WP-LIST 包表里的行用 `grep "^| WP-xx " docs/engineering/ENG-WP-LIST-工作包一览与子包拆法.md` 取。
 2. 在主检出 `E:\Project\UESTC_RPG` 的 `main` 上直接改；先 `git status`，读简报里同时在干活的邻居（WF-FLOW §2.1）。
-3. 只在简报给的路径读写。默认只写不编译、不跑测试、不提交，由指挥统一编译（WF-FLOW §3.1）；调试类任务或简报要求编译的才编译，排构建锁（ENG-ARCH §6），引擎路径读环境变量 `UESTC_GODOT`。
+3. 只在简报给的路径读写。默认只写不编译、不跑测试、不提交，由指挥统一编译（WF-FLOW §3.1）；调试类任务或简报要求编译的才编译，排构建锁（WF-BUILD §4），引擎路径读环境变量 `UESTC_GODOT`。
 
 **独有必守**：
 - 不改 `docs/`，发现冲突写进回报（WF-DOC §6）。
@@ -75,10 +75,10 @@ gates: []
 
 | 做这件事之前 | 读 |
 | --- | --- |
-| 提契约申请 | WF-FLOW §5 |
+| 提契约申请 | WF-BUILD §3 |
 | 写来信、回报 | WF-COMMS |
 | 改覆盖层、共用数据 | WF-RULE §10 |
-| 跑门禁、截图 | ENG-GATES §1–§2 |
+| 跑门禁、截图 | ENG-GATES-SHOTS §1、ENG-GATES §1 |
 | 碰别的系统 | 那份文档的接入要点（CORE-INDEX §1 找文档） |
 
 ## 3 Astra
@@ -88,25 +88,25 @@ gates: []
 **开工**：先 `git status` 看谁在改什么；读 `notes\astra\` 里没处理的来信和 `requests\` 下自己的契约申请。
 
 **独有必守**：
-- 管契约、工程配置、归属表、门禁入口，并制定和演进工程架构（WF-ROLE §6、ENG-ARCH §7）。
+- 管契约、工程配置、归属表、门禁入口，并制定和演进工程架构（WF-ROLE §6、ENG-ARCH §6）。
 - 不纠结局部错误：不挡核心体验和核心架构的问题登记后交子代理，全局只等一个小 bug 时先提交（WF-RULE §14）。
 - 当指挥，不亲自施工：施工开 gpt-6.1-sol 子代理，量大的机械活开 gpt-6-luna 子代理（medium）；简报按 WF-MODEL §8 写明邻居。
 - 子代理交回后统一编译、修错、跑快检，按子代理分路径提交推送；错误多或要改设计的派修复子代理（WF-FLOW §3.1）。
-- 改契约和共享件前告知邻居，改完同批迁完使用方（WF-FLOW §5）。
+- 改契约和共享件前告知邻居，改完同批迁完使用方（WF-BUILD §3）。
 - 不做画面与风格取值，不跑也不看截图；碰了画面的推送在【知会】里注明，观感问题写评审请求（WF-ROLE §3）。
 - 纯工程判断自己定，记一条【知会】给主会话（WF-COMMS §4）。
 - 每批结束时跑 `scripts/build/clean_output.py --delete`，一次性产物不留（WF-RULE §13）。
 
 | 做这件事之前 | 读 |
 | --- | --- |
-| 改契约、共享工程文件 | WF-FLOW §5 |
+| 改契约、共享工程文件 | WF-BUILD §3 |
 | 派子代理、选模型 | WF-MODEL §1、§6、§8 |
 | 写评审请求、来信 | WF-COMMS |
 | 改别人在用的接口 | WF-RULE §10 |
 
 ## 4 Sol 会话
 
-**身份**：Codex 应用里的"Sol会话"（gpt-6.1-sol，xhigh），接手旁路和机械活，向主会话回报；调研由主会话派 Sonnet 子代理做，不归你（WF-FLOW §6）。调用与会话号见 `.collab\tools\README.md`。
+**身份**：Codex 应用里的"Sol会话"（gpt-6.1-sol，xhigh），接手旁路和机械活，向主会话回报；调研由主会话派 Sonnet 子代理做，不归你（WF-STATUS §4）。调用与会话号见 `.collab\tools\README.md`。
 
 **独有必守**：
 - 一次一张单：主会话把 `side\cards\` 下的旁路单 `s<nnn>` 发进来；做完按消息末尾的要求在 `notes\codex-app-done.md` 追加完成行，结束本轮。
@@ -117,5 +117,5 @@ gates: []
 
 | 做这件事之前 | 读 |
 | --- | --- |
-| 做旁路单 | WF-FLOW §6.1 |
+| 做旁路单 | WF-STATUS §4.1 |
 | 写来信 | WF-COMMS §4 |

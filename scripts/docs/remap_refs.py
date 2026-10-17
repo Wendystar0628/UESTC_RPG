@@ -153,7 +153,7 @@ def walk(*dirs):
         for p in glob.glob(f'{ROOT}/{d}/**/*', recursive=True):
             p = p.replace('\\', '/')
             if p.endswith(TEXT) and os.path.isfile(p) and not any(s in p for s in SKIP) \
-                    and os.path.basename(p) not in ('SECTIONS.md', 'ROUTES.json', 'packages.lock.json'):
+                    and os.path.basename(p) not in ('SECTIONS.md', 'ROUTES.json', 'packages.lock.json', 'remap_refs.py'):
                 yield p
 
 
@@ -169,7 +169,7 @@ def run(fn, files, default):
         new = fn(t)
         if new == t:
             continue
-        rel = os.path.relpath(full, ROOT).replace('\\', '/')
+        rel = full.replace('\\', '/').removeprefix(ROOT + '/')
         if rel in skip:
             skipped.append(rel)
             continue

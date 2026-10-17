@@ -1,7 +1,7 @@
 ﻿# 固定机位截图：在主检出按 poses.txt 一个机位一个进程出图，拼一张缩略总览，看一眼就行，不做像素比对。
 # 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build]
 #   -Build：先 dotnet build 与 --headless --import（代码改过、还没编译时用）
-# 每个机位单独拿放构建锁（ENG-ARCH §6），120 秒超时，不开声音。出图固定在主检出 output/shots/，每次运行覆盖上一轮，总览是 总览.jpg。
+# 每个机位单独拿放构建锁（WF-BUILD §4），120 秒超时，不开声音。出图固定在主检出 output/shots/，每次运行覆盖上一轮，总览是 总览.jpg。
 param([string[]]$Only = @(), [switch]$Build)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path

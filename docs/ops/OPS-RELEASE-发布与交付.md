@@ -2,21 +2,21 @@
 id: OPS-RELEASE
 title: 发布与交付
 category: ops
-summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
-keywords: [发布, 交付, 版本号, version.txt, 构建信息, 导出, 导出入口, scripts/release, 分发压缩包, UESTC-<版本>-win64.7z, 地图数据包, map-data-<版本>.zip, ODbL, 正式用户目录, '%APPDATA%\UESTC', 安装, 更新, 卸载, 诊断包, 导出诊断, 许可, MIT, LICENSE, 干净环境验证]
+summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
+keywords: [发布, 交付, 版本号, version.txt, 构建信息, 导出, 导出入口, scripts/release, 分发压缩包, UESTC-<版本>-win64.7z, 地图数据包, map-data-<版本>.zip, ODbL, 正式用户目录, '%APPDATA%\UESTC', 安装, 更新, 卸载, 诊断包, 导出诊断, 许可, MIT, LICENSE, 干净环境验证, OSM 署名, 许可页, 制作人员与许可, 窗口标题, 窗口图标, 八角晶片]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-08, WP-35, WP-47, WP-50]
 depends: [ENG-ARCH, ENG-PERF, ENG-GATES]
-related: [ENG-WP, CORE-CONVENTIONS, SYS-SAVE, SYS-VIEW, SYS-TITLE, SYS-GRAPHICS, UI-NAV, WLD-OUTSKIRTS]
+related: [ENG-WP, CORE-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
 contracts: []
-data: []
+data: ["LICENSES.txt"]
 gates: [G6]
 ---
 # OPS-RELEASE · 发布与交付
 
-> **范围**：本文规定对外交付：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩出问题时怎样交回诊断材料，以及各部分按什么许可公开。
-> **不在本文**：导出入口脚本的步骤（`scripts/release/`）；构建信息的生成（`scripts/build/build-info.ps1`）；安装包的组成与体积（ENG-PERF、ENG-BUDGET §8，G6 见 ENG-GATES §2）；日志格式与诊断摘要字段（ENG-PERF §12）；存档的格式与失败处理（SYS-SAVE）；许可页与 `LICENSES.txt` 的文本（SYS-VIEW §6）。
-> **查阅**：先读 OPS-RELEASE §0；版本号与构建信息看 OPS-RELEASE §1；用户数据目录看 OPS-RELEASE §2；导出与发布看 OPS-RELEASE §3；安装、更新与卸载看 OPS-RELEASE §4；地图数据包看 OPS-RELEASE §5；故障与诊断看 OPS-RELEASE §6；许可看 OPS-RELEASE §7
+> **范围**：本文规定对外交付：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩出问题时怎样交回诊断材料，以及各部分按什么许可公开、画面右下角的署名、许可页、窗口标题与图标。
+> **不在本文**：导出入口脚本的步骤（`scripts/release/`）；构建信息的生成（`scripts/build/build-info.ps1`）；安装包的组成与体积（ENG-PERF、ENG-BUDGET §3，G6 见 ENG-GATES §1）；日志格式与诊断摘要字段（ENG-PERF-ADAPT §2）；存档的格式与失败处理（SYS-SAVE）；许可页的界面（UI-NAV §3.5）；图标的画法（UI-VISUAL-COMPONENTS §3.3）。
+> **查阅**：先读 §0；版本号与构建信息看 §1；用户数据目录看 §2；导出与发布看 §3；安装、更新与卸载看 §4；地图数据包看 §5；故障与诊断看 §6；许可看 §7；署名、许可页、窗口标题与图标看 §7.1
 
 ## 0 结论
 
@@ -25,39 +25,41 @@ gates: [G6]
 3. **一个公开版本** = `main` 上的标签 `v<版本>` + 分发压缩包 `UESTC-<版本>-win64.7z` + 地图数据包 `map-data-<版本>.zip`，三者版本号相同。
 4. **更新解压到新目录**，不覆盖旧目录；卸载程序和清理用户数据是两件事。
 5. **试玩出问题交回诊断包**：默认只含日志和诊断摘要，存档由玩家另选。
-6. **许可分四类**：代码与脚本 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据 ODbL 1.0；第三方素材按各自许可（OPS-RELEASE §7）。
+6. **许可分四类**：代码与脚本 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据 ODbL 1.0；第三方素材按各自许可（§7）。
+7. **署名**：画面右下角只有一行"© OpenStreetMap contributors"，`--ui=0` 时画面上只剩它（§7.1）。
 
 ### 0.1 接入要点
 
-- **显示或记录版本**：只读构建信息，别处不另写版本号；`version.txt` 只由主代理在发版时改（OPS-RELEASE §1）
-- **判断存档能不能读**：只看存档自己的各层版本号，构建信息只用于显示和定位问题（OPS-RELEASE §1）
-- **读写用户数据**：正式版 `user://` 是 `%APPDATA%\UESTC\`，不改名；开发态 `UESTC_DEV`；门禁和基准不读任何 `user://` 文件（OPS-RELEASE §2）
-- **改了导出配置、用户目录或存档格式**：要再走一遍干净环境验证，在回报里点明改了哪一项（OPS-RELEASE §3）
-- **打启动集或地图数据包**：启动集由 WP-02 打、导出入口调用；地图数据包由 WP-08 打、外围部分由 WP-47 提供，与安装包里是同一份字节（OPS-RELEASE §3、§5）
-- **写日志**：本机路径写成 `user://…`，不写出 Windows 用户名（OPS-RELEASE §6）
-- **引入第三方素材或代码**：只收 MIT、Apache、BSD、ISC、OFL，登记进 `third_party.json` 或 `game/data/audio/licenses.json`，汇总进 `LICENSES.txt`（OPS-RELEASE §7）
-- **写许可页、`LICENSES.txt` 或数据包说明**：与 `README.md` 的"许可"一段对同一类内容写同一种许可，并指向本版本的 `map-data-<版本>.zip`（OPS-RELEASE §5、§7）
-- **场景或文案涉及学校标识**：本作不是校方作品，校徽、红十字换成原创图形（OPS-RELEASE §7）
+- **显示或记录版本**：只读构建信息，别处不另写版本号；`version.txt` 只由主代理在发版时改（§1）
+- **判断存档能不能读**：只看存档自己的各层版本号，构建信息只用于显示和定位问题（§1）
+- **读写用户数据**：正式版 `user://` 是 `%APPDATA%\UESTC\`，不改名；开发态 `UESTC_DEV`；门禁和基准不读任何 `user://` 文件（§2）
+- **改了导出配置、用户目录或存档格式**：要再走一遍干净环境验证，在回报里点明改了哪一项（§3）
+- **打启动集或地图数据包**：启动集由 WP-02 打、导出入口调用；地图数据包由 WP-08 打、外围部分由 WP-47 提供，与安装包里是同一份字节（§3、§5）
+- **写日志**：本机路径写成 `user://…`，不写出 Windows 用户名（§6）
+- **引入第三方素材或代码**：只收 MIT、Apache、BSD、ISC、OFL，登记进 `third_party.json` 或 `game/data/audio/licenses.json`，汇总进 `LICENSES.txt`（§7）
+- **改画面右下角的署名、窗口标题或图标**：署名只有一行 OSM 文字，在界面层之上，`--ui=0` 时也保留；许可页与 `LICENSES.txt` 开头先写本作自身的许可（§7.1）
+- **写许可页、`LICENSES.txt` 或数据包说明**：与 `README.md` 的"许可"一段对同一类内容写同一种许可，并指向本版本的 `map-data-<版本>.zip`（§5、§7）
+- **场景或文案涉及学校标识**：本作不是校方作品，校徽、红十字换成原创图形（§7）
 
 ## 1 版本号与构建信息
 
 - **版本号**：`version.txt` 一行 `主.次.修订`，只由主代理在发版时改。
 - **构建信息**写作 `<版本>+<提交>`；工作区有未提交改动时提交号带 `-dirty`，带 `-dirty` 的构建不对外发布。
 - **谁读它**：开始页版本行、存档 meta 的 `build`、日志第一行与诊断摘要、两个压缩包的文件名（只取版本号）。
-- **兼容性**只看存档自己的各层版本号（SYS-SAVE §3.4）。拿到诊断包或存档，按里面的提交号检出代码即可复现。
+- **兼容性**只看存档自己的各层版本号（SYS-SAVE-FORMAT §1.4）。拿到诊断包或存档，按里面的提交号检出代码即可复现。
 
 ## 2 用户数据目录
 
-- **正式版**：`user://` 是 `%APPDATA%\UESTC\`，里面有存档、设置、本机烘焙缓存、日志和诊断包（SYS-SAVE §8、ENG-PERF §8）。
+- **正式版**：`user://` 是 `%APPDATA%\UESTC\`，里面有存档、设置、本机烘焙缓存、日志和诊断包（SYS-SAVE-FORMAT §3、ENG-PERF-STREAM §4）。
 - **不带版本号，也不再改名**：新旧版本读写同一目录，更新后存档和设置照常沿用；目录名一旦发出，改名就等于让玩家丢存档。
-- **开发态隔离**：开发态用 `UESTC_DEV`；门禁和基准不读 `user://`（ENG-GATES §1）。在开发机上试玩导出版，用的才是 `UESTC`。
+- **开发态隔离**：开发态用 `UESTC_DEV`；门禁和基准不读 `user://`（ENG-GATES-SHOTS §1）。在开发机上试玩导出版，用的才是 `UESTC`。
 
 ## 3 导出与发布
 
 1. **准备**：主代理在主检出的 `main` 上改 `version.txt`，提交并推送；工作区必须干净。
-2. **导出**：运行 `scripts/release/` 的导出入口，一条命令从编译做到压缩包：各图启动集与 `bake.manifest.json`、构建信息与 `LICENSES.txt`、7-Zip 打包 `UESTC-<版本>-win64.7z`、附上地图数据包（OPS-RELEASE §5）；产物放仓库里不进 git 的 `build/`。
-3. **检查**：G6 通过（体积、`--bake-verify`，ENG-GATES §2），两个包的文件名版本号与 `version.txt` 一致。
-4. **发布**：在这个提交上打标签 `v<版本>` 并推送，在 GitHub 发布页上传两个包，说明里写版本号、构建信息和 OPS-RELEASE §4 的更新方法。
+2. **导出**：运行 `scripts/release/` 的导出入口，一条命令从编译做到压缩包：各图启动集与 `bake.manifest.json`、构建信息与 `LICENSES.txt`、7-Zip 打包 `UESTC-<版本>-win64.7z`、附上地图数据包（§5）；产物放仓库里不进 git 的 `build/`。
+3. **检查**：G6 通过（体积、`--bake-verify`，ENG-GATES §1），两个包的文件名版本号与 `version.txt` 一致。
+4. **发布**：在这个提交上打标签 `v<版本>` 并推送，在 GitHub 发布页上传两个包，说明里写版本号、构建信息和 §4 的更新方法。
 - **导出会改 `project.godot`**（引擎规范化，会删掉等于默认值的项）：导出之后要把它恢复到提交的版本，不提交导出改过的文件。
 - **首次外发前走一遍干净环境**：在没装 .NET SDK、Godot、没有 `UESTC_*` 环境变量的普通 Windows 账户里解压、启动（首次运行在扉页期间本机烘焙）、走一段、保存、退出，再把下一版解压到另一个目录启动，"继续"读到刚才的存档。以后改了导出配置、用户目录或存档格式，再走一遍。
 
@@ -69,13 +71,13 @@ gates: [G6]
 | --- | --- | --- |
 | 安装 | 解压到任意有写权限的目录，运行 `UESTC.exe`；首次运行在扉页期间本机生成起始视角周围的内容，之后在开始页后台补齐 | 首次运行时在 `%APPDATA%\UESTC\` 建立 |
 | 更新 | 新版本解压到新目录运行，不要覆盖旧目录，否则新旧程序集和启动集混在一起；新版能继续后再删旧目录 | 存档、设置自动沿用；本机缓存按缓存键和 ABI 自行失效，不用手动清（ENG-ARCH §4） |
-| 回到旧版 | 运行旧目录里的程序 | 新版写过的存档在旧版里显示为"来自更新的版本"，只读不被写坏（SYS-SAVE §7） |
+| 回到旧版 | 运行旧目录里的程序 | 新版写过的存档在旧版里显示为"来自更新的版本"，只读不被写坏（SYS-SAVE-FORMAT §2） |
 | 卸载程序 | 删掉安装目录 | 不受影响 |
 | 清理用户数据 | 删掉 `%APPDATA%\UESTC\`；只想腾空间用设置卡"存储"行的"清除缓存"（UI-NAV §3.5） | 删目录会删掉存档、设置、缓存和日志，不可恢复；"清除缓存"不动存档和设置 |
 
 ## 5 地图数据包（ODbL）
 
-地图数据按 ODbL 1.0 提供（WLD-OUTSKIRTS §9）。每个公开版本附一份 `map-data-<版本>.zip`，与分发压缩包放在同一个发布页。
+地图数据按 ODbL 1.0 提供（WLD-OUTSKIRTS-BAND §6）。每个公开版本附一份 `map-data-<版本>.zip`，与分发压缩包放在同一个发布页。
 
 - **内容**：本版本实际使用的派生数据库（各图的 `campus.json`、`network.json`、`zones.json`、`outskirts.json` 和 `overlay/` 下全部覆盖层，与安装包里同一份字节）；`README.txt`（来源 © OpenStreetMap contributors、快照日期、Overpass 查询原文、ODbL 声明与全文地址、对应标签 `v<版本>`，以及在该标签下用 `pipeline/` 重建这些文件的命令）。
 - 派生数据库因故不能直接附上时，改附完整的重建材料（该标签下的 OSM 快照与元数据、查询语句、管线与全部输入、覆盖层），按 `README.txt` 的命令能重建出相同字节。
@@ -83,9 +85,9 @@ gates: [G6]
 
 ## 6 故障处理与诊断
 
-- **日志**：`user://logs/godot.log`，每次启动轮换、保留最近 5 次；每行带所属工作包、当前图和流程阶段，第一行是构建信息（ENG-PERF §12）。
+- **日志**：`user://logs/godot.log`，每次启动轮换、保留最近 5 次；每行带所属工作包、当前图和流程阶段，第一行是构建信息（ENG-PERF-ADAPT §2）。
 - **导出诊断**：操作说明页的"导出诊断"（UI-NAV §3.5）把日志和诊断摘要打成 `UESTC-diag-<版本>-<序号>.zip`，写进 `user://diagnostics/`并打开该目录；默认只含日志和摘要，存档由玩家另勾选；游戏不联网，诊断包由试玩者自己发回。
-- **常见情况**：加载停在失败页，用失败页的"复制错误信息"或"重试"（SYS-TITLE §1）再导出诊断；改了画面设置进不了游戏，用游戏外的"恢复画面设置"入口（SYS-GRAPHICS §6）；无法保存，看存档页写的原因（SYS-SAVE §4）；闪退时不强行保存，上一代存档仍有效（SYS-SAVE §4.4）；游戏内界面打不开，手动打开 `%APPDATA%\UESTC\logs\` 把文件发回。
+- **常见情况**：加载停在失败页，用失败页的"复制错误信息"或"重试"（SYS-TITLE §1）再导出诊断；改了画面设置进不了游戏，用游戏外的"恢复画面设置"入口（SYS-GRAPHICS §6）；无法保存，看存档页写的原因（SYS-SAVE-FLOW §1）；闪退时不强行保存，上一代存档仍有效（SYS-SAVE-FLOW §1.4）；游戏内界面打不开，手动打开 `%APPDATA%\UESTC\logs\` 把文件发回。
 - **试玩者交回**：诊断包加一句话（在哪、做了什么、看到了什么）。代理按提交号检出代码复现，结论写进回报（WF-COMMS §3.4）。
 
 ## 7 许可
@@ -96,9 +98,18 @@ gates: [G6]
 | --- | --- | --- |
 | 代码与脚本（C#、着色器、Python、PowerShell、构建配置） | MIT | `LICENSE` |
 | 原创美术、音频、文案与设计文档（含 `docs/`） | 保留所有权利 | `README.md` 的"许可"一段 |
-| 地图数据（© OpenStreetMap contributors）及其派生数据 | ODbL 1.0；每个公开版本附地图数据包（OPS-RELEASE §5） | `README.md`；数据包的 `README.txt` |
-| 第三方素材与代码（字体、音频、插件、移植的算法） | 按各自许可 | `third_party.json`、`game/data/audio/licenses.json`；汇总进 `LICENSES.txt`（SYS-VIEW §6） |
+| 地图数据（© OpenStreetMap contributors）及其派生数据 | ODbL 1.0；每个公开版本附地图数据包（§5） | `README.md`；数据包的 `README.txt` |
+| 第三方素材与代码（字体、音频、插件、移植的算法） | 按各自许可 | `third_party.json`、`game/data/audio/licenses.json`；汇总进 `LICENSES.txt`（§7.1） |
 
-- **第三方许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL。例外：只在开发机上运行的工具链依赖（如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材按 SYS-AUDIO §14 登记。
-- **不是校方作品**：`README.md` 开头和每个版本的发布说明都写明这是个人创作，与电子科技大学没有关联；场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §11）。
+- **第三方许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL。例外：只在开发机上运行的工具链依赖（如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材按 SYS-AUDIO §9 登记。
+- **不是校方作品**：`README.md` 开头和每个版本的发布说明都写明这是个人创作，与电子科技大学没有关联；场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §4）。
 - **说法一致**：`README.md`、许可页、`LICENSES.txt`、地图数据包的 `README.txt` 对同一类内容写同一种许可；改许可时先改 `LICENSE` 与 `README.md`，再同步其余几处。
+
+### 7.1 署名、许可页、窗口标题与图标
+
+- **署名**：内容只有一行文字"© OpenStreetMap contributors"，放在右下角，字号 10–11 px（1920×1080 基准，随界面缩放），颜色取当前雾色的反色，不透明度约 35%。界面的时间卡展开时署名左移让位，存储指示在署名上方；放映层出现黑边时署名改用固定的浅色。署名层在界面层之上，`--ui=0` 时画面上只剩它。界面态下点击署名用系统浏览器打开 OSM 版权页，漫游态下鼠标被捕获点不到。数据采用 ODbL 协议，必须署名；外围街区的数据同样来自 OSM（WLD-OUTSKIRTS-BAND §6）。
+- **许可页与 `LICENSES.txt`**：思源黑体、Inter、JetBrains Mono（SIL OFL 1.1）和 Godot 引擎（MIT）的许可文本，放进设置卡的"许可"页和开始页的"制作人员与许可"（同一个组件），安装包里另附 `LICENSES.txt`。不使用思源宋体。
+  - 开头先写本作自身的许可（上表四类），同一处注明这是个人创作，不是学校的官方作品。
+  - 写明 `campus.json` 与外围数据是 ODbL 1.0 下的派生数据库，附快照日期和 Overpass 查询原文，并指向本版本的地图数据包（§5）；音频素材的署名从 `licenses.json` 生成（SYS-AUDIO §8）。
+- **窗口标题**为"电光年华"；描述为"电子科技大学清水河校区，三渲二漫游作品"。
+- **图标**：八角晶片：一块左上切角的方形芯片，四边各 3 根短引脚，芯片面上是图书馆八角穹顶的平面八瓣线，底色科技蓝 #1961A0，切角旁一枚暖色过孔 #FFE0A8；16、24 px 只留切角方块和八边形外框（UI-VISUAL-COMPONENTS §3.3）。

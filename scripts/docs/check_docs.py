@@ -107,7 +107,7 @@ for code, d in docs.items():
         bad.append((code, 'keywords', 'missing'))
     if not re.search(r'^> \*\*查阅\*\*：', t, re.M):
         bad.append((code, 'lookup', 'missing'))
-    s0 = re.search(r'^## 0 .*?(?=^## [1-9])', t, re.S | re.M)
+    s0 = re.search(r'^## 0 .*?(?=^## [1-9]|\Z)', t, re.S | re.M)
     if not s0:
         bad.append((code, 'sec0', 'missing'))
     elif not re.search(r'^### 0\.\d+ 接入要点\s*$', s0.group(0), re.M):

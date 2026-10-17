@@ -1,0 +1,140 @@
+---
+id: CORE-DECISIONS-SYSTEMS
+title: 系统与工程决策
+category: core
+parent: CORE-DECISIONS
+summary: 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+keywords: [决策, 系统, 工程, 界面, 存档, 音频, 性能, 画面设置, 预算, 契约]
+owners: []
+contributors: []
+depends: [CORE-DECISIONS]
+related: []
+contracts: []
+data: []
+gates: []
+---
+
+# CORE-DECISIONS-SYSTEMS · 系统与工程决策
+
+> **范围**：本卷登记界面、存档、音频、性能与画面设置、工程五个领域的决策，每条一句结论，附适用范围、细则所在的小节和状态。
+> **不在本卷**：用法、编号规则、状态含义和归卷规则在 CORE-DECISIONS §0；数值与规则的细则以"细则所在"指向的文档为准；其他领域的决策在 CORE-DECISIONS 列出的别的卷。
+> **查阅**：先读 §0；按 D 编号或关键词 grep；界面看 §1，存档看 §2，音频看 §3，性能与画面设置看 §4，工程看 §5
+
+## 0 结论
+
+本卷装系统与工程类决策：细则所在第一份文档属界面、存档、音频、画质、性能、预算、工程、契约的归这里；编号全文连续，与其他卷共用一个序列。
+
+### 0.1 接入要点
+
+- **本卷只登记**：规则见主文档 CORE-DECISIONS §0 与 CORE-DECISIONS §0.1。
+
+## 1 界面
+
+| 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
+| --- | --- | --- | --- | --- |
+| D-067 | 界面主题是信息、数据、电子、芯片、光、计算、AI；专业克制，不做霓虹灯管、满屏辉光、数字雨这类效果；不用书页与银杏书签母题 | 界面 | UI-VISUAL §0；UI-VISUAL §1；UI-VISUAL §1 | 生效 |
+| D-068 | 第一主题色清蓝 #73C9F9（阶梯 400 档）；深端 800、900 两档是校色科技蓝 #1961A0、电子蓝 #003F8D，只作小面积；界面唯一的暖色点是 `window.warm` #FFE0A8，只表示"太阳 / 此刻" | 界面 | UI-VISUAL §3.1；UI-VISUAL §3.2 | 生效 |
+| D-069 | 两套主题：白天"晶白"、夜间"深屏"，按真实太阳高度离散切换（下穿 −0.5°、上穿 +0.5°），0.6 s 扫描前沿扫过；不做连续混色 | 界面 | UI-VISUAL §3.4 | 生效 |
+| D-070 | 常驻小部件（小地图、时间读数、临时提示、到达标题下的推荐小条等）默认固定深屏，可设为"随主题"；大页（大地图、设置卡、存档页）随昼夜；开始页、过场字幕和标题卡不随主题 | 界面 | UI-VISUAL §3.4；SYS-TITLE §2.2 | 生效 |
+| D-071 | 面板默认不透明（晶白约 94%、深屏约 90%）；磨砂只给大页且可关，另有"降低透明度"开关 | 界面 | UI-VISUAL-COMPONENTS §2 | 生效 |
+| D-072 | 形状：每个容器只切左上一个 45° 角，边线一律 1 物理像素，对齐 8 px 网格但不画网格线，过孔灯表示状态，衍射光边只给键盘焦点和选中项 | 界面 | UI-VISUAL-COMPONENTS §2 | 生效 |
+| D-073 | 字体：中文思源黑体 SC，英文 Inter，编号、坐标、键帽用 JetBrains Mono，全部 OFL；不用思源宋体和书法字 | 界面 | UI-VISUAL-COMPONENTS §1 | 生效 |
+| D-074 | 动效：光是信号不是装饰，八个母题分三级；计算出来的东西按 `step_rate` 步进；辉光只在深色底上，半径 ≤ 4 px，同屏最多 3 处；每个母题都有"减少动态效果"下的替代 | 界面 | UI-VISUAL-MOTION §1；UI-VISUAL-MOTION §2.1 | 生效 |
+| D-075 | 时间组件是"24 h 天色光谱环"，钟点顺时针增加；加载不做进度条，等待超过 1.5 s 才亮三颗过孔等待灯（扉页阈值 4 s） | 界面 | UI-VISUAL-COMPONENTS §4.3；UI-VISUAL-COMPONENTS §4.5；SYS-TITLE §1 | 生效 |
+| D-076 | 窗口图标是"八角晶片" | 窗口 | UI-VISUAL-COMPONENTS §3.3；OPS-RELEASE §7.1 | 生效 |
+| D-077 | 允许的界面以 UI-NAV、UI-VISUAL 登记的为准；3D 画面里不叠加地点标签、选中描边、世界空间标记、光柱或追踪标记；OSM 署名常驻 | 全项目 | INV-3；UI-NAV §1；SYS-ATLAS §1 | 生效 |
+| D-078 | 不做网页版地图功能（文字搜索、地点卡片、路径规划、在 3D 里拾取）；没有准星，也没有可以点选的东西 | 全项目 | INV-1；SYS-ATLAS §0；UI-NAV §3.2 | 生效 |
+| D-079 | 小地图在左上角常驻、北朝上（设置可改为随镜头、移动时显示或关），是漫游态唯一常驻的元素；按 U、`--ui=0`、过场、大地图或设置卡打开时隐藏 | 界面 | SYS-ATLAS-UI §2；UI-NAV §2 | 生效 |
+| D-080 | 快捷键：M 大地图，G 大地图的目录页（含点位目录），N 小地图显隐，Y 切天气（按住 0.6 s 回到自动），`.` 前进 1 h；没有往回的键 | 界面 | UI-NAV §4.2 | 生效 |
+| D-081 | 底图是本机烘焙（D-165）的精确矢量 SDF、运行时上色的"版图式校园平面图"，晶白与深屏各一套；外围街区画淡线，不可传送 | 平面地图 | SYS-ATLAS-UI §1 | 生效 |
+| D-082 | 传送默认雾幕瞬移，"飞过去"是第二选项；只有锚点、观景点、可进入室内的门口、路线起点可以传送 | 平面地图 | SYS-ATLAS-TRAVEL §1；SYS-ATLAS-TRAVEL §3.1 | 生效 |
+| D-083 | 锚点 13 个（6 个导览亭、7 个导览桩），做成校园里本来就有的导览设施；不用银杏、不用蓝色全息，在 3D 里不可点选 | 平面地图 | SYS-ATLAS-TRAVEL §2 | 生效 |
+| D-084 | 解锁：观光规则集的解锁策略是 `all-unlocked`，全部可用；`proximity` 只留给 RPG | 平面地图 | SYS-ATLAS-TRAVEL §4；ENG-ROADMAP §3 | 生效 |
+| D-085 | 冷启动依次是雾色、静态扉页（后台预热）、1.2 s 交叉淡化成实时的 T0"云隙望穹"，全程没有进度条；T0 显示最近存档的世界，流逝停住，`AnimTime` 照走 | 开始页 | SYS-TITLE §1；SYS-TITLE §2.1 | 生效 |
+| D-086 | 开始页菜单是继续 / 新游戏 / 存档 / 设置 / 制作人员与许可 / 退出；片名用细体宽字距加一行数据，不用书法 | 开始页 | SYS-TITLE §2.2；SYS-TITLE §2.3 | 生效 |
+| D-087 | 新游戏过场约 44 s，从秋 17:05 以 60× 推到 17:30，在 P00 全景出标题卡并转 1×；继续约 9 s；返回标题约 3 s | 过场 | SYS-TITLE-CINEMATIC §1；SYS-TITLE-CINEMATIC §2 | 生效 |
+| D-088 | 跳过是按住 Esc 0.8 s，跳过后的终态与完整播放一致；设置里"开场过场"可选完整、简短、关 | 过场 | SYS-TITLE-CINEMATIC §3 | 生效 |
+| D-089 | 应用流程由 `IAppFlow` 状态机管理：Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting；Leaving 是返回标题，Quitting 是退出程序 | 开始页 | SYS-TITLE §3；SYS-SAVE-FLOW §1.4 | 生效 |
+| D-090 | 界面缩放 75–150%，不乘系统 DPI | 界面 | UI-VISUAL §4 | 生效 |
+
+## 2 存档
+
+| 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
+| --- | --- | --- | --- | --- |
+| D-091 | 3 个存档位 s1–s3，各自持续自动保存，"继续"取最近保存的那个；观光期不出现手动槽（m1–m9 只在格式里预留） | 存档 | SYS-SAVE §1 | 生效 |
+| D-092 | 每次保存写一个新文件，保留最近几代，不覆盖、不改名；文件含头、元数据、分段正文和缩略图，用校验和发现损坏 | 存档 | SYS-SAVE-FORMAT §1.1 | 生效 |
+| D-093 | 序列化用 System.Text.Json 源生成；禁止用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar` 存读档 | 存档 | SYS-SAVE-FORMAT §1.3；SYS-SAVE-FORMAT §4 | 生效 |
+| D-094 | 保存时机：退出时（写完再退出）、定时、关键动作落定后、窗口失焦；两次之间有最短间隔，只在安全时刻拍快照 | 存档 | SYS-SAVE-FLOW §1.1；SYS-SAVE-FLOW §1.2 | 生效 |
+| D-095 | 读档后的状态等于存档那一刻的落定状态；进行中的过渡、偶发事件和打开的面板不续播；断电、强杀或关机最多丢 5 分钟 | 存档 | SYS-SAVE §0；SYS-SAVE-FLOW §2.3 | 生效 |
+| D-096 | 新游戏一律从落金初灯开始 | 存档 | SYS-SAVE-FLOW §2.5 | 生效 |
+| D-097 | 设置类文件（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）读值只接受基本类型 | 设置 | SYS-SAVE-FORMAT §3 | 生效 |
+| D-098 | 自定义标记存进存档，ID 用本图内递增的整数，不用 `Guid.NewGuid`；存档以外只存筛选偏好 | 平面地图 | SYS-ATLAS-UI §3.5；SYS-ATLAS §3 | 生效 |
+| D-099 | 门禁、`--shots`、`--bench` 下默认不写存档（`--save=off`） | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
+| D-100 | 存档按以后的 RPG 可扩展：各系统用 `[SaveSection]` 声明自己的段，字段有增减就升版本并写迁移函数 | 有状态的包 | SYS-SAVE-FORMAT §1.4 | 生效 |
+
+## 3 音频
+
+| 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
+| --- | --- | --- | --- | --- |
+| D-101 | 做环境声、观者动作音、空间声学和界面音效；不做配乐，只在开始页和进场过场放一段原创音乐 | 全项目 | SYS-AUDIO §0；SYS-AUDIO §6 | 生效 |
+| D-102 | 开场音乐委托或自制一段 1–2 分钟的原创钢琴或弦乐小品；做好之前不放，开始页只放高空环境床 | 开始页 | SYS-AUDIO §6 | 生效 |
+| D-103 | 宣邦楼钟楼 07:00–22:00 整点敲单音铜钟，按 12 小时制敲 1–12 下，钟楼不放旋律，不用威斯敏斯特钟声；钟室挂一口静止铜钟，整点钟锤轻敲（必做），钟机不出"咔"声 | 钟楼 | SYS-AUDIO-AMBIENCE §3；SYS-MOTION-LIFE §2；MAP-QSH-SOUTH §5 | 待原型验证 |
+| D-104 | 傍晚 17:40–18:10 放一段远处的校园广播：开头一段听得出曲调的原创旋律，之后的人声听不清；不做上下课铃 | 全校 | SYS-AUDIO-AMBIENCE §3 | 待原型验证 |
+| D-105 | 钟声和广播只在流逝 ≤ 10× 时出现，快进和拨表盘跳过的不补 | 全项目 | SYS-AUDIO-AMBIENCE §3；SYS-AUDIO-AMBIENCE §3；SYS-MOTION-LIFE §3 | 生效 |
+| D-106 | 素材不求真实：用免费开源、可商用的素材，CC0 优先，其次是可随游戏发布的免费包；不做实地采录，鸟种不求本地准确；需要时用 EQ、变调、分层、混响、剪辑调整 | 音频素材 | SYS-AUDIO §8；SYS-AUDIO-AMBIENCE §1.3 | 生效 |
+| D-107 | 素材许可：CC BY 可用但要署名；NC、ND、BBC、BY-SA、GPL 一律不用；只许随游戏发布的素材（如 Sonniss）不进公开仓库 | 音频素材 | SYS-AUDIO §8；ENG-WP §2 第 6 条 | 生效 |
+| D-108 | 远雷要做：低沉、远、可以关，跟云内闪同步；偶发事件本身无声，它引起的抖落、积雨、旗动有声 | 全项目 | SYS-AUDIO-AMBIENCE §3；SYS-AUDIO-AMBIENCE §3；SYS-WEATHER §5 | 生效 |
+| D-109 | 音量分五组：总、环境、动作、界面、音乐；声音设置存 `user://audio.cfg` | 设置 | SYS-AUDIO §7 | 生效 |
+| D-110 | 脚步默认安静、可调；闸机和门不出电子提示音，单车不响铃；飞行风声实时合成 | 观者声 | SYS-AUDIO-FOLEY §1.1；SYS-AUDIO-FOLEY §1.5；SYS-AUDIO-FOLEY §1.6 | 生效 |
+| D-111 | 门的声音：开放楼入口门固定敞开，没有开关声；能推开的门推开时一声，停在开位和回关途中无声，关好落锁一声；电梯不出"叮" | 开放室内 | SYS-AUDIO-FOLEY §1.5；WLD-INTERIORS-ACCESS §2.1 | 生效 |
+| D-112 | 同一动作在不同地方听起来不同（窄处脚步更明显），用"4 m 声学网格 + 房间与门户 + 行走射线细化 + 声源侧混响区"实现，不上 Steam Audio | 空间声学 | SYS-AUDIO-FOLEY §2.1；SYS-AUDIO-FOLEY §2.2 | 生效 |
+| D-113 | 不用 `AudioStreamRandomizer`，改用自研的洗牌选择器；不给 `AudioStreamPlaylist.Shuffle` 和 `AudioServer.PlaybackSpeedScale` 赋值 | 音频实现 | SYS-AUDIO-FOLEY §1.4；ENG-ARCH §2 | 生效 |
+| D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §4；SYS-AUDIO §5；INV-3 | 生效 |
+| D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §3；INV-10 | 生效 |
+| D-116 | 音频预算：主线程平均 ≤ 0.35 ms（从帧时余量里划出），在播 3D 声源 ≤ 32（核显档默认 24），常驻 ≤ 96 MB，导出包里音频单列 ≤ 165 MB | 性能 | SYS-AUDIO §9 | 生效 |
+| D-159 | 空间声学（WP-53c）主线程平均 ≤ 0.05 ms、p95 ≤ 0.1 ms，含在音频合计（平均 ≤ 0.35 ms、p95 ≤ 0.5 ms）里 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
+
+## 4 性能与画面设置
+
+| 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
+| --- | --- | --- | --- | --- |
+| D-117 | 画面预设四档：流畅、均衡、精致、极致，另有自定义；设备档只有最低配置、独显中、独显高三档，分别推荐均衡、精致、极致；流畅是兜底预设，不对应设备档（D-169） | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §1 | 生效 |
+| D-118 | 风格底线不可关：描线、分阶明暗与按材质的影色、柔光（高光晕开）、高光肩部、平涂贴图、雾与调色板、窗灯光晕等；实时阴影和西湖倒影只能降到最差值 | 画面设置 | SYS-GRAPHICS §2；ENG-BUDGET-RULES §1 | 生效 |
+| D-119 | 风格默认可关：移轴、镜头光斑、光柱、暗角 | 画面设置 | SYS-GRAPHICS §2 | 生效 |
+| D-120 | 超采样默认不做，只在极致（独显高）列出 1.25× 可选项 | 画面设置 | SYS-GRAPHICS §1 | 生效 |
+| D-121 | 自动调节画质默认开：只往下调，不超过玩家所选，跳过玩家手动改过的项 | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §5 | 生效 |
+| D-122 | 画面设置只改运行时选级和引擎参数，不改烘焙、碰撞、世界状态和种子，不影响声音；会清空管线的设置不做成选项 | 画面设置 | SYS-GRAPHICS §0 | 生效 |
+| D-123 | 不做静止降频：镜头静止时帧率不降（`low_processor_mode` 关） | 性能 | ENG-PERF-ADAPT §1.2；ENG-BUDGET-RULES §2 | 生效 |
+| D-124 | 视觉验收的基准是精致预设、1080p 原生 | 验收 | SYS-GRAPHICS §0.1；ART-FIDELITY §4 | 生效 |
+| D-125 | 安装目录上限 0.9 GB，分发压缩包（7-Zip LZMA2）上限 0.7 GB，音频单列 ≤ 165 MB；本机缓存不计入 | 构建 | ENG-GATES §1；ENG-BUDGET §3；ENG-PERF-STREAM §4 | 生效 |
+| D-165 | 本机烘焙：几何类烘焙产物不随包发，在玩家机器上由同一个 `Build()` 按需和后台生成并缓存；随包只发启动集 `boot_<地图>.pck`；本机产物与 CI 参考逐字节一致，gen 用 `DetMath`、禁用系统超越函数 | 构建、流式 | ENG-ARCH §2；ENG-ARCH §4；ENG-PERF-STREAM §1；ENG-PERF-STREAM §4；ENG-GATES §1 | 生效 |
+| D-126 | 包体估计约 0.45–0.75 GB、本机缓存烘满约 0.8–1.4 GB，原型实测后核账；超上限时向用户汇报 | 构建 | ENG-BUDGET §3 | 待原型验证 |
+| D-127 | GPU 的主代理余量约 2%，开发机主线程余量在音频划走后约 0.15 ms；原型实测后统一核账，写回 ENG-BUDGET §3 | 预算 | ENG-WP §2；ENG-BUDGET §3 | 待原型验证 |
+| D-128 | 室内预算（楼内视角，精致）：≤ 80 万三角形、≤ 250 次绘制，大厅和中庭 ≤ 100 万三角形 | 开放室内 | ENG-BUDGET §2 | 生效 |
+| D-129 | 外围预算：三角形 6%、绘制调用 5%、阴影绘制调用 3%、GPU 3% | 外围 | ENG-BUDGET §1 | 生效 |
+| D-130 | 存档预算：快照主线程 p99 ≤ 0.3 ms，从关闭请求到进程结束 ≤ 1.5 s | 存档 | SYS-SAVE-FLOW §1.2；INV-12 | 生效 |
+
+## 5 工程
+
+| 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
+| --- | --- | --- | --- | --- |
+| D-131 | 工作包以 ENG-WP 为准（含 WP-54a、54b） | 全项目 | ENG-WP-LIST §1 | 生效 |
+| D-132 | 门禁是 G1–G21，以 ENG-GATES §1 为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
+| D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，工作包以 ENG-WP 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1；ENG-WP-LIST §1 | 生效 |
+| D-134 | 契约分批冻结：某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结，之后只增不改；改契约、全局着色器参数、着色器文件、程序集引用，一律向主代理申请 | 全项目 | WF-BUILD §1；ENG-WP §2 第 1 条；ENG-ARCH §5 | 生效 |
+| D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
+| D-136 | 流式拆成两步：`Stream`（−500）只做选级与请求，`StreamMount`（900）做挂载与碰撞入树 | 内核 | ENG-PERF-STREAM §1；ENG-ARCH §3 | 生效 |
+| D-137 | 地图 ID 一律写 `MapId("qingshuihe")`，不用 "qsh"；实体 ID 的 `qsh:` 前缀是 OSM 数据的写法，不是地图 ID | 全项目 | SYS-MAPS §1.1；SYS-ATLAS §2；CORE-CONVENTIONS §3.1 | 生效 |
+| D-138 | 服务命名：`IMapService` 管地图加载与切换（WP-46），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（WP-48），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
+| D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §6 | 生效 |
+| D-140 | 门的状态机在 `Medium` 帧步（WP-07），运行时门体归 WP-43；触发距离与开关速度取值以细则为准 | 开放室内 | WLD-INTERIORS-ACCESS §2.1；ENG-ARCH §3 | 生效 |
+| D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §1.2；ENG-PERF-STREAM §4；WLD-INTERIORS-BUILD §1.1 | 生效 |
+| D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
+| D-143 | 全局参数（含 `map_rect`、`edge_fog`、`shaft`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；ENG-WP §2 第 1 条 | 生效 |
+| D-144 | 坐标单位米，x 向东、y 向上、z 向南；方位角是罗盘方位，从正北顺时针；数据坐标直接当 Godot 世界坐标用 | 全项目 | CORE-CONVENTIONS §1.1；CORE-CONVENTIONS §1.2 | 生效 |
+| D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | WF-ENTRY | 生效 |
+| D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
+| D-147 | 新增的设计物体写进覆盖层，ID 以 `design:` 开头；覆盖层按图放在 `game/data/maps/<地图>/overlay/` | 内容包 | CORE-CONVENTIONS §3.1；SYS-MAPS §1.1 | 生效 |
+| D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指门禁 G1–G21；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
+| D-160 | v1 冻结前做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；ENG-WP-LIST §1；CORE-CONVENTIONS §3.6 | 生效 |
+| D-177 | 目标框架用 net10.0（C# 14）：.NET 8 于 2026-11-10 停止支持；SDK 由 `global.json` 锁定；D0 在 net10.0 下跑通编译、导入、导出与导出版启动，不通时报作者决定，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §1；ENG-WP §2 第 2 条；ENG-ARCH §8 | 待原型验证 |

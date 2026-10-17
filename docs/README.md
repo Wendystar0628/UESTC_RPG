@@ -16,7 +16,7 @@ gates: []
 
 > **范围**：本文是全项目唯一的顶层：核心准则、文档地图、作品定位与当前范围、全局不变量。
 > **不在本文**：各条准则的细则在括号指向的小节；角色入口在 WF-ENTRY；文档写法在 WF-DOC；决策登记在 CORE-DECISIONS。
-> **查阅**：先读 CORE-INDEX §0；找文档看 CORE-INDEX §1；作品定位与当前范围看 CORE-INDEX §2；全局不变量看 CORE-INDEX §3
+> **查阅**：先读 §0；找文档看 §1；作品定位与当前范围看 §2；全局不变量看 §3
 
 ## 0 核心准则
 
@@ -30,7 +30,7 @@ gates: []
 
 **怎么写文档**
 7. **一份权威**：同一信息只在一处，别处给指向；代码和数据里有的不进文档；流水交给 git（WF-RULE §12）。
-8. **文档精简**：只写结构、规则、设计目标和导向，不写实现做法；能一句说清不写一段；CORE-INDEX §0 ≤1,000 字、接入要点 ≤900 字、单节 ≤2,000 字、单份 ≤12,000 字，超了先删；管着几个分开用的子主题就拆成主文档加子文档，没到上限也可以；新内容先找家，不另开平行文档（WF-DOC §4、§5）。
+8. **文档精简**：只写结构、规则、设计目标和导向，不写实现做法；能一句说清不写一段；§0 ≤1,000 字、接入要点 ≤900 字、单节 ≤2,000 字、单份 ≤12,000 字，超了先删；管着几个分开用的子主题就拆成主文档加子文档，没到上限也可以；新内容先找家，不另开平行文档（WF-DOC §4、§5）。
 9. **名字一看就懂**：改名、改结构全量改到最新，不留旧名（WF-DOC §3）。
 
 **怎么写代码**
@@ -45,38 +45,38 @@ gates: []
 
 ### 0.1 接入要点
 
-- **派单、写简报**：不抄核心准则，写"核心准则见 CORE-INDEX §0"。
+- **派单、写简报**：不抄核心准则，写"核心准则见 §0"。
 - **改一条核心准则**：先改它指向的细则，再改这里的一句。
-- **新增一份文档**：在 CORE-INDEX §1 对应的域里加一行（WF-DOC §7）。
+- **新增一份文档**：在 §1 对应的域里加一行（WF-DOC §7）。
 
 ## 1 文档地图
 
-按功能分七个域，这里只列主文档，子文档列在各主文档的 CORE-INDEX §0 里。找东西分三步：在下面找到域和文档；读那份文档的 CORE-INDEX §0 与接入要点；要细节时 grep `docs/SECTIONS.md`，按行号只读那一节。编码、`§`、`INV-n`、`D-nnn`、`Gnn`、`WP-xx` 都能直接 grep。
+按功能分七个域，这里只列主文档，子文档列在各主文档的 §0 里。找东西分三步：在下面找到域和文档；读那份文档的 §0 与接入要点；要细节时 grep `docs/SECTIONS.md`，按行号只读那一节。编码、`§`、`INV-n`、`D-nnn`、`Gnn`、`WP-xx` 都能直接 grep。
 
 **协作**（`workflow/`）：模型与会话怎么干活。
-- WF-ENTRY 角色入口卡：开工时读自己那一节（钩子注入）。WF-RULE 全员守则：核心准则的细则。WF-BUILD 施工边界：改哪里、共享文件与契约申请。
+- WF-ENTRY 角色入口卡：开工时读自己那一节（钩子注入）。WF-RULE 全员守则：核心准则的细则。WF-BUILD 施工边界：改哪里、共享文件、契约申请与构建排队。
 - WF-FLOW 开发流程：派工、施工、推送、评审、防打架。WF-COMMS 交接与通信：来信、任务单、回报格式。
-- WF-ROLE 参与者与分工：谁定什么、各模型的长短。WF-MODEL 模型选择与子代理。WF-QUOTA 账号与额度。WF-STATUS 施工状态与队列。WF-DOC 文档写法：写或改文档前读。
+- WF-ROLE 参与者与分工：谁定什么、各模型的长短。WF-MODEL 模型、子代理与额度。WF-STATUS 施工状态、队列与调研入队。WF-DOC 文档写法：写或改文档前读。
 
 **工程**（`engineering/`、`ops/`、`tools/`）：代码怎么组织、怎么验收。
-- ENG-ARCH 工程架构：分层、边界、契约、烘焙、构建排队、架构导向。ENG-CODE 代码结构准则：写代码、写测试前读。
-- ENG-GATES 验收与门禁：推送前跑哪档测试、截图参数。ENG-BUDGET 性能预算：额度与硬规则。ENG-PERF 性能工程：性能策略。
+- ENG-ARCH 工程架构：分层、边界、契约、烘焙、架构导向。ENG-CODE 代码结构准则：写代码、写测试前读。
+- ENG-GATES 验收与门禁：测试三档与门禁表。ENG-BUDGET 性能预算：额度与设备档。ENG-PERF 性能工程：性能策略。
 - OPS-RELEASE 发布与交付：版本、用户目录、日志、许可。TOOL-PREVIEW 内容预览：开发时看效果。
 
 **计划与登记**：ENG-WP 工作包（本包做什么、依赖谁）；ENG-ROADMAP 扩展路线（给 RPG 的预留）；CORE-CONVENTIONS 约定（坐标、单位、命名、ID）；CORE-DECISIONS 决策登记（按 D 编号查为什么、是否生效）；CORE-GLOSSARY 术语表。
 
 **画面**（`art/`）：画成什么样。
-- ART-STYLE 风格基础：色名、影子、描线、参考场景。ART-FIDELITY 视觉精度：底线与精度区 K1–K5。ART-MODELING 风格化造型：比例、倒角、最低合格构件。
+- ART-STYLE 风格基础：目标、调色板、排除元素、场景文字。ART-FIDELITY 视觉精度：底线与精度区 K1–K5。ART-MODELING 风格化造型：比例、倒角、最低合格构件。
 - ART-SKYLIGHT 天空、光照与大气。ART-AMBIENCE 日式日常街景：物件能不能用、放哪。ART-RENOVATION 老楼翻新的规则。
 
 **系统与界面**（`systems/`、`ui/`）：运行时各系统的行为。
-- SYS-VIEW 观察模式与介质。SYS-WALK 行走。SYS-TIME 时间与季节。SYS-WEATHER 天气。SYS-GRAPHICS 画面设置。SYS-MOTION 动态与事件。
-- SYS-SAVE 存档。SYS-MAPS 多地图。SYS-ATLAS 平面地图与传送。SYS-TITLE 开始页与过场。SYS-AUDIO 音频。
+- SYS-VIEW 观察模式与旁观漫游。SYS-WALK 行走。SYS-TIME 时间与季节。SYS-WEATHER 天气。SYS-GRAPHICS 画面设置。SYS-MOTION 动态与事件。
+- SYS-SAVE 存档。SYS-MAPS 多地图。SYS-ATLAS 平面地图与传送。SYS-TITLE 开始页与启动。SYS-AUDIO 音频。
 - UI-NAV 界面内容与操作。UI-VISUAL 界面视觉语言。
 
 **世界规则**（`world/`，不分图）：WLD-TERRAIN 地形；WLD-WATER 水体；WLD-VEGETATION 植被；WLD-INTERIORS 室内；WLD-OUTSKIRTS 边界与外围；WLD-DIORAMA 箱庭截面与远景；WLD-LIFE 动物、生活痕迹与街道家具。
 
-**地图：清水河**（`maps/qingshuihe/`）：MAP-QSH-TERRAIN 全图地形骨架；MAP-QSH-ADDITIONS 跨区设计增补与夜间灯光；MAP-QSH-RENOVATION 翻新清单；各区 MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST；MAP-QSH-LIBRARY 图书馆与博物馆室内。
+**地图：清水河**（`maps/qingshuihe/`）：MAP-QSH-TERRAIN 全图地形骨架；MAP-QSH-ADDITIONS 跨区设计增补与夜间灯光；MAP-QSH-RENOVATION 翻新清单；各区 MAP-QSH-CORE、MAP-QSH-NORTH、MAP-QSH-SOUTH、MAP-QSH-WEST、MAP-QSH-CENTER-EAST；MAP-QSH-LIBRARY 图书馆与博物馆室内；MAP-QSH-INTERIORS 其余开放楼室内；MAP-QSH-OUTSKIRTS 外围街区；MAP-QSH-VEGETATION 树种与种植；MAP-QSH-WATER 水体。
 
 `docs/godot-api/` 是 Godot 4.7.2 C# API 参考。冲突怎么判见 WF-DOC §6。
 
@@ -106,7 +106,7 @@ gates: []
 | INV-6 | 不出现 NPC 和他人，也不加学生剪影，人只以生活痕迹出现。玩家自己的角色是唯一例外：行走模式有角色本体，旁观不显示（D-182）。展陈里不出现人物肖像；声音里没有听得清的人声 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK、SYS-VIEW、WLD-INTERIORS、SYS-AUDIO |
 | INV-7 | 日本元素仅限日常街景；边界以 ART-STYLE 为准，物件、尺度与分区见 ART-AMBIENCE；室内同样适用，声音边界见 SYS-AUDIO | ART-AMBIENCE、ART-STYLE、WLD-INTERIORS、SYS-AUDIO |
 | INV-8 | 世界状态有三个量：时刻、季节、天气。世界时间在一个世界实例内只向前，不能逆转；新游戏、读档是换一个实例，不算倒流。默认状态是秋季 17:30、晴、自动天气、1×。所有切换自然过渡、不硬切，每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
-| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层。照片和 OSM 只定结构，细节按氛围处理（CORE-INDEX §2）。对 OSM 数据的风格化改动、设计增补（`add`）和删除（`hide`），只写在覆盖层里并写明理由 | MAP-QSH-ADDITIONS、SYS-MAPS、WLD-TERRAIN |
+| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层。照片和 OSM 只定结构，细节按氛围处理（§2）。对 OSM 数据的风格化改动、设计增补（`add`）和删除（`hide`），只写在覆盖层里并写明理由 | MAP-QSH-ADDITIONS、SYS-MAPS、WLD-TERRAIN |
 | INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件；用户触发的过渡、过场、鸽群局部惊飞、闪电与彩虹都不算。声音同样轻、慢、持续，偶发事件本身无声 | SYS-MOTION、SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-AUDIO |
 | INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级，越常被近看越密 | ART-FIDELITY、WLD-OUTSKIRTS、WLD-INTERIORS |
 | INV-12 | 满足性能预算与硬规则：界面、行走碰撞、存档、音频的耗时与体积，以及安装目录和分发压缩包的体积上限；几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165）。数值以 `budgets.json` 与 ENG-BUDGET 为准 | ENG-BUDGET、ENG-PERF、ENG-GATES |
