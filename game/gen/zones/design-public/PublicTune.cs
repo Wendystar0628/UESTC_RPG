@@ -3,14 +3,14 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.DesignPublic;
 
 /// <summary>
-/// Every tunable value of WP-29's public spaces in one place (WF-FLOW §4). Sizes follow MAP-QSH-ADDITIONS §2.3
+/// Every tunable value of WP-29's public spaces in one place (WF-FLOW). Sizes follow MAP-QSH-ADDITIONS
 /// (转角口袋绿地: about 6 × 6 m of paving, a 4 m curved bench, one tree) and §7 (walk: the pad walkable, the bench
 /// jumpable). Where the pocket greens are, how big their pads are and which way their benches face is data, in
 /// overlay/public.d/; this class holds the section of the bench and the pit, and the material families.
 /// </summary>
 public static class PublicTune
 {
-    /// <summary>Feature ID prefix of everything this package adds (MAP-QSH-ADDITIONS §0 第 1 条).</summary>
+    /// <summary>Feature ID prefix of everything this package adds (MAP-QSH-ADDITIONS 第 1 条).</summary>
     public const string Prefix = "design:public-";
 
     /// <summary>Overlay kind of the curved bench: point geometry at the arc centre (the pad centre), props radius/from/to.</summary>
@@ -24,7 +24,7 @@ public static class PublicTune
 
     public static class Bench
     {
-        /// <summary>Seat top above the paving (SYS-WALK §7 第 5 条: jumpable, 0.35–1.25 m; a comfortable 0.44 m).</summary>
+        /// <summary>Seat top above the paving (SYS-WALK 第 5 条: jumpable, 0.35–1.25 m; a comfortable 0.44 m).</summary>
         public const float SeatTop = 0.44f;
         /// <summary>Granite plinths: height to the steel carrier, tangential length and radial depth.</summary>
         public const float PlinthHeight = 0.36f, PlinthLength = 0.30f, PlinthDepth = 0.40f, PlinthBevel = 0.025f;
@@ -53,7 +53,7 @@ public static class PublicTune
         public const int SegmentsL0 = 28, SegmentsL1 = 16, SegmentsL2 = 10;
     }
 
-    /// <summary>Material families (ART-STYLE §8): only registered pairs, no new colours, no 砖红 or 电子蓝.</summary>
+    /// <summary>Material families (ART-STYLE): only registered pairs, no new colours, no 砖红 or 电子蓝.</summary>
     public static class Look
     {
         private static PaletteToken Lit(string f) => new(f + ".lit");

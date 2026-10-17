@@ -12,7 +12,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Hud;
 
 /// <summary>
-/// 界面根（UI-VISUAL §11.2、UI-NAV §3、§5）：CanvasLayer 10，搭控件树、挂唯一的 Theme。
+/// 界面根（UI-VISUAL、UI-NAV）：CanvasLayer 10，搭控件树、挂唯一的 Theme。
 /// 漫游态（鼠标被捕获）只留小地图槽位和临时提示；界面态（鼠标可见）四角出现，4 秒没有操作后淡出；
 /// 大页（设置卡、存档页）打开时占用观者输入；开始页只在 IAppFlow 的 Title 状态出现。
 /// 不显示的页不留件（引擎只在释放节点时归还实例参数槽，<see cref="UiKit.Holders"/>）：大页与开始页打开时建、关上就释放，
@@ -37,7 +37,7 @@ public partial class HudRoot : CanvasLayer
     private SettingsCard _settingsCard = null!;
     private SavePage _savePage = null!;
     private TitleMenu _title = null!;
-    private bool _timeOpen = true, _clean, _hidden, _weatherHeld, _primed, _galleryTitle;   // 时间卡在界面态默认展开，T 收起（UI-VISUAL §7.5）
+    private bool _timeOpen = true, _clean, _hidden, _weatherHeld, _primed, _galleryTitle;   // 时间卡在界面态默认展开，T 收起（UI-VISUAL）
     private float _idle, _weatherHold, _scaleDebounce = -1;
     private ViewMode _lastMode;
     private Season _lastSeason;
@@ -131,7 +131,7 @@ public partial class HudRoot : CanvasLayer
         if (Argument("ui-gallery") is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
     }
 
-    /// <summary>--ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL §11.12；完整的组件画廊归 35c）。</summary>
+    /// <summary>--ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL；完整的组件画廊归 35c）。</summary>
     private void OpenGallery(string page)
     {
         switch (page)
@@ -211,7 +211,7 @@ public partial class HudRoot : CanvasLayer
         catch (InvalidOperationException) { return ""; }
     }
 
-    // ---------------- 布局：四角贴角，中间留空（UI-VISUAL §8.2、§8.3） ----------------
+    // ---------------- 布局：四角贴角，中间留空（UI-VISUAL） ----------------
     private void Layout()
     {
         var view = _root.Size;
@@ -333,7 +333,7 @@ public partial class HudRoot : CanvasLayer
         _model.Tick(delta);
         if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
         SyncCorners();
-        // 自动隐藏只作用于没人在用的普通 HUD（UI-NAV §3）：焦点、大页、改键、读屏都让它保持显示
+        // 自动隐藏只作用于没人在用的普通 HUD（UI-NAV）：焦点、大页、改键、读屏都让它保持显示
         if (Playing && InterfaceState && !BigPage && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
             _idle += (float)delta;
         else _idle = 0;
@@ -404,7 +404,7 @@ public partial class HudRoot : CanvasLayer
 
     private void OnInterfaceModeChanged(bool enabled) => SyncCorners();
 
-    // ---------------- 界面缩放（UI-VISUAL §11.10）：不乘 DPI ----------------
+    // ---------------- 界面缩放（UI-VISUAL）：不乘 DPI ----------------
     private void ApplyScale()
     {
         var window = DisplayServer.WindowGetSize();
@@ -468,7 +468,7 @@ public partial class HudRoot : CanvasLayer
         SyncCorners();
     }
 
-    /// <summary>"退出"走关闭窗口的同一流程（UI-NAV §5）：交给场景树的关闭请求，由 IAppFlow 保存后退出。</summary>
+    /// <summary>"退出"走关闭窗口的同一流程（UI-NAV）：交给场景树的关闭请求，由 IAppFlow 保存后退出。</summary>
     private void RequestQuit()
     {
         _settings.Flush();
@@ -482,7 +482,7 @@ public partial class HudRoot : CanvasLayer
         _model.Poke();
     }
 
-    // ---------------- 输入（UI-NAV §5）：三层，经 IInputRouter 分发；路由还没注册时由本节点按同样的层次自己分发 ----------------
+    // ---------------- 输入（UI-NAV）：三层，经 IInputRouter 分发；路由还没注册时由本节点按同样的层次自己分发 ----------------
     // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归 WP-06。
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
@@ -563,7 +563,7 @@ public partial class HudRoot : CanvasLayer
         if (!Playing) return false;
         if (e.Action == "weather" && !e.Pressed)
         {
-            // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV §4.10）
+            // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV）
             if (!_weatherHeld) return false;
             _weatherHeld = false;
             if (_weatherHold < 0.6f) _resident?.Weather.Next();
@@ -634,7 +634,7 @@ public partial class HudRoot : CanvasLayer
 
     public override void _UnhandledInput(InputEvent e)
     {
-        // 有面板展开时，第一次单击画面只收起面板（UI-NAV §5）；单击是鼠标事件，不走动作路由
+        // 有面板展开时，第一次单击画面只收起面板（UI-NAV）；单击是鼠标事件，不走动作路由
         if (Playing && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _timeOpen && InterfaceState && !BigPage)
         {
             ToggleTime(false);
@@ -655,7 +655,7 @@ public partial class HudRoot : CanvasLayer
 
     public override void _Notification(int what)
     {
-        // 失焦时主动切到界面态（UI-NAV §5）；有路由时这件事归 WP-06
+        // 失焦时主动切到界面态（UI-NAV）；有路由时这件事归 WP-06
         if (what == NotificationApplicationFocusOut && _router is null && Playing && Input.MouseMode == Input.MouseModeEnum.Captured)
             Input.MouseMode = Input.MouseModeEnum.Visible;
         else if (what == NotificationApplicationFocusIn) _motion.Refresh();

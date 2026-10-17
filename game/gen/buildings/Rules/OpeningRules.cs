@@ -4,7 +4,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the facade fills its openings (WF-FLOW §4: tunables in one place). Detail follows the precision zone
+/// How the facade fills its openings (WF-FLOW: tunables in one place). Detail follows the precision zone
 /// (D-176): openings in K1 and K2 take the full WP-10 parts, K3 and beyond the simple window below. Section sizes,
 /// frame depth and leaf counts of the parts start from the PartCatalog defaults; these values only decide how a
 /// WP-14 opening maps onto them. Initial values; the main session sets the final ones at review.
@@ -28,9 +28,9 @@ public static class OpeningRules
     public const float SimpleTransomStep = 0.004f;
     /// <summary>Coarsest level with mullions and transoms; farther out the simple window is its frame ring alone (16 triangles).</summary>
     public const LodLevel SimpleBarsUpTo = LodLevel.L0;
-    /// <summary>Single 45° chamfer on the inner front edges of frame and bars, at L0 only (ART-FIDELITY §3.5 R ≥ 10 mm tier).</summary>
+    /// <summary>Single 45° chamfer on the inner front edges of frame and bars, at L0 only (ART-FIDELITY R ≥ 10 mm tier).</summary>
     public const float SimpleChamfer = 0.012f;
-    /// <summary>Frame edges pressed into the reveal, as the WP-10 frames (ART-MODELING §7.4).</summary>
+    /// <summary>Frame edges pressed into the reveal, as the WP-10 frames (ART-MODELING).</summary>
     public const float SimplePressIn = 0.005f;
     /// <summary>Top light of a two-row window: share of the height, clamped (the WP-10 casement rule).</summary>
     public const float TransomShare = 0.28f, TransomMin = 0.32f, TransomMax = 0.6f;
@@ -63,7 +63,7 @@ public static class OpeningRules
     /// </summary>
     public const LodLevel CurtainDetail = LodLevel.L1;
     /// <summary>
-    /// The 5–8 mm dark gaskets of the WP-10 windows (K1, K2 only, ART-FIDELITY §4): off on generic buildings; a zone
+    /// The 5–8 mm dark gaskets of the WP-10 windows (K1, K2 only, ART-FIDELITY): off on generic buildings; a zone
     /// pack's landmark may turn them on.
     /// </summary>
     public const bool Gaskets = false;

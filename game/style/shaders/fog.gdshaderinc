@@ -1,14 +1,14 @@
 // fog.gdshaderinc：调色板取色与共用雾函数（WP-04）
-// 规格：ART-STYLE §8.5；ART-SKYLIGHT §6.2、§6.5、§6.6；ENG-PERF §1.4、§1.5；WLD-OUTSKIRTS §8.3；SYS-VIEW §5。
+// 规格：ART-STYLE；ART-SKYLIGHT；ENG-PERF；WLD-OUTSKIRTS；SYS-VIEW。
 // 卡通材质只 include toon.gdshaderinc（它会带进本文件）。天空、粒子这类不走卡通明暗的着色器
 // 先 include globals.gdshaderinc 再 include 本文件；本文件自己不 include globals。
 // 调色板取色放在这里而不放在 toon.gdshaderinc，是因为天空着色器不能用 varying 和 instance uniform，不能 include toon。
-// 计算着色器用的 GLSL 版 fog.glslinc 由 WP-05 逐行对应（ART-SKYLIGHT §6.5）。
+// 计算着色器用的 GLSL 版 fog.glslinc 由 WP-05 逐行对应（ART-SKYLIGHT）。
 //
 // 对外签名（定稿，不再改）：
 //   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG
 //   vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt)     exempt：地标雾豁免系数 0–1（instance uniform fog_exempt，
-//                                                                        ENG-PERF §1.5）；1 时起雾不近于 200 m、剪影不近于 800 m
+//                                                                        ENG-PERF）；1 时起雾不近于 200 m、剪影不近于 800 m
 //   vec3 fog_desaturate(vec3 c, float dist)                        200 m 起降饱和，作用在受光色和影色上
 //   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)             等效雾程（按高度积分），fog_desaturate 的 dist 用它
 //   vec3 fog_sky(vec3 dir_w)                                       天空渐变（五段 OKLab 单调三次 + 霾带），与天空着色器同一规则
@@ -22,7 +22,7 @@
 #define CAMPUS_FOG_INCLUDED
 
 // ---------------------------------------------------------------------------
-// 调色板（ART-STYLE §8.5、ENG-PERF §1.5）：256×68 RGBA8，存 sRGB 字节，texelFetch 取。
+// 调色板（ART-STYLE、ENG-PERF）：256×68 RGBA8，存 sRGB 字节，texelFetch 取。
 // 行 0 当前色，行 1 灯照色，行 2 室内影色，行 3 室内受光色，行 4–63 季相行；行 64–67 是色号 256–511（bank 1）的行 0–3。
 // 色号与季节样本是两个域（contract-28，PaletteLayout）：表面行 0–3 按色号取，列 = 色号 & 255、行 + 64 × bank；
 // 季相行 4–63 的横坐标是 256 个季节样本，不做 bank 映射。旧的 0–255 色号落在原来的纹素上。
@@ -78,7 +78,7 @@ const int PAL_LAMP_AMBER = 52;
 const int PAL_LAMP_COOL = 53;
 
 // 纹理存 sRGB 字节。globals.gdshaderinc 给 palette 声明了 source_color；P0 沙盒实测（Godot 4.7.2，Forward+）：
-// 全局采样器上的 source_color 生效，texelFetch 读出的已是线性值，所以这里不再手工解码（ART-STYLE §14 一项）。
+// 全局采样器上的 source_color 生效，texelFetch 读出的已是线性值，所以这里不再手工解码（ART-STYLE 一项）。
 // 若以后去掉该提示，把下面改成 true。
 const bool PAL_MANUAL_SRGB = false;
 
@@ -117,11 +117,11 @@ vec3 pal_season(int row, float s) {
 
 const float FOG_SIL_ALPHA = 0.9;     // 剪影距离处雾量的上限，远处仍能和天空分开
 const float FOG_RATE = 2.3;          // 起雾到剪影之间的指数速率
-const float FOG_DESAT = 0.25;        // 200 m 起的降饱和量（ART-SKYLIGHT §6.2）
-const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)；主要效果靠 fog_range 里的距离收拢（ART-SKYLIGHT §6.4）
+const float FOG_DESAT = 0.25;        // 200 m 起的降饱和量（ART-SKYLIGHT）
+const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)；主要效果靠 fog_range 里的距离收拢（ART-SKYLIGHT）
 const float FOG_VEIL_NEAR = 20.0;    // 全幕雾幕时剪影距离收到的位置（m）
-const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS §8.3）
-const float FOG_WEATHER_SIL_MIN = 600.0;   // 雾天剪影距离不低于 600 m（ART-SKYLIGHT §6.6）
+const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS）
+const float FOG_WEATHER_SIL_MIN = 600.0;   // 雾天剪影距离不低于 600 m（ART-SKYLIGHT）
 const float FOG_SCALE_HEIGHT = 120.0;     // 大气的标高（m）：视线越高，等效雾程越短；俯瞰箱庭时不被整片雾盖住
 
 // 天气的雾密度倍率；没写入时（0）按 1 处理
@@ -159,7 +159,7 @@ vec3 ok_to_linear(vec3 o) {
 }
 
 // ---------------------------------------------------------------------------
-// 天空色带与定侧（ART-SKYLIGHT §4.1–§4.3；天空着色器 sky.gdshader 与雾、玻璃映天共用这一份）
+// 天空色带与定侧（ART-SKYLIGHT；天空着色器 sky.gdshader 与雾、玻璃映天共用这一份）
 // ---------------------------------------------------------------------------
 const float SKY_STOP_DEG[5] = { 0.0, 4.0, 12.0, 28.0, 90.0 };   // 五段的仰角（度），所有帧相同
 const float SKY_SIDE_SUN_DEG = 60.0;      // 与参照天体的方位差 ≤ 60° 全用太阳侧
@@ -281,7 +281,7 @@ vec3 fog_sky(vec3 dir_w) {
 }
 
 // 起雾距离与剪影距离（关键帧给 fog.z、fog.w，天气倍率把两者拉近）
-const float FOG_EXEMPT_START = 200.0;   // 地标豁免：起雾距离下限（ART-SKYLIGHT §6.6）
+const float FOG_EXEMPT_START = 200.0;   // 地标豁免：起雾距离下限（ART-SKYLIGHT）
 const float FOG_EXEMPT_SIL = 800.0;     // 地标豁免：剪影距离下限
 
 vec2 fog_range(float exempt) {
@@ -291,7 +291,7 @@ vec2 fog_range(float exempt) {
 	float k = clamp(exempt, 0.0, 1.0);
 	sil = mix(sil, max(sil, FOG_EXEMPT_SIL), k);
 	start = mix(start, max(start, FOG_EXEMPT_START), k);
-	// 雾幕（ART-SKYLIGHT §6.4）：起雾与剪影距离一起由远到近收拢，远处先沉、近处后沉；
+	// 雾幕（ART-SKYLIGHT）：起雾与剪影距离一起由远到近收拢，远处先沉、近处后沉；
 	// 全幕时一路收到镜头前，2D 雾幕层只在最后补满。地标豁免不抵抗雾幕，所以放在最后。
 	float v = clamp(veil, 0.0, 1.0);
 	sil = (sil - FOG_VEIL_NEAR) * (1.0 - v) * (1.0 - v) + FOG_VEIL_NEAR;

@@ -4,14 +4,14 @@ using Campus.Gen.Water;
 namespace Campus.Systems.Water;
 
 /// <summary>
-/// Underwater look (SYS-VIEW §5.3, WLD-WATER §7.5): WP-07's medium service tints the frame and runs the shared fog
+/// Underwater look (SYS-VIEW, WLD-WATER): WP-07's medium service tints the frame and runs the shared fog
 /// with these values; this package only supplies colour and visibility. Colours are palette names, so they follow
 /// the time of day and season like the water surface.
 /// </summary>
 [MediumPresenter("water.underwater", Owner = "WP-24")]
 public sealed class UnderwaterPresenter : IMediumPresenter
 {
-    /// <summary>Visibility just under the surface and at depth (m); SYS-VIEW §5.3 asks for 5–10 m.</summary>
+    /// <summary>Visibility just under the surface and at depth (m); SYS-VIEW asks for 5–10 m.</summary>
     public const float VisibilityShallow = 10f;
     public const float VisibilityDeep = 5f;
     public const float DepthForDeep = 3f;

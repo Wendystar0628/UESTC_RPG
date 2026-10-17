@@ -34,7 +34,7 @@ public static class FrameLayout
     public const int VegDepth = 109;       // shade.vegDepth：三阶类（植被、花）影的明度差倍率（缺省 1）
     public const int Count = 110;
 
-    /// <summary>Scalars interpolated in log2 (SYS-TIME §3.1: light intensity and fog density in the log domain).</summary>
+    /// <summary>Scalars interpolated in log2 (SYS-TIME: light intensity and fog density in the log domain).</summary>
     public static bool IsLog(int i) => i is Intensity or FogDensity or FogStart or FogSilhouette;
 
     /// <summary>The colour triples that form the sky bands (hue swings > 60° route through magenta).</summary>
@@ -70,7 +70,7 @@ public sealed class FrameVector
     }
 }
 
-/// <summary>Autumn base keyframe (SYS-TIME §3.2) with its altitude anchor.</summary>
+/// <summary>Autumn base keyframe (SYS-TIME) with its altitude anchor.</summary>
 public sealed record KeyframeInfo(string Id, string Name, KeyClass Class, KeySide Side, double AltDeg, double ExampleClock);
 
 public sealed class ColorScriptData

@@ -12,9 +12,9 @@ using SG = Campus.Gen.Zones.DesignBoundary.BoundaryTune.SideGate;
 namespace Campus.Gen.Zones.DesignBoundary.Ring;
 
 /// <summary>
-/// The campus boundary fence all the way round (30b; WLD-OUTSKIRTS §7.1, MAP-QSH-ADDITIONS §2.11): every run of
+/// The campus boundary fence all the way round (30b; WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): every run of
 /// <see cref="BoundaryPlan"/> in the north cluster fences' iron language with its hedge pieces, the closed side gates where
-/// other roads cross the ring, and the river grates where water does (WLD-OUTSKIRTS §7.3). The gates themselves are
+/// other roads cross the ring, and the river grates where water does (WLD-OUTSKIRTS). The gates themselves are
 /// <see cref="Gates.GateSite"/>s. Every collider here is Boundary.
 /// </summary>
 public sealed class RingFenceSite : BoundarySite

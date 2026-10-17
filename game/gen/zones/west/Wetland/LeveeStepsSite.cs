@@ -11,7 +11,7 @@ using T = Campus.Gen.Zones.West.WestTune.LeveeSteps;
 namespace Campus.Gen.Zones.West.Wetland;
 
 /// <summary>
-/// 渠堤台阶 (19a 接续, MAP-QSH-TERRAIN §6.3): stone garden steps down the levee's east flank where the stone-bridge footway
+/// 渠堤台阶 (19a 接续, MAP-QSH-TERRAIN): stone garden steps down the levee's east flank where the stone-bridge footway
 /// and the lake-mouth path leave the +0.9 levee top. Each flight lies along its path, spans the flank from the crest edge to
 /// the slope foot, and takes its rise from the terrain at those two points, so it fits whatever WP-08's evaluator makes of
 /// west.terrain.json; on flat ground (the stub) there is no rise and no flight. Cheek walls with copings and side

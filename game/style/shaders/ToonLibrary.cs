@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Style.Materials;
 
 /// <summary>
-/// 卡通材质库（ENG-ARCH §3、ENG-PERF §1.4–§1.6），实现跨包的 <see cref="IToonMaterialProvider"/>：
+/// 卡通材质库（ENG-ARCH、ENG-PERF），实现跨包的 <see cref="IToonMaterialProvider"/>：
 /// 按 <see cref="ToonSpec"/> 取白名单着色器的材质，分配 7 位材质 ID（1–111；0 未分配，112–127 留给 WP-05 的特殊线类），
 /// 生产全局数据纹理 mat_table 与静态 window_cards（经 <see cref="IGlobalDataTextureRegistry"/> 登记，交出释放权）。调色板纹理归 WP-37。
 /// </summary>
@@ -316,7 +316,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     /// <summary>
     /// 会换掉渲染管线变体的画质项（多重采样改渲染通道、软阴影档改特化常量）：这些一变，已画过的布局要重新预热。
-    /// 只影响距离、密度、后期或下次启动的项不作废证据。新项只在末尾追加；这里穷举，没登记的值直接报错（WF-BUILD §2）。
+    /// 只影响距离、密度、后期或下次启动的项不作废证据。新项只在末尾追加；这里穷举，没登记的值直接报错（WF-BUILD）。
     /// </summary>
     private static bool AffectsPipelines(QualityKnob knob) => knob switch
     {
@@ -335,7 +335,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     private ShaderMaterial MaterialFor(ToonKind kind)
     {
-        // 新 Kind 只在末尾追加；这里穷举，没有登记的值直接报错（WF-BUILD §2）。
+        // 新 Kind 只在末尾追加；这里穷举，没有登记的值直接报错（WF-BUILD）。
         // 卡通系（toon_*）由本类建；植被与荷（veg_*）的着色器归 WP-23、WP-38，经 IShaderMaterialSource 建。
         // 主线版：归属的包还没交付时退到同类的已有着色器，交付后自动接上，不改调用方。
         return kind switch

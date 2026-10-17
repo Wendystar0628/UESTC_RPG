@@ -7,7 +7,7 @@ public enum WindowCurtain : byte { Auto = 0, Open = 128, Drawn = 255 }
 /// <summary>
 /// window_override 的内容（256×256 RGBA8，纹素 = (窗号 % 256, 窗号 / 256)，只覆盖校内 0–65535 号窗）：
 /// R 亮灭（0 不覆盖、128 强制灭、255 强制亮），G 冷暖（0 按哈希、128 暖、255 冷），B 窗帘（0 按哈希、128 无帘、255 拉上），A 保留 0。
-/// 只在变化时上传，频率不超过 10 Hz（ENG-PERF §10.3）。按图：切图时清空。
+/// 只在变化时上传，频率不超过 10 Hz（ENG-PERF）。按图：切图时清空。
 /// </summary>
 public sealed class WindowOverrides
 {

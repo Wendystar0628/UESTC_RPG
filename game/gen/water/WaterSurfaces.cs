@@ -5,7 +5,7 @@ namespace Campus.Gen.Water;
 
 /// <summary>
 /// All water surfaces of one map, meshed once and handed out per streaming cell. A triangle belongs to the cell that
-/// holds its centroid (CORE-CONVENTIONS §6: an element crossing cells belongs to exactly one cell).
+/// holds its centroid (CORE-CONVENTIONS: an element crossing cells belongs to exactly one cell).
 /// Cell keys follow the content-module convention: at level L the key is floor(world / (64 &lt;&lt; L)); L4 (0, 0) is the whole map.
 /// </summary>
 public sealed class WaterSurfaces
@@ -77,7 +77,7 @@ public sealed class WaterSurfaces
         var normal = new float[count * 3];
         for (var i = 0; i < count; i++) normal[3 * i + 1] = 1f;
         var flags = new byte[count];
-        Array.Fill(flags, (byte)8);   // no shadow: the water never casts (WLD-WATER §7.1)
+        Array.Fill(flags, (byte)8);   // no shadow: the water never casts (WLD-WATER)
         var bundle = new GeometryBundle(new ToonRef(WaterPalette.Surface), position.ToArray(), normal, index.ToArray(),
             Uv: uv.ToArray(), Uv2: uv2.ToArray())
         {

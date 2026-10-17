@@ -12,8 +12,8 @@ public readonly record struct Opening(int Bay, int Row, float U0, float U1, floa
 
 /// <summary>
 /// One entrance door: the Door opening at (Bay, Row) of Openings[Facade]. Anchor is the interior index's EntranceDecl it
-/// was opened for (WLD-INTERIORS §15), null for the generic door. With Landing, WP-14 builds the WP-11 landing at the door
-/// floor, the connection down to GroundY in front of it (WLD-TERRAIN §4.3) and the canopy at CanopyY; without, the
+/// was opened for (WLD-INTERIORS), null for the generic door. With Landing, WP-14 builds the WP-11 landing at the door
+/// floor, the connection down to GroundY in front of it (WLD-TERRAIN) and the canopy at CanopyY; without, the
 /// outside landing is a deck or porch of another package and the door stands alone.
 /// </summary>
 public sealed record PlanEntrance(int Facade, int Bay, int Row, string? Anchor, bool Landing, float GroundY, float CanopyY);
@@ -168,7 +168,7 @@ public sealed class BuildingPlan
         return [.. result];
     }
 
-    /// <summary>Card type of one window (WLD-INTERIORS §5.1): skeleton columns first, then the family mix by window hash.</summary>
+    /// <summary>Card type of one window (WLD-INTERIORS): skeleton columns first, then the family mix by window hash.</summary>
     public WindowCard CardOf(BayKind kind, uint windowHash) => kind switch
     {
         BayKind.Stair => WindowCard.Stair,

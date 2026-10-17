@@ -9,7 +9,7 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Annex;
 
 /// <summary>
-/// 宁静苑 (16e, MAP-QSH-CORE §1.9, MAP-QSH-LIBRARY §9): the closed court between the library's north podium, the low block
+/// 宁静苑 (16e, MAP-QSH-CORE, MAP-QSH-LIBRARY): the closed court between the library's north podium, the low block
 /// 8408, the court wing 8406 and the north-east connector 8404. Not open; it is a picture seen from the 1F north windows
 /// and from the 3F G terrace above, so it is composed from above: a cut-granite court with a lighter stepping path, a red
 /// timber pergola along the wing, a grey granite colonnade along the library wall, a hexagonal timber pavilion in the

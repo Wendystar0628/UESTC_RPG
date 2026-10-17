@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
 /// Electric water boiler (电开水器): brushed stainless cabinet under a full-width lid, a dark control panel, taps with red
-/// hot-water levers over a perforated drip tray, and the white "小心烫伤" sticker with red lettering (WLD-INTERIORS §8.5).
+/// hot-water levers over a perforated drip tray, and the white "小心烫伤" sticker with red lettering (WLD-INTERIORS).
 /// Variation 0: floor cabinet on feet, two taps. 1: wider cabinet on a kick plinth, three taps. 2: wall-hung tank, one tap
 /// at the bottom (the placer mounts it about 1 m up). Front is −Z.
 /// </summary>

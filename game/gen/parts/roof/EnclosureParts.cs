@@ -7,7 +7,7 @@ namespace Campus.Gen.Parts.Roof;
 
 /// <summary>
 /// Equipment fence (设备围挡): dark perforated aluminium boards between light posts, with a light cap rail
-/// (MAP-QSH-ADDITIONS §2.9: a clean dark band, the plant only shows above it). Width runs along X, Depth is the
+/// (MAP-QSH-ADDITIONS: a clean dark band, the plant only shows above it). Width runs along X, Depth is the
 /// board thickness, PostSpacing the post pitch. Variation ≥ 1 adds an access door with a handle in the middle.
 /// <see cref="Along"/> builds a whole enclosure ring with mitred boards and corner posts.
 /// Collision is a barrier wall for enclosures on the ground; on roofs the fence is visual only and placers leave it out.

@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Style.Materials;
 
 /// <summary>
-/// 全局数据纹理 mat_table（ENG-PERF §1.5）：128×4 RGBA8、最近邻，按材质 ID 取列。WP-04 持有，WP-05 共读。
+/// 全局数据纹理 mat_table（ENG-PERF）：128×4 RGBA8、最近邻，按材质 ID 取列。WP-04 持有，WP-05 共读。
 /// <list type="bullet">
 /// <item>行 0 线表（WP-05 的布局）：R 线宽系数（值/255×2）、G 线色染色强度、B 标志位（1 擦除、2 只描外轮廓、4 内部软线、8 不描）、A 小件淡出终点（值×2 m）</item>
 /// <item>行 1：R 明暗档（ShadeSteps 原值）、G half_level、B 过渡带（两阶与三阶存固定半宽×1000，两阶半与软物存 fwidth 倍数×50）、A 湿润响应</item>
@@ -17,7 +17,7 @@ public static class MatTable
     public const int Width = 128;
     public const int Height = 4;
 
-    // 可调初值（ART-STYLE §2.1、§2.6、§5.3；ENG-PERF §2）
+    // 可调初值（ART-STYLE；ENG-PERF）
     public const float HalfLevel = 0.8f;          // 两阶半的半受光档
     public const float BandTwoHalf = 1.0f;        // 两阶半：fwidth × 1
     public const float BandSoft = 2.2f;           // 软物：fwidth × 2.2
@@ -28,7 +28,7 @@ public static class MatTable
     public const float SpecMetal = 1.0f;          // 硬卡通高光强度：金属件（带各向异性亮带的材质，max-110 110a）
     public const float LineWidth = 1.0f;
     public const float LineTint = 0.22f;
-    public const float FineFadeEndMeters = 60f;   // 小件线淡出的终点（ART-STYLE §4.1）
+    public const float FineFadeEndMeters = 60f;   // 小件线淡出的终点（ART-STYLE）
     public const int LastEmissiveSlot = 29;       // 可作自发光的最后一个灯光通道槽位：30 sys.cue、31 sys.poolGain 不是亮度
 
     public const int ByteCount = Width * Height * 4;
@@ -85,7 +85,7 @@ public static class MatTable
     }
 
     /// <summary>
-    /// 自发光通道：槽位 + 1，0 表示不自发光。只收灯光通道的窗灯与灯具槽位（ENG-PERF §10.3）；
+    /// 自发光通道：槽位 + 1，0 表示不自发光。只收灯光通道的窗灯与灯具槽位（ENG-PERF）；
     /// sys.cue、sys.poolGain 不是亮度，未登记的通道名直接报错。
     /// </summary>
     public static int EmissiveByte(ChannelId? channel)

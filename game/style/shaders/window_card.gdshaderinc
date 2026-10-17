@@ -1,5 +1,5 @@
 // window_card.gdshaderinc：窗卡与门厅卡的主线版程序化内容（WP-51b，contract-NN 申请登记）。
-// 规格：WLD-INTERIORS §5.1、§5.2、§8.6；ART-FIDELITY §3.3、§7（亮窗、门厅卡不是空盒子）；SYS-TIME §6（亮灭仍归 lamp_window_on）。
+// 规格：WLD-INTERIORS；ART-FIDELITY（亮窗、门厅卡不是空盒子）；SYS-TIME（亮灭仍归 lamp_window_on）。
 // 窗卡号 = VF-B 玻璃的窗位类型字节（COLOR.a），也是 window_cards 表的行号；表由 Campus.Gen.Interior.Shell.Cards.WindowCardTable
 // 打包（RGBA32F，6 × 32），一行一种卡：进深权重、隔墙、侧墙距离、近层与背墙剪影、侧墙内容、窗帘或百叶、日间明度、夜间增益、吊顶、点缀。
 // 主线版按卡号程序化画出各层（与 veg_card 的叶卡同一做法）；细节版换成 Texture2DArray 的同号层（表 x4.w 起的层号）。
@@ -327,7 +327,7 @@ vec3 wcard_room(WCard c, vec2 puv, vec2 pane, vec3 rd, uint key, vec3 tone, vec3
 	vec3 col = base * k;
 	// 灯具：开灯时亮、白天是浅色灯罩
 	col = mix(col, mix(tone * WC_FIX_DAY, fix, lit), clamp(fixture, 0.0, 1.0));
-	// 床帘：白天是彩色布面，开灯时整块透出暖光（SYS-TIME §6"宿舍床帘透光"）
+	// 床帘：白天是彩色布面，开灯时整块透出暖光（SYS-TIME"宿舍床帘透光"）
 	if (c.accent == WC_A_BEDCURTAIN && accent > 0.0) {
 		float hc = wc_h(rkey, 7u);
 		vec3 cloth = hc < 0.34 ? mix(tone, pal_cur(PAL_WATER_POOL_GLOW), 0.35)

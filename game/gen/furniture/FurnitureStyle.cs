@@ -5,7 +5,7 @@ using Campus.Gen.Parts.Street;
 
 namespace Campus.Gen.Furniture;
 
-/// <summary>Illuminance tier of a road (MAP-QSH-ADDITIONS §8.1): it picks the lamp, the spacing and the sides.</summary>
+/// <summary>Illuminance tier of a road (MAP-QSH-ADDITIONS): it picks the lamp, the spacing and the sides.</summary>
 public enum RoadTier
 {
     /// <summary>Main axis (grade one): white disc lamps on both sides, opposite each other, 25–30 m apart.</summary>
@@ -31,9 +31,9 @@ public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> R
 public sealed record RestNode(string Label, Vector2 At);
 
 /// <summary>
-/// Every tunable value of the WP-13 placement in one place (WF-FLOW §4): which roads, spacings, offsets from the kerb, the
-/// rest-stop rhythm, the part sizes and the landing rules. Initial values follow WLD-LIFE §4, MAP-QSH-ADDITIONS §8, SYS-ATLAS §6,
-/// WLD-INTERIORS §4 and WLD-TERRAIN §4.4; the Opus review sets the finals. Part looks stay in <see cref="StreetStyle"/>.
+/// Every tunable value of the WP-13 placement in one place (WF-FLOW): which roads, spacings, offsets from the kerb, the
+/// rest-stop rhythm, the part sizes and the landing rules. Initial values follow WLD-LIFE, MAP-QSH-ADDITIONS, SYS-ATLAS,
+/// WLD-INTERIORS and WLD-TERRAIN; the Opus review sets the finals. Part looks stay in <see cref="StreetStyle"/>.
 /// </summary>
 public static class FurnitureStyle
 {
@@ -93,13 +93,13 @@ public static class FurnitureStyle
     public static IReadOnlyList<string> FountainCategories { get; } = Array.AsReadOnly(new[] { "sport", "teaching" });
 
     // ---- Vending groups, delivery lockers and shared-bicycle bays (13c2c): where people use them, a few clusters, blank between ----
-    // ---- (WLD-LIFE §3.5, §4.5; ART-AMBIENCE §1.3 rule 4: one theme a place, things in a cluster; "no piling up": rather too few). ----
+    // ---- (WLD-LIFE; ART-AMBIENCE rule 4: one theme a place, things in a cluster; "no piling up": rather too few). ----
     /// <summary>
     /// A vending group is <see cref="VendingMin"/>–<see cref="VendingMax"/> machines side by side, <see cref="VendingSideGap"/> apart, on one
-    /// paved bay, every other group holding one low-saturation odd machine (WLD-LIFE §4.5). Groups stand at the dormitory cluster gates
+    /// paved bay, every other group holding one low-saturation odd machine (WLD-LIFE). Groups stand at the dormitory cluster gates
     /// (the open gate first, then by ID), then at the canteens and the sports venues (<see cref="VendingCategories"/>: by the first open
     /// entrance, else the side of the building nearest the network); none within <see cref="VendingSpacing"/> of another (one to a line of
-    /// sight) and none within <see cref="MainAxisClear"/> of a main road (ART-AMBIENCE §1.2: no vending groups on the main axis).
+    /// sight) and none within <see cref="MainAxisClear"/> of a main road (ART-AMBIENCE: no vending groups on the main axis).
     /// </summary>
     public static EquipmentParams Vending { get; } = new(1f, 1.85f, 0.78f);
     public const int VendingMin = 2;
@@ -117,19 +117,19 @@ public static class FurnitureStyle
     public const float ServiceFront = 1.2f;
     /// <summary>
     /// At a cluster gate they stay outside the cluster's outline by this much (the fence, hedge, turnstiles and guard house stand inside
-    /// it, MAP-QSH-NORTH §4.7) and at least <see cref="GateKeep"/> off the gate point, so the way through stays clear.
+    /// it, MAP-QSH-NORTH) and at least <see cref="GateKeep"/> off the gate point, so the way through stays clear.
     /// </summary>
     public const float GateOutside = 0.8f;
     public const float GateKeep = 4f;
     /// <summary>
-    /// Delivery lockers: WLD-LIFE §4.5 keeps them to two places. Their two places (the west gate's clinic wicket, inside West Gate 2) are
+    /// Delivery lockers: WLD-LIFE keeps them to two places. Their two places (the west gate's clinic wicket, inside West Gate 2) are
     /// not in the map data yet (WP-30's gates), so on the mainline they stand at the first <see cref="LockerSites"/> gates that hold a
     /// vending group, beside it: the dormitory gate is where deliveries are picked up. WP-30's gate points replace them.
     /// </summary>
     public static EquipmentParams Locker { get; } = new(2.4f, 2f, 0.6f);
     public const int LockerSites = 2;
     /// <summary>
-    /// Shared-bicycle bays (WLD-LIFE §3.5: the zones register them later; P0 starts with a few): at the open cluster gates, then at the
+    /// Shared-bicycle bays (WLD-LIFE: the zones register them later; P0 starts with a few): at the open cluster gates, then at the
     /// first open entrance of the teaching buildings, libraries and canteens (<see cref="BayCategories"/>), then the map's bicycle parking points
     /// (<see cref="BaySubcategories"/>); at a door <see cref="BayNear"/>–
     /// <see cref="BayFar"/> out from the door and in front of it; none within <see cref="BaySpacing"/> of another. Each holds
@@ -148,12 +148,12 @@ public static class FurnitureStyle
     public const int BayBikesMax = 3;
     public const float BayBikePitch = 1.2f;
 
-    // ---- Parked cars (WLD-LIFE §3.3: a few low-saturation cars in each car park, autumn evening) ----
+    // ---- Parked cars (WLD-LIFE: a few low-saturation cars in each car park, autumn evening) ----
     /// <summary>Slots run along a lot's longest edge at this pitch, the cars' noses this far in from it, at most this many a lot.</summary>
     public const float CarSlot = 2.6f;
     public const float CarNoseIn = 0.6f;
     public const int CarsPerLot = 3;
-    /// <summary>A slot holds a car when its hash falls under this share (sparse, WLD-LIFE §3.3).</summary>
+    /// <summary>A slot holds a car when its hash falls under this share (sparse, WLD-LIFE).</summary>
     public const float CarShare = 0.4f;
     /// <summary>A car keeps this far inside its lot's outline; it is not parked where the ground drops more than this under it.</summary>
     public const float CarLotMargin = 0.3f;
@@ -166,7 +166,7 @@ public static class FurnitureStyle
     /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: WP-23's planting rules.</summary>
     public const string PlantingKey = "vegetation/planting.json";
 
-    /// <summary>Lamp spacing along the road: grade one 25–30 m (ART-FIDELITY §6, kept regular on the avenue, §8.5), grade two 30–40 m.</summary>
+    /// <summary>Lamp spacing along the road: grade one 25–30 m (ART-FIDELITY, kept regular on the avenue, §8.5), grade two 30–40 m.</summary>
     public const float MainLampSpacing = 27.5f;
     public const float SecondaryLampSpacing = 35f;
     /// <summary>Pole centre from the carriageway edge (the kerb face).</summary>
@@ -266,7 +266,7 @@ public static class FurnitureStyle
     /// <summary>Two placed things keep this far apart (beyond their footprint radii).</summary>
     public const float ItemGap = 0.6f;
 
-    // ---- Landing (WLD-TERRAIN §4.4) ----
+    // ---- Landing (WLD-TERRAIN) ----
     /// <summary>
     /// WP-15 lays its surfaces above the height field: lawn 0.10 m, paving and kerb tops 0.15 m (GroundSection). Furniture takes
     /// its heights from those levels until the world model can say which surface lies at a point.
@@ -298,7 +298,7 @@ public static class FurnitureStyle
     public const float PadJoin = 0.05f;
     /// <summary>The kiosk's apron reaches this far beyond its canopy on every side.</summary>
     public const float ApronMargin = 0.35f;
-    /// <summary>An anchor's groundY this far above the terrain is a deck that is not in the height field (SYS-ATLAS §6: A06).</summary>
+    /// <summary>An anchor's groundY this far above the terrain is a deck that is not in the height field (SYS-ATLAS: A06).</summary>
     public const float DeckAbove = 0.5f;
 
     // ---- Parts at typical sizes (13a gallery values) ----
@@ -308,11 +308,11 @@ public static class FurnitureStyle
     public static FurnitureParams Bin { get; } = new(2f, 1f, 0.55f);
     public static SignParams Stop { get; } = new(1.2f, 2.5f, 0.18f);
 
-    // ---- Atlas anchors (SYS-ATLAS §6): sizes come from the overlay footprint and height; these are the fallbacks ----
+    // ---- Atlas anchors (SYS-ATLAS): sizes come from the overlay footprint and height; these are the fallbacks ----
     public static SignParams Kiosk { get; } = new(2f, 2.6f, 0.8f);
     public static SignParams Post { get; } = new(0.3f, 1.05f, 0.3f);
 
-    // ---- Open entrance (WLD-INTERIORS §4): mat in front of the door, standing sign beside it, lamp over the door head ----
+    // ---- Open entrance (WLD-INTERIORS): mat in front of the door, standing sign beside it, lamp over the door head ----
     public const float MatDepth = 1.0f;
     public const float MatThickness = 0.025f;
     /// <summary>Mat width = clear width + this, kept within [MatMinWidth, MatMaxWidth].</summary>
@@ -335,7 +335,7 @@ public static class FurnitureStyle
     /// </summary>
     public const float DoorLampY = 2.55f;
 
-    // ---- Module budget (ENG-BUDGET §8, WP-13 with WP-25: 8% of the main pass), heaviest 64 m cell ----
+    // ---- Module budget (ENG-BUDGET, WP-13 with WP-25: 8% of the main pass), heaviest 64 m cell ----
     public const int BudgetTrianglesL0 = 9000;
     public const int BudgetTrianglesL1 = 2400;
     public const int BudgetDrawCalls = 24;

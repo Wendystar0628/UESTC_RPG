@@ -4,7 +4,7 @@ using Godot;
 namespace Campus.Hud.Style;
 
 /// <summary>
-/// 界面的非色令牌：读 res://hud/style/ui_metrics.json（UI-VISUAL §11.2）。尺寸、字号、切角、线宽、影与辉光几何、
+/// 界面的非色令牌：读 res://hud/style/ui_metrics.json（UI-VISUAL）。尺寸、字号、切角、线宽、影与辉光几何、
 /// 动效曲线与时长都只从这里取；色值只在 ui.json，经 <see cref="UiColors"/> 取。
 /// </summary>
 public sealed class UiTokens

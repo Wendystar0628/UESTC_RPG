@@ -6,9 +6,9 @@ using KernelRegistry = Campus.Kernel.Registry.Kernel;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// map_base 材质的唯一取用点。只有 Campus.Style 能建 ShaderMaterial（ENG-ARCH §2）：地图经
+/// map_base 材质的唯一取用点。只有 Campus.Style 能建 ShaderMaterial（ENG-ARCH）：地图经
 /// IShaderMaterialSource.Create(ShaderId.MapBase) 向材质库申请（contract-3）。取不到时返回 null，
-/// 底图按"未就绪"的画法只画校内用地一种颜色（SYS-ATLAS §2.1），不挡主线。
+/// 底图按"未就绪"的画法只画校内用地一种颜色（SYS-ATLAS），不挡主线。
 /// </summary>
 public static class MapMaterial
 {

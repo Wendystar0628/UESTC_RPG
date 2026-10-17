@@ -31,7 +31,7 @@ public sealed record WindowGlowReport(int Windows, int UnknownChannel, int BadFa
 public static class GlowSets
 {
     public const float WindowStandOff = 0.02f;   // 离立面 2 cm
-    public const float WindowHaloRatio = 0.25f;  // 每边外扩 = 窗宽 × 0.25：面片边长 1.5 倍窗宽，光晕半径不超过窗宽的一半（ART-STYLE §7.5）
+    public const float WindowHaloRatio = 0.25f;  // 每边外扩 = 窗宽 × 0.25：面片边长 1.5 倍窗宽，光晕半径不超过窗宽的一半（ART-STYLE）
     public const int OutskirtsFlag = 1;
     public const int OutskirtsFirstId = 65536;   // 外围的窗号专用段（contract-12 第 1 节），着色器跳过窗覆盖
 

@@ -1,4 +1,4 @@
-"""调色板逐行自检，即影色自检（SYS-TIME §8，推导规则 ART-STYLE §3.2，夜间与阴雨 ART-STYLE §3.6）。
+"""调色板逐行自检，即影色自检（SYS-TIME，推导规则 ART-STYLE，夜间与阴雨 ART-STYLE）。
 
 只查能在调色板上判定的项；"主体与背景明度差""跳色面积""画面明度分布"要看截图，留给 WP-41 的集中测试。
 每条结果是 (级别, 季, 关键帧, 项, 材质, 说明)，级别为 FAIL / PASS / INFO。
@@ -14,9 +14,9 @@ import oklab as ok
 Result = Tuple[str, str, str, str, str, str]
 
 LIGHT_FACE_CLASSES = {"building", "ground", "snow"}   # "浅色面"只指 r_mat = 1 的墙、地、屋面、雪，不含植被与金属（假设）
-NEUTRAL_C_MAX = 0.06          # 中性材质：固有色彩度 < 0.06，标明暖影的暖墙（warmShade）除外（SYS-TIME §8，main 931e15f）
-LINE_NIGHT = (0.06, 0.10)     # 夜间描线比影暗 0.06–0.10（SYS-TIME §3.4，主代理裁定以此为准）
-LIGHT_FACE_ALBEDO_L = 0.80    # 浅色面另要求固有色 L ≥ 0.80（ART-STYLE §6.3 大面积墙面）；0.78 左右的中明度墙受光刚过 0.85 时两条限值不可同时满足（假设）
+NEUTRAL_C_MAX = 0.06          # 中性材质：固有色彩度 < 0.06，标明暖影的暖墙（warmShade）除外（SYS-TIME，main 931e15f）
+LINE_NIGHT = (0.06, 0.10)     # 夜间描线比影暗 0.06–0.10（SYS-TIME，主代理裁定以此为准）
+LIGHT_FACE_ALBEDO_L = 0.80    # 浅色面另要求固有色 L ≥ 0.80（ART-STYLE 大面积墙面）；0.78 左右的中明度墙受光刚过 0.85 时两条限值不可同时满足（假设）
 NEUTRAL_C_MIN = 0.012         # 影彩度低于它时色相无意义，按近中性灰处理
 IDENTITY_CLASSES = {"day", "default", "lowSun"}     # 身份色的色相只在白天与晨昏判；蓝调和夜间由 w_min 有意拉向蓝紫，改判蓝紫；彩度比所有时段都判
 DE_REGISTERED = 2.0           # 与登记值比对：OKLab ΔE × 100 ≤ 2 记为一致
@@ -47,7 +47,7 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
         La, Ca, ha = ok.lab_to_lch(m.albedo)
         Ll, Cl, hl = ok.lab_to_lch(m.lit)
         Ls, Cs, hs = ok.lab_to_lch(m.shade)
-        # 中性材质只指白墙、灰石、混凝土、雪这类面（ART-STYLE §3.1 第 3 条）：不含植被与花（花瓣向品红偏，§3.5）、玻璃
+        # 中性材质只指白墙、灰石、混凝土、雪这类面（ART-STYLE 第 3 条）：不含植被与花（花瓣向品红偏，§3.5）、玻璃
         neutral = (Ca < NEUTRAL_C_MAX and not m.meta.get("warmShade", False) and m.meta.get("kind") != "glass"
                    and m.cls not in ("vegetation", "flower"))
         # 1 中性材质：影色相落在 ambient.sky ±30° 内
@@ -104,8 +104,8 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
             wl = cs.exposure_lab(wall.shade, ev)[0]
             out.append(("PASS" if hor > wl else "FAIL", s, k, "天空比建筑亮", "sky.*.0", f"地平线 L{hor:.3f} > 墙影 L{wl:.3f}"))
     if k == "noon":
-        out.append(("PASS" if zen[1] >= 0.15 else "FAIL", s, k, "正午天顶彩度", "sky.sun.4", f"C {zen[1]:.3f}（≥ 0.15，SYS-TIME §3.4）"))
-    # 线比影暗（夜间，SYS-TIME §3.4）：按 ART-STYLE §4.2 的线色公式与本帧的 line_darken、line.warm、line.cool 算
+        out.append(("PASS" if zen[1] >= 0.15 else "FAIL", s, k, "正午天顶彩度", "sky.sun.4", f"C {zen[1]:.3f}（≥ 0.15，SYS-TIME）"))
+    # 线比影暗（夜间，SYS-TIME）：按 ART-STYLE 的线色公式与本帧的 line_darken、line.warm、line.cool 算
     if f.cls == "night":
         for t in ("shadow.1", "wall"):
             if t in mats:
@@ -118,7 +118,7 @@ def check_frame(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
 
 
 def check_registered(src: cs.Sources, grid: dict) -> List[Result]:
-    """默认格（秋 · 黄金）与正午与文档登记值比对（ART-STYLE §3.7、§8.1；WLD-VEGETATION §2.3）。"""
+    """默认格（秋 · 黄金）与正午与文档登记值比对（ART-STYLE；WLD-VEGETATION）。"""
     out: List[Result] = []
     gold = grid["materials"][("autumn", "golden")]
     noon = grid["materials"][("autumn", "noon")]
@@ -182,7 +182,7 @@ def frame_status(results: List[Result]) -> Dict[Tuple[str, str], Tuple[int, int]
 def format_report(results: List[Result]) -> str:
     lines = []
     summ = summarize(results)
-    lines.append(f"影色自检（SYS-TIME §8）：PASS {summ['PASS']} · FAIL {summ['FAIL']} · INFO {summ['INFO']}")
+    lines.append(f"影色自检（SYS-TIME）：PASS {summ['PASS']} · FAIL {summ['FAIL']} · INFO {summ['INFO']}")
     for lvl in ("FAIL", "INFO", "PASS"):
         rows = [r for r in results if r[0] == lvl]
         if not rows:

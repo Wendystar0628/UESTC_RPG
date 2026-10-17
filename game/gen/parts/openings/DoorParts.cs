@@ -10,7 +10,7 @@ internal enum DoorStyle { Entrance, Wood, Fire, Glass, Screen, Stall }
 internal readonly record struct LeafSlot(float X0, float X1, bool HingeLeft, bool Swings);
 
 /// <summary>
-/// Door frames and leaves (WLD-INTERIORS §4, §7.5 B). Local frame: origin at the bottom centre of the opening on the
+/// Door frames and leaves (WLD-INTERIORS B). Local frame: origin at the bottom centre of the opening on the
 /// leaf mid-plane, exterior towards −Z. Leaves open outwards about their hinge by OpenAngleDeg; with three or more
 /// leaves the outer two stay shut as side lights. Door glass carries the corridor/lobby card like WP-14's door bays.
 /// L0: frame, leaves and hardware; L1: frame and leaf slabs; L2 and further: nothing.
@@ -365,7 +365,7 @@ public abstract class DoorPart(PartBudget budget) : OpeningPart<DoorParams>(budg
         }
     }
 
-    /// <summary>Shut doors are static closures (WLD-INTERIORS §4: DoorClosed); open leaves carry no collision.</summary>
+    /// <summary>Shut doors are static closures (WLD-INTERIORS: DoorClosed); open leaves carry no collision.</summary>
     public override IReadOnlyList<Collider> Collision(DoorParams p)
     {
         _ = Bounds(p);

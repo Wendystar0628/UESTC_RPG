@@ -1,9 +1,9 @@
 namespace Campus.Gen.Interior.Shell.Cards;
 
 /// <summary>
-/// Window card type (WLD-INTERIORS §5.1). The numeric value is the VF-B glass window-type byte (COLOR's fourth byte)
+/// Window card type (WLD-INTERIORS). The numeric value is the VF-B glass window-type byte (COLOR's fourth byte)
 /// and the row of the window_cards table. 1–15 are the contract's card list; 16 is the door lobby card of closed
-/// entrances (WLD-INTERIORS §5.2), proposed to VF-B in the 51b contract request.
+/// entrances (WLD-INTERIORS), proposed to VF-B in the 51b contract request.
 /// </summary>
 public enum WindowCardKind : byte
 {
@@ -58,7 +58,7 @@ public enum CardFurniture : byte
 public enum CardSide : byte
 {
     None = 0,
-    /// <summary>Sliding blackboard with projection screen (classroom side wall, WLD-INTERIORS §8.5).</summary>
+    /// <summary>Sliding blackboard with projection screen (classroom side wall, WLD-INTERIORS).</summary>
     Board = 1,
     /// <summary>Loft beds along both side walls (4-person dorm).</summary>
     Bunk = 2,
@@ -97,7 +97,7 @@ public enum CardCeiling : byte
     Truss = 5,
 }
 
-/// <summary>A small signature element; most also keep a lit room off "dead black" at night (WLD-INTERIORS §8.6).</summary>
+/// <summary>A small signature element; most also keep a lit room off "dead black" at night (WLD-INTERIORS).</summary>
 public enum CardAccent : byte
 {
     None = 0,

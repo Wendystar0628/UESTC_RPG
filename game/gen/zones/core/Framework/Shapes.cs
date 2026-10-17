@@ -8,7 +8,7 @@ public delegate float Surface(float x, float z);
 
 /// <summary>
 /// Pure, deterministic shape builders for zone pieces: lathed solids (tiers, poles, discs, rings), draped flat inlays
-/// and frames. Trigonometry goes through DetMath (ENG-ARCH §2); only arithmetic and Math.Sqrt otherwise.
+/// and frames. Trigonometry goes through DetMath (ENG-ARCH); only arithmetic and Math.Sqrt otherwise.
 /// </summary>
 public static class Shapes
 {
@@ -81,7 +81,7 @@ public static class Shapes
     /// <summary>
     /// A flat annulus sector [r0, r1] × [a0, a1] (radians in the x = cos, z = sin parameterisation) lying on a surface,
     /// split into pieces of at most <paramref name="step"/> metres along the arc so it follows the terrain grid
-    /// (WLD-TERRAIN §4.1); the surface height comes from <paramref name="surface"/> plus <paramref name="lift"/>.
+    /// (WLD-TERRAIN); the surface height comes from <paramref name="surface"/> plus <paramref name="lift"/>.
     /// </summary>
     public static void Annulus(CoreMesh mesh, in Paint paint, Vector2 centre, float r0, float r1, float a0, float a1,
         Surface surface, float lift, float step = 1f)

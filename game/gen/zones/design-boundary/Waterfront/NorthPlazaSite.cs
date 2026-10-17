@@ -13,7 +13,7 @@ namespace Campus.Gen.Zones.DesignBoundary.Waterfront;
 
 /// <summary>
 /// The waterside plaza inside the north gate (design:boundary-north-a05-plaza): the foot of the A05 atlas kiosk and the first
-/// stop of R4 after the gate (MAP-QSH-NORTH §8 R4, SYS-ATLAS §6). The paving, its kerbs and edging are WP-15 ground drawn from
+/// stop of R4 after the gate (MAP-QSH-NORTH R4, SYS-ATLAS). The paving, its kerbs and edging are WP-15 ground drawn from
 /// the overlay polygon; this site adds a light steel railing along the water edge and two benches whose sitters face the
 /// channel and the north gate bridge. Frame: t along the bank, n off the water edge toward the road (<see cref="P"/>).
 /// </summary>
@@ -85,7 +85,7 @@ public sealed class NorthPlazaSite : BoundarySite
         var a = Frame.P(P.RailT0, P.RailN);
         var d = Frame.P(P.RailT1, P.RailN);
         var y = MathF.Min(c.Ground(a), c.Ground(d)) + P.PavingTop;
-        // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS §7.1), top 1.5 m (SYS-WALK §7).
+        // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS), top 1.5 m (SYS-WALK).
         c.Wall(a, d, 0.08f, y - 0.6f, y + P.RailColliderTop, SurfaceTag.Barrier, FootMat.Metal);
         foreach (var at in P.Benches)
         {

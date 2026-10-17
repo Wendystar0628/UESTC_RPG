@@ -14,11 +14,11 @@ using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
 namespace Campus.Gen.Zones.CenterEast.Research;
 
 /// <summary>
-/// One research building of 中部科研区 (MAP-QSH-CENTER-EAST §1.1–§1.2), claimed from WP-14 and built by this zone: its
+/// One research building of 中部科研区 (MAP-QSH-CENTER-EAST), claimed from WP-14 and built by this zone: its
 /// block parts as five-storey <see cref="GridFacade"/> blocks in the renovated research family, its lens hall as a glass
 /// hall with slab bands and an arc front, one entrance (a portal on a block face or doors in the hall's arc), stair
 /// penthouses and fenced plant on the roofs. Subclasses add each building's own roof features. Footprints come from the
-/// world model; every value lives in <see cref="R"/>. The buildings stay closed (WLD-INTERIORS §5): doors are shut and
+/// world model; every value lives in <see cref="R"/>. The buildings stay closed (WLD-INTERIORS): doors are shut and
 /// collide as DoorClosed. Each gridded block is one named window grid (contract-29) sized from the same layout as its
 /// geometry; the lens halls' glass and the entrance glazing stay unnumbered.
 /// </summary>
@@ -351,7 +351,7 @@ public abstract class ResearchSite : CenterEastSite
         b.Add(PartGeometryKernel.BeveledBox(s.X, h + 0.05f, s.Y, bevel, L.Stone), Frame.At(at.X, roof - 0.05f, at.Y));
         b.Add(PartGeometryKernel.BeveledBox(s.X + 0.3f, 0.18f, s.Y + 0.3f, bevel * 0.5f, L.LightTrim), Frame.At(at.X, roof + h, at.Y));
         if (b.Detail == SiteDetail.Mass) return;
-        // A shut steel door on the south face; the roof stays closed (MAP-QSH-CENTER-EAST §8 楼顶).
+        // A shut steel door on the south face; the roof stays closed (MAP-QSH-CENTER-EAST 楼顶).
         b.Place(PartCatalog.DoorFire, new DoorParams(1.0f, 2.1f, 0.12f), Frame.AtReversed(at.X - s.X * 0.25f, roof, at.Y + s.Y * 0.5f));
     }
 

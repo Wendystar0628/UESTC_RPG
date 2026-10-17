@@ -1,5 +1,5 @@
 {
-  "_doc": "game/assets/hud 的自产资源清单（ENG-ARCH §4、UI-VISUAL §6.1）。图标单色、24 网格、线宽 1.5 px、方头斜接；不用银杏、书签、纸纹等植物与器物意象（UI-VISUAL §6.2、§13 第 10 条）。第三方字体登记在 third_party.json。",
+  "_doc": "game/assets/hud 的自产资源清单（ENG-ARCH、UI-VISUAL）。图标单色、24 网格、线宽 1.5 px、方头斜接；不用银杏、书签、纸纹等植物与器物意象（UI-VISUAL 第 10 条）。第三方字体登记在 third_party.json。",
   "format": 1,
   "assets": [
     {

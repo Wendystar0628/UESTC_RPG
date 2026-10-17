@@ -207,7 +207,7 @@ public sealed class CirculationTests
     [TestCase]
     public void EmbankmentStepsAndRiserCountsFollowTheOutdoorStepRule()
     {
-        // 堤上路 (MAP-QSH-TERRAIN §8) by WLD-TERRAIN §5.1: the +1.0 m bank is one flight of 7 × 1/7 m on 0.65 − 2/7 m treads.
+        // 堤上路 (MAP-QSH-TERRAIN) by WLD-TERRAIN: the +1.0 m bank is one flight of 7 × 1/7 m on 0.65 − 2/7 m treads.
         foreach (var plan in new[] { TerrainDrop.PlanSteps(1.0f, mainNetwork: true), TerrainDrop.Plan(1.0f, 3, mainNetwork: true) })
         {
             Check(plan is { Method: DropMethod.Steps, Risers: 7, Fits: true, ParallelRampNeeded: false } && plan.Parts.Count == 1 && plan.Landings.Count == 0,
@@ -259,7 +259,7 @@ public sealed class CirculationTests
     [TestCase]
     public void PathStepsSeatsAndRampEdgesAreClosedAndClimbTheRightWay()
     {
-        // Time-plaza ring (MAP-QSH-TERRAIN §2): 6 × 0.15 / 0.35 from the −0.9 floor, a closed loop climbing outward.
+        // Time-plaza ring (MAP-QSH-TERRAIN): 6 × 0.15 / 0.35 from the −0.9 floor, a closed loop climbing outward.
         var ring = Loop(24.9f, 24.9f, 64);
         foreach (var lod in Enum.GetValues<LodLevel>())
         {

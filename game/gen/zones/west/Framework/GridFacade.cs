@@ -80,7 +80,7 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
     public int PilasterEvery { get; init; }
     /// <summary>
     /// A continuous dark strip on every spandrel between window rows, proud of the piers so it runs unbroken round convex
-    /// corners (六号's louvre bands, MAP-QSH-WEST §1.3); null leaves plain stone spandrels.
+    /// corners (六号's louvre bands, MAP-QSH-WEST); null leaves plain stone spandrels.
     /// </summary>
     public ToonSpec? Band { get; init; }
     /// <summary>Height of that strip and its lift above the window head below.</summary>
@@ -106,8 +106,8 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
 /// <summary>
 /// A gridded masonry block on a plan ring: a glass core, a stone frame of full-height piers and storey-high spandrel bands
 /// in front of it (the window reveals are the frame's depth), plinth, a two-step cornice, a parapet with coping and a
-/// roof slab. The zone dresses the buildings it claims from WP-14 with it (六号科研楼's stone blocks, MAP-QSH-WEST §1.3);
-/// it keeps the ART-MODELING §7.8 minimum set: corner piers, plinth, string courses, sills, recessed glass with frames,
+/// roof slab. The zone dresses the buildings it claims from WP-14 with it (六号科研楼's stone blocks, MAP-QSH-WEST);
+/// it keeps the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames,
 /// cornice and coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate. One pure layout
 /// (<see cref="Layout"/>) feeds the geometry, the collision and the window declarations. Same rules as the center-east
 /// zone's research blocks, plus optional louvred spandrel bands, kept in this assembly because zones do not reference each

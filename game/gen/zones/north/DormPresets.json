@@ -15,7 +15,7 @@
       "accent": "band.terracotta",
       "window": "opening.window.casement",
       "wwr": 0.25,
-      "basis": "MAP-QSH-NORTH §4.2：米黄墙（宿舍暖米黄墙）配陶红竖向墙带、白窗框、浅色带滴水窗台。寝室窗：开间 3.6 m 里 1.8 m 宽、1.6 m 高、窗台 1.0 m，是本科寝室的常见比例，墙多窗少，显得敦实；窗右侧还要留出 1.2 m 放机位格栅（窗与竖带之间，§4.2、MAP-QSH-ADDITIONS §3 第 4 条），所以窗宽不超过开间的一半。竖带取 band.terracotta 做窗列的窗间板：窗列与米黄墙垛一列隔一列，陶红露出约四分之一立面，远看是\"米黄墙上一道道陶红竖带\"，近看窗嵌在竖带里。线脚（窗台、压顶、腰线）取暖白 wall：§4.2 要浅色窗台、§4.6 要白色低女儿墙；暖白比 wall.greyWhite 更贴米黄的暖调。玻璃只有 glass 一个色名，寝室窗挂窗帘，用它即可。"
+      "basis": "MAP-QSH-NORTH：米黄墙（宿舍暖米黄墙）配陶红竖向墙带、白窗框、浅色带滴水窗台。寝室窗：开间 3.6 m 里 1.8 m 宽、1.6 m 高、窗台 1.0 m，是本科寝室的常见比例，墙多窗少，显得敦实；窗右侧还要留出 1.2 m 放机位格栅（窗与竖带之间，§4.2、MAP-QSH-ADDITIONS 第 4 条），所以窗宽不超过开间的一半。竖带取 band.terracotta 做窗列的窗间板：窗列与米黄墙垛一列隔一列，陶红露出约四分之一立面，远看是\"米黄墙上一道道陶红竖带\"，近看窗嵌在竖带里。线脚（窗台、压顶、腰线）取暖白 wall：§4.2 要浅色窗台、§4.6 要白色低女儿墙；暖白比 wall.greyWhite 更贴米黄的暖调。玻璃只有 glass 一个色名，寝室窗挂窗帘，用它即可。"
     },
     {
       "key": "dorm.a.creamCoffee",
@@ -30,7 +30,7 @@
       "accent": "band.terracotta",
       "window": "opening.window.casement",
       "wwr": 0.25,
-      "basis": "MAP-QSH-NORTH §4.5：老楼的另一种暖色外墙是浅奶咖；MAP-QSH-RENOVATION §11：竖带一律陶红。同一 A 型，只换主墙色，开窗与 dorm.a.dormYellow 完全相同，组团之间靠大块墙色区分（§4.5）。浅奶咖比米黄深、偏红，陶红竖带在上面对比弱一些，所以线脚仍用暖白 wall 把楼的横向分层拉出来，不加深竖带色。"
+      "basis": "MAP-QSH-NORTH：老楼的另一种暖色外墙是浅奶咖；MAP-QSH-RENOVATION：竖带一律陶红。同一 A 型，只换主墙色，开窗与 dorm.a.dormYellow 完全相同，组团之间靠大块墙色区分（§4.5）。浅奶咖比米黄深、偏红，陶红竖带在上面对比弱一些，所以线脚仍用暖白 wall 把楼的横向分层拉出来，不加深竖带色。"
     },
     {
       "key": "dorm.b",
@@ -46,7 +46,7 @@
       "accent": "panel.pinkSand",
       "window": "opening.window.casement",
       "wwr": 0.34,
-      "basis": "MAP-QSH-NORTH §4.3：开间密集，米白色竖横框与灰粉或浅砂色的窗间板交替，深灰蓝色窗玻璃，阳台或开廊形成暗孔洞。窗加宽到开间的 0.62（2.2 m），米白墙垛收窄到约 1.4 m，读作\"竖框\"而不是墙面；仍留够 1.2 m 放机位格栅。窗高 1.75 m、窗台 0.85 m，开口比 A 型大一档，暗孔洞感更强。墙（竖横框）取暖白 wall 即米白；窗间板 panel.pinkSand 是灰粉偏砂的那一色，与原型的灰粉、浅砂两种窗间板都对得上；线脚取 wall.greyWhite，与米白同明度、略偏冷，横框与压顶不抢竖框。深灰蓝玻璃要等 bank 1 的 glass.deep（14-2d 评审定的那一批）进调色板，之前用 glass，进了以后只改这一项。"
+      "basis": "MAP-QSH-NORTH：开间密集，米白色竖横框与灰粉或浅砂色的窗间板交替，深灰蓝色窗玻璃，阳台或开廊形成暗孔洞。窗加宽到开间的 0.62（2.2 m），米白墙垛收窄到约 1.4 m，读作\"竖框\"而不是墙面；仍留够 1.2 m 放机位格栅。窗高 1.75 m、窗台 0.85 m，开口比 A 型大一档，暗孔洞感更强。墙（竖横框）取暖白 wall 即米白；窗间板 panel.pinkSand 是灰粉偏砂的那一色，与原型的灰粉、浅砂两种窗间板都对得上；线脚取 wall.greyWhite，与米白同明度、略偏冷，横框与压顶不抢竖框。深灰蓝玻璃要等 bank 1 的 glass.deep（14-2d 评审定的那一批）进调色板，之前用 glass，进了以后只改这一项。"
     },
     {
       "key": "dorm.master.stoneBeige",
@@ -61,11 +61,11 @@
       "accent": "stone.beige",
       "window": "opening.window.casement",
       "wwr": 0.31,
-      "basis": "MAP-QSH-NORTH §4.4：外墙灰米色石材质感、深色窗框，开敞阳台的金属栏杆后挂白窗帘，外机在深灰百叶格里；硕丰 1–20 栋窗框用灰铝框。墙取 stone.beige（调色板里唯一的灰米石色）；不要竖带，accent 写成同色，整面是一块安静的石材墙，与学知苑的彩色竖带拉开。开口比本科楼大一档、窗台低到 0.8 m：硕士楼是阳台门加窗，开口高、暗，主线还没有阳台构件，先用 1.8 m 高的窗把\"开口大、进深暗\"读出来。线脚取 wall.greyWhite，比石材墙浅一档，对应 N-09 的\"浅色石材门套\"和白色压顶。窗框不在预设字段里：WP-10 窗的框色本来就是 frame.alu 灰铝，正是 §4.4 要的深色灰铝框。外机格栅是 frame.alu 机身加 roof.grey 百叶，对得上\"深灰百叶格\"。"
+      "basis": "MAP-QSH-NORTH：外墙灰米色石材质感、深色窗框，开敞阳台的金属栏杆后挂白窗帘，外机在深灰百叶格里；硕丰 1–20 栋窗框用灰铝框。墙取 stone.beige（调色板里唯一的灰米石色）；不要竖带，accent 写成同色，整面是一块安静的石材墙，与学知苑的彩色竖带拉开。开口比本科楼大一档、窗台低到 0.8 m：硕士楼是阳台门加窗，开口高、暗，主线还没有阳台构件，先用 1.8 m 高的窗把\"开口大、进深暗\"读出来。线脚取 wall.greyWhite，比石材墙浅一档，对应 N-09 的\"浅色石材门套\"和白色压顶。窗框不在预设字段里：WP-10 窗的框色本来就是 frame.alu 灰铝，正是 §4.4 要的深色灰铝框。外机格栅是 frame.alu 机身加 roof.grey 百叶，对得上\"深灰百叶格\"。"
     },
     {
       "key": "dorm.master.greyWhite",
-      "users": "硕丰苑 21–28 栋（硕丰六、七、八组团）与 30–33 栋（硕丰苑十组团），2015 年以后的新楼（MAP-QSH-RENOVATION §9）",
+      "users": "硕丰苑 21–28 栋（硕丰六、七、八组团）与 30–33 栋（硕丰苑十组团），2015 年以后的新楼（MAP-QSH-RENOVATION）",
       "glazing": 0.55,
       "windowHeight": 1.80,
       "sill": 0.80,
@@ -91,11 +91,11 @@
       "accent": "wall.creamCoffee",
       "window": "opening.window.casement",
       "wwr": 0.31,
-      "basis": "MAP-QSH-RENOVATION §8.3：博翰苑 1–6 栋按硕士楼语言（MAP-QSH-NORTH §4.4）加老宿舍示例，墙色与相邻的硕丰苑组团拉开，同组团同色。开窗与 dorm.master.stoneBeige 完全相同（同一套硕士楼语言，开口大、窗台低）；不要竖带，accent 写成同色。墙取 wall.creamCoffee：南邻硕丰五组团是灰米 stone.beige、东邻十组团是灰白 wall.greyWhite，浅奶咖比两者都暖、深一档，鸟瞰里博翰一组团是一块暖色，和两边的冷灰米、灰白分得开；又是 §4.5 登记的老宿舍暖色，属老宿舍示例的墙色家族。学知四、八组团也是浅奶咖，但它们是 A 型陶红竖带，相隔一百多米，竖带有无一眼可辨。线脚取暖白 wall，同老宿舍示例的浅色窗台与白色低女儿墙（§4.2、§4.6）。"
+      "basis": "MAP-QSH-RENOVATION：博翰苑 1–6 栋按硕士楼语言（MAP-QSH-NORTH）加老宿舍示例，墙色与相邻的硕丰苑组团拉开，同组团同色。开窗与 dorm.master.stoneBeige 完全相同（同一套硕士楼语言，开口大、窗台低）；不要竖带，accent 写成同色。墙取 wall.creamCoffee：南邻硕丰五组团是灰米 stone.beige、东邻十组团是灰白 wall.greyWhite，浅奶咖比两者都暖、深一档，鸟瞰里博翰一组团是一块暖色，和两边的冷灰米、灰白分得开；又是 §4.5 登记的老宿舍暖色，属老宿舍示例的墙色家族。学知四、八组团也是浅奶咖，但它们是 A 型陶红竖带，相隔一百多米，竖带有无一眼可辨。线脚取暖白 wall，同老宿舍示例的浅色窗台与白色低女儿墙（§4.2、§4.6）。"
     },
     {
       "key": "dorm.master.creamCoffeeWhite",
-      "users": "博翰苑 7–9 栋与同期的留学生 2 栋（学生公寓四期，2015 年，MAP-QSH-RENOVATION §9；7、8 栋和留学生 2 栋在博翰二组团，9 栋在硕丰苑十组团的围栏里）",
+      "users": "博翰苑 7–9 栋与同期的留学生 2 栋（学生公寓四期，2015 年，MAP-QSH-RENOVATION；7、8 栋和留学生 2 栋在博翰二组团，9 栋在硕丰苑十组团的围栏里）",
       "glazing": 0.55,
       "windowHeight": 1.80,
       "sill": 0.80,
@@ -106,12 +106,12 @@
       "accent": "wall",
       "window": "opening.window.casement",
       "wwr": 0.31,
-      "basis": "新楼不翻新，按区文档的新楼外观：硕士楼语言、墙色更新更干净（MAP-QSH-NORTH §4.4、§4.11）。开窗与 1–6 栋相同；主墙仍是博翰苑的浅奶咖（与南邻硕丰五组团的灰米、东邻十组团的灰白拉开），窗列的窗间板和窗楣换成暖白 wall，立面是浅奶咖墙垛夹一道道暖白窗带，比 1–6 栋整面浅奶咖明快、新，又看得出是博翰同一家。9 栋在硕丰苑十组团的围栏里，仍按博翰苑配色，不随十组团。"
+      "basis": "新楼不翻新，按区文档的新楼外观：硕士楼语言、墙色更新更干净（MAP-QSH-NORTH）。开窗与 1–6 栋相同；主墙仍是博翰苑的浅奶咖（与南邻硕丰五组团的灰米、东邻十组团的灰白拉开），窗列的窗间板和窗楣换成暖白 wall，立面是浅奶咖墙垛夹一道道暖白窗带，比 1–6 栋整面浅奶咖明快、新，又看得出是博翰同一家。9 栋在硕丰苑十组团的围栏里，仍按博翰苑配色，不随十组团。"
     },
     {
       "key": "annex.service.creamCoffee",
       "family": "service",
-      "users": "无名 4499（博翰一组团北，社区活动室，2 层，门关着；WLD-INTERIORS §17，MAP-QSH-RENOVATION Q-05）",
+      "users": "无名 4499（博翰一组团北，社区活动室，2 层，门关着；WLD-INTERIORS，MAP-QSH-RENOVATION Q-05）",
       "glazing": 0.60,
       "windowHeight": 2.00,
       "sill": 0.90,
@@ -122,12 +122,12 @@
       "accent": "wall.creamCoffee",
       "window": "opening.window.casement",
       "wwr": 0.40,
-      "basis": "不是宿舍：家族 service（数据里记成 teaching，会出教室窗卡，社区活动室不对）。MAP-QSH-NORTH 数据表只写\"按社区活动室画，门关着\"，外观没写，按 MAP-QSH-RENOVATION §8.1 第 3 条取所在组团的语言和墙色家族：博翰一组团的浅奶咖墙、暖白线脚，同 dorm.master.creamCoffee，不加预设以外的构件（§8.1 第 2 条）。活动室开口比宿舍大一档：窗宽占开间 0.6、高 2.0 m、窗台 0.9 m（层高按数据 7.8 m 两层约 3.9 m，窗高加窗台 2.9 m 在上限 3.35 m 以内）。窗卡用 service 家族的办公为主、少量设备与小卖混排（WLD-INTERIORS §5）；关着，WP-14 的通用门关着、门里是门厅卡。"
+      "basis": "不是宿舍：家族 service（数据里记成 teaching，会出教室窗卡，社区活动室不对）。MAP-QSH-NORTH 数据表只写\"按社区活动室画，门关着\"，外观没写，按 MAP-QSH-RENOVATION 第 3 条取所在组团的语言和墙色家族：博翰一组团的浅奶咖墙、暖白线脚，同 dorm.master.creamCoffee，不加预设以外的构件（§8.1 第 2 条）。活动室开口比宿舍大一档：窗宽占开间 0.6、高 2.0 m、窗台 0.9 m（层高按数据 7.8 m 两层约 3.9 m，窗高加窗台 2.9 m 在上限 3.35 m 以内）。窗卡用 service 家族的办公为主、少量设备与小卖混排（WLD-INTERIORS）；关着，WP-14 的通用门关着、门里是门厅卡。"
     },
     {
       "key": "annex.utility.creamCoffee",
       "family": "utility",
-      "users": "无名 5247（博翰一组团北，配电房、水泵房，1 层，后勤小楼，门关着；WLD-INTERIORS §17，MAP-QSH-RENOVATION Q-05）",
+      "users": "无名 5247（博翰一组团北，配电房、水泵房，1 层，后勤小楼，门关着；WLD-INTERIORS，MAP-QSH-RENOVATION Q-05）",
       "glazing": 0.38,
       "windowHeight": 1.20,
       "sill": 1.60,
@@ -138,12 +138,12 @@
       "accent": "wall.creamCoffee",
       "window": "opening.window.high",
       "wwr": 0.13,
-      "basis": "家族 utility（设备用房：高窗、设备窗卡、不挂窗帘）。开窗取 utility 家族本来的值，只把墙色换成所在组团的浅奶咖、线脚暖白，与紧贴着的 4499 连成一体（两栋共一道墙）。层高按数据 3.5 m，窗高加窗台 2.8 m 在上限 2.95 m 以内。可用附（MAP-QSH-ADDITIONS §3 第 12 条：卷帘门、波纹铁皮雨棚），主线不放，细节阶段再定。"
+      "basis": "家族 utility（设备用房：高窗、设备窗卡、不挂窗帘）。开窗取 utility 家族本来的值，只把墙色换成所在组团的浅奶咖、线脚暖白，与紧贴着的 4499 连成一体（两栋共一道墙）。层高按数据 3.5 m，窗高加窗台 2.8 m 在上限 2.95 m 以内。可用附（MAP-QSH-ADDITIONS 第 12 条：卷帘门、波纹铁皮雨棚），主线不放，细节阶段再定。"
     },
     {
       "key": "annex.utility.greyWhite",
       "family": "utility",
-      "users": "无名 6735（校医院西侧条楼，约 39 × 11 m，2 层，校医院附属或设备用房，门关着；WLD-INTERIORS §17，MAP-QSH-NORTH §2.3，MAP-QSH-RENOVATION Q-02）",
+      "users": "无名 6735（校医院西侧条楼，约 39 × 11 m，2 层，校医院附属或设备用房，门关着；WLD-INTERIORS，MAP-QSH-NORTH，MAP-QSH-RENOVATION Q-02）",
       "glazing": 0.45,
       "windowHeight": 1.40,
       "sill": 1.20,

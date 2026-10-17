@@ -5,13 +5,13 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Every tunable value of the WP-13 street parts in one place (WF-FLOW §4): colours, material classes, sizes, lamp
-/// markers and seating. Initial values follow ART-MODELING §4, §7.8, WLD-LIFE §4–§5, SYS-ATLAS §6, MAP-QSH-ADDITIONS
-/// §2.13, §8 and WLD-INTERIORS §4; the Opus review sets the finals. Review colours are autumn 17:30 lit colours.
+/// Every tunable value of the WP-13 street parts in one place (WF-FLOW): colours, material classes, sizes, lamp
+/// markers and seating. Initial values follow ART-MODELING, WLD-LIFE, SYS-ATLAS, MAP-QSH-ADDITIONS
+/// §2.13, §8 and WLD-INTERIORS; the Opus review sets the finals. Review colours are autumn 17:30 lit colours.
 /// </summary>
 public static class StreetStyle
 {
-    // ---- Colour families. WP-13 has no palette segment yet, so every name is borrowed (ART-STYLE §8.5) ----
+    // ---- Colour families. WP-13 has no palette segment yet, so every name is borrowed (ART-STYLE) ----
     /// <summary>White paint: disc street lamp, open-sign face, sign lettering, white stone sphere.</summary>
     public const string PaintWhite = "wall.greyWhite";
     /// <summary>Grey aluminium: single-arm lamp, bench legs, sign poles and frames, lamp accent rings.</summary>
@@ -45,22 +45,22 @@ public static class StreetStyle
     /// reaches the vertices this borrows the closest registered blue; switch the name here when street.blue is registered.
     /// </summary>
     public const string StreetBlue = "uestc.techblue";
-    /// <summary>Sorting doors left to right (WLD-LIFE §4.1): other, recyclable, hazardous, kitchen. Red is the campus red.</summary>
+    /// <summary>Sorting doors left to right (WLD-LIFE): other, recyclable, hazardous, kitchen. Red is the campus red.</summary>
     public static readonly string[] BinDoors = ["equip.grey", StreetBlue, "equip.fireRed", "ground.turf"];
     /// <summary>Shuttle-stop board ("蓝底白字"), the same street blue.</summary>
     public const string SignBlue = StreetBlue;
-    /// <summary>Open-sign green band and arrow (WLD-INTERIORS §4: sign.green is an emissive constant, so the face borrows a surface pair).</summary>
+    /// <summary>Open-sign green band and arrow (WLD-INTERIORS: sign.green is an emissive constant, so the face borrows a surface pair).</summary>
     public const string SignGreen = "ground.turf";
 
     public static PaletteToken Lit(string family) => new(family + ".lit");
     public static PaletteToken Shade(string family) => new(family + ".shade");
     private static ToonSpec Pair(string family) => new(Lit(family), Shade(family));
 
-    // ---- Material classes: the non-colour ToonSpec fields (ART-STYLE §2.1, §4.1, §5.2) ----
+    // ---- Material classes: the non-colour ToonSpec fields (ART-STYLE) ----
     /// <summary>Painted bodies and boxes: chamfer highlight, building line.</summary>
     public static ToonSpec Casing(string family) => Casing(Pair(family));
     public static ToonSpec Casing(ToonSpec colours) => new(colours.Lit, colours.Shade) { Fx = ToonFx.BevelLift, Wet = 0.5f };
-    /// <summary>Round poles and curved metal: two-and-a-half steps, smooth normals, the anisotropic band of ART-STYLE §5.2.</summary>
+    /// <summary>Round poles and curved metal: two-and-a-half steps, smooth normals, the anisotropic band of ART-STYLE.</summary>
     public static ToonSpec Pole(string family) => Pole(Pair(family));
     public static ToonSpec Pole(ToonSpec colours) => new(colours.Lit, colours.Shade) { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Fx = ToonFx.Rim | ToonFx.AnisoBand, Wet = 0.4f };
     /// <summary>Thin metal: bars, legs, frames.</summary>
@@ -75,7 +75,7 @@ public static class StreetStyle
     public static ToonSpec Board(string family) => new(Lit(family), Shade(family)) { Wet = 0.5f };
     /// <summary>Raised lettering and pictograms: fine line, out of the shadow pass.</summary>
     public static ToonSpec Ink(string family) => new(Lit(family), Shade(family)) { Line = LineClass.Fine, Wet = 0.5f };
-    /// <summary>Self-lit lens on a light channel (ToonSpec.Emissive, ENG-PERF §10.3).</summary>
+    /// <summary>Self-lit lens on a light channel (ToonSpec.Emissive, ENG-PERF).</summary>
     public static ToonSpec Lens(string family, ChannelId channel) => new(Lit(family), Shade(family)) { Emissive = channel, Line = LineClass.Fine, Wet = 0.3f };
     /// <summary>Flat things lying on the ground (mat).</summary>
     public static ToonSpec Mat(string family) => new(Lit(family), Shade(family)) { Line = LineClass.Fine, Wet = 0.8f };
@@ -92,12 +92,12 @@ public static class StreetStyle
     public const int RoundSegmentsSmall = 12;
     public const int RoundSegmentsFar = 8;
     public const float BoundsPad = 0.002f;
-    /// <summary>Overlap that hides joints between touching pieces (ART-MODELING §7.4: 2–5 mm into the body).</summary>
+    /// <summary>Overlap that hides joints between touching pieces (ART-MODELING: 2–5 mm into the body).</summary>
     public const float Joint = 0.003f;
-    /// <summary>Post colliders reach below grade (SYS-WALK §13: Y0 = lowest ground in the footprint − 0.1 m).</summary>
+    /// <summary>Post colliders reach below grade (SYS-WALK: Y0 = lowest ground in the footprint − 0.1 m).</summary>
     public const float PostColliderSink = 0.1f;
 
-    // ---- Lamp markers (MAP-QSH-ADDITIONS §8: grade 1 / 0.75 / 0.5, warm colour; schedule slots in lighting-schedule.json) ----
+    // ---- Lamp markers (MAP-QSH-ADDITIONS: grade 1 / 0.75 / 0.5, warm colour; schedule slots in lighting-schedule.json) ----
     public static readonly ChannelId FirstGroup = new("lamp.first");
     public static readonly ChannelId StreetGroup = new("lamp.street");
     public static readonly ChannelId Landscape = new("lamp.landscape");
@@ -106,10 +106,10 @@ public static class StreetStyle
     public const float GradeOneEnergy = 1f, GradeTwoEnergy = 0.75f, GradeThreeEnergy = 0.5f;
     /// <summary>Ground pool radii: grade 1 lamps at 25–30 m nearly join (50–70% cover), grade 2 at 30–40 m leave dark between.</summary>
     public const float GradeOneRange = 8.5f, GradeTwoRange = 7f;
-    /// <summary>The marker sits this far under the lens, so the halo hugs the lamp head and never hides it (ART-FIDELITY §3.6).</summary>
+    /// <summary>The marker sits this far under the lens, so the halo hugs the lamp head and never hides it (ART-FIDELITY).</summary>
     public const float MarkerDrop = 0.04f;
 
-    // ---- Street lamp (WLD-LIFE §4.2; ART-MODELING §4: pole 0.2–0.28 m, head ×1.3–1.5) ----
+    // ---- Street lamp (WLD-LIFE; ART-MODELING: pole 0.2–0.28 m, head ×1.3–1.5) ----
     /// <summary>Base sleeve: the thicker foot of the pole, with its grey ring as the one accent band.</summary>
     public const float LampSleeveRadius = 0.15f;
     public const float LampSleeveHeight = 0.6f;
@@ -134,13 +134,13 @@ public static class StreetStyle
     public const float ArmMinReach = 0.35f;
     public const float ArmDrop = 0.22f;
 
-    // ---- Entrance lamp (WLD-INTERIORS §4: one door lamp per open entrance, on the building's light channel) ----
+    // ---- Entrance lamp (WLD-INTERIORS: one door lamp per open entrance, on the building's light channel) ----
     public const float DoorLampBackPlate = 0.02f;
     public const float DoorLampHousingRatio = 0.82f;
     public const float DoorLampLensRatio = 0.6f;
     public const float DoorLampRange = 2.4f;
 
-    // ---- Bench (WLD-LIFE §4.7; seat 0.45 m is a human anchor, never scaled; ART-MODELING §4: 3–4 slats) ----
+    // ---- Bench (WLD-LIFE; seat 0.45 m is a human anchor, never scaled; ART-MODELING: 3–4 slats) ----
     public const float SeatHeight = 0.45f;
     public const float SeatDepth = 0.42f;
     public const int SeatSlats = 3;
@@ -158,7 +158,7 @@ public static class StreetStyle
     public const float SeatEdgeMargin = 0.15f;
     public const FootMat BenchFoot = FootMat.WoodFloor;
 
-    // ---- Four-stream sorting bin (WLD-LIFE §4.1; ART-MODELING §4: rounded box, a colour band round the mouth) ----
+    // ---- Four-stream sorting bin (WLD-LIFE; ART-MODELING: rounded box, a colour band round the mouth) ----
     public const float BinPlinth = 0.06f;
     public const float BinTop = 0.05f;
     public const float BinTopOverhang = 0.02f;
@@ -169,7 +169,7 @@ public static class StreetStyle
     public const float BinHoodProud = 0.035f;
     public const float BinBevel = 0.02f;
 
-    // ---- Bollard and stone sphere (WLD-LIFE §4.4; MAP-QSH-SOUTH §1.4) ----
+    // ---- Bollard and stone sphere (WLD-LIFE; MAP-QSH-SOUTH) ----
     public const float BollardFlange = 0.015f;
     public const float BollardFlareHeight = 0.035f;
     public const int BollardSegments = 10;
@@ -185,7 +185,7 @@ public static class StreetStyle
     public const FootMat StoneFoot = FootMat.StonePaving;
     public const FootMat MetalFoot = FootMat.Metal;
 
-    // ---- Shuttle stop (WLD-LIFE §4.3: blue board, white text, grey pole) ----
+    // ---- Shuttle stop (WLD-LIFE: blue board, white text, grey pole) ----
     public const float StopPoleRadius = 0.05f;
     public const float StopBoardHeight = 0.8f;
     public const float StopBoardTopGap = 0.12f;
@@ -193,11 +193,11 @@ public static class StreetStyle
     public const float StopBorder = 0.035f;
     public const string StopTitle = "班车";
 
-    // ---- Atlas kiosk and post (SYS-ATLAS §6, MAP-QSH-ADDITIONS §2.13) ----
+    // ---- Atlas kiosk and post (SYS-ATLAS, MAP-QSH-ADDITIONS) ----
     public const float KioskPost = 0.12f;
     public const float KioskPostInset = 0.06f;
     public const float KioskCanopy = 0.08f;
-    /// <summary>The canopy projects this far in front of the face (SYS-ATLAS §6: 0.6 m).</summary>
+    /// <summary>The canopy projects this far in front of the face (SYS-ATLAS: 0.6 m).</summary>
     public const float KioskOverhang = 0.6f;
     public const float KioskFaceWidth = 1.6f;
     public const float KioskFaceHeight = 1f;
@@ -212,10 +212,10 @@ public static class StreetStyle
     public const float PostPlateHeight = 0.14f;
     public const float PostLampHeight = 0.85f;
     public const float PostLampRadius = 0.02f;
-    /// <summary>Ground pool of the post lamp: about 1.5 m across (SYS-ATLAS §6).</summary>
+    /// <summary>Ground pool of the post lamp: about 1.5 m across (SYS-ATLAS).</summary>
     public const float PostLampRange = 0.75f;
 
-    // ---- Open entrance (WLD-INTERIORS §4, WLD-LIFE §4.11) ----
+    // ---- Open entrance (WLD-INTERIORS, WLD-LIFE) ----
     public const float MatBorder = 0.04f;
     public const float SignBandRatio = 0.38f;
     public const float SignFaceInset = 0.012f;
@@ -225,26 +225,26 @@ public static class StreetStyle
     public const float SignPanelRatio = 0.42f;
     public const string OpenTitle = "开放";
 
-    // ---- 13c2b colours (all borrowed, ART-STYLE §8.5) ----
-    /// <summary>Low-saturation body colours of parked cars (WLD-LIFE §3.3), picked by the placer through the part's Material.</summary>
+    // ---- 13c2b colours (all borrowed, ART-STYLE) ----
+    /// <summary>Low-saturation body colours of parked cars (WLD-LIFE), picked by the placer through the part's Material.</summary>
     public static readonly string[] CarBodies = ["wall.greyWhite", "umbrella.grayblue", "roof.grey", "umbrella.beige", "umbrella.graygreen"];
     /// <summary>Car glass: the dark sky-mirroring glass of the windows (the windows reflect the sky through the shader's glass class).</summary>
     public const string CarGlass = "glass";
     /// <summary>Tyres and grips: the darkest neutral, the same near-black the crash bollard borrows (switches with <see cref="HazardBlack"/>).</summary>
     public const string Tyre = HazardBlack;
-    /// <summary>Unlit lamps of a parked car (WLD-LIFE §3.4: car lights never on): clear head lamps and red tail lamps.</summary>
+    /// <summary>Unlit lamps of a parked car (WLD-LIFE: car lights never on): clear head lamps and red tail lamps.</summary>
     public const string HeadLamp = "wall.greyWhite";
     public const string TailLamp = "equip.fireRed";
-    /// <summary>Shared bicycle (WLD-LIFE §3.5, D-066): milk-white frame, electronic blue on the down tube and the number plate only, dark grey basket and lock box.</summary>
+    /// <summary>Shared bicycle (WLD-LIFE, D-066): milk-white frame, electronic blue on the down tube and the number plate only, dark grey basket and lock box.</summary>
     public const string BikeWhite = "wall";
     public const string BikeBlue = "uestc.blue";
     public const string BikeDark = DarkSteel;
-    /// <summary>Vending machine (WLD-LIFE §4.5): white body, blue pick-up panel; variation 1 is the low-saturation odd one of a group.</summary>
+    /// <summary>Vending machine (WLD-LIFE): white body, blue pick-up panel; variation 1 is the low-saturation odd one of a group.</summary>
     public const string VendingWhite = "wall.greyWhite";
     public const string VendingOdd = "umbrella.graygreen";
     /// <summary>Goods behind the window: a few clean, quiet colours, no brands, no lettering on the mainline.</summary>
     public static readonly string[] Goods = ["equip.fireRed", "ground.markingYellow", "ground.turf", StreetBlue, "umbrella.beige", "wall.greyWhite"];
-    /// <summary>Cold-white screens and display backs (WLD-LIFE §4.5: they glow at night, counted with the shop signs).</summary>
+    /// <summary>Cold-white screens and display backs (WLD-LIFE: they glow at night, counted with the shop signs).</summary>
     public const string ScreenWhite = "wall.greyWhite";
     public static readonly ChannelId ShopGroup = new("sign.shop");
     /// <summary>Paint of the shared-bicycle bay's frame on the ground (white road marking).</summary>
@@ -253,7 +253,7 @@ public static class StreetStyle
     public const string KerbConcrete = "ground.curb";
     public const string TactileYellow = "ground.markingYellow";
 
-    // ---- Parked car (WLD-LIFE §3.3–§3.4, §5: one box, Metal; Opus review 13c2b 21:05) ----
+    // ---- Parked car (WLD-LIFE: one box, Metal; Opus review 13c2b 21:05) ----
     /// <summary>The body's underside stands this high between the wheels (no skirt: the ground shows under the car).</summary>
     public const float CarClearance = 0.15f;
     /// <summary>Wheels: 0.65 m across, set this far in from the body side, under arches this much wider than the tyre.</summary>
@@ -304,32 +304,32 @@ public static class StreetStyle
     public static CarShape Hatch { get; } = new(Belt: 0.95f, HoodNose: 0.79f, TailTop: 0.95f, Cowl: 0.305f, RoofFront: 0.495f, RoofRear: 0.075f, RearBase: 0.035f,
         FrontAxle: 0.2f, RearAxle: 0.165f, Nose: new(0.27f, 0.16f, 0.17f, 0.07f), Tail: new(0.12f, 0.09f, 0.12f, 0.07f), BPillar: 0.4f, RearGlassTop: 0.32f, RearGlassFoot: 0.12f);
 
-    // ---- Shared bicycle (WLD-LIFE §3.5; ART-MODELING §7.8: 300–600 / 60 a bike; no collision, §5) ----
+    // ---- Shared bicycle (WLD-LIFE; ART-MODELING: 300–600 / 60 a bike; no collision, §5) ----
     public const float BikeWheelRadius = 0.33f;
     public const float BikeTyre = 0.028f;
     public const float BikeTube = 0.022f;
     public const float BikeSaddleY = 0.86f;
     public const float BikeBarY = 1.02f;
 
-    // ---- Vending machine and delivery locker (WLD-LIFE §4.5; §5: one box, Metal) ----
+    // ---- Vending machine and delivery locker (WLD-LIFE; §5: one box, Metal) ----
     public const float VendingPlinth = 0.06f;
     public const float VendingCanopy = 0.05f;
     public const float VendingCanopyOut = 0.16f;
     /// <summary>The window holds this many shelves of this many goods.</summary>
     public const int VendingShelves = 3;
     public const int VendingGoods = 5;
-    /// <summary>Compressor hum (WLD-LIFE §4.12, SYS-AUDIO §4.2): only within 4 m. The set waits for WP-53b's sound-set registry.</summary>
+    /// <summary>Compressor hum (WLD-LIFE, SYS-AUDIO): only within 4 m. The set waits for WP-53b's sound-set registry.</summary>
     public const string VendingHumSet = "amb.vending.hum";
     public const float VendingHumDb = 42f;
     public const float VendingHumRadius = 4f;
     public const int LockerColumns = 3;
     public const int LockerRows = 5;
 
-    // ---- Drinking fountain (MAP-QSH-ADDITIONS §2.13: brushed steel, two push spouts, a drip tray, a "直饮水" plate, a green light) ----
+    // ---- Drinking fountain (MAP-QSH-ADDITIONS: brushed steel, two push spouts, a drip tray, a "直饮水" plate, a green light) ----
     public const float FountainTop = 0.05f;
     public const string FountainTitle = "直饮水";
 
-    // ---- Signpost (MAP-QSH-ADDITIONS §2.13: two dark grey posts 2.6 m, 3–5 arrow boards 0.9 × 0.2 m, white text with pinyin) ----
+    // ---- Signpost (MAP-QSH-ADDITIONS: two dark grey posts 2.6 m, 3–5 arrow boards 0.9 × 0.2 m, white text with pinyin) ----
     public const float SignpostPost = 0.09f;
     public const float SignpostBoardLength = 0.9f;
     public const float SignpostBoardHeight = 0.2f;
@@ -337,7 +337,7 @@ public static class StreetStyle
     public const float SignpostBoardGap = 0.06f;
     public const float SignpostTip = 0.12f;
 
-    // ---- Shared-bicycle bay (WLD-LIFE §3.5: a painted frame on the ground and a low standing sign, number and bicycle icon) ----
+    // ---- Shared-bicycle bay (WLD-LIFE: a painted frame on the ground and a low standing sign, number and bicycle icon) ----
     public const float BayLine = 0.08f;
     public const float BaySlot = 0.6f;
     public const float BaySignWidth = 0.42f;
@@ -350,8 +350,8 @@ public static class StreetStyle
     public const float KerbRampFlare = 0.45f;
     public const float TactileDepth = 0.3f;
 
-    // ---- Lettering (ART-MODELING §7.8: vector type is a part constant at every level; §7.5: printed as face geometry) ----
-    /// <summary>Print quads float this far off their face (reverse-Z D32F separates 1–2 mm within 400 m, ART-MODELING §7.5).</summary>
+    // ---- Lettering (ART-MODELING: vector type is a part constant at every level; §7.5: printed as face geometry) ----
+    /// <summary>Print quads float this far off their face (reverse-Z D32F separates 1–2 mm within 400 m, ART-MODELING).</summary>
     public const float PrintLift = 0.0015f;
     public const float CjkStroke = 0.1f;
 }

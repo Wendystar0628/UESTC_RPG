@@ -5,8 +5,8 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
-/// "安全出口 EXIT" sign (WLD-INTERIORS §8.5: Chinese above English, never 非常口): white housing, green face, white lettering
-/// and a door-and-arrow symbol (no running figure: nothing that reads as a person, CORE-INDEX §3). The face and lettering
+/// "安全出口 EXIT" sign (WLD-INTERIORS: Chinese above English, never 非常口): white housing, green face, white lettering
+/// and a door-and-arrow symbol (no running figure: nothing that reads as a person, CORE-INDEX). The face and lettering
 /// carry <see cref="ToonSpec.Emissive"/> = sign.signal (always on); placers also hand <see cref="Glow"/> to the lamp inventory
 /// for the night halo. Variation 0: door symbol. 1: arrow pointing left. 2: arrow pointing right. Back on +Z; visual only.
 /// </summary>
@@ -85,7 +85,7 @@ public sealed class ExitSignPart() : MepPart<SignParams>(new(900, 60))
 /// Door plate (门牌) beside or above a room door. Variation 0: white plate with a dark band on the left and dark numerals.
 /// 1: brushed aluminium plate with a dark top rule. 2: warm wood plate with white numerals. The catalogue path has no text
 /// field yet, so it draws the blank plate; placers that know the room number call <see cref="Build"/> (numerals and '-' only,
-/// "区-层-序号", WLD-INTERIORS §11). Back on +Z; visual only.
+/// "区-层-序号", WLD-INTERIORS). Back on +Z; visual only.
 /// </summary>
 [Part(PartCatalog.RoomSign, Owner = "WP-12")]
 public sealed class RoomSignPart() : MepPart<SignParams>(new(500, 60))

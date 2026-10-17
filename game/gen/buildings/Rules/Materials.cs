@@ -2,7 +2,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Buildings.Rules;
 
-/// <summary>Material classes used by generated buildings. Colours vary per vertex; classes stay few (ENG-PERF §1.6).</summary>
+/// <summary>Material classes used by generated buildings. Colours vary per vertex; classes stay few (ENG-PERF).</summary>
 public enum MaterialKind : byte
 {
     /// <summary>Main wall surfaces, reveals, pilasters and penthouse walls.</summary>

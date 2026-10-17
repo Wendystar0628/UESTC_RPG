@@ -1,4 +1,4 @@
-"""OKLab / OKLCH 与 sRGB 的互换（WP-37 色彩脚本，SYS-TIME §3.1、CORE-CONVENTIONS 的"颜色"一条）。
+"""OKLab / OKLCH 与 sRGB 的互换（WP-37 色彩脚本，SYS-TIME、CORE-CONVENTIONS 的"颜色"一条）。
 
 全部用双精度纯 Python 计算，不依赖 numpy，保证同一输入在任何机器上逐位相同。
 矩阵取自 Björn Ottosson 的 OKLab 定义（公有领域）。
@@ -97,7 +97,7 @@ def in_gamut(lin: Rgb, eps: float = 1e-7) -> bool:
 
 
 def gamut_map_lab(lab: Lab) -> Lab:
-    """越出 sRGB 色域时只降彩度、不动 L（ART-STYLE §3.2 末行），二分到 1e-6；在色域内原样返回。"""
+    """越出 sRGB 色域时只降彩度、不动 L（ART-STYLE 末行），二分到 1e-6；在色域内原样返回。"""
     if in_gamut(oklab_to_linear(lab)):
         return lab
     L, c, h = lab_to_lch(lab)
@@ -159,7 +159,7 @@ def smootherstep(t: float) -> float:
 
 
 def cie_lstar(lab: Lab) -> float:
-    """OKLab → CIE L*（D65），给"夜间暗部 L* 不低于 12"一条用（SYS-TIME §8）。"""
+    """OKLab → CIE L*（D65），给"夜间暗部 L* 不低于 12"一条用（SYS-TIME）。"""
     lin = oklab_to_linear(lab)
     y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
     y = max(0.0, y)

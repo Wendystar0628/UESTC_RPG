@@ -6,7 +6,7 @@ using N = System.Numerics;
 namespace Campus.Hud.Widgets;
 
 /// <summary>
-/// 时间卡（UI-VISUAL §7.5、UI-NAV §4.1）：24 h 天色光谱环，12 在顶、00 在底、06 在左、18 在右，钟点顺时针增加；
+/// 时间卡（UI-VISUAL、UI-NAV）：24 h 天色光谱环，12 在顶、00 在底、06 在左、18 在右，钟点顺时针增加；
 /// 只能顺时针拨：拖动按 ClockSetMode.Drag 累计顺时针角度，逆时针时把手不动；点刻度按 Jump 跳到下一次出现。
 /// 拆三层：静态环与刻度只画一次；把手与细针只改变换；读数 10 Hz。常驻件，默认固定深屏。
 /// </summary>
@@ -307,7 +307,7 @@ public partial class SpectrumRing : Control
     }
 }
 
-/// <summary>环内 24 根刻度：1×5 px，每 6 h 一根长刻（UI-VISUAL §5.3）；颜色由 ui_panel kind 3 按 role 换。</summary>
+/// <summary>环内 24 根刻度：1×5 px，每 6 h 一根长刻（UI-VISUAL）；颜色由 ui_panel kind 3 按 role 换。</summary>
 public partial class TickRing : Control
 {
     public override void _Draw()

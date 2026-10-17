@@ -23,7 +23,7 @@ public sealed class MapHudContext(MapStyle style)
     /// <summary>大页的主题：0 晶白 … 1 深屏；与 ui_night 同一语义（扫描前沿的位置）。</summary>
     public float ThemeFront { get; set; }
     public bool PageNight => ThemeFront >= 0.5f;
-    /// <summary>常驻件"随主题"（设置项，UI-VISUAL §3.6）；默认 false，即常驻件固定深屏。</summary>
+    /// <summary>常驻件"随主题"（设置项，UI-VISUAL）；默认 false，即常驻件固定深屏。</summary>
     public bool ResidentFollowsTheme { get; set; }
     /// <summary>最近一次输入来自键盘时才画焦点环（gui/common/show_focus_state_on_pointer_event = 0 的同义）。</summary>
     public bool KeyboardFocus { get; set; }
@@ -40,7 +40,7 @@ public sealed class MapHudContext(MapStyle style)
         return Page;
     }
 
-    /// <summary>键盘焦点：控件外 3 px 一圈 1 物理像素的核，外衬 1 px 面板底，两侧各一条冷色色散（UI-VISUAL §5.6）。</summary>
+    /// <summary>键盘焦点：控件外 3 px 一圈 1 物理像素的核，外衬 1 px 面板底，两侧各一条冷色色散（UI-VISUAL）。</summary>
     public static void FocusRing(CanvasItem ci, Rect2 r, MapTone t)
     {
         var core = r.Grow(3);
@@ -107,7 +107,7 @@ public sealed class MapHudContext(MapStyle style)
         return $"{minutes / 60:00}:{minutes % 60:00}";
     }
 
-    /// <summary>标记的类型图标：可传送的标记用主色"通电"，其余用正文色（SYS-ATLAS §2.2、§5）。</summary>
+    /// <summary>标记的类型图标：可传送的标记用主色"通电"，其余用正文色（SYS-ATLAS）。</summary>
     public void Icon(CanvasItem ci, MapEntry e, Vector2 c, float size, Color ink, float stroke, bool solid)
     {
         var m = e.Marker;

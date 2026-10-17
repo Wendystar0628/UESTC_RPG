@@ -9,7 +9,7 @@ namespace Campus.Systems.Vegetation.Tests;
 /// <summary>
 /// The bark pair (tree.bark, colour IDs 252–253, ext/WP-23.json) evaluated by the WP-37 colour script. The albedo has OKLab
 /// chroma ~0.048, hue ~62: below ~0.06 the script treats a material as neutral and mixes its shade towards ambient.sky
-/// (ART-STYLE §3.2, w = smoothstep(0.06, 0.015, C)), which painted the trunks under the 17:30 canopy blue-violet (0q). With
+/// (ART-STYLE, w = smoothstep(0.06, 0.015, C)), which painted the trunks under the 17:30 canopy blue-violet (0q). With
 /// that chroma the shade keeps the bark hue. Lit targets are the 0q renders: autumn 17:30 #9F703E and noon #9F7E5E.
 /// </summary>
 [TestSuite]
@@ -39,7 +39,7 @@ public sealed class BarkColourTests
             var shadeChroma = Math.Sqrt(shade.A * shade.A + shade.B * shade.B);
             if (shadeHue < 35.0 || shadeHue > 85.0 || shadeChroma < 0.025)
                 throw new InvalidOperationException($"tree.bark shade at {clock} has hue {shadeHue:F0}, chroma {shadeChroma:F3}; want a warm 35–85 hue and C >= 0.025");
-            // ART-STYLE §3: shade by lightness (r 0.78 on the default frame), never darker than the trunk reads as wood.
+            // ART-STYLE: shade by lightness (r 0.78 on the default frame), never darker than the trunk reads as wood.
             if (shade.L >= litLab.L * 0.88 || shade.L <= litLab.L * 0.65)
                 throw new InvalidOperationException($"tree.bark shade L {shade.L:F3} against lit L {litLab.L:F3} at {clock}");
         }

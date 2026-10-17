@@ -8,9 +8,9 @@ namespace Campus.Gen.Zones.Core.Framework;
 /// Vertical datum and plan of one building the core zone builds itself (the library, its fourteen blocks, the
 /// museum): every building piece starts from this frame so all of them sit on the terrain the same way.
 /// <para>
-/// WLD-TERRAIN §4.3: the floor is PadY + <see cref="CoreStyle.FloorAbovePad"/>, walls start at
+/// WLD-TERRAIN: the floor is PadY + <see cref="CoreStyle.FloorAbovePad"/>, walls start at
 /// PadY − <see cref="CoreStyle.WallBelowPad"/> to cover the apron's small fall, and the plinth has a level top line at
-/// PadY + <see cref="CoreStyle.PlinthTop"/>. Storey heights are the building's own (MAP-QSH-CORE §10 initial values),
+/// PadY + <see cref="CoreStyle.PlinthTop"/>. Storey heights are the building's own (MAP-QSH-CORE initial values),
 /// so storey k's floor is Floor + sum of the storeys below it.
 /// </para>
 /// </summary>

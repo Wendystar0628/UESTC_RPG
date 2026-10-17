@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Hud.Pages;
 
 /// <summary>
-/// 开始页的界面部分（UI-VISUAL §8.6、UI-NAV §4.13、SYS-TITLE §2）：按"压在画面上"处理，不随主题，不读 ui_night——
+/// 开始页的界面部分（UI-VISUAL、UI-NAV、SYS-TITLE）：按"压在画面上"处理，不随主题，不读 ui_night——
 /// 只用两套主题里相同的 over.title.* 令牌；左侧一条暗渐变，片名细体宽字距，下面一行真数据；
 /// 菜单：继续 / 新游戏 / 存档 / 设置 / 制作人员与许可 / 退出。只经 IAppFlow 写，只读 ISaveService。
 /// </summary>

@@ -7,7 +7,7 @@ namespace Campus.Hud.Widgets;
 
 /// <summary>
 /// 组件工厂：面板、过孔、文字、图标、线、按钮。每件都挂 ui_panel 的对应 kind，并写 instance uniform。
-/// 常驻件（pin = true）登记在这里，设置"常驻件：随主题"时统一改写 pin_night（UI-VISUAL §3.6、§11.6）。
+/// 常驻件（pin = true）登记在这里，设置"常驻件：随主题"时统一改写 pin_night（UI-VISUAL）。
 /// </summary>
 public sealed class UiKit
 {
@@ -62,7 +62,7 @@ public sealed class UiKit
         _pinned.Add(new WeakReference<CanvasItem>(item));
     }
 
-    /// <summary>"常驻件：深屏 / 随主题"（UI-NAV §4.6）。</summary>
+    /// <summary>"常驻件：深屏 / 随主题"（UI-NAV）。</summary>
     public void SetResidentFollows(bool follows)
     {
         if (_residentFollows == follows) return;
@@ -150,7 +150,7 @@ public sealed class UiKit
         return line;
     }
 
-    /// <summary>M7 示波器（UI-VISUAL §9.3）：extra = (振幅 ≤ 0.4, 周期数, 相速, 线宽)。</summary>
+    /// <summary>M7 示波器（UI-VISUAL）：extra = (振幅 ≤ 0.4, 周期数, 相速, 线宽)。</summary>
     public ColorRect Wave(Control parent, Rect2 rect, string colorRole, bool pin, Vector4 extra)
     {
         var wave = new ColorRect { Position = rect.Position, Size = rect.Size, Color = Godot.Colors.White, MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -181,7 +181,7 @@ public sealed class UiKit
     /// <summary>
     /// 子树里占着实例参数槽的件数：挂着界面材质、没在排队释放的 CanvasItem（含滚动条这类内部子节点）。
     /// 引擎在材质挂上时就从全局参数池分配槽，隐藏、摘材质、清参数、移出场景树都不归还，只有释放节点才归还；
-    /// 所以隐藏的大页不留件，打开时再建（UI-VISUAL §11.5）。
+    /// 所以隐藏的大页不留件，打开时再建（UI-VISUAL）。
     /// </summary>
     public int Holders(Node root)
     {

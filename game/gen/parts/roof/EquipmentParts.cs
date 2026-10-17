@@ -129,7 +129,7 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
         var clear = height - 2 * f;
         if (!near)
         {
-            // Beyond the near level the louvre period is under 4 px: one recessed colour block (ART-MODELING §7.3).
+            // Beyond the near level the louvre period is under 4 px: one recessed colour block (ART-MODELING).
             builder.AddCentredBox(new(width - 2 * f + 0.008f, clear + 0.008f, Math.Min(0.02f, depth * 0.4f)), Xf.Move(0, height * 0.5f, 0).Then(at), blade);
             return;
         }
@@ -151,8 +151,8 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
 
 /// <summary>
 /// Panel water tank (水箱): stainless shell with flanges at every panel seam (the horizontal light bands at dusk,
-/// ART-FIDELITY §6), a hatch, a vent and a side ladder. Variation 0 sits on two rails; Variation ≥ 1 stands on a
-/// dark steel frame (the old teaching blocks, MAP-QSH-ADDITIONS §2.16). The ladder hangs off the +X side, outside the footprint.
+/// ART-FIDELITY), a hatch, a vent and a side ladder. Variation 0 sits on two rails; Variation ≥ 1 stands on a
+/// dark steel frame (the old teaching blocks, MAP-QSH-ADDITIONS). The ladder hangs off the +X side, outside the footprint.
 /// </summary>
 [Part(PartCatalog.WaterTank, Owner = "WP-12")]
 public sealed class WaterTankPart : IPartDef<EquipmentParams>

@@ -57,7 +57,7 @@ public sealed class PlantingTests
     [TestCase]
     public void GinkgosStayWhereTheyAreRegistered()
     {
-        // WLD-VEGETATION §2: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
+        // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
         // student centre; never spread elsewhere.
         var (world, species, rules) = Data.Value;
         var layout = Planting.Build(world, species, rules, 1u);
@@ -96,7 +96,7 @@ public sealed class PlantingTests
     [TestCase]
     public void TreesLandOnTheTerrainAndAvoidSteepGround()
     {
-        // WLD-TERRAIN §4.4: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band.
+        // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band.
         var (world, species, rules) = Data.Value;
         var terrain = new TiltedTerrain();
         var layout = Planting.Build(new TerrainWorld(world, terrain), species, rules, 1u);

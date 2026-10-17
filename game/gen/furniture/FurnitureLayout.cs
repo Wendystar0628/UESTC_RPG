@@ -35,13 +35,13 @@ public sealed record FurnitureLayout(IReadOnlyList<FurnitureItem> Items)
 /// <summary>
 /// WP-13 placement (13b): pure and deterministic from the world model and the map's claims.
 /// <list type="bullet">
-/// <item>Atlas anchors (SYS-ATLAS §6): a kiosk or a post on every <c>anchor</c> feature of WP-48c's <c>overlay/atlas.d/</c>,
+/// <item>Atlas anchors (SYS-ATLAS): a kiosk or a post on every <c>anchor</c> feature of WP-48c's <c>overlay/atlas.d/</c>,
 /// at its footprint, facing its <c>yawDeg</c>; the kiosk on its pad (or the deck the overlay names), the post landed as a point.
 /// A footprint more than <see cref="FurnitureStyle.AnchorPavingGap"/> off pedestrian paving moves the shortest way to its edge.</item>
-/// <item>Open entrances (WLD-INTERIORS §4): mat, standing open sign and door lamp at every open entrance of the interior index,
+/// <item>Open entrances (WLD-INTERIORS): mat, standing open sign and door lamp at every open entrance of the interior index,
 /// on the entrance floor, facing out; skipped where another package claims the building's <see cref="Aspects.Props"/>.</item>
-/// <item>Shuttle stops (WLD-LIFE §4.3): a stop sign at the kerb of the carriageway nearest each <c>bus</c> feature.</item>
-/// <item>Roads (WLD-LIFE §4, MAP-QSH-ADDITIONS §8.1): lamps along the <see cref="FurnitureStyle.Roads"/> at the tier's spacing,
+/// <item>Shuttle stops (WLD-LIFE): a stop sign at the kerb of the carriageway nearest each <c>bus</c> feature.</item>
+/// <item>Roads (WLD-LIFE, MAP-QSH-ADDITIONS): lamps along the <see cref="FurnitureStyle.Roads"/> at the tier's spacing,
 /// and rest stops midway between lamps: a bench lining the nearest walk on that side, facing the walk on a bay joined to it,
 /// never facing a carriageway or in the strip between the kerb and the tree rows; at every other stop a four-stream bin on its
 /// own bay 2–4 m along the same walk, towards a junction where there is one (Opus review 12:15).</item>
@@ -203,7 +203,7 @@ public static partial class FurniturePlanner
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Parked cars (WLD-LIFE §3.3): a few in each car park.
+    // Parked cars (WLD-LIFE): a few in each car park.
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -215,7 +215,7 @@ public static partial class FurniturePlanner
     private static void Cars(StreetSite site, List<FurnitureItem> items)
     {
         var terrain = site.World.Terrain;
-        // Each car look (shape and colour) is its own mesh set: a 64 m cell keeps to a few of them (draw calls, ART-MODELING §7.8).
+        // Each car look (shape and colour) is its own mesh set: a 64 m cell keeps to a few of them (draw calls, ART-MODELING).
         var looks = new Dictionary<(int, int), List<VehicleParams>>();
         for (var lot = 0; lot < site.ParkingLots.Count; lot++)
         {
@@ -425,7 +425,7 @@ public static partial class FurniturePlanner
                 case "kiosk":
                     {
                         var p = S.Kiosk with { Width = width >= 1.4f ? width : S.Kiosk.Width, Depth = depth >= 0.4f ? depth : S.Kiosk.Depth, Height = feature.Height is float h && h >= 2.2f ? h : S.Kiosk.Height };
-                        // Large entity (WLD-TERRAIN §4.4): on its pad, with a paved apron; a deck the height field does not carry (A06)
+                        // Large entity (WLD-TERRAIN): on its pad, with a paved apron; a deck the height field does not carry (A06)
                         // comes from the overlay's groundY. An apron off the paving moves to its edge (a deck is paving already).
                         var ground = terrain.HeightAt(centre.X, centre.Y);
                         var deck = Number(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
@@ -566,7 +566,7 @@ public static partial class FurniturePlanner
                 if (!door.Open || !seen.Add(door.Id)) continue;
                 var facing = Facing(door.YawDeg);
                 var plan = new Vector2(door.Center.X, door.Center.Z);
-                // The entrance floor, never below the paving in front of the door (WLD-TERRAIN §4.3: mat and sign on the landing).
+                // The entrance floor, never below the paving in front of the door (WLD-TERRAIN: mat and sign on the landing).
                 var front = plan + facing * (S.MatDepth * 0.5f + S.MatGap);
                 var floor = Frame(plan, facing, MathF.Max(door.Center.Y, site.World.Terrain.HeightAt(front.X, front.Y) + S.PavingLift));
                 var key = "door:" + door.Id;
@@ -589,7 +589,7 @@ public static partial class FurniturePlanner
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Shuttle stops: a sign at the kerb of the carriageway nearest each bus feature (WLD-LIFE §3.2, §4.3).
+    // Shuttle stops: a sign at the kerb of the carriageway nearest each bus feature (WLD-LIFE).
     // ---------------------------------------------------------------------------------------------------------
 
     private static void Stops(StreetSite site, List<FurnitureItem> items)

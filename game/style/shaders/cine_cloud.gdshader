@@ -1,4 +1,4 @@
-// cine_cloud.gdshader：开始页与过场的云卡、镜头云幕（SYS-TITLE §9，ENG-PERF §1.4 白名单，WP-49b）
+// cine_cloud.gdshader：开始页与过场的云卡、镜头云幕（SYS-TITLE，ENG-PERF 白名单，WP-49b）
 //
 // 用法（节点由 WP-49a 建，内核挂载）：
 // - 云卡：每层一个 MultiMesh（QuadMesh 1×1，按实例变换缩放到云卡的宽高），mode = 0。
@@ -12,7 +12,7 @@
 // 画法：剪影是"大团块打底 + 偏心的塔 + 塔肩上的小团块"，团块之间平滑相接、边缘按一拍二轻微起伏，底部平切。
 // 受光按各团块的球面法线（按"打底 → 塔 → 小团块"的次序，后画的压在前面）：朝光的一面是受光阶，其余是云腹阶；
 // 下半部背光最深处是最暗阶。金边只在朝太阳一侧的外轮廓上，1080p 下不超过 1.5 px；下沿一道细高光。
-// 光的方向取太阳（夜里取月亮）在卡面上的投影并往上抬（顶缘受光，ART-SKYLIGHT §4.5）。颜色只读调色板第 0 行，
+// 光的方向取太阳（夜里取月亮）在卡面上的投影并往上抬（顶缘受光，ART-SKYLIGHT）。颜色只读调色板第 0 行，
 // 走共用雾函数写 FOG；材质 ID 取"不描"的一档（云卡不描线）；动的部分只读一拍二时钟 t12()，不用 TIME。
 
 shader_type spatial;
@@ -48,7 +48,7 @@ vec4 fog_eval(vec3 world_pos, vec3 cam_pos) {
 }
 #endif
 
-// 材质 ID：WP-05 保留的通用"不描"ID（fx.noline）。云卡与镜头云幕都不出描线，剪影也不出（ART-STYLE §4.5）
+// 材质 ID：WP-05 保留的通用"不描"ID（fx.noline）。云卡与镜头云幕都不出描线，剪影也不出（ART-STYLE）
 const int CINE_CLOUD_MAT_ID = 126;
 
 // ---- 可调参数（材质 uniform；初值按 T0 预览定，运行时不改 render_mode）

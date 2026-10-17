@@ -5,7 +5,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;
 
-/// <summary>Illuminance grade of a lamp marker (MAP-QSH-ADDITIONS §8.1): the channel, energy and pool radius follow it.</summary>
+/// <summary>Illuminance grade of a lamp marker (MAP-QSH-ADDITIONS): the channel, energy and pool radius follow it.</summary>
 public enum LampGrade
 {
     /// <summary>Main axis and squares: early first-lamp group (lamp.first), energy 1.</summary>
@@ -17,10 +17,10 @@ public enum LampGrade
 }
 
 /// <summary>
-/// Street lamp (路灯, WLD-LIFE §4.2). Height is the top of the head; Width is the disc diameter (variations 0, 2) or the outreach
+/// Street lamp (路灯, WLD-LIFE). Height is the top of the head; Width is the disc diameter (variations 0, 2) or the outreach
 /// from the pole axis to the tip of the LED head (variation 1); Depth is unused beyond the base. Variation 0: white slim pole with
 /// a disc head on the first-lamp group (main roads, ginkgo avenue). 1: grey single-arm LED head over −Z on the street group
-/// (secondary roads). 2: the disc lamp on the street group (main lamps in grade-two areas, MAP-QSH-ADDITIONS §8.4).
+/// (secondary roads). 2: the disc lamp on the street group (main lamps in grade-two areas, MAP-QSH-ADDITIONS).
 /// No OmniLight3D: the lens is self-lit on its channel and placers hand <see cref="Emitter"/> to the lamp inventory (contract-12).
 /// </summary>
 [Part(PartCatalog.StreetLamp, Owner = "WP-13")]
@@ -141,7 +141,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
             b.AddCentredBox(new(S.ArmHeadWidth - 0.08f, 0.014f, S.ArmHeadLength - 0.12f), Xf.Move(0, -S.ArmHeadThickness * 0.5f - 0.003f, 0).Then(arm.Head), lens, near ? 0.004f : 0, VertexFlag.NoShadow);
     }
 
-    /// <summary>Base flange, sleeve and its accent ring: the pole's contact with the ground (ART-MODELING §7.8 item 3).</summary>
+    /// <summary>Base flange, sleeve and its accent ring: the pole's contact with the ground (ART-MODELING item 3).</summary>
     private static void AddFoot(PartBuilder b, LampParams p, bool near, int segments, ToonSpec body)
     {
         var rs = S.LampSleeveRadius; var hs = S.LampSleeveHeight; var c = near ? 0.03f : 0;
@@ -187,7 +187,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
 }
 
 /// <summary>
-/// Entrance lamp fixture (门口灯, WLD-INTERIORS §4): a wall lantern with a light back plate, a dark housing and frosted lenses on
+/// Entrance lamp fixture (门口灯, WLD-INTERIORS): a wall lantern with a light back plate, a dark housing and frosted lenses on
 /// the front (−Z) and the underside. Origin is the bottom centre; the back face lies on +Z (the wall). Visual only: it hangs
 /// above head height on the wall, whose collider stands in for it. Door lamps are lamp fixtures in the lamp table on the
 /// first-lamp group (on at dusk, on all night, never half off); no window or interior channel (WP-39, max-104).
@@ -205,7 +205,7 @@ public sealed class EntranceLampPart : IPartDef<LampParams>
         return Levels.Padded(new(-p.Width * 0.5f, -0.008f, -p.Depth * 0.5f - 0.008f), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f));
     }
 
-    /// <summary>Lamp-inventory marker in front of and below the lantern: first-lamp group, grade-two energy (entrances, MAP-QSH-ADDITIONS §8.1).</summary>
+    /// <summary>Lamp-inventory marker in front of and below the lantern: first-lamp group, grade-two energy (entrances, MAP-QSH-ADDITIONS).</summary>
     public static LightEmitter Emitter(LampParams p, Matrix4x4 at)
     {
         Validate(p);

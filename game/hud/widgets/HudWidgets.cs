@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Hud.Widgets;
 
 /// <summary>
-/// 天气签条（UI-VISUAL §7.6、UI-NAV §4.10）：自动 + 8 格，36 px 图标钮放在一条签条里；不合季节的雷雨格呈禁用态、可聚焦；
+/// 天气签条（UI-VISUAL、UI-NAV）：自动 + 8 格，36 px 图标钮放在一条签条里；不合季节的雷雨格呈禁用态、可聚焦；
 /// 强度三枚小方块只在雾、降水、雷雨下出现；自动时当前实际天气所在的格下方一枚 4 px 过孔点。常驻件，默认固定深屏。
 /// </summary>
 public partial class WeatherStrip : Control
@@ -109,7 +109,7 @@ public partial class WeatherStrip : Control
         Toast?.Invoke(UiKit.T("weather.manual_toast", ("name", UiKit.T("weather.cell." + CellKey(cell)))));
     }
 
-    /// <summary>Y 键单击：本季可选的格里循环到下一格，进入手动（UI-NAV §4.10）。</summary>
+    /// <summary>Y 键单击：本季可选的格里循环到下一格，进入手动（UI-NAV）。</summary>
     public void Next()
     {
         var sel = _model.Weather;
@@ -180,7 +180,7 @@ public partial class WeatherStrip : Control
 }
 
 /// <summary>
-/// 观察模式与速度 LED 条（UI-VISUAL §7.7、UI-NAV §4.3、§4.4）：[旁观 | 行走] 两段；旁观 16 格 7×14，已到达 graphic 实心，
+/// 观察模式与速度 LED 条（UI-VISUAL、UI-NAV）：[旁观 | 行走] 两段；旁观 16 格 7×14，已到达 graphic 实心，
 /// 当前档 primary.fill + primary.line 加高到 18；格子下方 2 px 光条是贴地限速后的实际速度；行走换成 5 个宽格。常驻件。
 /// </summary>
 public partial class SpeedBar : Control
@@ -263,7 +263,7 @@ public partial class SpeedBar : Control
     }
 }
 
-/// <summary>收起态的时间读数条（UI-VISUAL §7.5）：钟点（Inter Light 26，tnum）+ 时辰 + 季 · 天气 + 过孔（自动空心、手动实心）。界面态显示，漫游态不显示。</summary>
+/// <summary>收起态的时间读数条（UI-VISUAL）：钟点（Inter Light 26，tnum）+ 时辰 + 季 · 天气 + 过孔（自动空心、手动实心）。界面态显示，漫游态不显示。</summary>
 public partial class TimeStrip : Control
 {
     private UiKit _kit = null!;
@@ -300,7 +300,7 @@ public partial class TimeStrip : Control
 }
 
 /// <summary>
-/// 临时提示（UI-VISUAL §7.4、UI-NAV §4.9）：高 40、surface.panel、左侧 3 px 类型条、20 px 图标、Medium 16；
+/// 临时提示（UI-VISUAL、UI-NAV）：高 40、surface.panel、左侧 3 px 类型条、20 px 图标、Medium 16；
 /// 同时只显示 1 条，新的顶替旧的，2 s 内淡出；底部居中、离底边 150 px。常驻件，固定深屏；不配提示音。
 /// </summary>
 public partial class Toast : Control

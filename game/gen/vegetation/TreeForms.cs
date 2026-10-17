@@ -19,15 +19,15 @@ public sealed record TreeForm(
     float TrunkRadius,     // breast-height trunk radius / H
     float CardSize,        // leaf-card edge in metres (WLD-VEGETATION: 0.4–0.7 m on a 12 m ginkgo)
     float Droop,           // 0 none … 1 secondaries and cards hang (willow)
-    float Lumps,           // blob bump amplitude (cloud balls use 0.13, ART-MODELING §3)
+    float Lumps,           // blob bump amplitude (cloud balls use 0.13, ART-MODELING)
     int Stems = 1);        // multi-stem shrubs and small trees
 
-/// <summary>The mother-model shape table: one place for every tunable tree proportion (WLD-VEGETATION §1, §2).</summary>
+/// <summary>The mother-model shape table: one place for every tunable tree proportion (WLD-VEGETATION).</summary>
 public static class TreeForms
 {
     private static readonly Dictionary<string, TreeForm> Table = new(StringComparer.Ordinal)
     {
-        // Ginkgo: upright ovoid-cone, leader to the top, branches rising steeply (WLD-VEGETATION §1.8).
+        // Ginkgo: upright ovoid-cone, leader to the top, branches rising steeply (WLD-VEGETATION).
         ["ginkgo"] = new("ginkgo", 0.26f, 0.30f, 0.27f, 0.45f, true, 5, 7, 42f, 2, 3, 0.022f, 0.55f, 0f, 0.10f),
         // Metasequoia: narrow cone, straight leader, whorled near-horizontal tiers.
         ["metaseq"] = new("metaseq", 0.10f, 0.12f, 0.17f, 1.00f, true, 8, 10, 8f, 2, 2, 0.020f, 0.50f, 0f, 0.08f),
@@ -59,7 +59,7 @@ public static class TreeForms
     public static TreeForm Get(string id) => Table.TryGetValue(id, out var form) ? form
         : throw new KeyNotFoundException($"Unknown tree form '{id}'.");
 
-    /// <summary>Mother models per species (ART-MODELING §3: young, mature, old, and one asymmetric crown).</summary>
+    /// <summary>Mother models per species (ART-MODELING: young, mature, old, and one asymmetric crown).</summary>
     public const int Variants = 4;
 
     /// <summary>Height of one mother model within the species range: young 85% of the minimum, mature mid, old maximum, asymmetric mid.</summary>

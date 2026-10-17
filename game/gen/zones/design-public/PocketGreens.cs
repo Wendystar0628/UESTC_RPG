@@ -11,7 +11,7 @@ using L = Campus.Gen.Zones.DesignPublic.PublicTune.Look;
 namespace Campus.Gen.Zones.DesignPublic;
 
 /// <summary>
-/// A curved bench of a pocket green (MAP-QSH-ADDITIONS §2.3): wood slats on granite plinths with a dark steel back,
+/// A curved bench of a pocket green (MAP-QSH-ADDITIONS): wood slats on granite plinths with a dark steel back,
 /// swept along an arc about <see cref="Centre"/> from bearing <see cref="From"/> to <see cref="To"/> (degrees, 0 north,
 /// 90 east). Sitters face the centre; the back faces outward, so a bench centred on bearing 241° turns its back to the
 /// low autumn sun and is lit (MAP-QSH-ADDITIONS R1).
@@ -161,9 +161,9 @@ public static class PocketGreens
         return top + PublicTune.PavingLevel;
     }
 
-    // ---- Colliders and seats (same parameters as the geometry, SYS-WALK §13) ----
+    // ---- Colliders and seats (same parameters as the geometry, SYS-WALK) ----
 
-    /// <summary>Jumpable boxes along the arc, one per chord, from the paving to the seat top (MAP-QSH-ADDITIONS §7: 可跳上).</summary>
+    /// <summary>Jumpable boxes along the arc, one per chord, from the paving to the seat top (MAP-QSH-ADDITIONS: 可跳上).</summary>
     public static IReadOnlyList<BoxCollider> SeatBoxes(ArcBench bench, Func<Vector2, float> ground)
     {
         var deck = Paving(bench, ground);

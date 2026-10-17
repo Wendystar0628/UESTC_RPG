@@ -8,10 +8,10 @@ using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 namespace Campus.Gen.Zones.DesignWaterfront.Bridges;
 
 /// <summary>
-/// Bridge-head lying stone (桥头卧石, MAP-QSH-ADDITIONS §2.12): rough-hewn white stone, about 1.8 m long, lying on the lawn by
+/// Bridge-head lying stone (桥头卧石, MAP-QSH-ADDITIONS): rough-hewn white stone, about 1.8 m long, lying on the lawn by
 /// the head of a main bridge with its long face turned to the approaching walker (props <c>faceDeg</c>, a compass bearing;
 /// R1 wants 240° ± 30° so the face takes the low sun). The face stays blank: the 墨绿行书 bridge name waits for the scene
-/// lettering atlas (contract-26). Collision: one box, jumpable onto (高 0.62 m, SYS-WALK §7 第 5 条).
+/// lettering atlas (contract-26). Collision: one box, jumpable onto (高 0.62 m, SYS-WALK 第 5 条).
 /// </summary>
 internal sealed record BridgeStone(FeatureId Id, Vector2 Position, float FaceDeg, float GroundY)
 {

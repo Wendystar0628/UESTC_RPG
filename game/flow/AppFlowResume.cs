@@ -42,7 +42,7 @@ public sealed partial class AppFlowService
             mapRuntime.Prefetch(_destination, _destinationMode, Info(slot)?.Meta?.Space);
             await playback.WaitForPresentedCoverage();
             mapRuntime.BeginWarm();
-            // Save resumption is the ENG-PERF §5 read/restore barrier exception:
+            // Save resumption is the ENG-PERF read/restore barrier exception:
             // keep the cover until ready without the ordinary arrival time limit.
             await playback.WaitUntil(() => DestinationReady(_destination, _destinationMode), double.PositiveInfinity,
                 "Resume destination did not become resident, warm and collision-ready.");

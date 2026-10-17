@@ -13,11 +13,11 @@ using L = Campus.Gen.Zones.North.NorthTune.Look;
 namespace Campus.Gen.Zones.North.Clusters;
 
 /// <summary>
-/// One dormitory cluster's enclosure (MAP-QSH-NORTH §4.7, §8; MAP-QSH-RENOVATION N-22): the 2.2 m see-through steel fence
+/// One dormitory cluster's enclosure (MAP-QSH-NORTH; MAP-QSH-RENOVATION N-22): the 2.2 m see-through steel fence
 /// with the 1.2 m clipped hedge inside it, a gate at every road crossing — vehicle lane with the deep grey barrier arm down,
 /// a face-scan turnstile bank beside it, the guard house at the main gate — and a closed steel side gate on footways.
-/// Walk mode (SYS-WALK §7): every gate is closed (wings shut, red cross) except an open cluster's main gate, whose wings are
-/// retracted and arrows green; its barrier arm stays down (WLD-INTERIORS §2.8, §4). The buildings stay with WP-14.
+/// Walk mode (SYS-WALK): every gate is closed (wings shut, red cross) except an open cluster's main gate, whose wings are
+/// retracted and arrows green; its barrier arm stays down (WLD-INTERIORS). The buildings stay with WP-14.
 /// </summary>
 public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
 {
@@ -141,7 +141,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
 
     /// <summary>
     /// Face-scan speed gates: stainless cabinets with a dark glass top, glass wings across each passage when closed; open
-    /// wings fold into the cabinets and the end indicators show green arrows instead of red crosses (WLD-INTERIORS §4).
+    /// wings fold into the cabinets and the end indicators show green arrows instead of red crosses (WLD-INTERIORS).
     /// </summary>
     private static void Turnstiles(SiteBuilder b, GateSpot g, float y)
     {
@@ -240,7 +240,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
         }
     }
 
-    // ---- Collision (SYS-WALK §7, §13): tops at max(visual, 1.5 m), gaps under 0.5 m ----
+    // ---- Collision (SYS-WALK): tops at max(visual, 1.5 m), gaps under 0.5 m ----
 
     public override void Collide(SiteColliders c)
     {

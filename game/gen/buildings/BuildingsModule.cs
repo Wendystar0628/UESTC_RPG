@@ -11,13 +11,13 @@ namespace Campus.Gen.Buildings;
 
 /// <summary>
 /// WP-14 generic building generator: every building that no zone module has claimed gets massing, storeys,
-/// bays and numbered windows from the facade rules (MAP-QSH-ADDITIONS §3, ART-MODELING §7.8).
+/// bays and numbered windows from the facade rules (MAP-QSH-ADDITIONS, ART-MODELING).
 /// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
 /// </summary>
 [ContentModule("buildings", Owner = "WP-14")]
 public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource, IContentSourceTraceProvider
 {
-    /// <summary>Generic module: claims no specific feature (SYS-MAPS §7).</summary>
+    /// <summary>Generic module: claims no specific feature (SYS-MAPS).</summary>
     public IReadOnlyList<Claim> Claims { get; } = [];
 
     /// <summary>
@@ -138,7 +138,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     }
 
     /// <summary>
-    /// Wall colliders along the skin (SYS-WALK §13); declared open entrances cut their authored doorway range,
+    /// Wall colliders along the skin (SYS-WALK); declared open entrances cut their authored doorway range,
     /// while closed entrances stay DoorClosed. The WP-11 landings, slopes and steps bring their own colliders.
     /// Collision cells are fixed 64 m cells.
     /// </summary>

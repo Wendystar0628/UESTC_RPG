@@ -5,9 +5,9 @@ namespace Campus.Hud.Map;
 public enum AtlasTab { Layers, Index }
 
 /// <summary>
-/// 大地图（SYS-ATLAS §4、UI-VISUAL §8.4）：背后 scrim，标题行（图名中英、MAP 01/01、季节·钟点·天气、[收起 M]），
+/// 大地图（SYS-ATLAS、UI-VISUAL）：背后 scrim，标题行（图名中英、MAP 01/01、季节·钟点·天气、[收起 M]），
 /// 左栏 320（图层｜目录两页）锚在 (32, 104)，地图纸 1512×900 锚在 (376, 104)。大页，随昼夜主题。
-/// 控件在扉页之后预建、隐藏（SYS-ATLAS §4.1）；全部约 20 个 Control（≤ 120）。
+/// 控件在扉页之后预建、隐藏（SYS-ATLAS）；全部约 20 个 Control（≤ 120）。
 /// </summary>
 public partial class AtlasPage : Control
 {
@@ -106,7 +106,7 @@ public partial class AtlasPage : Control
         var t = _ctx.Page;
         var m = _ctx.Style.Metrics;
         DrawRect(new Rect2(Vector2.Zero, Size), t.Scrim);
-        // 标题行：思源黑体 Light 30（+0.2 em）加一行 mono-caps（UI-VISUAL §8.4）
+        // 标题行：思源黑体 Light 30（+0.2 em）加一行 mono-caps（UI-VISUAL）
         var title = _ctx.Style.Fonts["map.title"];
         var caps = _ctx.Style.Fonts["mono-caps"];
         var small = _ctx.Style.Fonts["small"];

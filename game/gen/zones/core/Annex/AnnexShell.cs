@@ -11,13 +11,13 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Annex;
 
 /// <summary>
-/// One of the library's north blocks (16e, MAP-QSH-CORE §1.1, WLD-INTERIORS §17: closed, shell plus window cards). The
+/// One of the library's north blocks (16e, MAP-QSH-CORE, WLD-INTERIORS: closed, shell plus window cards). The
 /// blocks continue the library's own language so the group reads as one building: beige stone walls on the library's
 /// floor lines, the light stone plinth band and a string course at every floor line, parapets with the same chamfered
 /// coping, reveals and sills of the library's openings. The court blocks (8406, 8408) and the north-west link (8409,
 /// 8410) carry the library's ribbon windows; the north annex (8403, offices and stacks) has punched windows stacked on one
 /// bay grid, rainwater pipes, roof units and one closed glass door with a stone canopy on its long street face. The low
-/// block's roof is the 3F G terrace (MAP-QSH-LIBRARY §9), paved like the library's 2F terrace.
+/// block's roof is the 3F G terrace (MAP-QSH-LIBRARY), paved like the library's 2F terrace.
 /// <para>Windows: one grid <see cref="WindowKey"/> per block, <see cref="Columns"/> × storeys, on the library's channel.</para>
 /// </summary>
 public sealed class AnnexShell : ICorePiece, IWindowedPiece
@@ -320,7 +320,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     // ------------------------------------------------------------------ collision
 
     /// <summary>
-    /// Ground walls block to 300 m (roofs are out of reach, MAP-QSH-CORE §8.2); the closed door's bay is a DoorClosed wall.
+    /// Ground walls block to 300 m (roofs are out of reach, MAP-QSH-CORE); the closed door's bay is a DoorClosed wall.
     /// The low block's G terrace is walkable from the library's 3F: a stone slab, its parapet blocking to 1.5 m above it.
     /// </summary>
     public IReadOnlyList<Collider> Collide()

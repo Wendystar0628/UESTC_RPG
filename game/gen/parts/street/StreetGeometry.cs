@@ -135,10 +135,10 @@ public sealed class PartBuilder
     }
 }
 
-/// <summary>Vertex flag bits of the VF-A COLOR byte (ENG-PERF §1.5).</summary>
+/// <summary>Vertex flag bits of the VF-A COLOR byte (ENG-PERF).</summary>
 public static class VertexFlag
 {
-    /// <summary>Pieces under 0.25 m (and thin inserts) stay out of the shadow pass (ART-MODELING §7.8).</summary>
+    /// <summary>Pieces under 0.25 m (and thin inserts) stay out of the shadow pass (ART-MODELING).</summary>
     public const byte NoShadow = 8;
 }
 
@@ -258,7 +258,7 @@ public static class Shapes
 
     /// <summary>
     /// One flat, single-sided quad (corners in order) facing <paramref name="normal"/>: face geometry for print and pictograms
-    /// (ART-MODELING §7.5), not a solid. Two triangles.
+    /// (ART-MODELING), not a solid. Two triangles.
     /// </summary>
     public static PartGeometry FlatQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, ToonSpec material)
     {
@@ -390,7 +390,7 @@ internal sealed class MeshWriter(ToonSpec material)
 /// <summary>Shared LOD table, bounds and validation helpers.</summary>
 public static class Levels
 {
-    /// <summary>One entry per listed level; levels left out are not drawn (ART-MODELING §7.8: L2 keeps identity pieces only).</summary>
+    /// <summary>One entry per listed level; levels left out are not drawn (ART-MODELING: L2 keeps identity pieces only).</summary>
     public static IReadOnlyDictionary<LodLevel, Func<T, PartGeometry>> Of<T>(Func<T, LodLevel, PartGeometry> build, params LodLevel[] levels)
     {
         var table = new SortedDictionary<LodLevel, Func<T, PartGeometry>>();

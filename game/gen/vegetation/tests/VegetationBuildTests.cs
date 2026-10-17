@@ -98,7 +98,7 @@ public sealed class VegetationBuildTests
         Console.WriteLine($"{far.Id}: far stand-in {standTriangles} triangles, L1 {VegetationPrototypes.Triangles(l1)}");
         Check(stand.Id != l1.Id && stand.Surfaces.Count == 2 && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
             && stand.Surfaces[1].Material.Spec.Kind == ToonKind.VegCard && standTriangles <= 200,
-            "the mainline far stand-in is a trunk and a mass crown within 200 triangles (ENG-PERF §9 L2: 150–300)");
+            "the mainline far stand-in is a trunk and a mass crown within 200 triangles (ENG-PERF L2: 150–300)");
         Check(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Catalog!).Surfaces.Count == 1, "one shadow proxy surface");
     }
 
@@ -147,7 +147,7 @@ public sealed class VegetationBuildTests
     [TestCase]
     public void OnlyTheKernelMakesEngineInstances()
     {
-        // ENG-ARCH §2 (G4 / arch rules): WP-23 code hands geometry over; it never creates engine instances itself.
+        // ENG-ARCH (G4 / arch rules): WP-23 code hands geometry over; it never creates engine instances itself.
         var root = Data.Value.Root;
         string[] banned = ["MultiMeshInstance3D", "MeshInstance3D", "RenderingServer.InstanceCreate", "RenderingServer.Multimesh", "MeshCreate"];
         foreach (var dir in new[] { Path.Combine(root, "game", "gen", "vegetation"), Path.Combine(root, "game", "systems", "vegetation") })

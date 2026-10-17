@@ -9,8 +9,8 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Sky;
 
 /// <summary>
-/// WP-40 all-day sky (ART-SKYLIGHT §4, §5.3; SYS-WEATHER §5, §7). Owns the Sky resource and its material,
-/// the global texture cloud_noise and the globals stars and cloud (ENG-PERF §1.5).
+/// WP-40 all-day sky (ART-SKYLIGHT; SYS-WEATHER). Owns the Sky resource and its material,
+/// the global texture cloud_noise and the globals stars and cloud (ENG-PERF).
 /// Inputs: IWorldState (world time, anim time, weather vector) and IColorScriptFrame (star visibility, cloud cover);
 /// colours come from the palette texture inside the shader. Nothing is read back from shader globals.
 /// </summary>
@@ -50,7 +50,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
                 ProcessMode = Godot.Sky.ProcessModeEnum.Incremental,
             };
         }
-        // cloud_noise 只算一次，放在工作线程里；做完以后在主线程上传（ENG-PERF §1.5：静态全局纹理）
+        // cloud_noise 只算一次，放在工作线程里；做完以后在主线程上传（ENG-PERF：静态全局纹理）
         var seed = StableHash.Hash32(0u, "sky", "cloud_noise");
         _noiseJob = Task.Run(() => CloudNoise.Generate(seed));
         TryAttach();
@@ -96,7 +96,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         RenderingServer.GlobalShaderParameterSet(ShaderNames.Cloud,
             new Vector4(drift.X, drift.Y, Clamp01(weather.CloudType), Clamp01(weather.Cb)));
 
-        // 星空：色彩脚本给的可见度，再按阴度与雾淡出；被云挡住的部分在着色器里逐像素处理（ART-SKYLIGHT §4.7）
+        // 星空：色彩脚本给的可见度，再按阴度与雾淡出；被云挡住的部分在着色器里逐像素处理（ART-SKYLIGHT）
         var stars = Clamp01(frame.Stars) * (1f - Clamp01(weather.Overcast))
             * (1f - SmoothStep(1f, SkyTuning.StarsFogHide, weather.Fog));
         RenderingServer.GlobalShaderParameterSet(ShaderNames.Stars, stars);
@@ -119,7 +119,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
     /// <summary>
     /// cloud.xy = f(world time) + g(anim time), wrapped so float precision holds over long saves.
-    /// World time only grows, so clouds never run backwards; fast flow turns f into a time-lapse (ART-SKYLIGHT §4.5).
+    /// World time only grows, so clouds never run backwards; fast flow turns f into a time-lapse (ART-SKYLIGHT).
     /// </summary>
     public static Vector2 Drift(double worldHours, double animTime, CloudDrift drift)
     {
@@ -161,7 +161,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         var environment = GetViewport()?.FindWorld3D()?.Environment;
         if (environment is null) return;
         // 字段边界（Opus 定案）：本节点只写 BackgroundMode 和 Sky。环境光源、反射源、雾、Glow、Tonemap、
-        // Adjustment 等归 WP-05 / WP-01，一概不碰（ENG-BUDGET §10"Environment 与 Sky"）。
+        // Adjustment 等归 WP-05 / WP-01，一概不碰（ENG-BUDGET"Environment 与 Sky"）。
         environment.Sky = _sky;
         environment.BackgroundMode = Godot.Environment.BGMode.Sky;
         _environment = environment;

@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Hud.Pages;
 
 /// <summary>
-/// 存档页（UI-VISUAL §7.9、§8.7、SYS-SAVE）：全屏大页，随主题，背后 scrim；三个存档位画成"存储模组"卡（400×212，切角 10，底边 16 根接点）。
+/// 存档页（UI-VISUAL、SYS-SAVE）：全屏大页，随主题，背后 scrim；三个存档位画成"存储模组"卡（400×212，切角 10，底边 16 根接点）。
 /// 只读 ISaveService 的存档位列表和缩略图；写入只经 IAppFlow（开始页里"继续 / 读取 / 新游戏"）。打开期间 LockInput(Menu)。
 /// </summary>
 public partial class SavePage : Control

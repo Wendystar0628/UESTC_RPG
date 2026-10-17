@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.West;
 
 /// <summary>
-/// Every tunable value of the west zone in one place, for review (WF-FLOW §4): materials as colour names, and the
+/// Every tunable value of the west zone in one place, for review (WF-FLOW): materials as colour names, and the
 /// dimensions of each site. Coordinates are world (x, z) in metres from the OSM footprints in campus.json. Values marked
 /// "初值" are starting values awaiting the main session's call. 19b and 19c add their own nested classes after these.
 /// </summary>
@@ -15,8 +15,8 @@ public static class WestTune
     public const int BudgetDrawCalls = 20;
 
     /// <summary>
-    /// Window numbering (contract-29): 六号's stone blocks follow the lab curve (about 0.3 all night, SYS-TIME §6) with
-    /// W-LAB : W-OFF = 7 : 3 (WLD-INTERIORS §5.1: 5 office, 6 lab), as the research family elsewhere; the zone stays quiet at night.
+    /// Window numbering (contract-29): 六号's stone blocks follow the lab curve (about 0.3 all night, SYS-TIME) with
+    /// W-LAB : W-OFF = 7 : 3 (WLD-INTERIORS: 5 office, 6 lab), as the research family elsewhere; the zone stays quiet at night.
     /// </summary>
     public static class Windows
     {
@@ -26,13 +26,13 @@ public static class WestTune
         public const int OfficeShare = 3;
     }
 
-    /// <summary>Materials (ART-STYLE §8 colour names only).</summary>
+    /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
             new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
 
-        /// <summary>六号's dry-hung stone: pale warm grey (浅暖灰石材, MAP-QSH-WEST §1.3).</summary>
+        /// <summary>六号's dry-hung stone: pale warm grey (浅暖灰石材, MAP-QSH-WEST).</summary>
         public static readonly ToonSpec Stone = S("stone.beige", ToonFx.BevelLift);
         /// <summary>Copings, sills, soffit fascias and column caps: grey-white, fine lines so trims do not hatch the facade.</summary>
         public static readonly ToonSpec Trim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
@@ -47,9 +47,9 @@ public static class WestTune
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>The campus red (equip.fireRed, Opus review 10:07): 六号's emblem and the motto's lacquered characters.</summary>
         public static readonly ToonSpec Red = S("equip.fireRed", ToonFx.None, LineClass.None, 0.3f);
-        /// <summary>The silver characters under the emblem: brushed metal with a rim and an anisotropic band (ART-STYLE §2).</summary>
+        /// <summary>The silver characters under the emblem: brushed metal with a rim and an anisotropic band (ART-STYLE).</summary>
         public static readonly ToonSpec Silver = S("roof.silverMetal", ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.5f);
-        /// <summary>The motto stone: one rough cream-white boulder (米白粗粝块面石, MAP-QSH-WEST §2.2), faceted normals.</summary>
+        /// <summary>The motto stone: one rough cream-white boulder (米白粗粝块面石, MAP-QSH-WEST), faceted normals.</summary>
         public static readonly ToonSpec CreamStone = S("wall", ToonFx.BevelLift);
         /// <summary>
         /// 深蓝玻璃 (19b): 四号's entrance boxes, the campus tech blue as glass (streaked, glaring), so the boxes read blue and
@@ -72,7 +72,7 @@ public static class WestTune
         public static readonly ToonSpec Deck = S("panel.brown", ToonFx.Mottle | ToonFx.BevelLift, LineClass.Fine, 0.7f);
         /// <summary>Boardwalk stringers, rail posts and piles: the same timber a step darker, so the deck edge reads as a clean line.</summary>
         public static readonly ToonSpec DeckDark = S("base.warmBrown", ToonFx.BevelLift, LineClass.Fine, 0.7f);
-        /// <summary>The low boardwalk lamp's body (深灰色圆柱灯, MAP-QSH-ADDITIONS §2.5): dark grey, fine lines.</summary>
+        /// <summary>The low boardwalk lamp's body (深灰色圆柱灯, MAP-QSH-ADDITIONS): dark grey, fine lines.</summary>
         public static readonly ToonSpec LampBody = S("roof.grey", ToonFx.BevelLift, LineClass.Fine, 0.6f);
         /// <summary>Frosted lamp lenses: pale grey-white; the light itself is the module's lamp emitter (contract-12).</summary>
         public static readonly ToonSpec LampLens = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.2f);
@@ -87,7 +87,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 六号科研楼 (MAP-QSH-WEST §1), named by the OSM blocks A, B and C. Three claimed entities: A and B are their own entities;
+    /// 六号科研楼 (MAP-QSH-WEST), named by the OSM blocks A, B and C. Three claimed entities: A and B are their own entities;
     /// the C block, the two links and the north tower are the parts of qsh:relation:14153711 (the duplicate C shell
     /// qsh:way:779496166 is hidden in overlay/west.d/). Every block stands on a two-storey glass base set back under the
     /// stone (底层两层通高、向内退的深色玻璃幕墙), with deep square windows above and one dark louvre strip per floor.
@@ -128,7 +128,7 @@ public static class WestTune
         public const float MullionPitch = 1.5f;
 
         /// <summary>
-        /// C 区东门 (WLD-INTERIORS §2.6, interiors.json six.c.east): door centre on the stone line, facing 77°, floor ±0 as the
+        /// C 区东门 (WLD-INTERIORS, interiors.json six.c.east): door centre on the stone line, facing 77°, floor ±0 as the
         /// entrance record says. A glass vestibule reaches from the set-back glass out to the stone line; its doors stand open.
         /// </summary>
         public static readonly Vector2 EastDoor = new(-588.3f, 230f);
@@ -152,7 +152,7 @@ public static class WestTune
         public const float ShutDoorHeight = 2.6f;
 
         /// <summary>
-        /// The crown sign on C's east face (§1.2, ART-STYLE §11), centred on the face above the door: a solid stone panel over the
+        /// The crown sign on C's east face (§1.2, ART-STYLE), centred on the face above the door: a solid stone panel over the
         /// top two storeys rising above the parapet, the red emblem at its head, a line of silver characters below and a thin
         /// English line under them. Text slots are blank until the scene text atlas (contract-26): 楼顶"基础与前沿研究院"加一行英文.
         /// </summary>
@@ -186,7 +186,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 校训石 (MAP-QSH-WEST §2): one cream-white boulder lying on its side, about 2 m high and 6.6 m long, in front of
+    /// 校训石 (MAP-QSH-WEST): one cream-white boulder lying on its side, about 2 m high and 6.6 m long, in front of
     /// 六号's C east door; its dressed face turns toward P10 (−515, 250) so the red characters read from the drop point.
     /// </summary>
     public static class Motto
@@ -219,10 +219,10 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 四号科研楼 (MAP-QSH-WEST §6): the three courtyard blocks are WP-14's (family research, overlay/west.d/ style); this
+    /// 四号科研楼 (MAP-QSH-WEST): the three courtyard blocks are WP-14's (family research, overlay/west.d/ style); this
     /// zone adds what the rules cannot: each block's entrance, a two-storey deep-blue glass box in a white door frame with a
-    /// sign band (§6.3), shut (WLD-INTERIORS §5.2: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
-    /// on its outer arc (MAP-QSH-TERRAIN §10.2; the lawn's dish is west.terrain.json's basin).
+    /// sign band (§6.3), shut (WLD-INTERIORS: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
+    /// on its outer arc (MAP-QSH-TERRAIN; the lawn's dish is west.terrain.json's basin).
     /// </summary>
     public static class Four
     {
@@ -261,14 +261,14 @@ public static class WestTune
             [new(-361f, -259f), new(-360f, -271f), new(-359f, -282f), new(-357f, -291f), new(-353f, -300f)],
             [new(-343f, -316f), new(-334f, -324f), new(-326f, -330f), new(-320f, -333f), new(-315f, -334f), new(-311f, -334.5f)],
         ];
-        /// <summary>The dish centre the arcs are inset toward (MAP-QSH-TERRAIN §10.2: about (−324, −275), radius 32, 0.45 deep).</summary>
+        /// <summary>The dish centre the arcs are inset toward (MAP-QSH-TERRAIN: about (−324, −275), radius 32, 0.45 deep).</summary>
         public static readonly Vector2 LawnCentre = new(-324f, -275f);
         public const float LawnRadius = 32f, LawnDepth = 0.45f;
         public const float SeatInset = 0.8f, SeatHeight = 0.45f, SeatWidth = 0.5f, SeatCap = 0.08f;
     }
 
     /// <summary>
-    /// 创新中心 (MAP-QSH-WEST §3, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are WP-14's
+    /// 创新中心 (MAP-QSH-WEST, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are WP-14's
     /// (research, with its rooftop plant enclosure and stair penthouses under the main coping); this zone builds the dark glass
     /// stair shafts where the wings meet the bars (§3.3) and the main entrance frame on the east wing's face to the parking
     /// square, with the slot for the red-brown calligraphy sign (§3.2) left blank until contract-26.
@@ -306,7 +306,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// A10 湿地 (MAP-QSH-WEST §12 锚点表; 设计增补): a small paved plaza at the boardwalk's south mouth, where the wetland loop
+    /// A10 湿地 (MAP-QSH-WEST 锚点表; 设计增补): a small paved plaza at the boardwalk's south mouth, where the wetland loop
     /// path meets the stone-bridge approach (−239.8, −155.1), on dry ground east of the low ground. The post stands on the
     /// plaza's east edge facing 250° over the reeds, so its warm lamp falls on the paving and leaves the water side dark.
     /// </summary>
@@ -324,7 +324,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 湿地栈道 (MAP-QSH-WEST §10.2, §12; 19c): a timber boardwalk through the wetland low ground east of the levee and the wetland
+    /// 湿地栈道 (MAP-QSH-WEST; 19c): a timber boardwalk through the wetland low ground east of the levee and the wetland
     /// stream, from the A10 plaza (south mouth) to the footway at the 西门车行桥's east head (north mouth), on the main network.
     /// No OSM line: the route is drawn here (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
@@ -349,16 +349,16 @@ public static class WestTune
         public const float Sill = 0.6f;
         /// <summary>Stringers along both edges (收边): width, depth below the deck top.</summary>
         public const float StringerWidth = 0.09f, StringerDepth = 0.30f;
-        /// <summary>Railing (SYS-WALK §7: waterside rails ≥ 1.05 m, barrier top 1.5 m): posts, handrail, one mid rail.</summary>
+        /// <summary>Railing (SYS-WALK: waterside rails ≥ 1.05 m, barrier top 1.5 m): posts, handrail, one mid rail.</summary>
         public const float RailHeight = 1.05f, RailBarrier = 1.5f, PostSize = 0.10f, PostPitch = 2.0f, RailInset = 0.06f;
         public const float HandrailWidth = 0.14f, HandrailDepth = 0.07f, MidRail = 0.5f, MidRailSize = 0.05f;
         /// <summary>Piles under the deck: pitch along the route, radius, how deep they go into the mud.</summary>
         public const float PilePitch = 3.0f, PileRadius = 0.085f, PileSink = 0.4f;
-        /// <summary>Colliders: the deck in 2 m slabs (SYS-WALK §13), this thick under the deck top.</summary>
+        /// <summary>Colliders: the deck in 2 m slabs (SYS-WALK), this thick under the deck top.</summary>
         public const float SlabLength = 2.0f, SlabThick = 0.2f;
 
         /// <summary>
-        /// Low boardwalk lamps (低位步道灯, §10.1, MAP-QSH-ADDITIONS §2.5 adapted to a deck): dark grey round columns 0.62 m high
+        /// Low boardwalk lamps (低位步道灯, §10.1, MAP-QSH-ADDITIONS adapted to a deck): dark grey round columns 0.62 m high
         /// on the deck edge away from the stream, a frosted band under the cap throwing light down on the planks; every 16 m.
         /// Both water sides stay dark for the fireflies; the emitter is landscape grade (lamp.landscape) with a short pool. 初值.
         /// </summary>
@@ -389,7 +389,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 渠堤台阶 (19a 接续; MAP-QSH-TERRAIN §6.3 "短陡、长缓"): where the stone-bridge footway (692240861) and the lake-mouth
+    /// 渠堤台阶 (19a 接续; MAP-QSH-TERRAIN "短陡、长缓"): where the stone-bridge footway (692240861) and the lake-mouth
     /// path (544161583) leave the +0.9 levee top, a flight of stone garden steps runs down the levee's 1:3 east flank to the 0 m
     /// path (the 5 % ramps at the levee's two ends are the long way). Built from the terrain itself: the flight spans the flank
     /// between the crest edge and the slope foot along the path, and is left out where the ground has no rise (flat stub).
@@ -409,7 +409,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 西门桥头候车亭 (MAP-QSH-WEST §10.3, §11 天气要点): the OSM shelter footprint qsh:way:604832425 (14 × 3.2 m, west of the
+    /// 西门桥头候车亭 (MAP-QSH-WEST 天气要点): the OSM shelter footprint qsh:way:604832425 (14 × 3.2 m, west of the
     /// bridgehead service road) built here instead of WP-14's box: a raised granite platform, slim aluminium posts along the
     /// back, a thin flat roof cantilevered over the platform with front and back eaves (rain curtains hang from both), a glass
     /// back screen, a timber bench, a downlight strip under the roof. Open to the road (east). The stop sign is WP-13's.
@@ -433,7 +433,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 国防科技园石刻 (MAP-QSH-WEST §9.1): one rough-hewn white lying stone in the green wedge north of the bridgehead junction,
+    /// 国防科技园石刻 (MAP-QSH-WEST): one rough-hewn white lying stone in the green wedge north of the bridgehead junction,
     /// its inscribed face turned south-south-west toward the junction (bearing 200°), so the low evening sun rakes it and it reads from the
     /// west gate road. The inscription "国防科技园" (墨绿行书) is left blank until the scene text atlas (contract-26). The
     /// WP-28 bridge-head stone (design:waterfront-stone-ximen, −238.4, −411.9) stands 14 m away across the road.
@@ -445,7 +445,7 @@ public static class WestTune
         public const float Facing = 200f;
         /// <summary>Scale of the motto stone's faceted body: about 3.0 × 1.15 m in plan and 1.1 m high.</summary>
         public static readonly Vector3 Scale = new(0.45f, 0.62f, 0.62f);
-        /// <summary>Its box collider (SYS-WALK §13): length, depth and height.</summary>
+        /// <summary>Its box collider (SYS-WALK): length, depth and height.</summary>
         public const float Length = 3.0f, Depth = 1.2f, Height = 1.1f;
     }
 }

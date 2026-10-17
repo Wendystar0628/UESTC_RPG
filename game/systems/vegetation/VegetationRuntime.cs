@@ -13,7 +13,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Vegetation;
 
 /// <summary>
-/// WP-23's vegetation runtime (WLD-VEGETATION §11.3–§11.4, ENG-PERF §9). On map load a worker takes the module's L0
+/// WP-23's vegetation runtime (WLD-VEGETATION, ENG-PERF). On map load a worker takes the module's L0
 /// instance streams (<see cref="VegetationModule.Build"/>, every planted tree once, grouped by mother model) and the
 /// shared prototypes of every pool; the main thread then asks the kernel's instance pools (<see cref="IInstancePoolHost"/>)
 /// for one pool per mother model and pool: L0+, L0, L1 and far on layer 4 without shadows, and the ShadowsOnly proxy on
@@ -27,7 +27,7 @@ namespace Campus.Systems.Vegetation;
 public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation
 {
     private const string ModuleId = "vegetation";
-    private const uint VisibleLayer = 1u << 3;   // layer 4: vegetation visible geometry (ENG-PERF §4)
+    private const uint VisibleLayer = 1u << 3;   // layer 4: vegetation visible geometry (ENG-PERF)
     private const uint ProxyLayer = 1u << 4;     // layer 5: ShadowsOnly proxies
     private const double Interval = 0.1;         // re-bucket at most 10 Hz
     private const int MountsPerFrame = 8;        // mother models mounted per frame after loading

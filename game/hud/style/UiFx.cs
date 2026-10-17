@@ -11,7 +11,7 @@ public static class UiFlags
 }
 
 /// <summary>
-/// 一个控件的 instance uniform（UI-VISUAL §11.5）：底色、边、内容色、flags、切角、外扩、悬停、焦点、流光、量化、常驻固定深屏、附加参数。
+/// 一个控件的 instance uniform（UI-VISUAL）：底色、边、内容色、flags、切角、外扩、悬停、焦点、流光、量化、常驻固定深屏、附加参数。
 /// 色只写色名（ui.json 的主题令牌），下标由 <see cref="UiTokens.Role"/> 换算。
 /// </summary>
 public record struct UiFx(

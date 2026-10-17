@@ -5,7 +5,7 @@ using static Campus.Style.Palette.Keys.FrameLayout;
 namespace Campus.Style.Palette.Keys;
 
 /// <summary>
-/// SYS-TIME §2 art sun, mirroring WP-34's ArtEphemeris (including its autumn 17:30 = 5.5° calibration). The live frame reads
+/// SYS-TIME art sun, mirroring WP-34's ArtEphemeris (including its autumn 17:30 = 5.5° calibration). The live frame reads
 /// IWorldState.Sun.AltDeg; this class only supplies the side of the arc, the noon cap, and altitudes for IPaletteProbe hours.
 /// </summary>
 public static class ArtSun
@@ -35,7 +35,7 @@ public static class ArtSun
             var u = (c - rise) / (set - rise);
             var sine = Math.Sin(Math.PI * u);
             var h = cap * Math.Pow(Math.Max(0.0, sine), Exponent);
-            // WP-34 ArtEphemeris autumn calibration: autumn 17:30 is exactly 5.5° (SYS-TIME §2).
+            // WP-34 ArtEphemeris autumn calibration: autumn 17:30 is exactly 5.5° (SYS-TIME).
             if (season == Season.Autumn) h += HeroDelta * sine * (1.0 - sine) / (HeroSine * (1.0 - HeroSine));
             return (h, u < 0.5 ? KeySide.Dawn : KeySide.Dusk);
         }
@@ -68,7 +68,7 @@ public static class ArtSun
     }
 }
 
-/// <summary>Autumn base keyframes + seasonal deltas and overrides (SYS-TIME §3.3; seasons.json).</summary>
+/// <summary>Autumn base keyframes + seasonal deltas and overrides (SYS-TIME; seasons.json).</summary>
 public static class SeasonComposer
 {
     public static string SeasonKey(Season s) => s switch
@@ -201,7 +201,7 @@ public static class SeasonComposer
 }
 
 /// <summary>
-/// Periodic monotone cubic Hermite (Fritsch–Butland) over the 12 anchors of one season (SYS-TIME §3.1):
+/// Periodic monotone cubic Hermite (Fritsch–Butland) over the 12 anchors of one season (SYS-TIME):
 /// colours in OKLab; segments whose hue swings more than 40° take an OKLCH path (sky bands over 60° go through magenta);
 /// intensity and fog in the log domain. Mirrors DayCurve in pipeline/colorscript/colorscript.py.
 /// </summary>
@@ -301,7 +301,7 @@ public sealed class DayCurve
         return outF;
     }
 
-    /// <summary>Blend two frames (season axis, SYS-TIME §3.1: smootherstep); log scalars blend in the log domain.</summary>
+    /// <summary>Blend two frames (season axis, SYS-TIME: smootherstep); log scalars blend in the log domain.</summary>
     public static FrameVector Blend(FrameVector a, FrameVector b, double t)
     {
         var f = new FrameVector();
@@ -313,7 +313,7 @@ public sealed class DayCurve
     }
 }
 
-/// <summary>Weather correction layer (SYS-WEATHER §7, weather.json). Clear weather leaves the frame untouched.</summary>
+/// <summary>Weather correction layer (SYS-WEATHER, weather.json). Clear weather leaves the frame untouched.</summary>
 public static class WeatherCorrection
 {
     public static bool IsClear(in WeatherVec w) => w.Overcast == 0f && w.Precip == 0f && w.Wet == 0f;
@@ -356,7 +356,7 @@ public static class WeatherCorrection
         v[CloudAmount] = Math.Max(v[CloudAmount] * (1.0 - g), w.Cloud);
     }
 
-    /// <summary>Rainy vegetation chroma +15% (SYS-WEATHER §2), continuous in precipitation and wetness.</summary>
+    /// <summary>Rainy vegetation chroma +15% (SYS-WEATHER), continuous in precipitation and wetness.</summary>
     public static double VegetationChromaMul(JsonElement weather, in WeatherVec w)
     {
         var p = w.Precip * (1.0 - w.PrecipKind);

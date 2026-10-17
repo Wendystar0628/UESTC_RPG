@@ -4,9 +4,9 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 大地图的地图纸（SYS-ATLAS §4.1–§4.2）：1512×900，锚在 (376, 104)，左上切角 14。
+/// 大地图的地图纸（SYS-ATLAS）：1512×900，锚在 (376, 104)，左上切角 14。
 /// 0.4–3.0 px/m 连续缩放，滚轮一格 ×1.25、以光标为中心、220 ms 缓动；左键拖动、WASD 或方向键每秒 600 px 平移。
-/// 拖动只改两个层的 Position；缩放档变化时重画（≤ 10 Hz），缩放动画中层按比例 Scale（SYS-ATLAS §10）。
+/// 拖动只改两个层的 Position；缩放档变化时重画（≤ 10 Hz），缩放动画中层按比例 Scale（SYS-ATLAS）。
 /// </summary>
 public partial class AtlasPaper : Control
 {
@@ -133,7 +133,7 @@ public partial class AtlasPaper : Control
         Markers.Follow(_view, PaperSize);
     }
 
-    /// <summary>贝塞尔 (.2, .7, .2, 1)：不回弹的缓出（UI-VISUAL §9）。</summary>
+    /// <summary>贝塞尔 (.2, .7, .2, 1)：不回弹的缓出（UI-VISUAL）。</summary>
     private static float Ease(float x)
     {
         float lo = 0, hi = 1;

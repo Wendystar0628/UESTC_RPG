@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.DesignBoundary;
 
 /// <summary>
-/// Every tunable value of the campus boundary and its gates in one place, for review (WF-FLOW §4): materials as colour
+/// Every tunable value of the campus boundary and its gates in one place, for review (WF-FLOW): materials as colour
 /// names, the gate table, the fence and the gate dimensions. Coordinates are world (x, z) in metres from campus.json. Gate
 /// frames come from the data: origin where the gate road's centreline crosses the boundary ring, local X along the ring
 /// toward the guard-house side, local +Z out of the campus. Values marked "初值" await the main session's call. The ring
@@ -16,7 +16,7 @@ public static class BoundaryTune
     public const int BudgetTrianglesL1 = 16_000;
     public const int BudgetDrawCalls = 12;
 
-    /// <summary>Materials (ART-STYLE §8 colour names only, no new names in 30a or 30b).</summary>
+    /// <summary>Materials (ART-STYLE colour names only, no new names in 30a or 30b).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
@@ -34,25 +34,25 @@ public static class BoundaryTune
         /// scene text atlas (INV-4); the field stays blank until then.
         /// </summary>
         public static readonly ToonSpec PlaqueField = S("roof.grey", ToonFx.None, LineClass.Fine, 0.5f);
-        /// <summary>Fence rails: deep grey steel, the north cluster fences' colour (MAP-QSH-NORTH §4.7, ART-AMBIENCE §0.1).</summary>
+        /// <summary>Fence rails: deep grey steel, the north cluster fences' colour (MAP-QSH-NORTH, ART-AMBIENCE).</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.BevelLift, LineClass.Fine, 0.4f);
         /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching.</summary>
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);
         /// <summary>Turnstile and barrier cabinets, window frames: brushed stainless.</summary>
         public static readonly ToonSpec Stainless = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
-        /// <summary>Barrier arm and the waterside railing: light painted steel (MAP-QSH-WEST §10.4 浅色栏杆).</summary>
+        /// <summary>Barrier arm and the waterside railing: light painted steel (MAP-QSH-WEST 浅色栏杆).</summary>
         public static readonly ToonSpec LightSteel = S("wall.greyWhite", ToonFx.None, LineClass.Fine, 0.4f);
         public static readonly ToonSpec LightBar = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.4f);
         public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
         { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
         public static readonly ToonSpec Door = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
-        /// <summary>Clipped hedge inside the fence (MAP-QSH-ADDITIONS §2.11 方整绿篱): seasonal hedge colour, soft shading.</summary>
+        /// <summary>Clipped hedge inside the fence (MAP-QSH-ADDITIONS 方整绿篱): seasonal hedge colour, soft shading.</summary>
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
         { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree };
     }
 
     /// <summary>
-    /// Boundary fence (MAP-QSH-ADDITIONS §2.11, WLD-OUTSKIRTS §7.1): the north cluster fence's iron language — deep grey 25 mm
+    /// Boundary fence (MAP-QSH-ADDITIONS, WLD-OUTSKIRTS): the north cluster fence's iron language — deep grey 25 mm
     /// bars at 0.14 m between a bottom and a top rail — hung between light grey 0.5 m stone pillars every ≤ 3.6 m, on a low
     /// granite base course; a 1.2 m clipped hedge inside where the strip allows. The fence's outer face sits on the ring.
     /// </summary>
@@ -75,7 +75,7 @@ public static class BoundaryTune
     }
 
     /// <summary>
-    /// Campus gate (WLD-OUTSKIRTS §7.1, MAP-QSH-NORTH §8, MAP-QSH-WEST §12): two stone piers flank the carriageway, the barrier
+    /// Campus gate (WLD-OUTSKIRTS, MAP-QSH-NORTH, MAP-QSH-WEST): two stone piers flank the carriageway, the barrier
     /// arm is down, the turnstile bank beside the island is closed, and the guard house closes the line on the far side. The
     /// left pier (seen from the street) carries the name plaque. Local X along the ring toward the guard house, +Z outward.
     /// </summary>
@@ -95,7 +95,7 @@ public static class BoundaryTune
         /// <summary>Guard house (值班室): flat-roofed grey stone room closing the line beyond the turnstiles.</summary>
         public const float HouseGap = 0.07f, HouseWidth = 4.0f, HouseDepth = 3.4f, HouseHeight = 3.3f, HouseFront = -0.1f;
         public const float HousePlinth = 0.45f, HouseRoof = 0.34f, HouseEave = 0.4f, WindowSill = 1.0f, WindowHead = 2.5f;
-        /// <summary>Collision tops: turnstiles and arm at least 1.5 m; the gate's invisible top-up over the lane to 2.2 m (SYS-WALK §7).</summary>
+        /// <summary>Collision tops: turnstiles and arm at least 1.5 m; the gate's invisible top-up over the lane to 2.2 m (SYS-WALK).</summary>
         public const float LowTop = 1.5f, LaneTop = 2.2f;
     }
 
@@ -107,7 +107,7 @@ public static class BoundaryTune
     /// <paramref name="Mirror"/> puts the guard house on the street view's left (local −X) when the right is taken (东南口:
     /// 走马河 leaves the campus 9 m to the right). <paramref name="Plaque"/>: the lone pier carries the name plaque (题字载体).
     /// <paramref name="Wicket"/>: local x (before mirroring) of a footway beside the lone pier, closed by its own turnstile bank
-    /// (人行便门, MAP-QSH-ADDITIONS §2.11). <paramref name="Locker"/>: local (x, z) of a delivery locker inside, by the fence.
+    /// (人行便门, MAP-QSH-ADDITIONS). <paramref name="Locker"/>: local (x, z) of a delivery locker inside, by the fence.
     /// </summary>
     public sealed record GateSpec(string Key, string Name, string Road, bool Closure, string? Forecourt, Vector2[] Bollards,
         bool Mirror = false, bool Plaque = true, float? Wicket = null, Vector2? Locker = null);
@@ -158,7 +158,7 @@ public static class BoundaryTune
     public static readonly Detour[] Detours = [new("north-tip", "qsh:source:way:723349816", 0.9f)];
 
     /// <summary>
-    /// River grate (拦污格栅, WLD-OUTSKIRTS §7.3, MAP-QSH-ADDITIONS §2.11) wherever water crosses the ring: deep grey flat bars
+    /// River grate (拦污格栅, WLD-OUTSKIRTS, MAP-QSH-ADDITIONS) wherever water crosses the ring: deep grey flat bars
     /// across the full channel between the fence's end pillars on the two bank tops, from below the bed to 1.5 m above the bank,
     /// held by a top beam and a waist rail. Collision 1.5 m above the bank top, Boundary.
     /// </summary>

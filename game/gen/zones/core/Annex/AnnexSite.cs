@@ -7,7 +7,7 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Annex;
 
 /// <summary>
-/// The library's north blocks as one plan (16e, MAP-QSH-CORE §1.1): every block of the library, the five north blocks this
+/// The library's north blocks as one plan (16e, MAP-QSH-CORE): every block of the library, the five north blocks this
 /// zone builds and the north-east connector, bridge and store front (16f's) as covers, so a wall standing against any
 /// other block is not built. The ground-floor wall pieces of all of them close round the 宁静苑 courtyard, which is found
 /// here as the one hole of that plan next to the court wing; nothing is placed by coordinates.

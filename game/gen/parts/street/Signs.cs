@@ -7,7 +7,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Shuttle stop sign (班车站牌, WLD-LIFE §4.3): a blue board with white lettering on a grey pole. Width and Height are the board
+/// Shuttle stop sign (班车站牌, WLD-LIFE): a blue board with white lettering on a grey pole. Width and Height are the board
 /// width and the overall height. The pole stands inside the board's left edge (seen from −Z) and the board is clamped on it,
 /// centred in Z, so both faces (−Z and +Z) carry the lettering clear of the pole. Depth is the footprint and must hold the
 /// pole's flange. Lettering is the fixed title "班车" and three timetable rules; stop names wait for the scene-text atlas.
@@ -83,7 +83,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
             }
             else
             {
-                // Beyond the near level the strokes are under 4 px: one light block per label (ART-MODELING §4 "干净" 2).
+                // Beyond the near level the strokes are under 4 px: one light block per label (ART-MODELING "干净" 2).
                 var w = Lettering.Width(S.StopTitle, titleHeight) * 0.9f;
                 Lettering.Segment(b, new(u - w * 0.5f, titleY), new(u + w * 0.5f, titleY), titleHeight * 0.55f, z, isBack, ink);
             }
@@ -104,7 +104,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Green open sign (绿色开放牌, WLD-INTERIORS §4, WLD-LIFE §4.11): a white face with a green band carrying "开放" and a green
+/// Green open sign (绿色开放牌, WLD-INTERIORS, WLD-LIFE): a white face with a green band carrying "开放" and a green
 /// upward arrow (the arrow is self-lit on the signal channel, like the gate arrows it matches). Variation 0: wall plate — Width ×
 /// Height × Depth is the plate, origin at its bottom centre, back on +Z (the wall), visual only. Variation 1: free-standing
 /// sign by the door — Width is the panel, Height the overall height, Depth the base; collision is one thin box, Metal.
@@ -188,8 +188,8 @@ public sealed class OpenSignPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Entrance mat (地垫, WLD-INTERIORS §4): a dark rubber mat in a slightly lighter dark border, lying flat (Height is its
-/// thickness). Walkable: no collider; its RubberMat footstep comes from the floor or ground material grid (WLD-LIFE §5).
+/// Entrance mat (地垫, WLD-INTERIORS): a dark rubber mat in a slightly lighter dark border, lying flat (Height is its
+/// thickness). Walkable: no collider; its RubberMat footstep comes from the floor or ground material grid (WLD-LIFE).
 /// </summary>
 [Part(PartCatalog.EntranceMat, Owner = "WP-13")]
 public sealed class EntranceMatPart : IPartDef<PanelParams>

@@ -1,4 +1,4 @@
-// fx_glow.gdshader（WP-39）：加法、不受光的夜间光晕。规格：ART-STYLE §7.5、§7.6；ENG-PERF §1.4、§10.2、§10.3。
+// fx_glow.gdshader（WP-39）：加法、不受光的夜间光晕。规格：ART-STYLE；ENG-PERF。
 // 分支由材质 uniform fx_kind 选（材质库每种一份材质，不在运行时改 render_mode 或 #define）：
 //   0 窗灯光晕：贴立面的面片，边长 1.5 倍窗宽、离立面 2 cm，光晕半径不超过窗宽的一半；250 m 外淡出
 //   1 灯头光晕：朝镜头的面片；夜雾里半径 ×2
@@ -32,7 +32,7 @@ const float GLOW_LAMP_CORE = 1.0;        // 灯头亮芯的峰值（初灯时在
 const float GLOW_LAMP_DUSK = 0.85;       // 初灯时（太阳 4° 以上）灯头光晕相对入夜的比例
 const float GLOW_LAMP_MIN_ANGLE = 0.0022;  // 远处灯头光晕的最小张角（弧度），远处仍认得出一点灯
 const float GLOW_LAMP_PULL = 0.35;       // 灯头光晕朝镜头拉近，免得被灯罩几何挡住
-const float GLOW_FOG_RADIUS = 2.0;       // 夜雾里灯头光晕半径 ×2（SYS-WEATHER §2）
+const float GLOW_FOG_RADIUS = 2.0;       // 夜雾里灯头光晕半径 ×2（SYS-WEATHER）
 const int GLOW_PAL_WINDOW_WARM = 10;     // 色号与 fog.gdshaderinc 的 PAL_WINDOW_WARM、PAL_WINDOW_COOL 一致（WP-04 登记）
 const int GLOW_PAL_WINDOW_COOL = 11;
 

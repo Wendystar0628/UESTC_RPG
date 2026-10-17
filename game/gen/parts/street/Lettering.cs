@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Street;
 /// <summary>
 /// Printed stroke lettering for the few fixed labels the street parts carry (shuttle stop, open sign) and the arrow pictogram.
 /// Glyphs are straight-stroke polylines in a unit em box (x right, y up), simplified Chinese only (INV-4). Each stroke is face
-/// geometry (ART-MODELING §7.5): one flat quad, two triangles, lifted <see cref="StreetStyle.PrintLift"/> off the face, line
+/// geometry (ART-MODELING): one flat quad, two triangles, lifted <see cref="StreetStyle.PrintLift"/> off the face, line
 /// class "not drawn", out of the shadow pass. Mainline stand-in for scene text; arbitrary names (building names, place names)
 /// wait for WP-04's scene-text atlas (contract-26 review).
 /// </summary>
@@ -85,7 +85,7 @@ public static class Lettering
     }
 
     /// <summary>
-    /// Bicycle pictogram (the shared-bicycle bay's icon, the same shape as its map marker, SYS-ATLAS §5) centred on (cx, cy):
+    /// Bicycle pictogram (the shared-bicycle bay's icon, the same shape as its map marker, SYS-ATLAS) centred on (cx, cy):
     /// two octagon wheels, the frame triangle, seat and bar; <paramref name="size"/> is its width.
     /// </summary>
     public static void Bicycle(PartBuilder builder, float cx, float cy, float size, float zFace, bool back, ToonSpec material)
@@ -134,6 +134,6 @@ public static class Lettering
         builder.Add(Shapes.FlatQuad(points[0], points[1], points[2], points[3], new(0, 0, outward), Print(material)), VertexFlag.NoShadow);
     }
 
-    /// <summary>The print class of a colour: face geometry draws no line of its own (ART-MODELING §7.5).</summary>
+    /// <summary>The print class of a colour: face geometry draws no line of its own (ART-MODELING).</summary>
     public static ToonSpec Print(ToonSpec material) => material with { Line = LineClass.None, Fx = ToonFx.None };
 }

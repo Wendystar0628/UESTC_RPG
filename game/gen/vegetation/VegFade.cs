@@ -1,13 +1,13 @@
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// Which pools a tree is drawn in by its distance (WLD-VEGETATION §11.4, ENG-PERF §9; max-011 23c2c). The near pool's L1
+/// Which pools a tree is drawn in by its distance (WLD-VEGETATION, ENG-PERF; max-011 23c2c). The near pool's L1
 /// and the far stand-in (<see cref="MotherModels.FarStandIn"/>) cross-fade with complementary 4×4 Bayer dither over
 /// <see cref="NearFadeStart"/>–<see cref="NearFadeEnd"/> (veg_card and veg_trunk VEG_POOL_FADE), so a tree in that band
 /// is in both pools. Until the crown clouds (L3, merged into the tile geometry) exist, the far stand-in is drawn at every
 /// distance (<see cref="CloudReady"/>); then it fades into them over <see cref="CloudFadeStart"/>–<see cref="CloudFadeEnd"/>.
 /// Distances run from the main camera to the point half a tree height above the trunk foot and scale with the detail
-/// factor (quality.x, WLD-VEGETATION §11.8). The runtime adds its own hysteresis on top; the shaders discard whatever lies
+/// factor (quality.x, WLD-VEGETATION). The runtime adds its own hysteresis on top; the shaders discard whatever lies
 /// outside a pool's share, so a late re-bucket never shows.
 /// </summary>
 public static class VegFade

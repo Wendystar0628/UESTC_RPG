@@ -56,7 +56,7 @@ public sealed record GateLayout(PlanFrame Frame, float S, float Carriage, Bounda
 }
 
 /// <summary>
-/// A campus gate (WLD-OUTSKIRTS §7.1; MAP-QSH-NORTH §8; MAP-QSH-WEST §12): a landmark kept sturdy and clean. Two stone piers
+/// A campus gate (WLD-OUTSKIRTS; MAP-QSH-NORTH; MAP-QSH-WEST): a landmark kept sturdy and clean. Two stone piers
 /// flank the carriageway — the left one, seen from the street, carries the name plaque — the barrier arm is down, the
 /// turnstile bank beside the island is closed, and a flat-roofed grey stone guard house closes the line beyond it. A fence wing
 /// runs off each side (the ring fence, Ring.BoundaryPlan). Walk mode: every gap is under 0.5 m and the closure is Boundary.
@@ -253,7 +253,7 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : BoundarySite
             b.Place(PartCatalog.Bollard, bollard, g.At(p.X, b.Ground(g.P(p.X, p.Y)) + BoundaryTune.Plaza.PavingTop, p.Y));
     }
 
-    // ---- Collision (SYS-WALK §7, WLD-OUTSKIRTS §7.1): Boundary, gaps under 0.5 m ----
+    // ---- Collision (SYS-WALK, WLD-OUTSKIRTS): Boundary, gaps under 0.5 m ----
 
     public override void Collide(SiteColliders c)
     {

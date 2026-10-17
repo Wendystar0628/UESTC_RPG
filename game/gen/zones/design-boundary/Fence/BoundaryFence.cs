@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.DesignBoundary.Fence;
 public enum RunEnd { None, Pillar, EndPillar }
 
 /// <summary>
-/// One run of the boundary fence along a plan polyline (MAP-QSH-ADDITIONS §2.11): light grey stone pillars at every corner
+/// One run of the boundary fence along a plan polyline (MAP-QSH-ADDITIONS): light grey stone pillars at every corner
 /// and at most every <see cref="F.PillarPitch"/>, deep grey iron panels between them (bottom rail, top rail, 25 mm bars at
 /// 0.14 m standing on a granite base course), and clipped hedge pieces on their own lines inside.
 /// </summary>

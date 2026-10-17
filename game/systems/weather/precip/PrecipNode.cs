@@ -14,14 +14,14 @@ namespace Campus.Systems.Weather.Precip;
 /// ① 把天气向量换算成天气类全局参数 weather_a、weather_b、weather_fog（contract-5 第 5 条）；
 /// ② 求降水池这一帧的可见实例数与 instance uniform（PrecipModel），写进内核的动态实例池；
 /// 切图时重建 precip_occ（主线版是常量纹理）并重设降水池的 CustomAabb。
-/// 负责画面设置的"降水与粒子密度"（SYS-GRAPHICS §3）。
-/// 降水池由内核建（ENG-ARCH §2，IInstancePoolHost）：启动时就挂上、整块写一次实例缓冲，运行时只改可见数与 instance uniform。
+/// 负责画面设置的"降水与粒子密度"（SYS-GRAPHICS）。
+/// 降水池由内核建（ENG-ARCH，IInstancePoolHost）：启动时就挂上、整块写一次实例缓冲，运行时只改可见数与 instance uniform。
 /// </summary>
 [KernelNode("systems.weather.precip", Owner = "WP-45b")]
 [QualityResponsive(Owns = [QualityKnob.ParticleDensity])]
 public partial class PrecipNode : Node, IQualityAware, IMapAware
 {
-    /// <summary>降水池在 ENG-PERF §4 图层登记里的第 6 层（粒子）：相机可见、不投影、不进倒影世界。</summary>
+    /// <summary>降水池在 ENG-PERF 图层登记里的第 6 层（粒子）：相机可见、不投影、不进倒影世界。</summary>
     private const uint PoolLayers = 1u << 5;
 
     private readonly PrecipModel _model = new();
@@ -96,7 +96,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         var d = ctx.Descriptor;
         PoolBounds = PrecipModel.PoolBounds(d.Center, d.Roam.MaxRadius, d.Roam.FloorY, d.Roam.CeilY);
         _pool?.SetAabb(ToAabb(PoolBounds));
-        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，ENG-WP §2.1）；全图纹理按 map_rect 采样，尺寸不影响取值。
+        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，ENG-WP）；全图纹理按 map_rect 采样，尺寸不影响取值。
         var size = PrecipTuning.OccConstantSize;
         _occImage ??= Image.CreateEmpty(size, size, false, Image.Format.Rh);
         _occImage.Fill(new Color(PrecipTuning.OccConstantTop, 0f, 0f, 1f));

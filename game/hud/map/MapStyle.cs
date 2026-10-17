@@ -5,8 +5,8 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 地图界面的令牌入口：颜色只来自 ui.json（map 段与 themes 段，UI-VISUAL §3.8），几何与字号来自 ui_metrics.json
-/// （WP-35 的非色令牌，UI-VISUAL §11.2）。两个文件都只读一次；代码里不写色值。
+/// 地图界面的令牌入口：颜色只来自 ui.json（map 段与 themes 段，UI-VISUAL），几何与字号来自 ui_metrics.json
+/// （WP-35 的非色令牌，UI-VISUAL）。两个文件都只读一次；代码里不写色值。
 /// </summary>
 public sealed class MapStyle
 {
@@ -38,7 +38,7 @@ public sealed class MapStyle
     public MapFonts Fonts { get; }
     public MapTone Tone(bool night) => night ? Night : Day;
 
-    /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（ENG-WP §2.1）。</summary>
+    /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（ENG-WP）。</summary>
     public static MapStyle? TryLoad()
     {
         if (!Godot.FileAccess.FileExists(PalettePath) || !Godot.FileAccess.FileExists(MetricsPath))
@@ -208,7 +208,7 @@ public sealed record MapMetrics(
     }
 }
 
-/// <summary>一个字号角色：字体链、字号与字距（UI-VISUAL §4.3）。</summary>
+/// <summary>一个字号角色：字体链、字号与字距（UI-VISUAL）。</summary>
 public sealed record MapFont(Font Font, int Size, bool Upper)
 {
     public float Ascent => Font.GetAscent(Size);

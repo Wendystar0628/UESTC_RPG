@@ -12,7 +12,7 @@ namespace Campus.Gen.Zones.South.ForestPark;
 /// <summary>
 /// Forest park between the museum and the main building (§3.2). The red maples and cherry trees are WP-23's; this site
 /// builds the peacock house, a white steel mesh cage with a hipped mesh roof on the hill's south-east foot, and the small
-/// square pavilion with its stone seat wall on the top of the red-maple hill (MAP-QSH-TERRAIN §1.2, design addition
+/// square pavilion with its stone seat wall on the top of the red-maple hill (MAP-QSH-TERRAIN, design addition
 /// design:south-hongfeng-pavilion). Everything stands on the terrain height, so the pavilion rises with the hill once the
 /// WP-08 evaluator lands; until then it stands on the flat stub.
 /// </summary>
@@ -82,7 +82,7 @@ public sealed class ForestParkSite : SouthSite
             Vector3[] r = [new(-hx, yy, -hz), new(hx, yy, -hz), new(hx, yy, hz), new(-hx, yy, hz)];
             for (var i = 0; i < 4; i++) Strut(b, Cage, r[i], r[(i + 1) % 4], rod * 1.4f, L.WhiteWire);
         }
-        // Timber perch inside for the birds' night roost (WLD-LIFE §1; the peacocks are WP-25's).
+        // Timber perch inside for the birds' night roost (WLD-LIFE; the peacocks are WP-25's).
         foreach (var x in new[] { -2.2f, 1.8f })
             b.Add(PartGeometryKernel.BeveledBox(0.12f, 2.3f, 0.12f, 0.015f, L.Wood), Cage.At(x, bottom, -1.0f));
         Strut(b, Cage, new(-2.4f, bottom + 2.1f, -1.0f), new(2.0f, bottom + 2.1f, -1.0f), 0.1f, L.Wood);
@@ -124,7 +124,7 @@ public sealed class ForestParkSite : SouthSite
         b.Add(PartGeometryKernel.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), GeometryPlacement.Multiply(local, f.At(0, 0, 0)));
     }
 
-    // ---- Hill-top pavilion and seat wall (MAP-QSH-TERRAIN §1.2) ----
+    // ---- Hill-top pavilion and seat wall (MAP-QSH-TERRAIN) ----
 
     private static void HillPavilion(SiteBuilder b, float y)
     {

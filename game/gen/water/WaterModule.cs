@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Water;
 
 /// <summary>
-/// Water surfaces of every map (WLD-WATER §7.1): lakes, ponds and channels as one opaque surface per cell.
+/// Water surfaces of every map (WLD-WATER): lakes, ponds and channels as one opaque surface per cell.
 /// Vertex layout: UV = flow velocity (m/s, x and z), UV2 = (shore distance in m, reflection lake number or -1),
 /// COLOR flag 8 = never casts. Banks, bridges and culvert structures belong to the zone packages.
 /// </summary>

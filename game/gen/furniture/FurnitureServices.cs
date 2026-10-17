@@ -9,9 +9,9 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 namespace Campus.Gen.Furniture;
 
 /// <summary>
-/// 13c2c: vending groups, delivery lockers and shared-bicycle bays where people use them (WLD-LIFE §3.5, §4.5): a few clusters at the
+/// 13c2c: vending groups, delivery lockers and shared-bicycle bays where people use them (WLD-LIFE): a few clusters at the
 /// dormitory cluster gates, the canteens, the sports venues and the doors of teaching buildings, libraries and canteens, blank in between
-/// (ART-AMBIENCE §1.3 rule 4; "no piling up"). Every rule and number is in <see cref="FurnitureStyle"/>.
+/// (ART-AMBIENCE rule 4; "no piling up"). Every rule and number is in <see cref="FurnitureStyle"/>.
 /// </summary>
 public static partial class FurniturePlanner
 {
@@ -66,7 +66,7 @@ public static partial class FurniturePlanner
         diagnostics.Add(new(DiagnosticLevel.Info, "wp13.vending.summary", $"vending: {machines} machines in {groups.Count} groups at {string.Join(", ", groups.Select(g => g.Label))} " +
             $"({axial} sites on the main axis, {crowded} within {Num(S.VendingSpacing)} m of a group, {cramped} with no room, {heavy} over a cell's budget, left out)"));
 
-        // Delivery lockers: beside the first gates that hold a vending group (their WLD-LIFE §4.5 places wait for WP-30's gates).
+        // Delivery lockers: beside the first gates that hold a vending group (their WLD-LIFE places wait for WP-30's gates).
         var lockers = new List<string>();
         foreach (var spot in lockerSpots)
         {
@@ -270,7 +270,7 @@ public static partial class FurniturePlanner
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // The module budget (ENG-BUDGET §8) per 64 m cell: a service cluster that would push its cell over is left out.
+    // The module budget (ENG-BUDGET) per 64 m cell: a service cluster that would push its cell over is left out.
     // ---------------------------------------------------------------------------------------------------------
 
     private static readonly EntranceMatPart MatDef = new();

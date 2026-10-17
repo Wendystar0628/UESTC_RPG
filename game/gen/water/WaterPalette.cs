@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Water;
 
 /// <summary>
-/// Water colour names registered in game/style/palette/ext/WP-24.json (ART-STYLE §8.5).
+/// Water colour names registered in game/style/palette/ext/WP-24.json (ART-STYLE).
 /// Columns are fixed once registered; water.gdshader reads the same columns by number.
 /// </summary>
 public static class WaterPalette

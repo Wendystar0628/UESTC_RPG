@@ -10,7 +10,7 @@ internal enum LightKind { Fixed, SideHung, TopHung, Sliding }
 internal readonly record struct Light(float X0, float Y0, float X1, float Y1, LightKind Kind, bool HandleRight);
 
 /// <summary>
-/// Frame, mullions, sashes, beads, gaskets and handles of a glazed opening (ART-FIDELITY §3.3, §4; ART-MODELING §7.4).
+/// Frame, mullions, sashes, beads, gaskets and handles of a glazed opening (ART-FIDELITY; ART-MODELING).
 /// Glass, reveal, sill and head stay in the wall block with the window number; this is the per-building
 /// MultiMesh part. L0: two-level section, gaskets and handles. L1: one simplified frame ring with mullions.
 /// L2 and further: nothing (the building draws flat panes).
@@ -114,7 +114,7 @@ internal static class WindowBuilder
 
         // Frame, mullions and transoms: one flush slab with a hole per light, its outer edge pressed into the
         // reveal. Watertight and without the 2–4 mm steps that stipple the outline at distance.
-        // L1 keeps a single simplified ring (ART-MODELING §7.8).
+        // L1 keeps a single simplified ring (ART-MODELING).
         if (lod == LodLevel.L1)
             Solid.Ring(mesh, frameSpec, flags, -p.Width * 0.5f - e, -e, p.Width * 0.5f + e, p.Height + e, Face(type) + e, -d, d);
         else

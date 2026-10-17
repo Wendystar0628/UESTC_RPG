@@ -3,8 +3,8 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Sky;
 
-/// <summary>Map-dependent sky parameters read from <c>&lt;DataRoot&gt;sky.json</c> (ENG-WP §2, WP-40).</summary>
-/// <param name="CloudDrift">Prevailing cloud drift for f(world time) (SYS-WEATHER §7).</param>
+/// <summary>Map-dependent sky parameters read from <c>&lt;DataRoot&gt;sky.json</c> (ENG-WP, WP-40).</summary>
+/// <param name="CloudDrift">Prevailing cloud drift for f(world time) (SYS-WEATHER).</param>
 public sealed record SkyMapData(CloudDrift CloudDrift)
 {
     public const string FileName = "sky.json";

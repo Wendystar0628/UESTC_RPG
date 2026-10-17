@@ -51,7 +51,7 @@ public sealed class RoofPartsTests
                 Check(triangles <= ((LodLevel)level.Key == LodLevel.L0 ? budget.L0 : budget.L1), $"{entry.Id.Value} {level.Key} has {triangles} triangles, over budget.");
             }
             // Interface dispatch, so default (empty) implementations count too. Roof and wall parts are visual only
-            // (MAP-QSH-ADDITIONS §7); the equipment fence alone is a barrier.
+            // (MAP-QSH-ADDITIONS); the equipment fence alone is a barrier.
             var contract = type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
             var colliders = (IReadOnlyList<Collider>)contract.GetMethod("Collision")!.Invoke(part, [entry.Defaults])!;
             var barrier = entry.Id.Value == PartCatalog.EquipmentFence;
@@ -141,8 +141,8 @@ public sealed class RoofPartsTests
                 tokens.Add(token.GetString()!);
                 if (Path.GetFileName(file) != "WP-12.json") continue;
                 Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255, $"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.");
-                // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING §5).
-                // Fire red is the small saturated identity colour (WLD-INTERIORS §8.4) and is exempt.
+                // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING).
+                // Fire red is the small saturated identity colour (WLD-INTERIORS) and is exempt.
                 if (token.GetString()!.StartsWith("equip.fireRed.", StringComparison.Ordinal)) continue;
                 var albedo = entry.GetProperty("albedo").EnumerateArray().Select(v => v.GetDouble()).ToArray();
                 Check(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05, $"{token.GetString()} has intrinsic chroma above 0.05.");

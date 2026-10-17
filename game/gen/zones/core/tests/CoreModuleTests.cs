@@ -203,7 +203,7 @@ public sealed class CoreModuleTests
         Require(MathF.Abs(g.X) < 1e-6f && g.Z < 0, "gnomon in the north meridian plane, pointing north (−z)");
         var elevation = MathF.Asin(g.Y) * 180f / MathF.PI;
         Require(MathF.Abs(elevation - 30.75f) < 0.01f, $"elevation {elevation}° equals the latitude");
-        Require(g.Y < 0.55f, "dial face normal y below the snow threshold (MAP-QSH-CORE §3.4)");
+        Require(g.Y < 0.55f, "dial face normal y below the snow threshold (MAP-QSH-CORE)");
         Require(sundial.Collide().All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider has a foot material");
     }
 

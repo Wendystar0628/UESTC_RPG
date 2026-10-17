@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
 /// 86-type switch plate (开关面板): a white plate with one, two or three rocker keys (Variation 0, 1, 2), each key with a fine
-/// grey rocker line. Every room has one by the door (WLD-INTERIORS §7.3). Back on +Z; visual only.
+/// grey rocker line. Every room has one by the door (WLD-INTERIORS). Back on +Z; visual only.
 /// </summary>
 [Part(PartCatalog.SwitchPanel, Owner = "WP-12")]
 public sealed class SwitchPanelPart() : MepPart<PanelParams>(new(260, 16))
@@ -35,7 +35,7 @@ public sealed class SwitchPanelPart() : MepPart<PanelParams>(new(260, 16))
 }
 
 /// <summary>
-/// Door-side access reader (刷卡器) and the dorm desk face tablet (人脸平板, WLD-INTERIORS §2.8). Variation 0: white reader with a
+/// Door-side access reader (刷卡器) and the dorm desk face tablet (人脸平板, WLD-INTERIORS). Variation 0: white reader with a
 /// dark card window and a card mark. 1: dark reader with a small screen and a 3 × 4 keypad. 2: face tablet: dark screen in a
 /// thin aluminium bezel with a camera dot. Back on +Z; visual only.
 /// </summary>

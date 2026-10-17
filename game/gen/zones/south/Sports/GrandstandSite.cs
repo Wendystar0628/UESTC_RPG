@@ -11,7 +11,7 @@ using L = Campus.Gen.Zones.South.SouthTune.Look;
 namespace Campus.Gen.Zones.South.Sports;
 
 /// <summary>
-/// The stadium's stand (看台, MAP-QSH-SOUTH §7.3), which WP-14 would extrude as a 15 m C-shaped block, so this site claims it:
+/// The stadium's stand (看台, MAP-QSH-SOUTH), which WP-14 would extrude as a 15 m C-shaped block, so this site claims it:
 /// - tiers round the west half of the track, sampled on rays from the track's centre: a front wall over the apron, a cross
 ///   walk, rows of seats (muted yellow in the middle, pale lilac grey to the sides), the back concourse and its parapet;
 /// - the silver-white pillow canopy (枕形罩棚) over the main stand, thick in the middle and rounded off at both ends, with a

@@ -8,11 +8,11 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// The post-processing chain (WP-05, ART-STYLE §7, ENG-PERF §10.2): owns the two CompositorEffects on the active
+/// The post-processing chain (WP-05, ART-STYLE, ENG-PERF): owns the two CompositorEffects on the active
 /// camera (outline at PostSky, finish at PostTransparent), the engine's glow / tonemap / adjustment settings and
 /// the runtime LUT. Each frame it copies the colour-script keyframe scalars (IColorScriptFrame), the key light,
 /// weather, veil, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads
-/// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS §3).
+/// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS).
 /// </summary>
 [KernelNode("post.chain", Owner = "WP-05")]
 [QualityResponsive(Owns = [QualityKnob.AntiAliasing, QualityKnob.GlowQuality, QualityKnob.TiltShift,
@@ -22,9 +22,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware
 {
     private const float FadeSeconds = 0.5f;            // style-default knobs and glow level changes fade, never cut
     private const float GlowThresholdFloor = 1.0f;     // registered lit colours (peak 1.0) never bloom by day
-    private const float GlowLowSunDeg = 6f;            // levels 2–4 above, 3–5 below (ART-STYLE §7.1)
-    private const float FlashBloom = 0.1f;             // thunderstorm flash frame (SYS-WEATHER §5)
-    private const float SeasonVeilBloom = 0.1f;        // season-change veil (SYS-TIME §5)
+    private const float GlowLowSunDeg = 6f;            // levels 2–4 above, 3–5 below (ART-STYLE)
+    private const float FlashBloom = 0.1f;             // thunderstorm flash frame (SYS-WEATHER)
+    private const float SeasonVeilBloom = 0.1f;        // season-change veil (SYS-TIME)
 
     private readonly PostFrameBox _box = new();
     private readonly OutlineEffect _outline = new();
@@ -91,7 +91,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _rig = Services.Get<ICameraRig>();
         _veil = Services.Get<IVeilState>();
         if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
-        // Startup-only pipeline switches (ENG-PERF §0 rule 10): set before warm-up, never toggled at runtime.
+        // Startup-only pipeline switches (ENG-PERF rule 10): set before warm-up, never toggled at runtime.
         GetViewport().UseDebanding = true;
     }
 
@@ -258,7 +258,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     {
         _environment = environment;
         if (environment is null) return;
-        // Fixed for the whole run (ART-STYLE §7.2, §7.7): Linear tonemap keeps palette colours, Adjustment carries the
+        // Fixed for the whole run (ART-STYLE): Linear tonemap keeps palette colours, Adjustment carries the
         // LUT with brightness / contrast / saturation neutral, fog lives in the materials, glow always on (Screen).
         environment.TonemapMode = Godot.Environment.ToneMapper.Linear;
         environment.FogEnabled = false;
@@ -274,7 +274,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     }
 
     // Glow levels: 2–4 by day, 3–5 once the sun is below 6°; "standard" quality drops the top level. Changes fade
-    // over 0.5 s (SetGlowLevel), and the bicubic upscale switch follows when the fade has finished (ENG-PERF §10.2).
+    // over 0.5 s (SetGlowLevel), and the bicubic upscale switch follows when the fade has finished (ENG-PERF).
     private void TargetGlowLevels(float sunAltDeg)
     {
         var first = sunAltDeg >= GlowLowSunDeg ? 1 : 2;   // 0-based index of level 2 or level 3

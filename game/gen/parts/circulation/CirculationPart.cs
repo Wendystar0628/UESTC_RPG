@@ -7,7 +7,7 @@ using Campus.Gen.Parts.Circulation.Geometry;
 
 namespace Campus.Gen.Parts.Circulation;
 
-/// <summary>What a level keeps (ART-MODELING §7.7–§7.8): bevels only at L0, balusters through L1, coarse silhouettes after.</summary>
+/// <summary>What a level keeps (ART-MODELING): bevels only at L0, balusters through L1, coarse silhouettes after.</summary>
 internal enum Detail { Full, Plain, Coarse, Mass }
 
 /// <summary>

@@ -12,7 +12,7 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Sports;
 
 /// <summary>
-/// Natatorium (MAP-QSH-SOUTH §7.2; WLD-INTERIORS §2.5): a low white elliptical dome, which the facade rules cannot make, so this
+/// Natatorium (MAP-QSH-SOUTH; WLD-INTERIORS): a low white elliptical dome, which the facade rules cannot make, so this
 /// site claims it. A short white skirt, the dome, its dark glass band near the top as a clerestory drum under a white cap
 /// (at night the band carries the pool's glow on the venue curve), a light concrete apron round the foot, and the
 /// platform-storey entrance hall on the platform side, closed until WP-31a registers the pool's entrance.
@@ -159,7 +159,7 @@ public sealed class NatatoriumSite : SouthSite
 
     /// <summary>
     /// Meridian ribs over the dome, from the skirt's cornice up to the glass band, one slim fin per profile step: the white
-    /// dome reads as a built shell with structure rather than one bare surface (ART-FIDELITY §0).
+    /// dome reads as a built shell with structure rather than one bare surface (ART-FIDELITY).
     /// </summary>
     private static void Meridians(SiteBuilder b, Plan p, float y, int count)
     {
@@ -207,7 +207,7 @@ public sealed class NatatoriumSite : SouthSite
     }
 
     /// <summary>
-    /// The platform-storey entrance hall (WLD-INTERIORS §2.5): a white box pushed out of the dome on the platform side, glazed
+    /// The platform-storey entrance hall (WLD-INTERIORS): a white box pushed out of the dome on the platform side, glazed
     /// front with closed doors, a flat canopy slab. It reads as the pool's door; it opens once WP-31a registers the entrance.
     /// </summary>
     private static void Entry(SiteBuilder b, Plan p, float y)

@@ -8,7 +8,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Atlas kiosk (导览亭, SYS-ATLAS §6, MAP-QSH-ADDITIONS §2.13): two dark grey steel side posts, a thin flat canopy, and a map
+/// Atlas kiosk (导览亭, SYS-ATLAS, MAP-QSH-ADDITIONS): two dark grey steel side posts, a thin flat canopy, and a map
 /// panel in a light aluminium frame. Width is the canopy width, Height the overall height, Depth the canopy depth; the face
 /// looks along −Z and the canopy projects <see cref="StreetStyle.KioskOverhang"/> in front of it. The faces carry a plain
 /// map-paper stand-in until WP-48a's baked map lands (front: the campus map, back: the district plan). Not lit, not clickable;
@@ -42,7 +42,7 @@ public sealed class AtlasKioskPart : IPartDef<SignParams>
         ];
     }
 
-    /// <summary>Lamp-inventory marker for the canopy downlight: just under the lens, lighting the face (MAP-QSH-ADDITIONS §8.4).</summary>
+    /// <summary>Lamp-inventory marker for the canopy downlight: just under the lens, lighting the face (MAP-QSH-ADDITIONS).</summary>
     public static LightEmitter Emitter(SignParams p, Matrix4x4 at)
     {
         var k = Layout(p);
@@ -98,7 +98,7 @@ public sealed class AtlasKioskPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Atlas post (导览桩, SYS-ATLAS §6): a 0.2 m dark grey steel square post on a dark stone base, its top cut at 30° facing the
+/// Atlas post (导览桩, SYS-ATLAS): a 0.2 m dark grey steel square post on a dark stone base, its top cut at 30° facing the
 /// viewer (−Z), an aluminium plate on the slant (the etched map and number come with WP-48a's plate texture), and a small warm
 /// lamp with a milky lens on the front at 0.85 m (grade three, first-lamp group, all night, a pool about 1.5 m across). Width
 /// and Depth are the base, Height the top of the slant. Collision: one vertical post, Metal.
@@ -128,7 +128,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
             { Foot = p.Foot == FootMat.Auto ? S.MetalFoot : p.Foot }];
     }
 
-    /// <summary>Lamp-inventory marker in front of the small lamp: the anchor's warm point at night (SYS-ATLAS §6).</summary>
+    /// <summary>Lamp-inventory marker in front of the small lamp: the anchor's warm point at night (SYS-ATLAS).</summary>
     public static LightEmitter Emitter(SignParams p, Matrix4x4 at)
     {
         var s = Section(p);

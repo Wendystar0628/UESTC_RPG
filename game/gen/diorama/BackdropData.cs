@@ -3,10 +3,10 @@ using System.Text.Json;
 namespace Campus.Gen.Diorama;
 
 /// <summary>
-/// The map's backdrop parameters (WLD-DIORAMA "分工"; SYS-MAPS §2.1): fog sea, the two city rings, the far ring with its hills
+/// The map's backdrop parameters (WLD-DIORAMA "分工"; SYS-MAPS): fog sea, the two city rings, the far ring with its hills
 /// and snow mountains, and the seasonal snow table. Read from the bytes of <c>env.backdrop</c> (清水河: backdrop.json) that the
 /// caller preloads into <c>BuildContext.SourceInputs</c>; the generator performs no IO and keeps no map constants in code.
-/// Azimuths are compass bearings in degrees (0 north, 90 east); world north is −z, east is +x (CORE-CONVENTIONS §1).
+/// Azimuths are compass bearings in degrees (0 north, 90 east); world north is −z, east is +x (CORE-CONVENTIONS).
 /// </summary>
 public sealed record BackdropData(
     float FarClip,
@@ -75,7 +75,7 @@ public sealed record BackdropData(
             foreach (var f in new[] { s.Near, s.Mid })
                 Check(f.Fill is >= 0f and <= 1f && f.TowerShare is >= 0f and <= 1f && f.Low.Min > 0f && f.Low.Max >= f.Low.Min &&
                     f.High.Min > 0f && f.High.Max >= f.High.Min, $"sector {s.From}-{s.To} fill and heights");
-        Check(FarRing.Parallax == 1f, "the far ring sits at infinity: parallax 1 (WLD-DIORAMA §5.4)");
+        Check(FarRing.Parallax == 1f, "the far ring sits at infinity: parallax 1 (WLD-DIORAMA)");
         Check(FarRing.Rows is >= 2 and <= 16 && FarRing.Depth > 0f && FarRing.Depth < FarRing.Radius * 0.5f, "far ring rows and depth");
         Check(FarRing.SkirtY < FogSea.TopY, "far ring skirt must sink below the fog sea");
         Check(FarRing.StepDeg is > 0.05f and <= 2f && FarRing.FineStepDeg > 0.02f && FarRing.FineStepDeg <= FarRing.StepDeg, "far ring steps");
@@ -113,14 +113,14 @@ public sealed record BackdropData(
     }
 }
 
-/// <param name="TopY">Clear-weather top of the fog sea (m), below the campus ground (WLD-DIORAMA §4.2).</param>
+/// <param name="TopY">Clear-weather top of the fog sea (m), below the campus ground (WLD-DIORAMA).</param>
 /// <param name="RiseTopY">Highest top in fog weather, about 1 m under the cut edge (§4.3).</param>
 public sealed record FogSeaData(float TopY, float OuterRadius, float RiseTopY, int Segments, EdgeBankData EdgeBank);
 
 /// <summary>
 /// The fog bank along the inner edge: the fog surface climbs to <see cref="Height"/> just inside the ground's edge so the edge
 /// of the world sinks into fog. Height 0 or below keeps the inner edge flat under the ground (for a map whose cut-line section
-/// is drawn, WLD-DIORAMA §2). Wander shifts the bank in and out along the edge (m), Jitter scales its crest.
+/// is drawn, WLD-DIORAMA). Wander shifts the bank in and out along the edge (m), Jitter scales its crest.
 /// </summary>
 public sealed record EdgeBankData(float Height, float Inside, float Outside, float Jitter, float WaveLength, float Wander);
 
@@ -142,5 +142,5 @@ public sealed record MountainData(string Name, float Azimuth, float DistanceKm, 
 public sealed record FarRingData(float Radius, float Parallax, float Depth, int Rows, float SkirtY, float StepDeg, float FineStepDeg,
     float VisualScale, IReadOnlyList<HillKey> Hills, IReadOnlyList<MountainData> Mountains);
 
-/// <summary>Seasonal snow table (WLD-DIORAMA §6.3), each array spring, summer, autumn, winter.</summary>
+/// <summary>Seasonal snow table (WLD-DIORAMA), each array spring, summer, autumn, winter.</summary>
 public sealed record SnowData(IReadOnlyList<float> Visibility, IReadOnlyList<float> Snowline);

@@ -4,8 +4,8 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 版图式的绘制原语（UI-VISUAL §5）：只切左上角的面板、1 物理像素发丝线（宽度传 −1，任何缩放下都是 1 物理像素）、
-/// 过孔、走线、键帽，以及地图标记与界面图标（UI-VISUAL §6：网格 24、活动区 20、线宽 1.5、方头、只用 0/45/90°）。
+/// 版图式的绘制原语（UI-VISUAL）：只切左上角的面板、1 物理像素发丝线（宽度传 −1，任何缩放下都是 1 物理像素）、
+/// 过孔、走线、键帽，以及地图标记与界面图标（UI-VISUAL：网格 24、活动区 20、线宽 1.5、方头、只用 0/45/90°）。
 /// </summary>
 public static class MapDraw
 {
@@ -20,7 +20,7 @@ public static class MapDraw
             : [new(p.X + chamfer, p.Y), new(e.X, p.Y), e, new(p.X, e.Y), new(p.X, p.Y + chamfer)];
     }
 
-    /// <summary>面板：平涂、外缘发丝线、顶边 1 px 内高光（UI-VISUAL §5.7）。</summary>
+    /// <summary>面板：平涂、外缘发丝线、顶边 1 px 内高光（UI-VISUAL）。</summary>
     public static void Panel(CanvasItem ci, Rect2 r, float chamfer, Color fill, Color line, Color? highlight = null)
     {
         var pts = ChipPoints(r, chamfer);
@@ -61,7 +61,7 @@ public static class MapDraw
         else ci.DrawArc(c, r - 0.5f, 0, Mathf.Tau, 20, color, 1f, true);
     }
 
-    /// <summary>过孔灯：Ø6 的核，深屏加 2 px 晕（UI-VISUAL §5.4）。</summary>
+    /// <summary>过孔灯：Ø6 的核，深屏加 2 px 晕（UI-VISUAL）。</summary>
     public static void Led(CanvasItem ci, Vector2 c, MapTone t, bool on)
     {
         if (on && t.LedHalo.A > 0)
@@ -75,14 +75,14 @@ public static class MapDraw
     public static void Text(CanvasItem ci, MapFont f, Vector2 baseline, string text, Color color, HorizontalAlignment align = HorizontalAlignment.Left, float width = -1)
         => ci.DrawString(f.Font, baseline, f.Shape(text), align, width, f.Size, color);
 
-    /// <summary>压在地图上的字：先画 2 px 晕，再画字（SYS-ATLAS §2.5）。</summary>
+    /// <summary>压在地图上的字：先画 2 px 晕，再画字（SYS-ATLAS）。</summary>
     public static void HaloText(CanvasItem ci, MapFont f, Vector2 baseline, string text, Color color, Color halo, float haloWidth)
     {
         ci.DrawStringOutline(f.Font, baseline, f.Shape(text), HorizontalAlignment.Left, -1, f.Size, (int)MathF.Round(haloWidth * 2), halo);
         ci.DrawString(f.Font, baseline, f.Shape(text), HorizontalAlignment.Left, -1, f.Size, color);
     }
 
-    /// <summary>键帽：凸起面、3 px 圆角近似为小斜角、等宽字（UI-VISUAL §7.2）。</summary>
+    /// <summary>键帽：凸起面、3 px 圆角近似为小斜角、等宽字（UI-VISUAL）。</summary>
     public static float Keycap(CanvasItem ci, MapFont f, Vector2 topLeft, string key, MapTone t)
     {
         var w = MathF.Max(24, MathF.Ceiling(f.Width(key)) + 14);
@@ -101,7 +101,7 @@ public static class MapDraw
         return [new(p.X + k, p.Y), new(e.X - k, p.Y), new(e.X, p.Y + k), new(e.X, e.Y - k), new(e.X - k, e.Y), new(p.X + k, e.Y), new(p.X, e.Y - k), new(p.X, p.Y + k)];
     }
 
-    /// <summary>走线：45°/90° 折线，两端各一个过孔，只表示"连接"（UI-VISUAL §5.5）。</summary>
+    /// <summary>走线：45°/90° 折线，两端各一个过孔，只表示"连接"（UI-VISUAL）。</summary>
     public static void Trace(CanvasItem ci, Vector2 from, Vector2 to, Color color, float width)
     {
         var d = to - from;
@@ -112,7 +112,7 @@ public static class MapDraw
         Via(ci, to, 5, color, false);
     }
 
-    /// <summary>刻度式比例尺：横线 + 两端 1×5 px 刻（UI-VISUAL §5.3）。</summary>
+    /// <summary>刻度式比例尺：横线 + 两端 1×5 px 刻（UI-VISUAL）。</summary>
     public static void ScaleBar(CanvasItem ci, Vector2 rightEnd, float length, Color color)
     {
         var l = new Vector2(rightEnd.X - length, rightEnd.Y);
@@ -137,7 +137,7 @@ public static class MapDraw
 
     private static void L(CanvasItem ci, Vector2 a, Vector2 b, Color c, float w) => ci.DrawLine(a, b, c, w, true);
 
-    /// <summary>锚点：光学基准点——环、中心点、四根刻线；导览亭外加一圈细方框（SYS-ATLAS §5）。</summary>
+    /// <summary>锚点：光学基准点——环、中心点、四根刻线；导览亭外加一圈细方框（SYS-ATLAS）。</summary>
     public static void AnchorIcon(CanvasItem ci, Vector2 c, float s, Color col, float w, bool kiosk, bool solid)
     {
         var u = s / 20f;
@@ -243,7 +243,7 @@ public static class MapDraw
         }
     }
 
-    /// <summary>大地图按钮的意象：版图——方框里的走线与过孔（UI-VISUAL §6.2）。</summary>
+    /// <summary>大地图按钮的意象：版图——方框里的走线与过孔（UI-VISUAL）。</summary>
     public static void AtlasGlyph(CanvasItem ci, Vector2 c, Color col, float w)
     {
         ci.DrawRect(new Rect2(c - new Vector2(8, 8), new Vector2(16, 16)), col, false, w, true);

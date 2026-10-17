@@ -4,7 +4,7 @@ using Godot.Collections;
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// The PostTransparent CompositorEffect (ENG-PERF §10.2 step 6). Every frame it
+/// The PostTransparent CompositorEffect (ENG-PERF step 6). Every frame it
 /// <list type="number">
 /// <item>re-bakes the runtime colour LUT (version lut of style/outline/post_outline.glsl: CDL ∘ static base table,
 /// 32³) when the CDL moved, so the engine's tonemap pass reads it later in the same frame through
@@ -12,7 +12,7 @@ namespace Campus.Kernel.Post;
 /// <item>runs the compose dispatch (version tiltshift_comp of the same file): highlight shoulder on the overflow only
 /// (registered lit colours unchanged), vignette, and the tilt-shift blend (amount 0 until the blur passes land).</item>
 /// </list>
-/// The compose dispatch always runs: the shoulder is a style floor (SYS-GRAPHICS §2).
+/// The compose dispatch always runs: the shoulder is a style floor (SYS-GRAPHICS).
 /// </summary>
 public partial class FinishEffect : CompositorEffect
 {
@@ -21,8 +21,8 @@ public partial class FinishEffect : CompositorEffect
     internal const int LutSize = 32;
     private const float ShoulderStart = 1.0f;     // at or above every registered lit colour (peak 1.0)
     private const float ShoulderHeadroom = 0.5f;
-    private const float TiltMaxBlend = 0.25f;     // ART-STYLE §7.4
-    private const float BaseSaturation = 1.02f;   // static base table (ART-STYLE §7.2)
+    private const float TiltMaxBlend = 0.25f;     // ART-STYLE
+    private const float BaseSaturation = 1.02f;   // static base table (ART-STYLE)
     private const float SplitToning = 1f;
     internal const float CdlEpsilon = 1e-4f;
 

@@ -198,7 +198,7 @@ internal static class Solid
     /// <summary>
     /// Closed glass slab for leaves and panels that move or stand alone (toon_glass). Both large faces carry pane
     /// coordinates (UV in [0, 1)), UV2 = (window base, channel + 32 × columns) and the card type in the spare byte,
-    /// as WP-14 writes them (WLD-INTERIORS §5.1).
+    /// as WP-14 writes them (WLD-INTERIORS).
     /// </summary>
     public static void Glass(PartMesh mesh, byte flags, Place turn, float x0, float y0, float z0, float x1, float y1, float z1,
         byte card, Vector2 uv2)
@@ -224,7 +224,7 @@ internal static class Solid
     /// Flush rectilinear slab between <paramref name="zFront"/> and <paramref name="zBack"/> on the grid of breakpoints
     /// <paramref name="xs"/> × <paramref name="ys"/>; cell (i, j) is solid when <paramref name="solid"/> says so. Every face
     /// is cut at the grid lines, so caps and sides share their vertices: watertight, without the T-junctions that crack and
-    /// stipple the outline (ART-MODELING §7.4). Used for frames with mullions and transoms, and for leaf stiles and rails.
+    /// stipple the outline (ART-MODELING). Used for frames with mullions and transoms, and for leaf stiles and rails.
     /// </summary>
     public static void Grid(PartMesh mesh, ToonSpec spec, byte flags, Place turn, IReadOnlyList<float> xs, IReadOnlyList<float> ys,
         Func<int, int, bool> solid, float zFront, float zBack)
@@ -266,7 +266,7 @@ internal static class Solid
     /// <summary>
     /// Closed corrugated sheet of constant thickness: z = <paramref name="zCentre"/> + amp·cos(2π(u − u0)/pitch) across u,
     /// straight along v. <paramref name="uAlongX"/> puts u on X (curtain pleats) or on Y (shutter slats).
-    /// Both faces have smooth analytic normals; the four edges are flat (ART-MODELING §7.6 "curved surfaces use soft edges").
+    /// Both faces have smooth analytic normals; the four edges are flat (ART-MODELING "curved surfaces use soft edges").
     /// <paramref name="shadeAmp"/> is the amplitude the normals follow: larger than <paramref name="amp"/>, a shallow sheet
     /// still shades like deep folds ("segments follow the silhouette, shading follows the normals").
     /// </summary>

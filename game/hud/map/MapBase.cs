@@ -3,7 +3,7 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 底图视口：挂 map_base 材质时每帧只写一次 instance uniform（SYS-ATLAS §10 的登记例外）；材质还没取到时，
+/// 底图视口：挂 map_base 材质时每帧只写一次 instance uniform（SYS-ATLAS 的登记例外）；材质还没取到时，
 /// 按"底图未就绪"的画法用 _Draw 画校内用地一种颜色（大地图另画 100 m 十字测试点），只在视图变了才重画。
 /// </summary>
 public partial class MapBase : Control

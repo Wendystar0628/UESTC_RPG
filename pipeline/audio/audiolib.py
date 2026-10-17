@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """音频入库用到的底层函数：解码、BS.1770 响度、真峰值、循环交叉、切段、编码。
 
-只依赖 numpy、scipy 与 ffmpeg（SYS-AUDIO §14.2）。全部在开发机上运行，不进游戏。
+只依赖 numpy、scipy 与 ffmpeg（SYS-AUDIO）。全部在开发机上运行，不进游戏。
 """
 import json, subprocess, shutil, os
 import numpy as np
@@ -117,14 +117,14 @@ def fade(x, fin_ms=0, fout_ms=0):
 
 
 def pitch_shift(x, semitones):
-    """重采样法变调（同时改速度；±1–3 半音内可接受，SYS-AUDIO §14.2 创作性处理）。"""
+    """重采样法变调（同时改速度；±1–3 半音内可接受，SYS-AUDIO 创作性处理）。"""
     r = 2 ** (semitones / 12)
     n = int(round(len(x) / r))
     return signal.resample(x, n, axis=0) if abs(semitones) > 1e-6 else x
 
 
 def loop_crossfade(seg, xf):
-    """seg 长 L+xf；返回长 L 的首尾等功率交叉后的循环体（见 SYS-AUDIO §14.2 第 3 条）。"""
+    """seg 长 L+xf；返回长 L 的首尾等功率交叉后的循环体（见 SYS-AUDIO 第 3 条）。"""
     L = len(seg) - xf
     out = seg[:L].copy()
     th = (np.arange(xf) / xf) * np.pi / 2

@@ -6,7 +6,7 @@ using GdUnit4;
 namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
-/// Pool choice of the vegetation runtime (WLD-VEGETATION §11.4): near bands scaled by tree height, 10% hysteresis outwards,
+/// Pool choice of the vegetation runtime (WLD-VEGETATION): near bands scaled by tree height, 10% hysteresis outwards,
 /// and the near / far cross-fade band where a tree is in both pools (max-011 23c2c).
 /// </summary>
 [TestSuite]

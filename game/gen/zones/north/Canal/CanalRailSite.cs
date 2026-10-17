@@ -73,7 +73,7 @@ public sealed class CanalRailSite : NorthSite
 
     public override void Collide(SiteColliders c)
     {
-        // An ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS §7.1); one wall per panel, the first from the joint
+        // An ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS); one wall per panel, the first from the joint
         // post's centre so it overlaps the plaza's last collider instead of leaving a seam.
         for (var k = 0; k < Panels; k++)
         {

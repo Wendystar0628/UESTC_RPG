@@ -178,7 +178,7 @@ public sealed class NorthModuleTests
     {
         var ctx = Context();
         var module = new NorthModule();
-        // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH §4.1); batched boxes anchor at their
+        // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH); batched boxes anchor at their
         // 64 m cell's centre, x 800 for that cell. South edge: 博翰一组团's fence reaches z −73 by 4499 (cell centre −96).
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
             Require(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -64, $"item at {item.Anchor} is in the north zone");
@@ -324,7 +324,7 @@ public sealed class NorthModuleTests
     }
 
     /// <summary>
-    /// 20b2: 博翰苑 9 栋 and the WLD-INTERIORS §17 blocks (4499, 5247, 6735) carry their family and preset; an annex preset
+    /// 20b2: 博翰苑 9 栋 and the WLD-INTERIORS blocks (4499, 5247, 6735) carry their family and preset; an annex preset
     /// names the family it was written for, and it matches.
     /// </summary>
     [TestCase]
@@ -390,7 +390,7 @@ public sealed class NorthModuleTests
     /// <summary>
     /// 20a-3: a road with no corridor keeps the automatic 0 m profile and would cut a trench across the terrace, so every
     /// line road that runs onto a terrace carries anchors; every shared centreline vertex has one elevation; the authored
-    /// profile keeps to 5 %, and to 3 % within 10 m of a junction (WLD-TERRAIN §3.8, §4.2).
+    /// profile keeps to 5 %, and to 3 % within 10 m of a junction (WLD-TERRAIN).
     /// </summary>
     [TestCase]
     public void EveryRoadOnATerraceHasAnchorsAndJunctionsAgree()
@@ -514,7 +514,7 @@ public sealed class NorthModuleTests
                 foreach (var op in terrain)
                     switch (op)
                     {
-                        // The side slope reaches y·n beyond the crest, plus half the fillet (WLD-TERRAIN §3.5).
+                        // The side slope reaches y·n beyond the crest, plus half the fillet (WLD-TERRAIN).
                         case TerrainPlatformOp t:
                             var n = double.Parse(t.Side.Fill.Split(':')[1], System.Globalization.CultureInfo.InvariantCulture);
                             var foot = Math.Abs(t.Y) * n + t.Fillet * 0.5;

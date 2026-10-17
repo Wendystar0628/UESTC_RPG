@@ -154,10 +154,10 @@ internal sealed class PartBuilder
     }
 }
 
-/// <summary>Vertex flag bits of the VF-A COLOR byte (ENG-PERF §1.5).</summary>
+/// <summary>Vertex flag bits of the VF-A COLOR byte (ENG-PERF).</summary>
 internal static class VertexFlag
 {
-    /// <summary>Interior surface: shade from palette row 2, lit from row 3 times the light-patch gain (WLD-INTERIORS §8.2).</summary>
+    /// <summary>Interior surface: shade from palette row 2, lit from row 3 times the light-patch gain (WLD-INTERIORS).</summary>
     public const byte Interior = 1;
     public const byte NoShadow = 8;
 }
@@ -332,7 +332,7 @@ internal sealed class MeshWriter(ToonSpec material)
 /// <summary>Shared LOD table and bounds helpers.</summary>
 internal static class Levels
 {
-    /// <summary>One entry per listed level; levels left out are not drawn (far levels may be omitted, ART-MODELING §6).</summary>
+    /// <summary>One entry per listed level; levels left out are not drawn (far levels may be omitted, ART-MODELING).</summary>
     public static IReadOnlyDictionary<LodLevel, Func<T, PartGeometry>> Of<T>(Func<T, LodLevel, PartGeometry> build, params LodLevel[] levels)
     {
         var table = new SortedDictionary<LodLevel, Func<T, PartGeometry>>();

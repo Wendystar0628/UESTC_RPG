@@ -12,7 +12,7 @@ namespace Campus.Hud.Pages;
 public enum SettingsPage : byte { Keys, General, Graphics, Sound, Rebind, Licenses }
 
 /// <summary>
-/// 设置卡（UI-VISUAL §8.5、UI-NAV §4.6、SYS-GRAPHICS §9）：贴左的大页，620×1016，切角 14，随主题；不压暗，右侧 2/3 留给实景。
+/// 设置卡（UI-VISUAL、UI-NAV、SYS-GRAPHICS）：贴左的大页，620×1016，切角 14，随主题；不压暗，右侧 2/3 留给实景。
 /// 页：键位、设置、画面（按 KnobSpec 生成，只经 IQualityService）、声音（只经 IAudioService）、改键、许可；底部"返回标题""退出"。
 /// 打开期间经 ICameraRig.LockInput(Menu) 占用观者输入。内容在打开时才建、关上就释放：引擎只在释放节点时归还
 /// 实例参数槽（<see cref="UiKit.Holders"/>），隐藏的大页不该和 3D 流式实例抢同一个池；画面页没应用的改动跨开关保留。
@@ -270,7 +270,7 @@ public partial class SettingsCard : Control
         return y + 64;
     }
 
-    /// <summary>键名按当前键盘布局显示（UI-NAV §5）：物理键码经 KeyboardGetLabelFromPhysical 换成布局上的字。</summary>
+    /// <summary>键名按当前键盘布局显示（UI-NAV）：物理键码经 KeyboardGetLabelFromPhysical 换成布局上的字。</summary>
     public string KeyLabel(string action)
     {
         if (_router is not null)
@@ -375,7 +375,7 @@ public partial class SettingsCard : Control
         return y + 56;
     }
 
-    // ---------------- 画面（SYS-GRAPHICS §9：只经 IQualityService.Plan / Apply） ----------------
+    // ---------------- 画面（SYS-GRAPHICS：只经 IQualityService.Plan / Apply） ----------------
     private float BuildGraphics(Control page, float width)
     {
         IQualityService quality;
@@ -520,7 +520,7 @@ public partial class SettingsCard : Control
         _ => throw new ArgumentOutOfRangeException(nameof(p)),
     };
 
-    // ---------------- 声音（SYS-AUDIO §13：只调 IAudioService.ApplySettings） ----------------
+    // ---------------- 声音（SYS-AUDIO：只调 IAudioService.ApplySettings） ----------------
     private float BuildSound(Control page, float width)
     {
         IAudioService audio;
@@ -573,7 +573,7 @@ public partial class SettingsCard : Control
         return y + 56;
     }
 
-    // ---------------- 改键（UI-NAV §5：按物理键改绑，一个物理键只能绑一个动作） ----------------
+    // ---------------- 改键（UI-NAV：按物理键改绑，一个物理键只能绑一个动作） ----------------
     private readonly Dictionary<string, Control> _rebindRows = [];
 
     private float BuildRebind(Control page, float width)

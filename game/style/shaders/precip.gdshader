@@ -1,16 +1,16 @@
 // precip.gdshader：降水池（WP-45b）。雨丝、雪花、溅落共用；檐滴（precip_k.z = 1）留到檐滴点表交付后接。
-// 规格：SYS-WEATHER §3（雨的可读性）、§7（降水池）；ENG-PERF §1.4、§9；SYS-MOTION §13.6。
+// 规格：SYS-WEATHER（雨的可读性）、§7（降水池）；ENG-PERF；SYS-MOTION。
 //
 // 实例数据（C# 侧 PrecipModel 写一次，之后不改）：变换是单位阵；INSTANCE_CUSTOM.xyz = 单位立方体里的起点 p0，
 // .w = 随机数。实例按哈希排好序，前缀就是均匀抽稀（VisibleInstanceCount）。每 16 个实例里最后一个是溅落槽位。
-// 每帧只改 instance uniform（ENG-PERF §1.5 登记）：
+// 每帧只改 instance uniform（ENG-PERF 登记）：
 //   precip_d：xyz 循环盒位移（C# 按 T12 累加、对 8h 取模），w 半边长 h（雨 18 m、雪 14 m）
 //   precip_v：xyz 雨丝方向（朝下的单位向量），w 丝长（m，一拍二的一步）
 //   precip_k：x 降水类型（0 雨 → 1 雪），y 降水量，z 角色（0 降水池），w 保留
 // 颜色只从背景（天空色带）与调色板推导，不写色值；不用 TIME，用 anim_time。
-// 雨丝、溅落、雪花的画法照参考场景"太阳雨中的小渔港"的降水（ART-STYLE §1）：细、略亮于背景、逆光偏暖白，
+// 雨丝、溅落、雪花的画法照参考场景"太阳雨中的小渔港"的降水（ART-STYLE）：细、略亮于背景、逆光偏暖白，
 // 多数淡、少数亮；预乘输出里 alpha 打七折，雨丝在亮背景上微微发亮；溅落是水面环 + 中心水柱 + 抛物线水珠；
-// 雪花是带浅边的圆点。透明度在 SYS-WEATHER §3 第 1 条的形式上按 Opus 评审抬高（主线评审 2026-10-16）。
+// 雪花是带浅边的圆点。透明度在 SYS-WEATHER 第 1 条的形式上按 Opus 评审抬高（主线评审 2026-10-16）。
 // 积水判定与 toon 共用 precip_wet.gdshaderinc（溅落不落在积水里）。
 shader_type spatial;
 render_mode blend_premul_alpha, unshaded, depth_draw_never, cull_disabled;
@@ -93,7 +93,7 @@ vec3 pc_shift_l(vec3 c, float dl) {
 	return c * pow(l1 / l0, 3.0);
 }
 
-// 俯视遮蔽顶面高度（SYS-WEATHER §7）；范围外没有顶面
+// 俯视遮蔽顶面高度（SYS-WEATHER）；范围外没有顶面
 float pc_occ_top(vec3 p) {
 	if (!in_map(p)) {
 		return PC_OCC_NONE;
@@ -192,7 +192,7 @@ void vertex() {
 		float px = size * abs(PROJECTION_MATRIX[1][1]) * VIEWPORT_SIZE.y * 0.5 / max(dist, 0.1);
 		float show = (1.0 - smoothstep(PC_SPLASH_SHOW * 0.7, PC_SPLASH_SHOW, dist)) * smoothstep(PC_SPLASH_PX.x, PC_SPLASH_PX.y, px)
 				* step(PC_SPLASH_PX.x, px) * step(0.8, dist);
-		// 积水里不画溅点，改由积水的雨点环表现（与水面同一规则，SYS-WEATHER §7）
+		// 积水里不画溅点，改由积水的雨点环表现（与水面同一规则，SYS-WEATHER）
 		float pl = clamp(weather_b.y, 0.0, 1.0);
 		show *= (pl > 0.0 && precip_puddle_potential(xz) > precip_puddle_threshold(pl)) ? 0.0 : 1.0;
 		// 竖直立着、水平朝向镜头的小片
@@ -210,7 +210,7 @@ void vertex() {
 		v_seed = float(e) * 0.13 + r * 7.0;
 		v_role = v_alpha > 0.002 ? 2 : -1;
 	} else {
-		// 循环盒（ENG-PERF §9）：p = c + mod(p0 + d − c + h, 2h) − h；雪花另乘每片的速度系数（0.75、1、1.25，d 按 8h 取模所以不跳）
+		// 循环盒（ENG-PERF）：p = c + mod(p0 + d − c + h, 2h) − h；雪花另乘每片的速度系数（0.75、1、1.25，d 按 8h 取模所以不跳）
 		float speed = is_snow ? 0.75 + 0.25 * floor(fract(r * 7.0) * 3.0) : 1.0;
 		vec3 p = cam + mod(p0 + precip_d.xyz * speed - cam + h, 2.0 * h) - h;
 		vec3 dir = normalize(precip_v.xyz);

@@ -94,8 +94,8 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
 /// <summary>
 /// A gridded masonry block on a plan ring: a glass core, a stone frame of full-height piers and storey-high spandrel bands
 /// in front of it (the window reveals are the frame's depth), plinth, a two-step cornice, a parapet with coping and a
-/// roof slab. The zone dresses the buildings it claims from WP-14 with it (the research family, MAP-QSH-CENTER-EAST §1);
-/// it keeps the ART-MODELING §7.8 minimum set: corner piers, plinth, string courses, sills, recessed glass with frames,
+/// roof slab. The zone dresses the buildings it claims from WP-14 with it (the research family, MAP-QSH-CENTER-EAST);
+/// it keeps the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames,
 /// cornice and coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate. One pure layout
 /// (<see cref="Layout"/>) feeds the geometry, the collision and the window declarations. Same rules as the south zone's grid
 /// blocks (Xuanbang), kept in this assembly because zones do not reference each other (G4).

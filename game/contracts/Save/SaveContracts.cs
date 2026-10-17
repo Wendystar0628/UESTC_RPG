@@ -1,6 +1,6 @@
 using Campus.Contracts.Maps;
 
-// 存档与持久化（照 SYS-SAVE §10，WP-50；Campus.Gen.* 不得引用）
+// 存档与持久化（照 SYS-SAVE，WP-50；Campus.Gen.* 不得引用）
 namespace Campus.Contracts.Save;
 
 using System.Text.Json.Nodes;
@@ -27,18 +27,18 @@ public enum SaveReason : byte
 public enum SlotHealth : byte { Empty, Ok, RecoveredOlderGen, Corrupt, NewerBuild }
 
 public sealed record SaveMeta(
-    int Format,                     // 正文结构版本，现为 1（SYS-SAVE §3.3）
+    int Format,                     // 正文结构版本，现为 1（SYS-SAVE）
     string Build,                   // 构建号，只用于显示和日志；兼容性只看版本号
     SlotId Slot, SlotKind Kind,
     ulong Gen,                      // 代号：存档位内严格递增；与头和文件名 g<gen>.sav 一致
-    ulong Line,                     // 世界线号 = 这条世界线第一代的代号；回退只在同一条线内（SYS-SAVE §1）
+    ulong Line,                     // 世界线号 = 这条世界线第一代的代号；回退只在同一条线内（SYS-SAVE）
     double PlaySeconds,             // 游玩时长：只在漫游态累加
     MapId Map, double WorldHours, double Clock, Season Season, WeatherKind Weather, ViewMode Mode,
-    Pose Pose,                      // 镜头位姿，与 view 段相同；"继续"过场按它定终点（SYS-SAVE §5.1，SYS-TITLE §4.1）
-    NavSpace? Space,                // 所在空间（楼与楼层，WLD-INTERIORS §15）；室外为 null
+    Pose Pose,                      // 镜头位姿，与 view 段相同；"继续"过场按它定终点（SYS-SAVE，SYS-TITLE）
+    NavSpace? Space,                // 所在空间（楼与楼层，WLD-INTERIORS）；室外为 null
     string? Region,                 // 区域 ID（SYS-ATLAS区域栅格）
-    string? PlaceKey,               // 地点名的翻译键，存档卡摘要与继续过场的地点字幕用；查不到时退回图名（SYS-SAVE §3.2）
-    long SavedAtUnix,               // 系统时钟，只用于显示（SYS-SAVE §6，G4 例外）
+    string? PlaceKey,               // 地点名的翻译键，存档卡摘要与继续过场的地点字幕用；查不到时退回图名（SYS-SAVE）
+    long SavedAtUnix,               // 系统时钟，只用于显示（SYS-SAVE，G4 例外）
     SaveReason Reason,
     string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
     SlotId? Origin = null,          // 手动槽预留：读它之后自动保存写回这个存档位
@@ -50,10 +50,10 @@ public sealed class SaveSectionAttribute(string id) : Attribute
 {   // 标在实现 ISaveSection<T> 的 [KernelService] 或 [KernelNode] 类上；注册器从 Kernel 取这个实例
     public string Id { get; } = id;               // 小写字母、数字、连字符，如 "world"；"map:<id>/" 前缀由 Scope 决定，不写进 Id
     public string Owner { get; set; } = "";       // "WP-34"；G5 核对与 ownership.json 一致
-    public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（SYS-SAVE §3.6）
+    public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（SYS-SAVE）
     public SaveScope Scope { get; set; } = SaveScope.Global;
-    public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE §2）；G5 查 Phase 与 SYS-SAVE §2 的表一致
-    public int Order { get; set; }                // 阶段内的恢复顺序，小的先（SYS-SAVE §2）；G5 查不重复
+    public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE）；G5 查 Phase 与 SYS-SAVE 的表一致
+    public int Order { get; set; }                // 阶段内的恢复顺序，小的先（SYS-SAVE）；G5 查不重复
 }
 public enum RestorePhase : byte
 {
@@ -61,7 +61,7 @@ public enum RestorePhase : byte
     Content,   // 换图之后：map:<id>/atlas、progress 等
     Pose,      // 落位：view、walk。Preview 读档时只解析、留作终点，CompleteResume 时恢复
 }
-public enum LoadScope : byte { Full, Preview }      // 读档范围：Preview 给开始页用，不恢复 Pose 阶段（SYS-SAVE §5.1，SYS-TITLE §1.1 第 6 步）
+public enum LoadScope : byte { Full, Preview }      // 读档范围：Preview 给开始页用，不恢复 Pose 阶段（SYS-SAVE，SYS-TITLE 第 6 步）
 
 public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool Forced)
 {
@@ -69,7 +69,7 @@ public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool 
     // Core world and active-map weather sections must use the same non-null moment in production saves.
     public WorldSaveMoment? Moment { get; init; }
 }
-// Forced：此刻不是安全时刻（退出，或顺延满 60 s），各段必须给出落定值（SYS-SAVE §4.2）
+// Forced：此刻不是安全时刻（退出，或顺延满 60 s），各段必须给出落定值（SYS-SAVE）
 public sealed class RestoreContext
 {
     public required MapId Map { get; init; }
@@ -85,20 +85,20 @@ public sealed class RestoreContext
     // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在 v1 里补全
 }
 public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start);
-// Start 默认取本图 map.json 的 newGameStart（MapWorldRules.NewGameStart；清水河秋 17:05、晴，SYS-MAPS §3），没有时取本图默认状态；
-// 之后由 IWorldControl.FlowTo 正向推到落金初灯（SYS-SAVE §5.5、SYS-TITLE §6）
+// Start 默认取本图 map.json 的 newGameStart（MapWorldRules.NewGameStart；清水河秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；
+// 之后由 IWorldControl.FlowTo 正向推到落金初灯（SYS-SAVE、SYS-TITLE）
 
 public interface ISaveSection                         // 注册器只认这个非泛型接口；各包实现下面的泛型版
 {
     JsonTypeInfo TypeInfo { get; }
-    bool IsSettled => true;                           // 本段此刻是否落定；有一段为 false，就顺延（SYS-SAVE §4.2）
+    bool IsSettled => true;                           // 本段此刻是否落定；有一段为 false，就顺延（SYS-SAVE）
     object Capture(in CaptureContext c);
     void Restore(object dto, RestoreContext c);
     object CreateDefault(NewGameContext c);
     JsonNode Migrate(int fromVersion, JsonNode data) => throw new NotSupportedException();
     // 从 fromVersion 迁到 fromVersion + 1；纯函数，在后台线程调用，不碰 Godot 和服务状态
 }
-public interface ISaveSection<T> : ISaveSection where T : class   // T：sealed record，只读，不含 Godot 类型（SYS-SAVE §3.5）
+public interface ISaveSection<T> : ISaveSection where T : class   // T：sealed record，只读，不含 Godot 类型（SYS-SAVE）
 {
     new JsonTypeInfo<T> TypeInfo { get; }             // 来自本包的源生成 JsonSerializerContext
     new T Capture(in CaptureContext c);               // 主线程，FramePriority.Save 那一步；落定快照；全部段合计 p99 ≤ 0.3 ms
@@ -114,8 +114,8 @@ public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
 public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
 public enum LoadStatus : byte { Loaded, Recovered, Empty, Corrupt, NewerBuild, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
-public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE §1、SYS-SAVE §12）
-public sealed record SaveState(                                     // 保存状态（SYS-SAVE §4.6）：存档页、设置卡持续显示
+public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE、SYS-SAVE）
+public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：存档页、设置卡持续显示
     SlotId? Slot,                   // 当前存档位
     SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
     string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
@@ -126,28 +126,28 @@ public interface ISaveService                         // Kernel 服务（WP-50�
 {
     bool Enabled { get; }                             // --save=off，或 .lock 被别的进程占着时为 false：不写、不挪任何文件
     IReadOnlyList<SlotInfo> Slots { get; }            // 扉页后读好；s1–s3 恒为三项
-    SlotId? Continue { get; }                         // 最近保存的可读存档位（SYS-SAVE §1）；没有就是 null
+    SlotId? Continue { get; }                         // 最近保存的可读存档位（SYS-SAVE）；没有就是 null
     SlotId? Active { get; }                           // 当前存档位：自动保存写到这里
     bool Busy { get; }                                // 后台写盘进行中
-    SaveState State { get; }                          // 保存状态（SYS-SAVE §4.6）；值变时也发 SlotsChanged
+    SaveState State { get; }                          // 保存状态（SYS-SAVE）；值变时也发 SlotsChanged
     event Action? SlotsChanged;                       // 在主线程发出
-    void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE §4.1）；只在漫游态有效；Quit、ToTitle 不走这里
+    void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE）；只在漫游态有效；Quit、ToTitle 不走这里
     Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁、预留的手动槽
     Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full);
-    // 后台读取、校验、迁移，主线程按阶段恢复（SYS-SAVE §5.1）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
+    // 后台读取、校验、迁移，主线程按阶段恢复（SYS-SAVE）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
     bool HasPendingPose { get; }                      // Preview 读档后为 true，Pose 阶段的段已解析、还没恢复
     Task CompleteResume();                            // 继续过场交还控制那一帧调用，在 FramePriority.Save 恢复 view、walk；Instance 不变
     Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
     Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
-    // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE §5.5）
+    // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE）
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
     // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
-    // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE §4.4、SYS-SAVE §4.6，D-171）
-    byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE §3.4）
+    // Failed（写盘出错、读回校验不符、超时）不退出，由 IAppFlow 让观者选重试、返回游戏或仍然退出（SYS-SAVE、SYS-SAVE，D-171）
+    byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（SYS-SAVE）
 }
-// 文件结构：魔数 → 64 字节的头 → 未压缩的 meta JSON → Brotli 压缩的分段 JSON → WebP 缩略图，外加 SHA-256（SYS-SAVE §3.1）。
+// 文件结构：魔数 → 64 字节的头 → 未压缩的 meta JSON → Brotli 压缩的分段 JSON → WebP 缩略图，外加 SHA-256（SYS-SAVE）。
 // 序列化只用 System.Text.Json 源生成；各包的 DTO 用自己的 JsonSerializerContext，约定与 ContractJson.Options 一致，
-// ID 类的 record struct 写成字符串（SYS-SAVE §3.5）。其他契约里与存档有关的部分（IWorldState.Instance、FramePriority.Save、
+// ID 类的 record struct 写成字符串（SYS-SAVE）。其他契约里与存档有关的部分（IWorldState.Instance、FramePriority.Save、
 // WeatherSeed 与 WeatherBoot.Seed 的含义、IWeatherProcess.Capture/Restore）在 §3 世界状态块
-// 规则集的先后（SYS-SAVE §5.1、SYS-SAVE §5.5）：新游戏先定规则集，再调各段的 CreateDefault；
+// 规则集的先后（SYS-SAVE、SYS-SAVE）：新游戏先定规则集，再调各段的 CreateDefault；
 // 读档先按 meta 的 Ruleset 定规则集，再进 World 阶段

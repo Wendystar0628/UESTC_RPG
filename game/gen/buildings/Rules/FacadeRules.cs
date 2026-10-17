@@ -15,7 +15,7 @@ public enum RoofEdge : byte
     Parapet,
 }
 
-/// <summary>Window card types (WLD-INTERIORS §5.1), written to the glass spare byte. 0 = unspecified.</summary>
+/// <summary>Window card types (WLD-INTERIORS), written to the glass spare byte. 0 = unspecified.</summary>
 public enum WindowCard : byte
 {
     None = 0, Classroom = 1, Lecture = 2, Corridor = 3, Stair = 4, Office = 5, Lab = 6, Clean = 7, Dorm = 8,
@@ -48,7 +48,7 @@ public static class LightSlots
 }
 
 /// <summary>
-/// Facade rule set of one family (MAP-QSH-ADDITIONS §3, ART-MODELING §2, §7.8). All lengths in metres.
+/// Facade rule set of one family (MAP-QSH-ADDITIONS, ART-MODELING). All lengths in metres.
 /// Stylised proportions: deep reveals, thick frames and sills, chunky cornices; human-scale anchors stay real.
 /// </summary>
 public sealed record FacadeProfile(
@@ -208,7 +208,7 @@ public static class FacadeRules
 
     /// <summary>
     /// Profile for a building. clusterHash groups neighbouring buildings (same 160 m cell) so that
-    /// families differ between groups, never inside one building (ART-MODELING §5).
+    /// families differ between groups, never inside one building (ART-MODELING).
     /// </summary>
     public static FacadeProfile ProfileFor(BuildingStyle style, uint clusterHash) => style switch
     {

@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
 /// Review set for the part gallery and the tests: every interior equipment part in all three variations at the sizes the
-/// golden-sample dorm (学知苑 1 栋, WLD-INTERIORS §2.8) uses. Door plates carry sample room numbers through
+/// golden-sample dorm (学知苑 1 栋, WLD-INTERIORS) uses. Door plates carry sample room numbers through
 /// <see cref="RoomSignPart.Build"/>.
 /// </summary>
 public static class MepGallery

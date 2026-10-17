@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 目录页（SYS-ATLAS §4.4、UI-NAV §4.5）：按区分组（总览、核心、南、西、北、东、边界），组内依次是锚点、观景点、
+/// 目录页（SYS-ATLAS、UI-NAV）：按区分组（总览、核心、南、西、北、东、边界），组内依次是锚点、观景点、
 /// 可进入的室内、路线。每项是 96×54 缩略图、中英双行名称、编号；"此处"用过孔灯。整张列表只算 1 个 Control，
 /// 行在 _Draw 里画；没有搜索框，也没有文字输入。↑↓ 选择（地图页随之平移、高亮），Enter 打开传送卡。
 /// </summary>
@@ -183,7 +183,7 @@ public partial class IndexList : Control
             if (top + row.Height < 0 || top > Size.Y) continue;
             if (row.Header is { } header)
             {
-                // 组标题："mono-caps 小标签 + 发丝线"（UI-VISUAL §5.1）
+                // 组标题："mono-caps 小标签 + 发丝线"（UI-VISUAL）
                 var baseline = top + 26;
                 var zhF = _ctx.Style.Fonts["small"];
                 MapDraw.Text(this, zhF, new(Pad, baseline), header, t.Text2);

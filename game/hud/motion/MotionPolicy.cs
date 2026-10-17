@@ -6,7 +6,7 @@ namespace Campus.Hud.Motion;
 public enum MotionLevel : byte { Full, Reduced, Instant }
 
 /// <summary>
-/// "减少动态效果"的唯一来源（UI-VISUAL §10.1、§11.7）：实现契约 <see cref="IMotionSettings"/>，3D 侧只读它；
+/// "减少动态效果"的唯一来源（UI-VISUAL）：实现契约 <see cref="IMotionSettings"/>，3D 侧只读它；
 /// 界面组件的时长一律经这里取，组件里不写判断。--motion=full|reduced|instant 优先于设置；Instant 给门禁和截图用。
 /// </summary>
 [KernelService(typeof(IMotionSettings), Owner = "WP-35")]
@@ -80,7 +80,7 @@ public sealed class MotionPolicy : IMotionSettings
             };
         }
         foreach (var arg in OS.GetCmdlineUserArgs())
-            if (arg == "--ui=1") return MotionLevel.Instant;   // --ui=1 的截图默认 instant（UI-VISUAL §11.12）
+            if (arg == "--ui=1") return MotionLevel.Instant;   // --ui=1 的截图默认 instant（UI-VISUAL）
         return null;
     }
 }

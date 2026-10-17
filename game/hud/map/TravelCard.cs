@@ -4,7 +4,7 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 传送卡（SYS-ATLAS §4.5）：宽 372 的实底卡片，左上切角；缩略图 336×189、名称 h3 与英文名、等宽元信息、
+/// 传送卡（SYS-ATLAS）：宽 372 的实底卡片，左上切角；缩略图 336×189、名称 h3 与英文名、等宽元信息、
 /// 标签行（可达模式、推荐状态）、按钮。主按钮默认【传送】，另有【飞过去】【追踪】；就在这里（20 m 内）时
 /// 两个前往按钮灰显、写"此处"。卡片不提供"应用推荐"。不是网页地图那种地点卡片（INV-1）。
 /// </summary>
@@ -39,7 +39,7 @@ public partial class TravelCard : Control
     public MapButton Fly { get; }
     public MapButton Track { get; }
     public MapEntry? Entry => _entry;
-    /// <summary>主按钮是【传送】还是【飞过去】（设置项"地图上的前往方式"，SYS-ATLAS §12）。</summary>
+    /// <summary>主按钮是【传送】还是【飞过去】（设置项"地图上的前往方式"，SYS-ATLAS）。</summary>
     public TravelStyle PrimaryStyle { get; private set; } = TravelStyle.Teleport;
 
     public void Show(MapEntry entry, string meta, bool here, bool tracked, TravelStyle primary)
@@ -81,7 +81,7 @@ public partial class TravelCard : Control
         var r = new Rect2(Vector2.Zero, Size);
         MapDraw.FloatShadow(this, r, m.ChamferCard, t.ShadowFloat, 8, 24);
         MapDraw.Panel(this, r, m.ChamferCard, t.Solid, t.PanelLine);
-        // 选中：顶边一条 1.5 px 的冷色色散线（UI-VISUAL §5.6）
+        // 选中：顶边一条 1.5 px 的冷色色散线（UI-VISUAL）
         var a = t.IrisA; a.A *= 0.35f;
         var b = t.IrisB; b.A *= 0.35f;
         DrawLine(new(m.ChamferCard, 0.75f), new(Width, 0.75f), a, 0.75f);

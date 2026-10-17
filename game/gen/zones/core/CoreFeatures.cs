@@ -16,7 +16,7 @@ public static class CoreFeatures
     /// <summary>品·悦吧 store front (8407) against the podium's north-east end: the 1F cafe door (lib.cafe) opens beside it.</summary>
     public static readonly FeatureId CafeStore = new("qsh:way:806848407");
 
-    /// <summary>16e: the library's north blocks this zone builds (WLD-INTERIORS §17), each its own entity.</summary>
+    /// <summary>16e: the library's north blocks this zone builds (WLD-INTERIORS), each its own entity.</summary>
     public static readonly FeatureId NorthAnnex = new("qsh:way:806848403");
     public static readonly FeatureId CourtWing = new("qsh:way:806848406");
     public static readonly FeatureId LowBlock = new("qsh:way:806848408");

@@ -14,7 +14,7 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.MainBuilding;
 
 /// <summary>
-/// Main building identity parts (MAP-QSH-SOUTH §2). The wings' massing, storeys and window bays stay with WP-14's facade
+/// Main building identity parts (MAP-QSH-SOUTH). The wings' massing, storeys and window bays stay with WP-14's facade
 /// rules (heights set by HeightOps in overlay/south.d/); this site adds what makes the building read as the main
 /// building: the front platform at the 2.6 m first floor with its grand steps, the flat-roofed square-column portico with
 /// round-headed windows and door in its back wall, the colonnaded roof gallery (空廊) with railing parapets on B2, and the
@@ -146,7 +146,7 @@ public sealed class MainBuildingSite : SouthSite
         b.Add(PartGeometryKernel.BeveledBox(Width + 0.06f, 0.14f, d + 0.03f, 0.02f, L.StoneTrim), F.At(Xc, top - 0.14f, z0 + d * 0.5f - 0.015f));
         // A plinth band reads the podium as built stone rather than a bare block.
         b.Add(PartGeometryKernel.BeveledBox(Width + 0.08f, 0.55f, d + 0.04f, 0.02f, L.Granite), F.At(Xc, y - 0.1f, z0 + d * 0.5f - 0.02f));
-        // 1.1 m stone balustrade walls on the two open side edges (drop over 1.0 m, WLD-TERRAIN §2.3).
+        // 1.1 m stone balustrade walls on the two open side edges (drop over 1.0 m, WLD-TERRAIN).
         foreach (var x in new[] { M.StepsX0 + 0.18f, M.StepsX1 - 0.18f })
         {
             b.Add(PartGeometryKernel.BeveledBox(0.36f, 1.0f, d - 0.3f, 0.02f, L.Stone), F.At(x, top, z0 + d * 0.5f - 0.15f));
@@ -238,12 +238,12 @@ public sealed class MainBuildingSite : SouthSite
             foreach (var k in new[] { 0.33f, 0.66f, 1f })
                 b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), F.At(Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
         }
-        // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK §8), stone threshold.
+        // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK), stone threshold.
         if (numbered is null) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), F.At(Xc, floor, glassZ));
         b.Add(PartGeometryKernel.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), F.At(Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), F.At(Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
-        // The mat, open sign and door lamp are WP-13's, placed on the b2.front entrance anchor (WLD-INTERIORS §0).
+        // The mat, open sign and door lamp are WP-13's, placed on the b2.front entrance anchor (WLD-INTERIORS).
     }
 
     // ---- Roof gallery (空廊, §2.3): a covered walkway ring of square columns, railing between the outer columns ----
@@ -276,7 +276,7 @@ public sealed class MainBuildingSite : SouthSite
             b.Add(railing.Lods[b.Lod](p), at);
             b.Add(PartGeometryKernel.BeveledBox(length, 0.15f, 0.3f, 0.02f, L.StoneTrim), at);
         }
-        // Plant enclosure inside the ring: 1.8 m perforated aluminium, locked (MAP-QSH-ADDITIONS §2.9).
+        // Plant enclosure inside the ring: 1.8 m perforated aluminium, locked (MAP-QSH-ADDITIONS).
         if (b.Lod != LodLevel.L4)
         {
             var inset = walk + 0.6f;
@@ -366,7 +366,7 @@ public sealed class MainBuildingSite : SouthSite
         else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), R.At(0, floor, RearGlassZ));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), R.At(side * 1.85f, floor, blockFront + 0.04f));
-        // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS §0).
+        // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS).
     }
 
     public override void Collide(SiteColliders c)

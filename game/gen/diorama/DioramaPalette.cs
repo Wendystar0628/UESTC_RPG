@@ -6,7 +6,7 @@ namespace Campus.Gen.Diorama;
 /// Colour names the backdrop reads (all registered in game/style/palette/core.json; WP-22 registers none of its own yet).
 /// City silhouettes take the grey-white wall pair, the far ring the snow pair; rock, haze, glow and rim colours are the
 /// frame colours the shader reads directly (fog, sky, sun light, cloud rim, window). The fog sea's spec is a placeholder:
-/// its colour comes only from the shared fog function (WLD-DIORAMA §4.2).
+/// its colour comes only from the shared fog function (WLD-DIORAMA).
 /// </summary>
 public static class DioramaPalette
 {

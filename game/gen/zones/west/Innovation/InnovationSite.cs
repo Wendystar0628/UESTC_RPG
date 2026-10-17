@@ -10,7 +10,7 @@ using L = Campus.Gen.Zones.West.WestTune.Look;
 namespace Campus.Gen.Zones.West.Innovation;
 
 /// <summary>
-/// 创新中心 (MAP-QSH-WEST §3; MAP-QSH-RENOVATION W-01). The bars and cross wings are WP-14's research family, renewed by its
+/// 创新中心 (MAP-QSH-WEST; MAP-QSH-RENOVATION W-01). The bars and cross wings are WP-14's research family, renewed by its
 /// rules (new windows, rooftop plant in its fenced enclosure, stair penthouses under the main coping: no sheds on the roof).
 /// This site adds the two identity pieces:
 /// <list type="bullet">
@@ -85,7 +85,7 @@ public sealed class InnovationSite : WestSite
         b.Place(PartCatalog.DoorGlass, new DoorParams(I.DoorWidth, I.DoorHeight, 0.08f, 0f, 2) { Foot = FootMat.Glass }, f.AtReversed(0, y, zs - 0.04f));
         b.Place(PartCatalog.InteriorCard, new PanelParams(I.PortalWidth - 2f * m - 0.6f, I.DoorHeight + 0.8f, 0.06f) { Variation = 1 }, f.AtReversed(0, y, 0.25f));
         GridFacade.Box(b, f, -hw, hw, y - 0.12f, y + 0.18f, -0.2f, d + 2.4f, L.Granite, 0.02f);
-        // Text hook: "创新中心" in red-brown calligraphy (MAP-QSH-WEST §3.2) goes on the sign panel (z = d + 0.34, between
+        // Text hook: "创新中心" in red-brown calligraphy (MAP-QSH-WEST) goes on the sign panel (z = d + 0.34, between
         // top − SignHeight − 0.2 and top − 0.2) once the scene text atlas (contract-26) arrives; the panel stays blank until then.
     }
 

@@ -236,7 +236,7 @@ public sealed class SouthModuleTests
     [TestCase]
     public void EntranceKitsAreLeftToTheStreetFurniture()
     {
-        // WLD-INTERIORS §0: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
+        // WLD-INTERIORS: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
         string[] kit = [PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp];
         var placed = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part is not null).Select(i => i.Part!.Part.Value).ToArray();
         Require(!placed.Any(kit.Contains), $"the zone places no entrance kit ({string.Join(", ", placed.Where(kit.Contains))})");
@@ -437,7 +437,7 @@ public sealed class SouthModuleTests
         Require(layouts.Values.Sum(g => g.Count) == 14, "fourteen grids in all");
     }
 
-    /// <summary>A06 on the deck (SYS-ATLAS §6): x, z and the panel's bearing, the main session's pick, 29 m from the old anchor.</summary>
+    /// <summary>A06 on the deck (SYS-ATLAS): x, z and the panel's bearing, the main session's pick, 29 m from the old anchor.</summary>
     private static readonly Vector2 A06Spot = new(-166.5f, 734f);
     private const float A06Yaw = 99f;
 

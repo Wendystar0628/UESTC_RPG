@@ -5,10 +5,10 @@ using Godot.Collections;
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// The outline CompositorEffect (ART-STYLE §4.5, ENG-PERF §10.2): EffectCallbackType PostSky, NeedsNormalRoughness,
+/// The outline CompositorEffect (ART-STYLE, ENG-PERF): EffectCallbackType PostSky, NeedsNormalRoughness,
 /// two dispatches of style/outline/post_outline.glsl (mask, then composite) on the internal-resolution buffers,
 /// before any upscaling. The intermediate RG8 mask lives in the scene buffers' own context and is rebuilt
-/// whenever the buffers are reconfigured (render scale, window size, anti-aliasing: SYS-GRAPHICS §4).
+/// whenever the buffers are reconfigured (render scale, window size, anti-aliasing: SYS-GRAPHICS).
 /// Runs on the render thread; inputs arrive through <see cref="PostFrameBox"/> and nothing is allocated per frame.
 /// </summary>
 public partial class OutlineEffect : CompositorEffect

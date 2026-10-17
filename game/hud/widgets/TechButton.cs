@@ -6,7 +6,7 @@ namespace Campus.Hud.Widgets;
 public enum ButtonStyle : byte { Primary, Secondary, Text, Danger, Icon, Segment, Cell, Ghost, Tab, Item }
 
 /// <summary>
-/// 界面按钮（UI-VISUAL §7.1、§7.2）：形状与颜色全部由 ui_panel kind 0 画，按钮自己的字和图标按 role 换色。
+/// 界面按钮（UI-VISUAL）：形状与颜色全部由 ui_panel kind 0 画，按钮自己的字和图标按 role 换色。
 /// 六种状态：常态、悬停（效果弹簧 0.15 s 进 / 0.2 s 出）、按下（0 ms 进 / 120 ms 出，内容下沉 1 px）、
 /// 焦点（衍射边 160 ms 收紧，只给键盘）、禁用（断电，仍可聚焦，读出原因）、选中（点亮）。
 /// </summary>
@@ -30,14 +30,14 @@ public partial class TechButton : Button
         set { if (_selected == value) return; _selected = value; Refresh(); }
     }
 
-    /// <summary>断电态：字 n-500、边改虚线、不发光；仍可聚焦，悬浮说明写原因（UI-VISUAL §7.1）。</summary>
+    /// <summary>断电态：字 n-500、边改虚线、不发光；仍可聚焦，悬浮说明写原因（UI-VISUAL）。</summary>
     public bool Off
     {
         get => _off;
         set { if (_off == value) return; _off = value; TooltipText = value ? OffReason ?? "" : ""; Refresh(); }
     }
 
-    /// <summary>常态的底色（压在实景上的常驻图标钮要有面板底，UI-VISUAL §2.4）；null 为透明。</summary>
+    /// <summary>常态的底色（压在实景上的常驻图标钮要有面板底，UI-VISUAL）；null 为透明。</summary>
     public string? BaseFill { get; set; }
 
     /// <summary>覆盖默认的内容色，例如强调色的文字按钮。</summary>
@@ -164,7 +164,7 @@ public partial class TechButton : Button
                 fx = fx with { Role = _off ? "text.off" : _selected ? "text.1" : hover > 0.5f ? "text.accent" : "text.2", Hover = 0 };
                 break;
             case ButtonStyle.Item:
-                // 列表项与开始页菜单：悬停 b-300 12% 底 + 左侧 2 px 指示条（UI-VISUAL §7.4）
+                // 列表项与开始页菜单：悬停 b-300 12% 底 + 左侧 2 px 指示条（UI-VISUAL）
                 fx = fx with
                 {
                     Fill = _selected ? "surface.selected" : null,
@@ -180,7 +180,7 @@ public partial class TechButton : Button
         return fx;
     }
 
-    // 文字按钮悬停：1 px 下划线（偏移 5），按下透明度 75%（UI-VISUAL §7.2）。下划线是一块 1 px 的面板，颜色同字色。
+    // 文字按钮悬停：1 px 下划线（偏移 5），按下透明度 75%（UI-VISUAL）。下划线是一块 1 px 的面板，颜色同字色。
     private Panel? _underline;
 
     private void RefreshTextStyle()

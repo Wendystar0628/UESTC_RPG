@@ -7,9 +7,9 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Axis;
 
 /// <summary>
-/// 日晷 (MAP-QSH-CORE §3): in the wood on the avenue side of the time plaza, the foreground of P01. A bronze
+/// 日晷 (MAP-QSH-CORE): in the wood on the avenue side of the time plaza, the foreground of P01. A bronze
 /// equatorial dial set in a polished stainless ring on a three-tier round stone base; the gnomon is parallel to the
-/// earth's axis, pointing true north at the latitude's elevation, and is the 3D scene's north arrow (SYS-VIEW §4).
+/// earth's axis, pointing true north at the latitude's elevation, and is the 3D scene's north arrow (SYS-VIEW).
 /// The dial is perpendicular to the gnomon, so its face normal has y = sin(latitude) ≈ 0.51 and never holds snow.
 /// Its position is the overlay point <c>design:core-sundial</c> (the real sundial is not in OSM).
 /// </summary>

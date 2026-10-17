@@ -3,17 +3,17 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Every tunable of the WP-10 openings in one place (WF-FLOW §4): stylised sections in metres, after
-/// ART-FIDELITY §3.3, §4, ART-MODELING §2, §7. Initial values; the main session sets the final ones at review.
+/// Every tunable of the WP-10 openings in one place (WF-FLOW): stylised sections in metres, after
+/// ART-FIDELITY, ART-MODELING. Initial values; the main session sets the final ones at review.
 /// Local frame of all glazed parts: origin at the bottom centre of the clear opening on the glass plane,
 /// X along the facade, Y up, exterior towards −Z.
 /// </summary>
 public static class OpeningStyle
 {
     // ---- Shared frame sections -------------------------------------------------------------------------------
-    /// <summary>Frame edges are pressed into the reveal so no light leaks (ART-MODELING §7.4).</summary>
+    /// <summary>Frame edges are pressed into the reveal so no light leaks (ART-MODELING).</summary>
     public const float PressIn = 0.005f;
-    /// <summary>Inserted overlap between touching solids instead of coplanar contact (ART-MODELING §7.4).</summary>
+    /// <summary>Inserted overlap between touching solids instead of coplanar contact (ART-MODELING).</summary>
     public const float Insert = 0.003f;
     /// <summary>Outer frame face width, seen from outside (stylised ≈ 1.4 × real).</summary>
     public const float FrameFace = 0.075f;
@@ -28,13 +28,13 @@ public static class OpeningStyle
     /// <summary>Glazing bead of a fixed light: face width and depth, in front of the glass.</summary>
     public const float BeadFace = 0.02f;
     public const float BeadDepth = 0.018f;
-    /// <summary>Dark gasket where glass meets sash or bead (ART-FIDELITY §4: 5–8 mm), L0 only.</summary>
+    /// <summary>Dark gasket where glass meets sash or bead (ART-FIDELITY: 5–8 mm), L0 only.</summary>
     public const float GasketWidth = 0.007f;
     public const float GasketDepth = 0.008f;
     /// <summary>
-    /// Single-band chamfer of the R ≥ 10 mm tier (ART-FIDELITY §3.5: copings, sills) on heavy members: shutter housing,
+    /// Single-band chamfer of the R ≥ 10 mm tier (ART-FIDELITY: copings, sills) on heavy members: shutter housing,
     /// counter shelf. Frames, sashes, leaves and handles (the 2–5 mm tier) get no geometric chamfer: it belongs to L0+,
-    /// and a 45° band a pixel or two wide stipples the outline (ART-MODELING §7.3 item 6); the line pass's convex-edge
+    /// and a 45° band a pixel or two wide stipples the outline (ART-MODELING item 6); the line pass's convex-edge
     /// light carries those edges instead.
     /// </summary>
     public const float LargeBevel = 0.012f;
@@ -42,7 +42,7 @@ public static class OpeningStyle
     public const float GlassClear = 0.0015f;
 
     // ---- Casement and slit windows ----------------------------------------------------------------------------
-    /// <summary>Transom light height as a share of the window height, clamped (ART-MODELING §2 proportions).</summary>
+    /// <summary>Transom light height as a share of the window height, clamped (ART-MODELING proportions).</summary>
     public const float TransomShare = 0.28f;
     public const float TransomMin = 0.32f;
     public const float TransomMax = 0.6f;
@@ -89,7 +89,7 @@ public static class OpeningStyle
     public const float GlassDoorRail = 0.085f;
     public const float StallLift = 0.15f;
     public const float ScreenFrameFace = 0.12f, ScreenPanelInset = 0.08f, ScreenPanelProud = 0.015f;
-    /// <summary>Window type written into door glass: W-COR = 3 (VF-B glass byte), as WP-14 does for door bays; the lobby card of WLD-INTERIORS §5.2 has no type yet.</summary>
+    /// <summary>Window type written into door glass: W-COR = 3 (VF-B glass byte), as WP-14 does for door bays; the lobby card of WLD-INTERIORS has no type yet.</summary>
     public const byte DoorCard = 3;
 
     // ---- Roller shutter and louvres ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ public static class OpeningStyle
     public const float RollerPassHeight = 2.0f;
     public const float LouvreFrame = 0.05f;
     public const float LouvrePitch = 0.09f;
-    /// <summary>Blade chord as (rise, run): ≈ 35°, clear of the 40–50° line-flicker band (ART-MODELING §7.3).</summary>
+    /// <summary>Blade chord as (rise, run): ≈ 35°, clear of the 40–50° line-flicker band (ART-MODELING).</summary>
     public const float LouvreRise = 0.05f, LouvreRun = 0.07f, LouvreBlade = 0.01f;
     public const float BlindPitch = 0.04f, BlindChord = 0.018f, BlindTilt = 0.006f, BlindSlat = 0.005f, BlindRail = 0.02f;
 
@@ -119,7 +119,7 @@ public static class OpeningStyle
     public const float PleatSlopeStacked = 0.75f, PleatSlopeRelaxed = 0.45f;
     /// <summary>Share of the width taken by one bunched stack, and the drawn panel width when half open.</summary>
     public const float StackShare = 0.16f, HalfDrawnShare = 0.58f;
-    /// <summary>Dormitory curtain states fully open : half : drawn = 3 : 4 : 3 (ART-FIDELITY §3.3); ≥ 40 % of windows have one.</summary>
+    /// <summary>Dormitory curtain states fully open : half : drawn = 3 : 4 : 3 (ART-FIDELITY); ≥ 40 % of windows have one.</summary>
     public const int RatioOpen = 3, RatioHalf = 4, RatioDrawn = 3;
     public const float CurtainShare = 0.6f;
 
@@ -139,10 +139,10 @@ public static class OpeningStyle
     public static ToonSpec Casing { get; } = Spec("wall.greyWhite") with { Wet = 0.55f };
     public static ToonSpec Laminate { get; } = Spec("wall.greyWhite") with { Wet = 0.55f };
     public static ToonSpec Blind { get; } = Spec("wall.greyWhite") with { Line = LineClass.Fine, Wet = 0.3f };
-    /// <summary>Soft goods: two and a half steps with smooth normals (ART-STYLE §2.1, ART-MODELING §7.6).</summary>
+    /// <summary>Soft goods: two and a half steps with smooth normals (ART-STYLE, ART-MODELING).</summary>
     public static ToonSpec Fabric { get; } = Spec("curtain.cream") with { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Line = LineClass.Fine, Wet = 0f };
     /// <summary>
-    /// Curtain colours chosen per window with weights (ART-FIDELITY §3.3: colours differ): cream about 60 %, the rest
+    /// Curtain colours chosen per window with weights (ART-FIDELITY: colours differ): cream about 60 %, the rest
     /// light and low in chroma (17:30 lit: silver L 0.89 C 0.03, grey-white L 0.93 C 0.05).
     /// </summary>
     public static IReadOnlyList<(string Family, int Weight)> CurtainColours { get; } =

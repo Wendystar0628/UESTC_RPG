@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.CenterEast;
 
 /// <summary>
-/// Every tunable value of the center-east zone in one place, for review (WF-FLOW §4): materials as colour names, and
+/// Every tunable value of the center-east zone in one place, for review (WF-FLOW): materials as colour names, and
 /// the dimensions of each site. Coordinates are world (x, z) in metres from the OSM footprints in campus.json; local frames
 /// are described per block. Values marked "初值" are starting values awaiting the main session's call. 21b–21d add their
 /// own nested classes after <see cref="Pinxue"/>.
@@ -16,9 +16,9 @@ public static class CenterEastTune
     public const int BudgetDrawCalls = 16;
 
     /// <summary>
-    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS §5.1: 3 corridor,
+    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS: 3 corridor,
     /// 5 office, 6 lab) of each grid the zone declares. The research blocks follow the lab curve with W-LAB : W-OFF = 7 : 3
-    /// (MAP-QSH-CENTER-EAST §1.2), 品学楼's frame beam and link bridges the teaching curve with corridor cards (初值).
+    /// (MAP-QSH-CENTER-EAST), 品学楼's frame beam and link bridges the teaching curve with corridor cards (初值).
     /// </summary>
     public static class Windows
     {
@@ -30,13 +30,13 @@ public static class CenterEastTune
         public const int WenkeOfficeShare = 4;
     }
 
-    /// <summary>Materials (ART-STYLE §8 colour names only).</summary>
+    /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
             new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
 
-        /// <summary>Renovated teaching-block frame and walls: grey-white (MAP-QSH-CENTER-EAST §2.8).</summary>
+        /// <summary>Renovated teaching-block frame and walls: grey-white (MAP-QSH-CENTER-EAST).</summary>
         public static readonly ToonSpec Wall = S("wall.greyWhite", ToonFx.BevelLift);
         /// <summary>Copings, bands, plaque frames: light beige stone, fine lines so trims do not hatch the facade.</summary>
         public static readonly ToonSpec Trim = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
@@ -63,7 +63,7 @@ public static class CenterEastTune
         /// <summary>
         /// The two bronze figures (§1.3–§1.4), after 吴立人像's accepted borrowing (18c1 review 1): the palette is full, so the
         /// deep bronze borrows tree.bark until the 320–321 bronze pair is registered; the verdigris in the recesses (ART-STYLE
-        /// §10 青铜像) waits for that pair too. Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE §2, §5).
+        /// §10 青铜像) waits for that pair too. Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE).
         /// </summary>
         public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
         {
@@ -84,7 +84,7 @@ public static class CenterEastTune
         public static readonly ToonSpec Ink = S("glass", ToonFx.None, LineClass.None, 0.9f);
         /// <summary>文科楼's ribbon mullions: dark frames so the glass between the floor bands reads as one continuous dark band.</summary>
         public static readonly ToonSpec DarkFrame = S("glass", ToonFx.None, LineClass.Fine, 0.8f);
-        /// <summary>文科楼's local yellow-green panels (#aaa961, ART-STYLE §8: only on this building).</summary>
+        /// <summary>文科楼's local yellow-green panels (#aaa961, ART-STYLE: only on this building).</summary>
         public static readonly ToonSpec YellowGreen = S("panel.yellowGreen", ToonFx.BevelLift);
         /// <summary>
         /// The green cloth wound round the friendship tree's trunk (绿布): borrows the turf green, a clear green that does not
@@ -93,7 +93,7 @@ public static class CenterEastTune
         public static readonly ToonSpec Cloth = S("ground.turf", ToonFx.None, LineClass.Fine, 0.8f) with { Normal = ToonNormal.Smooth };
         /// <summary>The granite landscape stone beside the friendship tree: pale grey, rounded body, smooth normals.</summary>
         public static readonly ToonSpec GreyStone = S("wall.greyWhite", ToonFx.None) with { Normal = ToonNormal.Smooth };
-        /// <summary>The gold emblem inlaid in that stone (嵌金色原创徽记, ART-STYLE §11): curved metal, rim and anisotropic band.</summary>
+        /// <summary>The gold emblem inlaid in that stone (嵌金色原创徽记, ART-STYLE): curved metal, rim and anisotropic band.</summary>
         public static readonly ToonSpec Gold = new(new("uestc.gold.lit"), new("uestc.gold.shade"))
         {
             Fx = ToonFx.Rim | ToonFx.AnisoBand,
@@ -104,7 +104,7 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 品学楼 (MAP-QSH-CENTER-EAST §2). The A, B and C wings keep WP-14's facade rules on the +1.5 m platform
+    /// 品学楼 (MAP-QSH-CENTER-EAST). The A, B and C wings keep WP-14's facade rules on the +1.5 m platform
     /// (center-east.terrain.json); this zone builds the gate frame, the two link bridges, the forecourt, the fountain's
     /// stone tiers and the curved end bay.
     /// </summary>
@@ -119,7 +119,7 @@ public static class CenterEastTune
         public const string BridgeBC = "osm:way:797290182";
         /// <summary>The forecourt (门框前广场) and its holes: the lawn panel round the fountain, the round bed on the ramp.</summary>
         public const string Forecourt = "qsh:source:relation:11043356";
-        /// <summary>Design level of the platform (MAP-QSH-TERRAIN §10): only for probe eye heights, which have no terrain to read.</summary>
+        /// <summary>Design level of the platform (MAP-QSH-TERRAIN): only for probe eye heights, which have no terrain to read.</summary>
         public const float PlatformY = 1.5f;
 
         /// <summary>
@@ -144,7 +144,7 @@ public static class CenterEastTune
         public const float BridgeBottom = 4.0f, BridgeTop = 12.0f, BridgeColumnRadius = 0.3f;
 
         /// <summary>
-        /// Low stepped cascade (§2.3; water by WP-24, WLD-WATER §9; 10:01 review): three nested rectangular pools of light
+        /// Low stepped cascade (§2.3; water by WP-24, WLD-WATER; 10:01 review): three nested rectangular pools of light
         /// stone, centred in the forecourt's 14.2 × 7.2 m lawn panel 22 m in front of the frame, long side along the bar.
         /// Each tier's thin water sheet spills over its coping into the pool below. Halves are (along the bar, toward the
         /// forecourt); heights are above the lawn and stay under 0.9 m so the cascade lies low on the grass (初值).
@@ -170,7 +170,7 @@ public static class CenterEastTune
         public const float RoundBedRadius = 3.45f, SeatWidth = 0.45f, SeatHeight = 0.45f;
 
         /// <summary>
-        /// Ramp seat walls (MAP-QSH-TERRAIN §10.2): 0.45 m planter walls on both long sides of the 5 % ramp plaza,
+        /// Ramp seat walls (MAP-QSH-TERRAIN): 0.45 m planter walls on both long sides of the 5 % ramp plaza,
         /// frame-local x of each wall's plaza face, from z0 (top of the ramp) to z1 (foot), stepping per segment.
         /// </summary>
         public static readonly float[] RampWallX = [3.6f, 33.7f];
@@ -197,7 +197,7 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 中部科研区 (MAP-QSH-CENTER-EAST §1): 基础实验大楼 (科 A) and 一号科研实验楼 (科 B, 科 C), claimed and built by this zone
+    /// 中部科研区 (MAP-QSH-CENTER-EAST): 基础实验大楼 (科 A) and 一号科研实验楼 (科 B, 科 C), claimed and built by this zone
     /// as the renovated research family: warm light stone frame over recessed glass, a glazed ground storey, windows
     /// grouped in pairs by giant pilasters, grey-white cornice and sills, dark plinth (MAP-QSH-RENOVATION E-02, E-03).
     /// All blocks share one plan direction; positions are in its local frame R (u along <see cref="Axis"/>, w = (−Axis.y,
@@ -268,7 +268,7 @@ public static class CenterEastTune
         public static readonly Vector2 StairSize = new(5.0f, 6.0f);
         public const float StairHeight = 3.4f;
 
-        /// <summary>Plant enclosures (屋面设备进围挡, MAP-QSH-ADDITIONS §2.9): dark perforated fence round three heat pumps.</summary>
+        /// <summary>Plant enclosures (屋面设备进围挡, MAP-QSH-ADDITIONS): dark perforated fence round three heat pumps.</summary>
         public static readonly Vector2[] KeAPlant = [new(0.0f, -63.3f)];
         public static readonly Vector2[] KeBPlant = [new(10.0f, -116.3f)];
         public static readonly Vector2[] KeCPlant = [new(60.0f, -222.7f)];
@@ -276,7 +276,7 @@ public static class CenterEastTune
         public const float PlantFence = 1.8f;
 
         /// <summary>
-        /// 科 A's roof fence and tower tank (MAP-QSH-ADDITIONS §2.16): a 2 m grey aluminium bar fence round the east wing's
+        /// 科 A's roof fence and tower tank (MAP-QSH-ADDITIONS): a 2 m grey aluminium bar fence round the east wing's
         /// roof and a panel tank on a steel stand beside the stair penthouse; skyline only, the roof stays closed.
         /// </summary>
         public static readonly Vector2 KeAFenceMin = new(27.4f, -70.8f), KeAFenceMax = new(35.8f, -2.0f);
@@ -294,11 +294,11 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 中部科研区 monuments (MAP-QSH-CENTER-EAST §1.3–§1.5): 林为干像 and 麦克斯韦像 on the statue lawn east of 科 B/C, the
+    /// 中部科研区 monuments (MAP-QSH-CENTER-EAST): 林为干像 and 麦克斯韦像 on the statue lawn east of 科 B/C, the
     /// equation stone beside Maxwell and the 科研楼 stele by 银杏大道 between 科 A and 科 B. The OSM points move less than
     /// 4 m (minor, no reshape); the equation stone and Maxwell's granite apron are design additions in overlay/center-east.d/.
     /// Facings are bearings (0 north, 90 east). The figures are sculpture volumes after 吴立人像 (18c1 review): clothes,
-    /// posture and hair as masses, the face one smooth volume with no features or likeness (CORE-INDEX §3). Inscriptions wait
+    /// posture and hair as masses, the face one smooth volume with no features or likeness (CORE-INDEX). Inscriptions wait
     /// for the scene text atlas (contract-26): the pedestal and stele faces stay blank, the equation stone carries four
     /// filled line blocks where the four equations go (初值).
     /// </summary>
@@ -366,7 +366,7 @@ public static class CenterEastTune
     }
 
     /// <summary>
-    /// 文科楼群 (MAP-QSH-CENTER-EAST §3), claimed whole and built by this zone from its five OSM parts: the tower in the east
+    /// 文科楼群 (MAP-QSH-CENTER-EAST), claimed whole and built by this zone from its five OSM parts: the tower in the east
     /// wing, three podium wings and the central hub that holds the glass-roofed atrium. Every block is a stack of rounded
     /// storeys: a white-grey slab-edge band at each floor and a continuous dark glass ribbon between (§3.2 白灰色楼板边，
     /// 夹着连续的黑灰玻璃带); the wings step back storey by storey toward their tips, each set-back a planted terrace behind

@@ -1,5 +1,5 @@
 // veg_trunk.gdshader：树干与枝（tree.bark，下半截可刷白）；同一着色器也画 ShadowsOnly 投影代理（木质加 L1 团块）（WP-23）
-// 规格：WLD-VEGETATION §1、§9、§11；ENG-PERF §1.4、§9；ART-STYLE §2.1（植被三阶）。
+// 规格：WLD-VEGETATION；ENG-PERF；ART-STYLE（植被三阶）。
 // 看得见的树冠团块在 veg_card 里（max-011：团块与叶卡同一面）；这里的团块只出现在投影代理上，挖洞、随叶量收缩。
 // 顶点数据见 Campus.Gen.Vegetation.MotherModels：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；
 // 远池替身的木质 CUSTOM2.w = 1，与近池 L1 在 135–165 m 按 Bayer 抖动互补交接（植被公共段 veg_pool_code，23c2c）。
@@ -9,11 +9,11 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_d
 
 #include "res://style/shaders/toon.gdshaderinc"
 
-// 投影代理（ENG-PERF §9）：打开后团块按世界坐标噪声挖出 0.4–0.8 m 的洞，形成林荫光斑
+// 投影代理（ENG-PERF）：打开后团块按世界坐标噪声挖出 0.4–0.8 m 的洞，形成林荫光斑
 instance uniform float shadow_proxy = 0.0;
 
 // ===========================================================================
-// 植被公共段：veg_trunk 与 veg_card 逐字相同（WLD-VEGETATION §11 的"植被 include"）。
+// 植被公共段：veg_trunk 与 veg_card 逐字相同（WLD-VEGETATION 的"植被 include"）。
 // 植被 include 进白名单前两份同步修改；进白名单后整段挪进 veg_common.gdshaderinc（契约申请 contract-24）。
 // 可调参数集中在这一段的常量里。
 // ===========================================================================
@@ -33,7 +33,7 @@ const int VEG_CARD_FROND = 9;
 const float VEG_SEASON_JITTER = 0.12;      // 逐株季节错相 ±0.06（§9.1）
 const float VEG_LEAD_BLOB = 0.03;          // 团块哈希带来的先后（季节单位）
 const float VEG_LEAD_TOP = 0.04;           // 树顶、向阳面先变（按 t0，§9.4）
-const float VEG_LIT_SHIFT = 0.08;          // 影 → 受光的阈值从全场的 −0.03 挪到植被的 0.05（ENG-PERF §9）
+const float VEG_LIT_SHIFT = 0.08;          // 影 → 受光的阈值从全场的 −0.03 挪到植被的 0.05（ENG-PERF）
 const float VEG_TOP_LIFT = 0.06;           // 冠顶亮：受光 L +0.06（§1.3）
 const float VEG_GRAD_SHADE = 0.04;         // 冠内梯度在影里的连续项（L，±0.02）
 // 四阶软色阶（max-110 110c）：照参考小渔港树叶的 soft 色阶（N·L 约 0.1 / 0.4 处分出 0.32 / 0.68 / 1），树冠在受光面里多一档
@@ -44,14 +44,14 @@ const float VEG_LIT_LIFT = 0.09;           // 树冠受光档整体提亮（OKLa
 const vec2 VEG_LIFT_ROOM = vec2(0.72, 0.9);   // 受光色 OKLab L 从前者到后者，提亮（含冠顶亮）从满降到 0
 // 树冠暗面按材质（max-110 110c 第二、三轮），按受光色的色相分三类；深影由影色推导，一起变。
 // 绿叶、红叶：参考树冠的暗面偏青蓝，不是同色压暗，OKLab 的 b（黄 → 蓝）往蓝推、L 再压，得青绿、紫红；
-// 黄橙类（主角银杏）：暗面往琥珀、橙走，色相向红转约 12°，彩度不降且不低于受光彩度的 0.44 倍（ART-STYLE §3 护栏下限），不往冷推
+// 黄橙类（主角银杏）：暗面往琥珀、橙走，色相向红转约 12°，彩度不降且不低于受光彩度的 0.44 倍（ART-STYLE 护栏下限），不往冷推
 const float VEG_SHADE_COOL = 0.03;         // 绿叶、红叶影色 OKLab b 往蓝推的量
 const float VEG_SHADE_DEEPEN = 0.07;       // 绿叶影色 L 再压的比例
 const float VEG_DEEPEN_RED = 0.05;         // 红叶影色 L 再压的比例
 const float VEG_DEEPEN_WARM = 0.04;        // 黄橙类影色 L 再压的比例
 const float VEG_WARM_SHADE_HUE = 0.21;     // 黄橙类影色色相往红转（rad，约 12°）
 const float VEG_WARM_SHADE_CMIN = 0.44;    // 黄橙类影色彩度下限：受光彩度的这个倍数
-const float VEG_HUE_JITTER = 0.10;         // 世界坐标色相噪声 ±0.10 rad ≈ ±6°（ART-MODELING §3）
+const float VEG_HUE_JITTER = 0.10;         // 世界坐标色相噪声 ±0.10 rad ≈ ±6°（ART-MODELING）
 const float VEG_L_JITTER = 0.04;           // 世界坐标明度噪声 ±4%
 const float VEG_TINT_CELL = 26.0;          // 色相噪声的格子（m），相邻的树颜色接近
 const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速度（m/s，WP-26 风场进来前的桩）
@@ -83,7 +83,7 @@ struct VegSpecies {
 	int twig_cid;     // 枝条笔触的受光色号（tree.bare）
 };
 
-// 每株量（WLD-VEGETATION §11.2）：x 种子，y 树种号 × 16 + 变体号，z 风向位置，w 树高。
+// 每株量（WLD-VEGETATION）：x 种子，y 树种号 × 16 + 变体号，z 风向位置，w 树高。
 // 不是 MultiMesh 的挂载读到的是 0：按"树种表缺省"处理，满冠、不开花、颜色取第 0 行。
 VegInst veg_instance(vec4 ic) {
 	if (ic.w <= 0.0) {
@@ -111,7 +111,7 @@ VegSpecies veg_species(int row) {
 	if (row < 0 || row > 31) {
 		return s;
 	}
-	// 树种表由 WP-38 启动时写入（WLD-VEGETATION §11.6）；没写时读不到标记，走上面的缺省。
+	// 树种表由 WP-38 启动时写入（WLD-VEGETATION）；没写时读不到标记，走上面的缺省。
 	if (abs(texelFetch(tree_species, ivec2(7, row), 0).w - VEG_TABLE_TAG) > 0.5) {
 		return s;
 	}
@@ -137,7 +137,7 @@ float veg_hash(float seed, uint salt) {
 	return lamp_hash01(uint(seed * 16777216.0) * 2654435761u + salt);
 }
 
-// 局部季节（WLD-VEGETATION §11.6）：φ = 0.6·seed + 0.4·z；转场按 φ 先后，再加逐株错相
+// 局部季节（WLD-VEGETATION）：φ = 0.6·seed + 0.4·z；转场按 φ 先后，再加逐株错相
 float veg_local_season(VegInst inst) {
 	float phi = 0.6 * inst.seed + 0.4 * inst.wind_pos;
 	float k = clamp((season.w - 0.3 * phi) / 0.7, 0.0, 1.0);
@@ -160,7 +160,7 @@ vec3 veg_pal(int cid, int row, float s) {
 	return row >= 4 ? pal_season(row, s) : pal_cur(cid);
 }
 
-// 世界坐标的低频噪声 → (色相, 明度)，相邻的树颜色接近（ART-MODELING §3）
+// 世界坐标的低频噪声 → (色相, 明度)，相邻的树颜色接近（ART-MODELING）
 vec2 veg_tint_noise(vec3 origin) {
 	vec2 g = origin.xz / VEG_TINT_CELL;
 	vec2 i = floor(g);
@@ -206,7 +206,7 @@ vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, floa
 }
 
 // 片元取色：照 toon_colors 的室外分支（天光渐变、地面反光、路灯光斑、200 m 降饱和、深影、透光、暖边），
-// 颜色由调用方从季相行给出；植被不做湿润变暗和倒角提亮（WLD-VEGETATION §9.4）。
+// 颜色由调用方从季相行给出；植被不做湿润变暗和倒角提亮（WLD-VEGETATION）。
 // t_grad < 0 时不加冠内梯度（木质部分）。
 ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float t_grad, float trans_k) {
 	if (t_grad >= 0.0) {
@@ -257,12 +257,12 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
 }
-// 远近池交接与淡出（WLD-VEGETATION §11.4、ENG-PERF §9，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
+// 远近池交接与淡出（WLD-VEGETATION、ENG-PERF，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
 // visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
 // 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Gen.Vegetation.VegFade 分桶）。
 // 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
 // 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
-// 距离乘细节系数 quality.x（WLD-VEGETATION §11.8）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
+// 距离乘细节系数 quality.x（WLD-VEGETATION）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。
 const vec2 VEG_POOL_FADE = vec2(135.0, 165.0);   // 近池 ↔ 远池替身的过渡带（m）；= VegFade.NearFadeStart/End
 const bool VEG_CLOUD_READY = false;              // 树冠云（L3，并入格子几何）还没有：替身一直画到远处，不淡出
 const vec2 VEG_CLOUD_FADE = vec2(360.0, 440.0);  // 替身 ↔ 树冠云的过渡带（m）；= VegFade.CloudFadeStart/End
@@ -308,7 +308,7 @@ bool veg_pool_discard(vec2 frag_xy, float code) {
 // 植被公共段结束
 // ===========================================================================
 
-const float VEG_WHITEWASH_Y = 1.2;         // 刷白高度（m，WLD-VEGETATION §1.7）
+const float VEG_WHITEWASH_Y = 1.2;         // 刷白高度（m，WLD-VEGETATION）
 const float VEG_HOLE_CELL = 0.75;          // 投影代理挖洞的噪声格（m）
 const float VEG_HOLE_COVER = 0.42;         // 投影代理挖掉的比例
 

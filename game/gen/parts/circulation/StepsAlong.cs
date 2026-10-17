@@ -17,7 +17,7 @@ public enum StepsFinish
 
 /// <summary>
 /// Steps or grass seat tiers swept along a plan polyline, open or closed: the time-plaza ring, curved flights, the lake
-/// and moon-viewing seat terraces and the sunken lawn (MAP-QSH-TERRAIN §2, §4, §5, §8, §10; WLD-TERRAIN §5.2, §5.5).
+/// and moon-viewing seat terraces and the sunken lawn (MAP-QSH-TERRAIN; WLD-TERRAIN).
 /// The line is the foot of the first riser at height baseY; the steps climb toward (dz, −dx) of the line's direction,
 /// the WP-09 sweep's positive lateral. A loop with positive Σ(x·z′ − x′·z) (x = cos θ, z = sin θ with θ rising) climbs
 /// outward, as the time-plaza ring does; reverse the points to climb inward. Tread k sits at k·riser over [(k−1)·tread, k·tread]; the top tread is flush with the upper level.

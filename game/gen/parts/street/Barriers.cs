@@ -7,9 +7,9 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Bollard (护柱, WLD-LIFE §4.4). Width is the diameter (or the square side), Height the top. Variation 0: stainless round
+/// Bollard (护柱, WLD-LIFE). Width is the diameter (or the square side), Height the top. Variation 0: stainless round
 /// bollard with a dome cap, a flared foot and one dark reflector band. 1: yellow-and-black crash bollard (南门广场,
-/// MAP-QSH-SOUTH §1.4), one broad black stripe. 2: square stone bollard with a stepped cap. Round bollards stay within 120
+/// MAP-QSH-SOUTH), one broad black stripe. 2: square stone bollard with a stepped cap. Round bollards stay within 120
 /// triangles near (Opus review 10:07): ten segments with smooth normals, the foot and dome rounded by normals, not by bands. A caller's Material (other than the record default) colours the
 /// body, so a site's marking paint or stone carries through. Collision: one vertical post, Metal (stone: StonePaving).
 /// </summary>
@@ -88,10 +88,10 @@ public sealed class BollardPart : IPartDef<ColumnParams>
 }
 
 /// <summary>
-/// Stone sphere (石球, WLD-LIFE §4.4): a polished stone ball sunk a little into a low round plinth. The ball's diameter is the
+/// Stone sphere (石球, WLD-LIFE): a polished stone ball sunk a little into a low round plinth. The ball's diameter is the
 /// smallest of Width, Depth and Height (less the plinth); its top is Height. Variation 0: white stone (main crossings). 1: grey
 /// stone (南门广场). A caller's Material colours both. The ball sits on the plinth, so its top is that smallest size.
-/// Collision: a post as tall as the ball — the contracts have no sphere primitive yet (WLD-LIFE §5 asks for one; requested by WP-13).
+/// Collision: a post as tall as the ball — the contracts have no sphere primitive yet (WLD-LIFE asks for one; requested by WP-13).
 /// </summary>
 [Part(PartCatalog.StoneSphere, Owner = "WP-13")]
 public sealed class StoneSpherePart : IPartDef<FurnitureParams>
@@ -120,7 +120,7 @@ public sealed class StoneSpherePart : IPartDef<FurnitureParams>
         var b = new PartBuilder();
         var centre = Top(p) - r;
         b.AddLathe([.. Shapes.Arc(r, centre, -90, 90, near ? 8 : 4)], near ? S.RoundSegments : S.RoundSegmentsFar, S.Stone(colour, true), Matrix4x4.Identity);
-        // The plinth is a separate stone material, so the ball meets it with a material line, not a seam (ART-MODELING §7.8 item 3).
+        // The plinth is a separate stone material, so the ball meets it with a material line, not a seam (ART-MODELING item 3).
         var rp = r * S.SpherePlinthRatio; var hp = S.SpherePlinthHeight;
         b.AddLathe(near
             ? Shapes.Creased(new(0, 0), new(rp, 0), new(rp, hp - 0.01f), new(rp - 0.01f, hp), new(0, hp))

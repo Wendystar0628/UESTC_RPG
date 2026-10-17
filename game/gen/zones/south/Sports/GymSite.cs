@@ -12,14 +12,14 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Sports;
 
 /// <summary>
-/// Gym (MAP-QSH-SOUTH §7.1; WLD-INTERIORS §2.5), a 26 m round drum that no facade rule can extrude, so this site claims it:
+/// Gym (MAP-QSH-SOUTH; WLD-INTERIORS), a 26 m round drum that no facade rule can extrude, so this site claims it:
 /// - an ochre-brown base band up to the platform storey (the field level behind it is closed, three service doors);
 /// - the ring hall's tea glass, faceted one bay per pane, with slanted dark mullions, a transom and brown louvre blades;
 /// - a ring of bulging silver ribs whose rolled edge turns down over the glass;
 /// - the silver-grey roof, broad and almost flat in the middle, radial seams and two rings of light blue-grey vent caps;
-/// - the open public entrance on the platform storey (gym.deck in interiors.json), with WLD-INTERIORS §4's presentation.
+/// - the open public entrance on the platform storey (gym.deck in interiors.json), with WLD-INTERIORS's presentation.
 /// The glass is one grid (contract-29): a column per facet, the platform storey and the upper hall as rows, the door cell skipped.
-/// The tea glass borrows the registered glass colour (the palette is full, ART-STYLE §8.5).
+/// The tea glass borrows the registered glass colour (the palette is full, ART-STYLE).
 /// </summary>
 public sealed class GymSite : SouthSite
 {
@@ -151,7 +151,7 @@ public sealed class GymSite : SouthSite
         // The coping is the ring hall's outer floor edge: its top is the platform storey.
         b.Add(Solids.Lathe([new(r + 0.2f, top - 0.3f), new(r + 0.2f, top), new(p.GlassRadius - 0.2f, top)], segments, Round(L.StoneTrim), capTop: false), at);
         if (b.Detail == SiteDetail.Mass) return;
-        // Two shallow joint bands keep the ochre band from reading as one bare extrusion (ART-FIDELITY §0).
+        // Two shallow joint bands keep the ochre band from reading as one bare extrusion (ART-FIDELITY).
         foreach (var h in new[] { 1.75f, 2.95f })
             b.Add(Solids.Lathe([new(r + 0.04f, h), new(r + 0.04f, h + 0.06f)], segments, Round(L.StoneTrim), capBottom: false, capTop: false), at);
     }
@@ -272,7 +272,7 @@ public sealed class GymSite : SouthSite
 
     /// <summary>
     /// The platform-storey public entrance in facet 0 (gym.deck): an aluminium portal with the leaves fixed open against the
-    /// jambs (SYS-WALK §8), a glass lobby screen inside and a flat canopy over the landing.
+    /// jambs (SYS-WALK), a glass lobby screen inside and a flat canopy over the landing.
     /// </summary>
     private static void Entrance(SiteBuilder b, Plan p, float y)
     {
@@ -293,7 +293,7 @@ public sealed class GymSite : SouthSite
         GridFacade.Box(b, f, -w * 0.5f - 1.4f, w * 0.5f + 1.4f, floor + h + 0.6f, floor + h + 0.85f, 0.1f, 2.6f, L.StoneTrim, 0.02f);
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 1.1f) - 0.08f, side * (w * 0.5f + 1.1f) + 0.08f, floor, floor + h + 0.6f, 2.3f, 2.46f, L.Metal, 0.01f);
-        // The mat, open sign and door lamp are WP-13's, placed on the gym.deck entrance anchor (WLD-INTERIORS §0).
+        // The mat, open sign and door lamp are WP-13's, placed on the gym.deck entrance anchor (WLD-INTERIORS).
     }
 
     private static float BearingAngle(float bearing)
@@ -302,7 +302,7 @@ public sealed class GymSite : SouthSite
         return DetMath.Atan2(d.Y, d.X);
     }
 
-    /// <summary>A closed field-level service door in the ochre band (WLD-INTERIORS §5.2), under a small stone hood.</summary>
+    /// <summary>A closed field-level service door in the ochre band (WLD-INTERIORS), under a small stone hood.</summary>
     private static void ServiceDoor(SiteBuilder b, Plan p, float y, float bearing)
     {
         var f = p.Frame(BearingAngle(bearing), p.Radius - S.GymBaseInset);

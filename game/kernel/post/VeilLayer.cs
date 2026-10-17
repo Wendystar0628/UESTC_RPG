@@ -8,10 +8,10 @@ namespace Campus.Kernel.Post;
 
 /// <summary>
 /// Presents the veil (IVeilPresentation; CanvasLayer 5, under the UI): a full-screen horizontal gradient in the
-/// horizon fog colour, plus the frontispiece still of the boot sequence (SYS-TITLE §1.1, §1.3). No shader.
+/// horizon fog colour, plus the frontispiece still of the boot sequence (SYS-TITLE). No shader.
 /// WP-01's veil service owns timing and content and writes the `veil` global; this layer only draws the frames
 /// it is handed through <see cref="Present(in VeilFrame)"/>, and draws nothing until the first one.
-/// <para>The veil is a global strength of the one shared fog (ART-SKYLIGHT §6.4): with `veil` written by the veil
+/// <para>The veil is a global strength of the one shared fog (ART-SKYLIGHT): with `veil` written by the veil
 /// service the 3D fog closes in from far to near, and this layer only completes the cover over the last stretch,
 /// alpha = smoothstep(0.6, 1, opacity). Its colour follows the fog: across the screen each column takes
 /// mix(FogAnti, FogSun, side weight) by its view azimuth, with the side rule of fog.gdshaderinc (sky_side_weight).</para>
@@ -24,7 +24,7 @@ namespace Campus.Kernel.Post;
 public partial class VeilLayer : CanvasLayer, IVeilPresentation
 {
     private const float LayerStart = 0.6f;
-    private const float StillFadeInSeconds = 0.3f;   // SYS-TITLE §1.1 step 1
+    private const float StillFadeInSeconds = 0.3f;   // SYS-TITLE step 1
     private const int Stops = 9;                     // gradient stops across the screen width
     // Side rule mirrored from fog.gdshaderinc (SKY_SIDE_SUN_DEG, SKY_SIDE_ANTI_DEG, SKY_NIGHT_SIDE_FROM / _TO).
     private const float SideSunDeg = 60f;

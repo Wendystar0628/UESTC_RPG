@@ -5,7 +5,7 @@ using N = System.Numerics;
 namespace Campus.Systems.Vegetation;
 
 /// <summary>
-/// Pool choice per tree of one mother model (WLD-VEGETATION §11.4, ENG-PERF §9): L0+, L0 and L1 within the near pool, and
+/// Pool choice per tree of one mother model (WLD-VEGETATION, ENG-PERF): L0+, L0 and L1 within the near pool, and
 /// the far pool (<see cref="VegFade"/>). The L0+ / L0 / L1 switch distances are for a 12 m tree and scale with the tree height
 /// (veg_card's VEG_LOD_L0 / VEG_LOD_L1); veg_card has already shrunk the finer level's extra cards at the distance itself,
 /// so those swaps do not show. Between the near pool's L1 and the far stand-in a tree is in both pools over the
@@ -20,7 +20,7 @@ public sealed class VegetationBuckets
     public const float L0Distance = 40f;
     public const float Hysteresis = 1.1f;
 
-    /// <summary>Lowest detail factor of the graphics presets (SYS-GRAPHICS §1: 0.7–1.0).</summary>
+    /// <summary>Lowest detail factor of the graphics presets (SYS-GRAPHICS: 0.7–1.0).</summary>
     public const float MinDetail = 0.7f;
 
     /// <summary>Level index of a tree outside the near pool (it may still be in the far pool, <see cref="Far"/>).</summary>

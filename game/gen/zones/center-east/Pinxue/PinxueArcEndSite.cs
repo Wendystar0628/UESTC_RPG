@@ -10,7 +10,7 @@ using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 namespace Campus.Gen.Zones.CenterEast.Pinxue;
 
 /// <summary>
-/// The curved end of 品学楼's right wing (MAP-QSH-CENTER-EAST §2.4). Seen from the forecourt the right wing is B; its far
+/// The curved end of 品学楼's right wing (MAP-QSH-CENTER-EAST). Seen from the forecourt the right wing is B; its far
 /// end is the diagonal south-west lobby, which WP-14 builds as a flat-faced block. This site wraps that face in a curved
 /// curtain-wall bay: a dark plinth, glass behind white slab bands at each storey, a deep attic band and coping, and a roof
 /// cap over the bulge. B stays unclaimed; the bay is registered as a design addition in overlay/center-east.d/.

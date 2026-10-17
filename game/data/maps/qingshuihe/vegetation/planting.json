@@ -1,12 +1,12 @@
 {
   "format": "campus.vegetation.planting/1",
   "owner": "WP-23",
-  "doc": "WLD-VEGETATION §2、§3、§4、§5.3；WLD-TERRAIN §4.4",
+  "doc": "WLD-VEGETATION；WLD-TERRAIN",
   "notes": [
     "本图的种植规则：线性种植按道路名取 network.json 的道路中心线（名字是数据，不写实体 ID）；片区按地名找锚点要素，在它的包络外扩 radius 内换用 mix 里的树种。",
     "roads.rows.offset 是树列离道路中心线的距离（m，两侧对称）；spacing 是同一列的株距；stagger 让外列错开半个株距；band 是银杏大道最外列外侧的春季粉带（§3）。",
     "osmTrees：OSM 树点按离它最近的线性种植道路取树种（near 以内），取不到时用 default（§3 的 OSM 行道树一条）。",
-    "groves：绿地里的片植，落点算法移植自 landscape.ts（ENG-ARCH §1）：绿地按面积的 0.84 次方加权，大草坪内部按聚簇噪声留空（§5.3），树冠不压楼、水、路、球场和停车场。",
+    "groves：绿地里的片植，落点算法移植自 landscape.ts（ENG-ARCH）：绿地按面积的 0.84 次方加权，大草坪内部按聚簇噪声留空（§5.3），树冠不压楼、水、路、球场和停车场。",
     "groves.mix 是缺省树种比例，areas 按地名覆盖；银杏只出现在 §2 登记的位置（银杏大道、主楼两侧、学生活动中心门前）。",
     "washNear：这些地名附近的片植树干下半截刷白（§1.7）；水杉路整条刷白。",
     "pits：覆盖层的树池（kind tree-pit）里没有树的，按 perPit 补种；square 是方池和种植带的树种（§2.1 栾树：方树池），round 是圆形树坛的树种；props.species 优先。池里已有树（OSM 点或规则树）的不补（max-011 18:06）。",

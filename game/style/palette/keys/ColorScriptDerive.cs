@@ -6,7 +6,7 @@ namespace Campus.Style.Palette.Keys;
 
 public enum VegetationMode : byte { Hero, Albedo }
 
-/// <summary>Reference light for vegetation defined by hero-frame lit colours (WLD-VEGETATION §2.3).</summary>
+/// <summary>Reference light for vegetation defined by hero-frame lit colours (WLD-VEGETATION).</summary>
 public sealed class HeroRef
 {
     public required double KeyA { get; init; }
@@ -22,7 +22,7 @@ public sealed class HeroRef
 
 public readonly record struct MaterialColors(Lab Lit, Lab Shade, Lab ShadeIn, Lab LitIn);
 
-/// <summary>Lit/shade derivation of ART-STYLE §3.2, §3.4, §8.3 with the WP-37 rules in derive.json.</summary>
+/// <summary>Lit/shade derivation of ART-STYLE with the WP-37 rules in derive.json.</summary>
 public sealed class Deriver
 {
     private readonly record struct ClassParams(double RMat, double KC, double DhMax, bool Three);
@@ -199,7 +199,7 @@ public sealed class Deriver
     }
 
     /// <summary>
-    /// Window-patch target colour (ART-STYLE §3.4): only L is raised (L × litGain, capped at litLMax); C is the lit colour's C,
+    /// Window-patch target colour (ART-STYLE): only L is raised (L × litGain, capped at litLMax); C is the lit colour's C,
     /// not scaled by the gain, and the hue is unchanged. Out-of-gamut targets lose chroma only.
     /// </summary>
     public Lab InteriorPatch(Lab lit) =>

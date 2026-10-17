@@ -7,7 +7,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// The pools a tree can be drawn in (WLD-VEGETATION §11.3–§11.4, ENG-PERF §9): the three near levels (≤ 150 m), the far
+/// The pools a tree can be drawn in (WLD-VEGETATION, ENG-PERF): the three near levels (≤ 150 m), the far
 /// pool (150–400 m) and the ShadowsOnly proxy of the near trees.
 /// </summary>
 public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
@@ -16,7 +16,7 @@ public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
 /// Frozen prototypes of the vegetation pools and the per-tree instance record. One prototype per mother model (species ×
 /// variant) and pool, built once per palette and shared by every tile stream and by the runtime pools: the near levels are
 /// the mother models (wood surface, then crown surface); the far pool's mainline stand-in is <see cref="MotherModels.FarStandIn"/>
-/// (the L2 stand-in decided in WLD-VEGETATION §11.5 replaces it in the detail version); the shadow proxy is
+/// (the L2 stand-in decided in WLD-VEGETATION replaces it in the detail version); the shadow proxy is
 /// <see cref="MotherModels.ShadowProxy"/>. The instance record is the 3×4 transform (uniform scale, yaw, trunk foot) plus
 /// INSTANCE_CUSTOM (<see cref="PlantedTree.Custom"/>, §11.2).
 /// </summary>
@@ -24,7 +24,7 @@ public static class VegetationPrototypes
 {
     public const string Owner = "WP-23";
 
-    /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION §11.4 CustomAabb).</summary>
+    /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION CustomAabb).</summary>
     public const float SwayPad = 0.6f;
 
     private static readonly ConditionalWeakTable<PaletteCatalog, ConcurrentDictionary<(SpeciesInfo, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();

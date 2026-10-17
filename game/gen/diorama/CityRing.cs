@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Diorama;
 
 /// <summary>
-/// One city ring of the backdrop (WLD-DIORAMA §5, O3): a few rows of simple building masses standing on a circle round
+/// One city ring of the backdrop (WLD-DIORAMA, O3): a few rows of simple building masses standing on a circle round
 /// the campus centre, low blocks and residential towers by compass sector, their feet sunk below the fog sea. The faces are
 /// real planes, so the lit and shaded sides follow the live sun (the "slope layer", §5); haze, night windows and weather
 /// are the shader's. Back and bottom faces are left out: the camera never leaves the ring (parallax k &lt; 1, roam ≤ 3 km).

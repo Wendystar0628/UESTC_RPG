@@ -11,12 +11,12 @@ using L = Campus.Gen.Zones.West.WestTune.Look;
 namespace Campus.Gen.Zones.West.Four;
 
 /// <summary>
-/// 四号科研楼 (MAP-QSH-WEST §6). The three courtyard blocks are WP-14's (overlay/west.d/ gives them the research family);
+/// 四号科研楼 (MAP-QSH-WEST). The three courtyard blocks are WP-14's (overlay/west.d/ gives them the research family);
 /// this site adds the identity pieces the facade rules cannot express:
 /// <list type="bullet">
 /// <item>each block's entrance toward the fan lawn: a two-storey deep-blue glass box set in a white door frame whose head
-/// carries the sign band (§6.3). All three are shut (WLD-INTERIORS §5.2): glass doors, the lobby card behind, DoorClosed.</item>
-/// <item>the 0.45 m seat wall on the lawn's outer arc (MAP-QSH-TERRAIN §10.2); the lawn's dish is west.terrain.json's basin.</item>
+/// carries the sign band (§6.3). All three are shut (WLD-INTERIORS): glass doors, the lobby card behind, DoorClosed.</item>
+/// <item>the 0.45 m seat wall on the lawn's outer arc (MAP-QSH-TERRAIN); the lawn's dish is west.terrain.json's basin.</item>
 /// </list>
 /// It claims nothing: the blocks keep WP-14's massing and windows, the box stands in front of their stone line.
 /// </summary>
@@ -85,7 +85,7 @@ public sealed class FourSite : WestSite
                 var x0 = s < 0 ? -hw - 0.12f : hw - 0.02f;
                 GridFacade.Box(b, f, x0, x0 + 0.14f, y + 0.3f, top, z - 0.04f, z + 0.04f, L.Metal, 0);
             }
-        // Shut glass doors with the lobby card behind them (WLD-INTERIORS §5.2), and the granite landing in front.
+        // Shut glass doors with the lobby card behind them (WLD-INTERIORS), and the granite landing in front.
         b.Place(PartCatalog.DoorGlass, new DoorParams(F.DoorWidth, F.DoorHeight, 0.08f, 0f, 2) { Foot = FootMat.Glass }, f.AtReversed(0, y, d - 0.04f));
         b.Place(PartCatalog.InteriorCard, new PanelParams(F.GlassWidth - 1.2f, F.DoorHeight + 1.2f, 0.06f) { Variation = 1 }, f.AtReversed(0, y, d - 1.5f));
         GridFacade.Box(b, f, -hw - m, hw + m, y - 0.12f, y + F.PavingTop + 0.03f, d - 0.2f, front + F.LandingDepth, L.Granite, 0.02f);
@@ -127,7 +127,7 @@ public sealed class FourSite : WestSite
             foreach (var s in new[] { -1f, 1f })
                 c.Box(f.At(s * (hw + F.FrameMember * 0.5f), y + h * 0.5f, d - 0.7f + (F.FrameProud + 0.7f) * 0.5f),
                     new(F.FrameMember * 0.5f, h * 0.5f, (F.FrameProud + 0.7f) * 0.5f), SurfaceTag.Wall, FootMat.StonePaving);
-            // The shut front: walking into the recess between the jambs reports a closed door (WLD-INTERIORS §4).
+            // The shut front: walking into the recess between the jambs reports a closed door (WLD-INTERIORS).
             c.Wall(f.P(-hw, d + 0.12f), f.P(hw, d + 0.12f), 0.1f, y, y + F.DoorHeight + 0.4f, SurfaceTag.DoorClosed, FootMat.Glass);
         }
         foreach (var arc in F.SeatArcs)

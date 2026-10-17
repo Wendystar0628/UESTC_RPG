@@ -20,8 +20,8 @@ public interface IPaletteProbe
 
 // 雾幕：WP-01 实现（雾幕层由 WP-05 画），转场、跳转、传送、换季、画质、回位、过场、切图共用一层
 public enum VeilReason : byte { Boot, Transit, Teleport, Season, Quality, Respawn, Cinematic, MapTravel }   // 在 Campus.Contracts，不在音频命名空间
-public enum VeilContent : byte { Fog, Frontispiece }    // 雾色；扉页插画（SYS-TITLE §1.3）
-// Fixed policies from UI-VISUAL §7.10 and SYS-TITLE §1.1. Callers do not choose delays.
+public enum VeilContent : byte { Fog, Frontispiece }    // 雾色；扉页插画（SYS-TITLE）
+// Fixed policies from UI-VISUAL and SYS-TITLE. Callers do not choose delays.
 public enum VeilWaitKind : byte { Readiness, BootFrontispiece }
 public interface IVeilState
 {
@@ -30,11 +30,11 @@ public interface IVeilState
     // True means a live readiness observation has reached its policy delay: show the waiting indicator.
     // Default false is compatibility only; it does not attest that an implementation supports observations.
     bool Waiting => false;
-}   // 只读；音频据此压低 World 组（SYS-AUDIO §7.2）
+}   // 只读；音频据此压低 World 组（SYS-AUDIO）
 public interface IVeilService : IVeilState             // 草案：签名由 WP-01 在 v1 里补全
 {
     Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog);   // 盖满时完成
-    void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds);            // 保持不透明直到条件满足（SYS-TITLE §10 的 hold）
+    void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds);            // 保持不透明直到条件满足（SYS-TITLE 的 hold）
     Task Reveal(VeilReason reason, float seconds);
     // Observe actual readiness work only. Main-thread begin; Dispose may run on a worker and is idempotent.
     // Does not cover/reveal, change Reason, evaluate Ready, cancel work, or impose any timeout.
@@ -43,8 +43,8 @@ public interface IVeilService : IVeilState             // 草案：签名由 WP-
         => throw new NotSupportedException("This veil implementation does not support readiness observations.");
 }
 
-// 其他包补的只读状态（SYS-AUDIO §19）
+// 其他包补的只读状态（SYS-AUDIO）
 public readonly record struct LightningFlash(double RealSeconds, float AzDeg, float ElDeg, float DistanceKm,
     int Pulses, float Peak, bool Visible);              // Visible = false：减少动态效果时只发事件、不画
-public interface ILightningFeed { event Action<LightningFlash>? Flash; }     // WP-40：远雷的节拍（SYS-AUDIO §6.1）
+public interface ILightningFeed { event Action<LightningFlash>? Flash; }     // WP-40：远雷的节拍（SYS-AUDIO）
 public interface IChannelReader { float Value(ChannelId id); }               // WP-03 / WP-39：灯光通道的当前值

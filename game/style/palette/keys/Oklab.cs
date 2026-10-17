@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Campus.Style.Palette.Keys;
 
-/// <summary>OKLab colour, double precision (SYS-TIME §3.1). Mirrors pipeline/colorscript/oklab.py.</summary>
+/// <summary>OKLab colour, double precision (SYS-TIME). Mirrors pipeline/colorscript/oklab.py.</summary>
 public readonly record struct Lab(double L, double A, double B)
 {
     public static Lab operator +(Lab x, Lab y) => new(x.L + y.L, x.A + y.A, x.B + y.B);
@@ -95,7 +95,7 @@ public static class Oklab
     private static bool InGamut((double R, double G, double B) c) =>
         c.R >= -1e-7 && c.R <= 1.0000001 && c.G >= -1e-7 && c.G <= 1.0000001 && c.B >= -1e-7 && c.B <= 1.0000001;
 
-    /// <summary>Out-of-gamut colours lose chroma only, never lightness (ART-STYLE §3.2); in-gamut colours come back unchanged.</summary>
+    /// <summary>Out-of-gamut colours lose chroma only, never lightness (ART-STYLE); in-gamut colours come back unchanged.</summary>
     public static Lab GamutMap(Lab c)
     {
         if (InGamut(ToLinear(c))) return c;

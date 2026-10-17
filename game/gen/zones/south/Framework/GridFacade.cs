@@ -87,7 +87,7 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
 /// A gridded masonry block on a plan ring: a glass core, a stone frame of full-height piers and storey-high spandrel bands
 /// in front of it (the window reveals are the frame's depth), plinth, a two-step cornice, a parapet with coping and a
 /// roof slab. This is how the zone dresses buildings it claims from WP-14 (Xuanbang, Liren's corner gateway); it keeps
-/// the ART-MODELING §7.8 minimum set: corner piers, plinth, string courses, sills, recessed glass with frames, cornice and
+/// the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames, cornice and
 /// coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate.
 /// </summary>
 public static class GridFacade

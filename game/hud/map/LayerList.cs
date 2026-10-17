@@ -4,7 +4,7 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 左栏"图层"页（SYS-ATLAS §4.3）：锚点、观景点、可进入的室内、路线、地标、设施、我的标记，另加"外围街区"；
+/// 左栏"图层"页（SYS-ATLAS）：锚点、观景点、可进入的室内、路线、地标、设施、我的标记，另加"外围街区"；
 /// 每行写当前图里的数量。下面是图例：可前往、此处、追踪中、未解锁（RPG 预留，观光模式下灰显）。
 /// 整页 1 个 Control。
 /// </summary>
@@ -42,7 +42,7 @@ public partial class LayerList : Control
         FocusExited += QueueRedraw;
     }
 
-    /// <summary>默认：设施、地标关，其余开（SYS-ATLAS §12）。</summary>
+    /// <summary>默认：设施、地标关，其余开（SYS-ATLAS）。</summary>
     public int Mask { get; private set; } = ~((1 << 4) | (1 << 5));
     public event Action<int>? MaskChanged;
 
@@ -102,7 +102,7 @@ public partial class LayerList : Control
             var top = Top + 32 + i * RowHeight;
             var on = (Mask & (1 << Layers[i].Bit)) != 0;
             if (i == _hover) DrawRect(new Rect2(0, top, w, RowHeight), t.RowHover);
-            // 复选框：18 px，1 px 控件边；开时主色实底加墨色勾（UI-VISUAL §7.3）
+            // 复选框：18 px，1 px 控件边；开时主色实底加墨色勾（UI-VISUAL）
             var box = new Rect2(Pad, top + (RowHeight - 18) * 0.5f, 18, 18);
             if (on)
             {

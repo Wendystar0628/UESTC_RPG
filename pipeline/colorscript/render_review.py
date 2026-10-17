@@ -7,11 +7,11 @@
     wp37_autumn_keyframes.png   秋季 12 张基准关键帧条带（场景小样 + 色块 + 标量 + 自检）
     wp37_colorscript_4x12.png   4 季 × 12 关键帧总表，每季下附一条 24 h 连续插值带
     wp37_default_golden.png     默认状态（秋 17:30 落金初灯）放大样张与登记值对照
-    wp37_selfcheck.txt          影色自检全文（SYS-TIME §8）
+    wp37_selfcheck.txt          影色自检全文（SYS-TIME）
     wp37_grid.json              4 × 12 格的推导结果（色值十六进制），供 WP-04、Astra 对照
 
 场景小样是示意：按 toon 合成（影 + (受光 − 影) × 主光强度 × 阴影）在线性空间里算，再按上屏近似
-（曝光、ART-STYLE §7.2 的高光肩部、CDL）出图；色块一律是调色板原值。
+（曝光、ART-STYLE 的高光肩部、CDL）出图；色块一律是调色板原值。
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ def lin_to_rgb8(lin: np.ndarray) -> np.ndarray:
 
 
 def post_lin(lin: np.ndarray, f: cs.Frame) -> np.ndarray:
-    """上屏近似：曝光 → 高光肩部（ART-STYLE §7.2）→ CDL（sRGB 域）。输入输出都是线性。"""
+    """上屏近似：曝光 → 高光肩部（ART-STYLE）→ CDL（sRGB 域）。输入输出都是线性。"""
     c = lin * (2.0 ** float(f.post.get("exposureEv", 0.0)))
     peak = np.max(c, axis=-1, keepdims=True)
     dd = 0.24
@@ -224,7 +224,7 @@ def render_card(src: cs.Sources, f: cs.Frame, mats: Dict[str, cs.MaterialResult]
     stone = mats["stone.beige"]
     path = [(0.30 * w, h), (0.52 * w, h), (0.60 * w, horizon + 0.02 * h), (0.56 * w, horizon + 0.02 * h)]
     d.polygon(path, fill=col(toon(stone, ks), 0.05))
-    # 秋季：只在银杏树冠下铺一圈落叶（SYS-TIME §4），草坪、铺地、落叶三种地面分开
+    # 秋季：只在银杏树冠下铺一圈落叶（SYS-TIME），草坪、铺地、落叶三种地面分开
     if season == "autumn" and "ginkgo" in mats:
         gk = mats["ginkgo"]
         d.ellipse((0.08 * w, horizon + 0.15 * h, 0.36 * w, horizon + 0.22 * h), fill=col(toon(gk, ks), 0.04))
@@ -424,7 +424,7 @@ def render_autumn_strip(src: cs.Sources, grid: dict, status, out_path: str) -> N
     height = 70 + 34 + card_h + 16 + 150 + 16 + row_h * (len(mat_rows) + 1) + 16 + 170 + 40
     img = Image.new("RGB", (colw * len(frames) + 40, height), PAPER)
     d = ImageDraw.Draw(img)
-    text(d, (20, 16), "WP-37 秋季 12 张基准关键帧（SYS-TIME §3.2）· 色板条带", 22)
+    text(d, (20, 16), "WP-37 秋季 12 张基准关键帧（SYS-TIME）· 色板条带", 22)
     text(d, (20, 46), "场景小样按上屏近似（toon 合成 + 曝光 + 高光肩部 + CDL）；色块为调色板原值。受光 | 影 | 室内影（第 2 行）| 室内受光（第 3 行）；植被另有深影。", 13, SUB)
     for i, f in enumerate(frames):
         x0 = 20 + i * colw
@@ -497,7 +497,7 @@ def render_4x12(src: cs.Sources, grid: dict, curves: Dict[str, cs.DayCurve], sta
     H = 90 + row_h * 4 + 20
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
-    text(d, (20, 16), "WP-37 色板联表 · 4 季 × 12 关键帧（秋季基准 + 四季增量，SYS-TIME §3.2、§3.3）", 22)
+    text(d, (20, 16), "WP-37 色板联表 · 4 季 × 12 关键帧（秋季基准 + 四季增量，SYS-TIME）", 22)
     text(d, (20, 46), "每格：场景小样（上屏近似）；下方两行色块：天空地平线 / 天顶 · 主光 · 墙受光 / 墙影 · shadow.1 · 季树受光 / 影 / 深影 · 草受光 / 影；钟点是该季到达同一太阳高度的时刻。每季下方是 24 h 连续插值带。", 12, SUB)
     for si, s in enumerate(cs.SEASONS):
         y0 = 80 + si * row_h
@@ -561,8 +561,8 @@ def render_default(src: cs.Sources, grid: dict, results, out_path: str) -> None:
     W, CW, CH = 1580, 880, 540
     img = Image.new("RGB", (W, 1400), PAPER)
     d = ImageDraw.Draw(img)
-    text(d, (24, 18), "默认状态 · 秋 17:30「落金初灯」· 太阳 5.475° / 241.0°（SYS-TIME §0、§2）", 24)
-    text(d, (24, 52), "r 0.78 · ambient.sky C 0.032 / h 275 · w_min 0 · line_darken 0.15（ART-STYLE §3.2 默认格）。场景为上屏近似示意，色块为调色板原值。", 14, SUB)
+    text(d, (24, 18), "默认状态 · 秋 17:30「落金初灯」· 太阳 5.475° / 241.0°（SYS-TIME）", 24)
+    text(d, (24, 52), "r 0.78 · ambient.sky C 0.032 / h 275 · w_min 0 · line_darken 0.15（ART-STYLE 默认格）。场景为上屏近似示意，色块为调色板原值。", 14, SUB)
     img.paste(render_card(src, f, mats, CW, CH, scale=2), (24, 84))
     x = 24 + CW + 28
     y = 84
@@ -597,7 +597,7 @@ def render_default(src: cs.Sources, grid: dict, results, out_path: str) -> None:
     y_mat_end = yy + ((len(items) + per_row - 1) // per_row) * 32
     gold = [r for r in results if r[1] == "autumn" and r[2] == "golden" and not r[3].startswith(("登记值", "校验值", "示例"))]
     fails = [r for r in gold if r[0] == "FAIL"]
-    text(d, (x, y0), f"默认格影色自检（SYS-TIME §8）：PASS {sum(1 for r in gold if r[0] == 'PASS')} · FAIL {len(fails)}", 15,
+    text(d, (x, y0), f"默认格影色自检（SYS-TIME）：PASS {sum(1 for r in gold if r[0] == 'PASS')} · FAIL {len(fails)}", 15,
          FAIL_C if fails else PASS_C)
     yy = y0 + 28
     keep = ("wall", "shadow.1", "stone.beige", "wall.greyWhite", "wall.dormYellow", "brick", "ginkgo", "grass", "camphor", "maple", "uestc.blue")

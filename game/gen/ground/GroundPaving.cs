@@ -18,7 +18,7 @@ internal sealed record PavingFrame(byte Profile, Vector2 Origin, Vector2 U, Vect
 }
 
 /// <summary>
-/// Surface patterns of the ground (Q-015, ART-STYLE §6.2). First family: the forecourt of a library's open entrance is
+/// Surface patterns of the ground (Q-015, ART-STYLE). First family: the forecourt of a library's open entrance is
 /// laid in 600×600 mm granite, stack bond, square to that entrance's façade, one joint on the entrance axis.
 /// <para>
 /// Selection reads data characteristics only (D-168 mainline, no entity or map IDs in code): buildings whose category is
@@ -110,7 +110,7 @@ internal sealed class GroundPaving
     private static (GroundShape Shape, float Run, PavingFrame Frame)? Forecourt(GroundShape[] plazas, EntranceDecl entrance)
     {
         var yaw = entrance.YawDeg * (MathF.PI / 180f);
-        // Yaw 0 = north (−Z), 90 = east (+X) (WLD-INTERIORS §2.17).
+        // Yaw 0 = north (−Z), 90 = east (+X) (WLD-INTERIORS).
         var axis = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
         if (!float.IsFinite(axis.X) || !float.IsFinite(axis.Y) || axis.LengthSquared() < 0.5f) return null;
         axis = Vector2.Normalize(axis);

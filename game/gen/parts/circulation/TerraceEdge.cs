@@ -8,7 +8,7 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// Terrace edge band, the v1 retaining edge of WLD-TERRAIN §5.4, generated along the height field's transition line.
+/// Terrace edge band, the v1 retaining edge of WLD-TERRAIN, generated along the height field's transition line.
 /// The band is 2 m wide and centred on the line. For a line running (dx, dz) the upper ground lies toward (dz, −dx), the
 /// WP-09 sweep's positive lateral; a line running +x therefore has the high side toward −z. Its front is a
 /// vertical stone wall reaching 0.4 m below the low ground, its top is level with the upper ground, and a trim coping
@@ -26,7 +26,7 @@ public static class TerraceEdge
 
     /// <summary>
     /// Geometry of one band. <paramref name="line"/> is an X/Z polyline without repeated points. A planted band
-    /// (退台花池, MAP-QSH-TERRAIN §7, §10) keeps the coping at the top and fills the rest of its top with soil 5 cm down for
+    /// (退台花池, MAP-QSH-TERRAIN) keeps the coping at the top and fills the rest of its top with soil 5 cm down for
     /// WP-23 to plant; a paved band is stone to the top.
     /// </summary>
     public static PartGeometry Build(IReadOnlyList<Vector2> line, float lowY, float topY, LodLevel lod, bool planted = false)
@@ -53,7 +53,7 @@ public static class TerraceEdge
 
     /// <summary>
     /// Front wall segments (WallCollider, Barrier) from 0.4 m under the low ground to the top, and a walkable box per
-    /// segment for the band's top (WLD-TERRAIN §5.4 "碰撞"). A 0.35–1.0 m edge has no railing: it can be sat on and jumped.
+    /// segment for the band's top (WLD-TERRAIN "碰撞"). A 0.35–1.0 m edge has no railing: it can be sat on and jumped.
     /// </summary>
     public static IReadOnlyList<Collider> Collide(IReadOnlyList<Vector2> line, float lowY, float topY, FootMat foot = FootMat.StonePaving)
     {
@@ -81,7 +81,7 @@ public static class TerraceEdge
         if (line.Count < 2) throw new ArgumentException("A terrace edge needs a polyline.", nameof(line));
         var drop = topY - lowY;
         if (!float.IsFinite(drop) || drop < 0.3f || drop > 1.05f)
-            throw new ArgumentOutOfRangeException(nameof(topY), "A terrace edge drops 0.35–1.0 m (WLD-TERRAIN §5.4); higher drops terrace.");
+            throw new ArgumentOutOfRangeException(nameof(topY), "A terrace edge drops 0.35–1.0 m (WLD-TERRAIN); higher drops terrace.");
     }
 
     private static Box3 Bounds(IReadOnlyList<Vector2> line, float lowY, float topY)

@@ -7,7 +7,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// Where a planted tree came from (WLD-VEGETATION §3, §4): road rows (the ginkgo avenue among them), the avenue band, OSM
+/// Where a planted tree came from (WLD-VEGETATION): road rows (the ginkgo avenue among them), the avenue band, OSM
 /// points, groves; then the empty tree pits of the overlays (perPit trees each) and the design trees the overlays hand to
 /// WP-23 (kind tree, props.planter WP-23). The last two are planted after every other source, so the earlier order is kept.
 /// </summary>
@@ -15,8 +15,8 @@ public enum PlantSource : byte { Road = 0, Band = 1, OsmTree = 2, Grove = 3, Pit
 
 /// <summary>
 /// One planted tree. Position is the trunk foot on the terrain (the mother model's trunk already runs Burial below it,
-/// WLD-TERRAIN §4.4). Variant picks the mother model (0–3); Scale stretches it uniformly; Height is the scaled model
-/// height. Custom is the INSTANCE_CUSTOM block of WLD-VEGETATION §11.2: (seed, row × 16 + look bits, wind position,
+/// WLD-TERRAIN). Variant picks the mother model (0–3); Scale stretches it uniformly; Height is the scaled model
+/// height. Custom is the INSTANCE_CUSTOM block of WLD-VEGETATION: (seed, row × 16 + look bits, wind position,
 /// height), the look bit 1 being the lime-washed lower trunk (§1.7).
 /// </summary>
 public sealed record PlantedTree(string Key, SpeciesInfo Species, int Variant, Vector3 Position, float Yaw, float Scale,
@@ -56,11 +56,11 @@ public sealed record PlantingLayout(IReadOnlyList<PlantedTree> Trees)
 }
 
 /// <summary>
-/// Whole-campus tree layout (WLD-VEGETATION §3–§4; ENG-ARCH §1 ports the old landscape.ts placement). Pure and
+/// Whole-campus tree layout (WLD-VEGETATION; ENG-ARCH ports the old landscape.ts placement). Pure and
 /// deterministic from the world model, the species table, the map's planting rules and the world seed. Order: linear
 /// planting along the named roads (the ginkgo avenue's four rows and spring band first), then the OSM tree points, then
 /// groves on the green parcels. Every tree lands on the terrain: y = HeightAt(centre), and none stands where the grade
-/// exceeds 25% (WLD-TERRAIN §4.4). Trunks keep clear of buildings, water, courts, parking and road surfaces; crowns of
+/// exceeds 25% (WLD-TERRAIN). Trunks keep clear of buildings, water, courts, parking and road surfaces; crowns of
 /// groves keep clear too, and groves leave the interior of large lawns open where the cluster noise is low (§5.3).
 /// Hard pavement of the effective world (pedestrian areas, footway, path, steps and cycleway areas, and the design walks
 /// the overlays add) takes no tree except in a tree pit; a tree that would stand on it gives way last, so every other tree
@@ -68,7 +68,7 @@ public sealed record PlantingLayout(IReadOnlyList<PlantedTree> Trees)
 /// </summary>
 public static class Planting
 {
-    /// <summary>Steepest grade a tree may stand on (WLD-TERRAIN §4.4: no trees above 25%).</summary>
+    /// <summary>Steepest grade a tree may stand on (WLD-TERRAIN: no trees above 25%).</summary>
     public const float MaxGrade = 0.25f;
 
     /// <summary>Trunk clearance from building, water, court and parking outlines, and beyond a road's half width.</summary>
@@ -514,7 +514,7 @@ public static class Planting
         /// <summary>The tree pits of the overlays, in feature-ID order.</summary>
         public IReadOnlyList<Pit> Pits => _pits;
 
-        /// <summary>WLD-VEGETATION §11.2 z: 0 at the west edge of the campus, 1 at the east edge.</summary>
+        /// <summary>WLD-VEGETATION z: 0 at the west edge of the campus, 1 at the east edge.</summary>
         public float WindPos(float x) => Math.Clamp((x - _windMin) / _windSpan, 0f, 1f);
 
         public bool Blocked(Vector2 p, float radius)

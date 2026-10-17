@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Openings;
 /// <summary>
 /// 窗帘: a rail and pleated fabric with soft normals. Variation 0 fully open (a bunched stack each side),
 /// 1 half open (one drawn panel and one stack), 2 drawn (two panels meeting at the middle). Width × Height is the
-/// glass it covers; Depth bounds the pleats. Curtains cast no shadow (ART-MODELING §7.4).
+/// glass it covers; Depth bounds the pleats. Curtains cast no shadow (ART-MODELING).
 /// L0: six segments per pleat; L1: two; L2 and further: nothing (toon_glass draws the state far away).
 /// </summary>
 [Part(PartCatalog.Curtain, Owner = "WP-10")]
@@ -61,7 +61,7 @@ public sealed class CurtainPart() : OpeningPart<PanelParams>(new(900, 300))
     }
 }
 
-/// <summary>PVC 门帘: overlapping translucent strips under a rail, alternating slightly in depth. No collision (WLD-INTERIORS §4).</summary>
+/// <summary>PVC 门帘: overlapping translucent strips under a rail, alternating slightly in depth. No collision (WLD-INTERIORS).</summary>
 [Part(PartCatalog.PvcCurtain, Owner = "WP-10")]
 public sealed class PvcCurtainPart() : OpeningPart<PanelParams>(new(160, 100))
 {

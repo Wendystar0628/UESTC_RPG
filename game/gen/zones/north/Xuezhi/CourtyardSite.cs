@@ -10,11 +10,11 @@ using L = Campus.Gen.Zones.North.NorthTune.Look;
 namespace Campus.Gen.Zones.North.Xuezhi;
 
 /// <summary>
-/// The 学知一 courtyard's stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS §0 R6, registered as
+/// The 学知一 courtyard's stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS R6, registered as
 /// design:north-xz1-seatwall): a gently bowed granite seat wall with a wood seat beside the courtyard walk, facing the hill
 /// across it, with a paved pad joining it to the walk. The courtyard hill and the rain garden are terrain operations in
 /// north.terrain.json; this site adds the wall and its pad. Both sit on level ground, so their base is the lowest ground under
-/// the wall's path and the body is sunk below it (WLD-TERRAIN §4.1 带厚度的小实体).
+/// the wall's path and the body is sunk below it (WLD-TERRAIN 带厚度的小实体).
 /// </summary>
 public sealed class CourtyardSite : NorthSite
 {

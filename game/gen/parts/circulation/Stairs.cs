@@ -21,7 +21,7 @@ internal static class StraightFlight
         return f;
     }
 
-    /// <summary>Indoor proportions: riser 0.1–0.2 m, tread 0.22–0.4 m, pitch no steeper than the 40° gate (WLD-INTERIORS §10).</summary>
+    /// <summary>Indoor proportions: riser 0.1–0.2 m, tread 0.22–0.4 m, pitch no steeper than the 40° gate (WLD-INTERIORS).</summary>
     internal static void CheckProportions(Flight f)
     {
         if (!(f.Riser >= 0.1f && f.Riser <= 0.2f)) throw new ArgumentOutOfRangeException(nameof(f), $"Riser {f.Riser} m is outside 0.1–0.2 m.");
@@ -71,7 +71,7 @@ internal static class StraightFlight
 }
 
 /// <summary>
-/// Straight indoor flight (WLD-INTERIORS §7.5 group C) in the WP-51a convention: Steps risers over Depth = Steps × tread,
+/// Straight indoor flight (WLD-INTERIORS group C) in the WP-51a convention: Steps risers over Depth = Steps × tread,
 /// the strip [0, tread] at the front is the lower floor and the last riser is the upper slab's edge. Height is floor to
 /// floor. Variation: 0 wall on −X and balustrade on +X, 1 walls on both sides (wall handrails only), 2 open both sides.
 /// Collision: the WP-51a RampCollider (26–34°, top flush, bottom buried 0.2 m, StairSpec) and a SlopedWallCollider on
@@ -95,7 +95,7 @@ public sealed class StairStraightPart() : CirculationPart<StairParams>(new(660, 
 }
 
 /// <summary>
-/// Open straight flight for atria and stair halls (WLD-INTERIORS §10 "宽梯井"): both sides carry a stringer, balusters
+/// Open straight flight for atria and stair halls (WLD-INTERIORS "宽梯井"): both sides carry a stringer, balusters
 /// and handrail, and both sides get a SlopedWallCollider. Parameters as <see cref="StairStraightPart"/>.
 /// </summary>
 [Part(PartCatalog.StairOpen, Owner = "WP-11")]
@@ -109,7 +109,7 @@ public sealed class StairOpenPart() : CirculationPart<StairParams>(new(860, 660)
 }
 
 /// <summary>
-/// Dog-leg stair of one storey (WLD-INTERIORS §10, the golden-sample stair), laid out exactly like WP-51a's plan:
+/// Dog-leg stair of one storey (WLD-INTERIORS, the golden-sample stair), laid out exactly like WP-51a's plan:
 /// Width = 2 flights + a 0.2 m well, Height = floor to floor, Steps = risers per flight, Depth = flight run + landing,
 /// where the landing is max(1.5 m, flight width) deep and the tread is what remains over Steps. The lower floor is
 /// in front (−Z); flight 1 climbs to the landing at the back, flight 2 returns to the upper slab edge at the front.

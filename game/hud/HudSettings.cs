@@ -8,9 +8,9 @@ public enum ResidentTheme : byte { Dark, Follow }
 public enum ReduceMotionMode : byte { System, On, Off }
 
 /// <summary>
-/// 界面的观者设置（UI-NAV §4.6），存 user://settings.cfg（档案级，不进存档）。
+/// 界面的观者设置（UI-NAV），存 user://settings.cfg（档案级，不进存档）。
 /// 读：先按文本查 Object( 等写法，只接受 bool、int、float、String，越界或类型不对用默认值；
-/// 写：EncodeToText → .tmp → Flush(true) → File.Replace（留 .bak），改动后 0.5 s 写一次（SYS-SAVE §8）。
+/// 写：EncodeToText → .tmp → Flush(true) → File.Replace（留 .bak），改动后 0.5 s 写一次（SYS-SAVE）。
 /// </summary>
 [KernelService(typeof(HudSettings), Owner = "WP-35")]
 public sealed class HudSettings

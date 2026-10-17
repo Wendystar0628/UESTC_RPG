@@ -19,7 +19,7 @@ public abstract class NorthSite
     /// <summary>Geometry and placed parts for builder.Lod, in world space.</summary>
     public abstract void Build(SiteBuilder builder);
 
-    /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK §13).</summary>
+    /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK).</summary>
     public virtual void Collide(SiteColliders colliders) { }
 
     /// <summary>Inspection probes this site contributes (MAP-QSH-NORTH Q1–Q8).</summary>

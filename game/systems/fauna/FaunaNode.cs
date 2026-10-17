@@ -8,7 +8,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Fauna;
 
 /// <summary>
-/// WP-25 animals at runtime (WLD-LIFE §1, §6.2, §6.3). On map load the site layout and every set's world-space geometry are
+/// WP-25 animals at runtime (WLD-LIFE). On map load the site layout and every set's world-space geometry are
 /// prepared off the main thread from the map's world model (no feature IDs, no data paths). Each site then keeps a latched
 /// "applied set": four times a second the target set is read from the sun altitude and the weather vector
 /// (<see cref="FaunaSchedule"/>; IWorldState only), and a changed target is applied only while the site is outside the main
@@ -19,7 +19,7 @@ namespace Campus.Systems.Fauna;
 [KernelNode("systems.fauna", Owner = "WP-25")]
 public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
 {
-    private const double CheckSeconds = 0.25;              // 4 Hz latch check (WLD-LIFE §6.2)
+    private const double CheckSeconds = 0.25;              // 4 Hz latch check (WLD-LIFE)
     private static readonly WpId Package = new("WP-25");
 
     private sealed record Prepared(FaunaLayout Layout, ContentOutput[][] Sets);

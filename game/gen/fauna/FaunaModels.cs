@@ -10,10 +10,10 @@ public enum BirdPose : byte { Stand, Peck, Perch }
 public enum SwanPose : byte { Float, Sleep }
 
 /// <summary>
-/// The 25a animal models (WLD-LIFE §1): cats in three poses and four coats, the plaza pigeon and the sparrow. Built in the
+/// The 25a animal models (WLD-LIFE): cats in three poses and four coats, the plaza pigeon and the sparrow. Built in the
 /// model frame (metres, +Z forward, +Y up, feet on y = 0) from soft lofts and ellipsoids, true-to-size before
 /// <see cref="FaunaStyle.Scale"/>; cartoon-clean but with real proportions (head about a fifth of a sitting cat, ears and tail
-/// carrying the silhouette). Static poses only: idle motion (pivot parts in vertex()) waits for the motion shader (SYS-MOTION §6).
+/// carrying the silhouette). Static poses only: idle motion (pivot parts in vertex()) waits for the motion shader (SYS-MOTION).
 /// </summary>
 public static class FaunaModels
 {

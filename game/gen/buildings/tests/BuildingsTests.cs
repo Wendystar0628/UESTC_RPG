@@ -189,7 +189,7 @@ public sealed class BuildingsTests
     [TestCase]
     public void K1AndK2OpeningsTakeTheWp10Parts()
     {
-        // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH §3 FacadeSegment).
+        // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH FacadeSegment).
         var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
         var set = BuildingSet.For(world, 1u);
         var plan = set.Plans[0];
@@ -308,7 +308,7 @@ public sealed class BuildingsTests
     [TestCase]
     public void FacadePresetsChangeOnlyTheirBuilding()
     {
-        // MAP-QSH-SOUTH §8.2 on one research block among ordinary buildings: larger glass in the same window cells; every
+        // MAP-QSH-SOUTH on one research block among ordinary buildings: larger glass in the same window cells; every
         // window block, and every other building cell for cell, as before.
         var preset = Rules.FacadePresets.ResearchStoneFrame;
         var features = new[]
@@ -360,7 +360,7 @@ public sealed class BuildingsTests
         Require(centre.Length >= 10 && centre.All(p => p.Profile.Preset == preset.Key && p.Style == Rules.BuildingStyle.Research), $"the centre's {centre.Length} footprints take the preset");
     }
 
-    /// <summary>The five dormitory presets of the north zone as WP-20's table gives them (MAP-QSH-NORTH §4.2–§4.5).</summary>
+    /// <summary>The five dormitory presets of the north zone as WP-20's table gives them (MAP-QSH-NORTH).</summary>
     private static readonly (string Key, float Glazing, float WindowHeight, float Sill, float GroundSill, string Glass, string Frame, string Trim, string Accent, string Window)[] DormTable =
     [
         ("dorm.a.dormYellow", 0.50f, 1.60f, 1.00f, 1.00f, "glass", "wall.dormYellow", "wall", "band.terracotta", "opening.window.casement"),
@@ -372,7 +372,7 @@ public sealed class BuildingsTests
         ("dorm.master.creamCoffeeWhite", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "wall.creamCoffee", "wall", "wall", "opening.window.casement"),
     ];
 
-    /// <summary>The three annex presets of the north zone (WP-20 DormPresets.json, WLD-INTERIORS §17) with the family each one lives in.</summary>
+    /// <summary>The three annex presets of the north zone (WP-20 DormPresets.json, WLD-INTERIORS) with the family each one lives in.</summary>
     private static readonly (string Key, string Family, Rules.BuildingStyle Style, float Glazing, float WindowHeight, float Sill, float GroundSill, string Frame, string Trim, string Window)[] AnnexTable =
     [
         ("annex.service.creamCoffee", "service", Rules.BuildingStyle.Service, 0.60f, 2.00f, 0.90f, 0.90f, "wall.creamCoffee", "wall", "opening.window.casement"),
@@ -680,7 +680,7 @@ public sealed class BuildingsTests
         var entrance = dorm.Entrances.Single();
         Require(entrance.Anchor == "dorm.south" && entrance.Row == 0 && entrance.Landing, "the dorm's door moved to its anchor, with a landing");
         var door = dorm.DoorOf(entrance);
-        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 1e-4f, "an anchor at the pad takes the building's floor (WLD-TERRAIN §4.3)");
+        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 1e-4f, "an anchor at the pad takes the building's floor (WLD-TERRAIN)");
         Require(Vector2.Distance(GlassCentre(dorm, entrance), new Vector2(21.3f, 0f)) <= Rules.EntranceRules.AnchorTolerance, "door within G18's 0.5 m of its anchor");
         Require(!dorm.Openings[entrance.Facade].Any(o => o.Row == 0 && o.Kind != BayKind.Door && o.U0 < door.U1 + Rules.EntranceRules.Pier && o.U1 > door.U0 - Rules.EntranceRules.Pier),
             "no window crowds the door");
@@ -798,7 +798,7 @@ public sealed class BuildingsTests
     [TestCase]
     public void EntranceLandingsFollowTheOutsideGround()
     {
-        // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN §4.3, §5.1).
+        // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN).
         var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
             new Falling(-1f, 0.9f), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 20, 40, 16), 4, 15.6f, "research"));
         var set = BuildingSet.For(world, 2u);

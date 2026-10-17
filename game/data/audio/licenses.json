@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "generated": "2026-10-17",
- "note": "来源与许可登记（SYS-AUDIO §14.2 第 1 步）。Freesound 素材取自网站公开的 HQ 预览（48 kHz Ogg Vorbis），原始无损文件需登录下载，登录后可在不改文件名的前提下替换母带。sha256 是下载文件的摘要。",
+ "note": "来源与许可登记（SYS-AUDIO 第 1 步）。Freesound 素材取自网站公开的 HQ 预览（48 kHz Ogg Vorbis），原始无损文件需登录下载，登录后可在不改文件名的前提下替换母带。sha256 是下载文件的摘要。",
  "sources": [
   {
    "id": "SELF-SYNTH:pipeline/audio/synth_broadcast.py",
@@ -15,7 +15,7 @@
    "snapshot": "",
    "sha256": "",
    "attribution": "",
-   "note": "自有版权，保留所有权利（OPS-RELEASE §7）",
+   "note": "自有版权，保留所有权利（OPS-RELEASE）",
    "used_in": [
     "bells/bell_strike_01.ogg",
     "music/broadcast_melody_dry.ogg",

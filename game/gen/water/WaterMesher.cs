@@ -17,7 +17,7 @@ public sealed record WaterMesh(
 /// <summary>
 /// Meshes a water polygon on a grid of WaterParams.MeshStep: cells fully inside water are plain quads, cells the shore
 /// passes through are cut into trapezoids along the shore. The shore distance is stored per vertex, so the three hard
-/// colour bands and the foam line (WLD-WATER §1.1, §1.4) need no mask texture. Pure and deterministic (D-165).
+/// colour bands and the foam line (WLD-WATER) need no mask texture. Pure and deterministic (D-165).
 /// </summary>
 public static class WaterMesher
 {
@@ -73,7 +73,7 @@ public static class WaterMesher
             if (body.Kind == WaterKind.Channel && tangent.LengthSquared() > 1e-12f)
             {
                 var t = Vector2.Normalize(tangent);
-                // WLD-WATER §4: every channel flows north to south (+z), east-west pieces flow east (+x).
+                // WLD-WATER: every channel flows north to south (+z), east-west pieces flow east (+x).
                 if (MathF.Abs(t.Y) >= 0.25f ? t.Y < 0f : t.X < 0f) t = -t;
                 flow[2 * i] = t.X * p.FlowSpeed;
                 flow[2 * i + 1] = t.Y * p.FlowSpeed;

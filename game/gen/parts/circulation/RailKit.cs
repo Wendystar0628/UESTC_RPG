@@ -8,7 +8,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// <summary>Infill of a guard railing between its bottom and top rails (BoxPartParams.Variation 0–2).</summary>
 internal enum Infill { Balusters, Panel, Bars }
 
-/// <summary>Railing and handrail builders shared by every WP-11 part (ART-MODELING §7.8 "围墙栏杆").</summary>
+/// <summary>Railing and handrail builders shared by every WP-11 part (ART-MODELING "围墙栏杆").</summary>
 internal static class RailKit
 {
     /// <summary>
@@ -97,10 +97,10 @@ internal static class RailKit
             Detail.Plain => Profiles.Circle(S.HandrailRadius, 8),
             _ => Profiles.Rect(-S.HandrailRadius, S.HandrailRadius, -S.HandrailRadius, S.HandrailRadius, 0),
         };
-        // Handrails are thin linear items: they stay out of the shadow pass, where they would only speckle (ART-MODELING §7.4).
+        // Handrails are thin linear items: they stay out of the shadow pass, where they would only speckle (ART-MODELING).
         mesh.VerticalSweep(CirculationStyle.MetalTube, profile, path, x, frame, MeshBuilder.NoShadow);
         if (detail == Detail.Coarse) return;
-        // Round end knobs instead of bare tube cuts (ART-MODELING §7.2 "端头圆帽").
+        // Round end knobs instead of bare tube cuts (ART-MODELING "端头圆帽").
         var knob = new Vector3(S.HandrailKnob, S.HandrailKnob, S.HandrailKnob);
         var (rings, segments) = detail == Detail.Full ? (3, 8) : (3, 6);
         if (capFirst) mesh.Ellipsoid(CirculationStyle.MetalTube, new(x, path[0].Y, path[0].X), knob, rings, segments, frame, MeshBuilder.NoShadow);

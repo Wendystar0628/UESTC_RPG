@@ -6,7 +6,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Hud.Style;
 
 /// <summary>
-/// 界面唯一的取色入口（UI-VISUAL §0.1、§3.8）：读 res://style/palette/ext/ui.json，经契约 <see cref="UiPalette"/> 解析，
+/// 界面唯一的取色入口（UI-VISUAL）：读 res://style/palette/ext/ui.json，经契约 <see cref="UiPalette"/> 解析，
 /// 启动时用 <see cref="UiPalette.Validate(UiPaletteDocument, PaletteCatalog)"/> 整表校验。代码里不写色值。
 /// </summary>
 public sealed class UiColors

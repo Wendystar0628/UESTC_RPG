@@ -6,7 +6,7 @@ using GdUnit4;
 namespace Campus.Tests.Style;
 
 /// <summary>
-/// ART-STYLE §3.4 interior rows of the WP-37 colour script: the window-patch colour only raises L (L × gain, capped), keeps the
+/// ART-STYLE interior rows of the WP-37 colour script: the window-patch colour only raises L (L × gain, capped), keeps the
 /// lit colour's C and hue, and palette row 3 stores the colour that toon's shade + g × (lit − shade) composite turns into it.
 /// Pure .NET: reads the key data and the registry from the repository.
 /// </summary>

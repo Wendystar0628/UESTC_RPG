@@ -7,7 +7,7 @@ namespace Campus.Style.Palette.Keys;
 /// <summary>The evaluated colour script for one world state: blended frame plus what derivation needs.</summary>
 public sealed record WorldFrame(FrameVector Frame, double X, double SunAltDeg, Season SeasonA, Season SeasonB, double SeasonT, double VegChromaMul);
 
-/// <summary>Colour script runtime (SYS-TIME §3): season sets, day curves, weather layer and derivation. Pure .NET.</summary>
+/// <summary>Colour script runtime (SYS-TIME): season sets, day curves, weather layer and derivation. Pure .NET.</summary>
 public sealed class ColorScript
 {
     public ColorScriptData Data { get; }
@@ -35,7 +35,7 @@ public sealed class ColorScript
         _curves[(int)season].Evaluate(ArtSun.Phase(ArtSun.ToAutumnX(altDeg, season), side));
 
     /// <summary>
-    /// Evaluates the world frame. Keyframes are indexed by sun altitude (SYS-TIME §3.1): <paramref name="sunAltDeg"/> is
+    /// Evaluates the world frame. Keyframes are indexed by sun altitude (SYS-TIME): <paramref name="sunAltDeg"/> is
     /// IWorldState.Sun.AltDeg (WP-34, single source); the side of the arc comes from the clock. Null uses the mirrored art sun.
     /// </summary>
     public WorldFrame EvaluateWorld(double clock, double seasonPos, double? sunAltDeg, in WeatherVec weather)
@@ -70,7 +70,7 @@ public sealed class ColorScript
 }
 
 /// <summary>
-/// Fills the 256×68 RGBA8 palette (ENG-PERF §1.5, contract-28 route B, layout <see cref="PaletteLayout.LayoutId"/>): row 0
+/// Fills the 256×68 RGBA8 palette (ENG-PERF, contract-28 route B, layout <see cref="PaletteLayout.LayoutId"/>): row 0
 /// current colours, row 1 lamp pools, rows 2–3 interior shade/lit, rows 4–63 seasonal rows along the season axis
 /// (256 samples), rows 64–67 the same four rows for colour IDs 256–511 (bank 1). Colour IDs reach a texel only through
 /// <see cref="PaletteLayout.FrameTexel"/>, season samples only through the seasonal rows, so the first 256×64 bytes are the
@@ -214,7 +214,7 @@ public sealed class PaletteComposer
             Blend(ca.ShadeIn, cb.ShadeIn, w.SeasonT), Blend(ca.LitIn, cb.LitIn, w.SeasonT));
     }
 
-    /// <summary>Season-axis colour blend: OKLCH when both ends are chromatic (green → yellow-green → gold, SYS-TIME §5), else OKLab.</summary>
+    /// <summary>Season-axis colour blend: OKLCH when both ends are chromatic (green → yellow-green → gold, SYS-TIME), else OKLab.</summary>
     private static Lab Blend(Lab a, Lab b, double t) =>
         a.Chroma > 0.02 && b.Chroma > 0.02 ? Oklab.LerpLch(a, b, t) : Oklab.Lerp(a, b, t);
 

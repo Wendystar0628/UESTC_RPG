@@ -20,7 +20,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Systems.Nightlight;
 
 /// <summary>
-/// 夜景灯光的时刻表节点（WP-39；SYS-TIME §6、MAP-QSH-ADDITIONS §8、ENG-PERF §10.3）。
+/// 夜景灯光的时刻表节点（WP-39；SYS-TIME、MAP-QSH-ADDITIONS、ENG-PERF）。
 /// 每帧在 FramePriority.Channels 按钟点、有效太阳高度 h_eff 与季节求 32 个通道的 (L, Δ)，经 WP-03 的
 /// ILightChannelSink 写进 light_channels；按图读时刻表、建灯表（lamp_table、lamp_grid）、管窗覆盖（window_override），
 /// 写全局参数 shaft。灯具与窗格读 WP-02 的全图清单 ILightInventory，清单的 Rev 变了就重建灯表和光晕；
@@ -35,7 +35,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     private const string ExtrasFile = "cinematics/extras.json";
     private const uint LampSeed = 0x39u;
 
-    // 光柱（ART-STYLE §7.6、ENG-PERF §10.2）：近镜 1.2 → 5.5 m 淡入、顺轴衰减 0.4；整体强度按太阳高度 2°–30° 与天气
+    // 光柱（ART-STYLE、ENG-PERF）：近镜 1.2 → 5.5 m 淡入、顺轴衰减 0.4；整体强度按太阳高度 2°–30° 与天气
     private const float ShaftNear = 1.2f;
     private const float ShaftFar = 5.5f;
     private const float ShaftAxisFalloff = 0.4f;
@@ -144,7 +144,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     }
 
     // ------------------------------------------------------------------
-    // 过场"灯光提示"钩子 ILampCueHook（SYS-TITLE §3.3）：WP-49a 的 CinematicPlayer 调用；只在 Entering 生效，
+    // 过场"灯光提示"钩子 ILampCueHook（SYS-TITLE）：WP-49a 的 CinematicPlayer 调用；只在 Entering 生效，
     // 只改灯光通道纹理（lamp.cue、sys.cue 两个槽位），撤销后各值与不覆盖时完全相同。
     // Seek 在 FramePriority.Camera 调，早于本节点的 Channels，所以同一帧就按新前沿求值；钩子自己不计时。
     // ------------------------------------------------------------------

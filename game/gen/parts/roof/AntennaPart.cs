@@ -8,7 +8,7 @@ namespace Campus.Gen.Parts.Roof;
 /// <summary>
 /// Roof antenna (天线). Variation 0: a white parabolic dish on a post, tilted up by <see cref="RoofStyle.DishTiltDeg"/>
 /// towards −Z, Width is the dish diameter and the rim top reaches Height (the science buildings' identity dishes,
-/// MAP-QSH-ADDITIONS §2.9). Variation ≥ 1: a communication mast with three white panel antennas at 120° (tall-building corners).
+/// MAP-QSH-ADDITIONS). Variation ≥ 1: a communication mast with three white panel antennas at 120° (tall-building corners).
 /// Bounds are measured over all levels, because the tilted and turned pieces do not reduce to a closed-form box.
 /// </summary>
 [Part(PartCatalog.Antenna, Owner = "WP-12")]

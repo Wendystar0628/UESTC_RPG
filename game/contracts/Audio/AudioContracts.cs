@@ -13,7 +13,7 @@ public static class AudioBuses
         OutEcho = "Out.Echo", InBed = "In.Bed", InEmit = "In.Emit",
         NearDry = "Near.Dry", SlotAEr = "Slot.A.ER", SlotARev = "Slot.A.Rev", SlotBEr = "Slot.B.ER", SlotBRev = "Slot.B.Rev",
         Air = "Air";
-    public const string ZonePrefix = "Zone.";       // Zone.<AcousticClass>.Rev，≤ 6 条（SYS-AUDIO §10.6）
+    public const string ZonePrefix = "Zone.";       // Zone.<AcousticClass>.Rev，≤ 6 条（SYS-AUDIO）
 }
 public enum AudioGroup : byte { Master, Ambience, Foley, Ui, Music }      // 设置里的五组音量：总、环境、动作、界面、音乐
 
@@ -67,7 +67,7 @@ public enum WeatherMask : ushort
     Clear = 1, FewClouds = 2, Cloudy = 4, Overcast = 8, Fog = 16, LightRain = 32,
     Rain = 64, Thunderstorm = 128, AfterRain = 256, Snow = 512, AfterSnow = 1024, All = 2047
 }
-public enum TraceKind : byte { None, HumanTrace, VisibleAnimal }  // 要过画外规则或动物同步规则（SYS-AUDIO §8、§4.4）
+public enum TraceKind : byte { None, HumanTrace, VisibleAnimal }  // 要过画外规则或动物同步规则（SYS-AUDIO）
 
 public sealed record AmbientEmitterDecl(
     string Id,                            // 以 "amb:" 开头，本图内唯一；G5 查重
@@ -76,7 +76,7 @@ public sealed record AmbientEmitterDecl(
     float RefDb, float AudibleRadius,
     SeasonMask Seasons = SeasonMask.All, DayBand Bands = DayBand.All, WeatherMask Weather = WeatherMask.All,
     TraceKind Trace = TraceKind.None, byte Priority = 4,
-    float MinDistance = 0f,               // 远景声的距离下限（SYS-AUDIO §4.6）
+    float MinDistance = 0f,               // 远景声的距离下限（SYS-AUDIO）
     FeatureId? Feature = null,
     ChannelId? Activity = null,           // 人迹跟随的灯光通道（灯亮才有人迹）
     string Reason = "");                  // 手工点必须写理由
@@ -96,7 +96,7 @@ public readonly record struct AmbienceSnapshot(long Frame, int ActiveVoices, int
 public interface IAmbienceService
 {
     AmbienceSnapshot Now { get; }
-    void Cue(in AmbienceCue cue);                          // 与画面同步的一次性声：偶发事件本身无声，它引起的抖落、积雨、旗动有声（SYS-AUDIO §6.4）
+    void Cue(in AmbienceCue cue);                          // 与画面同步的一次性声：偶发事件本身无声，它引起的抖落、积雨、旗动有声（SYS-AUDIO）
     void CancelCues(uint group);                           // 偶发事件被转场打断时
     int AddDynamic(in AmbientEmitterDecl decl);            // 会动的发声器（动物），返回句柄
     void MoveDynamic(int handle, Vector3 position);
@@ -108,7 +108,7 @@ public enum AcousticClass : byte
 {
     Open, Waterside, Street, Courtyard, Canopy, Underpass, Arcade,                      // 室外与半室外
     Corridor, Stair, SmallRoom, Room, Hall, Atrium, Gym, Pool, Canteen, Auditorium, Exhibit,  // 室内
-    Underwater, Underground, FogSea,                                                    // 介质（SYS-VIEW §5）
+    Underwater, Underground, FogSea,                                                    // 介质（SYS-VIEW）
 }
 public enum AbsorbClass : byte { Hard, Mixed, Soft, Foliage, Water, Snow }
 public enum PathKind : byte { Direct, Obstructed, Occluded, Portal, Transmission, None }
@@ -140,7 +140,7 @@ public sealed record AcousticRoomDecl(string LocalId, AcousticClass Class, IRead
     AbsorbClass Surfaces, AmbienceProfileId? Profile = null, float? Rt60 = null, float? SendDb = null);
 public sealed record AcousticPortalDecl(string RoomA, string? RoomB /* null = 室外 */, Vector3 Center, Vector3 Normal,
     float Width, float Height, float Depth, AcousticPortalKind Kind, ChannelId? Openness = null /* 电梯门的开度通道 */,
-    string? Door = null /* 自动门的门 ID（DoorLeafDecl.Id），开度读 IInteriorDoors.OpenOf，关好时门户馈送降到 −80 dB（SYS-AUDIO §10.4） */);
+    string? Door = null /* 自动门的门 ID（DoorLeafDecl.Id），开度读 IInteriorDoors.OpenOf，关好时门户馈送降到 −80 dB（SYS-AUDIO） */);
 public sealed record AcousticsDecl(IReadOnlyList<AcousticRoomDecl> Rooms, IReadOnlyList<AcousticPortalDecl> Portals)
 { public static readonly AcousticsDecl Empty = new([], []); }
 // IInteriorProvider.Acoustics(ctx, id) 默认方法在 §3 室内块；按层提供的室内照样实现：房间按层声明，Box3 带 y 区间
@@ -152,7 +152,7 @@ public enum FootMat : byte
     WoodDeck, MetalGrate, SteelPlate, MetalCover, RubberMat, Terrazzo, PolishedStone, Tile,
     Carpet, WoodFloor, Epoxy, SportWood, PoolDeck, Glass, Metal,
     Hedge, WoodDoor, Shutter,                              // 只作接触组
-    Bark,                                                  // 树干的接触组（SYS-AUDIO §9.3），追加在末尾
+    Bark,                                                  // 树干的接触组（SYS-AUDIO），追加在末尾
 }
 public readonly record struct StairSpec(float RiserM, float TreadM, int Count);
 public readonly record struct FootPatch(Vector2 Center, Vector2 HalfSize, float YawDeg, FootMat Mat, uint Flags);  // 井盖、箅子、排水沟
@@ -170,7 +170,7 @@ public interface IWalkTelemetry                            // WP-42；全部在 
 {
     event Action<FootfallInfo> Footfall;
     event Action<ulong, float> Jumped;                     // tick, 起跳速度
-    event Action<ulong, float, Vector3> Landed;            // tick, 撞击速度, 位置（SYS-WALK §12 第 9 条的扩展）
+    event Action<ulong, float, Vector3> Landed;            // tick, 撞击速度, 位置（SYS-WALK 第 9 条的扩展）
     event Action<ulong, float> StepUp;                     // 高差
     event Action<ulong, float> StepDown;
     event Action<ulong, float> Skid;                       // Δv
@@ -193,8 +193,8 @@ public enum FoleyKind : byte
     Curtain, LockedDoor, Gate, Railing, Hedge, BoundaryTouch,
     ElevatorDoorClose, ElevatorDoorOpen, ElevatorRun,
     Takeoff, Touchdown,
-    DoorOpen, DoorClose, AutoDoorOpen, AutoDoorClose,      // DoorOpen、DoorClose 给会动的门（WLD-INTERIORS §4.1，IInteriorDoors.Changed：
-                                                           // 进入 Opening 时 DoorOpen，进入 Closed 时 DoorClose，SYS-AUDIO §9.8）；Auto* 预留
+    DoorOpen, DoorClose, AutoDoorOpen, AutoDoorClose,      // DoorOpen、DoorClose 给会动的门（WLD-INTERIORS，IInteriorDoors.Changed：
+                                                           // 进入 Opening 时 DoorOpen，进入 Closed 时 DoorClose，SYS-AUDIO）；Auto* 预留
 }
 public readonly record struct GroundSample(FootMat Mat, FootMat Mat2, float Mat2Weight, bool Stair,
     GroundCover Cover, float WaterDepth, uint LocationHash);

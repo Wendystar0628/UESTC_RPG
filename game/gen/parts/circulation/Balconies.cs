@@ -9,7 +9,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// <summary>
 /// Cantilevered balcony against a wall at +Z: Width along the wall, Depth the projection, Height from the slab soffit
 /// to the top of the guard (slab 0.15 m, so 1.05 m of guard by default). Material colours the slab and parapet (the
-/// building's wall by default); copings are trim. Variation: 0 solid parapet (ART-MODELING §2 prefers it), 1 low
+/// building's wall by default); copings are trim. Variation: 0 solid parapet (ART-MODELING prefers it), 1 low
 /// upstand under a metal railing, 2 metal railing on the slab edge. Collision: the walkable slab and barrier walls on
 /// the three open edges, top 1.5 m over the balcony floor.
 /// </summary>
@@ -85,7 +85,7 @@ public sealed class BalconyPart() : CirculationPart<BalconyParams>(new(400, 120)
 /// <summary>
 /// Planter box: Width × Depth × Height to the rim, stone body on a recessed plinth, a trim rim, soil 5 cm down.
 /// Variation: 0 a clipped shrub cushion rising 0.28 m over the rim, 1 low groundcover, 2 soil only (planted by WP-23).
-/// Collision: one box to the rim; people can step up and sit (SYS-WALK §13 "花池").
+/// Collision: one box to the rim; people can step up and sit (SYS-WALK "花池").
 /// </summary>
 [Part(PartCatalog.Planter, Owner = "WP-11")]
 public sealed class PlanterPart() : CirculationPart<FurnitureParams>(new(480, 220))

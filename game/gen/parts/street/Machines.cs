@@ -7,12 +7,12 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Vending machine (售货机, WLD-LIFE §4.5, MAP-QSH-ADDITIONS §2.16): a white cabinet on a dark toe under a small grey rain canopy;
+/// Vending machine (售货机, WLD-LIFE, MAP-QSH-ADDITIONS): a white cabinet on a dark toe under a small grey rain canopy;
 /// on the front (−Z) a display window of three shelves of goods in a few clean colours in front of a self-lit back, a self-lit
 /// header strip, and below them the blue pick-up panel with its flap and a coin plate. Variation 1 is the one low-saturation
 /// odd machine a group may hold (its panel white). No brand and, on the mainline, no lettering. Width × Height × Depth is the
 /// cabinet; the canopy reaches <see cref="StreetStyle.VendingCanopyOut"/> beyond the front. The window and header glow cold white at
-/// night on the shop-sign channel (WLD-LIFE §4.5). Sound: the compressor's hum within 4 m (WLD-LIFE §4.12). Collision: one box, Metal.
+/// night on the shop-sign channel (WLD-LIFE). Sound: the compressor's hum within 4 m (WLD-LIFE). Collision: one box, Metal.
 /// </summary>
 [Part(PartCatalog.VendingMachine, Owner = "WP-13")]
 public sealed class VendingMachinePart : IPartDef<EquipmentParams>
@@ -34,7 +34,7 @@ public sealed class VendingMachinePart : IPartDef<EquipmentParams>
             { Foot = p.Foot == FootMat.Auto ? S.MetalFoot : p.Foot }];
     }
 
-    /// <summary>The compressor at the back of the toe, heard within 4 m (SYS-AUDIO §4.2); the set is registered by WP-53b.</summary>
+    /// <summary>The compressor at the back of the toe, heard within 4 m (SYS-AUDIO); the set is registered by WP-53b.</summary>
     public IReadOnlyList<SoundSocketDecl> Sounds(EquipmentParams p)
     {
         Validate(p);
@@ -98,9 +98,9 @@ public sealed class VendingMachinePart : IPartDef<EquipmentParams>
 }
 
 /// <summary>
-/// Delivery locker (外卖柜, WLD-LIFE §4.5): a grey steel cabinet on a dark toe under a dark cap, three banks of locker doors on the
+/// Delivery locker (外卖柜, WLD-LIFE): a grey steel cabinet on a dark toe under a dark cap, three banks of locker doors on the
 /// front (−Z), the middle bank holding a small screen and a keypad. The screen glows cold white at night on the shop-sign channel.
-/// Width × Height × Depth is the cabinet. Silent (WLD-LIFE §4.12). Collision: one box, Metal (2 m, out of jumping reach).
+/// Width × Height × Depth is the cabinet. Silent (WLD-LIFE). Collision: one box, Metal (2 m, out of jumping reach).
 /// </summary>
 [Part(PartCatalog.DeliveryLocker, Owner = "WP-13")]
 public sealed class DeliveryLockerPart : IPartDef<EquipmentParams>
@@ -176,10 +176,10 @@ public sealed class DeliveryLockerPart : IPartDef<EquipmentParams>
 }
 
 /// <summary>
-/// Drinking fountain (直饮水台, MAP-QSH-ADDITIONS §2.13): a brushed-steel cabinet with a lipped top, on the front (−Z) a dark
+/// Drinking fountain (直饮水台, MAP-QSH-ADDITIONS): a brushed-steel cabinet with a lipped top, on the front (−Z) a dark
 /// recess with two push spouts over a drip tray, the push buttons above, and a green indicator light between them (the one small
 /// lit point at night, signal channel); a white plate printed "直饮水" on its left side (+X). Width × Height × Depth is the cabinet
-/// (the top at 1.1 m). Silent. Collision: one box, Metal; the top is jumpable (MAP-QSH-ADDITIONS §7).
+/// (the top at 1.1 m). Silent. Collision: one box, Metal; the top is jumpable (MAP-QSH-ADDITIONS).
 /// </summary>
 [Part(PartCatalog.DrinkingFountain, Owner = "WP-13")]
 public sealed class DrinkingFountainPart : IPartDef<EquipmentParams>

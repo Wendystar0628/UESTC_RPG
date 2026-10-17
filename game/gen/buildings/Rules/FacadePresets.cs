@@ -36,13 +36,13 @@ public sealed record FacadeLook(string Key)
 }
 
 /// <summary>
-/// The facade presets WP-14 knows, by key (WF-FLOW §4: tunables in one place). Initial values; the main session sets the
+/// The facade presets WP-14 knows, by key (WF-FLOW: tunables in one place). Initial values; the main session sets the
 /// final ones at review. A key no preset has leaves the family profile as it is (logged, BuildingsModule.UnknownPreset).
 /// </summary>
 public static class FacadePresets
 {
     /// <summary>
-    /// 科研楼家族，浅暖灰石材框架加大面积深色玻璃，比六号科研楼更通透（MAP-QSH-SOUTH §8.2，成电国际创新中心）：
+    /// 科研楼家族，浅暖灰石材框架加大面积深色玻璃，比六号科研楼更通透（MAP-QSH-SOUTH，成电国际创新中心）：
     /// windows take 0.84 of the bay and 2.8 m of the storey (about 0.6 of the wall against the family's 0.3), filled
     /// with curtain-wall lights between stone piers and spandrels. 玻璃色借 glass（全校唯一的玻璃色名），深色玻璃色名进调色板后换。
     /// </summary>
@@ -58,14 +58,14 @@ public static class FacadePresets
         Window = PartCatalog.CurtainWall,
     };
 
-    // 北区宿舍预设 (WP-20 DormPresets.json, MAP-QSH-NORTH §4.2-§4.5). Every one names its frame, trims and accent outright:
+    // 北区宿舍预设 (WP-20 DormPresets.json, MAP-QSH-NORTH). Every one names its frame, trims and accent outright:
     // the dormitory family is one of two by cluster hash (DormA, DormB) and a preset has to cover both. Window cells, bays and
     // storeys stay the family's, so every window keeps its number (contract-29).
 
     /// <summary>
     /// 本科 A 型: the bay's 1.8 m window (half of it) in a 1.6 m opening 1.0 m off the floor, a solid wall around it, and the
-    /// 陶红 only as the apron under each window, as wide as the window (MAP-QSH-NORTH §4.2): about a sixth of the wall against a
-    /// quarter when the lintels took it too (ART-RENOVATION §3.3, the 陶红 at most a quarter of the facade).
+    /// 陶红 only as the apron under each window, as wide as the window (MAP-QSH-NORTH): about a sixth of the wall against a
+    /// quarter when the lintels took it too (ART-RENOVATION, the 陶红 at most a quarter of the facade).
     /// </summary>
     private static FacadeLook TypeA(string key, string frame) => new(key)
     {
@@ -84,7 +84,7 @@ public static class FacadePresets
     /// <summary>学知二、三、五、七组团: warm yellow wall (宿舍暖米黄墙) with the 陶红 aprons.</summary>
     public static readonly FacadeLook DormAYellow = TypeA("dorm.a.dormYellow", Families.WallDormYellow);
 
-    /// <summary>学知一、四、八组团: the same type A in 浅奶咖, the cluster told apart by the wall colour (MAP-QSH-NORTH §4.5).</summary>
+    /// <summary>学知一、四、八组团: the same type A in 浅奶咖, the cluster told apart by the wall colour (MAP-QSH-NORTH).</summary>
     public static readonly FacadeLook DormACreamCoffee = TypeA("dorm.a.creamCoffee", Families.WallCreamCoffee);
 
     /// <summary>
@@ -106,7 +106,7 @@ public static class FacadePresets
 
     /// <summary>
     /// 硕士楼 (硕丰苑 1–20 栋): larger openings than the undergraduate blocks (0.55 of the bay, 1.8 m, sills at 0.8 m), the
-    /// wall one grey-beige stone: no band, the accent is the frame's colour (MAP-QSH-NORTH §4.4).
+    /// wall one grey-beige stone: no band, the accent is the frame's colour (MAP-QSH-NORTH).
     /// </summary>
     private static FacadeLook Master(string key, string frame, string trim, string accent) => new(key)
     {
@@ -139,7 +139,7 @@ public static class FacadePresets
     /// </summary>
     public static readonly FacadeLook DormMasterCreamCoffeeWhite = Master("dorm.master.creamCoffeeWhite", Families.WallCreamCoffee, Families.WallWarmWhite, Families.WallWarmWhite);
 
-    // 博翰一组团附属 and 6735 (WP-20 DormPresets.json, WLD-INTERIORS §17). Not dormitories: the family (service, utility) stays the
+    // 博翰一组团附属 and 6735 (WP-20 DormPresets.json, WLD-INTERIORS). Not dormitories: the family (service, utility) stays the
     // zone pack's and keeps its own curtains, string courses and window cards. The accent is written out to keep the table whole,
     // though neither family paints it (AccentSpandrels is off there).
 

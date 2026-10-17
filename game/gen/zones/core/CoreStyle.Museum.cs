@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.Core;
 
 /// <summary>
-/// Tunable values of the museum (16d-2, MAP-QSH-CORE §4; 8401 hall body and 8402 colonnade ring, one entity). Metres above
+/// Tunable values of the museum (16d-2, MAP-QSH-CORE; 8401 hall body and 8402 colonnade ring, one entity). Metres above
 /// the museum floor (the pad + FloorAbovePad) unless noted; values marked "review" are mainline initial values awaiting
 /// the main session's call. Colours are palette names only.
 /// </summary>
@@ -18,7 +18,7 @@ public static partial class CoreStyle
     /// <summary>The eave band rises this far above the flat roof (parapet), its coping on top.</summary>
     public const float MuseumUpstand = 0.45f;
     public const float MuseumFasciaThick = 0.4f;
-    /// <summary>Central hall: plan size along and across the building's long axis (约 28×26 m, WLD-INTERIORS §2.2), eaves height.</summary>
+    /// <summary>Central hall: plan size along and across the building's long axis (约 28×26 m, WLD-INTERIORS), eaves height.</summary>
     public const float MuseumHallLength = 28f, MuseumHallWidth = 26f, MuseumHallEaves = 11.4f;
     /// <summary>
     /// Low pyramid roof (低坡锥形屋顶, about 18°): rise from the eave to the small flat top, whose ring is the eave ring scaled by
@@ -31,12 +31,12 @@ public static partial class CoreStyle
     public const float MuseumHallBase = 0.35f;
     /// <summary>
     /// Every octagonal ring (walls, eave, platform) gets this chamfer at its corners: the octagon's ~47° folds would sit in
-    /// the outline's critical band (ART-MODELING §7.3 第 6 条), two ~23° folds do not.
+    /// the outline's critical band (ART-MODELING 第 6 条), two ~23° folds do not.
     /// </summary>
     public const float MuseumCornerChamfer = 0.35f;
 
     // ---- Colonnade ring (柱廊环, 8402): square columns along the platform edge carrying the eave band. ----
-    /// <summary>Ring width where the data has no parallel outer edge (约 5.5 m, MAP-QSH-CORE §4.2).</summary>
+    /// <summary>Ring width where the data has no parallel outer edge (约 5.5 m, MAP-QSH-CORE).</summary>
     public const float ColonnadeFallback = 5.5f;
     /// <summary>Column centres in from the platform edge; the eave's outer face this far beyond the columns' outer faces.</summary>
     public const float ColumnInset = 0.9f, MuseumEaveOverhang = 0.3f;
@@ -44,7 +44,7 @@ public static partial class CoreStyle
     public const float ColumnSize = 0.6f, ColumnBase = 0.8f, ColumnBaseHeight = 0.3f, ColumnCap = 0.72f, ColumnCapHeight = 0.16f, ColumnBevel = 0.03f;
     public const float ColumnPitch = 4.8f;
 
-    // ---- Portico (方柱门廊) on the south colonnade (MAP-QSH-CORE §10 initial value: the boardwalk side): four larger
+    // ---- Portico (方柱门廊) on the south colonnade (MAP-QSH-CORE initial value: the boardwalk side): four larger
     //      columns and a raised head block (门头) over the bay, its face carrying a recessed name field (review). ----
     public const float PorticoColumn = 0.9f, PorticoColumnBase = 1.1f;
     /// <summary>Column centres either side of the door axis: inner pair, outer pair.</summary>

@@ -15,7 +15,7 @@ using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
 namespace Campus.Gen.Zones.CenterEast.Wenke;
 
 /// <summary>
-/// 文科楼群 (MAP-QSH-CENTER-EAST §3.2–§3.3), claimed whole from WP-14 and built by this zone: the 15-storey tower on its
+/// 文科楼群 (MAP-QSH-CENTER-EAST), claimed whole from WP-14 and built by this zone: the 15-storey tower on its
 /// rounded-triangle plan in the east wing, three podium wings stepping back storey by storey toward their tips, and the
 /// central hub carrying the glass-vaulted atrium. Each block is a stack of rounded storeys, one pure layout per block:
 /// a white-grey floor band at every floor standing proud of a continuous dark glass ribbon cut into numbered cells by
@@ -179,7 +179,7 @@ public sealed class WenkeSite : CenterEastSite
             }
     }
 
-    /// <summary>Window card of a cell: classrooms with a share of offices, a fixed hash of its ID (WLD-INTERIORS §5.1).</summary>
+    /// <summary>Window card of a cell: classrooms with a share of offices, a fixed hash of its ID (WLD-INTERIORS).</summary>
     private static byte CardOf(int id) => (uint)id * 2654435761u % 10u < (uint)W.WenkeOfficeShare ? W.Office : W.Classroom;
 
     // ---- Build ----

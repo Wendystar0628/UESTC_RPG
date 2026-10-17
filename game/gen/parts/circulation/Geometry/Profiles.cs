@@ -20,7 +20,7 @@ internal static class Profiles
             [new(0, -1), new(0, -1), new(1, 0), new(1, 0), new(0, 1), new(0, 1), new(-1, 0), new(-1, 0)]);
     }
 
-    /// <summary>Round tube section centred on the path; smooth radial normals (ART-MODELING §7.6).</summary>
+    /// <summary>Round tube section centred on the path; smooth radial normals (ART-MODELING).</summary>
     internal static SweepProfile Circle(float radius, int segments)
     {
         if (!(radius > 0) || segments < 6) throw new ArgumentException("A tube needs a positive radius and at least six sides.");

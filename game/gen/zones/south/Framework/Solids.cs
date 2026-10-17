@@ -12,7 +12,7 @@ public static class Solids
 {
     /// <summary>
     /// A surface of revolution about local Y. Profile points are (radius, y) from bottom to top; a zero radius closes the
-    /// end to a point. Normals follow the profile (smooth, ART-MODELING §7.6); the section is scaled by (sx, sz) for an
+    /// end to a point. Normals follow the profile (smooth, ART-MODELING); the section is scaled by (sx, sz) for an
     /// elliptical body. Flat caps close a nonzero first or last ring unless turned off (an open ring such as a bezel).
     /// </summary>
     public static PartGeometry Lathe(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx = 1f, float sz = 1f,

@@ -1,4 +1,4 @@
-// ui_panel.gdshader（WP-35，白名单；UI-VISUAL §11.5）
+// ui_panel.gdshader（WP-35，白名单；UI-VISUAL）
 // 界面层唯一的不读屏幕的画布着色器。kind 区分四种用法：
 //   0 面板：StyleBoxFlat 只作载体（白色不透明底，ExpandMargin = margin），本着色器画切角 SDF、
 //     物理像素发丝线、顶边内高光、悬停、焦点衍射边（M5）、走线流光（M1）、量化出入场（M6）、
@@ -10,7 +10,7 @@
 //   3 文字：Label 等只改 COLOR.rgb（MSDF 的 alpha 已在用户代码之前解出）。
 // 颜色只来自色表 pal_day / pal_night（下标见 R_*，与 ui.json 的 shader.panelRoles 同序，
 // 由 UiMaterials 从 ui.json 写入）；这里不写字面色值。日夜按 night_at() 取：屏幕 x 小于
-// 扫描前沿的像素是夜态，常驻件用 pin_night = 1 固定深屏（UI-VISUAL §11.6）。
+// 扫描前沿的像素是夜态，常驻件用 pin_night = 1 固定深屏（UI-VISUAL）。
 // 全局参数只读 ui_night、anim_time、step_rate；不用 TIME。
 // 输出是预乘 alpha（blend_premul_alpha），这样辉光能做成真正的叠加光。
 shader_type canvas_item;
@@ -94,7 +94,7 @@ uniform vec2 trace_geo = vec2(8.0, 120.0);            // 头部、拖尾（motio
 uniform float front_width = 0.02;                     // themeSwitch.frontWidth
 uniform float front_delta = 0.16;                     // 交班前沿的亮线增量（≤ motion.limits.frontDeltaMax）
 
-// ---- 单个控件的效果：instance uniform（UI-VISUAL §11.5；上限 16 个，这里用 12 个） ----
+// ---- 单个控件的效果：instance uniform（UI-VISUAL；上限 16 个，这里用 12 个） ----
 instance uniform int fill_role = -1;     // 底色；-1 不画
 instance uniform int line_role = -1;     // 边线；-1 不画
 instance uniform int role = 8;           // 内容色（文字、图标、线、波形）；默认 text.1

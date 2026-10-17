@@ -5,27 +5,27 @@ namespace Campus.Gen.Vegetation;
 /// <summary>One tree row parallel to a road: its distance from the centre line on both sides; Stagger shifts it half a spacing.</summary>
 public sealed record PlantingRow(float Offset, bool Stagger);
 
-/// <summary>The spring band outside the outermost row (WLD-VEGETATION §3): species alternate along it.</summary>
+/// <summary>The spring band outside the outermost row (WLD-VEGETATION): species alternate along it.</summary>
 public sealed record PlantingBand(IReadOnlyList<string> Species, float Offset, float Spacing);
 
-/// <summary>Linear planting along every road of one name (WLD-VEGETATION §3); species alternate along a row.</summary>
+/// <summary>Linear planting along every road of one name (WLD-VEGETATION); species alternate along a row.</summary>
 public sealed record RoadPlanting(string Name, IReadOnlyList<string> Species, IReadOnlyList<PlantingRow> Rows, float Spacing, bool Wash,
     PlantingBand? Band);
 
-/// <summary>A named place: within Radius of its plan envelope, groves take Mix instead of the default (WLD-VEGETATION §4).</summary>
+/// <summary>A named place: within Radius of its plan envelope, groves take Mix instead of the default (WLD-VEGETATION).</summary>
 public sealed record PlantingArea(string Name, float Radius, IReadOnlyList<(string Species, float Weight)> Mix);
 
 public sealed record GrovePlanting(int Target, float AreaPerTree, IReadOnlyList<(string Species, float Weight)> Mix,
     IReadOnlyList<PlantingArea> Areas, IReadOnlyList<PlantingArea> WashNear);
 
-/// <summary>Species of the trees planted in empty tree pits: square pits and strips, and round beds (WLD-VEGETATION §2.1 栾树: 方树池).</summary>
+/// <summary>Species of the trees planted in empty tree pits: square pits and strips, and round beds (WLD-VEGETATION 栾树: 方树池).</summary>
 public sealed record PitPlanting(string Square, string Round);
 
 /// <summary>Ground cover in the tree pits (max-011 18:52: WP-23 plants it): low clipped cushions round the trunk, Height m tall.</summary>
 public sealed record PitCover(string Species, float Height, float Spacing);
 
 /// <summary>
-/// Shrub borders along the green edges that face a road or a walk (WLD-VEGETATION §4 绿篱, §5.3 林缘与花境): the edge is
+/// Shrub borders along the green edges that face a road or a walk (WLD-VEGETATION 绿篱, §5.3 林缘与花境): the edge is
 /// sampled every Spacing m, Inset m inside the green; runs of Run m are planted where their hash is below Share; HedgeShare
 /// of the planted runs are clipped hedges (modules every Spacing m along the edge), the others loose clumps from Mix.
 /// Reach: an edge point counts as facing a road or walk when one lies within this distance.
@@ -34,7 +34,7 @@ public sealed record BorderPlanting(float Spacing, float Inset, float Run, float
     IReadOnlyList<string> Hedge, IReadOnlyList<(string Species, float Weight)> Mix);
 
 /// <summary>
-/// Grass tussocks that break up the lawns (WLD-VEGETATION §5; the near grass ring of ENG-PERF §9 is the detail version):
+/// Grass tussocks that break up the lawns (WLD-VEGETATION; the near grass ring of ENG-PERF is the detail version):
 /// along the green edges (Edge m deep, one try per Cell m, kept below Share) and round the trunks standing in green (PerTree).
 /// </summary>
 public sealed record TuftPlanting(string Species, float Cell, float Edge, float Share, int PerTree);

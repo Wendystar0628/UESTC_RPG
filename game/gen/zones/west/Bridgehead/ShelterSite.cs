@@ -10,7 +10,7 @@ using H = Campus.Gen.Zones.West.WestTune.Shelter;
 namespace Campus.Gen.Zones.West.Bridgehead;
 
 /// <summary>
-/// 西门桥头候车亭 (MAP-QSH-WEST §10.3): built on the OSM shelter footprint qsh:way:604832425, which this site claims so WP-14
+/// 西门桥头候车亭 (MAP-QSH-WEST): built on the OSM shelter footprint qsh:way:604832425, which this site claims so WP-14
 /// does not raise a 3.6 m box there. A light, clean shelter: a raised granite platform with a pale kerb, five slim aluminium
 /// posts along the back, a thin grey-white flat roof cantilevered toward the road with a front and a back eave (the rain
 /// curtains of §11 天气要点 hang from both, clear of the platform), a tech-blue lip under the front fascia, a glass back
@@ -69,7 +69,7 @@ public sealed class ShelterSite : WestSite
         foreach (var x in xs)
         {
             Box(b, f, x - H.PostSize * 0.5f, x + H.PostSize * 0.5f, top - 0.02f, under + 0.01f, PostZ - H.PostSize * 0.5f, PostZ + H.PostSize * 0.5f, L.Metal, fine ? 0.012f : 0);
-            // A small base plate where each post meets the platform (ART-MODELING §7.8: contact reads).
+            // A small base plate where each post meets the platform (ART-MODELING: contact reads).
             if (fine) Box(b, f, x - 0.11f, x + 0.11f, top, top + 0.025f, PostZ - 0.11f, PostZ + 0.11f, L.Metal, 0.008f);
         }
         // Glass back screen between the posts, framed by an aluminium sill and head rail along the whole back.

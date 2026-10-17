@@ -41,7 +41,7 @@ public sealed record WaterBody(
 
 /// <summary>
 /// Reads the water bodies of one map from the world model. Pure and deterministic: the same world gives the same list.
-/// Reflection candidates come from map.json env.reflectLakes; the list order is the lake number (WLD-WATER §7.2).
+/// Reflection candidates come from map.json env.reflectLakes; the list order is the lake number (WLD-WATER).
 /// </summary>
 public static class WaterCatalog
 {

@@ -10,7 +10,7 @@ using L = Campus.Gen.Zones.West.WestTune.Look;
 namespace Campus.Gen.Zones.West.Bridgehead;
 
 /// <summary>
-/// 国防科技园石刻 (MAP-QSH-WEST §9.1): the campus stone-carving manner (粗凿的白色卧石, as the 体育运动中心 stone), here the
+/// 国防科技园石刻 (MAP-QSH-WEST): the campus stone-carving manner (粗凿的白色卧石, as the 体育运动中心 stone), here the
 /// motto stone's faceted body at about half size: a few big cut planes, a low tilted top and one flat dressed face toward
 /// the bridgehead junction. It lies in a low oval of pebbles so its foot meets the lawn softly. The face is blank until the
 /// scene text atlas (contract-26) carries "国防科技园" in dark green running script. Night role: dark area (§11).
@@ -53,7 +53,7 @@ public sealed class CarvingSite : WestSite
         return new(meshes, new(g.Bounds.Min * s, g.Bounds.Max * s));
     }
 
-    /// <summary>One box with a top (SYS-WALK §13).</summary>
+    /// <summary>One box with a top (SYS-WALK).</summary>
     public override void Collide(SiteColliders c)
     {
         var y = c.Ground(C.At.X, C.At.Y);

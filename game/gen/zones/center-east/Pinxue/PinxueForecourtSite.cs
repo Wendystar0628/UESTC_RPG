@@ -10,10 +10,10 @@ using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 namespace Campus.Gen.Zones.CenterEast.Pinxue;
 
 /// <summary>
-/// 品学楼 forecourt (MAP-QSH-CENTER-EAST §2.3; MAP-QSH-TERRAIN §10): the light-grey paving is WP-15 ground and the trees
+/// 品学楼 forecourt (MAP-QSH-CENTER-EAST; MAP-QSH-TERRAIN): the light-grey paving is WP-15 ground and the trees
 /// are WP-23's (registered as tree pits in overlay/center-east.d/). This site builds what is stone: the two rows of
 /// square tree pits, the kerbed lawn panel with the low three-tier stepped stone cascade on the frame's axis (its water is
-/// WP-24's, WLD-WATER §9), the seat ring of the round bed and the planter seat walls stepping down both
+/// WP-24's, WLD-WATER), the seat ring of the round bed and the planter seat walls stepping down both
 /// sides of the 5 % ramp. The entrance kit at the A-wing hall door (px.a.hall: mat, open sign, door lamp) is WP-13's.
 /// </summary>
 public sealed class PinxueForecourtSite : CenterEastSite

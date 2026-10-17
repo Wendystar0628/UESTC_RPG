@@ -64,7 +64,7 @@ public sealed class SiteBuilder
         _items.Add(new(anchor, GeometryBuffer.Freeze(placed), null, HasLodChannel: mesh.Lods is not null));
     }
 
-    /// <summary>Places a catalogue part (PartCatalog); it shows as a box until its owner's geometry lands (ENG-ARCH §5).</summary>
+    /// <summary>Places a catalogue part (PartCatalog); it shows as a box until its owner's geometry lands (ENG-ARCH).</summary>
     public void Place(string part, BoxPartParams parameters, Matrix4x4 at, PaletteToken? tint = null)
     {
         ArgumentNullException.ThrowIfNull(parameters);
@@ -81,7 +81,7 @@ public sealed class SiteBuilder
     /// <summary>
     /// A plain box in world space, batched with others of the same material in its cell: centre <paramref name="c"/> on the
     /// plan, length along unit <paramref name="u"/>, depth across it, from y0 to y1. Caps off leaves the top and bottom
-    /// open (bars hidden by rails); noShadow sets the no-shadow vertex flag (thin bars, ART-MODELING §7.4).
+    /// open (bars hidden by rails); noShadow sets the no-shadow vertex flag (thin bars, ART-MODELING).
     /// </summary>
     public void Box(ToonSpec material, Vector2 c, Vector2 u, float length, float depth, float y0, float y1, bool caps = true, bool noShadow = false)
     {

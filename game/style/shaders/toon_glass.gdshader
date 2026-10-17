@@ -1,5 +1,5 @@
 // toon_glass.gdshader：窗玻璃（WP-04）。映天、斜条高光、低太阳眩光、窗灯与简化的室内视差。
-// 规格：ART-STYLE §5.1、§5.4、§10；ENG-PERF §1.4、§10.3；WLD-INTERIORS §5.1。
+// 规格：ART-STYLE；ENG-PERF；WLD-INTERIORS。
 // 顶点数据（VF-B，暂定，待与 WP-03、WP-14 对齐）：
 //   UV  ：窗格坐标，floor(UV) = (列, 行)，fract(UV) = 格内位置；UV.x 沿立面向右，UV.y 向上
 //   UV2 ：x = 本块玻璃的窗号基址；y = 灯光通道号 + 32 × 列数
@@ -137,7 +137,7 @@ void fragment() {
 	vec3 up = cross(n, right);
 	float nv = clamp(dot(-vdir, n), 0.0, 1.0);
 
-	// 0. 窗卡（WLD-INTERIORS §5.1，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
+	// 0. 窗卡（WLD-INTERIORS，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
 	bool carded = cols > 0;
 	float aa_m = max(length(fwidth(UV)) * GLASS_PANE_M.x * 0.7, 1e-4);
 	vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
@@ -149,7 +149,7 @@ void fragment() {
 	WCard wcard = wcard_fetch(card_byte & 127);
 	uint wkey = uint(wid) * 2u + 4u;
 	if (carded && on < 1.0) {
-		// 白天的室内是暖影（WLD-INTERIORS §8.2）。明度按天光给定值，不随玻璃底色（玻璃底色太深，房间读不出来）；夜里退回玻璃底色
+		// 白天的室内是暖影（WLD-INTERIORS）。明度按天光给定值，不随玻璃底色（玻璃底色太深，房间读不出来）；夜里退回玻璃底色
 		vec3 warm = pal_cur(PAL_WINDOW_WARM);
 		vec3 day_room = mix(vec3(1.0), warm / max(dot(warm, vec3(0.333)), 1e-4), GLASS_CARD_WARM) * GLASS_CARD_DAY_LUM;
 		vec3 base = mix(mix(tcol.lit, day_room, GLASS_CARD_DAY_MIX), tcol.lit, night) * wcard.dayl;
@@ -168,7 +168,7 @@ void fragment() {
 	tcol.lit = mix(tcol.lit, sky, fres);
 	tcol.shade = mix(tcol.shade, sky * 0.85, fres);
 
-	// 2. 低太阳眩光（ART-STYLE §5.1）：只在受光的玻璃上，经"受光 − 影"交给 light()
+	// 2. 低太阳眩光（ART-STYLE）：只在受光的玻璃上，经"受光 − 影"交给 light()
 	float h_sun = degrees(asin(clamp(sun_dir.y, -1.0, 1.0)));
 	vec2 sh = sun_dir.xz;
 	vec2 nh = n.xz;

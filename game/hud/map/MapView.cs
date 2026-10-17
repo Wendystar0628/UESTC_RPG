@@ -65,7 +65,7 @@ public sealed class MapGeo(GeoFrame geo)
     }
 }
 
-/// <summary>临界阻尼弹簧（阻尼比 1）：可被打断的跟随，不过冲（UI-VISUAL §9）。</summary>
+/// <summary>临界阻尼弹簧（阻尼比 1）：可被打断的跟随，不过冲（UI-VISUAL）。</summary>
 public struct Spring(float value, float response)
 {
     public float Value = value;

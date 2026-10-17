@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """登记：把入库结果写成 game/data/audio/licenses.json 与 game/assets/audio/index.json，
-并给床和音乐的 .import 打上循环参数（SYS-AUDIO §15）。
+并给床和音乐的 .import 打上循环参数（SYS-AUDIO）。
 
 用法: python register.py --assets <game/assets/audio> --licenses-out <licenses.json> --snap-dir <快照目录>
       --beds-rep <json> --beds-recipes <json> --os-rep <json> --os-recipes <json> [--synth-rep <json>]
@@ -86,14 +86,14 @@ def main():
         sr, ch, dur = A.probe(p)
         add_file(rel, [synth], "程序合成（pipeline/audio/synth_broadcast.py，固定种子，可复现）")
         index["music" if kind == "melody" else "bells"].append(dict(file=rel, duration_s=round(dur, 1), channels=ch,
-            placeholder=True, note="原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）" if kind == "melody" else "单音铜钟，占位"))
+            placeholder=True, note="原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO）" if kind == "melody" else "单音铜钟，占位"))
 
     sources = []
     for sid, rels in sorted(used.items()):
         if sid.startswith("SELF-SYNTH"):
             sources.append(dict(id=sid, source="自制（程序合成）", url="pipeline/audio/synth_broadcast.py", title="广播旋律与铜钟（占位）",
                                 author="UESTC_RPG", license="SELF-SYNTH", license_url="", downloaded="", snapshot="", sha256="",
-                                attribution="", note="自有版权，保留所有权利（OPS-RELEASE §7）", used_in=sorted(rels)))
+                                attribution="", note="自有版权，保留所有权利（OPS-RELEASE）", used_in=sorted(rels)))
             continue
         n = sid[3:]
         s = snaps[n]
@@ -102,7 +102,7 @@ def main():
                             snapshot=f"pipeline/audio/snapshots/{n}.json", retrieved_as=s["source_kind"],
                             original_name=s["title"], sha256=s["sha256"], attribution="", used_in=sorted(rels)))
     lic = dict(schema=1, generated=datetime.date.today().isoformat(),
-               note="来源与许可登记（SYS-AUDIO §14.2 第 1 步）。Freesound 素材取自网站公开的 HQ 预览（48 kHz Ogg Vorbis），"
+               note="来源与许可登记（SYS-AUDIO 第 1 步）。Freesound 素材取自网站公开的 HQ 预览（48 kHz Ogg Vorbis），"
                     "原始无损文件需登录下载，登录后可在不改文件名的前提下替换母带。sha256 是下载文件的摘要。",
                sources=sources, files=sorted(files, key=lambda f: f["path"]))
     os.makedirs(os.path.dirname(a.licenses_out), exist_ok=True)

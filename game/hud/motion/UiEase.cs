@@ -1,7 +1,7 @@
 namespace Campus.Hud.Motion;
 
 /// <summary>
-/// 动效曲线（UI-VISUAL §9.5）：贝塞尔 Enter (.2,.7,.2,1)、Exit (.3,0,.8,.15)、Standard (.2,0,0,1)，临界阻尼弹簧的精确解，一拍二步进。
+/// 动效曲线（UI-VISUAL）：贝塞尔 Enter (.2,.7,.2,1)、Exit (.3,0,.8,.15)、Standard (.2,0,0,1)，临界阻尼弹簧的精确解，一拍二步进。
 /// 不用 Godot 的 Back、Elastic、Bounce、Spring 过渡。曲线参数由 ui_metrics.json 给出，调用方传进来。
 /// </summary>
 public static class UiEase
@@ -43,7 +43,7 @@ public static class UiEase
         return 1 - (1 + w * seconds) * MathF.Exp(-w * seconds);
     }
 
-    /// <summary>临界阻尼弹簧进入 1% 的时间（UI-VISUAL §9.5：0.15 s → 158 ms）。</summary>
+    /// <summary>临界阻尼弹簧进入 1% 的时间（UI-VISUAL：0.15 s → 158 ms）。</summary>
     public static float SpringSettle(float response) => response * 1.0536f;
 
     /// <summary>一拍二步进：T = floor(t·rate)/rate。</summary>

@@ -8,7 +8,7 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Library;
 
 /// <summary>
-/// The library roof (MAP-QSH-CORE §1.5): the octagonal low-cone skylight over the atrium (port of the legacy
+/// The library roof (MAP-QSH-CORE): the octagonal low-cone skylight over the atrium (port of the legacy
 /// libraryRoof.ts: eight facets to a central ring, main ribs on the facet seams, a triangular steel grid between them,
 /// clear glass), the curved metal roofs alternating with the flat ring roof, and the raised mechanical box north of
 /// the skylight. Octagon vertices sit half-way between the face normals of <see cref="LibraryPlan.FaceAngle"/>.
@@ -43,7 +43,7 @@ public static class LibraryRoof
 
     /// <summary>
     /// Curb, glass facets, ribs, grid and hub. Steel goes to <paramref name="steel"/> (its own instance, fog-exempt with
-    /// the glass, MAP-QSH-CORE §7), the stone curb to the shared sink.
+    /// the glass, MAP-QSH-CORE), the stone curb to the shared sink.
     /// </summary>
     public static void Skylight(LibraryPlan plan, CoreMesh shared, CoreMesh steel, GlassSink glass, int column, LodLevel lod)
     {

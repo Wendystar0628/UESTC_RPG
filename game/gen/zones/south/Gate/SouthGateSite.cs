@@ -12,11 +12,11 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Gate;
 
 /// <summary>
-/// South gate (MAP-QSH-SOUTH §1): an open gateway with no gatehouse arch. Two flat-roofed grey stone guard houses, a stone
+/// South gate (MAP-QSH-SOUTH): an open gateway with no gatehouse arch. Two flat-roofed grey stone guard houses, a stone
 /// pillar on each traffic island beside the carriageway, barrier arms down across the carriageway, QR turnstiles closed in
 /// the two pedestrian lanes, the low granite name wall to the left seen from the street, and the forecourt's stone spheres,
 /// bollards and yellow no-parking grid. In walk mode the gate is the campus boundary: every gap is under 0.5 m and the
-/// closure is a 2.2 m Boundary collider (§1.2, WLD-OUTSKIRTS §7.1). At night the guard-house windows are the gate's two small
+/// closure is a 2.2 m Boundary collider (§1.2, WLD-OUTSKIRTS). At night the guard-house windows are the gate's two small
 /// lights (§11): they declare one grid on the all-night channel.
 /// The OSM relation is a "building" in the source data, so this site claims it and WP-14 must not extrude it.
 /// </summary>
@@ -162,7 +162,7 @@ public sealed class SouthGateSite : SouthSite
         b.Add(PartGeometryKernel.BeveledBox(T.PillarSize, T.PillarHeight - 0.9f, T.PillarSize, 0.04f, L.Stone), Frame.At(x, top + 0.5f, T.PillarZ));
         b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.24f, 0.4f, T.PillarSize + 0.24f, 0.03f, L.StoneTrim), Frame.At(x, top + T.PillarHeight - 0.4f, T.PillarZ));
         if (b.Detail == SiteDetail.Mass) return;
-        // Two shallow joint bands keep the pillar from reading as one bare extrusion (ART-FIDELITY §0).
+        // Two shallow joint bands keep the pillar from reading as one bare extrusion (ART-FIDELITY).
         foreach (var k in new[] { 0.36f, 0.68f })
             b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.04f, 0.05f, T.PillarSize + 0.04f, 0.01f, L.StoneTrim), Frame.At(x, top + 0.5f + (T.PillarHeight - 0.9f) * k, T.PillarZ));
     }

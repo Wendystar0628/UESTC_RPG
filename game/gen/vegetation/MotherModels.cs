@@ -4,7 +4,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
 
-/// <summary>Near-pool levels (ENG-PERF §9): L0+ 0–15 m, L0 15–40 m, L1 40–150 m on a 12 m tree.</summary>
+/// <summary>Near-pool levels (ENG-PERF): L0+ 0–15 m, L0 15–40 m, L1 40–150 m on a 12 m tree.</summary>
 public enum VegLevel : byte { L0Plus = 0, L0 = 1, L1 = 2 }
 
 /// <summary>
@@ -12,7 +12,7 @@ public enum VegLevel : byte { L0Plus = 0, L0 = 1, L1 = 2 }
 /// first, then the crown masses, all two-sided, veg_card; max-011 review). The crown is one material, so the outline
 /// pass only draws its outer contour; every crown vertex carries the normal of one smooth shell (<see cref="CrownShell"/>),
 /// so the crown shades as one lit side and one shadow band. Lower levels' cards are a prefix of higher levels' (CUSTOM2.w
-/// is the importance rank). TrunkRadius at breast height and BranchHeight feed the trunk collider (WLD-VEGETATION §10).
+/// is the importance rank). TrunkRadius at breast height and BranchHeight feed the trunk collider (WLD-VEGETATION).
 /// </summary>
 public sealed record MotherModel(
     string Species,
@@ -37,12 +37,12 @@ public sealed record MotherModel(
     /// <summary>Horizontal diameter of the crown shell, the yardstick of the 5% card rule.</summary>
     public float CrownDiameter { get; init; }
 
-    /// <summary>Branch ends the winter twig strokes hang from (WLD-VEGETATION §1.8); also the song-post candidates (§12).</summary>
+    /// <summary>Branch ends the winter twig strokes hang from (WLD-VEGETATION); also the song-post candidates (§12).</summary>
     public IReadOnlyList<Vector3> BranchTips { get; init; } = [];
 }
 
 /// <summary>
-/// Mother-model generator (WLD-VEGETATION §1, §11.2; ENG-PERF §9). Pure and deterministic: the same species,
+/// Mother-model generator (WLD-VEGETATION; ENG-PERF). Pure and deterministic: the same species,
 /// variant and level always give the same bytes. Vertex channels:
 /// COLOR = (lit colour ID, AO, flags, spare) where spare is the crown-gradient t0 on crown vertices (§1.3) and the
 /// whitewash colour ID on trunk vertices; CUSTOM0 = (card centre | mass centre, h2 | mass hash; −1 marks wood);
@@ -53,21 +53,21 @@ public sealed record MotherModel(
 /// </summary>
 public static class MotherModels
 {
-    /// <summary>Trunks start this far below the local ground (WLD-TERRAIN §4.4: HeightAt minus burial).</summary>
+    /// <summary>Trunks start this far below the local ground (WLD-TERRAIN: HeightAt minus burial).</summary>
     public const float Burial = 0.3f;
 
     /// <summary>Bark: warm grey-brown, low chroma (max-011 review; colour IDs 252–253, ext/WP-23.json).</summary>
     public static readonly PaletteToken Bark = new("tree.bark.lit");
     public static readonly PaletteToken BarkShade = new("tree.bark.shade");
 
-    /// <summary>Winter twig strokes keep the bare-branch name (WLD-VEGETATION §1.8); packed into the species table.</summary>
+    /// <summary>Winter twig strokes keep the bare-branch name (WLD-VEGETATION); packed into the species table.</summary>
     public static readonly PaletteToken Twig = new("tree.bare.lit");
 
-    /// <summary>Lime-washed lower trunk (WLD-VEGETATION §1.7), switched per instance by the variant bit in veg_trunk.</summary>
+    /// <summary>Lime-washed lower trunk (WLD-VEGETATION), switched per instance by the variant bit in veg_trunk.</summary>
     public static readonly PaletteToken Whitewash = new("wall.greyWhite.lit");
 
     /// <summary>
-    /// Card budget per crown type at L0+, L0 and L1 (ENG-PERF §9); lower levels take the top-ranked prefix. Every type keeps
+    /// Card budget per crown type at L0+, L0 and L1 (ENG-PERF); lower levels take the top-ranked prefix. Every type keeps
     /// the same fractions (L0 ≈ 40%, L1 ≈ 5.6% of L0+), because veg_card shrinks the extra cards by those two fractions
     /// (VEG_KEEP_L0, VEG_KEEP_L1) before the level swaps. Card crowns take the low end of the 1500–2000 band (23d), so their
     /// near masses can be finer icospheres within the L0+ ceiling.
@@ -86,7 +86,7 @@ public static class MotherModels
         _ => throw new ArgumentOutOfRangeException(nameof(level), level, "Unknown vegetation level.")
     };
 
-    /// <summary>Hard ceiling per mother model at L0+ (ENG-PERF §9: cloud crowns ≤ 10 000 triangles).</summary>
+    /// <summary>Hard ceiling per mother model at L0+ (ENG-PERF: cloud crowns ≤ 10 000 triangles).</summary>
     public const int MaxTrianglesL0Plus = 10000;
 
     /// <summary>Cloud crowns at L0 (15–40 m): 2.5k (max-011 review); may rise to 3.5k only if the outline still shows facets.</summary>
@@ -99,7 +99,7 @@ public static class MotherModels
     public const int CloudTrianglesL0Outline = 3500;
 
     /// <summary>
-    /// Card and mixed crowns at L0 (15–40 m; ENG-PERF §9: 3–4k): every mass is at least icosphere level 1 (23d: a bare
+    /// Card and mixed crowns at L0 (15–40 m; ENG-PERF: 3–4k): every mass is at least icosphere level 1 (23d: a bare
     /// icosahedron shows straight edges and corners at 15 m), and the most exposed step up to level 2 within this.
     /// </summary>
     public const int CardTrianglesL0 = 4000;
@@ -110,7 +110,7 @@ public static class MotherModels
     /// </summary>
     public const float HiddenMargin = 0.06f;
 
-    /// <summary>L1 target (ENG-PERF §9: 0.6–0.9k); L1 merges its masses down to this many.</summary>
+    /// <summary>L1 target (ENG-PERF: 0.6–0.9k); L1 merges its masses down to this many.</summary>
     public const int MaxMassesL1 = 6;
 
     /// <summary>Cards stay within this fraction of the crown diameter outside the crown masses (max-011 review: 5%).</summary>
@@ -309,7 +309,7 @@ public static class MotherModels
     }
 
     /// <summary>
-    /// The ShadowsOnly proxy of a mother model (WLD-VEGETATION §11.3, ENG-PERF §9): L1 wood plus the L1 masses scaled by
+    /// The ShadowsOnly proxy of a mother model (WLD-VEGETATION, ENG-PERF): L1 wood plus the L1 masses scaled by
     /// <see cref="ProxyScale"/>, drawn with veg_trunk and its shadow_proxy holes. One per mother model, shared by all levels.
     /// </summary>
     public static GeometryBundle ShadowProxy(SpeciesInfo species, int variant, PaletteCatalog palette)
@@ -326,7 +326,7 @@ public static class MotherModels
         return w.Bundle(WoodSpec(), flags: 0);
     }
 
-    /// <summary>Sides of the far stand-in's trunk (ENG-PERF §9: L2 is 150–300 triangles or fewer).</summary>
+    /// <summary>Sides of the far stand-in's trunk (ENG-PERF: L2 is 150–300 triangles or fewer).</summary>
     public const int FarTrunkSides = 5;
 
     /// <summary>
@@ -336,7 +336,7 @@ public static class MotherModels
     public const float FarWoodTag = 1f, FarMassTag = -2f;
 
     /// <summary>
-    /// The far-pool stand-in of a mother model (WLD-VEGETATION §11.4–§11.5 candidate A, mainline cut; max-011 23c2c): a
+    /// The far-pool stand-in of a mother model (WLD-VEGETATION candidate A, mainline cut; max-011 23c2c): a
     /// five-sided trunk from the buried foot to the crown base, and the L1 merged masses as level-0 lumpy icospheres sampled
     /// on the same surface as the L1 masses (so the two meet in the cross-fade band with the same bulk, normals, colour and
     /// crown gradient), no cards and no branches; about 130 triangles. Stemless balls (shrubs) have no wood. Wood is drawn
@@ -386,7 +386,7 @@ public static class MotherModels
         float H2, float H3, Vector3 Anchor, Vector3 BlobCenter, int Owner, int Cluster);
 
     /// <summary>
-    /// Icosphere level of one mass: 2 at L0+ and 1 at L0 (ENG-PERF §9; 23d: card and mixed masses as well, with their
+    /// Icosphere level of one mass: 2 at L0+ and 1 at L0 (ENG-PERF; 23d: card and mixed masses as well, with their
     /// hidden faces left out, so the near outline is round instead of faceted); L0 then steps the most exposed up to 2
     /// within its allowance. L1 uses merged masses at level 1.
     /// </summary>
@@ -550,7 +550,7 @@ public static class MotherModels
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Wood: tapered tubes with a lobed root flare; trunks 32 / 16 / 8 sides (ENG-PERF §9), branch tips capped.
+    // Wood: tapered tubes with a lobed root flare; trunks 32 / 16 / 8 sides (ENG-PERF), branch tips capped.
     // ---------------------------------------------------------------------------------------------------------
 
     private static void WriteWood(MeshWriter w, TreePlan plan, VegLevel level, Ids ids)
@@ -711,7 +711,7 @@ public static class MotherModels
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Cards (WLD-VEGETATION §11.2, max-011 reviews): cards come in clusters of 3–5. A cluster's centre sits on the
+    // Cards (WLD-VEGETATION, max-011 reviews): cards come in clusters of 3–5. A cluster's centre sits on the
     // outermost crown mass along a ray aimed at the crown shell, pressed into it by at least 30% of the card radius,
     // and its cards overlap around that centre facing the shell normal, so each clump grows out of the outline and none
     // hovers alone. veg_card keeps them at full size only on the silhouette ring. Cluster directions follow a Halton
@@ -924,7 +924,7 @@ public static class MotherModels
 
     private static int CardCapacity(TreePlan plan) => plan.Form.Id == "palm" ? 20 : CardCount(plan.Species.Crown, VegLevel.L0Plus);
 
-    /// <summary>Crown-gradient t0 = 0.36 + 0.26·n.y + 0.30·(height in crown − 0.5) + 0.12·outward (WLD-VEGETATION §1.3).</summary>
+    /// <summary>Crown-gradient t0 = 0.36 + 0.26·n.y + 0.30·(height in crown − 0.5) + 0.12·outward (WLD-VEGETATION).</summary>
     private static byte Gradient(TreePlan plan, Vector3 p, Vector3 n)
     {
         var h = Math.Clamp((p.Y - (plan.CrownCenter.Y - plan.CrownRy)) / (2f * plan.CrownRy), 0f, 1f);

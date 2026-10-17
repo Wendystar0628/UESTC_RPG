@@ -8,12 +8,12 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// Outdoor flight of steps, one flight per part (WLD-TERRAIN §5.2). Width is the outer width, Height the rise, Steps the
+/// Outdoor flight of steps, one flight per part (WLD-TERRAIN). Width is the outer width, Height the rise, Steps the
 /// riser count n, Depth = n × tread: the first riser stands on the front edge (−Z), tread k is at k × rise and the top
 /// tread [(n−1)·T, n·T] is flush with the upper level, whose pad starts at +Z. The solid sinks 0.1 m below y = 0.
 /// Variation: 0 cheek walls with copings and handrails (side rails from 0.6 m rise, a middle rail when the clear width
 /// is ≥ 2 m and the rise ≥ 1.05 m), 1 cheek walls only, 2 bare block for steps flanked by walls or terrain.
-/// Collision (WLD-TERRAIN §5.2, SYS-WALK §13): three or more risers give one RampCollider through every nosing, flush with
+/// Collision (WLD-TERRAIN, SYS-WALK): three or more risers give one RampCollider through every nosing, flush with
 /// the top tread and buried 0.2 m below the lower level; fewer risers give one box per step for auto-step.
 /// </summary>
 [Part(PartCatalog.Steps, Owner = "WP-11")]

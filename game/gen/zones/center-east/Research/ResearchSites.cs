@@ -12,7 +12,7 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 /// <summary>
 /// 基础实验大楼 (科 A, §1.2): the コ-shaped main block open to the west, closed by the west block and its link strip, the lens
 /// hall in the courtyard behind the east door, five storeys. Its roof carries the renovated old blocks' high fence and
-/// tower tank (MAP-QSH-ADDITIONS §2.16) on the east wing, seen from 银杏大道 and the river.
+/// tower tank (MAP-QSH-ADDITIONS) on the east wing, seen from 银杏大道 and the river.
 /// </summary>
 public sealed class KeASite : ResearchSite
 {
@@ -37,7 +37,7 @@ public sealed class KeASite : ResearchSite
             return;
         }
         b.Place(PartCatalog.WaterTank, new EquipmentParams(size.X, size.Y, size.Z) { Variation = 1 }, Frame.At(t.X, roof, t.Y));
-        // The fence: grey aluminium bars between posts, drawn as a frame only (ART-STYLE §4.4), in runs of at most 6 m.
+        // The fence: grey aluminium bars between posts, drawn as a frame only (ART-STYLE), in runs of at most 6 m.
         Vector2 min = R.KeAFenceMin, max = R.KeAFenceMax;
         foreach (var (a, e) in new[] { (min, new Vector2(max.X, min.Y)), (new Vector2(max.X, min.Y), max), (max, new Vector2(min.X, max.Y)), (new Vector2(min.X, max.Y), min) })
         {
@@ -57,7 +57,7 @@ public sealed class KeASite : ResearchSite
 /// <summary>
 /// 一号科研实验楼 · 科研楼 B 区 (§1.1–§1.2): the longer twin of 科 A with a middle block across its courtyard, five storeys
 /// with the east wing one storey higher as a set-back attic, the door facing the statue lawn, and the 一号科研楼 dishes on
-/// the attic roof (MAP-QSH-ADDITIONS §2.9). Joined to 科 C on the north.
+/// the attic roof (MAP-QSH-ADDITIONS). Joined to 科 C on the north.
 /// </summary>
 public sealed class KeBSite : ResearchSite
 {
@@ -123,7 +123,7 @@ public sealed class KeBSite : ResearchSite
 /// <summary>
 /// 一号科研实验楼 · 科研楼 C 区 (§1.1–§1.2): the five-storey bar on the north, the link block to 科 B on the west and the
 /// two-storey C hall (C 区大厅) between them on the east, its arc and doors facing the statue lawn; the 一号科研楼 roof
-/// garden (MAP-QSH-ADDITIONS §2.9) on the bar.
+/// garden (MAP-QSH-ADDITIONS) on the bar.
 /// </summary>
 public sealed class KeCSite : ResearchSite
 {

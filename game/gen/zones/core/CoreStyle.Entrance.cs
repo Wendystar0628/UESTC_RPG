@@ -4,7 +4,7 @@ using Campus.Gen.Zones.Core.Framework;
 namespace Campus.Gen.Zones.Core;
 
 /// <summary>
-/// Tunable values of the library's grand stair (8398) and its 2F front door (16c, MAP-QSH-CORE §1.7, WLD-TERRAIN §5).
+/// Tunable values of the library's grand stair (8398) and its 2F front door (16c, MAP-QSH-CORE, WLD-TERRAIN).
 /// Metres; values marked "review" are mainline initial values awaiting the main session's call. Colours are palette
 /// names only.
 /// </summary>
@@ -18,12 +18,12 @@ public static partial class CoreStyle
     public const float TerraceWidth = 4.78f;
     /// <summary>Side stair (侧梯) on each flank, outer width including cheeks (review).</summary>
     public const float SideStairWidth = 4.2f;
-    /// <summary>Solid stone guard wall outside each side stair, its top 1.05 m over the walking line (SYS-WALK §7).</summary>
+    /// <summary>Solid stone guard wall outside each side stair, its top 1.05 m over the walking line (SYS-WALK).</summary>
     public const float GuardWallWidth = 0.3f, GuardHeight = 1.05f;
     /// <summary>Top landing depth in front of the podium edge (the OSM base's 3.45 m back strip).</summary>
     public const float TopLandingDepth = 3.45f;
 
-    // ---- Section (WLD-TERRAIN §5.1, §5.2): risers near 0.15, flights of at most 1.5 m rise, one deep middle landing
+    // ---- Section (WLD-TERRAIN): risers near 0.15, flights of at most 1.5 m rise, one deep middle landing
     //      between the two runs (两跑) and short rest landings inside each run (review). ----
     public const float FlightMaxRise = 1.5f;
     public const float RestLanding = 1.2f, MiddleLanding = 2.8f;
@@ -41,11 +41,11 @@ public static partial class CoreStyle
     public const float CourseThickness = 0.08f, CourseRelief = 0.025f;
     /// <summary>Plinth band (勒脚) at the foot of the lower terrace fronts and the guard walls, above the ground.</summary>
     public const float StairPlinth = 0.45f;
-    /// <summary>Guards against a drop are collided this high above the walking surface (SYS-WALK §7).</summary>
+    /// <summary>Guards against a drop are collided this high above the walking surface (SYS-WALK).</summary>
     public const float GuardCollision = 1.5f;
 
-    // ---- Front door in the glass slot (MAP-QSH-CORE §1.7): four-leaf glass door over the slot's three middle cells,
-    //      the outer two leaves fixed side lights, the inner two fixed open at 90° (WLD-INTERIORS §4). ----
+    // ---- Front door in the glass slot (MAP-QSH-CORE): four-leaf glass door over the slot's three middle cells,
+    //      the outer two leaves fixed side lights, the inner two fixed open at 90° (WLD-INTERIORS). ----
     public const int DoorCells = 3;
     public const int DoorLeaves = 4;
     public const float DoorOpenDeg = 90f;

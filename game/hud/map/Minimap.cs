@@ -3,10 +3,10 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 左上角常驻的小地图（SYS-ATLAS §3、UI-VISUAL §8.2）：外框 244×272，锚在 (32, 32)；上方 226² 的地图视口，
+/// 左上角常驻的小地图（SYS-ATLAS、UI-VISUAL）：外框 244×272，锚在 (32, 32)；上方 226² 的地图视口，
 /// 下方 28 px 底栏（左区域名、右比例尺）。外框只切左上 12 px，切角旁一枚过孔，发丝线边，视口顶边中央等宽的"N"。
 /// 常驻件，默认固定深屏。界面态在视口右侧贴 [大地图 M]、[目录 G] 两个 36 px 图标钮。
-/// 共 8 个 Control：外框、视口、底图、标记层、玩家、N 签、两个按钮（SYS-ATLAS §10：≤ 12）。
+/// 共 8 个 Control：外框、视口、底图、标记层、玩家、N 签、两个按钮（SYS-ATLAS：≤ 12）。
 /// </summary>
 public partial class Minimap : Control
 {
@@ -57,7 +57,7 @@ public partial class Minimap : Control
     public float ViewportHalf => ViewportSide * 0.5f;
     public event Action? Clicked;
 
-    /// <summary>界面态时显示两个图标钮；漫游态不显示（SYS-ATLAS §3）。</summary>
+    /// <summary>界面态时显示两个图标钮；漫游态不显示（SYS-ATLAS）。</summary>
     public void SetInterfaceState(bool on)
     {
         AtlasButton.Visible = on;

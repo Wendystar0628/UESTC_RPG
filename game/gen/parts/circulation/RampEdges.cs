@@ -6,11 +6,11 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// Edge curbs and handrails of a ramp whose deck is the height field (WLD-TERRAIN §5.3 "坡道是高度场的一部分，扶手按部件
-/// 规则"), along any plan curve and grade: the time-plaza rim ramps and curved corridor ramps (MAP-QSH-TERRAIN §2.3).
+/// Edge curbs and handrails of a ramp whose deck is the height field (WLD-TERRAIN "坡道是高度场的一部分，扶手按部件
+/// 规则"), along any plan curve and grade: the time-plaza rim ramps and curved corridor ramps (MAP-QSH-TERRAIN).
 /// <paramref name="deckLine"/> runs along the deck centreline at deck height; curbs and rails keep plumb sections on the
 /// slope. The straight equivalent is <see cref="RampPart"/> variation 2. No collision: the height field carries walkers,
-/// curbs are 0.1 m and handrails do not block (WLD-INTERIORS §10).
+/// curbs are 0.1 m and handrails do not block (WLD-INTERIORS).
 /// </summary>
 public static class RampEdges
 {

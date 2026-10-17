@@ -12,7 +12,7 @@ public readonly record struct LampRecord(
     float HeadHeight,      // 灯头离地高度（m），光晕与灯锥从这里出
     float Radius,          // 地面光斑半径（m），冬夜再乘 sys.poolGain
     int ColorColumn,       // 调色板色号 0–511（灯色，bank 1 为 256 起）
-    float Energy,          // 级别：一级 1.0、二级 0.75、三级 0.5（MAP-QSH-ADDITIONS §8.1）
+    float Energy,          // 级别：一级 1.0、二级 0.75、三级 0.5（MAP-QSH-ADDITIONS）
     int Slot,              // 灯光通道槽位
     float ThresholdDeg,    // 开灯阈值（太阳高度，度）：h_eff 低于它就亮；≥ 89° 为常亮
     float Keep,            // 保留阈值 κ ∈ [0, 1)：通道保留比例低于它时熄（熄一半、整组关、过场前沿）

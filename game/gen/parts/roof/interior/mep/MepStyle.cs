@@ -3,17 +3,17 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
-/// Every tunable value of the interior equipment and sign parts (WLD-INTERIORS §7.5 group D) in one place (WF-FLOW §4).
-/// Sizes follow the real products (ART-MODELING §2: human-scale anchors are not enlarged); Opus review sets the finals.
-/// <para>All vertices carry the interior flag (shade from palette row 2, lit from row 3, WLD-INTERIORS §8.2) and the
-/// no-shadow flag (indoors only walls and slabs cast, WLD-INTERIORS §8.3). Wall- and ceiling-mounted parts are visual only;
+/// Every tunable value of the interior equipment and sign parts (WLD-INTERIORS group D) in one place (WF-FLOW).
+/// Sizes follow the real products (ART-MODELING: human-scale anchors are not enlarged); Opus review sets the finals.
+/// <para>All vertices carry the interior flag (shade from palette row 2, lit from row 3, WLD-INTERIORS) and the
+/// no-shadow flag (indoors only walls and slabs cast, WLD-INTERIORS). Wall- and ceiling-mounted parts are visual only;
 /// floor-standing units return one prop box.</para>
 /// </summary>
 public static class MepStyle
 {
     public const byte Flags = VertexFlag.Interior | VertexFlag.NoShadow;
 
-    // ---- Colour families: registered names only (ART-STYLE §8.5). Interior names (WLD-INTERIORS §8.4) are not registered yet. ----
+    // ---- Colour families: registered names only (ART-STYLE). Interior names (WLD-INTERIORS) are not registered yet. ----
     /// <summary>Off-white plastic and enamel: air-conditioner casings, dispensers, sign housings, switch plates, fans.</summary>
     public const string White = RoofStyle.CasingWhite;
     /// <summary>Brushed stainless: boiler cabinet, purifier, hydrant frame variant.</summary>
@@ -21,7 +21,7 @@ public static class MepStyle
     /// <summary>Grey aluminium: taps, trims, drip trays, brackets, door-plate variant.</summary>
     public const string Aluminium = RoofStyle.Aluminium;
     /// <summary>
-    /// Dark inserts: tap niches, outlets, valve heads and hoses, door-plate text. Never black (ART-STYLE §4.2). Borrowed from the core
+    /// Dark inserts: tap niches, outlets, valve heads and hoses, door-plate text. Never black (ART-STYLE). Borrowed from the core
     /// table (Opus review): `glass` (#354F59) is the closest dark near-neutral in ids 64–117, OKLab ΔE 0.037 from a neutral L 0.40
     /// (the next, `roof.grey`, is 0.173); the blue-grey fence steel read as blue under interior light.
     /// </summary>
@@ -39,7 +39,7 @@ public static class MepStyle
     /// <summary>
     /// Fire red (消防红, ids 254/255 in ext/WP-12.json): lit #C8473B at autumn 17:30, intrinsic #A7424B solved back from it with
     /// WP-37's deriver. Hydrant frame and door, extinguishers, the scald lettering; WP-13's outdoor hydrants reference the same
-    /// name. One of the three saturated interior colours (WLD-INTERIORS §8.4).
+    /// name. One of the three saturated interior colours (WLD-INTERIORS).
     /// </summary>
     public const string FireRed = "equip.fireRed";
     /// <summary>
@@ -50,7 +50,7 @@ public static class MepStyle
     public const string ExitGreen = "ground.turf";
     /// <summary>Always-on small signal lights: exit signs, gate arrows (lighting-schedule slot 22, group "always").</summary>
     public static readonly ChannelId SignalChannel = new("sign.signal");
-    /// <summary>Glow colour handed to the lamp inventory for the exit sign (ART-STYLE §8.1).</summary>
+    /// <summary>Glow colour handed to the lamp inventory for the exit sign (ART-STYLE).</summary>
     public static readonly PaletteToken SignalGlow = new("sign.green");
 
     public static ToonSpec Casing(string family) => RoofStyle.Casing(family);
@@ -71,7 +71,7 @@ public static class MepStyle
     public const float CjkStroke = 0.1f;
     public const float LatinStroke = 0.13f;
 
-    // ---- Boiler (电开水器, WLD-INTERIORS §8.5: stainless cabinet, "小心烫伤" in red) ----
+    // ---- Boiler (电开水器, WLD-INTERIORS: stainless cabinet, "小心烫伤" in red) ----
     public const float BoilerFoot = 0.08f;
     public const float BoilerTapReach = 0.075f;
     /// <summary>Tap outlet height as a share of the cabinet height (about 0.75 m on a 1.2 m cabinet).</summary>
@@ -86,7 +86,7 @@ public static class MepStyle
     public const float DispenserBottleMax = 0.46f;
     public const float DispenserNiche = 0.04f;
 
-    // ---- Hydrant box (长方形红框玻璃门, WLD-INTERIORS §8.5) ----
+    // ---- Hydrant box (长方形红框玻璃门, WLD-INTERIORS) ----
     public const float HydrantFrame = 0.05f;
     public const float HydrantFrameDepth = 0.035f;
     public const float HydrantGlassRecess = 0.012f;
@@ -97,14 +97,14 @@ public static class MepStyle
     public const float ExtinguisherValveRatio = 0.17f;
     public const float ExtinguisherRadiusRatio = 0.42f;
 
-    // ---- Exit sign ("安全出口 EXIT", Chinese above English, WLD-INTERIORS §8.5) ----
+    // ---- Exit sign ("安全出口 EXIT", Chinese above English, WLD-INTERIORS) ----
     public const float ExitBorder = 0.012f;
     public const float ExitFaceProud = 0.004f;
     /// <summary>Exit lettering stroke weight relative to plain labels: the sign is read across a stairwell.</summary>
     public const float ExitWeight = 1.35f;
     public const string ExitChinese = "安全出口";
     public const string ExitLatin = "EXIT";
-    /// <summary>Glow radius handed to the lamp inventory: the 0.4 m flat green halo on the stair wall (WLD-INTERIORS §8.6).</summary>
+    /// <summary>Glow radius handed to the lamp inventory: the 0.4 m flat green halo on the stair wall (WLD-INTERIORS).</summary>
     public const float ExitGlowRange = 0.4f;
     public const float ExitGlowEnergy = 0.5f;
 

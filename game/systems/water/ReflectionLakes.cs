@@ -9,7 +9,7 @@ public sealed record ReflectionLake(int Slot, FeatureId Id, float WaterY, IReadO
 
 /// <summary>
 /// Picks the lake that gets the planar reflection this frame: the candidate with the largest estimated screen area,
-/// switching only when another lake is clearly larger (WLD-WATER §7.2: 换湖带回差). Engine-free so it can be tested.
+/// switching only when another lake is clearly larger (WLD-WATER: 换湖带回差). Engine-free so it can be tested.
 /// </summary>
 public sealed class ReflectionLakes
 {

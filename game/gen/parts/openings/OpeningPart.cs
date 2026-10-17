@@ -7,11 +7,11 @@ namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
 /// Plumbing shared by every WP-10 part: semantic LODs, bounds, sockets and parameter checks.
-/// A level that adds nothing returns an empty geometry: the level keeps no copy of the part (ART-MODELING §7.8).
+/// A level that adds nothing returns an empty geometry: the level keeps no copy of the part (ART-MODELING).
 /// </summary>
 public abstract class OpeningPart<TParams> : IPartDef<TParams> where TParams : BoxPartParams
 {
-    /// <summary>Vertex flag: collapsed in the shadow pass (ART-MODELING §7.4 "small parts cast no shadow").</summary>
+    /// <summary>Vertex flag: collapsed in the shadow pass (ART-MODELING "small parts cast no shadow").</summary>
     internal const byte NoShadow = 8;
 
     protected OpeningPart(PartBudget budget)
@@ -80,7 +80,7 @@ public abstract class OpeningPart<TParams> : IPartDef<TParams> where TParams : B
     /// </summary>
     internal static ToonSpec Pick(TParams p, ToonSpec own) => p.Material == ContractDefault ? own : p.Material;
     internal static bool Bevelled(TParams p, LodLevel lod) => lod == LodLevel.L0 && p.Bevel > 0;
-    /// <summary>Bevel lift for chamfered members, set at every level so the material ID survives level changes (ART-MODELING §7.7).</summary>
+    /// <summary>Bevel lift for chamfered members, set at every level so the material ID survives level changes (ART-MODELING).</summary>
     internal static ToonSpec Hard(ToonSpec spec) => spec with { Fx = spec.Fx | ToonFx.BevelLift };
 
     private static readonly ToonSpec ContractDefault = new BoxParams().Material;

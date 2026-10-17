@@ -16,7 +16,7 @@ const int LAMP_SLOT_AVIATION = 26;       // lamp.aviation：慢明灭
 const int LAMP_SLOT_SYS_CUE = 30;        // sys.cue：x = 1 表示覆盖生效，y = 覆盖期间判开灯用的目标太阳高度
 const int LAMP_SLOT_POOL_GAIN = 31;      // sys.poolGain：x = 光斑面积增益（冬夜 1.5，半径乘它的平方根），不是 0–1 的量
 const float LAMP_ON_HALF_DEG = 0.08;     // 开灯过渡的半宽（度）
-const float LAMP_RAMP_FROM = 0.6;        // 刚亮时的亮度（SYS-TIME §6）
+const float LAMP_RAMP_FROM = 0.6;        // 刚亮时的亮度（SYS-TIME）
 const float LAMP_RAMP_FULL_DEG = -4.0;   // 太阳到 −4° 时亮度升到 1.0
 const float LAMP_ALWAYS_DEG = 89.0;      // θ ≥ 89° 表示常亮
 const float LAMP_POOL_TOP_M = 4.0;       // 光斑只照到 4 m 以下的立面
@@ -65,7 +65,7 @@ vec2 lamp_channel(int slot) {
 	return texelFetch(light_channels, ivec2(clamp(slot, 0, 31), 0), 0).rg;
 }
 
-// 有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER §7），与 C# 的 ScheduleMath.EffectiveSun 一致
+// 有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER），与 C# 的 ScheduleMath.EffectiveSun 一致
 float lamp_heff() {
 	float h = degrees(asin(clamp(sun_dir.y, -1.0, 1.0)));
 	return h - 6.0 * clamp(weather_a.y, 0.0, 1.0) - 4.0 * clamp(weather_a.z, 0.0, 1.0);

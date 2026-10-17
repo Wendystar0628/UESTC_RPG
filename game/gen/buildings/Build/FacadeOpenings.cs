@@ -38,7 +38,7 @@ public sealed class FacadeOpenings
     public static int Number(BuildingPlan plan, WindowBlock block, FacadeLayout layout, Opening o) =>
         block.Base + o.Row * plan.TotalColumns + layout.ColumnStart + o.Bay;
 
-    /// <summary>Card type of an opening, hashed from its window number (WLD-INTERIORS §5.1).</summary>
+    /// <summary>Card type of an opening, hashed from its window number (WLD-INTERIORS).</summary>
     public static WindowCard Card(BuildingPlan plan, Opening o, int number) =>
         plan.CardOf(o.Kind, StableHash.Hash32(plan.Seed, "card", number.ToString(CultureInfo.InvariantCulture)));
 

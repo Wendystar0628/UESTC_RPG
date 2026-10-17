@@ -93,7 +93,7 @@ public sealed class MotherModelTests
                 var near = MotherModels.Build(s, v, VegLevel.L0Plus, palette).Triangles;
                 var mid = MotherModels.Build(s, v, VegLevel.L0, palette).Triangles;
                 var far = MotherModels.Build(s, v, VegLevel.L1, palette).Triangles;
-                // ENG-PERF §9 and the max-011 review: cloud L0 2.5k raised to the 3.5k allowance for the outline, card and
+                // ENG-PERF and the max-011 review: cloud L0 2.5k raised to the 3.5k allowance for the outline, card and
                 // mixed L0 3–4k, L1 target 0.9k. Only the metasequoia exceeds 4k at L0 (up to 4.5k) and 0.9k at L1 (up to
                 // 1.1k); these ceilings hold it there.
                 var midLimit = s.Crown == CrownType.Cloud ? MotherModels.CloudTrianglesL0Outline : 4600;
@@ -158,7 +158,7 @@ public sealed class MotherModelTests
             var model = MotherModels.Build(s, 0, VegLevel.L0Plus, palette);
             var anchors = Vectors(model.Crown.Custom1!).Take(model.Cards * 4);
             var tips = model.BranchTips;
-            // Every card anchor is within 0.4 m of a branch tip that some crown mass hangs from (WLD-VEGETATION §1.8).
+            // Every card anchor is within 0.4 m of a branch tip that some crown mass hangs from (WLD-VEGETATION).
             foreach (var a in anchors)
                 if (tips.Min(t => Vector3.Distance(t, a)) > 0.4f) throw new InvalidOperationException($"{s.Id}: card anchor floats");
             var normals = Vectors(model.Crown.Normal, 3).Take(model.Cards * 4).Select(n => (MathF.Round(n.X), MathF.Round(n.Z))).Distinct().Count();

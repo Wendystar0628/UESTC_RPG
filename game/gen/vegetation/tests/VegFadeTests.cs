@@ -24,7 +24,7 @@ public sealed class VegFadeTests
             {
                 var (wood, crown) = MotherModels.FarStandIn(s, v, palette);
                 var tris = (wood.Index.Length + crown.Index.Length) / 3;
-                if (tris is <= 0 or > 300) throw new InvalidOperationException($"{s.Id}/{v}: {tris} triangles (ENG-PERF §9 L2 ≤ 300)");
+                if (tris is <= 0 or > 300) throw new InvalidOperationException($"{s.Id}/{v}: {tris} triangles (ENG-PERF L2 ≤ 300)");
                 if (crown.Index.Length == 0) throw new InvalidOperationException($"{s.Id}/{v}: no crown");
                 for (var i = 3; i < crown.Custom2!.Length; i += 4)
                     if (crown.Custom2[i] != MotherModels.FarMassTag) throw new InvalidOperationException($"{s.Id}/{v}: mass tag {crown.Custom2[i]}");

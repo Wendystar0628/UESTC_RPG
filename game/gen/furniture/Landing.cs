@@ -10,7 +10,7 @@ namespace Campus.Gen.Furniture;
 /// A slab the furniture stands on, in the furniture's plan frame <see cref="Frame"/> (rotation and plan position, y = 0):
 /// ±<see cref="HalfWidth"/> along local X, ±<see cref="HalfDepth"/> along local Z, from <see cref="Bottom"/> (below the lowest
 /// ground, its skirt) to <see cref="Top"/> (where the furniture stands). On gentle ground it is a paved bay just proud of the
-/// paving; where the footprint is steeper than 5% it is the concrete plinth (台基) of WLD-TERRAIN §4.4.
+/// paving; where the footprint is steeper than 5% it is the concrete plinth (台基) of WLD-TERRAIN.
 /// </summary>
 public sealed record Pad(Matrix4x4 Frame, float HalfWidth, float HalfDepth, float Bottom, float Top, bool Plinth)
 {
@@ -35,7 +35,7 @@ public sealed record Pad(Matrix4x4 Frame, float HalfWidth, float HalfDepth, floa
 }
 
 /// <summary>
-/// Landing on the terrain (WLD-TERRAIN §4.4). Parts are generated flat with their origin on the ground; the placer reads
+/// Landing on the terrain (WLD-TERRAIN). Parts are generated flat with their origin on the ground; the placer reads
 /// <see cref="ITerrain"/> and picks the origin height. WP-15 lays its surfaces above the height field (lawn
 /// <see cref="FurnitureStyle.LawnLift"/>, paving and kerb tops <see cref="FurnitureStyle.PavingLift"/>), so heights are taken
 /// from those levels:

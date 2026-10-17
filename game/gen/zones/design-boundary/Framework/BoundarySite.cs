@@ -16,7 +16,7 @@ public abstract class BoundarySite
     /// <summary>Geometry and placed parts for builder.Lod, in world space.</summary>
     public abstract void Build(SiteBuilder builder);
 
-    /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK §13).</summary>
+    /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK).</summary>
     public virtual void Collide(SiteColliders colliders) { }
 
     /// <summary>Bearing in degrees of a plan direction (world x east, z south; 0 north, 90 east).</summary>

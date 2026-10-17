@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Campus.Contracts.Save;
 using Campus.Contracts.Maps;
 
-// 平面地图（照 SYS-ATLAS §11，WP-48c；Campus.Gen.* 不得引用 IAtlasService）
+// 平面地图（照 SYS-ATLAS，WP-48c；Campus.Gen.* 不得引用 IAtlasService）
 // 自定义标记的 ID 是按存档递增的整数（Guid.NewGuid 被 G4 禁用）
 namespace Campus.Contracts.Atlas;
 
@@ -24,7 +24,7 @@ public sealed record AtlasMarker(
     MarkerId Id, MarkerKind Kind, LocalizedName Name,
     Vector2 At,                         // 地图坐标 (x, z)，单位 m
     string Icon,                        // UI-VISUAL图标体系里的名字
-    int Priority, byte MinZoomBand,     // 缩放档 0–4（SYS-ATLAS §4.2）
+    int Priority, byte MinZoomBand,     // 缩放档 0–4（SYS-ATLAS）
     string? Region,                     // 区域 ID（labels.json）
     TeleportSpec? Teleport = null,      // 只有 Anchor、Viewpoint、Interior、Route 可以非空
     FeatureId? Feature = null,          // 锚点：design:anchor:Axx；地标、设施：实体；室内：楼
@@ -62,7 +62,7 @@ public interface IAtlasService                                    // Kernel 服�
     UnlockState StateOf(MarkerId id);
     string? RegionAt(float x, float z);                           // 8 m 区域栅格；返回地点 ID
     bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why);
-    void Prefetch(MarkerId id);                                   // 同一时间只保留一个目的地（UI-NAV §7.5）
+    void Prefetch(MarkerId id);                                   // 同一时间只保留一个目的地（UI-NAV）
     ITransitHandle? Travel(MarkerId id, TravelStyle style);       // 同图只调 ICameraRig.Transit；目标在别的图时才调 IMapService.Travel；拒绝时返回 null
     MarkerId? Tracked { get; }
     void Track(MarkerId? id);                                     // null 取消；同一时间只有一个
@@ -83,5 +83,5 @@ public sealed record AtlasSave(
     string? Tracked,                                              // MarkerId.Value
     IReadOnlyDictionary<string, UnlockState> Unlock,             // 只存与策略初值不同的项；观光期为空
     IReadOnlyList<string> VisitedAnchors);
-// [SaveSection("atlas", Owner = "WP-48c", Version = 1, Scope = SaveScope.PerMap, Phase = RestorePhase.Content, Order = 40)]（SYS-SAVE §2）
+// [SaveSection("atlas", Owner = "WP-48c", Version = 1, Scope = SaveScope.PerMap, Phase = RestorePhase.Content, Order = 40)]（SYS-SAVE）
 // 相机契约里与传送有关的部分（TransitPreference、TransitOptions.Prefer、TransitKind.Teleport）在 §3 相机块

@@ -10,7 +10,7 @@ public enum SeatSide { Front, Back, Both }
 /// Contract seat declarations (<see cref="SeatDecl"/>, contract-33) from collider boxes, for the bench and for anyone whose
 /// sittable top is a <see cref="BoxCollider"/>: stone tables and tree-pool rims (WP-29, WP-20), grass seat tiers (WP-11
 /// StepsAlong, one box per tier). A part returns them from <see cref="IPartDef{TParams}.Seats"/>, computed from the same
-/// collider it returns from Collision(), so the seat edge and the standable top face can never drift apart (ENG-WP §2.2,
+/// collider it returns from Collision(), so the seat edge and the standable top face can never drift apart (ENG-WP,
 /// "与碰撞同源"). The sitting height is the edge's From.Y and To.Y (equal for a level box).
 /// </summary>
 public static class Seating

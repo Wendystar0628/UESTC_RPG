@@ -45,7 +45,7 @@ public sealed record WallPiece(Block Block, Vector2 A, Vector2 B, Vector2 Out, f
 /// <summary>
 /// The library shell's plan and section, a pure function of the world model: the blocks from the entity's source parts
 /// (MAP-QSH-CORE "数据定位"), the derived 5F set-back strips, every exterior wall piece, and the octagon frame the roof
-/// is laid out on. Heights come from the pad (WLD-TERRAIN §4.3) and the storey table in <see cref="CoreStyle"/>.
+/// is laid out on. Heights come from the pad (WLD-TERRAIN) and the storey table in <see cref="CoreStyle"/>.
 /// </summary>
 public sealed class LibraryPlan
 {

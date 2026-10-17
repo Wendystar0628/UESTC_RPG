@@ -1,5 +1,5 @@
 // toon.gdshaderinc：全校共用的卡通材质核心（WP-04）
-// 规格：ART-STYLE §2（明暗分阶）、§3（影色）、§5（暖边、透光、湿面）；ENG-PERF §1.4、§1.5、§2、§10.1；SYS-WEATHER §5、§7。
+// 规格：ART-STYLE（明暗分阶）、§3（影色）、§5（暖边、透光、湿面）；ENG-PERF；SYS-WEATHER。
 //
 // 合成方式：ALBEDO = 1，影色写 EMISSION，"受光 − 影"在 light() 的方向光分支里乘分阶遮罩加进 DIFFUSE_LIGHT。
 // 颜色只从调色板来，着色器不读 LIGHT_COLOR，不用 TIME。没有接触影，遮蔽只推阈值。
@@ -44,19 +44,19 @@ vec3 ok_adjust(vec3 c, float kl, float kc, float dl) {
 }
 
 // ---------------------------------------------------------------------------
-// 顶点数据（ENG-PERF §1.5）：COLOR RGBA8 = 色号、AO、标志、备用字节
+// 顶点数据（ENG-PERF）：COLOR RGBA8 = 色号、AO、标志、备用字节
 // 标志字节的位（WP-04 登记，暂定）：
 // ---------------------------------------------------------------------------
 const int TOON_F_INTERIOR = 1;   // 室内：影取行 2、受光取行 3 并乘光斑增益
 const int TOON_F_OUTSKIRT = 2;   // 外围：窗跳过 window_override；季节覆盖潜势读顶点而不读全图纹理
 const int TOON_F_DECAL = 4;      // 贴面贴花：备用字节是底面色号；不投影
-const int TOON_F_NOSHADOW = 8;   // 小件不投影：阴影通道里塌成一点（ART-MODELING §7.4）
+const int TOON_F_NOSHADOW = 8;   // 小件不投影：阴影通道里塌成一点（ART-MODELING）
 // 高两位是色号的 bank（contract-28，PaletteEncoding.EncodeColor）：bit 4 主色色号 +256，bit 5 贴花底色色号 +256。
 // 低四位的语义不变；旧几何（palette encoding 1）这两位恒为 0，解出来的色号与原来逐个相同。
 const int TOON_F_COLOR_BANK = 16;
 const int TOON_F_DECAL_BANK = 32;
 
-// 明暗分阶（ART-STYLE §2.1）
+// 明暗分阶（ART-STYLE）
 const int TOON_STEPS_TWO = 0;        // 建筑、地面、硬质大件
 const int TOON_STEPS_TWO_HALF = 1;   // 曲面道具、金属件
 const int TOON_STEPS_SOFT = 2;       // 软物（两阶半，带宽 ×2.2）
@@ -66,9 +66,9 @@ const float TOON_THR_HALF = 0.30;    // 两阶半的半受光阈值
 const float TOON_THR_DEEP = -0.25;   // 植被深影阈值
 const float TOON_BAND_OVERCAST = 0.06;   // 阴雨天按天光方向时的过渡带
 const float TOON_AO_PUSH = 0.3;      // 遮蔽推阈值的上限
-const float TOON_GRAZE = 0.06;       // 掠射面判进影里：受光再乘 smoothstep(0, 0.06, N·L)（ENG-PERF §10.1）
+const float TOON_GRAZE = 0.06;       // 掠射面判进影里：受光再乘 smoothstep(0, 0.06, N·L)（ENG-PERF）
 const vec2 TOON_SHADOW_THR = vec2(0.4, 0.6);     // 阴影图衰减的阈值化：窄而干脆；影边的颗粒来自 PCSS 采样噪声，不靠放宽阈值掩盖
-const float TOON_TRANS_K = 0.25;     // 透光整体系数（ART-STYLE §5.6，P0 看图定）
+const float TOON_TRANS_K = 0.25;     // 透光整体系数（ART-STYLE，P0 看图定）
 const float TOON_WET_DARKEN = 0.28;  // 湿润变暗：受光色和影色 × (1 − 0.28·wet)
 const float TOON_SKY_GRAD = 0.06;    // 影里随法线 y 的天光渐变（约 ±0.03 L）
 const float TOON_BOUNCE = 0.15;      // 朝下面的地面暖反光
@@ -102,7 +102,7 @@ const float TOON_SPEC_SIZE = 0.975;
 const float TOON_SPEC_K = 0.75;       // 参考 0.22 × 主光强度 3.3 ≈ 0.73，HDR 超过 1 的部分交给柔光
 const vec2 TOON_SPEC_KAPPA = vec2(0.5, 2.0);
 
-// 自发光（ToonSpec.Emissive，ART-STYLE §8.1）：亮时整面取色名本身的颜色，不分阶、不吃主光与湿润，描线照常。
+// 自发光（ToonSpec.Emissive，ART-STYLE）：亮时整面取色名本身的颜色，不分阶、不吃主光与湿润，描线照常。
 // 色名本身的颜色由灯照色（调色板行 1，不随时刻）去掉暖灯染色还原：行 1 = M × (L, a + K·a_lamp, b + K·b_lamp)，
 // M、K 与 WP-37 的 ColorScriptDerive.LampLit、derive.json 的 lit.tintK 一致，行 1 的规则改了要同步。
 const float TOON_EMIT_ROW1_M = 0.95;     // 行 1 的明度系数
@@ -111,7 +111,7 @@ const float TOON_EMIT_KL = 1.0;          // 自发光明度：L × KL + DL，再
 const float TOON_EMIT_DL = 0.03;
 const float TOON_EMIT_LMAX = 0.92;
 const float TOON_EMIT_KC = 1.1;          // 自发光彩度倍数（OKLab 的 a、b）
-// 顶点色号落在 40–63（天气色与发光常量，ART-STYLE §8.5）：单色常量，没有影色对，也没有行 1–3。
+// 顶点色号落在 40–63（天气色与发光常量，ART-STYLE）：单色常量，没有影色对，也没有行 1–3。
 // 自发光牌面按色名引用发光常量（例如 sign.exitGreen），亮时就是常量本身，不再调；
 // 灭时由常量推出暗的一对：明度 × OFF_KL、彩度 × OFF_KC，受光乘主光色 sun.light，影按 shadow.1 与其参照面之比。
 const int TOON_CONST_FIRST = 40;
@@ -120,7 +120,7 @@ const float TOON_EMIT_OFF_KL = 0.7;
 const float TOON_EMIT_OFF_KC = 0.6;
 const float TOON_SHADOW1_REF = 0.729;    // shadow.1 的参照面：OKLab L 0.90 的中性灰，线性值 0.9³
 
-// 室内窗光斑的辉光（WLD-INTERIORS §8.2）：调色板第 3 行的受光明度封顶 0.9 不放开，改在光斑亮芯加一层无色提亮
+// 室内窗光斑的辉光（WLD-INTERIORS）：调色板第 3 行的受光明度封顶 0.9 不放开，改在光斑亮芯加一层无色提亮
 // K ×（1 − smoothstep(C0, C1, C)）× smoothstep(L0, L1, L)，C、L 是受光色的 OKLab 彩度与明度。
 // 浅色、低彩度的地面和墙在光斑里略超过 1，让后期辉光抓住；高彩度表面（消防红的门、砖红）不加，不发光也不变粉；
 // 深色表面（深色玻璃、深灰件）也不加，免得发灰发白。L0、L1 取 0、0.01 即退回只看彩度的原式。
@@ -133,7 +133,7 @@ const float TOON_IN_GLOW_L1 = 0.75;
 // 材质 uniform：材质库按 ToonSpec 分配的 7 位材质 ID（0 = 未分配）
 uniform int mat_id : hint_range(0, 127) = 0;
 
-// instance uniform（ENG-PERF §1.5 登记）
+// instance uniform（ENG-PERF 登记）
 instance uniform float fade_t0 = 0.0;        // 抖动淡化起点（fade_clock 计，正负号区分淡入淡出，0 = 不在淡化中）
 instance uniform float retreat_bias = 0.0;   // 退光线偏置（只有宣邦楼穹顶设 6 m）
 instance uniform float fog_exempt = 0.0;     // 地标雾豁免系数 0–1（只有八角穹顶与宣邦楼钟楼设值）
@@ -230,7 +230,7 @@ int toon_decal_base(ToonCtx c) {
 	return int(round(c.spare * 255.0)) + ((c.flags & TOON_F_DECAL_BANK) != 0 ? 256 : 0);
 }
 
-// 解析法线（ART-MODELING §7.6、ENG-PERF §2）：球取 P − C，柱减去轴向分量；都在视空间里算
+// 解析法线（ART-MODELING、ENG-PERF）：球取 P − C，柱减去轴向分量；都在视空间里算
 vec3 toon_analytic_normal(vec3 vtx, vec3 n_mesh, vec3 c, vec3 axis, int mode) {
 	vec3 d = vtx - c;
 	vec3 n = n_mesh;
@@ -243,7 +243,7 @@ vec3 toon_analytic_normal(vec3 vtx, vec3 n_mesh, vec3 c, vec3 axis, int mode) {
 	return l > 1e-5 ? n / l : n_mesh;
 }
 
-// 4×4 Bayer 抖动淡化（ENG-PERF §2）：进度 = (fade_clock − |fade_t0|) / 0.25 s
+// 4×4 Bayer 抖动淡化（ENG-PERF）：进度 = (fade_clock − |fade_t0|) / 0.25 s
 const float TOON_BAYER[16] = float[](
 		0.0, 8.0, 2.0, 10.0,
 		12.0, 4.0, 14.0, 6.0,
@@ -264,7 +264,7 @@ bool toon_fade_discard(vec2 frag_xy) {
 // ---------------------------------------------------------------------------
 // 天气挂点
 // ---------------------------------------------------------------------------
-// 湿润的暴露度（SYS-WEATHER §7）：公共函数归 WP-45b，要读地面遮罩 2 的建筑遮蔽和树冠遮蔽。
+// 湿润的暴露度（SYS-WEATHER）：公共函数归 WP-45b，要读地面遮罩 2 的建筑遮蔽和树冠遮蔽。
 // 世界坐标、世界法线与室内/外围标志直接交给 WP-45b 的公共求值。
 float toon_wet_exposure(ToonCtx c) {
 	return precip_wet_exposure(c.wpos, c.n_w,
@@ -276,20 +276,20 @@ float toon_wet(ToonCtx c, ToonMat m) {
 	return clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(c) * m.wet;
 }
 
-// 积水（SYS-WEATHER §7，公共函数归 WP-45b）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
+// 积水（SYS-WEATHER，公共函数归 WP-45b）：在湿润变暗之后，按积水遮罩把受光色、影色换成积水色；ROUGHNESS 不动。
 // response 使用材质表行 1 的 A，已经由 toon_mat 解码为 m.wet。
 void toon_puddle(ToonCtx c, ToonMat m, inout vec3 lit, inout vec3 shade) {
 	precip_puddle_apply(c.wpos, c.cam, c.n_w,
 			(c.flags & TOON_F_INTERIOR) != 0, (c.flags & TOON_F_OUTSKIRT) != 0, m.wet, lit, shade);
 }
 
-// 地面云影（SYS-WEATHER §7，云噪声归 WP-40）：主线版没有云影，恒为 1。
+// 地面云影（SYS-WEATHER，云噪声归 WP-40）：主线版没有云影，恒为 1。
 float toon_cloud_shadow(vec3 wpos) {
 	return 1.0;
 }
 
 // ---------------------------------------------------------------------------
-// 窗灯（ENG-PERF §10.3）：亮灭只由窗号哈希、灯光通道和窗覆盖决定，与怎样到达这个钟点无关。
+// 窗灯（ENG-PERF）：亮灭只由窗号哈希、灯光通道和窗覆盖决定，与怎样到达这个钟点无关。
 // 哈希、阈值、亮灭与冷暖用 lamp.gdshaderinc 的 lamp_hash01、lamp_window_*（与 fx_glow、C# 的 ScheduleMath 同一份）。
 // window_override（RGBA8，纹素 = (id % 256, id / 256)，归 WP-39）：R 亮灭（0 不覆盖、128 强制灭、255 强制亮），
 // G 冷暖（0 按哈希、128 强制暖、255 强制冷），B 窗帘（0 按哈希、128 无帘、255 拉上），A 保留。
@@ -306,7 +306,7 @@ int toon_window_curtain(vec4 o) {
 }
 
 // ---------------------------------------------------------------------------
-// 路灯光斑（SYS-TIME §6、ENG-PERF §10.3；公共求值 lamp_pool_shade 归 WP-39）：
+// 路灯光斑（SYS-TIME、ENG-PERF；公共求值 lamp_pool_shade 归 WP-39）：
 // 地面和 4 m 以下立面上的两阶光斑（亮芯 + 收边外圈），灯光加在受光色和影色上、不替换底色，强度随环境变暗升起；
 // 观感参数都在 lamp.gdshaderinc 开头。室内不画（室内灯另走室内光）。
 // 竖直面按世界法线 c.n_w 判（含插值与解析法线），曲面上光斑的分界是光滑的；边缘过渡宽度 c.pool_aa 在 TOON_FRAGMENT_BEGIN 里按统一控制流算好。
@@ -319,7 +319,7 @@ void toon_lamp_pool(ToonCtx c, vec3 lamp, inout vec3 lit, inout vec3 shade) {
 }
 
 // ---------------------------------------------------------------------------
-// 自发光（ToonSpec.Emissive；SYS-TIME §6、ENG-PERF §10.3）：亮度读材质登记的灯光通道，随时刻表亮灭（lamp_fixture_level，WP-39）。
+// 自发光（ToonSpec.Emissive；SYS-TIME、ENG-PERF）：亮度读材质登记的灯光通道，随时刻表亮灭（lamp_fixture_level，WP-39）。
 // 窗灯类通道取 L。灯具类通道（灯罩、灯牌）跟着灯头在 1 m 以内的那盏灯，与它的光斑、光晕同时亮灭：白天灯灭，灯罩也不亮；
 // 附近没有登记的灯时取 L（保留比例 ×(1 + Δ)，夹到 0–1，"熄一半"这类时段整面按比例变暗）。
 // ---------------------------------------------------------------------------
@@ -396,7 +396,7 @@ vec3 toon_spec(ToonCtx c, ToonMat m, float sp, float spw) {
 }
 
 // 给定颜色的取色入口（contract-24 第 2 条）：lit、shade、lamp 是调用方取好的受光色、影色、灯照色（线性），
-// 例如植被按局部季节从季相行取样（WLD-VEGETATION §9.4）。其后的处理与 toon_colors 完全相同：
+// 例如植被按局部季节从季相行取样（WLD-VEGETATION）。其后的处理与 toon_colors 完全相同：
 // 天光渐变、地面反光、湿润与积水（按 mat_table 的湿润响应，不湿的材质登记 Wet = 0）、路灯光斑、倒角提亮
 // （只给登记了 BevelLift 的材质）、自发光、200 m 降饱和、明暗档、透光、暖边；室内标志位照旧乘光斑增益，并加窗光斑辉光。
 ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) {
@@ -411,7 +411,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	float day = smoothstep(-0.02, 0.05, sun_dir.y);
 	shade = toon_port_shade(c, m, lit, shade, interior ? 0.0 : day * (1.0 - toon_overcast()));
 
-	// 影里的两条连续项（ART-STYLE §3.3）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
+	// 影里的两条连续项（ART-STYLE）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
 	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y;
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day * (interior ? 0.0 : 1.0);
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
@@ -427,7 +427,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	// 路灯光斑：在湿润与积水之后，所以湿地面上的光斑也跟着暗、积水里也亮
 	toon_lamp_pool(c, lamp, lit, shade);
 
-	// 倒角带提亮（ART-STYLE §2.6）：按法线曲率判倒角带，只改明暗，不写 NORMAL
+	// 倒角带提亮（ART-STYLE）：按法线曲率判倒角带，只改明暗，不写 NORMAL
 	float bevel = smoothstep(2.0, 4.0, c.kappa) * step(1e-4, m.bevel_lit);
 	if (bevel > 0.0) {
 		lit = ok_adjust(lit, 1.0, 1.0, m.bevel_lit * bevel);
@@ -518,7 +518,7 @@ vec3 toon_emission(ToonCol t, ToonCtx c) {
 	if (t.deep_mix > 0.0) {
 		e = mix(e, ok_adjust(t.shade, 0.88, 0.95, 0.0), t.deep_mix);
 	}
-	// 闪光帧（SYS-WEATHER §5）：全场一瞬间翻到受光色，没有投影
+	// 闪光帧（SYS-WEATHER）：全场一瞬间翻到受光色，没有投影
 	e += clamp(lightning.x, 0.0, 1.0) * (t.lit - t.shade) * (0.5 + 0.5 * c.n_w.y);
 	return e + t.extra;
 }
@@ -528,7 +528,7 @@ vec3 toon_emission(ToonCol t, ToonCtx c) {
 // ---------------------------------------------------------------------------
 vec3 toon_key_light(vec3 n, vec3 l, vec3 v, mat3 view3, float att, vec3 backlight,
 		vec3 diff, vec4 band, vec3 rimcol, vec3 spec, float wy, float cloud_k) {
-	// 阴、雨、雪时按天光方向判明暗（SYS-WEATHER §7），带宽放到 0.06；主光方向本身不变
+	// 阴、雨、雪时按天光方向判明暗（SYS-WEATHER），带宽放到 0.06；主光方向本身不变
 	float g = toon_overcast();
 	vec3 ld = normalize(mix(l, normalize(view3 * overcast_dir), g));
 	float bw = mix(band.x, max(band.x, TOON_BAND_OVERCAST), g);
@@ -547,12 +547,12 @@ vec3 toon_key_light(vec3 n, vec3 l, vec3 v, mat3 view3, float att, vec3 backligh
 
 	vec3 res = diff * (m0 * mh * sh_key * k * band.w);
 
-	// 透光（ART-STYLE §5.6）：被别的物体挡住时不透光
+	// 透光（ART-STYLE）：被别的物体挡住时不透光
 	float fwd = pow(clamp(dot(-v, l), 0.0, 1.0), 3.0);
 	float back = smoothstep(0.15, -0.35, d);
 	res += backlight * (0.2 + 0.8 * fwd) * back * sh_raw * k * TOON_TRANS_K;
 
-	// 受光侧剪影暖边（ART-STYLE §5.3）：乘过阈值化阴影，影里不出亮边
+	// 受光侧剪影暖边（ART-STYLE）：乘过阈值化阴影，影里不出亮边
 	float nv = clamp(dot(n, v), 0.0, 1.0);
 	float rm = smoothstep(0.32, 0.55, pow(1.0 - nv, 3.0)) * clamp(dot(n, l) + 0.2, 0.0, 1.0);
 	res += rimcol * rm * sh_key * k;
@@ -562,7 +562,7 @@ vec3 toon_key_light(vec3 n, vec3 l, vec3 v, mat3 view3, float att, vec3 backligh
 	return res;
 }
 
-// 点光只给重点灯（不超过 32 盏，ENG-PERF §10.3）：灯照色替换影色，仍是两阶
+// 点光只给重点灯（不超过 32 盏，ENG-PERF）：灯照色替换影色，仍是两阶
 vec3 toon_point_light(vec3 n, vec3 l, float att, vec3 lampdiff, float push) {
 	float a = att * clamp(dot(n, l) - push, 0.0, 1.0);
 	return lampdiff * smoothstep(0.02, 0.08, a);

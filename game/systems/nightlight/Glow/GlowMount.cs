@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Systems.Nightlight.Glow;
 
 /// <summary>
-/// 一类 fx_glow 实例挂在内核的实例池上（IInstancePoolHost，ENG-PERF §10.3：每类一个 MultiMesh）。
+/// 一类 fx_glow 实例挂在内核的实例池上（IInstancePoolHost，ENG-PERF：每类一个 MultiMesh）。
 /// 材质向材质库要 fx_glow 一份、只设 fx_kind；网格是中心在原点、朝 +Z 的 1 × 1 四边形（fx_glow 按 VERTEX.xy 取面片坐标）。
 /// 清单变了就整块换缓冲；容量不够时按 256 取整重挂。亮度不经这里，全由着色器读通道。
 /// </summary>
@@ -14,7 +14,7 @@ public sealed class GlowMount(GlowKind kind, string poolId)
     private const string Owner = "WP-39";
     private const int CapacityStep = 256;
     private const float BoundsPad = 8f;        // 灯头光晕随距离放大、夜雾里半径 ×2、朝镜头拉近，包围盒统一外扩
-    public const uint Layer = 1u << 5;         // 第 6 层：草、粒子、光晕、光锥、光柱（ENG-PERF §4 图层登记）
+    public const uint Layer = 1u << 5;         // 第 6 层：草、粒子、光晕、光锥、光柱（ENG-PERF 图层登记）
 
     private static readonly float[] QuadPosition = [-0.5f, -0.5f, 0f, 0.5f, -0.5f, 0f, 0.5f, 0.5f, 0f, -0.5f, 0.5f, 0f];
     private static readonly float[] QuadUv = [0f, 1f, 1f, 1f, 1f, 0f, 0f, 0f];

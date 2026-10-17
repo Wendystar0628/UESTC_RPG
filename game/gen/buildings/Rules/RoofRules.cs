@@ -3,9 +3,9 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the generic roofs take the WP-12 parts (WF-FLOW §4: tunables in one place). Every parapet gets the coping and a
+/// How the generic roofs take the WP-12 parts (WF-FLOW: tunables in one place). Every parapet gets the coping and a
 /// lightning strip; the roof plant stands inside a perforated equipment fence and only its top shows (MAP-QSH-ADDITIONS
-/// §2.9, ART-FIDELITY §0.1 K4 (a)). Density follows the roof's precision zone (D-176): K1 and K2 roofs carry the full set
+/// §2.9, ART-FIDELITY K4 (a)). Density follows the roof's precision zone (D-176): K1 and K2 roofs carry the full set
 /// at the building's level, K3 and beyond fewer units, one part level coarser near. Part sizes are the PartCatalog
 /// defaults. Initial values; the main session sets the final ones at review.
 /// </summary>
@@ -43,7 +43,7 @@ public static class RoofRules
     public const string FenceBoard = "frame.alu";
 
     /// <summary>
-    /// What the enclosure holds: dormitories run air-source heat pumps (no solar heaters, MAP-QSH-ADDITIONS §2.9),
+    /// What the enclosure holds: dormitories run air-source heat pumps (no solar heaters, MAP-QSH-ADDITIONS),
     /// canteens their kitchen units, teaching and service buildings a panel water tank beside the heat pumps.
     /// Full roofs one heat pump more than simple ones.
     /// </summary>
@@ -56,7 +56,7 @@ public static class RoofRules
         _ => throw new ArgumentOutOfRangeException(nameof(style), style, "Unknown building style."),
     };
 
-    // ---- Communication mast (ART-FIDELITY §6: "高楼屋角偶尔有通信天线") ----
+    // ---- Communication mast (ART-FIDELITY: "高楼屋角偶尔有通信天线") ----
     /// <summary>Buildings at least this many storeys high may carry one mast at a roof corner (every other one, by hash).</summary>
     public const int MastFromStoreys = 9;
     /// <summary>Distance of the mast from its roof corner, along the inward bisector.</summary>

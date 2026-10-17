@@ -5,7 +5,7 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 
 namespace Campus.Gen.Parts.Circulation;
 
-/// <summary>How a vertical drop between two walking levels is connected (WLD-TERRAIN §5.1).</summary>
+/// <summary>How a vertical drop between two walking levels is connected (WLD-TERRAIN).</summary>
 public enum DropMethod
 {
     /// <summary>≤ 0.04 m: absorbed by the terrain (slope ≤ 5%).</summary>
@@ -46,7 +46,7 @@ public sealed record DropPlan(DropMethod Method, float Rise, float Run, bool Fit
 }
 
 /// <summary>
-/// WLD-TERRAIN §5.1–§5.3 as code: risers 0.12–0.16 m nearest 0.15, tread clamp(0.65 − 2R, 0.30, 0.40), a pad every
+/// WLD-TERRAIN as code: risers 0.12–0.16 m nearest 0.15, tread clamp(0.65 − 2R, 0.30, 0.40), a pad every
 /// ≤ 1.5 m of rise at least max(1.2 m, clear width) long, ramps ≤ 1:12 with a ≥ 1.5 m pad every 0.75 m of rise, clear
 /// widths ≥ 2.4 m on the main network and ≥ 1.5 m elsewhere. WP-15 calls it for the drops it derives (§5.8).
 /// </summary>

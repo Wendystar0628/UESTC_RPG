@@ -13,13 +13,13 @@ using W = Campus.Gen.Zones.West.WestTune.Wetland;
 namespace Campus.Gen.Zones.West.Wetland;
 
 /// <summary>
-/// 湿地栈道 (MAP-QSH-WEST §10.2, §12): a level timber boardwalk on piles through the wetland reeds, deck flush with the
+/// 湿地栈道 (MAP-QSH-WEST): a level timber boardwalk on piles through the wetland reeds, deck flush with the
 /// paving at both mouths (A10 plaza, the footway at the 西门车行桥's east head). Close up (L0) the deck is laid in single
 /// planks with fine gaps; further off it is one beveled slab. Both edges carry a 1.05 m timber railing (posts every 2 m,
-/// handrail, one mid rail; barrier top 1.5 m, SYS-WALK §7) with a 2.2 m gap and timber steps down to the pebble wading beach
+/// handrail, one mid rail; barrier top 1.5 m, SYS-WALK) with a 2.2 m gap and timber steps down to the pebble wading beach
 /// at the turn by the stream (§12 涉水区). Low lamps stand on the edge away from the stream every 16 m and light the planks
 /// only, so both water sides stay dark for the fireflies (§10.1). Snow lies on the planks and the handrail tops by normal
-/// (SYS-TIME §4); the deck only darkens when wet, it never pools (§11 天气要点).
+/// (SYS-TIME); the deck only darkens when wet, it never pools (§11 天气要点).
 /// </summary>
 public sealed class BoardwalkSite : WestSite
 {
@@ -260,7 +260,7 @@ public sealed class BoardwalkSite : WestSite
     {
         var path = Path;
         var y = DeckTop(c.Ground);
-        // Deck: 2 m slabs, each a box whose top is the deck (SYS-WALK §13), timber underfoot.
+        // Deck: 2 m slabs, each a box whose top is the deck (SYS-WALK), timber underfoot.
         var slabs = Math.Max(1, (int)MathF.Ceiling(path.Length / W.SlabLength));
         var piece = path.Length / slabs;
         for (var i = 0; i < slabs; i++)

@@ -23,7 +23,7 @@ public static class VertexFlags
 }
 
 /// <summary>
-/// Glass data a placed part surface takes over from the building (WLD-INTERIORS §5.1): its pane UVs in [0, 1) move
+/// Glass data a placed part surface takes over from the building (WLD-INTERIORS): its pane UVs in [0, 1) move
 /// into window cell <see cref="Cell"/> and UV2 becomes the building's (BaseId, channel slot + 32 × TotalColumns).
 /// </summary>
 public readonly record struct PartGlass(Vector2 Cell, Vector2 Uv2);

@@ -70,7 +70,7 @@ internal sealed class MeshBuilder
     }
 
     /// <summary>
-    /// Closed ellipsoid with smooth analytic normals (ART-MODELING §7.6 "曲面用软边"), for soft masses and rail end knobs.
+    /// Closed ellipsoid with smooth analytic normals (ART-MODELING "曲面用软边"), for soft masses and rail end knobs.
     /// Rings run pole to pole; both poles are single vertices with triangle fans.
     /// </summary>
     internal void Ellipsoid(ToonSpec material, Vector3 centre, Vector3 radii, int rings, int segments, Frame frame, byte flags = 0)
@@ -224,7 +224,7 @@ internal sealed class MeshBuilder
 
     /// <summary>
     /// Extrudes a simple (z, y) ring across x0..x1. Edges flagged in <paramref name="chamfer"/> are single-band bevels whose
-    /// normals run from the previous face's normal to the next face's; every other face is exactly flat (ART-MODELING §7.2).
+    /// normals run from the previous face's normal to the next face's; every other face is exactly flat (ART-MODELING).
     /// Caps come from <paramref name="capTriangles"/> (ring index triples, any winding) when given, which lets a ring carry
     /// collinear split points; otherwise from the kernel's Earcut, and then the ring must not have collinear neighbours.
     /// </summary>

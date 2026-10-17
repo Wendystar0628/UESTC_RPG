@@ -32,7 +32,7 @@ public sealed class GrandStairTests
         Console.WriteLine("stair corners: " + string.Join(", ", corners.Select(c => $"[{c.X:F2}, {c.Y:F2}]")));
         foreach (var c in corners)
             Require(ring.Min(p => Vector2.Distance(p, c)) < 0.15f, $"footprint corner {c} is in the overlay outline");
-        // The axis is the front door's (interiors.json lib.main, WLD-INTERIORS §2.17).
+        // The axis is the front door's (interiors.json lib.main, WLD-INTERIORS).
         var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var centre = new Vector2(entrance.Center.X, entrance.Center.Z);
         var offAxis = MathF.Abs(Vector2.Dot(centre - stair.Origin, stair.Across));

@@ -30,7 +30,7 @@ public sealed record AnimalMesh(Vector3[] Positions, Vector3[] Normals, PaletteT
 /// </summary>
 public sealed class OrganicMesh
 {
-    /// <summary>Tessellation factor over the nominal segment counts: round silhouettes and clean toon bands at close range (ART-MODELING §7.8, 1 px silhouette error).</summary>
+    /// <summary>Tessellation factor over the nominal segment counts: round silhouettes and clean toon bands at close range (ART-MODELING, 1 px silhouette error).</summary>
     public const float Detail = 1.6f;
 
     private readonly List<Vector3> _p = [];

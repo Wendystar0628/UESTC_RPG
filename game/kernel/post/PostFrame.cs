@@ -6,14 +6,14 @@ namespace Campus.Kernel.Post;
 /// <summary>
 /// Everything the render-thread passes need for one frame. Gathered once per frame on the main thread
 /// (<see cref="PostChain"/>, FramePriority.Systems) from published C# state — never by reading shader globals back
-/// (ENG-PERF §1.5) — and handed to the CompositorEffects through <see cref="PostFrameBox"/>.
+/// (ENG-PERF) — and handed to the CompositorEffects through <see cref="PostFrameBox"/>.
 /// </summary>
 internal struct PostFrame
 {
     // Outline (post_outline.glsl)
     public float LineDarken;      // IColorScriptFrame.LineDarkness
-    public float TentMix;         // 0 by default (ENG-PERF §10.2: lines on the foreground side, tent filter off)
-    public float Flash;           // lightning flash 0..1: line_darken x 0.7 at full flash (SYS-WEATHER §5)
+    public float TentMix;         // 0 by default (ENG-PERF: lines on the foreground side, tent filter off)
+    public float Flash;           // lightning flash 0..1: line_darken x 0.7 at full flash (SYS-WEATHER)
     public float FarRain;         // far rain band amount (reserved until the rain band lands)
     public Vector3 KeyDir;        // world direction toward the key light (sun by day, moon by night)
     public float KeyStrength;

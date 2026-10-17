@@ -1,4 +1,4 @@
-// reflect_flat.gdshader：倒影世界里的平涂 REFLECT 代理（WP-24；WLD-WATER §7.2，ENG-PERF §10.4）
+// reflect_flat.gdshader：倒影世界里的平涂 REFLECT 代理（WP-24；WLD-WATER，ENG-PERF）
 //
 // 只在倒影 SubViewport 的独立世界里用：没有光、不投影，颜色只读调色板行 0。
 // 顶点 COLOR 与 toon 相同（R 是受光色号低字节，B 的 bank 位补第 9 位，影 = 受光 + 1）；按主光方向分受光与影两块，倒影里的明暗与岸上一致。

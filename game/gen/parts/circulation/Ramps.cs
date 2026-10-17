@@ -7,7 +7,7 @@ using S = Campus.Gen.Parts.Circulation.CirculationStyle;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// One ramp run (WLD-TERRAIN §5.3): Width across X, Height the rise, Depth the horizontal run, climbing toward +Z.
+/// One ramp run (WLD-TERRAIN): Width across X, Height the rise, Depth the horizontal run, climbing toward +Z.
 /// Grade at most 1:5 here; the 1:12 limit and 0.75 m segments are planned by <see cref="TerrainDrop"/>.
 /// Variation: 0 solid deck with edge curbs and handrails on both sides, 1 deck and curbs only, 2 curbs and handrails
 /// only, for ramps whose deck is the terrain height field. Collision: one walkable RampCollider over the deck
@@ -52,7 +52,7 @@ public sealed class RampPart() : CirculationPart<RampParams>(new(900, 400))
         List<Vector2> curb = [new(-d, Deck(-d + StubRun) + c), new(-d + StubRun, Deck(-d + StubRun) + c), new(d - StubRun, Deck(d - StubRun) + c), new(d, Deck(d - StubRun) + c)];
         var bevel = detail == Detail.Full ? S.RailBevel : 0;
         var section = Profiles.Rect(0, c + 0.2f, 0, S.RampCurbWidth - S.FaceInset, bevel);
-        // Curbs stand 0.1 m proud: under 0.25 m nothing casts a shadow (ART-MODELING §7.8), which also spares the
+        // Curbs stand 0.1 m proud: under 0.25 m nothing casts a shadow (ART-MODELING), which also spares the
         // deck a saw-toothed grazing shadow at low sun.
         mesh.VerticalSweep(S.Trim, section, curb, -w + S.FaceInset, Frame.Identity, MeshBuilder.NoShadow);
         mesh.VerticalSweep(S.Trim, section, curb, w - S.RampCurbWidth, Frame.Identity, MeshBuilder.NoShadow);

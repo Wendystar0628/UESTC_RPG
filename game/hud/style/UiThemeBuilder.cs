@@ -4,7 +4,7 @@ using Godot;
 namespace Campus.Hud.Style;
 
 /// <summary>
-/// 生成界面唯一的 Theme（UI-VISUAL §11.3）：字体链、字号阶梯、类型变体、StyleBox 载体。
+/// 生成界面唯一的 Theme（UI-VISUAL）：字体链、字号阶梯、类型变体、StyleBox 载体。
 /// 颜色走 ui_panel 着色器按 ui_night 取日夜两值；Theme 里的颜色只作无着色器时的兜底，取晶白值。
 /// 不写零散的 theme_override_*，不另存共享 .tres。
 /// </summary>
@@ -44,7 +44,7 @@ public sealed class UiThemeBuilder
 
     public static string TextType(string role) => "Text_" + role.Replace('.', '_').Replace('-', '_');
 
-    // ---------- 字体（UI-VISUAL §4.2）：正文 Inter → 思源黑体 SC；数据 JetBrains Mono → 思源黑体 SC；标题 思源黑体 SC → Inter ----------
+    // ---------- 字体（UI-VISUAL）：正文 Inter → 思源黑体 SC；数据 JetBrains Mono → 思源黑体 SC；标题 思源黑体 SC → Inter ----------
     private FontFile File(string family, string weight)
     {
         var files = _t.Get("metrics", "type", "families", family, "files");
@@ -84,7 +84,7 @@ public sealed class UiThemeBuilder
     public bool Upper(string role) =>
         _t.Get("metrics", "type", "roles", role).TryGetProperty("upper", out var up) && up.GetBoolean();
 
-    // ---------- StyleBox 载体（UI-VISUAL §11.4）：着色器在载体上画切角 SDF 与发丝线 ----------
+    // ---------- StyleBox 载体（UI-VISUAL）：着色器在载体上画切角 SDF 与发丝线 ----------
     private StyleBox Carrier(int expand, float padX, float padY, float shiftY, string fallbackFill)
     {
         if (!_shaded)
@@ -145,7 +145,7 @@ public sealed class UiThemeBuilder
         return name;
     }
 
-    // 滚动条：宽 4，轨道不画，拇指是白色载体，由 ui_panel kind 3 换成 line.scroll（UI-VISUAL §7.3）
+    // 滚动条：宽 4，轨道不画，拇指是白色载体，由 ui_panel kind 3 换成 line.scroll（UI-VISUAL）
     private void BuildScrollBar()
     {
         var grabber = new StyleBoxFlat { BgColor = _shaded ? Colors.White : _c.Theme("light", "line.scroll"), AntiAliasing = false };
@@ -158,7 +158,7 @@ public sealed class UiThemeBuilder
         Theme.SetStylebox("grabber_pressed", "ScrollThin", grabber);
     }
 
-    /// <summary>--ui-export-theme：把生成结果另存为 ui_theme.tres，只作预览与差异审查，运行时不读（UI-VISUAL §11.3）。</summary>
+    /// <summary>--ui-export-theme：把生成结果另存为 ui_theme.tres，只作预览与差异审查，运行时不读（UI-VISUAL）。</summary>
     public Error Export(string path) => ResourceSaver.Save(Theme, path);
 
     public static JsonElement Role(UiTokens t, string role) => t.Get("metrics", "type", "roles", role);

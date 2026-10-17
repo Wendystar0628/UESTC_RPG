@@ -183,11 +183,11 @@ internal static class CarBody
         }
         if (!near) return b.Finish(bounds);
 
-        // ---- Near only: bumpers parted from the nose and tail by a line, lamps (never lit, WLD-LIFE §3.4), the intake, wing mirrors ----
+        // ---- Near only: bumpers parted from the nose and tail by a line, lamps (never lit, WLD-LIFE), the intake, wing mirrors ----
         var noseX = hw - shape.Nose.Side; var noseTop = shape.HoodNose - shape.Nose.Top; var noseUnder = S.CarClearance + shape.Nose.Bottom;
         var tailX = hw - shape.Tail.Side; var tailTop = shape.TailTop - shape.Tail.Top; var tailUnder = S.CarClearance + shape.Tail.Bottom;
         var bump = S.CarBumper;
-        // Unbevelled: the convex edge line stands in at this size (ART-STYLE §4.7), and the car keeps to its 1200 triangles.
+        // Unbevelled: the convex edge line stands in at this size (ART-STYLE), and the car keeps to its 1200 triangles.
         b.AddBox(new(-noseX + 0.06f, noseUnder + 0.06f, zN - bump), new(noseX - 0.06f, noseUnder + 0.24f, zN + 0.12f), 0, body, VertexFlag.NoShadow);
         b.AddBox(new(-tailX + 0.06f, tailUnder + 0.06f, zT - 0.12f), new(tailX - 0.06f, tailUnder + 0.24f, zT + bump), 0, body, VertexFlag.NoShadow);
         b.AddBox(new(-noseX + 0.3f, noseUnder + 0.1f, zN - bump - 0.008f), new(noseX - 0.3f, noseUnder + 0.19f, zN + 0.04f), 0, S.Casing(S.DarkSteel), VertexFlag.NoShadow);
@@ -259,7 +259,7 @@ internal static class CarBody
 /// <summary>
 /// A closed solid lofted through sections along Z (car bodies). Every station's ring has the same count of points, counterclockwise
 /// seen from +Z; the ends are flat caps. Band k runs from ring point k to k + 1: a chamfer band's two edges take the normals of the faces
-/// beside it, a face band's its own (ART-MODELING §7.2). Along the loft, normals follow the neighbouring stations, one-sided at a crease;
+/// beside it, a face band's its own (ART-MODELING). Along the loft, normals follow the neighbouring stations, one-sided at a crease;
 /// with rounded ends the end stations take the caps' normals (the ends round off into them).
 /// </summary>
 internal static class Loft

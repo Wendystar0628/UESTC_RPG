@@ -3,15 +3,15 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Roof;
 
 /// <summary>
-/// Every tunable value of the roof and equipment parts in one place (WF-FLOW §4): colours, material classes and sizes.
-/// Initial values follow ART-MODELING §2, §4, §7.8, ART-FIDELITY §6 and MAP-QSH-ADDITIONS §2.9; Opus review sets the finals.
-/// Collision: roof and wall-mounted parts are visual only (MAP-QSH-ADDITIONS §7: roofs cannot be reached, and small parts on
+/// Every tunable value of the roof and equipment parts in one place (WF-FLOW): colours, material classes and sizes.
+/// Initial values follow ART-MODELING, ART-FIDELITY and MAP-QSH-ADDITIONS; Opus review sets the finals.
+/// Collision: roof and wall-mounted parts are visual only (MAP-QSH-ADDITIONS: roofs cannot be reached, and small parts on
 /// a wall sit inside the building's wall collider), so they return no colliders and cannot form jump chains. Only the
 /// equipment fence returns a barrier, for ground-level enclosures; roof placers leave it out.
 /// </summary>
 public static class RoofStyle
 {
-    // ---- Colour families (ART-STYLE §8.5). WP-12 owns ids 248–251 in style/palette/ext/WP-12.json; the rest are core names. ----
+    // ---- Colour families (ART-STYLE). WP-12 owns ids 248–251 in style/palette/ext/WP-12.json; the rest are core names. ----
     /// <summary>Off-white casings: air-conditioner body, dish and panel antennas.</summary>
     public const string CasingWhite = "wall.greyWhite";
     /// <summary>Galvanised and stainless steel: lightning strip, tank shell, grille frame, masts.</summary>
@@ -36,7 +36,7 @@ public static class RoofStyle
     /// <summary>Bulky equipment bodies: chamfer highlight, building line.</summary>
     public static ToonSpec Casing(string family) => Casing(Pair(family));
     public static ToonSpec Casing(ToonSpec colours) => new(colours.Lit, colours.Shade) { Fx = ToonFx.BevelLift, Wet = 0.5f };
-    /// <summary>Curved casings (dish): two-and-a-half steps with smooth normals (ART-STYLE §2.1).</summary>
+    /// <summary>Curved casings (dish): two-and-a-half steps with smooth normals (ART-STYLE).</summary>
     public static ToonSpec Curved(string family) => new(Lit(family), Shade(family)) { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Wet = 0.5f };
     /// <summary>Host-coloured trims (coping, canopy, skylight curb): same class as building trims.</summary>
     public static ToonSpec Trim(string family) => Trim(Pair(family));
@@ -54,21 +54,21 @@ public static class RoofStyle
     private static ToonSpec Pair(string family) => new(Lit(family), Shade(family));
 
     // ---- Shared ----
-    /// <summary>Round sections: 12 segments with smooth normals (ART-MODELING §7.6, 1 px silhouette error near).</summary>
+    /// <summary>Round sections: 12 segments with smooth normals (ART-MODELING, 1 px silhouette error near).</summary>
     public const int RoundSegments = 12;
     public const int RoundSegmentsFine = 16;
     public const int RoundSegmentsFar = 6;
-    /// <summary>Bevels on equipment casings, near level only (ART-MODELING §4: 10–20% of the smallest section).</summary>
+    /// <summary>Bevels on equipment casings, near level only (ART-MODELING: 10–20% of the smallest section).</summary>
     public const float CasingBevel = 0.03f;
     /// <summary>Bounds pad that absorbs float rounding of rotated pieces.</summary>
     public const float BoundsPad = 0.002f;
 
-    // ---- Parapet coping (MAP-QSH-ADDITIONS §2.9, ART-MODELING §2) ----
+    // ---- Parapet coping (MAP-QSH-ADDITIONS, ART-MODELING) ----
     public const float CopingBevel = 0.02f;
     public const float CopingDripDepth = 0.06f;
     public const float CopingDripWidth = 0.04f;
 
-    // ---- Lightning strip: one continuous rod, never thinner than the prop minimum section (ART-FIDELITY §6) ----
+    // ---- Lightning strip: one continuous rod, never thinner than the prop minimum section (ART-FIDELITY) ----
     public const float StripMinRod = 0.08f;
     public const float StripDefaultHeight = 0.15f;
     /// <summary>Supports every metre only on Variation ≥ 1 (precision zone K1); otherwise one near each end.</summary>
@@ -92,7 +92,7 @@ public static class RoofStyle
     public const float GrilleCageDepth = 0.16f;
     public const float GrilleTopThickness = 0.04f;
 
-    // ---- Water tank (panel tank; Variation 1 stands on a steel frame, MAP-QSH-ADDITIONS §2.16) ----
+    // ---- Water tank (panel tank; Variation 1 stands on a steel frame, MAP-QSH-ADDITIONS) ----
     public const float TankPanel = 1f;
     public const float TankFlange = 0.04f;
     public const float TankFlangeHeight = 0.06f;
@@ -106,7 +106,7 @@ public static class RoofStyle
     public const float HeatPumpFanRatio = 0.38f;
     public const float HeatPumpLouvrePitch = 0.12f;
 
-    // ---- Equipment fence (dark perforated aluminium, 1.8 m, MAP-QSH-ADDITIONS §2.9) ----
+    // ---- Equipment fence (dark perforated aluminium, 1.8 m, MAP-QSH-ADDITIONS) ----
     public const float FencePost = 0.07f;
     public const float FenceCap = 0.05f;
     public const float FenceBoardInset = 0.012f;
@@ -119,7 +119,7 @@ public static class RoofStyle
     public const float CanopyRodRise = 1.2f;
     public const float CanopyRod = 0.05f;
 
-    // ---- Downpipe (ART-FIDELITY §6: one clamp per storey, an elbow at the foot) ----
+    // ---- Downpipe (ART-FIDELITY: one clamp per storey, an elbow at the foot) ----
     public const float DownpipeClampPitch = 3f;
     public const float DownpipeClampHeight = 0.05f;
     public const float DownpipeShoeRise = 0.3f;
@@ -131,7 +131,7 @@ public static class RoofStyle
     public const float SkylightFrame = 0.05f;
     public const float SkylightBarPitch = 1.2f;
     public const float SkylightDefaultSlopeDeg = 18f;
-    /// <summary>Glazing slopes stay below the 40–50° crease band of the outline pass (ART-MODELING §7.3).</summary>
+    /// <summary>Glazing slopes stay below the 40–50° crease band of the outline pass (ART-MODELING).</summary>
     public const float SkylightMaxSlopeDeg = 35f;
 
     // ---- Antenna ----

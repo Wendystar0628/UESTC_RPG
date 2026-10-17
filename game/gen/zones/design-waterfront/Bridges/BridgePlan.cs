@@ -15,7 +15,7 @@ internal readonly record struct Band(float U0, float U1, BandKind Kind);
 internal readonly record struct Abutment(Vector2 A, Vector2 B, Vector2 C, Vector2 D);
 
 /// <summary>
-/// The plan of one bridge, resolved from its overlay registration and the network lines it names (MAP-QSH-ADDITIONS §2.12).
+/// The plan of one bridge, resolved from its overlay registration and the network lines it names (MAP-QSH-ADDITIONS).
 /// Bridge frame: <c>P(s, u) = Origin + Axis * s + Normal * u</c>, s along the axis line, u across (Normal = Axis turned so
 /// that X × Y = Z holds for the local frame). Each deck end is a straight line <c>s = A + K * u</c>: first fitted through the
 /// end points of every line the bridge carries, then pulled in to the water it crosses (<see cref="FitToWater"/>), parallel to
@@ -159,7 +159,7 @@ internal sealed class BridgePlan
     }
 
     /// <summary>
-    /// Fits the deck to the water it crosses (MAP-QSH-ADDITIONS §2.12; the network lines often run on well past the banks):
+    /// Fits the deck to the water it crosses (MAP-QSH-ADDITIONS; the network lines often run on well past the banks):
     /// along two sample lines near the deck's outer edges, the first and last crossing of a water outline give the two bank
     /// lines. An abutment stands just behind each, and the deck ends a bearing margin behind the abutment, its end line
     /// parallel to the bank; the rest of each line is ordinary ground (WP-15). No water under the deck: it keeps the line ends

@@ -5,7 +5,7 @@ namespace Campus.Hud.Map;
 public enum MapButtonKind { Icon, Primary, Secondary, Tab }
 
 /// <summary>
-/// 地图界面的按钮（UI-VISUAL §7.2 的六种状态里用到的五种：闲置、悬停、按下、焦点、禁用）。
+/// 地图界面的按钮（UI-VISUAL 的六种状态里用到的五种：闲置、悬停、按下、焦点、禁用）。
 /// 一个按钮只算 1 个 Control；字和图标都在 _Draw 里画，状态变了才重画。
 /// </summary>
 public partial class MapButton : Control

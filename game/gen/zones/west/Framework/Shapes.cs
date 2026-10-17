@@ -107,7 +107,7 @@ public static class Shapes
 
     /// <summary>
     /// The same geometry with every triangle on its own three vertices and a flat normal, turned to agree with the source
-    /// normals: broad planar facets for rough stone (ART-MODELING §7.6 faceted surfaces).
+    /// normals: broad planar facets for rough stone (ART-MODELING faceted surfaces).
     /// </summary>
     public static PartGeometry Faceted(PartGeometry geometry)
     {

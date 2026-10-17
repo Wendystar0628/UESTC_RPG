@@ -16,7 +16,7 @@ public enum UnderKind : byte { PitCover = 0, Shrub = 1, Hedge = 2, Tuft = 3 }
 /// Size on its own axes (x along Yaw, y up, z across), so one clipped ball serves as a cushion, a shrub, a hedge module or a
 /// tussock. Position is the foot (on the soil of a pit, else on the terrain). Yaw turns about +Y the way the trees' Yaw does
 /// (local x goes to (cos, 0, −sin)); hedge modules lay their x along the edge. Custom is the INSTANCE_CUSTOM block of
-/// WLD-VEGETATION §11.2 with the drawn height in w; its appearance variant carries <see cref="Understorey.UnderVariantBit"/>,
+/// WLD-VEGETATION with the drawn height in w; its appearance variant carries <see cref="Understorey.UnderVariantBit"/>,
 /// so veg_card and veg_trunk fade the plant out before its draw distance (23c2c).
 /// </summary>
 public sealed record GroundPlant(string Key, SpeciesInfo Species, int Variant, Vector3 Position, float Yaw, Vector3 Size, UnderKind Kind,
@@ -34,7 +34,7 @@ public sealed record UnderstoreyLayout(IReadOnlyList<GroundPlant> Plants)
 }
 
 /// <summary>
-/// Understorey layout (WLD-VEGETATION §4, §5; max-011 23c2b). Pure and deterministic from the world model, the species
+/// Understorey layout (WLD-VEGETATION; max-011 23c2b). Pure and deterministic from the world model, the species
 /// table, the map's planting rules, the tree layout and the world seed:
 /// <list type="bullet">
 /// <item>tree pits get low clipped cushions round their trunks (the pit's frame, kerb and soil are WP-15's);</item>
@@ -43,7 +43,7 @@ public sealed record UnderstoreyLayout(IReadOnlyList<GroundPlant> Plants)
 /// </list>
 /// Nothing stands on hard pavement (the planter's pavement index, tree pits aside), on a road, in a building, water, court
 /// or car park, on a trunk, or on grades above <see cref="MaxGrade"/>. Shrubs, hedges and tussocks do not collide
-/// (WLD-VEGETATION §10: only blocking hedges do, and the cluster hedges are WP-20's).
+/// (WLD-VEGETATION: only blocking hedges do, and the cluster hedges are WP-20's).
 /// </summary>
 public static class Understorey
 {

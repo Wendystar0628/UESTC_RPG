@@ -10,7 +10,7 @@ using S = Campus.Gen.Zones.Core.CoreStyle;
 namespace Campus.Gen.Zones.Core.Axis;
 
 /// <summary>
-/// 时间广场 (MAP-QSH-CORE §2, MAP-QSH-TERRAIN §2): the big light-grey circle on the library axis. The paving itself is
+/// 时间广场 (MAP-QSH-CORE, MAP-QSH-TERRAIN): the big light-grey circle on the library axis. The paving itself is
 /// WP-15's; this piece adds what makes it the time plaza: three dark concentric bands with the twelve hour marks on
 /// the outer one and a gold emblem in the centre, the ring of steps and the two flank ramps down to the sunken floor,
 /// three flagpoles at the library-side step foot, the outer ring of thin lamps (初灯组) and the benches under them.
@@ -61,7 +61,7 @@ public sealed class TimePlaza : ICorePiece
         var radius = 0f;
         foreach (var p in ring) radius += Vector2.Distance(p, centre);
         radius /= ring.Count;
-        // The axis points from the plaza centre to the library's grand stair (MAP-QSH-CORE §6.3).
+        // The axis points from the plaza centre to the library's grand stair (MAP-QSH-CORE).
         var axis = world.Features.TryGetValue(CoreFeatures.LibraryStair, out var stair)
             ? Vector2.Normalize(Plan.Centroid(Plan.Polygons(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre)
             : Shapes.Bearing(S.AxisBearingFallback);
@@ -173,7 +173,7 @@ public sealed class TimePlaza : ICorePiece
     }
 
     /// <summary>
-    /// The original emblem (ART-STYLE §11) as a single-colour gold inlay: a thin outer ring, an octagon whose corner
+    /// The original emblem (ART-STYLE) as a single-colour gold inlay: a thin outer ring, an octagon whose corner
     /// points along the library axis, and eight circuit traces from its corners ending in square pads.
     /// </summary>
     private void Emblem(CoreMesh mesh, LodLevel lod)

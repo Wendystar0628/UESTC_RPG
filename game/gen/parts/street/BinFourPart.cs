@@ -6,11 +6,11 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Four-stream sorting bin (四联分类垃圾箱, WLD-LIFE §4.1): a dark grey steel cabinet on a recessed toe, a light grey lid band
-/// round the top (the colour band round the mouth, ART-MODELING §4), and four coloured doors on the front (−Z) — seen from the
+/// Four-stream sorting bin (四联分类垃圾箱, WLD-LIFE): a dark grey steel cabinet on a recessed toe, a light grey lid band
+/// round the top (the colour band round the mouth, ART-MODELING), and four coloured doors on the front (−Z) — seen from the
 /// front, left to right: grey (other), blue (recyclable), red (hazardous), green (kitchen). A hood over each door shades its
 /// throw-in slot. No lettering or icons on the mainline; doors are separate materials, so the material line draws their edges.
-/// Collision: one box, Metal; its 1 m top is reachable by a jump (WLD-LIFE §5).
+/// Collision: one box, Metal; its 1 m top is reachable by a jump (WLD-LIFE).
 /// </summary>
 [Part(PartCatalog.BinFour, Owner = "WP-13")]
 public sealed class BinFourPart : IPartDef<FurnitureParams>

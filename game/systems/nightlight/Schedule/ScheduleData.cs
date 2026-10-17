@@ -4,7 +4,7 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Nightlight.Schedule;
 
-// game/data/maps/<地图>/lighting-schedule.json 的数据模型（SYS-TIME §6、MAP-QSH-ADDITIONS §8、ENG-PERF §10.3）。
+// game/data/maps/<地图>/lighting-schedule.json 的数据模型（SYS-TIME、MAP-QSH-ADDITIONS、ENG-PERF）。
 // 用 ContractJson.Options 读写：字段 camelCase，向量写成数组。槽位号与 ChannelId 一一对应，32 个槽位全部登记。
 
 public enum ChannelClass : byte
@@ -29,7 +29,7 @@ public sealed record ChannelSpec(int Slot, ChannelId Id, ChannelClass Kind)
     public float Cap { get; init; } = 0.85f;
     /// <summary>窗灯类的天黑程度 dark = smoothstep(Dark.X, Dark.Y, h_eff)，X &gt; Y；null 表示与天色无关（恒为 1）。</summary>
     public Vector2? Dark { get; init; }
-    /// <summary>窗灯类是否取阴雨天的白天下限（SYS-WEATHER §2）。</summary>
+    /// <summary>窗灯类是否取阴雨天的白天下限（SYS-WEATHER）。</summary>
     public bool DayFloor { get; init; }
     /// <summary>灯具类的开灯阈值分组名（groups 里的键）。</summary>
     public string? Group { get; init; }
@@ -44,12 +44,12 @@ public sealed record EffectiveSunSpec(float OvercastDeg = 6f, float PrecipDeg = 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record DeltaSpec(float Min = 0.005f, float Max = 0.15f, float Seconds = 0.3f);
 
-/// <summary>阴雨天白天窗灯的下限：阴天 0.25、雨天 0.3（SYS-WEATHER §2），按阴度、降水量的两段 smoothstep 淡入。</summary>
+/// <summary>阴雨天白天窗灯的下限：阴天 0.25、雨天 0.3（SYS-WEATHER），按阴度、降水量的两段 smoothstep 淡入。</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record DayFloorSpec(float Overcast = 0.25f, float Rain = 0.3f,
     Vector2? OvercastRamp = null, Vector2? RainRamp = null, Vector2? OccupancyRamp = null);
 
-/// <summary>过场"初灯追镜头"（SYS-TITLE §3.3）：LampCueDef.Group 到通道的映射，以及接管这些灯的槽位。</summary>
+/// <summary>过场"初灯追镜头"（SYS-TITLE）：LampCueDef.Group 到通道的映射，以及接管这些灯的槽位。</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record CueSpec(ChannelId Slot, ChannelId SysSlot, IReadOnlyDictionary<string, ChannelId> Groups);
 

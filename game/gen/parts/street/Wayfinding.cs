@@ -7,7 +7,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Two-post signpost (双柱指路牌, MAP-QSH-ADDITIONS §2.13): two dark grey square posts with caps and base plates, carrying three to
+/// Two-post signpost (双柱指路牌, MAP-QSH-ADDITIONS): two dark grey square posts with caps and base plates, carrying three to
 /// five arrow boards (variation 0, 1, 2) that point alternately to the viewer's right and left, each with a white chevron printed at
 /// its tip on both faces. Width × Height × Depth is the overall sign; the boards span both posts and reach the side they point to.
 /// The place names (white, with pinyin) wait for the scene-text atlas; the boards stay clean until then. Collision: the two posts and a
@@ -51,7 +51,7 @@ public sealed class SignpostPart : IPartDef<SignParams>
         {
             b.AddBox(new(x - hp, 0, -hp), new(x + hp, p.Height - 0.04f + S.Joint, hp), near ? 0.012f : 0, dark);
             if (lod > LodLevel.L1) continue;
-            // Cap and base plate unbevelled: five boards stay within the budget (the convex edge line stands in, ART-STYLE §4.7).
+            // Cap and base plate unbevelled: five boards stay within the budget (the convex edge line stands in, ART-STYLE).
             b.AddBox(new(x - hp - 0.012f, p.Height - 0.04f, -hp - 0.012f), new(x + hp + 0.012f, p.Height, hp + 0.012f), 0, dark);
             if (near) b.AddBox(new(x - hp - 0.04f, 0, -hp - 0.04f), new(x + hp + 0.04f, 0.02f, hp + 0.04f), 0, dark, VertexFlag.NoShadow);
         }
@@ -103,11 +103,11 @@ public sealed class SignpostPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Shared-bicycle bay (共享单车停放点, WLD-LIFE §3.5, D-186): a white painted frame on the ground, Width × Depth, with a short slot
+/// Shared-bicycle bay (共享单车停放点, WLD-LIFE, D-186): a white painted frame on the ground, Width × Depth, with a short slot
 /// tick every <see cref="StreetStyle.BaySlot"/> along its back line, and at its back left corner a low standing sign: a dark post and
 /// a white panel with the electronic-blue band (for the bay's number) and a blue bicycle icon, both faces. Height is the sign's
 /// height. The number waits for WP-55's bay data and the scene-text atlas. Collision: the sign only, a thin box, Metal; the painted
-/// frame is ground (WLD-LIFE §5). Variation 0 is the open bay; a roofed shelter (自行车棚) is a later variation.
+/// frame is ground (WLD-LIFE). Variation 0 is the open bay; a roofed shelter (自行车棚) is a later variation.
 /// </summary>
 [Part(PartCatalog.BicycleShelter, Owner = "WP-13")]
 public sealed class BicycleBayPart : IPartDef<RoofParams>

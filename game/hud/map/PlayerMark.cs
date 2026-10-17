@@ -4,7 +4,7 @@ namespace Campus.Hud.Map;
 
 /// <summary>
 /// 玩家：主色箭头加视锥（map.player）。箭头朝向是观者的偏航（IObserverState），视锥是镜头的水平视场角
-/// （ICameraRig.Pose），二者分开读（ENG-ROADMAP §6 第 2 条）。每帧只改 Position 与 Rotation；
+/// （ICameraRig.Pose），二者分开读（ENG-ROADMAP 第 2 条）。每帧只改 Position 与 Rotation；
 /// 视锥相对箭头的夹角或视场角变化超过 0.5° 才重画。
 /// </summary>
 public partial class PlayerMark : Control
@@ -20,7 +20,7 @@ public partial class PlayerMark : Control
         MouseFilter = MouseFilterEnum.Ignore;
     }
 
-    /// <summary>视锥长度（逻辑像素）：小地图取视口半宽的 0.3（SYS-ATLAS §3）。</summary>
+    /// <summary>视锥长度（逻辑像素）：小地图取视口半宽的 0.3（SYS-ATLAS）。</summary>
     public float ConeLength { get; set; } = 34;
 
     public void Follow(Vector2 position, float observerYawDeg, float cameraYawDeg, float hfovDeg)

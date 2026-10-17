@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Diorama;
 
 /// <summary>
-/// The fog sea (WLD-DIORAMA §4.2–§4.3): one opaque, double-sided ring of flat panels round the diorama, its top below the
+/// The fog sea (WLD-DIORAMA): one opaque, double-sided ring of flat panels round the diorama, its top below the
 /// campus ground, out to <see cref="FogSeaData.OuterRadius"/>. The inner edge follows the ground's edge: the cut line when
 /// the map has outskirts (IOutskirtsModel.CutLine), otherwise the map's data rectangle (the extent of the ground). Along that
 /// edge the surface can climb into a fog bank (<see cref="EdgeBankData"/>) whose crest wanders with a slow noise, so the

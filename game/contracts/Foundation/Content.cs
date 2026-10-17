@@ -167,7 +167,7 @@ public sealed record GeometryBundle(
     public byte[]? Flags { get; init; }
     // VF-B glass: WindowCardEncoding.TypeMask (low 7 bits) carries 0 unspecified; 1-15 W-CLS, W-LEC, W-COR,
     // W-STR, W-OFF, W-LAB, W-CLEAN, W-DORM, W-WC, W-CAN, W-SHOP, W-MED, W-GYM, W-POOL, W-MECH.
-    // 16 = lobby card (closed entrance glass, WLD-INTERIORS §5.2). PhysicalCurtainFlag (0x80)
+    // 16 = lobby card (closed entrance glass, WLD-INTERIORS). PhysicalCurtainFlag (0x80)
     // means this LOD actually contains a physical curtain; suppress only the card's window screen layer.
     // This occupies COLOR's fourth (Reserved) byte; non-glass surfaces retain their existing semantics.
     public byte[]? Reserved { get; init; }

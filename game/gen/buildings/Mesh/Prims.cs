@@ -9,7 +9,7 @@ public readonly record struct ProfilePoint(float S, float Y, float Chamfer = 0f,
 /// <summary>
 /// A closed or open section profile, traversed so that the material lies on the right of travel in the (s, y) plane:
 /// up the front, inward across the top, down the back, outward across a soffit. Segment normal = (dy, -ds).
-/// A bevel segment takes its neighbours' normals at its two ends (custom bevel normals, ART-MODELING §7.2).
+/// A bevel segment takes its neighbours' normals at its two ends (custom bevel normals, ART-MODELING).
 /// </summary>
 public sealed class Profile
 {

@@ -1,7 +1,7 @@
 namespace Campus.Gen.Water;
 
 /// <summary>
-/// Tunable constants of the water generator, kept in one place for review (WF-FLOW §4).
+/// Tunable constants of the water generator, kept in one place for review (WF-FLOW).
 /// Shader-side look parameters live at the top of game/style/shaders/water.gdshader.
 /// </summary>
 public sealed record WaterParams
@@ -11,7 +11,7 @@ public sealed record WaterParams
     /// <summary>Grid step of the surface mesh in metres. Must divide <see cref="TileSize"/>.</summary>
     public float MeshStep { get; init; } = 3.2f;
 
-    /// <summary>Streaming cell edge (CORE-CONVENTIONS §1.3: 64 m quadtree cells).</summary>
+    /// <summary>Streaming cell edge (CORE-CONVENTIONS: 64 m quadtree cells).</summary>
     public float TileSize { get; init; } = 64f;
 
     /// <summary>
@@ -27,7 +27,7 @@ public sealed record WaterParams
     /// <summary>Lakes sit this much above channels so overlapping OSM polygons never z-fight.</summary>
     public float LakeLift { get; init; } = 0.004f;
 
-    /// <summary>Shore distances are clamped here; bands end at 9 m (WLD-WATER §1.1).</summary>
+    /// <summary>Shore distances are clamped here; bands end at 9 m (WLD-WATER).</summary>
     public float SdfClamp { get; init; } = 24f;
 
     /// <summary>An edge is not shore when the water continues past it (inlets, joints of OSM river pieces).</summary>
@@ -39,7 +39,7 @@ public sealed record WaterParams
     /// <summary>Isoperimetric ratio P²/(4πA) above which a water body counts as a channel.</summary>
     public float ChannelElongation { get; init; } = 5f;
 
-    /// <summary>Set flow speed of all channels (WLD-WATER §4).</summary>
+    /// <summary>Set flow speed of all channels (WLD-WATER).</summary>
     public float FlowSpeed { get; init; } = 0.45f;
 
     /// <summary>Grid lines closer than this fraction of a step to a ring vertex or band edge are skipped.</summary>

@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Hud;
 
 /// <summary>
-/// 界面的数据层（UI-NAV §9）：以 10 Hz 采样世界状态，值变了才发 <see cref="Changed"/>；采样间隔按帧间隔累加，不用 Timer。
+/// 界面的数据层（UI-NAV）：以 10 Hz 采样世界状态，值变了才发 <see cref="Changed"/>；采样间隔按帧间隔累加，不用 Timer。
 /// 界面只读 IWorldState、ICameraRig 的速度与模式，写入一律经 IWorldControl、IViewControl。
 /// </summary>
 [KernelService(typeof(HudModel), Owner = "WP-35")]
@@ -28,7 +28,7 @@ public sealed class HudModel(IWorldState world, ICameraRig rig, IRuleset ruleset
     public long Rev { get; private set; }
     public event Action? Changed;
 
-    /// <summary>世界控件是否开放（规则集的 WorldControls，ENG-ROADMAP §6 第 1 条）。</summary>
+    /// <summary>世界控件是否开放（规则集的 WorldControls，ENG-ROADMAP 第 1 条）。</summary>
     public bool Allows(WorldControlMask control) => (ruleset.Current.WorldControls & control) == control;
 
     public void Tick(double delta)

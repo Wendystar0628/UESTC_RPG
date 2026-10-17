@@ -1,6 +1,6 @@
 """WP-37 色彩脚本的参考实现（离线，Python）。
 
-读 game/style/palette/keys/ 下的源数据，按 SYS-TIME §3、ART-STYLE §3 与 §8.3 推导：
+读 game/style/palette/keys/ 下的源数据，按 SYS-TIME、ART-STYLE 推导：
 - 秋季 12 张基准关键帧 → 四季修正与季节专属覆盖 → （天气修正接口）；
 - 每个材质在每个"关键帧 × 季节"格里的受光色、影色、室内两行；
 - 沿一天的插值（单调三次 Hermite、OKLab，色相大转时走 OKLCH）。
@@ -25,7 +25,7 @@ KEYS_DIR = os.path.join(REPO, "game", "style", "palette", "keys")
 SEASONS = ["spring", "summer", "autumn", "winter"]
 SEASON_NAMES = {"spring": "春", "summer": "夏", "autumn": "秋", "winter": "冬"}
 
-# SYS-TIME §2 美术太阳：日出、日落钟点，日出、日落方位，正午高度上限 H
+# SYS-TIME 美术太阳：日出、日落钟点，日出、日落方位，正午高度上限 H
 ART_SUN = {
     "spring": (6 + 50 / 60, 19 + 20 / 60, 98.0, 262.0, 55.0),
     "summer": (6 + 10 / 60, 19 + 55 / 60, 85.0, 272.0, 62.0),
@@ -36,7 +36,7 @@ NIGHT_H = 24.0
 SUN_EXP = 1.15
 AUTUMN_H = 41.0
 NORM_FROM = 25.0          # 25° 以上按正午归一（假设，见 autumn.keys.json notes）
-# 主光强度 key_strength 的 smoothstep 两端（°）。SYS-TIME §2 现为 (−1, 4)；主代理评审要求 h≈0° 时约 25–35%，
+# 主光强度 key_strength 的 smoothstep 两端（°）。SYS-TIME 现为 (−1, 4)；主代理评审要求 h≈0° 时约 25–35%，
 # WP-37 建议改为 (−2, 4)：0° 时 0.26，0.5° 时 0.38，−2° 以下仍为 0（不碰无影蓝调）。写入方是 WP-03，这里只给预览与自检用。
 KEY_STRENGTH_EDGES = (-2.0, 4.0)
 
@@ -150,9 +150,9 @@ def validate(src: "Sources") -> None:
         raise DataError("源数据不合法：\n  " + "\n  ".join(errs))
 
 
-# ---------------------------------------------------------------- 美术太阳（SYS-TIME §2）
+# ---------------------------------------------------------------- 美术太阳（SYS-TIME）
 
-# WP-34 美术星历（game/kernel/world/ArtEphemeris.cs）对秋季的微调：秋 17:30 正好 5.5°（SYS-TIME §2），
+# WP-34 美术星历（game/kernel/world/ArtEphemeris.cs）对秋季的微调：秋 17:30 正好 5.5°（SYS-TIME），
 # 日出、日落与正午高度不变。这里照抄同一个公式，保证离线脚本与运行时同一来源。
 _HERO_U = (17.5 - 455 / 60) / ((1085 - 455) / 60)
 _HERO_SINE = math.sin(math.pi * _HERO_U)
@@ -236,7 +236,7 @@ def clock_for_key(key: Dict[str, Any], season: str) -> float:
 
 
 def key_strength_for(frame: "Frame") -> float:
-    """预览用：主光强度。太阳 smoothstep(−1°, 4°, h)；月光帧取 1；天光帧（无影蓝调）取 0（SYS-TIME §2）。"""
+    """预览用：主光强度。太阳 smoothstep(−1°, 4°, h)；月光帧取 1；天光帧（无影蓝调）取 0（SYS-TIME）。"""
     src = frame.key_source
     if src == "moon":
         return 1.0
@@ -316,7 +316,7 @@ def frame_from_key(k: Dict[str, Any]) -> Frame:
         "startM": float(fog["startM"]), "silhouetteM": float(fog["silhouetteM"]),
         "density": float(fog["density"]), "hazeDeg": float(fog["hazeDeg"]),
     }
-    low = k["fogLow"]   # 全局参数 fog_low（ENG-PERF §1.5）：贴地雾高度上限 m、贴地雾密度、湖面雾强度、预留
+    low = k["fogLow"]   # 全局参数 fog_low（ENG-PERF）：贴地雾高度上限 m、贴地雾密度、湖面雾强度、预留
     f.fog_low = {"topM": float(low["topM"]), "density": float(low["density"]), "lake": float(low["lake"])}
     key = k["key"]
     f.key_source = key["source"]
@@ -345,7 +345,7 @@ def autumn_frames(src: Sources) -> List[Frame]:
     return [frame_from_key(k) for k in src.autumn["keys"]]
 
 
-# ---------------------------------------------------------------- 四季修正（SYS-TIME §3.3）
+# ---------------------------------------------------------------- 四季修正（SYS-TIME）
 
 def _scope_weight(src: Sources, scope: str, key_id: str) -> float:
     sc = src.seasons["scopes"][scope]
@@ -438,7 +438,7 @@ def season_frames(src: Sources) -> Dict[str, List[Frame]]:
     return {s: [apply_season(src, b, s) for b in base] for s in SEASONS}
 
 
-# ---------------------------------------------------------------- 材质推导（ART-STYLE §3.2、§3.4、§8.3）
+# ---------------------------------------------------------------- 材质推导（ART-STYLE）
 
 def _light_m(src: Sources, f: Frame) -> float:
     ref = src.derive["lit"]["adaptRef"]
@@ -446,7 +446,7 @@ def _light_m(src: Sources, f: Frame) -> float:
 
 
 class HeroRef:
-    """植被的基准光：英雄帧的主光 (a, b)、饱和增益（WLD-VEGETATION §2.3）。
+    """植被的基准光：英雄帧的主光 (a, b)、饱和增益（WLD-VEGETATION）。
     mode = "hero"：固有色的 (a, b) 就是英雄帧受光值；mode = "albedo"：直接给固有色，受光按一般材质推导。
     c_ref、warm_ref：英雄帧上的受光彩度与低暖光度，给植被受光彩度上限用（vegetationWarmCap）。"""
 
@@ -537,7 +537,7 @@ def derive_shade(src: Sources, albedo: ok.Lab, lit: ok.Lab, f: Frame, cls: str,
 
 
 def interior_patch(src: Sources, lit: ok.Lab) -> ok.Lab:
-    """窗光斑里的目标色（ART-STYLE §3.4）：在 OKLab 里只抬 L，L = min(litLMax, L_受光 × litGain)；
+    """窗光斑里的目标色（ART-STYLE）：在 OKLab 里只抬 L，L = min(litLMax, L_受光 × litGain)；
     C 取原受光色的 C、不随增益放大；色相不变。越出色域只降彩度。"""
     ip = src.derive["interior"]
     L, C, h = ok.lab_to_lch(lit)
@@ -581,7 +581,7 @@ class MaterialResult:
 
 
 def cap_lit_chroma(src: Sources, albedo: ok.Lab, lit: ok.Lab, shade: ok.Lab) -> ok.Lab:
-    """有彩材质的受光彩度上限 = 影彩度 / chromaCapRatio（保住身份色：影 C ≥ 0.6 × 受光 C，SYS-TIME §8）。
+    """有彩材质的受光彩度上限 = 影彩度 / chromaCapRatio（保住身份色：影 C ≥ 0.6 × 受光 C，SYS-TIME）。
     只在强色光（日出、日落）把高彩材质的受光推得过艳时起作用；不改明度与色相。"""
     cap = src.derive["lit"].get("chromaCap")
     if not cap:
@@ -730,21 +730,21 @@ def derive_grid(src: Sources) -> Dict[str, Any]:
     return grid
 
 
-# ---------------------------------------------------------------- 天气修正（接口，SYS-WEATHER §7）
+# ---------------------------------------------------------------- 天气修正（接口，SYS-WEATHER）
 
 WEATHER_FIELDS = ["Cloud", "CloudType", "Cb", "Overcast", "Precip", "PrecipKind", "Wet", "Puddle",
                   "Fog", "GroundFog", "Storm", "SnowAdd", "Rainbow", "Lightning"]
 
 
 def clear_weather() -> Dict[str, float]:
-    """晴：全 0，只有雾密度倍率 Fog 为 1（ENG-ARCH §3 WeatherVec 的注释）。"""
+    """晴：全 0，只有雾密度倍率 Fog 为 1（ENG-ARCH WeatherVec 的注释）。"""
     v = {k: 0.0 for k in WEATHER_FIELDS}
     v["Fog"] = 1.0
     return v
 
 
 def apply_weather(src: Sources, base: Frame, wv: Dict[str, float]) -> Frame:
-    """天气修正量叠在四季修正之后（SYS-TIME §3.1）。晴天返回原帧的拷贝，逐值不变。"""
+    """天气修正量叠在四季修正之后（SYS-TIME）。晴天返回原帧的拷贝，逐值不变。"""
     f = base.copy()
     W = src.weather
     g = float(wv.get("Overcast", 0.0))
@@ -789,12 +789,12 @@ def apply_weather(src: Sources, base: Frame, wv: Dict[str, float]) -> Frame:
 
 
 def rain_vegetation_chroma_mul(src: Sources, wv: Dict[str, float]) -> float:
-    """雨天植被彩度 +15%（SYS-WEATHER §2）：按降水 × (1 − 降水类型) 连续接入。"""
+    """雨天植被彩度 +15%（SYS-WEATHER）：按降水 × (1 − 降水类型) 连续接入。"""
     p = float(wv.get("Precip", 0.0)) * (1.0 - float(wv.get("PrecipKind", 0.0)))
     return 1.0 + (src.weather["rainVegetationChromaMul"] - 1.0) * min(1.0, max(p, float(wv.get("Wet", 0.0))))
 
 
-# ---------------------------------------------------------------- 沿一天插值（SYS-TIME §3.1）
+# ---------------------------------------------------------------- 沿一天插值（SYS-TIME）
 
 def _fc_slopes(xs: List[float], ys: List[float]) -> List[float]:
     """周期的 Fritsch–Carlson 单调三次 Hermite 斜率。xs 已排序且首尾不重合，周期为 2。"""
@@ -981,7 +981,7 @@ def frame_at(src: Sources, curve: DayCurve, season: str, clock: float) -> Frame:
     return f
 
 
-# ---------------------------------------------------------------- IPaletteProbe 参考（UI-VISUAL §11.11）
+# ---------------------------------------------------------------- IPaletteProbe 参考（UI-VISUAL）
 
 def sample_horizon(src: Sources, curve: DayCurve, season: str, wv: Optional[Dict[str, float]] = None) -> List[ok.Rgb]:
     """24 个整点的地平线天色（sRGB 0–1）：太阳侧与背阳侧的地平线色各半（假设）。"""
@@ -995,7 +995,7 @@ def sample_horizon(src: Sources, curve: DayCurve, season: str, wv: Optional[Dict
     return out
 
 
-# ---------------------------------------------------------------- 线色（ART-STYLE §4.2，预览与自检用）
+# ---------------------------------------------------------------- 线色（ART-STYLE，预览与自检用）
 
 def line_color(base: ok.Lab, f: Frame) -> ok.Lab:
     lin = ok.oklab_to_linear(base)

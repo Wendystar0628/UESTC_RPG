@@ -7,7 +7,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// The fallen-leaf and canopy channels WP-23 owns in the two ground masks (WLD-VEGETATION §6, §9.5, §11.7), painted
+/// The fallen-leaf and canopy channels WP-23 owns in the two ground masks (WLD-VEGETATION), painted
 /// from one crown projection of the planting layout:
 /// ground_mask R (ginkgo leaves), G (other leaves and petals) and ground_mask2 B (canopy shelter). Both masks are RGBA8,
 /// row-major from the map rectangle's minimum corner with rows along +z, the layout WP-15's GroundMaskSet uploads.

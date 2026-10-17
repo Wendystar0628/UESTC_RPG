@@ -1,7 +1,7 @@
 namespace Campus.Systems.Sky;
 
 /// <summary>
-/// Builds the tileable 512² RGBA8 global texture cloud_noise (ENG-PERF §1.5, SYS-WEATHER §7) from integer hashes only,
+/// Builds the tileable 512² RGBA8 global texture cloud_noise (ENG-PERF, SYS-WEATHER) from integer hashes only,
 /// so the result is identical on every machine. Pure .NET; runs once on a worker thread.
 /// R: cumulus bodies (rounded domes, larger ones stronger, grouped by a low-frequency cluster field), normalized to [0, 1].
 /// G: mid-frequency fbm (overcast deck cells, edge wobble).

@@ -3,7 +3,7 @@ using Godot;
 namespace Campus.Hud.I18n;
 
 /// <summary>
-/// 界面文字一律写稳定键 &lt;域&gt;.&lt;对象&gt;.&lt;用途&gt;（UI-NAV §8），翻译表在 game/hud/i18n/&lt;语言&gt;.csv：
+/// 界面文字一律写稳定键 &lt;域&gt;.&lt;对象&gt;.&lt;用途&gt;（UI-NAV），翻译表在 game/hud/i18n/&lt;语言&gt;.csv：
 /// 首行 "keys,&lt;语言&gt;"，一句话一条，变量写成 {name} 这样的具名占位，不拼句。主线版只有中文表；查不到的键原样返回并告警一次。
 /// </summary>
 public static class Tr

@@ -42,7 +42,7 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
         builder.Add(PartGeometryKernel.Sweep(Shapes.BevelRect(p.Depth, p.Height, near ? RoofStyle.CopingBevel : 0, 0, 0), path, material, closed));
         if (near)
         {
-            // Drip lip under the outer edge only: deep enough to cast a clean line on the wall below (ART-MODELING §7.1).
+            // Drip lip under the outer edge only: deep enough to cast a clean line on the wall below (ART-MODELING).
             // It sits 2 mm behind the outer face and runs up into the slab, so no edge is shared with the chamfer.
             var d = RoofStyle.CopingDripDepth; var w = Math.Min(RoofStyle.CopingDripWidth, half * 0.4f);
             builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(half - w, half - 0.002f, -d, RoofStyle.CopingBevel + 0.01f), path, material, closed));
@@ -69,7 +69,7 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
 /// <summary>
 /// Lightning strip (避雷带): one continuous galvanised rod on short supports along the parapet top.
 /// Width is the run length along X, Height the rod top above the coping, Depth the rod diameter
-/// (raised to the prop minimum section, ART-FIDELITY §6). Variation 0 puts one support near each end;
+/// (raised to the prop minimum section, ART-FIDELITY). Variation 0 puts one support near each end;
 /// Variation ≥ 1 (precision zone K1) puts one every metre.
 /// </summary>
 [Part(PartCatalog.LightningStrip, Owner = "WP-12")]
@@ -140,7 +140,7 @@ public sealed class LightningStripPart : IPartDef<TrimParams>
 /// Width is the pipe diameter, Height the run from the ground to the hopper top, Depth the footprint across the wall:
 /// the wall plane is at +Depth/2, the pipe axis at the origin, the shoe kicks out towards −Z.
 /// Variation ≥ 1 is the dark condensate drain beside a unit grille: no hopper.
-/// Colours come from <see cref="BoxPartParams.Material"/> (main wall or dark grey, ART-FIDELITY §6).
+/// Colours come from <see cref="BoxPartParams.Material"/> (main wall or dark grey, ART-FIDELITY).
 /// </summary>
 [Part(PartCatalog.Downpipe, Owner = "WP-12")]
 public sealed class DownpipePart : IPartDef<ColumnParams>

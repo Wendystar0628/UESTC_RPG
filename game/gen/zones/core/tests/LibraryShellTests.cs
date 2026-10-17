@@ -24,7 +24,7 @@ public sealed class LibraryShellTests
         Require(Count(BlockKind.Tower) == 3 && Count(BlockKind.FrontTower) == 1 && Count(BlockKind.Podium) == 2,
             $"towers {Count(BlockKind.Tower)}, front tower {Count(BlockKind.FrontTower)}, podium {Count(BlockKind.Podium)}");
         Require(MathF.Abs(plan.SecondFloorY - plan.PadY - 5.1f) < 1e-3f && MathF.Abs(plan.TerraceY - plan.PadY - 18.6f) < 1e-3f && MathF.Abs(plan.RoofY - plan.PadY - 23.1f) < 1e-3f,
-            "2F 5.1, 5F 18.6, roof 23.1 above the pad (MAP-QSH-LIBRARY §0.4)");
+            "2F 5.1, 5F 18.6, roof 23.1 above the pad (MAP-QSH-LIBRARY)");
         var front = plan.Blocks.Single(b => b.Kind == BlockKind.FrontTower);
         Require(MathF.Abs(front.Y1 - plan.PadY - 27.6f) < 1e-3f, "front tower six storeys");
         Require(plan.Landing.Count > 0, "the stair base 8398 stands against the podium");

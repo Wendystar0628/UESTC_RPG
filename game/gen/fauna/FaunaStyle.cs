@@ -3,8 +3,8 @@ using Campus.Contracts;
 namespace Campus.Gen.Fauna;
 
 /// <summary>
-/// Every look and placement constant of the WP-25 animals in one place (WF-FLOW §4): colour names, shading specs, the
-/// overall scale and the site rules. Colours are palette names only (ART-STYLE §8.5); the three fauna pairs live in
+/// Every look and placement constant of the WP-25 animals in one place (WF-FLOW): colour names, shading specs, the
+/// overall scale and the site rules. Colours are palette names only (ART-STYLE); the three fauna pairs live in
 /// game/style/palette/ext/WP-25.json, the rest are borrowed from the core table.
 /// </summary>
 public static class FaunaStyle
@@ -26,18 +26,18 @@ public static class FaunaStyle
     public static PaletteToken ShadeOf(PaletteToken lit) =>
         lit.Value.EndsWith(".lit", StringComparison.Ordinal) ? new(lit.Value[..^4] + ".shade") : throw new ArgumentException($"'{lit.Value}' is not a lit token.", nameof(lit));
 
-    /// <summary>Cats are soft goods: two and a half steps with the 2.2× band (ART-STYLE §2.1, WLD-LIFE §6.3).</summary>
+    /// <summary>Cats are soft goods: two and a half steps with the 2.2× band (ART-STYLE, WLD-LIFE).</summary>
     public static ToonSpec Fur { get; } = new(White, ShadeOf(White))
     { Steps = ShadeSteps.Soft, Normal = ToonNormal.Smooth, Line = LineClass.Fine, Wet = 0.15f };
 
-    /// <summary>Birds are curved props: two and a half steps (ART-STYLE §2.1, WLD-LIFE §6.3).</summary>
+    /// <summary>Birds are curved props: two and a half steps (ART-STYLE, WLD-LIFE).</summary>
     public static ToonSpec Feather { get; } = new(Dove, ShadeOf(Dove))
     { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Line = LineClass.Fine, Wet = 0.15f };
 
-    /// <summary>Small things read 1.1–1.25× larger (ART-MODELING §7.8); animals take the low end so they stay true to size.</summary>
+    /// <summary>Small things read 1.1–1.25× larger (ART-MODELING); animals take the low end so they stay true to size.</summary>
     public const float Scale = 1.1f;
 
-    // ---- Sites (WLD-LIFE §1; mainline keeps 3–6 sites per kind, fewer rather than more) ----
+    // ---- Sites (WLD-LIFE; mainline keeps 3–6 sites per kind, fewer rather than more) ----
     /// <summary>Distance from a building wall to a cat resting at its door side, and to one sheltering under the eaves.</summary>
     public const float CatDoorOffset = 1.3f;
     public const float CatEaveOffset = 0.45f;
@@ -64,7 +64,7 @@ public static class FaunaStyle
     /// <summary>Perched sparrows stand on the top of seat walls (overlay kind "seat-wall"), two per wall, up to this many walls.</summary>
     public const int SparrowWalls = 2;
 
-    /// <summary>Black swans: four on the first lake, two on the second (WLD-LIFE §1); kept off the banks; pairs a little apart.</summary>
+    /// <summary>Black swans: four on the first lake, two on the second (WLD-LIFE); kept off the banks; pairs a little apart.</summary>
     public const int SwansFirstLake = 4;
     public const int SwansSecondLake = 2;
     public const float SwanShoreMargin = 14f;
@@ -72,7 +72,7 @@ public static class FaunaStyle
     /// <summary>The night huddle sits this far out from the bank.</summary>
     public const float SwanHuddleOut = 5f;
 
-    /// <summary>Dusk crows: 2-3 groups of 2-3 on dorm parapets, groups at least 150 m apart (WLD-LIFE §1, §7).</summary>
+    /// <summary>Dusk crows: 2-3 groups of 2-3 on dorm parapets, groups at least 150 m apart (WLD-LIFE).</summary>
     public const int CrowGroups = 3;
     public const float CrowGroupSpacing = 150f;
     /// <summary>Coping top above pad + height on WP-14's generic buildings (parapet rise 0.8 m + coping 0.15 m, plus the coping lip the birds stand on; checked in the 25a review shots).</summary>

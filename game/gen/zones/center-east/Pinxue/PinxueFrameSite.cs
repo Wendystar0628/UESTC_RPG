@@ -12,7 +12,7 @@ using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
 namespace Campus.Gen.Zones.CenterEast.Pinxue;
 
 /// <summary>
-/// 品学楼 gate frame and link bridges (MAP-QSH-CENTER-EAST §2.2). The 品学楼 entity's own parts are the frame bar between
+/// 品学楼 gate frame and link bridges (MAP-QSH-CENTER-EAST). The 品学楼 entity's own parts are the frame bar between
 /// A and B and the two bridges to C; OSM records all three as 16 m buildings standing on the ground, which would block
 /// the passage and the paths under the bridges, so this site claims the entity and builds them itself: four square
 /// columns carrying a two-storey beam bridge with the inscription plaque on its forecourt face (storeys 1–2 open as the

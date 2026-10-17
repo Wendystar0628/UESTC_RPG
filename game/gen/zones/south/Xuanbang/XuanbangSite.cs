@@ -14,7 +14,7 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Xuanbang;
 
 /// <summary>
-/// Xuanbang (MAP-QSH-SOUTH §5), the tallest group on the skyline, on the east bank of the east lake. Its entity carries three
+/// Xuanbang (MAP-QSH-SOUTH), the tallest group on the skyline, on the east bank of the east lake. Its entity carries three
 /// building parts of different heights and the clock tower cannot be a generic extrusion, so this site claims the whole
 /// entity and builds all three parts (contract request for per-part control in the 18b report):
 /// - the 8-storey main wing and south annex (35.7 m) as a gridded beige-stone block, with giant pilasters and round-headed
@@ -269,7 +269,7 @@ public sealed class XuanbangSite : SouthSite
     }
 
     /// <summary>
-    /// The facade behind the portico: three round-arched doors (the middle one open, WLD-INTERIORS §2.4) with arched windows
+    /// The facade behind the portico: three round-arched doors (the middle one open, WLD-INTERIORS) with arched windows
     /// above, responds behind the columns. The wall stands on the podium from the facade line (z −0.3…0.5). Its glass is the
     /// numbered hall glass once the map's window numbering is in the context, plain arched glass without one.
     /// </summary>
@@ -311,13 +311,13 @@ public sealed class XuanbangSite : SouthSite
                 b.Add(PartGeometryKernel.BeveledBox(X.DoorWidth, 0.1f, 0.1f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.1f, frame));
                 continue;
             }
-            // Open middle door: fanlight glass above the springing, leaves swung out against the reveals (SYS-WALK §8).
+            // Open middle door: fanlight glass above the springing, leaves swung out against the reveals (SYS-WALK).
             var fan = Shapes.RoundArch(x, X.DoorSpring - 0.01f, X.DoorWidth, 0.01f, segments);
             if (plain) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, L.Glass), p.At(0, floor, glass));
             b.Add(PartGeometryKernel.BeveledBox(X.DoorWidth, 0.12f, 0.12f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.06f, frame));
             foreach (var side in new[] { -1f, 1f })
                 b.Add(PartGeometryKernel.BeveledBox(0.06f, X.DoorSpring - 0.1f, 1.5f, 0.012f, L.DarkFrame), p.At(x + side * (X.DoorWidth * 0.5f - 0.05f), floor, 0.55f));
-            // The mat, open sign and door lamp are WP-13's, placed on the entrance anchor (WLD-INTERIORS §0).
+            // The mat, open sign and door lamp are WP-13's, placed on the entrance anchor (WLD-INTERIORS).
         }
     }
 
@@ -336,7 +336,7 @@ public sealed class XuanbangSite : SouthSite
         b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer, [inner]), 0.3f, L.BeigeTrim), g.At(0, baseY, s.PierDepth + 0.05f));
     }
 
-    // ---- Atrium skylight on the main wing (WLD-INTERIORS §16) ----
+    // ---- Atrium skylight on the main wing (WLD-INTERIORS) ----
 
     private static void Skylight(SiteBuilder b, float y)
     {

@@ -12,7 +12,7 @@ using L = Campus.Gen.Zones.North.NorthTune.Look;
 namespace Campus.Gen.Zones.North.Xuezhi;
 
 /// <summary>
-/// 学知苑 1 栋's open front door toward the 学知一 courtyard (MAP-QSH-NORTH §4.12, §8; WLD-INTERIORS §2.8, §4). The
+/// 学知苑 1 栋's open front door toward the 学知一 courtyard (MAP-QSH-NORTH; WLD-INTERIORS). The
 /// building's massing, storeys and windows stay with WP-14; the interior is WP-31c's. This site adds the entrance the
 /// interior is entered through: a granite landing at the raised ground floor reaching past the teleport landing, 6–8 steps
 /// down to the courtyard with cheek walls and handrails, and a vestibule block (门斗) whose through doorway carries the
@@ -63,7 +63,7 @@ public sealed class HallEntranceSite : NorthSite
         }
         if (best is not { } f) return null;
         var ground = world.Terrain.HeightAt(f.P(0, H.WallFace + H.LandingDepth + 2f).X, f.P(0, H.WallFace + H.LandingDepth + 2f).Y);
-        // The floor follows the terrace (+3.0 → 4.0, MAP-QSH-TERRAIN §7.5) even while the shared entrance still reads 1.0.
+        // The floor follows the terrace (+3.0 → 4.0, MAP-QSH-TERRAIN) even while the shared entrance still reads 1.0.
         var floor = MathF.Max(entrance.Center.Y, ground + H.FloorRaise);
         var risers = Math.Clamp((int)MathF.Round((floor - ground) / 0.15f), H.MinRisers, H.MaxRisers);
         return new(f, ground, floor, risers, entrance);

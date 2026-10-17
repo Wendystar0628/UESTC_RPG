@@ -10,7 +10,7 @@ using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 namespace Campus.Gen.Zones.CenterEast.Research;
 
 /// <summary>
-/// 科研楼碑 (MAP-QSH-CENTER-EAST §1.5), the campus stone-carving family: a rough-hewn white stone, wider than it is tall,
+/// 科研楼碑 (MAP-QSH-CENTER-EAST), the campus stone-carving family: a rough-hewn white stone, wider than it is tall,
 /// with a chunky chamfer and a top that falls away to one end, set straight into the lawn at the 银杏大道 roadside between
 /// 科 A and 科 B. It stands obliquely, its face turned to the walker coming north from the bridge, leaning back a few
 /// degrees. The face stays blank until the scene text atlas writes 科研楼 in ink-green running script (contract-26).

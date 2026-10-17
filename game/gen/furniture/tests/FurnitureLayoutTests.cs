@@ -59,7 +59,7 @@ public sealed class FurnitureLayoutTests
         var onDesign = a.Items.Where(i => i.Kind == FurnitureKind.Bench && site.PavingEdgeFacing(i.Anchor + Front(i.Part.At) * (((FurnitureParams)i.Part.Params).Depth * 0.5f + 0.4f)) is { Road: { } w } && w.Id.Value.StartsWith("design:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"benches facing a design walk: {onDesign.Count} " + string.Join(", ", onDesign.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
         Check(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest, "a bin at every other rest stop");
-        // SYS-ATLAS §6: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
+        // SYS-ATLAS: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
         // moving an anchor (WP-48c) never needs a new number here.
         var landings = AnchorLandings(World.Value);
         var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
@@ -810,7 +810,7 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void CarsParkSparselyInTheLotsAndKerbRampsMeetTheWalks()
     {
-        // WLD-LIFE §3.3: a few cars in each car park, whole inside it, noses to its longest edge; never more than the cap a lot.
+        // WLD-LIFE: a few cars in each car park, whole inside it, noses to its longest edge; never more than the cap a lot.
         var world = World.Value;
         var layout = Build(world);
         var site = new StreetSite(world);
@@ -829,7 +829,7 @@ public sealed class FurnitureLayoutTests
                 var q = Xf.Point(car.Part.At, new(u * p.Width * 0.5f, 0, v * p.Depth * 0.5f));
                 Check(PlanGeometry.Contains(lot, new(q.X, q.Z)), $"{car.Key} sticks out of its lot");
             }
-            Check(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal, $"{car.Key}: one Metal box (WLD-LIFE §5)");
+            Check(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal, $"{car.Key}: one Metal box (WLD-LIFE)");
             Check(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit"), $"{car.Key} is not in a car body colour");
         }
         // Kerb ramps on the osmanthus road where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
@@ -856,7 +856,7 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void AvenueLampsKeepTheirRhythm()
     {
-        // MAP-QSH-ADDITIONS §8.5: the avenue's lamps keep a regular 25–30 m; only junctions may nudge one by a step or two.
+        // MAP-QSH-ADDITIONS: the avenue's lamps keep a regular 25–30 m; only junctions may nudge one by a step or two.
         foreach (var side in new[] { ":l:", ":r:" })
         {
             var row = Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
@@ -955,7 +955,7 @@ public sealed class FurnitureLayoutTests
                 FurnitureKind.DrinkingFountain => item.Pad is null ? 1 : 2,
                 // A vending group's bay rides on its first machine; a locker's box and a bay's sign, with their bays.
                 FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker or FurnitureKind.BicycleBay => item.Pad is null ? 1 : 2,
-                // Parked bikes have no collision (WLD-LIFE §5).
+                // Parked bikes have no collision (WLD-LIFE).
                 FurnitureKind.EntranceMat or FurnitureKind.EntranceLamp or FurnitureKind.ParkedBicycle => 0,
                 _ => throw new InvalidOperationException(),
             };

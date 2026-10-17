@@ -71,7 +71,7 @@ internal sealed class MeshWriter(byte kind)
 
     public GeometryBundle Bundle(ToonSpec spec)
     {
-        if (VertexCount > 65536) throw new InvalidOperationException($"Diorama surface kind {kind} has {VertexCount} vertices; the limit is 65 536 (ENG-PERF §5).");
+        if (VertexCount > 65536) throw new InvalidOperationException($"Diorama surface kind {kind} has {VertexCount} vertices; the limit is 65 536 (ENG-PERF).");
         var count = VertexCount;
         var flags = new byte[count];
         Array.Fill(flags, DioramaVertex.FlagNoShadow);

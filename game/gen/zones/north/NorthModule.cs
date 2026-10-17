@@ -119,7 +119,7 @@ public sealed class NorthModule : IContentModule
 /// <summary>
 /// The north zone's sites in a fixed order. 20a: the 学知苑 and international students' cluster enclosures and
 /// 学知苑 1 栋's open front door. 20b appends 硕丰苑 and 博翰苑 (clusters into <see cref="NorthTune.Clusters"/> plus their
-/// own sites; the three blocks of WLD-INTERIORS §17 are styled for WP-14, not built here); 20c appends the canteens, the shopping street, the student
+/// own sites; the three blocks of WLD-INTERIORS are styled for WP-14, not built here); 20c appends the canteens, the shopping street, the student
 /// centre and auditorium, the hospital, the covered walkway and the cultural landmarks, after these.
 /// </summary>
 public static class NorthSites
@@ -133,7 +133,7 @@ public static class NorthSites
         new Xuezhi.CourtyardSite(),
         // 20b1 (its clusters are in NorthTune.Clusters above)
         new Shuofeng.RestDeckSite(),
-        // 20b2 adds no site: 博翰's clusters are in NorthTune.Clusters above, the WLD-INTERIORS §17 blocks go to WP-14
+        // 20b2 adds no site: 博翰's clusters are in NorthTune.Clusters above, the WLD-INTERIORS blocks go to WP-14
         // through the overlay (NorthTune.Singles).
         // 20a-4: the canal-bank railing from the north-gate plaza's (WP-30) up the 商业街 side
         new Canal.CanalRailSite(),

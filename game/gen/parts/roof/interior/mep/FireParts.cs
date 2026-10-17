@@ -6,7 +6,7 @@ using Campus.Gen.Parts.Core;
 namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
-/// Indoor hydrant box (消火栓箱), the rectangular red-framed glass door of WLD-INTERIORS §8.5: a box set against the wall, a
+/// Indoor hydrant box (消火栓箱), the rectangular red-framed glass door of WLD-INTERIORS: a box set against the wall, a
 /// chamfered front frame with a recessed pane, "消火栓" across the upper pane and a pull on the right stile.
 /// Variation 0: red frame, glass door, white lettering. 1: red steel door with a small vision pane. 2: stainless frame, glass
 /// door, red lettering. Back on +Z; visual only (it sits inside the wall collider's clearance).

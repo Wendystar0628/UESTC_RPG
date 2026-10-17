@@ -8,13 +8,13 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Parked car (停着的轿车, WLD-LIFE §3.3–§3.4; Opus review 13c2b 21:05): a plain family car in a low-saturation body colour, the body
+/// Parked car (停着的轿车, WLD-LIFE; Opus review 13c2b 21:05): a plain family car in a low-saturation body colour, the body
 /// rounded at nose and tail and chamfered along its shoulders, cut by wheel arches over 0.65 m wheels with light hubs, its underside
 /// 0.15 m off the ground (no skirt); a glasshouse set in behind a ledge at the belt, its windows inside body-colour pillars, sill strip
 /// and roof rail; clear head lamps and red tail lamps, never lit, wing mirrors (<see cref="CarBody"/>). Width × Height × Depth is the
 /// car, its length along Z and its nose at −Z. Variation 0 is a saloon, 1 a hatchback (<see cref="StreetStyle.Saloon"/>,
 /// <see cref="StreetStyle.Hatch"/>). The body colour is the caller's Material when it sets one, else <see cref="StreetStyle.CarBodies"/>[0].
-/// Collision (WLD-LIFE §5): one box, Metal; the roof is out of jumping reach.
+/// Collision (WLD-LIFE): one box, Metal; the roof is out of jumping reach.
 /// </summary>
 [Part(PartCatalog.ParkedCar, Owner = "WP-13")]
 public sealed class ParkedCarPart : IPartDef<VehicleParams>
@@ -52,12 +52,12 @@ public sealed class ParkedCarPart : IPartDef<VehicleParams>
 }
 
 /// <summary>
-/// Anonymous shared bicycle (匿名共享单车, WLD-LIFE §3.5, D-066): a low-step milk-white frame with the electronic blue on the down
+/// Anonymous shared bicycle (匿名共享单车, WLD-LIFE, D-066): a low-step milk-white frame with the electronic blue on the down
 /// tube and the number plate only, a front basket and a rear lock box in dark grey, solid mudguard, dark tyres on light solid
 /// wheels. No brand, no colours of a real scheme. Width × Height × Depth is the bike (handlebar width, bar height, wheel to wheel),
 /// its front at −Z. The ride's contact points are part sockets shared with WP-54b's riding clips: seat, left and right grips,
 /// left and right pedals, front and rear axles (the sitter faces −Z, so the left grip is at −X). Parked bikes have no collision and
-/// make no sound (WLD-LIFE §5, SYS-AUDIO §9.8); the number on the plate waits for the scene-text atlas and WP-55's bay data.
+/// make no sound (WLD-LIFE, SYS-AUDIO); the number on the plate waits for the scene-text atlas and WP-55's bay data.
 /// </summary>
 [Part(PartCatalog.ParkedBicycle, Owner = "WP-13")]
 public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
@@ -120,7 +120,7 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
         var basket = new Vector2(k.Front.X - 0.02f, k.Bar.Y - 0.19f);
         if (!near)
         {
-            // Beyond the near level (ART-MODELING §7.8): the blue down tube, seat tube, head and bar, the saddle and the basket.
+            // Beyond the near level (ART-MODELING): the blue down tube, seat tube, head and bar, the saddle and the basket.
             b.AddPipe(P(k.HeadLow), P(k.Crank), tube * 1.25f, seg, blue);
             b.AddPipe(P(k.Crank), P(k.Saddle), tube, seg, white);
             b.AddPipe(P(k.HeadLow), P(k.Bar), tube * 1.2f, seg, white);

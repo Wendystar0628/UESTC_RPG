@@ -7,8 +7,8 @@ namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
 /// Common shape of the interior equipment parts: a near level (L0, within about 14 m) and a mid level (L1, 14–50 m, the room
-/// MultiMesh split of WLD-INTERIORS §7.5); the footprint box is the bounds. Front is −Z; wall-mounted parts put their back
-/// on +Z. Variation 0–2 picks the look (WLD-INTERIORS §7.5: at least three, chosen by the room hash).
+/// MultiMesh split of WLD-INTERIORS); the footprint box is the bounds. Front is −Z; wall-mounted parts put their back
+/// on +Z. Variation 0–2 picks the look (WLD-INTERIORS: at least three, chosen by the room hash).
 /// </summary>
 public abstract class MepPart<TParams> : IPartDef<TParams> where TParams : BoxPartParams
 {

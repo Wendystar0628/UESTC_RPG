@@ -5,7 +5,7 @@ namespace Campus.Gen.Vegetation;
 
 /// <summary>
 /// WP-23's content module (contract-32): reads its inputs through <see cref="VegetationInputs"/>, gives the trunk
-/// colliders per 64 m cell (WLD-VEGETATION §10) and owns the canopy channels of the ground masks — ground_mask R
+/// colliders per 64 m cell (WLD-VEGETATION) and owns the canopy channels of the ground masks — ground_mask R
 /// (ginkgo leaves), G (other leaves and petals) and ground_mask2 B (canopy shelter), painted from one crown projection
 /// (§9.5, §11.7). The claim is exclusive: WP-15 skips its tree fallback for these channels and this contributor
 /// overwrites them, so the painted values are the projection's own, not a maximum with anything underneath.
@@ -13,7 +13,7 @@ namespace Campus.Gen.Vegetation;
 /// variant) present in the tile, over the shared prototypes of <see cref="VegetationPrototypes"/>: L0 (64 m cells) carries
 /// the near pool's trees on the L0 mother model, the source the vegetation runtime buckets into L0+ / L0 / L1 and the
 /// visible source of the trunk colliders; L1 and L2 carry the far pool (150–400 m) on its stand-in; L3 and L4 give
-/// nothing yet (crown clouds, ENG-PERF §9). Engine instances are made only by the kernel's instance pools.
+/// nothing yet (crown clouds, ENG-PERF). Engine instances are made only by the kernel's instance pools.
 /// </summary>
 [ContentModule("vegetation", Owner = "WP-23")]
 public sealed class VegetationModule : IContentModule, IGroundMaskContributor, IContentSourceTraceProvider

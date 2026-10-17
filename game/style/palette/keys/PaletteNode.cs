@@ -9,7 +9,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Style.Palette.Keys;
 
 /// <summary>
-/// WP-37 colour-script evaluator (SYS-TIME §3, ENG-PERF §1.5). Runs at FramePriority.Palette: reads clock, season and
+/// WP-37 colour-script evaluator (SYS-TIME, ENG-PERF). Runs at FramePriority.Palette: reads clock, season and
 /// weather from IWorldState, writes the 256×68 palette texture (global sampler <c>palette</c>) and the globals
 /// <c>fog</c> and <c>fog_low</c>, and publishes IColorScriptFrame. Also implements IPaletteProbe for the time ring.
 /// <c>--inspect=palette</c> shows a debug overlay of the live texture.
@@ -47,13 +47,13 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         CatalogSource = source.GetType().Name;
         _composer = new PaletteComposer(_script, _catalog);
         foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
-        // Default state until the world is read: autumn 17:30, clear (SYS-TIME §0).
+        // Default state until the world is read: autumn 17:30, clear (SYS-TIME).
         var first = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
         _composer.ComposeCurrent(first);
         _composer.StepSeasonal(first, full: true);
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture = ImageTexture.CreateFromImage(_image);
-        // WP-37 produces the palette (ENG-PERF §1.5); once published the registry owns its lifetime: never Dispose it here.
+        // WP-37 produces the palette (ENG-PERF); once published the registry owns its lifetime: never Dispose it here.
         _registration = Services.Get<IGlobalDataTextureRegistry>().RegisterOwned(ShaderGlobals.Palette, _texture, _texture.GetRid());
         RenderingServer.GlobalShaderParameterSet(ShaderNames.Palette, _texture);
         Current = _composer.Snapshot(first, ++_rev);

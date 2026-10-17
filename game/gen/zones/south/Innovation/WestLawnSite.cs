@@ -10,7 +10,7 @@ using L = Campus.Gen.Zones.South.SouthTune.Look;
 namespace Campus.Gen.Zones.South.Innovation;
 
 /// <summary>
-/// The west lawn by the innovation centre (MAP-QSH-ADDITIONS §0 R6; design:south-west-lawn-seat): the low grass mound is a
+/// The west lawn by the innovation centre (MAP-QSH-ADDITIONS R6; design:south-west-lawn-seat): the low grass mound is a
 /// terrain operation in south.terrain.json, this site adds the stop on its crest, a granite seat-wall arc facing north-east.
 /// Each chord follows the ground, so the seat rides the mound once the terrain evaluator lands and stands level on the flat stub.
 /// </summary>

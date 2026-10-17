@@ -2,7 +2,7 @@ namespace Campus.Gen.Interior.Shell.Cards;
 
 /// <summary>
 /// Packs <see cref="WindowCardCatalog"/> into the window_cards global data texture that toon_glass reads by the VF-B
-/// window-type byte (WLD-INTERIORS §5.1; the global and its uploader are in the 51b contract request). Static data:
+/// window-type byte (WLD-INTERIORS; the global and its uploader are in the 51b contract request). Static data:
 /// uploaded once, independent of map, time, season and weather. RGBA32F, <see cref="Width"/> × <see cref="Rows"/>,
 /// row = card kind, row 0 unused (unspecified glass falls back to Office in the shader):
 /// <list type="bullet">

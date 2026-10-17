@@ -4,12 +4,12 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Contracts;
 
-// 外围（照 WLD-OUTSKIRTS §12.3，WP-47 生成、WP-08 解析；命名空间 Campus.Contracts）
+// 外围（照 WLD-OUTSKIRTS，WP-47 生成、WP-08 解析；命名空间 Campus.Contracts）
 public enum OutskirtsBand : byte { O0, O1, O2 }        // O0 街道带、O1 外围街区、O2 雾中楼顶；O3 是现有的远景卡片和雪山（WP-22）
 public enum OutskirtsKind : byte { SlabResidential, PointTower, Factory, ParkOffice, Mall, School, Landmark }
 public sealed record OutskirtsBlock(string Id, OutskirtsKind Kind, OutskirtsBand Band,
     IReadOnlyList<Vector2> Footprint, float Height, int Floors,
-    byte FacadeLevel, byte RoofLevel, uint Seed);           // 级别由管线按最近可达距离定（WLD-OUTSKIRTS §4.1）
+    byte FacadeLevel, byte RoofLevel, uint Seed);           // 级别由管线按最近可达距离定（WLD-OUTSKIRTS）
 
 public interface IOutskirtsModel                             // WP-08 解析 outskirts.json 与外围覆盖层，只读
 {

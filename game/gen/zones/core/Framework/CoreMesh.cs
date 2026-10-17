@@ -6,7 +6,7 @@ namespace Campus.Gen.Zones.Core.Framework;
 
 /// <summary>
 /// Material classes of the core zone. Colours vary per vertex (palette IDs); classes stay few so a piece costs a
-/// handful of draw calls (ENG-PERF §1.6). The non-colour fields of each class live in <see cref="CoreStyle"/>.
+/// handful of draw calls (ENG-PERF). The non-colour fields of each class live in <see cref="CoreStyle"/>.
 /// </summary>
 public enum CoreMaterial : byte
 {

@@ -340,7 +340,7 @@ public static class BuildingPlanner
     private readonly record struct AnchorDoor(int Facade, int Bay, int Row, float U0, float U1, float Y0, float Y1, string Id, bool Deck);
 
     /// <summary>
-    /// The doors this footprint opens for the open entrances its feature has in the interior index (WLD-INTERIORS §15): on
+    /// The doors this footprint opens for the open entrances its feature has in the interior index (WLD-INTERIORS): on
     /// the facade edge the anchor stands on and faces out of, in the bay under its door centre (centred on the anchor unless
     /// the bay centre is within EntranceRules.BaySnap), at the storey of its floor. An anchor is left alone (to another part
     /// of the feature, or to the zone pack that builds that door) when no edge of this footprint takes it, its outside lies in
@@ -441,7 +441,7 @@ public static class BuildingPlanner
     }
 
     /// <summary>
-    /// The outside landing level in front of a door (WLD-TERRAIN §4.3): the terrain beyond the landing's front edge on the
+    /// The outside landing level in front of a door (WLD-TERRAIN): the terrain beyond the landing's front edge on the
     /// door's centre line (ITerrain; level ground at the pad while the evaluator is a stub).
     /// </summary>
     private static float GroundInFront(IWorldModel world, PlanRing skin, int edge, Opening door)
@@ -452,7 +452,7 @@ public static class BuildingPlanner
     }
 
     /// <summary>
-    /// Zone of each opening from the facade segments of the exported fidelity data (ENG-ARCH §3: one or more segments
+    /// Zone of each opening from the facade segments of the exported fidelity data (ENG-ARCH: one or more segments
     /// per footprint edge, A → B along the ring). An opening takes the segment its centre lies on (parallel, within
     /// OpeningRules.ZoneMatchDistance of the footprint line); row 0 takes the segment's ground band. No segment: K3.
     /// </summary>
@@ -489,7 +489,7 @@ public static class BuildingPlanner
 
     /// <summary>
     /// The one place the building's base height comes from (D-180): the terrain pad under the footprint,
-    /// ITerrain.PadY(feature) (WLD-TERRAIN §4.3); level ground at 0 while the map's evaluator is the flat stub.
+    /// ITerrain.PadY(feature) (WLD-TERRAIN); level ground at 0 while the map's evaluator is the flat stub.
     /// </summary>
     public static float PadY(IWorldModel world, WorldFeature feature) => world.Terrain.PadY(feature.Id);
 

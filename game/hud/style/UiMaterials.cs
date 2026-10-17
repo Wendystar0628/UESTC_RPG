@@ -6,7 +6,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Hud.Style;
 
 /// <summary>
-/// 经 IShaderMaterialSource 向 Campus.Style 的材质库申请 ui_panel、ui_screen（UI-VISUAL §11.5），只写 uniform：色表 pal_day / pal_night、
+/// 经 IShaderMaterialSource 向 Campus.Style 的材质库申请 ui_panel、ui_screen（UI-VISUAL），只写 uniform：色表 pal_day / pal_night、
 /// 数值令牌、kind / mode。逐控件的效果一律写 instance uniform（见 <see cref="UiFx"/>）。
 /// 材质来源还没注册时 <see cref="Available"/> 为 false，界面退回 Theme 的晶白兜底。
 /// </summary>

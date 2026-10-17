@@ -13,7 +13,7 @@ using Shapes = Campus.Gen.Zones.Core.Framework.Shapes;
 namespace Campus.Gen.Zones.Core.Museum;
 
 /// <summary>
-/// 电子科技博物馆 (16d-2, MAP-QSH-CORE §4): one entity, the hall body 8401 inside the colonnade ring 8402. The granite
+/// 电子科技博物馆 (16d-2, MAP-QSH-CORE): one entity, the hall body 8401 inside the colonnade ring 8402. The granite
 /// gallery storey (带横槽的浅灰花岗岩外墙) fills 8401 under a flat roof that runs out over the ring to a white eave band on
 /// square columns (柱廊环, walkable and dry in rain); the white central hall (序厅, 约 28×26 m) rises from the middle with a
 /// clerestory ribbon and a low pyramid roof (白色体量，低坡锥形屋顶). The south colonnade carries the portico (方柱门廊):
@@ -504,7 +504,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     // ------------------------------------------------------------------ collision
 
     /// <summary>
-    /// Gallery walls from their foot to 300 m (the roofs are out of reach, MAP-QSH-CORE §8.2), open at the two door bays
+    /// Gallery walls from their foot to 300 m (the roofs are out of reach, MAP-QSH-CORE), open at the two door bays
     /// (jambs, floor, the glass plane and fixed leaves beside the open leaves, lintel); each column from the floor to the
     /// ceiling; the colonnade floor as stone slabs round the ring.
     /// </summary>

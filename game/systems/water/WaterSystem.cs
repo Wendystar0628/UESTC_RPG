@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Systems.Water;
 
 /// <summary>
-/// Godot side of the water system (WLD-WATER §7.2, ENG-PERF §10.4): the planar reflection of the lake that fills most
+/// Godot side of the water system (WLD-WATER, ENG-PERF): the planar reflection of the lake that fills most
 /// of the screen. A SubViewport with its own World3D (no shadow-casting light there), a mirrored camera, and every
 /// N frames one render; reflect_tex, reflect_vp and reflect_lake are written for water.gdshader. The reflection is a
 /// style floor: it never switches off, only its refresh interval follows the quality setting (2 / 3 / 4 frames).
@@ -57,7 +57,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
 
     /// <summary>
     /// The reflect_flat override for every proxy in the reflection world. Its water_y follows the reflected lake,
-    /// so fragments under the water plane are dropped (4.7 has no oblique near plane, ENG-PERF §10.4).
+    /// so fragments under the water plane are dropped (4.7 has no oblique near plane, ENG-PERF).
     /// </summary>
     public ShaderMaterial? ReflectionProxyMaterial => _proxyMaterial;
 
@@ -121,7 +121,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     public void ApplyQuality(QualityView view, in QualityChange change)
     {
         ArgumentNullException.ThrowIfNull(view);
-        // Style floor: every 2–4 frames, never off (SYS-GRAPHICS §2); anything outside clamps to the worst value.
+        // Style floor: every 2–4 frames, never off (SYS-GRAPHICS); anything outside clamps to the worst value.
         var n = (int)MathF.Round(view[QualityKnob.ReflectionInterval]);
         _interval = n is >= 2 and <= 4 ? n : 4;
     }
@@ -134,7 +134,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
             _instance = _world.Instance;
             _lakes.Reset();
         }
-        // Underground and underwater the reflection is invisible: stop rendering it (SYS-VIEW §5). Not a quality option.
+        // Underground and underwater the reflection is invisible: stop rendering it (SYS-VIEW). Not a quality option.
         var kind = _medium?.Current.Kind ?? MediumKind.Air;
         if (kind is MediumKind.Underwater or MediumKind.Underground)
         {
@@ -176,7 +176,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
     }
 
-    /// <summary>The reflection uses the main world's tone mapping (ENG-PERF §10.4); sky, ambient, glow and fog stay off.</summary>
+    /// <summary>The reflection uses the main world's tone mapping (ENG-PERF); sky, ambient, glow and fog stay off.</summary>
     private void SyncEnvironment()
     {
         var source = GetViewport().FindWorld3D()?.Environment;

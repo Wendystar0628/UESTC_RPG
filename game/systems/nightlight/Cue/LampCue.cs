@@ -5,7 +5,7 @@ using Campus.Systems.Nightlight.Schedule;
 namespace Campus.Systems.Nightlight.Cue;
 
 /// <summary>
-/// 过场"初灯沿路推进"的灯光提示（SYS-TITLE §3.3）：只改先后、不改终值。
+/// 过场"初灯沿路推进"的灯光提示（SYS-TITLE）：只改先后、不改终值。
 /// 覆盖期间，lamp.cue 那一组灯（路线带宽以内的初灯组，κ = 沿路线的弧长比例）按前沿依次亮起，
 /// 判开灯用目标钟点的太阳高度（17:30 本该亮着的那些灯才亮，其余照旧不亮）；撤销后各值与不覆盖时完全相同。
 /// 只在 AppState.Entering 生效，由调用方（NightlightNode）把关；这里只按时间轴求前沿。

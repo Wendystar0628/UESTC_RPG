@@ -11,7 +11,7 @@ public readonly record struct ScheduleInput(
 public readonly record struct CueOverride(float Front, float Band, float TargetSunDeg);
 
 /// <summary>
-/// 32 个灯光通道的每帧求值（ENG-PERF §10.3）。只算数：结果交给 WP-03 的通道写入接口。
+/// 32 个灯光通道的每帧求值（ENG-PERF）。只算数：结果交给 WP-03 的通道写入接口。
 /// 目标值只由钟点、h_eff 与季节决定（可复现）；过渡宽度 Δ 随通道的变化速率自适应，
 /// 世界实例变了（IWorldState.Instance）就直接落到新值，不带历史。
 /// </summary>

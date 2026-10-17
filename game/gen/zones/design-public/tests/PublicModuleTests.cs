@@ -59,7 +59,7 @@ public sealed class PublicModuleTests
         }
     }
 
-    /// <summary>MAP-QSH-ADDITIONS §2.3: a 4 m bench whose back faces the evening sun, a tree north-east of it, both on the pad.</summary>
+    /// <summary>MAP-QSH-ADDITIONS: a 4 m bench whose back faces the evening sun, a tree north-east of it, both on the pad.</summary>
     [TestCase]
     public void BenchAndTreeSitOnThePadFacingTheSun()
     {
@@ -97,7 +97,7 @@ public sealed class PublicModuleTests
             foreach (var box in PocketGreens.SeatBoxes(bench, Ground))
             {
                 var top = box.At.M42 + box.Half.Y - deck;
-                Require(top is >= 0.35f and <= 1.25f, $"{bench.Id.Value} seat box top {top:F2} m is jumpable (SYS-WALK §7)");
+                Require(top is >= 0.35f and <= 1.25f, $"{bench.Id.Value} seat box top {top:F2} m is jumpable (SYS-WALK)");
             }
             var seats = PocketGreens.Seats(bench, Ground);
             Require(seats.Count == PublicTune.Bench.ColliderBoxes && seats.All(s => s.Back), $"{bench.Id.Value} declares a backed seat edge on every box");

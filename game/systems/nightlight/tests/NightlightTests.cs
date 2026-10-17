@@ -62,7 +62,7 @@ public sealed class NightlightTests
     {
         var s = Default();
         var general = s.SlotOf(new ChannelId("window.general"));
-        // SYS-TIME §6：17:22–17:40（6.9° → 3.7°）约 20% → 70%，17:30（5.5°）约 40%
+        // SYS-TIME：17:22–17:40（6.9° → 3.7°）约 20% → 70%，17:30（5.5°）约 40%
         Near(0.2f, s.Target(general, At(17.37, 6.9f)), 0.06f, "window.general at 17:22");
         Near(0.4f, s.Target(general, At(17.5, 5.5f)), 0.05f, "window.general at 17:30");
         Near(0.7f, s.Target(general, At(17.67, 3.7f)), 0.08f, "window.general at 17:40");

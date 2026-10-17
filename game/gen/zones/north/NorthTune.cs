@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.North;
 
 /// <summary>
-/// Every tunable value of the north zone in one place, for review (WF-FLOW §4): materials as colour names, the cluster
+/// Every tunable value of the north zone in one place, for review (WF-FLOW): materials as colour names, the cluster
 /// table and the dimensions of each site. Coordinates are world (x, z) in metres from campus.json; local frames are
 /// described per block. Values marked "初值" are starting values awaiting the main session's call.
 /// </summary>
@@ -14,7 +14,7 @@ public static class NorthTune
     public const int BudgetTrianglesL1 = 24_000;
     public const int BudgetDrawCalls = 14;
 
-    /// <summary>Materials (ART-STYLE §8 colour names only).</summary>
+    /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
@@ -28,9 +28,9 @@ public static class NorthTune
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
         /// <summary>Thresholds, islands, the hall landing and its steps: warm granite.</summary>
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift);
-        /// <summary>Fence posts and rails, barrier arms: deep grey steel (MAP-QSH-NORTH §4.7, §8). 初值：借 WP-12 的围挡深灰。</summary>
+        /// <summary>Fence posts and rails, barrier arms: deep grey steel (MAP-QSH-NORTH). 初值：借 WP-12 的围挡深灰。</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.BevelLift, LineClass.Fine, 0.4f);
-        /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching (ART-AMBIENCE §0.1).</summary>
+        /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching (ART-AMBIENCE).</summary>
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);
         /// <summary>Turnstile cabinets, barrier cabinets, scanner stalks: brushed stainless.</summary>
         public static readonly ToonSpec Stainless = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
@@ -47,7 +47,7 @@ public static class NorthTune
         /// <summary>Closed-lane cross. 借用：`maple`；WP-12 的 `equip.fireRed`（全校的红）进 main 后换。</summary>
         public static readonly ToonSpec CrossRed = S("maple", ToonFx.None, LineClass.None, 0.2f);
         public static readonly ToonSpec Wood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
-        /// <summary>Canal-bank railing: light painted steel, the north-gate plaza's (WP-30 30a, MAP-QSH-WEST §10.4 浅色栏杆), so the two runs read as one.</summary>
+        /// <summary>Canal-bank railing: light painted steel, the north-gate plaza's (WP-30 30a, MAP-QSH-WEST 浅色栏杆), so the two runs read as one.</summary>
         public static readonly ToonSpec LightSteel = S("wall.greyWhite", ToonFx.None, LineClass.Fine, 0.4f);
         /// <summary>Canal-bank railing bars: same colour, no outline.</summary>
         public static readonly ToonSpec LightBar = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.4f);
@@ -57,16 +57,16 @@ public static class NorthTune
     /// <param name="Id">Cluster entity (its OSM polygon is the fence line).</param>
     /// <param name="Key">Short key for site IDs and overlay IDs.</param>
     /// <param name="MainGate">Near the road crossing that gets the guard house; the nearest crossing within 15 m wins.</param>
-    /// <param name="Open">Walk mode: the main gate's wings retracted, arrows green (WLD-INTERIORS §2.8, §4).</param>
-    /// <param name="Facade">Wall preset handed to WP-14 through the overlay's StyleOp (MAP-QSH-RENOVATION §2.1, §11 初值).</param>
+    /// <param name="Open">Walk mode: the main gate's wings retracted, arrows green (WLD-INTERIORS).</param>
+    /// <param name="Facade">Wall preset handed to WP-14 through the overlay's StyleOp (MAP-QSH-RENOVATION 初值).</param>
     public sealed record Cluster(string Id, string Key, string Name, Vector2 MainGate, bool Open, string Facade, string[] Buildings);
 
     /// <summary>
     /// 20a clusters: 学知苑 1–8 and the international students' cluster. Wall presets (§11 初值): 二组团 A 型暖米黄（原型），
     /// 六组团 B 型（原型），其余在暖米黄与浅奶咖之间分配，相邻组团尽量不同色；竖带一律陶红。
-    /// 20b1 clusters: 硕丰苑 (MAP-QSH-NORTH §4.4): 1–20 栋 the renovated stone-beige master's dormitories, 21–28 and 30–33 栋
+    /// 20b1 clusters: 硕丰苑 (MAP-QSH-NORTH): 1–20 栋 the renovated stone-beige master's dormitories, 21–28 and 30–33 栋
     /// the newer grey-white ones, with the two small annexes 9803、9804 of their clusters.
-    /// 20b2 clusters: 博翰苑 (MAP-QSH-RENOVATION §8.3, §9): 一组团 1–6 栋 in the master's language, walled in cream coffee
+    /// 20b2 clusters: 博翰苑 (MAP-QSH-RENOVATION): 一组团 1–6 栋 in the master's language, walled in cream coffee
     /// to stand apart from the stone-beige 硕丰五 and grey-white 硕丰十 beside them; 二组团 7–8 栋 and the same-batch
     /// 留学生 2 栋 (2015), cream coffee with warm-white window bands. 博翰苑 9 栋 stands inside 硕丰十's fence (<see cref="Singles"/>).
     /// Main gates of 硕丰 and 博翰 (main session 18:26): the vehicle gate nearest the highest-grade road beside the cluster
@@ -132,8 +132,8 @@ public static class NorthTune
 
     /// <summary>
     /// Buildings handed to WP-14 with a family and a preset but no cluster of their own (20b2): 博翰苑 9 栋, the three
-    /// blocks of WLD-INTERIORS §17, and (20a-4) 5232、5561、9693, all closed — shell, window cards and the simplified interior only (INV-11); WP-14 keeps
-    /// its generic door, shut, so no entrance is registered. Families pick the window cards (WLD-INTERIORS §5.1).
+    /// blocks of WLD-INTERIORS, and (20a-4) 5232、5561、9693, all closed — shell, window cards and the simplified interior only (INV-11); WP-14 keeps
+    /// its generic door, shut, so no entrance is registered. Families pick the window cards (WLD-INTERIORS).
     /// </summary>
     public static readonly StyledBuilding[] Singles =
     [
@@ -150,7 +150,7 @@ public static class NorthTune
     /// <summary>Facade preset keys written into overlay/north.d/ StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
     public static class Facades
     {
-        /// <summary>本科 A 型：宿舍暖米黄墙配陶红竖向墙带（MAP-QSH-NORTH §4.2）。</summary>
+        /// <summary>本科 A 型：宿舍暖米黄墙配陶红竖向墙带（MAP-QSH-NORTH）。</summary>
         public const string ADormYellow = "dorm.a.dormYellow";
         /// <summary>本科 A 型的另一组团色：浅奶咖墙配陶红竖向墙带（§4.5）。</summary>
         public const string ACreamCoffee = "dorm.a.creamCoffee";
@@ -164,13 +164,13 @@ public static class NorthTune
         public const string MasterCreamCoffee = "dorm.master.creamCoffee";
         /// <summary>博翰苑 7–9 栋与留学生 2 栋（2015）：浅奶咖墙垛夹暖白窗带，更新、更干净（§4.4、§4.11）。</summary>
         public const string MasterCreamCoffeeWhite = "dorm.master.creamCoffeeWhite";
-        /// <summary>附属小楼（WLD-INTERIORS §17）：4499 社区活动室、5247 配电房水泵房取博翰苑浅奶咖，6735 取校医院的浅灰。</summary>
+        /// <summary>附属小楼（WLD-INTERIORS）：4499 社区活动室、5247 配电房水泵房取博翰苑浅奶咖，6735 取校医院的浅灰。</summary>
         public const string AnnexService = "annex.service.creamCoffee", AnnexUtility = "annex.utility.creamCoffee", AnnexHospital = "annex.utility.greyWhite";
-        /// <summary>2015 年以后的新楼，按区文档新楼外观（MAP-QSH-RENOVATION §9），不写 StyleOp。</summary>
+        /// <summary>2015 年以后的新楼，按区文档新楼外观（MAP-QSH-RENOVATION），不写 StyleOp。</summary>
         public const string New = "";
     }
 
-    /// <summary>Cluster fence (MAP-QSH-NORTH §4.7, §8): 2.2 m see-through steel bars, a 1.2 m clipped hedge inside.</summary>
+    /// <summary>Cluster fence (MAP-QSH-NORTH): 2.2 m see-through steel bars, a 1.2 m clipped hedge inside.</summary>
     public static class Fence
     {
         /// <summary>The fence runs this far inside the cluster polygon (OSM traces the kerb), more where a road runs alongside.</summary>
@@ -185,7 +185,7 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// Cluster gate at a road crossing (MAP-QSH-NORTH §4.7, MAP-QSH-RENOVATION N-22). Frame: origin on the fence line at the
+    /// Cluster gate at a road crossing (MAP-QSH-NORTH, MAP-QSH-RENOVATION N-22). Frame: origin on the fence line at the
     /// crossing, X along the fence, +Z out of the cluster. Vehicle lane centred on the road, the barrier cabinet on an
     /// island at +X, the face-scan turnstile bank beyond it, and at the main gate the guard house beyond the bank.
     /// </summary>
@@ -193,7 +193,7 @@ public static class NorthTune
     {
         public const float LaneMargin = 0.4f, IslandWidth = 0.7f, CurbRise = 0.15f;
         public const int Passages = 2;
-        /// <summary>Clear passage width: 1.1 m on the open route (WLD-INTERIORS §10), 1.0 m elsewhere.</summary>
+        /// <summary>Clear passage width: 1.1 m on the open route (WLD-INTERIORS), 1.0 m elsewhere.</summary>
         public const float Passage = 1.0f, OpenPassage = 1.1f;
         /// <summary>Cabinet: about 1.05 m tall; the collision top still goes to 1.5 m (§8: otherwise it can be jumped).</summary>
         public const float CabinetWidth = 0.24f, CabinetDepth = 1.4f, CabinetHeight = 1.05f, ColliderTop = 1.5f;
@@ -209,7 +209,7 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// Terrace levels of north.terrain.json (MAP-QSH-TERRAIN §7.2, §7.3), mirrored here for the authored heights that sit
+    /// Terrace levels of north.terrain.json (MAP-QSH-TERRAIN), mirrored here for the authored heights that sit
     /// on them. The terrain file is the only source of the ground; these constants never replace a HeightAt query.
     /// </summary>
     public static class Terrain
@@ -220,7 +220,7 @@ public static class NorthTune
     /// <summary>
     /// Inspection probes of 20a (MAP-QSH-NORTH 近景巡检点): Q1 outside 学知一组团's open gate at eye height (walk, K1),
     /// Q4 against 学知苑 1 栋's ground floor at 0.5 m (首层贴墙, N-01), Q6 45° down over the 学知一 courtyard from about 40 m.
-    /// All three stand on the upper terrace (MAP-QSH-TERRAIN §7.5): eye heights are terrace + 1.62 m, so they float 3 m
+    /// All three stand on the upper terrace (MAP-QSH-TERRAIN): eye heights are terrace + 1.62 m, so they float 3 m
     /// above the flat stub until the WP-08 evaluator lands.
     /// </summary>
     public static class Probes
@@ -234,12 +234,12 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 学知一 courtyard stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS §0 R6): one gently bowed seat wall at the
+    /// 学知一 courtyard stay point (20a-2, moved in 20a-3; D-185, MAP-QSH-ADDITIONS R6): one gently bowed seat wall at the
     /// courtyard walk (the cluster road's north-east leg toward 银杏大道), on its south-east side. It faces north-west across
     /// the walk to the hill (design:terrain:north-xz1-court-hill) and the lawn behind it; at its back is the lawn in front of
     /// the south dormitory, whose windows stay 10 m off. A paved pad fills the space between the wall and the walk's edge, so
     /// the seat is reached from the walk without crossing grass. Granite body sunk into the ground, a warm wood seat with a
-    /// small overhang (ART-FIDELITY §0: chamfered, capped). Plan points are world (x, z); the bow is a quadratic curve through
+    /// small overhang (ART-FIDELITY: chamfered, capped). Plan points are world (x, z); the bow is a quadratic curve through
     /// <see cref="SeatMid"/>, bulging away from the walk so the wall gathers the view. 初值。
     /// </summary>
     public static class Court
@@ -261,7 +261,7 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// Canal-bank railing along the 商业街 side of 红光右支渠北段 (20a-4; MAP-QSH-NORTH §8 碰撞体, MAP-QSH-TERRAIN §6: the bank is
+    /// Canal-bank railing along the 商业街 side of 红光右支渠北段 (20a-4; MAP-QSH-NORTH 碰撞体, MAP-QSH-TERRAIN: the bank is
     /// a stone wall with a railing, 1.05 m at least, collision top 1.5 m). It starts where the north-gate plaza's railing
     /// (WP-30 30a, design:boundary-north-a05-plaza, commit 04767c7) ends and runs south along the east bank to the street's far
     /// end. Frame as the plaza's: <c>t</c> along the straight water edge (toward bearing 21.8°, so the run south into the campus
@@ -285,7 +285,7 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 硕丰苑十组团 rest deck (20b1; D-185 R6, MAP-QSH-ADDITIONS §2.1 休憩平台, registered as design:north-sf10-deck): the
+    /// 硕丰苑十组团 rest deck (20b1; D-185 R6, MAP-QSH-ADDITIONS 休憩平台, registered as design:north-sf10-deck): the
     /// courtyard's one stay point, 12 × 8 m and 0.45 m high so its edge is the seat; deep grey steel frame, wood top in four
     /// boards around a square pit holding a clipped shrub. Long side along 33、32 栋, 20 m and more off every wall. 初值。
     /// </summary>
@@ -301,19 +301,19 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// 学知苑 1 栋 front door toward the courtyard (MAP-QSH-NORTH §4.12, WLD-INTERIORS §2.8, §2.17 `xz1.hall`). The door
+    /// 学知苑 1 栋 front door toward the courtyard (MAP-QSH-NORTH, WLD-INTERIORS `xz1.hall`). The door
     /// centre and facing come from the interior index (EntranceDecl); the porch sits on the facade edge nearest to it.
     /// Frame: origin on the footprint (glass plane), X along the facade, +Z out to the courtyard.
     /// </summary>
     public static class Hall
     {
         public const string Feature = "qsh:way:217855218";
-        /// <summary>Ground floor raised about 1.0 m above the courtyard (MAP-QSH-TERRAIN §7.4), reached by 6–8 risers.</summary>
+        /// <summary>Ground floor raised about 1.0 m above the courtyard (MAP-QSH-TERRAIN), reached by 6–8 risers.</summary>
         public const float FloorRaise = 1.0f, Tread = 0.33f;
         public const int MinRisers = 6, MaxRisers = 8;
         /// <summary>WP-14's wall face stands one reveal outside the footprint.</summary>
         public const float WallFace = 0.3f;
-        /// <summary>Landing reaches past the 2.5 m teleport landing in front of the door (SYS-ATLAS §5).</summary>
+        /// <summary>Landing reaches past the 2.5 m teleport landing in front of the door (SYS-ATLAS).</summary>
         public const float LandingWidth = 6.4f, LandingDepth = 3.2f, StepsWidth = 3.2f;
         /// <summary>Vestibule block (门斗) with a through doorway; double glass leaves fixed open against the reveals.</summary>
         public const float VestibuleWidth = 3.6f, VestibuleDepth = 1.2f, VestibuleHeight = 3.4f, DoorWidth = 1.8f, DoorHeight = 2.5f;

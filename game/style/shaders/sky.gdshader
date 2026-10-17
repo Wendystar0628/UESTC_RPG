@@ -1,11 +1,11 @@
 // sky.gdshader：全日天空（WP-40）
-// 规格：ART-SKYLIGHT §4、§5.3；SYS-TIME §3.2；SYS-WEATHER §2、§5、§7；ENG-PERF §1.4、§1.5。
+// 规格：ART-SKYLIGHT；SYS-TIME；SYS-WEATHER；ENG-PERF。
 // 主线版：五段渐变（太阳侧 / 背阳侧，夜间换月侧）、霾带、日盘与柔光、月盘（球面明暗与月晕）、星空、
 // 半分辨率云层（四分之一分辨率通道只记轮廓朝向，给金边与下沿高光用；积云：1.5 km 高的云底平面 + 高度场团块，硬边三阶；层云：满覆盖、两阶、留亮缝）。
-// 颜色只读调色板纹理第 0 行（ENG-PERF §1.5 的行布局，色号与 game/style/palette/core.json 一致），着色器里不写颜色。
+// 颜色只读调色板纹理第 0 行（ENG-PERF 的行布局，色号与 game/style/palette/core.json 一致），着色器里不写颜色。
 // 不用内置 TIME；时间只读 anim_time、step_rate；日月方向读全局参数里的真实方向（sun_dir、moon_dir），不读 LIGHT0。
 // 当前帧的云量与阈值由 SkyNode 写进本材质的两个 uniform（云量来自 IColorScriptFrame，不从脚本读回全局参数）。
-// 后置细节（ENG-WP §2.1）：银河、城市天光方位、九项光效、远处雨幕与云内闪、彩虹、积雨云卡片。
+// 后置细节（ENG-WP）：银河、城市天光方位、九项光效、远处雨幕与云内闪、彩虹、积雨云卡片。
 
 shader_type sky;
 render_mode use_half_res_pass, use_quarter_res_pass;
@@ -22,7 +22,7 @@ uniform float cloud_thr = 1.0;     // 当前云量对应的积云密度阈值（
 // ---------------------------------------------------------------------------
 // 可调参数（集中在这里，评审定值；C# 一侧的在 SkyTuning.cs）
 // ---------------------------------------------------------------------------
-// 日盘：直径放大到真实的 1.5 倍（ART-SKYLIGHT §2.3）
+// 日盘：直径放大到真实的 1.5 倍（ART-SKYLIGHT）
 const float SUN_RADIUS_DEG = 0.40;
 const float SUN_LOW_FROM = 3.0;      // 太阳低于这个高度：橙红硬边圆盘
 const float SUN_LOW_TO = 20.0;       // 高于这个高度：白金色、柔光晕开
@@ -31,17 +31,17 @@ const float SUN_LOW_GAIN = 1.45;
 const float SUN_HIGH_GAIN = 1.7;     // 高太阳略超 1，交给后期柔光晕开
 const float SUN_HALO_LOW = 0.18;
 const float SUN_HALO_HIGH = 0.55;
-// 月盘：直径约为真实的 2 倍（ART-SKYLIGHT §5.3），只带一圈很淡的光晕
+// 月盘：直径约为真实的 2 倍（ART-SKYLIGHT），只带一圈很淡的光晕
 const float MOON_RADIUS_DEG = 0.52;
 const float MOON_GAIN = 1.05;
 const float MOON_HALO = 0.07;
 const float MOON_MARIA = 0.86;       // 两三块淡灰斑的明度系数
 const float MOON_LIMB = 0.93;        // 外圈一阶的明度系数（只为看出球面）
-// 星空：立方体面网格，每格至多一颗（ART-SKYLIGHT §4.11）；上半球约 280 颗
+// 星空：立方体面网格，每格至多一颗（ART-SKYLIGHT）；上半球约 280 颗
 const float STAR_GRID = 16.0;
 const float STAR_P = 0.36;
 const float STAR_GAIN = 1.0;
-// 积云层（SYS-WEATHER §7）：云底 1.5 km 平面，团块高度场 = (密度 − 阈值) × 高度系数
+// 积云层（SYS-WEATHER）：云底 1.5 km 平面，团块高度场 = (密度 − 阈值) × 高度系数
 const float CU_BASE = 1500.0;
 // 云体 = { 密度(xz) − 阈值 − 剖面(高度) > 0 }，云底 y = CU_BASE 处平切：
 // 剖面在云底略收（下沿往里收一点，侧面在 CU_BULGE_Y 处鼓出），往上按 ((y − 鼓出高)/顶高)² 收成穹顶，
@@ -98,10 +98,10 @@ const float CU_GRAZE_FROM = 0.06;    // |n·视线| 小于它的面不单独受�
 const float CU_GRAZE_TO = 0.22;
 const float CU_HL_SUN_FROM = 12.0;   // 太阳低于这个高度才有（夜里按月亮算）
 const float CU_HL_SUN_TO = 25.0;
-// 火烧云：太阳贴着地平线（约 −4° 到 4°）时，薄的云底边被从下方点燃（SYS-WEATHER §2"低太阳时云腹被点燃"）
+// 火烧云：太阳贴着地平线（约 −4° 到 4°）时，薄的云底边被从下方点燃（SYS-WEATHER"低太阳时云腹被点燃"）
 const float CU_UNDER_REACH = 320.0;  // 云底朝太阳一侧被点燃的宽度（m）
 const float CU_UNDER_MIX = 0.75;
-// 层云盖（阴、雨，ART-SKYLIGHT §4.12）
+// 层云盖（阴、雨，ART-SKYLIGHT）
 const float DECK_Y = 1150.0;
 const float DECK_TILE = 48000.0;
 const float DECK_MAX_DIST = 70000.0;
@@ -117,7 +117,7 @@ const float DECK_CELL_MIX = 0.16;
 
 // ---------------------------------------------------------------------------
 // 五段渐变、霾带、定侧（太阳侧 / 背阳侧，入夜换月侧）、OKLab 换算与调色板取色都在 fog.gdshaderinc 里，
-// 与共用雾函数、玻璃映天同一份（ART-SKYLIGHT §4.1–§4.3、§6.5），地平线处天色等于雾色。
+// 与共用雾函数、玻璃映天同一份（ART-SKYLIGHT），地平线处天色等于雾色。
 // 五段的仰角 [0°, 4°, 12°, 28°, 90°] 是那里的 SKY_STOP_DEG。
 // ---------------------------------------------------------------------------
 float aastep(float edge, float x) {
@@ -141,7 +141,7 @@ vec3 add_sun(vec3 c, vec3 dir, float px, float w_sun) {
 	vec3 disc = mix(light * SUN_HIGH_GAIN, mix(light, pal_cur(PAL_SKY_SUN0 + 1), SUN_LOW_ORANGE) * SUN_LOW_GAIN, low);
 	float above = smoothstep(-px, px, dir.y);
 	float fogk = sky_fog_weather_k();
-	// 雾天：一枚隔雾可见的淡白圆，不带光晕（ART-SKYLIGHT §2.3）
+	// 雾天：一枚隔雾可见的淡白圆，不带光晕（ART-SKYLIGHT）
 	disc = mix(disc, mix(pal_cur(PAL_WEATHER_FOG), light, 0.35) * 1.05, fogk);
 	// 低于霾带时日盘被霾染色、压暗
 	float e = degrees(asin(clamp(dir.y, -1.0, 1.0)));
@@ -173,7 +173,7 @@ vec3 add_moon(vec3 c, vec3 dir, float px) {
 	float chord = length(off);
 	vec3 col = moon_color();
 	float above = smoothstep(-px, px, dir.y);
-	// 月晕：一圈很淡的光晕，不出镜头光斑（ART-STYLE §7.3）
+	// 月晕：一圈很淡的光晕，不出镜头光斑（ART-STYLE）
 	c += col * MOON_HALO * (exp(-chord / radians(2.2)) + 0.4 * exp(-chord / radians(9.0))) * above;
 	if (chord > r + 2.0 * px) {
 		return c;
@@ -652,7 +652,7 @@ vec3 composite_clouds(vec3 sky, vec3 dir, vec4 cl, vec4 rq) {
 		float near_light = mix(CU_RIM_FAR, 1.0, smoothstep(-0.3, 0.8, sd));
 		float deck_k = 1.0 - 0.75 * deck_amount();
 		col = mix(col, pal_cur(PAL_SKY_CLOUD_RIM), band * facing * near_light * deck_k);
-		// 云底下沿的白色细高光：低太阳从下方照亮（ART-SKYLIGHT §4.5）
+		// 云底下沿的白色细高光：低太阳从下方照亮（ART-SKYLIGHT）
 		vec2 up = vec2(dFdx(dir.y), dFdy(dir.y));
 		float bottom = length(up) > 1e-7 ? smoothstep(0.35, 0.8, -dot(outward, normalize(up))) : 0.0;
 		bottom = mix(bottom, fb.y, q_k);
@@ -668,7 +668,7 @@ void sky() {
 	vec3 sx = dFdx(EYEDIR);
 	vec3 sy = dFdy(EYEDIR);
 	if (AT_CUBEMAP_PASS) {
-		// 卡通材质不读天空的环境光和反射（ENG-BUDGET §10）：辐照度图只给常量，云和天气每帧变也不让它变贵
+		// 卡通材质不读天空的环境光和反射（ENG-BUDGET）：辐照度图只给常量，云和天气每帧变也不让它变贵
 		COLOR = vec3(0.5);
 	} else if (AT_QUARTER_RES_PASS) {
 		vec4 q = vec4(0.0);

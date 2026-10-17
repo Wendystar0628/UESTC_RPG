@@ -11,11 +11,11 @@ using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 namespace Campus.Gen.Zones.CenterEast.Wenke;
 
 /// <summary>
-/// The lawn in front of 文科楼's atrium door (MAP-QSH-CENTER-EAST §3.4), a functional open space (MAP-QSH-ADDITIONS R6)
+/// The lawn in front of 文科楼's atrium door (MAP-QSH-CENTER-EAST), a functional open space (MAP-QSH-ADDITIONS R6)
 /// that frames the view east to the training hall and the moonrise: a granite stop in front of the shut door and a walk
 /// from it to the road junction, the friendship tree's three timber stakes and green trunk cloth (the camphor itself is
 /// WP-23's, at the registered point), and the granite landscape stone beside it with the gold original emblem on its
-/// dressed face (ART-STYLE §11). The lawn's middle and the 2.5 m outside the door stay clear. Values in <see cref="F"/>, <see cref="K"/>.
+/// dressed face (ART-STYLE). The lawn's middle and the 2.5 m outside the door stay clear. Values in <see cref="F"/>, <see cref="K"/>.
 /// </summary>
 public sealed class WenkeForecourtSite : CenterEastSite
 {
@@ -90,7 +90,7 @@ public sealed class WenkeForecourtSite : CenterEastSite
     // ---- The landscape stone and its gold emblem ----
 
     /// <summary>
-    /// The granite stone sunk 8 cm into the lawn, its dressed face toward the forecourt. The emblem (ART-STYLE §11: a
+    /// The granite stone sunk 8 cm into the lawn, its dressed face toward the forecourt. The emblem (ART-STYLE: a
     /// round badge, a fine outer ring round an octagonal device) is a single-colour gold relief on the face: a disc, a
     /// raised ring near its rim and an octagon in the middle; the circuit traces wait for the detail pass.
     /// </summary>

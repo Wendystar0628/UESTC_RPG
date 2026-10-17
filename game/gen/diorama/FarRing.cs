@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Diorama;
 
 /// <summary>
-/// The far ring (WLD-DIORAMA §5.4 far layer, §6): one continuous height field round the whole horizon, low hills everywhere
+/// The far ring (WLD-DIORAMA far layer, §6): one continuous height field round the whole horizon, low hills everywhere
 /// and the snow mountains rising out of them at their bearings, visual height = true elevation × visualScale (§6.1).
 /// Columns run along the bearing (finer across the mountains), rows from the front foot (closer, low) to the crest (the
 /// silhouette); a skirt drops from the foot far below the fog sea. Smooth normals come from the field, so the lit and

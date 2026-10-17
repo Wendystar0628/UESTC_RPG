@@ -13,7 +13,7 @@ public static class ScheduleMath
         return t * t * (3f - 2f * t);
     }
 
-    /// <summary>有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER §7、SYS-TIME §6）。</summary>
+    /// <summary>有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER、SYS-TIME）。</summary>
     public static float EffectiveSun(float sunAltDeg, float overcast, float precip, EffectiveSunSpec spec) =>
         sunAltDeg - spec.OvercastDeg * Math.Clamp(overcast, 0f, 1f) - spec.PrecipDeg * Math.Clamp(precip, 0f, 1f);
 

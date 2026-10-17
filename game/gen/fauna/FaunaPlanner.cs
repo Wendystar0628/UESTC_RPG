@@ -29,7 +29,7 @@ public readonly record struct FaunaModelKey(FaunaKind Kind, CatCoat Coat, byte P
 public sealed record FaunaInstance(FaunaModelKey Model, Vector3 Position, float Yaw, float Scale);
 
 /// <summary>
-/// One place with its own latch (WLD-LIFE §6.2): the animals it shows in each set. A set may be empty (the pigeons' night
+/// One place with its own latch (WLD-LIFE): the animals it shows in each set. A set may be empty (the pigeons' night
 /// roost is under the eaves, out of sight). <see cref="Bounds"/> covers every set, so a switch waits until all of them are off-screen.
 /// </summary>
 public sealed record FaunaSite(string Key, FaunaKind Kind, IReadOnlyList<FaunaInstance> Day, IReadOnlyList<FaunaInstance> Night,
@@ -47,10 +47,10 @@ public sealed record FaunaSite(string Key, FaunaKind Kind, IReadOnlyList<FaunaIn
 public sealed record FaunaLayout(IReadOnlyList<FaunaSite> Sites, IReadOnlyList<string> Log);
 
 /// <summary>
-/// Chooses the mainline animal sites from the world model alone (WLD-LIFE §1): no feature IDs, no map IDs. Buildings are found by
+/// Chooses the mainline animal sites from the world model alone (WLD-LIFE): no feature IDs, no map IDs. Buildings are found by
 /// the entity category (residence, research, dining), the pigeon plaza is the largest stepped plaza (overlay kind "steps"), perches
 /// are seat walls (kind "seat-wall") and sparrows keep to trees of the planting network. Ground heights come from the world's
-/// terrain (WLD-TERRAIN §4.4). Deterministic: the same world and seed give the same layout.
+/// terrain (WLD-TERRAIN). Deterministic: the same world and seed give the same layout.
 /// </summary>
 public static class FaunaPlanner
 {
@@ -184,7 +184,7 @@ public static class FaunaPlanner
         var plaza = plazas[0];
         var centre = Centroid(plaza.Ring);
         var foot = Prop(plaza.Feature, "footRadius") ?? MathF.Sqrt(plaza.Area / float.Pi) * 0.9f;
-        // Toward the library when there is one (the flock keeps to the plaza and the library's great steps, WLD-LIFE §1).
+        // Toward the library when there is one (the flock keeps to the plaza and the library's great steps, WLD-LIFE).
         var library = buildings.Where(b => b.Category == "library").OrderByDescending(b => b.Area).FirstOrDefault();
         var toward = library is null ? Vector2.UnitY : OrganicMeshExt.Unit2(Centroid(library.Ring) - centre, Vector2.UnitY);
         var flock = centre + toward * (foot * S.PigeonRingFraction);
@@ -200,7 +200,7 @@ public static class FaunaPlanner
             var peck = rng.NextFloat() < 0.6f;
             if (!free(p) || taken.Any(q => Vector2.Distance(p, q) < 0.5f)) continue;
             taken.Add(p);
-            var white = day.Count == 4;   // one white bird among the grey (WLD-LIFE §1)
+            var white = day.Count == 4;   // one white bird among the grey (WLD-LIFE)
             day.Add(new(FaunaModelKey.PigeonOf(peck ? BirdPose.Peck : BirdPose.Stand, white), new(p.X, ground(p) + S.PavingLift, p.Y), yaw, S.Scale));
         }
         sites.Add(Site("pigeons.plaza", FaunaKind.Pigeon, day, [], []));

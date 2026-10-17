@@ -2,11 +2,11 @@
   "format": "campus.colorscript.probe/1",
   "owner": "WP-37",
   "notes": [
-    "自检与预览用的材质清单：固有色抄自 ART-STYLE §8.1、§8.3，是 WP-04 核心表的镜像，正式值与色名以 WP-04 的登记表为准。",
-    "带 registered 的条目是 ART-STYLE §8.1 / §3.7 给出的默认格登记值，自检时与推导结果比对 ΔE。",
+    "自检与预览用的材质清单：固有色抄自 ART-STYLE，是 WP-04 核心表的镜像，正式值与色名以 WP-04 的登记表为准。",
+    "带 registered 的条目是 ART-STYLE / §3.7 给出的默认格登记值，自检时与推导结果比对 ΔE。",
     "token 一栏凡是核心表里还没有名字的，用暂定名（标 provisional），只在本工具里用。",
-    "warmShade：标明暖影的暖墙，不按中性材质判影色（SYS-TIME §8、ART-STYLE §3.7）。",
-    "kind glass：玻璃的上屏颜色由映天色与斜条决定（ART-STYLE §5.1、ToonKind.Glass），不按中性材质判影色。"
+    "warmShade：标明暖影的暖墙，不按中性材质判影色（SYS-TIME、ART-STYLE）。",
+    "kind glass：玻璃的上屏颜色由映天色与斜条决定（ART-STYLE、ToonKind.Glass），不按中性材质判影色。"
   ],
   "materials": [
     { "token": "wall",            "name": "暖米白墙（宿舍米白墙）", "class": "building", "albedo": "#E4DDD0", "registered": { "lit": "#FFE4BE", "shade": "#A1A6BB" }, "noonShade": "#ABBFCA" },

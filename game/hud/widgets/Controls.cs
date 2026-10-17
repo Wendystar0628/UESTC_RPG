@@ -4,7 +4,7 @@ using Godot;
 namespace Campus.Hud.Widgets;
 
 /// <summary>
-/// 分段选择（UI-VISUAL §7.3）：外框 1 px line.control，段间发丝线；选中 = 选中底 + text.1 Medium + 底边 2 px 指示条，
+/// 分段选择（UI-VISUAL）：外框 1 px line.control，段间发丝线；选中 = 选中底 + text.1 Medium + 底边 2 px 指示条，
 /// 指示条用空间弹簧（0.22 s）滑到新项；禁用段可聚焦并读出原因；组内方向键切换。
 /// </summary>
 public partial class Segmented : Control
@@ -95,7 +95,7 @@ public partial class Segmented : Control
     }
 }
 
-/// <summary>开关（拨码，UI-VISUAL §7.3）：40×20，开 = 轨道 primary.fill、边 primary.line、拨钮右移；右侧必须写"开 / 关"。</summary>
+/// <summary>开关（拨码，UI-VISUAL）：40×20，开 = 轨道 primary.fill、边 primary.line、拨钮右移；右侧必须写"开 / 关"。</summary>
 public partial class DipSwitch : Control
 {
     private UiKit _kit = null!;
@@ -140,7 +140,7 @@ public partial class DipSwitch : Control
     }
 }
 
-/// <summary>滑杆（推子，UI-VISUAL §7.3）：轨道 1 px，已选段 2 px primary.line，推子帽 12×20 加中线；离散档画 1×5 刻度；拖动 1:1 跟手；←→ 一档。</summary>
+/// <summary>滑杆（推子，UI-VISUAL）：轨道 1 px，已选段 2 px primary.line，推子帽 12×20 加中线；离散档画 1×5 刻度；拖动 1:1 跟手；←→ 一档。</summary>
 public partial class Fader : Control
 {
     private UiKit _kit = null!;
@@ -239,7 +239,7 @@ public partial class Fader : Control
 /// <summary>小件：键帽、组标题、生效标签、LED 格。</summary>
 public static class Parts
 {
-    /// <summary>键帽（UI-VISUAL §7.4）：高 24、最小宽 24、1 px line.control、底边 2.5 px 键深、surface.raised；按下 = primary.fill、下沉 1.5 px。</summary>
+    /// <summary>键帽（UI-VISUAL）：高 24、最小宽 24、1 px line.control、底边 2.5 px 键深、surface.raised；按下 = primary.fill、下沉 1.5 px。</summary>
     public static float Keycap(UiKit kit, Control parent, Vector2 at, string key, bool down = false, bool pin = false)
     {
         var probe = kit.Text(parent, key, "keycap", "text.1", Vector2.Zero, pin);
@@ -252,7 +252,7 @@ public static class Parts
         return w;
     }
 
-    /// <summary>组标题："mono-caps 小标签 + 发丝线"（UI-VISUAL §5.1）。</summary>
+    /// <summary>组标题："mono-caps 小标签 + 发丝线"（UI-VISUAL）。</summary>
     public static void GroupHeader(UiKit kit, Control parent, Vector2 at, float width, string text, bool pin = false)
     {
         var label = kit.Text(parent, text, "mono-caps", "text.2", at, pin);
@@ -260,7 +260,7 @@ public static class Parts
         kit.Box(parent, new Rect2(at.X + w, at.Y + 8, width - w, 1), new UiFx(Fill: "line.hair", Pin: pin));
     }
 
-    /// <summary>生效标签：等宽的"雾幕""重启"，发丝边；雾幕用 primary.line 边（UI-VISUAL §8.5）。</summary>
+    /// <summary>生效标签：等宽的"雾幕""重启"，发丝边；雾幕用 primary.line 边（UI-VISUAL）。</summary>
     public static float Tag(UiKit kit, Control parent, Vector2 at, string text, bool primary, bool pin = false)
     {
         var label = kit.Text(parent, text, "data", "text.2", at + new Vector2(6, 3), pin);
@@ -269,7 +269,7 @@ public static class Parts
         return w;
     }
 
-    /// <summary>三格负载 LED（UI-VISUAL §8.5）。</summary>
+    /// <summary>三格负载 LED（UI-VISUAL）。</summary>
     public static void Leds(UiKit kit, Control parent, Vector2 at, int lit, int count = 3, bool pin = false)
     {
         for (var i = 0; i < count; i++)

@@ -17,7 +17,7 @@ internal static class AutoDoor
 }
 
 /// <summary>
-/// 自动门门框 (WLD-INTERIORS §4.1): the static half of a runtime door, frame, threshold and transom only.
+/// 自动门门框 (WLD-INTERIORS): the static half of a runtime door, frame, threshold and transom only.
 /// The runtime body and its collision belong to WP-07 and WP-43.
 /// </summary>
 [Part(PartCatalog.AutomaticDoorFrame, Owner = "WP-10")]
@@ -61,7 +61,7 @@ public sealed class AutomaticDoorLeafPart() : OpeningPart<DoorParams>(new(420, 4
     }
 }
 
-/// <summary>闭门器 (WLD-INTERIORS §7.5 B): dark grey body with a folded arm in front of it. The back face (+Z) mounts on the leaf.</summary>
+/// <summary>闭门器 (WLD-INTERIORS B): dark grey body with a folded arm in front of it. The back face (+Z) mounts on the leaf.</summary>
 [Part(PartCatalog.DoorCloser, Owner = "WP-10")]
 public sealed class DoorCloserPart() : OpeningPart<EquipmentParams>(new(140, 12))
 {

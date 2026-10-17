@@ -1,12 +1,12 @@
 // toon_static.gdshader：建筑、地面、道具的块几何、独立实例和重复部件的 MultiMesh；外围 O0–O2 也用它（WP-04）
-// 规格：ENG-PERF §1.4；ART-STYLE §2、§3、§6.2。材质只经材质库按 ToonSpec 取得，逐物体的颜色走顶点色号。
+// 规格：ENG-PERF；ART-STYLE。材质只经材质库按 ToonSpec 取得，逐物体的颜色走顶点色号。
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
 
 #include "res://style/shaders/toon.gdshaderinc"
 
 // ---------------------------------------------------------------------------
-// 室外构造图案线（ART-STYLE §6.2，D-195；ToonSpec.SurfacePattern，材质库按材质类写下面三个 uniform）
+// 室外构造图案线（ART-STYLE，D-195；ToonSpec.SurfacePattern，材质库按材质类写下面三个 uniform）
 // 几何给连续的米 UV（铺向与相位在 UV 里）和 UV2 = (gate, K)：gate 0 的三角形不画（K4、K5 或非目标面）。
 // 只改明度、不改色相：受光色、影色、灯照色同加 ΔL（OKLab L），影仍以明度为主；不画污渍、裂缝、做旧（D-174）。
 // 远处按屏幕上的格子大小淡出：缝线先按像素足迹做盒式滤波（滤波本身就收敛到面积平均），格子小于 PAT_FADE_PX
@@ -17,7 +17,7 @@ uniform vec2 pattern_period = vec2(1.0);     // 含缝的 U、V 模数（m）
 uniform vec2 pattern_joint = vec2(0.0);      // 缝带总宽（m），居中在格界上
 
 const float PAT_JOINT_DL = -0.04;            // 缝线的明度差（OKLab L，样板初值，主会话定值）
-const float PAT_MOTTLE_DL = 0.03;            // 弱斑驳的幅度上限（±L，ART-STYLE §6.2）
+const float PAT_MOTTLE_DL = 0.03;            // 弱斑驳的幅度上限（±L，ART-STYLE）
 const float PAT_MOTTLE_SCALE = 4.0;          // 斑驳的基本尺度（m，§6.2 的 2–8 m 里取中）
 const vec2 PAT_FADE_PX = vec2(3.0, 6.0);     // 格子在屏幕上的边长（px）从 .y 到 .x：缝线过渡到面积平均
 const float PAT_MIN_LINE_PX = 0.75;          // 缝线在屏幕上的最小宽度（px）：中景仍读得出格子，过了 PAT_FADE_PX 再回到真实面积平均

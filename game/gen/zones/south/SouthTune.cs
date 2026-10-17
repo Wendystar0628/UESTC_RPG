@@ -5,7 +5,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Zones.South;
 
 /// <summary>
-/// Every tunable value of the south zone in one place, for review (WF-FLOW §4): materials as colour names, and the
+/// Every tunable value of the south zone in one place, for review (WF-FLOW): materials as colour names, and the
 /// dimensions of each site. Coordinates are world (x, z) in metres taken from the OSM footprints in campus.json;
 /// local frames are described per block. Values marked "初值" are starting values awaiting the main session's call.
 /// </summary>
@@ -15,13 +15,13 @@ public static class SouthTune
     public const int BudgetTrianglesL1 = 45_000;
     public const int BudgetDrawCalls = 18;
 
-    /// <summary>Materials (ART-STYLE §8 colour names only).</summary>
+    /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
         private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
             new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
 
-        /// <summary>Main building and gate: light grey-white stone (MAP-QSH-SOUTH §1.2, §2.2).</summary>
+        /// <summary>Main building and gate: light grey-white stone (MAP-QSH-SOUTH).</summary>
         public static readonly ToonSpec Stone = S("wall.greyWhite", ToonFx.BevelLift);
         /// <summary>Copings, column bases and capitals, string courses, name-wall slabs.</summary>
         public static readonly ToonSpec StoneTrim = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
@@ -40,7 +40,7 @@ public static class SouthTune
         public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
         { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
 
-        /// <summary>Xuanbang: beige-grey stone walls, piers, columns and the clock tower (MAP-QSH-SOUTH §5.4–§5.6).</summary>
+        /// <summary>Xuanbang: beige-grey stone walls, piers, columns and the clock tower (MAP-QSH-SOUTH).</summary>
         public static readonly ToonSpec Beige = S("stone.beige", ToonFx.BevelLift);
         /// <summary>Xuanbang cornices, sills, capitals, dentils and pediment frames: the lighter stone, fine line.</summary>
         public static readonly ToonSpec BeigeTrim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
@@ -66,9 +66,9 @@ public static class SouthTune
         public static readonly ToonSpec BoatWood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec BoatInside = S("panel.brown", ToonFx.None, LineClass.Fine);
         /// <summary>
-        /// Wu Liren statue (§4.9), deep bronze: the palette is full (ART-STYLE §8.5), so it borrows the nearest registered name.
+        /// Wu Liren statue (§4.9), deep bronze: the palette is full (ART-STYLE), so it borrows the nearest registered name.
         /// tree.bark lights to about #8D7765 at autumn 17:30 (target #6F5B3E, ΔE_ok 0.10, the closest warm name; its shade is
-        /// derived as usual). Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE §2, §5).
+        /// derived as usual). Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE).
         /// </summary>
         public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
         {
@@ -77,7 +77,7 @@ public static class SouthTune
             Normal = ToonNormal.Smooth,
             Wet = 0.4f,
         };
-        /// <summary>Polished black stone pedestal: the darkest neutral name (C &lt; 0.06, ART-STYLE §3.1), lit about #525B52 at 17:30.</summary>
+        /// <summary>Polished black stone pedestal: the darkest neutral name (C &lt; 0.06, ART-STYLE), lit about #525B52 at 17:30.</summary>
         public static readonly ToonSpec DarkStone = S("glass", ToonFx.BevelLift, LineClass.Building, 0.9f);
         /// <summary>Hexagonal pavilion (§4.5): red-brown columns, dark grey tiles.</summary>
         public static readonly ToonSpec RedTimber = S("band.terracotta", ToonFx.BevelLift, LineClass.Fine);
@@ -85,7 +85,7 @@ public static class SouthTune
 
         /// <summary>
         /// Gym (§7.1): the silver-grey roof and the bulging rib ring are one curved metal, two-and-a-half steps with rim and
-        /// anisotropic band like the statue's bronze (ART-STYLE §2, §5); smooth normals so the drum reads round, not faceted.
+        /// anisotropic band like the statue's bronze (ART-STYLE); smooth normals so the drum reads round, not faceted.
         /// </summary>
         public static readonly ToonSpec Silver = new(new("roof.silverMetal.lit"), new("roof.silverMetal.shade"))
         {
@@ -100,7 +100,7 @@ public static class SouthTune
         public static readonly ToonSpec Louvre = S("panel.brown", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
         /// <summary>Light blue-grey roof vent caps (§7.1): WP-12's equipment grey.</summary>
         public static readonly ToonSpec Vent = S("equip.grey", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
-        /// <summary>Natatorium (§7.2): the low white dome, read by its two light steps (ART-STYLE §3), smooth normals.</summary>
+        /// <summary>Natatorium (§7.2): the low white dome, read by its two light steps (ART-STYLE), smooth normals.</summary>
         public static readonly ToonSpec DomeWhite = S("wall.greyWhite") with { Normal = ToonNormal.Smooth };
         /// <summary>
         /// The light concrete apron round the natatorium's foot (18c2 review: the ochre-red ring read as a running track next to
@@ -136,9 +136,9 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS §5.1, 1 classroom,
+    /// Window numbering (contract-29): the light channel (LightChannelCatalog) and window-card type (WLD-INTERIORS, 1 classroom,
     /// 3 corridor, 4 stair, 5 office, 6 lab, 13 gym, 14 pool) of each grid the zone declares (初值). Xuanbang follows the research
-    /// curve, Liren the teaching curve (MAP-QSH-SOUTH §11), the porch glass of the main building and Xuanbang the public-hall
+    /// curve, Liren the teaching curve (MAP-QSH-SOUTH), the porch glass of the main building and Xuanbang the public-hall
     /// channel, the gate's guard houses the all-night channel (manned, §1.2), the two venues the venue-light channel.
     /// </summary>
     public static class Windows
@@ -149,7 +149,7 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// South gate (MAP-QSH-SOUTH §1). Frame: origin midway between the two guard houses, X from the west house to the east
+    /// South gate (MAP-QSH-SOUTH). Frame: origin midway between the two guard houses, X from the west house to the east
     /// house (bearing ≈ 126°), local +Z outward to the street (≈ 216°), so the campus side is −Z.
     /// </summary>
     public static class Gate
@@ -168,11 +168,11 @@ public static class SouthTune
         public const float PillarSize = 1.3f, PillarHeight = 6.4f, PillarZ = 1.6f;
 
         public const float BarrierZ = -1.4f, BarrierHeight = 0.95f, BarrierGap = 0.25f;
-        /// <summary>Turnstile row: cabinet width and depth, flap height; gaps stay below 0.5 m (SYS-WALK §7).</summary>
+        /// <summary>Turnstile row: cabinet width and depth, flap height; gaps stay below 0.5 m (SYS-WALK).</summary>
         public const float TurnstileZ = -0.6f, CabinetWidth = 0.26f, CabinetDepth = 1.5f, CabinetHeight = 1.02f;
         public const int TurnstilePassages = 2;
 
-        /// <summary>Boundary collision: 1.5 m minimum, the gate's invisible top-up to 2.2 m (WLD-OUTSKIRTS §7.1).</summary>
+        /// <summary>Boundary collision: 1.5 m minimum, the gate's invisible top-up to 2.2 m (WLD-OUTSKIRTS).</summary>
         public const float BoundaryTop = 2.2f;
 
         /// <summary>Name wall (§1.3): low granite wall left of the gate seen from the street, one slab per character (初值).</summary>
@@ -227,7 +227,7 @@ public static class SouthTune
         public static readonly Vector2 FrontA = new(-374.74f, 476.82f);
         public static readonly Vector2 FrontB = new(-316.62f, 519.34f);
 
-        /// <summary>First-floor level of B2, the portico platform (WLD-INTERIORS §2.3, §2.17).</summary>
+        /// <summary>First-floor level of B2, the portico platform (WLD-INTERIORS).</summary>
         public const float FloorY = 2.6f;
         /// <summary>Front steps zone (osm:way:618752446): x from StepsX0 to StepsX1, out to StepsZ.</summary>
         public const float StepsX0 = 12.15f, StepsX1 = 60.65f, StepsZ = 17.4f;
@@ -257,10 +257,10 @@ public static class SouthTune
         public const float StoreyHeight = 4.28f;
     }
 
-    /// <summary>Forest park (§3.2; MAP-QSH-TERRAIN §1.2, §4).</summary>
+    /// <summary>Forest park (§3.2; MAP-QSH-TERRAIN).</summary>
     public static class Park
     {
-        /// <summary>Peacock house on the hill's south-east foot (MAP-QSH-TERRAIN §4.5), between the two woodland paths.</summary>
+        /// <summary>Peacock house on the hill's south-east foot (MAP-QSH-TERRAIN), between the two woodland paths.</summary>
         public static readonly Vector2 PeacockHouse = new(-302f, 305f);
         public const float CageWidth = 9f, CageDepth = 7f, CageWall = 3.2f, CageRoofRise = 1.6f, CageMesh = 0.5f;
 
@@ -271,7 +271,7 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// Xuanbang (MAP-QSH-SOUTH §5, WLD-INTERIORS §2.4, §16). The zone builds all three parts: main wing and south annex 8
+    /// Xuanbang (MAP-QSH-SOUTH, WLD-INTERIORS). The zone builds all three parts: main wing and south annex 8
     /// storeys to 35.7 m, tower 18 storeys to 73.85 m, clock tower 66.65 m. Footprints come from the world model.
     /// </summary>
     public static class Xuanbang
@@ -293,7 +293,7 @@ public static class SouthTune
         public const float DoorWidth = 3.2f, DoorSpring = 3.4f, UpperWindowSill = 7.0f, UpperWindowWidth = 2.6f, UpperWindowSpring = 3.0f;
         /// <summary>Small gables on the two projecting end blocks of the main wing (§5.7).</summary>
         public const float EndGableRise = 2.6f;
-        /// <summary>Atrium skylight on the main wing (WLD-INTERIORS §16: the 2019 rendering's roof light), centre at the entity anchor.</summary>
+        /// <summary>Atrium skylight on the main wing (WLD-INTERIORS: the 2019 rendering's roof light), centre at the entity anchor.</summary>
         public static readonly Vector2 Skylight = new(241.6f, 476.9f);
         public const float SkylightSize = 14f, SkylightRise = 2.2f;
 
@@ -331,13 +331,13 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// Sports venues (MAP-QSH-SOUTH §7.1, §7.2; WLD-INTERIORS §2.5), 初值. Plans are fitted to the OSM footprints: the gym's circle
+    /// Sports venues (MAP-QSH-SOUTH; WLD-INTERIORS), 初值. Plans are fitted to the OSM footprints: the gym's circle
     /// by area about its centroid, the natatorium's ellipse by the footprint's second moments. Heights are above the ground at
     /// the plan's centre.
     /// </summary>
     public static class Sports
     {
-        /// <summary>The platform storey (大平台二层) of both venues' public entrances (WLD-INTERIORS §2.5, gym.deck in interiors.json).</summary>
+        /// <summary>The platform storey (大平台二层) of both venues' public entrances (WLD-INTERIORS, gym.deck in interiors.json).</summary>
         public const float PlatformTop = 5.0f;
 
         /// <summary>Gym drum to 26 m (§7.1): ochre base band to the platform storey, tea glass ring hall, silver rib ring, roof.</summary>
@@ -387,16 +387,16 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// Sports platform (大平台, MAP-QSH-SOUTH §7.6, 初值): the deck over qsh:way:601600526, its top at
+    /// Sports platform (大平台, MAP-QSH-SOUTH, 初值): the deck over qsh:way:601600526, its top at
     /// <see cref="Sports.PlatformTop"/>. Under the deck a round-column street arcade runs along every free edge; behind it the closed
-    /// shops (§7.4, WLD-INTERIORS §5.2) fill a core block. Service roads keep running under the deck between the core and the gym
+    /// shops (§7.4, WLD-INTERIORS) fill a core block. Service roads keep running under the deck between the core and the gym
     /// and the stand. Heights are above the ground at the footprint's centroid.
     /// </summary>
     public static class Platform
     {
         /// <summary>Deck: slab under the top paving, the edge fascia band and its projection.</summary>
         public const float Slab = 0.75f, Fascia = 1.0f, FasciaProud = 0.12f;
-        /// <summary>Parapet panels (栏板, §7.6): 1.1 m solid, collision to 1.5 m from the railing part (SYS-WALK §7).</summary>
+        /// <summary>Parapet panels (栏板, §7.6): 1.1 m solid, collision to 1.5 m from the railing part (SYS-WALK).</summary>
         public const float Parapet = 1.1f, ParapetDepth = 0.22f, ParapetInset = 0.2f;
         /// <summary>Arcade columns along the free edges: round, at most this pitch, set in from the edge.</summary>
         public const float ColumnRadius = 0.36f, ColumnPitch = 7.2f, ColumnInset = 1.3f, ColumnEnd = 1.6f;
@@ -430,7 +430,7 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// The stand (看台, qsh:way:217855276, MAP-QSH-SOUTH §7.3, 初值): a C of tiers round the west half of the track, sampled on rays
+    /// The stand (看台, qsh:way:217855276, MAP-QSH-SOUTH, 初值): a C of tiers round the west half of the track, sampled on rays
     /// from the track's centre (angles in degrees from +x toward +z, so 180 is west); each ray's nearest and farthest crossings of
     /// the footprint are the front and back of the tiers. The rows rise at most <see cref="Slope"/> and stop at <see cref="TopMax"/>,
     /// so the deep main stand on the west is the tallest and the curved ends fall away. The pillow canopy covers the main stand.
@@ -462,7 +462,7 @@ public static class SouthTune
     }
 
     /// <summary>
-    /// The west lawn by the innovation centre (MAP-QSH-ADDITIONS §0 R6, 初值): a transition green between the boundary and the
+    /// The west lawn by the innovation centre (MAP-QSH-ADDITIONS R6, 初值): a transition green between the boundary and the
     /// north–south footpath, regrouped as a low grass mound (south.terrain.json) with a stone seat-wall arc on its crest facing
     /// north-east over the Zouma river to the core's research blocks.
     /// </summary>
@@ -482,7 +482,7 @@ public static class SouthTune
             new(105.86f, 299.29f), new(143.19f, 306.07f), new(144.75f, 297.54f), new(167.68f, 301.71f), new(166.68f, 307.16f), new(178.49f, 309.32f),
             new(177.95f, 312.26f), new(182.08f, 313.01f), new(180.27f, 322.82f), new(222.79f, 330.57f), new(223.39f, 327.30f),
         ];
-        /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK §7); balustrade line set back from the water.</summary>
+        /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK); balustrade line set back from the water.</summary>
         public const float WallBottom = -1.1f, CopingTop = 0.12f, RailTop = 1.08f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
         /// <summary>The wade step fills the middle of the bay's back edge (segment WadeSegment); its second tread is 0.15 m under the −0.5 m water.</summary>
         public const int WadeSegment = 2;
@@ -499,7 +499,7 @@ public static class SouthTune
         /// </summary>
         public static readonly Vector3 StatueLeaf = new(0.25f, 2.0f, 0f);
         public static readonly Vector3[] StatueUplights = [new(-0.9f, -PedestalTop, 1.7f), new(0.9f, -PedestalTop, 1.7f)];
-        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN §5.2, +3.0 m once the terrain lands).</summary>
+        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN, +3.0 m once the terrain lands).</summary>
         public static readonly Vector2 Pavilion = new(30f, 592f);
         public const float PavilionFloor = 0.45f, PavilionPlatform = 3.4f, PavilionColumns = 2.5f, PavilionColumnHeight = 3.0f;
         public const float LowerEave = 3.7f, LowerRise = 1.0f, DrumRadius = 2.0f, UpperEave = 2.75f, UpperRise = 1.8f;

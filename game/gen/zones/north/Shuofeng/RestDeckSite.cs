@@ -10,10 +10,10 @@ using L = Campus.Gen.Zones.North.NorthTune.Look;
 namespace Campus.Gen.Zones.North.Shuofeng;
 
 /// <summary>
-/// 硕丰苑十组团's courtyard stay point (20b1; D-185, MAP-QSH-ADDITIONS §0 R6, §2.1 休憩平台; registered as
+/// 硕丰苑十组团's courtyard stay point (20b1; D-185, MAP-QSH-ADDITIONS R6, §2.1 休憩平台; registered as
 /// design:north-sf10-deck): a 0.45 m deck whose edge is the seat, deep grey steel frame under a wood top laid as four boards
 /// round a square pit, a clipped shrub in the pit. The cluster is closed, so it is seen through the fence. It stands on level
-/// ground: the base is the lowest ground under its corners and the frame is sunk below it (WLD-TERRAIN §4.1).
+/// ground: the base is the lowest ground under its corners and the frame is sunk below it (WLD-TERRAIN).
 /// </summary>
 public sealed class RestDeckSite : NorthSite
 {

@@ -1,16 +1,16 @@
 {
   "format": "campus.vegetation.species/1",
   "owner": "WP-23",
-  "doc": "WLD-VEGETATION §1.1、§2、§8、§11.6、§12",
+  "doc": "WLD-VEGETATION",
   "notes": [
     "row 是树种号：tree_species 纹理的行号，也是 INSTANCE_CUSTOM.y = row × 16 + 外观变体号里的 row；只增不改。",
-    "leafAmount、bloomAmount 是季节锚点 s = 0、1、2、3（春、夏、秋、冬）上的叶量 A 与开花 B（WLD-VEGETATION §2.1、§2.2）。",
-    "leaf、bloom 是色名族（受光 .lit、影 .shade 成对登记，ART-STYLE §8.5）；季相行号由生成器按登记表查出，不写在这里。",
-    "crown：card 插片型、cloud 云团型、mixed 混合型（WLD-VEGETATION §1.1）；form 是母模型的树形，取值见 game/gen/vegetation/TreeForms.cs。",
+    "leafAmount、bloomAmount 是季节锚点 s = 0、1、2、3（春、夏、秋、冬）上的叶量 A 与开花 B（WLD-VEGETATION）。",
+    "leaf、bloom 是色名族（受光 .lit、影 .shade 成对登记，ART-STYLE）；季相行号由生成器按登记表查出，不写在这里。",
+    "crown：card 插片型、cloud 云团型、mixed 混合型（WLD-VEGETATION）；form 是母模型的树形，取值见 game/gen/vegetation/TreeForms.cs。",
     "card、bloomCard 是叶卡形状（叶卡纹理数组的层，主线版由 veg_card 着色器程序化画出）：fan、needle、strand、palmate、ovate、pinnate、blossom、spray、twig、frond。",
     "bloomOnBlobs：开花时团块（云团型的小球）也按哈希换成花色；只开在插片上的（桂花、栾树蒴果、香樟老叶）为 false。",
-    "香樟的春季老叶红按开花处理：bloom = camphor.red、bloomAmount 春 0.15（WLD-VEGETATION §2.2）。",
-    "sound 是叶声音色的四类（WLD-VEGETATION §12）：broadleaf、metaseq、willow、palm。"
+    "香樟的春季老叶红按开花处理：bloom = camphor.red、bloomAmount 春 0.15（WLD-VEGETATION）。",
+    "sound 是叶声音色的四类（WLD-VEGETATION）：broadleaf、metaseq、willow、palm。"
   ],
   "species": [
     { "id": "ginkgo",       "name": "银杏",     "row": 0,  "crown": "card",  "form": "ginkgo",    "height": [12, 15], "leaf": "ginkgo",      "bloom": null,            "card": "fan",     "bloomCard": "blossom", "deciduous": true,  "bloomOnBlobs": false, "leafAmount": [0.6, 1.0, 0.85, 0.1],  "bloomAmount": [0, 0, 0, 0],       "swayDeg": 2.0, "sound": "broadleaf" },

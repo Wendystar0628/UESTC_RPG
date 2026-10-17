@@ -10,12 +10,12 @@ using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 namespace Campus.Gen.Zones.CenterEast.Research;
 
 /// <summary>
-/// The statue lawn east of 科 B/C (MAP-QSH-CENTER-EAST §1.3–§1.4), a functional open space (MAP-QSH-ADDITIONS R6): its
+/// The statue lawn east of 科 B/C (MAP-QSH-CENTER-EAST), a functional open space (MAP-QSH-ADDITIONS R6): its
 /// middle stays open, the west edge is the buildings' doors and the east edge, along 银杏大道, is held by the two bronzes.
 /// 林为干像 stands at the east tip of the plaza's tree island on 科 B's door axis, the big tree (WP-23) behind it;
 /// 麦克斯韦像 stands on a granite apron at the lawn's east edge with the equation stone at his front right, both turned to
 /// the plaza corner where R5 comes up from the bridge. Figures are sculpture volumes (clothes, posture, hair and beard as
-/// masses; the face one smooth volume, no features or likeness, CORE-INDEX §3). Lawn, paving and trees are WP-15's and
+/// masses; the face one smooth volume, no features or likeness, CORE-INDEX). Lawn, paving and trees are WP-15's and
 /// WP-23's; this site builds the stone and the bronze. Every value lives in <see cref="M"/>.
 /// </summary>
 public sealed class StatueLawnSite : CenterEastSite
@@ -253,7 +253,7 @@ public sealed class StatueLawnSite : CenterEastSite
         Vector2 min = M.ApronMin, max = M.ApronMax, mid = (min + max) * 0.5f, apron = R.P(mid.X, mid.Y);
         var ag = c.Ground(apron.X, apron.Y);
         c.Box(R.At(mid.X, ag + (M.ApronTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (M.ApronTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
-        // The stone: its body behind the dressed face, kept within 0.3 m of the rounded outline (SYS-WALK §7).
+        // The stone: its body behind the dressed face, kept within 0.3 m of the rounded outline (SYS-WALK).
         var st = M.Stone;
         var sg = c.Ground(M.StoneAt.X, M.StoneAt.Y);
         var back = st.Depth * 0.5f;

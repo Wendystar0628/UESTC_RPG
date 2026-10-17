@@ -11,7 +11,7 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Xuanbang;
 
 /// <summary>
-/// Xuanbang's clock tower (MAP-QSH-SOUTH §5.4, §5.9), 66.65 m: a square beige-stone shaft with corner quoins, a pair of
+/// Xuanbang's clock tower (MAP-QSH-SOUTH), 66.65 m: a square beige-stone shaft with corner quoins, a pair of
 /// narrow windows per storey on every face and an arched portal at the foot of each (the south-east one is the open side
 /// door xb.clock); a corniced setback stage carrying four metal-rimmed dials (the north-west one faces the lake and P09);
 /// a cylindrical lantern of slit columns round a solid core; and the dark grey bullet dome. Lantern and dome together read

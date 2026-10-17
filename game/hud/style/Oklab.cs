@@ -2,7 +2,7 @@ using Godot;
 
 namespace Campus.Hud.Style;
 
-/// <summary>OKLab 换算：只给"再现场景"的颜色降彩度用（时间环的天色光谱乘 0.7，UI-VISUAL §2.2、§7.5）。</summary>
+/// <summary>OKLab 换算：只给"再现场景"的颜色降彩度用（时间环的天色光谱乘 0.7，UI-VISUAL）。</summary>
 public static class Oklab
 {
     private static float Lin(float c) => c <= 0.04045f ? c / 12.92f : MathF.Pow((c + 0.055f) / 1.055f, 2.4f);

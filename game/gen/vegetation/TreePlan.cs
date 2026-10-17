@@ -15,8 +15,8 @@ internal sealed class Limb(int level)
 
 /// <summary>
 /// One crown mass. Card and mixed crowns use lumpy blobs (3–7 mains, 2–3 subs each); cloud crowns use the
-/// small balls of WLD-VEGETATION §1.1 (core 0.8r, satellites, bridges). Anchor is the branch tip the cards of this
-/// blob retreat to in winter (WLD-VEGETATION §1.8). Group is the L1 merge group: −1 for blobs dropped at L1.
+/// small balls of WLD-VEGETATION (core 0.8r, satellites, bridges). Anchor is the branch tip the cards of this
+/// blob retreat to in winter (WLD-VEGETATION). Group is the L1 merge group: −1 for blobs dropped at L1.
 /// </summary>
 internal sealed record Blob(Vector3 Center, float Radius, float Lump, int Bumps, float Hash, float BloomHash,
     Vector3 Anchor, int Group, bool Core);
@@ -43,7 +43,7 @@ internal sealed class TreePlan
     public List<Blob> Blobs { get; } = [];
 
     /// <summary>
-    /// L1 masses (ENG-PERF §9 "6–10 merged blobs"): one sphere per branch group covering its core and sub-blobs,
+    /// L1 masses (ENG-PERF "6–10 merged blobs"): one sphere per branch group covering its core and sub-blobs,
     /// so the far crown keeps the near crown's volume; ungrouped masses (bridges, satellites, fillers) fold into the
     /// nearest. Groups beyond <paramref name="max"/> merge pairwise, closest first, to hold the L1 triangle target.
     /// </summary>
@@ -75,7 +75,7 @@ internal sealed class TreePlan
         return core with { Center = center, Radius = MathF.Max(radius, core.Radius), Lump = MathF.Max(core.Lump, 0.15f), Bumps = 12 };
     }
 
-    /// <summary>Directions sampled when looking for holes in the crown (WLD-VEGETATION §1.1: no see-through gaps).</summary>
+    /// <summary>Directions sampled when looking for holes in the crown (WLD-VEGETATION: no see-through gaps).</summary>
     public const int FillSamples = 96;
 
     /// <summary>Most filler masses one crown may receive (cloud crowns fewer: their gaps between clouds are part of the look).</summary>
@@ -336,7 +336,7 @@ internal sealed class TreePlan
                     }
                     if (Species.Crown == CrownType.Mixed)
                     {
-                        // Mixed crowns are thick: two satellite masses hug each main blob (WLD-VEGETATION §1.1).
+                        // Mixed crowns are thick: two satellite masses hug each main blob (WLD-VEGETATION).
                         for (var k = 0; k < 2; k++)
                         {
                             var d = Vector3.Normalize(RandomDirection() + outward * 0.8f + Vector3.UnitY * 0.5f);
@@ -356,7 +356,7 @@ internal sealed class TreePlan
     private void AddCloudCluster(Vector3 mainTip, Vector3 outward, int index, List<Vector3> tips)
     {
         // One big cloud: a core ball (0.8r) and 6–8 satellites (0.40–0.58r at 0.55–0.78r, leaning out and up),
-        // all with 10–14 bumps of 0.13 and bottoms squashed to 0.7 (WLD-VEGETATION §1.1, ART-MODELING §3).
+        // all with 10–14 bumps of 0.13 and bottoms squashed to 0.7 (WLD-VEGETATION, ART-MODELING).
         var mains = Math.Max(1, Form.MainMax);
         var r = CrownRx * 0.8f / DetMath.Cbrt(mains);
         var center = Vector3.Lerp(mainTip, CrownCenter, 0.1f) + Vector3.UnitY * (r * 0.1f);
@@ -403,7 +403,7 @@ internal sealed class TreePlan
 
     private void BuildShrub()
     {
-        // A clipped ball: three clusters around a low centre, no visible stem (WLD-VEGETATION §1.1 shrub balls).
+        // A clipped ball: three clusters around a low centre, no visible stem (WLD-VEGETATION shrub balls).
         var trunk = new Limb(0);
         AddTrunkPoint(trunk, -MotherModels.Burial, Vector3.Zero, 1f);
         AddTrunkPoint(trunk, Height * 0.3f, Vector3.Zero, 0.7f);

@@ -112,7 +112,7 @@ public sealed class DioramaModuleTests
             }
             var far = byKind[DioramaVertex.KindFar][0];
             if (Heights(far).Min() > data.FarRing.SkirtY + 0.01f) throw new InvalidOperationException("far ring skirt");
-            // Every bearing has a silhouette above the horizon (WLD-DIORAMA §5: no empty direction).
+            // Every bearing has a silhouette above the horizon (WLD-DIORAMA: no empty direction).
             var crest = new float[360];
             for (var v = 0; v < far.Position.Length / 3; v++)
             {

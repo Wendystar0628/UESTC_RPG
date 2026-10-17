@@ -23,12 +23,12 @@ public readonly record struct StairFlight(float Foot, float BaseY, int Risers)
 public readonly record struct StairLanding(float S0, float S1, float Y, bool Middle);
 
 /// <summary>
-/// 大台阶与二楼正门 (16c, MAP-QSH-CORE §1.7; 8398): the grand stair from the axis paving up to the 2F terrace and the
+/// 大台阶与二楼正门 (16c, MAP-QSH-CORE; 8398): the grand stair from the axis paving up to the 2F terrace and the
 /// front door in the tower's glass slot. Across the door axis, symmetric: the two-run main stair in the middle, a lawn
 /// terrace (草坪台地) on each side of it, a side stair (侧梯) on each flank and a solid stone guard wall outside each side
 /// stair; behind them the top landing joins the podium terrace (16b leaves the podium parapet open there).
 /// <para>
-/// Section (WLD-TERRAIN §5.1, §5.2): risers near 0.15 m, tread clamp(0.65 − 2R, 0.30, 0.40), flights of at most 1.5 m
+/// Section (WLD-TERRAIN): risers near 0.15 m, tread clamp(0.65 − 2R, 0.30, 0.40), flights of at most 1.5 m
 /// rise. The two runs (两跑) are split by one deep middle landing; inside each run a short rest landing. The terraces step
 /// with the stair: the lower tier at the middle landing's level, the upper tier at the top, each ringed by a clipped hedge
 /// (the lower tier's front band is the dark purple-red loropetalum, 红花檵木). Flights are WP-11's catalogue steps
@@ -373,7 +373,7 @@ public sealed class GrandStair : ICorePiece
     // ------------------------------------------------------------------ door and its presentation
 
     /// <summary>
-    /// The front door (WLD-INTERIORS §4): WP-10's glass door over the slot's door bay, its two inner leaves fixed open at
+    /// The front door (WLD-INTERIORS): WP-10's glass door over the slot's door bay, its two inner leaves fixed open at
     /// 90°. The entrance kit in front of it (mat, open sign, door lamp) is WP-13's, placed from the interior index.
     /// </summary>
     private void Door(CoreBuild build)
@@ -434,7 +434,7 @@ public sealed class GrandStair : ICorePiece
 
     /// <summary>
     /// Flights from the catalogue part's own colliders; landings and the top landing as stone slabs; terrace tiers as
-    /// boxes (lawn tops); every hedge and guard wall collided 1.5 m above its walking surface (SYS-WALK §7).
+    /// boxes (lawn tops); every hedge and guard wall collided 1.5 m above its walking surface (SYS-WALK).
     /// </summary>
     public IReadOnlyList<Collider> Collide()
     {

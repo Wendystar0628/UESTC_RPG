@@ -12,10 +12,10 @@ using L = Campus.Gen.Zones.South.SouthTune.Look;
 namespace Campus.Gen.Zones.South.EastLake;
 
 /// <summary>
-/// East lake shore (MAP-QSH-SOUTH §4). The water is WP-24's, the trees, reeds and lotus WP-23's and WP-38's, the paving of the
+/// East lake shore (MAP-QSH-SOUTH). The water is WP-24's, the trees, reeds and lotus WP-23's and WP-38's, the paving of the
 /// waterside platform WP-15's; this site builds:
 /// - the Liren-side hard bank along the lake's rectilinear north edge: brick-red retaining wall, red sandstone coping and a
-///   white vase-baluster balustrade (1.08 m, collision 1.5 m, SYS-WALK §7), opened in the bay for the wade step (§4.3,
+///   white vase-baluster balustrade (1.08 m, collision 1.5 m, SYS-WALK), opened in the bay for the wade step (§4.3,
 ///   design:south-eastlake-wade-step): two treads down from the platform, the second 0.15 m under the normal water level;
 /// - two wooden rowing boats moored off the wade step (§4.6) and two stone mooring posts;
 /// - the Wu Liren statue on its polished dark stone pedestal, facing the lake (§4.9);
@@ -241,7 +241,7 @@ public sealed class EastLakeSite : SouthSite
 
     /// <summary>
     /// Hook points for the detail pass (§4.9), world space: the seasonal leaf on the left shoulder (one season-masked instance
-    /// set, SYS-TIME §0 item 5) and the in-ground uplights in front of the pedestal (lamp.statue, off 1:00–5:30, §11).
+    /// set, SYS-TIME item 5) and the in-ground uplights in front of the pedestal (lamp.statue, off 1:00–5:30, §11).
     /// </summary>
     internal static (Vector3 Leaf, Vector3[] Uplights) StatueHooks(float y)
     {
@@ -259,7 +259,7 @@ public sealed class EastLakeSite : SouthSite
     /// sculpture's simplified volumes at 1.25 × a 2 m model: an overcoat cinched at the waist whose skirt hangs in folds, square shoulders and a
     /// stand collar, trouser legs and shoes under the hem; the left arm hangs with the hand by the thigh, the right forearm is
     /// bent across the waist holding a rolled document. The head is an ovoid with a hair mass only: no
-    /// features and no likeness (CORE-INDEX §3).
+    /// features and no likeness (CORE-INDEX).
     /// </summary>
     private static void WuLiren(SiteBuilder b, float y)
     {
@@ -355,7 +355,7 @@ public sealed class EastLakeSite : SouthSite
         return new(v.X / length, v.Y / length, v.Z / length);
     }
 
-    // ---- Hexagonal double-eaved pavilion on the south-bank hill (§4.5, MAP-QSH-TERRAIN §5.2) ----
+    // ---- Hexagonal double-eaved pavilion on the south-bank hill (§4.5, MAP-QSH-TERRAIN) ----
 
     /// <summary>Corner angle offset: one face of the hexagon looks north, back across the lake to the hard bank.</summary>
     private const float Phase = MathF.PI / 3f;

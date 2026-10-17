@@ -5,7 +5,7 @@ namespace Campus.Hud.Map;
 
 /// <summary>
 /// 标记层：一个 _Draw 控件画全部图标。每帧只改 Position（与 Scale），缩放变化超过 3%、旋转变了、
-/// 标记集合或状态变了才重画（SYS-ATLAS §10）。图标先垫一枚底，再画线框，主色只给可传送的标记、选中和追踪。
+/// 标记集合或状态变了才重画（SYS-ATLAS）。图标先垫一枚底，再画线框，主色只给可传送的标记、选中和追踪。
 /// </summary>
 public partial class MarkerLayer : Control
 {
@@ -23,7 +23,7 @@ public partial class MarkerLayer : Control
         MouseFilter = MouseFilterEnum.Ignore;
     }
 
-    /// <summary>按 MapHudContext.LayerOf 编号的图层开关（SYS-ATLAS §4.3）。</summary>
+    /// <summary>按 MapHudContext.LayerOf 编号的图层开关（SYS-ATLAS）。</summary>
     public int LayerMask { get; set; } = -1;
     public MarkerId? Hover { get; set; }
     public MarkerId? Selected { get; set; }
@@ -85,13 +85,13 @@ public partial class MarkerLayer : Control
             var hot = e.Id == Hover || e.Id == Selected;
             var ink = e.Travelable ? t.Graphic : t.Text1;
             var pad = size * 0.62f;
-            // 底：先有一层面板底，清蓝才不直接贴在底图上（UI-VISUAL §2.3 第 1 条）
+            // 底：先有一层面板底，清蓝才不直接贴在底图上（UI-VISUAL 第 1 条）
             DrawCircle(p, pad, here ? ink : t.Solid, true, -1, true);
             DrawArc(p, pad, 0, Mathf.Tau, 32, hot ? t.CardHover : t.PanelLine, 1f, true);
             _ctx.Icon(this, e, p, size * 0.82f, here ? t.Solid : ink, stroke, false);
             if (e.Id == Selected)
             {
-                // 选中：衍射光边——1 物理像素的核，两侧冷色色散（UI-VISUAL §5.6）
+                // 选中：衍射光边——1 物理像素的核，两侧冷色色散（UI-VISUAL）
                 var r = pad + 3;
                 var a = t.IrisA; a.A *= 0.35f;
                 var b = t.IrisB; b.A *= 0.35f;
@@ -105,7 +105,7 @@ public partial class MarkerLayer : Control
         if (named is not null) DrawName(named, t);
     }
 
-    /// <summary>悬停或选中的标记旁写名字：中文主名 + 英文副名，带 2 px 晕（SYS-ATLAS §2.5）。</summary>
+    /// <summary>悬停或选中的标记旁写名字：中文主名 + 英文副名，带 2 px 晕（SYS-ATLAS）。</summary>
     private void DrawName(MapEntry e, MapTone t)
     {
         var p = _ref.ToLocal(e.At, _viewport).Round();

@@ -8,7 +8,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// <summary>
 /// One indoor flight in the WP-51a convention: over a run of Risers × Tread the nosing line passes (0, 0) and
 /// (run, rise); riser k stands at u = k·Tread, the strip u ∈ [0, Tread] is the lower level and the last riser is the edge
-/// of the upper slab or landing. The flight's RampCollider is therefore exactly WP-51a's (WLD-INTERIORS §10).
+/// of the upper slab or landing. The flight's RampCollider is therefore exactly WP-51a's (WLD-INTERIORS).
 /// </summary>
 internal readonly record struct Flight(int Risers, float Riser, float Tread)
 {
@@ -111,7 +111,7 @@ internal readonly record struct FlightLane(Flight Flight, float X0, float X1, fl
         mesh.Extrude(material, zy, chamfer, X0, X1, frame, triangles);
     }
 
-    /// <summary>Far levels merge pairs of steps; total rise and run stay (ART-MODELING §2 "台阶").</summary>
+    /// <summary>Far levels merge pairs of steps; total rise and run stay (ART-MODELING "台阶").</summary>
     private static Flight Merge(Flight f)
     {
         if (f.Risers < 6) return f;
@@ -165,7 +165,7 @@ internal readonly record struct FlightLane(Flight Flight, float X0, float X1, fl
         }
     }
 
-    /// <summary>RampCollider through every nosing, top flush with the upper level, bottom buried 0.2 m (WLD-INTERIORS §10).</summary>
+    /// <summary>RampCollider through every nosing, top flush with the upper level, bottom buried 0.2 m (WLD-INTERIORS).</summary>
     internal RampCollider Ramp(float x0, float x1)
     {
         var f = Flight;
@@ -175,7 +175,7 @@ internal readonly record struct FlightLane(Flight Flight, float X0, float X1, fl
         { Stair = new(f.Riser, f.Tread, f.Risers) };
     }
 
-    /// <summary>Barrier on an open side: a thin wall whose top is 1.5 m over the nosing line (SlopedWallCollider, WLD-INTERIORS §10).</summary>
+    /// <summary>Barrier on an open side: a thin wall whose top is 1.5 m over the nosing line (SlopedWallCollider, WLD-INTERIORS).</summary>
     internal SlopedWallCollider OpenSide(float x)
     {
         var f = Flight;

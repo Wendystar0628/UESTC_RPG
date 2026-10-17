@@ -4,14 +4,14 @@ using Campus.Contracts.Audio;
 namespace Campus.Gen.Zones.DesignWaterfront;
 
 /// <summary>
-/// Every tunable value of the WP-28 bridges in one place (WF-FLOW §4). Lengths in metres; heights are relative to the
-/// carriageway surface at the bridge ends (the road level, WLD-TERRAIN §4.2: "桥面标高等于两端路面").
+/// Every tunable value of the WP-28 bridges in one place (WF-FLOW). Lengths in metres; heights are relative to the
+/// carriageway surface at the bridge ends (the road level, WLD-TERRAIN: "桥面标高等于两端路面").
 /// </summary>
 public static class WaterfrontTune
 {
     /// <summary>Overlay kind of a bridge registration (overlay/waterfront.d/): a point marker whose props name the network lines.</summary>
     public const string BridgeKind = "bridge-deck";
-    /// <summary>Overlay kind of a bridge-head lying stone (MAP-QSH-ADDITIONS §2.12 桥头卧石).</summary>
+    /// <summary>Overlay kind of a bridge-head lying stone (MAP-QSH-ADDITIONS 桥头卧石).</summary>
     public const string StoneKind = "bridge-stone";
 
     // ---- Deck section ----
@@ -28,16 +28,16 @@ public static class WaterfrontTune
     /// <summary>The stone parapet base overhangs the concrete fascia by this much: the drip and shadow line of the deck edge.</summary>
     public const float BaseOverhang = 0.04f;
 
-    // ---- Railing (MAP-QSH-ADDITIONS §2.5 护栏细部: 灰白石望柱、两道不锈钢细横管) ----
+    // ---- Railing (MAP-QSH-ADDITIONS 护栏细部: 灰白石望柱、两道不锈钢细横管) ----
     /// <summary>Continuous stone base (地栿) under the posts: width and rise above the walking surface.</summary>
     public const float BaseWidth = 0.34f, BaseRise = 0.14f, BaseDrop = 0.12f, BaseBevel = 0.02f;
-    /// <summary>Post: 0.25 m square, top 1.05 m above the walking surface (ART-FIDELITY §7 第 6 条, SYS-WALK §7 第 1 条).</summary>
+    /// <summary>Post: 0.25 m square, top 1.05 m above the walking surface (ART-FIDELITY 第 6 条, SYS-WALK 第 1 条).</summary>
     public const float PostSize = 0.25f, PostTop = 1.05f, PostBevel = 0.02f, PostSpacing = 2.0f;
     /// <summary>Plain square post head (望柱头做成素方，不雕兽): a slightly wider cap.</summary>
     public const float CapSize = 0.29f, CapHeight = 0.08f, CapBevel = 0.015f;
     /// <summary>Bridge-head posts at the four deck corners.</summary>
     public const float HeadSize = 0.40f, HeadTop = 1.25f, HeadCap = 0.46f, HeadCapHeight = 0.10f;
-    /// <summary>Two stainless rails (φ48), through the posts; they cast no shadow (ART-MODELING §7.4 小件不投影).</summary>
+    /// <summary>Two stainless rails (φ48), through the posts; they cast no shadow (ART-MODELING 小件不投影).</summary>
     public const float RailRadius = 0.024f, RailLow = 0.48f, RailHigh = 0.90f;
     public const int RailSegments = 10;
 
@@ -52,14 +52,14 @@ public static class WaterfrontTune
     /// <summary>Distance from the deck corner, outward and back along the approach, to the stone centre.</summary>
     public const float StoneOutward = 1.6f, StoneBack = 2.4f;
 
-    // ---- Collision (SYS-WALK §7, §13; MAP-QSH-ADDITIONS §7 WP-28 行) ----
+    // ---- Collision (SYS-WALK; MAP-QSH-ADDITIONS WP-28 行) ----
     /// <summary>Deck ramps are cut every 2 m along the bridge; each is a sloped box this thick.</summary>
     public const float RampStep = 2.0f, RampThick = 0.3f;
     /// <summary>Railing barrier top above the walking surface: max(visual 1.05, 1.5).</summary>
     public const float BarrierTop = 1.5f;
     public const FootMat CarriageFoot = FootMat.Asphalt, WalkFoot = FootMat.StonePaving, RailFoot = FootMat.Metal, StoneFoot = FootMat.StonePaving;
 
-    // ---- Colours (palette names only; MAP-QSH-ADDITIONS §0 第 2 条) ----
+    // ---- Colours (palette names only; MAP-QSH-ADDITIONS 第 2 条) ----
     public const string StoneWhite = "wall.greyWhite";
     public const string Stainless = "roof.silverMetal";
     public const string Concrete = "ground.concrete";
@@ -78,7 +78,7 @@ public static class WaterfrontTune
     public static ToonSpec ConcreteSpec => new(Lit(Concrete), Shade(Concrete)) { Fx = ToonFx.BevelLift, Wet = 0.7f };
     public static ToonSpec RailSpec => new(Lit(Stainless), Shade(Stainless)) { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
 
-    /// <summary>VF-A flag: never casts (ART-MODELING §7.4).</summary>
+    /// <summary>VF-A flag: never casts (ART-MODELING).</summary>
     public const byte NoShadow = 8;
 
     // ---- Budget (ENG-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----

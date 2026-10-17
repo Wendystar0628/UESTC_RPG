@@ -106,9 +106,9 @@ public sealed class StreetPartsTests
         {
             var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            // Parked bicycles never collide (WLD-LIFE §5: they come and go, a collider would leave an invisible wall).
+            // Parked bicycles never collide (WLD-LIFE: they come and go, a collider would leave an invisible wall).
             var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle";
-            Check(visualOnly ? colliders.Count == 0 : colliders.Count > 0, $"{sample.Id} has the wrong collision class (MAP-QSH-ADDITIONS §7).");
+            Check(visualOnly ? colliders.Count == 0 : colliders.Count > 0, $"{sample.Id} has the wrong collision class (MAP-QSH-ADDITIONS).");
             foreach (var collider in colliders)
             {
                 Check(collider.Foot != FootMat.Auto, $"{sample.Id} leaves a collider on Auto (G21).");
@@ -116,15 +116,15 @@ public sealed class StreetPartsTests
                 Check(collider.Tag == (sample.Id == "kerb-ramp" ? SurfaceTag.Ground : SurfaceTag.Prop), $"{sample.Id} collider has the wrong surface tag.");
                 var (min, max) = Extent(collider);
                 var b = sample.Bounds;
-                // SYS-WALK §7: no more than 0.3 m beyond the visible object; posts may reach below grade.
+                // SYS-WALK: no more than 0.3 m beyond the visible object; posts may reach below grade.
                 Check(min.X >= b.Min.X - 0.3f && min.Z >= b.Min.Z - 0.3f && max.X <= b.Max.X + 0.3f && max.Z <= b.Max.Z + 0.3f && max.Y <= b.Max.Y + 0.3f,
                     $"{sample.Id} collider reaches more than 0.3 m past the part.");
             }
         }
         IPartDef<FurnitureParams> sphere = new StoneSpherePart();
-        Check(sphere.Collision(new()).Single().Foot == FootMat.StonePaving, "Stone spheres step as stone paving (WLD-LIFE §5).");
+        Check(sphere.Collision(new()).Single().Foot == FootMat.StonePaving, "Stone spheres step as stone paving (WLD-LIFE).");
         IPartDef<FurnitureParams> bench = new BenchPart();
-        Check(bench.Collision(new()).All(c => c.Foot == FootMat.WoodFloor), "Bench colliders step as wood (WLD-LIFE §5).");
+        Check(bench.Collision(new()).All(c => c.Foot == FootMat.WoodFloor), "Bench colliders step as wood (WLD-LIFE).");
         Check(bench.Collision(new() { Foot = FootMat.Metal }).All(c => c.Foot == FootMat.Metal), "A caller's Foot overrides the default.");
     }
 
@@ -171,7 +171,7 @@ public sealed class StreetPartsTests
             foreach (var emitter in sample.Emitters(at))
             {
                 Check(LightChannelCatalog.Slot(emitter.Channel) is >= 12 and <= 27, $"{sample.Id} marker is not on a lamp channel.");
-                Check(emitter.Color.Value == "lamp.warm", $"{sample.Id} marker is not warm (MAP-QSH-ADDITIONS §8.2).");
+                Check(emitter.Color.Value == "lamp.warm", $"{sample.Id} marker is not warm (MAP-QSH-ADDITIONS).");
                 Check(emitter.Energy is 1f or 0.75f or 0.5f && emitter.Range > 0, $"{sample.Id} marker is off the three grades.");
                 var local = emitter.Position - new Vector3(10, 1, -4);
                 // Markers sit just under their lens: inside the part's height, or a few centimetres under a wall lantern.
@@ -219,7 +219,7 @@ public sealed class StreetPartsTests
                     Check(tokens.Contains(lit) && tokens.Contains(shade), $"{sample.Id} uses unregistered colour {lit}.");
                 }
             }
-        // Proportions of the atlas entities (SYS-ATLAS §6); the seat anchor is checked against the collider above.
+        // Proportions of the atlas entities (SYS-ATLAS); the seat anchor is checked against the collider above.
         var post = new AtlasPostPart().Bounds(new SignParams(0.3f, 1.05f, 0.3f));
         Check(Math.Abs(post.Max.Y - 1.05f) < 0.01f, "The atlas post is 1.05 m tall.");
         var kiosk = new AtlasKioskPart().Bounds(new SignParams(2f, 2.6f, 0.8f));
@@ -267,7 +267,7 @@ public sealed class StreetPartsTests
     [TestCase]
     public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
     {
-        // WLD-LIFE §4.12: of the street parts only the vending machine hums, within 4 m; every other part is silent.
+        // WLD-LIFE: of the street parts only the vending machine hums, within 4 m; every other part is silent.
         foreach (var sample in StreetGallery.CreateSamples())
         {
             var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
@@ -282,7 +282,7 @@ public sealed class StreetPartsTests
         Check(new[] { "seat", "grip.left", "grip.right", "pedal.left", "pedal.right", "axle.front", "axle.rear" }.All(sockets.ContainsKey), "The bicycle lacks a riding socket.");
         Check(sockets["grip.left"].M41 < 0 && sockets["grip.right"].M41 > 0 && sockets["axle.front"].M43 < sockets["axle.rear"].M43, "The bicycle's sockets face the wrong way (front is −Z, a rider's left is −X).");
         Check(sockets["seat"].M42 > sockets["pedal.left"].M42 + 0.4f, "The saddle is not above the pedals.");
-        // Sizes from MAP-QSH-ADDITIONS §2.13: the fountain's top at 1.1 m on 0.6 × 0.45, the signpost 2.6 m with 3–5 boards.
+        // Sizes from MAP-QSH-ADDITIONS: the fountain's top at 1.1 m on 0.6 × 0.45, the signpost 2.6 m with 3–5 boards.
         var fountain = new DrinkingFountainPart().Bounds(new EquipmentParams(0.6f, 1.1f, 0.45f));
         Check(Math.Abs(fountain.Max.Y - 1.1f) < 0.01f, "The fountain's top is not at 1.1 m.");
         Check(Lettering.Covers(StreetStyle.FountainTitle), "The fountain's plate has no glyphs.");
@@ -334,7 +334,7 @@ public sealed class StreetPartsTests
                 foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
                 { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
-            // Printed face geometry (lettering, pictograms; line class None) is flat quads by design (ART-MODELING §7.5); every
+            // Printed face geometry (lettering, pictograms; line class None) is flat quads by design (ART-MODELING); every
             // other surface is a set of closed solids.
             if (m.Material.Spec.Line != LineClass.None)
                 foreach (var (edge, count) in edges)

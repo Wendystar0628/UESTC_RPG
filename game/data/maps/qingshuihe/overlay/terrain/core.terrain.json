@@ -15,7 +15,7 @@
       "side": {"fill": "1:2", "cut": "1:2"},
       "fillet": 2.0,
       "priority": 40,
-      "reason": "排水（MAP-QSH-TERRAIN §2.2，谷—阶—殿）：时间广场 osm:way:552968505 整块下沉到 −0.9。环为台阶脚（半径 24.8 m）外 0.3 m，挖方边坡 1:2 在半径 26.9 m 的广场边回到 0，整段藏在 6 级环形台阶实体下（R 0.15、T 0.35，WLD-TERRAIN §5.2）；验收镜头 A 仰望、P02。圆内不另做向心排水坡，免得中心徽饰积水（MAP-QSH-CORE §7 天气要点）。"
+      "reason": "排水（MAP-QSH-TERRAIN，谷—阶—殿）：时间广场 osm:way:552968505 整块下沉到 −0.9。环为台阶脚（半径 24.8 m）外 0.3 m，挖方边坡 1:2 在半径 26.9 m 的广场边回到 0，整段藏在 6 级环形台阶实体下（R 0.15、T 0.35，WLD-TERRAIN）；验收镜头 A 仰望、P02。圆内不另做向心排水坡，免得中心徽饰积水（MAP-QSH-CORE 天气要点）。"
     },
     {
       "op": "slope",
@@ -33,7 +33,7 @@
       "side": {"fill": "1:3", "cut": "1:3"},
       "fillet": 2.0,
       "width": 2.0,
-      "reason": "连接（MAP-QSH-TERRAIN §2.3）：广场东北侧沿圆边内侧弧形下行的 1:12 坡道第一段，与环形台阶合成同一高差的两条路（短陡台阶、长缓坡道）。"
+      "reason": "连接（MAP-QSH-TERRAIN）：广场东北侧沿圆边内侧弧形下行的 1:12 坡道第一段，与环形台阶合成同一高差的两条路（短陡台阶、长缓坡道）。"
     },
     {
       "op": "slope",
@@ -51,7 +51,7 @@
       "side": {"fill": "1:3", "cut": "1:3"},
       "fillet": 2.0,
       "width": 2.0,
-      "reason": "连接：东北坡道中间 1.5 m 平台（每升 0.75 m 以内一块平台，WLD-TERRAIN §5.3）。"
+      "reason": "连接：东北坡道中间 1.5 m 平台（每升 0.75 m 以内一块平台，WLD-TERRAIN）。"
     },
     {
       "op": "slope",
@@ -87,7 +87,7 @@
       "side": {"fill": "1:3", "cut": "1:3"},
       "fillet": 2.0,
       "width": 2.0,
-      "reason": "连接（MAP-QSH-TERRAIN §2.3）：广场西南侧 1:12 坡道第一段，与东北坡道对称。"
+      "reason": "连接（MAP-QSH-TERRAIN）：广场西南侧 1:12 坡道第一段，与东北坡道对称。"
     },
     {
       "op": "slope",
@@ -144,7 +144,7 @@
         {"s0": 39.82, "s1": 41.94, "structure": "design:core-plaza-ring-steps"},
         {"s0": 91.55, "s1": 93.66, "structure": "design:core-plaza-ring-steps"}
       ],
-      "reason": "道路走廊（MAP-QSH-TERRAIN §2.2）：中轴步道落在下沉圆内的一段取 −0.9，不在广场里切出一道 0 m 的堤；在圆边断开，两处 steps 区段由环形台阶实体接上，走廊在这里不钳制高度场。"
+      "reason": "道路走廊（MAP-QSH-TERRAIN）：中轴步道落在下沉圆内的一段取 −0.9，不在广场里切出一道 0 m 的堤；在圆边断开，两处 steps 区段由环形台阶实体接上，走廊在这里不钳制高度场。"
     },
     {
       "op": "pad",
@@ -153,7 +153,7 @@
       "feature": "qsh:way:806848396",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层（MAP-QSH-TERRAIN §2.2）：图书馆锁在 0，大台阶顶与二楼楼面 +5.1 不随地形动（MAP-QSH-LIBRARY §0.4）。"
+      "reason": "垫层（MAP-QSH-TERRAIN）：图书馆锁在 0，大台阶顶与二楼楼面 +5.1 不随地形动（MAP-QSH-LIBRARY）。"
     },
     {
       "op": "pad",
@@ -162,7 +162,7 @@
       "feature": "qsh:way:806848398",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：图书馆大台阶基座 8398 锁在 0，脚下轴线铺装平（MAP-QSH-TERRAIN §2.3）。"
+      "reason": "垫层：图书馆大台阶基座 8398 锁在 0，脚下轴线铺装平（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -171,7 +171,7 @@
       "feature": "qsh:way:806848399",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：图书馆东侧平房 8399 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：图书馆东侧平房 8399 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -180,7 +180,7 @@
       "feature": "qsh:way:806848403",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：北辅楼 8403 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：北辅楼 8403 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -189,7 +189,7 @@
       "feature": "qsh:way:806848404",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：东北连接体 8404（一楼品·悦吧）锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：东北连接体 8404（一楼品·悦吧）锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -198,7 +198,7 @@
       "feature": "qsh:way:806848405",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：东北连桥 8405 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：东北连桥 8405 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -207,7 +207,7 @@
       "feature": "qsh:way:806848406",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：北内院翼楼 8406 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：北内院翼楼 8406 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -216,7 +216,7 @@
       "feature": "qsh:way:806848407",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：品·悦吧店面 8407 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：品·悦吧店面 8407 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -225,7 +225,7 @@
       "feature": "qsh:way:806848408",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：北内院低楼 8408 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：北内院低楼 8408 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -234,7 +234,7 @@
       "feature": "qsh:way:806848409",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：西北连廊 8409 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：西北连廊 8409 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -243,7 +243,7 @@
       "feature": "qsh:way:806848410",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：西北连廊接口 8410 锁在 0（MAP-QSH-TERRAIN §2.2）。"
+      "reason": "垫层：西北连廊接口 8410 锁在 0（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "pad",
@@ -252,7 +252,7 @@
       "feature": "qsh:way:806848402",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层：电子科技博物馆锁在 0，开放室内按垫层求楼面（MAP-QSH-TERRAIN §2.2、§12.2）。"
+      "reason": "垫层：电子科技博物馆锁在 0，开放室内按垫层求楼面（MAP-QSH-TERRAIN）。"
     },
     {
       "op": "channel",
@@ -272,7 +272,7 @@
         {"road": "qsh:source:way:217855042", "at": [-211.0, 445.0]},
         {"road": "qsh:source:way:687770521", "endBefore": true}
       ],
-      "reason": "排水（MAP-QSH-TERRAIN §3.2，落金沟）：银杏大道南段西侧人行道 osm:way:544161548 外约 10 m 的干植草沟，沟底 −0.4、底宽 1.2 m，内坡（朝路）1:4、外坡 1:6（swale 现只表达对称断面，先两侧 inner 1:5、outer 0，left/right 覆盖落地后改回），沟底卵石收边；路面一寸不动，两侧落低把路读成一道堤，秋季沟底是一条金色落叶带；验收镜头 B 揭示。与横路相交处路照常平，沟从路下穿过。"
+      "reason": "排水（MAP-QSH-TERRAIN，落金沟）：银杏大道南段西侧人行道 osm:way:544161548 外约 10 m 的干植草沟，沟底 −0.4、底宽 1.2 m，内坡（朝路）1:4、外坡 1:6（swale 现只表达对称断面，先两侧 inner 1:5、outer 0，left/right 覆盖落地后改回），沟底卵石收边；路面一寸不动，两侧落低把路读成一道堤，秋季沟底是一条金色落叶带；验收镜头 B 揭示。与横路相交处路照常平，沟从路下穿过。"
     },
     {
       "op": "channel",
@@ -294,7 +294,7 @@
         {"road": "qsh:source:way:584727581", "at": [-70.0, 328.0]},
         {"road": "qsh:source:way:572770122", "at": [-21.0, 262.0]}
       ],
-      "reason": "排水（MAP-QSH-TERRAIN §3.2，落金沟）：东侧人行道 osm:way:544161558 外约 10 m 的干植草沟，起点避开主楼 C3 区，做法同西沟；过路段地表只露出两端的卵石沟头。"
+      "reason": "排水（MAP-QSH-TERRAIN，落金沟）：东侧人行道 osm:way:544161558 外约 10 m 的干植草沟，起点避开主楼 C3 区，做法同西沟；过路段地表只露出两端的卵石沟头。"
     }
   ]
 }

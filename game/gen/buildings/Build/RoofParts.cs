@@ -10,12 +10,12 @@ using Campus.Gen.Parts.Roof;
 namespace Campus.Gen.Buildings.Build;
 
 /// <summary>
-/// The WP-12 roof parts of one building at one level, placed by PartCatalog ID (MAP-QSH-ADDITIONS §2.9): coping and
+/// The WP-12 roof parts of one building at one level, placed by PartCatalog ID (MAP-QSH-ADDITIONS): coping and
 /// lightning strip swept along the parapet centreline, and the plant enclosure, a closed equipment-fence ring around a
 /// row of heat pumps and a water tank, plus a mast on some tall roofs. Density follows the roof's precision zone
 /// (RoofRules): full roofs (K1, K2) at the building's level, the rest with fewer units one part level coarser near.
 /// A unit's +X runs along the building axis; everything stands on the roof slab and is visual only (roofs cannot be
-/// reached, MAP-QSH-ADDITIONS §7).
+/// reached, MAP-QSH-ADDITIONS).
 /// </summary>
 public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
 {

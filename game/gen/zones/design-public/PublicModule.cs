@@ -5,7 +5,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.DesignPublic;
 
 /// <summary>
-/// WP-29 公共空间 (MAP-QSH-ADDITIONS §2.3, §2.7, §2.8, §7): only the unowned public spaces (D-185). 29a: the corner pocket
+/// WP-29 公共空间 (MAP-QSH-ADDITIONS): only the unowned public spaces (D-185). 29a: the corner pocket
 /// greens of the main junctions between the zones. The paving is a pedestrian polygon in overlay/public.d/ (WP-15 paves
 /// it, WP-23 keeps trunks off it), the tree is a tree pit WP-23 plants; this module builds the curved bench and the pit
 /// kerb and soil, their colliders and seat edges. Claims nothing: no OSM feature is replaced.
@@ -15,7 +15,7 @@ public sealed class PublicModule : IContentModule
 {
     public IReadOnlyList<Claim> Claims { get; } = [];
 
-    /// <summary>ENG-BUDGET §8: WP-29 has 0.5 % (12,500 fine triangles) per view; one pocket green measures about 3k at L0.</summary>
+    /// <summary>ENG-BUDGET: WP-29 has 0.5 % (12,500 fine triangles) per view; one pocket green measures about 3k at L0.</summary>
     public ModuleBudget Budget { get; } = new(TrianglesL0: 12_000, TrianglesL1: 6_000, DrawCalls: 4);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx)

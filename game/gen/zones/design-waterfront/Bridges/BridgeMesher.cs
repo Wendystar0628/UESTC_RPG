@@ -7,7 +7,7 @@ using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 namespace Campus.Gen.Zones.DesignWaterfront.Bridges;
 
 /// <summary>
-/// Geometry of one bridge in world coordinates (ART-MODELING §7.2 收边与倒角, §7.4, §7.6):
+/// Geometry of one bridge in world coordinates (ART-MODELING 收边与倒角, §7.4, §7.6):
 /// a concrete slab with a flat soffit; asphalt on the carriageway, paving on the walking strips, granite kerbs between them,
 /// all at the WP-15 ground levels so the approaches meet flush; a continuous white-stone parapet base (地栿) that overhangs
 /// the fascia as its drip line; square stone posts with plain caps every ~2 m between taller bridge-head posts; two

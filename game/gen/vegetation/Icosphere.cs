@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Campus.Gen.Vegetation;
 
-/// <summary>Unit icospheres: level 0 = 20 triangles, 1 = 80, 2 = 320 (ENG-PERF §9 cloud balls). Triangles wind counter-clockwise seen from outside.</summary>
+/// <summary>Unit icospheres: level 0 = 20 triangles, 1 = 80, 2 = 320 (ENG-PERF cloud balls). Triangles wind counter-clockwise seen from outside.</summary>
 internal sealed class Icosphere
 {
     private static readonly Lazy<Icosphere>[] Levels =

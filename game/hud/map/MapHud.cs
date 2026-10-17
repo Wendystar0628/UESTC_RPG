@@ -8,9 +8,9 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// WP-48b 的入口：左上角常驻小地图与 M / G 打开的大地图（SYS-ATLAS §3、§4）。
+/// WP-48b 的入口：左上角常驻小地图与 M / G 打开的大地图（SYS-ATLAS）。
 /// 只依赖契约与 Kernel.Get：标记、区域与传送经 IAtlasService；玩家箭头与所在区域读 IObserverState；
-/// 视锥读 ICameraRig.Pose；不直接调 ICameraRig.Transit（ENG-ARCH §2）。界面在 CanvasLayer 10（HudRoot 那一层）；
+/// 视锥读 ICameraRig.Pose；不直接调 ICameraRig.Transit（ENG-ARCH）。界面在 CanvasLayer 10（HudRoot 那一层）；
 /// WP-35 的左上角槽位与全屏页槽位合入后改挂到槽位里。
 /// </summary>
 [KernelNode("hud-map", Owner = "WP-48b")]
@@ -108,7 +108,7 @@ public partial class MapHud : Node, IMapAware
         _minimap = new Minimap(_ctx);
         _root.AddChild(_minimap);
         CallDeferred(MethodName.MountMinimap);
-        // 大地图在扉页之后预建、隐藏：第一次按 M 不建控件（SYS-ATLAS §4.1）
+        // 大地图在扉页之后预建、隐藏：第一次按 M 不建控件（SYS-ATLAS）
         _page = new AtlasPage(_ctx) { Visible = false };
         _root.AddChild(_page);
 
@@ -144,7 +144,7 @@ public partial class MapHud : Node, IMapAware
     }
 
     /// <summary>
-    /// 小地图挂进 WP-35 的左上角槽位 "MinimapSlot"（槽位名由 WP-35 定，SYS-ATLAS §10）：U、--ui=0、过场、设置卡与存档页
+    /// 小地图挂进 WP-35 的左上角槽位 "MinimapSlot"（槽位名由 WP-35 定，SYS-ATLAS）：U、--ui=0、过场、设置卡与存档页
     /// 打开时随槽位隐藏。没有 HudRoot 时（只有 D0 舞台）留在本节点自己的 CanvasLayer 10 上。
     /// 大地图页留在本节点自己的 CanvasLayer 10 上，打开期间由 <see cref="CoverOthers"/> 收起其余界面层。
     /// </summary>
@@ -156,8 +156,8 @@ public partial class MapHud : Node, IMapAware
     }
 
     /// <summary>
-    /// 大地图打开时小地图和其余界面隐藏（SYS-ATLAS §4.1），署名任何时刻只出现一份：地图纸右下角那条（ODbL）。
-    /// 所以打开期间收起 WP-35 的 HudRoot 层（四角件、小地图槽位）和 WP-01 的署名层（CanvasLayer 11，UI-NAV §9），
+    /// 大地图打开时小地图和其余界面隐藏（SYS-ATLAS），署名任何时刻只出现一份：地图纸右下角那条（ODbL）。
+    /// 所以打开期间收起 WP-35 的 HudRoot 层（四角件、小地图槽位）和 WP-01 的署名层（CanvasLayer 11，UI-NAV），
     /// 关上时恢复原来的显隐。contract-9 的界面打开状态（IUiSurfaceSink）落地后，改为报告状态、由各层自己隐藏。
     /// </summary>
     private void CoverOthers(bool cover)
@@ -267,7 +267,7 @@ public partial class MapHud : Node, IMapAware
         if (_world.Instance != _instance || _resetMinimapView)
         {
             // 新的世界实例（读档、新游戏），或不连续地回到 Playing（同一世界继续）：
-            // 平滑量与标记参考直接落到新值，与冷启动恢复同一起点（ENG-ARCH §2）
+            // 平滑量与标记参考直接落到新值，与冷启动恢复同一起点（ENG-ARCH）
             _instance = _world.Instance;
             _lastFeet = at;
             _speed = 0;
@@ -288,7 +288,7 @@ public partial class MapHud : Node, IMapAware
         _minimap.Player.Follow(size * 0.5f, _observer.YawDeg, pose.YawDeg, HorizontalFov(pose));
         _minimap.SetScale(ppm);
         _minimap.SetInterfaceState(Input.MouseMode == Input.MouseModeEnum.Visible);
-        // 镜头在室内、地下、水下时整体不透明度 0.6；雾幕段跟着雾幕淡出、淡回（SYS-ATLAS §3）
+        // 镜头在室内、地下、水下时整体不透明度 0.6；雾幕段跟着雾幕淡出、淡回（SYS-ATLAS）
         var dim = _medium.Current.Kind switch
         {
             MediumKind.Interior or MediumKind.Underground or MediumKind.Underwater => 0.6f,
@@ -299,14 +299,14 @@ public partial class MapHud : Node, IMapAware
         UpdateRegion(dt, at);
     }
 
-    /// <summary>行走固定 120 m；旁观 W = clamp(120 + 1.1·h + 2.5·v, 120, 1300)（SYS-ATLAS §3）。</summary>
+    /// <summary>行走固定 120 m；旁观 W = clamp(120 + 1.1·h + 2.5·v, 120, 1300)（SYS-ATLAS）。</summary>
     private float TargetHalfWidth(float speed)
     {
         switch (_observer.Mode)
         {
             case ViewMode.Walk: return WalkHalfWidth;
             case ViewMode.Fly:
-                // 离地高度 h 应取常驻的低精度地形（SYS-VIEW §2.1）；界面拿不到地形，观光期地面是相对平面
+                // 离地高度 h 应取常驻的低精度地形（SYS-VIEW）；界面拿不到地形，观光期地面是相对平面
                 // （campus.json 的 heightNote），先按眼高计
                 var h = MathF.Max(0, _observer.Eye.Y);
                 return Math.Clamp(WalkHalfWidth + 1.1f * h + 2.5f * speed, WalkHalfWidth, 1300);
@@ -322,7 +322,7 @@ public partial class MapHud : Node, IMapAware
         return Mathf.RadToDeg(2 * MathF.Atan(MathF.Tan(Mathf.DegToRad(vfov) * 0.5f) * aspect));
     }
 
-    /// <summary>每秒 10 次查 8 m 区域栅格；新区域连续保持 1 s 才换字（SYS-ATLAS §3）。</summary>
+    /// <summary>每秒 10 次查 8 m 区域栅格；新区域连续保持 1 s 才换字（SYS-ATLAS）。</summary>
     private void UpdateRegion(float dt, Vector2 at)
     {
         _regionClock += dt;
@@ -363,7 +363,7 @@ public partial class MapHud : Node, IMapAware
         {
             if (arg.StartsWith("--ui=", StringComparison.Ordinal)) _uiEnabled = arg[5..] != "0";
             else if (arg.StartsWith("--ui-theme=", StringComparison.Ordinal)) _themeArg = arg[11..];
-            else if (arg.StartsWith("--motion=", StringComparison.Ordinal)) _instant = arg[9..] == "instant";   // 界面截图用 instant（ENG-GATES §1）
+            else if (arg.StartsWith("--motion=", StringComparison.Ordinal)) _instant = arg[9..] == "instant";   // 界面截图用 instant（ENG-GATES）
         }
     }
 
@@ -507,7 +507,7 @@ public partial class MapHud : Node, IMapAware
         return $"{_geo.Format(PlayerAt())} · 此处";
     }
 
-    /// <summary>"此处"：镜头在 40 m 以内、朝向偏差在 60° 以内（UI-NAV §4.5）；标记层与目录各用一份。</summary>
+    /// <summary>"此处"：镜头在 40 m 以内、朝向偏差在 60° 以内（UI-NAV）；标记层与目录各用一份。</summary>
     private void UpdateHere(Pose pose)
     {
         var cam = new Vector2(pose.Position.X, pose.Position.Z);
@@ -570,7 +570,7 @@ public partial class MapHud : Node, IMapAware
         else _page.Layers.GrabFocus();
     }
 
-    /// <summary>等宽元信息："P05 · 西区 · 30.7516°N 103.9229°E"（SYS-ATLAS §4.5）。</summary>
+    /// <summary>等宽元信息："P05 · 西区 · 30.7516°N 103.9229°E"（SYS-ATLAS）。</summary>
     private string Meta(MapEntry e)
     {
         var area = e.Marker.Region is { } r && _atlas.Regions.FirstOrDefault(region => region.Id == r) is { } reg ? reg.Name.Zh
@@ -596,7 +596,7 @@ public partial class MapHud : Node, IMapAware
         if (!_atlas.CanTravel(e.Id, style, out _)) return;
         var handle = _atlas.Travel(e.Id, style);
         if (handle is null) return;
-        // 输入占用不随大地图收拢释放，保持到还给控制（SYS-ATLAS §7.2 第 1、6 步）
+        // 输入占用不随大地图收拢释放，保持到还给控制（SYS-ATLAS 第 1、6 步）
         _pending = handle;
         _pendingFromRoam = _fromRoam;
         Close(restoreRoam: false);
@@ -617,7 +617,7 @@ public partial class MapHud : Node, IMapAware
         _atlas.Track(_atlas.Tracked == e.Id ? null : e.Id);
     }
 
-    // ------------------------------------------------------------------ 按键（UI-NAV §5、SYS-ATLAS §4.7）
+    // ------------------------------------------------------------------ 按键（UI-NAV、SYS-ATLAS）
 
     public override void _UnhandledInput(InputEvent e)
     {

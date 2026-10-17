@@ -1,10 +1,10 @@
 namespace Campus.Gen.Interior.Shell.Cards;
 
 /// <summary>
-/// The 15 window cards and the lobby card (WLD-INTERIORS §5.1, §5.2). This is the single place to tune what a closed
+/// The 15 window cards and the lobby card (WLD-INTERIORS). This is the single place to tune what a closed
 /// building shows behind its glass; the shader only interprets these numbers (window_cards table, WindowCardTable).
 /// Reading cues by day: curtains or blinds catching daylight, ceiling fittings, a side wall or partition. By night the
-/// lit rooms differ by depth, curtain state, fittings and silhouettes, never one uniform sheet (SYS-TIME §6 decides
+/// lit rooms differ by depth, curtain state, fittings and silhouettes, never one uniform sheet (SYS-TIME decides
 /// which windows are lit).
 /// </summary>
 public static class WindowCardCatalog
@@ -130,7 +130,7 @@ public static class WindowCardCatalog
                 NightGain = 0.8f, Ceiling = CardCeiling.Single, Accent = CardAccent.Indicator, CoolShare = 1f,
             },
             // Lobby card (door glass of closed entrances): deeper hall, turnstiles with standby green lamps, floor
-            // index board, elevator doors; one step darker than an open lobby (WLD-INTERIORS §4, §5.2).
+            // index board, elevator doors; one step darker than an open lobby (WLD-INTERIORS).
             new WindowCardSpec(WindowCardKind.Lobby)
             {
                 Depth6 = 1f, SideExtra = 1.6f, SillDrop = 0.02f, CeilingRise = 0.8f, Near = CardFurniture.Turnstile,

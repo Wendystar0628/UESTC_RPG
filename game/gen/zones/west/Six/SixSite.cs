@@ -13,7 +13,7 @@ using W = Campus.Gen.Zones.West.WestTune.Windows;
 namespace Campus.Gen.Zones.West.Six;
 
 /// <summary>
-/// 六号科研楼 (MAP-QSH-WEST §1), a landmark built by this zone instead of WP-14: blocks A (9 floors, the tallest), B and C
+/// 六号科研楼 (MAP-QSH-WEST), a landmark built by this zone instead of WP-14: blocks A (9 floors, the tallest), B and C
 /// (7 floors) each stand on a two-storey dark glass base set back under the stone, with stone columns in the stone line;
 /// above it deep square windows in a warm grey stone grid and one continuous dark louvre strip per floor. C carries the
 /// crown sign over its east face (red emblem, silver characters) and the open east door (C 区东门, interiors.json six.c.east):
@@ -300,7 +300,7 @@ public sealed class SixSite : WestSite
         foreach (var s in new[] { -1f, 1f })
             b.Place(PartCatalog.CurtainWall, new WindowParams(side, top - y - 0.1f, 0.1f, 1, 2), f.AtReversed(x + s * (S.DoorWidth * 0.5f + 0.1f + side * 0.5f), y, 0));
         b.Place(PartCatalog.CurtainWall, new WindowParams(S.DoorWidth, top - y - S.DoorHeight - 0.1f, 0.1f, 2, 1), f.AtReversed(x, y + S.DoorHeight, 0));
-        // The doors stand open into the vestibule (WLD-INTERIORS §4: an open entrance's leaves are fixed open).
+        // The doors stand open into the vestibule (WLD-INTERIORS: an open entrance's leaves are fixed open).
         b.Place(PartCatalog.DoorGlass, new DoorParams(S.DoorWidth, S.DoorHeight, 0.08f, 90f, 2) { Foot = FootMat.Glass }, f.AtReversed(x, y, 0));
         GridFacade.Box(b, f, x - S.ApronWidth * 0.5f, x + S.ApronWidth * 0.5f, y - 0.1f, y + S.PavingTop + 0.03f, -0.1f, S.ApronDepth, L.Granite, 0.02f);
     }
@@ -315,7 +315,7 @@ public sealed class SixSite : WestSite
         var z = -S.Recess;
         b.Place(PartCatalog.DoorGlass, new DoorParams(S.ShutDoorWidth, S.ShutDoorHeight, 0.08f, 0f, 2) { Foot = FootMat.Glass }, f.AtReversed(x, y, z));
         GridFacade.Box(b, f, x - S.ShutDoorWidth * 0.5f - 0.12f, x + S.ShutDoorWidth * 0.5f + 0.12f, y + S.ShutDoorHeight, y + S.ShutDoorHeight + 0.18f, z - 0.05f, z + 0.12f, L.Metal, 0);
-        // The lobby card behind the shut glass (WLD-INTERIORS §5.2): hall light, gate standby lamps, floor index.
+        // The lobby card behind the shut glass (WLD-INTERIORS): hall light, gate standby lamps, floor index.
         b.Place(PartCatalog.InteriorCard, new PanelParams(S.ShutDoorWidth + 1.6f, S.ShutDoorHeight + 0.6f, 0.06f) { Variation = 1 }, f.AtReversed(x, y, z - 1.4f));
     }
 

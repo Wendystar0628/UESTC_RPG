@@ -4,7 +4,7 @@ using Campus.Contracts.Audio;
 
 namespace Campus.Contracts;
 
-// 导航图（照 WLD-INTERIORS §13、§15，WP-44 烘焙，随启动集发；室内部分由开放提供者的 Nav() 给出；命名空间 Campus.Contracts）
+// 导航图（照 WLD-INTERIORS，WP-44 烘焙，随启动集发；室内部分由开放提供者的 Nav() 给出；命名空间 Campus.Contracts）
 public readonly record struct NavNodeId(uint Value);
 public readonly record struct NavSpace(FeatureId? Building, short Floor);   // 室外 Building 为 null；存档记观者所在的空间（SYS-SAVE）
 public enum NavEdgeKind : byte

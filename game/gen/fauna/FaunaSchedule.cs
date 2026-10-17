@@ -4,28 +4,28 @@ namespace Campus.Gen.Fauna;
 
 public enum FaunaKind : byte { Cat, Pigeon, Sparrow, Swan, Crow }
 
-/// <summary>The sets of one site (WLD-LIFE §6.2): day and night positions, and the cats' "under the eaves" set for rain.</summary>
+/// <summary>The sets of one site (WLD-LIFE): day and night positions, and the cats' "under the eaves" set for rain.</summary>
 public enum FaunaSet : byte { Day, Night, Rain }
 
-/// <summary>The weather dimension of the latched state (WLD-LIFE §6.2): clear, rain (snow counts as rain for animals), after rain.</summary>
+/// <summary>The weather dimension of the latched state (WLD-LIFE): clear, rain (snow counts as rain for animals), after rain.</summary>
 public enum WeatherDim : byte { Clear, Rain, AfterRain }
 
 /// <summary>
-/// Target set of each animal kind for a sun altitude and weather vector (WLD-LIFE §1, §6.2). Pure: the target depends only on
+/// Target set of each animal kind for a sun altitude and weather vector (WLD-LIFE). Pure: the target depends only on
 /// the world state, so every site converges to the same result once the camera looks away. Night means the sun below −6°.
-/// Rain is read from the weather vector only (SYS-WEATHER §8); the module never decides the weather itself.
+/// Rain is read from the weather vector only (SYS-WEATHER); the module never decides the weather itself.
 /// </summary>
 public static class FaunaSchedule
 {
-    /// <summary>Night: the sun below −6° (WLD-LIFE §1).</summary>
+    /// <summary>Night: the sun below −6° (WLD-LIFE).</summary>
     public const float NightSunDeg = -6f;
-    /// <summary>"Rain" once precipitation is clearly present (WLD-LIFE §7, P0 initial value; rain or snow alike for animals).</summary>
+    /// <summary>"Rain" once precipitation is clearly present (WLD-LIFE, P0 initial value; rain or snow alike for animals).</summary>
     public const float RainPrecip = 0.15f;
-    /// <summary>"After rain" while the ground is still wet after precipitation stops (WLD-LIFE §7, P0 initial value).</summary>
+    /// <summary>"After rain" while the ground is still wet after precipitation stops (WLD-LIFE, P0 initial value).</summary>
     public const float AfterRainWet = 0.4f;
-    /// <summary>Swans stay on the water in light and moderate rain; from this much precipitation on they use the night set (WLD-LIFE §1).</summary>
+    /// <summary>Swans stay on the water in light and moderate rain; from this much precipitation on they use the night set (WLD-LIFE).</summary>
     public const float HeavyPrecip = 0.6f;
-    /// <summary>Dusk crows: afternoon, sun from +8° down to −6° (D-175, WLD-LIFE §1).</summary>
+    /// <summary>Dusk crows: afternoon, sun from +8° down to −6° (D-175, WLD-LIFE).</summary>
     public const float DuskHighDeg = 8f;
     public const double DuskAfterClock = 12.0;
 
@@ -45,7 +45,7 @@ public static class FaunaSchedule
         };
         return kind switch
         {
-            // Cats: the only animals active at night; in rain they shelter under the eaves, day or night (WLD-LIFE §1).
+            // Cats: the only animals active at night; in rain they shelter under the eaves, day or night (WLD-LIFE).
             FaunaKind.Cat => rain ? FaunaSet.Rain : night ? FaunaSet.Night : FaunaSet.Day,
             // Pigeons: on the plaza by day; at night and in rain they roost under nearby eaves, never on the ground.
             FaunaKind.Pigeon => rain || night ? FaunaSet.Night : FaunaSet.Day,

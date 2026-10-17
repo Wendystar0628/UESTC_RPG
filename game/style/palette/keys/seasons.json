@@ -1,15 +1,15 @@
 {
   "format": "campus.palette.seasons/1",
   "owner": "WP-37",
-  "doc": "SYS-TIME §3.3；ART-SKYLIGHT §4.4、§6；ART-STYLE §7.1",
+  "doc": "SYS-TIME；ART-SKYLIGHT；ART-STYLE",
   "notes": [
-    "在秋季基准关键帧上用 OKLCH 叠增量，再按 derive.json 推导材质色（SYS-TIME §3.3）。秋季增量为 0。",
+    "在秋季基准关键帧上用 OKLCH 叠增量，再按 derive.json 推导材质色（SYS-TIME）。秋季增量为 0。",
     "scope 给出每个关键帧上增量的权重；表里没写的关键帧权重为 0，scope 为 all 时全部为 1。",
     "sky.zenith 的增量按 skyFalloff 从地平线（0）到天顶（1）分配到 5 段上，太阳侧与背阳侧相同。",
     "key 的 toward：主光色在 OKLab 里向目标色混合 amount × 权重；chroma：主光彩度乘 1 + (mul − 1) × 权重。",
     "fog 的 toward 只混 a、b（abAmount × 权重），L 另加 dL；visibilityMul 乘起雾与剪影距离；hazeMul 乘霾带高度。",
-    "shade.dr 叠到影明度比 r 上，结果再夹到 limits.rMax（白天格的上限，保证 SYS-TIME §8 白天 ΔL ≥ 0.13）。",
-    "limits.zenithMinC：正午天顶彩度不低于 0.15（SYS-TIME §3.4 正午太平），季节增量把它压低时夹回。",
+    "shade.dr 叠到影明度比 r 上，结果再夹到 limits.rMax（白天格的上限，保证 SYS-TIME 白天 ΔL ≥ 0.13）。",
+    "limits.zenithMinC：正午天顶彩度不低于 0.15（SYS-TIME 正午太平），季节增量把它压低时夹回。",
     "overrides 是季节专属覆盖（手调），按关键帧直接替换色名的值。"
   ],
   "skyFalloff": [0.0, 0.15, 0.4, 0.7, 1.0],

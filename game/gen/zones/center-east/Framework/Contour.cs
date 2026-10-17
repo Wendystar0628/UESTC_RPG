@@ -7,7 +7,7 @@ namespace Campus.Gen.Zones.CenterEast.Framework;
 /// <summary>
 /// Plan rings for rounded, terraced massing (the 21c liberal-arts group): half-plane clips for set-back storeys, corner
 /// fillets, miter offsets, cells of equal arclength for ribbon glazing, and slabs and ring walls whose sides keep smooth
-/// normals round the curves so a rounded floor edge shades as one band (ART-MODELING §7.6). Rings are canonical: outside
+/// normals round the curves so a rounded floor edge shades as one band (ART-MODELING). Rings are canonical: outside
 /// on the right of the path (<see cref="PlanMath.OutsideRight"/>), so an edge a→b faces out along (b − a) turned to (dz, −dx).
 /// Scalar arithmetic and DetMath only.
 /// </summary>

@@ -10,7 +10,7 @@ namespace Campus.Gen.Parts.Circulation;
 /// Straight guard railing segment. Width is the run along X, Height the top of the top rail (real 1.05–1.1 m, at most
 /// 1.2 m: a human-scale anchor), Depth the top-rail width (0.08–0.15 m), PostSpacing the maximum post pitch.
 /// Variation: 0 balusters, 1 solid panel, 2 horizontal bars. Material overrides the aluminium default.
-/// Collision: one barrier wall, top max(Height, 1.5 m), reaching 1 m below the base for sloping ground (SYS-WALK §13).
+/// Collision: one barrier wall, top max(Height, 1.5 m), reaching 1 m below the base for sloping ground (SYS-WALK).
 /// </summary>
 [Part(PartCatalog.Railing, Owner = "WP-11")]
 public sealed class RailingPart() : CirculationPart<RailingParams>(new(440, 240))
@@ -35,7 +35,7 @@ public sealed class RailingPart() : CirculationPart<RailingParams>(new(440, 240)
 
 /// <summary>
 /// The rail bar alone, for wall-mounted handrails: Width is its length along X, Height and Depth its section, base at
-/// y = 0. The mounting height is the caller's placement. No collision: wall-side handrails do not block (WLD-INTERIORS §10).
+/// y = 0. The mounting height is the caller's placement. No collision: wall-side handrails do not block (WLD-INTERIORS).
 /// </summary>
 [Part(PartCatalog.Handrail, Owner = "WP-11")]
 public sealed class HandrailPart() : CirculationPart<RailingParams>(new(44, 12))
@@ -53,7 +53,7 @@ public sealed class HandrailPart() : CirculationPart<RailingParams>(new(44, 12))
 
 /// <summary>
 /// Clothes-drying rail: Width is the span along X, Depth the rack depth (one bar per 0.3 m, at least one), Height the
-/// bracket height. Bars are thin tubes held by end brackets. Small overhead item: no collision, no shadow (WLD-INTERIORS §10).
+/// bracket height. Bars are thin tubes held by end brackets. Small overhead item: no collision, no shadow (WLD-INTERIORS).
 /// </summary>
 [Part(PartCatalog.DryingRail, Owner = "WP-11")]
 public sealed class DryingRailPart() : CirculationPart<RailingParams>(new(150, 60))
@@ -89,8 +89,8 @@ public sealed class DryingRailPart() : CirculationPart<RailingParams>(new(150, 6
 }
 
 /// <summary>
-/// Steel bar gate used as a seal in open buildings (WLD-INTERIORS §10): Width × Height leaf area, Depth the frame depth,
-/// Leaves 1 or 2. Collision: a DoorClosed wall, top at least 1.5 m (SYS-WALK §13).
+/// Steel bar gate used as a seal in open buildings (WLD-INTERIORS): Width × Height leaf area, Depth the frame depth,
+/// Leaves 1 or 2. Collision: a DoorClosed wall, top at least 1.5 m (SYS-WALK).
 /// </summary>
 [Part(PartCatalog.IronGate, Owner = "WP-11")]
 public sealed class IronGatePart() : CirculationPart<DoorParams>(new(540, 300))

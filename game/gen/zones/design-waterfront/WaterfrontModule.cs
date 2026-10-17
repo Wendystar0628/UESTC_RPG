@@ -7,7 +7,7 @@ using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 namespace Campus.Gen.Zones.DesignWaterfront;
 
 /// <summary>
-/// WP-28 waterfront and bridges (WLD-WATER 分工, MAP-QSH-ADDITIONS §2.5, §2.12). 28a: the bridges registered in
+/// WP-28 waterfront and bridges (WLD-WATER 分工, MAP-QSH-ADDITIONS). 28a: the bridges registered in
 /// overlay/waterfront.d/ (kind <see cref="T.BridgeKind"/>), each built from the network lines it names, plus the bridge-head
 /// stones (kind <see cref="T.StoneKind"/>). The network itself is untouched: a bridge that merges several lines keeps them all
 /// (路网拓扑照旧). Water surfaces stay WP-24's; the river banks between the bridges follow in the next slice.

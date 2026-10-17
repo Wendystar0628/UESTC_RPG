@@ -12,7 +12,7 @@ using W = Campus.Gen.Zones.South.SouthTune.Windows;
 namespace Campus.Gen.Zones.South.Liren;
 
 /// <summary>
-/// Liren building (MAP-QSH-SOUTH §6). Blocks A and B stay with WP-14 (4 storeys, white family set in overlay/south.d/);
+/// Liren building (MAP-QSH-SOUTH). Blocks A and B stay with WP-14 (4 storeys, white family set in overlay/south.d/);
 /// this site claims the connector entity, whose OSM parts WP-14 would extrude solid and so close the corner gateway:
 /// the two four-storey pier blocks either side of it, the fourth-storey bridge over the three-storey void, held on square
 /// columns at both open faces (§6.3), and the two-storey east link between A and B. The void stays open from the paved

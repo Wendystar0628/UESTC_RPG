@@ -2535,21 +2535,21 @@
    "duration_s": 58.5,
    "channels": 1,
    "placeholder": true,
-   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO）"
   },
   {
    "file": "music/broadcast_melody_mid.ogg",
    "duration_s": 59.4,
    "channels": 1,
    "placeholder": true,
-   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO）"
   },
   {
    "file": "music/broadcast_melody_far.ogg",
    "duration_s": 60.7,
    "channels": 1,
    "placeholder": true,
-   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO §6.3）"
+   "note": "原创曲调占位；正式曲目与录音由委托完成（SYS-AUDIO）"
   }
  ],
  "bells": [

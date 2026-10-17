@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Style.Materials;
 
 /// <summary>
-/// 白名单里非卡通着色器的材质来源（contract-3；ENG-PERF §1.4）。每次返回一个新的 ShaderMaterial，
+/// 白名单里非卡通着色器的材质来源（contract-3；ENG-PERF）。每次返回一个新的 ShaderMaterial，
 /// 调用方只写 uniform，不换着色器、不改 render_mode 和 #define。卡通系仍经 ToonSpec 走材质库。
 /// 着色器文件归各自的包，这里只建材质。
 /// </summary>

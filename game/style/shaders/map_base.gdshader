@@ -1,13 +1,13 @@
-// map_base.gdshader（WP-48b，白名单；SYS-ATLAS §2.2、ENG-PERF §1.4）
+// map_base.gdshader（WP-48b，白名单；SYS-ATLAS、ENG-PERF）
 // 平面地图唯一的画布着色器，小地图与大地图共用。两种用法由材质 uniform mode 区分（不用 #define）：
-//   0 底图：按本机烘焙的精确矢量距离场（WP-48a）逐层上色，画层顺序与色名见 SYS-ATLAS §2.2；
+//   0 底图：按本机烘焙的精确矢量距离场（WP-48a）逐层上色，画层顺序与色名见 SYS-ATLAS；
 //   1 地标线描：从 map_glyphs（MSDF 图集）里画一枚，颜色取 map.landmark 的描边色。
 // 颜色只来自色表 pal_day / pal_night（下标见 C_*，与 Campus.Hud.Map.MapPalette.Roles 同序，
 // 由界面从 ui.json 的 map.light / map.dark 写入）；这里不写字面色值。
 // 日夜：theme_front 与界面的 ui_night 同一语义（扫描前沿的位置），由界面写成材质 uniform；
-// 常驻的小地图写 instance uniform pin_night = 1，固定深屏（UI-VISUAL §11.6）。
-// 全局参数只读 season（绿地底色随季节轻微变化，SYS-ATLAS §2.4）。不用 TIME。
-// 线一律不细于 1 物理像素，界面缩放 ≥ 150% 时按缩放取整加宽（SYS-ATLAS §2.2 末条）。
+// 常驻的小地图写 instance uniform pin_night = 1，固定深屏（UI-VISUAL）。
+// 全局参数只读 season（绿地底色随季节轻微变化，SYS-ATLAS）。不用 TIME。
+// 线一律不细于 1 物理像素，界面缩放 ≥ 150% 时按缩放取整加宽（SYS-ATLAS 末条）。
 shader_type canvas_item;
 render_mode unshaded;
 
@@ -53,10 +53,10 @@ const int F_HIGHLIGHT = 2;  // 按 highlight 编号高亮一个地点
 uniform int mode : hint_enum("Base", "Glyph") = 0;
 uniform vec4 pal_day[32] : source_color;
 uniform vec4 pal_night[32] : source_color;
-uniform float theme_front = 0.0;        // 0 全屏晶白，1 全屏深屏；切换时 0.6 s 走完（UI-VISUAL §3.6）
+uniform float theme_front = 0.0;        // 0 全屏晶白，1 全屏深屏；切换时 0.6 s 走完（UI-VISUAL）
 uniform float front_width = 0.02;       // themeSwitch.frontWidth
 
-// 底图数据纹理（SYS-ATLAS §2.1）：不压缩 RGBA8，带 mipmap。距离夹在 ±8 m，128 是边界，内负外正。
+// 底图数据纹理（SYS-ATLAS）：不压缩 RGBA8，带 mipmap。距离夹在 ±8 m，128 是边界，内负外正。
 uniform sampler2D map_sdf_a : filter_linear_mipmap, repeat_disable;     // R 水，G 绿地，B 道路，A 建筑
 uniform sampler2D map_sdf_b : filter_linear_mipmap, repeat_disable;     // R 地点编号，G 类别（texelFetch），B 运动场与广场，A 校界
 uniform sampler2D map_sdf_out : filter_linear_mipmap, repeat_disable;   // R 外围街区，G 外围道路，B 外围水体，A 箱庭外缘
@@ -67,8 +67,8 @@ uniform vec4 rect_out = vec4(-1280.0, -1280.0, 2560.0, 2560.0);  // map_sdf_out�
 uniform vec4 rect_ring = vec4(-1536.0, -1536.0, 3072.0, 3072.0); // map_sdf_ring：atlasRect
 uniform float sdf_range = 8.0;          // 编码的距离上限（m）
 uniform float seam_band = 24.0;         // ±1280 m 边线内侧的混合带（m）
-uniform float data_ready = 0.0;         // 0：底图还没烘好，只画校内用地一种颜色（SYS-ATLAS §2.1）
-uniform uvec2 reveal = uvec2(4294967295u, 4294967295u);   // 64 位揭示掩码，每位一个大区（SYS-ATLAS §8）；观光全为 1
+uniform float data_ready = 0.0;         // 0：底图还没烘好，只画校内用地一种颜色（SYS-ATLAS）
+uniform uvec2 reveal = uvec2(4294967295u, 4294967295u);   // 64 位揭示掩码，每位一个大区（SYS-ATLAS）；观光全为 1
 uniform int place_region[256];          // 地点编号 → 大区位号（0–63），供 reveal 用；观光期不读
 
 // 版图的几何（逻辑像素，1920×1080 基准；地图色的几何在 ui_metrics.json 的 metrics.map）
@@ -88,7 +88,7 @@ instance uniform float pin_night = 0.0;                 // 1 = 常驻件固定�
 instance uniform int flags = 0;
 instance uniform int highlight = -1;                    // 地点编号；-1 不高亮
 instance uniform vec4 glyph_rect = vec4(0.0, 0.0, 1.0, 1.0);   // mode 1：图集里的 UV 矩形（左上、右下）
-instance uniform float chamfer = 0.0;                   // 左上切角边长（逻辑像素）：大地图的地图纸切 14（UI-VISUAL §5.2）
+instance uniform float chamfer = 0.0;                   // 左上切角边长（逻辑像素）：大地图的地图纸切 14（UI-VISUAL）
 
 varying vec2 v_local;
 

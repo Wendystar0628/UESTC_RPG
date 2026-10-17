@@ -439,7 +439,7 @@ internal sealed class StreetSite
         type is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
 
     /// <summary>
-    /// What a point lands on, for an anchor's fallback (SYS-ATLAS §6 data still under review): a building's or water's outline,
+    /// What a point lands on, for an anchor's fallback (SYS-ATLAS data still under review): a building's or water's outline,
     /// a carriageway (a vehicle road's surface or paved area), else open ground. Checked in that order.
     /// </summary>
     public Landing LandingAt(Vector2 p)

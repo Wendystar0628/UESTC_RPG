@@ -1,4 +1,4 @@
-// water.gdshader：全校默认不透明水面（WP-24；WLD-WATER §1、§7.1，ENG-PERF §1.4、§10.4）
+// water.gdshader：全校默认不透明水面（WP-24；WLD-WATER，ENG-PERF）
 //
 // 留在不透明通道：不读深度、不读屏幕纹理；接收主光阴影，两阶合成与 toon 相同
 // （ALBEDO = 1，影写 EMISSION，"受光 − 影"在 light() 的方向光分支里按阈值化的阴影加进 DIFFUSE_LIGHT）；
@@ -8,7 +8,7 @@
 // 颜色全部来自调色板：水色四档与泡沫是 WP-24 登记的表面色对（palette/ext/WP-24.json，色号 214–223），
 // 天空倒影、主光色、雾色是随帧色（WP-37）。着色器里不写色值。
 //
-// 画法的机制移植自渲染气质参照"太阳雨中的小渔港"的水面（ART-STYLE §1）：
+// 画法的机制移植自渲染气质参照"太阳雨中的小渔港"的水面（ART-STYLE）：
 //   水体色 = 按到岸距离分档的透出色（三道硬边色带）；
 //   天空的倒影 = 按波面法线偏离与视线高度分成的几块反射率（菲涅耳色块），不是一整片渐变；
 //   物体的倒影 = 平面倒影按 5 级明度换成水色色阶（色块化），饱和的物体留 0.58 的色相；
@@ -142,7 +142,7 @@ vec3 wtr_sky_at(vec2 az, float e_deg) {
 	return fog_sky(vec3(h.x * cos(e), sin(e), h.y * cos(e)));
 }
 
-// --- 噪声：周期 256 格的值噪声，平移量满足 480 s 回绕无缝（SYS-MOTION §1.6）
+// --- 噪声：周期 256 格的值噪声，平移量满足 480 s 回绕无缝（SYS-MOTION）
 float wtr_hash(ivec2 c) {
 	uvec2 q = uvec2(c & ivec2(255));
 	uint h = q.x * 0x8da6b343u ^ q.y * 0xd8163841u;
@@ -251,7 +251,7 @@ void fragment() {
 	float dist = max(length(ray), 1e-3);
 	vec3 D = ray / dist;                         // 相机 → 水面
 	vec3 Vc = -D;                                // 水面 → 相机
-	float t12 = floor(anim_time * step_rate) / step_rate;   // 一拍二（SYS-MOTION §2.2）
+	float t12 = floor(anim_time * step_rate) / step_rate;   // 一拍二（SYS-MOTION）
 	float overcast = clamp(weather_a.y, 0.0, 1.0);
 	float precip = clamp(weather_a.z, 0.0, 1.0) * (1.0 - step(0.5, weather_a.w));
 	float sun_el = asin(clamp(sun_dir.y, -1.0, 1.0));
@@ -303,10 +303,10 @@ void fragment() {
 	vec3 deep_lit = wtr_pal(WTR_PAL_DEEP);
 	vec3 body_lit = mix(mix(mix(near_lit, mid_lit, s1b), far_lit, s2b), deep_lit, s3b);
 	vec3 body_sh = mix(mix(mix(wtr_pal(WTR_PAL_NEAR + 1), wtr_pal(WTR_PAL_MID + 1), s1b), wtr_pal(WTR_PAL_FAR + 1), s2b), wtr_pal(WTR_PAL_DEEP + 1), s3b);
-	// 影比：水面按 r_mat 1.10 推出的影（WP-37）与受光之比，暗线、影里的倒影都用它（ART-STYLE §3.2）
+	// 影比：水面按 r_mat 1.10 推出的影（WP-37）与受光之比，暗线、影里的倒影都用它（ART-STYLE）
 	float shade_ratio = clamp(wtr_luma(wtr_pal(WTR_PAL_FAR + 1)) / max(wtr_luma(far_lit), 1e-4), 0.3, 1.0);
 	// 底色：天空倒影抬向高处天色再压暗（默认格约 #5B6FA8 一类的蓝紫）；夜里抬得少、压得轻，
-	// 夜空的地平线最亮，水面要比岸上的楼亮，剪影才看得清（§1.1、SYS-TIME §3.4）
+	// 夜空的地平线最亮，水面要比岸上的楼亮，剪影才看得清（§1.1、SYS-TIME）
 	vec3 R0 = reflect(D, vec3(0.0, 1.0, 0.0));
 	float sky_lift = WTR_SKY_LIFT * mix(WTR_NIGHT_LIFT, 1.0, day);
 	vec3 base = wtr_sky(normalize(vec3(R0.x, mix(max(R0.y, 0.0), WTR_SKY_LIFT_E, sky_lift), R0.z))) * mix(WTR_NIGHT_DARK, WTR_BASE_DARK, day);

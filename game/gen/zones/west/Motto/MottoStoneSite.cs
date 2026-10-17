@@ -10,7 +10,7 @@ using M = Campus.Gen.Zones.West.WestTune.Motto;
 namespace Campus.Gen.Zones.West.Motto;
 
 /// <summary>
-/// 校训石 (MAP-QSH-WEST §2): one cream-white landscape stone lying on its side, about 1.75 m × 6.6 m. 19b (Opus reviews
+/// 校训石 (MAP-QSH-WEST): one cream-white landscape stone lying on its side, about 1.75 m × 6.6 m. 19b (Opus reviews
 /// 21:28 and 19b): a few big flat planes with a low, gently tilted top and one flat dressed face, not a crumpled box and not
 /// a smooth dome (MottoStone); it no longer stands straight on the paving: it lies in an oval bed of river pebbles held by a low granite kerb, with a crescent of low
 /// clipped planting round its back and ends. The front stays open, so the face still reads from P10 and from Q1's 3 m spot.
@@ -75,7 +75,7 @@ public sealed class MottoStoneSite : WestSite
         return new(p, [.. n.Select(v => v / MathF.Sqrt(v.X * v.X + v.Y * v.Y))]);
     }
 
-    /// <summary>One box with a top (SYS-WALK §13): the stone is about 2 m high, not climbable.</summary>
+    /// <summary>One box with a top (SYS-WALK): the stone is about 2 m high, not climbable.</summary>
     public override void Collide(SiteColliders c)
     {
         var y = c.Ground(M.At.X, M.At.Y);

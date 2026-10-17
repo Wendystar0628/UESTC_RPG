@@ -1,7 +1,7 @@
 namespace Campus.Systems.Sky;
 
 /// <summary>
-/// C#-side tunables of the sky, kept in one place for review (WF-FLOW §4). Shader-side tunables are the
+/// C#-side tunables of the sky, kept in one place for review (WF-FLOW). Shader-side tunables are the
 /// constant block at the top of game/style/shaders/sky.gdshader; map-dependent values live in the map's sky.json.
 /// </summary>
 public static class SkyTuning
@@ -13,7 +13,7 @@ public static class SkyTuning
     /// <summary>Drift is wrapped at this period (m); every noise tile in the shader divides it, so the wrap is seamless.</summary>
     public const double DriftWrapMeters = 96000.0;
 
-    /// <summary>g(anim_time): a slow closed loop, so clouds still breathe while the clock is paused (ART-SKYLIGHT §4.5).</summary>
+    /// <summary>g(anim_time): a slow closed loop, so clouds still breathe while the clock is paused (ART-SKYLIGHT).</summary>
     public const double AnimLoopRadiusMeters = 150.0;
     public const double AnimLoopSeconds = 480.0;
 

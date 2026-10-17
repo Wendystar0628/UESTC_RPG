@@ -8,7 +8,7 @@ using Campus.Gen.Buildings.Rules;
 namespace Campus.Gen.Buildings.Build;
 
 /// <summary>
-/// Generates one building at one detail level (ART-MODELING §7.8 minimum components):
+/// Generates one building at one detail level (ART-MODELING minimum components):
 /// chamfered corners with custom normals, plinth, string courses, openings (reveal with AO and sill from the
 /// wall; WP-10 frames, doors and curtains with OpeningGlass glass, see FacadeOpenings), cornice or parapet with
 /// the WP-12 coping and lightning strip, roof with stair-core penthouses and a fenced WP-12 plant enclosure (see
@@ -323,7 +323,7 @@ public sealed class BuildingMesher
 
     // ---------------------------------------------------------------------------------------------
     // Roof relief: stair-core penthouses every ~30 m, one fenced plant enclosure and on some tall roofs a mast at a
-    // corner (B7, ART-MODELING §2; the plant and mast are WP-12 parts, RoofParts).
+    // corner (B7, ART-MODELING; the plant and mast are WP-12 parts, RoofParts).
     // ---------------------------------------------------------------------------------------------
     private void Penthouses()
     {

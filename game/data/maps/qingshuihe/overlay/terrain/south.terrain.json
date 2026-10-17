@@ -11,7 +11,7 @@
       "height": 7.5,
       "profile": "hermite",
       "priority": 50,
-      "reason": "土方平衡：挖西湖的土堆在南岸，全校唯一的地标丘红枫丘（MAP-QSH-TERRAIN §1.2、§4.2）；本体长轴方位 75°，最陡约 1:3.2，最高点偏向湖与西侧；服务 C 水边、E 俯瞰两镜与红枫丘揭示路线"
+      "reason": "土方平衡：挖西湖的土堆在南岸，全校唯一的地标丘红枫丘（MAP-QSH-TERRAIN）；本体长轴方位 75°，最陡约 1:3.2，最高点偏向湖与西侧；服务 C 水边、E 俯瞰两镜与红枫丘揭示路线"
     },
     {
       "op": "mound",
@@ -21,7 +21,7 @@
       "height": 2.0,
       "profile": "hermite",
       "priority": 50,
-      "reason": "土方平衡：红枫丘东尾，长而缓（约 1:8），经东南脚接林下小路（MAP-QSH-TERRAIN §4.2、§4.3 盘山小路起点约 (−300, 288)）"
+      "reason": "土方平衡：红枫丘东尾，长而缓（约 1:8），经东南脚接林下小路（MAP-QSH-TERRAIN 盘山小路起点约 (−300, 288)）"
     },
     {
       "op": "mound",
@@ -31,7 +31,7 @@
       "height": 1.0,
       "profile": "hermite",
       "priority": 50,
-      "reason": "空地重组（MAP-QSH-ADDITIONS §0 R6）：国际创新中心西侧过渡绿地里的一处缓草丘，高 1.0 m、半径 8.5 m（R ≥ 7.5 h，草坡类约 1:5），丘顶放弧形石坐墙（design:south-west-lawn-seat）；离校界不少于 20 m，不进零带，东缘让开南北小路"
+      "reason": "空地重组（MAP-QSH-ADDITIONS R6）：国际创新中心西侧过渡绿地里的一处缓草丘，高 1.0 m、半径 8.5 m（R ≥ 7.5 h，草坡类约 1:5），丘顶放弧形石坐墙（design:south-west-lawn-seat）；离校界不少于 20 m，不进零带，东缘让开南北小路"
     },
     {
       "op": "platform",
@@ -42,7 +42,7 @@
       "side": { "fill": "1:5", "cut": "1:5" },
       "fillet": 2.0,
       "priority": 60,
-      "reason": "台基与座位：红枫丘顶台，直径约 12 m 的平台，放小方亭与北缘石坐墙（design:south-hongfeng-pavilion，MAP-QSH-TERRAIN §1.2）"
+      "reason": "台基与座位：红枫丘顶台，直径约 12 m 的平台，放小方亭与北缘石坐墙（design:south-hongfeng-pavilion，MAP-QSH-TERRAIN）"
     }
   ]
 }

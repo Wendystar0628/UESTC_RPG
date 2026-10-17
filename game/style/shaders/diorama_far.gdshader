@@ -1,4 +1,4 @@
-// diorama_far.gdshader：远景环与雾海（WP-22；WLD-DIORAMA §4.2–§4.3、§5、§6；ENG-PERF §1.4）
+// diorama_far.gdshader：远景环与雾海（WP-22；WLD-DIORAMA；ENG-PERF）
 //
 // 不透明、双面、不受影也不投影（顶点标志 8，宿主关投影）；颜色全部来自调色板与共用雾函数（fog.gdshaderinc），着色器里不写色值。
 // 顶点格式 VF-B（与水面同）：COLOR = 受光色号（影 = +1）、AO 字节、标志、备用字节 = 种类；UV、UV2 按种类（Campus.Gen.Diorama.DioramaVertex）：
@@ -6,7 +6,7 @@
 //   种类 1 城市环：UV = (沿立面 m, 离地 m)，UV2 = (视差 k, 雾化量)，AO = 楼的种子（0 = 屋顶机房，不开窗）
 //   种类 2 远层（雪山与远山）：UV = (积雪潜势, 山脊标记)，UV2 = (四季可见度字, 四季雪线字)，每季 6 位，春在低位
 // 视差（§5.4）：顶点水平加 k ×（相机 − 中心），中心取 map_rect 的中心；远层 k = 1，并且竖直也随相机，看起来在无穷远。
-// 受光一律按真实太阳（入夜换月亮）的方向判定；天气只读 weather_a、weather_b、weather_fog（SYS-WEATHER §8），不自己判断天气。
+// 受光一律按真实太阳（入夜换月亮）的方向判定；天气只读 weather_a、weather_b、weather_fog（SYS-WEATHER），不自己判断天气。
 // 主线版：远景是程序生成的体块与高度场，不是手绘卡片贴图（通道打包的卡片留到 §5.4 的贴图那一步）；雾海没有清水河银带和顶面下的分层环。
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled, world_vertex_coords, depth_draw_opaque;

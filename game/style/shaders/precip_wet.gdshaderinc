@@ -1,5 +1,5 @@
 // precip_wet.gdshaderinc：湿润与积水的公共函数（WP-45b）。
-// 规格：SYS-WEATHER §2（湿面、积水）、§3 第 5 条、§7（湿润与积水）；ENG-PERF §1.4。
+// 规格：SYS-WEATHER（湿面、积水）、§3 第 5 条、§7（湿润与积水）；ENG-PERF。
 // 挂点归 WP-04：toon.gdshaderinc 在 fog.gdshaderinc 之后 include 本文件，toon_wet_exposure、toon_wet、toon_puddle
 // 三个挂点的函数体调这里。water 与外围也可以 include（雨点环）。本文件只读 globals 与 fog 的函数，自己不 include。
 //
@@ -7,7 +7,7 @@
 // 主线版：地面遮罩 2 还没有烘焙（R 积水潜势、G 建筑遮蔽、B 树冠遮蔽），积水潜势先用程序噪声，遮蔽只按朝向；
 // 积水倒影：天空按视线分成硬边色带（地平线亮、高天暗）；precip_occ 有内容时沿它步进，把楼和树切成剪影色块映进去
 // （主线版的 precip_occ 是常量小图，不步进）；夜间灯条与湿路面竖向拉长的倒影带在后置细节里接。
-// 做法照参考场景"太阳雨中的小渔港"的积水（wet rim + damp halo、水边内侧略暗、俯视两档菲涅尔，ART-STYLE §1）。
+// 做法照参考场景"太阳雨中的小渔港"的积水（wet rim + damp halo、水边内侧略暗、俯视两档菲涅尔，ART-STYLE）。
 // 湿痕只随天气：湿润与积水量回到 0 时完全干净，不留水渍（D-174）。
 
 #ifndef PRECIP_WET_GDSHADERINC
@@ -25,7 +25,7 @@ const vec2 PW_SHEEN_GRAZE = vec2(0.80, 0.985);   // 湿面掠射天光带：1 �
 const float PW_SHEEN_K = 0.5;           // 天光带的混合量 × 湿润
 const float PW_WET_EXTRA = 0.20;        // 湿面在 toon 的湿润变暗之上再压一档（× (1 − 0.20·wet)）
 const float PW_WET_CONTRAST = 0.10;     // 影色多压 0.10·wet：明暗对比略增
-const float PW_WET_CHROMA = 0.15;       // 湿面彩度 +15%（SYS-WEATHER §2）
+const float PW_WET_CHROMA = 0.15;       // 湿面彩度 +15%（SYS-WEATHER）
 const vec2 PW_POOL_F = vec2(0.72, 0.92);   // 积水里天空倒影的占比：俯视 0.72、平视 0.92（两档硬切）
 const float PW_POOL_FLOOR = 0.62;       // 透出的水底：湿地面色 × 0.62
 const float PW_MENISCUS = 0.84;         // 水边内侧 4 cm 略暗
@@ -40,7 +40,7 @@ const vec4 PW_SKY_GAIN = vec4(1.14, 1.0, 0.88, 0.76);     // 四条色带的明�
 const float PW_SKY_SLOPE = 0.12;        // 色带之内再按仰角连续压暗（上亮下暗）
 const float PW_POOL_NEAR = 0.72;        // 1 − |N·V| 小于它算俯视（近处的积水多透出水底）
 const vec2 PW_SIL = vec2(0.55, 0.8);    // 倒影里楼和树的剪影色 = mix(该方向地平线天色, 湿地面影色, 0.55) × 0.8
-const float PW_MARCH_T0 = 0.6;          // 倒影沿 precip_occ 步进：首步 0.6 m，每步 ×1.6，共 10 步（约 60 m，SYS-WEATHER §7）
+const float PW_MARCH_T0 = 0.6;          // 倒影沿 precip_occ 步进：首步 0.6 m，每步 ×1.6，共 10 步（约 60 m，SYS-WEATHER）
 const float PW_MARCH_K = 1.6;
 const int PW_MARCH_N = 10;
 const float PW_RING_CELL = 0.8;         // 雨点环：0.8 m 网格，一拍二，硬边同心环
@@ -92,7 +92,7 @@ float precip_puddle_threshold(float level) {
 	return PW_PUDDLE_TOP - PW_PUDDLE_SPAN * clamp(level, 0.0, 1.0);
 }
 
-// 雨点环（SYS-WEATHER §2）：0.8 m 网格，每格一个环，按一拍二长大、变淡。aa 为本片元的世界尺寸（m）
+// 雨点环（SYS-WEATHER）：0.8 m 网格，每格一个环，按一拍二长大、变淡。aa 为本片元的世界尺寸（m）
 float precip_rain_rings(vec2 xz, float aa) {
 	vec2 g = xz / PW_RING_CELL;
 	ivec2 c = ivec2(floor(g));

@@ -286,7 +286,7 @@ public sealed class WestModuleTests
         var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-wetland-stream");
         var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-hongguang-north");
         Require(stream.WaterY is -0.5 && canal.WaterY is -1.2, "the wetland stream keeps the lake level, the canal runs 0.7 m lower");
-        // The west gates' 20 m zero bands (MAP-QSH-TERRAIN §11): no authored point comes near them.
+        // The west gates' 20 m zero bands (MAP-QSH-TERRAIN): no authored point comes near them.
         Vector2[] gates = [new(-372.7f, -505.0f), new(-197.6f, -731.3f), new(-620.0f, -190.0f)];
         var points = file.Ops.SelectMany(Points).ToArray();
         Require(points.All(p => gates.All(g => Vector2.Distance(p, g) > 60f)), "every terrain operation stays out of the gates' zero bands");
@@ -365,7 +365,7 @@ public sealed class WestModuleTests
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
         var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == "design:terrain:west-four-fan-lawn");
         Require(dish.Height is 0.45 && dish.Shape is TerrainCircle { Radius: 32 } c && Vector2.Distance(c.Center, F4.LawnCentre) < 0.01f,
-            "the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN §10.2)");
+            "the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN)");
     }
 
     // ---- helpers ----

@@ -3,16 +3,16 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
 
-/// <summary>Crown family (WLD-VEGETATION §1.1). The numeric value is the tree_species code read by the veg_* shaders.</summary>
+/// <summary>Crown family (WLD-VEGETATION). The numeric value is the tree_species code read by the veg_* shaders.</summary>
 public enum CrownType : byte { Card = 0, Cloud = 1, Mixed = 2 }
 
 /// <summary>
-/// Leaf-card layer: one shape per layer of the leaf-card array (WLD-VEGETATION §11.1). The numeric value is the
+/// Leaf-card layer: one shape per layer of the leaf-card array (WLD-VEGETATION). The numeric value is the
 /// layer number in tree_species; the mainline veg_card shader draws each layer procedurally under the same number.
 /// </summary>
 public enum CardShape : byte { Fan = 0, Needle = 1, Strand = 2, Palmate = 3, Ovate = 4, Pinnate = 5, Blossom = 6, Spray = 7, Twig = 8, Frond = 9 }
 
-/// <summary>One row of game/data/vegetation/species.json (WLD-VEGETATION §2, §8, §12).</summary>
+/// <summary>One row of game/data/vegetation/species.json (WLD-VEGETATION).</summary>
 public sealed record SpeciesInfo(
     string Id,
     string Name,
@@ -39,7 +39,7 @@ public sealed record SpeciesInfo(
 
 /// <summary>
 /// The species table: parsed from species.json (callers read the bytes; generators never perform IO) and packed into
-/// the tree_species global texture that WP-38 uploads (WLD-VEGETATION §11.6). Packed layout, one row per species,
+/// the tree_species global texture that WP-38 uploads (WLD-VEGETATION). Packed layout, one row per species,
 /// <see cref="Width"/> RGBA32F texels per row:
 /// x0 leaf amount A at s = 0..3; x1 bloom B at s = 0..3; x2 (sway°, leaf lit row, bloom lit row or −1, bloom lit colour ID or −1);
 /// x3 (leaf card, bloom card, twig card, flags: 1 deciduous, 2 bloom on blobs); x4 (crown, leaf lit colour ID, twig-stroke lit colour ID, 0);

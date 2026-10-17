@@ -6,7 +6,7 @@ namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
 /// Glass for the wall block behind a WP-10 frame part, in the part frame (glass plane z = 0, exterior −Z), encoded as the
-/// VF-B glass contract (GeometryBundle) and WP-14 write it, so toon_glass keeps its window cards (WLD-INTERIORS §5.1):
+/// VF-B glass contract (GeometryBundle) and WP-14 write it, so toon_glass keeps its window cards (WLD-INTERIORS):
 /// floor(UV) = building-grid (column, row), UV2 = (BaseId, channel slot + 32 × TotalColumns), spare byte = window type
 /// 1–15. Window ID = BaseId + row × TotalColumns + column. Columns run along the part's +X, which is WP-14's facade
 /// Along. One-sided and shadow-casting: it closes the building shell.
@@ -69,7 +69,7 @@ public static class OpeningGlass
     }
 }
 
-/// <summary>Helpers for WP-14 and the zone packs when they place WP-10 parts (ENG-WP §2.1).</summary>
+/// <summary>Helpers for WP-14 and the zone packs when they place WP-10 parts (ENG-WP).</summary>
 public static class OpeningPlacement
 {
     /// <summary>
@@ -89,7 +89,7 @@ public static class OpeningPlacement
 
     /// <summary>
     /// Curtain for one window, stable per window number: about 60 % of windows get one, open : half : drawn = 3 : 4 : 3,
-    /// colours differ (ART-FIDELITY §3.3). Returns null for a bare window. toon_glass is opaque, so the curtain hangs
+    /// colours differ (ART-FIDELITY). Returns null for a bare window. toon_glass is opaque, so the curtain hangs
     /// between the glass and the sash face (depth ≤ 16 mm), sized to the opening so rail and edges hide behind the frame.
     /// </summary>
     public static PanelParams? Curtain(uint seed, int windowNumber, float glassWidth, float glassHeight, float depth = 0.016f)

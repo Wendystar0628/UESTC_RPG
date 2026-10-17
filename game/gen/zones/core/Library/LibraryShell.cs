@@ -12,14 +12,14 @@ using Shapes = Campus.Gen.Zones.Core.Framework.Shapes;
 namespace Campus.Gen.Zones.Core.Library;
 
 /// <summary>
-/// 图书馆外壳 (16b, MAP-QSH-CORE §1): the beige-stone octagonal ring with its four corner towers, the front square tower
+/// 图书馆外壳 (16b, MAP-QSH-CORE): the beige-stone octagonal ring with its four corner towers, the front square tower
 /// with the full-height glass slot, the one-storey podium whose roof is the 2F terrace, the set-back 5F under a canted
 /// metal eave, and the roof with the octagonal skylight, curved metal roofs and the mechanical box. Interiors are
 /// WP-17's; the grand stair (8398) and the door presentation are 16c's.
 /// <para>
-/// Faces: towers carry the vertical slits, every other face one long ribbon per storey (MAP-QSH-CORE §10 initial value).
+/// Faces: towers carry the vertical slits, every other face one long ribbon per storey (MAP-QSH-CORE initial value).
 /// Window glass is VF-B (toon_glass with cards); the skylight and the slot are clear glass with their steel in their
-/// own bundles, so they stay separate instances (MAP-QSH-CORE §7 fog exemption).
+/// own bundles, so they stay separate instances (MAP-QSH-CORE fog exemption).
 /// </para>
 /// <para>
 /// Windows: one grid <see cref="WindowKey"/> for the whole entity, <see cref="Columns"/> × 6 (rows are storeys 0–5,
@@ -470,13 +470,13 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     // ------------------------------------------------------------------ collision
 
     /// <summary>
-    /// Walls standing on the ground block from their foot to 300 m (the roof is out of reach, MAP-QSH-CORE §8.2), except
+    /// Walls standing on the ground block from their foot to 300 m (the roof is out of reach, MAP-QSH-CORE), except
     /// the podium, whose walls stop 1.5 m above its terrace; walls rising from the terrace block from there up. The
     /// terrace is a stone slab (16c's stair lands on it), its parapet left open where the stair base stands.
     /// <para>
     /// Door bays (the 2F front door, the 1F cafe door) are left open in the face line: the recess has its jambs, a floor
     /// level with the door's, the glass plane beside the door and the door's two fixed outer leaves as walls, and a lintel
-    /// over the two open leaves, so the clear way is the open leaves' width (WLD-INTERIORS §10).
+    /// over the two open leaves, so the clear way is the open leaves' width (WLD-INTERIORS).
     /// </para>
     /// </summary>
     public IReadOnlyList<Collider> Collide()

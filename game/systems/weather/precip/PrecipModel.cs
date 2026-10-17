@@ -3,12 +3,12 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Weather.Precip;
 
-/// <summary>降水池一帧的输出：可见实例数与三个 instance uniform（ENG-PERF §1.5 的 precip_d、precip_v、precip_k）。</summary>
+/// <summary>降水池一帧的输出：可见实例数与三个 instance uniform（ENG-PERF 的 precip_d、precip_v、precip_k）。</summary>
 public readonly record struct PrecipFrame(int VisibleCount, Vector4 D, Vector4 V, Vector4 K);
 
 /// <summary>
 /// 降水池的纯逻辑（不碰引擎）：实例缓冲、数量、循环盒位移的累加与 instance uniform 的取值。
-/// 规格：SYS-WEATHER §7；ENG-PERF §9；SYS-MOTION §13.6。只读天气向量，不自己判断天气，不计时。
+/// 规格：SYS-WEATHER；ENG-PERF；SYS-MOTION。只读天气向量，不自己判断天气，不计时。
 /// </summary>
 public sealed class PrecipModel
 {
@@ -93,7 +93,7 @@ public sealed class PrecipModel
     }
 
     /// <summary>
-    /// 每帧调用一次。位移只在一拍二跨步时按跨过的时长累加（ENG-PERF §9），所以改风、换强度时雨丝不跳，
+    /// 每帧调用一次。位移只在一拍二跨步时按跨过的时长累加（ENG-PERF），所以改风、换强度时雨丝不跳，
     /// anim_time 回绕时也不跳；世界实例变了（读档、新游戏）就从当前拍重新起算。
     /// </summary>
     public PrecipFrame Step(in WeatherVec w, long instance, double step12, float gust, float density, int stepRate)
@@ -123,7 +123,7 @@ public sealed class PrecipModel
     }
 
     /// <summary>
-    /// 降水池的 CustomAabb：可达范围"中心 ± 3 km"（ENG-PERF §1.2），y 取 floorY…ceilY，再各边放出一个循环盒。
+    /// 降水池的 CustomAabb：可达范围"中心 ± 3 km"（ENG-PERF），y 取 floorY…ceilY，再各边放出一个循环盒。
     /// </summary>
     public static Box3 PoolBounds(Vector2 center, float maxRadius, float floorY, float ceilY)
     {

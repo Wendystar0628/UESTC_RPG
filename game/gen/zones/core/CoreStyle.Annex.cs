@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.Core;
 
 /// <summary>
-/// Tunable values of the library's north blocks (16e, MAP-QSH-CORE §1.1, §1.9, WLD-INTERIORS §17): the north annex 8403,
+/// Tunable values of the library's north blocks (16e, MAP-QSH-CORE, WLD-INTERIORS): the north annex 8403,
 /// the courtyard wing 8406, the low block 8408 (its roof is the 3F G terrace), the north-west link 8409 and its joint 8410,
 /// and the 宁静苑 courtyard garden. Metres and degrees; "review" marks mainline initial values awaiting the main session.
 /// The blocks speak the library's language: the same beige stone, the same floor lines (storey table), plinth band,
@@ -35,7 +35,7 @@ public static partial class CoreStyle
     public const float AnnexGroundSill = 0.75f, AnnexGroundHeight = 2.9f, AnnexGroundTransom = 2.2f;
 
     /// <summary>
-    /// The closed door of the north annex on its long street face (门玻璃是门厅卡, MAP-QSH-LIBRARY §9): width, height of the
+    /// The closed door of the north annex on its long street face (门玻璃是门厅卡, MAP-QSH-LIBRARY): width, height of the
     /// opening and of the door below its transom light; a flat stone canopy over it.
     /// </summary>
     public const float AnnexDoorWidth = 2.4f, AnnexDoorHeight = 3.3f, AnnexDoorTop = 2.5f;
@@ -52,7 +52,7 @@ public static partial class CoreStyle
     public const int AnnexRoofUnits = 3;
     public const float AnnexUnitLength = 2.2f, AnnexUnitDepth = 1.6f, AnnexUnitHeight = 1.1f;
 
-    // ---- 宁静苑 (MAP-QSH-CORE §1.9): closed courtyard, seen from the 1F north windows and the 3F G terrace. ----
+    // ---- 宁静苑 (MAP-QSH-CORE): closed courtyard, seen from the 1F north windows and the 3F G terrace. ----
     /// <summary>Hexagonal timber pavilion (六角木亭): circumradius of the post ring, plinth, eave and apex heights, overhang.</summary>
     public const float PavilionRadius = 2.0f, PavilionPlinth = 0.36f, PavilionPlinthOut = 0.55f;
     public const float PavilionEave = 2.85f, PavilionApex = 4.55f, PavilionOverhang = 0.9f, PavilionFascia = 0.16f;
@@ -71,7 +71,7 @@ public static partial class CoreStyle
     /// <summary>Cut granite paving of the court (stepping path is the same stone, one tone lighter).</summary>
     public const float CourtInset = 0.05f;
 
-    // ---- Colours: the library's plus the garden timbers (palette names only, ART-STYLE §8.5). ----
+    // ---- Colours: the library's plus the garden timbers (palette names only, ART-STYLE). ----
     /// <summary>Red timber of the pergola: the campus' warm terracotta red (red wood, not the signal red), review.</summary>
     public const string PergolaRed = "band.terracotta";
     /// <summary>Pavilion posts, beams and planter edges: warm natural timber (WP-10's door wood).</summary>
@@ -84,7 +84,7 @@ public static partial class CoreStyle
     public const string CourtPath = "ground.curb";
     public const string PlanterSoil = "base.warmBrown";
 
-    /// <summary>Window cards (WLD-INTERIORS §5.1): offices for 8403, reading for the court blocks, corridor for the link.</summary>
+    /// <summary>Window cards (WLD-INTERIORS): offices for 8403, reading for the court blocks, corridor for the link.</summary>
     public const byte CardOffice = 5, CardCorridor = 3;
 }
 

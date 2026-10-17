@@ -7,11 +7,11 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Bench (长椅, WLD-LIFE §4.7): three wood slats on two grey steel side frames, seat top at 0.45 m (a human anchor, never
+/// Bench (长椅, WLD-LIFE): three wood slats on two grey steel side frames, seat top at 0.45 m (a human anchor, never
 /// scaled). Width runs along X; the sitter faces −Z. Variation 0 has a two-slat backrest leaning back towards +Z and Height is
 /// its top; variation 1 is backless, sittable from both sides, and Height is ignored (the seat is the top). Depth is the
 /// footprint: a backed bench's seat front lies on −Depth/2, a backless seat is centred.
-/// Collision (WLD-LIFE §5): the seat block, jumpable and standable, plus a thin block behind it for the backrest. The seat
+/// Collision (WLD-LIFE): the seat block, jumpable and standable, plus a thin block behind it for the backrest. The seat
 /// declaration (<see cref="IPartDef{TParams}.Seats"/>, contract-33) is read off that same seat block (<see cref="Seating.FromBox"/>).
 /// </summary>
 [Part(PartCatalog.Bench, Owner = "WP-13")]
