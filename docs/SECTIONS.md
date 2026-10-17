@@ -39,12 +39,12 @@
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 9.1k 字 · 协作、流程、文档规则与门禁流程类的已定决策
+`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 9.2k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
 - CORE-DECISIONS-PROCESS §0 结论 · L23 · 163
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-PROCESS §1 流程 · L31 · 8.4k
+- CORE-DECISIONS-PROCESS §1 流程 · L31 · 8.5k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
@@ -117,24 +117,24 @@
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 5.8k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱
-关键词：.collab、交接目录、文件布局、archive、logs、结案即挪走、.ignore、任务单、施工单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、截图命名、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208
+`docs/workflow/WF-COMMS-交接与通信.md` · 5.6k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱
+关键词：.collab、交接目录、文件布局、结案即删、不归档、下一个编号、任务单、施工单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、截图命名、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208
 
-- WF-COMMS §0 结论 · L23 · 635
+- WF-COMMS §0 结论 · L23 · 648
   - ★ WF-COMMS §0.1 接入要点 · L32 · 213
-- WF-COMMS §1 交接目录与文件 · L39 · 1.4k
-- WF-COMMS §2 命名与写法 · L64 · 426
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L71 · 892
-  - WF-COMMS §3.1 施工单与旁路单 · L73 · 158
-  - WF-COMMS §3.2 请求文件 · L78 · 50
-  - WF-COMMS §3.3 契约申请的短头部（D-201） · L82 · 168
-  - WF-COMMS §3.4 完成回报 · L92 · 491
-- WF-COMMS §4 来信与消息 · L110 · 1.2k
-  - WF-COMMS §4.1 什么时候发 · L112 · 252
-  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L121 · 221
-  - WF-COMMS §4.3 三级标记与写法 · L125 · 306
-  - WF-COMMS §4.4 来信、排队消息与引导信箱 · L132 · 429
-- WF-COMMS §5 Codex 会话与引导信箱 · L144 · 319
+- WF-COMMS §1 交接目录与文件 · L39 · 1.2k
+- WF-COMMS §2 命名与写法 · L61 · 451
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 892
+  - WF-COMMS §3.1 施工单与旁路单 · L70 · 158
+  - WF-COMMS §3.2 请求文件 · L75 · 50
+  - WF-COMMS §3.3 契约申请的短头部（D-201） · L79 · 168
+  - WF-COMMS §3.4 完成回报 · L89 · 491
+- WF-COMMS §4 来信与消息 · L107 · 1.2k
+  - WF-COMMS §4.1 什么时候发 · L109 · 252
+  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L118 · 221
+  - WF-COMMS §4.3 三级标记与写法 · L122 · 306
+  - WF-COMMS §4.4 来信、排队消息与引导信箱 · L129 · 415
+- WF-COMMS §5 Codex 会话与引导信箱 · L141 · 319
 
 ## WF-DOC · 文档写法
 
@@ -250,7 +250,7 @@
 
 - WF-STATUS §0 结论 · L23 · 582
   - ★ WF-STATUS §0.1 接入要点 · L32 · 233
-- WF-STATUS §1 施工状态文件怎么填 · L39 · 795
+- WF-STATUS §1 施工状态文件怎么填 · L39 · 787
 - WF-STATUS §2 待派工队列与队列平衡 · L60 · 731
 - WF-STATUS §3 交接单 · L76 · 89
 - WF-STATUS §4 调研入队流水线 · L80 · 1.4k
