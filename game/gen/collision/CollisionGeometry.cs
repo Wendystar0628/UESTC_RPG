@@ -1,6 +1,5 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Gen.World;
 
 namespace Campus.Gen.Collision;
 
@@ -60,96 +59,9 @@ public static class CollisionGeometry
         {
             if (!Enum.IsDefined(source.Tag) || !Enum.IsDefined(source.Foot)) throw new ArgumentException("Unknown collision tag or material.");
             if (source.Tag == SurfaceTag.Water) continue;
-            var local = Transform(source, translation);
-            if (local is SlabCollider slab)
-                result.AddRange(PrepareSlab(slab));
-            else result.Add(local);
+            foreach (var collider in CollisionBoxes.Of(source))
+                result.Add(Transform(collider, translation));
         }
-        return result;
-    }
-
-    /// <summary>Keep convex floors continuous; only concave outlines need a convex decomposition.</summary>
-    public static IReadOnlyList<SlabCollider> PrepareSlab(SlabCollider slab)
-    {
-        var ring = NormalizeSlabRing(slab);
-        return IsConvexRing(ring) ? [slab with { Ring = ring.ToArray() }] : TriangulatePrepared(slab, ring);
-    }
-
-    /// <summary>Ear-clips a simple ring; never fills a concave recess with its convex hull.</summary>
-    public static IReadOnlyList<SlabCollider> Triangulate(SlabCollider slab) => TriangulatePrepared(slab, NormalizeSlabRing(slab));
-
-    /// <summary>Checks the turns of a previously validated simple ring, in either winding.</summary>
-    public static bool IsConvexRing(IReadOnlyList<Vector2> ring)
-    {
-        if (ring.Count < 3) return false;
-        var direction = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var turn = Cross(ring[i], ring[(i + 1) % ring.Count], ring[(i + 2) % ring.Count]);
-            if (!double.IsFinite(turn)) return false;
-            if (turn == 0) continue;
-            var next = turn > 0 ? 1 : -1;
-            if (direction != 0 && next != direction) return false;
-            direction = next;
-        }
-        return direction != 0;
-    }
-
-    private static List<Vector2> NormalizeSlabRing(SlabCollider slab)
-    {
-        if (!float.IsFinite(slab.Y) || !float.IsFinite(slab.Thick) || slab.Thick <= 0) throw new ArgumentException("Invalid slab height or thickness.");
-        var ring = slab.Ring.ToList();
-        if (ring.Count > 1 && ring[0] == ring[^1]) ring.RemoveAt(ring.Count - 1);
-        if (ring.Count < 3 || ring.Any(p => !float.IsFinite(p.X) || !float.IsFinite(p.Y))) throw new ArgumentException("Invalid slab outline.");
-        bool removed;
-        do
-        {
-            removed = false;
-            for (var i = ring.Count - 1; i >= 0 && ring.Count >= 3; i--)
-            {
-                if (ring[i] != ring[(i + 1) % ring.Count] &&
-                    Cross(ring[(i + ring.Count - 1) % ring.Count], ring[i], ring[(i + 1) % ring.Count]) != 0) continue;
-                ring.RemoveAt(i);
-                removed = true;
-            }
-        } while (removed && ring.Count >= 3);
-        if (ring.Count < 3) throw new ArgumentException("Invalid slab outline.");
-        for (var i = 0; i < ring.Count; i++)
-            for (var j = i + 1; j < ring.Count; j++)
-            {
-                if (j == i + 1 || (i == 0 && j == ring.Count - 1)) continue;
-                if (SegmentsCross(ring[i], ring[(i + 1) % ring.Count], ring[j], ring[(j + 1) % ring.Count]))
-                    throw new ArgumentException("Slab outline must be simple.");
-            }
-        var area = 2 * PlanGeometry.SignedArea(ring);
-        if (area == 0)
-            throw new ArgumentException($"Slab outline has zero area: doubled area={area:R}, ring=[{string.Join("; ", ring)}].");
-        if (area < 0) ring.Reverse();
-        return ring;
-    }
-
-    private static IReadOnlyList<SlabCollider> TriangulatePrepared(SlabCollider slab, List<Vector2> ring)
-    {
-        var result = new List<SlabCollider>();
-        while (ring.Count > 3)
-        {
-            var clipped = false;
-            for (var i = 0; i < ring.Count; i++)
-            {
-                var previous = (i + ring.Count - 1) % ring.Count;
-                var next = (i + 1) % ring.Count;
-                var a = ring[previous]; var b = ring[i]; var c = ring[next];
-                if (Cross(a, b, c) <= 0) continue;
-                var occupied = false;
-                for (var j = 0; j < ring.Count; j++)
-                    if (j != previous && j != i && j != next && InTriangle(ring[j], a, b, c)) { occupied = true; break; }
-                if (occupied) continue;
-                result.Add(slab with { Ring = new[] { a, b, c } });
-                ring.RemoveAt(i); clipped = true; break;
-            }
-            if (!clipped) throw new ArgumentException("Slab ring is self-intersecting or cannot be triangulated.");
-        }
-        result.Add(slab with { Ring = ring.ToArray() });
         return result;
     }
 
@@ -179,13 +91,6 @@ public static class CollisionGeometry
         return new(min, max);
     }
 
-    // These are topology tests: a fixed area cutoff would erase valid small support faces.
-    private static double Cross(Vector2 a, Vector2 b, Vector2 c) => ((double)b.X - a.X) * ((double)c.Y - a.Y) - ((double)b.Y - a.Y) * ((double)c.X - a.X);
-    private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c) => Cross(a, b, p) >= 0 && Cross(b, c, p) >= 0 && Cross(c, a, p) >= 0;
-    private static bool SegmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d) =>
-        MathF.Max(a.X, b.X) >= MathF.Min(c.X, d.X) && MathF.Max(c.X, d.X) >= MathF.Min(a.X, b.X) &&
-        MathF.Max(a.Y, b.Y) >= MathF.Min(c.Y, d.Y) && MathF.Max(c.Y, d.Y) >= MathF.Min(a.Y, b.Y) &&
-        Cross(a, b, c) * Cross(a, b, d) <= 0 && Cross(c, d, a) * Cross(c, d, b) <= 0;
     private static void RequireUpright(Matrix4x4 at)
     {
         if (at.M12 != 0 || at.M21 != 0 || at.M23 != 0 || at.M32 != 0 || at.M14 != 0 || at.M24 != 0 || at.M34 != 0 || at.M44 != 1 || at.M22 <= 0)

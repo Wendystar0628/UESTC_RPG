@@ -10,46 +10,14 @@ namespace Campus.Gen.Collision.Tests;
 public sealed class CollisionGeometryTests
 {
     [TestCase]
-    public void ConcaveSlabKeepsItsRecessEmpty()
+    public void PlatformsBecomeBoxesWithoutFillingTheCourtyard()
     {
-        var slab = new SlabCollider(new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) }, 3, 0.2f, SurfaceTag.Ground);
-        var triangles = CollisionGeometry.Triangulate(slab);
-        Require(triangles.Count == 4, "An L-shaped six-point ring needs four triangles.");
-        var area = triangles.Sum(t => MathF.Abs(Cross(t.Ring[0], t.Ring[1], t.Ring[2])) / 2);
-        Require(MathF.Abs(area - 7) < 0.00001f, "Triangulation changed floor area.");
-        foreach (var t in triangles) Require(!Contains(t.Ring, new(2, 2)), "A recess must not become a floor.");
-    }
-
-    [TestCase]
-    public void ClockwiseAndRepeatedClosingVertexAreAccepted()
-    {
-        var triangles = CollisionGeometry.Triangulate(new(new Vector2[] { new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0) }, 0, 0.2f, SurfaceTag.Ground));
-        Require(triangles.Count == 2, "A rectangle needs two triangles.");
-    }
-
-    [TestCase]
-    public void ConvexFloorStaysWholeWhileConcaveRecessIsPreserved()
-    {
-        var rectangle = new SlabCollider(new Vector2[] { new(20, 40), new(24, 40), new(24, 44), new(20, 44) }, 2, 0.2f, SurfaceTag.Ground);
-        var whole = CollisionGeometry.PrepareSlab(rectangle);
-        Require(whole.Count == 1 && whole[0].Ring.Count == 4, "A convex rectangular floor must not gain an internal diagonal.");
-        var retraced = rectangle with
-        {
-            Ring = new Vector2[] { new(20, 40), new(22, 40), new(22, 42), new(22, 40), new(24, 40), new(24, 40), new(24, 44), new(20, 44) }
-        };
-        Require(CollisionGeometry.PrepareSlab(retraced).Single().Ring.SequenceEqual(rectangle.Ring),
-            "Zero-area retracing and adjacent duplicates must collapse fully without changing the occupied floor.");
-        var small = rectangle with { Ring = new Vector2[] { new(63.9f, 63.9f), new(63.902f, 63.9f), new(63.902f, 63.902f), new(63.9f, 63.902f) } };
-        Require(CollisionGeometry.PrepareSlab(small).Single().Ring.Count == 4,
-            "Translating a small valid floor near the tile edge must not cancel its area.");
-        var tiny = rectangle with { Ring = new Vector2[] { new(38.999573f, 63.00049f), new(38.999023f, 63), new(39, 63) } };
-        var tinyPrepared = CollisionGeometry.PrepareSlab(tiny).Single();
-        Require(tinyPrepared.Ring.SequenceEqual(tiny.Ring) && CollisionGeometry.IsConvexRing(tinyPrepared.Ring),
-            "A nonzero sub-square-millimetre support triangle must remain a valid convex floor.");
-        var concave = rectangle with { Ring = new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) } };
-        var pieces = CollisionGeometry.PrepareSlab(concave);
-        Require(pieces.All(p => CollisionGeometry.IsConvexRing(p.Ring)), "Floor decomposition emitted a concave shape.");
-        Require(pieces.All(p => !Contains(p.Ring, new(2, 2))), "Convex preparation filled the L-shaped recess.");
+        var slab = new SlabCollider(new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) },
+            3, .2f, SurfaceTag.Ground) { Foot = FootMat.Concrete };
+        var boxes = CollisionGeometry.Localize([slab], new(0, 0)).Cast<BoxCollider>().ToArray();
+        Require(boxes.Length <= 3 && boxes.All(b => b.Tag == slab.Tag && b.Foot == slab.Foot), "Platform boxes lost source semantics.");
+        Require(!boxes.Any(b => Contains(b, new(2, 3, 2))), "The L-shaped platform's courtyard was filled.");
+        Require(boxes.Any(b => Contains(b, new(.5f, 2.9f, 3))), "The elevated thin platform was removed.");
     }
 
     [TestCase]
@@ -58,8 +26,8 @@ public sealed class CollisionGeometryTests
         var tile = CollisionGeometry.TileAt(new(-0.01f, 0, -64.01f));
         Require(tile == new TileKey(-1, -2), "Negative coordinates must floor, not truncate.");
         var wall = new WallCollider(new(-64, -128), new(-60, -128), 0.1f, 0, 2, SurfaceTag.Barrier);
-        var local = (WallCollider)CollisionGeometry.Localize([wall], tile).Single();
-        Require(local.A == Vector2.Zero && local.B == new Vector2(4, 0), "Tile localization changed the world alignment.");
+        var local = (BoxCollider)CollisionGeometry.Localize([wall], tile).Single();
+        Require(Contains(local, new(2, 1, 0)) && !Contains(local, new(5, 1, 0)), "Tile localization changed the world alignment.");
     }
 
     [TestCase]
@@ -163,8 +131,12 @@ public sealed class CollisionGeometryTests
         var t = Math.Clamp(Vector2.Dot(q - a, d) / d.LengthSquared(), 0, 1);
         return p.Y >= w.Y0 && p.Y <= w.Y1 && Vector2.Distance(a + d * t, q) <= w.HalfT + 0.00001f;
     }
-    private static float Cross(Vector2 a, Vector2 b, Vector2 c) => (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
-    private static bool Contains(IReadOnlyList<Vector2> t, Vector2 p) => Cross(t[0], t[1], p) >= 0 && Cross(t[1], t[2], p) >= 0 && Cross(t[2], t[0], p) >= 0;
+    private static bool Contains(BoxCollider box, Vector3 point)
+    {
+        if (!Matrix4x4.Invert(box.At, out var inverse)) return false;
+        var local = Vector3.Abs(Vector3.Transform(point, inverse));
+        return local.X <= box.Half.X && local.Y <= box.Half.Y && local.Z <= box.Half.Z;
+    }
     private static void Require(bool ok, string message) { if (!ok) throw new InvalidOperationException(message); }
     [TestCase]
     public void WallBottomCoversTheExteriorThreeMetreTerrainBand()
@@ -184,8 +156,6 @@ public sealed class CollisionGeometryTests
         public IReadOnlyList<FeatureId> Query(Box3 box) => [];
         public float GroundY(float x, float z) => height?.Invoke(x, z) ?? 0;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => 0;
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => new(p.X, 0, p.Z);
     }
 }

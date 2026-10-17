@@ -69,5 +69,5 @@ public sealed class GroundModule : IContentModule
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>
-        GroundSupport.TileFor(ctx, tile, _section).Colliders;
+        [GroundCollision.Build(ctx, tile, _section)];
 }

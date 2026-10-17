@@ -169,19 +169,17 @@ public sealed class GroundTreePitTests
     }
 
     [TestCase]
-    public void PitFramesAndSoilKeepTheirOwnExactSupports()
+    public void PitSoilUsesTheGroundHeightFieldAndFootMaterial()
     {
         var ctx = TestWorld.Context(PlazaWorld());
-        var support = GroundSupport.TileFor(ctx, new(0, 0), Section);
-        Check.Close(PitSoil, support.SupportY(20f, 20f)!.Value, .001, "pit soil supports at its visible top");
-        Check.Close(StripSoil, support.SupportY(40f, 31f)!.Value, .001, "strip soil supports at its visible top");
-        Check.Close(PitRim, support.SupportY(20f, 19.15f)!.Value, .002, "pit frame supports at its visible top");
-        Check.True(!support.Colliders.OfType<BoxCollider>().Any(), "No whole-footprint pit box may fill the soil to rim height.");
-        var field = support.Colliders.OfType<HeightFieldCollider>().Single();
-        Check.Close(0f, GroundCollision.SampleHeight(field, 20f, 20f), .001, "pit does not rewrite the terrain HF");
+        var colliders = new GroundModule().Collide(ctx, new(0, 0));
+        Check.True(colliders.Count == 1 && colliders[0] is HeightFieldCollider, "Tree pits must not add exact support shapes.");
+        var field = (HeightFieldCollider)colliders[0];
+        Check.Close(PitSoil, GroundCollision.SampleHeight(field, 20f, 20f), .02, "pit soil height");
         Check.True((FootMat)field.FootMatHalfMeter![40 * GroundCollision.FootCells + 40] == FootMat.Soil,
             "Soil remains the foot material inside a pit.");
     }
+
 
     [TestCase]
     public void CoarseLevelsDoNotMarkPits()

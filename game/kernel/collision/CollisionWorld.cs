@@ -12,8 +12,6 @@ public sealed record CollisionDiagnostics(int Tiles, int ReadyTiles, int Bodies,
 {
     public int RegisteredBodies { get; init; }
     public int UnclassifiedHits { get; init; }
-    public int RegisteredSlabShapes { get; init; }
-    public int SlabEdgeSupports { get; init; }
 }
 
 /// <summary>The collision service owns every body it mounts. All entry points are main-thread only.</summary>
@@ -25,13 +23,11 @@ public sealed class CollisionWorld : ICollisionWorld
     public const uint SupportMask = (1u << (int)SurfaceTag.Ground) | (1u << (int)SurfaceTag.Stair) | (1u << (int)SurfaceTag.Prop);
     private readonly Dictionary<TileKey, TileState> _tiles = [];
     private readonly Dictionary<Rid, SurfaceTag> _bodySurfaces = [];
-    private readonly Dictionary<Rid, Dictionary<int, SlabTop>> _slabTops = [];
     private Node3D? _root;
     private IMapContext? _context;
     private int _threadViolations;
     private int _incompleteMounts;
     private int _unclassifiedHits;
-    private int _slabEdgeSupports;
     public MapId? Map => _context?.Descriptor.Id;
     public long Revision { get; private set; }
     public string? Error { get; private set; }
@@ -46,9 +42,7 @@ public sealed class CollisionWorld : ICollisionWorld
                 _tiles.Values.SelectMany(t => t.Bodies).Select(b => ShapeCount(b.Body)).DefaultIfEmpty().Max(), _threadViolations, _incompleteMounts)
             {
                 RegisteredBodies = _bodySurfaces.Count,
-                UnclassifiedHits = _unclassifiedHits,
-                RegisteredSlabShapes = _slabTops.Values.Sum(shapes => shapes.Count),
-                SlabEdgeSupports = _slabEdgeSupports
+                UnclassifiedHits = _unclassifiedHits
             };
         }
     }
@@ -105,7 +99,6 @@ public sealed class CollisionWorld : ICollisionWorld
         var first = colliders[0];
         StaticBody3D? body = null;
         var rid = default(Rid);
-        var slabs = new List<(int Shape, SlabCollider Slab)>();
         try
         {
             body = new StaticBody3D
@@ -131,27 +124,17 @@ public sealed class CollisionWorld : ICollisionWorld
                 var owner = body.CreateShapeOwner(shape);
                 body.ShapeOwnerSetTransform(owner, transform);
                 body.ShapeOwnerAddShape(owner, shape);
-                if (source is SlabCollider slab)
-                    slabs.Add((body.ShapeOwnerGetShapeIndex(owner, 0), slab));
             }
             if (body.IsInsideTree() || ShapeCount(body) != colliders.Count)
             { _incompleteMounts++; throw new InvalidOperationException("Collision body entered the tree before all shapes were ready."); }
             _root.AddChild(body);
             _bodySurfaces.Add(rid, first.Tag);
-            foreach (var (shape, slab) in slabs)
-            {
-                var top = SlabTop.Create(slab, body.GlobalTransform.ToNumerics());
-                if (top is null) continue;
-                if (!_slabTops.TryGetValue(rid, out var tops)) _slabTops.Add(rid, tops = []);
-                tops.Add(shape, top);
-            }
             state.Bodies.Add(new(body, rid));
             state.Shapes += colliders.Count;
         }
         catch
         {
             _bodySurfaces.Remove(rid);
-            _slabTops.Remove(rid);
             if (body is not null && GodotObject.IsInstanceValid(body)) body.Free();
             throw;
         }
@@ -174,7 +157,6 @@ public sealed class CollisionWorld : ICollisionWorld
         {
             // Remove by the saved RID even when the managed wrapper was already freed.
             _bodySurfaces.Remove(mounted.Rid);
-            _slabTops.Remove(mounted.Rid);
             if (GodotObject.IsInstanceValid(mounted.Body)) mounted.Body.Free();
         }
     }
@@ -184,7 +166,6 @@ public sealed class CollisionWorld : ICollisionWorld
         MainThread();
         foreach (var tile in _tiles.Keys.OrderBy(t => t.X).ThenBy(t => t.Z).ToArray()) RemoveTile(tile);
         _bodySurfaces.Clear();
-        _slabTops.Clear();
         _context = null; _root = null; Error = null; Revision++;
     }
 
@@ -196,26 +177,9 @@ public sealed class CollisionWorld : ICollisionWorld
         query.CollideWithAreas = false;
         query.HitBackFaces = false;
         var hit = _root.GetWorld3D().DirectSpaceState.IntersectRay(query);
-        return ReadSupportHit(hit, query.From, query.To);
-    }
-
-    // Also used by the native fixture to classify real side/underside rays.
-    internal SupportHit? ReadSupportHit(Godot.Collections.Dictionary hit, Vector3 from, Vector3 to)
-    {
-        if (hit.Count == 0) return null;
-        var normal = hit["normal"].AsVector3();
+        if (hit.Count == 0 || hit["normal"].AsVector3().Y <= 0) return null;
         var position = hit["position"].AsVector3();
         var rid = hit["rid"].AsRid();
-        if (normal.Y <= 0)
-        {
-            // Jolt may choose the vertical face at the exact top edge of two convex
-            // pieces. Recover only this same registered slab/shape's top-plane hit.
-            if (MathF.Abs(normal.Y) > 1e-6f || normal.X * normal.X + normal.Z * normal.Z < .99f || from.Y <= to.Y ||
-                !_slabTops.TryGetValue(rid, out var shapes) ||
-                !shapes.TryGetValue(hit["shape"].AsInt32(), out var top) ||
-                !top.Contains(position, from.Y, to.Y)) return null;
-            _slabEdgeSupports++;
-        }
         var tag = SurfaceForHit(rid, hit["collider"].AsGodotObject());
         // An unclassified external body cannot establish a safe walking support.
         return tag is { } known ? new(position.Y, known) : null;
@@ -280,43 +244,6 @@ public sealed class CollisionWorld : ICollisionWorld
         return null;
     }
     private static int ShapeCount(StaticBody3D body) => body.GetShapeOwners().Sum(owner => body.ShapeOwnerGetShapeCount((uint)owner));
-    private sealed record SlabTop(float Y, N.Vector2[] Ring)
-    {
-        public static SlabTop? Create(SlabCollider slab, N.Matrix4x4 bodyToWorld)
-        {
-            // This top is only for horizontal static slabs. Rotated slopes retain
-            // the ordinary native normal rule; no alternative support is invented.
-            if (MathF.Abs(bodyToWorld.M12) > 1e-6f || MathF.Abs(bodyToWorld.M32) > 1e-6f || bodyToWorld.M22 <= 0) return null;
-            var points = slab.Ring.Select(p => N.Vector3.Transform(new(p.X, slab.Y, p.Y), bodyToWorld)).ToArray();
-            return new(points[0].Y, points.Select(p => new N.Vector2(p.X, p.Z)).ToArray());
-        }
-        public bool Contains(Vector3 point, float rayFromY, float rayToY)
-        {
-            var yTolerance = Tolerance(MathF.Max(MathF.Abs(Y), MathF.Max(MathF.Abs(rayFromY), MathF.Abs(rayToY))));
-            var xzTolerance = Tolerance(MathF.Max(MathF.Abs(point.X), MathF.Abs(point.Z)));
-            if (yTolerance == 0 || xzTolerance == 0 || MathF.Abs(point.Y - Y) > yTolerance) return false;
-            var positive = false; var negative = false;
-            for (var i = 0; i < Ring.Length; i++)
-            {
-                var a = Ring[i]; var b = Ring[(i + 1) % Ring.Length];
-                double dx = (double)b.X - a.X, dz = (double)b.Y - a.Y;
-                var cross = dx * ((double)point.Z - a.Y) - dz * ((double)point.X - a.X);
-                var edgeTolerance = xzTolerance * Math.Sqrt(dx * dx + dz * dz);
-                positive |= cross > edgeTolerance; negative |= cross < -edgeTolerance;
-                if (positive && negative) return false;
-            }
-            return true;
-        }
-        private static float Tolerance(float magnitude)
-        {
-            // Four float ULPs cover coordinate subtraction and ray interpolation;
-            // 1 micrometre is the near-origin floor. Refuse the recovery entirely
-            // when precision would need >1 mm, rather than widening toward 2 cm.
-            if (!float.IsFinite(magnitude)) return 0;
-            var tolerance = MathF.Max(1e-6f, 4 * (MathF.BitIncrement(magnitude) - magnitude));
-            return tolerance <= .001f ? tolerance : 0;
-        }
-    }
     private sealed record MountedBody(StaticBody3D Body, Rid Rid);
     private sealed class TileState { public bool Ready; public int Shapes; public List<MountedBody> Bodies { get; } = []; }
 }

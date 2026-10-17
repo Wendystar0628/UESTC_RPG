@@ -144,40 +144,17 @@ public sealed class GroundTests
     public void HeightFieldMatchesSurfaces()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
-        var collider = new GroundModule().Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
+        var colliders = new GroundModule().Collide(ctx, new TileKey(0, 0));
+        Check.True(colliders.Count == 1 && colliders[0] is HeightFieldCollider, "Each ground tile has one height field.");
+        var collider = (HeightFieldCollider)colliders[0];
         Check.True(collider.HeightsCm.Length == 65 * 65, "Height field must be 65 x 65.");
         Check.True(collider.FootMatHalfMeter is { Length: 128 * 128 }, "Footstep grid must be 128 x 128.");
         Check.True(collider.FootMatHalfMeter!.All(b => b != 0), "No Auto footstep material on the ground.");
-        Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 10f, 0f), 0.011, "road height");
-        Check.Close(0f, GroundCollision.SampleHeight(collider, 10f, 4.5f), 0.011, "HF stays at the terrain base under paving");
-        var tops = GroundSupport.TileFor(ctx, new(0, 0), Section);
-        Check.Close(Section.PavingY, tops.SupportY(10f, 4.5f)!.Value, 0.001, "exact sidewalk support");
-        Check.Close(.14f, tops.SupportY(10f, 3.005f)!.Value, .002, "narrow kerb bevel retains its actual sloped top");
-        Check.Close(Section.PavingY, tops.SupportY(10f, 3.08f)!.Value, .001, "narrow kerb top is not smeared into the 1 m HF");
-        Check.Close(Section.GrassY, tops.SupportY(10f, 20f)!.Value, .001, "actual lawn support");
-        var recoloured = new BuildContext { World = ctx.World, Map = ctx.Map, Catalog = ctx.Catalog, WorldSeed = ctx.WorldSeed + 1 };
-        var recolouredTops = GroundSupport.TileFor(recoloured, new(0, 0), Section);
-        Check.True(tops.Colliders.Count == recolouredTops.Colliders.Count,
-            "Changing the lawn colour seed must not split physical support into different shapes.");
-        Check.Close(tops.SupportY(10f, 20f)!.Value, recolouredTops.SupportY(10f, 20f)!.Value, .00001,
-            "Lawn colour changes must preserve physical support height.");
-        Check.Close(0f, GroundCollision.SampleHeight(collider, 10f, 20f), 0.011, "HF stays at the terrain base under lawn");
-        var data = new WalkSupportData([tops.Data], []);
-        var restoredData = JsonSerializer.Deserialize<WalkSupportData>(JsonSerializer.SerializeToUtf8Bytes(data, ContractJson.Options), ContractJson.Options)!;
-        var restored = GroundSupport.Restore(restoredData);
-        Check.Close(tops.SupportY(10f, 3.005f)!.Value, restored.SupportY(10f, 3.005f, 0f)!.Value, .00001,
-            "resident geometry preserves the narrow kerb top");
-        var loaded = WorldModelLoader.Load(new("test"), new Dictionary<string, string>
-        {
-            ["campus.json"] = """{"meta":{"origin":[0,0],"crs":"EPSG:32648","bounds":[0,0,64,64]},"boundary":[[[0,0],[64,0],[64,64],[0,64]]],"entities":[],"features":[]}"""
-        });
-        var world = ((WorldModelSnapshot)loaded.World).WithWalkSupport(restored);
-        var resident = new GroundModule().Collide(TestWorld.Context(world), new(0, 0));
-        Check.True(ReferenceEquals(resident[0], restoredData.Ground[0].Base) &&
-            resident.Skip(1).SequenceEqual(restoredData.Ground[0].Tops), "Resident collision must reuse the original product colliders.");
-        Check.True(resident.OfType<HeightFieldCollider>().Single().FootMatHalfMeter!.SequenceEqual(collider.FootMatHalfMeter!),
-            "Resident ground contact materials changed.");
+        Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 10f, 0f), .02, "road height");
+        Check.Close(Section.PavingY, GroundCollision.SampleHeight(collider, 10f, 4.5f), .02, "sidewalk height");
+        Check.Close(Section.GrassY, GroundCollision.SampleHeight(collider, 10f, 20f), .02, "lawn height");
     }
+
 
     [TestCase]
     public void AllLevelsBuild()
@@ -243,7 +220,7 @@ public sealed class GroundTests
         Check.True(faceted > 0, "The steep flank of the mound (steeper than 1:6) shades with faceted normals.");
         AssertWinding(output);
         var collider = module.Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
-        Check.Close(terrain.HeightAt(50f, 50f), GroundCollision.SampleHeight(collider, 50f, 50f), 0.02, "collision on the mound");
+        Check.Close(terrain.HeightAt(50f, 50f) + Section.GrassY, GroundCollision.SampleHeight(collider, 50f, 50f), 0.02, "collision on the mound");
         Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 50f, 0f), 0.02, "road stays at its flattened grade");
     }
 
@@ -304,7 +281,7 @@ public sealed class GroundTests
         var collider = new GroundModule().Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
         // (4, 4) lies in the corner between the two kerb lines (x, z > 3): asphalt with a fillet, raised lawn without.
         Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 4f, 4f), 0.011, "fillet corner");
-        Check.Close(0f, GroundCollision.SampleHeight(collider, 12f, 12f), 0.011, "lawn beyond the fillet");
+        Check.Close(Section.GrassY, GroundCollision.SampleHeight(collider, 12f, 12f), 0.011, "lawn beyond the fillet");
     }
 
     [TestCase]

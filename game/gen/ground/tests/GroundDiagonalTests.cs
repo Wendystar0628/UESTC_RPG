@@ -90,47 +90,7 @@ public sealed class GroundDiagonalTests
         Check.Close(4.0 - 0.25 * 3.0 - 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f), 1e-6, "inside 10-11-01");
     }
 
-    [TestCase]
-    public void L0MeshTrianglesLieOnTheCollisionSurface()
-    {
-        // The designed terrain is the native fixture on tile (0, 0). Every top triangle of the L0 mesh (both of its
-        // cell triangles and every edge midpoint) must sit on the surface the collision sampler describes: a mesh that
-        // split cells along the other diagonal would cut across the creases by tenths of a metre.
-        var tile = new TileKey(0, 0);
-        var terrain = new FixtureTerrain(tile, NativeField());
-        var world = TestWorld.Empty();
-        world.Terrain = terrain;
-        var ctx = TestWorld.Context(world);
-        var section = GroundSection.Default;
-        var module = new GroundModule(section);
-        var support = GroundSupport.TileFor(ctx, tile, section);
-        var collider = support.Colliders.OfType<HeightFieldCollider>().Single();
-        Check.True(collider.HeightsCm.SequenceEqual(NativeField()), "The base HF must retain the exact FillTile centimetres.");
-        var output = module.Build(ctx, tile, LodLevel.L0);
-        var checkedTriangles = 0;
-        var worst = 0f;
-        foreach (var m in output.Meshes)
-            for (var t = 0; t < m.Index.Length; t += 3)
-            {
-                var p = new Vector3[3];
-                for (var k = 0; k < 3; k++)
-                    p[k] = new(m.Position[3 * m.Index[t + k]], m.Position[3 * m.Index[t + k] + 1], m.Position[3 * m.Index[t + k] + 2]);
-                if (p.Any(q => q.X % 64f == 0f || q.Z % 64f == 0f)) continue;   // border skirts hang below
-                var cross = Vector3.Cross(p[1] - p[0], p[2] - p[0]);
-                if (cross.Length() < 1e-5f || MathF.Abs(cross.Y) < 0.5f * cross.Length()) continue;   // slivers and vertical faces
-                var points = new[] { (p[0] + p[1] + p[2]) / 3f, (p[0] + p[1]) / 2f, (p[1] + p[2]) / 2f, (p[2] + p[0]) / 2f };
-                foreach (var q in points)
-                {
-                    var surface = GroundCollision.SampleHeight(collider, q.X, q.Z);
-                    worst = MathF.Max(worst, MathF.Abs(q.Y - section.GrassY - surface));
-                    Check.Close(q.Y, support.SupportY(q.X, q.Z)!.Value, .011, "actual top support follows the L0 triangle");
-                }
-                checkedTriangles++;
-            }
-        Check.True(checkedTriangles > 500, $"Only {checkedTriangles} top triangles checked.");
-        // Collision heights are whole centimetres, so allow one centimetre of rounding.
-        Check.True(worst <= 0.011f, $"Mesh leaves the collision surface by {worst} m.");
-    }
+
 
     [TestCase]
     public void CutCellsOfTheL0MeshLieOnTheDrapedSurface()

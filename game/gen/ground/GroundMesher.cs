@@ -37,7 +37,6 @@ internal sealed class GroundMesher
     private readonly GroundSection _s;
     private readonly GroundLayout _layout;
     private readonly MeshSink _sink;
-    private readonly GroundSupportBuilder? _support;
     private readonly GroundSourceContext _sourceContext;
     private readonly bool _bevel;
     private readonly bool _bands;
@@ -58,14 +57,13 @@ internal sealed class GroundMesher
 
     private readonly TerrainGrid _grid;
 
-    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, MeshSink sink, GroundSupportBuilder? support = null)
+    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, MeshSink sink)
     {
         _f = field;
         _s = section;
         _layout = layout;
         _grid = grid;
         _sink = sink;
-        _support = support;
         _bevel = GroundLod.HasBevel(lod);
         // Steps per level: L0 full cross-section, L1 lawns flush with paving, L2 and coarser one flat surface.
         var steps = GroundLod.Steps(lod);
@@ -280,7 +278,6 @@ internal sealed class GroundMesher
                 if (GroundShadingRule.For(surface, slope) == GroundShading.Faceted) na = nb = nc = n;
             }
         }
-        _support?.Add(surface, a, b, c);
         _sink.Triangle(GroundPalette.ColorOf(surface), GroundPalette.FlagNoShadow, a, b, c, na, nb, nc, Up,
             new(surface, GroundFaceRole.Top, _sourceContext));
     }

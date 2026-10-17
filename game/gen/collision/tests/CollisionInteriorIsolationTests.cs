@@ -110,8 +110,8 @@ public sealed class CollisionInteriorIsolationTests
 
     private static void RequireFloors(IReadOnlyList<Collider> colliders, float height)
     {
-        if (colliders.Count != 1 || colliders.Any(c => c is not SlabCollider slab || slab.Y != height))
-            throw new InvalidOperationException($"Expected one continuous convex floor at {height} m from this map's provider.");
+        if (colliders.Count != 1 || colliders.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - height) > .02f))
+            throw new InvalidOperationException($"Expected one box floor at {height} m from this map's provider.");
     }
     private static void Throws(Action action, string expected)
     {

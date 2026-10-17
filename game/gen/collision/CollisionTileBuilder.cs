@@ -58,7 +58,23 @@ public sealed class CollisionTileBuilder(
                             .Where(c => CollisionGeometry.IntersectsTile(c, tile)));
                 }
             }
-        return CollisionGeometry.Localize(world, tile);
+        return CollisionGeometry.Localize(world.Where(c => !IsGroundTrim(c, context.World.Terrain)), tile);
+    }
+
+    private static bool IsGroundTrim(Collider source, ITerrain terrain)
+    {
+        const float stepHeight = .35f;
+        if (source is HeightFieldCollider || source.Tag is not (SurfaceTag.Ground or SurfaceTag.Prop)) return false;
+        var bounds = CollisionGeometry.Bounds(source);
+        var size = bounds.Max - bounds.Min;
+        var width = source is BoxCollider box ? 2 * MathF.Min(
+            box.Half.X * new Vector3(box.At.M11, box.At.M12, box.At.M13).Length(),
+            box.Half.Z * new Vector3(box.At.M31, box.At.M32, box.At.M33).Length()) : MathF.Min(size.X, size.Z);
+        if (size.Y > stepHeight || width > .5f) return false;
+        var center = (bounds.Min + bounds.Max) / 2;
+        var ground = terrain.HeightAt(center.X, center.Z);
+        // Only low narrow trim resting on the ground is omitted. Elevated thin floors and stairs remain solid.
+        return bounds.Min.Y <= ground + .05f && bounds.Max.Y >= ground - .05f && bounds.Max.Y <= ground + stepHeight;
     }
 
     /// <summary>Parts replace the aggregate query envelope, including for mixed POI parents.</summary>
