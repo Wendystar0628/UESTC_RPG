@@ -4,14 +4,14 @@ title: 推送硬规则与工程设置
 category: engineering
 parent: ENG-BUDGET
 summary: 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
-keywords: [硬规则, 推送规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
+keywords: [硬规则, 推送规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
 owners: [WP-00]
 contributors: []
 depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SYS-AUDIO, WLD-INTERIORS, ART-STYLE]
 related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
-gates: [G4, G5, G6, G16, G17, G20, G21]
+gates: [G4, G5, G16, G17, G20, G21]
 paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 ---
 # ENG-BUDGET-RULES · 推送硬规则与工程设置
@@ -23,7 +23,7 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 ## 0 结论
 
 1. **硬规则 23 条，违反任何一条都不能推送**：第 1–10 条管渲染、材质与时间，第 11–23 条管烘焙、线程、存档与音频（§1）。
-2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G6、G16、G17、G20、G21 各验其中几条。
+2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G16、G17、G20、G21 各验其中几条。
 3. **工程设置由主代理维护**：`game/project.godot`、`export_presets.cfg`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
 
 ### 0.1 接入要点
@@ -31,7 +31,7 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 - **写材质或着色器**：只经 `ToonSpec` 和调色板色名，只用白名单着色器（§1 第 1 条）
 - **想加光源、SubViewport、CompositorEffect、全屏通道或 Environment**：不得新增，只有 WP-01、03、05 可以，先申请（§1 第 2 条）
 - **交付几何或碰撞**：经登记处按格交付；`Build()` 在工作线程上跑，不读世界状态和画面设置（§1 第 3、11、12、18 条）
-- **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）；gen 里的超越函数用 `DetMath`（§1 第 22 条）
+- **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）；gen 里随机与哈希只用 `Rng`、`StableHash`（§1 第 22 条）
 - **要全局着色器参数**：先登记，运行时不增不读回（§1 第 13 条）
 - **读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档只经 `ISaveService`（§1 第 19、23 条）
 - **要改 `project.godot`、`export_presets.cfg`、`Directory.Build.props`**：由主代理维护，申请（§2）
@@ -60,12 +60,12 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
 16. **线程边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。
 17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，G17 在最差值配置下截图检查。
-18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各包只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不读 `graphics.cfg`；每个单项恰有一个负责方（G5）。
+18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各包只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §3）。
 20. **室内只在开放清单里**（WLD-INTERIORS-BUILD §5）：清单外的楼没有完整室内和楼内碰撞；可走性不随钟点、季节、天气变；会动的门只由观者位置触发，剧情锁门也只走运行时门体。
 21. **音频硬上限**：在播 `AudioStreamPlayer3D` ≤ 32，开 `AreaMask` 的 ≤ 12；真实声部 ≤ 72；不在主线程同步加载素材；只有 `Campus.Audio.*` 能建播放器和改总线（SYS-AUDIO §1、§9）。
-22. **本机烘焙要确定**（D-165）：同一 ABI 下本机产物与 CI 参考烘焙逐字节一致（G6 `--bake-verify`）；gen 与烘焙子任务禁用 `Math`/`MathF` 的超越函数、`Vector<T>`、`System.Runtime.Intrinsics`、`Math.FusedMultiplyAdd`、`TensorPrimitives`，一律用契约里的 `DetMath`。
-23. **`user://` 不用 Godot 资源格式**（D-165）：`ResourceLoader`、`ResourceSaver` 不得读写 `user://`；本机缓存用自定义 `.tbin`，读入后与随包 `bake.manifest.json` 比对哈希，不符就重烘（ENG-PERF-STREAM §1）。
+22. **本机烘焙要确定**（D-165、D-232）：同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致；gen 与烘焙子任务的随机和哈希只用契约的 `Rng`、`StableHash`，不用 `System.Random`、系统时钟、`string.GetHashCode`、`Guid.NewGuid`，遍历字典、集合先排序。
+23. **`user://` 不用 Godot 资源格式**（D-165）：`ResourceLoader`、`ResourceSaver` 不得读写 `user://`；本机缓存用自定义 `.tbin`，每格按它用到的输入判鲜，不符就重烘（ENG-ARCH §4、ENG-PERF-STREAM §1）。
 
 ## 2 工程设置
 

@@ -3,13 +3,13 @@ id: SYS-AUDIO
 title: "音频：内核、混音、加速节制、人迹禁区、界面音效与素材"
 category: systems
 summary: "声音共守的规则：内核与生命周期、混音与响度、加速节制与转场、人迹禁区、界面音、开场音乐、设置、素材许可、预算验收"
-keywords: [音频, 声音, 混音, 响度, 加速节制, 转场, 人迹声, 界面音效, 开场音乐, 音频设置, 素材许可, 署名页, IAudioService, AudioBuses, AudioSettings, audio.cfg, G21]
+keywords: [音频, 声音, 混音, 响度, 加速节制, 转场, 人迹声, 界面音效, 开场音乐, 音频设置, 素材许可, 署名页, IAudioService, AudioBuses, AudioSettings, settings.json, G21]
 owners: [WP-53]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-07, WP-11, WP-13, WP-15, WP-17, WP-24, WP-25, WP-26, WP-27, WP-28, WP-30, WP-31, WP-35, WP-36, WP-38, WP-39, WP-40, WP-41, WP-42, WP-43, WP-45, WP-46, WP-48, WP-49, WP-51]
 depends: [SYS-MOTION, SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [CORE-INDEX, ART-STYLE, WLD-LIFE, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, ENG-ROADMAP, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
 contracts: [AudioBuses, AudioGroup, BackgroundBehavior, SuddenSoundMode, AudioSettings, UiCue, MusicCue, DuckReason, AudioSnapshot, IAudioService, SoundSetId]
-data: ["game/data/audio/", "user://audio.cfg"]
+data: ["game/data/audio/", "user://settings.json"]
 gates: [G4, G5, G6, G13, G14, G21]
 ---
 # SYS-AUDIO · 音频：内核、混音、加速节制、人迹禁区、界面音效与素材
@@ -26,6 +26,7 @@ gates: [G4, G5, G6, G13, G14, G21]
 4. **画面里没有人，声音里就没有听得清的人声**，一票否决（§4）。
 5. **界面音**按动效频率分级，高频默认无声；开场音乐做好之前不放（§5、§6）。
 6. **素材**：CC0 优先；NC、ND、BBC、BY-SA、GPL 不用（§8）。预算见 §9。
+7. **主线范围**：核心（内核、混音、界面音）、环境声床、按地面材质的脚步。空间声学（SYS-AUDIO-FOLEY §2）与数据驱动发声器（SYS-AUDIO-AMBIENCE §1.2）在主线之后。
 
 **子文档**：
 
@@ -46,9 +47,11 @@ gates: [G4, G5, G6, G13, G14, G21]
 - **听者**：`AudioListener3D` 由相机创建；第三人称时在头部支点；水下等介质按听者点另查。发声位置取物理事件里的接触点，不跟相机走。
 - **目标增益** = 参考增益 × 时段 × 季节 × 天气 × 地点配比 × 离地高度 × 介质与透射 × 速率档 × 压低，按**真实秒**一阶平滑（床约 2 s，介质 0.6–1.0 s）。
 - **任何组合都不空**：室外至少有底噪床加另一层，不出现数字静音；最安静的组合（雪夜）也听得见。
-- **发声器四种形态**：床（世界锁定的四向锚点，跟随听者平移、不跟转头）；定点与线声源；散布；同步提示。3D 声源一律单声道，不做多普勒。
+- **床**：世界锁定的四向锚点，跟随听者平移、不跟转头。3D 声源一律单声道，不做多普勒。
 - **声源上限与仲裁**：在播 3D 声源 ≤ 32（最低配置档 24），真实声部 ≤ 72。优先级：天气与底噪床 > 同步提示 > 定点 > 标志性叫声 > 散布 > 人迹；落选的循环声保留相位。界面、音乐、观者声不参与抢占。
 - **生命周期**：音频就绪是扉页转实时的条件之一。换图时雾幕盖起 World 组 0.5 s 压到 −40 dB，卸载本图的发声器与声学数据，雾幕散开时 2–3 s 淡入。读档与新游戏不存音频状态，声景由世界状态重建。退出时 Master 与雾幕同步 0.3 s 淡出。
+
+主线之后：数据驱动的发声器的另外三种形态——定点与线声源、散布、同步提示（SYS-AUDIO-AMBIENCE §1.2）；主线只有床。
 
 ## 2 混音与响度
 
@@ -107,7 +110,7 @@ gates: [G4, G5, G6, G13, G14, G21]
 
 ## 7 设置
 
-设置卡加一页"声音"（UI-NAV §3.5；WP-35 做）。设置存进 `user://audio.cfg`，只有内核读写，读值只接受基本类型（SYS-SAVE-FORMAT §3）；不并进 `settings.cfg`，因为开机时音频要比界面更早拿到音量。
+设置卡加一页"声音"（UI-NAV §3.5；WP-35 做）。设置存进 `user://settings.json` 的 `audio` 节，文件的读写规则在 SYS-SAVE-FORMAT §3；开机时音频要比界面更早拿到音量，所以设置文件在启动最早期读入，音量先于界面应用。
 
 设置项：总音量与环境 / 动作 / 界面 / 音乐四组音量；界面音效开关、悬停与聚焦音（默认关）；突发声音（雷、钟、孔雀）正常 / 柔和（−8 dB、更远）/ 关；安静模式（散布密度 × 0.5，人迹全关，不报时、不放广播，雷声柔和）；单声道；窗口在后台时照常（默认）/ 降低 / 静音；输出设备。默认值以 `AudioSettings` 为准。单声道、突发声音、安静模式作为无障碍项登记，"声音"页要能用键盘走完（G14）。画面设置不影响声音。
 
@@ -129,7 +132,7 @@ gates: [G4, G5, G6, G13, G14, G21]
 
 门禁 G21 缩成三件：素材许可登记、一次听评（响度、加速不爆发、转场不爆音、人声、对得上）、一票否决清单；做法归 ENG-GATES §1。视觉门禁一律不出声（`--audio=off`）。
 
-**一票否决**（并入 ENG-GATES-VETO §1）：清晰的人声；可辨认的近处车辆开过；加速时的一次性声爆发；室外的数字静音；循环接缝的咔哒；天气残留的声音；声音硬切；与画面对不上（空球场有拍球声、静止的主楼喷泉有水声、冬天有蝉、钟声带旋律、夜里或雨雪中有乌鸦叫、钟锤不动却有钟声）。
+**一票否决**：清晰的人声；可辨认的近处车辆开过；加速时的一次性声爆发；室外的数字静音；循环接缝的咔哒；天气残留的声音；声音硬切；与画面对不上（空球场有拍球声、静止的主楼喷泉有水声、冬天有蝉、钟声带旋律、夜里或雨雪中有乌鸦叫、钟锤不动却有钟声）。
 
 ## 11 待验证（P0）
 

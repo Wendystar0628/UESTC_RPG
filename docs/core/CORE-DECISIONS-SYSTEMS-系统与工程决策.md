@@ -52,8 +52,8 @@ gates: []
 | D-084 | 解锁：观光规则集的解锁策略是 `all-unlocked`，全部可用；`proximity` 只留给 RPG | 平面地图 | SYS-ATLAS-TRAVEL §4；ENG-ROADMAP §3 | 生效 |
 | D-085 | 冷启动依次是雾色、静态扉页（后台预热）、1.2 s 交叉淡化成实时的 T0"云隙望穹"，全程没有进度条；T0 显示最近存档的世界，流逝停住，`AnimTime` 照走 | 开始页 | SYS-TITLE §1；SYS-TITLE §2.1 | 生效 |
 | D-086 | 开始页菜单是继续 / 新游戏 / 存档 / 设置 / 制作人员与许可 / 退出；片名用细体宽字距加一行数据，不用书法 | 开始页 | SYS-TITLE §2.2；SYS-TITLE §2.3 | 生效 |
-| D-087 | 新游戏过场约 44 s，从秋 17:05 以 60× 推到 17:30，在 P00 全景出标题卡并转 1×；继续约 9 s；返回标题约 3 s | 过场 | SYS-TITLE-CINEMATIC §1；SYS-TITLE-CINEMATIC §2 | 生效 |
-| D-088 | 跳过是按住 Esc 0.8 s，跳过后的终态与完整播放一致；设置里"开场过场"可选完整、简短、关 | 过场 | SYS-TITLE-CINEMATIC §3 | 生效 |
+| D-087 | 新游戏过场约 44 s，从秋 17:05 以 60× 推到 17:30，在 P00 全景出标题卡并转 1×；继续与返回标题的过场推迟到主线之后（D-233） | 过场 | SYS-TITLE-CINEMATIC §1；SYS-TITLE-CINEMATIC §2 | 生效 |
+| D-088 | 跳过是按住 Esc 0.8 s，跳过后的终态与完整播放一致；设置里"开场过场"主线只有完整、关，简短版推迟（D-233） | 过场 | SYS-TITLE-CINEMATIC §3 | 生效 |
 | D-089 | 应用流程由 `IAppFlow` 状态机管理：Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting；Leaving 是返回标题，Quitting 是退出程序 | 开始页 | SYS-TITLE §3；SYS-SAVE-FLOW §1.4 | 生效 |
 | D-090 | 界面缩放 75–150%，不乘系统 DPI | 界面 | UI-VISUAL §4 | 生效 |
 
@@ -67,7 +67,7 @@ gates: []
 | D-094 | 保存时机：退出、返回标题、新游戏交还控制时立即保存（退出写完再退），漫游态每 5 分钟定时保存；只在安全时刻拍快照 | 存档 | SYS-SAVE-FLOW §1.1；SYS-SAVE-FLOW §1.2 | 生效 |
 | D-095 | 读档后的状态等于存档那一刻的落定状态；进行中的过渡、偶发事件和打开的面板不续播；断电、强杀或关机最多丢 5 分钟 | 存档 | SYS-SAVE §0；SYS-SAVE-FLOW §2.3 | 生效 |
 | D-096 | 新游戏一律从落金初灯开始 | 存档 | SYS-SAVE-FLOW §2.5 | 生效 |
-| D-097 | 设置类文件（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）读值只接受基本类型 | 设置 | SYS-SAVE-FORMAT §3 | 生效 |
+| D-097 | 设置只存一份 `user://settings.json`（分 ui、input、graphics、audio 四节），读值只接受基本类型（D-232） | 设置 | SYS-SAVE-FORMAT §3 | 生效 |
 | D-098 | 自定义标记存进存档，ID 用本图内递增的整数，不用 `Guid.NewGuid`；存档以外只存筛选偏好 | 平面地图 | SYS-ATLAS-UI §3.5；SYS-ATLAS §3 | 生效 |
 | D-099 | 门禁、`--shots`、`--bench` 下默认不写存档（`--save=off`） | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
 | D-100 | 存档按以后的 RPG 可扩展：各系统用 `[SaveSection]` 声明自己的段，字段有增减就升版本并写迁移函数 | 有状态的包 | SYS-SAVE-FORMAT §1.4 | 生效 |
@@ -87,7 +87,7 @@ gates: []
 | D-109 | 音量分五组：总、环境、动作、界面、音乐；声音设置存 `user://audio.cfg` | 设置 | SYS-AUDIO §7 | 生效 |
 | D-110 | 脚步默认安静、可调；闸机和门不出电子提示音，单车不响铃；飞行风声实时合成 | 观者声 | SYS-AUDIO-FOLEY §1.1；SYS-AUDIO-FOLEY §1.5；SYS-AUDIO-FOLEY §1.6 | 生效 |
 | D-111 | 门的声音：开放楼入口门固定敞开，没有开关声；能推开的门推开时一声，停在开位和回关途中无声，关好落锁一声；电梯不出"叮" | 开放室内 | SYS-AUDIO-FOLEY §1.5；WLD-INTERIORS-ACCESS §2.1 | 生效 |
-| D-112 | 同一动作在不同地方听起来不同（窄处脚步更明显），用"4 m 声学网格 + 房间与门户 + 行走射线细化 + 声源侧混响区"实现，不上 Steam Audio | 空间声学 | SYS-AUDIO-FOLEY §2.1；SYS-AUDIO-FOLEY §2.2 | 生效 |
+| D-112 | 同一动作在不同地方听起来不同（窄处脚步更明显），用"4 m 声学网格 + 房间与门户 + 行走射线细化 + 声源侧混响区"实现，不上 Steam Audio；推迟到主线之后，主线先做按地面材质的脚步（D-233） | 空间声学 | SYS-AUDIO-FOLEY §2.1；SYS-AUDIO-FOLEY §2.2 | 生效 |
 | D-113 | 不用 `AudioStreamRandomizer`，改用自研的洗牌选择器；不给 `AudioStreamPlaylist.Shuffle` 和 `AudioServer.PlaybackSpeedScale` 赋值 | 音频实现 | SYS-AUDIO-FOLEY §1.4；ENG-ARCH §2 | 生效 |
 | D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §4；SYS-AUDIO §5；INV-3 | 生效 |
 | D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §3；INV-10 | 生效 |
@@ -98,18 +98,19 @@ gates: []
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
-| D-117 | 画面预设四档：流畅、均衡、精致、极致，另有自定义；设备档只有最低配置、独显中、独显高三档，分别推荐均衡、精致、极致；流畅是兜底预设，不对应设备档（D-169） | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §1 | 生效 |
+| D-117 | 主线画面预设三档：均衡、精致、极致，默认精致，另有自定义；设备档与兜底的流畅预设推迟到主线之后（D-233） | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §1 | 生效 |
 | D-118 | 风格底线不可关：描线、分阶明暗与按材质的影色、柔光（高光晕开）、高光肩部、平涂贴图、雾与调色板、窗灯光晕等；实时阴影和西湖倒影只能降到最差值 | 画面设置 | SYS-GRAPHICS §2；ENG-BUDGET-RULES §1 | 生效 |
 | D-119 | 风格默认可关：移轴、镜头光斑、光柱、暗角 | 画面设置 | SYS-GRAPHICS §2 | 生效 |
 | D-120 | 不做超采样 | 画面设置 | SYS-GRAPHICS §1 | 生效 |
-| D-121 | 自动调节画质默认开：只往下调，不超过玩家所选，跳过玩家手动改过的项 | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §5 | 生效 |
+| D-121 | 自动调节画质推迟到主线之后（D-233）；做的时候只往下调，不超过玩家所选，跳过玩家手动改过的项 | 画面设置 | SYS-GRAPHICS §0；SYS-GRAPHICS §5 | 生效 |
 | D-122 | 画面设置只改运行时选级和引擎参数，不改烘焙、碰撞、世界状态和种子，不影响声音；会清空管线的设置不做成选项 | 画面设置 | SYS-GRAPHICS §0 | 生效 |
 | D-123 | 不做静止降频：镜头静止时帧率不降（`low_processor_mode` 关） | 性能 | ENG-PERF-ADAPT §1.2；ENG-BUDGET-RULES §2 | 生效 |
 | D-124 | 视觉验收的基准是精致预设、1080p 原生 | 验收 | SYS-GRAPHICS §0.1；ART-FIDELITY §4 | 生效 |
 | D-125 | 安装目录上限 0.9 GB，分发压缩包（7-Zip LZMA2）上限 0.7 GB；本机缓存不计入 | 构建 | ENG-GATES §1；ENG-BUDGET §3；ENG-PERF-STREAM §4 | 生效 |
-| D-165 | 本机烘焙：几何类烘焙产物不随包发，在玩家机器上由同一个 `Build()` 按需和后台生成并缓存；随包只发启动集 `boot_<地图>.pck`；本机产物与 CI 参考逐字节一致，gen 用 `DetMath`、禁用系统超越函数 | 构建、流式 | ENG-ARCH §2；ENG-ARCH §4；ENG-PERF-STREAM §1；ENG-PERF-STREAM §4；ENG-GATES §1 | 生效 |
+| D-165 | 本机烘焙：几何类烘焙产物不随包发，在玩家机器上由同一个 `Build()` 按需和后台生成并缓存；随包只发原始数据与必要的小索引，不发几何启动集（D-232） | 构建、流式 | ENG-ARCH §2；ENG-ARCH §4；ENG-PERF-STREAM §1；ENG-PERF-STREAM §4；ENG-GATES §1 | 生效 |
 | D-229 | 烘焙只重烘改到的格：每格只看它用到的输入改没改，用最省事的判断办法，说明文字不算；玩家侧游戏版本一变就清缓存；不叠多层哈希，不出整图行走产物 | 烘焙、本机缓存 | ENG-ARCH §4 | 生效 |
 | D-230 | 行走用常规做法：地面每格一个高度场，楼和物件用盒子，0.35 m 以下薄边不单独做碰撞，只加载身边；落点与回位运行时算；不预算整图可行走栅格、安全点网格和精确支持面；碰撞与画面差几厘米可以接受；G15 日常只跑固定路线加改到区域撒点 | 行走、碰撞、门禁 | SYS-WALK-BOUNDS §1、§4、§7，ENG-GATES | 生效 |
+| D-232 | demo 阶段工程与流程减负：快检过就推，专项失败分级登记、整图专项只在阶段收尾；编译不算源码哈希，快检只跑受影响的测试；删 PublicAPI、锁文件、门禁自测与无人用的 Python 孪生；子单 1 小时内、小错指挥自己修、日常用 high；程序集并成约 4–5 个；确定性只保同机同输入同输出，撤 `DetMath` 与逐字节一致；新内容只做近中远三档；取消几何启动集与 `bake.manifest.json`；存档、天气、多地图、设置按单图收缩 | 全部工程与施工 | WF-RULE §7，ENG-ARCH §2、§4，ENG-GATES | 生效 |
 | D-126 | 包体估计约 0.45–0.75 GB、本机缓存烘满约 0.8–1.4 GB，原型实测后核账；超上限时向用户汇报 | 构建 | ENG-BUDGET §3 | 待原型验证 |
 | D-127 | 总账各项统一留约 10% 作主代理余量，界面加音频的主线程合计不到 1 ms；原型实测后统一核账，写回 ENG-BUDGET §3 | 预算 | ENG-WP §2；ENG-BUDGET §3 | 待原型验证 |
 | D-128 | 室内预算（楼内视角，精致）：≤ 80 万三角形、≤ 250 次绘制，大厅和中庭 ≤ 100 万三角形 | 开放室内 | ENG-BUDGET §2 | 生效 |

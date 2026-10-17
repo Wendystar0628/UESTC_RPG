@@ -120,7 +120,7 @@ gates: [G1, G5]
 | T | 开始页镜头 | SYS-TITLE §2.1 |
 | Q | 各内容包的近景巡检点，每包 3–4 个 Q1–Q4 | ART-FIDELITY §4 |
 | G | 门禁 | ENG-GATES §1 |
-| WP | 工作包；子包写 WP-31a；RPG 包从 WP-54 起 | ENG-WP、ENG-ROADMAP-RPG §1 |
+| WP | 工作包；子包写 WP-31a；RPG 包从 WP-54 起 | ENG-WP、ENG-ROADMAP |
 | D | 决策，D-001 起，三位数，全文连续，只增不复用 | CORE-DECISIONS §0 |
 | O0–O3 | 外围分层 | WLD-OUTSKIRTS-BAND §2.2 |
 | L0+–L4 | 建筑与地块的细节级别；室内另有 I0、IS、IF 三级，碰撞级 C | ENG-BUDGET-LOD §1 |

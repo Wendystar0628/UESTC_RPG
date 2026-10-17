@@ -31,7 +31,6 @@
   "ENG-PERF-LIGHT": "docs/engineering/ENG-PERF-LIGHT-植被阴影与后期.md",
   "ENG-PERF-STREAM": "docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md",
   "ENG-ROADMAP": "docs/engineering/ENG-ROADMAP-扩展路线.md",
-  "ENG-ROADMAP-RPG": "docs/engineering/ENG-ROADMAP-RPG-RPG挂点与开工待办.md",
   "ENG-WP": "docs/engineering/ENG-WP-工作包派工单.md",
   "ENG-WP-LIST": "docs/engineering/ENG-WP-LIST-工作包一览与子包拆法.md",
   "MAP-QSH-ADDITIONS": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md",
@@ -203,7 +202,6 @@
    "ENG-BUDGET-RULES",
    "ENG-CODE",
    "ENG-ROADMAP",
-   "ENG-ROADMAP-RPG",
    "ENG-WP",
    "ENG-WP-LIST",
    "OPS-RELEASE"

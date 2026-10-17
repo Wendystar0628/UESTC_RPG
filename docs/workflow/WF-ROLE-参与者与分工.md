@@ -40,9 +40,9 @@ gates: []
 | --- | --- | --- |
 | 主会话 | Claude Opus 5.5，Claude Code 交互会话 | 作者 |
 | 主会话的子代理 | Claude Opus 或 Sonnet，Agent 工具后台开，按包取名 | 主会话 |
-| Astra | gpt-6-astra（xhigh），Codex 应用里的会话 | 主会话 |
+| Astra | gpt-6-astra（日常 high，诊断 xhigh），Codex 应用里的会话 | 主会话 |
 | Astra 的子代理 | 默认 gpt-6.1-sol，`spawn_agent` 开；gpt-6-astra 子代理只在 §6 列的情形开 | Astra |
-| Sol 会话 | gpt-6.1-sol（xhigh），Codex 应用里的会话；旁路、机械活 | 主会话 |
+| Sol 会话 | gpt-6.1-sol（日常 high），Codex 应用里的会话；旁路、机械活 | 主会话 |
 
 - **Claude 侧只有一个账号**，不另设中间会话；额度见底见 WF-MODEL §9.4。
 - **Codex 侧只有 Astra 和 Sol 两个会话**，开在 Codex 应用里（D-203、D-212），作者能看到全过程；派活一律发进对应会话（WF-COMMS §5）。GPT 侧一律普通速度（D-197）。
@@ -53,7 +53,7 @@ gates: []
 | --- | --- | --- |
 | Claude Opus 5.5 | 审美、判断、变通：画面、风格、内容，跨系统取舍，需要 Opus 的文档撰写 | 额度最贵，能交 Sonnet 的不交 Opus（WF-MODEL §9.1） |
 | Claude Sonnet | 价格约为 Opus 的一半：规格已给全的简单部件，按已定预设填数据，覆盖层与数据改动，测试与小修，中文文档改写、文案、看图初筛 | 不定风格，画面与风格的定值归主会话 |
-| gpt-6-astra（xhigh） | 架构判断与工程指挥：契约、程序集边界、依赖方向，并发、确定性、烘焙与流式、存档迁移、物理与碰撞、性能结构的方案定案；拆单、审查与集成 | 最贵的 GPT 档，主线程以指挥为主；不做审美 |
+| gpt-6-astra（日常 high，诊断 xhigh） | 架构判断与工程指挥：契约、程序集边界、依赖方向，并发、确定性、烘焙与流式、存档迁移、物理与碰撞、性能结构的方案定案；拆单、审查与集成 | 最贵的 GPT 档，主线程以指挥为主；不做审美 |
 | gpt-6.1-sol | 能力接近 Astra，额度充足，可高并发；复杂工程施工用 high 或 xhigh | 不做审美；契约和共享工程文件不自行改（Astra 授权后可施工）；设计文档只按确切文字打补丁 |
 
 ## 3 GPT 模型不做审美工作
