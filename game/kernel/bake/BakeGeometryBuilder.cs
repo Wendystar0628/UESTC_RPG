@@ -181,16 +181,25 @@ internal sealed class BakeGeometryBuilder
         var size = BakeRequestKeys.BaseTileMetres << (int)level;
         var minimum = level == LodLevel.L4 ? context.Map.Bounds.Min : new N.Vector3(tile.X * size, context.Map.Bounds.Min.Y, tile.Z * size);
         var maximum = level == LodLevel.L4 ? context.Map.Bounds.Max : minimum + new N.Vector3(size, context.Map.Bounds.Size.Y, size);
+        var hasGeometry = false;
         foreach (var mesh in meshes)
         {
             mesh.ValidateVertexData();
+            if (mesh.Position.Length == 0 || mesh.Index.Length == 0) continue;
+            if (!hasGeometry)
+            {
+                minimum.Y = float.PositiveInfinity;
+                maximum.Y = float.NegativeInfinity;
+                hasGeometry = true;
+            }
             for (var i = 0; i < mesh.Position.Length; i += 3)
             {
                 var p = new N.Vector3(mesh.Position[i], mesh.Position[i + 1], mesh.Position[i + 2]);
                 minimum = N.Vector3.Min(minimum, p); maximum = N.Vector3.Max(maximum, p);
             }
         }
-        // All surfaces share exactly one non-degenerate quantization box, including parts crossing a grid edge.
+        // Keep the grid's XZ coverage, but quantize Y over actual geometry instead of the map's flight limits.
+        // All surfaces share exactly one non-degenerate box, including parts crossing a grid edge.
         maximum = N.Vector3.Max(maximum, minimum + new N.Vector3(0.001f));
         return new(minimum, maximum);
     }

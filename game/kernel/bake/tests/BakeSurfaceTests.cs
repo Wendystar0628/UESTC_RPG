@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Registry;
 using GdUnit4;
 using Godot;
 using N = System.Numerics;
@@ -10,6 +11,55 @@ namespace Campus.Kernel.Bake.Tests;
 [TestSuite]
 public sealed class BakeSurfaceTests
 {
+    [TestCase]
+    public void TileHeightQuantizationUsesSharedGeometryRangeThroughCacheDecode()
+    {
+        var catalog = Palette();
+        var mapBounds = new Box3(new(-128, -28, -256), new(128, 2000, 256));
+        var map = new Campus.Contracts.Maps.MapDescriptor(
+            Id: new("fixture"), Name: default!, Kind: Campus.Contracts.Maps.MapKind.Outdoor,
+            Version: 1, Seed: 1, Geo: default!, Center: default, Bounds: mapBounds, DataRect: default!,
+            Roam: default!, TileMin: default, TileMax: default, DefaultSpawn: "fixture", Spawns: [],
+            World: default!, Env: default!, Cinematics: new Dictionary<string, string>(), Portals: []);
+        var context = new BuildContext { World = null!, Map = map, WorldSeed = 1, Catalog = catalog };
+        var builder = new BakeGeometryBuilder(catalog, new ServiceRegistry());
+        foreach (var level in new[] { LodLevel.L0, LodLevel.L4 })
+        {
+            var key = BakeRequestKeys.Tile(map.Id, "fixture.height", new(0, 0), level);
+            foreach (var planar in new[] { false, true })
+            {
+                var first = Geometry() with { Position = [-.5f, 0, 0, 64.5f, planar ? 0 : .321f, 0, 0, planar ? 0 : 1.9f, 64] };
+                var second = Geometry() with
+                {
+                    Position = [0, 0, 0, 1, planar ? 0 : 2.35f, 0, 0, planar ? 0 : .13f, 1],
+                    IgnoreOcclusionCulling = true
+                };
+                var result = builder.BuildOutput(key, context, new([first, second], []), new(0, 0), level, _ => { });
+                var restored = (TileBundle)TileBundleCodec.Decode("fixture/height", key, TileBundleCodec.Encode("fixture/height", result));
+                var expectedBounds = new Box3(new(level == LodLevel.L4 ? -128 : -.5f, 0, level == LodLevel.L4 ? -256 : 0),
+                    new(level == LodLevel.L4 ? 128 : 64.5f, planar ? .001f : 2.35f, level == LodLevel.L4 ? 256 : 64));
+                if (restored.Bounds != expectedBounds || restored.Surfaces.Count != 2 || restored.Surfaces.Any(s => s.Bounds != expectedBounds))
+                    throw new InvalidOperationException("Tile surfaces lost their shared actual-height bounds, grid XZ coverage or crossing geometry.");
+                for (var surfaceIndex = 0; surfaceIndex < 2; surfaceIndex++)
+                {
+                    var surface = restored.Surfaces[surfaceIndex];
+                    var source = surfaceIndex == 0 ? first : second;
+                    for (var vertex = 0; vertex < surface.VertexCount; vertex++)
+                    {
+                        var encoded = BinaryPrimitives.ReadUInt16LittleEndian(surface.VertexData.Span[(vertex * 8 + 2)..]);
+                        var decoded = surface.Bounds.Min.Y + encoded / 65535f * surface.Bounds.Size.Y;
+                        if (Math.Abs(decoded - source.Position[vertex * 3 + 1]) > .0001f || (planar && decoded != 0))
+                            throw new InvalidOperationException("Packed tile height exceeded the geometry-range quantization error or moved a flat road.");
+                    }
+                }
+            }
+            var empty = builder.BuildOutput(key, context, new([], []), new(0, 0), level, _ => { });
+            var emptyBounds = level == LodLevel.L4 ? mapBounds : new Box3(new(0, -28, 0), new(64, 2000, 64));
+            if (empty.Bounds != emptyBounds || empty.Surfaces.Count != 0)
+                throw new InvalidOperationException("Empty tile fallback bounds changed.");
+        }
+    }
+
     [TestCase]
     public void AbsentOptionalChannelsStayAbsentAndEmptyArraysRemainInvalid()
     {

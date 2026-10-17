@@ -9,9 +9,9 @@ namespace Campus.Kernel.Bake;
 public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool Background,
     bool AllowUnlisted, bool Reference, bool Verify, bool MapOnly, int LogicalProcessors, uint? SeedOverride)
 {
-    // v4 invalidates pre-batching geometry: packer semantics are not covered by every gen module's code closure.
+    // v5 invalidates geometry packed against map-wide height limits instead of actual surface heights.
     // Binary TileBundle payload remains version 2; old geometry/cache manifests must not be reused.
-    public const string Abi = "godot-4.7.2-tbin-4";
+    public const string Abi = "godot-4.7.2-tbin-5";
     public int MaximumWorkers => Math.Max(1, LogicalProcessors - 2);
     public int PlayingWorkers => Math.Max(1, LogicalProcessors / 4);
 

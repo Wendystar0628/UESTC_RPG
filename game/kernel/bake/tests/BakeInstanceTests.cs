@@ -43,7 +43,9 @@ public sealed class BakeInstanceTests
         records0[3] = 12345; firstSource.Position[0] = 54321; // Frozen inputs must not follow their old mutable owners.
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.instances", new(-2, 1), LodLevel.L2);
         var adapter = new BakeInstanceAdapter(Palette());
-        var bundle = adapter.PackTile(key, new(-2, 1), LodLevel.L2, new(new(-512, 0, 256), new(-256, 64, 512)), [], [stream0, stream1]);
+        var bundle = adapter.PackTile(key, new(-2, 1), LodLevel.L2, new(new(-512, 0, 256), new(-256, .001f, 512)), [], [stream0, stream1]);
+        if (bundle.Bounds != new Box3(new(-512, 0, 256), new(-256, 64, 512)))
+            throw new InvalidOperationException("Tile culling bounds did not include instance heights beyond the static geometry range.");
         if (bundle.MultiMeshes.Count != 4 || bundle.Surfaces.Count != 0 || bundle.Stats.Instances != 6 || bundle.Stats.Surfaces != 4)
             throw new InvalidOperationException("A two-surface prototype must produce two independent MultiMeshes per sub-block.");
         if (!ReferenceEquals(bundle.MultiMeshes[0].Surface, bundle.MultiMeshes[2].Surface) ||
