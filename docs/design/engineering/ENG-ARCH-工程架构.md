@@ -120,6 +120,8 @@ gates: [G1, G2, G3, G4, G5, G6]
 - **工具与验证**：构建、导入、截图和测试共用资源调度及进程生命周期入口；配置与真实执行目标一致。测试按本包语义及独占夹具验证，不锁其他内容包可合法改变的生产全局集合；固定原始快照的本包回归不因此删除。
 - **替换即清旧**：切换生产实现时，全部调用者、测试、脚本和相关说明同批迁移；删除旧入口、重复读取与失效断言。只有WF-RULE §10规定的短暂过渡可例外，并在同一任务结案前删除。
 
+`Campus.Gen.Geometry`（`gen/geometry`，WP-00）是仅依赖契约的公共纯几何下层，统一几何合批、标量变换与碰撞摆放。站点及LOD内容选择仍由各内容包负责；共享缓存使用`GeometryBuffer`，可写输出经公共发布操作复制。
+
 ### 目录树
 
 Godot 项目放在子目录 `game/`（即 `res://`），Godot 只扫描这个目录，不碰 docs、Python 和原始数据。
@@ -135,6 +137,7 @@ UESTC_RPG/
 │  ├─ gen/                   纯 .NET 的生成器程序集（Campus.Gen.*）：部件库、建筑、地面、各区、设计增补、植被布点、碰撞图元、可行走数据、
 │  │                         室内平面与家具、外围、声学与声景
 │  │  ├─ world/              WP-08  世界模型（读 campus.json、覆盖层、外围数据、室内索引、空间索引）
+│  │  ├─ geometry/           WP-00  公共纯几何（合批、标量变换、碰撞摆放与冻结几何发布）
 │  │  ├─ parts/{core,openings,circulation,roof,street}/   WP-09–13；parts/_stubs 归 WP-00
 │  │  ├─ buildings/  ground/  diorama/                    WP-14、WP-15、WP-22
 │  │  ├─ zones/{core,library-interior,south,west,north,center-east,design-*,showcase-interiors}/   WP-16–21、WP-28–31
@@ -202,11 +205,12 @@ UESTC_RPG/
 | --- | --- | --- | --- |
 | `Campus.Contracts` | `game/contracts` | 只有基础类库（`System.Numerics`、`System.Text.Json`） | GodotSharp，以及本仓库的任何其他程序集 |
 | `Campus.Gen.World` | `gen/world` | 契约 | GodotSharp、其他 gen 程序集 |
+| `Campus.Gen.Geometry` | `gen/geometry` | 契约 | GodotSharp、其他 gen 程序集 |
 | `Campus.Gen.Parts.Core` | `gen/parts/core` | 契约 | 世界模型、GodotSharp |
 | `Campus.Gen.Parts.<类>` | `gen/parts/<类>` | 契约、部件内核 | 世界模型、GodotSharp、其他部件包（跨包复用走部件 ID） |
 | `Campus.Gen.Interior`（室内共享层） | `gen/interior/core` | 契约、部件内核 | 世界模型、GodotSharp |
 | `Campus.Gen.InteriorProps`（室内共享层） | `gen/interior-props` | 契约、部件内核、`Campus.Gen.Interior` | 世界模型、GodotSharp |
-| `Campus.Gen.<内容>`（buildings、ground、diorama、zones.*、vegetation、water、fauna、traces、furniture、walkable、collision、outskirts、interior.shell、acoustics、ambience） | `gen/<内容>`（interior.shell 在 `gen/interior/shell`） | 契约、部件、室内共享层、世界模型（只读） | GodotSharp、其他内容程序集（区与区不互相依赖） |
+| `Campus.Gen.<内容>`（buildings、ground、diorama、zones.*、vegetation、water、fauna、traces、furniture、walkable、collision、outskirts、interior.shell、acoustics、ambience） | `gen/<内容>`（interior.shell 在 `gen/interior/shell`） | 契约、公共几何、部件、室内共享层、世界模型（只读） | GodotSharp、其他内容程序集（区与区不互相依赖） |
 | `Campus.Pipeline.Map`（WP-48a） | `pipeline/map` | 契约、`Campus.Gen.World`（只读） | GodotSharp |
 | `Campus`（主程序集） | kernel、style、camera、medium、systems、hud、stage、gates、flow、audio | GodotSharp、契约、全部 gen 程序集、`Campus.Pipeline.Map` | — （内部按命名空间受下面的规则约束） |
 | `Campus.Gen.Tests`、`Campus.Tests` | 各包的 `tests/` | 被测程序集、gdUnit4Net | — |

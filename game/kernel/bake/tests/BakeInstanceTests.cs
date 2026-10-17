@@ -20,7 +20,7 @@ public sealed class BakeInstanceTests
             IgnoreOcclusionCulling = true,
             Uv = [2.5f, -1.25f, .5f, 3f, 2f, 4f],
             Uv2 = [65535, 17, 65536, 33, 16777216, -1],
-            ColorIds = [66, 68, 66],
+            ColorIndices = [66, 68, 66],
             Ao = [.25f, .5f, .75f],
             Flags = [2, 2, 2],
             Reserved = [7, 8, 9],
@@ -103,26 +103,13 @@ public sealed class BakeInstanceTests
     public void UnsupportedInstanceSurfaceStatesAreExplicitFailures()
     {
         var source = Surface("fixture.first", "fixture.first.shade");
-        Reject(source with { Reflect = true }, PaletteLayout.LegacyEncodingVersion);
-        Reject(source with { Variant = new VariantTag() }, PaletteLayout.LegacyEncodingVersion);
-        Reject(source with { ColorIndices = [300, 300, 300] }, 2);
-        var high = new PaletteCatalog(Palette(), new PaletteEntryV2[]
-        {
-            new(new("fixture.high"), new PaletteIndex(300), Vector3.One, "fixture", false, PaletteRole.Lit),
-            new(new("fixture.high.shade"), new PaletteIndex(301), new Vector3(.5f), "fixture", false, PaletteRole.Shade)
-        });
-        var index = high.Resolve(new("fixture.high")).Value;
-        if (index != 300 || high.Resolve(new("fixture.high.shade")).Value != 301)
-            throw new InvalidOperationException("The high-index fixture was truncated to legacy byte IDs.");
-        var buffer = GeometryBuffer.Freeze(Surface("fixture.high", "fixture.high.shade") with
-        { ColorIndices = [index, index, index] }, PaletteLayout.EncodingVersion);
-        var stream = new GeometryInstanceStream("high", new("high", [buffer], PrototypeBounds()), Records((Matrix4x4.Identity, Vector4.Zero)), PrototypeBounds());
-        ExpectUnsupported(() => new BakeInstanceAdapter(Palette()).Pack([stream]));
+        Reject(source with { Reflect = true });
+        Reject(source with { Variant = new VariantTag() });
     }
 
-    private static void Reject(GeometryBundle source, int encoding)
+    private static void Reject(GeometryBundle source)
     {
-        var frozen = GeometryBuffer.Freeze(source, encoding);
+        var frozen = GeometryBuffer.Freeze(source);
         var stream = new GeometryInstanceStream("unsupported", new("unsupported", [frozen], PrototypeBounds()),
             Records((Matrix4x4.Identity, Vector4.Zero)), PrototypeBounds());
         ExpectUnsupported(() => new BakeInstanceAdapter(Palette()).Pack([stream]));
@@ -171,11 +158,11 @@ public sealed class BakeInstanceTests
     private static GeometryBundle Surface(string lit, string shade) => new(new(new(new(lit), new(shade))),
         [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2],
         Uv: [0, 0, 1, 0, 0, 1], Lods: [new MeshLod(.5f, [0, 2, 1])]);
-    private static PaletteRegistry Palette() => new([
+    private static PaletteCatalog Palette() => new(new PaletteRegistry([
         new(new("fixture.first"), 64, Vector3.One, "fixture", false, PaletteRole.Lit),
         new(new("fixture.first.shade"), 65, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
         new(new("fixture.second"), 66, Vector3.One, "fixture", false, PaletteRole.Lit),
         new(new("fixture.second.shade"), 67, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
         new(new("fixture.accent"), 68, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.accent.shade"), 69, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
+        new(new("fixture.accent.shade"), 69, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
 }

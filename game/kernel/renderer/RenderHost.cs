@@ -128,7 +128,7 @@ public partial class RenderHost : Node3D, IRenderHost, IMapAware
                 }
                 foreach (var surface in result)
                 {
-                    surface.Geometry.ValidateVertexData(PaletteLayout.EncodingVersion);
+                    surface.Geometry.ValidateVertexData();
                     catalog.Validate(surface.Geometry.Material.Spec);
                 }
                 return result;
@@ -184,7 +184,7 @@ public partial class RenderHost : Node3D, IRenderHost, IMapAware
         var mesh = new ArrayMesh();
         try
         {
-            GeometrySurfaceUpload.Append(mesh, source, _materials!, tint, catalog: catalog);
+            GeometrySurfaceUpload.Append(mesh, source, _materials!, catalog, tint);
             return mesh;
         }
         catch { mesh.Dispose(); throw; }

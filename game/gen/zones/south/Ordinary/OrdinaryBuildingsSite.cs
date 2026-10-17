@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Contracts;
 using Campus.Gen.Zones.South.Framework;
 

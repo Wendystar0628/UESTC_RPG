@@ -5,16 +5,16 @@ namespace Campus.Contracts;
 
 /// <summary>
 /// Pure .NET resolver for ui.json. Results are normalized sRGB RGBA, without premultiplication.
-/// Names resolve through special, then ramps (split at the first dot), then PaletteRegistry.Albedo.
+/// Names resolve through special, then ramps (split at the first dot), then PaletteCatalog.Albedo.
 /// The scene fallback is the registered intrinsic/constant color, not a GPU or current-frame palette read.
 /// The reserved name none means do not draw and always resolves to fully transparent black.
 /// </summary>
 public sealed class UiPalette
 {
     private readonly UiPaletteDocument _document;
-    private readonly PaletteRegistry _registry;
+    private readonly PaletteCatalog _registry;
 
-    public UiPalette(UiPaletteDocument document, PaletteRegistry registry)
+    public UiPalette(UiPaletteDocument document, PaletteCatalog registry)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(registry);
@@ -50,7 +50,7 @@ public sealed class UiPalette
     }
 
     /// <summary>G5 entry point: checks matching theme/map key sets and resolves every declared color leaf.</summary>
-    public static void Validate(UiPaletteDocument document, PaletteRegistry registry) => new UiPalette(document, registry).Validate();
+    public static void Validate(UiPaletteDocument document, PaletteCatalog registry) => new UiPalette(document, registry).Validate();
 
     public void Validate()
     {
@@ -120,7 +120,7 @@ public sealed class UiPalette
                 color = Follow("ramps." + name, rampValue, chain);
             else if (_registry.TryGet(new PaletteToken(name), out var entry) && entry is not null)
                 color = new Vector4(entry.Albedo, 1f);
-            else throw Failure($"Unresolved UI color '{name}' at {Chain(chain)} (searched special, ramps, PaletteRegistry).");
+            else throw Failure($"Unresolved UI color '{name}' at {Chain(chain)} (searched special, ramps, PaletteCatalog).");
         }
         color.W *= alpha;
         return color;

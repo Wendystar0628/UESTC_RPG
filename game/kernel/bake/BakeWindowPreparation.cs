@@ -112,7 +112,6 @@ internal static class BakeWindowPreparation
         World = input.World,
         Map = input.Map,
         WorldSeed = input.WorldSeed,
-        Palette = input.Palette,
         Catalog = input.Catalog,
         ClaimedBy = input.ClaimedBy,
         SourceInputs = input.SourceInputs,

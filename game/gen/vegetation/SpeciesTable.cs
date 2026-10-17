@@ -104,7 +104,7 @@ public sealed class SpeciesTable
     }
 
     /// <summary>Packs the RGBA32F texels (row-major, <see cref="Width"/> × <see cref="Rows"/>) for the tree_species texture.</summary>
-    public float[] Pack(PaletteRegistry palette)
+    public float[] Pack(PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(palette);
         var data = new float[Width * Rows * 4];
@@ -115,9 +115,9 @@ public sealed class SpeciesTable
             var flags = (s.Deciduous ? FlagDeciduous : 0) | (s.BloomOnBlobs ? FlagBloomOnBlobs : 0);
             Put(data, s.Row, 0, s.LeafAmount[0], s.LeafAmount[1], s.LeafAmount[2], s.LeafAmount[3]);
             Put(data, s.Row, 1, s.BloomAmount[0], s.BloomAmount[1], s.BloomAmount[2], s.BloomAmount[3]);
-            Put(data, s.Row, 2, s.SwayDeg, leaf.Row ?? -1, bloom?.Row ?? -1, bloom is null ? -1 : bloom.Id);
+            Put(data, s.Row, 2, s.SwayDeg, leaf.Row ?? -1, bloom?.Row ?? -1, bloom is null ? -1 : bloom.Index.Value);
             Put(data, s.Row, 3, (float)s.Card, (float)s.BloomCard, (float)CardShape.Twig, flags);
-            Put(data, s.Row, 4, (float)s.Crown, leaf.Id, palette.Get(MotherModels.Twig).Id, 0f);
+            Put(data, s.Row, 4, (float)s.Crown, leaf.Index.Value, palette.Resolve(MotherModels.Twig).Value, 0f);
             Put(data, s.Row, 7, 0f, 0f, 0f, Tag);
         }
         return data;

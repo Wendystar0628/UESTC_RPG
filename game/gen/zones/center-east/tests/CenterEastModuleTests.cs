@@ -374,7 +374,7 @@ public sealed class CenterEastModuleTests
     private static BuildContext Context()
     {
         // The center-east sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { World = World(), Map = null!, WorldSeed = 1 };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
     }
 
     private static string DataDirectory()
@@ -419,7 +419,7 @@ public sealed class CenterEastModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
         Throws(() => module.DescribeWindows(Context()), "positions need the numbering snapshot");
 
         var metadata = module.DescribeWindows(ctx);
@@ -472,14 +472,14 @@ public sealed class CenterEastModuleTests
         foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
         {
             WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-21") : null;
-            var prepass = new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+            var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
             var layouts = module.DescribeWindowLayouts(view, 1);
             var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
             var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
             Require(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0),
                 $"{name}: every center-east grid is allocated with cells ({ours.Length} of {layouts.Sum(l => l.Grids.Count)})");
             Require(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity, $"{name}: the table fits ({snapshot.WindowCount})");
-            var metadata = module.DescribeWindows(new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+            var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             Require(ids.Length > 0 && ids.All(id => ours.Any(a => id >= a.BaseId && id < a.BaseId + a.Count)), $"{name}: the zone's windows lie in its own grids");

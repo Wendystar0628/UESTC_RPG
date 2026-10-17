@@ -57,7 +57,7 @@ public partial class D0Stage : Node3D
         if (AppBoot.Value("gate") == "registry")
         {
             var report = RegistryGateRunner.Run(registry, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteRegistry), typeof(IRenderHost)]);
+                AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteCatalog), typeof(IRenderHost)]);
             GD.Print("G5_D0_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
             GD.Print($"G5 registry D0-scope PASS maps={report.Maps} declarations={report.Declarations}; runtime checks NOT_IMPLEMENTED={report.NotImplemented.Count}");
             GetTree().Quit();
@@ -110,6 +110,7 @@ public partial class D0Stage : Node3D
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var buildContext = new BuildContext
         {
+            Catalog = Services.Get<IPaletteCatalogSource>().Catalog,
             Map = context.Descriptor,
             World = world,
             WorldSeed = context.Descriptor.Seed,

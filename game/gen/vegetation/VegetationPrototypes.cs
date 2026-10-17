@@ -27,7 +27,7 @@ public static class VegetationPrototypes
     /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION §11.4 CustomAabb).</summary>
     public const float SwayPad = 0.6f;
 
-    private static readonly ConditionalWeakTable<PaletteRegistry, ConcurrentDictionary<(SpeciesInfo, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();
+    private static readonly ConditionalWeakTable<PaletteCatalog, ConcurrentDictionary<(SpeciesInfo, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();
 
     /// <summary>Prototype ID: vegetation/{species}/{variant}/{pool}.</summary>
     public static string Id(SpeciesInfo species, int variant, VegPool pool)
@@ -55,7 +55,7 @@ public static class VegetationPrototypes
         return (parts[1], variant, pool);
     }
 
-    public static GeometryPrototype Get(SpeciesInfo species, int variant, VegPool pool, PaletteRegistry palette)
+    public static GeometryPrototype Get(SpeciesInfo species, int variant, VegPool pool, PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(palette);
@@ -109,7 +109,7 @@ public static class VegetationPrototypes
         _ => throw new ArgumentOutOfRangeException(nameof(pool), pool, "Unknown vegetation pool.")
     };
 
-    private static GeometryPrototype Create(SpeciesInfo species, int variant, VegPool pool, PaletteRegistry palette)
+    private static GeometryPrototype Create(SpeciesInfo species, int variant, VegPool pool, PaletteCatalog palette)
     {
         var id = Id(species, variant, pool);
         switch (pool)

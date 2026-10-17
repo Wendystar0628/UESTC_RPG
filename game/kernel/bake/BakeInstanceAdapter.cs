@@ -11,11 +11,10 @@ namespace Campus.Kernel.Bake;
 /// There is no tile-origin translation, shadow-casting setting, or shadow-proxy parameter in this adapter/codec.
 /// Prototype buffers are read directly and packed once per prototype reference in this adapter's map lifetime.
 /// </remarks>
-public sealed class BakeInstanceAdapter(PaletteRegistry palette, PaletteCatalog? catalog = null)
+public sealed class BakeInstanceAdapter(PaletteCatalog catalog)
 {
     private readonly ConcurrentDictionary<GeometryPrototype, Lazy<BakedSurface[]>> _prototypes = new(ReferenceEqualityComparer.Instance);
 
-    public BakeInstanceAdapter(PaletteCatalog catalog) : this(catalog.LegacyRegistry, catalog) { }
 
     public TileBundle PackTile(BakeKey key, TileKey tile, LodLevel level, Box3 tileBounds,
         IReadOnlyList<BakedSurface> surfaces, IReadOnlyList<GeometryInstanceStream> streams)
@@ -57,9 +56,7 @@ public sealed class BakeInstanceAdapter(PaletteRegistry palette, PaletteCatalog?
                 throw new NotSupportedException($"Instance prototype {label} has Variant state; this adapter does not encode per-instance variant handling.");
             if (source.Reflect)
                 throw new NotSupportedException($"Instance prototype {label} requests reflection; the current MultiMesh consumer does not support reflection proxies.");
-            result[slot] = catalog is null
-                ? BakeSurfacePacker.Pack(source, prototype.Bounds, palette)
-                : BakeSurfacePacker.Pack(source, prototype.Bounds, catalog);
+            result[slot] = BakeSurfacePacker.Pack(source, prototype.Bounds, catalog);
         }
         return result;
     }

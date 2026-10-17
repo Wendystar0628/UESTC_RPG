@@ -208,9 +208,9 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         // 光斑、灯头光晕、窗光晕都不画，地面读到的是"无灯"。
         _inventoryRev = _inventory?.Rev ?? 0;
         IReadOnlyList<LightEmitter> emitters = _inventory?.Lamps ?? [];
-        var palette = TryPalette();
+        var palette = Services.Get<IPaletteCatalogSource>().Catalog;
         var lamps = LampSetBuilder.Build(emitters, schedule,
-            token => palette is not null && palette.TryGet(token, out var entry) ? entry.Index.Value : null,
+            token => palette.TryGet(token, out var entry) ? entry.Index.Value : null,
             (x, z) => ctx.World.Spatial.GroundY(x, z), LampSeed ^ ctx.Descriptor.Seed, _cueDefs, out var report);
         Lamps = lamps;
         var rect = ctx.Descriptor.DataRect;
@@ -235,13 +235,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} rev={_inventoryRev} lamps={report.Accepted} cue={report.CueLamps} grid={size.Width}x{size.Height} " +
             $"overflowCells={overflow} skipped(channel={report.UnknownChannel}, notLamp={report.NotLamp}, color={report.UnknownColor}, dup={report.Duplicates}) " +
             $"windows={windowReport.Windows} skipped(channel={windowReport.UnknownChannel}, facade={windowReport.BadFacade})");
-    }
-
-    // 完整色表（旧 0–255 + ext-v2 bank 1）：灯色号可以是 256–511。
-    private static PaletteCatalog? TryPalette()
-    {
-        try { return Services.Get<IPaletteCatalogSource>().Catalog; }
-        catch (InvalidOperationException) { return null; }
     }
 
     private void EnsureOverrideTexture()

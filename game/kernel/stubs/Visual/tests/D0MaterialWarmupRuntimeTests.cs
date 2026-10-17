@@ -139,9 +139,8 @@ public sealed class D0MaterialWarmupRuntimeTests
                 "A warm sample truncated the bank-1 colour or lost its bank flag.");
         }
         await fixture.Until(() => fixture.Driver.ReadyForReveal && pool.Visible);
-        Check(fixture.Provider.LegacyPaletteCalls == 0 && fixture.Library.IsReady(spec),
-            "Bank-1 warmup used the legacy byte API or failed to unlock the pool.");
-        GD.Print("MATERIAL_WARMUP_EVIDENCE paletteIndex=510 nativeBankFlag=True legacyByteCalls=0 poolVisible=True");
+        Check(pool.Visible, "Bank-1 warmup failed to unlock the pool.");
+        GD.Print("MATERIAL_WARMUP_EVIDENCE paletteIndex=510 nativeBankFlag=True poolVisible=True");
     }
 
     private static void Check(bool condition, string message)
@@ -188,7 +187,7 @@ public sealed class D0MaterialWarmupRuntimeTests
             var surface = GeometryBuffer.Freeze(new GeometryBundle(new(spec),
                 [-.5f, -.5f, 0f, .5f, -.5f, 0f, 0f, .5f, 0f],
                 [0f, 0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f], [0, 1, 2, 0, 2, 1])
-            { ColorIndices = spec.Lit.Value == "test.high.lit" ? [510, 510, 510] : [64, 64, 64] }, PaletteLayout.EncodingVersion);
+            { ColorIndices = spec.Lit.Value == "test.high.lit" ? [510, 510, 510] : [64, 64, 64] });
             var prototype = new GeometryPrototype(id, [surface], new Box3(new(-.5f, -.5f, 0f), new(.5f, .5f, 0f)));
             var pool = _host.Mount(new GeometryInstancePoolSpec(id, "WP-00", prototype, 1,
                 new Aabb(new(-10f, -10f, -10f), new(20f, 20f, 20f)), 1));
@@ -239,11 +238,9 @@ public sealed class D0MaterialWarmupRuntimeTests
     {
         public int Accepted { get; private set; }
         public int Rejected { get; private set; }
-        public int LegacyPaletteCalls { get; private set; }
         public ulong FirstCapturedFrame { get; private set; }
         public ulong FirstDrawCompleteFrame { get; private set; }
         public Material Get(ToonSpec spec) => library.Get(spec);
-        public byte PaletteId(PaletteToken token) { LegacyPaletteCalls++; return library.PaletteId(token); }
         public bool IsReady(ToonSpec spec) => library.IsReady(spec);
         public void Track(ShaderId shader, Material material) => library.Track(shader, material);
         public void TrackLayout(Material material, WarmDrawLayout layout) => library.TrackLayout(material, layout);

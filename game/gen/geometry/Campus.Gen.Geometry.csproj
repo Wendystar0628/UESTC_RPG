@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Gen.Geometry</RootNamespace></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../contracts/Campus.Contracts.csproj" /></ItemGroup>
+</Project>

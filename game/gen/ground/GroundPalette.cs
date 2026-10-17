@@ -38,7 +38,7 @@ public static class GroundPalette
     /// Registered palette column of the Lit entry (Shade = Lit + 1). Columns never change once registered
     /// (ART-STYLE 8.5); the unit tests check this table against the registry files.
     /// </summary>
-    public static byte Id(GroundColor color) => color switch
+    public static ushort Id(GroundColor color) => color switch
     {
         GroundColor.Asphalt => 178,
         GroundColor.Concrete => 180,

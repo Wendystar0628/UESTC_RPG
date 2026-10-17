@@ -94,7 +94,7 @@ public sealed class VegetationInputsTests
         return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
 
-    private static PaletteCatalog Catalog => new(MotherModelTests.Palette, []);
+    private static PaletteCatalog Catalog => MotherModelTests.Palette;
 
     private static void Expect<TException>(Action action) where TException : Exception
     {

@@ -37,7 +37,7 @@ public interface ICorePiece
 }
 
 /// <summary>Output of one tile build: shared mesh sink plus placed parts and emitters, in piece order.</summary>
-public sealed class CoreBuild(PaletteRegistry? palette)
+public sealed class CoreBuild(PaletteCatalog palette)
 {
     public CoreMesh Mesh { get; } = new(palette);
     public List<PlacedPart> Parts { get; } = [];
@@ -45,7 +45,7 @@ public sealed class CoreBuild(PaletteRegistry? palette)
     /// <summary>Bundles a piece writes itself (VF-B glass, landmark parts kept as their own instances), after the shared sink's.</summary>
     public List<GeometryBundle> Bundles { get; } = [];
     /// <summary>The registry the shared sink colours with, for pieces that write their own bundles.</summary>
-    public PaletteRegistry? Palette { get; } = palette;
+    public PaletteCatalog Palette { get; } = palette;
     /// <summary>The map's window allocation (BuildContext.WindowNumbering, map already checked); null only in fixtures.</summary>
     public WindowNumberingSnapshot? WindowNumbering { get; init; }
 

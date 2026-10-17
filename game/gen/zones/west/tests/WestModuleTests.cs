@@ -184,7 +184,7 @@ public sealed class WestModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
         var metadata = module.DescribeWindows(ctx);
         var declared = new List<int>();
         foreach (var f in metadata.Facades)
@@ -219,13 +219,13 @@ public sealed class WestModuleTests
         var module = new WestModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-19") : null;
-        var prepass = new BuildContext { World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+        var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
         var layouts = module.DescribeWindowLayouts(world, 1);
         var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
         Require(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0), "every west grid is allocated with cells");
         Require(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity, $"the table fits ({snapshot.WindowCount})");
-        var metadata = module.DescribeWindows(new BuildContext { World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+        var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
         Require(metadata.Facades.Count > 0, "the west zone declares facade runs");
     }
 
@@ -350,7 +350,7 @@ public sealed class WestModuleTests
         return stream.ToArray();
     }
 
-    private static BuildContext Context() => new() { World = World(), Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
 
     private static string DataDirectory()
     {

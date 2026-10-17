@@ -131,7 +131,7 @@ public sealed class PackedSurfaceBatchTests
             [-20 + id, 2, 11, -17 + id, 3, 11, -18 + id, 6, 11], [0, 0, 1, 0, 0, 1, 0, 0, 1], [2, 0, 1],
             Ao: [.1f, .5f, .9f], Uv: [0, 0, 1, 0, 0, 1], Uv2: uv2 ? [65535, 961, 65536, 1025, 16777216, -1] : null)
         {
-            ColorIds = [64, 66, 64],
+            ColorIndices = [64, 66, 64],
             Flags = [1, 2, 8],
             Reserved = [7, 251, 9],
             Custom0 = (customMask & 1) != 0 ? Custom(0) : null,
@@ -161,9 +161,9 @@ public sealed class PackedSurfaceBatchTests
             at: at ?? source.At, lods: lods, skinData: skin, uvScale: uvScale ?? source.UvScale, variant: variant, ignoreOcclusionCulling: ignore)
         { Shader = shader, Reflect = reflect };
     private static Box3 Bounds() => new(new(-64, -16, -64), new(64, 64, 64));
-    private static PaletteRegistry Palette() => new([
+    private static PaletteCatalog Palette() => new(new PaletteRegistry([
         new(new("fixture.lit"), 64, Vector3.One, "fixture", false, PaletteRole.Lit),
         new(new("fixture.shade"), 65, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
         new(new("fixture.accent"), 66, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.accent.shade"), 67, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
+        new(new("fixture.accent.shade"), 67, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
 }

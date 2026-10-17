@@ -23,7 +23,7 @@ internal static class BakeInputFingerprint
     }
 
     public static string Compute(IMapContext map, uint seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> inputs,
-        PaletteRegistry palette, BuildInputSnapshot globalInputs, bool includeAtlas = false)
+        PaletteCatalog catalog, BuildInputSnapshot globalInputs, bool includeAtlas = false)
     {
         var hash = new XxHash128();
         var selected = inputs.Where(pair => Files.Contains(pair.Key, StringComparer.Ordinal) ||
@@ -42,18 +42,7 @@ internal static class BakeInputFingerprint
             map.Descriptor.Env.Backdrop,
             map.Descriptor.Env.Outskirts
         }, ContractJson.Options));
-        Append(hash, JsonSerializer.SerializeToUtf8Bytes(palette.Entries.OrderBy(entry => entry.Id).ToArray(), ContractJson.Options));
-        return Convert.ToHexStringLower(hash.GetCurrentHash());
-    }
-
-    /// <summary>Explicit catalog path: even a legacy-only catalog is a distinct context/encoding domain.</summary>
-    public static string Compute(IMapContext map, uint seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> inputs,
-        PaletteCatalog catalog, BuildInputSnapshot globalInputs, bool includeAtlas = false)
-    {
-        ArgumentNullException.ThrowIfNull(catalog);
-        var hash = new XxHash128();
-        Append(hash, System.Text.Encoding.UTF8.GetBytes("Campus.Bake.PaletteCatalog/v1"));
-        Append(hash, System.Text.Encoding.UTF8.GetBytes(Compute(map, seed, inputs, catalog.LegacyRegistry, globalInputs, includeAtlas)));
+        Append(hash, System.Text.Encoding.UTF8.GetBytes("Campus.Bake.PaletteCatalog/v2"));
         Append(hash, JsonSerializer.SerializeToUtf8Bytes(new
         {
             encoding = PaletteLayout.EncodingVersion,

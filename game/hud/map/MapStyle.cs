@@ -48,8 +48,8 @@ public sealed class MapStyle
         }
         var document = JsonSerializer.Deserialize<UiPaletteDocument>(Godot.FileAccess.GetFileAsBytes(PalettePath), ContractJson.Options)
             ?? throw new InvalidDataException("ui.json is empty.");
-        // 地图与面板只用阶梯色和专用色；场景色名（只有 special.now 引用）这里用不到，传空登记表即可。
-        var palette = new UiPalette(document, new PaletteRegistry([]));
+        // 地图界面与其他消费者使用同一份完整场景目录。
+        var palette = new UiPalette(document, Campus.Kernel.Registry.Kernel.Get<IPaletteCatalogSource>().Catalog);
         using var metrics = JsonDocument.Parse(Godot.FileAccess.GetFileAsBytes(MetricsPath));
         var root = metrics.RootElement;
         return new MapStyle(MapTone.From(palette, "light", false), MapTone.From(palette, "dark", true),

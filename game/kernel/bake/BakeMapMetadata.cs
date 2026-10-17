@@ -97,7 +97,6 @@ internal static class BakeMapMetadataCodec
             World = map.Context.World,
             Map = map.Context.Descriptor,
             WorldSeed = data.Seed,
-            Palette = map.Palette,
             Catalog = map.Catalog,
             ClaimedBy = map.Claims.Value.ClaimedBy,
             SourceInputs = data.Inputs,

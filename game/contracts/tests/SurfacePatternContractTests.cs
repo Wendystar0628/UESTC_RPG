@@ -46,13 +46,12 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
-    public void ProfileDimensionsAreCheckedByGeometryAndBothPaletteCatalogs()
+    public void ProfileDimensionsAreCheckedByGeometryAndPaletteCatalog()
     {
         var registry = new PaletteRegistry([
             new(Plain.Lit, 64, Vector3.One, "fixture", false, PaletteRole.Lit),
             new(Plain.Shade, 65, Vector3.Zero, "fixture", false, PaletteRole.Shade)]);
-        var catalog = PaletteCatalog.FromLegacy(registry);
-        registry.Validate(Plain with { SurfacePattern = Pattern });
+        var catalog = new PaletteCatalog(registry, []);
         catalog.Validate(Plain with { SurfacePattern = Pattern });
         SurfacePatternSpec[] invalid = [default, Pattern with { PeriodMeters = new(0, 1) },
             Pattern with { PeriodMeters = new(1, -1) }, Pattern with { PeriodMeters = new(float.NaN, 1) },
@@ -63,7 +62,6 @@ public sealed class SurfacePatternContractTests
         {
             var spec = Plain with { SurfacePattern = pattern };
             Throws<ArgumentException>(() => (Surface() with { Material = new(spec) }).ValidateVertexData());
-            Throws<ArgumentException>(() => registry.Validate(spec));
             Throws<ArgumentException>(() => catalog.Validate(spec));
         }
     }

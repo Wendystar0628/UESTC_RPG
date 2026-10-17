@@ -25,6 +25,7 @@ public sealed class BakeWindowTests
         {
             var context = new BuildContext
             {
+                Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
                 World = new World(items.ToArray()),
                 Map = Map(),
                 WorldSeed = 9,
@@ -94,10 +95,10 @@ public sealed class BakeWindowTests
         Reject(() => BakeWindowPreparation.Prepare(Context(), modules), "found 2");
         Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source,
             new Provider(new(new("another-map"), new string('a', 64), [])))), "another map");
-        var empty = new BuildContext { World = new World([]), Map = Map(), WorldSeed = 9 };
+        var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([]), Map = Map(), WorldSeed = 9 };
         if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, BakeService.Module>()).Snapshot is not null)
             throw new InvalidOperationException("A windowless legacy fixture unexpectedly acquired an allocation.");
-        var building = new BuildContext { World = new World([new(Feature, FeatureSource.Design, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
+        var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([new(Feature, FeatureSource.Design, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
         Reject(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, BakeService.Module>()), "found 0");
     }
 
@@ -163,6 +164,7 @@ public sealed class BakeWindowTests
         var partLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())]);
         var context = new BuildContext
         {
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = baseline.World,
             Map = baseline.Map,
             WorldSeed = baseline.WorldSeed,
@@ -183,8 +185,8 @@ public sealed class BakeWindowTests
             var prepared = BakeWindowPreparation.Prepare(context, modules);
             return new(9, context.SourceInputs, "final-input", "atlas-input", new(), [], context.InteriorProviders, prepared);
         });
-        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, null!, claims, data,
-            context.GlobalInputs, context.GroundMaskContributors, partLods);
+        var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, data,
+            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
@@ -229,6 +231,7 @@ public sealed class BakeWindowTests
     private static WindowDecl Window(int id) => new(id, 0, 2, new("window.general"), new(-100 + id, 5, 50), Vector3.UnitX, Vector3.UnitY, 1, 1);
     private static BuildContext Context(WpId? owner = null, bool claimed = true) => new()
     {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = new World([new(Feature, FeatureSource.Design, new("poi"), new PointGeometry(Vector3.Zero))]),
         Map = Map(),
         WorldSeed = 9,

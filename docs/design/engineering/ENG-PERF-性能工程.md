@@ -341,7 +341,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
    - VF-B 窗格：VF-A + UV2（窗号基址）；
    - VF-C 植被插片：VF-A + CUSTOM0–2（§9）；
    - VF-D 面片与粒子：VF-A 的子集（无切线时补默认切线，保持同一压缩格式）。
-   - VF-E 角色蒙皮为保留项，当前不计入可用的四种格式。Skin4 约束每顶点四个骨影响，并要求真实 Skin、Skeleton 绑定；现行源码没有 VF-E 的通道表、骨索引与权重数组类型、打包布局或字节步长，因此不登记推算字节数。`GeometryBundle` 的 Position、Normal 为每顶点 3 个 float，Uv、Uv2 为 2 个 float，ColorIds、Flags、Reserved 为每顶点字节数据，Custom0–2 各为每顶点 4 个 float；这些是现有静态输入通道，不能改名充当 Bones、Weights。`GeometrySurfaceUpload` 只上传 Vertex、Normal、Color、Index、可选 UV、UV2 和 Custom0–2，不上传 Bones、Weights，也不建立 Skin、Skeleton 绑定。它的 `compressAttributes` 仅控制 `FlagCompressAttributes`，带 UV2 时拒绝压缩；该开关不提供 VF-E 骨索引、权重的压缩或上传支持。`BakedSurface` 虽保留不透明的 `SkinData` 字节段，仍没有定义 VF-E 布局或角色骨架绑定，不能据此宣称 TileBundle 已支持玩家蒙皮。
+   - VF-E 角色蒙皮为保留项，当前不计入可用的四种格式。Skin4 约束每顶点四个骨影响，并要求真实 Skin、Skeleton 绑定；现行源码没有 VF-E 的通道表、骨索引与权重数组类型、打包布局或字节步长，因此不登记推算字节数。现行静态输入通道与颜色编码以 `GeometryBundle`、`PaletteEncoding` 源码为准，不能改名充当 Bones、Weights。`GeometrySurfaceUpload` 只上传 Vertex、Normal、Color、Index、可选 UV、UV2 和 Custom0–2，不上传 Bones、Weights，也不建立 Skin、Skeleton 绑定。它的 `compressAttributes` 仅控制 `FlagCompressAttributes`，带 UV2 时拒绝压缩；该开关不提供 VF-E 骨索引、权重的压缩或上传支持。`BakedSurface` 虽保留不透明的 `SkinData` 字节段，仍没有定义 VF-E 布局或角色骨架绑定，不能据此宣称 TileBundle 已支持玩家蒙皮。
 2. **MultiMesh 格式统一**（§1.2）；剔除模式只有 `cull_back`（闭合网格）和 `cull_disabled`（插片、水、剖切变体）两种，写在白名单着色器里，不在运行时改。
 3. **扉页后面预热**（WP-01 的 `PipelineWarmup`；有开始页时在扉页插画后面，按 SYS-TITLE §1.1 第 3–4 步；`--title=0` 时在雾幕里）：
    - **三维**：从烘焙统计里汇总全部"着色器 × 顶点格式 × MultiMesh 与否 × 剔除模式 × 投影与否"组合，生成预热表；在相机前 2 m 摆一个预热阵列，每个组合一件小网格，放在第 1 级阴影范围内，让颜色、预通道和阴影三类管线都编到。倒影世界里另摆一组（它没有投影光，特化常量不同）。剖切变体、Compositor 的计算管线、天空一起预热。另有：`cine_cloud` 的云卡与镜头云幕（SYS-TITLE §9）、外围 O0–O2 的组合（WLD-OUTSKIRTS）、开放室内的组合（室内壳的 `toon_cut`、门厅卡、`toon_glass_near`，WLD-INTERIORS）、`fx_glow` 的三种光柱分支与细尘。

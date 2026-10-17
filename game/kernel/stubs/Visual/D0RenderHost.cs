@@ -49,9 +49,7 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
             throw new NotSupportedException("D0RenderHost mounts GeometryBundle only. PlacedPart generation and mounting belong to the WP-01 render host.");
 
         var materials = Services.Get<IToonMaterialProvider>();
-        // Pure RGB fallback never resolves a catalog. Mixed batches capture it once for indexed surfaces only.
-        var hasIndexedGeometry = content.Meshes.Any(geometry => materials is not FallbackToonMaterialProvider || geometry.Shader is not null);
-        var catalog = hasIndexedGeometry ? (_catalog ??= Services.Get<IPaletteCatalogSource>().Catalog) : null;
+        var catalog = _catalog ??= Services.Get<IPaletteCatalogSource>().Catalog;
         if (_reflection is null)
         {
             _reflection = Services.Get<IReflectionWorld>();
@@ -67,7 +65,7 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
             foreach (var geometry in content.Meshes)
             {
                 var useD0Rgb = materials is FallbackToonMaterialProvider && geometry.Shader is null;
-                geometry.ValidateVertexData(useD0Rgb ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
+                geometry.ValidateVertexData();
                 if (geometry.Index.Length == 0) continue;
                 var spec = useD0Rgb ? geometry.Material.Spec : ApprovedD0Spec(geometry.Material.Spec);
                 var material = geometry.Shader is { } shader ? ResolveShaderMaterial(shader) : materials.Get(spec);
@@ -116,13 +114,13 @@ public sealed class D0RenderHost : IRenderHost, IDisposable
         _ => spec
     };
 
-    private static ArrayMesh Upload(GeometryBundle source, ToonSpec spec, IToonMaterialProvider materials, bool useD0Rgb, PaletteCatalog? catalog)
+    private static ArrayMesh Upload(GeometryBundle source, ToonSpec spec, IToonMaterialProvider materials, bool useD0Rgb, PaletteCatalog catalog)
     {
         var mesh = new ArrayMesh();
         try
         {
-            GeometrySurfaceUpload.Append(mesh, source, materials, materialSpec: spec,
-                useD0Rgb: useD0Rgb, compressAttributes: source.Uv2 is null, catalog: useD0Rgb ? null : catalog);
+            GeometrySurfaceUpload.Append(mesh, source, materials, catalog, materialSpec: spec,
+                useD0Rgb: useD0Rgb, compressAttributes: source.Uv2 is null);
             return mesh;
         }
         catch { mesh.Dispose(); throw; }

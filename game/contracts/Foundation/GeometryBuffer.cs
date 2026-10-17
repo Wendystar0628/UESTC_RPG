@@ -6,27 +6,25 @@ namespace Campus.Contracts;
 /// <remarks>No engine resources are owned here. Consumers must not cast read-only memory back to mutable storage.</remarks>
 public sealed class GeometryBuffer
 {
-    private GeometryBuffer(GeometryBundle source, int encoding)
+    private GeometryBuffer(GeometryBundle source)
     {
-        source.ValidateVertexData(encoding);
-        PaletteEncodingVersion = encoding;
+        source.ValidateVertexData();
         Material = source.Material; Shader = source.Shader;
         Position = source.Position.ToArray(); Normal = source.Normal.ToArray(); Index = source.Index.ToArray();
         Ao = Copy(source.Ao); Uv = Copy(source.Uv); Uv2 = Copy(source.Uv2);
-        ColorIds = Copy(source.ColorIds); ColorIndices = Copy(source.ColorIndices);
+        ColorIndices = Copy(source.ColorIndices);
         DecalBaseColorIndices = Copy(source.DecalBaseColorIndices); Flags = Copy(source.Flags); Reserved = Copy(source.Reserved);
         Custom0 = Copy(source.Custom0); Custom1 = Copy(source.Custom1); Custom2 = Copy(source.Custom2);
         Lods = Array.AsReadOnly((source.Lods ?? []).Select(lod => new GeometryLodBuffer(lod.Error, lod.Index)).ToArray());
         Variant = source.Variant; Reflect = source.Reflect; IgnoreOcclusionCulling = source.IgnoreOcclusionCulling;
     }
 
-    public static GeometryBuffer Freeze(GeometryBundle source, int paletteEncodingVersion = PaletteLayout.LegacyEncodingVersion)
+    public static GeometryBuffer Freeze(GeometryBundle source)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return new(source, paletteEncodingVersion);
+        return new(source);
     }
 
-    public int PaletteEncodingVersion { get; }
     public ToonRef Material { get; }
     public ShaderId? Shader { get; }
     public ReadOnlyMemory<float> Position { get; }
@@ -35,7 +33,6 @@ public sealed class GeometryBuffer
     public ReadOnlyMemory<float>? Ao { get; }
     public ReadOnlyMemory<float>? Uv { get; }
     public ReadOnlyMemory<float>? Uv2 { get; }
-    public ReadOnlyMemory<byte>? ColorIds { get; }
     public ReadOnlyMemory<ushort>? ColorIndices { get; }
     public ReadOnlyMemory<ushort>? DecalBaseColorIndices { get; }
     public ReadOnlyMemory<byte>? Flags { get; }

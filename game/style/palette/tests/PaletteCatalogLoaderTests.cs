@@ -14,11 +14,11 @@ namespace Campus.Style.Palette.Tests;
 public sealed class PaletteCatalogLoaderTests
 {
     [TestCase]
-    public void RegisteredExtensionsJoinTheLegacyRegistry()
+    public void RegisteredExtensionsJoinTheBaseBank()
     {
         var (legacy, files) = Load();
-        var catalog = PaletteRegistryLoader.LoadCatalog(legacy, files);
-        Check(ReferenceEquals(catalog.LegacyRegistry, legacy), "The catalog must reuse the legacy registry instance.");
+        var catalog = LoadCatalog(legacy, files);
+        Check(catalog.Get(new PaletteIndex(legacy.Entries[0].Id)).Albedo == legacy.Entries[0].Albedo, "The base metadata changed while composing the catalog.");
         Check(catalog.ExtensionCount == 14, $"Expected the seven approved bank-1 pairs, found {catalog.ExtensionCount} extension entries.");
         foreach (var (family, lit) in new[]
         {
@@ -54,16 +54,19 @@ public sealed class PaletteCatalogLoaderTests
         foreach (var (name, json) in cases)
         {
             var refused = false;
-            try { PaletteRegistryLoader.LoadCatalog(legacy, [("test/" + name, Encoding.UTF8.GetBytes(json))]); }
+            try { LoadCatalog(legacy, [("test/" + name, Encoding.UTF8.GetBytes(json))]); }
             catch (InvalidDataException) { refused = true; }
             Check(refused, $"The loader accepted an invalid extension: {name}.");
         }
         var twice = File(2, Entry("t.lit", 256, "lit"), Entry("t.shade", 257, "shade"));
         var duplicated = false;
-        try { PaletteRegistryLoader.LoadCatalog(legacy, [("a", Encoding.UTF8.GetBytes(twice)), ("b", Encoding.UTF8.GetBytes(twice))]); }
+        try { LoadCatalog(legacy, [("a", Encoding.UTF8.GetBytes(twice)), ("b", Encoding.UTF8.GetBytes(twice))]); }
         catch (InvalidDataException) { duplicated = true; }
         Check(duplicated, "The same token and index in two extension files must be refused.");
     }
+
+    private static PaletteCatalog LoadCatalog(PaletteRegistry bank0, IEnumerable<(string Path, byte[] Json)> extensions) =>
+        PaletteCatalog.FromSources([("fixture/bank0.json", JsonSerializer.SerializeToUtf8Bytes(new PaletteRegistryData(bank0.Entries), ContractJson.Options))], extensions);
 
     private static (PaletteRegistry Legacy, (string, byte[])[] Files) Load()
     {

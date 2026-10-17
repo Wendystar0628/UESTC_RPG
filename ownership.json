@@ -2,6 +2,10 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/gen/geometry/**",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/style/shaders/window_card.gdshaderinc",
       "owner": "WP-51b"
     },

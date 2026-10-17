@@ -45,7 +45,7 @@ public sealed class GrandStairTests
     {
         var world = RealWorld();
         var (stair, shell) = Pieces(world);
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         stair.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
         var door = output.Parts.Single(p => p.Part.Value == PartCatalog.DoorGlass);
@@ -57,7 +57,7 @@ public sealed class GrandStairTests
         Require(output.Emitters is null or { Count: 0 }, "no lamp marker of the zone's own");
         // No glass in the door bay below the door transom: the doorway is open.
         var bay = shell.EntranceDoor!.Value;
-        var lib = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var lib = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(lib, LodLevel.L0);
         var across = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, bay.Outward));
         foreach (var g in lib.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
@@ -74,11 +74,11 @@ public sealed class GrandStairTests
     {
         var (stair, shell) = Pieces(RealWorld());
         var bay = shell.EntranceDoor!.Value;
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         stair.Build(build, LodLevel.L0);
-        var canopy = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec == CanopySpec).ToArray();
+        var canopy = build.Finish(LodLevel.L0).Meshes.Where(IsCanopy).ToArray();
         Require(canopy.Length > 0, "a canopy over the front door");
-        var points = canopy.SelectMany(m => Enumerable.Range(0, m.Position.Length / 3).Select(i => new Vector3(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]))).ToArray();
+        var points = canopy.SelectMany(m => Enumerable.Range(0, m.Position.Length / 3).Where(i => m.ColorIndices![i] == Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(CanopySpec.Lit).Value).Select(i => new Vector3(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]))).ToArray();
         var f = bay.Face;
         var along = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Along)).ToArray();
         var outward = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Out)).ToArray();
@@ -91,11 +91,15 @@ public sealed class GrandStairTests
         Require(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - CoreStyle.CanopyPier * 0.5f) < 1e-4f && w.Y0 < bay.Origin.Y) == 2, "the piers collide");
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
         {
-            var coarse = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+            var coarse = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
             stair.Build(coarse, lod);
-            Require(coarse.Finish(lod).Meshes.Any(m => m.Material.Spec == CanopySpec), $"the canopy reads at {lod}");
+            Require(coarse.Finish(lod).Meshes.Any(IsCanopy), $"the canopy reads at {lod}");
         }
     }
+
+    private static bool IsCanopy(GeometryBundle mesh) =>
+        (mesh.Material.Spec with { Lit = CanopySpec.Lit, Shade = CanopySpec.Shade }) == CanopySpec &&
+        mesh.ColorIndices?.Contains(Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(CanopySpec.Lit).Value) == true;
 
     private static ToonSpec CanopySpec => CoreStyle.Spec(CoreMaterial.Sheet, CoreStyle.CanopyFamily);
 

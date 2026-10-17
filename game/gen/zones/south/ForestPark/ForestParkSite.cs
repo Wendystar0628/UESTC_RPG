@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -120,7 +121,7 @@ public sealed class ForestParkSite : SouthSite
         var zv = new Vector3(x.Y * yv.Z - x.Z * yv.Y, x.Z * yv.X - x.X * yv.Z, x.X * yv.Y - x.Y * yv.X);
         var mid = (a + e) * 0.5f - yv * (size * 0.5f);
         var local = new Matrix4x4(x.X, x.Y, x.Z, 0, yv.X, yv.Y, yv.Z, 0, zv.X, zv.Y, zv.Z, 0, mid.X, mid.Y, mid.Z, 1);
-        b.Add(PartGeometryKernel.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), Affine.Mul(local, f.At(0, 0, 0)));
+        b.Add(PartGeometryKernel.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), GeometryPlacement.Multiply(local, f.At(0, 0, 0)));
     }
 
     // ---- Hill-top pavilion and seat wall (MAP-QSH-TERRAIN §1.2) ----

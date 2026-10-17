@@ -101,8 +101,8 @@ public sealed class ToonLibraryRuntimeTests
                     [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2],
                     Uv: [.01f, .01f, .99f, .01f, .99f, .99f, .01f, .99f],
                     Uv2: [0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32, 0, i == 3 ? 0 : 32])
-                { ColorIds = [64, 64, 64, 64], Reserved = [spare, spare, spare, spare] };
-                GeometrySurfaceUpload.Append(mesh, source, fixture.Library);
+                { ColorIndices = [64, 64, 64, 64], Reserved = [spare, spare, spare, spare] };
+                GeometrySurfaceUpload.Append(mesh, source, fixture.Library, new Palettes().Catalog);
             }
             parent.AddChild(new MeshInstance3D { Mesh = mesh });
             foreach (var state in new[] { "registered", "unbound", "undersized" })
@@ -164,11 +164,6 @@ public sealed class ToonLibraryRuntimeTests
         var library = fixture.Library;
         var extension = new ToonSpec(new PaletteToken("ext.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.BevelLift };
         Require(library.Get(extension) is ShaderMaterial, "A bank-1 Lit/Shade pair must pass the full-catalog ToonSpec check.");
-        Require(library.PaletteId(new PaletteToken("test.lit")) == 64, "The legacy byte entry must keep the old colour ID.");
-        var refused = false;
-        try { library.PaletteId(new PaletteToken("ext.lit")); }
-        catch (InvalidOperationException) { refused = true; }
-        Require(refused, "An extension token must fail explicitly through the legacy byte PaletteId, never truncate.");
         var mismatched = false;
         try { library.Get(new ToonSpec(new PaletteToken("test.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.Rim }); }
         catch (ArgumentException) { mismatched = true; }

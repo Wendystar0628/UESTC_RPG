@@ -67,6 +67,6 @@ public sealed class BarkColourTests
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
         foreach (var file in files)
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return (script, PaletteCatalog.FromLegacy(new PaletteRegistry(entries)));
+        return (script, new PaletteCatalog(new PaletteRegistry(entries), []));
     }
 }

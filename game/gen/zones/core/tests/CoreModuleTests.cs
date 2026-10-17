@@ -68,7 +68,7 @@ public sealed class CoreModuleTests
         Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 6 }), "stair ramps carry the six-step spec");
         Require(colliders.OfType<WallCollider>().Count() >= 8, "ramp cheek walls collide");
         Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider has a foot material");
-        var build = new CoreBuild(null);
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog);
         plaza.Build(build, LodLevel.L0);
         var bundles = build.Mesh.Finish();
         Require(build.Mesh.Triangles > 4000, $"steps and ramps add geometry ({build.Mesh.Triangles} triangles)");
@@ -89,7 +89,7 @@ public sealed class CoreModuleTests
                 CheckBundles(output.Meshes);
                 foreach (var m in output.Meshes)
                 {
-                    Require(m.ColorIds is not null, "palette IDs per vertex");
+                    Require(m.ColorIndices is not null, "palette IDs per vertex");
                     palette.Validate(m.Material.Spec);
                 }
                 var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
@@ -139,9 +139,9 @@ public sealed class CoreModuleTests
         var world = RealWorld();
         var plaza = CoreSite.Pieces(world)[0];
         var tile = CoreTiles.Of(plaza.Anchor, LodLevel.L0);
-        var bare = new BuildContext { World = world, Map = null!, WorldSeed = 1u };
+        var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         Require(Raises<InvalidOperationException>(() => new CoreModule().Build(bare, tile, LodLevel.L0)), "placed parts without BuildContext.PartLods are refused");
-        var empty = new BuildContext { World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
+        var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
         Require(Raises<KeyNotFoundException>(() => new CoreModule().Build(empty, tile, LodLevel.L0)), "a part the catalogue does not know is refused");
     }
 
@@ -377,12 +377,12 @@ public sealed class CoreModuleTests
         return false;
     }
 
-    private static BuildContext Context(IWorldModel world, PaletteRegistry? palette = null) => new()
+    private static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) => new()
     {
         World = world,
         Map = null!,
         WorldSeed = 1u,
-        Palette = palette,
+        Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog,
         PartLods = PartLodFixture.Catalog,
     };
 
@@ -397,13 +397,13 @@ public sealed class CoreModuleTests
         return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
     }
 
-    private static PaletteRegistry Palette()
+    private static PaletteCatalog Palette()
     {
         var dir = Path.Combine(FindRepository(), "game", "style", "palette");
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteRegistry(entries);
+        return new PaletteCatalog(new PaletteRegistry(entries), []);
     }
 
     private static string FindRepository()

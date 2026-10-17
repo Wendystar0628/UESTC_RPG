@@ -41,6 +41,7 @@ public sealed partial class D0BackdropNode : Node, IMapAware
             ?? throw new InvalidOperationException("Cannot construct the D0 diorama module."));
         var build = new BuildContext
         {
+            Catalog = Services.Get<IPaletteCatalogSource>().Catalog,
             Map = context.Descriptor,
             World = context.World,
             WorldSeed = context.Descriptor.Seed,

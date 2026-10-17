@@ -155,7 +155,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     /// </summary>
     private static Func<BuildContext> ContextFor(IMapContext map) => VegetationContext.Resolve(map, ModuleId,
         Services.Get<IBakeContextSource>(), VegetationContext.SourceIsD0Stub(Services.Services),
-        Services.Get<PaletteRegistry>(), Services.GlobalBuildInputs, Services.Get<IWorldModelLoader>(), () =>
+        Services.Get<PaletteCatalog>(), Services.GlobalBuildInputs, Services.Get<IWorldModelLoader>(), () =>
         {
             // D0 holds no map catalogue; the entry is the one this map's context was made from.
             var entry = new MapCatalogEntry(map.Descriptor, map.DataRoot, map.BakeRoot, []);
@@ -169,7 +169,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         var ctx = contextFor();
         var module = new VegetationModule();
         var species = VegetationInputs.Species(ctx);
-        var palette = ctx.Palette!;
+        var palette = ctx.Catalog!;
         var groups = new SortedDictionary<string, (SpeciesInfo Info, int Variant, List<float> Records)>(StringComparer.Ordinal);
         foreach (var tile in module.Tiles(ctx))
             foreach (var stream in module.Build(ctx, tile, LodLevel.L0).Instances)

@@ -1269,8 +1269,6 @@ Campus.Contracts.BoxCollider.Half.get -> System.Numerics.Vector3
 Campus.Contracts.BoxCollider.Half.init -> void
 Campus.Contracts.BuildContext
 Campus.Contracts.BuildContext.BuildContext() -> void
-Campus.Contracts.BuildContext.Catalog.get -> Campus.Contracts.PaletteCatalog?
-Campus.Contracts.BuildContext.Catalog.init -> void
 Campus.Contracts.BuildContext.ClaimedBy.get -> System.Func<Campus.Contracts.FeatureId, Campus.Contracts.Aspects, Campus.Contracts.WpId?>!
 Campus.Contracts.BuildContext.ClaimedBy.init -> void
 Campus.Contracts.BuildContext.CodeHash.get -> string!
@@ -1285,8 +1283,6 @@ Campus.Contracts.BuildContext.InteriorProviders.get -> System.Collections.Generi
 Campus.Contracts.BuildContext.InteriorProviders.init -> void
 Campus.Contracts.BuildContext.Map.get -> Campus.Contracts.Maps.MapDescriptor!
 Campus.Contracts.BuildContext.Map.init -> void
-Campus.Contracts.BuildContext.Palette.get -> Campus.Contracts.PaletteRegistry?
-Campus.Contracts.BuildContext.Palette.init -> void
 Campus.Contracts.BuildContext.PartLods.get -> Campus.Contracts.Parts.PartLodCatalog?
 Campus.Contracts.BuildContext.PartLods.init -> void
 Campus.Contracts.BuildContext.Seeded(Campus.Contracts.FeatureId feature, Campus.Contracts.PartId part, string! purpose) -> Campus.Contracts.Rng
@@ -2118,7 +2114,6 @@ Campus.Contracts.Footprint2D.Rings.init -> void
 Campus.Contracts.FramePriority
 Campus.Contracts.GeometryBuffer
 Campus.Contracts.GeometryBuffer.Ao.get -> System.ReadOnlyMemory<float>?
-Campus.Contracts.GeometryBuffer.ColorIds.get -> System.ReadOnlyMemory<byte>?
 Campus.Contracts.GeometryBuffer.ColorIndices.get -> System.ReadOnlyMemory<ushort>?
 Campus.Contracts.GeometryBuffer.Custom0.get -> System.ReadOnlyMemory<float>?
 Campus.Contracts.GeometryBuffer.Custom1.get -> System.ReadOnlyMemory<float>?
@@ -2130,7 +2125,6 @@ Campus.Contracts.GeometryBuffer.Index.get -> System.ReadOnlyMemory<int>
 Campus.Contracts.GeometryBuffer.Lods.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GeometryLodBuffer!>!
 Campus.Contracts.GeometryBuffer.Material.get -> Campus.Contracts.ToonRef
 Campus.Contracts.GeometryBuffer.Normal.get -> System.ReadOnlyMemory<float>
-Campus.Contracts.GeometryBuffer.PaletteEncodingVersion.get -> int
 Campus.Contracts.GeometryBuffer.Position.get -> System.ReadOnlyMemory<float>
 Campus.Contracts.GeometryBuffer.Reflect.get -> bool
 Campus.Contracts.GeometryBuffer.Reserved.get -> System.ReadOnlyMemory<byte>?
@@ -2142,8 +2136,6 @@ Campus.Contracts.GeometryBundle
 Campus.Contracts.GeometryBundle.<Clone>$() -> Campus.Contracts.GeometryBundle!
 Campus.Contracts.GeometryBundle.Ao.get -> float[]?
 Campus.Contracts.GeometryBundle.Ao.init -> void
-Campus.Contracts.GeometryBundle.ColorIds.get -> byte[]?
-Campus.Contracts.GeometryBundle.ColorIds.init -> void
 Campus.Contracts.GeometryBundle.ColorIndices.get -> ushort[]?
 Campus.Contracts.GeometryBundle.ColorIndices.init -> void
 Campus.Contracts.GeometryBundle.Custom0.get -> float[]?
@@ -2182,7 +2174,6 @@ Campus.Contracts.GeometryBundle.Uv.init -> void
 Campus.Contracts.GeometryBundle.Uv2.get -> float[]?
 Campus.Contracts.GeometryBundle.Uv2.init -> void
 Campus.Contracts.GeometryBundle.ValidateVertexData() -> void
-Campus.Contracts.GeometryBundle.ValidateVertexData(int paletteEncodingVersion) -> void
 Campus.Contracts.GeometryBundle.Variant.get -> Campus.Contracts.VariantTag?
 Campus.Contracts.GeometryBundle.Variant.init -> void
 Campus.Contracts.GeometryInstanceStream
@@ -2396,8 +2387,6 @@ Campus.Contracts.IPaletteIndexResolver
 Campus.Contracts.IPaletteIndexResolver.Resolve(Campus.Contracts.PaletteToken token) -> Campus.Contracts.PaletteIndex
 Campus.Contracts.IPaletteProbe
 Campus.Contracts.IPaletteProbe.SampleHorizon(Campus.Contracts.Season season, Campus.Contracts.WeatherVec weather, System.Span<System.Numerics.Vector3> srgb24) -> void
-Campus.Contracts.IPaletteRegistrySource
-Campus.Contracts.IPaletteRegistrySource.Registry.get -> Campus.Contracts.PaletteRegistry!
 Campus.Contracts.IPartDef
 Campus.Contracts.IPartDef.SupportedLods.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.LodLevel>!
 Campus.Contracts.IPartDef<TParams>
@@ -3435,7 +3424,6 @@ Campus.Contracts.PaletteCatalog.Entries.get -> System.Collections.Generic.IReadO
 Campus.Contracts.PaletteCatalog.ExtensionCount.get -> int
 Campus.Contracts.PaletteCatalog.Get(Campus.Contracts.PaletteIndex index) -> Campus.Contracts.PaletteEntryV2!
 Campus.Contracts.PaletteCatalog.Get(Campus.Contracts.PaletteToken token) -> Campus.Contracts.PaletteEntryV2!
-Campus.Contracts.PaletteCatalog.LegacyRegistry.get -> Campus.Contracts.PaletteRegistry!
 Campus.Contracts.PaletteCatalog.PaletteCatalog(Campus.Contracts.PaletteRegistry! legacyRegistry, System.Collections.Generic.IEnumerable<Campus.Contracts.PaletteEntryV2!>! extensions) -> void
 Campus.Contracts.PaletteCatalog.Resolve(Campus.Contracts.PaletteToken token) -> Campus.Contracts.PaletteIndex
 Campus.Contracts.PaletteCatalog.TryGet(Campus.Contracts.PaletteIndex index, out Campus.Contracts.PaletteEntryV2? entry) -> bool
@@ -3493,7 +3481,6 @@ Campus.Contracts.PaletteIndex
 Campus.Contracts.PaletteIndex.Equals(Campus.Contracts.PaletteIndex other) -> bool
 Campus.Contracts.PaletteIndex.PaletteIndex() -> void
 Campus.Contracts.PaletteIndex.PaletteIndex(int value) -> void
-Campus.Contracts.PaletteIndex.ToLegacyByte() -> byte
 Campus.Contracts.PaletteIndex.Value.get -> ushort
 Campus.Contracts.PaletteLayout
 Campus.Contracts.PaletteRegistry
@@ -5035,8 +5022,6 @@ Campus.Contracts.UiPalette
 Campus.Contracts.UiPalette.Resolve(string! reference) -> System.Numerics.Vector4
 Campus.Contracts.UiPalette.ResolveMap(string! theme, string! token, params string![]! components) -> System.Numerics.Vector4
 Campus.Contracts.UiPalette.ResolveTheme(string! theme, string! token) -> System.Numerics.Vector4
-Campus.Contracts.UiPalette.UiPalette(Campus.Contracts.UiPaletteDocument! document, Campus.Contracts.PaletteRegistry! registry) -> void
-Campus.Contracts.UiPalette.Validate() -> void
 Campus.Contracts.UiPaletteDocument
 Campus.Contracts.UiPaletteDocument.<Clone>$() -> Campus.Contracts.UiPaletteDocument!
 Campus.Contracts.UiPaletteDocument.Deconstruct(out System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyDictionary<string!, string!>!>! Ramps, out System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.UiColorToken!>! Special, out Campus.Contracts.UiThemePalette! Themes, out Campus.Contracts.UiMapPalette! Map, out string? Schema) -> void
@@ -6043,7 +6028,6 @@ const Campus.Contracts.PaletteLayout.Height = 68 -> int
 const Campus.Contracts.PaletteLayout.LayoutId = "banked9-rows-v1" -> string!
 const Campus.Contracts.PaletteLayout.LegacyByteCount = 65536 -> int
 const Campus.Contracts.PaletteLayout.LegacyCapacity = 256 -> int
-const Campus.Contracts.PaletteLayout.LegacyEncodingVersion = 1 -> int
 const Campus.Contracts.PaletteLayout.LegacyHeight = 64 -> int
 const Campus.Contracts.PaletteLayout.SeasonSampleCount = 256 -> int
 const Campus.Contracts.PaletteLayout.SeasonalRowCount = 60 -> int
@@ -7282,7 +7266,6 @@ static Campus.Contracts.Flow.operator !=(Campus.Contracts.Flow left, Campus.Cont
 static Campus.Contracts.Flow.operator ==(Campus.Contracts.Flow left, Campus.Contracts.Flow right) -> bool
 static Campus.Contracts.Footprint2D.operator !=(Campus.Contracts.Footprint2D? left, Campus.Contracts.Footprint2D? right) -> bool
 static Campus.Contracts.Footprint2D.operator ==(Campus.Contracts.Footprint2D? left, Campus.Contracts.Footprint2D? right) -> bool
-static Campus.Contracts.GeometryBuffer.Freeze(Campus.Contracts.GeometryBundle! source, int paletteEncodingVersion = 1) -> Campus.Contracts.GeometryBuffer!
 static Campus.Contracts.GeometryBundle.operator !=(Campus.Contracts.GeometryBundle? left, Campus.Contracts.GeometryBundle? right) -> bool
 static Campus.Contracts.GeometryBundle.operator ==(Campus.Contracts.GeometryBundle? left, Campus.Contracts.GeometryBundle? right) -> bool
 static Campus.Contracts.GroundMaskGrid.operator !=(Campus.Contracts.GroundMaskGrid left, Campus.Contracts.GroundMaskGrid right) -> bool
@@ -7393,7 +7376,6 @@ static Campus.Contracts.OverlayGeometry.operator ==(Campus.Contracts.OverlayGeom
 static Campus.Contracts.OverlayOp.operator !=(Campus.Contracts.OverlayOp? left, Campus.Contracts.OverlayOp? right) -> bool
 static Campus.Contracts.OverlayOp.operator ==(Campus.Contracts.OverlayOp? left, Campus.Contracts.OverlayOp? right) -> bool
 static Campus.Contracts.PaletteCatalog.FromData(Campus.Contracts.PaletteRegistry! legacyRegistry, Campus.Contracts.PaletteExtensionData! data) -> Campus.Contracts.PaletteCatalog!
-static Campus.Contracts.PaletteCatalog.FromLegacy(Campus.Contracts.PaletteRegistry! legacyRegistry) -> Campus.Contracts.PaletteCatalog!
 static Campus.Contracts.PaletteEncoding.DecodeColor(byte lowByte, byte packedFlags) -> Campus.Contracts.PaletteIndex
 static Campus.Contracts.PaletteEncoding.DecodeDecalBase(byte reserved, byte packedFlags) -> Campus.Contracts.PaletteIndex
 static Campus.Contracts.PaletteEncoding.EncodeColor(Campus.Contracts.PaletteIndex color, byte ao, byte flags, byte reserved = 0, Campus.Contracts.PaletteIndex? decalBase = null) -> (byte R, byte G, byte B, byte A)
@@ -7620,7 +7602,6 @@ static Campus.Contracts.UiColorToken.operator !=(Campus.Contracts.UiColorToken? 
 static Campus.Contracts.UiColorToken.operator ==(Campus.Contracts.UiColorToken? left, Campus.Contracts.UiColorToken? right) -> bool
 static Campus.Contracts.UiMapPalette.operator !=(Campus.Contracts.UiMapPalette? left, Campus.Contracts.UiMapPalette? right) -> bool
 static Campus.Contracts.UiMapPalette.operator ==(Campus.Contracts.UiMapPalette? left, Campus.Contracts.UiMapPalette? right) -> bool
-static Campus.Contracts.UiPalette.Validate(Campus.Contracts.UiPaletteDocument! document, Campus.Contracts.PaletteRegistry! registry) -> void
 static Campus.Contracts.UiPaletteDocument.operator !=(Campus.Contracts.UiPaletteDocument? left, Campus.Contracts.UiPaletteDocument? right) -> bool
 static Campus.Contracts.UiPaletteDocument.operator ==(Campus.Contracts.UiPaletteDocument? left, Campus.Contracts.UiPaletteDocument? right) -> bool
 static Campus.Contracts.UiThemePalette.operator !=(Campus.Contracts.UiThemePalette? left, Campus.Contracts.UiThemePalette? right) -> bool
@@ -7928,3 +7909,10 @@ const Campus.Contracts.WindowCardEncoding.Lobby = 16 -> byte
 const Campus.Contracts.ShaderGlobals.WindowCards = "window_cards" -> string!
 Campus.Contracts.Startup.IViewCapturePreparation
 Campus.Contracts.Startup.IViewCapturePreparation.PrepareCapture(Campus.Contracts.Pose pose) -> void
+Campus.Contracts.BuildContext.Catalog.get -> Campus.Contracts.PaletteCatalog!
+Campus.Contracts.BuildContext.Catalog.init -> void
+Campus.Contracts.UiPalette.UiPalette(Campus.Contracts.UiPaletteDocument! document, Campus.Contracts.PaletteCatalog! registry) -> void
+Campus.Contracts.UiPalette.Validate() -> void
+static Campus.Contracts.UiPalette.Validate(Campus.Contracts.UiPaletteDocument! document, Campus.Contracts.PaletteCatalog! registry) -> void
+static Campus.Contracts.GeometryBuffer.Freeze(Campus.Contracts.GeometryBundle! source) -> Campus.Contracts.GeometryBuffer!
+static Campus.Contracts.PaletteCatalog.FromSources(System.Collections.Generic.IEnumerable<(string! Path, byte[]! Json)>! bank0Files, System.Collections.Generic.IEnumerable<(string! Path, byte[]! Json)>! extensionFiles) -> Campus.Contracts.PaletteCatalog!

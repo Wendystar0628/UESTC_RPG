@@ -110,15 +110,14 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                 e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), CodeHash(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
-            var palette = catalog.LegacyRegistry;
             var globalInputs = Campus.Kernel.Registry.Kernel.GlobalBuildInputs;
             var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, context.Descriptor.Id);
             var partLods = BuildInputAssembly.CapturePartLods(registry, context.Descriptor.Id);
-            var geometry = new BakeGeometryBuilder(palette, registry, catalog, context.Descriptor.Id);
+            var geometry = new BakeGeometryBuilder(catalog, registry, context.Descriptor.Id);
             var seed = _options.SeedOverride ?? context.Descriptor.Seed;
             var claims = MapClaimLedger.Capture(registry, context.Descriptor.Id);
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
-            var map = new MapBuild(context, modules, interiors, producers, geometry, palette,
+            var map = new MapBuild(context, modules, interiors, producers, geometry,
                 ledger, new(() => Load(context, seed, catalog, interiors, modules, ledger.Value, globalInputs, groundContributors, partLods),
                     LazyThreadSafetyMode.ExecutionAndPublication), globalInputs, groundContributors, partLods, catalog);
             _contexts.Add(context.Descriptor.Id, map);
@@ -191,7 +190,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                     WorldSeed = data.Seed,
                     SourceInputs = data.Inputs,
                     DataHash = data.Hash,
-                    Palette = map.Palette,
                     Catalog = map.Catalog,
                     ClaimedBy = map.Claims.Value.ClaimedBy,
                     InteriorProviders = data.InteriorProviders,
@@ -313,7 +311,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             SourceInputs = data.Inputs,
             DataHash = dataHash,
             CodeHash = codeHash,
-            Palette = map.Palette,
             Catalog = map.Catalog,
             ClaimedBy = map.Claims.Value.ClaimedBy,
             InteriorProviders = data.InteriorProviders,
@@ -380,7 +377,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             World = context.World,
             Map = context.Descriptor,
             WorldSeed = seed,
-            Palette = catalog.LegacyRegistry,
             Catalog = catalog,
             ClaimedBy = claims.ClaimedBy,
             SourceInputs = inputs,
@@ -446,7 +442,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                 World = map.Context.World,
                 Map = map.Context.Descriptor,
                 WorldSeed = data.Seed,
-                Palette = map.Palette,
                 Catalog = map.Catalog,
                 ClaimedBy = map.Claims.Value.ClaimedBy,
                 SourceInputs = data.Inputs,
@@ -520,8 +515,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         BakeManifest Manifest, IReadOnlyList<D0InteriorBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
         BakeWindowPreparation.Result Windows);
     internal sealed record MapBuild(IMapContext Context, IReadOnlyDictionary<string, Module> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
-        BakeGeometryBuilder Geometry, PaletteRegistry Palette, Lazy<MapClaimLedger> Claims, Lazy<LoadedMap> Data,
-        BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog? Catalog = null)
+        BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Lazy<LoadedMap> Data,
+        BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
 
@@ -558,7 +553,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                     World = Context.World,
                     Map = Context.Descriptor,
                     WorldSeed = data.Seed,
-                    Palette = Palette,
                     Catalog = Catalog,
                     ClaimedBy = Claims.Value.ClaimedBy,
                     SourceInputs = data.Inputs,

@@ -24,7 +24,7 @@ internal static class VegetationContext
     /// <paramref name="readMapInputs"/> is called only on the D0 stub branch.
     /// </summary>
     public static Func<BuildContext> Resolve(IMapContext map, string moduleId, IBakeContextSource source, bool sourceIsD0Stub,
-        PaletteRegistry palette, BuildInputSnapshot global, IWorldModelLoader loader,
+        PaletteCatalog palette, BuildInputSnapshot global, IWorldModelLoader loader,
         Func<(MapLoadInput Input, MapClaimSnapshot? Claims)> readMapInputs)
     {
         ArgumentNullException.ThrowIfNull(map);
@@ -35,7 +35,6 @@ internal static class VegetationContext
         if (!sourceIsD0Stub)
         {
             var prepared = source.GetPreparedContext(map, moduleId);
-            if (prepared.Palette is null) prepared = With(prepared, palette);
             return () => prepared;
         }
         var (input, claims) = readMapInputs();
@@ -51,27 +50,10 @@ internal static class VegetationContext
                 WorldSeed = effective.Descriptor.Seed,
                 GlobalInputs = global,
                 SourceInputs = effective.SourceInputs.Entries,
-                Palette = palette,
+                Catalog = palette,
                 ClaimedBy = ledger is null ? (_, _) => null : ledger.ClaimedBy
             };
         };
     }
 
-    private static BuildContext With(BuildContext c, PaletteRegistry palette) => new()
-    {
-        World = c.World,
-        Map = c.Map,
-        WorldSeed = c.WorldSeed,
-        WindowNumbering = c.WindowNumbering,
-        PartLods = c.PartLods,
-        InteriorProviders = c.InteriorProviders,
-        Palette = palette,
-        Catalog = c.Catalog,
-        ClaimedBy = c.ClaimedBy,
-        SourceInputs = c.SourceInputs,
-        GlobalInputs = c.GlobalInputs,
-        GroundMaskContributors = c.GroundMaskContributors,
-        DataHash = c.DataHash,
-        CodeHash = c.CodeHash
-    };
 }

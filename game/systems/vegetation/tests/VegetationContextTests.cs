@@ -60,12 +60,13 @@ public sealed class VegetationContextTests
     }
 
     [TestCase]
-    public void APreparedContextIsReusedWithItsCatalogAndSnapshotsAndOnlyTheMissingPaletteIsAdded()
+    public void APreparedContextIsReusedWithItsCatalogAndSnapshots()
     {
         var fixture = Fixture.Load();
         var palette = Palette();
         var prepared = new BuildContext
         {
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = fixture.Map.World,
             Map = fixture.Map.Descriptor,
             WorldSeed = 77,
@@ -80,8 +81,8 @@ public sealed class VegetationContextTests
         Check(source.Module == Module && ReferenceEquals(source.Context, fixture.Map), "The prepared query used another map or module.");
         Check(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
               ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 && context.DataHash == "data" &&
-              context.CodeHash == "code" && ReferenceEquals(context.Palette, palette), "With lost a prepared field or missed the palette.");
-        var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Palette = palette };
+              context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog), "The prepared context lost a field or replaced the palette snapshot.");
+        var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
         Check(ReferenceEquals(VegetationContext.Resolve(fixture.Map, Module, new PreparedSource(own), false, Palette(), BuildInputSnapshot.Empty,
             new ThrowingLoader(), () => throw new InvalidOperationException())(), own), "A context with a palette must be returned as is.");
     }
@@ -99,7 +100,7 @@ public sealed class VegetationContextTests
     }
 
     private static Aspects Lowest(Aspects aspects) => Enum.GetValues<Aspects>().First(bit => (aspects & bit) != 0);
-    private static PaletteRegistry Palette() => new([]);
+    private static PaletteCatalog Palette() => Campus.Contracts.Tests.PaletteFixture.Catalog;
 
     private static void Check(bool condition, string message)
     {

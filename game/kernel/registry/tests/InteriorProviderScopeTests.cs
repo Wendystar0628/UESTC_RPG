@@ -147,7 +147,7 @@ public sealed class InteriorProviderScopeTests
             "spawn", [new("spawn", new(new(0, 20, 30), 0, -15), null)],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("测试时刻", "Fixture"), false, "fixture"),
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new BuildContext { Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
     }
 
     private static T Throws<T>(Action action) where T : Exception

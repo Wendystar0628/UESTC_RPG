@@ -15,7 +15,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeInputTests
 {
     [TestCase]
-    public void CompleteCatalogUsesAnIndependentDomainAndHashesAllMetadataInCanonicalOrder()
+    public void CompleteCatalogHashesAllMetadataInCanonicalOrder()
     {
         var context = Context(Inputs("campus", "planting"));
         var globals = Globals("species");
@@ -28,8 +28,8 @@ public sealed class BakeInputTests
             new(new("fixture.high.shade"), new(257), new(.5f), "fixture", false, PaletteRole.Shade)];
         var baseline = Full(new(legacy, entries));
         if (baseline != Full(new(legacy, entries.Reverse()))) throw new InvalidOperationException("Catalog insertion order changed its identity.");
-        var old = BakeInputFingerprint.Compute(context, 1, BakeInputFingerprint.ReadInputs(context), legacy, globals);
-        if (old == Full(PaletteCatalog.FromLegacy(legacy))) throw new InvalidOperationException("Catalog availability aliased a null-catalog generation context.");
+        var baseOnly = Full(new PaletteCatalog(legacy, []));
+        if (baseline == baseOnly) throw new InvalidOperationException("Extension metadata did not affect the input identity.");
         foreach (var changed in new[]
         {
             new PaletteCatalog(legacy, entries.Select(e => e with { Token = new(e.Token.Value + ".renamed") })),
@@ -39,7 +39,7 @@ public sealed class BakeInputTests
             new PaletteCatalog(new PaletteRegistry(legacy.Entries.Select(e => e.Id == 40 ? e with { Role = PaletteRole.Emissive } : e)), entries)
         }) if (baseline == Full(changed)) throw new InvalidOperationException("A catalog token/index/material/albedo/role edit hit old bytes.");
         var key = BakeRequestKeys.Tile(context.Descriptor.Id, "fixture.content", new(0, 0), LodLevel.L0);
-        if (BakeInputFingerprint.Identity(key, baseline, "code") == BakeInputFingerprint.Identity(key, old, "code"))
+        if (BakeInputFingerprint.Identity(key, baseline, "code") == BakeInputFingerprint.Identity(key, baseOnly, "code"))
             throw new InvalidOperationException("Catalog domain did not isolate cache lookup.");
         string Full(PaletteCatalog value) => BakeInputFingerprint.Compute(context, 1,
             BakeInputFingerprint.ReadInputs(context), value, globals);
@@ -166,7 +166,7 @@ public sealed class BakeInputTests
         var globals = Globals("species");
         var contributors = BuildInputAssembly.FreezeGroundMaskContributors([new Contributor()]);
         var partLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())]);
-        var catalog = PaletteCatalog.FromLegacy(new PaletteRegistry([]));
+        var catalog = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var original = new BuildContext
         {
             World = map.World,
@@ -187,7 +187,7 @@ public sealed class BakeInputTests
     }
 
     private static string Hash(TestContext context, BuildInputSnapshot globals, bool atlas = false) =>
-        BakeInputFingerprint.Compute(context, 1, BakeInputFingerprint.ReadInputs(context), new PaletteRegistry([]), globals, atlas);
+        BakeInputFingerprint.Compute(context, 1, BakeInputFingerprint.ReadInputs(context), Campus.Contracts.Tests.PaletteFixture.Catalog, globals, atlas);
     private static BuildInputSnapshot Globals(string text) => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
     { ["vegetation/species.json"] = Bytes(text) });
     private static BuildInputSnapshot Inputs(string campus, string planting) => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>

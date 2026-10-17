@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
@@ -57,11 +58,11 @@ public sealed class NorthModule : IContentModule
                 var cell = Cell(item.Anchor, lod);
                 if (cell.X != tile.X || cell.Z != tile.Z) continue;
             }
-            if (item.Mesh is { } mesh) meshes.Add(mesh);
+            if (item.Mesh is { } mesh) meshes.Add(GeometryPublication.Publish(mesh, item.HasLodChannel));
             if (item.Part is { } part) parts.Add(part);
         }
         if (meshes.Count == 0 && parts.Count == 0) return ContentOutput.Empty;
-        return new ContentOutput(MeshMerge.Merge(meshes), parts);
+        return new ContentOutput(GeometryBatch.Merge(meshes, GeometryMergePolicy.Plain), parts);
     }
 
     /// <summary>Colliders live in fixed 64 m cells, filed by each collider's anchor.</summary>
@@ -79,9 +80,15 @@ public sealed class NorthModule : IContentModule
             var shared = ReferenceEquals(_sites, NorthSites.All);
             var byKey = Cache.GetValue(ctx.World, _ => []);
             if (shared && byKey.TryGetValue((ctx.WorldSeed, lod), out var found)) return found;
-            var builder = new SiteBuilder(ctx, lod);
+            var builder = new SiteBuilder(ctx, lod, lod switch
+            {
+                LodLevel.L0 => SiteDetail.Full,
+                LodLevel.L1 => SiteDetail.Plain,
+                LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => SiteDetail.Mass,
+                _ => throw new ArgumentOutOfRangeException(nameof(lod), lod, "Unknown LOD level."),
+            });
             foreach (var site in _sites) site.Build(builder);
-            var items = builder.Items.ToArray();
+            var items = Array.AsReadOnly(builder.Items.ToArray());
             if (shared) byKey[(ctx.WorldSeed, lod)] = items;
             return items;
         }

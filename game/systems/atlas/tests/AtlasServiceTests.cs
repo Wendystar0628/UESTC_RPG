@@ -229,7 +229,7 @@ public sealed class AtlasServiceTests
             .Where(item => item.Registration is not null)
             .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
         var built = D0InteriorSetup.Build(interiorBytes,
-            new BuildContext { Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
+            new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
         interiorIndex.Configure(built.Entries);
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();

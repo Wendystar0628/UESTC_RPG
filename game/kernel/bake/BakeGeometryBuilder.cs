@@ -10,16 +10,15 @@ namespace Campus.Kernel.Bake;
 /// <summary>Expands registered parts and packs surfaces on a bake worker; never touches the scene tree.</summary>
 internal sealed class BakeGeometryBuilder
 {
-    private readonly PaletteRegistry _palette;
-    private readonly PaletteCatalog? _catalog;
+    private readonly PaletteCatalog _catalog;
     private readonly IReadOnlyDictionary<string, Func<object, LodLevel, PartGeometry>> _parts;
     private readonly BakeInstanceAdapter _instances;
 
-    public BakeGeometryBuilder(PaletteRegistry palette, ServiceRegistry registry, PaletteCatalog? catalog = null, MapId? map = null)
+    public BakeGeometryBuilder(PaletteCatalog catalog, ServiceRegistry registry, MapId? map = null)
     {
-        _palette = palette;
+        ArgumentNullException.ThrowIfNull(catalog);
         _catalog = catalog;
-        _instances = new BakeInstanceAdapter(palette, catalog);
+        _instances = new BakeInstanceAdapter(catalog);
         var parts = new Dictionary<string, Func<object, LodLevel, PartGeometry>>(StringComparer.Ordinal);
         foreach (var item in (map is { } mapId ? registry.ForMap(mapId.Value) : registry.Entries)
             .Where(r => r.Kind == "part").OrderBy(r => r.Id, StringComparer.Ordinal))
@@ -127,13 +126,13 @@ internal sealed class BakeGeometryBuilder
 
     private void RequireCatalog(BuildContext context)
     {
-        if (_catalog is not null && !ReferenceEquals(context.Catalog, _catalog))
+        if (!ReferenceEquals(context.Catalog, _catalog))
             throw new InvalidOperationException("Geometry generation and packing require the same catalog snapshot.");
     }
 
     private GeometryBundle Transform(GeometryBundle mesh, PlacedPart part)
     {
-        mesh.ValidateVertexData(_catalog is null ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
+        mesh.ValidateVertexData();
         if (!N.Matrix4x4.Invert(part.At, out var inverse)) throw new InvalidDataException("Part transform is singular.");
         var normalMatrix = N.Matrix4x4.Transpose(inverse);
         var positions = new float[mesh.Position.Length]; var normals = new float[mesh.Normal.Length];
@@ -144,7 +143,7 @@ internal sealed class BakeGeometryBuilder
             positions[i] = position.X; positions[i + 1] = position.Y; positions[i + 2] = position.Z;
             normals[i] = normal.X; normals[i + 1] = normal.Y; normals[i + 2] = normal.Z;
         }
-        var tinted = _catalog is null ? BakeSurfacePacker.ApplyTint(mesh, part, _palette) : BakeSurfacePacker.ApplyTint(mesh, part, _catalog);
+        var tinted = BakeSurfacePacker.ApplyTint(mesh, part, _catalog);
         return tinted with
         {
             Position = positions,
@@ -176,7 +175,7 @@ internal sealed class BakeGeometryBuilder
         var maximum = level == LodLevel.L4 ? context.Map.Bounds.Max : minimum + new N.Vector3(size, context.Map.Bounds.Size.Y, size);
         foreach (var mesh in meshes)
         {
-            mesh.ValidateVertexData(_catalog is null ? PaletteLayout.LegacyEncodingVersion : PaletteLayout.EncodingVersion);
+            mesh.ValidateVertexData();
             for (var i = 0; i < mesh.Position.Length; i += 3)
             {
                 var p = new N.Vector3(mesh.Position[i], mesh.Position[i + 1], mesh.Position[i + 2]);
@@ -188,6 +187,5 @@ internal sealed class BakeGeometryBuilder
         return new(minimum, maximum);
     }
 
-    private BakedSurface Pack(GeometryBundle mesh, Box3 bounds) => _catalog is null
-        ? BakeSurfacePacker.Pack(mesh, bounds, _palette) : BakeSurfacePacker.Pack(mesh, bounds, _catalog);
+    private BakedSurface Pack(GeometryBundle mesh, Box3 bounds) => BakeSurfacePacker.Pack(mesh, bounds, _catalog);
 }

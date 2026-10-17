@@ -299,6 +299,12 @@
           "Campus.Gen.World": "[1.0.0, )"
         }
       },
+      "campus.gen.geometry": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )"
+        }
+      },
       "campus.gen.ground": {
         "type": "Project",
         "dependencies": {
@@ -463,6 +469,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -477,6 +484,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -491,6 +499,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -505,6 +514,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -547,6 +557,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -575,6 +586,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",
@@ -589,6 +601,7 @@
         "type": "Project",
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
           "Campus.Gen.Interior": "[1.0.0, )",
           "Campus.Gen.InteriorProps": "[1.0.0, )",
           "Campus.Gen.Parts.Circulation": "[1.0.0, )",

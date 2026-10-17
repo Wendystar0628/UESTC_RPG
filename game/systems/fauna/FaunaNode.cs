@@ -73,16 +73,16 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         Error = null;
         var world = ctx.World;
         var seed = ctx.Descriptor.Seed;
-        var palette = Services.Get<PaletteRegistry>();
+        var palette = Services.Get<PaletteCatalog>();
         // Layout and meshes are pure and built off the main thread; mounting happens on the main thread when it is done.
         var lakes = ctx.Descriptor.Env.ReflectLakes;
         _job = Task.Run(() => Prepare(world, seed, lakes, palette));
     }
 
-    private static Prepared Prepare(IWorldModel world, uint seed, IReadOnlyList<FeatureId> lakes, PaletteRegistry palette)
+    private static Prepared Prepare(IWorldModel world, uint seed, IReadOnlyList<FeatureId> lakes, PaletteCatalog palette)
     {
         var layout = FaunaPlanner.Build(world, seed, lakes);
-        var scene = new FaunaScene(token => palette.Get(token).Id);
+        var scene = new FaunaScene(palette);
         var sets = layout.Sites.Select(site => Enum.GetValues<FaunaSet>().Select(set => scene.Build(site.Set(set))).ToArray()).ToArray();
         return new(layout, sets);
     }

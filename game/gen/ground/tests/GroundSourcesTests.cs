@@ -66,7 +66,7 @@ public sealed class GroundSourcesTests
             Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, Vector3.UnitZ, face);
         var meshes = sink.Finish();
         Check.True(meshes.Count == 2 && meshes[0].Material == meshes[1].Material &&
-            meshes.All(mesh => mesh.Material.Spec.SurfacePattern is null && mesh.ColorIds!.All(id => id == GroundPalette.Id(GroundColor.Curb))),
+            meshes.All(mesh => mesh.Material.Spec.SurfacePattern is null && mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb))),
             "Content classes split before batching; colour/Fx and GPU material sharing stay unchanged until T03 opts in.");
     }
 

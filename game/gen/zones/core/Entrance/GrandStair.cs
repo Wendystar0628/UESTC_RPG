@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -441,7 +442,7 @@ public sealed class GrandStair : ICorePiece
         foreach (var (w, width) in Lanes())
         {
             foreach (var flight in Flights)
-                list.AddRange(Placed.Colliders(Steps.Collision(FlightParams(flight, width)), FlightAt(flight, w)));
+                list.AddRange(GeometryPlacement.Colliders(Steps.Collision(FlightParams(flight, width)), FlightAt(flight, w)));
             foreach (var l in Landings)
                 list.Add(Slab(l.S0, l.S1, w - width * 0.5f, w + width * 0.5f, l.Y, SurfaceTag.Stair, FootMat.StonePaving));
         }
@@ -466,7 +467,7 @@ public sealed class GrandStair : ICorePiece
         }
         var service = new FireDoorPart();
         foreach (var (at, p) in ServiceDoorPlacements())
-            list.AddRange(Placed.Colliders(service.Collision(p), at));
+            list.AddRange(GeometryPlacement.Colliders(service.Collision(p), at));
         // The porch frame's two piers on the terrace (the canopy is out of reach).
         if (_door is { } d)
             foreach (var (u0, u1) in CanopyPiers(d.Face.Length))

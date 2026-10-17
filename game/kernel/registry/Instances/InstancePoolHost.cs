@@ -26,10 +26,11 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private long _nextNodeId;
 
     public InstancePoolHost() { }
-    public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, PaletteCatalog? catalog = null)
+    public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, PaletteCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(materials);
         ArgumentNullException.ThrowIfNull(shaderSource);
+        ArgumentNullException.ThrowIfNull(catalog);
         _materials = materials;
         _catalog = catalog;
         _shaderSource = shaderSource;
@@ -144,29 +145,12 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             if (_activeMap != map)
                 throw new InvalidOperationException("The pool map is not active; stale or pre-load mounts are rejected.");
         }
-        // The runtime host captures the same immutable source object used by the baker. Injected legacy fixtures
-        // may omit it; they retain the explicit encoding-1 path and reject encoding 2 before allocating a mesh.
-        if (_materials is null)
-        {
-            _materials = Services.Get<IToonMaterialProvider>();
-            _catalog = Services.Get<IPaletteCatalogSource>().Catalog;
-        }
-        var catalog = _catalog;
+        _materials ??= Services.Get<IToonMaterialProvider>();
+        var catalog = _catalog ??= Services.Get<IPaletteCatalogSource>().Catalog;
         var triangles = 0;
         foreach (var surface in spec.Prototype.Surfaces)
         {
-            switch (surface.PaletteEncodingVersion)
-            {
-                case PaletteLayout.LegacyEncodingVersion:
-                    if (surface.ColorIndices is not null || surface.DecalBaseColorIndices is not null)
-                        throw new NotSupportedException("An encoding-1 prototype cannot carry logical-index arrays.");
-                    break;
-                case PaletteLayout.EncodingVersion:
-                    if (catalog is null) throw new NotSupportedException("Encoding-2 pools require a complete catalog snapshot.");
-                    break;
-                default: throw new NotSupportedException($"Unknown palette encoding {surface.PaletteEncodingVersion}.");
-            }
-            catalog?.Validate(surface.Material.Spec);
+            catalog.Validate(surface.Material.Spec);
             if (surface.Reflect || surface.Variant is not null)
                 throw new NotSupportedException("Geometry-pool reflection proxies and variant masks are not implemented.");
             if (surface.Position.Length < 9 || surface.Index.Length == 0)

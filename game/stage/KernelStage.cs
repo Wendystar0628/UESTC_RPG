@@ -209,7 +209,7 @@ public partial class KernelStage : Node3D, IAppExit
     private void RunRegistryGate()
     {
         var report = RegistryGateRunner.Run(Services.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-            AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(IAppExit), typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
+            AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteCatalog), typeof(IAppExit), typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
         GD.Print("G5_D0_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
         GetTree().Quit();
     }

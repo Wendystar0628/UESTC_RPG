@@ -142,7 +142,7 @@ public sealed class LibraryShellTests
         var allocation = numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey);
         Require(allocation.BaseId == 707, "a generic block in front moves the library base");
         var module = new CoreModule();
-        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var output = module.Build(ctx, CoreTiles.Of(shell.Anchor, LodLevel.L0), LodLevel.L0);
         var glassIds = new SortedSet<int>();
         foreach (var g in output.Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
@@ -167,13 +167,13 @@ public sealed class LibraryShellTests
     {
         var world = RealWorld();
         var shell = Shell(world);
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var glass = build.Finish(LodLevel.L0).Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear).ToArray();
         Require(glass.Length > 0 && glass.All(g => g.Uv is null && g.Uv2 is null), "no base is invented without a snapshot");
         var wrong = Numbering(shell, shell.Columns + 1);
-        Require(Throws(() => shell.Build(new CoreBuild(null) { WindowNumbering = wrong }, LodLevel.L0)), "an allocation of another size is refused");
-        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u };
+        Require(Throws(() => shell.Build(new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { WindowNumbering = wrong }, LodLevel.L0)), "an allocation of another size is refused");
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         Require(Throws(() => new CoreModule().DescribeWindows(ctx)), "metadata needs the snapshot");
     }
 
@@ -201,7 +201,7 @@ public sealed class LibraryShellTests
         var store = Plan.OuterRing(world.Features[CoreFeatures.CafeStore]);
         Require(store.Min(p => Vector2.Distance(p, new(cafe.Origin.X, cafe.Origin.Z))) < 6f, "the cafe door is beside the store front");
         Require(cafe.Width / CoreStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f, $"cafe door {cafe.Width} × {cafe.Height}");
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
         Require(output.Parts.Count(p => p.Part.Value == PartCatalog.DoorGlass) == 1, "the shell places the cafe's glass door");
@@ -270,10 +270,10 @@ public sealed class LibraryShellTests
         Require(reach < 0f, $"the link ends on a footway ({reach:F2})");
         var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && Inside((walk.A + walk.B) * 0.5f, c.Ring)).ToArray();
         Require(slab.Length >= 1 && slab.All(c => c.Foot == FootMat.StonePaving), "the link is walkable stone paving");
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
-        Require(output.Meshes.Any(m => m.Material.Spec.Lit.Value == CoreStyle.CafeWalkPaving + ".lit"), "pavers on the link");
+        Require(output.Meshes.Any(m => m.ColorIndices?.Contains(Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(new(CoreStyle.CafeWalkPaving + ".lit")).Value) == true), "pavers on the link");
     }
 
     // ---------------------------------------------------------------- fixtures
@@ -335,13 +335,13 @@ public sealed class LibraryShellTests
         return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
     }
 
-    private static PaletteRegistry Palette()
+    private static PaletteCatalog Palette()
     {
         var dir = Path.Combine(FindRepository(), "game", "style", "palette");
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteRegistry(entries);
+        return new PaletteCatalog(new PaletteRegistry(entries), []);
     }
 
     private static string FindRepository()

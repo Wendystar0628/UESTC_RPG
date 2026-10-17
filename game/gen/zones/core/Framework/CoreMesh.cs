@@ -44,11 +44,10 @@ public static class VertexFlags
 
 /// <summary>
 /// Collects world-space triangles per material class and emits contract GeometryBundles (≤ 65 000 vertices each).
-/// With a palette registry, colours go into ColorIds and one bundle per class is enough; without one, bundles are
-/// split per colour family so each bundle's Lit token carries its colour. Every triangle is wound against the
+/// Colours use logical indices from the complete catalog, with one bundle per material class. Every triangle is wound against the
 /// supplied normal here (Godot front faces are clockwise from outside), so callers may list corners in any order.
 /// </summary>
-public sealed class CoreMesh(PaletteRegistry? palette)
+public sealed class CoreMesh(PaletteCatalog palette)
 {
     public const int MaxVertices = 65000;
 
@@ -130,7 +129,7 @@ public sealed class CoreMesh(PaletteRegistry? palette)
 
     private Stream Get(in Paint p, int extra)
     {
-        var family = palette is null ? p.Family : CoreStyle.DefaultFamily(p.Material);
+        var family = CoreStyle.DefaultFamily(p.Material);
         var key = ((int)p.Material).ToString("D2", CultureInfo.InvariantCulture) + "|" + family;
         if (!_streams.TryGetValue(key, out var s))
         {
@@ -150,29 +149,29 @@ public sealed class CoreMesh(PaletteRegistry? palette)
         if (s.Index.Count == 0) return;
         var bundle = new GeometryBundle(new ToonRef(CoreStyle.Spec(s.Material, s.Family)), [.. s.Position], [.. s.Normal], [.. s.Index], [.. s.Ao])
         {
-            ColorIds = s.ColorIds is { } ids ? [.. ids] : null,
+            ColorIndices = [.. s.ColorIndices],
             Flags = [.. s.Flags],
         };
         bundle.ValidateVertexData();
         _done.Add((key + "|" + _done.Count.ToString("D4", CultureInfo.InvariantCulture), bundle));
     }
 
-    private sealed class Stream(CoreMaterial material, string family, PaletteRegistry? palette)
+    private sealed class Stream(CoreMaterial material, string family, PaletteCatalog palette)
     {
-        private readonly Dictionary<string, byte> _ids = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ushort> _ids = new(StringComparer.Ordinal);
         public CoreMaterial Material { get; } = material;
         public string Family { get; } = family;
         public List<float> Position { get; } = [];
         public List<float> Normal { get; } = [];
         public List<float> Ao { get; } = [];
         public List<byte> Flags { get; } = [];
-        public List<byte>? ColorIds { get; } = palette is null ? null : [];
+        public List<ushort> ColorIndices { get; } = [];
         public List<int> Index { get; } = [];
         public int Count => Position.Count / 3;
 
         public void Clear()
         {
-            Position.Clear(); Normal.Clear(); Ao.Clear(); Flags.Clear(); ColorIds?.Clear(); Index.Clear();
+            Position.Clear(); Normal.Clear(); Ao.Clear(); Flags.Clear(); ColorIndices.Clear(); Index.Clear();
         }
 
         public void Add(Vector3 v, Vector3 n, in Paint p)
@@ -183,13 +182,12 @@ public sealed class CoreMesh(PaletteRegistry? palette)
             Normal.Add(n.X); Normal.Add(n.Y); Normal.Add(n.Z);
             Ao.Add(1f);
             Flags.Add(p.Flags);
-            if (ColorIds is null) return;
             if (!_ids.TryGetValue(p.Family, out var id))
             {
-                id = palette!.Get(new PaletteToken(p.Family + ".lit")).Id;
+                id = palette.Resolve(new PaletteToken(p.Family + ".lit")).Value;
                 _ids.Add(p.Family, id);
             }
-            ColorIds.Add(id);
+            ColorIndices.Add(id);
         }
 
         // Godot treats clockwise triangles (seen from the front) as front faces: cross(b - a, c - a) points away from the viewer.

@@ -88,6 +88,7 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var build = new BuildContext
         {
+            Catalog = Services.Get<IPaletteCatalogSource>().Catalog,
             Map = context.Descriptor,
             World = world,
             WorldSeed = ReadSeed(boot, "seed", context.Descriptor.Seed),

@@ -100,7 +100,7 @@ public sealed class D0BackdropResidentTests
     private static BuildContext Context()
     {
         var world = new StubWorldModel(new StubSpatialIndex(), new Campus.Kernel.Stubs.InteriorIndexStub(), new StubFidelityModel());
-        return new() { World = world, Map = BackdropInputsTests.Descriptor(), WorldSeed = 1 };
+        return new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = BackdropInputsTests.Descriptor(), WorldSeed = 1 };
     }
     private static async Task Fails(Task task)
     {

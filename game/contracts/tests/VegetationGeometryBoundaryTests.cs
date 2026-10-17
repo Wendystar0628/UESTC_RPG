@@ -17,7 +17,6 @@ public sealed class VegetationGeometryBoundaryTests
             Ao = null,
             Uv = null,
             Uv2 = null,
-            ColorIds = null,
             ColorIndices = null,
             DecalBaseColorIndices = null,
             Flags = null,
@@ -28,7 +27,7 @@ public sealed class VegetationGeometryBoundaryTests
         };
         var frozen = GeometryBuffer.Freeze(source);
         Require(frozen.Ao is null && frozen.Uv is null && frozen.Uv2 is null &&
-            frozen.ColorIds is null && frozen.ColorIndices is null && frozen.DecalBaseColorIndices is null &&
+            frozen.ColorIndices is null && frozen.DecalBaseColorIndices is null &&
             frozen.Flags is null && frozen.Reserved is null && frozen.Custom0 is null &&
             frozen.Custom1 is null && frozen.Custom2 is null,
             "Absent arrays must not become present empty ReadOnlyMemory through implicit array conversion.");
@@ -50,7 +49,7 @@ public sealed class VegetationGeometryBoundaryTests
         Array.Fill(source.Ao!, 1f);
         Array.Fill(source.Uv!, 99f);
         Array.Fill(source.Uv2!, 99f);
-        Array.Fill(source.ColorIds!, (byte)99);
+        Array.Fill(source.ColorIndices!, (ushort)99);
         Array.Fill(source.Flags!, (byte)8);
         Array.Fill(source.Reserved!, (byte)99);
         Array.Fill(source.Custom0!, 99f);
@@ -65,7 +64,7 @@ public sealed class VegetationGeometryBoundaryTests
             frozen.Normal.Span[2] == 1 && frozen.Index.Span.SequenceEqual(new[] { 0, 1, 2 }),
             "Reusing generation arrays changed the frozen surface.");
         Require(frozen.Ao!.Value.Span[0] == .25f && frozen.Uv!.Value.Span[2] == 1 &&
-            frozen.Uv2!.Value.Span[0] == 65537 && frozen.ColorIds!.Value.Span[0] == 2 &&
+            frozen.Uv2!.Value.Span[0] == 65537 && frozen.ColorIndices!.Value.Span[0] == 2 &&
             frozen.Flags!.Value.Span[0] == 0 && frozen.Reserved!.Value.Span[0] == 3 &&
             frozen.Custom0!.Value.Span[0] == 10 && frozen.Custom1!.Value.Span[0] == 20 &&
             frozen.Custom2!.Value.Span[0] == 30, "A frozen vertex channel still aliases mutable source storage.");
@@ -160,7 +159,7 @@ public sealed class VegetationGeometryBoundaryTests
         [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2],
         Ao: [.25f, .5f, .75f], Uv: [0, 0, 1, 0, 0, 1], Uv2: [65537, 0, 65537, 1, 65537, 2], Lods: lods)
     {
-        ColorIds = [2, 3, 4],
+        ColorIndices = [2, 3, 4],
         Flags = [0, 0, 0],
         Reserved = [3, 4, 5],
         Custom0 = [10, 1, 2, 3, 10, 1, 2, 3, 10, 1, 2, 3],

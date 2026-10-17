@@ -451,8 +451,8 @@
 - ART-STYLE §5 高光、边缘光与透光 · L398 · 4.1k
 - ART-STYLE §6 贴图与笔触 · L450 · 1.9k
 - ART-STYLE §7 后期 · L479 · 5.7k
-- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L548 · 10.7k
-  - ART-STYLE §8.1 风格色 · L550 · 2.9k
+- ART-STYLE §8 调色板（全局常量，以这里的命名为准） · L548 · 10.8k
+  - ART-STYLE §8.1 风格色 · L550 · 3.0k
   - ART-STYLE §8.2 大面积色与跳色的分工 · L598 · 1.1k
   - ART-STYLE §8.3 建筑固有色 · L617 · 1.2k
   - ART-STYLE §8.4 界面色 · L649 · 1.3k
@@ -1645,31 +1645,31 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 60.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 60.5k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.4k
   - ★ ENG-ARCH §0.1 接入要点 · L79 · 1.3k
 - ENG-ARCH §1 资源管线迁移约定 · L93 · 277
-- ENG-ARCH §2 目录结构与归属 · L102 · 20.5k
-  - ENG-ARCH 架构边界与唯一生产链 · L104 · 1.1k
-  - ENG-ARCH 目录树 · L123 · 5.4k
-  - ENG-ARCH 生成物与资源位置 · L189 · 315
-  - ENG-ARCH 归属依据 · L193 · 69
-  - ENG-ARCH 程序集边界 · L197 · 2.5k
-  - ENG-ARCH 命名空间依赖规则 · L219 · 3.9k
-  - ENG-ARCH 禁用写法与确定性 · L242 · 4.0k
-  - ENG-ARCH 自动发现与模块接入 · L277 · 3.2k
-- ENG-ARCH §3 关键接口与契约源码 · L301 · 3.2k
-  - ENG-ARCH 契约组与源码 · L317 · 1.3k
-  - ENG-ARCH 覆盖层约束 · L338 · 342
-  - ENG-ARCH 仍未落地项 · L344 · 511
-- ENG-ARCH §4 资源管线 · L350 · 10.6k
-- ENG-ARCH §5 接口先定、桩先合入 · L438 · 3.3k
-- ENG-ARCH §6 工作树的技术细节 · L477 · 2.8k
-- ENG-ARCH §7 主要风险与对策 · L510 · 6.3k
-- ENG-ARCH §8 扩展点（RPG） · L563 · 1.1k
-- ENG-ARCH §9 待验证（P0） · L579 · 2.3k
+- ENG-ARCH §2 目录结构与归属 · L102 · 20.8k
+  - ENG-ARCH 架构边界与唯一生产链 · L104 · 1.2k
+  - ENG-ARCH 目录树 · L125 · 5.5k
+  - ENG-ARCH 生成物与资源位置 · L192 · 315
+  - ENG-ARCH 归属依据 · L196 · 69
+  - ENG-ARCH 程序集边界 · L200 · 2.5k
+  - ENG-ARCH 命名空间依赖规则 · L223 · 3.9k
+  - ENG-ARCH 禁用写法与确定性 · L246 · 4.0k
+  - ENG-ARCH 自动发现与模块接入 · L281 · 3.2k
+- ENG-ARCH §3 关键接口与契约源码 · L305 · 3.2k
+  - ENG-ARCH 契约组与源码 · L321 · 1.3k
+  - ENG-ARCH 覆盖层约束 · L342 · 342
+  - ENG-ARCH 仍未落地项 · L348 · 511
+- ENG-ARCH §4 资源管线 · L354 · 10.6k
+- ENG-ARCH §5 接口先定、桩先合入 · L442 · 3.3k
+- ENG-ARCH §6 工作树的技术细节 · L481 · 2.8k
+- ENG-ARCH §7 主要风险与对策 · L514 · 6.3k
+- ENG-ARCH §8 扩展点（RPG） · L567 · 1.1k
+- ENG-ARCH §9 待验证（P0） · L583 · 2.3k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
@@ -1707,7 +1707,7 @@
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF-性能工程.md` · 134.4k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF-性能工程.md` · 134.3k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1719,7 +1719,7 @@
   - ENG-PERF §1.4 着色器白名单 · L126 · 7.6k
   - ENG-PERF §1.5 全局参数与数据纹理表 · L199 · 11.9k
   - ENG-PERF §1.6 排序与绘制顺序 · L316 · 373
-- ENG-PERF §2 着色器与编译（WP-04、WP-05、WP-01） · L323 · 8.6k
+- ENG-PERF §2 着色器与编译（WP-04、WP-05、WP-01） · L323 · 8.5k
 - ENG-PERF §3 填充率与带宽（WP-05、WP-23） · L396 · 1.6k
   - ENG-PERF §3.1 渲染目标格式 · L398 · 220
   - ENG-PERF §3.3 过度绘制 · L402 · 830

@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -41,7 +42,7 @@ public sealed class PublicModule : IContentModule
         foreach (var pit in PocketGreens.Pits(world))
             if (Cell(pit.Centre, lod) == tile) PocketGreens.Build(pit, Ground, lod, meshes);
         if (meshes.Count == 0) return ContentOutput.Empty;
-        return new ContentOutput(Merge(meshes), []) { Seats = seats };
+        return new ContentOutput(GeometryBatch.Merge(meshes, GeometryMergePolicy.MaterialGroups), []) { Seats = seats };
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
@@ -67,39 +68,4 @@ public sealed class PublicModule : IContentModule
         return new((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));
     }
 
-    /// <summary>Concatenates bundles of one material in input order, so a pocket green costs one draw per material.</summary>
-    internal static IReadOnlyList<GeometryBundle> Merge(IReadOnlyList<GeometryBundle> meshes)
-    {
-        var output = new List<GeometryBundle>();
-        foreach (var group in meshes.GroupBy(m => (m.Material, m.Shader, m.Variant, m.IgnoreOcclusionCulling, m.Reflect)))
-        {
-            var parts = group.ToList();
-            if (parts.Count == 1 || parts.Any(p => p.Ao is null || p.Uv is null || p.Uv2 is not null || p.Lods is not null || p.ColorIds is not null ||
-                p.Flags is not null || p.Reserved is not null || p.Custom0 is not null || p.Custom1 is not null || p.Custom2 is not null))
-            {
-                output.AddRange(parts);
-                continue;
-            }
-            var vertices = parts.Sum(p => p.Position.Length / 3);
-            var position = new float[vertices * 3];
-            var normal = new float[vertices * 3];
-            var ao = new float[vertices];
-            var uv = new float[vertices * 2];
-            var index = new int[parts.Sum(p => p.Index.Length)];
-            int v = 0, i = 0;
-            foreach (var p in parts)
-            {
-                var n = p.Position.Length / 3;
-                Array.Copy(p.Position, 0, position, v * 3, n * 3);
-                Array.Copy(p.Normal, 0, normal, v * 3, n * 3);
-                Array.Copy(p.Ao!, 0, ao, v, n);
-                Array.Copy(p.Uv!, 0, uv, v * 2, n * 2);
-                for (var k = 0; k < p.Index.Length; k++) index[i + k] = p.Index[k] + v;
-                v += n;
-                i += p.Index.Length;
-            }
-            output.Add(parts[0] with { Position = position, Normal = normal, Index = index, Ao = ao, Uv = uv });
-        }
-        return output;
-    }
 }

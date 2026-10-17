@@ -203,7 +203,7 @@ public sealed class PublicModuleTests
         return tokens;
     }
 
-    private static BuildContext Context() => new() { World = Loaded.Value, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = Loaded.Value, Map = null!, WorldSeed = 1 };
 
     private static string DataDirectory()
     {

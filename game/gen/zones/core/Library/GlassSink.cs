@@ -10,7 +10,7 @@ namespace Campus.Gen.Zones.Core.Library;
 /// limit allows, so a second glazed building in a cell costs no extra draw call. Every cell keeps its own building's
 /// VF-B encoding per vertex (UV, UV2, spare byte), so merging changes no window. Numbered and unnumbered glass never mix.
 /// </summary>
-public sealed class GlassBatch(ToonSpec spec, PaletteRegistry? palette, bool numbered)
+public sealed class GlassBatch(ToonSpec spec, PaletteCatalog palette, bool numbered)
 {
     private const int MaxVertices = 65000;
 
@@ -71,10 +71,10 @@ public sealed class GlassBatch(ToonSpec spec, PaletteRegistry? palette, bool num
     {
         if (_index.Count == 0) return;
         var count = _position.Count / 3;
-        var colour = palette?.Get(Spec.Lit).Id;
+        var colour = palette.Resolve(Spec.Lit).Value;
         var bundle = new GeometryBundle(new ToonRef(Spec), [.. _position], [.. _normal], [.. _index], Uv: Numbered ? [.. _uv] : null, Uv2: Numbered ? [.. _uv2] : null)
         {
-            ColorIds = colour is { } id ? Enumerable.Repeat(id, count).ToArray() : null,
+            ColorIndices = Enumerable.Repeat(colour, count).ToArray(),
             Flags = new byte[count],
             Reserved = [.. _card],
         };

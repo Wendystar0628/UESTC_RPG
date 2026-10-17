@@ -41,7 +41,6 @@ public sealed record ToonWarmBatch(long Revision, IReadOnlyList<ToonWarmMaterial
 public interface IToonMaterialProvider
 {
     Material Get(ToonSpec spec);
-    byte PaletteId(PaletteToken token);
     /// <summary>True only when every layout actually requested for the resolved material has valid draw evidence.</summary>
     bool IsReady(ToonSpec spec);
     /// <summary>Track this exact non-toon material instance. Its creator retains ownership and disposal responsibility.</summary>

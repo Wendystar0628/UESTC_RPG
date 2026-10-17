@@ -11,6 +11,12 @@
       "campus.contracts": {
         "type": "Project"
       },
+      "campus.gen.geometry": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )"
+        }
+      },
       "campus.gen.interior": {
         "type": "Project",
         "dependencies": {

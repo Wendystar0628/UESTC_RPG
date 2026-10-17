@@ -4,17 +4,6 @@ using Campus.Gen.Buildings.Rules;
 
 namespace Campus.Gen.Buildings.Mesh;
 
-/// <summary>Token to palette ID resolution (the generator converts colour names to IDs at build time, ART-STYLE §8.5).</summary>
-public interface IColorIds
-{
-    byte Id(PaletteToken lit);
-}
-
-public sealed class RegistryColorIds(PaletteRegistry registry) : IColorIds
-{
-    public byte Id(PaletteToken lit) => registry.Get(lit).Id;
-}
-
 /// <summary>
 /// One vertex: position, normal, UV (metres along the facade, or window pane coordinates on glass) and occlusion.
 /// Occlusion is 0 on open faces and grows on narrow recesses; the bundle stores visibility Ao = 1 - occlusion
@@ -43,10 +32,9 @@ public readonly record struct PartGlass(Vector2 Cell, Vector2 Uv2);
 /// Collects triangles per material class and emits contract GeometryBundles (≤ 65 000 vertices each).
 /// Every triangle is wound against its intended normal here, so primitives can list corners in any order.
 /// A material class is a ToonSpec without its colours: the generator's own faces and placed WP-10 part surfaces
-/// of the same class share one stream. With a palette registry, colours go into ColorIds and one bundle per class
-/// is enough; without one, bundles are split per colour family so the Lit token of each bundle carries the colour.
+/// of the same class share one stream. Colours use logical indices from the complete catalog; one bundle per material class is enough.
 /// </summary>
-public sealed class MeshSink(IColorIds? colorIds)
+public sealed class MeshSink(PaletteCatalog catalog)
 {
     public const int MaxVertices = 65000;
 
@@ -153,14 +141,14 @@ public sealed class MeshSink(IColorIds? colorIds)
     }
 
     private Stream Get(in Face f, int extra) =>
-        Get(Materials.Spec(f.Kind, colorIds is null ? f.Family : Materials.DefaultFamily(f.Kind)), extra);
+        Get(Materials.Spec(f.Kind, Materials.DefaultFamily(f.Kind)), extra);
 
     private Stream Get(ToonSpec spec, int extra)
     {
-        var key = ClassKey(spec) + (colorIds is null ? "|" + spec.Lit.Value : "");
+        var key = ClassKey(spec);
         if (!_streams.TryGetValue(key, out var s))
         {
-            s = new Stream(spec, spec.Kind == ToonKind.Glass, colorIds);
+            s = new Stream(spec, spec.Kind == ToonKind.Glass, catalog);
             _streams.Add(key, s);
         }
         if (s.Count + extra > MaxVertices)
@@ -188,17 +176,17 @@ public sealed class MeshSink(IColorIds? colorIds)
         var bundle = new GeometryBundle(new ToonRef(s.Spec), [.. s.Position], [.. s.Normal], [.. s.Index],
             [.. s.Ao], [.. s.Uv], s.HasUv2 ? [.. s.Uv2] : null)
         {
-            ColorIds = s.ColorIds is { } ids ? [.. ids] : null,
+            ColorIndices = [.. s.ColorIndices],
             Flags = [.. s.Flags],
             Reserved = [.. s.Spare],
         };
         _done.Add((key + "|" + _done.Count.ToString("D4", System.Globalization.CultureInfo.InvariantCulture), bundle));
     }
 
-    private sealed class Stream(ToonSpec spec, bool hasUv2, IColorIds? colorIds)
+    private sealed class Stream(ToonSpec spec, bool hasUv2, PaletteCatalog catalog)
     {
-        private readonly Dictionary<string, byte> _idCache = new(StringComparer.Ordinal);
-        /// <summary>The bundle's material: the first spec of the class (its colours are the fallback when ColorIds exist).</summary>
+        private readonly Dictionary<string, ushort> _idCache = new(StringComparer.Ordinal);
+        /// <summary>The bundle's material: the first spec of the class (its colours are the fallback when ColorIndices exist).</summary>
         public ToonSpec Spec { get; } = spec;
         public bool HasUv2 { get; } = hasUv2;
         public List<float> Position { get; } = [];
@@ -208,14 +196,14 @@ public sealed class MeshSink(IColorIds? colorIds)
         public List<float> Ao { get; } = [];
         public List<byte> Flags { get; } = [];
         public List<byte> Spare { get; } = [];
-        public List<byte>? ColorIds { get; } = colorIds is null ? null : [];
+        public List<ushort> ColorIndices { get; } = [];
         public List<int> Index { get; } = [];
         public int Count => Position.Count / 3;
 
         public void Clear()
         {
             Position.Clear(); Normal.Clear(); Uv.Clear(); Uv2.Clear(); Ao.Clear();
-            Flags.Clear(); Spare.Clear(); ColorIds?.Clear(); Index.Clear();
+            Flags.Clear(); Spare.Clear(); ColorIndices.Clear(); Index.Clear();
         }
 
         public void Add(in V v, in Face f) =>
@@ -234,15 +222,12 @@ public sealed class MeshSink(IColorIds? colorIds)
             Ao.Add(visibility);
             Flags.Add(flags);
             Spare.Add(spare);
-            if (ColorIds is not null)
+            if (!_idCache.TryGetValue(lit.Value, out var id))
             {
-                if (!_idCache.TryGetValue(lit.Value, out var id))
-                {
-                    id = colorIds!.Id(lit);
-                    _idCache.Add(lit.Value, id);
-                }
-                ColorIds.Add(id);
+                id = catalog.Resolve(lit).Value;
+                _idCache.Add(lit.Value, id);
             }
+            ColorIndices.Add(id);
         }
 
         // Godot treats clockwise triangles (seen from the front) as front faces: cross(b - a, c - a) points away from the viewer.

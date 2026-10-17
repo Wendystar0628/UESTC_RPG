@@ -312,7 +312,7 @@ public sealed class BoundaryModuleTests
         return stream.ToArray();
     }
 
-    private static BuildContext Context() => new() { World = World(), Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
 
     private static string DataDirectory()
     {

@@ -26,7 +26,7 @@ public sealed class BuildingsTests
         Require(plan.TotalColumns >= 20, "bays on all four facades");
         Require(plan.Entrances.Count == 1 && plan.Entrances[0].Anchor is null, "the generic entrance on the longest facade");
         Require(set.WindowCount == plan.TotalColumns * plan.Storeys, "window block covers the building grid");
-        var bundles = new BuildingsModule().BuildOne(plan, set.Blocks[0], LodLevel.L0);
+        var bundles = new BuildingsModule().BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
         Require(glass.Length > 0, "glass bundle");
         var block = set.Blocks[0];
@@ -58,7 +58,7 @@ public sealed class BuildingsTests
         for (var i = 0; i < set.Plans.Count; i++)
             foreach (var lod in Levels)
             {
-                var bundles = module.BuildOne(set.Plans[i], set.Blocks[i], lod);
+                var bundles = module.BuildOne(set.Plans[i], set.Blocks[i], lod, Campus.Contracts.Tests.PaletteFixture.Catalog);
                 Require(bundles.Count > 0, $"{set.Plans[i].Key} {lod} has geometry");
                 foreach (var b in bundles)
                 {
@@ -89,8 +89,8 @@ public sealed class BuildingsTests
         var world2 = World(Feature("t:a", LShape(0, 0), 6, 21f, "residence"));
         var s1 = BuildingSet.For(world1, 3u);
         var s2 = BuildingSet.For(world2, 3u);
-        var b1 = new BuildingsModule().BuildOne(s1.Plans[0], s1.Blocks[0], LodLevel.L0);
-        var b2 = new BuildingsModule().BuildOne(s2.Plans[0], s2.Blocks[0], LodLevel.L0);
+        var b1 = new BuildingsModule().BuildOne(s1.Plans[0], s1.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
+        var b2 = new BuildingsModule().BuildOne(s2.Plans[0], s2.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         Require(b1.Count == b2.Count, "same bundle count");
         for (var i = 0; i < b1.Count; i++)
         {
@@ -126,7 +126,7 @@ public sealed class BuildingsTests
             foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3 })
             {
                 var seen = new HashSet<int>();
-                foreach (var g in module.BuildOne(plan, block, lod).Where(x => x.Material.Spec.Kind == ToonKind.Glass))
+                foreach (var g in module.BuildOne(plan, block, lod, Campus.Contracts.Tests.PaletteFixture.Catalog).Where(x => x.Material.Spec.Kind == ToonKind.Glass))
                     for (var i = 0; i < g.Position.Length / 3; i++)
                     {
                         Require(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns,
@@ -142,7 +142,7 @@ public sealed class BuildingsTests
 
     private static bool Sash(GeometryBundle b) => b.Material.Spec.Lit.Value == "frame.alu.lit" && b.Material.Spec.Fx == ToonFx.Rim;
     // The WP-10 gasket class (dark equipment steel without outline), not the WP-12 roof fence of the same colour.
-    private static bool Gasket(GeometryBundle b) => b.Material.Spec.Lit.Value == "equip.fence.lit" && b.Material.Spec.Line == LineClass.None;
+    private static bool Gasket(GeometryBundle b) => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.None;
     // WP-10 curtain fabric; the WP-12 heat-pump shrouds share its shading but not its colours.
     private static bool Fabric(GeometryBundle b) => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Steps == ShadeSteps.TwoHalf &&
         !b.Material.Spec.Lit.Value.StartsWith("equip.", StringComparison.Ordinal);
@@ -163,7 +163,7 @@ public sealed class BuildingsTests
                     var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
                     foreach (var opening in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
                     {
-                        var sink = new Mesh.MeshSink(null);
+                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
                         var openings = new FacadeOpenings(plan, set.Blocks[0], lod, sink);
                         if (lod <= LodLevel.L1) openings.Fill(frame, layout, opening, zone);
                         else openings.FlatGlass(frame, layout, opening, -plan.Reveal);
@@ -197,8 +197,8 @@ public sealed class BuildingsTests
             for (var k = 0; k < plan.Openings[fi].Length; k++)
                 Require(plan.ZoneOf(fi, k) == (plan.Openings[fi][k].Row == 0 ? FidelityZone.K2 : FidelityZone.K3), "ground floor in the K2 band, the rest K3");
         var module = new BuildingsModule();
-        var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0);
-        var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1);
+        var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
+        var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
         Require(near.Any(Sash), "K2 windows carry the WP-10 two-level sashes at L0");
         Require(near.Any(Fabric), "K2 room windows hang WP-10 curtains at L0");
         Require(!mid.Any(Sash) && !mid.Any(Fabric), "L1 keeps the simplified frame ring only");
@@ -231,14 +231,14 @@ public sealed class BuildingsTests
                     var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
                     foreach (var o in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
                     {
-                        var sink = new Mesh.MeshSink(null);
+                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
                         new Build.FacadeOpenings(plan, set.Blocks[i], lod, sink).Fill(frame, layout, o, FidelityZone.K3);
                         levelMax = Math.Max(levelMax, sink.Triangles - 2);
                     }
                 }
                 Require(levelMax is >= 16 and <= 60, $"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})");
             }
-            var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0);
+            var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             Require(!near.Any(Sash) && !near.Any(Fabric), $"{plan.Key}: K3 has no sashes, handles or curtains");
             Require(near.All(b => !Gasket(b) || b.Index.Length / 3 <= 24), $"{plan.Key}: no window gaskets");
         }
@@ -251,33 +251,33 @@ public sealed class BuildingsTests
         var plain = BuildingSet.For(World(features), 2u);
         var hero = BuildingSet.For(World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K3, FidelityZone.K1), features), 2u);
         var module = new BuildingsModule();
-        static bool Pump(GeometryBundle b) => b.Material.Spec.Lit.Value == "equip.grey.lit";
+        static bool Pump(GeometryBundle b) => HasColor(b, "equip.grey.lit");
         // The fence boards in the light metal grey of RoofRules.FenceBoard (the board class: building line, no effects).
-        static bool Fence(GeometryBundle b) => b.Material.Spec.Lit.Value == Rules.RoofRules.FenceBoard + ".lit" &&
+        static bool Fence(GeometryBundle b) => HasColor(b, Rules.RoofRules.FenceBoard + ".lit") &&
             b.Material.Spec.Line == LineClass.Building && b.Material.Spec.Fx == ToonFx.None;
-        static bool Strip(GeometryBundle b) => b.Material.Spec.Lit.Value == "roof.silverMetal.lit" && b.Material.Spec.Fx.HasFlag(ToonFx.Rim);
-        static bool Tank(GeometryBundle b) => b.Material.Spec.Lit.Value == "roof.silverMetal.lit" && b.Material.Spec.Fx == ToonFx.BevelLift;
-        static int Tris(IEnumerable<GeometryBundle> bs) => bs.Sum(b => b.Index.Length / 3);
+        static bool Strip(GeometryBundle b) => HasColor(b, "roof.silverMetal.lit") && b.Material.Spec.Fx.HasFlag(ToonFx.Rim);
+        static bool Tank(GeometryBundle b) => HasColor(b, "roof.silverMetal.lit") && b.Material.Spec.Fx == ToonFx.BevelLift;
+        static int Tris(IEnumerable<GeometryBundle> bs, string token) => bs.Sum(b => Enumerable.Range(0, b.Index.Length / 3).Count(t => TriangleColor(b, t * 3, token)));
         for (var i = 0; i < plain.Plans.Count; i++)
         {
             var (simple, full) = (plain.Plans[i], hero.Plans[i]);
             Require(simple.RoofZone == FidelityZone.K4 && full.RoofZone == FidelityZone.K1, "roof zone from the fidelity data, K4 without it");
-            var near = module.BuildOne(simple, plain.Blocks[i], LodLevel.L0);
-            var nearFull = module.BuildOne(full, hero.Blocks[i], LodLevel.L0);
+            var near = module.BuildOne(simple, plain.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
+            var nearFull = module.BuildOne(full, hero.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             Require(near.Any(Fence) && near.Any(Pump) && near.Any(Strip), $"{simple.Key}: fenced plant and lightning strip");
-            Require(!near.Concat(nearFull).Any(b => b.Material.Spec.Lit.Value == "equip.fence.lit" && b.Material.Spec.Line == LineClass.Building),
+            Require(!near.Concat(nearFull).Any(b => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.Building),
                 $"{simple.Key}: no dark fence steel left on the boards");
             Require((simple.Style == Rules.BuildingStyle.Research) == near.Any(Tank), $"{simple.Key}: a water tank beside teaching plant only");
-            Require(Tris(nearFull.Where(Pump)) > Tris(near.Where(Pump)), $"{simple.Key}: a K1 roof carries more and finer units");
-            Require(Tris(nearFull.Where(Strip)) > Tris(near.Where(Strip)), $"{simple.Key}: K1 strip on supports, elsewhere one rod");
-            var mid = module.BuildOne(simple, plain.Blocks[i], LodLevel.L1);
-            Require(!mid.Any(Strip) && module.BuildOne(full, hero.Blocks[i], LodLevel.L1).Any(Strip), $"{simple.Key}: the rod stops at L0 on simple roofs");
+            Require(Tris(nearFull.Where(Pump), "equip.grey.lit") > Tris(near.Where(Pump), "equip.grey.lit"), $"{simple.Key}: a K1 roof carries more and finer units");
+            Require(Tris(nearFull.Where(Strip), "roof.silverMetal.lit") > Tris(near.Where(Strip), "roof.silverMetal.lit"), $"{simple.Key}: K1 strip on supports, elsewhere one rod");
+            var mid = module.BuildOne(simple, plain.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
+            Require(!mid.Any(Strip) && module.BuildOne(full, hero.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog).Any(Strip), $"{simple.Key}: the rod stops at L0 on simple roofs");
             // Coping: the WP-12 cap reaches the parapet top, its drip hangs 60 mm under the slab outside the wall.
-            var trim = near.Where(b => b.Material.Spec.Lit.Value == Rules.Materials.Lit(simple.Profile.Trim).Value && b.Material.Spec.Fx == ToonFx.BevelLift).ToArray();
-            var ys = trim.SelectMany(b => Enumerable.Range(0, b.Position.Length / 3).Select(v => b.Position[3 * v + 1])).ToArray();
+            var trim = near.Where(b => HasColor(b, Rules.Materials.Lit(simple.Profile.Trim).Value) && b.Material.Spec.Fx == ToonFx.BevelLift).ToArray();
+            var ys = trim.SelectMany(b => ColorVertices(b, Rules.Materials.Lit(simple.Profile.Trim).Value).Select(v => b.Position[3 * v + 1])).ToArray();
             Require(ys.Any(y => MathF.Abs(y - simple.EdgeTopY) < 1e-3f) && ys.Any(y => MathF.Abs(y - (simple.EdgeTopY - 0.21f)) < 1e-3f), $"{simple.Key}: coping and drip");
             foreach (var b in near.Where(b => Fence(b) || Pump(b)))
-                for (var v = 0; v < b.Position.Length / 3; v++)
+                foreach (var v in ColorVertices(b, Rules.RoofRules.FenceBoard + ".lit", "equip.grey.lit"))
                 {
                     var p = new Vector2(b.Position[3 * v], b.Position[3 * v + 2]);
                     Require(PlanRing.InsideFootprint(simple.Outer, simple.Holes, p) && PlanRing.DistanceToEdges(simple.Outer, simple.Holes, p) > 0.4f &&
@@ -336,12 +336,12 @@ public sealed class BuildingsTests
             var block = new WindowBlock(plan.Id, plan.Key, 0, plan.TotalColumns, plan.Storeys);
             foreach (var lod in Levels)
             {
-                var bundles = new BuildingsModule().BuildOne(plan, block, lod);
+                var bundles = new BuildingsModule().BuildOne(plan, block, lod, Campus.Contracts.Tests.PaletteFixture.Catalog);
                 foreach (var b in bundles) b.ValidateVertexData();
                 var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
-                Require(lod == LodLevel.L4 || (glass.Length > 0 && glass.All(g => g.Material.Spec.Lit.Value == "uestc.techblue.lit")), $"{name} {lod}: glass in the preset's colour");
+                Require(lod == LodLevel.L4 || (glass.Length > 0 && glass.All(g => ColorVertices(g, "uestc.techblue.lit").Count() == g.Position.Length / 3)), $"{name} {lod}: glass in the preset's colour");
                 var walls = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Static && b.Material.Spec.Fx == (ToonFx.BevelLift | ToonFx.Mottle)).ToArray();
-                Require(walls.Length > 0 && walls.All(b => b.Material.Spec.Lit.Value == "wall.creamCoffee.lit"), $"{name} {lod}: the wall frame in the preset's colour");
+                Require(walls.Length > 0 && walls.All(b => ColorVertices(b, "wall.creamCoffee.lit").Count() == b.Position.Length / 3), $"{name} {lod}: the wall frame in the preset's colour");
                 Require(!bundles.Any(Fabric), $"{name} {lod}: curtain walls hang no curtains");
             }
         }
@@ -421,7 +421,7 @@ public sealed class BuildingsTests
             Require(a.Plans[0].Profile == b.Plans[0].Profile && a.Plans[0].Profile.Accent == accent, $"{key}: one profile under either hash");
             foreach (var set in new[] { a, b })
             {
-                var lit = new HashSet<string>(new BuildingsModule().BuildOne(set.Plans[0], set.Blocks[0], LodLevel.L0).Select(m => m.Material.Spec.Lit.Value));
+                var lit = new HashSet<string>(new BuildingsModule().BuildOne(set.Plans[0], set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog).SelectMany(m => m.ColorIndices!.Select(i => Campus.Contracts.Tests.PaletteFixture.Catalog.Get(new PaletteIndex(i)).Token.Value)));
                 Require(lit.Contains(accent + ".lit") && lit.Contains(frame + ".lit") && lit.Contains(trim + ".lit"), $"{key}: frame, trim and accent reach the mesh");
                 Require(!lit.Contains("panel.brown.lit") && (accent == "panel.pinkSand") == lit.Contains("panel.pinkSand.lit"), $"{key}: no spandrel colour of the family's own");
             }
@@ -572,6 +572,20 @@ public sealed class BuildingsTests
         Require(seen.Count == keyOf.Count, $"all three blocks planned ({seen.Count})");
     }
 
+    private static IEnumerable<int> ColorVertices(GeometryBundle mesh, params string[] tokens)
+    {
+        var catalog = Campus.Contracts.Tests.PaletteFixture.Catalog;
+        var indices = tokens.Select(token => catalog.Resolve(new PaletteToken(token)).Value).ToArray();
+        return Enumerable.Range(0, mesh.Position.Length / 3)
+            .Where(vertex => indices.Contains(mesh.ColorIndices?[vertex] ?? catalog.Resolve(mesh.Material.Spec.Lit).Value));
+    }
+    private static bool HasColor(GeometryBundle mesh, string token) => ColorVertices(mesh, token).Any();
+    private static bool TriangleColor(GeometryBundle mesh, int offset, string token)
+    {
+        var index = Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(new PaletteToken(token)).Value;
+        return Enumerable.Range(0, 3).All(corner => mesh.ColorIndices![mesh.Index[offset + corner]] == index);
+    }
+
     private static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));
 
     /// <summary>
@@ -582,9 +596,10 @@ public sealed class BuildingsTests
     {
         var block = new WindowBlock(plan.Id, plan.Key, 0, plan.TotalColumns, plan.Storeys);
         var area = 0.0;
-        foreach (var b in new BuildingsModule().BuildOne(plan, block, LodLevel.L0).Where(m => m.Material.Spec.Lit.Value == "band.terracotta.lit"))
+        foreach (var b in new BuildingsModule().BuildOne(plan, block, LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog).Where(m => HasColor(m, "band.terracotta.lit")))
             for (var t = 0; t < b.Index.Length; t += 3)
             {
+                if (!TriangleColor(b, t, "band.terracotta.lit")) continue;
                 var a = P(b, b.Index[t]);
                 area += 0.5 * Vector3.Cross(P(b, b.Index[t + 1]) - a, P(b, b.Index[t + 2]) - a).Length();
             }
@@ -603,9 +618,10 @@ public sealed class BuildingsTests
     {
         var block = new WindowBlock(plan.Id, plan.Key, 0, plan.TotalColumns, plan.Storeys);
         var (area, strays) = (0.0, 0);
-        foreach (var b in new BuildingsModule().BuildOne(plan, block, LodLevel.L0).Where(m => m.Material.Spec.Lit.Value == "band.terracotta.lit"))
+        foreach (var b in new BuildingsModule().BuildOne(plan, block, LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog).Where(m => HasColor(m, "band.terracotta.lit")))
             for (var t = 0; t < b.Index.Length; t += 3)
             {
+                if (!TriangleColor(b, t, "band.terracotta.lit")) continue;
                 var (a, c, d) = (P(b, b.Index[t]), P(b, b.Index[t + 1]), P(b, b.Index[t + 2]));
                 area += 0.5 * Vector3.Cross(c - a, d - a).Length();
                 var (low, high) = (MathF.Min(a.Y, MathF.Min(c.Y, d.Y)), MathF.Max(a.Y, MathF.Max(c.Y, d.Y)));
@@ -658,7 +674,7 @@ public sealed class BuildingsTests
             var decls = FacadeOpenings.Declarations(plan, set.Blocks[i]);
             Require(decls.Select(d => d.Id).Distinct().Count() == decls.Count && decls.All(d => d.Id >= set.Blocks[i].Base && d.Id < set.Blocks[i].Base + set.Blocks[i].Count),
                 $"{plan.Key}: every opening keeps a unique number inside its block");
-            foreach (var lod in Levels) foreach (var b in module.BuildOne(plan, set.Blocks[i], lod)) b.ValidateVertexData();
+            foreach (var lod in Levels) foreach (var b in module.BuildOne(plan, set.Blocks[i], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();
         }
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var entrance = dorm.Entrances.Single();
@@ -699,7 +715,7 @@ public sealed class BuildingsTests
             "unclaimed, WP-14 opens the anchor door");
         foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
         {
-            var ctx = Prepared(new BuildContext { World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? new WpId("WP-18") : null });
+            var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? new WpId("WP-18") : null });
             Require(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0,
                 $"{aspect} claimed: no door, landing, canopy or collider of WP-14");
             Require(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0, "the neighbour stays");
@@ -709,7 +725,7 @@ public sealed class BuildingsTests
         // span of WP-14 stands at exactly the open anchors of unclaimed features. The library (16b), Xuanbang's clock tower
         // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
         var real = RealCampus();
-        var rctx = new BuildContext { World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
+        var rctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
         var anchored = BuildingSet.For(real, 1u).Plans.SelectMany(p => p.Entrances.Where(e => e.Anchor is not null).Select(e => (Plan: p, Door: e))).ToArray();
         foreach (var (plan, e) in anchored)
         {
@@ -747,7 +763,7 @@ public sealed class BuildingsTests
         var deck = Feature("t:deck", Rect(100, -6, 40, 6), 1, 1.2f, "service");
         string Log(TestWorld w, Func<FeatureId, Aspects, WpId?> claims)
         {
-            var ctx = new BuildContext { World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
+            var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
             var plan = BuildingSet.For(w, 2u).Plans.Single(p => p.Key == "t:lab");
             return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "wp14.door.alone" && d.Feature == plan.Id).Message;
         }
@@ -776,10 +792,10 @@ public sealed class BuildingsTests
             "landing, guard railings on its sides (over 1.0 m) and one flight");
         var flight = (StairParams)steps[3].Params;
         Require(MathF.Abs(flight.Height - 1.05f) < 1e-3f && flight.Steps == 7 && flight.Variation == 0, $"1.05 m in 7 risers with cheek walls ({flight.Steps})");
-        var sink = new Mesh.MeshSink(null);
+        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
         EntranceKit.Build(sink, steps, LodLevel.L0);
         Require(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit"), "handrails from 0.6 m (WP-11)");
-        foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod)) b.ValidateVertexData();
+        foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();
         var colliders = new BuildingsModule().Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0));
         Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }), "the flight walks as one stair ramp");
         Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Ground), "the landing is walkable");
@@ -943,7 +959,7 @@ public sealed class BuildingsTests
         Expect<ArgumentException>(() => module.PrepareWindowNumbering(ctx, [Layout("t:a", ("x", 1, 1), ("x", 2, 2))]), "a key twice");
         Expect<ArgumentException>(() => module.PrepareWindowNumbering(ctx, [Layout("t:a", ("x", 0, 3))]), "an empty grid");
         Expect<ArgumentException>(() => module.PrepareWindowNumbering(ctx, [Layout("t:zz", ("x", 1, 1))]), "a feature not on the map");
-        var roofOnly = new BuildContext { World = world, Map = TestMap, WorldSeed = 1u, ClaimedBy = (_, aspect) => aspect == Aspects.Roof ? new WpId("WP-18") : null };
+        var roofOnly = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 1u, ClaimedBy = (_, aspect) => aspect == Aspects.Roof ? new WpId("WP-18") : null };
         Expect<ArgumentException>(() => module.PrepareWindowNumbering(roofOnly, [Layout("t:a")]), "a roof claim grants no window layout");
         // osm:way:1 is numbered by t:a (first in order). t:b may leave it there and number its own grid (the Liren connector
         // beside the generic A/B blocks), but a grid renumbering that footprint would number one facade twice.
@@ -1159,7 +1175,7 @@ public sealed class BuildingsTests
     public void TraceSourcesReproduceBuildAndCollideOnTheRealCampus()
     {
         var real = RealCampus();
-        var ctx = Prepared(new BuildContext { World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
+        var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
         var module = new BuildingsModule();
         var mine = BuildingSet.For(real, 1u).Plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
         Require(mine.Select(p => $"building/{p.Id.Value}/{p.Key}").Distinct(StringComparer.Ordinal).Count() == mine.Length, "a source ID per building part over the map");
@@ -1219,7 +1235,7 @@ public sealed class BuildingsTests
         return a.Material == b.Material && Equals(a.Variant, b.Variant) && Equals(a.Shader, b.Shader) &&
             a.IgnoreOcclusionCulling == b.IgnoreOcclusionCulling && a.Reflect == b.Reflect &&
             Bits(a.Position, b.Position) && Bits(a.Normal, b.Normal) && Bits(a.Index, b.Index) && Bits(a.Ao, b.Ao) && Bits(a.Uv, b.Uv) && Bits(a.Uv2, b.Uv2) &&
-            Bits(a.ColorIds, b.ColorIds) && Bits(a.ColorIndices, b.ColorIndices) && Bits(a.DecalBaseColorIndices, b.DecalBaseColorIndices) &&
+            Bits(a.ColorIndices, b.ColorIndices) && Bits(a.ColorIndices, b.ColorIndices) && Bits(a.DecalBaseColorIndices, b.DecalBaseColorIndices) &&
             Bits(a.Flags, b.Flags) && Bits(a.Reserved, b.Reserved) && Bits(a.Custom0, b.Custom0) && Bits(a.Custom1, b.Custom1) && Bits(a.Custom2, b.Custom2) &&
             SameLods(a.Lods, b.Lods);
     }
@@ -1291,6 +1307,7 @@ public sealed class BuildingsTests
     /// <summary>A build context as the kernel hands it out: <paramref name="claims"/> are facade claims of a zone pack.</summary>
     private static BuildContext Ctx(IWorldModel world, uint seed, WindowNumberingSnapshot? numbering = null, string[]? claims = null) => new()
     {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = world,
         Map = TestMap,
         WorldSeed = seed,
@@ -1301,6 +1318,7 @@ public sealed class BuildingsTests
     /// <summary>The kernel's prepass stand-in until WP-02 runs it: the provider's snapshot, published in the context.</summary>
     private static BuildContext Prepared(BuildContext ctx) => new()
     {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = ctx.World,
         Map = ctx.Map,
         WorldSeed = ctx.WorldSeed,

@@ -18,7 +18,7 @@ public sealed class BakeSurfaceTests
             Ao = null,
             Uv = null,
             Uv2 = null,
-            ColorIds = null,
+            ColorIndices = null,
             Flags = null,
             Reserved = null,
             Custom0 = null,
@@ -41,7 +41,7 @@ public sealed class BakeSurfaceTests
         // Empty is supplied-but-invalid for a nonempty mesh. Never normalize Length=0 to missing.
         foreach (var malformed in new[]
         {
-            absent with { Ao = [] }, absent with { Uv = [] }, absent with { Uv2 = [] }, absent with { ColorIds = [] },
+            absent with { Ao = [] }, absent with { Uv = [] }, absent with { Uv2 = [] }, absent with { ColorIndices = [] },
             absent with { Flags = [] }, absent with { Reserved = [] }, absent with { Custom0 = [] },
             absent with { Custom1 = [] }, absent with { Custom2 = [] }
         })
@@ -53,21 +53,23 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
-    public void PlacedTintOverridesExplicitColorIdsWithoutChangingOtherVertexBytes()
+    public void PlacedTintOverridesExplicitColorIndicesWithoutChangingOtherVertexBytes()
     {
-        var palette = new PaletteRegistry(Palette().Entries.Concat(new PaletteEntry[]
+        var palette = new PaletteCatalog(new PaletteRegistry(new PaletteEntry[]
         {
+            new(new("fixture.lit"), 64, N.Vector3.One, "fixture", false, PaletteRole.Lit),
+            new(new("fixture.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
             new(new("fixture.tint"), 66, N.Vector3.One, "fixture", false, PaletteRole.Lit),
             new(new("fixture.tint.shade"), 67, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
             new(new("fixture.accent"), 68, N.Vector3.One, "fixture", false, PaletteRole.Lit),
             new(new("fixture.accent.shade"), 69, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)
-        }));
+        }), []);
         foreach (var useUv2 in new[] { false, true })
         {
-            byte[] originalIds = [64, 68, 64];
+            ushort[] originalIds = [64, 68, 64];
             var original = Geometry() with
             {
-                ColorIds = originalIds,
+                ColorIndices = originalIds,
                 Ao = [.2f, .7f, 1f],
                 Flags = [1, 2, 8],
                 Reserved = [3, 4, 5],
@@ -78,7 +80,7 @@ public sealed class BakeSurfaceTests
             var tinted = BakeSurfacePacker.ApplyTint(original, placed, palette);
             var before = BakeSurfacePacker.Pack(noTint, Bounds(), palette);
             var after = BakeSurfacePacker.Pack(tinted, Bounds(), palette);
-            if (!originalIds.SequenceEqual(new byte[] { 64, 68, 64 }) || !ReferenceEquals(noTint, original) ||
+            if (!originalIds.SequenceEqual(new ushort[] { 64, 68, 64 }) || !ReferenceEquals(noTint, original) ||
                 tinted.Material.Spec.Lit.Value != "fixture.tint" || tinted.Material.Spec.Shade.Value != "fixture.tint.shade")
                 throw new InvalidOperationException("Tint mutated source data or did not select the registered Lit/Shade pair.");
             if ((tinted.Material.Spec with { Lit = original.Material.Spec.Lit, Shade = original.Material.Spec.Shade }) != original.Material.Spec)
@@ -87,7 +89,7 @@ public sealed class BakeSurfaceTests
             for (var i = 0; i < 3; i++)
             {
                 if (before.AttributeData.Span[i * stride] != originalIds[i] || after.AttributeData.Span[i * stride] != 66)
-                    throw new InvalidOperationException("PlacedPart.Tint must override every explicit ColorIds entry like the immediate render path.");
+                    throw new InvalidOperationException("PlacedPart.Tint must override every explicit ColorIndices entry like the immediate render path.");
                 if (!before.AttributeData.Span.Slice(i * stride + 1, stride - 1).SequenceEqual(after.AttributeData.Span.Slice(i * stride + 1, stride - 1)))
                     throw new InvalidOperationException("Tint changed AO, flags, reserved bytes or UV data.");
             }
@@ -183,9 +185,9 @@ public sealed class BakeSurfaceTests
     private static GeometryBundle Geometry() => new(new(new(new("fixture.lit"), new("fixture.shade"))),
         [0, 0, 0, 64, 0, 0, 0, 0, 64], [0, 1, 0, 1, 0, 0, 0, 0, -1], [0, 2, 1], Uv: [0, 0, 1, 0, 0, 1]);
     private static Box3 Bounds() => new(N.Vector3.Zero, new(64, 64, 64));
-    private static PaletteRegistry Palette() => new([
+    private static PaletteCatalog Palette() => new(new PaletteRegistry([
         new(new("fixture.lit"), 64, N.Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
+        new(new("fixture.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
     private static Godot.Collections.Dictionary Dictionary(BakedSurface surface) => new()
     {
         ["format"] = surface.Format,

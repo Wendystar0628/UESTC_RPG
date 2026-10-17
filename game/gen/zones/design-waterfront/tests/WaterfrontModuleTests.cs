@@ -113,7 +113,7 @@ public sealed class WaterfrontModuleTests
         return u >= plan.OuterLeft - 0.5f && u <= plan.OuterRight + 0.5f && s >= plan.StartS(u) - 0.5f && s <= plan.EndS(u) + 0.5f;
     }
 
-    private static BuildContext Context() => new() { World = World(), Map = null!, WorldSeed = 1u };
+    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1u };
 
     private static IWorldModel World()
     {

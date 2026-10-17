@@ -147,7 +147,7 @@ public sealed class GroundDiagonalTests
             {
                 var p = new Vector3[3];
                 for (var k = 0; k < 3; k++) p[k] = new(m.Position[3 * m.Index[t + k]], m.Position[3 * m.Index[t + k] + 1], m.Position[3 * m.Index[t + k] + 2]);
-                if (m.Index.Skip(t).Take(3).Any(i => m.ColorIds![i] is not (150 or 190 or 192))) continue;   // lawn only
+                if (m.Index.Skip(t).Take(3).Any(i => m.ColorIndices![i] is not (150 or 190 or 192))) continue;   // lawn only
                 if (p.Any(q => q.X % 64f == 0f || q.Z % 64f == 0f)) continue;
                 var cross = Vector3.Cross(p[1] - p[0], p[2] - p[0]);
                 if (cross.Length() < 1e-5f || MathF.Abs(cross.Y) < 0.5f * cross.Length()) continue;

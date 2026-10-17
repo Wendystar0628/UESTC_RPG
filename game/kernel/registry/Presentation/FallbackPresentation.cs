@@ -6,7 +6,7 @@ namespace Campus.Kernel.Renderer;
 
 /// <summary>D0 RGB material only. Formal VF-A rendering must wait for the real WP-04 provider.</summary>
 [KernelService(typeof(IToonMaterialProvider), Owner = "WP-00", IsStub = true)]
-public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes) : IToonMaterialProvider
+public sealed class FallbackToonMaterialProvider(IPaletteCatalogSource palettes) : IToonMaterialProvider
 {
     private readonly ToonWarmBatch _emptyBatch = new(0, Array.Empty<ToonWarmMaterial>());
     private Campus.Style.Stubs.D0MaterialLibrary? _materials;
@@ -19,7 +19,6 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
         return Materials.Material;
     }
 
-    public byte PaletteId(PaletteToken token) => palettes.Registry.Get(token).Id;
     // A stub has no evidence that production material pipelines have been drawn.
     public bool IsReady(ToonSpec spec) => false;
     public void Track(ShaderId shader, Material material) => throw new NotSupportedException("The D0 material provider cannot prewarm non-toon materials; install the WP-04 provider.");
@@ -30,12 +29,12 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
         && batch.Revision == _emptyBatch.Revision && batch.Materials.Count == 0;
 
     /// <summary>Preserves the existing D0 RGB path without inventing registry entries or silently accepting unknown names.</summary>
-    public Color VertexColor(ToonSpec spec, byte? colorId)
+    public Color VertexColor(ToonSpec spec, PaletteIndex? colorId)
     {
         RejectSurfacePattern(spec);
         if (colorId is { } id)
         {
-            var color = palettes.Registry.Get(id).Albedo;
+            var color = palettes.Catalog.Get(id).Albedo;
             return new(color.X, color.Y, color.Z);
         }
         if (D0Token(spec) is { } token)
@@ -44,7 +43,7 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
             return _d0Colors.TryGetValue(token, out var value) ? value
                 : throw new KeyNotFoundException($"D0 palette token '{token}' is not registered.");
         }
-        var albedo = palettes.Registry.Get(spec.Lit).Albedo;
+        var albedo = palettes.Catalog.Get(spec.Lit).Albedo;
         return new(albedo.X, albedo.Y, albedo.Z);
     }
 
@@ -52,7 +51,7 @@ public sealed class FallbackToonMaterialProvider(IPaletteRegistrySource palettes
     {
         ArgumentNullException.ThrowIfNull(spec);
         RejectSurfacePattern(spec);
-        if (D0Token(spec) is null) palettes.Registry.Validate(spec);
+        if (D0Token(spec) is null) palettes.Catalog.Validate(spec);
     }
 
     private static void RejectSurfacePattern(ToonSpec spec)

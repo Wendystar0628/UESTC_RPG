@@ -30,7 +30,7 @@ public sealed class AnnexShellTests
             Require(shell.Openings.Count > 0, $"{shell.Id}: has windows");
             foreach (var lod in Levels)
             {
-                var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+                var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
                 shell.Build(build, lod);
                 var output = build.Finish(lod);
                 Require(output.Meshes.Count > 0, $"{shell.Id} {lod}: geometry");
@@ -63,7 +63,7 @@ public sealed class AnnexShellTests
         foreach (var p in garden.Planters.Append(garden.Pavilion)) Require(Inside(p, garden.Ring), "pavilion and planters stand in the court");
         foreach (var lod in Levels)
         {
-            var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+            var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
             garden.Build(build, lod);
             Require(build.Finish(lod).Meshes.Count > 0, $"garden {lod}");
         }
@@ -90,7 +90,7 @@ public sealed class AnnexShellTests
 
     private static ContentOutput Build(ICorePiece piece, LodLevel lod)
     {
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         piece.Build(build, lod);
         return build.Finish(lod);
     }

@@ -165,7 +165,7 @@ public sealed class D0EntranceHeightReferenceTests
             new(-1, -1), new(0, 0), "spawn", [],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Test", "Test"), false, "test"),
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new BuildContext { Map = map, World = world, WorldSeed = 1, InteriorProviders = providers };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = map, World = world, WorldSeed = 1, InteriorProviders = providers };
     }
 
     private sealed class ProbeTerrain : ITerrain

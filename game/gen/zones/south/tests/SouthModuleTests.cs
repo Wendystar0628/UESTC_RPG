@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -136,6 +137,28 @@ public sealed class SouthModuleTests
     }
 
     [TestCase]
+    public void WritableBuildOutputCannotModifySharedSiteGeometry()
+    {
+        var ctx = Context();
+        var module = new SouthModule();
+        var cached = module.ItemsFor(ctx, LodLevel.L0);
+        var anchor = cached.First(i => i.Mesh is not null).Anchor;
+        var tile = new TileKey((int)MathF.Floor(anchor.X / 64f), (int)MathF.Floor(anchor.Y / 64f));
+        var output = module.Build(ctx, tile, LodLevel.L0);
+        var positions = output.Meshes.Select(m => m.Position.ToArray()).ToArray();
+        var indices = output.Meshes.Select(m => m.Index.ToArray()).ToArray();
+        foreach (var mesh in output.Meshes)
+        {
+            Array.Fill(mesh.Position, 99f);
+            Array.Fill(mesh.Index, 99);
+        }
+        var again = module.Build(ctx, tile, LodLevel.L0);
+        Require(ReferenceEquals(cached, module.ItemsFor(ctx, LodLevel.L0)), "the regression must exercise the same shared cache");
+        Require(again.Meshes.Count == positions.Length && again.Meshes.Select((m, i) => m.Position.SequenceEqual(positions[i]) && m.Index.SequenceEqual(indices[i])).All(same => same),
+            "a caller's writable output changed the next build from the cached site");
+    }
+
+    [TestCase]
     public void GateClosureHasNoGapAboveHalfAMetre()
     {
         var ctx = Context();
@@ -265,13 +288,13 @@ public sealed class SouthModuleTests
         var ctx = Context();
         var items = new SouthModule().ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
         var f = Xuanbang.XuanbangSite.Rings(ctx.World);
-        float Top(IReadOnlyList<Vector2> ring) => items.Where(i => Near(ring, i.Anchor, 3f)).Max(i => MaxY(i.Mesh!));
+        float Top(IReadOnlyList<Vector2> ring) => items.Where(i => Near(ring, i.Anchor, 3f)).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         Require(MathF.Abs(Top(f.Clock) - SouthTune.Xuanbang.Top) < 0.05f, $"clock tower top {Top(f.Clock)}");
         Require(MathF.Abs(Top(f.Tower) - 73.85f) < 0.05f, $"tower top {Top(f.Tower)}");
         var main = items.Where(i => Near(f.Main, i.Anchor, 1f) && !Near(f.Tower, i.Anchor, 3f) && !Near(f.Clock, i.Anchor, 3f)
-            && Vector2.Distance(i.Anchor, SouthTune.Xuanbang.Skylight) > 10f).Max(i => MaxY(i.Mesh!));
+            && Vector2.Distance(i.Anchor, SouthTune.Xuanbang.Skylight) > 10f).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         Require(main > 35.6f && main < 38.8f, $"main wing roof line {main} (35.7 m, gables up to 38.3 m)");
-        var all = items.Max(i => MaxY(i.Mesh!));
+        var all = items.Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         Require(all < 73.9f, $"the Xuanbang tower stays the highest point of the zone ({all})");
     }
 
@@ -407,7 +430,7 @@ public sealed class SouthModuleTests
         var pool = Sports.NatatoriumSite.PlanOf(ctx.World);
         Require(gym.Radius is > 57f and < 62f && gym.Bays > 90, $"gym drum radius {gym.Radius}, {gym.Bays} bays");
         Require(pool.A >= pool.B && pool.B > 35f && pool.A < 60f, $"natatorium ellipse {pool.A} × {pool.B}");
-        float Top(Vector2 centre, float radius) => items.Where(i => Vector2.Distance(i.Anchor, centre) < radius).Max(i => MaxY(i.Mesh!));
+        float Top(Vector2 centre, float radius) => items.Where(i => Vector2.Distance(i.Anchor, centre) < radius).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         var gymTop = Top(gym.Centre, gym.Radius);
         Require(gymTop > SouthTune.Sports.GymTop - 0.1f && gymTop < SouthTune.Sports.GymTop + 1.2f, $"gym roof at 26 m, vent caps above it ({gymTop})");
         var poolTop = Top(pool.Frame.Origin, pool.B);
@@ -467,14 +490,14 @@ public sealed class SouthModuleTests
         foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
         {
             WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-18") : null;
-            var prepass = new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+            var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
             var layouts = module.DescribeWindowLayouts(view, 1);
             var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
             var south = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
             Require(south.Length == layouts.Sum(l => l.Grids.Count) && south.All(a => a.Columns > 0 && a.Rows > 0),
                 $"{name}: every south grid is allocated with cells ({south.Length} of {layouts.Sum(l => l.Grids.Count)})");
             Require(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity, $"{name}: the table fits ({snapshot.WindowCount})");
-            var metadata = module.DescribeWindows(new BuildContext { World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+            var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             Require(ids.Length > 0 && ids.All(id => south.Any(a => id >= a.BaseId && id < a.BaseId + a.Count)), $"{name}: the zone's windows lie in its own blocks");
@@ -554,7 +577,7 @@ public sealed class SouthModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
         Throws(() => module.DescribeWindows(Context()), "positions need the numbering snapshot");
 
         var metadata = module.DescribeWindows(ctx);
@@ -676,7 +699,7 @@ public sealed class SouthModuleTests
     private static BuildContext Context()
     {
         // The south sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { World = World(), Map = null!, WorldSeed = 1 };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
     }
 
     private static string DataRoot()

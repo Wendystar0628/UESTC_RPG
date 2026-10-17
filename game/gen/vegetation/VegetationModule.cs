@@ -155,8 +155,7 @@ public sealed class VegetationModule : IContentModule, IGroundMaskContributor
         lod.ToString(), tile.X.ToString(CultureInfo.InvariantCulture) + "_" + tile.Z.ToString(CultureInfo.InvariantCulture),
         first.Species.Id, first.Variant.ToString(CultureInfo.InvariantCulture));
 
-    private static PaletteRegistry RequirePalette(BuildContext ctx) => ctx.Palette
-        ?? throw new InvalidOperationException("Vegetation instance streams need BuildContext.Palette: the mother models carry palette colour IDs.");
+    private static PaletteCatalog RequirePalette(BuildContext ctx) => ctx.Catalog;
 }
 
 /// <summary>One tree's share of a vegetation tile (<see cref="VegetationModule.TraceSources"/>).</summary>

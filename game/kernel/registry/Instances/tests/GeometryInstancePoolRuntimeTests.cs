@@ -42,7 +42,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         var frozenSecond = GeometryBuffer.Freeze(second);
         var prototype = Prototype(frozenFirst, frozenSecond);
         first.Position[0] = 999;
-        first.ColorIds![0] = 254;
+        first.ColorIndices![0] = 254;
         first.Custom0![0] = -999;
         first.Ao![0] = 1;
 
@@ -176,12 +176,11 @@ public sealed class GeometryInstancePoolRuntimeTests
         using var fixture = Fixture.Create(catalog);
         var frozen = GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec) with
         {
-            ColorIds = null,
             ColorIndices = [255, 256, 510, 511],
             Flags = [4, 5, 6, 15],
             Reserved = null,
             DecalBaseColorIndices = [511, 255, 256, 511]
-        }, PaletteLayout.EncodingVersion);
+        });
         var pool = fixture.Host.Mount(Spec("catalog", Prototype(frozen)));
         var mesh = (ArrayMesh)FindPool(fixture.Host, "catalog").Multimesh.Mesh;
         using var arrays = mesh.SurfaceGetArrays(0);
@@ -193,7 +192,6 @@ public sealed class GeometryInstancePoolRuntimeTests
                 PaletteEncoding.DecodeDecalBase((byte)Byte(colors[i].A), flags).Value == frozen.DecalBaseColorIndices!.Value.Span[i] &&
                 (flags & 15) == frozen.Flags!.Value.Span[i], "A geometry pool lost bank bits or changed semantic flags.");
         }
-        Check(frozen.PaletteEncodingVersion == PaletteLayout.EncodingVersion, "The host changed its prototype encoding.");
         pool.Free();
     }
 
@@ -204,8 +202,8 @@ public sealed class GeometryInstancePoolRuntimeTests
     {
         using var fixture = Fixture.Create();
         var basic = Surface(fixture.Provider.FirstSpec);
-        var encoding2 = GeometryBuffer.Freeze(basic with { ColorIds = null, ColorIndices = [300, 301, 302, 303] }, PaletteLayout.EncodingVersion);
-        Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("encoding2", Prototype(encoding2))));
+        var encoding2 = GeometryBuffer.Freeze(basic with { ColorIndices = [300, 301, 302, 303] });
+        Throws<KeyNotFoundException>(() => fixture.Host.Mount(Spec("unregistered", Prototype(encoding2))));
         Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("reflect", Prototype(GeometryBuffer.Freeze(basic with { Reflect = true })))));
         Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("variant", Prototype(GeometryBuffer.Freeze(basic with { Variant = new VariantTag() })))));
         var normal = Prototype(GeometryBuffer.Freeze(basic));
@@ -261,7 +259,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         Ao: [.3f, .5f, 1f, .125f], Uv: [0, 0, 1, 0, 1, 1, 0, 1], Uv2: [16777215, -1, 65537, 1048577, 4097, 3, 8388609, -4],
         Lods: [new(2f, [0, 2, 3])])
     {
-        ColorIds = [23, 73, 101, 199],
+        ColorIndices = [23, 73, 101, 199],
         Flags = [1, 4, 8, 0],
         Reserved = [7, 11, 15, 3],
         Custom0 = Enumerable.Range(0, 16).Select(i => 100000.125f + i * .125f).ToArray(),
@@ -314,7 +312,7 @@ public sealed class GeometryInstancePoolRuntimeTests
                 "Normals were omitted or altered beyond the native normal packing tolerance.");
             Check(uv[i] == new Vector2(source.Uv!.Value.Span[i * 2], source.Uv.Value.Span[i * 2 + 1]), "UV changed.");
             Check(uv2[i] == new Vector2(source.Uv2!.Value.Span[i * 2], source.Uv2.Value.Span[i * 2 + 1]), "UV2 lost fp32 integer or negative precision.");
-            Check(Byte(colors[i].R) == source.ColorIds!.Value.Span[i] && Byte(colors[i].G) == (byte)(source.Ao!.Value.Span[i] * 255f) &&
+            Check(Byte(colors[i].R) == source.ColorIndices!.Value.Span[i] && Byte(colors[i].G) == (byte)(source.Ao!.Value.Span[i] * 255f) &&
                 Byte(colors[i].B) == source.Flags!.Value.Span[i] && Byte(colors[i].A) == source.Reserved!.Value.Span[i],
                 "COLOR must retain R=id/G=truncated AO/B=flags/A=reserved without an AO inversion.");
         }
@@ -343,6 +341,19 @@ public sealed class GeometryInstancePoolRuntimeTests
         public string BakeRoot => "";
     }
 
+    private static PaletteCatalog Catalog() => new(new PaletteRegistry(
+        Enumerable.Range(0, 256).Select(i => new PaletteEntry(new("fixture.color." + i), (byte)i,
+            new N.Vector3(.5f), "fixture", false, i < 32 ? PaletteRole.Frame : i < 40 ? PaletteRole.Retired :
+                i < 64 ? PaletteRole.Weather : (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade))
+            .Select(entry => entry.Id switch
+            {
+                64 => entry with { Token = new("fixture.first.lit") },
+                65 => entry with { Token = new("fixture.first.shade") },
+                66 => entry with { Token = new("fixture.second.lit") },
+                67 => entry with { Token = new("fixture.second.shade") },
+                _ => entry
+            })), []);
+
     private sealed class Fixture : IDisposable
     {
         private ShaderMaterial? _first;
@@ -364,7 +375,7 @@ public sealed class GeometryInstancePoolRuntimeTests
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
-                fixture._host = new InstancePoolHost(fixture.Provider, fixture.Source, catalog);
+                fixture._host = new InstancePoolHost(fixture.Provider, fixture.Source, catalog ?? Catalog());
                 fixture._parent.AddChild(fixture._host);
                 return fixture;
             }
@@ -404,7 +415,6 @@ public sealed class GeometryInstancePoolRuntimeTests
             _registered.Add(material);
             return material;
         }
-        public byte PaletteId(PaletteToken token) => token == FirstSpec.Lit ? (byte)23 : (byte)73;
         public bool IsReady(ToonSpec spec) => Ready;
         public bool IsReady(ShaderId shader, Material material) => Ready && _registered.Contains(material);
         public void Track(ShaderId shader, Material material) => _registered.Add(material);

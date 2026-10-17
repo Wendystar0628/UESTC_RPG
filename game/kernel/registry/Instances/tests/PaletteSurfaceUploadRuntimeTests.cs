@@ -12,10 +12,10 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     [TestCase]
     public void FallbackRejectsPatternsBeforeTokenAndVertexColorShortcuts()
     {
-        var fallback = new FallbackToonMaterialProvider(new RegistrySource(Catalog().LegacyRegistry));
+        var fallback = new FallbackToonMaterialProvider(new CatalogSource(Catalog()));
         var profile = Spec(64) with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) };
         Throws<NotSupportedException>(() => fallback.Get(profile));
-        Throws<NotSupportedException>(() => fallback.VertexColor(profile, 64));
+        Throws<NotSupportedException>(() => fallback.VertexColor(profile, new PaletteIndex(64)));
         Throws<NotSupportedException>(() => fallback.Get(profile with { Lit = new("d0.ground"), Shade = new("d0.ground.shade") }));
     }
 
@@ -28,8 +28,8 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         var spec = Spec(64) with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) };
         var source = Geometry() with { Material = new(spec), Uv = [-128.125f, .25f, -127.125f, .25f, -128.125f, 1.25f], Uv2 = [1, 3, 1, 3, 1, 3] };
         using var mesh = new ArrayMesh();
-        GeometrySurfaceUpload.Append(mesh, source, provider, materialSpec: spec);
-        GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(source), provider);
+        GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(), materialSpec: spec);
+        GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(source), provider, Catalog());
         for (var slot = 0; slot < 2; slot++)
         {
             using var arrays = mesh.SurfaceGetArrays(slot);
@@ -39,13 +39,13 @@ public sealed class PaletteSurfaceUploadRuntimeTests
                 Check(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
                     gate[vertex] == new Vector2(1, 3), "Native upload lost metre UV or discrete UV2.");
         }
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, materialSpec: Spec(64)));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider,
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(), materialSpec: Spec(64)));
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(),
             materialSpec: spec with { SurfacePattern = spec.SurfacePattern.Value with { Layer = 8 } }));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider,
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(),
             materialSpec: spec with { Kind = ToonKind.Glass }));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, compressAttributes: true));
-        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, useD0Rgb: true));
+        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(), compressAttributes: true));
+        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh, source, provider, Catalog(), useD0Rgb: true));
         Check(mesh.GetSurfaceCount() == 2, "Rejected overrides published partial native surfaces.");
     }
 
@@ -58,7 +58,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         var provider = new Provider();
         var legacy = Geometry(256) with
         {
-            ColorIds = Enumerable.Range(0, 256).Select(i => (byte)i).ToArray(),
+            ColorIndices = Enumerable.Range(0, 256).Select(i => (ushort)i).ToArray(),
             Ao = Enumerable.Range(0, 256).Select(i => i / 255f).ToArray(),
             Flags = Enumerable.Range(0, 256).Select(i => (byte)(i & 15)).ToArray(),
             Reserved = Enumerable.Range(0, 256).Select(i => (byte)(255 - i)).ToArray()
@@ -66,7 +66,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         using (var oldMesh = new ArrayMesh())
         using (var catalogMesh = new ArrayMesh())
         {
-            GeometrySurfaceUpload.Append(oldMesh, legacy, provider);
+            GeometrySurfaceUpload.Append(oldMesh, GeometryBuffer.Freeze(legacy), provider, catalog);
             GeometrySurfaceUpload.Append(catalogMesh, legacy, provider, catalog: catalog);
             using var oldArrays = oldMesh.SurfaceGetArrays(0);
             using var nextArrays = catalogMesh.SurfaceGetArrays(0);
@@ -95,7 +95,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
                     Custom2 = [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
                 };
                 using var mesh = new ArrayMesh();
-                GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(source, 2), provider, catalog: catalog);
+                GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(source), provider, catalog: catalog);
                 using var arrays = mesh.SurfaceGetArrays(0);
                 var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
                 var uv2 = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
@@ -117,26 +117,27 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void HighFallbackAndTintUseCatalogWhileVersionOneAndMissingCatalogStayStrict()
+    public void HighFallbackAndTintUseTheSharedCatalog()
     {
         var catalog = Catalog();
-        var provider = new Provider { RejectLegacyPaletteLookup = true };
+        var provider = new Provider();
         using var mesh = new ArrayMesh();
         var high = Geometry() with { Material = new(Spec(510)) };
         GeometrySurfaceUpload.Append(mesh, high, provider, catalog: catalog);
-        GeometrySurfaceUpload.Append(mesh, Geometry() with { ColorIds = [64, 66, 68] }, provider, tint: Token(510), catalog: catalog);
+        GeometrySurfaceUpload.Append(mesh, Geometry() with { ColorIndices = [64, 66, 68] }, provider, tint: Token(510), catalog: catalog);
         for (var surface = 0; surface < 2; surface++)
         {
             using var arrays = mesh.SurfaceGetArrays(surface);
             Check(arrays[(int)Mesh.ArrayType.Color].AsColorArray().All(color => Byte(color.R) == 254 && Byte(color.B) == 16),
                 "High token fallback/tint called the byte provider or lost bank 1.");
         }
-        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(high), provider, catalog: catalog));
-        var frozen = GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 256, 511] }, 2);
-        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh, frozen, provider));
+        GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(high), provider, catalog);
         Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh,
-            Geometry() with { ColorIds = [64, 64, 64], ColorIndices = [256, 256, 256] }, provider, catalog: catalog));
-        Check(mesh.GetSurfaceCount() == 2, "Rejected streams published partial native surfaces.");
+            Geometry() with { ColorIndices = [512, 256, 256] }, provider, catalog));
+        Throws<NotSupportedException>(() => GeometrySurfaceUpload.Append(mesh,
+            Geometry() with { ColorIndices = [256, 256, 256], Flags = [4, 4, 4], DecalBaseColorIndices = [510, 510, 510] },
+            new FallbackToonMaterialProvider(new CatalogSource(catalog)), catalog, useD0Rgb: true));
+        Check(mesh.GetSurfaceCount() == 3, "Rejected streams published partial native surfaces.");
     }
 
     private static int Byte(float value) => (int)MathF.Round(value * 255f);
@@ -161,8 +162,6 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     }
     private sealed class Provider : IToonMaterialProvider
     {
-        public bool RejectLegacyPaletteLookup { get; init; }
-        public byte PaletteId(PaletteToken token) => RejectLegacyPaletteLookup ? throw new InvalidOperationException("The v2 path used a byte resolver.") : (byte)64;
         public Material Get(ToonSpec spec) => throw new NotSupportedException();
         public bool IsReady(ToonSpec spec) => false;
         public void Track(ShaderId shader, Material material) => throw new NotSupportedException();
@@ -172,8 +171,8 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         public bool CompleteWarm(ToonWarmBatch batch) => throw new NotSupportedException();
     }
 
-    private sealed class RegistrySource(PaletteRegistry registry) : IPaletteRegistrySource
+    private sealed class CatalogSource(PaletteCatalog catalog) : IPaletteCatalogSource
     {
-        public PaletteRegistry Registry { get; } = registry;
+        public PaletteCatalog Catalog { get; } = catalog;
     }
 }

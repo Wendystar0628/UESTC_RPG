@@ -128,7 +128,7 @@ public sealed class MuseumShellTests
         var tile = CoreTiles.Of(museum.Anchor, LodLevel.L3);
         Require(tile == CoreTiles.Of(library.Anchor, LodLevel.L3), "library and museum share an L3 cell");
         var numbering = Numbering(museum.Columns, library.Columns);
-        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, Palette = palette, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
+        var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var module = new CoreModule();
         foreach (var lod in new[] { LodLevel.L3, LodLevel.L4 })
         {
@@ -170,7 +170,7 @@ public sealed class MuseumShellTests
 
     private static ContentOutput Build(MuseumShell museum, LodLevel lod)
     {
-        var build = new CoreBuild(null) { PartLods = PartLodFixture.Catalog };
+        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         museum.Build(build, lod);
         return build.Finish(lod);
     }
@@ -231,13 +231,13 @@ public sealed class MuseumShellTests
         return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
     }
 
-    private static PaletteRegistry Palette()
+    private static PaletteCatalog Palette()
     {
         var dir = Path.Combine(FindRepository(), "game", "style", "palette");
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteRegistry(entries);
+        return new PaletteCatalog(new PaletteRegistry(entries), []);
     }
 
     private static string FindRepository()

@@ -94,7 +94,7 @@ public sealed class GroundTreePitTests
                 var d = world.Features.Values.Where(f => f.Kind.Value == "tree-pit").Select(f => PitDistance(f, cx, cz)).Min();
                 if (d >= -InsideMargin) continue;
                 checkedTriangles++;
-                var color = mesh.ColorIds![a];
+                var color = mesh.ColorIndices![a];
                 Check.True(color == frame || color == earth, $"A triangle of colour {color} lies over a pit at ({cx}, {cz}).");
                 // A flat triangle (a top, not a vertical face) is never at the paving level: nothing is laid over a pit.
                 var flat = MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * b + 1]) < 1e-4f && MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * c + 1]) < 1e-4f;
@@ -124,7 +124,7 @@ public sealed class GroundTreePitTests
                 var a = mesh.Index[t];
                 var b = mesh.Index[t + 1];
                 var c = mesh.Index[t + 2];
-                if (mesh.ColorIds![a] != frame) continue;
+                if (mesh.ColorIndices![a] != frame) continue;
                 var top = MathF.Max(mesh.Position[3 * a + 1], MathF.Max(mesh.Position[3 * b + 1], mesh.Position[3 * c + 1]));
                 if (top < PitRim - 0.02f || top > PitRim + 1e-4f) continue;
                 var ny = (mesh.Normal[3 * a + 1] + mesh.Normal[3 * b + 1] + mesh.Normal[3 * c + 1]) / 3f;

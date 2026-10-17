@@ -25,7 +25,7 @@ public sealed class GroundTests
             var output = new GroundModule().Build(ctx, new TileKey(x, 0), LodLevel.L0);
             foreach (var mesh in output.Meshes)
             {
-                foreach (var id in mesh.ColorIds!) tones.Add(id.ToString());
+                foreach (var id in mesh.ColorIndices!) tones.Add(id.ToString());
                 triangles += mesh.Index.Length / 3;
                 for (var v = 0; v < mesh.Position.Length / 3; v++)
                 {
@@ -63,7 +63,7 @@ public sealed class GroundTests
     {
         var ctx = TestWorld.Context(TestWorld.Street());
         var output = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
-        var colours = output.Meshes.SelectMany(m => m.ColorIds!).Distinct().ToHashSet();
+        var colours = output.Meshes.SelectMany(m => m.ColorIndices!).Distinct().ToHashSet();
         foreach (var expected in new[] { GroundColor.Asphalt, GroundColor.Curb, GroundColor.Paver, GroundColor.Marking })
             Check.True(colours.Contains(GroundPalette.Id(expected)), $"Missing {expected}; got {string.Join(", ", colours)}.");
         Check.True(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 5, "At most five ground materials.");
@@ -201,7 +201,7 @@ public sealed class GroundTests
             m.ValidateVertexData();
             for (var v = 0; v < m.Position.Length / 3; v++)
             {
-                if (m.ColorIds![v] is not (150 or 190 or 192)) continue;
+                if (m.ColorIndices![v] is not (150 or 190 or 192)) continue;
                 if (OnTileBorder(m.Position[3 * v], m.Position[3 * v + 2])) continue;
                 float x = m.Position[3 * v], y = m.Position[3 * v + 1], z = m.Position[3 * v + 2];
                 if (z < 12f) continue;   // away from the flattened road verge
@@ -422,7 +422,7 @@ internal sealed class TestWorld : IWorldModel
             new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new BuildContext { World = world, Map = map, WorldSeed = 1u };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map, WorldSeed = 1u };
     }
 
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>

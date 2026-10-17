@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Gen.Zones.CenterEast</RootNamespace></PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../geometry/Campus.Gen.Geometry.csproj" />
     <ProjectReference Include="../../../contracts/Campus.Contracts.csproj" />
     <ProjectReference Include="../../parts/core/Campus.Gen.Parts.Core.csproj" />
     <ProjectReference Include="../../world/Campus.Gen.World.csproj" />

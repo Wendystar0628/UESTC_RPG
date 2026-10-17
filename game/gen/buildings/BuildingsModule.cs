@@ -16,17 +16,6 @@ namespace Campus.Gen.Buildings;
 [ContentModule("buildings", Owner = "WP-14")]
 public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource
 {
-    private readonly IColorIds? _colorIds;
-
-    /// <param name="palette">
-    /// Colour-name registry for per-vertex palette IDs. Until BuildContext carries it (contract request),
-    /// the kernel constructs the module without one and bundles are split per colour family instead.
-    /// </param>
-    public BuildingsModule(PaletteRegistry? palette = null)
-    {
-        _colorIds = palette is null ? null : new RegistryColorIds(palette);
-    }
-
     /// <summary>Generic module: claims no specific feature (SYS-MAPS §7).</summary>
     public IReadOnlyList<Claim> Claims { get; } = [];
 
@@ -71,7 +60,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
             // Glass reads the map's one allocation; nothing is numbered here.
             var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
-            meshes.AddRange(BuildOne(plan, block, lod));
+            meshes.AddRange(BuildOne(plan, block, lod, ctx.Catalog));
             // The light inventory needs each window once: declared with the L0 cell only; so is the log.
             if (lod != LodLevel.L0) continue;
             windows.AddRange(FacadeOpenings.Declarations(plan, block));
@@ -140,9 +129,9 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     }
 
     /// <summary>One building at one level, as its own bundles (the baker merges per material and block).</summary>
-    public IReadOnlyList<GeometryBundle> BuildOne(BuildingPlan plan, WindowBlock block, LodLevel lod)
+    public IReadOnlyList<GeometryBundle> BuildOne(BuildingPlan plan, WindowBlock block, LodLevel lod, PaletteCatalog catalog)
     {
-        var sink = new MeshSink(_colorIds);
+        var sink = new MeshSink(catalog);
         new BuildingMesher(plan, block, lod, sink).Build();
         return sink.Finish();
     }
@@ -214,7 +203,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
             var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
             traces.Add(new BuildingSourceTrace($"building/{plan.Id.Value}/{plan.Key}", plan.Id, plan.Key,
-                new ContentOutput(BuildOne(plan, block, lod), []), CollideOne(ctx, plan)));
+                new ContentOutput(BuildOne(plan, block, lod, ctx.Catalog), []), CollideOne(ctx, plan)));
         }
         return traces;
     }

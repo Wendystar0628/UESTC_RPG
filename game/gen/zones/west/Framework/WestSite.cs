@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Contracts;
 
 namespace Campus.Gen.Zones.West.Framework;

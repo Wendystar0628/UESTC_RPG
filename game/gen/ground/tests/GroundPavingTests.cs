@@ -31,7 +31,7 @@ public sealed class GroundPavingTests
             Check.True(mesh.Material.Spec.SurfacePattern == GroundPaving.Granite, "Granite 600 profile.");
             Check.True(mesh.Material.Spec with { SurfacePattern = null } == GroundPalette.Spec(GroundMaterial.Plaza),
                 "The profile is the only material difference from the plain plaza class.");
-            Check.True(mesh.ColorIds!.All(id => id == GroundPalette.Id(GroundColor.Curb)), "Granite keeps its colour.");
+            Check.True(mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb)), "Granite keeps its colour.");
             for (var v = 0; v < mesh.Position.Length / 3; v++)
             {
                 var x = mesh.Position[3 * v];

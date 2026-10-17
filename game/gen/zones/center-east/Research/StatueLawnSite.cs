@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -228,7 +229,7 @@ public sealed class StatueLawnSite : CenterEastSite
         b.Add(Solids.Boulder(M.Stone, segments, rings, L.FieldStone), at);
         if (b.Detail == SiteDetail.Mass) return;
         foreach (var (x, line, length) in StoneLines())
-            b.Add(PartGeometryKernel.BeveledBox(length, M.StoneLineHeight, 0.012f, 0, L.Ink), Affine.Mul(M.Stone.FaceAt(x, line), at));
+            b.Add(PartGeometryKernel.BeveledBox(length, M.StoneLineHeight, 0.012f, 0, L.Ink), GeometryPlacement.Multiply(M.Stone.FaceAt(x, line), at));
     }
 
     /// <summary>Centre x, bottom y (on the face, from its centre) and length of each inscription line, bottom to top.</summary>

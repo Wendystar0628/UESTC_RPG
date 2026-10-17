@@ -82,7 +82,7 @@ public sealed class WalkableBakerTests
         { Foot = Campus.Contracts.Audio.FootMat.Concrete };
         var product = Bake([]) with { Walls = [wall] };
         var world = new TestWorld([], new PlaneSpatial((_, _) => 0f)) { Walk = product };
-        var context = new BuildContext { World = world, Map = null!, WorldSeed = 1 };
+        var context = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
         var module = new WalkableModule();
         var tiles = module.Tiles(context).ToArray();
         Require(tiles.Length == 4, "A crossing wall must be available in every touched collision tile.");

@@ -198,7 +198,7 @@ public static class MotherModels
         };
     }
 
-    public static MotherModel Build(SpeciesInfo species, int variant, VegLevel level, PaletteRegistry palette)
+    public static MotherModel Build(SpeciesInfo species, int variant, VegLevel level, PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(palette);
@@ -312,7 +312,7 @@ public static class MotherModels
     /// The ShadowsOnly proxy of a mother model (WLD-VEGETATION §11.3, ENG-PERF §9): L1 wood plus the L1 masses scaled by
     /// <see cref="ProxyScale"/>, drawn with veg_trunk and its shadow_proxy holes. One per mother model, shared by all levels.
     /// </summary>
-    public static GeometryBundle ShadowProxy(SpeciesInfo species, int variant, PaletteRegistry palette)
+    public static GeometryBundle ShadowProxy(SpeciesInfo species, int variant, PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(palette);
@@ -343,7 +343,7 @@ public static class MotherModels
     /// with veg_trunk; the crown with veg_card in the same vertex layout as the near crown. Both carry the far tags
     /// (<see cref="FarWoodTag"/>, <see cref="FarMassTag"/>). The crown casts no shadow (the far pool has none).
     /// </summary>
-    public static (GeometryBundle Wood, GeometryBundle Crown) FarStandIn(SpeciesInfo species, int variant, PaletteRegistry palette)
+    public static (GeometryBundle Wood, GeometryBundle Crown) FarStandIn(SpeciesInfo species, int variant, PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(palette);
@@ -372,10 +372,10 @@ public static class MotherModels
         return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8));
     }
 
-    private static Ids IdsOf(SpeciesInfo species, PaletteRegistry palette) =>
-        new(palette.Get(species.LeafLit).Id, palette.Get(Bark).Id, palette.Get(Whitewash).Id);
+    private static Ids IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
+        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value, palette.Resolve(Whitewash).Value);
 
-    private readonly record struct Ids(byte Leaf, byte Bark, byte Whitewash);
+    private readonly record struct Ids(ushort Leaf, ushort Bark, ushort Whitewash);
 
     /// <summary>
     /// One leaf card; Owner is the plan mass it sits on (that mass is never pruned while the card is drawn). Cards of one
@@ -627,7 +627,7 @@ public static class MotherModels
                     var k = 1f - Math.Clamp(y / 0.9f, 0f, 1f);
                     r *= 1f + flare * k * k * (1f + 0.35f * DetMath.Cos(5f * a + flarePhase));
                 }
-                w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, trunk ? ids.Whitewash : (byte)0,
+                w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, trunk ? checked((byte)ids.Whitewash) : (byte)0,
                     new Vector4(0f, 0f, 0f, -1f), Vector4.Zero, new Vector4(0f, 0f, 0f, tag), Vector2.Zero);
             }
         }
@@ -941,7 +941,7 @@ public static class MotherModels
         private readonly List<float> _position = [];
         private readonly List<float> _normal = [];
         private readonly List<float> _ao = [];
-        private readonly List<byte> _color = [];
+        private readonly List<ushort> _color = [];
         private readonly List<byte> _spare = [];
         private readonly List<float> _c0 = [];
         private readonly List<float> _c1 = [];
@@ -953,7 +953,7 @@ public static class MotherModels
         public int Triangles => _index.Count / 3;
         public int Cards { get; set; }
 
-        public int Add(Vector3 p, Vector3 n, float ao, byte color, byte spare, Vector4 c0, Vector4 c1, Vector4 c2, Vector2 uv)
+        public int Add(Vector3 p, Vector3 n, float ao, ushort color, byte spare, Vector4 c0, Vector4 c1, Vector4 c2, Vector2 uv)
         {
             _position.AddRange([p.X, p.Y, p.Z]);
             _normal.AddRange([n.X, n.Y, n.Z]);
@@ -987,7 +987,7 @@ public static class MotherModels
         {
             var bundle = new GeometryBundle(new ToonRef(spec), [.. _position], [.. _normal], [.. _index], [.. _ao], withUv ? [.. _uv] : null)
             {
-                ColorIds = [.. _color],
+                ColorIndices = [.. _color],
                 Reserved = [.. _spare],
                 Flags = flags == 0 ? null : Enumerable.Repeat(flags, _ao.Count).ToArray(),
                 Custom0 = [.. _c0],

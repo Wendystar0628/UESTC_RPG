@@ -11,10 +11,9 @@ public sealed class PaletteCapacityBoundaryTests
     [TestCase]
     public void LogicalIndexAndLayoutKeepTheLegacyPrefixAndSeasonalDomain()
     {
-        Check(default(PaletteIndex).Value == 0 && new PaletteIndex(255).ToLegacyByte() == 255, "Legacy index range changed.");
+        Check(default(PaletteIndex).Value == 0 && new PaletteIndex(255).Value == 255, "Legacy index range changed.");
         Expect<ArgumentOutOfRangeException>(() => new PaletteIndex(-1));
         Expect<ArgumentOutOfRangeException>(() => new PaletteIndex(512));
-        Expect<InvalidOperationException>(() => new PaletteIndex(256).ToLegacyByte());
         Check(PaletteLayout.FrameTexel(new(255), 3) == (255, 3), "Legacy final frame-row texel moved.");
         Check(PaletteLayout.FrameTexel(new(256), 0) == (0, 64), "First extended texel is incorrect.");
         Check(PaletteLayout.FrameTexel(new(511), 3) == (255, 67), "Last extended texel is incorrect.");
@@ -65,13 +64,11 @@ public sealed class PaletteCapacityBoundaryTests
         var copied = new PaletteCatalog(legacy, extensions);
         extensions.Clear();
         Check(copied.ExtensionCount == 4 && catalog.Resolve(new("ext.510")).Value == 510, "Catalog retained a mutable input list or truncated an index.");
-        Check(ReferenceEquals(catalog.LegacyRegistry, legacy) && catalog.Get(new PaletteIndex(64)).Albedo == Vector3.One, "Legacy metadata changed.");
+        Check(catalog.Get(new PaletteIndex(64)).Albedo == Vector3.One, "Legacy metadata changed.");
         Check(legacyJson == JsonSerializer.Serialize(new PaletteRegistryData(legacy.Entries), ContractJson.Options), "Schema-1 serialization changed.");
         Check(json.Contains("\"index\":256", StringComparison.Ordinal), "Schema-2 must use a numeric index field.");
         Expect<NotSupportedException>(() => ((IList<PaletteEntryV2>)catalog.Entries).Clear());
         Expect<KeyNotFoundException>(() => legacy.Get(new PaletteToken("ext.256")));
-        var fallback = PaletteCatalog.FromLegacy(legacy);
-        Check(fallback.ExtensionCount == 0 && fallback.Count == legacy.Count && !fallback.TryGet(new PaletteIndex(256), out _), "Legacy fallback invented extension metadata.");
         catalog.Validate(new(new("ext.256"), new("ext.257")));
         Expect<ArgumentException>(() => catalog.Validate(new(new("ext.256"), new("ext.511"))));
         Expect<ArgumentException>(() => new PaletteCatalog(legacy, [Entry(256)]));
@@ -89,9 +86,9 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
-    public void NewGeometryArraysRequireExplicitSupportAndHaveUnambiguousDecalSemantics()
+    public void GeometryIndicesRetainWidthAndHaveUnambiguousDecalSemantics()
     {
-        var old = Geometry() with { ColorIds = [64, 64, 64], Reserved = [1, 8, 15] };
+        var old = Geometry() with { ColorIndices = [64, 64, 64], Reserved = [1, 8, 15] };
         old.ValidateVertexData();
         var next = Geometry() with
         {
@@ -99,23 +96,20 @@ public sealed class PaletteCapacityBoundaryTests
             DecalBaseColorIndices = [510, 510, 510],
             Flags = [4, 4, 4]
         };
-        Expect<NotSupportedException>(next.ValidateVertexData);
-        next.ValidateVertexData(PaletteLayout.EncodingVersion);
+        next.ValidateVertexData();
         var json = JsonSerializer.Serialize(next, ContractJson.Options);
         var restored = JsonSerializer.Deserialize<GeometryBundle>(json, ContractJson.Options) ?? throw new JsonException();
-        restored.ValidateVertexData(PaletteLayout.EncodingVersion);
+        restored.ValidateVertexData();
         Check(restored.ColorIndices is [256, 256, 256] && restored.DecalBaseColorIndices is [510, 510, 510] &&
-            restored.ColorIds is null && restored.Reserved is null, "The new arrays lost width or gained a competing byte source.");
+            restored.Reserved is null, "The new arrays lost width or gained a competing byte source.");
         var oldRestored = JsonSerializer.Deserialize<GeometryBundle>(JsonSerializer.Serialize(old, ContractJson.Options), ContractJson.Options)!;
         oldRestored.ValidateVertexData();
-        Check(oldRestored.ColorIndices is null && oldRestored.Reserved is [1, 8, 15], "Old glass bytes were repurposed.");
-        Expect<ArgumentException>(() => (next with { ColorIds = [0, 0, 0] }).ValidateVertexData(2));
-        Expect<ArgumentException>(() => (next with { Reserved = [0, 0, 0] }).ValidateVertexData(2));
-        Expect<ArgumentException>(() => (next with { Flags = [4, 0, 4] }).ValidateVertexData(2));
-        Expect<ArgumentException>(() => (next with { Flags = [20, 20, 20] }).ValidateVertexData(2));
-        Expect<ArgumentException>(() => (next with { ColorIndices = [512, 256, 256] }).ValidateVertexData(2));
-        Expect<ArgumentException>(() => (next with { DecalBaseColorIndices = [510, 510] }).ValidateVertexData(2));
-        Expect<ArgumentOutOfRangeException>(() => next.ValidateVertexData(3));
+        Check(oldRestored.ColorIndices is [64, 64, 64] && oldRestored.Reserved is [1, 8, 15], "Old glass bytes were repurposed.");
+        Expect<ArgumentException>(() => (next with { Reserved = [0, 0, 0] }).ValidateVertexData());
+        Expect<ArgumentException>(() => (next with { Flags = [4, 0, 4] }).ValidateVertexData());
+        Expect<ArgumentException>(() => (next with { Flags = [20, 20, 20] }).ValidateVertexData());
+        Expect<ArgumentException>(() => (next with { ColorIndices = [512, 256, 256] }).ValidateVertexData());
+        Expect<ArgumentException>(() => (next with { DecalBaseColorIndices = [510, 510] }).ValidateVertexData());
     }
 
     [TestCase]

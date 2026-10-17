@@ -42,7 +42,7 @@ public sealed class VegetationBuildTests
             WorldSeed = 1u,
             GlobalInputs = global,
             SourceInputs = map.Entries,
-            Palette = Palette(root)
+            Catalog = Palette(root)
         };
         return (root, ctx);
     }
@@ -85,21 +85,21 @@ public sealed class VegetationBuildTests
         foreach (var s in streams)
         {
             Check(s.Prototype.Surfaces.Count is 1 or 2, $"{s.Id}: surfaces");
-            var palette = ctx.Palette!;
+            var palette = ctx.Catalog!;
             foreach (var surface in s.Prototype.Surfaces) palette.Validate(surface.Material.Spec);
         }
         var far = streams.Select(s => s.Prototype).Distinct().First();
         var parts = far.Id.Split('/');
         var info = VegetationInputs.Species(ctx).Get(parts[1]);
         var variant = int.Parse(parts[2], CultureInfo.InvariantCulture);
-        var l1 = VegetationPrototypes.Get(info, variant, VegPool.L1, ctx.Palette!);
-        var stand = VegetationPrototypes.Get(info, variant, VegPool.Far, ctx.Palette!);
+        var l1 = VegetationPrototypes.Get(info, variant, VegPool.L1, ctx.Catalog!);
+        var stand = VegetationPrototypes.Get(info, variant, VegPool.Far, ctx.Catalog!);
         var standTriangles = VegetationPrototypes.Triangles(stand);
         Console.WriteLine($"{far.Id}: far stand-in {standTriangles} triangles, L1 {VegetationPrototypes.Triangles(l1)}");
         Check(stand.Id != l1.Id && stand.Surfaces.Count == 2 && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
             && stand.Surfaces[1].Material.Spec.Kind == ToonKind.VegCard && standTriangles <= 200,
             "the mainline far stand-in is a trunk and a mass crown within 200 triangles (ENG-PERF §9 L2: 150–300)");
-        Check(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Palette!).Surfaces.Count == 1, "one shadow proxy surface");
+        Check(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Catalog!).Surfaces.Count == 1, "one shadow proxy surface");
     }
 
     [TestCase]
@@ -190,7 +190,7 @@ public sealed class VegetationBuildTests
             s.Data.Span.Slice(i * 16, 16).ToArray().Select(v => BitConverter.SingleToInt32Bits(v).ToString("x8", CultureInfo.InvariantCulture)))))
         .Order(StringComparer.Ordinal).ToList();
 
-    private static PaletteRegistry Palette(string root)
+    private static PaletteCatalog Palette(string root)
     {
         var entries = new List<PaletteEntry>();
         var palette = Path.Combine(root, "game", "style", "palette");
@@ -198,7 +198,7 @@ public sealed class VegetationBuildTests
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
         foreach (var file in files)
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteRegistry(entries);
+        return new PaletteCatalog(new PaletteRegistry(entries), []);
     }
 
     private static void Check(bool condition, string message)

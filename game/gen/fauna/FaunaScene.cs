@@ -5,13 +5,13 @@ namespace Campus.Gen.Fauna;
 
 /// <summary>
 /// Turns one set of a site into world-space geometry for the kernel's render host (ENG-PERF: animals are scene nodes the kernel
-/// creates through IRenderHost). Cats share one soft-goods bundle, birds one curved-prop bundle; colours go into ColorIds as the
+/// creates through IRenderHost). Cats share one soft-goods bundle, birds one curved-prop bundle; colours go into ColorIndices as the
 /// lit palette IDs. Models are built once per key and shared. Pure: no IO, no engine types.
 /// </summary>
-public sealed class FaunaScene(Func<PaletteToken, byte> paletteId)
+public sealed class FaunaScene(PaletteCatalog catalog)
 {
     private readonly Dictionary<FaunaModelKey, AnimalMesh> _models = [];
-    private readonly Func<PaletteToken, byte> _paletteId = paletteId ?? throw new ArgumentNullException(nameof(paletteId));
+    private readonly PaletteCatalog _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
 
     public AnimalMesh Model(FaunaModelKey key)
     {
@@ -40,7 +40,7 @@ public sealed class FaunaScene(Func<PaletteToken, byte> paletteId)
         var vertexCount = animals.Sum(a => Model(a.Model).Positions.Length);
         var position = new float[vertexCount * 3];
         var normal = new float[vertexCount * 3];
-        var ids = new byte[vertexCount];
+        var ids = new ushort[vertexCount];
         var index = new List<int>(animals.Sum(a => Model(a.Model).Index.Length));
         var at = 0;
         foreach (var animal in animals)
@@ -54,12 +54,12 @@ public sealed class FaunaScene(Func<PaletteToken, byte> paletteId)
                 var n = Vector3.Normalize(Vector3.TransformNormal(model.Normals[i], rotation));
                 position[(at + i) * 3] = p.X; position[(at + i) * 3 + 1] = p.Y; position[(at + i) * 3 + 2] = p.Z;
                 normal[(at + i) * 3] = n.X; normal[(at + i) * 3 + 1] = n.Y; normal[(at + i) * 3 + 2] = n.Z;
-                ids[at + i] = _paletteId(model.Colors[i]);
+                ids[at + i] = _catalog.Resolve(model.Colors[i]).Value;
             }
             foreach (var k in model.Index) index.Add(at + k);
             at += model.Positions.Length;
         }
-        var bundle = new GeometryBundle(new ToonRef(spec), position, normal, [.. index]) { ColorIds = ids };
+        var bundle = new GeometryBundle(new ToonRef(spec), position, normal, [.. index]) { ColorIndices = ids };
         bundle.ValidateVertexData();
         return bundle;
     }

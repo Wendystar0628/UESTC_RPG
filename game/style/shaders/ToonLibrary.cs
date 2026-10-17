@@ -120,19 +120,6 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     /// </summary>
     public Material Get(ToonSpec spec) => Resolve(spec).Material;
 
-    /// <summary>
-    /// 旧的 byte 色号（只作 legacy 用途：palette encoding 1 的写入方，受光色号写进顶点 COLOR.r，影 = 受光 + 1）。
-    /// 只认旧表 0–255；扩展色（256–511）在这里明确失败，不截断、不取模，新路径经 <see cref="IPaletteIndexResolver"/> 取完整色号。
-    /// 登记表不可变，线程安全。
-    /// </summary>
-    public byte PaletteId(PaletteToken token)
-    {
-        if (_catalog.LegacyRegistry.TryGet(token, out var entry)) return entry.Id;
-        if (_catalog.TryGet(token, out var extension))
-            throw new InvalidOperationException($"Palette token '{token.Value}' is extension index {extension.Index.Value}; the legacy byte PaletteId cannot carry it, resolve it through IPaletteIndexResolver.");
-        throw new KeyNotFoundException($"Palette token '{token.Value ?? "<null>"}' is not registered.");
-    }
-
     /// <summary>材质 ID（写进 ROUGHNESS 的 7 位值），会按需分配。</summary>
     public byte MaterialId(ToonSpec spec) => Resolve(spec).Id;
 

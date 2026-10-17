@@ -22,7 +22,7 @@ public sealed class BakePaletteV2Tests
             World: default!, Env: default!, Cinematics: new Dictionary<string, string>(), Portals: []);
         var context = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = catalog };
         var key = BakeRequestKeys.Tile(descriptor.Id, "fixture.palette", new(0, 0), LodLevel.L0);
-        var builder = new BakeGeometryBuilder(catalog.LegacyRegistry, new ServiceRegistry(), catalog);
+        var builder = new BakeGeometryBuilder(catalog, new ServiceRegistry());
         var diagnostics = new List<BuildDiagnostic>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture placement", new FeatureId("fixture.feature"));
         var result = builder.BuildOutput(key, context, new([source], []) { Diagnostics = [warning] }, new(0, 0), LodLevel.L0, diagnostics.AddRange);
@@ -36,7 +36,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
-    public void LegacyBytesRemainIdenticalThroughBothCatalogAndFrozenEntrances()
+    public void BankZeroBytesRemainIdenticalThroughMutableAndFrozenGeometry()
     {
         var catalog = Catalog();
         foreach (var uv2 in new[] { false, true })
@@ -44,7 +44,7 @@ public sealed class BakePaletteV2Tests
             const int count = 256;
             var source = Geometry(count) with
             {
-                ColorIds = Enumerable.Range(0, count).Select(i => (byte)i).ToArray(),
+                ColorIndices = Enumerable.Range(0, count).Select(i => (ushort)i).ToArray(),
                 Ao = Enumerable.Range(0, count).Select(i => i / 255f).ToArray(),
                 Flags = Enumerable.Range(0, count).Select(i => (byte)(i & 15)).ToArray(),
                 Reserved = Enumerable.Range(0, count).Select(i => (byte)(255 - i)).ToArray(),
@@ -53,20 +53,18 @@ public sealed class BakePaletteV2Tests
                 Custom1 = Enumerable.Range(0, count * 4).Select(i => (float)-i).ToArray(),
                 Custom2 = Enumerable.Range(0, count * 4).Select(i => i / 4f).ToArray()
             };
-            var old = BakeSurfacePacker.Pack(source, Bounds(), catalog.LegacyRegistry);
+            var old = BakeSurfacePacker.Pack(source, Bounds(), catalog);
             var stride = old.AttributeData.Length / count;
             for (var i = 0; i < count; i++)
             {
                 var rgba = old.AttributeData.Span.Slice(i * stride, 4);
                 Check(rgba[0] == i && rgba[1] == (byte)(source.Ao![i] * 255f) && rgba[2] == (i & 15) && rgba[3] == 255 - i,
-                    "The v1 reference no longer copies the frozen R/A/flags bytes or truncates AO as before.");
+                    "The bank-zero surface no longer copies the frozen R/A/flags bytes or truncates AO as before.");
             }
             foreach (var next in new[]
             {
                 BakeSurfacePacker.Pack(source, Bounds(), catalog),
-                BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), catalog),
-                BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source with
-                    { ColorIds = null, ColorIndices = source.ColorIds!.Select(value => (ushort)value).ToArray() }, 2), Bounds(), catalog)
+                BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), catalog)
             })
             {
                 Check(old.Format == next.Format && old.VertexData.Span.SequenceEqual(next.VertexData.Span) &&
@@ -130,7 +128,7 @@ public sealed class BakePaletteV2Tests
                     Flags = [15, 15, 15],
                     Ao = [.5f, .5f, .5f]
                 };
-                var packed = BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source, 2), Bounds(), Catalog());
+                var packed = BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), Catalog());
                 var expectedFlags = 15 + (foreground > 255 ? 16 : 0) + (background > 255 ? 32 : 0);
                 for (var i = 0; i < 3; i++)
                 {
@@ -150,13 +148,12 @@ public sealed class BakePaletteV2Tests
         var high = Geometry() with { Material = new(Spec(510)) };
         var packed = BakeSurfacePacker.Pack(high, Bounds(), catalog);
         Check(packed.AttributeData.Span[0] == 254 && packed.AttributeData.Span[2] == 16, "A material-only extension token was narrowed to a byte.");
-        Throws<NotSupportedException>(() => BakeSurfacePacker.Pack(GeometryBuffer.Freeze(high), Bounds(), catalog));
-        var source = Geometry() with { ColorIds = [64, 66, 68], Flags = [4, 4, 4], DecalBaseColorIndices = [255, 256, 511] };
+        Check(BakeSurfacePacker.Pack(GeometryBuffer.Freeze(high), Bounds(), catalog).AttributeData.Span.SequenceEqual(packed.AttributeData.Span), "Freezing changed the high material fallback.");
+        var source = Geometry() with { ColorIndices = [64, 66, 68], Flags = [4, 4, 4], DecalBaseColorIndices = [255, 256, 511] };
         var part = new PlacedPart(new("fixture.part"), new object(), Matrix4x4.Identity, Token(510));
         var tinted = BakeSurfacePacker.ApplyTint(source, part, catalog);
-        Check(tinted.ColorIds is null && tinted.ColorIndices!.All(i => i == 510) && tinted.Material.Spec == Spec(510), "Tint dropped its high bit or retained conflicting color streams.");
+        Check(tinted.ColorIndices!.All(i => i == 510) && tinted.Material.Spec == Spec(510), "Tint dropped its high bit or retained conflicting color streams.");
         Check(ReferenceEquals(tinted.DecalBaseColorIndices, source.DecalBaseColorIndices) && ReferenceEquals(tinted.Flags, source.Flags), "Tint changed decal bases or semantic flags.");
-        Throws<NotSupportedException>(() => BakeSurfacePacker.Pack(high with { ColorIndices = [510, 510, 510] }, Bounds(), catalog.LegacyRegistry));
     }
 
     [TestCase]
@@ -165,22 +162,19 @@ public sealed class BakePaletteV2Tests
         var catalog = Catalog();
         foreach (var invalid in new[]
         {
-            Geometry() with { ColorIds = [64, 64, 64], ColorIndices = [256, 256, 256] },
             Geometry() with { ColorIndices = [512, 256, 256] }, Geometry() with { ColorIndices = [] },
             Geometry() with { ColorIndices = [256, 256, 256], Flags = [16, 0, 0] },
             Geometry() with { DecalBaseColorIndices = [256, 256, 256], Flags = [4, 0, 4] },
             Geometry() with { DecalBaseColorIndices = [256, 256, 256], Flags = [4, 4, 4], Reserved = [0, 0, 0] }
         }) Throws<ArgumentException>(() => BakeSurfacePacker.Pack(invalid, Bounds(), catalog));
-        Throws<KeyNotFoundException>(() => BakeSurfacePacker.Pack(Geometry() with { ColorIndices = [300, 300, 300] }, Bounds(), PaletteCatalog.FromLegacy(catalog.LegacyRegistry)));
-        Throws<ArgumentOutOfRangeException>(() => GeometryBuffer.Freeze(Geometry(), 99));
-        Throws<NotSupportedException>(() => GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 255, 255] }));
+        GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 255, 255] });
     }
 
     [TestCase]
     public void RepeatedPrototypeStreamsRetainOrderAndCachePerReferenceWithoutDiscardingInstances()
     {
         var catalog = Catalog();
-        var frozen = GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 256, 511] }, 2);
+        var frozen = GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 256, 511] });
         var prototype = new GeometryPrototype("fixture.shared", [frozen], Bounds());
         var record = new float[16];
         InstanceStreamLayout.Write(record, Matrix4x4.Identity, new(1, 2, 3, 4));
@@ -188,9 +182,8 @@ public sealed class BakePaletteV2Tests
         var result = new BakeInstanceAdapter(catalog).Pack([stream, stream]);
         Check(result.Count == 2 && ReferenceEquals(result[0].Surface, result[1].Surface) &&
             result[0].InstanceData.Span.SequenceEqual(result[1].InstanceData.Span), "Repeated streams were deduplicated or prototype bytes were repacked.");
-        Check(frozen.PaletteEncodingVersion == 2 && result[0].Surface.AttributeData.Span[10] == 16, "Prototype packing reinterpreted its frozen version or lost bank 1.");
+        Check(result[0].Surface.AttributeData.Span[10] == 16, "Prototype packing reinterpreted its logical colour or lost bank 1.");
         Throws<ArgumentNullException>(() => new BakeInstanceAdapter(catalog).Pack([null!]));
-        Throws<NotSupportedException>(() => new BakeInstanceAdapter(catalog.LegacyRegistry).Pack([stream]));
     }
 
     private static PaletteToken Token(int index) => new("fixture.p" + index);

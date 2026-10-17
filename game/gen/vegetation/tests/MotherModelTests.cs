@@ -12,11 +12,11 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class MotherModelTests
 {
-    private static readonly Lazy<(SpeciesTable Table, PaletteRegistry Palette)> Data = new(Load);
+    private static readonly Lazy<(SpeciesTable Table, PaletteCatalog Palette)> Data = new(Load);
 
-    internal static PaletteRegistry Palette => Data.Value.Palette;
+    internal static PaletteCatalog Palette => Data.Value.Palette;
 
-    private static (SpeciesTable, PaletteRegistry) Load()
+    private static (SpeciesTable, PaletteCatalog) Load()
     {
         var root = FindRepository();
         var table = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
@@ -26,7 +26,7 @@ public sealed class MotherModelTests
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
         foreach (var file in files)
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return (table, new PaletteRegistry(entries));
+        return (table, new PaletteCatalog(new PaletteRegistry(entries), []));
     }
 
     [TestCase]
@@ -45,7 +45,7 @@ public sealed class MotherModelTests
         _ = palette.Get(MotherModels.Whitewash);
         _ = palette.Get(MotherModels.Twig);
         // Bark has its own pair in the WP-23 extension range (max-011 review: 252–253).
-        if (palette.Get(MotherModels.Bark).Id != 252 || palette.Get(MotherModels.BarkShade).Id != 253)
+        if (palette.Resolve(MotherModels.Bark).Value != 252 || palette.Resolve(MotherModels.BarkShade).Value != 253)
             throw new InvalidOperationException("tree.bark must sit at colour IDs 252–253");
     }
 

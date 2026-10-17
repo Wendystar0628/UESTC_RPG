@@ -219,7 +219,7 @@ public sealed class West19cTests
         return best;
     }
 
-    private static BuildContext Context(IWorldModel world) => new() { World = world, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context(IWorldModel world) => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
 
     private static string DataDirectory()
     {

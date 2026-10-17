@@ -65,14 +65,14 @@ public interface IPaletteCatalogSource
     PaletteCatalog Catalog { get; }
 }
 
-/// <summary>Resolves a token without the legacy byte-width restriction. Does not load files or allocate resources.</summary>
+/// <summary>Resolves a token to its logical palette index. Does not load files or allocate resources.</summary>
 public interface IPaletteIndexResolver
 {
     PaletteIndex Resolve(PaletteToken token);
 }
 
 /// <summary>
-/// Immutable union of an unchanged legacy registry and explicitly supplied schema-2 entries.
+/// Immutable union of schema-1 base-bank data and explicitly supplied schema-2 entries.
 /// ExtensionCount describes metadata in this snapshot, not texture/upload readiness.
 /// </summary>
 public sealed class PaletteCatalog : IPaletteIndexResolver
@@ -84,7 +84,6 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
     {
         ArgumentNullException.ThrowIfNull(legacyRegistry);
         ArgumentNullException.ThrowIfNull(extensions);
-        LegacyRegistry = legacyRegistry;
         var byToken = new Dictionary<PaletteToken, PaletteEntryV2>();
         foreach (var entry in legacyRegistry.Entries)
             Add(new(entry.Token, new(entry.Id), entry.Albedo, entry.MaterialClass, entry.Seasonal, entry.Role) { Row = entry.Row });
@@ -100,7 +99,7 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
 
         _byToken = new ReadOnlyDictionary<PaletteToken, PaletteEntryV2>(byToken);
         Entries = Array.AsReadOnly(byToken.Values.OrderBy(entry => entry.Index.Value).ToArray());
-        ExtensionCount = Entries.Count - LegacyRegistry.Count;
+        ExtensionCount = Entries.Count - legacyRegistry.Count;
 
         void Add(PaletteEntryV2 entry)
         {
@@ -112,13 +111,40 @@ public sealed class PaletteCatalog : IPaletteIndexResolver
         }
     }
 
-    public PaletteRegistry LegacyRegistry { get; }
     public IReadOnlyList<PaletteEntryV2> Entries { get; }
     public int Count => Entries.Count;
     public int ExtensionCount { get; }
 
-    /// <summary>Wraps only the provided legacy metadata. Does not discover extension files or claim GPU readiness.</summary>
-    public static PaletteCatalog FromLegacy(PaletteRegistry legacyRegistry) => new(legacyRegistry, []);
+    /// <summary>Assembles the complete catalog from caller-read schema-1 and schema-2 files, without IO or engine resources.</summary>
+    public static PaletteCatalog FromSources(IEnumerable<(string Path, byte[] Json)> bank0Files,
+        IEnumerable<(string Path, byte[] Json)> extensionFiles)
+    {
+        ArgumentNullException.ThrowIfNull(bank0Files);
+        ArgumentNullException.ThrowIfNull(extensionFiles);
+        var bank0 = new List<PaletteEntry>();
+        var extensions = new List<PaletteEntryV2>();
+        foreach (var (path, json) in bank0Files)
+        {
+            var data = Parse<PaletteRegistryData>(path, json);
+            if (data.Schema != 1) throw new InvalidDataException($"Unsupported palette registry schema {data.Schema}: {path}");
+            bank0.AddRange(data.Entries);
+        }
+        foreach (var (path, json) in extensionFiles)
+        {
+            var data = Parse<PaletteExtensionData>(path, json);
+            if (data.Schema != PaletteLayout.ExtensionSchema)
+                throw new InvalidDataException($"Unsupported palette extension schema {data.Schema}: {path}");
+            extensions.AddRange(data.Entries);
+        }
+        try { return new(new PaletteRegistry(bank0), extensions); }
+        catch (ArgumentException error) { throw new InvalidDataException($"Invalid palette catalog: {error.Message}", error); }
+
+        static T Parse<T>(string path, byte[] json) where T : class
+        {
+            try { return JsonSerializer.Deserialize<T>(json, ContractJson.Options) ?? throw new InvalidDataException($"Empty palette data: {path}"); }
+            catch (JsonException error) { throw new InvalidDataException($"Invalid palette data {path}: {error.Message}", error); }
+        }
+    }
 
     public static PaletteCatalog FromData(PaletteRegistry legacyRegistry, PaletteExtensionData data)
     {

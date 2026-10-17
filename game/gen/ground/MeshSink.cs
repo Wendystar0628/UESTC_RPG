@@ -73,7 +73,7 @@ internal sealed class MeshSink
                 Array.Fill(flagArray, flags);
                 var bundle = new GeometryBundle(new ToonRef(spec), chunk.Position.ToArray(), chunk.Normal.ToArray(), chunk.Index.ToArray())
                 {
-                    ColorIds = chunk.Colors.ToArray(),
+                    ColorIndices = chunk.Colors.ToArray(),
                     Flags = flagArray,
                     Uv = profile != GroundPaving.None ? chunk.Uv.ToArray() : null,
                     Uv2 = profile != GroundPaving.None ? chunk.Uv2.ToArray() : null
@@ -99,16 +99,16 @@ internal sealed class MeshSink
 
     private sealed class Chunk
     {
-        private readonly Dictionary<(Vector3, Vector3, byte, float, float, PavingFrame?), int> _map = new();
+        private readonly Dictionary<(Vector3, Vector3, ushort, float, float, PavingFrame?), int> _map = new();
         public List<float> Position { get; } = [];
         public List<float> Normal { get; } = [];
-        public List<byte> Colors { get; } = [];
+        public List<ushort> Colors { get; } = [];
         public List<float> Uv { get; } = [];
         public List<float> Uv2 { get; } = [];
         public List<int> Index { get; } = [];
 
         /// <summary>One chunk holds one profile: either every vertex has a frame (UV, UV2) or none does.</summary>
-        public int Vertex(Vector3 p, Vector3 n, byte color, PavingFrame? frame, (float Gate, float Zone) gate)
+        public int Vertex(Vector3 p, Vector3 n, ushort color, PavingFrame? frame, (float Gate, float Zone) gate)
         {
             var key = (p, n, color, gate.Gate, gate.Zone, frame);
             if (_map.TryGetValue(key, out var index)) return index;

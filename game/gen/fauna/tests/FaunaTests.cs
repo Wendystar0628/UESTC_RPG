@@ -119,13 +119,7 @@ public sealed class FaunaTests
     [TestCase]
     public void ModelsAreClosedValidAndWithinBudget()
     {
-        var ids = new Dictionary<string, byte>(StringComparer.Ordinal);
-        byte Id(PaletteToken t)
-        {
-            if (!ids.TryGetValue(t.Value, out var id)) ids[t.Value] = id = (byte)(64 + 2 * ids.Count);
-            return id;
-        }
-        var scene = new FaunaScene(Id);
+        var scene = new FaunaScene(Campus.Contracts.Tests.PaletteFixture.Catalog);
         var keys = new List<FaunaModelKey>();
         foreach (var coat in Enum.GetValues<CatCoat>())
             foreach (var pose in Enum.GetValues<CatPose>()) keys.Add(FaunaModelKey.CatOf(coat, pose));
@@ -157,7 +151,7 @@ public sealed class FaunaTests
         var sites = FaunaPlanner.Build(World.Value, 1, Lakes.Value).Sites;
         var day = sites.SelectMany(s => s.Day).ToArray();
         var output = scene.Build(day);
-        Check(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIds is { } c && c.Length * 3 == m.Position.Length), "One cat and one bird bundle with colour IDs.");
+        Check(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIndices is { } c && c.Length * 3 == m.Position.Length), "One cat and one bird bundle with colour IDs.");
         Check(scene.Triangles(day) < 90000, "The whole day set stays small.");
     }
 

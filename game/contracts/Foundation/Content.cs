@@ -73,11 +73,8 @@ public sealed class BuildContext
             _interiorProviders = new ReadOnlyDictionary<string, IInteriorProvider>(snapshot);
         }
     }
-    /// <summary>Immutable palette registration supplied by the kernel/baker; its fingerprint belongs in the bake key. Null keeps token-based material grouping.</summary>
-    public PaletteRegistry? Palette { get; init; }
-    /// <summary>Optional complete CPU catalog supplied by the caller; include all entries in the bake fingerprint.
-    /// Null means no full catalog was supplied. A legacy-only catalog does not claim extensions or GPU readiness.</summary>
-    public PaletteCatalog? Catalog { get; init; }
+    /// <summary>Complete immutable palette snapshot shared by generation and packing; all entries belong in the bake fingerprint.</summary>
+    public required PaletteCatalog Catalog { get; init; }
     /// <summary>
     /// Ownership query supplied from the current map's formally resolved claims ledger, after map filtering
     /// and conflict checks. Never infer ownership from module names, directories or feature-ID prefixes.
@@ -156,11 +153,9 @@ public sealed record GeometryBundle(
     public ShaderId? Shader { get; init; }
     /// <summary>Opt-in reflection-world proxy, mounted and released with the owning tile. Does not create engine instances in generators.</summary>
     public bool Reflect { get; init; }
-    // VF-A COLOR RGBA8: ColorIds, quantized Ao, Flags, Reserved. Each byte array has one entry per vertex.
-    // Missing ColorIds uses Material.Spec.Lit; missing Ao means 1; missing Flags and Reserved mean 0.
-    public byte[]? ColorIds { get; init; }
-    /// <summary>Encoding-2 logical indices 0..511, one per vertex; mutually exclusive with ColorIds.
-    /// Requires an explicitly opted-in renderer/baker and a complete palette catalog for token validation.</summary>
+    // VF-A COLOR RGBA8: logical colour encoded by PaletteEncoding, quantized Ao, Flags, Reserved.
+    // Missing ColorIndices uses Material.Spec.Lit; missing Ao means 1; missing Flags and Reserved mean 0.
+    /// <summary>Logical indices 0..511, one per vertex, validated against the complete catalog by the consumer.</summary>
     public ushort[]? ColorIndices { get; init; }
     /// <summary>Encoding-2 decal background indices 0..511, one per vertex, only on an all-decal surface.
     /// Requires Flags' decal bit on every vertex and Reserved=null; the packer writes A's low byte and B's bit 5.
@@ -183,7 +178,7 @@ public sealed record GeometryBundle(
     // UV2 MUST retain fp32 components through packing/cache/GPU upload: half/UNorm16 loses integer IDs.
     // Flags bit 2 marks outskirts windows (dedicated IDs >= 65536), which skip window_override lookup.
     // Water shader payload instead uses Uv=(flow vx,vz) m/s, Uv2=(shore distance m, reflection lake or -1),
-    // Flags bit 8 for no shadow, upward normals, and optional ColorIds falling back to water.far.lit.
+    // Flags bit 8 for no shadow, upward normals, and optional ColorIndices falling back to water.far.lit.
     // VF-C channels: card centre/h2, branch anchor/h3, cluster centre/reserved; all are xyzw per vertex.
     public float[]? Custom0 { get; init; }
     public float[]? Custom1 { get; init; }
@@ -193,21 +188,11 @@ public sealed record GeometryBundle(
     // (gate, fidelity K). Both UV2 components are constant on every base/LOD triangle and retain fp32.
     // No channel is reinterpreted when the optional profile is absent.
 
-    /// <summary>Checks legacy vertex data; invalid data throws ArgumentException. Encoding-2 arrays throw
-    /// NotSupportedException until the caller explicitly selects a supported encoding in the overload.</summary>
-    public void ValidateVertexData() => ValidateVertexData(PaletteLayout.LegacyEncodingVersion);
-
-    /// <summary>Explicit format opt-in. Existing callers use encoding 1 and reject either new array,
-    /// even when its values fit in a byte. Only fully connected upload/bake paths may opt into encoding 2.</summary>
-    public void ValidateVertexData(int paletteEncodingVersion)
+    /// <summary>Checks the current logical-index vertex layout; invalid data throws ArgumentException.</summary>
+    public void ValidateVertexData()
     {
         ArgumentNullException.ThrowIfNull(Material.Spec);
         Material.Spec.ValidateSurfacePattern();
-        if (paletteEncodingVersion is not (PaletteLayout.LegacyEncodingVersion or PaletteLayout.EncodingVersion))
-            throw new ArgumentOutOfRangeException(nameof(paletteEncodingVersion));
-        if (paletteEncodingVersion == PaletteLayout.LegacyEncodingVersion &&
-            (ColorIndices is not null || DecalBaseColorIndices is not null))
-            throw new NotSupportedException("This path has not opted into palette encoding 2; new colour arrays must not be ignored.");
         ArgumentNullException.ThrowIfNull(Position);
         ArgumentNullException.ThrowIfNull(Normal);
         ArgumentNullException.ThrowIfNull(Index);
@@ -217,7 +202,6 @@ public sealed record GeometryBundle(
         RequireLength(Ao, count, nameof(Ao));
         RequireLength(Uv, checked(count * 2), nameof(Uv));
         RequireLength(Uv2, checked(count * 2), nameof(Uv2));
-        RequireLength(ColorIds, count, nameof(ColorIds));
         RequireLength(ColorIndices, count, nameof(ColorIndices));
         RequireLength(DecalBaseColorIndices, count, nameof(DecalBaseColorIndices));
         RequireLength(Flags, count, nameof(Flags));
@@ -236,8 +220,6 @@ public sealed record GeometryBundle(
             throw new ArgumentException("Ao values must be finite and in [0, 1].", nameof(Ao));
         if (Flags is not null && Flags.Any(value => (value & 0xf0) != 0))
             throw new ArgumentException("Flags may only use interior=1, outskirts=2, decal=4 and no-shadow=8.", nameof(Flags));
-        if (ColorIds is not null && ColorIndices is not null)
-            throw new ArgumentException("ColorIds and ColorIndices are mutually exclusive.", nameof(ColorIndices));
         if (ColorIndices is not null && ColorIndices.Any(value => value >= PaletteLayout.Capacity))
             throw new ArgumentException("ColorIndices must be in [0, 511].", nameof(ColorIndices));
         if (DecalBaseColorIndices is not null)

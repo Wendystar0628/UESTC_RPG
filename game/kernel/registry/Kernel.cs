@@ -32,7 +32,7 @@ public partial class Kernel : Node
         var assemblies = new List<Assembly> { typeof(Kernel).Assembly };
         foreach (var name in BuildInfo.ModuleAssemblies) assemblies.Add(Assembly.Load(new AssemblyName(name)));
         Services.Discover(assemblies);
-        Services.Add(Services.Get<IPaletteRegistrySource>().Registry);
+        Services.Add(Services.Get<IPaletteCatalogSource>().Catalog);
         GD.Print($"D0 registry: {Services.Entries.Count} declarations; build {BuildInfo.Build}");
     }
     public override void _ExitTree()

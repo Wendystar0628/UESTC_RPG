@@ -34,7 +34,7 @@ public sealed class CoreModule : IContentModule, IWindowMetadataSource
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var build = new CoreBuild(ctx.Palette) { WindowNumbering = CoreSite.Numbering(ctx), PartLods = ctx.PartLods };
+        var build = new CoreBuild(ctx.Catalog) { WindowNumbering = CoreSite.Numbering(ctx), PartLods = ctx.PartLods };
         foreach (var piece in CoreSite.Pieces(ctx.World))
             if (CoreTiles.Of(piece.Anchor, lod) == tile) piece.Build(build, lod);
         return build.Finish(lod);

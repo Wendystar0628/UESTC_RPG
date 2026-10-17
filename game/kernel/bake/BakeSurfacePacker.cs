@@ -9,30 +9,12 @@ namespace Campus.Kernel.Bake;
 /// <summary>Pure CPU encoder for the pinned renderer surface ABI. It creates no Godot resource or RID.</summary>
 public static class BakeSurfacePacker
 {
-    /// <summary>Tint is an explicit placed-part Lit override, including surfaces that already carry ColorIds.</summary>
-    public static GeometryBundle ApplyTint(GeometryBundle mesh, PlacedPart part, PaletteRegistry palette)
-    {
-        if (part.Tint is not { } token) return mesh;
-        mesh.ValidateVertexData();
-        var lit = palette.Get(token);
-        var colorId = LegacyPaletteId(lit.Id);
-        var material = new ToonRef(mesh.Material.Spec with
-        {
-            Lit = token,
-            Shade = palette.Get(checked((byte)(colorId + 1))).Token
-        });
-        palette.Validate(material.Spec);
-        var colors = new byte[mesh.Position.Length / 3];
-        Array.Fill(colors, colorId);
-        return mesh with { Material = material, ColorIds = colors };
-    }
-
-    /// <summary>Supplying a complete catalog explicitly opts mutable geometry into encoding 2.</summary>
+    /// <summary>Tint overrides every vertex with a registered logical Lit index.</summary>
     public static GeometryBundle ApplyTint(GeometryBundle mesh, PlacedPart part, PaletteCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         if (part.Tint is not { } token) return mesh;
-        mesh.ValidateVertexData(PaletteLayout.EncodingVersion);
+        mesh.ValidateVertexData();
         var lit = catalog.Get(token);
         var material = new ToonRef(mesh.Material.Spec with
         {
@@ -42,66 +24,37 @@ public static class BakeSurfacePacker
         catalog.Validate(material.Spec);
         var colors = new ushort[mesh.Position.Length / 3];
         Array.Fill(colors, lit.Index.Value);
-        return mesh with { Material = material, ColorIds = null, ColorIndices = colors };
+        return mesh with { Material = material, ColorIndices = colors };
     }
 
-    /// <summary>Legacy overload: supplying a registry remains an explicit encoding-1 path.</summary>
-    public static BakedSurface Pack(GeometryBundle mesh, Box3 bounds, PaletteRegistry palette)
-    {
-        mesh.ValidateVertexData();
-        return Pack(View(mesh, PaletteLayout.LegacyEncodingVersion), bounds, palette);
-    }
-
-    /// <summary>The catalog overload explicitly selects encoding 2; it never discards either logical-index stream.</summary>
     public static BakedSurface Pack(GeometryBundle mesh, Box3 bounds, PaletteCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(catalog);
-        mesh.ValidateVertexData(PaletteLayout.EncodingVersion);
-        return Pack(View(mesh, PaletteLayout.EncodingVersion), bounds, catalog.LegacyRegistry, catalog);
-    }
-
-    /// <summary>Reads the frozen prototype directly; its captured version remains authoritative.</summary>
-    public static BakedSurface Pack(GeometryBuffer mesh, Box3 bounds, PaletteRegistry palette)
-    {
-        ArgumentNullException.ThrowIfNull(mesh);
-        if (mesh.PaletteEncodingVersion != PaletteLayout.LegacyEncodingVersion || mesh.ColorIndices is not null || mesh.DecalBaseColorIndices is not null)
-            throw new NotSupportedException($"Palette encoding {mesh.PaletteEncodingVersion} needs the complete catalog overload; no palette data will be dropped.");
-        return Pack(View(mesh), bounds, palette);
+        mesh.ValidateVertexData();
+        return Pack(View(mesh), bounds, catalog);
     }
 
     public static BakedSurface Pack(GeometryBuffer mesh, Box3 bounds, PaletteCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         ArgumentNullException.ThrowIfNull(catalog);
-        return Pack(View(mesh), bounds, catalog.LegacyRegistry, catalog);
+        return Pack(View(mesh), bounds, catalog);
     }
 
-    private static PackInput View(GeometryBundle mesh, int encoding) => new(mesh.Material, mesh.Shader,
+    private static PackInput View(GeometryBundle mesh) => new(mesh.Material, mesh.Shader,
         mesh.Position, mesh.Normal, mesh.Index, Borrow(mesh.Ao), Borrow(mesh.Uv), Borrow(mesh.Uv2),
-        Borrow(mesh.ColorIds), Borrow(mesh.Flags), Borrow(mesh.Reserved), Borrow(mesh.Custom0), Borrow(mesh.Custom1),
+        Borrow(mesh.Flags), Borrow(mesh.Reserved), Borrow(mesh.Custom0), Borrow(mesh.Custom1),
         Borrow(mesh.Custom2), (mesh.Lods ?? []).Select(lod => new LodInput(lod.Error, lod.Index)), mesh.Variant,
-        mesh.Reflect, mesh.IgnoreOcclusionCulling, encoding, Borrow(mesh.ColorIndices), Borrow(mesh.DecalBaseColorIndices));
+        mesh.Reflect, mesh.IgnoreOcclusionCulling, Borrow(mesh.ColorIndices), Borrow(mesh.DecalBaseColorIndices));
 
     private static PackInput View(GeometryBuffer mesh) => new(mesh.Material, mesh.Shader,
-        mesh.Position, mesh.Normal, mesh.Index, mesh.Ao, mesh.Uv, mesh.Uv2, mesh.ColorIds, mesh.Flags, mesh.Reserved,
+        mesh.Position, mesh.Normal, mesh.Index, mesh.Ao, mesh.Uv, mesh.Uv2, mesh.Flags, mesh.Reserved,
         mesh.Custom0, mesh.Custom1, mesh.Custom2, mesh.Lods.Select(lod => new LodInput(lod.Error, lod.Index)),
-        mesh.Variant, mesh.Reflect, mesh.IgnoreOcclusionCulling, mesh.PaletteEncodingVersion, mesh.ColorIndices, mesh.DecalBaseColorIndices);
+        mesh.Variant, mesh.Reflect, mesh.IgnoreOcclusionCulling, mesh.ColorIndices, mesh.DecalBaseColorIndices);
 
-    private static BakedSurface Pack(PackInput mesh, Box3 bounds, PaletteRegistry palette, PaletteCatalog? catalog = null)
+    private static BakedSurface Pack(PackInput mesh, Box3 bounds, PaletteCatalog catalog)
     {
-        switch (mesh.Encoding)
-        {
-            case PaletteLayout.LegacyEncodingVersion:
-                if (mesh.ColorIndices is not null || mesh.DecalBaseColorIndices is not null)
-                    throw new NotSupportedException("Encoding 1 cannot carry logical-index arrays.");
-                break;
-            case PaletteLayout.EncodingVersion:
-                if (catalog is null) throw new NotSupportedException("Encoding 2 requires a complete catalog snapshot.");
-                break;
-            default: throw new NotSupportedException($"Unknown palette encoding {mesh.Encoding}.");
-        }
-        if (catalog is null) palette.Validate(mesh.Material.Spec);
-        else catalog.Validate(mesh.Material.Spec);
+        catalog.Validate(mesh.Material.Spec);
         var count = mesh.Position.Length / 3;
         if (count is <= 0 or > 65536) throw new InvalidDataException("A packed surface needs 1..65,536 vertices.");
         var size = bounds.Size;
@@ -121,9 +74,7 @@ public static class BakeSurfacePacker
         var vertices = new byte[checked((vertexStride + normalStride) * count)];
         var attributes = new byte[checked(attributeStride * count)];
         var uvScale = compressed ? UvScale(mesh.Uv) : Vector4.Zero;
-        var lit = catalog is null ? new PaletteIndex(palette.Get(mesh.Material.Spec.Lit).Id) : catalog.Resolve(mesh.Material.Spec.Lit);
-        if (mesh.Encoding == PaletteLayout.LegacyEncodingVersion && lit.Value >= PaletteLayout.LegacyCapacity)
-            throw new NotSupportedException("An encoding-1 material cannot resolve to a bank-1 fallback color.");
+        var lit = catalog.Resolve(mesh.Material.Spec.Lit);
         for (var i = 0; i < count; i++)
         {
             var p = new Vector3(mesh.Position.Span[i * 3], mesh.Position.Span[i * 3 + 1], mesh.Position.Span[i * 3 + 2]);
@@ -154,7 +105,7 @@ public static class BakeSurfacePacker
             }
             var attribute = attributes.AsSpan(i * attributeStride, attributeStride);
             var color = mesh.ColorIndices is { } logical ? Registered(logical.Span[i])
-                : mesh.ColorIds is { } legacy ? new PaletteIndex(legacy.Span[i]) : lit;
+                : lit;
             PaletteIndex? decalBase = mesh.DecalBaseColorIndices is { } backgrounds ? Registered(backgrounds.Span[i]) : null;
             var ao = (byte)Math.Clamp(Value(mesh.Ao, i, 1f) * 255f, 0f, 255f);
             var rgba = PaletteEncoding.EncodeColor(color, ao, Value(mesh.Flags, i, (byte)0),
@@ -189,7 +140,7 @@ public static class BakeSurfacePacker
         PaletteIndex Registered(ushort value)
         {
             var index = new PaletteIndex(value);
-            _ = catalog!.Get(index);
+            _ = catalog.Get(index);
             return index;
         }
     }
@@ -237,17 +188,15 @@ public static class BakeSurfacePacker
         return bytes;
     }
 
-    private static byte LegacyPaletteId(int id) => id is >= 0 and <= byte.MaxValue ? (byte)id :
-        throw new NotSupportedException($"Palette ID {id} needs encoding 2; legacy bake packing will not truncate it.");
     // The untyped null branch otherwise selects the array-to-ROM conversion and produces HasValue=true, Length=0.
     private static ReadOnlyMemory<T>? Borrow<T>(T[]? values) => values is null ? (ReadOnlyMemory<T>?)null : new ReadOnlyMemory<T>(values);
     private static T Value<T>(ReadOnlyMemory<T>? values, int index, T fallback) => values is { } memory ? memory.Span[index] : fallback;
     private readonly record struct LodInput(float Error, ReadOnlyMemory<int> Index);
     private sealed record PackInput(ToonRef Material, ShaderId? Shader, ReadOnlyMemory<float> Position,
         ReadOnlyMemory<float> Normal, ReadOnlyMemory<int> Index, ReadOnlyMemory<float>? Ao,
-        ReadOnlyMemory<float>? Uv, ReadOnlyMemory<float>? Uv2, ReadOnlyMemory<byte>? ColorIds,
+        ReadOnlyMemory<float>? Uv, ReadOnlyMemory<float>? Uv2,
         ReadOnlyMemory<byte>? Flags, ReadOnlyMemory<byte>? Reserved, ReadOnlyMemory<float>? Custom0,
         ReadOnlyMemory<float>? Custom1, ReadOnlyMemory<float>? Custom2, IEnumerable<LodInput> Lods,
-        VariantTag? Variant, bool Reflect, bool IgnoreOcclusionCulling, int Encoding,
+        VariantTag? Variant, bool Reflect, bool IgnoreOcclusionCulling,
         ReadOnlyMemory<ushort>? ColorIndices, ReadOnlyMemory<ushort>? DecalBaseColorIndices);
 }

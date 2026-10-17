@@ -15,13 +15,9 @@ public readonly record struct PaletteIndex
     }
 
     public ushort Value { get; }
-
-    /// <summary>Explicit legacy conversion. Extended indices fail instead of truncating to another colour.</summary>
-    public byte ToLegacyByte() => Value < PaletteLayout.LegacyCapacity ? (byte)Value
-        : throw new InvalidOperationException("An extended palette index cannot use a legacy byte API.");
 }
 
-// Scoped to the new type; the shared ContractJson options and all legacy representations remain unchanged.
+// Scoped to the logical index; the shared ContractJson options remain unchanged.
 internal sealed class PaletteIndexJsonConverter : JsonConverter<PaletteIndex>
 {
     public PaletteIndexJsonConverter() { }

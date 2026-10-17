@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -99,7 +100,7 @@ public sealed class WenkeForecourtSite : CenterEastSite
         var (segments, rings) = b.Detail switch { SiteDetail.Full => (40, 12), SiteDetail.Plain => (24, 8), _ => (14, 5) };
         b.Add(Solids.Boulder(F.Stone, segments, rings, L.GreyStone), at);
         if (b.Detail == SiteDetail.Mass) return;
-        var face = Affine.Mul(EmblemAt(), at);
+        var face = GeometryPlacement.Multiply(EmblemAt(), at);
         var small = b.Detail == SiteDetail.Full ? 32 : 16;
         b.Add(Shapes.Shaft(F.EmblemRadius, F.EmblemRadius, F.EmblemRelief, small, L.Gold), face);
         b.Add(Shapes.Ring(Vector2.Zero, F.EmblemRadius * 0.82f, 0.022f, F.EmblemRelief * 1.8f, small, L.Gold, 0f), face);

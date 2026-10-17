@@ -40,6 +40,7 @@ public sealed class DioramaModuleTests
 
     private static BuildContext Context(byte[]? backdrop, uint seed = 1) => new()
     {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = new World(),
         Map = Map("backdrop.json"),
         WorldSeed = seed,
