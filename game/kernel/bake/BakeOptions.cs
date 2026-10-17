@@ -29,7 +29,8 @@ public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool 
         var root = Value("bake-cache");
         if (root.Length == 0)
             root = BuildInfo.Kind == "dev"
-                ? System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE") ?? @"E:\Project\UESTC_RPG.cache\bake"
+                ? System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE") ??
+                    Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "output", "cache", "bake")
                 : ProjectSettings.GlobalizePath("user://cache/bake/");
         if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("--bake-cache must be an absolute path.");
         return new(Path.GetFullPath(root), Value("gen") == "live",
