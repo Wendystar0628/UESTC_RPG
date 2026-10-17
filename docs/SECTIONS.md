@@ -39,12 +39,12 @@
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 9.5k 字 · 协作、流程、文档规则与门禁流程类的已定决策
+`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 9.7k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
 - CORE-DECISIONS-PROCESS §0 结论 · L23 · 163
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-PROCESS §1 流程 · L31 · 8.9k
+- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.0k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
@@ -159,15 +159,15 @@
 
 ## WF-ENTRY · 角色入口卡
 
-`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.6k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
+`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.8k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
 关键词：角色入口卡、入口卡、主会话、子代理、Astra、Sol 会话、重置后先读、开工动作、收尾、做 X 前读 Y、钩子注入、SessionStart、SubagentStart、引擎路径、UESTC_GODOT
 
 - WF-ENTRY §0 结论 · L21 · 381
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
-- WF-ENTRY §1 主会话 · L33 · 1.1k
-- WF-ENTRY §2 子代理 · L57 · 1.0k
-- WF-ENTRY §3 Astra · L84 · 903
-- WF-ENTRY §4 Sol 会话 · L107 · 576
+- WF-ENTRY §1 主会话 · L33 · 1.2k
+- WF-ENTRY §2 子代理 · L58 · 1.0k
+- WF-ENTRY §3 Astra · L85 · 958
+- WF-ENTRY §4 Sol 会话 · L108 · 576
 
 ## WF-FLOW · 开发流程
 
@@ -208,7 +208,7 @@
 
 ## WF-ROLE · 参与者与分工
 
-`docs/workflow/WF-ROLE-参与者与分工.md` · 4.5k 字 · 角色表与汇报关系，会话的运行方式，各模型的长短板，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Astra 当指挥
+`docs/workflow/WF-ROLE-参与者与分工.md` · 4.7k 字 · 角色表与汇报关系，会话的运行方式，各模型的长短板，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Astra 当指挥
 关键词：角色表、汇报给、决定权、执行人、会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Astra、工程指挥、元规则、D-179
 
 - WF-ROLE §0 结论 · L22 · 533
@@ -217,8 +217,8 @@
 - WF-ROLE §2 模型的长处与短板 · L50 · 499
 - WF-ROLE §3 GPT 模型不做审美工作 · L59 · 359
 - WF-ROLE §4 决定权与事归谁 · L66 · 570
-- WF-ROLE §5 总指挥只做什么 · L75 · 484
-- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L87 · 638
+- WF-ROLE §5 总指挥只做什么 · L75 · 639
+- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L89 · 707
 
 ## WF-RULE · 全员守则
 
