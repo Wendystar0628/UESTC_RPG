@@ -3,7 +3,7 @@ id: WF-COMMS
 title: 交接与通信
 category: workflow
 summary: .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱
-keywords: [.collab, 交接目录, 文件布局, archive, logs, 结案即挪走, .ignore, 任务单, 施工单, 旁路单, 调研单, 契约申请, 评审请求, 六行短头部, 完成回报, 回报格式, 截图命名, 文件命名, 来信, 收件箱, notes, 一条一个文件, 【需定】【待审】【知会】, Codex 会话, codex queue, 引导信箱, steer, HANDOVER.md, D-207, D-208]
+keywords: [.collab, 交接目录, 文件布局, archive, logs, 结案即挪走, .ignore, 任务单, 施工单, 旁路单, 调研目录, 契约申请, 评审请求, 六行短头部, 完成回报, 回报格式, 截图命名, 文件命名, 来信, 收件箱, notes, 一条一个文件, 【需定】【待审】【知会】, Codex 会话, codex queue, 引导信箱, steer, HANDOVER.md, D-207, D-208]
 owners: [WP-00]
 contributors: []
 depends: [WF-RULE]
@@ -45,8 +45,8 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 | `requests/review-<包号>-<主题>.md` | Astra 主线程 | 请主会话审美评审：截图或录像路径、可调参数位置与现值；主会话在末尾写结论或新值 |
 | `tasks/claude/<nnn>-<主题>.md` | 主会话建单、写评审；施工子代理写一行现状 | 施工单（WF-FLOW §2）；过程流水记到 `logs/tasks/` |
 | `tasks/astra/`、`tasks/misc/` | Astra；主会话 | Astra 的计划与子单；其他任务单与简报 |
-| `side/cards/r<nnn>-<主题>.md`、`s<nnn>-<主题>.md` | 主会话 | 调研单、旁路单（WF-FLOW §6.1）；Sol 会话在末尾写"状态" |
-| `research/INDEX.md`、`research/<日期>-r<nnn>-<主题>/` | 主会话追加索引与审计；Sol 会话写报告与总览 | 调研索引与各方向报告 |
+| `side/cards/s<nnn>-<主题>.md` | 主会话 | 旁路单（WF-FLOW §6.1）；Sol 会话在末尾写"状态" |
+| `research/INDEX.md`、`research/<日期>-r<nnn>-<主题>/` | 主会话追加索引与审理；调研子代理写报告与总览 | 调研索引与各方向报告 |
 | `notes/<收件方>/<YYYYMMDD-HHMMSS>-<发件方>-<短词>.md` | 发件方 | 来信收件箱（§4）：`notes/opus/` 发给主会话，`notes/astra/` 发给 Astra |
 | `notes/codex-app-done.md` | Codex 会话 | 脚本握手：做完一件活追加一行"[任务号] 一句话结果"，只有脚本读 |
 | `status/施工状态.md`、`HANDOVER.md` | 主会话 | 施工状态与待派工队列的活表；主会话交接单（WF-STATUS） |
@@ -64,7 +64,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 - 任务单与请求文件只追加、不改写，每条带时间，路径一律写绝对路径；唯一的例外是 `research/INDEX.md` 的"Opus 审计"一列（Sol 会话标"待审"，主会话审计后改写）。
 - **文件名一看就懂**（D-208）：规范文档的文件名是"编码-中文简题.md"（WF-DOC §3）。
-- **任务单**："三位编号-主题"：施工单 `tasks/claude/<nnn>-<主题>.md`、调研单 `side/cards/r<nnn>-<主题>.md`、旁路单 `side/cards/s<nnn>-<主题>.md`。编号各自递增，新建前确认没被占用；子单在编号后加 a、b。流水文件与任务单同名，后缀换成 `.log.md`。
+- **任务单**："三位编号-主题"：施工单 `tasks/claude/<nnn>-<主题>.md`、调研目录 `research/<日期>-r<nnn>-<主题>/`、旁路单 `side/cards/s<nnn>-<主题>.md`。编号各自递增，新建前确认没被占用；子单在编号后加 a、b。流水文件与任务单同名，后缀换成 `.log.md`。
 - **请求文件**：`<类型>-<包号>-<主题>.md`，类型是 `contract`、`review`；先确认文件不存在再创建，已有同名时末尾加 `-2`、`-3`。
 
 ## 3 任务单、请求文件、契约申请与完成回报
@@ -114,7 +114,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 | 方向 | 什么时候发 |
 | --- | --- |
-| Sol 会话、Astra → 主会话 | 门禁失败、调研完成、待评审、受阻需要决定；写进 `notes/opus/` |
+| Sol 会话、Astra → 主会话 | 门禁失败、旁路单完成、待评审、受阻需要决定；写进 `notes/opus/` |
 | 主会话 → Astra | 文档改了、契约冻结了、某个包阻塞了、新任务；写进 `notes/astra/`，同时发进会话（§5） |
 
 ### 4.2 一条来信一个新文件（D-207）
