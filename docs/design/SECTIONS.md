@@ -50,7 +50,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS-决策登记.md` · 33.9k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 34.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 388
@@ -64,8 +64,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 10.0k
-- CORE-DECISIONS §11 待对齐 · L297 · 61
+- CORE-DECISIONS §10 流程 · L243 · 10.1k
+- CORE-DECISIONS §11 待对齐 · L298 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -97,7 +97,7 @@
 
 - WF-INDEX §0 结论 · L23 · 445
   - ★ WF-INDEX §0.1 接入要点 · L30 · 168
-- WF-INDEX §1 角色表 · L36 · 1.9k
+- WF-INDEX §1 角色表 · L36 · 2.0k
 - WF-INDEX §2 决定权与执行人 · L57 · 381
 - WF-INDEX §3 分册索引 · L65 · 1.1k
 - WF-INDEX §4 一条规则放哪份 · L82 · 497
@@ -131,17 +131,17 @@
 - WF-COMMS §2 命名与写法 · L70 · 506
 - WF-COMMS §3 任务单与请求文件的格式 · L78 · 757
 - WF-COMMS §4 来信与消息 · L94 · 922
-- WF-COMMS §5 Codex 会话与引导信箱 · L109 · 635
-- WF-COMMS §6 上下文重置后怎么接着做 · L115 · 439
+- WF-COMMS §5 Codex 会话与引导信箱 · L109 · 668
+- WF-COMMS §6 上下文重置后怎么接着做 · L115 · 437
 
 ## WF-DUTY · 值班与旁路
 
-`docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md` · 5.3k 字 · 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理
+`docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md` · 5.4k 字 · 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理
 关键词：值班、值班执行者、值班唤醒脚本、旁路唤醒脚本、duty_watch、side_runner、Grok、Gemini、luna、Sol 值班会话、退回、值班长期单、巡检、卡死进程、完成度调研、调研单、调研索引、三个视角、Sol 旁路会话、旁路单、side/ROLE.md、D-198、D-202、D-204
 
-- WF-DUTY §0 结论 · L23 · 543
+- WF-DUTY §0 结论 · L23 · 565
   - ★ WF-DUTY §0.1 接入要点 · L31 · 191
-- WF-DUTY §1 值班执行者、唤醒与退回 · L37 · 1.3k
+- WF-DUTY §1 值班执行者、唤醒与退回 · L37 · 1.4k
 - WF-DUTY §2 值班做什么、不许做什么 · L55 · 739
 - WF-DUTY §3 完成度调研 · L69 · 933
 - WF-DUTY §4 Sol 旁路会话 · L79 · 705
@@ -169,7 +169,7 @@
 
 - WF-ROLE §0 结论 · L23 · 559
   - ★ WF-ROLE §0.1 接入要点 · L31 · 228
-- WF-ROLE §1 会话与运行方式 · L37 · 460
+- WF-ROLE §1 会话与运行方式 · L37 · 493
 - WF-ROLE §2 模型的长处与短板 · L44 · 800
 - WF-ROLE §3 GPT 模型不做审美工作 · L55 · 418
 - WF-ROLE §4 事归谁与交叉的地方 · L62 · 448

@@ -44,7 +44,7 @@ gates: []
 | 主会话的子代理 | Claude Opus 或 Sonnet 按任务单，Agent 工具后台开，按包取名 | Opus：Opus 侧包的施工、质感移植、需要 Opus 的文档撰写；Sonnet：评审已定怎么改的活和补 GPT 短板的活（WF-MODEL §2） | 主会话 | WF-ONBOARD、WF-RULE、WF-BUILD（`CLAUDE.md` 自动载入）；自己的任务单；ENG-WP 本包的行；WF-MODEL §8 |
 | Astra | gpt-6-astra，xhigh，Codex 应用里的会话 | 工程指挥与代码工程架构师：制定并演进工程架构，契约与共享工程文件，Astra 侧包的拆单派工与架构审查、集成取舍、写合并请求；尽量不亲自施工（WF-ROLE §6） | 主会话 | `.collab/CODEX-BOOT.md`；WF-ROLE §3、§6；WF-FLOW §3、§5；WF-COMMS §3–§4；WF-RULE |
 | Astra 的子代理 | 默认 gpt-6.1-sol，`spawn_agent` 开 | Astra 侧包的施工；gpt-6-astra 子代理只在 WF-ROLE §6 列的情形开 | Astra | Astra 的简报；WF-ONBOARD、WF-RULE、WF-BUILD（Codex 侧不会自动载入，简报写明路径） |
-| Sol 值班会话 | gpt-6.1-sol，high，普通速度，Codex 应用里的会话 | 值班执行者没回复时接手合并执行、施工状态与巡检（WF-DUTY §1） | 主会话 | `.collab/tasks/sol/001-值班长期单.md`；WF-MERGE §2；WF-DUTY §1–§2 |
+| Sol 值班兜底 | gpt-6.1-sol，high，每次叫醒新开一个 Codex CLI 会话（D-210） | 值班执行者没回复时接手合并执行、施工状态与巡检（WF-DUTY §1） | 主会话 | `.collab/tasks/sol/001-值班长期单.md`；WF-MERGE §2；WF-DUTY §1–§2 |
 | Grok 值班执行者 | Grok 4.7，后台无界面调用 | 合并执行（首选）、值班单、定时巡检 | 主会话 | `.collab/tools/duty/ROLE-grok.md`；`001-值班长期单.md`；WF-MERGE §2 |
 | Gemini 快速杂活 | Gemini 3.8 Flash High，作者的 Antigravity 会话 | 只改文档的合并、主会话直接派的简单快速小活 | 主会话 | `.collab/tools/duty/ROLE-gemini.md`；`001-值班长期单.md` |
 | luna 批量苦力 | gpt-6-luna，medium，快速模式，Codex 应用里的会话 | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra | `.collab/tools/duty/ROLE-luna.md`；`001-值班长期单.md` |
