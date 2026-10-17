@@ -292,7 +292,7 @@ foreach ($id in $selected) {
                 if ($runCount -eq 0) { $status = 'Skipped' }
                 $detail = "Test projects run=$runCount. " + ($notes -join '; ')
             }
-            'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -D0:$D0 | ConvertTo-Json -Depth 5 -Compress }
+            'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef -D0:$D0 | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings

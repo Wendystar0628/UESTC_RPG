@@ -5,8 +5,8 @@ function Get-UESTCFiles {
 
 function Get-UESTCChanges {
     param([string]$Root, [string]$BaseRef)
-    $files = @(Get-UESTCGitLines $Root @('diff', '--name-only', '--diff-filter=ACDMRTUXB', "$BaseRef...HEAD"))
-    $files += @(Get-UESTCGitLines $Root @('diff', '--name-only', 'HEAD'))
+    $files = @(Get-UESTCGitLines $Root @('diff', '--no-renames', '--name-only', '--diff-filter=ACDMRTUXB', "$BaseRef...HEAD"))
+    $files += @(Get-UESTCGitLines $Root @('diff', '--no-renames', '--name-only', 'HEAD'))
     $files += @(Get-UESTCGitLines $Root @('ls-files', '--others', '--exclude-standard'))
     @($files | Where-Object { $_ } | Sort-Object -Unique)
 }
@@ -34,9 +34,19 @@ function Test-UESTCGlob {
 }
 
 function Test-UESTCOwnership {
-    param([string]$Root, [string]$Wp, [string[]]$Changes, [switch]$D0)
+    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef, [switch]$D0)
     $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
     $rules = @($ownership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
+    $deletedPaths = @($Changes | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
+    $basePaths = @()
+    $baseRules = @()
+    if ($deletedPaths.Count) {
+        $basePaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $BaseRef))
+        if (@($deletedPaths | Where-Object { $_ -in $basePaths }).Count) {
+            $baseOwnership = (Invoke-UESTCGit $Root @('show', "${BaseRef}:ownership.json")).StdOut | ConvertFrom-Json
+            $baseRules = @($baseOwnership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
+        }
+    }
     $failures = New-Object 'Collections.Generic.List[string]'
     $exceptions = New-Object 'Collections.Generic.List[string]'
     $initialPaths = @()
@@ -46,7 +56,9 @@ function Test-UESTCOwnership {
     foreach ($path in $Changes) {
         $owner = $null
         $maintainers = @()
-        foreach ($rule in $rules) {
+        # Deletions use the same baseline as the gate; renames arrive as delete/add pairs.
+        $pathRules = if ($path -in $deletedPaths -and $path -in $basePaths) { $baseRules } else { $rules }
+        foreach ($rule in $pathRules) {
             if (Test-UESTCGlob $path $rule.pattern) {
                 $owner = $rule.owner
                 if ($rule.PSObject.Properties['maintainers']) { $maintainers = @($rule.maintainers) }

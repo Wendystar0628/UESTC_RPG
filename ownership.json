@@ -2899,10 +2899,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "requirements.txt",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "scripts/gate.ps1",
       "owner": "WP-00"
     },
