@@ -1,6 +1,6 @@
 param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Output,[string]$Configuration='Debug')
 $ErrorActionPreference='Stop'
-. (Join-Path $Root 'scripts/wt/common.ps1')
+. (Join-Path $Root 'scripts/lib/common.ps1')
 $rootPath=[IO.Path]::GetFullPath($Root)
 $version=(Get-Content -LiteralPath (Join-Path $rootPath 'version.txt') -Raw -Encoding UTF8).Trim()
 $commit=(Invoke-UESTCGit $rootPath @('rev-parse','--short=12','HEAD')).StdOut.Trim()
@@ -115,7 +115,7 @@ foreach($name in $hashNames) {
   $project=$byName[$name]
   $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
   $inputs=@(Get-ProjectInputs $project.FullName $seen)
-  $inputs+=@('scripts/build/build-info.ps1','scripts/wt/common.ps1','version.txt') | ForEach-Object {Join-Path $rootPath $_}
+  $inputs+=@('scripts/build/build-info.ps1','scripts/lib/common.ps1','version.txt') | ForEach-Object {Join-Path $rootPath $_}
   $relativeInputs=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
   foreach($file in $inputs) { if(Test-AuthoredInput $file){[void]$relativeInputs.Add((Get-RelativeInput $file))} }
   $ordered=[string[]]@($relativeInputs);[Array]::Sort($ordered,[StringComparer]::Ordinal)

@@ -6,12 +6,12 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
-    [switch]$Plan, [switch]$NoCache, [switch]$SkipFormat, [string]$BaseRef = '',
+    [switch]$Plan, [switch]$NoCache, [string[]]$Paths = @(), [string]$BaseRef = '',
     [string]$Map = 'qingshuihe', [int]$Frames = 300,
     [ValidateSet('Debug')][string]$Configuration = 'Debug')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-. (Join-Path $PSScriptRoot 'wt/common.ps1')
+. (Join-Path $PSScriptRoot 'lib/common.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
 . (Join-Path $PSScriptRoot 'gates/cache.ps1')
@@ -144,7 +144,16 @@ if (-not $BaseRef) {
 $modeFlags = @(($Only.Count -gt 0), [bool]$Smoke, [bool]$Full)
 if (@($modeFlags | Where-Object { $_ }).Count -gt 1) { throw 'Choose only one of -Only, -Smoke, -Full.' }
 if ($Frames -lt 1) { throw 'Frames must be positive.' }
-$changes = @(Get-UESTCChanges $root $BaseRef)
+$changes = @(if ($PSBoundParameters.ContainsKey('Paths')) {
+    @($Paths | ForEach-Object {
+        $absolute = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ }))
+        if (-not $absolute.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Path escapes repository: $_"
+        }
+        $absolute.Substring($root.Length + 1).Replace('\','/')
+    } | Sort-Object -Unique)
+} else { Select-UESTCChanges $root $Wp @(Get-UESTCChanges $root $BaseRef) $BaseRef })
+$formatPaths = @($changes | Where-Object { $_ -match '\.cs$' -and $_ -notmatch '^game/addons/' -and (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) })
 $runtimeChanges = @($changes | Where-Object { $_ -notmatch '^docs/|\.md$|^\.collab/' })
 if (-not ($Full -or $Smoke -or $Only.Count)) {
     $existingBasePaths = @(Get-UESTCGitLines $root @('ls-tree', '-r', '--name-only', $BaseRef))
@@ -171,55 +180,50 @@ $serviceWindowPlan = Select-UESTCServiceWindow $selected.ToArray() $serviceImpac
 $selected.Clear()
 foreach ($gateId in $serviceWindowPlan.Gates) { $selected.Add($gateId) }
 $cacheIds = @('G1','G2','G3','G4')
-if ($SkipFormat) { $cacheIds = @($cacheIds | Where-Object { $_ -ne 'G1' }) }
 if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
-$planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; CpuLimit = [Math]::Max(2,[Math]::Floor([Environment]::ProcessorCount/8.0)); Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
+$planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges @(Get-UESTCFiles $root) ([bool]$Full)) } else { @() }
 $planObject['G2Selection'] = $g2Selection
-$planObject['SkipFormat'] = [bool]$SkipFormat
 $planObject['Stage'] = $mainStage
 $planObject['ServiceWindow'] = [ordered]@{ Impact=$serviceImpact; RequireFormalCore=$serviceWindowPlan.RequireFormalCore; CacheG5=$serviceWindowPlan.CacheG5 }
 if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
+$gateLease = Enter-UESTCBuildLock $layout.Locks
+try {
 $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $cacheable = $selected.Count -gt 0 -and -not ($Full -or $NoCache)
-$cachePaths = if ($cacheable) { @(Get-UESTCCachePaths $root $Wp) } else { @() }
-$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|format=$(-not $SkipFormat)|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object Project) -join ',')"
+$cachePaths = if ($cacheable) { @(Get-UESTCCachePaths $root $Wp $changes) } else { @() }
+$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object Project) -join ',')"
 $inputHash = if ($cacheable) { Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $cachePaths } else { '' }
 $ownershipHash = if ($cacheable -and $selected.Contains('G3')) {
     # Ownership is checked for every changed path, including documentation and deletions.
     Get-UESTCStringHash ($inputHash + ($changes -join "`n") + (Invoke-UESTCGit $root @('show',"${BaseRef}:ownership.json")).StdOut +
-        (Get-UESTCOwnershipUidHash $root))
+        (Get-UESTCOwnershipUidHash $root $changes))
 } else { '' }
 $cachePath = Join-Path $work "$Wp-cache.json"
 $cacheEntries = @{}
 if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
     try {
         $savedCache = Get-Content -Raw -Encoding UTF8 -LiteralPath $cachePath | ConvertFrom-Json
-        foreach ($entry in @($savedCache | Where-Object { $_.PSObject.Properties['version'] -and $_.version -eq 4 } | ForEach-Object entries)) {
+        foreach ($entry in @($savedCache | Where-Object { $_.PSObject.Properties['version'] -and $_.version -eq 5 } | ForEach-Object entries)) {
             if ($entry.Status -ne 'Passed') { continue }
-            if ($SkipFormat -and $entry.Gate -eq 'G1') { continue }
             $cacheEntries[$entry.Gate] = $entry
         }
     } catch { Write-Warning 'Unreadable gate cache ignored.' }
 }
 
-function Invoke-LockedProcess {
-    param([string]$Name, [string]$Executable, [string[]]$Arguments, [string]$Kind = 'Cpu', [switch]$Visible,
+function Invoke-GateProcess {
+    param([string]$Name, [string]$Executable, [string[]]$Arguments, [switch]$Visible,
         [int]$TimeoutSeconds = 1800)
-    $lease = Enter-UESTCResourceLock $layout.Locks $Kind
-    try {
-        try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds }
-        catch {
-            # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
-            if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
-            Write-Warning "Godot import exited 0xC0000005; retrying once. Original log preserved: $(Join-Path $work "$Name.log")"
-            Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds
-        }
+    try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds }
+    catch {
+        # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
+        if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
+        Write-Warning "Godot import exited 0xC0000005; retrying once. Original log preserved: $(Join-Path $work "$Name.log")"
+        Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds
     }
-    finally { Exit-UESTCResourceLock $lease }
 }
 function Assert-GodotVersion {
     if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) { throw "Godot missing: $godot" }
@@ -262,15 +266,16 @@ foreach ($id in $selected) {
             'G1' {
                 $naming = Test-UESTCSourceNaming $root
                 Assert-GodotVersion
-                $null = Invoke-LockedProcess 'G1-build' dotnet @('build',(Join-Path $game 'Campus.sln'),'-c',$Configuration,'-warnaserror')
-                if (-not $SkipFormat) {
-                    $null = Invoke-LockedProcess 'G1-format' dotnet @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--exclude',(Join-Path $game 'addons'))
+                $null = Invoke-GateProcess 'G1-build' dotnet @('build',(Join-Path $game 'Campus.sln'),'-c',$Configuration,'-warnaserror')
+                if ($formatPaths.Count) {
+                    $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
+                    $null = Invoke-GateProcess 'G1-format' dotnet $formatArgs
                 }
                 if ($importRequired) {
-                    $r = Invoke-LockedProcess 'G1-import' $godot @('--headless','--path',$game,'--import')
+                    $r = Invoke-GateProcess 'G1-import' $godot @('--headless','--path',$game,'--import')
                     Assert-CleanGodotLog $r
                 }
-                $formatDetail = if ($SkipFormat) { 'format skipped' } else { 'first-party format verified' }
+                $formatDetail = "changed-source format verified ($($formatPaths.Count) files)"
                 $detail = "Naming files=$($naming.CheckedFiles); build verified; $formatDetail; import=$importRequired"
             }
             'G2' {
@@ -282,9 +287,9 @@ foreach ($id in $selected) {
                     $project = Join-Path $root $selection.Project
                     $notes += "${test}: " + ($selection.Reasons -join '; ')
                     if (-not $selection.HasCompileFiles) { $notes += "${test}: Skipped (no files match explicit Compile Include)"; continue }
-                    # Native rendering/resource-lifetime tests are run explicitly with a GPU lease.
-                    # Ordinary merge quick checks remain headless CPU checks (D-167).
-                    $null = Invoke-LockedProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter','TestCategory!=NativeRender&TestCategory!=G15Core','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
+                    # Native rendering/resource-lifetime tests are run explicitly under the build lock.
+                    # Ordinary quick checks remain headless checks (D-167).
+                    $null = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter','TestCategory!=NativeRender&TestCategory!=G15Core','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
                     $runCount++
                 }
                 if ($runCount -eq 0) { $status = 'Skipped' }
@@ -294,12 +299,12 @@ foreach ($id in $selected) {
             'G4' {
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings
-                $null = Invoke-LockedProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
+                $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
                 $detail = 'Source rules and ArchUnitNET rules passed; BannedApiAnalyzers run in compilation.'
             }
             'G5' {
                 Assert-GodotVersion
-                $r = Invoke-LockedProcess 'G5-registry' $godot @('--headless','--path',$game,'--','--gate=registry','--map=*','--save=off','--audio=off')
+                $r = Invoke-GateProcess 'G5-registry' $godot @('--headless','--path',$game,'--','--gate=registry','--map=*','--save=off','--audio=off')
                 Assert-CleanGodotLog $r
                 $registryReport = [regex]::Match($r.Output, '(?m)^G5_REGISTRY_RESULT[ \t]+(.+)$')
                 if (-not $registryReport.Success) { throw 'The formal registry check did not return its result.' }
@@ -313,7 +318,7 @@ foreach ($id in $selected) {
                 } else {
                     . $coreScript
                     Assert-GodotVersion
-                    $detail = Invoke-UESTCMainlineSmoke -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map
+                    $detail = Invoke-UESTCMainlineSmoke -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -BuildLease $gateLease
                     if ($detail.Status -notin @('Passed','Failed','NotImplemented')) { throw 'The core entry returned an invalid status.' }
                     $status = $detail.Status
                 }
@@ -322,7 +327,7 @@ foreach ($id in $selected) {
                 Assert-GodotVersion
                 $release = Join-Path $root 'build/windows'
                 $null = [IO.Directory]::CreateDirectory($release)
-                $r = Invoke-LockedProcess 'G6-export' $godot @('--path',$game,'--export-release','Windows Desktop',(Join-Path $release 'UESTC.exe')) GpuExclusive -Visible
+                $r = Invoke-GateProcess 'G6-export' $godot @('--path',$game,'--export-release','Windows Desktop',(Join-Path $release 'UESTC.exe')) -Visible
                 Assert-CleanGodotLog $r
                 if (-not (Test-Path -LiteralPath (Join-Path $release 'UESTC.exe'))) { throw 'Export command did not produce UESTC.exe.' }
                 $bytes = (Get-ChildItem -LiteralPath $release -File -Recurse | Measure-Object Length -Sum).Sum
@@ -342,7 +347,7 @@ foreach ($id in $selected) {
                 try {
                     [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $Map, 'Process')
                     $coreArguments = @('test',(Join-Path $game 'Campus.Tests.csproj'),'-c',$Configuration,'--settings',$settings,'--filter','TestCategory=G15Core','--logger','console;verbosity=detailed','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
-                    $null = Invoke-LockedProcess 'G15Core' dotnet $coreArguments Cpu -TimeoutSeconds 1500
+                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 1500
                 } catch {
                     throw ("G15Core FirstFourPassed=false; whole-tile mount CPU and first actual Jolt-step timing are deferred. " + $_.Exception.Message)
                 } finally { [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $previousMap, 'Process') }
@@ -359,7 +364,7 @@ foreach ($id in $selected) {
                     . $coreScript
                     $saveSuitesPassed = @($results | Where-Object { $_.Gate -eq 'G2' -and $_.Status -in @('Passed','CachedPass') }).Count -gt 0 -and
                         @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles -and $_.Project -eq 'game/Campus.Tests.csproj' }).Count -gt 0
-                    $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed
+                    $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
                     $status = $detail.Status
                 }
             }
@@ -381,8 +386,9 @@ foreach ($id in $selected) {
 }
 if ($cacheable) {
     # If import or restore changed an input during this run, do not publish a stale pass.
-    $afterHash = Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes
-    if ($afterHash -eq $inputHash) { [IO.File]::WriteAllText($cachePath, (@{ version=4; entries=@($cacheEntries.Values) } | ConvertTo-Json -Depth 8), $utf8) }
+    $afterPaths = @(Get-UESTCCachePaths $root $Wp $changes)
+    $afterHash = Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $afterPaths
+    if ($afterHash -eq $inputHash) { [IO.File]::WriteAllText($cachePath, (@{ version=5; entries=@($cacheEntries.Values) } | ConvertTo-Json -Depth 8), $utf8) }
 }
 $report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); CachePolicy='Package inputs and project dependencies, shared tools/options and scoped binaries; only completed passes reused; full/window/export always fresh'; GeneratedAt=[DateTime]::UtcNow.ToString('o') }
 $reportPath = Join-Path $work "$Wp-result.json"
@@ -391,3 +397,5 @@ Write-Host "Report: $reportPath"
 if (@($results | Where-Object { $_.Status -eq 'Failed' }).Count) { exit 1 }
 if (@($results | Where-Object { $_.Status -eq 'NotImplemented' }).Count) { exit 2 }
 exit 0
+
+} finally { Exit-UESTCBuildLock $gateLease }

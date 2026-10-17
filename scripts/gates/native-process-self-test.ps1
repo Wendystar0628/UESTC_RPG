@@ -2,13 +2,13 @@
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot '../wt/common.ps1')
+. (Join-Path $PSScriptRoot '../lib/common.ps1')
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $output = Join-Path $root ('output/build/gates/native-process-self-test/' + [Guid]::NewGuid().ToString('N'))
 $fixture = Join-Path $output 'fixture repo'
 $null = [IO.Directory]::CreateDirectory($fixture)
 $utf8 = New-Object Text.UTF8Encoding $false
-$common = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../wt/common.ps1'))
+$common = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../lib/common.ps1'))
 $null = Invoke-UESTCGit $fixture @('-c', 'init.defaultBranch=main', 'init', '--quiet')
 $null = Invoke-UESTCGit $fixture @('config', 'core.autocrlf', 'false')
 $null = Invoke-UESTCGit $fixture @('config', 'core.safecrlf', 'warn')
@@ -33,11 +33,9 @@ for($i=0;$i -lt 6;$i++) { $layout=Get-UESTCLayout $Root; if($layout.Root -ne $Ro
 $gate=Join-Path $Root 'scripts/gate.ps1'
 $plan=& $gate -Wp WP-00 -Plan | ConvertFrom-Json
 if($plan.WorkPackage -ne 'WP-00') { throw 'Gate plan failed.' }
-$worktree=& (Join-Path $Root 'scripts/wt/new.ps1') -Wp WP-99 -Slug native-probe -Plan
-if(-not $worktree.Target.EndsWith('WP-99')) { throw 'Worktree plan failed.' }
 & (Join-Path $Root 'scripts/build/build-info.ps1') -Root $Root -Output ($Result+'.BuildInfo.cs')
 if(-not (Test-Path -LiteralPath ($Result+'.BuildInfo.cs'))) { throw 'Build metadata generation failed.' }
-$record=[ordered]@{mode=$Label;gitWarning=$warning.StdErr;warningExit=$warning.ExitCode;fatalExit128Preserved=$fatalPreserved;layoutRepeats=6;gatePlan=$true;worktreePlan=$true;buildInfo=$true}
+$record=[ordered]@{mode=$Label;gitWarning=$warning.StdErr;warningExit=$warning.ExitCode;fatalExit128Preserved=$fatalPreserved;layoutRepeats=6;gatePlan=$true;buildInfo=$true}
 [IO.File]::WriteAllText($Result,($record|ConvertTo-Json -Depth 5),(New-Object Text.UTF8Encoding $false))
 Write-Output "PASS $Label"
 '@

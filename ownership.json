@@ -3055,7 +3055,7 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "scripts/wt/**",
+      "pattern": "scripts/lib/**",
       "owner": "WP-00"
     },
     {

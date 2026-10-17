@@ -33,51 +33,102 @@ function Test-UESTCGlob {
     return $Path -match ('^' + $patternRegex + '$')
 }
 
-function Test-UESTCOwnership {
-    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
+# Resolve deletions against exactly the same baseline used by selection and G3.
+function Get-UESTCPathOwnership {
+    param([string]$Root, [string[]]$Paths, [string]$BaseRef)
     $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
     $rules = @($ownership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
-    $deletedPaths = @($Changes | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
+    $deleted = @($Paths | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) })
     $basePaths = @()
     $baseRules = @()
-    if ($deletedPaths.Count) {
+    if ($deleted.Count) {
         $basePaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $BaseRef))
-        if (@($deletedPaths | Where-Object { $_ -in $basePaths }).Count) {
+        if (@($deleted | Where-Object { $_ -in $basePaths }).Count) {
             $baseOwnership = (Invoke-UESTCGit $Root @('show', "${BaseRef}:ownership.json")).StdOut | ConvertFrom-Json
             $baseRules = @($baseOwnership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
         }
     }
-    $failures = New-Object 'Collections.Generic.List[string]'
-    foreach ($path in $Changes) {
-        $owner = $null
+    foreach ($path in $Paths) {
+        $owner = ''
         $maintainers = @()
-        # Deletions use the same baseline as the gate; renames arrive as delete/add pairs.
-        $pathRules = if ($path -in $deletedPaths -and $path -in $basePaths) { $baseRules } else { $rules }
+        $pathRules = if ($path -in $deleted -and $path -in $basePaths) { $baseRules } else { $rules }
         foreach ($rule in $pathRules) {
             if (Test-UESTCGlob $path $rule.pattern) {
-                $owner = $rule.owner
+                $owner = [string]$rule.owner
                 if ($rule.PSObject.Properties['maintainers']) { $maintainers = @($rule.maintainers) }
                 break
             }
         }
-        if ($Wp -in $maintainers) { continue }
-        if ($owner -eq $Wp -or ($Wp -eq 'WP-00' -and $owner -in @('shared','main')) -or
-            ($Wp -cmatch '^WP-[0-9]{2}$' -and $owner -cmatch ('^' + [regex]::Escape($Wp) + '[a-z]$'))) { continue }
-        $failures.Add("Ownership: $path belongs to '$owner', requested $Wp")
+        [pscustomobject]@{ Path=$path; Owner=$owner; Maintainers=$maintainers }
     }
-    $files = @(Get-UESTCFiles $Root)
-    $tracked = @(Get-UESTCGitLines $Root @('ls-files', '--cached'))
-    $uids = @{}
-    foreach ($path in $files) {
-        $absolute = Join-Path $Root $path
-        if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
-        if ($path -match '^game/.*\.uid$') {
-            $value = (Get-Content -Raw -Encoding UTF8 -LiteralPath $absolute).Trim()
-            if ($value -notmatch '^uid://[a-z0-9]+$') { $failures.Add("Invalid UID: $path") }
-            elseif ($uids.ContainsKey($value)) { $failures.Add("Duplicate UID: $path and $($uids[$value])") }
-            else { $uids[$value] = $path }
+}
+
+function Test-UESTCPackageOwner {
+    param([string]$Wp, [string]$Owner)
+    return $Owner -eq $Wp -or ($Wp -cmatch '^WP-[0-9]{2}$' -and $Owner -cmatch ('^'+[regex]::Escape($Wp)+'[a-z]$'))
+}
+
+function Select-UESTCChanges {
+    param([string]$Root, [string]$Wp, [string[]]$Changes, [string]$BaseRef)
+    # WP-00's general shared/main permission is not a claim to a neighbour's edits.
+    Get-UESTCPathOwnership $Root $Changes $BaseRef | Where-Object {
+        (Test-UESTCPackageOwner $Wp $_.Owner) -or $Wp -in $_.Maintainers
+    } | ForEach-Object Path
+}
+
+function Get-UESTCScopedUidPaths {
+    param([string[]]$Paths)
+    @($Paths | Where-Object { $_ -match '^game/(?:.*\.uid|.*\.(cs|gdshader|gdshaderinc))$' -and $_ -notmatch '^game/addons/' } |
+        ForEach-Object { if ($_ -match '\.uid$') { $_ } else { "$_.uid" } } | Sort-Object -Unique)
+}
+
+# Foreign work in progress must not change this invocation's UID baseline.
+function Get-UESTCUidInputs {
+    param([string]$Root, [string[]]$Changes)
+    $required = @(Get-UESTCScopedUidPaths $Changes)
+    if (-not $required.Count) { return }
+    $committed = @(Get-UESTCGitLines $Root @('ls-tree','-r','--name-only','HEAD','--','game') | Where-Object { $_ -match '\.uid$' })
+    $dirty = @(Get-UESTCGitLines $Root @('diff','--no-renames','--name-only','HEAD','--','*.uid'))
+    foreach ($path in @($committed + $required | Sort-Object -Unique)) {
+        if ($path -notin $required -and $path -in $dirty) {
+            $value = (Invoke-UESTCGit $Root @('show',"HEAD:$path")).StdOut.Trim()
+        } else {
+            $absolute = Join-Path $Root $path
+            $value = if (Test-Path -LiteralPath $absolute -PathType Leaf) { [IO.File]::ReadAllText($absolute).Trim() } else { '' }
         }
-        if ($path -notmatch '^game/.*\.(cs|gdshader|gdshaderinc)$' -or $path -match '^game/addons/') { continue }
+        [pscustomobject]@{ Path=$path; Value=$value }
+    }
+}
+
+function Test-UESTCOwnership {
+    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
+    $failures = New-Object 'Collections.Generic.List[string]'
+    foreach ($entry in (Get-UESTCPathOwnership $Root $Changes $BaseRef)) {
+        if ($Wp -in $entry.Maintainers -or (Test-UESTCPackageOwner $Wp $entry.Owner) -or
+            ($Wp -eq 'WP-00' -and $entry.Owner -in @('shared','main'))) { continue }
+        $failures.Add("Ownership: $($entry.Path) belongs to '$($entry.Owner)', requested $Wp")
+    }
+    $tracked = @(Get-UESTCGitLines $Root @('ls-files', '--cached'))
+    $requiredUids = @(Get-UESTCScopedUidPaths $Changes)
+    $uids = @{}
+    foreach ($input in (Get-UESTCUidInputs $Root $Changes)) {
+        $path = $input.Path
+        $value = $input.Value
+        if ($path -in $requiredUids -and (Test-Path -LiteralPath (Join-Path $Root $path) -PathType Leaf) -and $value -notmatch '^uid://[a-z0-9]+$') { $failures.Add("Invalid UID: $path") }
+        if ($value -match '^uid://[a-z0-9]+$') {
+            if (-not $uids.ContainsKey($value)) { $uids[$value] = @() }
+            $uids[$value] += $path
+        }
+    }
+    foreach ($value in @($uids.Keys)) {
+        if ($uids[$value].Count -gt 1 -and @($uids[$value] | Where-Object { $_ -in $requiredUids }).Count) {
+            $failures.Add("Duplicate UID: $($uids[$value] -join ' and ')")
+        }
+    }
+    foreach ($uid in $requiredUids) {
+        $source = $uid -replace '\.uid$', ''
+        $absolute = Join-Path $Root $source
+        if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
         $ignored = $false
         $directory = Split-Path $absolute -Parent
         while ($directory.StartsWith((Join-Path $Root 'game'), [StringComparison]::OrdinalIgnoreCase)) {
@@ -85,12 +136,11 @@ function Test-UESTCOwnership {
             $directory = Split-Path $directory -Parent
         }
         if ($ignored) { continue }
-        $uid = "$path.uid"
         if (-not (Test-Path -LiteralPath (Join-Path $Root $uid))) { $failures.Add("Missing UID: $uid; run G1 import") }
         elseif ($uid -notin $tracked) { $failures.Add("UID not staged/tracked: $uid") }
     }
     if ($failures.Count) { throw ($failures -join "`n") }
-    [pscustomobject]@{ CheckedPaths = $Changes.Count; Uids = $uids.Count }
+    [pscustomobject]@{ CheckedPaths=$Changes.Count; Uids=$requiredUids.Count }
 }
 
 function Test-UESTCSourceBoundaries {

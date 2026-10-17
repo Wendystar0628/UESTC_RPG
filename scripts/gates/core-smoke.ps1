@@ -37,7 +37,7 @@ namespace Uestc.Gates {
 function Invoke-UESTCMainlineSmoke {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
         [Parameter(Mandatory)][string]$Locks, [Parameter(Mandatory)][string]$Wp,
-        [Parameter(Mandatory)][string]$Map)
+        [Parameter(Mandatory)][string]$Map, [IO.FileStream]$BuildLease = $null)
     $rootPath = [IO.Path]::GetFullPath($Root)
     $key = $rootPath + '|' + $Godot + '|' + $Map
     if ($script:UESTCCoreSmokeResults.ContainsKey($key)) { return $script:UESTCCoreSmokeResults[$key] }
@@ -49,7 +49,7 @@ function Invoke-UESTCMainlineSmoke {
     $null = [IO.Directory]::CreateDirectory($shots)
     $lease = $null
     try {
-        $lease = Enter-UESTCResourceLock $Locks CpuGpuShared
+        if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks }
         $engineArgs = @('--path',(Join-Path $rootPath 'game'),'--rendering-method','forward_plus',
             '--rendering-driver','d3d12','--resolution','1280x720','--fixed-fps','60','--')
         $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=0','--audio=off','--quality=fine','--adaptive=0')
@@ -104,7 +104,7 @@ function Invoke-UESTCMainlineSmoke {
             Logs=$work; Screenshots=$shots }
     } catch {
         $result = [pscustomobject]@{ Status='Failed'; Scope='G5 startup/exit core'; Error=$_.Exception.Message; Logs=$work; Screenshots=$shots }
-    } finally { if ($lease) { Exit-UESTCResourceLock $lease } }
+    } finally { if ($lease) { Exit-UESTCBuildLock $lease } }
     $script:UESTCCoreSmokeResults[$key] = $result
     return $result
 }
@@ -112,24 +112,25 @@ function Invoke-UESTCMainlineSmoke {
 function Invoke-UESTCSaveCore {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
         [Parameter(Mandatory)][string]$Locks, [Parameter(Mandatory)][string]$Wp,
-        [Parameter(Mandatory)][string]$Map, [switch]$SaveTestsAlreadyPassed)
+        [Parameter(Mandatory)][string]$Map, [switch]$SaveTestsAlreadyPassed, [IO.FileStream]$BuildLease = $null)
     $rootPath = [IO.Path]::GetFullPath($Root)
-    if (-not $SaveTestsAlreadyPassed) {
-        $work = Join-Path $rootPath ('output/build/gates/' + $Wp + '-save-core')
-        $null = [IO.Directory]::CreateDirectory($work)
-        $settings = Join-Path $work 'save.runsettings'
-        $engine = [Security.SecurityElement]::Escape($Godot)
-        $escapedRoot = [Security.SecurityElement]::Escape($rootPath)
-        $xml = '<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables><GODOT_BIN>' + $engine + '</GODOT_BIN><UESTC_REPOSITORY>' + $escapedRoot + '</UESTC_REPOSITORY></EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>--headless</Parameters><DisplayName>FullyQualifiedName</DisplayName><TolerateExitCodeAfterCompletion>false</TolerateExitCodeAfterCompletion></GdUnit4></RunSettings>'
-        [IO.File]::WriteAllText($settings,$xml,(New-Object Text.UTF8Encoding $false))
-        $lease = Enter-UESTCResourceLock $Locks Cpu
-        try {
+    $lease = $null
+    try {
+        if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks; $BuildLease = $lease }
+        if (-not $SaveTestsAlreadyPassed) {
+            $work = Join-Path $rootPath ('output/build/gates/' + $Wp + '-save-core')
+            $null = [IO.Directory]::CreateDirectory($work)
+            $settings = Join-Path $work 'save.runsettings'
+            $engine = [Security.SecurityElement]::Escape($Godot)
+            $escapedRoot = [Security.SecurityElement]::Escape($rootPath)
+            $xml = '<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables><GODOT_BIN>' + $engine + '</GODOT_BIN><UESTC_REPOSITORY>' + $escapedRoot + '</UESTC_REPOSITORY></EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>--headless</Parameters><DisplayName>FullyQualifiedName</DisplayName><TolerateExitCodeAfterCompletion>false</TolerateExitCodeAfterCompletion></GdUnit4></RunSettings>'
+            [IO.File]::WriteAllText($settings,$xml,(New-Object Text.UTF8Encoding $false))
             $null = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'--no-build',
                 '--no-restore','--settings',$settings,'--filter','FullyQualifiedName~Campus.Kernel.Save',
                 '--logger','trx','--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600
-        } finally { Exit-UESTCResourceLock $lease }
-    }
-    $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Wp $Wp -Map $Map
-    return [pscustomobject]@{ Status=$window.Status; Scope='G20 roundtrip, migration, corruption and exit-save core';
-        SaveTests=$(if ($SaveTestsAlreadyPassed) { 'Covered by this invocation G2' } else { 'Existing save suites passed' }); Window=$window }
+        }
+        $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Wp $Wp -Map $Map -BuildLease $BuildLease
+        return [pscustomobject]@{ Status=$window.Status; Scope='G20 roundtrip, migration, corruption and exit-save core';
+            SaveTests=$(if ($SaveTestsAlreadyPassed) { 'Covered by this invocation G2' } else { 'Existing save suites passed' }); Window=$window }
+    } finally { Exit-UESTCBuildLock $lease }
 }
