@@ -94,9 +94,6 @@ public sealed class PaletteComposer
     private int _cursor;
     public IReadOnlyList<string> Warnings { get; }
 
-    /// <summary>Bank 0 only: the legacy registry, every extension row stays empty.</summary>
-    public PaletteComposer(ColorScript script, PaletteRegistry registry) : this(script, PaletteCatalog.FromLegacy(registry)) { }
-
     /// <summary>The complete catalog: legacy entries plus the schema-2 extension pairs (IDs 256–511, non-seasonal).</summary>
     public PaletteComposer(ColorScript script, PaletteCatalog catalog)
     {

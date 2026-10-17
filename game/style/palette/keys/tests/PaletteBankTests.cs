@@ -6,40 +6,39 @@ using GdUnit4;
 namespace Campus.Style.Palette.Keys.Tests;
 
 /// <summary>
-/// The 256×68 layout (contract-28 route B): bank-1 pairs fill rows 64–67 at their low byte, and the first 256×64 bytes stay
-/// exactly what the legacy registry alone writes, at every frame row and every seasonal row. The extension pairs here are
+/// The catalog fills bank-0 frame and seasonal rows plus bank-1 pairs in the 256×68 layout. The extension pairs here are
 /// test entries at the bank edges (256/257, 510/511) plus one per material class in between, not the registered ext-v2 table.
 /// </summary>
 [TestSuite]
 public sealed class PaletteBankTests
 {
     [TestCase]
-    public void BankOneFillsRowsSixtyFourToSixtySevenAndLeavesTheLegacyPrefix()
+    public void CatalogFillsBothBanksAndSeasonalRows()
     {
         var (script, catalog) = Load();
-        var legacy = new PaletteComposer(script, catalog.LegacyRegistry);
         var full = new PaletteComposer(script, catalog);
-        Check(legacy.Pixels.Length == PaletteLayout.ByteCount && full.Pixels.Length == PaletteLayout.ByteCount,
-            "The palette must be 256×68 RGBA8 for both entry points.");
+        Check(full.Pixels.Length == PaletteLayout.ByteCount, "The palette must be 256×68 RGBA8.");
         foreach (var (clock, season) in new[] { (17.5, Season.Autumn), (12.0, Season.Summer), (6.0, Season.Spring), (21.0, Season.Winter) })
         {
             var w = script.EvaluateWorld(clock, (double)season, null, default);
-            foreach (var composer in new[] { legacy, full })
+            full.ComposeCurrent(w);
+            full.StepSeasonal(w, full: true);
+            foreach (var e in catalog.Entries.Where(e => e.Role != PaletteRole.Retired))
             {
-                composer.ComposeCurrent(w);
-                composer.StepSeasonal(w, full: true);
-            }
-            Check(legacy.Pixels.AsSpan(0, PaletteLayout.LegacyByteCount).SequenceEqual(full.Pixels.AsSpan(0, PaletteLayout.LegacyByteCount)),
-                $"Extensions changed the legacy 256×64 bytes at {season} {clock}.");
-            Check(legacy.Pixels.AsSpan(PaletteLayout.LegacyByteCount).IndexOfAnyExcept((byte)0) < 0,
-                "The legacy entry point must leave the bank-1 rows empty.");
-            foreach (var e in catalog.Entries.Where(e => e.Index.Value >= PaletteLayout.LegacyCapacity))
-                for (var row = 0; row < PaletteLayout.FrameRowCount; row++)
+                var rows = e.Role is PaletteRole.Lit or PaletteRole.Shade ? PaletteLayout.FrameRowCount : 1;
+                for (var row = 0; row < rows; row++)
                 {
                     var (col, texelRow) = PaletteLayout.FrameTexel(e.Index, row);
-                    Check(texelRow == PaletteLayout.LegacyHeight + row && col == (e.Index.Value & 255), $"{e.Token.Value} maps to the wrong texel.");
+                    var expectedRow = e.Index.Value < PaletteLayout.LegacyCapacity ? row : PaletteLayout.LegacyHeight + row;
+                    Check(texelRow == expectedRow && col == (e.Index.Value & 255), $"{e.Token.Value} maps to the wrong texel.");
                     Check(full.Pixels[(texelRow * PaletteLayout.Width + col) * 4 + 3] == 255, $"{e.Token.Value} row {row} was not written at {season} {clock}.");
                 }
+                if (e is { Seasonal: true, Role: PaletteRole.Lit, Row: { } seasonalRow })
+                    for (var row = seasonalRow; row <= seasonalRow + 1; row++)
+                        for (var sample = 0; sample < PaletteLayout.SeasonSampleCount; sample++)
+                            Check(full.Pixels[(row * PaletteLayout.Width + sample) * 4 + 3] == 255,
+                                $"{e.Token.Value} seasonal row {row} sample {sample} was not written at {season} {clock}.");
+            }
         }
         // The pair derives like a legacy pair of the same class and albedo: lit brighter than shade under the default frame.
         var at = script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);

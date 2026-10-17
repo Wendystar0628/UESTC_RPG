@@ -76,8 +76,9 @@ public partial class PaletteInspector : CanvasLayer
         var pixels = _node.Pixels;
         foreach (var (token, rect) in _swatches)
         {
-            if (!_node.Registry.TryGet(new PaletteToken(token), out var e)) { rect.Color = new Color(0, 0, 0, 0); continue; }
-            var i = e.Id * 4;
+            if (!_node.Catalog.TryGet(new PaletteToken(token), out var e)) { rect.Color = new Color(0, 0, 0, 0); continue; }
+            var (col, row) = PaletteLayout.FrameTexel(e.Index, 0);
+            var i = (row * PaletteLayout.Width + col) * 4;
             rect.Color = new Color(pixels[i] / 255f, pixels[i + 1] / 255f, pixels[i + 2] / 255f);
         }
         FillSky(_sunImage, w.Frame, true);
@@ -88,7 +89,7 @@ public partial class PaletteInspector : CanvasLayer
         var hh = (int)Math.Floor(clock);
         var mm = (int)Math.Round((clock - hh) * 60.0);
         _title.Text = string.Create(CultureInfo.InvariantCulture,
-            $"WP-37 colour script   {SeasonName(season)} {hh:00}:{mm:00}   sun {w.SunAltDeg:+0.00;-0.00} deg   x {w.X:0.00}   registry {Path.GetFileName(_node.RegistrySource)}");
+            $"WP-37 colour script   {SeasonName(season)} {hh:00}:{mm:00}   sun {w.SunAltDeg:+0.00;-0.00} deg   x {w.X:0.00}   catalog {_node.CatalogSource}");
         _readout.Text = string.Create(CultureInfo.InvariantCulture,
             $"r {w.Frame.V[FrameLayout.R]:0.000}   wMin {w.Frame.V[FrameLayout.WMin]:0.00}   key intensity {w.Frame.V[FrameLayout.Intensity]:0.00}   satGain {w.Frame.V[FrameLayout.SatGain]:0.00}   litLift {w.Frame.V[FrameLayout.LitLift]:0.000}\n" +
             $"snapshot rev {s.Rev}: line {s.LineDarkness:0.00}  glow {s.Glow:0.000}/{s.GlowIntensity:0.00}  vignette {s.Vignette:0.00}  exposure {s.Exposure:+0.00;-0.00} EV  stars {s.Stars:0.00}  cloud {s.CloudCover:0.00}  lampPool {s.LampPoolGain:0.0}\n" +

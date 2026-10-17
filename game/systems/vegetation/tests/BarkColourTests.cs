@@ -21,19 +21,19 @@ public sealed class BarkColourTests
     [TestCase]
     public void BarkLitServesBothReviewFrames()
     {
-        var (script, registry) = Load();
-        var composer = new PaletteComposer(script, registry);
+        var (script, catalog) = Load();
+        var composer = new PaletteComposer(script, catalog);
         foreach (var (clock, target) in new[] { (17.5, "#9F703E"), (12.0, "#9F7E5E") })
         {
             composer.ComposeCurrent(script.EvaluateWorld(clock, (double)Season.Autumn, null, default));
-            var lit = Hex(composer, registry, MotherModels.Bark);
+            var lit = Hex(composer, catalog, MotherModels.Bark);
             var litLab = Oklab.Parse(lit);
             var want = Oklab.Parse(target);
             var d = Math.Sqrt((litLab.L - want.L) * (litLab.L - want.L) + (litLab.A - want.A) * (litLab.A - want.A) + (litLab.B - want.B) * (litLab.B - want.B));
             if (d > Tolerance) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, {d:F3} from the review's {target}");
             // Warm grey-brown: red over blue at every frame, never the neutral cool grey the first albedo gave at noon.
             if (!(litLab.A > 0.0 && litLab.B >= 0.0)) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, not warm");
-            var shade = Oklab.Parse(Hex(composer, registry, MotherModels.BarkShade));
+            var shade = Oklab.Parse(Hex(composer, catalog, MotherModels.BarkShade));
             // The shade keeps the bark's own warm hue (0q): never pulled to the sky's blue-violet, and not grey.
             var shadeHue = Math.Atan2(shade.B, shade.A) * 180.0 / Math.PI;
             var shadeChroma = Math.Sqrt(shade.A * shade.A + shade.B * shade.B);
@@ -45,14 +45,15 @@ public sealed class BarkColourTests
         }
     }
 
-    private static string Hex(PaletteComposer composer, PaletteRegistry registry, PaletteToken token)
+    private static string Hex(PaletteComposer composer, PaletteCatalog catalog, PaletteToken token)
     {
-        var id = registry.Get(token).Id;
+        var (col, row) = PaletteLayout.FrameTexel(catalog.Resolve(token), 0);
+        var offset = (row * PaletteLayout.Width + col) * 4;
         var p = composer.Pixels;
-        return $"#{p[id * 4]:X2}{p[id * 4 + 1]:X2}{p[id * 4 + 2]:X2}";
+        return $"#{p[offset]:X2}{p[offset + 1]:X2}{p[offset + 2]:X2}";
     }
 
-    private static (ColorScript, PaletteRegistry) Load()
+    private static (ColorScript, PaletteCatalog) Load()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "ownership.json"))) dir = dir.Parent;
@@ -66,6 +67,6 @@ public sealed class BarkColourTests
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
         foreach (var file in files)
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return (script, new PaletteRegistry(entries));
+        return (script, PaletteCatalog.FromLegacy(new PaletteRegistry(entries)));
     }
 }

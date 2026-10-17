@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -21,8 +20,6 @@ namespace Campus.Style.Palette.Keys;
 public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
 {
     private const string KeysDir = "res://style/palette/keys/";
-    private const string CorePath = "res://style/palette/core.json";
-    private const string ExtDir = "res://style/palette/ext";
 
     private readonly ColorScript _script;
     private readonly PaletteCatalog _catalog;
@@ -38,14 +35,16 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     private PaletteInspector? _inspector;
 
     public ColorScriptSnapshot Current { get; private set; }
-    public string RegistrySource { get; }
+    public string CatalogSource { get; }
 
     public PaletteNode()
     {
         ProcessPriority = FramePriority.Palette;
         _script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
             Read("vegetation.json"), Read("weather.json")));
-        (_catalog, RegistrySource) = ResolveCatalog();
+        var source = Services.Get<IPaletteCatalogSource>();
+        _catalog = source.Catalog;
+        CatalogSource = source.GetType().Name;
         _composer = new PaletteComposer(_script, _catalog);
         foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
         // Default state until the world is read: autumn 17:30, clear (SYS-TIME §0).
@@ -62,7 +61,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     }
 
     public ImageTexture Texture => _texture;
-    public PaletteRegistry Registry => _catalog.LegacyRegistry;
     public PaletteCatalog Catalog => _catalog;
     public byte[] Pixels => _composer.Pixels;
     public double[] SkyStops => _script.Data.SkyStopsDeg;
@@ -72,49 +70,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         var bytes = Godot.FileAccess.GetFileAsBytes(KeysDir + name);
         if (bytes.Length == 0) throw new FileNotFoundException($"Missing colour-script data: {KeysDir + name}");
         return bytes;
-    }
-
-    /// <summary>
-    /// The complete catalog (IPaletteCatalogSource, legacy entries plus the ext-v2 bank-1 pairs) once its source is a
-    /// production registration; until then only the legacy registry below, so the bank-1 rows stay empty.
-    /// </summary>
-    private static (PaletteCatalog, string) ResolveCatalog()
-    {
-        var source = Services.Services.Entries.FirstOrDefault(e => e.Kind == "service" && e.Id == typeof(IPaletteCatalogSource).FullName);
-        if (source is { IsStub: false }) return (Services.Get<IPaletteCatalogSource>().Catalog, "service " + source.Type.Name);
-        var (registry, from) = ResolveRegistry();
-        return (PaletteCatalog.FromLegacy(registry), from);
-    }
-
-    /// <summary>
-    /// The shared PaletteRegistry service once its source (IPaletteRegistrySource) is a production registration; until then
-    /// the same files WP-04's loader reads: core.json plus every package extension ext/WP-*.json (ART-STYLE §8.5).
-    /// </summary>
-    private static (PaletteRegistry, string) ResolveRegistry()
-    {
-        var source = Services.Services.Entries.FirstOrDefault(e => e.Kind == "service" && e.Id == typeof(IPaletteRegistrySource).FullName);
-        if (source is { IsStub: false }) return (Services.Get<PaletteRegistry>(), "service " + source.Type.Name);
-        var entries = new List<PaletteEntry>(Parse(CorePath).Entries);
-        var extFiles = new List<string>();
-        if (DirAccess.DirExistsAbsolute(ExtDir))
-            foreach (var name in ResourceLoader.ListDirectory(ExtDir)
-                .Where(n => n.StartsWith("WP-", StringComparison.Ordinal) && n.EndsWith(".json", StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal))
-            {
-                entries.AddRange(Parse(ExtDir + "/" + name).Entries);
-                extFiles.Add(name);
-            }
-        return (new PaletteRegistry(entries), extFiles.Count == 0 ? CorePath : CorePath + " + ext/" + string.Join(",", extFiles));
-    }
-
-    private static PaletteRegistryData Parse(string path)
-    {
-        var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new FileNotFoundException($"Missing palette registry: {path}");
-        var data = JsonSerializer.Deserialize<PaletteRegistryData>(bytes, ContractJson.Options)
-            ?? throw new InvalidDataException($"Empty palette registry: {path}");
-        if (data.Schema != 1) throw new InvalidDataException($"Unsupported palette registry schema {data.Schema}: {path}");
-        return data;
     }
 
     public override void _Ready()
@@ -187,6 +142,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
             "ginkgo.shade", "grass.lit", "grass.shade", "sky.sun.0", "sky.sun.4", "sky.anti.0", "fog.sun"];
         var parts = string.Join(" ", tokens.Select(t => $"{t}={HexOf(t)}"));
         GD.Print(string.Create(CultureInfo.InvariantCulture,
-            $"WP37_PALETTE season={season:F2} clock={clock:F3} alt={w.SunAltDeg:F3} r={w.Frame.V[FrameLayout.R]:F4} registry={RegistrySource} {parts} wall.shade.in={HexOf("wall.lit", 2)}"));
+            $"WP37_PALETTE season={season:F2} clock={clock:F3} alt={w.SunAltDeg:F3} r={w.Frame.V[FrameLayout.R]:F4} catalog={CatalogSource} {parts} wall.shade.in={HexOf("wall.lit", 2)}"));
     }
 }
