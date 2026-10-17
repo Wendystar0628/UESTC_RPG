@@ -101,16 +101,16 @@
 
 ## WF-ENTRY · 角色入口卡
 
-`docs/design/workflow/WF-ENTRY-角色入口卡.md` · 6.8k 字 · 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入
+`docs/design/workflow/WF-ENTRY-角色入口卡.md` · 7.0k 字 · 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入
 关键词：角色入口卡、入口卡、主会话、子代理、Astra、值班执行者、Sol 旁路会话、Grok、Gemini、luna、Sol 值班兜底、重置后先读、开工动作、做 X 前读 Y、钩子注入、SessionStart、SubagentStart
 
 - WF-ENTRY §0 结论 · L23 · 447
   - ★ WF-ENTRY §0.1 接入要点 · L30 · 153
-- WF-ENTRY §1 主会话 · L36 · 866
-- WF-ENTRY §2 子代理 · L63 · 1.4k
-- WF-ENTRY §3 Astra · L91 · 852
-- WF-ENTRY §4 值班执行者 · L114 · 1.2k
-- WF-ENTRY §5 Sol 旁路会话 · L133 · 901
+- WF-ENTRY §1 主会话 · L36 · 1.0k
+- WF-ENTRY §2 子代理 · L64 · 1.4k
+- WF-ENTRY §3 Astra · L92 · 852
+- WF-ENTRY §4 值班执行者 · L115 · 1.2k
+- WF-ENTRY §5 Sol 旁路会话 · L134 · 901
 
 ## WF-INDEX · 协作总纲
 
@@ -157,7 +157,7 @@
   - WF-COMMS §4.1 什么时候发 · L107 · 293
   - WF-COMMS §4.2 一条来信一个新文件（D-207） · L116 · 289
   - WF-COMMS §4.3 三级标记与写法 · L120 · 364
-- WF-COMMS §5 Codex 会话与引导信箱 · L127 · 677
+- WF-COMMS §5 Codex 会话与引导信箱 · L127 · 681
 
 ## WF-DUTY · 值班与旁路
 
