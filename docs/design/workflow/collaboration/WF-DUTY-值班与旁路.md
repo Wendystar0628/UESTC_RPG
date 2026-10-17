@@ -3,14 +3,15 @@ id: WF-DUTY
 title: 值班与旁路
 category: workflow
 summary: 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理
-keywords: [值班, 值班执行者, 值班唤醒脚本, 旁路唤醒脚本, duty_watch, side_runner, Grok, Gemini, luna, Sol 值班会话, 退回, 值班长期单, 巡检, 卡死进程, 完成度调研, 调研单, 调研索引, 三个视角, Sol 旁路会话, 旁路单, side/ROLE.md, D-198, D-202, D-204]
+keywords: [值班, 值班执行者, 值班唤醒脚本, 旁路唤醒脚本, duty_watch, side_runner, Grok, Gemini, luna, Sol 值班会话, 退回, 值班长期单, 巡检, 卡死进程, 完成度调研, 调研单, 调研索引, 三个视角, Sol 旁路会话, 旁路单, D-198, D-202, D-204]
 owners: [WP-00]
 contributors: []
 depends: [WF-INDEX, WF-ROLE, WF-COMMS]
-related: [WF-MERGE, WF-FLOW, WF-MODEL, WF-RULE, WF-STATUS]
+related: [WF-ENTRY, WF-MERGE, WF-FLOW, WF-MODEL, WF-RULE, WF-STATUS]
 contracts: []
 data: []
 gates: []
+paths: [".collab/side/**", ".collab/tasks/sol/**"]
 ---
 
 # WF-DUTY · 值班与旁路
@@ -48,7 +49,7 @@ gates: []
 
 **执行者与退回**（D-198）：值班执行者按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，D-202），Gemini 不可用时交 gpt-6-luna（每次新开一个 Codex CLI 会话，D-210）；其余合并、值班单与定时巡检交 Grok 4.7（后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol：唤醒脚本用 `tools/duty/codex_cli_run.py` 新开一个 Codex CLI 会话（gpt-6.1-sol，high，完全访问，工作目录主检出），进程退出即本轮结束，不续用旧会话（D-210）；由它先看 `git status`、`logs/merged.log` 和 `logs/tasks/001-值班长期单.log.md` 末尾再接着做，已做完的不重做。各执行者都照 `tasks/sol/001-值班长期单.md` 与 WF-MERGE 做；同一时刻只有一个执行者在主检出上做；通知都写进主会话收件箱（发件方 `duty`，一轮一个文件，开头注明是谁）。值班唤醒脚本不启动调研。
 
-**旁路唤醒脚本**按文件名顺序，从 `side/cards/` 里取一张还没交出的单，叫醒 Sol 旁路会话，消息里写明任务单路径并要求照 `side/ROLE.md` 执行；这一轮结束后再取下一张，一次只交一张。
+**旁路唤醒脚本**按文件名顺序，从 `side/cards/` 里取一张还没交出的单，叫醒 Sol 旁路会话，消息里写明任务单路径并要求照 WF-ENTRY 的 Sol 旁路会话节执行；这一轮结束后再取下一张，一次只交一张。
 
 **记录**：`tools/duty_watch/`（`seen.txt`、`cards.txt` 记已处理的批准行和任务单）、`tools/side_runner/done.txt`；日志在 `logs/duty/`、`logs/side/`。每轮只做被叫醒的事。
 
@@ -78,12 +79,12 @@ gates: []
 
 ## 4 Sol 旁路会话
 
-**是什么**：Codex 应用里的固定会话"Sol旁路会话"（gpt-6.1-sol，xhigh，普通速度，D-203），角色说明 `side/ROLE.md`。完成度调研和其他旁路任务都由它一个会话管理，按任务单开子代理并行处理。
+**是什么**：Codex 应用里的固定会话"Sol旁路会话"（gpt-6.1-sol，xhigh，普通速度，D-203），入口见 WF-ENTRY 的 Sol 旁路会话节。完成度调研和其他旁路任务都由它一个会话管理，按任务单开子代理并行处理。
 
 **两类任务单**（都放在 `side/cards/`）：
 - **调研单 `r<nnn>-<主题>.md`**：做法见 §3。
 - **旁路单 `s<nnn>-<主题>.md`**：由主会话写。主会话判断某件事不在主线关键路径上、却会占主线时间，或者要大量补信息、调研、批量核对数据时，写一张旁路单，写明在哪做、交付什么、能改什么、哪些不许做；派不派、派几张、做到什么程度由主会话定。
 
-**怎么执行**：旁路唤醒脚本一次交一张（§1）；旁路会话按方向数用 `spawn_agent` 开 gpt-6.1-sol 子代理，最多 8 个并发，简报按 WF-MODEL §6 写明共用工作目录的边界；做完在单子末尾"状态"写结果，在 `notes/opus/` 新建来信写一两行结果，然后结束本轮；上下文重置后照 `side/cards/` 下各单的"状态"接着做（WF-COMMS §6）。
+**怎么执行**：旁路唤醒脚本一次交一张（§1）；旁路会话按方向数用 `spawn_agent` 开 gpt-6.1-sol 子代理，最多 8 个并发，简报按 WF-MODEL §6 写明共用工作目录的边界；做完在单子末尾"状态"写结果，在 `notes/opus/` 新建来信写一两行结果，然后结束本轮；上下文重置后照 `side/cards/` 下各单的"状态"接着做。
 
 **边界**：不做任何审美工作（WF-ROLE §3），调研里涉及观感的只收集事实和出处；不改契约和共享工程文件；不改 `docs/design/`，任务单给出确切文字的补丁除外；不合并、不推送；不碰任何包的工作树和主检出。要写代码的旁路活，在单子指定的独立工作树里做，完成后写合并请求，经主会话批准由值班执行者合入（WF-MERGE §1）。

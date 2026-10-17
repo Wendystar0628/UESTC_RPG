@@ -49,15 +49,12 @@ gates: [G4, G5, G14, G16]
 - **要给界面元素取色**：只用 `game/style/palette/ext/ui.json` 里的色名，经 `UiPalette` 这一个入口读；代码和着色器里不写十六进制色值（G4）；缺色名时由 WP-35 登记进 `ui.json`，不在别处另写色值（§3.8、§11.2、§11.3）
 - **要画面板、卡片、按钮或文字**：用 `UiThemeBuilder` 生成的那一个 Theme，控件上设 `ThemeTypeVariation` 选类型变体；不写零散的 `theme_override_*`，不另存共享 `.tres`；随主题变的颜色一律走 `ui_panel` 着色器按 `ui_night` 取日、夜两值，Theme 里的颜色只作兜底（§11.3、§11.6）
 - **要用界面着色器或材质**：界面层只用白名单里的 `ui_panel.gdshader`（不读屏幕）和 `ui_screen.gdshader`（读屏幕的整页揭示与磨砂），地图底图的 `map_base.gdshader` 归 SYS-ATLAS；材质经 `UiMaterials` 向 `Campus.Style` 的材质库申请；单个控件的效果用 instance uniform，全局参数只读 `ui_night`、`anim_time`、`step_rate`，不新增；着色器里不用 `TIME`，颜色 uniform 加 `source_color`（§11.1、§11.5）
-- **做压在实景上的常驻小件**：默认固定深屏，材质写 instance uniform `pin_night = 1`；大页和确认对话框随主题；开始页、放映层不随主题、不读 `ui_night`（§3.6、§11.6）
-- **地图界面取色（WP-48b）**：只按 `ui.json` 的 `map.*` 色名取，大地图随主题取 `light` 或 `dark`，小地图默认固定取 `dark`；标记的状态色直接用 §3.5 的语义令牌，不另登记（§3.8）
 - **界面色与 3D 的边界**：`ui.*` 色只在界面层（CanvasLayer ≥ 9，含放映层 9），不进 3D 材质、调色板纹理、光照和后期；世界里不放蓝色全息标记、光柱信标和选中描边（§2.2）
 - **要做界面动效**：只用 M1–M8 八个母题，按频率分级选用；母题的样子、用法、曲线、时长、交错、辉光与闪烁上限以 §9.2–§9.9 正文为准，§0 第 9 条只是摘要；不新增母题；不用 Godot 的 `Back`、`Elastic`、`Bounce`、`Spring` 过渡；动效只改 `Modulate`、不在容器里的 `Position` 与 `Rotation` 和 instance uniform（§9.3、§9.4、§8.12、§11.7）
 - **3D 侧的过渡要响应"减少动态效果"**：读契约 `IMotionSettings`（WP-35 实现，WP-34、WP-36、WP-26、WP-45、WP-48、WP-49 只读）；界面组件的时长一律经 `MotionPolicy` 取，组件里不写判断（§10.1、§11.7、§11.11）
 - **要表示加载或等待**：不做进度条、百分比和剩余时间；等待藏在雾幕、扉页或标题卡后面，超过 1.5 s 才亮三过孔等待灯，冷启动的扉页阶段是 4 s（§7.10、§8.10）
 - **要加字体、图标或 MSDF 文字**：字体只用思源黑体 SC、Inter、JetBrains Mono，整包不改，回退链显式指定 SC；图标自绘单色 SVG，放 `game/assets/hud/icons/` 并登记进 `game/assets/hud/manifest.json`，不引第三方图标库，不用银杏等植物与器物意象；MSDF 只给 §11.8 登记的用途，再加先在那里登记（§4.1、§4.2、§6.1、§6.2、§11.8）
 - **新增界面着色器的绘制类型**：在开场雾幕或扉页后面预热，雾幕或扉页淡出后 `PipelineCompilationsCanvas` 不再增长；**新增大页或成批控件**：按需创建、关闭即释放，不预建隐藏（隐藏页会占实例参数池，§11.9）
-- **画面层次、契约与命令行**：层次从下到上是 3D、4 预热层、5 雾幕与扉页、9 放映层、10 界面 `HudRoot`、11 署名，`rendering/viewport/hdr_2d` 固定为关；`IMotionSettings`、`IPaletteProbe`（WP-37 实现，只在换季、换天气模式时取一次）由 WP-00 收进 ENG-ARCH §3；`--ui-theme`、`--motion`、`--ui-scale`、`--ui-gallery`、`--ui-export-theme` 写进 ENG-GATES §1 的命令行表（§11.1、§11.11、§11.12）
 
 ## 1 设计原则
 

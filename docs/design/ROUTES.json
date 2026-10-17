@@ -1,0 +1,529 @@
+{
+ "docs": {
+  "ART-AMBIENCE": "docs/design/art/ART-AMBIENCE-日式日常街景.md",
+  "ART-FIDELITY": "docs/design/art/ART-FIDELITY-视觉精度标准.md",
+  "ART-MODELING": "docs/design/art/ART-MODELING-风格化造型规则.md",
+  "ART-RENOVATION": "docs/design/art/ART-RENOVATION-老楼翻新.md",
+  "ART-SKYLIGHT": "docs/design/art/ART-SKYLIGHT-天空光照与大气.md",
+  "ART-STYLE": "docs/design/art/ART-STYLE-风格基础.md",
+  "CORE-CONTENT": "docs/design/core/CORE-CONTENT-开发内容核心准则.md",
+  "CORE-CONVENTIONS": "docs/design/core/CORE-CONVENTIONS-约定.md",
+  "CORE-DECISIONS": "docs/design/core/CORE-DECISIONS-决策登记.md",
+  "CORE-GLOSSARY": "docs/design/core/CORE-GLOSSARY-术语表.md",
+  "CORE-INDEX": "docs/design/README.md",
+  "ENG-ARCH": "docs/design/engineering/ENG-ARCH-工程架构.md",
+  "ENG-BUDGET": "docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md",
+  "ENG-GATES": "docs/design/engineering/ENG-GATES-验收与门禁.md",
+  "ENG-PERF": "docs/design/engineering/ENG-PERF-性能工程.md",
+  "ENG-ROADMAP": "docs/design/engineering/ENG-ROADMAP-扩展路线.md",
+  "ENG-WP": "docs/design/engineering/ENG-WP-工作包派工单.md",
+  "MAP-QSH-ADDITIONS": "docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md",
+  "MAP-QSH-CENTER-EAST": "docs/design/maps/qingshuihe/MAP-QSH-CENTER-EAST-中部与东区.md",
+  "MAP-QSH-CORE": "docs/design/maps/qingshuihe/MAP-QSH-CORE-核心区.md",
+  "MAP-QSH-LIBRARY": "docs/design/maps/qingshuihe/MAP-QSH-LIBRARY-图书馆与博物馆室内.md",
+  "MAP-QSH-NORTH": "docs/design/maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md",
+  "MAP-QSH-RENOVATION": "docs/design/maps/qingshuihe/MAP-QSH-RENOVATION-清水河翻新清单.md",
+  "MAP-QSH-SOUTH": "docs/design/maps/qingshuihe/MAP-QSH-SOUTH-南区.md",
+  "MAP-QSH-TERRAIN": "docs/design/maps/qingshuihe/MAP-QSH-TERRAIN-分区地形.md",
+  "MAP-QSH-WEST": "docs/design/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md",
+  "OPS-RELEASE": "docs/design/ops/OPS-RELEASE-发布与交付.md",
+  "SYS-ATLAS": "docs/design/systems/SYS-ATLAS-平面地图与传送.md",
+  "SYS-AUDIO": "docs/design/systems/SYS-AUDIO-音频.md",
+  "SYS-GRAPHICS": "docs/design/systems/SYS-GRAPHICS-画面设置.md",
+  "SYS-MAPS": "docs/design/systems/SYS-MAPS-多地图.md",
+  "SYS-MOTION": "docs/design/systems/SYS-MOTION-动态与事件.md",
+  "SYS-SAVE": "docs/design/systems/SYS-SAVE-存档与持久化.md",
+  "SYS-TIME": "docs/design/systems/SYS-TIME-时间与季节.md",
+  "SYS-TITLE": "docs/design/systems/SYS-TITLE-开始页与进入过场.md",
+  "SYS-VIEW": "docs/design/systems/SYS-VIEW-观察模式介质与开场.md",
+  "SYS-WALK": "docs/design/systems/SYS-WALK-行走模式.md",
+  "SYS-WEATHER": "docs/design/systems/SYS-WEATHER-天气.md",
+  "TOOL-PREVIEW": "docs/design/tools/TOOL-PREVIEW-内容预览.md",
+  "UI-NAV": "docs/design/ui/UI-NAV-界面与操作说明.md",
+  "UI-VISUAL": "docs/design/ui/UI-VISUAL-界面视觉语言.md",
+  "WF-BUILD": "docs/design/workflow/rules/WF-BUILD-施工边界.md",
+  "WF-COMMS": "docs/design/workflow/collaboration/WF-COMMS-交接与通信.md",
+  "WF-CORE": "docs/design/workflow/rules/WF-CORE-项目核心准则.md",
+  "WF-DOC": "docs/design/workflow/rules/WF-DOC-文档写法.md",
+  "WF-DUTY": "docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md",
+  "WF-ENTRY": "docs/design/workflow/WF-ENTRY-角色入口卡.md",
+  "WF-FLOW": "docs/design/workflow/process/WF-FLOW-开发流程.md",
+  "WF-INDEX": "docs/design/workflow/WF-INDEX-协作总纲.md",
+  "WF-MERGE": "docs/design/workflow/process/WF-MERGE-批准与合并.md",
+  "WF-MODEL": "docs/design/workflow/collaboration/WF-MODEL-模型选择与子代理.md",
+  "WF-ONBOARD": "docs/design/workflow/WF-ONBOARD-子代理开工手册.md",
+  "WF-QUOTA": "docs/design/workflow/management/WF-QUOTA-账号与额度.md",
+  "WF-ROLE": "docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md",
+  "WF-RULE": "docs/design/workflow/rules/WF-RULE-全员守则.md",
+  "WF-STATUS": "docs/design/workflow/management/WF-STATUS-施工状态与队列.md",
+  "WLD-DIORAMA": "docs/design/world/WLD-DIORAMA-箱庭边界截面与远景.md",
+  "WLD-INTERIORS": "docs/design/world/WLD-INTERIORS-室内.md",
+  "WLD-LIFE": "docs/design/world/WLD-LIFE-动物生活痕迹与街道家具.md",
+  "WLD-OUTSKIRTS": "docs/design/world/WLD-OUTSKIRTS-边界与外围.md",
+  "WLD-TERRAIN": "docs/design/world/WLD-TERRAIN-地形.md",
+  "WLD-VEGETATION": "docs/design/world/WLD-VEGETATION-植被.md",
+  "WLD-WATER": "docs/design/world/WLD-WATER-水体.md"
+ },
+ "paths": [
+  {
+   "docs": [
+    "WF-COMMS"
+   ],
+   "glob": ".collab/notes/**"
+  },
+  {
+   "docs": [
+    "WF-COMMS"
+   ],
+   "glob": ".collab/requests/**"
+  },
+  {
+   "docs": [
+    "WF-MERGE"
+   ],
+   "glob": ".collab/requests/merge-*"
+  },
+  {
+   "docs": [
+    "WF-DUTY"
+   ],
+   "glob": ".collab/side/**"
+  },
+  {
+   "docs": [
+    "WF-STATUS"
+   ],
+   "glob": ".collab/status/**"
+  },
+  {
+   "docs": [
+    "WF-COMMS"
+   ],
+   "glob": ".collab/tasks/**"
+  },
+  {
+   "docs": [
+    "WF-DUTY"
+   ],
+   "glob": ".collab/tasks/sol/**"
+  },
+  {
+   "docs": [
+    "WF-DOC"
+   ],
+   "glob": "docs/design/**"
+  },
+  {
+   "docs": [
+    "WF-BUILD"
+   ],
+   "glob": "game/**/*.cs"
+  },
+  {
+   "docs": [
+    "WF-BUILD"
+   ],
+   "glob": "game/**/*.gdshader*"
+  }
+ ],
+ "version": 1,
+ "wp": {
+  "WP-00": [
+   "CORE-CONTENT",
+   "CORE-CONVENTIONS",
+   "CORE-INDEX",
+   "ENG-ARCH",
+   "ENG-BUDGET",
+   "ENG-ROADMAP",
+   "ENG-WP",
+   "OPS-RELEASE",
+   "SYS-VIEW",
+   "ENG-GATES",
+   "SYS-MAPS"
+  ],
+  "WP-01": [
+   "ENG-PERF",
+   "SYS-VIEW",
+   "TOOL-PREVIEW",
+   "OPS-RELEASE"
+  ],
+  "WP-02": [
+   "ENG-PERF",
+   "ENG-BUDGET",
+   "OPS-RELEASE"
+  ],
+  "WP-02a": [
+   "ENG-PERF",
+   "ENG-BUDGET",
+   "OPS-RELEASE"
+  ],
+  "WP-02b": [
+   "ENG-PERF",
+   "ENG-BUDGET",
+   "OPS-RELEASE"
+  ],
+  "WP-03": [
+   "ART-SKYLIGHT",
+   "SYS-MOTION"
+  ],
+  "WP-04": [
+   "ART-STYLE"
+  ],
+  "WP-05": [
+   "ART-STYLE"
+  ],
+  "WP-06": [
+   "SYS-VIEW",
+   "ENG-GATES"
+  ],
+  "WP-07": [
+   "SYS-VIEW",
+   "WLD-DIORAMA",
+   "WLD-INTERIORS"
+  ],
+  "WP-08": [
+   "TOOL-PREVIEW",
+   "WLD-TERRAIN",
+   "WLD-DIORAMA",
+   "ENG-ARCH",
+   "OPS-RELEASE"
+  ],
+  "WP-09": [
+   "ART-MODELING"
+  ],
+  "WP-10": [],
+  "WP-11": [],
+  "WP-12": [],
+  "WP-13": [
+   "ART-AMBIENCE",
+   "MAP-QSH-ADDITIONS",
+   "WLD-LIFE",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-14": [
+   "ART-RENOVATION",
+   "MAP-QSH-ADDITIONS",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-15": [
+   "WLD-TERRAIN"
+  ],
+  "WP-16": [
+   "MAP-QSH-CORE",
+   "MAP-QSH-TERRAIN",
+   "ART-AMBIENCE",
+   "ART-RENOVATION",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-17": [
+   "MAP-QSH-LIBRARY",
+   "WLD-INTERIORS",
+   "ART-RENOVATION"
+  ],
+  "WP-18": [
+   "MAP-QSH-SOUTH",
+   "MAP-QSH-TERRAIN",
+   "ART-AMBIENCE",
+   "ART-RENOVATION",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-19": [
+   "MAP-QSH-TERRAIN",
+   "MAP-QSH-WEST",
+   "ART-AMBIENCE",
+   "ART-RENOVATION",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-20": [
+   "MAP-QSH-NORTH",
+   "MAP-QSH-TERRAIN",
+   "ART-AMBIENCE",
+   "ART-RENOVATION",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-21": [
+   "MAP-QSH-CENTER-EAST",
+   "MAP-QSH-TERRAIN",
+   "ART-AMBIENCE",
+   "ART-RENOVATION",
+   "MAP-QSH-RENOVATION"
+  ],
+  "WP-22": [
+   "WLD-DIORAMA",
+   "WLD-OUTSKIRTS"
+  ],
+  "WP-23": [
+   "WLD-VEGETATION"
+  ],
+  "WP-24": [
+   "WLD-WATER"
+  ],
+  "WP-25": [
+   "WLD-LIFE",
+   "ART-AMBIENCE"
+  ],
+  "WP-26": [
+   "SYS-MOTION"
+  ],
+  "WP-27": [
+   "ART-FIDELITY",
+   "ENG-GATES"
+  ],
+  "WP-28": [
+   "MAP-QSH-ADDITIONS",
+   "WLD-WATER"
+  ],
+  "WP-29": [
+   "MAP-QSH-ADDITIONS"
+  ],
+  "WP-30": [
+   "MAP-QSH-ADDITIONS",
+   "WLD-DIORAMA",
+   "WLD-OUTSKIRTS"
+  ],
+  "WP-31": [],
+  "WP-31a": [
+   "WLD-INTERIORS",
+   "MAP-QSH-SOUTH"
+  ],
+  "WP-31b": [
+   "WLD-INTERIORS",
+   "MAP-QSH-WEST",
+   "MAP-QSH-CENTER-EAST"
+  ],
+  "WP-31c": [
+   "WLD-INTERIORS",
+   "MAP-QSH-NORTH"
+  ],
+  "WP-32": [
+   "SYS-GRAPHICS"
+  ],
+  "WP-32a": [
+   "SYS-GRAPHICS"
+  ],
+  "WP-32b": [
+   "SYS-GRAPHICS"
+  ],
+  "WP-33": [],
+  "WP-34": [
+   "ART-SKYLIGHT",
+   "SYS-TIME",
+   "SYS-MOTION"
+  ],
+  "WP-35": [
+   "UI-NAV",
+   "UI-VISUAL",
+   "OPS-RELEASE"
+  ],
+  "WP-35a": [
+   "UI-NAV",
+   "UI-VISUAL",
+   "OPS-RELEASE"
+  ],
+  "WP-35b": [
+   "UI-NAV",
+   "UI-VISUAL",
+   "OPS-RELEASE"
+  ],
+  "WP-35c": [
+   "UI-NAV",
+   "UI-VISUAL",
+   "OPS-RELEASE"
+  ],
+  "WP-35d": [
+   "SYS-TITLE",
+   "UI-NAV",
+   "UI-VISUAL",
+   "OPS-RELEASE"
+  ],
+  "WP-36": [
+   "UI-NAV"
+  ],
+  "WP-37": [
+   "SYS-TIME"
+  ],
+  "WP-38": [
+   "SYS-TIME",
+   "WLD-VEGETATION",
+   "SYS-MOTION"
+  ],
+  "WP-39": [
+   "MAP-QSH-ADDITIONS",
+   "SYS-TIME"
+  ],
+  "WP-40": [
+   "ART-SKYLIGHT"
+  ],
+  "WP-41": [
+   "SYS-TIME",
+   "ENG-GATES"
+  ],
+  "WP-42": [
+   "SYS-WALK"
+  ],
+  "WP-43": [
+   "SYS-WALK"
+  ],
+  "WP-44": [
+   "SYS-WALK"
+  ],
+  "WP-45": [
+   "SYS-WEATHER"
+  ],
+  "WP-45a": [
+   "SYS-WEATHER"
+  ],
+  "WP-45b": [
+   "SYS-WEATHER"
+  ],
+  "WP-46": [
+   "SYS-MAPS",
+   "ENG-ARCH"
+  ],
+  "WP-47": [
+   "WLD-OUTSKIRTS",
+   "WLD-DIORAMA",
+   "OPS-RELEASE"
+  ],
+  "WP-47a": [
+   "WLD-OUTSKIRTS",
+   "WLD-DIORAMA",
+   "OPS-RELEASE"
+  ],
+  "WP-47b": [
+   "WLD-OUTSKIRTS",
+   "WLD-DIORAMA",
+   "OPS-RELEASE"
+  ],
+  "WP-48": [
+   "SYS-ATLAS",
+   "UI-NAV",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS",
+   "WLD-OUTSKIRTS",
+   "WLD-INTERIORS"
+  ],
+  "WP-48a": [
+   "SYS-ATLAS",
+   "UI-NAV",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS",
+   "WLD-OUTSKIRTS",
+   "WLD-INTERIORS"
+  ],
+  "WP-48b": [
+   "SYS-ATLAS",
+   "UI-NAV",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS",
+   "WLD-OUTSKIRTS",
+   "WLD-INTERIORS"
+  ],
+  "WP-48c": [
+   "SYS-ATLAS",
+   "UI-NAV",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS",
+   "WLD-OUTSKIRTS",
+   "WLD-INTERIORS"
+  ],
+  "WP-49": [
+   "SYS-TITLE",
+   "SYS-VIEW",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS"
+  ],
+  "WP-49a": [
+   "SYS-TITLE",
+   "SYS-VIEW",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS"
+  ],
+  "WP-49b": [
+   "SYS-TITLE",
+   "SYS-VIEW",
+   "UI-VISUAL",
+   "SYS-SAVE",
+   "SYS-MAPS"
+  ],
+  "WP-50": [
+   "SYS-SAVE"
+  ],
+  "WP-51": [
+   "WLD-INTERIORS",
+   "ART-FIDELITY",
+   "ART-MODELING"
+  ],
+  "WP-51a": [
+   "WLD-INTERIORS",
+   "ART-FIDELITY",
+   "ART-MODELING"
+  ],
+  "WP-51b": [
+   "WLD-INTERIORS",
+   "ART-FIDELITY",
+   "ART-MODELING"
+  ],
+  "WP-52": [
+   "WLD-INTERIORS"
+  ],
+  "WP-53": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-53a": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-53b": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-53c": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-53d": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-53e": [
+   "SYS-AUDIO",
+   "SYS-MOTION",
+   "SYS-TIME",
+   "SYS-WALK",
+   "SYS-WEATHER"
+  ],
+  "WP-54a": [
+   "SYS-WEATHER",
+   "ENG-PERF"
+  ],
+  "WP-54b": [
+   "ART-STYLE"
+  ],
+  "WP-55": [
+   "SYS-VIEW"
+  ]
+ }
+}

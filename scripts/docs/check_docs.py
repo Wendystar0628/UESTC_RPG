@@ -104,6 +104,9 @@ if not os.path.exists(map_path) or open(map_path, 'rb').read().decode('utf-8') !
 sec_path = os.path.join(D, 'SECTIONS.md')
 if not os.path.exists(sec_path) or open(sec_path, 'rb').read().decode('utf-8') != gen_index.build_sections():
     bad.append(('SECTIONS', 'stale', '重跑 scripts/docs/gen_index.py'))
+rt_path = os.path.join(D, 'ROUTES.json')
+if not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
+    bad.append(('ROUTES', 'stale', '重跑 scripts/docs/gen_index.py'))
 
 print('docs', len(docs), 'problems', len(bad), dict(Counter(b[1] for b in bad)))
 for b in bad:

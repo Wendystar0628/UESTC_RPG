@@ -7,7 +7,7 @@ keywords: [总索引, 作品定位, 电光年华, 当前范围, 主线, 全局�
 owners: [WP-00]
 contributors: []
 depends: []
-related: [CORE-DECISIONS, CORE-CONVENTIONS, CORE-GLOSSARY, ENG-WP, ENG-GATES, ENG-ARCH, ENG-ROADMAP]
+related: [CORE-CONTENT, CORE-DECISIONS, CORE-CONVENTIONS, CORE-GLOSSARY, ENG-WP, ENG-GATES, ENG-ARCH, ENG-ROADMAP]
 contracts: []
 data: []
 gates: []
@@ -16,23 +16,23 @@ gates: []
 # CORE-INDEX · 《电光年华》开发文档总索引
 
 > **范围**：本文规定作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定和阅读路径，并指向生成的文档地图与工作包矩阵。
-> **不在本文**：已定决策的登记（CORE-DECISIONS）；文档编码与写法（WF-DOC）；术语（CORE-GLOSSARY）；工作包（ENG-WP）；门禁（ENG-GATES）；扩展路线（ENG-ROADMAP）。
-> **查阅**：先读 §0；作品定位看 §1；当前范围与主线看 §2；全局不变量看 §3；坐标与数据看 §4；文档怎么组织看 §5；怎么查文档看 §6；文档地图与工作包矩阵看 [DOCMAP.md](DOCMAP.md)
-> **关联**：[CORE-DECISIONS 决策登记](core/CORE-DECISIONS-决策登记.md)、[CORE-CONVENTIONS 约定](core/CORE-CONVENTIONS-约定.md)、[CORE-GLOSSARY 术语表](core/CORE-GLOSSARY-术语表.md)、[ENG-WP 工作包](engineering/ENG-WP-工作包派工单.md)、[ENG-GATES 验收门禁](engineering/ENG-GATES-验收与门禁.md)、[ENG-ARCH 工程架构](engineering/ENG-ARCH-工程架构.md)、[ENG-ROADMAP 扩展路线](engineering/ENG-ROADMAP-扩展路线.md)
+> **不在本文**：开发内容的核心准则（CORE-CONTENT）；已定决策的登记（CORE-DECISIONS）；文档编码与写法（WF-DOC）；术语（CORE-GLOSSARY）；工作包（ENG-WP）；门禁（ENG-GATES）；扩展路线（ENG-ROADMAP）。
+> **查阅**：先读 §0；作品定位看 §1；当前范围与主线看 §2；全局不变量看 §3；坐标与数据看 §4；文档怎么组织看 §5；按要做的事查哪份文档看 §6；文档地图与工作包矩阵看 [DOCMAP.md](DOCMAP.md)
+> **关联**：[CORE-CONTENT 开发内容核心准则](core/CORE-CONTENT-开发内容核心准则.md)、[CORE-DECISIONS 决策登记](core/CORE-DECISIONS-决策登记.md)、[CORE-CONVENTIONS 约定](core/CORE-CONVENTIONS-约定.md)、[CORE-GLOSSARY 术语表](core/CORE-GLOSSARY-术语表.md)、[ENG-WP 工作包](engineering/ENG-WP-工作包派工单.md)、[ENG-GATES 验收门禁](engineering/ENG-GATES-验收与门禁.md)、[ENG-ARCH 工程架构](engineering/ENG-ARCH-工程架构.md)、[ENG-ROADMAP 扩展路线](engineering/ENG-ROADMAP-扩展路线.md)
 
 ## 0 结论
 
 - 《电光年华》（*Electric Years*）是一部校园题材的独立 RPG，第一张地图是电子科技大学清水河校区。当前阶段做它的世界与观光模式，RPG 玩法以后按 ENG-ROADMAP 的扩展点接入（§1、§2）。
 - 本目录 `docs/design/` 是唯一的开发依据。每份文档有唯一编码（例如 SYS-WEATHER），文件头写明主责工作包、依赖和门禁；引用写成"编码 §小节"（WF-DOC）。
-- 子代理开工只读开工手册 WF-ONBOARD 与守则 WF-RULE、WF-BUILD（经仓库根的 `CLAUDE.md` 自动载入）和自己的派工行，其余文档按需查（§6，D-178）；主代理和新会话从本文读起。文档地图与工作包矩阵由文件头生成到 [DOCMAP.md](DOCMAP.md)，全部小节见 [SECTIONS.md](SECTIONS.md)。
+- 开发内容的核心准则见 CORE-CONTENT §0（钩子注入）；其余文档按需查：先看 §6 的"按要做的事查哪里"，再用 [SECTIONS.md](SECTIONS.md) 定位小节（D-178）。文档地图与工作包矩阵由文件头生成到 [DOCMAP.md](DOCMAP.md)。
 - `docs/godot-api/` 是 Godot 4.7.2 C# API 参考，写代码前先查它。文档只记录现行状态，不保留修订记录（D-152）。
 
 ### 0.1 接入要点
 
-- **任何包**：遵守 §3 的全局不变量 INV-1–INV-12，它们优先于各文档的细则。
+- **任何包**：遵守 CORE-CONTENT §0，以及下面 §3 的全局不变量 INV-1–INV-12；INV 只列约束，细则以各自指向的系统文档为准。
 - **主线阶段**：只交主线版，主线的定义见 §2（D-168）。
 - **坐标与数据**：按 §4，细则见 CORE-CONVENTIONS §1。
-- **找文档**：[DOCMAP.md](DOCMAP.md) 的文档地图每份一行；全部小节见 `SECTIONS.md`；查法见 WF-ONBOARD §3。
+- **找文档**：按 §6 的表查；[DOCMAP.md](DOCMAP.md) 的文档地图每份一行；全部小节见 `SECTIONS.md`。
 
 ## 1 作品定位
 
@@ -48,13 +48,7 @@ gates: []
   - **日式氛围**：画面走日式动画背景，地图设计理念与之一致：在地图结构不变的前提下，增补和改造的建筑与环境细节带日式日常街景的氛围，主轴保持成电身份（ART-AMBIENCE、INV-7）。
   - **老旧外观一律翻新**：现实中老旧、破损的外观全部换成与新楼同标准的设计，全校建筑立面和地面都不做旧（ART-RENOVATION、MAP-QSH-RENOVATION、D-173、D-174）。
 - **视觉优先**：四季、昼夜、天象、花期、天气一律以画面好看为最高优先级。真实数据只作参考和灵感，以及用来保住"认得出是成电"的身份特征。
-- **视觉精度分两层：处处不粗糙，近看处更精细**（ART-FIDELITY §0，D-009、D-176）：
-  - **底线**：不论镜头在哪里、离得多近，包括 1.7 m 人眼高度、贴墙 0.5 m，以及只有飞行才到的屋顶、高处和背面，看到的东西都不能粗糙：比例对，有倒角和收边，不能露出光秃的拉伸体块或糊掉的贴图。
-  - **细节密度**：按精度区 K1–K5 分级，越常被近看的地方细节越多。主轴与地标、行走走廊和开放室内按贴脸标准做满；普通立面保证中景层次；屋顶、背立面和只有飞行才到的位置适度简化，只要求底线和轮廓。
-  - 校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）。关着的楼从窗外看、旁观穿墙进去看，用的是窗卡和简化室内；走进开放的室内才是全精度（WLD-INTERIORS §5）。
-  - 这是最终验收标准，在集中测试和收尾时全面验收；主线阶段先求完整（§2）。底线不拿来换性能预算，细节密度在预算里按区取舍（INV-12）。
-  - 校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）。
-  - 关着的楼从窗外看、旁观穿墙进去看，用的是窗卡和简化室内，精度不重要；走进开放的室内才要求全精度（WLD-INTERIORS §5）。
+- **视觉精度分两层：处处不粗糙，近看处更精细**（ART-FIDELITY §0，D-009、D-176）：底线是任何位置、任何距离都不粗糙，细节密度按精度区 K1–K5 分级。这是最终验收标准，集中测试和收尾时全面验收，主线阶段先求完整（§2）；底线不拿来换性能预算（INV-12）。外围街区和关着的楼的精度判法见 WLD-OUTSKIRTS §4.1、WLD-INTERIORS §5。
 - **叙事与默认状态**：
   - **开场**：作品打开时先是扉页和开始页，背景是最近一个存档的世界（SYS-TITLE §2）。
   - **新游戏**：一律从"落金初灯"开始（SYS-SAVE §5.5）。先播约 44 s 的进场过场，从秋 17:05 以 60× 正向推到 17:30；在 P00 全景上出标题卡，然后交还控制（SYS-TITLE §3）。
@@ -101,17 +95,17 @@ gates: []
 | 编号 | 约束 | 详见 |
 | --- | --- | --- |
 | INV-1 | 当前阶段是 PC 上实时渲染的观光作品（Godot 4.7.2 .NET，Windows）。不做网页版那套地图功能（搜索、地点卡片、路径规划、在 3D 里拾取）；允许界面里的平面地图（SYS-ATLAS） | SYS-VIEW、ENG-ARCH、SYS-ATLAS |
-| INV-2 | 两种观察模式，用 F 键、界面或双击空格切换。**旁观**（默认）：WASD 移动，空格上升，Shift 下降，鼠标转视角，滚轮调速，穿透一切物体。**行走**：有重力和碰撞，操作与《我的世界》一致（行走、疾跑、跳跃、潜行）。不实现环绕、俯视、导览、自动运镜；用户主动触发的点位跳转、传送（SYS-ATLAS）和模式切换过渡不算自动运镜。开始页与进场过场是例外：由观者在开始页主动触发，可以跳过（按住 Esc 0.8 s，跳过后的终态与完整播放一致），路径来自数据文件，交还控制后镜头不再自己动；开始页的 T0 是静止机位（SYS-TITLE） | SYS-VIEW §2、UI-NAV §7、SYS-WALK、SYS-ATLAS、SYS-TITLE |
-| INV-3 | 允许的界面以 UI-NAV 和 UI-VISUAL 登记的为准：时间（时间环）、季节、天气（天气格与一行预报，SYS-WEATHER §1）、速度、观察模式、小地图与大地图（含目录页与传送卡，SYS-ATLAS）、扉页（含首次运行的进度行）、开始页与存档页（SYS-TITLE、SYS-SAVE）、过场的放映层与字幕（SYS-TITLE）、操作说明与设置，以及几秒内淡出的临时提示。界面的视觉是信息与光：主色清蓝 #73C9F9，光只表示状态（UI-VISUAL）。漫游态唯一常驻的元素是小地图，可以关；按 U 全部隐藏，`--ui=0` 只留署名。3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱，追踪和传送也一样。界面音效按 SYS-AUDIO §11 登记，悬停默认无声，不加任何语音提示。OSM 署名常驻 | UI-NAV、UI-VISUAL、SYS-ATLAS、SYS-TITLE、SYS-AUDIO §11、SYS-VIEW §6 |
+| INV-2 | 两种观察模式，用 F 键、界面或双击空格切换：**旁观**（默认，穿透一切）和**行走**（重力与碰撞，手感同《我的世界》）。不做环绕、俯视、导览、自动运镜；观者主动触发的跳转、传送、模式切换，以及可跳过的开始页与进场过场不算 | SYS-VIEW §2、UI-NAV §7、SYS-WALK、SYS-ATLAS、SYS-TITLE |
+| INV-3 | 允许的界面以 UI-NAV 和 UI-VISUAL 登记的为准，视觉是信息与光，主色清蓝 #73C9F9。漫游态唯一常驻的是小地图（可关），按 U 全部隐藏；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；界面音效按 SYS-AUDIO §11 登记；OSM 署名常驻 | UI-NAV、UI-VISUAL、SYS-ATLAS、SYS-TITLE、SYS-AUDIO §11、SYS-VIEW §6 |
 | INV-4 | 场景里本来就有的字要保留，例如楼名题字、店招、路牌，一律用简体中文。校徽、红十字这类受专门规定保护的标志不原样使用，换成风格相近的原创图形（D-065） | ART-STYLE §11 |
-| INV-5 | 三渲二日式动画背景，清透干净：分阶明暗（建筑两阶，曲面道具与软物两阶半，植被三阶）；影子以明度为主、按材质推导，浅而透，不一律染蓝紫，不加接触暗影，透光的元素按逆光透射（ART-STYLE §2、ART-STYLE §3）；约 1.25 px（1080p）、随底色染色的细描线（ART-STYLE §4）；平涂贴图，斑驳只留在近处（ART-STYLE §6）；柔光在白天只让高光晕开，黄昏以后才叠全帧柔光（ART-STYLE §7）。画面设置有四档预设（流畅、均衡、精致、极致）加单项，风格底线不可关，实时阴影和西湖倒影只能降质量（SYS-GRAPHICS §2） | ART-STYLE、SYS-GRAPHICS |
-| INV-6 | 不出现 NPC 和他人，也不加学生剪影；人只以生活痕迹的形式出现。玩家自己的角色是唯一例外：旁观模式不显示任何角色，行走模式下玩家有自己的角色本体（D-182）。校史馆、博物馆的展陈里也不出现人物肖像，换成实物、文献、模型、风景照（WLD-INTERIORS §11）。声音里没有听得清的人声：人只以远处、听不清、来自看不见的地方的声音出现（SYS-AUDIO §8）。 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK §1、SYS-VIEW §2.7、WLD-INTERIORS §11、SYS-AUDIO §8 |
+| INV-5 | 三渲二日式动画背景，清透干净：分阶明暗，影子以明度为主、浅而透、不加接触暗影；约 1.25 px（1080p）、随底色染色的细描线；平涂贴图；白天柔光只让高光晕开。画面设置的风格底线不可关，实时阴影和西湖倒影只能降质量 | ART-STYLE、SYS-GRAPHICS §2 |
+| INV-6 | 不出现 NPC 和他人，也不加学生剪影，人只以生活痕迹出现。玩家自己的角色是唯一例外：行走模式有角色本体，旁观不显示（D-182）。展陈里不出现人物肖像；声音里没有听得清的人声 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK §1、SYS-VIEW §2.7、WLD-INTERIORS §11、SYS-AUDIO §8 |
 | INV-7 | 日本元素仅限日常街景；完整边界以 ART-STYLE §9.1 为准，物件、尺度与分区见 ART-AMBIENCE；室内同样适用（WLD-INTERIORS §8.5），声音边界见 SYS-AUDIO §6.2、SYS-AUDIO §6.3 | ART-AMBIENCE、ART-STYLE、WLD-INTERIORS、SYS-AUDIO |
-| INV-8 | 世界状态有三个量：时刻 0–24 小时连续可调；季节四档可调；天气 8 格加自动（SYS-WEATHER §1）。世界时间在一个世界实例内单调向前，不能逆转：拨时间环只能顺时针，跳到下一次出现的那个钟点（SYS-TIME §1）。新游戏、读档都是换一个世界实例（`IWorldState.Instance` 加 1），不算时间倒流；开始页停着的时间、关着游戏的那段现实时间都不计入世界时间（SYS-TITLE §6、SYS-SAVE §6）。默认状态是新游戏的终态，也是新存档的初值：秋季 17:30、晴、自动天气、流逝 1×；新游戏过场从 17:05 正向推到这里（SYS-TITLE §6）。退出时自动保存，再进同一存档时，世界是退出时的落定状态（SYS-SAVE §5）。流逝模式有暂停、1×、10×、60×、360×、1440×。天气受季节约束：春夏秋降雨、冬季降雪，雷雨只在春夏；自动天气是只走验证过组合的前向随机过程（SYS-WEATHER §6），每个存档一个天气种子（SYS-SAVE）。换季一律正向转场。所有切换都自然过渡，不能硬切；每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
-| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层里（WLD-TERRAIN）。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的任何风格化改动、设计增补（`add`）和删除（`hide`），都只能写在覆盖层里，并写明理由；覆盖层按图存放在 `game/data/maps/<地图>/overlay/`（SYS-MAPS §2.1） | MAP-QSH-ADDITIONS、ENG-ARCH §3、SYS-MAPS、WLD-TERRAIN |
-| INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件；鸽群被行走身体惊动时的局部惊飞是定向例外，不算偶发事件（SYS-MOTION §6.1）。用户触发的时间、季节、天气、跳转、传送过渡不算偶发事件，进场过场和返回标题也不算；过场期间不触发偶发事件（SYS-TITLE §7.2）。闪电（只做远处云内闪）是雷雨的持续氛围，彩虹是雨后初晴的天象状态，两者都不算偶发事件（SYS-WEATHER §5）。声音同样轻、慢、持续：一次性声按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个（SYS-AUDIO §7）；偶发事件本身无声，只有它引起的抖落、积雨、旗动有声；远雷是雷雨的持续氛围，跟云内闪同步，可以关（SYS-AUDIO §6） | SYS-MOTION、SYS-MOTION §6.1、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO |
-| INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有厚度、倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级、越常被近看越密：主轴与地标、行走走廊和开放室内按贴脸标准，普通立面按中景标准，屋顶、背立面和只有飞行才到的位置只判底线和轮廓。校外的外围街区按"最近可达距离"判定精度（WLD-OUTSKIRTS §4.1）；关着的楼只做外壳、窗卡和简化室内，开放的室内才要求全精度（WLD-INTERIORS §5） | ART-FIDELITY、WLD-OUTSKIRTS、WLD-INTERIORS |
-| INV-12 | 满足性能预算与硬规则，包括：界面（主线程、画布渲染 CPU、大页磨砂的 GPU，UI-VISUAL §12）；行走碰撞；存档（快照主线程 p99 ≤ 0.3 ms，从关闭请求到进程结束 ≤ 1.5 s，SYS-SAVE §13）；音频（主线程平均 ≤ 0.35 ms，在播 3D 声源 ≤ 32，常驻 ≤ 96 MB，SYS-AUDIO §18）。安装目录上限 0.9 GB、分发压缩包上限 0.7 GB，几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165，ENG-GATES §2 的 G6） | ENG-BUDGET、ENG-PERF、UI-NAV §9、SYS-WALK §14、UI-VISUAL §12、SYS-SAVE §13、SYS-AUDIO §18 |
+| INV-8 | 世界状态有三个量：时刻、季节、天气。世界时间在一个世界实例内只向前，不能逆转；新游戏、读档是换一个实例，不算倒流。默认状态是秋季 17:30、晴、自动天气、1×。所有切换自然过渡、不硬切，每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
+| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的风格化改动、设计增补（`add`）和删除（`hide`），只写在覆盖层里并写明理由 | MAP-QSH-ADDITIONS、ENG-ARCH §3、SYS-MAPS §2.1、WLD-TERRAIN |
+| INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件；用户触发的过渡、过场、鸽群局部惊飞、闪电与彩虹都不算。声音同样轻、慢、持续，偶发事件本身无声 | SYS-MOTION、SYS-MOTION §6.1、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO §6、SYS-AUDIO §7 |
+| INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级，越常被近看越密 | ART-FIDELITY、WLD-OUTSKIRTS §4.1、WLD-INTERIORS §5 |
+| INV-12 | 满足性能预算与硬规则：界面、行走碰撞、存档、音频的耗时与体积，以及安装目录和分发压缩包的体积上限；几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165）。数值以 `budgets.json` 与 ENG-BUDGET 为准 | ENG-BUDGET、ENG-PERF、UI-NAV §9、SYS-WALK §14、UI-VISUAL §12、SYS-SAVE §13、SYS-AUDIO §18、ENG-GATES §2 的 G6 |
 
 ## 4 坐标与数据约定
 
@@ -137,9 +131,60 @@ gates: []
 文档编码、写法、引用与冲突层级以 WF-DOC 为准；只写现行规则。
 文档地图与工作包矩阵见 [DOCMAP.md](DOCMAP.md)，小节行号与字数见 [SECTIONS.md](SECTIONS.md)，两者由 `scripts/docs/gen_index.py` 从文件头生成；`scripts/docs/check_docs.py` 校验引用、文件头与生成内容。
 
-## 6 阅读路径
+## 6 按要做的事查哪里
 
-- 子代理先读 [WF-ONBOARD](workflow/WF-ONBOARD-子代理开工手册.md) 与守则 WF-RULE、WF-BUILD，其余按其中的查阅方法按需读取。
-- 主代理与改文档的人先读本文、WF-INDEX 和施工状态文件（WF-STATUS）；改文档按 WF-DOC、WF-BUILD、ENG-WP §5、CORE-DECISIONS §0。
-- 查文档用 [DOCMAP.md](DOCMAP.md)，定位小节用 [SECTIONS.md](SECTIONS.md)。
+- 文档地图用 [DOCMAP.md](DOCMAP.md)，定位小节用 [SECTIONS.md](SECTIONS.md)；术语查 CORE-GLOSSARY，决策查 CORE-DECISIONS，坐标、单位、命名、目录、帧顺序查 CORE-CONVENTIONS。
 - Godot API 以 [本地签名库](../godot-api/README.md) 为准；扩展路线见 ENG-ROADMAP。
+
+表只是起点；每份文档范围块的"查阅"行会再往下指，规则与表冲突时以文档原文为准。表里没有的，用 `SECTIONS.md` 按关键词搜。
+
+| 要做或要查的事 | 先看 |
+| --- | --- |
+| 本包做什么、交什么、依赖谁、主线版做到哪 | ENG-WP §2、ENG-WP §2.1 本包的行 |
+| 某个包归谁、先开哪些包 | ENG-WP §1.1、§2 |
+| 契约签名，或申请改契约 | `game/contracts/`、ENG-ARCH §3；申请见 WF-FLOW §5 |
+| 路径归谁、能引用哪个程序集、模块怎么注册、禁用写法的完整清单 | ENG-ARCH §2 |
+| 依赖的包还没交付时用什么桩 | ENG-ARCH §5 |
+| 工作树的技术细节（override.cfg、导入种子、计数锁、烘焙预选） | ENG-ARCH §6 |
+| 加贴图、模型、字体、音频；本机烘焙与缓存键 | ENG-ARCH §4 |
+| 本包的额度、超额怎么办；合入前核对性能硬规则 | ENG-BUDGET §0.1、§8、§7 |
+| 该跑哪档测试、`gate.ps1` 怎么用 | ENG-GATES §2 |
+| 截图默认串、命令行参数、审查视角的位姿 | ENG-GATES §1 |
+| 开发时预览、按实体 ID 定位镜头 | TOOL-PREVIEW §1、§2 |
+| 版本号、用户目录、日志与导出诊断；第三方素材与许可 | OPS-RELEASE §1、§2、§6、§7 |
+| 为 RPG 预留的接口（规则集、观者状态、输入占用、枚举纪律） | ENG-ROADMAP §6 |
+| 读钟点、季节、世界实例 | SYS-TIME §0.1、§1 |
+| 材质随时刻和季节变色、新增色名 | SYS-TIME §3；ART-STYLE §0.1 |
+| 做季节内容（落叶、开花、覆雪） | SYS-TIME §4；WLD-VEGETATION §9 |
+| 让灯、窗、屏幕随时刻亮灭 | SYS-TIME §6；ENG-PERF §10.3 |
+| 让表现随天气变化（湿面、积水、降水） | SYS-WEATHER §0.1、§7、§8 |
+| 响应画面设置、新增画面单项 | SYS-GRAPHICS §0.1、§3、§8 |
+| 让东西动起来：风、飘落物、偶发事件 | SYS-MOTION §0.1、§3、§4.1、§10 |
+| 有要跨读档保留的状态 | SYS-SAVE §0.1、§2、§10 |
+| 读按图的数据，或代码里要区分地图 | SYS-MAPS §0.1、§7 |
+| 要出声；部件的声音插座；碰撞体的脚步材质 | SYS-AUDIO §0.1、§4.2、§9.3 |
+| 交碰撞体、做挡路物、登记可行走范围 | SYS-WALK §0.1、§6、§7、§13 |
+| 读地面高度、贴地、楼的垫层、水位与坡度；写地形覆盖层 | WLD-TERRAIN §0.1、§3、§4 |
+| 该读观者位置还是镜头位姿 | SYS-VIEW §0.1；ENG-ARCH §3 |
+| 地图上的锚点、观景点、传送 | SYS-ATLAS §0.1、§5、§6、§7 |
+| 只在过场里出现的东西、`IAppFlow` 的各状态 | SYS-TITLE §0.1、§3.3、§7 |
+| 界面取色、Theme、界面着色器 | UI-VISUAL §0.1、§3.8、§11.5 |
+| 读键盘鼠标、加快捷键、占用观者输入 | UI-NAV §0.1、§5 |
+| 界面文字、地名、临时提示 | UI-NAV §4.9、§8 |
+| 色名、影子、描线 | ART-STYLE §0.1、§3、§4 |
+| 表面属于哪个精度区、底线怎么自查 | ART-FIDELITY §0.4、§0.5、§2.0 |
+| 最低合格构件、倒角、法线 | ART-MODELING §7.2、§7.6、§7.8 |
+| 天空、主光、雾 | ART-SKYLIGHT §0.1、§3、§6.5 |
+| 日式物件能不能用、放在哪 | ART-AMBIENCE §0.1、§1 |
+| 翻新老楼 | ART-RENOVATION §0.1；MAP-QSH-RENOVATION |
+| 着色器白名单、全局参数、LOD 与淡化 | ENG-PERF §0.1、§1.4、§1.5、§2 |
+| 生成几何、流式加载、本机烘焙 | ENG-PERF §5、§6 |
+| 某栋楼能不能进、门怎么做、开放新的室内 | WLD-INTERIORS §0.1、§2、§4.1、§14 |
+| 关着的楼的窗卡与简化室内 | WLD-INTERIORS §5 |
+| 校界、外围的精度、行走与飞行阻挡 | WLD-OUTSKIRTS §0.1、§4.1、§7、§8 |
+| 雾幕、截面、远景 | WLD-DIORAMA §0.1、§4.2、§5 |
+| 树种、季相、植被 | WLD-VEGETATION §2、§9 |
+| 水面、倒影、积水 | WLD-WATER §7 |
+| 动物、生活痕迹、街道物件 | WLD-LIFE §0.1、§1、§4 |
+| 设计增补、登记覆盖层 | MAP-QSH-ADDITIONS §0.1、§2、§7 |
+| 本区的点位、锚点、入口与边界 | 本区 MAP-QSH 文档 §0 末尾的接入要点 |

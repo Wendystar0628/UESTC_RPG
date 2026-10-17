@@ -2,12 +2,12 @@
 id: WF-CORE
 title: 项目核心准则
 category: workflow
-summary: 所有会话、子代理和执行者每轮都要守的项目核心准则，一条一句，细则见各节指向；提醒钩子每条消息都注入本文 §0
-keywords: [核心准则, 实现优先, 只做必要的测试, 不过度工程化, 改设计必清旧, 一份权威, 主线优先, 画面不能变差, 架构, 分工, 上下文封顶, 新开不恢复, 推理强度, 门禁不重跑, 名字一看就懂, 提醒钩子]
+summary: 所有会话、子代理和执行者每轮都要守的行为准则，一条一句，细则见各条指向；提醒钩子每条消息都注入本文 §0
+keywords: [核心准则, 实现优先, 只做必要的测试, 不过度工程化, 改设计必清旧, 一份权威, 主线优先, 不向作者出选项, 不预判时间, 名字一看就懂, 提醒钩子]
 owners: [WP-00]
 contributors: []
-depends: [WF-RULE, WF-BUILD, WF-MODEL]
-related: [WF-INDEX, WF-DOC]
+depends: [WF-RULE, WF-ENTRY]
+related: [WF-INDEX, WF-DOC, WF-MODEL, WF-ROLE]
 contracts: []
 data: []
 gates: []
@@ -15,9 +15,9 @@ gates: []
 
 # WF-CORE · 项目核心准则
 
-> **范围**：本文只列核心准则，一条一句；细则以指向的小节为准。提醒钩子 `.collab/tools/hooks/uestc-guard.cjs` 把下面 §0 注入 Claude 与 Codex 的会话（每条消息前）和子代理（开工时一次）。
+> **范围**：本文只列行为准则，一条一句；细则以指向的小节为准。提醒钩子 `.collab/tools/hooks/uestc-guard.cjs` 把下面 §0 注入 Claude 与 Codex 的会话（每条消息前）和子代理（开工时一次）。
 > **查阅**：读 §0 即可；细则按每条后面的指向查。
-> **关联**：[WF-RULE 全员守则](WF-RULE-全员守则.md)、[WF-BUILD 施工边界与内容底线](WF-BUILD-施工边界与内容底线.md)、[WF-DOC 文档写法](WF-DOC-文档写法.md)、[WF-MODEL 模型选择与子代理](../collaboration/WF-MODEL-模型选择与子代理.md)、[WF-ROLE 参与者与分工](../collaboration/WF-ROLE-参与者与分工.md)、[WF-INDEX 协作总纲](../WF-INDEX-协作总纲.md)、[CORE-DECISIONS 决策登记](../../core/CORE-DECISIONS-决策登记.md)
+> **关联**：[WF-RULE 全员守则](WF-RULE-全员守则.md)、[WF-ENTRY 角色入口卡](../WF-ENTRY-角色入口卡.md)、[WF-DOC 文档写法](WF-DOC-文档写法.md)、[WF-MODEL 模型选择与子代理](../collaboration/WF-MODEL-模型选择与子代理.md)、[WF-ROLE 参与者与分工](../collaboration/WF-ROLE-参与者与分工.md)、[WF-INDEX 协作总纲](../WF-INDEX-协作总纲.md)、[CORE-DECISIONS 决策登记](../../core/CORE-DECISIONS-决策登记.md)
 
 ## 0 结论
 
@@ -27,11 +27,10 @@ gates: []
 4. **改设计必清旧**：同一批把所有使用方迁到新设计，删掉旧设计、旧代码、旧测试和旧文档，禁止新旧多套并存（WF-RULE §10，D-209）。
 5. **一份权威**：代码或数据里已实现的不在文档里抄；同一信息只留一份，别处只给指向；流水交给 git；能一句说清不写一段（WF-RULE §12）。
 6. **主线优先，小步交付**：先接进主线、跑得通、不崩，细节后补；一块能独立合入就先交（WF-RULE §8、§10）。
-7. **画面不能变差**：视觉优先；碰渲染、生成器、材质的改动要能和基线截图对上（WF-BUILD §4）。
-8. **架构要好**：发现明显不好的架构，先说清怎么改，再派人修，不绕过去、不打补丁糊过去（WF-ROLE）。
-9. **按活派人、省着用额度**：审美只交 Claude，GPT 不做审美；体力活交便宜模型；每张单写明模型和推理强度，够用就停；子代理一律新开，不恢复旧的；单子在上下文约 40 万或 150 次请求前交回（WF-MODEL）。
-10. **不向作者出选项，不预判时间**：要拍板的写给主会话；来信一条一个文件，标【需定】【待审】【知会】，5 行内（WF-RULE §2、§3、§5）。
-11. **名字一看就懂**：改名、改结构全量改到最新，不留对照表或兼容层（WF-DOC，D-200、D-208）。
+7. **不向作者出选项，不预判时间**：要拍板的写给主会话；来信一条一个文件，标【需定】【待审】【知会】，5 行内（WF-RULE §2、§3、§5）。
+8. **名字一看就懂**：改名、改结构全量改到最新，不留对照表或兼容层（WF-DOC，D-200、D-208）。
+
+本角色入口见 WF-ENTRY，开发内容准则见 CORE-CONTENT。
 
 ### 0.1 接入要点
 
@@ -40,4 +39,4 @@ gates: []
 
 ## 1 细则在哪
 
-每条的细则见它后面括号里的小节；角色与分工见 WF-INDEX，选模型与推理强度见 WF-MODEL。
+每条的细则见它后面括号里的小节；角色入口与"做 X 前读 Y"见 WF-ENTRY，角色分工见 WF-ROLE，选模型与推理强度见 WF-MODEL。

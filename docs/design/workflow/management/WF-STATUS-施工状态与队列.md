@@ -2,8 +2,8 @@
 id: WF-STATUS
 title: 施工状态与队列
 category: workflow
-summary: 施工状态文件怎么填、待派工队列与队列平衡、交接单与上下文重置后的接续
-keywords: [施工状态, 状态文件, 当前 main, 最近可运行入口, 已冻结的契约组, 活跃工作包, 待派工队列, Q-nnn, 排队, 可派, 已派, 队列平衡, 积压, 交接单, HANDOVER.md, 上下文重置, 接手, 已集成]
+summary: 施工状态文件怎么填、待派工队列与队列平衡、交接单
+keywords: [施工状态, 状态文件, 当前 main, 最近可运行入口, 已冻结的契约组, 活跃工作包, 待派工队列, Q-nnn, 排队, 可派, 已派, 队列平衡, 积压, 交接单, HANDOVER.md, 接手, 已集成]
 owners: [WP-00]
 contributors: []
 depends: [WF-INDEX, WF-FLOW]
@@ -11,13 +11,14 @@ related: [WF-MERGE, WF-DUTY, WF-QUOTA, WF-COMMS, ENG-WP]
 contracts: []
 data: []
 gates: []
+paths: [".collab/status/**"]
 ---
 
 # WF-STATUS · 施工状态与队列
 
-> **范围**：本文规定施工状态文件怎么填、待派工队列怎么管、队列怎么平衡，以及交接单与上下文重置后怎么接着做。
+> **范围**：本文规定施工状态文件怎么填、待派工队列怎么管、队列怎么平衡，以及交接单。
 > **不在本文**：状态文件的实际内容（它在 git 之外）；工作包的划分与交付：ENG-WP；合入流程：WF-MERGE；调研入队流水线：WF-FLOW §6。
-> **查阅**：先读 §0；状态文件怎么填看 §1；待派工队列与队列平衡看 §2；交接单与重置看 §3。
+> **查阅**：先读 §0；状态文件怎么填看 §1；待派工队列与队列平衡看 §2；交接单看 §3。
 > **关联**：[WF-INDEX 协作总纲](../WF-INDEX-协作总纲.md)、[WF-FLOW 开发流程](../process/WF-FLOW-开发流程.md)、[WF-MERGE 批准与合并](../process/WF-MERGE-批准与合并.md)、[WF-DUTY 值班与旁路](../collaboration/WF-DUTY-值班与旁路.md)、[WF-QUOTA 账号与额度](WF-QUOTA-账号与额度.md)、[WF-COMMS 交接与通信](../collaboration/WF-COMMS-交接与通信.md)、[ENG-WP 工作包](../../engineering/ENG-WP-工作包派工单.md)
 
 ## 0 结论
@@ -73,7 +74,6 @@ gates: []
 - **某一方空着、它的输入在另一方手里**：把能解开它的那一件排到最前，例如 Astra 等 Opus 侧的验收就先审它。
 - **叠单最多一层**：基点候选没合之前，不在它上面再叠第二层新单。
 
-## 3 交接单与上下文重置
+## 3 交接单
 
 - **交接单** `.collab/HANDOVER.md`：主会话写，只留进行中的事和现行模式；额度冻结与换账号时更新（WF-QUOTA §5）。
-- **重置后先读什么**：各角色先读的文件见 WF-COMMS §6；对不上时以 Git 为准。

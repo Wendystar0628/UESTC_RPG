@@ -8,6 +8,7 @@
 
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
+| [CORE-CONTENT](core/CORE-CONTENT-开发内容核心准则.md) 开发内容核心准则 | 做内容、写代码时每次都要守的开发内容核心准则，一条一句，细则见各条指向；钩子在子代理开工和会话首次命中内容路线时注入 §0 | WP-00 | G4 |
 | [CORE-CONVENTIONS](core/CORE-CONVENTIONS-约定.md) 约定 | 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性 | WP-00 | G1、G2、G3、G4、G5 |
 | [CORE-DECISIONS](core/CORE-DECISIONS-决策登记.md) 决策登记 | 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态 | — | — |
 | [CORE-GLOSSARY](core/CORE-GLOSSARY-术语表.md) 术语表 | 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节 | — | — |
@@ -16,18 +17,19 @@
 
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
-| [WF-INDEX](workflow/WF-INDEX-协作总纲.md) 协作总纲 | 开发期多个模型与会话怎么协作的总纲：角色表与各角色先读什么、决定权与执行人、各分册索引、规则放哪份的判定表 | WP-00 | — |
-| [WF-ONBOARD](workflow/WF-ONBOARD-子代理开工手册.md) 子代理开工手册 | 子代理开工时通读的手册：项目与阶段、开工环境、怎么查资料与按要做的事查哪里、完成怎么自检与回报 | WP-00 | — |
-| [WF-COMMS](workflow/collaboration/WF-COMMS-交接与通信.md) 交接与通信 | .collab 交接目录与文件布局，命名与写法，任务单、请求文件与批准行的格式，来信与消息，Codex 会话与引导信箱，上下文重置后先读什么 | WP-00 | — |
+| [WF-ENTRY](workflow/WF-ENTRY-角色入口卡.md) 角色入口卡 | 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入 | WP-00 | — |
+| [WF-INDEX](workflow/WF-INDEX-协作总纲.md) 协作总纲 | 开发期多个模型与会话怎么协作的总纲：角色表与各角色入口、决定权与执行人、规则放哪份的判定表 | WP-00 | — |
+| [WF-ONBOARD](workflow/WF-ONBOARD-子代理开工手册.md) 子代理开工手册 | 子代理的查询手册，不通读：开工路径与引擎命令、怎么查资料、完成怎么自检与回报样式 | WP-00 | — |
+| [WF-COMMS](workflow/collaboration/WF-COMMS-交接与通信.md) 交接与通信 | .collab 交接目录与文件布局，命名与写法，任务单、请求文件与批准行的格式，来信与消息，Codex 会话与引导信箱 | WP-00 | — |
 | [WF-DUTY](workflow/collaboration/WF-DUTY-值班与旁路.md) 值班与旁路 | 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理 | WP-00 | — |
 | [WF-MODEL](workflow/collaboration/WF-MODEL-模型选择与子代理.md) 模型选择与子代理 | 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，便宜两档，怎么开子代理，子代理生命周期，简报模板与接续段 | WP-00 | — |
 | [WF-ROLE](workflow/collaboration/WF-ROLE-参与者与分工.md) 参与者与分工 | 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥 | WP-00 | — |
 | [WF-QUOTA](workflow/management/WF-QUOTA-账号与额度.md) 账号与额度 | 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结 | WP-00 | — |
-| [WF-STATUS](workflow/management/WF-STATUS-施工状态与队列.md) 施工状态与队列 | 施工状态文件怎么填、待派工队列与队列平衡、交接单与上下文重置后的接续 | WP-00 | — |
+| [WF-STATUS](workflow/management/WF-STATUS-施工状态与队列.md) 施工状态与队列 | 施工状态文件怎么填、待派工队列与队列平衡、交接单 | WP-00 | — |
 | [WF-FLOW](workflow/process/WF-FLOW-开发流程.md) 开发流程 | 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线 | WP-00 | — |
 | [WF-MERGE](workflow/process/WF-MERGE-批准与合并.md) 批准与合并 | 批准行与滚动文档分支，合并执行的步骤，成批合入与省项，合入以后的状态与 rebase，git 分支与工作树的流程 | WP-00 | G1、G2、G3、G4、G5 |
-| [WF-BUILD](workflow/rules/WF-BUILD-施工边界与内容底线.md) 施工边界与内容底线 | 施工时能改哪里、共享文件与契约申请、代码边界与接入方式、禁用写法，以及内容与画面的底线 | WP-00 | G3、G4 |
-| [WF-CORE](workflow/rules/WF-CORE-项目核心准则.md) 项目核心准则 | 所有会话、子代理和执行者每轮都要守的项目核心准则，一条一句，细则见各节指向；提醒钩子每条消息都注入本文 §0 | WP-00 | — |
+| [WF-BUILD](workflow/rules/WF-BUILD-施工边界.md) 施工边界 | 施工时能改哪里、共享文件与契约申请、新模块怎么接入，以及禁用写法门禁拦不住的两条约定 | WP-00 | G3、G4 |
+| [WF-CORE](workflow/rules/WF-CORE-项目核心准则.md) 项目核心准则 | 所有会话、子代理和执行者每轮都要守的行为准则，一条一句，细则见各条指向；提醒钩子每条消息都注入本文 §0 | WP-00 | — |
 | [WF-DOC](workflow/rules/WF-DOC-文档写法.md) 文档写法 | 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护 | WP-00 | — |
 | [WF-RULE](workflow/rules/WF-RULE-全员守则.md) 全员守则 | 所有会话、子代理和执行者都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件与 git 安全、主线优先、测试最小、贴近主线、写文档与记忆 | WP-00 | — |
 
@@ -120,7 +122,7 @@
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-DUTY、WF-FLOW、WF-INDEX、WF-MERGE、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONTENT、CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-DUTY、WF-ENTRY、WF-FLOW、WF-INDEX、WF-MERGE、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |

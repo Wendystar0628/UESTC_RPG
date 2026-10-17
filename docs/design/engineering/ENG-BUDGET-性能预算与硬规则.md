@@ -39,7 +39,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 - **本包有主线程或内存开销**：按 §8"主线程与内存额度"表里本包的一行核算；存档快照、切图雾幕这类非常态的帧不占主线程余量（§8）
 - **实测或预测超出本包额度**：不能合入（§8；ENG-GATES §3 第 10 条）；在回报的"预算"一行写出实测值与额度（WF-ONBOARD §4.2），是否从余量里调拨由主代理决定（§8）
 - **主代理余量**：只由主代理调拨：三角形 4%、主通道绘制调用 11%、阴影绘制调用 10%、GPU 帧时 2%，开发机主线程约 0.15 ms；界面态的 GPU 1% 也计入这里（§8）
-- **写材质或着色器**：材质只经 `ToonSpec` 和调色板色名获得，只用白名单着色器，不用 StandardMaterial3D，不逐物体建材质；新增着色器文件要主代理批准（§7 第 1 条）
+- **写材质或着色器**：材质只经 `ToonSpec` 和调色板色名获得，只用白名单着色器，不逐物体建材质；新增着色器文件要主代理批准；禁用写法见 ENG-ARCH §2（§7 第 1 条）
 - **想加光源、SubViewport、CompositorEffect、全屏通道或 Environment**：不得新增；只有 WP-01、WP-03、WP-05 可以，而且先向主代理申请（§7 第 2 条）
 - **交付几何或碰撞**：经登记处按格交付，附每级几何误差；`Build()` 在工作线程上跑，不读世界状态和画面设置；只有内核创建渲染实例，碰撞 body 只在主线程入树（§7 第 3、11、12、18 条）
 - **写逐帧代码**：零托管分配；不用 `System.Random`、`DateTime.Now`、`Stopwatch`，不改 `Engine.TimeScale`，着色器不用内置的 `TIME`；界面每秒刷新不超过 10 次（§7 第 4 条）
@@ -277,12 +277,12 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 
 ## 7 硬规则（违反任何一条都不能合入）
 
-1. **材质只用白名单着色器**：场景材质只能经 `ToonSpec` 和调色板色名获得（ENG-ARCH §3），由 `Campus.Style` 用白名单里的 `.gdshader` 创建 ShaderMaterial，共用 `toon.gdshaderinc`（ENG-PERF §1.4）。禁止 StandardMaterial3D、ORMMaterial3D；禁止运行时新建 Shader、改着色器代码、改 `render_mode` 或 `#define`；禁止逐物体创建材质（逐物体的变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform）。新增着色器文件要主代理批准。
+1. **材质只用白名单着色器**：场景材质只能经 `ToonSpec` 和调色板色名获得（ENG-ARCH §3），由 `Campus.Style` 用白名单里的 `.gdshader` 创建 ShaderMaterial，共用 `toon.gdshaderinc`（ENG-PERF §1.4）。禁用写法见 ENG-ARCH §2；禁止逐物体创建材质（逐物体的变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform）。新增着色器文件要主代理批准。
 2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment 或 Environment。只有 WP-01、WP-03、WP-05 可以新增，而且要先向主代理申请；WP-24 的倒影视口、WP-03 管理的不超过 32 盏重点 OmniLight3D 已登记。
 3. **几何**必须通过登记处按格交付，附上每级的几何误差。全部级别烘焙成 TileBundle：发布版本机烘焙（D-165），随包发的只有启动集 `boot_<地图>.pck`（L4、遮挡体等，ENG-PERF §8）；本机烘焙和开发态 `--gen=live` 都调同一个 `Build()`，在工作线程上跑。主线程不生成几何。只有内核能创建 `MeshInstance3D`、`MultiMeshInstance3D`、`OccluderInstance3D` 和 RenderingServer 实例（ENG-ARCH §2）；静态几何经 RenderingServer 挂载，场景节点只给动态物体。
 4. **计时与逐帧路径**：
    - 计时只能由 WP-26 通过通道驱动（世界时间例外）。钟点、季节和天气只在 WorldState 那一步推进（WP-34；天气过程由 WP-45a 提供，SYS-TIME §1、SYS-WEATHER §8），世界时间单调递增；风、水、"一拍二"、雨丝只读动画时间 `anim_time`（delta 累加 mod 480），不读钟点。`Engine.TimeScale` 固定为 1；着色器禁用内置的 `TIME`。
-   - 内容代码不得用 `System.Random`、`DateTime.Now`、`Stopwatch` 等计时器（G4）。唯一的例外是天气种子：新游戏时由 `ISaveService.NewGame` 取一次熵，写进日志和存档，之后跟着存档走（SYS-WEATHER §6.4、SYS-SAVE §5.5）。系统时钟只有 `Campus.Kernel.Save` 能读，只写进存档的 meta（SYS-SAVE）。
+   - 内容代码的随机与计时禁用写法见 ENG-ARCH §2（G4）。唯一的例外是天气种子：新游戏时由 `ISaveService.NewGame` 取一次熵，写进日志和存档，之后跟着存档走（SYS-WEATHER §6.4、SYS-SAVE §5.5）。系统时钟只有 `Campus.Kernel.Save` 能读，只写进存档的 meta（SYS-SAVE）。
    - 逐帧路径零托管分配：不 `new` 引用类型，不用 LINQ、闭包、装箱和字符串拼接；`StringName` 预先缓存；不在 `_Process` 里 `GetNode`（ENG-PERF §6）。
    - 界面每秒刷新不超过 10 次，由 `HudModel` 采样世界状态、值变了才发信号；不在 `_Process` 里逐帧改控件的文字、尺寸或主题（UI-NAV §9）。界面动效只改 `Modulate`、不在容器里的 `Position` / `Rotation`、instance uniform 和扫过期间的 `ui_night`，不改尺寸、StyleBox、Theme 和文字（UI-VISUAL §11.7）；登记例外（SYS-ATLAS §10）：小地图和大地图可以逐帧写着色器参数和变换（`Position`、`Rotation`、`Scale`），"随镜头"模式下标记层可以逐帧重画；仍然不逐帧改文字、尺寸和主题。
 5. **纹理**：PNG 源图经 Godot 导入，导入模式 VRAM Compressed（普通 BC1/BC3，高质量 BC7，法线 RGTC）；需要重复铺贴的用 Texture2DArray。数据纹理（调色板、遮罩、灯表、窗表、树种表）用不压缩的 RGBA8 或浮点格式 ImageTexture，运行时创建。区域包不得自带大于 512² 的贴图（ENG-ARCH §4）。

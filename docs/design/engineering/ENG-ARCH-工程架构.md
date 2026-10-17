@@ -78,8 +78,8 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 ### 0.1 接入要点
 
-- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；共享文件（`project.godot`、`*.csproj`、`Directory.*.props`、契约、`ownership.json`、`docs/design/` 等）向 Astra 申请（WF-BUILD §1、§2）
-- **写纯 .NET 代码（契约、gen、烘焙子任务）**：不引用 GodotSharp，不碰文件路径，数据由内核读成字节交来；gen 不引用其他内容程序集，不依赖运行时接口（清单见 §2"ArchUnitNET 规则"）
+- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；共享文件（`project.godot`、`*.csproj`、`Directory.*.props`、契约、`ownership.json`、`docs/design/` 等）向 Astra 申请（WF-BUILD §1）
+- **写纯 .NET 代码（契约、gen、烘焙子任务）**：不引用 GodotSharp，不碰文件路径，数据由内核读成字节交来；gen 不引用其他内容程序集，不依赖运行时接口，不读世界状态，不感知天气和画面设置（清单见 §2"ArchUnitNET 规则"）
 - **内核、风格、音频以外的 Godot 侧包要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经 `IAudioService` 等音频服务；不自己创建 `MeshInstance3D`、`ShaderMaterial`、`AudioStreamPlayer`（§2）
 - **接入新模块、节点、服务或存档段**：打 `[ContentModule]`、`[Part]`、`[InteriorProvider]`、`[KernelNode]`、`[KernelService]`、`[QualityResponsive]`、`[SaveSection]` 等特性，由注册器自动发现；不加 Autoload，不改 `main.tscn`（§2"自动发现"）
 - **写随机、计时、哈希、三角函数或色值**：禁用清单以 §2 的 BannedApiAnalyzers 和 G4 正则为准；随机用 `Rng`，种子用 `StableHash`，gen 与烘焙子任务的超越函数用 `DetMath`，遍历字典先排序；不写十六进制色值、着色器 `TIME`、`.gd`、手写 `uid://`（§2）
@@ -308,6 +308,7 @@ UESTC_RPG/
 
 - **候选**：WP-00 先交能编译的契约 v1 候选和全部桩（§5），各包照它开工。还没冻结的组仍可修改，改动一律向主代理申请，由主代理改。
 - **按组冻结**：契约按下表分组。某一组的真实生产方与使用方在主线上接通（不再经桩）、相关核心专项通过（ENG-GATES §2）后，由主代理宣布冻结这一组，记进 WF-STATUS §1。
+- **画面相关的契约**：`ToonSpec`、调色板与 `IPaletteProbe`、着色器全局参数、`ui.json` 令牌、过场 JSON 的格式由 Astra 起草；主会话确认字段够用、命名与美术文档一致后才冻结。
 - **契约 21–23 的增量**（玩家身体、游泳、反应动物）：签名以源码为准；本节保留尚未落地能力及其边界。
 
 契约变更按WF-RULE §10同批迁移；冻结状态用于协调使用方，不作为长期保留旧设计的理由：

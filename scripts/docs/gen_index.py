@@ -1,9 +1,9 @@
-"""由文档文件头生成 docs/design/DOCMAP.md 和小节目录 SECTIONS.md。
+"""由文档文件头生成 docs/design/DOCMAP.md、小节目录 SECTIONS.md 和路线表 ROUTES.json。
 
 用法：python -I scripts/docs/gen_index.py；README.md 为手写入口，不由脚本改写。
 依赖：PyYAML。
 """
-import os, re, glob, sys
+import os, re, glob, sys, json
 import yaml
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -161,6 +161,61 @@ def build_sections():
     return NL.join(out)
 
 
+ROUTES = os.path.join(D, 'ROUTES.json')
+
+
+def build_routes(docs):
+    """路线表（定案 r016 §3）：文档编码到路径、工作包到文档编码、路径 glob 到文档编码；钩子按它在读改文件时注入。"""
+    allfm = dict(docs)
+    t = open(os.path.join(D, 'README.md'), encoding='utf-8').read()
+    m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', t, re.S)
+    if m:
+        fm = yaml.safe_load(m.group(1))
+        fm['_path'] = 'README.md'
+        allfm[str(fm.get('id'))] = fm
+    paths = {c: 'docs/design/' + d['_path'] for c, d in allfm.items()}
+    # ENG-WP §2 主表：包、起读栏
+    wp_text = open(os.path.join(D, 'engineering', 'ENG-WP-工作包派工单.md'), encoding='utf-8').read().replace('\r\n', NL)
+    sec = re.search(r'^## 2 .*?(?=^##)', wp_text, re.S | re.M).group(0)
+    reads = {}
+    for line in sec.split(NL):
+        c = [x.strip() for x in line.split('|')]
+        if len(c) >= 8 and re.fullmatch(r'WP-\d+[a-z]?', c[1]):
+            m = re.search(r'接入要点：([^；]*)', c[5])
+            reads[c[1]] = []
+            for tok in re.split(r'[、,，]', m.group(1) if m else ''):
+                tok = tok.strip()
+                if tok in ('', '无'):
+                    continue
+                cm = re.match(r'[A-Z]+(?:-[A-Z0-9]+)*', tok)
+                if not cm or cm.group(0) not in paths:
+                    raise SystemExit('ENG-WP §2 %s 起读栏的编码不存在：%s' % (c[1], tok))
+                reads[c[1]].append(cm.group(0))
+    own = json.load(open(os.path.join(ROOT, 'ownership.json'), encoding='utf-8'))
+    pkgs = {r['owner'] for r in own['rules'] if r['owner'] != 'Opus'} | set(reads)
+    wp = {}
+    for w in sorted(pkgs, key=wpkey):
+        codes = []
+        for c in sorted(allfm):
+            d = allfm[c]
+            if d.get('category') == 'workflow':
+                continue
+            if any(o == w or (w.startswith(o) and re.fullmatch(r'[a-z]', w[len(o):])) for o in wps(d.get('owners'))):
+                codes.append(c)
+        for c in reads.get(w, reads.get(w.rstrip('abcdefghijklmnopqrstuvwxyz'), [])):  # 子包没有自己的行时用母包的
+            if c not in codes and allfm[c].get('category') != 'workflow':
+                codes.append(c)
+        wp[w] = codes
+    globs = {}
+    for c, d in allfm.items():
+        pv = d.get('paths') or []
+        for g in [pv] if isinstance(pv, str) else pv:
+            globs.setdefault(str(g), []).append(c)
+    out = {'version': 1, 'docs': paths, 'wp': wp,
+           'paths': [{'glob': g, 'docs': sorted(set(globs[g]))} for g in sorted(globs)]}
+    return json.dumps(out, ensure_ascii=False, sort_keys=True, indent=1) + NL
+
+
 def main():
     docs = load()
     open(DOCMAP, 'wb').write(build(docs).encode('utf-8'))
@@ -168,6 +223,9 @@ def main():
     s = build_sections()
     open(SECTIONS, 'wb').write(s.encode('utf-8'))
     print('SECTIONS.md', s.count(NL + '- ') + s.count(NL + '  - '), 'sections,', len(s), 'chars')
+    r = build_routes(docs)
+    open(ROUTES, 'wb').write(r.encode('utf-8'))
+    print('ROUTES.json', len(r), 'chars')
 
 
 if __name__ == '__main__':

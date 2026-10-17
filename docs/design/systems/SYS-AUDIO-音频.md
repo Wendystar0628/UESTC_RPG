@@ -44,16 +44,14 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 
 - **要发出任何声音**：只经 `IAudioService`（界面音、音乐、压低）、`IAmbienceService`（同步提示、动态发声器）、`IFoleyService`（交互音）三个服务；不创建 `AudioStreamPlayer`、`AudioStreamPlayer2D`、`AudioStreamPlayer3D`，不调 `AudioServer.Set*`、`AddBus*`、`RemoveBus*`；`AudioListener3D` 只由 WP-06 的相机创建（§2.1、§16）
 - **画面里有要配声的一次性变化**（偶发事件的抖落、雪团落地、动物的小动作与反应动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec` 排队，同一批带同一个 `Group`，被转场打断时用 `CancelCues` 整批取消；远雷由 WP-40 经 `ILightningFeed` 发闪光事件，不调 `Cue`（§6.1、§6.4）
-- **有会移动的发声物**（天鹅、猫、鸽群等动物）：所属包的 `[KernelNode]` 在 `_Ready` 里调 `IAmbienceService.AddDynamic`，每帧调 `MoveDynamic`，位置在 `Systems`（0）那一步之中或之前更新；动物卸载、切图时 `RemoveDynamic`；不另设特性（§4.2、§20）
+- **有会移动的发声物**（天鹅、猫、鸽群等动物）：所属包的 `[KernelNode]` 在 `_Ready` 里调 `IAmbienceService.AddDynamic`，每帧调 `MoveDynamic`（位置在 `Systems` 那一步之中或之前更新），卸载、切图时 `RemoveDynamic`（§4.2、§20）
 - **游泳与身体**：入水、出水、划水只按 WP-42 的游泳遥测出声，泳态下不发陆地脚步；身体动画、相机都不另发声音事件（§9.2、§9.8）
 - **部件自带声音**（售货机、空调外机、广播喇叭、铁皮雨棚、变压器、雨水箅）：在部件定义里实现 `IPartDef.Sounds(p)` 插座，返回 `SoundSocketDecl`（默认 `[]`），插座随 `PlacedPart` 的变换走，区域包不另摆发声器（§4.2、§19）
-- **要从世界数据批量生成环境声发声器**：在 gen 程序集里写带 `[AmbientEmitter]` 特性的 `IAmbientEmitterSource`（纯函数，在烘焙器里跑），ID 以 `amb:` 开头、本图内唯一；不在场景里手摆发声器节点，本图的手工点归 53b 的 `manual_emitters.json`，不超过十个、每条写理由（§4.2、§19）
-- **建碰撞体**（地面高度场、坡道与楼梯、箱体、楼板、墙、柱、树干）：填 `Foot`（`FootMat`），楼梯另填 `StairSpec`；材质在生成几何的同一组参数里决定；世界里 `Auto` 的面积必须为 0，回退要在数据里显式写出；碰撞记录只加 init 属性，不改构造参数（§9.3、§19）
-- **声明开放室内**：在 `IInteriorProvider.Acoustics()` 里按 §10.4 的类别表声明房间、门户和室内档案 `AmbienceProfileId`，自动门的门户写门 ID（`AcousticPortalDecl.Door`），关着的楼不声明门户；声学用的 `Area3D` 由 `kernel/collision`（WP-43）代建，提供者不自己建（§4.5、§10.4、§10.6）
-- **音频要读你的状态**（灯光通道、介质、雾幕、闪电、脚下覆盖物、门的开度）：在自己的契约里提供只读的 C# 值（`IChannelReader`、`IMediumState`、`IVeilState`、`ILightningFeed`、`IGroundCover`、`IInteriorDoors`），着色器里也用到的量与全局参数同源；音频不读回全局参数，也不写任何世界状态（§2.1、§2.2、§19）
+- **要从世界数据批量生成环境声发声器**：在 gen 程序集里写带 `[AmbientEmitter]` 的 `IAmbientEmitterSource`（纯函数，在烘焙器里跑），ID 以 `amb:` 开头、本图内唯一；不在场景里手摆发声器节点，手工点归 53b 的 `manual_emitters.json`，每条写理由（§4.2、§19）
+- **建碰撞体**：填 `Foot`（`FootMat`），楼梯另填 `StairSpec`；材质在生成几何的同一组参数里决定，世界里 `Auto` 的面积必须为 0；碰撞记录只加 init 属性，不改构造参数（§9.3、§19）
+- **声明开放室内**：在 `IInteriorProvider.Acoustics()` 里按 §10.4 的类别表声明房间、门户和 `AmbienceProfileId`，自动门的门户写门 ID，关着的楼不声明门户；声学用的 `Area3D` 由 WP-43 代建（§4.5、§10.4、§10.6）
+- **音频要读你的状态**（灯光通道、介质、雾幕、闪电、脚下覆盖物、门的开度）：在自己的契约里提供只读的 C# 值（`IChannelReader`、`IMediumState`、`IVeilState`、`ILightningFeed`、`IGroundCover`、`IInteriorDoors`），与着色器用的全局参数同源；音频不写任何世界状态（§2.1、§2.2、§19）
 - **声音里要用随机**（选样、概率触发、音高与音量的抖动）：只用契约的 `StableHash` 和 `Rng`；不用 `AudioStreamRandomizer`、`AudioStreamPlaylist.Shuffle`，不给 `AudioServer.PlaybackSpeedScale` 赋值，这几项由 BannedApi 拦截（§9.6、§16、§17）
-- **加入任何音频素材**（含委托的音乐、合成的音）：先在 `game/data/audio/licenses.json` 登记一条（来源、作者、许可与版本、下载日期、页面快照、SHA-256、署名文本、改动记录），没有记录不许入库；许可只收白名单里的，NC、ND、BBC、BY-SA、GPL 一律不用；`*.wav`、`*.ogg` 走 Git LFS，经 53e 的 `pipeline/audio/` 入库（§14.1、§14.2、§14.3）
-- **做界面、传送与过场**：控件事件映射到 `UiCue` 后调 `PlayUi`（当场发声；临时提示和自动保存不配提示音）；传送开始时 `PlayUi(TeleportConfirm)`、到达时 `TeleportArrive`；压低用 `Duck(DuckReason…)`；过场的 `audio` 轨只用 `title.start`、`title.fadeIn`、`title.fadeOut`、`duck`、`amb.altitude`（§7.2、§11、§12）
 - **消费会追加值的音频枚举**（`DuckReason`、`AudioGroup`、`FoleyKind` 等）：写穷举的 `switch`，`default` 分支拒绝或报错（§19）
 
 ## 2 总体架构
@@ -995,7 +993,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ## 11 界面音效
 
-界面音效与 UI-VISUAL的界面语言是同一种性格。UI-VISUAL说"光是信号，不是装饰"，落到声音上就是**声也是信号**：只有"状态变了、确认了、正在进行"才出声；没有输入时完全安静；高频事件尽量不出声。
+界面音效与 UI-VISUAL的界面语言是同一种性格。UI-VISUAL说"光是信号，不是装饰"，落到声音上就是**声也是信号**：只有"状态变了、确认了、正在进行"才出声；没有输入时完全安静；高频事件尽量不出声。临时提示和自动保存不配提示音；控件事件映射到 `UiCue` 后调 `PlayUi`（当场发声）。
 
 **风格**：配合"电子、芯片、光"的主题和克制的动效——
 

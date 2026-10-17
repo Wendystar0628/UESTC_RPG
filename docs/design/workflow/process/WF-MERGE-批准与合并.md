@@ -11,6 +11,7 @@ related: [WF-DUTY, WF-STATUS, WF-RULE, ENG-GATES, ENG-ARCH, ENG-WP]
 contracts: []
 data: []
 gates: [G1, G2, G3, G4, G5]
+paths: [".collab/requests/merge-*"]
 ---
 
 # WF-MERGE · 批准与合并
@@ -58,13 +59,12 @@ gates: [G1, G2, G3, G4, G5]
 
 - **成批**：每轮从已批未合的候选里挑互不冲突的 3–5 条（文件不重叠、G3 owner 不交叉、前置条件已满足），各自 squash 成一个提交，按批准顺序叠起来，整批只跑一次 G1、G2、G4、G5，G3 按 owner 分跑；全过就整批推送，`logs/merged.log` 每条一行。整批失败时定位到具体候选，只撤出那一条并报告，其余重跑一次后合入。内核包仍按 ENG-WP §1.1 的顺序合。
 - **省掉重复的两项**（D-206）：一批里每条候选都在自己的工作树里 rebase 到交候选时的最新 `main` 并跑过快检、结果是通过（请求或回报的门禁行写明），而且 squash 时没有解冲突，就跳过 G1 的格式检查（`-SkipFormat`）和 G4 的依赖规则检查（`-Only G1,G2,G3,G5`）；编译、G2、G3、G5 照跑。有一条不满足，整批照常全跑；提交正文的门禁行写明省了哪两项。
-- **不重复复核**：同一组合的门禁只跑一次，没有新输入不再复核（WF-RULE §4）。
 - 交候选之前，施工方先 rebase 到最新的 `main`（WF-RULE §10）。叠在别的候选上的，基点合入后照批准行写的基点 `rebase --onto main`。
 
 ## 4 合入以后：施工状态与 rebase
 
 - **施工状态**：每小时最多同步一次；唤醒脚本在叫醒消息里写明这一轮同不同步。同步的那一轮整批合完以后，值班执行者更新施工状态文件（WF-STATUS §1）：当前 `main`、删掉已合入的行或改状态，并把依赖已满足的队列条目改成"可派"。状态文件在 git 之外，不需要提交，也不跑 `gen_index.py`。实时的合入记录看 `logs/merged.log`。
-- **rebase 通知**：值班执行者在 `merged.log` 那一行里写明需要谁 rebase；主会话通知名下已在施工的子代理，Astra 通知自己的子代理。任何施工方开始下一步之前都看一眼 `merged.log`，`main` 变了就在自己的工作树里 `git rebase main`；资源有变化时再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
+- **rebase 通知**：值班执行者在 `merged.log` 那一行里写明需要谁 rebase；主会话通知名下已在施工的子代理，Astra 通知自己的子代理。各方按 WF-RULE §10 在自己的工作树里 `git rebase main`；资源有变化时再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
 
 ## 5 git 与工作树
 

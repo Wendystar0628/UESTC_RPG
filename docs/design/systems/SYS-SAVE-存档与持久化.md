@@ -55,12 +55,12 @@ gates: [G2, G4, G5, G10, G16, G20]
 - **决定一段存什么**：只存读档后重建不出来的落定状态；音频状态、打开的面板、偶发事件计时、流式与画质统计、`user://cache/bake/`、玩家身体的瞬态（湿度、姿态、平滑历史）、动物的反应状态都不进存档，读档后各自重建（§2、§5.3）
 - **定义段的数据**：每段一个只读 `sealed record`，只放基础类型、`System.Numerics` 向量、契约里的枚举和 ID；本包自写源生成的 `JsonSerializerContext`，约定与 `ContractJson.Options` 相同；不放 `object`、`JsonElement`、Godot 类型，不用开放多态（§3.5）
 - **段的字段有任何增减**（哪怕只加一个可选字段）：`[SaveSection]` 的 `Version` 加 1，并实现 `Migrate(fromVersion, JsonNode)` 迁到下一版；迁移是纯函数，在后台线程调用，不碰 Godot、不读服务状态（§3.6）
-- **实现 `Capture` 与 `Restore`**：`Capture` 在主线程、任何时刻都给出落定值（过渡中取终点，空中、水里或骑行中取最近的岸上安全点，借的共享单车按已归还记，`view`、`walk`、`maps` 与 meta 指向同一个点），不做 I/O，全部段合计 p99 ≤ 0.3 ms；有过渡进行时让 `IsSettled` 返回 false；`Restore` 立即生效、不做过渡，核对数组长度与数值范围，每修一处调 `RestoreContext.Repair()`（§4.2、§5.6、§9）
+- **实现 `Capture` 与 `Restore`**：`Capture` 在主线程、任何时刻都给出落定值（过渡中取终点，空中、水里或骑行中取最近的岸上安全点），不做 I/O，全部段合计 p99 ≤ 0.3 ms；有过渡进行时让 `IsSettled` 返回 false；`Restore` 立即生效、不做过渡，核对数组长度与数值范围，每修一处调 `RestoreContext.Repair()`（§4.2、§5.6、§9）
 - **存档里要引用别的数据**：只存 ID，不存文件路径；ID 不复用，改名不改身份；确需换 ID 时由负责那份数据的包提交本图目录的 `id-remap.json`，引用它的段各升一次 `v`（§3.6、§9）
 - **关键动作落定、要触发一次保存**：调 `ISaveService.Request`，原因用 `Settled`、`MapChanged`、`FocusLost` 等，由存档服务合并、限频、等安全时刻，只在漫游态有效；`SaveNow` 只用于新游戏交还控制、门禁和预留的手动槽（§4.1、§10）
 - **看到 `IWorldState.Instance` 变了**：做平滑、带回差或保留历史的系统（钟点弹簧、天气插值、界面主题回差、窗灯错开、植被近池、声音平滑量等）把内部状态直接设成新世界的值，不做过渡；`WorldHours` 的单调只在同一实例内比较（§5.2）
-- **读写档案级设置文件**（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）：先查文本里有没有 `Object(` 等写法，再 `ConfigFile.Parse`，只接受 bool、int、float、String；写 `.tmp`、`Flush(true)` 后 `File.Replace`；不用 `ConfigFile.Save`、`DirAccess.Rename`（§8）
-- **任何代码读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档段的实现里也不用 ConfigFile、`GD.StrToVar`、`GD.BytesToVar*`、`FileAccess.GetVar`、Godot 的 `Json` 和不带 `JsonTypeInfo` 的 `JsonSerializer` 重载（G4，§9）
+- **读写档案级设置文件**（`settings.cfg`、`input.cfg`、`graphics.cfg`、`audio.cfg`）：先查文本里有没有 `Object(` 等写法，再 `ConfigFile.Parse`，只接受 bool、int、float、String；写入走 `.tmp` 加 `File.Replace`（§8）
+- **任何代码读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档段的实现里的禁用写法见 §9、ENG-ARCH §2（G4）
 - **界面要显示存档或保存结果**：只经 `ISaveService`（`Slots`、`State`、`Thumbnail`、`SlotsChanged`）读，不自己解析 `.sav`；失败原因用 `save.error.*` 文案键（§4.6、§10）
 - **想用现实时间**：系统时钟只能在 `Campus.Kernel.Save` 里读、只写进 meta 的 `savedAtUnix`；世界状态不读它，读档也不补关着游戏的那段时间（§6）
 
@@ -738,6 +738,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
   - 读档时执行了存档里的任何代码，或创建了存档内容指定的对象；
   - 存档被覆盖或删除，导致无法回退到上一代；
   - 来自更新版本的存档被旧构建覆盖。
+- **回报行**：完成回报的"存档"一行写本包的存档段是否已登记、G20 是否通过，以及段的版本号和有没有迁移函数；没有存档段时写"不涉及"。
 
 ## 15 工作包
 

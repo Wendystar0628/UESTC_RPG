@@ -36,18 +36,15 @@ gates: [G2, G4, G5, G6, G8, G10, G11, G13, G16, G17, G19, G20, G21]
 
 ### 0.1 接入要点
 
-- **要给内容上材质**：只经 `ToonSpec` 和调色板色名取卡通材质（ENG-ARCH §3）；不建 StandardMaterial3D，不自己新建 Shader 或 ShaderMaterial；逐物体的变化放顶点色号、`INSTANCE_CUSTOM` 或 instance uniform，不逐物体建材质、不用材质覆盖；运行时换材质只许换成预热过的变体（§1.1、§1.6、§2）
+- **要给内容上材质**：只经 `ToonSpec` 和调色板色名取卡通材质（ENG-ARCH §3）；不自己新建 Shader 或 ShaderMaterial（禁用写法见 ENG-ARCH §2）；逐物体的变化放顶点色号、`INSTANCE_CUSTOM` 或 instance uniform，不逐物体建材质、不用材质覆盖；运行时换材质只许换成预热过的变体（§1.1、§1.6、§2）
 - **要用或新增着色器、顶点格式**：只用 §1.4 白名单里的文件，共用 `toon.gdshaderinc`；新增着色器文件或顶点格式（登记的只有 VF-A 至 VF-D）要主代理批准；运行时只改参数值，不新建 Shader，不改 `render_mode`、`#define` 或特化开关；可开关、按状态出现的节点启动时就放进树里，让预热编到（§1.4、§2）
-- **着色器要读时间、季节、天气、介质或画面设置**：只读 §1.5 登记表里的全局参数和全局数据纹理，每项只有一个写入方；要新增时先登记进 §1.5 的表（它是唯一的登记来源：主代理据此改 `project.godot`，WP-01 据此生成 `globals.gdshaderinc` 和 C# 名字常量）；C# 侧用 `static readonly StringName` 常量写入，不用 `GlobalShaderParameterGet` 读回（§1.5、§6）
+- **着色器要读时间、季节、天气、介质或画面设置**：只读 §1.5 登记表里的全局参数和全局数据纹理，每项只有一个写入方；要新增时先登记进 §1.5 的表（唯一的登记来源）；C# 侧用 `static readonly StringName` 常量写入，不读回（§1.5、§6）
 - **要在场景里显示东西**：经内核的 `IRenderHost` 申请，不自己建 RenderingServer 实例或 MeshInstance3D（ENG-ARCH §2）；按 §1.1 选容器：同种部件共用 Mesh RID 与材质 RID，每格同种超过约 64 个时用 MultiMesh（统一格式、不用实例色、`MultimeshSetBuffer` 整块写入）；只有动态物体走场景节点（§1.1、§1.2）
-- **要生成几何或碰撞**：写成确定性的 `Build()`（`Campus.Gen.*`，不引用 GodotSharp，超越函数用 `DetMath`，不用 §5 列出的禁用 API，每个表面不超过 65 536 个顶点），由内核在工作线程上调用；主线程只挂载、不生成几何；`Build()` 不读世界状态和画面设置；工作线程上不调场景树、`RenderingServer.Instance*` 和 PhysicsServer3D 的 body 接口，gen 里不用 `Parallel`、`Task.Run`（§5、§6、§14）
-- **要分级或淡入淡出**：几何的淡入淡出在 `toon.gdshaderinc` 里按 4×4 Bayer 抖动做（instance uniform `fade_t0`，0.25 s；MultiMesh 不能逐实例淡化，改在 vertex() 里缩到 0）；visibility range 的 `fadeMode` 一律 Disabled，不用它自带的淡化；同级网格 LOD 只换索引、不换顶点，跨级持续存在的面保持同一法线、色号和材质 ID，剪影与投影构件留到不足 1 px，小件的线先于几何淡出（§1.2、§2）
-- **写逐帧代码或着色器**：逐帧路径零托管分配（不用 LINQ、闭包、装箱、字符串拼接，`GetNode` 只在 `_Ready` 里调）；调用引擎 API 一律批量；计时只用 `Campus.Kernel.Frame` 的计时作用域；着色器不用 `TIME` 和 `LIGHT_COLOR`，按距离的判断用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`（§6、§14）
+- **要生成几何或碰撞**：写成确定性的 `Build()`（`Campus.Gen.*`，不引用 GodotSharp，超越函数用 `DetMath`，不用 §5 列出的禁用 API，每个表面不超过 65 536 个顶点），由内核在工作线程上调用；主线程只挂载、不生成几何；`Build()` 不读世界状态和画面设置；工作线程上不调场景树、`RenderingServer.Instance*` 和 PhysicsServer3D 的 body 接口，gen 里不用 `Parallel`、`Task.Run`（§5、§6）
+- **要分级或淡入淡出**：几何的淡入淡出在 `toon.gdshaderinc` 里按 4×4 Bayer 抖动做（instance uniform `fade_t0`），visibility range 的 `fadeMode` 一律 Disabled；同级网格 LOD 只换索引、不换顶点，跨级持续存在的面保持同一法线、色号和材质 ID（§1.2、§2）
+- **写逐帧代码或着色器**：逐帧路径零托管分配（不用 LINQ、闭包、装箱、字符串拼接，`GetNode` 只在 `_Ready` 里调）；调用引擎 API 一律批量；计时只用 `Campus.Kernel.Frame` 的计时作用域；着色器不用 `TIME` 和 `LIGHT_COLOR`，按距离的判断用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`（§6）
 - **内容要投影或接收阴影**：投影物放在相机可见的图层上，按 §4 的图层登记选层，要新层向主代理申请；草、插片、粒子、光晕不投影，植被和远处体量用 `ShadowsOnly` 代理（第 5 层）；场景里只有 WP-03 的 KeyLight 一盏方向光，阴影的特化开关运行时一律不动，light() 以外要主光方向时读 `key_dir`（§4、§10.1）
-- **要让东西随时刻亮灯**：接进 WP-39 在按图的 `lighting-schedule.json` 里登记的 32 个灯光通道，亮度由着色器读 `light_channels` 和按哈希的阈值算出，CPU 不逐盏写；路灯光斑走 `lamp_grid`、`lamp_table`，只有重点灯用 OmniLight3D：全校不超过 32 盏，不投影，`LightCullMask` 排除第 2 层（§10.3）
-- **本包有受画面设置影响的内容**：在自己的 `[KernelNode]` 上用 `[QualityResponsive]` 声明负责或只读的单项，只经 `IQualityService` 接收，不读 `graphics.cfg`；按即时、雾幕、重启三类落到引擎上，有视觉变化的项淡化完成、不硬切，密度类用 `VisibleInstanceCount` 前缀抽稀；本包的风格底线在每个预设的最差值配置下仍在（§11.7、§11.3）
-- **要释放资源或经历切图**：只释放自己的实例和 TileBundle（`FreeRid` 加 `Dispose()`），不释放共享的材质、图集和数据纹理；全图纹理与包围盒从 `map_rect`、`MapDescriptor.Bounds` 换算，不写死"全校"；跨图常驻的节点只经 `IMapAware` 换数据（§7、§14）
-- **交付前**：逐条对照 §14 的性能自检清单，并通过 G8 静态预算（§12.5）
+- **要释放资源或经历切图**：只释放自己的实例和 TileBundle（`FreeRid` 加 `Dispose()`），不释放共享的材质、图集和数据纹理；全图纹理与包围盒从 `map_rect`、`MapDescriptor.Bounds` 换算，不写死"全校"；跨图常驻的节点只经 `IMapAware` 换数据（§7）
 
 ## 1 绘制管线与合批（WP-02，WP-01 配合）
 
@@ -1525,25 +1522,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 ## 14 每个工作包的性能自检清单
 
-1. 只用白名单里的着色器和调色板色名；没有新建 Shader、StandardMaterial3D，没有在运行时改 `render_mode` 或 `#define`；没有新增顶点格式（§1.4、§2）。
-2. 容器选型符合 §1.1；同种部件共用网格和材质；MultiMesh 是统一格式（3D 变换加自定义数据，无实例色），成批写入用 `MultimeshSetBuffer`。
-3. 逐帧路径零托管分配：`StringName` 预先缓存；没有 LINQ、闭包、装箱、字符串拼接；`_Process` 里没有 `GetNode`；没有计时器；动态全部通过通道接入。风、水、一拍二只读 `anim_time`，着色器不用 `TIME`；界面每秒刷新不超过 10 次（§6）。
-4. 不透明着色器里的 discard 和 alpha scissor 只用于镂空类和抖动淡化（§2）。
-5. 着色器里按距离的判断用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`；颜色不用 `LIGHT_COLOR`。
-6. 静态预算（G8）通过；关掉本包前后的帧时差在帧时占比额度之内。
-7. 生成函数是确定性的（同一输入、同一 ABI，产物逐字节一致），写在 `Campus.Gen.*` 里、不引用 GodotSharp，能在工作线程（本机烘焙）和烘焙器里运行；不用 §5 列出的禁用 API（超越函数一律用 `DetMath`），用 `ArrayPool` 和预分配缓冲。每个表面不超过 65 536 个顶点。
-8. 释放了自己的实例和 TileBundle（`FreeRid` 加 `Dispose()`）；没有释放共享的材质、图集和数据纹理。
-9. `Build()` 不读世界状态（钟点、季节、天气、观察模式），也不读画面设置。时间、季节和天气只经全局参数和全局纹理进入着色器；运行时不改特化开关；每次雾幕淡出之后 SURFACE、DRAW 编译计数不增（ENG-BUDGET §7 第 9、11、18 条）。
-10. 碰撞数据本机烘焙（D-165）、与几何同参数；碰撞 body 只在主线程入树，入树前加完全部形状（ENG-BUDGET §7 第 12 条）。
-11. 用到的全局参数都在 §1.5 的登记表里，有唯一的写入方；没有读回全局参数（ENG-BUDGET §7 第 13 条）。
-12. 投影物在相机可见的图层上；草、插片、粒子、光晕不投影；远处用 `ShadowsOnly` 代理（ENG-BUDGET §7 第 14 条）。
-13. 工作线程上没有调用场景树、`RenderingServer.Instance*` 和 PhysicsServer3D 的 body 接口（ENG-BUDGET §7 第 16 条）。
-14. 画面设置只经 `IQualityService` 和 `[QualityResponsive]` 接收，不读 `graphics.cfg`；本包负责的单项按 §11.7 的生效类别落到引擎上，有视觉变化的淡化完成、不硬切；本包的风格底线内容在每个预设的最差值配置下仍然在（ENG-BUDGET §7 第 17、18 条，G17）。
-15. 天气只读天气向量和天气的全局参数、纹理（§1.5），不自己维护天气状态；用到的节点启动时就在树里，运行时只改数值（ENG-BUDGET §7 第 9 条）。
-16. 全图的纹理和包围盒一律从 `map_rect`、`MapDescriptor.Bounds`（跟相机走的降水池用 `Center` ± `roam.maxRadius`）换算，不写死"全校"的原点和尺寸；跨图常驻的节点只经 `IMapAware` 换数据，不跨图持有格子句柄、`FeatureId` 或纹理内容（SYS-MAPS §4.3、SYS-MAPS §10）。
-17. 出声的包：在播 3D 声源走 WP-53 的池；没有用 `AudioStreamRandomizer`，也没有改 `PlaybackSpeedScale`（SYS-AUDIO §16）。
-18. 界面：只用 `ui_panel`、`ui_screen`、`map_base` 三个画布着色器，组件在扉页后面预热；运行中不新生成 MSDF 字形；设置卡、存档页等大页按需创建、关闭即释放，隐藏页不占实例参数池（UI-VISUAL §11.9）。
-19. 法线与换级：倒角盒、倒角扫掠用 WP-09 内核的构造器（大面平法线、倒角带过渡法线），建筑平面的法线由平面方程算；圆件用平滑法线或解析法线；只想改明暗的效果不写 `NORMAL`（§2）。跨级持续存在的面用同一法线、色号和材质 ID，剪影和投长影的构件留到不足 1 px，小件的线先于几何淡出（§1.2）。
+交付前逐条对照 ENG-BUDGET §7 的硬规则和本文接入要点（§0.1），并通过 G8 静态预算（§12.5）。禁用写法以 ENG-ARCH §2 为准。
 
 ## 16 待验证（P0）
 
