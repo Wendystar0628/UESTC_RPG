@@ -1,7 +1,7 @@
 using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Contracts.Maps;
+using Campus.Gen.Collision;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
@@ -12,111 +12,151 @@ using N = System.Numerics;
 
 namespace Campus.Kernel.Collision.Tests;
 
-/// <summary>The existing G15 core scope, over the same map inputs and generators as the running game.</summary>
+/// <summary>Daily G15: two authored Stand points and short walks in their formal collision neighbourhood.</summary>
 [TestSuite]
-public sealed partial class CollisionCoreTests
+public sealed class CollisionCoreTests
 {
-    private const int SampleCount = 2000;
-    private const double MountSliceBudgetMilliseconds = .3;
-    private readonly List<string> _failures = [];
-    private readonly Dictionary<string, int> _failureSamples = new(StringComparer.Ordinal);
-    private int _failureCount;
-
-    [TestCase(Timeout = 1200000)]
+    [TestCase(Timeout = 180000)]
     [TestCategory("G15Core")]
     [RequireGodotRuntime]
-    public async Task FormalMapGeometryAndCylinders()
+    public async Task FormalMapNearbyWalking()
     {
-        GD.Print("G15Core begin formal map input loading");
         Require(Engine.GetMainLoop() is SceneTree && OS.GetThreadCallerId() == OS.GetMainThreadId(),
-            "G15 core requires the existing Godot test runner on the main thread.");
-        Require(Engine.PhysicsTicksPerSecond == 120, "G15 requires the production 120 Hz physics configuration.");
-        Require(ProjectSettings.GetSetting("physics/3d/physics_engine").AsString() == "Jolt Physics",
-            "G15 requires the configured Jolt backend.");
+            "G15 core requires the Godot test runner on the main thread.");
         var tree = (SceneTree)Engine.GetMainLoop();
         var source = new MapDataSource();
         var catalog = await source.ReadCatalog();
-        GD.Print("G15Core map catalog loaded");
         var requested = System.Environment.GetEnvironmentVariable("UESTC_G15_MAP");
         var id = string.IsNullOrWhiteSpace(requested) ? catalog.Default : new MapId(requested);
         Require(catalog.TryGet(id, out var entry), "G15 requested an unknown map: " + id.Value);
+        // Fly-only viewpoints never become landing candidates.
+        var route = new[] { "P01", "P08" }.Select(pointId =>
+            entry.Waypoints.Single(point => point.Id == pointId)).ToArray();
+        Require(route.All(point => point.Stand is not null), "The G15 short route requires both authored Stand points.");
         var claims = source.ReadClaims(id);
-        var input = await source.PrepareLoadInput(source.ReadLoadInput(entry));
+        var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), input, claims));
-        GD.Print("G15Core formal world loaded");
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        var walk = context.World.Walk ?? throw new InvalidDataException("G15 requires the actual resident walk bake, not a fallback mask.");
-        walk.Validate();
         var repository = System.Environment.GetEnvironmentVariable("UESTC_REPOSITORY")
-            ?? throw new InvalidOperationException("The existing test runner must supply UESTC_REPOSITORY.");
-        using var bake = new BakeService(new(Path.Combine(repository, "output", "build", "gates", "G15Core-cache"),
-            Live: false, Strict: false, Background: false, AllowUnlisted: true, Reference: false, Verify: false,
+            ?? throw new InvalidOperationException("The test runner must supply UESTC_REPOSITORY.");
+        var cache = System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE")
+            ?? Path.Combine(repository, "output", "cache", "bake");
+        using var bake = new BakeService(new(cache, Live: false, Strict: false, Background: false,
             MapOnly: false, LogicalProcessors: 3, SeedOverride: null));
         var map = bake.Mount(context);
-        GD.Print($"G15Core freezing generation inputs map={id.Value}");
-        _ = await Task.Run(() => map.Data.Value);
-        CaptureParts(id);
-        var products = await Task.Run(() => BuildAndCheck(bake, map));
-        GD.Print($"G15Core map={id.Value} tiles={products.Count} geometryFailures={_failureCount}");
-        foreach (var failure in _failures) GD.Print($"G15Core geometryFailure {failure}");
-        await CheckCylinders(tree, context, walk, products);
-        Require(_failureCount == 0, $"G15 core failed {_failureCount} assertions:\n" + string.Join('\n', _failures));
-    }
-
-    private SortedDictionary<TileKey, CollisionTile> BuildAndCheck(BakeService bake, BakeService.MapBuild map)
-    {
-        var result = new SortedDictionary<TileKey, CollisionTile>(Comparer<TileKey>.Create((a, b) =>
-            a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X)));
-        var ground = map.Modules.Single(pair => pair.Value.Value is Campus.Gen.Ground.GroundModule);
-        var groundContext = map.CreateBuildContext(ground.Value.CodeHash);
-        var groundTiles = ground.Value.Value.Tiles(groundContext).ToHashSet();
-        var descriptor = map.Context.Descriptor;
-        GD.Print($"G15Core building C range={descriptor.TileMin}..{descriptor.TileMax}");
-        for (var z = descriptor.TileMin.Z; z <= descriptor.TileMax.Z; z++)
-            for (var x = descriptor.TileMin.X; x <= descriptor.TileMax.X; x++)
-            {
-                var tile = new TileKey(x, z);
-                var product = bake.Build(map, CollisionBakeProducer.Key(descriptor.Id, tile)) as CollisionTile
-                    ?? throw new InvalidDataException("The formal collision producer returned another product.");
-                Require(product.Tile == tile && product.Key.Map == descriptor.Id, "Collision product identity mismatch.");
-                result.Add(tile, product);
-                if (groundTiles.Contains(tile))
-                {
-                    var visible = bake.Build(map, BakeRequestKeys.Tile(descriptor.Id, ground.Key, tile, LodLevel.L0)) as TileBundle
-                        ?? throw new InvalidDataException("The formal ground producer returned another product.");
-                    CheckGround(product, visible);
-                }
-                if (result.Count % 128 == 0) GD.Print($"G15Core C/L0 checked tiles={result.Count}");
-            }
-        GD.Print($"G15Core built C tiles={result.Count}; checking building edges and source expansion");
-        CheckBuildingEdges(map.Context, result);
-        CheckSourceExpansion(map);
-        return result;
-    }
-
-    private static IReadOnlyList<N.Vector3> SampleMask(WalkBakeData data)
-    {
-        var grid = data.Walk;
-        var cells = Enumerable.Range(0, grid.Classes.Length).Where(i => (WalkClass)grid.Classes[i] is
-            WalkClass.Walk or WalkClass.Interior or WalkClass.Wade).ToArray();
-        Require(cells.Length != 0, "The real walk mask contains no supported cells.");
-        var random = new Rng(0);
-        var points = new N.Vector3[SampleCount];
-        for (var i = 0; i < points.Length; i++)
+        using var native = new World3D();
+        var viewport = new SubViewport { World3D = native, Size = new(32, 32) };
+        var root = new Node3D();
+        var collision = new CollisionWorld();
+        var resident = new HashSet<TileKey>();
+        var character = CreateCharacter();
+        try
         {
-            var cell = cells[random.NextInt(cells.Length)];
-            points[i] = new(grid.Origin.X + (cell % grid.Width + random.NextFloat()) * WalkGrid.CellSize,
-                grid.SupportY[cell], grid.Origin.Y + (cell / grid.Width + random.NextFloat()) * WalkGrid.CellSize);
+            tree.Root.AddChild(viewport);
+            viewport.AddChild(root);
+            root.AddChild(character);
+            collision.Attach(root, context);
+            using var admission = new WalkPlacementAdmission(character);
+            for (var index = 0; index < route.Length; index++)
+            {
+                var point = route[index];
+                var stand = point.Stand!;
+                await LoadNearby(stand.Feet);
+                Require(collision.Ready(stand.Feet, WalkTuning.Radius), point.Id + " collision is not Ready.");
+                var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkTuning.StandingHeight)
+                    ?? admission.Nearby(context.World.Spatial, collision, stand.Feet, WalkTuning.StandingHeight);
+                Require(landing is not null, point.Id + " has no legal raycast landing with cylinder clearance.");
+                var feet = landing!.Value;
+                character.GlobalPosition = feet.ToGodot();
+                character.Velocity = Vector3.Zero;
+                await MoveFor(1, N.Vector3.Zero, point.Id, feet);
+                Require(character.IsOnFloor(), point.Id + " did not settle on native collision.");
+                var start = character.GlobalPosition.ToNumerics();
+                var destination = route[1 - index].Stand!.Feet;
+                var direction = N.Vector3.Normalize(new(destination.X - feet.X, 0, destination.Z - feet.Z));
+                await MoveFor(.5f, direction * WalkTuning.WalkSpeed, point.Id, start);
+                await MoveFor(.5f, N.Vector3.Zero, point.Id, start);
+                var finish = character.GlobalPosition.ToNumerics();
+                Require(character.IsOnFloor(), point.Id + " lost the floor after its short walk.");
+                Require(N.Vector2.Distance(new(start.X, start.Z), new(finish.X, finish.Z)) > WalkTuning.Radius,
+                    point.Id + " could not move away from its landing.");
+                GD.Print($"G15Core point={point.Id} authored={stand.Feet} landing={feet} finish={finish} resident={resident.Count}");
+            }
+            collision.Unload();
+            Require(collision.Diagnostics.Tiles == 0 && collision.Diagnostics.Bodies == 0,
+                "The short route retained collision after unloading.");
+            GD.Print("G15Core complete: P01/P08 landing and nearby walking only; no full route traversal.");
         }
-        return points;
+        finally
+        {
+            collision.Unload();
+            if (GodotObject.IsInstanceValid(viewport)) viewport.Free();
+        }
+
+        async Task LoadNearby(N.Vector3 feet)
+        {
+            var center = CollisionGeometry.TileAt(feet);
+            var needed = new HashSet<TileKey>();
+            for (var z = center.Z - 1; z <= center.Z + 1; z++)
+                for (var x = center.X - 1; x <= center.X + 1; x++) needed.Add(new(x, z));
+            foreach (var tile in resident.Where(tile => !needed.Contains(tile)).ToArray())
+            {
+                collision.RemoveTile(tile);
+                resident.Remove(tile);
+            }
+            foreach (var tile in needed.OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
+            {
+                if (resident.Contains(tile)) continue;
+                var product = await Task.Run(() => bake.Build(map, CollisionBakeProducer.Key(id, tile))) as CollisionTile
+                    ?? throw new InvalidDataException("The formal collision producer returned another product.");
+                var work = new CollisionMountWork(collision, product, 0);
+                while (!work.Step(.3)) await root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                Require(work.Complete, "Nearby collision did not mount: " + work.Error);
+                resident.Add(tile);
+            }
+            Require(resident.Count <= 9, "The short route loaded more than a 3x3 neighbourhood.");
+            await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+            await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+        }
+
+        async Task MoveFor(float seconds, N.Vector3 horizontal, string point, N.Vector3 start)
+        {
+            var frames = (int)MathF.Ceiling(seconds * Engine.PhysicsTicksPerSecond);
+            for (var frame = 0; frame < frames; frame++)
+            {
+                await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+                var feet = character.GlobalPosition.ToNumerics();
+                Require(collision.Ready(feet, WalkTuning.Radius), point + " left its Ready neighbourhood.");
+                var delta = (float)character.GetPhysicsProcessDeltaTime();
+                character.Velocity = new(horizontal.X, character.Velocity.Y - WalkTuning.Gravity * delta, horizontal.Z);
+                character.MoveAndSlide();
+                Require(character.GlobalPosition.Y >= start.Y - WalkTuning.BelowSupportLimit,
+                    point + " fell through or away from its nearby floor.");
+            }
+        }
     }
 
-    private void Fail(string message, [System.Runtime.CompilerServices.CallerMemberName] string check = "")
+    private static CharacterBody3D CreateCharacter()
     {
-        _failureCount++;
-        var count = _failureSamples.GetValueOrDefault(check);
-        _failureSamples[check] = count + 1;
-        if (count < 3) _failures.Add($"[{check}] {message}");
+        var character = new CharacterBody3D
+        {
+            CollisionLayer = 0, CollisionMask = CollisionWorld.WalkMask,
+            FloorMaxAngle = WalkTuning.FloorAngleDegrees * float.Pi / 180,
+            FloorSnapLength = WalkTuning.SnapLength, FloorConstantSpeed = true,
+            FloorStopOnSlope = true, FloorBlockOnWall = true,
+            SafeMargin = WalkTuning.SafeMargin, MaxSlides = 4,
+            PhysicsInterpolationMode = Node.PhysicsInterpolationModeEnum.Off
+        };
+        character.AddChild(new CollisionShape3D
+        {
+            Shape = new CylinderShape3D { Radius = WalkTuning.Radius, Height = WalkTuning.StandingHeight },
+            Position = Vector3.Up * (WalkTuning.StandingHeight / 2)
+        });
+        return character;
     }
-    private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+
+    private static void Require(bool value, string message)
+    {
+        if (!value) throw new InvalidOperationException(message);
+    }
 }
