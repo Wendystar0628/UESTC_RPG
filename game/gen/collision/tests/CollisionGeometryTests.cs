@@ -33,6 +33,19 @@ public sealed class CollisionGeometryTests
         var rectangle = new SlabCollider(new Vector2[] { new(20, 40), new(24, 40), new(24, 44), new(20, 44) }, 2, 0.2f, SurfaceTag.Ground);
         var whole = CollisionGeometry.PrepareSlab(rectangle);
         Require(whole.Count == 1 && whole[0].Ring.Count == 4, "A convex rectangular floor must not gain an internal diagonal.");
+        var retraced = rectangle with
+        {
+            Ring = new Vector2[] { new(20, 40), new(22, 40), new(22, 42), new(22, 40), new(24, 40), new(24, 40), new(24, 44), new(20, 44) }
+        };
+        Require(CollisionGeometry.PrepareSlab(retraced).Single().Ring.SequenceEqual(rectangle.Ring),
+            "Zero-area retracing and adjacent duplicates must collapse fully without changing the occupied floor.");
+        var small = rectangle with { Ring = new Vector2[] { new(63.9f, 63.9f), new(63.902f, 63.9f), new(63.902f, 63.902f), new(63.9f, 63.902f) } };
+        Require(CollisionGeometry.PrepareSlab(small).Single().Ring.Count == 4,
+            "Translating a small valid floor near the tile edge must not cancel its area.");
+        var tiny = rectangle with { Ring = new Vector2[] { new(38.999573f, 63.00049f), new(38.999023f, 63), new(39, 63) } };
+        var tinyPrepared = CollisionGeometry.PrepareSlab(tiny).Single();
+        Require(tinyPrepared.Ring.SequenceEqual(tiny.Ring) && CollisionGeometry.IsConvexRing(tinyPrepared.Ring),
+            "A nonzero sub-square-millimetre support triangle must remain a valid convex floor.");
         var concave = rectangle with { Ring = new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) } };
         var pieces = CollisionGeometry.PrepareSlab(concave);
         Require(pieces.All(p => CollisionGeometry.IsConvexRing(p.Ring)), "Floor decomposition emitted a concave shape.");

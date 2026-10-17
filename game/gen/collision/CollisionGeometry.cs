@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Collision;
 
@@ -85,8 +86,8 @@ public static class CollisionGeometry
         for (var i = 0; i < ring.Count; i++)
         {
             var turn = Cross(ring[i], ring[(i + 1) % ring.Count], ring[(i + 2) % ring.Count]);
-            if (!float.IsFinite(turn)) return false;
-            if (MathF.Abs(turn) <= 0.000001f) continue;
+            if (!double.IsFinite(turn)) return false;
+            if (turn == 0) continue;
             var next = turn > 0 ? 1 : -1;
             if (direction != 0 && next != direction) return false;
             direction = next;
@@ -100,6 +101,19 @@ public static class CollisionGeometry
         var ring = slab.Ring.ToList();
         if (ring.Count > 1 && ring[0] == ring[^1]) ring.RemoveAt(ring.Count - 1);
         if (ring.Count < 3 || ring.Any(p => !float.IsFinite(p.X) || !float.IsFinite(p.Y))) throw new ArgumentException("Invalid slab outline.");
+        bool removed;
+        do
+        {
+            removed = false;
+            for (var i = ring.Count - 1; i >= 0 && ring.Count >= 3; i--)
+            {
+                if (ring[i] != ring[(i + 1) % ring.Count] &&
+                    Cross(ring[(i + ring.Count - 1) % ring.Count], ring[i], ring[(i + 1) % ring.Count]) != 0) continue;
+                ring.RemoveAt(i);
+                removed = true;
+            }
+        } while (removed && ring.Count >= 3);
+        if (ring.Count < 3) throw new ArgumentException("Invalid slab outline.");
         for (var i = 0; i < ring.Count; i++)
             for (var j = i + 1; j < ring.Count; j++)
             {
@@ -107,12 +121,9 @@ public static class CollisionGeometry
                 if (SegmentsCross(ring[i], ring[(i + 1) % ring.Count], ring[j], ring[(j + 1) % ring.Count]))
                     throw new ArgumentException("Slab outline must be simple.");
             }
-        for (var i = ring.Count - 1; i >= 0 && ring.Count > 3; i--)
-            if (MathF.Abs(Cross(ring[(i + ring.Count - 1) % ring.Count], ring[i], ring[(i + 1) % ring.Count])) < 0.000001f)
-                ring.RemoveAt(i);
-        var area = 0f;
-        for (var i = 0; i < ring.Count; i++) area += ring[i].X * ring[(i + 1) % ring.Count].Y - ring[(i + 1) % ring.Count].X * ring[i].Y;
-        if (MathF.Abs(area) < 0.000001f) throw new ArgumentException("Slab outline has zero area.");
+        var area = 2 * PlanGeometry.SignedArea(ring);
+        if (area == 0)
+            throw new ArgumentException($"Slab outline has zero area: doubled area={area:R}, ring=[{string.Join("; ", ring)}].");
         if (area < 0) ring.Reverse();
         return ring;
     }
@@ -128,7 +139,7 @@ public static class CollisionGeometry
                 var previous = (i + ring.Count - 1) % ring.Count;
                 var next = (i + 1) % ring.Count;
                 var a = ring[previous]; var b = ring[i]; var c = ring[next];
-                if (Cross(a, b, c) <= 0.000001f) continue;
+                if (Cross(a, b, c) <= 0) continue;
                 var occupied = false;
                 for (var j = 0; j < ring.Count; j++)
                     if (j != previous && j != i && j != next && InTriangle(ring[j], a, b, c)) { occupied = true; break; }
@@ -168,8 +179,9 @@ public static class CollisionGeometry
         return new(min, max);
     }
 
-    private static float Cross(Vector2 a, Vector2 b, Vector2 c) => (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
-    private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c) => Cross(a, b, p) >= -0.000001f && Cross(b, c, p) >= -0.000001f && Cross(c, a, p) >= -0.000001f;
+    // These are topology tests: a fixed area cutoff would erase valid small support faces.
+    private static double Cross(Vector2 a, Vector2 b, Vector2 c) => ((double)b.X - a.X) * ((double)c.Y - a.Y) - ((double)b.Y - a.Y) * ((double)c.X - a.X);
+    private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c) => Cross(a, b, p) >= 0 && Cross(b, c, p) >= 0 && Cross(c, a, p) >= 0;
     private static bool SegmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d) =>
         MathF.Max(a.X, b.X) >= MathF.Min(c.X, d.X) && MathF.Max(c.X, d.X) >= MathF.Min(a.X, b.X) &&
         MathF.Max(a.Y, b.Y) >= MathF.Min(c.Y, d.Y) && MathF.Max(c.Y, d.Y) >= MathF.Min(a.Y, b.Y) &&
