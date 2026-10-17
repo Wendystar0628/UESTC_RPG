@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 namespace Campus.Contracts;
 
 /// <summary>Explicit, preloaded world-building inputs. No IO, registry or runtime service is consulted.</summary>
-public sealed record WorldModelLoadInputs(MapDescriptor Descriptor, WalkBakeData? Walk = null,
+public sealed record WorldModelLoadInputs(MapDescriptor Descriptor,
     IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy = null)
 {
     private readonly IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? _zoneBoundaries;
@@ -45,7 +45,6 @@ public sealed record WorldModelLoadInputs(MapDescriptor Descriptor, WalkBakeData
     }
 
     public MapDescriptor Descriptor { get; } = Descriptor ?? throw new ArgumentNullException(nameof(Descriptor));
-    public WalkBakeData? Walk { get; } = Walk;
     // Copy the resolved map claims ledger once. Later mutations of the caller's dictionary cannot affect a load.
     public IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy { get; } = ClaimedBy is null ? null :
         new ReadOnlyDictionary<FeatureId, WpId>(ClaimedBy.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal)

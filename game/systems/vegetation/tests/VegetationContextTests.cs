@@ -133,7 +133,7 @@ public sealed class VegetationContextTests
             var baseFiles = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
                 .ToDictionary(name => name, name => all[name], StringComparer.Ordinal);
             var loader = new WorldModelLoaderAdapter();
-            var baseInput = new MapLoadInput(entry, baseFiles, ReadOnlyMemory<byte>.Empty);
+            var baseInput = new MapLoadInput(entry, baseFiles);
             var map = entry.CreateContext(MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
             var assemblies = Directory.EnumerateFiles(AppContext.BaseDirectory, "Campus.Gen.*.dll")
                 .Where(path => !Path.GetFileName(path).StartsWith("Campus.Gen.Tests", StringComparison.Ordinal))
@@ -141,7 +141,7 @@ public sealed class VegetationContextTests
             var registry = new ServiceRegistry();
             registry.Discover(assemblies);
             var claims = MapClaimCapture.Capture(registry, id);
-            return new(map, new MapLoadInput(entry, all, ReadOnlyMemory<byte>.Empty), claims);
+            return new(map, new MapLoadInput(entry, all), claims);
         }
 
         private static string DataDirectory()

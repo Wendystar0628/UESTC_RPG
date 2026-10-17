@@ -5,7 +5,6 @@
     <PackageReference Include="gdUnit4.api" PrivateAssets="all" Condition="'$(Configuration)' == 'Debug'" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;**/tests/**/*.cs" />
     <ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" />
-    <ProjectReference Include="../pipeline/walk/Campus.Pipeline.Walk.csproj" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">

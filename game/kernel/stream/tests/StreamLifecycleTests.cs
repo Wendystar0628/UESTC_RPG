@@ -80,6 +80,5 @@ public sealed class StreamLifecycleTests
     private sealed record ContextValue(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext
     {
         public string DataRoot => "res://fixture/";
-        public string BakeRoot => "res://fixture/boot/";
     }
 }

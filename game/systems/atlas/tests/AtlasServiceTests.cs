@@ -219,7 +219,7 @@ public sealed class AtlasServiceTests
         var files = Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories)
             .ToDictionary(path => Path.GetRelativePath(root, path).Replace('\\', '/'),
                 path => (ReadOnlyMemory<byte>)File.ReadAllBytes(path), StringComparer.Ordinal);
-        var campus = new WorldModelLoaderAdapter().Load(new("qingshuihe"), files);
+        var campus = Campus.Gen.World.WorldModelLoader.Load(new("qingshuihe"), files);
         var interiorIndex = new TestInteriorIndex();
         var world = new MutableWorldFixture(interiorIndex);
         world.Configure(campus.World.Features.Values, campus.World.Boundary);
@@ -307,7 +307,7 @@ public sealed class AtlasServiceTests
             new(id, id), at, "anchor", 1, 0, "test-district", new(new(new(at.X, 6, at.Y), 0, -12), new(new(at.X, 0, at.Y), 0)), new(id), Form: form);
     }
     private sealed record Context(MapDescriptor Descriptor, IWorldModel World) : IMapContext
-    { public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty; public string DataRoot => "res://test/"; public string BakeRoot => "res://test-bake/"; }
+    { public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty; public string DataRoot => "res://test/"; }
     private sealed class Rules(string policy) : IRuleset
     {
         public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly, ViewMode.Walk], WorldControlMask.All, policy, [], []);

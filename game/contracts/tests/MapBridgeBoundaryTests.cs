@@ -9,7 +9,7 @@ namespace Campus.Contracts.Tests;
 public sealed class MapBridgeBoundaryTests
 {
     [TestCase]
-    public void ExplicitLoadInputsSnapshotOwnershipAndNeverFallBackToLegacyLoad()
+    public void ExplicitLoadInputsSnapshotOwnership()
     {
         var feature = new FeatureId("fixture");
         var claims = new Dictionary<FeatureId, WpId> { [feature] = new("WP-01") };
@@ -18,10 +18,6 @@ public sealed class MapBridgeBoundaryTests
         if (inputs.ClaimedBy![feature] != new WpId("WP-01")) throw new InvalidOperationException("Claim input was not snapshotted.");
         if (inputs.ClaimedBy is IDictionary<FeatureId, WpId> exposed)
             Expect<NotSupportedException>(() => exposed[feature] = new("WP-02"));
-        var legacy = new LegacyLoader();
-        Expect<NotSupportedException>(() => ((IWorldModelLoader)legacy).Load(inputs.Descriptor.Id,
-            new Dictionary<string, ReadOnlyMemory<byte>>(), inputs));
-        if (legacy.Called) throw new InvalidOperationException("Explicit inputs were silently sent to the legacy loader.");
     }
 
     [TestCase]
@@ -80,14 +76,5 @@ public sealed class MapBridgeBoundaryTests
         try { action(); }
         catch (TException) { return; }
         throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
-    private sealed class LegacyLoader : IWorldModelLoader
-    {
-        public bool Called { get; private set; }
-        public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
-        {
-            Called = true;
-            throw new InvalidOperationException("Legacy load must not run for an explicit-input request.");
-        }
     }
 }

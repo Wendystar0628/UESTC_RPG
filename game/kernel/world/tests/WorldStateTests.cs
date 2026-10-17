@@ -592,7 +592,6 @@ public sealed class WorldStateTests
         public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
         public IWorldModel World => throw new NotSupportedException();
         public string DataRoot => "res://test/";
-        public string BakeRoot => "res://bake/test/";
     }
     private sealed class ReducedMotion : IMotionSettings
     {

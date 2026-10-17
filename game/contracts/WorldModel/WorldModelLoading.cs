@@ -17,10 +17,6 @@ public interface IWorldModelLoader
     /// Files are preloaded by the kernel adapter, keyed by forward-slash paths relative to this map's DataRoot.
     /// Implementations parse only the supplied bytes; no path access or engine resource loading occurs here.
     /// </summary>
-    WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files);
-
-    /// <summary>Consumes the descriptor, walk bake and resolved ownership supplied by the caller.
-    /// Implementations that only support the legacy signature must fail explicitly, never silently drop these inputs.</summary>
     WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
-        WorldModelLoadInputs inputs) => throw new NotSupportedException("This world loader does not support explicit load inputs.");
+        WorldModelLoadInputs inputs);
 }

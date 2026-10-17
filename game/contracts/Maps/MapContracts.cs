@@ -58,7 +58,6 @@ public interface IMapContext                 // 纯数据；场景 RID 和物理
     BuildInputSnapshot SourceInputs { get; }
     IWorldModel World { get; }               // 切图后失效，任何节点都不得跨图持有
     string DataRoot { get; }                 // "res://data/maps/qingshuihe/"
-    string BakeRoot { get; }                 // "res://bake/qingshuihe/boot/"（启动集根目录）；本机缓存由 IBakeService 管（§4）
 }
 public enum MapTravelCause : byte { Boot, NewGame, LoadSave, Ui, Portal, Teleport, Test }
 public sealed record MapTravelRequest(MapId Target, string? Spawn = null, Pose? Pose = null,

@@ -285,6 +285,5 @@ public sealed partial class SaveLifecycleTests
     {
         public IWorldModel World => throw new NotSupportedException("World-model geometry is not consumed by these production time/weather services.");
         public string DataRoot => "res://test/";
-        public string BakeRoot => "res://bake/test/";
     }
 }

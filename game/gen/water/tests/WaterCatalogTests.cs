@@ -23,9 +23,7 @@ public sealed class WaterCatalogTests
         public IReadOnlyList<FeatureId> Query(Box3 box) => [];
         public float GroundY(float x, float z) => bank;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => bank;
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => null;
     }
 
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>

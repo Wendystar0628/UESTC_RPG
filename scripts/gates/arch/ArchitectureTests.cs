@@ -147,7 +147,6 @@ public sealed class ArchitectureTests
         else if (origin == "Campus.Gen.Interior") allowed = target == "Campus.Gen.Parts.Core";
         else if (origin == "Campus.Gen.InteriorProps") allowed = target is "Campus.Gen.Parts.Core" or "Campus.Gen.Interior";
         else if (origin == "Campus.Pipeline.Map") allowed = target == "Campus.Gen.World";
-        else if (origin == "Campus.Pipeline.Walk") allowed = target == "Campus.Pipeline.Map" || target.StartsWith("Campus.Gen.", StringComparison.Ordinal);
         else allowed = target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" or "Campus.Gen.InteriorProps" || target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
         if (!allowed) throw new InvalidOperationException($"Assembly boundary: {origin} -> {target}");
     }

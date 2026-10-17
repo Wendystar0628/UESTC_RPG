@@ -71,10 +71,9 @@ public sealed record WorldNetwork(
     public static WorldNetwork Empty { get; } = new([], [], [], [], []);
 }
 
-public interface IWorldModel : IWalkDataSource
+public interface IWorldModel
 {
-    WalkBakeData? IWalkDataSource.Walk => null;
-    /// <summary>Current map terrain. A pure zero-height fallback keeps pre-terrain implementations source-compatible.</summary>
+    /// <summary>Current map terrain; maps without authored terrain use a flat surface.</summary>
     ITerrain Terrain => FlatTerrain.Default;
     /// <summary>Actual campus boundary from source geometry, including holes; never the map's bounding rectangle.</summary>
     PolygonRings Boundary { get; }
@@ -91,8 +90,5 @@ public interface ISpatialIndex
     /// <summary>Exactly the current world terrain's HeightAt(x, z), without a second low-resolution height table.</summary>
     float GroundY(float x, float z);
     CameraMedium MediumAt(Vector3 p);
-    /// <summary>Queries prepared exact physical support near yHint; walk permission is evaluated separately.</summary>
-    float? SupportY(float x, float z, float yHint);
     WalkClass WalkClassAt(float x, float z);
-    Vector3? NearestSafe(Vector3 p, float maxDist);
 }

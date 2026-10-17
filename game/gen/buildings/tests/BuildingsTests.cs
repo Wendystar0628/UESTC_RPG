@@ -1512,9 +1512,7 @@ public sealed class BuildingsTests
         public IReadOnlyList<FeatureId> Query(Box3 box) => [.. features.Keys.OrderBy(k => k.Value, StringComparer.Ordinal)];
         public float GroundY(float x, float z) => 0f;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => 0f;
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => p;
     }
 
     private sealed class NoInteriors : IInteriorIndex

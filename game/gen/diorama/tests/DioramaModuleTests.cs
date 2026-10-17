@@ -25,9 +25,7 @@ public sealed class DioramaModuleTests
         public IReadOnlyList<FeatureId> Query(Box3 box) => [];
         public float GroundY(float x, float z) => 0f;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => 0f;
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => null;
     }
 
     private static MapDescriptor Map(string backdrop) => new(

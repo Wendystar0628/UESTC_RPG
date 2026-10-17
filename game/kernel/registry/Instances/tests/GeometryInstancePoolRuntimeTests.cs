@@ -338,7 +338,6 @@ public sealed class GeometryInstancePoolRuntimeTests
         public MapDescriptor Descriptor => descriptor;
         public IWorldModel World => throw new NotSupportedException();
         public string DataRoot => "";
-        public string BakeRoot => "";
     }
 
     private static PaletteCatalog Catalog() => new(new PaletteRegistry(
