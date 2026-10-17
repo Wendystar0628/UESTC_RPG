@@ -105,7 +105,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _camera = null;
         _environment = null;
         _lut = null;
-        _box.OfferLeases(null, null);   // release leases no callback took; no new post callbacks after this
+        _box.Close();   // cancel input no callback took; callbacks already running keep their own batches
         // GPU objects belong to the render thread; release them there before the rendering device shuts down.
         RenderingServer.CallOnRenderThread(Callable.From(ReleaseGpuResources));
     }
@@ -229,10 +229,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             frame.DiagWorldInstance = _world.Instance;
             frame.DiagMainFrame = Engine.GetProcessFrames();
         }
-        _box.Write(frame);
         if (_diag.Enabled && _diag.NextLogLine() is { } line) GD.Print(line);
-        // Read leases for this frame's outline callback (taken and disposed on the render thread).
-        _box.OfferLeases(_textures.TryAcquire(ShaderGlobals.Palette, out var palette) ? palette : null,
+        // Publish the scalars and their texture leases as one render-thread input.
+        _box.Publish(frame, _textures.TryAcquire(ShaderGlobals.Palette, out var palette) ? palette : null,
             _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
 
         if (_environment is null) return;

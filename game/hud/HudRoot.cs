@@ -41,6 +41,7 @@ public partial class HudRoot : CanvasLayer
     private float _idle, _weatherHold, _scaleDebounce = -1;
     private ViewMode _lastMode;
     private Season _lastSeason;
+    private bool _initialized, _bound;
 
     public HudRoot()
     {
@@ -51,6 +52,19 @@ public partial class HudRoot : CanvasLayer
 
     public override void _Ready()
     {
+        if (_initialized)
+        {
+            ConnectInput();
+            BindEvents();
+            _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
+            _primed = false;
+            _lastMode = _model.Mode;
+            _lastSeason = _model.Season;
+            ApplyScale();
+            Layout();
+            SyncState();
+            return;
+        }
         _settings = Services.Get<HudSettings>();
         _model = Services.Get<HudModel>();
         _motion = (MotionPolicy)Services.Get<IMotionSettings>();
@@ -73,7 +87,6 @@ public partial class HudRoot : CanvasLayer
 
         _clock = new UiThemeClock(Services.Get<IWorldState>(), _settings, _motion, tokens);
         AddChild(_clock);
-        _clock.Switched += _ => { if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio?.PlayUi(UiCue.ShiftDayNight); };
 
         _root = new Control
         {
@@ -84,7 +97,6 @@ public partial class HudRoot : CanvasLayer
         };
         AddChild(_root);
         _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _root.Resized += Layout;
 
         _minimapSlot = new Control { Name = "MinimapSlot", MouseFilter = Control.MouseFilterEnum.Ignore, Size = tokens.V2("metrics", "size", "minimap") };
         _root.AddChild(_minimapSlot);
@@ -107,10 +119,9 @@ public partial class HudRoot : CanvasLayer
         _savePage.CloseRequested += CloseSaves;
         _toast = Toast.Create(_kit, _root);
 
-        _settings.Changed += OnSettingsChanged;
+        _initialized = true;
+        BindEvents();
         _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
-        if (_flow is not null) _flow.Changed += (_, _) => SyncState();
-        _model.Changed += OnModelChanged;
         _lastMode = _model.Mode;
         _lastSeason = _model.Season;
         _hidden = Argument("ui") == "0";
@@ -236,7 +247,11 @@ public partial class HudRoot : CanvasLayer
     private void ReleaseResident()
     {
         if (_resident is null) return;
-        foreach (var child in _corners.GetChildren()) child.QueueFree();
+        foreach (var child in _corners.GetChildren())
+        {
+            _corners.RemoveChild(child);
+            child.QueueFree();
+        }
         _resident = null;
         _weatherHeld = false;
     }
@@ -369,6 +384,26 @@ public partial class HudRoot : CanvasLayer
         _scaleDebounce = 0;
     }
 
+    private void BindEvents()
+    {
+        if (_bound) return;
+        _bound = true;
+        _clock.Switched += OnThemeSwitched;
+        _root.Resized += Layout;
+        _settings.Changed += OnSettingsChanged;
+        if (_flow is not null) _flow.Changed += OnFlowChanged;
+        _model.Changed += OnModelChanged;
+    }
+
+    private void OnThemeSwitched(bool dark)
+    {
+        if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio?.PlayUi(UiCue.ShiftDayNight);
+    }
+
+    private void OnFlowChanged(AppState previous, AppState current) => SyncState();
+
+    private void OnInterfaceModeChanged(bool enabled) => SyncCorners();
+
     // ---------------- 界面缩放（UI-VISUAL §11.10）：不乘 DPI ----------------
     private void ApplyScale()
     {
@@ -456,19 +491,39 @@ public partial class HudRoot : CanvasLayer
 
     private void ConnectInput()
     {
+        if (_layers.Count > 0) return;
         try { _router = Services.Get<IInputRouter>(); }
         catch (InvalidOperationException) { _router = null; }
         if (_router is null) return;
         _layers.Add(_router.RegisterLayer("WP-35.dialog", LayerDialog, DialogLayer));
         _layers.Add(_router.RegisterLayer("WP-35.page", LayerPage, PageLayer));
         _layers.Add(_router.RegisterLayer("WP-35.hud", LayerHud, HudLayer));
-        _router.InterfaceModeChanged += _ => SyncCorners();
+        _router.InterfaceModeChanged += OnInterfaceModeChanged;
     }
 
     public override void _ExitTree()
     {
+        if (_bound)
+        {
+            _bound = false;
+            _clock.Switched -= OnThemeSwitched;
+            _root.Resized -= Layout;
+            _settings.Changed -= OnSettingsChanged;
+            if (_flow is not null) _flow.Changed -= OnFlowChanged;
+            _model.Changed -= OnModelChanged;
+        }
+        if (_router is not null) _router.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();
         _layers.Clear();
+        if (_initialized)
+        {
+            _settingsCard.Close();
+            _savePage.Close();
+            ReleaseResident();
+            _weatherHeld = false;
+            // 同实例重新入树时复用根控件，恢复订阅并重建已释放的四角。
+            RequestReady();
+        }
     }
 
     /// <summary>漫游态 ⇄ 界面态：有路由时经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>

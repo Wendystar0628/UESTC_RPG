@@ -1,4 +1,5 @@
 using Campus.Kernel.Post;
+using Campus.Kernel.Renderer;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -111,5 +112,89 @@ public sealed class PostDiagnosticsTests
         True(every.NextLogLine() is not null, "all mode logs the first.");
         Capture(every, 1, 2, s, s, s, false);
         True(every.NextLogLine() is not null, "all mode logs every frame.");
+    }
+
+    [TestCase]
+    public void PublicationBetweenPassesCannotMixFramesOrReleaseTakenLeases()
+    {
+        var box = new PostFrameBox();
+        var firstReleased = 0;
+        var nextReleased = 0;
+        var firstPalette = new GlobalDataTextureLease(default, () => firstReleased++);
+        var firstTable = new GlobalDataTextureLease(default, () => firstReleased++);
+        var first = new PostFrame { DiagMainFrame = 1, VignetteK = 0.1f };
+        box.Publish(first, firstPalette, firstTable);
+        first.VignetteK = 0.9f;   // publication owns its value copy
+        Require(box.TryTake(out var batch), "PostSky must take the first publication.");
+        try
+        {
+            Require(batch.Frame.DiagMainFrame == 1 && batch.Frame.VignetteK == 0.1f,
+                "PostSky must receive the published frame value.");
+            Require(ReferenceEquals(batch.Palette, firstPalette) && ReferenceEquals(batch.MatTable, firstTable),
+                "PostSky must receive the leases published with that frame.");
+            // Reproduce the original main/render interleaving between Outline and Finish.
+            box.Publish(new PostFrame { DiagMainFrame = 2, VignetteK = 0.2f },
+                new GlobalDataTextureLease(default, () => nextReleased++),
+                new GlobalDataTextureLease(default, () => nextReleased++));
+            Require(box.TryTakeFinish(out var finish) && finish.DiagMainFrame == 1 && finish.VignetteK == 0.1f,
+                "Finish must use Outline's frame even after the next publication.");
+            Require(!box.TryTakeFinish(out _), "Finish input must be consumed only once.");
+            box.Close();
+            Require(nextReleased == 2 && firstReleased == 0,
+                "Cancellation must release pending leases and leave callback-owned leases alive.");
+        }
+        finally { batch.Dispose(); box.Close(); }
+        Require(firstReleased == 2 && nextReleased == 2, "Each publication must release exactly its own leases.");
+    }
+
+    [TestCase]
+    public void ReplacementAndCloseReleaseOnlyUnclaimedPublications()
+    {
+        var box = new PostFrameBox();
+        var oldReleased = 0;
+        var currentReleased = 0;
+        var lateReleased = 0;
+        box.Publish(new PostFrame { DiagMainFrame = 1 },
+            new GlobalDataTextureLease(default, () => oldReleased++), null);
+        box.Publish(new PostFrame { DiagMainFrame = 2 }, null,
+            new GlobalDataTextureLease(default, () => currentReleased++));
+        Require(oldReleased == 1 && currentReleased == 0, "Replacement must dispose the unclaimed older batch.");
+        Require(box.TryTake(out var batch) && batch.Frame.DiagMainFrame == 2 && batch.Palette is null,
+            "Only the current frame and its optional leases may be taken.");
+        try
+        {
+            box.Close();
+            box.Close();
+            Require(currentReleased == 0, "Close must not dispose callback-owned input.");
+            Require(!box.TryTake(out _) && !box.TryTakeFinish(out _), "Close must cancel both pass inputs.");
+            box.Publish(default, new GlobalDataTextureLease(default, () => lateReleased++), null);
+            Require(lateReleased == 1 && !box.TryTake(out _), "Late publication must release leases without reopening.");
+        }
+        finally { batch.Dispose(); box.Close(); }
+        Require(oldReleased == 1 && currentReleased == 1 && lateReleased == 1, "Release counts must remain exact.");
+    }
+
+    [TestCase]
+    public void RepeatedDrawsReuseLastFrameWithoutRetakingLeases()
+    {
+        var box = new PostFrameBox();
+        var released = 0;
+        Require(!box.TryTake(out _) && !box.TryTakeFinish(out _), "An empty mailbox has no pass inputs.");
+        box.Publish(new PostFrame { DiagMainFrame = 1 }, new GlobalDataTextureLease(default, () => released++), null);
+        Require(!box.TryTakeFinish(out _), "Finish must wait for Outline to select a frame.");
+        Require(box.TryTake(out var batch), "Outline must select the publication.");
+        batch.Dispose();
+        Require(box.TryTakeFinish(out var finish) && finish.DiagMainFrame == 1, "Finish must consume the selected frame.");
+        Require(box.TryTake(out batch) && batch.Frame.DiagMainFrame == 1 && batch.Palette is null && batch.MatTable is null,
+            "A draw without a new publication must reuse scalars with fallback textures, without retaking leases.");
+        batch.Dispose();
+        Require(box.TryTakeFinish(out finish) && finish.DiagMainFrame == 1, "Finish must also run for repeated draws.");
+        box.Close();
+        Require(released == 1, "Repeated draws and cancellation must not release a taken lease again.");
+    }
+
+    private static void Require(bool condition, string message)
+    {
+        if (!condition) throw new InvalidOperationException(message);
     }
 }

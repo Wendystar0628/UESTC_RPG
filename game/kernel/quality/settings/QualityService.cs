@@ -9,7 +9,7 @@ namespace Campus.Kernel.Quality.Settings;
 // Local engine boundary for the WP-32 application state machine, not a shared package contract.
 public interface IQualityRuntime
 {
-    Task<double> NextFrame();
+    Task<double> NextFrame(CancellationToken cancellationToken);
     bool Transitioning { get; }
     bool Booting { get; }
     bool OwnsQualityVeil { get; }
@@ -17,10 +17,10 @@ public interface IQualityRuntime
     Vector2I OutputSize { get; }
     Vector2I ScreenSize { get; }
     GraphicsDevice ReadDevice();
-    Task<DeviceTier> Sample(GraphicsDevice device);
-    Task Cover();
-    Task Reveal();
-    Task WaitForDestination();
+    Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken);
+    Task Cover(CancellationToken cancellationToken);
+    Task Reveal(CancellationToken cancellationToken);
+    Task WaitForDestination(CancellationToken cancellationToken);
     void Dispatch(QualityView view, in QualityChange change);
     void ReportError(string message);
     void ReportInfo(string message);
@@ -29,11 +29,20 @@ public interface IQualityRuntime
 [KernelService(typeof(IQualityService), Owner = "WP-32")]
 public sealed class QualityService : IQualityService, IBootParticipant
 {
+    private sealed class Binding
+    {
+        public IQualityRuntime Runtime { get; }
+        public CancellationTokenSource Lifetime { get; } = new();
+        public CancellationToken Token { get; }
+
+        public Binding(IQualityRuntime runtime) { Runtime = runtime; Token = Lifetime.Token; }
+    }
+
     private sealed record Request(QualityProfile Profile, ApplyOrigin Origin, TaskCompletionSource<ApplyResult>? Completion);
     private readonly QualityCatalog _catalog;
     private readonly QualityState _state;
     private readonly IGraphicsSettingsStore _store;
-    private IQualityRuntime? _runtime;
+    private Binding? _binding;
     private GraphicsDevice _device = new("Unknown", "Unknown", "Unknown", 0, 0, null, false);
     private string _deviceKey = "";
     private QualityProfile _durableProfile = QualityCatalog.Profile(QualityPreset.Balanced);
@@ -45,17 +54,17 @@ public sealed class QualityService : IQualityService, IBootParticipant
     private bool _initializing;
     private Request? _pending;
     private Task? _active;
+    private Request? _activeRequest;
     private double _debounce;
     private double _confirmSeconds;
     private QualityProfile? _displayBefore;
     private Task _lastSave = Task.CompletedTask;
 
-    public QualityService(QualityCatalog? catalog = null, IQualityRuntime? runtime = null, IGraphicsSettingsStore? store = null)
+    public QualityService(QualityCatalog? catalog = null, IGraphicsSettingsStore? store = null)
     {
         _catalog = catalog ?? new(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json"));
         _state = new(_catalog);
         _store = store ?? new GraphicsSettingsStore(OS.GetUserDataDir(), _catalog);
-        _runtime = runtime;
     }
 
     public DeviceTier Tier => _state.Tier;
@@ -70,13 +79,39 @@ public sealed class QualityService : IQualityService, IBootParticipant
     public float PresetValue(QualityPreset preset, QualityKnob knob) => _catalog.PresetValue(preset, knob);
     public ApplyPlan Plan(QualityProfile next) => _state.Plan(next);
 
-    internal void Attach(QualityRuntime runtime) => _runtime = runtime;
+    public CancellationToken Bind(IQualityRuntime runtime)
+    {
+        if (_binding is not null) throw new InvalidOperationException("Quality runtime is already mounted.");
+        _binding = new(runtime);
+        return _binding.Token;
+    }
+
+    public void Unbind(IQualityRuntime runtime)
+    {
+        if (_binding is not { } binding || !ReferenceEquals(binding.Runtime, runtime)) return;
+        var pending = _pending;
+        var active = _activeRequest;
+        _binding = null;
+        _pending = null;
+        _active = null;
+        _activeRequest = null;
+        _initialized = false;
+        _initializing = false;
+        _displayBefore = null;
+        _pendingDisplay.Clear();
+        _confirmSeconds = 0;
+        _lastSave = Task.CompletedTask;
+        binding.Lifetime.Cancel();
+        binding.Lifetime.Dispose();
+        pending?.Completion?.TrySetCanceled(binding.Token);
+        active?.Completion?.TrySetCanceled(binding.Token);
+    }
 
     public Task Initialize(BootPhase phase, BootContext context) => phase switch
     {
         BootPhase.BeforeMap => Task.CompletedTask,
         BootPhase.AfterMapWarm => InitializeAsync(context),
-        BootPhase.BeforeReveal => _lastSave,
+        BootPhase.BeforeReveal => _binding is { } binding ? _lastSave.WaitAsync(binding.Token) : Task.FromCanceled(new CancellationToken(true)),
         _ => throw new ArgumentOutOfRangeException(nameof(phase)),
     };
 
@@ -85,7 +120,9 @@ public sealed class QualityService : IQualityService, IBootParticipant
     {
         if (_initialized) return;
         if (_initializing) throw new InvalidOperationException("Quality initialization is already running.");
-        var runtime = _runtime ?? throw new InvalidOperationException("Quality runtime must be mounted before boot detection.");
+        var binding = _binding ?? throw new InvalidOperationException("Quality runtime must be mounted before boot detection.");
+        var runtime = binding.Runtime;
+        var cancellationToken = binding.Token;
         _initializing = true;
         try
         {
@@ -113,13 +150,15 @@ public sealed class QualityService : IQualityService, IBootParticipant
             _deviceKey = _device.CacheKey(outputWidth, outputHeight);
             var forcedTier = context.ExplicitArguments.Contains("tier");
             var tier = forcedTier ? context.Arguments["tier"] : null;
-            _state.Tier = forcedTier ? tier switch
+            var detectedTier = forcedTier ? tier switch
             {
                 "min-spec" => DeviceTier.MinSpec,
                 "dgpu-mid" => DeviceTier.DgpuMid,
                 "dgpu-high" => DeviceTier.DgpuHigh,
                 _ => throw new ArgumentException($"Unknown device tier: {tier}"),
-            } : stored is not null && stored.DeviceKey == _deviceKey ? stored.Tier : DeviceProbe.Classify(_device) ?? await runtime.Sample(_device);
+            } : stored is not null && stored.DeviceKey == _deviceKey ? stored.Tier : DeviceProbe.Classify(_device) ?? await runtime.Sample(_device, cancellationToken).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            _state.Tier = detectedTier;
             _userSelected = stored?.UserSelected == true;
             var profile = !forcedTier && stored is not null && (stored.UserSelected || stored.DeviceKey == _deviceKey)
                 ? stored.Profile : QualityCatalog.Profile(Recommended, !CaptureMode);
@@ -129,14 +168,16 @@ public sealed class QualityService : IQualityService, IBootParticipant
             _durableTier = forcedTier ? stored?.Tier ?? DeviceTier.MinSpec : Tier;
             // A forced tier with no genuine cache must be detected again on the next ordinary launch.
             _durableDeviceKey = forcedTier ? stored?.DeviceKey ?? "" : _deviceKey;
-            await runtime.NextFrame();
-            Publish(_state.Commit(profile, ApplyOrigin.Startup, true));
+            await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            Publish(binding, _state.Commit(profile, ApplyOrigin.Startup, true));
+            cancellationToken.ThrowIfCancellationRequested();
             _initialized = true;
             runtime.ReportInfo($"[WP-32] device={_device.Name}; tier={Tier}; recommended={Recommended}; UMA={_device.Uma}; budget={_device.BudgetBytes}");
             // A command-line override must never be cached as the hardware recommendation.
             if (!CaptureMode && !forcedTier && (stored is null || stored.DeviceKey != _deviceKey)) QueueSave();
         }
-        finally { _initializing = false; }
+        finally { if (ReferenceEquals(_binding, binding)) _initializing = false; }
     }
 
     public Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin)
@@ -145,10 +186,11 @@ public sealed class QualityService : IQualityService, IBootParticipant
         if (origin == ApplyOrigin.Adaptive) throw new ArgumentException("Adaptive is a change origin, not a request.", nameof(origin));
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) return Task.FromResult(Result(ApplyStatus.Rejected, plan.Rejected));
-        var runtime = _runtime ?? throw new InvalidOperationException("Quality runtime is not mounted.");
+        var binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
+        var runtime = binding.Runtime;
         // The boot caller already owns an opaque veil; no second veil or transition wait is needed.
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
-            return ApplyDuringBoot(plan.Next, origin);
+            return ApplyDuringBoot(binding, plan.Next, origin);
         var deferred = runtime.Transitioning || _active is not null;
         _pending?.Completion?.TrySetResult(Result(ApplyStatus.Deferred));
         var completion = deferred ? null : new TaskCompletionSource<ApplyResult>();
@@ -159,7 +201,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
 
     public void ConfirmDisplay()
     {
-        if (_displayBefore is null) return;
+        if (_binding is null || _displayBefore is null) return;
         _displayBefore = null;
         _confirmSeconds = 0;
         if (_pendingDisplay.Count != 0)
@@ -177,10 +219,12 @@ public sealed class QualityService : IQualityService, IBootParticipant
 
     public void Tick(double delta)
     {
+        if (_binding is not { } binding) return;
         if (_active is { IsCompleted: true })
         {
-            if (_active.IsFaulted) _runtime!.ReportError($"[WP-32] Quality apply failed: {_active.Exception!.GetBaseException().Message}");
+            if (_active.IsFaulted) binding.Runtime.ReportError($"[WP-32] Quality apply failed: {_active.Exception!.GetBaseException().Message}");
             _active = null;
+            _activeRequest = null;
         }
         if (_displayBefore is not null)
         {
@@ -195,24 +239,28 @@ public sealed class QualityService : IQualityService, IBootParticipant
                 _debounce = 0;
             }
         }
-        if (_pending is null || _active is not null || _initializing || _runtime!.Transitioning) return;
+        if (_pending is null || _active is not null || _initializing || binding.Runtime.Transitioning) return;
         _debounce -= Math.Max(0, delta);
         if (_debounce > 0) return;
         var request = _pending;
         _pending = null;
-        _active = Execute(request);
+        _activeRequest = request;
+        _active = Execute(binding, request);
     }
 
-    private async Task<ApplyResult> ApplyDuringBoot(QualityProfile profile, ApplyOrigin origin)
+    private async Task<ApplyResult> ApplyDuringBoot(Binding binding, QualityProfile profile, ApplyOrigin origin)
     {
-        await _runtime!.NextFrame();
-        Publish(_state.Commit(profile, origin, true));
+        await binding.Runtime.NextFrame(binding.Token).WaitAsync(binding.Token);
+        binding.Token.ThrowIfCancellationRequested();
+        Publish(binding, _state.Commit(profile, origin, true));
+        binding.Token.ThrowIfCancellationRequested();
         return Result(ApplyStatus.Applied);
     }
 
-    private async Task Execute(Request request)
+    private async Task Execute(Binding binding, Request request)
     {
-        var runtime = _runtime!;
+        var runtime = binding.Runtime;
+        var cancellationToken = binding.Token;
         var snapshot = _state.Capture();
         var previousDisplay = _displayBefore;
         var previousCountdown = _confirmSeconds;
@@ -229,18 +277,23 @@ public sealed class QualityService : IQualityService, IBootParticipant
             if (veiled)
             {
                 coverRequested = true;
-                await runtime.Cover();
+                await runtime.Cover(cancellationToken).WaitAsync(cancellationToken);
             }
-            await runtime.NextFrame();
+            cancellationToken.ThrowIfCancellationRequested();
+            await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             if (veiled && !runtime.OwnsQualityVeil) throw new InvalidOperationException("Quality veil was taken over before application.");
             applied = true;
             var change = _state.Commit(request.Profile, request.Origin, veiled);
             if (change.Knobs != 0) runtime.Dispatch(Effective, change);
+            cancellationToken.ThrowIfCancellationRequested();
             if (veiled)
             {
-                await runtime.WaitForDestination();
+                await runtime.WaitForDestination(cancellationToken).WaitAsync(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!runtime.OwnsQualityVeil) throw new InvalidOperationException("Quality veil was taken over during application.");
-                await runtime.Reveal();
+                await runtime.Reveal(cancellationToken).WaitAsync(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
             }
             if (plan.NeedsConfirm && request.Origin == ApplyOrigin.User)
             {
@@ -252,10 +305,16 @@ public sealed class QualityService : IQualityService, IBootParticipant
             {
                 persistenceAttempted = !CaptureMode;
                 QueueSave();
-                await _lastSave;
+                await _lastSave.WaitAsync(cancellationToken);
             }
-            Notify(change);
+            cancellationToken.ThrowIfCancellationRequested();
+            Notify(binding, change);
+            cancellationToken.ThrowIfCancellationRequested();
             request.Completion?.TrySetResult(Result(ApplyStatus.Applied));
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        {
+            request.Completion?.TrySetCanceled(cancellationToken);
         }
         catch (Exception error)
         {
@@ -271,19 +330,23 @@ public sealed class QualityService : IQualityService, IBootParticipant
                 var rollback = _state.Restore(snapshot, runtime.OwnsQualityVeil);
                 try { runtime.Dispatch(Effective, rollback); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
-                Notify(rollback);
+                if (cancellationToken.IsCancellationRequested) return;
+                Notify(binding, rollback);
             }
+            if (cancellationToken.IsCancellationRequested) return;
             // The reason is checked again at the engine boundary; never reveal another flow's cover.
             if (coverRequested && runtime.OwnsQualityVeil)
             {
-                try { await runtime.Reveal(); }
+                try { await runtime.Reveal(cancellationToken).WaitAsync(cancellationToken); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
             }
+            if (cancellationToken.IsCancellationRequested) return;
             if (persistenceAttempted)
             {
-                try { QueueSave(); await _lastSave; }
+                try { QueueSave(); await _lastSave.WaitAsync(cancellationToken); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
             }
+            if (cancellationToken.IsCancellationRequested) return;
             if (recoveryErrors.Count != 0)
             {
                 var failure = new AggregateException("Quality application and recovery failed.", new[] { error }.Concat(recoveryErrors));
@@ -295,20 +358,27 @@ public sealed class QualityService : IQualityService, IBootParticipant
         }
     }
 
-    private void Publish(in QualityChange change)
+    private void Publish(Binding binding, in QualityChange change)
     {
+        binding.Token.ThrowIfCancellationRequested();
         if (change.Knobs == 0) return;
-        _runtime!.Dispatch(Effective, change);
-        Notify(change);
+        binding.Runtime.Dispatch(Effective, change);
+        Notify(binding, change);
     }
 
-    private void Notify(in QualityChange change)
+    private void Notify(Binding binding, in QualityChange change)
     {
+        if (binding.Token.IsCancellationRequested) return;
         if (change.Knobs == 0 || Changed is null) return;
         foreach (Action<QualityChange> observer in Changed.GetInvocationList())
         {
+            if (binding.Token.IsCancellationRequested) return;
             try { observer(change); }
-            catch (Exception error) { _runtime!.ReportError($"[WP-32] Quality observer failed: {error.Message}"); }
+            catch (Exception error)
+            {
+                if (binding.Token.IsCancellationRequested) return;
+                binding.Runtime.ReportError($"[WP-32] Quality observer failed: {error.Message}");
+            }
         }
     }
 

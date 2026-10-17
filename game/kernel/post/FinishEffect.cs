@@ -131,7 +131,7 @@ public partial class FinishEffect : CompositorEffect
     public override void _RenderCallback(int effectCallbackType, RenderData renderData)
     {
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostTransparent) return;
-        if (Inputs is null || !Inputs.TryRead(out var frame)) return;
+        if (Inputs is null || !Inputs.TryTakeFinish(out var frame)) return;
         if (!EnsureResources() || _rd is null) return;
         var diag = Diagnostics;
         if (diag is { Enabled: true }) BakeAndCapture(diag, frame);

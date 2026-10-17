@@ -96,17 +96,15 @@ public partial class OutlineEffect : CompositorEffect
     public override void _RenderCallback(int effectCallbackType, RenderData renderData)
     {
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostSky) return;
-        if (Inputs is null) return;
-        Inputs.TakeLeases(out var paletteLease, out var matTableLease);
+        if (Inputs is null || !Inputs.TryTake(out var batch)) return;
         try
         {
-            if (Inputs.TryRead(out var frame)) Render(frame, renderData, paletteLease, matTableLease);
+            Render(batch.Frame, renderData, batch.Palette, batch.MatTable);
         }
         finally
         {
             // After issuing the commands (IGlobalDataTextureRegistry lease protocol).
-            paletteLease?.Dispose();
-            matTableLease?.Dispose();
+            batch.Dispose();
         }
     }
 

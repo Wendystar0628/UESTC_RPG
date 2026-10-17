@@ -48,61 +48,88 @@ internal struct PostFrame
 }
 
 /// <summary>
-/// Single-slot mailbox between the main thread and the render thread; struct copies, no allocation. It also carries
-/// the per-frame read leases of the global data textures (IGlobalDataTextureRegistry): the main thread acquires them
-/// before the frame is queued, the outline callback takes them over, uses them and disposes them after issuing its
-/// commands. Leases the render thread never took are disposed by the main thread when the next pair replaces them.
+/// One immutable publication. Taking it transfers both leases to the outline callback, which releases them in finally.
+/// </summary>
+internal readonly record struct PostFrameBatch(PostFrame Frame, GlobalDataTextureLease? Palette,
+    GlobalDataTextureLease? MatTable) : IDisposable
+{
+    public void Dispose()
+    {
+        Palette?.Dispose();
+        MatTable?.Dispose();
+    }
+}
+
+/// <summary>
+/// Single-slot main-to-render mailbox for the active camera's PostSky -> PostTransparent sequence.
+/// PostSky takes the pending frame and leases together and latches only its frame for the next PostTransparent;
+/// Publish cannot change that latch. Without a new publication, another PostSky reuses the scalars with fallback
+/// textures. Replaced or cancelled publications release only leases the render thread has not taken.
 /// </summary>
 internal sealed class PostFrameBox
 {
     private readonly object _gate = new();
-    private PostFrame _frame;
-    private bool _valid;
-    private GlobalDataTextureLease? _palette;
-    private GlobalDataTextureLease? _matTable;
+    private PostFrameBatch _latest;
+    private bool _valid, _closed;
+    private PostFrame _finishFrame;
+    private bool _finishValid;
 
-    public void Write(in PostFrame frame)
+    /// <summary>Main thread: transfers ownership of this frame and its leases, even after Close.</summary>
+    public void Publish(in PostFrame frame, GlobalDataTextureLease? palette, GlobalDataTextureLease? matTable)
+    {
+        var batch = new PostFrameBatch(frame, palette, matTable);
+        PostFrameBatch replaced;
+        lock (_gate)
+        {
+            replaced = _closed ? batch : _latest;
+            if (!_closed)
+            {
+                _latest = batch;
+                _valid = true;
+            }
+        }
+        replaced.Dispose();
+    }
+
+    /// <summary>PostSky: takes the publication and selects the frame shared by both passes.</summary>
+    public bool TryTake(out PostFrameBatch batch)
     {
         lock (_gate)
         {
-            _frame = frame;
-            _valid = true;
+            batch = _latest;
+            // Preserve the existing repeated-draw behavior: keep scalars, but never retake owned leases.
+            // Without a new publication Outline uses the frame's fallback textures as before.
+            _latest = new PostFrameBatch(batch.Frame, null, null);
+            _finishValid = _valid;
+            if (!_finishValid) return false;
+            _finishFrame = batch.Frame;
+            return true;
         }
     }
 
-    public bool TryRead(out PostFrame frame)
+    /// <summary>PostTransparent: consumes only the frame selected by this draw's PostSky, never the pending frame.</summary>
+    public bool TryTakeFinish(out PostFrame frame)
     {
         lock (_gate)
         {
-            frame = _frame;
-            return _valid;
+            frame = _finishFrame;
+            var valid = _finishValid;
+            _finishValid = false;
+            return valid;
         }
     }
 
-    /// <summary>Main thread: hands over this frame's leases (either may be null) and releases unclaimed older ones.</summary>
-    public void OfferLeases(GlobalDataTextureLease? palette, GlobalDataTextureLease? matTable)
+    /// <summary>Stops publication and cancels unclaimed input; taken batches remain owned by their callbacks.</summary>
+    public void Close()
     {
-        GlobalDataTextureLease? oldPalette, oldMatTable;
+        PostFrameBatch cancelled;
         lock (_gate)
         {
-            oldPalette = _palette;
-            oldMatTable = _matTable;
-            _palette = palette;
-            _matTable = matTable;
+            _closed = true;
+            cancelled = _latest;
+            _latest = default;
+            _valid = _finishValid = false;
         }
-        oldPalette?.Dispose();
-        oldMatTable?.Dispose();
-    }
-
-    /// <summary>Render thread: takes ownership of the current leases; the caller disposes them.</summary>
-    public void TakeLeases(out GlobalDataTextureLease? palette, out GlobalDataTextureLease? matTable)
-    {
-        lock (_gate)
-        {
-            palette = _palette;
-            matTable = _matTable;
-            _palette = null;
-            _matTable = null;
-        }
+        cancelled.Dispose();
     }
 }

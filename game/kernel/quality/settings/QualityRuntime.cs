@@ -18,29 +18,47 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
     private QualityService _service = null!;
     private IVeilService _veil = null!;
+    private CancellationToken _lifetime;
+    private bool _closed;
     private List<TaskCompletionSource<double>> _frames = [];
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Quality;
         _service = (QualityService)RuntimeKernel.Get<IQualityService>();
         _veil = RuntimeKernel.Get<IVeilService>();
-        _service.Attach(this);
+        _closed = false;
+        _lifetime = _service.Bind(this);
+    }
+
+    public override void _ExitTree()
+    {
+        _closed = true;
+        _service?.Unbind(this);
+        foreach (var frame in _frames) frame.TrySetCanceled();
+        _frames.Clear();
     }
 
     public override void _Process(double delta)
     {
+        if (_closed) return;
         _service.Tick(delta);
         if (_frames.Count == 0) return;
         var frames = _frames;
         _frames = [];
-        foreach (var frame in frames) frame.TrySetResult(delta);
+        foreach (var frame in frames)
+        {
+            if (_closed) frame.TrySetCanceled();
+            else frame.TrySetResult(delta);
+        }
     }
 
-    public Task<double> NextFrame()
+    public Task<double> NextFrame(CancellationToken cancellationToken)
     {
+        if (_closed) return Task.FromCanceled<double>(new CancellationToken(true));
+        cancellationToken.ThrowIfCancellationRequested();
         var frame = new TaskCompletionSource<double>();
         _frames.Add(frame);
-        return frame.Task;
+        return frame.Task.WaitAsync(cancellationToken);
     }
 
     public bool Transitioning
@@ -61,9 +79,17 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         }
     }
 
-    public Task Cover() => _veil.Cover(VeilReason.Quality, 0.3f);
+    public Task Cover(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _veil.Cover(VeilReason.Quality, 0.3f).WaitAsync(cancellationToken);
+    }
     public bool OwnsQualityVeil => _veil.Opacity > 0 && !OtherVeil(_veil.Reason);
-    public Task Reveal() => OwnsQualityVeil ? _veil.Reveal(VeilReason.Quality, 0.3f) : Task.CompletedTask;
+    public Task Reveal(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return OwnsQualityVeil ? _veil.Reveal(VeilReason.Quality, 0.3f).WaitAsync(cancellationToken) : Task.CompletedTask;
+    }
     public GraphicsDevice ReadDevice() => DeviceProbe.Read();
     public void ReportError(string message) => GD.PushError(message);
     public void ReportInfo(string message) => GD.Print(message);
@@ -77,20 +103,23 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     public Vector2I OutputSize => DisplayServer.WindowGetSize();
     public Vector2I ScreenSize => DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
 
-    public async Task WaitForDestination()
+    public async Task WaitForDestination(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var stream = RuntimeKernel.Get<IMapStreamState>();
         var camera = RuntimeKernel.Get<ICameraRig>();
         stream.Prefetch(camera.Pose, camera.Mode);
         var elapsed = 0d;
         while (!stream.DestinationReady && stream.Error is null && elapsed < 1.2)
-            elapsed += await NextFrame();
+            elapsed += await NextFrame(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         if (stream.Error is not null) throw new InvalidOperationException($"Quality destination failed: {stream.Error}");
         if (!stream.DestinationReady) throw new TimeoutException("Quality destination was not ready within 1.2 seconds.");
     }
 
     public void Dispatch(QualityView view, in QualityChange change)
     {
+        _lifetime.ThrowIfCancellationRequested();
         var notification = change;
         var recoveryErrors = change.Origin == ApplyOrigin.Revert ? new List<Exception>() : null;
         var currentMap = RuntimeKernel.Get<IMapService>().Current.Value;
@@ -101,6 +130,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             .ThenBy(item => item.Entry.Id, StringComparer.Ordinal).ToArray();
         foreach (var item in registrations)
         {
+            _lifetime.ThrowIfCancellationRequested();
             if (!item.Quality!.Owns.Concat(item.Quality.Reads).Any(notification.Has)) continue;
             if (RuntimeKernel.Services.Create(item.Entry.Type) is IQualityAware aware && aware is Node node && node.IsInsideTree())
             {
@@ -110,6 +140,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         }
         try
         {
+            _lifetime.ThrowIfCancellationRequested();
             RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, new Vector4(view[QualityKnob.DetailScale],
                 view[QualityKnob.FoliageDensity], view[QualityKnob.GrassRadius], 0));
             RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
@@ -145,8 +176,9 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameCap], view[QualityKnob.Vrr] != 0, RefreshRate);
     }
 
-    public async Task<DeviceTier> Sample(GraphicsDevice device)
+    public async Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var viewport = GetViewport();
         var previousScale = viewport.Scaling3DScale;
         var previousMode = viewport.Scaling3DMode;
@@ -163,7 +195,8 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             viewport.Scaling3DScale = 1;
             while (time < 2.4)
             {
-                time += await NextFrame();
+                time += await NextFrame(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (time >= 2.4) break;
                 if (!reducedPhase && time >= 1.4)
                 {
@@ -179,7 +212,14 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             var size = OutputSize;
             return DeviceProbe.FromSamples(device, full, reduced, (double)size.X * size.Y);
         }
-        finally { viewport.Scaling3DMode = previousMode; viewport.Scaling3DScale = previousScale; }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                viewport.Scaling3DMode = previousMode;
+                viewport.Scaling3DScale = previousScale;
+            }
+        }
     }
 
     private static int OwnerOrder(string owner) => owner switch

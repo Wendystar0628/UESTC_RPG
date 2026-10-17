@@ -40,14 +40,18 @@ public partial class UiThemeClock : Node
     /// <summary>主题切换开始时发出（参数为新主题是否深屏），界面据此决定要不要出交班音。</summary>
     public event Action<bool>? Switched;
 
-    public override void _Ready()
+    public override void _EnterTree()
     {
         _instance = _world.Instance;
         _dark = Decide(initial: true);
         _front = _target = _dark ? 1 : 0;
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.UiNight, _front);
-        _settings.Changed += () => Judge(force: true);
+        _settings.Changed += OnSettingsChanged;
     }
+
+    public override void _ExitTree() => _settings.Changed -= OnSettingsChanged;
+
+    private void OnSettingsChanged() => Judge(force: true);
 
     public override void _Process(double delta)
     {

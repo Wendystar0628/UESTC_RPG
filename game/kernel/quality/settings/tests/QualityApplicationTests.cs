@@ -34,7 +34,8 @@ public sealed class QualityApplicationTests
         var baseline = new QualityProfile(QualityPreset.Fine,
             new Dictionary<QualityKnob, float> { [QualityKnob.ShadowDistance] = 1000 }, true);
         var store = new FileStoreSpy(name, new(baseline, DeviceTier.MinSpec, runtime.Device.CacheKey(1920, 1080), true));
-        var service = new QualityService(Catalog(), runtime, store);
+        var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
         await service.Initialize(BootPhase.AfterMapWarm, Context());
         runtime.Booting = false;
         var before = service.Effective;
@@ -147,7 +148,8 @@ public sealed class QualityApplicationTests
     {
         var runtime = new FakeRuntime();
         var store = new FileStoreSpy("cli-no-cache", null);
-        var service = new QualityService(Catalog(), runtime, store);
+        var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
         await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
         runtime.Booting = false;
         if (store.SaveCount != 0) throw new InvalidOperationException("Forced tier created a hardware cache.");
@@ -157,13 +159,133 @@ public sealed class QualityApplicationTests
             throw new InvalidOperationException("A forced tier was stored as a real detection result.");
     }
 
+    [TestCase]
+    public async Task UnbindingCancelsApplicationWaitsAndDiscardsLateResults()
+    {
+        foreach (var boundary in new[] { "cover", "frame", "destination", "reveal", "save" })
+        {
+            var (service, runtime, store) = await CliSession($"close-{boundary}");
+            var changes = new List<QualityChange>();
+            service.Changed += changes.Add;
+            runtime.HoldAt = boundary;
+            if (boundary == "save") store.HeldWrite = new();
+            var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
+            next[QualityKnob.AntiAliasing] = 1;
+            next[QualityKnob.LensFlare] = 0;
+            var pending = service.Apply(new(service.Requested.Preset, next, service.Requested.Adaptive), ApplyOrigin.User);
+            service.Tick(.25);
+            if (pending.IsCompleted || (boundary == "save" ? store.SaveCount != 1 : runtime.HeldCalls != 1))
+                throw new InvalidOperationException($"Application did not wait at {boundary}.");
+            // An active application also owns the latest deferred request.
+            var queued = await service.Apply(QualityCatalog.Profile(QualityPreset.Balanced), ApplyOrigin.User);
+            if (queued.Status != ApplyStatus.Deferred) throw new InvalidOperationException("Active application did not defer the next request.");
+            var dispatches = runtime.DispatchCount;
+            var reveals = runtime.RevealCount;
+            var saves = store.SaveCount;
+            service.Unbind(runtime);
+            await ExpectCanceled(pending);
+            service.Tick(20);
+            if (runtime.DispatchCount != dispatches || runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != 0)
+                throw new InvalidOperationException($"Closing at {boundary} allowed a late publish, rollback, reveal or save.");
+            // Rebinding must not revive either request from the old runtime.
+            var replacement = new FakeRuntime();
+            service.Bind(replacement);
+            await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
+            await service.Initialize(BootPhase.BeforeReveal, Context()).WaitAsync(TimeSpan.FromSeconds(5));
+            replacement.Booting = false;
+            var afterRebind = replacement.DispatchCount;
+            var notificationsAfterRebind = changes.Count;
+            runtime.Held.TrySetResult(.1);
+            store.HeldWrite?.TrySetResult();
+            await Task.Yield();
+            service.Unbind(runtime); // A stale node's exit cannot detach the replacement.
+            service.Tick(0);
+            if (replacement.DispatchCount != afterRebind || runtime.DispatchCount != dispatches ||
+                runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != notificationsAfterRebind)
+                throw new InvalidOperationException("Old completion or queued request survived runtime replacement.");
+            await ApplyUser(service, new(service.Requested.Preset, new Dictionary<QualityKnob, float> { [QualityKnob.LensFlare] = 0 }, service.Requested.Adaptive));
+            service.Unbind(replacement);
+        }
+    }
+
+    [TestCase]
+    public async Task UnbindingCancelsDebouncedAndTransitionQueuedRequests()
+    {
+        foreach (var transitioning in new[] { false, true })
+        {
+            var (service, runtime, store) = await CliSession($"close-queued-{transitioning}");
+            runtime.Transitioning = transitioning;
+            var dispatches = runtime.DispatchCount;
+            var pending = service.Apply(new(service.Requested.Preset,
+                new Dictionary<QualityKnob, float> { [QualityKnob.LensFlare] = 0 }, service.Requested.Adaptive), ApplyOrigin.User);
+            service.Unbind(runtime);
+            if (transitioning)
+            {
+                if ((await pending).Status != ApplyStatus.Deferred) throw new InvalidOperationException("Transition request did not defer.");
+            }
+            else await ExpectCanceled(pending);
+            service.Tick(20);
+            if (runtime.DispatchCount != dispatches || store.SaveCount != 0)
+                throw new InvalidOperationException("Unbound service ran its queued application.");
+        }
+    }
+
+    [TestCase]
+    public async Task UnbindingCancelsInitializationAndBootApplyWithoutPublishing()
+    {
+        foreach (var initializing in new[] { true, false })
+        {
+            var runtime = new FakeRuntime();
+            var store = new FileStoreSpy($"close-boot-{initializing}", null);
+            var service = new QualityService(Catalog(), store);
+            var token = service.Bind(runtime);
+            if (!initializing) await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
+            runtime.HoldAt = "frame";
+            var dispatches = runtime.DispatchCount;
+            var changes = 0;
+            service.Changed += _ => changes++;
+            var pending = initializing ? service.Initialize(BootPhase.AfterMapWarm, Context()) :
+                service.Apply(QualityCatalog.Profile(QualityPreset.Ultra), ApplyOrigin.CommandLine);
+            service.Unbind(runtime);
+            await ExpectCanceled(pending);
+            if (!token.IsCancellationRequested) throw new InvalidOperationException("Unbinding left the runtime lifetime open.");
+            runtime.Held.TrySetResult(.1);
+            await Task.Yield();
+            if (runtime.DispatchCount != dispatches || changes != 0 || store.SaveCount != 0)
+                throw new InvalidOperationException("Closed boot application published or saved its late frame.");
+        }
+    }
+
+    [TestCase]
+    [RequireGodotRuntime]
+    public async Task RuntimeExitCancelsFrameQueueAndRejectsNewFrames()
+    {
+        var runtime = new QualityRuntime();
+        try
+        {
+            var pending = runtime.NextFrame(CancellationToken.None);
+            runtime._ExitTree();
+            await ExpectCanceled(pending);
+            await ExpectCanceled(runtime.NextFrame(CancellationToken.None));
+        }
+        finally { runtime.Free(); }
+    }
+
+    private static async Task ExpectCanceled(Task task)
+    {
+        try { await task.WaitAsync(TimeSpan.FromSeconds(5)); }
+        catch (OperationCanceledException) { return; }
+        throw new InvalidOperationException("Runtime shutdown did not cancel its request.");
+    }
+
     private static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)
     {
         var runtime = new FakeRuntime();
         var stored = new StoredGraphics(QualityCatalog.Profile(QualityPreset.Balanced), DeviceTier.MinSpec,
             runtime.Device.CacheKey(1920, 1080), true);
         var store = new FileStoreSpy(name, stored);
-        var service = new QualityService(Catalog(), runtime, store);
+        var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
         var originalHash = store.Hash;
         await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
         await service.Apply(new(QualityPreset.Ultra, new Dictionary<QualityKnob, float>
@@ -192,7 +314,7 @@ public sealed class QualityApplicationTests
     {
         public GraphicsDevice Device { get; } = new("test-uma", "test-vendor", "test-driver", 256UL << 20, 4UL << 30, true, true);
         public bool Booting { get; set; } = true;
-        public bool Transitioning => false;
+        public bool Transitioning { get; set; }
         public bool OwnsQualityVeil => Reason == VeilReason.Quality;
         public VeilReason? Reason { get; private set; }
         public float RefreshRate => 60;
@@ -205,18 +327,35 @@ public sealed class QualityApplicationTests
         public int RevealCount { get; private set; }
         public QualityView? EngineView { get; private set; }
         public List<string> Errors { get; } = [];
-        public Task<double> NextFrame() => Task.FromResult(.1);
+        public string? HoldAt { get; set; }
+        public TaskCompletionSource<double> Held { get; } = new();
+        public int HeldCalls { get; private set; }
+        public int DispatchCount { get; private set; }
+        // Deliberately ignore cancellation: the service must reject a boundary's late result itself.
+        private Task Wait(string boundary)
+        {
+            if (HoldAt != boundary) return Task.CompletedTask;
+            HeldCalls++;
+            return Held.Task;
+        }
+        public Task<double> NextFrame(CancellationToken cancellationToken)
+        {
+            if (HoldAt != "frame") return Task.FromResult(.1);
+            HeldCalls++;
+            return Held.Task;
+        }
         public GraphicsDevice ReadDevice() => Device;
-        public Task<DeviceTier> Sample(GraphicsDevice device) => Task.FromResult(DeviceTier.MinSpec);
-        public Task Cover() { Reason = VeilReason.Quality; return Task.CompletedTask; }
-        public Task Reveal() { RevealCount++; Reason = null; return Task.CompletedTask; }
-        public Task WaitForDestination()
+        public Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken) => Task.FromResult(DeviceTier.MinSpec);
+        public Task Cover(CancellationToken cancellationToken) { Reason = VeilReason.Quality; return Wait("cover"); }
+        public Task Reveal(CancellationToken cancellationToken) { RevealCount++; Reason = null; return Wait("reveal"); }
+        public Task WaitForDestination(CancellationToken cancellationToken)
         {
             if (Takeover) Reason = VeilReason.MapTravel;
-            return FailReadiness ? Task.FromException(new TimeoutException("Fake destination exceeded 1.2 seconds.")) : Task.CompletedTask;
+            return FailReadiness ? Task.FromException(new TimeoutException("Fake destination exceeded 1.2 seconds.")) : Wait("destination");
         }
         public void Dispatch(QualityView view, in QualityChange change)
         {
+            DispatchCount++;
             EngineView = view; // Model a consumer that mutates before it fails.
             if (change.Origin == ApplyOrigin.Revert && FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
             if (FailDispatch) { FailDispatch = false; throw new InvalidOperationException("Fake apply consumer failed."); }
@@ -230,6 +369,7 @@ public sealed class QualityApplicationTests
         private static int _nextId;
         private readonly string _path;
         public int SaveCount { get; private set; }
+        public TaskCompletionSource? HeldWrite { get; set; }
         public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path)));
         public FileStoreSpy(string scenario, StoredGraphics? baseline)
         {
@@ -247,7 +387,7 @@ public sealed class QualityApplicationTests
         {
             File.WriteAllBytes(_path, JsonSerializer.SerializeToUtf8Bytes(new StoredGraphics(profile, tier, key, userSelected)));
             SaveCount++;
-            return Task.CompletedTask;
+            return HeldWrite?.Task ?? Task.CompletedTask;
         }
     }
 
