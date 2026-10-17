@@ -45,7 +45,6 @@ gates: []
 | `requests/contract-<包号>-<主题>.md` | 任何代理 | 契约或共享工程文件的申请（WF-FLOW §5）；Astra 在末尾写结论和对应的提交 |
 | `requests/review-<包号>-<主题>.md` | Astra 主线程 | 请主会话做审美评审：截图或录像路径、可调参数在哪、各参数现在的值；主会话在末尾写结论或新值 |
 | `tasks/claude/<nnn>-<主题>.md` | 主会话建单、写评审与批准行；施工子代理写一行现状 | 施工单（WF-FLOW §2）：目标、范围、已定取值、交付标准、评审结论和一行现状；过程流水记到 `logs/tasks/`；批准行与"已合入"行留在单里 |
-| `tasks/claude/待派活清单.md` | 主会话 | 空缺活清单；流水记在 `logs/tasks/待派活清单.log.md` |
 | `tasks/sol/<nnn>-<主题>.md` | 主会话；值班执行者在末尾写"状态" | 值班单；`001-值班长期单.md` 是值班执行者的长期任务单 |
 | `tasks/astra/`、`tasks/misc/` | Astra；主会话 | Astra 的计划与子单；其他任务单与简报 |
 | `side/ROLE.md` | 主会话 | Sol 旁路会话的角色说明 |

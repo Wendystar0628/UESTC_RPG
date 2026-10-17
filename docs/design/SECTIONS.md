@@ -50,7 +50,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS-决策登记.md` · 34.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 30.7k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 388
@@ -64,7 +64,7 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 10.1k
+- CORE-DECISIONS §10 流程 · L243 · 6.7k
 - CORE-DECISIONS §11 待对齐 · L298 · 61
 
 ## CORE-GLOSSARY · 术语表
@@ -127,12 +127,12 @@
 
 - WF-COMMS §0 结论 · L23 · 554
   - ★ WF-COMMS §0.1 接入要点 · L31 · 193
-- WF-COMMS §1 交接目录与文件 · L38 · 2.2k
-- WF-COMMS §2 命名与写法 · L70 · 506
-- WF-COMMS §3 任务单与请求文件的格式 · L78 · 757
-- WF-COMMS §4 来信与消息 · L94 · 922
-- WF-COMMS §5 Codex 会话与引导信箱 · L109 · 668
-- WF-COMMS §6 上下文重置后怎么接着做 · L115 · 437
+- WF-COMMS §1 交接目录与文件 · L38 · 2.1k
+- WF-COMMS §2 命名与写法 · L69 · 506
+- WF-COMMS §3 任务单与请求文件的格式 · L77 · 757
+- WF-COMMS §4 来信与消息 · L93 · 922
+- WF-COMMS §5 Codex 会话与引导信箱 · L108 · 668
+- WF-COMMS §6 上下文重置后怎么接着做 · L114 · 437
 
 ## WF-DUTY · 值班与旁路
 
@@ -202,7 +202,7 @@
 
 ## WF-FLOW · 开发流程
 
-`docs/design/workflow/process/WF-FLOW-开发流程.md` · 6.6k 字 · 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线
+`docs/design/workflow/process/WF-FLOW-开发流程.md` · 6.7k 字 · 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线
 关键词：开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、回报、初步核对、评审、可调参数、契约申请、共享工程文件、契约冻结、调研入队流水线、审计、待派工队列、D-184、D-134、贴近主线、评审通用结论
 
 - WF-FLOW §0 结论 · L23 · 510
@@ -210,7 +210,7 @@
 - WF-FLOW §1 全流程一览 · L38 · 643
 - WF-FLOW §2 派工与拆单 · L54 · 1.3k
 - WF-FLOW §3 施工与回报 · L75 · 604
-- WF-FLOW §4 评审：审美与契约的交叉评审 · L87 · 654
+- WF-FLOW §4 评审：审美与契约的交叉评审 · L87 · 735
 - WF-FLOW §5 契约申请与共享工程文件 · L100 · 756
 - WF-FLOW §6 调研入队流水线 · L109 · 890
 
