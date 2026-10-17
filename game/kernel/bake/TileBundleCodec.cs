@@ -11,6 +11,7 @@ public static class TileBundleCodec
 {
     private const uint Magic = 0x4E494254;
     private const int MaximumItems = 4096;
+    private const int MaximumCollisionShapes = 16384;
     private const int MaximumJson = 1024 * 1024;
 
     public static byte[] Encode(string identity, object product)
@@ -35,8 +36,10 @@ public static class TileBundleCodec
                 Text(writer, tile.StatisticsJson);
                 break;
             case CollisionTile collision:
+                if (collision.Colliders.Count > MaximumCollisionShapes)
+                    throw new InvalidDataException($"Too many collision shapes in tile {collision.Tile}: {collision.Colliders.Count} > {MaximumCollisionShapes}.");
                 writer.Write((byte)2); Key(writer, collision.Key); Json(writer, collision.Tile); Json(writer, collision.Bounds);
-                Json(writer, collision.Colliders); Text(writer, collision.StatisticsJson);
+                Json(writer, collision.Colliders, BakeCacheStore.MaximumPayloadBytes); Text(writer, collision.StatisticsJson);
                 break;
             default: throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}");
         }
@@ -76,8 +79,8 @@ public static class TileBundleCodec
                     break;
                 case 2:
                     var collisionTile = Json<TileKey>(reader); var collisionBounds = Json<Box3>(reader);
-                    var colliders = Json<Collider[]>(reader);
-                    if (colliders.Length > MaximumItems) throw new InvalidDataException("Too many collision shapes in one tile.");
+                    var colliders = Json<Collider[]>(reader, BakeCacheStore.MaximumPayloadBytes);
+                    if (colliders.Length > MaximumCollisionShapes) throw new InvalidDataException("Too many collision shapes in one tile.");
                     foreach (var collider in colliders) ValidateCollider(collider);
                     result = new CollisionTile(key, collisionTile, collisionBounds, colliders, Statistics(reader));
                     break;
@@ -117,8 +120,13 @@ public static class TileBundleCodec
     private static BakeKey Key(BinaryReader reader) => new(new(Text(reader, 128)), Text(reader, 256), Text(reader, 1024));
     private static void Text(BinaryWriter writer, string text) => Bytes(writer, Encoding.UTF8.GetBytes(text));
     private static string Text(BinaryReader reader, int maximum = MaximumJson) => new UTF8Encoding(false, true).GetString(Bytes(reader, maximum));
-    private static void Json<T>(BinaryWriter writer, T value) => Bytes(writer, JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options));
-    private static T Json<T>(BinaryReader reader) => JsonSerializer.Deserialize<T>(Bytes(reader, MaximumJson), ContractJson.Options)
+    private static void Json<T>(BinaryWriter writer, T value, int maximum = MaximumJson)
+    {
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options);
+        if (bytes.Length > maximum) throw new InvalidDataException($"Tile JSON section exceeds its limit: {bytes.Length} > {maximum}.");
+        Bytes(writer, bytes);
+    }
+    private static T Json<T>(BinaryReader reader, int maximum = MaximumJson) => JsonSerializer.Deserialize<T>(Bytes(reader, maximum), ContractJson.Options)
         ?? throw new InvalidDataException($"Missing {typeof(T).Name} data.");
     private static void Bytes(BinaryWriter writer, ReadOnlyMemory<byte> bytes) { writer.Write(bytes.Length); writer.Write(bytes.Span); }
     private static byte[] Bytes(BinaryReader reader, int maximum = BakeCacheStore.MaximumPayloadBytes)

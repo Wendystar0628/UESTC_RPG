@@ -24,6 +24,19 @@ public sealed class BakeCodecTests
             throw new InvalidOperationException("Collision codec changed local parameters or bounds.");
         if (!bytes.SequenceEqual(TileBundleCodec.Encode("fixture/identity", decoded)))
             throw new InvalidOperationException("Canonical codec bytes changed after a round trip.");
+        var floors = Enumerable.Range(0, 2048).Select(index => (Collider)new SlabCollider(
+            Enumerable.Range(0, 32).Select(vertex => new Vector2(index % 64 + .5f, index / 64 + .5f)
+                + .4f * new Vector2(MathF.Cos(vertex * float.Tau / 32), MathF.Sin(vertex * float.Tau / 32))).ToArray(),
+            .1f, .2f, SurfaceTag.Ground) { Foot = FootMat.StonePaving }).ToArray();
+        var dense = new CollisionTile(key, original.Tile, box, floors);
+        var denseBytes = TileBundleCodec.Encode("fixture/dense", dense);
+        if (denseBytes.Length <= 1024 * 1024)
+            throw new InvalidOperationException("The collision payload must exercise data larger than the metadata envelope.");
+        var denseDecoded = (CollisionTile)TileBundleCodec.Decode("fixture/dense", key, denseBytes);
+        if (denseDecoded.Colliders.Count != floors.Length || denseDecoded.Colliders.Zip(floors).Any(pair =>
+            pair.First is not SlabCollider a || pair.Second is not SlabCollider b || !a.Ring.SequenceEqual(b.Ring)
+            || a.Y != b.Y || a.Thick != b.Thick || a.Foot != b.Foot))
+            throw new InvalidOperationException("A legal collision payload lost shapes or parameters during its round trip.");
     }
 
     [TestCase]
