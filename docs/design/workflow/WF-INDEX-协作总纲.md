@@ -34,7 +34,7 @@ gates: []
 
 ## 1 角色表
 
-协作由一位作者和下表的会话组成。评审里的"Opus"指主会话；"Opus 侧"指主会话和它开的 Claude 侧施工。各角色做什么见 WF-ROLE。模型、会话名与调用方式的操作细节（含会话号）在 `E:\Project\UESTC_RPG.wt\.collab\tools\README.md`，不写进文档。
+协作由一位作者和下表的会话组成。评审里的"Opus"指主会话；"Opus 侧"指主会话和它开的 Claude 侧施工。各角色做什么见 WF-ROLE。模型、会话名与调用方式的操作细节（含会话号）在 `E:\Project\UESTC_RPG.collab\tools\README.md`，不写进文档。
 
 | 角色 | 模型与运行方式 | 汇报给 | 入口 |
 | --- | --- | --- | --- |

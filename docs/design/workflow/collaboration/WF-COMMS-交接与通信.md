@@ -23,7 +23,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 ## 0 结论
 
-1. **经文件交接，消息只在事件发生时发**（§1、§4）：交接目录是 `E:\Project\UESTC_RPG.wt\.collab\`；任务单和请求文件是唯一依据，上下文重置后照它们的"状态"接着做，对不上以 Git 为准；各角色重置后先读什么见 WF-ENTRY。
+1. **经文件交接，消息只在事件发生时发**（§1、§4）：交接目录是 `E:\Project\UESTC_RPG.collab\`；任务单和请求文件是唯一依据，上下文重置后照它们的"状态"接着做，对不上以 Git 为准；各角色重置后先读什么见 WF-ENTRY。
 2. **任务单与请求文件只追加、不改写，来信一条一个新文件**（§2、§4）。
 3. **在用的和结案的分开放**（§1）：`tasks/<类>/` 与 `requests/` 下只放在用的和还在处理的；`archive/`、`logs/` 不用读，搜索默认跳过。
 4. **来信按收件方分收件箱，一条一个文件**（§4，D-207）：开头标【需定】【待审】【知会】，一件事、5 行以内。
@@ -36,7 +36,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 ## 1 交接目录与文件
 
-各方经仓库外的协作目录 `E:\Project\UESTC_RPG.wt\` 下的 `.collab\` 交接，它不进 git；协作目录里只有 `.collab` 和 VIS-check（WF-RULE §7）。
+各方经协作目录 `E:\Project\UESTC_RPG\.collab\` 交接。它在主检出里，但登记在本机的 `.git/info/exclude`，不进 git、不推送（里面有本机路径和会话号）。视觉回归的 VIS-check 是另一棵工作树，在 `E:\Project\UESTC_RPG.wt\VIS-check`（WF-RULE §7）。
 
 | 路径（相对 `.collab\`） | 谁写 | 写什么 |
 | --- | --- | --- |
