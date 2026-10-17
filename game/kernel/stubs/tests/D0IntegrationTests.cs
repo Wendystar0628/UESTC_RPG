@@ -30,6 +30,19 @@ public sealed class D0IntegrationTests
     }
 
     [TestCase]
+    public void ZeroInputCaptureStepUsesPlayerBoundsWithoutChangingView()
+    {
+        var camera = new CameraRigStub(new WorldStateStub(new WeatherProcessStub(), new TestRuleset()));
+        camera.ConfigureBounds(new(new(-10, -5, -20), new(10, 30, 20)));
+        var requested = new Pose(new(50, 90, -40), 37, -68, 75);
+        camera.SetPose(requested);
+        if (camera.Pose != requested) throw new InvalidOperationException("SetPose no longer preserves direct placement.");
+        camera.IntegrateInput(Vector3.Zero, Vector2.Zero, 0);
+        if (camera.Pose != requested with { Position = new(10, 30, -20) })
+            throw new InvalidOperationException("Zero-input capture skipped player bounds or changed the requested view.");
+    }
+
+    [TestCase]
     public void GodotAndNumericsTransformsKeepOrientationAndTranslation()
     {
         var matrix = Matrix4x4.CreateScale(2, 3, 4) * DetMath.RotationY(.6f) * Matrix4x4.CreateTranslation(14, 6, -2);

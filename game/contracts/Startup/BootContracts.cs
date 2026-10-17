@@ -23,6 +23,23 @@ public interface IBootParticipant
     Task Initialize(BootPhase phase, BootContext context);
 }
 
+/// <summary>
+/// Implement on an existing visible-content node. Readiness means its asynchronous work has been
+/// uploaded/mounted and applied for the supplied current capture pose, not merely scheduled.
+/// No-content configurations may be ready; a failed producer reports Error until its next load.
+/// </summary>
+public interface IViewContentReadiness
+{
+    bool IsReady(Pose pose);
+    string? Error { get; }
+}
+
+/// <summary>Optional visible-content capability: discard view history before preparing a requested still.</summary>
+public interface IViewCapturePreparation
+{
+    void PrepareCapture(Pose pose);
+}
+
 // BeforeMap: map catalog, save metadata/lock and silent audio resources, before destination selection.
 // AfterMapWarm: after Travel(Boot), resident data, viewport and 3D/2D warmup; quality detection/application.
 // BeforeReveal: after IAppBootFlow.PrepareWorld and explicit command-line world overrides, final ready work.

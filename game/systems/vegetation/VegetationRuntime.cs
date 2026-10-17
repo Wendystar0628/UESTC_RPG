@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Gen.Vegetation;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Maps;
@@ -23,7 +24,7 @@ namespace Campus.Systems.Vegetation;
 /// No engine instance is made here.
 /// </summary>
 [KernelNode("systems.vegetation", Owner = "WP-23")]
-public sealed partial class VegetationRuntime : Node, IMapAware
+public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation
 {
     private const string ModuleId = "vegetation";
     private const uint VisibleLayer = 1u << 3;   // layer 4: vegetation visible geometry (ENG-PERF §4)
@@ -40,6 +41,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware
     private int _mounted;
     private double _since = Interval;
     private long _instance = long.MinValue;
+    private N.Vector3? _appliedEye;
+    private bool _resetForCapture;
+    public string? Error { get; private set; }
+    public bool IsReady(Pose pose) => Error is null && _map is not null && _pending is null &&
+        _mounted == _mothers.Count && _appliedEye == pose.Position;
+
+    public void PrepareCapture(Pose pose)
+    {
+        _appliedEye = null;
+        _resetForCapture = true;
+    }
 
     /// <summary>Planted trees and mounted pools (for logs and gates).</summary>
     public int Trees => _mothers.Sum(m => m.Buckets.Count);
@@ -66,11 +78,13 @@ public sealed partial class VegetationRuntime : Node, IMapAware
     {
         ArgumentNullException.ThrowIfNull(ctx);
         FreeAll();
+        Error = null;
         _map = ctx.Descriptor.Id;
         Func<BuildContext> context;
         try { context = ContextFor(ctx); }
         catch (Exception error)
         {
+            Error = error.GetBaseException().Message;
             GD.PushError($"Vegetation build context unavailable, no trees on {ctx.Descriptor.Id.Value}: {error}");
             return;
         }
@@ -79,31 +93,48 @@ public sealed partial class VegetationRuntime : Node, IMapAware
 
     public override void _Process(double delta)
     {
+        if (Error is not null) return;
+        try { UpdateContent(delta); }
+        catch (Exception error)
+        {
+            Error = error.GetBaseException().Message;
+            GD.PushError($"Vegetation content failed: {error}");
+        }
+    }
+
+    private void UpdateContent(double delta)
+    {
         if (_pending is { IsCompleted: true } done)
         {
             _pending = null;
-            if (done.IsFaulted) GD.PushError($"Vegetation preparation failed: {done.Exception}");
-            else _mothers.AddRange(done.Result);
+            _mothers.AddRange(done.GetAwaiter().GetResult());
         }
         if (_host is null || _rig is null || _map is not { } map) return;
         for (var n = 0; n < MountsPerFrame && _mounted < _mothers.Count; n++)
         {
-            _mothers[_mounted++].Mount(_host, map);
+            _mothers[_mounted].Mount(_host, map);
+            _mounted++;
             if (_mounted == _mothers.Count)
             {
                 GD.Print($"Vegetation mounted: {Trees} trees, {_mothers.Count} mother models, {Pools} kernel pools");
                 _since = Interval;
             }
         }
-        if (_mounted == 0) return;
+        if (_mounted == 0)
+        {
+            if (_pending is null) _appliedEye = _rig.Pose.Position;
+            return;
+        }
         var instance = _world?.Instance ?? 0;
-        var reset = instance != _instance;
+        var eye = _rig.Pose.Position;
+        var reset = instance != _instance || _resetForCapture;
         _since += delta;
         if (!reset && _since < Interval) return;
         _since = 0;
         _instance = instance;
-        var eye = _rig.Pose.Position;
         for (var i = 0; i < _mounted; i++) _mothers[i].Refresh(eye, reset);
+        _resetForCapture = false;
+        _appliedEye = eye;
     }
 
     private void FreeAll()
@@ -113,6 +144,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware
         _mothers.Clear();
         _mounted = 0;
         _instance = long.MinValue;
+        _appliedEye = null;
+        _resetForCapture = false;
     }
 
     /// <summary>

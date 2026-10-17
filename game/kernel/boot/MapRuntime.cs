@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Kernel.Inspect;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
@@ -29,6 +28,7 @@ public partial class MapRuntime : Node, IMapRuntime
     private long _lastWarmDraw;
     private int _stable;
     private PipelineCounts _previous;
+    private ViewContentReadiness? _contentReadiness;
     public bool IsUnloaded => !_unloading && (_preparing is null || _preparing.IsCompleted) && _stream?.IsUnloaded == true && _scoped.Count == 0;
     public bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
     public bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true && _renderer?.PipelineReady == true && Error is null;
@@ -50,6 +50,7 @@ public partial class MapRuntime : Node, IMapRuntime
         if (_unloading) return;
         _error = null;
         _mountPrepared = false;
+        _contentReadiness = null;
         _unloading = true;
         _mapGeneration++;
         _warming = false;
@@ -98,6 +99,7 @@ public partial class MapRuntime : Node, IMapRuntime
             throw new InvalidOperationException("Unload the current map before mounting another.");
         _error = null;
         _mountPrepared = false;
+        _contentReadiness = null;
         WarmReady = false;
         try
         {
@@ -148,6 +150,7 @@ public partial class MapRuntime : Node, IMapRuntime
                 receiver = aware.GetType().FullName;
                 aware.OnMapLoaded(context);
             }
+            _contentReadiness = ViewContentReadiness.Capture(GetParent());
             _mountPrepared = true;
         }
         catch (Exception error)
@@ -189,6 +192,16 @@ public partial class MapRuntime : Node, IMapRuntime
         if (!_samplesStarted)
         {
             if (!ResidentReady) return;
+            try
+            {
+                if (_contentReadiness?.IsReady(Services.Get<ICameraRig>().Pose) != true) return;
+            }
+            catch (Exception error)
+            {
+                _error = error.GetBaseException().Message;
+                ReportFailure(_loaded ?? default, "content-readiness", null, error);
+                return;
+            }
             _materials!.Begin();
             _samplesStarted = true;
         }

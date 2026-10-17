@@ -9,26 +9,20 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-public readonly record struct PipelineCounts(double Surface, double Draw, double Canvas)
-{
-    public static PipelineCounts Read(bool canvas = true) => new(
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSurface),
-        Performance.GetMonitor(Performance.Monitor.PipelineCompilationsDraw),
-        canvas ? Performance.GetMonitor(Performance.Monitor.PipelineCompilationsCanvas) : 0);
-}
-
 /// <summary>Requires settled world/weather and a producer-owned content predicate; fixed sleeps cannot satisfy this barrier.</summary>
 public static class CaptureBarrier
 {
-    public static async Task WaitForReadyAsync(Node host, Func<bool> contentReady,
+    public static async Task WaitForReadyAsync(Node host, ViewContentReadiness producers, Func<bool> contentReady,
         CancellationToken cancellationToken = default, bool includeCanvas = true)
     {
         ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(producers);
         ArgumentNullException.ThrowIfNull(contentReady);
         var world = Services.Get<IWorldState>();
         var weather = Services.Get<IWeatherProcess>();
         var bake = Services.Get<IBakeService>();
         var runtime = Services.Get<IMapRuntime>();
+        var rig = Services.Get<ICameraRig>();
         var previous = PipelineCounts.Read(includeCanvas);
         var stable = 0;
         var settled = 0;
@@ -42,8 +36,11 @@ public static class CaptureBarrier
             cancellationToken.ThrowIfCancellationRequested();
             await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             cancellationToken.ThrowIfCancellationRequested();
+            if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
             var current = PipelineCounts.Read(includeCanvas);
             var content = contentReady();
+            if (runtime.Error is { } runtimeError) throw new InvalidOperationException(runtimeError);
+            content &= producers.IsReady(rig.Pose);
             var scrubbing = world.Scrubbing;
             var transition = world.Transition;
             var weatherTransitioning = weather.Transitioning;
@@ -71,7 +68,8 @@ public static class CaptureBarrier
                 $"content={content},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
                 $"ready={ready},stable={stable}/{BootTuning.CaptureStableFrames},settled={settled}/{BootTuning.CaptureSettleFrames}," +
                 $"pipelineChanged={pipelineChanged},pipelineBefore={previous},pipelineNow={current},canvasIncluded={includeCanvas}," +
-                $"instance={world.Instance},worldHours={world.WorldHours:R}; {DescribeProducers()}";
+                $"instance={world.Instance},worldHours={world.WorldHours:R}," +
+                $"contentProducers=[{producers.Describe(rig.Pose)}]; {DescribeProducers()}";
         }
     }
 

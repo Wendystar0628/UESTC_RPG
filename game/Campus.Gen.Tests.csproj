@@ -7,4 +7,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="GodotSharp" />
   </ItemGroup>
+  <Target Name="RequireDebugTestHost" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(Configuration)' != 'Debug'" Text="Campus.Gen.Tests uses the Debug test configuration. Use -c Debug; release export is checked separately by G6." />
+  </Target>
 </Project>

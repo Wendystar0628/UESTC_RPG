@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Gen.Fauna;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -16,7 +17,7 @@ namespace Campus.Systems.Fauna;
 /// creates engine instances. Animal reactions (contract-22) and the dynamic sound emitters (WP-53) are not part of 25a.
 /// </summary>
 [KernelNode("systems.fauna", Owner = "WP-25")]
-public partial class FaunaNode : Node, IMapAware
+public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
 {
     private const double CheckSeconds = 0.25;              // 4 Hz latch check (WLD-LIFE §6.2)
     private static readonly WpId Package = new("WP-25");
@@ -38,6 +39,8 @@ public partial class FaunaNode : Node, IMapAware
     private long _instance = long.MinValue;
     private double _sinceCheck;
     private bool _force;
+    public string? Error { get; private set; }
+    public bool IsReady(Pose pose) => Error is null && _job is null && _prepared is not null && _latches.All(latch => latch.Applied);
 
     /// <summary>Applied set per site key, for gates and the review sandbox (read only).</summary>
     public IReadOnlyDictionary<string, FaunaSet?> Applied =>
@@ -67,6 +70,7 @@ public partial class FaunaNode : Node, IMapAware
     {
         ArgumentNullException.ThrowIfNull(ctx);
         Release();
+        Error = null;
         var world = ctx.World;
         var seed = ctx.Descriptor.Seed;
         var palette = Services.Get<PaletteRegistry>();
@@ -85,12 +89,22 @@ public partial class FaunaNode : Node, IMapAware
 
     public override void _Process(double delta)
     {
+        if (Error is not null) return;
+        try { UpdateContent(delta); }
+        catch (Exception error)
+        {
+            Error = error.GetBaseException().Message;
+            GD.PushError($"[WP-25 fauna] content failed: {error}");
+        }
+    }
+
+    private void UpdateContent(double delta)
+    {
         if (_world is null) return;
         if (_job is { IsCompleted: true } job)
         {
             _job = null;
-            if (job.IsFaulted) { GD.PushError($"[WP-25 fauna] layout failed: {job.Exception?.GetBaseException().Message}"); return; }
-            _prepared = job.Result;
+            _prepared = job.GetAwaiter().GetResult();
             _latches = _prepared.Layout.Sites.Select(_ => new Latch()).ToArray();
             foreach (var line in _prepared.Layout.Log) GD.Print("[WP-25 fauna] " + line);
             _force = true;

@@ -65,7 +65,10 @@ foreach ($mode in @('merged-errors','all-streams')) {
     $null = Invoke-UESTCProcess $powershell $arguments $root (Join-Path $output ($mode+'.host.log'))
     $reports.Add((Get-Content -Raw -Encoding UTF8 -LiteralPath $resultFile | ConvertFrom-Json))
 }
-$bash = (Get-Command bash.exe -ErrorAction Stop).Source
+# Exercise the project's Git Bash boundary, not the unrelated system WSL shim.
+$gitPath = @(Get-Command git.exe -CommandType Application -ErrorAction Stop)[0].Source
+$gitRoot = Split-Path (Split-Path $gitPath -Parent) -Parent
+$bash = Join-Path $gitRoot 'bin/bash.exe'
 $bashResult = Join-Path $output 'bash-entry.json'
 $bashCommand = 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$1" -Common "$2" -Fixture "$3" -Label bash-entry -Result "$4" -Root "$5"'
 $null = Invoke-UESTCProcess $bash @('--noprofile','--norc','-c',$bashCommand,'--',$payload,$common,$fixture,$bashResult,$root) $root (Join-Path $output 'bash-entry.host.log')

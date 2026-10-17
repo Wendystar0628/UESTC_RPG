@@ -4496,6 +4496,9 @@ Campus.Contracts.Startup.IBootParticipant
 Campus.Contracts.Startup.IBootParticipant.Id.get -> string!
 Campus.Contracts.Startup.IBootParticipant.Initialize(Campus.Contracts.Startup.BootPhase phase, Campus.Contracts.Startup.BootContext! context) -> System.Threading.Tasks.Task!
 Campus.Contracts.Startup.IBootParticipant.Order.get -> int
+Campus.Contracts.Startup.IViewContentReadiness
+Campus.Contracts.Startup.IViewContentReadiness.Error.get -> string?
+Campus.Contracts.Startup.IViewContentReadiness.IsReady(Campus.Contracts.Pose pose) -> bool
 Campus.Contracts.StoreyInfo
 Campus.Contracts.StoreyInfo.<Clone>$() -> Campus.Contracts.StoreyInfo!
 Campus.Contracts.StoreyInfo.Deconstruct(out int Index, out float FloorY, out float Height, out System.Collections.Generic.IReadOnlyList<System.Numerics.Vector2>! Footprint) -> void
@@ -7923,3 +7926,5 @@ const Campus.Contracts.WindowCardEncoding.TypeMask = 127 -> byte
 const Campus.Contracts.WindowCardEncoding.PhysicalCurtainFlag = 128 -> byte
 const Campus.Contracts.WindowCardEncoding.Lobby = 16 -> byte
 const Campus.Contracts.ShaderGlobals.WindowCards = "window_cards" -> string!
+Campus.Contracts.Startup.IViewCapturePreparation
+Campus.Contracts.Startup.IViewCapturePreparation.PrepareCapture(Campus.Contracts.Pose pose) -> void

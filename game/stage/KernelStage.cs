@@ -32,6 +32,8 @@ public partial class KernelStage : Node3D, IAppExit
     private bool _cpuCommand;
     private bool _shutdownStarted;
     private Task? _shutdownTask;
+    private readonly CancellationTokenSource _captureLifetime = new();
+    private ViewContentReadiness? _contentReadiness;
     private int _frames;
     public string Phase { get; private set; } = "compose";
     public string? Failure { get; private set; }
@@ -167,8 +169,9 @@ public partial class KernelStage : Node3D, IAppExit
         _mapRuntime!.Prefetch(registry.Get<ICameraRig>().Pose, registry.Get<ICameraRig>().Mode);
         _mapRuntime.BeginWarm();
         await Initialize(BootPhase.BeforeReveal);
+        _contentReadiness = ViewContentReadiness.Capture(this);
         Phase = "warm-final-view";
-        await CaptureBarrier.WaitForReadyAsync(this, () =>
+        await CaptureBarrier.WaitForReadyAsync(this, _contentReadiness, () =>
         {
             CheckStartupActive();
             if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
@@ -245,21 +248,20 @@ public partial class KernelStage : Node3D, IAppExit
     {
         try
         {
-            var shots = AppBoot.Value("shots");
-            if (shots.Length > 0)
-            {
-                var ids = shots.Split(',');
-                if (ids.Length != 1) throw new NotSupportedException("Multi-pose capture is owned by the inspection driver and is not connected yet.");
-                await CaptureBarrier.WaitForReadyAsync(this, () => _ready && Services.Get<IVeilState>().Opacity == 0 &&
-                    _mapRuntime!.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady);
-                Directory.CreateDirectory(AppBoot.Value("out"));
-                using var image = GetViewport().GetTexture().GetImage();
-                var path = Path.Combine(AppBoot.Value("out"), ids[0] + ".png");
-                if (image.SavePng(path) != Error.Ok) throw new IOException("Screenshot could not be saved.");
-                GD.Print($"[WP-01][phase=capture] {path}");
-            }
+            if (AppBoot.Options.Has("shots"))
+                await CaptureSequence.RunAsync(this, _contentReadiness!, AppBoot.Options, Read, _view!.Sync, () =>
+                {
+                    CheckStartupActive();
+                    return _ready &&
+                        _mapRuntime!.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady;
+                }, _captureLifetime.Token, pose =>
+                {
+                    if (!Services.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
+                        throw new ArgumentException("Capture pose is outside the reachable space or inside its buffer.");
+                });
             await CloseAsync();
         }
+        catch (OperationCanceledException) when (_closing) { }
         catch (Exception error) { Fail(error); }
     }
     public override void _Notification(int what)
@@ -272,6 +274,7 @@ public partial class KernelStage : Node3D, IAppExit
         {
             if (_shutdownTask is not null) { await _shutdownTask; return; }
             _closing = true;
+            _captureLifetime.Cancel();
             if (_cpuCommand) { GetTree().Quit(130); return; }
             if (_flow is null) { await FinishQuit(); return; }
             // All requests, including repeats, use the flow's shared quit task. It calls IAppExit
@@ -291,6 +294,7 @@ public partial class KernelStage : Node3D, IAppExit
         }
         catch (Exception error) { _closing = false; Fail(error); }
     }
+    public override void _ExitTree() { _closing = true; _captureLifetime.Cancel(); }
 
     public Task FinishQuit()
     {

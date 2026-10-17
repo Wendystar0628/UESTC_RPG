@@ -1,4 +1,4 @@
-using Campus.Kernel.Inspect;
+using Campus.Kernel.Boot;
 using Godot;
 
 namespace Campus.Kernel.Frame;

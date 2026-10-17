@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -14,7 +15,7 @@ namespace Campus.Systems.Sky;
 /// colours come from the palette texture inside the shader. Nothing is read back from shader globals.
 /// </summary>
 [KernelNode("systems.sky", Owner = "WP-40")]
-public partial class SkyNode : Node, IMapAware
+public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 {
     private static readonly StringName CloudCoverParam = new("cloud_cover");
     private static readonly StringName CloudThrParam = new("cloud_thr");
@@ -30,7 +31,9 @@ public partial class SkyNode : Node, IMapAware
     private SkyMapData _map = SkyMapData.Fallback;
     private float _sentCover = -1f;
     private float _sentThr = -1f;
-    private bool _warnedMaterial;
+    public string? Error { get; private set; }
+    public bool IsReady(Pose pose) => Error is null && _material is not null &&
+        _environment is not null && _noiseTexture is not null && _thresholds is not null;
 
     public override void _Ready()
     {
@@ -70,6 +73,17 @@ public partial class SkyNode : Node, IMapAware
     }
 
     public override void _Process(double delta)
+    {
+        if (Error is not null) return;
+        try { UpdateContent(); }
+        catch (Exception error)
+        {
+            Error = error.GetBaseException().Message;
+            GD.PushError($"WP-40: sky content failed: {error}");
+        }
+    }
+
+    private void UpdateContent()
     {
         if (_world is null || _script is null) return;
         if (_environment is null) TryAttach();
@@ -135,9 +149,8 @@ public partial class SkyNode : Node, IMapAware
         }
         catch (InvalidOperationException error)
         {
-            // 没有注册材质来源时（只在拆了桩的测试构建里出现）天空不接管背景，舞台照旧，不崩
-            if (!_warnedMaterial) GD.PushWarning($"WP-40: no shader material source, sky stays on the stage background. {error.Message}");
-            _warnedMaterial = true;
+            Error = "Sky material source unavailable: " + error.GetBaseException().Message;
+            GD.PushError("WP-40: " + Error);
             return null;
         }
     }
@@ -161,8 +174,7 @@ public partial class SkyNode : Node, IMapAware
         _noiseJob = null;
         if (!job.IsCompletedSuccessfully)
         {
-            GD.PushError($"WP-40: cloud_noise generation failed: {job.Exception?.GetBaseException()}");
-            return;
+            throw new InvalidOperationException("cloud_noise generation failed.", job.Exception?.GetBaseException());
         }
         var result = job.Result;
         var image = Image.CreateFromData(CloudNoise.Size, CloudNoise.Size, false, Image.Format.Rgba8, result.Rgba);

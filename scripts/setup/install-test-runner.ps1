@@ -15,7 +15,10 @@ public partial class GdUnit4TestRunnerScene : GdUnit4.Core.Runners.GdUnit4TestRu
 {
     public GdUnit4TestRunnerScene()
     {
-        var path = Godot.ProjectSettings.GlobalizePath("res://bin/Campus.Tests/Debug/net10.0/Campus.Tests.dll");
+        var configuration = System.Reflection.CustomAttributeExtensions
+            .GetCustomAttribute<System.Reflection.AssemblyConfigurationAttribute>(GetType().Assembly)?.Configuration
+            ?? throw new System.InvalidOperationException("Test host build configuration is unavailable.");
+        var path = Godot.ProjectSettings.GlobalizePath($"res://bin/Campus.Tests/{configuration}/net10.0/Campus.Tests.dll");
         var context = System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(GetType().Assembly)
             ?? throw new System.InvalidOperationException("Godot assembly load context is unavailable.");
         context.LoadFromAssemblyPath(path);

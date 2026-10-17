@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Boot;
 using Campus.Kernel.Stubs;
 using Campus.Kernel.Stubs.Foundation;
 using GdUnit4;
@@ -68,6 +69,22 @@ public sealed class MapSpawnResolutionTests
             "Named spawns must take priority over waypoints for both default and explicit lookup.");
         Check(fixture.Service.ResolvePose(fixture.Service.Maps.Single(), "P00") == authored.Fly,
             "The existing D0 pose helper must share catalogue resolution.");
+    }
+
+    [TestCase]
+    public void ReviewCaptureSharesDefaultOverviewAndNamedWaypointResolution()
+    {
+        var fixture = CreateFixture();
+        var points = JsonSerializer.SerializeToUtf8Bytes(new WaypointFile(1, [fixture.First, fixture.Other]), ContractJson.Options);
+        byte[] Read(string path) => path.EndsWith("waypoints.json", StringComparison.Ordinal) ? points
+            : System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"poses\":[{\"id\":\"V1\",\"waypoint\":\"P00\"}]}");
+        var context = fixture.Service.Context!;
+        Check(ReviewPoseResolver.Resolve("V1", context, Read) == fixture.First.Fly,
+            "The existing V1 overview did not follow its authored P00 relation.");
+        Check(ReviewPoseResolver.Resolve("P01", context, Read) == fixture.Other.Fly,
+            "The next capture pose did not resolve through the same waypoint catalogue.");
+        Throws<ArgumentException>(() => ReviewPoseResolver.Resolve("missing", context, Read));
+        Check(fixture.Camera.Pose == fixture.First.Fly, "Resolving queued captures moved the camera before execution.");
     }
 
     [TestCase]

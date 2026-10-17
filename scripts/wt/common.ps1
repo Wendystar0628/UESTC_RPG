@@ -293,34 +293,22 @@ function Invoke-UESTCProcess {
         [int]$TimeoutSeconds = 1800, [switch]$AllowFailure, [switch]$Visible,
         [int[]]$SuccessExitCodes = @(0), [Text.Encoding]$TextEncoding = $null)
     if ($Log) { $null = [IO.Directory]::CreateDirectory((Split-Path $Log -Parent)) }
-    $info = New-Object Diagnostics.ProcessStartInfo
-    $info.FileName = $Executable
-    $info.Arguments = (($Arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' ')
-    $info.WorkingDirectory = $WorkingDirectory
-    $info.UseShellExecute = $false
-    $info.CreateNoWindow = -not $Visible
-    $info.RedirectStandardOutput = $true
-    $info.RedirectStandardError = $true
-    if ($TextEncoding) {
-        $info.StandardOutputEncoding = $TextEncoding
-        $info.StandardErrorEncoding = $TextEncoding
-    }
-    $process = New-Object Diagnostics.Process
-    $process.StartInfo = $info
-    $started = $false
+    if (-not ('Uestc.Tools.ProcessTree' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ProcessTree.cs') }
+    $path = @(Get-Command $Executable -CommandType Application -ErrorAction Stop)[0].Source
+    $commandLine = (($Arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' ')
+    if (-not $TextEncoding) { $TextEncoding = [Console]::OutputEncoding }
+    $process = $null
     try {
-        $started = $process.Start()
-        if (-not $started) { throw "Could not start $Executable" }
-        $stdout = $process.StandardOutput.ReadToEndAsync()
-        $stderr = $process.StandardError.ReadToEndAsync()
+        $process = New-Object Uestc.Tools.ProcessTree($path, $commandLine, $WorkingDirectory, [bool]$Visible, $TextEncoding)
         $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
-        while (-not $process.WaitForExit(500)) {
+        while (-not $process.HasExited) {
             if ([DateTime]::UtcNow -ge $deadline) { throw "Process timeout: $Executable" }
+            Start-Sleep -Milliseconds 100
         }
-        $stdoutText = $stdout.GetAwaiter().GetResult()
-        $stderrText = $stderr.GetAwaiter().GetResult()
+        $process.Finish()
+        $stdoutText = $process.StdOut
+        $stderrText = $process.StdErr
         $output = $stdoutText + $stderrText
-        if ($Log) { [IO.File]::WriteAllText($Log, $output, (New-Object Text.UTF8Encoding $false)) }
         $result = [pscustomobject]@{ ExitCode = $process.ExitCode; StdOut = $stdoutText; StdErr = $stderrText; Output = $output; Log = $Log }
         if (-not $AllowFailure -and $result.ExitCode -notin $SuccessExitCodes) {
             $location = if ($Log) { " See $Log." } else { '' }
@@ -333,12 +321,13 @@ function Invoke-UESTCProcess {
         }
         return $result
     } finally {
-        if ($started -and -not $process.HasExited) {
-            $process.Kill()
-            $process.WaitForExit()
-            if ($Log) { [IO.File]::WriteAllText($Log, ($stdout.GetAwaiter().GetResult() + $stderr.GetAwaiter().GetResult()), (New-Object Text.UTF8Encoding $false)) }
+        if ($process) {
+            try { $process.Finish() }
+            finally {
+                if ($Log) { [IO.File]::WriteAllText($Log, ($process.StdOut + $process.StdErr), (New-Object Text.UTF8Encoding $false)) }
+                $process.Dispose()
+            }
         }
-        $process.Dispose()
     }
 }
 

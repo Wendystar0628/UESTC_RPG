@@ -8,7 +8,7 @@ param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full, [switch]$D0,
     [switch]$Plan, [switch]$NoCache, [switch]$SkipFormat, [string]$BaseRef = '',
     [string]$Map = 'qingshuihe', [int]$Frames = 300,
-    [ValidateSet('Debug','Release')][string]$Configuration = 'Debug')
+    [ValidateSet('Debug')][string]$Configuration = 'Debug')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'wt/common.ps1')
@@ -197,15 +197,16 @@ if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
 }
 
 function Invoke-LockedProcess {
-    param([string]$Name, [string]$Executable, [string[]]$Arguments, [string]$Kind = 'Cpu', [switch]$Visible)
+    param([string]$Name, [string]$Executable, [string[]]$Arguments, [string]$Kind = 'Cpu', [switch]$Visible,
+        [int]$TimeoutSeconds = 1800)
     $lease = Enter-UESTCResourceLock $layout.Locks $Kind
     try {
-        try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible }
+        try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds }
         catch {
             # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
             if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
             Write-Warning "Godot import exited 0xC0000005; retrying once. Original log preserved: $(Join-Path $work "$Name.log")"
-            Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible
+            Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name-retry.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds
         }
     }
     finally { Exit-UESTCResourceLock $lease }
@@ -229,7 +230,7 @@ function Invoke-WindowProbe {
     $args += @('--','--shots=V1',"--out=$shots","--frames=$Frames",'--pose=V1','--clock=17.5','--season=autumn','--anim=240','--flow=0','--mode=fly','--ui=0','--seed=1','--weather=clear','--weather-seed=1','--quality=fine','--adaptive=0',"--map=$Map",'--title=0','--save=off','--audio=off')
     $began = [DateTime]::UtcNow
     # Atomic admission avoids a CPU -> GPU wait cycle with a queued exclusive job.
-    $result = Invoke-LockedProcess $Name $Executable $args CpuGpuShared -Visible
+    $result = Invoke-LockedProcess $Name $Executable $args CpuGpuShared -Visible -TimeoutSeconds 120
     Assert-CleanGodotLog $result
     $images = @(Get-ChildItem -LiteralPath $shots -Filter '*.png' -File | Where-Object { $_.Length -gt 0 -and $_.LastWriteTimeUtc -ge $began })
     if (-not $images.Count) { throw "Window probe produced no new PNG in $shots" }

@@ -8,6 +8,8 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
 using Campus.Kernel.Collision.Stubs;
+using Campus.Kernel.Boot;
+using Campus.Kernel.Inspect;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
@@ -31,6 +33,10 @@ public partial class D0Stage : Node3D
     private VeilServiceStub? _veil;
     private bool _ready;
     private bool _finishing;
+    private bool _closing;
+    private readonly CancellationTokenSource _captureLifetime = new();
+    private D0MaterialWarmup? _materialWarmup;
+    private ViewContentReadiness? _contentReadiness;
     private int _frames;
     private N.Vector2 _look;
 
@@ -226,16 +232,20 @@ public partial class D0Stage : Node3D
         var rect = context.Descriptor.DataRect;
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.MapRect,
             new Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y)));
-        ApplyInitialArguments(waypoints);
+        ApplyInitialArguments(context);
         BuildDebugUi(palette);
         _veil = (VeilServiceStub)registry.Get<IVeilService>();
         var materialWarmup = new D0MaterialWarmup(registry.Get<MaterialWarmup>(), _veil,
             registry.Get<IToonMaterialProvider>(), registry.Get<IVeilPresentation>());
+        _materialWarmup = materialWarmup;
         AddChild(materialWarmup);
         GD.Print($"D0 world ready: {campus.SourceEntityCount} entities / {interiors.Entries.Count} interior entities / {colliders.Length} colliders");
         await materialWarmup.WaitUntilReady();
         await ((AppFlowStub)registry.Get<IAppFlow>()).Initialize();
+        _contentReadiness = ViewContentReadiness.Capture(this);
         _ready = true;
+        if (AppBoot.Options.Has("shots") && !AppBoot.Options.Has("frames"))
+        { _finishing = true; _ = FinishRun(); }
     }
 
     private static byte[] Read(string path)
@@ -264,15 +274,15 @@ public partial class D0Stage : Node3D
         weather.Enter(context.Descriptor.Id, context.Descriptor.World.WeatherProfile, Services.Get<IWorldState>().WorldHours);
     }
 
-    private void ApplyInitialArguments(IReadOnlyList<Waypoint> waypoints)
+    private void ApplyInitialArguments(IMapContext context)
     {
         if (_rig is null) return;
         var poseId = AppBoot.Value("pose");
         if (poseId.Length > 0)
         {
-            var selected = waypoints.FirstOrDefault(w => w.Id == poseId);
-            if (selected is not null) _rig.SetPose(selected.Fly);
-            else if (poseId != "V1") throw new ArgumentException($"Unknown D0 pose: {poseId}");
+            _rig.SetPose(poseId == "T0" && AppBoot.Options.Title
+                ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
+                : ReviewPoseResolver.Resolve(poseId, context, Read));
         }
         Services.Get<IWorldControl>().SetFlow(int.Parse(AppBoot.Value("flow", "0"), CultureInfo.InvariantCulture));
         if (AppBoot.Value("mode", "fly") == "walk") Services.Get<IViewControl>().SetMode(ViewMode.Walk, ModeSwitchVia.Key).GetAwaiter().GetResult();
@@ -312,16 +322,13 @@ public partial class D0Stage : Node3D
     public override void _Process(double delta)
     {
         if (_camera is null || _rig is null) return;
-        if (_ready)
+        if (_ready && !AppBoot.Options.Has("shots"))
         {
             var move = new N.Vector3(Axis("move_left", "move_right"), Axis("move_down", "move_up"), Axis("move_forward", "move_backward"));
             _rig.IntegrateInput(move, _look, (float)Math.Min(delta, .1), Input.IsActionPressed("sprint"));
             _look = N.Vector2.Zero;
         }
-        var pose = _rig.Pose;
-        _camera.Position = pose.Position.ToGodot();
-        _camera.RotationDegrees = new(pose.PitchDeg, -pose.YawDeg, 0);
-        _camera.Fov = pose.FovDeg ?? 60;
+        SyncCamera();
         if (_readout is not null)
         {
             var state = Services.Get<IWorldState>();
@@ -330,9 +337,18 @@ public partial class D0Stage : Node3D
         if (_ready && !_finishing && int.TryParse(AppBoot.Value("frames"), out var limit) && ++_frames >= limit)
         { _finishing = true; _ = FinishRun(); }
     }
+    private void SyncCamera()
+    {
+        if (_camera is null || _rig is null) return;
+        var pose = _rig.Pose;
+        _camera.Position = pose.Position.ToGodot();
+        _camera.RotationDegrees = new(pose.PitchDeg, -pose.YawDeg, 0);
+        _camera.Fov = pose.FovDeg ?? 60;
+    }
     private static float Axis(string negative, string positive) => (Input.IsActionPressed(positive) ? 1 : 0) - (Input.IsActionPressed(negative) ? 1 : 0);
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (AppBoot.Options.Has("shots")) return;
         if (@event.IsActionPressed("menu")) Input.MouseMode = Input.MouseModeEnum.Visible;
         else if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) Input.MouseMode = Input.MouseModeEnum.Captured;
         else if (@event is InputEventMouseMotion motion && Input.MouseMode == Input.MouseModeEnum.Captured)
@@ -343,19 +359,19 @@ public partial class D0Stage : Node3D
     {
         try
         {
-            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            if (AppBoot.Value("shots") is { Length: > 0 } shots)
-            {
-                var destination = AppBoot.Value("out");
-                if (!Path.IsPathFullyQualified(destination)) throw new ArgumentException("--out must be an absolute directory.");
-                Directory.CreateDirectory(destination);
-                using var image = GetViewport().GetTexture().GetImage();
-                var file = Path.Combine(destination, shots.Split(',')[0] + ".png");
-                if (image.SavePng(file) != Error.Ok) throw new IOException("Screenshot could not be saved.");
-                GD.Print($"D0 screenshot: {file}");
-            }
+            if (AppBoot.Options.Has("shots"))
+                await CaptureSequence.RunAsync(this, _contentReadiness!, AppBoot.Options, Read, () =>
+                {
+                    _rig!.IntegrateInput(N.Vector3.Zero, N.Vector2.Zero, 0);
+                    SyncCamera();
+                }, () =>
+                {
+                    if (_materialWarmup?.Error is { } error) throw new InvalidOperationException(error);
+                    return _ready && !_closing && _materialWarmup?.ReadyForReveal == true;
+                }, _captureLifetime.Token);
             await CloseAsync();
         }
+        catch (OperationCanceledException) when (_closing) { }
         catch (Exception error) { GD.PushError(error.ToString()); GetTree().Quit(2); }
     }
     public override void _Notification(int what)
@@ -364,7 +380,10 @@ public partial class D0Stage : Node3D
     }
     private async Task CloseAsync()
     {
+        _closing = true;
+        _captureLifetime.Cancel();
         await Services.Get<IAppFlow>().Quit();
         if (Services.Get<IAppFlow>().State == AppState.Quitting) GetTree().Quit();
     }
+    public override void _ExitTree() { _closing = true; _captureLifetime.Cancel(); }
 }
