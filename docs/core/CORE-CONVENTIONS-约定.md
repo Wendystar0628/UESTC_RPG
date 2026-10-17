@@ -118,7 +118,7 @@ gates: [G1, G5]
 | V、E | 审查视角：V 全景与中景，E 人眼高度与低空 | ENG-GATES-SHOTS §1 |
 | F、W | 飞行路线脚本；行走路线录像脚本（W*n* 对应 R*n*） | ENG-GATES-SHOTS §1 |
 | T | 开始页镜头 | SYS-TITLE §2.1 |
-| Q | 各内容包的近景巡检点，每包 Q1–Q8 | ART-FIDELITY §4 |
+| Q | 各内容包的近景巡检点，每包 3–4 个 Q1–Q4 | ART-FIDELITY §4 |
 | G | 门禁 | ENG-GATES §1 |
 | WP | 工作包；子包写 WP-31a；RPG 包从 WP-54 起 | ENG-WP、ENG-ROADMAP-RPG §1 |
 | D | 决策，D-001 起，三位数，全文连续，只增不复用 | CORE-DECISIONS §0 |
@@ -128,7 +128,7 @@ gates: [G1, G5]
 | B1–B13 | 视觉精度的底线条目 | ART-FIDELITY §2.0 |
 | M1–M8 | 界面动效的八个母题 | UI-VISUAL-MOTION §1.2 |
 | W-xxx | 窗卡类型 | WLD-INTERIORS-ACCESS §3 |
-| s、m | 存档位 `s1`–`s3`；手动槽 `m1`–`m9` 预留 | SYS-SAVE §1 |
+| s | 存档位 `s1`–`s3` | SYS-SAVE §1 |
 
 ### 3.3 同号不同义的读法
 

@@ -15,7 +15,7 @@ gates: [G5, G7, G9, G12]
 # ART-RENOVATION · 老楼翻新：全部翻新的规则
 
 > **范围**：本文规定校园老旧建筑的全部翻新：位置、体量、层数和身份特征不动，外观上显旧的东西全部换成与新楼同一套材质、配色、部件和洁净度。内容包括适用范围、总则、材质与配色、删简留，各部位的改法，氛围与成电辨认，三种楼型的示例和验收。
-> **不在本文**：哪些楼翻新、逐栋的部位与优先级（MAP-QSH-RENOVATION）；楼的身份特征（各区文档、ART-MODELING-PROPORTION §1）；明暗、描线与调色板（ART-STYLE）；不做旧通则（ART-FIDELITY-DETAIL §1.5）；日式街景物件（ART-AMBIENCE）；生活痕迹的摆放（WLD-LIFE）；室内（WLD-INTERIORS）。
+> **不在本文**：哪些楼翻新、逐栋的部位与施工方式（MAP-QSH-RENOVATION）；楼的身份特征（各区文档、ART-MODELING-PROPORTION §1）；明暗、描线与调色板（ART-STYLE）；不做旧通则（ART-FIDELITY-DETAIL §1.5）；日式街景物件（ART-AMBIENCE）；生活痕迹的摆放（WLD-LIFE）；室内（WLD-INTERIORS）。
 > **查阅**：先读 §0；范围与限度看 §1；会脏处换什么构件看 §2.2；材质与色额看 §3；删简留看 §4；窗、檐口、楼梯间、屋顶与首层看 §5；氛围与成电辨认看 §6；楼型示例看 §7；验收看 §8
 
 ## 0 结论

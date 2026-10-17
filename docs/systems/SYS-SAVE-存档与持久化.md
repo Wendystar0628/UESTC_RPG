@@ -3,7 +3,7 @@ id: SYS-SAVE
 title: "存档与持久化：存档模型、存什么、不存什么"
 category: systems
 summary: "存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档"
-keywords: [存档, 存档位, 世界线, 存档段, 单实例锁, 手动槽, ISaveService, ISaveSection, SaveSectionAttribute, RestorePhase]
+keywords: [存档, 存档位, 世界线, 存档段, 单实例锁, ISaveService, ISaveSection, SaveSectionAttribute, RestorePhase]
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
 depends: [ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]

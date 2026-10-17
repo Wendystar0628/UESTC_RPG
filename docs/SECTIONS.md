@@ -28,7 +28,7 @@
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
 - CORE-CONVENTIONS §3 标识与命名 · L94 · 4.3k
   - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 826
-  - CORE-CONVENTIONS §3.2 编号体系 · L111 · 855
+  - CORE-CONVENTIONS §3.2 编号体系 · L111 · 842
   - CORE-CONVENTIONS §3.3 同号不同义的读法 · L133 · 576
   - CORE-CONVENTIONS §3.4 命名写法 · L145 · 682
   - CORE-CONVENTIONS §3.5 色名 · L155 · 364
@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.6k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 154
@@ -56,7 +56,7 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.0k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 1.9k
 - CORE-DECISIONS-SYSTEMS §5 工程 · L119 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
@@ -100,7 +100,7 @@
 - CORE-GLOSSARY §11 界面 · L240 · 1.4k
 - CORE-GLOSSARY §12 音频 · L267 · 1.1k
 - CORE-GLOSSARY §13 画面设置与性能 · L288 · 1.6k
-- CORE-GLOSSARY §14 工程与流程 · L315 · 2.3k
+- CORE-GLOSSARY §14 工程与流程 · L315 · 2.4k
 - CORE-GLOSSARY §15 同名异义 · L353 · 1.6k
 
 ## WF-BUILD · 施工边界
@@ -159,14 +159,14 @@
 
 ## WF-ENTRY · 角色入口卡
 
-`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.5k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
+`docs/workflow/WF-ENTRY-角色入口卡.md` · 4.6k 字 · 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
 关键词：角色入口卡、入口卡、主会话、子代理、Astra、Sol 会话、重置后先读、开工动作、收尾、做 X 前读 Y、钩子注入、SessionStart、SubagentStart、引擎路径、UESTC_GODOT
 
 - WF-ENTRY §0 结论 · L21 · 381
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
 - WF-ENTRY §1 主会话 · L33 · 1.1k
 - WF-ENTRY §2 子代理 · L57 · 1.0k
-- WF-ENTRY §3 Astra · L84 · 821
+- WF-ENTRY §3 Astra · L84 · 872
 - WF-ENTRY §4 Sol 会话 · L107 · 574
 
 ## WF-FLOW · 开发流程
@@ -300,15 +300,15 @@
 
 ## ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
 
-`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.6k 字 · 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
+`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.5k 字 · 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 关键词：视觉精度、精度区、K1–K5、判定距离、底线清单、B1–B13、不粗糙、一票否决、区界规则、可读规则、巡检点、行走走廊、外围分级
 
 - ART-FIDELITY §0 结论 · L21 · 1.1k
   - ★ ART-FIDELITY §0.1 接入要点 · L37 · 398
 - ART-FIDELITY §1 精度区与换算基准 · L46 · 2.1k
-  - ART-FIDELITY §1.1 五个精度区 · L48 · 793
+  - ART-FIDELITY §1.1 五个精度区 · L48 · 784
   - ART-FIDELITY §1.2 区界规则 · L60 · 187
-  - ART-FIDELITY §1.3 细节项在各区的取用 · L67 · 448
+  - ART-FIDELITY §1.3 细节项在各区的取用 · L67 · 442
   - ART-FIDELITY §1.4 划分与数据 · L79 · 252
   - ART-FIDELITY §1.5 换算基准 · L84 · 403
 - ART-FIDELITY §2 底线 · L90 · 1.1k
@@ -319,7 +319,7 @@
   - ART-FIDELITY §5.1 范围与画面构成 · L148 · 162
   - ART-FIDELITY §5.2 走廊里的加密 · L153 · 203
   - ART-FIDELITY §5.3 细节优先级 · L162 · 385
-- ART-FIDELITY §6 外围分级精度 · L173 · 235
+- ART-FIDELITY §6 外围分级精度 · L173 · 218
 
 ## ART-MODELING-PROPORTION · 风格化比例、颜色与金样
 
@@ -648,7 +648,7 @@
 `docs/world/WLD-OUTSKIRTS-边界与外围.md` · 2.4k 字 · 大箱庭的三条线（校界、前沿线、截面线）；外围环境带、边界阻挡与提示子文档的入口
 关键词：外围、校外、校界、边界、前沿线、截面线、大箱庭
 
-- WLD-OUTSKIRTS §0 结论 · L22 · 815
+- WLD-OUTSKIRTS §0 结论 · L22 · 812
   - ★ WLD-OUTSKIRTS §0.1 接入要点 · L34 · 204
 - WLD-OUTSKIRTS §1 三条线 · L39 · 401
 
@@ -804,7 +804,7 @@
 - MAP-QSH-ADDITIONS §4 参照与转译规则 · L88 · 709
 - MAP-QSH-ADDITIONS §5 不建议增补（禁做清单） · L99 · 812
 - MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L121 · 573
-- MAP-QSH-ADDITIONS §7 增补物的行走分类 · L141 · 567
+- MAP-QSH-ADDITIONS §7 增补物的行走分类 · L141 · 553
 - MAP-QSH-ADDITIONS §8 区文档共同口径 · L151 · 826
   - MAP-QSH-ADDITIONS §8.1 身份特征与近景要求 · L155 · 389
   - MAP-QSH-ADDITIONS §8.2 四季与昼夜 · L161 · 294
@@ -920,7 +920,7 @@
 - MAP-QSH-LIBRARY §8 行走 · L136 · 923
 - MAP-QSH-LIBRARY §9 附属部分 · L147 · 620
 - MAP-QSH-LIBRARY §10 博物馆展厅 · L153 · 654
-- MAP-QSH-LIBRARY §11 声音要点 · L165 · 592
+- MAP-QSH-LIBRARY §11 声音要点 · L165 · 593
 - MAP-QSH-LIBRARY §13 待验证 · L175 · 540
 
 ## MAP-QSH-NORTH-SEASONS · 北部生活区四季昼夜与天气：夜间角色、四季表、开放室内的灯、避雨处与积水点
@@ -1085,7 +1085,7 @@
 - MAP-QSH-TERRAIN-DISTRICTS §5 东湖 · L78 · 551
 - MAP-QSH-TERRAIN-DISTRICTS §6 河渠与箱涵 · L85 · 771
 - MAP-QSH-TERRAIN-DISTRICTS §7 宿舍区 · L94 · 1.3k
-- MAP-QSH-TERRAIN-DISTRICTS §8 运动场与体育区 · L106 · 649
+- MAP-QSH-TERRAIN-DISTRICTS §8 运动场与体育区 · L106 · 645
 - MAP-QSH-TERRAIN-DISTRICTS §9 食堂与商业街 · L114 · 350
 - MAP-QSH-TERRAIN-DISTRICTS §10 教学科研区 · L120 · 965
 - MAP-QSH-TERRAIN-DISTRICTS §11 校门与校界 · L128 · 304
@@ -1432,7 +1432,7 @@
 ## SYS-SAVE · 存档与持久化：存档模型、存什么、不存什么
 
 `docs/systems/SYS-SAVE-存档与持久化.md` · 3.9k 字 · 存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档
-关键词：存档、存档位、世界线、存档段、单实例锁、手动槽、ISaveService、ISaveSection、SaveSectionAttribute、RestorePhase
+关键词：存档、存档位、世界线、存档段、单实例锁、ISaveService、ISaveSection、SaveSectionAttribute、RestorePhase
 
 - SYS-SAVE §0 结论 · L22 · 647
   - ★ SYS-SAVE §0.1 接入要点 · L30 · 242
@@ -1641,25 +1641,25 @@
 
 ## UI-NAV · 界面与操作说明
 
-`docs/ui/UI-NAV-界面与操作说明.md` · 8.6k 字 · 界面有什么、怎么操作：界面态与漫游态、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
+`docs/ui/UI-NAV-界面与操作说明.md` · 8.5k 字 · 界面有什么、怎么操作：界面态与漫游态、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
 关键词：界面交互、快捷键、输入优先级、界面态、漫游态、自动隐藏、四角归属、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、无障碍、读屏、文本键、地名来源
 
 - UI-NAV §0 结论 · L21 · 997
   - ★ UI-NAV §0.1 接入要点 · L36 · 437
 - UI-NAV §1 允许什么、禁止什么 · L44 · 375
-- UI-NAV §2 界面态、漫游态与隐藏 · L53 · 783
-- UI-NAV §3 组件的内容与交互 · L72 · 3.2k
+- UI-NAV §2 界面态、漫游态与隐藏 · L53 · 776
+- UI-NAV §3 组件的内容与交互 · L72 · 3.1k
   - UI-NAV §3.1 时间环 · L74 · 577
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 415
   - UI-NAV §3.3 点位目录 · L89 · 217
   - UI-NAV §3.4 首次进入与到达标题 · L93 · 385
-  - UI-NAV §3.5 操作说明与设置 · L98 · 609
-  - UI-NAV §3.6 临时提示 · L106 · 435
+  - UI-NAV §3.5 操作说明与设置 · L98 · 561
+  - UI-NAV §3.6 临时提示 · L106 · 405
   - UI-NAV §3.7 天气签条 · L114 · 503
 - UI-NAV §4 输入 · L124 · 1.4k
   - UI-NAV §4.1 Esc 与单键快捷键 · L126 · 318
   - UI-NAV §4.2 关键键位 · L132 · 569
-  - UI-NAV §4.3 输入优先级 · L150 · 517
+  - UI-NAV §4.3 输入优先级 · L150 · 504
 - UI-NAV §5 无障碍与语言 · L164 · 777
 - UI-NAV §6 待验证 · L177 · 92
 
@@ -1681,7 +1681,7 @@
   - UI-VISUAL-COMPONENTS §4.2 控件与容器 · L75 · 320
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L81 · 351
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L90 · 306
-  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"与等待灯 · L96 · 379
+  - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"与等待灯 · L96 · 363
 - UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 501
 - UI-VISUAL-COMPONENTS §6 待验证 · L114 · 162
 
@@ -1694,7 +1694,7 @@
   - ★ UI-VISUAL-MOTION §0.1 接入要点 · L30 · 148
 - UI-VISUAL-MOTION §1 动效语言 · L35 · 1.7k
   - UI-VISUAL-MOTION §1.1 原则与两种时间 · L37 · 321
-  - UI-VISUAL-MOTION §1.2 八个母题 · L45 · 664
+  - UI-VISUAL-MOTION §1.2 八个母题 · L45 · 659
   - UI-VISUAL-MOTION §1.3 频率分级与声音 · L58 · 329
   - UI-VISUAL-MOTION §1.4 曲线、时长与上限 · L64 · 408
 - UI-VISUAL-MOTION §2 减少动态效果与无障碍 · L70 · 509
@@ -1779,11 +1779,11 @@
 
 - ENG-BUDGET §0 结论 · L21 · 781
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 195
-- ENG-BUDGET §1 总体要点 · L41 · 374
+- ENG-BUDGET §1 总体要点 · L41 · 375
 - ENG-BUDGET §2 预设与设备档的预算 · L48 · 1.6k
 - ENG-BUDGET §3 额度总账（`budgets.json`） · L79 · 305
 - ENG-BUDGET §4 怎么测 · L87 · 280
-- ENG-BUDGET §5 待验证（P0） · L91 · 216
+- ENG-BUDGET §5 待验证（P0） · L91 · 197
 
 ## ENG-CODE · 代码结构准则
 
@@ -1801,29 +1801,29 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.6k 字 · 命令行规则与截图默认串、截图方式、视角表 V/E/T、飞行与行走路线、时季抽样与巡检点轮换
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.5k 字 · 命令行规则与截图默认串、截图方式、视角表 V/E/T、飞行与行走路线、时季抽样与巡检点轮换
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L22 · 503
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 224
-- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.1k
+- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.0k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 757
   - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 509
   - ENG-GATES-SHOTS §1.3 视角表 · L67 · 1.6k
   - ENG-GATES-SHOTS §1.4 路线与点位 · L95 · 676
-  - ENG-GATES-SHOTS §1.5 时季抽样 · L104 · 441
+  - ENG-GATES-SHOTS §1.5 时季抽样 · L104 · 365
 - ENG-GATES-SHOTS §2 待验证（P0） · L113 · 144
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
-`docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md` · 3.2k 字 · 24 条一票否决（任一条即不通过）与收尾阶段主代理逐项检查的全局清单
+`docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md` · 3.1k 字 · 23 条一票否决（任一条即不通过）与收尾阶段主代理逐项检查的全局清单
 关键词：一票否决、全局清单、收尾清单、死黑、季节残留、硬切、切图残留、丢档、声音否决、观光规则集判据
 
 - ENG-GATES-VETO §0 结论 · L22 · 290
   - ★ ENG-GATES-VETO §0.1 接入要点 · L28 · 70
 - ENG-GATES-VETO §1 一票否决 · L32 · 1.6k
-- ENG-GATES-VETO §2 全局清单 · L61 · 531
-- ENG-GATES-VETO §3 待验证（P0） · L74 · 131
+- ENG-GATES-VETO §2 全局清单 · L60 · 525
+- ENG-GATES-VETO §3 待验证（P0） · L73 · 131
 
 ## ENG-GATES · 验收：测试三档与门禁 G1–G21
 
@@ -1938,7 +1938,7 @@
   - ★ ENG-WP-LIST §0.1 接入要点 · L30 · 145
 - ENG-WP-LIST §1 工作包一览 · L35 · 8.7k
   - ENG-WP-LIST §1.1 三个插入项 · L103 · 455
-  - ENG-WP-LIST §1.2 细节阶段待办 · L109 · 1.6k
+  - ENG-WP-LIST §1.2 细节阶段待办 · L109 · 1.7k
   - ENG-WP-LIST §1.3 候选包 · L135 · 246
 - ENG-WP-LIST §2 子包拆法 · L143 · 1.4k
 
@@ -1978,6 +1978,6 @@
 - OPS-RELEASE §3 导出与发布 · L57 · 619
 - OPS-RELEASE §4 安装、更新与卸载 · L66 · 508
 - OPS-RELEASE §5 地图数据包（ODbL） · L78 · 506
-- OPS-RELEASE §6 故障处理与诊断 · L86 · 542
+- OPS-RELEASE §6 故障处理与诊断 · L86 · 570
 - OPS-RELEASE §7 许可 · L93 · 1.7k
   - OPS-RELEASE §7.1 署名、许可页、窗口标题与图标 · L108 · 801

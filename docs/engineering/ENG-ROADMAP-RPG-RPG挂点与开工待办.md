@@ -38,7 +38,7 @@ gates: []
 | --- | --- | --- |
 | 多地图 | 只有 `qingshuihe`；按图数据在 `game/data/maps/<id>/`。新场景按 SYS-MAPS 的加图步骤加，不改契约和流式架构；邻图入口启用 `MapPortal` | SYS-MAPS §9 |
 | 图的种类与时间规则 | 只有 `Outdoor`、`Shared`；`Interior`、`Instance` 与 `MapTimeRule.Fixed` 已预留（`Fixed` 现在被拒绝）；副本式小场景用 `Instance` + `Fixed` | SYS-MAPS §9 |
-| 存档段与世界实例 | 未知段原样保留，缺段补默认值，每段独立版本与迁移链；预留段名 `quest`、`inventory`、`character`、`flags`、`map:<id>/objects`、手动槽、`SaveReason.Checkpoint`。RPG 只加段，不改容器 | SYS-SAVE §2、SYS-SAVE-FORMAT §1.4 |
+| 存档段与世界实例 | 未知段原样保留，缺段补默认值，每段独立版本与迁移链；预留段名 `quest`、`inventory`、`character`、`flags`、`map:<id>/objects`。RPG 只加段，不改容器 | SYS-SAVE §2、SYS-SAVE-FORMAT §1.4 |
 | 解锁策略 | 现在只启用 `all-unlocked`；`proximity` 与揭示规则已写好，RPG 规则集选它 | SYS-ATLAS-TRAVEL §4、SYS-ATLAS-UI §4 |
 | 标记与图层 | `MarkerKind.Quest`、`AtlasLayer`、`TravelRefusal.Locked` 已预留，任务服务产出 Quest 标记 | SYS-ATLAS-TRAVEL §1、SYS-ATLAS §2 |
 | 开放室内与生成器 | 加楼只改 `interiors.json` 并注册提供者；会动的门是运行时门体，剧情锁门在上面加锁状态；开放状态随剧情变时，G19c 按运行时状态核对 | WLD-INTERIORS-ACCESS §4、WLD-INTERIORS-ACCESS §2.1 |
