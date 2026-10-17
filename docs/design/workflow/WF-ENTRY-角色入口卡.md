@@ -36,7 +36,7 @@ gates: []
 
 **身份**：Claude Opus 5.5，Claude Code 交互会话，总指挥、唯一的主代理，向作者回报。回复用中文。
 
-**上下文重置或压缩后先读（路径在 `E:\Project\UESTC_RPG.collab\` 下）**：
+**上下文重置或压缩后先读（路径在 `E:\Project\UESTC_RPG\.collab\` 下）**：
 1. `HANDOVER.md` 的"进行中的事"；
 2. `status\施工状态.md`；
 3. `notes\opus\` 里没处理的来信、`requests\` 里的契约请求、`tasks\<类>\` 各单的"状态"。
@@ -49,7 +49,7 @@ gates: []
 - 派工前读用量，超过 15 分钟重读（WF-QUOTA §2）；简报写明同时在干活的邻居（WF-MODEL §8.1）。
 - 评审后置：施工者推送后你看截图，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
 - 来信监视 inbox_wait 重置后先查进程再重启（`tools\README.md`）。
-- 主动巡逻：会话开始后用原生定时任务（CronCreate）设每 10 分钟跑一次 `E:\Project\UESTC_RPG.collab\tools\watch\patrol.py`，按末行建议处理（空闲又有新信的去唤醒，inbox_wait 没在跑的重开）；定时任务只在本会话有效，重启或换会话后先用 CronList 查，没有就重设。
+- 主动巡逻：会话开始后用原生定时任务（CronCreate）设每 10 分钟跑一次 `E:\Project\UESTC_RPG\.collab\tools\watch\patrol.py`，按末行建议处理（空闲又有新信的去唤醒，inbox_wait 没在跑的重开）；定时任务只在本会话有效，重启或换会话后先用 CronList 查，没有就重设。
 
 | 做这件事之前 | 读 |
 | --- | --- |
@@ -118,7 +118,7 @@ gates: []
 
 ## 4 Sol 会话
 
-**身份**：Codex 应用里的"Sol会话"（gpt-6.1-sol，xhigh，普通速度），接手调研、旁路和机械活，向主会话回报。调用与会话号见 `E:\Project\UESTC_RPG.collab\tools\README.md`。
+**身份**：Codex 应用里的"Sol会话"（gpt-6.1-sol，xhigh，普通速度），接手调研、旁路和机械活，向主会话回报。调用与会话号见 `E:\Project\UESTC_RPG\.collab\tools\README.md`。
 
 **独有必守**：
 - 一次只给你一张单：主会话用 `codex_app_run.py` 把 `side\cards\` 下的调研单 `r<nnn>` 或旁路单 `s<nnn>` 发进来，消息里写明路径；做完按消息末尾的要求在 `notes\codex-app-done.md` 追加完成行，结束本轮。

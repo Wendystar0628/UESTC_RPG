@@ -109,7 +109,7 @@
 - WF-ENTRY §1 主会话 · L35 · 1.1k
 - WF-ENTRY §2 子代理 · L65 · 1.4k
 - WF-ENTRY §3 Astra · L96 · 859
-- WF-ENTRY §4 Sol 会话 · L119 · 916
+- WF-ENTRY §4 Sol 会话 · L119 · 917
 
 ## WF-INDEX · 协作总纲
 
@@ -118,7 +118,7 @@
 
 - WF-INDEX §0 结论 · L23 · 357
   - ★ WF-INDEX §0.1 接入要点 · L29 · 174
-- WF-INDEX §1 角色表 · L35 · 730
+- WF-INDEX §1 角色表 · L35 · 731
 - WF-INDEX §2 决定权与执行人 · L50 · 327
 - WF-INDEX §4 一条规则放哪份 · L58 · 515
 
@@ -143,7 +143,7 @@
 `docs/design/workflow/collaboration/WF-COMMS-交接与通信.md` · 5.7k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，来信与消息，Codex 会话与引导信箱
 关键词：.collab、交接目录、文件布局、archive、logs、结案即挪走、.ignore、任务单、施工单、旁路单、调研单、契约申请、评审请求、六行短头部、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208
 
-- WF-COMMS §0 结论 · L24 · 491
+- WF-COMMS §0 结论 · L24 · 492
   - ★ WF-COMMS §0.1 接入要点 · L31 · 151
 - WF-COMMS §1 交接目录与文件 · L37 · 1.6k
 - WF-COMMS §2 命名与写法 · L64 · 470
@@ -207,7 +207,7 @@
 `docs/design/workflow/management/WF-STATUS-施工状态与队列.md` · 2.9k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
 关键词：施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、活跃工作包、待派工队列、Q-nnn、排队、可派、已派、队列平衡、积压、交接单、HANDOVER.md、接手、已集成
 
-- WF-STATUS §0 结论 · L24 · 464
+- WF-STATUS §0 结论 · L24 · 465
   - ★ WF-STATUS §0.1 接入要点 · L32 · 196
 - WF-STATUS §1 施工状态文件怎么填 · L38 · 795
 - WF-STATUS §2 待派工队列与队列平衡 · L59 · 732
