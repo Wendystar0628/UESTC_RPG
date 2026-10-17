@@ -18,42 +18,40 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
         Exclude = [body.GetRid()]
     };
 
-    public static N.Vector3? ResolveSupport(ISpatialIndex spatial, N.Vector3 candidate)
+    public N.Vector3? Resolve(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 candidate, float height)
     {
-        if (!WalkMath.Finite(candidate) || !WalkMath.CanWalk(spatial.WalkClassAt(candidate.X, candidate.Z))) return null;
-        var support = spatial.SupportY(candidate.X, candidate.Z, candidate.Y);
-        return support is { } y && float.IsFinite(y) ? new(candidate.X, y, candidate.Z) : null;
-    }
-
-    public bool Accept(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 feet, float height, float lift)
-    {
-        if (!collision.Ready(feet, WalkTuning.Radius)) return false;
-        var support = ResolveSupport(spatial, feet - N.Vector3.UnitY * lift);
-        if (support is not { } floor || MathF.Abs(feet.Y - lift - floor.Y) > WalkTuning.SafeMargin) return false;
-        // Resident support selects the layer; mounted C must actually support that same layer.
-        if (collision.SupportY(floor.X, floor.Z, floor.Y) is not { } actual
-            || !float.IsFinite(actual.Y) || MathF.Abs(actual.Y - floor.Y) > WalkTuning.SafeMargin) return false;
+        if (!WalkMath.Finite(candidate) || !collision.Ready(candidate, WalkTuning.Radius)) return null;
+        float hint = MathF.Max(candidate.Y, spatial.GroundY(candidate.X, candidate.Z) + WalkTuning.StepHeight);
+        if (collision.SupportY(candidate.X, candidate.Z, hint) is not { } hit || !float.IsFinite(hit.Y)) return null;
+        var feet = new N.Vector3(candidate.X, hit.Y, candidate.Z);
+        if (!WalkSafetyQueries.AllowsFeet(spatial, feet)
+            || (WalkSafetyQueries.InWater(spatial, feet) && spatial.WalkClassAt(feet.X, feet.Z) != WalkClass.Wade)) return null;
         _shape.Height = height - WalkTuning.SafeMargin;
         _query.Shape = _shape;
-        _query.Transform = new(Basis.Identity,
-            (feet + N.Vector3.UnitY * (height * .5f + WalkTuning.SafeMargin)).ToGodot());
-        return body.GetWorld3D().DirectSpaceState.IntersectShape(_query, 1).Count == 0;
+        // A flat cylinder touches an uphill floor above its centre ray. Lift within the existing step
+        // height until its volume clears; ordinary gravity then settles it onto the native slope.
+        for (int step = 0; step <= 4; step++)
+        {
+            var placed = feet + N.Vector3.UnitY * (WalkTuning.StepHeight * step / 4);
+            _query.Transform = new(Basis.Identity,
+                (placed + N.Vector3.UnitY * (height * .5f + WalkTuning.SafeMargin)).ToGodot());
+            if (body.GetWorld3D().DirectSpaceState.IntersectShape(_query, 1).Count == 0) return placed;
+        }
+        return null;
     }
 
-    public static Pose? Recover(ISpatialIndex spatial, WalkSafetyRing safe, Pose from, bool manual,
-        int skip, N.Vector3? rejected)
+    public N.Vector3? Nearby(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 from, float height)
     {
-        bool AcceptTarget(N.Vector3 candidate)
+        for (int radius = 1; radius <= WalkTuning.LandingSearchRadius; radius++)
         {
-            var support = ResolveSupport(spatial, candidate);
-            return WalkSafetyQueries.SupportedDryFeet(spatial, candidate) && support is { } feet
-                && (rejected is not { } failed || N.Vector3.DistanceSquared(feet, failed) >= .04f);
+            for (int sample = 0; sample < 8; sample++)
+            {
+                float angle = sample * (float.Pi / 4f);
+                var candidate = from + new N.Vector3(MathF.Cos(angle), 0, MathF.Sin(angle)) * radius;
+                if (Resolve(spatial, collision, candidate, height) is { } feet) return feet;
+            }
         }
-        var target = safe.Nearest(from.Position, manual ? WalkTuning.ReturnMinimumDistance : 0, skip,
-            pose => AcceptTarget(pose.Position));
-        if (target is null && spatial.NearestSafe(from.Position, WalkTuning.SafetySearchRadius) is { } fallback
-            && AcceptTarget(fallback)) target = new(fallback, from.YawDeg, from.PitchDeg);
-        return target;
+        return null;
     }
 
     public void Dispose()

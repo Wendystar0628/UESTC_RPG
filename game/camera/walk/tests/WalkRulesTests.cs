@@ -5,7 +5,6 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using Campus.Gen.Ground;
 using Campus.Gen.World;
 using Campus.Kernel.Maps;
 using GdUnit4;
@@ -93,23 +92,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
-    public void SafeRingWrapsRestoresAndSkipsRecentPointsOnRepeatedRecovery()
-    {
-        var ring = new WalkSafetyRing();
-        for (int i = 0; i < 20; i++) ring.Add(new(new(i, 0, 0), 0, 0));
-        Require(ring.Count == 16, "Safety ring grew beyond its save capacity.");
-        Require(ring.Snapshot()[0].Position.X == 19 && ring.Snapshot()[15].Position.X == 4, "Ring wrap order is wrong.");
-        var copy = new WalkSafetyRing();
-        copy.Restore(ring.Snapshot());
-        Require(copy.Snapshot().SequenceEqual(ring.Snapshot()), "Restore reverses the safety ring.");
-        Require(copy.Nearest(new(20, 0, 0), 3, 0, _ => true)?.Position.X == 17, "Manual return ignores the 3 m minimum.");
-        Require(copy.Nearest(new(20, 0, 0), 0, 2, _ => true)?.Position.X == 17, "Repeated return reuses a rejected recent point.");
-        copy.Clear();
-        Require(copy.Count == 0 && copy.Nearest(Vector3.Zero, 0, 0, _ => true) is null, "Map unload retains old safe points.");
-    }
-
-    [TestCase]
-    public void SaveRoundTripKeepsFeetLookCrouchSpeedAndSafeRing()
+    public void SaveRoundTripKeepsLegacyFeetLookCrouchSpeedAndSafePoints()
     {
         var dto = new WalkSave(new(new(12.25f, 3, -7), 83, -12), true, 4,
             [new(new(11, 3, -7), 45, 9), new(new(10, 3, -7), 0, 0)]);
@@ -118,7 +101,7 @@ public sealed class WalkRulesTests
         var restored = JsonSerializer.Deserialize(json, context.WalkSave)!;
         Require(restored.Feet == dto.Feet && restored.Crouching && restored.SpeedStep == 4,
             "Walk save lost its physical state.");
-        Require(restored.SafePoints.SequenceEqual(dto.SafePoints), "Walk save lost the recovery ring.");
+        Require(restored.SafePoints.SequenceEqual(dto.SafePoints), "Walk save lost the existing safePoints field.");
         Require(!json.Contains("velocity", StringComparison.OrdinalIgnoreCase), "Transient velocity leaked into the save.");
     }
 
@@ -136,14 +119,14 @@ public sealed class WalkRulesTests
     {
         var spatial = new SafetySpatial(-1f, -.5f, WalkClass.Water, nearShore: true);
         var feet = new Vector3(0, -1, 0);
-        Require(spatial.SupportY(0, 0, feet.Y) == -1f && spatial.MediumAt(feet).Depth == .5f,
+        Require(spatial.GroundY(0, 0) == -1f && spatial.MediumAt(feet).Depth == .5f,
             "Regression fixture must distinguish bed height from water height.");
         Require(WalkSafetyQueries.NeedsRecovery(spatial, feet),
             "Standing on the riverbed beside a walkable bank prevents the water return.");
-        Require(WalkSafetyQueries.InWater(spatial, feet) && !WalkSafetyQueries.SupportedDryFeet(spatial, feet),
+        Require(WalkSafetyQueries.InWater(spatial, feet) && !WalkSafetyQueries.AllowsFeet(spatial, feet),
             "A supported underwater position is treated as a settled safe snapshot.");
         var walkCell = new SafetySpatial(-1f, -.5f, WalkClass.Walk);
-        Require(WalkSafetyQueries.NeedsRecovery(walkCell, feet) && !WalkSafetyQueries.SupportedDryFeet(walkCell, feet),
+        Require(WalkSafetyQueries.NeedsRecovery(walkCell, feet),
             "A coarse walk cell hides actual submersion at the feet.");
     }
 
@@ -154,50 +137,10 @@ public sealed class WalkRulesTests
         var bridge = new SafetySpatial(2f, -.5f, WalkClass.Walk, ground: -1f);
         Require(!WalkSafetyQueries.InWater(bridge, feet) && !WalkSafetyQueries.NeedsRecovery(bridge, feet),
             "A dry supported bridge is mistaken for the riverbed beneath it.");
-        Require(WalkSafetyQueries.SupportedDryFeet(bridge, feet), "A dry supported bridge cannot be saved.");
+        Require(WalkSafetyQueries.AllowsFeet(bridge, feet), "A dry bridge region is rejected before native support checks.");
         var coarseWaterCell = new SafetySpatial(2f, -.5f, WalkClass.Water, ground: -1f);
         Require(!WalkSafetyQueries.NeedsRecovery(coarseWaterCell, feet),
             "A supported dry bridge over a coarse water cell triggers a water return.");
-    }
-
-    [TestCase]
-    public void RestoreRejectsHighSafetyPointBeforeRecoveryOrForcedCapture()
-    {
-        var spatial = new SafetySpatial(0f);
-        var context = new RestoreContext { Map = new("test"), FromVersion = 1, Missing = false };
-        Pose high = new(new(10, 100, 0), 0, 0);
-        Pose supported = new(new(4, 0, 0), 0, 0);
-        var restored = WalkSafetyQueries.RestoreSafePoints(spatial, [high, supported], context);
-        Require(restored.Count == 1 && restored[0] == supported && context.Repairs.Count == 1,
-            "Unsupported safety-ring height survived restore without a repair record.");
-        Require(WalkSafetyQueries.SupportedDryFeet(spatial, Vector3.Zero)
-            && !WalkSafetyQueries.SupportedDryFeet(spatial, high.Position),
-            "Current feet and history do not share the same support-height validation.");
-        var ring = new WalkSafetyRing();
-        ring.Restore(restored);
-        Require(ring.Nearest(Vector3.Zero, 3, 0, p => WalkSafetyQueries.SupportedDryFeet(spatial, p.Position)) == supported,
-            "Manual recovery selected the unsupported high point.");
-        Require(ring.Snapshot().All(p => p.Position.Y == 0), "A forced snapshot retains an unsupported safety point.");
-        ring.Add(high);
-        Require(WalkPlacementAdmission.Recover(spatial, ring, high, false, 0, null) == supported,
-            "Formal recovery must reject an unsupported saved point before resolving its precise landing height.");
-    }
-
-    [TestCase]
-    public void RealP00FlyOnlyDefaultFindsSupportedFeetInLoadedCampusBaseModel()
-    {
-        // The four-file campus base model uses the production ground source for its outdoor default feet.
-        var (entry, context) = LoadCampusSpawnFixture(prepareGround: true);
-        var maps = new SpawnMaps(entry) { Context = context };
-        var spawn = maps.ResolveSpawn(entry.Descriptor.Id);
-        Require(spawn.Id == "P00" && spawn.Stand is null && spawn.Fly.Position.Y == 928f
-            && entry.Descriptor.Spawns.Count == 0, "Regression fixture must be the authored high-altitude, waypoint-only P00.");
-        var dto = WalkSafetyQueries.CreateDefault(maps, new(entry.Descriptor.Seed, entry.Descriptor.Id, entry.Descriptor.World.Default));
-        Require(maps.LastRequestedMap == entry.Descriptor.Id, "Default resolution used a different map.");
-        Require(WalkSafetyQueries.SupportedDryFeet(context.World.Spatial, dto.Feet.Position),
-            "P00 new-game walk state does not have a real supported, dry safety destination.");
-        Require(dto.Feet.Position != Vector3.Zero && dto.Feet.Position != spawn.Fly.Position && dto.SafePoints.Count == 0,
-            "P00 fly position or the origin was passed off as a standing position.");
     }
 
     [TestCase]
@@ -219,21 +162,6 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
-    public void FlyOnlyDefaultRefusesMissingTargetWorldOrMissingSafetyPoint()
-    {
-        var (entry, context) = LoadCampusSpawnFixture();
-        var maps = new SpawnMaps(entry);
-        RequireThrows<InvalidOperationException>(() => WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id));
-        maps.Current = new("previous-fixture");
-        maps.Context = context;
-        RequireThrows<InvalidOperationException>(() => WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id));
-        maps.Current = entry.Descriptor.Id;
-        maps.Context = new SpawnContext(context.Descriptor, new SpatialWorld(context.World, new SafetySpatial(0f)),
-            context.DataRoot, context.BakeRoot);
-        RequireThrows<InvalidOperationException>(() => WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id));
-    }
-
-    [TestCase]
     public void UnknownDefaultSpawnIsNotReplacedByTheOriginOrAnotherPoint()
     {
         var (entry, context) = LoadCampusSpawnFixture();
@@ -243,7 +171,7 @@ public sealed class WalkRulesTests
         RequireThrows<ArgumentException>(() => WalkSafetyQueries.DefaultFeet(maps, new("unknown-fixture")));
     }
 
-    private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture(bool prepareGround = false)
+    private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")
             ?? throw new InvalidOperationException("The gate must provide UESTC_REPOSITORY for the real campus fixture.");
@@ -256,11 +184,6 @@ public sealed class WalkRulesTests
         foreach (var name in new[] { "campus.json", "network.json", "interiors.json", "map.json" })
             files.Add(name, File.ReadAllText(Path.Combine(data, name)));
         var loaded = WorldModelLoader.Load(indexed.Id, files);
-        if (prepareGround)
-        {
-            var parsed = (WorldModelSnapshot)loaded.World;
-            loaded = loaded with { World = parsed.WithWalkSupport(GroundSupport.Prepare(parsed, entry.Descriptor)) };
-        }
         return (entry, entry.CreateContext(loaded, BuildInputSnapshot.Freeze(files.ToDictionary(p => p.Key, p => (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(p.Value), StringComparer.Ordinal))));
     }
 
@@ -284,22 +207,6 @@ public sealed class WalkRulesTests
         public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
     }
 
-    private sealed record SpawnContext(MapDescriptor Descriptor, IWorldModel World, string DataRoot, string BakeRoot) : IMapContext
-    {
-        public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
-    }
-
-    private sealed class SpatialWorld(IWorldModel source, ISpatialIndex spatial) : IWorldModel
-    {
-        public PolygonRings Boundary => source.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => source.Features;
-        public WorldNetwork Network => source.Network;
-        public ISpatialIndex Spatial => spatial;
-        public IInteriorIndex Interiors => source.Interiors;
-        public IOutskirtsModel? Outskirts => source.Outskirts;
-        public IFidelityModel? Fidelity => source.Fidelity;
-    }
-
     private static void RequireThrows<T>(Action action) where T : Exception
     {
         try { action(); }
@@ -314,10 +221,8 @@ public sealed class WalkRulesTests
         public float GroundY(float x, float z) => ground ?? support;
         public CameraMedium MediumAt(Vector3 p) => water is { } y && p.Y < y
             ? new(MediumKind.Underwater, Depth: y - p.Y) : new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => support;
         public WalkClass WalkClassAt(float x, float z) => nearShore && (MathF.Abs(x) > 1 || MathF.Abs(z) > 1)
             ? WalkClass.Wade : classification;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => null;
     }
 
     private static void Require(bool condition, string message)

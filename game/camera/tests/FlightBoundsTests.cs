@@ -54,7 +54,6 @@ public sealed class FlightBoundsTests
         public BuildInputSnapshot SourceInputs => sourceInputs;
         public IWorldModel World => world;
         public string DataRoot => "res://test/";
-        public string BakeRoot => "res://test/";
         public MapDescriptor Descriptor { get; } = new(new("test"), new("测试", "Test"), MapKind.Outdoor, 1, 1,
             new(0, 0, 0, new(-100, -100), new(100, 100)), Vector2.Zero,
             new(new(-200, -28, -200), new(200, 2000, 200)), new(new(-200, -200), new(200, 200)),
@@ -84,8 +83,6 @@ public sealed class FlightBoundsTests
         public IReadOnlyList<FeatureId> Query(Box3 box) => [];
         public float GroundY(float x, float z) => 0;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => 0;
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => p;
     }
 }

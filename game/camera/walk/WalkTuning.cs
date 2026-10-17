@@ -34,16 +34,11 @@ public static class WalkTuning
     public const float FovResponseSeconds = .2f;
     public const float SafetyRecordSeconds = .5f;
     public const float SafetyRecordSlopeDegrees = 20f;
-    public const float SafetyClearance = .6f;
     public const float BoundaryClearance = 1f;
-    public const float SafetySearchRadius = 50f;
-    public const float ReturnMinimumDistance = 3f;
-    public const float ReturnRetrySeconds = 1f;
+    public const int LandingSearchRadius = 4;
     public const float BelowSupportLimit = 3f;
     public const float WaterRecoveryDepth = .3f;
     public const float SaveSupportTolerance = .2f;
-    public const float ForbiddenDistanceLimit = 2f;
-    public const int SafePointCapacity = 16;
     public const int DefaultSpeedStep = 2;
     public const int SpeedStepCount = 5;
 

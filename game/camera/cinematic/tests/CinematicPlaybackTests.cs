@@ -17,7 +17,7 @@ public sealed class CinematicPlaybackTests
         var anchors = Anchors(pose, default, 70);
         var definition = Timeline() with { Camera = [Hold(0.5, 2)] };
         CinematicValidation.Validate(definition, definition.Map);
-        using var track = new CinematicTrack(definition, anchors, new TestSpatialIndex());
+        using var track = new CinematicTrack(definition, anchors, new TestWorldModel());
         var changedCamera = pose with { Position = Vector3.One, YawDeg = 0 };
         if (track.Sample(0.25, changedCamera, 0.1) != pose) throw new InvalidOperationException("$current was reread during a delayed camera track.");
         if (anchors.Resolve(new FovKey(0, Anchor: "$dest")) != 70) throw new InvalidOperationException("Missing saved FOV did not fall back to the setting.");
@@ -62,7 +62,7 @@ public sealed class CinematicPlaybackTests
             World = [new(0, WorldCueKind.NewTimeline)],
             Masks = [new(0, 1, MaskKind.Veil)],
         };
-        var playing = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+        var playing = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (_, _) => worldJob.Task);
         playback.Tick(0);
         var predicateCalls = 0;
@@ -80,7 +80,7 @@ public sealed class CinematicPlaybackTests
         var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
         var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
         var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
-        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var oldPredicateCalls = 0;
         var oldWait = playback.WaitUntil(() => { oldPredicateCalls++; return false; }, double.PositiveInfinity, "Old wait.");
@@ -104,7 +104,7 @@ public sealed class CinematicPlaybackTests
                 // EnterCore also clears playback synchronously when its awaited task is canceled.
                 playback.Clear();
                 nextWait = playback.WaitUntil(() => nextReady, double.PositiveInfinity, "Replacement wait.");
-                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
                     (_, _) => Task.CompletedTask);
             }
         }
@@ -142,7 +142,7 @@ public sealed class CinematicPlaybackTests
         var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
         var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
         var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
-        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var waiting = playback.WaitUntil(() => false, double.PositiveInfinity, "Old wait.");
         Task? nextPlaying = null; Task? nextWait = null; var nextReady = false;
@@ -162,7 +162,7 @@ public sealed class CinematicPlaybackTests
             try { await waiting; throw new InvalidOperationException("The old wait should be canceled."); }
             catch (OperationCanceledException)
             {
-                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
                     (_, _) => Task.CompletedTask);
                 nextWait = playback.WaitUntil(() => nextReady, double.PositiveInfinity, "Replacement wait.");
             }
@@ -185,7 +185,7 @@ public sealed class CinematicPlaybackTests
             World = [new(0, WorldCueKind.NewTimeline), new(0.5, WorldCueKind.FlowTo, 17.5, 60), new(2, WorldCueKind.SetFlow, Rate: 1)],
             Masks = [new(0, 1, MaskKind.Veil)],
         };
-        var done = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestSpatialIndex(), AppState.Entering,
+        var done = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (cue, skipped) => { observed.Add(cue.Cue); return cue.Cue == WorldCueKind.NewTimeline ? blocked.Task : Task.CompletedTask; });
         playback.Tick(0.1);
         var finish = playback.FinishWorld();
@@ -206,7 +206,7 @@ public sealed class CinematicPlaybackTests
     public void OrbitAzimuthUsesTheSameForwardConventionAsPose()
     {
         var definition = Timeline() with { Camera = [new(0, 2, CameraPath.Orbit, [], new(CameraLookMode.Target, Target: Vector3.Zero), [new(0, 60)], Orbit: new(Vector3.Zero, 10, 10, 0, 90, 5, 5))] };
-        using var track = new CinematicTrack(definition, Anchors(default, default, 60), new TestSpatialIndex());
+        using var track = new CinematicTrack(definition, Anchors(default, default, 60), new TestWorldModel());
         if (Vector3.Distance(track.PositionAt(0), new(0, 5, -10)) > 0.001f || Vector3.Distance(track.PositionAt(2), new(10, 5, 0)) > 0.001f)
             throw new InvalidOperationException("Orbit reflected the path along Z.");
     }

@@ -120,7 +120,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             }
             else
             {
-                await playback.Play(_definition!, _anchors, context.World.Spatial, State, ExecuteWorldCue);
+                await playback.Play(_definition!, _anchors, context.World, State, ExecuteWorldCue);
                 _finishing = true;
                 if (_skip is not null) await _skip;
             }
@@ -308,7 +308,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         if (definition is not null && !motion.ReduceMotion && !_quitting && rules.Current.CinematicStates.Contains(AppState.Leaving))
         {
             var anchors = new CinematicAnchorSet(TitlePose(), camera.Pose, TitlePose(), _userFov, maps, context.Descriptor.Id);
-            await playback.Play(definition, anchors, context.World.Spatial, State, ExecuteLeaveCue);
+            await playback.Play(definition, anchors, context.World, State, ExecuteLeaveCue);
             playback.Clear();
         }
         else await veil.Cover(VeilReason.Cinematic, FlowTuning.CoverSeconds);

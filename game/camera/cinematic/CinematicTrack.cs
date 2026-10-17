@@ -16,7 +16,7 @@ public sealed class CinematicTrack : IDisposable
     private readonly float[] _lengths;
     private int _segment = -1;
     private Pose _segmentStart;
-    public CinematicTrack(CinematicDef definition, CinematicAnchorSet anchors, ISpatialIndex spatial)
+    public CinematicTrack(CinematicDef definition, CinematicAnchorSet anchors, IWorldModel world)
     {
         CinematicValidation.Validate(definition, definition.Map);
         _definition = definition; _anchors = anchors; _segmentStart = anchors.Current;
@@ -39,7 +39,7 @@ public sealed class CinematicTrack : IDisposable
                     for (var s = 0; s <= FlowTuning.TransitSamples; s++)
                     {
                         var p = Vector3.Lerp(from, to, (float)s / FlowTuning.TransitSamples);
-                        roof = Math.Max(roof, (spatial.SupportY(p.X, p.Z, float.MaxValue) ?? spatial.GroundY(p.X, p.Z)) + FlowTuning.TransitClearance);
+                        roof = Math.Max(roof, SourceRoof(world, p) + FlowTuning.TransitClearance);
                     }
                     var apex = roof + Vector3.Distance(from, to) * FlowTuning.TransitHeightFactor;
                     var transit = new Curve3D { BakeInterval = FlowTuning.CurveBakeInterval };
@@ -53,6 +53,21 @@ public sealed class CinematicTrack : IDisposable
                 default: throw new InvalidDataException("Unknown camera path.");
             }
         }
+    }
+    private static float SourceRoof(IWorldModel world, Vector3 point)
+    {
+        float ground = world.Terrain.HeightAt(point.X, point.Z);
+        float top = ground;
+        var column = new Box3(new(point.X, float.MinValue, point.Z), new(point.X, float.MaxValue, point.Z));
+        foreach (var id in world.Spatial.Query(column))
+        {
+            var feature = world.Features[id];
+            float height = Math.Max(feature.Height ?? 0, feature.Bounds.Max.Y);
+            if (feature.Kind.Value == "building" && world.Interiors.Get(id) is { } interior)
+                foreach (var storey in interior.Storeys) height = Math.Max(height, storey.FloorY + storey.Height);
+            top = Math.Max(top, ground + height);
+        }
+        return top;
     }
     public Pose Sample(double time, Pose previous, double delta)
     {

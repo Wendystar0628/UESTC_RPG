@@ -21,7 +21,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         | (1u << (int)SurfaceTag.Invisible) | (1u << (int)SurfaceTag.Boundary) | (1u << (int)SurfaceTag.DoorClosed);
     private const uint NoStepLayers = (1u << (int)SurfaceTag.Barrier) | (1u << (int)SurfaceTag.Boundary)
         | (1u << (int)SurfaceTag.DoorClosed);
-    private readonly WalkSafetyRing _safe = new();
     private readonly PhysicsTestMotionParameters3D _probe = new();
     private readonly PhysicsTestMotionResult3D _probeResult = new();
     private readonly CylinderShape3D _cylinder = new() { Radius = WalkTuning.Radius, Height = WalkTuning.StandingHeight };
@@ -46,12 +45,15 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private float _jumpBuffer;
     private float _sinceJump = WalkTuning.HeldJumpInterval;
     private float _sinceSafe;
-    private float _sinceReturn = WalkTuning.ReturnRetrySeconds;
-    private int _returnSkip;
+    private Pose? _lastStable;
+    private Pose _placementTarget;
+    private bool _hasPlacement;
     private bool _placementNeedsCheck;
     private float _placementLift;
+    private bool _placementStableTried;
+    private bool _placementFallbackTried;
+    private Pose? _entryFrom;
     private bool _safetyFailed;
-    private N.Vector3? _rejectedLanding;
     private float _fov = WalkTuning.WalkFov;
     private Pose _descentFrom;
     private float _descentDuration;
@@ -158,28 +160,16 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         ValidatePose(from);
         ResolveServices();
         if (_map is null) return ModeSwitchResult.Refused;
-        var target = FindLanding(from, out var landingCandidate);
-        bool relocated = false;
-        if (target is null)
-        {
-            target = _map.World.Spatial.NearestSafe(landingCandidate, WalkTuning.SafetySearchRadius);
-            relocated = true;
-        }
-        if (target is not { } feet || !ValidSurface(feet)) return ModeSwitchResult.Refused;
+        var target = WalkSafetyQueries.PlacementHint(_map, from);
         Active = true;
         _appFrozen = false;
         _safetyFailed = false;
         _crouching = false;
         _restoredCrouch = false;
         ApplyHeight();
-        Place(new(feet, from.YawDeg, from.PitchDeg), WalkTuning.LandingLift);
-        _descentFrom = from;
-        float height = from.Position.Y - (feet.Y + EyeHeight);
-        float distance = N.Vector3.Distance(from.Position, feet + N.Vector3.UnitY * EyeHeight);
-        _descentDuration = distance > 3f ? WalkMath.DescentSeconds(MathF.Max(height, distance)) : 0;
-        _descentElapsed = 0;
-        Velocity = Vector3.Down * WalkTuning.LandingSpeed;
-        return relocated ? ModeSwitchResult.Relocated : ModeSwitchResult.Ok;
+        Place(target, WalkTuning.LandingLift);
+        _entryFrom = from;
+        return target.Position == from.Position ? ModeSwitchResult.Ok : ModeSwitchResult.Relocated;
     }
 
     public void Leave()
@@ -189,6 +179,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _input = default;
         _jumpQueued = false;
         _descentDuration = 0;
+        _entryFrom = null;
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
@@ -221,19 +212,25 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         ValidatePose(feet);
         SetLook(feet.YawDeg, feet.PitchDeg);
-        var support = _map is { } map ? WalkPlacementAdmission.ResolveSupport(map.World.Spatial, feet.Position) : null;
-        _feet = _previousFeet = (support ?? feet.Position) + N.Vector3.UnitY * lift;
+        _placementTarget = _map is { } map ? WalkSafetyQueries.PlacementHint(map, feet) : feet;
+        _hasPlacement = true;
+        _feet = _previousFeet = _placementTarget.Position;
         if (IsInsideTree()) GlobalPosition = _feet.ToGodot();
         else Position = _feet.ToGodot();
+        if (IsInsideTree()) ResetPhysicsInterpolation();
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
         _coyote = _jumpBuffer = 0;
         _sinceJump = WalkTuning.HeldJumpInterval;
+        _sinceSafe = 0;
         _jumpQueued = false;
         _descentDuration = _descentElapsed = 0;
         _placementNeedsCheck = true;
         _placementLift = lift;
+        _placementStableTried = false;
+        _placementFallbackTried = false;
+        _entryFrom = null;
         _safetyFailed = false;
         _fov = WalkTuning.WalkFov;
     }
@@ -244,6 +241,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= Services.Get<IAppFlow>();
         CollisionReady = _collision.Ready(_feet, WalkTuning.Radius);
+        if (_placementNeedsCheck)
+        {
+            if (!CollisionReady || !ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
+        }
         var runtimeVelocity = Velocity.ToNumerics();
         _appFrozen = WalkMath.FreezeForAppState(_appFlow.State, _feet, ref _previousFeet, ref runtimeVelocity);
         if (_appFrozen)
@@ -264,17 +265,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         }
         // Ready covers the current 64 m tile plus eight neighbours. Never integrate into an unmounted tile.
         if (!CollisionReady) { _previousFeet = _feet; return; }
-        if (_placementNeedsCheck)
-        {
-            _placementNeedsCheck = false;
-            if (!_admission!.Accept(_map.World.Spatial, _collision, _feet,
-                _crouching ? WalkTuning.CrouchingHeight : WalkTuning.StandingHeight, _placementLift))
-            {
-                _rejectedLanding = _feet;
-                Recover(false);
-                return;
-            }
-        }
         if (_descentDuration > 0)
         {
             _descentElapsed += dt;
@@ -283,7 +273,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             _previousFeet = _feet;
             Velocity = Vector3.Down * WalkTuning.LandingSpeed;
         }
-        _sinceReturn += dt;
         _sinceJump += dt;
         _sinceSafe += dt;
         bool wasGrounded = Grounded;
@@ -307,6 +296,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         }
         else velocity.Y = MathF.Max(-WalkTuning.TerminalFallSpeed, velocity.Y - WalkTuning.Gravity * dt);
         var requested = new Vector3(velocity.X * dt, 0, velocity.Z * dt);
+        requested = LimitRegions(requested);
         if (_crouching && wasGrounded && !jump) requested = LimitCrouchEdge(requested);
         velocity.X = requested.X / dt;
         velocity.Z = requested.Z / dt;
@@ -323,11 +313,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         LimitSteepSlide();
         Grounded = IsOnFloor() || stepped;
         _feet = GlobalPosition.ToNumerics();
-        if (NeedsRecovery()) { Recover(false); return; }
-        if (Grounded) _rejectedLanding = null;
+        if (NeedsRecovery()) { Recover(); return; }
         if (Grounded && _sinceSafe >= WalkTuning.SafetyRecordSeconds && IsSafeRecordPoint())
         {
-            _safe.Add(BodyPose);
+            _lastStable = BodyPose;
             _sinceSafe = 0;
         }
         float desiredFov = WalkTuning.WalkFov * (sprint && Grounded && requested.LengthSquared() > 0 ? WalkTuning.SprintFovMultiplier : 1f);
@@ -425,100 +414,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         }
     }
 
-    private N.Vector3? FindLanding(Pose from, out N.Vector3 candidate)
-    {
-        var spatial = _map!.World.Spatial;
-        float ground = spatial.GroundY(from.Position.X, from.Position.Z);
-        candidate = new(from.Position.X, ground, from.Position.Z);
-        if (from.Position.Y - ground > 30f)
-        {
-            float pitch = from.PitchDeg * (float.Pi / 180f);
-            var direction = WalkMath.Direction(new(0, 1), from.YawDeg) * MathF.Cos(pitch);
-            direction.Y = MathF.Sin(pitch);
-            for (float distance = 2; distance <= 600; distance += 2)
-            {
-                var point = from.Position + direction * distance;
-                float? y = spatial.SupportY(point.X, point.Z, point.Y + 2f);
-                if (y is { } floor && point.Y <= floor)
-                {
-                    candidate = new(point.X, floor, point.Z);
-                    return WalkMath.CanWalk(spatial.WalkClassAt(point.X, point.Z)) ? candidate : null;
-                }
-            }
-        }
-        var support = WalkPlacementAdmission.ResolveSupport(spatial, from.Position);
-        if (support is { } known) candidate = known;
-        return support;
-    }
-
-    private bool ValidSurface(N.Vector3 feet)
-    {
-        if (_map is null || !WalkMath.Finite(feet)) return false;
-        return WalkPlacementAdmission.ResolveSupport(_map.World.Spatial, feet) is not null;
-    }
-
-    private bool NeedsRecovery() => WalkSafetyQueries.NeedsRecovery(_map!.World.Spatial, _feet);
-
-    private bool IsSafeRecordPoint()
-    {
-        if (!Grounded || _map is null || _collision is null || !ValidSavedFeet(_feet)) return false;
-        if (GetFloorNormal().Y < MathF.Cos(WalkTuning.SafetyRecordSlopeDegrees * (float.Pi / 180f))) return false;
-        var spatial = _map.World.Spatial;
-        if (spatial.WalkClassAt(_feet.X, _feet.Z) is not (WalkClass.Walk or WalkClass.Interior)) return false;
-        // Conservative radial samples exclude water, cliffs, forbidden cells and boundaries without a new contract.
-        ReadOnlySpan<N.Vector2> offsets = [new(1, 0), new(-1, 0), new(0, 1), new(0, -1),
-            new(.7071f, .7071f), new(-.7071f, .7071f), new(.7071f, -.7071f), new(-.7071f, -.7071f)];
-        foreach (var direction in offsets)
-        {
-            var check = _feet + new N.Vector3(direction.X, 0, direction.Y) * WalkTuning.BoundaryClearance;
-            if (spatial.WalkClassAt(check.X, check.Z) is not (WalkClass.Walk or WalkClass.Interior)) return false;
-            var support = spatial.SupportY(check.X, check.Z, _feet.Y + .2f);
-            if (support is null || MathF.Abs(support.Value - _feet.Y) > .2f) return false;
-            var hit = _collision.Sweep(_feet + N.Vector3.UnitY * WalkTuning.SafeMargin,
-                check + N.Vector3.UnitY * WalkTuning.SafeMargin, WalkTuning.Radius, _cylinder.Height);
-            if (hit is { Tag: SurfaceTag.Boundary }) return false;
-            if (hit is { } obstruction && obstruction.T * WalkTuning.BoundaryClearance < WalkTuning.SafetyClearance)
-                return false;
-        }
-        return true;
-    }
-
-    public bool ReturnToSafety() => Active && Recover(true);
-
-    private bool Recover(bool manual)
-    {
-        if (_map is null) return false;
-        if (_sinceReturn >= WalkTuning.ReturnRetrySeconds) _returnSkip = 0;
-        var target = WalkPlacementAdmission.Recover(_map.World.Spatial, _safe, BodyPose, manual, _returnSkip, _rejectedLanding);
-        if (target is not { } destination)
-        {
-            _safetyFailed = true;
-            Active = false;
-            CollisionReady = false;
-            Velocity = Vector3.Zero;
-            return false;
-        }
-        _returnSkip = _safe.IndexOf(destination) + 1;
-        Warp(destination);
-        _sinceReturn = 0;
-        SafetyReturnCount++;
-        return true;
-    }
-
-    private Pose ResolveSettledFeet()
-    {
-        if (IsSettled && ValidSavedFeet(_feet)) return BodyPose;
-        var recorded = _safe.Nearest(_feet, 0, 0, p => ValidSavedFeet(p.Position));
-        if (recorded is { } safe) return safe with { YawDeg = _yaw, PitchDeg = _pitch };
-        if (_map?.World.Spatial.NearestSafe(_feet, WalkTuning.SafetySearchRadius) is { } global && ValidSavedFeet(global))
-            return new(global, _yaw, _pitch);
-        var landing = _feet - N.Vector3.UnitY * WalkTuning.LandingLift;
-        if (_descentDuration > 0 && ValidSavedFeet(landing)) return new(landing, _yaw, _pitch);
-        if (ValidSavedFeet(_feet)) return BodyPose;
-        if (!Active && _map is { } map && DefaultFeet(map.Descriptor.Id) is { } start && ValidSavedFeet(start.Position)) return start;
-        throw new InvalidOperationException("Cannot capture a walk position without supported, dry feet.");
-    }
-
     private Pose EyeAt(N.Vector3 feet) => new(feet + N.Vector3.UnitY * EyeHeight, _yaw, _pitch, _fov);
 
     private static void ValidatePose(Pose pose)
@@ -531,8 +426,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         Leave();
         _map = null;
-        _safe.Clear();
-        _rejectedLanding = null;
+        _lastStable = null;
+        _entryFrom = null;
+        _placementNeedsCheck = false;
+        _hasPlacement = false;
         _sinceSafe = 0;
     }
 

@@ -341,7 +341,7 @@ internal sealed class CinematicSpawnMapStub : IMapService
             new("named", new("另一个点", "Other point"), WaypointGroup.Core, new(new(-30, 80, 50), 90, -25), null, null, new(17.5, Season.Autumn)),
         ];
         // This path intentionally has no files. Entry must not re-read waypoints.json.
-        _entry = new(descriptor, "res://cinematic-test-no-files/", "res://cinematic-test-no-files/", waypoints);
+        _entry = new(descriptor, "res://cinematic-test-no-files/", waypoints);
         Maps = [descriptor];
         Context = new MapContext(descriptor, new TestWorldModel(),
             BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()));
@@ -356,6 +356,5 @@ internal sealed class CinematicSpawnMapStub : IMapService
     internal sealed record MapContext(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext
     {
         public string DataRoot => "res://cinematic-test-no-files/";
-        public string BakeRoot => "res://cinematic-test-no-files/";
     }
 }

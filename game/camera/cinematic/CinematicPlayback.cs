@@ -41,12 +41,12 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
             FlowTuning.PresentationReadyTimeoutSeconds, "Cinematic cover has not been presented by FramePostDraw.");
     }
 
-    public Task Play(CinematicDef definition, CinematicAnchorSet anchors, ISpatialIndex spatial,
+    public Task Play(CinematicDef definition, CinematicAnchorSet anchors, IWorldModel world,
         AppState state, Func<WorldCue, bool, Task> worldCue)
     {
         if (IsPlaying) throw new InvalidOperationException("A cinematic is already playing.");
         if (!rules.Current.CinematicStates.Contains(state)) throw new InvalidOperationException("Ruleset forbids cinematic playback in this state.");
-        _track?.Dispose(); _track = new(definition, anchors, spatial);
+        _track?.Dispose(); _track = new(definition, anchors, world);
         _definition = definition; _worldCue = worldCue; _worldIndex = 0; Time = 0;
         _paused = false; _covered = false; _stopping = false; _pending = null; _finish = null; _veilTask = null; _carry = 0;
         _done = new();
