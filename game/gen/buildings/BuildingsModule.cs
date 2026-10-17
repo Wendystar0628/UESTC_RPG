@@ -5,6 +5,7 @@ using Campus.Gen.Buildings.Build;
 using Campus.Gen.Buildings.Mesh;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Rules;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Buildings;
 
@@ -137,8 +138,8 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     }
 
     /// <summary>
-    /// Wall colliders along the skin (SYS-WALK §13); each entrance span is DoorClosed: closed buildings stay closed
-    /// (WLD-INTERIORS §5.2). The WP-11 landings, slopes and steps in front of the doors bring their own colliders.
+    /// Wall colliders along the skin (SYS-WALK §13); declared open entrances cut their authored doorway range,
+    /// while closed entrances stay DoorClosed. The WP-11 landings, slopes and steps bring their own colliders.
     /// Collision cells are fixed 64 m cells.
     /// </summary>
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
@@ -155,6 +156,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         var list = new List<Collider>();
         var y0 = plan.SunkY;
         var y1 = plan.EdgeTopY;
+        var entry = ctx.World.Interiors.Get(plan.Id);
         var fi = 0;
         for (var r = 0; r < plan.RingCount; r++)
         {
@@ -163,22 +165,16 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
             {
                 var a = skin.Points[e];
                 var b = skin.Points[(e + 1) % skin.Count];
-                var d = skin.Dir[e];
                 var inward = -skin.Normal[e] * 0.15f;
-                var start = a;
-                foreach (var door in plan.Entrances.Where(x => x.Facade == fi).Select(plan.DoorOf).OrderBy(o => o.U0))
+                var openings = new List<EntranceWallOpening>();
+                foreach (var entrance in plan.Entrances.Where(x => x.Facade == fi))
                 {
-                    Add(start, a + d * door.U0, SurfaceTag.Wall);
-                    Add(a + d * door.U0, a + d * door.U1, SurfaceTag.DoorClosed);
-                    start = a + d * door.U1;
+                    var door = plan.DoorOf(entrance);
+                    var declaration = entrance.Anchor is { } anchor ? entry?.Entrances.FirstOrDefault(e => e.Id == anchor) : null;
+                    openings.Add(new(door.U0, door.U1, door.Y0, door.Y1, EntranceWallOpenings.IsOpen(entry, declaration)));
                 }
-                Add(start, b, SurfaceTag.Wall);
-
-                void Add(Vector2 p, Vector2 q, SurfaceTag tag)
-                {
-                    if (Vector2.Distance(p, q) < 0.05f) return;
-                    list.Add(new WallCollider(p + inward, q + inward, 0.15f, y0, y1, tag) { Foot = Contracts.Audio.FootMat.Concrete });
-                }
+                list.AddRange(EntranceWallOpenings.Cut(new WallCollider(a + inward, b + inward, 0.15f, y0, y1, SurfaceTag.Wall)
+                    { Foot = Contracts.Audio.FootMat.Concrete }, openings));
             }
         }
         foreach (var entrance in plan.Entrances) list.AddRange(EntranceKit.Colliders(EntranceKit.Pieces(plan, entrance)));
@@ -202,8 +198,10 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         {
             if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
             var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
+            var footprint = new PolygonRings(Array.AsReadOnly(plan.SkinOuter.Points.ToArray()),
+                Array.AsReadOnly(plan.SkinHoles.Select(h => (IReadOnlyList<Vector2>)Array.AsReadOnly(h.Points.ToArray())).ToArray()));
             traces.Add(new BuildingSourceTrace($"building/{plan.Id.Value}/{plan.Key}", plan.Id, plan.Key,
-                new ContentOutput(BuildOne(plan, block, lod, ctx.Catalog), []), CollideOne(ctx, plan)));
+                new ContentOutput(BuildOne(plan, block, lod, ctx.Catalog), []), CollideOne(ctx, plan), footprint));
         }
         return traces;
     }
@@ -213,4 +211,5 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
 /// One building of a level cell with the geometry and colliders it alone produced (<see cref="BuildingsModule.TraceSources"/>).
 /// <paramref name="SourceId"/> is <c>building/{Feature.Value}/{PartKey}</c>: stable, unique in a map, independent of visit order.
 /// </summary>
-public sealed record BuildingSourceTrace(string SourceId, FeatureId Feature, string PartKey, ContentOutput Output, IReadOnlyList<Collider> Colliders);
+public sealed record BuildingSourceTrace(string SourceId, FeatureId Feature, string PartKey, ContentOutput Output,
+    IReadOnlyList<Collider> Colliders, PolygonRings OccupiedFootprint);

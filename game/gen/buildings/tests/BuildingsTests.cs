@@ -696,22 +696,37 @@ public sealed class BuildingsTests
             var plan = set.Plans.Single(p => p.Key == key);
             Require(plan.Entrances.Single().Anchor is null && Layout(set, key) == Layout(generic, key), $"{key}: the anchor is left alone and the generic door stays");
         }
-        // Collision: one closed door span per entrance, the walls either side.
-        var colliders = module.Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
-        Require(colliders.Any(w => MathF.Abs(Vector2.Distance(w.A, w.B) - (door.U1 - door.U0)) < 1e-3f), "the anchor door is the closed span");
+        // The authored opening is clear, with the wall above and below the door retained.
+        foreach (var plan in new[] { dorm, set.Plans.Single(p => p.Key == "t:lab") })
+        {
+            var e = plan.Entrances.Single();
+            var opening = plan.DoorOf(e);
+            var centre = GlassCentre(plan, e);
+            var walls = module.Collide(Ctx(world, 2u), plan.Tile(LodLevel.L0)).OfType<WallCollider>().ToArray();
+            Require(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f)), $"{plan.Key}: open anchor must not be blocked");
+            Require(walls.Any(w => Blocks(w, centre, opening.Y0 - 0.1f)) && walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f)),
+                $"{plan.Key}: retain the wall below the threshold and above the lintel");
+        }
+        var closedPlan = generic.Plans.Single(p => p.Key == "t:dorm");
+        var closedEntrance = closedPlan.Entrances.Single();
+        var closedDoor = closedPlan.DoorOf(closedEntrance);
+        Require(module.Collide(Ctx(World(features), 2u), closedPlan.Tile(LodLevel.L0)).OfType<WallCollider>()
+            .Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, GlassCentre(closedPlan, closedEntrance), (closedDoor.Y0 + closedDoor.Y1) * 0.5f)),
+            "the undeclared generic entrance stays closed");
     }
 
     [TestCase]
     public void ClaimedFacadesOpenNoDoors()
     {
         // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
-        // landing, canopy and closed-door span with it (the zone pack builds that door).
+        // landing, canopy and doorway colliders with it (the zone pack builds that door).
         var features = new[] { Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(200, 0, 40, 16), 4, 15.6f, "research") };
         var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
         var module = new BuildingsModule();
         var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
         var tile = dorm.Tile(LodLevel.L0);
-        Require(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed),
+        Require(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any() &&
+            !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed),
             "unclaimed, WP-14 opens the anchor door");
         foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
         {
@@ -721,8 +736,8 @@ public sealed class BuildingsTests
             Require(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0, "the neighbour stays");
         }
 
-        // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): a closed-door
-        // span of WP-14 stands at exactly the open anchors of unclaimed features. The library (16b), Xuanbang's clock tower
+        // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): WP-14's
+        // authored openings at open anchors remain clear. The library (16b), Xuanbang's clock tower
         // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
         var real = RealCampus();
         var rctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
@@ -731,9 +746,10 @@ public sealed class BuildingsTests
         {
             var mine = BuildingsModule.Unclaimed(rctx, plan);
             var centre = GlassCentre(plan, e);
-            var spans = module.Collide(rctx, plan.Tile(LodLevel.L0)).OfType<WallCollider>()
-                .Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, centre) < 1f);
-            Require(spans == (mine ? 1 : 0), $"{e.Anchor} on {plan.Id.Value}: {(mine ? "WP-14's door" : "no WP-14 door")} ({spans} closed spans)");
+            var opening = plan.DoorOf(e);
+            var walls = module.Collide(rctx, plan.Tile(LodLevel.L0)).OfType<WallCollider>().ToArray();
+            Require(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f)), $"{e.Anchor} on {plan.Id.Value}: open doorway is clear");
+            if (mine) Require(walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f)), $"{e.Anchor}: the lintel remains");
         }
         foreach (var id in new[] { "lib.main", "xb.clock", "gym.deck" })
             Require(anchored.Any(x => x.Door.Anchor == id && !BuildingsModule.Unclaimed(rctx, x.Plan)), $"{id}: claimed by its zone pack, WP-14 gives way");
@@ -1138,8 +1154,8 @@ public sealed class BuildingsTests
         var cell = AssertTraceMatches(module, ctx, home, LodLevel.L0);
         Require(cell.Select(t => t.SourceId).SequenceEqual(["building/t:dorm/t:dorm", "building/t:lab/t:lab"]),
             "two buildings share the dorm's L0 cell, the claimed neighbour in it is not traced: " + string.Join(", ", cell.Select(t => t.SourceId)));
-        Require(cell[0].Colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed) && cell[0].Colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }),
-            "the dorm's colliders hold its closed door span and its flight of steps");
+        Require(!cell[0].Colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed) && cell[0].Colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }),
+            "the dorm's colliders leave its open door clear and retain its flight of steps");
         Require(ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"M42\"", StringComparison.Ordinal)) && ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"Y1\"", StringComparison.Ordinal)),
             "the dumps reach into the box transforms and the wall heights");
         Require(AssertTraceMatches(module, ctx, plans.Single(p => p.Key == "t:dorm").Tile(LodLevel.L2), LodLevel.L2).Count == 5, "all five buildings share the L2 cell");
@@ -1205,6 +1221,17 @@ public sealed class BuildingsTests
         Require(traces.SelectMany(t => t.Output.Parts).SequenceEqual(built.Parts) && traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.Instances),
             $"{cell}: the traced parts and instances are the Build ones");
         var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        foreach (var trace in traces)
+        {
+            var plan = set.Plans.Single(p => p.Key == trace.PartKey);
+            Require(trace.OccupiedFootprint.Outer.SequenceEqual(plan.SkinOuter.Points) &&
+                trace.OccupiedFootprint.Holes.Count == plan.SkinHoles.Count &&
+                trace.OccupiedFootprint.Holes.Zip(plan.SkinHoles).All(h => h.First.SequenceEqual(h.Second.Points)),
+                $"{cell}: source footprint follows the generated wall skin, including courtyard holes");
+            Require(!ReferenceEquals(trace.OccupiedFootprint.Outer, plan.SkinOuter.Points) &&
+                trace.OccupiedFootprint.Holes.Zip(plan.SkinHoles).All(h => !ReferenceEquals(h.First, h.Second.Points)),
+                $"{cell}: source footprint is a snapshot of the plan");
+        }
         var cells = lod == LodLevel.L0 ? new[] { tile } : set.Plans.Where(p => traces.Any(t => t.PartKey == p.Key)).Select(p => p.Tile(LodLevel.L0)).Distinct().ToArray();
         var expected = ColliderDumps(cells.SelectMany(c => module.Collide(ctx, c)));
         var actual = ColliderDumps(traces.SelectMany(t => t.Colliders));
@@ -1270,6 +1297,13 @@ public sealed class BuildingsTests
         var skin = plan.SkinAt(plan.Facades[e.Facade].Ring);
         var edge = plan.Facades[e.Facade].Edge;
         return skin.Points[edge] + skin.Dir[edge] * ((door.U0 + door.U1) * 0.5f) - skin.Normal[edge] * plan.Reveal;
+    }
+
+    private static bool Blocks(WallCollider wall, Vector2 point, float y)
+    {
+        var edge = wall.B - wall.A;
+        var t = Math.Clamp(Vector2.Dot(point - wall.A, edge) / edge.LengthSquared(), 0f, 1f);
+        return y > wall.Y0 && y < wall.Y1 && Vector2.Distance(point, wall.A + edge * t) <= wall.HalfT + 0.0001f;
     }
 
     /// <summary>An open entrance of a feature: door centre (floor height in Y), facing yaw (0 north, 90 east), outside landing 2.5 m out.</summary>
