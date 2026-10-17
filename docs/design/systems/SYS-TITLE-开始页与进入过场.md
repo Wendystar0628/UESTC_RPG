@@ -498,7 +498,7 @@ game/data/maps/qingshuihe/cinematics/
 | `end` | 终点位姿、观察模式（继续时取存档）、交还后的流逝倍率、是否出标题卡和首次引导 | 新游戏的终态必须等于本图默认状态（§8.4 的检查） |
 
 - 现在没有"角色轨"。以后要加新的轨，提高 `format` 并加类型；本构建遇到不认识的轨，由检查报错，不静默忽略。
-- 对应的 C# 记录（`CinematicDef`、`CameraSeg`、`WorldCue`、`MaskSeg`、`CaptionCue`、`ExtraCue`、`AudioCue`、`CinematicEnd`）放在 `game/contracts/Cinematic/`，纯 .NET，字段与上面的 JSON 一一对应，由 WP-00 合入。
+- 对应的 C# 记录（`CinematicDef`、`CameraSeg`、`WorldCue`、`MaskSeg`、`CaptionCue`、`ExtraCue`、`AudioCue`、`CinematicEnd`）放在 `game/contracts/Cinematic/`，纯 .NET，字段与上面的 JSON 一一对应，由 WP-00 交付。
 
 ### 8.3 `CinematicPlayer`
 

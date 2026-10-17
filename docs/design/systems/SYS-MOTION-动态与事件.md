@@ -133,7 +133,7 @@ gates: [G4, G12, G13, G16, G21]
   - **服务**：动画时钟属于 WorldState，是 Kernel 的一个 C# 服务（不单独做 Autoload），`ProcessPriority = −1000`，排在相机之后、主光之前（SYS-TIME §1）。它的 `ProcessMode` 设为 Always，所以 `SceneTree.Paused` 也不让它停；"暂停"只是世界时钟的流逝模式（§1.5）。
   - **推进**：每帧在 `_Process(double delta)` 里 `AnimTime = (AnimTime + delta) % 480`，用 double 累加，单帧 delta 上限 0.1 s（防卡顿后跳一大步）；初值来自命令行参数 `--anim`。偶发事件和转场用的"真实秒"是另一个只增不绕的 double 计时，同样由 delta 累加。不读 `DateTime.Now`、`Stopwatch`，也不用计时器节点（G4）。
   - **进入着色器**：每帧 `RenderingServer.GlobalShaderParameterSet("anim_time", (float)AnimTime)`。`anim_time` 在项目设置的 Shader Globals 里登记（ENG-PERF §1.5）。
-  - **禁用 `TIME`**：着色器里不准用内置 `TIME`：它受 `Engine.TimeScale` 缩放，默认还每 3600 s 回绕一次。白名单着色器出现 `TIME` 就不能合入（着色器静态检查，WP-27 挂进 ENG-GATES §2）。
+  - **禁用 `TIME`**：着色器里不准用内置 `TIME`：它受 `Engine.TimeScale` 缩放，默认还每 3600 s 回绕一次。白名单着色器出现 `TIME` 就不能推送（着色器静态检查，WP-27 挂进 ENG-GATES §2）。
   - **`Engine.TimeScale` 固定为 1**：它会缩放 delta，也会缩放 `TIME`。倍速只改世界时钟（SYS-TIME §1）。
   - **可复现**：Movie Maker（`--write-movie … --fixed-fps 60`）下 delta 恒定，同一组命令行参数每次出的帧序列相同，供 ENG-GATES §2 的 G13 使用。
   - **声音的计时**（SYS-AUDIO §7.1、SYS-AUDIO §16）：音频同样只用帧间隔累加的真实秒，单帧上限 0.1 s，不用 `Timer` 节点、`Time.GetTicks*`、`DateTime`。`AudioServer.PlaybackSpeedScale` 与 `Engine.TimeScale` 一样固定为 1，倍速不改变声音的音高和节奏。

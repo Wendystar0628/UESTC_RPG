@@ -394,7 +394,7 @@ game/data/
 
 ## 13 同图重载门禁
 
-属于 **G16 管线编译与切图**（要窗口和显卡，与管线编译检查同排 GPU 锁）。不需要引擎的部分属于 G2。WP-46 在 `game/kernel/map` 里实现引擎内的驱动（只在 `--gate=maptravel` 时启用），WP-27 把它接进 `scripts\gate.ps1`。
+属于 **G16 管线编译与切图**（要窗口和显卡，与管线编译检查同排 构建锁）。不需要引擎的部分属于 G2。WP-46 在 `game/kernel/map` 里实现引擎内的驱动（只在 `--gate=maptravel` 时启用），WP-27 把它接进 `scripts\gate.ps1`。
 
 **做法**：
 

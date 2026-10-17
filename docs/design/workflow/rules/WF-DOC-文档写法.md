@@ -175,4 +175,4 @@ paths: ["docs/design/**"]
 
 - **谁改**：共识层、WF-* 和 ENG-WP、ENG-ARCH 等共享文档由主会话改（或由它分派、按确切文字改）；子代理需要改时在回报里提。
 - **改完以后**：重跑 `scripts/docs/gen_index.py`，重新生成文档地图 `docs/design/DOCMAP.md` 和小节目录 `docs/design/SECTIONS.md`，再跑 `scripts/docs/check_docs.py`，problems 为 0。`gen_index.py` 按文件头的 `category` 分类，加新类别要改脚本里的分类表。
-- **索引冲突**：取任一边后重跑 `gen_index.py`，不手工合并。
+- **主会话改文档**：在主检出 `main` 上改，`git add docs/...` 只加文档，`check_docs.py` problems 为 0 后提交并推送；`DOCMAP.md`、`SECTIONS.md` 由改文档的人重跑 `gen_index.py` 一起提交（WF-RULE §7）。

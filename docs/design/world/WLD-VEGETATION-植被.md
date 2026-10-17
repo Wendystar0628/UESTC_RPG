@@ -64,7 +64,7 @@ gates: [G2, G4, G5, G7, G8, G10, G12, G13, G15, G16, G17, G21]
 - **建筑、车顶、长椅要按法线覆雪**：用同一套写法：法线先从视空间转到世界，`(n.y − 0.55) / 0.35 × AO × snow` 与噪声做抗锯齿阈值（§9.6、§11.7）
 - **写季节、风、雪的全局参数（WP-34、WP-38、WP-26）**：`season`、`wind`、`snow`、`ground_amt` 的内容和写入者按 §11.6 的表；全局参数禁止从脚本读回（§11.6）
 - **驱动树的摆动和飘落（SYS-MOTION、WP-26）**：摆幅、相位、发射点、季节错相在树种表和 `INSTANCE_CUSTOM` 里，风在同一个 `vertex()` 里读，不经 CPU（§8、§11.2）
-- **着色器里按离相机多远做判断**：用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`；植被着色器违反即不能合入，静态检查由 WP-27 挂进门禁（§11.3）
+- **着色器里按离相机多远做判断**：用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`；植被着色器违反即不能推送，静态检查由 WP-27 挂进门禁（§11.3）
 - **外围的树（WP-08、WP-47）**：WP-08 给外围树点，本包实例化，额度计入 WP-47；O1、O2 不读地面遮罩，本包不给它们出树冠投影（§4.1、§9.5）
 - **烘焙行走碰撞（WP-43）**：本包输出树干的竖直圆柱和挡路绿篱的盒体图元，`Foot` 分别是 `Bark`、`Hedge`；其余植被不碰撞（§10）
 - **音频（WP-53）**：叶声音色按布点里的树种分四类；脚下的落叶读 `IGroundCover` 用的 CPU 副本；树下的雨声读地面遮罩 2 的 B 通道乘叶量（§12）
@@ -512,7 +512,7 @@ WP-23 的生成器（`game/gen/vegetation/`，纯 .NET）按布点输出碰撞�
 ### 11.3 阴影通道与 MAIN_CAM 门禁
 
 - **阴影自动跟随**：着色器只要用了 `vertex()`、discard 或 alpha scissor，阴影通道和深度预通道就编译同一段 `vertex()` 代码。风、叶量缩放、团块收缩、过渡带塌缩都自动跟到影子上，由引擎保证，不用手写阴影深度程序。
-- **MAIN_CAM 门禁**：阴影通道里，`CAMERA_POSITION_WORLD` 和 `INV_VIEW_MATRIX` 是灯的视角。凡是按"离相机多远"做的判断（近池过渡带、1.5 m 内插片塌缩、远池抖动分级、草环），一律用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`。否则影子按灯的位置选级，和看得见的树对不上。门禁：植被 include 和植被着色器里出现 `CAMERA_POSITION_WORLD`，或用 `INV_VIEW_MATRIX[3]` 取相机位置，就不能合入（着色器静态检查，由 WP-27 挂进 ENG-GATES §2 的门禁）。
+- **MAIN_CAM 门禁**：阴影通道里，`CAMERA_POSITION_WORLD` 和 `INV_VIEW_MATRIX` 是灯的视角。凡是按"离相机多远"做的判断（近池过渡带、1.5 m 内插片塌缩、远池抖动分级、草环），一律用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`。否则影子按灯的位置选级，和看得见的树对不上。门禁：植被 include 和植被着色器里出现 `CAMERA_POSITION_WORLD`，或用 `INV_VIEW_MATRIX[3]` 取相机位置，就不能推送（着色器静态检查，由 WP-27 挂进 ENG-GATES §2 的门禁）。
 - **阴影通道不做屏幕抖动**：屏幕 Bayer 在阴影图上没有意义。远近过渡带里，阴影通道改按每株种子整株二选一（`IN_SHADOW_PASS` 分支，全局标志，几乎不花代价），所以同一株不会同时投出 L1 和 L2 两份影子。
 - **投影物**：
   - 本体设 `cast_shadow = Off`；另建一个 `ShadowsOnly` 的代理 MultiMesh，用 L1 团块网格，团块按噪声挖出 0.4–0.8 m 的洞，形成林荫光斑（ENG-PERF §9）。代理和本体用同一个 include 里的叶量函数，冬季影子跟着变稀。

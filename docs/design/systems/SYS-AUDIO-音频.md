@@ -1230,7 +1230,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ## 19 C# 契约
 
-放在 `game/contracts/Audio/`（命名空间 `Campus.Contracts.Audio`，纯 .NET，向量用 `System.Numerics`），由 WP-00 先作为候选契约和桩合入；这一组的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结（D-134），冻结后枚举只能在末尾追加（JSON 按字符串存，旧值不变）；会追加值的枚举（`DuckReason`、`AudioGroup`、`FoleyKind` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错（ENG-ROADMAP §6 第 4 条）。观者声的送量用 `ListenerRouting` 表达（一个播放器只能走一条总线，送量必须拆成多路）；室内档案统一用 `AmbienceProfileId`。
+放在 `game/contracts/Audio/`（命名空间 `Campus.Contracts.Audio`，纯 .NET，向量用 `System.Numerics`），由 WP-00 先作为候选契约和桩交付；这一组的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结（D-134），冻结后枚举只能在末尾追加（JSON 按字符串存，旧值不变）；会追加值的枚举（`DuckReason`、`AudioGroup`、`FoleyKind` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错（ENG-ROADMAP §6 第 4 条）。观者声的送量用 `ListenerRouting` 表达（一个播放器只能走一条总线，送量必须拆成多路）；室内档案统一用 `AmbienceProfileId`。
 
 > 契约类型与签名以 `game/contracts/Audio/`为准。
 

@@ -39,8 +39,8 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 ## 1 改哪里
 
-- **只改本包的独占目录**：见 ENG-WP §2 的"独占目录"一列和 `ownership.json`；子包各自独占原包目录下的一个子目录（ENG-WP §3）。
-- **共享文件不自己改**：清单见 CORE-CONVENTIONS §5.1。工程共享件（契约、全部 csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/wt/` 等）由 Astra 改、经主会话合入；`docs/design/` 由主会话改。
+- **只改本包的独占目录**：见 ENG-WP §2 的"独占目录"一列和 `ownership.json`；子包各自独占原包目录下的一个子目录（ENG-WP §3）。独占目录就是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
+- **共享文件不自己改**：清单见 CORE-CONVENTIONS §5.1。工程共享件（契约、全部 csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Astra 直接提交推送；`docs/design/` 由主会话改。
 - **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请（`.collab/requests/contract-*.md`）交 Astra。契约分批冻结，已冻结的组只增不改（ENG-ARCH §3，D-134）。
 - **新模块用特性接入**：`[ContentModule]`、`[Part]`、`[KernelNode]`、`[KernelService]`、`[SaveSection]`、`[AmbientEmitter]`、`[InteriorProvider]`、`[MediumPresenter]`、`[QualityResponsive]`；不改注册表、不改主场景、不加 Autoload（ENG-ARCH §2）。
 - **场景与路径**：不在编辑器里打开或重存场景，场景尽量由代码生成；代码里只用 `res://` 路径，不手写 `uid://`；新文件的 `.uid` 由 `--headless --import` 生成，跟源文件一起提交，复制文件时删掉复制来的 `.uid`；不写 GDScript。

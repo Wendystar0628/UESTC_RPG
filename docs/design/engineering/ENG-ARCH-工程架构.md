@@ -2,8 +2,8 @@
 id: ENG-ARCH
 title: 工程架构：模块边界、接口契约与并行开发流程
 category: engineering
-summary: 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
-keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用写法, BannedApiAnalyzers, ArchUnitNET, 确定性, DetMath, StableHash, 自动发现, 特性注册, ContentModule, KernelNode, KernelService, Autoload, 契约, 契约冻结, PublicApiAnalyzers, ContractJson, 桩, 占位实现, 资源管线, 本机烘焙, .tbin, 缓存键, 工作树, git 流程, 合并队列, net10.0]
+summary: 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
+keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用写法, BannedApiAnalyzers, ArchUnitNET, 确定性, DetMath, StableHash, 自动发现, 特性注册, ContentModule, KernelNode, KernelService, Autoload, 契约, 契约冻结, PublicApiAnalyzers, ContractJson, 桩, 占位实现, 资源管线, 本机烘焙, .tbin, 缓存键, 构建与测试排队, 构建锁, net10.0]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, ENG-GATES, ENG-WP, ENG-PERF]
@@ -58,10 +58,10 @@ gates: [G1, G2, G3, G4, G5, G6]
 ---
 # ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-> **范围**：本文规定 Godot 工程的目录结构与归属、程序集边界与禁用写法、确定性规则、自动发现、全部 C# 契约（§3 是契约的权威来源）、帧顺序、资源管线、桩、git 工作树流程和主要风险。所有子代理都按这里的约定写代码，让 20–40 个子代理同时工作也不互相覆盖。
+> **范围**：本文规定 Godot 工程的目录结构与归属、程序集边界与禁用写法、确定性规则、自动发现、全部 C# 契约（§3 是契约的权威来源）、帧顺序、资源管线、桩、构建与测试排队和主要风险。所有子代理都按这里的约定写代码，让 20–40 个子代理同时工作也不互相覆盖。
 > **不在本文**：各系统的行为细则以各自的文档为准（例如门的参数 WLD-INTERIORS §4.1、天气 SYS-WEATHER）；全局参数登记表见 ENG-PERF §1.5；预算见 ENG-BUDGET；门禁判据见 ENG-GATES；工作包分工见 ENG-WP；以后的扩展路线见 ENG-ROADMAP。
-> **查阅**：先读 §0；目录归属、程序集边界、禁用写法与自动发现看 §2；契约签名看 §3；资源管线与本机烘焙看 §4；桩看 §5；工作树的技术细节看 §6；git 与合并流程看 WF-MERGE §5；风险与待验证项看 §7、§9；RPG 扩展点看 §8
-> **读者与技术栈**：写代码的子代理先看 §0 的接入要点，再按"查阅"一行查要用的那一节；主代理另查 §5–§7 的桩、合并队列与风险。引擎是 Godot 4.7.2-stable .NET 版，目标框架 net10.0（D-177），只做 PC（Windows），渲染器 Forward+；代码全部用 C#，着色器用 Godot 着色语言（`.gdshader`、`.gdshaderinc`），计算着色器用 GLSL（`.glsl`）；§3 的 Godot 侧写法以 [引擎 C# API 参考](../../godot-api/README.md) 的签名为准。
+> **查阅**：先读 §0；目录归属、程序集边界、禁用写法与自动发现看 §2；契约签名看 §3；资源管线与本机烘焙看 §4；桩看 §5；构建与测试排队看 §6；git 与回滚看 WF-RULE §7；风险与待验证项看 §7、§9；RPG 扩展点看 §8
+> **读者与技术栈**：写代码的子代理先看 §0 的接入要点，再按"查阅"一行查要用的那一节；主代理另查 §5–§7 的桩、构建与测试排队与风险。引擎是 Godot 4.7.2-stable .NET 版，目标框架 net10.0（D-177），只做 PC（Windows），渲染器 Forward+；代码全部用 C#，着色器用 Godot 着色语言（`.gdshader`、`.gdshaderinc`），计算着色器用 GLSL（`.glsl`）；§3 的 Godot 侧写法以 [引擎 C# API 参考](../../godot-api/README.md) 的签名为准。
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ENG-GATES 验收门禁](ENG-GATES-验收与门禁.md)、[ENG-BUDGET 性能预算](ENG-BUDGET-性能预算与硬规则.md)、[ENG-WP 工作包](ENG-WP-工作包派工单.md)、[ENG-PERF 性能工程](ENG-PERF-性能工程.md)、[ART-STYLE 风格基础](../art/ART-STYLE-风格基础.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION-动态与事件.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW-观察模式介质与开场.md)、[SYS-TIME 时间季节](../systems/SYS-TIME-时间与季节.md)、[UI-NAV 界面与跳转](../ui/UI-NAV-界面与操作说明.md)、[SYS-WALK 行走](../systems/SYS-WALK-行走模式.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER-天气.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS-画面设置.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL-界面视觉语言.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS-平面地图与传送.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE-开始页与进入过场.md)、[SYS-SAVE 存档](../systems/SYS-SAVE-存档与持久化.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS-多地图.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS-边界与外围.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS-室内.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO-音频.md)、[ENG-ROADMAP 扩展路线](ENG-ROADMAP-扩展路线.md)、[WLD-TERRAIN 地形](../world/WLD-TERRAIN-地形.md)
 
 ## 0 结论
@@ -73,7 +73,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 5. **契约以源码为准**：§3只维护源码索引；改设计按WF-RULE §10同批迁完使用方与公开API记录、schema和文档，不保留旧接口。
 6. **几何在本机烘焙**：几何一律由 gen 的 `Build()` 生成（经批准的英雄资产除外）；L0–L3 格包等在玩家机器上第一次需要时烘焙进本机缓存，用自定义 `.tbin`，不用 Godot 资源格式；L4 和全图常驻小数据随启动集发；贴图是 PNG 源图加 Godot 导入（§4、D-165）。
 7. **生产入口唯一**：未交付能力可用显式桩；真实实现接入时，同批移除被替代的生产桩和旧执行入口。测试替身不带运行时注册，不能代替正式核心验收（§2、§5）。
-8. **一个代理一个工作树**：多个代理同时写代码时，各用一个工作树和本地分支 `wp/<xx>-<slug>`，不推送；合并由主会话批准、值班执行者排队执行（WF-MERGE）。
+8. **同一主检出，一个文件一个写者**：所有代理在主检出 `main` 上直接改，按独占目录分工；构建与测试一次只跑一个，用锁排队（§6，D-211）。
 9. **目标框架 net10.0**：引擎锁定 Godot 4.7.2-stable .NET 版，契约语言版本 C# 14；D0 跑通构建到导出版启动的全链路，不通时报作者（§3、§7、D-177）。
 
 ### 0.1 接入要点
@@ -88,13 +88,13 @@ gates: [G1, G2, G3, G4, G5, G6]
 - **要改契约，或加全局着色器参数、着色器文件、程序集引用、NuGet 包**：向主代理申请，由主代理改（§3、D-134）
 - **依赖的包还没交付**：照桩开发；本区特有的部件建在自己目录里，ID 加区名前缀，证明能复用再申请提升（§5）
 - **加贴图、模型、字体或音频**：区域包不自带大于 512² 的贴图，向 WP-04 申请图集槽位或数组层；外部模型先经主代理批准，放 `game/assets/hero/`；每个资源登记许可、脚本、哈希和体积（§4）
-- **多个代理并行写代码时**：用 `scripts\wt\new.ps1` 开工作树，在本地分支小步提交，不推送、不碰 `main`；`main` 有新合入后 `git rebase main`（WF-MERGE §4）；只走命令行，不在编辑器里重存场景（§6）
+- **多个代理并行写代码时**：在主检出 `main` 上只改自己的文件，小步提交，测完推送，回滚用 `git revert`（WF-RULE §7）；`dotnet build`、`--import`、烘焙、`gate.ps1`、截图一次只跑一个，等锁不绕过；只走命令行，不在编辑器里重存场景（§6）
 
 ## 1 资源管线迁移约定
 
 资源管线以 `pipeline/` 为现行实现与数据位置；旧网页栈迁移记录不再在此维护。管线输入和输出遵守以下约定（WP-08；WP-47、WP-04、WP-37、WP-44 共用）：
 
-- 同一份已提交输入在任何工作树重建，输出逐字节相同。
+- 同一份已提交输入重建，输出逐字节相同。
 - 快照日期取自随快照提交的元数据，不读文件修改时间。
 - 默认离线生成；刷新快照须显式执行，并与元数据一并提交。
 - Python 依赖按 `pipeline/requirements.lock` 锁定；实体 ID 遵守 CORE-CONVENTIONS §3 的稳定规则。
@@ -131,7 +131,7 @@ UESTC_RPG/
 ├─ game/                     Godot 项目根（res://）：project.godot、Campus.sln、Campus.csproj（主程序集，Godot 侧代码）、
 │                            Campus.Tests.csproj、Campus.Gen.Tests.csproj、export_presets.cfg、.editorconfig、
 │                            Directory.Build.props、Directory.Packages.props、packages.lock.json（主代理独占）；
-│                            override.cfg（每个工作树生成，不进 git）
+│                            override.cfg（开发态 `user://` 指向 `UESTC_DEV`，不进 git）
 │  ├─ contracts/             WP-00  Campus.Contracts：纯 .NET 契约程序集（接口、record，用 System.Numerics，不引用 GodotSharp），带 PublicAPI.*.txt；
 │  │                         子目录 Quality/、Maps/、Atlas/、Flow/、Cinematic/、Save/、Audio/、Bake/、Parts/、schemas/；Entities/ 是 RPG 预留，观光期不写入
 │  ├─ gen/                   纯 .NET 的生成器程序集（Campus.Gen.*）：部件库、建筑、地面、各区、设计增补、植被布点、碰撞图元、可行走数据、
@@ -182,7 +182,7 @@ UESTC_RPG/
 │  └─ addons/                第三方插件（gdUnit4 等），主代理维护，登记在 third_party.json
 ├─ pipeline/                 原 scripts/data（Python OSM 管线，WP-08；raw/<地图>/ 归 WP-08；walk/、nav/ 子目录 WP-44）、assets/（贴图生成脚本，WP-04）、
 │                            colorscript/（WP-37）、outskirts/（WP-47）、map/（底图烘焙器，WP-48a）、audio/（素材管线，WP-53e）
-├─ scripts/                  gate.ps1（统一入口）与 gates/（门禁编排，WP-27；matrix 子目录 WP-41）、wt/（工作树脚本，WP-00）、
+├─ scripts/                  gate.ps1（统一入口）与 gates/（门禁编排，WP-27；matrix 子目录 WP-41）、lib/（脚本公共库，WP-00）、
 │                            devices/（核显实测与设备登记，WP-32）、godot-api/（API 参考生成，主代理）、docs/（文档总索引生成与校验，主代理）
 ├─ tools/godot-version.txt   锁定的版本串 4.7.2.stable.mono.official.ed1daf0bf
 ├─ docs/                     design/、godot-api/
@@ -191,7 +191,7 @@ UESTC_RPG/
 
 ### 生成物与资源位置
 
-不进 git 的位置：仓库外的工作树 `..\UESTC_RPG.wt\<WP-xx>\`、GPU 锁 `..\UESTC_RPG.wt\.locks\`、开发和 CI 的烘焙缓存 `..\UESTC_RPG.cache\bake\<地图>\`（§4，按图分目录；玩家机器上的本机缓存在 `user://cache/bake/`，不在仓库里）；仓库里的导出产物 `build/`、日志与截图 `output/`。音频的母带与素材（`*.wav`、`*.ogg`）进 Git LFS；仓库公开时，只许随游戏发布、不许公开分发的素材（如 Sonniss）放私有素材库（SYS-AUDIO §14.3）。
+不进 git 的位置：构建锁（位置以 `scripts\` 为准）、开发和 CI 的烘焙缓存 `..\UESTC_RPG.cache\bake\<地图>\`（§4，按图分目录；玩家机器上的本机缓存在 `user://cache/bake/`，不在仓库里）；仓库里的导出产物 `build/`、日志与截图 `output/`。音频的母带与素材（`*.wav`、`*.ogg`）进 Git LFS；仓库公开时，只许随游戏发布、不许公开分发的素材（如 Sonniss）放私有素材库（SYS-AUDIO §14.3）。
 
 ### 归属依据
 
@@ -369,12 +369,12 @@ UESTC_RPG/
   - 遮挡体每图一份，随 L4 放在启动集 `boot_<地图>.pck` 里，在切图的 Mount 那一步加载，不进 TileBundle（WP-33，ENG-PERF §4、SYS-MAPS §4.2）。
   - 碰撞级 C 每格单独一个 `.tbin`（同一种格式，只装碰撞形状参数和统计），与 TileBundle 分开，只在行走模式下加载（WP-43，SYS-WALK §13）。
   - 路灯灯光表这类派生数据纹理也由烘焙器的子任务产出，是全图常驻的小数据：开发和 CI 的烘焙器出，随启动集发，不在本机烘焙。
-  - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 GPU 锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
+  - 需要窗口和 GPU 的烘焙（例如 L2 的半八面体替身，如果 P0 选了它）不能在无界面模式下跑，要排进 构建锁（ENG-PERF §12.5）；这类产物只在开发期出，随启动集发布，不在玩家机器上烘。
   - **缓存键**（SYS-MAPS §2.4、ENG-PERF §5）：`ABI/地图/数据哈希/模块@代码哈希/级别/tileId`；室内包、碰撞级 C、底图也各有自己的键（§4"其他烘焙子任务"）。数据哈希只算本图里影响 `Build()` 的输入：`campus.json`、`network.json`、`zones.json`、全部覆盖层、`interiors.json`、`outskirts.json`、`fidelity.json`、`backdrop.json`，以及 `map.json` 的 `seed`、`dataRect`；改出生点、默认状态、过场、点位不重烘。
-    - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与工作树路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
+    - **代码哈希**是模块的生成代码指纹，包含它的全部共享生成依赖：模块所在的程序集，加上它传递引用的本仓库程序集（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`），取这些程序集的源文件和项目文件，再加 `global.json`、`Directory.Build.props`、`Directory.Packages.props`。构建时按相对路径排序算出，写进构建信息（本节末尾），与仓库所在路径无关。共享部件或世界模型的代码一改，所有引用它的模块都换键重烘。
     - 内核里的表面打包和 `.tbin` 读写代码不算模块代码：改了它们的输出字节，就提高 ABI 里的格式版本。
   - **缓存位置**：
-    - 开发和 CI：仓库外的共享缓存目录，路径从环境变量 `UESTC_BAKE_CACHE` 读，默认 `E:\Project\UESTC_RPG.cache\bake\`，按图分子目录 `<UESTC_BAKE_CACHE>\<地图>\`，各图互不覆盖。各工作树共用，按区单独烘焙；产物不进 git。
+    - 开发和 CI：仓库外的共享缓存目录，路径从环境变量 `UESTC_BAKE_CACHE` 读，默认 `E:\Project\UESTC_RPG.cache\bake\`，按图分子目录 `<UESTC_BAKE_CACHE>\<地图>\`，各图互不覆盖。按区单独烘焙；产物不进 git。
     - 玩家：`user://cache/bake/<地图>/<ABI>/…`，即导出版的 `%APPDATA%` 下，文件布局与缓存键与开发共享缓存相同。只有 `IBakeService` 读写这里，用 `.tbin`，不经 `ResourceLoader`、`ResourceSaver`（§2）。
     - `--bake-cache=<绝对路径>` 换缓存目录。默认是 `user://cache/bake/`；开发态默认指向 `UESTC_BAKE_CACHE`，所以开发与玩家走同一套逻辑（ENG-GATES §1）。
   - **缓存文件与校验**：写盘先写 tmp，`Flush` 后改名。读到长度超限、解析越界或哈希与 manifest 不符的文件时，删掉它，自动重建一次；新产物就绪前同样按 manifest 校验，仍不符就以 `BakeState.Failed` 结束，不再循环重烘（ENG-PERF §5"损坏、校验失败与终态"）；`cache.index` 只用于 LRU，不作信任依据。
@@ -440,9 +440,9 @@ UESTC_RPG/
   - 各模块的代码哈希（§4"缓存键"）。
   - **谁读它**：显示版本的界面、`SaveMeta.Build`、日志第一行与诊断摘要（ENG-PERF §12.6）、`output/perf/` 报告、分发压缩包名 `UESTC-<版本>-win64.7z` 一律读它，别处不另写版本号。对外发布的构建必须来自干净的提交（`Commit` 不带 `-dirty`）；导出、发布与更新的步骤见 OPS-RELEASE。
 
-## 5 接口先定、桩先合入
+## 5 接口先定、桩先交付
 
-WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这样所有工作包第一天就能运行和截图：
+WP-00 交付时自带一套能跑、但很简陋的桩（占位实现）。这样所有工作包第一天就能运行和截图：
 
 | 桩 | 行为 |
 | --- | --- |
@@ -479,34 +479,26 @@ WP-00 合入时自带一套能跑、但很简陋的桩（占位实现）。这�
 - 区域包直接按 ID 放置部件，先显示成方块；部件包完成后，方块自动换成真模型。
 - 区域包需要特有部件时，在自己的目录里新建，ID 加上区名前缀。证明可以复用后，再申请提升为共享部件。
 
-## 6 工作树的技术细节
+## 6 构建与测试排队
 
-git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；谁能改哪些共享文件见 CORE-CONVENTIONS §5.1。本节只写工作树里的技术细节。
+所有代理共用主检出 `E:\Project\UESTC_RPG` 这一棵树，`bin/`、`obj/`、`.godot/` 和烘焙缓存也共用。git 与回滚见 WF-RULE §7，防打架与编译被邻居弄坏时怎么办见 WF-FLOW §2，谁能改哪些共享文件见 CORE-CONVENTIONS §5.1。
 
 引擎路径一律从环境变量 `UESTC_GODOT` 读命令行版 exe，默认 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`。门禁比对 `--version` 的输出与 `tools/godot-version.txt`。
 
-工作树之间靠"每个工作树一个 `override.cfg` + 复制 `.godot` 做种子"隔离。
-
-1. **仓库配置**：
+1. **一次只跑一个**：`dotnet build`、`--headless --import`、烘焙（含本机烘焙）、`gate.ps1`、截图和基准同一时刻只许一个在跑，用 `scripts\` 里那把锁（容量 1，以脚本为准）排队。拿不到锁就等，不绕过：不另起进程抢跑，不删锁文件，不为赶时间并行。`gate.ps1` 自己取锁；手跑 `dotnet build`、`--import` 时也经同一把锁。
+2. **仓库配置**：
    - `.gitattributes` 是 `* text=auto eol=lf`，图片、`.res`、`.glb`、`.pck`、字体的 binary 标记，音频走 Git LFS（`*.wav`、`*.ogg`，SYS-AUDIO §14.3）；
    - `.gitignore` 含 `.godot/`、`override.cfg`、`bin/`、`obj/`、`.vs/`、`*.user`、`output/`、`.venv/`、`__pycache__/`、`build/`；
-   - 主检出有 `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`），让开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
-2. **新工作树**由 `scripts\wt\new.ps1` 完成，以脚本为准：从当前 `main` 拉本地分支；把主检出的 `game\.godot`（不含 `shader_cache`）复制过去做导入种子；写 `game\override.cfg`，`custom_user_dir_name` 设成 `UESTC_<WP-xx>`，让每个工作树有自己的 `user://`；`dotnet build -warnaserror`；`--headless --import`。
-   - 不要用目录联接共享 `.godot`：导入产物的文件名是"文件名-路径 md5"，两个分支内容不同时会互相覆盖。复制种子后，引擎发现修改时间不同会再比对 md5，内容一致就不重新导入。
-   - `--import` 的含义是"启动编辑器，等资源导入完成后退出"。导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。
+   - `game/override.cfg`（`config/use_custom_user_dir=true`、`config/custom_user_dir_name="UESTC_DEV"`，不进 git）让开发态不碰正式版的 `%APPDATA%\UESTC\`（§2）。
 3. **日常开发**：
    - 代理只走命令行，不在编辑器里打开或重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异）；场景尽量由代码生成。
-   - rebase 后如果资源有变化，再跑一次 `--headless --import`（`gate.ps1` 会自动做）。
-   - 截图类门禁（G7、G9）必须在交互式会话的窗口模式下跑，窗口不能最小化；无界面模式用的是空渲染器，不能截图，也不编译着色器。截图取共享 GPU 锁，同时最多 2 个工作包在跑；性能门禁（G10）取独占锁（ENG-PERF §12.5）。
+   - `--import` 的含义是"启动编辑器，等资源导入完成后退出"；导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。资源有变化时 `gate.ps1` 会自动再跑一次。
+   - 截图类门禁（G7、G9）必须在交互式会话的窗口模式下跑，窗口不能最小化；无界面模式用的是空渲染器，不能截图，也不编译着色器。性能门禁（G10）同样一次一个（ENG-PERF §12.5）。
    - **先选检查，再决定要不要烘焙**：`gate.ps1` 先按改动选出本次要跑的检查（快检；碰到核心体验时加核心专项；集中测试时全量；测试节奏只以 ENG-GATES §2 为准），再看所选的检查要不要烘焙产物：
      - 快检（编译、单元测试、归属、无界面注册检查）不烘焙；
      - 不带 `--bake-strict=1` 的检查（如核心专项的窗口冒烟）缺什么就按玩家路径现烘，不预烘；
      - 带 `--bake-strict=1` 的检查（截图类门禁、基准、G10）先把它们用到的图（`--bake=all --map=<id>`）按哈希增量补进共享缓存（`UESTC_BAKE_CACHE`），运行时带 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`，计时不受本机烘焙干扰（追加方式见 ENG-GATES §1）；
      - 全部图的 `--map=*` 预烘只在集中测试，或所选检查确实要全部图时跑。
-
-     各工作树的 `override.cfg` 把 `user://` 指向 `UESTC_WPxx`，所以玩家路径的本机缓存各工作树各一份；开发态 `--bake-cache` 默认指向共享缓存，一般用不到它。
-   - `dotnet build`、`--import` 和烘焙（含本机烘焙）都是重 CPU 任务。十几个工作树并行时，同时运行的重 CPU 任务不超过 max(2, 逻辑核数 / 8) 个，用 `..\UESTC_RPG.wt\.locks\` 下的计数锁排队（初值，P0 按本机实测调整，§9）；持有独占 GPU 锁时，其他工作树一律不得运行它们。
-   - **公平票据**：请求资源（CPU、GPU 共享、GPU 独占）先在独立的登记锁下取一个单调递增的票号，再竞争准入；较早的等待请求会阻挡后到、资源集合有交集的请求，资源不相交的可以继续。CPU 加 GPU 的组合请求拿不到全套资源时释放已占的局部槽位，不占着 CPU 等 GPU；GPU 独占先排空在跑的作业并阻止新的 CPU 与 GPU 请求。容量保持 CPU 为 max(2, 逻辑核数 / 8)、GPU 共享 2。超时、取消和进程退出会释放请求句柄，失效的文件不当活队列，计数器损坏时拒绝而不是悄悄归零。旧脚本发起的 CPU 请求不认识票据，可以绕过新的排队（新旧互斥仍安全），所以脚本更新后各工作树要 rebase、用新进程发起作业，才有统一的公平保证；在跑的旧作业正常结束，不杀进程、不删锁文件。
 4. **归属与 `.uid`**：
    - 改动路径必须在 `ownership.json` 给本包划定的范围内，否则门禁 G3 拒绝。
    - `.uid` 跟着源文件走，和源文件在同一个目录，所以目录独占规则自然覆盖它。新文件的 `.uid` 由 `--import` 生成后一起提交。复制文件时删掉复制来的 `.uid`，否则会出现重复的 UID（G3 检查"每个脚本都有 `.uid`、全仓 UID 不重复"）。
@@ -516,13 +508,13 @@ git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；�
 
 | 风险 | 对策 |
 | --- | --- |
-| 部件库成为瓶颈 | 编目和参数类型随候选契约先交，方块桩先合入；区域可以先建私有部件；部件库拆成 5 个包 |
+| 部件库成为瓶颈 | 编目和参数类型随候选契约先交，方块桩先交付；区域可以先建私有部件；部件库拆成 5 个包 |
 | 风格不统一 | 场景里只允许经 `ToonSpec` 取得的卡通材质，着色器只用白名单；颜色只能用色名；先做金样（见 ART-MODELING §6），再放开并行；设一名风格负责人横向比对 |
 | 预算超支 | 每个部件必须声明各级细节的面数；按模块统计预算；单个格子先卡上限；G8 用烘焙统计预测；详见 ENG-BUDGET |
-| 合并冲突 | 目录独占加特性自动发现；共享文件只有一个写入者；契约只增不改（PublicApiAnalyzers）；`main` 有新合入时 rebase（WF-MERGE §4）；代理不在编辑器里重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异） |
+| 改动互相覆盖 | 目录独占加特性自动发现；共享文件只有一个写入者；契约只增不改（PublicApiAnalyzers）；同一批文件同一时间只有一个写者、提交只加自己的文件（WF-RULE §7、WF-FLOW §2）；代理不在编辑器里重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异） |
 | 自由漫游暴露死角 | 由介质呈现兜底楼内、地下、水下和雾海；关着的楼旁观飞进去看到简化室内，镜头在任何楼体里至少显示 I0（WLD-INTERIORS §5.3、WLD-INTERIORS §6.4）；活动范围用软约束；集中测试时在全校随机巡检；行走模式另有行走走廊的加密标准（ART-FIDELITY §9） |
 | 近处深度精度不够 | 反向 Z 由引擎提供（4.3 起），近裁剪面 0.05 m 够用；不做反向 Z 的回退方案（ENG-BUDGET §5） |
-| 20 多个工作树抢一块 GPU | 视觉门禁排队；截图要求交互式会话、窗口可见；用 `--gpu-index` 固定 RTX 4080 并断言显卡名；开发阶段可以用半分辨率快速截图 |
+| 多个代理抢一块 GPU | 视觉门禁经构建锁一次只跑一个（§6）；截图要求交互式会话、窗口可见；用 `--gpu-index` 固定 RTX 4080 并断言显卡名；开发阶段可以用半分辨率快速截图 |
 | 截图无法复现 | 用 `-- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --adaptive=0 --map=qingshuihe --title=0 --save=off --audio=off` 冻结世界状态、天气和画面设置（末尾四项是地图、跳过开始页、不写存档、无声，ENG-GATES §1、SYS-AUDIO §17；`--shots`、`--gate`、`--bench`、`--frames` 下音频本来就默认关，串里照样显式写上）；固定随机种子；截图时禁用输入；等流式队列空、管线编译计数不再增长后才存图；固定 D3D12；比对时允许像素容差。G13 的录像用 Movie Maker 加"流式屏障" |
 | 时间 × 季节 × 天气的组合太多，难保每格都好看 | 关键帧按太阳高度索引，只手调秋季 12 帧加四季增量，天气是再叠一层的修正量；几何不随时季和天气变化；按 SYS-TIME §8 的矩阵抽样，集中测试时人工打分；天气另验静态格与动态格（SYS-WEATHER §9） |
 | 自动天气随机拼出难看的画面 | 只走验证过的转移边，晨昏带内不自动转移，降水有最短时长和最短间隔（SYS-WEATHER §6.2）；新游戏交还控制时固定是晴（SYS-WEATHER §9 的 G2）；G2 的 lint 与统计测试，一票否决"未验证的转移边"（SYS-WEATHER §9） |
@@ -531,7 +523,6 @@ git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；�
 | 界面破坏画面 | 漫游态唯一常驻的是左上角的小地图，可以关，按 U、`--ui=0`、过场时隐藏；界面态的组件贴四角，不进画面中央 60%；3D 画面里不叠加地点标签、选中描边、世界空间标记或光柱；常驻小部件固定用深屏，免得浅色面板在高调画面上消失；`--ui=0` 截图门禁（UI-NAV、UI-VISUAL §13、SYS-ATLAS §14.2） |
 | 字体与题字的许可 | 只用 OFL 字体（界面是思源黑体 SC、Inter、JetBrains Mono），界面字体不改文件；原作字迹须先确认许可 |
 | `.uid` 缺失或重复 | `.uid` 与源文件同目录、一起提交；复制文件时删掉复制来的 `.uid`；代码只用 `res://` 路径（UID 失效时引擎退回按路径解析，只打印警告）；G3 检查缺失和重复 |
-| 工作树共用 `user://` | 所有工作树的项目设置相同，会共用同一个 `user://`，日志和运行时着色器缓存互相干扰。每个工作树生成 `override.cfg`，把 `custom_user_dir_name` 设成 `UESTC_WPxx`；主检出设成 `UESTC_DEV`，不碰正式版的 `UESTC`（§2、§6） |
 | Godot 4.7.2 在 net10.0 下的全链路 | 项目目标定为 net10.0（D-177）；Godot 4.7.2 的 C# 模板默认仍是 net8.0。D0 在 net10.0 下跑通 `dotnet build` → `--headless --import` → `--export-release` → 导出版启动；不通时报作者决定，不自行退回 net8.0；`global.json` 锁 SDK 10.0.402 |
 | 无界面模式不编译着色器 | 着色器错误只有在窗口模式下才会暴露。G5 加一次短时间的窗口冒烟运行；G7 也在窗口模式下跑 |
 | 导出版里的反射与程序集加载 | 编译器会丢掉没用到的程序集引用，导出后反射可能扫不到模块。注册器按构建时生成的程序集清单显式加载；P0 跑通 `dotnet build` → `--import` → `--export-release` 全链路，确认导出版注册结果与编辑器一致 |
@@ -540,7 +531,6 @@ git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；�
 | 生成结果不确定 | .NET 每个进程的字符串哈希种子不同，`HashSet`、`Dictionary` 的遍历顺序也不可靠。种子一律用 `StableHash`；遍历前先排序；`build()` 内部不做并行浮点归约（§2） |
 | 两套数学类型 | 契约用 `System.Numerics`（`Matrix4x4` 是行向量约定），Godot 用 `Transform3D`（列向量约定），两边的 `Vector3` 同名。转换只用内核提供的一组扩展方法（WP-00），G2 有往返测试；同一文件里两套都用时，用 `using N = System.Numerics;` 别名 |
 | C# 垃圾回收造成卡顿 | 逐帧循环不分配内存（`CameraMedium` 等每帧查询的类型都是值类型）；用 `GC.GetTotalPauseDuration` 加自定义监视项监测（ENG-PERF §12.2）；生成代码用 `ArrayPool` 和预分配缓冲，后台烘焙期间第 2 代回收的暂停另测（§9） |
-| 40 个工作树同时导入、编译 | 每个工作树估计 0.1–0.3 GB，首次导入在分钟级以内（待验证，见 §9）；重 CPU 任务按 §6 的计数锁排队 |
 | 测试框架尚在 RC | gdUnit4Net 支持 4.7.2 的 5.1 版还是 RC；需要引擎的测试（`[RequireGodotRuntime]`）怎么托管，P0 验证；转正式版后由主代理换版本（ENG-WP §5） |
 | 引擎升级 | 锁定 4.7.2。升级可能改变表面的字节格式（4.2 有先例），将来 C# 也可能改到 GDExtension 上。升级前单独评估，加一道门禁比对我们的打包结果与 `AddSurfaceFromArrays` 的输出；升级后重新生成 API 参考（docs/godot-api/README.md） |
 | 本机烘焙：首次运行久、预烘占 CPU、缓存占盘（D-165） | 首次运行只烘起始视角周围和底图，其余后台预烘，线程数按核数、优先级低于正常、排在按需请求之后；缓存上限 2.5 GB、按最久未用淘汰，磁盘剩余不足 1 GB 时只在内存里生成；缺格时靠祖先格兜底，碰撞未就绪冻结物理（ENG-PERF §5）；G10 的冷缓存子项把关首次运行时间和碰撞冻结累计 |
@@ -591,8 +581,7 @@ git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；�
 | JSON 的导出行为：导出包里能否读到 `data/*.json`（§4、§7） | P0 的导出验证；WP-00、WP-02 | 导出过滤器显式包含 `data/*.json`、`data/maps/**/*.json`、`data/weather/**`、`data/audio/**` |
 | Godot 4.7.2 在 net10.0 下的全链路是否可用（§7） | D0 跑通 §7 所列四步（`dotnet build` → `--headless --import` → `--export-release` → 导出版启动）；主代理 | net10.0，`global.json` 锁 SDK 10.0.402 |
 | gdUnit4Net 5.1（RC）下需要引擎的测试怎么托管（§2、§7） | P0 验证 `[RequireGodotRuntime]` 经 `gate.ps1` 把 `UESTC_GODOT` 交给测试适配器的做法；WP-00、WP-27 | 按 §2 的写法；转正式版后由主代理换版本（ENG-WP §5） |
-| 40 个工作树同时导入、编译的磁盘占用与耗时（§7） | D0 在主检出和一个工作树上实测；主代理 | 每个工作树 0.1–0.3 GB，首次导入在分钟级以内；重 CPU 任务按 §6 的计数锁排队 |
-| L2 是否用半八面体替身（§4） | P0 选型（ENG-PERF）；WP-02 | 选用时这类烘焙要窗口和 GPU，排进 GPU 锁（ENG-PERF §12.5）；只在开发期出，随启动集发布，不在玩家机器上烘 |
+| L2 是否用半八面体替身（§4） | P0 选型（ENG-PERF）；WP-02 | 选用时这类烘焙要窗口和 GPU，排进 构建锁（ENG-PERF §12.5）；只在开发期出，随启动集发布，不在玩家机器上烘 |
 | 切图的卸载泄漏（§7） | P0 实测同图重载 3 次，按 G16 的判据（显存、对象数 ±5%，旧 `IWorldModel` 的弱引用被回收）；WP-46 | 集中测试时同图重载（SYS-MAPS §13） |
 | 全局纹理换尺寸、雾幕里重新分配材质 ID（§7） | P0 各验一次换尺寸后的 RID 与编译计数、雾幕里重新分配材质 ID（SYS-MAPS §15）；WP-46、WP-04 | 包内路径按图分开，G6 查各 PCK 的路径不相交 |
 | 外围的程序化楼型观感（§7） | P0 截图定楼型；WP-47 | WLD-OUTSKIRTS的楼型 |
@@ -604,5 +593,4 @@ git 分支、工作树的建法、合并与 rebase 的流程见 WF-MERGE §5；�
 | 后台烘焙期间的 GC 暂停（§4、§7） | P0 测第 2 代回收的暂停；WP-02 | 生成代码用 `ArrayPool` 和预分配缓冲；暂停上限在 P0 标定 |
 | 首次运行到转为实时的时间（§4） | P0 在空缓存目录上实测；WP-02、WP-49 | ≤ 25 s（开发机），底图 8 线程 ≤ 20 s |
 | 本机缓存烘满后的实际体积（§4） | P0 全图烘满后量；WP-02 | 一张图约 0.8–1.4 GB；默认上限 2.5 GB |
-| 十几个工作树并行时重 CPU 任务的并发上限（§6） | P0 在本机同时开 12 个工作树编译、导入、烘焙，看总耗时与内存；WP-00 | max(2, 逻辑核数 / 8) 个 |
 | 精度区划分的可见性判据与转角过渡长度（§3"精度区数据的规则"） | WP-44 划分后抽 50 个 K4 立面段人工复核，看有没有常被看到的面被判成 K4；WP-44、WP-27 | 60 m 内、视线与立面法线夹角 < 60°、不被遮挡记 K3；转角切出 6 m；点位落点 30 m 以内记 K1 |

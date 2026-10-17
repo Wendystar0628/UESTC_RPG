@@ -45,11 +45,9 @@
   "WF-COMMS": "docs/design/workflow/collaboration/WF-COMMS-交接与通信.md",
   "WF-CORE": "docs/design/workflow/rules/WF-CORE-项目核心准则.md",
   "WF-DOC": "docs/design/workflow/rules/WF-DOC-文档写法.md",
-  "WF-DUTY": "docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md",
   "WF-ENTRY": "docs/design/workflow/WF-ENTRY-角色入口卡.md",
   "WF-FLOW": "docs/design/workflow/process/WF-FLOW-开发流程.md",
   "WF-INDEX": "docs/design/workflow/WF-INDEX-协作总纲.md",
-  "WF-MERGE": "docs/design/workflow/process/WF-MERGE-批准与合并.md",
   "WF-MODEL": "docs/design/workflow/collaboration/WF-MODEL-模型选择与子代理.md",
   "WF-ONBOARD": "docs/design/workflow/WF-ONBOARD-子代理开工手册.md",
   "WF-QUOTA": "docs/design/workflow/management/WF-QUOTA-账号与额度.md",
@@ -79,18 +77,6 @@
   },
   {
    "docs": [
-    "WF-MERGE"
-   ],
-   "glob": ".collab/requests/merge-*"
-  },
-  {
-   "docs": [
-    "WF-DUTY"
-   ],
-   "glob": ".collab/side/**"
-  },
-  {
-   "docs": [
     "WF-STATUS"
    ],
    "glob": ".collab/status/**"
@@ -100,12 +86,6 @@
     "WF-COMMS"
    ],
    "glob": ".collab/tasks/**"
-  },
-  {
-   "docs": [
-    "WF-DUTY"
-   ],
-   "glob": ".collab/tasks/sol/**"
   },
   {
    "docs": [

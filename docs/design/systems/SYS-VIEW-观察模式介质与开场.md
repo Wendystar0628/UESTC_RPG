@@ -188,7 +188,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 - 参数由 Autoload `Boot` 用 `OS.GetCmdlineUserArgs()` 读取。未知参数直接以非零退出码结束，免得拼错的参数被静默忽略；不合季节的天气（例如冬季下雨）也一样（ENG-GATES §1）。`--slot` 或 `--load` 与 `--clock`、`--season`、`--pose`、`--map` 这类世界类参数同时给出时，同样以非零退出码结束，因为读档时世界状态只来自存档（SYS-SAVE §12）。
 - 导出的正式版也接受这些参数，因为 G10 测的就是导出的 release 版（ENG-GATES §2）。观者直接启动时不带参数，相当于 `--title=1`：先是扉页和开始页（SYS-TITLE §1、SYS-TITLE §2），起始图是最近存档的图（SYS-MAPS §4.4）；天气种子跟着存档走，只在新游戏时取一次熵（SYS-WEATHER §6.4、SYS-SAVE §5.4）；画面设置读 `user://graphics.cfg`，没有时用自动推荐的预设（SYS-GRAPHICS §5–§6）。
 - 门禁和基准只由命令行决定，不读 `user://`；命令行优先于 `graphics.cfg`（SYS-GRAPHICS §6）。`--save` 和 `--audio` 在 `--gate`、`--shots`、`--bench`、`--frames` 下默认 `off`；起始图不因"最近存档的图"而改变，不给 `--map` 就取默认图（SYS-SAVE §12、SYS-MAPS §11、SYS-AUDIO §17）。
-- 在编辑器里运行时，参数写在本工作树 `override.cfg` 的 `editor/run/main_run_args` 里（`override.cfg` 不进 git）。
+- 在编辑器里运行时，参数写在 `game/override.cfg` 的 `editor/run/main_run_args` 里（`override.cfg` 不进 git）。
 
 ### 2.6 操作说明与提示
 

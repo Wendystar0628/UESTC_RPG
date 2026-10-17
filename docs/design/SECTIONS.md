@@ -27,7 +27,7 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS-约定.md` · 28.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
+`docs/design/core/CORE-CONVENTIONS-约定.md` · 28.1k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
 关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
@@ -45,11 +45,11 @@
   - CORE-CONVENTIONS §3.4 C# 程序集、命名空间与文件 · L175 · 2.6k
   - CORE-CONVENTIONS §3.5 色名 · L200 · 964
   - CORE-CONVENTIONS §3.6 着色器文件 · L209 · 1.2k
-  - CORE-CONVENTIONS §3.7 其他命名 · L236 · 498
+  - CORE-CONVENTIONS §3.7 其他命名 · L236 · 459
   - CORE-CONVENTIONS §3.8 枚举与扩展纪律 · L243 · 1.0k
   - CORE-CONVENTIONS §3.9 持久化 ID 的稳定 · L255 · 525
 - CORE-CONVENTIONS §4 帧顺序 · L264 · 1.9k
-- CORE-CONVENTIONS §5 目录与归属 · L293 · 5.6k
+- CORE-CONVENTIONS §5 目录与归属 · L293 · 5.5k
   - CORE-CONVENTIONS §5.1 仓库 · L295 · 2.2k
   - CORE-CONVENTIONS §5.2 按图的数据 · L323 · 1.6k
   - CORE-CONVENTIONS §5.3 `user://` 下的文件 · L353 · 1.4k
@@ -59,7 +59,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS-决策登记.md` · 30.7k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 30.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 388
@@ -73,12 +73,12 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 6.8k
-- CORE-DECISIONS §11 待对齐 · L298 · 61
+- CORE-DECISIONS §10 流程 · L243 · 6.2k
+- CORE-DECISIONS §11 待对齐 · L294 · 61
 
 ## CORE-GLOSSARY · 术语表
 
-`docs/design/core/CORE-GLOSSARY-术语表.md` · 39.0k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/design/core/CORE-GLOSSARY-术语表.md` · 38.7k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - CORE-GLOSSARY §0 用法 · L23 · 275
@@ -96,163 +96,138 @@
 - CORE-GLOSSARY §11 界面 · L306 · 2.1k
 - CORE-GLOSSARY §12 音频 · L335 · 2.0k
 - CORE-GLOSSARY §13 画面设置与性能 · L360 · 3.0k
-- CORE-GLOSSARY §14 工程与流程 · L390 · 4.3k
-- CORE-GLOSSARY §15 同名异义 · L434 · 2.0k
+- CORE-GLOSSARY §14 工程与流程 · L390 · 4.0k
+- CORE-GLOSSARY §15 同名异义 · L432 · 2.0k
 
 ## WF-ENTRY · 角色入口卡
 
-`docs/design/workflow/WF-ENTRY-角色入口卡.md` · 7.0k 字 · 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入
-关键词：角色入口卡、入口卡、主会话、子代理、Astra、值班执行者、Sol 旁路会话、Grok、Gemini、luna、Sol 值班兜底、重置后先读、开工动作、做 X 前读 Y、钩子注入、SessionStart、SubagentStart
+`docs/design/workflow/WF-ENTRY-角色入口卡.md` · 5.8k 字 · 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入
+关键词：角色入口卡、入口卡、主会话、子代理、Astra、Sol 会话、重置后先读、开工动作、做 X 前读 Y、钩子注入、SessionStart、SubagentStart
 
-- WF-ENTRY §0 结论 · L23 · 447
-  - ★ WF-ENTRY §0.1 接入要点 · L30 · 153
-- WF-ENTRY §1 主会话 · L36 · 1.0k
-- WF-ENTRY §2 子代理 · L64 · 1.4k
-- WF-ENTRY §3 Astra · L92 · 852
-- WF-ENTRY §4 值班执行者 · L115 · 1.2k
-- WF-ENTRY §5 Sol 旁路会话 · L134 · 901
+- WF-ENTRY §0 结论 · L23 · 380
+  - ★ WF-ENTRY §0.1 接入要点 · L29 · 148
+- WF-ENTRY §1 主会话 · L35 · 1.2k
+- WF-ENTRY §2 子代理 · L65 · 1.4k
+- WF-ENTRY §3 Astra · L96 · 848
+- WF-ENTRY §4 Sol 会话 · L119 · 915
 
 ## WF-INDEX · 协作总纲
 
-`docs/design/workflow/WF-INDEX-协作总纲.md` · 3.8k 字 · 开发期多个模型与会话怎么协作的总纲：角色表与各角色入口、决定权与执行人、规则放哪份的判定表
-关键词：协作总纲、多模型协作、角色表、角色入口、作者、主会话、主会话的子代理、Astra、Astra 的子代理、值班执行者、Sol 值班会话、Sol 旁路会话、Grok、Gemini、luna、决定权、执行人、判定表
+`docs/design/workflow/WF-INDEX-协作总纲.md` · 3.2k 字 · 开发期多个模型与会话怎么协作的总纲：角色表与各角色入口、决定权与执行人、规则放哪份的判定表
+关键词：协作总纲、多模型协作、角色表、角色入口、作者、主会话、主会话的子代理、Astra、Astra 的子代理、Sol 会话、决定权、执行人、判定表
 
-- WF-INDEX §0 结论 · L23 · 363
+- WF-INDEX §0 结论 · L23 · 357
   - ★ WF-INDEX §0.1 接入要点 · L29 · 174
-- WF-INDEX §1 角色表 · L35 · 1.1k
-- WF-INDEX §2 决定权与执行人 · L54 · 381
-- WF-INDEX §4 一条规则放哪份 · L62 · 543
+- WF-INDEX §1 角色表 · L35 · 734
+- WF-INDEX §2 决定权与执行人 · L50 · 327
+- WF-INDEX §4 一条规则放哪份 · L58 · 515
 
 ## WF-ONBOARD · 子代理开工手册
 
-`docs/design/workflow/WF-ONBOARD-子代理开工手册.md` · 4.8k 字 · 子代理的查询手册，不通读：开工路径与引擎命令、怎么查资料、完成怎么自检与回报样式
-关键词：开工手册、查询手册、子代理、开工环境、工作树、引擎路径、查资料、SECTIONS.md、接入要点、Godot API、signatures.txt、文档冲突、完成与回报、gate.ps1、核心专项、回报格式、截图、render-review、交回就结束
+`docs/design/workflow/WF-ONBOARD-子代理开工手册.md` · 4.9k 字 · 子代理的查询手册，不通读：开工路径与引擎命令、怎么查资料、完成怎么自检与回报样式
+关键词：开工手册、查询手册、子代理、开工环境、主检出、引擎路径、查资料、SECTIONS.md、接入要点、Godot API、signatures.txt、文档冲突、完成与回报、gate.ps1、核心专项、回报格式、截图、render-review、交回就结束
 
-- WF-ONBOARD §0 结论 · L23 · 404
+- WF-ONBOARD §0 结论 · L23 · 410
   - ★ WF-ONBOARD §0.1 接入要点 · L30 · 82
-- WF-ONBOARD §2 开工路径与引擎命令 · L34 · 437
-- WF-ONBOARD §3 查资料 · L40 · 1.2k
-  - WF-ONBOARD §3.1 文档在哪、怎么找 · L42 · 774
-  - WF-ONBOARD §3.3 Godot API · L52 · 223
-  - WF-ONBOARD §3.4 文档不清楚或冲突时 · L58 · 187
-- WF-ONBOARD §4 完成与回报 · L64 · 1.7k
-  - WF-ONBOARD §4.1 做完怎么交 · L66 · 479
-  - WF-ONBOARD §4.2 回报格式 · L73 · 1.2k
+- WF-ONBOARD §2 开工路径与引擎命令 · L34 · 451
+- WF-ONBOARD §3 查资料 · L41 · 1.2k
+  - WF-ONBOARD §3.1 文档在哪、怎么找 · L43 · 774
+  - WF-ONBOARD §3.3 Godot API · L53 · 223
+  - WF-ONBOARD §3.4 文档不清楚或冲突时 · L59 · 187
+- WF-ONBOARD §4 完成与回报 · L65 · 1.7k
+  - WF-ONBOARD §4.1 做完怎么交 · L67 · 539
+  - WF-ONBOARD §4.2 回报格式 · L75 · 1.2k
 
 ## WF-COMMS · 交接与通信
 
-`docs/design/workflow/collaboration/WF-COMMS-交接与通信.md` · 6.8k 字 · .collab 交接目录与文件布局，命名与写法，任务单、请求文件与批准行的格式，来信与消息，Codex 会话与引导信箱
-关键词：.collab、交接目录、文件布局、archive、logs、结案即挪走、.ignore、任务单、施工单、值班单、旁路单、调研单、合并请求、契约申请、评审请求、批准行、已合入行、六行短头部、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、merged.log、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208
+`docs/design/workflow/collaboration/WF-COMMS-交接与通信.md` · 5.7k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，来信与消息，Codex 会话与引导信箱
+关键词：.collab、交接目录、文件布局、archive、logs、结案即挪走、.ignore、任务单、施工单、旁路单、调研单、契约申请、评审请求、六行短头部、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208
 
-- WF-COMMS §0 结论 · L24 · 584
-  - ★ WF-COMMS §0.1 接入要点 · L32 · 193
-- WF-COMMS §1 交接目录与文件 · L39 · 2.1k
-- WF-COMMS §2 命名与写法 · L69 · 506
-- WF-COMMS §3 任务单与请求文件的格式 · L77 · 777
-  - WF-COMMS §3.1 施工单、值班单与旁路单 · L79 · 271
-  - WF-COMMS §3.2 请求文件 · L85 · 50
-  - WF-COMMS §3.3 合并请求与契约申请的短头部（D-201） · L89 · 227
-  - WF-COMMS §3.4 批准行 · L101 · 211
-- WF-COMMS §4 来信与消息 · L105 · 958
-  - WF-COMMS §4.1 什么时候发 · L107 · 293
-  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L116 · 289
-  - WF-COMMS §4.3 三级标记与写法 · L120 · 364
-- WF-COMMS §5 Codex 会话与引导信箱 · L127 · 681
-
-## WF-DUTY · 值班与旁路
-
-`docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md` · 5.5k 字 · 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理
-关键词：值班、值班执行者、值班唤醒脚本、旁路唤醒脚本、duty_watch、side_runner、Grok、Gemini、luna、Sol 值班会话、退回、值班长期单、巡检、卡死进程、完成度调研、调研单、调研索引、三个视角、Sol 旁路会话、旁路单、D-198、D-202、D-204
-
-- WF-DUTY §0 结论 · L24 · 565
-  - ★ WF-DUTY §0.1 接入要点 · L32 · 191
-- WF-DUTY §1 值班执行者、唤醒与退回 · L38 · 1.4k
-- WF-DUTY §2 值班做什么、不许做什么 · L56 · 739
-- WF-DUTY §3 完成度调研 · L70 · 933
-- WF-DUTY §4 Sol 旁路会话 · L80 · 697
+- WF-COMMS §0 结论 · L24 · 495
+  - ★ WF-COMMS §0.1 接入要点 · L31 · 151
+- WF-COMMS §1 交接目录与文件 · L37 · 1.6k
+- WF-COMMS §2 命名与写法 · L64 · 470
+- WF-COMMS §3 任务单与请求文件的格式 · L72 · 477
+  - WF-COMMS §3.1 施工单与旁路单 · L74 · 203
+  - WF-COMMS §3.2 请求文件 · L79 · 50
+  - WF-COMMS §3.3 契约申请的短头部（D-201） · L83 · 206
+- WF-COMMS §4 来信与消息 · L95 · 895
+  - WF-COMMS §4.1 什么时候发 · L97 · 275
+  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L106 · 249
+  - WF-COMMS §4.3 三级标记与写法 · L110 · 359
+- WF-COMMS §5 Codex 会话与引导信箱 · L117 · 627
 
 ## WF-MODEL · 模型选择与子代理
 
-`docs/design/workflow/collaboration/WF-MODEL-模型选择与子代理.md` · 7.6k 字 · 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，便宜两档，怎么开子代理，子代理生命周期，简报模板与接续段
-关键词：七问、选模型、Opus 与 Sonnet 的分界、Sonnet 优先、便宜两档、Gemini、luna、推理强度、升级先找原因、派单最少写、简单少量的活直接做、子代理、Agent 工具、spawn_agent、共用工作目录、子代理生命周期、默认新开、恢复还是新开、简报模板、接续段、D-184、D-191、D-193、D-194
+`docs/design/workflow/collaboration/WF-MODEL-模型选择与子代理.md` · 7.2k 字 · 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，机械活交谁，怎么开子代理，子代理生命周期，简报模板与接续段
+关键词：七问、选模型、Opus 与 Sonnet 的分界、Sonnet 优先、机械活、gpt-6-luna 子代理、推理强度、升级先找原因、派单最少写、简单少量的活直接做、子代理、Agent 工具、spawn_agent、共用工作目录、子代理生命周期、默认新开、恢复还是新开、简报模板、接续段、D-184、D-191、D-193
 
-- WF-MODEL §0 结论 · L23 · 511
-  - ★ WF-MODEL §0.1 接入要点 · L32 · 172
-- WF-MODEL §1 按七问选施工模型 · L38 · 1.0k
-- WF-MODEL §2 Opus 与 Sonnet 的分界（D-193） · L52 · 478
-- WF-MODEL §3 最便宜的两档（D-194、D-202） · L66 · 1.2k
-- WF-MODEL §4 推理强度按难度选 · L86 · 635
-- WF-MODEL §5 升级、派单与直接做 · L100 · 512
-- WF-MODEL §6 怎么开子代理 · L107 · 769
-- WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L120 · 586
-- WF-MODEL §8 简报模板与"接续"段 · L130 · 788
-  - WF-MODEL §8.1 简报模板 · L132 · 482
-  - WF-MODEL §8.2 "接续"段 · L148 · 289
+- WF-MODEL §0 结论 · L23 · 551
+  - ★ WF-MODEL §0.1 接入要点 · L32 · 174
+- WF-MODEL §1 按七问选施工模型 · L38 · 982
+- WF-MODEL §2 Opus 与 Sonnet 的分界（D-193） · L52 · 466
+- WF-MODEL §3 机械活交谁 · L66 · 891
+- WF-MODEL §4 推理强度按难度选 · L84 · 615
+- WF-MODEL §5 升级、派单与直接做 · L98 · 511
+- WF-MODEL §6 怎么开子代理 · L105 · 656
+- WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L117 · 565
+- WF-MODEL §8 简报模板与"接续"段 · L127 · 843
+  - WF-MODEL §8.1 简报模板 · L129 · 537
+  - WF-MODEL §8.2 "接续"段 · L146 · 289
 
 ## WF-ROLE · 参与者与分工
 
-`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.4k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
+`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.1k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
 关键词：会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Astra、工程指挥、元规则、D-179
 
-- WF-ROLE §0 结论 · L23 · 559
-  - ★ WF-ROLE §0.1 接入要点 · L31 · 228
-- WF-ROLE §1 会话与运行方式 · L37 · 502
-- WF-ROLE §2 模型的长处与短板 · L44 · 800
-- WF-ROLE §3 GPT 模型不做审美工作 · L55 · 418
-- WF-ROLE §4 事归谁与交叉的地方 · L62 · 448
-- WF-ROLE §5 总指挥只做什么 · L70 · 742
-- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L86 · 799
+- WF-ROLE §0 结论 · L23 · 552
+  - ★ WF-ROLE §0.1 接入要点 · L31 · 223
+- WF-ROLE §1 会话与运行方式 · L37 · 334
+- WF-ROLE §2 模型的长处与短板 · L43 · 784
+- WF-ROLE §3 GPT 模型不做审美工作 · L54 · 415
+- WF-ROLE §4 事归谁与交叉的地方 · L61 · 450
+- WF-ROLE §5 总指挥只做什么 · L69 · 756
+- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L85 · 761
 
 ## WF-QUOTA · 账号与额度
 
-`docs/design/workflow/management/WF-QUOTA-账号与额度.md` · 3.8k 字 · 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结
-关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、节奏档、非紧急段、紧急段、Codex 额度、快速模式、普通速度、service_tier、额度见底、冻结、切换账号、D-196、D-197
+`docs/design/workflow/management/WF-QUOTA-账号与额度.md` · 3.7k 字 · 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结
+关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、节奏档、非紧急段、紧急段、Codex 额度、普通速度、额度见底、冻结、切换账号、D-196、D-197
 
-- WF-QUOTA §0 结论 · L23 · 426
+- WF-QUOTA §0 结论 · L23 · 418
   - ★ WF-QUOTA §0.1 接入要点 · L31 · 107
 - WF-QUOTA §1 口径 · L36 · 146
 - WF-QUOTA §2 Claude 侧的并发与额度 · L40 · 1.2k
-- WF-QUOTA §3 节奏档：非紧急段与紧急段（D-196） · L56 · 541
-- WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L63 · 246
-- WF-QUOTA §5 额度见底时冻结 · L68 · 224
+- WF-QUOTA §3 节奏档：非紧急段与紧急段（D-196） · L56 · 548
+- WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L63 · 166
+- WF-QUOTA §5 额度见底时冻结 · L68 · 216
 
 ## WF-STATUS · 施工状态与队列
 
-`docs/design/workflow/management/WF-STATUS-施工状态与队列.md` · 3.3k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
+`docs/design/workflow/management/WF-STATUS-施工状态与队列.md` · 2.9k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
 关键词：施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、活跃工作包、待派工队列、Q-nnn、排队、可派、已派、队列平衡、积压、交接单、HANDOVER.md、接手、已集成
 
-- WF-STATUS §0 结论 · L24 · 502
+- WF-STATUS §0 结论 · L24 · 468
   - ★ WF-STATUS §0.1 接入要点 · L32 · 196
-- WF-STATUS §1 施工状态文件怎么填 · L38 · 859
-- WF-STATUS §2 待派工队列与队列平衡 · L59 · 891
-- WF-STATUS §3 交接单 · L77 · 87
+- WF-STATUS §1 施工状态文件怎么填 · L38 · 795
+- WF-STATUS §2 待派工队列与队列平衡 · L59 · 732
+- WF-STATUS §3 交接单 · L75 · 87
 
 ## WF-FLOW · 开发流程
 
-`docs/design/workflow/process/WF-FLOW-开发流程.md` · 6.5k 字 · 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线
-关键词：开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、回报、初步核对、评审、可调参数、契约申请、共享工程文件、契约冻结、调研入队流水线、审计、待派工队列、D-184、D-134、贴近主线、评审通用结论
+`docs/design/workflow/process/WF-FLOW-开发流程.md` · 7.8k 字 · 一个包从派工、施工、自测推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线
+关键词：开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、回报、初步核对、评审、防打架、邻居、可调参数、契约申请、共享工程文件、契约冻结、调研入队流水线、审计、待派工队列、D-184、D-134、D-211、评审通用结论
 
-- WF-FLOW §0 结论 · L23 · 510
-  - ★ WF-FLOW §0.1 接入要点 · L31 · 214
-- WF-FLOW §1 全流程一览 · L38 · 643
-- WF-FLOW §2 派工与拆单 · L54 · 1.3k
-- WF-FLOW §3 施工与回报 · L75 · 604
-- WF-FLOW §4 评审：审美与契约的交叉评审 · L87 · 567
-- WF-FLOW §5 契约申请与共享工程文件 · L100 · 765
-- WF-FLOW §6 调研入队流水线 · L109 · 890
-
-## WF-MERGE · 批准与合并
-
-`docs/design/workflow/process/WF-MERGE-批准与合并.md` · 5.6k 字 · 批准行与滚动文档分支，合并执行的步骤，成批合入与省项，合入以后的状态与 rebase，git 分支与工作树的流程
-关键词：批准、批准行、滚动文档分支、doc/rolling、合并执行、squash、成批合入、省项、SkipFormat、merged.log、已合入、rebase 通知、工作树、本地分支、new.ps1、cleanup_worktrees、git 流程、远端只有 main、D-166、D-204、D-206
-
-- WF-MERGE §0 结论 · L24 · 576
-  - ★ WF-MERGE §0.1 接入要点 · L32 · 283
-- WF-MERGE §1 批准与滚动文档分支 · L38 · 627
-- WF-MERGE §2 合并步骤 · L46 · 1.3k
-- WF-MERGE §3 成批合入与省项 · L58 · 522
-- WF-MERGE §4 合入以后：施工状态与 rebase · L64 · 392
-- WF-MERGE §5 git 与工作树 · L69 · 872
+- WF-FLOW §0 结论 · L23 · 628
+  - ★ WF-FLOW §0.1 接入要点 · L32 · 276
+- WF-FLOW §1 全流程一览 · L40 · 498
+- WF-FLOW §2 派工与拆单 · L53 · 1.7k
+  - WF-FLOW §2.1 防打架（D-211） · L73 · 492
+- WF-FLOW §3 施工与回报 · L83 · 517
+- WF-FLOW §4 评审：审美与契约的交叉评审 · L95 · 730
+- WF-FLOW §5 契约申请与共享工程文件 · L110 · 725
+- WF-FLOW §6 调研入队流水线 · L119 · 1.8k
+  - WF-FLOW §6.1 调研单与旁路单 · L133 · 906
 
 ## WF-BUILD · 施工边界
 
@@ -261,7 +236,7 @@
 
 - WF-BUILD §0 结论 · L24 · 649
   - ★ WF-BUILD §0.1 接入要点 · L32 · 347
-- WF-BUILD §1 改哪里 · L40 · 769
+- WF-BUILD §1 改哪里 · L40 · 813
 - WF-BUILD §2 G4 拦不住的约定 · L48 · 236
 
 ## WF-CORE · 项目核心准则
@@ -269,13 +244,13 @@
 `docs/design/workflow/rules/WF-CORE-项目核心准则.md` · 1.7k 字 · 所有会话、子代理和执行者每轮都要守的行为准则，一条一句，细则见各条指向；提醒钩子每条消息都注入本文 §0
 关键词：核心准则、实现优先、只做必要的测试、不过度工程化、改设计必清旧、一份权威、主线优先、不向作者出选项、不预判时间、名字一看就懂、提醒钩子
 
-- WF-CORE §0 结论 · L22 · 737
+- WF-CORE §0 结论 · L22 · 736
   - ★ WF-CORE §0.1 接入要点 · L35 · 100
 - WF-CORE §1 细则在哪 · L40 · 88
 
 ## WF-DOC · 文档写法
 
-`docs/design/workflow/rules/WF-DOC-文档写法.md` · 7.9k 字 · 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护
+`docs/design/workflow/rules/WF-DOC-文档写法.md` · 8.0k 字 · 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护
 关键词：文档写法、文件头、front matter、keywords、范围块、查阅行、接入要点、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、数值只有一个家、待验证、冲突层级、决定层级、新增文档、登记决策、CORE-DECISIONS、gen_index、check_docs、SECTIONS.md、D-178、D-200、D-208
 
 - WF-DOC §0 结论 · L24 · 516
@@ -288,19 +263,19 @@
 - WF-DOC §6 冲突与决定层级 · L148 · 633
 - WF-DOC §7 新增文档与小节 · L162 · 328
 - WF-DOC §8 登记新决策 · L168 · 251
-- WF-DOC §9 文档维护 · L174 · 330
+- WF-DOC §9 文档维护 · L174 · 445
 
 ## WF-RULE · 全员守则
 
-`docs/design/workflow/rules/WF-RULE-全员守则.md` · 5.6k 字 · 所有会话、子代理和执行者都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件与 git 安全、主线优先、测试最小、贴近主线、写文档与记忆
-关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git 安全、不 stash、主线优先、测试最小、贴近主线、拿不准就问、写文档、写记忆、工作树用完删、D-201、D-168、D-167、D-199、D-209、D-166
+`docs/design/workflow/rules/WF-RULE-全员守则.md` · 5.9k 字 · 所有会话和子代理都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少和别人打架、写文档与记忆
+关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、回滚只用 revert、VIS-check、不 stash、主线优先、测试最小、少和别人打架、拿不准就问、写文档、写记忆、D-201、D-168、D-167、D-199、D-209、D-211
 
-- WF-RULE §0 结论 · L23 · 495
+- WF-RULE §0 结论 · L23 · 490
   - ★ WF-RULE §0.1 接入要点 · L27 · 322
 - WF-RULE §1 不过度工程化（D-201） · L32 · 317
-- WF-RULE §2 不向作者出选项 · L39 · 282
+- WF-RULE §2 不向作者出选项 · L39 · 273
 - WF-RULE §3 不预判时间 · L45 · 207
-- WF-RULE §4 不短轮询、不干等、不重复复核 · L52 · 300
+- WF-RULE §4 不短轮询、不干等、不重复复核 · L52 · 296
 - WF-RULE §5 来信 · L58 · 74
 - WF-RULE §6 文件操作 · L62 · 611
   - WF-RULE §6.1 下载 · L66 · 106
@@ -309,20 +284,19 @@
   - WF-RULE §6.4 路径与格式 · L78 · 108
   - WF-RULE §6.5 只改分派给自己的文件 · L82 · 33
   - WF-RULE §6.6 向 `.collab` 追加含 Windows 路径的中文文本 · L86 · 133
-- WF-RULE §7 git 安全 · L90 · 322
-- WF-RULE §8 主线优先（D-168） · L98 · 297
-- WF-RULE §9 测试最小（D-167） · L105 · 345
-- WF-RULE §10 贴近主线，少给合并添活（D-199） · L112 · 697
-  - WF-RULE §10.1 开工和被恢复时先看主线变了什么 · L116 · 123
-  - WF-RULE §10.2 只往自己的文件里加 · L120 · 85
-  - WF-RULE §10.3 测试只锁本包自己的输出 · L124 · 60
-  - WF-RULE §10.4 改架构或实现新设计时，一次迁完、不留旧的（D-209） · L128 · 188
-  - WF-RULE §10.5 小步交付 · L132 · 108
-  - WF-RULE §10.6 评审定下的通用规则以规范文档为准 · L136 · 68
-- WF-RULE §11 拿不准就问 · L140 · 137
-- WF-RULE §12 写文档与记忆 · L145 · 237
-- WF-RULE §13 截图与 GPU 锁 · L154 · 54
-- WF-RULE §14 工作树用完删（D-166） · L158 · 208
+- WF-RULE §7 git 与直接改主线（D-211） · L90 · 755
+- WF-RULE §8 主线优先（D-168） · L101 · 297
+- WF-RULE §9 测试最小（D-167） · L108 · 375
+- WF-RULE §10 少和别人打架（D-199） · L115 · 592
+  - WF-RULE §10.1 开工和被恢复时先看谁动了什么 · L119 · 92
+  - WF-RULE §10.2 只往自己的文件里加 · L123 · 85
+  - WF-RULE §10.3 测试只锁本包自己的输出 · L127 · 60
+  - WF-RULE §10.4 改架构或实现新设计时，一次迁完、不留旧的（D-209） · L131 · 190
+  - WF-RULE §10.5 小步交付 · L135 · 43
+  - WF-RULE §10.6 评审定下的通用规则以规范文档为准 · L139 · 68
+- WF-RULE §11 拿不准就问 · L143 · 137
+- WF-RULE §12 写文档与记忆 · L148 · 231
+- WF-RULE §13 截图与 GPU 锁 · L157 · 54
 
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法
 
@@ -1368,7 +1342,7 @@
   - SYS-SAVE §3.3 正文：分段 JSON · L220 · 955
   - SYS-SAVE §3.4 缩略图 · L244 · 510
   - SYS-SAVE §3.5 序列化约定 · L256 · 796
-  - SYS-SAVE §3.6 版本与迁移 · L269 · 931
+  - SYS-SAVE §3.6 版本与迁移 · L269 · 929
 - SYS-SAVE §4 保存时机与可靠性 · L287 · 6.4k
   - SYS-SAVE §4.1 时机 · L289 · 1.1k
   - SYS-SAVE §4.2 安全时刻与落定快照 · L311 · 955
@@ -1692,16 +1666,16 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 60.7k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
-关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 59.4k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
+关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、构建与测试排队、构建锁、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.4k
   - ★ ENG-ARCH §0.1 接入要点 · L79 · 1.4k
-- ENG-ARCH §1 资源管线迁移约定 · L93 · 277
+- ENG-ARCH §1 资源管线迁移约定 · L93 · 271
 - ENG-ARCH §2 目录结构与归属 · L102 · 20.8k
   - ENG-ARCH 架构边界与唯一生产链 · L104 · 1.2k
   - ENG-ARCH 目录树 · L125 · 5.5k
-  - ENG-ARCH 生成物与资源位置 · L192 · 315
+  - ENG-ARCH 生成物与资源位置 · L192 · 271
   - ENG-ARCH 归属依据 · L196 · 69
   - ENG-ARCH 程序集边界 · L200 · 2.5k
   - ENG-ARCH 命名空间依赖规则 · L223 · 3.9k
@@ -1712,16 +1686,16 @@
   - ENG-ARCH 覆盖层约束 · L343 · 342
   - ENG-ARCH 仍未落地项 · L349 · 511
 - ENG-ARCH §4 资源管线 · L355 · 10.6k
-- ENG-ARCH §5 接口先定、桩先合入 · L443 · 3.3k
-- ENG-ARCH §6 工作树的技术细节 · L482 · 2.8k
-- ENG-ARCH §7 主要风险与对策 · L515 · 6.3k
-- ENG-ARCH §8 扩展点（RPG） · L568 · 1.1k
-- ENG-ARCH §9 待验证（P0） · L584 · 2.3k
+- ENG-ARCH §5 接口先定、桩先交付 · L443 · 3.3k
+- ENG-ARCH §6 构建与测试排队 · L482 · 2.0k
+- ENG-ARCH §7 主要风险与对策 · L507 · 6.0k
+- ENG-ARCH §8 扩展点（RPG） · L558 · 1.1k
+- ENG-ARCH §9 待验证（P0） · L574 · 2.1k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
-`docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md` · 43.8k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
-关键词：性能预算、预算、额度、份额、配额、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、主线程额度、硬规则、合入规则、细节级别、L0+、分块、四叉树、速度律、屏幕误差、近裁剪面、导出包体、本机缓存预算、工程设置、project.godot 设置
+`docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md` · 43.8k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、推送硬规则、测法与工程设置
+关键词：性能预算、预算、额度、份额、配额、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、主线程额度、硬规则、推送规则、细节级别、L0+、分块、四叉树、速度律、屏幕误差、近裁剪面、导出包体、本机缓存预算、工程设置、project.godot 设置
 
 - ENG-BUDGET §0 结论 · L23 · 2.4k
   - ★ ENG-BUDGET §0.1 接入要点 · L36 · 1.3k
@@ -1731,7 +1705,7 @@
 - ENG-BUDGET §4 流式加载与速度 · L233 · 1.1k
 - ENG-BUDGET §5 深度与近裁剪面 · L250 · 654
 - ENG-BUDGET §6 阴影、后期、倒影、灯光 · L258 · 2.7k
-- ENG-BUDGET §7 硬规则（违反任何一条都不能合入） · L278 · 7.4k
+- ENG-BUDGET §7 硬规则（违反任何一条都不能推送） · L278 · 7.4k
 - ENG-BUDGET §8 额度总账（`budgets.json`） · L316 · 259
 - ENG-BUDGET §9 怎么测 · L320 · 4.0k
   - ENG-BUDGET §9.1 测量命令与参数 · L322 · 860
@@ -1741,16 +1715,16 @@
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检
 
-`docs/design/engineering/ENG-GATES-验收与门禁.md` · 57.3k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单
-关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、review.json、output/render-review、GPU 锁
+`docs/design/engineering/ENG-GATES-验收与门禁.md` · 56.8k 字 · 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单
+关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、review.json、output/render-review、构建锁
 
-- ENG-GATES §0 结论 · L22 · 1.8k
-  - ★ ENG-GATES §0.1 接入要点 · L38 · 738
+- ENG-GATES §0 结论 · L22 · 1.7k
+  - ★ ENG-GATES §0.1 接入要点 · L38 · 722
 - ENG-GATES §1 审查视角 · L51 · 14.8k
-- ENG-GATES §2 门禁与测试节奏 · L197 · 30.7k
-- ENG-GATES §3 一票否决 · L282 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L311 · 2.6k
-- ENG-GATES §5 待验证（P0） · L337 · 1.8k
+- ENG-GATES §2 门禁与测试节奏 · L197 · 30.2k
+- ENG-GATES §3 一票否决 · L281 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L310 · 2.6k
+- ENG-GATES §5 待验证（P0） · L336 · 1.8k
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
@@ -1831,20 +1805,20 @@
 
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP-工作包派工单.md` · 108.6k 字 · 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与合并顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项
-关键词：工作包、派工单、派工、归属、开工波次、合并顺序、独占目录、起读三档、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
+`docs/design/engineering/ENG-WP-工作包派工单.md` · 108.4k 字 · 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与推送顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项
+关键词：工作包、派工单、派工、归属、开工波次、推送顺序、独占目录、起读三档、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.6k
   - ★ ENG-WP §0.1 接入要点 · L39 · 585
-- ENG-WP §1 阶段与闸口 · L50 · 8.4k
-  - ENG-WP §1.1 开工波次与合并顺序 · L94 · 1.8k
-- ENG-WP §2 工作包一览 · L111 · 88.6k
-  - ENG-WP §2.1 各包主线版的范围 · L183 · 14.8k
-  - ENG-WP §2.2 细节阶段待办 · L255 · 3.3k
-  - ENG-WP §2.3 候选包 · L294 · 255
-- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L302 · 3.8k
-- ENG-WP §5 主代理的工程维护事项 · L327 · 2.1k
-- ENG-WP §6 待验证（P0） · L340 · 1.2k
+- ENG-WP §1 阶段与闸口 · L50 · 8.3k
+  - ENG-WP §1.1 开工波次与推送顺序 · L93 · 1.8k
+- ENG-WP §2 工作包一览 · L110 · 88.6k
+  - ENG-WP §2.1 各包主线版的范围 · L182 · 14.8k
+  - ENG-WP §2.2 细节阶段待办 · L254 · 3.3k
+  - ENG-WP §2.3 候选包 · L293 · 255
+- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L301 · 3.8k
+- ENG-WP §5 主代理的工程维护事项 · L326 · 2.1k
+- ENG-WP §6 待验证（P0） · L339 · 1.2k
 
 ## TOOL-PREVIEW · 内容预览
 
@@ -1856,19 +1830,19 @@
   - ★ TOOL-PREVIEW §0.1 接入要点 · L37 · 691
 - TOOL-PREVIEW §1 启动 · L48 · 741
 - TOOL-PREVIEW §2 按实体 ID 定位 · L65 · 297
-- TOOL-PREVIEW §3 记下机位 · L71 · 528
+- TOOL-PREVIEW §3 记下机位 · L71 · 531
 - TOOL-PREVIEW §4 改了以后回看 · L83 · 735
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/design/ops/OPS-RELEASE-发布与交付.md` · 8.1k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
+`docs/design/ops/OPS-RELEASE-发布与交付.md` · 8.0k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断和许可
 关键词：发布、发版、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、安装包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、升级、卸载、清理用户数据、诊断包、导出诊断、试玩反馈、许可、MIT、LICENSE、发布页、干净环境验证
 
   - OPS-RELEASE 分工 · L23 · 415
 - OPS-RELEASE §0 结论 · L32 · 1.3k
-  - ★ OPS-RELEASE §0.1 接入要点 · L41 · 873
+  - ★ OPS-RELEASE §0.1 接入要点 · L41 · 860
 - OPS-RELEASE §1 版本号与构建信息 · L54 · 406
-- OPS-RELEASE §2 用户数据目录 · L61 · 321
+- OPS-RELEASE §2 用户数据目录 · L61 · 303
 - OPS-RELEASE §3 导出与发布 · L67 · 935
 - OPS-RELEASE §4 安装、更新与卸载 · L76 · 549
 - OPS-RELEASE §5 地图数据包（ODbL） · L88 · 696

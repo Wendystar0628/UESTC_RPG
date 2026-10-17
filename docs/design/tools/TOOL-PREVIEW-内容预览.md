@@ -47,7 +47,7 @@ gates: []
 
 ## 1 启动
 
-在工作树根目录：
+在主检出根目录：
 
 ```powershell
 & $env:UESTC_GODOT --path game --windowed -- --gen=live --focus=qsh:way:544688571 `
@@ -70,7 +70,7 @@ gates: []
 
 ## 3 记下机位
 
-- **F6 复制机位**：把当前机位和世界参数写成一段 JSON，放进剪贴板，同时写到 `user://preview/last-pose.json`（开发态的 `user://` 是本工作树自己的目录，CORE-CONVENTIONS §5.3）。开发构建正常退出时也写一次这个文件。
+- **F6 复制机位**：把当前机位和世界参数写成一段 JSON，放进剪贴板，同时写到 `user://preview/last-pose.json`（开发态的 `user://` 是 `UESTC_DEV`，CORE-CONVENTIONS §5.3）。开发构建正常退出时也写一次这个文件。
 - 字段名和取值与命令行参数一致（ENG-GATES §1）；行走模式下 `position` 是脚位：
 
   ```json

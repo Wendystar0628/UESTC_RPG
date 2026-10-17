@@ -235,7 +235,7 @@ gates: [G1, G2, G3, G4, G5]
 
 ### 3.7 其他命名
 
-- **工作树**：`..\UESTC_RPG.wt\<WP-xx>\`；本地临时分支 `wp/<xx>-<slug>`（例 `wp/18-south`），合进 `main` 后即删，不推送；`user://` 的目录名 `UESTC_WPxx`（ENG-ARCH §6）。
+- **主检出**：`E:\Project\UESTC_RPG`，始终在 `main` 上，所有代理在这里直接改；`user://` 的目录名是 `UESTC_DEV`（ENG-ARCH §6）。
 - **截图**：放 `output/render-review/`，命名"包-视角.png"或"包-Qn.png"；非默认状态依次加季节、钟点、天气、预设，名字与命令行取值相同，例如 `WP-18-V6-winter-2100-snow.png`（WF-ONBOARD §4.2）。
 - **存档文件**：`saves/<slot>/g<6 位代号>.sav`，如 `s1/g000041.sav`（SYS-SAVE §1）。
 - **启动集**：每张图一个 `boot_<地图>.pck`，包内路径 `res://bake/<地图>/boot/`；其余烘焙产物是本机缓存 `user://cache/bake/<地图>/` 里的 `.tbin`（D-165，ENG-ARCH §4）。
@@ -316,8 +316,8 @@ UESTC_RPG/
 
 - 目录树全文和逐目录的归属以 ENG-ARCH §2 为准；`ownership.json` 照它写。改动的路径越出本包范围，G3 拒绝。
 - **RPG 预留目录**：`game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<地图>/entities/` 在 `ownership.json` 里记为 WP-00 的预留，观光期不写入（ENG-ROADMAP §6 第 6 条）。
-- **共享文件**（工程共享件由 Astra 改、经主会话合入，`docs/design/` 由主会话改，规则见 WF-BUILD §1）：`game/project.godot`（含 Shader Globals、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`、各图的 `interiors.json`；`map.json` 归 WP-46，但字段增改经主代理（ENG-ARCH §6）。
-- **不进 git**：仓库外的工作树 `..\UESTC_RPG.wt\<WP-xx>\`、GPU 锁 `..\UESTC_RPG.wt\.locks\`、烘焙缓存（环境变量 `UESTC_BAKE_CACHE`，默认 `E:\Project\UESTC_RPG.cache\bake\<地图>\`）；仓库里的 `build/`、`output/`、`.godot/`、`override.cfg`（ENG-ARCH §2、ENG-ARCH §4、ENG-ARCH §6）。`*.wav`、`*.ogg` 进 Git LFS。
+- **共享文件**（工程共享件由 Astra 改并直接提交推送，`docs/design/` 由主会话改，规则见 WF-BUILD §1）：`game/project.godot`（含 Shader Globals、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`、各图的 `interiors.json`；`map.json` 归 WP-46，但字段增改经主代理（ENG-ARCH §6）。
+- **不进 git**：构建锁（位置以 `scripts\` 为准）、烘焙缓存（环境变量 `UESTC_BAKE_CACHE`，默认 `E:\Project\UESTC_RPG.cache\bake\<地图>\`）；仓库里的 `build/`、`output/`、`.godot/`、`override.cfg`（ENG-ARCH §2、ENG-ARCH §4、ENG-ARCH §6）。`*.wav`、`*.ogg` 进 Git LFS。
 - `game/contracts/`、`game/gen/` 和每个 `tests/` 目录各放一个空的 `.gdignore`，Godot 不扫描纯 .NET 代码（ENG-ARCH §2）。
 
 ### 5.2 按图的数据
@@ -363,8 +363,8 @@ UESTC_RPG/
 
 - 设置类文件读值只接受 bool、int、float、String；先按文本检查，含 `Object(`、`Resource(` 等就整份退回；写盘走 tmp + `FileStream.Flush(true)` + `File.Replace`（SYS-SAVE §8）。
 - 只有 `Campus.Kernel.Save` 能读写 `user://saves`；任何代码都不得用 `ResourceLoader`、`ResourceSaver` 读写 `user://`，因为 `user://` 里的 Godot 资源能嵌脚本，读入即执行（ENG-ARCH §2、SYS-SAVE §8）。本机缓存因此用自定义二进制 `.tbin`，由 `IBakeService` 用 `FileAccess` 读写，读入后先按随包的 `bake.manifest.json` 校验哈希再用（ENG-PERF §5）。
-- 门禁和基准不读任何 `user://` 文件，本机缓存由 `--bake-cache` 指到共享的烘焙缓存（ENG-GATES §1）；`--save=off` 下 `user://saves` 不被创建、不被修改（SYS-GRAPHICS §6、SYS-SAVE §12）。每个工作树经 `override.cfg` 有自己的 `user://`（ENG-ARCH §6）。
-- **目录名**：正式版的 `user://` 是 `%APPDATA%\UESTC\`（`custom_user_dir_name = "UESTC"`，ENG-ARCH §2）。目录名不带版本号，所有版本共用，解压新版本后存档、设置和日志照常沿用（OPS-RELEASE §2）。开发态另行隔离：主检出是 `UESTC_DEV`，工作树是 `UESTC_WPxx`（§3.7），都不读写正式目录。
+- 门禁和基准不读任何 `user://` 文件，本机缓存由 `--bake-cache` 指到共享的烘焙缓存（ENG-GATES §1）；`--save=off` 下 `user://saves` 不被创建、不被修改（SYS-GRAPHICS §6、SYS-SAVE §12）。开发态经 `override.cfg` 把 `user://` 指到 `UESTC_DEV`（ENG-ARCH §6）。
+- **目录名**：正式版的 `user://` 是 `%APPDATA%\UESTC\`（`custom_user_dir_name = "UESTC"`，ENG-ARCH §2）。目录名不带版本号，所有版本共用，解压新版本后存档、设置和日志照常沿用（OPS-RELEASE §2）。开发态另行隔离：用 `UESTC_DEV`（§3.7），不读写正式目录。
 
 ### 5.4 文档目录
 

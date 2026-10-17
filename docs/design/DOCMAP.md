@@ -20,18 +20,16 @@
 | [WF-ENTRY](workflow/WF-ENTRY-角色入口卡.md) 角色入口卡 | 每个角色的入口卡：身份与回报对象、本角色独有的必守、开工动作、做某事前读哪一节；由钩子按节标题注入 | WP-00 | — |
 | [WF-INDEX](workflow/WF-INDEX-协作总纲.md) 协作总纲 | 开发期多个模型与会话怎么协作的总纲：角色表与各角色入口、决定权与执行人、规则放哪份的判定表 | WP-00 | — |
 | [WF-ONBOARD](workflow/WF-ONBOARD-子代理开工手册.md) 子代理开工手册 | 子代理的查询手册，不通读：开工路径与引擎命令、怎么查资料、完成怎么自检与回报样式 | WP-00 | — |
-| [WF-COMMS](workflow/collaboration/WF-COMMS-交接与通信.md) 交接与通信 | .collab 交接目录与文件布局，命名与写法，任务单、请求文件与批准行的格式，来信与消息，Codex 会话与引导信箱 | WP-00 | — |
-| [WF-DUTY](workflow/collaboration/WF-DUTY-值班与旁路.md) 值班与旁路 | 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理 | WP-00 | — |
-| [WF-MODEL](workflow/collaboration/WF-MODEL-模型选择与子代理.md) 模型选择与子代理 | 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，便宜两档，怎么开子代理，子代理生命周期，简报模板与接续段 | WP-00 | — |
+| [WF-COMMS](workflow/collaboration/WF-COMMS-交接与通信.md) 交接与通信 | .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，来信与消息，Codex 会话与引导信箱 | WP-00 | — |
+| [WF-MODEL](workflow/collaboration/WF-MODEL-模型选择与子代理.md) 模型选择与子代理 | 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，机械活交谁，怎么开子代理，子代理生命周期，简报模板与接续段 | WP-00 | — |
 | [WF-ROLE](workflow/collaboration/WF-ROLE-参与者与分工.md) 参与者与分工 | 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥 | WP-00 | — |
 | [WF-QUOTA](workflow/management/WF-QUOTA-账号与额度.md) 账号与额度 | 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结 | WP-00 | — |
 | [WF-STATUS](workflow/management/WF-STATUS-施工状态与队列.md) 施工状态与队列 | 施工状态文件怎么填、待派工队列与队列平衡、交接单 | WP-00 | — |
-| [WF-FLOW](workflow/process/WF-FLOW-开发流程.md) 开发流程 | 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线 | WP-00 | — |
-| [WF-MERGE](workflow/process/WF-MERGE-批准与合并.md) 批准与合并 | 批准行与滚动文档分支，合并执行的步骤，成批合入与省项，合入以后的状态与 rebase，git 分支与工作树的流程 | WP-00 | G1、G2、G3、G4、G5 |
+| [WF-FLOW](workflow/process/WF-FLOW-开发流程.md) 开发流程 | 一个包从派工、施工、自测推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线 | WP-00 | — |
 | [WF-BUILD](workflow/rules/WF-BUILD-施工边界.md) 施工边界 | 施工时能改哪里、共享文件与契约申请、新模块怎么接入，以及禁用写法门禁拦不住的两条约定 | WP-00 | G3、G4 |
 | [WF-CORE](workflow/rules/WF-CORE-项目核心准则.md) 项目核心准则 | 所有会话、子代理和执行者每轮都要守的行为准则，一条一句，细则见各条指向；提醒钩子每条消息都注入本文 §0 | WP-00 | — |
 | [WF-DOC](workflow/rules/WF-DOC-文档写法.md) 文档写法 | 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护 | WP-00 | — |
-| [WF-RULE](workflow/rules/WF-RULE-全员守则.md) 全员守则 | 所有会话、子代理和执行者都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件与 git 安全、主线优先、测试最小、贴近主线、写文档与记忆 | WP-00 | — |
+| [WF-RULE](workflow/rules/WF-RULE-全员守则.md) 全员守则 | 所有会话和子代理都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少和别人打架、写文档与记忆 | WP-00 | — |
 
 ### 1.3 美术方向 `art/`
 
@@ -97,12 +95,12 @@
 
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
-| [ENG-ARCH](engineering/ENG-ARCH-工程架构.md) 工程架构：模块边界、接口契约与并行开发流程 | 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程 | WP-00 | G1、G2、G3、G4、G5、G6 |
-| [ENG-BUDGET](engineering/ENG-BUDGET-性能预算与硬规则.md) 性能预算与硬规则 | 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置 | WP-00 | G4、G5、G6、G8、G10、G11、G13、G14、G15、G16、G17、G20、G21 |
-| [ENG-GATES](engineering/ENG-GATES-验收与门禁.md) 验收：门禁、审查视角、近景巡检 | 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单 | WP-27 | G1、G2、G3、G4、G5、G6、G7、G8、G9、G10、G11、G12、G13、G14、G15、G16、G17、G18、G19、G20、G21 |
+| [ENG-ARCH](engineering/ENG-ARCH-工程架构.md) 工程架构：模块边界、接口契约与并行开发流程 | 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队 | WP-00 | G1、G2、G3、G4、G5、G6 |
+| [ENG-BUDGET](engineering/ENG-BUDGET-性能预算与硬规则.md) 性能预算与硬规则 | 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、推送硬规则、测法与工程设置 | WP-00 | G4、G5、G6、G8、G10、G11、G13、G14、G15、G16、G17、G20、G21 |
+| [ENG-GATES](engineering/ENG-GATES-验收与门禁.md) 验收：门禁、审查视角、近景巡检 | 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单 | WP-27 | G1、G2、G3、G4、G5、G6、G7、G8、G9、G10、G11、G12、G13、G14、G15、G16、G17、G18、G19、G20、G21 |
 | [ENG-PERF](engineering/ENG-PERF-性能工程.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP-扩展路线.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
-| [ENG-WP](engineering/ENG-WP-工作包派工单.md) 工作包派工单：56 个工作包，可并行 55 个 | 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与合并顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项 | WP-00 | G1、G3、G5 |
+| [ENG-WP](engineering/ENG-WP-工作包派工单.md) 工作包派工单：56 个工作包，可并行 55 个 | 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与推送顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项 | WP-00 | G1、G3、G5 |
 
 ### 1.9 工具 `tools/`
 
@@ -122,7 +120,7 @@
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONTENT、CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-DUTY、WF-ENTRY、WF-FLOW、WF-INDEX、WF-MERGE、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONTENT、CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-ENTRY、WF-FLOW、WF-INDEX、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |

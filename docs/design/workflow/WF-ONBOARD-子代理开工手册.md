@@ -3,7 +3,7 @@ id: WF-ONBOARD
 title: 子代理开工手册
 category: workflow
 summary: 子代理的查询手册，不通读：开工路径与引擎命令、怎么查资料、完成怎么自检与回报样式
-keywords: [开工手册, 查询手册, 子代理, 开工环境, 工作树, 引擎路径, 查资料, SECTIONS.md, 接入要点, Godot API, signatures.txt, 文档冲突, 完成与回报, gate.ps1, 核心专项, 回报格式, 截图, render-review, 交回就结束]
+keywords: [开工手册, 查询手册, 子代理, 开工环境, 主检出, 引擎路径, 查资料, SECTIONS.md, 接入要点, Godot API, signatures.txt, 文档冲突, 完成与回报, gate.ps1, 核心专项, 回报格式, 截图, render-review, 交回就结束]
 owners: [WP-00]
 contributors: []
 depends: [WF-INDEX, WF-RULE, WF-BUILD, CORE-INDEX]
@@ -25,7 +25,7 @@ gates: []
 1. **本文是查询手册，不通读**：入口与必守在 WF-ENTRY 子代理节，需要什么再查本文对应的节（D-178）。
 2. **怎么查资料**（§3）：用 `docs/design/SECTIONS.md` 定位小节，按行号只读需要的那一节；碰到别的系统先看那份文档的接入要点；按要做的事查，见 CORE-INDEX §6。
 3. **Godot API 不凭记忆写**：先在 `docs/godot-api/signatures.txt` 查到签名再用（§3.3，D-145）。
-4. **做完以后**：跑 `scripts\gate.ps1 -Wp <WP-xx>`，截几张图，按 §4 回报，交回就结束（§4）。
+4. **做完以后**：跑 `scripts\gate.ps1 -Wp <WP-xx>`，截几张图，提交并推送，按 §4 回报，交回就结束（§4）。
 
 ### 0.1 接入要点
 
@@ -33,9 +33,10 @@ gates: []
 
 ## 2 开工路径与引擎命令
 
-- **路径**：项目在 `E:\Project\UESTC_RPG`，你的工作树在 `..\UESTC_RPG.wt\<WP-xx>`；没有包号的任务是 `SN-<nnn>`。简报会给出绝对路径，只在那里读写。
-- **引擎**：命令行版路径读环境变量 `UESTC_GODOT`，默认 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`；新工作树第一次需要自己 `dotnet build game/Campus.sln` 和 `--headless --path game --import`。
-- **工作树配置**：工作树里的 `game\override.cfg` 已把 `user://` 指到 `UESTC_<WP-xx>`，不要改，也不要提交（工作树的技术细节见 ENG-ARCH §6）。
+- **路径**：项目在 `E:\Project\UESTC_RPG`，这就是主检出，直接在 `main` 上改，不另开目录和分支；没有包号的任务是 `SN-<nnn>`。简报会给出绝对路径和同时在干活的邻居，只在点名的路径读写；开工先 `git status` 看谁在改什么（WF-FLOW §2.1）。
+- **引擎**：命令行版路径读环境变量 `UESTC_GODOT`，默认 `E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe`。
+- **构建与测试**：`dotnet build`、`--import`、烘焙、`gate.ps1` 和截图排队，一次只跑一个（ENG-ARCH §6）。
+- **git**：只 `git add` 自己改的文件，带路径提交，测完推送，回滚只用 `git revert`（WF-RULE §7）。
 
 ## 3 查资料
 
@@ -67,8 +68,9 @@ gates: []
 
 1. **跑检查**：运行 `scripts\gate.ps1 -Wp <WP-xx>`，它按改动自动跑快检。改动碰到下面三类时，加跑核心专项并确保全部通过（ENG-GATES §2，D-167）：启动与进出（G5 的启动与进出核心范围）、行走碰撞（G15 的前四项和入树检查）、存档（G20 的往返、损坏、退出时保存）。其余门禁留到集中测试，由主会话安排。截图类门禁的运行方式见 ENG-GATES §1。
 2. **截图**：用 `--pose` 截几张能说明本包效果的图，存到 `output/render-review/`；全套巡检截图在集中测试时做。结果看得见或听得见的，可调参数集中放一处并在回报里列出（WF-FLOW §4）。
-3. **回报**：照 §4.2 的样式，中文，交给派你的一方；要提的申请（契约申请见 WF-FLOW §5）、做过的假设、留到后面的细节都写进回报。
-4. **交候选时写"接续"**：在任务单"状态"里照 WF-MODEL §8 写一段"接续"，下一张子单由新的子代理照它接着做。
+3. **提交并推送**：自测通过后带路径提交并 `git push origin main`（WF-RULE §7）。
+4. **回报**：照 §4.2 的样式，中文，交给派你的一方；要提的申请（契约申请见 WF-FLOW §5）、做过的假设、留到后面的细节都写进回报。
+5. **交回时写"接续"**：在任务单"状态"里照 WF-MODEL §8 写一段"接续"，下一张子单由新的子代理照它接着做。
 
 ### 4.2 回报格式
 
@@ -91,4 +93,4 @@ gates: []
 
 - 截图统一放在 `output/render-review/`（不进 git），命名为"包-视角.png"或"包-Qn.png"（Qn 是巡检点编号 Q1–Q8，与点位 P00–P23 区分）。非默认状态的截图在后面加季节和钟点，例如 `WP-18-V6-winter-2100.png`；天气不是晴、预设不是精致时再依次加天气和预设，例如 `WP-18-V6-winter-2100-snow.png`、`WP-18-V1-autumn-1730-clear-smooth.png`（名字与命令行取值相同）。
 - 各行怎么填由对应的系统文档规定（门禁见 ENG-GATES §2，天气与画质见 SYS-WEATHER §10、SYS-GRAPHICS §7，存档见 SYS-SAVE §2，声音见 SYS-AUDIO §22）；不涉及的写"不涉及"。
-- 报告里引用条目时只写编号，不复述内容；合并请求与契约申请的六行短头部见 WF-COMMS §3。
+- 报告里引用条目时只写编号，不复述内容；契约申请的六行短头部见 WF-COMMS §3.3。
