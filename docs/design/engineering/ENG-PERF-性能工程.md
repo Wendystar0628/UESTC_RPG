@@ -264,7 +264,7 @@ Godot 里只有一个"绘制调用"口径，分主通道和阴影两类。
 | `ground_mask2` | 全图（范围 = `map_rect`）RGBA8，不压缩，与 `ground_mask` 同尺寸 | 地面遮罩 2：R 积水潜势、G 建筑遮蔽（檐下、雨篷、连廊为 0）、B 树冠遮蔽（运行时乘叶量）、A 保留（SYS-WEATHER §7） | WP-15 | 静态（切图时重建） |
 
 - 不设全局纹理 `contact_spheres`（不做接触影，§10.1）。
-- **全局数据纹理的释放权与退出顺序**：纹理经内核的全局纹理登记处发布（`RegisterOwned`），发布以后释放权归登记处：创建方（WP-04、WP-37 等）不再 `Dispose` 已发布的纹理，也不重复释放；读者经租约（lease）读，有读租约时登记处不提前释放，同名重新注册走登记处的替换流程。正常退出的顺序固定：先停止并销毁 producer 节点和后期节点，再释放普通的自有服务，然后 `await` 登记处的 `ShutdownAsync()` 排空全部纹理，最后才 `Quit`；`IAppFlow.Quit` 是唯一公开的退出入口，离开状态后由启动层统一卸载与排空（`IAppExit.FinishQuit`，ENG-ARCH §3 的 AppFlow 段）。
+- **全局数据纹理的释放权与退出顺序**：纹理经内核的全局纹理登记处发布（`RegisterOwned`），发布以后释放权归登记处：创建方（WP-04、WP-37 等）不再 `Dispose` 已发布的纹理，也不重复释放；读者经租约（lease）读，有读租约时登记处不提前释放，同名重新注册走登记处的替换流程。正常退出的顺序固定：先停止并销毁 producer 节点和后期节点，再释放普通的自有服务，然后 `await` 登记处的 `ShutdownAsync()` 排空全部纹理，最后才 `Quit`；`IAppFlow.Quit` 是唯一公开的退出入口，离开状态后由启动层统一卸载与排空（`IAppExit.FinishQuit`，契约 `AppFlow/`，ENG-ARCH §3）。
 - **全图纹理共用一个 `map_rect`**（SYS-MAPS §10）：`ground_mask`、`ground_mask2`、`terrain_height`、`precip_occ`、`lamp_grid`，以及以后任何"全图"纹理都按它换算，各自的分辨率可以不同；不隐式按"全校"换算。
 - **范围外**：`globals.gdshaderinc` 提供 `map_uv()` 和 `in_map()`（WP-01 生成）；范围外一律取"无数据"的默认值：遮罩为 0、`precip_occ` 视为没有顶面、地形高度取 0。外围 O1、O2 和截面上缘不论是否落在 `map_rect` 内（截面线东西两侧约 ±1250 m 在范围内，南北两侧在范围外），一律不读这几张纹理：季节覆盖的潜势按面类别写进顶点，配程序噪声做阈值生长，由外围的顶点标志选择数据来源，`map_rect` 的边线穿过 O1 也不出接缝（WLD-OUTSKIRTS §3.5、WLD-OUTSKIRTS §4.5）。
 - **切图**：各写入方在 `OnMapLoaded` 里重建纹理；尺寸不变用 `ImageTexture.Update()`，尺寸变了用 `SetImage()`（会重新分配显存）。RID 是否保持、会不会让材质失效或触发编译，P0 验证（SYS-MAPS §15）。
@@ -647,7 +647,7 @@ Godot 的内部缓冲格式由引擎决定（Forward+ 颜色 RGBA16F、深度优
 
 官方基准里 1 万个同网格的 MeshInstance3D，渲染 CPU 约 4.6 ms，所以主通道 2000 次、阴影 2500 次绘制的提交开销要在 P0 用本机和一台最低配置的笔记本各测一次。
 
-**帧内顺序**（与 ENG-ARCH §3 的 `FramePriority` 表、SYS-TIME §1 的每帧顺序表一致；任何两步不得同值，同值时 Godot 按场景树顺序执行，说不清谁先谁后）：
+**帧内顺序**（与 `game/contracts/` 的 `FramePriority`（ENG-ARCH §3）、SYS-TIME §1 的每帧顺序表一致；任何两步不得同值，同值时 Godot 按场景树顺序执行，说不清谁先谁后）：
 
 地图 −1300（WP-46：切换状态机、`IMapAware` 分发、Mount 时写 `map_rect`，SYS-MAPS §9）→ 画质 −1200（`FramePriority.Quality`，只在设置或自动调节变化的那一帧做事，同一帧里所有系统看到同一版本，SYS-GRAPHICS §8）→ 相机 −1100（含 `CinematicPlayer`，SYS-TITLE §8.3；写 `edge_fog`）→ WorldState −1000（推进钟点、季节后求天气向量）→ 主光 −900 → 调色板 −800 → 通道 −700 → 动态 −650（季节氛围 −640）→ 介质 −600 → 声学 −590（SYS-AUDIO §20）→ 流式选级与请求 −500 → 默认优先级的系统 0（植被近池重建、`IAtlasService` 等）→ 音频 50 → 界面 100（HudModel、`UiThemeClock` 写 `ui_night`）→ 流式挂载 900 → 存档 1000（平时只计时，有请求时在安全时刻拍快照；读档时在这一步恢复，SYS-SAVE §11）。
 
@@ -758,7 +758,7 @@ user://（导出版是 %APPDATA%\UESTC\，不带版本号，ENG-ARCH §2）
    settings.cfg、input.cfg、graphics.cfg（画面设置与分档缓存，SYS-GRAPHICS §6）、engine_override.cfg（重启类画面设置）、audio.cfg（SYS-AUDIO）、saves/<slot>/g*.sav、saves/.lock、saves/corrupt/（SYS-SAVE）、管线缓存（只有 Vulkan 用）、着色器缓存、cache/bake/<地图>/<ABI>/…（本机烘焙缓存，含每图一份 cache.index，§5，预算见 ENG-BUDGET §8）、logs/（日志，§12.6）、diagnostics/（导出的诊断包，§12.6）
 ```
 
-- **启动集按图分开**：WP-02 的打包步骤用 `PckPacker` 只把本图的启动集写进 `boot_<地图>.pck`（ENG-ARCH §4 的"按清单打进导出包"），首次进图时 `ProjectSettings.LoadResourcePack` 挂上、不卸载，`replaceFiles: false`；包内路径一律 `res://bake/<地图>/boot/`，G6 查各 PCK 的路径两两不相交（SYS-MAPS §2.4）。其余烘焙产物不进任何 PCK，在本机缓存里（§5）。改了代码或数据，缓存键变化，玩家机器上按 §5"失效"一条的粒度重烘：数据变了整图重烘，只改了某个模块的代码就只重烘它；启动集内容变了才重打 `boot_<地图>.pck`。参考哈希清单 `bake.manifest.json`（每图一份）在启动集里，包内路径 `res://bake/<地图>/boot/bake.manifest.json`。
+- **启动集按图分开**：WP-02 的打包步骤用 `PckPacker` 只把本图的启动集写进 `boot_<地图>.pck`（OPS-RELEASE §3），首次进图时 `ProjectSettings.LoadResourcePack` 挂上、不卸载，`replaceFiles: false`；包内路径一律 `res://bake/<地图>/boot/`，G6 查各 PCK 的路径两两不相交（SYS-MAPS §2.4）。其余烘焙产物不进任何 PCK，在本机缓存里（§5）。改了代码或数据，缓存键变化，玩家机器上按 §5"失效"一条的粒度重烘：数据变了整图重烘，只改了某个模块的代码就只重烘它；启动集内容变了才重打 `boot_<地图>.pck`。参考哈希清单 `bake.manifest.json`（每图一份）在启动集里，包内路径 `res://bake/<地图>/boot/bake.manifest.json`。
 - `.res` 本身已是 zstd 压缩，PCK 不再二次压缩；贴图本身是 BC 格式。
 - 设置类文件（`settings.cfg`、`input.cfg`、`graphics.cfg`、`engine_override.cfg`、`audio.cfg`）读值时只接受基本类型，先查文本、含 `Object(` 之类的写法就整份退回；写盘走 tmp + `Flush(true)` + `File.Replace`（SYS-SAVE §8）。
 - 只考虑 SSD；机械硬盘上的加载时间不作为验收条件。
@@ -1488,7 +1488,7 @@ SYS-TIME §2 的主光交接、阴影方向钳制、方向量化，SYS-TIME §8 
 
 - **一套日志**：用引擎自带的文件日志（`debug/file_logging/enable_file_logging = true`，导出版也开），路径 `user://logs/godot.log`，每次启动轮换，保留最近 5 次（`debug/file_logging/max_log_files = 5`）。各包只经 WP-01 的日志接口（`Campus.Kernel.Inspect`）写日志；接口给每行加前缀：启动后的毫秒与帧号、级别、所属工作包、当前图、流程阶段（`AppState`，切图途中另记 `MapStage`）；错误另带异常类型和堆栈。
 - **大小上限**：单次运行经接口写出的日志超过 16 MB 后，只再记警告和错误；同一条消息每分钟最多记 10 次，多出的只计数，在下一条里写"另有 N 条相同"。日志目录因此在约 80 MB 以内（初值，§16）。
-- **启动第一段**：构建信息（版本、提交、构建类别，ENG-ARCH §4）、命令行、Windows 版本、CPU 型号与逻辑核数、内存、显卡名与驱动版本、DXGI 显存预算、图形接口、设备档与当前预设。
+- **启动第一段**：构建信息（版本、提交、构建类别，OPS-RELEASE §1）、命令行、Windows 版本、CPU 型号与逻辑核数、内存、显卡名与驱动版本、DXGI 显存预算、图形接口、设备档与当前预设。
 - **诊断摘要**（`diagnostics.json`，导出时现场生成，只读现有接口，不另存状态）：上面这段启动信息，加上画面预设与手动改过的项、自动调节的当前级别（`IQualityService`）；当前图、位姿、观察模式、流程阶段；世界状态（季节、钟点、天气与天气种子）；本机缓存占用、烘焙进度与失败的键（`IBakeService`）；最近一次成功保存的时间与存档位、最近一次保存失败的原因（`ISaveService`）；最近 20 条警告和错误。
 - **导出诊断**：把 `user://logs/` 下的日志和摘要打成一个 zip（`UESTC-diag-<版本>-<序号>.zip`），写进 `user://diagnostics/`（只留最近 3 份），再在文件管理器里打开这个目录（`OS.ShellShowInFileManager`）。默认只含日志和摘要，存档要玩家另外勾选。入口在操作说明页的"打开日志目录""导出诊断"（UI-NAV），故障处理的步骤见 OPS-RELEASE。
 - **隐私**：日志和摘要里的本机路径一律写成 `user://…`、`res://…`，不写出 Windows 用户名和安装位置。

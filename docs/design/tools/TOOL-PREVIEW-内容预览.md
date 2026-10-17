@@ -16,7 +16,7 @@ gates: []
 # TOOL-PREVIEW · 内容预览
 
 > **范围**：本文说明开发时怎样预览和回看内容：从开发入口启动，按实体 ID 找到对象，改了覆盖层或参数以后在同一机位、同一时季天气下回看，把机位记下来。这些功能只在开发构建里有。
-> **不在本文**：命令行参数的权威表（ENG-GATES §1）；覆盖层的格式（ENG-ARCH §3）；`--gen=live` 与烘焙（ENG-ARCH §4）；同图重载（SYS-MAPS §13）；近景巡检点（ART-FIDELITY §8）。
+> **不在本文**：命令行参数的权威表（ENG-GATES §1）；覆盖层的格式（CORE-CONVENTIONS §3.1）；`--gen=live` 与烘焙（ENG-ARCH §4）；同图重载（SYS-MAPS §13）；近景巡检点（ART-FIDELITY §8）。
 > **查阅**：先读 §0；启动命令与起点参数看 §1；按实体 ID 定位看 §2；机位文件与 F6 看 §3；改了以后怎么回看（F5、F7、重编译）看 §4
 > **关联**：[ENG-GATES 验收门禁](../engineering/ENG-GATES-验收与门禁.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS-多地图.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS-边界与外围.md)、[ART-FIDELITY 视觉精度](../art/ART-FIDELITY-视觉精度标准.md)、[ENG-WP 工作包](../engineering/ENG-WP-工作包派工单.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS-约定.md)
 
@@ -90,4 +90,4 @@ gates: []
 
 - **校验不过**（JSON 语法、schema、两个覆盖层改同一个要素，以及 G5 会报的数据错误）：不卸载当前图，画面保持上一次有效的结果；屏幕上方显示一行错误，完整信息写日志。改好后再按 F5。
 - **只看效果的截图**：`--pose-file` 加 `--out=<绝对路径>.png` 出一张；这算开发中自己看效果，不算门禁（WF-RULE §9）。
-- **预览里不能做的**：拖动、摆放物体，改颜色或参数后直接存盘。位置和轮廓的调整写进覆盖层的 `reshape`、`add`（ENG-ARCH §3），参数改在负责包自己的文件里。
+- **预览里不能做的**：拖动、摆放物体，改颜色或参数后直接存盘。位置和轮廓的调整写进覆盖层的 `reshape`、`add`（CORE-CONVENTIONS §3.1），参数改在负责包自己的文件里。

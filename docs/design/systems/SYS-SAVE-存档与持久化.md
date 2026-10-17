@@ -631,7 +631,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
   - 读档时的主线程恢复也放在这一步，下一帧所有系统同时看到新世界。
 - **平时几乎不做事**：只累加漫游态的时长和 5 分钟的计时；有请求时检查安全时刻，满足就调各段的 `Capture`，然后把 DTO 交给线程池。
 - **缩略图**：分两帧，在这一步里先隐藏界面、下一帧再抓图（§3.4）。
-- **不得与别的步骤同值**：Godot 对 `ProcessPriority` 相同的节点按场景树顺序执行，同值就说不清谁先谁后。流式拆成两步：`Stream` 只做选级与请求，`StreamMount` 做挂载与碰撞入树；ENG-ARCH §3 的 17 步表、ENG-PERF §5–§6、SYS-TIME §1 与下表一致：
+- **不得与别的步骤同值**：Godot 对 `ProcessPriority` 相同的节点按场景树顺序执行，同值就说不清谁先谁后。流式拆成两步：`Stream` 只做选级与请求，`StreamMount` 做挂载与碰撞入树；契约 `FramePriority`（ENG-ARCH §3）、ENG-PERF §5–§6、SYS-TIME §1 与下表一致：
 
 | `ProcessPriority` | 步骤 | 与存档的关系 |
 | --- | --- | --- |

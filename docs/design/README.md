@@ -41,7 +41,7 @@ gates: []
   - 风格是浓厚的日式动画背景美术，气质清透干净：整体明度高，线细而随底色，影子浅而透（ART-STYLE）。
   - 观者有两种方式看校园：像《我的世界》的旁观者那样自由飞行、穿墙、钻地；或者切到行走模式，以 1.62 m 的眼高在校园里走、跑、跳（SYS-WALK）。
   - 时刻、季节和天气都可以在界面上调节（SYS-TIME、UI-NAV、SYS-WEATHER）；时间只往前走，不能逆转（SYS-TIME §1）。
-- **技术栈**：Godot 4.7.2-stable .NET 版，全部用 C#；渲染器 Forward+，默认 D3D12；着色器用 Godot 着色语言。浏览器方案（three.js、React、Vite）已作废，旧代码只留在 git 标签 `baseline-map` 里（SYS-VIEW §1、ENG-ARCH §1）。不做手机、网页和触屏。
+- **技术栈**：Godot 4.7.2-stable .NET 版，全部用 C#；渲染器 Forward+，默认 D3D12；着色器用 Godot 着色语言（ENG-ARCH §1）。浏览器方案（three.js、React、Vite）已作废（SYS-VIEW §1）。不做手机、网页和触屏。
 - **不是什么**：**不是地图复刻**。保留清水河校区的平面格局，主要建筑、道路、设施的位置和形状大体对就行，其余可以风格化；竖向的地形不照现实的平地做，主动设计成有层次的地形，与真实地形不符也可以（WLD-TERRAIN，D-180）；原本没有设计感的地方，主动补上设计（MAP-QSH-ADDITIONS）。
   - **环境不照着照片复刻**：照片和 OSM 只定结构，即楼的体量、层数、平面布局、入口、交通核、道路和水体。材质、色彩、陈设、装饰、标识、生活痕迹按氛围做艺术化处理。
   - **可以增删元素**：可以新增校园里没有、但能加强氛围的元素；也可以删掉现实里有、放进画面难看的元素，例如杂乱的管线、临时围挡、刺眼的广告、施工网架、过多的指示牌。增删都写进覆盖层并写明理由（INV-9）。
@@ -102,7 +102,7 @@ gates: []
 | INV-6 | 不出现 NPC 和他人，也不加学生剪影，人只以生活痕迹出现。玩家自己的角色是唯一例外：行走模式有角色本体，旁观不显示（D-182）。展陈里不出现人物肖像；声音里没有听得清的人声 | WLD-LIFE、MAP-QSH-ADDITIONS、SYS-WALK §1、SYS-VIEW §2.7、WLD-INTERIORS §11、SYS-AUDIO §8 |
 | INV-7 | 日本元素仅限日常街景；完整边界以 ART-STYLE §9.1 为准，物件、尺度与分区见 ART-AMBIENCE；室内同样适用（WLD-INTERIORS §8.5），声音边界见 SYS-AUDIO §6.2、SYS-AUDIO §6.3 | ART-AMBIENCE、ART-STYLE、WLD-INTERIORS、SYS-AUDIO |
 | INV-8 | 世界状态有三个量：时刻、季节、天气。世界时间在一个世界实例内只向前，不能逆转；新游戏、读档是换一个实例，不算倒流。默认状态是秋季 17:30、晴、自动天气、1×。所有切换自然过渡、不硬切，每一种时刻 × 季节 × 天气的组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-TITLE、SYS-SAVE |
-| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的风格化改动、设计增补（`add`）和删除（`hide`），只写在覆盖层里并写明理由 | MAP-QSH-ADDITIONS、ENG-ARCH §3、SYS-MAPS §2.1、WLD-TERRAIN |
+| INV-9 | 保留大体的平面格局（楼、路、水体的位置与形状）；竖向地形按 D-180 主动设计，写在地形覆盖层。照片和 OSM 只定结构，细节按氛围处理（§1）。对 OSM 数据的风格化改动、设计增补（`add`）和删除（`hide`），只写在覆盖层里并写明理由 | MAP-QSH-ADDITIONS、SYS-MAPS §2.1、WLD-TERRAIN |
 | INV-10 | 所有动态都轻、慢、持续，全片只有一个偶发事件；用户触发的过渡、过场、鸽群局部惊飞、闪电与彩虹都不算。声音同样轻、慢、持续，偶发事件本身无声 | SYS-MOTION、SYS-MOTION §6.1、SYS-TIME §7、SYS-WEATHER §5、SYS-TITLE、SYS-AUDIO §6、SYS-AUDIO §7 |
 | INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，包括只有旁观飞行才到的地方。细节密度按精度区 K1–K5 分级，越常被近看越密 | ART-FIDELITY、WLD-OUTSKIRTS §4.1、WLD-INTERIORS §5 |
 | INV-12 | 满足性能预算与硬规则：界面、行走碰撞、存档、音频的耗时与体积，以及安装目录和分发压缩包的体积上限；几何类烘焙产物在玩家机器上本机烘焙，不计入安装包（D-165）。数值以 `budgets.json` 与 ENG-BUDGET 为准 | ENG-BUDGET、ENG-PERF、UI-NAV §9、SYS-WALK §14、UI-VISUAL §12、SYS-SAVE §13、SYS-AUDIO §18、ENG-GATES §2 的 G6 |
@@ -122,7 +122,7 @@ gates: []
 - **实体 ID**：各区文件里的"实体 ID"就是 `game/data/maps/qingshuihe/campus.json` 中 `entities[].id` 的值，用它定位对象，不靠名字。
   - 实体 ID 只在本图内唯一。清水河数据的前缀 `qsh:` 是 OSM 管线的既有写法，属于数据，不是地图 ID；地图 ID 一律写 `qingshuihe`（SYS-MAPS §2.1）。
   - OSM 把东湖畔的雕像误标为"孙立人像"（`qsh:node:7867995301`），按吴立人像处理。
-- **新增内容**：所有新增的设计物体都写进覆盖层，ID 以 `design:` 开头（ENG-ARCH §3）。增补（`add`）和删除（`hide`）都写明理由（INV-9）。
+- **新增内容**：所有新增的设计物体都写进覆盖层，ID 以 `design:` 开头（CORE-CONVENTIONS §3.1）。增补（`add`）和删除（`hide`）都写明理由（INV-9）。
 - **高度**：地面不是平的。全图 −5…+10 m，地形写在地形覆盖层 `overlay/terrain/<区>.terrain.json`；地面高度、垫层、水位一律读 `IWorldModel.Terrain`（`ITerrain`），不写死 y = 0（WLD-TERRAIN §2、WLD-TERRAIN §3）。
 - 其余单位、时间写法、编号与命名的速查见 CORE-CONVENTIONS §1–§3。
 
@@ -143,7 +143,7 @@ gates: []
 | 本包做什么、交什么、依赖谁、主线版做到哪 | ENG-WP §2、ENG-WP §2.1 本包的行 |
 | 某个包归谁、先开哪些包 | ENG-WP §1.1、§2 |
 | 契约签名，或申请改契约 | `game/contracts/`、ENG-ARCH §3；申请见 WF-FLOW §5 |
-| 路径归谁、能引用哪个程序集、模块怎么注册、禁用写法的完整清单 | ENG-ARCH §2 |
+| 路径归谁、能引用哪个程序集、模块怎么注册、禁用写法 | `ownership.json`、ENG-ARCH §2 |
 | 写代码前：规则数放哪、坐标与 ID 写哪、该不该新建类、文件多大该拆；写测试前 | ENG-CODE §0.1、§2–§6 |
 | 依赖的包还没交付时用什么桩 | ENG-ARCH §5 |
 | 构建与测试排队（构建锁、烘焙预选） | ENG-ARCH §6 |

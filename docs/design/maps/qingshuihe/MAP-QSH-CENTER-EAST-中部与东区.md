@@ -28,7 +28,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
   - 银杏大道跨走马河的小桥；
   - 品学楼东侧的小溪和小桥，以及门框前叠水喷泉的石台（§2.3）；
   - 球场的围网、灯杆、器材室；
-  - 改色后的球场地面（标线沿用旧网页版的球场标线拟合算法，ENG-ARCH §1 列为迁移项，用 C# 重写）；
+  - 改色后的球场地面（标线沿用旧网页版的球场标线拟合算法，用 C# 重写）；
   - 本区开放入口的门口表现（WLD-INTERIORS §4）：品学楼 A 区大厅、A 区侧门、C 区大厅，训练馆北附楼门厅；
   - 室外游泳池组团的外观（WLD-INTERIORS §17，本文 §5.4）；
   - 以上构件的碰撞图元（由本包内容模块 `IContentModule` 的 `Collide` 方法按与几何相同的参数生成，SYS-WALK §13），碰撞体同时填 `Foot`（`FootMat`，SYS-AUDIO §9.3）。
@@ -48,7 +48,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC。
 
-- 代码在 `game/gen/zones/center-east/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/center-east.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/center-east/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/center-east.d/`（按包分片，CORE-CONVENTIONS §3.1；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。围网段这类重复件按部件放置交付，由烘焙器按每格数量选容器：同种超过约 64 个用 MultiMesh，更少的（例如高杆灯）用独立实例（ENG-PERF §1）。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元的形状见 §8 末尾"碰撞体"一段（SYS-WALK §13），由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）。
@@ -262,7 +262,7 @@ gates: [G4, G5, G7, G8, G9, G10, G12, G15, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 下面"本区身份特征"表里的特征，以及本文写明的结构（体量、层数、平面布局、入口），视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来；写明"可参考，按画面需要处理"的细节按氛围处理。
-- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/center-east.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/center-east.d/` 里本包自己的分片（CORE-CONVENTIONS §3.1）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：本区建成较早的楼（品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房）和球场、围网、灯杆按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §3，待核实的楼见 MAP-QSH-RENOVATION §8。守 D-174（ART-FIDELITY §3.5）。
 

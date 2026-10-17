@@ -208,7 +208,7 @@ gates: []
 | D-123 | 不做静止降频：镜头静止时帧率不降（`low_processor_mode` 关） | 性能 | ENG-PERF §11.3；ENG-BUDGET §10 | 生效 |
 | D-124 | 视觉验收的基准是精致预设、1080p 原生 | 验收 | SYS-GRAPHICS §10；ART-FIDELITY §8 | 生效 |
 | D-125 | 安装目录上限 0.9 GB，分发压缩包（7-Zip LZMA2）上限 0.7 GB，音频单列 ≤ 165 MB；本机缓存不计入 | 构建 | ENG-GATES §2；ENG-BUDGET §8；ENG-PERF §8 | 生效 |
-| D-165 | 本机烘焙：几何类烘焙产物（L0–L3 的 TileBundle、碰撞级 C、室内包与碰撞包、平面地图底图）不随包发，在玩家机器上由同一个 `Build()` 按需和后台生成，写进 `user://cache/bake/`；随包只发启动集 `boot_<地图>.pck`（L4、遮挡体、O2 常驻块、低精度地形、需 GPU 的替身图集，以及派生数据纹理、碰撞栅格与安全点、声学与声景、导航图这些全图常驻的小数据和参考哈希清单）；本机产物与 CI 参考逐字节一致，gen 用 `DetMath`、禁用系统超越函数与变宽 SIMD | 构建、流式 | ENG-ARCH §4；ENG-PERF §5；ENG-PERF §8；ENG-GATES §2 | 生效 |
+| D-165 | 本机烘焙：几何类烘焙产物（L0–L3 的 TileBundle、碰撞级 C、室内包与碰撞包、平面地图底图）不随包发，在玩家机器上由同一个 `Build()` 按需和后台生成，写进 `user://cache/bake/`；随包只发启动集 `boot_<地图>.pck`（L4、遮挡体、O2 常驻块、低精度地形、需 GPU 的替身图集，以及派生数据纹理、碰撞栅格与安全点、声学与声景、导航图这些全图常驻的小数据和参考哈希清单）；本机产物与 CI 参考逐字节一致，gen 用 `DetMath`、禁用系统超越函数与变宽 SIMD | 构建、流式 | ENG-ARCH §2；ENG-ARCH §4；ENG-PERF §5；ENG-PERF §8；ENG-GATES §2 | 生效 |
 | D-126 | 包体估计约 0.45–0.75 GB、本机缓存烘满约 0.8–1.4 GB，原型实测后核账；超上限时向用户汇报 | 构建 | ENG-BUDGET §8 | 待原型验证 |
 | D-127 | GPU 的主代理余量约 2%，开发机主线程余量在音频划走后约 0.15 ms；原型实测后统一核账，写回 ENG-BUDGET §8 | 预算 | ENG-WP §5；ENG-BUDGET §8；WLD-OUTSKIRTS §11.1 | 待原型验证 |
 | D-128 | 室内预算（楼内视角，精致）：≤ 80 万三角形、≤ 250 次绘制，大厅和中庭 ≤ 100 万三角形 | 开放室内 | WLD-INTERIORS §12 | 生效 |
@@ -235,10 +235,10 @@ gates: []
 | D-144 | 坐标单位米，x 向东、y 向上、z 向南；方位角是罗盘方位，从正北顺时针；数据坐标直接当 Godot 世界坐标用 | 全项目 | CORE-INDEX §4 | 生效 |
 | D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | WF-ONBOARD §3.3；CORE-INDEX §6 | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、不开声音 | 门禁 | ENG-GATES §1 | 生效 |
-| D-147 | 新增的设计物体写进覆盖层，ID 以 `design:` 开头；覆盖层按图放在 `game/data/maps/<地图>/overlay/` | 内容包 | CORE-INDEX §4；ENG-ARCH §3；SYS-MAPS §2.1 | 生效 |
+| D-147 | 新增的设计物体写进覆盖层，ID 以 `design:` 开头；覆盖层按图放在 `game/data/maps/<地图>/overlay/` | 内容包 | CORE-INDEX §4；CORE-CONVENTIONS §3.1；SYS-MAPS §2.1 | 生效 |
 | D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指门禁 G1–G21；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
 | D-160 | v1 冻结前做 ENG-ROADMAP §6 的六条预留：规则集（`RulesetDescriptor`、`IRuleset`，观光为 `sightseeing`）、观者状态 `IObserverState`、按原因计数的输入占用 `LockInput(InputLockReason)`、枚举穷举纪律、偶发事件数据化（`incidents.json`）、RPG 名字占位（目录、实体 ID 前缀、存档段名、E 与 I 键）；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §6；ENG-ARCH §2；ENG-ARCH §3；ENG-WP §2；CORE-CONVENTIONS §3.8 | 生效 |
-| D-177 | 目标框架用 net10.0（C# 14）：.NET 8 于 2026-11-10 停止支持；SDK 10.0.402 由 `global.json` 锁定（`rollForward: latestPatch`）；Godot 4.7.2 的 C# 模板默认是 net8.0，D0 在 net10.0 下跑通编译、导入、导出与导出版启动，不通时报作者决定，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §1；ENG-WP §5；ENG-ARCH §7 | 待原型验证 |
+| D-177 | 目标框架用 net10.0（C# 14）：.NET 8 于 2026-11-10 停止支持；SDK 10.0.402 由 `global.json` 锁定（`rollForward: latestPatch`）；Godot 4.7.2 的 C# 模板默认是 net8.0，D0 在 net10.0 下跑通编译、导入、导出与导出版启动，不通时报作者决定，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §1；ENG-WP §5；ENG-ARCH §9 | 待原型验证 |
 
 ## 10 流程
 
@@ -291,6 +291,7 @@ gates: []
 | D-212 | Codex 侧只留 Astra 与 Sol会话（gpt-6.1-sol xhigh），Sol会话接手调研、旁路和机械活，机械活可开 gpt-6-luna 子代理（medium）；不设值班执行者、Sol 值班、Grok、Gemini、luna 会话与值班唤醒脚本 | Claude 与 Codex 两侧 | WF-ROLE §1；WF-ENTRY | 生效 |
 | D-213 | 代码结构准则：写代码守 ENG-CODE（依赖单向、规则值与数据各一份、先复用、不留死代码、控制规模、测试测行为），一句话摘要列入 CORE-CONTENT §0 的"工程结构"；钩子在内容准则重注、写代码与写测试时注入，提交后测试新增偏多或文件过大时带数字提醒 | 全部写代码的会话与子代理 | ENG-CODE；CORE-CONTENT §0 | 生效 |
 | D-214 | 契约程序集不再用 PublicApiAnalyzers 与 `PublicAPI.*.txt` 清单；契约改动照旧先申请、与全部使用方同批改，签名只在源码里 | `game/contracts/` | ENG-ARCH §2、§3；WF-BUILD §1 | 生效 |
+| D-215 | 设计文档写当前结构、规则、设计目标和导向，不写实现做法与实现细节（签名、目录明细、格式字段、参数表、清单、内部流程），这些以代码和数据为准；ENG-ARCH 按此重写为架构、准则与导向 | `docs/design/` 全部 | WF-DOC §4；WF-RULE §12；ENG-ARCH | 生效 |
 | D-161 | "主代理"是开发期的编排者，由 Opus 担任；WP-00 由 Astra 做、主代理验收（D-179）；审批契约变更、开放室内清单的增删和预算余量（ENG-BUDGET §8 的"主代理余量"）；文档里"须经 WP-00 审批"与"须经主代理审批"等价 | 全项目 | WF-ROLE §5；CORE-GLOSSARY §14；ENG-WP §5 | 生效 |
 
 ## 11 待对齐

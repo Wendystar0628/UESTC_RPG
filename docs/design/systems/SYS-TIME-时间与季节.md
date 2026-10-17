@@ -57,7 +57,7 @@ gates: [G2, G7, G12, G13, G16]
 
 - **要读钟点、季节、日月或天气**：C# 只经 `IWorldState` 读（Kernel 服务，WP-34），不自己写计时器；着色器不读 C# 对象，只读 WorldState 写的全局着色器参数（§1）
 - **要改时间、季节、天气或套用推荐状态**：只经 `IWorldControl`；时间只向前（`SetClock` 跳到下一次出现、`Advance`、`FlowTo`），换季一律正向转场；读档经存档段 `world` 恢复，不经 `IWorldControl`；`Freeze` 只给测试构建（§1）
-- **节点每帧要用本帧的世界状态**：用 `ProcessPriority` 排在 WorldState（−1000）之后，取值与 ENG-ARCH §3 的 `FramePriority` 表一致，任何两步不得同值（§1"每帧顺序"）
+- **节点每帧要用本帧的世界状态**：用 `ProcessPriority` 排在 WorldState（−1000）之后，取值与契约 `FramePriority`（ENG-ARCH §3）一致，任何两步不得同值（§1"每帧顺序"）
 - **要写全局着色器参数**：用 `RenderingServer.GlobalShaderParameterSet`，参数先登记进 ENG-PERF §1.5 的登记表（项目设置 Shader Globals）；数组做成数据纹理；禁止从脚本读回全局参数（§1）
 - **着色器要用时间**：禁用内置 `TIME`，周期动画读 `anim_time`（`AnimTime`，480 s 循环，与世界时间无关）；`Engine.TimeScale` 固定为 1，暂停不用 `SceneTree.Paused`（§1；SYS-MOTION §1.6）
 - **内容随时刻、季节、天气变化**：不换模型、不重建格子、不切特化开关、不新增管线编译；颜色从全局调色板纹理读（当前行与季相行），季节变化走连续参数、阈值生长和地面遮罩（§3.1、§4"实现"）
@@ -111,7 +111,7 @@ gates: [G2, G7, G12, G13, G16]
   - **取消**：调用 `SetFlow` 或再次 `FlowTo`，会取消上一次还没到点的 `FlowTo`。
   - **新游戏的过场**用它：新建实例（秋 17:05、晴）→ `FlowTo(17:30, 倍率)`，完整版 60×、简短版 360×、关与跳过 1440×，是同一条世界轨 → 交还时 `SetFlow(1)`。所以交还那一刻钟点正好是 17:30:00，与跳过的终态逐位相同（SYS-TITLE §6）。
 - **回到本图默认状态**（`ResetDefault()`，SYS-MAPS §5）：读当前图的 `world.default` 与 `quietUntilDusk`：正向换季转场（§5）+ 快进到下一次出现的默认钟点 + 流逝 1× + 自动天气 + `quietUntilDusk` 为真时天气保持晴到本季黄昏带结束；天气种子不变，不移动镜头（SYS-WEATHER §6.6）。在清水河上就是：换到秋季、快进到下一个 17:30（已在 17:22–17:40 之间就不动）、保持晴到约 19:36，按钮名取 `world.defaultName`，仍是"回到落金初灯"。它是同一实例里的组合正向转场，不换实例，与新游戏不同（SYS-TITLE §6）。
-- **每帧顺序**（与 ENG-ARCH §3 的 `FramePriority` 表、ENG-PERF §6 的帧内顺序一致）：用节点的 `ProcessPriority` 固定，值越小越先执行，与场景树里的顺序无关；任何两步不得同值（同值时按场景树顺序执行，说不清谁先谁后）。
+- **每帧顺序**（与契约 `FramePriority`（ENG-ARCH §3）、ENG-PERF §6 的帧内顺序一致）：用节点的 `ProcessPriority` 固定，值越小越先执行，与场景树里的顺序无关；任何两步不得同值（同值时按场景树顺序执行，说不清谁先谁后）。
 
   | `ProcessPriority` | 步骤 | 工作包 | 职责 |
   | --- | --- | --- | --- |

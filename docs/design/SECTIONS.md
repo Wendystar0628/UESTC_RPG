@@ -4,7 +4,7 @@
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 11.6k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定及文档入口
+`docs/design/README.md` · 11.5k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定及文档入口
 关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、清水河
 
 - CORE-INDEX §0 结论 · L23 · 686
@@ -14,7 +14,7 @@
 - CORE-INDEX §3 全局不变量 · L91 · 2.3k
 - CORE-INDEX §4 坐标与数据约定 · L110 · 1.3k
 - CORE-INDEX §5 文档怎么组织 · L129 · 203
-- CORE-INDEX §6 按要做的事查哪里 · L134 · 2.5k
+- CORE-INDEX §6 按要做的事查哪里 · L134 · 2.6k
 
 ## CORE-CONTENT · 开发内容核心准则
 
@@ -27,13 +27,13 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS-约定.md` · 28.1k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
+`docs/design/core/CORE-CONVENTIONS-约定.md` · 28.0k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
 关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
   - ★ CORE-CONVENTIONS §0.1 接入要点 · L45 · 354
 - CORE-CONVENTIONS §1 坐标与单位 · L55 · 2.8k
-  - CORE-CONVENTIONS §1.1 坐标系 · L57 · 604
+  - CORE-CONVENTIONS §1.1 坐标系 · L57 · 591
   - CORE-CONVENTIONS §1.2 角度 · L64 · 531
   - CORE-CONVENTIONS §1.3 范围数（清水河） · L72 · 1.3k
   - CORE-CONVENTIONS §1.4 其他单位 · L87 · 370
@@ -59,7 +59,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS-决策登记.md` · 30.5k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 30.7k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L24 · 388
@@ -73,8 +73,8 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 6.6k
-- CORE-DECISIONS §11 待对齐 · L296 · 61
+- CORE-DECISIONS §10 流程 · L243 · 6.7k
+- CORE-DECISIONS §11 待对齐 · L297 · 61
 
 ## CORE-GLOSSARY · 术语表
 
@@ -96,7 +96,7 @@
 - CORE-GLOSSARY §11 界面 · L306 · 2.1k
 - CORE-GLOSSARY §12 音频 · L335 · 2.0k
 - CORE-GLOSSARY §13 画面设置与性能 · L360 · 3.0k
-- CORE-GLOSSARY §14 工程与流程 · L390 · 4.0k
+- CORE-GLOSSARY §14 工程与流程 · L390 · 4.1k
 - CORE-GLOSSARY §15 同名异义 · L432 · 2.0k
 
 ## WF-ENTRY · 角色入口卡
@@ -131,7 +131,7 @@
   - ★ WF-ONBOARD §0.1 接入要点 · L30 · 82
 - WF-ONBOARD §2 开工路径与引擎命令 · L34 · 451
 - WF-ONBOARD §3 查资料 · L41 · 1.2k
-  - WF-ONBOARD §3.1 文档在哪、怎么找 · L43 · 774
+  - WF-ONBOARD §3.1 文档在哪、怎么找 · L43 · 782
   - WF-ONBOARD §3.3 Godot API · L53 · 223
   - WF-ONBOARD §3.4 文档不清楚或冲突时 · L59 · 187
 - WF-ONBOARD §4 完成与回报 · L65 · 1.7k
@@ -207,8 +207,8 @@
 `docs/design/workflow/management/WF-STATUS-施工状态与队列.md` · 2.9k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
 关键词：施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、活跃工作包、待派工队列、Q-nnn、排队、可派、已派、队列平衡、积压、交接单、HANDOVER.md、接手、已集成
 
-- WF-STATUS §0 结论 · L24 · 465
-  - ★ WF-STATUS §0.1 接入要点 · L32 · 196
+- WF-STATUS §0 结论 · L24 · 452
+  - ★ WF-STATUS §0.1 接入要点 · L32 · 183
 - WF-STATUS §1 施工状态文件怎么填 · L38 · 795
 - WF-STATUS §2 待派工队列与队列平衡 · L59 · 732
 - WF-STATUS §3 交接单 · L75 · 87
@@ -225,13 +225,13 @@
   - WF-FLOW §2.1 防打架（D-211） · L73 · 492
 - WF-FLOW §3 施工与回报 · L83 · 517
 - WF-FLOW §4 评审：审美与契约的交叉评审 · L95 · 735
-- WF-FLOW §5 契约申请与共享工程文件 · L110 · 725
+- WF-FLOW §5 契约申请与共享工程文件 · L110 · 727
 - WF-FLOW §6 调研入队流水线 · L119 · 1.8k
   - WF-FLOW §6.1 调研单与旁路单 · L133 · 906
 
 ## WF-BUILD · 施工边界
 
-`docs/design/workflow/rules/WF-BUILD-施工边界.md` · 2.8k 字 · 施工时能改哪里、共享文件与契约申请、新模块怎么接入，以及禁用写法门禁拦不住的两条约定
+`docs/design/workflow/rules/WF-BUILD-施工边界.md` · 2.9k 字 · 施工时能改哪里、共享文件与契约申请、新模块怎么接入，以及禁用写法门禁拦不住的两条约定
 关键词：独占目录、共享文件、契约申请、特性接入、ContentModule、Part、KernelNode、SaveSection、穷举 switch、几何不随时季天气变、GDScript、uid、signatures.txt
 
 - WF-BUILD §0 结论 · L24 · 649
@@ -250,7 +250,7 @@
 
 ## WF-DOC · 文档写法
 
-`docs/design/workflow/rules/WF-DOC-文档写法.md` · 8.0k 字 · 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护
+`docs/design/workflow/rules/WF-DOC-文档写法.md` · 8.1k 字 · 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护
 关键词：文档写法、文件头、front matter、keywords、范围块、查阅行、接入要点、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、数值只有一个家、待验证、冲突层级、决定层级、新增文档、登记决策、CORE-DECISIONS、gen_index、check_docs、SECTIONS.md、D-178、D-200、D-208
 
 - WF-DOC §0 结论 · L24 · 516
@@ -258,12 +258,12 @@
 - WF-DOC §1 文件头 · L38 · 1.4k
 - WF-DOC §2 标题与范围块 · L79 · 888
 - WF-DOC §3 编码、小节编号与引用 · L101 · 1.7k
-- WF-DOC §4 正文写法 · L133 · 407
-- WF-DOC §5 待验证（P0）节 · L141 · 169
-- WF-DOC §6 冲突与决定层级 · L148 · 633
-- WF-DOC §7 新增文档与小节 · L162 · 328
-- WF-DOC §8 登记新决策 · L168 · 251
-- WF-DOC §9 文档维护 · L174 · 445
+- WF-DOC §4 正文写法 · L133 · 524
+- WF-DOC §5 待验证（P0）节 · L142 · 169
+- WF-DOC §6 冲突与决定层级 · L149 · 633
+- WF-DOC §7 新增文档与小节 · L163 · 337
+- WF-DOC §8 登记新决策 · L169 · 251
+- WF-DOC §9 文档维护 · L175 · 445
 
 ## WF-RULE · 全员守则
 
@@ -295,7 +295,7 @@
   - WF-RULE §10.5 小步交付 · L136 · 43
   - WF-RULE §10.6 评审定下的通用规则以规范文档为准 · L140 · 68
 - WF-RULE §11 拿不准就问 · L144 · 137
-- WF-RULE §12 写文档与记忆 · L149 · 231
+- WF-RULE §12 写文档与记忆 · L149 · 261
 - WF-RULE §13 截图与 GPU 锁 · L158 · 54
 
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法
@@ -326,16 +326,16 @@
 
 ## ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
 
-`docs/design/art/ART-FIDELITY-视觉精度标准.md` · 38.5k 字 · 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度
+`docs/design/art/ART-FIDELITY-视觉精度标准.md` · 38.6k 字 · 任何位置都成立的精度底线、五个精度区的细节密度与判定距离、一票否决与验收方法，含行走走廊加密和外围分级精度
 关键词：视觉精度、精度区、精度分区、K1、K2、K3、K4、K5、判定距离、d_K、底线清单、B1–B13、不粗糙、细节密度、一票否决、贴脸距离、L0+ 专用几何、热点簇、事件贴花、倒角表、不做旧、立面密度、可读规则、近景巡检点、人工评分、裸面检测、跳变检测、行走走廊、走廊加密
 
   - ART-FIDELITY 分工 · L22 · 197
-- ART-FIDELITY §0 结论 · L27 · 6.3k
+- ART-FIDELITY §0 结论 · L27 · 6.4k
   - ART-FIDELITY §0.1 五个精度区 · L55 · 1.8k
   - ART-FIDELITY §0.2 区界规则 · L65 · 262
   - ART-FIDELITY §0.3 细节项在各区的取用 · L72 · 968
-  - ART-FIDELITY §0.4 划分、数据与预算 · L91 · 738
-  - ★ ART-FIDELITY §0.5 接入要点 · L104 · 1.0k
+  - ART-FIDELITY §0.4 划分、数据与预算 · L91 · 782
+  - ★ ART-FIDELITY §0.5 接入要点 · L104 · 1.1k
 - ART-FIDELITY §1 换算基准 · L119 · 1.6k
 - ART-FIDELITY §2 精致感的九个来源与底线清单 · L147 · 3.2k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L159 · 2.0k
@@ -507,7 +507,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS-室内.md` · 65.2k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS-室内.md` · 65.3k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -843,7 +843,7 @@
 关键词：中部科研区、东区、基础实验大楼、一号科研实验楼、科研楼B区、科研楼C区、麦克斯韦像、方程石、林为干院士像、科研楼碑、银杏大道跨河小桥、品学楼、第一教学楼、书法横梁门框、架空通道、叠水喷泉石台、文科楼群、友谊树、综合训练馆、筒拱、网球场树墙、绿色房间、球场标线、球场围网、高杆灯、田径场、器材室、室外游泳池组团、东区月出、overlay/center-east.d
 
   - MAP-QSH-CENTER-EAST 分工 · L23 · 1.1k
-  - MAP-QSH-CENTER-EAST 实现 · L47 · 639
+  - MAP-QSH-CENTER-EAST 实现 · L47 · 649
 - MAP-QSH-CENTER-EAST §0 结论 · L56 · 2.0k
   - ★ MAP-QSH-CENTER-EAST §0.1 接入要点 · L69 · 956
 - MAP-QSH-CENTER-EAST 数据定位 · L81 · 2.7k
@@ -854,7 +854,7 @@
 - MAP-QSH-CENTER-EAST §5 东缘 · L226 · 951
 - MAP-QSH-CENTER-EAST §6 本区的光 · L237 · 522
 - MAP-QSH-CENTER-EAST WP-21 交付验收 · L246 · 743
-- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L259 · 2.1k
+- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L259 · 2.2k
 - MAP-QSH-CENTER-EAST §7 季节与昼夜清单 · L303 · 3.3k
 - MAP-QSH-CENTER-EAST §8 行走 · L343 · 4.1k
 - MAP-QSH-CENTER-EAST §9 声音要点（SYS-AUDIO） · L398 · 603
@@ -862,11 +862,11 @@
 
 ## MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
-`docs/design/maps/qingshuihe/MAP-QSH-CORE-核心区.md` · 30.7k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
+`docs/design/maps/qingshuihe/MAP-QSH-CORE-核心区.md` · 30.8k 字 · 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物，含四季昼夜、天气、行走与声音要点
 关键词：核心区、图书馆外观、八角采光顶、穹顶、方塔玻璃槽、竖缝窗、大台阶、二楼正门、品·悦吧店面、宁静苑、无主体块、时间广场、旗杆、十二时辰刻度、日晷、晷针、博物馆外观、柱廊环、西湖、折线栈桥、白色拱桥、湖心岛观景平台、西湖喷泉、箱涵、天鹅屋、入水口荷花、草阶看台、overlay/core.d
 
   - MAP-QSH-CORE 分工 · L27 · 998
-  - MAP-QSH-CORE 实现 · L50 · 715
+  - MAP-QSH-CORE 实现 · L50 · 725
 - MAP-QSH-CORE §0 结论 · L59 · 2.3k
   - ★ MAP-QSH-CORE §0.1 接入要点 · L74 · 1.2k
 - MAP-QSH-CORE 数据定位 · L89 · 2.2k
@@ -923,7 +923,7 @@
 关键词：北部生活区、学生活动中心、成电会堂、赭红圆鼓、校医院、院名灯牌、商业街、玻璃拱顶步行街、店招、宿舍组团、学知苑、硕丰苑、博翰苑、留学生组团、本科楼A型、本科楼B型、组团闸机、学知一组团、阳台晾晒、银杏苑、芙蓉餐厅、思学苑、春晖苑、朝阳餐厅、西北餐厅、室外扶梯罩棚、风雨连廊、丹桂路、博士公寓、overlay/north.d
 
   - MAP-QSH-NORTH 分工 · L23 · 1.1k
-  - MAP-QSH-NORTH 实现 · L43 · 629
+  - MAP-QSH-NORTH 实现 · L43 · 639
 - MAP-QSH-NORTH §0 结论 · L52 · 1.9k
   - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 827
 - MAP-QSH-NORTH 数据定位 · L77 · 4.7k
@@ -982,8 +982,8 @@
 `docs/design/maps/qingshuihe/MAP-QSH-SOUTH-南区.md` · 40.1k 字 · 南区各楼与构筑物的外观、受光与夜景、四季昼夜与天气、行走与开放入口、声音要点
 关键词：南区、南门、校名墙、主楼、主轴线、屋顶空廊、过街楼、主楼泛光、森林公园、孔雀之家、东湖岸线、环湖跑道、里程标、六角亭、亲水平台、荷角、吴立人像、宣邦楼、钟楼、电子管穹顶、交班的钟、钟面指针、立人楼、体育馆、游泳馆、体育运动中心大平台、看台罩棚、国际创新中心、1–8 号楼、overlay/south.d
 
-  - MAP-QSH-SOUTH 分工 · L22 · 1.2k
-  - MAP-QSH-SOUTH 实现 · L46 · 701
+  - MAP-QSH-SOUTH 分工 · L22 · 1.1k
+  - MAP-QSH-SOUTH 实现 · L46 · 711
 - MAP-QSH-SOUTH §0 结论 · L54 · 2.0k
   - ★ MAP-QSH-SOUTH §0.1 接入要点 · L68 · 935
 - MAP-QSH-SOUTH 数据定位 · L80 · 4.9k
@@ -1096,7 +1096,7 @@
 关键词：西区、西北区、六号科研楼、基础与前沿研究院、公式台阶、2F室外连廊、校训石、创新中心、经管楼、三号科研实验楼、宾诺咖啡、立人托幼公园、键盘立面、四号科研楼、扇形草坪、深蓝玻璃盒入口、五号科研楼、电子科学技术研究院大楼、微波暗室、工程训练中心、荟文楼、综合楼、核磁共振中心、国防科技园石刻、湿地公园、湿地栈道、西门桥头、水杉路、孤儿楼 6151 与 6154、overlay/west.d
 
   - MAP-QSH-WEST 分工 · L22 · 783
-  - MAP-QSH-WEST 实现 · L39 · 599
+  - MAP-QSH-WEST 实现 · L39 · 609
 - MAP-QSH-WEST §0 结论 · L49 · 1.8k
   - ★ MAP-QSH-WEST §0.1 接入要点 · L62 · 768
 - MAP-QSH-WEST 数据定位 · L73 · 3.3k
@@ -1141,7 +1141,7 @@
   - SYS-ATLAS §4.6 自定义标记与追踪 · L404 · 471
   - SYS-ATLAS §4.7 大地图内的按键 · L419 · 473
 - SYS-ATLAS §5 标记类型 · L439 · 2.5k
-- SYS-ATLAS §6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点） · L472 · 3.5k
+- SYS-ATLAS §6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点） · L472 · 3.6k
 - SYS-ATLAS §7 传送流程（WP-48c 调用，WP-36 实现过渡） · L529 · 2.8k
   - SYS-ATLAS §7.1 两种方式 · L531 · 703
   - SYS-ATLAS §7.2 传送的时序 · L542 · 923
@@ -1151,7 +1151,7 @@
 - SYS-ATLAS §8 解锁策略（WP-48c） · L587 · 698
 - SYS-ATLAS §9 多地图下的数据（WP-48c，与 SYS-MAPS一致） · L602 · 1.7k
 - SYS-ATLAS §10 实现与性能（WP-48b、WP-48c） · L627 · 2.4k
-- SYS-ATLAS §11 C# 契约 · L690 · 922
+- SYS-ATLAS §11 C# 契约 · L690 · 938
 - SYS-ATLAS §12 存档里存什么、设置里存什么 · L702 · 978
 - SYS-ATLAS §13 各包的分工 · L730 · 71
 - SYS-ATLAS §14 验收 · L734 · 2.9k
@@ -1166,7 +1166,7 @@
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
   - SYS-AUDIO 分工 · L22 · 105
-- SYS-AUDIO §0 结论 · L27 · 3.9k
+- SYS-AUDIO §0 结论 · L27 · 4.0k
   - ★ SYS-AUDIO §0.1 接入要点 · L43 · 1.8k
 - SYS-AUDIO §2 总体架构 · L57 · 8.8k
   - SYS-AUDIO §2.1 一个内核、三条管线 · L59 · 2.6k
@@ -1246,7 +1246,7 @@
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
-`docs/design/systems/SYS-GRAPHICS-画面设置.md` · 18.7k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
+`docs/design/systems/SYS-GRAPHICS-画面设置.md` · 18.8k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
 关键词：画面设置、画质、画面预设、设备档、流畅、均衡、精致、极致、单项、风格底线、风格默认、自动调节画质、自适应、首次分档、渲染比例、超采样、雾幕类设置、画面页、显存估算、IQualityService、IQualityAware、QualityResponsive、QualityKnob、QualityView、KnobSpec、quality-presets.json、graphics.cfg、engine_override.cfg、reset-graphics.cmd、预设轮换
 
 - SYS-GRAPHICS §0 结论 · L24 · 2.1k
@@ -1272,7 +1272,7 @@
 - SYS-MAPS §0 结论 · L28 · 2.3k
   - ★ SYS-MAPS §0.1 接入要点 · L38 · 1.3k
 - SYS-MAPS §2 数据模型与目录 · L51 · 6.9k
-  - SYS-MAPS §2.1 目录 · L53 · 3.4k
+  - SYS-MAPS §2.1 目录 · L53 · 3.5k
   - SYS-MAPS §2.2 按图与全局的划分 · L101 · 1.1k
   - SYS-MAPS §2.4 本机烘焙缓存与启动集 PCK · L118 · 2.3k
 - SYS-MAPS §3 `map.json`：`MapDescriptor` · L135 · 4.5k
@@ -1362,7 +1362,7 @@
 - SYS-SAVE §8 设置类文件只接受基本类型 · L556 · 1.3k
 - SYS-SAVE §9 安全：为什么禁止用 Resource 和 ConfigFile 存档 · L577 · 1.6k
 - SYS-SAVE §10 C# 契约 · L608 · 821
-- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L627 · 994
+- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L627 · 1.0k
 - SYS-SAVE §12 命令行 · L648 · 1.2k
 - SYS-SAVE §13 性能实测 · L664 · 2.5k
 - SYS-SAVE §14 验收：G20 · L710 · 3.1k
@@ -1523,7 +1523,7 @@
 - SYS-WEATHER §8 状态、参数与接口 · L250 · 2.3k
 - SYS-WEATHER §9 验收 · L282 · 1.5k
 - SYS-WEATHER §10 工作包 · L296 · 69
-- SYS-WEATHER §12 待验证（P0） · L300 · 585
+- SYS-WEATHER §12 待验证（P0） · L300 · 605
 
 ## UI-NAV · 界面、点位跳转与操作说明
 
@@ -1658,39 +1658,36 @@
   - UI-VISUAL §11.8 字体与 MSDF · L1104 · 787
   - UI-VISUAL §11.9 预热与预建 · L1114 · 1.1k
   - UI-VISUAL §11.10 界面缩放公式 · L1124 · 938
-  - UI-VISUAL §11.11 契约增量（写进 ENG-ARCH §3） · L1141 · 982
+  - UI-VISUAL §11.11 契约增量（写进 ENG-ARCH §3） · L1141 · 998
   - UI-VISUAL §11.12 命令行与组件画廊（写进 ENG-GATES §1） · L1164 · 607
 - UI-VISUAL §12 性能 · L1176 · 1.3k
 - UI-VISUAL §13 验收 · L1195 · 2.5k
 - UI-VISUAL §15 待验证（P0） · L1228 · 608
 
-## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
+## ENG-ARCH · 工程架构
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 56.6k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
-关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、构建与测试排队、构建锁、net10.0
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 10.2k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则，构建排队与后续导向；实现细节以代码为准
+关键词：工程架构、分层、依赖方向、程序集边界、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、DetMath、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、启动集、英雄资产、桩、占位、构建与测试排队、构建锁、架构导向、扩展方式、net10.0、技术栈
 
-- ENG-ARCH §0 结论 · L67 · 2.4k
-  - ★ ENG-ARCH §0.1 接入要点 · L79 · 1.4k
-- ENG-ARCH §1 资源管线迁移约定 · L93 · 271
-- ENG-ARCH §2 目录结构与归属 · L102 · 20.8k
-  - ENG-ARCH 架构边界与唯一生产链 · L104 · 1.2k
-  - ENG-ARCH 目录树 · L125 · 5.5k
-  - ENG-ARCH 生成物与资源位置 · L192 · 271
-  - ENG-ARCH 归属依据 · L196 · 69
-  - ENG-ARCH 程序集边界 · L200 · 2.5k
-  - ENG-ARCH 命名空间依赖规则 · L223 · 3.9k
-  - ENG-ARCH 禁用写法与确定性 · L246 · 4.0k
-  - ENG-ARCH 自动发现与模块接入 · L281 · 3.2k
-- ENG-ARCH §3 关键接口与契约源码 · L305 · 3.3k
-  - ENG-ARCH 契约组与源码 · L322 · 1.3k
-  - ENG-ARCH 覆盖层约束 · L343 · 342
-  - ENG-ARCH 仍未落地项 · L349 · 511
-- ENG-ARCH §4 资源管线 · L355 · 10.6k
-- ENG-ARCH §5 未交付能力的占位边界 · L443 · 572
-- ENG-ARCH §6 构建与测试排队 · L457 · 2.0k
-- ENG-ARCH §7 主要风险与对策 · L482 · 6.0k
-- ENG-ARCH §8 扩展点（RPG） · L533 · 1.1k
-- ENG-ARCH §9 待验证（P0） · L549 · 2.1k
+- ENG-ARCH §0 结论 · L22 · 1.5k
+  - ★ ENG-ARCH §0.1 接入要点 · L34 · 828
+- ENG-ARCH §1 当前架构 · L47 · 1.2k
+  - ENG-ARCH 技术栈 · L49 · 196
+  - ENG-ARCH 分层 · L53 · 568
+  - ENG-ARCH 生产链 · L65 · 265
+  - ENG-ARCH 数据流 · L73 · 125
+- ENG-ARCH §2 边界与确定性 · L77 · 1.7k
+  - ENG-ARCH 依赖方向 · L79 · 616
+  - ENG-ARCH 确定性与禁用写法 · L87 · 544
+  - ENG-ARCH 自动发现与模块接入 · L99 · 340
+  - ENG-ARCH 生命周期与发布 · L106 · 233
+- ENG-ARCH §3 契约 · L113 · 551
+- ENG-ARCH §4 资源与烘焙 · L122 · 942
+- ENG-ARCH §5 未交付能力的占位边界 · L133 · 359
+- ENG-ARCH §6 构建与测试排队 · L142 · 739
+- ENG-ARCH §7 架构导向 · L151 · 514
+- ENG-ARCH §8 扩展点（RPG） · L163 · 462
+- ENG-ARCH §9 待验证（P0） · L175 · 583
 
 ## ENG-BUDGET · 性能预算与硬规则
 
@@ -1718,18 +1715,18 @@
 `docs/design/engineering/ENG-CODE-代码结构准则.md` · 3.4k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
 关键词：代码结构准则、软件工程、坏味道、屎山、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、魔法数、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、复制粘贴、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、钉哈希、输入哈希、提交后提醒
 
-- ENG-CODE §0 结论 · L23 · 585
-  - ★ ENG-CODE §0.1 接入要点 · L32 · 324
-- ENG-CODE §1 依赖方向 · L41 · 422
-- ENG-CODE §2 规则值与数据各一份 · L51 · 403
-- ENG-CODE §3 先复用，不复制 · L60 · 158
-- ENG-CODE §4 不留死代码 · L66 · 203
-- ENG-CODE §5 规模 · L73 · 160
-- ENG-CODE §6 测试代码怎么写 · L79 · 351
+- ENG-CODE §0 结论 · L23 · 586
+  - ★ ENG-CODE §0.1 接入要点 · L32 · 325
+- ENG-CODE §1 依赖方向 · L41 · 351
+- ENG-CODE §2 规则值与数据各一份 · L50 · 403
+- ENG-CODE §3 先复用，不复制 · L59 · 158
+- ENG-CODE §4 不留死代码 · L65 · 203
+- ENG-CODE §5 规模 · L72 · 160
+- ENG-CODE §6 测试代码怎么写 · L78 · 351
 
 ## ENG-GATES · 验收：门禁、审查视角、近景巡检
 
-`docs/design/engineering/ENG-GATES-验收与门禁.md` · 57.0k 字 · 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单
+`docs/design/engineering/ENG-GATES-验收与门禁.md` · 56.9k 字 · 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单
 关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、review.json、output/render-review、构建锁
 
 - ENG-GATES §0 结论 · L22 · 1.7k
@@ -1747,7 +1744,7 @@
 
 - ENG-PERF §0 十条总原则 · L24 · 3.6k
   - ★ ENG-PERF §0.1 接入要点 · L37 · 1.7k
-- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L49 · 25.2k
+- ENG-PERF §1 绘制管线与合批（WP-02，WP-01 配合） · L49 · 25.3k
   - ENG-PERF §1.1 容器选型规则 · L51 · 1.1k
   - ENG-PERF §1.2 MultiMesh 与 RenderingServer 挂载的用法 · L71 · 3.6k
   - ENG-PERF §1.3 调用口径 · L110 · 716
@@ -1819,7 +1816,7 @@
 
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP-工作包派工单.md` · 108.4k 字 · 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与推送顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项
+`docs/design/engineering/ENG-WP-工作包派工单.md` · 108.3k 字 · 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与推送顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项
 关键词：工作包、派工单、派工、归属、开工波次、推送顺序、独占目录、起读三档、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.6k
@@ -1845,7 +1842,7 @@
 - TOOL-PREVIEW §1 启动 · L48 · 741
 - TOOL-PREVIEW §2 按实体 ID 定位 · L65 · 297
 - TOOL-PREVIEW §3 记下机位 · L71 · 531
-- TOOL-PREVIEW §4 改了以后回看 · L83 · 735
+- TOOL-PREVIEW §4 改了以后回看 · L83 · 745
 
 ## OPS-RELEASE · 发布与交付
 
@@ -1855,10 +1852,10 @@
   - OPS-RELEASE 分工 · L23 · 415
 - OPS-RELEASE §0 结论 · L32 · 1.3k
   - ★ OPS-RELEASE §0.1 接入要点 · L41 · 860
-- OPS-RELEASE §1 版本号与构建信息 · L54 · 406
-- OPS-RELEASE §2 用户数据目录 · L61 · 303
+- OPS-RELEASE §1 版本号与构建信息 · L54 · 393
+- OPS-RELEASE §2 用户数据目录 · L61 · 290
 - OPS-RELEASE §3 导出与发布 · L67 · 935
 - OPS-RELEASE §4 安装、更新与卸载 · L76 · 549
 - OPS-RELEASE §5 地图数据包（ODbL） · L88 · 696
 - OPS-RELEASE §6 故障处理与诊断 · L99 · 848
-- OPS-RELEASE §7 许可 · L116 · 1.0k
+- OPS-RELEASE §7 许可 · L116 · 992

@@ -69,7 +69,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 | --- | --- |
 | 整套 Vite + React + three.js 代码：`src/`、`public/`、`index.html`、`package.json` 与锁文件、`vite.config.ts`、`playwright.config.ts`、网页端测试、`dist/`、`node_modules/` | 在 git 基线（标签 `baseline-map`）里保留；主分支上整体删除，不留 legacy 目录 |
 | 可移植的算法：轮廓工具、边与斜接、扫描线、开间分层、地标屋顶的主轴求法、八角采光顶、落点算法、球场标线拟合等 | 各包用 `git show baseline-map:<原路径>` 读出原文，改写成 C#，放进自己的目录；旧栈的几何与数据测试一并改写成 `dotnet test` |
-| Python 数据管线、OSM 快照、`categories.json` 等管线输入 | 在 `pipeline/`；输出写到 `game/data/`，管线迁移约定见 ENG-ARCH §1 |
+| Python 数据管线、OSM 快照、`categories.json` 等管线输入 | 在 `pipeline/`；输出写到 `game/data/`，管线输入的确定性规则见 ENG-ARCH §4 |
 | `campus.json` | 迁到 `game/data/maps/qingshuihe/campus.json`，格式留用，只增不改 |
 | 照片纹理：`public/assets/materials-v1/`、`data/raw/materials/` 和两个旧贴图脚本 | 不迁移，只留在归档里（ART-STYLE §6.1） |
 | `lucide-react` 等前端依赖 | 随归档删除；新界面的图标自绘（UI-NAV §2、UI-VISUAL §6） |

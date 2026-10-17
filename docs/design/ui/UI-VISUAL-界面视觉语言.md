@@ -1157,7 +1157,7 @@ public interface IPaletteProbe
 }
 ```
 
-- `FramePriority.Hud` 是 100；`UiThemeClock` 和 `MotionHub` 都在这一步。按 ENG-ARCH的统一帧顺序，它在 `WorldState`（−1000）之后，所以读到的是本帧的太阳高度；在 `Audio`（50）之后、`StreamMount`（900）和 `Save`（1000）之前。
+- `FramePriority.Hud` 是 100；`UiThemeClock` 和 `MotionHub` 都在这一步。按契约 `FramePriority`（ENG-ARCH §3），它在 `WorldState`（−1000）之后，所以读到的是本帧的太阳高度；在 `Audio`（50）之后、`StreamMount`（900）和 `Save`（1000）之前。
 - 全局参数 `ui_night` 的写入方是 WP-35（ENG-PERF §1.5）。`Campus.Hud` 的依赖规则（ENG-ARCH §2）加一条：可以经 `RenderingServer.GlobalShaderParameterSet` 写 `ui_night`，只此一项。
 - **界面发声**：界面经 `IAudioService.PlayUi(UiCue)` 发声，在输入回调或编排的时间点上当场调用，不等 `Audio` 那一步；组件事件到 `UiCue` 的映射由 WP-35 写，契约与提示音清单见 SYS-AUDIO。声音页经 `IAudioService` 的设置接口读写，界面不直接读写 `user://audio.cfg`。`Campus.Hud` 的依赖白名单加 `IAudioService`。
 

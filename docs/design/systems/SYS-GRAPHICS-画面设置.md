@@ -217,7 +217,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
   - 优先级：命令行 > `graphics.cfg` > 自动推荐 > 默认值。门禁和基准只由命令行决定，不读 `user://`。
 - **截图默认串**追加 `--quality=fine --adaptive=0`；默认串末尾另有 `--map=qingshuihe --title=0 --save=off --audio=off`（ENG-GATES §1、SYS-AUDIO §17；截图和基准一律不出声，只有声音门禁显式给 `--audio=on`）。基准默认 `--quality=fine`，开发机另跑 `--quality=ultra`。
 - **恢复画面设置**（游戏外入口，WP-32 随包提供）：引擎在任何 C# 代码运行之前就读 `engine_override.cfg`，图形接口写坏时游戏可能起不来，游戏里的画面页和启动失败页（SYS-TITLE §1.1）都打不开。所以安装目录根下随包放一个 `reset-graphics.cmd`（界面和说明里叫"恢复画面设置"），不依赖 Godot 和 .NET：
-  - 把正式版 user 目录 `%APPDATA%\UESTC\`（ENG-ARCH §2）下的 `engine_override.cfg` 和 `graphics.cfg` 改名为 `<原名>.reset-<日期时间>`，不删除，留给诊断；
+  - 把正式版 user 目录 `%APPDATA%\UESTC\`（CORE-CONVENTIONS §5.3）下的 `engine_override.cfg` 和 `graphics.cfg` 改名为 `<原名>.reset-<日期时间>`，不删除，留给诊断；
   - 只动这两个文件：存档、`settings.cfg`、`input.cfg`、`audio.cfg`、日志和本机烘焙缓存都不碰；
   - 下次启动按默认值走：D3D12、引擎默认的显卡，重新做首次分档并采用推荐预设（§5）；
   - 两个文件都不存在时什么也不改，提示"画面设置已是默认值"；脚本只用 ASCII 命令，结果用中英两行写在窗口里，按任意键关闭；

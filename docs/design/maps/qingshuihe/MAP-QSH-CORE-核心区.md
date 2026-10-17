@@ -51,7 +51,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 
 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC。
 
-- 代码在 `game/gen/zones/core/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/core.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/core/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/core.d/`（按包分片，CORE-CONVENTIONS §3.1；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元按 SYS-WALK §13 的形状映射，由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）：栏杆、护岸每段一个 `BoxShape3D`，顶取 max(视觉高度, 1.5 m)；台阶、坡道、桥面用斜放的 `BoxShape3D` 或 8 顶点 `ConvexPolygonShape3D`；杆件用 `CylinderShape3D`；长椅、花池、石台用 `BoxShape3D`。碰撞体同时填脚步材质 `Foot`（§9，SYS-AUDIO §9.3）。
@@ -289,7 +289,7 @@ gates: [G4, G7, G9, G12, G13, G15, G18, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 本节"本区身份特征"表里的特征，以及 §1–§5 中描述实物（而不是设计新增物）的条目，视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来。
-- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/core.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/core.d/` 里本包自己的分片（CORE-CONVENTIONS §3.1）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 按 WLD-INTERIORS §8.1，照片和 OSM 只定结构（体量、层数、平面、入口、交通核、道路、水体）；材质、色彩、陈设、装饰、标识按氛围做艺术化处理。可以新增校园里没有、但能加强氛围的元素，也可以删掉现实里有、放进画面难看的东西（杂乱的管线、临时围挡、刺眼的广告、过多的指示牌），都写进覆盖层并注明理由。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象、主轴（银杏大道南段—时间广场—图书馆、西湖主岸线）和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：图书馆、附属体和博物馆是石材主体，按 ART-RENOVATION 的翻新预设做新（石材分格整齐、屋面设备进围挡），逐栋条目见 MAP-QSH-RENOVATION §6；守 D-174（ART-FIDELITY §3.5）。

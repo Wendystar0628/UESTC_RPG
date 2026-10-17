@@ -92,7 +92,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 ### 2.1 来源：世界模型，不是原始 OSM
 
 - **输入**：
-  - SYS-MAPS的按图数据：`campus.json`，加上 `overlay/` 下的全部覆盖层，即 `reshape`、`height`、`hide`、`add`（ENG-ARCH §3）；
+  - SYS-MAPS的按图数据：`campus.json`，加上 `overlay/` 下的全部覆盖层，即 `reshape`、`height`、`hide`、`add`（CORE-CONVENTIONS §3.1）；
   - 外围数据 `outskirts.json`（WLD-OUTSKIRTS）：O0、O1 的街区轮廓、道路边线、河道，以及截面线（即箱庭外缘，进 `map_sdf_out.A`）；
   - 地图页范围取 `atlas/markers.json` 的 `atlasRect`（清水河 ±1536 m，§2.3）；全分辨率的 `map_sdf_a` 覆盖校界外扩 64 m 的方框（约 ±1056 m），外圈的 `map_sdf_out` 取 `map.json` 的 `dataRect`（SYS-MAPS），也就是全局参数 `map_rect` 的值（±1280 m）；每张纹理实际覆盖的 rect 逐张写进 `map.manifest.json`。没有真实分区边界时，`RegionAt` 返回 Unknown，不用 Voronoi 一类的近似伪造分区。
 - 各区为了画面增删的元素（新增的广场、栈道、桥，删掉的临时围挡、杂乱的小建筑等）都按覆盖层后的结果进图，原始 OSM 里被 `hide` 的要素不画。
@@ -494,7 +494,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - 相邻锚点之间约 250–450 m。
 - **夜里认得出**：导览桩的暖色小灯在远处是一个低亮度的点，与 MAP-QSH-ADDITIONS §8"初灯"的语言一致；白天靠它所在的大拍节点和地标来认（SYS-WALK §6 的 weenie 原则）。
 - **登记**：
-  - 每个锚点在 `overlay/atlas.d/` 里有一条 `add` 操作，ID 是 `design:anchor:A01`……，`Props` 写形态（亭或桩）、朝向和编号，并写明理由（ENG-ARCH §3）；
+  - 每个锚点在 `overlay/atlas.d/` 里有一条 `add` 操作，ID 是 `design:anchor:A01`……，`Props` 写形态（亭或桩）、朝向和编号，并写明理由（CORE-CONVENTIONS §3.1）；
   - `atlas/markers.json` 的锚点条目引用这个 ID，G18 核对两者相差不超过 0.5 m。
 
 **锚点表**（坐标是按各区文件的 OSM 锚点推出的初值，y 取地面；最终由 WP-48c 与 WP-44 按截图和 SYS-WALK §15 的落地检查定，§16）：
@@ -695,7 +695,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
   - `Campus.Hud.Map`（`game/hud/map`）除 GodotSharp 外，只依赖契约、`Kernel.Get<T>()`、`IAtlasService`、`IWorldState`（读）、`IObserverState`（读：玩家箭头与区域名）和 `ICameraRig.Pose`（读：视锥等"画面从哪看"的量，ENG-ROADMAP §3）；
   - 它不直接调 `ICameraRig.Transit`，传送一律经 `IAtlasService.Travel`。
   - `Campus.Systems.Atlas` 可以调 `ICameraRig.Transit`、`ICameraRig.LockInput`、`IViewControl`，读 `IObserverState`（`proximity` 的判定）、WLD-INTERIORS的室内索引（`IWorldModel.Interiors`）和导航图，以及调 `IAudioService.PlayUi`（传送的两声，SYS-AUDIO）。
-  - 帧顺序：`IAtlasService` 的 10 Hz 查询在 `FramePriority.Systems`（0）那一步；按 ENG-ARCH的统一表，它在 `Map`（−1300）之后，所以换图那一帧看到的已是新图；存档快照在 `Save`（1000）那一步拍。
+  - 帧顺序：`IAtlasService` 的 10 Hz 查询在 `FramePriority.Systems`（0）那一步；按 `FramePriority`（ENG-ARCH §3），它在 `Map`（−1300）之后，所以换图那一帧看到的已是新图；存档快照在 `Save`（1000）那一步拍。
 - **JSON**：一律用 `ContractJson.Options`（ENG-ARCH §3）。`atlas/markers.json`、`atlas/labels.json` 的 schema 放在 `game/contracts/schemas/`。存档段 `AtlasSave` 走 SYS-SAVE的 System.Text.Json 源生成上下文。
 - **不叫 `IMapService`**：那个名字属于 SYS-MAPS的地图加载与切换（WP-46）。
 

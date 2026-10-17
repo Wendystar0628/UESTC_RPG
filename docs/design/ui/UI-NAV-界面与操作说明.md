@@ -704,7 +704,7 @@ public sealed record Waypoint(
 
 ## 9 实现与性能（WP-35）
 
-- **目录与归属**：都归 WP-35（ENG-ARCH §2），`game/hud/map/` 除外。
+- **目录与归属**：都归 WP-35（`ownership.json`），`game/hud/map/` 除外。
   - `game/hud/`：界面代码（命名空间 `Campus.Hud`），子目录 `style`、`motion`、`widgets`、`pages`、`gallery`、`i18n` 见 UI-VISUAL §11.2；`ui_theme.tres` 是 `UiThemeBuilder` 的导出物，只作编辑器预览和差异审查，运行时不读；
   - `game/hud/map/`：小地图与大地图，归 WP-48b（SYS-ATLAS §10）；WP-35 在左上角和全屏页各留一个槽位给它；
   - `game/style/shaders/ui_*`：界面着色器 `ui_panel.gdshader`、`ui_screen.gdshader`（UI-VISUAL §11.5）；

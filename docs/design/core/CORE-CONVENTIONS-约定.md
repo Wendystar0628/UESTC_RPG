@@ -35,7 +35,7 @@ gates: [G1, G2, G3, G4, G5]
 | 门禁 G1–G21 与测试节奏 | ENG-GATES §2 | 不摘录 |
 | 预算与额度 | 20（总账 ENG-BUDGET §8） | 不摘录 |
 | 工作包、独占目录、阶段 | ENG-WP §1、ENG-WP §2、ENG-WP §3 | 不摘录 |
-| 目录与归属 | ENG-ARCH §2、`ownership.json` | §5 |
+| 目录与归属 | `ownership.json` | §5 |
 | 按图数据 | SYS-MAPS §2 | §5.2 |
 | 已定决策 | CORE-DECISIONS | WF-DOC §6、§8 |
 | 术语 | CORE-GLOSSARY | — |
@@ -59,7 +59,7 @@ gates: [G1, G2, G3, G4, G5]
 - 单位米；x 向东、y 向上、z 向南。与 Godot 一样是右手系、y 向上，数据坐标直接当 Godot 世界坐标用，不做换算；正北就是 Godot 的前方（−z），偏航 0° 的相机朝北（CORE-INDEX §4，D-144）。
 - **每张图一个原点和投影**，写在该图 `campus.json` 的 `meta` 里，`MapDescriptor.Geo` 从这里读，`map.json` 不重复（SYS-MAPS §3）。清水河：经度 103.9282919、纬度 30.75316145，EPSG:32648。
 - 地图之间的坐标互不相通；跨图引用一律写成"地图 + ID"（`WaypointRef(MapId, Id)`，ENG-ARCH §3）。单图半径（离中心最远的可达点）不超过 8 km（SYS-MAPS §12、ENG-BUDGET §5）。
-- **两套数学类型**：契约程序集只用 `System.Numerics`（`Vector2`、`Vector3`、`Quaternion`、`Matrix4x4`；`Matrix4x4` 是行向量约定），Godot 用 `Transform3D`（列向量约定）。只用内核提供的扩展方法转换；同一文件里两套都用时写 `using N = System.Numerics;`（ENG-ARCH §7）。
+- **两套数学类型**：契约程序集只用 `System.Numerics`（`Vector2`、`Vector3`、`Quaternion`、`Matrix4x4`；`Matrix4x4` 是行向量约定），Godot 用 `Transform3D`（列向量约定）。只用内核提供的扩展方法转换；同一文件里两套都用时写 `using N = System.Numerics;`。
 
 ### 1.2 角度
 
@@ -124,13 +124,13 @@ gates: [G1, G2, G3, G4, G5]
 | --- | --- | --- | --- | --- |
 | 地图 ID（`MapId`） | 小写字母、数字、连字符，≤ 32 字符；与目录名相同 | `MapId("qingshuihe")` | 代码里不写地图 ID 字面量（`kernel/map` 和门禁夹具除外）；不用 "qsh" 指地图 | SYS-MAPS §3、ENG-ARCH §2、D-137 |
 | 实体 ID（`FeatureId`） | `campus.json` 的 `entities[].id`；清水河的前缀是 `qsh:`，形如 `qsh:<类型>:<编号>` | `qsh:way:544688571`、`qsh:relation:8407525` | 只在本图内唯一；`qsh:` 是数据，不是地图 ID；按 ID 定位对象，不按名字；通用代码里不写字面量；以后的图换用自己的前缀，G5 查前缀不冲突 | CORE-INDEX §4、SYS-MAPS §2.1 |
-| 设计增补 | `design:` 开头；锚点实体写 `design:anchor:Axx` | `design:anchor:A02` | 只经覆盖层的 `add` 新增，写明理由 | ENG-ARCH §3、MAP-QSH-ADDITIONS §0、SYS-ATLAS §6 |
+| 设计增补 | `design:` 开头；锚点实体写 `design:anchor:Axx` | `design:anchor:A02` | 只经覆盖层的 `add` 新增，写明理由 | MAP-QSH-ADDITIONS §0、SYS-ATLAS §6 |
 | 可行走区域 | `walk:` 开头 | — | 只在 `overlay/walkable.overlay.json` | SYS-WALK §6 |
 | 地形操作 | `design:terrain:` 开头，本图内唯一 | `design:terrain:lakeside-lawn-tier1` | 只在 `overlay/terrain/<区>.terrain.json`；每条写理由 | WLD-TERRAIN §3.2 |
-| 环境发声器 | `amb:` 开头，本图内唯一 | — | G5 查重 | ENG-ARCH §3（音频块） |
+| 环境发声器 | `amb:` 开头，本图内唯一 | — | G5 查重 | `game/contracts/` 源码（ENG-ARCH §3） |
 | RPG 预留前缀 | `npc:`、`item:`、`quest:` | — | 观光数据不得使用 | ENG-ROADMAP §6.1 第 6 条 |
 
-- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<组>.d/`，通用覆盖层按包分片，每个包只写自己的 `<四位序号>-wp-<包号>-<短名>.json`，序号接在该目录现有最大值之后，不改别包的分片，`0000-wp-<包号>-base.json` 底稿尽量不改（加载规则见 ENG-ARCH §3 覆盖层的规则）；通用单文件入口已退役，地形、室内等专属格式不在此列。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
+- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<组>.d/`，通用覆盖层按包分片，每个包只写自己的 `<四位序号>-wp-<包号>-<短名>.json`，序号接在该目录现有最大值之后，不改别包的分片，`0000-wp-<包号>-base.json` 底稿尽量不改；通用单文件入口已退役，地形、室内等专属格式不在此列。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
 
 ### 3.2 编号体系
 
@@ -174,8 +174,8 @@ gates: [G1, G2, G3, G4, G5]
 
 ### 3.4 C# 程序集、命名空间与文件
 
-- **命名空间**：命名空间用 PascalCase，按 ENG-ARCH §2 的程序集与职责取，不跟目录的字面大小写：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`；契约程序集的分组目录（`Foundation/`、`Ui/` 等）共用根命名空间 `Campus.Contracts`，只有 ENG-ARCH §3 列出的子命名空间（如 `Campus.Contracts.AppFlow`）例外。IDE0130 按目录字面大小写判，不适用本约定，`.editorconfig` 里关掉；改由 G1 的源码门禁按本条检查（ENG-ARCH §2）。
-- **程序集**（边界与可引用关系以 ENG-ARCH §2 的表为准）：
+- **命名空间**：命名空间用 PascalCase，按 ENG-ARCH §1 的分层与职责取，不跟目录的字面大小写：`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`，`game/systems/water/` 对应 `Campus.Systems.Water`；契约程序集的分组目录（`Foundation/`、`Ui/` 等）共用根命名空间 `Campus.Contracts`，只有 `game/contracts/` 里已有的子命名空间（如 `Campus.Contracts.AppFlow`，ENG-ARCH §3）例外。IDE0130 按目录字面大小写判，不适用本约定，`.editorconfig` 里关掉；改由 G1 的源码门禁按本条检查（ENG-ARCH §2）。
+- **程序集**（边界与可引用关系以 ENG-ARCH §2 的依赖方向为准）：
 
 | 程序集 | 目录 | 说明 |
 | --- | --- | --- |
@@ -189,9 +189,9 @@ gates: [G1, G2, G3, G4, G5]
 | `Campus.Gen.Tests`、`Campus.Tests` | 各包的 `tests/` | 测试按目录归属 |
 
 - 各区程序集带 `[assembly: MapScope("qingshuihe")]`，由 WP-00 写进 csproj；其余 gen 程序集是通用模块（ENG-ARCH §2、SYS-MAPS §7）。
-- **文件名**：实现 `IContentModule` 的类写在 `*Module.cs`；Godot 侧包的根节点写在 `*Node.cs`，标 `[KernelNode]`（ENG-ARCH §3）。
+- **文件名**：实现 `IContentModule` 的类写在 `*Module.cs`；Godot 侧包的根节点写在 `*Node.cs`，标 `[KernelNode]`（ENG-ARCH §2）。
 - **特性的 ID**：小写、点分：`[ContentModule("zone.south")]`、`[ContentModule("interior.shell")]`、`[Part("opening.window.casement")]`、`[KernelNode("systems.water")]`、`[InteriorProvider("interior.library")]`、`[AmbientEmitter("ambience.water")]`、`[MediumPresenter("medium.interior")]`；`Owner` 写 `"WP-xx"`，G5 核对与 `ownership.json` 一致。区域私有的部件 ID 加区名前缀（ENG-ARCH §2、ENG-ARCH §5）。
-- **存档段 ID**：小写字母、数字、连字符（如 `"world"`）；按图的段在文件里展开为 `map:<id>/<段>`（ENG-ARCH §3）。
+- **存档段 ID**：小写字母、数字、连字符（如 `"world"`）；按图的段在文件里展开为 `map:<id>/<段>`（SYS-SAVE §2）。
 - **全局着色器参数**：名字一律小写下划线、不带前缀（`weather_a`、`map_rect`）；C# 侧只用 `ShaderGlobals` 的常量（`ShaderGlobals.WeatherA`），不写字符串字面量（ENG-PERF §1.5、ENG-ARCH §3）。总线名同样只用 `AudioBuses` 的常量。
 - **JSON**：一律用 `ContractJson.Options`：字段 camelCase，枚举按字符串，向量写成数组 `[x, y, z]`；多态类型的类型字段写在每个对象的第一个字段（覆盖层是 `"op"`，碰撞体是 `"kind"`）；存档 DTO 用各包自己的源生成 `JsonSerializerContext`，约定相同，ID 类的 record struct 写成字符串（ENG-ARCH §3、SYS-SAVE §3.5）。
 - **命令行取值**：天气写连字符小写（`few-clouds`、`after-rain`）；季节写英文小写；预设 `smooth`、`balanced`、`fine`、`ultra`；设备档 `dgpu-high` 等；`--quality-set` 的单项名是 `QualityKnob` 的 snake_case（ENG-GATES §1）。
@@ -263,7 +263,7 @@ gates: [G1, G2, G3, G4, G5]
 
 ## 4 帧顺序
 
-权威表在 ENG-ARCH §3 的 `FramePriority`（D-135）；SYS-TIME §1、ENG-PERF §6、SYS-MAPS §9、SYS-AUDIO §20 的表与它逐行一致。下表是速查，两者不一致时以 ENG-ARCH §3 为准。
+权威表是 `game/contracts/` 里的 `FramePriority`（ENG-ARCH §3，D-135）；SYS-TIME §1、ENG-PERF §6、SYS-MAPS §9、SYS-AUDIO §20 的表与它逐行一致。下表是速查，两者不一致时以 `FramePriority` 源码为准。
 
 | 值 | 常量 | 工作包 | 做什么 |
 | --- | --- | --- | --- |
@@ -287,7 +287,7 @@ gates: [G1, G2, G3, G4, G5]
 
 - 用节点的 `ProcessPriority` 固定，值越小越先执行，与场景树里的顺序无关；任何两步不得同值（同值时按场景树顺序，说不清先后）。
 - 行走物理在 `_PhysicsProcess` 里按固定 120 Hz 子步推进，不在上表里；脚步等观者声在那里当场发出。自动门的开关门声在 `Medium` 那一步门的阶段变化时当场发出（ENG-ARCH §3）。
-- 新增一步：在现有空档里加常量，属于契约变更（走 WP-00），ENG-ARCH §3、SYS-TIME §1、ENG-PERF §6、SYS-MAPS §9、SYS-AUDIO §20 五张表同步改（ENG-ROADMAP §6.2）。
+- 新增一步：在现有空档里加常量，属于契约变更（走 WP-00），`FramePriority` 源码（ENG-ARCH §3）、SYS-TIME §1、ENG-PERF §6、SYS-MAPS §9、SYS-AUDIO §20 五处同步改（ENG-ROADMAP §6.2）。
 - **画布层号**（从下到上）：3D 画面 → CanvasLayer 4 预热层（只在扉页阶段，WP-01）→ 5 雾幕与扉页（WP-01）→ 9 放映层（WP-35d）→ 10 界面 `HudRoot`（WP-35）→ 11 署名（WP-01）。OSM 署名始终在最上层（UI-VISUAL §11.1、SYS-TITLE §8.5）。
 
 ## 5 目录与归属
@@ -314,10 +314,10 @@ UESTC_RPG/
 └─ global.json、ownership.json、budgets.json、third_party.json、.gitattributes、.gitignore
 ```
 
-- 目录树全文和逐目录的归属以 ENG-ARCH §2 为准；`ownership.json` 照它写。改动的路径越出本包范围，G3 拒绝。
+- 逐目录的归属以 `ownership.json` 为准。改动的路径越出本包范围，G3 拒绝。
 - **RPG 预留目录**：`game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<地图>/entities/` 在 `ownership.json` 里记为 WP-00 的预留，观光期不写入（ENG-ROADMAP §6 第 6 条）。
 - **共享文件**（工程共享件由 Astra 改并直接提交推送，`docs/design/` 由主会话改，规则见 WF-BUILD §1）：`game/project.godot`（含 Shader Globals、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`、各图的 `interiors.json`；`map.json` 归 WP-46，但字段增改经主代理（ENG-ARCH §6）。
-- **不进 git**：构建锁（位置以 `scripts\` 为准）、烘焙缓存（环境变量 `UESTC_BAKE_CACHE`，默认 `E:\Project\UESTC_RPG.cache\bake\<地图>\`）；仓库里的 `build/`、`output/`、`.godot/`、`override.cfg`（ENG-ARCH §2、ENG-ARCH §4、ENG-ARCH §6）。`*.wav`、`*.ogg` 进 Git LFS。
+- **不进 git**：构建锁（位置以 `scripts\` 为准）、烘焙缓存（环境变量 `UESTC_BAKE_CACHE`，默认 `E:\Project\UESTC_RPG.cache\bake\<地图>\`）；仓库里的 `build/`、`output/`、`.godot/`、`override.cfg`（ENG-ARCH §6）。`*.wav`、`*.ogg` 进 Git LFS。
 - `game/contracts/`、`game/gen/` 和每个 `tests/` 目录各放一个空的 `.gdignore`，Godot 不扫描纯 .NET 代码（ENG-ARCH §2）。
 
 ### 5.2 按图的数据
@@ -386,7 +386,7 @@ UESTC_RPG/
   - `build()` 的输入里没有世界状态和画面设置，所以改时间、换季、换天气、改画质不会让烘焙产物失效（ENG-ARCH §2、ENG-PERF §5）。
 - **天气**：每次抽取用计数器子流 `StableHash(种子, mapId, epoch, 片段号, 尝试号, 用途)`，与补队列的时机和帧率无关（SYS-WEATHER §6.4）。
 - **音频**：音频种子 = `StableHash(--seed, "audio")`，每个发声器、每个排程槽一条子流；不用 `AudioStreamRandomizer`（ENG-ARCH §2、SYS-AUDIO §17）。
-- **运行时的确定性**：同一钟点、同一哈希的东西结果相同（例如窗灯按哈希亮灭）；同一构建 + 同一种子 + 同一串输入（命令行、Movie Maker 固定步长、脚本化的时间推进）得到同样的画面。时间不能逆转，所以不要求"倒回去复现"。读档后的续跑等价见 SYS-SAVE §5.3（ENG-ARCH §3）。
+- **运行时的确定性**：同一钟点、同一哈希的东西结果相同（例如窗灯按哈希亮灭）；同一构建 + 同一种子 + 同一串输入（命令行、Movie Maker 固定步长、脚本化的时间推进）得到同样的画面。时间不能逆转，所以不要求"倒回去复现"。读档后的续跑等价见 SYS-SAVE §5.3（ENG-ARCH §2）。
 - **Movie Maker**：`--write-movie <目录>\f.png --fixed-fps 60 --quit-after <帧数>`，delta 恒定，时间按帧号推进；流式管理器切换成同步的"流式屏障"，本帧要用的格全部就绪再推进；过场、读档、切图同样是屏障。PNG 序列旁边写一个 WAV，同一组参数两次录音逐字节相同（ENG-GATES §1、ENG-PERF §5、SYS-AUDIO §17）。
 - **截图默认串**（权威在 ENG-GATES §1，D-146）：
 

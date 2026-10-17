@@ -47,7 +47,7 @@ gates: []
 - **每份规范文档的结构一样**：文件头的 `summary`、`keywords`、`contracts`、`data`；范围块的"查阅"行；§0 结论；§0 末尾的"接入要点"（别的包碰到这个系统必须守的规则）。判断一份文档和你有没有关系，看 `summary` 和接入要点就够了。
 - **可以直接 grep 的编码**：文档编码、`§`、`INV-n`、`D-nnn`、`G1`–`G21`、`B1`–`B13`、`K1`–`K5`、`WP-xx`、契约名与类型名。跨文档引用写作"SYS-WEATHER §6.4"。
 - **专门的查询文档**：术语查 CORE-GLOSSARY；某条规则为什么这样、是否仍然生效，按 D 编号查 CORE-DECISIONS；坐标、单位、命名、目录、帧顺序查 CORE-CONVENTIONS。
-- **契约**：以 `game/contracts/` 的源码为准，各契约组与冻结状态的地图见 ENG-ARCH §3。
+- **契约**：以 `game/contracts/` 的源码为准（ENG-ARCH §3），冻结状态见状态文件（WF-STATUS）。
 - **ENG-WP 的"起读"栏**分三档：必读、接入要点、其余按需。
 
 ### 3.3 Godot API

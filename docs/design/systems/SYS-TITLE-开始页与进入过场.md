@@ -68,7 +68,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
   - **只按进展判卡死，不按总时长**：每一步都向 `IAppFlow` 报进展（`IBakeService.Progress` 的完成数与子步骤、管线编译计数、已就绪的格）；首次运行的本机烘焙只要进度在走就一直等。某一步连续 60 s 没有任何进展才按终态处理，原因记"停滞"（初值，与 ENG-PERF §5 的烘焙停滞同一判定，§16）。
   - **失败页不依赖三维世界**：雾幕层（layer 5）保持雾色（扉页静帧已经加载时保留它），等待灯熄灭；界面层画一张卡，样式同 UI-VISUAL §8.8 的确认对话框：标题"没能准备好画面"，一行人话原因，下面一行等宽小字的错误码。三个按钮 **[重试] [复制错误信息] [退出]**，默认焦点在"重试"，键盘可达，读屏可读：
     - 重试：从出错的那一步重新走启动序列，不重启进程；出错的是本机烘焙时先调 `IBakeService.ClearFailures()`（ENG-PERF §5）；
-    - 复制错误信息：把构建信息（ENG-ARCH §4）、流程阶段、出错的地图、`IBakeHandle.Error` 或异常摘要、日志目录 `user://logs/` 写进剪贴板（`DisplayServer.ClipboardSet`）；路径按 ENG-PERF §12.6 的隐私规则写，不带 Windows 用户名；
+    - 复制错误信息：把构建信息（OPS-RELEASE §1）、流程阶段、出错的地图、`IBakeHandle.Error` 或异常摘要、日志目录 `user://logs/` 写进剪贴板（`DisplayServer.ClipboardSet`）；路径按 ENG-PERF §12.6 的隐私规则写，不带 Windows 用户名；
     - 退出：直接结束进程；Boot 里没有要保存的进度，只写设置。
   - 失败页属于 Boot 状态，不新增 `AppState`。WP-01 判终态、写日志、给出剪贴板内容；WP-49a 的 `IAppFlow` 停在 Boot 并处理三个按钮；WP-35d 画卡片。
   - `--title=0`（门禁、截图、基准）不出失败页：写日志后以非零退出码结束。
@@ -417,7 +417,7 @@ Boot ──转为实时──▶ Title ──Enter──▶ Entering ──交�
   - 调用 `SetFlow` 或再次 `FlowTo` 会取消上一次未到点的 `FlowTo`。
 - SYS-SAVE 的新游戏要能接受"起点预设"（本图的 `newGameStart`），读档要能分"只恢复世界与天气、视角留作终点"和"完整恢复"两种（§1.1 第 6 步、§4.1）；两者都先定规则集（ENG-ROADMAP §6 第 1 条）：新游戏先定规则集（观光恒为 `sightseeing`），再调各段的 `CreateDefault`；读档先按 meta 的 `ruleset` 定规则集，再进 `World` 阶段（SYS-SAVE §5.1、SYS-SAVE §5.5）。
 - `ICameraRig.SetPose`（ENG-ARCH §3）除了出生位置和测试构建，另用于 Title、Entering、Leaving 状态下 `CinematicPlayer` 的逐帧驱动；这三个状态里 WP-06 的相机不积分输入。
-- WP-01 的雾幕服务（ENG-ARCH登记的雾幕契约）要支持"扉页"这种内容和"保持不透明直到条件满足"；雾幕原因用 ENG-ARCH §3 的 `VeilReason`：冷启动 `Boot`，跳过、雾幕直达、返回标题 `Cinematic`。
+- WP-01 的雾幕服务（雾幕契约，ENG-ARCH §3）要支持"扉页"这种内容和"保持不透明直到条件满足"；雾幕原因用 ENG-ARCH §3 的 `VeilReason`：冷启动 `Boot`，跳过、雾幕直达、返回标题 `Cinematic`。
 
 ## 8 过场数据格式与 `CinematicPlayer`
 
@@ -513,7 +513,7 @@ game/data/maps/qingshuihe/cinematics/
   6. 越过时刻的世界提示、遮罩、字幕、专属元素、音频提示按时间顺序执行，一条都不跳过。
 - **写法沿用** WP-36 的 Transit（UI-NAV §7.1）：自己算路径、弧长表控速度、四元数插值。**不用** AnimationPlayer、PathFollow3D 驱动镜头（要在编辑器里做资源，难做跳过和预取），**不用** VideoStreamPlayer 播预渲染视频（画质和体积都差），**不用** Tween 驱动镜头。放映层的淡入淡出用 Tween，写法按 UI-VISUAL：一个动效一个 `TweenMethod`，进度 0 → 1，C# 侧算贝塞尔 (.2,.7,.2,1)；若改用 `PropertyTweener.SetCustomInterpolator()`，就不再调 `SetTrans`、`SetEase`，免得双重缓动。
 - **它调用谁**：镜头只经 `ICameraRig`；世界只经 SYS-SAVE 的存档服务和 `IWorldControl`；黑边、字幕、标题卡、跳过环、等待灯经 WP-35d 的放映层接口；云卡经自己的节点（§9）；雾幕经 WP-01 的雾幕服务；初灯沿路推进经 WP-39 的灯光提示钩子；音频经 SYS-AUDIO的 `IAudioService.Cine` 与 `SetMusic`。
-- **帧顺序**（与 ENG-ARCH的统一表一致）：
+- **帧顺序**（与契约 `FramePriority`（ENG-ARCH §3）一致）：
 
 | 步骤（`FramePriority`） | 值 | 本文里在这一步做的事 |
 | --- | --- | --- |

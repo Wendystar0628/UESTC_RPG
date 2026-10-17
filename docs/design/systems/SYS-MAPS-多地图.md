@@ -33,7 +33,7 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 4. **只用一个 World3D，先卸后装**：雾幕 → 卸旧图 → 装新图 → 出生 → 雾幕散，共 8 步（§4）。内存峰值等于"一张图 + 全局常驻"。两张图同时驻留太占内存。每图一个 World3D 的写法留到以后要做无缝切换时（§14）。
 5. **世界状态是混合方案**：`WorldHours`、季节、`AnimTime` 全局共享，切图时世界时间照常向前；天气按图各自一份前向过程，进图时把队列补算到当前世界时间，补算是微秒级（SYS-WEATHER §6.5），不在后台模拟没去的图（§5）。
 6. **地图服务这一版就交付**：只有一张图时，`Travel` 到当前图就是"同图重载"。用它跑泄漏门禁（§13），把"以为只有一张图"的隐藏写法提前逼出来。
-7. **几个新登记**：帧顺序 `FramePriority.Map = −1300`，与 ENG-ARCH §3 的 17 步表统一（§9）；全局参数 `map_rect`，清水河取全图数据纹理的覆盖范围 ±1280 m（§10）；命令行 `--map`、`--spawn`、`--gate=maptravel`（§11）；单图半径不超过 8 km（§12）。
+7. **几个新登记**：帧顺序 `FramePriority.Map = −1300`，与契约 `FramePriority`（ENG-ARCH §3）统一（§9）；全局参数 `map_rect`，清水河取全图数据纹理的覆盖范围 ±1280 m（§10）；命令行 `--map`、`--spawn`、`--gate=maptravel`（§11）；单图半径不超过 8 km（§12）。
 
 ### 0.1 接入要点
 
@@ -59,7 +59,7 @@ game/data/
 │  └─ qingshuihe/                        清水河（当前唯一的图）
 │     ├─ map.json                        WP-46   MapDescriptor 的手写部分（§3）；字段增改须经主代理批准
 │     ├─ campus.json  network.json  zones.json          WP-08
-│     ├─ overlay/<组>.d/                 各区包与公共空间、滨水、校界等包，每包一个分片文件；含 design: 增补与 hide 删除，每条都写理由（ENG-ARCH §3 覆盖层的规则）
+│     ├─ overlay/<组>.d/                 各区包与公共空间、滨水、校界等包，每包一个分片文件；含 design: 增补与 hide 删除，每条都写理由（CORE-CONVENTIONS §3.1）
 │     ├─ overlay/walkable.overlay.json   WP-44
 │     ├─ overlay/outskirts.overlay.json  WP-47（WLD-OUTSKIRTS）
 │     ├─ overlay/atlas.d/                WP-48c（SYS-ATLAS）锚点实体
@@ -126,7 +126,7 @@ game/data/
 - **挂载**：某张图第一次进入时，在 LoadData 那一步 `ProjectSettings.LoadResourcePack(path, replaceFiles: false)` 挂上 `boot_<地图>.pck`，之后不卸载（Godot 没有卸载接口）。挂载只读目录表，常驻开销按很小计（§19）。G6 检查各 PCK 的路径集合两两不相交，否则同名文件会互相覆盖。
 - **本机缓存与画面设置、世界状态、存档无关**：`Build()` 的输入里没有这些（CORE-CONVENTIONS §6），所以缓存跨存档、跨画质共用；`--seed` 覆盖时种子进数据哈希，各自一份。它不是存档（SYS-SAVE）。
 - 主 PCK 只留全局资源和各图的 JSON（`res://data/maps/*/`）。导出过滤器包含 `data/maps/**/*.json`。
-- **失效粒度**（先求简单正确，细则见 ENG-ARCH §4"失效"）：
+- **失效粒度**（先求简单正确，细则见 ENG-PERF §5"失效"）：
   - **数据变化整图失效**：数据哈希每图一个。上面任何一份输入变了（哪怕只改一条覆盖层），本图的全部本机烘焙产物一起换键，之后按需和后台预烘重新生成；不按模块细分数据输入。
   - **代码指纹含共享生成依赖**：`模块@代码哈希` 的代码哈希把这个模块传递引用的共享生成代码（契约、部件内核与各部件包、室内共享层、世界模型；底图另含 `Campus.Pipeline.Map`）一起算进去。改了共享代码，所有引用它的模块一起重烘；没有引用它的模块不动。
   - 只有实测发现整图失效明显拖慢制作时，才把数据输入细分到模块，并由 G2 证明依赖没有漏算；不做逐实体的增量构建。
@@ -218,7 +218,7 @@ game/data/
 | 1 | VeilIn | 0.5 s | 雾幕盖满，沿用开场和跳转的那一层（SYS-TITLE §1、UI-NAV §9），原因写 `VeilReason.MapTravel`（SYS-AUDIO）。取得输入占用 `ICameraRig.LockInput(InputLockReason.MapTravel)`（ENG-ARCH §3）；取消正在进行的跳转和已知目的地预取（UI-NAV §7.5）；小地图淡出（SYS-ATLAS）；存档服务暂停拍快照（不是安全时刻，SYS-SAVE）；声音的 World 组 0.5 s 压到 −40 dB（SYS-AUDIO） |
 | 2 | Snapshot | 1 帧 | 给存档的挂点：记下旧图的 `MapVisit`（最后位姿、观察模式、天气 epoch、离开时的世界时间）；`IWeatherProcess.Leave(旧图)` |
 | 3 | Unload | ≤ 0.5 s | 流式（`Stream`）不再发新请求，在途的照常完成后 `Dispose()`，挂载（`StreamMount`）不再挂本图的格子；本图所有实例 `FreeRid`，碰撞 body 出树，释放 L4、遮挡体和倒影代理；全图数据纹理交还各写入方；各 `IMapAware` 节点按 ID 顺序收到 `OnMapUnloading`（音频节点在这里丢掉本图的发声器、声景场、声学网格和房间，SYS-AUDIO）；带 `Map` 的 `[KernelNode]` 释放；`Context` 置空；最后 `GC.Collect()` 一次（雾幕里允许，期间 GC 延迟模式临时改回 Interactive，ENG-PERF §6） |
-| 4 | LoadData | ≤ 1 s | 首次进图时挂上 `boot_<地图>.pck`（启动集，§2.4）；内核读字节、工作线程解析新图数据、建世界模型（ENG-ARCH §2"纯 .NET 代码不碰文件路径"）；读本图的常驻数据（2 m 分类栅格、8 m 安全点网格，都在启动集里，§2.4）；世界模型建好地形评估器，地形高度此后按 `ITerrain.HeightAt` 求值（WLD-TERRAIN §9.4）；注册器按"通用 + 本图"重新筛选模块（§7）；`IWeatherProcess.Enter(新图)`，补算队列（§5） |
+| 4 | LoadData | ≤ 1 s | 首次进图时挂上 `boot_<地图>.pck`（启动集，§2.4）；内核读字节、工作线程解析新图数据、建世界模型（ENG-ARCH §0.1，生成层不碰文件路径）；读本图的常驻数据（2 m 分类栅格、8 m 安全点网格，都在启动集里，§2.4）；世界模型建好地形评估器，地形高度此后按 `ITerrain.HeightAt` 求值（WLD-TERRAIN §9.4）；注册器按"通用 + 本图"重新筛选模块（§7）；`IWeatherProcess.Enter(新图)`，补算队列（§5） |
 | 5 | Mount | ≤ 1.5 s | 同步加载 L4 和遮挡体（ENG-PERF §5 第 1 条）；写全局参数 `map_rect`（§10）；各写入方重建全图数据纹理并重新设全局参数；实例化本图的 `[KernelNode]`；各 `IMapAware` 节点按 ID 顺序收到 `OnMapLoaded`（`IAtlasService` 换底图与标记，SYS-ATLAS；音频节点读本图的 `audio/` 和烘焙产物，SYS-AUDIO）；材质库按需重新分配材质 ID（风险 5）；按已知目的地预取出生点周围的 L0+–L2 各环和室内提供者，行走模式另加碰撞格 |
 | 6 | Warm | 同图 0；新图 ≤ 2 s | 只预热本图新出现的组合，等 SURFACE、DRAW、Canvas 三项管线编译计数连续 30 帧不再增长（ENG-PERF §2）；本图节点空跑 30 帧做 JIT 预热。G16 对每张图都成立 |
 | 7 | Spawn | ≤ 1.5 s | 设位姿（§6），按 WLD-OUTSKIRTS的可达空间合法化；行走模式等 `ICollisionWorld.Ready()`（SYS-WALK §14 第 5 条），出生点在开放室内时等这一层就绪（ENG-PERF §5 第 6 条，WLD-INTERIORS §6.4）；清相机插值缓冲，重判介质；`Current` 换成新图，`Rev` + 1 |
@@ -324,7 +324,7 @@ game/data/
 
 ## 9 帧顺序：`FramePriority.Map = −1300`
 
-与 ENG-ARCH §3 的 `FramePriority` 17 步表一致。任何两步都不得同值。
+与契约 `FramePriority`（ENG-ARCH §3）一致。任何两步都不得同值。
 
 | `ProcessPriority` | 常量 | 工作包 | 职责；切图期间怎样 |
 | --- | --- | --- | --- |

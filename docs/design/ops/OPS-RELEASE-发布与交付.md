@@ -16,7 +16,7 @@ gates: [G6]
 # OPS-RELEASE · 发布与交付
 
 > **范围**：本文规定对外交付的流程：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩时出了问题怎样交回诊断材料，以及本作各部分按什么许可公开。
-> **不在本文**：构建信息的生成步骤（ENG-ARCH §4）；正式版目录名的设置（ENG-ARCH §2）；安装包的组成与体积（ENG-PERF §8、ENG-BUDGET §8）；导出门禁 G6（ENG-GATES §2）；日志的格式、上限与诊断摘要的字段（ENG-PERF §12.6）；存档的格式与失败处理（SYS-SAVE）；许可页与 `LICENSES.txt` 的文本内容（SYS-VIEW §6）。
+> **不在本文**：构建信息的生成步骤与正式版目录名的设置（ENG-WP §2 的 WP-00 行）；安装包的组成与体积（ENG-PERF §8、ENG-BUDGET §8）；导出门禁 G6（ENG-GATES §2）；日志的格式、上限与诊断摘要的字段（ENG-PERF §12.6）；存档的格式与失败处理（SYS-SAVE）；许可页与 `LICENSES.txt` 的文本内容（SYS-VIEW §6）。
 > **查阅**：先读 §0；版本号与构建信息看 §1；用户数据目录看 §2；导出与发布的步骤看 §3；安装、更新与卸载看 §4；地图数据包看 §5；故障与诊断看 §6；许可看 §7
 > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF-性能工程.md)、[ENG-GATES 验收门禁](../engineering/ENG-GATES-验收与门禁.md)、[ENG-WP 工作包](../engineering/ENG-WP-工作包派工单.md)、[CORE-CONVENTIONS 约定](../core/CORE-CONVENTIONS-约定.md)、[SYS-SAVE 存档](../systems/SYS-SAVE-存档与持久化.md)、[SYS-VIEW 观察模式与介质](../systems/SYS-VIEW-观察模式介质与开场.md)、[SYS-TITLE 开始页与过场](../systems/SYS-TITLE-开始页与进入过场.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS-画面设置.md)、[UI-NAV 界面与跳转](../ui/UI-NAV-界面与操作说明.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS-边界与外围.md)
 
@@ -31,7 +31,7 @@ gates: [G6]
 
 ## 0 结论
 
-1. **构建信息只有一个来源**：仓库根的 `version.txt` 加当前提交，生成 `<版本>+<提交>`；界面、存档、日志、诊断和压缩包名都读它（ENG-ARCH §4）。
+1. **构建信息只有一个来源**：仓库根的 `version.txt` 加当前提交，生成 `<版本>+<提交>`；界面、存档、日志、诊断和压缩包名都读它。
 2. **正式用户目录固定**：`%APPDATA%\UESTC\`，不带版本号，所有版本共用；开发态用 `UESTC_DEV`，不碰它。
 3. **一个公开版本** = `main` 上的标签 `v<版本>` + 分发压缩包 `UESTC-<版本>-win64.7z` + 地图数据包 `map-data-<版本>.zip`，三者版本号相同。
 4. **更新解压到新目录**，不覆盖旧目录；卸载程序和清理用户数据是两件事，分开做。
@@ -53,14 +53,14 @@ gates: [G6]
 
 ## 1 版本号与构建信息
 
-- **版本号**：`version.txt` 一行 `主.次.修订`，只由主代理在发版时改（ENG-ARCH §4）。
+- **版本号**：`version.txt` 一行 `主.次.修订`，只由主代理在发版时改。
 - **构建信息**：`Build` 写作 `<版本>+<提交>`，例如 `0.4.0+a1b2c3d4e5f6`；工作区有未提交的改动时提交号带 `-dirty`。对外发布的构建必须来自干净的提交，带 `-dirty` 的构建不发布。
 - **谁读它**：开始页片名块的版本行（SYS-TITLE §2.3）、存档 meta 的 `build`（SYS-SAVE §3.2）、日志第一行与诊断摘要（ENG-PERF §12.6）、分发压缩包和地图数据包的文件名（只取版本号）。别处不另写版本号。
 - **兼容性**只看存档自己的各层版本号（SYS-SAVE §3.6）；构建信息只用于显示和定位问题。拿到一份诊断包或存档，按里面的提交号检出代码就能复现。
 
 ## 2 用户数据目录
 
-- **正式版**：`user://` 是 `%APPDATA%\UESTC\`（ENG-ARCH §2）。里面有存档、设置、本机烘焙缓存、日志和导出的诊断包，清单见 CORE-CONVENTIONS §5.3、ENG-PERF §8。
+- **正式版**：`user://` 是 `%APPDATA%\UESTC\`。里面有存档、设置、本机烘焙缓存、日志和导出的诊断包，清单见 CORE-CONVENTIONS §5.3、ENG-PERF §8。
 - **不带版本号，也不再改名**：新旧版本读写同一个目录，所以更新后存档和设置照常沿用。目录名一旦随公开版本发出，改名就等于让玩家"丢了存档"，所以不改。
 - **开发态隔离**：开发态用 `UESTC_DEV`；门禁和基准不读任何 `user://` 文件（ENG-GATES §1）。在开发机上试玩导出版，用的才是 `UESTC`。
 
@@ -124,6 +124,6 @@ gates: [G6]
 | 地图数据（© OpenStreetMap contributors）：快照、补充数据和由它们生成的派生数据 | ODbL 1.0；每个公开版本附地图数据包（§5） | `README.md`；地图数据包的 `README.txt` |
 | 第三方素材与代码：字体、音频、插件、移植的算法 | 按各自的许可 | `third_party.json`、`game/data/audio/licenses.json`；汇总进 `LICENSES.txt`（SYS-VIEW §6） |
 
-- **第三方的许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL（ENG-WP §5；C# 移植的 earcut 是 ISC，ENG-ARCH §1）。例外：只在开发机上运行的工具链依赖（Python 管线的传递依赖等，例如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材的来源与许可按 SYS-AUDIO §14 登记。
+- **第三方的许可白名单**：插件与第三方代码只收 MIT、Apache、BSD、ISC、OFL（ENG-WP §5；C# 移植的 earcut 是 ISC）。例外：只在开发机上运行的工具链依赖（Python 管线的传递依赖等，例如 pyproj 带进来的 certifi，MPL-2.0）可以用 MPL-2.0，条件是不进游戏导出、不把源码或库文件放进仓库，并在 `third_party.json` 里标为仅开发用；音频素材的来源与许可按 SYS-AUDIO §14 登记。
 - **不是校方作品**：`README.md` 开头写明这是个人创作，不是电子科技大学的官方作品，与学校没有关联；每个版本的发布说明也写这一句。场景里的校徽、红十字换成原创图形（D-065、ART-STYLE §11）。
 - **说法一致**：`README.md` 的"许可"一段、许可页（SYS-VIEW §6）、安装包的 `LICENSES.txt` 和地图数据包的 `README.txt`，对同一类内容写同一种许可；改许可时先改 `LICENSE` 与 `README.md`，再同步其余几处。

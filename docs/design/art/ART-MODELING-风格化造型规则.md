@@ -167,7 +167,7 @@ gates: [G2, G4, G5, G7, G12]
    - 区域代码（`game/gen/zones/`）里不准自己写几何常量，只能取部件库的参数和预设，门禁 G4 会检查。
    - **实现**：
      - 部件库是纯 .NET 生成器，放在 `game/gen/parts/{core,openings,circulation,roof,street}/`（WP-09–13），不引用 GodotSharp，向量用 `System.Numerics`，可以直接 `dotnet test`（ENG-ARCH §2）。
-     - 每个部件实现 C# 契约 `IPartDef`，用 `[Part("opening.window.casement", Owner = "WP-10")]` 这类特性标注，启动时反射扫描、按 ID 排序注册，ID 重复由 G5 报错（ENG-ARCH §3）。
+     - 每个部件实现 C# 契约 `IPartDef`，用 `[Part("opening.window.casement", Owner = "WP-10")]` 这类特性标注，启动时反射扫描、按 ID 排序注册，ID 重复由 G5 报错（ENG-ARCH §2）。
      - 部件按语义级别（L0+–L4，ENG-BUDGET §3）分别给几何，远级可以缺省；L0 必须有实体厚度和倒角（底线 B2、B3），并具备 §7.8 的最低合格构件。L0+ 专用几何只给 K1、K2 生成（ART-FIDELITY §0.3）。同一级内部还可以另给网格 LOD，只换索引的简化写法见 §7.7：每级是"误差 + 这一级自己的索引数组"，与本级共用顶点，烘焙时写进表面的 `lods` 字典（契约 `MeshLod`，ENG-ARCH §3、ENG-PERF §1.2）。连续的墙面、屋面和倒角盒要真正简化出新的索引，不能截掉一段三角形了事，否则会留洞、破坏轮廓和倒角高光；截取索引前缀（`MeshLod.Prefix`）只用于整件拿掉独立的小件和叶片。建筑的主线版只用语义级别，同级内部的网格 LOD 后做。
      - 烘焙器把网格存成压缩顶点格式（`ARRAY_FLAG_COMPRESS_ATTRIBUTES`，20 B/顶点），每个表面不超过 65 536 个顶点（16 位索引）。部件不自己建 `ArrayMesh`、材质或节点，这些都由烘焙器和内核做。
      - 碰撞图元由同一组部件参数生成（`IPartDef` 的 `Collision` 方法，MAP-QSH-ADDITIONS §7、SYS-WALK §13）。

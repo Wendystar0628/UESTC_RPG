@@ -356,7 +356,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 
 ## 10 工程设置清单
 
-本节是 `project.godot` 和相关资源里与性能有关的设置。`project.godot`、`export_presets.cfg`、`Directory.Build.props` 由主代理维护（ENG-ARCH §6），改动要申请。
+本节是 `project.godot` 和相关资源里与性能有关的设置。`project.godot`、`export_presets.cfg`、`Directory.Build.props` 由主代理维护（CORE-CONVENTIONS §5.1），改动要申请。
 
 已在 `game/project.godot` 中设置的值以该文件为准；下表保留不在源文件中的默认行为、运行时规则及其理由。随画面设置改的项按 SYS-GRAPHICS §3 的生效类别在运行时改（实现见 ENG-PERF §11.7），四个预设共用的固定项运行时一律不动。
 

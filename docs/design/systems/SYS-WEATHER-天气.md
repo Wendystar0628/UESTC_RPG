@@ -305,4 +305,4 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
 | 投影淡到 0 时设 `ShadowOpacity = 0`、`ShadowCasterMask` 置 0，这两项不是特化开关，切换不触发管线编译（§7"投影"） | P0 核实，看 G16 的编译计数，WP-03 | 按不是特化开关实现 |
 | 各天气相对晴天的帧时增量（§9"性能"） | 按 ENG-PERF §12.4 的"E1 夏夜雷雨"基准实测，WP-45 | 晴到多云 +0.05–0.15 ms；阴和雾约 0；小雨 +0.3 ms；大雨和雷雨 +0.6–0.8 ms；大雪 +0.3 ms |
 | 大雨的增量可能超过天气对晴天的 5% 总上限，届时收紧降水数量还是放宽上限（ENG-BUDGET §8） | P0 实测后定，WP-45 | 上限按 5%，降水数量按 §7 |
-| `WeatherProcessState` 的完整字段（§8） | WP-45a 在这一组冻结前定（ENG-ARCH §3，D-134） | ENG-ARCH §3 草案列出的字段 |
+| `WeatherProcessState` 的完整字段（§8） | WP-45a 在这一组冻结前定（ENG-ARCH §3，D-134） | `game/contracts/` 源码里的草案字段（ENG-ARCH §3） |

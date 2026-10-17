@@ -17,7 +17,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 # WF-BUILD · 施工边界
 
 > **范围**：本文规定施工子代理在写代码和做内容时的硬边界：能改哪些文件，哪些要提申请，新模块怎么接入。
-> **不在本文**：代码边界、接入方式与禁用写法的完整清单：ENG-ARCH §2（G4 门禁检查）；契约的内容与冻结状态：ENG-ARCH §3；目录与归属明细：`ownership.json`；共享文件清单：CORE-CONVENTIONS §5.1；内容与画面的底线：CORE-CONTENT；全员守则：WF-RULE。
+> **不在本文**：代码边界、接入方式与禁用写法：原则见 ENG-ARCH §2，清单以各程序集的 `BannedSymbols.txt` 和 G4 为准；契约的内容：`game/contracts/` 源码与 ENG-ARCH §3；冻结状态：WF-STATUS；目录与归属明细：`ownership.json`；共享文件清单：CORE-CONVENTIONS §5.1；内容与画面的底线：CORE-CONTENT；全员守则：WF-RULE。
 > **查阅**：先读 §0；改哪里与申请看 §1；G4 拦不住的约定看 §2。
 > **关联**：[WF-INDEX 协作总纲](../WF-INDEX-协作总纲.md)、[WF-RULE 全员守则](WF-RULE-全员守则.md)、[WF-ONBOARD 子代理开工手册](../WF-ONBOARD-子代理开工手册.md)、[WF-FLOW 开发流程](../process/WF-FLOW-开发流程.md)、[CORE-INDEX 总索引](../../README.md)、[ENG-ARCH 工程架构](../../engineering/ENG-ARCH-工程架构.md)、[ENG-WP 工作包](../../engineering/ENG-WP-工作包派工单.md)、[CORE-CONVENTIONS 约定](../../core/CORE-CONVENTIONS-约定.md)
 

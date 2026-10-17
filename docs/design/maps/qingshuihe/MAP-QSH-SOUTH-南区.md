@@ -30,7 +30,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
   - 树木、蒲苇、棕榈、樱花林、红枫由 WP-23 负责；
   - 荷花由 WP-38 负责（SYS-TIME §4），WP-23 配合；
   - 孔雀、天鹅、单车由 WP-25 负责；
-  - 球场标线沿用旧网页版的球场标线拟合算法（ENG-ARCH §1 列为迁移项，用 C# 重写），改色由 WP-04 统一处理；
+  - 球场标线沿用旧网页版的球场标线拟合算法（用 C# 重写），改色由 WP-04 统一处理；
   - 灯光时刻表由 WP-39 汇总，本区灯具见 §11；
   - 可行走遮罩、安全点和节奏锚点由 WP-44 汇总，本区范围见 §12；
   - 主楼 B2（一楼柱厅、二楼校史馆、屋顶空廊）、宣邦楼（中厅、钟楼）、体育馆与游泳馆、立人楼一层的室内由 WP-31a 负责（WLD-INTERIORS §2.3、WLD-INTERIORS §2.4、WLD-INTERIORS §2.5、WLD-INTERIORS §2.15）；钟面指针的转动和钟室铜钟的钟锤由 WP-26 驱动（§5.4）；
@@ -46,7 +46,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 ### 实现
 
 - 引擎是 Godot 4.7.2 .NET，全部 C#，只做 PC（ENG-ARCH）。
-- 代码在 `game/gen/zones/south/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/south.d/`（按包分片，ENG-ARCH §3；按图存放，SYS-MAPS）。
+- 代码在 `game/gen/zones/south/`，属纯 .NET 的生成器程序集（`Campus.Gen.*`，不引用 GodotSharp，向量用 `System.Numerics`，ENG-ARCH §2）；本区覆盖层是 `game/data/maps/qingshuihe/overlay/south.d/`（按包分片，CORE-CONVENTIONS §3.1；按图存放，SYS-MAPS）。
 - 材质只用 toon 着色器（`toon.gdshaderinc`）与调色板色名。本包只交付几何和材质键；`MeshInstance3D`、`MultiMeshInstance3D`、材质和 RenderingServer 实例都由内核创建。
 - G4 边界（ENG-GATES §2）：不依赖其他区；代码里禁用 `System.Random`（用带种子的生成器）、`DateTime.Now`、`Stopwatch` 与计时器、直接写十六进制色值。
 - 碰撞图元按 SYS-WALK §13 的形状映射，由 WP-43 烘焙（本机烘焙，D-165）成每格一个碰撞文件（`.tbin`）：栏杆、驳岸、闸机、隐形墙每段一个 `BoxShape3D`，顶取 max(视觉高度, 1.5 m)；台阶、坡道、桥面用斜放的 `BoxShape3D` 或 8 顶点 `ConvexPolygonShape3D`；柱子、杆件用 `CylinderShape3D`；长椅、基座、置石用 `BoxShape3D`。
@@ -377,7 +377,7 @@ gates: [G4, G5, G7, G9, G12, G13, G15, G19, G21]
 
 - "数据定位"一节的表只是位置参考。主要建筑、道路、设施的位置和大体形状要保留，其余部分按 ART-MODELING 风格化。
 - 下面"本区身份特征"表里的特征，以及 §1–§10 中描述实物形制（体量、层数、屋顶标志物、主入口、特色色或材质）的条目，视为该对象的"身份特征"（ART-MODELING §1），造型和配色要让人认得出来。
-- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/south.d/` 里本包自己的分片（ENG-ARCH §3）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
+- 轮廓需要调整时，写进本区覆盖层目录 `game/data/maps/qingshuihe/overlay/south.d/` 里本包自己的分片（CORE-CONVENTIONS §3.1）：4 m 以内算轻微调整；超过 4 m，或者是新增的设计物，都要写明理由。
 - 照片和 OSM 只定结构，即体量、层数、平面、入口、交通核、道路、水体；材质、色彩、陈设、装饰、标识、生活痕迹按氛围处理，照片只作参考。可以新增校园里没有、但能加强氛围的元素，写进覆盖层（ID 以 `design:` 开头）并写明理由；现实里有、放进画面难看的东西（杂乱管线、临时围挡、刺眼的广告、过多的指示牌）可以删掉。
 - 视觉精度按 ART-FIDELITY 验收：镜头在任何位置看到的都不粗糙（底线，ART-FIDELITY §2.0）；本区"身份特征"表里的对象、主轴（南门—主楼—银杏大道、东湖主岸线）和点位落点 30 m 内是精度区 K1，行走走廊和开放室内是 K2，按贴脸标准做满；其余按精度区（ART-FIDELITY §0.1）。
 - **翻新**：本区建成较早的楼（主楼、体育场馆与大平台、桃园餐厅、1–8 号楼）和环境按 ART-RENOVATION 全部翻新（D-173），本文写的外观就是翻新后的样子；逐栋的部位、优先级和所用规则见 MAP-QSH-RENOVATION §4，孤儿楼群等待核实的楼见 MAP-QSH-RENOVATION §8。守 D-174（ART-FIDELITY §3.5）。

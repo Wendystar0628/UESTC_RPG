@@ -36,9 +36,9 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 8. **界面音效**按 UI-VISUAL的动效频率分级：高频事件默认无声，低频编排配短而轻的玻璃质感音，悬停默认无声（§11）。开场音乐只留挂点，原创作品做好之前，开始页只放高空环境床（§12）。
 9. **素材**：CC0 优先，其次是 Sonniss GDC 这类可随游戏发布的免费包；CC BY 允许，但要署名；NC、ND、BBC、BY-SA、GPL 一律不用；素材走 Git LFS，入库脚本统一标定响度、真峰值和循环接缝（§14）。
 10. **预算**：主线程平均 ≤ 0.35 ms、p95 ≤ 0.5 ms，从 ENG-PERF §6 主线程表的余量里划出（计入音频之前 ≥ 0.5 ms），划完开发机余量约 0.15 ms；最低配置档默认把在播 3D 声源上限降到 24、次要的床退成 2 个锚点，守住同一个数（§18.1）；在播 3D 声源 ≤ 32；混音线程 ≤ 一个核的 10%；常驻内存 ≤ 96 MB；导出包里音频单列 ≤ 165 MB（实际 125–165 MB），它计入 G6 的安装目录上限 0.9 GB 和分发压缩包上限 0.7 GB（§18.2）；GPU 为 0。
-11. **帧顺序**：音频占 `FramePriority.Acoustics = −590`（介质之后、流式之前）和 `FramePriority.Audio = 50`（系统之后、界面之前）两步，与 `Map = −1300`、`StreamMount = 900`、`Save = 1000` 都不冲突，和 ENG-ARCH §3 的统一表一致（§20）。
+11. **帧顺序**：音频占 `FramePriority.Acoustics = −590`（介质之后、流式之前）和 `FramePriority.Audio = 50`（系统之后、界面之前）两步，与 `Map = −1300`、`StreamMount = 900`、`Save = 1000` 都不冲突，和契约 `FramePriority`（ENG-ARCH §3）一致（§20）。
 12. **门禁 G21 声音**分十项：素材入库、混音响度、加速不爆发、转场不爆音、设置有效、确定性、预算、覆盖与"对得上"、观者声、空间声学。声音门禁复用 Movie Maker 的录像流水线，同一组参数两次录音逐字节相同（§22）。
-13. **设置**存进 `user://audio.cfg`（ENG-ARCH §2 的读写方表已登记），只有 53a 读写，读值只接受基本类型，与 `graphics.cfg` 同一做法（§13）。
+13. **设置**存进 `user://audio.cfg`（ENG-ARCH §2：`user://` 每个文件一个读写方），只有 53a 读写，读值只接受基本类型，与 `graphics.cfg` 同一做法（§13）。
 
 ### 0.1 接入要点
 
@@ -232,7 +232,7 @@ Master            [StereoEnhance：单声道选项，默认旁通] [HardLimiter 
 - 共约 21–25 条。`Zone.<类>.Rev` 的类别取 Canteen、Gym、Pool、Hall、Atrium、Auditorium（§10.6），契约常量只增不改。
 - **父总线必须排在子总线前面**：`send` 指向的序号不小于本总线时，源码会回落到 Master。
 - **没有输入的总线不花钱**：电平连续 2 s 低于 −60 dB（`audio/buses/channel_disable_time`）时通道停用，效果器也不再处理；16 条没有输入的混响总线与空载基线相同。
-- **项目设置**（`project.godot` 统一维护，ENG-ARCH §2）：`audio/driver/mix_rate = 48000`（默认 44100；素材统一 48 kHz，免得重采样；Movie Maker 默认也是 48000，而且能被 60、30 整除）；`audio/driver/output_latency` 保持 15 ms；`audio/general/3d_panning_strength` 保持 0.5；`channel_disable_time` 保持 2.0。
+- **项目设置**（`project.godot` 统一维护，ENG-ARCH §0.1）：`audio/driver/mix_rate = 48000`（默认 44100；素材统一 48 kHz，免得重采样；Movie Maker 默认也是 48000，而且能被 60、30 整除）；`audio/driver/output_latency` 保持 15 ms；`audio/general/3d_panning_strength` 保持 0.5；`channel_disable_time` 保持 2.0。
 
 ### 3.2 混音铁律
 
@@ -336,7 +336,7 @@ Master            [StereoEnhance：单声道选项，默认旁通] [HardLimiter 
 
 底噪床的配比是这些量的加权组合，例如：湖岸床 = 开阔水面 × (1 − 0.5 × 楼间)；林下床 = 冠层 × (1 − 开阔水面)；宿舍夜床 = 宿舍 × 宿舍窗灯通道值 × 季节系数（夏 1.0、冬 0.6、春秋 0.3）；空旷床 = max(草地, 运动) × (1 − 冠层)。几条床的音量和要归一，保证任何格子的床层总响度都在同一范围内（G21h）。
 
-**手工点**（不超过十个）：宣邦楼钟楼（钟声，§6.2）、西湖喷泉、两处堰、天鹅屋（夜里天鹅聚在屋旁时偶尔的低声）、孔雀之家（稀少）、体育场看台（远处的哨声痕迹，随运动时段）。ID 以 `amb:` 开头，每条写理由，规则同覆盖层（ENG-ARCH §3）。
+**手工点**（不超过十个）：宣邦楼钟楼（钟声，§6.2）、西湖喷泉、两处堰、天鹅屋（夜里天鹅聚在屋旁时偶尔的低声）、孔雀之家（稀少）、体育场看台（远处的哨声痕迹，随运动时段）。ID 以 `amb:` 开头，每条写理由，规则同覆盖层（CORE-CONVENTIONS §3.1）。
 
 **数据放在哪**（按 SYS-MAPS的规则：按图的数据放 `game/data/maps/<图>/`，全局的声音库放 `game/data/audio/`）：
 
@@ -1048,7 +1048,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ## 13 设置：五组音量与减少干扰
 
-设置卡加一页"声音"（UI-NAV §4.6；界面由 WP-35 做）。声音页约 30 个 Control，和画面页一样随设置卡**按需创建、关闭即释放**，不预建隐藏（UI-NAV §9、UI-VISUAL §11.9）。设置存进 `user://audio.cfg`，只有 53a 读写，与 `graphics.cfg` 归 WP-32 的做法相同；读取按 SYS-SAVE"设置类文件只接受基本类型"的流程：先查文本里有没有 `Object(` 之类的写法，再按登记表只取 bool、int、float、String。它登记在 ENG-ARCH §2 的读写方表和 SYS-SAVE的档案级文件里，换存档位时它不变。不并进 `settings.cfg`：开机时音频要比界面更早拿到音量。
+设置卡加一页"声音"（UI-NAV §4.6；界面由 WP-35 做）。声音页约 30 个 Control，和画面页一样随设置卡**按需创建、关闭即释放**，不预建隐藏（UI-NAV §9、UI-VISUAL §11.9）。设置存进 `user://audio.cfg`，只有 53a 读写，与 `graphics.cfg` 归 WP-32 的做法相同；读取按 SYS-SAVE"设置类文件只接受基本类型"的流程：先查文本里有没有 `Object(` 之类的写法，再按登记表只取 bool、int、float、String。它属于 SYS-SAVE的档案级文件，读写方唯一（ENG-ARCH §2），换存档位时它不变。不并进 `settings.cfg`：开机时音频要比界面更早拿到音量。
 
 | 设置 | 取值 | 默认 |
 | --- | --- | --- |
@@ -1108,7 +1108,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ### 14.3 版本库：Git LFS
 
-- `*.wav`、`*.ogg`（以及母带的 `*.flac`）走 Git LFS；`.gitattributes` 统一维护（ENG-ARCH §2）。
+- `*.wav`、`*.ogg`（以及母带的 `*.flac`）走 Git LFS；`.gitattributes` 统一维护（ENG-ARCH §6）。
 - **仓库公开时**：Sonniss 这类不许"作为音效"再分发的素材，导入后的文件同样是可以直接取出的声音，不能进公开仓库——放私有素材库，构建时同步进来；或者公开仓库只用 CC0、CC BY 和合成的素材。随游戏的导出包发布不受这条限制。
 - 文件名：`<声音集>_<序号>.wav`，声音集 ID 与 `sets/*.json` 一致。
 - **声音集 id 以入库清单为准**：`game/assets/audio/index.json` 是已入库素材的清单（床 `bed_*`、脚步 `foot_<材质>_walk`、鸟 `bird_<角色>` 等），声音集 id 先以它为准；53b 的 `sets` 和 53d 的 `foley_banks` 建的时候对齐它，要改名由那两单提出，改名后重跑入库管线。
@@ -1242,7 +1242,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 ## 20 帧顺序：`FramePriority` 里的两步
 
-表与 ENG-ARCH §3 的统一表（17 步）一致。
+表与契约 `FramePriority`（ENG-ARCH §3，17 步）一致。
 
 | `ProcessPriority` | 步骤 | 工作包 | 与音频的关系 |
 | --- | --- | --- | --- |
@@ -1266,7 +1266,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 - **为什么是这两个值**：`Acoustics` 要在相机（−1100）和介质（−600）之后，才拿得到本帧的听者位置、介质和自动门的开度；它放在流式（−500）之前，与选级无关，也让同一帧里的观者声和环境声看到本帧的声学。`Audio` 要在系统（0）之后，这时动物位置、风场（−650）、世界状态（−1000）都已更新完；它在界面（100）、挂载（900）和存档（1000）之前。两个值都不与表里任何一步同值。同值时 Godot 按场景树的顺序执行，就说不清谁先谁后（SYS-SAVE的帧顺序一节同理）。
 - **例外**：观者的脚步等事件在 `_PhysicsProcess`（120 Hz，先于本帧全部 `_Process`）里当场发声，为的是对齐时间；它读的 `Routing` 是上一帧的，差不超过 1 帧，可以接受。`PlayUi` 也当场发声。自动门的开关门声在介质那一步（−600）门的阶段变化时当场发出，读的 `Routing` 同样是上一帧的。这三种都不等 `Audio` 那一步。
-- ENG-ARCH §3 的 `FramePriority` 表、ENG-PERF §6 的帧内顺序、SYS-TIME §1 的每帧顺序表与本表是同一张表（17 步）。
+- `game/contracts/` 的 `FramePriority`（ENG-ARCH §3）、ENG-PERF §6 的帧内顺序、SYS-TIME §1 的每帧顺序表与本表是同一张表（17 步）。
 
 ## 21 工作包
 
