@@ -72,7 +72,7 @@ public sealed class BakeCacheStore
             finally { Monitor.Exit(_sync); }
             return bytes;
         }
-        catch (Exception error) when (error is IOException or JsonException or ArgumentException or OverflowException)
+        catch (Exception error) when (error is IOException or InvalidDataException or JsonException or ArgumentException or OverflowException)
         {
             cancellationToken.ThrowIfCancellationRequested();
             EnterCache(cancellationToken);
@@ -245,7 +245,7 @@ public sealed class BakeCacheStore
             index = File.Exists(path) ? JsonSerializer.Deserialize<CacheIndex>(ReadBounded(path, MaximumIndexBytes)) ?? new() : new();
             if (index.Schema != 1 || index.Entries is null || index.Entries.Count > 100000) index = new();
         }
-        catch (Exception error) when (error is IOException or JsonException) { index = new(); }
+        catch (Exception error) when (error is IOException or InvalidDataException or JsonException) { index = new(); }
         foreach (var entry in index.Entries.Values) _sequence = Math.Max(_sequence, entry.LastUsed);
         _indices.Add(map, index);
         return index;

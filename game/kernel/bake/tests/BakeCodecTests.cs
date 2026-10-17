@@ -157,6 +157,31 @@ public sealed class BakeCodecTests
 
     [TestCase]
     [RequireGodotRuntime]
+    public void UnindexedCachePayloadIsRemovedAsAMiss()
+    {
+        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
+        var directory = Path.Combine(root, "output", "bake-orphan", Guid.NewGuid().ToString("N"));
+        var writer = new BakeCacheStore(directory);
+        byte[] payload = [1, 2, 3, 4];
+        writer.Write("fixture", "orphan", payload);
+        File.Delete(Path.Combine(directory, "fixture", "cache.index"));
+        var reader = new BakeCacheStore(directory);
+        reader.Initialize();
+        try
+        {
+            if (reader.TryRead("fixture", "orphan", null, true) is not null ||
+                Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 0)
+                throw new InvalidOperationException("An unindexed cache payload was trusted or left in place.");
+            reader.Write("fixture", "orphan", payload);
+            if (reader.TryRead("fixture", "orphan", BakeCacheStore.Hash(payload), false) is not { } restored ||
+                !restored.SequenceEqual(payload))
+                throw new InvalidOperationException("A regenerated cache entry did not become readable.");
+        }
+        finally { reader.Clear(); }
+    }
+
+    [TestCase]
+    [RequireGodotRuntime]
     public void CancelledCacheReaderLeavesItsIndexUntouchedWithoutWaitingForTheOwnerLock()
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
