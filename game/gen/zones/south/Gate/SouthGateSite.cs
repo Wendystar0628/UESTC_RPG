@@ -52,6 +52,10 @@ public sealed class SouthGateSite : SouthSite
     private static float CarriageA => T.IslandWestX + T.IslandWidth * 0.5f;
     private static float CarriageB => T.IslandEastX - T.IslandWidth * 0.5f;
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
+        [.. new[] { -1, 1 }.Select(side => new PolygonRings(Frame.Shift(side * HouseX, 0).Rect(
+            -T.HouseSize * 0.5f, -T.HouseSize * 0.5f, T.HouseSize * 0.5f, T.HouseSize * 0.5f)))];
+
     public override void Build(SiteBuilder b)
     {
         var y = b.Ground(Frame.Origin);

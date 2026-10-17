@@ -117,6 +117,13 @@ public sealed class GymSite : SouthSite
         return allocation;
     }
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var p = PlanOf(world);
+        var count = lod switch { LodLevel.L0 => 144, LodLevel.L1 => 96, LodLevel.L2 => 64, _ => 40 };
+        return [new(Enumerable.Range(0, count).Select(i => p.At(2f * MathF.PI * i / count, p.Radius - S.GymBaseInset)).ToArray())];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var p = PlanOf(b.Context.World);

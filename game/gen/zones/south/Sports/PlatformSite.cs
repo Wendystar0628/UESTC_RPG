@@ -162,6 +162,12 @@ public sealed class PlatformSite : SouthSite
 
     // ---- Geometry ----
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var p = PlanOf(world);
+        return [.. p.Decks.Select(r => new PolygonRings(r)), new(p.Core)];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var p = PlanOf(b.Context.World);

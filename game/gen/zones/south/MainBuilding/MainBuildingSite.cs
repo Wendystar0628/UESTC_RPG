@@ -110,12 +110,31 @@ public sealed class MainBuildingSite : SouthSite
 
     public override void Build(SiteBuilder b)
     {
+        Front(b);
+        RoofGallery(b, b.Ground(F.P(36f, -20f)));
+        RearPorch(b, b.Ground(R.Origin));
+    }
+
+    private static void Front(SiteBuilder b)
+    {
         var y = b.Ground(F.P(Xc, M.StepsZ));
         Platform(b, y);
         FrontSteps_(b, y);
         Portico(b, y);
-        RoofGallery(b, b.Ground(F.P(36f, -20f)));
-        RearPorch(b, b.Ground(R.Origin));
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext ctx, LodLevel lod)
+    {
+        yield return Trace(ctx, lod, Id + "/front", new(FrontSteps), Front, CollideFront,
+            [new(F.Rect(M.StepsX0, -0.3f, M.StepsX1, M.StepsZ))]);
+        yield return Trace(ctx, lod, Id + "/roof-gallery", new(B2),
+            b => RoofGallery(b, b.Ground(F.P(36f, -20f))), CollideGallery,
+            [new(F.Rect(M.GalleryX0, M.GalleryZ0, M.GalleryX1, M.GalleryZ1),
+                [F.Rect(M.GalleryX0 + M.GalleryWalk, M.GalleryZ0 + M.GalleryWalk,
+                    M.GalleryX1 - M.GalleryWalk, M.GalleryZ1 - M.GalleryWalk)])]);
+        yield return Trace(ctx, lod, Id + "/rear-porch", new(B2),
+            b => RearPorch(b, b.Ground(R.Origin)), CollideRear,
+            [new(R.Rect(-M.RearLandingWidth * 0.5f, -0.3f, M.RearLandingWidth * 0.5f, 2.6f + M.RearLandingDepth))]);
     }
 
     // ---- Front platform and grand steps (§2.4: about 17 steps up to the 2.6 m first floor) ----
@@ -352,6 +371,13 @@ public sealed class MainBuildingSite : SouthSite
 
     public override void Collide(SiteColliders c)
     {
+        CollideFront(c);
+        CollideGallery(c);
+        CollideRear(c);
+    }
+
+    private static void CollideFront(SiteColliders c)
+    {
         var y = c.Ground(F.P(Xc, M.StepsZ).X, F.P(Xc, M.StepsZ).Y);
         var floor = y + M.FloorY;
         // Front platform top, steps, landing, side balustrades and the portico columns.
@@ -371,6 +397,10 @@ public sealed class MainBuildingSite : SouthSite
         var hw = M.PorticoHalfWidth;
         c.Wall(F.P(Xc - hw, M.BackWall), F.P(Xc - M.DoorWidth * 0.5f, M.BackWall), 0.15f, floor, floor + M.PorticoHeight, SurfaceTag.Wall, FootMat.StonePaving);
         c.Wall(F.P(Xc + M.DoorWidth * 0.5f, M.BackWall), F.P(Xc + hw, M.BackWall), 0.15f, floor, floor + M.PorticoHeight, SurfaceTag.Wall, FootMat.StonePaving);
+    }
+
+    private static void CollideGallery(SiteColliders c)
+    {
         // Roof gallery: the railing parapet and the plant enclosure; the walkway floor comes with WP-31a's roof interior.
         var deck = c.Ground(F.P(36f, -20f).X, F.P(36f, -20f).Y) + M.RoofY;
         var g = M.GalleryColumn * 0.5f;
@@ -379,6 +409,10 @@ public sealed class MainBuildingSite : SouthSite
         var inset = M.GalleryWalk + 0.6f;
         Vector2[] pen = [F.P(M.GalleryX0 + inset, M.GalleryZ1 - inset), F.P(M.GalleryX1 - inset, M.GalleryZ1 - inset), F.P(M.GalleryX1 - inset, M.GalleryZ0 + inset), F.P(M.GalleryX0 + inset, M.GalleryZ0 + inset)];
         for (var i = 0; i < 4; i++) c.Wall(pen[i], pen[(i + 1) % 4], 0.05f, deck, deck + 1.8f, SurfaceTag.Barrier, FootMat.Metal);
+    }
+
+    private static void CollideRear(SiteColliders c)
+    {
         // Rear porch landing, parapets and steps.
         var ry = c.Ground(R.Origin.X, R.Origin.Y);
         var rfloor = ry + M.FloorY;

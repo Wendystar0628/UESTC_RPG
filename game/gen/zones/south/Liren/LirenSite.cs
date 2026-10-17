@@ -163,6 +163,15 @@ public sealed class LirenSite : SouthSite
             GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
     }
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var f = Rings(world);
+        var blocks = Blocks(f).Select(b => new PolygonRings(b.Ring));
+        if (lod is LodLevel.L3 or LodLevel.L4) return [.. blocks];
+        var half = (T.ColumnSize + 0.3f) * 0.5f;
+        return [.. blocks, .. Columns(f).Select(c => new PolygonRings(new PlanFrame(c.Point, c.Along).Rect(-half, -half, half, half)))];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);

@@ -79,6 +79,60 @@ public sealed class SouthModuleTests
     }
 
     [TestCase]
+    public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
+    {
+        var ctx = Context();
+        var module = new SouthModule();
+        foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
+        {
+            var traces = module.TraceSources(ctx, lod).ToArray();
+            Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, "source IDs are unique");
+            foreach (var claim in module.Claims.OfType<FeatureClaim>())
+                Require(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0),
+                    $"{lod}: claimed source {claim.Feature} has actual geometry, collision and material contours");
+            var size = 64 << (int)lod;
+            var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
+            Require(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes))),
+                $"{lod}: complete source geometry reproduces the tiled production geometry");
+            Require(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
+                .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)), $"{lod}: placed parts remain in their actual source");
+            Require(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances)), $"{lod}: instance streams remain in their actual source");
+            var options = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            string Dump(Collider c) => System.Text.Json.JsonSerializer.Serialize<Collider>(c, options);
+            Require(traces.SelectMany(t => t.Colliders).Select(Dump).Order(StringComparer.Ordinal)
+                .SequenceEqual(module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Select(Dump).Order(StringComparer.Ordinal)),
+                $"{lod}: complete source colliders reproduce production collision");
+            Require(traces.Count(t => t.SourceId.StartsWith("18a.main-building/", StringComparison.Ordinal)) == 3 &&
+                traces.Where(t => t.Feature == new FeatureId(MainBuilding.MainBuildingSite.FrontSteps)).All(t => t.SourceId.EndsWith("/front", StringComparison.Ordinal)),
+                "the roof gallery and rear porch are separate B2 sources");
+            var gallery = traces.Single(t => t.SourceId.EndsWith("/roof-gallery", StringComparison.Ordinal));
+            Require(gallery.OccupiedContours.Single().Holes.Count == 1, "the gallery keeps its open centre");
+            var stand = traces.Single(t => t.Feature == new FeatureId(Sports.GrandstandSite.Feature));
+            var centre = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
+            Require(stand.OccupiedContours.All(r => !PlanMath.Inside(r.Outer, centre)), "stand segments leave the track and the C opening unfilled");
+            Require(traces.Single(t => t.Feature == new FeatureId(Sports.GrandstandSite.LowSeats)).SourceId.EndsWith("/east-seats", StringComparison.Ordinal), "east seats use their own real feature");
+            var connector = traces.Single(t => t.Feature == new FeatureId(Liren.LirenSite.Connector));
+            var connectorPlan = Liren.LirenSite.Rings(ctx.World);
+            Require(connector.OccupiedContours.Count == Liren.LirenSite.Blocks(connectorPlan).Count() + Liren.LirenSite.Columns(connectorPlan).Count(),
+                "connector contours contain only its generated blocks and columns");
+        }
+
+        static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
+        {
+            var result = new List<string>();
+            foreach (var mesh in meshes)
+                for (var i = 0; i < mesh.Index.Length; i += 3)
+                {
+                    string Vertex(int v) => string.Join(",", mesh.Position.Skip(v * 3).Take(3).Concat(mesh.Normal.Skip(v * 3).Take(3)).Select(BitConverter.SingleToInt32Bits));
+                    result.Add($"{mesh.Material}/{Vertex(mesh.Index[i])}/{Vertex(mesh.Index[i + 1])}/{Vertex(mesh.Index[i + 2])}");
+                }
+            result.Sort(StringComparer.Ordinal);
+            return result;
+        }
+    }
+
+    [TestCase]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();

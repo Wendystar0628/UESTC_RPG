@@ -193,6 +193,15 @@ public sealed class XuanbangSite : SouthSite
         return allocation;
     }
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var f = Rings(world);
+        var (clock, hx, hz) = ClockTower.FrameOf(f.Clock);
+        return [new(f.Main), new(f.Tower), new(clock.Rect(-hx, -hz, hx, hz)),
+            .. Porticoes(f).Select(p => new PolygonRings(p.Rect(-X.PorticoHalfWidth - 0.5f, -0.3f,
+                X.PorticoHalfWidth + 0.5f, X.PorticoDepth + 0.3f)))];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);

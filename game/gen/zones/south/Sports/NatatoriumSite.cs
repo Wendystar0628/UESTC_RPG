@@ -109,6 +109,17 @@ public sealed class NatatoriumSite : SouthSite
         return allocation;
     }
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var p = PlanOf(world);
+        var count = lod switch { LodLevel.L0 => 120, LodLevel.L1 => 80, LodLevel.L2 => 56, _ => 36 };
+        var body = new PolygonRings(Enumerable.Range(0, count).Select(i => p.At(2f * MathF.PI * i / count, 1f)).ToArray());
+        if (lod is not (LodLevel.L0 or LodLevel.L1)) return [body];
+        var entry = EntryFrame(p, out var reach);
+        var half = S.PoolEntryWidth * 0.5f;
+        return [body, new(entry.Rect(-half, reach - 3f, half, reach + S.PoolEntryDepth - 0.5f))];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var p = PlanOf(b.Context.World);

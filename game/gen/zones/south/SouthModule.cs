@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.South;
 /// gathered from its sites; B2 and the other main-building wings, and every other WP-14 building, keep generic windows.
 /// </summary>
 [ContentModule("zone.south", Owner = "WP-18")]
-public sealed class SouthModule : IContentModule, IWindowMetadataSource
+public sealed class SouthModule : IContentModule, IWindowMetadataSource, IContentSourceTraceProvider
 {
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
@@ -74,6 +74,13 @@ public sealed class SouthModule : IContentModule, IWindowMetadataSource
         var colliders = new SiteColliders(ctx);
         foreach (var site in _sites) site.Collide(colliders);
         return colliders.Items.Where(i => Cell(i.Anchor, LodLevel.L0) == (tile.X, tile.Z)).Select(i => i.Collider).ToArray();
+    }
+
+    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        foreach (var site in _sites)
+            foreach (var source in site.TraceSources(context, level)) yield return source;
     }
 
     public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint worldSeed)

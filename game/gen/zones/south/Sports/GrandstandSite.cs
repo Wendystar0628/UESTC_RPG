@@ -131,17 +131,35 @@ public sealed class GrandstandSite : SouthSite
     private static (Vector2[] Points, byte[] Face, float Top) LowProfile(int rows) =>
         Profile(T.LowWalk + T.LowRows * T.LowRow + T.LowBack, rows, T.LowFront, T.LowWalk, T.LowBack, 0.9f, T.LowRise / T.LowRow, 99f, T.LowRows);
 
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext ctx, LodLevel lod)
+    {
+        var p = PlanOf(ctx.World);
+        var stride = lod switch { LodLevel.L0 => 1, LodLevel.L1 => 2, _ => 4 };
+        var picked = p.Stations.Where((_, i) => i % stride == 0).ToList();
+        if (picked[^1] != p.Stations[^1]) picked.Add(p.Stations[^1]);
+        yield return Trace(ctx, lod, Id + "/main", new(Feature), b => Build(b, true, false), c => Collide(c, true, false), Contours(picked));
+        if (p.Low.Count == 2)
+            yield return Trace(ctx, lod, Id + "/east-seats", new(LowSeats), b => Build(b, false, true), c => Collide(c, false, true), Contours(p.Low));
+    }
+
+    private static IReadOnlyList<PolygonRings> Contours(IReadOnlyList<Station> stations) =>
+        [.. Enumerable.Range(0, stations.Count - 1).Select(i => new PolygonRings(
+            [stations[i].Front, stations[i + 1].Front, stations[i + 1].Back, stations[i].Back]))];
+
     // ---- Geometry ----
 
-    public override void Build(SiteBuilder b)
+    public override void Build(SiteBuilder b) => Build(b, true, true);
+
+    private static void Build(SiteBuilder b, bool main, bool low)
     {
         var p = PlanOf(b.Context.World);
         var (stride, rows) = b.Detail switch { SiteDetail.Full => (1, T.Rows), SiteDetail.Plain => (2, T.Rows / 2), _ => (4, 0) };
         var picked = new List<Station>();
         for (var i = 0; i < p.Stations.Count; i += stride) picked.Add(p.Stations[i]);
         if (picked[^1] != p.Stations[^1]) picked.Add(p.Stations[^1]);
-        Tiers(b, p, picked, s => Main(s, rows), s => s.Angle is >= T.YellowFrom and <= T.YellowTo ? L.SeatYellow : L.SeatLilac);
-        if (p.Low.Count == 2) Tiers(b, p, p.Low, _ => LowProfile(b.Detail == SiteDetail.Mass ? 0 : T.LowRows), _ => L.SeatDark);
+        if (main) Tiers(b, p, picked, s => Main(s, rows), s => s.Angle is >= T.YellowFrom and <= T.YellowTo ? L.SeatYellow : L.SeatLilac);
+        if (low && p.Low.Count == 2) Tiers(b, p, p.Low, _ => LowProfile(b.Detail == SiteDetail.Mass ? 0 : T.LowRows), _ => L.SeatDark);
+        if (!main) return;
         Canopy(b, p, picked);
         if (b.Detail == SiteDetail.Mass) return;
         Copings(b, p, picked);
@@ -364,10 +382,12 @@ public sealed class GrandstandSite : SouthSite
 
     // ---- Collision ----
 
-    public override void Collide(SiteColliders c)
+    public override void Collide(SiteColliders c) => Collide(c, true, true);
+
+    private static void Collide(SiteColliders c, bool main, bool includeLow)
     {
         var p = PlanOf(c.Context.World);
-        foreach (var stations in new[] { p.Stations, p.Low })
+        foreach (var stations in new[] { p.Stations, p.Low }.Where(s => ReferenceEquals(s, p.Low) ? includeLow : main))
         {
             if (stations.Count < 2) continue;
             var low = ReferenceEquals(stations, p.Low);
