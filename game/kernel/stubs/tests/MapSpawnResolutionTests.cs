@@ -105,11 +105,13 @@ public sealed class MapSpawnResolutionTests
         var camera = CreateCamera();
         var service = new MapServiceStub(camera, runtime);
         var world = new StubWorldModel(new StubSpatialIndex(), new InteriorIndexStub(), new StubFidelityModel());
-        service.LoadFromBytes(JsonSerializer.SerializeToUtf8Bytes(index, ContractJson.Options),
-            JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options), world,
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        { ["map.json"] = JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options) });
+        service.LoadFromBytes(JsonSerializer.SerializeToUtf8Bytes(index, ContractJson.Options), inputs, world,
             new(103, 30, 32648, new(-32, -32), new(32, 32)), Vector2.Zero,
             new(new(-64, -28, -64), new(64, 2000, 64)), new(-1, -1), new(0, 0),
             "res://bake/spawn-test/boot/", [first, other]);
+        Check(ReferenceEquals(service.Context?.SourceInputs, inputs), "D0 published another input version.");
         return new(map, service, camera, first, other);
     }
 

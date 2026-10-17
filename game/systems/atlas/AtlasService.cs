@@ -73,20 +73,20 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         {
             if (marker.Kind is MarkerKind.Interior or MarkerKind.Custom)
                 throw new JsonException("Interior and custom markers are generated, not authored in markers.json.");
+            var point = waypoints.Waypoints.SingleOrDefault(w => w.Id == marker.WaypointId);
             if (marker.Kind == MarkerKind.Viewpoint)
             {
-                var point = waypoints.Waypoints.SingleOrDefault(w => w.Id == marker.WaypointId)
-                    ?? throw new JsonException($"Missing waypoint: {marker.WaypointId}");
+                if (point is null) throw new JsonException($"Missing waypoint: {marker.WaypointId}");
                 if (marker.Teleport is not null) throw new JsonException("A viewpoint must reference its waypoint pose.");
-                markers.Add(marker with { At = Plan(point.Fly.Position), Teleport = new(point.Fly, point.Stand, point.Entry), Group = point.Group });
+                markers.Add(marker with { At = Plan(point.Fly.Position), Teleport = new(point.Fly, point.Stand, point.Entry), Group = point.Group, Recommend = point.Recommend });
             }
-            else markers.Add(marker);
+            else markers.Add(marker with { Group = point?.Group, Recommend = point?.Recommend });
         }
         foreach (var point in waypoints.Waypoints)
             if (!markers.Any(m => m.WaypointId == point.Id))
                 markers.Add(new(new(point.Id), MarkerKind.Viewpoint, point.Name, Plan(point.Fly.Position),
                     "viewpoint", 50, 1, null, new(point.Fly, point.Stand, point.Entry), WaypointId: point.Id)
-                { Group = point.Group });
+                { Group = point.Group, Recommend = point.Recommend });
         // The world interior index is the authority for open entrances. No duplicate entrance table.
         foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {

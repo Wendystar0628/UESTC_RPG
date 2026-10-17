@@ -58,7 +58,22 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
         if (world is StubWorldModel stubWorld) stubWorld.Configure(campus);
         var waypoints = JsonSerializer.Deserialize<WaypointFile>(waypointBytes, ContractJson.Options)
             ?? throw new JsonException("Waypoint file is null.");
-        maps.LoadFromBytes(indexBytes, mapBytes, world, campus.Geo, campus.Center, campus.Bounds,
+        var mapFile = JsonSerializer.Deserialize<MapFile>(mapBytes, ContractJson.Options)
+            ?? throw new JsonException("Map file is null.");
+        var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
+        var inputBytes = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        {
+            ["map.json"] = mapBytes,
+            ["campus.json"] = campusBytes,
+            ["interiors.json"] = interiorBytes,
+            ["waypoints.json"] = waypointBytes
+        };
+        // Canonical map-relative path only. No implicit lookup of the retired global planting path.
+        const string plantingKey = "vegetation/planting.json";
+        if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
+        var mapInputs = BackdropInputs.Freeze(descriptor, entry.Dir, inputBytes,
+            Godot.FileAccess.FileExists, path => Read(path));
+        maps.LoadFromBytes(indexBytes, mapInputs, world, campus.Geo, campus.Center, campus.Bounds,
             campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints.Waypoints);
         var context = maps.Context ?? throw new InvalidDataException("D0 map context was not configured.");
 
@@ -70,19 +85,6 @@ public sealed partial class D0Bootstrap : Node, IBootParticipant
             .ToDictionary(registration => registration.Id,
                 registration => registry.CreateInteriorProvider(registration.Type, entry.Id), StringComparer.Ordinal);
         var bindings = D0InteriorSetup.Configure(interiorBytes, providers, world.Terrain);
-        var inputBytes = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-        {
-            ["map.json"] = mapBytes,
-            ["campus.json"] = campusBytes,
-            ["interiors.json"] = interiorBytes,
-            ["waypoints.json"] = waypointBytes
-        };
-        // Canonical map-relative path only. No implicit lookup of the retired global planting path.
-        const string plantingKey = "vegetation/planting.json";
-        if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
-        var mapInputs = BackdropInputs.Freeze(context.Descriptor, context.DataRoot, inputBytes,
-            Godot.FileAccess.FileExists, path => Read(path));
-        context = maps.SetSourceInputs(mapInputs);
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var build = new BuildContext
         {

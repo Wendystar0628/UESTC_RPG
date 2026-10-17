@@ -56,10 +56,6 @@ public static class MapWorldLoading
         return loaded;
     }
 
-    /// <summary>Compatibility path for old fixtures; formal loading must use the snapshot overload.</summary>
-    public static IMapContext CreateContext(MapCatalogEntry entry, WorldModelLoadResult loaded) =>
-        CreateContext(entry, loaded, BuildInputSnapshot.Empty);
-
     public static IMapContext CreateContext(MapCatalogEntry entry, WorldModelLoadResult loaded, BuildInputSnapshot sourceInputs)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -79,7 +75,7 @@ public static class MapWorldLoading
                 TileMax = new((int)MathF.Ceiling(max.X / 64f) - 1, (int)MathF.Ceiling(max.Y / 64f) - 1)
             };
         }
-        return new MapContext(descriptor, loaded.World, entry.DataRoot, entry.BakeRoot) { SourceInputs = sourceInputs };
+        return new MapContext(descriptor, loaded.World, entry.DataRoot, entry.BakeRoot, sourceInputs);
     }
 
     public static WalkBakeData? ReadWalk(MapLoadInput input)

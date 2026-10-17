@@ -336,6 +336,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         Cinematics: new Dictionary<string, string>(), Portals: []));
     private sealed class TestMapContext(MapDescriptor descriptor) : IMapContext
     {
+        public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
         public MapDescriptor Descriptor => descriptor;
         public IWorldModel World => throw new NotSupportedException();
         public string DataRoot => "";

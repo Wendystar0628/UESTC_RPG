@@ -79,13 +79,9 @@ public partial class D0Stage : Node3D
         var waypoints = JsonSerializer.Deserialize<WaypointFile>(waypointsBytes, ContractJson.Options)!.Waypoints;
         var maps = (MapServiceStub)registry.Get<IMapService>();
         var mapBytes = Read(entry.Dir + "map.json");
-        maps.LoadFromBytes(indexBytes, mapBytes, world, campus.Geo, campus.Center,
-            campus.Bounds, campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints);
-        var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
-        InitializeWorld(context);
-        var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
-            .ToDictionary(r => r.Id, r => registry.CreateInteriorProvider(r.Type, entry.Id), StringComparer.Ordinal);
-        var bindings = D0InteriorSetup.Configure(interiorsBytes, providers, world.Terrain);
+        var mapFile = JsonSerializer.Deserialize<MapFile>(mapBytes, ContractJson.Options)
+            ?? throw new JsonException("Map file is null.");
+        var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
         var inputBytes = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             ["map.json"] = mapBytes,
@@ -96,9 +92,15 @@ public partial class D0Stage : Node3D
         // Canonical map-relative path only. No implicit lookup of the retired global planting path.
         const string plantingKey = "vegetation/planting.json";
         if (Godot.FileAccess.FileExists(entry.Dir + plantingKey)) inputBytes[plantingKey] = Read(entry.Dir + plantingKey);
-        var mapInputs = BackdropInputs.Freeze(context.Descriptor, context.DataRoot, inputBytes,
+        var mapInputs = BackdropInputs.Freeze(descriptor, entry.Dir, inputBytes,
             Godot.FileAccess.FileExists, path => Read(path));
-        context = maps.SetSourceInputs(mapInputs);
+        maps.LoadFromBytes(indexBytes, mapInputs, world, campus.Geo, campus.Center,
+            campus.Bounds, campus.TileMin, campus.TileMax, "res://bake/" + entry.Id.Value + "/boot/", waypoints);
+        var context = maps.Context ?? throw new InvalidDataException("Map context not initialized.");
+        InitializeWorld(context);
+        var providers = registry.ForMap(entry.Id.Value).Where(r => r.Kind == "interior")
+            .ToDictionary(r => r.Id, r => registry.CreateInteriorProvider(r.Type, entry.Id), StringComparer.Ordinal);
+        var bindings = D0InteriorSetup.Configure(interiorsBytes, providers, world.Terrain);
         var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, entry.Id);
         var buildContext = new BuildContext
         {

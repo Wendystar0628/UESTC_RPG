@@ -589,6 +589,7 @@ public sealed class WorldStateTests
         new("sky", "backdrop", []), new Dictionary<string, string>(), []));
     private sealed record TestContext(MapDescriptor Descriptor) : IMapContext
     {
+        public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
         public IWorldModel World => throw new NotSupportedException();
         public string DataRoot => "res://test/";
         public string BakeRoot => "res://bake/test/";

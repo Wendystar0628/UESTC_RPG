@@ -154,7 +154,8 @@ public sealed class VegetationContextTests
             var baseFiles = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
                 .ToDictionary(name => name, name => all[name], StringComparer.Ordinal);
             var loader = new WorldModelLoaderAdapter();
-            var map = entry.CreateContext(loader.Load(id, baseFiles));
+            var baseInput = new MapLoadInput(entry, baseFiles, ReadOnlyMemory<byte>.Empty);
+            var map = entry.CreateContext(MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
             var assemblies = Directory.EnumerateFiles(AppContext.BaseDirectory, "Campus.Gen.*.dll")
                 .Where(path => !Path.GetFileName(path).StartsWith("Campus.Gen.Tests", StringComparison.Ordinal))
                 .Order(StringComparer.Ordinal).Select(path => System.Reflection.Assembly.LoadFrom(path)).ToArray();

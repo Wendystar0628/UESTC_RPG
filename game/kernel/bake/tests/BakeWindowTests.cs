@@ -174,7 +174,7 @@ public sealed class BakeWindowTests
             PartLods = partLods
         };
         var modules = Modules(source, new Provider(Snapshot([])));
-        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", "fixture") { SourceInputs = inputs };
+        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", "fixture", inputs);
         var claims = new Lazy<MapClaimLedger>(() => new(context.World, [new("source", Owner, false, [new FeatureClaim(Feature, Aspects.Facade)])]));
         var reads = 0;
         var data = new Lazy<BakeService.LoadedMap>(() =>
@@ -204,7 +204,18 @@ public sealed class BakeWindowTests
             throw new InvalidOperationException("Catalog contexts mixed preparation generations or module identities.");
         ExpectNotReady(() => map.GetPreparedContext(mapContext with { }, "source"));
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "unknown"));
+        var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
+        map.Collect("source", "metadata", [warning], Feature);
+        if (!map.Diagnostics.TryDequeue(out var diagnostic) || diagnostic.Map != context.Map.Id || diagnostic.Owner != Owner ||
+            diagnostic.Module != "source" || diagnostic.Stage != "metadata" || diagnostic.Diagnostic.Feature != Feature ||
+            diagnostic.Diagnostic.Code != warning.Code || diagnostic.Diagnostic.Level != warning.Level)
+            throw new InvalidOperationException("Build diagnostics lost their map, owner, module, stage or feature context.");
+        try { map.Collect("source", "geometry", [warning, default]); }
+        catch (ArgumentException) { }
+        if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Invalid diagnostics partially entered the collection.");
         map.Active = false;
+        map.Collect("source", "geometry", [warning]);
+        if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
     }

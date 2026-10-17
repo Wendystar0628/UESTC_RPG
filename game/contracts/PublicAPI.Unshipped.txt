@@ -193,6 +193,8 @@ Campus.Contracts.Atlas.AtlasMarker.Name.get -> Campus.Contracts.LocalizedName
 Campus.Contracts.Atlas.AtlasMarker.Name.init -> void
 Campus.Contracts.Atlas.AtlasMarker.Priority.get -> int
 Campus.Contracts.Atlas.AtlasMarker.Priority.init -> void
+Campus.Contracts.Atlas.AtlasMarker.Recommend.get -> Campus.Contracts.WaypointRecommend?
+Campus.Contracts.Atlas.AtlasMarker.Recommend.init -> void
 Campus.Contracts.Atlas.AtlasMarker.Region.get -> string?
 Campus.Contracts.Atlas.AtlasMarker.Region.init -> void
 Campus.Contracts.Atlas.AtlasMarker.RouteId.get -> string?

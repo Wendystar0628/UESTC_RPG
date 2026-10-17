@@ -65,10 +65,6 @@ public sealed class MapInputSnapshotTests
             !ReferenceEquals(oldContext.SourceInputs, newContext.SourceInputs), "Context construction refroze or mixed map versions.");
         Require(oldContext.SourceInputs.Require("campus.json").Span[0] == 1 &&
             newContext.SourceInputs.Require("campus.json").Span[0] == 2, "An old context observed newer source bytes.");
-        Require(ReferenceEquals(entry.CreateContext(oldWorld).SourceInputs, BuildInputSnapshot.Empty),
-            "The old context-creation signature lost its fixture-compatible empty default.");
-        IMapContext legacy = new LegacyContext(entry.Descriptor, oldWorld.World, entry.DataRoot, entry.BakeRoot);
-        Require(ReferenceEquals(legacy.SourceInputs, BuildInputSnapshot.Empty), "An old IMapContext implementation lost its default.");
     }
 
     private static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files(byte version) =>
@@ -93,5 +89,4 @@ public sealed class MapInputSnapshotTests
     }
     private static void Require(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); }
-    private sealed record LegacyContext(MapDescriptor Descriptor, IWorldModel World, string DataRoot, string BakeRoot) : IMapContext;
 }

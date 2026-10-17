@@ -26,16 +26,7 @@ public sealed record FurnitureItem(string Key, FurnitureKind Kind, PlacedPart Pa
 /// <summary>All street furniture of one map, in a stable order (anchors, entrances, stops, then roads in rule order).</summary>
 public sealed record FurnitureLayout(IReadOnlyList<FurnitureItem> Items)
 {
-    /// <summary>
-    /// One line per atlas anchor the layout left out (its point lands on a carriageway, in water or in a building) or left where
-    /// the data put it (no pedestrian paving within reach), in anchor order: for the anchor data's review (WP-48c).
-    /// </summary>
-    public IReadOnlyList<string> Log { get; init; } = [];
-
-    /// <summary>
-    /// Deterministic build diagnostics in a stable order (ContentOutput.Diagnostics carries them out): a warning where the map's
-    /// planting input could not give a road's tree rows and the fallback stood in.
-    /// </summary>
+    /// <summary>Deterministic placement and planting diagnostics, returned through ContentOutput.Diagnostics.</summary>
     public IReadOnlyList<BuildDiagnostic> Diagnostics { get; init; } = [];
 
     public int Count(FurnitureKind kind) => Items.Count(i => i.Kind == kind);
@@ -90,22 +81,22 @@ public static partial class FurniturePlanner
     {
         ArgumentNullException.ThrowIfNull(world);
         claimedBy ??= (_, _) => null;
-        var (roads, diagnostics) = PlantingRows.Resolve(inputs, rules);
+        var (roads, plantingDiagnostics) = PlantingRows.Resolve(inputs, rules);
         var site = new StreetSite(world);
         foreach (var rule in roads) site.AddRows(world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name), rule.Rows);
         var items = new List<FurnitureItem>();
-        var log = new List<string>();
-        Anchors(site, items, log);
+        var diagnostics = new List<BuildDiagnostic>(plantingDiagnostics);
+        Anchors(site, items, diagnostics);
         Entrances(site, items, claimedBy);
         Stops(site, items);
-        for (var r = 0; r < roads.Count; r++) Road(site, items, log, r, roads[r]);
+        for (var r = 0; r < roads.Count; r++) Road(site, items, diagnostics, r, roads[r]);
         for (var r = 0; r < roads.Count; r++)
-            if (roads[r].KerbRamps) KerbRamps(site, items, log, r, roads[r]);
+            if (roads[r].KerbRamps) KerbRamps(site, items, diagnostics, r, roads[r]);
         Cars(site, items);
-        Fountains(site, items, log);
-        Signposts(site, items, log);
-        Services(site, items, log, roads);
-        return new(items.AsReadOnly()) { Log = log.AsReadOnly(), Diagnostics = diagnostics };
+        Fountains(site, items, diagnostics);
+        Signposts(site, items, diagnostics);
+        Services(site, items, diagnostics, roads);
+        return new(items.AsReadOnly()) { Diagnostics = diagnostics.AsReadOnly() };
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -117,9 +108,9 @@ public static partial class FurniturePlanner
     /// <see cref="FurnitureStyle.RampKerbReach"/> of its kerb gets one on that kerb, a walk crossing it one on each kerb. The ramp lies on
     /// the carriageway against the kerb, rising to the kerb top and onto the paving behind it (sliding along the kerb by up to
     /// <see cref="FurnitureStyle.RampSlide"/> to find it, never onto a verge), <see cref="FurnitureStyle.RampGap"/> clear of the next; none inside a
-    /// junction (on another road's surface), which WP-15 marks and paves. The count and the refusals go to the layout log.
+    /// junction (on another road's surface), which WP-15 marks and paves. The count and the refusals go to the layout diagnostics.
     /// </summary>
-    private static void KerbRamps(StreetSite site, List<FurnitureItem> items, List<string> log, int r, RoadRule rule)
+    private static void KerbRamps(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, RoadRule rule)
     {
         var lines = site.World.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name && StreetSite.Carriageway(l)).OrderBy(l => l.Id.Value, StringComparer.Ordinal).ToList();
         if (lines.Count == 0) return;
@@ -170,7 +161,7 @@ public static partial class FurniturePlanner
                 }
             }
         }
-        log.Add($"road {rule.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)");
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.kerb-ramps.summary", $"road {rule.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)"));
     }
 
     /// <summary>The nearest point of any of <paramref name="lines"/> to <paramref name="p"/>, with the unit direction of its segment.</summary>
@@ -281,9 +272,9 @@ public static partial class FurniturePlanner
     /// One drinking fountain for each sports venue and teaching building (<see cref="FurnitureStyle.FountainCategories"/>) with a main
     /// entrance: the first open entrance by ID of its interior-index entry. It stands beside the paving <see cref="FurnitureStyle.FountainNear"/>–
     /// <see cref="FurnitureStyle.FountainFar"/> in front of the door, the nearest spot that fits first, on a bay joined to the paving and
-    /// facing it, under the walk furniture's rules (<see cref="PavingSlot"/>). The count and the buildings left without go to the log.
+    /// facing it, under the walk furniture's rules (<see cref="PavingSlot"/>). The count and the buildings left without go to the diagnostics.
     /// </summary>
-    private static void Fountains(StreetSite site, List<FurnitureItem> items, List<string> log)
+    private static void Fountains(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
     {
         var p = S.Fountain;
         var done = new HashSet<FeatureId>();
@@ -311,8 +302,8 @@ public static partial class FurniturePlanner
             site.Occupy(at.Ends.A, at.Ends.B, at.Ends.R);
             placed++;
         }
-        log.Add($"drinking fountains: {placed} by the main entrances of sports and teaching buildings" +
-            (left.Count == 0 ? "" : $"; no room {Num(S.FountainNear)} to {Num(S.FountainFar)} m out at {string.Join(", ", left)}"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.fountains.summary", $"drinking fountains: {placed} by the main entrances of sports and teaching buildings" +
+            (left.Count == 0 ? "" : $"; no room {Num(S.FountainNear)} to {Num(S.FountainFar)} m out at {string.Join(", ", left)}")));
     }
 
     /// <summary>
@@ -320,9 +311,9 @@ public static partial class FurniturePlanner
     /// branches meet and a landmark lies within <see cref="FurnitureStyle.SignpostLandmarkReach"/> (<see cref="Junctions"/>): the junctions
     /// with more branches first, then the nearer landmark, none within <see cref="FurnitureStyle.SignpostSpacing"/> of a placed one (one to a
     /// line of sight). Each stands beside the paving nearest its junction, within <see cref="FurnitureStyle.SignpostReach"/>, facing it, on a
-    /// bay joined to the paving (<see cref="PavingSlot"/>). The counts go to the log.
+    /// bay joined to the paving (<see cref="PavingSlot"/>). The counts go to the diagnostics.
     /// </summary>
-    private static void Signposts(StreetSite site, List<FurnitureItem> items, List<string> log)
+    private static void Signposts(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
     {
         var p = S.Signpost;
         var landmarks = site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal)
@@ -349,8 +340,8 @@ public static partial class FurniturePlanner
             site.Occupy(spot.Ends.A, spot.Ends.B, spot.Ends.R);
             placed.Add(at);
         }
-        log.Add($"signposts: {placed.Count} at walk junctions of {S.SignpostBranches}+ branches within {Num(S.SignpostLandmarkReach)} m of a landmark " +
-            $"({junctions.Count(j => j.Branches >= S.SignpostBranches)} such junctions, {candidates.Count} near a landmark; {crowded} within {Num(S.SignpostSpacing)} m of another, {cramped} with no room beside the paving)");
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.signposts.summary", $"signposts: {placed.Count} at walk junctions of {S.SignpostBranches}+ branches within {Num(S.SignpostLandmarkReach)} m of a landmark " +
+            $"({junctions.Count(j => j.Branches >= S.SignpostBranches)} such junctions, {candidates.Count} near a landmark; {crowded} within {Num(S.SignpostSpacing)} m of another, {cramped} with no room beside the paving)"));
     }
 
     /// <summary>
@@ -406,7 +397,7 @@ public static partial class FurniturePlanner
     // Atlas anchors: kiosks and posts on WP-48c's overlay features.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Anchors(StreetSite site, List<FurnitureItem> items, List<string> log)
+    private static void Anchors(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
     {
         var terrain = site.World.Terrain;
         foreach (var feature in site.World.Features.Values.Where(f => f.Kind.Value == "anchor").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -426,7 +417,7 @@ public static partial class FurniturePlanner
             var landing = site.LandingAt(centre);
             if (landing != Landing.Open)
             {
-                log.Add($"anchor {feature.Id.Value} ({form}) not placed: its point lands {Where(landing)}");
+                diagnostics.Add(new(DiagnosticLevel.Warning, "wp13.anchor.not-placed", $"anchor {feature.Id.Value} ({form}) not placed: its point lands {Where(landing)}", feature.Id));
                 continue;
             }
             switch (form)
@@ -438,7 +429,7 @@ public static partial class FurniturePlanner
                         // comes from the overlay's groundY. An apron off the paving moves to its edge (a deck is paving already).
                         var ground = terrain.HeightAt(centre.X, centre.Y);
                         var deck = Number(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
-                        if (deck is null) (centre, facing) = KioskOnPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, log, feature.Id);
+                        if (deck is null) (centre, facing) = KioskOnPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, diagnostics, feature.Id);
                         var level = deck ?? terrain.PadY(feature.Id);
                         var plan = Frame(centre, facing, 0f);
                         var apron = Land.Pad(terrain, plan, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, level)!;
@@ -452,7 +443,7 @@ public static partial class FurniturePlanner
                     {
                         var p = S.Post with { Width = width >= 0.16f ? width : S.Post.Width, Depth = depth >= 0.16f ? depth : S.Post.Depth, Height = feature.Height is float h && h >= 0.6f ? h : S.Post.Height };
                         var radius = MathF.Max(p.Width, p.Depth) * 0.5f;
-                        centre = ToPaving(site, centre, facing, radius, radius, log, feature.Id, form);
+                        centre = ToPaving(site, centre, facing, radius, radius, diagnostics, feature.Id, form);
                         if (Land.Point(terrain, centre, radius) is not { } y) continue;
                         var at = Frame(centre, facing, y);
                         items.Add(Item(key, FurnitureKind.AtlasPost, PartCatalog.AtlasPost, p, at, PostDef.Collision(p), [AtlasPostPart.Emitter(p, at)]));
@@ -473,7 +464,7 @@ public static partial class FurniturePlanner
     /// its data yaw. The new centre and yaw are logged for the anchor data (WP-48c), which takes them over; an apron whole on paving
     /// already stays as the data has it.
     /// </summary>
-    private static (Vector2 Centre, Vector2 Facing) KioskOnPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<string> log, FeatureId id)
+    private static (Vector2 Centre, Vector2 Facing) KioskOnPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<BuildDiagnostic> diagnostics, FeatureId id)
     {
         // An apron whole on paving stays; one that only partly is (13c2a: A03, about half its outline off) turns onto the edge
         // its outline crosses, as one wholly off does onto the nearest edge (Opus review 17:28).
@@ -486,11 +477,11 @@ public static partial class FurniturePlanner
             {
                 var at = hit.Edge + along * slide + inward * (S.ApronPavingClear + halfDepth);
                 if (Vector2.Distance(at, centre) > S.AnchorPavingReach || !OnPaving(site, at, inward, halfWidth, halfDepth)) continue;
-                log.Add($"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(YawDeg(inward))} (data {Fixed(YawDeg(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))");
+                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.anchor.turned", $"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(YawDeg(inward))} (data {Fixed(YawDeg(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))", id));
                 return (at, inward);
             }
         }
-        return (ToPaving(site, centre, facing, halfWidth, halfDepth, log, id, "kiosk"), facing);
+        return (ToPaving(site, centre, facing, halfWidth, halfDepth, diagnostics, id, "kiosk"), facing);
     }
 
     /// <summary>
@@ -523,9 +514,9 @@ public static partial class FurniturePlanner
     /// <summary>
     /// The anchor's centre, moved the shortest way until its footprint (±<paramref name="halfWidth"/> across, ±<paramref name="halfDepth"/>
     /// along <paramref name="facing"/>) meets the nearest pedestrian paving, when it does not touch it yet; the facing stays. The footprint ends <see cref="FurnitureStyle.PadJoin"/> over the paving edge, so the two join. Paving
-    /// further than <see cref="FurnitureStyle.AnchorPavingReach"/> is a data question (WP-48c), not a move: the anchor stays, logged.
+    /// further than <see cref="FurnitureStyle.AnchorPavingReach"/> is a data question (WP-48c), not a move: the anchor stays, diagnosticsged.
     /// </summary>
-    private static Vector2 ToPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<string> log, FeatureId id, string form)
+    private static Vector2 ToPaving(StreetSite site, Vector2 centre, Vector2 facing, float halfWidth, float halfDepth, List<BuildDiagnostic> diagnostics, FeatureId id, string form)
     {
         var right = new Vector2(-facing.Y, facing.X);
         var start = centre;
@@ -543,7 +534,7 @@ public static partial class FurniturePlanner
             if (near is { } n) centre += Vector2.Normalize(n.Edge - n.From) * (n.Gap + S.PadJoin);
             if (near is null || Vector2.Distance(start, centre) > S.AnchorPavingReach)
             {
-                log.Add($"anchor {id.Value} ({form}) left in place: no pedestrian paving within {Num(S.AnchorPavingReach)} m");
+                diagnostics.Add(new(DiagnosticLevel.Warning, "wp13.anchor.no-paving", $"anchor {id.Value} ({form}) left in place: no pedestrian paving within {Num(S.AnchorPavingReach)} m", id));
                 return start;
             }
         }
@@ -631,7 +622,7 @@ public static partial class FurniturePlanner
     // Roads: lamps at the tier's spacing; rest stops midway between lamps.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Road(StreetSite site, List<FurnitureItem> items, List<string> log, int r, RoadRule rule)
+    private static void Road(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, RoadRule rule)
     {
         var lines = site.World.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name).ToList();
         if (lines.Count == 0) return;
@@ -669,16 +660,16 @@ public static partial class FurniturePlanner
                 }
             }
         }
-        if (rule.Nodes is { } nodes) NodeStops(site, items, log, r, rule.Name, nodes);
+        if (rule.Nodes is { } nodes) NodeStops(site, items, diagnostics, r, rule.Name, nodes);
     }
 
     /// <summary>
     /// A road's rest stops at its nodes (Opus review 16:23): at each node, up to <see cref="FurnitureStyle.NodeBenches"/> benches on the
     /// pedestrian paving within <see cref="FurnitureStyle.NodeReach"/> of it (a plaza's edge, a walk's), nearest first, each standing
     /// just off the paving edge and facing the paving under the 13c1 rules (<see cref="PavingSlot"/>), <see cref="FurnitureStyle.NodeBenchGap"/>
-    /// apart. A node that takes none says why, in the layout log, and the rules stay as they are.
+    /// apart. A node that takes none says why, in the layout diagnostics, and the rules stay as they are.
     /// </summary>
-    private static void NodeStops(StreetSite site, List<FurnitureItem> items, List<string> log, int r, string road, IReadOnlyList<RestNode> nodes)
+    private static void NodeStops(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, string road, IReadOnlyList<RestNode> nodes)
     {
         for (var n = 0; n < nodes.Count; n++)
         {
@@ -727,8 +718,8 @@ public static partial class FurniturePlanner
                 Seat(bench);
             }
             if (placed.Count == 0)
-                log.Add($"road {road} node {node.Label} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
-                    (why.Count == 0 ? "none of them on pedestrian paving" : string.Join(", ", why.Select(w => $"{w.Value} {w.Key}"))));
+                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.node.no-bench", $"road {road} node {node.Label} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
+                    (why.Count == 0 ? "none of them on pedestrian paving" : string.Join(", ", why.Select(w => $"{w.Value} {w.Key}")))));
         }
     }
 

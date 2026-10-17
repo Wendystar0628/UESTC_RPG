@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Campus.Contracts.Save;
 using Campus.Contracts.Maps;
 
@@ -31,7 +32,10 @@ public sealed record AtlasMarker(
     string? RouteId = null,
     AnchorForm? Form = null)
 {
+    // 由 Atlas 加载时从关联点位发布；无点位时分组和推荐均为空。
     public WaypointGroup? Group { get; init; }
+    [JsonIgnore]
+    public WaypointRecommend? Recommend { get; init; }
 }
 
 public sealed record AtlasRegion(string Id, LocalizedName Name, string? Parent);   // 大区的 Parent 为 null

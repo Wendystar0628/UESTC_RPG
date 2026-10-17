@@ -39,7 +39,7 @@ public sealed class AtlasServiceStub(ICameraRig camera, IRuleset ruleset, IAppFl
         _waypointMarkers = file.Waypoints.Select(w => new AtlasMarker(new MarkerId(w.Id), MarkerKind.Viewpoint,
             w.Name, new Vector2(w.Fly.Position.X, w.Fly.Position.Z), "viewpoint", 0, 0, null,
             new TeleportSpec(w.Fly, w.Stand, w.Entry), WaypointId: w.Id)
-        { Group = w.Group }).ToArray();
+        { Group = w.Group, Recommend = w.Recommend }).ToArray();
         Refresh();
     }
 

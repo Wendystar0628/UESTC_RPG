@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
@@ -48,9 +47,7 @@ public partial class MapHud : Node, IMapAware
 
     private MapDescriptor? _map;
     private MapGeo? _geo;
-    private readonly Dictionary<string, Waypoint> _waypoints = new(StringComparer.Ordinal);
     private IReadOnlyList<MapEntry> _entries = [];
-    private Dictionary<string, AtlasRegion> _regions = new(StringComparer.Ordinal);
     private long _atlasRev = -1;
 
     private bool _uiEnabled = true;
@@ -196,7 +193,6 @@ public partial class MapHud : Node, IMapAware
     {
         _map = null;
         _geo = null;
-        _waypoints.Clear();
         if (_style is null) return;
         if (_open) Close(restoreRoam: false);
         _entries = [];
@@ -207,13 +203,6 @@ public partial class MapHud : Node, IMapAware
     {
         _map = ctx.Descriptor;
         _geo = new MapGeo(ctx.Descriptor.Geo);
-        _waypoints.Clear();
-        var path = ctx.DataRoot + "waypoints.json";
-        if (Godot.FileAccess.FileExists(path))
-        {
-            var file = JsonSerializer.Deserialize<WaypointFile>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options);
-            foreach (var w in file?.Waypoints ?? []) _waypoints[w.Id] = w;
-        }
         if (_style is null) return;
         _page.SetTitle(ctx.Descriptor.Name.Zh, ctx.Descriptor.Name.En.ToUpperInvariant());
         _page.Paper.SetBounds(PageRect(ctx.Descriptor));
@@ -236,9 +225,8 @@ public partial class MapHud : Node, IMapAware
     {
         if (_style is null || _atlas.Rev == _atlasRev) return;
         _atlasRev = _atlas.Rev;
-        _regions = _atlas.Regions.GroupBy(r => r.Id, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         _entries = [.. _atlas.Markers.Where(m => _atlas.StateOf(m.Id) != UnlockState.Hidden)
-            .Select(m => new MapEntry(m, m.WaypointId is { } w && _waypoints.TryGetValue(w, out var wp) ? wp : null))];
+            .Select(m => new MapEntry(m))];
         _minimap.Markers.Tracked = _atlas.Tracked;
         _minimap.Markers.SetEntries(_entries);
         _page.Paper.Markers.Tracked = _atlas.Tracked;
@@ -359,9 +347,9 @@ public partial class MapHud : Node, IMapAware
     /// <summary>"核心区 · 图书馆"：大区名 · 地点名；区域表还空着时写图名。</summary>
     private string RegionText(string? id)
     {
-        if (id is { Length: > 0 } && _regions.TryGetValue(id, out var place))
+        if (id is { Length: > 0 } && _atlas.Regions.FirstOrDefault(region => region.Id == id) is { } place)
         {
-            if (place.Parent is { } p && _regions.TryGetValue(p, out var parent)) return parent.Name.Zh + " · " + place.Name.Zh;
+            if (place.Parent is { } p && _atlas.Regions.FirstOrDefault(region => region.Id == p) is { } parent) return parent.Name.Zh + " · " + place.Name.Zh;
             return place.Name.Zh;
         }
         return _map?.Name.Zh ?? "";
@@ -562,7 +550,7 @@ public partial class MapHud : Node, IMapAware
         paper.Card.Position = new Vector2(MathF.Round(x), MathF.Round(y));
         var here = PlayerAt().DistanceTo(e.At) <= HereCardMeters
             || (!_atlas.CanTravel(e.Id, TravelStyle.Teleport, out var why) && why == TravelRefusal.Here);
-        paper.Card.Show(e, Meta(e), Reach(e), Recommend(e), here, _atlas.Tracked == e.Id, TravelStyle.Teleport);
+        paper.Card.Show(e, Meta(e), here, _atlas.Tracked == e.Id, TravelStyle.Teleport);
         paper.Markers.NameSelected = false;
         paper.SelectMarker(e.Id);
         _page.Index.Select(e.Id);
@@ -585,8 +573,8 @@ public partial class MapHud : Node, IMapAware
     /// <summary>等宽元信息："P05 · 西区 · 30.7516°N 103.9229°E"（SYS-ATLAS §4.5）。</summary>
     private string Meta(MapEntry e)
     {
-        var area = e.Marker.Region is { } r && _regions.TryGetValue(r, out var reg) ? reg.Name.Zh
-            : e.Waypoint?.Group is not { } g ? ""
+        var area = e.Marker.Region is { } r && _atlas.Regions.FirstOrDefault(region => region.Id == r) is { } reg ? reg.Name.Zh
+            : e.Group is not { } g ? ""
             : g switch
             {
                 WaypointGroup.Overview or WaypointGroup.Edge => MapHudContext.GroupName(g),
@@ -599,17 +587,6 @@ public partial class MapHud : Node, IMapAware
         if (_geo is not null) parts.Add(_geo.Format(e.At));
         return string.Join(" · ", parts);
     }
-
-    private static string Reach(MapEntry e) => e.Marker.Teleport switch
-    {
-        null => "只能追踪",
-        { Stand: null } => "仅旁观",
-        _ => "旁观 · 行走",
-    };
-
-    private static string Recommend(MapEntry e) => e.Waypoint?.Recommend is { } r
-        ? $"推荐 {MapHudContext.SeasonName(r.Season)} {MapHudContext.Clock(r.Clock)} · {MapHudContext.WeatherName(r.Weather)}"
-        : "";
 
     // ------------------------------------------------------------------ 传送与追踪
 

@@ -23,10 +23,16 @@ public sealed class BakePaletteV2Tests
         var context = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = catalog };
         var key = BakeRequestKeys.Tile(descriptor.Id, "fixture.palette", new(0, 0), LodLevel.L0);
         var builder = new BakeGeometryBuilder(catalog.LegacyRegistry, new ServiceRegistry(), catalog);
-        var result = builder.BuildOutput(key, context, new([source], []), new(0, 0), LodLevel.L0);
+        var diagnostics = new List<BuildDiagnostic>();
+        var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture placement", new FeatureId("fixture.feature"));
+        var result = builder.BuildOutput(key, context, new([source], []) { Diagnostics = [warning] }, new(0, 0), LodLevel.L0, diagnostics.AddRange);
+        Check(diagnostics.SequenceEqual([warning]), "BuildOutput dropped or changed producer diagnostics.");
+        var quiet = builder.BuildOutput(key, context, new([source], []), new(0, 0), LodLevel.L0, diagnostics.AddRange);
+        Check(TileBundleCodec.Encode("fixture", result).SequenceEqual(TileBundleCodec.Encode("fixture", quiet)),
+            "Diagnostics changed serialized geometry.");
         Check(result.Surfaces.Single().AttributeData.Span[10] == 16, "The ordinary geometry path rejected or narrowed bank 1 before the packer.");
         var other = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = Catalog() };
-        Throws<InvalidOperationException>(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0));
+        Throws<InvalidOperationException>(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0, _ => { }));
     }
 
     [TestCase]

@@ -33,18 +33,19 @@ internal sealed class BakeGeometryBuilder
         _parts = parts;
     }
 
-    public TileBundle Build(BakeKey key, BuildContext context, IContentModule module)
+    public TileBundle Build(BakeKey key, BuildContext context, IContentModule module, Action<IReadOnlyList<BuildDiagnostic>> collect)
     {
         var request = BakeRequestKeys.Parse(key);
         if (request.Collision) throw new InvalidOperationException("Collision requests must use a collision producer.");
         RequireCatalog(context);
         var output = module.Build(context, request.Tile, request.Level);
-        return BuildOutput(key, context, output, request.Tile, request.Level);
+        return BuildOutput(key, context, output, request.Tile, request.Level, collect);
     }
 
-    public TileBundle BuildOutput(BakeKey key, BuildContext context, ContentOutput output, TileKey tile, LodLevel level)
+    public TileBundle BuildOutput(BakeKey key, BuildContext context, ContentOutput output, TileKey tile, LodLevel level, Action<IReadOnlyList<BuildDiagnostic>> collect)
     {
         RequireCatalog(context);
+        collect(output.Diagnostics);
         var meshes = new List<GeometryBundle>(output.Meshes);
         foreach (var part in output.Parts)
         {

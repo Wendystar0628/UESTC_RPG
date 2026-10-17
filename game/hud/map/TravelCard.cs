@@ -42,12 +42,19 @@ public partial class TravelCard : Control
     /// <summary>主按钮是【传送】还是【飞过去】（设置项"地图上的前往方式"，SYS-ATLAS §12）。</summary>
     public TravelStyle PrimaryStyle { get; private set; } = TravelStyle.Teleport;
 
-    public void Show(MapEntry entry, string meta, string reach, string recommend, bool here, bool tracked, TravelStyle primary)
+    public void Show(MapEntry entry, string meta, bool here, bool tracked, TravelStyle primary)
     {
         _entry = entry;
         _meta = meta;
-        _reach = reach;
-        _recommend = recommend;
+        _reach = entry.Marker.Teleport switch
+        {
+            null => "只能追踪",
+            { Stand: null } => "仅旁观",
+            _ => "旁观 · 行走",
+        };
+        _recommend = entry.Recommend is { } r
+            ? $"推荐 {MapHudContext.SeasonName(r.Season)} {MapHudContext.Clock(r.Clock)} · {MapHudContext.WeatherName(r.Weather)}"
+            : "";
         PrimaryStyle = primary;
         var travel = entry.Travelable;
         Primary.Visible = travel;

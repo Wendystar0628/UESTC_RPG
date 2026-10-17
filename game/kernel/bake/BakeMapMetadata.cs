@@ -109,8 +109,9 @@ internal static class BakeMapMetadataCodec
             GroundMaskContributors = map.GroundMaskContributors,
             PartLods = map.PartLods
         };
-        void Collect(string id, ContentOutput output, bool collectLegacyWindows = true)
+        void Collect(string id, ContentOutput output, bool collectLegacyWindows = true, FeatureId? feature = null)
         {
+            map.Collect(id, "metadata", output.Diagnostics, feature);
             foreach (var lamp in output.Emitters ?? []) lamps.TryAdd(Canonical(lamp), lamp);
             if (collectLegacyWindows)
             {
@@ -130,7 +131,7 @@ internal static class BakeMapMetadataCodec
             {
                 if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
                 // Windows were collected once by the pure two-phase metadata pass. This existing geometry walk
-                // remains solely for lamps/entrances, whose contracts have no separate metadata capability yet.
+                // collects diagnostics and lamps/entrances, whose contracts have no separate metadata capability yet.
                 Collect(id, module.Value.Build(context, tile, LodLevel.L0), module.Value is not IWindowMetadataSource);
             }
         }
@@ -146,7 +147,7 @@ internal static class BakeMapMetadataCodec
                 foreach (var storey in layout.OpenStoreys.Order())
                 {
                     if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing interior metadata.");
-                    Collect(id, interior.Value.BuildStorey(context, feature, storey, InteriorDetail.Full));
+                    Collect(id, interior.Value.BuildStorey(context, feature, storey, InteriorDetail.Full), feature: feature);
                 }
             }
         }

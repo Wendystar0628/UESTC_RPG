@@ -23,7 +23,7 @@ public partial class LayerList : Control
     ];
 
     private static readonly MapEntry LegendAnchor = new(new AtlasMarker(new MarkerId("legend"), MarkerKind.Anchor, new("", ""), default,
-        "anchor", 0, 0, null, new TeleportSpec(new Campus.Contracts.Pose(default, 0, 0), null)), null);
+        "anchor", 0, 0, null, new TeleportSpec(new Campus.Contracts.Pose(default, 0, 0), null)));
     private static readonly (string Zh, int State)[] LegendStates = [("可前往", 0), ("此处", 1), ("追踪中", 2), ("未解锁（RPG 预留）", 3)];
 
     private readonly MapHudContext _ctx;

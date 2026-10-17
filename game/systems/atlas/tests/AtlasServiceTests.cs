@@ -7,6 +7,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.Parts.Stubs;
+using Campus.Hud.Map;
 using Campus.Kernel.Stubs;
 using Campus.Kernel.Stubs.AudioUi;
 using Campus.Kernel.Stubs.Foundation;
@@ -104,6 +105,52 @@ public sealed class AtlasServiceTests
         }
         Check(test.Camera.Handle is null && test.Camera.Locks == 0 && test.Saves.Requests == 0,
             "Unready transit changed camera, input, or save state.");
+    }
+
+    [TestCase]
+    public void DisplayMetadataUsesLoadedWaypointsAndPreservesMarkerNamesAndMissingValues()
+    {
+        var test = new Fixture();
+        var authored = new Waypoint("test-authored", new("点位标题", "Waypoint title"), WaypointGroup.West,
+            new(new(25, 10, 30), 40, -10), null, null, new(17.5, Season.Autumn));
+        var generated = authored with
+        {
+            Id = "test-generated",
+            Group = WaypointGroup.North,
+            Recommend = new(8, Season.Winter, WeatherKind.Snow)
+        };
+        var title = new LocalizedName("标记标题", "Marker title");
+        test.Atlas.LoadMap(test.Context, new(1, test.Context.Descriptor.DataRect,
+            [new(new("test-view"), MarkerKind.Viewpoint, title, default, "viewpoint", 1, 1, null,
+                WaypointId: authored.Id),
+             new(new("test-facility"), MarkerKind.Facility, title, default, "facility", 1, 1, null,
+                WaypointId: authored.Id),
+             new(new("test-missing"), MarkerKind.Facility, title, default, "facility", 1, 1, null,
+                WaypointId: "missing") { Group = WaypointGroup.Core },
+             new(new("test-unlinked"), MarkerKind.Facility, title, default, "facility", 1, 1, null)]),
+            new(1, [], []), new(1, [authored, generated]));
+        foreach (var id in new[] { "test-view", "test-facility" })
+        {
+            var entry = new MapEntry(test.Atlas.Find(new(id))!);
+            Check(entry.Name == title && entry.Group == authored.Group && entry.Recommend == authored.Recommend,
+                "Display metadata changed the marker title or lost linked waypoint values.");
+        }
+        var automatic = new MapEntry(test.Atlas.Find(new(generated.Id))!);
+        Check(automatic.Name == generated.Name && automatic.Group == generated.Group
+            && automatic.Recommend == generated.Recommend && automatic.FlyOnly,
+            "Generated waypoint marker lost its display metadata or travel mode.");
+        foreach (var id in new[] { "test-missing", "test-unlinked" })
+        {
+            var entry = new MapEntry(test.Atlas.Find(new(id))!);
+            Check(entry.Group is null && entry.Recommend is null, "Missing waypoint acquired display defaults.");
+        }
+        Check(!JsonSerializer.Serialize(test.Atlas.Find(new("test-view")), ContractJson.Options).Contains("recommend"),
+            "Runtime display metadata became an authored Atlas field.");
+        var published = automatic.Marker;
+        test.Atlas.OnMapUnloading(test.Context.Descriptor.Id);
+        test.Reload();
+        Check(test.Atlas.Find(new(generated.Id)) is null && published.Recommend == generated.Recommend,
+            "Reload retained old display data or mutated a published marker.");
     }
 
     [TestCase]
@@ -258,7 +305,7 @@ public sealed class AtlasServiceTests
             new(id, id), at, "anchor", 1, 0, "test-district", new(new(new(at.X, 6, at.Y), 0, -12), new(new(at.X, 0, at.Y), 0)), new(id), Form: form);
     }
     private sealed record Context(MapDescriptor Descriptor, IWorldModel World) : IMapContext
-    { public string DataRoot => "res://test/"; public string BakeRoot => "res://test-bake/"; }
+    { public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty; public string DataRoot => "res://test/"; public string BakeRoot => "res://test-bake/"; }
     private sealed class Rules(string policy) : IRuleset
     {
         public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly, ViewMode.Walk], WorldControlMask.All, policy, [], []);

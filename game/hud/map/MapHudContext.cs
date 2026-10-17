@@ -4,14 +4,16 @@ using Godot;
 
 namespace Campus.Hud.Map;
 
-/// <summary>地图界面里一条可显示的标记：契约里的标记，加上观景点引用的点位（分组、推荐状态、能不能行走落地）。</summary>
-public sealed record MapEntry(AtlasMarker Marker, Waypoint? Waypoint)
+/// <summary>地图界面的一条标记；展示元数据与可达模式均由 Atlas 发布。</summary>
+public sealed record MapEntry(AtlasMarker Marker)
 {
     public MarkerId Id => Marker.Id;
     public Vector2 At => MapView.Flat(Marker.At);
     public bool Travelable => Marker.Teleport is not null;
     public bool FlyOnly => Marker.Teleport is { Stand: null };
     public LocalizedName Name => Marker.Name;
+    public WaypointGroup? Group => Marker.Group;
+    public WaypointRecommend? Recommend => Marker.Recommend;
 }
 
 /// <summary>小地图与大地图共享的状态与令牌；不是 Godot 节点。</summary>

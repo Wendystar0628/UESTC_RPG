@@ -49,7 +49,7 @@ public partial class IndexList : Control
         _rows.Clear();
         float y = 4;
         var groups = entries.Where(e => e.Travelable)
-            .GroupBy(GroupOf).OrderBy(g => g.Key is { } gk ? (int)gk : int.MaxValue);
+            .GroupBy(e => e.Group).OrderBy(g => g.Key is { } gk ? (int)gk : int.MaxValue);
         foreach (var g in groups)
         {
             var label = g.Key is { } wg ? MapHudContext.GroupName(wg) : "其他";
@@ -67,9 +67,6 @@ public partial class IndexList : Control
         ClampScroll();
         QueueRedraw();
     }
-
-    /// <summary>观景点按点位的分组；其余可传送标记按所在区域的大区归组，没有时归"其他"。</summary>
-    private static WaypointGroup? GroupOf(MapEntry e) => e.Waypoint?.Group;
 
     private static int KindOrder(MapEntry e) => e.Marker.Kind switch
     {

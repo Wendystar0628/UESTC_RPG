@@ -19,10 +19,10 @@ public static partial class FurniturePlanner
     private static readonly DeliveryLockerPart LockerDef = new();
     private static readonly BicycleBayPart BayDef = new();
 
-    /// <summary>A place a service thing serves: its point, a label for keys and the log, and the outline it must stay outside, if any.</summary>
+    /// <summary>A place a service thing serves: its point, a label for keys and the diagnostics, and the outline it must stay outside, if any.</summary>
     private readonly record struct ServiceSite(string Label, Vector2 At, PolygonRings? Outside, Vector2? Front, bool Open = false);
 
-    private static void Services(StreetSite site, List<FurnitureItem> items, List<string> log, IReadOnlyList<RoadRule> roads)
+    private static void Services(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, IReadOnlyList<RoadRule> roads)
     {
         var world = site.World;
         var cache = new Dictionary<(string, object), (int Meshes, int Triangles)>();
@@ -63,8 +63,8 @@ public static partial class FurniturePlanner
             groups.Add(spot);
             if (withLocker) lockerSpots.Add(spot);
         }
-        log.Add($"vending: {machines} machines in {groups.Count} groups at {string.Join(", ", groups.Select(g => g.Label))} " +
-            $"({axial} sites on the main axis, {crowded} within {Num(S.VendingSpacing)} m of a group, {cramped} with no room, {heavy} over a cell's budget, left out)");
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.vending.summary", $"vending: {machines} machines in {groups.Count} groups at {string.Join(", ", groups.Select(g => g.Label))} " +
+            $"({axial} sites on the main axis, {crowded} within {Num(S.VendingSpacing)} m of a group, {cramped} with no room, {heavy} over a cell's budget, left out)"));
 
         // Delivery lockers: beside the first gates that hold a vending group (their WLD-LIFE §4.5 places wait for WP-30's gates).
         var lockers = new List<string>();
@@ -77,7 +77,7 @@ public static partial class FurniturePlanner
             site.Occupy(fit.Ends.A, fit.Ends.B, fit.Ends.R);
             lockers.Add(spot.Label);
         }
-        log.Add($"delivery lockers: {lockers.Count} at {string.Join(", ", lockers)}");
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.lockers.summary", $"delivery lockers: {lockers.Count} at {string.Join(", ", lockers)}"));
 
         // Shared-bicycle bays: the open cluster gates, the doors of teaching buildings, libraries and canteens, then the places the map
         // marks for parking bicycles (OSM 非机动车 points).
@@ -118,7 +118,7 @@ public static partial class FurniturePlanner
             placedAt.Add(spot.At);
             bays.Add(spot.Label);
         }
-        log.Add($"bicycle bays: {bays.Count} with {bikes} stand-in bikes at {string.Join(", ", bays)} ({heavy} over a cell's budget, left out)");
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.bicycles.summary", $"bicycle bays: {bays.Count} with {bikes} stand-in bikes at {string.Join(", ", bays)} ({heavy} over a cell's budget, left out)"));
     }
     /// <summary>The dormitory cluster gates (WP-20's <c>clusterGate</c> features), the open ones first, then by ID; each with its cluster's outline.</summary>
     private static List<ServiceSite> Gates(IWorldModel world)

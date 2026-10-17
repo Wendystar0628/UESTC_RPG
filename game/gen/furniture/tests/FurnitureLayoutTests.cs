@@ -117,17 +117,16 @@ public sealed class FurnitureLayoutTests
     [TestCase]
     public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
     {
-        // An anchor whose point lands on a carriageway, in water or in a building gets nothing, and the layout says so in one log
-        // line. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
+        // An anchor whose point lands on a carriageway, in water or in a building gets nothing and one structured diagnostic. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
         var world = World.Value;
         var layout = Build(world);
-        Console.WriteLine("furniture log: " + string.Join(" | ", layout.Log));
+        Console.WriteLine("furniture diagnostics: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
         var landings = AnchorLandings(world);
         foreach (var (feature, form, _, landing) in landings)
         {
             var id = feature.Id.Value;
             var placed = layout.Items.Any(i => i.Key == "anchor:" + id);
-            var left = layout.Log.Where(l => l.StartsWith($"anchor {id} ", StringComparison.Ordinal) && l.Contains("not placed", StringComparison.Ordinal)).ToList();
+            var left = layout.Diagnostics.Where(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed").ToList();
             if (landing == Landing.Open)
             {
                 Check(placed, $"{id} lands on open ground but is not placed");
@@ -135,9 +134,9 @@ public sealed class FurnitureLayoutTests
                 continue;
             }
             Check(!placed, $"{id} placed, though its point lands {Where(landing)}");
-            Check(left.SequenceEqual([$"anchor {id} ({form}) not placed: its point lands {Where(landing)}"]), $"{id} not logged once as {Where(landing)}");
+            Check(left.Count == 1 && left[0].Level == DiagnosticLevel.Warning && left[0].Message == $"anchor {id} ({form}) not placed: its point lands {Where(landing)}", $"{id} not logged once as {Where(landing)}");
         }
-        Check(layout.Log.Count(l => l.Contains("not placed", StringComparison.Ordinal)) == landings.Count(l => l.Landing != Landing.Open), "a log line without a left-out anchor");
+        Check(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open), "a diagnostic message without a left-out anchor");
         // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
         var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
@@ -149,7 +148,7 @@ public sealed class FurnitureLayoutTests
         var indoors = Build(new FeatureWorld(world, moved));
         var name = anchor.Feature.Id.Value;
         Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
-        Check(indoors.Log.Contains($"anchor {name} ({anchor.Form}) not placed: its point lands in a building"), "the building fallback is not logged");
+        Check(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning), "the building fallback is not logged");
         Check(indoors.Items.Count == layout.Items.Count - 1, "the building fallback changed other furniture");
     }
 
@@ -242,9 +241,9 @@ public sealed class FurnitureLayoutTests
             Check(fallback.Select(r => r.Rows).Zip(FurnitureStyle.Roads.Select(r => r.Rows), (a, b) => a.SequenceEqual(b)).All(same => same), "the fallback rows are not the style's");
             Check(warnings.Count == 1 && warnings[0].Level == DiagnosticLevel.Warning && warnings[0].Code == code, $"{warnings.Count} diagnostics for {code}");
             var layout = FurniturePlanner.Build(World.Value, null, inputs);
-            Check(layout.Diagnostics.SequenceEqual(warnings) && layout.Items.Count == Build(World.Value).Items.Count, "the fallback layout differs from the real one, whose rows are the same");
+            Check(layout.Diagnostics.Where(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)).SequenceEqual(warnings) && layout.Items.Count == Build(World.Value).Items.Count, "the fallback layout differs from the real one, whose rows are the same");
         }
-        Check(Build(World.Value).Diagnostics.Count == 0, "the real layout warns");
+        Check(!Build(World.Value).Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)), "the real layout warns");
     }
 
     [TestCase]
@@ -294,9 +293,9 @@ public sealed class FurnitureLayoutTests
         Check(!layout.Items.Any(i => i.Key.StartsWith("rest:0:", StringComparison.Ordinal)), "rest stops along a road with nodes");
         Check(layout.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)) == baseline.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)), "the node rule changed the road's lamps");
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
-        Console.WriteLine($"node benches at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")) + "; log: " + string.Join(" | ", layout.Log.Where(l => l.Contains("node", StringComparison.Ordinal))));
+        Console.WriteLine($"node benches at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")) + "; diagnostics: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message).Where(l => l.Contains("node", StringComparison.Ordinal))));
         Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node");
-        Check(!layout.Log.Any(l => l.Contains("has no bench", StringComparison.Ordinal) && l.Contains("test node", StringComparison.Ordinal)), "a node with benches logs 'no bench'");
+        Check(!layout.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("test node", StringComparison.Ordinal)), "a node with benches logs 'no bench'");
         foreach (var bench in benches)
         {
             var facing = Front(bench.Part.At);
@@ -315,7 +314,7 @@ public sealed class FurnitureLayoutTests
     public void TheOsmanthusRoadsNodesTakeBenchesOrSayWhyNot()
     {
         // The road's walks carry no benches (the design walks sit 7.5 m off the road: a bench on either side is too near the carriageway
-        // or looks at it); its two nodes take benches under the same rules or log why none fits, never by relaxing them.
+        // or looks at it); its two nodes take benches under the same rules or report why none fits, never by relaxing them.
         var world = World.Value;
         var layout = Build(world);
         var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.Nodes is not null);
@@ -326,7 +325,7 @@ public sealed class FurnitureLayoutTests
         {
             var node = rule.Nodes[n];
             var placed = layout.Items.Count(i => i.Key.StartsWith($"node:{index}:{n}:", StringComparison.Ordinal));
-            var says = layout.Log.Where(l => l.StartsWith($"road {rule.Name} node {node.Label} has no bench: ", StringComparison.Ordinal)).ToList();
+            var says = layout.Diagnostics.Where(d => d.Code == "wp13.node.no-bench" && d.Message.StartsWith($"road {rule.Name} node {node.Label} ", StringComparison.Ordinal)).Select(d => d.Message).ToList();
             Console.WriteLine($"{rule.Name} node {node.Label}: {placed} benches" + (says.Count > 0 ? "; " + says[0] : ""));
             Check(placed > 0 ? says.Count == 0 : says.Count == 1 && says[0].Length > 60, $"node {node.Label}: {placed} benches and {says.Count} 'no bench' lines");
         }
@@ -432,7 +431,7 @@ public sealed class FurnitureLayoutTests
         var signs = layout.Items.Where(i => i.Kind == FurnitureKind.Signpost).ToList();
         var junctions = FurniturePlanner.Junctions(site).Where(j => j.Branches >= FurnitureStyle.SignpostBranches).ToList();
         Console.WriteLine($"signposts: {signs.Count} " + string.Join(", ", signs.Select(s => $"{s.Key} ({s.Anchor.X:F1}, {s.Anchor.Y:F1})")) + "; " +
-            layout.Log.Single(l => l.StartsWith("signposts: ", StringComparison.Ordinal)));
+            layout.Diagnostics.Single(d => d.Code == "wp13.signposts.summary").Message);
         foreach (var sign in signs)
         {
             var junction = junctions.MinBy(j => Vector2.Distance(j.At, sign.Anchor));
@@ -480,7 +479,7 @@ public sealed class FurnitureLayoutTests
         var site = new StreetSite(world);
         var fountains = layout.Items.Where(i => i.Kind == FurnitureKind.DrinkingFountain).ToList();
         Console.WriteLine($"fountains: {fountains.Count} " + string.Join(", ", fountains.Select(f => $"{f.Key} ({f.Anchor.X:F1}, {f.Anchor.Y:F1})")) + "; " +
-            layout.Log.Single(l => l.StartsWith("drinking fountains: ", StringComparison.Ordinal)));
+            layout.Diagnostics.Single(d => d.Code == "wp13.fountains.summary").Message);
         Check(fountains.Count >= 1, "no drinking fountain on the map");
         var buildings = new HashSet<FeatureId>();
         foreach (var fountain in fountains)
@@ -508,7 +507,7 @@ public sealed class FurnitureLayoutTests
         var world = World.Value;
         var layout = Build(world);
         var site = new StreetSite(world);
-        foreach (var line in layout.Log.Where(l => l.StartsWith("vending: ", StringComparison.Ordinal) || l.StartsWith("delivery lockers: ", StringComparison.Ordinal) || l.StartsWith("bicycle bays: ", StringComparison.Ordinal)))
+        foreach (var line in layout.Diagnostics.Where(d => d.Code is "wp13.vending.summary" or "wp13.lockers.summary" or "wp13.bicycles.summary").Select(d => d.Message))
             Console.WriteLine(line);
         bool Serves(FurnitureItem item, float front)
         {
@@ -673,10 +672,10 @@ public sealed class FurnitureLayoutTests
         var both = Layout(line, feature);
         var benches = Benches(both);
         Console.WriteLine($"design walk at {spot}: {benches.Count} node benches " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
-        Check(Benches(none).Count == 0 && none.Log.Any(l => l.Contains("node open node has no bench", StringComparison.Ordinal)), "a node with no walk has benches or no log line");
+        Check(Benches(none).Count == 0 && none.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("open node", StringComparison.Ordinal)), "a node with no walk has benches or no diagnostic message");
         Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node of a walk filed twice");
         Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the walk's node benches stand closer than the gap");
-        Check(both.Items.Count == none.Items.Count + benches.Count && !both.Log.Any(l => l.Contains("open node", StringComparison.Ordinal)), "the walk changed more than its node's benches");
+        Check(both.Items.Count == none.Items.Count + benches.Count && !both.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("open node", StringComparison.Ordinal)), "the walk changed more than its node's benches");
         var site = new StreetSite(new WalkWorld(open, line, feature));
         foreach (var bench in benches)
         {
@@ -693,7 +692,7 @@ public sealed class FurnitureLayoutTests
         var shown = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: false), FlatTerrain.Default), null, Inputs(), rules);
         var hidden = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: true), FlatTerrain.Default), null, Inputs(), rules);
         Check(Benches(shown).Select(b => (b.Key, b.Anchor)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor))), "the loaded walk has other node benches than the walk filed by hand");
-        Check(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Log.SequenceEqual(none.Log), "a hidden design walk still gets furniture");
+        Check(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Diagnostics.SequenceEqual(none.Diagnostics), "a hidden design walk still gets furniture");
     }
 
     /// <summary>The avenue's rule with one rest node at <paramref name="spot"/> (the others as they are): the node's benches are keyed <c>node:0:0:</c>.</summary>
@@ -750,7 +749,7 @@ public sealed class FurnitureLayoutTests
     public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
     {
         // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
-        // edge and its face towards the paving, and the layout logs the yaw (and centre) the anchor data should take over. Judged on
+        // edge and its face towards the paving, and the layout diagnosticss the yaw (and centre) the anchor data should take over. Judged on
         // a synthetic anchor: the first kiosk of the data moved to a grass notch inside the plaza near (120, -65) (A04's old spot).
         var world = World.Value;
         var site = new StreetSite(world);
@@ -761,11 +760,11 @@ public sealed class FurnitureLayoutTests
         var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
         var moved = original with { Geometry = new PolygonGeometry(new PolygonRings(ring, [])), Props = Edit(original.Props!.Value, "yawDeg", 90f) };
         var layout = Build(new FeatureWorld(world, moved));
-        var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Log));
+        var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
         var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
-        Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; log: {layout.Log.Single(l => l.StartsWith($"anchor {moved.Id.Value} ", StringComparison.Ordinal) && l.Contains("turned onto", StringComparison.Ordinal))}");
+        Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; diagnostics: {layout.Diagnostics.Single(d => d.Feature == moved.Id && d.Code == "wp13.anchor.turned").Message}");
         var facing = Front(item.Part.At);
-        Check(Vector2.Dot(facing, FurniturePlanner.Facing(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f, "the log does not give the placement");
+        Check(Vector2.Dot(facing, FurniturePlanner.Facing(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f, "the diagnostic does not give the placement");
         Check(Vector2.Dot(facing, FurniturePlanner.Facing(90f)) < 0.99f, "the yaw of the data stands, though the apron was off the paving");
         var apron = item.Pad ?? throw new InvalidOperationException("no apron");
         var right = new Vector2(-facing.Y, facing.X);
@@ -785,15 +784,15 @@ public sealed class FurnitureLayoutTests
 
     private static (float Yaw, Vector2 Centre)? Turned(FurnitureLayout layout, string id)
     {
-        var line = layout.Log.SingleOrDefault(l => l.StartsWith($"anchor {id} (kiosk) turned onto paving: ", StringComparison.Ordinal));
+        var line = layout.Diagnostics.Where(d => d.Feature?.Value == id && d.Code == "wp13.anchor.turned").Select(d => d.Message).SingleOrDefault();
         if (line is null) return null;
         var m = System.Text.RegularExpressions.Regex.Match(line, @"yawDeg (-?\d+\.\d+) \(data -?\d+\.\d+\), centre \((-?\d+\.\d+), (-?\d+\.\d+)\) \(data");
-        Check(m.Success, "unreadable log line: " + line);
+        Check(m.Success, "unreadable diagnostic message: " + line);
         float F(int g) => float.Parse(m.Groups[g].Value, System.Globalization.CultureInfo.InvariantCulture);
         return (F(1), new(F(2), F(3)));
     }
 
-    /// <summary>The facing an anchor has in the layout: its data's yaw, or the yaw its "turned onto paving" log line gives.</summary>
+    /// <summary>The facing an anchor has in the layout: its data's yaw, or the yaw its "turned onto paving" diagnostic message gives.</summary>
     private static Vector2 ExpectedFacing(FurnitureLayout layout, WorldFeature feature) =>
         FurniturePlanner.Facing(Turned(layout, feature.Id.Value)?.Yaw ?? feature.Props!.Value.GetProperty("yawDeg").GetSingle());
 
@@ -837,7 +836,7 @@ public sealed class FurnitureLayoutTests
         var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.KerbRamps);
         var rule = FurnitureStyle.Roads[index];
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
-        var line = layout.Log.Single(l => l.StartsWith($"road {rule.Name}: ", StringComparison.Ordinal) && l.Contains("kerb ramps", StringComparison.Ordinal));
+        var line = layout.Diagnostics.Single(d => d.Code == "wp13.kerb-ramps.summary" && d.Message.StartsWith($"road {rule.Name}: ", StringComparison.Ordinal)).Message;
         Console.WriteLine(line + "; " + string.Join(", ", ramps.Select(r => $"{r.Key} ({r.Anchor.X:F1}, {r.Anchor.Y:F1})")));
         Check(ramps.All(r => r.Key.StartsWith($"ramp:{index}:", StringComparison.Ordinal)), "a kerb ramp on another road");
         var road = world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name && StreetSite.Carriageway(l)).ToList();
@@ -973,7 +972,7 @@ public sealed class FurnitureLayoutTests
         {
             if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
             {
-                Check(layout.Log.Any(l => l.StartsWith($"anchor {feature.Id.Value} ", StringComparison.Ordinal) && l.Contains("not placed", StringComparison.Ordinal)), $"{feature.Id.Value} missing without a log line");
+                Check(layout.Diagnostics.Any(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed"), $"{feature.Id.Value} missing without a diagnostic message");
                 continue;
             }
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
@@ -981,7 +980,7 @@ public sealed class FurnitureLayoutTests
             // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
             Check(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + 0.1f, $"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint");
             var yaw = feature.Props!.Value.GetProperty("yawDeg").GetSingle();
-            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} does not face {yaw}° (or the yaw its log line gives)");
+            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} does not face {yaw}° (or the yaw its diagnostic message gives)");
         }
         foreach (var door in world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open))
         {
@@ -1041,18 +1040,20 @@ public sealed class FurnitureLayoutTests
     }
 
     [TestCase]
-    public void TheFallbackWarningTravelsWithTheFirstCellOnly()
+    public void LayoutDiagnosticsTravelWithTheFirstCellOnly()
     {
         // Structured diagnostics (ContentOutput.Diagnostics) are reported once per layout: with the first cell's L0 output.
         var module = new FurnitureModule();
         var quiet = Context(Inputs());
-        Check(module.Tiles(quiet).All(t => module.Build(quiet, t, LodLevel.L0).Diagnostics.Count == 0), "warnings with the real planting input");
+        Check(module.Tiles(quiet).All(t => !module.Build(quiet, t, LodLevel.L0).Diagnostics.Any(d => d.Code == PlantingRows.MissingCode)), "warnings with the real planting input");
         var ctx = Context(new Dictionary<string, ReadOnlyMemory<byte>>());
         var tiles = module.Tiles(ctx).ToList();
         var warned = tiles.Where(t => module.Build(ctx, t, LodLevel.L0).Diagnostics.Count > 0).ToList();
         Check(warned.Count == 1 && warned[0] == tiles[0], $"{warned.Count} cells carry the warning");
         var diagnostics = module.Build(ctx, tiles[0], LodLevel.L0).Diagnostics;
-        Check(diagnostics.Count == 1 && diagnostics[0].Code == PlantingRows.MissingCode && diagnostics[0].Level == DiagnosticLevel.Warning, "not one missing-input warning");
+        foreach (var diagnostic in diagnostics) diagnostic.Validate();
+        Check(diagnostics.SequenceEqual(FurnitureModule.Layout(ctx).Diagnostics), "layout diagnostics changed in the module output");
+        Check(diagnostics.Count(d => d.Code == PlantingRows.MissingCode && d.Level == DiagnosticLevel.Warning) == 1, "not one missing-input warning");
         Check(tiles.All(t => module.Build(ctx, t, LodLevel.L1).Diagnostics.Count == 0), "warnings outside L0");
     }
 

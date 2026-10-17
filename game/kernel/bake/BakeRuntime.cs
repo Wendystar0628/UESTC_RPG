@@ -40,6 +40,18 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
     public override void _Process(double delta)
     {
         while (_service.TryTakeError(out var error)) GD.PushError("[WP-02a] " + error);
+        while (_service.TryTakeDiagnostic(out var collected))
+        {
+            var diagnostic = collected!.Diagnostic;
+            var message = $"[{collected.Owner.Value}] map={collected.Map.Value} module={collected.Module} stage={collected.Stage} entity={diagnostic.Feature?.Value ?? "-"} {diagnostic.Code}: {diagnostic.Message}";
+            switch (diagnostic.Level)
+            {
+                case DiagnosticLevel.Info: GD.Print(message); break;
+                case DiagnosticLevel.Warning: GD.PushWarning(message); break;
+                case DiagnosticLevel.Error: GD.PushError(message); break;
+                default: throw new InvalidDataException("Unknown build diagnostic level.");
+            }
+        }
         if (_finished || _map is null) return;
         var progress = _service.Progress;
         if (AppBoot.Value("bake-strict") == "1" && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))

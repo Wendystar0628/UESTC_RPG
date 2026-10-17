@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -47,6 +48,15 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
     public bool IsBatch => _options.Reference || _options.Verify || _options.MapOnly;
     public bool IsVerification => _options.Verify;
     internal bool TryTakeError(out string? error) => _queue.Failures.TryDequeue(out error);
+
+    internal bool TryTakeDiagnostic(out CollectedDiagnostic? diagnostic)
+    {
+        lock (_sync)
+            foreach (var map in _contexts.Values)
+                if (map.Active && map.Diagnostics.TryDequeue(out diagnostic)) return true;
+        diagnostic = null;
+        return false;
+    }
 
     public BuildContext GetPreparedContext(IMapContext context, string moduleId)
     {
@@ -97,7 +107,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             var producers = entries.Where(e => e.Kind == "bake").Select(e =>
                 new Producer(e.Id, (IBakeProducer)registry.Create(e.Type), CodeHash(e.Type))).ToArray();
             var interiors = entries.Where(e => e.Kind == "interior").ToDictionary(e => "interior." + e.Id,
-                e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), CodeHash(e.Type)), StringComparer.Ordinal);
+                e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), CodeHash(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
             var palette = catalog.LegacyRegistry;
@@ -312,7 +322,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             GroundMaskContributors = map.GroundMaskContributors,
             PartLods = map.PartLods
         };
-        var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value) :
+        var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
         var bytes = Encode(identity, built);
         data.Manifest.Verify(identity, bytes, !_options.Verify && (_options.AllowUnlisted || _options.Reference));
@@ -410,7 +420,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         if (!layout.OpenStoreys.Contains(storey)) throw new InvalidDataException("Interior storey is not open.");
         var center = layout.Bounds.Center;
         var tile = new TileKey((int)Math.Floor(center.X / 64f), (int)Math.Floor(center.Z / 64f));
-        return map.Geometry!.BuildOutput(key, context, provider.BuildStorey(context, feature, storey, detail), tile, LodLevel.L0);
+        return map.Geometry!.BuildOutput(key, context, provider.BuildStorey(context, feature, storey, detail), tile, LodLevel.L0,
+            diagnostics => map.Collect(key.Module, "interior-geometry", diagnostics, feature));
     }
 
     internal static InteriorLayout ValidatedLayout(IInteriorProvider provider, D0InteriorBinding binding, BuildContext context, FeatureId feature)
@@ -501,7 +512,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
 
     internal sealed record Module(IContentModule Value, string CodeHash, WpId Owner, bool Global);
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);
-    internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash);
+    internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash, WpId Owner);
+    internal sealed record CollectedDiagnostic(MapId Map, WpId Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
     internal sealed record InteriorCoverage(string ProviderId, bool IsStub, int CatalogFeatures, int BoundFeatures,
         int CatalogFeatureStoreys, int ProducedFeatureStoreys, int AuthoredEntrances, int ProducedEntrances);
     internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, string Hash, string AtlasHash,
@@ -511,6 +523,18 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         BakeGeometryBuilder Geometry, PaletteRegistry Palette, Lazy<MapClaimLedger> Claims, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog? Catalog = null)
     {
+        internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
+
+        internal void Collect(string module, string stage, IReadOnlyList<BuildDiagnostic> diagnostics, FeatureId? feature = null)
+        {
+            if (!Active || diagnostics.Count == 0) return;
+            foreach (var diagnostic in diagnostics) diagnostic.Validate();
+            var owner = Modules.TryGetValue(module, out var content) ? content.Owner : Interiors[module].Owner;
+            foreach (var diagnostic in diagnostics)
+                Diagnostics.Enqueue(new(Context.Descriptor.Id, owner, module, stage,
+                    diagnostic.Feature is null && feature is not null ? diagnostic with { Feature = feature } : diagnostic));
+        }
+
         public BakeManifest Reference { get; } = new();
         public SortedDictionary<string, object> Products { get; } = new(StringComparer.Ordinal);
         public HashSet<BakeKey> CompletedInteriorKeys { get; } = [];

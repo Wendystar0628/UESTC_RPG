@@ -77,10 +77,6 @@ public sealed class FurnitureModule : IContentModule
                 if (ReferenceEquals(claims, ctx.ClaimedBy) && ReferenceEquals(inputs, ctx.SourceInputs)) return layout;
             var fresh = FurniturePlanner.Build(ctx.World, ctx.ClaimedBy, ctx.SourceInputs);
             built.Add((ctx.ClaimedBy, ctx.SourceInputs, fresh));
-            // Anchors left out or left in place, once per layout, for the anchor data's review (WP-48c); the structured diagnostics
-            // travel with ContentOutput.Diagnostics, and stay visible here until the collector consumes them.
-            foreach (var line in fresh.Log) Console.Error.WriteLine("[WP-13 furniture] " + line);
-            foreach (var diagnostic in fresh.Diagnostics) Console.Error.WriteLine($"[WP-13 furniture] {diagnostic.Level.ToString().ToLowerInvariant()} {diagnostic.Code}: {diagnostic.Message}");
             return fresh;
         }
     }

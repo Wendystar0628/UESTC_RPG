@@ -26,7 +26,7 @@ public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> R
 
 /// <summary>
 /// A rest node of a road (Opus review 16:23): a place on the map (a plaza edge, a junction) where the road's rest stops stand, instead
-/// of along its line. <paramref name="At"/> is its plan position in map metres, <paramref name="Label"/> the name its log lines use.
+/// of along its line. <paramref name="At"/> is its plan position in map metres, <paramref name="Label"/> the name its diagnostics use.
 /// </summary>
 public sealed record RestNode(string Label, Vector2 At);
 

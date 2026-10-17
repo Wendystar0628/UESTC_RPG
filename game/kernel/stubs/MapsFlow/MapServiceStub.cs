@@ -34,13 +34,14 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         _viewControl = viewControl;
     }
 
-    public void LoadFromBytes(ReadOnlySpan<byte> indexBytes, ReadOnlySpan<byte> mapBytes,
+    public void LoadFromBytes(ReadOnlySpan<byte> indexBytes, BuildInputSnapshot sourceInputs,
         IWorldModel world, GeoFrame geo, Vector2 center, Box3 bounds,
         TileKey tileMin, TileKey tileMax, string bakeRoot, IReadOnlyList<Waypoint> waypoints)
     {
         var index = JsonSerializer.Deserialize<MapIndex>(indexBytes, ContractJson.Options)
             ?? throw new JsonException("Map index is null.");
-        var map = JsonSerializer.Deserialize<MapFile>(mapBytes, ContractJson.Options)
+        ArgumentNullException.ThrowIfNull(sourceInputs);
+        var map = JsonSerializer.Deserialize<MapFile>(sourceInputs.Require("map.json").Span, ContractJson.Options)
             ?? throw new JsonException("Map file is null.");
         if (index.Version != 1 || map.Version < 1 || index.Maps.Count != 1)
             throw new InvalidDataException("D0 requires one versioned map in the index.");
@@ -60,7 +61,7 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         Default = map.Id;
         Current = map.Id;
         Maps = Array.AsReadOnly(new[] { descriptor });
-        _configuredContext = new MapContextStub(descriptor, world, entry.Dir, bakeRoot);
+        _configuredContext = new MapContextStub(descriptor, world, entry.Dir, bakeRoot, sourceInputs);
         Context = _configuredContext;
         camera.SetPose(pose);
         Visits = Array.AsReadOnly(new[] { new MapVisit(Current, pose, camera.Mode, 0, 0) });
@@ -88,16 +89,6 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
         LastError = null;
         _ = CompleteTravel(transition, context, pose, r.Mode ?? camera.Mode);
         return transition;
-    }
-
-    /// <summary>Publish the exact frozen D0 input version before any worker or map-aware node sees the context.</summary>
-    public IMapContext SetSourceInputs(BuildInputSnapshot inputs)
-    {
-        if (_configuredContext is not MapContextStub context || _transition is not null)
-            throw new InvalidOperationException("D0 inputs must be configured before travel.");
-        _configuredContext = context with { SourceInputs = inputs };
-        Context = _configuredContext;
-        return _configuredContext;
     }
 
     private async Task CompleteTravel(MapTransitionStub transition, IMapContext context, Pose pose, ViewMode mode)
@@ -178,10 +169,7 @@ public sealed class MapServiceStub(ICameraRig camera, IMapRuntime? runtime = nul
 }
 
 internal sealed record MapContextStub(MapDescriptor Descriptor, IWorldModel World,
-    string DataRoot, string BakeRoot) : IMapContext
-{
-    public BuildInputSnapshot SourceInputs { get; init; } = BuildInputSnapshot.Empty;
-}
+    string DataRoot, string BakeRoot, BuildInputSnapshot SourceInputs) : IMapContext;
 
 internal sealed class MapTransitionStub : IMapTransition
 {
