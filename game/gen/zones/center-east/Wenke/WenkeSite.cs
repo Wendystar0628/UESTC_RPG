@@ -33,6 +33,9 @@ public sealed class WenkeSite : CenterEastSite
 
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(K.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
+        [.. Footprints(world).Blocks.SelectMany(block => block.Outlines).Select(outline => new PolygonRings(outline))];
+
     // ---- Layout: one pure plan for geometry, collision and the window declarations ----
 
     internal enum CellKind { Window, Hidden, Panel }

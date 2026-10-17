@@ -21,6 +21,60 @@ public sealed class CenterEastModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase]
+    public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
+    {
+        var ctx = Context();
+        var module = new CenterEastModule();
+        foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
+        {
+            var traces = module.TraceSources(ctx, lod).ToArray();
+            Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, "source IDs are unique");
+            foreach (var claim in module.Claims.OfType<FeatureClaim>())
+                Require(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0),
+                    $"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours");
+            var size = 64 << (int)lod;
+            var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
+            Require(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes))),
+                $"{lod}: source triangles reproduce tiled production");
+            Require(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
+                .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)), "source parts reproduce production");
+            Require(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances)), "source instances reproduce production");
+            string Dump(Collider collider) => System.Text.Json.JsonSerializer.Serialize<Collider>(collider, ContractJson.Options);
+            Require(traces.SelectMany(t => t.Colliders).Select(Dump).Order(StringComparer.Ordinal)
+                .SequenceEqual(module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Select(Dump).Order(StringComparer.Ordinal)),
+                "source colliders reproduce tiled production");
+            foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
+            {
+                var own = site.Footprints(ctx.World);
+                var contours = traces.Single(t => t.Feature == new FeatureId(site.Entity)).OccupiedContours;
+                Require(contours.Zip(site.GridBlocks(own).Select(b => b.Ring).Append(own.Hall)).All(pair => pair.First.Outer.SequenceEqual(pair.Second)) &&
+                    contours.Count == site.GridBlocks(own).Count() + 1,
+                    "research sources use their generated blocks and hall, excluding neighbours");
+            }
+            var wenke = traces.Single(t => t.Feature == new FeatureId(K.Entity));
+            Require(wenke.OccupiedContours.Select(r => r.Outer).SequenceEqual(WenkeSite.Footprints(ctx.World).Blocks.SelectMany(b => b.Outlines)),
+                "Wenke keeps the actual clipped and rounded storeys");
+            var frame = traces.Single(t => t.Feature == new FeatureId(P.Complex));
+            foreach (var box in PinxueFrameSite.Bridges(ctx.World))
+                Require(frame.OccupiedContours.Any(r => r.Outer.SequenceEqual(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1))),
+                    "the frame uses its actual bridge plans");
+        }
+
+        static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
+        {
+            var triangles = new List<string>();
+            foreach (var mesh in meshes)
+                for (var i = 0; i < mesh.Index.Length; i += 3)
+                {
+                    string Vertex(int v) => string.Join(",", mesh.Position.Skip(v * 3).Take(3).Concat(mesh.Normal.Skip(v * 3).Take(3)).Select(BitConverter.SingleToInt32Bits));
+                    triangles.Add($"{mesh.Material}/{Vertex(mesh.Index[i])}/{Vertex(mesh.Index[i + 1])}/{Vertex(mesh.Index[i + 2])}");
+                }
+            return triangles.Order(StringComparer.Ordinal);
+        }
+    }
+
+    [TestCase]
     public void OverlayLoadsAndRegistersTheForecourtAdditions()
     {
         var world = World();

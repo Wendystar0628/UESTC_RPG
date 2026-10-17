@@ -22,6 +22,16 @@ public abstract class CenterEastSite
     /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK §13).</summary>
     public virtual void Collide(SiteColliders colliders) { }
 
+    /// <summary>Complete production sources, before the module files their output into cells.</summary>
+    public virtual IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var feature = Claims.OfType<FeatureClaim>().Select(c => (FeatureId?)c.Feature).SingleOrDefault();
+        yield return SiteSourceTrace.Build(context, lod, Id, feature, Build, Collide, OccupiedContours(context.World, lod));
+    }
+
+    /// <summary>Material plans of this site's generated solids; visible output supplies edge details.</summary>
+    protected virtual IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) => [];
+
     /// <summary>Inspection probes this site contributes (MAP-QSH-CENTER-EAST Q1–Q8).</summary>
     public virtual IReadOnlyList<InspectionProbe> Probes => [];
 

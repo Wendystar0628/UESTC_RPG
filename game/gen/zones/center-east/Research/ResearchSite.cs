@@ -65,6 +65,12 @@ public abstract class ResearchSite : CenterEastSite
 
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var plan = Footprints(world);
+        return [.. GridBlocks(plan).Select(block => new PolygonRings(block.Ring)), new(plan.Hall)];
+    }
+
     // ---- Plan ----
 
     /// <summary>World rings of this building's blocks, of every block that may hide or face them, and of its lens hall.</summary>

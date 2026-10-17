@@ -29,6 +29,11 @@ public sealed class PinxueFrameSite : CenterEastSite
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(P.Complex), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
+        [.. Bridges(world).Select(box => new PolygonRings(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1))),
+         .. P.ColumnX.Select(x => new PolygonRings(F.Rect(x - P.ColumnSize * 0.5f, -P.FrameDepth * 0.5f - P.ColumnSize * 0.5f,
+             x + P.ColumnSize * 0.5f, -P.FrameDepth * 0.5f + P.ColumnSize * 0.5f)))];
+
     public override IReadOnlyList<InspectionProbe> Probes
     {
         get
