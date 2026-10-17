@@ -1,9 +1,7 @@
 using System.Numerics;
 using System.Reflection;
 using Campus.Contracts;
-using Campus.Gen.Buildings;
 using Campus.Gen.Collision;
-using Campus.Gen.Vegetation;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -45,20 +43,24 @@ public sealed partial class CollisionCoreTests
             if (module is Campus.Gen.Ground.GroundModule) continue;
             Godot.GD.Print($"G15Core expansion module={pair.Key}");
             var context = map.CreateBuildContext(pair.Value.CodeHash);
+            if (module is IContentSourceTraceProvider provider)
+            {
+                var owner = module.GetType().GetCustomAttribute<ContentModuleAttribute>()!.Owner;
+                var sourceIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var source in provider.TraceSources(context, LodLevel.L0))
+                {
+                    if (!sourceIds.Add(source.SourceId))
+                        Fail($"module={pair.Key} repeats source ID {source.SourceId}.");
+                    var hasCollision = Measure(source.SourceId, source.Output, source.Colliders, source.OccupiedContours);
+                    if (hasCollision && source.Feature is { } feature && claimed.ContainsKey(feature)
+                        && (map.ClaimLookup(feature, Aspects.Massing)?.Value == owner
+                            || map.ClaimLookup(feature, Aspects.Facade)?.Value == owner))
+                        measuredClaims.Add(feature);
+                }
+                continue;
+            }
             foreach (var tile in module.Tiles(context).Distinct().OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
             {
-                if (module is BuildingsModule buildings)
-                {
-                    foreach (var source in buildings.TraceSources(context, tile, LodLevel.L0))
-                        Measure(source.SourceId, source.Output, source.Colliders, [source.OccupiedFootprint]);
-                    continue;
-                }
-                if (module is VegetationModule vegetation)
-                {
-                    foreach (var source in vegetation.TraceSources(context, tile, LodLevel.L0))
-                        Measure(source.SourceId, source.Output, source.Colliders);
-                    continue;
-                }
                 var output = module.Build(context, tile, LodLevel.L0);
                 foreach (var placed in output.Parts)
                 {
@@ -68,13 +70,8 @@ public sealed partial class CollisionCoreTests
                         part.Colliders.Select(collider => CollisionGeometry.Transform(collider, placed.At)).ToArray());
                     if (part.Colliders.Count != 0) measured++;
                 }
-                var direct = module.Collide(context, tile);
-                if (direct.Count == 0) continue;
-                // Claimed modules must expose their actual source output and directed contours before
-                // they can be measured. Neither a tile AABB nor an untransformed world footprint proves
-                // ownership or the final visible contour; the missing-source assertion below stays red.
-                if (module.Claims.Count == 0)
-                    Measure($"module/{pair.Key}/{tile}", output, direct);
+                if (module.Collide(context, tile).Any(NeedsExpansionCheck))
+                    Fail($"module={pair.Key} tile={tile} has direct collision without an actual source trace provider.");
             }
         }
         foreach (var missing in claimed.Keys.Where(id => !measuredClaims.Contains(id)))
@@ -82,10 +79,13 @@ public sealed partial class CollisionCoreTests
         Require(measured > 0, "G15 measured no source-paired collision expansion.");
         Godot.GD.Print($"G15Core expansionSources={measured} claimedSources={measuredClaims.Count}/{claimed.Count}");
 
-        void Measure(string id, ContentOutput output, IReadOnlyList<Collider> colliders, IReadOnlyList<PolygonRings>? occupied = null)
+        bool Measure(string id, ContentOutput output, IReadOnlyList<Collider> colliders, IReadOnlyList<PolygonRings>? occupied = null)
         {
-            if (colliders.Count == 0) return;
-            CheckExpansion(id, OutputTriangles(output).ToArray(), colliders, occupied); measured++;
+            var actual = colliders.Concat(output.Parts.SelectMany(placed =>
+                _parts[placed.Part.Value](placed.Params).Colliders.Select(collider => CollisionGeometry.Transform(collider, placed.At)))).ToArray();
+            if (actual.Length == 0) return false;
+            CheckExpansion(id, OutputTriangles(output).ToArray(), actual, occupied); measured++;
+            return true;
         }
     }
 
@@ -112,10 +112,13 @@ public sealed partial class CollisionCoreTests
             }
     }
 
+    private static bool NeedsExpansionCheck(Collider collider) =>
+        collider is not HeightFieldCollider && collider.Tag is not (SurfaceTag.Ground or SurfaceTag.Invisible or SurfaceTag.Water);
+
     private void CheckExpansion(string source, IReadOnlyList<Triangle> visible, IReadOnlyList<Collider> colliders,
         IReadOnlyList<PolygonRings>? occupied = null)
     {
-        foreach (var collider in colliders.Where(collider => collider is not HeightFieldCollider && collider.Tag is not (SurfaceTag.Ground or SurfaceTag.Invisible or SurfaceTag.Water)))
+        foreach (var collider in colliders.Where(NeedsExpansionCheck))
         {
             if (visible.Count == 0)
             { Fail($"source={source} has collision without matching visible geometry."); continue; }

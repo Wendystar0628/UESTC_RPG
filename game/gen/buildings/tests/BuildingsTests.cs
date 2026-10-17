@@ -1131,7 +1131,7 @@ public sealed class BuildingsTests
     [TestCase]
     public void TraceSourcesReproduceBuildAndCollidePerBuilding()
     {
-        // The G15 hook lists each building of a cell with its own output; flattened, that is the cell's Build and Collide.
+        // Full-map sources are selected by the plans that actually contribute to each fixture cell.
         var door = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f);
         WorldFeature[] features =
         [
@@ -1151,7 +1151,8 @@ public sealed class BuildingsTests
 
         // A cell with two buildings, and the coarser cells with more of them.
         var home = mine.Single(p => p.Key == "t:dorm").Tile(LodLevel.L0);
-        var cell = AssertTraceMatches(module, ctx, home, LodLevel.L0);
+        var traced = module.TraceSources(ctx, LodLevel.L0).ToArray();
+        var cell = AssertTraceMatches(module, ctx, home, LodLevel.L0, traced);
         Require(cell.Select(t => t.SourceId).SequenceEqual(["building/t:dorm/t:dorm", "building/t:lab/t:lab"]),
             "two buildings share the dorm's L0 cell, the claimed neighbour in it is not traced: " + string.Join(", ", cell.Select(t => t.SourceId)));
         Require(!cell[0].Colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed) && cell[0].Colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }),
@@ -1159,32 +1160,34 @@ public sealed class BuildingsTests
         Require(ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"M42\"", StringComparison.Ordinal)) && ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"Y1\"", StringComparison.Ordinal)),
             "the dumps reach into the box transforms and the wall heights");
         Require(AssertTraceMatches(module, ctx, plans.Single(p => p.Key == "t:dorm").Tile(LodLevel.L2), LodLevel.L2).Count == 5, "all five buildings share the L2 cell");
-        Require(AssertTraceMatches(module, ctx, home, LodLevel.L0).Count == 2 && module.TraceSources(ctx, new TileKey(7, 7), LodLevel.L0).Count == 0, "tracing again changes nothing; an empty cell has no source");
+        Require(AssertTraceMatches(module, ctx, home, LodLevel.L0, traced).Count == 2 && AssertTraceMatches(module, ctx, new TileKey(7, 7), LodLevel.L0, traced).Count == 0, "an empty cell has no source");
 
         var ids = new List<string>();
         foreach (var lod in Levels)
+        {
+            var levelSources = module.TraceSources(ctx, lod).ToArray();
             foreach (var tile in mine.Select(p => p.Tile(lod)).Distinct())
             {
-                var traces = AssertTraceMatches(module, ctx, tile, lod);
+                var traces = AssertTraceMatches(module, ctx, tile, lod, levelSources);
                 Require(traces.Count == mine.Count(p => p.Tile(lod) == tile), $"{lod}: one source per building of the cell");
                 if (lod == LodLevel.L0) ids.AddRange(traces.Select(t => t.SourceId));
             }
+        }
         Require(ids.Count == 5 && ids.Distinct(StringComparer.Ordinal).Count() == 5, "every building has its own source ID over the map");
 
         // The IDs and what they stand for do not depend on the order the features were declared in.
         var shuffled = Prepared(Ctx(World(new Entrances(door), new Falling(-1f, 0.9f), [.. Enumerable.Reverse(features)]), 2u, claims: ["t:claimed"]));
-        foreach (var tile in mine.Select(p => p.Tile(LodLevel.L0)).Distinct())
         {
-            var a = module.TraceSources(ctx, tile, LodLevel.L0).ToDictionary(t => t.SourceId);
-            var b = module.TraceSources(shuffled, tile, LodLevel.L0).ToDictionary(t => t.SourceId);
+            var a = traced.ToDictionary(t => t.SourceId);
+            var b = module.TraceSources(shuffled, LodLevel.L0).ToDictionary(t => t.SourceId);
             Require(a.Keys.Order(StringComparer.Ordinal).SequenceEqual(b.Keys.Order(StringComparer.Ordinal)) &&
                 a.All(p => p.Value.Output.Meshes.Count == b[p.Key].Output.Meshes.Count && p.Value.Output.Meshes.Zip(b[p.Key].Output.Meshes).All(m => SameBundle(m.First, m.Second)) &&
                     ColliderDumps(p.Value.Colliders).SequenceEqual(ColliderDumps(b[p.Key].Colliders))), "same sources, same geometry");
         }
 
-        // It reads the map's one window allocation: no snapshot, no trace; an empty cell needs none (as Build).
-        Expect<InvalidOperationException>(() => module.TraceSources(Ctx(world, 2u), home, LodLevel.L0), "no snapshot, no windows");
-        Require(module.TraceSources(Ctx(world, 2u), new TileKey(7, 7), LodLevel.L0).Count == 0, "nothing to number in an empty cell");
+        // Enumeration reads the map's one window allocation; an empty world needs none (as Build).
+        Expect<InvalidOperationException>(() => module.TraceSources(Ctx(world, 2u), LodLevel.L0).ToArray(), "no snapshot, no windows");
+        Require(!module.TraceSources(Ctx(World(), 2u), LodLevel.L0).Any(), "nothing to number in an empty world");
     }
 
     [TestCase]
@@ -1199,40 +1202,43 @@ public sealed class BuildingsTests
         {
             // The busiest cell of the level (most buildings, then the lowest cell).
             var busiest = mine.GroupBy(p => p.Tile(lod)).OrderByDescending(g => g.Count()).ThenBy(g => g.Key.X).ThenBy(g => g.Key.Z).First();
-            var traces = AssertTraceMatches(module, ctx, busiest.Key, lod);
+            var traces = AssertTraceMatches(module, ctx, busiest.Key, lod, module.TraceSources(ctx, lod).ToArray());
             Require(traces.Count == busiest.Count() && (lod != LodLevel.L0 || traces.Count > 1), $"{lod}: every unclaimed building of the busiest cell, {traces.Count}");
         }
     }
 
     // ---------------------------------------------------------------- fixtures
     /// <summary>
-    /// TraceSources of a cell, flattened, is that cell's Build (meshes, parts and instances, in order) and its Collide
+    /// Full-map sources selected by the actual plans of a cell, flattened, reproduce that cell's Build (meshes, parts and instances, in order) and its Collide
     /// (the same sequence at L0, the same multiset over the L0 cells of the traced buildings at a coarser level).
     /// </summary>
-    private static IReadOnlyList<BuildingSourceTrace> AssertTraceMatches(BuildingsModule module, BuildContext ctx, TileKey tile, LodLevel lod)
+    private static IReadOnlyList<ContentSourceTrace> AssertTraceMatches(BuildingsModule module, BuildContext ctx, TileKey tile, LodLevel lod, IReadOnlyList<ContentSourceTrace>? allSources = null)
     {
         var cell = $"{lod} cell ({tile.X}, {tile.Z})";
         var built = module.Build(ctx, tile, lod);
-        var traces = module.TraceSources(ctx, tile, lod);
-        Require(traces.All(t => t.SourceId == $"building/{t.Feature.Value}/{t.PartKey}"), $"{cell}: building/{{feature}}/{{part key}}");
+        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        var plans = set.Plans.Where(p => BuildingsModule.Unclaimed(ctx, p) && p.Tile(lod) == tile).ToArray();
+        var ids = plans.Select(p => $"building/{p.Id.Value}/{p.Key}").ToHashSet(StringComparer.Ordinal);
+        IReadOnlyList<ContentSourceTrace> traces = (allSources ?? module.TraceSources(ctx, lod).ToArray()).Where(t => ids.Contains(t.SourceId)).ToArray();
+        Require(traces.Count == plans.Length && traces.All(t => plans.Any(p => p.Id == t.Feature && t.SourceId == $"building/{p.Id.Value}/{p.Key}")), $"{cell}: actual source feature and stable ID");
         Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Count, $"{cell}: source IDs are unique");
         var meshes = traces.SelectMany(t => t.Output.Meshes).ToArray();
         Require(meshes.Length == built.Meshes.Count && meshes.Zip(built.Meshes).All(m => SameBundle(m.First, m.Second)), $"{cell}: the traced meshes are the Build meshes, in order");
         Require(traces.SelectMany(t => t.Output.Parts).SequenceEqual(built.Parts) && traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.Instances),
             $"{cell}: the traced parts and instances are the Build ones");
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
         foreach (var trace in traces)
         {
-            var plan = set.Plans.Single(p => p.Key == trace.PartKey);
-            Require(trace.OccupiedFootprint.Outer.SequenceEqual(plan.SkinOuter.Points) &&
-                trace.OccupiedFootprint.Holes.Count == plan.SkinHoles.Count &&
-                trace.OccupiedFootprint.Holes.Zip(plan.SkinHoles).All(h => h.First.SequenceEqual(h.Second.Points)),
+            var plan = plans.Single(p => trace.SourceId == $"building/{p.Id.Value}/{p.Key}");
+            var footprint = trace.OccupiedContours.Single();
+            Require(footprint.Outer.SequenceEqual(plan.SkinOuter.Points) &&
+                footprint.Holes.Count == plan.SkinHoles.Count &&
+                footprint.Holes.Zip(plan.SkinHoles).All(h => h.First.SequenceEqual(h.Second.Points)),
                 $"{cell}: source footprint follows the generated wall skin, including courtyard holes");
-            Require(!ReferenceEquals(trace.OccupiedFootprint.Outer, plan.SkinOuter.Points) &&
-                trace.OccupiedFootprint.Holes.Zip(plan.SkinHoles).All(h => !ReferenceEquals(h.First, h.Second.Points)),
+            Require(!ReferenceEquals(footprint.Outer, plan.SkinOuter.Points) &&
+                footprint.Holes.Zip(plan.SkinHoles).All(h => !ReferenceEquals(h.First, h.Second.Points)),
                 $"{cell}: source footprint is a snapshot of the plan");
         }
-        var cells = lod == LodLevel.L0 ? new[] { tile } : set.Plans.Where(p => traces.Any(t => t.PartKey == p.Key)).Select(p => p.Tile(LodLevel.L0)).Distinct().ToArray();
+        var cells = lod == LodLevel.L0 ? new[] { tile } : plans.Select(p => p.Tile(LodLevel.L0)).Distinct().ToArray();
         var expected = ColliderDumps(cells.SelectMany(c => module.Collide(ctx, c)));
         var actual = ColliderDumps(traces.SelectMany(t => t.Colliders));
         if (lod != LodLevel.L0)

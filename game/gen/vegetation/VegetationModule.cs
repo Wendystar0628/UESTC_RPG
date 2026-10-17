@@ -16,7 +16,7 @@ namespace Campus.Gen.Vegetation;
 /// nothing yet (crown clouds, ENG-PERF §9). Engine instances are made only by the kernel's instance pools.
 /// </summary>
 [ContentModule("vegetation", Owner = "WP-23")]
-public sealed class VegetationModule : IContentModule, IGroundMaskContributor
+public sealed class VegetationModule : IContentModule, IGroundMaskContributor, IContentSourceTraceProvider
 {
     private readonly object _gate = new();
     private Cache? _cache;
@@ -55,28 +55,22 @@ public sealed class VegetationModule : IContentModule, IGroundMaskContributor
         return ContentOutput.Empty with { Instances = streams.AsReadOnly() };
     }
 
-    /// <summary>
-    /// Read-only source trace for the static audits (G15): one entry per tree of the tile, its own one-record stream over the
-    /// same prototype as <see cref="Build"/> and, at L0, its own trunk collider. Flattened, the records are exactly Build's and
-    /// the colliders exactly Collide's. SourceId is object/vegetation/{tree key}.
-    /// </summary>
-    public IReadOnlyList<VegetationSourceTrace> TraceSources(BuildContext ctx, TileKey tile, LodLevel lod)
+    /// <summary>Complete trees over the same production prototypes and trunk collision parameters as Build and Collide.</summary>
+    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
     {
-        ArgumentNullException.ThrowIfNull(ctx);
-        if (PoolOf(lod) is not { } pool) return [];
-        var trees = InTile(Layout(ctx).Layout, tile, lod);
-        if (trees.Count == 0) return [];
-        var palette = RequirePalette(ctx);
-        var traces = new List<VegetationSourceTrace>(trees.Count);
-        foreach (var tree in trees)
+        ArgumentNullException.ThrowIfNull(context);
+        if (PoolOf(level) is not { } pool) yield break;
+        foreach (var tree in Layout(context).Layout.Trees)
         {
             var id = "object/vegetation/" + tree.Key;
-            var prototype = VegetationPrototypes.Get(tree.Species, tree.Variant, pool, palette);
+            var prototype = VegetationPrototypes.Get(tree.Species, tree.Variant, pool, RequirePalette(context));
             var output = ContentOutput.Empty with { Instances = [Stream(id, prototype, [tree])] };
-            var colliders = lod == LodLevel.L0 ? TreeColliders.For(new PlantingLayout([tree]), tile, ctx.World.Terrain) : [];
-            traces.Add(new VegetationSourceTrace(id, tree.Key, output, colliders));
+            var tile = new TileKey((int)MathF.Floor(tree.Position.X / TreeColliders.TileSize),
+                (int)MathF.Floor(tree.Position.Z / TreeColliders.TileSize));
+            var colliders = level == LodLevel.L0 ? TreeColliders.For(new PlantingLayout([tree]), tile, context.World.Terrain) : [];
+            FeatureId? feature = context.World.Features.ContainsKey(new(tree.Key)) ? new FeatureId(tree.Key) : null;
+            yield return new ContentSourceTrace(id, feature, output, colliders, []);
         }
-        return traces;
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => TreeColliders.For(Layout(ctx).Layout, tile, ctx.World.Terrain);
@@ -157,6 +151,3 @@ public sealed class VegetationModule : IContentModule, IGroundMaskContributor
 
     private static PaletteCatalog RequirePalette(BuildContext ctx) => ctx.Catalog;
 }
-
-/// <summary>One tree's share of a vegetation tile (<see cref="VegetationModule.TraceSources"/>).</summary>
-public sealed record VegetationSourceTrace(string SourceId, string TreeKey, ContentOutput Output, IReadOnlyList<Collider> Colliders);

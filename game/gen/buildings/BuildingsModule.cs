@@ -15,7 +15,7 @@ namespace Campus.Gen.Buildings;
 /// Pure .NET: reads only the world model, outputs contract geometry for the WP-02 baker.
 /// </summary>
 [ContentModule("buildings", Owner = "WP-14")]
-public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource
+public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource, IContentSourceTraceProvider
 {
     /// <summary>Generic module: claims no specific feature (SYS-MAPS §7).</summary>
     public IReadOnlyList<Claim> Claims { get; } = [];
@@ -181,35 +181,20 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         return list;
     }
 
-    /// <summary>
-    /// Read-only provenance of one level cell, for the G15 trace gate (never part of a published Build or Collide): each
-    /// formal building of the cell as its own output and colliders, tagged <c>building/{feature}/{part key}</c>. Same
-    /// selection, window blocks (the map's published allocation) and geometry as <see cref="Build"/> and
-    /// <see cref="Collide"/>; nothing is numbered, claimed, simplified or cached here, and the tags are never written out.
-    /// Colliders are the building's own, whatever the level: at a coarser level they are the union of its L0 cells' ones.
-    /// </summary>
-    public IReadOnlyList<BuildingSourceTrace> TraceSources(BuildContext ctx, TileKey tile, LodLevel lod)
+    /// <summary>Complete ordinary buildings with the same production meshes, colliders and directed skin contours.</summary>
+    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
     {
-        ArgumentNullException.ThrowIfNull(ctx);
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        ArgumentNullException.ThrowIfNull(context);
+        var set = BuildingSet.For(context.World, context.WorldSeed);
         WindowNumberingSnapshot? numbering = null;
-        var traces = new List<BuildingSourceTrace>();
         foreach (var plan in set.Plans)
         {
-            if (!Unclaimed(ctx, plan) || plan.Tile(lod) != tile) continue;
-            var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(ctx), plan);
+            if (!Unclaimed(context, plan)) continue;
+            var block = WindowNumbering.BlockOf(numbering ??= WindowNumbering.For(context), plan);
             var footprint = new PolygonRings(Array.AsReadOnly(plan.SkinOuter.Points.ToArray()),
                 Array.AsReadOnly(plan.SkinHoles.Select(h => (IReadOnlyList<Vector2>)Array.AsReadOnly(h.Points.ToArray())).ToArray()));
-            traces.Add(new BuildingSourceTrace($"building/{plan.Id.Value}/{plan.Key}", plan.Id, plan.Key,
-                new ContentOutput(BuildOne(plan, block, lod, ctx.Catalog), []), CollideOne(ctx, plan), footprint));
+            yield return new ContentSourceTrace($"building/{plan.Id.Value}/{plan.Key}", plan.Id,
+                new ContentOutput(BuildOne(plan, block, level, context.Catalog), []), CollideOne(context, plan), [footprint]);
         }
-        return traces;
     }
 }
-
-/// <summary>
-/// One building of a level cell with the geometry and colliders it alone produced (<see cref="BuildingsModule.TraceSources"/>).
-/// <paramref name="SourceId"/> is <c>building/{Feature.Value}/{PartKey}</c>: stable, unique in a map, independent of visit order.
-/// </summary>
-public sealed record BuildingSourceTrace(string SourceId, FeatureId Feature, string PartKey, ContentOutput Output,
-    IReadOnlyList<Collider> Colliders, PolygonRings OccupiedFootprint);

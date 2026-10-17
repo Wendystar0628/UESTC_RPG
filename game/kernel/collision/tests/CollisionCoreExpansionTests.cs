@@ -36,6 +36,11 @@ public sealed partial class CollisionCoreTests
         Require(OutwardDistanceSquared(new(3, 1.7f), [], [solid]) == 0,
             "The material side of the courtyard facade has no outward expansion.");
 
+        var island = new PolygonRings([new(2.5f, 2.5f), new(3.5f, 2.5f), new(3.5f, 3.5f), new(2.5f, 3.5f)]);
+        Require(OutwardDistanceSquared(new(3, 3), [], [solid, island]) == 0
+            && OutwardDistanceSquared(new(2.25f, 3), [], [solid, island]) > 0,
+            "Each contour subtracts its own holes before union: another actual component fills only its own island.");
+
         // Four actual cap strips leave a 2x2 hole; their projection is a union, never a convex hull.
         var cap = Strip(0, 0, 6, 2).Concat(Strip(0, 4, 6, 6))
             .Concat(Strip(0, 2, 2, 4)).Concat(Strip(4, 2, 6, 4)).ToArray();

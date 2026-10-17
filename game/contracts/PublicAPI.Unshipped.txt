@@ -7917,3 +7917,27 @@ Campus.Contracts.UiPalette.Validate() -> void
 static Campus.Contracts.UiPalette.Validate(Campus.Contracts.UiPaletteDocument! document, Campus.Contracts.PaletteCatalog! registry) -> void
 static Campus.Contracts.GeometryBuffer.Freeze(Campus.Contracts.GeometryBundle! source) -> Campus.Contracts.GeometryBuffer!
 static Campus.Contracts.PaletteCatalog.FromSources(System.Collections.Generic.IEnumerable<(string! Path, byte[]! Json)>! bank0Files, System.Collections.Generic.IEnumerable<(string! Path, byte[]! Json)>! extensionFiles) -> Campus.Contracts.PaletteCatalog!
+Campus.Contracts.ContentSourceTrace
+Campus.Contracts.ContentSourceTrace.<Clone>$() -> Campus.Contracts.ContentSourceTrace!
+Campus.Contracts.ContentSourceTrace.Colliders.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!
+Campus.Contracts.ContentSourceTrace.Colliders.init -> void
+Campus.Contracts.ContentSourceTrace.ContentSourceTrace(string! SourceId, Campus.Contracts.FeatureId? Feature, Campus.Contracts.ContentOutput! Output, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Colliders, System.Collections.Generic.IReadOnlyList<Campus.Contracts.PolygonRings!>! OccupiedContours) -> void
+Campus.Contracts.ContentSourceTrace.Deconstruct(out string! SourceId, out Campus.Contracts.FeatureId? Feature, out Campus.Contracts.ContentOutput! Output, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Colliders, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.PolygonRings!>! OccupiedContours) -> void
+Campus.Contracts.ContentSourceTrace.Equals(Campus.Contracts.ContentSourceTrace? other) -> bool
+Campus.Contracts.ContentSourceTrace.Feature.get -> Campus.Contracts.FeatureId?
+Campus.Contracts.ContentSourceTrace.Feature.init -> void
+Campus.Contracts.ContentSourceTrace.OccupiedContours.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.PolygonRings!>!
+Campus.Contracts.ContentSourceTrace.OccupiedContours.init -> void
+Campus.Contracts.ContentSourceTrace.Output.get -> Campus.Contracts.ContentOutput!
+Campus.Contracts.ContentSourceTrace.Output.init -> void
+Campus.Contracts.ContentSourceTrace.SourceId.get -> string!
+Campus.Contracts.ContentSourceTrace.SourceId.init -> void
+Campus.Contracts.IContentSourceTraceProvider
+Campus.Contracts.IContentSourceTraceProvider.TraceSources(Campus.Contracts.BuildContext! context, Campus.Contracts.LodLevel level) -> System.Collections.Generic.IEnumerable<Campus.Contracts.ContentSourceTrace!>!
+override Campus.Contracts.ContentSourceTrace.Equals(object? obj) -> bool
+override Campus.Contracts.ContentSourceTrace.GetHashCode() -> int
+override Campus.Contracts.ContentSourceTrace.ToString() -> string!
+static Campus.Contracts.ContentSourceTrace.operator !=(Campus.Contracts.ContentSourceTrace? left, Campus.Contracts.ContentSourceTrace? right) -> bool
+static Campus.Contracts.ContentSourceTrace.operator ==(Campus.Contracts.ContentSourceTrace? left, Campus.Contracts.ContentSourceTrace? right) -> bool
+Campus.Contracts.IWalkSupportSource
+Campus.Contracts.IWalkSupportSource.SupportY(float x, float z, float yHint) -> float?

@@ -107,16 +107,23 @@ public sealed class VegetationBuildTests
     {
         var ctx = Data.Value.Context;
         var module = new VegetationModule();
+        var sources = module.TraceSources(ctx, LodLevel.L0).ToArray();
+        var trees = VegetationInputs.Layout(ctx).Layout.Trees;
+        Check(sources.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == sources.Length,
+            "all trees have stable unique source IDs");
         foreach (var tile in module.Tiles(ctx).Take(40))
         {
-            var traces = module.TraceSources(ctx, tile, LodLevel.L0);
+            var ids = trees.Where(t => (int)MathF.Floor(t.Position.X / TreeColliders.TileSize) == tile.X
+                && (int)MathF.Floor(t.Position.Z / TreeColliders.TileSize) == tile.Z)
+                .Select(t => "object/vegetation/" + t.Key).ToHashSet(StringComparer.Ordinal);
+            var traces = sources.Where(t => ids.Contains(t.SourceId)).ToArray();
             var built = Flatten(module.Build(ctx, tile, LodLevel.L0).Instances);
             var traced = Flatten(traces.SelectMany(t => t.Output.Instances));
             Check(built.SequenceEqual(traced), $"{tile}: traced records differ from Build");
             var colliders = module.Collide(ctx, tile).Select(c => c.ToString()).Order(StringComparer.Ordinal);
             var tracedColliders = traces.SelectMany(t => t.Colliders).Select(c => c.ToString()).Order(StringComparer.Ordinal);
             Check(colliders.SequenceEqual(tracedColliders), $"{tile}: traced colliders differ from Collide");
-            Check(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Count, $"{tile}: duplicate source IDs");
+            Check(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, $"{tile}: duplicate source IDs");
         }
     }
 
