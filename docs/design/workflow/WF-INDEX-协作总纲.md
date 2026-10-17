@@ -47,7 +47,7 @@ gates: []
 | Sol 值班兜底 | gpt-6.1-sol，high，每次叫醒新开一个 Codex CLI 会话（D-210） | 值班执行者没回复时接手合并执行、施工状态与巡检（WF-DUTY §1） | 主会话 | `.collab/tasks/sol/001-值班长期单.md`；WF-MERGE §2；WF-DUTY §1–§2 |
 | Grok 值班执行者 | Grok 4.7，后台无界面调用 | 合并执行（首选）、值班单、定时巡检 | 主会话 | `.collab/tools/duty/ROLE-grok.md`；`001-值班长期单.md`；WF-MERGE §2 |
 | Gemini 快速杂活 | Gemini 3.8 Flash High，作者的 Antigravity 会话 | 只改文档的合并、主会话直接派的简单快速小活 | 主会话 | `.collab/tools/duty/ROLE-gemini.md`；`001-值班长期单.md` |
-| luna 批量苦力 | gpt-6-luna，medium，快速模式，Codex 应用里的会话 | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra | `.collab/tools/duty/ROLE-luna.md`；`001-值班长期单.md` |
+| luna 批量苦力 | gpt-6-luna；值班合并每次新开一个 Codex CLI 会话（D-210），批量苦力的单发进 Codex 应用里的"Luna会话" | 量大的机械活；Gemini 不可用时接手只改文档的合并 | 主会话、Astra | `.collab/tools/duty/ROLE-luna.md`；`001-值班长期单.md` |
 | Sol 旁路会话 | gpt-6.1-sol，xhigh，普通速度，Codex 应用里的会话 | 按任务单开子代理，做调研与旁路活：调研、补信息、数据核对、按确切文字打文档补丁、批量旁路工程活（WF-DUTY §3–§4） | 主会话 | `.collab/side/ROLE.md`；WF-DUTY §3–§4 |
 
 - 上表每个角色都要守 WF-RULE；"开工必读"之外的文档按需查，不通读。

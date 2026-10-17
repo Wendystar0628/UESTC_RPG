@@ -37,7 +37,7 @@ gates: []
 ## 1 会话与运行方式
 
 - **Claude 侧只有一个账号**：主会话是 Claude Code 交互会话；Opus 与 Sonnet 施工子代理都由主会话用 Agent 工具在后台开，向主会话回报，不另设中间会话。额度见底的处理见 WF-QUOTA §5。
-- **Codex 侧会话都开在 Codex 应用里**（D-203）：Astra、Sol 旁路和 luna 都是作者开着的会话（值班兜底的 Sol 例外：每次新开一个 Codex CLI 会话，D-210），作者能看到全过程；派活一律发进对应会话（WF-COMMS §5）。模型、推理档和速度跟着会话走，在应用里设；GPT 侧只有 gpt-6-luna 用快速模式，其余一律普通速度（D-197）。
+- **Codex 侧会话都开在 Codex 应用里**（D-203）：Astra、Sol 旁路和 luna 都是作者开着的会话（值班里的 luna 与兜底的 Sol 例外：每次新开一个 Codex CLI 会话，D-210），作者能看到全过程；派活一律发进对应会话（WF-COMMS §5）。模型、推理档和速度跟着会话走，在应用里设；GPT 侧只有 gpt-6-luna 用快速模式，其余一律普通速度（D-197）。
 - **后台执行者**：Grok 4.7 由值班唤醒脚本后台无界面调用；Gemini 3.8 Flash High 在作者的 Antigravity 会话里接活（WF-DUTY §1）。
 - 角色、模型与职责的总表见 WF-INDEX §1；会话号与调用命令见 `.collab/tools/README.md`。
 

@@ -46,7 +46,7 @@ gates: []
 | 否则：`tasks/sol/` 下新的值班单（`001-值班长期单.md` 除外） | 交 Grok（medium）读单执行 |
 | 否则：距上次巡检满 60 分钟 | 交 Grok（medium）巡检；已批未合、条件已满足的顺手合入，到点就同步施工状态 |
 
-**执行者与退回**（D-198）：值班执行者按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，D-202），Gemini 不可用时交 gpt-6-luna（luna 会话，快速模式）；其余合并、值班单与定时巡检交 Grok 4.7（后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol：唤醒脚本用 `tools/duty/codex_cli_run.py` 新开一个 Codex CLI 会话（gpt-6.1-sol，high，完全访问，工作目录主检出），进程退出即本轮结束，不续用旧会话（D-210）；由它先看 `git status`、`logs/merged.log` 和 `logs/tasks/001-值班长期单.log.md` 末尾再接着做，已做完的不重做。各执行者都照 `tasks/sol/001-值班长期单.md` 与 WF-MERGE 做；同一时刻只有一个执行者在主检出上做；通知都写进主会话收件箱（发件方 `duty`，一轮一个文件，开头注明是谁）。值班唤醒脚本不启动调研。
+**执行者与退回**（D-198）：值班执行者按难度分：只改文档的合并（批准行写了"只跑 check_docs.py"的）这类简单快速的交 Gemini 3.8 Flash High（发进作者开着的 Antigravity 会话，D-202），Gemini 不可用时交 gpt-6-luna（每次新开一个 Codex CLI 会话，D-210）；其余合并、值班单与定时巡检交 Grok 4.7（后台无界面调用，同一会话续用）。Grok 或 luna 没有回复、出错或报额度用尽，就把同一条消息退回 Sol：唤醒脚本用 `tools/duty/codex_cli_run.py` 新开一个 Codex CLI 会话（gpt-6.1-sol，high，完全访问，工作目录主检出），进程退出即本轮结束，不续用旧会话（D-210）；由它先看 `git status`、`logs/merged.log` 和 `logs/tasks/001-值班长期单.log.md` 末尾再接着做，已做完的不重做。各执行者都照 `tasks/sol/001-值班长期单.md` 与 WF-MERGE 做；同一时刻只有一个执行者在主检出上做；通知都写进主会话收件箱（发件方 `duty`，一轮一个文件，开头注明是谁）。值班唤醒脚本不启动调研。
 
 **旁路唤醒脚本**按文件名顺序，从 `side/cards/` 里取一张还没交出的单，叫醒 Sol 旁路会话，消息里写明任务单路径并要求照 `side/ROLE.md` 执行；这一轮结束后再取下一张，一次只交一张。
 

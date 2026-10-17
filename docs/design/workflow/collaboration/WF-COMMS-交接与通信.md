@@ -107,7 +107,7 @@ gates: []
 
 ## 5 Codex 会话与引导信箱
 
-**Codex 侧会话都在 Codex 应用里**（D-203）：Astra、Sol 旁路和 luna 都是作者开着的会话（值班兜底的 Sol 例外：每次新开一个 Codex CLI 会话，D-210）。主会话、唤醒脚本给它们派活，一律发进对应会话：`codex queue --thread <会话号> --message <内容>`，作者在应用里能看到全过程。脚本用 `tools/duty/codex_app_run.py` 发，它在消息末尾附一个任务号，要求会话做完在 `notes/codex-app-done.md` 追加"[任务号] 一句话结果"，看到这一行才算这一轮结束。模型、推理档和速度跟着会话走；要新的会话，请作者在应用里开好再登记会话号。不用 `codex exec` 另起或续跑后台线程。
+**Codex 侧会话都在 Codex 应用里**（D-203）：Astra、Sol 旁路和 luna 都是作者开着的会话（值班里的 luna 与兜底的 Sol 例外：每次新开一个 Codex CLI 会话，D-210）。主会话、唤醒脚本给它们派活，一律发进对应会话：`codex queue --thread <会话号> --message <内容>`，作者在应用里能看到全过程。脚本用 `tools/duty/codex_app_run.py` 发，它在消息末尾附一个任务号，要求会话做完在 `notes/codex-app-done.md` 追加"[任务号] 一句话结果"，看到这一行才算这一轮结束。模型、推理档和速度跟着会话走；要新的会话，请作者在应用里开好再登记会话号。不用 `codex exec` 另起或续跑后台线程。
 
 **要当轮生效的消息走引导信箱**：会话正在跑时，`codex queue` 的消息要等这一轮结束才送到。要它当轮就看到，用 `python -I tools/duty/codex_app_steer.py <会话号> <消息文件> [等待秒数]`：会话在跑，就把信放进 `steer/<会话号>.md`，钩子 `tools/hooks/uestc-steer.cjs` 在它下一次工具调用后把信送进当前这一轮，只送一次，送完挪进 `steer/delivered/`；等待超时没被取走就撤回、改为排队；会话空闲就直接排队。只在确实要马上改变对方手上的事时用，平常照常排队。
 

@@ -131,7 +131,7 @@
 - WF-COMMS §2 命名与写法 · L69 · 506
 - WF-COMMS §3 任务单与请求文件的格式 · L77 · 757
 - WF-COMMS §4 来信与消息 · L93 · 922
-- WF-COMMS §5 Codex 会话与引导信箱 · L108 · 668
+- WF-COMMS §5 Codex 会话与引导信箱 · L108 · 677
 - WF-COMMS §6 上下文重置后怎么接着做 · L114 · 437
 
 ## WF-DUTY · 值班与旁路
@@ -164,12 +164,12 @@
 
 ## WF-ROLE · 参与者与分工
 
-`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.4k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
+`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.5k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
 关键词：会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Astra、工程指挥、元规则、D-179
 
 - WF-ROLE §0 结论 · L23 · 559
   - ★ WF-ROLE §0.1 接入要点 · L31 · 228
-- WF-ROLE §1 会话与运行方式 · L37 · 493
+- WF-ROLE §1 会话与运行方式 · L37 · 502
 - WF-ROLE §2 模型的长处与短板 · L44 · 800
 - WF-ROLE §3 GPT 模型不做审美工作 · L55 · 418
 - WF-ROLE §4 事归谁与交叉的地方 · L62 · 448
