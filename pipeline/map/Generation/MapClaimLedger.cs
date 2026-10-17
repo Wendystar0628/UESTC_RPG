@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using System.Collections.ObjectModel;
 
-namespace Campus.Kernel.Registry;
+namespace Campus.Pipeline.Map;
 
 /// <summary>Resolves declared claims against this loaded map; package names never imply ownership.</summary>
 public sealed record MapClaimSource(string Module, WpId Owner, bool Global, IReadOnlyList<Claim> Claims);
@@ -42,9 +42,6 @@ public sealed class MapClaimSnapshot
 
 public sealed class MapClaimLedger
 {
-    public static MapClaimSnapshot Capture(ServiceRegistry registry, MapId map) => new(registry.ForMap(map.Value)
-        .Where(entry => entry.Kind == "content").Select(entry => new MapClaimSource(entry.Id, new WpId(entry.Owner),
-            entry.Map is null, ((IContentModule)registry.Create(entry.Type)).Claims)));
     private static readonly Aspects[] Bits = Enum.GetValues<Aspects>();
     private readonly Dictionary<(FeatureId Feature, Aspects Aspect), WpId> _owners = [];
     public MapClaimLedger(IWorldModel world, IEnumerable<MapClaimSource> modules)

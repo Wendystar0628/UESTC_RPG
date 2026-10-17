@@ -1,14 +1,14 @@
 using System.Buffers.Binary;
 using System.Text;
 using Campus.Contracts;
-using Campus.Contracts.Parts;
-using Campus.Kernel.Registry;
 
-namespace Campus.Kernel.Maps;
+namespace Campus.Pipeline.Map;
 
 /// <summary>Loading-boundary helpers only. Callers own asset lifetime, I/O delegates and the existing bake hash.</summary>
 public static class BuildInputAssembly
 {
+    public static IReadOnlyList<string> RequiredGlobalKeys { get; } = Array.AsReadOnly(new[] { "vegetation/species.json" });
+
     /// <summary>Read an explicit global asset manifest and freeze its bytes once. Keys are relative to game/data.</summary>
     public static BuildInputSnapshot ReadRequiredGlobalInputs(IEnumerable<string> requiredGlobalKeys,
         Func<string, ReadOnlyMemory<byte>> read)
@@ -31,44 +31,6 @@ public static class BuildInputAssembly
             bytes.Add(key, input);
         }
         return BuildInputSnapshot.Freeze(bytes);
-    }
-
-    /// <summary>
-    /// Capture the current map's registered part capabilities once on the composition/main thread.
-    /// This creates only existing pure CPU part definitions, reads no reflected properties and runs no builders.
-    /// Publish the returned immutable catalog in every BuildContext for this map; workers never use the registry.
-    /// </summary>
-    public static PartLodCatalog CapturePartLods(ServiceRegistry registry, MapId map)
-    {
-        ArgumentNullException.ThrowIfNull(registry);
-        if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("Map identity is required.", nameof(map));
-        var definitions = new List<KeyValuePair<PartId, IPartDef>>();
-        foreach (var entry in registry.ForMap(map.Value).Where(entry => entry.Kind == "part")
-            .OrderBy(entry => entry.Id, StringComparer.Ordinal))
-        {
-            if (registry.Create(entry.Type) is not IPartDef definition)
-                throw new InvalidOperationException($"Registered part '{entry.Id}' ({entry.Type.FullName}) must implement IPartDef.");
-            definitions.Add(new(new PartId(entry.Id), definition));
-        }
-        return new PartLodCatalog(definitions);
-    }
-
-    /// <summary>Capture existing content-module capabilities after map filtering, on the composition thread.</summary>
-    public static IReadOnlyList<IGroundMaskContributor> CaptureGroundMaskContributors(ServiceRegistry registry, MapId map)
-    {
-        ArgumentNullException.ThrowIfNull(registry);
-        if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("Map identity is required.", nameof(map));
-        var selected = registry.ForMap(map.Value)
-            .Where(entry => entry.Kind == "content" && typeof(IGroundMaskContributor).IsAssignableFrom(entry.Type))
-            .OrderBy(entry => entry.Id, StringComparer.Ordinal).ToArray();
-        var contributors = new List<IGroundMaskContributor>();
-        foreach (var entry in selected)
-        {
-            if (!typeof(IContentModule).IsAssignableFrom(entry.Type))
-                throw new InvalidOperationException($"Ground-mask contributor '{entry.Id}' must also implement IContentModule.");
-            contributors.Add((IGroundMaskContributor)registry.Create(entry.Type));
-        }
-        return FreezeGroundMaskContributors(contributors);
     }
 
     /// <summary>Publish a stable read-only capability list, rejecting duplicate IDs/channel owners before any Paint call.</summary>

@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -32,7 +33,7 @@ public sealed class BakeWindowTests
                 WorldSeed = 9,
                 ClaimedBy = (feature, aspect) => aspect == Aspects.Facade ? new WpId(feature.Value == "fixture:a" ? "WP-16" : "WP-21") : null
             };
-            try { _ = BakeWindowPreparation.Prepare(context, new Dictionary<string, BakeService.Module>()); }
+            try { _ = BakeWindowPreparation.Prepare(context, new Dictionary<string, ContentModuleInput>()); }
             catch (InvalidDataException error) { return error.Message; }
             throw new InvalidOperationException("Missing layouts were silently accepted.");
         }
@@ -89,7 +90,7 @@ public sealed class BakeWindowTests
     public void ProviderMustBeUniqueAndMapCorrectExceptForWindowlessLegacyFixture()
     {
         var source = new Source { Layouts = [new(Feature, [])] };
-        var modules = new Dictionary<string, BakeService.Module>(StringComparer.Ordinal) { ["source"] = new(source, "source-code", Owner, false) };
+        var modules = new Dictionary<string, ContentModuleInput>(StringComparer.Ordinal) { ["source"] = new(source, "source-code", Owner, false) };
         Reject(() => BakeWindowPreparation.Prepare(Context(), modules), "found 0");
         modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", new("WP-14"), true));
         modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", new("WP-14"), true));
@@ -97,10 +98,10 @@ public sealed class BakeWindowTests
         Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source,
             new Provider(new(new("another-map"), new string('a', 64), [])))), "another map");
         var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([]), Map = Map(), WorldSeed = 9 };
-        if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, BakeService.Module>()).Snapshot is not null)
+        if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot is not null)
             throw new InvalidOperationException("A windowless legacy fixture unexpectedly acquired an allocation.");
         var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([new(Feature, FeatureSource.Design, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
-        Reject(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, BakeService.Module>()), "found 0");
+        Reject(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, ContentModuleInput>()), "found 0");
     }
 
     [TestCase]
@@ -240,7 +241,7 @@ public sealed class BakeWindowTests
         using var started = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var producer = new PausedProducer(started, release);
-        var map = new BakeService.MapBuild(mapContext, new Dictionary<string, BakeService.Module>(),
+        var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
             new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
             new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, "data", "atlas", new(), [],
                 new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
@@ -283,7 +284,7 @@ public sealed class BakeWindowTests
         }
     }
 
-    private static Dictionary<string, BakeService.Module> Modules(Source source, Provider provider) => new(StringComparer.Ordinal)
+    private static Dictionary<string, ContentModuleInput> Modules(Source source, Provider provider) => new(StringComparer.Ordinal)
     {
         ["source"] = new(source, "source-code", Owner, false),
         ["provider"] = new(provider, "provider-code", new("WP-14"), true)

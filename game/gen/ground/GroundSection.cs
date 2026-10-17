@@ -104,12 +104,6 @@ public sealed record PitSpec
     public float DefaultKerb { get; init; } = 0.15f;
     public float MinKerb { get; init; } = 0.06f;
     public float MaxKerb { get; init; } = 0.6f;
-
-    /// <summary>A pit whose frame stands at least this far above the walking surface is solid: it gets a box collider (SYS-WALK 13).</summary>
-    public float SolidHeight { get; init; } = 0.18f;
-
-    /// <summary>A pit outline is a box only when its corners are this close to right angles (cosine of the angle between neighbouring edges).</summary>
-    public float RectangleTolerance { get; init; } = 0.06f;
 }
 
 /// <summary>Road marking dimensions (ART-AMBIENCE 6, GB 5768 proportions, stylised).</summary>

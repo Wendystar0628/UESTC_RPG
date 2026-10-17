@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -607,11 +608,27 @@ public sealed class MapServiceTests
         f.Catalog.TryGet(f.A, out var entry);
         var origin = entry.Descriptor.DataRect.Min;
         var files = f.Data.ReadWorldFiles(entry);
-        var walk = new WalkBakeData(1, f.A, WalkBakeInputHash.ComputeForMap(files),
+        var walk = new WalkBakeData(WalkBakeData.CurrentVersion, f.A, WalkBakeInputHash.ComputeForMap(files),
             new(origin, 64, 64, new byte[64 * 64], new byte[64 * 64], new float[64 * 64]),
-            new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), []);
+            new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), [], new([], []));
         var input = new MapLoadInput(entry, files, JsonSerializer.SerializeToUtf8Bytes(walk, ContractJson.Options));
-        Require(MapWorldLoading.ReadWalk(input)!.Map == f.A, "Valid resident walk input was lost.");
+        input = f.Data.PrepareLoadInput(input).GetAwaiter().GetResult();
+        var resident = MapWorldLoading.ReadWalk(input)!;
+        Require(resident.Map == f.A && ReferenceEquals(resident, MapWorldLoading.ReadWalk(input)),
+            "Prepared resident walk data was lost or decoded again.");
+        var changedFiles = files.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        changedFiles["campus.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = 2 }, ContractJson.Options);
+        foreach (var changed in new[] { input with { Files = changedFiles }, input with
+            { Entry = entry with { Descriptor = entry.Descriptor with { Id = f.B } } } })
+        {
+            try { MapWorldLoading.ReadWalk(changed); }
+            catch (Exception error) when (error is InvalidDataException or WalkBakeFreshnessException) { continue; }
+            throw new InvalidOperationException("Changed resident inputs retained the previous prepared walk data.");
+        }
+        var legacyRejected = false;
+        try { MapWorldLoading.ReadWalk(input with { WalkBytes = JsonSerializer.SerializeToUtf8Bytes(walk with { Version = 1, Support = null! }, ContractJson.Options) }); }
+        catch (WalkBakeFreshnessException error) when (error.Failure == WalkBakeFreshnessFailure.UnknownVersion) { legacyRejected = true; }
+        Require(legacyRejected, "Legacy data must reach development version freshness before v2 support validation.");
         foreach (var wrong in new[] { walk with { Map = f.B }, walk with { Walk = walk.Walk with { Origin = origin + new Vector2(8) },
             SafePoints = walk.SafePoints with { Origin = origin + new Vector2(8) } } })
         {
@@ -709,9 +726,9 @@ public sealed class MapServiceTests
             _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
             var files = ReadWorldFiles(entry);
             var origin = entry.Descriptor.DataRect.Min;
-            var walk = new WalkBakeData(1, entry.Descriptor.Id, WalkBakeInputHash.ComputeForMap(files),
+            var walk = new WalkBakeData(WalkBakeData.CurrentVersion, entry.Descriptor.Id, WalkBakeInputHash.ComputeForMap(files),
                 new(origin, 64, 64, new byte[64 * 64], new byte[64 * 64], new float[64 * 64]),
-                new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), []);
+                new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), [], new([], []));
             var input = new MapLoadInput(entry, files, JsonSerializer.SerializeToUtf8Bytes(walk, ContractJson.Options));
             Inputs.Add(input);
             return input;

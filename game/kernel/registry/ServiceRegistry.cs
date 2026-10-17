@@ -2,6 +2,7 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Save;
+using Campus.Pipeline.Map;
 
 namespace Campus.Kernel.Registry;
 
@@ -103,7 +104,8 @@ public sealed class ServiceRegistry
 
     public void Discover(IEnumerable<Assembly> assemblies)
     {
-        var types = assemblies.Distinct().OrderBy(a => a.FullName, StringComparer.Ordinal)
+        var capturedAssemblies = assemblies.Distinct().ToArray();
+        var types = capturedAssemblies.OrderBy(a => a.FullName, StringComparer.Ordinal)
             .SelectMany(a => a.GetTypes()).Where(t => t.IsClass && !t.IsAbstract && !t.ContainsGenericParameters)
             .OrderBy(t => t.FullName, StringComparer.Ordinal).ToArray();
         var services = types.SelectMany(t => t.GetCustomAttributes<KernelServiceAttribute>()
@@ -118,11 +120,10 @@ public sealed class ServiceRegistry
             _serviceTypes.Add(group.Key, item.Type);
             _entries.Add(new("service", group.Key.FullName!, item.Attribute.Owner, null, item.Type, item.Attribute.IsStub));
         }
+        foreach (var entry in RegistrationDiscovery.Discover(capturedAssemblies))
+            _entries.Add(new(entry.Kind, entry.Id, entry.Owner, entry.Map, entry.Type, entry.IsStub));
         foreach (var type in types)
         {
-            AddAttribute(type, type.GetCustomAttribute<ContentModuleAttribute>(), "content");
-            AddAttribute(type, type.GetCustomAttribute<PartAttribute>(), "part");
-            AddAttribute(type, type.GetCustomAttribute<InteriorProviderAttribute>(), "interior");
             AddAttribute(type, type.GetCustomAttribute<Campus.Contracts.Audio.AmbientEmitterAttribute>(), "ambient");
             AddAttribute(type, type.GetCustomAttribute<MediumPresenterAttribute>(), "medium");
             AddAttribute(type, type.GetCustomAttribute<KernelNodeAttribute>(), "node");
@@ -130,13 +131,10 @@ public sealed class ServiceRegistry
             foreach (var section in type.GetCustomAttributes<SaveSectionAttribute>())
                 AddAttribute(type, section, "save");
         }
-        foreach (var group in _entries.Where(e => e.Kind != "service").GroupBy(e => (e.Kind, e.Map, e.Id, e.Scope)).ToArray())
-        {
-            var real = group.Where(e => !e.IsStub).ToArray();
-            var selected = real.Length > 0 ? real : group.ToArray();
-            if (selected.Length > 1) throw new InvalidOperationException($"Duplicate registration: {group.Key}");
-            foreach (var dropped in group.Where(e => e != selected[0]).ToArray()) _entries.Remove(dropped);
-        }
+        var selected = RegistrationDiscovery.Select(_entries.Where(entry => entry.Kind != "service"),
+            entry => (entry.Kind, entry.Map, entry.Id, entry.Scope), entry => entry.IsStub);
+        _entries.RemoveAll(entry => entry.Kind != "service");
+        _entries.AddRange(selected);
         _entries.Sort((a, b) => StringComparer.Ordinal.Compare(
             a.Kind + ":" + a.Id + ":" + a.Map + ":" + a.Scope,
             b.Kind + ":" + b.Id + ":" + b.Map + ":" + b.Scope));
@@ -169,8 +167,7 @@ public sealed class ServiceRegistry
         foreach (var service in _serviceTypes.Keys.OrderBy(t => t.FullName, StringComparer.Ordinal)) Get(service);
     }
 
-    public IReadOnlyList<Registration> ForMap(string map) => _entries
-        .Where(e => string.IsNullOrEmpty(e.Map) || e.Map == map).ToArray();
+    public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, entry => entry.Map, map);
 
     public void ValidateMap(string map)
     {

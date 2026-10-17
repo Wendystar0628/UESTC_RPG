@@ -5,8 +5,13 @@ namespace Campus.Gen.Walkable;
 
 internal static class WalkGeometry
 {
-    internal static bool Contains(PolygonRings polygon, Vector2 point) =>
-        Contains(polygon.Outer, point) && !polygon.Holes.Any(hole => Contains(hole, point));
+    internal static bool Contains(PolygonRings polygon, Vector2 point)
+    {
+        if (!Contains(polygon.Outer, point)) return false;
+        for (var i = 0; i < polygon.Holes.Count; i++)
+            if (Contains(polygon.Holes[i], point)) return false;
+        return true;
+    }
 
     private static bool Contains(IReadOnlyList<Vector2> ring, Vector2 point)
     {

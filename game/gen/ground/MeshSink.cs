@@ -10,7 +10,7 @@ namespace Campus.Gen.Ground;
 /// Patterned plaza faces (Q-015) carry continuous metre UVs in their paving frame and UV2 = (gate, K), constant on each
 /// triangle; vertices are shared only between triangles with the same UV2.
 /// </summary>
-internal sealed class MeshSink
+internal sealed class MeshSink(bool collect = true)
 {
     private const int MaxVertices = 65536;
     private readonly SortedDictionary<int, List<Chunk>> _chunks = new();
@@ -20,6 +20,7 @@ internal sealed class MeshSink
     public void Triangle(GroundColor color, byte flags, Vector3 a, Vector3 b, Vector3 c,
         Vector3 na, Vector3 nb, Vector3 nc, Vector3 facing, GroundFaceInput? input = null)
     {
+        if (!collect) return;
         var cross = Vector3.Cross(b - a, c - a);
         if (cross.LengthSquared() < 1e-14f) return;
         if (Vector3.Dot(cross, facing) > 0f)

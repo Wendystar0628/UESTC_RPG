@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Runtime;
 using System.Text.Json.Serialization.Metadata;
@@ -516,9 +517,9 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
         _preparedSource = null;
     }
 
-    private sealed record MapLoadSource(MapLoadInput Input, Campus.Kernel.Registry.MapClaimSnapshot? Claims);
+    private sealed record MapLoadSource(MapLoadInput Input, Campus.Pipeline.Map.MapClaimSnapshot? Claims);
     private async Task<(MapLoadInput Input, WorldModelLoadResult Loaded)> LoadSource(Task<MapLoadInput> prepared,
-        Campus.Kernel.Registry.MapClaimSnapshot? claims)
+        Campus.Pipeline.Map.MapClaimSnapshot? claims)
     {
         var input = await prepared;
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims));

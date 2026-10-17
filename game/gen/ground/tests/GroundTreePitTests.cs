@@ -169,38 +169,18 @@ public sealed class GroundTreePitTests
     }
 
     [TestCase]
-    public void TallRectangularPitsAreSolidBoxesAndTheWalkingGroundStaysLevel()
+    public void PitFramesAndSoilKeepTheirOwnExactSupports()
     {
-        var world = PlazaWorld();
-        var ctx = TestWorld.Context(world);
-        var boxes = GroundCollision.PitBoxes(ctx, new TileKey(0, 0)).OfType<BoxCollider>().ToArray();
-        Check.True(boxes.Length == 2, $"The two square pits are boxes and the low strip is not, got {boxes.Length}.");
-        Check.True(boxes.All(b => b.Tag == SurfaceTag.Prop && b.Foot == FootMat.StonePaving), "Pit boxes are props with stone underfoot.");
-        var plain = boxes.Single(b => Math.Abs(b.At.M41 - 20f) < 1e-3f);
-        Check.Close(0.9, plain.Half.X, 1e-4, "half width");
-        Check.Close(0.9, plain.Half.Z, 1e-4, "half depth");
-        Check.Close(PitRim * 0.5, plain.Half.Y, 1e-4, "half height: from the terrain to the frame top");
-        Check.Close(PitRim * 0.5, plain.At.M42, 1e-4, "centre height");
-        Check.Close(PitRim, plain.At.M42 + plain.Half.Y, 1e-4, "frame top");
-
-        // The turned pit: the box follows its outline.
-        var turned = boxes.Single(b => Math.Abs(b.At.M41 - 36f) < 1e-3f);
-        var angle = 30f * MathF.PI / 180f;
-        Check.Close(MathF.Cos(angle), Math.Abs(turned.At.M11), 1e-3, "box axis follows the turned pit");
-        Check.Close(1.0, turned.At.M11 * turned.At.M33 - turned.At.M13 * turned.At.M31, 1e-3, "the box rotation is proper");
-
-        // The walking height field passes over the pits at paving level; the frame is the box.
-        var collide = new GroundModule().Collide(ctx, new TileKey(0, 0));
-        var field = collide.OfType<HeightFieldCollider>().Single();
-        Check.Close(Section.PavingY, GroundCollision.SampleHeight(field, 20f, 20f), 1e-2, "walking height in the middle of a pit");
-        Check.Close(Section.PavingY, GroundCollision.SampleHeight(field, 40f, 31f), 1e-2, "walking height along the strip");
-        Check.True(collide.OfType<BoxCollider>().Count() == 2, "The module hands over the pit boxes with the ground.");
-        // A pit belongs to one tile only.
-        Check.True(GroundCollision.PitBoxes(ctx, new TileKey(1, 0)).Count == 0 && GroundCollision.PitBoxes(ctx, new TileKey(0, 1)).Count == 0, "A pit is solid in its own tile only.");
-
-        // Footsteps: stone on the frame, soil in the pit.
-        var foot = field.FootMatHalfMeter!;
-        Check.True((FootMat)foot[40 * GroundCollision.FootCells + 40] == FootMat.Soil, "Soil underfoot inside a pit.");
+        var ctx = TestWorld.Context(PlazaWorld());
+        var support = GroundSupport.TileFor(ctx, new(0, 0), Section);
+        Check.Close(PitSoil, support.SupportY(20f, 20f)!.Value, .001, "pit soil supports at its visible top");
+        Check.Close(StripSoil, support.SupportY(40f, 31f)!.Value, .001, "strip soil supports at its visible top");
+        Check.Close(PitRim, support.SupportY(20f, 19.15f)!.Value, .002, "pit frame supports at its visible top");
+        Check.True(!support.Colliders.OfType<BoxCollider>().Any(), "No whole-footprint pit box may fill the soil to rim height.");
+        var field = support.Colliders.OfType<HeightFieldCollider>().Single();
+        Check.Close(0f, GroundCollision.SampleHeight(field, 20f, 20f), .001, "pit does not rewrite the terrain HF");
+        Check.True((FootMat)field.FootMatHalfMeter![40 * GroundCollision.FootCells + 40] == FootMat.Soil,
+            "Soil remains the foot material inside a pit.");
     }
 
     [TestCase]
@@ -209,7 +189,7 @@ public sealed class GroundTreePitTests
         var world = PlazaWorld();
         var layout = GroundLayout.Of(world);
         var tile = new GroundTile(0f, 0f, 256f, 2f);
-        var grid = TerrainGrid.For(FlatTerrain.Instance, new TileKey(0, 0), LodLevel.L2, tile);
+        var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(0, 0), LodLevel.L2, tile);
         var field = TileField.Build(layout, tile, Section, grid);
         var mesher = new GroundMesher(field, Section, LodLevel.L2, layout, grid, new MeshSink());
         for (var j = 0; j <= field.N; j++)
@@ -285,7 +265,7 @@ public sealed class GroundTreePitTests
     {
         var layout = GroundLayout.Of(world);
         var tile = new GroundTile(0f, 0f, GroundLod.TileSize, GroundLod.TileSize / 256f);
-        var grid = TerrainGrid.For(FlatTerrain.Instance, new TileKey(0, 0), LodLevel.L0, tile);
+        var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(0, 0), LodLevel.L0, tile);
         field = TileField.Build(layout, tile, Section, grid);
         return new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
     }

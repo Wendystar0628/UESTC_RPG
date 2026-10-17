@@ -5,7 +5,7 @@ using Campus.Contracts.Audio;
 namespace Campus.Gen.Parts.Stubs;
 
 /// <summary>D0 only: one rectangular plan, an open entry and straight stairs per registered building.</summary>
-public abstract class BoxInteriorProviderStub : IInteriorProvider
+public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCatalogConfigurable
 {
     private FeatureId[] _features = [];
     private int[] _floors = [1];

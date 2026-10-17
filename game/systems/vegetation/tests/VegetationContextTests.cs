@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
@@ -139,7 +140,7 @@ public sealed class VegetationContextTests
                 .Order(StringComparer.Ordinal).Select(path => System.Reflection.Assembly.LoadFrom(path)).ToArray();
             var registry = new ServiceRegistry();
             registry.Discover(assemblies);
-            var claims = MapClaimLedger.Capture(registry, id);
+            var claims = MapClaimCapture.Capture(registry, id);
             return new(map, new MapLoadInput(entry, all, ReadOnlyMemory<byte>.Empty), claims);
         }
 

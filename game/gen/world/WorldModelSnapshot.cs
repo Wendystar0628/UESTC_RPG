@@ -5,7 +5,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.World;
 
-public sealed class WorldModelSnapshot : IWorldModel, IWalkDataSource
+public sealed class WorldModelSnapshot : IWorldModel, IWalkDataSource, IWalkSupportSource
 {
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
     public PolygonRings Boundary { get; }
@@ -16,15 +16,24 @@ public sealed class WorldModelSnapshot : IWorldModel, IWalkDataSource
     public IFidelityModel? Fidelity { get; }
     public IReadOnlyList<InteriorOverlayFile> InteriorOverlays { get; }
     public WalkBakeData? Walk { get; }
+    public ITerrain Terrain { get; }
+    public IWalkSupportSource? WalkSupport { get; }
 
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
-        WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts, IFidelityModel? fidelity,
-        IReadOnlyList<InteriorOverlayFile> interiorOverlays, WalkBakeData? walk)
+        WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
+        IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
-        Outskirts = outskirts; Fidelity = fidelity; InteriorOverlays = interiorOverlays; Walk = walk;
-        Spatial = new WorldSpatialIndex(features, boundary, interiors, walk);
+        Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays; Walk = options.Walk;
+        Terrain = options.Terrain; WalkSupport = options.WalkSupport;
+        Spatial = new WorldSpatialIndex(features, boundary, interiors, Walk, Terrain, WalkSupport);
     }
+    public float? SupportY(float x, float z, float yHint) => WalkSupport?.SupportY(x, z, yHint);
+
+    /// <summary>Finalize the parsed world with its exact, immutable prepared walking support.</summary>
+    public WorldModelSnapshot WithWalkSupport(IWalkSupportSource support) => new(Features, Boundary, Network,
+        Interiors, Outskirts, InteriorOverlays, new()
+        { Fidelity = Fidelity, Walk = Walk, Terrain = Terrain, WalkSupport = support ?? throw new ArgumentNullException(nameof(support)) });
 }
 
 internal static class WorldFeatureKinds
@@ -115,9 +124,11 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
     private readonly PolygonRings _boundary;
     private readonly IInteriorIndex _interiors;
     private readonly WalkBakeData? _walk;
-    public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary, IInteriorIndex interiors, WalkBakeData? walk)
+    private readonly ITerrain _terrain;
+    private readonly IWalkSupportSource? _support;
+    public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary, IInteriorIndex interiors, WalkBakeData? walk, ITerrain terrain, IWalkSupportSource? support)
     {
-        _features = features; _boundary = boundary; _interiors = interiors; _walk = walk;
+        _features = features; _boundary = boundary; _interiors = interiors; _walk = walk; _terrain = terrain; _support = support;
         foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             for (var z = Cell(feature.Bounds.Min.Z); z <= Cell(feature.Bounds.Max.Z); z++)
                 for (var x = Cell(feature.Bounds.Min.X); x <= Cell(feature.Bounds.Max.X); x++)
@@ -137,8 +148,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                     foreach (var id in cell) if (_features[id].Bounds.Intersects(box)) ids.Add(id);
         return ids.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
     }
-    // The migrated survey explicitly defines terrain as a relative plane, not sampled elevation.
-    public float GroundY(float x, float z) => 0;
+    public float GroundY(float x, float z) => _terrain.HeightAt(x, z);
     private IEnumerable<WorldFeature> At(float x, float z)
     {
         if (!_cells.TryGetValue(new(Cell(x), Cell(z)), out var ids)) yield break;
@@ -193,7 +203,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
     }
     public float? SupportY(float x, float z, float yHint) => WalkClassAt(x, z) switch
     {
-        WalkClass.Walk or WalkClass.Wade or WalkClass.Interior => _walk is { } data ? data.Walk.SupportY[WalkIndex(data.Walk, x, z)] : GroundY(x, z),
+        WalkClass.Walk or WalkClass.Wade or WalkClass.Interior => _support?.SupportY(x, z, yHint),
         WalkClass.Building or WalkClass.Water or WalkClass.Forbidden or WalkClass.Outside or WalkClass.Steep => null,
         _ => throw new ArgumentOutOfRangeException(nameof(x), "Unknown walk class.")
     };
@@ -227,7 +237,9 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
             {
                 var wx = x * 8f; var wz = z * 8f;
                 if (WalkClassAt(wx, wz) != WalkClass.Walk) continue;
-                var candidate = new Vector3(wx, GroundY(wx, wz), wz);
+                var support = SupportY(wx, wz, p.Y);
+                if (support is null || _terrain.FactsAt(wx, wz).Grade >= .36397023f) continue;
+                var candidate = new Vector3(wx, support.Value, wz);
                 var distance = Vector3.DistanceSquared(candidate, p);
                 if (distance < best || (distance == best && closest is null)) { best = distance; closest = candidate; }
             }

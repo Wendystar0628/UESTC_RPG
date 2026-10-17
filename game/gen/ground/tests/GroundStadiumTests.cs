@@ -211,7 +211,7 @@ public sealed class GroundStadiumTests
         var tx = (int)MathF.Floor(x / GroundLod.TileSize);
         var tz = (int)MathF.Floor(z / GroundLod.TileSize);
         var tile = new GroundTile(tx * GroundLod.TileSize, tz * GroundLod.TileSize, GroundLod.TileSize, GroundLod.TileSize / 256f);
-        var grid = TerrainGrid.For(FlatTerrain.Instance, new TileKey(tx, tz), LodLevel.L0, tile);
+        var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(tx, tz), LodLevel.L0, tile);
         var field = TileField.Build(layout, tile, Section, grid);
         var mesher = new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
         return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));

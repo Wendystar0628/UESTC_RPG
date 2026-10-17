@@ -62,6 +62,8 @@ public sealed class WalkBakeFreshnessTests
             WalkBakeFreshnessFailure.InvalidData, "walk.invalid:");
         ExpectFailure(() => WalkBakeInputHash.RequireCurrent(product with { Walk = null! }, files),
             WalkBakeFreshnessFailure.InvalidData, "walk.invalid:");
+        ExpectFailure(() => WalkBakeInputHash.RequireCurrent(product with { Support = null! }, files),
+            WalkBakeFreshnessFailure.InvalidData, "walk.invalid:");
         ExpectFailure(() => WalkBakeInputHash.RequireCurrent(null, files), WalkBakeFreshnessFailure.InvalidData, "walk.invalid:");
         ExpectFailure(() => WalkBakeInputHash.RequireCurrent(product with { InputHash = new string('0', 64) }, files),
             WalkBakeFreshnessFailure.StaleInputs, "walk.stale:");
@@ -87,7 +89,7 @@ public sealed class WalkBakeFreshnessTests
 
     private static WalkBakeData Product(string hash) => new(WalkBakeData.CurrentVersion, new MapId("example"), hash,
         new WalkGrid(Vector2.Zero, 4, 4, new byte[16], new byte[16], new float[16]),
-        new SafePointGrid(Vector2.Zero, 1, 1, Vector3.Zero, [short.MinValue, short.MinValue, short.MinValue]), []);
+        new SafePointGrid(Vector2.Zero, 1, 1, Vector3.Zero, [short.MinValue, short.MinValue, short.MinValue]), [], new([], []));
     private static ReadOnlyMemory<byte> Bytes(string text) => Encoding.UTF8.GetBytes(text);
     private static void Require(bool condition, string message)
     {

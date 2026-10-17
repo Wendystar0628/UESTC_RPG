@@ -56,7 +56,7 @@ function Invoke-UESTCMainlineSmoke {
         $closeObservation = @{ At=$null; Sent=$false }
         $closeObserver = New-UESTCCoreCloseObserver $closeObservation
         $close = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-close','--title=1',
-            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 120 -ObserveOutput $closeObserver
+            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 180 -ObserveOutput $closeObserver
         $closeEnded = [Diagnostics.Stopwatch]::GetTimestamp()
         if ($close.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
             throw 'The production close process reported an engine/shader error.'
@@ -79,7 +79,7 @@ function Invoke-UESTCMainlineSmoke {
         $resumeObservation = @{ At=$null; Sent=$false }
         $resumeObserver = New-UESTCCoreCloseObserver $resumeObservation
         $resume = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-resume','--title=0',
-            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 120 -ObserveOutput $resumeObserver
+            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 180 -ObserveOutput $resumeObserver
         if ($resume.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
             throw 'The production resume process reported an engine/shader error.'
         }

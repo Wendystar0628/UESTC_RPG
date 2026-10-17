@@ -75,14 +75,12 @@ public sealed record SafePointGrid(Vector2 Origin, int Width, int Height, Vector
 }
 
 /// <summary>Per-map startup data, generated offline. It is independent of physics tile residency.</summary>
-/// <remarks>InputHash is lowercase SHA-256. Hash the UTF-8 prefix "campus-walk-v1\0", then source files ordered
-/// by ordinal slash-separated relative path. Each item is uint32LE UTF-8 path length, path bytes,
-/// uint64LE raw file length, raw bytes. Include map/campus/network/zones and every input overlay;
-/// exclude generated outputs and downstream fidelity data. Changes to fixed bake rules require a version bump.</remarks>
+/// <remarks>InputHash is lowercase SHA-256 over the current walk-rule domain and selected source bytes,
+/// framed by ordinal relative path and byte length. Generated outputs are excluded.</remarks>
 public sealed record WalkBakeData(int Version, MapId Map, string InputHash, WalkGrid Walk,
-    SafePointGrid SafePoints, IReadOnlyList<WallCollider> Walls)
+    SafePointGrid SafePoints, IReadOnlyList<WallCollider> Walls, WalkSupportData Support)
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public void Validate()
     {
@@ -90,7 +88,8 @@ public sealed record WalkBakeData(int Version, MapId Map, string InputHash, Walk
         if (string.IsNullOrWhiteSpace(Map.Value)) throw new ArgumentException("Walk bake map is required.");
         if (InputHash.Length != 64 || InputHash.Any(c => !(c is >= '0' and <= '9' or >= 'a' and <= 'f')))
             throw new ArgumentException("Walk input hash must be 64 lowercase hexadecimal characters.");
-        Walk.Validate(); SafePoints.Validate();
+        ArgumentNullException.ThrowIfNull(Support);
+        Walk.Validate(); SafePoints.Validate(); Support.Validate();
         if (Walk.Origin != SafePoints.Origin || (long)SafePoints.Width * 4 != Walk.Width || (long)SafePoints.Height * 4 != Walk.Height)
             throw new ArgumentException("Walk and safe-point grids must cover the same map rectangle.");
         Vector2 max = Walk.Origin + new Vector2(Walk.Width * WalkGrid.CellSize, Walk.Height * WalkGrid.CellSize);

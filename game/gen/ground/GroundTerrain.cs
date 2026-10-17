@@ -3,34 +3,6 @@ using Campus.Contracts;
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// Designed terrain as the ground reads it (D-180): a deterministic height function sampled on a world grid of int16
-/// centimetres. This mirrors the part of the planned contract <c>ITerrain</c> (contract-15) that the ground uses;
-/// when the contract lands, an adapter over <c>IWorldModel.Terrain</c> replaces <see cref="FlatTerrain"/> and
-/// nothing else changes. Grid spacing per level: L0 1 m, L1 2 m, L2 4 m, L3 8 m (65 x 65 per tile), L4 32 m
-/// (81 x 81 for the whole map).
-/// </summary>
-public interface IGroundTerrain
-{
-    /// <summary>No terrain operation touches this L0 tile: the flat fast path applies.</summary>
-    bool IsFlat(TileKey tile);
-
-    /// <summary>Exact height; equals the int16 grid on 1 m grid points.</summary>
-    float HeightAt(float x, float z);
-
-    /// <summary>Fills the tile's grid in centimetres (65 x 65; 81 x 81 at level 4).</summary>
-    void FillTile(TileKey tile, int level, Span<short> cm);
-}
-
-public sealed class FlatTerrain : IGroundTerrain
-{
-    public static FlatTerrain Instance { get; } = new();
-    private FlatTerrain() { }
-    public bool IsFlat(TileKey tile) => true;
-    public float HeightAt(float x, float z) => 0f;
-    public void FillTile(TileKey tile, int level, Span<short> cm) => cm.Clear();
-}
-
-/// <summary>
 /// One tile's terrain samples, interpolated on the grid triangles with the anti-diagonal (1,0)-(0,1) (<see cref="CellSplit"/>),
 /// the same split the collision height field uses; every ground vertex takes its base height from here ("draping").
 /// </summary>
@@ -54,7 +26,7 @@ internal sealed class TerrainGrid
     public int Count { get; }
     public bool IsFlat { get; }
 
-    public static TerrainGrid For(IGroundTerrain terrain, TileKey tile, LodLevel lod, GroundTile extent)
+    public static TerrainGrid For(ITerrain terrain, TileKey tile, LodLevel lod, GroundTile extent)
     {
         var level = lod switch
         {

@@ -1,8 +1,8 @@
 using System.Globalization;
-using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Gen.Collision;
+using Campus.Pipeline.Map;
 using Campus.Kernel.Registry;
 using Services = Campus.Kernel.Registry.Kernel;
 
@@ -32,19 +32,11 @@ public sealed class CollisionBakeProducer : IBakeProducer
         if (key.Map != context.Map.Id || !CanBuild(key)) throw new ArgumentException("Collision bake key does not match its map.");
         var tile = ParseTile(key.Detail);
         var sources = _sources.Where(s => string.IsNullOrEmpty(s.Registration.Map) || s.Registration.Map == key.Map.Value).ToArray();
-        var parts = sources.Where(s => s.Registration.Kind == "part").ToDictionary(s => s.Registration.Id, StringComparer.Ordinal);
-        IReadOnlyList<Collider> PartCollision(PlacedPart part)
-        {
-            if (!parts.TryGetValue(part.Part.Value, out var registration)) throw new InvalidOperationException($"Unregistered collision part: {part.Part.Value}.");
-            var contract = registration.Instance.GetType().GetInterfaces().Single(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IPartDef<>));
-            if (!contract.GenericTypeArguments[0].IsInstanceOfType(part.Params)) throw new ArgumentException($"Wrong parameters for part {part.Part.Value}.");
-            var method = contract.GetMethod("Collision") ?? throw new MissingMethodException(contract.FullName, "Collision");
-            try { return (IReadOnlyList<Collider>)(method.Invoke(registration.Instance, [part.Params]) ?? throw new InvalidOperationException("Part collision returned null.")); }
-            catch (TargetInvocationException e) { throw new InvalidOperationException($"Collision generation failed for {part.Part.Value}.", e.InnerException ?? e); }
-        }
+        var partCollision = new PartCollisionBinding(sources.Where(source => source.Registration.Kind == "part")
+            .Select(source => new KeyValuePair<PartId, IPartDef>(new(source.Registration.Id), (IPartDef)source.Instance)));
         var builder = new CollisionTileBuilder(
             sources.Where(s => s.Registration.Kind == "content").Select(s => new CollisionModule(s.Registration.Id, (IContentModule)s.Instance)).ToArray(),
-            PartCollision);
+            partCollision.Collision);
         var colliders = builder.Build(context, tile);
         var origin = CollisionGeometry.Origin(tile);
         var bounds = new Box3(new(origin.X, context.Map.Bounds.Min.Y, origin.Z), new(origin.X + 64, context.Map.Bounds.Max.Y, origin.Z + 64));

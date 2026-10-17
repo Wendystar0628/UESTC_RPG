@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.IO.Hashing;
 using System.Numerics;
 using System.Text;

@@ -243,13 +243,30 @@ public sealed class WorldModelTests
     {
         var coordinates = Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 12).ToArray();
         coordinates[0] = 4; coordinates[1] = 1; coordinates[2] = 4;
-        var data = new WalkBakeData(1, new("test"), new string('a', 64),
+        var data = new WalkBakeData(WalkBakeData.CurrentVersion, new("test"), new string('a', 64),
             new(new(-16, -16), 8, 8, new byte[64], new byte[64], new float[64]),
-            new(new(-16, -16), 2, 2, new(-16, 0, -16), coordinates), []);
-        var result = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = Campus }, new() { Walk = data });
+            new(new(-16, -16), 2, 2, new(-16, 0, -16), coordinates), [], new([], []));
+        var result = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = Campus }, new() { Walk = data, Terrain = new AnalyticSupport(), WalkSupport = new AnalyticSupport() });
         Require(result.World.Spatial.NearestSafe(new(-15, 2, -15), 1) is null, "maxDist was ignored.");
-        Require(result.World.Spatial.NearestSafe(new(-15, 2, -15), 3) == new Vector3(-15, 0, -15), "Quantized safety clearance did not resolve onto the support surface.");
+        var safe = result.World.Spatial.NearestSafe(new(-15, 2, -15), 3);
+        Require(safe is not null && MathF.Abs(safe.Value.Y - (-.3f)) < .00001f,
+            "Quantized safety clearance did not resolve onto the exact support surface.");
+        Require(MathF.Abs(result.World.Spatial.GroundY(-14.3f, -14.2f) + .427f) < .00001f,
+            "GroundY must directly evaluate the current ITerrain at arbitrary XZ.");
+        Require(MathF.Abs(result.World.Spatial.SupportY(-14.3f, -14.2f, 0f)!.Value + .277f) < .00001f,
+            "The 2 m support centre hint must never replace exact arbitrary-XZ support.");
         Require(result.World.Spatial.WalkClassAt(1, 1) == WalkClass.Outside, "Resident grid extent was ignored.");
+    }
+
+    private sealed class AnalyticSupport : ITerrain, IWalkSupportSource
+    {
+        public bool IsFlat(TileKey tile) => false;
+        public float HeightAt(float x, float z) => x * .01f + z * .02f;
+        public float? SupportY(float x, float z, float yHint) => HeightAt(x, z) + .15f;
+        public float PadY(FeatureId feature) => 0f;
+        public float? WaterY(FeatureId water) => null;
+        public TerrainFacts FactsAt(float x, float z) => new(.02236068f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
+        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
     }
 
     [TestCase]

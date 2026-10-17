@@ -1,18 +1,19 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Walkable;
 
 /// <summary>Bridge occupancy and its actual collision tops supplied by the offline composition root.</summary>
-internal sealed class WalkBridgeSurfaces
+public sealed class WalkBridgeSurfaces
 {
     internal IReadOnlyList<Footprint2D> Footprints { get; }
     internal IReadOnlySet<FeatureId> ReplacedLines { get; }
     private readonly (Footprint2D Footprint, Vector2 Min, Vector2 Max)[] _areas;
-    private readonly RampCollider[] _ramps;
+    private readonly WalkSupportSurfaces _supports;
 
-    internal WalkBridgeSurfaces(IWorldModel world, IEnumerable<Footprint2D> occupancy, IEnumerable<RampCollider> supports)
+    public WalkBridgeSurfaces(IWorldModel world, IEnumerable<Footprint2D> occupancy, IEnumerable<Collider> supports)
     {
         var bridges = world.Features.Values.Where(feature => feature.Kind.Value == "bridge-deck")
             .ToDictionary(feature => feature.Id);
@@ -35,7 +36,7 @@ internal sealed class WalkBridgeSurfaces
             var (min, max) = WalkGeometry.Bounds(item.Rings.Outer);
             return (item, min, max);
         }).ToArray();
-        _ramps = supports.Where(ramp => ramp.Tag == SurfaceTag.Ground).ToArray();
+        _supports = new WalkSupportSurfaces(supports);
         var lines = new HashSet<FeatureId>();
         foreach (var id in footprints.Select(item => item.Feature).Distinct())
         {
@@ -51,42 +52,15 @@ internal sealed class WalkBridgeSurfaces
 
     internal bool TrySupport(Vector2 point, out float y, out float slopeSquared)
     {
-        y = 0f;
-        slopeSquared = 0f;
-        if (!_areas.Any(area => point.X >= area.Min.X && point.X <= area.Max.X &&
-            point.Y >= area.Min.Y && point.Y <= area.Max.Y && WalkGeometry.Contains(area.Footprint.Rings, point))) return false;
-        var found = false;
-        var supportY = 0f;
-        var supportSlope = 0f;
-        foreach (var ramp in _ramps)
-        {
-            Sample(ramp.P0, ramp.P1, ramp.P2);
-            Sample(ramp.P0, ramp.P2, ramp.P3);
-        }
-        if (!found) throw new InvalidOperationException("Bridge occupancy has no matching collision-top support.");
-        y = supportY;
-        slopeSquared = supportSlope;
+        y = 0f; slopeSquared = 0f;
+        var inside = false;
+        foreach (var area in _areas)
+            if (point.X >= area.Min.X && point.X <= area.Max.X && point.Y >= area.Min.Y && point.Y <= area.Max.Y
+                && WalkGeometry.Contains(area.Footprint.Rings, point)) { inside = true; break; }
+        if (!inside) return false;
+        if (!_supports.TrySupport(point, float.PositiveInfinity, out y, out slopeSquared))
+            throw new InvalidOperationException("Bridge occupancy has no matching collision-top support.");
         return true;
-
-        void Sample(Vector3 a, Vector3 b, Vector3 c)
-        {
-            var ab = new Vector2(b.X - a.X, b.Z - a.Z);
-            var ac = new Vector2(c.X - a.X, c.Z - a.Z);
-            var ap = point - new Vector2(a.X, a.Z);
-            var determinant = ab.X * ac.Y - ab.Y * ac.X;
-            if (Math.Abs(determinant) < .000001f) return;
-            var u = (ap.X * ac.Y - ap.Y * ac.X) / determinant;
-            var v = (ab.X * ap.Y - ab.Y * ap.X) / determinant;
-            if (u < -.00001f || v < -.00001f || u + v > 1.00001f) return;
-            var height = a.Y + u * (b.Y - a.Y) + v * (c.Y - a.Y);
-            if (!float.IsFinite(height)) throw new InvalidOperationException("Bridge collision-top support must be finite.");
-            if (found && height <= supportY) return;
-            supportY = height;
-            var dx = ((b.Y - a.Y) * ac.Y - (c.Y - a.Y) * ab.Y) / determinant;
-            var dz = (ab.X * (c.Y - a.Y) - ac.X * (b.Y - a.Y)) / determinant;
-            supportSlope = dx * dx + dz * dz;
-            found = true;
-        }
     }
 
     private static bool Same(PolygonRings a, PolygonRings b) => Compare(a, b) == 0;

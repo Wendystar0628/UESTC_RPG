@@ -36,7 +36,7 @@ public static class WalkBakeInputHash
     }
 
     public static string ComputeForMap(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) =>
-        Compute(SelectSourceFiles(files), "campus-walk-rules-2\0"u8);
+        Compute(SelectSourceFiles(files), "campus-walk-rules-3\0"u8);
 
     /// <summary>Validate a non-empty startup product before publishing its world. Offline empty baselines skip this call.</summary>
     /// <remarks>Never rebuilds, changes support heights, or returns a fallback. Map identity and extent checks remain with the map loader.</remarks>

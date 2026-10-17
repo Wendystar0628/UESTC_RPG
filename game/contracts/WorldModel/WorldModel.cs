@@ -91,7 +91,7 @@ public interface ISpatialIndex
     /// <summary>Exactly the current world terrain's HeightAt(x, z), without a second low-resolution height table.</summary>
     float GroundY(float x, float z);
     CameraMedium MediumAt(Vector3 p);
-    /// <summary>Queries the supported surface near yHint; the ground-layer result comes from Terrain.HeightAt.</summary>
+    /// <summary>Queries prepared exact physical support near yHint; walk permission is evaluated separately.</summary>
     float? SupportY(float x, float z, float yHint);
     WalkClass WalkClassAt(float x, float z);
     Vector3? NearestSafe(Vector3 p, float maxDist);

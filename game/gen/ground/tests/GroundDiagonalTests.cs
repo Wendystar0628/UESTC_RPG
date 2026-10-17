@@ -98,10 +98,14 @@ public sealed class GroundDiagonalTests
         // split cells along the other diagonal would cut across the creases by tenths of a metre.
         var tile = new TileKey(0, 0);
         var terrain = new FixtureTerrain(tile, NativeField());
-        var ctx = TestWorld.Context(TestWorld.Empty());
+        var world = TestWorld.Empty();
+        world.Terrain = terrain;
+        var ctx = TestWorld.Context(world);
         var section = GroundSection.Default;
-        var module = new GroundModule(section, terrain);
-        var collider = (HeightFieldCollider)module.Collide(ctx, tile).Single();
+        var module = new GroundModule(section);
+        var support = GroundSupport.TileFor(ctx, tile, section);
+        var collider = support.Colliders.OfType<HeightFieldCollider>().Single();
+        Check.True(collider.HeightsCm.SequenceEqual(NativeField()), "The base HF must retain the exact FillTile centimetres.");
         var output = module.Build(ctx, tile, LodLevel.L0);
         var checkedTriangles = 0;
         var worst = 0f;
@@ -117,8 +121,9 @@ public sealed class GroundDiagonalTests
                 var points = new[] { (p[0] + p[1] + p[2]) / 3f, (p[0] + p[1]) / 2f, (p[1] + p[2]) / 2f, (p[2] + p[0]) / 2f };
                 foreach (var q in points)
                 {
-                    var surface = GroundCollision.SampleHeight(collider, q.X, q.Z) - section.GrassY;
+                    var surface = GroundCollision.SampleHeight(collider, q.X, q.Z);
                     worst = MathF.Max(worst, MathF.Abs(q.Y - section.GrassY - surface));
+                    Check.Close(q.Y, support.SupportY(q.X, q.Z)!.Value, .011, "actual top support follows the L0 triangle");
                 }
                 checkedTriangles++;
             }
@@ -135,10 +140,12 @@ public sealed class GroundDiagonalTests
         // so each fine cell has to be split along the same diagonal as the terrain grid.
         var tile = new TileKey(0, 0);
         var terrain = new FixtureTerrain(tile, NativeField());
-        var ctx = TestWorld.Context(TestWorld.Junction());
+        var world = TestWorld.Junction();
+        world.Terrain = terrain;
+        var ctx = TestWorld.Context(world);
         var section = GroundSection.Default;
         var grid = TerrainGrid.For(terrain, tile, LodLevel.L0, GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect));
-        var output = new GroundModule(section, terrain).Build(ctx, tile, LodLevel.L0);
+        var output = new GroundModule(section).Build(ctx, tile, LodLevel.L0);
         var checkedTriangles = 0;
         var nearArc = 0;
         var worst = 0f;
@@ -170,7 +177,7 @@ public sealed class GroundDiagonalTests
         var tile = new TileKey(0, 0);
         var ctx = TestWorld.Context(TestWorld.Empty());
         var extent = GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect);
-        var grid = TerrainGrid.For(FlatTerrain.Instance, tile, LodLevel.L0, extent);
+        var grid = TerrainGrid.For(FlatTerrain.Default, tile, LodLevel.L0, extent);
         var field = TileField.Build(GroundLayout.Of(ctx.World), extent, GroundSection.Default, grid, LawnNoise.Seed(ctx), GroundLod.ToneCell(LodLevel.L0));
         var m = field.ToneMacro;
         Check.True(m >= 4, $"Tone macro cell of {m} fine cells is too small to test.");
@@ -197,8 +204,11 @@ public sealed class GroundDiagonalTests
     }
 
     /// <summary>A terrain whose only non-flat tile is <paramref name="tile"/> at level 0, filled from a ready 65 x 65 centimetre field.</summary>
-    private sealed class FixtureTerrain(TileKey tile, short[] cm) : IGroundTerrain
+    private sealed class FixtureTerrain(TileKey tile, short[] cm) : ITerrain
     {
+        public float PadY(FeatureId feature) => 0f;
+        public float? WaterY(FeatureId water) => null;
+        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
         public bool IsFlat(TileKey other) => other != tile;
 
         public float HeightAt(float x, float z)

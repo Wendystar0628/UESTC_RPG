@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -108,7 +109,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             var entries = registry.ForMap(context.Descriptor.Id.Value);
             // Instantiate all generators on the main thread. Their Build methods receive only a captured pure context.
             var modules = entries.Where(e => e.Kind == "content").ToDictionary(e => e.Id,
-                e => new Module((IContentModule)registry.Create(e.Type), CodeHash(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
+                e => new ContentModuleInput((IContentModule)registry.Create(e.Type), CodeHash(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
             var producers = entries.Where(e => e.Kind == "bake").Select(e =>
                 new Producer(e.Id, (IBakeProducer)registry.Create(e.Type), CodeHash(e.Type))).ToArray();
             var interiors = entries.Where(e => e.Kind == "interior").ToDictionary(e => "interior." + e.Id,
@@ -116,11 +117,11 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
             var globalInputs = Campus.Kernel.Registry.Kernel.GlobalBuildInputs;
-            var groundContributors = BuildInputAssembly.CaptureGroundMaskContributors(registry, context.Descriptor.Id);
-            var partLods = BuildInputAssembly.CapturePartLods(registry, context.Descriptor.Id);
+            var groundContributors = GenerationInputCapture.CaptureGroundMaskContributors(registry, context.Descriptor.Id);
+            var partLods = GenerationInputCapture.CapturePartLods(registry, context.Descriptor.Id);
             var geometry = new BakeGeometryBuilder(catalog, registry, context.Descriptor.Id);
             var seed = _options.SeedOverride ?? context.Descriptor.Seed;
-            var claims = MapClaimLedger.Capture(registry, context.Descriptor.Id);
+            var claims = MapClaimCapture.Capture(registry, context.Descriptor.Id);
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
             Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
             var map = new MapBuild(context, modules, interiors, producers, geometry,
@@ -227,7 +228,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                     var name = "interior." + binding.ProviderId;
                     var interior = map.Interiors[name];
                     foreach (var feature in binding.FeatureIds.OrderBy(f => f.Value, StringComparer.Ordinal))
-                        foreach (var storey in ValidatedLayout(interior.Value, binding, basic, feature).OpenStoreys.Order())
+                        foreach (var storey in InteriorAssembly.ValidatedLayout(interior.Value, binding, basic, feature).OpenStoreys.Order())
                             foreach (var detail in new[] { "IF", "IS" })
                                 Schedule(map, new(context.Descriptor.Id, name, FormattableString.Invariant($"{feature.Value}/{storey}/{detail}")), BakePriority.Background);
                 }
@@ -363,7 +364,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
     }
 
     private LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,
-        IReadOnlyDictionary<string, Module> modules, Func<FeatureId, Aspects, WpId?> claimLookup, BuildInputSnapshot globalInputs,
+        IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, WpId?> claimLookup, BuildInputSnapshot globalInputs,
         IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods)
     {
         // Validate the final post-overlay world once, before cache hits or geometry can bypass it.
@@ -379,15 +380,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         // Configure once before the Lazy publishes them to any consumer of this map's generation context.
         var providers = interiors.Values.ToDictionary(interior => interior.ProviderId, interior => interior.Value, StringComparer.Ordinal);
         IReadOnlyList<InteriorProviderBinding> bindings = inputs.TryGetValue("interiors.json", out var interiorCatalogBytes)
-            ? InteriorAssembly.Configure(interiorCatalogBytes, providers, context.World.Terrain) : [];
-        foreach (var binding in bindings)
-        {
-            var actual = providers[binding.ProviderId].FeatureIds;
-            if (actual.Count != binding.FeatureIds.Count || actual.Distinct().Count() != actual.Count || !actual.ToHashSet().SetEquals(binding.FeatureIds))
-                throw new InvalidDataException($"Interior provider {binding.ProviderId} is not bound to its catalog: expected {binding.FeatureIds.Count} features, actual {actual.Count}.");
-            foreach (var feature in binding.FeatureIds)
-                if (!context.World.Features.ContainsKey(feature)) throw new InvalidDataException($"Interior catalog feature is absent from the loaded world: {feature.Value}");
-        }
+            ? InteriorAssembly.ConfigureForWorld(interiorCatalogBytes, providers, context.World) : [];
         var manifestPath = context.BakeRoot.TrimEnd('/') + "/bake.manifest.json";
         var manifest = new BakeManifest();
         if (Godot.FileAccess.FileExists(manifestPath))
@@ -438,22 +431,12 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         if (binding is null || !binding.FeatureIds.Contains(feature) || !provider.FeatureIds.Contains(feature))
             throw new InvalidDataException("Interior feature is not bound to this map's authoritative catalog.");
         var detail = fields[2] switch { "IF" => InteriorDetail.Full, "IS" => InteriorDetail.Shell, _ => throw new InvalidDataException("Interior detail must be IF or IS.") };
-        var layout = ValidatedLayout(provider, binding, context, feature);
+        var layout = InteriorAssembly.ValidatedLayout(provider, binding, context, feature);
         if (!layout.OpenStoreys.Contains(storey)) throw new InvalidDataException("Interior storey is not open.");
         var center = layout.Bounds.Center;
         var tile = new TileKey((int)Math.Floor(center.X / 64f), (int)Math.Floor(center.Z / 64f));
         return map.Geometry!.BuildOutput(key, context, provider.BuildStorey(context, feature, storey, detail), tile, LodLevel.L0,
             diagnostics => map.Collect(key.Module, "interior-geometry", diagnostics, feature));
-    }
-
-    internal static InteriorLayout ValidatedLayout(IInteriorProvider provider, InteriorProviderBinding binding, BuildContext context, FeatureId feature)
-    {
-        var layout = provider.Layout(context, feature);
-        if (layout.Feature != feature || layout.OpenStoreys.Count == 0 || layout.OpenStoreys.Distinct().Count() != layout.OpenStoreys.Count ||
-            !layout.OpenStoreys.ToHashSet().SetEquals(binding.OpenFloors) ||
-            layout.OpenStoreys.Any(floor => !layout.Storeys.Any(storey => storey.Index == floor)))
-            throw new InvalidDataException($"Interior layout coverage differs from its catalog: {binding.ProviderId}/{feature.Value}.");
-        return layout;
     }
 
     private static IReadOnlyList<InteriorCoverage> InspectInteriorCoverage(MapBuild map)
@@ -468,7 +451,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             var entrances = new HashSet<string>(StringComparer.Ordinal);
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
-                var layout = ValidatedLayout(interior.Value, binding, context, feature);
+                var layout = InteriorAssembly.ValidatedLayout(interior.Value, binding, context, feature);
                 floors += layout.OpenStoreys.Count;
                 foreach (var entrance in layout.Entrances) entrances.Add(System.Text.Json.JsonSerializer.Serialize(entrance, ContractJson.Options));
             }
@@ -526,7 +509,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         _queue.Dispose();
     }
 
-    internal sealed record Module(IContentModule Value, string CodeHash, WpId Owner, bool Global);
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);
     internal sealed record Interior(string ProviderId, bool IsStub, IInteriorProvider Value, string CodeHash, WpId Owner);
     internal sealed record CollectedDiagnostic(MapId Map, WpId Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
@@ -535,7 +517,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
     internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, string Hash, string AtlasHash,
         BakeManifest Manifest, IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
         BakeWindowPreparation.Result Windows);
-    internal sealed record MapBuild(IMapContext Context, IReadOnlyDictionary<string, Module> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
+    internal sealed record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
         BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {

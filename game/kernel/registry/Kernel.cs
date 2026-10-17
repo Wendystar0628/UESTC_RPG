@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
@@ -19,7 +20,7 @@ public partial class Kernel : Node
         Services = new ServiceRegistry();
         // Explicit composition-root asset manifest. Old pure fixtures can keep BuildInputSnapshot.Empty.
         _globalBuildInputs = new(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["vegetation/species.json"], key => Godot.FileAccess.GetFileAsBytes("res://data/" + key)),
+            BuildInputAssembly.RequiredGlobalKeys, key => Godot.FileAccess.GetFileAsBytes("res://data/" + key)),
             LazyThreadSafetyMode.ExecutionAndPublication);
         var bytes = Godot.FileAccess.GetFileAsBytes(ProjectSettings.GetSetting("campus/rulesets/default").AsString());
         var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(bytes, ContractJson.Options)

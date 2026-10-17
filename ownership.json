@@ -2999,6 +2999,10 @@
       "owner": "WP-48b"
     },
     {
+      "pattern": "pipeline/map/Generation/**",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "pipeline/map/**",
       "owner": "WP-48a"
     },

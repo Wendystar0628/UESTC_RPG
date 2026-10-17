@@ -3,14 +3,14 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Campus.Contracts;
 
-namespace Campus.Kernel.Bake;
+namespace Campus.Pipeline.Map;
 
 /// <summary>Pure, map-filtered declaration collection. Only the registered provider allocates window IDs.</summary>
-internal static class BakeWindowPreparation
+public static class BakeWindowPreparation
 {
-    internal sealed record Result(WindowNumberingSnapshot? Snapshot, WindowMetadata Metadata);
+    public sealed record Result(WindowNumberingSnapshot? Snapshot, WindowMetadata Metadata);
 
-    public static Result Prepare(BuildContext prepass, IReadOnlyDictionary<string, BakeService.Module> modules)
+    public static Result Prepare(BuildContext prepass, IReadOnlyDictionary<string, ContentModuleInput> modules)
     {
         var ordered = modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray();
         var declarations = new SortedDictionary<string, ClaimedWindowLayout>(StringComparer.Ordinal);
@@ -107,9 +107,9 @@ internal static class BakeWindowPreparation
         return new(snapshot, result);
     }
 
-    internal static BuildContext Context(BuildContext input, string dataHash, string codeHash, WindowNumberingSnapshot? snapshot) => new()
+    public static BuildContext Context(BuildContext input, string dataHash, string codeHash, WindowNumberingSnapshot? snapshot, IWorldModel? world = null) => new()
     {
-        World = input.World,
+        World = world ?? input.World,
         Map = input.Map,
         WorldSeed = input.WorldSeed,
         Catalog = input.Catalog,

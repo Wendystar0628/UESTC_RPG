@@ -37,6 +37,7 @@ internal sealed class GroundMesher
     private readonly GroundSection _s;
     private readonly GroundLayout _layout;
     private readonly MeshSink _sink;
+    private readonly GroundSupportBuilder? _support;
     private readonly GroundSourceContext _sourceContext;
     private readonly bool _bevel;
     private readonly bool _bands;
@@ -57,13 +58,14 @@ internal sealed class GroundMesher
 
     private readonly TerrainGrid _grid;
 
-    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, MeshSink sink)
+    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, MeshSink sink, GroundSupportBuilder? support = null)
     {
         _f = field;
         _s = section;
         _layout = layout;
         _grid = grid;
         _sink = sink;
+        _support = support;
         _bevel = GroundLod.HasBevel(lod);
         // Steps per level: L0 full cross-section, L1 lawns flush with paving, L2 and coarser one flat surface.
         var steps = GroundLod.Steps(lod);
@@ -278,6 +280,7 @@ internal sealed class GroundMesher
                 if (GroundShadingRule.For(surface, slope) == GroundShading.Faceted) na = nb = nc = n;
             }
         }
+        _support?.Add(surface, a, b, c);
         _sink.Triangle(GroundPalette.ColorOf(surface), GroundPalette.FlagNoShadow, a, b, c, na, nb, nc, Up,
             new(surface, GroundFaceRole.Top, _sourceContext));
     }
@@ -782,20 +785,9 @@ internal sealed class GroundMesher
         return _bands && !Has(TPlazaBorder) ? GroundSurface.PlazaBorder : GroundSurface.Granite;
     }
 
-    /// <summary>Surface at a lattice point (used by the collision height field and the footstep grid).</summary>
+    /// <summary>Surface at a lattice point (used by the footstep and mask grids).</summary>
     public GroundSurface SurfaceAt(int i, int j) => Classify(_code[j * _f.S + i]);
 
     public float HeightAt(int i, int j) => LatticeHeight(SurfaceAt(i, j), i, j);
 
-    /// <summary>
-    /// Height a walker stands at: the visible height, except inside a tree pit, where it is the paving level (the pit's
-    /// frame is a box collider when it is tall enough to block, and the walking height field never bumps up to it).
-    /// </summary>
-    public float WalkHeightAt(int i, int j)
-    {
-        var surface = SurfaceAt(i, j);
-        return surface is GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil
-            ? _f.Get(i, j, TileField.H) + _pavingY
-            : LatticeHeight(surface, i, j);
-    }
 }

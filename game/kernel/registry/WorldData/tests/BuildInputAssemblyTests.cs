@@ -1,5 +1,9 @@
+using Campus.Pipeline.Map;
 using System.Security.Cryptography;
 using System.Text;
+using System.Numerics;
+using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Circulation;
 using Campus.Contracts;
 using Campus.Kernel.Maps;
 using GdUnit4;
@@ -87,6 +91,24 @@ public sealed class BuildInputAssemblyTests
         _ = Throws<InvalidOperationException>(() => BuildInputAssembly.FreezeGroundMaskContributors(
             [new Contributor("unknown", (GroundMaskChannels)8)]));
         Require(first.PaintCalls == 0 && second.PaintCalls == 0, "Composition painted buffers before ownership validation completed.");
+    }
+
+    [TestCase]
+    public void CapturedPartCollisionKeepsRealStairAndPlatformSurfacesAndRejectsWrongParameters()
+    {
+        var definitions = new Dictionary<PartId, IPartDef>
+        {
+            [new(PartCatalog.Steps)] = new StepsPart(),
+            [new(PartCatalog.Platform)] = new PlatformPart()
+        };
+        var collision = new PartCollisionBinding(definitions);
+        definitions.Clear();
+        var steps = collision.Collision(new(new(PartCatalog.Steps), new StairParams(2, .9f, 1.8f, 6), Matrix4x4.Identity));
+        var platform = collision.Collision(new(new(PartCatalog.Platform), new PanelParams(2, .3f, 2), Matrix4x4.Identity));
+        Require(steps.Any(collider => collider is RampCollider { Tag: SurfaceTag.Stair }) &&
+            platform.Any(collider => collider is BoxCollider { Tag: SurfaceTag.Ground }), "Captured definitions lost their authored support surfaces.");
+        _ = Throws<ArgumentException>(() => collision.Collision(new(new(PartCatalog.Steps), new object(), Matrix4x4.Identity)));
+        _ = Throws<InvalidOperationException>(() => collision.Collision(new(new("unregistered"), new object(), Matrix4x4.Identity)));
     }
 
     private static BuildInputSnapshot Snapshot(params (string Key, string Value)[] entries) =>

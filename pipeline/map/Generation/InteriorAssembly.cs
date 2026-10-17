@@ -1,9 +1,8 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.Parts.Stubs;
 
-namespace Campus.Kernel.Maps;
+namespace Campus.Pipeline.Map;
 
 public sealed record InteriorProviderBinding(
     string ProviderId,
@@ -38,6 +37,32 @@ public static class InteriorAssembly
         return ConfigureCore(interiorsBytes, providers, terrain);
     }
 
+    /// <summary>Configure and validate the complete catalog against the parsed map before publishing workers.</summary>
+    public static IReadOnlyList<InteriorProviderBinding> ConfigureForWorld(ReadOnlyMemory<byte> interiorsBytes,
+        IReadOnlyDictionary<string, IInteriorProvider> providers, IWorldModel world)
+    {
+        var bindings = Configure(interiorsBytes, providers, world.Terrain);
+        foreach (var binding in bindings)
+        {
+            var actual = providers[binding.ProviderId].FeatureIds;
+            if (actual.Count != binding.FeatureIds.Count || actual.Distinct().Count() != actual.Count || !actual.ToHashSet().SetEquals(binding.FeatureIds))
+                throw new InvalidDataException($"Interior provider {binding.ProviderId} is not bound to its catalog: expected {binding.FeatureIds.Count} features, actual {actual.Count}.");
+            foreach (var feature in binding.FeatureIds)
+                if (!world.Features.ContainsKey(feature)) throw new InvalidDataException($"Interior catalog feature is absent from the loaded world: {feature.Value}");
+        }
+        return bindings;
+    }
+
+    public static InteriorLayout ValidatedLayout(IInteriorProvider provider, InteriorProviderBinding binding, BuildContext context, FeatureId feature)
+    {
+        var layout = provider.Layout(context, feature);
+        if (layout.Feature != feature || layout.OpenStoreys.Count == 0 || layout.OpenStoreys.Distinct().Count() != layout.OpenStoreys.Count ||
+            !layout.OpenStoreys.ToHashSet().SetEquals(binding.OpenFloors) ||
+            layout.OpenStoreys.Any(floor => !layout.Storeys.Any(storey => storey.Index == floor)))
+            throw new InvalidDataException($"Interior layout coverage differs from its catalog: {binding.ProviderId}/{feature.Value}.");
+        return layout;
+    }
+
     private static IReadOnlyList<InteriorProviderBinding> ConfigureCore(ReadOnlyMemory<byte> interiorsBytes,
         IReadOnlyDictionary<string, IInteriorProvider> providers, ITerrain? terrain)
     {
@@ -46,7 +71,7 @@ public static class InteriorAssembly
         if (document.RootElement.GetProperty("version").GetInt32() != 1) throw new JsonException("Unsupported interior catalog version.");
         _ = InteriorEntranceJson.ParseClosedEntrances(document.RootElement, terrain);
         var bindings = new List<InteriorProviderBinding>();
-        var configurations = new List<(BoxInteriorProviderStub Stub, FeatureId[] Features, int[] Floors,
+        var configurations = new List<(IInteriorCatalogConfigurable Provider, FeatureId[] Features, int[] Floors,
             IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances)>();
         var claimed = new HashSet<FeatureId>();
         var providerIds = new HashSet<string>(StringComparer.Ordinal);
@@ -78,14 +103,14 @@ public static class InteriorAssembly
                 list.Add(InteriorEntranceJson.Parse(entry, feature, terrain));
                 authoredEntranceCount++;
             }
-            if (provider is BoxInteriorProviderStub stub)
-                configurations.Add((stub, features, floors, entranceLists.ToDictionary(pair => pair.Key,
+            if (provider is IInteriorCatalogConfigurable configurable)
+                configurations.Add((configurable, features, floors, entranceLists.ToDictionary(pair => pair.Key,
                     pair => (IReadOnlyList<EntranceDecl>)Array.AsReadOnly(pair.Value.ToArray()))));
             bindings.Add(new(providerId, Array.AsReadOnly(features), Array.AsReadOnly(floors), authoredEntranceCount));
         }
         // Validate the entire catalog before mutating any fallback provider; no geometry is generated here.
         foreach (var configuration in configurations)
-            configuration.Stub.Configure(configuration.Features, configuration.Floors, configuration.Entrances);
+            configuration.Provider.Configure(configuration.Features, configuration.Floors, configuration.Entrances);
         return bindings.AsReadOnly();
     }
 

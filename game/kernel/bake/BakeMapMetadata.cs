@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -126,7 +127,7 @@ internal static class BakeMapMetadataCodec
             var context = map.CreateBuildContext(interior.CodeHash);
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
-                var layout = BakeService.ValidatedLayout(interior.Value, binding, context, feature);
+                var layout = InteriorAssembly.ValidatedLayout(interior.Value, binding, context, feature);
                 Collect(id, ContentOutput.Empty with { Entrances = layout.Entrances });
                 foreach (var storey in layout.OpenStoreys.Order())
                 {

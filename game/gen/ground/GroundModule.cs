@@ -14,18 +14,12 @@ public sealed class GroundModule : IContentModule
     public const int MarginTiles = 2;
 
     private readonly GroundSection _section;
-    private readonly IGroundTerrain _terrain;
 
-    public GroundModule() : this(GroundSection.Default, FlatTerrain.Instance) { }
+    public GroundModule() : this(GroundSection.Default) { }
 
-    /// <summary>
-    /// Tests and previews pass their own section and terrain. Internal on purpose: the module registry constructs the
-    /// public constructor with the most parameters, and the map's terrain will come from the world model (contract-15).
-    /// </summary>
-    internal GroundModule(GroundSection section, IGroundTerrain terrain)
+    internal GroundModule(GroundSection section)
     {
         _section = section ?? throw new ArgumentNullException(nameof(section));
-        _terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
     }
 
     public IReadOnlyList<Claim> Claims => [];
@@ -37,7 +31,11 @@ public sealed class GroundModule : IContentModule
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var map = ctx.Map;
+        return TileKeys(ctx.Map);
+    }
+
+    internal static IEnumerable<TileKey> TileKeys(Contracts.Maps.MapDescriptor map)
+    {
         var geo = map.Geo;
         var x0 = (int)MathF.Floor(geo.BoundaryMin.X / GroundLod.TileSize) - MarginTiles;
         var z0 = (int)MathF.Floor(geo.BoundaryMin.Y / GroundLod.TileSize) - MarginTiles;
@@ -62,7 +60,7 @@ public sealed class GroundModule : IContentModule
         var layout = GroundLayout.Of(ctx.World);
         var extent = GroundLod.Tile(tile, lod, ctx.Map.DataRect);
         // Surfaces are classified on the flat plan, then draped: every vertex takes the terrain grid's height (D-180).
-        var terrain = TerrainGrid.For(_terrain, tile, lod, extent);
+        var terrain = TerrainGrid.For(ctx.World.Terrain, tile, lod, extent);
         var field = TileField.Build(layout, extent, _section, terrain, LawnNoise.Seed(ctx), GroundLod.ToneCell(lod));
         var sink = new MeshSink();
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
@@ -71,5 +69,5 @@ public sealed class GroundModule : IContentModule
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>
-        [GroundCollision.Build(ctx, tile, _section, _terrain), .. GroundCollision.PitBoxes(ctx, tile, _section, _terrain)];
+        GroundSupport.TileFor(ctx, tile, _section).Colliders;
 }

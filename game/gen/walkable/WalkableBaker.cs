@@ -8,28 +8,31 @@ namespace Campus.Gen.Walkable;
 /// <summary>Development/CI-only deterministic ground walk bake. Runtime code consumes the boot product.</summary>
 public static class WalkableBaker
 {
-    public static WalkBakeData Build(IWorldModel world, MapId map, MapRect rect, PolygonRings boundary, string inputHash)
-        => Build(world, map, rect, boundary, inputHash, [], []);
+    public static WalkBakeData Build(IWorldModel world, MapId map, MapRect rect, PolygonRings boundary, string inputHash,
+        WalkSupportData support)
+        => Build(world, map, rect, boundary, inputHash, support, []);
 
     public static WalkBakeData Build(IWorldModel world, MapId map, MapRect rect, PolygonRings boundary, string inputHash,
-        IEnumerable<Footprint2D> occupancy, IEnumerable<RampCollider> bridgeSupports)
+        WalkSupportData support, IEnumerable<Footprint2D> occupancy)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(boundary);
+        var exact = world as IWalkSupportSource
+            ?? throw new ArgumentException("Walk baking requires the world's prepared exact support source.", nameof(world));
         ValidateRect(rect);
         if (boundary.Outer.Count < 3) throw new ArgumentException("A campus boundary polygon is required.", nameof(boundary));
         var features = world.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal)
             .SelectMany(GeometryParts).ToArray();
-        var bridges = new WalkBridgeSurfaces(world, occupancy, bridgeSupports);
+        var bridges = new WalkBridgeSurfaces(world, occupancy, support.Other);
         var fine = Classify(world, features, rect, boundary, 1f, bridges);
         var runtime = Classify(world, features, rect, boundary, 2f, bridges);
         var flags = new byte[runtime.Classes.Length];
         runtime.MarkNearBoundary(boundary, flags);
-        var supports = SampleSupports(world.Spatial, runtime, fine, bridges);
+        var supports = SampleSupports(world.Terrain, exact, runtime, fine, bridges);
         var quantizationOrigin = new Vector3((rect.Min.X + rect.Max.X) * .5f, 0f, (rect.Min.Y + rect.Max.Y) * .5f);
         var exclusions = features.Where(feature => feature.Kind.Value is "building" or "water" or "viewOnly" or "seal")
             .SelectMany(feature => Polygons(feature.Geometry)).Concat(bridges.Footprints.Select(item => item.Rings)).ToArray();
-        var safe = WalkSafePoints.Build(runtime, fine, boundary, world.Spatial, quantizationOrigin, exclusions);
+        var safe = WalkSafePoints.Build(runtime, fine, boundary, world.Terrain, exact, quantizationOrigin, exclusions);
         var walls = WalkWalls.Extract(fine, world.Spatial, HeightAt);
         foreach (var feature in features)
         {
@@ -45,11 +48,12 @@ public static class WalkableBaker
         }
         var product = new WalkBakeData(WalkBakeData.CurrentVersion, map, inputHash,
             new WalkGrid(runtime.Origin, runtime.Width, runtime.Height, runtime.Classes, flags, supports),
-            new SafePointGrid(runtime.Origin, runtime.Width / 4, runtime.Height / 4, quantizationOrigin, safe), walls);
+            new SafePointGrid(runtime.Origin, runtime.Width / 4, runtime.Height / 4, quantizationOrigin, safe), walls, support);
         product.Validate();
         return product;
 
-        float HeightAt(Vector2 point) => bridges.TrySupport(point, out var y, out _) ? y : world.Spatial.GroundY(point.X, point.Y);
+        float HeightAt(Vector2 point) => bridges.TrySupport(point, out var y, out _) ? y :
+            exact.SupportY(point.X, point.Y, world.Terrain.HeightAt(point.X, point.Y)) ?? world.Terrain.HeightAt(point.X, point.Y);
     }
 
     private static WalkRaster Classify(IWorldModel world, IReadOnlyList<WorldFeature> features, MapRect rect, PolygonRings boundary, float step,
@@ -136,7 +140,7 @@ public static class WalkableBaker
         }
     }
 
-    private static float[] SampleSupports(ISpatialIndex spatial, WalkRaster runtime, WalkRaster fine, WalkBridgeSurfaces bridges)
+    private static float[] SampleSupports(ITerrain terrain, IWalkSupportSource exact, WalkRaster runtime, WalkRaster fine, WalkBridgeSurfaces bridges)
     {
         var heights = new float[runtime.Classes.Length];
         for (var z = 0; z < runtime.Height; z++)
@@ -157,16 +161,11 @@ public static class WalkableBaker
                     else heights[z * runtime.Width + x] = bridgeY;
                     continue;
                 }
-                var y = spatial.GroundY(point.X, point.Y);
-                var x0 = spatial.GroundY(point.X - 1f, point.Y);
-                var x1 = spatial.GroundY(point.X + 1f, point.Y);
-                var z0 = spatial.GroundY(point.X, point.Y - 1f);
-                var z1 = spatial.GroundY(point.X, point.Y + 1f);
-                if (!float.IsFinite(y) || !float.IsFinite(x0) || !float.IsFinite(x1) || !float.IsFinite(z0) || !float.IsFinite(z1))
-                    throw new InvalidOperationException("Walkable terrain must have finite ground heights.");
-                var dx = (x1 - x0) * .5f;
-                var dz = (z1 - z0) * .5f;
-                if (dx * dx + dz * dz > 1f)
+                var y = exact.SupportY(point.X, point.Y, terrain.HeightAt(point.X, point.Y));
+                var facts = terrain.FactsAt(point.X, point.Y);
+                if (y is null || !float.IsFinite(y.Value) || !float.IsFinite(facts.Grade))
+                    throw new InvalidOperationException("Walkable terrain requires an exact finite support source and terrain facts.");
+                if (facts.Grade > .5f)
                 {
                     runtime.Classes[z * runtime.Width + x] = (byte)WalkClass.Steep;
                     for (var fz = z * 2; fz < z * 2 + 2; fz++)
@@ -174,7 +173,7 @@ public static class WalkableBaker
                             if (fine.At(fx, fz) is WalkClass.Walk or WalkClass.Interior or WalkClass.Wade)
                                 fine.Classes[fz * fine.Width + fx] = (byte)WalkClass.Steep;
                 }
-                else heights[z * runtime.Width + x] = y;
+                else heights[z * runtime.Width + x] = y.Value;
             }
         return heights;
     }

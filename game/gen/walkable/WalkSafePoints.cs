@@ -6,7 +6,7 @@ namespace Campus.Gen.Walkable;
 internal static class WalkSafePoints
 {
     internal static short[] Build(WalkRaster runtime, WalkRaster fine, PolygonRings boundary,
-        ISpatialIndex spatial, Vector3 quantizationOrigin, IReadOnlyList<PolygonRings> exclusions)
+        ITerrain terrain, IWalkSupportSource exact, Vector3 quantizationOrigin, IReadOnlyList<PolygonRings> exclusions)
     {
         var width = runtime.Width / 4;
         var height = runtime.Height / 4;
@@ -33,7 +33,7 @@ internal static class WalkSafePoints
                         if (runtime.At(x, z) != WalkClass.Walk) continue;
                         var point = runtime.Center(x, z);
                         var distance = Vector2.DistanceSquared(point, target);
-                        if (distance >= best || !IsSafe(point, fine, boundary, spatial, out var y) || NearObstacle(point)) continue;
+                        if (distance >= best || !IsSafe(point, fine, boundary, terrain, exact, out var y) || NearObstacle(point)) continue;
                         best = distance;
                         chosen = new Vector3(point.X, y, point.Y);
                     }
@@ -77,9 +77,10 @@ internal static class WalkSafePoints
         }
     }
 
-    private static bool IsSafe(Vector2 point, WalkRaster fine, PolygonRings boundary, ISpatialIndex spatial, out float y)
+    private static bool IsSafe(Vector2 point, WalkRaster fine, PolygonRings boundary, ITerrain terrain, IWalkSupportSource exact, out float y)
     {
-        y = spatial.GroundY(point.X, point.Y);
+        var support = exact.SupportY(point.X, point.Y, terrain.HeightAt(point.X, point.Y));
+        y = support ?? float.NaN;
         if (!float.IsFinite(y) || WalkGeometry.EdgeDistanceSquared(boundary, point) < 1f) return false;
         var fx = (int)MathF.Floor((point.X - fine.Origin.X) / fine.Step);
         var fz = (int)MathF.Floor((point.Y - fine.Origin.Y) / fine.Step);
@@ -87,15 +88,13 @@ internal static class WalkSafePoints
         for (var z = fz - 1; z <= fz; z++)
             for (var x = fx - 1; x <= fx; x++)
                 if (fine.At(x, z) != WalkClass.Walk) return false;
-        var left = spatial.GroundY(point.X - .6f, point.Y);
-        var right = spatial.GroundY(point.X + .6f, point.Y);
-        var top = spatial.GroundY(point.X, point.Y - .6f);
-        var bottom = spatial.GroundY(point.X, point.Y + .6f);
-        if (!float.IsFinite(left) || !float.IsFinite(right) || !float.IsFinite(top) || !float.IsFinite(bottom)) return false;
-        if (Math.Abs(left - y) > .35f || Math.Abs(right - y) > .35f || Math.Abs(top - y) > .35f || Math.Abs(bottom - y) > .35f) return false;
-        var dx = (right - left) / 1.2f;
-        var dz = (bottom - top) / 1.2f;
-        return dx * dx + dz * dz < .13247433f; // tan(20 degrees)^2; no platform transcendental functions.
+        foreach (var offset in new[] { new Vector2(-.6f, 0f), new Vector2(.6f, 0f), new Vector2(0f, -.6f), new Vector2(0f, .6f) })
+        {
+            var neighbour = point + offset;
+            var height = exact.SupportY(neighbour.X, neighbour.Y, y);
+            if (height is null || !float.IsFinite(height.Value) || MathF.Abs(height.Value - y) > .35f) return false;
+        }
+        return terrain.FactsAt(point.X, point.Y).Grade < .36397023f; // tan(20 degrees).
     }
 
     private static void Write(short[] data, int cell, Vector3 point, Vector3 origin)

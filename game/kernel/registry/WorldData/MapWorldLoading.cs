@@ -1,3 +1,5 @@
+using Campus.Pipeline.Map;
+using Campus.Gen.Walkable;
 using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Text.Json;
@@ -11,17 +13,30 @@ namespace Campus.Kernel.Maps;
 public sealed record MapLoadInput(MapCatalogEntry Entry,
     IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files, ReadOnlyMemory<byte> WalkBytes)
 {
+    private MapCatalogEntry _entry = Entry;
     private BuildInputSnapshot _sourceInputs = BuildInputSnapshot.Freeze(Files);
+    private ReadOnlyMemory<byte> _walkBytes = WalkBytes;
+    public MapCatalogEntry Entry
+    {
+        get => _entry;
+        init { _entry = value; PreparedWalk = null; }
+    }
     /// <summary>The original positional constructor and deconstruction remain available; map bytes freeze at construction.</summary>
     public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files
     {
         get => _sourceInputs.Entries;
-        init => _sourceInputs = BuildInputSnapshot.Freeze(value);
+        init { _sourceInputs = BuildInputSnapshot.Freeze(value); PreparedWalk = null; }
+    }
+    public ReadOnlyMemory<byte> WalkBytes
+    {
+        get => _walkBytes;
+        init { _walkBytes = value; PreparedWalk = null; }
     }
     /// <summary>with { WalkBytes = ... } shares this exact snapshot; with { Files = ... } freezes only the new record's inputs.</summary>
     public BuildInputSnapshot SourceInputs => _sourceInputs;
     internal string? DevelopmentWalkPath { get; init; }
-    internal PaletteCatalog? DevelopmentWalkCatalog { get; init; }
+    internal MapGenerationInputs? GenerationInputs { get; init; }
+    internal WalkBakeData? PreparedWalk { get; init; }
 }
 
 public static class MapWorldLoading
@@ -48,7 +63,7 @@ public static class MapWorldLoading
                     .Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
                     .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
-                var baseline = loader.Load(map.Id, baselineFiles, new(map, walk, null));
+                var baseline = loader.Load(map.Id, baselineFiles, new(map, null, null));
                 claimedBy = claims.OverlayOwners(baseline.World);
             }
             else claimedBy = claims.OverlayOwners();
@@ -82,10 +97,11 @@ public static class MapWorldLoading
 
     public static WalkBakeData? ReadWalk(MapLoadInput input)
     {
+        if (input.PreparedWalk is { } prepared) return prepared;
         if (input.WalkBytes.IsEmpty) return null;
         var walk = JsonSerializer.Deserialize<WalkBakeData>(input.WalkBytes.Span, ContractJson.Options)
             ?? throw new InvalidDataException("Resident walk data is null.");
-        walk.Validate();
+        WalkBakeInputHash.RequireCurrent(walk, input.Files);
         var rect = input.Entry.Descriptor.DataRect;
         var max = walk.Walk.Origin + new Vector2(walk.Walk.Width * WalkGrid.CellSize, walk.Walk.Height * WalkGrid.CellSize);
         if (walk.Map != input.Entry.Descriptor.Id || walk.Walk.Origin != rect.Min || max != rect.Max)

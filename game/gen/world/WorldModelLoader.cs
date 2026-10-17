@@ -14,6 +14,8 @@ public sealed record WorldLoadOptions
     public IOutskirtsModel? Outskirts { get; init; }
     public IFidelityModel? Fidelity { get; init; }
     public WalkBakeData? Walk { get; init; }
+    public ITerrain Terrain { get; init; } = FlatTerrain.Default;
+    public IWalkSupportSource? WalkSupport { get; init; }
     /// <summary>Explicit registered feature claims, supplied by the map adapter; an overlay Owner is not a claim.</summary>
     public IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy { get; init; }
 }
@@ -165,7 +167,7 @@ public static class WorldModelLoader
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
-        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, options.Fidelity, interiorOverlays.AsReadOnly(), options.Walk);
+        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays.AsReadOnly(), options);
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
@@ -174,7 +176,7 @@ public static class WorldModelLoader
         return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds,
             new((int)MathF.Floor(bounds.Min.X / 64), (int)MathF.Floor(bounds.Min.Z / 64)),
             new((int)MathF.Floor(bounds.Max.X / 64), (int)MathF.Floor(bounds.Max.Z / 64)))
-        { Diagnostics = ["Terrain input is not attached: GroundY currently falls back to the source relative plane. Designed slopes, platforms and sunken areas remain incomplete."] };
+        { Diagnostics = ["Terrain uses the current source relative plane. Designed slopes, platforms and sunken areas remain incomplete."] };
     }
 
     private static void ApplyZones(SortedDictionary<string, string> input, SortedDictionary<string, WorldFeature> features, Dictionary<string, List<string>> aliases)

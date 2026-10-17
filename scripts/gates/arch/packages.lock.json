@@ -303,6 +303,7 @@
           "Campus.Gen.Zones.South": "[1.0.0, )",
           "Campus.Gen.Zones.West": "[1.0.0, )",
           "Campus.Pipeline.Map": "[1.0.0, )",
+          "Campus.Pipeline.Walk": "[1.0.0, )",
           "GodotSharp": "[4.7.2, )",
           "GodotSharpEditor": "[4.7.2, )",
           "System.IO.Hashing": "[10.0.0, )"
@@ -727,6 +728,47 @@
         "dependencies": {
           "Campus.Contracts": "[1.0.0, )",
           "Campus.Gen.World": "[1.0.0, )"
+        }
+      },
+      "campus.pipeline.walk": {
+        "type": "Project",
+        "dependencies": {
+          "Campus.Contracts": "[1.0.0, )",
+          "Campus.Gen.Acoustics": "[1.0.0, )",
+          "Campus.Gen.Ambience": "[1.0.0, )",
+          "Campus.Gen.Buildings": "[1.0.0, )",
+          "Campus.Gen.Collision": "[1.0.0, )",
+          "Campus.Gen.Diorama": "[1.0.0, )",
+          "Campus.Gen.Fauna": "[1.0.0, )",
+          "Campus.Gen.Furniture": "[1.0.0, )",
+          "Campus.Gen.Geometry": "[1.0.0, )",
+          "Campus.Gen.Ground": "[1.0.0, )",
+          "Campus.Gen.Interior": "[1.0.0, )",
+          "Campus.Gen.Interior.Shell": "[1.0.0, )",
+          "Campus.Gen.InteriorProps": "[1.0.0, )",
+          "Campus.Gen.Outskirts": "[1.0.0, )",
+          "Campus.Gen.Parts.Circulation": "[1.0.0, )",
+          "Campus.Gen.Parts.Core": "[1.0.0, )",
+          "Campus.Gen.Parts.Openings": "[1.0.0, )",
+          "Campus.Gen.Parts.Roof": "[1.0.0, )",
+          "Campus.Gen.Parts.Street": "[1.0.0, )",
+          "Campus.Gen.Parts.Stubs": "[1.0.0, )",
+          "Campus.Gen.Traces": "[1.0.0, )",
+          "Campus.Gen.Vegetation": "[1.0.0, )",
+          "Campus.Gen.Walkable": "[1.0.0, )",
+          "Campus.Gen.Water": "[1.0.0, )",
+          "Campus.Gen.World": "[1.0.0, )",
+          "Campus.Gen.Zones.CenterEast": "[1.0.0, )",
+          "Campus.Gen.Zones.Core": "[1.0.0, )",
+          "Campus.Gen.Zones.DesignBoundary": "[1.0.0, )",
+          "Campus.Gen.Zones.DesignPublic": "[1.0.0, )",
+          "Campus.Gen.Zones.DesignWaterfront": "[1.0.0, )",
+          "Campus.Gen.Zones.LibraryInterior": "[1.0.0, )",
+          "Campus.Gen.Zones.North": "[1.0.0, )",
+          "Campus.Gen.Zones.ShowcaseInteriors": "[1.0.0, )",
+          "Campus.Gen.Zones.South": "[1.0.0, )",
+          "Campus.Gen.Zones.West": "[1.0.0, )",
+          "Campus.Pipeline.Map": "[1.0.0, )"
         }
       },
       "System.IO.Hashing": {

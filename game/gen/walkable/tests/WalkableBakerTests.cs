@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.World;
 using GdUnit4;
 
 namespace Campus.Gen.Walkable.Tests;
@@ -56,8 +57,44 @@ public sealed class WalkableBakerTests
         }
         var none = Bake([Feature("water", "water", Boundary)]);
         Require(none.SafePoints.Coordinates.All(value => value == short.MinValue), "No-safe maps must retain invalid sentinels.");
-        var slope = Bake([], new PlaneSpatial((x, _) => x * .5f));
+        var slope = Bake([], new PlaneSpatial((x, _) => x * .5f, .5f));
         Require(slope.SafePoints.Coordinates.All(value => value == short.MinValue), "Ground steeper than 20 degrees must not seed safety.");
+    }
+
+    [TestCase]
+    public void ActualSupportLayersDoNotRequireBridgeOccupancy()
+    {
+        var heights = new short[TerrainSampling.TileSamples * TerrainSampling.TileSamples];
+        heights[1] = 100; heights[TerrainSampling.TileSamples] = 200;
+        var holes = heights.ToArray(); holes[0] = TerrainSampling.HoleCm;
+        var data = new WalkSupportData([], [
+            new SlabCollider(Rectangle(2, 2, 10, 10).Outer, .15f, .2f, SurfaceTag.Ground),
+            new RampCollider(new(2, 2, 2), new(10, 2, 2), new(10, 3, 10), new(2, 3, 10), .2f, SurfaceTag.Stair),
+            new BoxCollider(Matrix4x4.CreateTranslation(-4, 2, -4), new(1, .5f, 1), SurfaceTag.Ground),
+            new HeightFieldCollider(new(1, 0), heights, SurfaceTag.Ground),
+            new HeightFieldCollider(new(2, 0), holes, SurfaceTag.Ground)]);
+        data = JsonSerializer.Deserialize<WalkSupportData>(JsonSerializer.SerializeToUtf8Bytes(data, ContractJson.Options), ContractJson.Options)!;
+        data.Validate();
+        var surfaces = new WalkSupportSurfaces(data.Other.Concat([
+            new SlabCollider(Rectangle(2, 2, 10, 10).Outer, 7f, .2f, SurfaceTag.Barrier)]));
+        Require(MathF.Abs(surfaces.SupportY(5, 6, 0f)!.Value - .15f) < .00001f,
+            "Low layer did not retain the actual slab top.");
+        Require(MathF.Abs(surfaces.SupportY(5, 6, 3f)!.Value - 2.5f) < .00001f,
+            "Stair ramp outside bridge occupancy must support the matching hinted layer.");
+        Require(MathF.Abs(surfaces.SupportY(5, 6, 7f)!.Value - 2.5f) < .00001f,
+            "A barrier top cannot become a walking support source.");
+        Require(surfaces.SupportY(-4, -4, 2f) == 2.5f && surfaces.SupportY(64.25f, .25f, 0f) == .75f,
+            "Resident box transforms or height-field anti-diagonal changed.");
+        Require(surfaces.SupportY(128.25f, .25f, 0f) is null && surfaces.SupportY(128.75f, .75f, 0f) == .75f,
+            "A height-field hole must remove only its actual collision triangle.");
+    }
+
+    [TestCase]
+    public void TerrainFactsClassifySteepGroundWithoutHeightDifferences()
+    {
+        var product = Bake([], new PlaneSpatial((_, _) => 0f, .6f));
+        Require(At(product, 15, 15) == WalkClass.Steep, "Terrain FactsAt above 1:2 must classify Steep even when sampled heights are equal.");
+        Require(product.SafePoints.Coordinates.All(value => value == short.MinValue), "Steep facts cannot seed a safe point.");
     }
 
     [TestCase]
@@ -143,7 +180,8 @@ public sealed class WalkableBakerTests
             new PolygonRings(Rectangle(-4, 6, 36, 26).Outer, [Rectangle(12, 10, 16, 14).Outer]), -10f, 99f);
         var ramp = new RampCollider(new(-4, 2.5f, 6), new(36, 2.5f, 6), new(36, 2.5f, 26), new(-4, 2.5f, 26), .2f, SurfaceTag.Ground);
         var unrelated = new Footprint2D(new("unregistered"), Rectangle(26, 28, 32, 32), 0f, 100f);
-        var product = WalkableBaker.Build(world, new("example"), Rect, Boundary, InputHash, [footprint, unrelated], [ramp]);
+        var support = new WalkSupportData([], [ramp]);
+        var product = WalkableBaker.Build(world, new("example"), Rect, Boundary, InputHash, support, [footprint, unrelated]);
         Require(At(product, 3, 19) == WalkClass.Walk, "The deck outside the old centreline must open.");
         Require(At(product, 13, 11) == WalkClass.Water, "An old bridge line must not fill a deck hole.");
         Require(At(product, 33, 19) == WalkClass.Outside, "A bridge must not open the campus exterior.");
@@ -154,9 +192,9 @@ public sealed class WalkableBakerTests
         var index = (19 + 8) / 2 * product.Walk.Width + (3 + 8) / 2;
         Require(product.Walk.SupportY[index] == 2.5f, "Deck support must use the collision top, not ground or occupancy bounds.");
         var repeated = WalkableBaker.Build(world, new("example"), Rect, Boundary, InputHash,
-            [unrelated, footprint with { MinY = -20f, MaxY = 200f }, footprint], [ramp, ramp]);
+            support, [unrelated, footprint with { MinY = -20f, MaxY = 200f }, footprint]);
         Require(JsonSerializer.Serialize(product, ContractJson.Options) == JsonSerializer.Serialize(repeated, ContractJson.Options),
-            "Repeated LOD footprints and collider order must not change the product.");
+            "Repeated LOD footprints must not change the product.");
     }
 
     [TestCase]
@@ -167,7 +205,7 @@ public sealed class WalkableBakerTests
         try
         {
             WalkableBaker.Build(world, new("example"), Rect, Boundary, InputHash,
-                [new Footprint2D(bridge.Id, Rectangle(4, 4, 28, 28), 0f, 10f)], []);
+                new([], []), [new Footprint2D(bridge.Id, Rectangle(4, 4, 28, 28), 0f, 10f)]);
         }
         catch (InvalidOperationException error) when (error.Message.Contains("collision-top support", StringComparison.Ordinal))
         {
@@ -177,7 +215,7 @@ public sealed class WalkableBakerTests
     }
 
     private static WalkBakeData Bake(IReadOnlyList<WorldFeature> features, ISpatialIndex? spatial = null) =>
-        WalkableBaker.Build(new TestWorld(features, spatial ?? new PlaneSpatial((_, _) => 0f)), new MapId("example"), Rect, Boundary, InputHash);
+        WalkableBaker.Build(new TestWorld(features, spatial ?? new PlaneSpatial((_, _) => 0f)), new MapId("example"), Rect, Boundary, InputHash, new([], []));
     private static WorldFeature Feature(string id, string kind, PolygonRings polygon) =>
         new(new FeatureId(id), FeatureSource.Design, new DesignKind(kind), new PolygonGeometry(polygon));
     private static PolygonRings Rectangle(float x0, float z0, float x1, float z1) =>
@@ -189,8 +227,10 @@ public sealed class WalkableBakerTests
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private sealed class TestWorld(IReadOnlyList<WorldFeature> features, ISpatialIndex spatial) : IWorldModel
+    private sealed class TestWorld(IReadOnlyList<WorldFeature> features, ISpatialIndex spatial) : IWorldModel, IWalkSupportSource
     {
+        public float? SupportY(float x, float z, float yHint) => spatial.SupportY(x, z, yHint);
+        public ITerrain Terrain => (ITerrain)spatial;
         public PolygonRings Boundary => WalkableBakerTests.Boundary;
         public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features.ToDictionary(feature => feature.Id);
         public WorldNetwork Network { get; init; } = WorldNetwork.Empty;
@@ -201,8 +241,14 @@ public sealed class WalkableBakerTests
         public WalkBakeData? Walk { get; init; }
     }
 
-    private sealed class PlaneSpatial(Func<float, float, float> ground) : ISpatialIndex
+    private sealed class PlaneSpatial(Func<float, float, float> ground, float grade = 0f) : ISpatialIndex, ITerrain
     {
+        public bool IsFlat(TileKey tile) => grade == 0f;
+        public float HeightAt(float x, float z) => ground(x, z);
+        public float PadY(FeatureId feature) => 0f;
+        public float? WaterY(FeatureId water) => null;
+        public TerrainFacts FactsAt(float x, float z) => new(grade, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
+        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
         public IReadOnlyList<FeatureId> Query(Box3 box) => [];
         public float GroundY(float x, float z) => ground(x, z);
         public CameraMedium MediumAt(Vector3 p) => throw new NotSupportedException();

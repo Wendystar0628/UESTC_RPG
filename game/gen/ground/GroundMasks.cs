@@ -150,14 +150,14 @@ public static class GroundMasks
     public const float EaveOverhang = 0.6f;
 
     public static GroundMaskSet Build(BuildContext ctx, GroundSection? section = null,
-        float metersPerPixel = DefaultMetersPerPixel, IGroundTerrain? terrain = null)
+        float metersPerPixel = DefaultMetersPerPixel)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         section ??= GroundSection.Default;
         var rect = ctx.Map.DataRect;
         var set = new GroundMaskSet(rect, metersPerPixel, TerrainMetersPerPixel);
         var layout = GroundLayout.Of(ctx.World);
-        PaintSurfaces(set, layout, section, terrain ?? FlatTerrain.Instance);
+        PaintSurfaces(set, layout, section, ctx.World.Terrain);
         PaintBuildings(set, layout);
         PaintTrees(set, ctx.World);
         return set;
@@ -167,7 +167,7 @@ public static class GroundMasks
     /// Snow potential, puddle potential along the gutter, default (unsheltered) exposure, and the terrain height as the
     /// box average of the surface heights of the mask pixels inside each terrain texel.
     /// </summary>
-    private static void PaintSurfaces(GroundMaskSet set, GroundLayout layout, GroundSection section, IGroundTerrain terrain)
+    private static void PaintSurfaces(GroundMaskSet set, GroundLayout layout, GroundSection section, ITerrain terrain)
     {
         var step = set.MetersPerPixel;
         var ratio = set.TerrainMetersPerPixel / step;

@@ -5088,7 +5088,7 @@ Campus.Contracts.ViewMode.Fly = 0 -> Campus.Contracts.ViewMode
 Campus.Contracts.ViewMode.Walk = 1 -> Campus.Contracts.ViewMode
 Campus.Contracts.WalkBakeData
 Campus.Contracts.WalkBakeData.<Clone>$() -> Campus.Contracts.WalkBakeData!
-Campus.Contracts.WalkBakeData.Deconstruct(out int Version, out Campus.Contracts.MapId Map, out string! InputHash, out Campus.Contracts.WalkGrid! Walk, out Campus.Contracts.SafePointGrid! SafePoints, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.WallCollider!>! Walls) -> void
+Campus.Contracts.WalkBakeData.Deconstruct(out int Version, out Campus.Contracts.MapId Map, out string! InputHash, out Campus.Contracts.WalkGrid! Walk, out Campus.Contracts.SafePointGrid! SafePoints, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.WallCollider!>! Walls, out Campus.Contracts.WalkSupportData! Support) -> void
 Campus.Contracts.WalkBakeData.Equals(Campus.Contracts.WalkBakeData? other) -> bool
 Campus.Contracts.WalkBakeData.InputHash.get -> string!
 Campus.Contracts.WalkBakeData.InputHash.init -> void
@@ -5101,7 +5101,7 @@ Campus.Contracts.WalkBakeData.Version.get -> int
 Campus.Contracts.WalkBakeData.Version.init -> void
 Campus.Contracts.WalkBakeData.Walk.get -> Campus.Contracts.WalkGrid!
 Campus.Contracts.WalkBakeData.Walk.init -> void
-Campus.Contracts.WalkBakeData.WalkBakeData(int Version, Campus.Contracts.MapId Map, string! InputHash, Campus.Contracts.WalkGrid! Walk, Campus.Contracts.SafePointGrid! SafePoints, System.Collections.Generic.IReadOnlyList<Campus.Contracts.WallCollider!>! Walls) -> void
+Campus.Contracts.WalkBakeData.WalkBakeData(int Version, Campus.Contracts.MapId Map, string! InputHash, Campus.Contracts.WalkGrid! Walk, Campus.Contracts.SafePointGrid! SafePoints, System.Collections.Generic.IReadOnlyList<Campus.Contracts.WallCollider!>! Walls, Campus.Contracts.WalkSupportData! Support) -> void
 Campus.Contracts.WalkBakeData.Walls.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.WallCollider!>!
 Campus.Contracts.WalkBakeData.Walls.init -> void
 Campus.Contracts.WalkBodyShape
@@ -6201,7 +6201,7 @@ const Campus.Contracts.TerrainSampling.MinimumHeight = -5 -> float
 const Campus.Contracts.TerrainSampling.TileQuads = 64 -> int
 const Campus.Contracts.TerrainSampling.TileSamples = 65 -> int
 const Campus.Contracts.TerrainSampling.WholeMapSamples = 81 -> int
-const Campus.Contracts.WalkBakeData.CurrentVersion = 1 -> int
+const Campus.Contracts.WalkBakeData.CurrentVersion = 2 -> int
 const Campus.Contracts.WalkGrid.CellSize = 2 -> float
 const Campus.Contracts.WalkGrid.NearBoundaryFlag = 1 -> byte
 const Campus.Contracts.WetSurface.FlatFrom = 0.93 -> float
@@ -7941,3 +7941,55 @@ static Campus.Contracts.ContentSourceTrace.operator !=(Campus.Contracts.ContentS
 static Campus.Contracts.ContentSourceTrace.operator ==(Campus.Contracts.ContentSourceTrace? left, Campus.Contracts.ContentSourceTrace? right) -> bool
 Campus.Contracts.IWalkSupportSource
 Campus.Contracts.IWalkSupportSource.SupportY(float x, float z, float yHint) -> float?
+
+
+Campus.Contracts.ContentModuleInput
+Campus.Contracts.ContentModuleInput.ContentModuleInput(Campus.Contracts.IContentModule! value, string! codeHash, Campus.Contracts.WpId owner, bool global) -> void
+Campus.Contracts.ContentModuleInput.Value.get -> Campus.Contracts.IContentModule!
+Campus.Contracts.ContentModuleInput.CodeHash.get -> string!
+Campus.Contracts.ContentModuleInput.Owner.get -> Campus.Contracts.WpId
+Campus.Contracts.ContentModuleInput.Global.get -> bool
+Campus.Contracts.ContentModuleInput.Claims.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Claim!>!
+Campus.Contracts.MapGenerationInputs
+Campus.Contracts.MapGenerationInputs.MapGenerationInputs(Campus.Contracts.PaletteCatalog! catalog, System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.ContentModuleInput!>! modules, Campus.Contracts.Parts.PartLodCatalog! partLods, System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.IInteriorProvider!>! interiorProviders, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! interiorCodeHashes, Campus.Contracts.BuildInputSnapshot! globalInputs, System.Collections.Generic.IReadOnlyList<Campus.Contracts.IGroundMaskContributor!>! groundMaskContributors, System.Func<Campus.Contracts.PlacedPart!, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!>! partCollision) -> void
+Campus.Contracts.MapGenerationInputs.Catalog.get -> Campus.Contracts.PaletteCatalog!
+Campus.Contracts.MapGenerationInputs.Modules.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.ContentModuleInput!>!
+Campus.Contracts.MapGenerationInputs.PartLods.get -> Campus.Contracts.Parts.PartLodCatalog!
+Campus.Contracts.MapGenerationInputs.InteriorProviders.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Campus.Contracts.IInteriorProvider!>!
+Campus.Contracts.MapGenerationInputs.GlobalInputs.get -> Campus.Contracts.BuildInputSnapshot!
+Campus.Contracts.MapGenerationInputs.GroundMaskContributors.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.IGroundMaskContributor!>!
+Campus.Contracts.IInteriorCatalogConfigurable
+Campus.Contracts.IInteriorCatalogConfigurable.Configure(System.Collections.Generic.IEnumerable<Campus.Contracts.FeatureId>! features, System.Collections.Generic.IEnumerable<int>! openFloors, System.Collections.Generic.IReadOnlyDictionary<Campus.Contracts.FeatureId, System.Collections.Generic.IReadOnlyList<Campus.Contracts.EntranceDecl!>!>! entrances) -> void
+Campus.Contracts.MapGenerationInputs.InteriorCodeHashes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Campus.Contracts.MapGenerationInputs.PartCollision.get -> System.Func<Campus.Contracts.PlacedPart!, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!>!
+Campus.Contracts.WalkBakeData.Support.get -> Campus.Contracts.WalkSupportData!
+Campus.Contracts.WalkBakeData.Support.init -> void
+Campus.Contracts.GroundSupportTileData
+Campus.Contracts.GroundSupportTileData.<Clone>$() -> Campus.Contracts.GroundSupportTileData!
+Campus.Contracts.GroundSupportTileData.GroundSupportTileData(Campus.Contracts.HeightFieldCollider! Base, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Tops) -> void
+Campus.Contracts.GroundSupportTileData.Deconstruct(out Campus.Contracts.HeightFieldCollider! Base, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Tops) -> void
+Campus.Contracts.GroundSupportTileData.Base.get -> Campus.Contracts.HeightFieldCollider!
+Campus.Contracts.GroundSupportTileData.Base.init -> void
+Campus.Contracts.GroundSupportTileData.Tops.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!
+Campus.Contracts.GroundSupportTileData.Tops.init -> void
+Campus.Contracts.GroundSupportTileData.Equals(Campus.Contracts.GroundSupportTileData? other) -> bool
+static Campus.Contracts.GroundSupportTileData.operator !=(Campus.Contracts.GroundSupportTileData? left, Campus.Contracts.GroundSupportTileData? right) -> bool
+static Campus.Contracts.GroundSupportTileData.operator ==(Campus.Contracts.GroundSupportTileData? left, Campus.Contracts.GroundSupportTileData? right) -> bool
+override Campus.Contracts.GroundSupportTileData.Equals(object? obj) -> bool
+override Campus.Contracts.GroundSupportTileData.GetHashCode() -> int
+override Campus.Contracts.GroundSupportTileData.ToString() -> string!
+Campus.Contracts.WalkSupportData
+Campus.Contracts.WalkSupportData.<Clone>$() -> Campus.Contracts.WalkSupportData!
+Campus.Contracts.WalkSupportData.WalkSupportData(System.Collections.Generic.IReadOnlyList<Campus.Contracts.GroundSupportTileData!>! Ground, System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Other) -> void
+Campus.Contracts.WalkSupportData.Deconstruct(out System.Collections.Generic.IReadOnlyList<Campus.Contracts.GroundSupportTileData!>! Ground, out System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>! Other) -> void
+Campus.Contracts.WalkSupportData.Ground.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.GroundSupportTileData!>!
+Campus.Contracts.WalkSupportData.Ground.init -> void
+Campus.Contracts.WalkSupportData.Other.get -> System.Collections.Generic.IReadOnlyList<Campus.Contracts.Collider!>!
+Campus.Contracts.WalkSupportData.Other.init -> void
+Campus.Contracts.WalkSupportData.Validate() -> void
+Campus.Contracts.WalkSupportData.Equals(Campus.Contracts.WalkSupportData? other) -> bool
+static Campus.Contracts.WalkSupportData.operator !=(Campus.Contracts.WalkSupportData? left, Campus.Contracts.WalkSupportData? right) -> bool
+static Campus.Contracts.WalkSupportData.operator ==(Campus.Contracts.WalkSupportData? left, Campus.Contracts.WalkSupportData? right) -> bool
+override Campus.Contracts.WalkSupportData.Equals(object? obj) -> bool
+override Campus.Contracts.WalkSupportData.GetHashCode() -> int
+override Campus.Contracts.WalkSupportData.ToString() -> string!

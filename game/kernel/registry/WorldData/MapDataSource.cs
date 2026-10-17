@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Campus.Contracts;
@@ -57,46 +58,49 @@ public class MapDataSource
         // Env.Backdrop is an authored relative path, not an extension convention. Preserve already read JSON bytes.
         BackdropInputs.AddOptional(entry.Descriptor, entry.DataRoot, files,
             Godot.FileAccess.FileExists, path => ReadRequired(path));
-        var input = new MapLoadInput(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"));
+        var input = new MapLoadInput(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"))
+        {
+            GenerationInputs = GenerationInputCapture.Capture(Campus.Kernel.Registry.Kernel.Services,
+            entry.Descriptor.Id, Campus.Kernel.Registry.Kernel.Services.Get<PaletteCatalog>(), Campus.Kernel.Registry.Kernel.GlobalBuildInputs)
+        };
         return OS.IsDebugBuild() ? input with
         {
-            DevelopmentWalkPath = ProjectSettings.GlobalizePath(entry.BakeRoot + "walk.bake.json"),
-            DevelopmentWalkCatalog = Campus.Kernel.Registry.Kernel.Services.Get<PaletteCatalog>()
+            DevelopmentWalkPath = ProjectSettings.GlobalizePath(entry.BakeRoot + "walk.bake.json")
         } : input;
     }
 
-    public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimLedger.Capture(Campus.Kernel.Registry.Kernel.Services, map);
+    public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimCapture.Capture(Campus.Kernel.Registry.Kernel.Services, map);
 
     /// <summary>Prepare the frozen startup input on workers; exported games require their shipped startup product.</summary>
     public virtual async Task<MapLoadInput> PrepareLoadInput(MapLoadInput input)
     {
         var destination = input.DevelopmentWalkPath;
-        var catalog = input.DevelopmentWalkCatalog;
+        var generation = input.GenerationInputs;
         var development = destination is not null;
-        var rebuild = await Task.Run(() =>
+        var resident = await Task.Run(() =>
         {
             if (input.WalkBytes.IsEmpty)
             {
                 if (!development)
                     throw new InvalidDataException("Required resident walk data is missing: " + input.Entry.BakeRoot + "walk.bake.json");
-                return true;
+                return null;
             }
-            try { WalkBakeInputHash.RequireCurrent(MapWorldLoading.ReadWalk(input), input.Files); }
-            catch (WalkBakeFreshnessException error) when (development && error.Failure == WalkBakeFreshnessFailure.StaleInputs)
-            { return true; }
-            return false;
+            try { return MapWorldLoading.ReadWalk(input); }
+            catch (WalkBakeFreshnessException error) when (development && error.Failure is
+                WalkBakeFreshnessFailure.UnknownVersion or WalkBakeFreshnessFailure.StaleInputs)
+            { return null; }
         });
-        if (!rebuild) return input;
-        if (catalog is null) throw new InvalidOperationException("Development walk preparation requires the map palette catalog.");
+        if (resident is not null) return input with { PreparedWalk = resident };
+        if (generation is null) throw new InvalidOperationException("Development walk preparation requires the captured map generation inputs.");
         var prepared = await Task.Run(() =>
         {
-            var product = WalkBakeGenerator.Build(input.Files, catalog);
+            var product = WalkBakeGenerator.Build(input.Files, generation);
             var bytes = JsonSerializer.SerializeToUtf8Bytes(product, ContractJson.Options);
             var result = input with { WalkBytes = bytes };
-            WalkBakeInputHash.RequireCurrent(MapWorldLoading.ReadWalk(result), result.Files);
+            var walk = MapWorldLoading.ReadWalk(result);
             Directory.CreateDirectory(Path.GetDirectoryName(destination!)!);
             File.WriteAllBytes(destination!, bytes);
-            return result;
+            return result with { PreparedWalk = walk };
         });
         Console.WriteLine($"[walk][map={input.Entry.Descriptor.Id.Value}] prepared development startup product");
         return prepared;
