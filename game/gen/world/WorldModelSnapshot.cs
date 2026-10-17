@@ -5,7 +5,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.World;
 
-public sealed class WorldModelSnapshot : IWorldModel, IWalkDataSource, IWalkSupportSource
+public sealed class WorldModelSnapshot : IWorldModel
 {
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
     public PolygonRings Boundary { get; }
@@ -15,25 +15,17 @@ public sealed class WorldModelSnapshot : IWorldModel, IWalkDataSource, IWalkSupp
     public IOutskirtsModel? Outskirts { get; }
     public IFidelityModel? Fidelity { get; }
     public IReadOnlyList<InteriorOverlayFile> InteriorOverlays { get; }
-    public WalkBakeData? Walk { get; }
     public ITerrain Terrain { get; }
-    public IWalkSupportSource? WalkSupport { get; }
 
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
         IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
-        Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays; Walk = options.Walk;
-        Terrain = options.Terrain; WalkSupport = options.WalkSupport;
-        Spatial = new WorldSpatialIndex(features, boundary, interiors, Walk, Terrain, WalkSupport);
+        Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays;
+        Terrain = options.Terrain;
+        Spatial = new WorldSpatialIndex(features, boundary, network, interiors, Terrain);
     }
-    public float? SupportY(float x, float z, float yHint) => WalkSupport?.SupportY(x, z, yHint);
-
-    /// <summary>Finalize the parsed world with its exact, immutable prepared walking support.</summary>
-    public WorldModelSnapshot WithWalkSupport(IWalkSupportSource support) => new(Features, Boundary, Network,
-        Interiors, Outskirts, InteriorOverlays, new()
-        { Fidelity = Fidelity, Walk = Walk, Terrain = Terrain, WalkSupport = support ?? throw new ArgumentNullException(nameof(support)) });
 }
 
 internal static class WorldFeatureKinds
@@ -121,14 +113,14 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
 {
     private readonly IReadOnlyDictionary<FeatureId, WorldFeature> _features;
     private readonly Dictionary<TileKey, List<FeatureId>> _cells = [];
-    private readonly PolygonRings _boundary;
     private readonly IInteriorIndex _interiors;
-    private readonly WalkBakeData? _walk;
     private readonly ITerrain _terrain;
-    private readonly IWalkSupportSource? _support;
-    public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary, IInteriorIndex interiors, WalkBakeData? walk, ITerrain terrain, IWalkSupportSource? support)
+    private readonly WorldWalkRegions _walkRegions;
+    public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
+        WorldNetwork network, IInteriorIndex interiors, ITerrain terrain)
     {
-        _features = features; _boundary = boundary; _interiors = interiors; _walk = walk; _terrain = terrain; _support = support;
+        _features = features; _interiors = interiors; _terrain = terrain;
+        _walkRegions = new(features.Values, boundary, network);
         foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             for (var z = Cell(feature.Bounds.Min.Z); z <= Cell(feature.Bounds.Max.Z); z++)
                 for (var x = Cell(feature.Bounds.Min.X); x <= Cell(feature.Bounds.Max.X); x++)
@@ -184,71 +176,5 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         }
         return p.Y < ground ? new(MediumKind.Underground, Depth: ground - p.Y) : new(MediumKind.Air);
     }
-    public WalkClass WalkClassAt(float x, float z)
-    {
-        if (_walk is { } data)
-        {
-            var index = WalkIndex(data.Walk, x, z);
-            return index < 0 ? WalkClass.Outside : (WalkClass)data.Walk.Classes[index];
-        }
-        if (!PlanGeometry.Contains(_boundary, new(x, z))) return WalkClass.Outside;
-        var water = false;
-        foreach (var feature in At(x, z))
-        {
-            var point = new Vector2(x, z);
-            if (WorldFeatureKinds.Parts(feature, "building").Any(part => WorldModelLoader.Polygons(part.Geometry).Any(r => PlanGeometry.Contains(r, point)))) return WalkClass.Building;
-            if (WorldFeatureKinds.Parts(feature, "water").Any(part => WorldModelLoader.Polygons(part.Geometry).Any(r => PlanGeometry.Contains(r, point)))) water = true;
-        }
-        return water ? WalkClass.Water : WalkClass.Walk;
-    }
-    public float? SupportY(float x, float z, float yHint) => WalkClassAt(x, z) switch
-    {
-        WalkClass.Walk or WalkClass.Wade or WalkClass.Interior => _support?.SupportY(x, z, yHint),
-        WalkClass.Building or WalkClass.Water or WalkClass.Forbidden or WalkClass.Outside or WalkClass.Steep => null,
-        _ => throw new ArgumentOutOfRangeException(nameof(x), "Unknown walk class.")
-    };
-    public Vector3? NearestSafe(Vector3 p, float maxDist)
-    {
-        if (!float.IsFinite(maxDist) || maxDist < 0) throw new ArgumentOutOfRangeException(nameof(maxDist));
-        Vector3? closest = null;
-        var best = maxDist * maxDist;
-        if (_walk is { } data)
-        {
-            var grid = data.SafePoints;
-            var x0 = Math.Max(0, (int)MathF.Floor((p.X - maxDist - SafePointGrid.CellSize - grid.Origin.X) / SafePointGrid.CellSize));
-            var z0 = Math.Max(0, (int)MathF.Floor((p.Z - maxDist - SafePointGrid.CellSize - grid.Origin.Y) / SafePointGrid.CellSize));
-            var x1 = Math.Min(grid.Width - 1, (int)MathF.Floor((p.X + maxDist + SafePointGrid.CellSize - grid.Origin.X) / SafePointGrid.CellSize));
-            var z1 = Math.Min(grid.Height - 1, (int)MathF.Floor((p.Z + maxDist + SafePointGrid.CellSize - grid.Origin.Y) / SafePointGrid.CellSize));
-            for (var z = z0; z <= z1; z++)
-                for (var x = x0; x <= x1; x++)
-                {
-                    if (!grid.TryDecode(z * grid.Width + x, out var candidate)) continue;
-                    var support = SupportY(candidate.X, candidate.Z, candidate.Y);
-                    if (support is null) continue;
-                    candidate.Y = support.Value;
-                    var distance = Vector3.DistanceSquared(candidate, p);
-                    if (distance < best || (distance == best && closest is null)) { best = distance; closest = candidate; }
-                }
-            return closest;
-        }
-        // Deterministic conservative fallback until WP-44 supplies its resident safe-point grid.
-        for (var z = (int)MathF.Ceiling((p.Z - maxDist) / 8); z <= (int)MathF.Floor((p.Z + maxDist) / 8); z++)
-            for (var x = (int)MathF.Ceiling((p.X - maxDist) / 8); x <= (int)MathF.Floor((p.X + maxDist) / 8); x++)
-            {
-                var wx = x * 8f; var wz = z * 8f;
-                if (WalkClassAt(wx, wz) != WalkClass.Walk) continue;
-                var support = SupportY(wx, wz, p.Y);
-                if (support is null || _terrain.FactsAt(wx, wz).Grade >= .36397023f) continue;
-                var candidate = new Vector3(wx, support.Value, wz);
-                var distance = Vector3.DistanceSquared(candidate, p);
-                if (distance < best || (distance == best && closest is null)) { best = distance; closest = candidate; }
-            }
-        return closest;
-    }
-    private static int WalkIndex(WalkGrid grid, float x, float z)
-    {
-        var column = (int)MathF.Floor((x - grid.Origin.X) / WalkGrid.CellSize);
-        var row = (int)MathF.Floor((z - grid.Origin.Y) / WalkGrid.CellSize);
-        return column < 0 || row < 0 || column >= grid.Width || row >= grid.Height ? -1 : row * grid.Width + column;
-    }
+    public WalkClass WalkClassAt(float x, float z) => _walkRegions.At(x, z);
 }

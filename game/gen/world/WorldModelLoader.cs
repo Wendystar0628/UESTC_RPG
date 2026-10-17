@@ -13,9 +13,7 @@ public sealed record WorldLoadOptions
     public IInteriorIndex? Interiors { get; init; }
     public IOutskirtsModel? Outskirts { get; init; }
     public IFidelityModel? Fidelity { get; init; }
-    public WalkBakeData? Walk { get; init; }
     public ITerrain Terrain { get; init; } = FlatTerrain.Default;
-    public IWalkSupportSource? WalkSupport { get; init; }
     /// <summary>Explicit registered feature claims, supplied by the map adapter; an overlay Owner is not a claim.</summary>
     public IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy { get; init; }
 }
@@ -48,12 +46,6 @@ public static class WorldModelLoader
     private static WorldModelLoadResult LoadCore(MapId map, IReadOnlyDictionary<string, string> files, WorldLoadOptions? options)
     {
         options ??= new();
-        if (options.Walk is { } walk)
-        {
-            try { walk.Validate(); }
-            catch (ArgumentException error) { throw new WorldDataException("walk.bake.json", "root", error.Message, error); }
-            if (walk.Map != map) throw new WorldDataException("walk.bake.json", "map", "Walk data belongs to another map.");
-        }
         var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
         {

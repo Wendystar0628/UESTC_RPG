@@ -112,7 +112,7 @@ public sealed class WorldModelTests
         Require(spatial.WalkClassAt(-9, 3) == WalkClass.Water, "Water missing.");
         Require(spatial.MediumAt(new(-9, -1, 3)).Kind == MediumKind.Underwater, "Underwater classification missing.");
         Require(spatial.WalkClassAt(21, 0) == WalkClass.Outside, "Exterior became walkable.");
-        Require(spatial.SupportY(-5, -5, 0) is null, "Building became supported ground.");
+        Require(spatial.WalkClassAt(-5, -5) == WalkClass.Walk, "A building projection blocked its physical openings.");
     }
 
     [TestCase]
@@ -239,37 +239,6 @@ public sealed class WorldModelTests
         });
 
     [TestCase]
-    public void ResidentWalkDataUsesExactDistanceAndRestoresGroundHeight()
-    {
-        var coordinates = Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 12).ToArray();
-        coordinates[0] = 4; coordinates[1] = 1; coordinates[2] = 4;
-        var data = new WalkBakeData(WalkBakeData.CurrentVersion, new("test"), new string('a', 64),
-            new(new(-16, -16), 8, 8, new byte[64], new byte[64], new float[64]),
-            new(new(-16, -16), 2, 2, new(-16, 0, -16), coordinates), [], new([], []));
-        var result = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = Campus }, new() { Walk = data, Terrain = new AnalyticSupport(), WalkSupport = new AnalyticSupport() });
-        Require(result.World.Spatial.NearestSafe(new(-15, 2, -15), 1) is null, "maxDist was ignored.");
-        var safe = result.World.Spatial.NearestSafe(new(-15, 2, -15), 3);
-        Require(safe is not null && MathF.Abs(safe.Value.Y - (-.3f)) < .00001f,
-            "Quantized safety clearance did not resolve onto the exact support surface.");
-        Require(MathF.Abs(result.World.Spatial.GroundY(-14.3f, -14.2f) + .427f) < .00001f,
-            "GroundY must directly evaluate the current ITerrain at arbitrary XZ.");
-        Require(MathF.Abs(result.World.Spatial.SupportY(-14.3f, -14.2f, 0f)!.Value + .277f) < .00001f,
-            "The 2 m support centre hint must never replace exact arbitrary-XZ support.");
-        Require(result.World.Spatial.WalkClassAt(1, 1) == WalkClass.Outside, "Resident grid extent was ignored.");
-    }
-
-    private sealed class AnalyticSupport : ITerrain, IWalkSupportSource
-    {
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => x * .01f + z * .02f;
-        public float? SupportY(float x, float z, float yHint) => HeightAt(x, z) + .15f;
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(.02236068f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-    }
-
-    [TestCase]
     public void ArchitectureReviewMixedParentsKeepBuildingPartsAndOpenParkDistinct()
     {
         var result = WorldModelLoader.Load(new("qingshuihe"), RealFiles());
@@ -281,7 +250,7 @@ public sealed class WorldModelTests
         {
             var medium = result.World.Spatial.MediumAt(sample.Point);
             Require(medium.Kind == MediumKind.Interior && medium.Feature == sample.Id, $"Building part {sample.Id.Value} was classified as {medium.Kind}.");
-            Require(result.World.Spatial.WalkClassAt(sample.Point.X, sample.Point.Z) == WalkClass.Building, "Building part became walkable.");
+            Require(result.World.Spatial.WalkClassAt(sample.Point.X, sample.Point.Z) == WalkClass.Walk, "A building projection blocked its physical openings.");
             Require(result.World.Interiors.Get(sample.Id) is not null, "Mixed parent lost its interior index.");
             Require(result.World.Spatial.MediumAt(sample.Point with { Y = sample.Height + 1 }).Kind == MediumKind.Air, "Part height was ignored.");
         }
