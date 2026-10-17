@@ -27,6 +27,7 @@
 | [WF-FLOW](workflow/process/WF-FLOW-开发流程.md) 开发流程 | 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线 | WP-00 | — |
 | [WF-MERGE](workflow/process/WF-MERGE-批准与合并.md) 批准与合并 | 批准行与滚动文档分支，合并执行的步骤，成批合入与省项，合入以后的状态与 rebase，git 分支与工作树的流程 | WP-00 | G1、G2、G3、G4、G5 |
 | [WF-BUILD](workflow/rules/WF-BUILD-施工边界与内容底线.md) 施工边界与内容底线 | 施工时能改哪里、共享文件与契约申请、代码边界与接入方式、禁用写法，以及内容与画面的底线 | WP-00 | G3、G4 |
+| [WF-CORE](workflow/rules/WF-CORE-项目核心准则.md) 项目核心准则 | 所有会话、子代理和执行者每轮都要守的项目核心准则，一条一句，细则见各节指向；提醒钩子每条消息都注入本文 §0 | WP-00 | — |
 | [WF-DOC](workflow/rules/WF-DOC-文档写法.md) 文档写法 | 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护 | WP-00 | — |
 | [WF-RULE](workflow/rules/WF-RULE-全员守则.md) 全员守则 | 所有会话、子代理和执行者都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件与 git 安全、主线优先、测试最小、贴近主线、写文档与记忆 | WP-00 | — |
 
@@ -119,7 +120,7 @@
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-DOC、WF-DUTY、WF-FLOW、WF-INDEX、WF-MERGE、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-DUTY、WF-FLOW、WF-INDEX、WF-MERGE、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |
