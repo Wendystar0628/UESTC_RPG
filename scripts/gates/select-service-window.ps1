@@ -1,5 +1,38 @@
 # Select real startup checks when registered services change.
 # Uses the already loaded common.ps1 and check-source.ps1 helpers.
+function Get-UESTCRegistrationSignature {
+    param([string]$Text)
+    $pattern = '(?s)\[\s*(?:[A-Za-z_][\w.]*\.)?(?:ContentModule|Part|KernelNode|KernelService|SaveSection|AmbientEmitter|InteriorProvider|MediumPresenter|QualityResponsive)(?:Attribute)?\b[^\]]*\](?:\s*\[[^\]]*\])*\s*(?:(?:public|internal|sealed|abstract|partial|static)\s+)*(?:class|struct|record)\s+\w+[^{;]*|<AssemblyAttribute\b.*?</AssemblyAttribute>'
+    $declarations = @([regex]::Matches($Text, $pattern) | ForEach-Object { $_.Value.Trim() })
+    # Registration attributes can live in another partial file. Constructor
+    # parameters still change discovery dependencies; executable bodies do not.
+    foreach ($type in [regex]::Matches($Text, '\b(?:class|struct|record)\s+(?<name>\w+)(?:\s*<[^>{}]+>)?\s*(?<primary>\([^)]*\))?')) {
+        if ($type.Groups['primary'].Success) { $declarations += $type.Value.Trim() }
+        $constructor = '\bpublic\s+' + [regex]::Escape($type.Groups['name'].Value) + '\s*\([^)]*\)'
+        $declarations += @([regex]::Matches($Text, $constructor) | ForEach-Object { $_.Value.Trim() })
+    }
+    if (-not $declarations.Count) { return '' }
+    return ((@([regex]::Matches($Text, '(?m)^\s*namespace\s+[\w.]+') | ForEach-Object { $_.Value.Trim() }) + $declarations) -join "`n")
+}
+
+function Test-UESTCG5Impact {
+    param([string]$Root, [string]$BaseRef, [string[]]$Changes)
+    if (@($Changes | Where-Object { $_ -match '^game/(kernel/|contracts/|stage/|data/maps/|project\.godot$)' }).Count) { return $true }
+    $code = @($Changes | Where-Object { (Test-UESTCProductionCs $_) -or $_ -match '\.csproj$' })
+    if (-not $code.Count) { return $false }
+    $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
+    $baseFiles = @(Get-UESTCGitLines $Root @('ls-tree','-r','--name-only',$base))
+    foreach ($path in $code) {
+        $absolute = Join-Path $Root $path
+        $current = if (Test-Path -LiteralPath $absolute) { [IO.File]::ReadAllText($absolute) } else { '' }
+        $old = if ($path -in $baseFiles) { (Invoke-UESTCGit $Root @('show',"${base}:$path")).StdOut } else { '' }
+        $before = Get-UESTCRegistrationSignature $old
+        $after = Get-UESTCRegistrationSignature $current
+        if ($before -cne $after) { return $true }
+    }
+    return $false
+}
+
 function Test-UESTCProductionCs {
     param([string]$Path)
     return $Path -match '^(game|pipeline)/.*\.cs$' -and $Path -notmatch '^game/addons/|/(tests?|obj|bin|\.godot)/'

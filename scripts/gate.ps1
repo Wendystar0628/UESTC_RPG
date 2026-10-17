@@ -50,8 +50,8 @@ function Get-UESTCG2CompileScope {
         if (@($xml.SelectNodes("//*[local-name()='Import' or local-name()='Choose']")).Count) {
             $fallback.Add('Explicit Import/Choose may change Compile items')
         }
-        if (@($xml.SelectNodes('//@*|//text()') | Where-Object { $_.Value -match '[\$@%]\(' }).Count) {
-            $fallback.Add('Unevaluated MSBuild expression in project metadata')
+        if (@($xml.SelectNodes("//*[local-name()='Compile']//@*|//*[local-name()='Compile']//text()") | Where-Object { $_.Value -match '[\$@%]\(' }).Count) {
+            $fallback.Add('Unevaluated MSBuild expression in Compile items')
         }
         $items = @($xml.SelectNodes("//*[local-name()='Compile']"))
         if (-not $items.Count) { $fallback.Add('No explicit Compile Include items') }
@@ -89,11 +89,15 @@ function Get-UESTCG2ProjectSelection {
     $normalizedChanges = @($Changes | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
     $normalizedFiles = @($Files | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
     # Shared dependency/project edits retain the existing conservative all-project policy.
-    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/|\.(props|targets|csproj|sln|slnx)$|^global\.json$' })
+    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
         $scope = Get-UESTCG2CompileScope $Root $project
         $reasons = New-Object 'Collections.Generic.List[string]'
-        if ($ForceAll) { $reasons.Add('D0/full/explicit G2 selection') }
+        if ($ForceAll) { $reasons.Add('D0/full G2 selection') }
+        foreach ($path in $normalizedChanges) {
+            if ($path -eq $project -or $path -eq ($project -replace '\.csproj$', '.packages.lock.json') -or
+                ($project -eq 'game/Campus.Tests.csproj' -and $path -eq 'game/Campus.csproj')) { $reasons.Add("Test host changed: $path") }
+        }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
         foreach ($reason in $scope.ConservativeReasons) { $reasons.Add("Conservative selection: $reason") }
         foreach ($path in $normalizedChanges) {
@@ -156,7 +160,8 @@ elseif ($Smoke) { $selected.Add('G5Smoke') }
 elseif ($Full) { 1..21 | ForEach-Object { $selected.Add("G$_") }; $selected.Add('G5Smoke') }
 elseif ($D0) { 1..5 | ForEach-Object { $selected.Add("G$_") }; $selected.Add('G5Smoke'); $selected.Add('G6'); $selected.Add('D0ExportRuntime') }
 elseif ($runtimeChanges.Count) {
-    1..5 | ForEach-Object { $selected.Add("G$_") }
+    1..4 | ForEach-Object { $selected.Add("G$_") }
+    if (Test-UESTCG5Impact $root $BaseRef $runtimeChanges) { $selected.Add('G5') }
     if (@($changes | Where-Object { $_ -match '^game/(flow|kernel|camera|stage)/|^game/project\.godot$' }).Count) { $selected.Add('G5Smoke') }
     if (@($changes | Where-Object { $_ -match '^game/(camera/walk|kernel/collision|gen/(collision|walkable))/' }).Count) { $selected.Add('G15Core') }
     if (@($changes | Where-Object { $_ -match '^game/kernel/save/|^game/contracts/Save/' }).Count) { $selected.Add('G20Core') }
@@ -173,7 +178,7 @@ if ($SkipFormat) { $cacheIds = @($cacheIds | Where-Object { $_ -ne 'G1' }) }
 if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
 $scope = if ($D0) { 'D0' } elseif ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; CpuLimit = [Math]::Max(2,[Math]::Floor([Environment]::ProcessorCount/8.0)); Bake = 'No pre-bake in D0/quick/core; centralized bake gates not implemented' }
-$g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $changes @(Get-UESTCFiles $root) ([bool]($D0 -or $Full -or $Only.Count))) } else { @() }
+$g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges @(Get-UESTCFiles $root) ([bool]($D0 -or $Full))) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $planObject['SkipFormat'] = [bool]$SkipFormat
 $planObject['Stage'] = $mainStage
@@ -183,13 +188,21 @@ $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $cacheable = $selected.Count -gt 0 -and -not ($D0 -or $Full -or $NoCache)
-$inputHash = if ($cacheable) { Get-UESTCInputHash $root $Wp $BaseRef $Configuration $godot $changes } else { '' }
+$cachePaths = if ($cacheable) { @(Get-UESTCCachePaths $root $Wp) } else { @() }
+$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|format=$(-not $SkipFormat)|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object Project) -join ',')"
+$inputHash = if ($cacheable) { Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $cachePaths } else { '' }
+$ownershipHash = if ($cacheable -and $selected.Contains('G3')) {
+    # Ownership is checked for every changed path, including documentation and deletions.
+    Get-UESTCStringHash ($inputHash + ($changes -join "`n") + (Invoke-UESTCGit $root @('show',"${BaseRef}:ownership.json")).StdOut +
+        (Get-UESTCOwnershipUidHash $root))
+} else { '' }
 $cachePath = Join-Path $work "$Wp-cache.json"
 $cacheEntries = @{}
 if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
     try {
         $savedCache = Get-Content -Raw -Encoding UTF8 -LiteralPath $cachePath | ConvertFrom-Json
-        foreach ($entry in $savedCache.entries) {
+        foreach ($entry in @($savedCache | Where-Object { $_.PSObject.Properties['version'] -and $_.version -eq 4 } | ForEach-Object entries)) {
+            if ($entry.Status -ne 'Passed') { continue }
             if ($SkipFormat -and $entry.Gate -eq 'G1') { continue }
             $cacheEntries[$entry.Gate] = $entry
         }
@@ -250,15 +263,17 @@ function Write-TestSettings {
 foreach ($id in $selected) {
     Write-Host "[$id] $scope"
     try {
+        $gateHash = if ($id -eq 'G3') { $ownershipHash } else { $inputHash }
         if ($cacheable -and $id -in $cacheIds -and $cacheEntries.ContainsKey($id)) {
             $entry = $cacheEntries[$id]
-            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root }
-            if ($binaryHash -and $entry.InputHash -eq $inputHash -and $entry.BinaryHash -eq $binaryHash) {
+            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root $Wp $cachePaths }
+            if ($binaryHash -and $entry.InputHash -eq $gateHash -and $entry.BinaryHash -eq $binaryHash) {
                 $results.Add([pscustomobject]@{ Gate=$id; Status='CachedPass'; Scope=$scope; Detail=$entry.Detail })
                 Write-Host "[$id] CachedPass (source, dependency, tool and binary fingerprints unchanged)"
                 continue
             }
         }
+        $cacheEntries.Remove($id)
         $detail = ''
         $status = 'Passed'
         switch ($id) {
@@ -362,11 +377,12 @@ foreach ($id in $selected) {
         }
         $results.Add([pscustomobject]@{ Gate=$id; Status=$status; Scope=$scope; Detail=$detail })
         if ($cacheable -and $status -eq 'Passed' -and $id -in $cacheIds) {
-            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root }
-            $cacheEntries[$id] = [pscustomobject]@{ Gate=$id; InputHash=$inputHash; BinaryHash=$binaryHash; Detail=$detail }
+            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root $Wp $cachePaths }
+            $cacheEntries[$id] = [pscustomobject]@{ Gate=$id; Status='Passed'; InputHash=$gateHash; BinaryHash=$binaryHash; Detail=$detail }
         }
         Write-Host "[$id] $status - $detail"
     } catch {
+        $cacheEntries.Remove($id)
         $results.Add([pscustomobject]@{ Gate=$id; Status='Failed'; Scope=$scope; Detail=$_.Exception.Message })
         Write-Warning "[$id] $($_.Exception.Message)"
         # Dependent later stages must not test stale binaries after a build/import failure.
@@ -375,10 +391,10 @@ foreach ($id in $selected) {
 }
 if ($cacheable) {
     # If import or restore changed an input during this run, do not publish a stale pass.
-    $afterHash = Get-UESTCInputHash $root $Wp $BaseRef $Configuration $godot $changes
-    if ($afterHash -eq $inputHash) { [IO.File]::WriteAllText($cachePath, (@{ entries=@($cacheEntries.Values) } | ConvertTo-Json -Depth 8), $utf8) }
+    $afterHash = Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes
+    if ($afterHash -eq $inputHash) { [IO.File]::WriteAllText($cachePath, (@{ version=4; entries=@($cacheEntries.Values) } | ConvertTo-Json -Depth 8), $utf8) }
 }
-$report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); CachePolicy='Conservative whole-repository runtime/dependency hash plus SDK, engine and production binary fingerprints; D0/full/window/export never cached'; GeneratedAt=[DateTime]::UtcNow.ToString('o') }
+$report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); CachePolicy='Package inputs and project dependencies, shared tools/options and scoped binaries; only completed passes reused; D0/full/window/export always fresh'; GeneratedAt=[DateTime]::UtcNow.ToString('o') }
 $reportPath = Join-Path $work "$Wp-result.json"
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 10), $utf8)
 Write-Host "Report: $reportPath"
