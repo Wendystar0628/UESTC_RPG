@@ -1,110 +1,93 @@
 using System.Buffers.Binary;
-using System.IO.Hashing;
-using System.Text.Json;
+using Campus.Contracts.Bake;
+using Campus.Kernel.Registry;
 using Godot;
 using FileAccess = System.IO.FileAccess;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Only this store touches the local bake cache. Files contain bounded data, never engine resources.</summary>
+/// <summary>Local CPU products, stored once per map/product/module/cell/LOD. The payload owns its input stamp.</summary>
 public sealed class BakeCacheStore
 {
     public const int MaximumTileUploadBytes = 8 * 1024 * 1024;
     public const int MaximumCompressedTileBytes = 8 * 1024 * 1024;
-    // Header/statistics allowance is separate from the native raw-buffer upload budget.
     public const int MaximumPayloadBytes = MaximumTileUploadBytes + 1024 * 1024;
     public const int MaximumProductBytes = 128 * 1024 * 1024;
-    private const int MaximumIndexBytes = 16 * 1024 * 1024;
     private const uint CompressionMagic = 0x315A4254; // TBZ1
     private readonly string _root;
+    private readonly string _version;
     private readonly object _sync = new();
-    private readonly Dictionary<string, CacheIndex> _indices = new(StringComparer.Ordinal);
-    private long _sequence;
     private long _bytes;
     private bool _initialized;
     private static long _temporarySequence;
 
-    public BakeCacheStore(string root)
+    public BakeCacheStore(string root, string? version = null)
     {
         if (!Path.IsPathFullyQualified(root)) throw new ArgumentException("Cache root must be absolute.", nameof(root));
-        _root = Path.GetFullPath(root);
+        _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        _version = (version ?? BuildInfo.Version) + "/" + BakeOptions.Abi;
     }
 
     public long CacheBytes => Interlocked.Read(ref _bytes);
 
-    /// <summary>Called by a worker, never by the UI polling CacheBytes.</summary>
+    /// <summary>Version changes discard player products before a worker can read one.</summary>
     public void Initialize()
     {
         lock (_sync)
         {
             if (_initialized) return;
-            _bytes = Directory.Exists(_root) ? SafeFiles(_root)
-                .Where(p => p.EndsWith(".tbin", StringComparison.Ordinal)).Sum(p => new FileInfo(p).Length) : 0;
+            if (Directory.Exists(_root) && IsLink(_root)) throw new IOException("Cache root must not be a reparse point.");
+            Directory.CreateDirectory(_root);
+            var marker = Path.Combine(_root, "cache.version");
+            if (!File.Exists(marker) || File.ReadAllText(marker) != _version)
+            {
+                DeleteProducts();
+                AtomicWrite(marker, System.Text.Encoding.UTF8.GetBytes(_version));
+            }
+            _bytes = SafeFiles(_root).Where(path => path.EndsWith(".tbin", StringComparison.Ordinal))
+                .Sum(path => new FileInfo(path).Length);
             _initialized = true;
         }
     }
 
-    public static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexStringLower(XxHash128.Hash(bytes));
-
-    public byte[]? TryRead(string map, string identity, string? expectedHash, bool allowUnlisted,
-        int maximumPayload = MaximumPayloadBytes, CancellationToken cancellationToken = default)
+    public byte[]? TryRead(BakeKey key, int maximumPayload = MaximumPayloadBytes,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var path = FilePath(map, identity);
+        Initialize();
+        var path = FilePath(key);
         if (!File.Exists(path)) return null;
         try
         {
-            var fileLimit = maximumPayload == MaximumProductBytes ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
-            var bytes = DecodeFile(ReadBounded(path, fileLimit), maximumPayload);
+            var limit = maximumPayload == MaximumProductBytes ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
+            var bytes = DecodeFile(ReadBounded(path, limit), maximumPayload);
             cancellationToken.ThrowIfCancellationRequested();
-            var hash = Hash(bytes);
-            EnterCache(cancellationToken);
-            try
-            {
-                var index = Index(map);
-                var expected = expectedHash;
-                if (expected is null && allowUnlisted && index.Entries.TryGetValue(identity, out var entry)) expected = entry.Hash;
-                if (expected is null || !string.Equals(hash, expected, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"Cache hash mismatch: {identity}; expected={expected ?? "unlisted"}; actual={hash}");
-                index.Entries[identity] = new(hash, new FileInfo(path).Length, ++_sequence);
-                SaveIndex(map, index);
-            }
-            finally { Monitor.Exit(_sync); }
             return bytes;
         }
-        catch (Exception error) when (error is IOException or InvalidDataException or JsonException or ArgumentException or OverflowException)
+        catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            EnterCache(cancellationToken);
-            try
-            {
-                if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
-                Index(map).Entries.Remove(identity);
-            }
-            finally { Monitor.Exit(_sync); }
+            Remove(key, cancellationToken);
             return null;
         }
     }
 
-    public void Write(string map, string identity, byte[] bytes, bool mapProduct = false,
-        CancellationToken cancellationToken = default)
+    public void Write(BakeKey key, byte[] bytes, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        Initialize();
         var encoded = EncodeFile(bytes);
         cancellationToken.ThrowIfCancellationRequested();
-        if (!mapProduct && encoded.Length > MaximumCompressedTileBytes)
+        if (key.Module != "map" && encoded.Length > MaximumCompressedTileBytes)
             throw new InvalidDataException("Compressed tile exceeds 8 MiB on disk; split the generated tile.");
         EnterCache(cancellationToken);
         try
         {
-            var path = FilePath(map, identity);
+            var path = FilePath(key);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
             AtomicWrite(path, encoded);
             _bytes += encoded.Length - oldLength;
-            var index = Index(map);
-            index.Entries[identity] = new(Hash(bytes), encoded.Length, ++_sequence);
-            SaveIndex(map, index);
         }
         finally { Monitor.Exit(_sync); }
     }
@@ -126,44 +109,27 @@ public sealed class BakeCacheStore
     {
         lock (_sync)
         {
-            if (Directory.Exists(_root))
-                foreach (var path in SafeFiles(_root).Where(p => p.EndsWith(".tbin", StringComparison.Ordinal) ||
-                    p.EndsWith(".tmp", StringComparison.Ordinal) || Path.GetFileName(p) == "cache.index")) File.Delete(path);
-            _indices.Clear();
+            DeleteProducts();
             _bytes = 0;
         }
     }
 
-    public void Remove(string map, string identity, CancellationToken cancellationToken = default)
+    private void DeleteProducts()
+    {
+        if (!Directory.Exists(_root)) return;
+        foreach (var path in SafeFiles(_root).Where(path => path.EndsWith(".tbin", StringComparison.Ordinal) ||
+            path.EndsWith(".tmp", StringComparison.Ordinal) || Path.GetFileName(path) == "cache.index")) File.Delete(path);
+    }
+
+    public void Remove(BakeKey key, CancellationToken cancellationToken = default)
     {
         EnterCache(cancellationToken);
         try
         {
-            var path = FilePath(map, identity);
+            var path = FilePath(key);
             if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
-            Index(map).Entries.Remove(identity);
         }
         finally { Monitor.Exit(_sync); }
-    }
-
-    public void RemoveOtherAbis(string map)
-    {
-        lock (_sync)
-        {
-            var path = MapPath(map);
-            if (!Directory.Exists(path)) return;
-            foreach (var directory in Directory.EnumerateDirectories(path).Order(StringComparer.Ordinal))
-            {
-                if (Path.GetFileName(directory) == BakeOptions.Abi || IsLink(directory)) continue;
-                // No recursive delete: only known bake files under a validated map directory are removed.
-                foreach (var file in SafeFiles(directory).Where(p => p.EndsWith(".tbin", StringComparison.Ordinal) ||
-                    p.EndsWith(".tmp", StringComparison.Ordinal)))
-                {
-                    if (file.EndsWith(".tbin", StringComparison.Ordinal)) _bytes -= new FileInfo(file).Length;
-                    File.Delete(file);
-                }
-            }
-        }
     }
 
     public static byte[] EncodeFile(byte[] payload)
@@ -213,49 +179,24 @@ public sealed class BakeCacheStore
         File.Move(temporary, path, overwrite: true);
     }
 
-    private string MapPath(string map)
+    private string FilePath(BakeKey key)
     {
-        if (string.IsNullOrWhiteSpace(map) || map.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_'))
-            throw new ArgumentException("Map ID is not a safe cache segment.", nameof(map));
-        var path = Path.GetFullPath(Path.Combine(_root, map));
-        if (Directory.Exists(_root) && IsLink(_root) || Directory.Exists(path) && IsLink(path))
-            throw new IOException("Cache paths must not be reparse points.");
+        var detail = key.Detail.Split('/');
+        var product = key.Module == "map" ? "map" : key.Module.StartsWith("interior.", StringComparison.Ordinal) ? "interior" :
+            detail[0] == "C" ? "collision" : "geometry";
+        var segments = new List<string> { _root, Segment(key.Map.Value), product, Segment(key.Module) };
+        segments.AddRange(detail.Select(Segment));
+        var path = Path.Combine(segments.ToArray()) + ".tbin";
+        for (var current = path; current != _root; current = Path.GetDirectoryName(current)!)
+            if ((File.Exists(current) || Directory.Exists(current)) && IsLink(current))
+                throw new IOException("Cache paths must not be reparse points.");
         return path;
     }
 
-    private string FilePath(string map, string identity)
+    private static string Segment(string value)
     {
-        // The full canonical key is in the payload and index; a digest avoids path traversal and Windows path limits.
-        var directory = Path.Combine(MapPath(map), BakeOptions.Abi);
-        if (Directory.Exists(directory) && IsLink(directory)) throw new IOException("ABI directory is a reparse point.");
-        if (identity.Contains("/interior.", StringComparison.Ordinal)) directory = Path.Combine(directory, "interior");
-        if (Directory.Exists(directory) && IsLink(directory)) throw new IOException("Cache directory is a reparse point.");
-        var path = Path.Combine(directory, Hash(System.Text.Encoding.UTF8.GetBytes(identity)) + ".tbin");
-        if (File.Exists(path) && IsLink(path)) throw new IOException("Cache file is a reparse point.");
-        return path;
-    }
-
-    private CacheIndex Index(string map)
-    {
-        if (_indices.TryGetValue(map, out var found)) return found;
-        var path = Path.Combine(MapPath(map), "cache.index");
-        CacheIndex index;
-        try
-        {
-            index = File.Exists(path) ? JsonSerializer.Deserialize<CacheIndex>(ReadBounded(path, MaximumIndexBytes)) ?? new() : new();
-            if (index.Schema != 1 || index.Entries is null || index.Entries.Count > 100000) index = new();
-        }
-        catch (Exception error) when (error is IOException or InvalidDataException or JsonException) { index = new(); }
-        foreach (var entry in index.Entries.Values) _sequence = Math.Max(_sequence, entry.LastUsed);
-        _indices.Add(map, index);
-        return index;
-    }
-
-    private void SaveIndex(string map, CacheIndex index)
-    {
-        var directory = MapPath(map);
-        Directory.CreateDirectory(directory);
-        AtomicWrite(Path.Combine(directory, "cache.index"), JsonSerializer.SerializeToUtf8Bytes(index));
+        if (string.IsNullOrWhiteSpace(value) || value is "." or "..") throw new ArgumentException("Invalid cache key segment.");
+        return Uri.EscapeDataString(value);
     }
 
     private static bool IsLink(string path) => (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
@@ -267,11 +208,4 @@ public sealed class BakeCacheStore
         foreach (var directory in Directory.EnumerateDirectories(root).Order(StringComparer.Ordinal))
             if (!IsLink(directory)) foreach (var file in SafeFiles(directory)) yield return file;
     }
-
-    public sealed class CacheIndex
-    {
-        public int Schema { get; set; } = 1;
-        public SortedDictionary<string, CacheEntry> Entries { get; set; } = new(StringComparer.Ordinal);
-    }
-    public sealed record CacheEntry(string Hash, long Bytes, long LastUsed);
 }

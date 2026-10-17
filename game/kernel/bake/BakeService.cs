@@ -2,6 +2,7 @@ using Campus.Pipeline.Map;
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -16,7 +17,7 @@ using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>One path for live generation, local caching and reference baking. Ready always means validated CPU data.</summary>
+/// <summary>One path for live generation and per-cell local caching. Ready always means validated CPU data.</summary>
 [KernelService(typeof(IBakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
 public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
@@ -50,9 +51,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
 
     public BakeProgress Progress => _queue.Progress;
     public long CacheBytes => _cache.CacheBytes;
-    public bool IsReference => _options.Reference;
-    public bool IsBatch => _options.Reference || _options.Verify || _options.MapOnly;
-    public bool IsVerification => _options.Verify;
     internal bool TryTakeError(out string? error) => _queue.Failures.TryDequeue(out error);
 
     internal bool TryTakeDiagnostic(out CollectedDiagnostic? diagnostic)
@@ -148,28 +146,13 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         removed?.Lifetime.Cancel(); // Forget first: cancellation is not a failed active-map build.
     }
 
-    internal async Task<BakeMapMetadata> PrepareMapData(IMapContext context, bool rebuild = false)
+    internal async Task<BakeMapMetadata> PrepareMapData(IMapContext context)
     {
         var map = Mount(context);
         var metadata = await Task.Run(() =>
         {
             map.InteriorCoverage = InspectInteriorCoverage(map);
-            var hash = BakeMapMetadataCodec.SourceHash(map);
-            var lightPath = context.BakeRoot.TrimEnd('/') + "/" + BakeMapMetadataCodec.LightingFile;
-            var entrancePath = context.BakeRoot.TrimEnd('/') + "/" + BakeMapMetadataCodec.EntrancesFile;
-            if (!rebuild && Godot.FileAccess.FileExists(lightPath) && Godot.FileAccess.FileExists(entrancePath))
-            {
-                try
-                {
-                    var loaded = BakeMapMetadataCodec.Read(Godot.FileAccess.GetFileAsBytes(lightPath), Godot.FileAccess.GetFileAsBytes(entrancePath),
-                        context.Descriptor.Id, hash, map.Data.Value.Windows.Snapshot);
-                    RequireEntranceCoverage(map, loaded);
-                    return loaded;
-                }
-                catch (InvalidDataException) when (_options.AllowUnlisted) { }
-            }
-            if (!rebuild && !_options.AllowUnlisted) throw new InvalidDataException("Required resident lighting/entrance metadata is missing from the boot pack.");
-            var generated = BakeMapMetadataCodec.Build(map);
+            var generated = BakeMapMetadataBuilder.Build(map);
             RequireEntranceCoverage(map, generated);
             return generated;
         });
@@ -185,7 +168,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
     internal void Prebake(IMapContext context)
     {
         var map = Mount(context);
-        if (!IsBatch && !_options.Background) return;
+        if (!_options.MapOnly && !_options.Background) return;
         lock (_sync)
         {
             if (map.EnumerationStarted) return;
@@ -219,10 +202,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                 if (map.Producers.Any(p => p.Value.CanBuild(mapKey))) Schedule(map, mapKey, BakePriority.Normal);
                 foreach (var key in keys.OrderBy(k => LevelOrder(k)).ThenBy(k => Distance(k, context)).ThenBy(k => k.Module, StringComparer.Ordinal))
                     Schedule(map, key, BakePriority.Background);
-                if (map.Producers.Any(p => p.Value.CanBuild(new(context.Descriptor.Id, "collision.world", "C/0/0"))))
-                    for (var x = context.Descriptor.TileMin.X; x <= context.Descriptor.TileMax.X; x++)
-                        for (var z = context.Descriptor.TileMin.Z; z <= context.Descriptor.TileMax.Z; z++)
-                            Schedule(map, BakeRequestKeys.Collision(context.Descriptor.Id, "collision.world", new(x, z)), BakePriority.Background);
                 foreach (var binding in data.InteriorBindings.OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
                 {
                     var name = "interior." + binding.ProviderId;
@@ -283,7 +262,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         lock (_sync) clearing = _clearing;
         clearing?.WaitAsync(cancellation).GetAwaiter().GetResult();
         cancellation.ThrowIfCancellationRequested();
-        var data = map.Data.Value;
+        _ = map.Data.Value;
         cancellation.ThrowIfCancellationRequested();
         var module = map.Modules.GetValueOrDefault(key.Module);
         var interior = map.Interiors.GetValueOrDefault(key.Module);
@@ -292,29 +271,28 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             throw new InvalidDataException("More than one producer claims this bake key.");
         if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
         var codeHash = module?.CodeHash ?? interior?.CodeHash ?? matches[0].CodeHash;
-        var dataHash = key.Module == "map" ? data.AtlasHash : data.Hash;
-        var identity = BakeInputFingerprint.Identity(key, dataHash, codeHash);
-        if (!_options.Live && !_options.Verify)
+        var context = map.CreateBuildContext(codeHash);
+        var runtimeCode = RuntimeCodeHash();
+        var dependencies = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        if (key.Detail.StartsWith("C/", StringComparison.Ordinal))
         {
-            phase("boot-read");
-            var boot = BakeBootStore.TryRead(map.Context.BakeRoot, identity, cancellation);
-            cancellation.ThrowIfCancellationRequested();
-            if (boot is not null)
-            {
-                data.Manifest.Verify(identity, boot, _options.AllowUnlisted);
-                var product = Decode(identity, key, boot);
-                cancellation.ThrowIfCancellationRequested();
-                RequireInteriorProduct(map, key, product);
-                if (_options.Reference) lock (map.Reference)
-                {
-                    map.Reference.Add(identity, boot);
-                    if (product is TileBundle { Level: LodLevel.L4 }) map.Products[identity] = product;
-                    if (map.Interiors.ContainsKey(key.Module)) map.CompletedInteriorKeys.Add(key);
-                }
-                return product;
-            }
+            var area = BakeInputFingerprint.Area(context, key);
+            foreach (var (id, source) in map.Modules)
+                if (source.Value.Tiles(context).Any(tile =>
+                    (tile.X + 1) * 64 >= area.Min.X && tile.X * 64 <= area.Max.X &&
+                    (tile.Z + 1) * 64 >= area.Min.Y && tile.Z * 64 <= area.Max.Y)) dependencies[id] = source.CodeHash;
+            foreach (var (id, source) in map.Interiors)
+                if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
+                    value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
+                    value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y)) dependencies[id] = source.CodeHash;
+            dependencies.Add("collision", GenerationInputAssembly.CodeVersion(Assembly.Load(new AssemblyName("Campus.Gen.Collision"))));
+        }
+        var inputHash = BakeInputFingerprint.Compute(context, key, runtimeCode, dependencies);
+        var identity = BakeInputFingerprint.Identity(key, inputHash);
+        if (!_options.Live)
+        {
             phase("cache-read");
-            var cached = _cache.TryRead(key.Map.Value, identity, data.Manifest.Find(identity), _options.AllowUnlisted || _options.Reference,
+            var cached = _cache.TryRead(key,
                 key.Module == "map" ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes, cancellation);
             if (cached is not null)
             {
@@ -323,19 +301,13 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                     var product = Decode(identity, key, cached);
                     cancellation.ThrowIfCancellationRequested();
                     RequireInteriorProduct(map, key, product);
-                    if (_options.Reference) lock (map.Reference)
-                    {
-                        map.Reference.Add(identity, cached);
-                        if (product is TileBundle { Level: LodLevel.L4 }) map.Products[identity] = product;
-                        if (map.Interiors.ContainsKey(key.Module)) map.CompletedInteriorKeys.Add(key);
-                    }
                     return product;
                 }
-                catch (InvalidDataException) { _cache.Remove(key.Map.Value, identity, cancellation); }
+                catch (InvalidDataException) { _cache.Remove(key, cancellation); }
             }
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
-        var buildContext = map.CreateBuildContext(codeHash, dataHash);
+        var buildContext = map.CreateBuildContext(codeHash, inputHash);
         phase(module is not null ? "content-body" : interior is not null ? "interior-body" : "producer-body");
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics), phase) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
@@ -343,7 +315,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         phase("encode");
         var bytes = Encode(identity, built);
         cancellation.ThrowIfCancellationRequested();
-        data.Manifest.Verify(identity, bytes, !_options.Verify && (_options.AllowUnlisted || _options.Reference));
         // Validate exactly the bytes about to be written before publishing Ready; malformed producer output is terminal.
         phase("decode");
         var validated = Decode(identity, key, bytes);
@@ -352,13 +323,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
             phase("cache-write");
-            _cache.Write(key.Map.Value, identity, bytes, key.Module == "map", cancellation);
-        }
-        if (_options.Reference) lock (map.Reference)
-        {
-            map.Reference.Add(identity, bytes);
-            if (validated is TileBundle { Level: LodLevel.L4 }) map.Products[identity] = validated;
-            if (map.Interiors.ContainsKey(key.Module)) map.CompletedInteriorKeys.Add(key);
+            _cache.Write(key, bytes, cancellation);
         }
         return validated;
     }
@@ -373,7 +338,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         if (!_options.Live)
         {
             _cache.Initialize();
-            _cache.RemoveOtherAbis(context.Descriptor.Id.Value);
         }
         var inputs = BakeInputFingerprint.ReadInputs(context);
         // These instances belong to this MapBuild, never the registry's global cache or an older map's jobs.
@@ -381,16 +345,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         var providers = interiors.Values.ToDictionary(interior => interior.ProviderId, interior => interior.Value, StringComparer.Ordinal);
         IReadOnlyList<InteriorProviderBinding> bindings = inputs.TryGetValue("interiors.json", out var interiorCatalogBytes)
             ? InteriorAssembly.ConfigureForWorld(interiorCatalogBytes, providers, context.World) : [];
-        var manifestPath = context.BakeRoot.TrimEnd('/') + "/bake.manifest.json";
-        var manifest = new BakeManifest();
-        if (Godot.FileAccess.FileExists(manifestPath))
-        {
-            try { manifest = BakeManifest.Parse(Godot.FileAccess.GetFileAsBytes(manifestPath)); }
-            catch (InvalidDataException) when (!_options.Verify && (_options.Reference || _options.AllowUnlisted)) { }
-        }
         var activeInteriors = new ReadOnlyDictionary<string, IInteriorProvider>(bindings.ToDictionary(binding => binding.ProviderId,
             binding => providers[binding.ProviderId], StringComparer.Ordinal));
-        var inputHash = BakeInputFingerprint.Compute(context, seed, inputs, catalog, globalInputs);
         var prepass = new BuildContext
         {
             World = context.World,
@@ -399,7 +355,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
             Catalog = catalog,
             ClaimedBy = claimLookup,
             SourceInputs = inputs,
-            DataHash = inputHash,
             InteriorProviders = activeInteriors,
             GlobalInputs = globalInputs,
             GroundMaskContributors = groundContributors,
@@ -407,9 +362,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         };
         // This Lazy is completed before any catalog Tiles, geometry Build, or producer Collide can run.
         var windows = BakeWindowPreparation.Prepare(prepass, modules);
-        return new(seed, inputs, BakeWindowPreparation.IncludeNumbering(inputHash, windows.Snapshot),
-            BakeWindowPreparation.IncludeNumbering(BakeInputFingerprint.Compute(context, seed, inputs, catalog, globalInputs, includeAtlas: true), windows.Snapshot),
-            manifest, bindings, activeInteriors, windows);
+        return new(seed, inputs, bindings, activeInteriors, windows);
     }
 
     private static byte[] Encode(string identity, object product) => BakeProductCodec.Encode(identity, product);
@@ -419,8 +372,9 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         if (map.Interiors.ContainsKey(key.Module) && (product is not TileBundle tile || tile.Stats.Surfaces == 0 || tile.Stats.Triangles == 0))
             throw new InvalidDataException($"Open interior product is empty: {key.Map.Value}/{key.Module}/{key.Detail}.");
     }
-    private static string CodeHash(Type type) => BuildInfo.ModuleCodeHashes.TryGetValue(type.Assembly.GetName().Name!, out var hash)
-        ? hash : throw new InvalidDataException($"BuildInfo has no code fingerprint for {type.Assembly.GetName().Name}.");
+    private static string RuntimeCodeHash() => typeof(BakeService).Module.ModuleVersionId.ToString("N") + ":" +
+        typeof(GenerationInputAssembly).Module.ModuleVersionId.ToString("N");
+    private static string CodeHash(Type type) => GenerationInputAssembly.CodeVersion(type);
     private static TileBundle BuildInterior(MapBuild map, BakeKey key, BuildContext context, IInteriorProvider provider)
     {
         var fields = key.Detail.Split('/');
@@ -514,8 +468,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
     internal sealed record CollectedDiagnostic(MapId Map, WpId Owner, string Module, string Stage, BuildDiagnostic Diagnostic);
     internal sealed record InteriorCoverage(string ProviderId, bool IsStub, int CatalogFeatures, int BoundFeatures,
         int CatalogFeatureStoreys, int ProducedFeatureStoreys, int AuthoredEntrances, int ProducedEntrances);
-    internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, string Hash, string AtlasHash,
-        BakeManifest Manifest, IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
+    internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs,
+        IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
         BakeWindowPreparation.Result Windows);
     internal sealed record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
         BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
@@ -533,9 +487,6 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                     diagnostic.Feature is null && feature is not null ? diagnostic with { Feature = feature } : diagnostic));
         }
 
-        public BakeManifest Reference { get; } = new();
-        public SortedDictionary<string, object> Products { get; } = new(StringComparer.Ordinal);
-        public HashSet<BakeKey> CompletedInteriorKeys { get; } = [];
         public volatile bool EnumerationComplete;
         public bool EnumerationStarted;
         public volatile bool Active = true;
@@ -544,7 +495,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
         public IReadOnlyList<InteriorCoverage> InteriorCoverage { get; set; } = [];
         private IReadOnlyDictionary<string, BuildContext>? _preparedContexts;
 
-        internal BuildContext CreateBuildContext(string codeHash, string? dataHash = null)
+        internal BuildContext CreateBuildContext(string codeHash, string dataHash = "")
         {
             var data = Data.Value;
             return new()
@@ -555,7 +506,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
                 Catalog = Catalog,
                 ClaimedBy = ClaimLookup,
                 SourceInputs = data.Inputs,
-                DataHash = dataHash ?? data.Hash,
+                DataHash = dataHash,
                 CodeHash = codeHash,
                 InteriorProviders = data.InteriorProviders,
                 WindowNumbering = data.Windows.Snapshot,

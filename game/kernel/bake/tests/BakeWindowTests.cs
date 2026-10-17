@@ -105,7 +105,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
-    public void PreparedSnapshotIsDefensiveAndPublishedByIdentityAfterCacheRoundTrip()
+    public void PreparedSnapshotIsDefensiveAndPublishedByIdentity()
     {
         var grids = new List<WindowGridSpec> { new("main", 2, 1) };
         var source = new Source { Layouts = [new(Feature, grids)], Metadata = new([], [Window(0), Window(1)]) };
@@ -115,26 +115,12 @@ public sealed class BakeWindowTests
         grids.Clear();
         if (provider.Layouts!.Single().Grids.Count != 1 || !ReferenceEquals(source.SeenContext!.WindowNumbering, snapshot))
             throw new InvalidOperationException("The declared input or shared snapshot was not retained.");
-        var hash = BakeWindowPreparation.IncludeNumbering("base-input", snapshot);
-        var changed = new WindowNumberingSnapshot(snapshot.Map, new string('b', 64), snapshot.Allocations);
-        if (hash == BakeWindowPreparation.IncludeNumbering("base-input", changed) || hash != source.SeenContext.DataHash)
-        {
-            // Context's base input is 'base-input'; provider fingerprint must affect all final producers equally.
-            throw new InvalidOperationException("Window fingerprint did not enter the final input identity.");
-        }
-        var lights = new LightInventoryDocument(1, BakeOptions.Abi, Map().Id, hash, [], result.Metadata.Facades, result.Metadata.Windows)
+        var lights = new LightInventoryDocument(Map().Id, [], result.Metadata.Facades, result.Metadata.Windows)
         { WindowNumbering = snapshot };
-        var doors = new EntranceInventoryDocument(1, BakeOptions.Abi, Map().Id, hash, []);
-        var lightBytes = BakeMapMetadataCodec.Encode(lights);
-        var doorBytes = BakeMapMetadataCodec.Encode(doors);
-        var loaded = BakeMapMetadataCodec.Read(lightBytes, doorBytes, Map().Id, hash, snapshot);
         var inventory = new BakeLightInventory();
-        inventory.Publish(loaded.Lighting);
+        inventory.Publish(lights);
         if (!ReferenceEquals(inventory.WindowNumbering, snapshot) || inventory.Windows.Count != 2 || inventory.Rev != 1)
             throw new InvalidOperationException("Inventory did not atomically publish the same prepared snapshot.");
-        Reject(() => BakeMapMetadataCodec.Read(lightBytes, doorBytes, Map().Id, hash, changed), "Cached window numbering");
-        var old = BakeMapMetadataCodec.Encode(lights with { WindowNumbering = null });
-        Reject(() => BakeMapMetadataCodec.Read(old, doorBytes, Map().Id, hash, snapshot), "Cached window numbering");
         inventory.Clear();
         if (inventory.WindowNumbering is not null || inventory.Windows.Count != 0 || inventory.Rev != 2)
             throw new InvalidOperationException("Unloading retained an old map's window allocation.");
@@ -178,14 +164,14 @@ public sealed class BakeWindowTests
             PartLods = partLods
         };
         var modules = Modules(source, new Provider(Snapshot([])));
-        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", "fixture", inputs);
+        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", inputs);
         var claims = new Lazy<MapClaimLedger>(() => new(context.World, [new("source", Owner, false, [new FeatureClaim(Feature, Aspects.Facade)])]));
         var reads = 0;
         var data = new Lazy<BakeService.LoadedMap>(() =>
         {
             reads++;
             var prepared = BakeWindowPreparation.Prepare(context, modules);
-            return new(9, context.SourceInputs, "final-input", "atlas-input", new(), [], context.InteriorProviders, prepared);
+            return new(9, context.SourceInputs, [], context.InteriorProviders, prepared);
         });
         Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
         var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
@@ -196,13 +182,13 @@ public sealed class BakeWindowTests
         _ = claims.Value;
         var producer = map.CreateBuildContext("producer-code", "atlas-input");
         ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
-        var lighting = new LightInventoryDocument(1, BakeOptions.Abi, context.Map.Id, "hash", [], [], []) { WindowNumbering = loaded.Windows.Snapshot };
-        map.CompletePreparation(new(lighting, new(1, BakeOptions.Abi, context.Map.Id, "hash", [])));
+        var lighting = new LightInventoryDocument(context.Map.Id, [], [], []) { WindowNumbering = loaded.Windows.Snapshot };
+        map.CompletePreparation(new(lighting, new(context.Map.Id, [])));
         var a = map.GetPreparedContext(mapContext, "source");
         var b = map.GetPreparedContext(mapContext, "provider");
         if (!ReferenceEquals(a, map.GetPreparedContext(mapContext, "source")) || !ReferenceEquals(a.WindowNumbering, b.WindowNumbering) ||
             !ReferenceEquals(a.World, context.World) || !ReferenceEquals(a.SourceInputs, context.SourceInputs) ||
-            !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) || a.DataHash != "final-input" ||
+            !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) || a.DataHash != "" ||
             !ReferenceEquals(a.ClaimedBy, producer.ClaimedBy) || !ReferenceEquals(a.Catalog, producer.Catalog) ||
             !ReferenceEquals(a.SourceInputs, producer.SourceInputs) || !ReferenceEquals(a.WindowNumbering, producer.WindowNumbering) ||
             !ReferenceEquals(a.GlobalInputs, producer.GlobalInputs) || !ReferenceEquals(a.GroundMaskContributors, producer.GroundMaskContributors) ||
@@ -237,18 +223,18 @@ public sealed class BakeWindowTests
     {
         var context = Context();
         var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs);
-        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", "fixture", snapshot);
+        var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", snapshot);
         using var started = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var producer = new PausedProducer(started, release);
         var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
             new Dictionary<string, BakeService.Interior>(), [new("cancelled", producer, "code")], null!,
-            new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, "data", "atlas", new(), [],
+            new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, [],
                 new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
         var cache = Path.Combine(root, "output", "bake-cancel", Guid.NewGuid().ToString("N"));
-        using var service = new BakeService(new(cache, true, false, false, true, false, false, false, 1, null));
+        using var service = new BakeService(new(cache, true, false, false, false, 1, null));
         var queue = new BakeQueue(1);
         Exception? stopped = null;
         try
@@ -353,7 +339,7 @@ public sealed class BakeWindowTests
         public PolygonRings Boundary => new([Vector2.Zero, Vector2.UnitX, Vector2.One, Vector2.UnitY]);
         public WorldNetwork Network => WorldNetwork.Empty;
         public ISpatialIndex Spatial => throw new NotSupportedException();
-        public IInteriorIndex Interiors => throw new NotSupportedException();
+        public IInteriorIndex Interiors { get; } = new Campus.Tests.TestInteriorIndex();
         public IOutskirtsModel? Outskirts => null;
         public IFidelityModel? Fidelity => null;
     }

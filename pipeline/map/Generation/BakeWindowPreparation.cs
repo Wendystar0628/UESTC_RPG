@@ -88,11 +88,10 @@ public static class BakeWindowPreparation
 
         var facades = new List<WindowFacadeDecl>();
         var windows = new List<WindowDecl>();
-        var dataHash = IncludeNumbering(prepass.DataHash, snapshot);
         foreach (var (id, module) in ordered)
         {
             if (module.Value is not IWindowMetadataSource source) continue;
-            var metadata = source.DescribeWindows(Context(prepass, dataHash, module.CodeHash, snapshot))
+            var metadata = source.DescribeWindows(Context(prepass, prepass.DataHash, module.CodeHash, snapshot))
                 ?? throw new InvalidDataException($"Window metadata is null: {id}.");
             if (metadata.Facades is null || metadata.Windows is null) throw new InvalidDataException($"Window metadata lists are null: {id}.");
             foreach (var facade in metadata.Facades)
@@ -124,8 +123,6 @@ public static class BakeWindowPreparation
         WindowNumbering = snapshot
     };
 
-    public static string IncludeNumbering(string inputHash, WindowNumberingSnapshot? snapshot) => snapshot is null ? inputHash :
-        Hash(new { input = inputHash, windows = snapshot.Fingerprint });
     private static string Hash<T>(T value) => Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
 
     /// <summary>Validate logical cells, including duplicates between regular facades and individual windows.</summary>

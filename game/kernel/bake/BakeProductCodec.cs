@@ -26,6 +26,8 @@ internal static class BakeProductCodec
         var length = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4));
         if (length is < 1 or > 2048 || length > bytes.Length - 8 || Encoding.UTF8.GetString(bytes, 8, length) != identity)
             throw new InvalidDataException("Map bake identity mismatch.");
-        return MapBakeCodec.Deserialize(bytes.AsSpan(8 + length));
+        try { return MapBakeCodec.Deserialize(bytes.AsSpan(8 + length)); }
+        catch (Exception error) when (error is EndOfStreamException or System.Text.Json.JsonException or ArgumentException or OverflowException)
+        { throw new InvalidDataException("Invalid local map payload.", error); }
     }
 }

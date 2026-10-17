@@ -72,63 +72,6 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
-    public void ReferenceHashDoesNotTrustAnUnlistedReleaseKey()
-    {
-        var manifest = new BakeManifest();
-        manifest.Add("listed", [1, 2, 3]);
-        var parsed = BakeManifest.Parse(manifest.Encode());
-        parsed.Verify("listed", [1, 2, 3], false);
-        Reject(() => parsed.Verify("listed", [1, 2, 4], false));
-        Reject(() => parsed.Verify("unlisted", [1, 2, 3], false));
-        parsed.Verify("unlisted", [1, 2, 3], true);
-    }
-
-    [TestCase]
-    public void LargeReferenceManifestRoundTripsAndAcceptsTheExactEightMiBBoundary()
-    {
-        var manifest = new BakeManifest();
-        byte[] payload = [1, 2, 3];
-        var identities = Enumerable.Range(0, 6000).Select(index => FormattableString.Invariant(
-            $"{BakeOptions.Abi}/fixture/{new string('a', 64)}/fixture.content@{new string('b', 64)}/L0/{index:D7}")).ToArray();
-        foreach (var identity in identities) manifest.Add(identity, payload);
-        var encoded = manifest.Encode();
-        if (encoded.Length <= 1024 * 1024 || encoded.Length >= BakeManifest.MaximumBytes)
-            throw new InvalidOperationException("The realistic reference fixture did not exercise the old one-MiB limit.");
-        var parsed = BakeManifest.Parse(encoded);
-        if (parsed.Count != identities.Length || identities.Any(identity => parsed.Find(identity) != manifest.Find(identity)))
-            throw new InvalidOperationException("A large reference manifest lost keys or hashes.");
-
-        // All keys/hash values are ASCII without escapes. A subsequent property occupies key.Length + 38 bytes.
-        const int keyLength = 1800;
-        var fullEntries = (BakeManifest.MaximumBytes - encoded.Length) / (keyLength + 38);
-        var remaining = BakeManifest.MaximumBytes - encoded.Length - fullEntries * (keyLength + 38);
-        if (remaining is > 0 and < 39) { fullEntries--; remaining += keyLength + 38; }
-        for (var index = 0; index < fullEntries; index++)
-            manifest.Add(FormattableString.Invariant($"padding/{index:D6}/{new string('x', keyLength - 15)}"), payload);
-        if (remaining > 0) manifest.Add(new string('z', remaining - 38), payload);
-        var atLimit = manifest.Encode();
-        if (atLimit.Length != BakeManifest.MaximumBytes || BakeManifest.Parse(atLimit).Count != manifest.Count)
-            throw new InvalidOperationException("Encode and Parse disagree at the inclusive eight-MiB limit.");
-
-        manifest.Add("over-limit", payload);
-        var encodeError = Rejection(() => manifest.Encode());
-        if (!encodeError.Contains($"count={manifest.Count}", StringComparison.Ordinal) ||
-            !encodeError.Contains($"maximumBytes={BakeManifest.MaximumBytes}", StringComparison.Ordinal) || !encodeError.Contains("bytes=", StringComparison.Ordinal))
-            throw new InvalidOperationException("Oversized encoding omitted its actual size/count/budget diagnostic.");
-        var parseError = Rejection(() => BakeManifest.Parse([.. atLimit, (byte)' ']));
-        if (!parseError.Contains($"bytes={BakeManifest.MaximumBytes + 1}", StringComparison.Ordinal) ||
-            !parseError.Contains("count=unread", StringComparison.Ordinal) || !parseError.Contains($"maximumBytes={BakeManifest.MaximumBytes}", StringComparison.Ordinal))
-            throw new InvalidOperationException("The parser did not reject oversize bytes before allocating a JSON document.");
-
-        static string Rejection(Action action)
-        {
-            try { action(); }
-            catch (InvalidDataException error) { return error.Message; }
-            throw new InvalidOperationException("An oversized manifest was accepted.");
-        }
-    }
-
-    [TestCase]
     public void UnloadingAnInFlightRequestKeepsItsOldHandleFailed()
     {
         using var started = new ManualResetEventSlim();
@@ -157,81 +100,29 @@ public sealed class BakeCodecTests
 
     [TestCase]
     [RequireGodotRuntime]
-    public void UnindexedCachePayloadIsRemovedAsAMiss()
+    public void CorruptCacheIsAMissAndGameVersionChangesClearProducts()
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
-        var directory = Path.Combine(root, "output", "bake-orphan", Guid.NewGuid().ToString("N"));
-        var writer = new BakeCacheStore(directory);
+        var directory = Path.Combine(root, "output", "bake-cache", Guid.NewGuid().ToString("N"));
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
+        var writer = new BakeCacheStore(directory, "version-one");
         byte[] payload = [1, 2, 3, 4];
-        writer.Write("fixture", "orphan", payload);
-        File.Delete(Path.Combine(directory, "fixture", "cache.index"));
-        var reader = new BakeCacheStore(directory);
-        reader.Initialize();
         try
         {
-            if (reader.TryRead("fixture", "orphan", null, true) is not null ||
-                Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 0)
-                throw new InvalidOperationException("An unindexed cache payload was trusted or left in place.");
-            reader.Write("fixture", "orphan", payload);
-            if (reader.TryRead("fixture", "orphan", BakeCacheStore.Hash(payload), false) is not { } restored ||
-                !restored.SequenceEqual(payload))
-                throw new InvalidOperationException("A regenerated cache entry did not become readable.");
+            writer.Write(key, payload);
+            if (writer.TryRead(key) is not { } restored || !restored.SequenceEqual(payload))
+                throw new InvalidOperationException("A local product failed to round trip without an index.");
+            File.WriteAllBytes(Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Single(), [1, 2, 3]);
+            if (writer.TryRead(key) is not null || Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 0)
+                throw new InvalidOperationException("A corrupt local product was trusted or left in place.");
+            writer.Write(key, payload);
+            var updated = new BakeCacheStore(directory, "version-two");
+            updated.Initialize();
+            if (updated.CacheBytes != 0 || updated.TryRead(key) is not null)
+                throw new InvalidOperationException("A game version change reused player products.");
         }
-        finally { reader.Clear(); }
+        finally { writer.Clear(); }
     }
-
-    [TestCase]
-    [RequireGodotRuntime]
-    public void CancelledCacheReaderLeavesItsIndexUntouchedWithoutWaitingForTheOwnerLock()
-    {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
-        var directory = Path.Combine(root, "output", "bake-cancel", Guid.NewGuid().ToString("N"));
-        var cache = new BakeCacheStore(directory);
-        byte[] payload = [1, 2, 3, 4];
-        cache.Write("fixture", "first", payload);
-        var indexPath = Path.Combine(directory, "fixture", "cache.index");
-        var index = File.ReadAllBytes(indexPath);
-        var gate = typeof(BakeCacheStore).GetField("_sync", System.Reflection.BindingFlags.Instance |
-            System.Reflection.BindingFlags.NonPublic)!.GetValue(cache)!;
-        using var cancellation = new CancellationTokenSource();
-        using var started = new ManualResetEventSlim();
-        using var done = new ManualResetEventSlim();
-        Exception? stopped = null;
-        var worker = new Thread(() =>
-        {
-            started.Set();
-            try
-            {
-                cache.TryRead("fixture", "first", BakeCacheStore.Hash(payload), true,
-                cancellationToken: cancellation.Token);
-            }
-            catch (Exception error) { stopped = error; }
-            finally { done.Set(); }
-        });
-        try
-        {
-            lock (gate)
-            {
-                worker.Start();
-                if (!started.Wait(TimeSpan.FromSeconds(5)) || !SpinWait.SpinUntil(() =>
-                    (worker.ThreadState & ThreadState.WaitSleepJoin) != 0, TimeSpan.FromSeconds(5)))
-                    throw new TimeoutException("Cache reader did not wait for the index lock.");
-                cancellation.Cancel();
-                if (!done.Wait(TimeSpan.FromSeconds(1))) throw new TimeoutException("Cancelled reader still waited for the index lock.");
-            }
-            worker.Join();
-            if (stopped is not OperationCanceledException || !index.SequenceEqual(File.ReadAllBytes(indexPath)))
-                throw new InvalidOperationException("Cancelled cache read changed the index or suppressed cancellation.");
-            var writeCancelled = false;
-            try { cache.Write("fixture", "cancelled", payload, cancellationToken: cancellation.Token); }
-            catch (OperationCanceledException) { writeCancelled = true; }
-            if (!writeCancelled || !index.SequenceEqual(File.ReadAllBytes(indexPath)) ||
-                Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 1)
-                throw new InvalidOperationException("A cancelled cache write committed another product or index.");
-        }
-        finally { cancellation.Cancel(); if (worker.IsAlive) worker.Join(); }
-    }
-
     [TestCase]
     public void NegativeTileParentsUseFloorDivision()
     {

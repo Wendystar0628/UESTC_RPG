@@ -1,11 +1,34 @@
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace Campus.Pipeline.Map;
 
 /// <summary>Compose already discovered map registrations with the host's CPU-only factories.</summary>
 public static class GenerationInputAssembly
 {
+    private static readonly ConcurrentDictionary<Assembly, string> CodeVersions = new();
+
+    public static string CodeVersion(Type type) => CodeVersion(type.Assembly);
+
+    /// <summary>Assembly identities cover the generator and its actual Campus references without reading source files.</summary>
+    public static string CodeVersion(Assembly assembly) => CodeVersions.GetOrAdd(assembly, source =>
+    {
+        // The runtime is a composition root; its content registrations are tracked per consuming cell by the baker.
+        if (source.GetName().Name == "Campus") return source.ManifestModule.ModuleVersionId.ToString("N");
+        var versions = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        Visit(source);
+        return string.Join(";", versions.Select(pair => pair.Key + "@" + pair.Value));
+
+        void Visit(Assembly current)
+        {
+            if (!versions.TryAdd(current.GetName().Name!, current.ManifestModule.ModuleVersionId.ToString("N"))) return;
+            foreach (var reference in current.GetReferencedAssemblies())
+                if (reference.Name?.StartsWith("Campus.", StringComparison.Ordinal) == true) Visit(Assembly.Load(reference));
+        }
+    });
+
     public static MapGenerationInputs Capture(MapId map, IReadOnlyList<GenerationRegistration> registrations,
         Func<Type, object> create, Func<Type, IInteriorProvider> createInterior,
         Func<Type, string> codeHash, PaletteCatalog catalog, BuildInputSnapshot globalInputs)

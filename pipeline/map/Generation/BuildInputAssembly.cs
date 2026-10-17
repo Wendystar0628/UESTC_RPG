@@ -1,10 +1,8 @@
-using System.Buffers.Binary;
-using System.Text;
 using Campus.Contracts;
 
 namespace Campus.Pipeline.Map;
 
-/// <summary>Loading-boundary helpers only. Callers own asset lifetime, I/O delegates and the existing bake hash.</summary>
+/// <summary>Freeze global resources and discovered ground-mask capabilities at the loading boundary.</summary>
 public static class BuildInputAssembly
 {
     public static IReadOnlyList<string> RequiredGlobalKeys { get; } = Array.AsReadOnly(new[] { "vegetation/species.json" });
@@ -53,45 +51,6 @@ public static class BuildInputAssembly
             owned |= item.Channels;
         }
         return Array.AsReadOnly(items.OrderBy(item => item.Id, StringComparer.Ordinal).ToArray());
-    }
-
-    /// <summary>
-    /// Append to the caller's existing DataHash at load time, never per tile. The caller selects map files that affect generation;
-    /// preserve its existing exclusions for pose/time/quality settings and its seed/DataRect/palette contributions.
-    /// Each record is uint32LE scope length + UTF8 scope, uint32LE key length + UTF8 key, uint64LE byte length + raw bytes.
-    /// Global and map entries are separate namespaces, sorted ordinally by scope then key. This method performs no IO or deep copy.
-    /// </summary>
-    public static void AppendScopedInputs(Action<ReadOnlyMemory<byte>> append, BuildInputSnapshot globalInputs,
-        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> mapInputs)
-    {
-        ArgumentNullException.ThrowIfNull(append);
-        ArgumentNullException.ThrowIfNull(globalInputs);
-        ArgumentNullException.ThrowIfNull(mapInputs);
-        append(Encoding.UTF8.GetBytes("campus-scoped-build-inputs-v1\0"));
-        AppendScope("global", globalInputs.Entries);
-        AppendScope("map", mapInputs);
-
-        void AppendScope(string scope, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> entries)
-        {
-            foreach (var pair in entries.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-            {
-                ValidateKey(scope, pair.Key);
-                AppendText(scope);
-                AppendText(pair.Key);
-                var length = new byte[sizeof(ulong)];
-                BinaryPrimitives.WriteUInt64LittleEndian(length, (ulong)pair.Value.Length);
-                append(length);
-                append(pair.Value);
-            }
-        }
-        void AppendText(string value)
-        {
-            var bytes = Encoding.UTF8.GetBytes(value);
-            var length = new byte[sizeof(uint)];
-            BinaryPrimitives.WriteUInt32LittleEndian(length, (uint)bytes.Length);
-            append(length);
-            append(bytes);
-        }
     }
 
     private static void ValidateKey(string scope, string key)

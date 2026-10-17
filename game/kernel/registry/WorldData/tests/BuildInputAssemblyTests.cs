@@ -1,11 +1,9 @@
 using Campus.Pipeline.Map;
-using System.Security.Cryptography;
 using System.Text;
 using System.Numerics;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Contracts;
-using Campus.Kernel.Maps;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -40,39 +38,6 @@ public sealed class BuildInputAssemblyTests
         _ = Throws<ArgumentException>(() => BuildInputAssembly.ReadRequiredGlobalInputs(
             ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; }));
         Require(!read, "A non-canonical key reached the IO boundary.");
-    }
-
-    [TestCase]
-    public void ScopedRawInputChangesInvalidateOnlyTheAffectedInputSets()
-    {
-        var speciesOne = Snapshot(("vegetation/species.json", "species-1"));
-        var speciesTwo = Snapshot(("vegetation/species.json", "species-2"));
-        var mapA = Snapshot(("campus.json", "campus-a"), ("vegetation/planting.json", "planting-a"));
-        var mapB = Snapshot(("campus.json", "campus-b"), ("vegetation/planting.json", "planting-b"));
-        var changedA = Snapshot(("campus.json", "campus-a"), ("vegetation/planting.json", "planting-a-edited"));
-        var aBefore = Hash(speciesOne, mapA.Entries);
-        var bBefore = Hash(speciesOne, mapB.Entries);
-        Require(aBefore != Hash(speciesTwo, mapA.Entries) && bBefore != Hash(speciesTwo, mapB.Entries),
-            "A species edit did not invalidate every consuming map's input hash.");
-        Require(aBefore != Hash(speciesOne, changedA.Entries) && bBefore == Hash(speciesOne, mapB.Entries),
-            "A planting edit affected the wrong map or failed to invalidate its own map.");
-        Require(Hash(speciesOne, Snapshot(("value.json", "{\"a\":1}")).Entries) !=
-            Hash(speciesOne, Snapshot(("value.json", "{\"a\": 1}")).Entries), "Hashing lost changes to actual raw input bytes.");
-    }
-
-    [TestCase]
-    public void ScopeAndLengthFramingPreventAmbiguousRecordsAndIgnoreDictionaryInsertionOrder()
-    {
-        var one = Snapshot(("same.json", "payload"));
-        Require(Hash(one, BuildInputSnapshot.Empty.Entries) != Hash(BuildInputSnapshot.Empty, one.Entries),
-            "Global and map keys collided.");
-        Require(Hash(BuildInputSnapshot.Empty, Snapshot(("ab", "c")).Entries) !=
-            Hash(BuildInputSnapshot.Empty, Snapshot(("a", "bc")).Entries), "Key/raw-byte boundaries collided.");
-        var forward = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-        { ["a.json"] = new byte[] { 1 }, ["z.json"] = new byte[] { 2 } };
-        var reverse = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-        { ["z.json"] = new byte[] { 2 }, ["a.json"] = new byte[] { 1 } };
-        Require(Hash(one, forward) == Hash(one, reverse), "Input dictionary iteration order changed the hash.");
     }
 
     [TestCase]
@@ -111,16 +76,6 @@ public sealed class BuildInputAssemblyTests
         _ = Throws<InvalidOperationException>(() => collision.Collision(new(new("unregistered"), new object(), Matrix4x4.Identity)));
     }
 
-    private static BuildInputSnapshot Snapshot(params (string Key, string Value)[] entries) =>
-        BuildInputSnapshot.Freeze(entries.ToDictionary(entry => entry.Key,
-            entry => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(entry.Value), StringComparer.Ordinal));
-    private static string Hash(BuildInputSnapshot globals, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> map)
-    {
-        // This tests the framed input stream, not a second production hash algorithm. WP-02a keeps its existing XxHash128.
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        BuildInputAssembly.AppendScopedInputs(bytes => hash.AppendData(bytes.Span), globals, map);
-        return Convert.ToHexStringLower(hash.GetHashAndReset());
-    }
     private static T Throws<T>(Action action) where T : Exception
     {
         try { action(); }
