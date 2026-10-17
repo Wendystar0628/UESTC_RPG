@@ -16,6 +16,56 @@ public sealed class CoreModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase]
+    public void WholeSourceTracesRestoreProductionGeometryAndCollisions()
+    {
+        var world = RealWorld();
+        var context = Context(world);
+        var module = new CoreModule();
+        var pieces = CoreSite.Pieces(world);
+        var buildings = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Roof) != 0).Select(c => c.Feature).ToHashSet();
+        foreach (var lod in new[] { LodLevel.L0, LodLevel.L3 })
+        {
+            var traces = module.TraceSources(context, lod).ToArray();
+            Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, "source IDs are unique");
+            Require(traces.Select(t => t.SourceId).SequenceEqual(pieces.Select(p => $"core/{p.Id}")), "whole pieces retain production order and stable IDs across levels");
+            Require(traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)).Select(t => t.Feature!.Value).ToHashSet().SetEquals(buildings),
+                "every claimed building has its own actual source");
+            foreach (var trace in traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)))
+                Require(trace.Output.Meshes.Count > 0, $"{trace.SourceId}: actual generated building geometry");
+            foreach (var tile in pieces.Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
+            {
+                var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, lod) == tile).Select(pair => pair.First).ToArray();
+                var output = module.Build(context, tile, lod);
+                var expected = Triangles([output]);
+                var actual = Triangles(sources.Select(t => t.Output));
+                Require(expected.Count == actual.Count && expected.All(t => actual.TryGetValue(t.Key, out var count) && count == t.Value),
+                    $"{lod} {tile}: source triangles restore the batched visible geometry without clipping");
+                Require(JsonSerializer.Serialize(output.Parts, ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Parts).ToArray(), ContractJson.Options),
+                    $"{lod} {tile}: placed parts and transforms survive tracing");
+                Require(JsonSerializer.Serialize(output.Emitters ?? [], ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Emitters ?? []).ToArray(), ContractJson.Options),
+                    $"{lod} {tile}: emitters retain production order");
+            }
+            foreach (var tile in module.Tiles(context))
+            {
+                var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, LodLevel.L0) == tile).Select(pair => pair.First);
+                Require(JsonSerializer.Serialize(module.Collide(context, tile), ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Colliders).ToArray(), ContractJson.Options),
+                    $"{tile}: whole sources restore production collisions");
+            }
+        }
+    }
+
+    private static Dictionary<(ToonRef Material, Vector3 A, Vector3 B, Vector3 C), int> Triangles(IEnumerable<ContentOutput> outputs) =>
+        outputs.SelectMany(o => o.Meshes).SelectMany(mesh => Enumerable.Range(0, mesh.Index.Length / 3).Select(t =>
+        {
+            Vector3 At(int k)
+            {
+                var i = 3 * mesh.Index[3 * t + k];
+                return new(mesh.Position[i], mesh.Position[i + 1], mesh.Position[i + 2]);
+            }
+            return (mesh.Material, At(0), At(1), At(2));
+        })).GroupBy(t => t).ToDictionary(g => g.Key, g => g.Count());
+
+    [TestCase]
     public void RealMapLoadsTheOverlayAndBothAxisPieces()
     {
         var world = RealWorld();

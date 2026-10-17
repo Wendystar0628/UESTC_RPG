@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.Core;
 /// to <see cref="CoreSite.Pieces"/>, their entries to overlay/core.d/ and their terrain to core.terrain.json.
 /// </summary>
 [ContentModule("core", Owner = "WP-16")]
-public sealed class CoreModule : IContentModule, IWindowMetadataSource
+public sealed class CoreModule : IContentModule, IWindowMetadataSource, IContentSourceTraceProvider
 {
     /// <summary>Union of every piece's claims; static because the kernel reads claims before any world is loaded.</summary>
     public IReadOnlyList<Claim> Claims { get; } = CoreSite.Claims;
@@ -34,7 +34,7 @@ public sealed class CoreModule : IContentModule, IWindowMetadataSource
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var build = new CoreBuild(ctx.Catalog) { WindowNumbering = CoreSite.Numbering(ctx), PartLods = ctx.PartLods };
+        var build = CreateBuild(ctx);
         foreach (var piece in CoreSite.Pieces(ctx.World))
             if (CoreTiles.Of(piece.Anchor, lod) == tile) piece.Build(build, lod);
         return build.Finish(lod);
@@ -45,6 +45,26 @@ public sealed class CoreModule : IContentModule, IWindowMetadataSource
         ArgumentNullException.ThrowIfNull(ctx);
         return CoreSite.Pieces(ctx.World).Where(p => CoreTiles.Of(p.Anchor, LodLevel.L0) == tile).SelectMany(p => p.Collide()).ToArray();
     }
+
+    /// <summary>Whole production pieces before the tile's material and glass batching, retaining their placed parts.</summary>
+    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        foreach (var piece in CoreSite.Pieces(context.World))
+        {
+            var build = CreateBuild(context);
+            piece.Build(build, level);
+            // The plaza owns its separately claimed ring steps; other pieces have one owning claim or are auxiliary.
+            var feature = piece is TimePlaza ? CoreFeatures.TimePlaza : piece.Claims.OfType<FeatureClaim>().SingleOrDefault()?.Feature;
+            yield return new ContentSourceTrace($"core/{piece.Id}", feature, build.Finish(level), piece.Collide(), []);
+        }
+    }
+
+    private static CoreBuild CreateBuild(BuildContext context) => new(context.Catalog)
+    {
+        WindowNumbering = CoreSite.Numbering(context),
+        PartLods = context.PartLods,
+    };
 
     public IReadOnlyList<InspectionProbe> Probes => [];
 
