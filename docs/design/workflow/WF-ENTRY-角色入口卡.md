@@ -48,8 +48,8 @@ gates: []
 - 按活派人、省着用额度：审美只交 Claude，GPT 不做审美；体力活交便宜模型；每张单写明模型与推理强度，够用就停；子代理一律新开，不恢复旧的；单子在上下文约 40 万或 150 次请求前交回（WF-MODEL）。
 - 派工前读用量，超过 15 分钟重读（WF-QUOTA §2）；简报写明同时在干活的邻居（WF-MODEL §8.1）。
 - 评审后置：施工者推送后你看截图，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
-- collab_wait 重置后先查进程再重启（`tools\README.md`）。
-- 主动巡逻：会话开始后用原生定时任务（CronCreate）设每 10 分钟跑一次 `E:\Project\UESTC_RPG.wt\.collab\tools\watch\patrol.py`，按末行建议处理（空闲又有新信的去唤醒，collab_wait 没在跑的重开）；定时任务只在本会话有效，重启或换会话后先用 CronList 查，没有就重设。
+- 来信监视 inbox_wait 重置后先查进程再重启（`tools\README.md`）。
+- 主动巡逻：会话开始后用原生定时任务（CronCreate）设每 10 分钟跑一次 `E:\Project\UESTC_RPG.wt\.collab\tools\watch\patrol.py`，按末行建议处理（空闲又有新信的去唤醒，inbox_wait 没在跑的重开）；定时任务只在本会话有效，重启或换会话后先用 CronList 查，没有就重设。
 
 | 做这件事之前 | 读 |
 | --- | --- |

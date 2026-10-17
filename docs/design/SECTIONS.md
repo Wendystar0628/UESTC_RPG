@@ -200,7 +200,7 @@
 - WF-QUOTA §2 Claude 侧的并发与额度 · L40 · 1.2k
 - WF-QUOTA §3 节奏档：非紧急段与紧急段（D-196） · L56 · 548
 - WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L63 · 166
-- WF-QUOTA §5 额度见底时冻结 · L68 · 216
+- WF-QUOTA §5 额度见底时冻结 · L68 · 220
 
 ## WF-STATUS · 施工状态与队列
 
