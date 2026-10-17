@@ -50,7 +50,7 @@ public sealed partial class CollisionCoreTests
                 if (module is BuildingsModule buildings)
                 {
                     foreach (var source in buildings.TraceSources(context, tile, LodLevel.L0))
-                        Measure(source.SourceId, source.Output, source.Colliders);
+                        Measure(source.SourceId, source.Output, source.Colliders, [source.OccupiedFootprint]);
                     continue;
                 }
                 if (module is VegetationModule vegetation)
@@ -70,41 +70,22 @@ public sealed partial class CollisionCoreTests
                 }
                 var direct = module.Collide(context, tile);
                 if (direct.Count == 0) continue;
-                // Pair claimed buildings to their own footprint and elevated/vertical surfaces, never the tile's ground AABB.
-                var triangles = OutputTriangles(output).ToArray();
-                foreach (var feature in claimed.Values.Where(feature => !measuredClaims.Contains(feature.Id)
-                    && (map.ClaimLookup(feature.Id, Aspects.Massing) ?? map.ClaimLookup(feature.Id, Aspects.Facade)) == pair.Value.Owner))
-                {
-                    var footprints = CollisionTileBuilder.BuildingFootprints(feature);
-                    var rings = footprints.Select(footprint => footprint.Rings.Outer).ToArray();
-                    var min = rings.SelectMany(ring => ring).Aggregate(Vector2.Min) - new Vector2(.3f);
-                    var max = rings.SelectMany(ring => ring).Aggregate(Vector2.Max) + new Vector2(.3f);
-                    var own = direct.Where(collider => collider.Tag is not (SurfaceTag.Ground or SurfaceTag.Invisible)
-                        && BoundsOverlap(CollisionGeometry.Bounds(collider), min, max)).ToArray();
-                    if (own.Length == 0) continue;
-                    var visible = triangles.Where(triangle =>
-                    {
-                        var normal = Vector3.Cross(triangle.B - triangle.A, triangle.C - triangle.A);
-                        var center = (triangle.A + triangle.B + triangle.C) / 3;
-                        return center.X >= min.X && center.X <= max.X && center.Z >= min.Y && center.Z <= max.Y
-                            && (MathF.Abs(normal.Y) < normal.Length() * .7f || center.Y > context.World.Spatial.GroundY(center.X, center.Z) + .3f);
-                    }).ToArray();
-                    CheckExpansion($"claimed/{pair.Value.Owner.Value}/{feature.Id.Value}", visible, own);
-                    measuredClaims.Add(feature.Id); measured++;
-                }
+                // Claimed modules must expose their actual source output and directed contours before
+                // they can be measured. Neither a tile AABB nor an untransformed world footprint proves
+                // ownership or the final visible contour; the missing-source assertion below stays red.
                 if (module.Claims.Count == 0)
                     Measure($"module/{pair.Key}/{tile}", output, direct);
             }
         }
         foreach (var missing in claimed.Keys.Where(id => !measuredClaims.Contains(id)))
-            Fail("No actual claimed-source expansion sample: " + missing.Value);
+            Fail("No actual claimed-source expansion sample (source geometry and directed contour required): " + missing.Value);
         Require(measured > 0, "G15 measured no source-paired collision expansion.");
         Godot.GD.Print($"G15Core expansionSources={measured} claimedSources={measuredClaims.Count}/{claimed.Count}");
 
-        void Measure(string id, ContentOutput output, IReadOnlyList<Collider> colliders)
+        void Measure(string id, ContentOutput output, IReadOnlyList<Collider> colliders, IReadOnlyList<PolygonRings>? occupied = null)
         {
             if (colliders.Count == 0) return;
-            CheckExpansion(id, OutputTriangles(output).ToArray(), colliders); measured++;
+            CheckExpansion(id, OutputTriangles(output).ToArray(), colliders, occupied); measured++;
         }
     }
 
@@ -131,24 +112,54 @@ public sealed partial class CollisionCoreTests
             }
     }
 
-    private void CheckExpansion(string source, IReadOnlyList<Triangle> visible, IReadOnlyList<Collider> colliders)
+    private void CheckExpansion(string source, IReadOnlyList<Triangle> visible, IReadOnlyList<Collider> colliders,
+        IReadOnlyList<PolygonRings>? occupied = null)
     {
         foreach (var collider in colliders.Where(collider => collider is not HeightFieldCollider && collider.Tag is not (SurfaceTag.Ground or SurfaceTag.Invisible or SurfaceTag.Water)))
         {
-            if (visible.Count == 0) { Fail($"source={source} has collision without matching visible geometry."); continue; }
-            var maximum = 0f;
-            foreach (var point in HorizontalSamples(collider))
-            {
-                var minimum = float.PositiveInfinity;
-                foreach (var triangle in visible)
-                {
-                    minimum = MathF.Min(minimum, DistanceSquared(point, triangle));
-                    if (minimum == 0) break;
-                }
-                maximum = MathF.Max(maximum, MathF.Sqrt(minimum));
-            }
+            if (visible.Count == 0)
+            { Fail($"source={source} has collision without matching visible geometry."); continue; }
+            var maximum = MaximumOutwardExpansion(visible, collider, occupied);
             if (maximum > .3f) Fail($"source={source} {collider.GetType().Name} horizontal expansion={maximum:R}m > .3m.");
         }
+    }
+
+    private static float MaximumOutwardExpansion(IReadOnlyList<Triangle> visible, Collider collider,
+        IReadOnlyList<PolygonRings>? occupied = null) =>
+        HorizontalSamples(collider).Max(point => MathF.Sqrt(OutwardDistanceSquared(point, visible, occupied)));
+
+    // Visible triangles already describe their occupied XZ projection, including any triangulated holes.
+    // A one-sided building facade additionally needs its generator's directed solid footprint: filling
+    // that material side removes inward wall thickness, while courtyard rings retain their air side.
+    private static float OutwardDistanceSquared(Vector2 point, IReadOnlyList<Triangle> visible,
+        IReadOnlyList<PolygonRings>? occupied)
+    {
+        var minimum = float.PositiveInfinity;
+        foreach (var polygon in occupied ?? [])
+        {
+            if (ContainsPoint(polygon.Outer, point) && !polygon.Holes.Any(hole => ContainsPoint(hole, point))) return 0;
+            foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
+                for (var edge = 0; edge < ring.Count; edge++)
+                    minimum = MathF.Min(minimum, SegmentDistanceSquared(point, ring[edge], ring[(edge + 1) % ring.Count]));
+        }
+        foreach (var triangle in visible)
+        {
+            minimum = MathF.Min(minimum, DistanceSquared(point, triangle));
+            if (minimum == 0) break;
+        }
+        return minimum;
+    }
+
+    private static bool ContainsPoint(IReadOnlyList<Vector2> ring, Vector2 point)
+    {
+        var inside = false;
+        for (var edge = 0; edge < ring.Count; edge++)
+        {
+            var a = ring[edge]; var b = ring[(edge + 1) % ring.Count];
+            if ((a.Y > point.Y) != (b.Y > point.Y)
+                && point.X < a.X + (point.Y - a.Y) * (b.X - a.X) / (b.Y - a.Y)) inside = !inside;
+        }
+        return inside;
     }
 
     private static IEnumerable<Vector2> HorizontalSamples(Collider collider)
@@ -186,6 +197,4 @@ public sealed partial class CollisionCoreTests
         var direction = Vector2.Normalize(b - a); var offset = new Vector2(-direction.Y, direction.X) * half;
         return [a - offset, b - offset, b + offset, a + offset];
     }
-    private static bool BoundsOverlap(Box3 bounds, Vector2 min, Vector2 max) =>
-        bounds.Max.X >= min.X && bounds.Min.X <= max.X && bounds.Max.Z >= min.Y && bounds.Min.Z <= max.Y;
 }
