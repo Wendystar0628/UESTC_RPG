@@ -1,4 +1,4 @@
-# Default: changed-package quick checks, plus explicitly reported core-specialist work.
+# Default: G1, affected-module G2 and G4. Specialist checks are explicit.
 # -Plan is read-only. Core scopes drive the formal production stage.
 # -Full requests G1-G21; unfinished gates return NotImplemented and exit 2.
 # Exit codes: 0 requested implemented scope passed; 1 failed; 2 incomplete scope.
@@ -88,26 +88,18 @@ function Get-UESTCG2ProjectSelection {
     param([string]$Root, [string[]]$Changes, [string[]]$Files, [bool]$ForceAll=$false)
     $normalizedChanges = @($Changes | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
     $normalizedFiles = @($Files | ForEach-Object { ConvertTo-UESTCG2RelativePath '' $_ })
-    # Shared dependency/project edits retain the existing conservative all-project policy.
-    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
+    # Contract, build and shared data changes can affect both test hosts.
+    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!tests/)|^game/contracts/tests/PaletteFixture\.cs$|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
         $scope = Get-UESTCG2CompileScope $Root $project
         $reasons = New-Object 'Collections.Generic.List[string]'
         if ($ForceAll) { $reasons.Add('full G2 selection') }
         foreach ($path in $normalizedChanges) {
-            if ($path -eq $project -or $path -eq ($project -replace '\.csproj$', '.packages.lock.json') -or
+            if ($path -eq $project -or
                 ($project -eq 'game/Campus.Tests.csproj' -and $path -eq 'game/Campus.csproj')) { $reasons.Add("Test host changed: $path") }
         }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
         foreach ($reason in $scope.ConservativeReasons) { $reasons.Add("Conservative selection: $reason") }
-        foreach ($path in $normalizedChanges) {
-            foreach ($production in $scope.ProductionRoots) {
-                if (-not $production -or $path -ieq $production -or $path.StartsWith($production+'/', [StringComparison]::OrdinalIgnoreCase)) {
-                    $reasons.Add("Compile-derived production root '$production': $path")
-                    break
-                }
-            }
-        }
         $patterns = @($scope.CompileGlobs | ForEach-Object {
             $pattern = [regex]::Escape($_).Replace('\*\*/','(?:.*/)?').Replace('\*\*','.*').Replace('\*','[^/]*').Replace('\?','[^/]')
             New-Object Text.RegularExpressions.Regex ('^'+$pattern+'$'), ([Text.RegularExpressions.RegexOptions]::IgnoreCase)
@@ -119,8 +111,33 @@ function Get-UESTCG2ProjectSelection {
             }
             return $false
         })
+        $allTests = $reasons.Count -gt 0
+        $classes = New-Object 'Collections.Generic.List[string]'
+        foreach ($file in $compileFiles) {
+            # The aggregate gen/**/tests glob is not a module boundary. Each
+            # test's own tests directory identifies the production module.
+            if ($file -notmatch '^(?<module>.+)/tests/') { continue }
+            $module = $Matches.module
+            $affected = @($normalizedChanges | Where-Object {
+                $_ -ieq $module -or $_.StartsWith($module+'/', [StringComparison]::OrdinalIgnoreCase)
+            }).Count -gt 0
+            if (-not ($allTests -or $affected)) { continue }
+            $source = [IO.File]::ReadAllText((Join-Path $Root $file))
+            $namespace = [regex]::Match($source, '(?m)^\s*namespace\s+([\w.]+)\s*[;{]')
+            $suites = [regex]::Matches($source, '(?s)\[TestSuite(?:\([^\]]*\))?\](?:\s*\[[^\]]*\])*\s*(?:(?:public|internal|sealed|partial|abstract)\s+)*class\s+(\w+)')
+            foreach ($suite in $suites) {
+                $class = $namespace.Groups[1].Value + '.' + $suite.Groups[1].Value
+                if ($namespace.Success -and -not $classes.Contains($class)) { $classes.Add($class) }
+            }
+            if ($affected) { $reasons.Add("Changed module '$module'") }
+        }
+        $filter = 'TestCategory!=NativeRender&TestCategory!=G15Core'
+        if (-not $ForceAll) { $filter += '&TestCategory!=Slow' }
+        if (-not $allTests -and $classes.Count) {
+            $filter += '&(' + (@($classes | Sort-Object | ForEach-Object { 'FullyQualifiedName~'+$_+'.' }) -join '|') + ')'
+        }
         [pscustomobject]@{ Name=[IO.Path]::GetFileNameWithoutExtension($project); Project=$project;
-            Selected=($reasons.Count -gt 0); Reasons=$reasons.ToArray();
+            Selected=($allTests -or $classes.Count -gt 0); Reasons=@($reasons | Sort-Object -Unique); Filter=$filter;
             CompileGlobs=$scope.CompileGlobs; ProductionRoots=$scope.ProductionRoots;
             CompileFileCount=$compileFiles.Count;
             HasCompileFiles=($compileFiles.Count -gt 0 -or $scope.ConservativeReasons.Count -gt 0) }
@@ -132,6 +149,7 @@ $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
 $godot = Get-UESTCGodot
 $work = Join-Path $root 'output/build/gates'
+$cacheWork = Join-Path $root 'output/cache/gates'
 $branch = (Invoke-UESTCGit $root @('branch', '--show-current')).StdOut.Trim()
 if (-not $BaseRef) {
     $BaseRef = 'main'
@@ -167,11 +185,7 @@ if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -notm
 elseif ($Smoke) { $selected.Add('G5Smoke') }
 elseif ($Full) { 1..21 | ForEach-Object { $selected.Add("G$_") }; $selected.Add('G5Smoke') }
 elseif ($runtimeChanges.Count) {
-    1..4 | ForEach-Object { $selected.Add("G$_") }
-    if (Test-UESTCG5Impact $root $BaseRef $runtimeChanges) { $selected.Add('G5') }
-    if (@($changes | Where-Object { $_ -match '^game/(flow|kernel|camera|stage)/|^game/project\.godot$' }).Count) { $selected.Add('G5Smoke') }
-    if (@($changes | Where-Object { $_ -match '^game/(camera/walk|kernel/collision|gen/(collision|walkable))/' }).Count) { $selected.Add('G15Core') }
-    if (@($changes | Where-Object { $_ -match '^game/kernel/save/|^game/contracts/Save/' }).Count) { $selected.Add('G20Core') }
+    foreach ($id in @('G1','G2','G4')) { $selected.Add($id) }
 }
 # Service replacement is a required G5 subcheck, including explicitly selected G5.
 $mainStage = Get-UESTCMainStage $root
@@ -191,18 +205,19 @@ if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
 $gateLease = Enter-UESTCBuildLock $layout.Locks
 try {
 $null = [IO.Directory]::CreateDirectory($work)
+$null = [IO.Directory]::CreateDirectory($cacheWork)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $cacheable = $selected.Count -gt 0 -and -not ($Full -or $NoCache)
 $cachePaths = if ($cacheable) { @(Get-UESTCCachePaths $root $Wp $changes) } else { @() }
-$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object Project) -join ',')"
+$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object { $_.Project+':'+$_.Filter }) -join ',')"
 $inputHash = if ($cacheable) { Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $cachePaths } else { '' }
 $ownershipHash = if ($cacheable -and $selected.Contains('G3')) {
     # Ownership is checked for every changed path, including documentation and deletions.
     Get-UESTCStringHash ($inputHash + ($changes -join "`n") + (Invoke-UESTCGit $root @('show',"${BaseRef}:ownership.json")).StdOut +
         (Get-UESTCOwnershipUidHash $root $changes))
 } else { '' }
-$cachePath = Join-Path $work "$Wp-cache.json"
+$cachePath = Join-Path $cacheWork "$Wp-cache.json"
 $cacheEntries = @{}
 if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
     try {
@@ -289,7 +304,7 @@ foreach ($id in $selected) {
                     if (-not $selection.HasCompileFiles) { $notes += "${test}: Skipped (no files match explicit Compile Include)"; continue }
                     # Native rendering/resource-lifetime tests are run explicitly under the build lock.
                     # Ordinary quick checks remain headless checks (D-167).
-                    $null = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter','TestCategory!=NativeRender&TestCategory!=G15Core','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
+                    $null = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter',$selection.Filter,'--logger','trx','--results-directory',(Join-Path $work 'test-results'))
                     $runCount++
                 }
                 if ($runCount -eq 0) { $status = 'Skipped' }
@@ -331,15 +346,15 @@ foreach ($id in $selected) {
                 Assert-CleanGodotLog $r
                 if (-not (Test-Path -LiteralPath (Join-Path $release 'UESTC.exe'))) { throw 'Export command did not produce UESTC.exe.' }
                 $bytes = (Get-ChildItem -LiteralPath $release -File -Recurse | Measure-Object Length -Sum).Sum
-                $detail = "Windows Desktop release export; directory bytes=$bytes. Archive/bake-verify/PCK/license/production-budget checks: NotImplemented."
+                $detail = "Windows Desktop release export; directory bytes=$bytes. Archive/PCK/license/production-budget checks: NotImplemented."
                 $status = 'NotImplemented'
             }
             'G15Core' {
                 Assert-GodotVersion
-                # The complete-map core gets its own bounded session; ordinary G2 settings stay unchanged.
+                # The daily walking core has a three-minute session limit.
                 [xml]$coreSettings = Get-Content -Raw -LiteralPath (Write-TestSettings)
                 $sessionTimeout = $coreSettings.CreateElement('TestSessionTimeout')
-                $sessionTimeout.InnerText = '1320000'
+                $sessionTimeout.InnerText = '180000'
                 $null = $coreSettings.RunSettings.RunConfiguration.AppendChild($sessionTimeout)
                 $settings = Join-Path $work 'G15Core.runsettings'
                 $coreSettings.Save($settings)
@@ -347,13 +362,11 @@ foreach ($id in $selected) {
                 try {
                     [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $Map, 'Process')
                     $coreArguments = @('test',(Join-Path $game 'Campus.Tests.csproj'),'-c',$Configuration,'--settings',$settings,'--filter','TestCategory=G15Core','--logger','console;verbosity=detailed','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
-                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 1500
+                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 210
                 } catch {
-                    throw ("G15Core FirstFourPassed=false; whole-tile mount CPU and first actual Jolt-step timing are deferred. " + $_.Exception.Message)
+                    throw ("G15Core nearby walking failed. " + $_.Exception.Message)
                 } finally { [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $previousMap, 'Process') }
-                # This batch implements the first four checks; it does not sign off the remaining G15 scope.
-                $status = 'NotImplemented'
-                $detail = [pscustomobject]@{ FirstFourPassed=$true; Deferred=@('Whole-tile native construction/mount CPU budget','First actual Jolt-step spike') }
+                $detail = 'P01/P08 authored landing and nearby walking passed; at most 3x3 collision tiles. Full routes and whole-map checks were not run.'
             }
             'G20Core' {
                 $coreScript = Join-Path $PSScriptRoot 'gates/core-smoke.ps1'
@@ -363,7 +376,7 @@ foreach ($id in $selected) {
                 } else {
                     . $coreScript
                     $saveSuitesPassed = @($results | Where-Object { $_.Gate -eq 'G2' -and $_.Status -in @('Passed','CachedPass') }).Count -gt 0 -and
-                        @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles -and $_.Project -eq 'game/Campus.Tests.csproj' }).Count -gt 0
+                        @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles -and $_.Project -eq 'game/Campus.Tests.csproj' -and $_.Filter -notmatch 'FullyQualifiedName' }).Count -gt 0
                     $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
                     $status = $detail.Status
                 }

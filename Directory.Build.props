@@ -7,12 +7,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <NuGetLockFilePath Condition="'$(MSBuildProjectName)' == 'Campus.Tests' Or '$(MSBuildProjectName)' == 'Campus.Gen.Tests'">$(MSBuildProjectDirectory)/$(MSBuildProjectName).packages.lock.json</NuGetLockFilePath>
-    <!-- Godot tools and exports resolve different package graphs; keep their locks independent. -->
-    <CampusRestoreFlavor Condition="'$(Configuration)' != '' And '$(Configuration)' != 'Debug'">$(Configuration)</CampusRestoreFlavor>
-    <CampusRestoreFlavor Condition="'$(RuntimeIdentifier)' != ''">$(CampusRestoreFlavor).$(RuntimeIdentifier)</CampusRestoreFlavor>
-    <NuGetLockFilePath Condition="'$(CampusRestoreFlavor)' != ''">$(MSBuildProjectDirectory)/$(MSBuildProjectName).$(CampusRestoreFlavor).packages.lock.json</NuGetLockFilePath>
     <BaseIntermediateOutputPath>obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
     <BaseOutputPath>bin/$(MSBuildProjectName)/</BaseOutputPath>
     <DefaultItemExcludes>$(DefaultItemExcludes);**/obj/**;**/bin/**;**/.godot/**</DefaultItemExcludes>

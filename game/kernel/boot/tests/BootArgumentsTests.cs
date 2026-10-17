@@ -65,8 +65,7 @@ public sealed class BootArgumentsTests
     [TestCase]
     public void CpuBakeHasOneExecutionOwner()
     {
-        if (!BootArguments.Parse(["--bake=all", "--map=*"], true).CpuBakeMode ||
-            !BootArguments.Parse(["--bake-verify"], true).CpuBakeMode)
+        if (!BootArguments.Parse(["--bake=all", "--map=*"], true).CpuBakeMode)
             throw new InvalidOperationException("CPU baking did not select its command path.");
         var rejected = false;
         try { BootArguments.Parse(["--bake=all", "--frames=30"], true); }

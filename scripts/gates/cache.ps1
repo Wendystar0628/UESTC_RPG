@@ -30,7 +30,6 @@ function Get-UESTCCachePaths {
             if (-not $aggregate -and $path.StartsWith($directory+'/', [StringComparison]::OrdinalIgnoreCase)) {
                 $null = $paths.Add($path)
             }
-            if ($aggregate -and $path -in @("$directory/packages.lock.json", "$directory/$([IO.Path]::GetFileNameWithoutExtension($project)).packages.lock.json")) { $null = $paths.Add($path) }
         }
         if (-not (Test-Path -LiteralPath (Join-Path $Root $project))) { continue }
         [xml]$xml = [IO.File]::ReadAllText((Join-Path $Root $project))

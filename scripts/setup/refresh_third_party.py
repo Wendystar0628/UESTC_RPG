@@ -1,8 +1,8 @@
-"""Refresh third_party.json from pinned packages and verified D0 tool receipts.
+"""Refresh NuGet sources in third_party.json from existing restore assets.
 
-Downloads package archives for license/provenance inspection only. Does not run
-restore, compile, import, install packages into a project, or execute package code.
-Both packages.lock.json and project-specific *.packages.lock.json files are read.
+Reads NuGet libraries from obj/**/project.assets.json without running restore or
+recreating lockfiles. Existing package metadata and non-NuGet entries are preserved.
+New package metadata requires a local nupkg archive; nothing is downloaded.
 Manual entries (including fonts supplied by another package) are preserved.
 Python wheel inventory may retain explicit pending license reviews; that is not
 license approval. The certifi exception is restricted to its approved artifact.
@@ -13,7 +13,6 @@ metadata does not run validation or promote a historical result to a new run.
 import hashlib
 import json
 from pathlib import Path
-import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -27,8 +26,7 @@ def package_entry(name, version, scopes):
     archive = DOWNLOADS / filename
     url = f"https://api.nuget.org/v3-flatcontainer/{name.lower()}/{version.lower()}/{name.lower()}.{version.lower()}.nupkg"
     if not archive.exists():
-        with urllib.request.urlopen(url, timeout=120) as response:
-            archive.write_bytes(response.read())
+        raise FileNotFoundError(f"Package archive not available locally: {archive}")
     with zipfile.ZipFile(archive) as content:
         bad = content.testzip()
         if bad:
@@ -59,7 +57,7 @@ def package_entry(name, version, scopes):
         "commit": repo.get("commit"), "commitStatus": "NUSPEC_DECLARED" if repo.get("commit") else "NOT_DECLARED_UPSTREAM",
         "license": license_id, "licenseEvidence": {"archive": "output/downloads/" + filename, "nuspec": nuspec_name, "declaration": license_evidence},
         "source": url, "repository": repo.get("url"), "sha256": hashlib.sha256(payload).hexdigest(),
-        "sha512": hashlib.sha512(payload).hexdigest(), "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE", "hashScope": "Complete signed nupkg archive bytes; differs from NuGet lockfile contentHash, which excludes the signature context", "bytes": len(payload),
+        "sha512": hashlib.sha512(payload).hexdigest(), "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE", "hashScope": "Complete signed nupkg archive bytes", "bytes": len(payload),
     }
 
 
@@ -89,11 +87,12 @@ def validate_manual_license(entry):
 
 
 def main():
-    DOWNLOADS.mkdir(parents=True, exist_ok=True)
     manifest_path = ROOT / "third_party.json"
     existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
-    manual_entries = [entry for entry in existing.get("entries", [])
-                      if entry.get("managedBy") == "manual" or entry.get("kind") == "font"]
+    previous_entries = {(entry["name"], entry["version"]): entry
+                        for entry in existing.get("entries", [])}
+    retained_entries = [entry for entry in existing.get("entries", [])
+                        if entry.get("kind") != "nuget" or entry.get("managedBy") == "manual"]
     versions = {}
     def register(name, version, scope):
         versions.setdefault((name, version), set()).add(scope)
@@ -101,54 +100,53 @@ def main():
     for node in props.findall(".//PackageVersion"):
         register(node.attrib["Include"], node.attrib["Version"], "central-version")
     register("Godot.NET.Sdk", "4.7.2", "project-sdk")
-    lock_files = []
-    lock_paths = set(ROOT.rglob("packages.lock.json")) | set(ROOT.rglob("*.packages.lock.json"))
-    for lock_path in sorted(lock_paths):
-        if any(part in {"output", "bin", "obj", ".godot"} for part in lock_path.parts):
+    assets_files = []
+    for assets_path in sorted(ROOT.rglob("project.assets.json")):
+        parts = assets_path.relative_to(ROOT).parts
+        if "obj" not in parts or any(part in {"output", "bin"} for part in parts):
             continue
-        relative = lock_path.relative_to(ROOT).as_posix()
-        lock_files.append(relative)
-        lock = json.loads(lock_path.read_text(encoding="utf-8-sig"))
-        for framework in lock.get("dependencies", {}).values():
-            for name, node in framework.items():
-                if node.get("type", "").lower() != "project" and node.get("resolved"):
-                    register(name, node["resolved"], relative)
-    entries = [package_entry(name, version, scopes) for (name, version), scopes in sorted(versions.items())]
-    plugin = json.loads((DOWNLOADS / "gdunit4-installation.json").read_text(encoding="utf-8"))
-    entries.append({
-        "name": "gdUnit4", "version": plugin["version"], "commit": plugin["commit"], "kind": "godot-editor-plugin", "license": "MIT",
-        "source": plugin["source"], "release": plugin["release"], "sha256": plugin["sha256"], "sha512": plugin["sha512"], "hashStatus": "COMPUTED_FROM_OFFICIAL_TAG_ARCHIVE",
-        "bytes": plugin["bytes"], "path": "game/addons/gdUnit4", "licenseFile": "game/addons/gdUnit4/LICENSE", "modified": False,
-        "installedFileCount": plugin["installedFileCount"], "installedBytes": plugin["installedBytes"],
-        "languagePolicy": "Vendored upstream GDScript and C# bridge are third-party plugin code, not project-authored gameplay code.",
-        "compatibility": {"targetGodot": "4.7.2.stable.mono", "upstreamReadmeVersions": ["4.5", "4.5.1", "4.5.2", "4.6", "4.6.1", "4.6.2", "4.6.3", "4.7", "4.7.1"], "readmeEvidence": "https://github.com/godot-gdunit-labs/gdUnit4/blob/v6.2.2/README.md", "loaderMinimumHex": "0x40200", "loaderEvidence": "game/addons/gdUnit4/src/dotnet/GdUnit4CSharpApiLoader.gd", "patchCompatibility": "4.7 family declared; 4.7.2 is not individually enumerated in the upstream README", "runtimeValidation": "NOT_RUN", "dotnetApi": "5.1.0-rc5", "dotnetAdapter": "3.1.1"}
-    })
-    templates = json.loads((DOWNLOADS / "godot-template-installation.json").read_text(encoding="utf-8"))
-    entries.append({
-        "name": "Godot .NET Windows x64 export templates", "version": "4.7.2-stable", "kind": "external-build-tool", "commit": "ed1daf0bf001b61586d9930840f2f1394092c079", "license": "MIT", "licenseUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt", "thirdPartyNoticesUrl": "https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt", "source": templates["source"], "release": templates["release"], "bytes": templates["bytes"], "sha256": templates["sha256"], "sha512": templates["sha512"], "hashStatus": "VERIFIED_OFFICIAL_SHA512_AND_RELEASE_SHA256", "archive": "output/downloads/" + templates["name"], "installation": templates["installation"], "scope": templates["scope"], "installedFiles": templates["installedFiles"], "runtimeValidation": "NOT_RUN"
-    })
-    generated_keys = {(entry["name"], entry["version"]) for entry in entries}
-    previous_entries = {(entry["name"], entry["version"]): entry for entry in existing.get("entries", [])}
-    for entry in entries:
-        previous = previous_entries.get((entry["name"], entry["version"]))
-        if previous is None or previous.get("sha256") != entry.get("sha256"):
+        assets = json.loads(assets_path.read_text(encoding="utf-8-sig"))
+        project_path = (assets.get("project", {}).get("restore", {}).get("projectPath")
+                        or assets.get("restore", {}).get("projectPath"))
+        if not project_path or not (ROOT / project_path).is_file():
             continue
-        for field in ("runtimeValidation", "validation", "validationEvidence"):
-            if field in previous:
-                entry[field] = previous[field]
-        if "compatibility" in entry and "runtimeValidation" in previous.get("compatibility", {}):
-            entry["compatibility"]["runtimeValidation"] = previous["compatibility"]["runtimeValidation"]
-    for entry in manual_entries:
-        if (entry["name"], entry["version"]) in generated_keys:
-            raise ValueError(f"Manual entry conflicts with generated package: {entry['name']}")
-        validate_manual_license(entry)
-    entries.extend(manual_entries)
-    result = {"version": 1, "allowedLicenses": sorted(ALLOWED), "entries": entries,
-        "nugetClosure": {"lockFiles": sorted(lock_files), "lockFilePatterns": ["packages.lock.json", "*.packages.lock.json"], "status": "LOCKFILES_INCLUDED" if lock_files else "PENDING_RESTORE_LOCKFILES", "policy": "Read every lockfile independently without modifying it. Run this script after restoring all projects to include every resolved transitive package; missing lockfiles are not license validation success."},
-        "audio": {"manifest": "game/data/audio/licenses.json", "owner": "WP-53e", "assetsDownloadedInD0": False},
-        "validation": existing.get("validation", {"build": "NOT_RUN", "godotImport": "NOT_RUN", "export": "NOT_RUN"})}
+        relative = assets_path.relative_to(ROOT).as_posix()
+        assets_files.append(relative)
+        for library, node in assets.get("libraries", {}).items():
+            if node.get("type") == "package":
+                name, version = library.rsplit("/", 1)
+                register(name, version, relative)
+    if not assets_files:
+        raise ValueError("No restore assets found; restore projects before refreshing the manifest")
+    missing = [key for key, entry in previous_entries.items()
+               if entry.get("kind") == "nuget" and key not in versions
+               and entry["name"] != "Microsoft.CodeAnalysis.PublicApiAnalyzers"]
+    if missing:
+        raise ValueError(f"Restore inputs do not cover registered NuGet packages: {missing}")
+    entries = []
+    for (name, version), scopes in sorted(versions.items()):
+        previous = previous_entries.get((name, version))
+        if previous is not None:
+            if previous in retained_entries:
+                raise ValueError(f"Manual entry conflicts with generated package: {name}")
+            entry = {**previous, "scopes": sorted(scopes)}
+        else:
+            entry = package_entry(name, version, scopes)
+        entries.append(entry)
+    for entry in retained_entries:
+        if entry.get("managedBy") == "manual" or entry.get("kind") == "font":
+            validate_manual_license(entry)
+    entries.extend(retained_entries)
+    closure = dict(existing.get("nugetClosure", {}))
+    for field in ("lockFiles", "lockFilePatterns", "status"):
+        closure.pop(field, None)
+    closure.update({
+        "assetsFiles": assets_files,
+        "policy": "Read NuGet package libraries from existing obj/**/project.assets.json without modifying restore outputs. Run after restoring all projects; this inventory does not grant license approval."
+    })
+    result = {**existing, "entries": entries, "nugetClosure": closure}
     (ROOT / "third_party.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
-    print(f"Recorded {len(entries)} entries; NuGet lockfiles: {len(lock_files)}")
+    print(f"Recorded {len(entries)} entries; NuGet restore assets: {len(assets_files)}")
 
 
 if __name__ == "__main__":

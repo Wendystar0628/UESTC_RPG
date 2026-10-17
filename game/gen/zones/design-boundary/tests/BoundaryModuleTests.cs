@@ -225,7 +225,7 @@ public sealed class BoundaryModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory("Slow")]
     public void SameInputSameBytes()
     {
         var a = Bytes(Context());

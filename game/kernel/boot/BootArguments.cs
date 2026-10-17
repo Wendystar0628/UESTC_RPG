@@ -11,12 +11,12 @@ public sealed class BootArguments
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
         "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "weather-queue", "sunshower",
         "quality", "quality-set", "adaptive", "bench", "tier", "without", "inspect", "shots", "frames", "out",
-        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "bake-verify", "title", "cine", "save", "slot",
+        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "cine", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
         "audio-probe", "audio-out", "preset", "focus", "pose-file"
     };
-    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "bake-verify", "audio-probe" };
+    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
         "weather-seed", "weather-remaining", "weather-queue", "sunshower", "wet", "pose", "mode", "map", "spawn", "focus", "pose-file"];
     private readonly Dictionary<string, string> _values;
@@ -31,7 +31,7 @@ public sealed class BootArguments
     public IReadOnlyDictionary<string, string> Values => _values;
     public IReadOnlySet<string> ExplicitArguments => _provided;
     public bool CaptureMode => _provided.Overlaps(["gate", "shots", "bench", "frames"]);
-    public bool CpuBakeMode => Has("bake") || Value("bake-verify") == "1";
+    public bool CpuBakeMode => Has("bake");
     public bool Title => Value("title", "1") == "1";
     public bool HasLoad => Has("slot") || Has("load");
     public bool Has(string key) => _provided.Contains(key);
@@ -67,7 +67,7 @@ public sealed class BootArguments
 
     private void Validate()
     {
-        foreach (var key in new[] { "ui", "title", "adaptive", "bench", "bake-bg", "bake-strict", "bake-verify", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
+        foreach (var key in new[] { "ui", "title", "adaptive", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
             OneOf(key, "0", "1");
         OneOf("season", "spring", "summer", "autumn", "winter");
         OneOf("flow", "0", "1", "10", "60", "360", "1440");

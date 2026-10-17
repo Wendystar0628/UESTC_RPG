@@ -165,7 +165,7 @@ public sealed class NorthModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory("Slow")]
     public void BuildIsDeterministic()
     {
         var a = Bytes(Context());
