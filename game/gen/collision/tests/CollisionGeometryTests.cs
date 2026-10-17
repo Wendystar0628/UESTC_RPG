@@ -69,6 +69,20 @@ public sealed class CollisionGeometryTests
         Require(opened.Any(w => Blocks(w, new(5, 4, 0))), "Lintel must remain above the open doorway.");
         var closed = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [door with { Open = false }] });
         Require(closed.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))), "Closed doorway must stay solid and tagged.");
+        var closedBuilding = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Open = false });
+        Require(closedBuilding.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))), "An open door declaration cannot open a closed building.");
+
+        var raisedDoor = door with { Center = new(5, 5, 0), HeadY = 7.4f };
+        var raised = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [raisedDoor] });
+        Require(!raised.Any(w => Blocks(w, new(5, 6.5f, 0))), "An absolute raised doorway is blocked by a ground-relative lintel.");
+        Require(raised.Any(w => Blocks(w, new(5, 4.9f, 0))) && raised.Any(w => Blocks(w, new(5, 7.5f, 0))), "Raised doors must retain the walls below and above their declared opening.");
+        var unknownHead = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [raisedDoor with { HeadY = 0 }] });
+        Require(!unknownHead.Any(w => Blocks(w, new(5, 6.5f, 0))) && unknownHead.Any(w => Blocks(w, new(5, 9, 0))), "An unknown head uses door height above its absolute threshold.");
+        var stacked = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [door with { Open = false, HeadY = 2.4f }, raisedDoor] });
+        Require(stacked.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))) &&
+            !stacked.Any(w => Blocks(w, new(5, 6.5f, 0))), "A closed lower door must not block an open door on another floor at the same horizontal span.");
+        Require(stacked.Any(w => w.Tag == SurfaceTag.Wall && Blocks(w, new(5, 4, 0))) && stacked.Any(w => Blocks(w, new(5, 7.5f, 0))),
+            "The wall between stacked doorways and above the upper doorway must remain.");
         Require(opened.All(w => w.HalfT <= 0.15f), "Wall horizontal expansion exceeds 0.3 m.");
     }
 

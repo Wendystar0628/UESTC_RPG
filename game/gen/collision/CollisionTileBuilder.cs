@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Collision;
 
@@ -93,7 +94,7 @@ public sealed class CollisionTileBuilder(
         }
     }
 
-    /// <summary>Wall thickness goes inside each ring; only declared open entrances cut the lower wall.</summary>
+    /// <summary>Wall thickness goes inside each ring; declared open entrances cut their absolute doorway range.</summary>
     public static IReadOnlyList<WallCollider> BuildingWalls(PolygonRings polygon, ISpatialIndex spatial, InteriorIndexEntry? interior, float? buildingHeight = null)
     {
         const float halfThickness = 0.075f;
@@ -123,7 +124,7 @@ public sealed class CollisionTileBuilder(
                 var edgeGround = MathF.Min(spatial.GroundY(a.X, a.Y), spatial.GroundY(b.X, b.Y));
                 var bottom = MinimumExteriorGround(a, b, inward, spatial) - 2f;
                 var top = edgeGround + collisionHeight;
-                var cuts = new List<(float Start, float End, bool Open)>();
+                var cuts = new List<EntranceWallOpening>();
                 foreach (var door in interior?.Entrances ?? [])
                 {
                     var center = new Vector2(door.Center.X, door.Center.Z);
@@ -132,20 +133,11 @@ public sealed class CollisionTileBuilder(
                     if (Vector2.Distance(center, projected) > 0.5f || door.ClearWidth <= 0) continue;
                     var start = Math.Clamp(t - door.ClearWidth / 2, 0, length);
                     var end = Math.Clamp(t + door.ClearWidth / 2, 0, length);
-                    if (end > start) cuts.Add((start, end, door.Open && interior!.Open));
+                    var head = door.HeadY != 0f ? door.HeadY : door.Center.Y + entranceHeight;
+                    if (end > start) cuts.Add(new(start, end, door.Center.Y, head, EntranceWallOpenings.IsOpen(interior, door)));
                 }
-                var breaks = cuts.SelectMany(c => new[] { c.Start, c.End }).Append(0f).Append(length).Distinct().Order().ToArray();
-                for (var j = 0; j < breaks.Length - 1; j++)
-                {
-                    var lo = breaks[j]; var hi = breaks[j + 1]; var midpoint = (lo + hi) / 2;
-                    var doors = cuts.Where(c => midpoint >= c.Start && midpoint <= c.End).ToArray();
-                    var open = doors.Length > 0 && doors.All(d => d.Open);
-                    var tag = doors.Length > 0 && !open ? SurfaceTag.DoorClosed : SurfaceTag.Wall;
-                    var start = a + direction * (lo == 0 ? -halfThickness : lo) + inward * halfThickness;
-                    var end = a + direction * (hi == length ? length + halfThickness : hi) + inward * halfThickness;
-                    var y0 = open ? edgeGround + entranceHeight : bottom;
-                    result.Add(new(start, end, halfThickness, y0, top, tag) { Foot = FootMat.Concrete });
-                }
+                result.AddRange(EntranceWallOpenings.Cut(new WallCollider(a + inward * halfThickness, b + inward * halfThickness,
+                    halfThickness, bottom, top, SurfaceTag.Wall) { Foot = FootMat.Concrete }, cuts, halfThickness, halfThickness));
             }
         }
     }
