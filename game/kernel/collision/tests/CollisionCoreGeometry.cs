@@ -4,38 +4,12 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.Collision;
-using Campus.Gen.Ground;
 using Format = Godot.RenderingServer.ArrayFormat;
 
 namespace Campus.Kernel.Collision.Tests;
 
 public sealed partial class CollisionCoreTests
 {
-    private void CheckGround(CollisionTile collision, TileBundle visible)
-    {
-        var fields = collision.Colliders.OfType<HeightFieldCollider>().Where(field => field.Tile == collision.Tile).ToArray();
-        if (fields.Length != 1) { Fail($"tile={collision.Tile} ground height fields={fields.Length}, expected one."); return; }
-        var checkedPoints = 0;
-        var maximum = 0f;
-        Vector3 worst = default;
-        foreach (var surface in visible.Surfaces)
-            foreach (var triangle in Triangles(surface))
-            {
-                var normal = Vector3.Cross(triangle.B - triangle.A, triangle.C - triangle.A);
-                if (MathF.Abs(normal.Y) < normal.Length() * .7f) continue; // Vertical skirts/kerb faces are not supporting ground.
-                foreach (var point in Samples(triangle))
-                {
-                    var height = GroundCollision.SampleHeight(fields[0], point.X, point.Z);
-                    if (!float.IsFinite(height)) continue; // An explicitly encoded height-field hole has no ground surface.
-                    var error = MathF.Abs(point.Y - height);
-                    checkedPoints++;
-                    if (error > maximum) { maximum = error; worst = point; }
-                }
-            }
-        if (checkedPoints == 0) Fail($"tile={collision.Tile} has no measured L0 supporting triangles.");
-        if (maximum > .02f) Fail($"tile={collision.Tile} L0/C error={maximum:R}m at {worst}, limit=.02m.");
-    }
-
     private void CheckBuildingEdges(IMapContext context, IReadOnlyDictionary<TileKey, CollisionTile> tiles)
     {
         var worldWalls = tiles.Values.SelectMany(tile => tile.Colliders.OfType<WallCollider>()

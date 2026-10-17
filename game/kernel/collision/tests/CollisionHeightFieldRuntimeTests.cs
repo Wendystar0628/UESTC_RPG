@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.Collision;
@@ -15,7 +16,7 @@ public sealed class CollisionHeightFieldRuntimeTests
     [TestCase(Timeout = 30000)]
     [TestCategory("G15Core")]
     [RequireGodotRuntime]
-    public async Task WorldPostsMountAtTheirActualPositiveAndNegativeTiles()
+    public async Task WorldPostsAndThinSlabsMountAtTheirActualTiles()
     {
         var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Native scene tree required.");
         using var native = new World3D();
@@ -33,8 +34,33 @@ public sealed class CollisionHeightFieldRuntimeTests
                 world.MountBody(tile, CollisionGeometry.Localize([post], tile));
                 world.CompleteTile(tile);
             }
+            var thinTile = new TileKey(-2, -16);
+            var thinSlab = new SlabCollider(new N.Vector2[]
+                { new(59.5f, 61.99884f), new(59.5f, 62), new(59.499252f, 62) }, .1f, .5f, SurfaceTag.Ground)
+                { Foot = FootMat.Grass };
+            world.BeginTile(thinTile);
+            world.MountBody(thinTile, [thinSlab]);
+            world.CompleteTile(thinTile);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
+            var thinCenter = (thinSlab.Ring[0] + thinSlab.Ring[1] + thinSlab.Ring[2]) / 3;
+            var thinOrigin = CollisionGeometry.Origin(thinTile);
+            var thinProbe = new Vector3(thinOrigin.X + thinCenter.X, thinSlab.Y, thinOrigin.Z + thinCenter.Y);
+            using var ray = PhysicsRayQueryParameters3D.Create(thinProbe + Vector3.Up * .5f,
+                thinProbe + Vector3.Down, CollisionWorld.SupportMask);
+            var nativeHit = native.DirectSpaceState.IntersectRay(ray);
+            Require(nativeHit.Count > 0 && nativeHit["normal"].AsVector3().Y > .99f &&
+                MathF.Abs(nativeHit["position"].AsVector3().Y - thinSlab.Y) <= .00002f,
+                "The sub-millimeter grass slab has no native top face at its actual negative tile.");
+            Require(nativeHit["collider"].AsGodotObject() is StaticBody3D thinBody &&
+                thinBody.GetMeta("foot").AsInt32() == (int)FootMat.Grass,
+                "The native thin slab hit lost its grass foot material.");
+            ray.From = thinProbe + Vector3.Down;
+            ray.To = thinProbe + Vector3.Down * .25f;
+            nativeHit = native.DirectSpaceState.IntersectRay(ray);
+            Require(nativeHit.Count > 0 && nativeHit["normal"].AsVector3().Y < -.99f &&
+                MathF.Abs(nativeHit["position"].AsVector3().Y - (thinSlab.Y - thinSlab.Thick)) <= .00002f,
+                "The native thin slab changed its original thickness.");
             foreach (var tile in new TileKey[] { new(3, 2), new(-4, -3) })
             {
                 var at = new N.Vector3(tile.X * 64 + 12, .01f, tile.Z * 64 + 24);

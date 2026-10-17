@@ -10,6 +10,7 @@ internal static class CollisionShapeFactory
 {
     private const int HeightSide = 65;
     private const float TileSide = 64f;
+    private const float JoltHullTolerance = .001f;
     public static (Shape3D Shape, Transform3D Transform) MakeShape(Collider source) => source switch
     {
         HeightFieldCollider height => HeightField(height),
@@ -91,18 +92,60 @@ internal static class CollisionShapeFactory
         if (!CollisionGeometry.IsConvexRing(source.Ring)) throw new ArgumentException("A prepared slab must have a convex outline.", nameof(source));
         Positive(source.Thick);
         Finite(source.Y);
+        var bottom = source.Y - source.Thick;
+        Finite(bottom);
+        if (bottom >= source.Y) throw new ArgumentException("A slab must retain a nonzero thickness in physics coordinates.", nameof(source));
         var points = new N.Vector3[source.Ring.Count * 2];
         for (var i = 0; i < source.Ring.Count; i++)
         {
             Finite(source.Ring[i].X, source.Ring[i].Y);
             points[i] = new N.Vector3(source.Ring[i].X, source.Y, source.Ring[i].Y);
-            points[i + source.Ring.Count] = points[i] - N.Vector3.UnitY * source.Thick;
+            points[i + source.Ring.Count] = new N.Vector3(source.Ring[i].X, bottom, source.Ring[i].Y);
         }
         // Every floor piece retains the tile-local frame. Re-centering adjacent pieces on
         // different float centroids can reconstruct a shared edge differently and open a
         // native ray crack. The tile body already keeps these coordinates near the origin.
         // Convex floors remain whole; concave outlines were decomposed by the bake worker.
-        return (new ConvexPolygonShape3D { Points = points.Select(point => point.ToGodot()).ToArray() }, At(N.Vector3.Zero));
+        var scale = SlabHullScale(source.Ring, (double)source.Y - bottom);
+        if (scale == 1)
+            return (new ConvexPolygonShape3D { Points = points.Select(point => point.ToGodot()).ToArray() }, At(N.Vector3.Zero));
+        // Jolt builds the hull before shrinking its margin. Binary scaling clears its
+        // absolute hull tolerance without moving a tile-local vertex or shared edge.
+        for (var i = 0; i < points.Length; i++)
+        {
+            points[i] *= scale;
+            Finite(points[i].X, points[i].Y, points[i].Z);
+        }
+        return (new ConvexPolygonShape3D { Margin = 0, Points = points.Select(point => point.ToGodot()).ToArray() },
+            new Transform3D(Basis.Identity.Scaled(Vector3.One / scale), Vector3.Zero));
+    }
+
+    private static float SlabHullScale(IReadOnlyList<N.Vector2> ring, double thickness)
+    {
+        var width = thickness;
+        for (var i = 0; i < ring.Count; i++)
+        {
+            var a = ring[i];
+            var b = ring[(i + 1) % ring.Count];
+            var dx = (double)b.X - a.X;
+            var dz = (double)b.Y - a.Y;
+            var length = Math.Sqrt(dx * dx + dz * dz);
+            if (length == 0) throw new ArgumentException("A prepared slab cannot contain zero-length edges.", nameof(ring));
+            var edgeWidth = 0d;
+            foreach (var point in ring)
+                edgeWidth = Math.Max(edgeWidth, Math.Abs(dx * ((double)point.Y - a.Y) - dz * ((double)point.X - a.X)) / length);
+            if (edgeWidth == 0) throw new ArgumentException("A prepared slab must have a nonzero outline width.", nameof(ring));
+            width = Math.Min(width, edgeWidth);
+        }
+        if (width >= JoltHullTolerance) return 1;
+        var scale = 1f;
+        // Keep the narrowest dimension at least four hull tolerances wide.
+        while (width * scale < 4 * JoltHullTolerance)
+        {
+            scale *= 2;
+            Positive(scale);
+        }
+        return scale;
     }
 
     private static (Shape3D, Transform3D) Ramp(RampCollider source)

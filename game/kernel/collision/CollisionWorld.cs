@@ -125,6 +125,7 @@ public sealed class CollisionWorld : ICollisionWorld
                 if (source.Tag != first.Tag || source.Foot != first.Foot || !Enum.IsDefined(source.Tag) || !Enum.IsDefined(source.Foot) || source.Tag == SurfaceTag.Water)
                     throw new ArgumentException("A collision body must have a single valid surface and material.");
                 var (shape, transform) = CollisionShapeFactory.MakeShape(source);
+                using var ownedShape = shape;
                 shape.SetMeta("surface", (int)source.Tag);
                 shape.SetMeta("foot", (int)source.Foot);
                 var owner = body.CreateShapeOwner(shape);

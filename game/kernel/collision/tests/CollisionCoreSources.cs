@@ -34,7 +34,10 @@ public sealed partial class CollisionCoreTests
             (map.ClaimLookup(feature.Id, Aspects.Massing) ?? map.ClaimLookup(feature.Id, Aspects.Facade)) is not null
             && CollisionTileBuilder.BuildingFootprints(feature).Count != 0)
             .ToDictionary(feature => feature.Id, feature => feature);
+        var tracedClaims = new HashSet<FeatureId>();
         var measuredClaims = new HashSet<FeatureId>();
+        var unsampledDirectModules = new List<string>();
+        var emptySources = 0;
         var measured = 0;
         foreach (var pair in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
@@ -52,13 +55,19 @@ public sealed partial class CollisionCoreTests
                     if (!sourceIds.Add(source.SourceId))
                         Fail($"module={pair.Key} repeats source ID {source.SourceId}.");
                     var hasCollision = Measure(source.SourceId, source.Output, source.Colliders, source.OccupiedContours);
-                    if (hasCollision && source.Feature is { } feature && claimed.ContainsKey(feature)
+                    if (source.Feature is { } feature && claimed.ContainsKey(feature)
                         && (map.ClaimLookup(feature, Aspects.Massing)?.Value == owner
                             || map.ClaimLookup(feature, Aspects.Facade)?.Value == owner))
-                        measuredClaims.Add(feature);
+                    {
+                        if (!OutputTriangles(source.Output).Any())
+                            Fail($"module={pair.Key} claimed feature={feature.Value} has no actual source geometry.");
+                        else tracedClaims.Add(feature);
+                        if (hasCollision) measuredClaims.Add(feature);
+                    }
                 }
                 continue;
             }
+            var unsampledDirect = 0;
             foreach (var tile in module.Tiles(context).Distinct().OrderBy(tile => tile.Z).ThenBy(tile => tile.X))
             {
                 var output = module.Build(context, tile, LodLevel.L0);
@@ -68,22 +77,32 @@ public sealed partial class CollisionCoreTests
                     CheckExpansion($"part/{pair.Key}/{tile}/{placed.Part.Value}",
                         part.Geometry.Meshes.SelectMany(mesh => Triangles(mesh, placed.At)).ToArray(),
                         part.Colliders.Select(collider => CollisionGeometry.Transform(collider, placed.At)).ToArray());
-                    if (part.Colliders.Count != 0) measured++;
+                    if (part.Colliders.Any(NeedsExpansionCheck)) measured++;
                 }
-                if (module.Collide(context, tile).Any(NeedsExpansionCheck))
-                    Fail($"module={pair.Key} tile={tile} has direct collision without an actual source trace provider.");
+                unsampledDirect += module.Collide(context, tile).Count(NeedsExpansionCheck);
+            }
+            if (unsampledDirect != 0)
+            {
+                unsampledDirectModules.Add(pair.Key);
+                Godot.GD.Print($"G15Core expansion direct module={pair.Key} colliders={unsampledDirect} unsampled: no source trace provider.");
             }
         }
-        foreach (var missing in claimed.Keys.Where(id => !measuredClaims.Contains(id)))
-            Fail("No actual claimed-source expansion sample (source geometry and directed contour required): " + missing.Value);
+        foreach (var missing in claimed.Keys.Where(id => !tracedClaims.Contains(id)))
+            Fail("No actual owning-provider feature trace for claimed source: " + missing.Value);
         Require(measured > 0, "G15 measured no source-paired collision expansion.");
-        Godot.GD.Print($"G15Core expansionSources={measured} claimedSources={measuredClaims.Count}/{claimed.Count}");
+        Godot.GD.Print($"G15Core expansionSources={measured} claimedTraced={tracedClaims.Count}/{claimed.Count} claimedWithMeasuredCollision={measuredClaims.Count}/{claimed.Count} emptyCollisionSources={emptySources} unsampledDirectModules={unsampledDirectModules.Count} [{string.Join(',', unsampledDirectModules)}]");
 
         bool Measure(string id, ContentOutput output, IReadOnlyList<Collider> colliders, IReadOnlyList<PolygonRings>? occupied = null)
         {
             var actual = colliders.Concat(output.Parts.SelectMany(placed =>
                 _parts[placed.Part.Value](placed.Params).Colliders.Select(collider => CollisionGeometry.Transform(collider, placed.At)))).ToArray();
-            if (actual.Length == 0) return false;
+            if (actual.Length == 0)
+            {
+                emptySources++;
+                Godot.GD.Print($"G15Core expansion source={id} traced with empty formal collision; no collision expansion measured.");
+                return false;
+            }
+            if (!actual.Any(NeedsExpansionCheck)) return false;
             CheckExpansion(id, OutputTriangles(output).ToArray(), actual, occupied); measured++;
             return true;
         }

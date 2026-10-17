@@ -5,6 +5,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Gen.Ground;
 using Campus.Gen.World;
 using Campus.Kernel.Maps;
 using GdUnit4;
@@ -177,12 +178,16 @@ public sealed class WalkRulesTests
         Require(ring.Nearest(Vector3.Zero, 3, 0, p => WalkSafetyQueries.SupportedDryFeet(spatial, p.Position)) == supported,
             "Manual recovery selected the unsupported high point.");
         Require(ring.Snapshot().All(p => p.Position.Y == 0), "A forced snapshot retains an unsupported safety point.");
+        ring.Add(high);
+        Require(WalkPlacementAdmission.Recover(spatial, ring, high, false, 0, null) == supported,
+            "Formal recovery must reject an unsupported saved point before resolving its precise landing height.");
     }
 
     [TestCase]
-    public void RealP00FlyOnlyDefaultFindsSupportedFeetInLoadedCampus()
+    public void RealP00FlyOnlyDefaultFindsSupportedFeetInLoadedCampusBaseModel()
     {
-        var (entry, context) = LoadCampusSpawnFixture();
+        // The four-file campus base model uses the production ground source for its outdoor default feet.
+        var (entry, context) = LoadCampusSpawnFixture(prepareGround: true);
         var maps = new SpawnMaps(entry) { Context = context };
         var spawn = maps.ResolveSpawn(entry.Descriptor.Id);
         Require(spawn.Id == "P00" && spawn.Stand is null && spawn.Fly.Position.Y == 928f
@@ -238,7 +243,7 @@ public sealed class WalkRulesTests
         RequireThrows<ArgumentException>(() => WalkSafetyQueries.DefaultFeet(maps, new("unknown-fixture")));
     }
 
-    private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
+    private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture(bool prepareGround = false)
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")
             ?? throw new InvalidOperationException("The gate must provide UESTC_REPOSITORY for the real campus fixture.");
@@ -251,6 +256,11 @@ public sealed class WalkRulesTests
         foreach (var name in new[] { "campus.json", "network.json", "interiors.json", "map.json" })
             files.Add(name, File.ReadAllText(Path.Combine(data, name)));
         var loaded = WorldModelLoader.Load(indexed.Id, files);
+        if (prepareGround)
+        {
+            var parsed = (WorldModelSnapshot)loaded.World;
+            loaded = loaded with { World = parsed.WithWalkSupport(GroundSupport.Prepare(parsed, entry.Descriptor)) };
+        }
         return (entry, entry.CreateContext(loaded, BuildInputSnapshot.Freeze(files.ToDictionary(p => p.Key, p => (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(p.Value), StringComparer.Ordinal))));
     }
 
