@@ -25,8 +25,6 @@ internal sealed class MutableWorldFixture(TestInteriorIndex? interiors = null) :
         public float GroundY(float x, float z) => 0;
         public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
         public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public float? SupportY(float x, float z, float yHint) => 0;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => new(p.X, 0, p.Z);
     }
 }
 

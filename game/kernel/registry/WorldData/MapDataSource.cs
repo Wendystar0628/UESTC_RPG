@@ -1,11 +1,8 @@
 using Campus.Pipeline.Map;
 using System.Collections.ObjectModel;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Gen.Walkable;
 using Campus.Kernel.Registry;
-using Campus.Pipeline.Walk;
 using Godot;
 
 namespace Campus.Kernel.Maps;
@@ -13,8 +10,6 @@ namespace Campus.Kernel.Maps;
 /// <summary>All resource I/O stays on the engine side; workers receive detached byte arrays.</summary>
 public class MapDataSource
 {
-    private readonly HashSet<MapId> _mountedPacks = [];
-
     public virtual Task<MapCatalog> ReadCatalog()
     {
         var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
@@ -28,12 +23,6 @@ public class MapDataSource
 
     public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry)
     {
-        var pack = "res://boot_" + entry.Descriptor.Id.Value + ".pck";
-        if (!_mountedPacks.Contains(entry.Descriptor.Id) && Godot.FileAccess.FileExists(pack))
-        {
-            if (!ProjectSettings.LoadResourcePack(pack, false)) throw new IOException($"Cannot mount startup pack: {pack}.");
-            _mountedPacks.Add(entry.Descriptor.Id);
-        }
         var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             ["campus.json"] = ReadRequired(entry.DataRoot + "campus.json")
@@ -46,65 +35,22 @@ public class MapDataSource
         return new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(files);
     }
 
-    /// <summary>Capture map resources and development bake metadata on the engine thread before worker preparation.</summary>
+    /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
-        var worldFiles = ReadWorldFiles(entry); // Mount the startup pack before reading its resident walk data.
+        var worldFiles = ReadWorldFiles(entry);
         var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         foreach (var pair in worldFiles) files.Add(pair.Key, pair.Value);
         // Capture the complete map input coverage before world parsing.
-        // Global assets and BakeRoot products are separate scopes. The bake hasher still selects only its dependencies.
+        // Global assets are captured separately. The bake hasher selects only its dependencies.
         ReadJsonDirectory(entry.DataRoot, "", files);
         // Env.Backdrop is an authored relative path, not an extension convention. Preserve already read JSON bytes.
         BackdropInputs.AddOptional(entry.Descriptor, entry.DataRoot, files,
             Godot.FileAccess.FileExists, path => ReadRequired(path));
-        var input = new MapLoadInput(entry, files, ReadOptional(entry.BakeRoot + "walk.bake.json"))
-        {
-            GenerationInputs = GenerationInputCapture.Capture(Campus.Kernel.Registry.Kernel.Services,
-            entry.Descriptor.Id, Campus.Kernel.Registry.Kernel.Services.Get<PaletteCatalog>(), Campus.Kernel.Registry.Kernel.GlobalBuildInputs)
-        };
-        return OS.IsDebugBuild() ? input with
-        {
-            DevelopmentWalkPath = ProjectSettings.GlobalizePath(entry.BakeRoot + "walk.bake.json")
-        } : input;
+        return new(entry, files);
     }
 
     public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimCapture.Capture(Campus.Kernel.Registry.Kernel.Services, map);
-
-    /// <summary>Prepare the frozen startup input on workers; exported games require their shipped startup product.</summary>
-    public virtual async Task<MapLoadInput> PrepareLoadInput(MapLoadInput input)
-    {
-        var destination = input.DevelopmentWalkPath;
-        var generation = input.GenerationInputs;
-        var development = destination is not null;
-        var resident = await Task.Run(() =>
-        {
-            if (input.WalkBytes.IsEmpty)
-            {
-                if (!development)
-                    throw new InvalidDataException("Required resident walk data is missing: " + input.Entry.BakeRoot + "walk.bake.json");
-                return null;
-            }
-            try { return MapWorldLoading.ReadWalk(input); }
-            catch (WalkBakeFreshnessException error) when (development && error.Failure is
-                WalkBakeFreshnessFailure.UnknownVersion or WalkBakeFreshnessFailure.StaleInputs)
-            { return null; }
-        });
-        if (resident is not null) return input with { PreparedWalk = resident };
-        if (generation is null) throw new InvalidOperationException("Development walk preparation requires the captured map generation inputs.");
-        var prepared = await Task.Run(() =>
-        {
-            var product = WalkBakeGenerator.Build(input.Files, generation);
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(product, ContractJson.Options);
-            var result = input with { WalkBytes = bytes };
-            var walk = MapWorldLoading.ReadWalk(result);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination!)!);
-            File.WriteAllBytes(destination!, bytes);
-            return result with { PreparedWalk = walk };
-        });
-        Console.WriteLine($"[walk][map={input.Entry.Descriptor.Id.Value}] prepared development startup product");
-        return prepared;
-    }
 
     public virtual void WriteMapRect(MapRect rect) => RenderingServer.GlobalShaderParameterSet(
         Campus.Kernel.Renderer.ShaderNames.MapRect,

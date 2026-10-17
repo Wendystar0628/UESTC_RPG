@@ -1,5 +1,4 @@
 using Campus.Pipeline.Map;
-using System.IO.Hashing;
 using System.Numerics;
 using System.Text;
 using Campus.Contracts;
@@ -45,7 +44,7 @@ public sealed class BackdropInputsTests
             _ => throw new InvalidOperationException("Captured file was probed twice."),
             _ => throw new InvalidOperationException("Captured file was read twice."));
         Check(reads == 1 && files[map.Env.Backdrop].Equals((ReadOnlyMemory<byte>)bytes), "Capture copied or reread the source.");
-        var input = new MapLoadInput(new(map, "res://fixture/", "res://bake/fixture/", []), files, ReadOnlyMemory<byte>.Empty);
+        var input = new MapLoadInput(new(map, "res://fixture/", []), files);
         bytes[0] = 0;
         Check(input.SourceInputs.Require(map.Env.Backdrop).Span[0] == (byte)'{', "Formal load input did not freeze the captured bytes.");
     }
@@ -61,19 +60,6 @@ public sealed class BackdropInputsTests
         foreach (var key in new[] { "../backdrop.json", "/backdrop.json", "a\\b.json", "res://escape.json", "a//b.json" })
             Fails(() => BackdropInputs.Freeze(Descriptor(key), "res://fixture/", missing.Entries,
                 _ => throw new InvalidOperationException("Invalid keys reached I/O."), _ => ReadOnlyMemory<byte>.Empty));
-    }
-
-    [TestCase]
-    public void ScopedHashIncludesAuthoredKeyAndEveryOriginalByte()
-    {
-        var original = Snapshot("backdrop.json", "{\"farClip\":12000}");
-        var whitespace = Snapshot("backdrop.json", "{ \"farClip\":12000}");
-        var nested = Snapshot("environment/far.json", "{\"farClip\":12000}");
-        var nestedChanged = Snapshot("environment/far.json", "{\"farClip\":13000}");
-        Check(Hash(original) != Hash(whitespace) && Hash(original) != Hash(nested) && Hash(nested) != Hash(nestedChanged),
-            "Scope framing lost a key or raw-byte change.");
-        Check(Hash(original) != Hash(BuildInputSnapshot.Empty), "An absent backdrop shares the present-input hash.");
-        // This checks the backdrop hash contribution; the bake tests cover its production cache identity.
     }
 
     [TestCase]
@@ -100,12 +86,6 @@ public sealed class BackdropInputsTests
 
     internal static BuildInputSnapshot Snapshot(string key, string json) =>
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = Encoding.UTF8.GetBytes(json) });
-    private static string Hash(BuildInputSnapshot inputs)
-    {
-        var hash = new XxHash128();
-        BuildInputAssembly.AppendScopedInputs(bytes => hash.Append(bytes.Span), BuildInputSnapshot.Empty, inputs.Entries);
-        return Convert.ToHexString(hash.GetCurrentHash());
-    }
     private static void Fails(Action action)
     {
         try { action(); }

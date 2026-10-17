@@ -95,7 +95,7 @@ public sealed class MapCatalog
             throw new InvalidDataException("Waypoint version or IDs are invalid.");
         foreach (var waypoint in waypoints.Waypoints) ValidatePose(waypoint.Fly);
         var descriptor = file.Complete(new(lon, lat, epsg, min, max), center, box, tileMin, tileMax);
-        var result = new MapCatalogEntry(descriptor, entry.Dir, "res://bake/" + entry.Id.Value + "/boot/",
+        var result = new MapCatalogEntry(descriptor, entry.Dir,
             Array.AsReadOnly(waypoints.Waypoints.ToArray()));
         _ = result.ResolveSpawn(file.DefaultSpawn);
         return result;
@@ -188,7 +188,7 @@ public sealed class MapCatalog
     }
 }
 
-public sealed record MapCatalogEntry(MapDescriptor Descriptor, string DataRoot, string BakeRoot,
+public sealed record MapCatalogEntry(MapDescriptor Descriptor, string DataRoot,
     IReadOnlyList<Waypoint> Waypoints)
 {
     public IMapContext CreateContext(WorldModelLoadResult loaded, BuildInputSnapshot sourceInputs) =>

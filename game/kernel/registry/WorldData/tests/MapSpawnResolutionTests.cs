@@ -39,7 +39,7 @@ public sealed class MapSpawnResolutionTests
             ["waypoints.json"] = JsonSerializer.SerializeToUtf8Bytes(new WaypointFile(1, entry.Waypoints), ContractJson.Options),
             ["review.json"] = System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"poses\":[{\"id\":\"V1\",\"waypoint\":\"P00\"}]}")
         });
-        var context = new MapContext(entry.Descriptor, new TestWorldModel(), entry.DataRoot, entry.BakeRoot, inputs);
+        var context = new MapContext(entry.Descriptor, new TestWorldModel(), entry.DataRoot, inputs);
         Check(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly,
             "The V1 overview did not follow the authored P00 relation.");
         Check(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly,
@@ -59,7 +59,7 @@ public sealed class MapSpawnResolutionTests
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
         return new(file.Complete(new(103, 30, 32648, new(-32, -32), new(32, 32)), Vector2.Zero,
             new(new(-64, -28, -64), new(64, 2000, 64)), new(-1, -1), new(0, 0)),
-            "res://data/maps/spawn-test/", "res://bake/spawn-test/boot/", [first, other]);
+            "res://data/maps/spawn-test/", [first, other]);
     }
 
     // Deliberately implements only the pre-extension interface: the default method must fail explicitly.

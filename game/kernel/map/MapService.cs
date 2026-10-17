@@ -251,14 +251,15 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
                         var input = _data.ReadLoadInput(_target!);
                         source = new(input, _data.ReadClaims(_target!.Descriptor.Id));
                     }
-                    _load = new(source, LoadSource(_data.PrepareLoadInput(source.Input), source.Claims));
+                    _load = new(source, Task.Run(() => MapWorldLoading.LoadPrepared(_loader, source.Input, source.Claims)));
                     _started = true;
                 }
                 var operation = _load ?? throw new InvalidOperationException("Map load operation is missing.");
                 if (!operation.Work.IsCompleted) return;
-                var (preparedInput, loaded) = operation.Work.GetAwaiter().GetResult();
-                _prepared = MapWorldLoading.CreateContext(preparedInput.Entry, loaded, preparedInput.SourceInputs);
-                _preparedSource = operation.Source with { Input = preparedInput };
+                var loaded = operation.Work.GetAwaiter().GetResult();
+                var loadedInput = operation.Source.Input;
+                _prepared = MapWorldLoading.CreateContext(loadedInput.Entry, loaded, loadedInput.SourceInputs);
+                _preparedSource = operation.Source;
                 _load = null;
                 PrepareDestination();
                 Move(MapStage.Mount);
@@ -518,15 +519,7 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
     }
 
     private sealed record MapLoadSource(MapLoadInput Input, Campus.Pipeline.Map.MapClaimSnapshot? Claims);
-    private async Task<(MapLoadInput Input, WorldModelLoadResult Loaded)> LoadSource(Task<MapLoadInput> prepared,
-        Campus.Pipeline.Map.MapClaimSnapshot? claims)
-    {
-        var input = await prepared;
-        var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(_loader, input, claims));
-        return (input, loaded);
-    }
-
-    private sealed record PendingMapLoad(MapLoadSource Source, Task<(MapLoadInput Input, WorldModelLoadResult Loaded)> Work);
+    private sealed record PendingMapLoad(MapLoadSource Source, Task<WorldModelLoadResult> Work);
 
     private static bool OwnsPresentation(MapTravelCause cause) => cause switch
     {

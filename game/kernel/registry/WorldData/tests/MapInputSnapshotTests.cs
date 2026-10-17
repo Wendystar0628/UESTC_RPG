@@ -14,7 +14,7 @@ public sealed class MapInputSnapshotTests
     {
         var raw = new byte[] { 1, 2, 3 };
         var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["campus.json"] = raw };
-        var input = new MapLoadInput(Entry: Entry(), Files: files, WalkBytes: ReadOnlyMemory<byte>.Empty);
+        var input = new MapLoadInput(Entry: Entry(), Files: files);
         raw[0] = 9;
         files["campus.json"] = new byte[] { 7 };
         files["network.json"] = new byte[] { 8 };
@@ -24,17 +24,9 @@ public sealed class MapInputSnapshotTests
     }
 
     [TestCase]
-    public void PositionalDeconstructionAndWalkOnlyWithKeepTheSameMapSnapshot()
+    public void ReplacementFilesFreezeANewInputVersion()
     {
-        var entry = Entry();
-        var original = new MapLoadInput(entry, Files(1), new byte[] { 3 });
-        var regeneratedWalk = original with { WalkBytes = new byte[] { 4, 5 } };
-        var (actualEntry, actualFiles, actualWalk) = regeneratedWalk;
-        Require(ReferenceEquals(actualEntry, entry) && ReferenceEquals(original.SourceInputs, regeneratedWalk.SourceInputs) &&
-            ReferenceEquals(actualFiles, original.SourceInputs.Entries), "Walk-only with copied or lost the map snapshot.");
-        Require(actualWalk.Span.SequenceEqual(new byte[] { 4, 5 }) && original.WalkBytes.Span.SequenceEqual(new byte[] { 3 }),
-            "Positional deconstruction or WalkBytes with semantics changed.");
-
+        var original = new MapLoadInput(Entry(), Files(1));
         var replacementBytes = new byte[] { 6 };
         var replaced = original with
         {
@@ -50,8 +42,8 @@ public sealed class MapInputSnapshotTests
     public void OldAndNewContextsRetainTheirOwnParsedInputVersionWithoutRefreezing()
     {
         var entry = Entry();
-        var oldInput = new MapLoadInput(entry, Files(1), ReadOnlyMemory<byte>.Empty);
-        var newInput = new MapLoadInput(entry, Files(2), ReadOnlyMemory<byte>.Empty);
+        var oldInput = new MapLoadInput(entry, Files(1));
+        var newInput = new MapLoadInput(entry, Files(2));
         var oldWorld = Loaded(entry);
         var newWorld = Loaded(entry);
         var oldContext = entry.CreateContext(oldWorld, oldInput.SourceInputs);
@@ -76,7 +68,7 @@ public sealed class MapInputSnapshotTests
             "spawn", [new("spawn", new(new(0, 20, 30), 0, -15), null)],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("默认", "Default"), false, "fixture"),
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new(descriptor, "res://data/fixture/", "res://bake/fixture/boot/", []);
+        return new(descriptor, "res://data/fixture/", []);
     }
     private static WorldModelLoadResult Loaded(MapCatalogEntry entry)
     {

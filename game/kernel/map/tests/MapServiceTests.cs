@@ -5,7 +5,6 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using Campus.Gen.Walkable;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using GdUnit4;
@@ -601,43 +600,6 @@ public sealed class MapServiceTests
         throw new InvalidOperationException("Traversal map root was accepted.");
     }
 
-    [TestCase]
-    public void ResidentWalkPayloadMustMatchMapAndDataRectangle()
-    {
-        var f = new Fixture();
-        f.Catalog.TryGet(f.A, out var entry);
-        var origin = entry.Descriptor.DataRect.Min;
-        var files = f.Data.ReadWorldFiles(entry);
-        var walk = new WalkBakeData(WalkBakeData.CurrentVersion, f.A, WalkBakeInputHash.ComputeForMap(files),
-            new(origin, 64, 64, new byte[64 * 64], new byte[64 * 64], new float[64 * 64]),
-            new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), [], new([], []));
-        var input = new MapLoadInput(entry, files, JsonSerializer.SerializeToUtf8Bytes(walk, ContractJson.Options));
-        input = f.Data.PrepareLoadInput(input).GetAwaiter().GetResult();
-        var resident = MapWorldLoading.ReadWalk(input)!;
-        Require(resident.Map == f.A && ReferenceEquals(resident, MapWorldLoading.ReadWalk(input)),
-            "Prepared resident walk data was lost or decoded again.");
-        var changedFiles = files.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        changedFiles["campus.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = 2 }, ContractJson.Options);
-        foreach (var changed in new[] { input with { Files = changedFiles }, input with
-            { Entry = entry with { Descriptor = entry.Descriptor with { Id = f.B } } } })
-        {
-            try { MapWorldLoading.ReadWalk(changed); }
-            catch (Exception error) when (error is InvalidDataException or WalkBakeFreshnessException) { continue; }
-            throw new InvalidOperationException("Changed resident inputs retained the previous prepared walk data.");
-        }
-        var legacyRejected = false;
-        try { MapWorldLoading.ReadWalk(input with { WalkBytes = JsonSerializer.SerializeToUtf8Bytes(walk with { Version = 1, Support = null! }, ContractJson.Options) }); }
-        catch (WalkBakeFreshnessException error) when (error.Failure == WalkBakeFreshnessFailure.UnknownVersion) { legacyRejected = true; }
-        Require(legacyRejected, "Legacy data must reach development version freshness before v2 support validation.");
-        foreach (var wrong in new[] { walk with { Map = f.B }, walk with { Walk = walk.Walk with { Origin = origin + new Vector2(8) },
-            SafePoints = walk.SafePoints with { Origin = origin + new Vector2(8) } } })
-        {
-            try { MapWorldLoading.ReadWalk(input with { WalkBytes = JsonSerializer.SerializeToUtf8Bytes(wrong, ContractJson.Options) }); }
-            catch (InvalidDataException) { continue; }
-            throw new InvalidOperationException("Mismatched resident walk payload was accepted.");
-        }
-    }
-
     private static void Require(bool valid, string message) { if (!valid) throw new InvalidOperationException(message); }
     private static int SnapshotVersion(IMapContext context)
     {
@@ -702,7 +664,7 @@ public sealed class MapServiceTests
                 "start", [new("start", new(new(0, 20, 10), 0, -10), null)],
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("默认", "Default"), false, "test"),
                 new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-            return new(map, "res://data/" + id.Value + '/', "res://bake/" + id.Value + "/boot/", []);
+            return new(map, "res://data/" + id.Value + '/', []);
         }
     }
 
@@ -725,11 +687,7 @@ public sealed class MapServiceTests
         {
             _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
             var files = ReadWorldFiles(entry);
-            var origin = entry.Descriptor.DataRect.Min;
-            var walk = new WalkBakeData(WalkBakeData.CurrentVersion, entry.Descriptor.Id, WalkBakeInputHash.ComputeForMap(files),
-                new(origin, 64, 64, new byte[64 * 64], new byte[64 * 64], new float[64 * 64]),
-                new(origin, 16, 16, Vector3.Zero, Enumerable.Repeat(SafePointGrid.InvalidCoordinate, 16 * 16 * 3).ToArray()), [], new([], []));
-            var input = new MapLoadInput(entry, files, JsonSerializer.SerializeToUtf8Bytes(walk, ContractJson.Options));
+            var input = new MapLoadInput(entry, files);
             Inputs.Add(input);
             return input;
         }
@@ -752,7 +710,8 @@ public sealed class MapServiceTests
         public void DelayNext(MapId map)
         { _delayMap = map; _delayedEntered = new(); _releaseDelayed = new(); }
         public void ReleaseDelayed() => _releaseDelayed?.TrySetResult();
-        public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+        public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
+            WorldModelLoadInputs inputs)
         {
             Interlocked.Increment(ref _loads);
             if (_delayMap == map)
@@ -770,8 +729,6 @@ public sealed class MapServiceTests
             _worldVersions[world] = document.RootElement.GetProperty("revision").GetInt32();
             return new(world, d.Geo, d.Center, d.Bounds, d.TileMin, d.TileMax);
         }
-        public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
-            WorldModelLoadInputs inputs) => Load(map, files);
     }
     private sealed class TestRuntime : IMapRuntime
     {

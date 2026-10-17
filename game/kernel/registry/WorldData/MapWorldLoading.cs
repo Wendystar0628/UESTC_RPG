@@ -1,42 +1,23 @@
 using Campus.Pipeline.Map;
-using Campus.Gen.Walkable;
 using System.Collections.ObjectModel;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Kernel.Registry;
 
 namespace Campus.Kernel.Maps;
 
-/// <summary>One frozen map input version. Walk bytes come from BakeRoot and never masquerade as DataRoot input.</summary>
+/// <summary>One frozen version of the authored map inputs.</summary>
 public sealed record MapLoadInput(MapCatalogEntry Entry,
-    IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files, ReadOnlyMemory<byte> WalkBytes)
+    IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files)
 {
-    private MapCatalogEntry _entry = Entry;
     private BuildInputSnapshot _sourceInputs = BuildInputSnapshot.Freeze(Files);
-    private ReadOnlyMemory<byte> _walkBytes = WalkBytes;
-    public MapCatalogEntry Entry
-    {
-        get => _entry;
-        init { _entry = value; PreparedWalk = null; }
-    }
-    /// <summary>The original positional constructor and deconstruction remain available; map bytes freeze at construction.</summary>
+    /// <summary>Map bytes freeze at construction and whenever a replacement is supplied.</summary>
     public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files
     {
         get => _sourceInputs.Entries;
-        init { _sourceInputs = BuildInputSnapshot.Freeze(value); PreparedWalk = null; }
+        init => _sourceInputs = BuildInputSnapshot.Freeze(value);
     }
-    public ReadOnlyMemory<byte> WalkBytes
-    {
-        get => _walkBytes;
-        init { _walkBytes = value; PreparedWalk = null; }
-    }
-    /// <summary>with { WalkBytes = ... } shares this exact snapshot; with { Files = ... } freezes only the new record's inputs.</summary>
     public BuildInputSnapshot SourceInputs => _sourceInputs;
-    internal string? DevelopmentWalkPath { get; init; }
-    internal MapGenerationInputs? GenerationInputs { get; init; }
-    internal WalkBakeData? PreparedWalk { get; init; }
 }
 
 public static class MapWorldLoading
@@ -51,7 +32,6 @@ public static class MapWorldLoading
         ArgumentNullException.ThrowIfNull(loader);
         ArgumentNullException.ThrowIfNull(input);
         var map = input.Entry.Descriptor;
-        var walk = ReadWalk(input);
         IReadOnlyDictionary<FeatureId, WpId>? claimedBy = null;
         if (claims is not null)
         {
@@ -63,12 +43,12 @@ public static class MapWorldLoading
                     .Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
                     .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
-                var baseline = loader.Load(map.Id, baselineFiles, new(map, null, null));
+                var baseline = loader.Load(map.Id, baselineFiles, new(map));
                 claimedBy = claims.OverlayOwners(baseline.World);
             }
             else claimedBy = claims.OverlayOwners();
         }
-        var loaded = loader.Load(map.Id, input.Files, new(map, walk, claimedBy));
+        var loaded = loader.Load(map.Id, input.Files, new(map, claimedBy));
         _ = claims?.Build(loaded.World); // Validate final per-aspect ownership before exposing the context.
         return loaded;
     }
@@ -92,20 +72,6 @@ public static class MapWorldLoading
                 TileMax = new((int)MathF.Ceiling(max.X / 64f) - 1, (int)MathF.Ceiling(max.Y / 64f) - 1)
             };
         }
-        return new MapContext(descriptor, loaded.World, entry.DataRoot, entry.BakeRoot, sourceInputs);
-    }
-
-    public static WalkBakeData? ReadWalk(MapLoadInput input)
-    {
-        if (input.PreparedWalk is { } prepared) return prepared;
-        if (input.WalkBytes.IsEmpty) return null;
-        var walk = JsonSerializer.Deserialize<WalkBakeData>(input.WalkBytes.Span, ContractJson.Options)
-            ?? throw new InvalidDataException("Resident walk data is null.");
-        WalkBakeInputHash.RequireCurrent(walk, input.Files);
-        var rect = input.Entry.Descriptor.DataRect;
-        var max = walk.Walk.Origin + new Vector2(walk.Walk.Width * WalkGrid.CellSize, walk.Walk.Height * WalkGrid.CellSize);
-        if (walk.Map != input.Entry.Descriptor.Id || walk.Walk.Origin != rect.Min || max != rect.Max)
-            throw new InvalidDataException("Resident walk data does not match the requested map and data rectangle.");
-        return walk;
+        return new MapContext(descriptor, loaded.World, entry.DataRoot, sourceInputs);
     }
 }

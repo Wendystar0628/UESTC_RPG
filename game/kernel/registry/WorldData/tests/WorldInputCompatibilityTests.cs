@@ -27,10 +27,11 @@ public sealed class WorldInputCompatibilityTests
         foreach (var encoded in new[] { "2.0", "2e0" })
         {
             var bytes = Encoding.UTF8.GetBytes(json.Replace("\"levels\": 2.0", "\"levels\": " + encoded, StringComparison.Ordinal));
-            var data = new WorldModelLoaderAdapter().Load(new("integer-levels"),
+            var data = Campus.Gen.World.WorldModelLoader.Load(new("integer-levels"),
                 new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = bytes });
             if (data.World.Features.Single().Value.Storeys != 2)
                 throw new InvalidOperationException("Integral source level encoding was lost.");
         }
     }
+
 }

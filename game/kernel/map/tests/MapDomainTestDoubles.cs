@@ -20,9 +20,7 @@ internal sealed class TestSpatialIndex : ISpatialIndex
     public IReadOnlyList<FeatureId> Query(Box3 box) => [];
     public float GroundY(float x, float z) => 0;
     public CameraMedium MediumAt(Vector3 point) => new(MediumKind.Air);
-    public float? SupportY(float x, float z, float yHint) => 0;
     public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-    public Vector3? NearestSafe(Vector3 point, float maxDist) => MathF.Abs(point.Y) <= maxDist ? point with { Y = 0 } : null;
 }
 
 internal sealed class TestCollisionWorld : ICollisionWorld
