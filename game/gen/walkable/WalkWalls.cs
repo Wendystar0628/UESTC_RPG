@@ -72,8 +72,7 @@ internal static class WalkWalls
     }
 
     private static bool NeedsWall(WalkClass a, WalkClass b) =>
-        (IsAllowed(a) && IsBlocked(b) || IsAllowed(b) && IsBlocked(a)) &&
-        !((a == WalkClass.Wade && b == WalkClass.Water) || (b == WalkClass.Wade && a == WalkClass.Water));
+        IsAllowed(a) && IsBlocked(b) || IsAllowed(b) && IsBlocked(a);
 
     private static bool IsAllowed(WalkClass value) => value is WalkClass.Walk or WalkClass.Interior or WalkClass.Wade;
     private static bool IsBlocked(WalkClass value) => value is WalkClass.Forbidden or WalkClass.Water or WalkClass.Steep;

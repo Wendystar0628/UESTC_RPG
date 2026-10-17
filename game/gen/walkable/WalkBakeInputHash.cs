@@ -6,7 +6,7 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Walkable;
 
-/// <summary>Pure hash of original map source bytes for offline walk production; never reads files.</summary>
+/// <summary>Pure hash of map source bytes and walk bake rules; never reads files.</summary>
 public static class WalkBakeInputHash
 {
     /// <summary>The one source selection used by offline producers and runtime freshness validation.</summary>
@@ -35,7 +35,8 @@ public static class WalkBakeInputHash
         return selected.ToArray();
     }
 
-    public static string ComputeForMap(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) => Compute(SelectSourceFiles(files));
+    public static string ComputeForMap(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) =>
+        Compute(SelectSourceFiles(files), "campus-walk-rules-2\0"u8);
 
     /// <summary>Validate a non-empty startup product before publishing its world. Offline empty baselines skip this call.</summary>
     /// <remarks>Never rebuilds, changes support heights, or returns a fallback. Map identity and extent checks remain with the map loader.</remarks>
@@ -61,12 +62,11 @@ public static class WalkBakeInputHash
                 $"walk.stale: startup walk inputs differ (stored {data.InputHash}, current {expected}). Rebuild the startup set offline before loading this map.");
     }
 
-    /// <summary>Legacy byte framing: hashes exactly the supplied files, without filtering. Kept wire-compatible.</summary>
-    public static string Compute(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+    private static string Compute(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, ReadOnlySpan<byte> domain)
     {
         ArgumentNullException.ThrowIfNull(files);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData("campus-walk-v1\0"u8);
+        hash.AppendData(domain);
         Span<byte> size = stackalloc byte[8];
         foreach (var pair in files.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {

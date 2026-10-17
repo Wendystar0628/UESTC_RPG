@@ -61,7 +61,7 @@ public sealed class WalkableBakerTests
     }
 
     [TestCase]
-    public void CampusPerimeterIsNotAnInvisibleFenceAndWadeOuterEdgeStaysOpen()
+    public void CampusPerimeterUsesVisibleFencesAndUnregisteredWadeWaterEdgesAreBlocked()
     {
         Require(Bake([]).Walls.Count == 0, "Campus boundary collision belongs to visible fences.");
         var gate = new WorldFeature(new FeatureId("walk:gate"), FeatureSource.Design, new DesignKind("boundary"),
@@ -69,8 +69,15 @@ public sealed class WalkableBakerTests
         var result = Bake([gate, Feature("lake", "water", Rectangle(16, 4, 28, 28)), Feature("wade", "wade", Rectangle(12, 12, 20, 20))]);
         Require(result.Walls.Count(wall => wall.Tag == SurfaceTag.Boundary) == 1, "Only a registered gate produces Boundary walls.");
         Require(result.Walls.All(wall => wall.Foot != Campus.Contracts.Audio.FootMat.Auto), "Walls must carry a resolved contact material.");
-        Require(!result.Walls.Any(wall => wall.Tag == SurfaceTag.Invisible && wall.A.X == 20f && wall.B.X == 20f &&
-            Math.Min(wall.A.Y, wall.B.Y) < 20f && Math.Max(wall.A.Y, wall.B.Y) > 12f), "Wade-to-water edge must remain open.");
+        foreach (var (a, b) in new (Vector2, Vector2)[]
+        {
+            (new(16, 12), new(20, 12)), (new(16, 20), new(20, 20)), (new(20, 12), new(20, 20))
+        })
+            Require(result.Walls.Any(wall => wall.Tag == SurfaceTag.Invisible && wall.A == a && wall.B == b),
+                "Every unregistered wade-to-water edge must be blocked in both raster directions.");
+        Require(!result.Walls.Any(wall => wall.Tag == SurfaceTag.Invisible && wall.A.X == 12f && wall.B.X == 12f &&
+            Math.Min(wall.A.Y, wall.B.Y) < 20f && Math.Max(wall.A.Y, wall.B.Y) > 12f),
+            "Wading must remain connected to the permitted dry shore.");
         var i = 4 * result.Walk.Width + 4;
         Require((result.Walk.Flags[i] & 1) != 0, "The 3 m campus buffer must be marked.");
     }

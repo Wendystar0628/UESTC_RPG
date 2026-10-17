@@ -9,20 +9,22 @@ namespace Campus.Gen.Walkable.Tests;
 public sealed class WalkBakeFreshnessTests
 {
     [TestCase]
-    public void LegacyFramingKeepsItsGoldenDigestAndMapSelectionIgnoresOutputs()
+    public void MapRuleRevisionRejectsPreviousBakeAndSelectionIgnoresOutputs()
     {
         var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             ["map.json"] = Bytes("{\"id\":\"example\"}"),
             ["campus.json"] = Bytes("{\"features\":[]}")
         };
-        const string expected = "bae492c424b5369f01dac6d4c36b3301837097d3110285b88cef3a85eb78ccca";
-        Require(WalkBakeInputHash.Compute(files) == expected, "Legacy v1 byte framing changed.");
+        const string previousHash = "bae492c424b5369f01dac6d4c36b3301837097d3110285b88cef3a85eb78ccca";
+        ExpectFailure(() => WalkBakeInputHash.RequireCurrent(Product(previousHash), files),
+            WalkBakeFreshnessFailure.StaleInputs, "walk.stale:");
+        var expected = WalkBakeInputHash.ComputeForMap(files);
+        WalkBakeInputHash.RequireCurrent(Product(expected), files);
         files.Add("boot/walk.bake.json", Bytes("{\"oldProduct\":true}"));
         files.Add("fidelity.json", Bytes("{\"generated\":true}"));
         files.Add("atlas/markers.json", Bytes("[]"));
         Require(WalkBakeInputHash.ComputeForMap(files) == expected, "Downstream outputs must not invalidate their own upstream bake.");
-        Require(WalkBakeInputHash.Compute(files) != expected, "The legacy Compute API must still hash all explicitly supplied files.");
         var reversed = files.Reverse().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         Require(WalkBakeInputHash.ComputeForMap(reversed) == expected, "Dictionary insertion order must not affect map freshness.");
     }
