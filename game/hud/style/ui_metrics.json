@@ -1,9 +1,9 @@
 {
-  "_doc": "界面的非色令牌：主题切换、着色器色表顺序、尺寸、字号、形状、线宽、影与辉光的几何、动效曲线与时长（UI-VISUAL §3.6、§4.3、§5、§6.1、§7、§9.5–§9.8、§10.1、§11.5）。按 UI-VISUAL §11.2 由 UiTokens 读取；色值只在 game/style/palette/ext/ui.json。单位是 1920×1080 基准的逻辑像素（随界面缩放），标 Phys 的是物理像素，时长 ms，弹簧 response 秒。以 _ 开头的键是注释，读取方忽略。",
+  "_doc": "界面的非色令牌：主题切换、着色器色表顺序、尺寸、字号、形状、线宽、影与辉光的几何、动效曲线与时长（UI-VISUAL §3–§7、§9.4、§10.1、§11）。按 UI-VISUAL §11 由 UiTokens 读取；色值只在 game/style/palette/ext/ui.json。单位是 1920×1080 基准的逻辑像素（随界面缩放），标 Phys 的是物理像素，时长 ms，弹簧 response 秒。以 _ 开头的键是注释，读取方忽略。",
   "format": 1,
 
   "themeSwitch": {
-    "_ref": "UI-VISUAL §3.6、§11.6",
+    "_ref": "UI-VISUAL §3.4、§11",
     "signal": "sun.altDeg",
     "toDarkBelowDeg": -0.5,
     "toLightAboveDeg": 0.5,
@@ -20,7 +20,7 @@
   },
 
   "shader": {
-    "_ref": "UI-VISUAL §11.3、§11.5：ui_panel 的色表 pal_day / pal_night 按这个顺序由 ui.json 的 themes.light / themes.dark 写入，下标即着色器里的 R_* 常量；只在末尾追加",
+    "_ref": "UI-VISUAL §11：ui_panel 的色表 pal_day / pal_night 按这个顺序由 ui.json 的 themes.light / themes.dark 写入，下标即着色器里的 R_* 常量；只在末尾追加",
     "panelRoles": [
       "surface.panel", "surface.solid", "surface.raised", "surface.sunk",
       "surface.selected", "surface.frost", "surface.hover", "surface.row.hover",
@@ -137,7 +137,7 @@
       }
     },
     "shape": {
-      "_ref": "UI-VISUAL §5.2：只切左上一个 45° 角",
+      "_ref": "UI-VISUAL §5：只切左上一个 45° 角",
       "chamfer": { "page": 14, "panel": 12, "card": 10, "primary": 8, "small": 0 },
       "chamferMinWidth": 48,
       "cornerMinor": 2,
@@ -146,7 +146,7 @@
       "signatureVia": 4
     },
     "line": {
-      "_ref": "UI-VISUAL §5.3–§5.6",
+      "_ref": "UI-VISUAL §5",
       "hairPhys": 1,
       "indicator": 2,
       "selectedIris": 1.5,
@@ -166,7 +166,7 @@
     "focus": { "offset": 3, "corePhys": 1, "backingPhys": 1, "irisPhys": 0.7, "irisMax": 0.35, "tightenFrom": 2 },
     "glow": { "radius": 4, "max": 0.30, "maxCount": 3, "falloff": "exp", "maxRelLuminance": 0.78 },
     "shadow": {
-      "_ref": "UI-VISUAL §3.5 的 shadow.* 的几何；颜色在 ui.json",
+      "_ref": "UI-VISUAL §3.3 的 shadow.* 的几何；颜色在 ui.json",
       "shadow.ambient": { "light": { "x": 0, "y": 2, "blur": 12 }, "dark": null },
       "shadow.float": { "light": { "x": 0, "y": 8, "blur": 24 }, "dark": { "x": 0, "y": 10, "blur": 30 } },
       "shadow.float.near": { "light": { "x": 0, "y": 1, "blur": 2 }, "dark": null }
@@ -178,7 +178,7 @@
     },
     "icon": { "grid": 24, "live": 20, "sizes": [16, 20, 24], "mapMarker": [20, 28], "miterLimit": 4, "innerRadius": 1, "solidMax": 0.25 },
     "map": {
-      "_ref": "UI-VISUAL §3.8 地图色表里的几何；颜色在 ui.json 的 map 段",
+      "_ref": "UI-VISUAL §3 令牌中的地图色表里的几何；颜色在 ui.json 的 map 段",
       "map.bound": { "dash": [5, 3] },
       "map.label.halo": { "width": 2 },
       "map.player": { "lineWidth": 1.5, "glow": { "light": 0, "dark": 4 } }
@@ -186,7 +186,7 @@
   },
 
   "motion": {
-    "_ref": "UI-VISUAL §9.5–§9.8、§10.1",
+    "_ref": "UI-VISUAL §9.4、§10.1",
     "curves": {
       "Enter": [0.2, 0.7, 0.2, 1.0],
       "Exit": [0.3, 0.0, 0.8, 0.15],
