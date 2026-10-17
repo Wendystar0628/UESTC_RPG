@@ -27,7 +27,7 @@ gates: []
 ### 0.1 接入要点
 
 - **派任何单、写任何简报**：不抄本文，只写"守则见 WF-RULE"；简报里的规则副本会漂移（§12）。
-- **提醒钩子**：`.collab/tools/hooks/uestc-guard.cjs` 每条消息前读 WF-CORE §0 注入 Claude 主会话与 Codex 各会话，Claude 子代理在启动时、Codex 子代理在第一次调用工具时各注入一次；钩子按 WF-ENTRY 的节标题注入角色入口；钩子不另存准则文字，核心准则只在 WF-CORE 写一句、细则在本文。
+- **提醒钩子**：`.collab/tools/hooks/uestc-guard.cjs` 每条消息前读 WF-CORE §0 注入 Claude 主会话与 Codex 各会话，Claude 子代理在启动时、Codex 子代理在第一次调用工具时各注入一次；钩子按 WF-ENTRY 的节标题注入角色入口，按路线表注入接入要点，碰内容路径时注入并定期重注 CORE-CONTENT §0，新建代码、脚本或文档时注入本文 §1；钩子不另存准则文字，核心准则只在 WF-CORE 写一句、细则在本文。
 
 ## 1 不过度工程化（D-201）
 
