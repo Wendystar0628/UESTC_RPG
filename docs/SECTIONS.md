@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.4k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 154
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 1.7k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L117 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 1.8k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L118 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1741,7 +1741,7 @@
   - ENG-ARCH 仓库脚本自成一体 · L104 · 101
   - ENG-ARCH 生命周期与发布 · L108 · 233
 - ENG-ARCH §3 契约 · L115 · 566
-- ENG-ARCH §4 资源与烘焙 · L124 · 959
+- ENG-ARCH §4 资源与烘焙 · L124 · 1.0k
 - ENG-ARCH §5 未交付能力的占位边界 · L135 · 359
 - ENG-ARCH §6 架构导向 · L144 · 514
 - ENG-ARCH §7 扩展点（RPG） · L156 · 448
