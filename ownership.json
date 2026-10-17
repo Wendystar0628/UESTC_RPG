@@ -2979,6 +2979,10 @@
       "owner": "WP-00"
     },
     {
+      "pattern": "scripts/shots/**",
+      "owner": "WP-27"
+    },
+    {
       "pattern": "scripts/gates/**",
       "owner": "WP-27"
     },
@@ -3019,7 +3023,7 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "docs/design/**",
+      "pattern": "docs/**",
       "owner": "Opus"
     },
     {

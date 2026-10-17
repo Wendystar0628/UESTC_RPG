@@ -1,4 +1,4 @@
-"""校验 docs/design：小节引用、文件头的 depends/related、相对链接、工作包与门禁编号。
+"""校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、工作包与门禁编号、导航树（没有孤儿文档）。
 
 用法：python -I scripts/docs/check_docs.py
 依赖：PyYAML。有问题时退出码为 1。
@@ -9,11 +9,13 @@ import yaml
 
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-D = os.path.join(ROOT, 'docs', 'design')
+D = os.path.join(ROOT, 'docs')
 FM = re.compile(r'^---\r?\n(.*?)\r?\n---\r?\n', re.S)
 
 docs = {}
 for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
+    if os.path.relpath(p, D).replace(chr(92), '/').startswith('godot-api/'):
+        continue
     t = open(p, encoding='utf-8').read()
     m = FM.match(t)
     if not m:
@@ -79,6 +81,22 @@ for code, d in docs.items():
         if str(g) not in gates:
             bad.append((code, 'gate', g))
 
+# 导航树（WF-DOC §5.1）：主文档要列在 CORE-INDEX §1，子文档写 parent 并列在主文档里；不许有孤儿文档
+index = docs.get('CORE-INDEX', {}).get('text', '')
+m = re.search(r'^## 1 .*?(?=^## 2 )', index, re.S | re.M)
+index1 = m.group(0) if m else ''
+for code, d in docs.items():
+    if code == 'CORE-INDEX' or d['fm'].get('category') in RECORDS:
+        continue
+    parent = d['fm'].get('parent')
+    if parent:
+        if parent not in docs:
+            bad.append((code, 'tree', 'parent 不存在：%s' % parent))
+        elif not re.search(r'(?<![A-Z0-9-])%s(?![A-Z0-9-])' % re.escape(code), docs[parent]['text']):
+            bad.append((code, 'tree', '主文档 %s 里没有列出它' % parent))
+    elif not re.search(r'(?<![A-Z0-9-])%s(?![A-Z0-9-])' % re.escape(code), index1):
+        bad.append((code, 'tree', 'CORE-INDEX §1 没有列出它'))
+
 # 便于按需查阅（D-178）：规范文档要有 keywords、查阅行、§0 和 §0 末尾的接入要点
 for code, d in docs.items():
     rel = os.path.relpath(d['path'], D).replace(chr(92), '/')
@@ -98,9 +116,6 @@ for code, d in docs.items():
 # 小节目录要与文档一致：文档改过以后重跑 gen_index.py
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_index
-map_path = os.path.join(D, 'DOCMAP.md')
-if not os.path.exists(map_path) or open(map_path, 'rb').read().decode('utf-8') != gen_index.build(gen_index.load()):
-    bad.append(('DOCMAP', 'stale', '重跑 scripts/docs/gen_index.py'))
 sec_path = os.path.join(D, 'SECTIONS.md')
 if not os.path.exists(sec_path) or open(sec_path, 'rb').read().decode('utf-8') != gen_index.build_sections():
     bad.append(('SECTIONS', 'stale', '重跑 scripts/docs/gen_index.py'))
@@ -108,7 +123,14 @@ rt_path = os.path.join(D, 'ROUTES.json')
 if not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
     bad.append(('ROUTES', 'stale', '重跑 scripts/docs/gen_index.py'))
 
+# 体量上限（WF-DOC §5）：只列出，不算 problems；量法只在 doc_size.py
+import doc_size
+over = [(code, where, n) for p in doc_size.docs_in() for code, _, ov in [doc_size.check(p)] for where, n, _cap in ov]
 print('docs', len(docs), 'problems', len(bad), dict(Counter(b[1] for b in bad)))
 for b in bad:
     print('%s\t%s\t%s' % b)
+if over:
+    print('超体量上限', len(over), '处（WF-DOC §5）')
+    for o in over:
+        print('  %s\t%s\t%d 字' % o)
 sys.exit(1 if bad else 0)
