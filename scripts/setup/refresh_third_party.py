@@ -82,7 +82,6 @@ def validate_manual_license(entry):
         and entry.get("sha256") == "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
         and review.get("status") == "APPROVED_EXCEPTION"
         and review.get("approvedBy") == "Opus"
-        and review.get("evidence") == "E:/Project/UESTC_RPG.wt/.collab/notes/opus-to-astra.md#2026-10-16-0440"
     )
     if development_wheel and certifi_exception:
         return

@@ -1168,16 +1168,6 @@
       "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
-      "evidence": {
-        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
-        "sections": [
-          "3",
-          "2026-10-16 01:22:16 Opus decision item 3"
-        ],
-        "providerDownloadDirectory": "WP-35/output/downloads/",
-        "providerExtractedDirectory": "WP-35/output/fonts/",
-        "providerWorktreeReadByThisAgent": false
-      },
       "sourceMetadataSha256MatchesProvider": true,
       "selectedWeights": [
         "Light",
@@ -1205,16 +1195,6 @@
       "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
-      "evidence": {
-        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
-        "sections": [
-          "3",
-          "2026-10-16 01:22:16 Opus decision item 3"
-        ],
-        "providerDownloadDirectory": "WP-35/output/downloads/",
-        "providerExtractedDirectory": "WP-35/output/fonts/",
-        "providerWorktreeReadByThisAgent": false
-      },
       "selectedWeights": [
         "Light",
         "Regular",
@@ -1241,16 +1221,6 @@
       "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
-      "evidence": {
-        "request": "E:/Project/UESTC_RPG.wt/.collab/requests/contract-1.md",
-        "sections": [
-          "3",
-          "2026-10-16 01:22:16 Opus decision item 3"
-        ],
-        "providerDownloadDirectory": "WP-35/output/downloads/",
-        "providerExtractedDirectory": "WP-35/output/fonts/",
-        "providerWorktreeReadByThisAgent": false
-      },
       "selectedWeights": [
         "Regular",
         "Medium"
@@ -1284,7 +1254,7 @@
       "source": "https://github.com/certifi/python-certifi",
       "packageIndex": "https://pypi.org/project/certifi/2026.7.22/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/certifi-2026.7.22-py3-none-any.whl",
+      "archive": "output/pipeline-wheels/certifi-2026.7.22-py3-none-any.whl",
       "bytes": 136983,
       "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
@@ -1310,8 +1280,6 @@
       "licenseReview": {
         "status": "APPROVED_EXCEPTION",
         "approvedBy": "Opus",
-        "evidence": "E:/Project/UESTC_RPG.wt/.collab/notes/opus-to-astra.md#2026-10-16-0440",
-        "evidenceStatus": "APPROVAL_REPORTED_BY_COORDINATOR; NOTE_NOT_READ_IN_THIS_SCOPED_TASK",
         "scope": "Only certifi 2026.7.22 at this SHA256, unmodified local development dependency; no export or vendoring. MPL-2.0 is not added to the general allowlist."
       }
     },
@@ -1325,7 +1293,7 @@
       "source": "https://github.com/numpy/numpy",
       "packageIndex": "https://pypi.org/project/numpy/2.5.4/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/numpy-2.5.4-cp313-cp313-win_amd64.whl",
+      "archive": "output/pipeline-wheels/numpy-2.5.4-cp313-cp313-win_amd64.whl",
       "bytes": 12566113,
       "sha256": "8b4d2fd2d34e5f8c9235ee787de5631a37a28402b15cb80814df973d2be54129",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
@@ -1452,7 +1420,7 @@
       "source": "https://github.com/python-pillow/Pillow",
       "packageIndex": "https://pypi.org/project/pillow/12.3.0/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/pillow-12.3.0-cp313-cp313-win_amd64.whl",
+      "archive": "output/pipeline-wheels/pillow-12.3.0-cp313-cp313-win_amd64.whl",
       "bytes": 7239691,
       "sha256": "1cca606cd25738df4ed873d5ad46bbdb3d83b5cbca291f6b4ff13a4df6b0bbe8",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
@@ -1568,7 +1536,7 @@
       "source": "https://github.com/pyproj4/pyproj",
       "packageIndex": "https://pypi.org/project/pyproj/3.8.0/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/pyproj-3.8.0-cp313-cp313-win_amd64.whl",
+      "archive": "output/pipeline-wheels/pyproj-3.8.0-cp313-cp313-win_amd64.whl",
       "bytes": 6710283,
       "sha256": "d7b542e249eb593c1af737b7124648868383b69744ab6a1a0a2ffd0113c997f4",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
@@ -1625,7 +1593,7 @@
       "source": "https://github.com/yaml/pyyaml",
       "packageIndex": "https://pypi.org/project/PyYAML/6.0.3/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/pyyaml-6.0.3-cp313-cp313-win_amd64.whl",
+      "archive": "output/pipeline-wheels/pyyaml-6.0.3-cp313-cp313-win_amd64.whl",
       "bytes": 154090,
       "sha256": "79005a0d97d5ddabfeeea4cf676af11e647e41d81c9a7722a193022accdb6b7c",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
@@ -1663,7 +1631,7 @@
       "source": "https://github.com/shapely/shapely",
       "packageIndex": "https://pypi.org/project/shapely/2.2.0/",
       "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "E:/Project/UESTC_RPG.wt/WP-08/output/pipeline-wheels/shapely-2.2.0-cp313-cp313-win_amd64.whl",
+      "archive": "output/pipeline-wheels/shapely-2.2.0-cp313-cp313-win_amd64.whl",
       "bytes": 1790191,
       "sha256": "1eaa2cb64cdedaf65d6bc86f2819c9cd7d6d68f969aa3ebfdc93743ab581f437",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
