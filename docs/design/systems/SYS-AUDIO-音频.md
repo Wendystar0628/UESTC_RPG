@@ -16,13 +16,13 @@ gates: [G2, G4, G5, G6, G13, G14, G21]
 
 > **范围**：本文规定全部声音：音频内核与混音（总线、五组音量、声部池），环境声景与天气声，远雷、钟声与广播，观者声（脚步、门、飞行风），空间声学（窄处脚步更明显），界面音效，开场音乐的挂点，素材与许可，以及契约、帧顺序、预算与 G21 门禁。声音只读世界状态，要和画面、所处环境对得上；同一动作在不同地方听起来不一样。
 > **不在本文**：雾幕与介质判定（SYS-VIEW，WP-01、WP-07）；自动门的状态机与参数（WLD-INTERIORS §4.1）；界面的视觉与动效（UI-VISUAL）；过场的编排（SYS-TITLE）；切图流程（SYS-MAPS）；画面设置（SYS-GRAPHICS，声音不是画面单项）。
-> **查阅**：先读 §0；契约签名看 §19；各包要为音频补的增量看 §21.2；发声器与数据文件位置看 §4.2；脚步材质 `FootMat` 看 §9.3；房间与门户声明看 §10.4；素材许可与入库看 §14；帧顺序看 §20
+> **查阅**：先读 §0；契约签名读 `game/contracts/Audio/`；各包分工见 ENG-WP；发声器与数据文件位置看 §4.2；脚步材质 `FootMat` 看 §9.3；房间与门户声明看 §10.4；素材许可与入库看 §14；帧顺序看 §20
 > **关联**：[SYS-MOTION 动态与事件](SYS-MOTION-动态与事件.md)、[SYS-VIEW 观察模式与介质](SYS-VIEW-观察模式介质与开场.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF-性能工程.md)、[SYS-TIME 时间与季节](SYS-TIME-时间与季节.md)、[SYS-WALK 行走模式](SYS-WALK-行走模式.md)、[SYS-WEATHER 天气](SYS-WEATHER-天气.md)、[WLD-INTERIORS 室内](../world/WLD-INTERIORS-室内.md)；[CORE-INDEX 总览](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE-风格基础.md)、[WLD-LIFE 动物与生活痕迹](../world/WLD-LIFE-动物生活痕迹与街道家具.md)、[ENG-GATES 验收](../engineering/ENG-GATES-验收与门禁.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET-性能预算与硬规则.md)、[UI-NAV 界面与跳转](../ui/UI-NAV-界面与操作说明.md)、[SYS-GRAPHICS 画面设置](SYS-GRAPHICS-画面设置.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL-界面视觉语言.md)、[SYS-ATLAS 平面地图与传送](SYS-ATLAS-平面地图与传送.md)、[SYS-TITLE 开始页与过场](SYS-TITLE-开始页与进入过场.md)、[SYS-SAVE 存档](SYS-SAVE-存档与持久化.md)、[SYS-MAPS 多地图](SYS-MAPS-多地图.md)、[WLD-OUTSKIRTS 边界与外围](../world/WLD-OUTSKIRTS-边界与外围.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP-扩展路线.md)
 
 ### 分工
 
 - **WP-53 音频**独占 `game/audio` 等目录（§21.1），分五个子包：53a 内核与混音、53b 环境声、53c 空间声学、53d 观者声、53e 素材管线与许可。
-- 其他包的增量见 §21.2。
+
 
 ## 0 结论
 
@@ -197,7 +197,7 @@ g* = g_ref                         入库标定后的参考增益（§3.3）
 
 ### 2.7 生命周期：启动、换图、读档、退出
 
-- **启动**：53a 在 Boot 之后建总线树（§3.1），在扉页或雾幕后面后台加载常驻声音集。"音频就绪"是扉页转为实时、雾幕淡出的条件之一（SYS-TITLE、SYS-VIEW §3）。扉页或雾幕期间 Master 组在 −∞。
+- **启动**：53a 在 Boot 之后建总线树（§3.1），在扉页或雾幕后面后台加载常驻声音集。"音频就绪"是扉页转为实时、雾幕淡出的条件之一（SYS-TITLE、SYS-TITLE §1）。扉页或雾幕期间 Master 组在 −∞。
 - **换图**（SYS-MAPS）：`audio` 节点是跨图常驻的 `[KernelNode]`，实现 `IMapAware`。雾幕盖起时 World 组 0.5 s 压到 −40 dB；`OnMapUnloading` 时丢掉本图的发声器表、声景场、声学网格和房间；`OnMapLoaded` 时读新图的 `game/data/maps/<图>/audio/` 和烘焙产物（随启动集挂载，SYS-MAPS §2.4）；雾幕散开时 2–3 s 淡入。全局的声音库（声音集、观者声样本组、界面音、音乐）不重载。
 - **读档、新游戏**（SYS-SAVE）：存档里**不存任何音频状态**，声景由世界状态和位姿重建。`IWorldState.Instance` 变了，所有平滑量、虚拟相位和散布状态直接落到新世界的值；这一刻总在遮挡之下，不算硬切。
 - **退出**（SYS-SAVE）：进入 Quitting（退出程序；Leaving 是返回标题）后 Master 组 0.3 s 淡出，与雾幕同步，不额外拖延退出。
@@ -494,7 +494,7 @@ Master            [StereoEnhance：单声道选项，默认旁通] [HardLimiter 
 - **可以关**："突发声音"设为关时没有雷；设为柔和时 −8 dB、听起来更远（§13）。
 - **流逝**：闪电只在主光角速度 ω < 0.05°/s 时出现（SYS-WEATHER §5），60× 及以上本来就没有闪电，也就没有雷。
 - **减少动态效果**：闪电不画，但 WP-40 照同一节拍发"不可见"的闪光事件（`Visible = false`）；雷保留，更远（−6 dB）、更少（每两次取一次）。声音不是闪光，不违反 WCAG 2.3.1。
-- **分工**：WP-40 发闪光事件、53b 放雷声，WP-45b 不碰音频（SYS-WEATHER §10）。
+- **分工**：WP-40 发闪光事件、53b 放雷声，WP-45b 不碰音频（SYS-WEATHER §7）。
 
 ### 6.2 宣邦楼的钟声
 
@@ -568,7 +568,7 @@ SYS-MOTION §10.6"这个事件不发出声音"细化为：**事件本身无声**
 | 转场 | 画面 | 声音 |
 | --- | --- | --- |
 | 冷启动（SYS-TITLE） | 扉页 → 1.2 s 交叉淡化成实时的 T0 | 扉页期间 Master 在 −∞，音频内核与常驻素材在扉页后就绪；转实时时高空远景床 3 s 淡入；有开始页音乐时，在转实时 2 s 后淡入（§12） |
-| `--title=0` 的开场（SYS-VIEW §3） | 雾幕 2–3 s 淡出 | 雾幕淡出时环境声从 −∞ 用 3 s 淡入 |
+| `--title=0` 的开场（SYS-TITLE §1） | 雾幕 2–3 s 淡出 | 雾幕淡出时环境声从 −∞ 用 3 s 淡入 |
 | 新游戏过场（约 44 s） | 云卡、60× 前推、低掠、P00 | 环境声随镜头从高空床过渡到地面；60× 段按 §7.1 不放钟和广播；交还控制后音乐 6–8 s 淡出 |
 | 继续过场（约 9 s） | 穿云 → 存档位姿 | 音乐 3 s 淡出；声景在穿云的全遮段直接"换场" |
 | 点位跳转 ≥ 600 m、传送（SYS-ATLAS的雾幕瞬移） | 雾幕 0.3 s 盖满 → 移位 → 等就绪 → 0.6 s 散开 | 雾幕盖起时 World 压低 8 dB，加 1.5 kHz 低通，表现"进雾"；全遮时听者相关的权重直接置为目的地的值（τ 缩到 0.5 s），发声器换成目的地的格；散开时 0.6–0.8 s 恢复。按"传送"时放界面音"传送确认"，雾幕散到 30%、到达标题出现时放更轻的"传送到达" |
@@ -1234,233 +1234,7 @@ SYS-WALK §12 第 9 条只有 `Landed`，扩展为一个遥测接口（WP-42 实
 
 放在 `game/contracts/Audio/`（命名空间 `Campus.Contracts.Audio`，纯 .NET，向量用 `System.Numerics`），由 WP-00 先作为候选契约和桩合入；这一组的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结（D-134），冻结后枚举只能在末尾追加（JSON 按字符串存，旧值不变）；会追加值的枚举（`DuckReason`、`AudioGroup`、`FoleyKind` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错（ENG-ROADMAP §6 第 4 条）。观者声的送量用 `ListenerRouting` 表达（一个播放器只能走一条总线，送量必须拆成多路）；室内档案统一用 `AmbienceProfileId`。
 
-```csharp
-namespace Campus.Contracts.Audio;
-using System.Numerics;
-// 引用 Campus.Contracts 已有的：SurfaceTag、MediumKind、CameraMedium、SeasonMask、NightRule、FeatureId、ChannelId、Box3、BuildContext
-
-// ===== 名字常量：G5 比对代码建出的总线树（同 ShaderGlobals 的做法） =====
-public static class AudioBuses
-{
-    public const string Master = "Master", Music = "Music", Ui = "UI", World = "World", Out = "Out",
-        AmbBed = "Amb.Bed", AmbWeather = "Amb.Weather", AmbFar = "Amb.Far", AmbTrace = "Amb.Trace", AmbEmit = "Amb.Emit",
-        OutEcho = "Out.Echo", InBed = "In.Bed", InEmit = "In.Emit",
-        NearDry = "Near.Dry", SlotAEr = "Slot.A.ER", SlotARev = "Slot.A.Rev", SlotBEr = "Slot.B.ER", SlotBRev = "Slot.B.Rev",
-        Air = "Air";
-    public const string ZonePrefix = "Zone.";       // Zone.<AcousticClass>.Rev，≤ 6 条（§10.6）
-}
-public enum AudioGroup : byte { Master, Ambience, Foley, Ui, Music }      // 设置里的五组音量
-
-// ===== 设置：user://audio.cfg，只有 53a 读写，读取只收基本类型 =====
-public enum BackgroundBehavior : byte { Keep, Lower, Mute }
-public enum SuddenSoundMode : byte { Normal, Softer, Off }                 // 雷、钟、孔雀
-public sealed record AudioSettings(
-    float Master = 0.8f, float Ambience = 1.0f, float Foley = 0.8f, float Ui = 0.6f, float Music = 0.7f,   // 滑杆值 0–1
-    bool UiSounds = true, bool HoverSounds = false, bool QuietMode = false, bool Mono = false,
-    SuddenSoundMode Sudden = SuddenSoundMode.Normal, BackgroundBehavior Background = BackgroundBehavior.Keep,
-    string? OutputDevice = null, int Schema = 1);
-
-// ===== 界面音与音乐 =====
-public enum UiCue : byte { Focus, Hover, Confirm, Back, Toggle, PageOpen, PageClose, SliderTick,
-    TeleportConfirm, TeleportArrive, Saved, ShiftDayNight, Denied }
-public enum MusicCue : byte { Silence, Title, EnterNew, EnterContinue, ReturnTitle }   // 音乐做好之前全部按 Silence
-
-// ===== 音频服务：总入口（53a，Kernel 服务） =====
-public enum DuckReason : byte { Boot, Veil, PageOpen, Cinematic, MapTravel }
-public readonly record struct AudioSnapshot(long Frame, int RealVoices, int Nodes3D, int VirtualEmitters,
-    int OneShotsLast5s, float MasterPeakDb, int ResidentKb);
-public interface IAudioService
-{
-    AudioSettings Settings { get; }
-    event Action<AudioSettings>? SettingsChanged;            // 主线程；值变了才发
-    void ApplySettings(AudioSettings next);                  // 音量 80 ms 斜坡；0.5 s 去抖写盘
-    void PlayUi(UiCue cue);                                  // 当场 PlayStream；界面音效关时静默丢弃；80 ms 去重
-    void SetMusic(MusicCue cue, float fadeSeconds = 1.5f);
-    void Cine(string cue, float seconds, float db = 0f);     // 过场的 audio 轨：title.start / title.fadeIn / title.fadeOut / duck / amb.altitude
-    void Duck(DuckReason reason, float db, float attackSeconds, float releaseSeconds);   // 多个原因取最深
-    void ReleaseDuck(DuckReason reason);
-    AudioSnapshot Snapshot { get; }                          // 调试面板与门禁
-}
-
-// ===== 环境声（53b） =====
-public readonly record struct SoundSetId(string Value);          // 如 "amb.bird.dusk.roost"，登记在 game/data/audio/sets/*.json
-public readonly record struct AmbienceProfileId(string Value);   // 室内档案，如 "interior.library.atrium"
-public enum EmitterShape : byte { Point, Line, Area, Scatter }
-[Flags] public enum DayBand : ushort { PreDawn = 1, Dawn = 2, Morning = 4, Midday = 8, Afternoon = 16,
-                                       Dusk = 32, Evening = 64, Night = 128, LateNight = 256, All = 511 }
-[Flags] public enum WeatherMask : ushort { Clear = 1, FewClouds = 2, Cloudy = 4, Overcast = 8, Fog = 16, LightRain = 32,
-                                           Rain = 64, Thunderstorm = 128, AfterRain = 256, Snow = 512, AfterSnow = 1024, All = 2047 }
-public enum TraceKind : byte { None, HumanTrace, VisibleAnimal }  // 要过画外规则或动物同步规则（§8、§4.4）
-
-public sealed record AmbientEmitterDecl(
-    string Id,                            // 以 "amb:" 开头，本图内唯一；G5 查重
-    EmitterShape Shape, SoundSetId Set,
-    IReadOnlyList<Vector3> Points,        // Point：1 个；Line：折线；Area：外环；Scatter：候选位点
-    float RefDb, float AudibleRadius,
-    SeasonMask Seasons = SeasonMask.All, DayBand Bands = DayBand.All, WeatherMask Weather = WeatherMask.All,
-    TraceKind Trace = TraceKind.None, byte Priority = 4,
-    float MinDistance = 0f,               // 远景声的距离下限（§4.6）
-    FeatureId? Feature = null,
-    ChannelId? Activity = null,           // 人迹跟随的灯光通道（灯亮才有人迹）
-    string Reason = "");                  // 手工点必须写理由
-
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class AmbientEmitterAttribute(string id) : Attribute { public string Id { get; } = id; public string Owner { get; set; } = ""; }
-public interface IAmbientEmitterSource { IEnumerable<AmbientEmitterDecl> Emit(BuildContext ctx); }   // gen 里，纯函数，在烘焙器里跑
-
-// 部件自带的声音插座：IPartDef 加默认方法，只增不改
-public sealed record SoundSocketDecl(string Id, SoundSetId Set, Matrix4x4 Local, float RefDb, float AudibleRadius,
-    SeasonMask Seasons = SeasonMask.All, NightRule Night = NightRule.Any, WeatherMask Weather = WeatherMask.All, byte Priority = 2);
-// public interface IPartDef<TParams> { … IReadOnlyList<SoundSocketDecl> Sounds(TParams p) => []; }
-
-public readonly record struct AmbienceCue(SoundSetId Set, Vector3 Position, float DelaySec = 0f, float GainDb = 0f,
-    TraceKind Trace = TraceKind.None, byte Priority = 1, uint Group = 0);   // Group：同一批（如一次偶发事件），可以整批取消
-public readonly record struct AmbienceSnapshot(long Frame, int ActiveVoices, int OneShotsLast5s, float BedWeightSum,
-    float Birds, float Insects, float Frogs, float HumanTrace, float Rain, float Wind, float Water, float Far);
-public interface IAmbienceService
-{
-    AmbienceSnapshot Now { get; }
-    void Cue(in AmbienceCue cue);                          // 与画面同步的一次性声（§6.4）
-    void CancelCues(uint group);                           // 偶发事件被转场打断时
-    int AddDynamic(in AmbientEmitterDecl decl);            // 会动的发声器（动物），返回句柄
-    void MoveDynamic(int handle, Vector3 position);
-    void RemoveDynamic(int handle);
-}
-
-// ===== 空间声学（53c） =====
-public enum AcousticClass : byte
-{
-    Open, Waterside, Street, Courtyard, Canopy, Underpass, Arcade,                      // 室外与半室外
-    Corridor, Stair, SmallRoom, Room, Hall, Atrium, Gym, Pool, Canteen, Auditorium, Exhibit,  // 室内
-    Underwater, Underground, FogSea,                                                    // 介质（SYS-VIEW §5）
-}
-public enum AbsorbClass : byte { Hard, Mixed, Soft, Foliage, Water, Snow }
-public enum PathKind : byte { Direct, Obstructed, Occluded, Portal, Transmission, None }
-public enum AcousticPortalKind : byte { OpenDoor, SlidingGlass, Curtain, Window, Archway, ElevatorDoor, SwingDoor }
-    // 不叫 PortalKind，免得与 WLD-INTERIORS Campus.Contracts 里的室内 PortalKind 同名；SwingDoor：WLD-INTERIORS §4.1 的自动门
-public readonly record struct AcousticEnv(                // 值类型，查询不分配
-    AcousticClass Class, float Indoor, float SkyOpen, float Enclosure,
-    float WallDistM, float CeilingM, float MeanFreePathM, float VolumeM3,
-    float Absorption, float HfRatio, float Rt60S, float ErDelayMs, float ErLevelDb, float FlutterMs,
-    float NoiseFloorDb, ushort RoomId, FeatureId? Building);
-public readonly record struct SendTap(int BusIndex, float GainDb);
-public readonly record struct ListenerRouting(int DryBus, SendTap ErA, SendTap RevA, SendTap ErB, SendTap RevB,
-    float Enclosure, long Rev);                            // 不交叉时 B 两路为 −80 dB；BusIndex 由 53a 启动时建表，不在发声时查字符串
-public readonly record struct OcclusionResult(float DirectDb, float CutoffHz, float FilterDb, PathKind Path, Vector3 ApparentPos);
-public readonly record struct AcousticPortal(ushort Id, ushort RoomA, ushort RoomB, Vector3 Center, Vector3 Normal,
-    float Width, float Height, float Depth, AcousticPortalKind Kind, float Openness);
-public interface IAcousticEnv                              // Kernel 服务，主线程
-{
-    AcousticEnv At(Vector3 p);                             // 网格 + 房间 + 覆盖层 + 介质 + 天气修正；不含射线细化
-    AcousticEnv Listener { get; }                          // 本帧听者处：At() + 射线细化 + 平滑；每帧一次
-    ListenerRouting Routing { get; }                       // 观者声每次发声取一份
-    long Rev { get; }                                      // Listener 或 Routing 变化时 +1
-    OcclusionResult Occlusion(Vector3 source, ushort sourceRoom);   // 相对当前听者
-    ushort RoomAt(Vector3 p);                              // 0 = 室外
-    AmbienceProfileId? ProfileOf(ushort room);
-    ReadOnlySpan<AcousticPortal> PortalsOf(ushort room);
-}
-public sealed record AcousticRoomDecl(string LocalId, AcousticClass Class, IReadOnlyList<Box3> Volumes,
-    AbsorbClass Surfaces, AmbienceProfileId? Profile = null, float? Rt60 = null, float? SendDb = null);
-public sealed record AcousticPortalDecl(string RoomA, string? RoomB /* null = 室外 */, Vector3 Center, Vector3 Normal,
-    float Width, float Height, float Depth, AcousticPortalKind Kind, ChannelId? Openness = null /* 电梯门的开度通道 */,
-    string? Door = null /* 自动门的门 ID，开度读 IInteriorDoors（WLD-INTERIORS） */);
-public sealed record AcousticsDecl(IReadOnlyList<AcousticRoomDecl> Rooms, IReadOnlyList<AcousticPortalDecl> Portals)
-{ public static readonly AcousticsDecl Empty = new([], []); }
-// IInteriorProvider 增加默认方法（纯函数，与 Build、Collision 一样在线程池或烘焙器里跑）：
-//   AcousticsDecl Acoustics(BuildContext ctx, FeatureId id) => AcousticsDecl.Empty;
-// 按层提供的室内提供者照样实现：房间按层声明，Box3 带 y 区间
-
-// ===== 观者声（53d）与它的输入 =====
-public enum FootMat : byte
-{
-    Auto = 0, Asphalt, Concrete, StonePaving, BrickPaver, RubberTrack, Grass, Soil, Gravel,
-    WoodDeck, MetalGrate, SteelPlate, MetalCover, RubberMat, Terrazzo, PolishedStone, Tile,
-    Carpet, WoodFloor, Epoxy, SportWood, PoolDeck, Glass, Metal,
-    Hedge, WoodDoor, Shutter,                              // 只作接触组
-    Bark,                                                  // 树干的接触组（§9.3），只增不改，追加在末尾
-}
-public readonly record struct StairSpec(float RiserM, float TreadM, int Count);
-public readonly record struct FootPatch(Vector2 Center, Vector2 HalfSize, float YawDeg, FootMat Mat, uint Flags);  // 井盖、箅子、排水沟
-// 碰撞契约的增量（SYS-WALK §13）：只加 init 属性，不改构造参数，PublicAPI 只增不改
-//   public abstract record Collider(SurfaceTag Tag) { public FootMat Foot { get; init; } = FootMat.Auto; }
-//   public sealed record RampCollider(...) { public StairSpec? Stair { get; init; } }
-//   public sealed record HeightFieldCollider(...) { public byte[]? FootMatHalfMeter { get; init; }   // 128×128，FootMat 值
-//                                                   public IReadOnlyList<FootPatch>? Patches { get; init; } }
-
-public readonly record struct GroundCover(float Wet, float Puddle, float Snow, float SnowFresh,
-    float Leaves, float LeafWet, float Petals, float Shelter);
-public interface IGroundCover { GroundCover Sample(float x, float z); }    // WP-38；与着色器同一套阈值函数，G2 比对两边
-
-public enum FootSide : byte { Left, Right, Both }
-public readonly record struct FootfallInfo(ulong Tick, FootSide Side, Vector3 Pos, float SpeedH, Vector3 Normal,
-    ulong ColliderId, int ShapeIndex, bool OnStair, float Slope);
-public readonly record struct ContactInfo(ulong Tick, ulong ColliderId, int ShapeIndex, Vector3 Pos, Vector3 Normal,
-    float NormalSpeed, float TangentSpeed, bool Pushing, SurfaceTag Tag);
-public interface IWalkTelemetry                            // WP-42；全部在 _PhysicsProcess 里发出
-{
-    event Action<FootfallInfo> Footfall;
-    event Action<ulong, float> Jumped;                     // tick, 起跳速度
-    event Action<ulong, float, Vector3> Landed;            // tick, 撞击速度, 位置（SYS-WALK §12 第 9 条的扩展）
-    event Action<ulong, float> StepUp;                     // 高差
-    event Action<ulong, float> StepDown;
-    event Action<ulong, float> Skid;                       // Δv
-    event Action<ContactInfo> WallContact;                 // 每个物理步里有墙接触就发
-    event Action<ulong, float> WaterEnter;                 // 水深
-    event Action<ulong> WaterExit;
-    event Action<ulong> Sink;
-    event Action<ulong, float> TurnInPlace;                // 角度
-    event Action<ulong> ModeTouchdown;
-    event Action<ulong> ModeTakeoff;
-    event Action<ulong> Teleport;
-    event Action<ulong, float> ElevatorDoor;               // 主楼电梯门的开度 0–1
-    float StepPhase { get; }                               // 0–1，晃动和脚步共用
-}
-
-public enum FoleyKind : byte
-{
-    Footfall, Scuff, Jump, Land, StepUp, StepDown, Skid, Bump, Brush,
-    WadeStep, WadeEnter, WadeExit, Sink, LeafKick,
-    Curtain, LockedDoor, Gate, Railing, Hedge, BoundaryTouch,
-    ElevatorDoorClose, ElevatorDoorOpen, ElevatorRun,
-    Takeoff, Touchdown,
-    DoorOpen, DoorClose, AutoDoorOpen, AutoDoorClose,      // DoorOpen、DoorClose 给会动的门（WLD-INTERIORS §4.1，IInteriorDoors.Changed：
-                                                           // 进入 Opening 时 DoorOpen，进入 Closed 时 DoorClose）；Auto* 预留
-}
-public readonly record struct GroundSample(FootMat Mat, FootMat Mat2, float Mat2Weight, bool Stair,
-    GroundCover Cover, float WaterDepth, uint LocationHash);
-public readonly record struct FoleyEvent(
-    FoleyKind Kind,
-    Vector3 Pos,                 // 世界坐标；观者自身的事件取落脚点
-    float Intensity,             // 0–1：速度、撞击速度、Δv 等归一后的力度
-    GroundSample Ground,         // 地面事件用；交互事件可以为 default
-    FootSide Side = FootSide.Both,
-    FootMat Contact = FootMat.Auto,   // 碰撞类事件：碰到的东西的材质
-    uint SourceId = 0,           // 交互对象的稳定 ID（冷却、复用）
-    ulong Tick = 0);             // 物理步序号（事件日志与确定性）
-public enum FoleyLoop : byte { WadeDrag, WallBrush, HedgeBrush, ElevatorCab, FlyAir }
-public readonly record struct FoleyStats(int ActivePlayers, int Voices, int Dropped, long Events);
-public interface IFoleyService                             // Kernel 服务（53d）
-{
-    void Play(in FoleyEvent e);                                  // 主线程，物理步或帧里都可以
-    void SetLoop(FoleyLoop loop, float level01, float param01);  // 每帧调；level 为 0 时自动淡出停播
-    FoleyStats Stats { get; }
-    IReadOnlyList<FoleyEvent> RecentLog { get; }                 // 只在门禁构建里记录
-}
-
-// ===== 其他包要补的只读状态：写进各自的契约，只增不改 =====
-public enum VeilReason : byte { Boot, Transit, Teleport, Season, Quality, Respawn, Cinematic, MapTravel }
-public interface IVeilState { float Opacity { get; } VeilReason Reason { get; } }                    // WP-01
-public interface IMediumState { CameraMedium Current { get; } MediumKind From { get; } MediumKind To { get; } float Blend { get; } }   // WP-07
-public readonly record struct LightningFlash(double RealSeconds, float AzDeg, float ElDeg, float DistanceKm,
-    int Pulses, float Peak, bool Visible);                 // Visible = false：减少动态效果时只发事件、不画
-public interface ILightningFeed { event Action<LightningFlash>? Flash; }                             // WP-40
-public interface IChannelReader { float Value(ChannelId id); }                                       // WP-03 / WP-39：灯光通道的当前值
-// IInteriorDoors（WP-07，WLD-INTERIORS的 Campus.Contracts，ENG-ARCH §3）：会动的门的 PhaseOf、OpenOf 与 Changed 事件；53d 发开关门声，53c 读门户开度
-// ICameraRig 增加：ITransitHandle? ActiveTransit { get; }（WP-06、WP-36）
-//                  float EdgeFog { get; }（WP-06；与全局参数 edge_fog 同一个值，WLD-OUTSKIRTS）
-// FramePriority 增加：public const int Acoustics = -590; public const int Audio = 50;（§20）
-```
+> 契约类型与签名以 `game/contracts/Audio/`为准。
 
 **命令行**（WP-01 解析，登记进 ENG-GATES §1、SYS-VIEW §2.5；未知值以非零退出码结束）：
 
@@ -1509,46 +1283,19 @@ public interface IChannelReader { float Value(ChannelId id); }                  
 - `pipeline/audio/`（53e）；
 - `game/style/shaders/` 下没有文件；不新增全局着色器参数。
 
-**起读**：先读本文 §0 和 §19（契约），再从本子包的章节读起：53a §2、§3、§7.1、§11–§13，53b §4–§8，53c §10，53d §9，53e §14、§15；预算、帧顺序与门禁是各子包共用的，在 §18、§20、§22。碰到外部规则时再查对应文档：时段与美术太阳 SYS-TIME；风场、偶发事件与季节权重 SYS-MOTION；介质 SYS-VIEW §5；行走控制器与碰撞语义 SYS-WALK；天气向量 SYS-WEATHER；设置卡 UI-NAV；动效语言 UI-VISUAL；音频挂点 SYS-TITLE；读档与换实例 SYS-SAVE；换图 SYS-MAPS；行走阻挡与飞行阻挡 WLD-OUTSKIRTS；门的区分、开放高处与自动门 WLD-INTERIORS（自动门在 WLD-INTERIORS §4.1）。
+**起读**：先读本文 §0；契约签名读 `game/contracts/Audio/`，再从本子包的章节读起：53a §2、§3、§7.1、§11–§13，53b §4–§8，53c §10，53d §9，53e §14、§15；预算、帧顺序与门禁是各子包共用的，在 §18、§20、§22。碰到外部规则时再查对应文档：时段与美术太阳 SYS-TIME；风场、偶发事件与季节权重 SYS-MOTION；介质 SYS-VIEW §5；行走控制器与碰撞语义 SYS-WALK；天气向量 SYS-WEATHER；设置卡 UI-NAV；动效语言 UI-VISUAL；音频挂点 SYS-TITLE；读档与换实例 SYS-SAVE；换图 SYS-MAPS；行走阻挡与飞行阻挡 WLD-OUTSKIRTS；门的区分、开放高处与自动门 WLD-INTERIORS（自动门在 WLD-INTERIORS §4.1）。
 
-| 子包 | 交付 | 依赖 | 规模 |
-| --- | --- | --- | --- |
-| **53a 内核与混音** | `IAudioService`；总线树代码化与 `AudioBuses` 的 G5 比对；五组音量（乘进播放器）、压低合成、静音流程；声部池、仲裁、虚拟化与回差；`RateGovernor` 与门禁日志；介质与透射的低通渐变；界面音（`ui_cues.json` 与合成规格）和开场音乐的挂点（`AudioStreamInteractive`、过场的 `audio` 轨）；`user://audio.cfg` 的读写与迁移；后台行为、输出设备、单声道；`--audio*` 参数的生效；`IMapAware`（换图）与换实例时的落值；自定义监视项；G21b、G21d–G21g 的引擎侧接口 | WP-00 的契约；WP-01 的 Boot 与 `IVeilState`；WP-06 的听者 | 1.4k 行 |
-| **53b 环境声** | `IAmbienceService`；配方求值（`recipes.json` 与本图覆盖）；床的 A/B 段落交叉与世界锁定锚点；线声源、面声源；散布调度器（真实秒、令牌桶、鸣唱回合、位点）；同步提示（雷、雪团、偶发事件、动物）；钟声与广播；画外规则与人迹作息；远景声（外围与边缘雾）；`[AmbientEmitter]` 来源与声景场的烘焙子任务（`game/gen/ambience`，与 WP-02 配合）；部件插座的汇总；G21c、G21h | 53a；53c 的 `Listener`、`ProfileOf`、`PortalsOf`、`Occlusion`；WP-02、WP-03 / 39、WP-24、WP-25、WP-26、WP-38、WP-40 的接口 | 1.6k 行 |
-| **53c 空间声学** | `IAcousticEnv`：声学网格烘焙（`game/gen/acoustics`，挂在 `precip_occ` 的挂点上）、房间与门户、行走射线细化、遮挡、门户馈送与溢出声源、听者空间槽 A/B 与 `ListenerRouting`、`Zone.*` 的类别与预设（Area 由 `kernel/collision` 代建）、介质与雪雾修正；`acoustics.json` 与本图的声学覆盖层；G21j | 53a；WP-02、WP-07、WP-08、WP-38、WP-43、WP-45；各室内包的 `Acoustics()` | 1.6k 行 |
-| **53d 观者声** | `IFoleyService` 与 `FoleyDirector`、`GroundResolver`、`BankSet`、`NoRepeatBag`、`VoiceRouter`；按 `ListenerRouting` 多路发声；交互点（自动门、门帘、电梯、关着的门、闸机、栏杆、绿篱、校界）；飞行风的程序合成；`foley_banks.json`；G21i | 53a、53c；WP-15、WP-43 的材质数据；WP-38 的 `IGroundCover`；WP-42 的 `IWalkTelemetry`；WP-07 的 `IInteriorDoors`（WLD-INTERIORS） | 1.2k 行 |
-| **53e 素材管线与许可** | `pipeline/audio/`：入库体检与标定（BS.1770、真峰值、直流、单声道、循环接缝、语音识别）、创作性处理的脚本和工程规范、`.import` 生成、Ogg 编码；`licenses.json` 与署名页的生成；界面音的合成；首批素材（约 700 条观者声、约 1500 条一次性声、约 40 段床）的挑选与处理；开场音乐与傍晚广播旋律的委托与授权；G21a | 53a 的规格；§14 | 0.6k 行脚本，另有素材工作 |
+| 子包 | 负责范围 |
+| --- | --- |
+| 53a 内核与混音 | 音频服务、总线与设置；§2、§3、§7.1、§11–§13 |
+| 53b 环境声 | 环境声景、发声器与声景烘焙；§4–§8 |
+| 53c 空间声学 | 声学网格、房间与门户；§10 |
+| 53d 观者声 | 脚步与交互音效；§9 |
+| 53e 素材管线与许可 | 音频素材入库、处理与许可；§14、§15 |
 
-- **合计**约 6.4k 行代码，另有约 125–165 MB 素材。**额度**：三角形、绘制调用、GPU 都是 0；主线程和内存见 §18，记进 ENG-BUDGET §8 的"音频"一行。
-- **开工顺序**（ENG-ARCH §5"接口先定、桩先合入"）：53a 第一天交桩（总线树、`PlayUi` 的空实现）；53c 交 `IAcousticEnv` 的桩（永远返回 Open；介质是 Interior 时 `Indoor` 为 1，否则为 0；`Routing` 只有干声；`Occlusion` 一律 Direct）；53d 交 `IFoleyService.Play` 的空实现。这样 WP-35、WP-42 不用等。
+### 21.2 其他包的声音接入
 
-### 21.2 其他包的增量
-
-| 包 | 增量 | 规模 |
-| --- | --- | --- |
-| WP-00 | `game/contracts/Audio/` 的候选契约与桩（冻结时机按 D-134）；`game/gen/acoustics`、`game/gen/ambience` 两个 csproj；`FramePriority.Acoustics`、`Audio`；特性表加 `[AmbientEmitter]`；`IPartDef.Sounds`、`IInteriorProvider.Acoustics` 两个默认方法；碰撞记录的 init 属性 `Foot`、`Stair`、`FootMatHalfMeter`、`Patches`；ArchUnit 与 BannedApi 规则（§16）；`.gitattributes` 的 LFS 条目（统一维护） | 0.2k |
-| WP-01 | Boot 解析 `--audio*`、`--amb*`、`--gate=acoustics`；`IVeilState`（加 `MapTravel`）；扉页与开场序列里"音频就绪"作为转实时、雾幕淡出的条件之一；`project.godot` 的 `mix_rate = 48000`（统一维护方改） | 0.1k |
-| WP-06 | `AudioListener3D` 由相机代码创建并设为当前，第一人称与相机重合，第三人称放在身体头部支点、朝向取相机，介质按听者点另查（§2.1）；`ICameraRig.ActiveTransit`、`EdgeFog` | < 0.1k |
-| WP-36、WP-48c | 跳转、传送开始时 `PlayUi(TeleportConfirm)`，到达时 `TeleportArrive`；雾幕原因写 `Teleport` 或 `Transit` | < 0.1k |
-| WP-42 | 实现 `IWalkTelemetry`；步相 φ 与视角晃动共用；游泳遥测与划相 ψ（入水、出水、划水的边沿事件，连续的泳速与浸深，contract-21）；主楼电梯门的开度写通道并发 `ElevatorDoor` 事件 | 0.15k |
-| WP-43 | 碰撞 body 的 meta 加 `"foot"`；碰撞格带半米材质栅格与点状特征；按室内房间代建声学 `Area3D`（专用物理层，登记进层分配表）；声学射线的掩码排除 `Invisible`、`Barrier`、`Boundary` | 0.15k |
-| WP-15 | 地面的 `FootMat` 栅格与 `FootPatch`；地面遮罩 1、2 的 CPU 只读副本 | 0.1k |
-| WP-11、WP-13、WP-28、WP-30、各区包、各室内提供者 | 碰撞体填 `Foot`；楼梯填 `StairSpec`；部件实现 `Sounds()`（售货机、空调外机、广播喇叭、雨棚、变压器、雨水箅） | 各 < 0.05k |
-| WP-02 | 烘焙器加声学网格和声景场的子任务挂点（与 `precip_occ` 同一套）；产物进 `boot_<图>.pck`（SYS-MAPS §2.4，D-165） | < 0.1k |
-| WP-03 / WP-39 | `IChannelReader` | < 0.1k |
-| WP-07 | `IMediumState`（与全局参数 `medium` 同源的只读值，游泳时长时间在水下、半入水时的混合度也在里面，§10.9）；`IInteriorDoors`（自动门的开度、阶段与阶段变化事件，WLD-INTERIORS §4.1，门的状态机本身是 WLD-INTERIORS的工作量） | < 0.1k |
-| WP-24 | 河渠中线与喷泉时段表的 CPU 读取 | < 0.1k |
-| WP-25 | 动物的动态发声器与小动作时刻；反应动物（猫、鸽群）的动作提示，同一次动作带同一个 `Group`，卸载与切图时 `RemoveDynamic`、`CancelCues`（§4.4、§6.4） | < 0.1k |
-| WP-26 | 偶发事件每棵树的抖落时刻调 `Cue`，被打断时 `CancelCues`；`TransitionDirector` 的转场阶段只读；整点时钟室铜钟的钟锤一拍二轻敲，与钟声同一条判定（§6.2） | 0.05k |
-| WP-38 | `IGroundCover`（CPU 镜像，G2 比对）；雪团落地的 `Cue`；`snow` 的 C# 求值 | 0.15k |
-| WP-40 | `ILightningFeed`（减少动态效果时照发 `Visible = false` 的事件） | < 0.1k |
-| WP-45 | 45b 不做远雷（远雷归 WP-40 与 53b，§6.1）；`WeatherNow`、`precip_occ` 与檐滴点表在 CPU 侧可读；积水与湿润的公共函数 | < 0.1k |
-| WP-17、WP-31a–c、WP-51 | 各开放室内的 `Acoustics()`（类别表 §10.4）与室内档案 ID，自动门的门户写门 ID；WP-31a 在钟室加一口静止的铜钟（静态几何，WLD-INTERIORS §3）；WP-51 给简化室内和平面内核生成的普通房间声明通用的 Room、Corridor、Stair | 各 < 0.05k |
-| WP-35 | 设置卡的"声音"页（约 30 个 Control，随设置卡按需创建，UI-VISUAL §11.9）；组件事件到 `UiCue` 的映射；数据手册与许可页读 `licenses.json` 生成音频署名；依赖白名单加 `IAudioService` | 0.2k |
-| WP-49 | 过场 `audio` 轨的提示，以及跳过时的执行顺序 | < 0.1k |
-| WP-46 | 切图时 `IMapAware` 的时序（§2.7）；`VeilReason.MapTravel` | < 0.1k |
-| WP-27、WP-41 | G21 的编排：Movie Maker 录音脚本（复用 G13 的录像流水线）、BS.1770 分析、日志判据、语音识别；集中测试的听评集（P00–P15 加英雄帧 × 4 种状态 × 60 s） | 0.3k |
-| WP-32 | 无：声音不是画面单项；"试跑"时声音照常开，让混音线程也算进去 | 0 |
+声音接入遵守本文 §4.2 的发声器、§9.3 的 Foot/Sounds、§9.4 的地面覆盖与 §10 的声学规则；任务分工以 ENG-WP §2 为准。
 
 ## 22 验收：G21 声音
 

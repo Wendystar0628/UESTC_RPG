@@ -64,7 +64,7 @@ gates: [G4, G8, G15, G16, G19, G21]
 ## 1 两种模式的关系
 
 - 观察模式记在 `IWorldState.ViewMode`（SYS-TIME §1）里，取值 `ViewMode.Fly` 或 `ViewMode.Walk`，默认 `Fly`。
-- 行走模式只是观者换了一种移动方式。时间、季节、天气、介质呈现都不变。画面设置与模式无关，按 SYS-GRAPHICS 执行；碰撞、行走半径与画面设置无关，任何预设下走到的范围都一样（SYS-GRAPHICS §7）。
+- 行走模式只是观者换了一种移动方式。时间、季节、天气、介质呈现都不变。画面设置与模式无关，按 SYS-GRAPHICS 执行；碰撞、行走半径与画面设置无关，任何预设下走到的范围都一样（SYS-GRAPHICS）。
 - 行走的代码（WP-42 的控制器、WP-43 的碰撞运行时）随主程序集一起加载。只有碰撞格是按需的：只在行走模式下加载（§13）。
 - **行走模式下玩家有身体**（INV-6，D-182）：旁观模式不显示任何角色；行走模式下玩家有自己的角色本体，与地形、台阶、门、水、天气、光照与描线、脚步声、镜头和存档完整交互。
   - **人称**：默认第一人称，低头看得到腿和脚，地上有完整的人影，平视时画面里没有身体；按 V 可切第三人称，角色外观通过画面评审之前，第三人称只在开发构建和门禁里开放。镜头规则见 SYS-VIEW §2.7。
@@ -491,7 +491,7 @@ gates: [G4, G8, G15, G16, G19, G21]
    - 室内楼梯（WLD-INTERIORS §10）：斜面 26–34°，门禁上限 40°；斜面顶边与上平台的上表面严格齐平，底边埋进下层地面 ≥ 0.2 m。外伸约 2.5 cm 时下楼卡在顶层平台，压低 2 cm 时上楼会卡。水平速度在坡面上不变（`FloorConstantSpeed`），脚步照常按步频走（§1）；
    - 单级台阶：显示的眼高可以落后于物理位置，上台阶时间常数 0.10 s，下台阶 0.06 s，最多落后 0.35 m。跳跃和下落时不平滑。参照 Quake 和 Source 引擎的 `SmoothViewOnStairs`。
 9. **落地与计时器**：从腾空变为 `IsOnFloor()` 且 vy ≤ 0 时判为着地。土狼时间 0.1 s、跳跃缓冲 0.12 s、按住空格的连跳间隔 0.5 s，都按累计的物理步时长计时，不用计时器节点。
-   - **遥测**：控制器实现契约接口 `IWalkTelemetry`（SYS-AUDIO §9.10、SYS-AUDIO §19），全部在 `_PhysicsProcess` 里发出，带物理步序号：`Footfall`、`Jumped`、`Landed`（撞击速度）、`StepUp`、`StepDown`、`Skid`、`WallContact`、`WaterEnter`、`WaterExit`、`Sink`、`TurnInPlace`、`ModeTouchdown`、`ModeTakeoff`、`Teleport`、`ElevatorDoor`，并暴露晃动与脚步共用的 `StepPhase`（§1）。没有沉水过程，`Sink` 留在契约里，现行规则不触发它；游泳的事件见本节"水中"。WP-53d 在同一个物理步里把它们翻译成声音；控制器本身不碰音频。
+   - **遥测**：控制器实现契约接口 `IWalkTelemetry`（SYS-AUDIO §9.10（契约源码：`game/contracts/Audio/AudioVoiceContracts.cs`）），全部在 `_PhysicsProcess` 里发出，带物理步序号：`Footfall`、`Jumped`、`Landed`（撞击速度）、`StepUp`、`StepDown`、`Skid`、`WallContact`、`WaterEnter`、`WaterExit`、`Sink`、`TurnInPlace`、`ModeTouchdown`、`ModeTakeoff`、`Teleport`、`ElevatorDoor`，并暴露晃动与脚步共用的 `StepPhase`（§1）。没有沉水过程，`Sink` 留在契约里，现行规则不触发它；游泳的事件见本节"水中"。WP-53d 在同一个物理步里把它们翻译成声音；控制器本身不碰音频。
 10. **防穿透**：`MoveAndSlide()` 每步做形状扫掠。以 50 m/s 下落时每步只移动约 0.42 m，小于碰撞体高度，不会穿地；Jolt 的高度场是双面的，从下面也穿不上来。兜底：低于地面 3 m 立即回位（§9）。
 11. **碰撞未就绪**（§14 第 5 条）：`ICollisionWorld.Ready()` 为假时，这一步不调 `MoveAndSlide()`，也不加重力，角色停在原地。
 12. **电梯与自动门**（§8）：主楼电梯的触发体、门扇和两站平移在这里推进，平移那一步按"相机"一段清掉插值缓冲，并发 `ElevatorDoor` 事件。自动门不归控制器：它的状态机由 WP-07 在 `FramePriority.Medium` 那一步推进，读本帧物理之后的角色位置，门体碰撞的启停从下一个物理步起生效（WLD-INTERIORS §4.1）；控制器只看到 WP-43 的运行时门体在关好时出现、在转动和开着时不在，照常 `MoveAndSlide()`。
@@ -601,68 +601,8 @@ gates: [G4, G8, G15, G16, G19, G21]
 | 全局常驻（2 m 分类栅格 + 8 m 安全点网格） | 约 0.9 MB |
 | 本机烘焙一格 | 工作线程，不占主线程；≤ 50 ms（开发机单线程初值，P0 实测，§17） |
 
-**契约增量**（ENG-ARCH §3 照本节写入候选契约，这一组由主代理宣布冻结后只增不改，D-134；`Vector2`、`Vector3`、`Matrix4x4` 都是 `System.Numerics` 的。`SurfaceTag` 的新值一律追加在末尾，`Invisible` 之后依次是 `Boundary`、`DoorClosed`）：
+**契约增量**以 `game/contracts/Spatial/CollisionContracts.cs`、`WalkControlContracts.cs` 与 `WalkBakeContracts.cs` 为准；新增 `SurfaceTag` 值追加在末尾。
 
-```csharp
-// Campus.Contracts：纯 .NET，不引用 GodotSharp
-public enum ViewMode { Fly, Walk }                         // 见 SYS-TIME §1
-public enum WalkClass { Walk, Interior, Wade, Building, Water, Forbidden, Outside, Steep }   // Outside：外围（校界以外，WLD-OUTSKIRTS）
-public enum SurfaceTag { Ground, Stair, Barrier, Wall, Prop, Water, Invisible, Boundary, DoorClosed }
-//   Invisible：可行走遮罩边界的隐形墙（§6）
-//   Boundary：校界栏杆、关闭的校门与闸机、车道抬杆、河渠格栅、校门处的隐形墙（WLD-OUTSKIRTS §12.3）
-//   DoorClosed：关着的门；开放楼里锁着的房门与封口（WLD-INTERIORS §15）
-
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
-[JsonDerivedType(typeof(WallCollider), "wall")] [JsonDerivedType(typeof(RampCollider), "ramp")]
-[JsonDerivedType(typeof(PostCollider), "post")] [JsonDerivedType(typeof(BoxCollider), "box")]
-[JsonDerivedType(typeof(SlabCollider), "slab")] [JsonDerivedType(typeof(HeightFieldCollider), "heightField")]
-[JsonDerivedType(typeof(SlopedWallCollider), "slopedWall")]                                  // WLD-INTERIORS §15
-public abstract record Collider(SurfaceTag Tag);
-public sealed record WallCollider(Vector2 A, Vector2 B, float HalfT, float Y0, float Y1, SurfaceTag Tag) : Collider(Tag);
-public sealed record RampCollider(Vector3 P0, Vector3 P1, Vector3 P2, Vector3 P3, float Thick, SurfaceTag Tag) : Collider(Tag);  // 台阶坡面、桥面
-public sealed record PostCollider(Vector2 C, float R, float Y0, float Y1, SurfaceTag Tag) : Collider(Tag);     // 树干、灯杆
-public sealed record BoxCollider(Matrix4x4 At, Vector3 Half, SurfaceTag Tag) : Collider(Tag);                // 长椅、花池
-public sealed record SlabCollider(IReadOnlyList<Vector2> Ring, float Y, float Thick, SurfaceTag Tag) : Collider(Tag);  // 室内楼板
-public sealed record HeightFieldCollider(TileKey Tile, short[] HeightsCm, SurfaceTag Tag) : Collider(Tag);     // 地面：65×65，1 m 间距（WP-15）
-public sealed record SlopedWallCollider(Vector2 A, Vector2 B, float HalfT,
-    float Y0a, float Y1a, float Y0b, float Y1b, SurfaceTag Tag) : Collider(Tag);
-    // 斜顶薄墙，A 端底 Y0a、顶 Y1a，B 端底 Y0b、顶 Y1b；WP-43 映射为 8 顶点 ConvexPolygonShape3D（宽梯井栏杆，WLD-INTERIORS §10）
-
-// 音频增量（SYS-AUDIO §19；只加 init 属性，不改上面各 record 的构造参数）：
-//   Collider            { public FootMat Foot { get; init; } = FootMat.Auto; }
-//   RampCollider        { public StairSpec? Stair { get; init; } }
-//   HeightFieldCollider { public byte[]? FootMatHalfMeter { get; init; }            // 128×128，0.5 m 一格的 FootMat
-//                         public IReadOnlyList<FootPatch>? Patches { get; init; } } // 井盖、箅子、排水沟
-
-// 可选成员用默认接口方法：不提供碰撞的模块什么都不用写
-public interface IContentModule    { /* 原有成员（ENG-ARCH §3） */ IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => []; }
-public interface IPartDef<TParams> { /* 原有成员 */ IReadOnlyList<Collider> Collision(TParams p) => []; }   // 由部件参数生成，和几何同源
-public interface IInteriorProvider { /* 其余成员见 WLD-INTERIORS §15 */ bool Walkable => true;             // 注册即开放
-    IReadOnlyList<Collider> CollisionStorey(BuildContext ctx, FeatureId id, int storey); }        // 按层提供
-public interface ISpatialIndex     { /* 原有成员 */                 // 常驻数据，不依赖碰撞格
-    float? SupportY(float x, float z, float yHint);
-    WalkClass WalkClassAt(float x, float z);
-    Vector3? NearestSafe(Vector3 p, float maxDist); }
-
-public readonly record struct SweepHit(Vector3 Point, Vector3 Normal, float T, SurfaceTag Tag);
-public readonly record struct SupportHit(float Y, SurfaceTag Tag);
-public interface ICollisionWorld                           // WP-43，Godot 侧实现；只在已入树的碰撞格内有效
-{
-    bool Ready(Vector3 p, float r);                        // §14 第 5 条用它判断：所在格及 8 个邻格已入树
-    SweepHit? Sweep(Vector3 from, Vector3 to, float r, float h);   // 竖直圆柱的形状扫掠（CastMotion），给测试和落点校验用
-    SupportHit? SupportY(float x, float z, float yHint);
-}
-
-public enum ModeSwitchVia { Key, Ui, DoubleSpace }
-public enum ModeSwitchResult { Ok, Relocated, Refused }
-public interface IViewControl
-{
-    ViewMode Mode { get; }
-    Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via);
-}
-// 行走物理在引擎的 _PhysicsProcess 里（120 Hz，先于本帧全部 _Process）
-// 控制器自己用 MoveAndSlide() 和 PhysicsServer3D.BodyTestMotion()，不经 ICollisionWorld.Sweep
-```
 
 - 碰撞体和几何用同一套参数生成，保证"看到的就是碰到的"。
 - 碰撞的桩是"地面高度场 + 楼体轮廓拉伸成的墙段"，直接从世界模型生成，所以 WP-42 第一天就能走起来（ENG-ARCH §5）。

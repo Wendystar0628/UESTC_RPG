@@ -3,7 +3,7 @@ using System.Numerics;
 namespace Campus.Systems.Weather.Precip;
 
 /// <summary>
-/// 降水池的可调参数集中在这里（ENG-TEAM §5），由 Opus 评审定值。
+/// 降水池的可调参数集中在这里（WF-FLOW §4），由 Opus 评审定值。
 /// 规格：SYS-WEATHER §3、§7；ENG-PERF §9。着色器自己的视觉常量在 precip.gdshader 开头，不与这里重复。
 /// </summary>
 public static class PrecipTuning

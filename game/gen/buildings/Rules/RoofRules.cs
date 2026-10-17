@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the generic roofs take the WP-12 parts (ENG-TEAM §5: tunables in one place). Every parapet gets the coping and a
+/// How the generic roofs take the WP-12 parts (WF-FLOW §4: tunables in one place). Every parapet gets the coping and a
 /// lightning strip; the roof plant stands inside a perforated equipment fence and only its top shows (MAP-QSH-ADDITIONS
 /// §2.9, ART-FIDELITY §0.1 K4 (a)). Density follows the roof's precision zone (D-176): K1 and K2 roofs carry the full set
 /// at the building's level, K3 and beyond fewer units, one part level coarser near. Part sizes are the PartCatalog

@@ -24,7 +24,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 
 ## 0 结论
 
-1. **启动先出扉页**（启动流程以 §1 为准，SYS-VIEW §3 只规定引擎启动画面、`--title=0` 与失败处理）：窗口先是雾色，约 1 s 内换成一张 T0 静帧做的扉页，片名块同时出现；预热、首次分档、读存档都在扉页后面做完，然后 1.2 s 交叉淡化成实时的 T0，开始页的菜单进场。全程没有进度条，扉页停满 4 s 仍未就绪才亮三颗过孔等待灯（§1）。
+1. **启动先出扉页**（启动流程以 §1 为准）：窗口先是雾色，约 1 s 内换成一张 T0 静帧做的扉页，片名块同时出现；预热、首次分档、读存档都在扉页后面做完，然后 1.2 s 交叉淡化成实时的 T0，开始页的菜单进场。全程没有进度条，扉页停满 4 s 仍未就绪才亮三颗过孔等待灯（§1）。
 2. **开始页的背景就是世界本身**：T0"云隙望穹"在校区中心外约 3.5 km 的高空，隔着几层专为标题设计的云卡看箱庭浮在雾海上；画面里是最近一个存档的世界状态（季节、钟点、天气），流逝停住，风、水、云照常动。没有存档时是"落金初灯"的预览（§2）。
 3. **新游戏是一条新的时间线**：在云卡全遮的一瞬建新的世界实例（秋 17:05、晴），以 60× 正向推到 17:30 正好停住，把"落金 → 初灯"演一遍，交还控制时恢复 1×。镜头穿云 → 沿主轴线由南向北 → 低掠主轴林荫大道 → 绕到穹顶前抬升 → 后拉到 P00，出标题卡，共 44 s。看点是光：长影、退去的金光、一盏盏亮起的路灯和图书馆的窗，不拿银杏当卖点（§3）。
 4. **继续约 9 s**：穿云，在云里移到存档位姿上空，落下，交还；世界时间不动。返回标题约 3 s，先保存再回到 T0（§4）。
@@ -48,13 +48,13 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 - **实现 `IWorldControl.FlowTo`**：以 `rate` 正向流逝到下一次出现的 `clock` 正好停住；`rate` 只取 `Flow` 的六档，否则抛 `ArgumentOutOfRangeException`；停点在 `FramePriority.WorldState` 那一步夹住（§7.4）
 - **写时间单调或跳过终态的测试**：单调只在同一实例内查，以 `IWorldState.Instance` 区分；新游戏、读另一个存档位、冷启动预览各换一次实例，按"继续"进入正在预览的存档位不换（§6、§11.2）
 
-## 1 启动序列（SYS-VIEW §3 的启动流程以本节为准）
+## 1 启动序列
 
 ### 1.1 步骤
 
 | 步 | 画面 | 后台在做什么 | 负责 |
 | --- | --- | --- | --- |
-| 0 窗口出现 | 引擎启动画面：全屏雾色 #B8B6D6，不显示标志（`application/boot_splash/show_image = false`，与 SYS-VIEW §3 相同） | 引擎与 .NET 启动、程序集加载 | WP-00（`project.godot`） |
+| 0 窗口出现 | 引擎启动画面：全屏雾色 #B8B6D6，不显示标志（`application/boot_splash/show_image = false`） | 引擎与 .NET 启动、程序集加载 | WP-00（`project.godot`） |
 | 1 主场景第一帧 | 雾幕层（layer 5）在 0.3 s 内换上**扉页静帧**；界面层同时画出片名块（§2.3），菜单还不出现；OSM 署名照常 | Boot 解析命令行；`IAppFlow` 进入 Boot；读各存档位的 meta（SYS-SAVE，未压缩、只读这一段），选出"最近存档位"和扉页变体（§1.3）；声音的 Master 组在 −∞，音频内核在扉页后面启动（SYS-AUDIO） | WP-01、WP-49a、WP-53a |
 | 2 地图与常驻数据 | 扉页 | `IMapService.Travel(Boot)` 的数据与挂载阶段（SYS-MAPS）：挂启动集 `boot_<地图>.pck`、解析世界数据、同步加载 L4 与遮挡体、建全局数据纹理（ENG-PERF §8 第 2–4 步） | WP-46、WP-01、WP-02 |
 | 3 三维预热 | 扉页 | ENG-PERF §2 的预热阵列，另加 `cine_cloud` 云卡、外围环境（WLD-OUTSKIRTS）的组合；判据同 ENG-PERF §2 | WP-01 |
@@ -65,7 +65,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 | 8 转为实时 | 扉页以 1.2 s、标准曲线 (0.4, 0, 0.2, 1) 交叉淡化成实时 T0；淡化结束时菜单进场（§2.4）；高空远景床 3 s 淡入，有开场音乐时在转实时 2 s 后淡入（SYS-AUDIO） | 前置条件：第 2–7 步完成，且"音频就绪"（音频内核与常驻素材已加载，SYS-AUDIO）。`IAppFlow` 进入 Title。**G16 的计数基线从这一刻算起**（§11.2） | WP-49a、WP-35d、WP-53a |
 | 9 标题页空闲 | 实时 T0 | 已知目的地预取：继续的终点、新游戏的整条路径（§10） | WP-02 |
 
-- **失败**：单次读取出错、写缓存被占用这类可恢复的错误，在扉页后面静默重试并写日志，不打扰观者。出现**终态**就停止等待，转到**启动失败页**（SYS-VIEW §3 第 4 条以本条为准）：
+- **失败**：单次读取出错、写缓存被占用这类可恢复的错误，在扉页后面静默重试并写日志，不打扰观者。出现**终态**就停止等待，转到**启动失败页**：
   - **终态**：本机烘焙返回 `BakeState.Failed`（缓存损坏已自动重建一次、新产物仍通不过校验，ENG-PERF §5）；`IMapService.Travel(Boot)` 返回 `Failed`（回退也失败，SYS-MAPS §4.3）；安装文件缺失，或启动集与程序不配套（ABI、manifest 对不上）；启动序列里抛出未处理的异常。读存档失败按 SYS-SAVE §7 回退到旧代或空存档位，不算启动失败。
   - **只按进展判卡死，不按总时长**：每一步都向 `IAppFlow` 报进展（`IBakeService.Progress` 的完成数与子步骤、管线编译计数、已就绪的格）；首次运行的本机烘焙只要进度在走就一直等。某一步连续 60 s 没有任何进展才按终态处理，原因记"停滞"（初值，与 ENG-PERF §5 的烘焙停滞同一判定，§16）。
   - **失败页不依赖三维世界**：雾幕层（layer 5）保持雾色（扉页静帧已经加载时保留它），等待灯熄灭；界面层画一张卡，样式同 UI-VISUAL §8.8 的确认对话框：标题"没能准备好画面"，一行人话原因，下面一行等宽小字的错误码。三个按钮 **[重试] [复制错误信息] [退出]**，默认焦点在"重试"，键盘可达，读屏可读：
@@ -78,7 +78,7 @@ gates: [G2, G7, G8, G10, G13, G14, G16]
 - **等待灯**：扉页本身是画面，前 4 s 不算"等待"；停满 4 s 仍未转为实时，右下角亮 UI-VISUAL 的三过孔等待灯和一行等宽小字"正在准备画面"；首次启动或驱动更新后再加一行"首次启动需要编译着色器，只会发生一次"（真实情况才显示）。其余等待一律按 UI-VISUAL 的 1.5 s 阈值。
 - **首次运行**（D-165）：本机缓存为空（首次运行，或缓存清空、版本更新以后）时，上表第 2–6 步要先在本机烘焙。顺序：先烘起始视角（T0 或命令行位姿）周围、按 ENG-PERF §5 的环要用的格（L2–L3 与外围），再烘平面地图底图（SYS-ATLAS §2.1）。扉页下方显示一行进度，用数据字体，例如"首次运行 · 正在本机生成校园 37%"，数据取 `IBakeService.Progress`，烘完就淡出。有这一行时，等待灯照常亮，但不再显示正在准备画面那行字，由进度行代替。以后的启动缓存已在，没有这一行。
 - **雾幕层**：扉页是 WP-01 雾幕服务的第二种内容（另一种是雾色），所以它和雾幕同在 layer 5，三维画面和预热层都在它下面，放映层（9）、界面层（10）和署名层（11）在它上面（层号与 UI-VISUAL一致）。
-- **`--title=0`**（门禁、截图、基准的默认，ENG-GATES §1）：没有扉页和开始页，第 1 步只有雾色，第 6 步用命令行给出的世界状态和位姿，第 8 步改为雾幕 2–3 s 淡出后直接进入 Playing，与 SYS-VIEW §3 相同（环境声在雾幕淡出时用 3 s 淡入，SYS-AUDIO；门禁下 `--audio` 默认关）；G16 的基线仍在雾幕淡出的那一刻。
+- **`--title=0`**（门禁、截图、基准的默认，ENG-GATES §1）：没有扉页和开始页，第 1 步只有雾色，第 6 步用命令行给出的世界状态和位姿，第 8 步改为雾幕 2–3 s 淡出后直接进入 Playing，（环境声在雾幕淡出时用 3 s 淡入，SYS-AUDIO；门禁下 `--audio` 默认关）；G16 的基线仍在雾幕淡出的那一刻。
 
 ### 1.2 目标
 
@@ -408,30 +408,7 @@ Boot ──转为实时──▶ Title ──Enter──▶ Entering ──交�
 
 ### 7.4 契约
 
-```csharp
-// game/contracts/AppFlow/（纯 .NET，只增不改；WP-00 合入，WP-49a 实现）
-namespace Campus.Contracts.AppFlow;
-
-public enum AppState : byte { Boot, Title, Entering, Playing, Leaving, Quitting }
-public enum EnterKind : byte { NewGame, Continue, LoadSlot }
-public enum CinematicMode : byte { Full, Short, Off }            // 设置项"开场过场"（§5.3）
-public enum EnterPath : byte { Cinematic, ShortCinematic, Veil } // 本次实际走的路径；减少动态效果时为 Veil
-public enum EnterResult : byte { Entered, Rejected, Failed }     // Failed：回到 Title 并提示原因
-public sealed record EnterRequest(EnterKind Kind, SlotId? Slot = null);   // SlotId 见 SYS-SAVE；NewGame 的 Slot 由开始页选定
-
-public interface IAppFlow                     // Kernel 服务（WP-49a），主线程
-{
-    AppState State { get; }
-    long Rev { get; }
-    event Action<AppState, AppState>? Changed; // (旧, 新)，值变才发
-    EnterPath? Path { get; }                   // 只在 Entering 时有值
-    bool Skippable { get; }                    // Entering 且还没开始收尾
-    Task<EnterResult> Enter(EnterRequest r);   // 只在 Title 接受；规则集先于各段确定（新游戏 sightseeing，继续、读取取 meta，SYS-SAVE §5.1、SYS-SAVE §5.5）
-    Task ReturnToTitle();                      // 只在 Playing 接受；先保存（SYS-SAVE）
-    void Skip();                               // 输入层在按住 Esc 0.8 s 后调用（§5）
-    Task Quit();                               // 任何状态（§7.1）
-}
-```
+契约类型与签名以 `game/contracts/AppFlow/` 为准：状态流转、进入请求/结果及 `IAppFlow` 服务由此处统一定义。
 
 相关契约（定义在 ENG-ARCH §3、SYS-TIME §1 和 SYS-SAVE）：
 
@@ -678,22 +655,7 @@ game/data/maps/qingshuihe/cinematics/
 
 ## 14 工作包分工
 
-| 包 | 交付 |
-| --- | --- |
-| WP-49a 流程与播放器 | `IAppFlow`（`game/flow`）；`CinematicPlayer`（`game/camera/cinematic`）；四个过场文件（`game/data/maps/qingshuihe/cinematics/`）；§8.4 的检查；预取请求（§10）；跳过与安全落点；与 SYS-SAVE、SYS-MAPS 的衔接；扉页下方首次运行的进度行（§1.1，D-165，读 `IBakeService.Progress`） |
-| WP-49b 标题美术 | T0 构图与云卡布局；`cine_cloud.gdshader`；扉页 8 个变体的出图脚本与美术处理（`game/assets/title/`）；分镜的截图定稿；过场专属元素里的归鸟 |
-| WP-35d 开始页与存档页 | 开始页（片名块、菜单、首次启动的推荐行）、存档页、数据手册、放映层（黑边、字幕、时间读数、标题卡、跳过环、等待灯）；设置项"开场过场"；设置卡的"返回标题"；视觉按 UI-VISUAL |
-| WP-01 | 启动序列（§1）、扉页作为雾幕内容、预热层（layer 4）、`--title`、`--cine` 的解析 |
-| WP-02 | 路径预取、LRU 钉住、前瞻检查与"过场流式欠账"记录 |
-| WP-06 | Title、Entering、Leaving 下相机不积分输入，由 `SetPose` 外部驱动 |
-| WP-25 | 白鹭的飞行姿态（只给过场用） |
-| WP-27、WP-41 | G2、G7、G13、G14、G16 的增项；截图机在集中测试时出扉页变体；"过场体验"脚本 |
-| WP-32 | 首次分档放在扉页后面；三个非 Playing 状态下冻结自适应 |
-| WP-34 | `IWorldControl.FlowTo`；开始页的停流逝与恢复 |
-| WP-39 | "灯光提示"钩子（初灯沿路推进），只在 Entering 生效 |
-| WP-46 | `map.json` 的 `title`、`cinematics`、`newGameStart` 字段 |
-| WP-50 | 预览恢复（只恢复世界与天气）、带起点预设的新游戏、交还后与返回标题时的保存 |
-| WP-53a | `audio` 轨的执行（`IAudioService.Cine`）、`MusicCue`、开始页的高空远景床；音乐的委托与授权归 53e（SYS-AUDIO） |
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 16 待验证（P0）
 

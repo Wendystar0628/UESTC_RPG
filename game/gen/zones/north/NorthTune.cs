@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.North;
 
 /// <summary>
-/// Every tunable value of the north zone in one place, for review (ENG-TEAM §0.1): materials as colour names, the cluster
+/// Every tunable value of the north zone in one place, for review (WF-FLOW §4): materials as colour names, the cluster
 /// table and the dimensions of each site. Coordinates are world (x, z) in metres from campus.json; local frames are
 /// described per block. Values marked "初值" are starting values awaiting the main session's call.
 /// </summary>

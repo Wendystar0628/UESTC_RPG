@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Roof;
 
 /// <summary>
-/// Every tunable value of the roof and equipment parts in one place (ENG-TEAM §5): colours, material classes and sizes.
+/// Every tunable value of the roof and equipment parts in one place (WF-FLOW §4): colours, material classes and sizes.
 /// Initial values follow ART-MODELING §2, §4, §7.8, ART-FIDELITY §6 and MAP-QSH-ADDITIONS §2.9; Opus review sets the finals.
 /// Collision: roof and wall-mounted parts are visual only (MAP-QSH-ADDITIONS §7: roofs cannot be reached, and small parts on
 /// a wall sit inside the building's wall collider), so they return no colliders and cannot form jump chains. Only the

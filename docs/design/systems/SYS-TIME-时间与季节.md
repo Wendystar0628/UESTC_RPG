@@ -70,69 +70,8 @@ gates: [G2, G7, G12, G13, G16]
 
 ## 1 世界状态与控制（WP-34）
 
-契约写在 ENG-ARCH §3 中。下面是摘录，字段名和类型以 ENG-ARCH §3 为准，两处有出入时改本节：
+世界状态与控制的接口以 `game/contracts/World/WorldContracts.cs` 为准；本节规定时间、季节与状态变化的语义。
 
-```csharp
-// Campus.Contracts：纯 .NET 程序集，向量用 System.Numerics，不引用 GodotSharp
-using System.Numerics;
-
-public enum Season { Spring, Summer, Autumn, Winter }
-public enum ViewMode { Fly, Walk }
-public readonly record struct Body(Vector3 Dir, float AltDeg, float AzDeg, float Intensity);
-public readonly record struct Flow(int Rate);   // Rate ∈ {0, 1, 10, 60, 360, 1440}，世界秒 / 真实秒；0 = 暂停
-[Flags] public enum WorldTransition : byte { None = 0, Time = 1, Season = 2, Weather = 4 }   // 三者可以同时进行（§5）
-
-// 天气（SYS-WEATHER §8）
-public enum WeatherKind : byte { Clear, FewClouds, Cloudy, Overcast, Fog, LightRain, Rain, Thunderstorm, AfterRain, Snow, AfterSnow }
-public enum WeatherMode : byte { Auto, Manual }
-public readonly record struct WeatherSel(WeatherMode Mode, WeatherKind Kind, float Intensity);
-public readonly record struct WeatherVec(float Cloud, float CloudType, float Cb, float Overcast, float Precip, float PrecipKind,
-    float Wet, float Puddle, float Fog, float GroundFog, float Storm, float SnowAdd, float Rainbow, float Lightning);
-public readonly record struct WeatherSpan(double FromHours, double ToHours, WeatherKind Kind, float Intensity);
-public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weather = null, float? Intensity = null);
-
-public interface IWorldState                // Kernel 的服务（WP-34），不单独做 Autoload
-{
-    long Rev { get; }
-    long Instance { get; }                  // 世界实例号：进程内计数，读档、新游戏时 +1，不进存档（SYS-SAVE §5.2）
-    double WorldHours { get; }              // 世界时间（h），单调递增：同一世界实例内，任何操作都不让它减小
-    double Clock { get; }                   // 美术钟点 0–24 h = (WorldHours + offset) mod 24
-    double SeasonPos { get; }               // 季节位置 0–4，连续，循环；0 春 1 夏 2 秋 3 冬
-    Season SeasonTarget { get; }
-    Body Sun { get; }
-    Body Moon { get; }
-    float MoonPhase { get; }                // 默认 1 = 满月
-    float Omega { get; }                    // 主光角速度 °/s；WP-03 据此决定量化转灯还是连续转动（ENG-PERF §10.1）
-    Flow Flow { get; }
-    bool Scrubbing { get; }
-    WorldTransition Transition { get; }     // 位标志
-    ViewMode ViewMode { get; }
-    WeatherSel Weather { get; }             // 自动或手动、天气格、强度
-    WeatherVec WeatherNow { get; }          // 本帧插值后的天气向量；所有天气表现只读它和对应的全局参数
-    IReadOnlyList<WeatherSpan> WeatherAhead { get; }   // 前瞻 24 h，供预报行
-    uint WeatherSeed { get; }               // 本存档的天气基础种子（每个存档一个，SYS-WEATHER §6.4、SYS-SAVE）
-    bool IsNative(WeatherKind k);           // 当前季节有没有这种天气（SYS-WEATHER §1）
-    double AnimTime { get; }                // 实时秒 mod 480，用 delta 累加，与 Clock 无关
-    double Step12 { get; }                  // floor(AnimTime·StepRate)/StepRate，"一拍二"；StepRate 与全局参数 `step_rate` 同源（`QualityView.StepRate`：帧率上限 30 时 15，其余 12）
-}
-
-public enum ClockSetMode { Drag, Jump }
-public interface IWorldControl
-{
-    void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump);   // 跳到下一次出现的 hours，最多前进 24 h
-    void Advance(double hours);                                // 向前推进 hours（> 0），如 `.` 键的 +1 h
-    void SetSeason(Season s);                                  // 一律正向转场（§5）
-    void SetFlow(int rate);                                    // rate ∈ {0, 1, 10, 60, 360, 1440}
-    void FlowTo(double clock, int rate);                       // 以 rate 正向流逝，到下一次出现的 clock 正好停住（流逝变为 0）；rate 须为 Flow 的取值，
-                                                               // 否则抛 ArgumentOutOfRangeException；SetFlow 或再次 FlowTo 取消未到点的一次（SYS-TITLE §7.4）
-    void SetWeather(WeatherKind kind, float? intensity = null);   // 转为手动天气
-    void SetWeatherIntensity(float intensity);
-    void SetWeatherAuto();
-    void Apply(WorldPreset p);                                 // 点位推荐：前向跳到钟点、换季、钉住天气（SYS-WEATHER §6.6）
-    void ResetDefault();                                       // 回到本图默认状态（清水河：落金初灯，秋、下一个 17:30、1×、自动天气，见下）
-    void Freeze(double clock, Season season, double anim);     // 只给测试构建（命令行参数 --clock、--season、--anim），只设初值
-}
-```
 
 - **形态**：WorldState 是 Kernel 的一项服务（不单独做 Autoload，ENG-ARCH §2），实现类挂在 Kernel 下，按下文"每帧顺序"表里的 `ProcessPriority` 每帧推进。天气过程（WP-45a，`game/systems/weather`）由 WorldState 在同一步里调用，不另设计时器。内容代码只通过 `IWorldState` 读，不能自己写计时器；着色器不读 C# 对象，只读全局着色器参数（见"每帧顺序"）。WP-34 同时实现存档段 `world`（SYS-SAVE §2）；读档经它恢复，不经 `IWorldControl`；`Freeze` 只给测试构建。
 - **测试与截图**：冻结状态由命令行参数给出（`--clock=17.5 --season=autumn --anim=240 --flow=0 --weather=clear --weather-seed=1`，用 `OS.GetCmdlineUserArgs()` 读；完整的默认串和天气参数见 ENG-GATES §1、SYS-WEATHER §8；默认串末尾还有 `--map=qingshuihe --title=0 --save=off --audio=off`），Boot 解析后交给 WorldState；未知参数和不合季节的天气直接以非零退出码结束。用 `--slot`、`--load` 读档时，世界状态只来自存档，与 `--clock` 等世界类参数同时给出时以非零退出码结束（SYS-SAVE §12）。
@@ -409,7 +348,7 @@ public interface IWorldControl
 - **季节氛围粒子**（WP-38）：
   - 春：樱瓣；秋：落叶；冬：枝头落下的雪团（SYS-WEATHER §2）。三者共用一个飘落池，容量 160。
   - 下雪时的雪花和下雨时的雨丝由降水池负责，跟着天气走（SYS-WEATHER §7）。两池的具体分工以 SYS-MOTION §11.3、SYS-MOTION §13 为准。
-  - 夏夜的萤火虫：分布在西湖岸、湿地、东湖荷角三个区，只在镜头 60 m 以内出现。64 只，1 次绘制。雨天减量（SYS-WEATHER §10）。
+  - 夏夜的萤火虫：分布在西湖岸、湿地、东湖荷角三个区，只在镜头 60 m 以内出现。64 只，1 次绘制。雨天减量（SYS-WEATHER §7）。
   - 飘落池和萤火虫都是 MultiMesh，位置在 vertex() 里由 `AnimTime` 解析算出：不存状态，截图和录像可复现。一拍二统一用 T12 = floor(anim_time × step_rate) / step_rate（`step_rate` 默认 12，SYS-MOTION §2.2）。GPUParticles3D 只作备选（它有状态，截图复现要固定种子再预跑，SYS-MOTION §13）。
 - **风量**：春 1.2×、夏 0.8×、秋 1.0×、冬 0.6×，夜间再乘 0.7；天气再乘 (1 + 1.2 × 风暴度)，雾天 ×0.3（SYS-WEATHER §2、SYS-WEATHER §7）。
 - **雪山**：可见度和雪线作为季节参数，晴天的可见度下限 0.35，保证每个组合都至少有一道淡剪影；阴、雾、雨时最低可到 0.15，仍留一道最淡的剪影，雨后初晴 0.95（SYS-WEATHER §4）；夜里画成月光下的银灰（WLD-DIORAMA §6）。

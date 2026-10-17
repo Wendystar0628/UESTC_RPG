@@ -37,7 +37,7 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 
 - **要知道本包的额度**：在 §8 总账里找本包所在的一行；占比在精致预设下核算，乘 §2 的预设上限换算成数值；派工简报和 ENG-WP §2 的"额度"一列是同一份数，拆出的子包按 ENG-WP §3 从原包里分；带"计入"字样的格子是从已有行里划出的子额度，不增加合计（§8）
 - **本包有主线程或内存开销**：按 §8"主线程与内存额度"表里本包的一行核算；存档快照、切图雾幕这类非常态的帧不占主线程余量（§8）
-- **实测或预测超出本包额度**：不能合入（§8；ENG-GATES §3 第 10 条）；在回报的"预算"一行写出实测值与额度（ENG-GATES §5），是否从余量里调拨由主代理决定（§8）
+- **实测或预测超出本包额度**：不能合入（§8；ENG-GATES §3 第 10 条）；在回报的"预算"一行写出实测值与额度（WF-ONBOARD §4.2），是否从余量里调拨由主代理决定（§8）
 - **主代理余量**：只由主代理调拨：三角形 4%、主通道绘制调用 11%、阴影绘制调用 10%、GPU 帧时 2%，开发机主线程约 0.15 ms；界面态的 GPU 1% 也计入这里（§8）
 - **写材质或着色器**：材质只经 `ToonSpec` 和调色板色名获得，只用白名单着色器，不用 StandardMaterial3D，不逐物体建材质；新增着色器文件要主代理批准（§7 第 1 条）
 - **想加光源、SubViewport、CompositorEffect、全屏通道或 Environment**：不得新增；只有 WP-01、WP-03、WP-05 可以，而且先向主代理申请（§7 第 2 条）
@@ -315,145 +315,18 @@ gates: [G4, G5, G6, G8, G10, G11, G13, G14, G15, G16, G17, G20, G21]
 
 ## 8 额度总账（`budgets.json`）
 
-各包的占比在**精致预设**下核算（SYS-GRAPHICS §10 的验收基准：1920×1080 原生、`--quality=fine --adaptive=0`）；其他预设只核 §2 的总量，各包按同一比例缩放。自定义组合不保证预算。
-
-以下是各包占总量的比例，按 §2 的预设资源上限换算成数值（精致：主通道三角形 250 万、绘制调用 1500 次，阴影三角形 120 万、阴影绘制调用 1500 次）。阴影三角形按"三角形"一列的比例分配。"GPU 帧时占比"是该包在开发机上、精致预设下实测的 GPU 帧时中所占的比例，含它的几何在深度预通道、颜色通道和各级阴影里的开销。
-
-合计：发出的份额 96% / 89% / 90% / 98%，加余量各为 100%（WLD-OUTSKIRTS §11.1）。
-
-| 工作包 | 三角形（主通道） | 绘制调用（主通道） | 阴影绘制调用 | GPU 帧时占比 |
-| --- | --- | --- | --- | --- |
-| 建筑：WP-14、WP-16–21、WP-28–31（按区细分，见 ENG-WP）；含关着的楼的简化室内与 I0（旁观穿墙时），以及室外视角下门口看进去的门厅和"看进去例外"（WLD-INTERIORS §6.2） | 38% | 38% | 48% | 36% |
-| 地表与道路：WP-15；含地形起伏格（WLD-TERRAIN §9.5）：典型视角增加 3–5 万、最坏约 12 万三角形，与铺装、路缘共用本行；起伏格每格每表面 1 次绘制调用，平面、坡面、台缘带前壁最多 3 次；地面不投影，阴影份额只含台缘带与挡墙实体。P0 在样板区按 G8 对账，超出时先降 L2、L3 的格点到 33² 或合并表面 | 7% | 6% | 2% | 6% |
-| 植被：WP-23 | 30% | 14% | 22% | 18% |
-| 动物与家具：WP-25、WP-13 | 8% | 16% | 13% | 6% |
-| 箱庭截面与远景：WP-22 | 3% | 2% | 2% | 3% |
-| 外围环境带：WP-47（WLD-OUTSKIRTS） | 6% | 5% | 3% | 3% |
-| 水与倒影：WP-24 | 2% | 3% | 0% | 7% |
-| 天空与特效：WP-40（天空）、WP-03、WP-26 | 2% | 5% | 0% | 4% |
-| 后期：WP-05 | — | — | — | 15% |
-| 主代理余量 | 4% | 11% | 10% | 2% |
-| 界面：WP-35、WP-48b（地图界面） | — | Canvas 通道单独统计（`RenderInfoType.Canvas`），不计入主通道；界面态画布绘制调用 ≤ 150（UI-VISUAL §12） | — | 界面态 ≤ 1%，计入主代理余量；漫游态（小地图、署名与临时提示）开发机 ≤ 0.05 ms、最低配置档 ≤ 0.3 ms；大地图打开时最低配置档上 ≤ 0.3 ms，计入界面态的 1%；大页磨砂另计（开发机 +0.05 ms、最低配置档 +0.5–1 ms），最低配置档默认关（UI-VISUAL §12、SYS-ATLAS §10） |
-| 开放室内：WP-17、WP-31a–c、WP-51、WP-52（WLD-INTERIORS） | 楼内视角按 §2 的楼内额度另核算；室外视角下的部分计入"建筑"行 | 同左；室内光柱与细尘计入楼内额度 | 同左 | 楼内另核算（原型室内 0.24–0.27 ms，WLD-INTERIORS §12）；室外视角下计入"建筑"行 |
-| 开始页与过场：WP-49（SYS-TITLE） | 云卡 ≤ 8k，只在 Title、Entering、Leaving 三个状态 | 云卡 ≤ 4 次 | 0（云卡不投影） | 云卡 ≤ 0.15 ms（开发机 1080p）；T0 不超过同一世界状态下的 V1；过场帧与 Playing 同位置同预算（SYS-TITLE §11.1）；漫游时为 0 |
-| 地图服务：WP-46（SYS-MAPS） | — | — | — | 0：不画东西；切图只在雾幕里进行 |
-| 存档：WP-50（SYS-SAVE） | 0 | 0 | 0 | 0：缩略图的缩放和编码在 CPU 的线程池里做；读回用 `GetImage()`，不走 GPU 回读 |
-| 音频：WP-53（SYS-AUDIO） | 0 | 0 | 0 | 0：不画任何东西，不碰管线编译 |
-| 季节植被与氛围：WP-38 | 荷花约 600 实例 ≤ 1%，计入"水与倒影"；季相参数不另占（在植被行内） | 荷花 2 个 MultiMesh、≤ 4 次，计入"水与倒影"；萤火虫 1 次，计入"天空与特效"；飘落池仍是 1 次 | 0（都不投影） | ≤ 0.6%，不新增份额：荷花 ≤ 0.3% 计入"水与倒影"，飘落池（容量 160）和萤火虫 ≤ 0.3% 计入"天空与特效" |
-| 夜间灯光：WP-39 | 窗灯光晕面片、路灯光锥 ≤ 0.5%，计入"天空与特效" | 光晕、光锥全校各 1 个 MultiMesh，共 2 次，计入"天空与特效" | 0 | ≤ 0.8%，计入"天空与特效"；含不超过 32 盏重点 OmniLight3D 在 light() 里的开销。窗灯和路灯光斑本身画在建筑、地面的着色器里，不另计 |
-| 全日天空：WP-40 | 0：天穹不是网格，积雨云卡片在天空着色器里 | 0 | 0 | ≤ 1.2%，即"天空与特效"一行里的天空份额。星空（≤ 300 颗）、银河、城市天光都在天空着色器里算，云可以放进 half-res 通道 |
-| 行走与碰撞：WP-42、WP-43 | — | — | — | 0：不画任何东西。CPU 与内存见本节"主线程与内存额度"表 |
-| 玩家角色：WP-54b（WP-54a 运行时挂载的骨骼网格按包记在这一行；SYS-WALK §1） | P0 初值，原型验证后定：主通道 ≤ 1.5 万，计入主代理余量 | P0 初值，原型验证后定：≤ 4 次，计入主代理余量 | P0 初值，原型验证后定：每级 ≤ 4 次，计入主代理余量 | P0 初值，原型验证后定：开发机 ≤ 0.10 ms、最低配置档 ≤ 0.25 ms，计入主代理余量；只在行走模式下有；包体 ≤ 4 MB |
-| 天气：WP-45（降水池、溅落、檐滴），以及 WP-40、WP-04、WP-15、WP-24、WP-05 的天气分支（云、雨幕、闪电、彩虹、湿面、积水、雨点环、闪光帧描线） | 约 0：降水池和溅落是面片，计入"天空与特效"；云和雨幕不是网格 | ≤ 16，计入"天空与特效"：降水池 1 次；檐滴每个 L0 格一个小 MultiMesh；其余是各包分支里多出的面片 | 0（都不投影） | 对晴天的总增量 ≤ 5%（SYS-WEATHER §9）：WP-45 自己 ≤ 1%，从主代理余量拨（SYS-WEATHER §10）；其余分别计入"天空与特效""地表与道路""水与倒影""后期"。夜雨无月影时阴影通道空跑，省下的阴影份额先抵天气增量（ENG-PERF §10.1） |
-
-**建筑主通道三角形共享池**：全校建筑可见池的总硬上限为38%（精致预设950,000三角形）。WP-14单包上限为20%（500,000三角形），负责全校未认领楼；区包认领地标与WP-44真实精度区数据落地后，实际用量会下降。其余建筑包保留现有上限，均为共享池内的包内上限，不能相加，也不预留独占份额。
-
-| 工作包 | 主通道三角形包内上限 | 精致预设三角形上限 |
-| --- | --- | --- |
-| WP-14 | 20% | 500,000 |
-| WP-16 | 3% | 75,000 |
-| WP-17 | 2% | 50,000 |
-| WP-18 | 8% | 200,000 |
-| WP-19 | 5% | 125,000 |
-| WP-20 | 9% | 225,000 |
-| WP-21 | 6% | 150,000 |
-| WP-28 | 1% | 25,000 |
-| WP-29 | 0.5% | 12,500 |
-| WP-30 | 0.5% | 12,500 |
-
-G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑表面只计一次，同时检查所属包上限和38%建筑总池。各包上限合计不代表可同时使用的份额；共享池冲突按实测报告，不以降低风格底线消账。上述数字为设计上限，实际共视量仍未测，不记G8已通过。
-
-- 带"计入"字样的格子，是从已有行里划出的子额度，不增加合计。
-- "天空与特效"一行要同时容纳 WP-40、WP-39、WP-38 的一部分、天气的降水池与溅落，以及 WP-03、WP-26 的室外软边光柱（每屏 ≤ 8 根，软边加法体）和细尘；G10 实测超出时，由主代理从余量里调拨。
-- **外围**（WLD-OUTSKIRTS §11）：同一视角三层合计不超过 WP-47 的份额（精致 15 万三角形、75 次绘制调用、45 次阴影绘制调用；极致 24 万、100、75），分层上限见 WLD-OUTSKIRTS §11.2。O0 行道树由 WP-23 实例化，归因记在 WP-23 名下，额度计入 WP-47；外围路灯光晕计入 WP-47。
-- **余量风险**：GPU 余量只剩 2%。开放室内（WLD-INTERIORS）、平面地图（SYS-ATLAS）也可能动用余量，P0 实测后统一核账（§11）。
-- 天气的增量按 ENG-PERF §12.4 的"E1 夏夜雷雨"基准实测；白天的阴、雨不空跑阴影（SYS-WEATHER §3 第 4 条要求白天阴影强度不低于 0.2），大雨的增量估计 0.6–0.8 ms（SYS-WEATHER §9），在开发机的帧时里可能超过 5%，P0 实测后决定收紧降水数量还是放宽上限（§11）。
-- 归因：只有内核能创建实例，内核给每个 RenderingServer 实例记上所属工作包（ENG-ARCH §2 的 `IRenderHost`），G8 按包预测，`-- --without=WP-xx` 按包实测（ENG-PERF §12.2）。
-
-**主线程与内存额度**（开发机 / 最低配置档）：
-
-| 包 | 主线程每帧 | 内存 | 说明 |
-| --- | --- | --- | --- |
-| WP-34 世界状态、WP-37 调色板求值 | 合计 ≤ 0.35 ms（调色板求值 ≤ 0.3 ms）/ ≤ 0.5 ms | 调色板纹理 64 KB，另有 CPU 侧的 Image 一份 | `ProcessPriority` −1000、−800（SYS-TIME §1） |
-| WP-35 界面 | 脚本与排版平均 ≤ 0.2 ms / ≤ 0.3 ms；画布渲染 CPU ≤ 0.3 ms / ≤ 0.5 ms（单列，在 ENG-PERF §6 的"渲染 CPU"里）；每秒刷新 ≤ 10 次 | 可见且在处理的 Control ≤ 400，预建隐藏的（现只有大地图）另计、总数 ≤ 700；字体约 30–50 MB 整包常驻，计入进程内存（ENG-PERF §8） | 漫游态只有小地图（SYS-ATLAS §10）；按 UI-VISUAL §12 |
-| WP-36 点位跳转 | 计入相机那一步 | — | 预取只是给加载队列插队，不另占挂载预算 |
-| WP-54a 角色运行时（动画、IK、地面查询、可见性） | P0 初值，原型验证后定：p95 ≤ 0.08 ms / ≤ 0.15 ms，从本节下方的主线程余量里拨；超支时先让 IK 隔帧更新，再降看不见的下身的动画频率 | P0 初值，原型验证后定：网格与动画 ≤ 8 MB | 只在行走模式下；帧顺序在角色动画一步（contract-23，以 Astra 落地的源码为准） |
-| WP-42、WP-43 行走与碰撞 | 控制器加查询：P0 原型重定（预计 0.05–0.3 ms，p95）；碰撞格入树每帧最多 1 格、≤ 0.3 ms，计入流式挂载的 1.0 ms | 加载环内的碰撞 `.tbin` ≤ 1.3 MB（Jolt 内部结构另计，P0 实测）；全局常驻约 0.9 MB（C# 数组） | 只在行走模式下加载碰撞格（SYS-WALK §13） |
-| WP-45 天气（过程、天气向量插值、降水池参数、檐滴槽位） | ≤ 0.1 ms；补齐 24 h 前瞻队列是微秒级（SYS-WEATHER §6.1） | 显存约 5 MB（`cloud_noise` 1 MB、`precip_occ` 约 3.3 MB、`refl_lamps`），另加地面遮罩 2（与 `ground_mask` 同尺寸，RGBA8 不压缩） | 在 WorldState（−1000）推进钟点和季节之后求天气向量（SYS-WEATHER §8） |
-| WP-32 画面设置与自动调节 | 平时约 0：只在设置或自动调节变化时，于 `FramePriority.Quality`（−1200）那一步分发；细节距离改动后的分帧重写每帧 ≤ 0.3 ms（SYS-GRAPHICS §3），计入流式挂载的 1.0 ms | `graphics.cfg` 可忽略 | 画面页随设置卡按需创建、关闭即释放（UI-VISUAL §11.9） |
-| WP-48 平面地图（SYS-ATLAS） | 小地图平均 ≤ 0.02 ms（"随镜头"模式 ≤ 0.05 ms）；大地图打开时 ≤ 0.15 ms，界面合计仍 ≤ 0.2 ms；`IAtlasService` ≤ 0.01 ms | 地图纹理约 41 MB 显存（含外圈约 4 MB，§2）；标记、标注、8 m 区域栅格约 0.2 MB | Control：小地图 ≤ 12、大地图 ≤ 120，计入界面的 400；`IAtlasService` 在 `FramePriority.Systems` 那一步，不新增帧顺序值（SYS-ATLAS §10） |
-| WP-46 地图服务（SYS-MAPS） | 平时约 0；切图的 Unload、Mount 在雾幕里，不计帧预算 | 内存峰值 = 最大的一张图 + 全局常驻（先卸后装，SYS-MAPS §12） | `FramePriority.Map = −1300`；热切图 ≤ 5 s |
-| WP-02 本机烘焙（`IBakeService`，D-165） | 主线程约 0：生成只在工作线程上做，主线程只挂载，计入流式挂载的 1.0 ms；工作线程数：扉页和开始页期间 max(1, 逻辑核数 − 2)，进 Playing 后 max(1, 逻辑核数 / 4)，优先级低于正常、排在按需请求之后；同时在途的生成任务 ≤ max(2, 逻辑核数 − 2) | 磁盘：本机缓存一张图烘满约 0.8–1.4 GB，默认上限 2.5 GB（见下"本机缓存预算"）；生成用 `ArrayPool` 和预分配缓冲 | 单件生成耗时初值（开发机单线程，P0 实测）：L0 一格 ≤ 150 ms、碰撞一格 ≤ 50 ms、室内一层 ≤ 100 ms；ENG-PERF §5 |
-| WP-47 外围（WLD-OUTSKIRTS） | 0：只有挂载，计入流式挂载的 1.0 ms；可达空间求值 ≤ 0.02 ms 记在 WP-06 的相机那一步，校界查询 ≤ 0.02 ms 记在行走控制器（只在校界附近） | 常驻约 0.6 MB（前沿线距离场约 0.3 MB、软地板网格约 0.25 MB）；几何显存 ≤ 80 MB（O1 流式、O2 常驻 ≤ 12 MB、O0 流式 ≤ 20 MB） | WLD-OUTSKIRTS §11.3 |
-| WP-07 室内运行时、WP-43 室内碰撞（WLD-INTERIORS） | 挂载一层 0.31–0.45 ms，计入流式挂载的 1.0 ms；碰撞入树每帧 1 个 body、≤ 0.3 ms；自动门状态机 ≤ 0.02 ms；楼内视角的室内剔除与提交 ≤ 0.3 ms、遮挡 ≤ 0.3 ms（在渲染 CPU 里） | 显存最多两栋 ≤ 60 MB；碰撞每栋 ≤ 2 MB；室内索引约 50 KB；导航图约 2 MB（WP-44） | WLD-INTERIORS §6、WLD-INTERIORS §12 |
-| WP-49 开始页与过场（SYS-TITLE） | `CinematicPlayer` ≤ 0.05 ms / 帧、不分配，在相机那一步（−1100）运行；只在 Title、Entering、Leaving | 扉页静帧约 20 MB 显存，只在扉页期间 | 开始页可见的 Control ≤ 60（SYS-TITLE §11.1） |
-| WP-50 存档（SYS-SAVE） | 快照 p99 ≤ 0.3 ms（每 5 分钟和关键动作落定后各一次，平时为 0）；缩略图那一帧 ≤ 5 ms（1080p；1440p ≤ 8 ms），只在退出、返回标题、失焦、新游戏时出现，那一帧不计入自动调节的统计；读档的主线程恢复 ≤ 2 ms | 峰值 < 1 MB（观光档）；磁盘约 30 KB | 后台一次保存 ≤ 50 ms，在线程池（SYS-SAVE §13）；从关闭请求到进程结束 ≤ 1.5 s（含 0.3 s 雾幕），硬上限 2 s；`FramePriority.Save = 1000` |
-| WP-53 音频（SYS-AUDIO；内核、环境声、声学、观者声，含引擎更新在播 3D 声源） | 平均 ≤ 0.35 ms / p95 ≤ 0.5 ms，**从 ENG-PERF §6 的余量里划出**：开发机余量由 ≥ 0.5 ms 降为约 0.15 ms；最低配置档默认把在播 3D 上限降到 24、次要的床退成 2 个锚点，守住同一个数 | 常驻 ≤ 96 MB（床约 45 MB、一次性声约 15 MB、观者声 7–10 MB、声学 ≤ 8 MB）；混音线程 ≤ 一个核的 10%（最低配置档 ≤ 25%） | `FramePriority.Acoustics`（−590）与 `Audio`（50）两步；脚步在物理步里（SYS-AUDIO §20）；超支时的降级顺序见 SYS-AUDIO §18.1 |
-
-- **主线程余量**：ENG-PERF §6 的每帧主线程表合计约 5.5 ms，计入音频之前余量 ≥ 0.5 ms；音频的 0.35 ms 从中划出后，开发机余量只剩约 0.15 ms（ENG-PERF §6 表里的余量一行已是划出后的值），最低配置档原样乘 1.5 会把余量吃光，所以最低配置档默认降级（上一行），按 SYS-AUDIO §18.1 的方案 A 执行；P0 在开发机和一台最低配置的笔记本上实测后再定（§11）。存档的快照与缩略图帧、切图的雾幕帧不是常态开销，不占这份余量。
-
-集中测试时，G10 估计上一次集中测试以来各包带来的帧时变化（`main` 上每个包一个提交，可逐个定位，ENG-GATES §2），计入该包的帧时账；累计超出该包的占比额度，就不能再合入（ENG-PERF §12.5）。
-
-**按图预算：`budgets.json` 的 `maps.<id>`**（SYS-MAPS §12）：每张图单独一节，本图的预算只记在这里（不写进 `map.json`），G8 按图检查。字段：
-
-| 字段 | 清水河 | 依据 |
-| --- | --- | --- |
-| L4 三角形 | 约 26 万（校内 23 万加外围 O1 的 L4） | §3、WLD-OUTSKIRTS |
-| 遮挡体三角形 | 约 7k（外围第一排楼另可登记约 1k） | ENG-PERF §4、WLD-OUTSKIRTS §11.2 |
-| 全图数据纹理字节 | 按 `map_rect` 的覆盖范围算；清水河的 `map_rect` 取 ±1280 m（全图数据纹理的覆盖范围，64 m 整倍数） | ENG-PERF §1.5、SYS-MAPS §10 |
-| 常驻 CPU 数据 | 约 0.9 MB，加外围约 0.6 MB | SYS-WALK §13、WLD-OUTSKIRTS §11.3 |
-| `boot_<地图>.pck` 体积（启动集） | ≤ 60 MB，其中全图常驻小数据约 10–15 MB | ENG-PERF §8 |
-| 本机缓存烘满后的体积 | 约 0.8–1.4 GB：校内约 0.6–1.0 GB，加外围 60–120 MB、开放室内约 50–85 MB、碰撞级 C 约 30–60 MB，另有平面地图底图 | ENG-PERF §5、WLD-OUTSKIRTS §11.3、WLD-INTERIORS §12 |
-| 热切图耗时 | ≤ 5 s | SYS-MAPS §13 |
-
-- 进程内存的上限不随图变：精致、极致 ≤ 4 GB，均衡、流畅 ≤ 3 GB；先卸后装，峰值是"最大的一张图 + 全局常驻"（SYS-MAPS §12）。
-
-**导出包体**（G6，D-165 本机烘焙）：安装目录 **≤ 0.9 GB**，分发压缩包（7-Zip，LZMA2，`-mx=9`，文件名 `UESTC-<版本>-win64.7z`）**≤ 0.7 GB**，音频单列 ≤ 165 MB。两个上限都写进 `budgets.json`：安装目录记 `export.install`，分发压缩包记 `export.archive`。G6 的总预算是全部图的启动集之和加全局资源，加图时由主代理重定。
-
-| 内容 | 估计 | 依据 |
-| --- | --- | --- |
-| Godot 运行时与 .NET 运行时 | 约 100–150 MB | ENG-PERF §8 |
-| C# 程序集（含 gen 与烘焙子任务的代码，都要随包发） | ≤ 25 MB | ENG-PERF §8、ENG-ARCH §3 |
-| 着色器：只发 D3D12 一份 shader baker 产物；Vulkan 只是回落，回落时在扉页后面现场编译 | 约 10–40 MB | ENG-PERF §2、§8 |
-| 贴图（BC 压缩；BC1/BC3 优先，BC7 只在需要时用；含外围新增贴图） | ≤ 250 MB | ENG-PERF §8 |
-| 界面字体（思源黑体 SC、Inter、JetBrains Mono） | 约 30–50 MB | UI-VISUAL §12 |
-| 扉页静帧（8 个变体） | 约 4–8 MB | SYS-TITLE §1.3 |
-| 世界数据 JSON（含 `outskirts.json` ≤ 5 MB、精度区数据 `fidelity.json` ≤ 1 MB） | 约 10–15 MB | WLD-OUTSKIRTS §11.3、ENG-ARCH §3 |
-| 英雄资产 `.glb`（如有） | 计入主 PCK | — |
-| 启动集 `boot_<地图>.pck`：L4、遮挡体、外围 O2 常驻块与卡片版，需要 GPU 才能出的产物（L2 半八面体替身图集，如果 P0 选了它），全图常驻的小数据（派生数据纹理、2 m 分类栅格与 8 m 安全点网格、声学网格、声景场与发声器表、导航图），以及参考哈希清单 `bake.manifest.json`（包内 `res://bake/<地图>/boot/bake.manifest.json`） | 每图 ≤ 60 MB（其中全图常驻小数据约 10–15 MB） | ENG-PERF §8 |
-| 音频（单列） | ≤ 165 MB（约 125–165 MB） | SYS-AUDIO §18.2 |
-| **合计** | **约 0.45–0.75 GB** | — |
-
-- **不随包发**（本机烘焙，只有这四类；在本机缓存里，不计入 G6）：L0–L3 的 TileBundle（含外围 O0、O1 和 I0 兜底层）；碰撞级 C；开放室内与简化室内的室内包和碰撞包；平面地图底图（SDF、MSDF 图集、`labels.bake`、区域栅格）。
-- **G6 的检查**：导出后量安装目录；用 7-Zip 打分发包；跑 `--bake-verify`；检查各 PCK 的路径两两不相交（ENG-GATES §2）。
-- **包体风险**：估计合计的上端约 0.75 GB 低于安装目录上限 0.9 GB，但高于分发压缩包上限 0.7 GB，压缩包能否达标取决于实际压缩率（音频、BC 贴图和 zstd 的 `.res` 本身都难再压），P0 实测安装目录和压缩包的体积（§11）。
-
-**本机缓存预算**（D-165；不计入 G6，机制见 ENG-PERF §5）：
-
-- **位置**：`user://cache/bake/<地图>/<ABI>/…`，即导出版的 `%APPDATA%` 下。
-- **大小**：一张图烘满约 0.8–1.4 GB（P0 实测，§11），也就是几何类烘焙产物的全部体积；与画面设置、世界状态、存档无关，跨存档、跨画质共用。
-- **上限与淘汰**：默认上限 2.5 GB，超出时按"最久未用"淘汰：先淘汰别的图，再淘汰本图的 L0 和室内包。L1–L4 和全图常驻数据不淘汰。
-- **剩余空间不足 1 GB 时不落盘**：不写缓存，只在内存里生成、用完即弃，并给一次几秒内淡出的临时提示（INV-3 允许）。
-- **时间目标**（开发机，初值，P0 实测）：首次运行到转为实时 ≤ 25 s，平面地图底图 8 线程 ≤ 20 s；开始页上后台预烘满全图 ≤ 4 min；以后的启动仍是冷启动 ≤ 9 s、热启动 ≤ 3.5 s（ENG-PERF §8）。
-- **玩家可管**：设置卡的"存储"一行显示占用和本机烘焙进度，"清除缓存"按钮只清缓存（WP-35，ENG-PERF §5）。
-
-**按精度区的预算侧重**（ART-FIDELITY §0，D-176）：
-
-- **总量不改**：§2 的预设上限和上面总账里的各包份额都不因精度区改变。分区只决定建筑、地表与道路、动物与家具这几个包在各区之间怎么花自己的份额。
-- **侧重**：
-  - K1、K2 优先拿 L0+ 专用几何、热点簇（8–15 件）、生活痕迹和人工打磨，也是人工评分的主战场；
-  - K3 保 5–150 m 的构件层次、开间变化和窗，不拨 L0+ 专用几何和热点簇；
-  - K4 省 L0 与 L0+ 的增量几何、贴花、生活痕迹和人工评分，屋顶的俯视构成（轮廓、设备体量、分仓色块）不省；
-  - K5 照 WP-47 的份额（本节总账之后的"外围"一条）。
-- **G8 按区小计**：G8 的预测另按精度区出小计，核对 L0+ 专用几何和热点簇确实集中在 K1、K2（ENG-GATES §2）。
-- **缓存与烘焙**：K3–K5 不生成 L0+ 专用几何、K4 的 L0 更轻，格包和本机缓存会比本节"按图预算"和"本机缓存预算"里的估计小；§3 的单格上限和本节的缓存体积在 P0 按分区后的实测重估（§11）。
+各预设上限、工作包额度与子额度、运行时和内存额度、按图预算、导出包体、本机缓存与余量等数值，以仓库根目录的 `budgets.json` 为准。额度是核算上限，不是独占预留；共享池冲突须按实测报告，不得以降低视觉底线消账。精度区只决定各包如何使用自己的额度，不改变预设总量或各包份额（ART-FIDELITY §0，D-176）；尚未测量的数值仍按 P0 待验证处理，不视为已通过。测量与归因见 ENG-PERF §12，门禁判据见 ENG-GATES §2。
 
 ## 9 怎么测
+
+### 9.1 测量命令与参数
 
 完整做法见 ENG-PERF §12，这里只列要点：
 
 - **命令行参数**：截图和基准的默认值是 `-- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --adaptive=0 --map=qingshuihe --title=0 --save=off --audio=off`，即默认状态（晴）、动画时钟冻结在 240 s、隐藏界面、精致预设、自动调节关、清水河、跳过开场、不写存档、无声。用 `OS.GetCmdlineUserArgs()` 读，未知参数以非零退出码结束（ENG-GATES §1）。门禁和基准只由命令行决定，不读 `user://`（SYS-GRAPHICS §6）。
 - **本机烘焙的参数**（D-165）：`--bake-cache=<绝对路径>`（本机缓存目录，默认 `user://cache/bake/`，开发态默认指向 `UESTC_BAKE_CACHE`）、`--bake-bg=0|1`（后台预烘，默认 1）、`--bake-strict=1`（缓存不命中直接报错退出，默认 0）、`--bake-verify`（G6 的逐文件哈希比对）。`--bake=all` 和 `--gen=live` 保留。`scripts\gate.ps1` 先按改动选门禁，再决定要不要准备烘焙数据（ENG-ARCH §6 第 3 步）：截图类门禁、基准和 G10 先把用到的图按哈希增量补进共享缓存，运行时一律追加 `--bake-cache=<UESTC_BAKE_CACHE> --bake-bg=0 --bake-strict=1`；快检不烘焙；默认串不变；G10 另有冷缓存子项（ENG-PERF §12.4、§12.5）。
+### 9.2 运行时测量接口
+
 - **运行时计数**：`Performance` 监视器（`RenderTotalDrawCallsInFrame`、`RenderTotalPrimitivesInFrame`、`RenderVideoMemUsed`、`RenderTextureMemUsed`、`RenderBufferMemUsed`、`PipelineCompilations*`，含 Canvas）；`Viewport.GetRenderInfo` 分主通道和阴影；`Performance.AddCustomMonitor` 加流式加载、字节账、GC 暂停等自定义项。音频的 `audio/main_us`、`audio/real_voices`、`audio/nodes3d`、`audio/virtual`、`audio/resident_kb`、`audio/mix_core_pct`（SYS-AUDIO §18.1）；界面主线程和画布渲染 CPU 由 `Campus.Kernel.Inspect` 接 `SceneTree.ProcessFrame`、`RenderingServer.FramePreDraw`、`FramePostDraw` 记时间戳，不用 `Performance.Monitor.TimeProcess` 算平均（它是每秒内的最大值，UI-VISUAL §12）。
 - **GPU 与 CPU 计时**：`RenderingServer.ViewportSetMeasureRenderTime` 打开后逐帧读 `ViewportGetMeasuredRenderTimeGpu` 和 `...Cpu`；分段 GPU 时间用 `RenderingDevice.CaptureTimestamp`；.NET 的 GC 暂停用 `GC.GetTotalPauseDuration()`。测量时锁 GPU 频率，GPU 降频会让测得的时间偏大。
 - **命令行基准**：测导出的 release 版，窗口模式（无界面模式不渲染），例如 `UESTC.exe --rendering-driver d3d12 --gpu-index <n> --resolution 1920x1080 --disable-vsync --fixed-fps 60 -- --bench=1 --pose=V1 … --quality=fine --adaptive=0 --frames=600 --out=<路径>`；开发机另跑 `--resolution 2560x1440 … --quality=ultra`，对照 §2 的 8.0 ms。吞吐模式关垂直同步并固定步长；体验模式开垂直同步、按真实时间跑（ENG-PERF §12.4）。
@@ -485,14 +358,14 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 
 本节是 `project.godot` 和相关资源里与性能有关的设置。`project.godot`、`export_presets.cfg`、`Directory.Build.props` 由主代理维护（ENG-ARCH §6），改动要申请。
 
-下表的值是项目默认；随画面设置改的项按 SYS-GRAPHICS §3 的生效类别在运行时改（实现见 ENG-PERF §11.7），四个预设共用的固定项（软影滤波、阴影深度、MSAA、TAA）运行时一律不动。
+已在 `game/project.godot` 中设置的值以该文件为准；下表保留不在源文件中的默认行为、运行时规则及其理由。随画面设置改的项按 SYS-GRAPHICS §3 的生效类别在运行时改（实现见 ENG-PERF §11.7），四个预设共用的固定项运行时一律不动。
 
 **渲染器与驱动**
 
 | 设置 | 值 | 理由 |
 | --- | --- | --- |
 | `rendering/renderer/rendering_method` | `forward_plus` | 需要 normal_roughness 缓冲、自动实例化、分簇灯光；只做 PC |
-| `rendering/rendering_device/driver.windows` | `d3d12` | 4.6 起 Windows 默认；shader baker 在 D3D12 上加载最快（ENG-PERF §13） |
+| `rendering/rendering_device/driver.windows` | 见 `game/project.godot` | 4.6 起 Windows 默认；shader baker 在 D3D12 上加载最快（ENG-PERF §13） |
 | `rendering/rendering_device/fallback_to_vulkan` | `true` | D3D12 不可用时回落 Vulkan |
 | `rendering/rendering_device/fallback_to_opengl3` | `false` | 兼容渲染器跑不了 Compositor 描线，不做降级画面 |
 | `rendering/driver/threads/thread_model` | Safe（默认） | Separate 模式官方标注为实验性，不建议用于生产 |
@@ -514,7 +387,7 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 | `rendering/anti_aliasing/quality/msaa_3d` | 关 | ID 和法线没法 resolve；运行中切换会重编管线 |
 | `rendering/anti_aliasing/quality/use_taa` | `false` | 一拍二、风动顶点、细描线都会拖影 |
 | `rendering/anti_aliasing/quality/screen_space_aa` | SMAA | 精致、极致 SMAA 1x，均衡、流畅 FXAA（SYS-GRAPHICS §1）；运行时改 `Viewport.ScreenSpaceAA`，属雾幕类（重建缓冲，不编译；两套后期都在启动预热里） |
-| `rendering/anti_aliasing/quality/use_debanding` | `true` | 后期链末尾的去色带抖动；不做成选项 |
+| `rendering/anti_aliasing/quality/use_debanding` | 见 `game/project.godot` | 后期链末尾的去色带抖动；不做成选项 |
 | `rendering/scaling_3d/mode`、`scale` | Bilinear、1.0；运行时按预设设为 FSR1 与对应比例 | 改比例会重建缓冲（4K 下 11–25 ms，不编译），属雾幕类，只在设置界面里改；自动调节不动它（ENG-PERF §3.4、ENG-PERF §11.3）。不提供 FSR2 和 Nearest。极致预设可选"超采样 1.25×"（`Scaling3DScale` = 1.25，只对 Bilinear 有效），默认关，属雾幕类（§2） |
 | `rendering/textures/default_filters/anisotropic_filtering_level` | 16×；运行时按预设改 `Viewport.AnisotropicFilteringLevel`（4× / 8× / 16×） | 属雾幕类；着色器采样器要写 `filter_linear_mipmap_anisotropic` 才生效（SYS-GRAPHICS §3） |
 | `rendering/mesh_lod/lod_change/threshold_pixels` | 1.0（默认） | 预设和自动调节改 `Viewport.MeshLodThreshold`（1 / 1.5 / 2 px，即时，ENG-PERF §11.3） |
@@ -524,13 +397,13 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 | 设置 | 值 | 理由 |
 | --- | --- | --- |
 | `rendering/lights_and_shadows/directional_shadow/size` | 8192；按预设用 `RenderingServer.DirectionalShadowAtlasSetSize` 设为 4096 或 2048 | 只换纹理、不改格式，不编译，即时生效（SYS-GRAPHICS §3） |
-| `rendering/lights_and_shadows/directional_shadow/16_bits` | `true`，四个预设固定，运行时不改 | 改格式要新管线 |
-| `rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality` | Soft Medium（3），四个预设固定，运行时不改 | 改一次会经 `set_default_specialization` 清空**全部**已编译管线（实验里每改一次 DRAW +8）；三渲二对阴影做了阈值化，滤波档位对画面影响很小，所以不做成选项 |
+| `rendering/lights_and_shadows/directional_shadow/16_bits` | 见 `game/project.godot`，四个预设固定，运行时不改 | 改格式要新管线 |
+| `rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality` | 见 `game/project.godot`，四个预设固定，运行时不改 | 改一次会经 `set_default_specialization` 清空**全部**已编译管线（实验里每改一次 DRAW +8）；三渲二对阴影做了阈值化，滤波档位对画面影响很小，所以不做成选项 |
 | `rendering/lights_and_shadows/positional_shadow/atlas_size` | 0 | 不用带阴影的点光和聚光，省下默认 4096² 的点光阴影图 |
-| `rendering/lights_and_shadows/positional_shadow/atlas_16_bits` | `false` | 本项目没有点光阴影；设为 false 时，引擎启动就把 16 位和 32 位两种阴影格式的管线都编好，万一位深被改也不再编译。阴影深度本身仍固定 16 位（SYS-GRAPHICS §3） |
+| `rendering/lights_and_shadows/positional_shadow/atlas_16_bits` | 见 `game/project.godot` | 本项目没有点光阴影；该设置使引擎启动时把 16 位和 32 位两种阴影格式的管线都编好，万一位深被改也不再编译。阴影深度本身仍固定 16 位（SYS-GRAPHICS §3） |
 | `rendering/limits/cluster_builder/max_clustered_elements` | 512（默认） | 重点 OmniLight3D 不超过 32 盏，不用引擎 Decal 和反射探针 |
 | `rendering/shading/overrides/force_vertex_shading` | `false`（默认） | 否则 light() 不执行 |
-| `rendering/limits/global_shader_variables/buffer_size` | 131072（默认 65536 的两倍，每个缓冲 2 MiB） | 这是实例着色器参数池的容量：3D 流式实例和界面控件的实例参数槽都从这里分配，高峰容量需要 131072（实测在 65536 时出过 "Too many instances using shader instance variables"）；这是容量修正，不是泄漏修复，隐藏的界面页不该占槽（UI-VISUAL §11.9） |
+| `rendering/limits/global_shader_variables/buffer_size` | 见 `game/project.godot` | 这是实例着色器参数池的容量：3D 流式实例和界面控件的实例参数槽都从这里分配，容量经过实测校准；这是容量修正，不是泄漏修复，隐藏的界面页不该占槽（UI-VISUAL §11.9） |
 
 **剔除**
 
@@ -548,10 +421,10 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 | `application/run/max_fps` | 0 | 帧率上限由运行时按设置和显示器设：30 / 60 / 半刷新率 / 刷新率 / 不限（SYS-GRAPHICS §3）；`step_rate` 随它变（ENG-PERF §11.4） |
 | `application/run/low_processor_mode` | `false` | **不做静止降频** |
 | `application/run/delta_smoothing` | `true`（默认） | 垂直同步下平滑 delta，动画时间更匀 |
-| `physics/3d/physics_engine` | `Jolt Physics`，显式写上 | 不依赖 DEFAULT 的含义（SYS-WALK §12） |
-| `physics/common/physics_ticks_per_second` | 120 | 行走物理固定 120 Hz |
+| `physics/3d/physics_engine` | 见 `game/project.godot` | 不依赖 DEFAULT 的含义（SYS-WALK §12） |
+| `physics/common/physics_ticks_per_second` | 见 `game/project.godot` | 行走物理使用固定频率 |
 | `physics/common/physics_interpolation` | `false` | 不开全局物理插值，相机按 `Engine.GetPhysicsInterpolationFraction()` 手动插值 |
-| `physics/common/physics_jitter_fix` | 0 | 与 `physics_interpolation` 一起关：相机手动插值 |
+| `physics/common/physics_jitter_fix` | 见 `game/project.godot` | 与 `physics_interpolation` 一起关：相机手动插值 |
 | `physics/common/max_physics_steps_per_frame` | 12 | 对应 100 ms 的步长上限；原型时与 SYS-WALK 核对 |
 | `physics/3d/run_on_separate_thread` | `false`（默认） | body 只在主线程创建和入树 |
 
@@ -572,7 +445,7 @@ G8按实际共视总量核算：正式认领与可见LOD选级后，每个建筑
 
 | 设置 | 值 | 理由 |
 | --- | --- | --- |
-| `audio/driver/mix_rate` | 48000（默认 44100） | 素材统一 48 kHz，免得重采样；Movie Maker 默认也是 48000，而且能被 60、30 整除，录音逐位可复现（SYS-AUDIO §17） |
+| `audio/driver/mix_rate` | 见 `game/project.godot` | 素材统一 48 kHz，免得重采样；Movie Maker 默认也是 48000，而且能被 60、30 整除，录音逐位可复现（SYS-AUDIO §17） |
 | `audio/driver/output_latency`、`audio/general/3d_panning_strength`、`channel_disable_time` | 15 ms、0.5、2.0 s（默认，已实测读出） | 保持默认 |
 | `editor/movie_writer/mix_rate` | 48000（默认） | 声音门禁用 Movie Maker 录的 WAV |
 

@@ -4,7 +4,7 @@ using Campus.Contracts.Audio;
 namespace Campus.Gen.Parts.Circulation;
 
 /// <summary>
-/// Every tunable value of WP-11 lives here (ENG-TEAM §5). Sizes are metres. Sources: ART-MODELING §2 and §7.8 (stylised
+/// Every tunable value of WP-11 lives here (WF-FLOW §4). Sizes are metres. Sources: ART-MODELING §2 and §7.8 (stylised
 /// proportions; human-scale anchors kept real), WLD-TERRAIN §5 (step, landing and ramp rules), WLD-INTERIORS §10 and
 /// SYS-WALK §7, §13 (collision). Values marked "review" are mainline initial values awaiting the main session's call.
 /// </summary>

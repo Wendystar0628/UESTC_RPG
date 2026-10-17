@@ -36,7 +36,7 @@ public sealed record FacadeLook(string Key)
 }
 
 /// <summary>
-/// The facade presets WP-14 knows, by key (ENG-TEAM §5: tunables in one place). Initial values; the main session sets the
+/// The facade presets WP-14 knows, by key (WF-FLOW §4: tunables in one place). Initial values; the main session sets the
 /// final ones at review. A key no preset has leaves the family profile as it is (logged, BuildingsModule.UnknownPreset).
 /// </summary>
 public static class FacadePresets

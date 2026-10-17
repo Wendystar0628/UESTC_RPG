@@ -82,7 +82,7 @@ for code, d in docs.items():
 # 便于按需查阅（D-178）：规范文档要有 keywords、查阅行、§0 和 §0 末尾的接入要点
 for code, d in docs.items():
     rel = os.path.relpath(d['path'], D).replace(chr(92), '/')
-    if d['fm'].get('category') in RECORDS or code == 'REF-PROMPT' or (os.path.basename(rel) == 'README.md' and rel != 'README.md'):
+    if d['fm'].get('category') in RECORDS or (os.path.basename(rel) == 'README.md' and rel != 'README.md'):
         continue
     t = d['text']
     if not d['fm'].get('keywords'):
@@ -98,6 +98,9 @@ for code, d in docs.items():
 # 小节目录要与文档一致：文档改过以后重跑 gen_index.py
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gen_index
+map_path = os.path.join(D, 'DOCMAP.md')
+if not os.path.exists(map_path) or open(map_path, 'rb').read().decode('utf-8') != gen_index.build(gen_index.load()):
+    bad.append(('DOCMAP', 'stale', '重跑 scripts/docs/gen_index.py'))
 sec_path = os.path.join(D, 'SECTIONS.md')
 if not os.path.exists(sec_path) or open(sec_path, 'rb').read().decode('utf-8') != gen_index.build_sections():
     bad.append(('SECTIONS', 'stale', '重跑 scripts/docs/gen_index.py'))

@@ -14,7 +14,7 @@ gates: [G5, G6, G8, G9, G15, G18, G19]
 ---
 # WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-> **范围**：本文规定第一批 15 处开放室内与 3 处开放高处（范围、入口、交通核、主要空间），门的开与关（含楼里的自动门），关着的楼的外壳、窗卡、门厅卡与简化室内，室内加载与进楼衔接，平面生成器与类型库，室内风格与生活痕迹，楼梯、门洞与碰撞，导航图与路线，扩展步骤，以及室内的契约增量、预算、工作包与 G19 验收。
+> **范围**：本文规定第一批 15 处开放室内与 3 处开放高处（范围、入口、交通核、主要空间），门的开与关（含楼里的自动门），关着的楼的外壳、窗卡、门厅卡与简化室内，室内加载与进楼衔接，平面生成器与类型库，室内风格与生活痕迹，楼梯、门洞与碰撞，导航图与路线，扩展步骤，以及室内契约、预算、工作包与 G19 验收。
 > **不在本文**：图书馆与博物馆室内的陈设细则（MAP-QSH-LIBRARY）；各楼的外观（MAP-QSH-CORE、MAP-QSH-SOUTH–MAP-QSH-CENTER-EAST、ART-FIDELITY）；行走控制器与角色参数（SYS-WALK）；介质与楼内呈现（SYS-VIEW）；声音与空间声学（SYS-AUDIO）；地图图层与门口传送（SYS-ATLAS）；契约全文以 ENG-ARCH §3 为准。
 > **查阅**：先读 §0；开放清单与入口看 §2；门的开关与自动门看 §4；窗卡、门厅卡与简化室内看 §5；加载与进楼看 §6；楼梯、门洞与碰撞看 §10；新开一栋楼看 §14；契约、工作包与 G19 看 §15、§18、§19
 > **关联**：[CORE-INDEX 总索引](../README.md)、[ART-STYLE 风格基础](../art/ART-STYLE-风格基础.md)、[ART-SKYLIGHT 天空光照与大气](../art/ART-SKYLIGHT-天空光照与大气.md)、[MAP-QSH-CORE 核心区](../maps/qingshuihe/MAP-QSH-CORE-核心区.md)、[MAP-QSH-LIBRARY 图书馆与博物馆室内](../maps/qingshuihe/MAP-QSH-LIBRARY-图书馆与博物馆室内.md)、[MAP-QSH-SOUTH 南区](../maps/qingshuihe/MAP-QSH-SOUTH-南区.md)、[MAP-QSH-WEST 西区与西北区](../maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md)、[MAP-QSH-NORTH 北部生活区](../maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md)、[MAP-QSH-CENTER-EAST 中部与东区](../maps/qingshuihe/MAP-QSH-CENTER-EAST-中部与东区.md)、[WLD-LIFE 动物生活痕迹与街道家具](WLD-LIFE-动物生活痕迹与街道家具.md)、[SYS-VIEW 观察模式介质与开场](../systems/SYS-VIEW-观察模式介质与开场.md)、[ART-FIDELITY 视觉精度标准](../art/ART-FIDELITY-视觉精度标准.md)、[ART-MODELING 风格化造型规则](../art/ART-MODELING-风格化造型规则.md)、[MAP-QSH-ADDITIONS 设计增补](../maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[ENG-BUDGET 性能预算与硬规则](../engineering/ENG-BUDGET-性能预算与硬规则.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF-性能工程.md)、[SYS-TIME 时间与季节](../systems/SYS-TIME-时间与季节.md)、[UI-NAV 界面与操作说明](../ui/UI-NAV-界面与操作说明.md)、[SYS-WALK 行走模式](../systems/SYS-WALK-行走模式.md)、[SYS-WEATHER 天气](../systems/SYS-WEATHER-天气.md)、[SYS-GRAPHICS 画面设置](../systems/SYS-GRAPHICS-画面设置.md)、[SYS-ATLAS 平面地图与传送](../systems/SYS-ATLAS-平面地图与传送.md)、[SYS-SAVE 存档与持久化](../systems/SYS-SAVE-存档与持久化.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS-多地图.md)、[WLD-OUTSKIRTS 边界与外围](WLD-OUTSKIRTS-边界与外围.md)、[SYS-AUDIO 音频](../systems/SYS-AUDIO-音频.md)；另见 [WLD-DIORAMA 箱庭边界截面与远景](WLD-DIORAMA-箱庭边界截面与远景.md)、[WLD-WATER 水体](WLD-WATER-水体.md)、[SYS-MOTION 动态与事件](../systems/SYS-MOTION-动态与事件.md)、[ENG-GATES 验收与门禁](../engineering/ENG-GATES-验收与门禁.md)、[ENG-WP 工作包派工单](../engineering/ENG-WP-工作包派工单.md)、[UI-VISUAL 界面视觉语言](../ui/UI-VISUAL-界面视觉语言.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP-扩展路线.md)。
@@ -599,7 +599,7 @@ gates: [G5, G6, G8, G9, G15, G18, G19]
 
 **识别要素**（每类房间至少用 2 个）：600 方格矿棉板吊顶加格栅灯；侧墙推拉黑板加电动投影幕、多媒体讲桌；水磨石或米白抛光砖加深色分格条；绿或灰墙裙；不锈钢扶手与护角；"安全出口 EXIT"绿灯（中文在上、英文在下）；长方形红框玻璃门消火栓箱；吊扇、壁扇或柜式空调；上床下桌与米灰钢架床、暖水瓶、床帘；电开水器加"小心烫伤"红字；办公室的锦旗、白瓷盖杯、档案盒，会议室的桌签；食堂的连体桌椅、橙色餐盘、窗口灯箱；实验室的万向抽气罩、蓝色钢木实验台；门边刷卡器、智慧教室中控、人脸闸机；楼梯平台墙上的大楼层号。
 
-**日式物件的分界**（ART-STYLE §9.1 的室内扩展）：陈设类的日式日常物件可以加，但不替代上面的识别要素；改变门窗系统、房间布局、房间功能的，以及带日文的标识和传统和式建筑构件，按下表换掉。
+日式元素边界以 ART-STYLE §9.1 为准；室内不得替代中国高校识别要素。
 
 - **可以加**：楼门口一排鞋柜（地垫照旧，不做换室内鞋）；教室后墙的个人储物格；走廊的公用电话、成组售货机（每处 2–3 台，WLD-LIFE §4.5）；校园超市里的关东煮锅与饭团货架；食堂的自助售票机（简体中文屏，刷卡机和窗口打饭照旧）。字一律用简体中文；物件是新的、干净的样子。新部件进 §7.5 的部件库。
 
@@ -828,152 +828,19 @@ R2、R3、R5 见 SYS-WALK §11；R3 从博物馆穿过（门常开）。R6–R14
 - **碰撞**：开放前楼体墙段在门口不开洞（`DoorClosed`）；开放后 WP-43 按 `EntranceDecl.Open` 在门洞处开洞，楼内碰撞由提供者给出。
 - **以后的 RPG**：如果剧情需要"某扇门先锁、后开"，那是随世界状态变化的碰撞，违反现在的 ENG-BUDGET §7 第 11 条。§4.1 的自动门已经是不进烘焙碰撞的运行时门体，到时候在它上面加一个随剧情变化的锁状态，再增量加契约即可。观光期不做。
 
-## 15 契约增量（给 ENG-ARCH §3，这一组冻结前改，D-134）
+## 15 契约与实现
 
-冻结前定下的改动直接写进候选契约，不保留旧签名（ENG-ARCH §3、D-134）。`IInteriorProvider` 按层提供（`BuildStorey`、`CollisionStorey`）；以下都是 `Campus.Contracts`，纯 .NET，向量用 `System.Numerics`。
-
-```csharp
-// 室内（§6、§7）
-public enum InteriorDetail : byte { Proxy = 0, Shell = 1, Full = 2 }   // I0 兜底、IS 只留壳、IF 完整
-public enum ZoneKind : byte { Room, Corridor, Stair, Atrium, Lobby, Wc, Service, Gallery }
-public enum PortalKind : byte { Door, StairOpening, AtriumOpening, Window, Sealed, ElevatorStop }   // Sealed：封口
-public sealed record StoreyInfo(int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);
-public sealed record ZoneVolume(int Storey, int Id, ZoneKind Kind, IReadOnlyList<Vector2> Ring,
-    ChannelId LightChannel, uint LightHash, bool Open);                     // Open：属于开放范围
-public sealed record PortalDecl(int Storey, int ZoneA, int ZoneB, Vector3 A, Vector3 B, float Height, PortalKind Kind);
-public sealed record EntranceDecl(string Id, Vector3 Outside, Vector3 Inside, float ClearWidth, bool Open)
-{   // Outside：门外落点（门外 2.5 m，SYS-ATLAS的落点与标记位置）；Inside：门内 3 m 的点
-    public Vector3 Center { get; init; }       // 门中心（SYS-ATLAS的门口标记、G18 的 ≤ 0.5 m 比对）
-    public float YawDeg { get; init; }         // 门外法线的方位角，0 = 北、90 = 东，与点位偏航同一约定（§2.17 有 P16–P23 的初值）
-}
-public sealed record ElevatorDecl(string Id, int StoreyA, int StoreyB, Box3 CabA, Box3 CabB);   // 关门换位两站（§3）
-
-// 会动的门（§4.1）：开放室内里能进的房门、开放路线上的楼梯间防火门和走廊玻璃门。
-// 开放楼的入口门（固定敞开）和锁着的门（静态几何，DoorClosed）不在此列
-public enum DoorLeafKind : byte { RoomDoor, FireDoor, GlassSwing }      // 木质房门、楼梯间防火门、玻璃平开门：决定门体的 Foot 和开关门声
-public sealed record DoorLeafDecl(string Id, int Storey, int ZoneA, int ZoneB,
-    Vector3 Hinge, float ClosedYawDeg, float OpenDeg, float Width, float Height, DoorLeafKind Kind,
-    float TriggerM = 1.5f);                    // 静止时的触发半径；运动时放大为 max(TriggerM, v × 0.75 s)（§4.1）
-public sealed record InteriorLayout(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
-    IReadOnlyList<ZoneVolume> Zones, IReadOnlyList<PortalDecl> Portals, IReadOnlyList<EntranceDecl> Entrances,
-    IReadOnlyList<ElevatorDecl> Elevators, IReadOnlyList<int> OpenStoreys, IReadOnlyList<int> AtriumVisibleStoreys,
-    Box3 Bounds, uint PlanHash)
-{
-    public IReadOnlyList<DoorLeafDecl> Doors { get; init; } = [];          // 会动的门扇
-}
-
-public interface IInteriorProvider           // gen 里实现，纯函数；[InteriorProvider("interior.xxx", Owner = "WP-xx")] 不变
-{
-    IReadOnlyList<FeatureId> FeatureIds { get; }
-    int Priority { get; }
-    bool Walkable => true;                                                // 注册即开放
-    InteriorLayout Layout(BuildContext ctx, FeatureId id);
-    ContentOutput BuildStorey(BuildContext ctx, FeatureId id, int storey, InteriorDetail detail);
-    IReadOnlyList<Collider> CollisionStorey(BuildContext ctx, FeatureId id, int storey);
-    NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey) => NavFloorGraph.Empty(id, storey);   // §13
-    AcousticsDecl Acoustics(BuildContext ctx, FeatureId id) => AcousticsDecl.Empty;
-        // 房间按层声明（Box3 带 y 区间）与门户；类型在 Campus.Contracts.Audio，见 SYS-AUDIO（§14 第 4 步）
-}
-
-// 门的运行时（§4.1）：WP-07 的 InteriorDirector 实现，Kernel 服务，在 FramePriority.Medium 那一步推进
-public enum DoorPhase : byte { Closed, Opening, Open, Closing }
-public readonly record struct DoorEvent(FeatureId Building, string DoorId, DoorPhase Phase, Vector3 Position, ulong Tick);
-public interface IInteriorDoors
-{
-    DoorPhase PhaseOf(FeatureId building, string doorId);
-    float OpenOf(FeatureId building, string doorId);   // 门扇开度 0–1；声学门户的开度读同一个值（SYS-AUDIO）
-    event Action<DoorEvent>? Changed;        // 阶段变化时发：WP-53d 放开门、关门、落锁声，WP-43 在 Closed 时启用、离开 Closed 时停用这扇门的运行时门体
-}
-// 读档、切图、换世界实例时所有门直接落到 Closed，不放声音；门的状态不进存档（SYS-SAVE）
-
-// 室内索引：WP-51 烘焙，WP-08 随空间索引加载，常驻约 50 KB
-public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
-    IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId);
-public interface IInteriorIndex
-{
-    InteriorIndexEntry? Get(FeatureId id);
-    IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r);       // 入口预取、地图图层、G19
-}
-// IWorldModel 增：IInteriorIndex Interiors { get; }；MediumAt 据此返回 Interior 的楼与层
-
-// 碰撞（SYS-WALK §13，只增不改）
-public enum SurfaceTag { Ground, Stair, Barrier, Wall, Prop, Water, Invisible, Boundary, DoorClosed }
-    // Boundary：校界栏杆、关闭的校门与闸机、车道抬杆、河渠格栅、校门处的隐形墙（WLD-OUTSKIRTS）
-    // DoorClosed：关着的门、锁着的房门、封口（§4）。自动门关好时的门体用 Wall
-// Collider 另加 init 属性 Foot（FootMat），RampCollider 另加 Stair（StairSpec?）：声音用，见 SYS-AUDIO（§10）
-// Collider 的多态声明追加一行：[JsonDerivedType(typeof(SlopedWallCollider), "slopedWall")]
-public sealed record SlopedWallCollider(Vector2 A, Vector2 B, float HalfT,
-    float Y0a, float Y1a, float Y0b, float Y1b, SurfaceTag Tag) : Collider(Tag);
-    // 斜顶薄墙：A 端底 Y0a、顶 Y1a，B 端底 Y0b、顶 Y1b；WP-43 映射为 8 顶点 ConvexPolygonShape3D（宽梯井栏杆，§10）
-
-// 导航图（§13）
-public readonly record struct NavNodeId(uint Value);
-public readonly record struct NavSpace(FeatureId? Building, short Floor);
-public enum NavEdgeKind : byte { Road, Sidewalk, Footway, Path, Plaza, Steps, Ramp, Bridge, Boardwalk, Wade,
-                                 Corridor, Room, Stair, Elevator, Connector, Door, Gate, Jump, DesignPath }
-[Flags] public enum NavFlags : ushort { None = 0, Main = 1, Covered = 2, Lit = 4, Indoor = 8, OneWay = 16, Locked = 32,
-                                        Accessible = 64, Scenic = 128, NpcOnly = 256, PlayerOnly = 512 }
-public enum DoorKind : byte { Swing, Sliding, Curtain, Turnstile, Gate, OpenArch }
-public enum DoorState : byte { Open, AutoOpen, Locked }
-public sealed record NavNode(NavNodeId Id, Vector3 P, NavSpace Space, string? Tag = null);
-public sealed record NavEdge(NavNodeId A, NavNodeId B, NavEdgeKind Kind, float Length, float Width,
-                             float Rise, NavFlags Flags, string Source);
-public sealed record NavPortal(string Id, FeatureId Building, NavNodeId Outside, NavNodeId Inside,
-                               Vector3 DoorCenter, float YawDeg, float ClearWidth, DoorKind Kind, DoorState State);
-public sealed record NavFloorGraph(FeatureId Building, short Floor, IReadOnlyList<NavNode> Nodes, IReadOnlyList<NavEdge> Edges)
-{ public static NavFloorGraph Empty(FeatureId b, int f) => new(b, (short)f, [], []); }
-public sealed record NavQuery(NavFlags Avoid = NavFlags.Locked | NavFlags.NpcOnly, NavFlags Prefer = NavFlags.None,
-                              bool AllowWade = false, bool AllowElevator = true, bool AllowJump = false);
-public sealed record NavPath(IReadOnlyList<NavNodeId> Nodes, float Length, float Seconds);
-public interface INavGraph
-{
-    NavNode Node(NavNodeId id);
-    IReadOnlyList<NavEdge> Edges(NavNodeId id);
-    NavNodeId? Nearest(Vector3 p, NavSpace? space = null, float maxDist = 20f);
-    NavPath? FindPath(Vector3 from, Vector3 to, NavQuery q);         // A*，可在线程池里跑
-    IReadOnlyList<NavPortal> PortalsNear(Vector3 p, float r);
-}
-```
+室内布局、入口、门扇、索引、导航图与碰撞类型以 `E:\Project\UESTC_RPG\game\contracts\Interiors\`、`Navigation\`、`Spatial\` 及 `Audio\` 源码为准；生成器与运行时服务的职责见 §6、§7、§10、§13。
 
 - `Waypoint.Id` 的取值是 "P00"–"P23"，以后从 P24 往后编（UI-NAV §6、ENG-ARCH §3）。
-- `SurfaceTag` 末尾依次是 `Boundary`（WLD-OUTSKIRTS的校界）与 `DoorClosed`（§4，关着的门、锁着的房门、封口），顺序与 ENG-ARCH §3、SYS-WALK §13 一致；`EntranceDecl` 的门中心与朝向是 init 属性（SYS-ATLAS要用）；自动门的 `DoorLeafKind`、`DoorLeafDecl`、`InteriorLayout.Doors`（init 属性）、`DoorPhase`、`DoorEvent`、`IInteriorDoors`（§4.1）和 `IInteriorProvider.Acoustics` 默认方法（SYS-AUDIO），名字与 ENG-ARCH §3 的 v1 草案一致，以 ENG-ARCH §3 为准。音频契约里的门户类型叫 `AcousticPortalKind`，与这里的 `PortalKind` 不同名，同一文件里同时 `using` 两个命名空间也不冲突。
+
 - 自动门的运行时门体由 WP-43 按 `DoorLeafDecl` 建，不出现在 `CollisionStorey()` 的返回值里；锁着的门扇是静态几何，碰撞照常由 `CollisionStorey()` 给出（`DoorClosed`）。
 - `ContentOutput` 里室内层的实例一律带 `IgnoreOcclusionCulling` 的标记，室内遮挡体单独成表（WP-33 管理显隐）。
 - 新增白名单着色器：**无**。门厅卡是 `toon_glass` 的图层，近处玻璃是 `toon_glass_near`，剖切是 `toon_cut`，房间灯是 `toon.gdshaderinc` 的灯照权重分支（ENG-PERF §1.4）。
 
-## 16 事实修正汇总表（给各区文档用）
+## 16 各区事实
 
-只收**结构**类：体量、层数、平面、入口、交通核、道路、水体。细节类（材质、颜色、陈设、标识、主题墙、店铺样子）一律写成"可参考，按画面需要处理"，不列为必改的事实。
-
-| 区与文档 | 修正（结构） |
-| --- | --- |
-| 核心 MAP-QSH-CORE、MAP-QSH-LIBRARY | 图书馆地上 5 层（OSM 4 层），正门在二楼，大台阶升约 5.1 m 通二楼门，门斗与闸机在二楼 |
-| 核心 MAP-QSH-CORE、MAP-QSH-LIBRARY | 中庭回廊 4 圈（2F–5F）；中庭只有一对 1F↔2F 八字楼梯；上层走四个转角塔里的 6 部封闭楼梯与 2 部电梯 |
-| 核心 MAP-QSH-CORE、MAP-QSH-LIBRARY | 平面是中庭 + 回廊 + 十字走廊 + 四扇区，A/B/C/D 分在东/北/西/南；核心约 84×83 m，外轮廓约 109×106 m；1F 层高约 5.1 m、其余 4.5 m |
-| 核心 MAP-QSH-CORE、MAP-QSH-LIBRARY | 附属：东北连接体一楼是 24 h 的品·悦吧（就是 OSM 的"品诺咖啡"）；北侧 4 层 L 形辅楼；北内院宁静苑是阅览楼北立面与北辅楼之间的封闭内院；二、三楼北侧有户外露台；没有可走的地下层 |
-| 核心 MAP-QSH-CORE | 博物馆就是原 168 报告厅，单层；中央高厅加外圈展廊和柱廊环；常设展厅约 2000 m²、临展约 300 m²、8 个单元 |
-| 南区 MAP-QSH-SOUTH | 主楼是办公楼（80,754 m²，办公室 500 余间）；B2 一层是 8 m 柱网的单层柱厅，没有中庭和天窗；B2 有四角 4 部封闭楼梯、后门厅 1 部楼梯和 2 部电梯；校史馆新馆在 B2 二楼（965 m²） |
-| 南区 MAP-QSH-SOUTH | 主楼有两座 5 层过街楼（A3–B1 `843471835`、B3–C1 `843471834`），底层是车行门洞，银杏大道南端从 B3–C1 过街楼底下穿出；主楼前台阶 OSM 记为楼体；B1、B2、B3 在 OSM 里互不连接（覆盖层补连接） |
-| 南区 MAP-QSH-SOUTH | 体育馆、游泳馆、看台坐在 1.24 万 m² 的大平台（OSM 0526）上，平台下是圆柱街廊，道路从下穿过；体育馆观众入口在平台二层；体育馆 22,015 m²、6000 座、高 26 m；游泳馆 10,138 m²；体育场 11,960 m² |
-| 南区 MAP-QSH-SOUTH | 立人楼 4 层（不是 4–5 层），35,438 m²；朝院子是单面外廊；A、B 区各 1 部电梯；A–B 之间 1、2、4 层相通、3 层不通；转角门洞上方是第 4 层的过街体 |
-| 南区 MAP-QSH-SOUTH | 宣邦楼约 6.6 万 m²；钟楼 66.65 m（OSM 记 8 层是错的）；2019 年效果图里正楼屋顶中部有采光顶（中厅的结构依据） |
-| 南区 MAP-QSH-SOUTH | OSM 的"未命名 9136"是一座公共卫生间 |
-| 西区 MAP-QSH-WEST | 四号 C 区 OSM 记 2 层，实为 5 层；五号科研楼按 5 层；研究院大楼 OSM 记 3 层，部件实为 4–7 层；托幼园按 3 层 |
-| 西区 MAP-QSH-WEST | 六号科研楼：校方"A/B 区"与 OSM 的 A/B/C 区不一一对应，基础与前沿研究院在 OSM C 区；C 区东门门厅有一座通到 2F 的木台阶；2F 有一条跨 B–C 连接体的室外连廊 |
-| 西区 MAP-QSH-WEST | 研究院大楼：工程训练中心在一楼；微波暗室在 127，从靠近西二门的一侧进 |
-| 北区 MAP-QSH-NORTH | 硕丰苑 32 栋（没有 29 栋）；博翰苑 9 栋 10 条记录；留学生 4 栋 5 条记录；2026-07 交付的博士公寓（5 栋 6 层）不在数据里 |
-| 北区 MAP-QSH-NORTH | 银杏苑 3 层（银桦、紫荆、芙蓉）、思学苑 3 层、春晖苑 2 层（OSM 分别记 2 层、缺、1 层）；上二楼靠带拱形罩棚的室外扶梯 |
-| 北区 MAP-QSH-NORTH | 商业街是拱形玻璃采光顶下的 3 层室内步行街：两侧店铺、二三层回廊、两座廊桥、两端敞口（不是露天街） |
-| 北区 MAP-QSH-NORTH | 学生活动中心约 12,200 m²、至少 3 层（OSM 记 2 层）；成电会堂 976 座；校医院门诊在 1–3 层、5 层手术室，约 2.3 万 m² |
-| 北区 MAP-QSH-NORTH | 本科宿舍：中廊，主楼梯在门厅旁，楼梯口有铁栅门；4 人间约 3.4 × 5.2 m，洗漱台和厕浴间在阳台一段 |
-| 中东 MAP-QSH-CENTER-EAST | "基础实验大楼"就是科 A（原一号科研楼），5 层（OSM 记 1 层是错的）；一号科研实验楼 = 科 B + 科 C；科 C 按 5 层 |
-| 中东 MAP-QSH-CENTER-EAST | 品学楼：A、B 区是"回"字，西侧两个转角门厅各配一个伸进内院的半圆楼梯厅，东侧是封闭疏散梯；门框横梁 1–2 层架空、3–4 层是连廊；A–C、B–C 两条 2–3 层连廊 |
-| 中东 MAP-QSH-CENTER-EAST | 品学楼门框前有一座多层叠水喷泉（MAP-QSH-CENTER-EAST §2.3） |
-| 中东 MAP-QSH-CENTER-EAST | 文科楼不是 6–8 层：约 15–16 层的塔楼，加 4–6 层圆角退台裙楼和一个钢网架玻璃顶中庭；状态是"建成、正在搬入" |
-| 中东 MAP-QSH-CENTER-EAST | 综合训练馆是钢网架筒拱的一层大空间，南北两端各一栋 2 层附楼；东区田径场没有看台 |
-| 外围（由 WLD-OUTSKIRTS 负责） | 东北紧贴科新南路、蓉昌高速 G4217 和互通匝道；绕城高速 G4202 主线在东南 220–440 m |
-
-**只作参考、按画面需要处理的细节**：图书馆回廊栏杆的木格栅、中厅地面条带、绿罩台灯、校训木匾的位置、闸机造型；主楼柱厅的主题墙与服务柜台；校史馆展陈；宣邦楼全部室内；体育馆座椅颜色；1–8 号楼外墙用什么颜色（由画面决定）；朝阳一楼翻新后的样子；宿舍窗帘颜色；商业街店招与外摆；训练馆场地分区的片数。
+各建筑的结构修正与事实以对应区文档（MAP-QSH-CORE、SOUTH、WEST、NORTH、CENTER-EAST、LIBRARY）为准。
 
 ## 17 无主体块的归属
 
@@ -988,38 +855,22 @@ public interface INavGraph
 
 无主体块一律不开放，只做外壳加窗卡；归属的包负责外观、窗卡选型和入口登记。
 
-## 18 工作包
+## 18 工作包目录与拆分
 
-| 包 | 交付 | 独占目录 | 规模 |
-| --- | --- | --- | --- |
-| **WP-51 室内生成器与壳体** | 51a：平面内核 `Campus.Gen.Interior`（矢量偏移与直骨架、楼型骨架、立面开间网格与窗位类型、交通核、分房、门、封口、校验，快照与模糊测试、平面图差异报告），与 WP-14 共定开间网格；通用提供者 `GenericInteriorProvider` 与楼型配置格式（§14）。51b：室内壳体部件（§7.5 A、E 组）；内容模块 `interior.shell`：关着的楼的简化室内、I0 兜底层、室内索引（入口的门中心、朝向、门外落点，§2.17）；窗卡与门厅卡的图层内容（与 WP-04 出图）；室内遮挡体网格；`InteriorLayout` 的公共构造（含 `Doors`：平面内核生成的门按楼型配置决定登记为会动的门 `DoorLeafDecl`，还是锁着，§4.1）；简化室内和平面内核生成的普通房间的通用声学声明（Room、Corridor、Stair，SYS-AUDIO） | `game/gen/interior`（51a `core/`，51b `shell/`） | 51a 约 3.5k，51b 约 2.5k |
-| **WP-52 室内家具与生活痕迹** | §7.5 的 F、G、H 组部件；12–15 类房间的布局模板（先做第一批用到的，其余按需补）；性格、槽位、状态掩码（§9）；房间灯照权重；扩展 WP-12 的室内设备接口 | `game/gen/interior-props` | 约 3–4k，加部件 |
-| WP-17 图书馆与博物馆室内 | §2.1、§2.2；MAP-QSH-LIBRARY的全部；看进去例外的 IS 层；`Acoustics()` 与室内档案 ID（SYS-AUDIO） | `game/gen/zones/library-interior`（博物馆在 `museum/` 子目录） | 约 2.5k |
-| WP-31a 南区精选室内 | §2.3、§2.4、§2.5、§2.15；主楼屋顶空廊与电梯两站的轿厢几何；宣邦楼钟楼钟室与灯笼环，钟室里一口静止的铜钟（静态几何，§3）；各处的 `Acoustics()` 与室内档案 ID | `game/gen/zones/showcase-interiors/south` | 约 2.5k |
-| WP-31b 西区与中东区精选室内 | §2.6、§2.7、§2.12、§2.13；各处的 `Acoustics()` 与室内档案 ID | `game/gen/zones/showcase-interiors/west-east` | 约 2k |
-| WP-31c 北区精选室内 | §2.8–§2.11、§2.14；学知一组团闸机开放的表现（闸机几何与碰撞归 WP-20，本包与它配合：开放态的翼门、绿箭头和入口登记，§4）；各处的 `Acoustics()` 与室内档案 ID | `game/gen/zones/showcase-interiors/north` | 约 2.5k |
-| WP-07 介质呈现与室内运行时 | 室内运行时 `InteriorDirector`：入口预取、软停信号、按层显示（IF/IS/隐藏）、看进去例外、简化室内与 I0 的显示、ENG-PERF §5 第 6 条、进出楼要做的事（§6.3，含阴影方向抬到 14° 与 `interior_light`）；自动门的状态机与门扇动画、`IInteriorDoors`（§4.1）；`IMediumState`（SYS-AUDIO）；通用室内与门厅套件归 WP-51，关着的门后不做实体门厅（§5.2） | `game/medium`（含 `medium/interior/`） | +1.4k |
-| WP-43 碰撞 | 开放楼的碰撞包（按层、按房间簇拆 body）；`SlopedWallCollider` 映射；`DoorClosed`；开放入口处楼体墙段开洞；开放区安全点；自动门的运行时门体（§4.1）；body 的 meta 加 `foot`，按室内提供者声明的房间代建声学 `Area3D`（SYS-AUDIO） | 不变 | +0.6k |
-| WP-02 | 室内包的加载与生成队列位置，室内包和碰撞包本机烘焙、进本机缓存的 `interior/`（SYS-MAPS §2.4，D-165）；缓存键 | 不变 | +0.2k |
-| WP-03 | 窗覆盖纹理 256×256；当前楼 4–6 盏重点灯的名额 | 不变 | 小 |
-| WP-04 | 门厅卡视差图层与窗卡数组的登记；`interior.json` 色名；灯照权重的着色器分支（并进 `toon.gdshaderinc`） | 不变 | +0.2k |
-| WP-10、11、12、13 | §7.5 的 B、C、D 组；入口部件（敞开门扇、地垫、开放牌）；自动门的门扇、闭门器与门吸（WP-10）；部件和碰撞体填 `Foot`，楼梯带 `StairSpec`（SYS-AUDIO） | 不变 | 部件 |
-| WP-14 | 改调平面内核取开间网格与窗位类型；关着的门扇与门厅卡图层；入口登记进覆盖层 | 不变 | +0.3k |
-| WP-33 | 室内遮挡体的显隐；进楼时隐藏本楼外包遮挡体 | 不变 | +0.2k |
-| WP-39 | 门口灯登记；房间灯通道；窗覆盖的写入接口（§6.3 的可选对齐经它写） | 不变 | +0.2k |
-| WP-42 | 登阶层定为必需；门口软停；开放楼内的落点；主楼电梯的关门换位（触发、门扇、平移与清插值缓冲；门扇开度写进通道、发 `ElevatorDoor` 事件）；`IWalkTelemetry`（SYS-AUDIO） | 不变 | +0.5k |
-| WP-44 | 导航图烘焙与桩图（§13）；可行走遮罩接开放入口；3 处登记高处的可达性检查；路线 R1–R14 数据 | 不变；另含 `pipeline/nav` | +1k |
-| WP-27 | G19（§19）；G8、G9、G15 的室内扩展；室内巡游机器人 | 不变 | +0.8k |
-| WP-36 | 新点位 P16–P23 与 `Entry = Door` | 不变 | 小 |
-| WP-35 | 提示文案"此处暂不开放"（UI-NAV §4.9） | 不变 | 小 |
-| WP-48 | 地图"可进入的室内"图层与室内门口传送，读室内索引（SYS-ATLAS） | 不变 | — |
-| WP-26 | 整点时宣邦楼钟室铜钟的钟锤一拍二轻敲（§3，与钟面指针同一套驱动） | 不变 | 小 |
-| WP-53 | 室内的脚步、门、电梯的声音，空间声学（房间与门户）、室内档案（SYS-AUDIO）；自动门的开关门声读 `IInteriorDoors` | 不变 | 见 SYS-AUDIO |
+交付范围、验收与包行以 ENG-WP 为准；本节只记录实现目录及本文件独有的 WP-51 子包拆分。
 
-- 子代理峰值约 7–9 个（51a、51b、52、07 的室内运行时，加 17、31a–c 中同时开工的 3–4 个）。合计约 1.9–2.4 万行 C#。
-- **交付顺序**：P0 金样选学知苑 1 栋的 1–2 层（走廊、4 人间、开水间、楼梯平台铁栅门），ART-FIDELITY 的 L0+ 达标，加三张时季截图；同期做平面内核矢量版、入口预取与软停、按层显示，以及楼梯与门的行走测试。I1：每区先做一处，让 R1–R5 穿过室内。I2：其余开放处、关门提示、门口光、简化室内。I3：最低配置调优、G19 集中测试全量、本机缓存体积与室内烘焙耗时。
+| 包 | 独占目录 | 拆分 |
+| --- | --- | --- |
+| WP-51a | `game/gen/interior/core/` | 平面内核 |
+| WP-51b | `game/gen/interior/shell/` | 室内壳体部件与 `interior.shell` 内容模块 |
+| WP-52 | `game/gen/interior-props` | 室内家具与生活痕迹 |
+| WP-17 | `game/gen/zones/library-interior`（博物馆在 `museum/` 子目录） | 图书馆与博物馆室内 |
+| WP-31a | `game/gen/zones/showcase-interiors/south` | 南区精选室内 |
+| WP-31b | `game/gen/zones/showcase-interiors/west-east` | 西区与中东区精选室内 |
+| WP-31c | `game/gen/zones/showcase-interiors/north` | 北区精选室内 |
+
+
 - **P0 必须验证的风险**：矢量平面无锯齿、隔墙不穿窗；楼梯、门、封口可走；以最大步速冲向开放入口 50 次软停触发 0 次；32 m/s 斜撞开放楼与关着的楼、竖直穿楼板不出空壳；最低配置（Arc 核显、Radeon 780M 级）上的楼内视角；室内壳一律用剖切变体的开销；室内太阳阴影的痤疮与缩第一级的效果；两台机器烘出的 `PlanHash` 一致。
-  - **进入室内时阴影方向的最低高度抬到 14°**（12–16° 之间看图定，§6.3）的 A/B 截图与窗外影子变短的可接受度；**自动门**（§4.1）在 2× 疾跑下 50 次冲门、门扇在观者到达前开过 75°、无穿模，回关时不把人关在门扇里，开关门声与门扇同步；室内棱柱光柱在 17:30 人眼高度的近镜淡入与屏幕覆盖（§8.3）。
 
 ## 19 验收：G19 路径与连通
 

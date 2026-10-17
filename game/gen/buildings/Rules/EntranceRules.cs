@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// Where a generic building opens its doors and how they meet the ground (ENG-TEAM §5: tunables in one place). A building
+/// Where a generic building opens its doors and how they meet the ground (WF-FLOW §4: tunables in one place). A building
 /// with open entrances in the interior index (EntranceDecl) opens a door at each anchor it can take, so that the door and
 /// the entrance data agree (WLD-INTERIORS §15, G18 ≤ 0.5 m); one without keeps the generic door in the middle of its
 /// longest facade. A door at the building's own floor gets the WP-11 landing and the connection down to the outside

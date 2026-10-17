@@ -4,7 +4,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// How the facade fills its openings (ENG-TEAM §5: tunables in one place). Detail follows the precision zone
+/// How the facade fills its openings (WF-FLOW §4: tunables in one place). Detail follows the precision zone
 /// (D-176): openings in K1 and K2 take the full WP-10 parts, K3 and beyond the simple window below. Section sizes,
 /// frame depth and leaf counts of the parts start from the PartCatalog defaults; these values only decide how a
 /// WP-14 opening maps onto them. Initial values; the main session sets the final ones at review.

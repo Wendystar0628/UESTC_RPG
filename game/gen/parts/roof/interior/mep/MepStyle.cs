@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Roof.Mep;
 
 /// <summary>
-/// Every tunable value of the interior equipment and sign parts (WLD-INTERIORS §7.5 group D) in one place (ENG-TEAM §5).
+/// Every tunable value of the interior equipment and sign parts (WLD-INTERIORS §7.5 group D) in one place (WF-FLOW §4).
 /// Sizes follow the real products (ART-MODELING §2: human-scale anchors are not enlarged); Opus review sets the finals.
 /// <para>All vertices carry the interior flag (shade from palette row 2, lit from row 3, WLD-INTERIORS §8.2) and the
 /// no-shadow flag (indoors only walls and slabs cast, WLD-INTERIORS §8.3). Wall- and ceiling-mounted parts are visual only;

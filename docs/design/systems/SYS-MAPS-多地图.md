@@ -215,18 +215,18 @@ game/data/
 
 | 步 | 名称 | 时长 | 做什么 |
 | --- | --- | --- | --- |
-| 1 | VeilIn | 0.5 s | 雾幕盖满，沿用开场和跳转的那一层（SYS-VIEW §3、UI-NAV §9），原因写 `VeilReason.MapTravel`（SYS-AUDIO）。取得输入占用 `ICameraRig.LockInput(InputLockReason.MapTravel)`（ENG-ARCH §3）；取消正在进行的跳转和已知目的地预取（UI-NAV §7.5）；小地图淡出（SYS-ATLAS）；存档服务暂停拍快照（不是安全时刻，SYS-SAVE）；声音的 World 组 0.5 s 压到 −40 dB（SYS-AUDIO） |
+| 1 | VeilIn | 0.5 s | 雾幕盖满，沿用开场和跳转的那一层（SYS-TITLE §1、UI-NAV §9），原因写 `VeilReason.MapTravel`（SYS-AUDIO）。取得输入占用 `ICameraRig.LockInput(InputLockReason.MapTravel)`（ENG-ARCH §3）；取消正在进行的跳转和已知目的地预取（UI-NAV §7.5）；小地图淡出（SYS-ATLAS）；存档服务暂停拍快照（不是安全时刻，SYS-SAVE）；声音的 World 组 0.5 s 压到 −40 dB（SYS-AUDIO） |
 | 2 | Snapshot | 1 帧 | 给存档的挂点：记下旧图的 `MapVisit`（最后位姿、观察模式、天气 epoch、离开时的世界时间）；`IWeatherProcess.Leave(旧图)` |
 | 3 | Unload | ≤ 0.5 s | 流式（`Stream`）不再发新请求，在途的照常完成后 `Dispose()`，挂载（`StreamMount`）不再挂本图的格子；本图所有实例 `FreeRid`，碰撞 body 出树，释放 L4、遮挡体和倒影代理；全图数据纹理交还各写入方；各 `IMapAware` 节点按 ID 顺序收到 `OnMapUnloading`（音频节点在这里丢掉本图的发声器、声景场、声学网格和房间，SYS-AUDIO）；带 `Map` 的 `[KernelNode]` 释放；`Context` 置空；最后 `GC.Collect()` 一次（雾幕里允许，期间 GC 延迟模式临时改回 Interactive，ENG-PERF §6） |
 | 4 | LoadData | ≤ 1 s | 首次进图时挂上 `boot_<地图>.pck`（启动集，§2.4）；内核读字节、工作线程解析新图数据、建世界模型（ENG-ARCH §2"纯 .NET 代码不碰文件路径"）；读本图的常驻数据（2 m 分类栅格、8 m 安全点网格，都在启动集里，§2.4）；世界模型建好地形评估器，地形高度此后按 `ITerrain.HeightAt` 求值（WLD-TERRAIN §9.4）；注册器按"通用 + 本图"重新筛选模块（§7）；`IWeatherProcess.Enter(新图)`，补算队列（§5） |
 | 5 | Mount | ≤ 1.5 s | 同步加载 L4 和遮挡体（ENG-PERF §5 第 1 条）；写全局参数 `map_rect`（§10）；各写入方重建全图数据纹理并重新设全局参数；实例化本图的 `[KernelNode]`；各 `IMapAware` 节点按 ID 顺序收到 `OnMapLoaded`（`IAtlasService` 换底图与标记，SYS-ATLAS；音频节点读本图的 `audio/` 和烘焙产物，SYS-AUDIO）；材质库按需重新分配材质 ID（风险 5）；按已知目的地预取出生点周围的 L0+–L2 各环和室内提供者，行走模式另加碰撞格 |
 | 6 | Warm | 同图 0；新图 ≤ 2 s | 只预热本图新出现的组合，等 SURFACE、DRAW、Canvas 三项管线编译计数连续 30 帧不再增长（ENG-PERF §2）；本图节点空跑 30 帧做 JIT 预热。G16 对每张图都成立 |
 | 7 | Spawn | ≤ 1.5 s | 设位姿（§6），按 WLD-OUTSKIRTS的可达空间合法化；行走模式等 `ICollisionWorld.Ready()`（SYS-WALK §14 第 5 条），出生点在开放室内时等这一层就绪（ENG-PERF §5 第 6 条，WLD-INTERIORS §6.4）；清相机插值缓冲，重判介质；`Current` 换成新图，`Rev` + 1 |
-| 8 | VeilOut | 2–3 s | 雾幕散开，同 SYS-VIEW §3 第 3 步；环境声 2–3 s 淡入（SYS-AUDIO）；跨图到达时显示一次到达标题，写图名（UI-NAV §4.8）。之后释放第 1 步取得的输入占用，`Done` 返回 `Arrived`，请求一次存档（`MapChanged`，SYS-SAVE）；`Cause` 为 `Boot`、`LoadSave` 时不请求 |
+| 8 | VeilOut | 2–3 s | 雾幕散开，同 SYS-TITLE §1 第 3 步；环境声 2–3 s 淡入（SYS-AUDIO）；跨图到达时显示一次到达标题，写图名（UI-NAV §4.8）。之后释放第 1 步取得的输入占用，`Done` 返回 `Arrived`，请求一次存档（`MapChanged`，SYS-SAVE）；`Cause` 为 `Boot`、`LoadSave` 时不请求 |
 
 - **热切图目标**：VeilIn 开始到 VeilOut 开始不超过 5 s（§19）；冷启动按 ENG-PERF §8 的目标。上表和这条目标按出生点周围已在本机缓存里计。
 - **起始点周围不在缓存里时**（D-165）：第 4 步挂上 `boot_<地图>.pck` 之后，第 5 步预取清单里没有缓存的格（出生点周围的 L0+–L2 各环、室内提供者，行走模式另加碰撞格），在雾幕下本机烘焙（ENG-PERF §5）；雾幕保持不透明，烘完、Spawn 等到就绪才散，不受上表时长限制。只要烘焙还有进展就一直等；预取清单里有键进入 `BakeState.Failed`，或连续 60 s 没有进展（ENG-PERF §5"损坏、校验失败与终态"），这次切换按 §4.3 的 Failed 处理。
-- **Boot**：窗口启动时就是雾色（SYS-VIEW §3），开始页时是扉页插画（SYS-TITLE），所以第 1–3 步跳过，从 LoadData 起；LoadData–Warm 都在扉页后面完成（SYS-TITLE的启动序列；首次运行时包括起始点周围的本机烘焙，进度行见 SYS-TITLE §1），VeilOut 由 `IAppFlow` 的转为实时代替。
+- **Boot**：窗口启动时就是雾色（SYS-TITLE §1），开始页时是扉页插画（SYS-TITLE），所以第 1–3 步跳过，从 LoadData 起；LoadData–Warm 都在扉页后面完成（SYS-TITLE的启动序列；首次运行时包括起始点周围的本机烘焙，进度行见 SYS-TITLE §1），VeilOut 由 `IAppFlow` 的转为实时代替。
 - **雾幕契约的两项增量**（SYS-TITLE的协调项，WP-01 的雾幕服务）：雾幕内容除了雾色，还可以是 SYS-TITLE的"扉页"；雾幕可以"保持不透明直到条件满足"，切图用它等 Warm、Spawn 完成，冷启动用它等开始页就绪。
 - **雾幕之下世界照常运行**：天空、天气、风都在走，只是看不见；全局节点不重建。
 
@@ -320,123 +320,7 @@ game/data/
 
 照 ENG-ARCH §3 的写法，只增不改。`MapId` 放在基础类型那一组（与 `FeatureId` 同处），SYS-ATLAS、SYS-SAVE引用同一个定义，不各自另定。
 
-```csharp
-// 基础类型（Campus.Contracts）增：
-public readonly record struct MapId(string Value);               // 小写字母、数字、连字符，≤ 32 字符；清水河是 "qingshuihe"
-public readonly record struct WaypointRef(MapId Map, string Id); // 跨图引用点位或出生点（平面地图、传送门、存档）
-
-// 多地图（WP-46）；命名空间与 SYS-ATLAS平面地图的契约分开
-namespace Campus.Contracts.Maps;
-
-public enum MapKind : byte { Outdoor, Interior, Instance }       // 现在只有 Outdoor；精选室内属于所在的图（§2.1）
-public enum MapTimeRule : byte { Shared, Fixed }                 // Fixed 预留，WP-34 现在只实现 Shared（§14）
-public sealed record GeoFrame(double OriginLon, double OriginLat, int Epsg,
-    Vector2 BoundaryMin, Vector2 BoundaryMax);                   // 从 campus.json 的 meta 读，不手写
-public sealed record MapRect(Vector2 Min, Vector2 Max);          // 全图数据纹理的 xz 范围，边长为 64 m 的整数倍（§10）
-public sealed record RoamLimits(                                 // 旁观活动范围（SYS-VIEW §2.3）；公式与前沿线见 WLD-OUTSKIRTS
-    float HeightFactor, float HeightStart, float MaxRadius,      // 0.9、30 m、3000 m（HeightStart 即 WLD-OUTSKIRTS的 HeightOffset）
-    float FloorY, float CeilY,                                   // −28 m、2000 m
-    float Buffer, float SoftFloorClearance,                      // 30 m、40 m（SoftFloorClearance 即 WLD-OUTSKIRTS的 RoofClearance）
-    float FallbackMargin)                                        // 没有外围数据的图：校界外扩 150 m（即 WLD-OUTSKIRTS的 Margin）
-{   // WLD-OUTSKIRTS的三项作为 init 属性追加（ENG-ARCH §3）
-    public float PushRate { get; init; } = 1.5f;                 // 越界推回速率 1/s（WLD-OUTSKIRTS的缓冲带与推回）
-    public float PushMax { get; init; } = 15f;                   // 推回上限 m/s
-    public float EdgeFogMax { get; init; } = 1.6f;               // 边缘雾朝外一侧的最大倍数
-}
-public sealed record MapTitle(Pose T0, string CloudLayout);      // 开始页的 T0 镜头与云卡布局（SYS-TITLE）
-public sealed record MapSpawn(string Id, Pose Fly, WaypointStand? Stand);   // 点位以外的出生点
-public sealed record MapWorldRules(
-    MapTimeRule Time,
-    WorldPreset Default,                                         // 清水河：秋 17:30 晴
-    LocalizedName DefaultName,                                   // "落金初灯"
-    bool QuietUntilDusk,                                         // 默认状态保持晴到本季黄昏带结束（SYS-WEATHER §6.6）
-    string WeatherProfile,                                       // game/data/weather/<剧本>/；清水河 "chengdu"
-    string SunProfile = "default",                               // 美术日月轨迹（SYS-TIME §2）
-    WorldPreset? Fixed = null)                                   // Time == Fixed 时进图钉住的状态（预留）
-{
-    public WorldPreset? NewGameStart { get; init; }              // 新游戏的起点预设（清水河：秋 17:05、晴，SYS-TITLE）；null 时取 Default
-}
-public sealed record MapEnvironment(string Sky, string Backdrop, IReadOnlyList<FeatureId> ReflectLakes)   // 列表顺序即湖号
-{
-    public string? Outskirts { get; init; }                      // "outskirts.json"；null 表示没有外围（WLD-OUTSKIRTS）
-}
-public sealed record MapPortal(string Id, Box3 Trigger, MapId Target, string TargetSpawn);              // 预留
-public sealed record MapDescriptor(
-    MapId Id, LocalizedName Name, MapKind Kind, int Version, uint Seed,
-    GeoFrame Geo, Vector2 Center,                                // Center：校界形心（§3）
-    Box3 Bounds,                                                 // 箱庭包围盒：截面线的包围盒（WLD-OUTSKIRTS）；没有外围时校界外接框外扩 FallbackMargin
-    MapRect DataRect, RoamLimits Roam,
-    TileKey TileMin, TileKey TileMax,
-    string DefaultSpawn, IReadOnlyList<MapSpawn> Spawns,
-    MapWorldRules World, MapEnvironment Env,
-    IReadOnlyDictionary<string, string> Cinematics,              // 角色 → 过场 ID：enterNew、enterNewShort、enterContinue、leave（SYS-TITLE）
-    IReadOnlyList<MapPortal> Portals)
-{
-    public MapTitle? Title { get; init; }                        // 开始页的 T0；null 时开始页用默认图的 T0（SYS-TITLE）
-}
-
-// 归属：类上不写 Map 时继承程序集的 MapScope；两者都没有 = 通用模块
-[AttributeUsage(AttributeTargets.Assembly)]
-public sealed class MapScopeAttribute(string map) : Attribute { public string Map { get; } = map; }
-// ContentModuleAttribute、InteriorProviderAttribute、KernelNodeAttribute 各增 public string Map { get; set; } = "";
-// BuildContext 增 public required MapDescriptor Map { get; init; }；WorldSeed 取 Map.Seed
-// OverlayFile 增可选的 MapId? Map，只用于自检；归属以文件所在目录为准
-
-public interface IMapContext                 // 纯数据；场景 RID 和物理空间留在 Godot 侧的 kernel/map
-{
-    MapDescriptor Descriptor { get; }
-    IWorldModel World { get; }               // 切图后作废，任何节点都不得跨图持有
-    string DataRoot { get; }                 // "res://data/maps/qingshuihe/"
-    string BakeRoot { get; }                 // 启动集 "res://bake/qingshuihe/boot/"；本机缓存 "user://cache/bake/qingshuihe/" 由 IBakeService 管
-}
-public enum MapTravelCause : byte { Boot, NewGame, LoadSave, Ui, Portal, Teleport, Test }
-public sealed record MapTravelRequest(MapId Target, string? Spawn = null, Pose? Pose = null,
-    ViewMode? Mode = null, MapTravelCause Cause = MapTravelCause.Ui);
-public enum MapStage : byte { VeilIn, Snapshot, Unload, LoadData, Mount, Warm, Spawn, VeilOut, Done }
-public enum MapTravelResult : byte { Arrived, Rejected, Failed }
-public interface IMapTransition
-{
-    MapId From { get; }
-    MapId To { get; }
-    MapTravelCause Cause { get; }
-    MapStage Stage { get; }
-    float Progress { get; }                  // 0–1，只给界面的等待灯用，不画进度条（UI-VISUAL）
-    Task<MapTravelResult> Done { get; }      // 主线程完成；不可取消
-}
-public interface IMapService                 // Kernel 服务（WP-46）
-{
-    long Rev { get; }                        // 每次 Spawn 完成 + 1
-    MapId Default { get; }                   // index.json 的默认图
-    IReadOnlyList<MapDescriptor> Maps { get; }
-    MapId Current { get; }
-    IMapContext? Context { get; }            // Unload 到 Mount 之间为 null
-    IMapTransition? Transition { get; }
-    IMapTransition Travel(MapTravelRequest r);   // 同图内移动交给 ICameraRig.Transit 和 IAtlasService（SYS-ATLAS）
-}
-public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用
-{
-    void OnMapUnloading(MapId from);         // 释放本图的实例、纹理内容和缓存；之后不得再读旧的 IWorldModel
-    void OnMapLoaded(IMapContext ctx);       // 读新图的数据，重建本图的状态
-}
-public interface IMapDataParticipant         // 生产本图数据的实例（如烘焙服务）在已注册的实例上可选实现，宿主按实例去重，不单独注册成服务
-{
-    Task Prepare(IMapContext ctx);           // 本图全部 [KernelNode] 入树之后、任何 OnMapLoaded 之前；生产方先备好，消费方才看到完整的一张图
-    void Unload(MapId from);                 // 全部 IMapAware.OnMapUnloading 的消费者释放旧图数据之后才调用
-}
-public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint WeatherEpoch, double LeftAtHours);
-// 存档只需记：MapId CurrentMap、各图的 MapVisit；段的格式由 SYS-SAVE定（按图的段名是 "map:<id>/…"）。
-// 当前图的那一条在保存时按此刻的位姿和模式写，与视角段一致；Travel(LoadSave) 不给 Pose 时按 §6 的优先级取它
-
-// 其他契约的增量：
-// IWeatherProcess 增 void Enter(MapId map, string profile, double worldHours);   // 恢复或新建本图的过程，补算到 worldHours
-//                    void Leave(MapId map, double worldHours);                   // 冻结在离开那一刻
-//                    （存档用的 Capture、Restore 由 SYS-SAVE加，ENG-ARCH §3 统一）
-// FramePriority 增 public const int Map = -1300;（17 步全表见 §9 与 ENG-ARCH §3）
-// IWorldControl.ResetDefault() 签名不变；语义是"回到本图默认状态"（§5）
-// ShaderGlobals 增 MapRect = "map_rect"
-// 雾幕（WP-01 的 IVeilService，契约在 ENG-ARCH §3）：切图用 VeilReason.MapTravel；内容可以是 SYS-TITLE的扉页（VeilContent.Frontispiece）；
-//   HoldUntil 保持不透明直到条件满足（§4.2）
-```
+> 契约类型与签名以 `game/contracts/Maps/`为准。
 
 ## 9 帧顺序：`FramePriority.Map = −1300`
 
@@ -574,35 +458,7 @@ public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint Weat
 
 ## 16 工作包与各包增量
 
-**WP-46 地图服务与多地图**：
-
-- 独占：`game/kernel/map`、`game/data/maps/index.json`、各图的 `map.json`（字段增改须经主代理批准）。
-- 交付：`IMapService`、`IMapContext`、`IMapTransition` 的实现；`index.json` 与 `map.json` 的加载和校验（派生 `geo`、`center`、`bounds`）；8 步切换状态机与规则（§4）；`IMapAware` 的分发；启动集 PCK 的挂载；`map_rect` 的写入；`--map`、`--spawn` 的生效；`maps` 存档段（`MapVisit`，SYS-SAVE）；`--gate=maptravel` 的引擎内驱动与 G2 的状态机测试；替换 WP-00 的桩。
-- 依赖：契约（WP-00）、WP-02 的卸载接口、WP-01 的雾幕钩子。合入顺序排在 WP-02 之后、WP-43 之前。
-- 规模约 1.0k 行（ENG-WP）；不占渲染额度，平时每帧约 0。
-
-**各包的增量**（ENG-WP 的各行同步）：
-
-- **WP-00**：契约增量（§8）、`MapScope` 特性及各区 csproj 的 `<AssemblyAttribute>`；注册器按图筛选；`IMapService` 的桩（ENG-ARCH §5）；ArchUnit 与 G4 正则的新规则；`ownership.json` 里登记 `game/data/maps/<id>/entities/`、`game/data/text/` 为 RPG 预留（ENG-ROADMAP §6 第 6 条），规则集目录 `game/data/rulesets/`（ENG-ROADMAP §6 第 1 条）。
-- **WP-01**：`--map`、`--spawn`、`--gate=maptravel` 的解析；`map_rect` 的名字常量和 `map_uv()`、`in_map()`；启动步骤走 `Travel(Boot)`（ENG-PERF §8）。
-- **WP-02**：缓存键加地图、本机缓存目录 `user://cache/bake/<地图>/` 按图、启动集 `boot_<地图>.pck`（`res://bake/<地图>/boot/`）、本机烘焙服务 `IBakeService`（D-165）；整图卸载（在途请求完成后 `Dispose()`、`FreeRid` 全部实例）；Mount 时的出生点预取。
-- **WP-08**：按地图根目录解析数据（`IMapContext.DataRoot`）；覆盖层只扫当前图的目录；管线加 `--map`。
-- **WP-15、WP-23、WP-24、WP-39、WP-45b**：全图纹理按 `map_rect` 采样、按图重建（`IMapAware`）；WP-24 的倒影湖读 `env.reflectLakes`。
-- **WP-22**：远景参数读 `backdrop.json`。**WP-40**：天空档案读 `sky.json`。
-- **WP-34**：全局时间线不随切图变；`ResetDefault()` 读本图默认状态；切图时调 `IWeatherProcess.Leave`、`Enter`。
-- **WP-26**：`incidents.json` 按图放（文件与 schema，SYS-MOTION §10、ENG-ROADMAP §6 第 5 条）；WP-39 的灯光表烘焙读它。
-- **WP-45a**：按图的天气过程、子流加 mapId、进图补算、剧本库 `weather/<剧本>/`。
-- **WP-36**：点位按图分文件；`WaypointRef`。
-- **WP-43**：碰撞格按图卸载；常驻栅格按图换。**WP-44**：可行走遮罩、安全点网格按图输出。
-- **WP-35**：按钮名取 `world.defaultName`；跨图到达标题写图名。
-- **WP-27**：`review.json`；把 `--gate=maptravel` 接进 G16；G5、G7、G8 按图跑。
-- WP-47 至 WP-53：
-  - **WP-47**（WLD-OUTSKIRTS）：`outskirts.json`、`overlay/outskirts.overlay.json` 按图放；外围程序集是通用模块，只读当前图的外围数据。
-  - **WP-48**（SYS-ATLAS）：`IAtlasService` 实现 `IMapAware`；数据放 `atlas/`，烘焙产物进本机缓存的 `map/`（§2.4）；目标标记在别的图时才调 `Travel(Cause = Teleport)`。
-  - **WP-49**（SYS-TITLE）：`map.json` 的 `title`、`cinematics`、`world.newGameStart` 的内容；扉页后面的 `Travel(Boot)`。
-  - **WP-50**（SYS-SAVE）：读档时先恢复世界段与天气段，再 `Travel(LoadSave)`；`maps` 段由 WP-46 交付（SYS-SAVE）。
-  - **WP-51**（WLD-INTERIORS）：`interiors.json` 的格式与 schema；室内包与碰撞包由本机烘焙，进本机缓存的 `interior/`（§2.4）。
-  - **WP-53**（SYS-AUDIO）：音频节点实现 `IMapAware`；本图数据 `audio/`、烘焙产物（声景场、声学网格）随启动集发（§2.4）；切图的压低与淡入（§4.2）。
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 17 验收
 

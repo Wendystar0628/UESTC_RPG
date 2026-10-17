@@ -225,78 +225,11 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 
 ## 7 各包的分工
 
-| 包 | 交付 |
-| --- | --- |
-| WP-32a | `IQualityService`、`QualityCatalog`、预设表 `game/data/quality-presets.json`、应用状态机、持久化、命令行、与自适应的合并 |
-| WP-32b | 首次分档（DXGI、UMA、测速；扉页后面做，SYS-TITLE §1.1）、自动调节（Title、Entering、Leaving 下冻结）、帧节奏、`step_rate`、画面测试、显存估算 |
-| WP-35 | 设置卡的"画面"页（§9，视觉按 UI-VISUAL §8.5） |
-| WP-01 | 解析新参数；预热覆盖所有可达设置的并集；雾幕服务开放"请求雾幕"钩子 |
-| WP-02 | 细节距离、模型 LOD 精度；分帧重写 visibility range；按预设的显存上限定 LRU 容量 |
-| WP-03 | 阴影质量、阴影距离、细小物件投影 |
-| WP-04 | 各向异性（着色器采样器提示） |
-| WP-05 | 抗锯齿、柔光质量、移轴、镜头光斑、光柱、暗角；描线线宽按内部分辨率换算 |
-| WP-23 | 近景几何叶、植被与草密度、草地范围 |
-| WP-24 | 倒影刷新 |
-| WP-45 | 粒子与降水密度（单项的唯一负责方；WP-38 只读，按同一密度设飘落池） |
-| WP-47 | 外围环境带：在 `[QualityResponsive]` 里登记"细节距离"为只读（负责方仍是 WP-02），O1、O2 随之选级，流畅档的 O2 换卡片环（WLD-OUTSKIRTS §11.4） |
-| WP-07 | 介质覆盖：开放室内的阴影第一级范围（§3），不是单项，不登记 `Owns` |
-| WP-27、WP-41 | 门禁按预设参数化、G17、"预设轮换"脚本 |
-
-区域包、部件包和行走相关的包没有新交付：碰撞、行走半径与画面设置无关。室内包（WP-17、WP-31a–c、WP-51、WP-52）也不新增单项：WLD-INTERIORS 提出的可选单项"室内痕迹密度"（只降次痕迹和杂物，主痕迹不降）暂不做，P0 实测室内预算后如需要，再在 `QualityKnob` 末尾追加，负责方 WP-52（§12）。
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 8 契约
 
-```csharp
-// game/contracts/Quality/（纯 .NET，只增不改；Campus.Gen.* 不得引用）
-namespace Campus.Contracts.Quality;
-
-public enum QualityPreset : byte { Smooth, Balanced, Fine, Ultra, Custom }       // 流畅、均衡、精致、极致、自定义
-public enum DeviceTier : byte { MinSpec, DgpuMid, DgpuHigh }                     // 最低配置、独显中、独显高（ENG-BUDGET §2、D-169）
-public enum ApplyClass : byte { Immediate, Amortized, UnderVeil, Restart }
-public enum KnobKind : byte { Floor, StyleDefault, Performance }                 // 底线 / 风格默认 / 性能
-
-public enum QualityKnob : byte
-{
-    DisplayMode, WindowSize, VSync, FrameCap, Vrr,
-    RenderScale, FsrSharpness, AntiAliasing, Anisotropy,
-    ShadowQuality, ShadowDistance, SmallCasters,
-    GlowQuality, TiltShift, LensFlare, LightShafts,
-    DetailScale, MeshLodThreshold,
-    GeometricLeaves, FoliageDensity, GrassRadius,
-    ReflectionInterval, ParticleDensity,
-    Adaptive, GraphicsApi, GpuIndex,
-    Vignette,                                    // 暗角（风格默认，§2），追加在末尾
-}
-
-public sealed record KnobSpec(QualityKnob Knob, string OwnerWp, ApplyClass Apply, KnobKind Kind,
-    float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
-    bool InAdaptiveLadder, string LabelKey);                                     // 界面按它自动生成控件
-
-public sealed record QualityProfile(QualityPreset Preset,
-    IReadOnlyDictionary<QualityKnob, float> Overrides, bool Adaptive, int Schema = 1);
-
-public interface IQualityService                    // Kernel 服务（WP-32）；界面与门禁的唯一入口
-{
-    DeviceTier Tier { get; }
-    QualityPreset Recommended { get; }
-    QualityProfile Requested { get; }
-    QualityView Effective { get; }                  // 实际生效值，读取无分配
-    IReadOnlyList<KnobSpec> Knobs { get; }          // 单项目录（QualityCatalog）：画面页按它生成控件
-    float PresetValue(QualityPreset p, QualityKnob k);   // 预设表 game/data/quality-presets.json 的取值
-    event Action<QualityChange>? Changed;           // 主线程，值变才发
-    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"雾幕""重启"生效标签与显存估计
-    Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin);
-    void ConfirmDisplay();                          // 15 s 确认
-}
-
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class QualityResponsiveAttribute : Attribute   // 标在 Godot 侧包的 [KernelNode] 上
-{
-    public QualityKnob[] Owns { get; init; } = [];   // 我负责落到引擎上；G5 核对每项恰有一个负责方
-    public QualityKnob[] Reads { get; init; } = [];  // 只读
-}
-// FramePriority 增：Quality = −1200（先于相机，同一帧里所有系统看到同一版本，ENG-ARCH §3）
-```
+> 契约类型与签名以 `game/contracts/Quality/`为准。
 
 `QualityView`、`QualityChange`、`ApplyPlan`、`ApplyResult`、`ApplyOrigin` 的完整定义写进 ENG-ARCH §3。任何包都不读 `graphics.cfg`，只通过 `IQualityService` 和 `IQualityAware.ApplyQuality()` 接收设置。着色器需要的值（细节系数、植被密度、草半径）合成一个全局参数 `quality`（vec4），写入方 WP-32，登记进 ENG-PERF §1.5。
 

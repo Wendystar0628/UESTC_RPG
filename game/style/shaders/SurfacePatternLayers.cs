@@ -12,7 +12,7 @@ public static class SurfacePatternLayers
     /// <summary>直缝方砖：缝在 U、V 两向都对齐。首个用户是图书馆前广场的 600×600 mm 花岗岩（WP-15 GroundPaving）。</summary>
     public const ushort StackBond = 1;
 
-    /// <summary>新层只在末尾追加；这里穷举，没有登记的层号直接拒绝（ENG-ONBOARD §3.2）。</summary>
+    /// <summary>新层只在末尾追加；这里穷举，没有登记的层号直接拒绝（WF-BUILD §2）。</summary>
     public static bool IsRegistered(ushort layer) => layer switch
     {
         StackBond => true,

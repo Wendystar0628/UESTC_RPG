@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.DesignPublic;
 
 /// <summary>
-/// Every tunable value of WP-29's public spaces in one place (ENG-TEAM §5). Sizes follow MAP-QSH-ADDITIONS §2.3
+/// Every tunable value of WP-29's public spaces in one place (WF-FLOW §4). Sizes follow MAP-QSH-ADDITIONS §2.3
 /// (转角口袋绿地: about 6 × 6 m of paving, a 4 m curved bench, one tree) and §7 (walk: the pad walkable, the bench
 /// jumpable). Where the pocket greens are, how big their pads are and which way their benches face is data, in
 /// public.overlay.json; this class holds the section of the bench and the pit, and the material families.

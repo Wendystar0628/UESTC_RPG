@@ -329,7 +329,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     /// <summary>
     /// 会换掉渲染管线变体的画质项（多重采样改渲染通道、软阴影档改特化常量）：这些一变，已画过的布局要重新预热。
-    /// 只影响距离、密度、后期或下次启动的项不作废证据。新项只在末尾追加；这里穷举，没登记的值直接报错（ENG-ONBOARD §3.2）。
+    /// 只影响距离、密度、后期或下次启动的项不作废证据。新项只在末尾追加；这里穷举，没登记的值直接报错（WF-BUILD §2）。
     /// </summary>
     private static bool AffectsPipelines(QualityKnob knob) => knob switch
     {
@@ -348,7 +348,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     private ShaderMaterial MaterialFor(ToonKind kind)
     {
-        // 新 Kind 只在末尾追加；这里穷举，没有登记的值直接报错（ENG-ONBOARD §3.2）。
+        // 新 Kind 只在末尾追加；这里穷举，没有登记的值直接报错（WF-BUILD §2）。
         // 卡通系（toon_*）由本类建；植被与荷（veg_*）的着色器归 WP-23、WP-38，经 IShaderMaterialSource 建。
         // 主线版：归属的包还没交付时退到同类的已有着色器，交付后自动接上，不改调用方。
         return kind switch

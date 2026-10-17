@@ -68,8 +68,8 @@ gates: [G1, G2, G7, G13, G16, G21]
 | 内容 | 处理 |
 | --- | --- |
 | 整套 Vite + React + three.js 代码：`src/`、`public/`、`index.html`、`package.json` 与锁文件、`vite.config.ts`、`playwright.config.ts`、网页端测试、`dist/`、`node_modules/` | 在 git 基线（标签 `baseline-map`）里保留；主分支上整体删除，不留 legacy 目录 |
-| 可移植的算法：轮廓工具、边与斜接、扫描线、开间分层、地标屋顶的主轴求法、八角采光顶、落点算法、球场标线拟合等 | 清单见 ENG-ARCH §1。各包用 `git show baseline-map:<原路径>` 读出原文，改写成 C#，放进自己的目录；旧栈的几何与数据测试一并改写成 `dotnet test` |
-| Python 数据管线、OSM 快照、`categories.json` 等管线输入 | 在 `pipeline/`（外围快照的迁移见 ENG-ARCH §1）；输出写到 `game/data/` |
+| 可移植的算法：轮廓工具、边与斜接、扫描线、开间分层、地标屋顶的主轴求法、八角采光顶、落点算法、球场标线拟合等 | 各包用 `git show baseline-map:<原路径>` 读出原文，改写成 C#，放进自己的目录；旧栈的几何与数据测试一并改写成 `dotnet test` |
+| Python 数据管线、OSM 快照、`categories.json` 等管线输入 | 在 `pipeline/`；输出写到 `game/data/`，管线迁移约定见 ENG-ARCH §1 |
 | `campus.json` | 迁到 `game/data/maps/qingshuihe/campus.json`，格式留用，只增不改 |
 | 照片纹理：`public/assets/materials-v1/`、`data/raw/materials/` 和两个旧贴图脚本 | 不迁移，只留在归档里（ART-STYLE §6.1） |
 | `lucide-react` 等前端依赖 | 随归档删除；新界面的图标自绘（UI-NAV §2、UI-VISUAL §6） |
@@ -180,7 +180,7 @@ gates: [G1, G2, G7, G13, G16, G21]
 - 地图：`--map=<id>`（默认 `qingshuihe`）、`--spawn=<id>`（SYS-MAPS §11）；
 - 开始页与过场：`--title=0|1`（门禁与截图默认 0）、`--cine=<id>`（SYS-TITLE）；
 - 存档：`--save=off|<n>`、`--slot=<n>`、`--load=<路径>`、`--save-dir=<路径>`、`--save-at=<帧号>`（SYS-SAVE §12）；
-- 声音：`--audio=on|off`、`--audio-seed=`、`--audio-limiter=`、`--audio-log=`、`--audio-probe`、`--amb-*`（SYS-AUDIO §19）；
+- 声音：`--audio=on|off`、`--audio-seed=`、`--audio-limiter=`、`--audio-log=`、`--audio-probe`、`--amb-*`（`game/contracts/Audio/AudioContracts.cs`）；
 - 门禁：`--gate=maptravel`（SYS-MAPS §13）、`--gate=acoustics`（SYS-AUDIO §22）。
 
 完整列表和截图默认值见 ENG-GATES §1，截图默认串是 `-- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --adaptive=0 --map=qingshuihe --title=0 --save=off --audio=off`。设定之后，镜头仍然是普通的漫游相机，这不算另一种观看模式。
@@ -236,36 +236,9 @@ gates: [G1, G2, G7, G13, G16, G21]
 - **第三人称**：开放范围、吊杆与避障照旧；吊杆的支点仍是物理眼位的插值，不跟车架。
 - **下车**：把下车那一刻的看向一次交回步行，不跳回上车前的视向；同时清掉骑行转向和相机、身体、车的插值历史。
 
-## 3 启动与开场（WP-01；流程以 SYS-TITLE §1 为准）
+## 3 启动与开场
 
-正常启动的开场是"扉页 → 开始页 → 进场过场"，流程以 SYS-TITLE §1 的启动序列为准（窗口雾色 → 约 1 s 内换成扉页 → 扉页后面做完地图加载、三维与二维预热、首次分档、读存档 → 1.2 s 交叉淡化成实时的开始页，全程没有进度条）。本节只规定四件事：引擎启动画面的设置、启动各项预热的去处、`--title=0` 的流程，以及失败处理。
-
-1. **引擎启动画面**：从窗口出现的第一帧起就是全屏雾色 #B8B6D6，不显示任何文字、进度条、图标，也不显示引擎的启动标志。
-   - `application/boot_splash/show_image = false`，`application/boot_splash/bg_color = #B8B6D6`；`rendering/environment/defaults/default_clear_color` 也设成同色（`project.godot`，WP-00 维护）。
-   - 主场景的第一帧起，由雾幕接管：雾幕层（layer 5）里的全屏 `ColorRect`，不透明（UI-NAV §9、SYS-TITLE §1.1）。启动画面和雾幕同色，交接时看不出来。正常启动时雾幕层在 0.3 s 内换上扉页静帧（SYS-TITLE §1.3）。
-2. **启动各项预热的去处**：都在扉页（`--title=0` 时是雾幕）后面做：
-
-   | 项 | 做法 |
-   | --- | --- |
-   | 加载常驻的 L4，加载并挂载初始位置附近的格子 | 开场就是一次 `IMapService.Travel(Boot)`：按 SYS-MAPS §4.2 的 LoadData、Mount、Warm，直到"加载、挂载、管线就绪"（ENG-PERF §5 第 2 条）；起始图 = `--map` > 最近存档的图 > 默认图（SYS-MAPS §4.4）。SYS-TITLE §1.1 第 2 步 |
-   | 预热管线 | 三维：白名单里的每个着色器变体各画一次，包括 §5.1 的剖切变体、降水用的 `precip.gdshader`（SYS-WEATHER §7）、云卡 `cine_cloud` 和外围环境（WLD-OUTSKIRTS），覆盖四个预设和所有单项取值能到达的组合的并集（SYS-GRAPHICS §3），直到 `PipelineCompilationsSurface`、`PipelineCompilationsDraw` 不再增长（SYS-TITLE §1.1 第 3 步）。二维：`ui_panel`、`ui_screen` 两个着色器 × 各绘制类型各画一次，大地图的卡片预建并隐藏（设置卡与画面页、存档页、开始页菜单按需创建、关闭即释放，不预建），界面代码路径空跑一遍，之后 `PipelineCompilationsCanvas` 不再增长（UI-VISUAL §11.9，SYS-TITLE §1.1 第 4 步） |
-   | 首次分档与推荐预设 | 按 SYS-GRAPHICS §5 在 2.5 s 内完成，结果写进 `user://graphics.cfg`；观者手动选过预设的，下次启动不覆盖。SYS-TITLE §1.1 第 5 步 |
-   | 天气种子 | 有可继续的存档时，种子和已生成的队列来自存档；新游戏时由 `ISaveService.NewGame` 取一次熵（`--weather-seed` 覆盖），并保持晴到秋季黄昏带结束（SYS-WEATHER §6.4、SYS-WEATHER §6.6，SYS-SAVE §5.4） |
-   | 读取 `settings.cfg`、`input.cfg`、`graphics.cfg` | 在 Boot 里读（UI-NAV §4.6、SYS-GRAPHICS §6），另加 `user://audio.cfg`（SYS-AUDIO）。读值时只接受基本类型，读之前先查文本里有没有 `Object(` 这类对象构造（SYS-SAVE §8） |
-   | 存档 | 拿 `user://saves/.lock`（`--save=off` 时不拿锁）；读三个存档位的 meta，挑出"继续"的那个（SYS-TITLE §1.1 第 1 步），再完整恢复成开始页 T0 要显示的世界（SYS-SAVE §5.1，SYS-TITLE §1.1 第 6 步）；空跑一次"序列化 + 压缩 + 哈希"，消掉第一次约 29 ms 的 JIT（SYS-SAVE §4.5，SYS-TITLE §1.1 第 7 步） |
-   | 声音 | 扉页或雾幕期间 Master 组在 −∞；"音频就绪"是扉页转为实时、雾幕淡出的条件之一（SYS-AUDIO §2.7） |
-
-3. **`--title=0`**（门禁、截图、基准的默认，ENG-GATES §1）：没有扉页和开始页。
-   - 窗口雾色 → 雾幕后面做完第 2 条表里的各项预热，世界状态和位姿取命令行；给了 `--slot` 或 `--load` 时取那份存档（SYS-SAVE §12）→ 全部就绪后，雾色在 2–3 秒内淡出，直接进入 Playing（SYS-TITLE §1.1、SYS-TITLE §7.1）。
-   - 透明度由 Tween 驱动；雾幕颜色每帧取当前地平线雾色，与跳转雾幕是同一种语言（UI-NAV §7.1）。
-   - 雾幕淡出时环境声从 −∞ 用 3 s 淡入（SYS-AUDIO §7.2）。
-4. **失败**（细则以 SYS-TITLE §1.1 为准）：
-   - 可恢复的错误（单次读取出错、写缓存被占用）在扉页后面静默重试并写日志，`--title=0` 时在雾色后面，不打扰观者。
-   - 出现终态（本机烘焙或 `Travel(Boot)` 失败、安装文件缺失或启动集与程序不配套、启动序列里未处理的异常），或某一步连续 60 s 没有任何进展（只按进展判卡死，不按总时长；首次运行的本机烘焙只要进度在走就一直等），就停止等待。
-   - 正常启动时转到启动失败页：不依赖三维世界，雾幕层保持雾色或扉页静帧，界面层一张卡，三个按钮 [重试] [复制错误信息] [退出]，默认焦点在"重试"。`--title=0` 时不出失败页，写日志后以非零退出码结束。
-5. **之后**：
-   - 正常启动时，扉页转为实时的那一刻进入开始页（Title）；开始页的视觉见 UI-VISUAL §8.6，菜单与 T0 见 SYS-TITLE §2。首次进入的一行引导在新游戏交还控制之后出现（§2.6）。
-   - G16 的计数基线：正常启动时是"标题页转为实时"那一刻（SYS-TITLE §1.1 第 8 步）；`--title=0` 时仍是雾幕淡出那一刻。此后三项管线编译计数都不得再增长（ENG-GATES §2）。
+启动与开场流程以 [SYS-TITLE §1](SYS-TITLE-开始页与进入过场.md) 为准。
 
 ## 4 环境痕迹与平面地图的分工
 

@@ -243,33 +243,12 @@ gates: [G2, G5, G6, G8, G15]
 6. **噪声**：v1 不加。增强阶段若要有机感（§10.4），只用整数哈希值噪声加三次 Hermite 插值，波长 ≥ 16 m、幅度 ≤ 0.15 m，只在草坪类区域、不进铺装走廊。
 7. **门禁**：同一输入求两遍、在两台机器上烘焙，比较每格 `FillTile` 的哈希（G6 的 `--bake-verify`）；每条格边分别从两侧格算一遍，整数逐位一致（G2 单元测试）。
 
-### 3.7 读取接口
+### 3.7 读取接口与源码
 
-契约草案如下；接口名、签名与放置位置以 Astra 落地的 `game/contracts/` 源码为准（contract-WP-08-地形求值与覆盖层），定稿后写进 ENG-ARCH §3 的世界模型块。
+接口与数据类型以 `E:\Project\UESTC_RPG\game\contracts\Foundation\Terrain.cs`、`TerrainOperations.cs` 为准。
 
-```csharp
-// 世界模型（WP-08 实现）；gen 程序集只读。平地桩：HeightAt 恒 0、IsFlat 恒 true、PadY 恒 0、FillTile 全 0
-public interface ITerrain                                         // IWorldModel.Terrain
-{
-    bool IsFlat(TileKey tile);                                    // 本格（含格边）上 H 恒为 0：走平地快路径
-    float HeightAt(float x, float z);                             // 解析值；在 1 m 格点上与 FillTile 的厘米值相差 ≤ 0.5 cm
-    void FillTile(TileKey tile, int level, Span<short> cm);       // 65×65 个厘米值；level 0–3 对应 1/2/4/8 m 格距；level 4 忽略 tile，填全图 81×81（约 32 m）
-    float PadY(FeatureId feature);                                // 楼或广场的垫层标高
-    float? WaterY(FeatureId water);                               // 水体常水位；不是水体返回 null
-    TerrainFacts FactsAt(float x, float z);                       // 坡度、地形类别、到冠线与脚线的有符号距离
-}
-public enum TerrainClass : byte { Flat, Slope, Transition }       // 平面类、坡面类、墙下过渡带（§8.2）；只在末尾追加
-public readonly record struct TerrainFacts(float Grade, TerrainClass Class, float CrestDist, float ToeDist);   // Grade = 坡度（升高 / 水平距离）
-public sealed record TerrainOverlayFile(ZoneId Zone, WpId Owner, IReadOnlyList<TerrainOp> Ops)
-{
-    public MapId? Map { get; init; }                              // 只用于自检；归属以文件所在目录为准
-}
-public abstract record TerrainOp(string Id, string Reason, int Priority);   // "op" 判别：platform、mound、basin、slope、terrace、channel、lake、pad、corridor
-// 常量：HeightFieldCollider.HeightsCm 的洞哨兵 short.MinValue（映射为 NaN，§7.3）；地面格量化范围 [−5, +10] m（§9.3）
-// IWorldModel 增：ITerrain Terrain { get; }；ISpatialIndex.GroundY(x, z) 取 Terrain.HeightAt(x, z)，SupportY 在地面层也取它
-```
 
-- 运行时直接调 `HeightAt`：评估器是纯函数，操作表只有几十 KB，随世界模型在 LoadData 时建好；各文档所说"常驻的地形高度"就是它，不另烘低精度高度表（§9.4；待 Astra 在 contract-WP-08-地形求值与覆盖层 确认）。
+- 运行时直接调 `HeightAt`：评估器是纯函数，操作表只有几十 KB，随世界模型在 LoadData 时建好；各文档所说"常驻的地形高度"就是它，不另烘低精度高度表（§9.4）。
 - `FactsAt` 给布点器、`WalkClassAt`、着色属性和安全点用；不自己从高度差分算坡度。
 
 ### 3.8 校验与门禁

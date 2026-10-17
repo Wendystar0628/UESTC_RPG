@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.DesignBoundary;
 
 /// <summary>
-/// Every tunable value of the campus boundary and its gates in one place, for review (ENG-TEAM §0.1): materials as colour
+/// Every tunable value of the campus boundary and its gates in one place, for review (WF-FLOW §4): materials as colour
 /// names, the gate table, the fence and the gate dimensions. Coordinates are world (x, z) in metres from campus.json. Gate
 /// frames come from the data: origin where the gate road's centreline crosses the boundary ring, local X along the ring
 /// toward the guard-house side, local +Z out of the campus. Values marked "初值" await the main session's call. The ring

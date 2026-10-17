@@ -1,7 +1,7 @@
 namespace Campus.Systems.Sky;
 
 /// <summary>
-/// C#-side tunables of the sky, kept in one place for review (ENG-TEAM §5). Shader-side tunables are the
+/// C#-side tunables of the sky, kept in one place for review (WF-FLOW §4). Shader-side tunables are the
 /// constant block at the top of game/style/shaders/sky.gdshader; map-dependent values live in the map's sky.json.
 /// </summary>
 public static class SkyTuning

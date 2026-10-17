@@ -243,7 +243,7 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
   - **外围**（WLD-OUTSKIRTS §4.5）：O0 在 `map_rect` 以内，读地面遮罩 2，有湿面、积水和灯的竖条倒影；O1、O2 不论是否落在 `map_rect` 内（东西两侧的 O1 有一部分在范围内），都按外围的顶点标志不读地面遮罩 2，只做湿润变暗和掠射天光带，不做积水。
   - **开放室内**（WLD-INTERIORS）：室内无雨；开放入口门口的地垫雨天变深：地垫多在檐下，它的湿润不乘建筑遮蔽，只乘湿润量，算一条雨天的生活痕迹；进门以后地面是干的。
   - **CPU 侧的同一判定**（SYS-AUDIO）：WP-45b 把湿润与积水的公共函数开放给 `IGroundCover`（WP-38 实现），C# 一份、着色器一份，同一套阈值；观者的溅水声和脚下的积水涟漪用同一个判定，不会出现"有涟漪没水声"（SYS-WALK §1）。G2 比对两边在抽样点上的结果。
-  - **湿痕只随天气**：建筑立面和地面都不做旧（D-174、ART-RENOVATION），上面只有天气湿痕和季节落物（落叶、花瓣、积雪）；湿润变暗和积水在雨停后按湿润衰减干净，不留水渍、雨痕或流挂。
+  - **湿痕只随天气**：建筑立面和地面遵守 D-174（ART-FIDELITY §3.5），上面只有天气湿痕和季节落物（落叶、花瓣、积雪）；湿润变暗和积水在雨停后按湿润衰减干净，不留水渍、雨痕或流挂。
 - **雾**：共用雾函数的签名不变，天气只修正它的输入；天气雾只作用于室外，介质呈现的混合度会把它换成室内、地下、水下的值（SYS-VIEW §5）。
 - **风**：风量乘 (1 + 1.2 × 风暴度)，另加湍流；雨丝倾斜、雪的横漂、云速都读同一个风场（SYS-MOTION §3）。风暴时银杏摆角放到 4°。
 
@@ -254,40 +254,8 @@ gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
 - **天气向量**（每帧插值）：云量、云型、积雨云量、阴度、降水量、降水类型（雨 → 雪）、湿润、积水、雾密度倍率、贴地雾、风暴度、新雪（0–1 的累积量，积雪 = max(季节基线, 天气累积)，WLD-VEGETATION §9.5）、彩虹、闪光。
 - **全局着色器参数**（登记进 ENG-PERF §1.5）：`weather_a`（云量、阴度、降水量、降水类型）、`weather_b`（湿润、积水、风暴、彩虹）、`weather_fog`（雾密度倍率、贴地雾顶高、贴地雾密度、远雨幕）、`cloud`（漂移、云型、积雨云量）、`lightning`（闪光、方位、仰角、种子）、`snow_fx`（新雪亮度、冠雪、融雪湿）、`overcast_dir`（天光方向）。
 - **全局纹理**：`cloud_noise`（512² RGBA8，可平铺）、`precip_occ`（`Image.Format.Rh`，2 m/px，约 3.3 MB）、`refl_lamps`（16×2 RGBAF）、地面遮罩 2。
-- **契约增量**（ENG-ARCH §3，命名以它为准）：
+- **契约增量**以 `game/contracts/World/WorldContracts.cs` 与 `game/contracts/Audio/AudioVoiceContracts.cs` 为准；天气过程按图进出并由存档段捕获/恢复，`WeatherProcessState` 的字段仍由 WP-45a 在冻结前确定。
 
-```csharp
-public enum WeatherKind : byte { Clear, FewClouds, Cloudy, Overcast, Fog, LightRain, Rain, Thunderstorm, AfterRain, Snow, AfterSnow }
-public enum WeatherMode : byte { Auto, Manual }
-public readonly record struct WeatherSel(WeatherMode Mode, WeatherKind Kind, float Intensity);
-public readonly record struct WeatherVec(float Cloud, float CloudType, float Cb, float Overcast, float Precip, float PrecipKind,
-    float Wet, float Puddle, float Fog, float GroundFog, float Storm, float SnowAdd, float Rainbow, float Lightning);
-public readonly record struct WeatherSpan(double FromHours, double ToHours, WeatherKind Kind, float Intensity);
-public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weather = null, float? Intensity = null);
-
-// IWorldState 增：double WorldHours（单调递增）、WeatherSel Weather、WeatherVec WeatherNow、
-//                IReadOnlyList<WeatherSpan> WeatherAhead（前瞻 24 h，供预报）、uint WeatherSeed、bool IsNative(WeatherKind)
-//   WeatherSeed 是本存档的天气基础种子（§6.4、SYS-SAVE §5.4）；WeatherNow、WeatherAhead 都是当前图的
-// IWorldControl 增：SetWeather(WeatherKind, float? intensity)、SetWeatherIntensity(float)、SetWeatherAuto()、
-//                  Apply(WorldPreset)、Advance(double hours)
-// WorldTransition 是位标志 [Flags] { None = 0, Time = 1, Season = 2, Weather = 4 }
-// WaypointRecommend 增 WeatherKind? Weather
-
-// 多地图与存档：
-// IWeatherProcess 增 void Enter(MapId map, string profile, double worldHours);   // 恢复或新建本图的过程，补算到 worldHours（SYS-MAPS §8）
-//                    void Leave(MapId map, double worldHours);                   // 冻结在离开那一刻
-// 子流 StableHash(种子, mapId, epoch, 片段号, 尝试号, 用途)（§6.4）
-// IWeatherProcess 增 WeatherProcessState Capture(MapId map);               // 存档：一张图的天气过程的落定值，过渡中取终点（SYS-SAVE §4.2）
-//                    void Restore(MapId map, WeatherProcessState s);         // 读档：在遮挡下直接落到存档的状态，不做过渡、不调 Reset
-//   WeatherProcessState 的字段（图、epoch、片段号、选择、队列、钉住窗口、保持晴的期限、湿润与积水余量、离开时的世界时间）
-//   由 WP-45a 在这一组冻结前定（D-134），以 ENG-ARCH §3 为准。weather、map:<id>/weather 两个存档段（SYS-SAVE §2）是 WP-45a 的两个 ISaveSection<T> 小类，
-//   各自的 Capture / Restore 调上面这两个方法；G20 的续跑等价测试也经它们比对天气状态。
-//   Reset 只在新游戏和命令行新开时调用
-// 闪光事件（SYS-AUDIO §19，WP-40 实现）：
-// public readonly record struct LightningFlash(double RealSeconds, float AzDeg, float ElDeg, float DistanceKm,
-//     int Pulses, float Peak, bool Visible);           // Visible = false：减少动态效果时只发事件、不画
-// public interface ILightningFeed { event Action<LightningFlash>? Flash; }
-```
 
 - **存档里的天气**（SYS-SAVE §2、SYS-SAVE §5.4）：
 
@@ -326,12 +294,7 @@ public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weath
 
 ## 10 工作包
 
-- **WP-45 天气系统**：
-  - 45a 过程与剧本：`game/systems/weather`（规则、模板、前向过程、过渡、预报读数、lint 与统计测试）、`game/data/weather/chengdu/`；按图的前向过程与 `Enter`、`Leave`（SYS-MAPS §5）；`IWeatherProcess.Capture`、`Restore` 与存档段 `weather`、`map:<id>/weather` 的两个小类（SYS-SAVE §2）；太阳雨走法的抽取；
-  - 45b 降水与湿润：降水池、`precip.gdshader`（含太阳雨着色）、湿润与积水的公共函数（同时开放给 `IGroundCover`）、`precip_occ` 的烘焙（覆盖 `map_rect`），以及地面遮罩 2 的 R、G 通道（这张纹理由 WP-15 汇总、登记为 `ground_mask2`，B 通道由 WP-23 写，ENG-PERF §1.5；与 WP-02 配合烘焙）。远雷归音频包 WP-53b；45b 不碰音频，只保证 `WeatherNow`、`precip_occ` 与檐滴点表在 CPU 侧可读（SYS-AUDIO）。
-  - 规模约 1.6k 行（ENG-WP §2）；三角形约为 0，绘制调用不超过 16 次（降水池、溅落各 1 次，檐滴每个 L0 格一个小 MultiMesh），GPU 份额见 ENG-BUDGET §8 的天气一行，从余量里拨。
-- **其余各包的增量**：WP-34 契约与世界时间；WP-01 命令行；WP-03 天气阴影乘子与投影物 mask；WP-04 湿润挂点与天气色名；WP-05 远雨幕与闪光帧描线；WP-15 地面遮罩 2；WP-24 雨点环、阴天水色、共用灯条表；WP-26 风的天气系数与偶发事件的天气版本；WP-37 天气修正量；WP-38 雪改读天气、雨天萤火虫减量；WP-39 h_eff 与湿路灯影；WP-40 云量、阴天云盖、远处雨幕、闪电、彩虹（彩虹半径按 §5 随太阳高度变化）、`ILightningFeed`；WP-35 天气格、气象站填图符号图标（UI-VISUAL §6.2）、Y 键、预报行；WP-36 推荐状态的天气字段与钉住；WP-41 矩阵的天气维与录像；WP-27 截图机与 G14；WP-25 雨天动物与晾晒。
-- **多地图、外围、存档与声音的增量**：WP-46 地图服务在切图时调 `IWeatherProcess.Leave`、`Enter`（SYS-MAPS）；WP-47 外围的湿润响应与雾天淡出，只读天气类全局参数（WLD-OUTSKIRTS）；WP-50 存档内核登记两个天气段（SYS-SAVE）；WP-53b 远雷与全部天气声，53d 观者脚下的湿、积水与雪（SYS-AUDIO）；WP-38 实现 `IGroundCover`；WP-01 命令行 `--sunshower`，以及 `--weather-seed` 只作用于新游戏（§6.4）。
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 12 待验证（P0）
 

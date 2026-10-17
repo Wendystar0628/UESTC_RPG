@@ -4,7 +4,7 @@ using Campus.Gen.Zones.Core.Framework;
 namespace Campus.Gen.Zones.Core;
 
 /// <summary>
-/// Every tunable value of WP-16 lives here (ENG-TEAM §0.1: one place for the main session to review). Sizes are metres,
+/// Every tunable value of WP-16 lives here (WF-FLOW §4: one place for the main session to review). Sizes are metres,
 /// angles degrees. Values marked "review" are mainline initial values awaiting the main session's call; the rest come
 /// from the cited documents. Colours are palette names only (ART-STYLE §8.5).
 /// </summary>

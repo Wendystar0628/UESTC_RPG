@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Zones.CenterEast;
 
 /// <summary>
-/// Every tunable value of the center-east zone in one place, for review (ENG-TEAM §0.1): materials as colour names, and
+/// Every tunable value of the center-east zone in one place, for review (WF-FLOW §4): materials as colour names, and
 /// the dimensions of each site. Coordinates are world (x, z) in metres from the OSM footprints in campus.json; local frames
 /// are described per block. Values marked "初值" are starting values awaiting the main session's call. 21b–21d add their
 /// own nested classes after <see cref="Pinxue"/>.

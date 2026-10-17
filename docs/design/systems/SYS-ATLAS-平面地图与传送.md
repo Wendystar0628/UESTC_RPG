@@ -536,7 +536,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 | **飞过去** | 传送卡的【飞过去】、F；数字键 1–9 / 0 和 `[` `]` | UI-NAV §7.1 的三种方式：滑移、弧线、雾幕弧线，按距离自动选 | 保留地理感，看沿途。连续飞行时声景随位置连续变化，飞行风按速度变（SYS-AUDIO） |
 
 - 两者共用同一套机制：`ICameraRig.Transit`、雾幕层（WP-01 的 CanvasLayer 5，UI-NAV §9）、预取与到达保证（UI-NAV §7.5）、到达标题（UI-NAV §4.8）。
-- 传送不是"淡出、加载、淡入"那种加载画面：雾幕的颜色取当前地平线的雾色，与开场、跳转是同一种语言（SYS-VIEW §3、UI-NAV §7.1）；没有进度条，也没有等待文字。
+- 传送不是"淡出、加载、淡入"那种加载画面：雾幕的颜色取当前地平线的雾色，与开场、跳转是同一种语言（SYS-TITLE §1、UI-NAV §7.1）；没有进度条，也没有等待文字。
 - 跨地图的传送（以后有多张图时）走 SYS-MAPS的雾幕加载，不在本节范围内：同图传送一律走 `ICameraRig.Transit`；只有目标标记在别的图上时，`IAtlasService` 才调 `IMapService.Travel`（`MapTravelCause.Teleport`）。
 
 ### 7.2 传送的时序
@@ -666,7 +666,7 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 - 目录用 96×54（按 2 倍即 192×108 导入），常驻，约 80 张（锚点 13、观景点 24、室内门口约 28、路线起点 14），约 1.6 MB。
 - 传送卡用 336×189（按 2 倍导入），打开卡片时用 `ResourceLoader.LoadThreadedRequest()` 后台读；大地图关闭 30 s 后释放。读取期间卡片先显示列表小图放大后的样子，不显示等待提示。
 
-**预热**（UI-VISUAL、SYS-VIEW §3）：
+**预热**（UI-VISUAL、SYS-TITLE §1）：
 
 - `map_base` 的两种 `mode` 和两套主题，在开场雾幕或扉页期间各画一次（SYS-TITLE启动序列的二维预热）。
 - 地图纹理的 `ImageTexture` 在雾幕里创建。
@@ -687,89 +687,9 @@ WP-13、WP-27、WP-35、WP-36、WP-39、WP-44、WP-01、WP-04、WP-06、WP-51、
 
 - 漫游态的界面开销只有小地图，与 ENG-BUDGET的界面一行一致。
 
-## 11 C# 契约（照 ENG-ARCH §3 的写法；纯 .NET，只增不改）
+## 11 C# 契约
 
-```csharp
-// game/contracts/Atlas/（Campus.Contracts 程序集；Campus.Gen.* 不得引用 IAtlasService，ENG-ARCH §2 的 ArchUnitNET 规则）
-// MapId 见 SYS-MAPS；Pose、EntryPath、WaypointStand、LocalizedName、FeatureId、ITransitHandle 见 ENG-ARCH §3
-namespace Campus.Contracts.Atlas;
-
-public readonly record struct MarkerId(string Value);
-    // 本图内唯一："A03"（锚点）、"P05"（观景点）、"door:<入口 ID>"（可进入的室内）、"route:R1"、
-    // "lm:<FeatureId>"（地标）、"fac:<FeatureId>"（设施）、"pin:<整数>"（自定义，例如 "pin:7"）
-public enum MarkerKind : byte { Anchor, Viewpoint, Interior, Route, Landmark, Facility, Custom, Quest /* RPG 预留 */ }
-public enum AnchorForm : byte { Kiosk, Post }                     // 导览亭、导览桩
-public enum UnlockState : byte { Hidden, Known, Unlocked }
-public enum TravelStyle : byte { Teleport, Fly }
-public enum TravelRefusal : byte { None, NotTravelable, Locked, Here, Busy, Unavailable }
-    // Unavailable：过场、开始页、换图雾幕期间
-public enum PinShape : byte { Diamond, Circle, Square, Triangle, Star, Flag }
-
-public sealed record TeleportSpec(Pose Fly, WaypointStand? Stand, EntryPath? Entry = null);   // Stand 为 null：仅旁观
-
-public sealed record AtlasMarker(
-    MarkerId Id, MarkerKind Kind, LocalizedName Name,
-    Vector2 At,                         // 地图坐标 (x, z)，单位 m
-    string Icon,                        // UI-VISUAL图标体系里的名字
-    int Priority, byte MinZoomBand,     // 缩放档 0–4（§4.2）
-    string? Region,                     // 区域 ID（atlas/labels.json）
-    TeleportSpec? Teleport = null,      // 只有 Anchor、Viewpoint、Interior、Route 可以非空
-    FeatureId? Feature = null,          // 锚点：design:anchor:Axx；地标、设施：实体；室内：楼
-    string? WaypointId = null,          // Viewpoint：引用 waypoints.json，不复制位姿
-    string? RouteId = null,
-    AnchorForm? Form = null);
-
-public sealed record AtlasRegion(string Id, LocalizedName Name, string? Parent);   // 大区的 Parent 为 null
-public sealed record AtlasLayer(string Id, LocalizedName Name, float YMin, float YMax);   // 预留：楼层图
-
-public sealed record CustomPin(int Id, Vector2 At, PinShape Shape, string? Note = null);
-    // Id：本存档这张图内递增的整数，从 1 开始，不复用；不用 Guid.NewGuid（G4 禁用，SYS-SAVE）。Note 观光期不开放
-
-public interface IUnlockPolicy
-{
-    string Id { get; }                                            // "all-unlocked"、"proximity"
-    UnlockState Initial(AtlasMarker m);
-    UnlockState OnVisit(AtlasMarker m, UnlockState now);          // 进入判定圈时调用
-}
-
-public interface IAtlasService                                    // Kernel 服务（WP-48c）
-{
-    long Rev { get; }
-    MapId Map { get; }
-    IReadOnlyList<AtlasMarker> Markers { get; }                   // 含运行时生成的室内门口与自定义标记
-    IReadOnlyList<AtlasRegion> Regions { get; }
-    event Action? Changed;                                        // 主线程；换图、标记增删、解锁或追踪变化时发
-    AtlasMarker? Find(MarkerId id);
-    UnlockState StateOf(MarkerId id);
-    string? RegionAt(float x, float z);                           // 8 m 区域栅格；返回地点 ID
-    bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why);
-    void Prefetch(MarkerId id);                                   // 同一时间只保留一个目的地（UI-NAV §7.5）
-    ITransitHandle? Travel(MarkerId id, TravelStyle style);       // 同图只调 ICameraRig.Transit；目标在别的图时才调 IMapService.Travel（§7.1）；拒绝时返回 null
-    MarkerId? Tracked { get; }
-    void Track(MarkerId? id);                                     // null 取消；同一时间只有一个
-    IReadOnlyList<CustomPin> Pins { get; }                        // 当前图
-    CustomPin? AddPin(Vector2 at, PinShape shape);                // 满 50 返回 null；新 ID = NextPinId，随后 NextPinId 加 1
-    void MovePin(int id, Vector2 at);
-    void SetPinShape(int id, PinShape shape);
-    void RemovePin(int id);
-    string PolicyId { get; }
-}
-
-// ENG-ARCH §3 的相机契约增量（只增不改）：
-public enum TransitPreference : byte { Auto, Teleport }          // Auto：按距离选滑移、弧线或雾幕弧线（UI-NAV §7.1）
-// TransitOptions 增加：public TransitPreference Prefer { get; init; } = TransitPreference.Auto;
-// TransitKind 增加：Teleport
-
-// 存档段（SYS-SAVE的 ISaveSection；段 ID 按图展开为 "map:<id>/atlas"）
-public sealed record AtlasSave(
-    string Policy,                                                // "all-unlocked"
-    IReadOnlyList<CustomPin> Pins,
-    int NextPinId,                                                // 下一枚自定义标记的 ID；新游戏为 1
-    string? Tracked,                                              // MarkerId.Value
-    IReadOnlyDictionary<string, UnlockState> Unlock,             // 只存与策略初值不同的项；观光期为空
-    IReadOnlyList<string> VisitedAnchors);
-// [SaveSection("atlas", Owner = "WP-48c", Version = 1, Scope = SaveScope.PerMap, Order = 40)]，特性与接口以 SYS-SAVE为准
-```
+> 契约类型与签名以 `game/contracts/Atlas/`为准。
 
 - **依赖规则**（ENG-ARCH §2）：
   - `Campus.Hud.Map`（`game/hud/map`）除 GodotSharp 外，只依赖契约、`Kernel.Get<T>()`、`IAtlasService`、`IWorldState`（读）、`IObserverState`（读：玩家箭头与区域名）和 `ICameraRig.Pose`（读：视锥等"画面从哪看"的量，ENG-ROADMAP §3）；
@@ -809,25 +729,7 @@ public sealed record AtlasSave(
 
 ## 13 各包的分工
 
-| 包 | 交付 |
-| --- | --- |
-| **WP-48a** 底图烘焙与地标贴图 | 底图烘焙器（引用 `Campus.Gen.World`；代码放进随包程序集，由 `IBakeService` 本机调用，D-165；`pipeline/map/` 只留控制台入口）：精确矢量 SDF、外围纹理、区域与地点栅格、`labels.bake`、`map.manifest.json`；`atlas/labels.json` 初稿；地标线描 SVG 与 MSDF 图集；导览亭牌面、导览桩铭牌的贴图（场景调色板，交 WP-04 进图集）；`--bake=map` 接进 ENG-ARCH §4 的烘焙流程 |
-| **WP-48b** 小地图与大地图界面 | `game/hud/map/`：小地图、大地图（图层、目录、传送卡、自定义标记、追踪、按键）；`game/style/shaders/map_base.gdshader`；地图相关的设置项；读屏名字；预建与预热 |
-| **WP-48c** 标记、锚点、传送与解锁服务 | `game/systems/atlas/`：`IAtlasService`、`all-unlocked` 与 `proximity` 两个策略的实现、开放清单驱动的室内标记、停放点数据驱动的共享单车停放点标记、存档段（自定义标记用整数 ID）；`atlas/markers.json`、`overlay/atlas.d/`；传送时的 `PlayUi` 两声；G18 检查器（与 WP-27 合作） |
-| WP-13 | 导览亭、导览桩两个部件及其碰撞（§6），按 `overlay/atlas.d/` 摆放；不另做单独的导览牌部件 |
-| WP-36 | `TransitKind.Teleport` 与 `TransitPreference`：传送时序（§7.2）、到达保证、落点规则 |
-| WP-35 | 左上角槽位与全屏页槽位；不做单独的点位目录抽屉（由 48b 的目录页承担）；设置表新增 §12 的四项；临时提示新增"小地图"一条 |
-| WP-06 | 输入动作 `map`（M）、`atlas_index`（G）、`minimap`（N），按 `physical_keycode` 绑定，可改键；实现按原因计数的 `ICameraRig.LockInput`，大地图打开期间由 WP-48c 以 `InputLockReason.Atlas` 占用观者输入 |
-| WP-27 | 标记缩略图（锚点、点位、室内门口、路线起点）；地标的正交俯视参考图；G18 的跑法；G14 的地图部分；F4 传送压力路线（§14） |
-| WP-44 | 锚点和门口落点的选点，以及 SYS-WALK §15 的落地检查；导航图给出推荐路线的折线 |
-| WP-39 | 导览亭顶棚灯、导览桩灯接进灯光时刻表（MAP-QSH-ADDITIONS §8.4） |
-| WP-04 | 导览亭牌面、导览桩铭牌进"不重复内容"图集；材质库为 `map_base` 建 ShaderMaterial；`map.*` 色名按 UI-VISUAL登记 |
-| WP-01 | 雾幕或扉页期间预热 `map_base`、创建地图纹理；`--bake=map`、`--gate=atlas` 的命令行解析；雾幕原因 `VeilReason.Teleport` |
-| WP-51 | 开放清单 `interiors.json` 与室内索引里每个入口的门外点、门内点（WLD-INTERIORS），以及开放范围的一句话说明（中英），供门口标记和传送卡使用 |
-| WP-53a | 传送的 `TeleportConfirm`、`TeleportArrive`，大地图开合的 `PageOpen`、`PageClose` 与压低；传送雾幕里声景换场（SYS-AUDIO） |
-| WP-55 | 共享单车停放点的数据（编号、站牌位置、登记范围），供 48c 生成停放点标记（§5，SYS-WALK §16） |
-
-- 规模估计：48a 约 0.9k 行；48b 约 1.6k 行；48c 约 0.8k 行。
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 14 验收
 

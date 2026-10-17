@@ -1,91 +1,60 @@
 # 小节目录
 
-> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（ENG-ONBOARD §4.1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
+> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（WF-ONBOARD §3.1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
 
 ## CORE-INDEX · 《电光年华》开发文档总索引
 
-`docs/design/README.md` · 45.8k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定、阅读路径、文档地图与依赖
-关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、依赖图、清水河
+`docs/design/README.md` · 11.2k 字 · 作品定位、当前范围、全局不变量 INV-1–INV-12、坐标与数据约定及文档入口
+关键词：总索引、作品定位、电光年华、当前范围、主线、全局不变量、INV、坐标约定、阅读路径、文档地图、工作包矩阵、清水河
 
-- CORE-INDEX §0 结论 · L23 · 667
-  - ★ CORE-INDEX §0.1 接入要点 · L30 · 204
+- CORE-INDEX §0 结论 · L23 · 700
+  - ★ CORE-INDEX §0.1 接入要点 · L30 · 223
 - CORE-INDEX §1 作品定位 · L37 · 2.6k
 - CORE-INDEX §2 当前范围 · L72 · 1.2k
-- CORE-INDEX §3 全局不变量 · L97 · 4.0k
+- CORE-INDEX §3 全局不变量 · L97 · 3.9k
 - CORE-INDEX §4 坐标与数据约定 · L116 · 1.3k
-- CORE-INDEX §5 文档怎么组织 · L135 · 764
-- CORE-INDEX §6 阅读路径 · L145 · 1.1k
-- CORE-INDEX §7 文档地图 · L163 · 10.8k
-  - CORE-INDEX §7.1 共识层 `core/` · L165 · 393
-  - CORE-INDEX §7.2 美术方向 `art/` · L173 · 965
-  - CORE-INDEX §7.3 世界内容（通用） `world/` · L184 · 1.3k
-  - CORE-INDEX §7.4 地图：清水河 `maps/qingshuihe/` · L196 · 1.7k
-  - CORE-INDEX §7.5 运行时系统 `systems/` · L210 · 1.9k
-  - CORE-INDEX §7.6 界面 `ui/` · L226 · 350
-  - CORE-INDEX §7.7 工程 `engineering/` · L233 · 2.3k
-  - CORE-INDEX §7.8 参考 `reference/` · L253 · 279
-  - CORE-INDEX §7.9 工具 `tools/` · L260 · 183
-  - CORE-INDEX §7.10 运维 `ops/` · L266 · 179
-  - CORE-INDEX §7.11 提案 `proposals/` · L272 · 459
-  - CORE-INDEX §7.12 待用的文件夹 · L281 · 896
-- CORE-INDEX §8 工作包与文档 · L297 · 9.4k
-- CORE-INDEX §9 文档依赖图 · L375 · 12.9k
+- CORE-INDEX §5 文档怎么组织 · L135 · 203
+- CORE-INDEX §6 阅读路径 · L140 · 328
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/design/core/CORE-CONVENTIONS-约定.md` · 37.2k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
-关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性、文件头、front matter、keywords、范围块、查阅行、接入要点、小节引用、施工约定、文件操作、删除规则
+`docs/design/core/CORE-CONVENTIONS-约定.md` · 28.1k 字 · 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
+关键词：约定、坐标系、单位、角度、编号体系、命名、程序集、命名空间、色名、帧顺序、FramePriority、目录归属、ownership.json、user://、确定性
 
 - CORE-CONVENTIONS §0 原则与权威表 · L23 · 1.1k
-  - ★ CORE-CONVENTIONS §0.1 接入要点 · L45 · 372
-- CORE-CONVENTIONS §1 坐标与单位 · L56 · 2.8k
-  - CORE-CONVENTIONS §1.1 坐标系 · L58 · 604
-  - CORE-CONVENTIONS §1.2 角度 · L65 · 531
-  - CORE-CONVENTIONS §1.3 范围数（清水河） · L73 · 1.3k
-  - CORE-CONVENTIONS §1.4 其他单位 · L88 · 370
-- CORE-CONVENTIONS §2 时间单位 · L97 · 2.3k
-- CORE-CONVENTIONS §3 标识与命名 · L120 · 10.7k
-  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L122 · 1.4k
-  - CORE-CONVENTIONS §3.2 编号体系 · L136 · 1.6k
-  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L163 · 885
-  - CORE-CONVENTIONS §3.4 C# 程序集、命名空间与文件 · L176 · 2.6k
-  - CORE-CONVENTIONS §3.5 色名 · L201 · 964
-  - CORE-CONVENTIONS §3.6 着色器文件 · L210 · 1.2k
-  - CORE-CONVENTIONS §3.7 其他命名 · L237 · 495
-  - CORE-CONVENTIONS §3.8 枚举与扩展纪律 · L244 · 1.0k
-  - CORE-CONVENTIONS §3.9 持久化 ID 的稳定 · L256 · 525
-- CORE-CONVENTIONS §4 帧顺序 · L265 · 1.9k
-- CORE-CONVENTIONS §5 目录与归属 · L294 · 5.5k
-  - CORE-CONVENTIONS §5.1 仓库 · L296 · 2.2k
-  - CORE-CONVENTIONS §5.2 按图的数据 · L324 · 1.6k
-  - CORE-CONVENTIONS §5.3 `user://` 下的文件 · L354 · 1.4k
-  - CORE-CONVENTIONS §5.4 文档目录 · L370 · 286
-- CORE-CONVENTIONS §6 确定性 · L376 · 2.2k
-- CORE-CONVENTIONS §7 文档约定 · L400 · 5.5k
-  - CORE-CONVENTIONS §7.1 文件头 · L402 · 1.2k
-  - CORE-CONVENTIONS §7.2 标题与范围块 · L442 · 732
-  - CORE-CONVENTIONS §7.3 编码、小节编号与引用 · L461 · 1.7k
-  - CORE-CONVENTIONS §7.4 正文写法 · L493 · 372
-  - CORE-CONVENTIONS §7.5 待验证（P0）节 · L501 · 172
-  - CORE-CONVENTIONS §7.6 冲突与决定层级 · L508 · 663
-  - CORE-CONVENTIONS §7.7 新增文档与小节 · L522 · 438
-  - CORE-CONVENTIONS §7.8 登记新决策 · L528 · 310
-- CORE-CONVENTIONS §8 子代理施工约定 · L534 · 3.5k
-  - CORE-CONVENTIONS §8.1 开工 · L536 · 263
-  - CORE-CONVENTIONS §8.2 改什么 · L541 · 1.0k
-  - CORE-CONVENTIONS §8.3 门禁与回报 · L556 · 684
-  - CORE-CONVENTIONS §8.4 文件操作 · L563 · 755
-  - CORE-CONVENTIONS §8.5 主代理的角色 · L578 · 484
-  - CORE-CONVENTIONS §8.6 主线优先（D-168） · L585 · 307
-- CORE-CONVENTIONS §9 待对齐 · L593 · 48
+  - ★ CORE-CONVENTIONS §0.1 接入要点 · L45 · 352
+- CORE-CONVENTIONS §1 坐标与单位 · L55 · 2.8k
+  - CORE-CONVENTIONS §1.1 坐标系 · L57 · 604
+  - CORE-CONVENTIONS §1.2 角度 · L64 · 531
+  - CORE-CONVENTIONS §1.3 范围数（清水河） · L72 · 1.3k
+  - CORE-CONVENTIONS §1.4 其他单位 · L87 · 370
+- CORE-CONVENTIONS §2 时间单位 · L96 · 2.3k
+- CORE-CONVENTIONS §3 标识与命名 · L119 · 10.7k
+  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L121 · 1.4k
+  - CORE-CONVENTIONS §3.2 编号体系 · L135 · 1.6k
+  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L162 · 885
+  - CORE-CONVENTIONS §3.4 C# 程序集、命名空间与文件 · L175 · 2.6k
+  - CORE-CONVENTIONS §3.5 色名 · L200 · 964
+  - CORE-CONVENTIONS §3.6 着色器文件 · L209 · 1.2k
+  - CORE-CONVENTIONS §3.7 其他命名 · L236 · 498
+  - CORE-CONVENTIONS §3.8 枚举与扩展纪律 · L243 · 1.0k
+  - CORE-CONVENTIONS §3.9 持久化 ID 的稳定 · L255 · 525
+- CORE-CONVENTIONS §4 帧顺序 · L264 · 1.9k
+- CORE-CONVENTIONS §5 目录与归属 · L293 · 5.6k
+  - CORE-CONVENTIONS §5.1 仓库 · L295 · 2.2k
+  - CORE-CONVENTIONS §5.2 按图的数据 · L323 · 1.6k
+  - CORE-CONVENTIONS §5.3 `user://` 下的文件 · L353 · 1.4k
+  - CORE-CONVENTIONS §5.4 文档目录 · L369 · 291
+- CORE-CONVENTIONS §6 确定性 · L375 · 2.2k
+- CORE-CONVENTIONS §7 待对齐 · L399 · 48
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/design/core/CORE-DECISIONS-决策登记.md` · 34.3k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/design/core/CORE-DECISIONS-决策登记.md` · 33.9k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
-- CORE-DECISIONS §0 用法 · L24 · 400
-  - ★ CORE-DECISIONS §0.1 接入要点 · L32 · 172
+- CORE-DECISIONS §0 用法 · L24 · 388
+  - ★ CORE-DECISIONS §0.1 接入要点 · L32 · 160
 - CORE-DECISIONS §1 作品定位与范围 · L38 · 2.0k
 - CORE-DECISIONS §2 世界与地图 · L55 · 3.9k
 - CORE-DECISIONS §3 时间、季节、天气 · L86 · 2.4k
@@ -95,15 +64,15 @@
 - CORE-DECISIONS §7 音频 · L176 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L198 · 1.8k
 - CORE-DECISIONS §9 工程 · L218 · 3.3k
-- CORE-DECISIONS §10 流程 · L243 · 10.3k
-- CORE-DECISIONS §11 待对齐 · L296 · 61
+- CORE-DECISIONS §10 流程 · L243 · 10.0k
+- CORE-DECISIONS §11 待对齐 · L297 · 61
 
 ## CORE-GLOSSARY · 术语表
 
 `docs/design/core/CORE-GLOSSARY-术语表.md` · 39.0k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
-- CORE-GLOSSARY §0 用法 · L23 · 287
+- CORE-GLOSSARY §0 用法 · L23 · 275
   - ★ CORE-GLOSSARY §0.1 接入要点 · L29 · 104
 - CORE-GLOSSARY §1 作品与默认状态 · L34 · 2.6k
 - CORE-GLOSSARY §2 世界状态与时间 · L59 · 2.8k
@@ -121,31 +90,219 @@
 - CORE-GLOSSARY §14 工程与流程 · L390 · 4.3k
 - CORE-GLOSSARY §15 同名异义 · L434 · 2.0k
 
+## WF-INDEX · 协作总纲
+
+`docs/design/workflow/WF-INDEX-协作总纲.md` · 5.8k 字 · 开发期多个模型与会话怎么协作的总纲：角色表与各角色先读什么、决定权与执行人、各分册索引、规则放哪份的判定表
+关键词：协作总纲、多模型协作、角色表、先读什么、作者、主会话、主会话的子代理、Astra、Astra 的子代理、值班执行者、Sol 值班会话、Sol 旁路会话、Grok、Gemini、luna、决定权、执行人、分册索引、判定表、单账户模式
+
+- WF-INDEX §0 结论 · L23 · 445
+  - ★ WF-INDEX §0.1 接入要点 · L30 · 168
+- WF-INDEX §1 角色表 · L36 · 1.9k
+- WF-INDEX §2 决定权与执行人 · L57 · 381
+- WF-INDEX §3 分册索引 · L65 · 1.1k
+- WF-INDEX §4 一条规则放哪份 · L82 · 497
+
+## WF-ONBOARD · 子代理开工手册
+
+`docs/design/workflow/WF-ONBOARD-子代理开工手册.md` · 8.6k 字 · 子代理开工时通读的手册：项目与阶段、开工环境、怎么查资料与按要做的事查哪里、完成怎么自检与回报
+关键词：开工手册、子代理、开工环境、工作树、引擎路径、查资料、SECTIONS.md、接入要点、路由表、按任务查、Godot API、signatures.txt、文档冲突、完成与回报、gate.ps1、核心专项、回报格式、截图、render-review、交回就结束
+
+- WF-ONBOARD §0 结论 · L23 · 571
+  - ★ WF-ONBOARD §0.1 接入要点 · L32 · 73
+- WF-ONBOARD §1 项目与当前阶段 · L36 · 341
+- WF-ONBOARD §2 开工环境 · L43 · 843
+- WF-ONBOARD §3 查资料 · L53 · 3.7k
+  - WF-ONBOARD §3.1 文档在哪、怎么找 · L55 · 763
+  - WF-ONBOARD §3.2 按要做的事查哪里 · L65 · 2.5k
+  - WF-ONBOARD §3.3 Godot API · L126 · 223
+  - WF-ONBOARD §3.4 文档不清楚或冲突时 · L132 · 187
+- WF-ONBOARD §4 完成与回报 · L138 · 2.0k
+  - WF-ONBOARD §4.1 做完怎么交 · L140 · 609
+  - WF-ONBOARD §4.2 回报格式 · L148 · 1.4k
+
+## WF-COMMS · 交接与通信
+
+`docs/design/workflow/collaboration/WF-COMMS-交接与通信.md` · 7.2k 字 · .collab 交接目录与文件布局，命名与写法，任务单、请求文件与批准行的格式，来信与消息，Codex 会话与引导信箱，上下文重置后先读什么
+关键词：.collab、交接目录、文件布局、archive、logs、结案即挪走、.ignore、任务单、施工单、值班单、旁路单、调研单、合并请求、契约申请、评审请求、批准行、已合入行、六行短头部、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、merged.log、Codex 会话、codex queue、引导信箱、steer、上下文重置、HANDOVER.md、D-207、D-208
+
+- WF-COMMS §0 结论 · L23 · 554
+  - ★ WF-COMMS §0.1 接入要点 · L31 · 193
+- WF-COMMS §1 交接目录与文件 · L38 · 2.2k
+- WF-COMMS §2 命名与写法 · L70 · 506
+- WF-COMMS §3 任务单与请求文件的格式 · L78 · 757
+- WF-COMMS §4 来信与消息 · L94 · 922
+- WF-COMMS §5 Codex 会话与引导信箱 · L109 · 635
+- WF-COMMS §6 上下文重置后怎么接着做 · L115 · 439
+
+## WF-DUTY · 值班与旁路
+
+`docs/design/workflow/collaboration/WF-DUTY-值班与旁路.md` · 5.3k 字 · 值班执行者的分派、唤醒与退回，值班做什么与不许做，完成度调研怎么排，Sol 旁路会话按单开子代理
+关键词：值班、值班执行者、值班唤醒脚本、旁路唤醒脚本、duty_watch、side_runner、Grok、Gemini、luna、Sol 值班会话、退回、值班长期单、巡检、卡死进程、完成度调研、调研单、调研索引、三个视角、Sol 旁路会话、旁路单、side/ROLE.md、D-198、D-202、D-204
+
+- WF-DUTY §0 结论 · L23 · 543
+  - ★ WF-DUTY §0.1 接入要点 · L31 · 191
+- WF-DUTY §1 值班执行者、唤醒与退回 · L37 · 1.3k
+- WF-DUTY §2 值班做什么、不许做什么 · L55 · 739
+- WF-DUTY §3 完成度调研 · L69 · 933
+- WF-DUTY §4 Sol 旁路会话 · L79 · 705
+
+## WF-MODEL · 模型选择与子代理
+
+`docs/design/workflow/collaboration/WF-MODEL-模型选择与子代理.md` · 7.6k 字 · 按七问与难度选施工模型和推理强度，Opus 与 Sonnet 的分界，便宜两档，怎么开子代理，子代理生命周期，简报模板与接续段
+关键词：七问、选模型、Opus 与 Sonnet 的分界、Sonnet 优先、便宜两档、Gemini、luna、推理强度、升级先找原因、派单最少写、简单少量的活直接做、子代理、Agent 工具、spawn_agent、共用工作目录、子代理生命周期、默认新开、恢复还是新开、简报模板、接续段、D-184、D-191、D-193、D-194
+
+- WF-MODEL §0 结论 · L23 · 459
+  - ★ WF-MODEL §0.1 接入要点 · L32 · 152
+- WF-MODEL §1 按七问选施工模型 · L38 · 1.0k
+- WF-MODEL §2 Opus 与 Sonnet 的分界（D-193） · L52 · 478
+- WF-MODEL §3 最便宜的两档（D-194、D-202） · L66 · 1.2k
+- WF-MODEL §4 推理强度按难度选 · L86 · 635
+- WF-MODEL §5 升级、派单与直接做 · L100 · 512
+- WF-MODEL §6 怎么开子代理 · L107 · 834
+- WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L120 · 561
+- WF-MODEL §8 简报模板与"接续"段 · L129 · 813
+
+## WF-ROLE · 参与者与分工
+
+`docs/design/workflow/collaboration/WF-ROLE-参与者与分工.md` · 5.4k 字 · 会话的运行方式，各模型的长短板，GPT 模型不做审美，事归谁与交叉处，总指挥只做什么，Astra 当指挥
+关键词：会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Astra、工程指挥、元规则、D-179
+
+- WF-ROLE §0 结论 · L23 · 559
+  - ★ WF-ROLE §0.1 接入要点 · L31 · 228
+- WF-ROLE §1 会话与运行方式 · L37 · 460
+- WF-ROLE §2 模型的长处与短板 · L44 · 800
+- WF-ROLE §3 GPT 模型不做审美工作 · L55 · 418
+- WF-ROLE §4 事归谁与交叉的地方 · L62 · 448
+- WF-ROLE §5 总指挥只做什么 · L70 · 845
+- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L86 · 799
+
+## WF-QUOTA · 账号与额度
+
+`docs/design/workflow/management/WF-QUOTA-账号与额度.md` · 3.8k 字 · 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结
+关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、节奏档、非紧急段、紧急段、Codex 额度、快速模式、普通速度、service_tier、额度见底、冻结、切换账号、D-196、D-197
+
+- WF-QUOTA §0 结论 · L23 · 430
+  - ★ WF-QUOTA §0.1 接入要点 · L31 · 107
+- WF-QUOTA §1 口径 · L36 · 146
+- WF-QUOTA §2 Claude 侧的并发与额度 · L40 · 1.2k
+- WF-QUOTA §3 节奏档：非紧急段与紧急段（D-196） · L56 · 541
+- WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L63 · 246
+- WF-QUOTA §5 额度见底时冻结 · L68 · 224
+
+## WF-STATUS · 施工状态与队列
+
+`docs/design/workflow/management/WF-STATUS-施工状态与队列.md` · 3.3k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单与上下文重置后的接续
+关键词：施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、活跃工作包、待派工队列、Q-nnn、排队、可派、已派、队列平衡、积压、交接单、HANDOVER.md、上下文重置、接手、已集成
+
+- WF-STATUS §0 结论 · L23 · 502
+  - ★ WF-STATUS §0.1 接入要点 · L31 · 196
+- WF-STATUS §1 施工状态文件怎么填 · L37 · 859
+- WF-STATUS §2 待派工队列与队列平衡 · L58 · 891
+- WF-STATUS §3 交接单与上下文重置 · L76 · 143
+
+## WF-FLOW · 开发流程
+
+`docs/design/workflow/process/WF-FLOW-开发流程.md` · 6.6k 字 · 一个包从派工、施工、回报、评审到批准的流程，按工作量拆单，可调参数集中放，契约申请与共享工程文件，调研入队流水线
+关键词：开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、回报、初步核对、评审、可调参数、契约申请、共享工程文件、契约冻结、调研入队流水线、审计、待派工队列、D-184、D-134、贴近主线、评审通用结论
+
+- WF-FLOW §0 结论 · L23 · 510
+  - ★ WF-FLOW §0.1 接入要点 · L31 · 214
+- WF-FLOW §1 全流程一览 · L38 · 643
+- WF-FLOW §2 派工与拆单 · L54 · 1.3k
+- WF-FLOW §3 施工与回报 · L75 · 604
+- WF-FLOW §4 评审：审美与契约的交叉评审 · L87 · 654
+- WF-FLOW §5 契约申请与共享工程文件 · L100 · 756
+- WF-FLOW §6 调研入队流水线 · L109 · 890
+
+## WF-MERGE · 批准与合并
+
+`docs/design/workflow/process/WF-MERGE-批准与合并.md` · 5.6k 字 · 批准行与滚动文档分支，合并执行的步骤，成批合入与省项，合入以后的状态与 rebase，git 分支与工作树的流程
+关键词：批准、批准行、滚动文档分支、doc/rolling、合并执行、squash、成批合入、省项、SkipFormat、merged.log、已合入、rebase 通知、工作树、本地分支、new.ps1、cleanup_worktrees、git 流程、远端只有 main、D-166、D-204、D-206
+
+- WF-MERGE §0 结论 · L23 · 576
+  - ★ WF-MERGE §0.1 接入要点 · L31 · 283
+- WF-MERGE §1 批准与滚动文档分支 · L37 · 627
+- WF-MERGE §2 合并步骤 · L45 · 1.3k
+- WF-MERGE §3 成批合入与省项 · L57 · 569
+- WF-MERGE §4 合入以后：施工状态与 rebase · L64 · 416
+- WF-MERGE §5 git 与工作树 · L69 · 872
+
+## WF-BUILD · 施工边界与内容底线
+
+`docs/design/workflow/rules/WF-BUILD-施工边界与内容底线.md` · 4.9k 字 · 施工时能改哪里、共享文件与契约申请、代码边界与接入方式、禁用写法，以及内容与画面的底线
+关键词：独占目录、共享文件、契约申请、特性接入、ContentModule、Part、KernelNode、SaveSection、代码边界、game/gen 纯 .NET、IRenderHost、ToonSpec、禁用写法、System.Random、StableHash、DetMath、StandardMaterial3D、色名、视觉精度、精度区、内容底线、INV-4、INV-7、INV-11、GDScript、uid
+
+- WF-BUILD §0 结论 · L23 · 671
+  - ★ WF-BUILD §0.1 接入要点 · L32 · 260
+- WF-BUILD §1 改哪里 · L39 · 769
+- WF-BUILD §2 代码边界与接入方式 · L47 · 993
+- WF-BUILD §3 禁用写法 · L61 · 435
+- WF-BUILD §4 内容与画面的底线 · L69 · 718
+
+## WF-DOC · 文档写法
+
+`docs/design/workflow/rules/WF-DOC-文档写法.md` · 7.5k 字 · 规范文档的文件头、范围块、编码与小节引用、正文写法、冲突层级、新增文档与登记决策、文档维护
+关键词：文档写法、文件头、front matter、keywords、范围块、查阅行、接入要点、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、数值只有一个家、待验证、冲突层级、决定层级、新增文档、登记决策、CORE-DECISIONS、gen_index、check_docs、SECTIONS.md、D-178、D-200、D-208
+
+- WF-DOC §0 结论 · L23 · 516
+  - ★ WF-DOC §0.1 接入要点 · L31 · 189
+- WF-DOC §1 文件头 · L37 · 1.2k
+- WF-DOC §2 标题与范围块 · L77 · 729
+- WF-DOC §3 编码、小节编号与引用 · L97 · 1.7k
+- WF-DOC §4 正文写法 · L129 · 407
+- WF-DOC §5 待验证（P0）节 · L137 · 169
+- WF-DOC §6 冲突与决定层级 · L144 · 633
+- WF-DOC §7 新增文档与小节 · L158 · 328
+- WF-DOC §8 登记新决策 · L164 · 251
+- WF-DOC §9 文档维护 · L170 · 330
+
+## WF-RULE · 全员守则
+
+`docs/design/workflow/rules/WF-RULE-全员守则.md` · 5.7k 字 · 所有会话、子代理和执行者都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件与 git 安全、主线优先、测试最小、贴近主线、写文档与记忆
+关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git 安全、不 stash、主线优先、测试最小、贴近主线、覆盖层分片、拿不准就问、写文档、写记忆、截图超时、GPU 锁、工作树用完删、D-201、D-168、D-167、D-199、D-209、D-166
+
+- WF-RULE §0 结论 · L23 · 334
+  - ★ WF-RULE §0.1 接入要点 · L27 · 166
+- WF-RULE §1 不过度工程化（D-201） · L32 · 317
+- WF-RULE §2 不向作者出选项 · L39 · 282
+- WF-RULE §3 不预判时间 · L45 · 207
+- WF-RULE §4 不短轮询、不干等、不重复复核 · L52 · 408
+- WF-RULE §5 来信 · L59 · 74
+- WF-RULE §6 文件操作 · L63 · 672
+- WF-RULE §7 git 安全 · L73 · 322
+- WF-RULE §8 主线优先（D-168） · L81 · 297
+- WF-RULE §9 测试最小（D-167） · L88 · 199
+- WF-RULE §10 贴近主线，少给合并添活（D-199） · L93 · 761
+- WF-RULE §11 拿不准就问 · L103 · 137
+- WF-RULE §12 写文档与记忆 · L108 · 237
+- WF-RULE §13 截图与 GPU 锁 · L117 · 154
+- WF-RULE §14 工作树用完删（D-166） · L122 · 224
+
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法
 
-`docs/design/art/ART-AMBIENCE-日式日常街景.md` · 19.8k 字 · 日式日常街景元素的边界与分区，各元素的形、色、限定与三渲二做法，以及对应的鸟与声音
+`docs/design/art/ART-AMBIENCE-日式日常街景.md` · 18.2k 字 · 日式日常街景元素的边界与分区，各元素的形、色、限定与三渲二做法，以及对应的鸟与声音
 关键词：日式街景、日式氛围、日系、日本味、电线杆、架空线、自动售货机、售货机光岛、弯道凸面镜、驻轮场式车棚、屋顶围网、高架水箱、通长雨庇、推拉铝窗、象牙色窗帘、开放外廊、次路标线、让行牌、L 形边沟、砌块墙、樱花行道树、绣球、夏季绿帘、杆上防犯灯、便利店夜景、透明塑料伞、暖帘、防球网、外墙圆钟、电车道口
 
-  - ART-AMBIENCE 分工 · L22 · 610
-- ART-AMBIENCE §0 结论 · L34 · 1.6k
-  - ★ ART-AMBIENCE §0.1 接入要点 · L43 · 821
-- ART-AMBIENCE §1 边界、分区与通用约束 · L56 · 2.6k
-  - ART-AMBIENCE §1.1 用与不用 · L58 · 531
-  - ART-AMBIENCE §1.2 区域代号 · L71 · 491
-  - ART-AMBIENCE §1.3 方式与通用约束 · L84 · 929
-  - ART-AMBIENCE §1.4 颜色 · L99 · 605
-- ART-AMBIENCE §2 校舍外立面与屋顶 · L112 · 1.8k
-- ART-AMBIENCE §3 外廊、楼梯与出入口 · L125 · 1.1k
-- ART-AMBIENCE §4 车棚、售货机与街角小设施 · L136 · 1.0k
-- ART-AMBIENCE §5 电线杆、架空线与线上的鸟 · L146 · 976
-- ART-AMBIENCE §6 道路标线、凸面镜、护栏、路缘与排水 · L154 · 1.8k
-- ART-AMBIENCE §7 绿化 · L171 · 796
-- ART-AMBIENCE §8 照明与夜景 · L181 · 960
-- ART-AMBIENCE §9 生活痕迹 · L192 · 851
-- ART-AMBIENCE §10 河堤、球场设施、店头、外围街道与飞机云 · L206 · 1.4k
-- ART-AMBIENCE §11 声音 · L222 · 749
-- ART-AMBIENCE §12 先做的 10 项 · L237 · 886
-- ART-AMBIENCE §13 待验证（P0） · L256 · 648
+  - ART-AMBIENCE 分工 · L22 · 624
+- ART-AMBIENCE §0 结论 · L34 · 1.3k
+  - ★ ART-AMBIENCE §0.1 接入要点 · L43 · 773
+- ART-AMBIENCE §1 边界、分区与通用约束 · L56 · 2.2k
+  - ART-AMBIENCE §1.1 用与不用 · L58 · 276
+  - ART-AMBIENCE §1.2 区域代号 · L68 · 491
+  - ART-AMBIENCE §1.3 方式与通用约束 · L81 · 874
+  - ART-AMBIENCE §1.4 颜色 · L96 · 575
+- ART-AMBIENCE §2 校舍外立面与屋顶 · L109 · 1.8k
+- ART-AMBIENCE §3 外廊、楼梯与出入口 · L122 · 1.1k
+- ART-AMBIENCE §4 车棚、售货机与街角小设施 · L133 · 923
+- ART-AMBIENCE §5 电线杆、架空线与线上的鸟 · L143 · 944
+- ART-AMBIENCE §6 道路标线、凸面镜、护栏、路缘与排水 · L151 · 1.7k
+- ART-AMBIENCE §7 绿化 · L168 · 798
+- ART-AMBIENCE §8 照明与夜景 · L178 · 960
+- ART-AMBIENCE §9 生活痕迹 · L189 · 47
+- ART-AMBIENCE §10 河堤、球场设施、店头、外围街道与飞机云 · L193 · 1.4k
+- ART-AMBIENCE §11 声音 · L209 · 749
+- ART-AMBIENCE §12 先做的 10 项 · L224 · 869
+- ART-AMBIENCE §13 待验证（P0） · L243 · 648
 
 ## ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
 
@@ -162,12 +319,12 @@
 - ART-FIDELITY §1 换算基准 · L119 · 1.6k
 - ART-FIDELITY §2 精致感的九个来源与底线清单 · L147 · 3.2k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L159 · 2.0k
-- ART-FIDELITY §3 量化标准（L0 和 L1，即 5–150 m，按精度区取用） · L181 · 6.1k
+- ART-FIDELITY §3 量化标准（L0 和 L1，即 5–150 m，按精度区取用） · L181 · 6.2k
   - ART-FIDELITY §3.1 每栋楼的构件层次 · L185 · 418
   - ART-FIDELITY §3.2 立面密度 · L200 · 378
   - ART-FIDELITY §3.3 窗 · L214 · 962
   - ART-FIDELITY §3.4 地面（每 100 m²） · L228 · 887
-  - ART-FIDELITY §3.5 倒角与不做旧 · L252 · 1.0k
+  - ART-FIDELITY §3.5 倒角与不做旧 · L252 · 1.1k
   - ART-FIDELITY §3.6 夜间与四季 · L275 · 890
   - ART-FIDELITY §3.7 天气 · L294 · 1.4k
 - ART-FIDELITY §4 贴脸距离（L0+，0.5–5 m，人眼高度 1.6–1.7 m） · L319 · 1.9k
@@ -211,18 +368,18 @@
 
 ## ART-RENOVATION · 老楼翻新：全部翻新的规则
 
-`docs/design/art/ART-RENOVATION-老楼翻新.md` · 18.9k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：材质配色、删简留、窗檐楼梯屋顶的改法、成电辨认与验收
+`docs/design/art/ART-RENOVATION-老楼翻新.md` · 18.7k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：材质配色、删简留、窗檐楼梯屋顶的改法、成电辨认与验收
 关键词：老楼翻新、翻新、翻修、翻新预设、翻新楼、全部翻新、旧痕、删简留、防盗网、窗套、窗楣、窗台滴水、勒脚、压顶檐口、管槽、管廊、护窗栏、伸出杆、颜色配额、色额、陶红墙带、浅奶咖墙、斑驳、顶点色、面砖、楼梯间窗带、叶影上墙、成电辨认、翻新对照楼
 
   - ART-RENOVATION 分工 · L22 · 483
 - ART-RENOVATION §0 结论 · L30 · 1.3k
-  - ★ ART-RENOVATION §0.1 接入要点 · L38 · 793
-- ART-RENOVATION §1 适用范围 · L50 · 931
-  - ART-RENOVATION §1.1 哪些楼列入翻新 · L52 · 422
+  - ★ ART-RENOVATION §0.1 接入要点 · L38 · 805
+- ART-RENOVATION §1 适用范围 · L50 · 828
+  - ART-RENOVATION §1.1 哪些楼列入翻新 · L52 · 345
   - ART-RENOVATION §1.2 不动什么 · L59 · 219
-  - ART-RENOVATION §1.3 能加多少 · L65 · 279
-- ART-RENOVATION §2 总则 · L70 · 1.3k
-  - ART-RENOVATION §2.1 全部翻新，与新楼同标准 · L72 · 262
+  - ART-RENOVATION §1.3 能加多少 · L65 · 253
+- ART-RENOVATION §2 总则 · L70 · 1.2k
+  - ART-RENOVATION §2.1 全部翻新，与新楼同标准 · L72 · 240
   - ART-RENOVATION §2.2 会脏的地方换成构件 · L78 · 677
   - ART-RENOVATION §2.3 生活感只靠干净的痕迹 · L91 · 317
 - ART-RENOVATION §3 材质与配色 · L97 · 2.8k
@@ -236,15 +393,15 @@
   - ART-RENOVATION §4.1 删：旧痕、杂物与防盗网 · L175 · 574
   - ART-RENOVATION §4.2 简：外机、管线、窗分格与标识 · L190 · 487
   - ART-RENOVATION §4.3 留：干净版的生活痕迹 · L202 · 755
-- ART-RENOVATION §5 窗、檐口、楼梯间、屋顶与首层 · L216 · 2.1k
+- ART-RENOVATION §5 窗、檐口、楼梯间、屋顶与首层 · L216 · 2.0k
   - ART-RENOVATION §5.1 窗 · L218 · 639
   - ART-RENOVATION §5.2 檐口与女儿墙 · L228 · 321
   - ART-RENOVATION §5.3 楼梯间 · L235 · 383
-  - ART-RENOVATION §5.4 屋顶 · L243 · 438
+  - ART-RENOVATION §5.4 屋顶 · L243 · 417
   - ART-RENOVATION §5.5 首层、入口与阳台 · L251 · 264
 - ART-RENOVATION §6 氛围与成电辨认 · L258 · 1.9k
   - ART-RENOVATION §6.1 画法上的氛围手法 · L260 · 1.1k
-  - ART-RENOVATION §6.2 日式物件上楼 · L278 · 521
+  - ART-RENOVATION §6.2 日式物件上楼 · L278 · 500
   - ART-RENOVATION §6.3 保住"认得出是成电" · L285 · 291
 - ART-RENOVATION §7 示例：三种楼型 · L292 · 3.1k
   - ART-RENOVATION §7.1 老式宿舍楼 · L294 · 1.0k
@@ -274,12 +431,12 @@
 
 ## ART-STYLE · 风格基础：三渲二日式动画背景规范
 
-`docs/design/art/ART-STYLE-风格基础.md` · 58.0k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
+`docs/design/art/ART-STYLE-风格基础.md` · 57.5k 字 · 全局风格：调色板与色名、明暗分阶与影色、描线、高光与透光、贴图、后期、排除元素与情绪
 关键词：三渲二、卡通材质、toon.gdshaderinc、调色板、色名、调色板纹理、退役色名、明暗分阶、植被三阶、影色、影色推导、室内暖影、描线、线色、材质 ID、倒角提亮、凸边亮线、边缘光、透光、玻璃眩光、湿面、柔光、色调映射、后期链、跳色、日本元素边界、场景文字、PaletteToken、ToonSpec、LineClass
 
   - ART-STYLE 分工 · L22 · 1.0k
-- ART-STYLE §0 结论 · L48 · 2.7k
-  - ★ ART-STYLE §0.1 接入要点 · L63 · 1.5k
+- ART-STYLE §0 结论 · L48 · 2.6k
+  - ★ ART-STYLE §0.1 接入要点 · L63 · 1.4k
 - ART-STYLE §1 总体风格与参照 · L78 · 2.2k
 - ART-STYLE §2 明暗分阶 · L119 · 6.0k
 - ART-STYLE §3 影子：明度为主，按材质定影色 · L196 · 5.7k
@@ -301,8 +458,8 @@
   - ART-STYLE §8.4 界面色 · L649 · 1.3k
   - ART-STYLE §8.5 色名登记与调色板纹理 · L674 · 3.1k
   - ART-STYLE §8.6 天气色 · L729 · 1.1k
-- ART-STYLE §9 排除元素 · L748 · 2.6k
-  - ART-STYLE §9.1 日本元素的边界 · L750 · 2.0k
+- ART-STYLE §9 排除元素 · L748 · 2.3k
+  - ART-STYLE §9.1 日本元素的边界 · L750 · 1.6k
   - ART-STYLE §9.2 其他排除项 · L776 · 631
 - ART-STYLE §10 材质速查 · L785 · 694
 - ART-STYLE §11 场景内的文字与标识（属于背景美术） · L803 · 1.0k
@@ -330,7 +487,7 @@
 
 ## WLD-INTERIORS · 室内：开放清单、门的区分、加载、生成器与类型库、楼梯与碰撞、预算
 
-`docs/design/world/WLD-INTERIORS-室内.md` · 78.1k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
+`docs/design/world/WLD-INTERIORS-室内.md` · 65.2k 字 · 第一批 15 处开放室内与 3 处高处、门的开关、室内加载、平面生成器与类型库、楼梯碰撞、契约、预算与 G19
 关键词：楼内、开放室内、开放清单、interiors.json、IInteriorProvider、InteriorLayout、EntranceDecl、开放入口、自动门、DoorLeafDecl、IInteriorDoors、DoorClosed、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、室内加载、平面内核、GenericInteriorProvider、室内类型库、楼梯碰撞、SlopedWallCollider、关门换位、开放屋顶、导航图、INavGraph、室内色名、G19
 
   - WLD-INTERIORS 分工 · L24 · 519
@@ -374,12 +531,12 @@
   - WLD-INTERIORS §7.3 房间类型（35 类） · L464 · 2.1k
   - WLD-INTERIORS §7.4 规范值与行走换算 · L508 · 1.1k
   - WLD-INTERIORS §7.5 部件（约 120 个，分 8 组） · L528 · 1.1k
-- WLD-INTERIORS §8 风格 · L546 · 5.6k
+- WLD-INTERIORS §8 风格 · L546 · 5.5k
   - WLD-INTERIORS §8.1 艺术化处理 · L548 · 365
   - WLD-INTERIORS §8.2 明暗分阶与室内暖影 · L555 · 1.4k
   - WLD-INTERIORS §8.3 窗光斑与光（全片最重要的室内画面） · L571 · 1.6k
   - WLD-INTERIORS §8.4 室内色名 · L590 · 999
-  - WLD-INTERIORS §8.5 中国高校识别要素与日式物件的分界 · L598 · 1.0k
+  - WLD-INTERIORS §8.5 中国高校识别要素与日式物件的分界 · L598 · 949
   - WLD-INTERIORS §8.6 夜间不死黑 · L621 · 184
 - WLD-INTERIORS §9 生活痕迹规则 · L625 · 1.9k
 - WLD-INTERIORS §10 楼梯、门洞、电梯与碰撞 · L656 · 2.6k
@@ -387,42 +544,43 @@
 - WLD-INTERIORS §12 室内预算 · L711 · 1.7k
 - WLD-INTERIORS §13 导航图与路线 · L746 · 3.7k
 - WLD-INTERIORS §14 扩展：开放更多室内 · L787 · 2.8k
-- WLD-INTERIORS §15 契约增量（给 ENG-ARCH §3，这一组冻结前改，D-134） · L831 · 7.8k
-- WLD-INTERIORS §16 事实修正汇总表（给各区文档用） · L944 · 2.8k
-- WLD-INTERIORS §17 无主体块的归属 · L978 · 729
-- WLD-INTERIORS §18 工作包 · L991 · 3.6k
-- WLD-INTERIORS §19 验收：G19 路径与连通 · L1024 · 2.0k
-- WLD-INTERIORS §21 待验证（P0） · L1045 · 1.7k
+- WLD-INTERIORS §15 契约与实现 · L831 · 559
+- WLD-INTERIORS §16 各区事实 · L841 · 85
+- WLD-INTERIORS §17 无主体块的归属 · L845 · 729
+- WLD-INTERIORS §18 工作包目录与拆分 · L858 · 737
+- WLD-INTERIORS §19 验收：G19 路径与连通 · L875 · 2.0k
+- WLD-INTERIORS §21 待验证（P0） · L896 · 1.7k
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
-`docs/design/world/WLD-LIFE-动物生活痕迹与街道家具.md` · 28.7k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
+`docs/design/world/WLD-LIFE-动物生活痕迹与街道家具.md` · 28.6k 字 · 全校动物与反应动物、生活痕迹、停着的车与街道家具的内容，昼夜、四季与天气的显隐，行走碰撞、声音数据与 Godot 实现
 关键词：动物、鸟、校园猫、鸽群、反应动物、黄昏乌鸦、季节性动物、生活痕迹、生活感、共享单车、电动车、晾晒、黑天鹅、季节生活痕迹、雨天生活痕迹、小心地滑、停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、日夜两套、变体掩码、state_bits、show_ratio
 
-  - WLD-LIFE 分工 · L23 · 1.9k
+  - WLD-LIFE 分工 · L23 · 1.8k
 - WLD-LIFE §0 结论 · L61 · 2.7k
   - ★ WLD-LIFE §0.1 接入要点 · L75 · 1.4k
 - WLD-LIFE §1 动物 · L91 · 4.8k
   - WLD-LIFE §1.1 反应动物：猫、鸽群与水禽 · L138 · 1.8k
 - WLD-LIFE §2 生活痕迹 · L158 · 3.7k
-- WLD-LIFE §3 停着的车 · L232 · 1.3k
-- WLD-LIFE §4 街道家具 · L253 · 3.4k
-- WLD-LIFE §5 行走模式下的碰撞 · L308 · 2.1k
-- WLD-LIFE §6 Godot 实现 · L343 · 3.9k
-  - WLD-LIFE §6.1 容器 · L347 · 782
-  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L359 · 1.8k
-  - WLD-LIFE §6.3 动物 · L377 · 1.3k
-- WLD-LIFE WP-25 交付验收 · L392 · 1.5k
-- WLD-LIFE §7 待验证（P0） · L415 · 710
+  - WLD-LIFE §2.10 室外生活痕迹造型 · L224 · 653
+- WLD-LIFE §3 停着的车 · L238 · 1.3k
+- WLD-LIFE §4 街道家具 · L259 · 3.4k
+- WLD-LIFE §5 行走模式下的碰撞 · L314 · 2.1k
+- WLD-LIFE §6 Godot 实现 · L349 · 3.9k
+  - WLD-LIFE §6.1 容器 · L353 · 782
+  - WLD-LIFE §6.2 显隐：整组可见性与变体掩码 · L365 · 1.8k
+  - WLD-LIFE §6.3 动物 · L383 · 1.3k
+- WLD-LIFE WP-25 交付验收 · L398 · 1.5k
+- WLD-LIFE §7 待验证（P0） · L421 · 710
 
 ## WLD-OUTSKIRTS · 边界与外围：大箱庭、外围环境带、阻挡与提示
 
-`docs/design/world/WLD-OUTSKIRTS-边界与外围.md` · 39.1k 字 · 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算
+`docs/design/world/WLD-OUTSKIRTS-边界与外围.md` · 34.6k 字 · 大箱庭的三条线与截面精度、外围 O0–O3 的内容与精度、行走和旁观在边界的阻挡与提示、外围数据与预算
 关键词：外围、校外、校界、边界、前沿线、截面线、大箱庭、外围环境带、O0–O3、最近可达距离、d_min、outskirts.json、outskirts.overlay.json、IOutskirtsModel、OutskirtsBlock、SurfaceTag.Boundary、校外暂未开放、前方暂未开放、行走阻挡、飞行阻挡、缓停、推回、缓冲带、软地板、可达空间、活动范围、edge_fog、边缘雾、看街长椅、河渠格栅
 
-  - WLD-OUTSKIRTS 分工 · L22 · 379
+  - WLD-OUTSKIRTS 分工 · L22 · 354
 - WLD-OUTSKIRTS §0 结论 · L30 · 3.1k
-  - ★ WLD-OUTSKIRTS §0.1 接入要点 · L55 · 1.9k
+  - ★ WLD-OUTSKIRTS §0.1 接入要点 · L55 · 1.8k
 - WLD-OUTSKIRTS §1 参考做法：挡路与精度的共同规律 · L71 · 89
 - WLD-OUTSKIRTS §2 周边真实环境 · L75 · 1.6k
   - WLD-OUTSKIRTS §2.1 四边 · L79 · 966
@@ -441,11 +599,11 @@
   - WLD-OUTSKIRTS §4.4 灯光（夜间） · L218 · 1.1k
   - WLD-OUTSKIRTS §4.5 时间、季节、天气 · L243 · 860
   - WLD-OUTSKIRTS §4.6 不画车流 · L264 · 448
-- WLD-OUTSKIRTS §5 保留、删除与新增（艺术化处理） · L274 · 2.9k
+- WLD-OUTSKIRTS §5 保留、删除与新增（艺术化处理） · L274 · 2.8k
   - WLD-OUTSKIRTS §5.1 身份地标（保留，让人认得出） · L283 · 506
   - WLD-OUTSKIRTS §5.2 删掉的（现实里有，放进画面难看） · L297 · 477
-  - WLD-OUTSKIRTS §5.3 可以新增的氛围元素 · L309 · 838
-  - WLD-OUTSKIRTS §5.4 画法：清透、细线 · L325 · 865
+  - WLD-OUTSKIRTS §5.3 可以新增的氛围元素 · L309 · 722
+  - WLD-OUTSKIRTS §5.4 画法：清透、细线 · L325 · 852
 - WLD-OUTSKIRTS §6 数据管线与许可 · L345 · 2.2k
   - WLD-OUTSKIRTS §6.1 管线步骤（`pipeline/outskirts/`，Python，WP-47） · L347 · 694
   - WLD-OUTSKIRTS §6.2 产物 · L363 · 566
@@ -470,19 +628,19 @@
   - WLD-OUTSKIRTS §11.2 分层上限 · L567 · 541
   - WLD-OUTSKIRTS §11.3 显存、包体与 CPU · L580 · 999
   - WLD-OUTSKIRTS §11.4 低档设备 · L594 · 347
-- WLD-OUTSKIRTS §12 工作包与契约增量 · L604 · 5.2k
-  - WLD-OUTSKIRTS §12.1 WP-47 外围环境带 · L606 · 820
-  - WLD-OUTSKIRTS §12.2 其余各包的增量 · L622 · 2.3k
-  - WLD-OUTSKIRTS §12.3 契约增量 · L654 · 2.0k
-- WLD-OUTSKIRTS §13 验收 · L690 · 2.6k
-  - WLD-OUTSKIRTS §13.1 审查视角（ENG-GATES §1、UI-NAV §6） · L692 · 1.0k
-  - WLD-OUTSKIRTS §13.2 门禁增量 · L707 · 844
-  - WLD-OUTSKIRTS §13.3 WP-47 交付验收 · L736 · 686
-- WLD-OUTSKIRTS §15 待验证（P0） · L749 · 1.1k
+- WLD-OUTSKIRTS §12 工作包与契约 · L604 · 826
+  - WLD-OUTSKIRTS §12.1 WP-47 目录与拆分 · L606 · 324
+  - WLD-OUTSKIRTS §12.2 其他包的外围接入 · L611 · 62
+  - WLD-OUTSKIRTS §12.3 契约与实现 · L615 · 426
+- WLD-OUTSKIRTS §13 验收 · L624 · 2.6k
+  - WLD-OUTSKIRTS §13.1 审查视角（ENG-GATES §1、UI-NAV §6） · L626 · 1.0k
+  - WLD-OUTSKIRTS §13.2 门禁增量 · L641 · 844
+  - WLD-OUTSKIRTS §13.3 WP-47 交付验收 · L670 · 686
+- WLD-OUTSKIRTS §15 待验证（P0） · L683 · 1.1k
 
 ## WLD-TERRAIN · 地形：分层、地形操作与高度函数、贴地、竖直落差、水位与可走性
 
-`docs/design/world/WLD-TERRAIN-地形.md` · 41.8k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
+`docs/design/world/WLD-TERRAIN-地形.md` · 40.2k 字 · 校园地形的设计原则与分层、地形覆盖层与确定性高度函数、贴地与垫层、竖直落差、水位、可走性、着色与性能
 关键词：地形、地形分层、高度函数、地形评估器、地形操作、地形覆盖层、terrain.json、ITerrain、HeightAt、FillTile、PadY、WaterY、TerrainFacts、洞哨兵、平地快路径、主模数、灰区、零带、先平后贴、道路走廊、垫层、勒脚水平顶线、台缘带、退台、常水位、岸型、涉水带、Steep、分面平法线、遮挡与揭示
 
   - WLD-TERRAIN 分工 · L23 · 610
@@ -498,68 +656,68 @@
   - WLD-TERRAIN §2.4 遮挡高度 · L117 · 325
   - WLD-TERRAIN §2.5 坡度类 · L124 · 519
   - WLD-TERRAIN §2.6 全图范围与零带 · L140 · 566
-- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 11.0k
+- WLD-TERRAIN §3 数据：地形覆盖层 · L147 · 9.4k
   - WLD-TERRAIN §3.1 文件与归属 · L149 · 614
   - WLD-TERRAIN §3.2 公共字段 · L157 · 440
   - WLD-TERRAIN §3.3 操作词表 · L171 · 4.6k
   - WLD-TERRAIN §3.4 合成顺序与优先级 · L209 · 550
   - WLD-TERRAIN §3.5 坡度包络：坡度上限由构造保证 · L221 · 1.2k
   - WLD-TERRAIN §3.6 确定性写法 · L234 · 737
-  - WLD-TERRAIN §3.7 读取接口 · L246 · 1.9k
-  - WLD-TERRAIN §3.8 校验与门禁 · L275 · 989
-- WLD-TERRAIN §4 贴地 · L292 · 3.3k
-  - WLD-TERRAIN §4.1 先平后贴 · L294 · 791
-  - WLD-TERRAIN §4.2 道路与铺装 · L310 · 864
-  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L322 · 1.0k
-  - WLD-TERRAIN §4.4 树与道具落地 · L333 · 561
-- WLD-TERRAIN §5 竖直落差 · L344 · 2.6k
-  - WLD-TERRAIN §5.1 连接规则 · L346 · 661
-  - WLD-TERRAIN §5.2 台阶 · L362 · 464
-  - WLD-TERRAIN §5.3 坡道 · L371 · 165
-  - WLD-TERRAIN §5.4 台缘带（v1 的挡墙） · L377 · 549
-  - WLD-TERRAIN §5.5 退台 · L387 · 203
-  - WLD-TERRAIN §5.6 高墙（增强阶段） · L393 · 209
-  - WLD-TERRAIN §5.7 防护 · L398 · 172
-  - WLD-TERRAIN §5.8 谁来做 · L404 · 155
-- WLD-TERRAIN §6 水体 · L409 · 3.5k
-  - WLD-TERRAIN §6.1 常水位 · L411 · 532
-  - WLD-TERRAIN §6.2 岸型 · L418 · 1.2k
-  - WLD-TERRAIN §6.3 涉水带与浅滩 · L432 · 404
-  - WLD-TERRAIN §6.4 湖盆 · L439 · 186
-  - WLD-TERRAIN §6.5 河渠 · L445 · 258
-  - WLD-TERRAIN §6.6 穿出校界 · L452 · 199
-  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L458 · 680
-- WLD-TERRAIN §7 可走性与碰撞 · L466 · 3.0k
-  - WLD-TERRAIN §7.1 坡度分级 · L468 · 648
-  - WLD-TERRAIN §7.2 与控制器的配合 · L483 · 371
-  - WLD-TERRAIN §7.3 碰撞带 · L490 · 516
-  - WLD-TERRAIN §7.4 瓦片接缝 · L500 · 472
-  - WLD-TERRAIN §7.5 不卡脚、不穿地 · L509 · 621
-  - WLD-TERRAIN §7.6 其他读地面高度的地方 · L525 · 334
-- WLD-TERRAIN §8 三渲二着色与描线 · L532 · 2.6k
-  - WLD-TERRAIN §8.1 为什么坡面容易脏 · L534 · 262
-  - WLD-TERRAIN §8.2 规则 · L538 · 1.1k
-  - WLD-TERRAIN §8.3 描线 · L555 · 582
-  - WLD-TERRAIN §8.4 材质 ID 与表面 · L570 · 182
-  - WLD-TERRAIN §8.5 换级与粗级法线 · L575 · 171
-  - WLD-TERRAIN §8.6 与季节和光照的关系 · L580 · 222
-- WLD-TERRAIN §9 LOD、分辨率与性能 · L586 · 2.3k
-  - WLD-TERRAIN §9.1 分级 · L588 · 494
-  - WLD-TERRAIN §9.2 几何误差与裙边 · L601 · 371
-  - WLD-TERRAIN §9.3 量化范围与对角线 · L607 · 208
-  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L612 · 605
-  - WLD-TERRAIN §9.5 预算 · L619 · 624
-- WLD-TERRAIN §10 分阶段施工 · L630 · 2.0k
-  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L632 · 522
-  - WLD-TERRAIN §10.2 P0 样板区（约 2–4 天，高优先级） · L640 · 267
-  - WLD-TERRAIN §10.3 主线铺开（约 1–2 周） · L647 · 254
-  - WLD-TERRAIN §10.4 增强（按需） · L653 · 90
-  - WLD-TERRAIN §10.5 各包的改动面 · L657 · 848
-- WLD-TERRAIN §11 待验证（P0） · L675 · 1.5k
+  - WLD-TERRAIN §3.7 读取接口与源码 · L246 · 264
+  - WLD-TERRAIN §3.8 校验与门禁 · L254 · 989
+- WLD-TERRAIN §4 贴地 · L271 · 3.3k
+  - WLD-TERRAIN §4.1 先平后贴 · L273 · 791
+  - WLD-TERRAIN §4.2 道路与铺装 · L289 · 864
+  - WLD-TERRAIN §4.3 楼宇：垫层、勒脚与入口 · L301 · 1.0k
+  - WLD-TERRAIN §4.4 树与道具落地 · L312 · 561
+- WLD-TERRAIN §5 竖直落差 · L323 · 2.6k
+  - WLD-TERRAIN §5.1 连接规则 · L325 · 661
+  - WLD-TERRAIN §5.2 台阶 · L341 · 464
+  - WLD-TERRAIN §5.3 坡道 · L350 · 165
+  - WLD-TERRAIN §5.4 台缘带（v1 的挡墙） · L356 · 549
+  - WLD-TERRAIN §5.5 退台 · L366 · 203
+  - WLD-TERRAIN §5.6 高墙（增强阶段） · L372 · 209
+  - WLD-TERRAIN §5.7 防护 · L377 · 172
+  - WLD-TERRAIN §5.8 谁来做 · L383 · 155
+- WLD-TERRAIN §6 水体 · L388 · 3.5k
+  - WLD-TERRAIN §6.1 常水位 · L390 · 532
+  - WLD-TERRAIN §6.2 岸型 · L397 · 1.2k
+  - WLD-TERRAIN §6.3 涉水带与浅滩 · L411 · 404
+  - WLD-TERRAIN §6.4 湖盆 · L418 · 186
+  - WLD-TERRAIN §6.5 河渠 · L424 · 258
+  - WLD-TERRAIN §6.6 穿出校界 · L431 · 199
+  - WLD-TERRAIN §6.7 开放泳区的水深与出口 · L437 · 680
+- WLD-TERRAIN §7 可走性与碰撞 · L445 · 3.0k
+  - WLD-TERRAIN §7.1 坡度分级 · L447 · 648
+  - WLD-TERRAIN §7.2 与控制器的配合 · L462 · 371
+  - WLD-TERRAIN §7.3 碰撞带 · L469 · 516
+  - WLD-TERRAIN §7.4 瓦片接缝 · L479 · 472
+  - WLD-TERRAIN §7.5 不卡脚、不穿地 · L488 · 621
+  - WLD-TERRAIN §7.6 其他读地面高度的地方 · L504 · 334
+- WLD-TERRAIN §8 三渲二着色与描线 · L511 · 2.6k
+  - WLD-TERRAIN §8.1 为什么坡面容易脏 · L513 · 262
+  - WLD-TERRAIN §8.2 规则 · L517 · 1.1k
+  - WLD-TERRAIN §8.3 描线 · L534 · 582
+  - WLD-TERRAIN §8.4 材质 ID 与表面 · L549 · 182
+  - WLD-TERRAIN §8.5 换级与粗级法线 · L554 · 171
+  - WLD-TERRAIN §8.6 与季节和光照的关系 · L559 · 222
+- WLD-TERRAIN §9 LOD、分辨率与性能 · L565 · 2.3k
+  - WLD-TERRAIN §9.1 分级 · L567 · 494
+  - WLD-TERRAIN §9.2 几何误差与裙边 · L580 · 371
+  - WLD-TERRAIN §9.3 量化范围与对角线 · L586 · 208
+  - WLD-TERRAIN §9.4 烘焙、缓存与运行时求值 · L591 · 605
+  - WLD-TERRAIN §9.5 预算 · L598 · 624
+- WLD-TERRAIN §10 分阶段施工 · L609 · 2.0k
+  - WLD-TERRAIN §10.1 第 0 阶段：接缝（现在，约 1 天，高优先级） · L611 · 522
+  - WLD-TERRAIN §10.2 P0 样板区（约 2–4 天，高优先级） · L619 · 267
+  - WLD-TERRAIN §10.3 主线铺开（约 1–2 周） · L626 · 254
+  - WLD-TERRAIN §10.4 增强（按需） · L632 · 90
+  - WLD-TERRAIN §10.5 各包的改动面 · L636 · 848
+- WLD-TERRAIN §11 待验证（P0） · L654 · 1.5k
 
 ## WLD-VEGETATION · 植被：树种与四季、银杏大道与水杉路、草坪与灌木
 
-`docs/design/world/WLD-VEGETATION-植被.md` · 43.4k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
+`docs/design/world/WLD-VEGETATION-植被.md` · 43.3k 字 · 全校树木、灌木、草坪与水生植物的画法、树种四季、种植位置、季相参数、碰撞、声音接口与 Godot 实现
 关键词：植被、植物、树种、树冠画法、云团型、插片型、冬季裸枝、枝条笔触、叶量 A、开花 B、季相参数、季相行、局部季节、四季变色、银杏大道、水杉路、春季粉带、草坪、绿篱、荷、芦苇、落叶地毯、树冠投影、树冠遮蔽、覆雪、近池、远池、L2 替身、species.json、tree_species
 
   - WLD-VEGETATION 分工 · L23 · 908
@@ -603,7 +761,7 @@
 - WLD-WATER §1 动画式水面（所有水体通用） · L77 · 6.5k
 - WLD-WATER §2 西湖 · L189 · 1.5k
 - WLD-WATER §3 东湖 · L216 · 943
-- WLD-WATER §4 河渠 · L236 · 2.1k
+- WLD-WATER §4 河渠 · L236 · 2.0k
 - WLD-WATER §5 主楼喷泉（可选） · L269 · 145
 - WLD-WATER §6 截面水柱的水色 · L273 · 470
 - WLD-WATER §7 Godot 实现 · L287 · 7.1k
@@ -620,13 +778,13 @@
 
 ## MAP-QSH-ADDITIONS · 设计增补：给没有设计感的地方加设计
 
-`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md` · 44.5k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
+`docs/design/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md` · 42.4k 字 · 全校无设计感处的增补词汇、楼宇设计规则、禁做清单、各包增补任务，以及夜间灯光总图和雨天增补
 关键词：设计增补、增补物、增补词汇、作用代号、默认状态规则、初灯、初灯组、照度三级、夜间灯光总图、灯光调度表、灯具标记、普通楼宇设计规则、西立面竖向鳍片、日式街景物件落位、不建议增补、禁做清单、新颜色登记、walk 列、可跳上、步行服务设施、导览亭、导览桩、直饮水台、雨帘、避雨处、积水点、lighting-schedule.json、功能开敞面、过渡绿地、空间记录
 
 - MAP-QSH-ADDITIONS §0 通用规则 · L22 · 3.9k
   - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L60 · 1.1k
 - MAP-QSH-ADDITIONS §1 中国高校"有设计感"的常见手法 · L74 · 519
-- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L91 · 15.3k
+- MAP-QSH-ADDITIONS §2 按场地类型的增补词汇 · L91 · 13.4k
   - MAP-QSH-ADDITIONS §2.1 宿舍组团内外 · L95 · 944
   - MAP-QSH-ADDITIONS §2.2 食堂与商业街前 · L107 · 948
   - MAP-QSH-ADDITIONS §2.3 普通道路和路口 · L118 · 861
@@ -635,29 +793,29 @@
   - MAP-QSH-ADDITIONS §2.6 湖岸 · L150 · 775
   - MAP-QSH-ADDITIONS §2.7 大片草坪 · L160 · 822
   - MAP-QSH-ADDITIONS §2.8 楼与楼之间的空地 · L173 · 657
-  - MAP-QSH-ADDITIONS §2.9 屋顶 · L183 · 903
+  - MAP-QSH-ADDITIONS §2.9 屋顶 · L183 · 918
   - MAP-QSH-ADDITIONS §2.10 运动区周边 · L196 · 553
   - MAP-QSH-ADDITIONS §2.11 围墙和校界 · L206 · 1.0k
-  - MAP-QSH-ADDITIONS §2.12 桥 · L218 · 544
+  - MAP-QSH-ADDITIONS §2.12 桥 · L218 · 555
   - MAP-QSH-ADDITIONS §2.13 步行服务设施（配合 SYS-WALK §10） · L228 · 1.7k
   - MAP-QSH-ADDITIONS §2.14 外围街道带（WLD-OUTSKIRTS） · L240 · 1.2k
   - MAP-QSH-ADDITIONS §2.15 钟与广播（SYS-AUDIO） · L259 · 548
-  - MAP-QSH-ADDITIONS §2.16 日式日常街景物件（ART-STYLE §9.1、ART-AMBIENCE） · L268 · 2.1k
-- MAP-QSH-ADDITIONS §3 让普通楼宇有设计感 · L289 · 1.5k
-- MAP-QSH-ADDITIONS §4 参照与转译规则 · L306 · 1.2k
-- MAP-QSH-ADDITIONS §5 不建议增补 · L332 · 1.2k
-- MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L354 · 833
-- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L376 · 7.6k
-- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L421 · 6.5k
-  - MAP-QSH-ADDITIONS §8.1 照度三级 · L433 · 674
-  - MAP-QSH-ADDITIONS §8.2 颜色 · L445 · 479
-  - MAP-QSH-ADDITIONS §8.3 初灯组 · L454 · 706
-  - MAP-QSH-ADDITIONS §8.4 调度表 · L462 · 2.9k
-  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L509 · 896
-- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L520 · 2.4k
-  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L524 · 1.2k
-  - MAP-QSH-ADDITIONS §9.2 积水点 · L545 · 993
-- MAP-QSH-ADDITIONS §10 待验证（P0） · L555 · 658
+  - MAP-QSH-ADDITIONS §2.16 日式日常街景物件 · L268 · 137
+- MAP-QSH-ADDITIONS §3 让普通楼宇有设计感 · L272 · 1.5k
+- MAP-QSH-ADDITIONS §4 参照与转译规则 · L289 · 1.2k
+- MAP-QSH-ADDITIONS §5 不建议增补 · L315 · 1.1k
+- MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L337 · 853
+- MAP-QSH-ADDITIONS §7 各工作包的增补任务 · L359 · 7.6k
+- MAP-QSH-ADDITIONS §8 夜间灯光总图（交 WP-39） · L404 · 6.5k
+  - MAP-QSH-ADDITIONS §8.1 照度三级 · L416 · 674
+  - MAP-QSH-ADDITIONS §8.2 颜色 · L428 · 479
+  - MAP-QSH-ADDITIONS §8.3 初灯组 · L437 · 706
+  - MAP-QSH-ADDITIONS §8.4 调度表 · L445 · 2.9k
+  - MAP-QSH-ADDITIONS §8.5 雨夜与雾夜 · L492 · 896
+- MAP-QSH-ADDITIONS §9 雨天：雨帘、避雨处与积水点 · L503 · 2.4k
+  - MAP-QSH-ADDITIONS §9.1 雨帘与避雨处 · L507 · 1.2k
+  - MAP-QSH-ADDITIONS §9.2 积水点 · L528 · 993
+- MAP-QSH-ADDITIONS §10 待验证（P0） · L538 · 658
 
 ## MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
@@ -676,7 +834,7 @@
 - MAP-QSH-CENTER-EAST §5 东缘 · L226 · 951
 - MAP-QSH-CENTER-EAST §6 本区的光 · L237 · 522
 - MAP-QSH-CENTER-EAST WP-21 交付验收 · L246 · 743
-- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L259 · 2.2k
+- MAP-QSH-CENTER-EAST 定位、设计增补与近景要求 · L259 · 2.1k
 - MAP-QSH-CENTER-EAST §7 季节与昼夜清单 · L303 · 3.3k
 - MAP-QSH-CENTER-EAST §8 行走 · L343 · 4.1k
 - MAP-QSH-CENTER-EAST §9 声音要点（SYS-AUDIO） · L398 · 603
@@ -746,7 +904,7 @@
 
   - MAP-QSH-NORTH 分工 · L23 · 1.1k
   - MAP-QSH-NORTH 实现 · L43 · 629
-- MAP-QSH-NORTH §0 结论 · L52 · 2.2k
+- MAP-QSH-NORTH §0 结论 · L52 · 2.3k
   - ★ MAP-QSH-NORTH §0.1 接入要点 · L65 · 1.2k
 - MAP-QSH-NORTH 数据定位 · L77 · 4.3k
   - MAP-QSH-NORTH 地标与服务 · L79 · 1.8k
@@ -767,11 +925,11 @@
 
 ## MAP-QSH-RENOVATION · 清水河翻新清单
 
-`docs/design/maps/qingshuihe/MAP-QSH-RENOVATION-清水河翻新清单.md` · 21.9k 字 · 清水河校区要翻新的楼与环境：逐条的实体、优先级、翻新部位和所用规则，以及待核实楼的做法
+`docs/design/maps/qingshuihe/MAP-QSH-RENOVATION-清水河翻新清单.md` · 22.0k 字 · 清水河校区要翻新的楼与环境：逐条的实体、优先级、翻新部位和所用规则，以及待核实楼的做法
 关键词：翻新清单、逐栋翻新、翻新条目、条目号、翻新优先级、高中低档、部位代号、楼型、翻新对照楼、待核实的楼、核实前的口径、缺立面近景、不列入的楼、2015 年以后的新楼、宿舍屋面设备、组团门禁、商业街店招、全校环境翻新、老楼翻新理由、翻新施工顺序
 
-- MAP-QSH-RENOVATION §0 结论 · L23 · 1.3k
-  - ★ MAP-QSH-RENOVATION §0.1 接入要点 · L35 · 676
+- MAP-QSH-RENOVATION §0 结论 · L23 · 1.4k
+  - ★ MAP-QSH-RENOVATION §0.1 接入要点 · L35 · 696
 - MAP-QSH-RENOVATION §1 优先级、条目号、部位代号与楼型 · L47 · 2.5k
   - MAP-QSH-RENOVATION §1.1 优先级 · L49 · 345
   - MAP-QSH-RENOVATION §1.2 条目号 · L59 · 329
@@ -780,7 +938,7 @@
 - MAP-QSH-RENOVATION §2 北部生活区（MAP-QSH-NORTH，WP-20） · L104 · 5.4k
   - MAP-QSH-RENOVATION §2.1 宿舍 · L106 · 3.0k
   - MAP-QSH-RENOVATION §2.2 食堂、商业与生活服务 · L127 · 1.5k
-  - MAP-QSH-RENOVATION §2.3 组团门禁与屋面设备 · L140 · 920
+  - MAP-QSH-RENOVATION §2.3 组团门禁与屋面设备 · L140 · 912
 - MAP-QSH-RENOVATION §3 中部与东区（MAP-QSH-CENTER-EAST，WP-21） · L147 · 1.4k
 - MAP-QSH-RENOVATION §4 南区（MAP-QSH-SOUTH，WP-18） · L159 · 1.6k
 - MAP-QSH-RENOVATION §5 西区与西北区（MAP-QSH-WEST，WP-19） · L172 · 512
@@ -790,10 +948,10 @@
   - MAP-QSH-RENOVATION §8.1 核实前的口径 · L205 · 387
   - MAP-QSH-RENOVATION §8.2 年代未查到的楼 · L213 · 2.0k
   - MAP-QSH-RENOVATION §8.3 缺立面近景的楼 · L238 · 492
-- MAP-QSH-RENOVATION §9 不列入的楼 · L252 · 853
-- MAP-QSH-RENOVATION §10 登记、分工与验收 · L271 · 1.2k
+- MAP-QSH-RENOVATION §9 不列入的楼 · L252 · 866
+- MAP-QSH-RENOVATION §10 登记、分工与验收 · L271 · 1.3k
   - MAP-QSH-RENOVATION §10.1 覆盖层登记 · L273 · 311
-  - MAP-QSH-RENOVATION §10.2 分工 · L279 · 459
+  - MAP-QSH-RENOVATION §10.2 分工 · L279 · 482
   - MAP-QSH-RENOVATION §10.3 施工顺序 · L294 · 182
   - MAP-QSH-RENOVATION §10.4 验收 · L300 · 266
 - MAP-QSH-RENOVATION §11 待验证（P0） · L306 · 361
@@ -810,13 +968,13 @@
 - MAP-QSH-SOUTH 数据定位 · L80 · 4.9k
 - MAP-QSH-SOUTH §1 南门 · L144 · 1.1k
 - MAP-QSH-SOUTH §2 主楼 · L163 · 2.5k
-- MAP-QSH-SOUTH §3 主楼周边 · L199 · 713
+- MAP-QSH-SOUTH §3 主楼周边 · L199 · 711
 - MAP-QSH-SOUTH §4 东湖 · L215 · 1.6k
 - MAP-QSH-SOUTH §5 宣邦楼 · L252 · 2.5k
 - MAP-QSH-SOUTH §6 立人楼 · L293 · 665
 - MAP-QSH-SOUTH §7 体育场馆（沿西源大道从西到东） · L306 · 1.5k
 - MAP-QSH-SOUTH §8 西南角：成电国际创新中心与科创餐厅 · L333 · 509
-- MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L343 · 517
+- MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L343 · 497
 - MAP-QSH-SOUTH §10 本区的水道 · L350 · 392
 - MAP-QSH-SOUTH WP-18 交付验收 · L357 · 1.0k
 - MAP-QSH-SOUTH 定位、设计增补与近景要求 · L374 · 2.9k
@@ -923,7 +1081,7 @@
 - MAP-QSH-WEST 数据定位 · L73 · 3.3k
 - MAP-QSH-WEST §1 六号科研楼 · L125 · 1.2k
 - MAP-QSH-WEST §2 校训石 · L148 · 412
-- MAP-QSH-WEST §3 创新中心 · L162 · 431
+- MAP-QSH-WEST §3 创新中心 · L162 · 394
 - MAP-QSH-WEST §4 经管楼 · L172 · 128
 - MAP-QSH-WEST §5 立人托幼公园 · L178 · 276
 - MAP-QSH-WEST §6 四号科研楼 · L185 · 480
@@ -940,7 +1098,7 @@
 
 ## SYS-ATLAS · 平面地图与传送：底图、小地图、大地图、标记、锚点、传送与解锁
 
-`docs/design/systems/SYS-ATLAS-平面地图与传送.md` · 46.6k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
+`docs/design/systems/SYS-ATLAS-平面地图与传送.md` · 40.4k 字 · 规定平面地图：底图烘焙与上色、小地图、大地图、标记、锚点、雾幕传送、解锁、契约与 G18 验收
 关键词：平面地图、小地图、大地图、底图、地图标记、锚点、传送点、导览亭、导览桩、传送、雾幕瞬移、飞过去、传送卡、传送落点、目录页、追踪、自定义标记、解锁策略、区域名、地名标注、atlasRect、G18 地图一致性、IAtlasService、IUnlockPolicy、MarkerId、AtlasSave、map_base.gdshader、markers.json、labels.json、overlay/atlas.d
 
 - SYS-ATLAS §0 结论 · L30 · 3.1k
@@ -964,7 +1122,7 @@
 - SYS-ATLAS §5 标记类型 · L439 · 2.5k
 - SYS-ATLAS §6 锚点实体：导览亭与导览桩（WP-13 做部件，WP-48c 登记，WP-44 配合选点） · L472 · 3.5k
 - SYS-ATLAS §7 传送流程（WP-48c 调用，WP-36 实现过渡） · L529 · 2.8k
-  - SYS-ATLAS §7.1 两种方式 · L531 · 702
+  - SYS-ATLAS §7.1 两种方式 · L531 · 703
   - SYS-ATLAS §7.2 传送的时序 · L542 · 923
   - SYS-ATLAS §7.3 落点 · L559 · 675
   - SYS-ATLAS §7.4 预取与到达保证 · L571 · 202
@@ -972,21 +1130,21 @@
 - SYS-ATLAS §8 解锁策略（WP-48c） · L587 · 698
 - SYS-ATLAS §9 多地图下的数据（WP-48c，与 SYS-MAPS一致） · L602 · 1.7k
 - SYS-ATLAS §10 实现与性能（WP-48b、WP-48c） · L627 · 2.4k
-- SYS-ATLAS §11 C# 契约（照 ENG-ARCH §3 的写法；纯 .NET，只增不改） · L690 · 5.4k
-- SYS-ATLAS §12 存档里存什么、设置里存什么 · L782 · 978
-- SYS-ATLAS §13 各包的分工 · L810 · 1.8k
-- SYS-ATLAS §14 验收 · L832 · 2.9k
-  - SYS-ATLAS §14.1 G18 地图一致性（ENG-GATES §2） · L834 · 1.3k
-  - SYS-ATLAS §14.2 G14 界面门禁的地图部分（G14 的总则见 UI-VISUAL与 ENG-GATES §2，这里只列地图部分） · L854 · 983
-  - SYS-ATLAS §14.3 G2、G13、G15、G16 与 F4 的地图增量 · L866 · 661
-- SYS-ATLAS §16 待验证（P0） · L885 · 592
+- SYS-ATLAS §11 C# 契约 · L690 · 922
+- SYS-ATLAS §12 存档里存什么、设置里存什么 · L702 · 978
+- SYS-ATLAS §13 各包的分工 · L730 · 71
+- SYS-ATLAS §14 验收 · L734 · 2.9k
+  - SYS-ATLAS §14.1 G18 地图一致性（ENG-GATES §2） · L736 · 1.3k
+  - SYS-ATLAS §14.2 G14 界面门禁的地图部分（G14 的总则见 UI-VISUAL与 ENG-GATES §2，这里只列地图部分） · L756 · 983
+  - SYS-ATLAS §14.3 G2、G13、G15、G16 与 F4 的地图增量 · L768 · 661
+- SYS-ATLAS §16 待验证（P0） · L787 · 592
 
 ## SYS-AUDIO · 音频：环境声、观者声、空间声学、界面音效与混音
 
-`docs/design/systems/SYS-AUDIO-音频.md` · 113.8k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
+`docs/design/systems/SYS-AUDIO-音频.md` · 94.5k 字 · 声音的总体架构、环境声景、天气与钟声、观者声、空间声学、界面音、素材许可、契约、预算与 G21 门禁
 关键词：音频、声音、环境声、声景、观者声、脚步声、空间声学、混响、混音、音频总线、界面音效、开场音乐、音量设置、远雷、钟声、校园广播、人迹声、素材许可、IAudioService、IAmbienceService、IFoleyService、IAcousticEnv、IWalkTelemetry、AudioBuses、FootMat、AmbientEmitter、SoundSocketDecl、audio.cfg、licenses.json、G21
 
-  - SYS-AUDIO 分工 · L22 · 121
+  - SYS-AUDIO 分工 · L22 · 105
 - SYS-AUDIO §0 结论 · L27 · 4.5k
   - ★ SYS-AUDIO §0.1 接入要点 · L43 · 2.4k
 - SYS-AUDIO §2 总体架构 · L59 · 8.8k
@@ -996,7 +1154,7 @@
   - SYS-AUDIO §2.4 发声器的四种形态 · L142 · 604
   - SYS-AUDIO §2.5 声源池、仲裁与虚拟化 · L153 · 1.6k
   - SYS-AUDIO §2.6 二维与三维的分工、距离衰减 · L178 · 1.1k
-  - SYS-AUDIO §2.7 生命周期：启动、换图、读档、退出 · L198 · 628
+  - SYS-AUDIO §2.7 生命周期：启动、换图、读档、退出 · L198 · 629
 - SYS-AUDIO §3 总线布局与混音铁律 · L206 · 3.2k
   - SYS-AUDIO §3.1 总线树（代码生成，不用 `.tres`） · L208 · 1.6k
   - SYS-AUDIO §3.2 混音铁律 · L239 · 869
@@ -1014,7 +1172,7 @@
   - SYS-AUDIO §5.1 雨：按落点表面分 · L460 · 1.0k
   - SYS-AUDIO §5.2 雪、雾、风 · L480 · 561
 - SYS-AUDIO §6 远雷、钟声、广播与偶发事件 · L488 · 3.6k
-  - SYS-AUDIO §6.1 远雷 · L490 · 589
+  - SYS-AUDIO §6.1 远雷 · L490 · 588
   - SYS-AUDIO §6.2 宣邦楼的钟声 · L499 · 905
   - SYS-AUDIO §6.3 傍晚的校园广播 · L509 · 662
   - SYS-AUDIO §6.4 偶发事件与其他同步提示 · L518 · 1.4k
@@ -1057,17 +1215,17 @@
 - SYS-AUDIO §18 性能预算与包体 · L1194 · 2.6k
   - SYS-AUDIO §18.1 CPU · L1196 · 1.6k
   - SYS-AUDIO §18.2 内存与包体 · L1216 · 937
-- SYS-AUDIO §19 C# 契约 · L1233 · 15.7k
-- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1471 · 2.0k
-- SYS-AUDIO §21 工作包 · L1499 · 5.5k
-  - SYS-AUDIO §21.1 WP-53 音频 · L1501 · 2.8k
-  - SYS-AUDIO §21.2 其他包的增量 · L1525 · 2.7k
-- SYS-AUDIO §22 验收：G21 声音 · L1553 · 4.2k
-- SYS-AUDIO §25 待验证（P0） · L1573 · 995
+- SYS-AUDIO §19 C# 契约 · L1233 · 805
+- SYS-AUDIO §20 帧顺序：`FramePriority` 里的两步 · L1245 · 2.0k
+- SYS-AUDIO §21 工作包 · L1273 · 1.2k
+  - SYS-AUDIO §21.1 WP-53 音频 · L1275 · 1.1k
+  - SYS-AUDIO §21.2 其他包的声音接入 · L1296 · 100
+- SYS-AUDIO §22 验收：G21 声音 · L1300 · 4.2k
+- SYS-AUDIO §25 待验证（P0） · L1320 · 995
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、自动推荐与自适应
 
-`docs/design/systems/SYS-GRAPHICS-画面设置.md` · 22.1k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
+`docs/design/systems/SYS-GRAPHICS-画面设置.md` · 18.7k 字 · 四档画面预设与单项、风格底线、应用流程、首次分档与自动调节、持久化与命令行、契约与验收
 关键词：画面设置、画质、画面预设、设备档、流畅、均衡、精致、极致、单项、风格底线、风格默认、自动调节画质、自适应、首次分档、渲染比例、超采样、雾幕类设置、画面页、显存估算、IQualityService、IQualityAware、QualityResponsive、QualityKnob、QualityView、KnobSpec、quality-presets.json、graphics.cfg、engine_override.cfg、reset-graphics.cmd、预设轮换
 
 - SYS-GRAPHICS §0 结论 · L24 · 2.1k
@@ -1078,15 +1236,15 @@
 - SYS-GRAPHICS §4 应用流程 · L138 · 632
 - SYS-GRAPHICS §5 自动推荐与自动调节 · L153 · 2.5k
 - SYS-GRAPHICS §6 持久化与命令行 · L204 · 2.3k
-- SYS-GRAPHICS §7 各包的分工 · L226 · 992
-- SYS-GRAPHICS §8 契约 · L247 · 2.7k
-- SYS-GRAPHICS §9 界面（WP-35，视觉见 UI-VISUAL §8.5） · L303 · 1.1k
-- SYS-GRAPHICS §10 验收 · L317 · 836
-- SYS-GRAPHICS §12 待验证（P0） · L329 · 512
+- SYS-GRAPHICS §7 各包的分工 · L226 · 70
+- SYS-GRAPHICS §8 契约 · L230 · 299
+- SYS-GRAPHICS §9 界面（WP-35，视觉见 UI-VISUAL §8.5） · L236 · 1.1k
+- SYS-GRAPHICS §10 验收 · L250 · 836
+- SYS-GRAPHICS §12 待验证（P0） · L262 · 512
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-`docs/design/systems/SYS-MAPS-多地图.md` · 45.0k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
+`docs/design/systems/SYS-MAPS-多地图.md` · 35.6k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
 关键词：多地图、换图、切图、地图服务、按图数据、按图与全局、先卸后装、切换 8 步、同图重载、天气按图、进图补算、地图归属、本图默认状态、单图半径、启动集 PCK、IMapService、IMapContext、IMapAware、MapScope、MapDescriptor、MapId、MapVisit、MapTravelRequest、IMapTransition、map.json、index.json、map_rect、boot_<地图>.pck、FramePriority.Map、--gate=maptravel
 
   - SYS-MAPS 分工与约定 · L22 · 235
@@ -1105,24 +1263,24 @@
 - SYS-MAPS §5 世界状态：时间与季节全局，天气按图 · L257 · 1.3k
 - SYS-MAPS §6 相机、行走与安全点 · L282 · 633
 - SYS-MAPS §7 自动发现与 `MapScope` · L293 · 2.2k
-- SYS-MAPS §8 C# 契约 · L319 · 7.2k
-- SYS-MAPS §9 帧顺序：`FramePriority.Map = −1300` · L441 · 1.4k
-- SYS-MAPS §10 全局参数 `map_rect` · L468 · 1.4k
-- SYS-MAPS §11 命令行 · L486 · 998
-- SYS-MAPS §12 内存、包体与单图半径 · L501 · 1.0k
-- SYS-MAPS §13 同图重载门禁 · L511 · 1.4k
-- SYS-MAPS §14 以后的方向 · L536 · 1.3k
-- SYS-MAPS §15 风险与 P0 验证 · L560 · 1.1k
-- SYS-MAPS §16 工作包与各包增量 · L575 · 2.5k
-- SYS-MAPS §17 验收 · L607 · 642
-- SYS-MAPS §19 待验证（P0） · L618 · 706
+- SYS-MAPS §8 C# 契约 · L319 · 143
+- SYS-MAPS §9 帧顺序：`FramePriority.Map = −1300` · L325 · 1.4k
+- SYS-MAPS §10 全局参数 `map_rect` · L352 · 1.4k
+- SYS-MAPS §11 命令行 · L370 · 998
+- SYS-MAPS §12 内存、包体与单图半径 · L385 · 1.0k
+- SYS-MAPS §13 同图重载门禁 · L395 · 1.4k
+- SYS-MAPS §14 以后的方向 · L420 · 1.3k
+- SYS-MAPS §15 风险与 P0 验证 · L444 · 1.1k
+- SYS-MAPS §16 工作包与各包增量 · L459 · 74
+- SYS-MAPS §17 验收 · L463 · 642
+- SYS-MAPS §19 待验证（P0） · L474 · 706
 
 ## SYS-MOTION · 动态与事件
 
 `docs/design/systems/SYS-MOTION-动态与事件.md` · 46.6k 字 · 两个时钟与一拍二，风、悬浮物、流体、生命体与反应动物的节奏，唯一的偶发事件、季节氛围与转场
 关键词：动态、两个时钟、动画时钟、AnimTime、anim_time、一拍二、step_rate、Step12、T12、480 s 回绕、内置 TIME、风场、阵风、IWindField、WindSample、wind、飘落池、萤火虫、解析运动、季节氛围、反应动物、根变换单一写者、偶发事件、晚归者、IncidentDirector、incidents.json、incident、转场、TransitionDirector、钟锤
 
-  - SYS-MOTION 分工 · L23 · 861
+  - SYS-MOTION 分工 · L23 · 860
 - SYS-MOTION §0 结论 · L41 · 3.0k
   - ★ SYS-MOTION §0.1 接入要点 · L56 · 1.4k
 - SYS-MOTION §1 世界时钟、流逝与动画时钟 · L72 · 6.5k
@@ -1150,7 +1308,7 @@
 
 ## SYS-SAVE · 存档与持久化：存档模型、存什么、格式与迁移、保存时机、加载与一致性、安全、契约与验收
 
-`docs/design/systems/SYS-SAVE-存档与持久化.md` · 54.1k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
+`docs/design/systems/SYS-SAVE-存档与持久化.md` · 42.6k 字 · 规定存档位与世界线、存档段、文件格式与迁移、保存时机、读档流程与一致性、设置文件安全与 G20
 关键词：存档、保存、读档、自动保存、存档位、世界线、存档段、段版本、存档迁移、金档、落定快照、安全时刻、续跑等价、世界实例、校验修复、存档损坏、单实例锁、设置文件安全、退出保存、ISaveService、SaveSectionAttribute、ISaveSection、SaveReason、LoadScope、RestorePhase、SaveMeta、IWorldState.Instance、FlushForQuit、CompleteResume、user://saves/
 
 - SYS-SAVE §0 结论 · L25 · 3.2k
@@ -1182,45 +1340,45 @@
 - SYS-SAVE §7 存档损坏与版本不兼容 · L532 · 1.0k
 - SYS-SAVE §8 设置类文件只接受基本类型 · L556 · 1.3k
 - SYS-SAVE §9 安全：为什么禁止用 Resource 和 ConfigFile 存档 · L577 · 1.6k
-- SYS-SAVE §10 C# 契约 · L608 · 9.5k
-- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L778 · 994
-- SYS-SAVE §12 命令行 · L799 · 1.2k
-- SYS-SAVE §13 性能实测 · L815 · 2.5k
-- SYS-SAVE §14 验收：G20 · L861 · 3.0k
-- SYS-SAVE §15 工作包 · L893 · 2.9k
-- SYS-SAVE §17 待验证（P0） · L928 · 476
+- SYS-SAVE §10 C# 契约 · L608 · 821
+- SYS-SAVE §11 帧顺序：`FramePriority.Save = 1000` · L627 · 994
+- SYS-SAVE §12 命令行 · L648 · 1.2k
+- SYS-SAVE §13 性能实测 · L664 · 2.5k
+- SYS-SAVE §14 验收：G20 · L710 · 3.0k
+- SYS-SAVE §15 工作包 · L742 · 69
+- SYS-SAVE §17 待验证（P0） · L746 · 476
 
 ## SYS-TIME · 时间与季节系统：世界状态、美术日月、色彩脚本、过渡
 
-`docs/design/systems/SYS-TIME-时间与季节.md` · 41.7k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
+`docs/design/systems/SYS-TIME-时间与季节.md` · 37.8k 字 · 世界状态与控制契约、美术日月、色彩脚本、四季内容、时间季节天气的过渡、灯光时刻表与时季验收
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、IWorldState、IWorldControl、WorldPreset、WorldTransition、ClockSetMode、FlowTo、美术太阳、美术月亮、主光交接、退光线、色彩脚本、调色板关键帧、季相行、英雄帧、四季内容、换季转场、改时间、延时摄影快进、每帧顺序、灯光时刻表、lighting-schedule.json、有效太阳高度
 
   - SYS-TIME 分工 · L23 · 166
 - SYS-TIME §0 结论 · L34 · 2.9k
   - ★ SYS-TIME §0.1 接入要点 · L56 · 1.4k
-- SYS-TIME §1 世界状态与控制（WP-34） · L71 · 10.6k
-- SYS-TIME §2 美术太阳与月亮（WP-34） · L201 · 2.6k
-- SYS-TIME §3 色彩脚本（WP-37） · L250 · 8.7k
-  - SYS-TIME §3.1 组织方式 · L252 · 2.4k
-  - SYS-TIME §3.2 秋季基准关键帧 · L278 · 3.8k
-  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L304 · 974
-  - SYS-TIME §3.4 难看时段的改造 · L323 · 516
-  - SYS-TIME §3.5 英雄帧 · L332 · 986
-- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L358 · 4.7k
-- SYS-TIME §5 过渡 · L417 · 1.9k
-- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L449 · 3.8k
-- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L508 · 867
-- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L521 · 2.9k
-- SYS-TIME §10 待验证（P0） · L551 · 445
+- SYS-TIME §1 世界状态与控制（WP-34） · L71 · 6.8k
+- SYS-TIME §2 美术太阳与月亮（WP-34） · L140 · 2.6k
+- SYS-TIME §3 色彩脚本（WP-37） · L189 · 8.7k
+  - SYS-TIME §3.1 组织方式 · L191 · 2.4k
+  - SYS-TIME §3.2 秋季基准关键帧 · L217 · 3.8k
+  - SYS-TIME §3.3 四季修正与季节专属覆盖 · L243 · 974
+  - SYS-TIME §3.4 难看时段的改造 · L262 · 516
+  - SYS-TIME §3.5 英雄帧 · L271 · 986
+- SYS-TIME §4 四季内容（WP-38，配合 WP-23、WP-15、WP-24） · L297 · 4.7k
+- SYS-TIME §5 过渡 · L356 · 1.9k
+- SYS-TIME §6 灯光与生活痕迹的时刻表（WP-39，各区配合） · L388 · 3.8k
+- SYS-TIME §7 与动态、偶发事件的协调（WP-26） · L447 · 867
+- SYS-TIME §8 验收（WP-41，配合 ENG-GATES） · L460 · 2.9k
+- SYS-TIME §10 待验证（P0） · L490 · 445
 
 ## SYS-TITLE · 开始页与进入过场：扉页、开始页、新游戏与继续过场、跳过、`IAppFlow`
 
-`docs/design/systems/SYS-TITLE-开始页与进入过场.md` · 44.2k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
+`docs/design/systems/SYS-TITLE-开始页与进入过场.md` · 41.8k 字 · 规定冷启动扉页、开始页 T0、新游戏与继续过场、跳过、IAppFlow 状态机与过场数据格式
 关键词：开始页、标题页、主菜单、扉页、启动序列、启动失败页、T0、云隙望穹、片名块、新游戏过场、继续过场、开场动画、返回标题、跳过过场、安全落点、开场过场设置、过场专属元素、云卡、放映层、标题卡、IAppFlow、AppState、EnterRequest、CinematicPlayer、CinematicDef、cine_cloud.gdshader、enter_new.json、game/data/maps/qingshuihe/cinematics/
 
-- SYS-TITLE §0 结论 · L25 · 3.2k
+- SYS-TITLE §0 结论 · L25 · 3.1k
   - ★ SYS-TITLE §0.1 接入要点 · L36 · 1.9k
-- SYS-TITLE §1 启动序列（SYS-VIEW §3 的启动流程以本节为准） · L51 · 6.1k
+- SYS-TITLE §1 启动序列 · L51 · 6.0k
   - SYS-TITLE §1.1 步骤 · L53 · 3.7k
   - SYS-TITLE §1.2 目标 · L83 · 482
   - SYS-TITLE §1.3 扉页 · L97 · 572
@@ -1243,33 +1401,33 @@
   - SYS-TITLE §5.2 安全落点 · L304 · 457
   - SYS-TITLE §5.3 设置项"开场过场" · L317 · 642
 - SYS-TITLE §6 与时间不可逆的关系 · L331 · 1.1k
-- SYS-TITLE §7 `IAppFlow` 状态机 · L353 · 5.1k
+- SYS-TITLE §7 `IAppFlow` 状态机 · L353 · 3.8k
   - SYS-TITLE §7.1 状态与转移 · L355 · 1.5k
   - SYS-TITLE §7.2 各状态下的约定 · L381 · 918
   - SYS-TITLE §7.3 交还控制 · L400 · 351
-  - SYS-TITLE §7.4 契约 · L409 · 2.3k
-- SYS-TITLE §8 过场数据格式与 `CinematicPlayer` · L447 · 7.6k
-  - SYS-TITLE §8.1 文件 · L449 · 521
-  - SYS-TITLE §8.2 结构 · L463 · 3.4k
-  - SYS-TITLE §8.3 `CinematicPlayer` · L528 · 2.0k
-  - SYS-TITLE §8.4 检查（G2 的一部分，纯 .NET） · L557 · 647
-  - SYS-TITLE §8.5 放映层（WP-35d） · L568 · 261
-  - SYS-TITLE §8.6 音频挂点 · L575 · 692
-- SYS-TITLE §9 云卡 `cine_cloud.gdshader` · L586 · 843
-- SYS-TITLE §10 流式预取 · L599 · 751
-- SYS-TITLE §11 性能与门禁 · L612 · 2.0k
-  - SYS-TITLE §11.1 预算 · L614 · 367
-  - SYS-TITLE §11.2 门禁增项（写进 ENG-GATES §2） · L625 · 1.3k
-  - SYS-TITLE §11.3 体验脚本（写进 ENG-PERF §12.4） · L641 · 197
-  - SYS-TITLE §11.4 静态预算、性能回归与自适应画质 · L645 · 202
-- SYS-TITLE §12 多地图 · L651 · 803
-- SYS-TITLE §13 不做的事 · L665 · 355
-- SYS-TITLE §14 工作包分工 · L679 · 1.1k
-- SYS-TITLE §16 待验证（P0） · L698 · 724
+  - SYS-TITLE §7.4 契约 · L409 · 1.1k
+- SYS-TITLE §8 过场数据格式与 `CinematicPlayer` · L424 · 7.6k
+  - SYS-TITLE §8.1 文件 · L426 · 521
+  - SYS-TITLE §8.2 结构 · L440 · 3.4k
+  - SYS-TITLE §8.3 `CinematicPlayer` · L505 · 2.0k
+  - SYS-TITLE §8.4 检查（G2 的一部分，纯 .NET） · L534 · 647
+  - SYS-TITLE §8.5 放映层（WP-35d） · L545 · 261
+  - SYS-TITLE §8.6 音频挂点 · L552 · 692
+- SYS-TITLE §9 云卡 `cine_cloud.gdshader` · L563 · 843
+- SYS-TITLE §10 流式预取 · L576 · 751
+- SYS-TITLE §11 性能与门禁 · L589 · 2.0k
+  - SYS-TITLE §11.1 预算 · L591 · 367
+  - SYS-TITLE §11.2 门禁增项（写进 ENG-GATES §2） · L602 · 1.3k
+  - SYS-TITLE §11.3 体验脚本（写进 ENG-PERF §12.4） · L618 · 197
+  - SYS-TITLE §11.4 静态预算、性能回归与自适应画质 · L622 · 202
+- SYS-TITLE §12 多地图 · L628 · 803
+- SYS-TITLE §13 不做的事 · L642 · 355
+- SYS-TITLE §14 工作包分工 · L656 · 71
+- SYS-TITLE §16 待验证（P0） · L660 · 724
 
 ## SYS-VIEW · 观察模式、介质与开场
 
-`docs/design/systems/SYS-VIEW-观察模式介质与开场.md` · 29.2k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
+`docs/design/systems/SYS-VIEW-观察模式介质与开场.md` · 26.3k 字 · 观察模式总述与旁观漫游、行走的第一与第三人称镜头、镜头在楼里地下水下雾海的介质呈现、启动开场与署名、旧网页栈归档
 关键词：旁观模式、第一人称、观察模式、飞行速度档、视场角、鼠标灵敏度、初始位置、第三人称、命令行参数、--pose、--title=0、镜头不会自己动、自动运镜、启动预热、引擎启动画面、介质呈现、剖切变体、楼里、地下、水下、半入水、雾海、ICameraRig、Pose、IMediumState、MediumKind、medium_overlay.gdshader、OSM 署名、LICENSES.txt、旧网页栈归档
 
   - SYS-VIEW 分工 · L23 · 348
@@ -1284,20 +1442,20 @@
   - SYS-VIEW §2.5 镜头不会自己动 · L165 · 2.1k
   - SYS-VIEW §2.6 操作说明与提示 · L193 · 340
   - SYS-VIEW §2.7 行走模式 · L202 · 2.1k
-- SYS-VIEW §3 启动与开场（WP-01；流程以 SYS-TITLE §1 为准） · L239 · 2.9k
-- SYS-VIEW §4 环境痕迹与平面地图的分工 · L270 · 758
-- SYS-VIEW §5 介质呈现：镜头在楼里、地下、水下、雾海里时（WP-07） · L283 · 5.0k
-  - SYS-VIEW §5.1 楼里 · L305 · 1.7k
-  - SYS-VIEW §5.2 地下 · L328 · 502
-  - SYS-VIEW §5.3 水下 · L339 · 772
-  - SYS-VIEW §5.4 雾海 · L350 · 281
-- SYS-VIEW §6 署名、窗口标题与图标（WP-01） · L358 · 1.8k
-- SYS-VIEW 交付验收 · L378 · 1.7k
-- SYS-VIEW §7 待验证（P0） · L407 · 772
+- SYS-VIEW §3 启动与开场 · L239 · 64
+- SYS-VIEW §4 环境痕迹与平面地图的分工 · L243 · 758
+- SYS-VIEW §5 介质呈现：镜头在楼里、地下、水下、雾海里时（WP-07） · L256 · 5.0k
+  - SYS-VIEW §5.1 楼里 · L278 · 1.7k
+  - SYS-VIEW §5.2 地下 · L301 · 502
+  - SYS-VIEW §5.3 水下 · L312 · 772
+  - SYS-VIEW §5.4 雾海 · L323 · 281
+- SYS-VIEW §6 署名、窗口标题与图标（WP-01） · L331 · 1.8k
+- SYS-VIEW 交付验收 · L351 · 1.7k
+- SYS-VIEW §7 待验证（P0） · L380 · 772
 
 ## SYS-WALK · 行走模式：手感、可行走范围、边界、碰撞与角色控制器
 
-`docs/design/systems/SYS-WALK-行走模式.md` · 60.2k 字 · 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
+`docs/design/systems/SYS-WALK-行走模式.md` · 56.1k 字 · 行走模式的手感、玩家身体、游泳、骑行、模式切换、可行走范围与边界、开放室内的门与电梯、角色控制器、碰撞数据与验收
 关键词：行走模式、游泳、角色控制器、手感参数、模式切换、可行走范围、可行走遮罩、边界收口、隐形墙、校界缓停、软墙提示、安全点、回位、涉水、玩家身体、开放泳区、碰撞级 C、碰撞就绪、自动登阶、电梯关门换位、推荐路线、步相、WalkClass、SurfaceTag、Collider、ICollisionWorld、IViewControl、IWalkTelemetry、walkable.overlay.json、routes.json
 
   - SYS-WALK 分工 · L23 · 414
@@ -1315,15 +1473,15 @@
 - SYS-WALK §10 行走走廊与节奏（配合 ART-FIDELITY） · L387 · 1.5k
 - SYS-WALK §11 推荐路线 · L424 · 3.0k
 - SYS-WALK §12 角色控制器（WP-42） · L451 · 7.1k
-- SYS-WALK §13 碰撞数据（WP-43） · L539 · 10.9k
-- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L670 · 828
-- SYS-WALK §15 验收 · L683 · 3.2k
-- SYS-WALK §16 骑行（WP-42、WP-55） · L723 · 2.5k
-- SYS-WALK §17 待验证（P0） · L764 · 1.9k
+- SYS-WALK §13 碰撞数据（WP-43） · L539 · 6.7k
+- SYS-WALK §14 碰撞就绪、进楼衔接与性能 · L610 · 828
+- SYS-WALK §15 验收 · L623 · 3.2k
+- SYS-WALK §16 骑行（WP-42、WP-55） · L663 · 2.5k
+- SYS-WALK §17 待验证（P0） · L704 · 1.9k
 
 ## SYS-WEATHER · 天气：天气清单、画面规则、前向随机过程、过渡与验收
 
-`docs/design/systems/SYS-WEATHER-天气.md` · 26.1k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
+`docs/design/systems/SYS-WEATHER-天气.md` · 22.6k 字 · 八格天气的画面与声音规则、自动天气的前向随机过程、各系统的实现、状态与契约、存档段与验收
 关键词：天气、天气格、自动天气、手动天气、天气向量、WeatherNow、WeatherKind、WeatherVec、WeatherSpan、IWeatherProcess、WeatherProcessState、ILightningFeed、LightningFlash、前向随机过程、前瞻队列、天气预报、天气种子、天气修正量、太阳雨、雨的可读性、闪电、彩虹、降水池、precip.gdshader、precip_occ、湿润、积水、地面遮罩 2、refl_lamps、天气巡回
 
 - SYS-WEATHER §0 结论 · L24 · 2.0k
@@ -1341,55 +1499,55 @@
   - SYS-WEATHER §6.5 时间与天气 · L205 · 706
   - SYS-WEATHER §6.6 固定点 · L218 · 805
 - SYS-WEATHER §7 光照、云与降水的实现（WP-45 及各系统包） · L226 · 2.9k
-- SYS-WEATHER §8 状态、参数与接口 · L250 · 4.6k
-- SYS-WEATHER §9 验收 · L314 · 1.4k
-- SYS-WEATHER §10 工作包 · L327 · 1.3k
-- SYS-WEATHER §12 待验证（P0） · L336 · 585
+- SYS-WEATHER §8 状态、参数与接口 · L250 · 2.3k
+- SYS-WEATHER §9 验收 · L282 · 1.4k
+- SYS-WEATHER §10 工作包 · L295 · 69
+- SYS-WEATHER §12 待验证（P0） · L299 · 585
 
 ## UI-NAV · 界面、点位跳转与操作说明
 
-`docs/design/ui/UI-NAV-界面与操作说明.md` · 52.7k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
+`docs/design/ui/UI-NAV-界面与操作说明.md` · 50.1k 字 · 界面的内容与交互：组件、快捷键、点位清单、跳转与传送过渡、无障碍、实现与性能
 关键词：界面交互、快捷键、键位、改键、输入优先级、界面态、漫游态、鼠标捕获、自动隐藏、时间环操作、天气签条、速度档、临时提示、到达标题、设置项、首次引导、点位、跳转点、Waypoint、LocalizedName、waypoints.json、跳转、飞过去、无障碍、读屏、文本键、翻译表、地名来源、settings.cfg、input.cfg
 
   - UI-NAV 分工 · L22 · 194
 - UI-NAV §0 结论 · L28 · 2.8k
   - ★ UI-NAV §0.1 接入要点 · L36 · 1.9k
 - UI-NAV §1 允许什么、禁止什么 · L52 · 1.1k
-- UI-NAV §2 视觉风格（WP-35；以 UI-VISUAL 为准） · L71 · 1.3k
-- UI-NAV §3 布局 · L83 · 2.3k
-- UI-NAV §4 组件 · L131 · 14.4k
-  - UI-NAV §4.1 时间环（时间） · L135 · 2.0k
-  - UI-NAV §4.2 季节 · L177 · 461
-  - UI-NAV §4.3 速度 · L187 · 462
-  - UI-NAV §4.4 观察模式 · L201 · 543
-  - UI-NAV §4.5 点位目录（大地图的目录页） · L216 · 504
-  - UI-NAV §4.6 操作说明与设置 · L227 · 3.7k
-  - UI-NAV §4.7 首次进入 · L283 · 268
-  - UI-NAV §4.8 到达标题 · L291 · 521
-  - UI-NAV §4.9 临时提示 · L303 · 1.4k
-  - UI-NAV §4.10 天气格 · L330 · 2.5k
-  - UI-NAV §4.11 小地图（摘要） · L383 · 669
-  - UI-NAV §4.12 大地图（摘要） · L395 · 645
-  - UI-NAV §4.13 开始页、存档页与放映层（摘要） · L406 · 664
-- UI-NAV §5 鼠标捕获、界面态与快捷键（WP-35，WP-06 配合） · L416 · 5.6k
-- UI-NAV §6 点位清单（WP-36，`game/data/maps/qingshuihe/waypoints.json`） · L517 · 6.6k
-- UI-NAV §7 跳转过渡（WP-36） · L608 · 4.2k
-  - UI-NAV §7.1 跳转方式 · L610 · 1.0k
-  - UI-NAV §7.2 镜头朝向 · L630 · 155
-  - UI-NAV §7.3 到达 · L639 · 321
-  - UI-NAV §7.4 打断 · L646 · 285
-  - UI-NAV §7.5 预取与速度律豁免 · L654 · 697
-  - UI-NAV §7.6 减少动态效果 · L670 · 236
-  - UI-NAV §7.7 为什么飞过去，又为什么有传送 · L674 · 388
-  - UI-NAV §7.8 传送（地图） · L680 · 1.1k
-- UI-NAV §8 无障碍与语言（WP-35） · L699 · 3.6k
-- UI-NAV §9 实现与性能（WP-35） · L736 · 6.0k
-- UI-NAV §10 验收 · L795 · 1.3k
-- UI-NAV §12 待验证（P0） · L816 · 1.0k
+- UI-NAV §2 视觉风格（WP-35；以 UI-VISUAL 为准） · L71 · 93
+- UI-NAV §3 布局 · L75 · 2.3k
+- UI-NAV §4 组件 · L123 · 12.9k
+  - UI-NAV §4.1 时间环（时间） · L127 · 2.0k
+  - UI-NAV §4.2 季节 · L169 · 461
+  - UI-NAV §4.3 速度 · L179 · 462
+  - UI-NAV §4.4 观察模式 · L193 · 543
+  - UI-NAV §4.5 点位目录（大地图的目录页） · L208 · 504
+  - UI-NAV §4.6 操作说明与设置 · L219 · 3.7k
+  - UI-NAV §4.7 首次进入 · L275 · 268
+  - UI-NAV §4.8 到达标题 · L283 · 521
+  - UI-NAV §4.9 临时提示 · L295 · 1.4k
+  - UI-NAV §4.10 天气格 · L322 · 2.5k
+  - UI-NAV §4.11 小地图 · L375 · 119
+  - UI-NAV §4.12 大地图 · L379 · 124
+  - UI-NAV §4.13 开始页、存档页与放映层 · L383 · 230
+- UI-NAV §5 鼠标捕获、界面态与快捷键（WP-35，WP-06 配合） · L386 · 5.6k
+- UI-NAV §6 点位清单（WP-36，`game/data/maps/qingshuihe/waypoints.json`） · L487 · 6.6k
+- UI-NAV §7 跳转过渡（WP-36） · L578 · 4.2k
+  - UI-NAV §7.1 跳转方式 · L580 · 1.0k
+  - UI-NAV §7.2 镜头朝向 · L600 · 155
+  - UI-NAV §7.3 到达 · L609 · 321
+  - UI-NAV §7.4 打断 · L616 · 285
+  - UI-NAV §7.5 预取与速度律豁免 · L624 · 697
+  - UI-NAV §7.6 减少动态效果 · L640 · 236
+  - UI-NAV §7.7 为什么飞过去，又为什么有传送 · L644 · 388
+  - UI-NAV §7.8 传送（地图） · L650 · 1.1k
+- UI-NAV §8 无障碍与语言（WP-35） · L669 · 3.6k
+- UI-NAV §9 实现与性能（WP-35） · L706 · 6.0k
+- UI-NAV §10 验收 · L765 · 1.3k
+- UI-NAV §12 待验证（P0） · L786 · 1.0k
 
 ## UI-VISUAL · 界面视觉语言：令牌、字体、形状、材质、图标、组件、画面布局、动效与实现
 
-`docs/design/ui/UI-VISUAL-界面视觉语言.md` · 74.9k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
+`docs/design/ui/UI-VISUAL-界面视觉语言.md` · 71.6k 字 · 界面视觉规范：色彩令牌与两套主题、字体、形状材质、图标、组件、布局、动效、Godot 实现与验收
 关键词：界面视觉、色彩令牌、主题色、清蓝、晶白、深屏、深色主题、昼夜交班、常驻件、界面字体、切角、发丝线、过孔灯、衍射光边、焦点环、界面图标、窗口图标、动效母题、界面动画、减少动态效果、辉光、等待灯、界面缩放、ui.json、ui_theme.tres、ui_panel.gdshader、ui_screen.gdshader、ui_night、IMotionSettings、IPaletteProbe
 
   - UI-VISUAL 分工 · L22 · 376
@@ -1442,69 +1600,79 @@
   - UI-VISUAL §7.8 到达标题与压在画面上的字 · L615 · 368
   - UI-VISUAL §7.9 存档卡："存储模组" · L624 · 1.0k
   - UI-VISUAL §7.10 等待灯与存储指示 · L653 · 370
-- UI-VISUAL §8 画面清单与布局 · L658 · 12.5k
+- UI-VISUAL §8 画面清单与布局 · L658 · 9.2k
   - UI-VISUAL §8.1 画面清单：出现时机、主题与压暗 · L662 · 940
   - UI-VISUAL §8.2 漫游态 · L678 · 1.2k
   - UI-VISUAL §8.3 界面态 · L699 · 1.6k
   - UI-VISUAL §8.4 大地图（框架） · L725 · 1.1k
   - UI-VISUAL §8.5 设置卡（含画面页、声音页） · L745 · 1.8k
-  - UI-VISUAL §8.6 开始页（界面部分；流程以 SYS-TITLE 为准） · L771 · 1.8k
-  - UI-VISUAL §8.7 存档页（界面部分；存档语义以 SYS-SAVE 为准） · L797 · 1.2k
-  - UI-VISUAL §8.8 确认对话框与临时提示 · L818 · 350
-  - UI-VISUAL §8.9 过场字幕与标题卡（视觉部分；时长、镜头、跳过逻辑以 SYS-TITLE 为准） · L832 · 659
-  - UI-VISUAL §8.10 加载与等待 · L842 · 232
-  - UI-VISUAL §8.11 制作人员与许可（"数据手册"样式） · L848 · 1.1k
-  - UI-VISUAL §8.12 以后的多地图与 RPG（预留，只定视觉） · L869 · 338
-- UI-VISUAL §9 动效语言 · L877 · 7.4k
-  - UI-VISUAL §9.1 动效原则 · L879 · 302
-  - UI-VISUAL §9.2 两种时间 · L888 · 254
-  - UI-VISUAL §9.3 八个母题 · L893 · 1.8k
-  - UI-VISUAL §9.4 频率分级 · L906 · 656
-  - UI-VISUAL §9.5 曲线 · L923 · 885
-  - UI-VISUAL §9.6 时长表 · L939 · 985
-  - UI-VISUAL §9.7 进入与退出、交错、打断 · L959 · 247
-  - UI-VISUAL §9.8 辉光与闪烁的上限 · L965 · 491
-  - UI-VISUAL §9.9 关键编排 · L981 · 1.8k
-- UI-VISUAL §10 减少动态效果与无障碍 · L1001 · 1.4k
-  - UI-VISUAL §10.1 "减少动态效果"下的替代 · L1003 · 847
-  - UI-VISUAL §10.2 无障碍 · L1028 · 551
-- UI-VISUAL §11 Godot 实现 · L1040 · 13.0k
-  - UI-VISUAL §11.1 分层与 `hdr_2d` · L1042 · 662
-  - UI-VISUAL §11.2 目录与类 · L1052 · 1.8k
-  - UI-VISUAL §11.3 `ui.json` 与 Theme 的生成 · L1084 · 1.2k
-  - UI-VISUAL §11.4 StyleBox、切角与发丝线 · L1097 · 1.1k
-  - UI-VISUAL §11.5 两个界面着色器（白名单） · L1115 · 1.4k
-  - UI-VISUAL §11.6 主题切换：`ui_night` 的锁存与扫描前沿 · L1130 · 934
-  - UI-VISUAL §11.7 动效的驱动 · L1140 · 1.5k
-  - UI-VISUAL §11.8 字体与 MSDF · L1152 · 787
-  - UI-VISUAL §11.9 预热与预建 · L1162 · 1.1k
-  - UI-VISUAL §11.10 界面缩放公式 · L1172 · 938
-  - UI-VISUAL §11.11 契约增量（写进 ENG-ARCH §3） · L1189 · 982
-  - UI-VISUAL §11.12 命令行与组件画廊（写进 ENG-GATES §1） · L1212 · 607
-- UI-VISUAL §12 性能 · L1224 · 1.3k
-- UI-VISUAL §13 验收 · L1243 · 2.5k
-- UI-VISUAL §15 待验证（P0） · L1276 · 608
+  - UI-VISUAL §8.6 开始页（界面部分；流程以 SYS-TITLE 为准） · L771 · 100
+  - UI-VISUAL §8.7 存档页（界面部分；存档语义以 SYS-SAVE 为准） · L775 · 94
+  - UI-VISUAL §8.8 确认对话框与临时提示 · L779 · 350
+  - UI-VISUAL §8.9 过场字幕与标题卡（视觉部分；时长、镜头、跳过逻辑以 SYS-TITLE 为准） · L793 · 116
+  - UI-VISUAL §8.10 加载与等待 · L797 · 232
+  - UI-VISUAL §8.11 制作人员与许可（"数据手册"样式） · L803 · 1.1k
+  - UI-VISUAL §8.12 以后的多地图与 RPG（预留，只定视觉） · L824 · 338
+- UI-VISUAL §9 动效语言 · L832 · 7.4k
+  - UI-VISUAL §9.1 动效原则 · L834 · 302
+  - UI-VISUAL §9.2 两种时间 · L843 · 254
+  - UI-VISUAL §9.3 八个母题 · L848 · 1.8k
+  - UI-VISUAL §9.4 频率分级 · L861 · 656
+  - UI-VISUAL §9.5 曲线 · L878 · 885
+  - UI-VISUAL §9.6 时长表 · L894 · 985
+  - UI-VISUAL §9.7 进入与退出、交错、打断 · L914 · 247
+  - UI-VISUAL §9.8 辉光与闪烁的上限 · L920 · 491
+  - UI-VISUAL §9.9 关键编排 · L936 · 1.8k
+- UI-VISUAL §10 减少动态效果与无障碍 · L956 · 1.4k
+  - UI-VISUAL §10.1 "减少动态效果"下的替代 · L958 · 847
+  - UI-VISUAL §10.2 无障碍 · L983 · 551
+- UI-VISUAL §11 Godot 实现 · L995 · 13.0k
+  - UI-VISUAL §11.1 分层与 `hdr_2d` · L997 · 662
+  - UI-VISUAL §11.2 目录与类 · L1007 · 1.8k
+  - UI-VISUAL §11.3 `ui.json` 与 Theme 的生成 · L1039 · 1.2k
+  - UI-VISUAL §11.4 StyleBox、切角与发丝线 · L1052 · 1.1k
+  - UI-VISUAL §11.5 两个界面着色器（白名单） · L1070 · 1.4k
+  - UI-VISUAL §11.6 主题切换：`ui_night` 的锁存与扫描前沿 · L1085 · 934
+  - UI-VISUAL §11.7 动效的驱动 · L1095 · 1.5k
+  - UI-VISUAL §11.8 字体与 MSDF · L1107 · 787
+  - UI-VISUAL §11.9 预热与预建 · L1117 · 1.1k
+  - UI-VISUAL §11.10 界面缩放公式 · L1127 · 938
+  - UI-VISUAL §11.11 契约增量（写进 ENG-ARCH §3） · L1144 · 982
+  - UI-VISUAL §11.12 命令行与组件画廊（写进 ENG-GATES §1） · L1167 · 607
+- UI-VISUAL §12 性能 · L1179 · 1.3k
+- UI-VISUAL §13 验收 · L1198 · 2.5k
+- UI-VISUAL §15 待验证（P0） · L1231 · 608
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 200.5k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 59.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
-- ENG-ARCH §0 结论 · L67 · 2.3k
+- ENG-ARCH §0 结论 · L67 · 2.4k
   - ★ ENG-ARCH §0.1 接入要点 · L79 · 1.3k
-- ENG-ARCH §1 旧网页栈怎么处理 · L93 · 4.1k
-- ENG-ARCH §2 目录结构与归属 · L148 · 34.2k
-- ENG-ARCH §3 关键接口（契约草案） · L468 · 115.1k
-- ENG-ARCH §4 资源管线 · L2287 · 10.6k
-- ENG-ARCH §5 接口先定、桩先合入 · L2375 · 3.3k
-- ENG-ARCH §6 git 工作树流程 · L2414 · 6.2k
-- ENG-ARCH §7 主要风险与对策 · L2487 · 6.3k
-- ENG-ARCH §8 扩展点（RPG） · L2540 · 8.6k
-- ENG-ARCH §9 待验证（P0） · L2584 · 2.3k
+- ENG-ARCH §1 资源管线迁移约定 · L93 · 277
+- ENG-ARCH §2 目录结构与归属 · L102 · 19.5k
+  - ENG-ARCH 目录树 · L104 · 5.5k
+  - ENG-ARCH 生成物与资源位置 · L170 · 315
+  - ENG-ARCH 归属依据 · L174 · 69
+  - ENG-ARCH 程序集边界 · L178 · 2.5k
+  - ENG-ARCH 命名空间依赖规则 · L200 · 3.9k
+  - ENG-ARCH 禁用写法与确定性 · L223 · 4.0k
+  - ENG-ARCH 自动发现与模块接入 · L258 · 3.2k
+- ENG-ARCH §3 关键接口与契约源码 · L282 · 3.3k
+  - ENG-ARCH 契约组与源码 · L298 · 1.3k
+  - ENG-ARCH 覆盖层约束 · L319 · 342
+  - ENG-ARCH 仍未落地项 · L325 · 511
+- ENG-ARCH §4 资源管线 · L331 · 10.6k
+- ENG-ARCH §5 接口先定、桩先合入 · L419 · 3.3k
+- ENG-ARCH §6 工作树的技术细节 · L458 · 2.8k
+- ENG-ARCH §7 主要风险与对策 · L491 · 6.3k
+- ENG-ARCH §8 扩展点（RPG） · L544 · 1.1k
+- ENG-ARCH §9 待验证（P0） · L560 · 2.3k
 
 ## ENG-BUDGET · 性能预算与硬规则
 
-`docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md` · 55.0k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
+`docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md` · 43.9k 字 · 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、合入硬规则、测法与工程设置
 关键词：性能预算、预算、额度、份额、配额、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、主线程额度、硬规则、合入规则、细节级别、L0+、分块、四叉树、速度律、屏幕误差、近裁剪面、导出包体、本机缓存预算、工程设置、project.godot 设置
 
 - ENG-BUDGET §0 结论 · L23 · 2.4k
@@ -1516,65 +1684,29 @@
 - ENG-BUDGET §5 深度与近裁剪面 · L250 · 654
 - ENG-BUDGET §6 阴影、后期、倒影、灯光 · L258 · 2.7k
 - ENG-BUDGET §7 硬规则（违反任何一条都不能合入） · L278 · 7.5k
-- ENG-BUDGET §8 额度总账（`budgets.json`） · L316 · 11.5k
-- ENG-BUDGET §9 怎么测 · L451 · 4.0k
-- ENG-BUDGET §10 工程设置清单 · L484 · 7.2k
-- ENG-BUDGET §11 待验证（P0） · L586 · 2.8k
+- ENG-BUDGET §8 额度总账（`budgets.json`） · L316 · 259
+- ENG-BUDGET §9 怎么测 · L320 · 4.0k
+  - ENG-BUDGET §9.1 测量命令与参数 · L322 · 860
+  - ENG-BUDGET §9.2 运行时测量接口 · L328 · 3.1k
+- ENG-BUDGET §10 工程设置清单 · L357 · 7.2k
+- ENG-BUDGET §11 待验证（P0） · L459 · 2.8k
 
-## ENG-GATES · 验收：门禁、审查视角、近景巡检、回报格式
+## ENG-GATES · 验收：门禁、审查视角、近景巡检
 
-`docs/design/engineering/ENG-GATES-验收与门禁.md` · 58.6k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单和回报格式
-关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、回报格式、回报模板、截图命名、review.json、output/render-review、GPU 锁
+`docs/design/engineering/ENG-GATES-验收与门禁.md` · 57.0k 字 · 审查视角与命令行参数、合入门禁 G1–G21、一票否决、全局清单
+关键词：门禁、验收、测试、自查、测试节奏、测试三档、快检、核心专项、集中测试、gate.ps1、门禁编号、G1–G21、审查视角、截图默认串、命令行参数、用户参数、截图方式、截图就绪、流式屏障、录像、时季抽样、巡检点轮换、一票否决、全局清单、review.json、output/render-review、GPU 锁
 
-- ENG-GATES §0 结论 · L22 · 1.9k
-  - ★ ENG-GATES §0.1 接入要点 · L38 · 850
-- ENG-GATES §1 审查视角 · L52 · 14.7k
-- ENG-GATES §2 门禁与测试节奏 · L197 · 30.5k
-- ENG-GATES §3 一票否决 · L281 · 3.2k
-- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L310 · 2.6k
-- ENG-GATES §5 回报格式 · L336 · 1.4k
-- ENG-GATES §6 待验证（P0） · L365 · 1.8k
-
-## ENG-ONBOARD-LOOKUP · 子代理开工手册：按要做的事查哪里
-
-`docs/design/engineering/ENG-ONBOARD-LOOKUP-开工手册查阅表.md` · 3.5k 字 · 子代理按要做的事找资料的路由表：工程与流程、接入各系统、画面与内容三张表，每行给出该先看的文档与小节
-关键词：开工手册、查哪里、路由表、按任务查、先看哪份文档、接入要点、查阅、子代理
-
-- ENG-ONBOARD-LOOKUP §0 结论 · L23 · 269
-  - ★ ENG-ONBOARD-LOOKUP §0.1 接入要点 · L29 · 71
-- ENG-ONBOARD-LOOKUP §1 按要做的事查哪里 · L33 · 2.5k
-  - ENG-ONBOARD-LOOKUP §1.1 工程与流程 · L35 · 840
-  - ENG-ONBOARD-LOOKUP §1.2 接入各系统 · L59 · 874
-  - ENG-ONBOARD-LOOKUP §1.3 画面与内容 · L82 · 781
-
-## ENG-ONBOARD · 子代理开工手册
-
-`docs/design/engineering/ENG-ONBOARD-子代理开工手册.md` · 9.1k 字 · 子代理开工时唯一要通读的文档：开工环境、硬规则、查资料的方法与路由、完成与回报
-关键词：开工手册、子代理、必读、查阅、按需查、小节目录、SECTIONS.md、接入要点、硬规则、禁用写法、工作树、回报、CLAUDE.md
-
-- ENG-ONBOARD §0 结论 · L23 · 641
-  - ★ ENG-ONBOARD §0.1 接入要点 · L33 · 69
-- ENG-ONBOARD §1 项目与当前阶段 · L37 · 514
-- ENG-ONBOARD §2 开工环境 · L45 · 720
-- ENG-ONBOARD §3 硬规则 · L55 · 4.1k
-  - ENG-ONBOARD §3.1 改哪里 · L57 · 704
-  - ENG-ONBOARD §3.2 代码边界与接入方式 · L65 · 931
-  - ENG-ONBOARD §3.3 禁用写法 · L80 · 438
-  - ENG-ONBOARD §3.4 内容与画面的底线 · L89 · 530
-  - ENG-ONBOARD §3.5 文件操作 · L97 · 361
-  - ENG-ONBOARD §3.6 贴近主线，少给合并添活 · L107 · 823
-  - ENG-ONBOARD §3.7 不过度工程化 · L119 · 270
-- ENG-ONBOARD §4 查资料 · L126 · 1.3k
-  - ENG-ONBOARD §4.1 文档在哪、怎么找 · L128 · 725
-  - ENG-ONBOARD §4.2 按要做的事查哪里 · L137 · 136
-  - ENG-ONBOARD §4.3 Godot API · L141 · 223
-  - ENG-ONBOARD §4.4 文档不清楚或冲突时 · L147 · 200
-- ENG-ONBOARD §5 完成与回报 · L153 · 597
-- ENG-ONBOARD §6 改文档时 · L160 · 331
+- ENG-GATES §0 结论 · L22 · 1.8k
+  - ★ ENG-GATES §0.1 接入要点 · L38 · 738
+- ENG-GATES §1 审查视角 · L51 · 14.7k
+- ENG-GATES §2 门禁与测试节奏 · L196 · 30.5k
+- ENG-GATES §3 一票否决 · L280 · 3.2k
+- ENG-GATES §4 全局清单（收尾阶段由主代理逐项检查） · L309 · 2.6k
+- ENG-GATES §5 待验证（P0） · L335 · 1.8k
 
 ## ENG-PERF · 性能工程：高质量实现设计（Godot 4.7.2 .NET）
 
-`docs/design/engineering/ENG-PERF-性能工程.md` · 138.6k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
+`docs/design/engineering/ENG-PERF-性能工程.md` · 134.4k 字 · 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量
 关键词：着色器白名单、全局着色器参数、全局数据纹理、ShaderGlobals、globals.gdshaderinc、合批、自动实例化、MultiMesh、绘制调用口径、管线预热、管线编译计数、顶点格式、抖动淡化、遮挡剔除、渲染图层、TileBundle、流式加载、卡帧、本机烘焙缓存、.tbin、零分配、显存账、PSSM 阴影、方向量化、灯光通道、后期链、描线、设备档、自动调节画质、性能基准
 
 - ENG-PERF §0 十条总原则 · L24 · 4.2k
@@ -1593,33 +1725,44 @@
   - ENG-PERF §3.4 动态分辨率 · L414 · 526
 - ENG-PERF §4 剔除（WP-02、WP-33、WP-07） · L421 · 2.6k
 - ENG-PERF §5 流式加载（WP-02） · L462 · 14.0k
-- ENG-PERF §6 主线程与 C#（WP-01） · L622 · 4.0k
-- ENG-PERF §7 内存与显存（WP-01、WP-02） · L678 · 3.0k
-- ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L722 · 4.9k
-- ENG-PERF §9 植被（WP-23） · L781 · 10.7k
-- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L947 · 25.2k
-  - ENG-PERF §10.1 阴影（WP-03，引擎原生 PSSM） · L949 · 8.1k
-  - ENG-PERF §10.2 后期链（WP-05） · L1061 · 10.0k
-  - ENG-PERF §10.3 窗灯与路灯（WP-03 负责通道与着色，WP-39 负责时刻表） · L1146 · 5.2k
-  - ENG-PERF §10.4 倒影（WP-24） · L1198 · 1.9k
-- ENG-PERF §11 设备档、画面预设与自适应（WP-32，WP-01 配合） · L1218 · 10.5k
-  - ENG-PERF §11.1 设备档 → 推荐预设 · L1222 · 782
-  - ENG-PERF §11.2 首次分档（扉页后面完成，不超过 2.5 s） · L1236 · 1.5k
-  - ENG-PERF §11.3 运行时自适应（自动调节画质） · L1253 · 2.2k
-  - ENG-PERF §11.4 帧节奏与输入 · L1298 · 1.2k
-  - ENG-PERF §11.5 Windows 平台的已知问题 · L1309 · 447
-  - ENG-PERF §11.6 集成显卡 · L1317 · 486
-  - ENG-PERF §11.7 画面设置（WP-32a、32b，WP-01、WP-35 配合） · L1325 · 3.7k
-- ENG-PERF §12 测量、剖析与门禁（WP-27，WP-01 提供接口） · L1380 · 12.0k
-  - ENG-PERF §12.1 测量机器 · L1382 · 282
-  - ENG-PERF §12.2 运行时测量 · L1386 · 1.6k
-  - ENG-PERF §12.3 剖析工具 · L1400 · 408
-  - ENG-PERF §12.4 自动化基准 · L1411 · 4.1k
-  - ENG-PERF §12.5 门禁（写入 ENG-GATES §2） · L1462 · 4.3k
-  - ENG-PERF §12.6 日志与诊断（WP-01；WP-02、WP-32、WP-50 提供读数，WP-35 提供入口） · L1516 · 1.2k
-- ENG-PERF §13 D3D12 与 Vulkan 的选择 · L1528 · 776
-- ENG-PERF §14 每个工作包的性能自检清单 · L1554 · 2.1k
-- ENG-PERF §16 待验证（P0） · L1576 · 6.0k
+  - ENG-PERF §5.1 级别与资源分工 · L464 · 2.1k
+  - ENG-PERF §5.2 帧内请求与挂载 · L486 · 888
+  - ENG-PERF §5.3 碰撞级与室内包 · L507 · 2.2k
+  - ENG-PERF §5.4 外围与目的地预取 · L528 · 8.8k
+- ENG-PERF §6 主线程与 C#（WP-01） · L630 · 4.0k
+- ENG-PERF §7 内存与显存（WP-01、WP-02） · L686 · 3.0k
+- ENG-PERF §8 安装包与磁盘布局（WP-01、WP-02、WP-04、WP-27） · L730 · 4.9k
+- ENG-PERF §9 植被（WP-23） · L789 · 10.8k
+  - ENG-PERF §9.1 植被容器与分级 · L791 · 1.5k
+  - ENG-PERF §9.2 远距替身与树冠 · L825 · 1.0k
+  - ENG-PERF §9.3 树叶材质与明暗 · L843 · 1.3k
+  - ENG-PERF §9.4 实例数据与风动 · L860 · 1.3k
+  - ENG-PERF §9.5 落叶与草地 · L881 · 1.4k
+  - ENG-PERF §9.6 阴影与季相 · L908 · 2.4k
+  - ENG-PERF §9.7 降水池 · L945 · 1.9k
+- ENG-PERF §10 阴影、光照与后期（WP-03、WP-05、WP-24） · L969 · 25.2k
+  - ENG-PERF §10.1 阴影（WP-03，引擎原生 PSSM） · L971 · 8.1k
+  - ENG-PERF §10.2 后期链（WP-05） · L1083 · 10.0k
+  - ENG-PERF §10.3 窗灯与路灯（WP-03 负责通道与着色，WP-39 负责时刻表） · L1168 · 5.2k
+  - ENG-PERF §10.4 倒影（WP-24） · L1220 · 1.9k
+- ENG-PERF §11 设备档、画面预设与自适应（WP-32，WP-01 配合） · L1240 · 10.5k
+  - ENG-PERF §11.1 设备档 → 推荐预设 · L1244 · 782
+  - ENG-PERF §11.2 首次分档（扉页后面完成，不超过 2.5 s） · L1258 · 1.5k
+  - ENG-PERF §11.3 运行时自适应（自动调节画质） · L1275 · 2.2k
+  - ENG-PERF §11.4 帧节奏与输入 · L1320 · 1.2k
+  - ENG-PERF §11.5 Windows 平台的已知问题 · L1331 · 447
+  - ENG-PERF §11.6 集成显卡 · L1339 · 486
+  - ENG-PERF §11.7 画面设置（WP-32a、32b，WP-01、WP-35 配合） · L1347 · 3.7k
+- ENG-PERF §12 测量、剖析与门禁（WP-27，WP-01 提供接口） · L1402 · 7.7k
+  - ENG-PERF §12.1 测量机器 · L1404 · 282
+  - ENG-PERF §12.2 运行时测量 · L1408 · 1.6k
+  - ENG-PERF §12.3 剖析工具 · L1422 · 408
+  - ENG-PERF §12.4 自动化基准 · L1433 · 4.0k
+  - ENG-PERF §12.5 门禁指向 · L1484 · 76
+  - ENG-PERF §12.6 日志与诊断（WP-01；WP-02、WP-32、WP-50 提供读数，WP-35 提供入口） · L1488 · 1.2k
+- ENG-PERF §13 D3D12 与 Vulkan 的选择 · L1500 · 776
+- ENG-PERF §14 每个工作包的性能自检清单 · L1526 · 2.1k
+- ENG-PERF §16 待验证（P0） · L1548 · 6.0k
 
 ## ENG-ROADMAP · 扩展路线：从观光到 RPG
 
@@ -1638,150 +1781,22 @@
   - ENG-ROADMAP §6.2 不需要现在预留的（以后只增即可） · L201 · 685
 - ENG-ROADMAP §7 RPG 开工前待办 · L218 · 1.6k
 
-## ENG-STATUS · 施工状态
-
-`docs/design/engineering/ENG-STATUS-施工状态.md` · 37.2k 字 · 主代理维护的当前施工状态：main、最近可运行入口、活跃工作包的进度和待派工队列
-关键词：施工状态、施工进度、当前 main、最近可运行入口、活跃工作包、已冻结的契约组、契约冻结记录、候选提交、待合入、已集成、交接、接手、换会话、换账号、阻塞、下一步、待派工队列、待处理流水线、调研入队流水线、Q-nnn、排队、可派、已派
-
-- ENG-STATUS §0 结论 · L23 · 574
-  - ★ ENG-STATUS §0.1 接入要点 · L30 · 287
-- ENG-STATUS §1 填写规则 · L37 · 933
-- ENG-STATUS §2 当前 main、可运行入口与已冻结契约 · L61 · 28.2k
-- ENG-STATUS §3 活跃工作包 · L111 · 3.1k
-- ENG-STATUS §4 待派工队列 · L140 · 3.4k
-
-## ENG-TEAM-COMMS · 协作分册：交接与通信
-
-`docs/design/engineering/ENG-TEAM-COMMS-交接与通信.md` · 13.2k 字 · .collab 交接目录与文件，命名与写法，任务单、请求文件与批准行的格式，消息与流水，唤醒脚本与值班执行者，上下文重置后的接续
-关键词：.collab、archive、logs、结案即挪走、谁读什么、.ignore、交接目录、合并请求、评审请求、契约申请文件、任务单、施工单、值班单、文件命名、编号-主题、二号会话长期角色、待派活清单、值班长期单、旁路单、调研单、logs/merged.log、流水、notes、收件箱、一条一个文件、只追加、不预判时间、撞号、批准行、已合入行、消息频率、确认框、转问作者、等待不短轮询、唤醒脚本、duty_watch、side_runner、值班执行者、Grok 4.7、上下文重置、HANDOVER.md
-
-- ENG-TEAM-COMMS §0 结论 · L23 · 838
-  - ★ ENG-TEAM-COMMS §0.1 接入要点 · L33 · 69
-- ENG-TEAM-COMMS §1 交接目录与文件 · L37 · 4.2k
-  - ENG-TEAM-COMMS §1.1 结案即挪走与谁读什么 · L71 · 1.3k
-- ENG-TEAM-COMMS §2 命名与写法 · L85 · 854
-- ENG-TEAM-COMMS §3 任务单与请求文件的格式 · L95 · 961
-- ENG-TEAM-COMMS §4 消息与流水 · L123 · 2.3k
-- ENG-TEAM-COMMS §5 唤醒脚本 · L155 · 2.2k
-- ENG-TEAM-COMMS §6 上下文重置后怎么接着做 · L184 · 590
-
-## ENG-TEAM-DUTY · 协作分册：值班与旁路
-
-`docs/design/engineering/ENG-TEAM-DUTY-值班与旁路.md` · 7.8k 字 · 值班执行者与 Sol 值班会话的合并执行与巡检，完成度调研怎么排，Sol 旁路会话按单开子代理，各方怎么开子代理，Codex 侧怎么省
-关键词：值班、值班执行者、Sol 值班会话、值班长期单、巡检、卡死进程、工作树落后、完成度调研、阶段调研、持续调研、值班单 002、调研单、调研索引、INDEX.md、00-总览、三个视角、各阶段的侧重、不调研的、Sol 旁路会话、旁路单、side/ROLE.md、怎么开子代理、spawn_agent、wait_agent、send_input、max_concurrent_threads_per_session、共用工作目录、计数锁、Codex 侧怎么省、不重复复核、一份输入一份证据
-
-- ENG-TEAM-DUTY §0 结论 · L23 · 706
-  - ★ ENG-TEAM-DUTY §0.1 接入要点 · L34 · 69
-- ENG-TEAM-DUTY §1 值班执行者与 Sol 值班会话 · L38 · 1.1k
-- ENG-TEAM-DUTY §2 完成度调研 · L55 · 1.8k
-- ENG-TEAM-DUTY §3 Sol 旁路会话 · L96 · 944
-- ENG-TEAM-DUTY §4 怎么开子代理 · L116 · 1.2k
-- ENG-TEAM-DUTY §5 Codex 侧怎么省 · L144 · 484
-- ENG-TEAM-DUTY §6 待验证（P0） · L159 · 232
-
-## ENG-TEAM-FLOW · 协作分册：包的归属与开发流程
-
-`docs/design/engineering/ENG-TEAM-FLOW-包的归属与开发流程.md` · 15.3k 字 · 包的归属与开工顺序，一个包从派工、施工、评审、批准到合并与 rebase 的流程，契约申请、调研入队、队列平衡与贴近主线
-关键词：包的归属、Astra 侧、Opus 侧、开工分段、D0、第一波、第二波、合并顺序、开发流程、派工、施工单、按工作量拆单、开工 30 分钟重估、建工作树、回报、初步核对、Opus 评审、可调参数、批准行、合并执行、成批合入、施工状态、rebase 通知、契约申请、共享工程文件、调研入队流水线、待派工队列、队列平衡、节奏档、贴近主线
-
-- ENG-TEAM-FLOW §0 结论 · L23 · 685
-  - ★ ENG-TEAM-FLOW §0.1 接入要点 · L31 · 69
-- ENG-TEAM-FLOW §1 包的归属与开工顺序 · L35 · 2.5k
-  - ENG-TEAM-FLOW §1.1 包的归属 · L37 · 1.2k
-  - ENG-TEAM-FLOW §1.2 开工顺序与合并顺序 · L52 · 1.3k
-- ENG-TEAM-FLOW §2 开发流程 · L66 · 10.8k
-  - ENG-TEAM-FLOW §2.1 全流程一览 · L70 · 617
-  - ENG-TEAM-FLOW §2.2 派工 · L84 · 1.7k
-  - ENG-TEAM-FLOW §2.3 施工与回报 · L113 · 796
-  - ENG-TEAM-FLOW §2.4 评审：审美与契约的交叉评审 · L132 · 660
-  - ENG-TEAM-FLOW §2.5 批准与合并 · L144 · 2.6k
-  - ENG-TEAM-FLOW §2.6 合入以后：施工状态与 rebase · L171 · 615
-  - ENG-TEAM-FLOW §2.7 契约申请与共享工程文件 · L182 · 494
-  - ENG-TEAM-FLOW §2.8 调研入队流水线 · L190 · 1.2k
-  - ENG-TEAM-FLOW §2.9 队列平衡：不让一类活积压 · L208 · 1.1k
-  - ENG-TEAM-FLOW §2.10 贴近主线：减少合并工作量 · L224 · 892
-
-## ENG-TEAM-QUOTA · 协作分册：账号与额度
-
-`docs/design/engineering/ENG-TEAM-QUOTA-账号与额度.md` · 6.8k 字 · 额度排程口径，Claude 侧按 Opus 当量的并发公式与记账，Codex 账号与速度，单 Claude 账户模式，额度见底时冻结，仅双账号模式的规则
-关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、Codex 额度、快速模式、普通速度、service_tier、单 Claude 账户模式、双账号模式、仅双账号模式、额度见底、冻结、切换账号、主账号、二号会话的账号、合计下限、空缺活清单补位、报额度、撞到 5 小时上限、API 官方定价
-
-- ENG-TEAM-QUOTA §0 结论 · L23 · 571
-  - ★ ENG-TEAM-QUOTA §0.1 接入要点 · L32 · 69
-- ENG-TEAM-QUOTA §1 额度排程口径与两种模式 · L36 · 263
-- ENG-TEAM-QUOTA §2 Claude 侧的并发与额度 · L44 · 1.9k
-- ENG-TEAM-QUOTA §3 Codex 账号（Astra 与 Sol） · L69 · 287
-- ENG-TEAM-QUOTA §4 单 Claude 账户模式 · L75 · 1.2k
-- ENG-TEAM-QUOTA §5 额度见底时冻结 · L95 · 196
-- ENG-TEAM-QUOTA §6 仅双账号模式 · L101 · 1.1k
-  - ENG-TEAM-QUOTA §6.1 主账号（主会话） · L105 · 205
-  - ENG-TEAM-QUOTA §6.2 二号会话的账号 · L110 · 762
-
-## ENG-TEAM-ROLES · 协作分册：参与者与分工
-
-`docs/design/engineering/ENG-TEAM-ROLES-参与者与分工.md` · 14.6k 字 · 协作的参与者与决定权，按模型能力分工，按七问与难度选施工模型，总指挥与 Astra 各做什么，子代理的生命周期
-关键词：参与者、会话、作者、主会话、总指挥、主代理、决定权、执行人、二号会话、project-09、wendystar1145、Astra、gpt-6-astra、gpt-6.1-sol、gpt-6-luna、Grok 值班执行者、luna 机械值班、模型能力、GPT 不做审美、视觉风格归属、事归谁、七问、推理强度、Opus 与 Sonnet 的分界、补 GPT 短板、简单少量的活、派单最少写、升级先找失败原因、子代理生命周期、恢复还是新开
-
-- ENG-TEAM-ROLES §0 结论 · L23 · 1.1k
-  - ★ ENG-TEAM-ROLES §0.1 接入要点 · L35 · 69
-- ENG-TEAM-ROLES §1 参与者与会话 · L39 · 3.2k
-  - ENG-TEAM-ROLES §1.1 决定权与执行人 · L62 · 531
-- ENG-TEAM-ROLES §2 按模型能力分工 · L80 · 2.4k
-  - ENG-TEAM-ROLES §2.1 各模型的长处与短板 · L84 · 803
-  - ENG-TEAM-ROLES §2.2 硬规则：GPT 模型不做审美工作 · L93 · 485
-  - ENG-TEAM-ROLES §2.2a 不过度工程化（各方都适用，GPT 模型尤其） · L102 · 521
-  - ENG-TEAM-ROLES §2.3 事归谁 · L110 · 247
-  - ENG-TEAM-ROLES §2.4 交叉的地方 · L116 · 219
-- ENG-TEAM-ROLES §3 模型等级与任务划分 · L122 · 6.7k
-  - ENG-TEAM-ROLES §3.1 按七问选施工模型 · L126 · 4.6k
-  - ENG-TEAM-ROLES §3.2 总指挥只做什么 · L204 · 495
-  - ENG-TEAM-ROLES §3.3 Astra 当指挥，施工默认交 6.1-sol 子代理 · L218 · 674
-  - ENG-TEAM-ROLES §3.4 包内的实现路径由施工模型规划 · L233 · 110
-  - ENG-TEAM-ROLES §3.5 子代理的生命周期：默认新开，靠任务单交接 · L238 · 684
-
-## ENG-TEAM · 多模型协作规程：总纲与分册索引
-
-`docs/design/engineering/ENG-TEAM-多模型协作规程.md` · 4.9k 字 · 多模型协作规程的总纲：五份分册各自的结论、按角色的接入要点与分册索引
-关键词：多模型协作、协作规程、总纲、分册索引、接入要点、按角色读、作者、主会话、二号会话、二号会话开的子代理、Astra、Astra 派出的子代理、值班执行者、Sol 值班会话、Sol 旁路会话、下属会话、施工子代理、不向作者出选项
-
-- ENG-TEAM §0 结论 · L23 · 2.8k
-  - ★ ENG-TEAM §0.1 接入要点 · L32 · 2.1k
-- ENG-TEAM §1 分册索引 · L49 · 798
-
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/design/engineering/ENG-WP-工作包派工单.md` · 109.5k 字 · 56 个工作包的划分、独占目录、起读文档、交付与额度，各包主线版范围，细节阶段待办与候选包，开发阶段与闸口，子代理简报与主代理职责
-关键词：工作包、派工单、派工、独占目录、起读文档、起读小节、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、派工简报、子代理简报、简报模板、主代理职责、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
+`docs/design/engineering/ENG-WP-工作包派工单.md` · 109.3k 字 · 56 个工作包的划分、归属、独占目录、起读、交付与额度，开发阶段与闸口、开工波次与合并顺序，各包主线版范围，细节阶段待办与候选包，主代理的工程维护事项
+关键词：工作包、派工单、派工、归属、开工波次、合并顺序、独占目录、起读三档、交付条目、额度、规模、依赖、主线版、主线可见结果、验收重点、后置细节、细节阶段待办、候选包、观光照片留存、阶段与闸口、主线闸口、D0 骨架、阶段名 P0–P3、拆包、子包、并行度、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、待验证（P0）、目标框架
 
 - ENG-WP §0 结论 · L25 · 1.7k
-  - ★ ENG-WP §0.1 接入要点 · L39 · 737
-- ENG-WP §1 阶段与闸口 · L52 · 6.6k
-- ENG-WP §2 工作包一览 · L96 · 89.5k
-  - ENG-WP §2.1 各包主线版的范围 · L168 · 14.9k
-  - ENG-WP §2.2 细节阶段待办 · L240 · 3.3k
-  - ENG-WP §2.3 候选包 · L279 · 255
-- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L287 · 3.9k
-- ENG-WP §4 子代理通用简报模板 · L312 · 638
-- ENG-WP §5 主代理的职责 · L330 · 3.2k
-- ENG-WP §6 待验证（P0） · L350 · 1.2k
-
-## REF-PROMPT · 完整提示词（备份）
-
-`docs/design/reference/REF-PROMPT-完整提示词备份.md` · 12.6k 字 · 作品《电光年华》的完整描述，用作提示词，供通读全貌；不是施工文档
-
-- REF-PROMPT 提示词正文 · L20 · 12.1k
-
-## REF-SPEND-AUDIT · 近一天开发消耗与可省流程
-
-`docs/design/reference/REF-SPEND-AUDIT-开发消耗与可省流程.md` · 3.7k 字 · 实现占比、浪费证据与节省建议
-关键词：额度、实现、测试、审计、协调、轮询、重复门禁
-
-- REF-SPEND-AUDIT §0 结论 · L23 · 506
-  - ★ REF-SPEND-AUDIT §0.1 接入要点 · L31 · 216
-- REF-SPEND-AUDIT §1 方法与范围 · L35 · 649
-- REF-SPEND-AUDIT §2 分类消耗 · L45 · 375
-- REF-SPEND-AUDIT §3 浪费与必要性 · L58 · 1.1k
-- REF-SPEND-AUDIT §4 建议（按节省排序） · L70 · 401
+  - ★ ENG-WP §0.1 接入要点 · L39 · 736
+- ENG-WP §1 阶段与闸口 · L52 · 8.4k
+  - ENG-WP §1.1 开工波次与合并顺序 · L96 · 1.8k
+- ENG-WP §2 工作包一览 · L113 · 89.2k
+  - ENG-WP §2.1 各包主线版的范围 · L185 · 14.8k
+  - ENG-WP §2.2 细节阶段待办 · L257 · 3.3k
+  - ENG-WP §2.3 候选包 · L296 · 255
+- ENG-WP §3 还能再拆的包（并行度提到 80 左右） · L304 · 3.8k
+- ENG-WP §5 主代理的工程维护事项 · L329 · 2.1k
+- ENG-WP §6 待验证（P0） · L342 · 1.2k
 
 ## TOOL-PREVIEW · 内容预览
 
@@ -1794,7 +1809,7 @@
 - TOOL-PREVIEW §1 启动 · L48 · 741
 - TOOL-PREVIEW §2 按实体 ID 定位 · L65 · 297
 - TOOL-PREVIEW §3 记下机位 · L71 · 528
-- TOOL-PREVIEW §4 改了以后回看 · L83 · 746
+- TOOL-PREVIEW §4 改了以后回看 · L83 · 735
 
 ## OPS-RELEASE · 发布与交付
 
@@ -1803,11 +1818,11 @@
 
   - OPS-RELEASE 分工 · L23 · 415
 - OPS-RELEASE §0 结论 · L32 · 1.3k
-  - ★ OPS-RELEASE §0.1 接入要点 · L41 · 870
+  - ★ OPS-RELEASE §0.1 接入要点 · L41 · 873
 - OPS-RELEASE §1 版本号与构建信息 · L54 · 406
 - OPS-RELEASE §2 用户数据目录 · L61 · 321
 - OPS-RELEASE §3 导出与发布 · L67 · 935
 - OPS-RELEASE §4 安装、更新与卸载 · L76 · 549
 - OPS-RELEASE §5 地图数据包（ODbL） · L88 · 696
-- OPS-RELEASE §6 故障处理与诊断 · L99 · 845
+- OPS-RELEASE §6 故障处理与诊断 · L99 · 848
 - OPS-RELEASE §7 许可 · L116 · 1.0k

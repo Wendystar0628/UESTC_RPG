@@ -31,7 +31,7 @@ public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> R
 public sealed record RestNode(string Label, Vector2 At);
 
 /// <summary>
-/// Every tunable value of the WP-13 placement in one place (ENG-TEAM §5): which roads, spacings, offsets from the kerb, the
+/// Every tunable value of the WP-13 placement in one place (WF-FLOW §4): which roads, spacings, offsets from the kerb, the
 /// rest-stop rhythm, the part sizes and the landing rules. Initial values follow WLD-LIFE §4, MAP-QSH-ADDITIONS §8, SYS-ATLAS §6,
 /// WLD-INTERIORS §4 and WLD-TERRAIN §4.4; the Opus review sets the finals. Part looks stay in <see cref="StreetStyle"/>.
 /// </summary>

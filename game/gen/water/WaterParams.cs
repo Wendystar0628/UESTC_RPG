@@ -1,7 +1,7 @@
 namespace Campus.Gen.Water;
 
 /// <summary>
-/// Tunable constants of the water generator, kept in one place for review (ENG-TEAM §5).
+/// Tunable constants of the water generator, kept in one place for review (WF-FLOW §4).
 /// Shader-side look parameters live at the top of game/style/shaders/water.gdshader.
 /// </summary>
 public sealed record WaterParams

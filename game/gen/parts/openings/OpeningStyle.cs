@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Every tunable of the WP-10 openings in one place (ENG-TEAM §5): stylised sections in metres, after
+/// Every tunable of the WP-10 openings in one place (WF-FLOW §4): stylised sections in metres, after
 /// ART-FIDELITY §3.3, §4, ART-MODELING §2, §7. Initial values; the main session sets the final ones at review.
 /// Local frame of all glazed parts: origin at the bottom centre of the clear opening on the glass plane,
 /// X along the facade, Y up, exterior towards −Z.

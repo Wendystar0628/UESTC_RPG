@@ -423,7 +423,7 @@ user://saves/
 5. **内容与落位**（`Content`、`Pose` 阶段）：换图完成后（同图时就在第 3 步的同一帧），在存档那一步依次恢复每张到过的图的 `map:<id>/atlas`（平面地图服务按图保存，当前图的立即生效，别的图在进图时生效）和 `progress`，`Full` 范围再恢复 `view`、`walk`。缺的段一律用 `CreateDefault` 补；全部立即生效，不做过渡动画；各段顺手做校验修复（§5.6），位姿按 WLD-OUTSKIRTS的可达空间合法化。从下一帧起，所有系统同时看到新世界（§5.2）。
 6. **预取**：恢复的位姿作为"已知目的地"预取各级格子（ENG-PERF §5）。`NavSpace` 指向开放室内时，按 WLD-INTERIORS的规则加载这栋楼的开放部分，等这一层的 IF 与碰撞就绪再落地（ENG-PERF §5 第 6 条，WLD-INTERIORS §6.4）；行走模式下还要等碰撞格就绪（SYS-WALK §14 第 5 条）。
 7. **撤遮挡**：就绪之前不撤。
-   - `--title=0`，或走雾幕直达的读档时，雾幕 2–3 s 淡出（SYS-VIEW §3）；
+   - `--title=0`，或走雾幕直达的读档时，雾幕 2–3 s 淡出（SYS-TITLE §1）；
    - 从开始页按"继续"时，由约 9 s 的继续过场落到 meta 里的 `pose`（SYS-TITLE）；交还控制那一帧调 `CompleteResume()`，`view`、`walk` 两段在存档那一步恢复，`Instance` 不变。
 
    之后放开输入，恢复存档里的流逝倍率。
@@ -607,160 +607,9 @@ user://saves/
 
 ## 10 C# 契约
 
-照 ENG-ARCH §3 的写法，由 WP-00 加进契约 v1 候选；这一组由主代理宣布冻结后只增不改（D-134）。
+存档契约类型与签名以 `game/contracts/Save/` 为准。
 
-```csharp
-// 存档与持久化（SYS-SAVE）。放在 game/contracts/Save/；Campus.Gen.* 不得引用（ENG-ARCH §2）
-namespace Campus.Contracts.Save;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization.Metadata;
-
-public readonly record struct SlotId(string Value);   // "s1"–"s3"：三个存档位；"m1"–"m9" 预留给手动槽。文件夹名就是 Value
-// MapId、MapVisit 由 SYS-MAPS定义，存档只引用，不另定义。现在只有 new MapId("qingshuihe")
-
-public enum SlotKind : byte { Auto, Manual }           // Manual 预留
-public enum SaveScope : byte { Global, PerMap }        // PerMap 的段在文件里的键是 "map:<MapId>/<段 ID>"
-public enum SaveReason : byte
-{
-    Quit,          // 关窗口、Alt+F4、菜单"退出"
-    ToTitle,       // 返回开始页（SYS-TITLE）
-    Interval,      // 漫游态累计 5 分钟
-    FocusLost,     // 窗口失焦
-    Settled,       // 关键动作落定：跳转或传送到达、换季落定、Apply 落定、回到落金初灯落定
-    MapChanged,    // 换图到达（SYS-MAPS）
-    NewGame,       // 新游戏交还控制：写这条世界线的第一代
-    Manual,        // 预留：手动槽
-    Checkpoint,    // 预留：RPG 的剧情节点
-    Test,          // 门禁（--save-at）
-}
-public enum SlotHealth : byte { Empty, Ok, RecoveredOlderGen, Corrupt, NewerBuild }
-
-public sealed record SaveMeta(
-    int Format,                     // 正文结构版本，现为 1（§3.3）
-    string Build,                   // 构建号，只用于显示和日志；兼容性只看版本号
-    SlotId Slot, SlotKind Kind,
-    ulong Gen,                      // 代号：存档位内严格递增；与头和文件名一致
-    ulong Line,                     // 世界线号 = 这条世界线第一代的代号；回退只在同一条线内（§1）
-    double PlaySeconds,             // 游玩时长：只在漫游态累加
-    MapId Map, double WorldHours, double Clock, Season Season, WeatherKind Weather, ViewMode Mode,
-    Pose Pose,                      // 镜头位姿，与 view 段相同；"继续"过场按它定终点（§5.1，SYS-TITLE）
-    NavSpace? Space,                // 观者所在空间（楼与楼层，WLD-INTERIORS），取 IObserverState；室外为 null
-    string? Region,                 // 观者所在的区域 ID（按 IObserverState 的位置查 SYS-ATLAS区域栅格）
-    string? PlaceKey,               // 地点名的翻译键：存档卡摘要与继续过场的地点字幕用；查不到时退回图名（§3.2）
-    long SavedAtUnix,               // 系统时钟，只用于显示（§6，G4 例外）
-    SaveReason Reason,
-    string Ruleset = "sightseeing", // 本局的规则集 ID（ENG-ROADMAP §6 第 1 条）；读档时先按它定规则集（§5.1）；预留 "rpg"
-    SlotId? Origin = null,          // 手动槽预留：读它之后自动保存写回这个存档位
-    bool HasThumb = false);
-public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations);
-
-[AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class SaveSectionAttribute(string id) : Attribute
-{   // 标在实现 ISaveSection<T> 的 [KernelService] 或 [KernelNode] 类上；注册器从 Kernel 取这个实例
-    public string Id { get; } = id;               // 小写字母、数字、连字符，如 "world"；"map:<id>/" 前缀由 Scope 决定，不写进 Id
-    public string Owner { get; set; } = "";       // "WP-34"；G5 核对与 ownership.json 一致
-    public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（§3.6）
-    public SaveScope Scope { get; set; } = SaveScope.Global;
-    public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（§2）；G5 查 Phase 与 §2 的表一致
-    public int Order { get; set; }                // 阶段内的恢复顺序，小的先（§2）；G5 查不重复
-}
-public enum RestorePhase : byte
-{
-    World,     // 换图之前：maps、world、weather、map:<id>/weather；这一阶段结束时 Instance + 1
-    Content,   // 换图之后：map:<id>/atlas、progress 等
-    Pose,      // 落位：view、walk。Preview 读档时只解析、留作终点，CompleteResume 时恢复
-}
-public enum LoadScope : byte { Full, Preview }      // Preview：开始页用，不恢复 Pose 阶段（§5.1，SYS-TITLE）
-
-public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool Forced);
-    // Forced：此刻不是安全时刻（退出，或顺延满 60 s），各段必须给出落定值（§4.2）
-public sealed class RestoreContext
-{
-    public required MapId Map { get; init; }
-    public required int FromVersion { get; init; }   // 迁移前的版本，只用于日志；迁移已在后台做完
-    public required bool Missing { get; init; }      // 文件里没有这一段，传进来的是 CreateDefault 的值
-    public void Repair(string what) { … }            // 记一条校验修复（§5.6）
-    // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在这一组冻结前补全（D-134）
-}
-public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start);
-    // Start 默认取本图 map.json 的 newGameStart（清水河：秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；之后由 FlowTo 推到落金初灯（§5.5）
-
-public interface ISaveSection                         // 注册器只认这个非泛型接口；各包实现下面的泛型版
-{
-    JsonTypeInfo TypeInfo { get; }
-    bool IsSettled => true;                           // 本段此刻是否落定；有一段为 false，就顺延（§4.2）
-    object Capture(in CaptureContext c);
-    void Restore(object dto, RestoreContext c);
-    object CreateDefault(NewGameContext c);
-    JsonNode Migrate(int fromVersion, JsonNode data) => throw new NotSupportedException();
-        // 从 fromVersion 迁到 fromVersion + 1；纯函数，在后台线程调用，不碰 Godot 和服务状态
-}
-public interface ISaveSection<T> : ISaveSection where T : class   // T：sealed record，只读，不含 Godot 类型（§3.5）
-{
-    new JsonTypeInfo<T> TypeInfo { get; }             // 来自本包的源生成 JsonSerializerContext
-    new T Capture(in CaptureContext c);               // 主线程，FramePriority.Save 那一步；落定快照；全部段合计 p99 ≤ 0.3 ms
-    void Restore(T dto, RestoreContext c);            // 主线程，在遮挡下按 Phase、Order 调用；立即生效，不做过渡
-    new T CreateDefault(NewGameContext c);            // 新游戏，或文件里缺这一段
-    JsonTypeInfo ISaveSection.TypeInfo => TypeInfo;
-    object ISaveSection.Capture(in CaptureContext c) => Capture(in c);
-    void ISaveSection.Restore(object dto, RestoreContext c) => Restore((T)dto, c);
-    object ISaveSection.CreateDefault(NewGameContext c) => CreateDefault(c);
-}
-
-public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
-public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
-public enum LoadStatus : byte { Loaded, Recovered, Empty, Corrupt, NewerBuild, Failed }
-public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
-public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off（§12）、另一个窗口持有锁（§1）
-public sealed record SaveState(                                     // 保存状态（§4.6）：存档页、设置卡持续显示
-    SlotId? Slot,                   // 当前存档位
-    SaveStatus? Last,               // 本次运行最近一次写盘的结果；还没写过为 null
-    string? ErrorKey,               // Last 为 Failed 时的原因，文案键，如 "save.error.disk_full"
-    long? LastSavedAtUnix,          // 当前存档位最后一次成功保存的时间（最新可读一代 meta 的 savedAtUnix），只用于显示
-    ReadOnlyReason ReadOnly);
-
-public interface ISaveService                         // Kernel 服务（WP-50）；不加 Autoload
-{
-    bool Enabled { get; }                             // --save=off，或 .lock 被别的进程占着时为 false：不写、不挪任何文件
-    IReadOnlyList<SlotInfo> Slots { get; }            // 扉页后读好；s1–s3 恒为三项
-    SlotId? Continue { get; }                         // 最近保存的可读存档位（§1）；没有就是 null
-    SlotId? Active { get; }                           // 当前存档位：自动保存写到这里
-    bool Busy { get; }                                // 后台写盘进行中
-    SaveState State { get; }                          // 保存状态（§4.6）；值变时也发 SlotsChanged
-    event Action? SlotsChanged;                       // 在主线程发出
-    void Request(SaveReason r);                       // 合并、限频、等安全时刻（§4.1）；只在漫游态有效；Quit、ToTitle 不走这里
-    Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁、预留的手动槽
-    Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full);
-        // 后台读取、校验、迁移，主线程按阶段恢复（§5.1）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
-    bool HasPendingPose { get; }                      // Preview 读档后为 true：Pose 阶段的段已解析、还没恢复
-    Task CompleteResume();                            // 继续过场交还控制那一帧调用：在 FramePriority.Save 恢复 view、walk；Instance 不变
-    Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
-    Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
-        // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（§5.5）
-    Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
-        // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；
-        // Failed（写盘出错、校验不符、超时）由 IAppFlow 让观者选重试、返回游戏或仍然退出（§4.4）
-    byte[]? Thumbnail(SlotId s);                      // 最新可读一代的 WebP 字节，界面自己解码（§3.4）
-}
-```
-
-**对现有契约的增量**（写进 ENG-ARCH §3）：
-
-```csharp
-// IWorldState 增：
-long Instance { get; }        // 世界实例号：启动后第一次得到世界状态为 1，此后每次 Load、LoadFile、NewGame 加 1（§5.2）
-// IWorldState.WeatherSeed 的含义是"本存档的天气基础种子"（SYS-WEATHER §6.4）
-// WeatherBoot.Seed：--weather-seed；没给时由 NewGame 取一次熵。读档时不调 IWeatherProcess.Reset，天气由 WP-45a 的两个存档段恢复
-// IWeatherProcess 增 Capture(MapId) → WeatherProcessState、Restore(MapId, WeatherProcessState)：weather、map:<id>/weather 两段由 WP-45a 用两个小类实现，
-//   经这两个方法读写天气过程；G20 的续跑等价也经它们比对天气状态（ENG-ARCH §3）
-// IWorldControl 增 FlowTo(double clock, int rate)：新游戏从 newGameStart 正向推到 17:30 停住（SYS-TITLE）
-// ISaveService（ENG-ARCH §3 的副本与上面一致）：FlushForQuit 返回 Task<SaveResult>；增 State 属性与 SaveState、ReadOnlyReason 两个类型（§4.6）
-// FramePriority 增（与 ENG-ARCH §3 的 17 步表一致，§11）：
-public const int StreamMount = 900; // WP-02 挂载、WP-43 碰撞入树
-public const int Save = 1000;       // WP-50：每帧最后一步，拍快照，读档时在这一步恢复（§11）
-```
-
-**一段的写法示例**（WP-34）：
+**未落地示例**（WP-34）：`WorldSaveV1`、`WorldSaveJson`、`WorldStateService` 尚未出现在 `game/contracts/`；落地前保留此处定义。
 
 ```csharp
 public sealed record WorldSaveV1(double WorldHours, double ClockOffset, double SeasonPos, Season SeasonTarget,
@@ -892,38 +741,7 @@ public sealed partial class WorldStateService : IWorldState, IWorldControl, ISav
 
 ## 15 工作包
 
-- **WP-50 存档与持久化**（P0 交付，RPG 开工之前就把格式定死）：
-  - 独占 `game/kernel/save`，含 `format/` 子目录与 `tests/golden/`；
-  - 交付：`ISaveService`；`[SaveSection]` 的注册与恢复阶段、顺序（含 `Preview` 读档与 `CompleteResume`）；容器编解码与 64 字节的头；meta；缩略图；迁移链与金档；时机、合并、限频与安全时刻；后台写盘与旧代清理；`.lock`；`corrupt/`；读档与新游戏里先定规则集（经 `IRuleset`，§5.1、§5.5）；`--save`、`--slot`、`--load`、`--save-dir`、`--save-at` 的落实；G20 的测试。
-  - 规模约 1.2k 行。
-  - 为什么单独成包，而不是扩展现有的包：存档是横切功能，需要有一个包独占格式、迁移和金档。
-- **各包的增量**：
-  - **WP-00**：`Campus.Contracts.Save`（§10）；`IWorldState.Instance`；`FramePriority.Save`；注册器扫描 `[SaveSection]`；BannedApiAnalyzers 与 ArchUnitNET 规则（§9）；`ISaveService` 的桩（ENG-ARCH §5）。
-  - **WP-01**：
-    - Boot 在第一帧前设 `AutoAcceptQuit = false`；
-    - 与 WP-49 一起做退出编排（§4.4）；
-    - 解析新的命令行参数；
-    - 雾幕或扉页期间空跑一次序列化；
-    - 启动时不取熵：熵源例外只在 `NewGame`（§5.4）。
-  - **WP-34**：`world` 段；`Instance`；同一实例内 `WorldHours` 单调；换实例时直接落到新值；换季、`Apply`、"回到落金初灯"落定时 `Request(Settled)`。
-  - **WP-45a**：`weather` 与 `map:<id>/weather` 两段（`World` 阶段），经 `IWeatherProcess.Capture`、`Restore`；种子每个存档一个；新游戏时 `Quiet`；读档时不 `Reset`。
-  - **WP-06**：`view` 段（`Pose` 阶段；跳转、模式切换途中存目的地或落点；含 `NavSpace`）；读档位姿按 WLD-OUTSKIRTS的可达空间合法化；失焦时 `Request(FocusLost)`；`input.cfg` 按 §8 读写。
-  - **WP-42**：`walk` 段（`Pose` 阶段，安全点环）；恢复后碰撞就绪之前冻结物理；在水里时 `IsSettled` 为假，`Capture` 取最近的岸上安全点，与 WP-06、WP-46 的 `view`、`maps` 段写同一个点（§4.2）；不加泳态字段。骑行中同样 `IsSettled` 为假，`Capture` 取最近的岸上安全点，不加骑行字段（SYS-WALK §16）。
-  - **WP-55**：共享单车的车辆一段（段名、阶段、顺序与格式由 Astra 定）：按图记每辆可借车的停放归属；借的车按归还到来源回收槽记，与 `view`、`walk`、`maps` 出自同一次落定；旧档缺段按基线初始化，停放点改了按迁移与校验修复处理（§2、§4.2、§5.6）。
-  - **WP-54a**：角色运行时不设存档段；`Instance` 变了、读档、切图时身体回到静止、干燥，清掉平滑历史（§2、§5.2）。
-  - **WP-25**：动物的反应不设存档段，读档、切图后按栖地重建（§2）。
-  - **WP-36**：`progress` 段；跳转到达时 `Request(Settled)`。
-  - **WP-46**：`maps` 段（`World` 阶段，SYS-MAPS的 `MapVisit`；当前图的那一条按此刻位姿写）；`MapTravelCause.LoadSave`（位姿取 `MapVisit`，`Preview` 时不设位姿）；`map.json` 的 `newGameStart`；换图到达时 `Request(MapChanged)`（`LoadSave`、`Boot` 不请求）。
-  - **WP-48c**：`map:<id>/atlas` 段（`Content` 阶段，SYS-ATLAS的 `AtlasSave`）；自定义标记用整数 ID；传送到达时 `Request(Settled)`。
-  - **WP-49**：开始页在扉页后按 `Preview` 读"继续"的存档位；继续过场的终点取 meta 的 `pose`，交还时调 `CompleteResume()`；新游戏用 `newGameStart` 加 `FlowTo`；返回标题、过场途中退出（§4.4、§5.5）。
-  - **WP-53a**：`audio.cfg` 按 §8 读写；存档里不存音频状态，换实例时声音的平滑量直接落到新值；退出时 Master 组 0.3 s 淡出（SYS-AUDIO）。
-  - **WP-35（子包 35d，与 WP-49 配合）**：开始页的存档卡做成"存储模组"（UI-VISUAL），含覆盖确认、损坏和新版本的显示、临时提示；只经 `ISaveService` 访问存档；`settings.cfg` 按 §8 读写；界面不用独占的 `Window` 弹窗。
-  - **WP-32**：`graphics.cfg`、`engine_override.cfg` 按 §8 读写；读档雾幕期间和之后 2 s，以及缩略图那一帧，不计入自动调节的统计。
-  - **WP-02、WP-43**：把恢复的位姿当作已知目的地，用作就绪屏障（ENG-PERF §5）。
-  - **WP-26**：`Instance` 变了就把偶发事件的计时重新开始（SYS-MOTION §10.1），不设存档段。
-  - **WP-03、WP-23、WP-39，以及 WP-35 的界面主题**：换实例时直接落到新值（§5.2）。
-  - **WP-27**：G20 接进 `gate.ps1`；G5 冒烟里的 WM_CLOSE；强杀测试；续跑等价的两次启动；G4 的正则。
-  - **保存失败反馈**（§4.4、§4.6）：WP-50 提供 `State` 和 `FlushForQuit` 的结果；WP-49a 在 Quitting 里处理三选一；WP-35 做对话框、存档卡、设置卡的"存档"一行与延后的提示。
+包的独占目录与交付以 [ENG-WP](../engineering/ENG-WP-工作包派工单.md) 为准。
 
 ## 17 待验证（P0）
 

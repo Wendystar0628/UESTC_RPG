@@ -5,7 +5,7 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Every tunable value of the WP-13 street parts in one place (ENG-TEAM §5): colours, material classes, sizes, lamp
+/// Every tunable value of the WP-13 street parts in one place (WF-FLOW §4): colours, material classes, sizes, lamp
 /// markers and seating. Initial values follow ART-MODELING §4, §7.8, WLD-LIFE §4–§5, SYS-ATLAS §6, MAP-QSH-ADDITIONS
 /// §2.13, §8 and WLD-INTERIORS §4; the Opus review sets the finals. Review colours are autumn 17:30 lit colours.
 /// </summary>

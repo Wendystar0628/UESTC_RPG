@@ -3,7 +3,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Fauna;
 
 /// <summary>
-/// Every look and placement constant of the WP-25 animals in one place (ENG-TEAM §5): colour names, shading specs, the
+/// Every look and placement constant of the WP-25 animals in one place (WF-FLOW §4): colour names, shading specs, the
 /// overall scale and the site rules. Colours are palette names only (ART-STYLE §8.5); the three fauna pairs live in
 /// game/style/palette/ext/WP-25.json, the rest are borrowed from the core table.
 /// </summary>

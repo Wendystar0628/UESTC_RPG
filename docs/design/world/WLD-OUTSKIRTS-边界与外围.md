@@ -25,7 +25,7 @@ gates: [G2, G6, G7, G8, G9, G12, G13, G15, G16]
 - **WP-22 的增量**（WLD-DIORAMA）：截面沿截面线挤出、截面精度按 L2、水柱交点按管线重算、雾海内缘在截面线、远景近层画 1.5–3 km 的楼群与高架剪影；
 - **WP-44 的增量**（SYS-WALK）：校外"能看不能进"、校界的表面类型与提示数据、看街长椅的选点。
 
-WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
+各包交付范围与依赖以 ENG-WP 为准。
 
 ## 0 结论
 
@@ -61,12 +61,12 @@ WP-06、WP-30、WP-35、WP-38、WP-39 等其余各包的增量见 §12.2。
 - **定审查视角、点位、锚点、过场终点或跳转路径**：位姿必须在可达空间内且不在缓冲带里（G2 检查）；跳转途中不施加推回，弧线越界时抬高弧顶（§8.5、§13.1）
 - **读档、换图或 `--pose` 出生**：位姿不在可达空间里就近投影进去，不播推回动画；`--pose` 不合法或在缓冲带里时以非零退出码结束（§8.4、§10）
 - **给外围的表面定精度或验收**：按最近可达距离 d_min 套 ENG-BUDGET §3 的级别表，不按校内精度区的距离；外围整体是 K5，O0 按 K3，底线 B1–B13 在任何距离都成立；d_min 由管线写进 `outskirts.json`，生成器和检查只读结果（§4.1、§4.2）
-- **画截面或远景（WP-22）**：截面沿截面线挤出，和 O1 地面共用 `IOutskirtsModel.CutLine` 上的点；截面精度按 L2；近层卡片只画 1.5–3 km 的楼群和高架剪影，不画街道（§3.4、§4.2、§12.2）
-- **运行时要用外围数据**：经 `IWorldModel.Outskirts`（`IOutskirtsModel`，WP-08 解析，没有外围的图为 null）读前沿线、截面线、距离场与软地板；平面地图和声景的烘焙器直接读 `outskirts.json`；校界仍在 `campus.json`（§6.2、§8.4、§12.3）
+- **画截面或远景（WP-22）**：截面沿截面线挤出，和 O1 地面共用 `IOutskirtsModel.CutLine` 上的点；截面精度按 L2；近层卡片只画 1.5–3 km 的楼群和高架剪影，不画街道（§3.4、§4.2）
+- **运行时要用外围数据**：经 `IWorldModel.Outskirts`（`IOutskirtsModel`，WP-08 解析，没有外围的图为 null）读前沿线、截面线、距离场与软地板；平面地图和声景的烘焙器直接读 `outskirts.json`；校界仍在 `campus.json`（§6.2、§8.4）
 - **在外围加或改内容**：地标、风格化改动和氛围新增写进 `outskirts.overlay.json`（WP-47 独占，ID 以 `design:` 开头、写明理由），不改 OSM 快照；外围不画车流、不加动态，不用霓虹、彩色灯和 LED 屏（§4.4、§4.6、§5.3、§6.3）
 - **外围的灯与地面覆盖**：灯接 WP-39 的时刻表，不新增灯光通道；O0 的灯进 `lamp_grid`、`lamp_table`，O1、O2 只画光晕和路面灯带；O0 读 `ground_mask`、`ground_mask2`，O1、O2 和截面上缘按顶点标志读顶点潜势；不新增着色器（§4.4、§4.5、§11.3）
 - **出边界提示**：行走顶住校界出"校外暂未开放"，旁观到水平边缘出"前方暂未开放"；"前方不可前往 · F 切换旁观可穿过"只用于校内阻挡，不用在校界（§9）
-- **校界附近的地形与水位**：校界内侧 20 m 是地形零带，高度恒为基准 0，外围 O0、O1 与截面上缘一律按平地 y = 0 做；河渠断面可以穿出校界，岸顶恒为 0，河渠的水面高取 `outskirts.json` 交点记录的 `waterY`，与校内该段河渠的常水位一致（§3.5、§12.3，WLD-TERRAIN §2.6、WLD-TERRAIN §6.6）
+- **校界附近的地形与水位**：校界内侧 20 m 是地形零带，高度恒为基准 0，外围 O0、O1 与截面上缘一律按平地 y = 0 做；河渠断面可以穿出校界，岸顶恒为 0，河渠的水面高取 `outskirts.json` 交点记录的 `waterY`，与校内该段河渠的常水位一致（§3.5，WLD-TERRAIN §2.6、WLD-TERRAIN §6.6）
 
 ## 1 参考做法：挡路与精度的共同规律
 
@@ -318,9 +318,9 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 - **小区的门与墙**：小区入口的门岗亭亮一盏暖灯；围墙上爬藤（凌霄、爬山虎），四季同 MAP-QSH-ADDITIONS §2.11。
 - **高架下的绿带**：桥下是修剪整齐的灌木带和一条步道，不留裸土。
 - **农田的田埂和灌渠**，零星几株桤木。
-- **日式日常街景**（ART-AMBIENCE、ART-STYLE §9.1）：O0 支路上整齐的水泥电线杆与架空线（MAP-QSH-ADDITIONS §2.16）；有轨电车跨小路的一处可以做道口，栏杆平时抬起、警报灯不亮，画面里的电车照旧静止（§4.6）。都是新的、干净的样子，字一律用简体中文。
+- 日式日常物件与边界按 ART-STYLE §9.1、ART-AMBIENCE；外围独有的电车道口见 §4.6。
 
-**不加的**：鸟居、石灯笼这类宗教符号和日本地标符号（ART-STYLE §9.1 第 1 条）；不锈钢抽象雕塑、网红打卡件（MAP-QSH-ADDITIONS §5）；会动的东西。外围不加任何动态，只有树随风摆，风场共用 SYS-MOTION 的风。
+**不加的**：日式边界按 ART-STYLE §9.1；不锈钢抽象雕塑、网红打卡件（MAP-QSH-ADDITIONS §5）；会动的东西。外围不加任何动态，只有树随风摆，风场共用 SYS-MOTION 的风。
 
 ### 5.4 画法：清透、细线
 
@@ -329,7 +329,7 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 - **基调清透**：外围是校园的背景，整体比校内再浅、再净一点。
   - 立面固有色的明度宜 ≥ 0.80（深色材质除外，ART-STYLE §6），彩度不高于校内同类楼，让校园留作主角；
   - 斑驳按 ART-STYLE §6 的上限，O1 的中远景读作干净的平涂；方向笔触只在 5 m 以内出现，外围只有 O0 的部件会贴近到这个距离。
-  - 立面和路面同校内一样不做旧（D-174）：没有流挂、锈、裂缝、补丁和油渍，只留天气湿痕和季节落物。
+  - 立面和路面的状态遵守 D-174（ART-FIDELITY §3.5）。
 - **影子以明度为主**（ART-STYLE §3）：
   - 外围楼体按建筑两阶，影色由固有色推导；白墙、白色厂房屋面、灰色隔音屏这类中性面，影里只带一点天光色，不刷成一片蓝紫；
   - 没有接触影，楼脚、墙脚不画暗带，层次靠投影和物体分界线；
@@ -601,87 +601,21 @@ d_min 由管线在 8 m 网格上求出，按立面和屋顶写进 `outskirts.jso
 - **均衡**（0.8）：O2 仍是体量，网格 LOD 更粗。
 - 画面设置只改选级，不改烘焙产物（ENG-BUDGET §7 第 18 条）：卡片环和 O2 体量都烘焙好，运行时只选用哪一个。
 
-## 12 工作包与契约增量
+## 12 工作包与契约
 
-### 12.1 WP-47 外围环境带
+### 12.1 WP-47 目录与拆分
 
-- **独占**：`pipeline/outskirts`、`game/gen/outskirts`（程序集 `Campus.Gen.Outskirts`，是内容程序集，按 ENG-ARCH §2 的边界只引用契约、部件和世界模型）、`game/data/maps/qingshuihe/outskirts.json`、`game/data/maps/qingshuihe/overlay/outskirts.overlay.json`。
-- **交付**：
-  - §6 的管线与产物；
-  - O0 街道带：用部件编目里的路灯、长椅、站牌、护栏、垃圾箱，道路横断面和铺装按 WP-15 提升出来的部件；
-  - 有轨电车的轨道、草坪轨道床、接触网、站台与雨棚，是新部件，登记进部件编目；
-  - O1 的六种楼型与布局；
-  - O2 常驻合并块与流畅档的卡片环；
-  - 覆盖层里的地标与新增元素；
-  - 外围的灯具标记（Lamp 标记加时刻表标签，交 WP-39）、树点（交 WP-23）、作物色号（交 WP-04、WP-37、WP-38）；
-  - `LICENSES.txt` 里外围数据的那一段；地图数据包里的外围部分（`outskirts.json`、外围覆盖层、Overpass 查询原文与快照日期），交 WP-08 一并打包（§6.4、OPS-RELEASE §5）；
-  - 8 个巡检点（§13.2）。
-- **规模**：约 1.6k 行。可以拆成 47a 数据管线（`pipeline/outskirts`）和 47b 生成（`game/gen/outskirts`），两者只经 `outskirts.json` 的格式交接，格式由 47a 先定。
-- **依赖**：WP-08、WP-13、WP-14、WP-15、WP-22、WP-23、WP-39、WP-46。
+交付范围与依赖以 ENG-WP 为准。独占目录：`pipeline/outskirts`、`game/gen/outskirts`（程序集 `Campus.Gen.Outskirts`）、`game/data/maps/qingshuihe/outskirts.json`、`game/data/maps/qingshuihe/overlay/outskirts.overlay.json`。实现可拆成 47a 数据管线（`pipeline/outskirts`）与 47b 生成（`game/gen/outskirts`），两者通过 `outskirts.json` 交接，由 47a 先定格式。
 
-### 12.2 其余各包的增量
 
-| 包 | 增量 |
-| --- | --- |
-| **WP-22**（WLD-DIORAMA） | 截面沿截面线挤出，和 O1 地面共用截面线上的点；精度按 L2（§3.4）；路面、路堤穿过处的断面；水柱交点按管线重算；雾海内缘在截面线；清水河银带；近层卡片画 1.5–3 km 楼群；行走时看到的截面按 §7.4（WLD-DIORAMA §2.4）；额度为三角形 3%、绘制调用 2%、GPU 3% |
-| **WP-30**（MAP-QSH-ADDITIONS §2.11） | 栏杆外侧是街景；校门与闸机关闭；河渠格栅与节制闸；校界碰撞体的表面类型为 `Boundary`；看街长椅（§7.4） |
-| **WP-44**（SYS-WALK） | 可行走遮罩的"校外"一类记为"外围：能看不能进"；校门处的隐形墙段登记为 `Boundary`；2 m 分类栅格标出"离校界 3 m 以内"；提示去重的分段；安全点离校界 ≥ 1 m；看街长椅选点 |
-| **WP-06**（SYS-VIEW） | §8 的可达空间、缓冲带、推回、高度上限、地下水平边界，只在 Playing 状态作用；写 `edge_fog`，并在 `ICameraRig.EdgeFog` 暴露同一个值（SYS-AUDIO）；"前方暂未开放"的触发；出生和读档位姿的合法化；`--pose` 合法性检查 |
-| **WP-35**（UI-NAV） | 两条新提示的文案与中英文；去重计时 |
-| **WP-39**（MAP-QSH-ADDITIONS §8、SYS-TIME §6） | §4.4 的外围灯接进时刻表；O0 灯具进 `lamp_grid`、`lamp_table`；O1、O2 路灯的光晕；`lamp_grid` 覆盖 `map_rect` |
-| **WP-38**（SYS-TIME §4） | 农田四季、林泽杜鹃春花、草坪轨道的季相；外围积雪按法线自动；外围（O1、O2、截面上缘）的地面一律按顶点潜势生长（§4.5） |
-| WP-02 | 四叉树覆盖地图包围盒 `MapDescriptor.Bounds`（箱庭包围盒，约 ±1.5 km）；O2 常驻块随 L4 在雾幕里同步加载、不淘汰；O1 只有临街店面那一层裙房有 L0；流畅档 O2 切卡片环 |
-| WP-04 | `fog.gdshaderinc` 加 `edge_fog` 一项；`toon.gdshaderinc` 按外围的顶点标志选择地面潜势的来源（§4.5）；外围窗号段跳过 `window_override`；作物和外围的色名；外围按 §5.4 的画法取色与线 |
-| WP-05 | Compositor 写给计算着色器的 push constant 加 `edge_fog` 和 `map_rect` 中心 |
-| WP-08 | 世界模型解析 `outskirts.json` 和外围覆盖层（单独一层）；向 WP-06 提供前沿线距离场、软地板网格；向 WP-23 提供外围树点；地形评估器校验校界零带，并核对河渠的常水位与交点记录的 `waterY` 一致（WLD-TERRAIN §3.8） |
-| WP-13 | 部件被外围复用；按需加市政变体（公交站牌、路名牌），走部件参数 |
-| WP-14 | 把立面规则提升到部件内核，供外围楼型复用（ENG-ARCH §2） |
-| WP-15 | 道路横断面、路缘、铺装提升为部件，供 O0 复用；`ground_mask`、`ground_mask2`、`terrain_height` 覆盖 `map_rect` |
-| WP-23 | O0 行道树、O1 小区植被按外围树点实例化，额度计入 WP-47 |
-| WP-24 | O1 里的明渠用 `water.gdshader`，不做倒影和水下内容；O0 露出的明渠段按校内河渠的标准，由 WP-28 延续 |
-| WP-27 | 新视角 V11、E6、E7；全部 V、E、P 位姿的合法性自检；外飞录像；G8 的外围子项 |
-| WP-33 | O1 第一排楼的遮挡体（可选） |
-| WP-36 | 跳转路径不出可达空间；P07、P15 的位姿按 UI-NAV §6 复核 |
-| WP-41 | 时季矩阵的视角轮换加入 V11、E6、E7 |
-| WP-42 | §7.2 的缓停；顶住 `Boundary` 0.8 s 出"校外暂未开放"，同时发接触事件给 WP-53d（`IWalkTelemetry`，SYS-AUDIO） |
-| WP-43 | `SurfaceTag.Boundary` 的碰撞层登记 |
-| WP-45 | `precip_occ` 覆盖 `map_rect` |
-| WP-46 | `map.json` 的活动范围增加推回速率、推回上限、边缘雾上限（§8.4）；写 `map_rect`（±1280 m）；`MapEnvironment` 增加外围文件名；`Bounds` 由截面线派生；将来的入口段（§10） |
-| WP-48 | 底图读外围数据画淡线；页面范围包住截面线 |
-| WP-49 | 过场终点合法；T0 和过场画面里的外围按距离验收（SYS-TITLE） |
-| WP-53 | 外围的远景声源放在外围外缘以外的雾里，街上不出车声、电车声（§4.6）；`Boundary` 的轻接触声（§7.2）；读 `ICameraRig.EdgeFog` 把远处的声音压低、变闷（§8.3）（SYS-AUDIO） |
+### 12.2 其他包的外围接入
 
-### 12.3 契约增量
+各包的增量分工以 ENG-WP §2 为准；外围数据与边界接口见本文 §12.3。
 
-```csharp
-// Campus.Contracts（纯 .NET，只增不改；最终写法以 ENG-ARCH §3 为准）
-public enum SurfaceTag { Ground, Stair, Barrier, Wall, Prop, Water, Invisible, Boundary, DoorClosed }
-//   Boundary：校界栏杆、关闭的校门与闸机、车道抬杆、河渠格栅、校门处的隐形墙（§7）
-//   DoorClosed：关着的门，由 WLD-INTERIORS加；两项依次追加在原有各项之后（以 ENG-ARCH §3 为准）
+### 12.3 契约与实现
 
-public enum OutskirtsBand : byte { O0, O1, O2 }
-public enum OutskirtsKind : byte { SlabResidential, PointTower, Factory, ParkOffice, Mall, School, Landmark }
-public sealed record OutskirtsBlock(string Id, OutskirtsKind Kind, OutskirtsBand Band,
-    IReadOnlyList<Vector2> Footprint, float Height, int Floors,
-    byte FacadeLevel, byte RoofLevel, uint Seed);           // 级别由管线按 d_min 定（§4.1）
+外围模型、楼型、漫游边界、地图环境与相机雾值的类型均已落在 `E:\Project\UESTC_RPG\game\contracts\Spatial\OutskirtsContracts.cs`、`Maps\MapContracts.cs`、`CameraContracts.cs`；类型与签名以源码为准。校外地图可无外围数据；外围类型分带与 `edge_fog` 行为见 §4、§8。
 
-public interface IOutskirtsModel                             // WP-08 解析 outskirts.json 与外围覆盖层，只读
-{
-    IReadOnlyList<Vector2> FrontLine { get; }               // 前沿线，闭合
-    IReadOnlyList<Vector2> CutLine { get; }                 // 截面线，闭合，2 m 等距；WP-22 与 WP-47 共用这些点
-    IReadOnlyList<OutskirtsBlock> Blocks { get; }
-    float FrontDistance(float x, float z);                  // 到前沿线的距离，线内为 0（16 m 网格，双线性）
-    float SoftFloor(float x, float z);                      // 屋顶净空 + 40 m（8 m 网格，外扩一格取最大）
-    // 道路横断面、轨道与站台、水系、用地、树点、灯位、地标、水柱交点：字段由 WP-47 定，经 WP-00 并入
-    // 水柱交点与河渠穿出校界的点各带 float WaterY：与校内该段河渠的常水位一致（WLD-TERRAIN §6.6）
-}
-// IWorldModel 增：IOutskirtsModel? Outskirts { get; }       // 没有外围数据的地图为 null
-
-// RoamLimits（SYS-MAPS的八个字段）之外，以 init 属性追加：
-//   public float PushRate { get; init; } = 1.5f;  public float PushMax { get; init; } = 15f;  public float EdgeFogMax { get; init; } = 1.6f;
-// MapEnvironment（SYS-MAPS）增 init 属性：string? Outskirts     // "outskirts.json"；null 表示没有外围
-// ICameraRig 增：float EdgeFog { get; }                   // 与全局参数 edge_fog 同一个值，WP-06 写；音频读（SYS-AUDIO）
-```
 
 - **全局参数**（ENG-PERF §1.5）：
   - `edge_fog`：float，0–1，写入方 WP-06，每帧；

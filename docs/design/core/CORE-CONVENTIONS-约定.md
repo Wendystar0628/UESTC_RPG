@@ -2,12 +2,12 @@
 id: CORE-CONVENTIONS
 title: 约定
 category: core
-summary: 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性、文档写法与施工规则
-keywords: [约定, 坐标系, 单位, 角度, 编号体系, 命名, 程序集, 命名空间, 色名, 帧顺序, FramePriority, 目录归属, ownership.json, user://, 确定性, 文件头, front matter, keywords, 范围块, 查阅行, 接入要点, 小节引用, 施工约定, 文件操作, 删除规则]
+summary: 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性
+keywords: [约定, 坐标系, 单位, 角度, 编号体系, 命名, 程序集, 命名空间, 色名, 帧顺序, FramePriority, 目录归属, ownership.json, user://, 确定性]
 owners: [WP-00]
 contributors: [WP-27]
 depends: [CORE-INDEX]
-related: [ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-WP, ENG-PERF, SYS-TIME, SYS-SAVE, SYS-MAPS, CORE-DECISIONS, CORE-GLOSSARY, ENG-ROADMAP, ENG-STATUS, OPS-RELEASE]
+related: [ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-WP, ENG-PERF, SYS-TIME, SYS-SAVE, SYS-MAPS, CORE-DECISIONS, CORE-GLOSSARY, ENG-ROADMAP, WF-STATUS, OPS-RELEASE]
 contracts: []
 data: []
 gates: [G1, G2, G3, G4, G5]
@@ -15,14 +15,14 @@ gates: [G1, G2, G3, G4, G5]
 
 # CORE-CONVENTIONS · 约定
 
-> **范围**：本文汇总所有子代理共同遵守的跨文档约定：坐标与单位、时间单位、标识与命名、帧顺序、目录与归属、确定性、文档写法和施工规则，查一处就够。有权威表的地方只给速查和指针。
-> **不在本文**：契约全文（ENG-ARCH §3）、全局参数登记表（ENG-PERF §1.5）、命令行参数表（ENG-GATES §1）、门禁（ENG-GATES §2）、预算（ENG-BUDGET）、工作包（ENG-WP）、决策（CORE-DECISIONS）、术语解释（CORE-GLOSSARY）、RPG 扩展点（ENG-ROADMAP）。
-> **查阅**：先读 §0；坐标与单位看 §1；时间单位看 §2；编号与命名看 §3；帧顺序看 §4；目录与 `user://` 看 §5；确定性看 §6；文档写法看 §7；施工、文件操作与主线优先看 §8
-> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-GATES 验收](../engineering/ENG-GATES-验收与门禁.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET-性能预算与硬规则.md)、[ENG-WP 工作包](../engineering/ENG-WP-工作包派工单.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF-性能工程.md)、[SYS-TIME 时间季节](../systems/SYS-TIME-时间与季节.md)、[SYS-SAVE 存档](../systems/SYS-SAVE-存档与持久化.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS-多地图.md)、[CORE-DECISIONS 决策登记](CORE-DECISIONS-决策登记.md)、[CORE-GLOSSARY 术语表](CORE-GLOSSARY-术语表.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP-扩展路线.md)、[ENG-STATUS 施工状态](../engineering/ENG-STATUS-施工状态.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE-发布与交付.md)
+> **范围**：本文汇总所有子代理共同遵守的跨文档约定：坐标与单位、时间单位、标识与命名、帧顺序、目录与归属、确定性，查一处就够。有权威表的地方只给速查和指针。
+> **不在本文**：契约全文（ENG-ARCH §3）、全局参数登记表（ENG-PERF §1.5）、命令行参数表（ENG-GATES §1）、门禁（ENG-GATES §2）、预算（ENG-BUDGET）、工作包（ENG-WP）、决策（CORE-DECISIONS）、术语解释（CORE-GLOSSARY）、RPG 扩展点（ENG-ROADMAP）；文档写法（WF-DOC）、施工规则（WF-RULE、WF-BUILD）、开工手册（WF-ONBOARD）。
+> **查阅**：先读 §0；坐标与单位看 §1；时间单位看 §2；编号与命名看 §3；帧顺序看 §4；目录与 `user://` 看 §5；确定性看 §6；与权威位置的差异看 §7
+> **关联**：[CORE-INDEX 总览](../README.md)、[ENG-GATES 验收](../engineering/ENG-GATES-验收与门禁.md)、[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、[ENG-BUDGET 性能预算](../engineering/ENG-BUDGET-性能预算与硬规则.md)、[ENG-WP 工作包](../engineering/ENG-WP-工作包派工单.md)、[ENG-PERF 性能工程](../engineering/ENG-PERF-性能工程.md)、[SYS-TIME 时间季节](../systems/SYS-TIME-时间与季节.md)、[SYS-SAVE 存档](../systems/SYS-SAVE-存档与持久化.md)、[SYS-MAPS 多地图](../systems/SYS-MAPS-多地图.md)、[CORE-DECISIONS 决策登记](CORE-DECISIONS-决策登记.md)、[CORE-GLOSSARY 术语表](CORE-GLOSSARY-术语表.md)、[ENG-ROADMAP 扩展路线](../engineering/ENG-ROADMAP-扩展路线.md)、[OPS-RELEASE 发布与交付](../ops/OPS-RELEASE-发布与交付.md)
 
 ## 0 原则与权威表
 
-- 本文只做速查。数值、签名、表格以权威位置为准；本文与权威位置不一致时，以权威位置为准，差异记进 §9。
+- 本文只做速查。数值、签名、表格以权威位置为准；本文与权威位置不一致时，以权威位置为准，差异记进 §7。
 - 权威位置的分工见 CORE-DECISIONS 的 D-133。本文引用的速查与权威位置对应如下：
 
 | 内容 | 权威位置 | 本文 |
@@ -32,15 +32,15 @@ gates: [G1, G2, G3, G4, G5]
 | 全局着色器参数与数据纹理 | ENG-PERF §1.5 | §1.3 只列 `map_rect` |
 | 着色器白名单 | ENG-PERF §1.4 | §3.6 |
 | 命令行参数 | ENG-GATES §1 | §6 只抄截图默认串 |
-| 门禁 G1–G21 与测试节奏 | ENG-GATES §2 | §8 只列施工时怎么跑 |
+| 门禁 G1–G21 与测试节奏 | ENG-GATES §2 | 不摘录 |
 | 预算与额度 | 20（总账 ENG-BUDGET §8） | 不摘录 |
-| 工作包、独占目录、阶段 | ENG-WP §1、ENG-WP §2、ENG-WP §3 | §8 |
+| 工作包、独占目录、阶段 | ENG-WP §1、ENG-WP §2、ENG-WP §3 | 不摘录 |
 | 目录与归属 | ENG-ARCH §2、`ownership.json` | §5 |
 | 按图数据 | SYS-MAPS §2 | §5.2 |
-| 已定决策 | CORE-DECISIONS | §7.6、§7.8 |
+| 已定决策 | CORE-DECISIONS | WF-DOC §6、§8 |
 | 术语 | CORE-GLOSSARY | — |
 | RPG 扩展点 | ENG-ROADMAP | §3.8 |
-| 子代理开工与查阅 | ENG-ONBOARD | §8.1 |
+| 子代理开工与查阅 | WF-ONBOARD | 不摘录 |
 
 ### 0.1 接入要点
 
@@ -50,8 +50,7 @@ gates: [G1, G2, G3, G4, G5]
 - **节点要在某一帧阶段执行**：按 §4 的帧顺序选 `FramePriority`。
 - **放文件**：仓库目录按 §5.1，按图的数据按 §5.2，`user://` 下的文件按 §5.3。
 - **生成或随机的结果要能复现**：按 §6 的确定性规则。
-- **写或改文档**：按 §7（文件头、范围块、§0 与接入要点、引用写法）。
-- **施工**：开工、改什么、门禁与回报、文件操作、主线优先，按 §8。
+- **写或改文档**：按 WF-DOC；**施工**：按 WF-ONBOARD、WF-RULE、WF-BUILD。
 
 ## 1 坐标与单位
 
@@ -237,7 +236,7 @@ gates: [G1, G2, G3, G4, G5]
 ### 3.7 其他命名
 
 - **工作树**：`..\UESTC_RPG.wt\<WP-xx>\`；本地临时分支 `wp/<xx>-<slug>`（例 `wp/18-south`），合进 `main` 后即删，不推送；`user://` 的目录名 `UESTC_WPxx`（ENG-ARCH §6）。
-- **截图**：放 `output/render-review/`，命名"包-视角.png"或"包-Qn.png"；非默认状态依次加季节、钟点、天气、预设，名字与命令行取值相同，例如 `WP-18-V6-winter-2100-snow.png`（ENG-GATES §5）。
+- **截图**：放 `output/render-review/`，命名"包-视角.png"或"包-Qn.png"；非默认状态依次加季节、钟点、天气、预设，名字与命令行取值相同，例如 `WP-18-V6-winter-2100-snow.png`（WF-ONBOARD §4.2）。
 - **存档文件**：`saves/<slot>/g<6 位代号>.sav`，如 `s1/g000041.sav`（SYS-SAVE §1）。
 - **启动集**：每张图一个 `boot_<地图>.pck`，包内路径 `res://bake/<地图>/boot/`；其余烘焙产物是本机缓存 `user://cache/bake/<地图>/` 里的 `.tbin`（D-165，ENG-ARCH §4）。
 
@@ -317,7 +316,7 @@ UESTC_RPG/
 
 - 目录树全文和逐目录的归属以 ENG-ARCH §2 为准；`ownership.json` 照它写。改动的路径越出本包范围，G3 拒绝。
 - **RPG 预留目录**：`game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<地图>/entities/` 在 `ownership.json` 里记为 WP-00 的预留，观光期不写入（ENG-ROADMAP §6 第 6 条）。
-- **只有主代理能改的共享文件**：`game/project.godot`（含 Shader Globals、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`、各图的 `interiors.json`；`map.json` 归 WP-46，但字段增改经主代理（ENG-ARCH §6）。
+- **共享文件**（工程共享件由 Astra 改、经主会话合入，`docs/design/` 由主会话改，规则见 WF-BUILD §1）：`game/project.godot`（含 Shader Globals、动作表、Autoload）、`export_presets.cfg`、`Campus.sln`、全部 `*.csproj`、`Directory.Build.props`、`Directory.Packages.props`、`packages.lock.json`、`global.json`、`.editorconfig`、`.gitattributes`、`.gitignore`、`game/addons/`、契约、`ownership.json`、`budgets.json`、`third_party.json`、`tools/`、`docs/design/`、`docs/godot-api/`、各图的 `interiors.json`；`map.json` 归 WP-46，但字段增改经主代理（ENG-ARCH §6）。
 - **不进 git**：仓库外的工作树 `..\UESTC_RPG.wt\<WP-xx>\`、GPU 锁 `..\UESTC_RPG.wt\.locks\`、烘焙缓存（环境变量 `UESTC_BAKE_CACHE`，默认 `E:\Project\UESTC_RPG.cache\bake\<地图>\`）；仓库里的 `build/`、`output/`、`.godot/`、`override.cfg`（ENG-ARCH §2、ENG-ARCH §4、ENG-ARCH §6）。`*.wav`、`*.ogg` 进 Git LFS。
 - `game/contracts/`、`game/gen/` 和每个 `tests/` 目录各放一个空的 `.gdignore`，Godot 不扫描纯 .NET 代码（ENG-ARCH §2）。
 
@@ -369,7 +368,7 @@ UESTC_RPG/
 
 ### 5.4 文档目录
 
-- `docs/design/`：开发文档，开发以它为准（D-152）。`README.md` 是总索引（CORE-INDEX）；文件夹与编码前缀见 §7.3 的表。
+- `docs/design/`：开发文档，开发以它为准（D-152）。`README.md` 是总索引（CORE-INDEX）；文件夹与编码前缀见 WF-DOC §3 的表。
 - `reference/REF-PROMPT-完整提示词备份.md` 是作品描述的备份，不是施工文档；与拆分文档冲突时以拆分文档为准（D-153）。
 - `docs/godot-api/`：Godot 4.7.2 C# API 参考。写 Godot 代码前先在 `docs/godot-api/signatures.txt` 查到签名，不凭记忆写 API（D-145）。
 
@@ -397,200 +396,7 @@ UESTC_RPG/
 
   出别的视角只换 `--pose`；门禁和基准只由命令行决定，不读 `user://`；截图在窗口模式下、等流式队列空和管线编译计数稳定以后再存图（ENG-GATES §1）。
 
-## 7 文档约定
-
-### 7.1 文件头
-
-每份文档以 YAML front matter 开头，放在标题行之前。字段：
-
-| 字段 | 写什么 |
-| --- | --- |
-| `id` | 文档编码，与文件名相同，例如 `SYS-WEATHER`（§7.3） |
-| `title` | 与标题行 `# 编码 · 标题` 的标题部分一致 |
-| `category` | 所在文件夹的类别名，见 §7.3 的表，例如 `systems`、`maps` |
-| `status` | 只用于记录类文档（RFC、ISS、EXP、ADR），取值见各自文件夹的 README |
-| `summary` | 一句话说清本文规定什么，不超过 60 字 |
-| `keywords` | 检索词，10–30 个：本文的核心概念、契约与类型名、数据与着色器文件名、常见的同义说法；只写本文是权威来源的（D-178） |
-| `owners` | 主责工作包（实现本文主体的包） |
-| `contributors` | 按本文有增量交付的其他包 |
-| `depends` | 读懂、实现本文必须先读的文档编码 |
-| `related` | 有交叉、需要对齐的文档编码 |
-| `contracts` | 本文定义或拥有的契约、类型名（以 ENG-ARCH §3 为准；没有写 `[]`） |
-| `data` | 本文规定的数据文件或目录（没有写 `[]`） |
-| `gates` | 验收本文内容的门禁（ENG-GATES） |
-
-- 工作包、契约、门禁要与 ENG-WP、ENG-ARCH §3、ENG-GATES 核对，不能自己编。这些字段供脚本生成总索引和工作包矩阵。
-- 示例：
-
-  ```yaml
-  ---
-  id: SYS-WEATHER
-  title: 天气
-  category: systems
-  summary: 一句话说清本文规定什么
-  keywords: [天气, 天气向量, WeatherVec, 降水, 积雪, 湿度, 雨, 雪]
-  owners: [WP-45]
-  contributors: [WP-03, WP-40]
-  depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ENG-ARCH, SYS-TIME]
-  related: [SYS-MOTION, SYS-AUDIO]
-  contracts: [IWeatherProcess, WeatherVec, WeatherSel]
-  data: ["game/data/weather/"]
-  gates: [G12, G13, G21]
-  ---
-  ```
-
-### 7.2 标题与范围块
-
-- front matter 之后第一行是 `# 编码 · 标题`，例如 `# SYS-WEATHER · 天气`。
-- 紧接一个 3–6 行的引用块：
-
-  ```
-  > **范围**：本文规定……（一两句）
-  > **不在本文**：……（指向负责的文档编码）
-  > **查阅**：先读 §0；……看 §x；……看 §y（3–8 项，说明什么内容在哪一节）
-  > **关联**：[ENG-ARCH 工程架构](../engineering/ENG-ARCH-工程架构.md)、……（按 depends 和 related 给相对链接）
-  ```
-
-- 有具体分工信息的（例如"X 由 WP-23 负责"），写成正文里的"### 分工"一段或原位的简短列表。
-- **§0 与接入要点**（D-178）：
-  - 规范文档在范围块（和"### 分工"）之后写 `## 0 结论`：5–12 条，每条一两句，指向细则所在的小节。
-  - §0 的最后一个小节是 `### 0.N 接入要点`，写给不负责本文的其他包：碰到本文管的东西时必须遵守的规则。每条一行，写成 `- **<什么时候>**：<必须怎么做或不许怎么做>（§n.m）`；只写对外的约束、接口和数据位置，不写内部实现。没有对外要求的，写一句"本文只约束 <包号>，没有对其他包的要求。"
-  - `scripts/docs/gen_index.py` 按标题文字"接入要点"抽取它，所以标题文字不改。
-- **便于单独阅读**：标题写清内容，不只写"其他""补充""细则"；正文不用"同上""上文所说"这类要靠上下文才懂的指代，写明 §n.m 或具体名称。
-
-### 7.3 编码、小节编号与引用
-
-- **文档编码**：文件名就是编码，全大写英文加连字符，在全库唯一；拆分、合并、重组时可以改，改了就全局替换（D-200）。
-  - **规范文档**：`<领域>-<主题>`，例如 `SYS-WEATHER`、`UI-VISUAL`。按图的文档再带图名：`MAP-<图>-<主题>`，清水河的图名缩写是 `QSH`，例如 `MAP-QSH-CORE`。
-  - **记录类文档**：`<类>-<领域>-<短名>`，类是 `RFC`（提案）、`ISS`（问题）、`EXP`（实验）、`ADR`（重大决策），例如 `ISS-SYS-SAVE-FLUSH`。领域取规范文档的前缀；状态写在文件头的 `status`。结果定下后写回规范文档，规范文档不引用提案和问题。
-  - **领域与文件夹**：
-
-    | 领域前缀 | 文件夹 | 放什么 |
-    | --- | --- | --- |
-    | CORE | `core/`（总索引是根目录的 `README.md`） | 总索引、决策登记、约定、术语 |
-    | ART | `art/` | 风格、天空光照、视觉精度、造型 |
-    | WLD | `world/` | 不分图的世界内容：箱庭、植被、水、生活痕迹、外围、室内 |
-    | MAP | `maps/<图>/` | 某一张图的分区内容，清水河在 `maps/qingshuihe/` |
-    | SYS | `systems/` | 运行时系统 |
-    | UI | `ui/` | 界面内容与视觉语言 |
-    | ENG | `engineering/` | 门禁、架构、预算、工作包、性能、扩展路线 |
-    | REF | `reference/` | 参考材料，不是施工文档 |
-    | GAME、NARR、CHAR、CONT、TOOL、QA、OPS、L10N | `gameplay/`、`narrative/`、`characters/`、`content/`、`tools/`、`qa/`、`ops/`、`localization/` | 待用，见各文件夹的 README |
-    | RFC、ISS、EXP、ADR | `proposals/`、`issues/`、`experiments/`、`decisions/` | 记录类文档 |
-
-- **小节编号**：小节号只在本文内有效，不带文档前缀，例如 `## 6 自动天气`、`### 6.4 种子`。多数文档的第一节是 `## 0 结论`，"至少读"的要求通常指它。编号一律稳定，别的文档靠它引用。
-- **新小节**加在所属一级节的末尾，取下一个空号，不插号、不重排。整节作废或搬走就直接删，所有引用同批改到新位置，不留占位标题（D-200）。
-- **改结构、改编号时全局替换**：文档拆分、合并、重新编号或改名时，所有引用一次改到新位置，不留旧编号对照表、兼容段或"原 §x 现见 §y"之类的说明；docs 以外引用了它的文件（任务单、简报、角色说明等）同一批改掉（D-200）。
-- **引用写法**：
-  - 跨文档写"编码 §小节"，例如 `ENG-ARCH §3`、`SYS-WEATHER §6.4`；范围写 `SYS-WALK §6–§8`；
-  - 本文内只写 `§6.4`；
-  - 引用整份文档直接写编码，例如"见 SYS-WEATHER"；
-  - 全局不变量写"INV-6"，决策写"D-133"，门禁写"G19"；
-  - 编号列表里的一条写"ENG-BUDGET §7 第 9 条"。
-- 正文里第一次提到别的文档时写"编码 §小节"，不必逐处加链接；链接只放在范围块的"关联"里。
-- 回报里引用条目只写编码和小节（如"MAP-QSH-SOUTH §2.1–§2.9"），不复述内容（ENG-GATES §5）。
-
-### 7.4 正文写法
-
-- **只写现行规则**：不写修订历史、用户原话、"原写 X，改为 Y"这类过程记录，现行规则直接陈述。
-- **不写证据**：调研发现、照片与报道、来源链接都不写。解释"为什么这样设计"的一句话理由可以保留，它是施工共识。
-- **链接**：只留施工要用的技术文档（Godot 官方文档、API、规范条文）。
-- **数值只有一个家**：某个系统的数值以该系统自己的文档为准（门的参数以 WLD-INTERIORS §4.1 为准，天气以 SYS-WEATHER 为准）；别处引用时写指针，必须抄数值时注明出处，改的时候一起改。
-- **观光规则照写**：写死观光模式的规则（不出现人物、没有可以点选的东西、只有一个偶发事件等）照常写成规则；它们怎样成为观光规则集的配置，由 ENG-ROADMAP 统一登记。
-
-### 7.5 待验证（P0）节
-
-- 文末加一节，标题按本文编号接在最后一节之后，例如 `## 12 待验证（P0）`。
-- 收两类项：会影响施工、要在 P0 原型上核实或实测的数值和做法；文中"待定""需要原型看图"的项。
-- 每条写三样：待验证的内容；验证方法或负责包；验证前用的初值。正文原位只留初值。
-- 没有这类项就不加这一节。
-
-### 7.6 冲突与决定层级
-
-文档之间、或文档内部有互相矛盾的设计时，按下面的层级判定，从高到低：
-
-1. **用户的决定**（登记在 CORE-DECISIONS）；
-2. **CORE-DECISIONS 登记的其他决策**；CORE-DECISIONS 每条只写现行决定，决策有变时改写原行（CORE-DECISIONS §0）；
-3. **权威文档**（D-133）：契约以 ENG-ARCH §3 为准，帧顺序以 ENG-ARCH为准，全局参数以 ENG-PERF §1.5 为准，预算以 ENG-BUDGET为准，门禁以 ENG-GATES为准，工作包以 ENG-WP为准；
-4. **系统自己的文档**：某个系统的细则以它自己的文档为准，例如门参数以 WLD-INTERIORS §4.1 为准、天气以 SYS-WEATHER为准、存档以 SYS-SAVE为准；
-5. 其他文档里的摘录与速查，包括本文。
-
-- CORE-DECISIONS 的一句话结论与细则文档有出入时，按细则文档施工，并报主代理（CORE-DECISIONS §0）。拆分文档与 REF-PROMPT 冲突时以拆分文档为准（D-153）。
-- **能按层级判定的**：改低层的那一处，使之与高层一致。**判定不了的**：不改，报给主代理，由主代理定案并登记进 CORE-DECISIONS。
-- 施工期间子代理不改 `docs/design/`（ENG-ARCH §6），发现冲突写进回报；文档整理由主代理分派时例外，按分派说明改。
-
-### 7.7 新增文档与小节
-
-- **新文档**：按 §7.3 取编码，放进对应的文件夹；写 front matter 和范围块，需要时在末尾加待验证节。由主代理登记进 CORE-INDEX §7 的文档地图（CORE-INDEX §7–§9 和小节目录 `docs/design/SECTIONS.md` 用 `scripts/docs/gen_index.py` 重新生成，再用 `scripts/docs/check_docs.py` 校验），并同步改受影响的权威位置：工作包与起读（ENG-WP）、新门禁（ENG-GATES）、新契约（ENG-ARCH §3）、新全局参数（ENG-PERF §1.5）、归属（`ownership.json`）。
-- **新小节**：见 §7.3。
-- 新契约、全局参数、着色器文件、程序集引用或 NuGet 包的需求，不在文档里先写成定论，而是在回报里申请，由主代理统一处理（ENG-ONBOARD §3.1、D-134）。
-
-### 7.8 登记新决策
-
-- 新增或推翻决策时，主代理先登记进 CORE-DECISIONS，再改相关文档（D-154）。CORE-DECISIONS 的编号 D-001 起全文连续，编号不改、不复用；决策有变时改写原行；每条写一句结论、适用范围、细则所在和状态（生效、待原型验证）（CORE-DECISIONS §0）。
-- 改相关文档时，正文只写决定后的现行规则，不写"某某定"。需要留下背景、选项和取舍的重大决策，另写一份 ADR（§7.3）。
-- 子代理只读 CORE-DECISIONS；发现文档与 CORE-DECISIONS 不一致时报主代理，不自行改动（CORE-DECISIONS 的范围块）。
-
-## 8 子代理施工约定
-
-### 8.1 开工
-
-- 开工只读三样：开工手册 ENG-ONBOARD（经仓库根的 `CLAUDE.md` 自动载入）、ENG-WP §2 与 ENG-WP §2.1 里本包的两行，以及派工简报（ENG-WP §4）。其余文档按 ENG-ONBOARD §4 按需查，不要求通读；决策、约定、术语三份共识文档也是需要时再查（D-178）。
-- 写 Godot 代码前先读 `docs/godot-api/README.md`，用到的每个类、方法、属性都先在 `signatures.txt` 里查到签名（D-145）。
-
-### 8.2 改什么
-
-- **只改自己工作包的独占目录**（ENG-WP §2 的"独占目录"一列，`ownership.json`）；子包各自独占原包目录下的一个子目录（ENG-WP §3）。越界由 G3 拒绝。
-- **共享文件只由主代理改**（§5.1）。改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，在回报里提申请，经 WP-00 处理。契约分批定死：WP-00 先交能编译的候选契约和桩（契约 v1 候选）；某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结这一组，之后只增不改（ENG-ARCH §3、D-134）。
-- **新模块用特性接入**（`[ContentModule]`、`[Part]`、`[KernelNode]`、`[KernelService]`、`[SaveSection]`、`[AmbientEmitter]`、`[InteriorProvider]`、`[MediumPresenter]`、`[QualityResponsive]`），不改注册表、不改主场景、不加 Autoload（ENG-ARCH §2）。
-- **代码边界**（细则以 ENG-ARCH §2 为准，开工用的清单见 ENG-ONBOARD §3.3）：
-  - `game/gen` 是纯 .NET：只引用契约、部件、世界模型（只读），不引用 GodotSharp，不读文件，不读世界状态，不感知天气和画面设置；
-  - 显示东西经内核的 `IRenderHost`；材质只经 `ToonSpec`；
-  - 出声只经 `IAudioService`、`IAmbienceService`、`IFoleyService`；
-  - 跨读档的状态用 `[SaveSection]` 声明，不自己读写 `user://`；
-  - 响应画面设置用 `[QualityResponsive]` 与 `IQualityAware`，不读设置文件；
-  - 天气只读 `IWorldState.WeatherNow` 和天气类全局参数，不自己判断天气；
-  - 按图的数据只经 `IMapContext`；
-  - 不写 GDScript；不在编辑器里打开或重存场景；代码里只用 `res://` 路径，不手写 `uid://`；`.uid` 跟源文件一起提交。
-
-### 8.3 门禁与回报
-
-- 测试按 ENG-GATES §2 的三档（D-167）：每次合入前只跑几分钟的快检（编译、改动涉及的单元测试、归属、注册）；只有核心体验（启动与主线冒烟、行走不穿地、存档不丢不坏）在改动碰到时跑核心专项；其余测试全部留到大量开发之后的集中测试，一次做完。`scripts\gate.ps1 -Wp <WP-xx>` 默认按改动自动选，输入没变的门禁沿用上次结果，只改文档不跑；先选定本次的检查，选中的检查要用烘焙数据时才预烘共享缓存（ENG-ARCH §6）。开发中自己截图看效果不算门禁。
-- 截图类门禁（G7、G9）在已登录的交互式会话里、窗口模式下跑，窗口不能最小化；脚本自己排 GPU 锁，不绕过；截图与基准一律不开声音（ENG-GATES §1、ENG-ARCH §6）。
-- git 流程按 ENG-ARCH §6（D-166）：远端只有 `main` 和标签。并行写代码时每个代理一个工作树和本地临时分支，小步提交、不推送、不碰 `main`，主代理通知有新合入时 `git rebase main`；主代理的合并队列一次合一个：rebase → 快检与相关核心专项（ENG-GATES §2）→ squash 合进 `main` → `git push origin main` → 删本地分支。只有一个代理写代码时，直接在主检出的 `main` 上做，同样先过与改动相关的快检和核心专项，再提交、推送。
-- 完成后按 ENG-GATES §5 的格式回报，截图放 `output/render-review/`。
-
-### 8.4 文件操作
-
-这四条对主代理和全部子代理都适用（D-149–D-152）：
-
-1. **下载**：需要的引擎、导出模板、SDK、素材、文档直接下载，不必请示。只用官方或可信来源，能校验哈希就校验；下载后说明下了什么、多大、放在哪。第三方插件与代码只收 MIT、Apache、BSD、ISC、OFL 许可（ENG-WP §5），登记进 `third_party.json`；音频素材登记进 `licenses.json`（ENG-ARCH §4）。本作自己的许可见 OPS-RELEASE §7（D-170）。
-2. **临时文件**：不干扰开发的就留着，不必频繁删除；临时文件放会话临时目录或仓库里不进 git 的 `output/`，不放进项目的源码和文档目录。只在占用项目目录、影响构建时清理。
-3. **删除**：能不删就不删。要删时只用绝对路径，只删具体的文件；不用带通配符或相对路径的删除命令，也不写 `cd X; … rm …` 这类组合，因为 `cd` 一旦失败，删除就会落到当前目录上（可能是文档目录）。例如复制文件时要删掉复制来的 `.uid`（ENG-ARCH §6），就按绝对路径逐个删。
-4. **文档只记现行状态**：不写修订说明、用户原话和证据（D-152）；文档的增删改按 §7。
-
-另外：
-
-- 一律用绝对路径；命令行参数里的路径（`--out`、`--load`、`--save-dir`）也必须是绝对路径（ENG-GATES §1）。
-- 只改分派给自己的文件；别的代理正在改的文件不碰。
-- 保持文件原有的换行风格。仓库的 `.gitattributes` 是 `* text=auto eol=lf`，新建的文本文件用 LF（ENG-ARCH §6）。
-
-### 8.5 主代理的角色
-
-- **主代理**：开发期的编排者，由 Opus 担任（ENG-TEAM，D-179）。验收并合入 Astra 做的 WP-00（骨架、契约 v1 候选、桩）；之后发派工简报、维护合并队列，按组宣布契约冻结（§8.2、D-134），并审批三类事：契约变更（含全局着色器参数、着色器文件、程序集引用与 NuGet 包，§8.2）、开放室内清单 `interiors.json` 的增删（D-164）、预算余量（ENG-BUDGET §8 的"主代理余量"）（D-161）。
-- 文档里"须经 WP-00 审批"与"须经主代理审批"等价。
-- 共享文件由 Astra 在自己的工作树里改、经主代理的合并队列进 `main`，文档只由主代理改（§5.1、ENG-TEAM-ROLES §1.1）；文档冲突报主代理，由主代理定案并登记进 CORE-DECISIONS（§7.6）。
-- 主代理维护 ENG-STATUS（当前施工状态），派工、合入和交接时更新；换会话或换账号接手时，先读它再对照 Git 核实（ENG-STATUS §1）。
-
-### 8.6 主线优先（D-168）
-
-- 主线的定义见 CORE-INDEX §2。主线闸口（ENG-WP §1）通过之前，每个包只交主线版：能接进主线、跑得通、不崩、不挡路。
-- **主线版可以**：用简化几何或体块、默认参数、占位贴图和占位声音；只做默认状态和最常见的组合；跳过边角情况。
-- **主线版不可以**：改动或绕开契约、数据格式和目录归属；留临时接口；违反 CORE-INDEX §3 里关于内容的规则。
-- **不为细节阻塞合入**：细节问题写进回报，留到主线闸口之后统一处理。
-- **细节阶段**按各文档的完整规格推进；核心体验（主线流程、行走、存档、画面没有明显卡顿）的问题优先修。
-
-## 9 待对齐
+## 7 待对齐
 
 本节登记本文与权威位置之间的差异；由主代理判定后改相关文档。
 

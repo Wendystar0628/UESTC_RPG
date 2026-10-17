@@ -4,7 +4,7 @@ using Campus.Contracts.Audio;
 namespace Campus.Gen.Zones.DesignWaterfront;
 
 /// <summary>
-/// Every tunable value of the WP-28 bridges in one place (ENG-TEAM §5). Lengths in metres; heights are relative to the
+/// Every tunable value of the WP-28 bridges in one place (WF-FLOW §4). Lengths in metres; heights are relative to the
 /// carriageway surface at the bridge ends (the road level, WLD-TERRAIN §4.2: "桥面标高等于两端路面").
 /// </summary>
 public static class WaterfrontTune
