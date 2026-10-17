@@ -17,25 +17,25 @@ gates: [G1, G5]
 
 > **范围**：本文规定所有文档和代码共同遵守的写法：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则。
 > **不在本文**：契约与帧顺序（`game/contracts/` 源码，说明见 ENG-ARCH §3）；命令行与门禁（ENG-GATES）；预算（ENG-BUDGET）；工作包与目录归属（ENG-WP、`ownership.json`）；按图文件归属（SYS-MAPS、MAP-QSH-*）；决策（CORE-DECISIONS）；术语（CORE-GLOSSARY）；文档写法（WF-DOC）。
-> **查阅**：先读 §0；坐标、角度、单位看 §1；时间写法看 §2；ID、编号、命名、枚举纪律看 §3；确定性看 §4；路径看 §5
+> **查阅**：先读 CORE-CONVENTIONS §0；坐标、角度、单位看 CORE-CONVENTIONS §1；时间写法看 CORE-CONVENTIONS §2；ID、编号、命名、枚举纪律看 CORE-CONVENTIONS §3；确定性看 CORE-CONVENTIONS §4；路径看 CORE-CONVENTIONS §5
 
 ## 0 结论
 
-- 单位米；x 向东、y 向上、z 向南；数据坐标直接当 Godot 世界坐标用；正北是 −z（§1.1）。
-- 方位角从正北顺时针，单位度；Godot 节点的 `Rotation.Y = −A`（弧度）（§1.2）。
-- 时间只往前走；钟点正文写 HH:MM，命令行与 JSON 写小数小时（§2）。
-- 每张图一个坐标原点和投影；实体 ID 只在本图内唯一，按 ID 定位对象，不按名字（§1.1、§3.1）。
-- 编号前缀各有固定含义，同号不同义时按 §3.3 的写法区分（§3.2、§3.3）。
-- 色名是唯一的取色途径；枚举只追加不重排；已进 `main` 的持久化 ID 不复用（§3.5、§3.6、§3.7）。
-- 同一构建加同一种子加同一串输入，得到同样的结果；随机只用契约的 `Rng` 与 `StableHash`（§4）。
+- 单位米；x 向东、y 向上、z 向南；数据坐标直接当 Godot 世界坐标用；正北是 −z（CORE-CONVENTIONS §1.1）。
+- 方位角从正北顺时针，单位度；Godot 节点的 `Rotation.Y = −A`（弧度）（CORE-CONVENTIONS §1.2）。
+- 时间只往前走；钟点正文写 HH:MM，命令行与 JSON 写小数小时（CORE-CONVENTIONS §2）。
+- 每张图一个坐标原点和投影；实体 ID 只在本图内唯一，按 ID 定位对象，不按名字（CORE-CONVENTIONS §1.1、§3.1）。
+- 编号前缀各有固定含义，同号不同义时按 CORE-CONVENTIONS §3.3 的写法区分（CORE-CONVENTIONS §3.2、§3.3）。
+- 色名是唯一的取色途径；枚举只追加不重排；已进 `main` 的持久化 ID 不复用（CORE-CONVENTIONS §3.5、§3.6、§3.7）。
+- 同一构建加同一种子加同一串输入，得到同样的结果；随机只用契约的 `Rng` 与 `StableHash`（CORE-CONVENTIONS §4）。
 
 ### 0.1 接入要点
 
-- **用坐标、角度、单位**：x 东、y 上、z 南，单位米；方位角从正北顺时针；地面高度读 `IWorldModel.Terrain`，不写死 y = 0（§1）。
-- **写时间**：正文 HH:MM，命令行与 JSON 小数小时；世界时间只增不减（§2）。
-- **起 ID 和名字**：前缀、大小写、命名空间、命令行取值按 §3；代码里不写地图 ID、实体 ID 的字面量（§3.1）。
-- **加枚举值**：只在末尾追加；消费方写穷举 `switch`，不做二值判断（§3.6）。
-- **删或改被引用的对象**：ID 不复用，改名不改身份，确需换 ID 给旧新映射（§3.7）。
+- **用坐标、角度、单位**：x 东、y 上、z 南，单位米；方位角从正北顺时针；地面高度读 `IWorldModel.Terrain`，不写死 y = 0（CORE-CONVENTIONS §1）。
+- **写时间**：正文 HH:MM，命令行与 JSON 小数小时；世界时间只增不减（CORE-CONVENTIONS §2）。
+- **起 ID 和名字**：前缀、大小写、命名空间、命令行取值按 CORE-CONVENTIONS §3；代码里不写地图 ID、实体 ID 的字面量（CORE-CONVENTIONS §3.1）。
+- **加枚举值**：只在末尾追加；消费方写穷举 `switch`，不做二值判断（CORE-CONVENTIONS §3.6）。
+- **删或改被引用的对象**：ID 不复用，改名不改身份，确需换 ID 给旧新映射（CORE-CONVENTIONS §3.7）。
 - **生成或随机的结果要能复现**：只用契约的随机来源，细则见 ENG-ARCH §2（§4）。
 - **写或改文档**：按 WF-DOC；**施工**：入口见 WF-ENTRY，核心准则见 CORE-INDEX §0。
 
@@ -67,10 +67,10 @@ gates: [G1, G5]
 
 ### 1.4 其他单位
 
-- 长度 m，速度 m/s；时间单位见 §2。
+- 长度 m，速度 m/s；时间单位见 CORE-CONVENTIONS §2。
 - **眼高**：行走 1.62 m（SYS-WALK）。
 - **像素基准**：截图与界面都按 1920×1080；线宽按"内部高度 / 1080"换算（ENG-GATES §1、UI-VISUAL §8）。
-- **颜色**：色彩计算在 OKLab / OKLCH 里做，明度写 L（OKLab）；十六进制色值只出现在调色板数据文件里（§3.5）。
+- **颜色**：色彩计算在 OKLab / OKLCH 里做，明度写 L（OKLab）；十六进制色值只出现在调色板数据文件里（CORE-CONVENTIONS §3.5）。
 - **音量**：dB；界面滑杆值 0–1（SYS-AUDIO）。
 
 ## 2 时间写法

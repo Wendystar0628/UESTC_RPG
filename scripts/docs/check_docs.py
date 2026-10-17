@@ -67,7 +67,7 @@ for code, d in docs.items():
             bad.append((code, 'link', m.group(1)))
 
 # 工作包与门禁编号以 ENG-WP、ENG-GATES 为准
-wp_text = open(os.path.join(D, 'engineering', 'ENG-WP-工作包派工单.md'), encoding='utf-8').read()
+wp_text = ''.join(open(p, encoding='utf-8').read() for p in glob.glob(os.path.join(D, 'engineering', 'ENG-WP*.md')))
 wps = set(re.findall(r'^\|\s*(WP-\d+[a-z]?)\s*\|', wp_text, re.M))
 gates = set(re.findall(r'\b(G\d{1,2})\b', open(os.path.join(D, 'engineering', 'ENG-GATES-验收与门禁.md'), encoding='utf-8').read()))
 for code, d in docs.items():

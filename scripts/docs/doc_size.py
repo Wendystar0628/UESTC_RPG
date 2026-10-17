@@ -16,7 +16,11 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
 LIMIT = {'doc': 12000, 'map': 16000, 's0': 1000, 'hooks': 900, 'section': 2000, 'core0': 1800, 'core1': 3000, 'entry': 1200}
-REGISTRY = {'CORE-DECISIONS', 'CORE-GLOSSARY', 'ENG-WP'}  # 登记类：每条一行，不量全文与单节
+REGISTRY = {'CORE-DECISIONS', 'CORE-GLOSSARY', 'ENG-WP'}  # 登记类（连同它们的子文档）：每条一行，不量全文与单节
+
+
+def registry(code):
+    return any(code == r or code.startswith(r + '-') for r in REGISTRY)
 
 
 def docs_in(paths=None):
@@ -57,7 +61,7 @@ def check(path):
     """返回 (编码, 正文字数, [(哪一处, 字数, 上限)])"""
     code, total, secs = measure(path)
     over = []
-    if code not in REGISTRY:
+    if not registry(code):
         cap = LIMIT['map'] if code.startswith('MAP-') else LIMIT['doc']
         if total > cap:
             over.append(('全文', total, cap))
@@ -70,7 +74,7 @@ def check(path):
             cap = LIMIT['core1']
         elif code == 'WF-ENTRY' and re.match(r'^[1-9] ', title):
             cap = LIMIT['entry']
-        elif code in REGISTRY:
+        elif registry(code):
             continue
         else:
             cap = LIMIT['section']
