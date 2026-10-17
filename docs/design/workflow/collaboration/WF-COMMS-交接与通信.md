@@ -36,7 +36,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 ## 1 交接目录与文件
 
-各方经协作目录 `E:\Project\UESTC_RPG\.collab\` 交接。它在主检出里，但登记在本机的 `.git/info/exclude`，不进 git、不推送（里面有本机路径和会话号）。视觉回归的 VIS-check 是另一棵工作树，在 `E:\Project\UESTC_RPG.wt\VIS-check`（WF-RULE §7）。
+各方经协作目录 `E:\Project\UESTC_RPG\.collab\` 交接。它在主检出里，但登记在本机的 `.git/info/exclude`，不进 git、不推送（里面有本机路径和会话号）。
 
 | 路径（相对 `.collab\`） | 谁写 | 写什么 |
 | --- | --- | --- |
