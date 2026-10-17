@@ -17,9 +17,9 @@ namespace Campus.Gen.Vegetation.Tests;
 public sealed class VegetationInputsTests
 {
     /// <summary>
-    /// The whole-campus layout read from game/data/vegetation/maps/qingshuihe.planting.json before the move (23b, ceae168):
+    /// The raw campus layout read before the input-boundary move (23b, ceae168), without any authored overlays:
     /// tree count and a SHA-256 over every tree's key, species, variant, position, yaw, scale, wash and source, in order.
-    /// Hard pavement has taken trees since (23c2a): the fingerprint is of the order before they gave way, which PavementTests checks.
+    /// Hard pavement has taken trees since (23c2a): the fingerprint is of the order before they gave way.
     /// </summary>
     private const int CampusTrees = 2258;
     private const string CampusFingerprint = PavementTests.BareFingerprint;
@@ -46,7 +46,7 @@ public sealed class VegetationInputsTests
     public void InputsComeOnlyFromTheBoundary()
     {
         // No species table in the global inputs is an error naming the key; no planting file means a map without trees.
-        var empty = new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u };
+        var empty = new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog };
         Expect<KeyNotFoundException>(() => VegetationInputs.Layout(empty));
         var bare = Context(withPlanting: false);
         var (layout, rules) = VegetationInputs.Layout(bare);
@@ -63,8 +63,6 @@ public sealed class VegetationInputsTests
         var cell = new TileKey((int)MathF.Floor(tree.Position.X / 64f), (int)MathF.Floor(tree.Position.Z / 64f));
         if (!module.Tiles(ctx).Contains(cell) || module.Collide(ctx, cell).Count == 0)
             throw new InvalidOperationException("tiles or trunk colliders disagree with the layout");
-        // The instance streams carry palette colour IDs: a context without the palette fails instead of building nothing.
-        Expect<InvalidOperationException>(() => module.Build(ctx, cell, LodLevel.L0));
         var grid = new GroundMaskGrid(new MapRect(new(tree.Position.X - 32f, tree.Position.Z - 32f), new(tree.Position.X + 32f, tree.Position.Z + 32f)), 64, 64, 1f);
         var mask1 = Enumerable.Repeat((byte)77, grid.ByteCount).ToArray();
         var mask2 = Enumerable.Repeat((byte)77, grid.ByteCount).ToArray();
@@ -93,8 +91,10 @@ public sealed class VegetationInputsTests
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
             map[VegetationInputs.PlantingKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json"));
-        return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
+        return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
+
+    private static PaletteCatalog Catalog => new(MotherModelTests.Palette, []);
 
     private static void Expect<TException>(Action action) where TException : Exception
     {

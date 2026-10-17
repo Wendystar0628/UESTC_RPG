@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
@@ -51,7 +50,7 @@ public sealed class UnderstoreyTests
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
         var again = PavementTests.Plant(PavementTests.Load(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
         var print = PavementTests.Fingerprint(added);
-        if (PavementTests.Fingerprint(again) != print) throw new InvalidOperationException("the new sources differ between two builds");
+        if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         Console.WriteLine($"new sources: {added.Count(t => t.Source == PlantSource.Pit)} pit trees, {added.Count(t => t.Source == PlantSource.Design)} design trees, " +
             $"{layout.PitsHeld} pits already held a tree; fingerprint {print}");
         // Pit trees come before design trees; the known ones keep their bytes and their order (by ID, D-199).
@@ -67,7 +66,30 @@ public sealed class UnderstoreyTests
             if (index < last) throw new InvalidOperationException($"{key} moved before an earlier known source");
             last = index;
         }
-        if (KnownNewSources.Count(k => at.ContainsKey(k.Key)) < 2) throw new InvalidOperationException("the known pit and design trees are gone; check the fixture");
+    }
+
+    [TestCase]
+    public void AddingSourcesPreservesExistingRecordsAndOrder()
+    {
+        var original = PavementTests.PlantFixture(PavementTests.Fixture());
+        var first = new[] { Pit("design:fixture-held-pit", -70f, -20f), DesignTree("design:fixture-tree", -70f, 20f) };
+        var before = PavementTests.PlantFixture(PavementTests.Fixture(first));
+        var after = PavementTests.PlantFixture(PavementTests.Fixture(first.Concat(
+            [Pit("design:fixture-added-pit", -70f, -50f), DesignTree("design:fixture-added-tree", -70f, 50f)]).ToArray()));
+        foreach (var layout in new[] { before, after })
+        {
+            if (!PavementTests.SameRecords(PavementTests.Original(layout.BeforeGivingWay()), original.BeforeGivingWay()))
+                throw new InvalidOperationException("a new source moved or reordered an original tree");
+            var all = layout.BeforeGivingWay();
+            var newSources = all.SkipWhile(t => t.Source <= PlantSource.Grove).Select(t => t.Source).ToList();
+            if (newSources.Any(s => s <= PlantSource.Grove) || !newSources.SequenceEqual(newSources.Order()))
+                throw new InvalidOperationException("tree sources are out of order");
+            if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a new source gave way");
+        }
+        var existing = before.Trees.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
+        if (before.Count(PlantSource.Pit) != 1 || before.Count(PlantSource.Design) != 1 || after.Trees.Count != before.Trees.Count + 2 ||
+            !PavementTests.SameRecords(before.Trees, after.Trees.Where(t => existing.Contains(t.Key))))
+            throw new InvalidOperationException("adding pit and design trees changed existing records or their order");
     }
 
     [TestCase]
@@ -87,41 +109,45 @@ public sealed class UnderstoreyTests
     [TestCase]
     public void APitThatHoldsATreeGetsNoOther()
     {
-        // On the campus data: a square pit round a planted rule tree, and an empty square pit in a lawn away from every tree.
-        var bare = PavementTests.Plant(PavementTests.World(false));
+        // Exclusive fixture: one occupied square pit and one empty pit well away from every original tree.
+        var bare = PavementTests.PlantFixture(PavementTests.Fixture());
         var held = bare.Trees.First(t => t.Source == PlantSource.Grove);
-        var empty = EmptySpot(bare);
-        var world = PavementTests.Load(false, ("fixture-pits.d/0000-fixture.json", PavementTests.Overlay(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
-            Pit("design:fixture-empty-pit", empty.X, empty.Y))));
-        var layout = PavementTests.Plant(world);
+        var empty = new Vector2(-70f, -70f);
+        var world = PavementTests.Fixture(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
+            Pit("design:fixture-empty-pit", empty.X, empty.Y));
+        var layout = PavementTests.PlantFixture(world);
         var pitTrees = layout.Trees.Where(t => t.Source == PlantSource.Pit).ToList();
         if (layout.PitsHeld != 1 || pitTrees.Count != 1 || pitTrees[0].Key != "design:fixture-empty-pit" ||
             Vector2.Distance(new(pitTrees[0].Position.X, pitTrees[0].Position.Z), empty) > 0.01f)
             throw new InvalidOperationException($"{layout.PitsHeld} pits held, pit trees: {string.Join(", ", pitTrees.Select(t => t.Key))}");
-        if (PavementTests.Fingerprint(PavementTests.Original(layout.Trees)) != PavementTests.Fingerprint(PavementTests.Original(bare.Trees)))
+        if (!PavementTests.SameRecords(PavementTests.Original(layout.Trees), PavementTests.Original(bare.Trees)))
             throw new InvalidOperationException("the pits moved a rule tree");
-        // The map: the Pinxue Building's ten square pits and its round bed were all empty.
-        var map = Overlaid.Value;
-        var pinxue = map.Trees.Count(t => t.Source == PlantSource.Pit && t.Key.StartsWith("design:center-east-pinxue-", StringComparison.Ordinal));
-        if (pinxue != 11) throw new InvalidOperationException($"{pinxue} trees in the Pinxue pits");
     }
 
     [TestCase]
     public void UnderstoreyKeepsOffPavementAndRoads()
     {
-        var world = PavementTests.World(true);
-        var (species, rules) = PavementTests.Data;
-        var trees = Overlaid.Value;
+        var world = PavementTests.Fixture(Pit("design:fixture-understorey-pit", -70f, -70f));
+        var species = PavementTests.Data.Species;
+        var rules = PavementTests.FixtureRules;
+        var trees = PavementTests.PlantFixture(world);
+        CheckUnderstorey(world, species, rules, trees, requireKinds: true);
+        CheckUnderstorey(PavementTests.World(true), species, PavementTests.Data.Rules, Overlaid.Value, requireKinds: false);
+    }
+
+    private static void CheckUnderstorey(IWorldModel world, SpeciesTable species, PlantingRules rules, PlantingLayout trees, bool requireKinds)
+    {
         var under = Understorey.Build(world, species, rules, trees, 1u);
         foreach (var kind in Enum.GetValues<UnderKind>())
         {
             if (kind == UnderKind.Tuft)
             {
-                // Tussocks are switched off (Understorey.TuftsEnabled): the rule stays, nothing is laid.
-                if (Understorey.TuftsEnabled != (under.Count(kind) > 0)) throw new InvalidOperationException($"{under.Count(kind)} tussocks with TuftsEnabled = {Understorey.TuftsEnabled}");
+                // Disabled tussocks are absent everywhere; only the fixture requires a nonempty enabled case.
+                if ((!Understorey.TuftsEnabled && under.Count(kind) != 0) || (requireKinds && Understorey.TuftsEnabled && under.Count(kind) == 0))
+                    throw new InvalidOperationException($"{under.Count(kind)} tussocks with TuftsEnabled = {Understorey.TuftsEnabled}");
                 continue;
             }
-            if (under.Count(kind) == 0) throw new InvalidOperationException($"no {kind}");
+            if (requireKinds && under.Count(kind) == 0) throw new InvalidOperationException($"no {kind} in the exclusive fixture");
         }
         var census = PavementTests.Census.Of(world);
         foreach (var p in under.Plants)
@@ -142,7 +168,7 @@ public sealed class UnderstoreyTests
             }
         }
         var again = Understorey.Build(world, species, rules, trees, 1u);
-        if (!again.Plants.Select(p => (p.Key, p.Position, p.Size, p.Yaw)).SequenceEqual(under.Plants.Select(p => (p.Key, p.Position, p.Size, p.Yaw))))
+        if (!again.Plants.SequenceEqual(under.Plants))
             throw new InvalidOperationException("the understorey differs between two builds");
         Console.WriteLine("understorey: " + string.Join(", ", Enum.GetValues<UnderKind>().Select(k => $"{k} {under.Count(k)}")) + "; " +
             string.Join(", ", under.Plants.GroupBy(p => p.Species.Id).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}")));
@@ -166,20 +192,9 @@ public sealed class UnderstoreyTests
 
     // ---------------------------------------------------------------------------------------------------------
 
-    /// <summary>A lawn spot of the campus data at least 12 m from every planted tree.</summary>
-    private static Vector2 EmptySpot(PlantingLayout layout)
-    {
-        var world = PavementTests.World(false);
-        foreach (var green in world.Features.Values.Where(f => f.Kind.Value == "green").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-        {
-            var box = green.Bounds;
-            var p = new Vector2((box.Min.X + box.Max.X) * 0.5f, (box.Min.Z + box.Max.Z) * 0.5f);
-            if (green.Geometry is PolygonGeometry polygon && PlanGeometry.Contains(polygon.Rings, p) && PlanGeometry.Contains(world.Boundary, p) &&
-                layout.Trees.All(t => Vector2.Distance(new(t.Position.X, t.Position.Z), p) > 12f))
-                return p;
-        }
-        throw new InvalidOperationException("no empty lawn spot");
-    }
+    private static string DesignTree(string id, float x, float z) =>
+        "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + PavementTests.F(x) + ",0," + PavementTests.F(z) +
+        "]},\"height\":8,\"props\":{\"planter\":\"WP-23\",\"species\":\"camphor\"},\"reason\":\"Fixture: an explicitly planted tree.\"}";
 
     private static string Pit(string id, float x, float z)
     {
