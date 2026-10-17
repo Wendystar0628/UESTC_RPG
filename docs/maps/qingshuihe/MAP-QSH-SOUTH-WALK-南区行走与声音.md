@@ -99,5 +99,4 @@ P17–P19 是 `Entry = Door`：跳转时从最近的开放入口走进去。
 
 | 待验证 | 验证方法或负责 | 验证前的初值 |
 | --- | --- | --- |
-| 钟楼爬楼时长（MAP-QSH-INTERIORS §1） | WP-31a 原型实测 | 约 40–50 s |
-| P07 位姿前景是否横进接触网、P17–P19 与导览亭 A01/A03/A06 的坐标 | WP-36、WP-44、WP-48c 按截图定 | `waypoints.json`、`overlay/atlas.d/` 中的初值 |
+| P07 位姿前景是否横进接触网 | WP-36 | 不横进即可，坐标以 `waypoints.json`、`overlay/atlas.d/` 为准 |
