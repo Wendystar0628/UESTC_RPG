@@ -39,7 +39,7 @@
 
 ## CORE-DECISIONS · 决策登记
 
-`docs/core/CORE-DECISIONS-决策登记.md` · 29.1k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
+`docs/core/CORE-DECISIONS-决策登记.md` · 29.3k 字 · 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态
 关键词：决策、已定、D 编号、决策登记、生效、待原型验证、细则所在、推翻决策、ADR
 
 - CORE-DECISIONS §0 用法 · L23 · 407
@@ -53,7 +53,7 @@
 - CORE-DECISIONS §7 音频 · L175 · 2.0k
 - CORE-DECISIONS §8 性能与画面设置 · L197 · 1.6k
 - CORE-DECISIONS §9 工程 · L217 · 2.8k
-- CORE-DECISIONS §10 流程 · L242 · 8.0k
+- CORE-DECISIONS §10 流程 · L242 · 8.1k
 
 ## CORE-GLOSSARY · 术语表
 
@@ -140,7 +140,7 @@
 - WF-ENTRY §1 主会话 · L33 · 1.1k
 - WF-ENTRY §2 子代理 · L57 · 997
 - WF-ENTRY §3 Astra · L84 · 819
-- WF-ENTRY §4 Sol 会话 · L107 · 574
+- WF-ENTRY §4 Sol 会话 · L107 · 570
 
 ## WF-FLOW · 开发流程
 
@@ -171,7 +171,7 @@
 - WF-MODEL §3 机械活交谁 · L64 · 542
 - WF-MODEL §4 推理强度按难度选 · L73 · 533
 - WF-MODEL §5 升级、派单与直接做 · L87 · 417
-- WF-MODEL §6 怎么开子代理 · L94 · 512
+- WF-MODEL §6 怎么开子代理 · L94 · 517
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L102 · 447
 - WF-MODEL §8 简报模板与"接续"段 · L112 · 775
   - WF-MODEL §8.1 简报模板 · L114 · 479
@@ -179,16 +179,16 @@
 
 ## WF-QUOTA · 账号与额度
 
-`docs/workflow/WF-QUOTA-账号与额度.md` · 3.3k 字 · 额度口径，Claude 侧按 Opus 当量的并发公式与记账，节奏档，Codex 账号与速度，额度见底时冻结
-关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发公式、Opus 当量、推理档系数、余量封顶、记账、get_usage、节奏档、非紧急段、紧急段、Codex 额度、普通速度、额度见底、冻结、切换账号、D-196、D-197
+`docs/workflow/WF-QUOTA-账号与额度.md` · 2.1k 字 · 额度口径，子代理并发按任务量定、额度只做刹车，临近重置时用足，Codex 账号与速度，额度见底时冻结
+关键词：额度、账号、Max 20x、5 小时窗口、每周额度、并发、按任务量开、不设个数上限、额度刹车、get_usage、用量读数、临近重置用足、Codex 额度、普通速度、额度见底、冻结、切换账号、D-196、D-226
 
-- WF-QUOTA §0 结论 · L22 · 416
-  - ★ WF-QUOTA §0.1 接入要点 · L30 · 107
-- WF-QUOTA §1 口径 · L35 · 77
-- WF-QUOTA §2 Claude 侧的并发与额度 · L39 · 1.2k
-- WF-QUOTA §3 节奏档：非紧急段与紧急段（D-196） · L55 · 556
-- WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L62 · 166
-- WF-QUOTA §5 额度见底时冻结 · L67 · 220
+- WF-QUOTA §0 结论 · L22 · 430
+  - ★ WF-QUOTA §0.1 接入要点 · L30 · 122
+- WF-QUOTA §1 口径 · L35 · 55
+- WF-QUOTA §2 开多少与刹车 · L39 · 389
+- WF-QUOTA §3 节奏（D-196） · L45 · 204
+- WF-QUOTA §4 Codex 账号（Astra 与 Sol） · L51 · 166
+- WF-QUOTA §5 额度见底时冻结 · L56 · 220
 
 ## WF-ROLE · 参与者与分工
 
@@ -198,7 +198,7 @@
 - WF-ROLE §0 结论 · L22 · 533
   - ★ WF-ROLE §0.1 接入要点 · L29 · 213
 - WF-ROLE §1 角色与运行方式 · L35 · 716
-- WF-ROLE §2 模型的长处与短板 · L50 · 471
+- WF-ROLE §2 模型的长处与短板 · L50 · 486
 - WF-ROLE §3 GPT 模型不做审美工作 · L59 · 359
 - WF-ROLE §4 决定权与事归谁 · L66 · 658
 - WF-ROLE §5 总指挥只做什么 · L77 · 557
@@ -229,13 +229,13 @@
 
 ## WF-STATUS · 施工状态与队列
 
-`docs/workflow/WF-STATUS-施工状态与队列.md` · 2.6k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
+`docs/workflow/WF-STATUS-施工状态与队列.md` · 2.7k 字 · 施工状态文件怎么填、待派工队列与队列平衡、交接单
 关键词：施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、活跃工作包、待派工队列、Q-nnn、排队、可派、已派、队列平衡、积压、交接单、HANDOVER.md、接手、已集成
 
 - WF-STATUS §0 结论 · L23 · 452
   - ★ WF-STATUS §0.1 接入要点 · L31 · 183
 - WF-STATUS §1 施工状态文件怎么填 · L37 · 795
-- WF-STATUS §2 待派工队列与队列平衡 · L58 · 732
+- WF-STATUS §2 待派工队列与队列平衡 · L58 · 737
 - WF-STATUS §3 交接单 · L74 · 87
 
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法

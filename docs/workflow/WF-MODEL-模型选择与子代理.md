@@ -95,9 +95,9 @@ Opus 贵，只用在观感还没定的地方。
 
 **各方都适用**：一个包或子包一个子代理；同一时刻一个文件只有一个代理在写，简报写明邻居（WF-FLOW §2.1）；简报按 §8 模板写，入口由钩子注入（WF-ENTRY §2）；构建、import、烘焙、门禁和截图排队，一次一个（ENG-ARCH §6）。
 
-**Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"` 并给 `name`；子代理的最终回复就是回报。开之前按 WF-QUOTA §2 算并发。
+**Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"` 并给 `name`；子代理的最终回复就是回报。开几个按任务量定，额度紧时少开（WF-QUOTA §2）。
 
-**Codex 侧**（Astra 与 Sol 会话）：用 `spawn_agent`（`task_name` 写包号，`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。并发上限在 `~/.codex/config.toml`，每个会话各算各的；Sol 会话另按 WF-ENTRY §4 最多 8 个。Codex 子代理和主线程共用工作目录，简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
+**Codex 侧**（Astra 与 Sol 会话）：用 `spawn_agent`（`task_name` 写包号，`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。开几个按任务量定（WF-QUOTA §2）；`~/.codex/config.toml` 里的上限是软件自身的硬限制，照它办。Codex 子代理和主线程共用工作目录，简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
 
 ## 7 子代理的生命周期：默认新开，靠任务单交接
 
