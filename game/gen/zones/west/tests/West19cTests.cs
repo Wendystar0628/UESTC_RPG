@@ -90,6 +90,7 @@ public sealed class West19cTests
         var ctx = Context(World());
         var module = new WestModule();
         var lights = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Light is not null).Select(i => i.Light!).ToArray();
+        Require(module.DescribeLights(ctx).SequenceEqual(lights), "light metadata matches every site's L0 output");
         var lamps = lights.Where(l => l.Channel.Value == "lamp.landscape").ToArray();
         Require(lamps.Length == BoardwalkSite.LampStations().Length && lamps.Length >= 12, $"one landscape marker per boardwalk lamp, got {lamps.Length}");
         var path = BoardwalkSite.Path;

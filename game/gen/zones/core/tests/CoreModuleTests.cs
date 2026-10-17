@@ -96,6 +96,7 @@ public sealed class CoreModuleTests
         Require(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == 3, "three benches from the overlay");
         Require(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps, "one first-light emitter per lamp");
         Require(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) == 3, "three flag uplights");
+        Require(module.DescribeLights(ctx).SequenceEqual(output.Emitters!), "light metadata matches the plaza's L0 output");
         Require(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlags.Decal) != 0)), "inlays are decals");
         foreach (var lamp in plaza.LampPositions())
         {

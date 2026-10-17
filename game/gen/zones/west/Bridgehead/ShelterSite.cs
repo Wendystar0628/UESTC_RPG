@@ -18,7 +18,7 @@ namespace Campus.Gen.Zones.West.Bridgehead;
 /// platform at night (候车亭顶灯, §11). Snow lies on the roof by normal. The stop sign and its light box are WP-13's.
 /// Frame: origin at the footprint's south-west corner, local X north along the back line, local +Z toward the road.
 /// </summary>
-public sealed class ShelterSite : WestSite
+public sealed class ShelterSite : WestSite, ILightMetadataSource
 {
     public override string Id => "19c.shelter";
 
@@ -91,11 +91,27 @@ public sealed class ShelterSite : WestSite
             Box(b, f, x - 0.03f, x + 0.03f, top, top + H.SeatHeight - 0.055f, z0 + 0.04f, z1 - 0.06f, L.Metal, 0);
         // Downlight strip under the roof and its markers, one per bay (contract-12).
         Box(b, f, xs[0] + 0.4f, xs[^1] - 0.4f, under - 0.03f, under, H.Depth * 0.45f - 0.05f, H.Depth * 0.45f + 0.05f, L.LampLens, 0);
+        foreach (var light in Lights(under)) b.Light(light);
+    }
+
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var top = Ground(context.World.Terrain.HeightAt) + H.PlatformRise;
+        return Lights(top + H.Clear);
+    }
+
+    private static IReadOnlyList<LightEmitter> Lights(float under)
+    {
+        var f = Frame;
+        var xs = PostsX;
+        var lights = new List<LightEmitter>();
         for (var i = 0; i + 1 < xs.Length; i++)
         {
             var p = f.P((xs[i] + xs[i + 1]) * 0.5f, H.Depth * 0.45f);
-            b.Light(new(StreetStyle.StreetGroup, new(p.X, under - 0.08f, p.Y), StreetStyle.LampWarm, H.LightEnergy, H.LightRange));
+            lights.Add(new(StreetStyle.StreetGroup, new(p.X, under - 0.08f, p.Y), StreetStyle.LampWarm, H.LightEnergy, H.LightRange));
         }
+        return lights;
     }
 
     private static void Box(SiteBuilder b, PlanFrame f, float x0, float x1, float y0, float y1, float z0, float z1, ToonSpec material, float bevel) =>

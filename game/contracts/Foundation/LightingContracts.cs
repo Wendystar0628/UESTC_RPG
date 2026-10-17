@@ -20,6 +20,12 @@ public sealed record WindowFacadeDecl(int BaseId, int TotalColumns, ChannelId Ch
 public sealed record WindowDecl(int Id, int BaseId, int TotalColumns, ChannelId Channel,
     Vector3 Center, Vector3 Right, Vector3 Up, float Width, float Height);
 
+/// <summary>Map lighting declarations from source layouts, without building tile geometry.</summary>
+public interface ILightMetadataSource
+{
+    IReadOnlyList<LightEmitter> DescribeLights(BuildContext context);
+}
+
 /// <summary>WP-02's map-wide baked lighting inventory, ready after Mount and before MapAware.OnMapLoaded.</summary>
 public interface ILightInventory
 {

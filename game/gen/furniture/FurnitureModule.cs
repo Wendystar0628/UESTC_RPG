@@ -9,12 +9,12 @@ namespace Campus.Gen.Furniture;
 /// <summary>
 /// WP-13 street furniture on the map (13b placement, <see cref="FurniturePlanner"/>). Each 64 m cell gets the catalogue parts
 /// whose anchors fall in it, as <see cref="PlacedPart"/>s (the kernel instances them by part ID); pads (rest-stop bays, kiosk
-/// aprons, plinths) come as merged meshes, lamp markers as <see cref="ContentOutput.Emitters"/> (L0 only, so the lamp inventory
-/// sees each lamp once) and colliders through <see cref="Collide"/>. Claims nothing: furniture stands between the features other packages own.
+/// aprons, plinths) come as merged meshes, lamp markers as <see cref="ContentOutput.Emitters"/> (L0 only), with the resident
+/// inventory reading <see cref="DescribeLights"/>, and colliders through <see cref="Collide"/>. Claims nothing: furniture stands between the features other packages own.
 /// Pure .NET; the layout is built once per world model and claims query and shared by every tile and level.
 /// </summary>
 [ContentModule("furniture", Owner = "WP-13")]
-public sealed class FurnitureModule : IContentModule
+public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {
     private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, FurnitureLayout Layout)>> Cache = new();
     private static readonly object Sync = new();
@@ -49,6 +49,9 @@ public sealed class FurnitureModule : IContentModule
         var meshes = pads?.Finish(new(Vector3.Zero, Vector3.Zero)).Meshes ?? [];
         return new ContentOutput(meshes, parts, emitters.Count > 0 ? emitters : null) { Diagnostics = lod == LodLevel.L0 ? DiagnosticsFor(ctx, tile) : [] };
     }
+
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context) =>
+        Layout(context).Items.SelectMany(item => item.Emitters).ToArray();
 
     /// <summary>The layout's diagnostics, reported once: with the L0 output of the first cell of <see cref="Tiles"/>.</summary>
     private static IReadOnlyList<BuildDiagnostic> DiagnosticsFor(BuildContext ctx, TileKey tile)

@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.Core;
 /// to <see cref="CoreSite.Pieces"/>, their entries to overlay/core.d/ and their terrain to core.terrain.json.
 /// </summary>
 [ContentModule("core", Owner = "WP-16")]
-public sealed class CoreModule : IContentModule, IWindowMetadataSource, IContentSourceTraceProvider
+public sealed class CoreModule : IContentModule, IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
 {
     /// <summary>Union of every piece's claims; static because the kernel reads claims before any world is loaded.</summary>
     public IReadOnlyList<Claim> Claims { get; } = CoreSite.Claims;
@@ -67,6 +67,12 @@ public sealed class CoreModule : IContentModule, IWindowMetadataSource, IContent
     };
 
     public IReadOnlyList<InspectionProbe> Probes => [];
+
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return CoreSite.Pieces(context.World).OfType<TimePlaza>().SelectMany(plaza => plaza.Lights(LodLevel.L0)).ToArray();
+    }
 
     /// <summary>Window grids of every facade this zone claims (16b: the library shell), from the pieces' own layouts.</summary>
     public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint worldSeed) => CoreSite.WindowLayouts(world);

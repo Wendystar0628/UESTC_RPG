@@ -111,6 +111,23 @@ public sealed class TimePlaza : ICorePiece
         }
         Flags(build, lod);
         if (lod <= LodLevel.L2) Lamps(build);
+        build.Emitters.AddRange(Lights(lod));
+    }
+
+    /// <summary>Pure lamp layout shared by resident metadata and the geometry output at each level.</summary>
+    public IReadOnlyList<LightEmitter> Lights(LodLevel lod)
+    {
+        if (lod == LodLevel.L4) return [];
+        var lights = new List<LightEmitter>();
+        foreach (var pole in Poles())
+            lights.Add(new(S.FlagLightChannel, new(pole.Foot.X - Axis.X * 0.9f, FloorTop + 0.05f, pole.Foot.Y - Axis.Y * 0.9f), S.LampColor, S.FlagLightEnergy, S.FlagLightRange));
+        if (lod <= LodLevel.L2)
+            foreach (var p in LampPositions())
+            {
+                var ground = _world.Terrain.HeightAt(p.X, p.Y) + S.LawnLift;
+                lights.Add(new(S.RimLampChannel, new(p.X, ground + S.RimLampLightY, p.Y), S.LampColor, S.RimLampEnergy, S.RimLampRange));
+            }
+        return lights;
     }
 
     public IReadOnlyList<Collider> Collide()
@@ -377,7 +394,6 @@ public sealed class TimePlaza : ICorePiece
                 Shapes.Lathe(mesh, steel, frame, ball, sides);
             }
             Drape(mesh, pole, foot, lod);
-            build.Emitters.Add(new LightEmitter(S.FlagLightChannel, new(foot.X - Axis.X * 0.9f, FloorTop + 0.05f, foot.Z - Axis.Y * 0.9f), S.LampColor, S.FlagLightEnergy, S.FlagLightRange));
         }
     }
 
@@ -436,7 +452,6 @@ public sealed class TimePlaza : ICorePiece
         {
             var ground = _world.Terrain.HeightAt(p.X, p.Y) + S.LawnLift;
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.StreetLamp), parameters, Matrix4x4.CreateTranslation(p.X, ground, p.Y)));
-            build.Emitters.Add(new LightEmitter(S.RimLampChannel, new(p.X, ground + S.RimLampLightY, p.Y), S.LampColor, S.RimLampEnergy, S.RimLampRange));
         }
         var bench = new FurnitureParams(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(S.LampMetal) };
         foreach (var p in _benches)

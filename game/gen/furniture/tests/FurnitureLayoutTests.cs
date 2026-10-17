@@ -1033,6 +1033,7 @@ public sealed class FurnitureLayoutTests
         }
         Check(parts == layout.Items.Count, $"{parts} placed parts for {layout.Items.Count} items");
         Check(emitters == layout.Items.Sum(i => i.Emitters.Count), "emitters lost or repeated");
+        Check(module.DescribeLights(ctx).SequenceEqual(layout.Items.SelectMany(i => i.Emitters)), "light metadata differs from the item layout");
         Check(colliders == layout.Items.Sum(i => i.Colliders.Count), "colliders lost or repeated");
         Check(heaviest <= module.Budget.TrianglesL0 && heaviestL1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls,
             $"heaviest cell L0 {heaviest}, L1 {heaviestL1}, draws {draws} over {module.Budget}");

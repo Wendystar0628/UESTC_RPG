@@ -21,7 +21,7 @@ namespace Campus.Gen.Zones.West.Wetland;
 /// only, so both water sides stay dark for the fireflies (§10.1). Snow lies on the planks and the handrail tops by normal
 /// (SYS-TIME); the deck only darkens when wet, it never pools (§11 天气要点).
 /// </summary>
-public sealed class BoardwalkSite : WestSite
+public sealed class BoardwalkSite : WestSite, ILightMetadataSource
 {
     private static readonly StepsPart Steps = new();
     private static readonly Lazy<Route> Line = new(() => new(Route.Smooth(W.Route, 2)));
@@ -153,20 +153,33 @@ public sealed class BoardwalkSite : WestSite
 
     // ---- Low lamps ----
 
-    private static void Lamp(SiteBuilder b, Route path, float y, float s, float side, SiteDetail detail)
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var y = DeckTop(context.World.Terrain.HeightAt);
+        return LampStations().Select(s => LampLayout(Path, y, s, -Beach.Side).Emitter).ToArray();
+    }
+
+    private static (Vector2 Foot, LightEmitter Emitter) LampLayout(Route path, float y, float s, float side)
     {
         var (p, t) = path.At(s);
         var r = Route.Right(t);
         var q = p + r * side * (W.Width * 0.5f - W.LampInset);
+        // The marker sits under the cap, nudged toward the deck's middle (contract-12).
+        var m = q - r * side * 0.08f;
+        return (q, new(StreetStyle.Landscape, new(m.X, y + W.LampHeight - 0.13f, m.Y), StreetStyle.LampWarm, W.LampEnergy, W.LampRange));
+    }
+
+    private static void Lamp(SiteBuilder b, Route path, float y, float s, float side, SiteDetail detail)
+    {
+        var (q, emitter) = LampLayout(path, y, s, side);
         var segments = detail == SiteDetail.Full ? 14 : 8;
         var h = W.LampHeight;
         b.Add(Shapes.Shaft(W.LampRadius * 1.25f, W.LampRadius * 1.15f, 0.04f, segments, L.LampBody), Matrix4x4.CreateTranslation(q.X, y, q.Y));
         b.Add(Shapes.Shaft(W.LampRadius, W.LampRadius, h - 0.16f, segments, L.LampBody), Matrix4x4.CreateTranslation(q.X, y, q.Y));
         b.Add(Shapes.Shaft(W.LampRadius * 0.92f, W.LampRadius * 0.92f, 0.08f, segments, L.LampLens), Matrix4x4.CreateTranslation(q.X, y + h - 0.16f, q.Y));
         b.Add(Shapes.Shaft(W.LampRadius * 1.3f, W.LampRadius * 1.1f, 0.08f, segments, L.LampBody), Matrix4x4.CreateTranslation(q.X, y + h - 0.08f, q.Y));
-        // The light falls on the planks: the marker sits under the cap, nudged toward the deck's middle (contract-12).
-        var m = q - r * side * 0.08f;
-        b.Light(new(StreetStyle.Landscape, new(m.X, y + h - 0.13f, m.Y), StreetStyle.LampWarm, W.LampEnergy, W.LampRange));
+        b.Light(emitter);
     }
 
     // ---- Wading beach and its steps ----
