@@ -165,9 +165,9 @@
 - WF-ENTRY §0 结论 · L21 · 381
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
 - WF-ENTRY §1 主会话 · L33 · 1.2k
-- WF-ENTRY §2 子代理 · L58 · 1.0k
-- WF-ENTRY §3 Astra · L85 · 958
-- WF-ENTRY §4 Sol 会话 · L108 · 576
+- WF-ENTRY §2 子代理 · L58 · 1.1k
+- WF-ENTRY §3 Astra · L86 · 974
+- WF-ENTRY §4 Sol 会话 · L109 · 576
 
 ## WF-FLOW · 开发流程
 
@@ -218,7 +218,7 @@
 - WF-ROLE §3 GPT 模型不做审美工作 · L59 · 359
 - WF-ROLE §4 决定权与事归谁 · L66 · 570
 - WF-ROLE §5 总指挥只做什么 · L75 · 639
-- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L89 · 707
+- WF-ROLE §6 Astra 当指挥，施工默认交 gpt-6.1-sol 子代理 · L89 · 750
 
 ## WF-RULE · 全员守则
 
