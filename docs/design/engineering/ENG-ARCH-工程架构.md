@@ -3,7 +3,7 @@ id: ENG-ARCH
 title: 工程架构：模块边界、接口契约与并行开发流程
 category: engineering
 summary: 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队
-keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用写法, BannedApiAnalyzers, ArchUnitNET, 确定性, DetMath, StableHash, 自动发现, 特性注册, ContentModule, KernelNode, KernelService, Autoload, 契约, 契约冻结, PublicApiAnalyzers, ContractJson, 桩, 占位实现, 资源管线, 本机烘焙, .tbin, 缓存键, 构建与测试排队, 构建锁, net10.0]
+keywords: [工程架构, 目录归属, ownership.json, 程序集边界, 禁用写法, BannedApiAnalyzers, ArchUnitNET, 确定性, DetMath, StableHash, 自动发现, 特性注册, ContentModule, KernelNode, KernelService, Autoload, 契约, 契约冻结, ContractJson, 桩, 占位实现, 资源管线, 本机烘焙, .tbin, 缓存键, 构建与测试排队, 构建锁, net10.0]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
 depends: [CORE-INDEX, ENG-GATES, ENG-WP, ENG-PERF]
@@ -132,7 +132,7 @@ UESTC_RPG/
 │                            Campus.Tests.csproj、Campus.Gen.Tests.csproj、export_presets.cfg、.editorconfig、
 │                            Directory.Build.props、Directory.Packages.props、packages.lock.json（主代理独占）；
 │                            override.cfg（开发态 `user://` 指向 `UESTC_DEV`，不进 git）
-│  ├─ contracts/             WP-00  Campus.Contracts：纯 .NET 契约程序集（接口、record，用 System.Numerics，不引用 GodotSharp），带 PublicAPI.*.txt；
+│  ├─ contracts/             WP-00  Campus.Contracts：纯 .NET 契约程序集（接口、record，用 System.Numerics，不引用 GodotSharp）；
 │  │                         子目录 Quality/、Maps/、Atlas/、Flow/、Cinematic/、Save/、Audio/、Bake/、Parts/、schemas/；Entities/ 是 RPG 预留，观光期不写入
 │  ├─ gen/                   纯 .NET 的生成器程序集（Campus.Gen.*）：部件库、建筑、地面、各区、设计增补、植被布点、碰撞图元、可行走数据、
 │  │                         室内平面与家具、外围、声学与声景
@@ -313,7 +313,7 @@ UESTC_RPG/
 
 契约变更按WF-RULE §10同批迁移；冻结状态用于协调使用方，不作为长期保留旧设计的理由：
 
-- C#公开API由PublicApiAnalyzers检查，公开记录随已批准的设计与全部使用方同批更新；接口签名只在源码和分析器所需记录中维护。
+- 公开契约随已批准的设计与全部使用方同批更新，接口签名只在源码里维护（D-214）。
 - JSON格式以`game/contracts/schemas/`为准；改格式时同批迁移生产输入和读取方，持久化数据的迁移或重建安排需在该任务里明确，不隐式保留旧解析器。
 - **枚举的穷举纪律**（ENG-ROADMAP §6 第 4 条）：枚举只在末尾追加值，JSON 按字符串存。会追加值的枚举（`ViewMode`、`AppState`、`MapKind`、`MapTravelCause`、`MarkerKind`、`SaveReason`、`SlotKind`、`TransitKind`、`VeilReason`、`DuckReason`、`AudioGroup`、`FoleyKind`、`QualityKnob`、`InputLockReason`、`InteractionRule` 等），消费方一律写穷举的 `switch`，`default` 分支拒绝或报错；不写 `mode == ViewMode.Fly ? … : …` 这样的二值判断。读到不认识的枚举字符串，按 SYS-SAVE §3.5 当作不合法。G1 的 `-warnaserror` 把非穷举 switch 表达式的警告当错误，二值判断靠评审。
 
@@ -450,7 +450,7 @@ UESTC_RPG/
 
 部件按"编目先行"的方式管理：
 
-- `game/contracts/Parts/` 放所有共享部件的 ID 常量和参数 record（`PartCatalog`），随契约 v1 候选先交；部件包与区域包在主线上接通后按组冻结（§3），之后受 PublicApiAnalyzers 保护。
+- `game/contracts/Parts/` 放所有共享部件的 ID 常量和参数 record（`PartCatalog`），随契约 v1 候选先交；部件包与区域包在主线上接通后按组冻结（§3），之后改动走契约申请（WF-BUILD §1）。
 - 区域包按 ID 放置部件；未交付部件可用显式方块桩，真实部件接入时同批撤掉对应桩。
 - 区域包需要特有部件时，在自己的目录里新建，ID 加上区名前缀。证明可以复用后，再申请提升为共享部件。
 
@@ -486,7 +486,7 @@ UESTC_RPG/
 | 部件库成为瓶颈 | 编目和参数类型随候选契约先交，方块桩先交付；区域可以先建私有部件；部件库拆成 5 个包 |
 | 风格不统一 | 场景里只允许经 `ToonSpec` 取得的卡通材质，着色器只用白名单；颜色只能用色名；先做金样（见 ART-MODELING §6），再放开并行；设一名风格负责人横向比对 |
 | 预算超支 | 每个部件必须声明各级细节的面数；按模块统计预算；单个格子先卡上限；G8 用烘焙统计预测；详见 ENG-BUDGET |
-| 改动互相覆盖 | 目录独占加特性自动发现；共享文件只有一个写入者；契约只增不改（PublicApiAnalyzers）；同一批文件同一时间只有一个写者、提交只加自己的文件（WF-RULE §7、WF-FLOW §2）；代理不在编辑器里重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异） |
+| 改动互相覆盖 | 目录独占加特性自动发现；共享文件只有一个写入者；契约改动先申请（WF-BUILD §1）；同一批文件同一时间只有一个写者、提交只加自己的文件（WF-RULE §7、WF-FLOW §2）；代理不在编辑器里重存场景（编辑器存盘会给每个节点写 `unique_id`，产生无关差异） |
 | 自由漫游暴露死角 | 由介质呈现兜底楼内、地下、水下和雾海；关着的楼旁观飞进去看到简化室内，镜头在任何楼体里至少显示 I0（WLD-INTERIORS §5.3、WLD-INTERIORS §6.4）；活动范围用软约束；集中测试时在全校随机巡检；行走模式另有行走走廊的加密标准（ART-FIDELITY §9） |
 | 近处深度精度不够 | 反向 Z 由引擎提供（4.3 起），近裁剪面 0.05 m 够用；不做反向 Z 的回退方案（ENG-BUDGET §5） |
 | 多个代理抢一块 GPU | 视觉门禁经构建锁一次只跑一个（§6）；截图要求交互式会话、窗口可见；用 `--gpu-index` 固定 RTX 4080 并断言显卡名；开发阶段可以用半分辨率快速截图 |

@@ -8,7 +8,7 @@
 
 | 文档 | 规定什么 | 主责 | 门禁 |
 | --- | --- | --- | --- |
-| [CORE-CONTENT](core/CORE-CONTENT-开发内容核心准则.md) 开发内容核心准则 | 写代码、做内容时要守的核心准则：开发方式（不过度工程化、测试最小、改设计必清旧、架构）、开发流程、规范约定与内容底线，一条一句，细则见各条指向；钩子在子代理开工、首次碰内容路径时注入 §0，之后定期重注 | WP-00 | G4 |
+| [CORE-CONTENT](core/CORE-CONTENT-开发内容核心准则.md) 开发内容核心准则 | 写代码、做内容时要守的核心准则：开发方式（不过度工程化、测试最小、改设计必清旧、架构）、开发流程、工程结构、规范约定与内容底线，一条一句，细则见各条指向；钩子在子代理开工、首次碰内容路径时注入 §0，之后定期重注 | WP-00 | G4 |
 | [CORE-CONVENTIONS](core/CORE-CONVENTIONS-约定.md) 约定 | 跨文档共同约定速查：坐标单位、时间、编号命名、帧顺序、目录归属、确定性 | WP-00 | G1、G2、G3、G4、G5 |
 | [CORE-DECISIONS](core/CORE-DECISIONS-决策登记.md) 决策登记 | 全项目已定决策的登记：每条一句结论，附适用范围、细则所在和状态 | — | — |
 | [CORE-GLOSSARY](core/CORE-GLOSSARY-术语表.md) 术语表 | 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节 | — | — |
@@ -97,6 +97,7 @@
 | --- | --- | --- | --- |
 | [ENG-ARCH](engineering/ENG-ARCH-工程架构.md) 工程架构：模块边界、接口契约与并行开发流程 | 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与构建测试排队 | WP-00 | G1、G2、G3、G4、G5、G6 |
 | [ENG-BUDGET](engineering/ENG-BUDGET-性能预算与硬规则.md) 性能预算与硬规则 | 预设与设备档的预算、细节级别、各包额度总账（budgets.json）、推送硬规则、测法与工程设置 | WP-00 | G4、G5、G6、G8、G10、G11、G13、G14、G15、G16、G17、G20、G21 |
+| [ENG-CODE](engineering/ENG-CODE-代码结构准则.md) 代码结构准则 | 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法 | WP-00 | — |
 | [ENG-GATES](engineering/ENG-GATES-验收与门禁.md) 验收：门禁、审查视角、近景巡检 | 审查视角与命令行参数、推送前门禁 G1–G21、一票否决、全局清单 | WP-27 | G1、G2、G3、G4、G5、G6、G7、G8、G9、G10、G11、G12、G13、G14、G15、G16、G17、G18、G19、G20、G21 |
 | [ENG-PERF](engineering/ENG-PERF-性能工程.md) 性能工程：高质量实现设计（Godot 4.7.2 .NET） | 性能的实现方法：合批、着色器白名单、全局参数登记、预热、剔除、流式、主线程、内存、阴影后期、自适应与测量 | WP-01、WP-02 | G2、G4、G5、G6、G8、G10、G11、G13、G16、G17、G19、G20、G21 |
 | [ENG-ROADMAP](engineering/ENG-ROADMAP-扩展路线.md) 扩展路线：从观光到 RPG | 规定观光版给以后 RPG 留的扩展点、现在不能写死的地方和 v1 冻结前的最小预留 | WP-00 | G4、G5、G20 |
@@ -120,7 +121,7 @@
 
 | 工作包 | 主责文档 | 有增量的文档 |
 | --- | --- | --- |
-| WP-00 | CORE-CONTENT、CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-ENTRY、WF-FLOW、WF-INDEX、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
+| WP-00 | CORE-CONTENT、CORE-CONVENTIONS、ENG-ARCH、ENG-BUDGET、ENG-CODE、ENG-ROADMAP、ENG-WP、OPS-RELEASE、WF-BUILD、WF-COMMS、WF-CORE、WF-DOC、WF-ENTRY、WF-FLOW、WF-INDEX、WF-MODEL、WF-ONBOARD、WF-QUOTA、WF-ROLE、WF-RULE、WF-STATUS | ENG-GATES、SYS-AUDIO、SYS-MAPS、SYS-SAVE、SYS-VIEW、SYS-WALK、WLD-INTERIORS、WLD-TERRAIN |
 | WP-01 | ENG-PERF、SYS-VIEW、TOOL-PREVIEW | ENG-ARCH、ENG-GATES、OPS-RELEASE、SYS-ATLAS、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WALK、SYS-WEATHER、UI-NAV、UI-VISUAL |
 | WP-02 | ENG-PERF | ENG-ARCH、ENG-BUDGET、ENG-GATES、OPS-RELEASE、SYS-AUDIO、SYS-GRAPHICS、SYS-MAPS、SYS-SAVE、SYS-TITLE、SYS-WEATHER、TOOL-PREVIEW、WLD-INTERIORS、WLD-OUTSKIRTS、WLD-TERRAIN、WLD-VEGETATION |
 | WP-03 | ART-SKYLIGHT | ENG-PERF、MAP-QSH-LIBRARY、MAP-QSH-NORTH、MAP-QSH-SOUTH、SYS-AUDIO、SYS-GRAPHICS、SYS-SAVE、SYS-TIME、SYS-WEATHER、WLD-INTERIORS |

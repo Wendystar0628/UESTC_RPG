@@ -13,6 +13,7 @@
   "CORE-INDEX": "docs/design/README.md",
   "ENG-ARCH": "docs/design/engineering/ENG-ARCH-工程架构.md",
   "ENG-BUDGET": "docs/design/engineering/ENG-BUDGET-性能预算与硬规则.md",
+  "ENG-CODE": "docs/design/engineering/ENG-CODE-代码结构准则.md",
   "ENG-GATES": "docs/design/engineering/ENG-GATES-验收与门禁.md",
   "ENG-PERF": "docs/design/engineering/ENG-PERF-性能工程.md",
   "ENG-ROADMAP": "docs/design/engineering/ENG-ROADMAP-扩展路线.md",
@@ -95,6 +96,7 @@
   },
   {
    "docs": [
+    "ENG-CODE",
     "WF-BUILD"
    ],
    "glob": "game/**/*.cs"
@@ -104,6 +106,18 @@
     "WF-BUILD"
    ],
    "glob": "game/**/*.gdshader*"
+  },
+  {
+   "docs": [
+    "ENG-CODE"
+   ],
+   "glob": "pipeline/**/*.cs"
+  },
+  {
+   "docs": [
+    "ENG-CODE"
+   ],
+   "glob": "pipeline/**/*.py"
   }
  ],
  "version": 1,
@@ -114,6 +128,7 @@
    "CORE-INDEX",
    "ENG-ARCH",
    "ENG-BUDGET",
+   "ENG-CODE",
    "ENG-ROADMAP",
    "ENG-WP",
    "OPS-RELEASE",
