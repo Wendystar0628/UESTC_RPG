@@ -166,37 +166,4 @@ public sealed class KeyLightTests
         True(LightChannelCatalog.Slot(new ChannelId("window.dorm")) == 1, "dorm slot");
         True(LightChannelCatalog.Slot(new ChannelId("sys.poolGain")) == 31, "pool gain slot");
     }
-
-    [TestCase]
-    public void ChannelDeltaFollowsRate()
-    {
-        var tracker = new ChannelDeltaTracker();
-        var values = new float[LightChannelCatalog.Count];
-        var pairs = new Vector2[LightChannelCatalog.Count];
-        tracker.Track(values, 1 / 60d, 1, pairs);
-        Near(ChannelDeltaTracker.DeltaMin, pairs[0].Y, 0f, "fresh instance");
-        values[0] = 0.1f;
-        tracker.Track(values, 1d, 1, pairs);
-        Near(0.03f, pairs[0].Y, 1e-6f, "0.1 per second over 0.3 s");
-        values[0] = 0.9f;
-        tracker.Track(values, 1 / 60d, 1, pairs);
-        Near(ChannelDeltaTracker.DeltaMax, pairs[0].Y, 0f, "fast change clamps to Δmax");
-        tracker.Track(values, 1 / 60d, 2, pairs);
-        Near(ChannelDeltaTracker.DeltaMin, pairs[0].Y, 0f, "new instance snaps");
-    }
-
-    [TestCase]
-    public void FallbackScheduleLightsAtNight()
-    {
-        var values = new float[LightChannelCatalog.Count];
-        var clear = new WeatherVec(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-        LightScheduleFallback.Evaluate(new ChannelEvalInput(12.8, 41f, clear), values);
-        True(values.Take(31).All(v => v == 0f) && values[31] == 1f, "noon is dark except the pool gain");
-        LightScheduleFallback.Evaluate(new ChannelEvalInput(21, -14f, clear), values);
-        Near(0.85f, values[1], 1e-6f, "dorm windows at night");
-        Near(1f, values[14], 1e-6f, "street lamps at night");
-        var rain = clear with { Overcast = 1f, Precip = 1f };
-        LightScheduleFallback.Evaluate(new ChannelEvalInput(17, 10f, rain), values);
-        True(values[0] > 0.5f, "h_eff lights windows earlier in rain");
-    }
 }

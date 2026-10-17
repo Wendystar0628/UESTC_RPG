@@ -35,9 +35,14 @@ public static class CaptureSequence
             syncCamera();
             var appliedPose = rig.Pose;
             producers.PrepareCapture(appliedPose);
-            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!Services.Get<IVeilPresentation>().IsCovered)
+            // The veil layer processes before this stage in a frame, so the cover set above is first drawn one frame later.
+            var presentation = Services.Get<IVeilPresentation>();
+            for (var frame = 0; frame < 2 && !presentation.IsCovered; frame++)
+            {
+                await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            if (!presentation.IsCovered)
                 throw new InvalidOperationException("Capture warmup requires a drawn opaque veil.");
             runtime.Prefetch(appliedPose, rig.Mode);
             runtime.BeginWarm();

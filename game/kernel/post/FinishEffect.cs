@@ -42,9 +42,6 @@ public partial class FinishEffect : CompositorEffect
 
     internal PostFrameBox? Inputs { get; set; }
 
-    /// <summary>Read-only diagnostic sink (null or disabled = off; the render path is then unchanged).</summary>
-    internal PostDiagSink? Diagnostics { get; set; }
-
     /// <summary>RD texture of the runtime LUT once created on the render thread; invalid before that.</summary>
     internal Rid LutTexture
     {
@@ -133,9 +130,7 @@ public partial class FinishEffect : CompositorEffect
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostTransparent) return;
         if (Inputs is null || !Inputs.TryTakeFinish(out var frame)) return;
         if (!EnsureResources() || _rd is null) return;
-        var diag = Diagnostics;
-        if (diag is { Enabled: true }) BakeAndCapture(diag, frame);
-        else BakeLutIfChanged(frame);
+        BakeLutIfChanged(frame);
         if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers) return;
         var size = buffers.GetInternalSize();
         if (size.X <= 0 || size.Y <= 0) return;
@@ -156,35 +151,11 @@ public partial class FinishEffect : CompositorEffect
         _rd.ComputeListEnd();
     }
 
-    // Diagnostic variant of the bake call: same decision, plus an immutable snapshot of what this callback saw.
-    // Render thread only; reads the render thread's own baked fields, never writes them.
-    private void BakeAndCapture(PostDiagSink diag, in PostFrame f)
-    {
-        var before = Baked();
-        var beforeValid = !float.IsNaN(_bakedSlope.X);
-        var baked = false;
-        BakeLutIfChanged(f, ref baked);
-        diag.Capture(f.DiagWorldInstance, f.DiagMainFrame, Engine.GetFramesDrawn(),
-            new CdlSample(f.CdlSlope.X, f.CdlSlope.Y, f.CdlSlope.Z, f.CdlOffset.X, f.CdlOffset.Y, f.CdlOffset.Z,
-                f.CdlPower.X, f.CdlPower.Y, f.CdlPower.Z, f.CdlSaturation),
-            beforeValid, before, Baked(), baked, LutSize, BaseSaturation, SplitToning);
-    }
-
-    private CdlSample Baked() => new(_bakedSlope.X, _bakedSlope.Y, _bakedSlope.Z, _bakedOffset.X, _bakedOffset.Y,
-        _bakedOffset.Z, _bakedPower.X, _bakedPower.Y, _bakedPower.Z, _bakedSaturation);
-
     private void BakeLutIfChanged(in PostFrame f)
-    {
-        var baked = false;
-        BakeLutIfChanged(f, ref baked);
-    }
-
-    private void BakeLutIfChanged(in PostFrame f, ref bool baked)
     {
         if (_rd is null) return;
         if (Near(f.CdlSlope, _bakedSlope) && Near(f.CdlOffset, _bakedOffset) && Near(f.CdlPower, _bakedPower)
             && Mathf.Abs(f.CdlSaturation - _bakedSaturation) < CdlEpsilon) return;
-        baked = true;
         _bakedSlope = f.CdlSlope;
         _bakedOffset = f.CdlOffset;
         _bakedPower = f.CdlPower;
