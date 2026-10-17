@@ -186,13 +186,13 @@ public sealed class CoreModuleTests
     public void OverlayParsesStrictly()
     {
         // Every key of the core overlay maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
-        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "core.overlay.json");
+        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "core.d");
         var strict = new JsonSerializerOptions(ContractJson.Options)
         {
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             RespectNullableAnnotations = true,
         };
-        var files = new[] { path }.Concat(Directory.GetFiles(Path.Combine(Path.GetDirectoryName(path)!, "core.d"), "*.json").Order(StringComparer.Ordinal))
+        var files = Directory.GetFiles(path, "*.json").Order(StringComparer.Ordinal)
             .Select(file => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(file), strict)!).ToArray();
         Require(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe"), "zone, owner and map");
         var operations = files.SelectMany(file => file.Ops).ToArray();

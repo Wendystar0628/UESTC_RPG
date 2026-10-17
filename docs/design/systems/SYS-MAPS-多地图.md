@@ -59,7 +59,7 @@ game/data/
 │  └─ qingshuihe/                        清水河（当前唯一的图）
 │     ├─ map.json                        WP-46   MapDescriptor 的手写部分（§3）；字段增改须经主代理批准
 │     ├─ campus.json  network.json  zones.json          WP-08
-│     ├─ overlay/<组>.d/                 各区包与公共空间、滨水、校界等包，每包一个分片文件；含 design: 增补与 hide 删除，每条都写理由（ENG-ARCH §3 覆盖层的规则）；旧 <组>.overlay.json 只留空壳
+│     ├─ overlay/<组>.d/                 各区包与公共空间、滨水、校界等包，每包一个分片文件；含 design: 增补与 hide 删除，每条都写理由（ENG-ARCH §3 覆盖层的规则）
 │     ├─ overlay/walkable.overlay.json   WP-44
 │     ├─ overlay/outskirts.overlay.json  WP-47（WLD-OUTSKIRTS）
 │     ├─ overlay/atlas.d/                WP-48c（SYS-ATLAS）锚点实体
@@ -86,7 +86,7 @@ game/data/
 ```
 
 - **按图的资源**放在各自资源目录下的 `<地图>/` 子目录，归属不变：远景卡片 `game/assets/style/backdrop/qingshuihe/`（WP-22 向 WP-04 申请的子目录），扉页插画 `game/assets/title/qingshuihe/`（SYS-TITLE），平面地图的贴图按 SYS-ATLAS的目录，同样分到 `qingshuihe/` 下。
-- **覆盖层**：通用覆盖层按包分片放在 `overlay/<组>.d/`，旧的 `<组>.overlay.json` 只留空壳；分片的命名与加载规则、`hidePart`、覆盖层新增步道进有效路网的规则都在 ENG-ARCH §3 覆盖层的规则。覆盖层里删原有的路只能精确 `hide` 无歧义的纯 road；与原路重叠的片段，先 `hide` 整条再 `add` 保留的各段和新连接，并迁移地形覆盖层对它的引用，不用 `sourceRoad` 隐藏原车行道。
+- **覆盖层**：通用覆盖层唯一入口为 `overlay/<组>.d/<直接子文件>.json`，按真实组名、组内文件名以 Ordinal 顺序应用；同 owner 同组允许顺序覆盖，跨组冲突仍需显式认领，错误保留实际分片路径；退役通用单文件输入（包括空文件）明确拒绝。每片内容仍用 `OverlayFile` schema，专用格式保持不变；具体加载与校验以 `game/gen/world/WorldModelLoader.cs` 为准。覆盖层里删原有的路只能精确 `hide` 无歧义的纯 road；与原路重叠的片段，先 `hide` 整条再 `add` 保留的各段和新连接，并迁移地形覆盖层对它的引用，不用 `sourceRoad` 隐藏原车行道。
 - **管线**：`pipeline/` 的脚本都接受 `--map=<id>`，原始数据放 `pipeline/raw/<地图>/`，输出写到 `game/data/maps/<地图>/`。
 - **实体 ID**：`campus.json` 里实体 ID 的前缀 `qsh:` 是 OSM 管线的既有写法，属于数据，不是地图 ID，保持不动。实体 ID 只在本图内唯一；跨图引用一律写成"地图 + ID"。以后的图换用自己的前缀，G5 检查各图数据的 ID 前缀不冲突。
 - **精选室内属于所在的图**，不是单独的图。WLD-INTERIORS的 15 处开放室内都在 `qingshuihe` 里，随本图的流式加载进出（离入口 25 m 加载，WLD-INTERIORS）。
@@ -300,7 +300,7 @@ game/data/
 | `[KernelNode]` 带 `Map` | 本图 | Mount 时实例化，Unload 时释放 |
 | `[KernelNode]` 不带 `Map` | 全局 | 常驻；需要换数据的实现 `IMapAware` |
 | `[KernelService]`、`[MediumPresenter]`、`[Part]`、`[QualityResponsive]` | 全局 | 不变（区内私有部件随所在程序集归本图） |
-| `res://data/maps/<地图>/overlay/<组>.d/*.json`、`overlay/*.overlay.json` | 本图 | WP-08 只扫描当前图的目录 |
+| `res://data/maps/<地图>/overlay/<组>.d/*.json`、`overlay/{walkable,outskirts,fidelity}.overlay.json` | 本图 | WP-08 只扫描当前图的目录 |
 | `res://style/palette/ext/*.json` | 全局 | 不变 |
 
 - **换图数据的生命周期**：生产本图数据的实例（烘焙服务等）实现 `IMapDataParticipant`，与 `IMapAware` 按下面的顺序配合，消费方只管 `IMapAware`。

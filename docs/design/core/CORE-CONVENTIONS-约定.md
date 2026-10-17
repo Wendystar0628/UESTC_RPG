@@ -130,7 +130,7 @@ gates: [G1, G2, G3, G4, G5]
 | 环境发声器 | `amb:` 开头，本图内唯一 | — | G5 查重 | ENG-ARCH §3（音频块） |
 | RPG 预留前缀 | `npc:`、`item:`、`quest:` | — | 观光数据不得使用 | ENG-ROADMAP §6.1 第 6 条 |
 
-- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<组>.d/`，通用覆盖层按包分片，每个包只写自己的 `<四位序号>-wp-<包号>-<短名>.json`（加载规则见 ENG-ARCH §3 覆盖层的规则）；旧的 `<组>.overlay.json` 只留空壳，不再追加。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
+- **覆盖层**：OSM 数据永不改写。风格化改动、设计增补和删除都写进本图的覆盖层：`game/data/maps/<地图>/overlay/<组>.d/`，通用覆盖层按包分片，每个包只写自己的 `<四位序号>-wp-<包号>-<短名>.json`（加载规则见 ENG-ARCH §3 覆盖层的规则）；通用单文件入口已退役。操作有 `reshape`、`height`、`style`、`hide`、`add`，`"op"` 写在每个对象的第一个字段；轮廓调整 4 m 以内算轻微（`Minor`），超过 4 m 或新增设计物体必须写理由；两个覆盖层改同一个要素时报错，除非其中一个已经认领了它（ENG-ARCH §3）。地形另有地形覆盖层 `overlay/terrain/<区>.terrain.json`，只写地形操作，一个文件只归一个包（WLD-TERRAIN §3.1）。
 
 ### 3.2 编号体系
 

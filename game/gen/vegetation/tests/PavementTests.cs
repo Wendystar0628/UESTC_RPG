@@ -99,7 +99,7 @@ public sealed class PavementTests
         var bare = BareLayout.Value;
         var tree = bare.Trees.Where(t => t.Source == PlantSource.Road && t.Species.Id == "ginkgo").ElementAt(300);
         var (x, z) = (tree.Position.X, tree.Position.Z);
-        var world = Load(false, ("fixture-avenue-walk.overlay.json", Overlay(Road("design:fixture-avenue-cross-walk", "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]))));
+        var world = Load(false, ("fixture-avenue-walk.d/0000-fixture.json", Overlay(Road("design:fixture-avenue-cross-walk", "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]))));
         var layout = Verify(world, BareFingerprint, "avenue walk");
         if (layout.Avoided.All(a => a.Tree.Key != tree.Key) || layout.Trees.Any(t => t.Key == tree.Key))
             throw new InvalidOperationException($"{tree.Key} stands on the walk and did not give way");
@@ -115,7 +115,7 @@ public sealed class PavementTests
         foreach (var id in DanguiOsmTrees)
             if (bare.Trees.All(t => t.Key != id) || bare.Avoided.Any(a => a.Tree.Key == id))
                 throw new InvalidOperationException($"{id} is not a planted OSM tree before the walk");
-        var world = Load(false, ("fixture-dangui-w2.overlay.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", 2.5f, DanguiWalkW2))));
+        var world = Load(false, ("fixture-dangui-w2.d/0000-fixture.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", 2.5f, DanguiWalkW2))));
         var layout = Verify(world, BareFingerprint, "w2");
         foreach (var id in DanguiOsmTrees)
         {
@@ -152,7 +152,7 @@ public sealed class PavementTests
         var tree = bare.Trees.Where(t => t.Source == PlantSource.Road && t.Species.Id == "ginkgo").ElementAt(300);
         var (x, z) = (tree.Position.X, tree.Position.Z);
         const string id = "design:fixture-twice-filed-walk";
-        var world = Load(false, ("fixture-twice-filed.overlay.json", Overlay(Road(id, "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]))));
+        var world = Load(false, ("fixture-twice-filed.d/0000-fixture.json", Overlay(Road(id, "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]))));
         RequireFiled(world, id, line: true, feature: true);
         var both = Verify(world, BareFingerprint, "filed twice");
         if (both.Avoided.Count(a => a.Tree.Key == tree.Key) != 1 || both.Trees.Any(t => t.Key == tree.Key))
@@ -178,7 +178,7 @@ public sealed class PavementTests
         var tree = bare.Trees.Where(t => t.Source == PlantSource.Road && t.Species.Id == "ginkgo").ElementAt(300);
         var (x, z) = (tree.Position.X, tree.Position.Z);
         const string id = "design:fixture-hidden-walk";
-        var world = Load(false, ("fixture-hidden.overlay.json", Overlay(Road(id, "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]),
+        var world = Load(false, ("fixture-hidden.d/0000-fixture.json", Overlay(Road(id, "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]),
             "{\"op\":\"hide\",\"target\":\"" + id + "\",\"reason\":\"Fixture: the walk is taken away again.\"}")));
         RequireFiled(world, id, line: false, feature: false);
         var layout = Verify(world, BareFingerprint, "hidden walk");
@@ -192,7 +192,7 @@ public sealed class PavementTests
         // layout's Avoided list at its place in the planting order, none is dropped before it is planted, none stands.
         var bare = BareLayout.Value;
         const string id = "design:fixture-dangui-walk-w2";
-        var world = Load(false, ("fixture-dangui-w2-both.overlay.json", Overlay(Road(id, "footway", 2.5f, DanguiWalkW2))));
+        var world = Load(false, ("fixture-dangui-w2-both.d/0000-fixture.json", Overlay(Road(id, "footway", 2.5f, DanguiWalkW2))));
         RequireFiled(world, id, line: true, feature: true);
         var layout = Verify(world, BareFingerprint, "w2 filed twice");
         var walk = world.Network.Roads.Single(r => r.Id.Value == id);
@@ -237,7 +237,7 @@ public sealed class PavementTests
         var round = bare.Avoided.First(a => a.Tree.Source == PlantSource.OsmTree).Tree;
         var (sx, sz) = (square.Position.X, square.Position.Z);
         var ring = $"[[{F(sx - 0.9f)},{F(sz - 0.9f)}],[{F(sx + 0.9f)},{F(sz - 0.9f)}],[{F(sx + 0.9f)},{F(sz + 0.9f)}],[{F(sx - 0.9f)},{F(sz + 0.9f)}]]";
-        var world = Load(false, ("fixture-tree-pits.overlay.json", Overlay(
+        var world = Load(false, ("fixture-tree-pits.d/0000-fixture.json", Overlay(
             "{\"op\":\"add\",\"id\":\"design:fixture-square-pit\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":" + ring +
             ",\"holes\":[]}},\"height\":0.42,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"size\":1.8},\"reason\":\"Fixture: a square tree pit.\"}",
             "{\"op\":\"add\",\"id\":\"design:fixture-round-bed\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"point\",\"position\":[" + F(round.Position.X) + ",0," + F(round.Position.Z) +
@@ -255,14 +255,14 @@ public sealed class PavementTests
     [TestCase]
     public void APitNamingItsSpeciesGetsOneTreeOfIt()
     {
-        // WP-29 29a's pocket-garden pits (public.overlay.json, 160bdfa): round beds at a point with radius, perPit 1, props.species,
+        // WP-29 29a's pocket-garden pits (overlay/public.d/, 160bdfa): round beds at a point with radius, perPit 1, props.species,
         // stone = site (WP-29 draws the frame). Fixture IDs on the campus data alone, so the test does not meet the real 29a pits.
         static string Pit(string id, float x, float z, string species, float radius) =>
             "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"point\",\"position\":[" + F(x) + ",0," + F(z) +
             "]},\"height\":0.2,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"species\":\"" + species + "\",\"radius\":" + F(radius) +
             ",\"kerb\":0.16,\"soilAbove\":0.15,\"stone\":\"site\"},\"reason\":\"Fixture: a 29a pocket-garden pit.\"}";
         var pits = new[] { ("design:fixture-29a-dangui-tree", -109.27f, -370.82f, "maple", 0.85f), ("design:fixture-29a-canteen-tree", -14.07f, -327.98f, "camphor", 1.0f) };
-        var world = Load(false, ("fixture-29a-pits.overlay.json", Overlay(pits.Select(t => Pit(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5)).ToArray())));
+        var world = Load(false, ("fixture-29a-pits.d/0000-fixture.json", Overlay(pits.Select(t => Pit(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5)).ToArray())));
         var layout = Plant(world);
         foreach (var (id, x, z, species, radius) in pits)
         {
@@ -344,10 +344,9 @@ public sealed class PavementTests
     {
         var data = Path.Combine(Root, "game", "data", "maps", "qingshuihe");
         var names = new[] { "campus.json", "network.json", "interiors.json", "map.json" }.AsEnumerable();
-        if (overlays) names = names.Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
-                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+        if (overlays) names = names.Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
                     .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')));
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')));
         var files = names.OrderBy(name => name, StringComparer.Ordinal).ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         foreach (var (name, text) in extra) files["overlay/" + name] = text;
         return WorldModelLoader.Load(new("qingshuihe"), files).World;

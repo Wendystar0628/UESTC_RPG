@@ -91,7 +91,7 @@ public sealed class UnderstoreyTests
         var bare = PavementTests.Plant(PavementTests.World(false));
         var held = bare.Trees.First(t => t.Source == PlantSource.Grove);
         var empty = EmptySpot(bare);
-        var world = PavementTests.Load(false, ("fixture-pits.overlay.json", PavementTests.Overlay(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
+        var world = PavementTests.Load(false, ("fixture-pits.d/0000-fixture.json", PavementTests.Overlay(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
             Pit("design:fixture-empty-pit", empty.X, empty.Y))));
         var layout = PavementTests.Plant(world);
         var pitTrees = layout.Trees.Where(t => t.Source == PlantSource.Pit).ToList();

@@ -10,7 +10,7 @@ using L = Campus.Gen.Zones.West.WestTune.Look;
 namespace Campus.Gen.Zones.West.Four;
 
 /// <summary>
-/// 四号科研楼 (MAP-QSH-WEST §6). The three courtyard blocks are WP-14's (west.overlay.json gives them the research family);
+/// 四号科研楼 (MAP-QSH-WEST §6). The three courtyard blocks are WP-14's (overlay/west.d/ gives them the research family);
 /// this site adds the identity pieces the facade rules cannot express:
 /// <list type="bullet">
 /// <item>each block's entrance toward the fan lawn: a two-storey deep-blue glass box set in a white door frame whose head

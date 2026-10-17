@@ -6,7 +6,7 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.DesignPublic.Tests;
 
-/// <summary>WP-29 29a: the two corner pocket greens of public.overlay.json, loaded with every other overlay of the map.</summary>
+/// <summary>WP-29 29a: the two corner pocket greens of overlay/public.d/, loaded with every other overlay of the map.</summary>
 [TestSuite]
 public sealed class PublicModuleTests
 {
@@ -217,10 +217,9 @@ public sealed class PublicModuleTests
     {
         var data = DataDirectory();
         var names = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
-                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
                     .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Order(StringComparer.Ordinal).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')));
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Order(StringComparer.Ordinal).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')));
         var files = names.ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }

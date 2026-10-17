@@ -5,7 +5,7 @@ namespace Campus.Gen.Zones.DesignPublic;
 
 /// <summary>
 /// WP-29 公共空间 (MAP-QSH-ADDITIONS §2.3, §2.7, §2.8, §7): only the unowned public spaces (D-185). 29a: the corner pocket
-/// greens of the main junctions between the zones. The paving is a pedestrian polygon in public.overlay.json (WP-15 paves
+/// greens of the main junctions between the zones. The paving is a pedestrian polygon in overlay/public.d/ (WP-15 paves
 /// it, WP-23 keeps trunks off it), the tree is a tree pit WP-23 plants; this module builds the curved bench and the pit
 /// kerb and soil, their colliders and seat edges. Claims nothing: no OSM feature is replaced.
 /// </summary>

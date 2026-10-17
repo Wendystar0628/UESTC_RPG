@@ -25,7 +25,7 @@ public sealed class GrandStairTests
         Require(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1, "two runs split by one middle landing");
         Require(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < 1e-3f,
             "flights run from the foot to the top landing");
-        // The data footprint (core.overlay.json reshape) is the built stair: the same rectangle within 0.15 m.
+        // The data footprint (overlay/core.d/ reshape) is the built stair: the same rectangle within 0.15 m.
         var ring = Plan.OuterRing(world.Features[CoreFeatures.LibraryStair]);
         var h = GrandStair.HalfWidth;
         Vector2[] corners = [stair.At(0, -h), stair.At(0, h), stair.At(stair.FrontS, h), stair.At(stair.FrontS, -h)];

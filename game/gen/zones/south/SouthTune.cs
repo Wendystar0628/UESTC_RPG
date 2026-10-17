@@ -253,7 +253,7 @@ public static class SouthTune
         public const float RearLandingWidth = 9f, RearLandingDepth = 3f, RearStepsWidth = 6f, RearTread = 0.33f;
         public const float RearCanopyY = 7.0f, RearColumnRadius = 0.26f;
 
-        /// <summary>Wing heights through south.overlay.json HeightOps: one storey height (≈ 4.28 m) across all wings.</summary>
+        /// <summary>Wing heights through overlay/south.d/ HeightOps: one storey height (≈ 4.28 m) across all wings.</summary>
         public const float StoreyHeight = 4.28f;
     }
 
@@ -312,7 +312,7 @@ public static class SouthTune
         public const float PortalWidth = 3.2f, PortalSpring = 4.4f;
         /// <summary>
         /// Floor and door threshold above the ground: the top of WP-15's paving (GroundSection.PavingY), so the side door's forecourt
-        /// (design:south-clock-forecourt in south.overlay.json) runs level into the doorway.
+        /// (design:south-clock-forecourt in overlay/south.d/) runs level into the doorway.
         /// </summary>
         public const float Threshold = 0.15f;
         /// <summary>A pair of narrow windows per storey on every face.</summary>

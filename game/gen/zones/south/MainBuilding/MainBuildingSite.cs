@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.South.MainBuilding;
 
 /// <summary>
 /// Main building identity parts (MAP-QSH-SOUTH §2). The wings' massing, storeys and window bays stay with WP-14's facade
-/// rules (heights set by HeightOps in south.overlay.json); this site adds what makes the building read as the main
+/// rules (heights set by HeightOps in overlay/south.d/); this site adds what makes the building read as the main
 /// building: the front platform at the 2.6 m first floor with its grand steps, the flat-roofed square-column portico with
 /// round-headed windows and door in its back wall, the colonnaded roof gallery (空廊) with railing parapets on B2, and the
 /// rear door porch. The front steps are a "building" in the OSM data, so this site claims them.

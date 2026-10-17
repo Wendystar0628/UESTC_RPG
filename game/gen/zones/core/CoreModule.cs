@@ -13,7 +13,7 @@ namespace Campus.Gen.Zones.Core;
 /// WP-16 核心区 (MAP-QSH-CORE): the library, the time plaza and sundial, the museum and the West Lake structures.
 /// The module is a list of pieces (<see cref="ICorePiece"/>), each a pure function of the world model; the module
 /// only routes them to tiles, merges their output and unions their claims. Sub-packages 16b onward add their pieces
-/// to <see cref="CoreSite.Pieces"/>, their entries to core.overlay.json and their terrain to core.terrain.json.
+/// to <see cref="CoreSite.Pieces"/>, their entries to overlay/core.d/ and their terrain to core.terrain.json.
 /// </summary>
 [ContentModule("core", Owner = "WP-16")]
 public sealed class CoreModule : IContentModule, IWindowMetadataSource

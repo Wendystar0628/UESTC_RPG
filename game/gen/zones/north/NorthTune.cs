@@ -147,7 +147,7 @@ public static class NorthTune
         new("qsh:way:544269693", "dormitory", Facades.MasterCreamCoffee, "无名 9693，2 层宿舍，数据家族 unknown 改 dormitory，同上"),
     ];
 
-    /// <summary>Facade preset keys written into north.overlay.json StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
+    /// <summary>Facade preset keys written into overlay/north.d/ StyleOps (family "dormitory"); WP-14 reads them once it honours StyleOp.Facade.</summary>
     public static class Facades
     {
         /// <summary>本科 A 型：宿舍暖米黄墙配陶红竖向墙带（MAP-QSH-NORTH §4.2）。</summary>

@@ -20,10 +20,9 @@ public sealed class FaunaTests
         var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var overlay in Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
-                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+        foreach (var overlay in Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
                     .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Order(StringComparer.Ordinal))
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Order(StringComparer.Ordinal))
             files[Path.GetRelativePath(data, overlay).Replace('\\', '/')] = File.ReadAllText(overlay);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }

@@ -32,7 +32,7 @@ public sealed class VegetationContextTests
         var context = resolve();
         Check(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad), "The overlay's design footway is missing from the world.");
         Check(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
-              context.SourceInputs.ContainsKey("overlay/center-east.overlay.json") &&
+              context.SourceInputs.Keys.Any(path => path.StartsWith("overlay/center-east.d/", StringComparison.Ordinal)) &&
               context.SourceInputs.ContainsKey("vegetation/planting.json"), "The context lost the frozen source snapshot.");
         var (feature, aspect, owner) = fixture.Claims.Sources.Where(s => !s.Global)
             .SelectMany(s => s.Claims.OfType<FeatureClaim>().Select(c => (c.Feature, Aspect: Lowest(c.Aspects), s.Owner)))

@@ -69,7 +69,7 @@ public static partial class CoreStyle
     public static readonly ChannelId FlagLightChannel = new("lamp.street");
     public const float FlagLightEnergy = 0.8f, FlagLightRange = 6f;
 
-    /// <summary>Benches under rim lamps, facing the plaza (design addition, core.overlay.json): lamp slots and offset.</summary>
+    /// <summary>Benches under rim lamps, facing the plaza (design addition, overlay/core.d/): lamp slots and offset.</summary>
     public static readonly int[] BenchLampSlots = [6, 8, 10];
     public const float BenchSideOffset = 1.2f;
 

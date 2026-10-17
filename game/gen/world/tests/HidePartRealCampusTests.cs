@@ -22,7 +22,7 @@ public sealed class HidePartRealCampusTests
         var four = new FeatureId("qsh:relation:11665640");
         var wingA = new FeatureId("qsh:relation:11334255");
         var wingB = new FeatureId("qsh:relation:11665641");
-        files["overlay/hide-part-review.overlay.json"] = JsonSerializer.Serialize(new OverlayFile(new("review"), new("WP-14"),
+        files["overlay/hide-part-review.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("review"), new("WP-14"),
         [
             new HidePartOp(one, "osm:way:691679138", "approved source-only removal fixture"),
             new HidePartOp(four, "osm:relation:11334254", "approved duplicate source removal fixture"),

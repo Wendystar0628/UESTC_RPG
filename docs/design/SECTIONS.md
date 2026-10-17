@@ -272,7 +272,7 @@
 - WF-RULE §7 git 安全 · L73 · 322
 - WF-RULE §8 主线优先（D-168） · L81 · 297
 - WF-RULE §9 测试最小（D-167） · L88 · 199
-- WF-RULE §10 贴近主线，少给合并添活（D-199） · L93 · 761
+- WF-RULE §10 贴近主线，少给合并添活（D-199） · L93 · 744
 - WF-RULE §11 拿不准就问 · L103 · 137
 - WF-RULE §12 写文档与记忆 · L108 · 237
 - WF-RULE §13 截图与 GPU 锁 · L117 · 154
@@ -1244,13 +1244,13 @@
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-`docs/design/systems/SYS-MAPS-多地图.md` · 35.6k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
+`docs/design/systems/SYS-MAPS-多地图.md` · 35.7k 字 · 按图数据与 map.json、IMapService 先卸后装切图、时间全局天气按图、map_rect、同图重载门禁
 关键词：多地图、换图、切图、地图服务、按图数据、按图与全局、先卸后装、切换 8 步、同图重载、天气按图、进图补算、地图归属、本图默认状态、单图半径、启动集 PCK、IMapService、IMapContext、IMapAware、MapScope、MapDescriptor、MapId、MapVisit、MapTravelRequest、IMapTransition、map.json、index.json、map_rect、boot_<地图>.pck、FramePriority.Map、--gate=maptravel
 
   - SYS-MAPS 分工与约定 · L22 · 235
 - SYS-MAPS §0 结论 · L28 · 2.3k
   - ★ SYS-MAPS §0.1 接入要点 · L38 · 1.3k
-- SYS-MAPS §2 数据模型与目录 · L51 · 6.8k
+- SYS-MAPS §2 数据模型与目录 · L51 · 6.9k
   - SYS-MAPS §2.1 目录 · L53 · 3.4k
   - SYS-MAPS §2.2 按图与全局的划分 · L101 · 1.1k
   - SYS-MAPS §2.4 本机烘焙缓存与启动集 PCK · L118 · 2.3k
@@ -1262,7 +1262,7 @@
   - SYS-MAPS §4.4 各入口 · L245 · 671
 - SYS-MAPS §5 世界状态：时间与季节全局，天气按图 · L257 · 1.3k
 - SYS-MAPS §6 相机、行走与安全点 · L282 · 633
-- SYS-MAPS §7 自动发现与 `MapScope` · L293 · 2.2k
+- SYS-MAPS §7 自动发现与 `MapScope` · L293 · 2.3k
 - SYS-MAPS §8 C# 契约 · L319 · 143
 - SYS-MAPS §9 帧顺序：`FramePriority.Map = −1300` · L325 · 1.4k
 - SYS-MAPS §10 全局参数 `map_rect` · L352 · 1.4k
@@ -1645,7 +1645,7 @@
 
 ## ENG-ARCH · 工程架构：模块边界、接口契约与并行开发流程
 
-`docs/design/engineering/ENG-ARCH-工程架构.md` · 60.2k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
+`docs/design/engineering/ENG-ARCH-工程架构.md` · 60.3k 字 · 目录与归属、程序集边界、全部 C# 契约、帧顺序、资源管线、桩与工作树流程
 关键词：工程架构、目录归属、ownership.json、程序集边界、禁用写法、BannedApiAnalyzers、ArchUnitNET、确定性、DetMath、StableHash、自动发现、特性注册、ContentModule、KernelNode、KernelService、Autoload、契约、契约冻结、PublicApiAnalyzers、ContractJson、桩、占位实现、资源管线、本机烘焙、.tbin、缓存键、工作树、git 流程、合并队列、net10.0
 
 - ENG-ARCH §0 结论 · L67 · 2.4k
@@ -1653,7 +1653,7 @@
 - ENG-ARCH §1 资源管线迁移约定 · L93 · 277
 - ENG-ARCH §2 目录结构与归属 · L102 · 20.5k
   - ENG-ARCH 架构边界与唯一生产链 · L104 · 1.1k
-  - ENG-ARCH 目录树 · L123 · 5.5k
+  - ENG-ARCH 目录树 · L123 · 5.4k
   - ENG-ARCH 生成物与资源位置 · L189 · 315
   - ENG-ARCH 归属依据 · L193 · 69
   - ENG-ARCH 程序集边界 · L197 · 2.5k

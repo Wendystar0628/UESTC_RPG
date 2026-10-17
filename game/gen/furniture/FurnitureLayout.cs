@@ -44,7 +44,7 @@ public sealed record FurnitureLayout(IReadOnlyList<FurnitureItem> Items)
 /// <summary>
 /// WP-13 placement (13b): pure and deterministic from the world model and the map's claims.
 /// <list type="bullet">
-/// <item>Atlas anchors (SYS-ATLAS §6): a kiosk or a post on every <c>anchor</c> feature of WP-48c's <c>atlas.overlay.json</c>,
+/// <item>Atlas anchors (SYS-ATLAS §6): a kiosk or a post on every <c>anchor</c> feature of WP-48c's <c>overlay/atlas.d/</c>,
 /// at its footprint, facing its <c>yawDeg</c>; the kiosk on its pad (or the deck the overlay names), the post landed as a point.
 /// A footprint more than <see cref="FurnitureStyle.AnchorPavingGap"/> off pedestrian paving moves the shortest way to its edge.</item>
 /// <item>Open entrances (WLD-INTERIORS §4): mat, standing open sign and door lamp at every open entrance of the interior index,

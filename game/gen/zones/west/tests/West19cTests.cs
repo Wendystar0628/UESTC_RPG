@@ -232,7 +232,7 @@ public sealed class West19cTests
     private static IWorldModel World()
     {
         var data = DataDirectory();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json", "overlay/west.overlay.json" }
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
             .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "west.d"), "*.json").Order(StringComparer.Ordinal)
                 .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);

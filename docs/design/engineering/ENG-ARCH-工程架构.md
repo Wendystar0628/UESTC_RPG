@@ -162,7 +162,7 @@ UESTC_RPG/
 │  ├─ gates/                 WP-27  截图机、路线回放、巡检的引擎内驱动，只在带门禁参数时启用；gates/matrix 归 WP-41
 │  ├─ data/                  运行时 JSON（按图的数据都在 maps/ 下，SYS-MAPS §2.1）：
 │  │  ├─ maps/index.json     WP-46  地图清单、默认地图
-│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<组>.d/ 分片目录与旧 <组>.overlay.json 空壳、walkable、outskirts、fidelity，
+│  │  ├─ maps/qingshuihe/    map.json；campus.json、network.json、zones.json；overlay/（<组>.d/ 分片目录、walkable、outskirts、fidelity，
 │  │  │                      以及 overlay/interior/<区>.interior.json、overlay/terrain/<区>.terrain.json）；outskirts.json；fidelity.json；interiors.json；waypoints.json；lighting-schedule.json；
 │  │  │                      backdrop.json；sky.json；review.json；cinematics/<id>.json；atlas/（markers.json、labels.json）；
 │  │  │                      audio/（声景与声学的本图数据）；nav/（routes.json、views.json）；incidents.json（偶发事件清单）；
@@ -291,7 +291,7 @@ UESTC_RPG/
 | `[SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]` | 实现 `ISaveSection<T>` 的 `[KernelService]` 或 `[KernelNode]` 类；`Scope = SaveScope.PerMap` 的段在文件里展开为 `map:<id>/<段>`。G5 查 `Phase` 与 SYS-SAVE §2 的表一致、`Order` 不重复、`Owner` 与 `ownership.json` 一致（SYS-SAVE §10） | 主程序集 | 主线程：`Capture` 在 `FramePriority.Save` 那一步，`Restore` 在读档那一帧的同一步；迁移函数在后台线程 |
 | `[assembly: MapScope("qingshuihe")]` | 各区程序集，由 WP-00 写进 csproj（见 §2 的 `MapScope` 条） | gen | 注册时求模块归属 |
 | `res://style/palette/ext/*.json` | 调色板扩展，一包一个文件 | — | 启动时用 `ResourceLoader.ListDirectory` 扫描 |
-| `res://data/maps/<地图>/overlay/<组>.d/*.json`、`overlay/*.overlay.json`、`overlay/interior/*.interior.json`、`overlay/terrain/*.terrain.json` | 覆盖层，通用的按包分片、专属格式一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
+| `res://data/maps/<地图>/overlay/<组>.d/*.json`、`overlay/{walkable,outskirts,fidelity}.overlay.json`、`overlay/interior/*.interior.json`、`overlay/terrain/*.terrain.json` | 覆盖层，通用的按包分片、专属格式一区一个文件（按图分目录） | — | WP-08 只扫描当前图的目录 |
 
 - **Autoload 只有两个**，D0 冻结：`Boot`（WP-01，解析命令行参数）和 `Kernel`（WP-00，服务定位器）。需要新的全局对象时，用 `[KernelService]` 注册成 Kernel 的服务，不往 `project.godot` 里加条目。`IMapService`、`IAtlasService`、`IAppFlow`、`ISaveService`、`IAudioService` 等一律如此。
 - **build 与 mount 分开**：生成在纯 .NET 里，可以在线程池或烘焙器里跑（发布版的本机烘焙就在工作线程上调 `Build()`，D-165）；Godot 侧的挂载和动态物体只在主线程。gen 里的内容包没有挂载：随时间动的东西一律通过通道（`ChannelDecl`、`PlacedPart.Emitter`）和着色器（风场、`anim_time`）表达，需要节点的动态物体由 Godot 侧包的 `[KernelNode]` 负责（SYS-MOTION）。开放室内里会动的门扇同样如此：gen 只声明门扇（`DoorLeafDecl`），转动与运行时门体由 WP-07、WP-43 负责（§3）。

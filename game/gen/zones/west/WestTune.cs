@@ -89,7 +89,7 @@ public static class WestTune
     /// <summary>
     /// 六号科研楼 (MAP-QSH-WEST §1), named by the OSM blocks A, B and C. Three claimed entities: A and B are their own entities;
     /// the C block, the two links and the north tower are the parts of qsh:relation:14153711 (the duplicate C shell
-    /// qsh:way:779496166 is hidden in west.overlay.json). Every block stands on a two-storey glass base set back under the
+    /// qsh:way:779496166 is hidden in overlay/west.d/). Every block stands on a two-storey glass base set back under the
     /// stone (底层两层通高、向内退的深色玻璃幕墙), with deep square windows above and one dark louvre strip per floor.
     /// </summary>
     public static class Six
@@ -139,7 +139,7 @@ public static class WestTune
         /// <summary>
         /// The granite threshold apron in front of the open door, 3 cm proud of the forecourt paving (WP-15 draws paving at
         /// <see cref="PavingTop"/>; the interior floor is ±0 in interiors.json, so no risers); the forecourt itself is
-        /// west.overlay.json's design:west-six-forecourt.
+        /// overlay/west.d/'s design:west-six-forecourt.
         /// </summary>
         public const float ApronDepth = 4.0f;
         /// <summary>Top of WP-15's paving (GroundSection.PavingY); the paving under the overhang sits 1 cm above it.</summary>
@@ -219,7 +219,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 四号科研楼 (MAP-QSH-WEST §6): the three courtyard blocks are WP-14's (family research, west.overlay.json style); this
+    /// 四号科研楼 (MAP-QSH-WEST §6): the three courtyard blocks are WP-14's (family research, overlay/west.d/ style); this
     /// zone adds what the rules cannot: each block's entrance, a two-storey deep-blue glass box in a white door frame with a
     /// sign band (§6.3), shut (WLD-INTERIORS §5.2: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
     /// on its outer arc (MAP-QSH-TERRAIN §10.2; the lawn's dish is west.terrain.json's basin).

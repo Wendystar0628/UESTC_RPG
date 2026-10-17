@@ -139,15 +139,15 @@ public sealed class EffectiveRoadNetworkTests
         foreach (var first in new OverlayOp[][] { [add, new HideOp(add.Id, "first file hide")], [add] })
         {
             var files = Files(first);
-            files["overlay/b.overlay.json"] = Overlay([add]);
-            Contains(Fails(() => WorldModelLoader.Load(new("test"), files)), "Overlay conflict", "overlay/a.overlay.json", "overlay/b.overlay.json", add.Id.Value);
+            files["overlay/b.d/0000-fixture.json"] = Overlay([add]);
+            Contains(Fails(() => WorldModelLoader.Load(new("test"), files)), "Overlay conflict", "overlay/a.d/0000-fixture.json", "overlay/b.d/0000-fixture.json", add.Id.Value);
         }
         foreach (var targets in new[] { new[] { RoadId, "osm:way:10" }, new[] { "osm:way:10", RoadId }, new[] { "campus-test:source:way:99", "campus-test:source:way:99" } })
         {
             var network = new WorldNetwork([Line(RoadId), Line("campus-test:source:way:99")], [], [], [], []);
             var files = Files([new HideOp(new(targets[0]), "first writer")], network: network);
-            files["overlay/b.overlay.json"] = Overlay([new HideOp(new(targets[1]), "same owner is not a claim")]);
-            Contains(Fails(() => WorldModelLoader.Load(new("test"), files)), "Overlay conflict", "overlay/a.overlay.json", "overlay/b.overlay.json");
+            files["overlay/b.d/0000-fixture.json"] = Overlay([new HideOp(new(targets[1]), "same owner is not a claim")]);
+            Contains(Fails(() => WorldModelLoader.Load(new("test"), files)), "Overlay conflict", "overlay/a.d/0000-fixture.json", "overlay/b.d/0000-fixture.json");
         }
     }
 
@@ -181,9 +181,9 @@ public sealed class EffectiveRoadNetworkTests
             _ = Fails(() => Load([add]));
         }
         var nonfinite = Files([Design("design:nonfinite")]);
-        var overlay = JsonNode.Parse(nonfinite["overlay/a.overlay.json"])!;
+        var overlay = JsonNode.Parse(nonfinite["overlay/a.d/0000-fixture.json"])!;
         overlay["ops"]![0]!["geometry"]!["line"]!["points"]![1]![0] = JsonValue.Create(1e99);
-        nonfinite["overlay/a.overlay.json"] = overlay.ToJsonString();
+        nonfinite["overlay/a.d/0000-fixture.json"] = overlay.ToJsonString();
         _ = Fails(() => WorldModelLoader.Load(new("test"), nonfinite));
         var duplicated = new WorldNetwork([Line(RoadId), Line(RoadId)], [], [], [], []);
         Contains(Fails(() => Load([], network: duplicated)), "duplicate road ID", RoadId);
@@ -202,7 +202,7 @@ public sealed class EffectiveRoadNetworkTests
     private static NetworkLine Line(string id) => new(new(id), new([new(-10, -6), new(-2, -6)]), 2) { Props = Props("{\"highway\":\"footway\"}") };
     private static string Overlay(IReadOnlyList<OverlayOp> ops) => JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"), ops), ContractJson.Options);
     private static Dictionary<string, string> Files(IReadOnlyList<OverlayOp> ops, string campus = Campus, WorldNetwork? network = null) => new(StringComparer.Ordinal)
-    { ["campus.json"] = campus, ["network.json"] = Canonical(network ?? new([Line(RoadId)], [], [], [], [])), ["overlay/a.overlay.json"] = Overlay(ops) };
+    { ["campus.json"] = campus, ["network.json"] = Canonical(network ?? new([Line(RoadId)], [], [], [], [])), ["overlay/a.d/0000-fixture.json"] = Overlay(ops) };
     private static WorldModelLoadResult Load(IReadOnlyList<OverlayOp> ops, string campus = Campus, WorldNetwork? network = null) =>
         WorldModelLoader.Load(new("test"), Files(ops, campus, network));
     private static string Canonical<T>(T value) => JsonSerializer.Serialize(value, ContractJson.Options);

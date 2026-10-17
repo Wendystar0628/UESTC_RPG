@@ -67,7 +67,7 @@ public sealed class AnnexShellTests
             garden.Build(build, lod);
             Require(build.Finish(lod).Meshes.Count > 0, $"garden {lod}");
         }
-        // The palms WP-23 plants (core.overlay.json) stand in the planters.
+        // The palms WP-23 plants (overlay/core.d/) stand in the planters.
         var palms = world.Features.Values.Where(f => f.Id.Value.StartsWith("design:core-quiet-garden-palm-", StringComparison.Ordinal)).ToArray();
         Require(palms.Length == 2, $"two palms registered, got {palms.Length}");
         foreach (var palm in palms)

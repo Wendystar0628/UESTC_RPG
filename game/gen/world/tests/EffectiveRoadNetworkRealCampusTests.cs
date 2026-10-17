@@ -21,9 +21,8 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         // Only an authored hide of an exact original road ID removes it; every other original road keeps its order and bytes.
         var originalIds = previous.Roads.Select(road => road.Id.Value).ToHashSet(StringComparer.Ordinal);
         var hidden = files.Where(pair => pair.Key.StartsWith("overlay/", StringComparison.Ordinal) &&
-                (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) || pair.Key.Split('/') is ["overlay", var group, _] &&
-                    group.EndsWith(".d", StringComparison.Ordinal) && group is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d") &&
-                pair.Key is not "overlay/outskirts.overlay.json" and not "overlay/walkable.overlay.json" and not "overlay/fidelity.overlay.json")
+                (pair.Key.Split('/') is ["overlay", var group, var child] && child.EndsWith(".json", StringComparison.Ordinal) &&
+                    group.EndsWith(".d", StringComparison.Ordinal) && group is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d"))
             .SelectMany(pair => JsonSerializer.Deserialize<OverlayFile>(pair.Value, ContractJson.Options)!.Ops.OfType<HideOp>())
             .Select(op => op.Target.Value).Where(originalIds.Contains).ToHashSet(StringComparer.Ordinal);
         Require(loaded.Network.Roads.All(road => !hidden.Contains(road.Id.Value)), "An explicitly hidden original road survived in the effective network.");
@@ -79,7 +78,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
             {
                 var trial = new Dictionary<string, string>(files, StringComparer.Ordinal)
                 {
-                    ["overlay/zz-road-identity-fixture.overlay.json"] = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"),
+                    ["overlay/zz-road-identity-fixture.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"),
                         [new HideOp(new(target), "read-only real source identity regression")]), ContractJson.Options)
                 };
                 try { LoadPrepared(trial); throw new InvalidOperationException("Named source was treated as independent network-only road: " + target); }

@@ -9,7 +9,7 @@ namespace Campus.Gen.Zones.DesignWaterfront;
 /// </summary>
 public static class WaterfrontTune
 {
-    /// <summary>Overlay kind of a bridge registration (waterfront.overlay.json): a point marker whose props name the network lines.</summary>
+    /// <summary>Overlay kind of a bridge registration (overlay/waterfront.d/): a point marker whose props name the network lines.</summary>
     public const string BridgeKind = "bridge-deck";
     /// <summary>Overlay kind of a bridge-head lying stone (MAP-QSH-ADDITIONS §2.12 桥头卧石).</summary>
     public const string StoneKind = "bridge-stone";

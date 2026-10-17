@@ -348,7 +348,7 @@ public sealed class BuildingsTests
         Require(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
             BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null, "a key WP-14 does not know keeps the family, with a warning");
 
-        // The real campus with the innovation centre's five buildings on the preset (the StyleOps of south.overlay.json): no
+        // The real campus with the innovation centre's five buildings on the preset (the StyleOps of overlay/south.d/): no
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
         string[] innovation = ["qsh:relation:10807928", "qsh:relation:10807929", "qsh:relation:17732622", "qsh:way:779496164", "qsh:way:779496165"];
         var real = RealCampus();
@@ -515,7 +515,7 @@ public sealed class BuildingsTests
     [TestCase]
     public void NorthPresetsReachTheRealBuildings()
     {
-        // The zone pack keys these ways in north.overlay.json: each one takes its preset, keeps its family, opens its windows at the
+        // The zone pack keys these ways in overlay/north.d/: each one takes its preset, keeps its family, opens its windows at the
         // preset's height (the ground storey within 0.1 m) and shows the preset's wall; none of the five new keys is unknown any more.
         var real = RealCampus();
         var set = BuildingSet.For(real, 1u);
@@ -1316,10 +1316,9 @@ public sealed class BuildingsTests
         if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
         var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
         var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay"), "*.overlay.json")
-                .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
                     .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json"))).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return Campus.Gen.World.WorldModelLoader.Load(new MapId("qingshuihe"), files).World;

@@ -296,7 +296,7 @@ public static class CenterEastTune
     /// <summary>
     /// 中部科研区 monuments (MAP-QSH-CENTER-EAST §1.3–§1.5): 林为干像 and 麦克斯韦像 on the statue lawn east of 科 B/C, the
     /// equation stone beside Maxwell and the 科研楼 stele by 银杏大道 between 科 A and 科 B. The OSM points move less than
-    /// 4 m (minor, no reshape); the equation stone and Maxwell's granite apron are design additions in center-east.overlay.json.
+    /// 4 m (minor, no reshape); the equation stone and Maxwell's granite apron are design additions in overlay/center-east.d/.
     /// Facings are bearings (0 north, 90 east). The figures are sculpture volumes after 吴立人像 (18c1 review): clothes,
     /// posture and hair as masses, the face one smooth volume with no features or likeness (CORE-INDEX §3). Inscriptions wait
     /// for the scene text atlas (contract-26): the pedestal and stele faces stay blank, the equation stone carries four

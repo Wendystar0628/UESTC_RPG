@@ -95,7 +95,7 @@ public sealed class HidePartOverlayTests
         foreach (var operations in invalid)
         {
             var error = Fails(() => Load(operations));
-            Require(error.File == "overlay/test.overlay.json", "hidePart failure lost its file location.");
+            Require(error.File == "overlay/test.d/0000-fixture.json", "hidePart failure lost its file location.");
             Require(Canonical(previous) == stable, "A failed reload changed the previously published entity.");
         }
         // Loader already rejects duplicate canonical sources before overlay dispatch; the new operation also counts exact matches defensively.
@@ -107,13 +107,13 @@ public sealed class HidePartOverlayTests
     public void DifferentPartsStillShareTheExistingWholeEntityConflictRule()
     {
         var files = BaseFiles();
-        files["overlay/a.overlay.json"] = Overlay([new HidePartOp(Main, "osm:way:10", "first part")], "WP-14");
-        files["overlay/b.overlay.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "second part")], "WP-15");
+        files["overlay/a.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:10", "first part")], "WP-14");
+        files["overlay/b.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "second part")], "WP-15");
         var error = Fails(() => WorldModelLoader.Load(new("fixture"), files));
-        Require(error.Message.Contains("overlay/a.overlay.json", StringComparison.Ordinal) &&
-            error.Message.Contains("overlay/b.overlay.json", StringComparison.Ordinal) && error.Message.Contains(Main.Value, StringComparison.Ordinal),
+        Require(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) &&
+            error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains(Main.Value, StringComparison.Ordinal),
             "hidePart bypassed entity-level conflict provenance.");
-        files["overlay/b.overlay.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "same owner is not a claim")], "WP-14");
+        files["overlay/b.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "same owner is not a claim")], "WP-14");
         _ = Fails(() => WorldModelLoader.Load(new("fixture"), files));
         var claims = new Dictionary<FeatureId, WpId> { [Main] = new("WP-14") };
         var allowed = WorldModelLoader.Load(new("fixture"), files, new() { ClaimedBy = claims }).World.Features[Main];
@@ -135,7 +135,7 @@ public sealed class HidePartOverlayTests
     private static WorldModelLoadResult Load(IReadOnlyList<OverlayOp> operations, string campus = Campus)
     {
         var files = BaseFiles(campus);
-        if (operations.Count != 0) files["overlay/test.overlay.json"] = Overlay(operations, "WP-14");
+        if (operations.Count != 0) files["overlay/test.d/0000-fixture.json"] = Overlay(operations, "WP-14");
         return WorldModelLoader.Load(new("fixture"), files);
     }
     private static Dictionary<string, string> BaseFiles(string campus = Campus) => new(StringComparer.Ordinal)

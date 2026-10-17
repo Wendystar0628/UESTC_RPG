@@ -223,7 +223,7 @@ public sealed class GroundEffectiveRoadsTests
         {
             ["campus.json"] = Campus,
             ["network.json"] = JsonSerializer.Serialize(new WorldNetwork([line], [], [], [], []), ContractJson.Options),
-            ["overlay/a.overlay.json"] = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"), ops), ContractJson.Options)
+            ["overlay/a.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"), ops), ContractJson.Options)
         };
         return WorldModelLoader.Load(new("test"), files);
     }

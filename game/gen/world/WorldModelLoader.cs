@@ -132,9 +132,8 @@ public static class WorldModelLoader
         var roads = new EffectiveRoadNetwork(originalNetwork, prefix, features);
         var overlayWrites = new Dictionary<string, List<OverlayWrite>>(StringComparer.Ordinal);
         var interiorOverlays = new List<InteriorOverlayFile>();
-        var splitGroups = input.Keys.Select(FeatureOverlayShardGroup).OfType<string>().ToHashSet(StringComparer.Ordinal);
         foreach (var pair in input.Where(p => p.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .OrderBy(p => FeatureOverlayShardGroup(p.Key) ?? p.Key, StringComparer.Ordinal)
+            .OrderBy(p => FeatureOverlayShardGroup(p.Key) is { } group ? "overlay/" + group : p.Key, StringComparer.Ordinal)
             .ThenBy(p => p.Key, StringComparer.Ordinal))
         {
             if (pair.Key.StartsWith("overlay/interior/", StringComparison.Ordinal) && pair.Key.EndsWith(".interior.json", StringComparison.Ordinal))
@@ -148,14 +147,15 @@ public static class WorldModelLoader
                 }
                 interiorOverlays.Add(overlay);
             }
-            else if (FeatureOverlayShardGroup(pair.Key) is not null || IsLegacyFeatureOverlay(pair.Key))
+            else if (FeatureOverlayShardGroup(pair.Key) is not null)
             {
                 var overlay = Deserialize<OverlayFile>(pair.Key, pair.Value);
                 CheckMap(map, overlay.Map, pair.Key);
-                if (splitGroups.Contains(pair.Key) && overlay.Ops.Count != 0)
-                    throw new WorldDataException(pair.Key, "ops", $"A non-empty legacy overlay cannot coexist with split overlay directory '{pair.Key[..^".overlay.json".Length]}.d/'.");
                 ApplyOverlay(pair.Key, overlay, features, aliases, overlayWrites, options.ClaimedBy, roads);
             }
+            else if (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) &&
+                !IsDedicatedOverlayGroup(pair.Key["overlay/".Length..].Split('/')[0].Replace(".overlay.json", "", StringComparison.Ordinal)))
+                throw new WorldDataException(pair.Key, "path", "Retired feature overlay input; use overlay/<group>.d/<file>.json.");
         }
         var network = roads.Publish(features);
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
@@ -205,17 +205,7 @@ public static class WorldModelLoader
         var group = relative[..(separator - 2)];
         var child = relative[(separator + 1)..];
         return !IsDedicatedOverlayGroup(group) && child.EndsWith(".json", StringComparison.Ordinal) && !child.Contains('/')
-            ? "overlay/" + group + ".overlay.json" : null;
-    }
-
-    private static bool IsLegacyFeatureOverlay(string file)
-    {
-        if (!file.EndsWith(".overlay.json", StringComparison.Ordinal)) return false;
-        var segments = file["overlay/".Length..].Split('/');
-        if (segments.Take(segments.Length - 1).Any(segment => segment.EndsWith(".d", StringComparison.Ordinal))) return false;
-        var group = segments[0];
-        if (segments.Length == 1) group = group[..^".overlay.json".Length];
-        return !IsDedicatedOverlayGroup(group);
+            ? group : null;
     }
 
     private static void RegisterWrite(string entity, string target, string file, WpId owner,
@@ -226,7 +216,7 @@ public static class WorldModelLoader
         foreach (var write in previous)
         {
             if (write.File == file) continue;
-            // Same-owner shards retain the legacy logical file's sequential writes, without losing real error paths.
+            // Same-owner shards in one group apply sequentially, preserving real error paths.
             if (splitGroup is not null && splitGroup == FeatureOverlayShardGroup(write.File) && owner == write.Owner) continue;
             var explicitlyClaimed = claimedBy is not null && claimedBy.TryGetValue(new(entity), out var claimant)
                 && (claimant == owner || claimant == write.Owner);
