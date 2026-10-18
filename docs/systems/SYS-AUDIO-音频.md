@@ -37,7 +37,7 @@ gates: [G4, G5, G6, G14, G21]
 
 ### 0.1 接入要点
 
-- **要发出任何声音**：只经 `IAudioService`、`IAmbienceService`、`IFoleyService`；不创建 `AudioStreamPlayer*`，不调 `AudioServer.Set*`、`AddBus*`；`AudioListener3D` 只由 WP-06 的相机创建（§1）
+- **要发出任何声音**：只经 `IAudioService`、`IAmbienceService`、`IFoleyService`；不创建 `AudioStreamPlayer*`，不调 `AudioServer.Set*`、`AddBus*`；`AudioListener3D` 只由 WP-06（相机与输入） 的相机创建（§1）
 - **音频要读你的状态**（灯光通道、介质、雾幕、闪电、脚下覆盖物、门的开度）：提供只读的 C# 值，与着色器参数同源（§1）
 - **声音里要用随机**：只用 `StableHash` 和 `Rng`；不用 `AudioStreamRandomizer`，不给 `AudioServer.PlaybackSpeedScale` 赋值；消费会追加值的音频枚举时写穷举的 `switch`，`default` 拒绝或报错
 
@@ -110,7 +110,7 @@ gates: [G4, G5, G6, G14, G21]
 
 ## 7 设置
 
-设置卡加一页"声音"（UI-NAV §3.5；WP-35 做）。设置存进 `user://settings.json` 的 `audio` 节，文件的读写规则在 SYS-SAVE-FORMAT §3；开机时音频要比界面更早拿到音量，所以设置文件在启动最早期读入，音量先于界面应用。
+设置卡加一页"声音"（UI-NAV §3.5；WP-35（界面） 做）。设置存进 `user://settings.json` 的 `audio` 节，文件的读写规则在 SYS-SAVE-FORMAT §3；开机时音频要比界面更早拿到音量，所以设置文件在启动最早期读入，音量先于界面应用。
 
 设置项：总音量与环境 / 动作 / 界面 / 音乐四组音量；界面音效开关、悬停与聚焦音（默认关）；突发声音（雷、钟、孔雀）正常 / 柔和（−8 dB、更远）/ 关；安静模式（散布密度 × 0.5，人迹全关，不报时、不放广播，雷声柔和）；单声道；窗口在后台时照常（默认）/ 降低 / 静音；输出设备。默认值以 `AudioSettings` 为准。单声道、突发声音、安静模式作为无障碍项登记，"声音"页要能用键盘走完（G14）。画面设置不影响声音。
 

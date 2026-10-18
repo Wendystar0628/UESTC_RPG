@@ -28,7 +28,7 @@ gates: [G21]
 
 ### 0.1 接入要点
 
-- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 WP-40 经 `ILightningFeed` 发事件（§3）
+- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 WP-40（全日天空） 经 `ILightningFeed` 发事件（§3）
 - **会移动的发声物**（天鹅、猫、鸽群，主线之后）：调 `AddDynamic`、`MoveDynamic`，卸载与切图时 `RemoveDynamic`（§1.2）
 - **部件自带声音**（主线之后）：返回 `SoundSocketDecl`，区域包不另摆发声器；**批量生成发声器**：写带 `[AmbientEmitter]` 的来源，ID 以 `amb:` 开头（§1.2）
 

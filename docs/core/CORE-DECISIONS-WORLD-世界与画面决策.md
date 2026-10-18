@@ -43,7 +43,7 @@ gates: []
 | D-009 | 视觉精度分两层：底线（比例对、有厚度倒角和收边、没有光秃拉伸体块、不穿帮不跳变）对任何位置、任何距离都成立，含只有飞行才到的地方；细节密度按精度区 K1–K5 分级，越常被近看越密；外围按距离环分级，关着的楼只做外壳、窗卡和简化室内 | 全部建模包 | INV-11；ART-FIDELITY §0；WLD-OUTSKIRTS-BAND §2.1；WLD-INTERIORS-ACCESS §3 | 待原型验证（方向已定，判定距离和分数线在 P0 校准） |
 | D-010 | RPG（入学到毕业）方向暂缓，只留架构接口（存档段与迁移、地图服务、解锁策略 `proximity`、多地图、门的锁状态），重新提出之前不展开设计 | 全项目 | ENG-ROADMAP；ENG-ARCH §7 | 生效 |
 | D-011 | 作品名《电光年华》（英文 *Electric Years*）；默认状态的名字是"落金初灯" | 全项目 | CORE-INDEX §2；SYS-TIME §0 | 生效 |
-| D-186 | 共享单车：本期载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；首版只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归新包 WP-55，按 D-183 排在建模包之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1；ENG-WP-LIST §1 | 待原型验证 |
+| D-186 | 共享单车：本期载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；首版只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归新包 WP-55（共享单车运行与取还），按 D-183 排在建模包之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1；ENG-WP-LIST §1 | 待原型验证 |
 
 ## 2 世界与地图
 
@@ -72,7 +72,7 @@ gates: []
 | D-032 | 展陈不出现人物肖像，只用实物、文献、模型、风景照；实验室门牌的楼层单位用真实名称、房间级用通用名称；主楼一楼按柱厅做主题墙，不用《沁园春·雪》书法墙 | 开放室内 | WLD-INTERIORS-BUILD §4；MAP-QSH-INTERIORS §1 | 生效 |
 | D-033 | 观景点共 P00–P23，其中 P16–P23 以 WLD-INTERIORS为准；再新增的点位从 P24 起编 | 点位 | WLD-INTERIORS-ACCESS §1；UI-NAV-WAYPOINTS §1；CORE-CONVENTIONS §3.2 | 生效 |
 | D-157 | 外围分层编号 O0–O3：O0 街道带、O1 外围街区、O2 雾中楼顶、O3 远景卡片与雪山；E 只指审查视角 E1–E7 | 全项目 | WLD-OUTSKIRTS-BAND §2.2；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
-| D-164 | 开放清单 `interiors.json` 由主代理管：schema 与格式归 WP-51，条目由负责包经回报提交，增删由主代理审批 | 开放室内 | ENG-WP §2 第 4 条；SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
+| D-164 | 开放清单 `interiors.json` 由主代理管：schema 与格式归 WP-51（室内生成器与壳体），条目由负责包经回报提交，增删由主代理审批 | 开放室内 | ENG-WP §2 第 4 条；SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
 | D-180 | 地形分层：清水河不做平地，主动设计有层次的地形（平缓底板、少量强垂直、遮挡与揭示），与真实地形不符也可以；全图高差约 −5…+10 m；地形是覆盖层里的矢量地形操作合成的确定性高度函数，竖直落差一律做成实体，楼坐在垫层上，每个水体有自己的常水位 | 清水河 | WLD-TERRAIN §0；MAP-QSH-TERRAIN；ENG-ARCH §3 | 待原型验证 |
 | D-185 | 空地按游戏设计理念组织，不照校内实际布局：开阔草坪不默认中心留白；较大的空地由所在区包归为功能开敞面（保持空旷但说明用途）或过渡绿地（重组，至少有远处参照、停留点和走动中的发现，不堆设施）；重组的草丘、浅洼登记在本区地形覆盖层；区包管本区空地，无主空地的草丘、浅洼由所属区包代为登记 | 清水河 | MAP-QSH-ADDITIONS §0；WLD-VEGETATION §3.2；WLD-VEGETATION §3.4；ENG-WP-LIST §1 | 生效 |
 
@@ -98,7 +98,7 @@ gates: []
 | D-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；SYS-TIME-LOOK §2 | 生效 |
 | D-050 | 阴雨天两阶不丢：投影强度乘 (1 − 0.8 × 阴度)，白天不低于 0.2 | 天气 | SYS-WEATHER §6；ENG-PERF-LIGHT §2.1 | 生效 |
 | D-051 | 所有切换都自然过渡、不硬切；每种时刻 × 季节 × 天气的组合都要好看 | 全项目 | INV-8；SYS-TIME §4；SYS-WEATHER §7 | 生效 |
-| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（WP-32 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
+| D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（WP-32（设备分档、画面设置与自适应） 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
 | D-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；SYS-TIME-LOOK §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |
 
 ## 4 美术风格

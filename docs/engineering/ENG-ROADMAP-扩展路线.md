@@ -58,7 +58,7 @@ gates: [G4, G5, G20]
 
 ### 3.1 清单
 
-以下 6 条已采纳（D-160），由 WP-00 写进契约 v1 候选；契约以 `game/contracts/` 为准。
+以下 6 条已采纳（D-160），由 WP-00（契约、桩与拆除） 写进契约 v1 候选；契约以 `game/contracts/` 为准。
 
 1. **规则集**：契约 `RulesetId`、`WorldControlMask`、`InteractionRule`、`RulesetDescriptor`、`IRuleset`（Kernel 服务，只读，只有新游戏和读档能切换）；数据 `game/data/rulesets/sightseeing.json`，字段含 `ViewModes`、`WorldControls`、`UnlockPolicy`、`Incidents`、`CinematicStates` 与内容规则。新游戏先定规则集再调各段 `CreateDefault`；读档先按 meta 的 `Ruleset` 定规则集再进 `World` 阶段。
 2. **观者状态**：契约 `IObserverState`（脚位、眼位、朝向、所在空间、观察模式）；旁观时是镜头位置，行走时是行走控制器的物理体。第一人称下观者与镜头重合，第三人称后分开。

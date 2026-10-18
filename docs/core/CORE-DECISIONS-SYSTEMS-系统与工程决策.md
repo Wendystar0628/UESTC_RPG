@@ -134,16 +134,16 @@ gates: []
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
-| D-131 | 工作包以 ENG-WP 为准（含 WP-54a、54b） | 全项目 | ENG-WP-LIST §1 | 生效 |
+| D-131 | 工作包以 ENG-WP 为准（含 WP-54a（角色运行时）、54b） | 全项目 | ENG-WP-LIST §1 | 生效 |
 | D-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
 | D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，工作包以 ENG-WP 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1；ENG-WP-LIST §1 | 生效 |
 | D-134 | 契约分批冻结：某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结，之后只增不改；改契约、全局着色器参数、着色器文件、程序集引用，一律向主代理申请 | 全项目 | WF-BUILD §1；ENG-WP §2 第 1 条；ENG-ARCH §5 | 生效 |
 | D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
 | D-136 | 流式拆成两步：`Stream`（−500）只做选级与请求，`StreamMount`（900）做挂载与碰撞入树 | 内核 | ENG-PERF-STREAM §1；ENG-ARCH §3 | 生效 |
 | D-137 | 地图 ID 一律写 `MapId("qingshuihe")`，不用 "qsh"；实体 ID 的 `qsh:` 前缀是 OSM 数据的写法，不是地图 ID | 全项目 | SYS-MAPS §1.1；SYS-ATLAS §2；CORE-CONVENTIONS §3.1 | 生效 |
-| D-138 | 服务命名：`IMapService` 管地图加载与切换（WP-46），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（WP-48），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
+| D-138 | 服务命名：`IMapService` 管地图加载与切换（WP-46（地图服务与多地图）），`IAtlasService` 管平面地图的标记、解锁、追踪与传送（WP-48（平面地图、标记与传送）），两者不得混名 | 全项目 | ENG-ARCH §3 | 生效 |
 | D-139 | 按图的数据一律从 `IMapContext` 取，通用代码里不写死数据路径、实体 ID 和地图 ID | 全部包 | SYS-MAPS §6 | 生效 |
-| D-140 | 门的状态机在 `Medium` 帧步（WP-07），运行时门体归 WP-43；触发距离与开关速度取值以细则为准 | 开放室内 | WLD-INTERIORS-ACCESS §2.1；ENG-ARCH §3 | 生效 |
+| D-140 | 门的状态机在 `Medium` 帧步（WP-07（介质呈现与室内运行时）），运行时门体归 WP-43（碰撞代理生成与流式加载）；触发距离与开关速度取值以细则为准 | 开放室内 | WLD-INTERIORS-ACCESS §2.1；ENG-ARCH §3 | 生效 |
 | D-141 | 开放室内的室内包与碰撞包也是本机烘焙，进本图的本机缓存，不另设 PCK | 打包 | SYS-MAPS §1.2；ENG-PERF-STREAM §4；WLD-INTERIORS-BUILD §1.1 | 生效 |
 | D-142 | 白名单着色器含 `ui_panel`、`ui_screen`、`cine_cloud`、`map_base`、`precip`；外围不新增着色器 | 渲染 | ENG-PERF §1.4 | 生效 |
 | D-143 | 全局参数（含 `map_rect`、`edge_fog`、`shaft`、`interior_light` 等）一律登记在 ENG-PERF §1.5 | 渲染 | ENG-PERF §1.5；ENG-WP §2 第 1 条 | 生效 |
