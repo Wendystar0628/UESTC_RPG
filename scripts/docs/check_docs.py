@@ -119,8 +119,13 @@ import gen_index
 sec_path = os.path.join(D, 'SECTIONS.md')
 if not os.path.exists(sec_path) or open(sec_path, 'rb').read().decode('utf-8') != gen_index.build_sections():
     bad.append(('SECTIONS', 'stale', '重跑 scripts/docs/gen_index.py'))
+# 路线表的工作包部分由 ownership.json 生成：它有未提交改动时，ROUTES 由改它的一方在同一提交里重生成，这里不判过期
 rt_path = os.path.join(D, 'ROUTES.json')
-if not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
+import subprocess
+own_dirty = subprocess.run(['git', '-C', ROOT, 'status', '--porcelain', '--', 'ownership.json'], capture_output=True, text=True).stdout.strip() != ''
+if own_dirty:
+    print('ROUTES\t跳过\townership.json 有未提交改动：ROUTES 和它同一提交重生成，别单独提交 ROUTES.json')
+elif not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
     bad.append(('ROUTES', 'stale', '重跑 scripts/docs/gen_index.py'))
 
 # 体量上限（WF-DOC §5）：只列出，不算 problems；量法只在 doc_size.py
