@@ -119,12 +119,13 @@ import gen_index
 sec_path = os.path.join(D, 'SECTIONS.md')
 if not os.path.exists(sec_path) or open(sec_path, 'rb').read().decode('utf-8') != gen_index.build_sections():
     bad.append(('SECTIONS', 'stale', '重跑 scripts/docs/gen_index.py'))
+notes = []   # 不算问题的说明，打印在汇总行之后（第一行留给汇总，巡逻按它读）
 # 路线表的工作包部分由 ownership.json 生成：它有未提交改动时，ROUTES 由改它的一方在同一提交里重生成，这里不判过期
 rt_path = os.path.join(D, 'ROUTES.json')
 import subprocess
 own_dirty = subprocess.run(['git', '-C', ROOT, 'status', '--porcelain', '--', 'ownership.json'], capture_output=True, text=True).stdout.strip() != ''
 if own_dirty:
-    print('ROUTES\t跳过\townership.json 有未提交改动：ROUTES 和它同一提交重生成，别单独提交 ROUTES.json')
+    notes.append('ROUTES\t跳过\townership.json 有未提交改动：ROUTES 和它同一提交重生成，别单独提交 ROUTES.json')
 elif not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
     bad.append(('ROUTES', 'stale', '重跑 scripts/docs/gen_index.py'))
 
@@ -132,6 +133,8 @@ elif not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') !
 import doc_size
 over = [(code, where, n) for p in doc_size.docs_in() for code, _, ov in [doc_size.check(p)] for where, n, _cap in ov]
 print('docs', len(docs), 'problems', len(bad), dict(Counter(b[1] for b in bad)))
+for n in notes:   # 说明走 stderr：stdout 第一行之后每行都算问题（巡逻按这个约定读）
+    print(n, file=sys.stderr)
 for b in bad:
     print('%s\t%s\t%s' % b)
 if over:
