@@ -544,9 +544,4 @@ public sealed class MapServiceTests
         }
         public bool IsLegal(Pose pose, bool outsideBuffer) => Allowed(pose);
     }
-    private sealed class TestRuleset : IRuleset
-    {
-        public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly, ViewMode.Walk], WorldControlMask.All, "all-unlocked", [], []);
-        public long Rev => 1;
-    }
 }

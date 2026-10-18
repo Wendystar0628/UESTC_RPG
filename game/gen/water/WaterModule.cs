@@ -15,7 +15,7 @@ public sealed class WaterModule : IContentModule
 
     public IReadOnlyList<Claim> Claims => [];
 
-    // ENG-BUDGET water row (budgets.json "water"): 50 k main triangles, 45 draw calls, no shadow casting.
+    // ENG-BUDGET water budget: 50 k main triangles, 45 draw calls, no shadow casting.
     public ModuleBudget Budget { get; } = new(50_000, 50_000, 45);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx) => Surfaces(ctx).Tiles();

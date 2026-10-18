@@ -1,0 +1,95 @@
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Campus.Contracts;
+using Campus.Contracts.Audio;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
+using Campus.Gen.Parts.Street;
+using Campus.Gen.World;
+using GdUnit4;
+
+namespace Campus.Gen.Furniture.Tests;
+
+using static Campus.Gen.Furniture.Tests.FurnitureTestSupport;
+
+[TestSuite]
+public sealed class AnchorFacingTests
+{
+    [TestCase]
+    public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
+    {
+        // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
+        // edge and its face towards the paving, and the layout diagnosticss the yaw (and centre) the anchor data should take over. Judged on
+        // a synthetic anchor: the first kiosk of the data moved to a grass notch inside the plaza near (120, -65) (A04's old spot).
+        var world = World.Value;
+        var site = new StreetSite(world);
+        var spot = new Vector2(120f, -65f);
+        Check(site.PavingEdgeFacing(spot) is { Gap: > 1f }, "the notch is not off the paving any more: pick another spot");
+        var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && Text(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First();
+        var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
+        var moved = original with { Geometry = new PolygonGeometry(new PolygonRings(ring, [])), Props = Edit(original.Props!.Value, "yawDeg", 90f) };
+        var layout = Build(new FeatureWorld(world, moved));
+        var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
+        var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
+        Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; diagnostics: {layout.Diagnostics.Single(d => d.Feature == moved.Id && d.Code == "wp13.anchor.turned").Message}");
+        var facing = Front(item.Part.At);
+        Check(Vector2.Dot(facing, FurniturePlanner.Facing(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f, "the diagnostic does not give the placement");
+        Check(Vector2.Dot(facing, FurniturePlanner.Facing(90f)) < 0.99f, "the yaw of the data stands, though the apron was off the paving");
+        var apron = item.Pad ?? throw new InvalidOperationException("no apron");
+        var right = new Vector2(-facing.Y, facing.X);
+        // The whole outline of the apron is on paving.
+        for (var u = -apron.HalfWidth; u <= apron.HalfWidth + 1e-3f; u += 0.25f)
+            foreach (var v in new[] { -apron.HalfDepth, apron.HalfDepth })
+                Check(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }, $"the apron's outline leaves the paving at ({u:F2}, {v:F2})");
+        for (var v = -apron.HalfDepth; v <= apron.HalfDepth + 1e-3f; v += 0.25f)
+            foreach (var u in new[] { -apron.HalfWidth, apron.HalfWidth })
+                Check(site.PavingEdgeFacing(item.Anchor + right * u + facing * v) is { Gap: <= 0f }, $"the apron's side leaves the paving at ({u:F2}, {v:F2})");
+        // The back edge runs along the paving edge, 0.5 m inside it: stepping 0.7 m behind the back edge's middle reaches 0.2 m past the edge.
+        var back = item.Anchor - facing * apron.HalfDepth;
+        var behind = site.PavingEdgeFacing(back - facing * (FurnitureStyle.ApronPavingClear + 0.2f)) ?? throw new InvalidOperationException("no paving edge behind the kiosk");
+        Check(behind.Gap is > 0.05f and < 0.35f, $"the paving edge lies {behind.Gap + FurnitureStyle.ApronPavingClear:F2} m behind the back edge, not 0.5 m");
+        Check(Vector2.Dot(behind.Inward, facing) > 0.98f, "the back edge is not parallel to the paving edge, or the face looks at it");
+    }
+
+    [TestCase]
+    public void AnchorsAndEntrancesFaceTheirData()
+    {
+        var world = World.Value;
+        var layout = Build(world);
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
+        {
+            if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)
+            {
+                Check(layout.Diagnostics.Any(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed"), $"{feature.Id.Value} missing without a diagnostic message");
+                continue;
+            }
+            var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
+            var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+            // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
+            Check(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + 0.1f, $"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint");
+            var yaw = feature.Props!.Value.GetProperty("yawDeg").GetSingle();
+            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} does not face {yaw}° (or the yaw its diagnostic message gives)");
+        }
+        foreach (var door in world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open))
+        {
+            var outward = FurniturePlanner.Facing(door.YawDeg);
+            var mat = layout.Items.Single(i => i.Key == $"door:{door.Id}:mat");
+            var lamp = layout.Items.Single(i => i.Key == $"door:{door.Id}:lamp");
+            Check(Vector2.Dot(mat.Anchor - new Vector2(door.Center.X, door.Center.Z), outward) > 0.4f, $"{door.Id}: mat not in front of the door");
+            // On the entrance floor, never below the paving (flat terrain: 0.15 m).
+            var floor = MathF.Max(door.Center.Y, FurnitureStyle.PavingLift);
+            Check(MathF.Abs(mat.Part.At.M42 - floor) < 1e-4f && lamp.Part.At.M42 > floor + 2f, $"{door.Id}: kit off the entrance floor");
+            Check(Vector2.Dot(Front(lamp.Part.At), outward) > 0.999f && lamp.Emitters.Single().Channel == StreetStyle.FirstGroup, $"{door.Id}: lamp");
+        }
+        // A building whose props another package claims keeps its own kit.
+        var claimed = world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).First(e => e.Open);
+        var owner = world.Features.Keys.First(f => world.Interiors.Get(f)?.Entrances.Any(e => e.Id == claimed.Id) == true);
+        var building = world.Interiors.Get(owner)!.Feature;
+        var skipped = Build(world, (f, a) => f == building && a == Aspects.Props ? new WpId("WP-18") : null);
+        Check(!skipped.Items.Any(i => i.Key.StartsWith($"door:{claimed.Id}:", StringComparison.Ordinal)), "kit placed on a claimed building");
+        Check(skipped.Count(FurnitureKind.EntranceMat) == layout.Count(FurnitureKind.EntranceMat) - world.Interiors.Get(owner)!.Entrances.Count(e => e.Open), "claim skipped other kits");
+    }
+}

@@ -30,16 +30,3 @@ internal sealed class TestCollisionWorld : ICollisionWorld
     public SweepHit? Sweep(Vector3 from, Vector3 to, float radius, float height) => throw new NotSupportedException();
     public SupportHit? SupportY(float x, float z, float yHint) => throw new NotSupportedException();
 }
-
-internal sealed class UnavailableMapService : IMapService
-{
-    public long Rev => 0;
-    public MapId Default => default;
-    public MapId Current => default;
-    public IReadOnlyList<MapDescriptor> Maps => [];
-    public IReadOnlyList<MapVisit> Visits => [];
-    public IMapContext? Context => null;
-    public IMapTransition? Transition => null;
-    public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-    public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
-}

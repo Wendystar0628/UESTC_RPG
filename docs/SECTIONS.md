@@ -1304,15 +1304,15 @@
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-`docs/systems/SYS-MAPS-多地图.md` · 10.7k 字 · 按图数据与全局的划分、map_rect、单图半径等多图约定；先卸后装的切图运行时在主线之后
+`docs/systems/SYS-MAPS-多地图.md` · 10.6k 字 · 按图数据与全局的划分、map_rect、单图半径等多图约定；先卸后装的切图运行时在主线之后
 关键词：多地图、换图、切图、地图服务、按图数据、先卸后装、同图重载、天气按图、单图半径、本机烘焙缓存、IMapService、IMapAware、MapScope、MapDescriptor、map.json、map_rect
 
 - SYS-MAPS §0 结论 · L21 · 1.3k
   - ★ SYS-MAPS §0.1 接入要点 · L32 · 787
 - SYS-MAPS §1 数据归属 · L42 · 1.2k
-  - SYS-MAPS §1.1 按图与全局 · L44 · 729
+  - SYS-MAPS §1.1 按图与全局 · L44 · 711
   - SYS-MAPS §1.2 本机烘焙缓存与启动数据 · L62 · 436
-- SYS-MAPS §2 地图描述 `map.json` · L70 · 706
+- SYS-MAPS §2 地图描述 `map.json` · L70 · 693
 - SYS-MAPS §3 切换 · L82 · 2.4k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L86 · 151
   - SYS-MAPS §3.2 八步（切图部分主线之后） · L90 · 1.1k
@@ -1323,7 +1323,7 @@
 - SYS-MAPS §5 相机、行走与安全点（主线之后） · L150 · 429
 - SYS-MAPS §6 归属与 `MapScope` · L161 · 600
 - SYS-MAPS §7 全局参数 `map_rect` · L169 · 691
-- SYS-MAPS §8 内存、包体与单图半径 · L179 · 344
+- SYS-MAPS §8 内存、包体与单图半径 · L179 · 331
 - SYS-MAPS §9 以后的方向 · L185 · 184
 - SYS-MAPS §10 待验证（P0） · L189 · 265
 
@@ -1742,7 +1742,7 @@
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
-`docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md` · 4.4k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
+`docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md` · 4.3k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
 - ENG-BUDGET-LOD §0 结论 · L22 · 609
@@ -1767,16 +1767,16 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.3k 字 · 额度的数值家：设备档与预设的预算口径、GPU 帧时分配、额度总账、怎么测；细节级别、速度律与推送硬规则在子文档
-关键词：性能预算、额度、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与推送硬规则在子文档
+关键词：性能预算、额度、额度分配、budgets.json、KernelBudgets、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
 
-- ENG-BUDGET §0 结论 · L21 · 778
-  - ★ ENG-BUDGET §0.1 接入要点 · L35 · 192
-- ENG-BUDGET §1 总体要点 · L41 · 346
+- ENG-BUDGET §0 结论 · L21 · 770
+  - ★ ENG-BUDGET §0.1 接入要点 · L35 · 187
+- ENG-BUDGET §1 总体要点 · L41 · 347
 - ENG-BUDGET §2 预设与设备档的预算 · L48 · 1.5k
-- ENG-BUDGET §3 额度总账（`budgets.json`） · L79 · 305
+- ENG-BUDGET §3 额度怎么分 · L79 · 393
 - ENG-BUDGET §4 怎么测 · L87 · 195
-- ENG-BUDGET §5 待验证（P0） · L91 · 197
+- ENG-BUDGET §5 待验证（P0） · L91 · 196
 
 ## ENG-CODE · 代码结构准则
 
@@ -1819,7 +1819,7 @@
 
 ## ENG-GATES · 验收：测试三档与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 4.8k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 4.9k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
 - ENG-GATES §0 结论 · L21 · 808
@@ -1868,12 +1868,12 @@
 - ENG-PERF-STREAM §0 结论 · L22 · 610
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L30 · 216
 - ENG-PERF-STREAM §1 流式加载 · L36 · 1.4k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L38 · 614
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L38 · 615
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L46 · 474
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L59 · 168
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L63 · 179
-- ENG-PERF-STREAM §2 主线程与 C# · L67 · 327
-- ENG-PERF-STREAM §3 内存与显存 · L73 · 274
+- ENG-PERF-STREAM §2 主线程与 C# · L67 · 319
+- ENG-PERF-STREAM §3 内存与显存 · L73 · 264
 - ENG-PERF-STREAM §4 安装包与磁盘布局 · L77 · 155
 - ENG-PERF-STREAM §5 待验证（P0） · L81 · 79
 
@@ -1923,14 +1923,14 @@
 
 ## ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-`docs/engineering/ENG-WP-工作包派工单.md` · 6.3k 字 · 56 个工作包的划分、开发阶段与闸口、开工波次与推送顺序，主代理的工程维护事项；包表与子包拆法在 ENG-WP-LIST
+`docs/engineering/ENG-WP-工作包派工单.md` · 6.2k 字 · 56 个工作包的划分、开发阶段与闸口、开工波次与推送顺序，主代理的工程维护事项；包表与子包拆法在 ENG-WP-LIST
 关键词：工作包、派工单、派工、开工波次、推送顺序、依赖、主线版、主线可见结果、后置细节、阶段与闸口、主线闸口、D0、阶段名 P0–P3、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、目标框架
 
-- ENG-WP §0 结论 · L24 · 1.0k
-  - ★ ENG-WP §0.1 接入要点 · L37 · 326
+- ENG-WP §0 结论 · L24 · 994
+  - ★ ENG-WP §0.1 接入要点 · L37 · 293
 - ENG-WP §1 阶段与闸口 · L44 · 2.4k
   - ENG-WP §1.1 开工波次与推送顺序 · L66 · 1.0k
-- ENG-WP §2 主代理的工程维护事项 · L82 · 1.2k
+- ENG-WP §2 主代理的工程维护事项 · L82 · 1.1k
 - ENG-WP §3 待验证（P0） · L93 · 425
 
 ## TOOL-PREVIEW · 内容预览

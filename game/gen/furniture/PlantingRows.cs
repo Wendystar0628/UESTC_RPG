@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
 
 namespace Campus.Gen.Furniture;
@@ -25,61 +25,29 @@ internal static class PlantingRows
     {
         if (inputs is null || !inputs.TryGetValue(S.PlantingKey, out var bytes))
             return (rules, [Warn(MissingCode, $"Build input {S.PlantingKey} is not available; tree rows fall back to FurnitureStyle.Roads.")]);
-        JsonDocument document;
-        try { document = JsonDocument.Parse(bytes); }
-        catch (JsonException) { return (rules, [Warn(UnreadableCode, $"Build input {S.PlantingKey} is not valid JSON; tree rows fall back to FurnitureStyle.Roads.")]); }
-        using (document)
+        PlantingFile file;
+        try { file = PlantingJson.Read(bytes.Span); }
+        catch (InvalidDataException error) { return (rules, [Warn(UnreadableCode, $"Build input {S.PlantingKey} is unreadable ({error.Message}); tree rows fall back to FurnitureStyle.Roads.")]); }
+        var resolved = new List<RoadRule>();
+        var diagnostics = new List<BuildDiagnostic>();
+        foreach (var rule in rules)
         {
-            if (document.RootElement is not { ValueKind: JsonValueKind.Object } root || !root.TryGetProperty("roads", out var roads) || roads.ValueKind != JsonValueKind.Array)
-                return (rules, [Warn(UnreadableCode, $"Build input {S.PlantingKey} has no roads list; tree rows fall back to FurnitureStyle.Roads.")]);
-            var resolved = new List<RoadRule>();
-            var diagnostics = new List<BuildDiagnostic>();
-            foreach (var rule in rules)
+            var offsets = file.Roads.FirstOrDefault(r => r.Name == rule.Name) is { } road ? Offsets(road) : null;
+            if (offsets is null)
             {
-                var offsets = Find(roads, rule.Name) is { } road ? Offsets(road) : null;
-                if (offsets is null)
-                {
-                    diagnostics.Add(Warn(RoadCode, $"Build input {S.PlantingKey} has no readable tree rows for road {rule.Name}; its rows fall back to FurnitureStyle.Roads."));
-                    resolved.Add(rule);
-                }
-                else resolved.Add(rule with { Rows = Array.AsReadOnly(offsets) });
+                diagnostics.Add(Warn(RoadCode, $"Build input {S.PlantingKey} has no readable tree rows for road {rule.Name}; its rows fall back to FurnitureStyle.Roads."));
+                resolved.Add(rule);
             }
-            return (Array.AsReadOnly([.. resolved]), diagnostics.AsReadOnly());
+            else resolved.Add(rule with { Rows = Array.AsReadOnly(offsets) });
         }
+        return (Array.AsReadOnly([.. resolved]), diagnostics.AsReadOnly());
     }
 
-    /// <summary>The road entry of the planting list with this name (the first one).</summary>
-    private static JsonElement? Find(JsonElement roads, string name)
+    /// <summary>The offsets of a road's <c>rows</c>, then its <c>band</c> when it has one; null when an offset is negative or not finite.</summary>
+    private static float[]? Offsets(RoadWire road)
     {
-        foreach (var road in roads.EnumerateArray())
-            if (road.ValueKind == JsonValueKind.Object && road.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String && n.GetString() == name)
-                return road;
-        return null;
-    }
-
-    /// <summary>The offsets of a road's <c>rows</c>, then its <c>band</c> when it has one; null when the entry has no rows list or a bad offset.</summary>
-    private static float[]? Offsets(JsonElement road)
-    {
-        if (!road.TryGetProperty("rows", out var rows) || rows.ValueKind != JsonValueKind.Array) return null;
-        var offsets = new List<float>();
-        foreach (var row in rows.EnumerateArray())
-        {
-            if (!Offset(row, out var offset)) return null;
-            offsets.Add(offset);
-        }
-        if (road.TryGetProperty("band", out var band) && band.ValueKind != JsonValueKind.Null)
-        {
-            if (!Offset(band, out var offset)) return null;
-            offsets.Add(offset);
-        }
-        return [.. offsets];
-    }
-
-    private static bool Offset(JsonElement element, out float offset)
-    {
-        offset = 0f;
-        return element is { ValueKind: JsonValueKind.Object } && element.TryGetProperty("offset", out var value) && value.ValueKind == JsonValueKind.Number
-            && value.TryGetSingle(out offset) && float.IsFinite(offset) && offset >= 0f;
+        float[] offsets = [.. road.Rows.Select(row => row.Offset), .. road.Band is { } band ? new[] { band.Offset } : []];
+        return offsets.All(offset => float.IsFinite(offset) && offset >= 0f) ? offsets : null;
     }
 
     private static BuildDiagnostic Warn(string code, string message) => new(DiagnosticLevel.Warning, code, message);

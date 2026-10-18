@@ -1,0 +1,223 @@
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Campus.Contracts;
+using Campus.Contracts.Audio;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
+using Campus.Gen.Parts.Street;
+using Campus.Gen.World;
+using GdUnit4;
+
+namespace Campus.Gen.Furniture.Tests;
+
+using static Campus.Gen.Furniture.Tests.FurnitureTestSupport;
+
+[TestSuite]
+public sealed class FurnitureStreetLayoutTests
+{
+    [TestCase]
+    public void TheMainRoadAndTwoSecondaryRoadsAreFurnishedDeterministically()
+    {
+        var a = Build(World.Value);
+        var b = Build(World.Value);
+        var lamps = a.Items.Where(i => i.Kind == FurnitureKind.StreetLamp).ToList();
+        var disc = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 0);
+        var arm = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 1);
+        Console.WriteLine("furniture: " + string.Join(", ", Enum.GetValues<FurnitureKind>().Select(k => $"{k} {a.Count(k)}")) + $"; disc {disc}, arm {arm}");
+        Check(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params))), "two builds differ");
+        Check(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count, "duplicate keys");
+        // The avenue is about 1.43 km: 52 slots a side at 27.5 m, less junctions and crossings; the two secondary roads 0.69 and 0.62 km at 35 m.
+        Check(disc is >= 70 and <= 104, $"{disc} avenue lamps");
+        Check(arm is >= 20 and <= 36, $"{arm} secondary lamps");
+        // Rest stops only where a walk takes a bench (Opus review 12:15): the avenue's north half and Shuisha Road's walk.
+        Check(a.Count(FurnitureKind.Bench) >= 8, $"{a.Count(FurnitureKind.Bench)} benches");
+        // A bin at every other rest stop along a road; node benches (on the plazas) come without.
+        var rest = a.Items.Count(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal));
+        // The design walks (0h) reach the layout through WP-08's effective network: say how many benches line one.
+        var site = new StreetSite(World.Value);
+        var onDesign = a.Items.Where(i => i.Kind == FurnitureKind.Bench && site.PavingEdgeFacing(i.Anchor + Front(i.Part.At) * (((FurnitureParams)i.Part.Params).Depth * 0.5f + 0.4f)) is { Road: { } w } && w.Id.Value.StartsWith("design:", StringComparison.Ordinal)).ToList();
+        Console.WriteLine($"benches facing a design walk: {onDesign.Count} " + string.Join(", ", onDesign.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
+        Check(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest, "a bin at every other rest stop");
+        // SYS-ATLAS: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
+        // moving an anchor (WP-48c) never needs a new number here.
+        var landings = AnchorLandings(World.Value);
+        var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
+        var posts = landings.Count(l => l.Form == "post" && l.Landing == Landing.Open);
+        Check(kiosks + posts > 0, "no anchor lands on open ground");
+        Check(a.Count(FurnitureKind.AtlasKiosk) == kiosks && a.Count(FurnitureKind.AtlasPost) == posts,
+            $"{a.Count(FurnitureKind.AtlasKiosk)} kiosks and {a.Count(FurnitureKind.AtlasPost)} posts for {kiosks} and {posts} anchors on open ground");
+        Check(a.Count(FurnitureKind.BusStop) == 2, $"{a.Count(FurnitureKind.BusStop)} shuttle stops");
+        var open = World.Value.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open).Select(e => e.Id).Distinct().Count();
+        Check(new[] { FurnitureKind.EntranceMat, FurnitureKind.OpenSign, FurnitureKind.EntranceLamp }.All(k => a.Count(k) == open), $"one kit at each of {open} open entrances");
+    }
+
+    [TestCase]
+    public void BenchesLineAWalkAndBinsStandApart()
+    {
+        // Opus review 12:15: a bench lines a walk and faces it, its bay joined to the walk, a passage of 1.2 m left in front; it
+        // never faces a carriageway or sits in the strip between the kerb and the tree rows. Its bin stands 2–4 m away on its own bay.
+        var world = World.Value;
+        var layout = Build(world);
+        var walks = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian").ToList();
+        var lanes = world.Network.Roads.Where(Carriageway).ToList();
+        // Rest stops along walks; a rest node's benches (key "node:") stand at a plaza or walk end and are judged by their own test.
+        var benches = layout.Items.Where(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal)).ToList();
+        foreach (var item in benches.Concat(layout.Items.Where(i => i.Kind == FurnitureKind.Bin)))
+        {
+            var p = (FurnitureParams)item.Part.Params;
+            var facing = Front(item.Part.At);
+            var front = item.Anchor + facing * (p.Depth * 0.5f);
+            var walk = walks.MinBy(w => Distance(front, w));
+            var edge = Distance(front, walk!) - Half(walk!);
+            Check(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f, $"{item.Key}: front {edge:F2} m off its walk's edge");
+            var toWalk = Vector2.Normalize(Nearest(front, walk!) - item.Anchor);
+            Check(Vector2.Dot(toWalk, facing) > 0.97f, $"{item.Key} does not face its walk");
+            Check(2f * Half(walk!) - FurnitureStyle.FeetReach >= FurnitureStyle.PassClear, $"{item.Key}: walk too narrow to pass");
+            var pad = item.Pad ?? throw new InvalidOperationException($"{item.Key} has no bay");
+            var padFront = new Vector2(pad.Frame.M41, pad.Frame.M43) + facing * pad.HalfDepth;
+            Check(Distance(padFront, walk!) < Half(walk!), $"{item.Key}: its bay does not reach the walk");
+            Check(MathF.Abs(pad.Top - item.Part.At.M42) < 1e-4f, $"{item.Key} is off its bay");
+            var radius = p.Depth * 0.5f;
+            foreach (var lane in lanes)
+                Check(Distance(item.Anchor, lane) - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f, $"{item.Key} stands in the kerbside strip of {lane.Id.Value}");
+            if (item.Kind != FurnitureKind.Bench) continue;
+            for (var d = 0f; d <= FurnitureStyle.FaceClear; d += 0.5f)
+                Check(lanes.All(l => Distance(front + facing * d, l) >= Half(l)), $"{item.Key} faces a carriageway {d:F1} m ahead");
+        }
+        foreach (var bin in layout.Items.Where(i => i.Kind == FurnitureKind.Bin))
+        {
+            var bench = benches.Single(i => i.Key == bin.Key.Replace(":bin", ":bench", StringComparison.Ordinal));
+            var gap = Vector2.Distance(bin.Anchor, bench.Anchor) - (FurnitureStyle.Bench.Width + FurnitureStyle.Bin.Width) * 0.5f;
+            Check(gap is >= FurnitureStyle.BinGapMin - 0.15f and <= FurnitureStyle.BinGapMax + 0.15f, $"{bin.Key} stands {gap:F2} m from its bench");
+            Check(!ReferenceEquals(bin.Pad, bench.Pad), $"{bin.Key} shares the bench's bay");
+        }
+    }
+
+    [TestCase]
+    public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
+    {
+        // An anchor whose point lands on a carriageway, in water or in a building gets nothing and one structured diagnostic. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
+        var world = World.Value;
+        var layout = Build(world);
+        Console.WriteLine("furniture diagnostics: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
+        var landings = AnchorLandings(world);
+        foreach (var (feature, form, _, landing) in landings)
+        {
+            var id = feature.Id.Value;
+            var placed = layout.Items.Any(i => i.Key == "anchor:" + id);
+            var left = layout.Diagnostics.Where(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed").ToList();
+            if (landing == Landing.Open)
+            {
+                Check(placed, $"{id} lands on open ground but is not placed");
+                Check(left.Count == 0, $"{id} is placed but logged as not placed");
+                continue;
+            }
+            Check(!placed, $"{id} placed, though its point lands {Where(landing)}");
+            Check(left.Count == 1 && left[0].Level == DiagnosticLevel.Warning && left[0].Message == $"anchor {id} ({form}) not placed: its point lands {Where(landing)}", $"{id} not logged once as {Where(landing)}");
+        }
+        Check(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open), "a diagnostic message without a left-out anchor");
+        // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
+        var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+            .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
+            .First(b => PlanGeometry.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanGeometry.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
+        var anchor = landings.First(l => l.Landing == Landing.Open);
+        var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
+        var shift = building.Centre - anchor.Centre;
+        var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
+        var indoors = Build(new FeatureWorld(world, moved));
+        var name = anchor.Feature.Id.Value;
+        Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
+        Check(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning), "the building fallback is not logged");
+        Check(indoors.Items.Count == layout.Items.Count - 1, "the building fallback changed other furniture");
+    }
+
+    [TestCase]
+    public void AnchorsStandOnOrBesidePaving()
+    {
+        // Opus review 12:15: a kiosk's apron or a post's foot touches pedestrian paving (≤ 0.5 m off it); the facing never changes.
+        var world = World.Value;
+        var layout = Build(world);
+        var site = new StreetSite(world);
+        var lines = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian" or "steps").ToList();
+        var areas = new List<PolygonRings>();
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "road"))
+        {
+            var sources = feature.Parts.Count == 0 ? [(feature.Props, feature.Geometry)] : feature.Parts.Select(p => (p.Props ?? feature.Props, p.Geometry)).ToList();
+            foreach (var (props, geometry) in sources)
+                if (RoadType(props) is "footway" or "path" or "pedestrian" or "steps")
+                    areas.AddRange(geometry switch { PolygonGeometry p => [p.Rings], MultiPolygonGeometry m => m.Polygons, _ => [] });
+        }
+        float Gap(Vector2 q) => MathF.Max(0f, MathF.Min(
+            lines.Select(l => Distance(q, l) - Half(l)).DefaultIfEmpty(float.MaxValue).Min(),
+            areas.Select(a => PlanGeometry.Contains(a, q) ? 0f : a.Holes.Append(a.Outer).Min(r => PlanGeometry.DistanceToRing(q, r))).DefaultIfEmpty(float.MaxValue).Min()));
+        foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
+        {
+            var feature = world.Features[new(item.Key["anchor:".Length..])];
+            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} turned");
+            if (feature.Props!.Value.TryGetProperty("groundY", out var deck) && deck.GetSingle() > 0.5f) continue;
+            var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
+            var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+            if (Vector2.Distance(centre, item.Anchor) < 1e-3f && Gap(centre) > FurnitureStyle.AnchorPavingReach)
+            {
+                Console.WriteLine($"{item.Key}: no pedestrian paving within {FurnitureStyle.AnchorPavingReach} m, left for the anchor data");
+                continue;
+            }
+            var hw = item.Pad is { } apron ? apron.HalfWidth : ((SignParams)item.Part.Params).Width * 0.5f;
+            var hd = item.Pad is { } pad ? pad.HalfDepth : ((SignParams)item.Part.Params).Depth * 0.5f;
+            var gap = float.MaxValue;
+            for (var i = -1; i <= 1; i++)
+                for (var k = -1; k <= 1; k++)
+                    if (i != 0 || k != 0)
+                    {
+                        var q = Xf.Point(item.Part.At, new(i * hw, 0, k * hd));
+                        gap = MathF.Min(gap, Gap(new(q.X, q.Z)));
+                    }
+            Console.WriteLine($"{item.Key}: footprint {gap:F2} m off paving");
+            Check(gap <= FurnitureStyle.AnchorPavingGap + 0.1f, $"{item.Key}: footprint {gap:F2} m off pedestrian paving");
+            // Opus review 17:28 (A03): a kiosk's apron stands whole on the paving, not half over its edge.
+            if (item.Kind != FurnitureKind.AtlasKiosk) continue;
+            var outside = 0; var samples = 0;
+            for (var u = -hw; u <= hw + 1e-3f; u += 0.25f)
+                for (var v = -hd; v <= hd + 1e-3f; v += 0.25f)
+                {
+                    if (MathF.Abs(u) < hw - 1e-3f && MathF.Abs(v) < hd - 1e-3f) continue;
+                    var q = Xf.Point(item.Part.At, new(u, 0, v));
+                    samples++;
+                    if (site.PavingEdgeFacing(new(q.X, q.Z)) is not { Gap: <= 0f }) outside++;
+                }
+            Check(outside == 0, $"{item.Key}: {outside}/{samples} outline points of its apron off the paving");
+        }
+    }
+
+    /// <summary>
+    /// Every kiosk and post anchor of the world in ID order, with its footprint centre and what that point lands on: the data the
+    /// planner places by, so the tests' expectations follow the anchor data.
+    /// </summary>
+    private static List<(WorldFeature Feature, string Form, Vector2 Centre, Landing Landing)> AnchorLandings(IWorldModel world)
+    {
+        var site = new StreetSite(world);
+        var found = new List<(WorldFeature, string, Vector2, Landing)>();
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            if (feature.Geometry is not PolygonGeometry { Rings.Outer: { Count: >= 3 } ring }) continue;
+            if (feature.Props is not { ValueKind: JsonValueKind.Object } props || !props.TryGetProperty("form", out var value) || value.ValueKind != JsonValueKind.String) continue;
+            var form = value.GetString();
+            if (form is not ("kiosk" or "post")) continue;
+            var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
+            found.Add((feature, form, centre, site.LandingAt(centre)));
+        }
+        return found;
+    }
+
+    private static string Where(Landing landing) => landing switch
+    {
+        Landing.Carriageway => "on a carriageway",
+        Landing.Water => "in water",
+        Landing.Building => "in a building",
+        _ => throw new ArgumentOutOfRangeException(nameof(landing), landing, "Open ground is not a fallback."),
+    };
+
+    private static bool Carriageway(NetworkLine line) => Highway(line) is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
+}

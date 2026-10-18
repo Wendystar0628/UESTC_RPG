@@ -1,6 +1,9 @@
 using Campus.Camera.Cinematic;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Save;
+using Campus.Flow;
 using Campus.Kernel.Renderer;
 
 namespace Campus.Tests;
@@ -54,4 +57,32 @@ internal static class CinematicTestFrames
         if (!operation.IsCompleted) throw new InvalidOperationException("Cinematic operation did not finish within its synthetic frame budget.");
         await operation;
     }
+}
+
+/// <summary>The parts an AppFlowService needs, wired the way the entry-flow tests share them.</summary>
+internal sealed class FlowTestRig
+{
+    public TestRuleset Rules { get; } = TestRuleset.ForFlow();
+    public TestWorldState World { get; }
+    public TestCameraRig Camera { get; }
+    public ImmediateVeil Veil { get; } = new();
+    public CinematicTestPresentation Presentation { get; } = new();
+    public CinematicRuntimeTestStub Runtime { get; }
+    public CinematicPlayback Playback { get; }
+    public TestCollisionWorld Collision { get; } = new();
+    public List<string> Diagnostics { get; } = [];
+
+    public FlowTestRig(bool completePrefetchImmediately = true)
+    {
+        World = new(new TestWeatherProcess(), Rules);
+        Camera = new(World);
+        Runtime = new(() => Presentation.IsCovered) { CompletePrefetchImmediately = completePrefetchImmediately };
+        Playback = new(Camera, Veil, Rules, Presentation);
+    }
+
+    /// <summary>Builds the flow under test; restore defaults to the rig's world.</summary>
+    public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
+        new(Camera, Veil, saves, maps, World, World, Rules, new TestMotionSettings(), World, Collision, Playback,
+            restore ?? World, exit, Runtime, Runtime)
+        { DiagnosticSink = Diagnostics.Add };
 }

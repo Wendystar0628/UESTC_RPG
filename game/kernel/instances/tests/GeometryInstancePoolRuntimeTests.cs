@@ -332,13 +332,6 @@ public sealed class GeometryInstancePoolRuntimeTests
         Bounds: default, DataRect: default!, Roam: default!, TileMin: default, TileMax: default,
         DefaultSpawn: "fixture", Spawns: [], World: default!, Env: default!,
         Cinematics: new Dictionary<string, string>(), Portals: []));
-    private sealed class TestMapContext(MapDescriptor descriptor) : IMapContext
-    {
-        public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
-        public MapDescriptor Descriptor => descriptor;
-        public IWorldModel World => throw new NotSupportedException();
-        public string DataRoot => "";
-    }
 
     private static PaletteCatalog Catalog() => new(new PaletteRegistry(
         Enumerable.Range(0, 256).Select(i => new PaletteEntry(new("fixture.color." + i), (byte)i,

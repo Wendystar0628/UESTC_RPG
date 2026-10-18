@@ -15,7 +15,7 @@ gates: [G1, G3, G5]
 # ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
 
 > **范围**：本文规定工作包的划分原则（WP-00 至 WP-55）、开发阶段与闸口、开工波次与推送顺序，以及主代理的工程维护事项；每包一行的包表、闸口之后的细节待办与候选包、子包拆法在 ENG-WP-LIST。
-> **不在本文**：独占目录以 `ownership.json` 为准；文档的主责与贡献以各文档文件头的 `owners`、`contributors` 为准；施工状态见 WF-STATUS 与 `.collab/status/`；额度见 `budgets.json` 与 ENG-BUDGET §3；契约见 `game/contracts/` 与 ENG-ARCH §3；门禁见 ENG-GATES；派工简报模板见 WF-MODEL。
+> **不在本文**：独占目录以 `ownership.json` 为准；文档的主责与贡献以各文档文件头的 `owners`、`contributors` 为准；施工状态见 WF-STATUS 与 `.collab/status/`；额度见 ENG-BUDGET §3；契约见 `game/contracts/` 与 ENG-ARCH §3；门禁见 ENG-GATES；派工简报模板见 WF-MODEL。
 > **查阅**：先读 §0；阶段、闸口、开工波次与推送顺序看 §1；各包一行、细节待办、候选包与子包拆法看 ENG-WP-LIST；主代理工程维护看 §2；待验证看 §3
 > **读者**：主代理派工时读全文；子代理只读本包在 ENG-WP-LIST §1 的那一行和派工简报。
 
@@ -38,7 +38,7 @@ gates: [G1, G3, G5]
 
 - **主线闸口之前**：只交 ENG-WP-LIST §1 本包"主线版"列写的东西，细节留到闸口之后（ENG-WP-LIST §1）
 - **闸口之后排细节**：按 ENG-WP-LIST §1.2 本包牵头或协作的条目做；ENG-WP-LIST §1.3 的候选范围在定下归属与编号之前不开工
-- **要增删开放室内、改 `map.json` 的字段或 `budgets.json` 的 `maps.<id>` 一节**：经回报提交，由主代理审批（§2 第 4 条）
+- **要增删开放室内、改 `map.json` 的字段**：经回报提交，由主代理审批（§2 第 4 条）
 - **要加插件**：只收 MIT、ISC、Apache、BSD、OFL，由主代理登记进 `third_party.json`（§2 第 3 条）
 
 ## 1 阶段与闸口
@@ -86,7 +86,7 @@ gates: [G1, G3, G5]
 1. **契约分批定死**（D-134，ENG-ARCH §3）：WP-00 先交能编译的契约 v1 候选和全部桩。某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，主代理宣布冻结这一组，记进施工状态，之后只增不改；未冻结的组按申请修改。改契约、加全局着色器参数、着色器白名单、程序集引用和 NuGet 包的申请由主代理统一处理；共享文件的改法见 WF-BUILD §1。
 2. **版本**：Godot 4.7.2 与 net10.0（C# 14）、SDK 10.0.402 以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主代理（D-177）；升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各包。正式启动链须跑通 `dotnet build` → `--import` → `--export-release` → 导出版启动，不通时报作者决定，不自行退回 net8.0。.NET 导出模板约 1.2 GB，第一次做 G6 导出前从官方来源下载，下完说明（WF-RULE §6）。
 3. **插件清单**：`game/addons/` 与 `third_party.json`（名称、版本、提交、许可证、哈希）。只收 MIT、ISC、Apache、BSD、OFL（D-170），插件须声明支持当前小版本；NuGet 包在 `Directory.Packages.props` 集中锁版本。
-4. **开放室内清单**：`game/data/maps/qingshuihe/interiors.json` 的格式与 schema 归 WP-51，条目由负责包经回报提交，增删由主代理审批，以用户的决定为准；加一栋楼按 WLD-INTERIORS-ACCESS §4。`map.json` 的字段增改、`budgets.json` 的 `maps.<id>` 一节也由主代理批准。
+4. **开放室内清单**：`game/data/maps/qingshuihe/interiors.json` 的格式与 schema 归 WP-51，条目由负责包经回报提交，增删由主代理审批，以用户的决定为准；加一栋楼按 WLD-INTERIORS-ACCESS §4。`map.json` 的字段增改也由主代理批准。
 5. **预算核账**：GPU 与主线程的主代理余量所剩无几（外围、室内、平面地图都可能动用），P0 实测后统一核账，写回 ENG-BUDGET §3。
 6. **音频素材与版本库**：维护 `.gitattributes` 的 Git LFS 条目（`*.wav`、`*.ogg`）；仓库公开时，只许随游戏发布、不许公开分发的素材放私有素材库；开场音乐的委托或自制由 53e 跟进，做好之前开始页只放环境声（SYS-AUDIO §6、SYS-AUDIO §8）。
 

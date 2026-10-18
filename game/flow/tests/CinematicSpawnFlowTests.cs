@@ -26,7 +26,7 @@ public sealed class CinematicSpawnFlowTests
         var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
         { ["cinematics/frozen.json"] = bytes });
         Array.Fill(bytes, (byte)0);
-        var context = new CinematicSpawnMapStub.MapContext(source.Descriptor, source.World, inputs);
+        var context = new TestMapContext(source.Descriptor, source.World, inputs, CinematicSpawnMapStub.DataRoot);
         var loaded = new CinematicCatalog(context).Read("frozen");
         if (loaded.Id != definition.Id || loaded.Map != definition.Map || loaded.Duration != definition.Duration)
             throw new InvalidOperationException("Cinematic data did not come from the frozen map version.");
@@ -35,16 +35,10 @@ public sealed class CinematicSpawnFlowTests
     [TestCase]
     public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
     {
-        var rules = new Rules(); var world = new TestWorldState(new TestWeatherProcess(), rules);
-        var camera = new TestCameraRig(world); var maps = new CinematicSpawnMapStub();
-        var veil = new ImmediateVeil(); var saves = new SaveService();
-        var presentation = new CinematicTestPresentation();
-        var runtime = new CinematicRuntimeTestStub(() => presentation.IsCovered);
-        var playback = new CinematicPlayback(camera, veil, rules, presentation);
-        var diagnostics = new List<string>();
-        var flow = new AppFlowService(camera, veil, saves, maps, world, world, rules, new Motion(), world,
-            new TestCollisionWorld(), playback, world, new ExitService(), runtime, runtime)
-        { DiagnosticSink = diagnostics.Add };
+        var rig = new FlowTestRig(); var maps = new CinematicSpawnMapStub(); var saves = new SaveService();
+        var camera = rig.Camera; var veil = rig.Veil; var presentation = rig.Presentation;
+        var playback = rig.Playback; var diagnostics = rig.Diagnostics;
+        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
         if (maps.Context.Descriptor.Spawns.Count != 0) throw new InvalidOperationException("Fixture must use waypoint-only spawns.");
         await flow.PrepareBoot(new()); await flow.PrepareWorld(); await flow.CompleteBoot();
         if (flow.State != AppState.Title || camera.Pose != CinematicSpawnMapStub.DefaultPose)
@@ -101,20 +95,14 @@ public sealed class CinematicSpawnFlowTests
     private static async Task ResumeCase(bool pending, bool delayDestination = false,
         bool failDestination = false, bool quitDuringWait = false, bool clearDuringWait = false, bool failCollision = false)
     {
-        var rules = new Rules(); var world = new TestWorldState(new TestWeatherProcess(), rules);
+        var rig = new FlowTestRig(completePrefetchImmediately: !delayDestination);
+        var world = rig.World; var camera = rig.Camera; var veil = rig.Veil; var presentation = rig.Presentation;
+        var runtime = rig.Runtime; var playback = rig.Playback; var collision = rig.Collision; var diagnostics = rig.Diagnostics;
         world.SetFlow(60);
-        var camera = new TestCameraRig(world); var maps = new CinematicSpawnMapStub();
-        var veil = new ImmediateVeil(); var presentation = new CinematicTestPresentation();
-        var runtime = new CinematicRuntimeTestStub(() => presentation.IsCovered)
-        { CompletePrefetchImmediately = !delayDestination };
-        var playback = new CinematicPlayback(camera, veil, rules, presentation);
+        var maps = new CinematicSpawnMapStub();
         var saves = new ResumeSaveService(camera, world, runtime, () => presentation.IsCovered);
-        var diagnostics = new List<string>();
-        var exit = new ExitService(quitDuringWait);
-        var collision = new TestCollisionWorld();
-        var flow = new AppFlowService(camera, veil, saves, maps, world, world, rules, new Motion(), world,
-            collision, playback, world, exit, runtime, runtime)
-        { DiagnosticSink = diagnostics.Add };
+        var exit = new TestAppExit(quitDuringWait);
+        var flow = rig.CreateFlow(saves, maps, exit);
         await flow.PrepareBoot(new(ShowTitle: pending)); await flow.PrepareWorld(); await flow.CompleteBoot();
         if (!pending)
         {
@@ -212,149 +200,43 @@ public sealed class CinematicSpawnFlowTests
             throw new InvalidOperationException("Continue lost the saved flow, world identity, endpoint or input handoff.");
     }
 
-    private sealed class Rules : IRuleset
+    private sealed class SaveService : TestSaveService
     {
-        public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly], WorldControlMask.All, "none", [], [AppState.Title, AppState.Entering, AppState.Leaving]);
-        public long Rev => 1;
-    }
-    private sealed class Motion : IMotionSettings
-    {
-        public bool ReduceMotion => false;
-        public event Action? Changed { add { } remove { } }
-    }
-    private sealed class ImmediateVeil : IVeilService
-    {
-        public float Opacity { get; private set; }
-        public VeilReason Reason { get; private set; }
-        public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) { Reason = reason; Opacity = 1; return Task.CompletedTask; }
-        public Task Reveal(VeilReason reason, float seconds) { Reason = reason; Opacity = 0; return Task.CompletedTask; }
-        // Test-only lifecycle recording. Timing belongs to VeilTimeline tests, not this fixture.
-        public int ActiveObservations;
-        public int ObservationCount;
-        public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
-        {
-            Interlocked.Increment(ref ActiveObservations);
-            Interlocked.Increment(ref ObservationCount);
-            return new Observation(() => Interlocked.Decrement(ref ActiveObservations));
-        }
-        private sealed class Observation(Action release) : IDisposable
-        {
-            private int _disposed;
-            public void Dispose() { if (Interlocked.Exchange(ref _disposed, 1) == 0) release(); }
-        }
-        public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
-    }
-    private sealed class ExitService(bool allowQuit = false) : IAppExit
-    {
-        public int Calls { get; private set; }
-        public Task FinishQuit()
-        {
-            if (!allowQuit) throw new InvalidOperationException("This entry regression must never quit.");
-            Calls++; return Task.CompletedTask;
-        }
-    }
-    private sealed class SaveService : ISaveService
-    {
+        private SlotId? _active;
         public int NewGames { get; private set; }
         public int Saves { get; private set; }
-        public bool Enabled => true;
-        public IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
-        public SlotId? Continue => null;
-        public SlotId? Active { get; private set; }
-        public bool Busy => false;
-        public SaveState State => new(Active, null, null, null, ReadOnlyReason.None);
-        public event Action? SlotsChanged { add { } remove { } }
-        public bool HasPendingPose => false;
-        public void Request(SaveReason reason) { }
-        public Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
-        public Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => throw new InvalidOperationException("Unexpected load during new game.");
-        public Task CompleteResume() => throw new InvalidOperationException("Unexpected resume during new game.");
-        public Task<LoadResult> LoadFile(string path) => throw new InvalidOperationException("Unexpected file load.");
-        public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) { NewGames++; Active = slot; return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, [])); }
-        public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new InvalidOperationException("Unexpected quit during entry.");
-        public byte[]? Thumbnail(SlotId slot) => null;
+        public override IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
+        public override SlotId? Active => _active;
+        public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
+        public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
+        { NewGames++; _active = slot; return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, [])); }
     }
     private sealed class ResumeSaveService(ICameraRig camera, IWorldState world, CinematicRuntimeTestStub runtime,
-        Func<bool> covered) : ISaveService
+        Func<bool> covered) : TestSaveService
     {
         public SaveMeta Meta { get; } = new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, CinematicSpawnMapStub.Map,
             17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly, new(new(30, 45, -15), 25, -20), null, null, null, 0, SaveReason.Test);
         public int Loads { get; private set; }
         public int Completions { get; private set; }
-        public bool Enabled => true;
-        public IReadOnlyList<SlotInfo> Slots => [new(Meta.Slot, SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
-        public SlotId? Continue => Meta.Slot;
-        public SlotId? Active => Meta.Slot;
-        public bool Busy => false;
-        public SaveState State => new(Active, null, null, null, ReadOnlyReason.None);
-        public event Action? SlotsChanged { add { } remove { } }
-        public bool HasPendingPose { get; private set; }
-        public void Request(SaveReason reason) { }
-        public Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Continue must not write a new generation.");
-        public Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
+        public override IReadOnlyList<SlotInfo> Slots => [new(Meta.Slot, SlotKind.Auto, SlotHealth.Ok, Meta, 1)];
+        public override SlotId? Continue => Meta.Slot;
+        public override SlotId? Active => Meta.Slot;
+        public override bool HasPendingPose => _hasPendingPose;
+        private bool _hasPendingPose;
+        public override Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Continue must not write a new generation.");
+        public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
         {
-            Loads++; HasPendingPose = scope is LoadScope.Preview;
+            Loads++; _hasPendingPose = scope is LoadScope.Preview;
             return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 1, []));
         }
-        public Task CompleteResume()
+        public override Task CompleteResume()
         {
-            if (!HasPendingPose || !covered() || world.Flow.Rate != 0) throw new InvalidOperationException("Resume was not prepared under frozen, presented cover.");
+            if (!_hasPendingPose || !covered() || world.Flow.Rate != 0) throw new InvalidOperationException("Resume was not prepared under frozen, presented cover.");
             Completions++; runtime.Prefetch(Meta.Pose, Meta.Mode, Meta.Space); runtime.BeginWarm();
-            camera.SetPose(Meta.Pose); HasPendingPose = false;
+            camera.SetPose(Meta.Pose); _hasPendingPose = false;
             return Task.CompletedTask;
         }
-        public Task<LoadResult> LoadFile(string path) => throw new InvalidOperationException("Unexpected file load.");
-        public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) => throw new InvalidOperationException("Unexpected new game.");
-        public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));
-        public byte[]? Thumbnail(SlotId slot) => null;
+        public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1));
     }
 }
 
-// A real catalogue resolver backs this test double. It does not return a fixed pose
-// for arbitrary IDs or silently inherit IMapService's NotSupported default method.
-internal sealed class CinematicSpawnMapStub : IMapService
-{
-    public static readonly MapId Map = new("cinematic-spawn-test");
-    public static readonly Pose DefaultPose = new(new(120, 35, -70), 20, -35);
-    private readonly MapCatalogEntry _entry;
-    public int DefaultRequests { get; private set; }
-    public int NamedRequests { get; private set; }
-    public long Rev => 1;
-    public MapId Default => Map;
-    public IReadOnlyList<MapDescriptor> Maps { get; }
-    public IReadOnlyList<MapVisit> Visits => [];
-    public MapId Current => Map;
-    public IMapContext Context { get; }
-    public IMapTransition? Transition => null;
-    public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-    public CinematicSpawnMapStub(IReadOnlyList<MapSpawn>? inlineSpawns = null)
-    {
-        var descriptor = new MapDescriptor(Map, new("测试地图", "Test map"), MapKind.Outdoor, 1, 1,
-            new(0, 0, 0, new(-500, -500), new(500, 500)), Vector2.Zero,
-            new(new(-500, -50, -500), new(500, 500, 500)), new(new(-512, -512), new(512, 512)),
-            new(0.9f, 30, 3000, -28, 2000, 30, 40, 150), new(-8, -8), new(7, 7), "start", inlineSpawns ?? [],
-            new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("默认", "Default"), true, "default"),
-            new("sky", "backdrop", []), new Dictionary<string, string>(), []);
-        Waypoint[] waypoints =
-        [
-            new("start", new("起点", "Start"), WaypointGroup.Overview, DefaultPose, null, null, new(17.5, Season.Autumn)),
-            new("named", new("另一个点", "Other point"), WaypointGroup.Core, new(new(-30, 80, 50), 90, -25), null, null, new(17.5, Season.Autumn)),
-        ];
-        // This path intentionally has no files. Entry must not re-read waypoints.json.
-        _entry = new(descriptor, "res://cinematic-test-no-files/", waypoints);
-        Maps = [descriptor];
-        Context = new MapContext(descriptor, new TestWorldModel(),
-            BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()));
-    }
-    public MapSpawn ResolveSpawn(MapId map, string? spawn = null)
-    {
-        if (map != Map) throw new ArgumentException($"Unknown map: {map.Value}", nameof(map));
-        if (spawn is null) DefaultRequests++; else NamedRequests++;
-        return _entry.ResolveSpawn(spawn ?? _entry.Descriptor.DefaultSpawn);
-    }
-    public IMapTransition Travel(MapTravelRequest request) => throw new InvalidOperationException("The save fixture owns entry; no extra travel is expected.");
-    internal sealed record MapContext(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext
-    {
-        public string DataRoot => "res://cinematic-test-no-files/";
-    }
-}

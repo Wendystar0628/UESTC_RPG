@@ -19,13 +19,6 @@ internal sealed class MutableWorldFixture(TestInteriorIndex? interiors = null) :
         Features = features.ToDictionary(feature => feature.Id);
         Boundary = boundary ?? new([]);
     }
-    private sealed class TestSpatialIndex : ISpatialIndex
-    {
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
-        public float GroundY(float x, float z) => 0;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-    }
 }
 
 internal sealed class TestInteriorIndex : IInteriorIndex

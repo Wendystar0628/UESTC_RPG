@@ -8,6 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Kernel.Save.Tests;
@@ -132,7 +133,7 @@ public sealed partial class SaveLifecycleTests
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.Weather.FailRestore = true;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.LockCount == 1,
+        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1,
             "A partially restored world remained interactive.");
         Check(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }, "Restore failure is not visible through the save state.");
         await fixture.Frames(10); // FakeWorld.Tick throws if a pending restore escaped the failing Save frame.
@@ -142,7 +143,7 @@ public sealed partial class SaveLifecycleTests
         Check(fixture.Save.Slots[0].Meta?.Gen == 1, "Fault damaged the last good generation.");
         fixture.Weather.FailRestore = false;
         var recovered = await fixture.Pump(fixture.Save.NewGame(new("s1"), 2));
-        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.LockCount == 0,
+        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0,
             "A complete new game did not release the fault lease.");
         Check(fixture.Save.State.ErrorKey is null, "Recovery left the stale error visible.");
     }
@@ -155,11 +156,11 @@ public sealed partial class SaveLifecycleTests
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.Maps.FailTravel = true;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.LockCount == 1,
+        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1,
             "A post-commit map failure exposed a half-restored world.");
         fixture.Maps.FailTravel = false;
         var recovered = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.LockCount == 0,
+        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0,
             "Full load did not recover the faulted transaction.");
     }
 
@@ -185,7 +186,7 @@ public sealed partial class SaveLifecycleTests
         {
             var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? throw new InvalidOperationException("UESTC_REPOSITORY required.");
             var directory = Path.Combine(root, "output", "save-tests", "lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
-            var rules = new FakeRules();
+            var rules = new TestRuleset("test-policy", id: "test-rules");
             var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new FakeVeil(), () => Flow,
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400);
@@ -215,11 +216,6 @@ public sealed partial class SaveLifecycleTests
         public void Dispose() => Save.Dispose();
     }
 
-    private sealed class FakeRules : IRuleset
-    {
-        public RulesetDescriptor Current { get; } = new(new("test-rules"), [ViewMode.Fly, ViewMode.Walk], WorldControlMask.All, "test-policy", [], []);
-        public long Rev => 1;
-    }
     private sealed class FakeVeil : IVeilState { public float Opacity => 0; public VeilReason Reason => VeilReason.Boot; }
     private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<LifecycleWorld>
     {
@@ -252,27 +248,21 @@ public sealed partial class SaveLifecycleTests
         { Check(inFrame(), "Restore ran outside Save frame."); Hours = dto.WorldHours; TargetHours = null; _pending = true; log.Add("world"); }
         public LifecycleWorld CreateDefault(NewGameContext context) => new(context.Start.Clock, 0, context.Start.Season);
     }
-    private sealed class FakeCamera(Func<bool> inFrame, List<string> log) : ICameraRig, IObserverState, ISaveSection<LifecycleView>
+    private sealed class FakeCamera(Func<bool> inFrame, List<string> log)
+        : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<LifecycleView>
     {
         public Action? BeforeDefault { get; set; }
         public NewGameContext? DefaultContext { get; private set; }
-        public Pose Pose { get; private set; } = new(new Vector3(1, 2, 3), 0, 0);
-        public float Speed => 1; public ViewMode Mode => ViewMode.Fly; public float EdgeFog => 0; public ITransitHandle? ActiveTransit => null;
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
-        public void SetPose(Pose pose) => Pose = pose;
-        public int LockCount { get; private set; }
-        public ITransitHandle Transit(Pose to, TransitOptions? options = null) => throw new NotSupportedException();
-        public IDisposable LockInput(InputLockReason reason) { LockCount++; return new Lease(() => LockCount--); }
         public JsonTypeInfo<LifecycleView> TypeInfo => LifecycleJsonContext.Strict.LifecycleView;
         public LifecycleView Capture(in CaptureContext context) { Check(inFrame(), "View capture outside Save frame."); return new(Pose, Mode, Space); }
-        public void Restore(LifecycleView dto, RestoreContext context) { Check(inFrame(), "Pose restore outside Save frame."); Pose = dto.Pose; log.Add("view"); }
+        public void Restore(LifecycleView dto, RestoreContext context) { Check(inFrame(), "Pose restore outside Save frame."); SetPose(dto.Pose); log.Add("view"); }
         public LifecycleView CreateDefault(NewGameContext context)
         {
             BeforeDefault?.Invoke(); DefaultContext = context;
             return new(new(new Vector3(1, 2, 3), 0, 0), ViewMode.Fly, null);
         }
     }
-    private sealed class Lease(Action release) : IDisposable { public void Dispose() => release(); }
     private sealed class FakeWeather : ISaveSection<LifecycleWeather>
     {
         public double LastTickHours { get; set; } = 17.5;
@@ -288,28 +278,31 @@ public sealed partial class SaveLifecycleTests
         { if (FailRestore) throw new InvalidDataException("Injected core semantic restore failure."); LastTickHours = dto.AtHours; }
         public LifecycleWeather CreateDefault(NewGameContext context) => new(new(WeatherMode.Auto, WeatherKind.Clear, 0), context.Start.Clock);
     }
-    private sealed class FakeMaps(List<string> log) : IMapService
+    private sealed class FakeMaps : TestMapService
     {
         private static readonly MapId Id = new("test-map");
+        private readonly List<string> _log;
+        public FakeMaps(List<string> log)
+        {
+            _log = log;
+            Rev = 1; Default = Id; Current = Id;
+            Maps = [new(Id, new("测试", "Test"), MapKind.Outdoor, 1, 1,
+                new(0, 0, 32648, new(-100), new(100)), Vector2.Zero, new(new(-100), new(100)), new(new(-100), new(100)),
+                new(1, 0, 3000, -100, 1000, 30, 40, 150), new(-1, -1), new(1, 1), "spawn", [],
+                new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), false, "test"),
+                new("test", "test", []), new Dictionary<string, string>(), [])];
+        }
         public TaskCompletionSource<MapTravelResult>? Pending { get; set; }
         public bool FailTravel { get; set; }
         public bool HasTravelled { get; private set; }
-        public long Rev => 1; public MapId Default => Id; public MapId Current => Id; public IMapContext? Context => null;
-        public IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new CompletedMap(new(Id), Pending.Task) : null;
-        public IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
-        public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-        public IReadOnlyList<MapDescriptor> Maps { get; } = [new(Id, new("测试", "Test"), MapKind.Outdoor, 1, 1,
-            new(0, 0, 32648, new(-100), new(100)), Vector2.Zero, new(new(-100), new(100)), new(new(-100), new(100)),
-            new(1, 0, 3000, -100, 1000, 30, 40, 150), new(-1, -1), new(1, 1), "spawn", [],
-            new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), false, "test"),
-            new("test", "test", []), new Dictionary<string, string>(), [])];
-        public IMapTransition Travel(MapTravelRequest request)
-        { log.Add("travel"); HasTravelled = true; return new CompletedMap(request, Task.FromResult(FailTravel ? MapTravelResult.Failed : MapTravelResult.Arrived)); }
-    }
-    private sealed class CompletedMap(MapTravelRequest request, Task<MapTravelResult> done) : IMapTransition
-    {
-        public MapId From => request.Target; public MapId To => request.Target; public MapTravelCause Cause => request.Cause;
-        public MapStage Stage => done.IsCompleted ? MapStage.Done : MapStage.LoadData; public float Progress => 1; public Task<MapTravelResult> Done => done;
+        public override IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new TestMapTransition(Id, Id, MapTravelCause.Boot, Pending.Task) : null;
+        public override IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
+        public override IMapTransition Travel(MapTravelRequest request)
+        {
+            _log.Add("travel"); HasTravelled = true;
+            return new TestMapTransition(request.Target, request.Target, request.Cause,
+                Task.FromResult(FailTravel ? MapTravelResult.Failed : MapTravelResult.Arrived));
+        }
     }
     private sealed class FakeAtlas(IMapService maps) : IAtlasService
     {

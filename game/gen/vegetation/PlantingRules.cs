@@ -1,3 +1,5 @@
+using Campus.Gen.World;
+
 namespace Campus.Gen.Vegetation;
 
 /// <summary>One tree row parallel to a road: its distance from the centre line on both sides; Stagger shifts it half a spacing.</summary>
@@ -58,7 +60,7 @@ public sealed record PlantingRules(IReadOnlyList<RoadPlanting> Roads, float OsmN
     public static PlantingRules Parse(ReadOnlySpan<byte> json, SpeciesTable species)
     {
         ArgumentNullException.ThrowIfNull(species);
-        var file = VegetationJson.Read(json, VegetationJson.Context.PlantingFile, "planting");
+        var file = PlantingJson.Read(json);
         if (file.Format != "campus.vegetation.planting/1") throw new InvalidDataException("planting: unsupported format.");
         string Known(string id, string at) => species.TryGet(id, out _) ? id
             : throw new InvalidDataException($"planting: {at}: unknown species '{id}'.");

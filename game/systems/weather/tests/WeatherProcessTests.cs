@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Systems.Weather.Tests;
@@ -77,7 +78,7 @@ public sealed class WeatherProcessTests
     public void NewGameSeedsRemainClearAtHandoff()
     {
         var source = new Source(Profile);
-        var maps = new TestMaps();
+        var maps = TestMaps();
         for (uint seed = 0; seed < 500; seed++)
         {
             var p = new WeatherProcess(source);
@@ -109,11 +110,11 @@ public sealed class WeatherProcessTests
             a.Step(Tick(150, season));
             a.Select(new(WeatherMode.Manual, rain, .6f));
             a.Step(Tick(150.5, season)); a.Step(Tick(150.5, season));
-            var section = new WeatherSection(a, new TestMaps(), source);
+            var section = new WeatherSection(a, TestMaps(), source);
             var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true));
             var restored = JsonSerializer.Deserialize(JsonSerializer.Serialize(saved, section.TypeInfo), section.TypeInfo)!;
             var b = new WeatherProcess(source);
-            new WeatherSection(b, new TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
+            new WeatherSection(b, TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
             b.Enter(Map, "test", 150.5);
             Equal(a, b);
             a.Select(new(WeatherMode.Auto, rain, .6f)); b.Select(new(WeatherMode.Auto, rain, .6f));
@@ -311,24 +312,19 @@ public sealed class WeatherProcessTests
         throw new InvalidOperationException("Invalid input was accepted.");
     }
     private sealed class Source(WeatherProfile profile) : IWeatherProfileSource { public WeatherProfile Load(string name) => profile; }
-    private sealed class TestMaps(MapId? current = null) : IMapService
+    private static TestMapService TestMaps() => new()
     {
-        public long Rev => 1;
-        public MapId Default => Map;
-        public MapId Current => current ?? Map;
-        public IMapContext? Context => null;
-        public IMapTransition? Transition => null;
-        public IReadOnlyList<MapVisit> Visits => Array.Empty<MapVisit>();
-        public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-        public IReadOnlyList<MapDescriptor> Maps { get; } = new[]
-        {
+        Rev = 1,
+        Default = Map,
+        Current = Map,
+        Maps =
+        [
             new MapDescriptor(Map, new("测试", "Test"), MapKind.Outdoor, 1, 1, null!, default, default, null!, null!,
                 default, default, "test", Array.Empty<MapSpawn>(),
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), true, "test"),
                 null!, new Dictionary<string, string>(), Array.Empty<MapPortal>())
-        };
-        public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
-    }
+        ],
+    };
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]

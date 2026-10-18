@@ -1,0 +1,283 @@
+using System.Numerics;
+using System.Text.Json;
+using Campus.Contracts;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
+using Campus.Gen.Buildings.Build;
+using Campus.Gen.Buildings.Model;
+using Campus.Gen.Buildings.Plan;
+using GdUnit4;
+
+namespace Campus.Gen.Buildings.Tests;
+
+/// <summary>Fixtures and assertion helpers shared by the building test suites.</summary>
+internal static class BuildingsTestSupport
+{
+    internal static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
+
+    // WP-10 curtain fabric; the WP-12 heat-pump shrouds share its shading but not its colours.
+    internal static bool Fabric(GeometryBundle b) => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Steps == ShadeSteps.TwoHalf &&
+        !b.Material.Spec.Lit.Value.StartsWith("equip.", StringComparison.Ordinal);
+
+    internal static IEnumerable<int> ColorVertices(GeometryBundle mesh, params string[] tokens)
+    {
+        var catalog = Campus.Contracts.Tests.PaletteFixture.Catalog;
+        var indices = tokens.Select(token => catalog.Resolve(new PaletteToken(token)).Value).ToArray();
+        return Enumerable.Range(0, mesh.Position.Length / 3)
+            .Where(vertex => indices.Contains(mesh.ColorIndices?[vertex] ?? catalog.Resolve(mesh.Material.Spec.Lit).Value));
+    }
+    internal static bool HasColor(GeometryBundle mesh, string token) => ColorVertices(mesh, token).Any();
+    internal static bool TriangleColor(GeometryBundle mesh, int offset, string token)
+    {
+        var index = Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(new PaletteToken(token)).Value;
+        return Enumerable.Range(0, 3).All(corner => mesh.ColorIndices![mesh.Index[offset + corner]] == index);
+    }
+
+    /// <summary>Every opening of every plan (or of one key, or of those <paramref name="where"/> takes) with its number and card, in plan order.</summary>
+    internal static string Layout(BuildingSet set, string? key = null, Func<BuildingPlan, bool>? where = null)
+    {
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < set.Plans.Count; i++)
+        {
+            var (plan, block) = (set.Plans[i], set.Blocks[i]);
+            if ((key is not null && plan.Key != key) || where?.Invoke(plan) == false) continue;
+            sb.Append(ci, $"P {plan.Key} base={block.Base} cols={block.Columns} rows={block.Rows}\n");
+            for (var fi = 0; fi < plan.Facades.Count; fi++)
+                foreach (var o in plan.Openings[fi])
+                {
+                    var n = FacadeOpenings.Number(plan, block, plan.Facades[fi], o);
+                    sb.Append(ci, $"  {fi} b{o.Bay} r{o.Row} {o.Kind} {o.U0:R} {o.U1:R} {o.Y0:R} {o.Y1:R} #{n} {FacadeOpenings.Card(plan, o, n)}\n");
+                }
+        }
+        return sb.ToString();
+    }
+
+    internal static string LayoutHash(BuildingSet set) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Layout(set))))[..16];
+
+    /// <summary>Plan position of an entrance door's centre on the glass plane (where the interior index puts it).</summary>
+    internal static Vector2 GlassCentre(BuildingPlan plan, PlanEntrance e)
+    {
+        var door = plan.DoorOf(e);
+        var skin = plan.SkinAt(plan.Facades[e.Facade].Ring);
+        var edge = plan.Facades[e.Facade].Edge;
+        return skin.Points[edge] + skin.Dir[edge] * ((door.U0 + door.U1) * 0.5f) - skin.Normal[edge] * plan.Reveal;
+    }
+
+    internal static bool Blocks(WallCollider wall, Vector2 point, float y)
+    {
+        var edge = wall.B - wall.A;
+        var t = Math.Clamp(Vector2.Dot(point - wall.A, edge) / edge.LengthSquared(), 0f, 1f);
+        return y > wall.Y0 && y < wall.Y1 && Vector2.Distance(point, wall.A + edge * t) <= wall.HalfT + 0.0001f;
+    }
+
+    /// <summary>An open entrance of a feature: door centre (floor height in Y), facing yaw (0 north, 90 east), outside landing 2.5 m out.</summary>
+    internal static (string Feature, EntranceDecl Door) Anchor(string feature, string id, Vector3 centre, float yawDeg, float? outsideY = null)
+    {
+        var yaw = yawDeg * (float.Pi / 180f);
+        var facing = new Vector3(MathF.Sin(yaw), 0f, -MathF.Cos(yaw));
+        var outside = centre + facing * 2.5f;
+        outside.Y = outsideY ?? centre.Y;
+        return (feature, new EntranceDecl(id, outside, centre - facing * 3f, 1.1f, true) { Center = centre, YawDeg = yawDeg });
+    }
+
+    internal static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
+    internal static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
+
+    internal static void Require(bool condition, string what)
+    {
+        if (!condition) throw new InvalidOperationException("Expected: " + what);
+    }
+
+    internal static void Expect<T>(Action action, string what) where T : Exception
+    {
+        try { action(); }
+        catch (T) { return; }
+        throw new InvalidOperationException($"Expected {typeof(T).Name}: {what}");
+    }
+
+    internal static readonly MapDescriptor TestMap = new(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
+        new GeoFrame(0d, 0d, 32648, new(-1000f, -1000f), new(1000f, 1000f)), Vector2.Zero,
+        new Box3(new(-1024f, -28f, -1024f), new(1024f, 2000f, 1024f)), new MapRect(new(-1024f, -1024f), new(1024f, 1024f)),
+        new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f), new TileKey(-16, -16), new TileKey(15, 15), "P00", [],
+        new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
+        new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+
+    /// <summary>A build context as the kernel hands it out: <paramref name="claims"/> are facade claims of a zone pack.</summary>
+    internal static BuildContext Ctx(IWorldModel world, uint seed, WindowNumberingSnapshot? numbering = null, string[]? claims = null) => new()
+    {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+        World = world,
+        Map = TestMap,
+        WorldSeed = seed,
+        WindowNumbering = numbering,
+        ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? new WpId("WP-18") : null,
+    };
+
+    /// <summary>The kernel's prepass stand-in until WP-02 runs it: the provider's snapshot, published in the context.</summary>
+    internal static BuildContext Prepared(BuildContext ctx) => new()
+    {
+        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+        World = ctx.World,
+        Map = ctx.Map,
+        WorldSeed = ctx.WorldSeed,
+        ClaimedBy = ctx.ClaimedBy,
+        WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
+    };
+
+    /// <summary>The repository's campus as the kernel loads it: base data, interior index and every zone overlay.</summary>
+    internal static IWorldModel RealCampus()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
+        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
+        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
+                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
+                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        return Campus.Gen.World.WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
+    }
+
+    /// <summary>
+    /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its owner.
+    /// The other content modules (furniture, ground, vegetation, water) claim nothing.
+    /// </summary>
+    internal static Func<FeatureId, Aspects, WpId?> RealClaims(IWorldModel world)
+    {
+        IContentModule[] zones = [new Campus.Gen.Zones.Core.CoreModule(), new Campus.Gen.Zones.South.SouthModule(),
+            new Campus.Gen.Zones.CenterEast.CenterEastModule(), new Campus.Gen.Zones.North.NorthModule()];
+        var owners = new Dictionary<(FeatureId, Aspects), WpId>();
+        foreach (var zone in zones)
+        {
+            var owner = new WpId(zone.GetType().GetCustomAttributes(typeof(ContentModuleAttribute), false).OfType<ContentModuleAttribute>().Single().Owner);
+            foreach (var claim in zone.Claims)
+            {
+                FeatureId[] claimed = claim switch
+                {
+                    FeatureClaim f => world.Features.ContainsKey(f.Feature) ? [f.Feature] : Array.Empty<FeatureId>(),
+                    AreaClaim a => [.. world.Features.Values.Where(f => f.Zone == a.Zone).Select(f => f.Id)],
+                    _ => throw new InvalidOperationException("Unknown claim kind."),
+                };
+                foreach (var feature in claimed)
+                    foreach (var aspect in Enum.GetValues<Aspects>().Where(a => (claim.Aspects & a) != 0)) owners.Add((feature, aspect), owner);
+            }
+        }
+        return (feature, aspect) => owners.TryGetValue((feature, aspect), out var owner) ? owner : null;
+    }
+
+    internal static ClaimedWindowLayout Layout(string feature, params (string Key, int Columns, int Rows)[] grids) =>
+        new(new FeatureId(feature), [.. grids.Select(g => new WindowGridSpec(g.Key, g.Columns, g.Rows))]);
+
+    internal static List<Vector2> Rect(float x, float z, float w, float d) => [new(x, z), new(x + w, z), new(x + w, z + d), new(x, z + d)];
+
+    internal static List<Vector2> LShape(float x, float z) =>
+        [new(x, z), new(x + 50, z), new(x + 50, z + 15), new(x + 16, z + 15), new(x + 16, z + 45), new(x, z + 45)];
+
+    internal static PolygonRings Courtyard(float x, float z) =>
+        new(Rect(x, z, 50, 40), [new List<Vector2> { new(x + 12, z + 12), new(x + 12, z + 28), new(x + 38, z + 28), new(x + 38, z + 12) }]);
+
+    internal static WorldFeature Feature(string id, List<Vector2> outer, int storeys, float height, string category) =>
+        Feature(id, new PolygonRings(outer), storeys, height, category);
+
+    internal static WorldFeature Feature(string id, PolygonRings rings, int storeys, float height, string category) =>
+        new(new FeatureId(id), FeatureSource.Osm, new DesignKind("building"), new PolygonGeometry(rings))
+        {
+            Height = height,
+            Storeys = storeys,
+            Props = JsonDocument.Parse("{\"category\":\"" + category + "\"}").RootElement.Clone(),
+        };
+
+    internal static TestWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id), null);
+
+    internal static TestWorld World(Entrances entrances, params WorldFeature[] features) =>
+        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances };
+
+    internal static TestWorld World(Entrances entrances, ITerrain terrain, params WorldFeature[] features) =>
+        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances, Terrain = terrain };
+
+    internal static TestWorld World(ZonedFidelity fidelity, params WorldFeature[] features)
+    {
+        var map = features.ToDictionary(f => f.Id);
+        fidelity.Features = map;
+        return new(map, fidelity);
+    }
+
+    /// <summary>Every footprint edge one segment: Zone above the ground band, GroundBand within it; roofs in <paramref name="roof"/>.</summary>
+    internal sealed class ZonedFidelity(FidelityZone zone, FidelityZone ground, FidelityZone roof = FidelityZone.K4) : IFidelityModel
+    {
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; set; } = new Dictionary<FeatureId, WorldFeature>();
+        public string InputHash => "test";
+        public IReadOnlyList<FacadeSegment> Facades(FeatureId building)
+        {
+            var ring = ((PolygonGeometry)Features[building].Geometry).Rings.Outer;
+            return [.. ring.Select((a, i) => new FacadeSegment(building, i, a, ring[(i + 1) % ring.Count], zone, ground))];
+        }
+        public RoofZone Roof(FeatureId building) => new(building, roof);
+        public FidelityZone GroundAt(float x, float z) => FidelityZone.K3;
+        public float WalkDistanceAt(float x, float z) => 0f;
+    }
+
+    internal sealed class TestWorld(IReadOnlyDictionary<FeatureId, WorldFeature> features, IFidelityModel? fidelity) : IWorldModel
+    {
+        public PolygonRings Boundary { get; } = new([new(-1000, -1000), new(1000, -1000), new(1000, 1000), new(-1000, 1000)]);
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features;
+        public WorldNetwork Network => WorldNetwork.Empty;
+        public ISpatialIndex Spatial { get; } = new Flat(features);
+        public IInteriorIndex Interiors { get; init; } = new NoInteriors();
+        public ITerrain Terrain { get; init; } = FlatTerrain.Default;
+        public IOutskirtsModel? Outskirts => null;
+        public IFidelityModel? Fidelity { get; } = fidelity;
+    }
+
+    /// <summary>A loaded world with its features rewritten (as an overlay op would), everything else as loaded.</summary>
+    internal sealed class StyledWorld(IWorldModel inner, Func<WorldFeature, WorldFeature> rewrite) : IWorldModel
+    {
+        public ITerrain Terrain => inner.Terrain;
+        public PolygonRings Boundary => inner.Boundary;
+        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => rewrite(p.Value));
+        public WorldNetwork Network => inner.Network;
+        public ISpatialIndex Spatial => inner.Spatial;
+        public IInteriorIndex Interiors => inner.Interiors;
+        public IOutskirtsModel? Outskirts => inner.Outskirts;
+        public IFidelityModel? Fidelity => inner.Fidelity;
+    }
+
+    /// <summary>The open entrances of the fixture's features (the interior index's EntranceDecl).</summary>
+    internal sealed class Entrances(params (string Feature, EntranceDecl Door)[] doors) : IInteriorIndex
+    {
+        public InteriorIndexEntry? Get(FeatureId id) => doors.Any(d => d.Feature == id.Value)
+            ? new(id, [], [.. doors.Where(d => d.Feature == id.Value).Select(d => d.Door)], true, "test")
+            : null;
+        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [.. doors.Select(d => d.Door).Where(d => Vector3.Distance(d.Center, p) <= r)];
+    }
+
+    /// <summary>Level at 0 (pads too) north of <paramref name="edge"/> (z), <paramref name="drop"/> lower south of it.</summary>
+    internal sealed class Falling(float edge, float drop) : ITerrain
+    {
+        public bool IsFlat(TileKey tile) => false;
+        public float HeightAt(float x, float z) => z < edge ? -drop : 0f;
+        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
+        public float PadY(FeatureId feature) => 0f;
+        public float? WaterY(FeatureId water) => null;
+        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
+    }
+
+    /// <summary>Flat ground; every fixture feature is a candidate of every query (the planner tests containment itself).</summary>
+    internal sealed class Flat(IReadOnlyDictionary<FeatureId, WorldFeature> features) : ISpatialIndex
+    {
+        public IReadOnlyList<FeatureId> Query(Box3 box) => [.. features.Keys.OrderBy(k => k.Value, StringComparer.Ordinal)];
+        public float GroundY(float x, float z) => 0f;
+        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
+        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
+    }
+
+    internal sealed class NoInteriors : IInteriorIndex
+    {
+        public InteriorIndexEntry? Get(FeatureId id) => null;
+        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [];
+    }
+}

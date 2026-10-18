@@ -25,7 +25,7 @@ public sealed class CollisionHeightFieldRuntimeTests
         var world = new CollisionWorld();
         try
         {
-            tree.Root.AddChild(viewport); viewport.AddChild(root); world.Attach(root, FixtureContext.Create());
+            tree.Root.AddChild(viewport); viewport.AddChild(root); world.Attach(root, FixtureContext());
             foreach (var tile in new TileKey[] { new(3, 2), new(-4, -3) })
             {
                 var at = new N.Vector2(tile.X * 64 + 12, tile.Z * 64 + 24);
@@ -64,7 +64,7 @@ public sealed class CollisionHeightFieldRuntimeTests
             viewport.AddChild(root);
             Require(root.GetWorld3D().Space == nativeWorld.Space && nativeWorld.Space != tree.Root.FindWorld3D().Space,
                 "Native collision fixture shares the application physics space.");
-            var context = FixtureContext.Create();
+            var context = FixtureContext();
             world.Attach(root, context);
             for (var x = -1; x <= 1; x++)
                 for (var z = -1; z <= 1; z++)
@@ -163,19 +163,13 @@ public sealed class CollisionHeightFieldRuntimeTests
         new SlopedWallCollider(new(35, 40), new(35, 44), .1f, 0, 1.5f, 2, 3.5f, SurfaceTag.Barrier)
     ];
 
-    private sealed record FixtureContext(MapDescriptor Descriptor) : IMapContext
-    {
-        public static FixtureContext Create() => new(new MapDescriptor(
-            new("fixture-collision-jolt"), new("原生碰撞测试", "Native collision fixture"), MapKind.Instance, 1, 1,
-            new(0, 0, 0, new(-128, -128), new(128, 128)), N.Vector2.Zero,
-            new(new(-128, -5, -128), new(128, 10, 128)), new(new(-128, -128), new(128, 128)),
-            new(1, 0, 128, -5, 10, 0, 0, 0), new(-2, -2), new(1, 1), "fixture", [],
-            new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
-            new("fixture-no-sky", "fixture-no-backdrop", []), new Dictionary<string, string>(), []));
-        public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty;
-        public IWorldModel World => throw new NotSupportedException();
-        public string DataRoot => throw new NotSupportedException();
-    }
+    private static TestMapContext FixtureContext() => new(new MapDescriptor(
+        new("fixture-collision-jolt"), new("原生碰撞测试", "Native collision fixture"), MapKind.Instance, 1, 1,
+        new(0, 0, 0, new(-128, -128), new(128, 128)), N.Vector2.Zero,
+        new(new(-128, -5, -128), new(128, 10, 128)), new(new(-128, -128), new(128, 128)),
+        new(1, 0, 128, -5, 10, 0, 0, 0), new(-2, -2), new(1, 1), "fixture", [],
+        new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
+        new("fixture-no-sky", "fixture-no-backdrop", []), new Dictionary<string, string>(), []));
 
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

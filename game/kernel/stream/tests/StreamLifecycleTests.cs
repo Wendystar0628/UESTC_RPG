@@ -71,12 +71,8 @@ public sealed class StreamLifecycleTests
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target);
     private static void Set(StreamDirector target, string name, object value) =>
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
-    private static IMapContext Context() => new ContextValue(BackdropInputsTests.Descriptor(), new TestWorldModel(),
-        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()));
+    private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new TestWorldModel(),
+        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()), "res://fixture/");
     private static BuildContext Build(IMapContext context) => new()
     { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = context.World, Map = context.Descriptor, WorldSeed = 1 };
-    private sealed record ContextValue(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext
-    {
-        public string DataRoot => "res://fixture/";
-    }
 }

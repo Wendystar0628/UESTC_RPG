@@ -1,0 +1,118 @@
+using System.Numerics;
+using System.Text.Json;
+using Campus.Contracts;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Parts;
+using Campus.Gen.Buildings.Build;
+using Campus.Gen.Buildings.Model;
+using Campus.Gen.Buildings.Plan;
+using GdUnit4;
+
+namespace Campus.Gen.Buildings.Tests;
+
+using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
+
+[TestSuite]
+public sealed class WindowPartTests
+{
+    private static bool Sash(GeometryBundle b) => b.Material.Spec.Lit.Value == "frame.alu.lit" && b.Material.Spec.Fx == ToonFx.Rim;
+    // The WP-10 gasket class (dark equipment steel without outline), not the WP-12 roof fence of the same colour.
+    private static bool Gasket(GeometryBundle b) => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.None;
+
+    [TestCase]
+    public void PhysicalCurtainFlagMatchesActualPerOpeningGeometryAtEachLodAndZone()
+    {
+        var world = World(Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
+        var set = BuildingSet.For(world, 1u);
+        var plan = set.Plans[0];
+        var present = 0;
+        var absent = 0;
+        foreach (var zone in new[] { FidelityZone.K1, FidelityZone.K2, FidelityZone.K3 })
+            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3 })
+                for (var fi = 0; fi < plan.Facades.Count; fi++)
+                {
+                    var layout = plan.Facades[fi];
+                    var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
+                    foreach (var opening in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
+                    {
+                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
+                        var openings = new FacadeOpenings(plan, set.Blocks[0], lod, sink);
+                        if (lod <= LodLevel.L1) openings.Fill(frame, layout, opening, zone);
+                        else openings.FlatGlass(frame, layout, opening, -plan.Reveal);
+                        var meshes = sink.Finish();
+                        var actualCurtain = meshes.Any(Fabric);
+                        if (actualCurtain) present++; else absent++;
+                        Require(!actualCurtain || (zone <= FidelityZone.K2 && lod == LodLevel.L0), "Physical curtain remains confined to the existing near LOD/zone.");
+                        var glass = meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
+                        Require(glass.Length > 0, "Each opening still has glass.");
+                        var card = (byte)FacadeOpenings.Card(plan, opening, FacadeOpenings.Number(plan, set.Blocks[0], layout, opening));
+                        foreach (var mesh in glass)
+                            foreach (var encoded in mesh.Reserved!)
+                            {
+                                Require((encoded & WindowCardEncoding.TypeMask) == card, "Presence flag preserves the window card type.");
+                                Require(((encoded & WindowCardEncoding.PhysicalCurtainFlag) != 0) == actualCurtain,
+                                    $"{zone} {lod} bay {opening.Bay}: flag exactly matches actual curtain geometry.");
+                            }
+                    }
+                }
+        Require(present > 0 && absent > 0, "Exercise actual curtains and uncurtained openings, including distant LODs.");
+    }
+
+    [TestCase]
+    public void K1AndK2OpeningsTakeTheWp10Parts()
+    {
+        // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH FacadeSegment).
+        var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
+        var set = BuildingSet.For(world, 1u);
+        var plan = set.Plans[0];
+        for (var fi = 0; fi < plan.Facades.Count; fi++)
+            for (var k = 0; k < plan.Openings[fi].Length; k++)
+                Require(plan.ZoneOf(fi, k) == (plan.Openings[fi][k].Row == 0 ? FidelityZone.K2 : FidelityZone.K3), "ground floor in the K2 band, the rest K3");
+        var module = new BuildingsModule();
+        var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
+        var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
+        Require(near.Any(Sash), "K2 windows carry the WP-10 two-level sashes at L0");
+        Require(near.Any(Fabric), "K2 room windows hang WP-10 curtains at L0");
+        Require(!mid.Any(Sash) && !mid.Any(Fabric), "L1 keeps the simplified frame ring only");
+        // Without window gaskets the dark steel is only the astragal between the entrance leaves (two boxes).
+        var dark = near.Where(Gasket).Sum(b => b.Index.Length / 3);
+        Require(Rules.OpeningRules.Gaskets || dark <= 24, "window gaskets follow OpeningRules.Gaskets");
+        Require(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base)),
+            "no part glass keeps WP-10's placeholder numbering");
+    }
+
+    [TestCase]
+    public void K3OpeningsTakeTheSimpleWindow()
+    {
+        var world = World(
+            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"),
+            Feature("t:hall", Rect(100, 0, 40, 30), 1, 9f, "sport"),
+            Feature("t:lab", Rect(200, 0, 48, 16), 5, 21f, "research"),
+            Feature("t:canteen", Rect(300, 0, 40, 24), 2, 9.5f, "dining"));
+        var set = BuildingSet.For(world, 3u);
+        var module = new BuildingsModule();
+        for (var i = 0; i < set.Plans.Count; i++)
+        {
+            var plan = set.Plans[i];
+            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1 })
+            {
+                var levelMax = 0;
+                for (var fi = 0; fi < plan.Facades.Count; fi++)
+                {
+                    var layout = plan.Facades[fi];
+                    var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
+                    foreach (var o in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
+                    {
+                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
+                        new Build.FacadeOpenings(plan, set.Blocks[i], lod, sink).Fill(frame, layout, o, FidelityZone.K3);
+                        levelMax = Math.Max(levelMax, sink.Triangles - 2);
+                    }
+                }
+                Require(levelMax is >= 16 and <= 60, $"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})");
+            }
+            var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
+            Require(!near.Any(Sash) && !near.Any(Fabric), $"{plan.Key}: K3 has no sashes, handles or curtains");
+            Require(near.All(b => !Gasket(b) || b.Index.Length / 3 <= 24), $"{plan.Key}: no window gaskets");
+        }
+    }
+}

@@ -14,7 +14,7 @@ public sealed class MapSpawnResolutionTests
     [TestCase]
     public void LegacyImplementationExplicitlyRejectsCatalogueLookup()
     {
-        IMapService legacy = new LegacyMapService();
+        IMapService legacy = new TestMapService(); // Implements no ResolveSpawn: the default method must fail explicitly.
         Throws<NotSupportedException>(() => legacy.ResolveSpawn(new("spawn-test")));
         Throws<NotSupportedException>(() => legacy.ResolveSpawn(new("spawn-test"), "P00"));
     }
@@ -60,20 +60,6 @@ public sealed class MapSpawnResolutionTests
         return new(file.Complete(new(103, 30, 32648, new(-32, -32), new(32, 32)), Vector2.Zero,
             new(new(-64, -28, -64), new(64, 2000, 64)), new(-1, -1), new(0, 0)),
             "res://data/maps/spawn-test/", [first, other]);
-    }
-
-    // Deliberately implements only the pre-extension interface: the default method must fail explicitly.
-    private sealed class LegacyMapService : IMapService
-    {
-        public long Rev => 0;
-        public MapId Default => default;
-        public IReadOnlyList<MapDescriptor> Maps => [];
-        public IReadOnlyList<MapVisit> Visits => [];
-        public MapId Current => default;
-        public IMapContext? Context => null;
-        public IMapTransition? Transition => null;
-        public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-        public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
     }
 
     private static void Check(bool condition, string message)

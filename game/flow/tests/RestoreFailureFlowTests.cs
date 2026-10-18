@@ -86,31 +86,16 @@ public sealed class RestoreFailureFlowTests
 
     private sealed class Fixture
     {
-        public TestCameraRig Camera { get; }
+        private readonly FlowTestRig _rig = new();
+        public TestCameraRig Camera => _rig.Camera;
         public FaultedSave Save { get; } = new();
-        public ImmediateVeil Veil { get; } = new();
-        public ExitService Exit { get; } = new();
-        public CinematicTestPresentation Presentation { get; } = new();
-        public CinematicPlayback Playback { get; }
-        public List<string> Diagnostics { get; } = [];
+        public ImmediateVeil Veil => _rig.Veil;
+        public TestAppExit Exit { get; } = new();
+        public CinematicTestPresentation Presentation => _rig.Presentation;
+        public CinematicPlayback Playback => _rig.Playback;
+        public List<string> Diagnostics => _rig.Diagnostics;
         public AppFlowService Flow { get; }
-        public Fixture()
-        {
-            var rules = new Rules(); var world = new TestWorldState(new TestWeatherProcess(), rules);
-            Camera = new(world);
-            Playback = new(Camera, Veil, rules, Presentation);
-            var runtime = new CinematicRuntimeTestStub(() => Presentation.IsCovered);
-            Flow = new(Camera, Veil, Save, new UnavailableMapService(), world, world, rules,
-                new Motion(), world, new TestCollisionWorld(), Playback, new Fault(), Exit, runtime, runtime)
-            { DiagnosticSink = Diagnostics.Add };
-        }
-    }
-    private sealed class ExitService : IAppExit
-    {
-        public int Calls { get; private set; }
-        public TaskCompletionSource? Gate { get; set; }
-        public TaskCompletionSource Started { get; } = new();
-        public Task FinishQuit() { Calls++; Started.TrySetResult(); return Gate?.Task ?? Task.CompletedTask; }
+        public Fixture() => Flow = _rig.CreateFlow(Save, new TestMapService(), Exit, new Fault());
     }
     private sealed class Fault : IWorldRestore
     {
@@ -118,51 +103,22 @@ public sealed class RestoreFailureFlowTests
         public void AbortRestore() => RestoreFaulted = true;
         public void CompleteRestore() => RestoreFaulted = false;
     }
-    private sealed class Rules : IRuleset
-    {
-        public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly], WorldControlMask.All, "none", [], [AppState.Title, AppState.Entering, AppState.Leaving]);
-        public long Rev => 1;
-    }
-    private sealed class Motion : IMotionSettings
-    {
-        public bool ReduceMotion => false;
-        public event Action? Changed { add { } remove { } }
-    }
-    private sealed class ImmediateVeil : IVeilService
-    {
-        public float Opacity { get; private set; }
-        public VeilReason Reason { get; private set; }
-        public int Reveals { get; private set; }
-        public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) { Reason = reason; Opacity = 1; return Task.CompletedTask; }
-        public Task Reveal(VeilReason reason, float seconds) { Reason = reason; Opacity = 0; Reveals++; return Task.CompletedTask; }
-        // Explicit test-only observation; this fixture does not simulate waiting-indicator timing.
-        public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness) => new Observation();
-        private sealed class Observation : IDisposable { public void Dispose() { } }
-        public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
-    }
-    private sealed class FaultedSave : ISaveService
+    private sealed class FaultedSave : TestSaveService
     {
         public int NewGames { get; private set; }
         public int Flushes { get; private set; }
         public int Saves { get; private set; }
         public SaveStatus FlushStatus { get; set; } = SaveStatus.Deferred;
         public TaskCompletionSource<SaveResult>? FlushGate { get; set; }
-        public bool Enabled => true;
-        public IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
-        public SlotId? Continue => new("s1");
-        public SlotId? Active => null;
-        public bool Busy => false;
-        public SaveState State { get; } = new(null, SaveStatus.Failed, "save.error.restore_world", null, ReadOnlyReason.None);
-        public event Action? SlotsChanged { add { } remove { } }
-        public bool HasPendingPose => false;
-        public void Request(SaveReason reason) { }
-        public Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Failed, null, 0)); }
-        public Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => Failed(slot);
-        public Task CompleteResume() => throw new InvalidOperationException("Cannot resume a faulted world.");
-        public Task<LoadResult> LoadFile(string path) => Failed(null);
-        public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) { NewGames++; return Failed(slot); }
-        public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) { Flushes++; return FlushGate?.Task ?? Task.FromResult(new SaveResult(FlushStatus, null, 0)); }
-        public byte[]? Thumbnail(SlotId slot) => null;
+        public override IReadOnlyList<SlotInfo> Slots { get; } = [new(new("s1"), SlotKind.Auto, SlotHealth.Empty, null, 0)];
+        public override SlotId? Continue => new("s1");
+        public override SaveState State { get; } = new(null, SaveStatus.Failed, "save.error.restore_world", null, ReadOnlyReason.None);
+        public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Failed, null, 0)); }
+        public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => Failed(slot);
+        public override Task CompleteResume() => throw new InvalidOperationException("Cannot resume a faulted world.");
+        public override Task<LoadResult> LoadFile(string path) => Failed(null);
+        public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) { NewGames++; return Failed(slot); }
+        public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) { Flushes++; return FlushGate?.Task ?? Task.FromResult(new SaveResult(FlushStatus, null, 0)); }
         private static Task<LoadResult> Failed(SlotId? slot) => Task.FromResult(new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world"));
     }
 }

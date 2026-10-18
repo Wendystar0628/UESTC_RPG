@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
@@ -70,7 +71,7 @@ public sealed class SpeciesTable
 
     public static SpeciesTable Parse(ReadOnlySpan<byte> json)
     {
-        var file = VegetationJson.Read(json, VegetationJson.Context.SpeciesFile, "species.json");
+        var file = WireJson.Read(json, VegetationJson.Context.SpeciesFile, "species.json");
         if (file.Format != "campus.vegetation.species/1") throw new InvalidDataException("species.json: unsupported format.");
         var list = new List<SpeciesInfo>();
         var rows = new HashSet<int>();

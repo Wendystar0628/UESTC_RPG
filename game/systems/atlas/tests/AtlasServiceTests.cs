@@ -243,8 +243,8 @@ public sealed class AtlasServiceTests
             "Regression no longer exercises multiple generated fallback entrances.");
         Check(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length,
             "Interior provider reused an entrance ID across different building features.");
-        var atlas = new AtlasService(new Camera(), new Observer(), new Rules("all-unlocked"));
-        atlas.LoadMap(new Context(descriptor, world),
+        var atlas = new AtlasService(NewCamera(), new Observer(), new TestRuleset());
+        atlas.LoadMap(new TestMapContext(descriptor, world),
             JsonSerializer.Deserialize<AtlasMarkerFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "markers.json")), ContractJson.Options)!,
             JsonSerializer.Deserialize<AtlasLabelFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "labels.json")), ContractJson.Options)!,
             JsonSerializer.Deserialize<WaypointFile>(File.ReadAllBytes(Path.Combine(root, "waypoints.json")), ContractJson.Options)!);
@@ -271,14 +271,15 @@ public sealed class AtlasServiceTests
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    private static TestCameraRig NewCamera() => new(pose: new Pose(new(500, 100, 500), 0, 0), transit: true) { Mode = ViewMode.Walk };
     private sealed class Fixture
     {
-        internal Camera Camera { get; } = new();
+        internal TestCameraRig Camera { get; } = NewCamera();
         internal Driver Driver { get; } = new();
         internal Observer Observer { get; } = new();
         internal TestInteriorIndex Interiors { get; } = new();
         internal MutableWorldFixture World { get; }
-        internal Context Context { get; }
+        internal TestMapContext Context { get; }
         internal AtlasService Atlas { get; }
         internal Fixture(string policy = "all-unlocked")
         {
@@ -290,8 +291,8 @@ public sealed class AtlasServiceTests
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("测试", "Test"), false, "test"),
                 new("test", "test", []), new Dictionary<string, string>(), []);
             Context = new(map, World);
-            var maps = new TestMapService(Context, Camera);
-            Atlas = new(Camera, Observer, new Rules(policy), Driver);
+            var maps = new SingleMapService(Context, Camera);
+            Atlas = new(Camera, Observer, new TestRuleset(policy), Driver);
             Atlas.Connect(maps, new Flow(), new TestAudio());
             Reload();
         }
@@ -302,55 +303,46 @@ public sealed class AtlasServiceTests
         private static AtlasMarker Anchor(string id, Vector2 at, AnchorForm form) => new(new(id), MarkerKind.Anchor,
             new(id, id), at, "anchor", 1, 0, "test-district", new(new(new(at.X, 6, at.Y), 0, -12), new(new(at.X, 0, at.Y), 0)), new(id), Form: form);
     }
-    private sealed record Context(MapDescriptor Descriptor, IWorldModel World) : IMapContext
-    { public BuildInputSnapshot SourceInputs => BuildInputSnapshot.Empty; public string DataRoot => "res://test/"; }
-    private sealed class Rules(string policy) : IRuleset
-    {
-        public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly, ViewMode.Walk], WorldControlMask.All, policy, [], []);
-        public long Rev => 1;
-    }
     private sealed class Observer : IObserverState
     {
         public Vector3 Feet { get; set; } = new(200, 0, 200);
         public Vector3 Eye => Feet + Vector3.UnitY;
         public float YawDeg => 0; public NavSpace? Space => null; public ViewMode Mode { get; set; } = ViewMode.Walk;
     }
-    private sealed class TestMapService(Context context, Camera camera) : IMapService
+    private sealed class SingleMapService : TestMapService
     {
-        public long Rev { get; private set; } = 1;
-        public MapId Default => Current; public MapId Current => context.Descriptor.Id;
-        public IReadOnlyList<MapDescriptor> Maps => [context.Descriptor]; public IMapContext? Context => context;
-        // This fixture starts on its sole map at world hour zero, before any weather epoch change.
-        public IReadOnlyList<MapVisit> Visits => [new(Current, camera.Pose, camera.Mode)];
-        public IMapTransition? Transition { get; private set; }
-        public event Action<MapId, MapTravelCause>? Arrived;
-
-        public IMapTransition Travel(MapTravelRequest request)
+        private readonly TestMapContext _context;
+        private readonly TestCameraRig _camera;
+        public SingleMapService(TestMapContext context, TestCameraRig camera)
         {
-            if (request.Target != Current)
-                return Transition = new TestMapTransition(Current, request.Target, request.Cause, MapTravelResult.Rejected);
-            var spawn = request.Spawn is null ? null : context.Descriptor.Spawns.SingleOrDefault(s => s.Id == request.Spawn);
+            _context = context; _camera = camera;
+            Rev = 1; Default = Current = context.Descriptor.Id; Maps = [context.Descriptor]; Context = context;
+        }
+        // This fixture starts on its sole map at world hour zero, before any weather epoch change.
+        public override IReadOnlyList<MapVisit> Visits => [new(Current, _camera.Pose, _camera.Mode)];
+
+        public override IMapTransition Travel(MapTravelRequest request)
+        {
+            if (request.Target != Current) return Finish(Current, request.Target, request.Cause, MapTravelResult.Rejected);
+            var spawn = request.Spawn is null ? null : _context.Descriptor.Spawns.SingleOrDefault(s => s.Id == request.Spawn);
             if (request.Pose is null && request.Spawn is not null && spawn is null)
-                return Transition = new TestMapTransition(Current, request.Target, request.Cause, MapTravelResult.Rejected);
-            var mode = request.Mode ?? camera.Mode;
+                return Finish(Current, request.Target, request.Cause, MapTravelResult.Rejected);
+            var mode = request.Mode ?? _camera.Mode;
             _ = mode switch
             {
                 ViewMode.Fly or ViewMode.Walk => 0,
                 _ => throw new ArgumentOutOfRangeException(nameof(request)),
             };
-            camera.SetPose(request.Pose ?? spawn?.Fly ?? camera.Pose);
-            camera.Mode = mode;
+            _camera.SetPose(request.Pose ?? spawn?.Fly ?? _camera.Pose);
+            _camera.Mode = mode;
             Rev++;
-            Transition = new TestMapTransition(Current, Current, request.Cause, MapTravelResult.Arrived);
-            Arrived?.Invoke(Current, request.Cause);
-            return Transition;
+            var arrived = Finish(Current, Current, request.Cause, MapTravelResult.Arrived);
+            RaiseArrived(Current, request.Cause);
+            return arrived;
         }
-    }
-    private sealed record TestMapTransition(MapId From, MapId To, MapTravelCause Cause, MapTravelResult Result) : IMapTransition
-    {
-        public MapStage Stage => MapStage.Done;
-        public float Progress => 1;
-        public Task<MapTravelResult> Done { get; } = Task.FromResult(Result);
+
+        private IMapTransition Finish(MapId from, MapId to, MapTravelCause cause, MapTravelResult result) =>
+            LastTransition = TestMapTransition.Completed(from, to, cause, result);
     }
     private sealed class Flow : IAppFlow
     {
@@ -360,34 +352,12 @@ public sealed class AtlasServiceTests
         public Task ReturnToTitle() => Task.CompletedTask; public void Skip() { }
         public Task Quit() => Task.CompletedTask;
     }
-    private sealed class Camera : ICameraRig
-    {
-        public Pose Pose { get; private set; } = new(new(500, 100, 500), 0, 0);
-        public float Speed => 0; public ViewMode Mode { get; set; } = ViewMode.Walk;
-        public float EdgeFog => 0;
-        public int Locks { get; private set; }
-        public TransitOptions? Options { get; private set; }
-        public Handle? Handle { get; private set; }
-        public ITransitHandle? ActiveTransit => Handle;
-        public void SetPose(Pose pose) => Pose = pose;
-        public ITransitHandle Transit(Pose to, TransitOptions? options = null)
-        { Options = options; return Handle = new(options?.Prefer == TransitPreference.Teleport ? TransitKind.Teleport : TransitKind.Slide); }
-        public IDisposable LockInput(InputLockReason reason) { Locks++; return new Lease(() => Locks--); }
-    }
     private sealed class Driver : ITransitDriver
     {
         public bool IsReady { get; set; } = true;
         public Pose? Destination => null;
         public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null) => throw new NotSupportedException();
     }
-    private sealed class Handle(TransitKind kind) : ITransitHandle
-    {
-        public TaskCompletionSource<TransitResult> Completion { get; } = new();
-        public TransitKind Kind => kind; public float Progress => 0; public Task<TransitResult> Done => Completion.Task;
-        public void Cancel() => Completion.TrySetResult(TransitResult.Cancelled);
-    }
-    private sealed class Lease(Action release) : IDisposable
-    { private Action? _release = release; public void Dispose() { _release?.Invoke(); _release = null; } }
     private sealed class TestAudio : Campus.Contracts.Audio.IAudioService
     {
         public Campus.Contracts.Audio.AudioSettings Settings { get; } = new();
