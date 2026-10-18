@@ -69,16 +69,30 @@ internal readonly record struct GroundFaceInput(GroundSurface Surface, GroundFac
     public IEnumerable<GroundShape> SourcesAt(Vector2 position) => Context.At(Surface, position);
 
     /// <summary>
-    /// Paving frame of a granite plaza top at this position, or null. Only the plaza body is patterned (not curbs,
-    /// vertical faces, skirts or borders). The first bound source covering the point (stable source order) gives the frame;
-    /// unbound plazas overlapping it are laid in the same grid, so the field has no seam along the triangulation.
+    /// Paving frame of a granite plaza top or a paver walk top at this position, or null. Only the paved body is
+    /// patterned (not curbs, edging, vertical faces, skirts or borders). Plazas: the first bound source covering the
+    /// point (stable source order) gives the frame; unbound plazas overlapping it are laid in the same grid, so the field
+    /// has no seam along the triangulation. Walks: where several overlap (junctions), the one the point lies deepest in.
     /// </summary>
     public PavingFrame? PavingAt(Vector2 position)
     {
-        if (Surface != GroundSurface.Granite || Role != GroundFaceRole.Top || Context.Paving.Count == 0) return null;
+        if (Role != GroundFaceRole.Top) return null;
+        var paving = Context.Paving;
+        if (Surface == GroundSurface.Granite && paving.HasPlazas)
+        {
+            foreach (var shape in SourcesAt(position))
+                if (paving.FrameOf(shape) is { } frame) return frame;
+            return null;
+        }
+        if (Surface != GroundSurface.Paver || !paving.HasWalks) return null;
+        GroundShape? deepest = null;
+        var depth = float.MaxValue;
         foreach (var shape in SourcesAt(position))
-            if (Context.Paving.FrameOf(shape) is { } frame) return frame;
-        return null;
+        {
+            var d = Sdf.Shape(shape, position, 64f);
+            if (d < depth) (deepest, depth) = (shape, d);
+        }
+        return deepest is null ? null : paving.WalkFrameAt(deepest, position);
     }
 }
 

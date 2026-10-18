@@ -71,7 +71,8 @@ public sealed class GroundTests
         var colours = output.Meshes.SelectMany(m => m.ColorIndices!).Distinct().ToHashSet();
         foreach (var expected in new[] { GroundColor.Asphalt, GroundColor.Curb, GroundColor.Paver, GroundColor.Marking })
             AssertThat(colours.Contains(GroundPalette.Id(expected))).OverrideFailureMessage($"Missing {expected}; got {string.Join(", ", colours)}.").IsTrue();
-        AssertThat(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 5).OverrideFailureMessage("At most five ground materials.").IsTrue();
+        // Asphalt, kerb, plain paving, patterned walk pavers (Q-015), lawn and markings: one bundle each.
+        AssertThat(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 6).OverrideFailureMessage("At most six ground materials.").IsTrue();
         foreach (var mesh in output.Meshes)
         {
             mesh.ValidateVertexData();

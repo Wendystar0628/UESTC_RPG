@@ -12,10 +12,16 @@ public static class SurfacePatternLayers
     /// <summary>直缝方砖：缝在 U、V 两向都对齐。首个用户是图书馆前广场的 600×600 mm 花岗岩（WP-15 GroundPaving）。</summary>
     public const ushort StackBond = 1;
 
+    /// <summary>
+    /// 错缝（顺砖）：V 向一行一行，行缝通长；U 向的竖缝隔行错半格。首个用户是人行步道的 300×150 mm 透水砖
+    /// （WP-15 GroundPaving，U 沿步道）；墙面砖也用这一层（U 沿墙水平、V 向上）。
+    /// </summary>
+    public const ushort RunningBond = 2;
+
     /// <summary>新层只在末尾追加；这里穷举，没有登记的层号直接拒绝（WF-BUILD）。</summary>
     public static bool IsRegistered(ushort layer) => layer switch
     {
-        StackBond => true,
+        StackBond or RunningBond => true,
         _ => false
     };
 

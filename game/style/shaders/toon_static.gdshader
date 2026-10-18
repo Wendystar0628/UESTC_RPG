@@ -12,14 +12,14 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_d
 // 远处按屏幕上的格子大小淡出：缝线先按像素足迹做盒式滤波（滤波本身就收敛到面积平均），格子小于 PAT_FADE_PX
 // 时再整体过渡到"砖面与缝按面积加权"的平均明度，不出摩尔纹、不闪。层号登记在 SurfacePatternLayers.cs。
 // ---------------------------------------------------------------------------
-uniform int pattern_layer = 0;               // 0 = 无图样；1 = 直缝方砖（StackBond）
+uniform int pattern_layer = 0;               // 0 = 无图样；1 = 直缝方砖（StackBond）；2 = 错缝（RunningBond，V 向成行、竖缝隔行错半格）
 uniform vec2 pattern_period = vec2(1.0);     // 含缝的 U、V 模数（m）
 uniform vec2 pattern_joint = vec2(0.0);      // 缝带总宽（m），居中在格界上
 
 const float PAT_JOINT_DL = -0.04;            // 缝线的明度差（OKLab L，样板初值，主会话定值）
 const float PAT_MOTTLE_DL = 0.03;            // 弱斑驳的幅度上限（±L，ART-STYLE）
 const float PAT_MOTTLE_SCALE = 4.0;          // 斑驳的基本尺度（m，§6.2 的 2–8 m 里取中）
-const vec2 PAT_FADE_PX = vec2(3.0, 6.0);     // 格子在屏幕上的边长（px）从 .y 到 .x：缝线过渡到面积平均
+const vec2 PAT_FADE_PX = vec2(4.0, 8.0);     // 格子在屏幕上的边长（px）从 .y 到 .x：缝线过渡到面积平均（掠射中景不出断续短划）
 const float PAT_MIN_LINE_PX = 0.75;          // 缝线在屏幕上的最小宽度（px）：中景仍读得出格子，过了 PAT_FADE_PX 再回到真实面积平均
 const vec2 PAT_MOTTLE_FADE_PX = vec2(6.0, 16.0);   // 斑驳更早淡出：中远景读作干净的平涂
 
@@ -34,6 +34,14 @@ float pat_line(float x, float j, float w) {
 	float ia = floor(a) * j + min(fract(a), j);
 	float ib = floor(b) * j + min(fract(b), j);
 	return clamp((ib - ia) / w, 0.0, 1.0);
+}
+
+// 错缝的竖缝：偶数行缝在整数处，奇数行错半格；足迹跨行时按落在奇数行的份额混合两种相位（仍是盒式滤波）
+float pat_bond_line(vec2 g, float j, vec2 w) {
+	float even = pat_line(g.x, j, w.x);
+	float odd = pat_line(g.x + 0.5, j, w.x);
+	float in_odd = pat_line(0.5 * g.y - 0.75, 0.5, 0.5 * w.y);
+	return mix(even, odd, in_odd);
 }
 
 float pat_hash(ivec2 i) {
@@ -54,21 +62,24 @@ float pat_noise(vec2 p) {
 }
 
 // 图案的明度差。uv、fw（米 UV 及其 fwidth）在统一控制流里取好；gate 0 时为 0
-float pat_dl(vec2 uv, vec2 fw, vec2 gate_k, vec3 wpos) {
-	if (pattern_layer != 1) {
+float pat_dl(vec2 uv, vec2 fw, vec2 gate_k, vec3 wpos, vec3 n_w) {
+	if (pattern_layer != 1 && pattern_layer != 2) {
 		return 0.0;
 	}
 	vec2 period = max(pattern_period, vec2(1e-3));
 	vec2 j = clamp(pattern_joint / period, vec2(0.0), vec2(0.999));
+	vec2 g = uv / period;
 	vec2 w = fw / period;
 	float cell_px = min(period.x / max(fw.x, 1e-6), period.y / max(fw.y, 1e-6));
 	vec2 jl = min(max(j, PAT_MIN_LINE_PX * w), vec2(0.5));
-	float cu = pat_line(uv.x / period.x, jl.x, w.x);
-	float cv = pat_line(uv.y / period.y, jl.y, w.y);
+	float cu = pattern_layer == 2 ? pat_bond_line(g, jl.x, w) : pat_line(g.x, jl.x, w.x);
+	float cv = pat_line(g.y, jl.y, w.y);
 	float cover = 1.0 - (1.0 - cu) * (1.0 - cv);
 	float avg = 1.0 - (1.0 - j.x) * (1.0 - j.y);
 	cover = mix(avg, cover, smoothstep(PAT_FADE_PX.x, PAT_FADE_PX.y, cell_px));
-	vec2 q = wpos.xz / PAT_MOTTLE_SCALE;
+	// 斑驳在世界空间里各向同性：地面取 xz，墙面取（沿墙水平, 高度），不随 UV 的分段铺向跳变
+	vec2 along = normalize(vec2(-n_w.z, n_w.x) + vec2(1e-5, 0.0));
+	vec2 q = (abs(n_w.y) > 0.7 ? wpos.xz : vec2(dot(wpos.xz, along), wpos.y)) / PAT_MOTTLE_SCALE;
 	float mottle = (0.65 * pat_noise(q) + 0.35 * pat_noise(q * 2.03 + vec2(17.3, 5.1))) * PAT_MOTTLE_DL;
 	mottle *= smoothstep(PAT_MOTTLE_FADE_PX.x, PAT_MOTTLE_FADE_PX.y, cell_px);
 	float on = gate_k.x > 0.5 ? 1.0 : 0.0;
@@ -97,7 +108,7 @@ void fragment() {
 	if (pattern_layer == 0) {
 		tcol = toon_colors(tctx, tmat);
 	} else {
-		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos));
+		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));
 	}
 	TOON_FRAGMENT_END(tcol)
 }
