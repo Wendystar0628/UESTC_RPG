@@ -50,11 +50,11 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 | `research/INDEX.md`、`research/<日期>-r<nnn>-<主题>/` | 主会话追加索引与审计；调研子代理写报告与总览 | 调研索引与各方向报告 |
 | `notes/<收件方>/<YYYYMMDD-HHMMSS>-<发件方>-<短词>.md` | 发件方 | 来信收件箱（§4）：`notes/opus/` 发给主会话，`notes/astra/` 发给 Astra |
 | `notes/codex-app-done.md` | Codex 会话 | 脚本握手：做完一件活追加一行"[任务号] 一句话结果"，只有脚本读 |
-| `status/施工状态.md`、`HANDOVER.md` | 主会话 | 施工状态与待派工队列的活表；主会话交接单（WF-STATUS） |
+| `status/施工状态.md`、`HANDOVER.md` | 主会话 | 施工状态与施工队列的活表；主会话交接单（WF-STATUS） |
 | `tools/` | 主会话 | 脚本、会话号与状态，索引见 `tools/README.md` |
 
 **结案即删**（D-228）：
-- 派单的一方确认合入、没有未了的事就写"结案"并删掉这张单：Opus 侧由主会话删，Astra 侧由 Astra 删；巡逻会列出写了结案或已合入的单。结果在提交、代码、文档和决策登记里；还有后续的，先写进新单或待派工队列（WF-STATUS §2）再删。
+- 派单的一方确认合入、没有未了的事就写"结案"并删掉这张单：Opus 侧由主会话删，Astra 侧由 Astra 删；巡逻会列出写了结案或已合入的单。结果在提交、代码、文档和决策登记里；还有后续的，先写进施工队列（WF-STATUS §2）再删。
 - 处理完的请求、来信、交出结果的旁路单同样直接删；调研见 WF-STATUS §4.1。
 - 任务单只放目标、范围、已定取值、交付标准、评审结论和一行现状，不记过程流水。
 
