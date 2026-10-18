@@ -39,12 +39,12 @@
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.2k 字 · 协作、流程、文档规则与门禁流程类的已定决策
+`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.3k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
 - CORE-DECISIONS-PROCESS §0 结论 · L23 · 173
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.5k
+- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.6k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
@@ -356,7 +356,7 @@
 
 ## ART-RENOVATION · 老楼翻新：全部翻新的规则
 
-`docs/art/ART-RENOVATION-老楼翻新.md` · 10.0k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：会脏处换构件、材质色额、删简留、各部位改法、氛围与成电辨认、验收
+`docs/art/ART-RENOVATION-老楼翻新.md` · 10.1k 字 · 老楼位置、体量与身份特征不动，外观全部换成新楼标准：会脏处换构件、材质色额、删简留、各部位改法、氛围与成电辨认、验收
 关键词：老楼翻新、翻新、翻新预设、翻新楼、全部翻新、旧痕、删简留、防盗网、窗套、窗楣、窗台滴水、勒脚、压顶檐口、管槽、管廊、护窗栏、伸出杆、颜色配额、陶红墙带、浅奶咖墙、斑驳、面砖、楼梯间窗带、叶影上墙、成电辨认、翻新对照楼
 
 - ART-RENOVATION §0 结论 · L21 · 968
@@ -369,12 +369,12 @@
   - ART-RENOVATION §2.1 全部翻新，与新楼同标准 · L62 · 223
   - ART-RENOVATION §2.2 会脏的地方换成构件 · L68 · 388
   - ART-RENOVATION §2.3 生活感只靠干净的痕迹 · L81 · 270
-- ART-RENOVATION §3 材质与配色 · L87 · 1.4k
-  - ART-RENOVATION §3.1 材质族 · L89 · 274
+- ART-RENOVATION §3 材质与配色 · L87 · 1.5k
+  - ART-RENOVATION §3.1 材质族 · L89 · 296
   - ART-RENOVATION §3.2 每栋楼的颜色配额 · L100 · 128
   - ART-RENOVATION §3.3 取值 · L105 · 595
   - ART-RENOVATION §3.4 斑驳、笔触与顶点色 · L114 · 201
-  - ART-RENOVATION §3.5 面砖 · L120 · 100
+  - ART-RENOVATION §3.5 面砖 · L120 · 106
   - ART-RENOVATION §3.6 描线 · L124 · 130
 - ART-RENOVATION §4 删、简、留 · L128 · 882
   - ART-RENOVATION §4.1 删：旧痕、杂物与防盗网 · L130 · 365
@@ -580,13 +580,13 @@
 
 ## WLD-LIFE-STREET · 停着的车与街道家具：车、家具、碰撞
 
-`docs/world/WLD-LIFE-STREET-停着的车与街道家具.md` · 4.7k 字 · 停着的车与匿名共享单车、街道家具的设计，行走模式下的碰撞与 Foot 材质、声音数据
+`docs/world/WLD-LIFE-STREET-停着的车与街道家具.md` · 4.6k 字 · 停着的车与匿名共享单车、街道家具的设计，行走模式下的碰撞与 Foot 材质、声音数据
 关键词：停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、共享单车停放点
 
 - WLD-LIFE-STREET §0 结论 · L23 · 611
   - ★ WLD-LIFE-STREET §0.1 接入要点 · L28 · 470
 - WLD-LIFE-STREET §1 停着的车 · L37 · 788
-- WLD-LIFE-STREET §2 街道家具 · L47 · 1.7k
+- WLD-LIFE-STREET §2 街道家具 · L47 · 1.6k
 - WLD-LIFE-STREET §3 行走模式下的碰撞 · L60 · 679
 - WLD-LIFE-STREET §4 待验证（P0） · L75 · 59
 
