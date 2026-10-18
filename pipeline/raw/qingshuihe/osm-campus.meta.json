@@ -1,6 +1,0 @@
-{
-  "retrievedDateUtc": "2026-09-16",
-  "dateBasis": "Preserved campus.json meta.date from the committed source dataset; the original acquisition time of day was not recorded.",
-  "source": "https://www.openstreetmap.org/api/0.6/map.json?bbox=103.9170,30.7433,103.9393,30.7630",
-  "queryFile": "osm-campus.query.txt"
-}

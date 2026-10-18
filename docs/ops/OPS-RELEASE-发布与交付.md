@@ -79,8 +79,7 @@ gates: [G6]
 
 地图数据按 ODbL 1.0 提供（WLD-OUTSKIRTS-BAND §6）。每个公开版本附一份 `map-data-<版本>.zip`，与分发压缩包放在同一个发布页。
 
-- **内容**：本版本实际使用的派生数据库（各图的 `campus.json`、`network.json`、`zones.json`、`outskirts.json` 和 `overlay/` 下全部覆盖层，与安装包里同一份字节）；`README.txt`（来源 © OpenStreetMap contributors、快照日期、Overpass 查询原文、ODbL 声明与全文地址、对应标签 `v<版本>`，以及在该标签下用 `pipeline/` 重建这些文件的命令）。
-- 派生数据库因故不能直接附上时，改附完整的重建材料（该标签下的 OSM 快照与元数据、查询语句、管线与全部输入、覆盖层），按 `README.txt` 的命令能重建出相同字节。
+- **内容**：本版本实际使用的派生数据库（各图的 `campus.json`、`network.json`、`zones.json`、`outskirts.json` 和 `overlay/` 下全部覆盖层，与安装包里同一份字节）；`README.txt`（来源 © OpenStreetMap contributors、快照日期（取 `campus.json` 的 `meta`）、ODbL 声明与全文地址、对应标签 `v<版本>`）。
 - **指向同一份**：仓库 README 的许可一段、许可页和 `LICENSES.txt` 都写明本版本的数据包和它所在的发布页。
 
 ## 6 故障处理与诊断
@@ -110,6 +109,6 @@ gates: [G6]
 - **署名**：内容只有一行文字"© OpenStreetMap contributors"，放在右下角，字号 10–11 px（1920×1080 基准，随界面缩放），颜色取当前雾色的反色，不透明度约 35%。界面的时间卡展开时署名左移让位，存储指示在署名上方；放映层出现黑边时署名改用固定的浅色。署名层在界面层之上，`--ui=0` 时画面上只剩它。界面态下点击署名用系统浏览器打开 OSM 版权页，漫游态下鼠标被捕获点不到。数据采用 ODbL 协议，必须署名；外围街区的数据同样来自 OSM（WLD-OUTSKIRTS-BAND §6）。
 - **许可页与 `LICENSES.txt`**：思源黑体、Inter、JetBrains Mono（SIL OFL 1.1）和 Godot 引擎（MIT）的许可文本，放进设置卡的"许可"页和开始页的"制作人员与许可"（同一个组件），安装包里另附 `LICENSES.txt`。不使用思源宋体。
   - 开头先写本作自身的许可（上表四类），同一处注明这是个人创作，不是学校的官方作品。
-  - 写明 `campus.json` 与外围数据是 ODbL 1.0 下的派生数据库，附快照日期和 Overpass 查询原文，并指向本版本的地图数据包（§5）；音频素材的署名从 `licenses.json` 生成（SYS-AUDIO §8）。
+  - 写明 `campus.json` 与外围数据是 ODbL 1.0 下的派生数据库，附快照日期，并指向本版本的地图数据包（§5）；音频素材的署名从 `licenses.json` 生成（SYS-AUDIO §8）。
 - **窗口标题**为"电光年华"；描述为"电子科技大学清水河校区，三渲二漫游作品"。
 - **图标**：八角晶片：一块左上切角的方形芯片，四边各 3 根短引脚，芯片面上是图书馆八角穹顶的平面八瓣线，底色科技蓝 #1961A0，切角旁一枚暖色过孔 #FFE0A8；16、24 px 只留切角方块和八边形外框（UI-VISUAL-COMPONENTS §3.3）。

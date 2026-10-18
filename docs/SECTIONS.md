@@ -10,7 +10,7 @@
 - CORE-INDEX §0 核心准则 · L21 · 1.7k
   - ★ CORE-INDEX §0.1 接入要点 · L46 · 119
 - CORE-INDEX §1 文档地图 · L52 · 2.1k
-- CORE-INDEX §2 作品与范围 · L85 · 965
+- CORE-INDEX §2 作品与范围 · L85 · 972
 - CORE-INDEX §3 全局不变量 · L95 · 2.0k
 
 ## CORE-CONVENTIONS · 约定
@@ -26,8 +26,8 @@
   - CORE-CONVENTIONS §1.3 清水河的范围数 · L60 · 278
   - CORE-CONVENTIONS §1.4 其他单位 · L68 · 267
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
-- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.1k
-  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 923
+- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.2k
+  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 976
   - CORE-CONVENTIONS §3.2 编号体系 · L112 · 873
   - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 687
   - CORE-CONVENTIONS §3.4 命名写法 · L148 · 1.1k
@@ -40,12 +40,12 @@
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.5k 字 · 协作、流程、文档规则与门禁流程类的已定决策
+`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.7k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
 - CORE-DECISIONS-PROCESS §0 结论 · L23 · 173
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.8k
+- CORE-DECISIONS-PROCESS §1 流程 · L31 · 10.1k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
@@ -83,7 +83,7 @@
 
 ## CORE-GLOSSARY · 术语表
 
-`docs/core/CORE-GLOSSARY-术语表.md` · 20.9k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
+`docs/core/CORE-GLOSSARY-术语表.md` · 21.0k 字 · 文档里专有说法的统一解释，按领域分组，每条一两句并给出细则所在的小节
 关键词：术语、术语表、名词解释、同名异义、缩写、别名
 
 - CORE-GLOSSARY §0 用法 · L22 · 261
@@ -101,8 +101,8 @@
 - CORE-GLOSSARY §11 界面 · L240 · 1.4k
 - CORE-GLOSSARY §12 音频 · L267 · 1.1k
 - CORE-GLOSSARY §13 画面设置与性能 · L288 · 1.7k
-- CORE-GLOSSARY §14 工程与流程 · L315 · 2.2k
-- CORE-GLOSSARY §15 同名异义 · L351 · 1.6k
+- CORE-GLOSSARY §14 工程与流程 · L315 · 2.3k
+- CORE-GLOSSARY §15 同名异义 · L352 · 1.6k
 
 ## WF-BUILD · 施工边界
 
@@ -675,11 +675,11 @@
 `docs/world/WLD-TERRAIN-SHAPE-地形设计.md` · 7.1k 字 · 地形设计规则：设计原则、高度预算与分层、手感刻度、坡度类、竖直落差、水位与岸型
 关键词：地形设计原则、地形分层、高度预算、主模数、手感刻度、灰区、坡度类、零带、竖直落差、台缘带、退台、常水位、岸型、涉水带、泳岸型、遮挡与揭示
 
-- WLD-TERRAIN-SHAPE §0 结论 · L23 · 615
-  - ★ WLD-TERRAIN-SHAPE §0.1 接入要点 · L30 · 282
-- WLD-TERRAIN-SHAPE §1 设计原则 · L36 · 929
+- WLD-TERRAIN-SHAPE §0 结论 · L23 · 617
+  - ★ WLD-TERRAIN-SHAPE §0.1 接入要点 · L30 · 279
+- WLD-TERRAIN-SHAPE §1 设计原则 · L36 · 926
   - WLD-TERRAIN-SHAPE §1.1 总骨架 · L38 · 189
-  - WLD-TERRAIN-SHAPE §1.2 规则 · L44 · 729
+  - WLD-TERRAIN-SHAPE §1.2 规则 · L44 · 726
 - WLD-TERRAIN-SHAPE §2 高度预算与分层 · L58 · 1.8k
   - WLD-TERRAIN-SHAPE §2.1 分层 · L60 · 493
   - WLD-TERRAIN-SHAPE §2.2 手感刻度 · L73 · 499
@@ -691,9 +691,9 @@
   - WLD-TERRAIN-SHAPE §3.3 退台与高墙 · L133 · 184
   - WLD-TERRAIN-SHAPE §3.4 防护与谁来做 · L138 · 231
 - WLD-TERRAIN-SHAPE §4 水位与岸型 · L143 · 1.5k
-  - WLD-TERRAIN-SHAPE §4.1 常水位 · L145 · 271
+  - WLD-TERRAIN-SHAPE §4.1 常水位 · L145 · 263
   - WLD-TERRAIN-SHAPE §4.2 岸型 · L151 · 551
-  - WLD-TERRAIN-SHAPE §4.3 涉水带、湖盆与河渠 · L162 · 346
+  - WLD-TERRAIN-SHAPE §4.3 涉水带、湖盆与河渠 · L162 · 341
   - WLD-TERRAIN-SHAPE §4.4 穿出校界 · L168 · 110
   - WLD-TERRAIN-SHAPE §4.5 开放泳区的泳岸型与支撑面 · L172 · 247
 - WLD-TERRAIN-SHAPE §5 待验证 · L178 · 128
@@ -747,7 +747,7 @@
 关键词：水体、水面、开放泳区、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、灯的竖条倒影、refl_lamps
 
 - WLD-WATER §0 结论 · L22 · 1.1k
-  - ★ WLD-WATER §0.1 接入要点 · L33 · 550
+  - ★ WLD-WATER §0.1 接入要点 · L33 · 545
 - WLD-WATER §1 水面的通用画法 · L43 · 727
   - WLD-WATER §1.1 底色与色带 · L47 · 357
   - WLD-WATER §1.2 波纹线与泡沫线 · L53 · 284
@@ -1092,7 +1092,7 @@
   - MAP-QSH-TERRAIN §1.1 分层分布 · L46 · 746
   - MAP-QSH-TERRAIN §1.2 地标丘：红枫丘 · L61 · 539
   - MAP-QSH-TERRAIN §1.3 遮挡与揭示的三条路线 · L69 · 592
-- MAP-QSH-TERRAIN §2 水系与常水位 · L79 · 970
+- MAP-QSH-TERRAIN §2 水系与常水位 · L79 · 967
 - MAP-QSH-TERRAIN §3 坡度与着色 · L100 · 414
 
 ## MAP-QSH-VEGETATION · 清水河植被：树种、种植与地面覆盖的位置
@@ -1732,7 +1732,7 @@
   - ENG-ARCH 仓库脚本自成一体 · L104 · 101
   - ENG-ARCH 生命周期与发布 · L108 · 233
 - ENG-ARCH §3 契约 · L115 · 568
-- ENG-ARCH §4 资源与烘焙 · L124 · 1.0k
+- ENG-ARCH §4 资源与烘焙 · L124 · 991
 - ENG-ARCH §5 未交付能力的占位边界 · L135 · 359
 - ENG-ARCH §6 架构导向 · L144 · 807
 - ENG-ARCH §7 扩展点（RPG） · L157 · 448
@@ -1945,7 +1945,7 @@
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/ops/OPS-RELEASE-发布与交付.md` · 6.7k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
+`docs/ops/OPS-RELEASE-发布与交付.md` · 6.6k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 关键词：发布、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、卸载、诊断包、导出诊断、许可、MIT、LICENSE、干净环境验证、OSM 署名、许可页、制作人员与许可、窗口标题、窗口图标、八角晶片
 
 - OPS-RELEASE §0 结论 · L21 · 1.2k
@@ -1954,7 +1954,7 @@
 - OPS-RELEASE §2 用户数据目录 · L51 · 273
 - OPS-RELEASE §3 导出与发布 · L57 · 584
 - OPS-RELEASE §4 安装、更新与卸载 · L66 · 504
-- OPS-RELEASE §5 地图数据包（ODbL） · L78 · 506
-- OPS-RELEASE §6 故障处理与诊断 · L86 · 547
-- OPS-RELEASE §7 许可 · L93 · 1.7k
-  - OPS-RELEASE §7.1 署名、许可页、窗口标题与图标 · L108 · 801
+- OPS-RELEASE §5 地图数据包（ODbL） · L78 · 397
+- OPS-RELEASE §6 故障处理与诊断 · L85 · 547
+- OPS-RELEASE §7 许可 · L92 · 1.6k
+  - OPS-RELEASE §7.1 署名、许可页、窗口标题与图标 · L107 · 786
