@@ -1,5 +1,5 @@
 using Campus.Contracts.Quality;
-using Campus.Kernel.Settings;
+using Campus.Contracts.Settings;
 using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
@@ -12,9 +12,9 @@ public interface IGraphicsSettingsStore
 }
 
 /// <summary>Graphics' view of the graphics section in settings.json: the preset and the knobs that differ from it.</summary>
-public sealed class GraphicsSettingsStore(SettingsStore settings, QualityCatalog catalog) : IGraphicsSettingsStore
+public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalog catalog) : IGraphicsSettingsStore
 {
-    private readonly SettingsSection _section = settings.Section("graphics");
+    private readonly ISettingsSection _section = settings.Section("graphics");
 
     public QualityProfile? Read()
     {

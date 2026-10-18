@@ -1,5 +1,5 @@
 using Campus.Contracts;
-using Campus.Kernel.Settings;
+using Campus.Contracts.Settings;
 
 namespace Campus.Hud;
 
@@ -9,15 +9,21 @@ public enum ReduceMotionMode : byte { System, On, Off }
 
 /// <summary>
 /// 界面的观者设置（UI-NAV），存 user://settings.json 的 ui 节（档案级，不进存档）。
-/// 读写经 SettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
+/// 读写经 ISettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
 /// </summary>
 [KernelService(typeof(HudSettings), Owner = "WP-35")]
 public sealed class HudSettings
 {
-    private readonly SettingsSection _section = SettingsStore.Shared.Section("ui");
+    private readonly ISettingsStore _store;
+    private readonly ISettingsSection _section;
     private float _dirtyFor = -1;
 
-    public HudSettings() => Load();
+    public HudSettings(ISettingsStore store)
+    {
+        _store = store;
+        _section = store.Section("ui");
+        Load();
+    }
 
     public UiThemeMode Theme { get; private set; } = UiThemeMode.Auto;
     public ResidentTheme Resident { get; private set; } = ResidentTheme.Dark;
@@ -66,7 +72,7 @@ public sealed class HudSettings
         _section.Set("frost", Frost);
         _section.Set("ui_scale", UiScale);
         _section.Set("single_key_shortcuts", SingleKeyShortcuts);
-        SettingsStore.Shared.TrySave();
+        _store.TrySave();
     }
 
     private void Load()

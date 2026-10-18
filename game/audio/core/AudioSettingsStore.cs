@@ -1,11 +1,11 @@
 using Campus.Contracts.Audio;
-using Campus.Kernel.Settings;
+using Campus.Contracts.Settings;
 using Godot;
 
 namespace Campus.Audio.Core;
 
-/// <summary>Audio's view of the audio section in user://settings.json; debounces writes to the shared SettingsStore.</summary>
-internal sealed class AudioSettingsStore(bool fixedSettings)
+/// <summary>Audio's view of the audio section in user://settings.json; debounces writes to the registered settings store.</summary>
+internal sealed class AudioSettingsStore(ISettingsStore store)
 {
     private const string Section = "audio";
     private AudioSettings? _pending;
@@ -14,8 +14,7 @@ internal sealed class AudioSettingsStore(bool fixedSettings)
 
     public AudioSettings Load()
     {
-        if (fixedSettings) return new();
-        var section = SettingsStore.Shared.Section(Section);
+        var section = store.Section(Section);
         var defaults = new AudioSettings();
         return new AudioSettings(
             section.Float("master", defaults.Master, 0, 1), section.Float("ambience", defaults.Ambience, 0, 1),
@@ -27,7 +26,6 @@ internal sealed class AudioSettingsStore(bool fixedSettings)
 
     public void Queue(AudioSettings settings)
     {
-        if (fixedSettings) return;
         _pending = settings; _remaining = .5f; _attempts = 0;
     }
 
@@ -43,14 +41,14 @@ internal sealed class AudioSettingsStore(bool fixedSettings)
     private void WritePending()
     {
         var settings = _pending!;
-        var section = SettingsStore.Shared.Section(Section);
+        var section = store.Section(Section);
         section.Set("master", settings.Master); section.Set("ambience", settings.Ambience);
         section.Set("foley", settings.Foley); section.Set("ui", settings.Ui); section.Set("music", settings.Music);
         section.Set("ui_sounds", settings.UiSounds); section.Set("hover_sounds", settings.HoverSounds);
         section.Set("quiet_mode", settings.QuietMode); section.Set("mono", settings.Mono);
         section.Set("sudden", (int)settings.Sudden); section.Set("background", (int)settings.Background);
         section.Set("output_device", settings.OutputDevice ?? "");
-        if (SettingsStore.Shared.TrySave()) { _pending = null; return; }
+        if (store.TrySave()) { _pending = null; return; }
         // Retries advance on real frame delta; never block the main thread for 50 ms.
         _attempts++;
         _remaining = _attempts <= 3 ? .05f : float.PositiveInfinity;

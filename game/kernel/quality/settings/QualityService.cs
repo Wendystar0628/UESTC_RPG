@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Settings;
 using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
@@ -50,11 +50,17 @@ public sealed class QualityService : IQualityService, IBootParticipant
     private double _debounce;
     private Task _lastSave = Task.CompletedTask;
 
-    public QualityService(QualityCatalog? catalog = null, IGraphicsSettingsStore? store = null)
+    public QualityService(ISettingsStore settings)
+        : this(new QualityCatalog(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json")), settings) { }
+
+    private QualityService(QualityCatalog catalog, ISettingsStore settings)
+        : this(catalog, new GraphicsSettingsStore(settings, catalog)) { }
+
+    internal QualityService(QualityCatalog catalog, IGraphicsSettingsStore store)
     {
-        _catalog = catalog ?? new(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json"));
+        _catalog = catalog;
         _state = new(_catalog);
-        _store = store ?? new GraphicsSettingsStore(SettingsStore.Shared, _catalog);
+        _store = store;
     }
 
     public QualityProfile Requested => _state.Requested;

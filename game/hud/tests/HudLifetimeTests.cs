@@ -1,6 +1,7 @@
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Settings;
 using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
@@ -22,7 +23,7 @@ public sealed class HudLifetimeTests
     [RequireGodotRuntime]
     public void ThemeClockStopsObservingSettingsUntilItReenters()
     {
-        var settings = new HudSettings();
+        var settings = new HudSettings(Services.Get<ISettingsStore>());
         settings.SetTheme(UiThemeMode.Light);
         settings.SetReduceMotion(ReduceMotionMode.On);
         var world = new WorldStateService(new WeatherProcess(Services.Get<IWeatherProfileSource>()));
@@ -57,7 +58,7 @@ public sealed class HudLifetimeTests
         var registry = new ServiceRegistry();
         var flow = new Flow();
         var router = new Router();
-        var settings = new HudSettings();
+        var settings = new HudSettings(Services.Get<ISettingsStore>());
         var world = new WorldStateService(new TestWeatherProcess());
         var camera = new TestCameraRig(world);
         var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());

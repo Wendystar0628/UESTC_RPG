@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Campus.Contracts;
+using Campus.Contracts.Settings;
 using Godot;
 
 namespace Campus.Kernel.Settings;
@@ -11,26 +13,25 @@ namespace Campus.Kernel.Settings;
 /// JSON parsing never creates objects from file content; wrong-typed or out-of-range keys fall back to
 /// the caller's default, unknown keys are ignored, missing sections read as defaults.
 /// </summary>
-public sealed class SettingsStore
+[KernelService(typeof(ISettingsStore), Owner = "WP-32")]
+public sealed class SettingsStore : ISettingsStore
 {
     private const int MaxBytes = 256 * 1024;
-    private static SettingsStore? _shared;
 
     private readonly string _path;
     private readonly object _gate = new();      // guards _root
     private readonly object _fileGate = new();  // serializes disk writes
     private readonly JsonObject _root;
 
-    public SettingsStore(string path)
+    public SettingsStore() : this(ProjectSettings.GlobalizePath("user://settings.json")) { }
+
+    internal SettingsStore(string path)
     {
         _path = path;
         _root = Load(path);
     }
 
-    /// <summary>The game's settings file; loaded on first use, which audio does at startup.</summary>
-    public static SettingsStore Shared => _shared ??= new(ProjectSettings.GlobalizePath("user://settings.json"));
-
-    public SettingsSection Section(string name) => new(this, [name]);
+    public ISettingsSection Section(string name) => new SettingsSection(this, [name]);
 
     /// <summary>One write attempt: temp file, flush, replace keeping a .bak. False when the disk refused; the memory copy stays valid.</summary>
     public bool TrySave()
@@ -132,7 +133,7 @@ public sealed class SettingsStore
 }
 
 /// <summary>One object inside settings.json. Readers take the caller's fallback and range; writers set a single primitive.</summary>
-public sealed class SettingsSection
+public sealed class SettingsSection : ISettingsSection
 {
     private readonly SettingsStore _store;
     private readonly string[] _path;
@@ -143,7 +144,7 @@ public sealed class SettingsSection
         _path = path;
     }
 
-    public SettingsSection Child(string name) => new(_store, [.. _path, name]);
+    public ISettingsSection Child(string name) => new SettingsSection(_store, [.. _path, name]);
 
     public bool Has(string key) => _store.Read(_path, node => node?[key] is not null);
 

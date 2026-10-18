@@ -1,4 +1,4 @@
-using Campus.Kernel.Settings;
+using Campus.Contracts.Settings;
 using Godot;
 
 namespace Campus.Camera;
@@ -18,7 +18,7 @@ public sealed class InputBindings
     private readonly Dictionary<string, int> _keys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _defaults = new(StringComparer.Ordinal);
 
-    public void Initialize(bool readUserSettings)
+    public void Initialize(ISettingsStore? settings)
     {
         foreach (string action in Actions)
         {
@@ -30,8 +30,8 @@ public sealed class InputBindings
                 break;
             }
         }
-        if (!readUserSettings) return;
-        if (!TryLoad()) GD.Print("Input bindings: defaults (no valid saved bindings).");
+        if (settings is null) return;
+        if (!TryLoad(settings)) GD.Print("Input bindings: defaults (no valid saved bindings).");
         ApplyAll();
     }
 
@@ -55,18 +55,18 @@ public sealed class InputBindings
         return true;
     }
 
-    public bool Save()
+    public bool Save(ISettingsStore settings)
     {
-        var section = SettingsStore.Shared.Section(Section);
+        var section = settings.Section(Section);
         foreach (string action in Actions) section.Set(action, _keys[action]);
-        if (SettingsStore.Shared.TrySave()) return true;
+        if (settings.TrySave()) return true;
         GD.PushWarning("Input bindings were changed but could not be saved.");
         return false;
     }
 
-    private bool TryLoad()
+    private bool TryLoad(ISettingsStore settings)
     {
-        var section = SettingsStore.Shared.Section(Section);
+        var section = settings.Section(Section);
         if (!Actions.Any(section.Has)) return false;
         var candidate = new Dictionary<string, int>(_defaults, StringComparer.Ordinal);
         foreach (string action in Actions)

@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -58,7 +59,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
         _automated = new[] { "gate", "shots", "bench", "frames", "inspect" }.Any(AppBoot.Arguments.ContainsKey);
-        _bindings.Initialize(!_automated);
+        _bindings.Initialize(_automated ? null : Services.Get<ISettingsStore>());
         Input.UseAccumulatedInput = false;
         _flow.Changed += OnFlowChanged;
         _listener = new ObserverListener { Observer = this };

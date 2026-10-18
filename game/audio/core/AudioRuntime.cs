@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
 using Godot;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
@@ -75,8 +76,8 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
             _ => throw new ArgumentException("--audio must be on or off.")
         };
         var fixedSettings = context.CaptureMode || Value("audio-fixed", "0") == "1";
-        _store = new AudioSettingsStore(fixedSettings);
-        Settings = _store.Load();
+        _store = fixedSettings ? null : new AudioSettingsStore(RuntimeKernel.Get<ISettingsStore>());
+        Settings = _store?.Load() ?? new();
         _mix.SetSettings(Settings, true);
         _mix.SetAudible(false, 0f);
         _buses.Initialize(Value("audio-limiter", "1") != "0");
@@ -203,11 +204,11 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         {
             _audible = audible;
             _mix.SetAudible(audible, audible ? 3f : .3f);
-            if (quitting) _store!.Flush();
+            if (quitting) _store?.Flush();
         }
         _mix.UpdateVeil(_veil!.Opacity, _veil.Reason);
         _mix.Step(dt);
-        _store!.Step(dt);
+        _store?.Step(dt);
         if (_routeChangeDelay >= 0f)
         {
             _routeChangeDelay -= dt;
