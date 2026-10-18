@@ -1,5 +1,5 @@
 ﻿# 启动游戏：先编译与导入（经构建锁，WF-BUILD §4），再用窗口版引擎打开正式入口（开始页）。
-# 用法：powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build\start_game.ps1 [-NoBuild] [游戏参数…]
+# 用法：双击根目录 启动游戏.cmd；命令行可写 启动游戏.cmd [-NoBuild] [游戏参数…]，参数原样转到这里
 #   -NoBuild：代码没改过时跳过编译与导入，直接启动
 #   游戏参数照 BootArguments 原样传给游戏，例如 --title=0（跳过开始页直接进漫游）
 # 编译与导入日志在 output\start_game\；游戏在后台运行，脚本启动后即返回。
