@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L78 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 2.7k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L126 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 2.8k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L127 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1717,7 +1717,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 9.2k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 9.3k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、英雄资产、桩、占位、仓库脚本自成一体、架构导向、扩展方式、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L21 · 1.4k
@@ -1736,7 +1736,7 @@
 - ENG-ARCH §3 契约 · L115 · 566
 - ENG-ARCH §4 资源与烘焙 · L124 · 1.0k
 - ENG-ARCH §5 未交付能力的占位边界 · L135 · 359
-- ENG-ARCH §6 架构导向 · L144 · 580
+- ENG-ARCH §6 架构导向 · L144 · 662
 - ENG-ARCH §7 扩展点（RPG） · L156 · 448
 - ENG-ARCH §8 待验证（P0） · L168 · 583
 
