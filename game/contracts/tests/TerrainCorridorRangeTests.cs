@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -17,15 +18,19 @@ public sealed class TerrainCorridorRangeTests
         { Zone = new("fixture") };
         var bytes = TerrainOverlayJson.ToUtf8Bytes(new(new("fixture"), new("WP-00"), [legacy]));
         using var wire = JsonDocument.Parse(bytes);
-        Require(!wire.RootElement.GetProperty("ops")[0].TryGetProperty("range", out _), "Legacy serialization must not acquire a range field.");
+        AssertThat(!wire.RootElement.GetProperty("ops")[0].TryGetProperty("range", out _)).OverrideFailureMessage("Legacy serialization must not acquire a range field.").IsTrue();
         var restored = (TerrainCorridorOp)TerrainOverlayJson.Parse(bytes).Ops[0];
-        Require(restored.Range is null && restored.Anchors[0].S == 0 && restored.Anchors[^1].S == 100 && restored.Steps.Count == 0,
-            "Missing range changed legacy source-road anchor semantics.");
+        AssertThat(restored.Range is null && restored.Anchors[0].S == 0 && restored.Anchors[^1].S == 100 && restored.Steps.Count == 0).OverrideFailureMessage("Missing range changed legacy source-road anchor semantics.").IsTrue();
         var explicitNull = JsonNode.Parse(Encoding.UTF8.GetString(bytes))!.AsObject();
         explicitNull["ops"]![0]!["range"] = null;
-        Require(((TerrainCorridorOp)Parse(explicitNull).Ops[0]).Range is null, "Nullable range must canonicalize to the legacy absence state.");
+        AssertThat(((TerrainCorridorOp)Parse(explicitNull).Ops[0]).Range is null).OverrideFailureMessage("Nullable range must canonicalize to the legacy absence state.").IsTrue();
         explicitNull["ops"]![0]!["anchors"]![0]!["s"] = 20;
-        Expect<JsonException>(() => Parse(explicitNull));
+        {
+            bool rejected = false;
+            try { Parse(explicitNull); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -33,11 +38,9 @@ public sealed class TerrainCorridorRangeTests
     {
         var parsed = Parse(RangedFixture());
         var restored = (TerrainCorridorOp)TerrainOverlayJson.Parse(TerrainOverlayJson.ToUtf8Bytes(parsed)).Ops[0];
-        Require(restored.Range == new TerrainStationRange(20, 80) &&
-            restored.Anchors[0].S == 20 && restored.Anchors[1].S == 50 && restored.Anchors[^1].S == 80,
-            "A range must preserve original source-road stations rather than rebasing its fragment to zero.");
-        Require(restored.Steps is [{ S0: 30, S1: 35 }] && restored.Steps[0].Structure == new FeatureId("source:stairs"),
-            "An in-range step lost its absolute interval or real structure reference.");
+        AssertThat(restored.Range == new TerrainStationRange(20, 80) &&
+            restored.Anchors[0].S == 20 && restored.Anchors[1].S == 50 && restored.Anchors[^1].S == 80).OverrideFailureMessage("A range must preserve original source-road stations rather than rebasing its fragment to zero.").IsTrue();
+        AssertThat(restored.Steps is [{ S0: 30, S1: 35 }] && restored.Steps[0].Structure == new FeatureId("source:stairs")).OverrideFailureMessage("An in-range step lost its absolute interval or real structure reference.").IsTrue();
     }
 
     [TestCase]
@@ -59,13 +62,18 @@ public sealed class TerrainCorridorRangeTests
         })
         {
             var root = RangedFixture(); mutate(root);
-            Expect<JsonException>(() => Parse(root));
+            {
+                bool rejected = false;
+                try { Parse(root); }
+                catch (JsonException) { rejected = true; }
+                AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+            }
         }
         foreach (var range in new[] { new TerrainStationRange(double.NaN, 80), new TerrainStationRange(20, double.PositiveInfinity) })
         {
             var parsed = Parse(RangedFixture());
             var invalid = ((TerrainCorridorOp)parsed.Ops[0]) with { Range = range };
-            Expect<ArgumentException>(() => TerrainOverlayJson.Validate(parsed with { Ops = [invalid] }));
+            AssertThrown(() => TerrainOverlayJson.Validate(parsed with { Ops = [invalid] })).IsInstanceOf<ArgumentException>();
         }
     }
 
@@ -78,11 +86,4 @@ public sealed class TerrainCorridorRangeTests
            "crossFall":0.015,"shoulder":0.75,"range":{"s0":20,"s1":80},
            "steps":[{"s0":30,"s1":35,"structure":"source:stairs"}]}]}
         """)!.AsObject();
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 }

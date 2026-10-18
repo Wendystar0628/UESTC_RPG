@@ -9,6 +9,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class WaterCatalogTests
 {
@@ -44,12 +46,10 @@ public sealed class WaterCatalogTests
         };
         var bodies = WaterCatalog.Build(new FakeWorld { Features = features, Spatial = new FlatSpatial((_, _) => 2f) }, Map(lake));
         var p = WaterParams.Default;
-        if (bodies.Count != 4) throw new InvalidOperationException($"expected 4 bodies, got {bodies.Count}");
+        AssertThat(bodies.Count != 4).OverrideFailureMessage($"expected 4 bodies, got {bodies.Count}").IsFalse();
         var l = bodies.Single(b => b.Id == lake);
-        if (l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > 0.001f)
-            throw new InvalidOperationException("lake level or slot wrong");
+        AssertThat(l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > 0.001f).OverrideFailureMessage("lake level or slot wrong").IsFalse();
         foreach (var r in bodies.Where(b => b.Id == river))
-            if (r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > 0.001f)
-                throw new InvalidOperationException("channel level, kind or slot wrong");
+            AssertThat(r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > 0.001f).OverrideFailureMessage("channel level, kind or slot wrong").IsFalse();
     }
 }

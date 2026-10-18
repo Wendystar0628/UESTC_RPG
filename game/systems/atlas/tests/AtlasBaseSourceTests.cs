@@ -4,6 +4,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Systems.Atlas;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -23,12 +24,10 @@ public sealed class AtlasBaseSourceTests
         source.Reset(TestMap);
         source.Publish(TestMap, Page, RegionTable, product);
         var snapshot = source.Snapshot!;
-        Check(source.Ready && !snapshot.RegionsReady && !snapshot.LabelsReady && !snapshot.GlyphsReady,
-            "Four SDF textures incorrectly marked unproduced content ready.");
-        Check(snapshot.SdfA.Rect == product.Textures[0].Rect && snapshot.SdfOut.Rect == product.Textures[2].Rect
-            && snapshot.SdfRing.Rect == Page, "Per-texture rectangles were replaced by one page rectangle.");
-        Check(snapshot.PlaceToRegion.Span[0] == byte.MaxValue && snapshot.PlaceToRegion.Span[255] == byte.MaxValue,
-            "Unknown/unused place index was mapped to the first region.");
+        AssertThat(source.Ready && !snapshot.RegionsReady && !snapshot.LabelsReady && !snapshot.GlyphsReady).OverrideFailureMessage("Four SDF textures incorrectly marked unproduced content ready.").IsTrue();
+        AssertThat(snapshot.SdfA.Rect == product.Textures[0].Rect && snapshot.SdfOut.Rect == product.Textures[2].Rect
+            && snapshot.SdfRing.Rect == Page).OverrideFailureMessage("Per-texture rectangles were replaced by one page rectangle.").IsTrue();
+        AssertThat(snapshot.PlaceToRegion.Span[0] == byte.MaxValue && snapshot.PlaceToRegion.Span[255] == byte.MaxValue).OverrideFailureMessage("Unknown/unused place index was mapped to the first region.").IsTrue();
     }
 
     [TestCase]
@@ -42,14 +41,10 @@ public sealed class AtlasBaseSourceTests
         var original = snapshot.SdfA.Rgba8.Span[0];
         product.Textures[0].Rgba8[0] = 99;
         product.Regions.Ids[1] = "changed-after-publication";
-        Check(snapshot.SdfA.Rgba8.Span[0] == original && snapshot.PlaceIds[1] == "a-place",
-            "Snapshot borrowed mutable producer bytes or IDs.");
-        Check(ReferenceEquals(snapshot, source.Snapshot) && snapshot.SdfA.Rgba8.Equals(source.Snapshot!.SdfA.Rgba8),
-            "Reading Snapshot copied data instead of returning the published view.");
-        Check(snapshot.RegionsReady && snapshot.PlaceToRegion.Span[1] == 0 && snapshot.PlaceToRegion.Span[2] == 0,
-            "Known places did not map to the stable zero-based region bit.");
-        Check(snapshot.LabelsReady && snapshot.LabelBands.Count == 1 && snapshot.LabelBands[0].Language == "zh",
-            "Actual measured label bands were replaced with fabricated language/zoom coverage.");
+        AssertThat(snapshot.SdfA.Rgba8.Span[0] == original && snapshot.PlaceIds[1] == "a-place").OverrideFailureMessage("Snapshot borrowed mutable producer bytes or IDs.").IsTrue();
+        AssertThat(ReferenceEquals(snapshot, source.Snapshot) && snapshot.SdfA.Rgba8.Equals(source.Snapshot!.SdfA.Rgba8)).OverrideFailureMessage("Reading Snapshot copied data instead of returning the published view.").IsTrue();
+        AssertThat(snapshot.RegionsReady && snapshot.PlaceToRegion.Span[1] == 0 && snapshot.PlaceToRegion.Span[2] == 0).OverrideFailureMessage("Known places did not map to the stable zero-based region bit.").IsTrue();
+        AssertThat(snapshot.LabelsReady && snapshot.LabelBands.Count == 1 && snapshot.LabelBands[0].Language == "zh").OverrideFailureMessage("Actual measured label bands were replaced with fabricated language/zoom coverage.").IsTrue();
     }
 
     [TestCase]
@@ -64,10 +59,10 @@ public sealed class AtlasBaseSourceTests
         var source = new AtlasBaseSource();
         source.Reset(TestMap);
         source.Publish(TestMap, Page, RegionTable, product);
-        Check(!source.Snapshot!.RegionsReady, "A nonzero grid concealed missing boundary evidence.");
+        AssertThat(!source.Snapshot!.RegionsReady).OverrideFailureMessage("A nonzero grid concealed missing boundary evidence.").IsTrue();
         var revision = source.Rev;
         source.Reset(default);
-        Check(!source.Ready && source.Snapshot is null && source.Rev > revision, "Unload retained the previous map snapshot.");
+        AssertThat(!source.Ready && source.Snapshot is null && source.Rev > revision).OverrideFailureMessage("Unload retained the previous map snapshot.").IsTrue();
     }
 
     [TestCase]
@@ -76,9 +71,9 @@ public sealed class AtlasBaseSourceTests
         var source = new AtlasBaseSource();
         source.Reset(TestMap);
         var product = Product(regionsReady: true, labelsReady: true);
-        ExpectInvalid(() => source.Publish(new("another-map"), Page, RegionTable, product));
-        ExpectInvalid(() => source.Publish(TestMap, Page, RegionTable, product with { Textures = product.Textures.Take(3).ToArray() }));
-        Check(!source.Ready && source.Snapshot is null, "Incomplete product became drawable.");
+        AssertThrown(() => source.Publish(new("another-map"), Page, RegionTable, product)).IsInstanceOf<InvalidDataException>();
+        AssertThrown(() => source.Publish(TestMap, Page, RegionTable, product with { Textures = product.Textures.Take(3).ToArray() })).IsInstanceOf<InvalidDataException>();
+        AssertThat(!source.Ready && source.Snapshot is null).OverrideFailureMessage("Incomplete product became drawable.").IsTrue();
     }
 
     private static MapBakeProduct Product(bool regionsReady, bool labelsReady)
@@ -101,11 +96,4 @@ public sealed class AtlasBaseSourceTests
         return new(manifest, textures, grid, new(1, "labels-hash", labelsReady ? "measured-font-hash" : "", labelsReady, bands));
     }
 
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void ExpectInvalid(Action action)
-    {
-        try { action(); }
-        catch (InvalidDataException) { return; }
-        throw new InvalidOperationException("Invalid map product was accepted.");
-    }
 }

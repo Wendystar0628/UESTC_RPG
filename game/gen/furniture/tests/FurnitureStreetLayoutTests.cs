@@ -15,6 +15,8 @@ namespace Campus.Gen.Furniture.Tests;
 
 using static Campus.Gen.Furniture.Tests.FurnitureTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class FurnitureStreetLayoutTests
 {
@@ -27,31 +29,30 @@ public sealed class FurnitureStreetLayoutTests
         var disc = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 0);
         var arm = lamps.Count(i => ((LampParams)i.Part.Params).Variation == 1);
         Console.WriteLine("furniture: " + string.Join(", ", Enum.GetValues<FurnitureKind>().Select(k => $"{k} {a.Count(k)}")) + $"; disc {disc}, arm {arm}");
-        Check(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params))), "two builds differ");
-        Check(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count, "duplicate keys");
+        AssertThat(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)))).OverrideFailureMessage("two builds differ").IsTrue();
+        AssertThat(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count).OverrideFailureMessage("duplicate keys").IsTrue();
         // The avenue is about 1.43 km: 52 slots a side at 27.5 m, less junctions and crossings; the two secondary roads 0.69 and 0.62 km at 35 m.
-        Check(disc is >= 70 and <= 104, $"{disc} avenue lamps");
-        Check(arm is >= 20 and <= 36, $"{arm} secondary lamps");
+        AssertThat(disc is >= 70 and <= 104).OverrideFailureMessage($"{disc} avenue lamps").IsTrue();
+        AssertThat(arm is >= 20 and <= 36).OverrideFailureMessage($"{arm} secondary lamps").IsTrue();
         // Rest stops only where a walk takes a bench (Opus review 12:15): the avenue's north half and Shuisha Road's walk.
-        Check(a.Count(FurnitureKind.Bench) >= 8, $"{a.Count(FurnitureKind.Bench)} benches");
+        AssertThat(a.Count(FurnitureKind.Bench) >= 8).OverrideFailureMessage($"{a.Count(FurnitureKind.Bench)} benches").IsTrue();
         // A bin at every other rest stop along a road; node benches (on the plazas) come without.
         var rest = a.Items.Count(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal));
         // The design walks (0h) reach the layout through WP-08's effective network: say how many benches line one.
         var site = new StreetSite(World.Value);
         var onDesign = a.Items.Where(i => i.Kind == FurnitureKind.Bench && site.PavingEdgeFacing(i.Anchor + Front(i.Part.At) * (((FurnitureParams)i.Part.Params).Depth * 0.5f + 0.4f)) is { Road: { } w } && w.Id.Value.StartsWith("design:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"benches facing a design walk: {onDesign.Count} " + string.Join(", ", onDesign.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
-        Check(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest, "a bin at every other rest stop");
+        AssertThat(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at every other rest stop").IsTrue();
         // SYS-ATLAS: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
         // moving an anchor (WP-48c) never needs a new number here.
         var landings = AnchorLandings(World.Value);
         var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
         var posts = landings.Count(l => l.Form == "post" && l.Landing == Landing.Open);
-        Check(kiosks + posts > 0, "no anchor lands on open ground");
-        Check(a.Count(FurnitureKind.AtlasKiosk) == kiosks && a.Count(FurnitureKind.AtlasPost) == posts,
-            $"{a.Count(FurnitureKind.AtlasKiosk)} kiosks and {a.Count(FurnitureKind.AtlasPost)} posts for {kiosks} and {posts} anchors on open ground");
-        Check(a.Count(FurnitureKind.BusStop) == 2, $"{a.Count(FurnitureKind.BusStop)} shuttle stops");
+        AssertThat(kiosks + posts > 0).OverrideFailureMessage("no anchor lands on open ground").IsTrue();
+        AssertThat(a.Count(FurnitureKind.AtlasKiosk) == kiosks && a.Count(FurnitureKind.AtlasPost) == posts).OverrideFailureMessage($"{a.Count(FurnitureKind.AtlasKiosk)} kiosks and {a.Count(FurnitureKind.AtlasPost)} posts for {kiosks} and {posts} anchors on open ground").IsTrue();
+        AssertThat(a.Count(FurnitureKind.BusStop) == 2).OverrideFailureMessage($"{a.Count(FurnitureKind.BusStop)} shuttle stops").IsTrue();
         var open = World.Value.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open).Select(e => e.Id).Distinct().Count();
-        Check(new[] { FurnitureKind.EntranceMat, FurnitureKind.OpenSign, FurnitureKind.EntranceLamp }.All(k => a.Count(k) == open), $"one kit at each of {open} open entrances");
+        AssertThat(new[] { FurnitureKind.EntranceMat, FurnitureKind.OpenSign, FurnitureKind.EntranceLamp }.All(k => a.Count(k) == open)).OverrideFailureMessage($"one kit at each of {open} open entrances").IsTrue();
     }
 
     [TestCase]
@@ -72,27 +73,27 @@ public sealed class FurnitureStreetLayoutTests
             var front = item.Anchor + facing * (p.Depth * 0.5f);
             var walk = walks.MinBy(w => Distance(front, w));
             var edge = Distance(front, walk!) - Half(walk!);
-            Check(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f, $"{item.Key}: front {edge:F2} m off its walk's edge");
+            AssertThat(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f).OverrideFailureMessage($"{item.Key}: front {edge:F2} m off its walk's edge").IsTrue();
             var toWalk = Vector2.Normalize(Nearest(front, walk!) - item.Anchor);
-            Check(Vector2.Dot(toWalk, facing) > 0.97f, $"{item.Key} does not face its walk");
-            Check(2f * Half(walk!) - FurnitureStyle.FeetReach >= FurnitureStyle.PassClear, $"{item.Key}: walk too narrow to pass");
+            AssertThat(Vector2.Dot(toWalk, facing) > 0.97f).OverrideFailureMessage($"{item.Key} does not face its walk").IsTrue();
+            AssertThat(2f * Half(walk!) - FurnitureStyle.FeetReach >= FurnitureStyle.PassClear).OverrideFailureMessage($"{item.Key}: walk too narrow to pass").IsTrue();
             var pad = item.Pad ?? throw new InvalidOperationException($"{item.Key} has no bay");
             var padFront = new Vector2(pad.Frame.M41, pad.Frame.M43) + facing * pad.HalfDepth;
-            Check(Distance(padFront, walk!) < Half(walk!), $"{item.Key}: its bay does not reach the walk");
-            Check(MathF.Abs(pad.Top - item.Part.At.M42) < 0.01f, $"{item.Key} is off its bay");
+            AssertThat(Distance(padFront, walk!) < Half(walk!)).OverrideFailureMessage($"{item.Key}: its bay does not reach the walk").IsTrue();
+            AssertThat(MathF.Abs(pad.Top - item.Part.At.M42) < 0.01f).OverrideFailureMessage($"{item.Key} is off its bay").IsTrue();
             var radius = p.Depth * 0.5f;
             foreach (var lane in lanes)
-                Check(Distance(item.Anchor, lane) - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f, $"{item.Key} stands in the kerbside strip of {lane.Id.Value}");
+                AssertThat(Distance(item.Anchor, lane) - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f).OverrideFailureMessage($"{item.Key} stands in the kerbside strip of {lane.Id.Value}").IsTrue();
             if (item.Kind != FurnitureKind.Bench) continue;
             for (var d = 0f; d <= FurnitureStyle.FaceClear; d += 0.5f)
-                Check(lanes.All(l => Distance(front + facing * d, l) >= Half(l)), $"{item.Key} faces a carriageway {d:F1} m ahead");
+                AssertThat(lanes.All(l => Distance(front + facing * d, l) >= Half(l))).OverrideFailureMessage($"{item.Key} faces a carriageway {d:F1} m ahead").IsTrue();
         }
         foreach (var bin in layout.Items.Where(i => i.Kind == FurnitureKind.Bin))
         {
             var bench = benches.Single(i => i.Key == bin.Key.Replace(":bin", ":bench", StringComparison.Ordinal));
             var gap = Vector2.Distance(bin.Anchor, bench.Anchor) - (FurnitureStyle.Bench.Width + FurnitureStyle.Bin.Width) * 0.5f;
-            Check(gap is >= FurnitureStyle.BinGapMin - 0.15f and <= FurnitureStyle.BinGapMax + 0.15f, $"{bin.Key} stands {gap:F2} m from its bench");
-            Check(!ReferenceEquals(bin.Pad, bench.Pad), $"{bin.Key} shares the bench's bay");
+            AssertThat(gap is >= FurnitureStyle.BinGapMin - 0.15f and <= FurnitureStyle.BinGapMax + 0.15f).OverrideFailureMessage($"{bin.Key} stands {gap:F2} m from its bench").IsTrue();
+            AssertThat(!ReferenceEquals(bin.Pad, bench.Pad)).OverrideFailureMessage($"{bin.Key} shares the bench's bay").IsTrue();
         }
     }
 
@@ -111,14 +112,14 @@ public sealed class FurnitureStreetLayoutTests
             var left = layout.Diagnostics.Where(d => d.Feature == feature.Id && d.Code == "wp13.anchor.not-placed").ToList();
             if (landing == Landing.Open)
             {
-                Check(placed, $"{id} lands on open ground but is not placed");
-                Check(left.Count == 0, $"{id} is placed but logged as not placed");
+                AssertThat(placed).OverrideFailureMessage($"{id} lands on open ground but is not placed").IsTrue();
+                AssertThat(left.Count == 0).OverrideFailureMessage($"{id} is placed but logged as not placed").IsTrue();
                 continue;
             }
-            Check(!placed, $"{id} placed, though its point lands {Where(landing)}");
-            Check(left.Count == 1 && left[0].Level == DiagnosticLevel.Warning && left[0].Message == $"anchor {id} ({form}) not placed: its point lands {Where(landing)}", $"{id} not logged once as {Where(landing)}");
+            AssertThat(!placed).OverrideFailureMessage($"{id} placed, though its point lands {Where(landing)}").IsTrue();
+            AssertThat(left.Count == 1 && left[0].Level == DiagnosticLevel.Warning && left[0].Message == $"anchor {id} ({form}) not placed: its point lands {Where(landing)}").OverrideFailureMessage($"{id} not logged once as {Where(landing)}").IsTrue();
         }
-        Check(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open), "a diagnostic message without a left-out anchor");
+        AssertThat(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open)).OverrideFailureMessage("a diagnostic message without a left-out anchor").IsTrue();
         // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
         var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
@@ -129,9 +130,9 @@ public sealed class FurnitureStreetLayoutTests
         var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
         var indoors = Build(MadeWorld(world, [], [moved]));
         var name = anchor.Feature.Id.Value;
-        Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
-        Check(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning), "the building fallback is not logged");
-        Check(indoors.Items.Count == layout.Items.Count - 1, "the building fallback changed other furniture");
+        AssertThat(!indoors.Items.Any(i => i.Key == "anchor:" + name)).OverrideFailureMessage("an anchor's furniture stands in a building").IsTrue();
+        AssertThat(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning)).OverrideFailureMessage("the building fallback is not logged").IsTrue();
+        AssertThat(indoors.Items.Count == layout.Items.Count - 1).OverrideFailureMessage("the building fallback changed other furniture").IsTrue();
     }
 
     [TestCase]
@@ -156,7 +157,7 @@ public sealed class FurnitureStreetLayoutTests
         foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
         {
             var feature = world.Features[new(item.Key["anchor:".Length..])];
-            Check(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f, $"{item.Key} turned");
+            AssertThat(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f).OverrideFailureMessage($"{item.Key} turned").IsTrue();
             if (feature.Props!.Value.TryGetProperty("groundY", out var deck) && deck.GetSingle() > 0.5f) continue;
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
@@ -176,7 +177,7 @@ public sealed class FurnitureStreetLayoutTests
                         gap = MathF.Min(gap, Gap(new(q.X, q.Z)));
                     }
             Console.WriteLine($"{item.Key}: footprint {gap:F2} m off paving");
-            Check(gap <= FurnitureStyle.AnchorPavingGap + 0.1f, $"{item.Key}: footprint {gap:F2} m off pedestrian paving");
+            AssertThat(gap <= FurnitureStyle.AnchorPavingGap + 0.1f).OverrideFailureMessage($"{item.Key}: footprint {gap:F2} m off pedestrian paving").IsTrue();
             // Opus review 17:28 (A03): a kiosk's apron stands whole on the paving, not half over its edge.
             if (item.Kind != FurnitureKind.AtlasKiosk) continue;
             var outside = 0; var samples = 0;
@@ -188,7 +189,7 @@ public sealed class FurnitureStreetLayoutTests
                     samples++;
                     if (site.PavingEdgeFacing(new(q.X, q.Z)) is not { Gap: <= 0f }) outside++;
                 }
-            Check(outside == 0, $"{item.Key}: {outside}/{samples} outline points of its apron off the paving");
+            AssertThat(outside == 0).OverrideFailureMessage($"{item.Key}: {outside}/{samples} outline points of its apron off the paving").IsTrue();
         }
     }
 

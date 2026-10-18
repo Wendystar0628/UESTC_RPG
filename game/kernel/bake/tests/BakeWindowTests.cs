@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Bake.Tests;
 
@@ -51,7 +52,7 @@ public sealed class BakeWindowTests
         var source = new Source();
         var provider = new Provider(Snapshot([]));
         var modules = Modules(source, provider);
-        Reject(() => BakeWindowPreparation.Prepare(context, modules), "Missing window layout");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(context, modules); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Missing window layout").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Missing window layout").Contains("Missing window layout"); };
         if (provider.Calls != 0) throw new InvalidOperationException("An incomplete declaration reached the allocator.");
         source.Layouts = [new(Feature, [])];
         var result = BakeWindowPreparation.Prepare(context, modules);
@@ -66,23 +67,23 @@ public sealed class BakeWindowTests
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var provider = new Provider(Snapshot([]));
-        Reject(() => BakeWindowPreparation.Prepare(Context(new WpId("WP-18")), Modules(source, provider)), "owner mismatch");
-        Reject(() => BakeWindowPreparation.Prepare(Context(claimed: false), Modules(source, provider)), "owner mismatch");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(new WpId("WP-18")), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "owner mismatch").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "owner mismatch").Contains("owner mismatch"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(claimed: false), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "owner mismatch").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "owner mismatch").Contains("owner mismatch"); };
         source.Layouts = [new(new("fixture:absent"), [])];
-        Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source, provider)), "absent feature");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "absent feature").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "absent feature").Contains("absent feature"); };
         source.Layouts = [new(Feature, []), new(Feature, [])];
-        Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source, provider)), "Duplicate complete");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Duplicate complete").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Duplicate complete").Contains("Duplicate complete"); };
         source.Layouts = [new(Feature, [])];
         var modules = Modules(source, provider);
         modules.Add("other-same-owner", new(new Source { Layouts = [new(Feature, [])] }, "other-code", Owner, false));
-        Reject(() => BakeWindowPreparation.Prepare(Context(), modules), "Duplicate complete");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), modules); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Duplicate complete").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Duplicate complete").Contains("Duplicate complete"); };
         foreach (var grid in new WindowGridSpec[] { new("grid", 0, 1), new("grid", int.MaxValue, int.MaxValue), new(" ", 1, 1) })
         {
             source.Layouts = [new(Feature, [grid])];
-            Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source, provider)), "Invalid window dimensions");
+            { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Invalid window dimensions").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Invalid window dimensions").Contains("Invalid window dimensions"); };
         }
         source.Layouts = [new(Feature, [new("grid", 1, 1), new("grid", 1, 1)])];
-        Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source, provider)), "Duplicate window grid");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), Modules(source, provider)); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Duplicate window grid").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Duplicate window grid").Contains("Duplicate window grid"); };
         if (provider.Calls != 0) throw new InvalidOperationException("Invalid claims reached the provider.");
     }
 
@@ -91,17 +92,17 @@ public sealed class BakeWindowTests
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var modules = new Dictionary<string, ContentModuleInput>(StringComparer.Ordinal) { ["source"] = new(source, "source-code", Owner, false) };
-        Reject(() => BakeWindowPreparation.Prepare(Context(), modules), "found 0");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), modules); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "found 0").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "found 0").Contains("found 0"); };
         modules.Add("provider-a", new(new Provider(Snapshot([])), "a-code", new("WP-14"), true));
         modules.Add("provider-b", new(new Provider(Snapshot([])), "b-code", new("WP-14"), true));
-        Reject(() => BakeWindowPreparation.Prepare(Context(), modules), "found 2");
-        Reject(() => BakeWindowPreparation.Prepare(Context(), Modules(source,
-            new Provider(new(new("another-map"), new string('a', 64), [])))), "another map");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), modules); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "found 2").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "found 2").Contains("found 2"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(Context(), Modules(source,
+            new Provider(new(new("another-map"), new string('a', 64), [])))); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "another map").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "another map").Contains("another map"); };
         var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([]), Map = Map(), WorldSeed = 9 };
         if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot is not null)
             throw new InvalidOperationException("A windowless legacy fixture unexpectedly acquired an allocation.");
         var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = new World([new(Feature, FeatureSource.Design, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
-        Reject(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, ContentModuleInput>()), "found 0");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.Prepare(building, new Dictionary<string, ContentModuleInput>()); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "found 0").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "found 0").Contains("found 0"); };
     }
 
     [TestCase]
@@ -134,11 +135,11 @@ public sealed class BakeWindowTests
             new(-100, 5, 50), Vector3.UnitX, Vector3.UnitY, 2, 1, 1, [0])
         { Skip = [1] };
         BakeWindowPreparation.ValidateMetadata(new([facade], [Window(1)]), snapshot);
-        Reject(() => BakeWindowPreparation.ValidateMetadata(new([facade], [Window(0)]), snapshot), "Duplicate logical");
-        Reject(() => BakeWindowPreparation.ValidateMetadata(new([], [Window(0), Window(0)]), snapshot), "Duplicate logical");
-        Reject(() => BakeWindowPreparation.ValidateMetadata(new([], [Window(2)]), snapshot), "outside");
-        Reject(() => BakeWindowPreparation.ValidateMetadata(new([], [Window(0) with { TotalColumns = 3 }]), snapshot), "BaseId/TotalColumns");
-        Reject(() => BakeWindowPreparation.ValidateMetadata(new([facade with { Skip = [1, 1] }], []), snapshot), "Skip");
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.ValidateMetadata(new([facade], [Window(0)]), snapshot); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Duplicate logical").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Duplicate logical").Contains("Duplicate logical"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.ValidateMetadata(new([], [Window(0), Window(0)]), snapshot); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Duplicate logical").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Duplicate logical").Contains("Duplicate logical"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.ValidateMetadata(new([], [Window(2)]), snapshot); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "outside").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "outside").Contains("outside"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.ValidateMetadata(new([], [Window(0) with { TotalColumns = 3 }]), snapshot); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "BaseId/TotalColumns").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "BaseId/TotalColumns").Contains("BaseId/TotalColumns"); };
+        { string? __rejectionMessage = null; try { BakeWindowPreparation.ValidateMetadata(new([facade with { Skip = [1, 1] }], []), snapshot); } catch (InvalidDataException error) { __rejectionMessage = error.Message; } AssertThat(__rejectionMessage is not null).OverrideFailureMessage("Expected rejection: " + "Skip").IsTrue(); AssertThat(__rejectionMessage!).OverrideFailureMessage("Expected rejection: " + "Skip").Contains("Skip"); };
     }
 
     [TestCase]
@@ -176,12 +177,12 @@ public sealed class BakeWindowTests
         Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspect) => claims.Value.ClaimedBy(feature, aspect);
         var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
-        ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
+        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
         _ = claims.Value;
         var producer = map.CreateBuildContext("producer-code", "atlas-input");
-        ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
+        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], []) { WindowNumbering = loaded.Windows.Snapshot };
         map.CompletePreparation(new(lighting, new(context.Map.Id, [])));
         var a = map.GetPreparedContext(mapContext, "source");
@@ -200,8 +201,8 @@ public sealed class BakeWindowTests
             !ReferenceEquals(source.SeenContext!.PartLods, partLods) ||
             !ReferenceEquals(((Provider)modules["provider"].Value).SeenPartLods, partLods))
             throw new InvalidOperationException("Catalog contexts mixed preparation generations or module identities.");
-        ExpectNotReady(() => map.GetPreparedContext(mapContext with { }, "source"));
-        ExpectNotReady(() => map.GetPreparedContext(mapContext, "unknown"));
+        AssertThrown(() => map.GetPreparedContext(mapContext with { }, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.GetPreparedContext(mapContext, "unknown")).IsInstanceOf<InvalidOperationException>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
         map.Collect("source", "metadata", [warning], Feature);
         if (!map.Diagnostics.TryDequeue(out var diagnostic) || diagnostic.Map != context.Map.Id || diagnostic.Owner != Owner ||
@@ -214,7 +215,7 @@ public sealed class BakeWindowTests
         map.Active = false;
         map.Collect("source", "geometry", [warning]);
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
-        ExpectNotReady(() => map.GetPreparedContext(mapContext, "source"));
+        AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
     }
 
@@ -292,18 +293,6 @@ public sealed class BakeWindowTests
         new(Vector2.Zero, new(64, 64)), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],
         new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
         new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-    private static void Reject(Action action, string message)
-    {
-        try { action(); }
-        catch (InvalidDataException error) when (error.Message.Contains(message, StringComparison.Ordinal)) { return; }
-        throw new InvalidOperationException("Expected rejection: " + message);
-    }
-    private static void ExpectNotReady(Action action)
-    {
-        try { action(); }
-        catch (InvalidOperationException) { return; }
-        throw new InvalidOperationException("A stale/unprepared/unknown context was accepted.");
-    }
     private class Module : IContentModule
     {
         public IReadOnlyList<Claim> Claims => [];

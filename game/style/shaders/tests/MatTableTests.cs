@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Style.Materials;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -11,11 +12,6 @@ public sealed class MatTableTests
 
     private static int Texel(byte[] bytes, int id, int row, int channel) => bytes[(row * MatTable.Width + id) * 4 + channel];
 
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
     [TestCase]
     public void EmissiveChannelIsWrittenAsSlotPlusOneInRowTwoAlpha()
     {
@@ -23,9 +19,9 @@ public sealed class MatTableTests
         MatTable.WriteRows(bytes, 5, Plain with { Emissive = new ChannelId("sign.signal") });
         MatTable.WriteRows(bytes, 6, Plain with { Emissive = LightChannelCatalog.Id(0) });
         MatTable.WriteRows(bytes, 7, Plain);
-        Require(Texel(bytes, 5, 2, 3) == 23, "sign.signal is slot 22, stored as 23.");
-        Require(Texel(bytes, 6, 2, 3) == 1, "Slot 0 must stay distinguishable from 'no emissive'.");
-        Require(Texel(bytes, 7, 2, 3) == 0, "A material without Emissive stores 0.");
+        AssertThat(Texel(bytes, 5, 2, 3) == 23).OverrideFailureMessage("sign.signal is slot 22, stored as 23.").IsTrue();
+        AssertThat(Texel(bytes, 6, 2, 3) == 1).OverrideFailureMessage("Slot 0 must stay distinguishable from 'no emissive'.").IsTrue();
+        AssertThat(Texel(bytes, 7, 2, 3) == 0).OverrideFailureMessage("A material without Emissive stores 0.").IsTrue();
     }
 
     [TestCase]
@@ -39,7 +35,7 @@ public sealed class MatTableTests
         for (var row = 0; row < MatTable.Height; row++)
             for (var channel = 0; channel < 4; channel++)
                 if (row != 2 || channel != 3)
-                    Require(Texel(plain, 9, row, channel) == Texel(lit, 9, row, channel), $"Row {row} channel {channel} changed with Emissive.");
+                    AssertThat(Texel(plain, 9, row, channel) == Texel(lit, 9, row, channel)).OverrideFailureMessage($"Row {row} channel {channel} changed with Emissive.").IsTrue();
     }
 
     [TestCase]
@@ -50,9 +46,8 @@ public sealed class MatTableTests
             var threw = false;
             try { MatTable.WriteRows(new byte[MatTable.ByteCount], 3, Plain with { Emissive = bad }); }
             catch (ArgumentException) { threw = true; }
-            Require(threw, $"Emissive channel '{bad.Value}' must be rejected.");
+            AssertThat(threw).OverrideFailureMessage($"Emissive channel '{bad.Value}' must be rejected.").IsTrue();
         }
-        Require(MatTable.EmissiveByte(LightChannelCatalog.Id(MatTable.LastEmissiveSlot)) == MatTable.LastEmissiveSlot + 1,
-            "The last light-level slot is accepted.");
+        AssertThat(MatTable.EmissiveByte(LightChannelCatalog.Id(MatTable.LastEmissiveSlot)) == MatTable.LastEmissiveSlot + 1).OverrideFailureMessage("The last light-level slot is accepted.").IsTrue();
     }
 }

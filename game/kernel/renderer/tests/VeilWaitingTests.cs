@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -11,7 +12,7 @@ public sealed class VeilWaitingTests
     public void LegacyCompatibilityDoesNotClaimObservationSupport()
     {
         IVeilService legacy = new LegacyVeil();
-        Check(!legacy.Waiting, "An old implementation must default to hidden.");
+        AssertThat(!legacy.Waiting).OverrideFailureMessage("An old implementation must default to hidden.").IsTrue();
         try { legacy.ObserveReadinessWait(); }
         catch (NotSupportedException) { return; }
         throw new InvalidOperationException("An unimplemented production observation API silently reported support.");
@@ -23,10 +24,10 @@ public sealed class VeilWaitingTests
         var veil = new VeilTimeline();
         veil.Cover(VeilReason.Cinematic, 0).GetAwaiter().GetResult();
         veil.Advance(10);
-        Check(!veil.Waiting, "Authored opaque dwell became loading.");
+        AssertThat(!veil.Waiting).OverrideFailureMessage("Authored opaque dwell became loading.").IsTrue();
         veil.HoldUntil(VeilReason.Teleport, () => false, 30);
         veil.Advance(10);
-        Check(!veil.Waiting && veil.Opacity == 1, "HoldUntil silently acquired a readiness observation.");
+        AssertThat(!veil.Waiting && veil.Opacity == 1).OverrideFailureMessage("HoldUntil silently acquired a readiness observation.").IsTrue();
     }
 
     [TestCase]
@@ -35,16 +36,16 @@ public sealed class VeilWaitingTests
         var ordinary = new VeilTimeline();
         using var wait = ordinary.ObserveReadinessWait(); // Default Reason is Boot, yet this is explicitly ordinary.
         ordinary.Advance(1.5);
-        Check(!ordinary.Waiting, "Ordinary wait must exceed 1.5 seconds.");
+        AssertThat(!ordinary.Waiting).OverrideFailureMessage("Ordinary wait must exceed 1.5 seconds.").IsTrue();
         ordinary.Advance(.001);
-        Check(ordinary.Waiting, "Ordinary wait never became visible.");
+        AssertThat(ordinary.Waiting).OverrideFailureMessage("Ordinary wait never became visible.").IsTrue();
         var boot = new VeilTimeline();
         using var frontispiece = boot.ObserveReadinessWait(VeilWaitKind.BootFrontispiece);
         boot.Cover(VeilReason.Cinematic, 0).GetAwaiter().GetResult(); // Reason cannot reclassify this scope.
         boot.Advance(3.999);
-        Check(!boot.Waiting, "Frontispiece wait became visible before four seconds.");
+        AssertThat(!boot.Waiting).OverrideFailureMessage("Frontispiece wait became visible before four seconds.").IsTrue();
         boot.Advance(.001);
-        Check(boot.Waiting, "A full four-second frontispiece wait remained hidden.");
+        AssertThat(boot.Waiting).OverrideFailureMessage("A full four-second frontispiece wait remained hidden.").IsTrue();
     }
 
     [TestCase]
@@ -56,13 +57,13 @@ public sealed class VeilWaitingTests
         var next = veil.ObserveReadinessWait();
         veil.Advance(2);
         old.Dispose(); old.Dispose();
-        Check(veil.Waiting, "Old owner cleared another owner's live wait.");
+        AssertThat(veil.Waiting).OverrideFailureMessage("Old owner cleared another owner's live wait.").IsTrue();
         next.Dispose();
-        Check(!veil.Waiting, "Disposed scope remained visible until the next frame.");
+        AssertThat(!veil.Waiting).OverrideFailureMessage("Disposed scope remained visible until the next frame.").IsTrue();
         veil.Advance(0);
         using var retry = veil.ObserveReadinessWait();
         old.Dispose(); veil.Advance(1);
-        Check(!veil.Waiting, "Retry inherited an old scope's elapsed time.");
+        AssertThat(!veil.Waiting).OverrideFailureMessage("Retry inherited an old scope's elapsed time.").IsTrue();
     }
 
     [TestCase]
@@ -73,9 +74,9 @@ public sealed class VeilWaitingTests
         veil.Advance(2);
         var changes = 0; veil.Changed += () => changes++;
         OnDedicatedWorker(scope.Dispose);
-        Check(!veil.Waiting && changes == 0, "Worker disposal published UI state or retained visibility.");
+        AssertThat(!veil.Waiting && changes == 0).OverrideFailureMessage("Worker disposal published UI state or retained visibility.").IsTrue();
         veil.Advance(0);
-        Check(changes == 1, "Owner frame did not publish disposal.");
+        AssertThat(changes == 1).OverrideFailureMessage("Owner frame did not publish disposal.").IsTrue();
     }
 
     [TestCase]
@@ -87,14 +88,14 @@ public sealed class VeilWaitingTests
         var reveal = veil.Reveal(VeilReason.Cinematic, 1);
         try { veil.Advance(3); }
         finally { scope.Dispose(); }
-        Check(!veil.Waiting && veil.Opacity == 1 && reveal.IsFaulted, "Failure cleared protection or retained the wait indicator.");
+        AssertThat(!veil.Waiting && veil.Opacity == 1 && reveal.IsFaulted).OverrideFailureMessage("Failure cleared protection or retained the wait indicator.").IsTrue();
         _ = reveal.Exception;
         var cancelled = veil.ObserveReadinessWait();
         try { throw new OperationCanceledException(); }
         catch (OperationCanceledException) { }
         finally { cancelled.Dispose(); }
         veil.Advance(10);
-        Check(!veil.Waiting, "Cancelled observation resurfaced after later frames.");
+        AssertThat(!veil.Waiting).OverrideFailureMessage("Cancelled observation resurfaced after later frames.").IsTrue();
     }
 
     [TestCase]
@@ -107,7 +108,7 @@ public sealed class VeilWaitingTests
             try { veil.ObserveReadinessWait(); } catch (InvalidOperationException) { rejected++; }
             try { veil.Advance(1); } catch (InvalidOperationException) { rejected++; }
         });
-        Check(rejected == 2 && !veil.Waiting, "A worker mutated the observation collection or clock.");
+        AssertThat(rejected == 2 && !veil.Waiting).OverrideFailureMessage("A worker mutated the observation collection or clock.").IsTrue();
     }
 
     private static void OnDedicatedWorker(Action action)
@@ -126,8 +127,7 @@ public sealed class VeilWaitingTests
         worker.Start();
         if (!worker.Join(TimeSpan.FromSeconds(5)))
             throw new TimeoutException($"Dedicated test worker did not finish: owner={ownerThreadId}, worker={workerThreadId}.");
-        Check(workerThreadId != 0 && workerThreadId != ownerThreadId,
-            $"Test did not cross a thread boundary: owner={ownerThreadId}, worker={workerThreadId}.");
+        AssertThat(workerThreadId != 0 && workerThreadId != ownerThreadId).OverrideFailureMessage($"Test did not cross a thread boundary: owner={ownerThreadId}, worker={workerThreadId}.").IsTrue();
         Console.WriteLine($"VeilWaitingTests threads: owner={ownerThreadId}, worker={workerThreadId}.");
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
@@ -141,5 +141,4 @@ public sealed class VeilWaitingTests
         public Task Reveal(VeilReason reason, float seconds) => Task.CompletedTask;
     }
 
-    private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 }

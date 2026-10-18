@@ -9,6 +9,7 @@ using Campus.Kernel.Renderer;
 using GdUnit4;
 using Godot;
 using N = System.Numerics;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Collision.Tests;
 
@@ -21,18 +22,17 @@ public sealed class CollisionCoreTests
     [RequireGodotRuntime]
     public async Task FormalMapNearbyWalking()
     {
-        Require(Engine.GetMainLoop() is SceneTree && OS.GetThreadCallerId() == OS.GetMainThreadId(),
-            "G15 core requires the Godot test runner on the main thread.");
+        AssertThat(Engine.GetMainLoop() is SceneTree && OS.GetThreadCallerId() == OS.GetMainThreadId()).OverrideFailureMessage("G15 core requires the Godot test runner on the main thread.").IsTrue();
         var tree = (SceneTree)Engine.GetMainLoop();
         var source = new MapDataSource();
         var catalog = await source.ReadCatalog();
         var requested = System.Environment.GetEnvironmentVariable("UESTC_G15_MAP");
         var id = string.IsNullOrWhiteSpace(requested) ? catalog.Default : new MapId(requested);
-        Require(catalog.TryGet(id, out var entry), "G15 requested an unknown map: " + id.Value);
+        AssertThat(catalog.TryGet(id, out var entry)).OverrideFailureMessage("G15 requested an unknown map: " + id.Value).IsTrue();
         // Fly-only viewpoints never become landing candidates.
         var route = new[] { "P01", "P08" }.Select(pointId =>
             entry.Waypoints.Single(point => point.Id == pointId)).ToArray();
-        Require(route.All(point => point.Stand is not null), "The G15 short route requires both authored Stand points.");
+        AssertThat(route.All(point => point.Stand is not null)).OverrideFailureMessage("The G15 short route requires both authored Stand points.").IsTrue();
         var claims = source.ReadClaims(id);
         var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), input, claims));
@@ -62,29 +62,27 @@ public sealed class CollisionCoreTests
                 var point = route[index];
                 var stand = point.Stand!;
                 await LoadNearby(stand.Feet);
-                Require(collision.Ready(stand.Feet, WalkRules.Radius), point.Id + " collision is not Ready.");
+                AssertThat(collision.Ready(stand.Feet, WalkRules.Radius)).OverrideFailureMessage(point.Id + " collision is not Ready.").IsTrue();
                 var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight)
                     ?? admission.Nearby(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight);
-                Require(landing is not null, point.Id + " has no legal raycast landing with cylinder clearance.");
+                AssertThat(landing is not null).OverrideFailureMessage(point.Id + " has no legal raycast landing with cylinder clearance.").IsTrue();
                 var feet = landing!.Value;
                 character.GlobalPosition = feet.ToGodot();
                 character.Velocity = Vector3.Zero;
                 await MoveFor(1, N.Vector3.Zero, point.Id, feet);
-                Require(character.IsOnFloor(), point.Id + " did not settle on native collision.");
+                AssertThat(character.IsOnFloor()).OverrideFailureMessage(point.Id + " did not settle on native collision.").IsTrue();
                 var start = character.GlobalPosition.ToNumerics();
                 var destination = route[1 - index].Stand!.Feet;
                 var direction = N.Vector3.Normalize(new(destination.X - feet.X, 0, destination.Z - feet.Z));
                 await MoveFor(.5f, direction * WalkTuning.WalkSpeed, point.Id, start);
                 await MoveFor(.5f, N.Vector3.Zero, point.Id, start);
                 var finish = character.GlobalPosition.ToNumerics();
-                Require(character.IsOnFloor(), point.Id + " lost the floor after its short walk.");
-                Require(N.Vector2.Distance(new(start.X, start.Z), new(finish.X, finish.Z)) > WalkRules.Radius,
-                    point.Id + " could not move away from its landing.");
+                AssertThat(character.IsOnFloor()).OverrideFailureMessage(point.Id + " lost the floor after its short walk.").IsTrue();
+                AssertThat(N.Vector2.Distance(new(start.X, start.Z), new(finish.X, finish.Z)) > WalkRules.Radius).OverrideFailureMessage(point.Id + " could not move away from its landing.").IsTrue();
                 GD.Print($"G15Core point={point.Id} authored={stand.Feet} landing={feet} finish={finish} resident={resident.Count}");
             }
             collision.Unload();
-            Require(collision.Diagnostics.Tiles == 0 && collision.Diagnostics.Bodies == 0,
-                "The short route retained collision after unloading.");
+            AssertThat(collision.Diagnostics.Tiles == 0 && collision.Diagnostics.Bodies == 0).OverrideFailureMessage("The short route retained collision after unloading.").IsTrue();
             GD.Print("G15Core complete: P01/P08 landing and nearby walking only; no full route traversal.");
         }
         finally
@@ -111,10 +109,10 @@ public sealed class CollisionCoreTests
                     ?? throw new InvalidDataException("The formal collision producer returned another product.");
                 var work = new CollisionMountWork(collision, product, 0);
                 while (!work.Step(.3)) await root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-                Require(work.Complete, "Nearby collision did not mount: " + work.Error);
+                AssertThat(work.Complete).OverrideFailureMessage("Nearby collision did not mount: " + work.Error).IsTrue();
                 resident.Add(tile);
             }
-            Require(resident.Count <= 9, "The short route loaded more than a 3x3 neighbourhood.");
+            AssertThat(resident.Count <= 9).OverrideFailureMessage("The short route loaded more than a 3x3 neighbourhood.").IsTrue();
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
         }
@@ -126,12 +124,11 @@ public sealed class CollisionCoreTests
             {
                 await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
                 var feet = character.GlobalPosition.ToNumerics();
-                Require(collision.Ready(feet, WalkRules.Radius), point + " left its Ready neighbourhood.");
+                AssertThat(collision.Ready(feet, WalkRules.Radius)).OverrideFailureMessage(point + " left its Ready neighbourhood.").IsTrue();
                 var delta = (float)character.GetPhysicsProcessDeltaTime();
                 character.Velocity = new(horizontal.X, character.Velocity.Y - WalkTuning.Gravity * delta, horizontal.Z);
                 character.MoveAndSlide();
-                Require(character.GlobalPosition.Y >= start.Y - WalkTuning.BelowSupportLimit,
-                    point + " fell through or away from its nearby floor.");
+                AssertThat(character.GlobalPosition.Y >= start.Y - WalkTuning.BelowSupportLimit).OverrideFailureMessage(point + " fell through or away from its nearby floor.").IsTrue();
             }
         }
     }
@@ -153,10 +150,5 @@ public sealed class CollisionCoreTests
             Position = Vector3.Up * (WalkRules.StandingHeight / 2)
         });
         return character;
-    }
-
-    private static void Require(bool value, string message)
-    {
-        if (!value) throw new InvalidOperationException(message);
     }
 }

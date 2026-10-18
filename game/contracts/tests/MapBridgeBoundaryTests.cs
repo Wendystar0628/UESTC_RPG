@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -17,7 +18,7 @@ public sealed class MapBridgeBoundaryTests
         claims[feature] = new("WP-02");
         if (inputs.ClaimedBy![feature] != new WpId("WP-01")) throw new InvalidOperationException("Claim input was not snapshotted.");
         if (inputs.ClaimedBy is IDictionary<FeatureId, WpId> exposed)
-            Expect<NotSupportedException>(() => exposed[feature] = new("WP-02"));
+            AssertThrown(() => exposed[feature] = new("WP-02")).IsInstanceOf<NotSupportedException>();
     }
 
     [TestCase]
@@ -43,17 +44,17 @@ public sealed class MapBridgeBoundaryTests
     [TestCase]
     public void AtlasRejectsMalformedBuffersAndReadinessClaimsWhileSupportingAll64MaskBits()
     {
-        Expect<ArgumentException>(() => new AtlasBaseTexture("map_sdf_a", 2, 2, Rect(), new byte[15]));
-        Expect<ArgumentException>(() => new AtlasLabelBand("zh", 0, 1,
-            [new("bad", "Text", new(float.NaN, 0), Vector2.Zero, Vector2.One)]));
-        Expect<ArgumentException>(() => Snapshot(new byte[16], labelsReady: true));
-        Expect<ArgumentException>(() => Snapshot(new byte[16], places: ["", "place"], regions: ["region"], regionsReady: true));
+        AssertThrown(() => new AtlasBaseTexture("map_sdf_a", 2, 2, Rect(), new byte[15])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new AtlasLabelBand("zh", 0, 1,
+            [new("bad", "Text", new(float.NaN, 0), Vector2.Zero, Vector2.One)])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => Snapshot(new byte[16], labelsReady: true)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => Snapshot(new byte[16], places: ["", "place"], regions: ["region"], regionsReady: true)).IsInstanceOf<ArgumentException>();
         var regions = Enumerable.Range(0, 64).Select(i => "region-" + i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture)).ToArray();
         var lookup = Enumerable.Repeat(byte.MaxValue, 256).ToArray(); lookup[1] = 63;
         var snapshot = Snapshot(new byte[16], places: ["", "place"], regions: regions, lookup: lookup, regionsReady: true);
         if ((1UL << snapshot.PlaceToRegion.Span[1]) != (1UL << 63)) throw new InvalidOperationException("The 64th region mask bit was lost.");
         lookup[1] = 64;
-        Expect<ArgumentException>(() => Snapshot(new byte[16], places: ["", "place"], regions: regions, lookup: lookup));
+        AssertThrown(() => Snapshot(new byte[16], places: ["", "place"], regions: regions, lookup: lookup)).IsInstanceOf<ArgumentException>();
     }
 
     private static AtlasBaseSnapshot Snapshot(byte[] pixels, IReadOnlyList<AtlasLabelBand>? bands = null,
@@ -70,11 +71,4 @@ public sealed class MapBridgeBoundaryTests
         Rect(), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],
         new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
         new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 }

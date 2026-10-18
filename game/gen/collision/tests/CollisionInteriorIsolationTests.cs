@@ -8,6 +8,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class CollisionInteriorIsolationTests
 {
@@ -39,28 +41,41 @@ public sealed class CollisionInteriorIsolationTests
             // the same provider/feature IDs while the old build is still inside CollisionStorey.
             var newContext = Context(newMap, Bind(newProvider), open: true, catalog: true);
             var newResult = builder.Build(newContext, new(0, 0));
-            RequireFloors(newResult, 7);
+            AssertThat(newResult.Count != 1 || newResult.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 7) > .02f))
+                .OverrideFailureMessage("Expected one box floor at 7 m from this map's provider.").IsFalse();
         }
         finally
         {
             release.Set();
             oldResult = await oldJob;
         }
-        RequireFloors(oldResult ?? throw new InvalidOperationException("Old-map worker did not complete."), 3);
+        AssertThat(oldResult).OverrideFailureMessage("Old-map worker did not complete.").IsNotNull();
+        AssertThat(oldResult!.Count != 1 || oldResult!.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 3) > .02f))
+            .OverrideFailureMessage("Expected one box floor at 3 m from this map's provider.").IsFalse();
     }
 
     [TestCase]
     public void OpenIndexedInteriorCannotUseAnEmptyProviderSnapshot()
     {
         var context = Context(new("fixture-missing"), EmptyBindings(), open: true, catalog: false);
-        Throws(() => new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)), "missing provider");
+        Exception? error = null;
+        try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
+        catch (Exception caught) { error = caught; }
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'missing provider'.").IsNotNull();
+        AssertThat(error!).IsInstanceOf<InvalidOperationException>();
+        AssertThat(error!.Message).Contains("missing provider");
     }
 
     [TestCase]
     public void CatalogBindingCannotDisappearBehindAClosedOrIncompleteIndex()
     {
         var context = Context(new("fixture-catalog"), EmptyBindings(), open: false, catalog: true);
-        Throws(() => new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)), "missing from this map's snapshot");
+        Exception? error = null;
+        try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
+        catch (Exception caught) { error = caught; }
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'missing from this map's snapshot'.").IsNotNull();
+        AssertThat(error!).IsInstanceOf<InvalidOperationException>();
+        AssertThat(error!.Message).Contains("missing from this map's snapshot");
     }
 
     [TestCase]
@@ -68,7 +83,12 @@ public sealed class CollisionInteriorIsolationTests
     {
         var map = new MapId("fixture-unconfigured");
         var context = Context(map, Bind(new FixtureProvider(map, 3, [])), open: true, catalog: true);
-        Throws(() => new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)), "feature list is empty");
+        Exception? error = null;
+        try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
+        catch (Exception caught) { error = caught; }
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'feature list is empty'.").IsNotNull();
+        AssertThat(error!).IsInstanceOf<InvalidOperationException>();
+        AssertThat(error!.Message).Contains("feature list is empty");
     }
 
     [TestCase]
@@ -77,7 +97,7 @@ public sealed class CollisionInteriorIsolationTests
         var map = new MapId("fixture-no-interiors");
         var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
         var result = new CollisionTileBuilder([], _ => []).Build(context, new(0, 0));
-        if (result.Count != 0) throw new InvalidOperationException("A map without interior declarations produced extra collision shapes.");
+        AssertThat(result.Count == 0).OverrideFailureMessage("A map without interior declarations produced extra collision shapes.").IsTrue();
     }
 
     private static BuildContext Context(MapId map, IReadOnlyDictionary<string, IInteriorProvider> providers, bool open, bool catalog)
@@ -108,18 +128,6 @@ public sealed class CollisionInteriorIsolationTests
         new(Vector2.Zero, new(64, 64)), new(1, 0, 64, -5, 20, 0, 0, 0), new(0, 0), new(0, 0),
         "fixture", [], new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
         new("fixture-sky", "fixture-backdrop", []), new Dictionary<string, string>(), []);
-
-    private static void RequireFloors(IReadOnlyList<Collider> colliders, float height)
-    {
-        if (colliders.Count != 1 || colliders.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - height) > .02f))
-            throw new InvalidOperationException($"Expected one box floor at {height} m from this map's provider.");
-    }
-    private static void Throws(Action action, string expected)
-    {
-        try { action(); }
-        catch (InvalidOperationException error) when (error.Message.Contains(expected, StringComparison.Ordinal)) { return; }
-        throw new InvalidOperationException($"Expected an explicit interior binding error containing '{expected}'.");
-    }
 
     // The aggregate is a non-building marker so this fixture isolates the provider's floor, not automatic exterior walls.
     private static FakeWorld FixtureWorld(bool open) => new()

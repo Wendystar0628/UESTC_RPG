@@ -7,6 +7,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class CollisionGeometryTests
 {
@@ -16,19 +18,19 @@ public sealed class CollisionGeometryTests
         var slab = new SlabCollider(new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) },
             3, .2f, SurfaceTag.Ground) { Foot = FootMat.Concrete };
         var boxes = CollisionGeometry.Localize([slab], new(0, 0)).Cast<BoxCollider>().ToArray();
-        Require(boxes.Length <= 3 && boxes.All(b => b.Tag == slab.Tag && b.Foot == slab.Foot), "Platform boxes lost source semantics.");
-        Require(!boxes.Any(b => Contains(b, new(2, 3, 2))), "The L-shaped platform's courtyard was filled.");
-        Require(boxes.Any(b => Contains(b, new(.5f, 2.9f, 3))), "The elevated thin platform was removed.");
+        AssertThat(boxes.Length <= 3 && boxes.All(b => b.Tag == slab.Tag && b.Foot == slab.Foot)).OverrideFailureMessage("Platform boxes lost source semantics.").IsTrue();
+        AssertThat(!boxes.Any(b => Contains(b, new(2, 3, 2)))).OverrideFailureMessage("The L-shaped platform's courtyard was filled.").IsTrue();
+        AssertThat(boxes.Any(b => Contains(b, new(.5f, 2.9f, 3)))).OverrideFailureMessage("The elevated thin platform was removed.").IsTrue();
     }
 
     [TestCase]
     public void NegativeCoordinatesUseFloorAndLocalTransforms()
     {
         var tile = CollisionGeometry.TileAt(new(-0.01f, 0, -64.01f));
-        Require(tile == new TileKey(-1, -2), "Negative coordinates must floor, not truncate.");
+        AssertThat(tile == new TileKey(-1, -2)).OverrideFailureMessage("Negative coordinates must floor, not truncate.").IsTrue();
         var wall = new WallCollider(new(-64, -128), new(-60, -128), 0.1f, 0, 2, SurfaceTag.Barrier);
         var local = (BoxCollider)CollisionGeometry.Localize([wall], tile).Single();
-        Require(Contains(local, new(2, 1, 0)) && !Contains(local, new(5, 1, 0)), "Tile localization changed the world alignment.");
+        AssertThat(Contains(local, new(2, 1, 0)) && !Contains(local, new(5, 1, 0))).OverrideFailureMessage("Tile localization changed the world alignment.").IsTrue();
     }
 
     [TestCase]
@@ -36,8 +38,8 @@ public sealed class CollisionGeometryTests
     {
         var wall = new WallCollider(Vector2.Zero, Vector2.UnitX, 0.1f, 0, 2, SurfaceTag.Wall) { Foot = FootMat.Concrete };
         var batches = CollisionGeometry.BodyBatches(Enumerable.Repeat<Collider>(wall, 501).Append(wall with { Tag = SurfaceTag.Boundary }));
-        Require(batches.Count == 4, "501 walls plus one boundary need four bodies.");
-        Require(batches.All(b => b.Count <= 250 && b.Select(c => (c.Tag, c.Foot)).Distinct().Count() == 1), "Invalid collision body grouping.");
+        AssertThat(batches.Count == 4).OverrideFailureMessage("501 walls plus one boundary need four bodies.").IsTrue();
+        AssertThat(batches.All(b => b.Count <= 250 && b.Select(c => (c.Tag, c.Foot)).Distinct().Count() == 1)).OverrideFailureMessage("Invalid collision body grouping.").IsTrue();
     }
 
     [TestCase]
@@ -47,25 +49,24 @@ public sealed class CollisionGeometryTests
         var door = new EntranceDecl("entrance", new(5, 0, -2.5f), new(5, 0, 3), 2, true) { Center = new(5, 0, 0) };
         var entry = new InteriorIndexEntry(new("building"), [], [door], true, "provider");
         var opened = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry);
-        Require(!opened.Any(w => Blocks(w, new(5, 0.5f, 0))), "Open doorway is blocked.");
-        Require(opened.Any(w => Blocks(w, new(5, 4, 0))), "Lintel must remain above the open doorway.");
+        AssertThat(!opened.Any(w => Blocks(w, new(5, 0.5f, 0)))).OverrideFailureMessage("Open doorway is blocked.").IsTrue();
+        AssertThat(opened.Any(w => Blocks(w, new(5, 4, 0)))).OverrideFailureMessage("Lintel must remain above the open doorway.").IsTrue();
         var closed = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [door with { Open = false }] });
-        Require(closed.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))), "Closed doorway must stay solid and tagged.");
+        AssertThat(closed.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0)))).OverrideFailureMessage("Closed doorway must stay solid and tagged.").IsTrue();
         var closedBuilding = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Open = false });
-        Require(closedBuilding.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))), "An open door declaration cannot open a closed building.");
+        AssertThat(closedBuilding.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0)))).OverrideFailureMessage("An open door declaration cannot open a closed building.").IsTrue();
 
         var raisedDoor = door with { Center = new(5, 5, 0), HeadY = 7.4f };
         var raised = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [raisedDoor] });
-        Require(!raised.Any(w => Blocks(w, new(5, 6.5f, 0))), "An absolute raised doorway is blocked by a ground-relative lintel.");
-        Require(raised.Any(w => Blocks(w, new(5, 4.9f, 0))) && raised.Any(w => Blocks(w, new(5, 7.5f, 0))), "Raised doors must retain the walls below and above their declared opening.");
+        AssertThat(!raised.Any(w => Blocks(w, new(5, 6.5f, 0)))).OverrideFailureMessage("An absolute raised doorway is blocked by a ground-relative lintel.").IsTrue();
+        AssertThat(raised.Any(w => Blocks(w, new(5, 4.9f, 0))) && raised.Any(w => Blocks(w, new(5, 7.5f, 0)))).OverrideFailureMessage("Raised doors must retain the walls below and above their declared opening.").IsTrue();
         var unknownHead = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [raisedDoor with { HeadY = 0 }] });
-        Require(!unknownHead.Any(w => Blocks(w, new(5, 6.5f, 0))) && unknownHead.Any(w => Blocks(w, new(5, 9, 0))), "An unknown head uses door height above its absolute threshold.");
+        AssertThat(!unknownHead.Any(w => Blocks(w, new(5, 6.5f, 0))) && unknownHead.Any(w => Blocks(w, new(5, 9, 0)))).OverrideFailureMessage("An unknown head uses door height above its absolute threshold.").IsTrue();
         var stacked = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry with { Entrances = [door with { Open = false, HeadY = 2.4f }, raisedDoor] });
-        Require(stacked.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))) &&
-            !stacked.Any(w => Blocks(w, new(5, 6.5f, 0))), "A closed lower door must not block an open door on another floor at the same horizontal span.");
-        Require(stacked.Any(w => w.Tag == SurfaceTag.Wall && Blocks(w, new(5, 4, 0))) && stacked.Any(w => Blocks(w, new(5, 7.5f, 0))),
-            "The wall between stacked doorways and above the upper doorway must remain.");
-        Require(opened.All(w => w.HalfT <= 0.15f), "Wall horizontal expansion exceeds 0.3 m.");
+        AssertThat(stacked.Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, new(5, 0.5f, 0))) &&
+            !stacked.Any(w => Blocks(w, new(5, 6.5f, 0)))).OverrideFailureMessage("A closed lower door must not block an open door on another floor at the same horizontal span.").IsTrue();
+        AssertThat(stacked.Any(w => w.Tag == SurfaceTag.Wall && Blocks(w, new(5, 4, 0))) && stacked.Any(w => Blocks(w, new(5, 7.5f, 0)))).OverrideFailureMessage("The wall between stacked doorways and above the upper doorway must remain.").IsTrue();
+        AssertThat(opened.All(w => w.HalfT <= 0.15f)).OverrideFailureMessage("Wall horizontal expansion exceeds 0.3 m.").IsTrue();
     }
 
     [TestCase]
@@ -75,7 +76,7 @@ public sealed class CollisionGeometryTests
         var heights = Enumerable.Range(0, 65 * 65).Select(i => (short)(i % 101)).ToArray();
         var field = new HeightFieldCollider(tile, heights, SurfaceTag.Ground);
         var local = (HeightFieldCollider)CollisionGeometry.Localize([field], tile).Single();
-        Require(local.Tile == tile && local.HeightsCm.SequenceEqual(heights), "Height-map lattice changed.");
+        AssertThat(local.Tile == tile && local.HeightsCm.SequenceEqual(heights)).OverrideFailureMessage("Height-map lattice changed.").IsTrue();
     }
 
     [TestCase]
@@ -94,14 +95,14 @@ public sealed class CollisionGeometryTests
             ],
         };
         var footprints = CollisionTileBuilder.BuildingFootprints(parent);
-        Require(footprints.Count == 2, "Mixed park parent lost building parts or generated its aggregate envelope.");
-        Require(footprints[0].SourceId == "source:a-building" && footprints[1].SourceId == "source:z-building", "Part order must follow SourceId.");
-        Require(footprints[0].Height == 6 && footprints[1].Height == 9, "Each part must retain its own height.");
+        AssertThat(footprints.Count == 2).OverrideFailureMessage("Mixed park parent lost building parts or generated its aggregate envelope.").IsTrue();
+        AssertThat(footprints[0].SourceId == "source:a-building" && footprints[1].SourceId == "source:z-building").OverrideFailureMessage("Part order must follow SourceId.").IsTrue();
+        AssertThat(footprints[0].Height == 6 && footprints[1].Height == 9).OverrideFailureMessage("Each part must retain its own height.").IsTrue();
         var walls = footprints.SelectMany(p => CollisionTileBuilder.BuildingWalls(p.Rings, new FlatSpatial(), null, p.Height)).ToArray();
-        Require(walls.Length == 8, "Two rectangular buildings must create exactly their eight perimeter walls.");
-        Require(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15))), "A building perimeter is missing.");
-        Require(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15))), "Open park ground or the aggregate perimeter was walled off.");
-        Require(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.01f), "Aggregate parent height leaked into its building parts.");
+        AssertThat(walls.Length == 8).OverrideFailureMessage("Two rectangular buildings must create exactly their eight perimeter walls.").IsTrue();
+        AssertThat(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15)))).OverrideFailureMessage("A building perimeter is missing.").IsTrue();
+        AssertThat(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15)))).OverrideFailureMessage("Open park ground or the aggregate perimeter was walled off.").IsTrue();
+        AssertThat(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.01f)).OverrideFailureMessage("Aggregate parent height leaked into its building parts.").IsTrue();
     }
 
     [TestCase]
@@ -117,9 +118,9 @@ public sealed class CollisionGeometryTests
             ],
         };
         var footprints = CollisionTileBuilder.BuildingFootprints(parent);
-        Require(footprints.Count == 2, "A multi-polygon part must retain separate footprints without its courtyard or parent envelope.");
+        AssertThat(footprints.Count == 2).OverrideFailureMessage("A multi-polygon part must retain separate footprints without its courtyard or parent envelope.").IsTrue();
         var walls = footprints.SelectMany(p => CollisionTileBuilder.BuildingWalls(p.Rings, new FlatSpatial(), null, p.Height)).ToArray();
-        Require(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(25, 1, 15))), "The aggregate boundary or non-building courtyard was walled off.");
+        AssertThat(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(25, 1, 15)))).OverrideFailureMessage("The aggregate boundary or non-building courtyard was walled off.").IsTrue();
     }
 
     private static PolygonRings Rectangle(float x0, float z0, float x1, float z1) => new(new Vector2[] { new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1) });
@@ -138,17 +139,15 @@ public sealed class CollisionGeometryTests
         var local = Vector3.Abs(Vector3.Transform(point, inverse));
         return local.X <= box.Half.X && local.Y <= box.Half.Y && local.Z <= box.Half.Z;
     }
-    private static void Require(bool ok, string message) { if (!ok) throw new InvalidOperationException(message); }
     [TestCase]
     public void WallBottomCoversTheExteriorThreeMetreTerrainBand()
     {
         var walls = CollisionTileBuilder.BuildingWalls(Rectangle(0, 0, 10, 10),
             new FlatSpatial((x, z) => z <= -2 ? -3 : 0), null);
         var south = walls.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1);
-        Require(south.Y0 == -5 && south.Y1 == WalkRules.BuildingCollisionHeight, "Exterior low ground was missed or the visible-side wall top moved.");
+        AssertThat(south.Y0 == -5 && south.Y1 == WalkRules.BuildingCollisionHeight).OverrideFailureMessage("Exterior low ground was missed or the visible-side wall top moved.").IsTrue();
         var corner = CollisionTileBuilder.BuildingWalls(Rectangle(0, 0, 10, 10),
             new FlatSpatial((x, z) => x <= -2 && z <= -2 ? -4 : 0), null);
-        Require(corner.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1).Y0 == -6,
-            "The exterior three-metre band omitted the footprint corner.");
+        AssertThat(corner.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1).Y0 == -6).OverrideFailureMessage("The exterior three-metre band omitted the footprint corner.").IsTrue();
     }
 }

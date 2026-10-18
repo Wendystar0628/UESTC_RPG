@@ -6,6 +6,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Interior.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class InteriorPlanTests
 {
@@ -16,13 +18,13 @@ public sealed class InteriorPlanTests
         FacadeGrid first = FacadeGridGenerator.Generate(new(ring));
         FacadeGrid equivalent = FacadeGridGenerator.Generate(new(new Vector2[]
             { ring[2], ring[1], new(18, 0), ring[0], ring[3], ring[2] }));
-        Equal(first.GridHash, equivalent.GridHash);
-        Equal(first.Bays.Count, equivalent.Bays.Count);
-        for (int i = 0; i < first.Bays.Count; i++) Equal(first.Bays[i], equivalent.Bays[i]);
+        AssertThat(equivalent.GridHash).IsEqual(first.GridHash);
+        AssertThat(EqualityComparer<int>.Default.Equals(first.Bays.Count, equivalent.Bays.Count)).OverrideFailureMessage($"Expected {first.Bays.Count}; got {equivalent.Bays.Count}.").IsTrue();
+        for (int i = 0; i < first.Bays.Count; i++) AssertThat(EqualityComparer<FacadeBay>.Default.Equals(first.Bays[i], equivalent.Bays[i])).OverrideFailureMessage($"Expected {first.Bays[i]}; got {equivalent.Bays[i]}.").IsTrue();
         foreach (FacadeBay bay in first.Bays)
         {
-            Equal(bay.Index + first.Bays.Count, bay.WindowIndex(1, first.Bays.Count));
-            True(bay.Width <= 4.201f, "A facade bay exceeds the configured maximum width.");
+            AssertThat(EqualityComparer<int>.Default.Equals(bay.Index + first.Bays.Count, bay.WindowIndex(1, first.Bays.Count))).OverrideFailureMessage($"Expected {bay.Index + first.Bays.Count}; got {bay.WindowIndex(1, first.Bays.Count)}.").IsTrue();
+            AssertThat(bay.Width <= 4.201f).OverrideFailureMessage("A facade bay exceeds the configured maximum width.").IsTrue();
         }
     }
 
@@ -34,32 +36,30 @@ public sealed class InteriorPlanTests
         foreach (FacadeBay bay in grid.Bays.Where(b => b.Ring == 1))
         {
             Vector2 point = bay.Center + bay.Inward * 0.1f;
-            True(!(point.X > 10 && point.X < 20 && point.Y > 4 && point.Y < 9), "A courtyard normal faces the void.");
+            AssertThat(!(point.X > 10 && point.X < 20 && point.Y > 4 && point.Y < 9)).OverrideFailureMessage("A courtyard normal faces the void.").IsTrue();
         }
-        Throws<ArgumentException>(() => FacadeGridGenerator.Generate(new(Rectangle(), [Rectangle()])));
-        Throws<ArgumentException>(() => FacadeGridGenerator.Generate(new(new Vector2[]
-            { new(0, 0), new(10, 10), new(0, 10), new(10, 0) })));
+        AssertThrown(() => FacadeGridGenerator.Generate(new(Rectangle(), [Rectangle()]))).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => FacadeGridGenerator.Generate(new(new Vector2[]
+            { new(0, 0), new(10, 10), new(0, 10), new(10, 0) }))).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase]
     public void GoldWingHasExplicitOpenRoomsAndNoBakedMovingLeaves()
     {
         InteriorPlan plan = InteriorPlanGenerator.Generate(Request());
-        Equal(2, plan.Storeys.Count);
-        Equal(2, plan.Rooms.Count(r => r.Open));
-        True(plan.Rooms.Count > 2, "The wing has no closed rooms besides the two selected.");
-        True(plan.Doors.Count >= 2, "The selected rooms have no doors.");
-        Equal(2, plan.Stairs.Count);
-        True(plan.Rooms.Where(r => !r.Open).All(r => plan.Portals.Any(p => p.ZoneB == r.ZoneId && p.Kind == PortalKind.Sealed)),
-            "A non-selected room was silently opened.");
+        AssertThat(EqualityComparer<int>.Default.Equals(2, plan.Storeys.Count)).OverrideFailureMessage($"Expected {2}; got {plan.Storeys.Count}.").IsTrue();
+        AssertThat(EqualityComparer<int>.Default.Equals(2, plan.Rooms.Count(r => r.Open))).OverrideFailureMessage($"Expected {2}; got {plan.Rooms.Count(r => r.Open)}.").IsTrue();
+        AssertThat(plan.Rooms.Count > 2).OverrideFailureMessage("The wing has no closed rooms besides the two selected.").IsTrue();
+        AssertThat(plan.Doors.Count >= 2).OverrideFailureMessage("The selected rooms have no doors.").IsTrue();
+        AssertThat(EqualityComparer<int>.Default.Equals(2, plan.Stairs.Count)).OverrideFailureMessage($"Expected {2}; got {plan.Stairs.Count}.").IsTrue();
+        AssertThat(plan.Rooms.Where(r => !r.Open).All(r => plan.Portals.Any(p => p.ZoneB == r.ZoneId && p.Kind == PortalKind.Sealed))).OverrideFailureMessage("A non-selected room was silently opened.").IsTrue();
         foreach (DoorLeafDecl door in plan.Doors)
         {
             PortalDecl portal = plan.Portals.Single(p => p.ZoneA == door.ZoneA && p.ZoneB == door.ZoneB && p.Kind == PortalKind.Door);
             Vector3 center = (portal.A + portal.B) * 0.5f + Vector3.UnitY;
-            True(!InteriorPlanCollision.BuildStorey(plan, door.Storey).OfType<WallCollider>().Any(w => Covers(w, center)),
-                "An automatic doorway is blocked by a baked wall or leaf.");
+            AssertThat(!InteriorPlanCollision.BuildStorey(plan, door.Storey).OfType<WallCollider>().Any(w => Covers(w, center))).OverrideFailureMessage("An automatic doorway is blocked by a baked wall or leaf.").IsTrue();
         }
-        True(InteriorPlanCollision.BuildStorey(plan, 2).All(c => c.Foot != FootMat.Auto), "A collider lacks a foot material.");
+        AssertThat(InteriorPlanCollision.BuildStorey(plan, 2).All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("A collider lacks a foot material.").IsTrue();
     }
 
     [TestCase]
@@ -68,20 +68,18 @@ public sealed class InteriorPlanTests
         InteriorPlan plan = InteriorPlanGenerator.Generate(Request());
         foreach (InteriorStair stair in plan.Stairs)
         {
-            Equal(stair.MidLanding.TopY, stair.UpFlight.P2.Y);
-            Equal(3.6f, stair.ReturnFlight.P2.Y);
-            True(stair.UpFlight.P0.Y <= -0.199f, "Stair bottom is not buried.");
-            True(stair.ReturnFlight.P0.Y <= stair.MidLanding.TopY - 0.199f, "Return flight is not buried into the mid-landing.");
-            Equal(11, stair.UpFlight.Stair!.Value.Count);
+            AssertThat(EqualityComparer<float>.Default.Equals(stair.MidLanding.TopY, stair.UpFlight.P2.Y)).OverrideFailureMessage($"Expected {stair.MidLanding.TopY}; got {stair.UpFlight.P2.Y}.").IsTrue();
+            AssertThat(EqualityComparer<float>.Default.Equals(3.6f, stair.ReturnFlight.P2.Y)).OverrideFailureMessage($"Expected {3.6f}; got {stair.ReturnFlight.P2.Y}.").IsTrue();
+            AssertThat(stair.UpFlight.P0.Y <= -0.199f).OverrideFailureMessage("Stair bottom is not buried.").IsTrue();
+            AssertThat(stair.ReturnFlight.P0.Y <= stair.MidLanding.TopY - 0.199f).OverrideFailureMessage("Return flight is not buried into the mid-landing.").IsTrue();
+            AssertThat(EqualityComparer<int>.Default.Equals(11, stair.UpFlight.Stair!.Value.Count)).OverrideFailureMessage($"Expected {11}; got {stair.UpFlight.Stair!.Value.Count}.").IsTrue();
             Vector2 a = stair.FloorOpening[0], c = stair.FloorOpening[2];
             foreach (float fraction in new[] { 0.1f, 0.5f, 0.9f })
             {
                 Vector2 sample = a + (c - a) * fraction;
-                True(!plan.Slabs.Where(s => s.Storey == 2).Any(s => InAxisAlignedRing(s.Ring, sample)),
-                    "An upper floor slab covers the stair opening.");
+                AssertThat(!plan.Slabs.Where(s => s.Storey == 2).Any(s => InAxisAlignedRing(s.Ring, sample))).OverrideFailureMessage("An upper floor slab covers the stair opening.").IsTrue();
             }
-            True(plan.Walls.Any(w => w.Storey == 2 && w.Role == InteriorWallRole.StairBarrier && w.TopY >= 5.1f),
-                "The upper stair opening has no fall barrier.");
+            AssertThat(plan.Walls.Any(w => w.Storey == 2 && w.Role == InteriorWallRole.StairBarrier && w.TopY >= 5.1f)).OverrideFailureMessage("The upper stair opening has no fall barrier.").IsTrue();
         }
     }
 
@@ -96,7 +94,7 @@ public sealed class InteriorPlanTests
         WallCollider[] middleWalls = InteriorPlanCollision.BuildStorey(plan, 2).OfType<WallCollider>().ToArray();
         WallCollider[] terminalWalls = InteriorPlanCollision.BuildStorey(plan, 3).OfType<WallCollider>().ToArray();
         InteriorStair[] outgoing = plan.Stairs.Where(s => s.LowerStorey == 2).ToArray();
-        Equal(2, outgoing.Length);
+        AssertThat(EqualityComparer<int>.Default.Equals(2, outgoing.Length)).OverrideFailureMessage($"Expected {2}; got {outgoing.Length}.").IsTrue();
         foreach (InteriorStair stair in outgoing)
         {
             RampCollider ramp = stair.UpFlight;
@@ -112,13 +110,11 @@ public sealed class InteriorPlanTests
                 {
                     Vector3 feet = Vector3.Lerp(low, high, floorT + offset / runLength);
                     feet.Y = MathF.Max(3.6f, feet.Y);
-                    True(!middleWalls.Any(w => BlocksWalkingCylinder(w, feet)),
-                        "A wall blocks the 2F-to-3F first flight even though its portal graph is connected.");
+                    AssertThat(!middleWalls.Any(w => BlocksWalkingCylinder(w, feet))).OverrideFailureMessage("A wall blocks the 2F-to-3F first flight even though its portal graph is connected.").IsTrue();
                 }
                 Vector3 terminalFeet = Vector3.Lerp(low, high, floorT);
                 terminalFeet.Y = 7.2f;
-                True(terminalWalls.Any(w => BlocksWalkingCylinder(w, terminalFeet)),
-                    "The final storey must still guard the first-flight opening where no upward flight follows.");
+                AssertThat(terminalWalls.Any(w => BlocksWalkingCylinder(w, terminalFeet))).OverrideFailureMessage("The final storey must still guard the first-flight opening where no upward flight follows.").IsTrue();
             }
         }
     }
@@ -134,11 +130,11 @@ public sealed class InteriorPlanTests
             Rooms = request.Rooms.Reverse().ToArray(),
             Footprint = new(request.Footprint.Outer.Reverse().ToArray())
         });
-        Equal(original.PlanHash, reordered.PlanHash);
-        True(original.PlanHash != InteriorPlanGenerator.Generate(request with { WorldSeed = 99 }).PlanHash, "World seed is absent from the hash.");
-        True(original.PlanHash != InteriorPlanGenerator.Generate(request with { Rooms = [] }).PlanHash, "Opening decisions are absent from the hash.");
-        True(original.PlanHash != InteriorPlanGenerator.Generate(request with
-        { Options = request.Options with { DoorHeight = 2.2f } }).PlanHash, "Door geometry is absent from the hash.");
+        AssertThat(reordered.PlanHash).IsEqual(original.PlanHash);
+        AssertThat(original.PlanHash != InteriorPlanGenerator.Generate(request with { WorldSeed = 99 }).PlanHash).OverrideFailureMessage("World seed is absent from the hash.").IsTrue();
+        AssertThat(original.PlanHash != InteriorPlanGenerator.Generate(request with { Rooms = [] }).PlanHash).OverrideFailureMessage("Opening decisions are absent from the hash.").IsTrue();
+        AssertThat(original.PlanHash != InteriorPlanGenerator.Generate(request with
+        { Options = request.Options with { DoorHeight = 2.2f } }).PlanHash).OverrideFailureMessage("Door geometry is absent from the hash.").IsTrue();
     }
 
     [TestCase]
@@ -149,24 +145,24 @@ public sealed class InteriorPlanTests
         PolygonRings rotated = new(request.Footprint.Outer.Select(Transform).ToArray());
         // No entry is supplied here: a composing provider connects this wing through its authored hall.
         InteriorPlan plan = InteriorPlanGenerator.Generate(request with { Footprint = rotated, Entrances = [], Rooms = [], ZoneIdBase = 1000 });
-        Equal(1000, plan.Zones.Min(z => z.Id));
-        True(plan.Zones.All(z => z.Ring.All(p => p.X > 90 && p.Y < -160)), "The rotated plan escaped its wing.");
-        True(plan.Doors.All(d => d.ZoneA >= 1000 && d.ZoneB >= 1000), "Composed wing IDs were not offset consistently.");
-        True(plan.Stairs.All(s => s.LowerZone >= 1000 && s.UpperZone >= 1000), "Stair links use local IDs.");
+        AssertThat(EqualityComparer<int>.Default.Equals(1000, plan.Zones.Min(z => z.Id))).OverrideFailureMessage($"Expected {1000}; got {plan.Zones.Min(z => z.Id)}.").IsTrue();
+        AssertThat(plan.Zones.All(z => z.Ring.All(p => p.X > 90 && p.Y < -160))).OverrideFailureMessage("The rotated plan escaped its wing.").IsTrue();
+        AssertThat(plan.Doors.All(d => d.ZoneA >= 1000 && d.ZoneB >= 1000)).OverrideFailureMessage("Composed wing IDs were not offset consistently.").IsTrue();
+        AssertThat(plan.Stairs.All(s => s.LowerZone >= 1000 && s.UpperZone >= 1000)).OverrideFailureMessage("Stair links use local IDs.").IsTrue();
     }
 
     [TestCase]
     public void InvalidFootprintsFloorsAndUnmatchedSelectionsFailExplicitly()
     {
         InteriorPlanRequest request = Request();
-        Throws<ArgumentException>(() => InteriorPlanGenerator.Generate(request with
-        { Footprint = new(new Vector2[] { new(0, 0), new(36, 0), new(36, 13.6f), new(18, 13.6f), new(18, 8), new(0, 8) }) }));
-        Throws<ArgumentException>(() => InteriorPlanGenerator.Generate(request with
-        { Storeys = [new(1, 0, 3.6f, Rectangle()), new(3, 7.2f, 3.6f, Rectangle())] }));
-        Throws<ArgumentException>(() => InteriorPlanGenerator.Generate(request with
-        { Rooms = [new(2, int.MaxValue, "dorm.four", true)] }));
+        AssertThrown(() => InteriorPlanGenerator.Generate(request with
+        { Footprint = new(new Vector2[] { new(0, 0), new(36, 0), new(36, 13.6f), new(18, 13.6f), new(18, 8), new(0, 8) }) })).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => InteriorPlanGenerator.Generate(request with
+        { Storeys = [new(1, 0, 3.6f, Rectangle()), new(3, 7.2f, 3.6f, Rectangle())] })).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => InteriorPlanGenerator.Generate(request with
+        { Rooms = [new(2, int.MaxValue, "dorm.four", true)] })).IsInstanceOf<ArgumentException>();
         EntranceDecl entry = request.Entrances[0] with { Center = new(10, 0, 6.8f) };
-        Throws<ArgumentException>(() => InteriorPlanGenerator.Generate(request with { Entrances = [entry] }));
+        AssertThrown(() => InteriorPlanGenerator.Generate(request with { Entrances = [entry] })).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase]
@@ -179,8 +175,8 @@ public sealed class InteriorPlanTests
             InteriorPlan expected = InteriorPlanGenerator.Generate(Request());
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
             InteriorPlan actual = InteriorPlanGenerator.Generate(Request());
-            Equal(expected.PlanHash, actual.PlanHash);
-            Equal(string.Join(';', expected.Doors.Select(d => d.Id)), string.Join(';', actual.Doors.Select(d => d.Id)));
+            AssertThat(actual.PlanHash).IsEqual(expected.PlanHash);
+            AssertThat(EqualityComparer<string>.Default.Equals(string.Join(';', expected.Doors.Select(d => d.Id)), string.Join(';', actual.Doors.Select(d => d.Id)))).OverrideFailureMessage($"Expected {string.Join(';', expected.Doors.Select(d => d.Id))}; got {string.Join(';', actual.Doors.Select(d => d.Id))}.").IsTrue();
         }
         finally { CultureInfo.CurrentCulture = previous; }
     }
@@ -219,13 +215,5 @@ public sealed class InteriorPlanTests
         float t = Math.Clamp(Vector2.Dot(p - wall.A, d) / d.LengthSquared(), 0f, 1f);
         Vector2 nearest = wall.A + d * t;
         return Vector2.Distance(p, nearest) < radius + wall.HalfT;
-    }
-    private static void True(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
-    private static void Equal<T>(T expected, T actual) where T : notnull =>
-        True(EqualityComparer<T>.Default.Equals(expected, actual), $"Expected {expected}; got {actual}.");
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); } catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
     }
 }

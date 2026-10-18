@@ -2,6 +2,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Style.Palette.Keys;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests.Style;
 
@@ -28,11 +29,11 @@ public sealed class InteriorLitTests
         {
             var m = deriver.Material(albedo, cls, frame, x, null);
             var patch = deriver.InteriorComposite(m.ShadeIn, m.LitIn);
-            Check(patch.L <= LitLMax + 1e-6, $"{token}: patch L {patch.L:F4} exceeds {LitLMax}.");
-            Check(patch.L > m.Lit.L, $"{token}: patch L {patch.L:F4} must be lifted above the lit L {m.Lit.L:F4}.");
-            Check(patch.Chroma <= m.Lit.Chroma + 1e-6, $"{token}: patch C {patch.Chroma:F4} exceeds the lit C {m.Lit.Chroma:F4}.");
-            Check(Math.Abs(Oklab.HueDiff(m.Lit.Hue, patch.Hue)) < 0.01, $"{token}: hue moved from {m.Lit.Hue:F3} to {patch.Hue:F3}.");
-            Check(m.LitIn.L <= LitLMax + 1e-6, $"{token}: row 3 L {m.LitIn.L:F4} exceeds {LitLMax}.");
+            AssertThat(patch.L <= LitLMax + 1e-6).OverrideFailureMessage($"{token}: patch L {patch.L:F4} exceeds {LitLMax}.").IsTrue();
+            AssertThat(patch.L > m.Lit.L).OverrideFailureMessage($"{token}: patch L {patch.L:F4} must be lifted above the lit L {m.Lit.L:F4}.").IsTrue();
+            AssertThat(patch.Chroma <= m.Lit.Chroma + 1e-6).OverrideFailureMessage($"{token}: patch C {patch.Chroma:F4} exceeds the lit C {m.Lit.Chroma:F4}.").IsTrue();
+            AssertThat(Math.Abs(Oklab.HueDiff(m.Lit.Hue, patch.Hue)) < 0.01).OverrideFailureMessage($"{token}: hue moved from {m.Lit.Hue:F3} to {patch.Hue:F3}.").IsTrue();
+            AssertThat(m.LitIn.L <= LitLMax + 1e-6).OverrideFailureMessage($"{token}: row 3 L {m.LitIn.L:F4} exceeds {LitLMax}.").IsTrue();
         }
     }
 
@@ -44,9 +45,9 @@ public sealed class InteriorLitTests
         {
             var m = deriver.Material(albedo, cls, frame, x, null);
             var patch = deriver.InteriorComposite(m.ShadeIn, m.LitIn);
-            Near(patch.L, Math.Min(LitLMax, m.Lit.L * LitGain), 1e-4, $"{token}: L");
-            Near(patch.Chroma, m.Lit.Chroma, 1e-4, $"{token}: C");
-            Check(Math.Abs(Oklab.HueDiff(m.Lit.Hue, patch.Hue)) < 0.05, $"{token}: hue moved from {m.Lit.Hue:F3} to {patch.Hue:F3}.");
+            AssertThat(patch.L).OverrideFailureMessage($"{$"{token}: L"}: expected {Math.Min(LitLMax, m.Lit.L * LitGain):R}, got {patch.L:R}.").IsEqualApprox(Math.Min(LitLMax, m.Lit.L * LitGain), 1e-4);
+            AssertThat(patch.Chroma).OverrideFailureMessage($"{$"{token}: C"}: expected {m.Lit.Chroma:R}, got {patch.Chroma:R}.").IsEqualApprox(m.Lit.Chroma, 1e-4);
+            AssertThat(Math.Abs(Oklab.HueDiff(m.Lit.Hue, patch.Hue)) < 0.05).OverrideFailureMessage($"{token}: hue moved from {m.Lit.Hue:F3} to {patch.Hue:F3}.").IsTrue();
         }
     }
 
@@ -59,9 +60,9 @@ public sealed class InteriorLitTests
             var m = deriver.Material(albedo, cls, frame, x, null);
             var patch = deriver.InteriorPatch(m.Lit);
             var composite = deriver.InteriorComposite(m.ShadeIn, m.LitIn);
-            Check(Dist(composite, patch) < 1e-4, $"{token}: composite {Oklab.ToHex(composite)} is not the patch {Oklab.ToHex(patch)}.");
+            AssertThat(Dist(composite, patch) < 1e-4).OverrideFailureMessage($"{token}: composite {Oklab.ToHex(composite)} is not the patch {Oklab.ToHex(patch)}.").IsTrue();
             var (r, g, b) = Oklab.ToLinear(m.LitIn);
-            Check(r >= -1e-6 && g >= -1e-6 && b >= -1e-6 && r <= 1 + 1e-6 && g <= 1 + 1e-6 && b <= 1 + 1e-6, $"{token}: row 3 is out of gamut.");
+            AssertThat(r >= -1e-6 && g >= -1e-6 && b >= -1e-6 && r <= 1 + 1e-6 && g <= 1 + 1e-6 && b <= 1 + 1e-6).OverrideFailureMessage($"{token}: row 3 is out of gamut.").IsTrue();
         }
     }
 
@@ -80,7 +81,7 @@ public sealed class InteriorLitTests
             var actual = Oklab.ToHex(m.LitIn);
             var want = expected.First(e => e.Token == token).Hex;
             for (var i = 1; i < 7; i += 2)
-                Check(Math.Abs(Convert.ToInt32(actual.Substring(i, 2), 16) - Convert.ToInt32(want.Substring(i, 2), 16)) <= 2, $"{token}: row 3 {actual}, reference {want}.");
+                AssertThat(Math.Abs(Convert.ToInt32(actual.Substring(i, 2), 16) - Convert.ToInt32(want.Substring(i, 2), 16)) <= 2).OverrideFailureMessage($"{token}: row 3 {actual}, reference {want}.").IsTrue();
         }
     }
 
@@ -94,7 +95,7 @@ public sealed class InteriorLitTests
         foreach (var (token, albedo, cls) in Materials(["equip.fireRed", .. HighChroma, .. LowChroma]))
         {
             var m = deriver.Material(albedo, cls, frame, x, null);
-            Check(m.ShadeIn.Chroma <= Math.Max(albedo.Chroma + cap, warmC) + 1e-9, $"{token}: interior shade C {m.ShadeIn.Chroma:F4} grew past the shade rule.");
+            AssertThat(m.ShadeIn.Chroma <= Math.Max(albedo.Chroma + cap, warmC) + 1e-9).OverrideFailureMessage($"{token}: interior shade C {m.ShadeIn.Chroma:F4} grew past the shade rule.").IsTrue();
         }
     }
 
@@ -136,8 +137,4 @@ public sealed class InteriorLitTests
             if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
         throw new InvalidOperationException("Repository root not found.");
     }
-
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void Near(double actual, double expected, double tolerance, string what) =>
-        Check(Math.Abs(actual - expected) <= tolerance, $"{what}: expected {expected:R}, got {actual:R}.");
 }

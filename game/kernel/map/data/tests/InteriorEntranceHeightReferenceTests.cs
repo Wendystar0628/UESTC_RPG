@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text;
@@ -27,17 +28,16 @@ public sealed class InteriorEntranceHeightReferenceTests
     {
         var box = new LibraryBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
-        Throws<JsonException>(() => InteriorAssembly.Configure(Bytes("pad"), providers));
-        Require(box.FeatureIds.Count == 0, "Missing terrain partially configured the provider.");
+        AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers)).IsInstanceOf<JsonException>();
+        AssertThat(box.FeatureIds.Count == 0).OverrideFailureMessage("Missing terrain partially configured the provider.").IsTrue();
         foreach (var reference in new string?[] { null, "absolute" })
         {
             var bindings = InteriorAssembly.Configure(Bytes(reference), providers);
             var layout = box.Layout(Context(providers), Feature);
-            Require(bindings.Single().AuthoredEntranceCount == 1 && layout.Entrances.Single().Center.Y == .75f &&
-                layout.Entrances.Single().Outside.Y == .25f && layout.Entrances.Single().Inside.Y == .5f,
-                "The terrain-free configuration moved absolute coordinates.");
+            AssertThat(bindings.Single().AuthoredEntranceCount == 1 && layout.Entrances.Single().Center.Y == .75f &&
+                layout.Entrances.Single().Outside.Y == .25f && layout.Entrances.Single().Inside.Y == .5f).OverrideFailureMessage("The terrain-free configuration moved absolute coordinates.").IsTrue();
         }
-        Throws<ArgumentNullException>(() => InteriorAssembly.Configure(Bytes("pad"), providers, null!));
+        AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers, null!)).IsInstanceOf<ArgumentNullException>();
     }
 
     [TestCase]
@@ -47,13 +47,12 @@ public sealed class InteriorEntranceHeightReferenceTests
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         var terrain = new ProbeTerrain();
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
-        Require(terrain.Calls == 1, "One entrance should query its feature pad once during configuration.");
+        AssertThat(terrain.Calls == 1).OverrideFailureMessage("One entrance should query its feature pad once during configuration.").IsTrue();
         var context = Context(providers);
         var first = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single().Entrances.Single();
         var second = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single().Entrances.Single();
-        Require(first == second && first.Center.Y == 2.75f && first.Outside.Y == 2.25f && first.Inside.Y == 2.5f &&
-            first.Id == "entry.main" && first.YawDeg == 0 && first.ClearWidth == 1.25f && terrain.Calls == 1,
-            "BuildConfigured reparsed or re-offset a resolved entrance.");
+        AssertThat(first == second && first.Center.Y == 2.75f && first.Outside.Y == 2.25f && first.Inside.Y == 2.5f &&
+            first.Id == "entry.main" && first.YawDeg == 0 && first.ClearWidth == 1.25f && terrain.Calls == 1).OverrideFailureMessage("BuildConfigured reparsed or re-offset a resolved entrance.").IsTrue();
     }
 
     private static byte[] Bytes(string? heightRef) => Encoding.UTF8.GetBytes(Catalog.Replace("@HEIGHT@",
@@ -65,28 +64,24 @@ public sealed class InteriorEntranceHeightReferenceTests
         var context = Context(new Dictionary<string, IInteriorProvider>());
         var catalog = Encoding.UTF8.GetBytes(ClosedCatalog());
         var bindings = InteriorAssembly.Configure(catalog, context.InteriorProviders, context.World.Terrain);
-        Require(bindings.Count == 0, "Closed entrance configured a provider.");
+        AssertThat(bindings.Count == 0).OverrideFailureMessage("Closed entrance configured a provider.").IsTrue();
         var result = InteriorAssembly.BuildConfigured(context, bindings, catalog);
         var entry = result.Entries.Single();
-        Require(entry.Feature == Feature && !entry.Open && entry.ProviderId is null && entry.Storeys.Count == 2 &&
-            entry.Storeys[1].FloorY == 4 && entry.Entrances.Single().Center.Y == .15f,
-            "Interior assembly lost closed entrance or original building storeys.");
-        Require(result.Content.Meshes.Count == 0 && result.Colliders.Count == 0 && result.NavNodes.Count == 0 &&
-            result.NavEdges.Count == 0 && result.NavPortals.Count == 0, "Closed register generated walkable content.");
+        AssertThat(entry.Feature == Feature && !entry.Open && entry.ProviderId is null && entry.Storeys.Count == 2 &&
+            entry.Storeys[1].FloorY == 4 && entry.Entrances.Single().Center.Y == .15f).OverrideFailureMessage("Interior assembly lost closed entrance or original building storeys.").IsTrue();
+        AssertThat(result.Content.Meshes.Count == 0 && result.Colliders.Count == 0 && result.NavNodes.Count == 0 &&
+            result.NavEdges.Count == 0 && result.NavPortals.Count == 0).OverrideFailureMessage("Closed register generated walkable content.").IsTrue();
         var index = (TestInteriorIndex)context.World.Interiors;
         index.Configure(result.Entries);
-        Require(index.Get(Feature) == entry && index.EntrancesNear(new(0, .15f, 0), 1).Single().Id == "entry.closed",
-            "Interior assembly final configured index omitted closed registration.");
+        AssertThat(index.Get(Feature) == entry && index.EntrancesNear(new(0, .15f, 0), 1).Single().Id == "entry.closed").OverrideFailureMessage("Interior assembly final configured index omitted closed registration.").IsTrue();
         var again = InteriorAssembly.BuildConfigured(context, bindings, catalog);
-        Require(ReferenceEquals(again.Entries.Single().Storeys, entry.Storeys) &&
-            again.Entries.Single().Entrances.Count == 1, "Existing closed index duplicated doors or replaced storeys.");
-        Require(InteriorAssembly.Build(catalog, context, context.InteriorProviders).Entries.Single().Entrances.Count == 1,
-            "Legacy Interior assembly Build omitted the closed register.");
+        AssertThat(ReferenceEquals(again.Entries.Single().Storeys, entry.Storeys) &&
+            again.Entries.Single().Entrances.Count == 1).OverrideFailureMessage("Existing closed index duplicated doors or replaced storeys.").IsTrue();
+        AssertThat(InteriorAssembly.Build(catalog, context, context.InteriorProviders).Entries.Single().Entrances.Count == 1).OverrideFailureMessage("Legacy Interior assembly Build omitted the closed register.").IsTrue();
         var terrain = new ProbeTerrain();
         using var pad = JsonDocument.Parse(ClosedCatalog(extra: ",\"heightRef\":\"pad\",\"headY\":2"));
         var resolved = InteriorEntranceJson.ParseClosedEntrances(pad.RootElement, terrain)[Feature].Single();
-        Require(terrain.Calls == 1 && resolved.Center.Y == 2.15f && resolved.HeadY == 4,
-            "Closed parsing did not reuse explicit pad/headY semantics.");
+        AssertThat(terrain.Calls == 1 && resolved.Center.Y == 2.15f && resolved.HeadY == 4).OverrideFailureMessage("Closed parsing did not reuse explicit pad/headY semantics.").IsTrue();
     }
 
     [TestCase]
@@ -108,13 +103,12 @@ public sealed class InteriorEntranceHeightReferenceTests
         var mixed = Encoding.UTF8.GetString(Bytes(null)).TrimEnd();
         mixed = mixed[..^1] + ",\"closedEntrances\":" + raw + "}";
         var result = InteriorAssembly.BuildConfigured(context, bindings, Encoding.UTF8.GetBytes(mixed));
-        Require(probe.Calls == baselineCalls && result.Content.Meshes.Count == baseline.Content.Meshes.Count &&
+        AssertThat(probe.Calls == baselineCalls && result.Content.Meshes.Count == baseline.Content.Meshes.Count &&
             result.Colliders.Count == baseline.Colliders.Count && result.NavNodes.SequenceEqual(baseline.NavNodes) &&
             result.NavEdges.SequenceEqual(baseline.NavEdges) && result.NavPortals.SequenceEqual(baseline.NavPortals) &&
             result.Entries.Single(entry => entry.Feature == Feature).Entrances.SequenceEqual(baseline.Entries.Single().Entrances) &&
             result.Entries.Single(entry => entry.Feature == Feature).ProviderId == Provider &&
-            !result.Entries.Single(entry => entry.Feature == closedFeature).Open,
-            "Closed registration changed open provider generation or navigation.");
+            !result.Entries.Single(entry => entry.Feature == closedFeature).Open).OverrideFailureMessage("Closed registration changed open provider generation or navigation.").IsTrue();
     }
 
     private sealed class CountingProvider(IInteriorProvider inner) : IInteriorProvider
@@ -141,11 +135,11 @@ public sealed class InteriorEntranceHeightReferenceTests
             ClosedCatalog(extra: ",\"heightRef\":\"unknown\""),
             ClosedCatalog().Replace("}]}", "}," + ClosedCatalog().Split("\"closedEntrances\":[", StringSplitOptions.None)[1], StringComparison.Ordinal)
         })
-            Throws<JsonException>(() => InteriorAssembly.BuildConfigured(context,
-                [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog)));
+            AssertThrown(() => InteriorAssembly.BuildConfigured(context,
+                [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog))).IsInstanceOf<JsonException>();
         var source = context.World.Features[Feature];
         ((MutableWorldFixture)context.World).Configure([source with { Kind = new("water") }]);
-        Throws<JsonException>(() => InteriorAssembly.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog())));
+        AssertThrown(() => InteriorAssembly.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog()))).IsInstanceOf<JsonException>();
     }
 
     private static string ClosedCatalog(string feature = "fixture:building", string extra = "") =>
@@ -184,14 +178,4 @@ public sealed class InteriorEntranceHeightReferenceTests
         public TerrainFacts FactsAt(float x, float z) => throw new NotSupportedException();
     }
 
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 }

@@ -12,6 +12,7 @@ using Campus.Gen.Interior.Shell.Box;
 using Campus.Hud.Map;
 using Campus.Systems.Atlas;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -24,7 +25,7 @@ public sealed class AtlasServiceTests
         // Reproduce the integration order: another consumer has already frozen the shared options.
         _ = JsonSerializer.Serialize(0, ContractJson.Options);
         var test = new Fixture();
-        Check(!ReferenceEquals(test.Atlas.TypeInfo.Options, ContractJson.Options), "Atlas context bound the shared options instance.");
+        AssertThat(!ReferenceEquals(test.Atlas.TypeInfo.Options, ContractJson.Options)).OverrideFailureMessage("Atlas context bound the shared options instance.").IsTrue();
         var pin = test.Atlas.AddPin(new(10, 20), PinShape.Flag)!;
         test.Atlas.Track(new("pin:" + pin.Id));
         var capture = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false);
@@ -33,7 +34,7 @@ public sealed class AtlasServiceTests
         var decoded = JsonSerializer.Deserialize(bytes, test.Atlas.TypeInfo)!;
         test.Atlas.RemovePin(pin.Id);
         test.Atlas.Restore(decoded, test.RestoreContext());
-        Check(test.Atlas.Pins.Single().Id == pin.Id && test.Atlas.Tracked?.Value == "pin:1", "Round trip lost pin or tracking.");
+        AssertThat(test.Atlas.Pins.Single().Id == pin.Id && test.Atlas.Tracked?.Value == "pin:1").OverrideFailureMessage("Round trip lost pin or tracking.").IsTrue();
         var repairs = test.RestoreContext();
         test.Atlas.Restore(decoded with
         {
@@ -43,9 +44,9 @@ public sealed class AtlasServiceTests
             Unlock = new Dictionary<string, UnlockState> { ["missing"] = UnlockState.Unlocked },
             VisitedAnchors = ["missing"],
         }, repairs);
-        Check(test.Atlas.Pins.Count == 1 && test.Atlas.Tracked is null && repairs.Repairs.Count == 6, "Malformed save was not repaired.");
-        Check(test.Atlas.AddPin(Vector2.Zero, PinShape.Circle)?.Id == 2, "Pin ID was reused.");
-        Check(saved.Pins.Count == 1 && saved.Pins[0] == pin, "Capture retained mutable live state.");
+        AssertThat(test.Atlas.Pins.Count == 1 && test.Atlas.Tracked is null && repairs.Repairs.Count == 6).OverrideFailureMessage("Malformed save was not repaired.").IsTrue();
+        AssertThat(test.Atlas.AddPin(Vector2.Zero, PinShape.Circle)?.Id == 2).OverrideFailureMessage("Pin ID was reused.").IsTrue();
+        AssertThat(saved.Pins.Count == 1 && saved.Pins[0] == pin).OverrideFailureMessage("Capture retained mutable live state.").IsTrue();
     }
 
     [TestCase]
@@ -55,18 +56,18 @@ public sealed class AtlasServiceTests
         test.Camera.SetPose(new(new(0, 0, 0), 0, 0));
         test.Observer.Feet = new(100, 0, 100);
         test.Atlas.Tick();
-        Check(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Known, "Camera position unlocked a marker.");
+        AssertThat(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Known).OverrideFailureMessage("Camera position unlocked a marker.").IsTrue();
         test.Observer.Mode = ViewMode.Fly;
         test.Observer.Feet = new(0, 26, 0);
         test.Atlas.Tick();
-        Check(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Known, "High flight unlocked an anchor.");
+        AssertThat(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Known).OverrideFailureMessage("High flight unlocked an anchor.").IsTrue();
         test.Observer.Feet = Vector3.Zero;
         test.Atlas.Tick();
-        Check(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Unlocked, "Observer visit did not unlock kiosk.");
-        Check(test.Atlas.StateOf(new("test-post")) == UnlockState.Known, "Kiosk visit did not reveal district post.");
+        AssertThat(test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Unlocked).OverrideFailureMessage("Observer visit did not unlock kiosk.").IsTrue();
+        AssertThat(test.Atlas.StateOf(new("test-post")) == UnlockState.Known).OverrideFailureMessage("Kiosk visit did not reveal district post.").IsTrue();
         var revision = test.Atlas.Rev;
         test.Atlas.Tick();
-        Check(test.Atlas.Rev == revision, "Stationary visit emitted repeated changes.");
+        AssertThat(test.Atlas.Rev == revision).OverrideFailureMessage("Stationary visit emitted repeated changes.").IsTrue();
     }
 
     [TestCase]
@@ -75,18 +76,18 @@ public sealed class AtlasServiceTests
         var test = new Fixture();
         test.Observer.Feet = new(100, 0, 100);
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
-        Check(test.Camera.Options?.Prefer == TransitPreference.Teleport && test.Camera.Options.Entry is null, "Teleport used flight path options.");
-        Check(test.Camera.Locks == 1 && !test.Atlas.IsSettled, "Travel lock or unsettled state missing.");
-        Check(!test.Atlas.CanTravel(new("test-post"), TravelStyle.Fly, out var why) && why == TravelRefusal.Busy, "Concurrent travel was allowed.");
+        AssertThat(test.Camera.Options?.Prefer == TransitPreference.Teleport && test.Camera.Options.Entry is null).OverrideFailureMessage("Teleport used flight path options.").IsTrue();
+        AssertThat(test.Camera.Locks == 1 && !test.Atlas.IsSettled).OverrideFailureMessage("Travel lock or unsettled state missing.").IsTrue();
+        AssertThat(!test.Atlas.CanTravel(new("test-post"), TravelStyle.Fly, out var why) && why == TravelRefusal.Busy).OverrideFailureMessage("Concurrent travel was allowed.").IsTrue();
         test.Camera.Handle!.Completion.SetResult(TransitResult.Arrived);
         test.Atlas.Tick();
-        Check(test.Camera.Locks == 0 && test.Atlas.IsSettled, "Arrival did not release input.");
+        AssertThat(test.Camera.Locks == 0 && test.Atlas.IsSettled).OverrideFailureMessage("Arrival did not release input.").IsTrue();
         test.Atlas.Travel(new("test-post"), TravelStyle.Fly);
-        Check(test.Camera.Options?.Prefer == TransitPreference.Auto, "Fly did not use normal transit preference.");
-        Check(test.Camera.Locks == 0, "Fly retained an Atlas input lock and cannot be interrupted.");
+        AssertThat(test.Camera.Options?.Prefer == TransitPreference.Auto).OverrideFailureMessage("Fly did not use normal transit preference.").IsTrue();
+        AssertThat(test.Camera.Locks == 0).OverrideFailureMessage("Fly retained an Atlas input lock and cannot be interrupted.").IsTrue();
         test.Camera.Handle!.Completion.SetResult(TransitResult.Cancelled);
         test.Atlas.Tick();
-        Check(test.Camera.Locks == 0, "Cancelled transit retained the input lock.");
+        AssertThat(test.Camera.Locks == 0).OverrideFailureMessage("Cancelled transit retained the input lock.").IsTrue();
     }
 
     [TestCase]
@@ -96,12 +97,11 @@ public sealed class AtlasServiceTests
         test.Driver.IsReady = false;
         foreach (var style in new[] { TravelStyle.Teleport, TravelStyle.Fly })
         {
-            Check(!test.Atlas.CanTravel(new("test-kiosk"), style, out var why)
-                && why == TravelRefusal.Unavailable, "Unready transit driver advertised travel.");
-            Check(test.Atlas.Travel(new("test-kiosk"), style) is null, "Unready transit driver was started.");
+            AssertThat(!test.Atlas.CanTravel(new("test-kiosk"), style, out var why)
+                && why == TravelRefusal.Unavailable).OverrideFailureMessage("Unready transit driver advertised travel.").IsTrue();
+            AssertThat(test.Atlas.Travel(new("test-kiosk"), style) is null).OverrideFailureMessage("Unready transit driver was started.").IsTrue();
         }
-        Check(test.Camera.Handle is null && test.Camera.Locks == 0,
-            "Unready transit changed camera or input state.");
+        AssertThat(test.Camera.Handle is null && test.Camera.Locks == 0).OverrideFailureMessage("Unready transit changed camera or input state.").IsTrue();
     }
 
     [TestCase]
@@ -129,25 +129,21 @@ public sealed class AtlasServiceTests
         foreach (var id in new[] { "test-view", "test-facility" })
         {
             var entry = new MapEntry(test.Atlas.Find(new(id))!);
-            Check(entry.Name == title && entry.Group == authored.Group && entry.Recommend == authored.Recommend,
-                "Display metadata changed the marker title or lost linked waypoint values.");
+            AssertThat(entry.Name == title && entry.Group == authored.Group && entry.Recommend == authored.Recommend).OverrideFailureMessage("Display metadata changed the marker title or lost linked waypoint values.").IsTrue();
         }
         var automatic = new MapEntry(test.Atlas.Find(new(generated.Id))!);
-        Check(automatic.Name == generated.Name && automatic.Group == generated.Group
-            && automatic.Recommend == generated.Recommend && automatic.FlyOnly,
-            "Generated waypoint marker lost its display metadata or travel mode.");
+        AssertThat(automatic.Name == generated.Name && automatic.Group == generated.Group
+            && automatic.Recommend == generated.Recommend && automatic.FlyOnly).OverrideFailureMessage("Generated waypoint marker lost its display metadata or travel mode.").IsTrue();
         foreach (var id in new[] { "test-missing", "test-unlinked" })
         {
             var entry = new MapEntry(test.Atlas.Find(new(id))!);
-            Check(entry.Group is null && entry.Recommend is null, "Missing waypoint acquired display defaults.");
+            AssertThat(entry.Group is null && entry.Recommend is null).OverrideFailureMessage("Missing waypoint acquired display defaults.").IsTrue();
         }
-        Check(!JsonSerializer.Serialize(test.Atlas.Find(new("test-view")), ContractJson.Options).Contains("recommend"),
-            "Runtime display metadata became an authored Atlas field.");
+        AssertThat(!JsonSerializer.Serialize(test.Atlas.Find(new("test-view")), ContractJson.Options).Contains("recommend")).OverrideFailureMessage("Runtime display metadata became an authored Atlas field.").IsTrue();
         var published = automatic.Marker;
         test.Atlas.OnMapUnloading(test.Context.Descriptor.Id);
         test.Reload();
-        Check(test.Atlas.Find(new(generated.Id)) is null && published.Recommend == generated.Recommend,
-            "Reload retained old display data or mutated a published marker.");
+        AssertThat(test.Atlas.Find(new(generated.Id)) is null && published.Recommend == generated.Recommend).OverrideFailureMessage("Reload retained old display data or mutated a published marker.").IsTrue();
     }
 
     [TestCase]
@@ -157,10 +153,10 @@ public sealed class AtlasServiceTests
         test.Atlas.SetRegionLookup((_, _) => "test-district");
         test.Atlas.AddPin(Vector2.Zero, PinShape.Diamond);
         test.Atlas.OnMapUnloading(test.Context.Descriptor.Id);
-        Check(test.Atlas.Markers.Count == 0 && test.Atlas.Regions.Count == 0 && test.Atlas.Pins.Count == 0
-            && test.Atlas.RegionAt(0, 0) is null, "Unload retained old map data.");
+        AssertThat(test.Atlas.Markers.Count == 0 && test.Atlas.Regions.Count == 0 && test.Atlas.Pins.Count == 0
+            && test.Atlas.RegionAt(0, 0) is null).OverrideFailureMessage("Unload retained old map data.").IsTrue();
         test.Reload();
-        Check(test.Atlas.Pins.Count == 0 && test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Unlocked, "Reload carried state from old map.");
+        AssertThat(test.Atlas.Pins.Count == 0 && test.Atlas.StateOf(new("test-kiosk")) == UnlockState.Unlocked).OverrideFailureMessage("Reload carried state from old map.").IsTrue();
     }
 
     [TestCase]
@@ -171,11 +167,11 @@ public sealed class AtlasServiceTests
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
         var forced = new CaptureContext(SaveReason.Quit, test.Context.Descriptor.Id, true);
         var settled = new CaptureContext(SaveReason.Test, test.Context.Descriptor.Id, false);
-        Check(test.Atlas.Capture(in forced).VisitedAnchors.Contains("test-kiosk"), "Forced snapshot omitted terminal anchor.");
-        Check(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0, "Forced capture changed live visit state.");
+        AssertThat(test.Atlas.Capture(in forced).VisitedAnchors.Contains("test-kiosk")).OverrideFailureMessage("Forced snapshot omitted terminal anchor.").IsTrue();
+        AssertThat(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0).OverrideFailureMessage("Forced capture changed live visit state.").IsTrue();
         test.Camera.Handle!.Cancel();
         test.Atlas.Tick();
-        Check(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0, "Cancelled transit committed a visit.");
+        AssertThat(test.Atlas.Capture(in settled).VisitedAnchors.Count == 0).OverrideFailureMessage("Cancelled transit committed a visit.").IsTrue();
     }
 
     [TestCase]
@@ -190,8 +186,8 @@ public sealed class AtlasServiceTests
         test.Interiors.Configure([new(featureId, [], [entrance], true, "test-provider")]);
         test.Reload();
         var door = test.Atlas.Find(new("door:test-door"))!;
-        Check(door.At == new Vector2(10, 10) && door.Teleport?.Stand?.Feet == entrance.Outside, "Door marker copied an incorrect location.");
-        Check(door.Teleport!.Fly.Position.Y == 9 && door.Teleport.Stand!.YawDeg == 0, "Door viewing direction is wrong.");
+        AssertThat(door.At == new Vector2(10, 10) && door.Teleport?.Stand?.Feet == entrance.Outside).OverrideFailureMessage("Door marker copied an incorrect location.").IsTrue();
+        AssertThat(door.Teleport!.Fly.Position.Y == 9 && door.Teleport.Stand!.YawDeg == 0).OverrideFailureMessage("Door viewing direction is wrong.").IsTrue();
     }
 
     [TestCase]
@@ -233,44 +229,36 @@ public sealed class AtlasServiceTests
         interiorIndex.Configure(built.Entries);
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
-        Check(campus.World.Features.Count > 400 && built.Entries.Select(entry => entry.Feature)
-            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures),
-            "Regression did not assemble the complete campus and registered interior index.");
-        Check(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
-            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(open.OrderBy(id => id.Value, StringComparer.Ordinal)),
-            "Closed registration changed the open interior feature set.");
-        Check(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1,
-            "Regression no longer exercises multiple generated fallback entrances.");
-        Check(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length,
-            "Interior provider reused an entrance ID across different building features.");
+        AssertThat(campus.World.Features.Count > 400 && built.Entries.Select(entry => entry.Feature)
+            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures)).OverrideFailureMessage("Regression did not assemble the complete campus and registered interior index.").IsTrue();
+        AssertThat(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
+            .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(open.OrderBy(id => id.Value, StringComparer.Ordinal))).OverrideFailureMessage("Closed registration changed the open interior feature set.").IsTrue();
+        AssertThat(doors.Count(item => !authoredDoorIds.Contains(item.Door.Id)) > 1).OverrideFailureMessage("Regression no longer exercises multiple generated fallback entrances.").IsTrue();
+        AssertThat(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length).OverrideFailureMessage("Interior provider reused an entrance ID across different building features.").IsTrue();
         var atlas = new AtlasService(NewCamera(), new Observer(), new TestRuleset());
         atlas.LoadMap(new TestMapContext(descriptor, world),
             JsonSerializer.Deserialize<AtlasMarkerFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "markers.json")), ContractJson.Options)!,
             JsonSerializer.Deserialize<AtlasLabelFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "labels.json")), ContractJson.Options)!,
             JsonSerializer.Deserialize<WaypointFile>(File.ReadAllBytes(Path.Combine(root, "waypoints.json")), ContractJson.Options)!);
-        Check(atlas.Markers.Count(marker => marker.Kind == MarkerKind.Interior) == doors.Length,
-            "Atlas silently discarded an entrance from the real interior index.");
+        AssertThat(atlas.Markers.Count(marker => marker.Kind == MarkerKind.Interior) == doors.Length).OverrideFailureMessage("Atlas silently discarded an entrance from the real interior index.").IsTrue();
         foreach (var item in doors)
         {
             var marker = atlas.Find(new("door:" + item.Door.Id));
-            Check(marker is not null && marker.Feature == item.Feature
+            AssertThat(marker is not null && marker.Feature == item.Feature
                 && marker.At == new Vector2(item.Door.Center.X, item.Door.Center.Z)
-                && marker.Teleport?.Stand?.Feet == item.Door.Outside,
-                "A real interior marker lost its owner, center, or outside landing.");
+                && marker.Teleport?.Stand?.Feet == item.Door.Outside).OverrideFailureMessage("A real interior marker lost its owner, center, or outside landing.").IsTrue();
         }
         foreach (var id in authoredDoorIds)
-            Check(atlas.Find(new("door:" + id)) is not null, "An authored entrance ID changed during fallback repair.");
+            AssertThat(atlas.Find(new("door:" + id)) is not null).OverrideFailureMessage("An authored entrance ID changed during fallback repair.").IsTrue();
         foreach (var door in closed)
         {
             var feature = new FeatureId(door.GetProperty("featureId").GetString()!);
             var id = door.GetProperty("id").GetString()!;
             var entry = built.Entries.Single(item => item.Feature == feature);
-            Check(!entry.Open && entry.ProviderId is null && entry.Entrances.Single(item => item.Id == id).Open == false &&
-                atlas.Find(new("door:" + id)) is null, "Closed registration gained an open interior marker or provider.");
+            AssertThat(!entry.Open && entry.ProviderId is null && entry.Entrances.Single(item => item.Id == id).Open == false &&
+                atlas.Find(new("door:" + id)) is null).OverrideFailureMessage("Closed registration gained an open interior marker or provider.").IsTrue();
         }
     }
-
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static TestCameraRig NewCamera() => new(pose: new Pose(new(500, 100, 500), 0, 0), transit: true) { Mode = ViewMode.Walk };
     private sealed class Fixture
     {

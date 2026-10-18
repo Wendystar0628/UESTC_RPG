@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text;
@@ -19,12 +20,10 @@ public sealed class MapServiceTests
     {
         var f = new Fixture(waypointDefault: true);
         var spawn = f.Service.ResolveSpawn(f.B);
-        Require(spawn.Id == "P00" && spawn.Fly == new Pose(new(37, 19, -4), 15, -12, 60) &&
-            spawn.Stand == new WaypointStand(new(37, 0, -4), 15),
-            "DefaultSpawn backed by a waypoint was not resolved with its fly and stand poses.");
-        Require(f.Service.Context is null && f.Service.Current == default && f.Service.Rev == 0 &&
-            f.Loader.Loads == 0 && f.Runtime.PrefetchCalls == 0,
-            "Spawn lookup unexpectedly loaded or travelled to a map.");
+        AssertThat(spawn.Id == "P00" && spawn.Fly == new Pose(new(37, 19, -4), 15, -12, 60) &&
+            spawn.Stand == new WaypointStand(new(37, 0, -4), 15)).OverrideFailureMessage("DefaultSpawn backed by a waypoint was not resolved with its fly and stand poses.").IsTrue();
+        AssertThat(f.Service.Context is null && f.Service.Current == default && f.Service.Rev == 0 &&
+            f.Loader.Loads == 0 && f.Runtime.PrefetchCalls == 0).OverrideFailureMessage("Spawn lookup unexpectedly loaded or travelled to a map.").IsTrue();
     }
 
     [TestCase]
@@ -33,10 +32,8 @@ public sealed class MapServiceTests
         var f = new Fixture(); f.Boot();
         var context = f.Service.Context;
         var extra = f.Service.ResolveSpawn(f.C, "extra");
-        Require(extra.Fly == new Pose(new(15, 25, 6), 40, -5) && extra.Stand is null,
-            "Extra spawn did not come from the explicitly requested map.");
-        Require(ReferenceEquals(context, f.Service.Context) && f.Service.Current == f.A && f.Service.Rev == 1 && f.Loader.Loads == 1,
-            "Resolving another map's extra spawn changed the active map.");
+        AssertThat(extra.Fly == new Pose(new(15, 25, 6), 40, -5) && extra.Stand is null).OverrideFailureMessage("Extra spawn did not come from the explicitly requested map.").IsTrue();
+        AssertThat(ReferenceEquals(context, f.Service.Context) && f.Service.Current == f.A && f.Service.Rev == 1 && f.Loader.Loads == 1).OverrideFailureMessage("Resolving another map's extra spawn changed the active map.").IsTrue();
     }
 
     [TestCase]
@@ -50,7 +47,7 @@ public sealed class MapServiceTests
             catch (ArgumentException) { continue; }
             throw new InvalidOperationException("Unknown map/spawn was silently replaced by a default.");
         }
-        Require(f.Loader.Loads == 0 && f.Service.Transition is null, "Rejected spawn query started work.");
+        AssertThat(f.Loader.Loads == 0 && f.Service.Transition is null).OverrideFailureMessage("Rejected spawn query started work.").IsTrue();
     }
 
     [TestCase]
@@ -63,7 +60,7 @@ public sealed class MapServiceTests
             var initialized = f.Service.Initialize();
             f.Until(() => initialized.IsCompleted);
             initialized.GetAwaiter().GetResult();
-            Require(f.Service.ResolveSpawn(f.A).Id == "start", "Initialized catalogue did not resolve its default.");
+            AssertThat(f.Service.ResolveSpawn(f.A).Id == "start").OverrideFailureMessage("Initialized catalogue did not resolve its default.").IsTrue();
             return;
         }
         throw new InvalidOperationException("Spawn lookup before catalogue initialization was accepted.");
@@ -78,24 +75,23 @@ public sealed class MapServiceTests
         f.Runtime.WarmReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Stage == MapStage.Mount);
-        Require(f.Service.Context is null, "Context became visible before Mount.");
+        AssertThat(f.Service.Context is null).OverrideFailureMessage("Context became visible before Mount.").IsTrue();
         f.Service.Step();
-        Require(f.Service.Context is not null && f.Service.Current == default, "Mount/current lifetime is wrong.");
-        Require(!travel.Done.IsCompleted && f.Camera.InputLocked, "Unready map was handed to the observer.");
-        Require(f.Data.RectWrites == 1, "map_rect was not applied exactly at Mount.");
+        AssertThat(f.Service.Context is not null && f.Service.Current == default).OverrideFailureMessage("Mount/current lifetime is wrong.").IsTrue();
+        AssertThat(!travel.Done.IsCompleted && f.Camera.InputLocked).OverrideFailureMessage("Unready map was handed to the observer.").IsTrue();
+        AssertThat(f.Data.RectWrites == 1).OverrideFailureMessage("map_rect was not applied exactly at Mount.").IsTrue();
         f.Runtime.ResidentReady = true;
         f.Service.Step();
         f.Service.Step();
-        Require(travel.Stage == MapStage.Warm && !travel.Done.IsCompleted, "Destination was not awaited.");
-        Require(f.Runtime.WarmStarts == 1, "Warm was blocked behind destination material readiness.");
+        AssertThat(travel.Stage == MapStage.Warm && !travel.Done.IsCompleted).OverrideFailureMessage("Destination was not awaited.").IsTrue();
+        AssertThat(f.Runtime.WarmStarts == 1).OverrideFailureMessage("Warm was blocked behind destination material readiness.").IsTrue();
         f.Runtime.DestinationReady = true;
         f.Service.Step();
-        Require(f.Runtime.WarmStarts == 1 && !travel.Done.IsCompleted, "Warm readiness was ignored.");
+        AssertThat(f.Runtime.WarmStarts == 1 && !travel.Done.IsCompleted).OverrideFailureMessage("Warm readiness was ignored.").IsTrue();
         f.Runtime.WarmReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.A && f.Service.Rev == 1,
-            "Boot did not arrive.");
-        Require(!f.Camera.InputLocked, "Boot leaked its input lease.");
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.A && f.Service.Rev == 1).OverrideFailureMessage("Boot did not arrive.").IsTrue();
+        AssertThat(!f.Camera.InputLocked).OverrideFailureMessage("Boot leaked its input lease.").IsTrue();
     }
 
     [TestCase]
@@ -110,16 +106,14 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Pose: destination, Mode: ViewMode.Fly, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Stage == MapStage.Warm);
         f.Service.Step();
-        Require(f.Runtime.WarmStarts == warmStarts + 1 && f.Camera.Pose == destination && !travel.Done.IsCompleted,
-            "Same-map restoration waited for invalidated pipelines without drawing their warm samples.");
+        AssertThat(f.Runtime.WarmStarts == warmStarts + 1 && f.Camera.Pose == destination && !travel.Done.IsCompleted).OverrideFailureMessage("Same-map restoration waited for invalidated pipelines without drawing their warm samples.").IsTrue();
         f.Runtime.DestinationReady = true;
         f.Service.Step();
-        Require(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts + 1,
-            "Same-map restoration skipped warmth or repeatedly restarted the warm batch.");
+        AssertThat(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts + 1).OverrideFailureMessage("Same-map restoration skipped warmth or repeatedly restarted the warm batch.").IsTrue();
         f.Runtime.WarmReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Loader.Loads == 1, "Warming a same-map restore rebuilt the map.");
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
+            f.Loader.Loads == 1).OverrideFailureMessage("Warming a same-map restore rebuilt the map.").IsTrue();
     }
 
     [TestCase]
@@ -131,12 +125,10 @@ public sealed class MapServiceTests
         f.Runtime.DestinationReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
         f.Until(() => travel.Stage == MapStage.Warm);
-        Require(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts,
-            "Same-map NewGame introduced another warm operation.");
+        AssertThat(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts).OverrideFailureMessage("Same-map NewGame introduced another warm operation.").IsTrue();
         f.Runtime.DestinationReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context),
-            "Same-map NewGame rebuilt the map.");
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context)).OverrideFailureMessage("Same-map NewGame rebuilt the map.").IsTrue();
     }
 
     [TestCase]
@@ -149,19 +141,15 @@ public sealed class MapServiceTests
         f.Until(() => travel.Stage == MapStage.Mount);
         f.Service.Step(); // Mount returns while its asynchronous prepare task is still pending.
         for (var frame = 0; frame < 3; frame++) f.Service.Step();
-        Require(f.Runtime.MountPending && travel.Stage == MapStage.Mount && !travel.Done.IsCompleted,
-            "Async Mount was treated as a completed map binding.");
-        Require(f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == originalPose,
-            "Destination work started before map preparation and callbacks completed.");
-        Require(f.Poses.LegalizeCalls == 0, "Destination was legalized against old or incomplete map data.");
-        Require(f.Service.Rev == 0 && f.Camera.InputLocked, "Unprepared map was granted to the observer.");
+        AssertThat(f.Runtime.MountPending && travel.Stage == MapStage.Mount && !travel.Done.IsCompleted).OverrideFailureMessage("Async Mount was treated as a completed map binding.").IsTrue();
+        AssertThat(f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == originalPose).OverrideFailureMessage("Destination work started before map preparation and callbacks completed.").IsTrue();
+        AssertThat(f.Poses.LegalizeCalls == 0).OverrideFailureMessage("Destination was legalized against old or incomplete map data.").IsTrue();
+        AssertThat(f.Service.Rev == 0 && f.Camera.InputLocked).OverrideFailureMessage("Unprepared map was granted to the observer.").IsTrue();
 
         f.Runtime.ReleaseMount();
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && f.Runtime.PrefetchCalls == 1 && f.Runtime.WarmStarts == 1,
-            "Released async Mount did not prefetch and warm exactly once.");
-        Require(f.Service.Current == f.A && f.Service.Rev == 1 && !f.Camera.InputLocked,
-            "Async Mount did not finish the normal arrival lifecycle.");
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Runtime.PrefetchCalls == 1 && f.Runtime.WarmStarts == 1).OverrideFailureMessage("Released async Mount did not prefetch and warm exactly once.").IsTrue();
+        AssertThat(f.Service.Current == f.A && f.Service.Rev == 1 && !f.Camera.InputLocked).OverrideFailureMessage("Async Mount did not finish the normal arrival lifecycle.").IsTrue();
     }
 
     [TestCase]
@@ -174,9 +162,8 @@ public sealed class MapServiceTests
         f.Service.Step();
         f.Runtime.FailMount("Fixture asynchronous preparation failure.");
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Runtime.PrefetchCalls == 0 &&
-            f.Runtime.WarmStarts == 0 && f.Service.Rev == 0,
-            "Failed asynchronous preparation was mistaken for readiness.");
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Runtime.PrefetchCalls == 0 &&
+            f.Runtime.WarmStarts == 0 && f.Service.Rev == 0).OverrideFailureMessage("Failed asynchronous preparation was mistaken for readiness.").IsTrue();
     }
 
     [TestCase]
@@ -193,14 +180,11 @@ public sealed class MapServiceTests
         var legalizeCalls = f.Poses.LegalizeCalls;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Done.IsCompleted);
-        Require(ReferenceEquals(context, f.Service.Context) && f.Loader.Loads == 1,
-            "Same-map LoadSave rebuilt the world.");
-        Require(f.Camera.Pose == titlePose && f.Service.Visits.Single().LastPose == savedPose,
-            "Preview replaced the title camera or saved destination.");
-        Require(f.Poses.LegalizeCalls == legalizeCalls, "Presentation T0 was incorrectly forced into the roam volume.");
-        Require(ReferenceEquals(context!.SourceInputs, f.Service.Context!.SourceInputs) &&
-            SnapshotVersion(context) == 1 && f.Data.ReadCount(f.A) == 1,
-            "Same-map preview reread or replaced the mounted source snapshot.");
+        AssertThat(ReferenceEquals(context, f.Service.Context) && f.Loader.Loads == 1).OverrideFailureMessage("Same-map LoadSave rebuilt the world.").IsTrue();
+        AssertThat(f.Camera.Pose == titlePose && f.Service.Visits.Single().LastPose == savedPose).OverrideFailureMessage("Preview replaced the title camera or saved destination.").IsTrue();
+        AssertThat(f.Poses.LegalizeCalls == legalizeCalls).OverrideFailureMessage("Presentation T0 was incorrectly forced into the roam volume.").IsTrue();
+        AssertThat(ReferenceEquals(context!.SourceInputs, f.Service.Context!.SourceInputs) &&
+            SnapshotVersion(context) == 1 && f.Data.ReadCount(f.A) == 1).OverrideFailureMessage("Same-map preview reread or replaced the mounted source snapshot.").IsTrue();
     }
 
     [TestCase]
@@ -214,9 +198,8 @@ public sealed class MapServiceTests
         var expected = requested with { Position = new(20, 40, 5) };
         var travel = f.Service.Travel(new(f.A, Pose: requested, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.LastPrefetch == expected && f.Camera.Pose == expected,
-            "Prefetch and Spawn did not use the same legal finite destination.");
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Poses.LegalizeCalls == 1 &&
+            f.Runtime.LastPrefetch == expected && f.Camera.Pose == expected).OverrideFailureMessage("Prefetch and Spawn did not use the same legal finite destination.").IsTrue();
     }
 
     [TestCase]
@@ -227,9 +210,8 @@ public sealed class MapServiceTests
         f.Poses.Project = pose => pose with { Position = new(float.NaN, 20, 10) };
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original,
-            "Non-finite legalization output was applied or replaced by an invented fallback position.");
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
+            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original).OverrideFailureMessage("Non-finite legalization output was applied or replaced by an invented fallback position.").IsTrue();
     }
 
     [TestCase]
@@ -245,10 +227,9 @@ public sealed class MapServiceTests
         f.Poses.Allowed = pose => pose.Position.X <= 20;
         var travel = f.Service.Travel(new(f.A, Pose: saved, Mode: ViewMode.Fly, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
             f.Loader.Loads == 1 && f.Runtime.LastPrefetch == legal && f.Camera.Pose == legal &&
-            f.Service.Visits.Single().LastPose == legal,
-            "Full restore retained an obsolete saved pose or unnecessarily rebuilt the current world.");
+            f.Service.Visits.Single().LastPose == legal).OverrideFailureMessage("Full restore retained an obsolete saved pose or unnecessarily rebuilt the current world.").IsTrue();
     }
 
     [TestCase]
@@ -263,9 +244,8 @@ public sealed class MapServiceTests
         // but the independent legality query must still prevent prefetch, camera placement and arrival.
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original && f.Service.Rev == 0,
-            "A finite destination rejected by the roam validator was treated as a legal arrival.");
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
+            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original && f.Service.Rev == 0).OverrideFailureMessage("A finite destination rejected by the roam validator was treated as a legal arrival.").IsTrue();
     }
 
     [TestCase]
@@ -280,13 +260,11 @@ public sealed class MapServiceTests
         {
             f.Until(() => f.Loader.DelayedLoadStarted);
             f.Service.Dispose(); f.Service.Dispose();
-            Require(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked,
-                "Map shutdown left an accepted request or its input lease pending.");
+            AssertThat(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked).OverrideFailureMessage("Map shutdown left an accepted request or its input lease pending.").IsTrue();
             f.Loader.ReleaseDelayed();
             f.Until(() => f.Loader.CompletedLoads == 1);
-            Require(f.Service.Context is null && f.Runtime.Mounted.Count == 0 && arrivals == 0 &&
-                f.Service.Travel(new(f.C, Cause: MapTravelCause.LoadSave)).Done.Result == MapTravelResult.Rejected,
-                "A stopped map service published or accepted new work.");
+            AssertThat(f.Service.Context is null && f.Runtime.Mounted.Count == 0 && arrivals == 0 &&
+                f.Service.Travel(new(f.C, Cause: MapTravelCause.LoadSave)).Done.Result == MapTravelResult.Rejected).OverrideFailureMessage("A stopped map service published or accepted new work.").IsTrue();
         }
         finally { f.Loader.ReleaseDelayed(); }
     }
@@ -297,8 +275,7 @@ public sealed class MapServiceTests
         var f = new Fixture(); f.Loader.Failing.Add(f.A);
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Loader.Loads == 1,
-            "Boot retried after a failed load.");
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Loader.Loads == 1).OverrideFailureMessage("Boot retried after a failed load.").IsTrue();
     }
 
     [TestCase]
@@ -308,10 +285,9 @@ public sealed class MapServiceTests
         var context = new CaptureContext(SaveReason.Test, f.A, false);
         var dto = f.Service.Capture(in context);
         var json = JsonSerializer.Serialize(dto, f.Service.TypeInfo);
-        Require(json.Contains("\"current\":\"map-a\"", StringComparison.Ordinal) && json.Contains("\"position\":[", StringComparison.Ordinal),
-            "Map save lost contract ID/vector encoding.");
+        AssertThat(json.Contains("\"current\":\"map-a\"", StringComparison.Ordinal) && json.Contains("\"position\":[", StringComparison.Ordinal)).OverrideFailureMessage("Map save lost contract ID/vector encoding.").IsTrue();
         var restored = JsonSerializer.Deserialize(json, f.Service.TypeInfo)!;
-        Require(restored.Current == dto.Current && restored.Visits.Single() == dto.Visits.Single(), "Map save round trip changed values.");
+        AssertThat(restored.Current == dto.Current && restored.Visits.Single() == dto.Visits.Single()).OverrideFailureMessage("Map save round trip changed values.").IsTrue();
         try { JsonSerializer.Deserialize(json[..^1] + ",\"unknown\":1}", f.Service.TypeInfo); }
         catch (JsonException) { return; }
         throw new InvalidOperationException("Unknown map save field was accepted.");
@@ -326,10 +302,8 @@ public sealed class MapServiceTests
         var removed = new MapVisit(new("deleted-map"), new(new(2, 20, 8), 0, 0), ViewMode.Fly);
         var restore = new RestoreContext { Map = f.A, FromVersion = 1, Missing = false };
         f.Service.Restore(new(f.A, [known, removed, current]), restore);
-        Require(f.Service.Visits.SequenceEqual(new[] { current, known }),
-            "Deleted map visits were retained or known visits changed their values or ordering.");
-        Require(restore.Repairs.Count == 1 && restore.Repairs[0].Contains(removed.Map.Value, StringComparison.Ordinal),
-            "Dropping a deleted map visit did not report its repair.");
+        AssertThat(f.Service.Visits.SequenceEqual(new[] { current, known })).OverrideFailureMessage("Deleted map visits were retained or known visits changed their values or ordering.").IsTrue();
+        AssertThat(restore.Repairs.Count == 1 && restore.Repairs[0].Contains(removed.Map.Value, StringComparison.Ordinal)).OverrideFailureMessage("Dropping a deleted map visit did not report its repair.").IsTrue();
     }
 
     [TestCase]
@@ -345,13 +319,12 @@ public sealed class MapServiceTests
             var entry = MapCatalog.ReadEntry(new(map.Id, "res://data/" + map.Id.Value + '/'),
                 JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options),
                 Encoding.UTF8.GetBytes("{\"meta\":{\"origin\":[104,31],\"crs\":\"EPSG:32648\",\"bounds\":[0,0,10,10]},\"boundary\":[[[0,0],[10,0],[0,10]]] }"), []);
-            Require(Vector2.Distance(entry.Descriptor.Center, new(10f / 3, 10f / 3)) < .0001f, "Map center used bounding-box center instead of polygon centroid.");
+            AssertThat(Vector2.Distance(entry.Descriptor.Center, new(10f / 3, 10f / 3)) < .0001f).OverrideFailureMessage("Map center used bounding-box center instead of polygon centroid.").IsTrue();
             return;
         }
         throw new InvalidOperationException("Traversal map root was accepted.");
     }
 
-    private static void Require(bool valid, string message) { if (!valid) throw new InvalidOperationException(message); }
     private static int SnapshotVersion(IMapContext context)
     {
         using var document = JsonDocument.Parse(context.SourceInputs.Require("campus.json"));
@@ -399,7 +372,7 @@ public sealed class MapServiceTests
                 initialized.GetAwaiter().GetResult();
             }
         }
-        public void Boot() { var t = Service.Travel(new(A, Cause: MapTravelCause.Boot)); Until(() => t.Done.IsCompleted); Require(t.Done.Result == MapTravelResult.Arrived, "Fixture boot failed."); }
+        public void Boot() { var t = Service.Travel(new(A, Cause: MapTravelCause.Boot)); Until(() => t.Done.IsCompleted); AssertThat(t.Done.Result == MapTravelResult.Arrived).OverrideFailureMessage("Fixture boot failed.").IsTrue(); }
         public void Until(Func<bool> ready)
         {
             if (!SpinWait.SpinUntil(() => { Service.Step(); return ready(); }, 5000))

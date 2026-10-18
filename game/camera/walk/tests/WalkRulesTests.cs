@@ -8,6 +8,7 @@ using Campus.Contracts.Save;
 using Campus.Gen.World;
 using Campus.Kernel.Maps;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -17,14 +18,12 @@ public sealed class WalkRulesTests
     [TestCase]
     public void CylinderDimensionsKeepStandingCrouchingAndFlatBottomShapesDistinctFromCapsules()
     {
-        Require(WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkRules.StandingHeight)
-            && WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkTuning.CrouchingHeight),
-            "Standing or crouching cylinder dimensions were rejected.");
-        Require(WalkMath.ValidCylinderDimensions(WalkRules.Radius, .2f), "A capsule height-to-radius rule was imposed on a cylinder.");
-        Require(!WalkMath.ValidCylinderDimensions(float.NaN, WalkRules.StandingHeight)
+        AssertThat(WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkRules.StandingHeight)
+            && WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkTuning.CrouchingHeight)).OverrideFailureMessage("Standing or crouching cylinder dimensions were rejected.").IsTrue();
+        AssertThat(WalkMath.ValidCylinderDimensions(WalkRules.Radius, .2f)).OverrideFailureMessage("A capsule height-to-radius rule was imposed on a cylinder.").IsTrue();
+        AssertThat(!WalkMath.ValidCylinderDimensions(float.NaN, WalkRules.StandingHeight)
             && !WalkMath.ValidCylinderDimensions(WalkRules.Radius, float.PositiveInfinity)
-            && !WalkMath.ValidCylinderDimensions(0, WalkRules.StandingHeight) && !WalkMath.ValidCylinderDimensions(WalkRules.Radius, -1),
-            "Invalid dimensions can be presented as a usable native shape snapshot.");
+            && !WalkMath.ValidCylinderDimensions(0, WalkRules.StandingHeight) && !WalkMath.ValidCylinderDimensions(WalkRules.Radius, -1)).OverrideFailureMessage("Invalid dimensions can be presented as a usable native shape snapshot.").IsTrue();
     }
 
     [TestCase]
@@ -35,9 +34,8 @@ public sealed class WalkRulesTests
         {
             var previous = new Vector3(-20, 40, 50);
             var velocity = new Vector3(3, -8, 2);
-            Require(WalkMath.FreezeForAppState(state, feet, ref previous, ref velocity), "Non-playing state did not freeze physics: " + state);
-            Require(previous == feet && velocity == Vector3.Zero && feet == new Vector3(12, 3, -8),
-                "Freeze moved the restored body or retained velocity/interpolation drift.");
+            AssertThat(WalkMath.FreezeForAppState(state, feet, ref previous, ref velocity)).OverrideFailureMessage("Non-playing state did not freeze physics: " + state).IsTrue();
+            AssertThat(previous == feet && velocity == Vector3.Zero && feet == new Vector3(12, 3, -8)).OverrideFailureMessage("Freeze moved the restored body or retained velocity/interpolation drift.").IsTrue();
         }
     }
 
@@ -47,25 +45,22 @@ public sealed class WalkRulesTests
         var feet = new Vector3(12, 3, -8);
         var previous = feet + Vector3.UnitX;
         var velocity = new Vector3(4, -9, 2);
-        Require(WalkMath.FreezeForAppState(AppState.Entering, feet, ref previous, ref velocity), "Entering did not freeze.");
-        Require(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
-            && previous == feet && velocity == Vector3.Zero, "Playing teleported or injected a resume impulse.");
+        AssertThat(WalkMath.FreezeForAppState(AppState.Entering, feet, ref previous, ref velocity)).OverrideFailureMessage("Entering did not freeze.").IsTrue();
+        AssertThat(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
+            && previous == feet && velocity == Vector3.Zero).OverrideFailureMessage("Playing teleported or injected a resume impulse.").IsTrue();
         previous = feet - Vector3.UnitX;
         velocity = new Vector3(2, -3, 1);
-        Require(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
-            && previous == feet - Vector3.UnitX && velocity == new Vector3(2, -3, 1),
-            "Playing motion was frozen; Menu/Atlas input ownership must not become a physics pause.");
+        AssertThat(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
+            && previous == feet - Vector3.UnitX && velocity == new Vector3(2, -3, 1)).OverrideFailureMessage("Playing motion was frozen; Menu/Atlas input ownership must not become a physics pause.").IsTrue();
     }
 
     [TestCase]
     public void DiagonalMovementHasNoSpeedBonusAndYawMatchesCamera()
     {
         var diagonal = WalkMath.Direction(new(1, 1), 0);
-        Require(MathF.Abs(diagonal.Length() - 1) < .00001f, "Diagonal movement has a speed bonus.");
-        Require(Vector3.Distance(WalkMath.Direction(new(0, 1), 90), Vector3.UnitX) < .00001f,
-            "Walk forward disagrees with the camera's positive yaw.");
-        Require(Vector3.Distance(WalkMath.Direction(new(1, 0), 0), Vector3.UnitX) < .00001f,
-            "Strafing right uses the wrong axis.");
+        AssertThat(MathF.Abs(diagonal.Length() - 1) < .00001f).OverrideFailureMessage("Diagonal movement has a speed bonus.").IsTrue();
+        AssertThat(Vector3.Distance(WalkMath.Direction(new(0, 1), 90), Vector3.UnitX) < .00001f).OverrideFailureMessage("Walk forward disagrees with the camera's positive yaw.").IsTrue();
+        AssertThat(Vector3.Distance(WalkMath.Direction(new(1, 0), 0), Vector3.UnitX) < .00001f).OverrideFailureMessage("Strafing right uses the wrong axis.").IsTrue();
     }
 
     [TestCase]
@@ -76,20 +71,18 @@ public sealed class WalkRulesTests
         var fine = Vector3.Zero;
         for (int i = 0; i < 30; i++) coarse = WalkMath.HorizontalVelocity(coarse, target, true, 1f / 60);
         for (int i = 0; i < 60; i++) fine = WalkMath.HorizontalVelocity(fine, target, true, 1f / 120);
-        Require(Vector3.Distance(coarse, fine) < .00001f, "Exponential acceleration changed with fixed-step subdivision.");
-        Require(fine.X > 3.58f && fine.X < 3.6f, "Half-second acceleration does not approach the target speed.");
+        AssertThat(Vector3.Distance(coarse, fine) < .00001f).OverrideFailureMessage("Exponential acceleration changed with fixed-step subdivision.").IsTrue();
+        AssertThat(fine.X > 3.58f && fine.X < 3.6f).OverrideFailureMessage("Half-second acceleration does not approach the target speed.").IsTrue();
     }
 
     [TestCase]
     public void SpeedCapPreservesVerticalJumpAndCrouchRemainsSlower()
     {
         var velocity = WalkMath.LimitHorizontal(new(20, WalkTuning.JumpSpeed, 20));
-        Require(MathF.Abs(new Vector2(velocity.X, velocity.Z).Length() - 12f) < .00001f,
-            "Horizontal speed cap is missing.");
-        Require(velocity.Y == WalkTuning.JumpSpeed, "Speed multiplier changes vertical jump impulse.");
+        AssertThat(MathF.Abs(new Vector2(velocity.X, velocity.Z).Length() - 12f) < .00001f).OverrideFailureMessage("Horizontal speed cap is missing.").IsTrue();
+        AssertThat(velocity.Y == WalkTuning.JumpSpeed).OverrideFailureMessage("Speed multiplier changes vertical jump impulse.").IsTrue();
         for (int step = 0; step < WalkTuning.SpeedStepCount; step++)
-            Require(WalkTuning.CrouchSpeed * WalkTuning.SpeedMultiplier(step) < WalkTuning.WalkSpeed * WalkTuning.SpeedMultiplier(step),
-                "Crouch is not slower at a supported speed step.");
+            AssertThat(WalkTuning.CrouchSpeed * WalkTuning.SpeedMultiplier(step) < WalkTuning.WalkSpeed * WalkTuning.SpeedMultiplier(step)).OverrideFailureMessage("Crouch is not slower at a supported speed step.").IsTrue();
     }
 
     [TestCase]
@@ -100,19 +93,18 @@ public sealed class WalkRulesTests
         var context = new WalkSaveJsonContext(new JsonSerializerOptions(ContractJson.Options));
         var json = JsonSerializer.Serialize(dto, context.WalkSave);
         var restored = JsonSerializer.Deserialize(json, context.WalkSave)!;
-        Require(restored.Feet == dto.Feet && restored.Crouching && restored.SpeedStep == 4,
-            "Walk save lost its physical state.");
-        Require(restored.SafePoints.SequenceEqual(dto.SafePoints), "Walk save lost the existing safePoints field.");
-        Require(!json.Contains("velocity", StringComparison.OrdinalIgnoreCase), "Transient velocity leaked into the save.");
+        AssertThat(restored.Feet == dto.Feet && restored.Crouching && restored.SpeedStep == 4).OverrideFailureMessage("Walk save lost its physical state.").IsTrue();
+        AssertThat(restored.SafePoints.SequenceEqual(dto.SafePoints)).OverrideFailureMessage("Walk save lost the existing safePoints field.").IsTrue();
+        AssertThat(!json.Contains("velocity", StringComparison.OrdinalIgnoreCase)).OverrideFailureMessage("Transient velocity leaked into the save.").IsTrue();
     }
 
     [TestCase]
     public void ForbiddenSurfacesCannotBecomeLandingPoints()
     {
         foreach (var value in new[] { WalkClass.Building, WalkClass.Water, WalkClass.Forbidden, WalkClass.Outside, WalkClass.Steep })
-            Require(!WalkMath.CanWalk(value), "Forbidden landing class accepted: " + value);
+            AssertThat(!WalkMath.CanWalk(value)).OverrideFailureMessage("Forbidden landing class accepted: " + value).IsTrue();
         foreach (var value in new[] { WalkClass.Walk, WalkClass.Interior, WalkClass.Wade })
-            Require(WalkMath.CanWalk(value), "Walkable landing class rejected: " + value);
+            AssertThat(WalkMath.CanWalk(value)).OverrideFailureMessage("Walkable landing class rejected: " + value).IsTrue();
     }
 
     [TestCase]
@@ -120,15 +112,11 @@ public sealed class WalkRulesTests
     {
         var spatial = new SafetySpatial(-1f, -.5f, WalkClass.Water, nearShore: true);
         var feet = new Vector3(0, -1, 0);
-        Require(spatial.GroundY(0, 0) == -1f && spatial.MediumAt(feet).Depth == .5f,
-            "Regression fixture must distinguish bed height from water height.");
-        Require(WalkSafetyQueries.NeedsRecovery(spatial, feet),
-            "Standing on the riverbed beside a walkable bank prevents the water return.");
-        Require(WalkSafetyQueries.InWater(spatial, feet) && !WalkSafetyQueries.AllowsFeet(spatial, feet),
-            "A supported underwater position is treated as a settled safe snapshot.");
+        AssertThat(spatial.GroundY(0, 0) == -1f && spatial.MediumAt(feet).Depth == .5f).OverrideFailureMessage("Regression fixture must distinguish bed height from water height.").IsTrue();
+        AssertThat(WalkSafetyQueries.NeedsRecovery(spatial, feet)).OverrideFailureMessage("Standing on the riverbed beside a walkable bank prevents the water return.").IsTrue();
+        AssertThat(WalkSafetyQueries.InWater(spatial, feet) && !WalkSafetyQueries.AllowsFeet(spatial, feet)).OverrideFailureMessage("A supported underwater position is treated as a settled safe snapshot.").IsTrue();
         var walkCell = new SafetySpatial(-1f, -.5f, WalkClass.Walk);
-        Require(WalkSafetyQueries.NeedsRecovery(walkCell, feet),
-            "A coarse walk cell hides actual submersion at the feet.");
+        AssertThat(WalkSafetyQueries.NeedsRecovery(walkCell, feet)).OverrideFailureMessage("A coarse walk cell hides actual submersion at the feet.").IsTrue();
     }
 
     [TestCase]
@@ -136,12 +124,10 @@ public sealed class WalkRulesTests
     {
         var feet = new Vector3(0, 2, 0);
         var bridge = new SafetySpatial(2f, -.5f, WalkClass.Walk, ground: -1f);
-        Require(!WalkSafetyQueries.InWater(bridge, feet) && !WalkSafetyQueries.NeedsRecovery(bridge, feet),
-            "A dry supported bridge is mistaken for the riverbed beneath it.");
-        Require(WalkSafetyQueries.AllowsFeet(bridge, feet), "A dry bridge region is rejected before native support checks.");
+        AssertThat(!WalkSafetyQueries.InWater(bridge, feet) && !WalkSafetyQueries.NeedsRecovery(bridge, feet)).OverrideFailureMessage("A dry supported bridge is mistaken for the riverbed beneath it.").IsTrue();
+        AssertThat(WalkSafetyQueries.AllowsFeet(bridge, feet)).OverrideFailureMessage("A dry bridge region is rejected before native support checks.").IsTrue();
         var coarseWaterCell = new SafetySpatial(2f, -.5f, WalkClass.Water, ground: -1f);
-        Require(!WalkSafetyQueries.NeedsRecovery(coarseWaterCell, feet),
-            "A supported dry bridge over a coarse water cell triggers a water return.");
+        AssertThat(!WalkSafetyQueries.NeedsRecovery(coarseWaterCell, feet)).OverrideFailureMessage("A supported dry bridge over a coarse water cell triggers a water return.").IsTrue();
     }
 
     [TestCase]
@@ -157,9 +143,8 @@ public sealed class WalkRulesTests
         };
         var maps = new SpawnMaps(targetEntry) { Current = entry.Descriptor.Id, Context = oldContext };
         var dto = WalkSafetyQueries.CreateDefault(maps, new(1, target, targetEntry.Descriptor.World.Default));
-        Require(maps.LastRequestedMap == target && dto.Feet.Position == waypoint.Stand!.Feet
-            && dto.Feet.YawDeg == waypoint.Stand.YawDeg,
-            "CreateDefault ignored NewGameContext.Map or reused the previously mounted map.");
+        AssertThat(maps.LastRequestedMap == target && dto.Feet.Position == waypoint.Stand!.Feet
+            && dto.Feet.YawDeg == waypoint.Stand.YawDeg).OverrideFailureMessage("CreateDefault ignored NewGameContext.Map or reused the previously mounted map.").IsTrue();
     }
 
     [TestCase]
@@ -168,8 +153,14 @@ public sealed class WalkRulesTests
         var (entry, context) = LoadCampusSpawnFixture();
         var missing = entry with { Descriptor = entry.Descriptor with { DefaultSpawn = "missing-fixture" } };
         var maps = new SpawnMaps(missing) { Context = context };
-        RequireThrows<ArgumentException>(() => WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id));
-        RequireThrows<ArgumentException>(() => WalkSafetyQueries.DefaultFeet(maps, new("unknown-fixture")));
+        var missingSpawnRejected = false;
+        try { WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id); }
+        catch (ArgumentException) { missingSpawnRejected = true; }
+        AssertThat(missingSpawnRejected).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}; a default feet position was invented instead.").IsTrue();
+        var unknownMapRejected = false;
+        try { WalkSafetyQueries.DefaultFeet(maps, new("unknown-fixture")); }
+        catch (ArgumentException) { unknownMapRejected = true; }
+        AssertThat(unknownMapRejected).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}; a default feet position was invented instead.").IsTrue();
     }
 
     private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
@@ -208,13 +199,6 @@ public sealed class WalkRulesTests
         public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
     }
 
-    private static void RequireThrows<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}; a default feet position was invented instead.");
-    }
-
     private sealed class SafetySpatial(float support, float? water = null, WalkClass classification = WalkClass.Walk,
         bool nearShore = false, float? ground = null) : ISpatialIndex
     {
@@ -226,8 +210,4 @@ public sealed class WalkRulesTests
             ? WalkClass.Wade : classification;
     }
 
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 }

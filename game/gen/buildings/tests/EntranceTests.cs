@@ -13,6 +13,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class EntranceTests
 {
@@ -37,29 +39,26 @@ public sealed class EntranceTests
         foreach (var (plan, i) in set.Plans.Select((p, i) => (p, i)))
         {
             var decls = FacadeOpenings.Declarations(plan, set.Blocks[i]);
-            Require(decls.Select(d => d.Id).Distinct().Count() == decls.Count && decls.All(d => d.Id >= set.Blocks[i].Base && d.Id < set.Blocks[i].Base + set.Blocks[i].Count),
-                $"{plan.Key}: every opening keeps a unique number inside its block");
+            AssertThat(decls.Select(d => d.Id).Distinct().Count() == decls.Count && decls.All(d => d.Id >= set.Blocks[i].Base && d.Id < set.Blocks[i].Base + set.Blocks[i].Count)).OverrideFailureMessage("Expected: " + ($"{plan.Key}: every opening keeps a unique number inside its block")).IsTrue();
             foreach (var lod in Levels) foreach (var b in module.BuildOne(plan, set.Blocks[i], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();
         }
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var entrance = dorm.Entrances.Single();
-        Require(entrance.Anchor == "dorm.south" && entrance.Row == 0 && entrance.Landing, "the dorm's door moved to its anchor, with a landing");
+        AssertThat(entrance.Anchor == "dorm.south" && entrance.Row == 0 && entrance.Landing).OverrideFailureMessage("Expected: " + ("the dorm's door moved to its anchor, with a landing")).IsTrue();
         var door = dorm.DoorOf(entrance);
-        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 0.01f, "an anchor at the pad takes the building's floor (WLD-TERRAIN)");
-        Require(Vector2.Distance(GlassCentre(dorm, entrance), new Vector2(21.3f, 0f)) <= Rules.EntranceRules.AnchorTolerance, "door within G18's 0.5 m of its anchor");
-        Require(!dorm.Openings[entrance.Facade].Any(o => o.Row == 0 && o.Kind != BayKind.Door && o.U0 < door.U1 + Rules.EntranceRules.Pier && o.U1 > door.U0 - Rules.EntranceRules.Pier),
-            "no window crowds the door");
+        AssertThat(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 0.01f).OverrideFailureMessage("Expected: " + ("an anchor at the pad takes the building's floor (WLD-TERRAIN)")).IsTrue();
+        AssertThat(Vector2.Distance(GlassCentre(dorm, entrance), new Vector2(21.3f, 0f)) <= Rules.EntranceRules.AnchorTolerance).OverrideFailureMessage("Expected: " + ("door within G18's 0.5 m of its anchor")).IsTrue();
+        AssertThat(!dorm.Openings[entrance.Facade].Any(o => o.Row == 0 && o.Kind != BayKind.Door && o.U0 < door.U1 + Rules.EntranceRules.Pier && o.U1 > door.U0 - Rules.EntranceRules.Pier)).OverrideFailureMessage("Expected: " + ("no window crowds the door")).IsTrue();
         var old = generic.Plans.Single(p => p.Key == "t:dorm");
-        Require(old.Entrances.Single().Facade != entrance.Facade || old.Entrances.Single().Bay != entrance.Bay, "the generic door is gone");
+        AssertThat(old.Entrances.Single().Facade != entrance.Facade || old.Entrances.Single().Bay != entrance.Bay).OverrideFailureMessage("Expected: " + ("the generic door is gone")).IsTrue();
         var lab = set.Plans.Single(p => p.Key == "t:lab").Entrances.Single();
         var labDoor = set.Plans.Single(p => p.Key == "t:lab").DoorOf(lab);
-        Require(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < 0.01f && labDoor.Y1 - labDoor.Y0 >= 2f,
-            "a raised anchor opens a door at its floor, onto the porch, without a landing");
-        Require(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0, "no WP-14 landing under a porch");
+        AssertThat(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < 0.01f && labDoor.Y1 - labDoor.Y0 >= 2f).OverrideFailureMessage("Expected: " + ("a raised anchor opens a door at its floor, onto the porch, without a landing")).IsTrue();
+        AssertThat(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0).OverrideFailureMessage("Expected: " + ("no WP-14 landing under a porch")).IsTrue();
         foreach (var key in new[] { "t:low", "t:wing" })
         {
             var plan = set.Plans.Single(p => p.Key == key);
-            Require(plan.Entrances.Single().Anchor is null && Layout(set, key) == Layout(generic, key), $"{key}: the anchor is left alone and the generic door stays");
+            AssertThat(plan.Entrances.Single().Anchor is null && Layout(set, key) == Layout(generic, key)).OverrideFailureMessage("Expected: " + ($"{key}: the anchor is left alone and the generic door stays")).IsTrue();
         }
         // The authored opening is clear, with the wall above and below the door retained.
         foreach (var plan in new[] { dorm, set.Plans.Single(p => p.Key == "t:lab") })
@@ -68,16 +67,14 @@ public sealed class EntranceTests
             var opening = plan.DoorOf(e);
             var centre = GlassCentre(plan, e);
             var walls = module.Collide(Ctx(world, 2u), plan.Tile(LodLevel.L0)).OfType<WallCollider>().ToArray();
-            Require(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f)), $"{plan.Key}: open anchor must not be blocked");
-            Require(walls.Any(w => Blocks(w, centre, opening.Y0 - 0.1f)) && walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f)),
-                $"{plan.Key}: retain the wall below the threshold and above the lintel");
+            AssertThat(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f))).OverrideFailureMessage("Expected: " + ($"{plan.Key}: open anchor must not be blocked")).IsTrue();
+            AssertThat(walls.Any(w => Blocks(w, centre, opening.Y0 - 0.1f)) && walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f))).OverrideFailureMessage("Expected: " + ($"{plan.Key}: retain the wall below the threshold and above the lintel")).IsTrue();
         }
         var closedPlan = generic.Plans.Single(p => p.Key == "t:dorm");
         var closedEntrance = closedPlan.Entrances.Single();
         var closedDoor = closedPlan.DoorOf(closedEntrance);
-        Require(module.Collide(Ctx(World(features), 2u), closedPlan.Tile(LodLevel.L0)).OfType<WallCollider>()
-            .Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, GlassCentre(closedPlan, closedEntrance), (closedDoor.Y0 + closedDoor.Y1) * 0.5f)),
-            "the undeclared generic entrance stays closed");
+        AssertThat(module.Collide(Ctx(World(features), 2u), closedPlan.Tile(LodLevel.L0)).OfType<WallCollider>()
+            .Any(w => w.Tag == SurfaceTag.DoorClosed && Blocks(w, GlassCentre(closedPlan, closedEntrance), (closedDoor.Y0 + closedDoor.Y1) * 0.5f))).OverrideFailureMessage("Expected: " + ("the undeclared generic entrance stays closed")).IsTrue();
     }
 
     [TestCase]
@@ -90,15 +87,13 @@ public sealed class EntranceTests
         var module = new BuildingsModule();
         var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
         var tile = dorm.Tile(LodLevel.L0);
-        Require(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any() &&
-            !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed),
-            "unclaimed, WP-14 opens the anchor door");
+        AssertThat(dorm.Entrances.Single().Anchor == "dorm.south" && module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any() &&
+            !module.Collide(Ctx(world, 2u), tile).OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed)).OverrideFailureMessage("Expected: " + ("unclaimed, WP-14 opens the anchor door")).IsTrue();
         foreach (var aspect in new[] { Aspects.Facade, Aspects.Massing })
         {
             var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = TestMap, WorldSeed = 2u, ClaimedBy = (f, a) => a == aspect && f.Value == "t:dorm" ? new WpId("WP-18") : null });
-            Require(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0,
-                $"{aspect} claimed: no door, landing, canopy or collider of WP-14");
-            Require(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0, "the neighbour stays");
+            AssertThat(!module.Tiles(ctx).Contains(tile) && module.Build(ctx, tile, LodLevel.L0) == ContentOutput.Empty && module.Collide(ctx, tile).Count == 0).OverrideFailureMessage("Expected: " + ($"{aspect} claimed: no door, landing, canopy or collider of WP-14")).IsTrue();
+            AssertThat(module.Build(ctx, BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:lab").Tile(LodLevel.L0), LodLevel.L0).Meshes.Count > 0).OverrideFailureMessage("Expected: " + ("the neighbour stays")).IsTrue();
         }
 
         // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): WP-14's
@@ -113,11 +108,11 @@ public sealed class EntranceTests
             var centre = GlassCentre(plan, e);
             var opening = plan.DoorOf(e);
             var walls = module.Collide(rctx, plan.Tile(LodLevel.L0)).OfType<WallCollider>().ToArray();
-            Require(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f)), $"{e.Anchor} on {plan.Id.Value}: open doorway is clear");
-            if (mine) Require(walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f)), $"{e.Anchor}: the lintel remains");
+            AssertThat(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f))).OverrideFailureMessage("Expected: " + ($"{e.Anchor} on {plan.Id.Value}: open doorway is clear")).IsTrue();
+            if (mine) AssertThat(walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f))).OverrideFailureMessage("Expected: " + ($"{e.Anchor}: the lintel remains")).IsTrue();
         }
         foreach (var id in new[] { "lib.main", "xb.clock", "gym.deck" })
-            Require(anchored.Any(x => x.Door.Anchor == id && !BuildingsModule.Unclaimed(rctx, x.Plan)), $"{id}: claimed by its zone pack, WP-14 gives way");
+            AssertThat(anchored.Any(x => x.Door.Anchor == id && !BuildingsModule.Unclaimed(rctx, x.Plan))).OverrideFailureMessage("Expected: " + ($"{id}: claimed by its zone pack, WP-14 gives way")).IsTrue();
     }
 
     [TestCase]
@@ -132,11 +127,11 @@ public sealed class EntranceTests
             return plan.Entrances.SingleOrDefault(e => e.Anchor == "dorm.south");
         }
         var known = Door(2.6f, out var p1)!;
-        Require(MathF.Abs(p1.DoorOf(known).Y1 - 2.6f) < 0.01f, "HeadY 2.6 is the door top");
+        AssertThat(MathF.Abs(p1.DoorOf(known).Y1 - 2.6f) < 0.01f).OverrideFailureMessage("Expected: " + ("HeadY 2.6 is the door top")).IsTrue();
         var unknown = Door(0f, out var p0)!;
-        Require(MathF.Abs(p0.DoorOf(unknown).Y1 - (p0.FloorY(0) + Math.Clamp(p0.StoreyHeight - 1f, 2.1f, 2.4f))) < 0.01f, "0 = unknown: the family's door rise");
+        AssertThat(MathF.Abs(p0.DoorOf(unknown).Y1 - (p0.FloorY(0) + Math.Clamp(p0.StoreyHeight - 1f, 2.1f, 2.4f))) < 0.01f).OverrideFailureMessage("Expected: " + ("0 = unknown: the family's door rise")).IsTrue();
         var tall = Door(9f, out var p2)!;
-        Require(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 0.01f, "never through the next slab");
+        AssertThat(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 0.01f).OverrideFailureMessage("Expected: " + ("never through the next slab")).IsTrue();
 
         // Doors alone (outside landing on a porch or deck) are logged with the package expected to build what they open onto.
         var lab = Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research") with { Zone = new ZoneId("north") };
@@ -149,15 +144,15 @@ public sealed class EntranceTests
             return BuildingsModule.DoorsAlone(ctx, plan).Single(d => d.Level == DiagnosticLevel.Info && d.Code == "wp14.door.alone" && d.Feature == plan.Id).Message;
         }
         var byZone = Log(World(porch, lab), (_, _) => null);
-        Require(byZone.Contains("lab.porch", StringComparison.Ordinal) && byZone.Contains("1.20 m", StringComparison.Ordinal) && byZone.Contains("north zone pack", StringComparison.Ordinal), byZone);
+        AssertThat(byZone.Contains("lab.porch", StringComparison.Ordinal) && byZone.Contains("1.20 m", StringComparison.Ordinal) && byZone.Contains("north zone pack", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byZone)).IsTrue();
         var byDeck = Log(World(porch, lab, deck), (f, a) => f.Value == "t:deck" && a == Aspects.Massing ? new WpId("WP-21") : null);
-        Require(byDeck.Contains("WP-21, which builds the deck block t:deck", StringComparison.Ordinal), byDeck);
+        AssertThat(byDeck.Contains("WP-21, which builds the deck block t:deck", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (byDeck)).IsTrue();
         var nobody = Log(World(porch, lab with { Zone = null }), (_, _) => null);
-        Require(nobody.Contains("undecided", StringComparison.Ordinal), nobody);
+        AssertThat(nobody.Contains("undecided", StringComparison.Ordinal)).OverrideFailureMessage("Expected: " + (nobody)).IsTrue();
         var ctx0 = Prepared(Ctx(World(porch, lab), 2u));
         var plan0 = BuildingSet.For(ctx0.World, 2u).Plans.Single();
-        Require(new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L0), LodLevel.L0).Diagnostics.Count == 1 &&
-            new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L1), LodLevel.L1).Diagnostics.Count == 0, "logged once, with the L0 cell");
+        AssertThat(new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L0), LodLevel.L0).Diagnostics.Count == 1 &&
+            new BuildingsModule().Build(ctx0, plan0.Tile(LodLevel.L1), LodLevel.L1).Diagnostics.Count == 0).OverrideFailureMessage("Expected: " + ("logged once, with the L0 cell")).IsTrue();
     }
 
     [TestCase]
@@ -169,22 +164,21 @@ public sealed class EntranceTests
         var set = BuildingSet.For(world, 2u);
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var steps = EntranceKit.Pieces(dorm, dorm.Entrances.Single());
-        Require(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps]),
-            "landing, guard railings on its sides (over 1.0 m) and one flight");
+        AssertThat(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps])).OverrideFailureMessage("Expected: " + ("landing, guard railings on its sides (over 1.0 m) and one flight")).IsTrue();
         var flight = (StairParams)steps[3].Params;
-        Require(MathF.Abs(flight.Height - 1.05f) < 0.01f && flight.Steps == 7 && flight.Variation == 0, $"1.05 m in 7 risers with cheek walls ({flight.Steps})");
+        AssertThat(MathF.Abs(flight.Height - 1.05f) < 0.01f && flight.Steps == 7 && flight.Variation == 0).OverrideFailureMessage("Expected: " + ($"1.05 m in 7 risers with cheek walls ({flight.Steps})")).IsTrue();
         var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
         EntranceKit.Build(sink, steps, LodLevel.L0);
-        Require(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit"), "handrails from 0.6 m (WP-11)");
+        AssertThat(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit")).OverrideFailureMessage("Expected: " + ("handrails from 0.6 m (WP-11)")).IsTrue();
         foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();
         var colliders = new BuildingsModule().Collide(Ctx(world, 2u), dorm.Tile(LodLevel.L0));
-        Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }), "the flight walks as one stair ramp");
-        Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Ground), "the landing is walkable");
-        Require(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.Barrier && w.Y1 - w.Y0 >= 1.5f) == 2, "its railings cannot be climbed over");
+        AssertThat(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 })).OverrideFailureMessage("Expected: " + ("the flight walks as one stair ramp")).IsTrue();
+        AssertThat(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Ground)).OverrideFailureMessage("Expected: " + ("the landing is walkable")).IsTrue();
+        AssertThat(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.Barrier && w.Y1 - w.Y0 >= 1.5f) == 2).OverrideFailureMessage("Expected: " + ("its railings cannot be climbed over")).IsTrue();
         var lab = set.Plans.Single(p => p.Key == "t:lab");
         var slope = EntranceKit.Pieces(lab, lab.Entrances.Single());
-        Require(slope.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Ramp]), "0.15 m: landing and a kerbed slope, no step");
+        AssertThat(slope.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Ramp])).OverrideFailureMessage("Expected: " + ("0.15 m: landing and a kerbed slope, no step")).IsTrue();
         var ramp = (RampParams)slope[1].Params;
-        Require(ramp.Height / ramp.Depth <= 1f / 12f + 0.001f && ramp.Variation == 1, "the slope is 1:12 or gentler");
+        AssertThat(ramp.Height / ramp.Depth <= 1f / 12f + 0.001f && ramp.Variation == 1).OverrideFailureMessage("Expected: " + ("the slope is 1:12 or gentler")).IsTrue();
     }
 }

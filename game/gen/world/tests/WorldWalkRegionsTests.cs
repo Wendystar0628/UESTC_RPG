@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -19,16 +20,13 @@ public sealed class WorldWalkRegionsTests
             Feature("seal", "seal", Box(12, -2, 16, 2))
         ], Box(-32, -32, 32, 32), WorldNetwork.Empty with
         { Bridges = [new(new("bridge"), new([new(-24, 0), new(24, 0)]), 6)] });
-        Require(regions.At(0, 0) == WalkClass.Wade, "Registered shallow water was lost.");
-        Require(regions.At(6, 0) == WalkClass.Forbidden && regions.At(14, 0) == WalkClass.Forbidden,
-            "A bridge bypassed a registered restriction.");
-        Require(regions.At(-12, 0) == WalkClass.Walk && regions.At(-12, 4) == WalkClass.Water,
-            "Bridge permission ignored its network width.");
-        Require(regions.At(28, 0) == WalkClass.Walk && regions.At(33, 0) == WalkClass.Outside,
-            "Unrestricted ground or the campus boundary changed.");
+        AssertThat(regions.At(0, 0) == WalkClass.Wade).OverrideFailureMessage("Registered shallow water was lost.").IsTrue();
+        AssertThat(regions.At(6, 0) == WalkClass.Forbidden && regions.At(14, 0) == WalkClass.Forbidden).OverrideFailureMessage("A bridge bypassed a registered restriction.").IsTrue();
+        AssertThat(regions.At(-12, 0) == WalkClass.Walk && regions.At(-12, 4) == WalkClass.Water).OverrideFailureMessage("Bridge permission ignored its network width.").IsTrue();
+        AssertThat(regions.At(28, 0) == WalkClass.Walk && regions.At(33, 0) == WalkClass.Outside).OverrideFailureMessage("Unrestricted ground or the campus boundary changed.").IsTrue();
         var building = new WorldWalkRegions([Feature("building", "building", Box(-8, -8, -4, -4))],
             Box(-32, -32, 32, 32), WorldNetwork.Empty);
-        Require(building.At(-6, -6) == WalkClass.Walk, "A building projection blocked physical openings and floors.");
+        AssertThat(building.At(-6, -6) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked physical openings and floors.").IsTrue();
     }
 
     [TestCase]
@@ -43,20 +41,15 @@ public sealed class WorldWalkRegionsTests
                 Bridges = [new(new("bridge-axis"), new([new(-40, 0), new(40, 0)]), 6),
                     new(new("bridge-walk"), new([new(-40, 6), new(40, 6)]), 3)]
             });
-        Require(regions.At(0, 0) == WalkClass.Water && regions.At(10, 0) == WalkClass.Walk,
-            "A network line filled a declared deck hole.");
-        Require(regions.At(28, 6) == WalkClass.Water && regions.At(34, 0) == WalkClass.Outside,
-            "A replaced line extended the bridge or opened the campus exterior.");
+        AssertThat(regions.At(0, 0) == WalkClass.Water && regions.At(10, 0) == WalkClass.Walk).OverrideFailureMessage("A network line filled a declared deck hole.").IsTrue();
+        AssertThat(regions.At(28, 6) == WalkClass.Water && regions.At(34, 0) == WalkClass.Outside).OverrideFailureMessage("A replaced line extended the bridge or opened the campus exterior.").IsTrue();
         var channel = new WorldWalkRegions([], Box(-32, -32, 32, 32), WorldNetwork.Empty with
         { Waterways = [new(new("channel"), new([new(-20, 12), new(20, 12)]), 4)] });
-        Require(channel.At(0, 12) == WalkClass.Water && channel.At(0, 16) == WalkClass.Walk,
-            "Waterway classification ignored its source width.");
+        AssertThat(channel.At(0, 12) == WalkClass.Water && channel.At(0, 16) == WalkClass.Walk).OverrideFailureMessage("Waterway classification ignored its source width.").IsTrue();
     }
 
     private static WorldFeature Feature(string id, string kind, PolygonRings area) =>
         new(new(id), FeatureSource.Design, new(kind), new PolygonGeometry(area));
     private static PolygonRings Box(float x0, float z0, float x1, float z1) =>
         new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
-    private static void Require(bool value, string message)
-    { if (!value) throw new InvalidOperationException(message); }
 }

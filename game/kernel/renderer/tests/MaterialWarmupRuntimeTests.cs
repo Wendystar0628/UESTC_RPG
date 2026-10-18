@@ -6,6 +6,7 @@ using Campus.Kernel.Renderer;
 using Campus.Kernel.Post;
 using Campus.Style.Materials;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using Godot;
 using N = System.Numerics;
 
@@ -21,28 +22,25 @@ public sealed class MaterialWarmupRuntimeTests
     {
         await using var fixture = new Fixture();
         var first = fixture.Mount("first", fixture.Spec);
-        Check(!first.Visible && !fixture.Library.IsReady(fixture.Spec), "A pending pool must start hidden.");
+        AssertThat(!first.Visible && !fixture.Library.IsReady(fixture.Spec)).OverrideFailureMessage("A pending pool must start hidden.").IsTrue();
         await fixture.Until(() => fixture.Provider.Accepted > 0);
-        Check(fixture.Veil.Opacity == 1f && !fixture.ReadyForReveal,
-            "Accepting warm evidence must not skip sample removal and its postdraw barrier.");
+        AssertThat(fixture.Veil.Opacity == 1f && !fixture.ReadyForReveal).OverrideFailureMessage("Accepting warm evidence must not skip sample removal and its postdraw barrier.").IsTrue();
         await fixture.Until(() => fixture.ReadyForReveal);
         await fixture.Draw();
-        Check(first.Visible && fixture.Warmup.SamplesReleased, "The real provider did not unlock the pool after warm draws.");
-        Check(fixture.Provider.FirstDrawCompleteFrame > fixture.Provider.FirstCapturedFrame,
-            "Evidence must follow actual rendered frames.");
+        AssertThat(first.Visible && fixture.Warmup.SamplesReleased).OverrideFailureMessage("The real provider did not unlock the pool after warm draws.").IsTrue();
+        AssertThat(fixture.Provider.FirstDrawCompleteFrame > fixture.Provider.FirstCapturedFrame).OverrideFailureMessage("Evidence must follow actual rendered frames.").IsTrue();
         await fixture.Veil.Reveal(VeilReason.Boot, 0f);
         await fixture.Draw();
         fixture.Capture("WP-00-material-first-visible");
         var secondSpec = fixture.Spec with { Line = LineClass.Fine };
         await fixture.Veil.Cover(VeilReason.Boot, 0f);
         var late = fixture.Mount("late", secondSpec);
-        Check(!late.Visible && !fixture.ReadyForReveal, "A late material inherited old readiness.");
+        AssertThat(!late.Visible && !fixture.ReadyForReveal).OverrideFailureMessage("A late material inherited old readiness.").IsTrue();
         await fixture.Until(() => fixture.Veil.Opacity == 1f);
-        Check(!late.Visible, "The late pool escaped before its material was drawn.");
+        AssertThat(!late.Visible).OverrideFailureMessage("The late pool escaped before its material was drawn.").IsTrue();
         fixture.Capture("WP-00-material-late-cover");
         await fixture.Until(() => fixture.ReadyForReveal && late.Visible);
-        Check(fixture.Provider.Accepted >= 2 && fixture.Provider.Rejected == 0,
-            "The late pool must complete its own real batch.");
+        AssertThat(fixture.Provider.Accepted >= 2 && fixture.Provider.Rejected == 0).OverrideFailureMessage("The late pool must complete its own real batch.").IsTrue();
         await fixture.Veil.Reveal(VeilReason.Boot, 0f);
         await fixture.Until(() => fixture.Veil.Opacity == 0f);
         await fixture.Draw();
@@ -51,8 +49,7 @@ public sealed class MaterialWarmupRuntimeTests
         var externallyCovered = fixture.Mount("external-cover", fixture.Spec with { Line = LineClass.Tree });
         await fixture.Until(() => fixture.ReadyForReveal && externallyCovered.Visible);
         await externalCover;
-        Check(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Transit,
-            "Warmup revealed an external Cover that started from the previously visible viewport.");
+        AssertThat(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Transit).OverrideFailureMessage("Warmup revealed an external Cover that started from the previously visible viewport.").IsTrue();
         await fixture.Veil.Reveal(VeilReason.Transit, 0f);
         await fixture.Draw();
         await fixture.Veil.Cover(VeilReason.Boot, 0f);
@@ -61,8 +58,7 @@ public sealed class MaterialWarmupRuntimeTests
         await fixture.Veil.Cover(VeilReason.Teleport, 0f);
         await fixture.Until(() => fixture.ReadyForReveal && coveredDuringWarm.Visible);
         for (var i = 0; i < 5; i++) await fixture.Draw();
-        Check(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Teleport,
-            "An explicit Cover during warmup was replaced by an older automatic reveal intent.");
+        AssertThat(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Teleport).OverrideFailureMessage("An explicit Cover during warmup was replaced by an older automatic reveal intent.").IsTrue();
         GD.Print($"MATERIAL_WARMUP_EVIDENCE actualDraw=True firstVisible={first.Visible} lateVisible={late.Visible} " +
             $"accepted={fixture.Provider.Accepted} rejected={fixture.Provider.Rejected} samplesReleased={fixture.Warmup.SamplesReleased} externalCoverRetained=True");
     }
@@ -78,9 +74,8 @@ public sealed class MaterialWarmupRuntimeTests
         fixture.Veil.HoldUntil(VeilReason.Boot, () => fixture.ReadyForReveal, 60f);
         var reveal = fixture.Veil.Reveal(VeilReason.Boot, 0f);
         for (var i = 0; i < MaterialWarmup.StableFrames + 5; i++) await fixture.Draw();
-        Check(!fixture.Cover.IsCovered && !fixture.ReadyForReveal && fixture.Warmup.SamplesReleased &&
-            fixture.Provider.Accepted == 0 && !pool.Visible && !reveal.IsCompleted,
-            "Uncovered/zero-second reveal fabricated a warm or visibility result.");
+        AssertThat(!fixture.Cover.IsCovered && !fixture.ReadyForReveal && fixture.Warmup.SamplesReleased &&
+            fixture.Provider.Accepted == 0 && !pool.Visible && !reveal.IsCompleted).OverrideFailureMessage("Uncovered/zero-second reveal fabricated a warm or visibility result.").IsTrue();
         fixture.Cover.Visible = true;
         await fixture.Until(() => fixture.ReadyForReveal && pool.Visible);
         await fixture.Draw();
@@ -99,11 +94,9 @@ public sealed class MaterialWarmupRuntimeTests
         var batch = fixture.Library.CapturePendingWarm();
         var material = batch.Materials.Single().Material;
         fixture.Library.TrackLayout(material, batch.Materials.Single().Layouts.Single() with { Instanced = false });
-        Check(!fixture.Library.IsReady(fixture.Spec) && fixture.Library.CapturePendingWarm().Revision > batch.Revision,
-            "Adding a real layout must invalidate the current batch.");
+        AssertThat(!fixture.Library.IsReady(fixture.Spec) && fixture.Library.CapturePendingWarm().Revision > batch.Revision).OverrideFailureMessage("Adding a real layout must invalidate the current batch.").IsTrue();
         await fixture.Until(() => fixture.Provider.Rejected > 0);
-        Check(!fixture.Library.IsReady(fixture.Spec) && !pool.Visible,
-            "A stale batch partially unlocked the pool.");
+        AssertThat(!fixture.Library.IsReady(fixture.Spec) && !pool.Visible).OverrideFailureMessage("A stale batch partially unlocked the pool.").IsTrue();
         var window = fixture.Parent.GetTree().Root;
         var oldSize = window.Size;
         var resizeInvalidated = false;
@@ -114,9 +107,8 @@ public sealed class MaterialWarmupRuntimeTests
             await fixture.Until(() => !fixture.Warmup.SamplesReleased);
             window.Size = new Vector2I(oldSize.X + 48, oldSize.Y + 32);
             await fixture.Until(() => fixture.ReadyForReveal && pool.Visible);
-            Check(resizeInvalidated, "A resized viewport inherited the previous coverage certificate.");
-            Check(fixture.Provider.Accepted == 1 && fixture.Provider.Rejected == 1 && fixture.Warmup.SamplesReleased,
-                "Fresh layout/viewport evidence did not replace the stale batch exactly once.");
+            AssertThat(resizeInvalidated).OverrideFailureMessage("A resized viewport inherited the previous coverage certificate.").IsTrue();
+            AssertThat(fixture.Provider.Accepted == 1 && fixture.Provider.Rejected == 1 && fixture.Warmup.SamplesReleased).OverrideFailureMessage("Fresh layout/viewport evidence did not replace the stale batch exactly once.").IsTrue();
             GD.Print("MATERIAL_WARMUP_EVIDENCE staleRejected=True resizeRecertified=True poolVisible=True");
         }
         finally { window.SizeChanged -= CheckResizedCoverage; window.Size = oldSize; }
@@ -136,18 +128,12 @@ public sealed class MaterialWarmupRuntimeTests
         using (var arrays = mesh.SurfaceGetArrays(0))
         {
             var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
-            Check(colors.Length == 4 && colors.All(color => PaletteEncoding.DecodeColor(
-                (byte)MathF.Round(color.R * 255f), (byte)MathF.Round(color.B * 255f)).Value == 510),
-                "A warm sample truncated the bank-1 colour or lost its bank flag.");
+            AssertThat(colors.Length == 4 && colors.All(color => PaletteEncoding.DecodeColor(
+                (byte)MathF.Round(color.R * 255f), (byte)MathF.Round(color.B * 255f)).Value == 510)).OverrideFailureMessage("A warm sample truncated the bank-1 colour or lost its bank flag.").IsTrue();
         }
         await fixture.Until(() => fixture.ReadyForReveal && pool.Visible);
-        Check(pool.Visible, "Bank-1 warmup failed to unlock the pool.");
+        AssertThat(pool.Visible).OverrideFailureMessage("Bank-1 warmup failed to unlock the pool.").IsTrue();
         GD.Print("MATERIAL_WARMUP_EVIDENCE paletteIndex=510 nativeBankFlag=True poolVisible=True");
-    }
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 
     private sealed class Fixture : IAsyncDisposable
@@ -216,7 +202,7 @@ public sealed class MaterialWarmupRuntimeTests
             var destination = Path.Combine(root, "output", "render-review");
             Directory.CreateDirectory(destination);
             using var image = Parent.GetViewport().GetTexture().GetImage();
-            Check(image.SavePng(Path.Combine(destination, name + ".png")) == Godot.Error.Ok, "Could not save warmup evidence.");
+            AssertThat(image.SavePng(Path.Combine(destination, name + ".png")) == Godot.Error.Ok).OverrideFailureMessage("Could not save warmup evidence.").IsTrue();
         }
         public async Task Until(Func<bool> ready)
         {

@@ -12,6 +12,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class WindowPartTests
 {
@@ -42,20 +44,19 @@ public sealed class WindowPartTests
                         var meshes = sink.Finish();
                         var actualCurtain = meshes.Any(Fabric);
                         if (actualCurtain) present++; else absent++;
-                        Require(!actualCurtain || (zone <= FidelityZone.K2 && lod == LodLevel.L0), "Physical curtain remains confined to the existing near LOD/zone.");
+                        AssertThat(!actualCurtain || (zone <= FidelityZone.K2 && lod == LodLevel.L0)).OverrideFailureMessage("Expected: " + ("Physical curtain remains confined to the existing near LOD/zone.")).IsTrue();
                         var glass = meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
-                        Require(glass.Length > 0, "Each opening still has glass.");
+                        AssertThat(glass.Length > 0).OverrideFailureMessage("Expected: " + ("Each opening still has glass.")).IsTrue();
                         var card = (byte)FacadeOpenings.Card(plan, opening, FacadeOpenings.Number(plan, set.Blocks[0], layout, opening));
                         foreach (var mesh in glass)
                             foreach (var encoded in mesh.Reserved!)
                             {
-                                Require((encoded & WindowCardEncoding.TypeMask) == card, "Presence flag preserves the window card type.");
-                                Require(((encoded & WindowCardEncoding.PhysicalCurtainFlag) != 0) == actualCurtain,
-                                    $"{zone} {lod} bay {opening.Bay}: flag exactly matches actual curtain geometry.");
+                                AssertThat((encoded & WindowCardEncoding.TypeMask) == card).OverrideFailureMessage("Expected: " + ("Presence flag preserves the window card type.")).IsTrue();
+                                AssertThat(((encoded & WindowCardEncoding.PhysicalCurtainFlag) != 0) == actualCurtain).OverrideFailureMessage("Expected: " + ($"{zone} {lod} bay {opening.Bay}: flag exactly matches actual curtain geometry.")).IsTrue();
                             }
                     }
                 }
-        Require(present > 0 && absent > 0, "Exercise actual curtains and uncurtained openings, including distant LODs.");
+        AssertThat(present > 0 && absent > 0).OverrideFailureMessage("Expected: " + ("Exercise actual curtains and uncurtained openings, including distant LODs.")).IsTrue();
     }
 
     [TestCase]
@@ -67,18 +68,17 @@ public sealed class WindowPartTests
         var plan = set.Plans[0];
         for (var fi = 0; fi < plan.Facades.Count; fi++)
             for (var k = 0; k < plan.Openings[fi].Length; k++)
-                Require(plan.ZoneOf(fi, k) == (plan.Openings[fi][k].Row == 0 ? FidelityZone.K2 : FidelityZone.K3), "ground floor in the K2 band, the rest K3");
+                AssertThat(plan.ZoneOf(fi, k) == (plan.Openings[fi][k].Row == 0 ? FidelityZone.K2 : FidelityZone.K3)).OverrideFailureMessage("Expected: " + ("ground floor in the K2 band, the rest K3")).IsTrue();
         var module = new BuildingsModule();
         var near = module.BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         var mid = module.BuildOne(plan, set.Blocks[0], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
-        Require(near.Any(Sash), "K2 windows carry the WP-10 two-level sashes at L0");
-        Require(near.Any(Fabric), "K2 room windows hang WP-10 curtains at L0");
-        Require(!mid.Any(Sash) && !mid.Any(Fabric), "L1 keeps the simplified frame ring only");
+        AssertThat(near.Any(Sash)).OverrideFailureMessage("Expected: " + ("K2 windows carry the WP-10 two-level sashes at L0")).IsTrue();
+        AssertThat(near.Any(Fabric)).OverrideFailureMessage("Expected: " + ("K2 room windows hang WP-10 curtains at L0")).IsTrue();
+        AssertThat(!mid.Any(Sash) && !mid.Any(Fabric)).OverrideFailureMessage("Expected: " + ("L1 keeps the simplified frame ring only")).IsTrue();
         // Without window gaskets the dark steel is only the astragal between the entrance leaves (two boxes).
         var dark = near.Where(Gasket).Sum(b => b.Index.Length / 3);
-        Require(Rules.OpeningRules.Gaskets || dark <= 24, "window gaskets follow OpeningRules.Gaskets");
-        Require(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base)),
-            "no part glass keeps WP-10's placeholder numbering");
+        AssertThat(Rules.OpeningRules.Gaskets || dark <= 24).OverrideFailureMessage("Expected: " + ("window gaskets follow OpeningRules.Gaskets")).IsTrue();
+        AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps WP-10's placeholder numbering")).IsTrue();
     }
 
     [TestCase]
@@ -108,11 +108,11 @@ public sealed class WindowPartTests
                         levelMax = Math.Max(levelMax, sink.Triangles - 2);
                     }
                 }
-                Require(levelMax is >= 16 and <= 60, $"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})");
+                AssertThat(levelMax is >= 16 and <= 60).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})")).IsTrue();
             }
             var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
-            Require(!near.Any(Sash) && !near.Any(Fabric), $"{plan.Key}: K3 has no sashes, handles or curtains");
-            Require(near.All(b => !Gasket(b) || b.Index.Length / 3 <= 24), $"{plan.Key}: no window gaskets");
+            AssertThat(!near.Any(Sash) && !near.Any(Fabric)).OverrideFailureMessage("Expected: " + ($"{plan.Key}: K3 has no sashes, handles or curtains")).IsTrue();
+            AssertThat(near.All(b => !Gasket(b) || b.Index.Length / 3 <= 24)).OverrideFailureMessage("Expected: " + ($"{plan.Key}: no window gaskets")).IsTrue();
         }
     }
 }

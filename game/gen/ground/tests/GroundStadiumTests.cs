@@ -10,6 +10,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// Stadium ground: an untagged stadium or sports-centre outline has no surface, a running track is a ring around its infield,
 /// and a football pitch is natural turf with its white lines.
@@ -31,15 +33,13 @@ public sealed class GroundStadiumTests
         ]);
 
         var (shapes, _) = GroundSources.Read(world);
-        Check.True(shapes.All(s => s.Id.Value is not ("test:way:1" or "test:way:2")),
-            "A stadium or sports centre without a sport tag only encloses other features: it makes no ground shape.");
-        Check.True(shapes.Count(s => s.Kind == SurfaceKind.Court) == 1 && shapes.Single(s => s.Kind == SurfaceKind.Court).Id.Value == "test:way:4",
-            "Only the pitch that names a sport is a court.");
-        Check.True(shapes.Single(s => s.Id.Value == "test:way:3").Kind == SurfaceKind.Turf, "A pitch without a sport tag is open turf.");
-        Check.True(IsLawn(SurfaceAt(world, 80f, 80f)), "Inside the stadium outline the lawn shows, not a court.");
-        Check.True(IsLawn(SurfaceAt(world, 340f, 0f)), "Inside the sports centre outline the lawn shows, not a court.");
-        Check.True(SurfaceAt(world, -275f, 0f) == GroundSurface.Turf, "An untagged pitch is turf, not a court.");
-        Check.True(SurfaceAt(world, -185f, 165f) == GroundSurface.Court, "A tagged court is still a court.");
+        AssertThat(shapes.All(s => s.Id.Value is not ("test:way:1" or "test:way:2"))).OverrideFailureMessage("A stadium or sports centre without a sport tag only encloses other features: it makes no ground shape.").IsTrue();
+        AssertThat(shapes.Count(s => s.Kind == SurfaceKind.Court) == 1 && shapes.Single(s => s.Kind == SurfaceKind.Court).Id.Value == "test:way:4").OverrideFailureMessage("Only the pitch that names a sport is a court.").IsTrue();
+        AssertThat(shapes.Single(s => s.Id.Value == "test:way:3").Kind == SurfaceKind.Turf).OverrideFailureMessage("A pitch without a sport tag is open turf.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 80f, 80f))).OverrideFailureMessage("Inside the stadium outline the lawn shows, not a court.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 340f, 0f))).OverrideFailureMessage("Inside the sports centre outline the lawn shows, not a court.").IsTrue();
+        AssertThat(SurfaceAt(world, -275f, 0f) == GroundSurface.Turf).OverrideFailureMessage("An untagged pitch is turf, not a court.").IsTrue();
+        AssertThat(SurfaceAt(world, -185f, 165f) == GroundSurface.Court).OverrideFailureMessage("A tagged court is still a court.").IsTrue();
     }
 
     [TestCase]
@@ -49,21 +49,20 @@ public sealed class GroundStadiumTests
         var world = TestWorld.Of([Entity("test:way:10", """{"leisure":"track","sport":"running"}""", """{"kind":"sport","sport":"running"}""", oval)]);
 
         var tracks = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Track).ToArray();
-        Check.True(tracks.Length == 1 && tracks[0].Rings is { Length: 2 }, "A running track polygon is one ring: an outer and an inner outline.");
+        AssertThat(tracks.Length == 1 && tracks[0].Rings is { Length: 2 }).OverrideFailureMessage("A running track polygon is one ring: an outer and an inner outline.").IsTrue();
         var layout = GroundLayout.Of(world);
-        Check.Close(-SportGround.TrackWidth * 0.5, layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f), 0.05,
-            "the middle of the ring is half a track width from both edges");
-        Check.True(layout.SignedDistance(SurfaceKind.Track, new(30f, 0f), 50f) is > -0.01f and < 0.01f, "The traced line is the inner edge of the ring.");
+        AssertThat(Math.Abs((double)(-SportGround.TrackWidth * 0.5) - (double)(layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f))) <= 0.05).OverrideFailureMessage($"the middle of the ring is half a track width from both edges: expected {-SportGround.TrackWidth * 0.5}, got {layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f)}.").IsTrue();
+        AssertThat(layout.SignedDistance(SurfaceKind.Track, new(30f, 0f), 50f) is > -0.01f and < 0.01f).OverrideFailureMessage("The traced line is the inner edge of the ring.").IsTrue();
 
         // Along the straight (x = 30 is the inner edge): the ring lies outside it, the infield inside is lawn.
-        Check.True(SurfaceAt(world, 34f, 0f) == GroundSurface.Track, "4 m outside the inner edge is track.");
-        Check.True(SurfaceAt(world, 37f, 0f) == GroundSurface.Track, "7 m outside the inner edge is still track.");
-        Check.True(IsLawn(SurfaceAt(world, 26f, 0f)), "Just inside the inner edge is infield lawn.");
-        Check.True(IsLawn(SurfaceAt(world, 0f, 0f)), "The infield is lawn, not track.");
-        Check.True(IsLawn(SurfaceAt(world, 41f, 0f)), "Beyond the track width the lawn returns.");
+        AssertThat(SurfaceAt(world, 34f, 0f) == GroundSurface.Track).OverrideFailureMessage("4 m outside the inner edge is track.").IsTrue();
+        AssertThat(SurfaceAt(world, 37f, 0f) == GroundSurface.Track).OverrideFailureMessage("7 m outside the inner edge is still track.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 26f, 0f))).OverrideFailureMessage("Just inside the inner edge is infield lawn.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 0f, 0f))).OverrideFailureMessage("The infield is lawn, not track.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 41f, 0f))).OverrideFailureMessage("Beyond the track width the lawn returns.").IsTrue();
         // Round the end (the semicircle is centred on z = 40 and reaches z = 70).
-        Check.True(SurfaceAt(world, 0f, 74f) == GroundSurface.Track, "The ring runs round the end of the oval.");
-        Check.True(IsLawn(SurfaceAt(world, 0f, 64f)) && IsLawn(SurfaceAt(world, 0f, 85f)), "Infield and outside of the end are lawn.");
+        AssertThat(SurfaceAt(world, 0f, 74f) == GroundSurface.Track).OverrideFailureMessage("The ring runs round the end of the oval.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 0f, 64f)) && IsLawn(SurfaceAt(world, 0f, 85f))).OverrideFailureMessage("Infield and outside of the end are lawn.").IsTrue();
     }
 
     [TestCase]
@@ -71,7 +70,7 @@ public sealed class GroundStadiumTests
     {
         // leisure=track without any sport tag is a track too.
         var bare = TestWorld.Of([Entity("test:way:11", """{"leisure":"track"}""", """{"kind":"sport"}""", Oval(0f, 0f, 40f, 30f))]);
-        Check.True(GroundSources.Read(bare).Shapes.Count(s => s.Kind == SurfaceKind.Track) == 1, "leisure=track is a running track.");
+        AssertThat(GroundSources.Read(bare).Shapes.Count(s => s.Kind == SurfaceKind.Track) == 1).OverrideFailureMessage("leisure=track is a running track.").IsTrue();
 
         // A track mapped as a closed line is a band along it that closes on itself.
         var points = Oval(0f, 0f, 40f, 30f).Outer;
@@ -79,14 +78,14 @@ public sealed class GroundStadiumTests
             new PolylineGeometry(new Polyline([.. points, points[0]])))
         { Props = Json("""{"kind":"sport","sport":"running"}""") };
         var shape = GroundSources.Read(TestWorld.Of([line])).Shapes.Single(s => s.Kind == SurfaceKind.Track);
-        Check.True(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1], "A closed track line stays closed.");
-        Check.Close(SportGround.TrackWidth * 0.5, shape.HalfWidth, 0.01, "track line half width");
+        AssertThat(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1]).OverrideFailureMessage("A closed track line stays closed.").IsTrue();
+        AssertThat(Math.Abs((double)(SportGround.TrackWidth * 0.5) - (double)(shape.HalfWidth)) <= 0.01).OverrideFailureMessage($"track line half width: expected {SportGround.TrackWidth * 0.5}, got {shape.HalfWidth}.").IsTrue();
 
         // A concave outline cannot be offset outward: it falls back to a band centred on the outline, never a filled area.
         var dent = new PolygonRings([new(0f, 0f), new(60f, 0f), new(60f, 40f), new(40f, 40f), new(40f, 20f), new(20f, 20f), new(20f, 40f), new(0f, 40f)]);
         var concave = TestWorld.Of([Entity("test:way:13", """{"leisure":"track","sport":"running"}""", """{"kind":"sport","sport":"running"}""", dent)]);
         var fallback = GroundSources.Read(concave).Shapes.Single(s => s.Kind == SurfaceKind.Track);
-        Check.True(fallback.Line is not null && fallback.Rings is null, "A concave track polygon becomes a band along its outline.");
+        AssertThat(fallback.Line is not null && fallback.Rings is null).OverrideFailureMessage("A concave track polygon becomes a band along its outline.").IsTrue();
     }
 
     [TestCase]
@@ -94,17 +93,17 @@ public sealed class GroundStadiumTests
     {
         var pitch = Pitch(0f, 0f, 108f, 70f, 8f);
         var world = TestWorld.Of([Entity("test:way:20", """{"leisure":"pitch","sport":"soccer"}""", """{"kind":"sport","sport":"soccer"}""", pitch.Rings)]);
-        Check.True(GroundSources.Read(world).Shapes.Single().Kind == SurfaceKind.Turf, "A soccer pitch is turf.");
-        Check.True(SurfaceAt(world, pitch.Centre.X + 20f * pitch.Across.X, pitch.Centre.Y + 20f * pitch.Across.Y) == GroundSurface.Turf, "The pitch is turf.");
+        AssertThat(GroundSources.Read(world).Shapes.Single().Kind == SurfaceKind.Turf).OverrideFailureMessage("A soccer pitch is turf.").IsTrue();
+        AssertThat(SurfaceAt(world, pitch.Centre.X + 20f * pitch.Across.X, pitch.Centre.Y + 20f * pitch.Across.Y) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
 
         var layout = GroundLayout.Of(world);
         var quads = QuadsNear(layout, 0f, 0f, 120f);
-        Check.True(quads.Count > 100, $"A pitch carries over a hundred line strips (straight lines and circle chords), got {quads.Count}.");
-        Check.True(quads.All(q => q.Color == GroundColor.Marking && q.Level == Section.PavingY), "Pitch lines are white and lie on the turf level.");
+        AssertThat(quads.Count > 100).OverrideFailureMessage($"A pitch carries over a hundred line strips (straight lines and circle chords), got {quads.Count}.").IsTrue();
+        AssertThat(quads.All(q => q.Color == GroundColor.Marking && q.Level == Section.PavingY)).OverrideFailureMessage("Pitch lines are white and lie on the turf level.").IsTrue();
         // No line leaves the turf.
         foreach (var q in quads)
             foreach (var corner in new[] { q.A, q.B, q.C, q.D })
-                Check.True(layout.SignedDistance(SurfaceKind.Turf, corner, 5f) < 0f, $"A pitch line corner {corner} lies outside the turf.");
+                AssertThat(layout.SignedDistance(SurfaceKind.Turf, corner, 5f) < 0f).OverrideFailureMessage($"A pitch line corner {corner} lies outside the turf.").IsTrue();
 
         bool Covered(float u, float v) => Covers(quads, pitch.Centre + pitch.Along * u + pitch.Across * v);
         // The lines are laid out on the rectangle inside the outer line, which lies inside the edging band of the boundary.
@@ -114,30 +113,30 @@ public sealed class GroundStadiumTests
         var su = 2f * hl / 105f;
         var sv = 2f * hw / 68f;
         var radius = 9.15f * (su + sv) * 0.5f;
-        Check.True(Covered(0f, 10f) && Covered(0f, -25f), "The halfway line runs across the pitch.");
-        Check.True(!Covered(5f, 10f) && !Covered(-5f, -10f), "Nothing else crosses the middle.");
-        Check.True(Covered(radius, 0f) && Covered(-radius, 0f), "The centre circle crosses the long axis at its radius.");
-        Check.True(Covered(0f, 0f), "The kick-off spot.");
-        Check.True(Covered(hl, 0f) && Covered(-hl, 0f) && Covered(0f, hw) && Covered(0f, -hw), "The outer line.");
+        AssertThat(Covered(0f, 10f) && Covered(0f, -25f)).OverrideFailureMessage("The halfway line runs across the pitch.").IsTrue();
+        AssertThat(!Covered(5f, 10f) && !Covered(-5f, -10f)).OverrideFailureMessage("Nothing else crosses the middle.").IsTrue();
+        AssertThat(Covered(radius, 0f) && Covered(-radius, 0f)).OverrideFailureMessage("The centre circle crosses the long axis at its radius.").IsTrue();
+        AssertThat(Covered(0f, 0f)).OverrideFailureMessage("The kick-off spot.").IsTrue();
+        AssertThat(Covered(hl, 0f) && Covered(-hl, 0f) && Covered(0f, hw) && Covered(0f, -hw)).OverrideFailureMessage("The outer line.").IsTrue();
         foreach (var end in new[] { -1f, 1f })
         {
             var goal = end * hl;
-            Check.True(Covered(goal - end * 16.5f * su, 0f), "The edge of the penalty area, in front of goal.");
-            Check.True(Covered(goal - end * 5.5f * su, 0f), "The edge of the goal area.");
-            Check.True(Covered(goal - end * 11f * su, 0f), "The penalty spot.");
-            Check.True(!Covered(goal - end * 8.25f * su, 0f), "Between the goal area and the penalty spot there is no line.");
-            Check.True(Covered(goal - end * 8.25f * su, 20.16f * sv) && Covered(goal - end * 8.25f * su, -20.16f * sv), "The sides of the penalty area.");
-            Check.True(Covered(goal - end * 11f * su - end * radius, 0f), "The penalty arc bows out past the area edge.");
+            AssertThat(Covered(goal - end * 16.5f * su, 0f)).OverrideFailureMessage("The edge of the penalty area, in front of goal.").IsTrue();
+            AssertThat(Covered(goal - end * 5.5f * su, 0f)).OverrideFailureMessage("The edge of the goal area.").IsTrue();
+            AssertThat(Covered(goal - end * 11f * su, 0f)).OverrideFailureMessage("The penalty spot.").IsTrue();
+            AssertThat(!Covered(goal - end * 8.25f * su, 0f)).OverrideFailureMessage("Between the goal area and the penalty spot there is no line.").IsTrue();
+            AssertThat(Covered(goal - end * 8.25f * su, 20.16f * sv) && Covered(goal - end * 8.25f * su, -20.16f * sv)).OverrideFailureMessage("The sides of the penalty area.").IsTrue();
+            AssertThat(Covered(goal - end * 11f * su - end * radius, 0f)).OverrideFailureMessage("The penalty arc bows out past the area edge.").IsTrue();
         }
 
         // Pitch lines are real decal geometry in the tile that holds the pitch.
         var output = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), LodLevel.L0);
         var marking = output.Meshes.Where(m => m.Material.Spec.Lit.Value == "ground.marking.lit").ToArray();
-        Check.True(marking.Length > 0 && marking.All(m => m.Flags!.All(f => (f & GroundPalette.FlagDecal) != 0)), "Pitch lines are decals.");
+        AssertThat(marking.Length > 0 && marking.All(m => m.Flags!.All(f => (f & GroundPalette.FlagDecal) != 0))).OverrideFailureMessage("Pitch lines are decals.").IsTrue();
         foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
         foreach (var mesh in marking)
             for (var v = 0; v < mesh.Position.Length / 3; v++)
-                Check.Close(Section.PavingY + Section.DecalLift, mesh.Position[3 * v + 1], 0.001, "pitch line height above flat ground");
+                AssertThat(Math.Abs((double)(Section.PavingY + Section.DecalLift) - (double)(mesh.Position[3 * v + 1])) <= 0.001).OverrideFailureMessage($"pitch line height above flat ground: expected {Section.PavingY + Section.DecalLift}, got {mesh.Position[3 * v + 1]}.").IsTrue();
     }
 
     [TestCase]
@@ -152,8 +151,8 @@ public sealed class GroundStadiumTests
             Entity("test:way:31", """{"sport":"soccer"}""", """{"kind":"sport","sport":"soccer"}""", square.Rings),
             Entity("test:way:32", """{"sport":"soccer"}""", """{"kind":"sport","sport":"soccer"}""", trapezoid),
         ]);
-        Check.True(GroundSources.Read(world).Shapes.Count(s => s.Kind == SurfaceKind.Turf) == 3, "All three are still turf.");
-        Check.True(QuadsNear(GroundLayout.Of(world), 100f, 100f, 400f).Count == 0, "Only rectangles of football proportions are marked.");
+        AssertThat(GroundSources.Read(world).Shapes.Count(s => s.Kind == SurfaceKind.Turf) == 3).OverrideFailureMessage("All three are still turf.").IsTrue();
+        AssertThat(QuadsNear(GroundLayout.Of(world), 100f, 100f, 400f).Count == 0).OverrideFailureMessage("Only rectangles of football proportions are marked.").IsTrue();
     }
 
     [TestCase]
@@ -170,12 +169,12 @@ public sealed class GroundStadiumTests
         ]);
         var layout = GroundLayout.Of(world);
         var quads = QuadsNear(layout, 0f, 0f, 160f);
-        Check.True(quads.Count > 100, "The pitch inside the track is marked.");
-        Check.True(quads.All(q => layout.SignedDistance(SurfaceKind.Track, (q.A + q.C) * 0.5f, 5f) > 0f), "No pitch line lies on the track ring.");
-        Check.True(SurfaceAt(world, 0f, 20f) == GroundSurface.Turf, "The pitch is turf.");
-        Check.True(IsLawn(SurfaceAt(world, 36f, 0f)), "Between the pitch and the track the infield is lawn.");
-        Check.True(SurfaceAt(world, 44f, 0f) == GroundSurface.Track, "The ring starts at the traced line, 40 m from the centre.");
-        Check.True(IsLawn(SurfaceAt(world, 60f, 60f)), "Inside the stadium outline, outside the track, the lawn shows.");
+        AssertThat(quads.Count > 100).OverrideFailureMessage("The pitch inside the track is marked.").IsTrue();
+        AssertThat(quads.All(q => layout.SignedDistance(SurfaceKind.Track, (q.A + q.C) * 0.5f, 5f) > 0f)).OverrideFailureMessage("No pitch line lies on the track ring.").IsTrue();
+        AssertThat(SurfaceAt(world, 0f, 20f) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 36f, 0f))).OverrideFailureMessage("Between the pitch and the track the infield is lawn.").IsTrue();
+        AssertThat(SurfaceAt(world, 44f, 0f) == GroundSurface.Track).OverrideFailureMessage("The ring starts at the traced line, 40 m from the centre.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 60f, 60f))).OverrideFailureMessage("Inside the stadium outline, outside the track, the lawn shows.").IsTrue();
     }
 
     [TestCase]
@@ -184,20 +183,20 @@ public sealed class GroundStadiumTests
         var world = WorldModelLoader.Load(new("qingshuihe"), RealFiles()).World;
         var shapes = GroundSources.Read(world).Shapes;
         // The stadium outline has no sport tag and no surface of its own; the sports centre outline likewise.
-        Check.True(shapes.All(s => s.Id.Value is not ("qsh:way:808264788" or "qsh:way:949704496")), "Stadium and sports-centre outlines make no shapes.");
+        AssertThat(shapes.All(s => s.Id.Value is not ("qsh:way:808264788" or "qsh:way:949704496"))).OverrideFailureMessage("Stadium and sports-centre outlines make no shapes.").IsTrue();
         var track = shapes.Single(s => s.Id.Value == "qsh:way:808264789");
-        Check.True(track.Kind == SurfaceKind.Track && track.Rings is { Length: 2 }, "The running track is a ring.");
+        AssertThat(track.Kind == SurfaceKind.Track && track.Rings is { Length: 2 }).OverrideFailureMessage("The running track is a ring.").IsTrue();
 
-        Check.True(SurfaceAt(world, 84f, 775f) == GroundSurface.Turf, "The pitch is turf.");
-        Check.True(IsLawn(SurfaceAt(world, 44.5f, 775f)), "Between the pitch and the track the infield is lawn.");
+        AssertThat(SurfaceAt(world, 84f, 775f) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 44.5f, 775f))).OverrideFailureMessage("Between the pitch and the track the infield is lawn.").IsTrue();
         // The traced line is the inner edge: its west side is at x = 40 and its east side at x = 125 along z = 770.
-        Check.True(SurfaceAt(world, 36.5f, 770f) == GroundSurface.Track, "The ring lies outside the traced line, west side.");
-        Check.True(SurfaceAt(world, 129.5f, 770f) == GroundSurface.Track, "The ring lies outside the traced line, east side.");
-        Check.True(IsLawn(SurfaceAt(world, 170f, 780f)), "The grass east of the track is lawn, not a court.");
-        Check.True(IsLawn(SurfaceAt(world, 0f, 760f)), "West of the track, inside the outline, is lawn.");
+        AssertThat(SurfaceAt(world, 36.5f, 770f) == GroundSurface.Track).OverrideFailureMessage("The ring lies outside the traced line, west side.").IsTrue();
+        AssertThat(SurfaceAt(world, 129.5f, 770f) == GroundSurface.Track).OverrideFailureMessage("The ring lies outside the traced line, east side.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 170f, 780f))).OverrideFailureMessage("The grass east of the track is lawn, not a court.").IsTrue();
+        AssertThat(IsLawn(SurfaceAt(world, 0f, 760f))).OverrideFailureMessage("West of the track, inside the outline, is lawn.").IsTrue();
 
         var quads = QuadsNear(GroundLayout.Of(world), 84f, 775f, 70f);
-        Check.True(quads.Count > 100, $"The stadium pitch has its lines, got {quads.Count} strips.");
+        AssertThat(quads.Count > 100).OverrideFailureMessage($"The stadium pitch has its lines, got {quads.Count} strips.").IsTrue();
     }
 
     // ---------------------------------------------------------------- helpers

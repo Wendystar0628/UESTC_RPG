@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -29,30 +30,25 @@ public sealed class HidePartRealCampusTests
             new HidePartOp(four, "osm:relation:11665642", "approved duplicate source removal fixture")
         ]), ContractJson.Options);
         var after = WorldModelLoader.Load(new("qingshuihe"), files).World;
-        Require(after.Features.Count == before.Features.Count, "Source-only removal deleted an entity identity.");
-        Require(after.Features.Values.Sum(feature => feature.Parts.Count) == before.Features.Values.Sum(feature => feature.Parts.Count) - 3,
-            "Unexpected source parts were removed.");
+        AssertThat(after.Features.Count == before.Features.Count).OverrideFailureMessage("Source-only removal deleted an entity identity.").IsTrue();
+        AssertThat(after.Features.Values.Sum(feature => feature.Parts.Count) == before.Features.Values.Sum(feature => feature.Parts.Count) - 3).OverrideFailureMessage("Unexpected source parts were removed.").IsTrue();
         var remainingOne = after.Features[one];
-        Require(remainingOne.Parts.Single().SourceId == "osm:way:691679140" && remainingOne.Height == 3.9f && remainingOne.Storeys == 1,
-            "Building 1 did not retain its one-storey source part.");
+        AssertThat(remainingOne.Parts.Single().SourceId == "osm:way:691679140" && remainingOne.Height == 3.9f && remainingOne.Storeys == 1).OverrideFailureMessage("Building 1 did not retain its one-storey source part.").IsTrue();
         var remainingFour = after.Features[four];
-        Require(remainingFour.Parts.Select(part => part.SourceId).SequenceEqual(
-            new[] { "osm:relation:11665640", "osm:way:828726368", "osm:way:828726369" }, StringComparer.Ordinal),
-            "Research Building 4 lost or retained the wrong source pieces.");
-        Require(remainingFour.Height == 7.8f && remainingFour.Storeys == 2, "Research Building 4 retained the removed pieces' height.");
+        AssertThat(remainingFour.Parts.Select(part => part.SourceId).SequenceEqual(
+            new[] { "osm:relation:11665640", "osm:way:828726368", "osm:way:828726369" }, StringComparer.Ordinal)).OverrideFailureMessage("Research Building 4 lost or retained the wrong source pieces.").IsTrue();
+        AssertThat(remainingFour.Height == 7.8f && remainingFour.Storeys == 2).OverrideFailureMessage("Research Building 4 retained the removed pieces' height.").IsTrue();
         foreach (var id in new[] { one, four })
         {
             var old = before.Features[id]; var current = after.Features[id];
-            Require(current.Name == old.Name && current.Zone == old.Zone && current.Family == old.Family &&
-                current.Facade == old.Facade && current.Props?.GetRawText() == old.Props?.GetRawText(), "Parent properties changed.");
+            AssertThat(current.Name == old.Name && current.Zone == old.Zone && current.Family == old.Family &&
+                current.Facade == old.Facade && current.Props?.GetRawText() == old.Props?.GetRawText()).OverrideFailureMessage("Parent properties changed.").IsTrue();
             foreach (var part in current.Parts)
-                Require(Canonical(part) == Canonical(old.Parts.Single(previous => previous.SourceId == part.SourceId)), "A surviving real source part changed.");
+                AssertThat(Canonical(part) == Canonical(old.Parts.Single(previous => previous.SourceId == part.SourceId))).OverrideFailureMessage("A surviving real source part changed.").IsTrue();
         }
         foreach (var id in new[] { wingA, wingB })
-            Require(Canonical(after.Features[id]) == Canonical(before.Features[id]), "An independent A/B entity or one of its parts changed.");
+            AssertThat(Canonical(after.Features[id]) == Canonical(before.Features[id])).OverrideFailureMessage("An independent A/B entity or one of its parts changed.").IsTrue();
     }
 
     private static string Canonical<T>(T value) => JsonSerializer.Serialize(value, ContractJson.Options);
-    private static void Require(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
 }

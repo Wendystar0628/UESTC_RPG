@@ -12,6 +12,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class BuildingTraceTests
 {
@@ -34,20 +36,17 @@ public sealed class BuildingTraceTests
         var module = new BuildingsModule();
         var plans = BuildingSet.For(world, 2u).Plans;
         var mine = plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
-        Require(plans.Count == 6 && mine.Length == 5 && mine.All(p => p.Key != "t:claimed"), "the claimed building is a plan but not WP-14's");
+        AssertThat(plans.Count == 6 && mine.Length == 5 && mine.All(p => p.Key != "t:claimed")).OverrideFailureMessage("Expected: " + ("the claimed building is a plan but not WP-14's")).IsTrue();
 
         // A cell with two buildings, and the coarser cells with more of them.
         var home = mine.Single(p => p.Key == "t:dorm").Tile(LodLevel.L0);
         var traced = module.TraceSources(ctx, LodLevel.L0).ToArray();
         var cell = AssertTraceMatches(module, ctx, home, LodLevel.L0, traced);
-        Require(cell.Select(t => t.SourceId).SequenceEqual(["building/t:dorm/t:dorm", "building/t:lab/t:lab"]),
-            "two buildings share the dorm's L0 cell, the claimed neighbour in it is not traced: " + string.Join(", ", cell.Select(t => t.SourceId)));
-        Require(!cell[0].Colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed) && cell[0].Colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 }),
-            "the dorm's colliders leave its open door clear and retain its flight of steps");
-        Require(ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"M42\"", StringComparison.Ordinal)) && ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"Y1\"", StringComparison.Ordinal)),
-            "the dumps reach into the box transforms and the wall heights");
-        Require(AssertTraceMatches(module, ctx, plans.Single(p => p.Key == "t:dorm").Tile(LodLevel.L2), LodLevel.L2).Count == 5, "all five buildings share the L2 cell");
-        Require(AssertTraceMatches(module, ctx, home, LodLevel.L0, traced).Count == 2 && AssertTraceMatches(module, ctx, new TileKey(7, 7), LodLevel.L0, traced).Count == 0, "an empty cell has no source");
+        AssertThat(cell.Select(t => t.SourceId).SequenceEqual(["building/t:dorm/t:dorm", "building/t:lab/t:lab"])).OverrideFailureMessage("Expected: " + ("two buildings share the dorm's L0 cell, the claimed neighbour in it is not traced: " + string.Join(", ", cell.Select(t => t.SourceId)))).IsTrue();
+        AssertThat(!cell[0].Colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed) && cell[0].Colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 7 })).OverrideFailureMessage("Expected: " + ("the dorm's colliders leave its open door clear and retain its flight of steps")).IsTrue();
+        AssertThat(ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"M42\"", StringComparison.Ordinal)) && ColliderDumps(cell[0].Colliders).Any(d => d.Contains("\"Y1\"", StringComparison.Ordinal))).OverrideFailureMessage("Expected: " + ("the dumps reach into the box transforms and the wall heights")).IsTrue();
+        AssertThat(AssertTraceMatches(module, ctx, plans.Single(p => p.Key == "t:dorm").Tile(LodLevel.L2), LodLevel.L2).Count == 5).OverrideFailureMessage("Expected: " + ("all five buildings share the L2 cell")).IsTrue();
+        AssertThat(AssertTraceMatches(module, ctx, home, LodLevel.L0, traced).Count == 2 && AssertTraceMatches(module, ctx, new TileKey(7, 7), LodLevel.L0, traced).Count == 0).OverrideFailureMessage("Expected: " + ("an empty cell has no source")).IsTrue();
 
         var ids = new List<string>();
         foreach (var lod in Levels)
@@ -56,25 +55,25 @@ public sealed class BuildingTraceTests
             foreach (var tile in mine.Select(p => p.Tile(lod)).Distinct())
             {
                 var traces = AssertTraceMatches(module, ctx, tile, lod, levelSources);
-                Require(traces.Count == mine.Count(p => p.Tile(lod) == tile), $"{lod}: one source per building of the cell");
+                AssertThat(traces.Count == mine.Count(p => p.Tile(lod) == tile)).OverrideFailureMessage("Expected: " + ($"{lod}: one source per building of the cell")).IsTrue();
                 if (lod == LodLevel.L0) ids.AddRange(traces.Select(t => t.SourceId));
             }
         }
-        Require(ids.Count == 5 && ids.Distinct(StringComparer.Ordinal).Count() == 5, "every building has its own source ID over the map");
+        AssertThat(ids.Count == 5 && ids.Distinct(StringComparer.Ordinal).Count() == 5).OverrideFailureMessage("Expected: " + ("every building has its own source ID over the map")).IsTrue();
 
         // The IDs and what they stand for do not depend on the order the features were declared in.
         var shuffled = Prepared(Ctx(World(Entrances(door), Falling(-1f, 0.9f), [.. Enumerable.Reverse(features)]), 2u, claims: ["t:claimed"]));
         {
             var a = traced.ToDictionary(t => t.SourceId);
             var b = module.TraceSources(shuffled, LodLevel.L0).ToDictionary(t => t.SourceId);
-            Require(a.Keys.Order(StringComparer.Ordinal).SequenceEqual(b.Keys.Order(StringComparer.Ordinal)) &&
+            AssertThat(a.Keys.Order(StringComparer.Ordinal).SequenceEqual(b.Keys.Order(StringComparer.Ordinal)) &&
                 a.All(p => p.Value.Output.Meshes.Count == b[p.Key].Output.Meshes.Count && p.Value.Output.Meshes.Zip(b[p.Key].Output.Meshes).All(m => SameBundle(m.First, m.Second)) &&
-                    ColliderDumps(p.Value.Colliders).SequenceEqual(ColliderDumps(b[p.Key].Colliders))), "same sources, same geometry");
+                    ColliderDumps(p.Value.Colliders).SequenceEqual(ColliderDumps(b[p.Key].Colliders)))).OverrideFailureMessage("Expected: " + ("same sources, same geometry")).IsTrue();
         }
 
         // Enumeration reads the map's one window allocation; an empty world needs none (as Build).
-        Expect<InvalidOperationException>(() => module.TraceSources(Ctx(world, 2u), LodLevel.L0).ToArray(), "no snapshot, no windows");
-        Require(!module.TraceSources(Ctx(World(), 2u), LodLevel.L0).Any(), "nothing to number in an empty world");
+        AssertThrown(() => module.TraceSources(Ctx(world, 2u), LodLevel.L0).ToArray()).IsInstanceOf<InvalidOperationException>();
+        AssertThat(!module.TraceSources(Ctx(World(), 2u), LodLevel.L0).Any()).OverrideFailureMessage("Expected: " + ("nothing to number in an empty world")).IsTrue();
     }
 
     [TestCase]
@@ -84,13 +83,13 @@ public sealed class BuildingTraceTests
         var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
         var module = new BuildingsModule();
         var mine = BuildingSet.For(real, 1u).Plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();
-        Require(mine.Select(p => $"building/{p.Id.Value}/{p.Key}").Distinct(StringComparer.Ordinal).Count() == mine.Length, "a source ID per building part over the map");
+        AssertThat(mine.Select(p => $"building/{p.Id.Value}/{p.Key}").Distinct(StringComparer.Ordinal).Count() == mine.Length).OverrideFailureMessage("Expected: " + ("a source ID per building part over the map")).IsTrue();
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
         {
             // The busiest cell of the level (most buildings, then the lowest cell).
             var busiest = mine.GroupBy(p => p.Tile(lod)).OrderByDescending(g => g.Count()).ThenBy(g => g.Key.X).ThenBy(g => g.Key.Z).First();
             var traces = AssertTraceMatches(module, ctx, busiest.Key, lod, module.TraceSources(ctx, lod).ToArray());
-            Require(traces.Count == busiest.Count() && (lod != LodLevel.L0 || traces.Count > 1), $"{lod}: every unclaimed building of the busiest cell, {traces.Count}");
+            AssertThat(traces.Count == busiest.Count() && (lod != LodLevel.L0 || traces.Count > 1)).OverrideFailureMessage("Expected: " + ($"{lod}: every unclaimed building of the busiest cell, {traces.Count}")).IsTrue();
         }
     }
 
@@ -106,23 +105,20 @@ public sealed class BuildingTraceTests
         var plans = set.Plans.Where(p => BuildingsModule.Unclaimed(ctx, p) && p.Tile(lod) == tile).ToArray();
         var ids = plans.Select(p => $"building/{p.Id.Value}/{p.Key}").ToHashSet(StringComparer.Ordinal);
         IReadOnlyList<ContentSourceTrace> traces = (allSources ?? module.TraceSources(ctx, lod).ToArray()).Where(t => ids.Contains(t.SourceId)).ToArray();
-        Require(traces.Count == plans.Length && traces.All(t => plans.Any(p => p.Id == t.Feature && t.SourceId == $"building/{p.Id.Value}/{p.Key}")), $"{cell}: actual source feature and stable ID");
-        Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Count, $"{cell}: source IDs are unique");
+        AssertThat(traces.Count == plans.Length && traces.All(t => plans.Any(p => p.Id == t.Feature && t.SourceId == $"building/{p.Id.Value}/{p.Key}"))).OverrideFailureMessage("Expected: " + ($"{cell}: actual source feature and stable ID")).IsTrue();
+        AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Count).OverrideFailureMessage("Expected: " + ($"{cell}: source IDs are unique")).IsTrue();
         var meshes = traces.SelectMany(t => t.Output.Meshes).ToArray();
-        Require(meshes.Length == built.Meshes.Count && meshes.Zip(built.Meshes).All(m => SameBundle(m.First, m.Second)), $"{cell}: the traced meshes are the Build meshes, in order");
-        Require(traces.SelectMany(t => t.Output.Parts).SequenceEqual(built.Parts) && traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.Instances),
-            $"{cell}: the traced parts and instances are the Build ones");
+        AssertThat(meshes.Length == built.Meshes.Count && meshes.Zip(built.Meshes).All(m => SameBundle(m.First, m.Second))).OverrideFailureMessage("Expected: " + ($"{cell}: the traced meshes are the Build meshes, in order")).IsTrue();
+        AssertThat(traces.SelectMany(t => t.Output.Parts).SequenceEqual(built.Parts) && traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.Instances)).OverrideFailureMessage("Expected: " + ($"{cell}: the traced parts and instances are the Build ones")).IsTrue();
         foreach (var trace in traces)
         {
             var plan = plans.Single(p => trace.SourceId == $"building/{p.Id.Value}/{p.Key}");
             var footprint = trace.OccupiedContours.Single();
-            Require(footprint.Outer.SequenceEqual(plan.SkinOuter.Points) &&
+            AssertThat(footprint.Outer.SequenceEqual(plan.SkinOuter.Points) &&
                 footprint.Holes.Count == plan.SkinHoles.Count &&
-                footprint.Holes.Zip(plan.SkinHoles).All(h => h.First.SequenceEqual(h.Second.Points)),
-                $"{cell}: source footprint follows the generated wall skin, including courtyard holes");
-            Require(!ReferenceEquals(footprint.Outer, plan.SkinOuter.Points) &&
-                footprint.Holes.Zip(plan.SkinHoles).All(h => !ReferenceEquals(h.First, h.Second.Points)),
-                $"{cell}: source footprint is a snapshot of the plan");
+                footprint.Holes.Zip(plan.SkinHoles).All(h => h.First.SequenceEqual(h.Second.Points))).OverrideFailureMessage("Expected: " + ($"{cell}: source footprint follows the generated wall skin, including courtyard holes")).IsTrue();
+            AssertThat(!ReferenceEquals(footprint.Outer, plan.SkinOuter.Points) &&
+                footprint.Holes.Zip(plan.SkinHoles).All(h => !ReferenceEquals(h.First, h.Second.Points))).OverrideFailureMessage("Expected: " + ($"{cell}: source footprint is a snapshot of the plan")).IsTrue();
         }
         var cells = lod == LodLevel.L0 ? new[] { tile } : plans.Select(p => p.Tile(LodLevel.L0)).Distinct().ToArray();
         var expected = ColliderDumps(cells.SelectMany(c => module.Collide(ctx, c)));
@@ -132,7 +128,7 @@ public sealed class BuildingTraceTests
             expected.Sort(StringComparer.Ordinal);
             actual.Sort(StringComparer.Ordinal);
         }
-        Require(actual.SequenceEqual(expected), $"{cell}: the traced colliders are the Collide colliders ({actual.Count} against {expected.Count})");
+        AssertThat(actual.SequenceEqual(expected)).OverrideFailureMessage("Expected: " + ($"{cell}: the traced colliders are the Collide colliders ({actual.Count} against {expected.Count})")).IsTrue();
         return traces;
     }
 

@@ -5,6 +5,7 @@ using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Quality.Settings;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -128,7 +129,7 @@ public sealed class QualityApplicationTests
             var reveals = runtime.RevealCount;
             var saves = store.SaveCount;
             service.Unbind(runtime);
-            await ExpectCanceled(pending);
+            await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
             service.Tick(20);
             if (runtime.DispatchCount != dispatches || runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != 0)
                 throw new InvalidOperationException($"Closing at {boundary} allowed a late publish, rollback, reveal or save.");
@@ -168,7 +169,7 @@ public sealed class QualityApplicationTests
             {
                 if ((await pending).Status != ApplyStatus.Deferred) throw new InvalidOperationException("Transition request did not defer.");
             }
-            else await ExpectCanceled(pending);
+            else await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
             service.Tick(20);
             if (runtime.DispatchCount != dispatches || store.SaveCount != 0)
                 throw new InvalidOperationException("Unbound service ran its queued application.");
@@ -192,7 +193,7 @@ public sealed class QualityApplicationTests
             var pending = initializing ? service.Initialize(BootPhase.AfterMapWarm, Context()) :
                 service.Apply(QualityCatalog.Profile(QualityPreset.Ultra), ApplyOrigin.CommandLine);
             service.Unbind(runtime);
-            await ExpectCanceled(pending);
+            await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
             if (!token.IsCancellationRequested) throw new InvalidOperationException("Unbinding left the runtime lifetime open.");
             runtime.Held.TrySetResult(.1);
             await Task.Yield();
@@ -210,17 +211,10 @@ public sealed class QualityApplicationTests
         {
             var pending = runtime.NextFrame(CancellationToken.None);
             runtime._ExitTree();
-            await ExpectCanceled(pending);
-            await ExpectCanceled(runtime.NextFrame(CancellationToken.None));
+            await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
+            await AssertThrown(runtime.NextFrame(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
         }
         finally { runtime.Free(); }
-    }
-
-    private static async Task ExpectCanceled(Task task)
-    {
-        try { await task.WaitAsync(TimeSpan.FromSeconds(5)); }
-        catch (OperationCanceledException) { return; }
-        throw new InvalidOperationException("Runtime shutdown did not cancel its request.");
     }
 
     private static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)

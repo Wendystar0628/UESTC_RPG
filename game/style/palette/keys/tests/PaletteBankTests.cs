@@ -2,6 +2,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Style.Palette.Keys;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Style.Palette.Keys.Tests;
 
@@ -17,7 +18,7 @@ public sealed class PaletteBankTests
     {
         var (script, catalog) = Load();
         var full = new PaletteComposer(script, catalog);
-        Check(full.Pixels.Length == PaletteLayout.ByteCount, "The palette must be 256×68 RGBA8.");
+        AssertThat(full.Pixels.Length == PaletteLayout.ByteCount).OverrideFailureMessage("The palette must be 256×68 RGBA8.").IsTrue();
         foreach (var (clock, season) in new[] { (17.5, Season.Autumn), (12.0, Season.Summer), (6.0, Season.Spring), (21.0, Season.Winter) })
         {
             var w = script.EvaluateWorld(clock, (double)season, null, default);
@@ -30,14 +31,13 @@ public sealed class PaletteBankTests
                 {
                     var (col, texelRow) = PaletteLayout.FrameTexel(e.Index, row);
                     var expectedRow = e.Index.Value < PaletteLayout.LegacyCapacity ? row : PaletteLayout.LegacyHeight + row;
-                    Check(texelRow == expectedRow && col == (e.Index.Value & 255), $"{e.Token.Value} maps to the wrong texel.");
-                    Check(full.Pixels[(texelRow * PaletteLayout.Width + col) * 4 + 3] == 255, $"{e.Token.Value} row {row} was not written at {season} {clock}.");
+                    AssertThat(texelRow == expectedRow && col == (e.Index.Value & 255)).OverrideFailureMessage($"{e.Token.Value} maps to the wrong texel.").IsTrue();
+                    AssertThat(full.Pixels[(texelRow * PaletteLayout.Width + col) * 4 + 3] == 255).OverrideFailureMessage($"{e.Token.Value} row {row} was not written at {season} {clock}.").IsTrue();
                 }
                 if (e is { Seasonal: true, Role: PaletteRole.Lit, Row: { } seasonalRow })
                     for (var row = seasonalRow; row <= seasonalRow + 1; row++)
                         for (var sample = 0; sample < PaletteLayout.SeasonSampleCount; sample++)
-                            Check(full.Pixels[(row * PaletteLayout.Width + sample) * 4 + 3] == 255,
-                                $"{e.Token.Value} seasonal row {row} sample {sample} was not written at {season} {clock}.");
+                            AssertThat(full.Pixels[(row * PaletteLayout.Width + sample) * 4 + 3] == 255).OverrideFailureMessage($"{e.Token.Value} seasonal row {row} sample {sample} was not written at {season} {clock}.").IsTrue();
             }
         }
         // The pair derives like a legacy pair of the same class and albedo: lit brighter than shade under the default frame.
@@ -47,7 +47,7 @@ public sealed class PaletteBankTests
         {
             var lit = Texel(full, e.Index.Value);
             var shade = Texel(full, e.Index.Value + 1);
-            Check(lit.L > shade.L, $"{e.Token.Value}: lit L {lit.L:F3} is not above shade L {shade.L:F3}.");
+            AssertThat(lit.L > shade.L).OverrideFailureMessage($"{e.Token.Value}: lit L {lit.L:F3} is not above shade L {shade.L:F3}.").IsTrue();
         }
     }
 
@@ -83,10 +83,5 @@ public sealed class PaletteBankTests
             extensions.Add(new(new PaletteToken($"test.bank{lit}.shade"), new PaletteIndex(lit + 1), albedo, cls, false, PaletteRole.Shade));
         }
         return (script, new PaletteCatalog(new PaletteRegistry(entries), extensions));
-    }
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }

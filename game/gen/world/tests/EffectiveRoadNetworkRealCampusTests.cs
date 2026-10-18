@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Pipeline.Map;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -18,7 +19,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         var expected = loaded.Features.Values.Where(feature => feature.Id.Value.StartsWith("design:", StringComparison.Ordinal) &&
             feature.Kind.Value == "road" && feature.Geometry is PolylineGeometry && PedestrianType(feature.Props) && !Area(feature.Props))
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
-        Require(expected.Length > 0, "The real current campus has no authored design centerlines.");
+        AssertThat(expected.Length > 0).OverrideFailureMessage("The real current campus has no authored design centerlines.").IsTrue();
         // Only an authored hide of an exact original road ID removes it; every other original road keeps its order and bytes.
         var originalIds = previous.Roads.Select(road => road.Id.Value).ToHashSet(StringComparer.Ordinal);
         var hidden = files.Where(pair => pair.Key.StartsWith("overlay/", StringComparison.Ordinal) &&
@@ -26,38 +27,36 @@ public sealed class EffectiveRoadNetworkRealCampusTests
                     group.EndsWith(".d", StringComparison.Ordinal) && group is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d"))
             .SelectMany(pair => JsonSerializer.Deserialize<OverlayFile>(pair.Value, ContractJson.Options)!.Ops.OfType<HideOp>())
             .Select(op => op.Target.Value).Where(originalIds.Contains).ToHashSet(StringComparer.Ordinal);
-        Require(loaded.Network.Roads.All(road => !hidden.Contains(road.Id.Value)), "An explicitly hidden original road survived in the effective network.");
+        AssertThat(loaded.Network.Roads.All(road => !hidden.Contains(road.Id.Value))).OverrideFailureMessage("An explicitly hidden original road survived in the effective network.").IsTrue();
         var kept = previous.Roads.Where(road => !hidden.Contains(road.Id.Value)).ToArray();
-        Require(loaded.Network.Roads.Count == kept.Length + expected.Length,
-            "Unexpected original-road removal or design projection count.");
-        Require(loaded.Network.Roads.Select(road => road.Id).Distinct().Count() == loaded.Network.Roads.Count, "Final road IDs repeat.");
-        Require(Canonical(loaded.Network.Roads.Take(kept.Length).ToArray()) == Canonical(kept), "Original road order or bytes changed without a hide.");
-        Require(Canonical(loaded.Network.Waterways) == Canonical(previous.Waterways) && Canonical(loaded.Network.Bridges) == Canonical(previous.Bridges) &&
-            Canonical(loaded.Network.Culverts) == Canonical(previous.Culverts) && Canonical(loaded.Network.Trees) == Canonical(previous.Trees), "Other network categories changed.");
-        Require(loaded.Network.Roads.Skip(kept.Length).Select(road => road.Id).SequenceEqual(expected.Select(feature => feature.Id)), "Design road order changed.");
+        AssertThat(loaded.Network.Roads.Count == kept.Length + expected.Length).OverrideFailureMessage("Unexpected original-road removal or design projection count.").IsTrue();
+        AssertThat(loaded.Network.Roads.Select(road => road.Id).Distinct().Count() == loaded.Network.Roads.Count).OverrideFailureMessage("Final road IDs repeat.").IsTrue();
+        AssertThat(Canonical(loaded.Network.Roads.Take(kept.Length).ToArray()) == Canonical(kept)).OverrideFailureMessage("Original road order or bytes changed without a hide.").IsTrue();
+        AssertThat(Canonical(loaded.Network.Waterways) == Canonical(previous.Waterways) && Canonical(loaded.Network.Bridges) == Canonical(previous.Bridges) &&
+            Canonical(loaded.Network.Culverts) == Canonical(previous.Culverts) && Canonical(loaded.Network.Trees) == Canonical(previous.Trees)).OverrideFailureMessage("Other network categories changed.").IsTrue();
+        AssertThat(loaded.Network.Roads.Skip(kept.Length).Select(road => road.Id).SequenceEqual(expected.Select(feature => feature.Id))).OverrideFailureMessage("Design road order changed.").IsTrue();
         foreach (var feature in expected)
         {
             var road = loaded.Network.Roads.Single(road => road.Id == feature.Id);
-            Require(road.Line.Points.SequenceEqual(((PolylineGeometry)feature.Geometry).Line.Points) &&
-                road.Width == feature.Props!.Value.GetProperty("width").GetSingle() && road.Props?.GetRawText() == feature.Props?.GetRawText(),
-                "Real design road lost its authored point order, width or props: " + feature.Id.Value);
+            AssertThat(road.Line.Points.SequenceEqual(((PolylineGeometry)feature.Geometry).Line.Points) &&
+                road.Width == feature.Props!.Value.GetProperty("width").GetSingle() && road.Props?.GetRawText() == feature.Props?.GetRawText()).OverrideFailureMessage("Real design road lost its authored point order, width or props: " + feature.Id.Value).IsTrue();
         }
         foreach (var area in loaded.Features.Values.Where(feature => feature.Kind.Value == "road" && feature.Id.Value.StartsWith("design:", StringComparison.Ordinal) &&
             feature.Geometry is PolygonGeometry or MultiPolygonGeometry))
-            Require(loaded.Network.Roads.All(road => road.Id != area.Id), "A real road area became a centerline: " + area.Id.Value);
+            AssertThat(loaded.Network.Roads.All(road => road.Id != area.Id)).OverrideFailureMessage("A real road area became a centerline: " + area.Id.Value).IsTrue();
 
         var baselineFiles = files.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var baseline = WorldModelLoader.Load(new("qingshuihe"), baselineFiles).World;
         var four = loaded.Features[new("qsh:relation:11665640")];
-        Require(four.Parts.Select(part => part.SourceId).SequenceEqual(new[] { "osm:relation:11665640", "osm:way:828726368", "osm:way:828726369" }, StringComparer.Ordinal) &&
-            four.Height == 7.8f && four.Storeys == 2, "Research Building 4 hidePart data regressed.");
+        AssertThat(four.Parts.Select(part => part.SourceId).SequenceEqual(new[] { "osm:relation:11665640", "osm:way:828726368", "osm:way:828726369" }, StringComparer.Ordinal) &&
+            four.Height == 7.8f && four.Storeys == 2).OverrideFailureMessage("Research Building 4 hidePart data regressed.").IsTrue();
         foreach (var part in four.Parts)
-            Require(Canonical(part) == Canonical(baseline.Features[four.Id].Parts.Single(old => old.SourceId == part.SourceId)), "Research Building 4 surviving source changed.");
+            AssertThat(Canonical(part) == Canonical(baseline.Features[four.Id].Parts.Single(old => old.SourceId == part.SourceId))).OverrideFailureMessage("Research Building 4 surviving source changed.").IsTrue();
         foreach (var id in new[] { new FeatureId("qsh:relation:11334255"), new FeatureId("qsh:relation:11665641") })
-            Require(Canonical(loaded.Features[id].Parts) == Canonical(baseline.Features[id].Parts), "Independent A/B source parts changed.");
+            AssertThat(Canonical(loaded.Features[id].Parts) == Canonical(baseline.Features[id].Parts)).OverrideFailureMessage("Independent A/B source parts changed.").IsTrue();
         var one = loaded.Features[new("qsh:way:691679140")];
-        Require(one.Parts.Single().SourceId == "osm:way:691679140" && one.Height == 3.9f && one.Storeys == 1, "Building 1 hidePart data regressed.");
-        Require(loaded.Features.ContainsKey(new("qsh:relation:14153711")) && !loaded.Features.ContainsKey(new("qsh:way:779496166")), "Research Building 6 hide data regressed.");
+        AssertThat(one.Parts.Single().SourceId == "osm:way:691679140" && one.Height == 3.9f && one.Storeys == 1).OverrideFailureMessage("Building 1 hidePart data regressed.").IsTrue();
+        AssertThat(loaded.Features.ContainsKey(new("qsh:relation:14153711")) && !loaded.Features.ContainsKey(new("qsh:way:779496166"))).OverrideFailureMessage("Research Building 6 hide data regressed.").IsTrue();
         Console.WriteLine($"REAL_EFFECTIVE_ROADS original={previous.Roads.Count} hidden={hidden.Count} design={expected.Length} final={loaded.Network.Roads.Count}");
         foreach (var feature in expected)
             Console.WriteLine($"REAL_DESIGN_ROAD id={feature.Id.Value} points={((PolylineGeometry)feature.Geometry).Line.Points.Count} width={feature.Props!.Value.GetProperty("width").GetSingle()}");
@@ -85,9 +84,8 @@ public sealed class EffectiveRoadNetworkRealCampusTests
                 try { LoadPrepared(trial); throw new InvalidOperationException("Named source was treated as independent network-only road: " + target); }
                 catch (WorldDataException error)
                 {
-                    Require(error.Message.Contains("Ambiguous", StringComparison.Ordinal) && error.Message.Contains(source, StringComparison.Ordinal) &&
-                        error.Message.Contains(entity, StringComparison.Ordinal) && error.Message.Contains(network, StringComparison.Ordinal),
-                        "Named road rejection lost its real source/entity/network identity: " + error.Message);
+                    AssertThat(error.Message.Contains("Ambiguous", StringComparison.Ordinal) && error.Message.Contains(source, StringComparison.Ordinal) &&
+                        error.Message.Contains(entity, StringComparison.Ordinal) && error.Message.Contains(network, StringComparison.Ordinal)).OverrideFailureMessage("Named road rejection lost its real source/entity/network identity: " + error.Message).IsTrue();
                 }
             }
         }
@@ -123,7 +121,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
                 }
             }
         }
-        Require(modules.Length > 0 && candidates.Count > 0, "No real registered module claims were captured.");
+        AssertThat(modules.Length > 0 && candidates.Count > 0).OverrideFailureMessage("No real registered module claims were captured.").IsTrue();
         var ownersByFeature = candidates.Where(pair => pair.Value.Count == 1).ToDictionary(pair => pair.Key, pair => pair.Value.Single());
         return WorldModelLoader.Load(new("qingshuihe"), files, new() { ClaimedBy = ownersByFeature });
     }
@@ -144,5 +142,4 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         (value.TryGetProperty("roadType", out var roadType) ? roadType.GetString() : value.TryGetProperty("highway", out var highway) ? highway.GetString() : null) is "footway" or "path" or "pedestrian";
     private static bool Area(JsonElement? props) => props is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty("area", out var area) && area.GetString() == "yes";
     private static string Canonical<T>(T value) => JsonSerializer.Serialize(value, ContractJson.Options);
-    private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 }

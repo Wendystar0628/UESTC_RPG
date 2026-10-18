@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -26,11 +27,10 @@ public sealed class VegetationGeometryBoundaryTests
             Custom2 = null
         };
         var frozen = GeometryBuffer.Freeze(source);
-        Require(frozen.Ao is null && frozen.Uv is null && frozen.Uv2 is null &&
+        AssertThat(frozen.Ao is null && frozen.Uv is null && frozen.Uv2 is null &&
             frozen.ColorIndices is null && frozen.DecalBaseColorIndices is null &&
             frozen.Flags is null && frozen.Reserved is null && frozen.Custom0 is null &&
-            frozen.Custom1 is null && frozen.Custom2 is null,
-            "Absent arrays must not become present empty ReadOnlyMemory through implicit array conversion.");
+            frozen.Custom1 is null && frozen.Custom2 is null).OverrideFailureMessage("Absent arrays must not become present empty ReadOnlyMemory through implicit array conversion.").IsTrue();
     }
 
     [TestCase]
@@ -60,18 +60,16 @@ public sealed class VegetationGeometryBoundaryTests
         lods.Clear();
         surfaces.Clear();
 
-        Require(frozen.Position.Span.SequenceEqual(new float[] { 0, 0, 0, 1, 0, 0, 0, 1, 0 }) &&
-            frozen.Normal.Span[2] == 1 && frozen.Index.Span.SequenceEqual(new[] { 0, 1, 2 }),
-            "Reusing generation arrays changed the frozen surface.");
-        Require(frozen.Ao!.Value.Span[0] == .25f && frozen.Uv!.Value.Span[2] == 1 &&
+        AssertThat(frozen.Position.Span.SequenceEqual(new float[] { 0, 0, 0, 1, 0, 0, 0, 1, 0 }) &&
+            frozen.Normal.Span[2] == 1 && frozen.Index.Span.SequenceEqual(new[] { 0, 1, 2 })).OverrideFailureMessage("Reusing generation arrays changed the frozen surface.").IsTrue();
+        AssertThat(frozen.Ao!.Value.Span[0] == .25f && frozen.Uv!.Value.Span[2] == 1 &&
             frozen.Uv2!.Value.Span[0] == 65537 && frozen.ColorIndices!.Value.Span[0] == 2 &&
             frozen.Flags!.Value.Span[0] == 0 && frozen.Reserved!.Value.Span[0] == 3 &&
             frozen.Custom0!.Value.Span[0] == 10 && frozen.Custom1!.Value.Span[0] == 20 &&
-            frozen.Custom2!.Value.Span[0] == 30, "A frozen vertex channel still aliases mutable source storage.");
-        Require(frozen.Lods.Count == 1 && frozen.Lods[0].Error == .5f &&
-            frozen.Lods[0].Index.Span.SequenceEqual(new[] { 2, 1, 0 }), "The LOD list or index storage was retained by reference.");
-        Require(prototype.Surfaces.Count == 1 && ReferenceEquals(prototype.Surfaces[0], frozen),
-            "The prototype must retain the immutable surface while isolating the mutable surface list.");
+            frozen.Custom2!.Value.Span[0] == 30).OverrideFailureMessage("A frozen vertex channel still aliases mutable source storage.").IsTrue();
+        AssertThat(frozen.Lods.Count == 1 && frozen.Lods[0].Error == .5f &&
+            frozen.Lods[0].Index.Span.SequenceEqual(new[] { 2, 1, 0 })).OverrideFailureMessage("The LOD list or index storage was retained by reference.").IsTrue();
+        AssertThat(prototype.Surfaces.Count == 1 && ReferenceEquals(prototype.Surfaces[0], frozen)).OverrideFailureMessage("The prototype must retain the immutable surface while isolating the mutable surface list.").IsTrue();
     }
 
     [TestCase]
@@ -80,9 +78,9 @@ public sealed class VegetationGeometryBoundaryTests
         // Three vertices: 2 is valid; 3 is already outside the source surface.
         GeometryBuffer.Freeze(Surface([new MeshLod(.5f, [0, 1, 2])]));
         foreach (int[] indices in new int[][] { [0, 1, 3], [0, -1, 2], [0, 1] })
-            Expect<ArgumentException>(() => GeometryBuffer.Freeze(Surface([new MeshLod(.5f, indices)])));
+            AssertThrown(() => GeometryBuffer.Freeze(Surface([new MeshLod(.5f, indices)]))).IsInstanceOf<ArgumentException>();
         foreach (float error in new[] { -1f, float.NaN, float.PositiveInfinity })
-            Expect<ArgumentException>(() => GeometryBuffer.Freeze(Surface([new MeshLod(error, [0, 1, 2])])));
+            AssertThrown(() => GeometryBuffer.Freeze(Surface([new MeshLod(error, [0, 1, 2])]))).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase]
@@ -93,19 +91,18 @@ public sealed class VegetationGeometryBoundaryTests
         var scratch = new float[16];
         InstanceStreamLayout.Write(scratch, at, new(.125f, 7, -2, .75f));
         float[] expected = [0, -3, 0, -130, 2, 0, 0, -2.5f, 0, 0, 4, -65, .125f, 7, -2, .75f];
-        Require(scratch.SequenceEqual(expected), "Transform rows or the four custom values changed order.");
+        AssertThat(scratch.SequenceEqual(expected)).OverrideFailureMessage("Transform rows or the four custom values changed order.").IsTrue();
 
         // An independent consumer applies the packed rows to local (1,2,-1).
         var transformed = new Vector3(scratch[0] + 2 * scratch[1] - scratch[2] + scratch[3],
             scratch[4] + 2 * scratch[5] - scratch[6] + scratch[7],
             scratch[8] + 2 * scratch[9] - scratch[10] + scratch[11]);
-        Require(transformed == new Vector3(-136, -.5f, -69), "Negative world translation must be applied exactly once.");
+        AssertThat(transformed == new Vector3(-136, -.5f, -69)).OverrideFailureMessage("Negative world translation must be applied exactly once.").IsTrue();
 
         var prototype = Prototype();
         var stream = new GeometryInstanceStream("fixture-stream", prototype, scratch, WorldBounds);
         Array.Fill(scratch, 99f);
-        Require(stream.Count == 1 && stream.Data.Span.SequenceEqual(expected) && ReferenceEquals(stream.Prototype, prototype),
-            "A static stream must freeze upload scratch while sharing its immutable prototype.");
+        AssertThat(stream.Count == 1 && stream.Data.Span.SequenceEqual(expected) && ReferenceEquals(stream.Prototype, prototype)).OverrideFailureMessage("A static stream must freeze upload scratch while sharing its immutable prototype.").IsTrue();
     }
 
     [TestCase]
@@ -120,16 +117,16 @@ public sealed class VegetationGeometryBoundaryTests
         invalidTranslation.M41 = float.PositiveInfinity;
         foreach (var invalid in new[] { projective, invalidBasis, invalidTranslation })
         {
-            Expect<ArgumentException>(() => InstanceStreamLayout.Write(target, invalid, Vector4.Zero));
-            Require(target.All(value => value == 123f), "Rejected matrix input partially changed the destination.");
+            AssertThrown(() => InstanceStreamLayout.Write(target, invalid, Vector4.Zero)).IsInstanceOf<ArgumentException>();
+            AssertThat(target.All(value => value == 123f)).OverrideFailureMessage("Rejected matrix input partially changed the destination.").IsTrue();
         }
-        Expect<ArgumentException>(() => InstanceStreamLayout.Write(target, Matrix4x4.Identity, new(0, 0, 0, float.NegativeInfinity)));
-        Require(target.All(value => value == 123f), "Rejected custom data partially changed the destination.");
+        AssertThrown(() => InstanceStreamLayout.Write(target, Matrix4x4.Identity, new(0, 0, 0, float.NegativeInfinity))).IsInstanceOf<ArgumentException>();
+        AssertThat(target.All(value => value == 123f)).OverrideFailureMessage("Rejected custom data partially changed the destination.").IsTrue();
         foreach (int length in new[] { 15, 17 })
         {
             var incomplete = Enumerable.Repeat(123f, length).ToArray();
-            Expect<ArgumentException>(() => InstanceStreamLayout.Write(incomplete, Matrix4x4.Identity, Vector4.Zero));
-            Require(incomplete.All(value => value == 123f), "A wrong-sized destination was partially written.");
+            AssertThrown(() => InstanceStreamLayout.Write(incomplete, Matrix4x4.Identity, Vector4.Zero)).IsInstanceOf<ArgumentException>();
+            AssertThat(incomplete.All(value => value == 123f)).OverrideFailureMessage("A wrong-sized destination was partially written.").IsTrue();
         }
     }
 
@@ -140,14 +137,14 @@ public sealed class VegetationGeometryBoundaryTests
         var valid = new float[32];
         InstanceStreamLayout.Write(valid.AsSpan(0, 16), Matrix4x4.Identity, Vector4.Zero);
         InstanceStreamLayout.Write(valid.AsSpan(16, 16), Matrix4x4.Identity, Vector4.One);
-        Require(new GeometryInstanceStream("two", prototype, valid, LocalBounds).Count == 2, "Two complete records must be accepted.");
+        AssertThat(new GeometryInstanceStream("two", prototype, valid, LocalBounds).Count == 2).OverrideFailureMessage("Two complete records must be accepted.").IsTrue();
         foreach (int length in new[] { 1, 15, 17, 31 })
-            Expect<ArgumentException>(() => new GeometryInstanceStream("partial", prototype, new float[length], LocalBounds));
+            AssertThrown(() => new GeometryInstanceStream("partial", prototype, new float[length], LocalBounds)).IsInstanceOf<ArgumentException>();
         foreach (var (offset, value) in new[] { (0, float.NaN), (19, float.PositiveInfinity), (31, float.NegativeInfinity) })
         {
             var invalid = valid.ToArray();
             invalid[offset] = value;
-            Expect<ArgumentException>(() => new GeometryInstanceStream("nonfinite", prototype, invalid, LocalBounds));
+            AssertThrown(() => new GeometryInstanceStream("nonfinite", prototype, invalid, LocalBounds)).IsInstanceOf<ArgumentException>();
         }
     }
 
@@ -166,12 +163,4 @@ public sealed class VegetationGeometryBoundaryTests
         Custom1 = [20, 1, 2, 3, 20, 1, 2, 3, 20, 1, 2, 3],
         Custom2 = [30, 1, 2, 3, 30, 1, 2, 3, 30, 1, 2, 3]
     };
-
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 }

@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -15,8 +16,8 @@ public sealed class MapSpawnResolutionTests
     public void LegacyImplementationExplicitlyRejectsCatalogueLookup()
     {
         IMapService legacy = new TestMapService(); // Implements no ResolveSpawn: the default method must fail explicitly.
-        Throws<NotSupportedException>(() => legacy.ResolveSpawn(new("spawn-test")));
-        Throws<NotSupportedException>(() => legacy.ResolveSpawn(new("spawn-test"), "P00"));
+        AssertThrown(() => legacy.ResolveSpawn(new("spawn-test"))).IsInstanceOf<NotSupportedException>();
+        AssertThrown(() => legacy.ResolveSpawn(new("spawn-test"), "P00")).IsInstanceOf<NotSupportedException>();
     }
 
     [TestCase]
@@ -25,9 +26,9 @@ public sealed class MapSpawnResolutionTests
         var authored = new MapSpawn("P00", new(new Vector3(12, 50, 18), 35, -20),
             new(new Vector3(11, 0, 17), 32));
         var entry = Entry([authored]);
-        Check(entry.ResolveSpawn("P00") == authored, "Explicit spawn lost priority over a same-named waypoint.");
+        AssertThat(entry.ResolveSpawn("P00") == authored).OverrideFailureMessage("Explicit spawn lost priority over a same-named waypoint.").IsTrue();
         foreach (var unknown in new[] { "missing", "", "p00" })
-            Throws<ArgumentException>(() => entry.ResolveSpawn(unknown));
+            AssertThrown(() => entry.ResolveSpawn(unknown)).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase]
@@ -40,11 +41,9 @@ public sealed class MapSpawnResolutionTests
             ["review.json"] = System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"poses\":[{\"id\":\"V1\",\"waypoint\":\"P00\"}]}")
         });
         var context = new MapContext(entry.Descriptor, new TestWorldModel(), entry.DataRoot, inputs);
-        Check(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly,
-            "The V1 overview did not follow the authored P00 relation.");
-        Check(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly,
-            "Capture did not resolve the named waypoint in the frozen input version.");
-        Throws<ArgumentException>(() => ReviewPoseResolver.Resolve("missing", context));
+        AssertThat(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly).OverrideFailureMessage("The V1 overview did not follow the authored P00 relation.").IsTrue();
+        AssertThat(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly).OverrideFailureMessage("Capture did not resolve the named waypoint in the frozen input version.").IsTrue();
+        AssertThrown(() => ReviewPoseResolver.Resolve("missing", context)).IsInstanceOf<ArgumentException>();
     }
 
     private static MapCatalogEntry Entry(IReadOnlyList<MapSpawn> spawns)
@@ -62,11 +61,4 @@ public sealed class MapSpawnResolutionTests
             "res://data/maps/spawn-test/", [first, other]);
     }
 
-    private static void Check(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); } catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

@@ -12,6 +12,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class BuildingPlanKernelTests
 {
@@ -25,10 +27,10 @@ public sealed class BuildingPlanKernelTests
         };
         var entity = Feature("qsh:way:1", Rect(0, 0, 60, 12), 6, 21f, "teaching") with { Parts = parts };
         var set = BuildingSet.For(World(entity), 1u);
-        Require(set.Plans.Count == 2, "one plan per part, none for the aggregate");
-        Require(set.Plans[0].Key == "osm:way:1" && set.Plans[0].Storeys == 6, "first part by source id, six storeys");
-        Require(set.Plans[1].Key == "osm:way:2" && set.Plans[1].Storeys == 2, "second part keeps its own storeys");
-        Require(set.Blocks[1].Base == set.Blocks[0].Count, "parts take consecutive window blocks");
+        AssertThat(set.Plans.Count == 2).OverrideFailureMessage("Expected: " + ("one plan per part, none for the aggregate")).IsTrue();
+        AssertThat(set.Plans[0].Key == "osm:way:1" && set.Plans[0].Storeys == 6).OverrideFailureMessage("Expected: " + ("first part by source id, six storeys")).IsTrue();
+        AssertThat(set.Plans[1].Key == "osm:way:2" && set.Plans[1].Storeys == 2).OverrideFailureMessage("Expected: " + ("second part keeps its own storeys")).IsTrue();
+        AssertThat(set.Blocks[1].Base == set.Blocks[0].Count).OverrideFailureMessage("Expected: " + ("parts take consecutive window blocks")).IsTrue();
     }
 
     [TestCase]
@@ -49,8 +51,8 @@ public sealed class BuildingPlanKernelTests
         var lawn = new WorldFeature(new FeatureId("qsh:way:8"), FeatureSource.Osm, new DesignKind("green"),
             new PolygonGeometry(new PolygonRings(Rect(100, 0, 20, 20))));
         var set = BuildingSet.For(World(park, lawn), 1u);
-        Require(set.Plans.Count == 2, "the two building parts of a poi entity, not its green part nor the lawn");
-        Require(set.Plans.All(p => p.Style == Rules.BuildingStyle.Academic), "style from the part's own category");
+        AssertThat(set.Plans.Count == 2).OverrideFailureMessage("Expected: " + ("the two building parts of a poi entity, not its green part nor the lawn")).IsTrue();
+        AssertThat(set.Plans.All(p => p.Style == Rules.BuildingStyle.Academic)).OverrideFailureMessage("Expected: " + ("style from the part's own category")).IsTrue();
     }
 
     [TestCase]
@@ -64,22 +66,21 @@ public sealed class BuildingPlanKernelTests
         foreach (var plan in set.Plans)
         {
             var bays = plan.Grid.Bays;
-            Require(plan.TotalColumns == bays.Count, "one window column per kernel bay");
+            AssertThat(plan.TotalColumns == bays.Count).OverrideFailureMessage("Expected: " + ("one window column per kernel bay")).IsTrue();
             var seen = 0;
             foreach (var f in plan.Facades)
                 for (var k = 0; k < f.Bays; k++, seen++)
                 {
                     var bay = bays[f.ColumnStart + k];
-                    Require(bay.Index == f.ColumnStart + k && bay.Ring == f.Ring && bay.Edge == f.Edge && bay.Bay == k,
-                        $"{plan.Key}: column {f.ColumnStart + k} is kernel bay r{bay.Ring}/e{bay.Edge}/b{bay.Bay}");
-                    Require((bay.WindowKind == Campus.Gen.Interior.FacadeWindowKind.Blank) == (f.Kinds[k] == BayKind.Blank), "blank bays agree");
+                    AssertThat(bay.Index == f.ColumnStart + k && bay.Ring == f.Ring && bay.Edge == f.Edge && bay.Bay == k).OverrideFailureMessage("Expected: " + ($"{plan.Key}: column {f.ColumnStart + k} is kernel bay r{bay.Ring}/e{bay.Edge}/b{bay.Bay}")).IsTrue();
+                    AssertThat((bay.WindowKind == Campus.Gen.Interior.FacadeWindowKind.Blank) == (f.Kinds[k] == BayKind.Blank)).OverrideFailureMessage("Expected: " + ("blank bays agree")).IsTrue();
                 }
-            Require(seen == bays.Count, "every kernel bay is laid out once");
+            AssertThat(seen == bays.Count).OverrideFailureMessage("Expected: " + ("every kernel bay is laid out once")).IsTrue();
             var again = Campus.Gen.Interior.FacadeGridGenerator.Generate(plan.Grid.Footprint, BuildingPlanner.GridOptions(plan.Profile));
-            Require(again.GridHash == plan.Grid.GridHash, "same grid for the interiors from the same footprint and options");
+            AssertThat(again.GridHash == plan.Grid.GridHash).OverrideFailureMessage("Expected: " + ("same grid for the interiors from the same footprint and options")).IsTrue();
         }
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
-        Require(dorm.Facades.Where(f => f.Ring == 0).Max(f => f.Bays) == 10, "dormitory 36 m facade: ten 3.6 m bays");
+        AssertThat(dorm.Facades.Where(f => f.Ring == 0).Max(f => f.Bays) == 10).OverrideFailureMessage("Expected: " + ("dormitory 36 m facade: ten 3.6 m bays")).IsTrue();
     }
 
     /// <summary>
@@ -104,18 +105,17 @@ public sealed class BuildingPlanKernelTests
                     MultiPolygonGeometry m => m.Polygons,
                     _ => Array.Empty<PolygonRings>(),
                 };
-                Require(sources.Length == facade.Count, $"{part.SourceId}: one source per facade polygon");
+                AssertThat(sources.Length == facade.Count).OverrideFailureMessage("Expected: " + ($"{part.SourceId}: one source per facade polygon")).IsTrue();
                 for (var i = 0; i < sources.Length; i++)
                 {
-                    Require(sources[i].Rings.Outer.SequenceEqual(facade[i].Outer), $"{part.SourceId}: the footprint's outer ring is the facade ring");
-                    Require(sources[i].Rings.Holes.Count == facade[i].Holes.Count
-                        && sources[i].Rings.Holes.Zip(facade[i].Holes).All(h => h.First.SequenceEqual(h.Second)), $"{part.SourceId}: the footprint's holes are the facade holes");
+                    AssertThat(sources[i].Rings.Outer.SequenceEqual(facade[i].Outer)).OverrideFailureMessage("Expected: " + ($"{part.SourceId}: the footprint's outer ring is the facade ring")).IsTrue();
+                    AssertThat(sources[i].Rings.Holes.Count == facade[i].Holes.Count
+                        && sources[i].Rings.Holes.Zip(facade[i].Holes).All(h => h.First.SequenceEqual(h.Second))).OverrideFailureMessage("Expected: " + ($"{part.SourceId}: the footprint's holes are the facade holes")).IsTrue();
                     var reference = BuildingPlanner.Plan(sources[i] with { Rings = facade[i] }, world, 4u);
                     var actual = BuildingPlanner.Plan(sources[i], world, 4u);
-                    Require((reference is null) == (actual is null), $"{part.SourceId}: the same footprint is built or skipped");
+                    AssertThat((reference is null) == (actual is null)).OverrideFailureMessage("Expected: " + ($"{part.SourceId}: the same footprint is built or skipped")).IsTrue();
                     if (actual is null || reference is null) continue;
-                    Require(actual.TotalColumns == reference.TotalColumns && actual.Grid.GridHash == reference.Grid.GridHash,
-                        $"{part.SourceId}: the window grid is the one of the facade outline");
+                    AssertThat(actual.TotalColumns == reference.TotalColumns && actual.Grid.GridHash == reference.Grid.GridHash).OverrideFailureMessage("Expected: " + ($"{part.SourceId}: the window grid is the one of the facade outline")).IsTrue();
                     checkedParts++;
                 }
                 var detailed = part.Geometry switch
@@ -126,7 +126,7 @@ public sealed class BuildingPlanKernelTests
                 };
                 if (detailed.Count != facade.Count || detailed.Zip(facade).Any(t => !t.First.Outer.SequenceEqual(t.Second.Outer))) differing++;
             }
-        Require(checkedParts >= 20, $"enough building parts with a facade outline are covered ({checkedParts})");
-        Require(differing > 0, "the detailed and the facade outlines do differ, so the guard has teeth");
+        AssertThat(checkedParts >= 20).OverrideFailureMessage("Expected: " + ($"enough building parts with a facade outline are covered ({checkedParts})")).IsTrue();
+        AssertThat(differing > 0).OverrideFailureMessage("Expected: " + ("the detailed and the facade outlines do differ, so the guard has teeth")).IsTrue();
     }
 }

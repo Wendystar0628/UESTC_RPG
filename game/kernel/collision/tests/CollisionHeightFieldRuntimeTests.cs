@@ -7,6 +7,7 @@ using Campus.Kernel.Collision;
 using GdUnit4;
 using Godot;
 using N = System.Numerics;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -40,8 +41,7 @@ public sealed class CollisionHeightFieldRuntimeTests
             {
                 var at = new N.Vector3(tile.X * 64 + 12, .01f, tile.Z * 64 + 24);
                 var hit = world.Sweep(at - N.Vector3.UnitX * 2, at + N.Vector3.UnitX * 2, .3f, 1.8f);
-                Require(hit is { Tag: SurfaceTag.Barrier } && hit.Value.T > 0 && hit.Value.T < 1,
-                    "A world-coordinate post was shifted away from its actual tile: " + tile);
+                AssertThat(hit is { Tag: SurfaceTag.Barrier } && hit.Value.T > 0 && hit.Value.T < 1).OverrideFailureMessage("A world-coordinate post was shifted away from its actual tile: " + tile).IsTrue();
             }
         }
         finally { world.Unload(); if (GodotObject.IsInstanceValid(viewport)) viewport.Free(); }
@@ -62,29 +62,28 @@ public sealed class CollisionHeightFieldRuntimeTests
         {
             tree.Root.AddChild(viewport);
             viewport.AddChild(root);
-            Require(root.GetWorld3D().Space == nativeWorld.Space && nativeWorld.Space != tree.Root.FindWorld3D().Space,
-                "Native collision fixture shares the application physics space.");
+            AssertThat(root.GetWorld3D().Space == nativeWorld.Space && nativeWorld.Space != tree.Root.FindWorld3D().Space).OverrideFailureMessage("Native collision fixture shares the application physics space.").IsTrue();
             var context = FixtureContext();
             world.Attach(root, context);
             for (var x = -1; x <= 1; x++)
                 for (var z = -1; z <= 1; z++)
                     if (x != 0 || z != 0) { world.BeginTile(new(x, z)); world.CompleteTile(new(x, z)); }
             var feet = new N.Vector3(8, .01f, 8);
-            Require(!world.Ready(feet, .3f), "A missing center collision tile became ready.");
+            AssertThat(!world.Ready(feet, .3f)).OverrideFailureMessage("A missing center collision tile became ready.").IsTrue();
             var colliders = await Task.Run(() => CollisionGeometry.Localize(Fixture(), new(0, 0)));
             var key = CollisionBakeProducer.Key(context.Descriptor.Id, new(0, 0));
             var tile = new CollisionTile(key, new(0, 0), new(new(0, -5, 0), new(64, 10, 64)), colliders);
             var mount = new CollisionMountWork(world, tile, 0);
             while (!mount.Step(.3))
             {
-                Require(!world.Ready(feet, .3f), "A partially mounted collision tile became ready.");
+                AssertThat(!world.Ready(feet, .3f)).OverrideFailureMessage("A partially mounted collision tile became ready.").IsTrue();
                 await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             }
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
-            Require(world.Ready(feet, .3f), "The mounted 3x3 neighborhood is not ready.");
+            AssertThat(world.Ready(feet, .3f)).OverrideFailureMessage("The mounted 3x3 neighborhood is not ready.").IsTrue();
             foreach (var body in root.GetChildren().OfType<StaticBody3D>())
-                Require(PhysicsServer3D.BodyGetSpace(body.GetRid()) == nativeWorld.Space, "A body entered another physics space.");
+                AssertThat(PhysicsServer3D.BodyGetSpace(body.GetRid()) == nativeWorld.Space).OverrideFailureMessage("A body entered another physics space.").IsTrue();
             CheckSupport(8, 8, 0, SurfaceTag.Ground);
             var character = new CharacterBody3D
             {
@@ -105,10 +104,9 @@ public sealed class CollisionHeightFieldRuntimeTests
                 await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
                 character.Velocity += Vector3.Down * (27.8f / 120);
                 character.MoveAndSlide();
-                Require(character.Position.Y >= -.02f, "The walking cylinder penetrated the mounted ground.");
+                AssertThat(character.Position.Y >= -.02f).OverrideFailureMessage("The walking cylinder penetrated the mounted ground.").IsTrue();
             }
-            Require(character.IsOnFloor() && MathF.Abs(character.Position.Y) <= .02f,
-                "The walking cylinder did not settle on native ground within one second.");
+            AssertThat(character.IsOnFloor() && MathF.Abs(character.Position.Y) <= .02f).OverrideFailureMessage("The walking cylinder did not settle on native ground within one second.").IsTrue();
             character.Free();
             CheckSweep(new(18, .01f, 24), new(22, .01f, 24), SurfaceTag.Wall);
             CheckSweep(new(28, .01f, 24), new(32, .01f, 24), SurfaceTag.Barrier);
@@ -118,30 +116,28 @@ public sealed class CollisionHeightFieldRuntimeTests
             CheckSupport(31, 42, 1, SurfaceTag.Stair);
             CheckSweep(new(33, .01f, 42), new(37, .01f, 42), SurfaceTag.Barrier);
             var mounted = world.Diagnostics;
-            Require(mounted.Bodies > 0 && mounted.MaxBodyShapes <= 250 && mounted.RegisteredBodies == mounted.Bodies
-                && mounted.MainThreadViolations == 0 && mounted.IncompleteMounts == 0, "Invalid atomic collision mounting.");
+            AssertThat(mounted.Bodies > 0 && mounted.MaxBodyShapes <= 250 && mounted.RegisteredBodies == mounted.Bodies
+                && mounted.MainThreadViolations == 0 && mounted.IncompleteMounts == 0).OverrideFailureMessage("Invalid atomic collision mounting.").IsTrue();
             var mountedBodies = root.GetChildren().OfType<StaticBody3D>().ToArray();
             world.RemoveTile(new(0, 0));
-            Require(mountedBodies.All(body => !GodotObject.IsInstanceValid(body)), "Removing a tile retained its native bodies.");
+            AssertThat(mountedBodies.All(body => !GodotObject.IsInstanceValid(body))).OverrideFailureMessage("Removing a tile retained its native bodies.").IsTrue();
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
-            Require(world.SupportY(8, 8, 1) is null, "Removed height-field collision is still present.");
+            AssertThat(world.SupportY(8, 8, 1) is null).OverrideFailureMessage("Removed height-field collision is still present.").IsTrue();
             world.Unload();
             var unloaded = world.Diagnostics;
-            Require(unloaded.Bodies == 0 && unloaded.Shapes == 0 && unloaded.Tiles == 0 && unloaded.RegisteredBodies == 0
-                && !world.Ready(feet, .3f), "Unload retained native collision state.");
+            AssertThat(unloaded.Bodies == 0 && unloaded.Shapes == 0 && unloaded.Tiles == 0 && unloaded.RegisteredBodies == 0
+                && !world.Ready(feet, .3f)).OverrideFailureMessage("Unload retained native collision state.").IsTrue();
 
             void CheckSupport(float x, float z, float y, SurfaceTag tag)
             {
                 var hit = world.SupportY(x, z, y + .1f);
-                Require(hit is { } support && support.Tag == tag && MathF.Abs(support.Y - y) <= .02f,
-                    $"Incorrect {tag} support at ({x}, {z}): expected {y}, actual {hit?.Y}.");
+                AssertThat(hit is { } support && support.Tag == tag && MathF.Abs(support.Y - y) <= .02f).OverrideFailureMessage($"Incorrect {tag} support at ({x}, {z}): expected {y}, actual {hit?.Y}.").IsTrue();
             }
             void CheckSweep(N.Vector3 from, N.Vector3 to, SurfaceTag tag)
             {
                 var hit = world.Sweep(from, to, .3f, 1.8f);
-                Require(hit is { } block && block.Tag == tag && block.T > 0 && block.T < 1 && block.Normal.X < -.8f,
-                    $"Cylinder sweep missed {tag}.");
+                AssertThat(hit is { } block && block.Tag == tag && block.T > 0 && block.T < 1 && block.Normal.X < -.8f).OverrideFailureMessage($"Cylinder sweep missed {tag}.").IsTrue();
             }
         }
         finally
@@ -170,6 +166,4 @@ public sealed class CollisionHeightFieldRuntimeTests
         new(1, 0, 128, -5, 10, 0, 0, 0), new(-2, -2), new(1, 1), "fixture", [],
         new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
         new("fixture-no-sky", "fixture-no-backdrop", []), new Dictionary<string, string>(), []));
-
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

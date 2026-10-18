@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Parts.Core.Tests;
 
@@ -18,8 +19,8 @@ public sealed class AoContractTests
         var examples = Examples();
         var again = Examples();
         for (var i = 0; i < examples.Count; i++)
-            if (Fingerprint(examples[i].Geometry) != Fingerprint(again[i].Geometry))
-                throw new InvalidOperationException($"{examples[i].Id}: a second build gave different geometry bytes.");
+            AssertThat(Fingerprint(examples[i].Geometry) != Fingerprint(again[i].Geometry))
+                .OverrideFailureMessage($"{examples[i].Id}: a second build gave different geometry bytes.").IsFalse();
     }
 
     [TestCase]
@@ -54,13 +55,13 @@ public sealed class AoContractTests
             ValidateVisibility(geometry);
             var mesh = geometry.Meshes.Single();
             var ao = mesh.Ao!;
-            if (ao.Count(v => v == 0.8f) != 16 || ao.Count(v => v == 1) != ao.Length - 16)
-                throw new InvalidOperationException("Only the four reveal quads should have 0.8 visibility; every other vertex must have 1.");
+            AssertThat(ao.Count(v => v == 0.8f) != 16 || ao.Count(v => v == 1) != ao.Length - 16)
+                .OverrideFailureMessage("Only the four reveal quads should have 0.8 visibility; every other vertex must have 1.").IsFalse();
             for (var i = 0; i < ao.Length; i++)
             {
                 var normal = new Vector3(mesh.Normal[3 * i], mesh.Normal[3 * i + 1], mesh.Normal[3 * i + 2]);
-                if ((normal == capNormal || normal == -capNormal) && ao[i] != 1)
-                    throw new InvalidOperationException("An unoccluded principal face has reduced visibility.");
+                AssertThat((normal == capNormal || normal == -capNormal) && ao[i] != 1)
+                    .OverrideFailureMessage("An unoccluded principal face has reduced visibility.").IsFalse();
             }
         }
     }
@@ -72,16 +73,16 @@ public sealed class AoContractTests
     private static void AssertUnoccluded(PartGeometry geometry)
     {
         ValidateVisibility(geometry);
-        if (geometry.Meshes.Any(mesh => mesh.Ao!.Any(value => value != 1)))
-            throw new InvalidOperationException("Unoccluded geometry must write visibility 1 directly.");
+        AssertThat(geometry.Meshes.Any(mesh => mesh.Ao!.Any(value => value != 1)))
+            .OverrideFailureMessage("Unoccluded geometry must write visibility 1 directly.").IsFalse();
     }
     private static void ValidateVisibility(PartGeometry geometry)
     {
         foreach (var mesh in geometry.Meshes)
         {
             mesh.ValidateVertexData();
-            if (mesh.Ao is null || mesh.Ao.Any(value => !float.IsFinite(value) || value < 0 || value > 1))
-                throw new InvalidOperationException("Core geometry needs explicit finite visibility in [0, 1].");
+            AssertThat(mesh.Ao is null || mesh.Ao.Any(value => !float.IsFinite(value) || value < 0 || value > 1))
+                .OverrideFailureMessage("Core geometry needs explicit finite visibility in [0, 1].").IsFalse();
         }
     }
 

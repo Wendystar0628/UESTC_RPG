@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using System.Buffers.Binary;
 using System.Numerics;
 using Campus.Contracts;
@@ -45,10 +46,30 @@ public sealed class BakeCodecTests
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
         var bytes = TileBundleCodec.Encode("fixture/identity", new TileBundle(key, new(0, 0), LodLevel.L0,
             new Box3(Vector3.Zero, new(64, 64, 64)), []));
-        for (var i = 0; i < bytes.Length; i++) Reject(() => TileBundleCodec.Decode("fixture/identity", key, bytes[..i]));
-        Reject(() => TileBundleCodec.Decode("other", key, bytes));
-        Reject(() => TileBundleCodec.Decode("fixture/identity", key with { Module = "other" }, bytes));
-        Reject(() => TileBundleCodec.Decode("fixture/identity", key, [.. bytes, 0]));
+        for (var i = 0; i < bytes.Length; i++) {
+            var rejected = false;
+            try { TileBundleCodec.Decode("fixture/identity", key, bytes[..i]); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
+        {
+            var rejected = false;
+            try { TileBundleCodec.Decode("other", key, bytes); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
+        {
+            var rejected = false;
+            try { TileBundleCodec.Decode("fixture/identity", key with { Module = "other" }, bytes); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
+        {
+            var rejected = false;
+            try { TileBundleCodec.Decode("fixture/identity", key, [.. bytes, 0]); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -58,7 +79,12 @@ public sealed class BakeCodecTests
         var bytes = TileBundleCodec.Encode("fixture/identity", new TileBundle(key, new(0, 0), LodLevel.L0,
             new Box3(Vector3.Zero, new(64, 64, 64)), []));
         BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), int.MaxValue);
-        Reject(() => TileBundleCodec.Decode("fixture/identity", key, bytes));
+        {
+            var rejected = false;
+            try { TileBundleCodec.Decode("fixture/identity", key, bytes); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -68,7 +94,12 @@ public sealed class BakeCodecTests
         BinaryPrimitives.WriteUInt32LittleEndian(bytes, 0x315A4254);
         BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(4), int.MaxValue);
         BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(8), 1);
-        Reject(() => BakeCacheStore.DecodeFile(bytes));
+        {
+            var rejected = false;
+            try { BakeCacheStore.DecodeFile(bytes); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -134,10 +165,4 @@ public sealed class BakeCodecTests
             throw new InvalidOperationException("Tile request identity did not round trip.");
     }
 
-    private static void Reject(Action action)
-    {
-        try { action(); }
-        catch (InvalidDataException) { return; }
-        throw new InvalidOperationException("Malformed bake data was accepted.");
-    }
 }

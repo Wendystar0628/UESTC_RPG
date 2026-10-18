@@ -11,6 +11,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class GroundTests
 {
@@ -32,14 +34,13 @@ public sealed class GroundTests
                 for (var v = 0; v < mesh.Position.Length / 3; v++)
                 {
                     if (OnTileBorder(mesh.Position[3 * v], mesh.Position[3 * v + 2])) continue;   // border skirts hang below
-                    Check.Close(Section.GrassY, mesh.Position[3 * v + 1], 0.01, "lawn height");
+                    AssertThat(Math.Abs((double)(Section.GrassY) - (double)(mesh.Position[3 * v + 1])) <= 0.01).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {mesh.Position[3 * v + 1]}.").IsTrue();
                 }
             }
             AssertWinding(output);
         }
-        Check.True(tones.SetEquals(["150", "190", "192"]),
-            $"A 256 m strip of lawn shows all three tones, got {string.Join(", ", tones)}.");
-        Check.True(triangles < 4 * 12000, $"Lawn tone contours stay cheap, got {triangles} triangles.");
+        AssertThat(tones.SetEquals(["150", "190", "192"])).OverrideFailureMessage($"A 256 m strip of lawn shows all three tones, got {string.Join(", ", tones)}.").IsTrue();
+        AssertThat(triangles < 4 * 12000).OverrideFailureMessage($"Lawn tone contours stay cheap, got {triangles} triangles.").IsTrue();
     }
 
     [TestCase]
@@ -57,7 +58,7 @@ public sealed class GroundTests
                 var t = Tone(x, z);
                 if (Tone(x + 1, z) != t && Tone(x - 1, z) != t && Tone(x, z + 1) != t && Tone(x, z - 1) != t) isolated++;
             }
-        Check.True(isolated == 0, $"{isolated} isolated tone samples.");
+        AssertThat(isolated == 0).OverrideFailureMessage($"{isolated} isolated tone samples.").IsTrue();
     }
 
     [TestCase]
@@ -67,19 +68,19 @@ public sealed class GroundTests
         var output = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
         var colours = output.Meshes.SelectMany(m => m.ColorIndices!).Distinct().ToHashSet();
         foreach (var expected in new[] { GroundColor.Asphalt, GroundColor.Curb, GroundColor.Paver, GroundColor.Marking })
-            Check.True(colours.Contains(GroundPalette.Id(expected)), $"Missing {expected}; got {string.Join(", ", colours)}.");
-        Check.True(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 5, "At most five ground materials.");
+            AssertThat(colours.Contains(GroundPalette.Id(expected))).OverrideFailureMessage($"Missing {expected}; got {string.Join(", ", colours)}.").IsTrue();
+        AssertThat(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 5).OverrideFailureMessage("At most five ground materials.").IsTrue();
         foreach (var mesh in output.Meshes)
         {
             mesh.ValidateVertexData();
-            Check.True(mesh.Position.Length / 3 <= 65536, "Bundle exceeds 16-bit indices.");
-            Check.True(mesh.Flags is not null && mesh.Flags.All(f => (f & GroundPalette.FlagNoShadow) != 0), "Ground must not cast shadows.");
+            AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("Bundle exceeds 16-bit indices.").IsTrue();
+            AssertThat(mesh.Flags is not null && mesh.Flags.All(f => (f & GroundPalette.FlagNoShadow) != 0)).OverrideFailureMessage("Ground must not cast shadows.").IsTrue();
         }
         var marking = output.Meshes.Where(m => m.Material.Spec.Lit.Value == "ground.marking.lit").ToArray();
-        Check.True(marking.All(m => m.Flags!.All(f => (f & GroundPalette.FlagDecal) != 0)), "Markings are decals.");
-        Check.True(marking.All(m => m.Material.Spec.Line == LineClass.None), "Markings are not outlined.");
+        AssertThat(marking.All(m => m.Flags!.All(f => (f & GroundPalette.FlagDecal) != 0))).OverrideFailureMessage("Markings are decals.").IsTrue();
+        AssertThat(marking.All(m => m.Material.Spec.Line == LineClass.None)).OverrideFailureMessage("Markings are not outlined.").IsTrue();
         var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-        Check.True(triangles < new GroundModule().Budget.TrianglesL0, $"Over L0 budget: {triangles}.");
+        AssertThat(triangles < new GroundModule().Budget.TrianglesL0).OverrideFailureMessage($"Over L0 budget: {triangles}.").IsTrue();
         AssertWinding(output);
     }
 
@@ -100,10 +101,10 @@ public sealed class GroundTests
                 {
                     found = true;
                     var nz = m.Normal[3 * v + 2];
-                    Check.True(nz < -0.99f, $"Kerb face must face the road (-z), got {nz}.");
+                    AssertThat(nz < -0.99f).OverrideFailureMessage($"Kerb face must face the road (-z), got {nz}.").IsTrue();
                 }
             }
-        Check.True(found, "No kerb face found along the road edge.");
+        AssertThat(found).OverrideFailureMessage("No kerb face found along the road edge.").IsTrue();
     }
 
     [TestCase]
@@ -111,12 +112,12 @@ public sealed class GroundTests
     {
         var a = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);
         var b = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);
-        Check.True(a.Meshes.Count == b.Meshes.Count, "Bundle count differs.");
+        AssertThat(a.Meshes.Count == b.Meshes.Count).OverrideFailureMessage("Bundle count differs.").IsTrue();
         for (var k = 0; k < a.Meshes.Count; k++)
         {
-            Check.True(a.Meshes[k].Position.SequenceEqual(b.Meshes[k].Position), "Positions differ.");
-            Check.True(a.Meshes[k].Normal.SequenceEqual(b.Meshes[k].Normal), "Normals differ.");
-            Check.True(a.Meshes[k].Index.SequenceEqual(b.Meshes[k].Index), "Indices differ.");
+            AssertThat(a.Meshes[k].Position.SequenceEqual(b.Meshes[k].Position)).OverrideFailureMessage("Positions differ.").IsTrue();
+            AssertThat(a.Meshes[k].Normal.SequenceEqual(b.Meshes[k].Normal)).OverrideFailureMessage("Normals differ.").IsTrue();
+            AssertThat(a.Meshes[k].Index.SequenceEqual(b.Meshes[k].Index)).OverrideFailureMessage("Indices differ.").IsTrue();
         }
     }
 
@@ -134,11 +135,11 @@ public sealed class GroundTests
         var b = Seam(right);
         // Every contour crossing the seam is present on both sides.
         var crossings = a.Where(p => p.Item3 % 0.25f != 0f).ToArray();
-        Check.True(crossings.Length > 0, "Expected contour vertices on the seam.");
+        AssertThat(crossings.Length > 0).OverrideFailureMessage("Expected contour vertices on the seam.").IsTrue();
         foreach (var p in crossings)
-            Check.True(b.Contains(p), $"Seam vertex {p} missing on the right tile. Near: " +
+            AssertThat(b.Contains(p)).OverrideFailureMessage($"Seam vertex {p} missing on the right tile. Near: " +
                 string.Join(" ", b.Where(q => MathF.Abs(q.Item3 - p.Item3) < 0.02f).Select(q => $"({q.Item1:R},{q.Item2:R},{q.Item3:R})")) +
-                " left near: " + string.Join(" ", a.Where(q => MathF.Abs(q.Item3 - p.Item3) < 0.02f).Select(q => $"({q.Item1:R},{q.Item2:R},{q.Item3:R})")));
+                " left near: " + string.Join(" ", a.Where(q => MathF.Abs(q.Item3 - p.Item3) < 0.02f).Select(q => $"({q.Item1:R},{q.Item2:R},{q.Item3:R})"))).IsTrue();
     }
 
     [TestCase]
@@ -146,14 +147,14 @@ public sealed class GroundTests
     {
         var ctx = TestWorld.Context(TestWorld.Street());
         var colliders = new GroundModule().Collide(ctx, new TileKey(0, 0));
-        Check.True(colliders.Count == 1 && colliders[0] is HeightFieldCollider, "Each ground tile has one height field.");
+        AssertThat(colliders.Count == 1 && colliders[0] is HeightFieldCollider).OverrideFailureMessage("Each ground tile has one height field.").IsTrue();
         var collider = (HeightFieldCollider)colliders[0];
-        Check.True(collider.HeightsCm.Length == 65 * 65, "Height field must be 65 x 65.");
-        Check.True(collider.FootMatHalfMeter is { Length: 128 * 128 }, "Footstep grid must be 128 x 128.");
-        Check.True(collider.FootMatHalfMeter!.All(b => b != 0), "No Auto footstep material on the ground.");
-        Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 10f, 0f), .02, "road height");
-        Check.Close(Section.PavingY, GroundCollision.SampleHeight(collider, 10f, 4.5f), .02, "sidewalk height");
-        Check.Close(Section.GrassY, GroundCollision.SampleHeight(collider, 10f, 20f), .02, "lawn height");
+        AssertThat(collider.HeightsCm.Length == 65 * 65).OverrideFailureMessage("Height field must be 65 x 65.").IsTrue();
+        AssertThat(collider.FootMatHalfMeter is { Length: 128 * 128 }).OverrideFailureMessage("Footstep grid must be 128 x 128.").IsTrue();
+        AssertThat(collider.FootMatHalfMeter!.All(b => b != 0)).OverrideFailureMessage("No Auto footstep material on the ground.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 10f, 0f))) <= .02).OverrideFailureMessage($"road height: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 10f, 0f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY) - (double)(GroundCollision.SampleHeight(collider, 10f, 4.5f))) <= .02).OverrideFailureMessage($"sidewalk height: expected {Section.PavingY}, got {GroundCollision.SampleHeight(collider, 10f, 4.5f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 10f, 20f))) <= .02).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 10f, 20f)}.").IsTrue();
     }
 
 
@@ -164,13 +165,13 @@ public sealed class GroundTests
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2, LodLevel.L3 })
         {
             var output = new GroundModule().Build(ctx, new TileKey(0, 0), lod);
-            Check.True(output.Meshes.Count > 0, $"{lod} produced nothing.");
+            AssertThat(output.Meshes.Count > 0).OverrideFailureMessage($"{lod} produced nothing.").IsTrue();
             foreach (var m in output.Meshes) m.ValidateVertexData();
             AssertWinding(output);
         }
         var whole = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L4);
         foreach (var m in whole.Meshes) m.ValidateVertexData();
-        Check.True(whole.Meshes.Sum(m => m.Index.Length / 3) < 20000, "L4 is a light whole-map surface.");
+        AssertThat(whole.Meshes.Sum(m => m.Index.Length / 3) < 20000).OverrideFailureMessage("L4 is a light whole-map surface.").IsTrue();
     }
 
     [TestCase]
@@ -178,19 +179,19 @@ public sealed class GroundTests
     {
         var ctx = TestWorld.Context(TestWorld.Street(), 128f);
         var masks = GroundMasks.Build(ctx, Section);
-        Check.True(masks.Width == 256 && masks.Height == 256, $"Mask size {masks.Width} x {masks.Height}.");
-        Check.True(masks.Mask1.Length == 256 * 256 * 4 && masks.Mask2.Length == masks.Mask1.Length, "RGBA8 buffers.");
+        AssertThat(masks.Width == 256 && masks.Height == 256).OverrideFailureMessage($"Mask size {masks.Width} x {masks.Height}.").IsTrue();
+        AssertThat(masks.Mask1.Length == 256 * 256 * 4 && masks.Mask2.Length == masks.Mask1.Length).OverrideFailureMessage("RGBA8 buffers.").IsTrue();
         byte Snow(float x, float z) { var (px, pz) = masks.Pixel(new(x, z)); return masks.Read(MaskChannel.Snow, px, pz); }
         byte Shelter(float x, float z) { var (px, pz) = masks.Pixel(new(x, z)); return masks.Read(MaskChannel.Shelter, px, pz); }
-        Check.True(Snow(10.2f, 0.2f) == 51, "Carriageway snow potential 0.2.");
-        Check.True(Snow(10.2f, 4.7f) == 128, "Sidewalk snow potential 0.5.");
-        Check.True(Snow(10.2f, 30.2f) == 255, "Lawn snow potential 1.");
-        Check.True(Shelter(-30.5f, 30.5f) == 0 && Snow(-30.5f, 30.5f) == 0, "Under a building is sheltered and snowless.");
-        Check.True(Shelter(10.2f, 30.2f) == 255, "Open lawn is exposed.");
-        Check.True(masks.Mask1.Where((_, i) => i % 4 == 3).All(b => b == 0), "Mask A stays reserved.");
-        Check.True(masks.Terrain.All(float.IsFinite), "Terrain heights finite.");
+        AssertThat(Snow(10.2f, 0.2f) == 51).OverrideFailureMessage("Carriageway snow potential 0.2.").IsTrue();
+        AssertThat(Snow(10.2f, 4.7f) == 128).OverrideFailureMessage("Sidewalk snow potential 0.5.").IsTrue();
+        AssertThat(Snow(10.2f, 30.2f) == 255).OverrideFailureMessage("Lawn snow potential 1.").IsTrue();
+        AssertThat(Shelter(-30.5f, 30.5f) == 0 && Snow(-30.5f, 30.5f) == 0).OverrideFailureMessage("Under a building is sheltered and snowless.").IsTrue();
+        AssertThat(Shelter(10.2f, 30.2f) == 255).OverrideFailureMessage("Open lawn is exposed.").IsTrue();
+        AssertThat(masks.Mask1.Where((_, i) => i % 4 == 3).All(b => b == 0)).OverrideFailureMessage("Mask A stays reserved.").IsTrue();
+        AssertThat(masks.Terrain.All(float.IsFinite)).OverrideFailureMessage("Terrain heights finite.").IsTrue();
         masks.Write(MaskChannel.GinkgoLeaves, 3, 4, 200);
-        Check.True(masks.Read(MaskChannel.GinkgoLeaves, 3, 4) == 200, "Channel write round-trips.");
+        AssertThat(masks.Read(MaskChannel.GinkgoLeaves, 3, 4) == 200).OverrideFailureMessage("Channel write round-trips.").IsTrue();
     }
 
     [TestCase]
@@ -212,17 +213,17 @@ public sealed class GroundTests
                 if (OnTileBorder(m.Position[3 * v], m.Position[3 * v + 2])) continue;
                 float x = m.Position[3 * v], y = m.Position[3 * v + 1], z = m.Position[3 * v + 2];
                 if (z < 12f) continue;   // away from the flattened road verge
-                Check.Close(terrain.HeightAt(x, z) + Section.GrassY, y, 0.03, $"lawn at ({x}, {z})");
+                AssertThat(Math.Abs((double)(terrain.HeightAt(x, z) + Section.GrassY) - (double)(y)) <= 0.03).OverrideFailureMessage($"lawn at ({x}, {z}): expected {terrain.HeightAt(x, z) + Section.GrassY}, got {y}.").IsTrue();
                 checkedLawn++;
             }
         }
-        Check.True(checkedLawn > 50, "Expected lawn vertices on the mound.");
+        AssertThat(checkedLawn > 50).OverrideFailureMessage("Expected lawn vertices on the mound.").IsTrue();
         var faceted = output.Meshes.Sum(m => Enumerable.Range(0, m.Normal.Length / 3).Count(v => m.Normal[3 * v + 1] < 0.99f && m.Normal[3 * v + 1] > 0.5f));
-        Check.True(faceted > 0, "The steep flank of the mound (steeper than 1:6) shades with faceted normals.");
+        AssertThat(faceted > 0).OverrideFailureMessage("The steep flank of the mound (steeper than 1:6) shades with faceted normals.").IsTrue();
         AssertWinding(output);
         var collider = module.Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
-        Check.Close(terrain.HeightAt(50f, 50f) + Section.GrassY, GroundCollision.SampleHeight(collider, 50f, 50f), 0.02, "collision on the mound");
-        Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 50f, 0f), 0.02, "road stays at its flattened grade");
+        AssertThat(Math.Abs((double)(terrain.HeightAt(50f, 50f) + Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 50f, 50f))) <= 0.02).OverrideFailureMessage($"collision on the mound: expected {terrain.HeightAt(50f, 50f) + Section.GrassY}, got {GroundCollision.SampleHeight(collider, 50f, 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 50f, 0f))) <= 0.02).OverrideFailureMessage($"road stays at its flattened grade: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 50f, 0f)}.").IsTrue();
     }
 
     private static FormulaTerrain Mound() => new(
@@ -238,7 +239,7 @@ public sealed class GroundTests
     {
         var root = AppContext.BaseDirectory;
         while (root is not null && !System.IO.Directory.Exists(System.IO.Path.Combine(root, "game", "style", "palette"))) root = System.IO.Path.GetDirectoryName(root);
-        Check.True(root is not null, "Repository root not found.");
+        AssertThat(root is not null).OverrideFailureMessage("Repository root not found.").IsTrue();
         var palette = System.IO.Path.Combine(root!, "game", "style", "palette");
         var ids = new Dictionary<string, int>();
         var core = System.IO.Path.Combine(palette, "core.json");
@@ -252,8 +253,8 @@ public sealed class GroundTests
         foreach (var color in Enum.GetValues<GroundColor>())
         {
             var lit = GroundPalette.Lit(color).Value;
-            Check.True(ids.TryGetValue(lit, out var id) && id == GroundPalette.Id(color), $"{lit}: table {GroundPalette.Id(color)}, registry {(ids.TryGetValue(lit, out var r) ? r : -1)}.");
-            Check.True(ids.TryGetValue(GroundPalette.Shade(color).Value, out var shade) && shade == id + 1, $"{color} shade must follow its lit column.");
+            AssertThat(ids.TryGetValue(lit, out var id) && id == GroundPalette.Id(color)).OverrideFailureMessage($"{lit}: table {GroundPalette.Id(color)}, registry {(ids.TryGetValue(lit, out var r) ? r : -1)}.").IsTrue();
+            AssertThat(ids.TryGetValue(GroundPalette.Shade(color).Value, out var shade) && shade == id + 1).OverrideFailureMessage($"{color} shade must follow its lit column.").IsTrue();
         }
     }
 
@@ -263,8 +264,8 @@ public sealed class GroundTests
         var ctx = TestWorld.Context(TestWorld.Junction());
         var collider = new GroundModule().Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
         // (4, 4) lies in the corner between the two kerb lines (x, z > 3): asphalt with a fillet, raised lawn without.
-        Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 4f, 4f), 0.011, "fillet corner");
-        Check.Close(Section.GrassY, GroundCollision.SampleHeight(collider, 12f, 12f), 0.011, "lawn beyond the fillet");
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 4f, 4f))) <= 0.011).OverrideFailureMessage($"fillet corner: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 4f, 4f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 12f, 12f))) <= 0.011).OverrideFailureMessage($"lawn beyond the fillet: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 12f, 12f)}.").IsTrue();
     }
 
     [TestCase]
@@ -303,7 +304,7 @@ public sealed class GroundTests
                     if (Border(a) && Border(b) && (a.X == b.X || a.Z == b.Z)) continue;
                     if (a.Y < 0f && b.Y < 0f) continue;   // skirt and bank bottoms
                     if (Vector3.Distance(a, b) < 1e-3f) continue;   // sub-millimetre slivers beside nudged contours are dropped
-                    throw new InvalidOperationException($"{lod}: edge {a} -> {b} used {count} times.");
+                    AssertThat(false).OverrideFailureMessage($"{lod}: edge {a} -> {b} used {count} times.").IsTrue();
                 }
             }
     }
@@ -327,21 +328,8 @@ public sealed class GroundTests
                 if (cross.Length() < 2e-6f) continue;   // sub-millimetre slivers next to nudged contours carry no orientation
                 var n = N(0) + N(1) + N(2);
                 if (MathF.Abs(Vector3.Dot(Vector3.Normalize(cross), Vector3.Normalize(n))) < 0.1f) continue;   // border skirts shade as level ground
-                Check.True(Vector3.Dot(cross, n) < 0f, $"Triangle {t / 3} in {m.Material.Spec.Lit.Value} is back-facing: {P(0)} {P(1)} {P(2)} n {N(0)} {N(1)} {N(2)}.");
+                AssertThat(Vector3.Dot(cross, n) < 0f).OverrideFailureMessage($"Triangle {t / 3} in {m.Material.Spec.Lit.Value} is back-facing: {P(0)} {P(1)} {P(2)} n {N(0)} {N(1)} {N(2)}.").IsTrue();
             }
-    }
-}
-
-internal static class Check
-{
-    public static void True(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
-    public static void Close(double expected, double actual, double tolerance, string label)
-    {
-        if (!(Math.Abs(expected - actual) <= tolerance)) throw new InvalidOperationException($"{label}: expected {expected}, got {actual}.");
     }
 }
 

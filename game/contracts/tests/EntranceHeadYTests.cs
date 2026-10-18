@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -17,14 +18,13 @@ public sealed class EntranceHeadYTests
     public void OldConstructorAndMissingOrZeroRawHeadRemainUnknownAfterPadTranslation()
     {
         var oldDeclaration = new EntranceDecl("entry.main", new(1, 2, 3), new(4, 5, 6), 1.25f, true);
-        Require(oldDeclaration.HeadY == 0, "The existing constructor must keep an unknown head.");
+        AssertThat(oldDeclaration.HeadY == 0).OverrideFailureMessage("The existing constructor must keep an unknown head.").IsTrue();
         foreach (var height in new[] { 2f, -2f, 0f })
         {
             var terrain = new PadTerrain(height);
             var omitted = Parse(Add("\"heightRef\":\"pad\""), terrain.Terrain);
             var zero = Parse(Add("\"heightRef\":\"pad\",\"headY\":0"), terrain.Terrain);
-            Require(omitted.HeadY == 0 && zero.HeadY == 0 && omitted == zero && omitted.Center.Y == .75f + height,
-                "An unknown head acquired a pad height or prevented the three points from moving.");
+            AssertThat(omitted.HeadY == 0 && zero.HeadY == 0 && omitted == zero && omitted.Center.Y == .75f + height).OverrideFailureMessage("An unknown head acquired a pad height or prevented the three points from moving.").IsTrue();
         }
     }
 
@@ -32,21 +32,18 @@ public sealed class EntranceHeadYTests
     public void KnownHeadFollowsRawReferenceAndSerializesOnlyItsAbsoluteResult()
     {
         var unused = new PadTerrain(20);
-        Require(Parse(Add("\"headY\":3.5"), unused.Terrain).HeadY == 3.5f &&
-            Parse(Add("\"heightRef\":\"absolute\",\"headY\":-0.5"), unused.Terrain).HeadY == -.5f && unused.Calls == 0,
-            "Absolute heads must remain absolute, including negative world elevations.");
+        AssertThat(Parse(Add("\"headY\":3.5"), unused.Terrain).HeadY == 3.5f &&
+            Parse(Add("\"heightRef\":\"absolute\",\"headY\":-0.5"), unused.Terrain).HeadY == -.5f && unused.Calls == 0).OverrideFailureMessage("Absolute heads must remain absolute, including negative world elevations.").IsTrue();
         foreach (var pad in new[] { 2f, -4f })
         {
             var terrain = new PadTerrain(pad);
             var raw = Add("\"heightRef\":\"pad\",\"headY\":3.5");
             var resolved = Parse(raw, terrain.Terrain);
-            Require(resolved.HeadY == 3.5f + pad && terrain.Calls == 1,
-                "Known head must use the same single pad sample as the entrance points.");
+            AssertThat(resolved.HeadY == 3.5f + pad && terrain.Calls == 1).OverrideFailureMessage("Known head must use the same single pad sample as the entrance points.").IsTrue();
             var json = JsonSerializer.Serialize(resolved, ContractJson.Options);
-            Require(!json.Contains("heightRef", StringComparison.Ordinal) &&
+            AssertThat(!json.Contains("heightRef", StringComparison.Ordinal) &&
                 JsonSerializer.Deserialize<EntranceDecl>(json, ContractJson.Options) == resolved &&
-                Parse(raw, new PadTerrain(pad).Terrain) == resolved,
-                "Raw parsing or resolved-object round trip applied the head offset twice.");
+                Parse(raw, new PadTerrain(pad).Terrain) == resolved).OverrideFailureMessage("Raw parsing or resolved-object round trip applied the head offset twice.").IsTrue();
         }
     }
 
@@ -54,10 +51,30 @@ public sealed class EntranceHeadYTests
     public void InvalidHeadsAndKnownValuesCollidingWithUnknownSentinelAreRejected()
     {
         foreach (var value in new[] { "null", "\"3.5\"", "true", "1e999", "-1e999" })
-            Throws<JsonException>(() => Parse(Add("\"headY\":" + value)));
-        Throws<JsonException>(() => Parse(Add("\"headY\":3.5,\"headY\":4")));
-        Throws<JsonException>(() => Parse(Add("\"heightRef\":\"pad\",\"headY\":3.5"), new PadTerrain(-3.5f).Terrain));
-        Throws<JsonException>(() => Parse(Add("\"heightRef\":\"pad\",\"headY\":3e38"), new PadTerrain(3e38f).Terrain));
+        {
+            bool rejected = false;
+            try { Parse(Add("\"headY\":" + value)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Add("\"headY\":3.5,\"headY\":4")); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Add("\"heightRef\":\"pad\",\"headY\":3.5"), new PadTerrain(-3.5f).Terrain); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Add("\"heightRef\":\"pad\",\"headY\":3e38"), new PadTerrain(3e38f).Terrain); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
     }
 
     private static string Add(string fields) => Entry.Insert(Entry.Length - 1, "," + fields);
@@ -79,16 +96,5 @@ public sealed class EntranceHeadYTests
         public FormulaTerrain Terrain { get; }
         public int Calls { get; private set; }
         private float PadY(FeatureId feature) { Calls++; return feature == Feature ? value : throw new KeyNotFoundException(); }
-    }
-
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }

@@ -28,13 +28,4 @@ internal static class WorldTestKit
         "entry", [], new(MapTimeRule.Shared, preset, new("默认", "Default"), quiet, "test-profile"),
         new("sky", "backdrop", []), new Dictionary<string, string>(), []));
 
-    public static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    public static void Near(double actual, double expected, double tolerance = 1e-10) =>
-        Check(Math.Abs(actual - expected) <= tolerance, $"Expected {expected:R}, got {actual:R}.");
-    public static void Equal<T>(T actual, T expected) => Check(EqualityComparer<T>.Default.Equals(actual, expected), $"Expected {expected}, got {actual}.");
-    public static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); } catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

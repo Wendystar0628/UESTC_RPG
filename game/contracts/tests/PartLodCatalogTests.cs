@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts.Parts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -14,14 +15,14 @@ public sealed class PartLodCatalogTests
         IPartDef<int> typed = legacy;
         IPartDef untyped = typed;
         var levels = untyped.SupportedLods;
-        Require(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4]), "Default bridge lost numeric order or keys.");
-        Expect<NotSupportedException>(() => ((IList<LodLevel>)levels)[0] = LodLevel.L1);
+        AssertThat(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4])).OverrideFailureMessage("Default bridge lost numeric order or keys.").IsTrue();
+        AssertThrown(() => ((IList<LodLevel>)levels)[0] = LodLevel.L1).IsInstanceOf<NotSupportedException>();
         legacy.Builders.Clear();
         legacy.Builders.Add(LodLevel.L1, _ => throw new InvalidOperationException("A capability query ran a builder."));
-        Require(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4]), "A returned default-interface list aliases mutable Lods.Keys.");
-        Require(untyped.SupportedLods.SequenceEqual([LodLevel.L1]), "The generic bridge did not read this object's current builders.");
+        AssertThat(levels.SequenceEqual([LodLevel.L0, LodLevel.L2, LodLevel.L4])).OverrideFailureMessage("A returned default-interface list aliases mutable Lods.Keys.").IsTrue();
+        AssertThat(untyped.SupportedLods.SequenceEqual([LodLevel.L1])).OverrideFailureMessage("The generic bridge did not read this object's current builders.").IsTrue();
         legacy.Builders.Add((LodLevel)255, _ => throw new InvalidOperationException("A capability query ran a builder."));
-        Expect<ArgumentOutOfRangeException>(() => { _ = untyped.SupportedLods; });
+        AssertThrown(() => { _ = untyped.SupportedLods; }).IsInstanceOf<ArgumentOutOfRangeException>();
     }
 
     [TestCase]
@@ -29,22 +30,27 @@ public sealed class PartLodCatalogTests
     {
         var valid = new LegacyPart(LodLevel.L0);
         var catalog = new PartLodCatalog([Pair("known", valid)]);
-        Require(catalog.Supports(new("known"), LodLevel.L0) && !catalog.Supports(new("known"), LodLevel.L2), "Known supported/unsupported LOD query changed.");
-        var unknown = Expect<KeyNotFoundException>(() => catalog.Supports(new("missing"), LodLevel.L0));
-        Require(unknown.Message.Contains("missing", StringComparison.Ordinal), "Unknown ID diagnostic lost the ID.");
-        Expect<KeyNotFoundException>(() => catalog.SupportedLods(new("missing")));
-        Expect<ArgumentOutOfRangeException>(() => catalog.Supports(new("known"), (LodLevel)255));
-        Expect<ArgumentException>(() => catalog.SupportedLods(default));
-        Expect<ArgumentNullException>(() => new PartLodCatalog(null!));
-        Expect<ArgumentException>(() => new PartLodCatalog([new(default, valid)]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair(" ", valid)]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("same", valid), Pair("same", valid)]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("null-definition", null!)]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("empty", new RawDefinition([]))]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("bad-enum", new RawDefinition([(LodLevel)255]))]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("repeat-lod", new RawDefinition([LodLevel.L0, LodLevel.L0]))]));
-        Expect<ArgumentException>(() => new PartLodCatalog([Pair("null-list", new RawDefinition(null!))]));
-        Expect<KeyNotFoundException>(() => new PartLodCatalog([]).Supports(new("absent"), LodLevel.L0));
+        AssertThat(catalog.Supports(new("known"), LodLevel.L0) && !catalog.Supports(new("known"), LodLevel.L2)).OverrideFailureMessage("Known supported/unsupported LOD query changed.").IsTrue();
+        KeyNotFoundException? unknown = null;
+        AssertThrown(() =>
+        {
+            try { catalog.Supports(new("missing"), LodLevel.L0); }
+            catch (KeyNotFoundException caught) { unknown = caught; throw; }
+        }).IsInstanceOf<KeyNotFoundException>();
+        AssertThat(unknown!.Message.Contains("missing", StringComparison.Ordinal)).OverrideFailureMessage("Unknown ID diagnostic lost the ID.").IsTrue();
+        AssertThrown(() => catalog.SupportedLods(new("missing"))).IsInstanceOf<KeyNotFoundException>();
+        AssertThrown(() => catalog.Supports(new("known"), (LodLevel)255)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => catalog.SupportedLods(default)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog(null!)).IsInstanceOf<ArgumentNullException>();
+        AssertThrown(() => new PartLodCatalog([new(default, valid)])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair(" ", valid)])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("same", valid), Pair("same", valid)])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("null-definition", null!)])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("empty", new RawDefinition([]))])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("bad-enum", new RawDefinition([(LodLevel)255]))])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("repeat-lod", new RawDefinition([LodLevel.L0, LodLevel.L0]))])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([Pair("null-list", new RawDefinition(null!))])).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => new PartLodCatalog([]).Supports(new("absent"), LodLevel.L0)).IsInstanceOf<KeyNotFoundException>();
     }
 
     [TestCase]
@@ -55,30 +61,22 @@ public sealed class PartLodCatalogTests
         var raw = new RawDefinition(mutable);
         var source = new List<KeyValuePair<PartId, IPartDef>> { Pair("z", raw), Pair("a", legacy) };
         var frozen = new PartLodCatalog(source);
-        Require(raw.Reads == 1, "Catalog queried the definition more than once during capture.");
+        AssertThat(raw.Reads == 1).OverrideFailureMessage("Catalog queried the definition more than once during capture.").IsTrue();
         var reversed = new PartLodCatalog([Pair("a", new LegacyPart(LodLevel.L0, LodLevel.L2)),
             Pair("z", new RawDefinition([LodLevel.L1, LodLevel.L4]))]);
         foreach (var id in new[] { new PartId("a"), new PartId("z") })
-            Require(frozen.SupportedLods(id).SequenceEqual(reversed.SupportedLods(id)), "Insertion order changed the catalog.");
+            AssertThat(frozen.SupportedLods(id).SequenceEqual(reversed.SupportedLods(id))).OverrideFailureMessage("Insertion order changed the catalog.").IsTrue();
         source.Clear();
         legacy.Builders.Clear();
         mutable[0] = LodLevel.L0;
         raw.ThrowOnRead = true;
-        Require(frozen.SupportedLods(new("a")).SequenceEqual([LodLevel.L0, LodLevel.L2]), "Frozen catalog still reads a definition's Lods.");
-        Require(frozen.SupportedLods(new("z")).SequenceEqual([LodLevel.L1, LodLevel.L4]), "Frozen catalog aliases a provider-owned list.");
-        Require(frozen.Supports(new("z"), LodLevel.L4) && !frozen.Supports(new("z"), LodLevel.L0) && raw.Reads == 1,
-            "A query re-read or reinterpreted mutable definitions.");
-        Expect<NotSupportedException>(() => ((IList<LodLevel>)frozen.SupportedLods(new("z")))[0] = LodLevel.L0);
+        AssertThat(frozen.SupportedLods(new("a")).SequenceEqual([LodLevel.L0, LodLevel.L2])).OverrideFailureMessage("Frozen catalog still reads a definition's Lods.").IsTrue();
+        AssertThat(frozen.SupportedLods(new("z")).SequenceEqual([LodLevel.L1, LodLevel.L4])).OverrideFailureMessage("Frozen catalog aliases a provider-owned list.").IsTrue();
+        AssertThat(frozen.Supports(new("z"), LodLevel.L4) && !frozen.Supports(new("z"), LodLevel.L0) && raw.Reads == 1).OverrideFailureMessage("A query re-read or reinterpreted mutable definitions.").IsTrue();
+        AssertThrown(() => ((IList<LodLevel>)frozen.SupportedLods(new("z")))[0] = LodLevel.L0).IsInstanceOf<NotSupportedException>();
     }
 
     private static KeyValuePair<PartId, IPartDef> Pair(string id, IPartDef definition) => new(new(id), definition);
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static T Expect<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T error) { return error; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 
     // Implements only the existing generic contract's abstract members: no SupportedLods member.
     private sealed class LegacyPart(params LodLevel[] levels) : IPartDef<int>

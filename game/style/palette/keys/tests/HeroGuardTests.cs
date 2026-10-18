@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Style.Palette.Keys;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests.Style;
 
@@ -26,9 +27,9 @@ public sealed class HeroGuardTests
                 var (m, hero) = Colours(script, token, Season.Autumn, clock);
                 var lit = m.Lit;
                 var cmin = Math.Min(floor * hero.CRef, m.Shade.Chroma / ratio);
-                Check(hero.Guard, $"{token}: autumn hero hue {hero.HRef:F1} should be guarded.");
-                Check(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9, $"{token} {clock}: lit hue {lit.Hue:F2} is greener than the hero hue {hero.HRef:F2}.");
-                Check(lit.Chroma >= cmin - 1e-9, $"{token} {clock}: lit C {lit.Chroma:F4} is below the floor {cmin:F4}.");
+                AssertThat(hero.Guard).OverrideFailureMessage($"{token}: autumn hero hue {hero.HRef:F1} should be guarded.").IsTrue();
+                AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9).OverrideFailureMessage($"{token} {clock}: lit hue {lit.Hue:F2} is greener than the hero hue {hero.HRef:F2}.").IsTrue();
+                AssertThat(lit.Chroma >= cmin - 1e-9).OverrideFailureMessage($"{token} {clock}: lit C {lit.Chroma:F4} is below the floor {cmin:F4}.").IsTrue();
             }
         foreach (var e in script.Vegetation.Entries.Values)
             foreach (var season in Enum.GetValues<Season>())
@@ -38,7 +39,7 @@ public sealed class HeroGuardTests
                 for (var hour = 0; hour < 24; hour++)
                 {
                     var lit = Lit(script, e.Token, season, hour).Lit;
-                    Check(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9, $"{e.Token} {season} {hour}:00: lit hue {lit.Hue:F2} past hero {hero.HRef:F2}.");
+                    AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9).OverrideFailureMessage($"{e.Token} {season} {hour}:00: lit hue {lit.Hue:F2} past hero {hero.HRef:F2}.").IsTrue();
                 }
             }
     }
@@ -51,7 +52,7 @@ public sealed class HeroGuardTests
         foreach (var (clock, hex) in new[] { (21.0, "#887653"), (19.0, "#98845D"), (6.5, "#95815A") })
         {
             var actual = Oklab.ToHex(Lit(script, "ginkgo", Season.Autumn, clock).Lit);
-            Check(actual == hex, $"ginkgo autumn {clock}: {actual}, expected {hex}.");
+            AssertThat(actual == hex).OverrideFailureMessage($"ginkgo autumn {clock}: {actual}, expected {hex}.").IsTrue();
         }
     }
 
@@ -71,11 +72,11 @@ public sealed class HeroGuardTests
                 for (var hour = 0.0; hour < 24.0; hour += 0.5)
                 {
                     var m = Colours(script, e.Token, season, hour).Colors;
-                    Check(m.Lit.Chroma <= m.Shade.Chroma / ratio + 1e-9, $"{e.Token} {season} {hour}: lit C {m.Lit.Chroma:F4} passes the cap {m.Shade.Chroma / ratio:F4}.");
+                    AssertThat(m.Lit.Chroma <= m.Shade.Chroma / ratio + 1e-9).OverrideFailureMessage($"{e.Token} {season} {hour}: lit C {m.Lit.Chroma:F4} passes the cap {m.Shade.Chroma / ratio:F4}.").IsTrue();
                     checkedCount++;
                 }
             }
-        Check(checkedCount > 500, $"only {checkedCount} cases checked.");
+        AssertThat(checkedCount > 500).OverrideFailureMessage($"only {checkedCount} cases checked.").IsTrue();
     }
 
     [TestCase]
@@ -85,7 +86,7 @@ public sealed class HeroGuardTests
         var off = Script(true);
         string[] expected = ["bloom.yellow", "camphor.red", "cherry", "crop", "deciduous", "ginkgo", "lotus", "metaseq", "reed"];
         var guarded = on.Vegetation.Entries.Values.Where(e => e.Hero.Any(h => h.Guard)).Select(e => e.Token).Order(StringComparer.Ordinal).ToArray();
-        Check(guarded.SequenceEqual(expected), $"guarded tokens: {string.Join(", ", guarded)}.");
+        AssertThat(guarded.SequenceEqual(expected)).OverrideFailureMessage($"guarded tokens: {string.Join(", ", guarded)}.").IsTrue();
         var checkedCount = 0;
         foreach (var e in on.Vegetation.Entries.Values)
             foreach (var season in Enum.GetValues<Season>())
@@ -96,11 +97,11 @@ public sealed class HeroGuardTests
                     var w = on.EvaluateWorld(hour, (double)season, null, default(WeatherVec));
                     var a = on.Deriver.Material(e.Albedo[(int)season], e.Class, w.Frame, w.X, e.Hero[(int)season]);
                     var b = off.Deriver.Material(off.Vegetation.Entries[e.Token].Albedo[(int)season], e.Class, w.Frame, w.X, off.Vegetation.Entries[e.Token].Hero[(int)season]);
-                    Check(a == b, $"{e.Token} {season} {hour}: {Oklab.ToHex(a.Lit)} / {Oklab.ToHex(b.Lit)} changed by the guard.");
+                    AssertThat(a == b).OverrideFailureMessage($"{e.Token} {season} {hour}: {Oklab.ToHex(a.Lit)} / {Oklab.ToHex(b.Lit)} changed by the guard.").IsTrue();
                     checkedCount++;
                 }
             }
-        Check(checkedCount > 1000, $"only {checkedCount} cases checked.");
+        AssertThat(checkedCount > 1000).OverrideFailureMessage($"only {checkedCount} cases checked.").IsTrue();
     }
 
     private static (Lab Lit, HeroRef Hero) Lit(ColorScript script, string token, Season season, double clock)
@@ -140,6 +141,4 @@ public sealed class HeroGuardTests
             if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
         throw new InvalidOperationException("Repository root not found.");
     }
-
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

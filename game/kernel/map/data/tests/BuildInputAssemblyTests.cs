@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Text;
 using System.Numerics;
@@ -21,23 +22,27 @@ public sealed class BuildInputAssemblyTests
         var firstMap = assets.Value;
         raw[0] = 0;
         var secondMap = assets.Value;
-        Require(reads == 1 && ReferenceEquals(firstMap, secondMap), "Asset bytes were read or frozen again per map.");
-        Require(firstMap.Require("vegetation/species.json").Span[0] == (byte)'s', "Published bytes alias a caller-owned mutable array.");
+        AssertThat(reads == 1 && ReferenceEquals(firstMap, secondMap)).OverrideFailureMessage("Asset bytes were read or frozen again per map.").IsTrue();
+        AssertThat(firstMap.Require("vegetation/species.json").Span[0] == (byte)'s').OverrideFailureMessage("Published bytes alias a caller-owned mutable array.").IsTrue();
         var empty = BuildInputAssembly.ReadRequiredGlobalInputs([], _ => throw new InvalidOperationException("Unexpected fixture IO."));
-        Require(ReferenceEquals(empty, BuildInputSnapshot.Empty), "A fixture with no requested global assets lost its empty default.");
+        AssertThat(ReferenceEquals(empty, BuildInputSnapshot.Empty)).OverrideFailureMessage("A fixture with no requested global assets lost its empty default.").IsTrue();
     }
 
     [TestCase]
     public void RequiredInputsFailWithScopeAndKeyBeforeAnyConsumerRuns()
     {
-        var missing = Throws<InvalidDataException>(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty));
-        Require(missing.Message.Contains("scope=global", StringComparison.Ordinal) &&
-            missing.Message.Contains("vegetation/species.json", StringComparison.Ordinal), "Missing-input error lost scope or key.");
+        Exception? missing = null;
+        AssertThrown(() =>
+        {
+            try { BuildInputAssembly.ReadRequiredGlobalInputs(["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty); }
+            catch (Exception error) { missing = error; throw; }
+        }).IsInstanceOf<InvalidDataException>();
+        AssertThat(missing is InvalidDataException missingError && missingError.Message.Contains("scope=global", StringComparison.Ordinal) &&
+            missingError.Message.Contains("vegetation/species.json", StringComparison.Ordinal)).OverrideFailureMessage("Missing-input error lost scope or key.").IsTrue();
         var read = false;
-        _ = Throws<ArgumentException>(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; }));
-        Require(!read, "A non-canonical key reached the IO boundary.");
+        AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
+            ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; })).IsInstanceOf<ArgumentException>();
+        AssertThat(!read).OverrideFailureMessage("A non-canonical key reached the IO boundary.").IsTrue();
     }
 
     [TestCase]
@@ -48,14 +53,14 @@ public sealed class BuildInputAssemblyTests
         var source = new List<IGroundMaskContributor> { first, second };
         var snapshot = BuildInputAssembly.FreezeGroundMaskContributors(source);
         source.Clear();
-        Require(snapshot.Select(item => item.Id).SequenceEqual(["a", "z"]), "Contributor snapshot was mutable or unsorted.");
-        _ = Throws<InvalidOperationException>(() => BuildInputAssembly.FreezeGroundMaskContributors(
-            [second, new Contributor("conflict", GroundMaskChannels.GinkgoLeaves)]));
-        _ = Throws<InvalidOperationException>(() => BuildInputAssembly.FreezeGroundMaskContributors(
-            [second, new Contributor("a", GroundMaskChannels.OtherLeaves)]));
-        _ = Throws<InvalidOperationException>(() => BuildInputAssembly.FreezeGroundMaskContributors(
-            [new Contributor("unknown", (GroundMaskChannels)8)]));
-        Require(first.PaintCalls == 0 && second.PaintCalls == 0, "Composition painted buffers before ownership validation completed.");
+        AssertThat(snapshot.Select(item => item.Id).SequenceEqual(["a", "z"])).OverrideFailureMessage("Contributor snapshot was mutable or unsorted.").IsTrue();
+        AssertThrown(() => BuildInputAssembly.FreezeGroundMaskContributors(
+            [second, new Contributor("conflict", GroundMaskChannels.GinkgoLeaves)])).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => BuildInputAssembly.FreezeGroundMaskContributors(
+            [second, new Contributor("a", GroundMaskChannels.OtherLeaves)])).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => BuildInputAssembly.FreezeGroundMaskContributors(
+            [new Contributor("unknown", (GroundMaskChannels)8)])).IsInstanceOf<InvalidOperationException>();
+        AssertThat(first.PaintCalls == 0 && second.PaintCalls == 0).OverrideFailureMessage("Composition painted buffers before ownership validation completed.").IsTrue();
     }
 
     [TestCase]
@@ -70,20 +75,12 @@ public sealed class BuildInputAssemblyTests
         definitions.Clear();
         var steps = collision.Collision(new(new(PartCatalog.Steps), new StairParams(2, .9f, 1.8f, 6), Matrix4x4.Identity));
         var platform = collision.Collision(new(new(PartCatalog.Platform), new PanelParams(2, .3f, 2), Matrix4x4.Identity));
-        Require(steps.Any(collider => collider is RampCollider { Tag: SurfaceTag.Stair }) &&
-            platform.Any(collider => collider is BoxCollider { Tag: SurfaceTag.Ground }), "Captured definitions lost their authored support surfaces.");
-        _ = Throws<ArgumentException>(() => collision.Collision(new(new(PartCatalog.Steps), new object(), Matrix4x4.Identity)));
-        _ = Throws<InvalidOperationException>(() => collision.Collision(new(new("unregistered"), new object(), Matrix4x4.Identity)));
+        AssertThat(steps.Any(collider => collider is RampCollider { Tag: SurfaceTag.Stair }) &&
+            platform.Any(collider => collider is BoxCollider { Tag: SurfaceTag.Ground })).OverrideFailureMessage("Captured definitions lost their authored support surfaces.").IsTrue();
+        AssertThrown(() => collision.Collision(new(new(PartCatalog.Steps), new object(), Matrix4x4.Identity))).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => collision.Collision(new(new("unregistered"), new object(), Matrix4x4.Identity))).IsInstanceOf<InvalidOperationException>();
     }
 
-    private static T Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T error) { return error; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-    private static void Require(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
 
     // No registration attributes or test-assembly scanning: this exercises a detached capability list only.
     private sealed class Contributor(string id, GroundMaskChannels channels) : IContentModule, IGroundMaskContributor

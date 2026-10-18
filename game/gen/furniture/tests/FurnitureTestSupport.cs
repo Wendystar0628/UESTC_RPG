@@ -10,7 +10,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
-using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Furniture.Tests;
 
@@ -73,7 +73,7 @@ internal static class FurnitureTestSupport
         var line = layout.Diagnostics.Where(d => d.Feature?.Value == id && d.Code == "wp13.anchor.turned").Select(d => d.Message).SingleOrDefault();
         if (line is null) return null;
         var m = System.Text.RegularExpressions.Regex.Match(line, @"yawDeg (-?\d+\.\d+) \(data -?\d+\.\d+\), centre \((-?\d+\.\d+), (-?\d+\.\d+)\) \(data");
-        Check(m.Success, "unreadable diagnostic message: " + line);
+        AssertThat(m.Success).OverrideFailureMessage("unreadable diagnostic message: " + line).IsTrue();
         float F(int g) => float.Parse(m.Groups[g].Value, System.Globalization.CultureInfo.InvariantCulture);
         return (F(1), new(F(2), F(3)));
     }
@@ -149,11 +149,6 @@ internal static class FurnitureTestSupport
             Features = all,
             Network = inner.Network with { Roads = [.. inner.Network.Roads, .. lines], Trees = [.. inner.Network.Trees, .. trees ?? Array.Empty<NetworkTree>()] },
         };
-    }
-
-    internal static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 
     internal static string FindRepository()

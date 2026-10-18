@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -24,8 +25,8 @@ public sealed class LightingContentBoundaryTests
             throw new InvalidOperationException("Lighting slots must form a complete bijection.");
         if (LightChannelCatalog.Slot(new ChannelId("WINDOW.GENERAL")) != -1 || LightChannelCatalog.Slot(default) != -1)
             throw new InvalidOperationException("Unregistered names must not silently select a shader slot.");
-        ExpectArgument(() => LightChannelCatalog.Id(-1));
-        ExpectArgument(() => LightChannelCatalog.Id(32));
+        AssertThrown(() => LightChannelCatalog.Id(-1)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => LightChannelCatalog.Id(32)).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase]
@@ -83,10 +84,5 @@ public sealed class LightingContentBoundaryTests
             throw new InvalidOperationException("Non-toon water payload was mistaken for glass window numbering.");
     }
 
-    private static void ExpectArgument(Action action)
-    {
-        try { action(); }
-        catch (ArgumentException) { return; }
-        throw new InvalidOperationException("Out-of-range lighting slot was accepted.");
-    }
+
 }

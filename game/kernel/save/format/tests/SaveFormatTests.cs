@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Save.Format.Tests;
 
@@ -33,14 +34,6 @@ public sealed class SaveFormatTests
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
             if (File.Exists(Path.Combine(directory.FullName, "ownership.json"))) return directory.FullName;
         throw new InvalidOperationException("Set UESTC_REPOSITORY to the tested worktree.");
-    }
-    private static void Check(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
-    private static void Reject(Action action)
-    {
-        try { action(); }
-        catch (SaveFormatException) { return; }
-        throw new InvalidOperationException("Invalid save was accepted.");
     }
     private static void Rehash(byte[] bytes)
     {
@@ -72,8 +65,8 @@ public sealed class SaveFormatTests
                 new Dictionary<string, RawSaveSection> { ["unseen"] = new(47, unknown) });
             var decoded = SaveContainer.Decode(SaveContainer.Encode(new(Meta(), raw, null)), 1, new("s1"));
             var prepared = registry.Prepare(decoded);
-            Check(BitConverter.DoubleToInt64Bits(((TestState)prepared.Sections[0].Dto!).Hours) == BitConverter.DoubleToInt64Bits(hours), "Double lost bits.");
-            Check(decoded.Sections["unseen"].Envelope.SequenceEqual(unknown), "Unknown section bytes changed.");
+            AssertThat(BitConverter.DoubleToInt64Bits(((TestState)prepared.Sections[0].Dto!).Hours) == BitConverter.DoubleToInt64Bits(hours)).OverrideFailureMessage("Double lost bits.").IsTrue();
+            AssertThat(decoded.Sections["unseen"].Envelope.SequenceEqual(unknown)).OverrideFailureMessage("Unknown section bytes changed.").IsTrue();
         }
     }
 
@@ -81,33 +74,80 @@ public sealed class SaveFormatTests
     public void TruncationAndBitFlipAreRejected()
     {
         var original = SaveContainer.Encode(Document());
-        Reject(() => SaveContainer.Decode(original[..(original.Length / 2)]));
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(original[..(original.Length / 2)]); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
         var flipped = original.ToArray(); flipped[^1] ^= 1;
-        Reject(() => SaveContainer.Decode(flipped));
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(flipped); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
     public void LengthGenerationFlagsAndNewerVersionsAreRejected()
     {
         var original = SaveContainer.Encode(Document());
-        Reject(() => SaveContainer.Decode(original, 2));
-        Reject(() => SaveContainer.Decode(original, expectedSlot: new("s2")));
-        var flags = original.ToArray(); flags[10] = 5; Rehash(flags); Reject(() => SaveContainer.Decode(flags));
-        var newer = original.ToArray(); newer[8] = 2; Rehash(newer); Reject(() => SaveContainer.Decode(newer));
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(original, 2); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(original, expectedSlot: new("s2")); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
+        var flags = original.ToArray(); flags[10] = 5; Rehash(flags);
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(flags); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
+        var newer = original.ToArray(); newer[8] = 2; Rehash(newer);
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(newer); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
         var length = original.ToArray(); BinaryPrimitives.WriteUInt32LittleEndian(length.AsSpan(12), 17000); Rehash(length);
-        Reject(() => SaveContainer.Decode(length));
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(length); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
         var newSection = Document() with { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray()) } };
-        Reject(() => Sections().Prepare(SaveContainer.Decode(SaveContainer.Encode(newSection))));
+        {
+            var thrown = false;
+            try { Sections().Prepare(SaveContainer.Decode(SaveContainer.Encode(newSection))); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
     public void InvalidBrotliAndBadThumbnailAreContained()
     {
-        Reject(() => SaveContainer.Decode(ReplaceCompressedBody("not brotli"u8.ToArray())));
+        {
+            var thrown = false;
+            try { SaveContainer.Decode(ReplaceCompressedBody("not brotli"u8.ToArray())); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
         var thumbnail = "RIFF\u0004\0\0\0WEBP"u8.ToArray();
         var thumbSave = SaveContainer.Encode(Document() with { Thumbnail = thumbnail });
         thumbSave[^1] = 0; Rehash(thumbSave);
-        Check(SaveContainer.Decode(thumbSave).Thumbnail is null, "Invalid thumbnail was exposed to the image decoder.");
+        AssertThat(SaveContainer.Decode(thumbSave).Thumbnail is null).OverrideFailureMessage("Invalid thumbnail was exposed to the image decoder.").IsTrue();
     }
 
     [TestCase]
@@ -116,7 +156,12 @@ public sealed class SaveFormatTests
         foreach (var data in new[] { "{\"hours\":1,\"hours\":2}", "{\"hours\":1,\"surprise\":2}", "{}", "{\"hours\":\"wrong\"}" })
         {
             var document = Document() with { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, Encoding.UTF8.GetBytes("{\"v\":1,\"data\":" + data + "}")) } };
-            Reject(() => Sections().Prepare(SaveContainer.Decode(SaveContainer.Encode(document))));
+            {
+                var thrown = false;
+                try { Sections().Prepare(SaveContainer.Decode(SaveContainer.Encode(document))); }
+                catch (SaveFormatException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+            }
         }
         var deep = Encoding.UTF8.GetBytes(new string('[', 65) + "0" + new string(']', 65));
         try { using var parsed = SaveContainer.ParseJson(deep); }
@@ -128,11 +173,16 @@ public sealed class SaveFormatTests
     public void NoncoreErrorsAndVersionMismatchBecomeDefaults()
     {
         var older = Sections(null, 3, RestorePhase.Content).Prepare(Document());
-        Check(older.Sections[0].Dto is null && older.Sections[0].Repair is not null, "A section with another version should be replaced by its default.");
-        Reject(() => Sections(null, 3).Prepare(Document()));
+        AssertThat(older.Sections[0].Dto is null && older.Sections[0].Repair is not null).OverrideFailureMessage("A section with another version should be replaced by its default.").IsTrue();
+        {
+            var thrown = false;
+            try { Sections(null, 3).Prepare(Document()); }
+            catch (SaveFormatException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
+        }
         var noncore = Sections(phase: RestorePhase.Content).Prepare(Document() with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } });
-        Check(noncore.Sections[0].Dto is null && noncore.Sections[0].Repair is not null, "Invalid noncore section should be repaired independently.");
+        AssertThat(noncore.Sections[0].Dto is null && noncore.Sections[0].Repair is not null).OverrideFailureMessage("Invalid noncore section should be repaired independently.").IsTrue();
     }
 
     [TestCase]
@@ -142,10 +192,10 @@ public sealed class SaveFormatTests
         repository.Write(Document());
         try { repository.Write(Document(2), (stream, bytes) => { stream.Write(bytes.AsSpan(0, 40)); throw new IOException("disk full"); }); }
         catch (IOException) { }
-        Check(repository.Scan(new("s1")).Info.Meta?.Gen == 1, "Failed write destroyed the previous save.");
+        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("Failed write destroyed the previous save.").IsTrue();
         try { repository.Write(Document(2), (stream, bytes) => stream.Write(bytes.AsSpan(0, 40))); }
         catch (SaveFormatException) { }
-        Check(repository.Scan(new("s1")).Info.Meta?.Gen == 1, "A truncated file was committed.");
+        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A truncated file was committed.").IsTrue();
     }
 
     [TestCase]
@@ -154,18 +204,18 @@ public sealed class SaveFormatTests
         var root = TestDirectory();
         using var repository = new SaveRepository(root, true, Sections());
         using var second = new SaveRepository(root, true, Sections());
-        Check(!second.Enabled && second.ReadOnly == ReadOnlyReason.OtherWindow, "Second writer acquired lock.");
+        AssertThat(!second.Enabled && second.ReadOnly == ReadOnlyReason.OtherWindow).OverrideFailureMessage("Second writer acquired lock.").IsTrue();
         for (ulong gen = 1; gen <= 4; gen++) repository.Write(Document(gen));
-        Check(Directory.GetFiles(Path.Combine(root, "s1")).Length == 3, "Retention is not three generations.");
+        AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 3).OverrideFailureMessage("Retention is not three generations.").IsTrue();
         var broken = Path.Combine(root, "s1", "g000004.sav"); File.WriteAllBytes(broken, [1, 2, 3]);
-        Check(second.Scan(new("s1")).Info.Meta?.Gen == 3 && File.Exists(broken), "Readonly scanner moved a file.");
+        AssertThat(second.Scan(new("s1")).Info.Meta?.Gen == 3 && File.Exists(broken)).OverrideFailureMessage("Readonly scanner moved a file.").IsTrue();
         var recovered = repository.Scan(new("s1"));
-        Check(recovered.Info.Health == SlotHealth.Ok && recovered.Info.Meta?.Gen == 3, "Did not recover one generation.");
-        Check(File.Exists(broken) && recovered.MaxGeneration == 4, "Recovery moved the unreadable file or lost the generation high-water mark.");
+        AssertThat(recovered.Info.Health == SlotHealth.Ok && recovered.Info.Meta?.Gen == 3).OverrideFailureMessage("Did not recover one generation.").IsTrue();
+        AssertThat(File.Exists(broken) && recovered.MaxGeneration == 4).OverrideFailureMessage("Recovery moved the unreadable file or lost the generation high-water mark.").IsTrue();
         repository.Write(Document(5, 5));
-        Check(Directory.GetFiles(Path.Combine(root, "s1")).Length == 1, "Old world survived successful new-world commit.");
+        AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 1).OverrideFailureMessage("Old world survived successful new-world commit.").IsTrue();
         File.WriteAllBytes(Path.Combine(root, "s1", "g000005.sav"), [0]);
-        Check(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt, "Crossed a world-line boundary.");
+        AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("Crossed a world-line boundary.").IsTrue();
     }
 
     [TestCase]
@@ -173,13 +223,13 @@ public sealed class SaveFormatTests
     {
         var offRoot = TestDirectory();
         using (var off = new SaveRepository(offRoot, false, Sections()))
-        { Check(off.Scan(new("s1")).Info.Health == SlotHealth.Empty, "Empty readonly scan failed."); }
-        Check(!Directory.Exists(offRoot), "Save-off created its root.");
+        { AssertThat(off.Scan(new("s1")).Info.Health == SlotHealth.Empty).OverrideFailureMessage("Empty readonly scan failed.").IsTrue(); }
+        AssertThat(!Directory.Exists(offRoot)).OverrideFailureMessage("Save-off created its root.").IsTrue();
         var root = TestDirectory();
         using var repository = new SaveRepository(root, true, Sections());
         Directory.CreateDirectory(Path.Combine(root, "s1"));
         var file = Path.Combine(root, "s1", "g000001.sav"); File.WriteAllBytes(file, [0]);
-        Check(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt && File.Exists(file), "All-corrupt slot was moved or deleted.");
+        AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt && File.Exists(file)).OverrideFailureMessage("All-corrupt slot was moved or deleted.").IsTrue();
     }
 
     [TestCase]
@@ -190,14 +240,14 @@ public sealed class SaveFormatTests
         repository.Write(Document());
         var newer = SaveContainer.Encode(Document(2)); newer[8] = 2; Rehash(newer);
         var path = Path.Combine(root, "s1", "g000002.sav"); File.WriteAllBytes(path, newer);
-        Check(repository.Scan(new("s1")).Info.Meta?.Gen == 1, "A newer-format generation did not fall back to the older one.");
+        AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not fall back to the older one.").IsTrue();
         var invalidNewLine = Document(2, 2) with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
         File.WriteAllBytes(path, SaveContainer.Encode(invalidNewLine));
-        Check(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt, "Recovered a different world line.");
+        AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("Recovered a different world line.").IsTrue();
         var rejected = false;
         try { repository.Write(Document(3, 2)); } catch (InvalidOperationException) { rejected = true; }
-        Check(rejected && File.Exists(path), "Automatic write replaced an unreadable slot.");
+        AssertThat(rejected && File.Exists(path)).OverrideFailureMessage("Automatic write replaced an unreadable slot.").IsTrue();
     }
 }
 

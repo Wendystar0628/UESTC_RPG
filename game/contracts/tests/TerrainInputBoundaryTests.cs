@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Maps;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -43,15 +44,15 @@ public sealed class TerrainInputBoundaryTests
         var valid = new TerrainDefaults("1:5", 1.5f, "1:4", 1.2f, .75f);
         foreach (var ratio in new[] { "1:0", "1:-4", "2:5", "1:NaN", "1:5\n", "1:1e2", "1:" + new string('9', 400), "", null })
         {
-            Expect<ArgumentException>(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { LakeBankSlope = ratio! }));
-            Expect<ArgumentException>(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { ChannelBankSlope = ratio! }));
+            AssertThrown(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { LakeBankSlope = ratio! })).IsInstanceOf<ArgumentException>();
+            AssertThrown(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { ChannelBankSlope = ratio! })).IsInstanceOf<ArgumentException>();
         }
         foreach (var number in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity })
         {
-            Expect<ArgumentException>(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { LakeMaxDepth = number }));
-            Expect<ArgumentException>(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { ChannelDepth = number }));
-            Expect<ArgumentException>(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { CorridorShoulder = number }));
-            Expect<ArgumentException>(() => Complete(File() with { TerrainDefaults = valid with { LakeMaxDepth = number } }));
+            AssertThrown(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { LakeMaxDepth = number })).IsInstanceOf<ArgumentException>();
+            AssertThrown(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { ChannelDepth = number })).IsInstanceOf<ArgumentException>();
+            AssertThrown(() => TerrainOverlayJson.ValidateTerrainDefaults(valid with { CorridorShoulder = number })).IsInstanceOf<ArgumentException>();
+            AssertThrown(() => Complete(File() with { TerrainDefaults = valid with { LakeMaxDepth = number } })).IsInstanceOf<ArgumentException>();
         }
     }
 
@@ -71,7 +72,13 @@ public sealed class TerrainInputBoundaryTests
             DefaultsJson.Replace("1:5", "1:0", StringComparison.Ordinal),
             DefaultsJson.Insert(DefaultsJson.Length - 1, ",\"channelDepth\":1.2"),
             DefaultsJson.Insert(DefaultsJson.Length - 1, ",\"extra\":true")
-        }) Expect<JsonException>(() => JsonSerializer.Deserialize<TerrainDefaults>(invalid, ContractJson.Options));
+        })
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<TerrainDefaults>(invalid, ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
         // The local converter must not change the repository-wide compatibility options.
         if (!ContractJson.Options.PropertyNameCaseInsensitive) throw new InvalidOperationException("Global JSON options were changed.");
     }
@@ -90,11 +97,11 @@ public sealed class TerrainInputBoundaryTests
         if (!snapshot.Keys.Select(z => z.Value).SequenceEqual(new[] { "a", "z" }) ||
             snapshot[new("z")][0].Outer[0] != Vector2.Zero || snapshot[new("z")][0].Holes[0][0] != Vector2.One)
             throw new InvalidOperationException("Zone boundaries still alias producer collections or coordinates.");
-        Expect<NotSupportedException>(() => ((IDictionary<ZoneId, IReadOnlyList<PolygonRings>>)snapshot).Clear());
-        Expect<NotSupportedException>(() => ((IList<PolygonRings>)snapshot[new("z")]).Clear());
-        Expect<NotSupportedException>(() => ((IList<Vector2>)snapshot[new("z")][0].Outer)[0] = Vector2.One);
-        Expect<NotSupportedException>(() => ((IList<IReadOnlyList<Vector2>>)snapshot[new("z")][0].Holes).Clear());
-        Expect<NotSupportedException>(() => ((IList<Vector2>)snapshot[new("z")][0].Holes[0])[0] = Vector2.Zero);
+        AssertThrown(() => ((IDictionary<ZoneId, IReadOnlyList<PolygonRings>>)snapshot).Clear()).IsInstanceOf<NotSupportedException>();
+        AssertThrown(() => ((IList<PolygonRings>)snapshot[new("z")]).Clear()).IsInstanceOf<NotSupportedException>();
+        AssertThrown(() => ((IList<Vector2>)snapshot[new("z")][0].Outer)[0] = Vector2.One).IsInstanceOf<NotSupportedException>();
+        AssertThrown(() => ((IList<IReadOnlyList<Vector2>>)snapshot[new("z")][0].Holes).Clear()).IsInstanceOf<NotSupportedException>();
+        AssertThrown(() => ((IList<Vector2>)snapshot[new("z")][0].Holes[0])[0] = Vector2.Zero).IsInstanceOf<NotSupportedException>();
     }
 
     [TestCase]
@@ -116,11 +123,4 @@ public sealed class TerrainInputBoundaryTests
     private static MapDescriptor Complete(MapFile file) => file.Complete(
         new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32),
         new(Vector3.Zero, new(64, 64, 64)), new(0, 0), new(0, 0));
-
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 }

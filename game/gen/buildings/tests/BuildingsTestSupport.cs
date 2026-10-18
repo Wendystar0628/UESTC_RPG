@@ -7,7 +7,6 @@ using Campus.Gen.Buildings.Build;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Plan;
 using Campus.Gen.Tests.Support;
-using GdUnit4;
 
 namespace Campus.Gen.Buildings.Tests;
 
@@ -83,17 +82,6 @@ internal static class BuildingsTestSupport
     internal static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     internal static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-    internal static void Require(bool condition, string what)
-    {
-        if (!condition) throw new InvalidOperationException("Expected: " + what);
-    }
-
-    internal static void Expect<T>(Action action, string what) where T : Exception
-    {
-        try { action(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}: {what}");
-    }
 
     internal static readonly MapDescriptor TestMap = new(new MapId("test"), new LocalizedName("测试", "Test"), MapKind.Outdoor, 1, 1u,
         new GeoFrame(0d, 0d, 32648, new(-1000f, -1000f), new(1000f, 1000f)), Vector2.Zero,

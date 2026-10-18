@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
 using Godot;
@@ -22,33 +23,93 @@ public static class InstancePoolRuntimeFixture
         var host = new InstancePoolHost();
         try
         {
-            Throws<InvalidOperationException>(() => host.Mount(spec));
+            {
+                var thrown = false;
+                try { host.Mount(spec); }
+                catch (InvalidOperationException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+            }
             parent.AddChild(host);
-            Throws<ArgumentOutOfRangeException>(() => host.Mount(spec with { Capacity = int.MaxValue }));
-            Throws<ArgumentOutOfRangeException>(() => host.Mount(spec with { Capacity = 0 }));
-            Throws<ArgumentException>(() => host.Mount(spec with { Position = [0, 1] }));
-            Throws<ArgumentException>(() => host.Mount(spec with { Uv = [0, 0] }));
-            Throws<ArgumentOutOfRangeException>(() => host.Mount(spec with { Index = [0, 1, 4] }));
-            Throws<ArgumentException>(() => host.Mount(spec with { Index = [0, 1] }));
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Capacity = int.MaxValue }); }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Capacity = 0 }); }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Position = [0, 1] }); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Uv = [0, 0] }); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Index = [0, 1, 4] }); }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Index = [0, 1] }); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
             var badPosition = (float[])spec.Position.Clone();
             badPosition[0] = float.PositiveInfinity;
-            Throws<ArgumentException>(() => host.Mount(spec with { Position = badPosition }));
-            Throws<ArgumentOutOfRangeException>(() => host.Mount(spec with { Layers = 1u << 20 }));
-            Check(host.GetChildCount() == 0 && host.GetStatistics().Count == 0, "Invalid input allocated a pool.");
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Position = badPosition }); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec with { Layers = 1u << 20 }); }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
+            AssertThat(host.GetChildCount() == 0 && host.GetStatistics().Count == 0).OverrideFailureMessage("Invalid input allocated a pool.").IsTrue();
 
             var pool = host.Mount(spec);
-            Throws<InvalidOperationException>(() => host.Mount(spec));
+            {
+                var thrown = false;
+                try { host.Mount(spec); }
+                catch (InvalidOperationException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+            }
             var node = host.GetChild<MultiMeshInstance3D>(0);
             var multiMesh = node.Multimesh;
             var mesh = multiMesh.Mesh;
-            Check(pool.Capacity == 8192 && pool.VisibleCount == 0, "Initial pool state is wrong.");
-            Check(multiMesh.InstanceCount == 8192 && multiMesh.UseCustomData && !multiMesh.UseColors &&
-                multiMesh.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D, "Buffer format is wrong.");
-            Check(node.GetMeta("owner_wp").AsString() == spec.OwnerWp &&
-                node.GetMeta("instance_pool_id").AsString() == spec.Id, "Instance attribution was lost.");
-            Check(node.MaterialOverride is null && ReferenceEquals(mesh.SurfaceGetMaterial(0), material), "Borrowed surface material was replaced or cloned.");
-            Throws<InvalidOperationException>(() => pool.VisibleCount = 1);
-            Throws<ArgumentException>(() => pool.WriteBuffer(new float[16]));
+            AssertThat(pool.Capacity == 8192 && pool.VisibleCount == 0).OverrideFailureMessage("Initial pool state is wrong.").IsTrue();
+            AssertThat(multiMesh.InstanceCount == 8192 && multiMesh.UseCustomData && !multiMesh.UseColors &&
+                multiMesh.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D).OverrideFailureMessage("Buffer format is wrong.").IsTrue();
+            AssertThat(node.GetMeta("owner_wp").AsString() == spec.OwnerWp &&
+                node.GetMeta("instance_pool_id").AsString() == spec.Id).OverrideFailureMessage("Instance attribution was lost.").IsTrue();
+            AssertThat(node.MaterialOverride is null && ReferenceEquals(mesh.SurfaceGetMaterial(0), material)).OverrideFailureMessage("Borrowed surface material was replaced or cloned.").IsTrue();
+            {
+                var thrown = false;
+                try { pool.VisibleCount = 1; }
+                catch (InvalidOperationException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { pool.WriteBuffer(new float[16]); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
             var buffer = new float[8192 * 16];
             for (var i = 0; i < 8192; i++)
             {
@@ -61,45 +122,94 @@ public static class InstancePoolRuntimeFixture
                 buffer[offset + 15] = 1;
             }
             buffer[^1] = float.NaN;
-            Throws<ArgumentException>(() => pool.WriteBuffer(buffer));
+            {
+                var thrown = false;
+                try { pool.WriteBuffer(buffer); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
             buffer[^1] = 1;
             pool.WriteBuffer(buffer);
-            Check(multiMesh.GetBuffer().SequenceEqual(buffer), "The native buffer lost transform or custom data.");
+            AssertThat(multiMesh.GetBuffer().SequenceEqual(buffer)).OverrideFailureMessage("The native buffer lost transform or custom data.").IsTrue();
             pool.VisibleCount = 32;
-            Check(multiMesh.VisibleInstanceCount == 32, "Visible prefix did not reach Godot.");
-            Throws<ArgumentOutOfRangeException>(() => pool.VisibleCount = -1);
-            Throws<ArgumentOutOfRangeException>(() => pool.VisibleCount = 8193);
+            AssertThat(multiMesh.VisibleInstanceCount == 32).OverrideFailureMessage("Visible prefix did not reach Godot.").IsTrue();
+            {
+                var thrown = false;
+                try { pool.VisibleCount = -1; }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { pool.VisibleCount = 8193; }
+                catch (ArgumentOutOfRangeException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+            }
             var stats = host.GetStatistics().Single();
-            Check(stats.OwnerWp == spec.OwnerWp && stats.Id == spec.Id && stats.VisibleTriangles == 64 &&
-                stats.InstanceBufferBytes == 524288, "Ownership statistics are wrong.");
+            AssertThat(stats.OwnerWp == spec.OwnerWp && stats.Id == spec.Id && stats.VisibleTriangles == 64 &&
+                stats.InstanceBufferBytes == 524288).OverrideFailureMessage("Ownership statistics are wrong.").IsTrue();
 
             var bounds = new Aabb(new(-200, -50, -200), new(400, 100, 400));
             pool.SetAabb(bounds);
-            Check(multiMesh.CustomAabb == bounds && node.CustomAabb == bounds, "Bounds did not reach both engine objects.");
-            Throws<ArgumentException>(() => pool.SetAabb(new Aabb(new(0, 0, 0), new(-1, 1, 1))));
-            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.FogExempt, new Vector4(0, 0, 0, 0)));
-            Throws<ArgumentException>(() => pool.SetParameter(InstanceShaderNames.PrecipD, new Vector4(float.NaN, 0, 0, 1)));
+            AssertThat(multiMesh.CustomAabb == bounds && node.CustomAabb == bounds).OverrideFailureMessage("Bounds did not reach both engine objects.").IsTrue();
+            {
+                var thrown = false;
+                try { pool.SetAabb(new Aabb(new(0, 0, 0), new(-1, 1, 1))); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { pool.SetParameter(InstanceShaderNames.FogExempt, new Vector4(0, 0, 0, 0)); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { pool.SetParameter(InstanceShaderNames.PrecipD, new Vector4(float.NaN, 0, 0, 1)); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
             var displacement = new Vector4(1, 2, 3, 18);
             pool.SetParameter(InstanceShaderNames.PrecipD, displacement);
             pool.SetParameter(InstanceShaderNames.PrecipV, new Vector4(0, -1, 0, .58f));
             pool.SetParameter(InstanceShaderNames.PrecipK, new Vector4(0, 0, 0, 0));
-            Check(node.GetInstanceShaderParameter(InstanceShaderNames.PrecipD).AsVector4() == displacement,
-                "The registered vec4 did not reach the instance.");
-            Throws<InvalidOperationException>(() => Task.Run(() => pool.VisibleCount = 1).GetAwaiter().GetResult());
+            AssertThat(node.GetInstanceShaderParameter(InstanceShaderNames.PrecipD).AsVector4() == displacement).OverrideFailureMessage("The registered vec4 did not reach the instance.").IsTrue();
+            {
+                var thrown = false;
+                try { Task.Run(() => pool.VisibleCount = 1).GetAwaiter().GetResult(); }
+                catch (InvalidOperationException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+            }
 
             pool.Free();
             pool.Free();
-            Check(!GodotObject.IsInstanceValid(node) && !GodotObject.IsInstanceValid(multiMesh) &&
-                !GodotObject.IsInstanceValid(mesh), "Free retained an owned engine object.");
-            Check(host.GetStatistics().Count == 0 && host.GetChildCount() == 0 &&
-                GodotObject.IsInstanceValid(material), "Free changed the material owner or retained accounting.");
-            Throws<ObjectDisposedException>(() => pool.WriteBuffer(buffer));
+            AssertThat(!GodotObject.IsInstanceValid(node) && !GodotObject.IsInstanceValid(multiMesh) &&
+                !GodotObject.IsInstanceValid(mesh)).OverrideFailureMessage("Free retained an owned engine object.").IsTrue();
+            AssertThat(host.GetStatistics().Count == 0 && host.GetChildCount() == 0 &&
+                GodotObject.IsInstanceValid(material)).OverrideFailureMessage("Free changed the material owner or retained accounting.").IsTrue();
+            {
+                var thrown = false;
+                try { pool.WriteBuffer(buffer); }
+                catch (ObjectDisposedException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
+            }
             var next = host.Mount(spec);
             parent.RemoveChild(host);
             next.Free();
-            Check(host.GetStatistics().Count == 0 && GodotObject.IsInstanceValid(material), "Tree exit retained a pool.");
-            Throws<ObjectDisposedException>(() => next.VisibleCount = 0);
-            Throws<InvalidOperationException>(() => host.Mount(spec));
+            AssertThat(host.GetStatistics().Count == 0 && GodotObject.IsInstanceValid(material)).OverrideFailureMessage("Tree exit retained a pool.").IsTrue();
+            {
+                var thrown = false;
+                try { next.VisibleCount = 0; }
+                catch (ObjectDisposedException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
+            }
+            {
+                var thrown = false;
+                try { host.Mount(spec); }
+                catch (InvalidOperationException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+            }
         }
         finally
         {
@@ -107,15 +217,4 @@ public static class InstancePoolRuntimeFixture
         }
     }
 
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
-    private static void Throws<T>(Action operation) where T : Exception
-    {
-        try { operation(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

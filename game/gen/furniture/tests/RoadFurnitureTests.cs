@@ -15,6 +15,8 @@ namespace Campus.Gen.Furniture.Tests;
 
 using static Campus.Gen.Furniture.Tests.FurnitureTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class RoadFurnitureTests
 {
@@ -28,9 +30,9 @@ public sealed class RoadFurnitureTests
         var cars = layout.Items.Where(i => i.Kind == FurnitureKind.ParkedCar).ToList();
         Console.WriteLine($"cars {cars.Count} in {cars.Select(c => c.Key.Split(':')[1]).Distinct().Count()} of {site.ParkingLots.Count} lots; " +
             string.Join(", ", cars.Take(6).Select(c => $"{c.Key} ({c.Anchor.X:F1}, {c.Anchor.Y:F1})")));
-        Check(cars.Count > 0, "no parked cars");
+        AssertThat(cars.Count > 0).OverrideFailureMessage("no parked cars").IsTrue();
         foreach (var group in cars.GroupBy(c => c.Key.Split(':')[1]))
-            Check(group.Count() <= FurnitureStyle.CarsPerLot, $"lot {group.Key} holds {group.Count()} cars");
+            AssertThat(group.Count() <= FurnitureStyle.CarsPerLot).OverrideFailureMessage($"lot {group.Key} holds {group.Count()} cars").IsTrue();
         foreach (var car in cars)
         {
             var p = (VehicleParams)car.Part.Params;
@@ -38,10 +40,10 @@ public sealed class RoadFurnitureTests
             foreach (var (u, v) in new[] { (-1f, -1f), (1f, -1f), (-1f, 1f), (1f, 1f) })
             {
                 var q = Xf.Point(car.Part.At, new(u * p.Width * 0.5f, 0, v * p.Depth * 0.5f));
-                Check(PlanGeometry.Contains(lot, new(q.X, q.Z)), $"{car.Key} sticks out of its lot");
+                AssertThat(PlanGeometry.Contains(lot, new(q.X, q.Z))).OverrideFailureMessage($"{car.Key} sticks out of its lot").IsTrue();
             }
-            Check(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal, $"{car.Key}: one Metal box (WLD-LIFE)");
-            Check(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit"), $"{car.Key} is not in a car body colour");
+            AssertThat(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal).OverrideFailureMessage($"{car.Key}: one Metal box (WLD-LIFE)").IsTrue();
+            AssertThat(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit")).OverrideFailureMessage($"{car.Key} is not in a car body colour").IsTrue();
         }
         // Kerb ramps on the osmanthus road where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
         var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.KerbRamps);
@@ -49,19 +51,19 @@ public sealed class RoadFurnitureTests
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
         var line = layout.Diagnostics.Single(d => d.Code == "wp13.kerb-ramps.summary" && d.Message.StartsWith($"road {rule.Name}: ", StringComparison.Ordinal)).Message;
         Console.WriteLine(line + "; " + string.Join(", ", ramps.Select(r => $"{r.Key} ({r.Anchor.X:F1}, {r.Anchor.Y:F1})")));
-        Check(ramps.All(r => r.Key.StartsWith($"ramp:{index}:", StringComparison.Ordinal)), "a kerb ramp on another road");
+        AssertThat(ramps.All(r => r.Key.StartsWith($"ramp:{index}:", StringComparison.Ordinal))).OverrideFailureMessage("a kerb ramp on another road").IsTrue();
         var road = world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name && StreetSite.Carriageway(l)).ToList();
         foreach (var ramp in ramps)
         {
             var p = (RampParams)ramp.Part.Params;
             var back = ramp.Anchor - Front(ramp.Part.At) * (p.Depth * 0.5f);
             var kerb = road.Min(l => Distance(back, l) - StreetSite.HalfWidth(l));
-            Check(MathF.Abs(kerb) < 0.05f, $"{ramp.Key}: its top edge is {kerb:F2} m off the kerb");
-            Check(road.Min(l => Distance(ramp.Anchor + Front(ramp.Part.At) * 2f, l)) < road.Min(l => Distance(ramp.Anchor, l)), $"{ramp.Key} does not face the road");
+            AssertThat(MathF.Abs(kerb) < 0.05f).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
+            AssertThat(road.Min(l => Distance(ramp.Anchor + Front(ramp.Part.At) * 2f, l)) < road.Min(l => Distance(ramp.Anchor, l))).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
         }
         for (var i = 0; i < ramps.Count; i++)
             for (var k = i + 1; k < ramps.Count; k++)
-                Check(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - 0.01f, $"{ramps[i].Key} and {ramps[k].Key} crowd each other");
+                AssertThat(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - 0.01f).OverrideFailureMessage($"{ramps[i].Key} and {ramps[k].Key} crowd each other").IsTrue();
     }
 
     [TestCase]
@@ -72,9 +74,9 @@ public sealed class RoadFurnitureTests
         {
             var row = Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
             var gaps = row.Zip(row.Skip(1), (p, q) => Vector2.Distance(p.Anchor, q.Anchor)).ToList();
-            Check(gaps.Count > 30, $"{gaps.Count} gaps on side {side}");
+            AssertThat(gaps.Count > 30).OverrideFailureMessage($"{gaps.Count} gaps on side {side}").IsTrue();
             var regular = gaps.Count(g => g is >= 24f and <= 31f);
-            Check(regular >= gaps.Count * 0.75f, $"side {side}: only {regular} of {gaps.Count} gaps are 25–30 m");
+            AssertThat(regular >= gaps.Count * 0.75f).OverrideFailureMessage($"side {side}: only {regular} of {gaps.Count} gaps are 25–30 m").IsTrue();
         }
     }
 
@@ -86,12 +88,12 @@ public sealed class RoadFurnitureTests
         foreach (var item in Build(world).Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
         {
             var p = item.Anchor;
-            Check(PlanGeometry.Contains(world.Boundary, p), $"{item.Key} outside the campus");
-            Check(!outlines.Any(o => PlanGeometry.Contains(o, p)), $"{item.Key} inside a building or water");
+            AssertThat(PlanGeometry.Contains(world.Boundary, p)).OverrideFailureMessage($"{item.Key} outside the campus").IsTrue();
+            AssertThat(!outlines.Any(o => PlanGeometry.Contains(o, p))).OverrideFailureMessage($"{item.Key} inside a building or water").IsTrue();
             foreach (var road in world.Network.Roads)
             {
                 var d = MathF.Sqrt(road.Line.Points.Zip(road.Line.Points.Skip(1), (u, v) => PlanGeometry.SegmentDistanceSquared(p, u, v)).DefaultIfEmpty(float.MaxValue).Min());
-                Check(d > MathF.Max(road.Width, 2f) * 0.5f + 0.2f, $"{item.Key} stands on {road.Id.Value} ({d:F2} m from its centre line)");
+                AssertThat(d > MathF.Max(road.Width, 2f) * 0.5f + 0.2f).OverrideFailureMessage($"{item.Key} stands on {road.Id.Value} ({d:F2} m from its centre line)").IsTrue();
             }
         }
     }

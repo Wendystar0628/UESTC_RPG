@@ -16,6 +16,8 @@ namespace Campus.Gen.Furniture.Tests;
 
 using static Campus.Gen.Furniture.Tests.FurnitureTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class FurnitureModuleTests
 {
@@ -28,34 +30,32 @@ public sealed class FurnitureModuleTests
         foreach (var lamp in gentle.Items.Where(i => i.Kind == FurnitureKind.StreetLamp))
         {
             var burial = terrain.HeightAt(lamp.Part.At.M41, lamp.Part.At.M43) + FurnitureStyle.LawnLift - lamp.Part.At.M42;
-            Check(burial is >= 0.049f and <= 0.301f, $"{lamp.Key} buried {burial:F3} m");
+            AssertThat(burial is >= 0.049f and <= 0.301f).OverrideFailureMessage($"{lamp.Key} buried {burial:F3} m").IsTrue();
         }
         var benches = gentle.Items.Where(i => i.Kind == FurnitureKind.Bench).ToList();
-        Check(benches.Count > 10, "no benches on 8%");
+        AssertThat(benches.Count > 10).OverrideFailureMessage("no benches on 8%").IsTrue();
         foreach (var bench in benches)
         {
-            Check(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < 0.01f, $"{bench.Key} has no plinth on 8%");
+            AssertThat(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < 0.01f).OverrideFailureMessage($"{bench.Key} has no plinth on 8%").IsTrue();
             var plinth = bench.Pad!;
             var high = Corners(bench).Max(c => terrain.HeightAt(c.X, c.Y));
             var low = Corners(bench).Min(c => terrain.HeightAt(c.X, c.Y));
-            Check(plinth.Top >= high + FurnitureStyle.PavingLift - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f, $"{bench.Key}: plinth does not cover the slope");
-            Check(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete), $"{bench.Key}: plinth has no collider");
-            Check(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0, $"{bench.Key}: empty plinth mesh");
+            AssertThat(plinth.Top >= high + FurnitureStyle.PavingLift - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f).OverrideFailureMessage($"{bench.Key}: plinth does not cover the slope").IsTrue();
+            AssertThat(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete)).OverrideFailureMessage($"{bench.Key}: plinth has no collider").IsTrue();
+            AssertThat(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0).OverrideFailureMessage($"{bench.Key}: empty plinth mesh").IsTrue();
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
-            Check(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 0.01f, $"{bench.Key}: the bin is off its own plinth");
+            AssertThat(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 0.01f).OverrideFailureMessage($"{bench.Key}: the bin is off its own plinth").IsTrue();
         }
         // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
         var flat = Build(World.Value);
         var top = FurnitureStyle.PavingLift + FurnitureStyle.PadProud;
-        Check(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth), "plinths on flat ground");
-        Check(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? FurnitureStyle.PavingLift : top)) < 0.01f),
-            "benches off their bays (or, on a plaza, off its paving)");
+        AssertThat(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth)).OverrideFailureMessage("plinths on flat ground").IsTrue();
+        AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? FurnitureStyle.PavingLift : top)) < 0.01f)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
-        Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 0.01f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 0.01f) == kiosks.Count - 1,
-            "kiosks: one on the A06 deck, the others on their pads");
+        AssertThat(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 0.01f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 0.01f) == kiosks.Count - 1).OverrideFailureMessage("kiosks: one on the A06 deck, the others on their pads").IsTrue();
         // 30%: no pole stands.
         var steep = Build(new FakeWorld(World.Value) { Terrain = Tilted(0.3f) });
-        Check(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0, "poles on a 30% grade");
+        AssertThat(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0).OverrideFailureMessage("poles on a 30% grade").IsTrue();
     }
 
     [TestCase]
@@ -63,7 +63,7 @@ public sealed class FurnitureModuleTests
     {
         foreach (var item in Build(World.Value).Items)
         {
-            Check(item.Colliders.All(c => c.Foot != FootMat.Auto), $"{item.Key} leaves a collider on Auto (G21i)");
+            AssertThat(item.Colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage($"{item.Key} leaves a collider on Auto (G21i)").IsTrue();
             foreach (var collider in item.Colliders)
             {
                 var at = collider switch
@@ -73,7 +73,7 @@ public sealed class FurnitureModuleTests
                     RampCollider ramp => new Vector2(ramp.P0.X + ramp.P2.X, ramp.P0.Z + ramp.P2.Z) * 0.5f,
                     _ => throw new InvalidOperationException(),
                 };
-                Check(Vector2.Distance(at, item.Anchor) < 2f, $"{item.Key}: a collider strayed {Vector2.Distance(at, item.Anchor):F2} m");
+                AssertThat(Vector2.Distance(at, item.Anchor) < 2f).OverrideFailureMessage($"{item.Key}: a collider strayed {Vector2.Distance(at, item.Anchor):F2} m").IsTrue();
             }
             var expected = item.Kind switch
             {
@@ -93,7 +93,7 @@ public sealed class FurnitureModuleTests
                 FurnitureKind.EntranceMat or FurnitureKind.EntranceLamp or FurnitureKind.ParkedBicycle => 0,
                 _ => throw new InvalidOperationException(),
             };
-            Check(item.Colliders.Count == expected, $"{item.Key}: {item.Colliders.Count} colliders");
+            AssertThat(item.Colliders.Count == expected).OverrideFailureMessage($"{item.Key}: {item.Colliders.Count} colliders").IsTrue();
         }
     }
 
@@ -124,14 +124,13 @@ public sealed class FurnitureModuleTests
             heaviest = Math.Max(heaviest, l0);
             heaviestL1 = Math.Max(heaviestL1, l1);
             draws = Math.Max(draws, output.Parts.Select(p => (p.Part.Value, p.Params)).Distinct().Sum(k => triangles[k].Meshes) + output.Meshes.Count);
-            Check(module.Build(ctx, tile, LodLevel.L1).Emitters is null, "emitters outside L0");
+            AssertThat(module.Build(ctx, tile, LodLevel.L1).Emitters is null).OverrideFailureMessage("emitters outside L0").IsTrue();
         }
-        Check(parts == layout.Items.Count, $"{parts} placed parts for {layout.Items.Count} items");
-        Check(emitters == layout.Items.Sum(i => i.Emitters.Count), "emitters lost or repeated");
-        Check(module.DescribeLights(ctx).SequenceEqual(layout.Items.SelectMany(i => i.Emitters)), "light metadata differs from the item layout");
-        Check(colliders == layout.Items.Sum(i => i.Colliders.Count), "colliders lost or repeated");
-        Check(heaviest <= module.Budget.TrianglesL0 && heaviestL1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls,
-            $"heaviest cell L0 {heaviest}, L1 {heaviestL1}, draws {draws} over {module.Budget}");
+        AssertThat(parts == layout.Items.Count).OverrideFailureMessage($"{parts} placed parts for {layout.Items.Count} items").IsTrue();
+        AssertThat(emitters == layout.Items.Sum(i => i.Emitters.Count)).OverrideFailureMessage("emitters lost or repeated").IsTrue();
+        AssertThat(module.DescribeLights(ctx).SequenceEqual(layout.Items.SelectMany(i => i.Emitters))).OverrideFailureMessage("light metadata differs from the item layout").IsTrue();
+        AssertThat(colliders == layout.Items.Sum(i => i.Colliders.Count)).OverrideFailureMessage("colliders lost or repeated").IsTrue();
+        AssertThat(heaviest <= module.Budget.TrianglesL0 && heaviestL1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls).OverrideFailureMessage($"heaviest cell L0 {heaviest}, L1 {heaviestL1}, draws {draws} over {module.Budget}").IsTrue();
         Console.WriteLine($"furniture module: {tiles.Count} cells, {parts} parts, {emitters} lamp markers, {colliders} colliders; heaviest cell L0 {heaviest} / L1 {heaviestL1} triangles, {draws} draws");
     }
 
@@ -141,16 +140,16 @@ public sealed class FurnitureModuleTests
         // Structured diagnostics (ContentOutput.Diagnostics) are reported once per layout: with the first cell's L0 output.
         var module = new FurnitureModule();
         var quiet = Context(Inputs());
-        Check(module.Tiles(quiet).All(t => !module.Build(quiet, t, LodLevel.L0).Diagnostics.Any(d => d.Code == PlantingRows.MissingCode)), "warnings with the real planting input");
+        AssertThat(module.Tiles(quiet).All(t => !module.Build(quiet, t, LodLevel.L0).Diagnostics.Any(d => d.Code == PlantingRows.MissingCode))).OverrideFailureMessage("warnings with the real planting input").IsTrue();
         var ctx = Context(new Dictionary<string, ReadOnlyMemory<byte>>());
         var tiles = module.Tiles(ctx).ToList();
         var warned = tiles.Where(t => module.Build(ctx, t, LodLevel.L0).Diagnostics.Count > 0).ToList();
-        Check(warned.Count == 1 && warned[0] == tiles[0], $"{warned.Count} cells carry the warning");
+        AssertThat(warned.Count == 1 && warned[0] == tiles[0]).OverrideFailureMessage($"{warned.Count} cells carry the warning").IsTrue();
         var diagnostics = module.Build(ctx, tiles[0], LodLevel.L0).Diagnostics;
         foreach (var diagnostic in diagnostics) diagnostic.Validate();
-        Check(diagnostics.SequenceEqual(FurnitureModule.Layout(ctx).Diagnostics), "layout diagnostics changed in the module output");
-        Check(diagnostics.Count(d => d.Code == PlantingRows.MissingCode && d.Level == DiagnosticLevel.Warning) == 1, "not one missing-input warning");
-        Check(tiles.All(t => module.Build(ctx, t, LodLevel.L1).Diagnostics.Count == 0), "warnings outside L0");
+        AssertThat(diagnostics.SequenceEqual(FurnitureModule.Layout(ctx).Diagnostics)).OverrideFailureMessage("layout diagnostics changed in the module output").IsTrue();
+        AssertThat(diagnostics.Count(d => d.Code == PlantingRows.MissingCode && d.Level == DiagnosticLevel.Warning) == 1).OverrideFailureMessage("not one missing-input warning").IsTrue();
+        AssertThat(tiles.All(t => module.Build(ctx, t, LodLevel.L1).Diagnostics.Count == 0)).OverrideFailureMessage("warnings outside L0").IsTrue();
     }
 
     private static BuildContext Context(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> inputs)

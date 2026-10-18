@@ -5,6 +5,7 @@ using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Style.Materials;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using Godot;
 using N = System.Numerics;
 
@@ -25,9 +26,14 @@ public sealed class GeometryInstancePoolRuntimeTests
         }), [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2],
             Uv: [0, 0, 1, 0, 0, 1], Uv2: [1, 2, 1, 2, 1, 2]);
         var prototype = Prototype(GeometryBuffer.Freeze(surface));
-        Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("unsupported-pattern", prototype)));
-        Check(fixture.Host.GetChildCount() == 0 && fixture.Provider.Layouts.Count == 0 &&
-            fixture.Host.GetStatistics().Count == 0, "Rejected surface pattern allocated/tracked a partial instance pool.");
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("unsupported-pattern", prototype)); }
+            catch (NotSupportedException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(NotSupportedException).Name}.").IsTrue();
+        }
+        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Provider.Layouts.Count == 0 &&
+            fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Rejected surface pattern allocated/tracked a partial instance pool.").IsTrue();
     }
 
     [TestCase]
@@ -50,70 +56,70 @@ public sealed class GeometryInstancePoolRuntimeTests
         var node = fixture.Host.GetChild<MultiMeshInstance3D>(0);
         var multi = node.Multimesh;
         var mesh = (ArrayMesh)multi.Mesh;
-        Check(mesh.GetSurfaceCount() == 2 && node.MaterialOverride is null, "The prototype did not retain two independent material slots.");
-        Check(ReferenceEquals(mesh.SurfaceGetMaterial(0), fixture.Provider.FirstMaterial), "The Toon slot was replaced.");
+        AssertThat(mesh.GetSurfaceCount() == 2 && node.MaterialOverride is null).OverrideFailureMessage("The prototype did not retain two independent material slots.").IsTrue();
+        AssertThat(ReferenceEquals(mesh.SurfaceGetMaterial(0), fixture.Provider.FirstMaterial)).OverrideFailureMessage("The Toon slot was replaced.").IsTrue();
         var ownedShaderMaterial = fixture.Source.Created.Single();
-        Check(ReferenceEquals(mesh.SurfaceGetMaterial(1), ownedShaderMaterial), "The ShaderId slot was replaced.");
-        Check(!ReferenceEquals(mesh.SurfaceGetMaterial(0), mesh.SurfaceGetMaterial(1)), "Materials leaked across surface slots.");
-        Check(multi.UseCustomData && !multi.UseColors && multi.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D,
-            "The instance stream must have the single approved transform/custom format.");
+        AssertThat(ReferenceEquals(mesh.SurfaceGetMaterial(1), ownedShaderMaterial)).OverrideFailureMessage("The ShaderId slot was replaced.").IsTrue();
+        AssertThat(!ReferenceEquals(mesh.SurfaceGetMaterial(0), mesh.SurfaceGetMaterial(1))).OverrideFailureMessage("Materials leaked across surface slots.").IsTrue();
+        AssertThat(multi.UseCustomData && !multi.UseColors && multi.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D).OverrideFailureMessage("The instance stream must have the single approved transform/custom format.").IsTrue();
 
         CheckSurface(mesh, 0, frozenFirst);
         CheckSurface(mesh, 1, frozenSecond);
         var formats = new[] { MeshSurfaceFormat.Read(mesh, 0), MeshSurfaceFormat.Read(mesh, 1) };
         var version = (ulong)RenderingServer.ArrayFormat.FlagFormatCurrentVersion;
-        Check(formats.All(format => (format & version) == version), "The helper discarded native format-version bits.");
-        Check(fixture.Provider.Layouts.Count == 2, "Each real surface must register one actual layout.");
+        AssertThat(formats.All(format => (format & version) == version)).OverrideFailureMessage("The helper discarded native format-version bits.").IsTrue();
+        AssertThat(fixture.Provider.Layouts.Count == 2).OverrideFailureMessage("Each real surface must register one actual layout.").IsTrue();
         for (var i = 0; i < 2; i++)
         {
             var tracked = fixture.Provider.Layouts[i];
-            Check(tracked.Layout == new WarmDrawLayout(formats[i], Instanced: true), "Prewarm received a guessed or non-instanced layout.");
-            Check(ReferenceEquals(tracked.Material, mesh.SurfaceGetMaterial(i)), "Prewarm material and surface slot disagree.");
+            AssertThat(tracked.Layout == new WarmDrawLayout(formats[i], Instanced: true)).OverrideFailureMessage("Prewarm received a guessed or non-instanced layout.").IsTrue();
+            AssertThat(ReferenceEquals(tracked.Material, mesh.SurfaceGetMaterial(i))).OverrideFailureMessage("Prewarm material and surface slot disagree.").IsTrue();
         }
 
         // Exactly one complete native-surface dictionary read in this fixture, for calibration/LOD assertions only.
         using (var native = RenderingServer.MeshGetSurface(mesh.GetRid(), 0))
         {
-            Check(native["format"].AsUInt64() == formats[0], "Cached 64-bit metadata differs from native surface format.");
-            Check(native.ContainsKey("lods"), "The original LOD index buffer was dropped.");
+            AssertThat(native["format"].AsUInt64() == formats[0]).OverrideFailureMessage("Cached 64-bit metadata differs from native surface format.").IsTrue();
+            AssertThat(native.ContainsKey("lods")).OverrideFailureMessage("The original LOD index buffer was dropped.").IsTrue();
             using var lods = native["lods"].AsGodotArray();
-            Check(lods.Count == 1, "The original LOD surface count changed.");
-            Check(native["vertex_count"].AsInt32() == 4 && native["index_count"].AsInt32() == 6,
-                "The native base surface must retain four vertices and two triangles.");
+            AssertThat(lods.Count == 1).OverrideFailureMessage("The original LOD surface count changed.").IsTrue();
+            AssertThat(native["vertex_count"].AsInt32() == 4 && native["index_count"].AsInt32() == 6).OverrideFailureMessage("The native base surface must retain four vertices and two triangles.").IsTrue();
             // The locked Windows runtime stores <= 65536-vertex surface indices as little-endian uint16.
-            Check(native["index_data"].AsByteArray().SequenceEqual(new byte[] { 0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0 }),
-                "The complete native base index bytes changed.");
+            AssertThat(native["index_data"].AsByteArray().SequenceEqual(new byte[] { 0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0 })).OverrideFailureMessage("The complete native base index bytes changed.").IsTrue();
             using var lod = lods[0].AsGodotDictionary();
-            Check(lod["edge_length"].AsSingle() == 2f, "The native LOD error changed.");
-            Check(lod["index_data"].AsByteArray().SequenceEqual(new byte[] { 0, 0, 2, 0, 3, 0 }),
-                "The native LOD must retain exactly triangle (0, 2, 3), including its fourth-vertex reference.");
+            AssertThat(lod["edge_length"].AsSingle() == 2f).OverrideFailureMessage("The native LOD error changed.").IsTrue();
+            AssertThat(lod["index_data"].AsByteArray().SequenceEqual(new byte[] { 0, 0, 2, 0, 3, 0 })).OverrideFailureMessage("The native LOD must retain exactly triangle (0, 2, 3), including its fourth-vertex reference.").IsTrue();
         }
 
-        Throws<InvalidOperationException>(() => pool.VisibleCount = 1);
+        {
+            var thrown = false;
+            try { pool.VisibleCount = 1; }
+            catch (InvalidOperationException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+        }
         var scratch = InstanceData(pool.Capacity);
         var submitted = (float[])scratch.Clone();
         pool.WriteBuffer(scratch);
         pool.VisibleCount = 3;
-        Check(!node.Visible && multi.VisibleInstanceCount == 3, "A requested prefix escaped the pending-prewarm visibility gate.");
+        AssertThat(!node.Visible && multi.VisibleInstanceCount == 3).OverrideFailureMessage("A requested prefix escaped the pending-prewarm visibility gate.").IsTrue();
         var meshIdentity = mesh.GetInstanceId();
         var materialIdentity = ownedShaderMaterial.GetInstanceId();
         System.Array.Fill(scratch, float.NaN);
         await fixture.Parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        Check(multi.GetBuffer().SequenceEqual(submitted), "Reusing caller scratch changed the already uploaded native buffer.");
+        AssertThat(multi.GetBuffer().SequenceEqual(submitted)).OverrideFailureMessage("Reusing caller scratch changed the already uploaded native buffer.").IsTrue();
 
         fixture.Provider.Ready = true; // Simulates the provider's issued evidence; this test does not certify a warm draw.
         fixture.Host._Process(0);
-        Check(node.Visible && fixture.Host.GetStatistics().Single().MaterialReady, "Completed provider readiness did not reveal the pool.");
+        AssertThat(node.Visible && fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("Completed provider readiness did not reveal the pool.").IsTrue();
         pool.WriteBuffer(submitted);
         pool.VisibleCount = 2;
-        Check(mesh.GetInstanceId() == meshIdentity && ownedShaderMaterial.GetInstanceId() == materialIdentity && fixture.Source.Created.Count == 1,
-            "An instance-buffer update rebuilt the prototype or material.");
+        AssertThat(mesh.GetInstanceId() == meshIdentity && ownedShaderMaterial.GetInstanceId() == materialIdentity && fixture.Source.Created.Count == 1).OverrideFailureMessage("An instance-buffer update rebuilt the prototype or material.").IsTrue();
         var statistics = fixture.Host.GetStatistics().Single();
-        Check(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
-            statistics.InstanceBufferBytes == pool.Capacity * 64L, "Multi-surface allocation statistics are wrong.");
+        AssertThat(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
+            statistics.InstanceBufferBytes == pool.Capacity * 64L).OverrideFailureMessage("Multi-surface allocation statistics are wrong.").IsTrue();
         fixture.Provider.Ready = false;
         fixture.Host._Process(0);
-        Check(!node.Visible && fixture.Host.GetStatistics().Single().ReadyVisibleTriangles == 0, "Invalidated readiness left a pool visible.");
+        AssertThat(!node.Visible && fixture.Host.GetStatistics().Single().ReadyVisibleTriangles == 0).OverrideFailureMessage("Invalidated readiness left a pool visible.").IsTrue();
     }
 
     [TestCase]
@@ -132,30 +138,37 @@ public sealed class GeometryInstancePoolRuntimeTests
         var mappedNode = FindPool(fixture.Host, "mapped");
         var mappedMulti = mappedNode.Multimesh;
         var mappedMesh = mappedMulti.Mesh;
-        Check(fixture.Source.Created.Count == 1, "The same ShaderId was created again for another live pool.");
-        Check(mappedNode.GetMeta("map_id").AsString() == mapA.Value, "The native pool lost map attribution.");
+        AssertThat(fixture.Source.Created.Count == 1).OverrideFailureMessage("The same ShaderId was created again for another live pool.").IsTrue();
+        AssertThat(mappedNode.GetMeta("map_id").AsString() == mapA.Value).OverrideFailureMessage("The native pool lost map attribution.").IsTrue();
         fixture.Host.OnMapUnloading(mapA);
         fixture.Host.OnMapUnloading(mapA);
         mapped.Free();
-        Check(!GodotObject.IsInstanceValid(mappedNode) && !GodotObject.IsInstanceValid(mappedMulti) &&
-            !GodotObject.IsInstanceValid(mappedMesh), "Map cleanup retained owned native resources.");
-        Check(fixture.Host.GetStatistics().Count == 1 && fixture.Host.GetStatistics()[0].Map is null,
-            "Map cleanup freed a global pool or retained the mapped pool.");
-        Check(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Source.Created.Single()),
-            "Map cleanup disposed a borrowed or still-shared cached material.");
-        Throws<ObjectDisposedException>(() => mapped.WriteBuffer(InstanceData(mapped.Capacity)));
-        Throws<InvalidOperationException>(() => fixture.Host.Mount(Spec("late", prototype) with { Map = mapA }));
+        AssertThat(!GodotObject.IsInstanceValid(mappedNode) && !GodotObject.IsInstanceValid(mappedMulti) &&
+            !GodotObject.IsInstanceValid(mappedMesh)).OverrideFailureMessage("Map cleanup retained owned native resources.").IsTrue();
+        AssertThat(fixture.Host.GetStatistics().Count == 1 && fixture.Host.GetStatistics()[0].Map is null).OverrideFailureMessage("Map cleanup freed a global pool or retained the mapped pool.").IsTrue();
+        AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Source.Created.Single())).OverrideFailureMessage("Map cleanup disposed a borrowed or still-shared cached material.").IsTrue();
+        {
+            var thrown = false;
+            try { mapped.WriteBuffer(InstanceData(mapped.Capacity)); }
+            catch (ObjectDisposedException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("late", prototype) with { Map = mapA }); }
+            catch (InvalidOperationException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+        }
 
         fixture.Host.OnMapLoaded(Context(mapB));
         var reloaded = fixture.Host.Mount(Spec("mapped", prototype) with { Map = mapB });
-        Check(fixture.Host.GetStatistics().Single(stat => stat.Id == "mapped").Map == mapB, "Reload retained old map attribution.");
+        AssertThat(fixture.Host.GetStatistics().Single(stat => stat.Id == "mapped").Map == mapB).OverrideFailureMessage("Reload retained old map attribution.").IsTrue();
         reloaded.Free();
         reloaded.Free();
         fixture.Host.Free();
         global.Free();
-        Check(!GodotObject.IsInstanceValid(fixture.Source.Created.Single()), "Host exit did not dispose its cached ShaderMaterial.");
-        Check(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial),
-            "Host exit disposed provider-owned Toon materials.");
+        AssertThat(!GodotObject.IsInstanceValid(fixture.Source.Created.Single())).OverrideFailureMessage("Host exit did not dispose its cached ShaderMaterial.").IsTrue();
+        AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Host exit disposed provider-owned Toon materials.").IsTrue();
     }
 
     [TestCase]
@@ -188,9 +201,9 @@ public sealed class GeometryInstancePoolRuntimeTests
         for (var i = 0; i < 4; i++)
         {
             var flags = (byte)Byte(colors[i].B);
-            Check(PaletteEncoding.DecodeColor((byte)Byte(colors[i].R), flags).Value == frozen.ColorIndices!.Value.Span[i] &&
+            AssertThat(PaletteEncoding.DecodeColor((byte)Byte(colors[i].R), flags).Value == frozen.ColorIndices!.Value.Span[i] &&
                 PaletteEncoding.DecodeDecalBase((byte)Byte(colors[i].A), flags).Value == frozen.DecalBaseColorIndices!.Value.Span[i] &&
-                (flags & 15) == frozen.Flags!.Value.Span[i], "A geometry pool lost bank bits or changed semantic flags.");
+                (flags & 15) == frozen.Flags!.Value.Span[i]).OverrideFailureMessage("A geometry pool lost bank bits or changed semantic flags.").IsTrue();
         }
         pool.Free();
     }
@@ -203,27 +216,59 @@ public sealed class GeometryInstancePoolRuntimeTests
         using var fixture = Fixture.Create();
         var basic = Surface(fixture.Provider.FirstSpec);
         var encoding2 = GeometryBuffer.Freeze(basic with { ColorIndices = [300, 301, 302, 303] });
-        Throws<KeyNotFoundException>(() => fixture.Host.Mount(Spec("unregistered", Prototype(encoding2))));
-        Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("reflect", Prototype(GeometryBuffer.Freeze(basic with { Reflect = true })))));
-        Throws<NotSupportedException>(() => fixture.Host.Mount(Spec("variant", Prototype(GeometryBuffer.Freeze(basic with { Variant = new VariantTag() })))));
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("unregistered", Prototype(encoding2))); }
+            catch (KeyNotFoundException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(KeyNotFoundException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("reflect", Prototype(GeometryBuffer.Freeze(basic with { Reflect = true })))); }
+            catch (NotSupportedException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(NotSupportedException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("variant", Prototype(GeometryBuffer.Freeze(basic with { Variant = new VariantTag() })))); }
+            catch (NotSupportedException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(NotSupportedException).Name}.").IsTrue();
+        }
         var normal = Prototype(GeometryBuffer.Freeze(basic));
-        Throws<ArgumentOutOfRangeException>(() => fixture.Host.Mount(Spec("capacity", normal) with { Capacity = int.MaxValue }));
-        Throws<ArgumentOutOfRangeException>(() => fixture.Host.Mount(Spec("shadows", normal) with { Shadows = (GeometryInstance3D.ShadowCastingSetting)99 }));
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("capacity", normal) with { Capacity = int.MaxValue }); }
+            catch (ArgumentOutOfRangeException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("shadows", normal) with { Shadows = (GeometryInstance3D.ShadowCastingSetting)99 }); }
+            catch (ArgumentOutOfRangeException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentOutOfRangeException).Name}.").IsTrue();
+        }
         foreach (var invalidLod in new MeshLod[] { new(0f, [0, 2, 3]), new(2f, []), new(2f, [0, 1, 2, 0, 2, 3]) })
         {
             var invalidPrototype = Prototype(GeometryBuffer.Freeze(basic with { Lods = [invalidLod] }));
-            Throws<ArgumentException>(() => fixture.Host.Mount(Spec("skipped-lod", invalidPrototype)));
+            {
+                var thrown = false;
+                try { fixture.Host.Mount(Spec("skipped-lod", invalidPrototype)); }
+                catch (ArgumentException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+            }
         }
-        Check(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0 && fixture.Provider.Layouts.Count == 0,
-            "Unsupported input allocated or published a partial pool.");
+        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0 && fixture.Provider.Layouts.Count == 0).OverrideFailureMessage("Unsupported input allocated or published a partial pool.").IsTrue();
 
         fixture.Provider.ThrowAtLayout = 2;
         var two = Prototype(GeometryBuffer.Freeze(basic), GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec)));
-        Throws<InvalidOperationException>(() => fixture.Host.Mount(Spec("failed-layout", two)));
-        Check(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0,
-            "A later surface preparation failure published a partial pool.");
-        Check(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial),
-            "Rollback disposed a borrowed material.");
+        {
+            var thrown = false;
+            try { fixture.Host.Mount(Spec("failed-layout", two)); }
+            catch (InvalidOperationException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
+        }
+        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("A later surface preparation failure published a partial pool.").IsTrue();
+        AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Rollback disposed a borrowed material.").IsTrue();
     }
 
     [TestCase]
@@ -237,20 +282,48 @@ public sealed class GeometryInstancePoolRuntimeTests
         var body = fixture.Host.Mount(Spec("body", prototype));
         var proxyNode = FindPool(fixture.Host, "proxy");
         var bodyNode = FindPool(fixture.Host, "body");
-        Check(proxyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.ShadowsOnly &&
-            bodyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.Off, "Explicit body/proxy shadow policy changed.");
+        AssertThat(proxyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.ShadowsOnly &&
+            bodyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.Off).OverrideFailureMessage("Explicit body/proxy shadow policy changed.").IsTrue();
         proxy.SetParameter(InstanceShaderNames.ShadowProxy, 1f);
-        Check(proxyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 1f,
-            "The scalar instance parameter did not reach the native proxy.");
-        Check(bodyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 0f,
-            "Changing a proxy contaminated a body sharing its material.");
-        Throws<ArgumentException>(() => proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.NaN));
-        Throws<ArgumentException>(() => proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.PositiveInfinity));
-        Throws<ArgumentException>(() => proxy.SetParameter(InstanceShaderNames.FadeT0, 1f));
-        Throws<ArgumentException>(() => proxy.SetParameter(InstanceShaderNames.PrecipD, 1f));
-        Throws<ArgumentException>(() => proxy.SetParameter(InstanceShaderNames.ShadowProxy, new Godot.Vector4(1, 0, 0, 0)));
+        AssertThat(proxyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
+        AssertThat(bodyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.NaN); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.PositiveInfinity); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.FadeT0, 1f); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.PrecipD, 1f); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, new Godot.Vector4(1, 0, 0, 0)); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
         proxy.Free();
-        Throws<ObjectDisposedException>(() => proxy.SetParameter(InstanceShaderNames.ShadowProxy, 0f));
+        {
+            var thrown = false;
+            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, 0f); }
+            catch (ObjectDisposedException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
+        }
         body.Free();
     }
 
@@ -289,36 +362,30 @@ public sealed class GeometryInstancePoolRuntimeTests
         var required = (ulong)(Mesh.ArrayFormat.FormatVertex | Mesh.ArrayFormat.FormatNormal | Mesh.ArrayFormat.FormatColor |
             Mesh.ArrayFormat.FormatTexUV | Mesh.ArrayFormat.FormatTexUV2 | Mesh.ArrayFormat.FormatIndex |
             Mesh.ArrayFormat.FormatCustom0 | Mesh.ArrayFormat.FormatCustom1 | Mesh.ArrayFormat.FormatCustom2);
-        Check((format & required) == required && (format & (ulong)Mesh.ArrayFormat.FlagCompressAttributes) == 0,
-            "A native surface dropped attributes or compressed fp32 UV2.");
+        AssertThat((format & required) == required && (format & (ulong)Mesh.ArrayFormat.FlagCompressAttributes) == 0).OverrideFailureMessage("A native surface dropped attributes or compressed fp32 UV2.").IsTrue();
         foreach (var shift in new[] { Mesh.ArrayFormat.FormatCustom0Shift, Mesh.ArrayFormat.FormatCustom1Shift, Mesh.ArrayFormat.FormatCustom2Shift })
-            Check(((format >> (int)shift) & (ulong)Mesh.ArrayFormat.FormatCustomMask) == (ulong)Mesh.ArrayCustomFormat.RgbaFloat,
-                "A custom channel was not RGBA_FLOAT.");
+            AssertThat(((format >> (int)shift) & (ulong)Mesh.ArrayFormat.FormatCustomMask) == (ulong)Mesh.ArrayCustomFormat.RgbaFloat).OverrideFailureMessage("A custom channel was not RGBA_FLOAT.").IsTrue();
         using var arrays = mesh.SurfaceGetArrays(index); // Test-only native attribute readback.
         var vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
         var normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
         var uv = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
         var uv2 = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
         var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
-        Check(arrays[(int)Mesh.ArrayType.Index].AsInt32Array().SequenceEqual(source.Index.ToArray()), "Triangle indices changed.");
+        AssertThat(arrays[(int)Mesh.ArrayType.Index].AsInt32Array().SequenceEqual(source.Index.ToArray())).OverrideFailureMessage("Triangle indices changed.").IsTrue();
         var count = source.Position.Length / 3;
-        Check(vertices.Length == count && normals.Length == count && uv.Length == count && uv2.Length == count && colors.Length == count,
-            "The native surface lost a vertex attribute record.");
+        AssertThat(vertices.Length == count && normals.Length == count && uv.Length == count && uv2.Length == count && colors.Length == count).OverrideFailureMessage("The native surface lost a vertex attribute record.").IsTrue();
         for (var i = 0; i < count; i++)
         {
-            Check(vertices[i] == new Vector3(source.Position.Span[i * 3], source.Position.Span[i * 3 + 1], source.Position.Span[i * 3 + 2]),
-                "Frozen positions changed after the producer reused its array.");
-            Check(MathF.Abs(normals[i].X) < .0002f && MathF.Abs(normals[i].Y) < .0002f && MathF.Abs(normals[i].Z - 1f) < .0002f,
-                "Normals were omitted or altered beyond the native normal packing tolerance.");
-            Check(uv[i] == new Vector2(source.Uv!.Value.Span[i * 2], source.Uv.Value.Span[i * 2 + 1]), "UV changed.");
-            Check(uv2[i] == new Vector2(source.Uv2!.Value.Span[i * 2], source.Uv2.Value.Span[i * 2 + 1]), "UV2 lost fp32 integer or negative precision.");
-            Check(Byte(colors[i].R) == source.ColorIndices!.Value.Span[i] && Byte(colors[i].G) == (byte)(source.Ao!.Value.Span[i] * 255f) &&
-                Byte(colors[i].B) == source.Flags!.Value.Span[i] && Byte(colors[i].A) == source.Reserved!.Value.Span[i],
-                "COLOR must retain R=id/G=truncated AO/B=flags/A=reserved without an AO inversion.");
+            AssertThat(vertices[i] == new Vector3(source.Position.Span[i * 3], source.Position.Span[i * 3 + 1], source.Position.Span[i * 3 + 2])).OverrideFailureMessage("Frozen positions changed after the producer reused its array.").IsTrue();
+            AssertThat(MathF.Abs(normals[i].X) < .0002f && MathF.Abs(normals[i].Y) < .0002f && MathF.Abs(normals[i].Z - 1f) < .0002f).OverrideFailureMessage("Normals were omitted or altered beyond the native normal packing tolerance.").IsTrue();
+            AssertThat(uv[i] == new Vector2(source.Uv!.Value.Span[i * 2], source.Uv.Value.Span[i * 2 + 1])).OverrideFailureMessage("UV changed.").IsTrue();
+            AssertThat(uv2[i] == new Vector2(source.Uv2!.Value.Span[i * 2], source.Uv2.Value.Span[i * 2 + 1])).OverrideFailureMessage("UV2 lost fp32 integer or negative precision.").IsTrue();
+            AssertThat(Byte(colors[i].R) == source.ColorIndices!.Value.Span[i] && Byte(colors[i].G) == (byte)(source.Ao!.Value.Span[i] * 255f) &&
+                Byte(colors[i].B) == source.Flags!.Value.Span[i] && Byte(colors[i].A) == source.Reserved!.Value.Span[i]).OverrideFailureMessage("COLOR must retain R=id/G=truncated AO/B=flags/A=reserved without an AO inversion.").IsTrue();
         }
-        Check(arrays[(int)Mesh.ArrayType.Custom0].AsFloat32Array().SequenceEqual(source.Custom0!.Value.ToArray()), "CUSTOM0 changed.");
-        Check(arrays[(int)Mesh.ArrayType.Custom1].AsFloat32Array().SequenceEqual(source.Custom1!.Value.ToArray()), "CUSTOM1 changed.");
-        Check(arrays[(int)Mesh.ArrayType.Custom2].AsFloat32Array().SequenceEqual(source.Custom2!.Value.ToArray()), "CUSTOM2 changed.");
+        AssertThat(arrays[(int)Mesh.ArrayType.Custom0].AsFloat32Array().SequenceEqual(source.Custom0!.Value.ToArray())).OverrideFailureMessage("CUSTOM0 changed.").IsTrue();
+        AssertThat(arrays[(int)Mesh.ArrayType.Custom1].AsFloat32Array().SequenceEqual(source.Custom1!.Value.ToArray())).OverrideFailureMessage("CUSTOM1 changed.").IsTrue();
+        AssertThat(arrays[(int)Mesh.ArrayType.Custom2].AsFloat32Array().SequenceEqual(source.Custom2!.Value.ToArray())).OverrideFailureMessage("CUSTOM2 changed.").IsTrue();
     }
     private static int Byte(float value) => (int)MathF.Round(value * 255f);
     private static MultiMeshInstance3D FindPool(InstancePoolHost host, string id)
@@ -421,14 +488,4 @@ public sealed class GeometryInstancePoolRuntimeTests
         public bool CompleteWarm(ToonWarmBatch batch) => throw new NotSupportedException("Use the real WP-04 warm-draw integration for evidence.");
     }
 
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

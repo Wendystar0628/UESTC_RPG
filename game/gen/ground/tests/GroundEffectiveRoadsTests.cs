@@ -10,6 +10,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// The ground lays centre lines from the effective road network only (WP-08 batch 4): an authored footway that is in the
 /// feature table and in <c>Network.Roads</c> is paved once, a hidden one is gone, an area stays an area, and the markings
@@ -26,15 +28,15 @@ public sealed class GroundEffectiveRoadsTests
         var points = new Vector2[] { new(0f, 20f), new(30f, 24f), new(60f, 20f) };
         var both = TestWorld.Of([Line("design:t-walk", points, 3f)], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []));
         var (shapes, roads) = GroundSources.Read(both);
-        Check.True(roads.Count == 1, $"One centre line, got {roads.Count}.");
+        AssertThat(roads.Count == 1).OverrideFailureMessage($"One centre line, got {roads.Count}.").IsTrue();
         var mine = shapes.Where(s => s.Id.Value == "design:t-walk").ToArray();
-        Check.True(mine.Length == 1, $"The line is one capsule chain, got {mine.Length} shapes.");
-        Check.True(mine[0].Kind == SurfaceKind.Walk && mine[0].Line!.SequenceEqual(points) && mine[0].HalfWidth == 1.5f, "A 3 m footway along its authored points.");
+        AssertThat(mine.Length == 1).OverrideFailureMessage($"The line is one capsule chain, got {mine.Length} shapes.").IsTrue();
+        AssertThat(mine[0].Kind == SurfaceKind.Walk && mine[0].Line!.SequenceEqual(points) && mine[0].HalfWidth == 1.5f).OverrideFailureMessage("A 3 m footway along its authored points.").IsTrue();
 
         // The network alone gives the same shapes: the feature copy adds nothing.
         var networkOnly = GroundSources.Read(TestWorld.Of([], new WorldNetwork([Road("design:t-walk", points, 3f)], [], [], [], []))).Shapes;
-        Check.True(networkOnly.Count == shapes.Count && networkOnly.Zip(shapes).All(p => p.First.Id == p.Second.Id && p.First.Kind == p.Second.Kind &&
-            p.First.HalfWidth == p.Second.HalfWidth && p.First.Line!.SequenceEqual(p.Second.Line!)), "Features copy changed the shapes.");
+        AssertThat(networkOnly.Count == shapes.Count && networkOnly.Zip(shapes).All(p => p.First.Id == p.Second.Id && p.First.Kind == p.Second.Kind &&
+            p.First.HalfWidth == p.Second.HalfWidth && p.First.Line!.SequenceEqual(p.Second.Line!))).OverrideFailureMessage("Features copy changed the shapes.").IsTrue();
     }
 
     [TestCase]
@@ -45,24 +47,22 @@ public sealed class GroundEffectiveRoadsTests
         {
             var stale = TestWorld.Of([Line("design:t-" + type, [new(0f, 0f), new(40f, 0f)], 3f, type)]);
             var (shapes, roads) = GroundSources.Read(stale);
-            Check.True(shapes.Count == 0 && roads.Count == 0, $"A {type} line missing from the network was laid anyway.");
+            AssertThat(shapes.Count == 0 && roads.Count == 0).OverrideFailureMessage($"A {type} line missing from the network was laid anyway.").IsTrue();
         }
         // A class the network does not take is still laid from its feature, and so is an original way.
         var service = TestWorld.Of([Line("design:t-service", [new(0f, 0f), new(40f, 0f)], 5f, "service")]);
-        Check.True(GroundSources.Read(service).Shapes.Single().Kind == SurfaceKind.Carriageway, "A service line outside the network keeps its surface.");
+        AssertThat(GroundSources.Read(service).Shapes.Single().Kind == SurfaceKind.Carriageway).OverrideFailureMessage("A service line outside the network keeps its surface.").IsTrue();
         var original = Line("osm:way:9", [new(0f, 0f), new(40f, 0f)], 3f, "footway") with { Source = FeatureSource.Osm };
-        Check.True(GroundSources.Read(TestWorld.Of([original])).Shapes.Count == 1, "An original way is not an authored line.");
+        AssertThat(GroundSources.Read(TestWorld.Of([original])).Shapes.Count == 1).OverrideFailureMessage("An original way is not an authored line.").IsTrue();
     }
 
     [TestCase]
     public void HideThroughTheLoaderLeavesNoShape()
     {
         var added = GroundSources.Read(Load([Add("design:line")]).World);
-        Check.True(added.Shapes.Count(s => s.Id.Value == "design:line") == 1 && added.Roads.Count(r => r.Id.Value == "design:line") == 1,
-            "The authored line is paved once from the loaded world.");
+        AssertThat(added.Shapes.Count(s => s.Id.Value == "design:line") == 1 && added.Roads.Count(r => r.Id.Value == "design:line") == 1).OverrideFailureMessage("The authored line is paved once from the loaded world.").IsTrue();
         var hidden = GroundSources.Read(Load([Add("design:line"), new HideOp(new("design:line"), "remove the line")]).World);
-        Check.True(hidden.Shapes.All(s => s.Id.Value != "design:line") && hidden.Roads.All(r => r.Id.Value != "design:line"),
-            "A hidden authored line is not paved from anywhere.");
+        AssertThat(hidden.Shapes.All(s => s.Id.Value != "design:line") && hidden.Roads.All(r => r.Id.Value != "design:line")).OverrideFailureMessage("A hidden authored line is not paved from anywhere.").IsTrue();
     }
 
     [TestCase]
@@ -77,19 +77,18 @@ public sealed class GroundEffectiveRoadsTests
             Area("design:t-plaza-pair", new MultiPolygonGeometry([holed with { Outer = Shift(holed.Outer, 100f), Holes = [Shift(holed.Holes[0], 100f)] }, second]), "pedestrian"),
         ]);
         var (shapes, roads) = GroundSources.Read(world);
-        Check.True(roads.Count == 0, "An area is no centre line.");
-        Check.True(shapes.Count == 3 && shapes.All(s => s.Kind == SurfaceKind.Plaza && s.Line is null && s.Rings!.Length == 2), "Three plaza polygons, each with its hole.");
+        AssertThat(roads.Count == 0).OverrideFailureMessage("An area is no centre line.").IsTrue();
+        AssertThat(shapes.Count == 3 && shapes.All(s => s.Kind == SurfaceKind.Plaza && s.Line is null && s.Rings!.Length == 2)).OverrideFailureMessage("Three plaza polygons, each with its hole.").IsTrue();
         var layout = GroundLayout.Of(world);
-        Check.True(layout.SignedDistance(SurfaceKind.Plaza, new(20f, 20f), 20f) > 0f, "The hole of a polygon is open ground.");
-        Check.True(layout.SignedDistance(SurfaceKind.Plaza, new(5f, 20f), 20f) < 0f, "The body of a polygon is plaza.");
-        Check.True(layout.SignedDistance(SurfaceKind.Plaza, new(120f, 20f), 20f) > 0f && layout.SignedDistance(SurfaceKind.Plaza, new(70f, 10f), 20f) > 0f,
-            "The holes of a multi-polygon are open ground too.");
+        AssertThat(layout.SignedDistance(SurfaceKind.Plaza, new(20f, 20f), 20f) > 0f).OverrideFailureMessage("The hole of a polygon is open ground.").IsTrue();
+        AssertThat(layout.SignedDistance(SurfaceKind.Plaza, new(5f, 20f), 20f) < 0f).OverrideFailureMessage("The body of a polygon is plaza.").IsTrue();
+        AssertThat(layout.SignedDistance(SurfaceKind.Plaza, new(120f, 20f), 20f) > 0f && layout.SignedDistance(SurfaceKind.Plaza, new(70f, 10f), 20f) > 0f).OverrideFailureMessage("The holes of a multi-polygon are open ground too.").IsTrue();
 
         // An original way is a polygon in the feature table and a centre line in the network under one ID: both are laid.
         var polygon = Area("osm:way:5", new PolygonGeometry(plaza), "footway") with { Source = FeatureSource.Osm };
         var both = TestWorld.Of([polygon], new WorldNetwork([Road("osm:way:5", [new(0f, 20f), new(40f, 20f)], 2.5f)], [], [], [], []));
         var laid = GroundSources.Read(both).Shapes;
-        Check.True(laid.Count == 2 && laid.Count(s => s.Rings is not null) == 1 && laid.Count(s => s.Line is not null) == 1, "Polygon as polygon, centre line as capsule.");
+        AssertThat(laid.Count == 2 && laid.Count(s => s.Rings is not null) == 1 && laid.Count(s => s.Line is not null) == 1).OverrideFailureMessage("Polygon as polygon, centre line as capsule.").IsTrue();
     }
 
     [TestCase]
@@ -109,24 +108,24 @@ public sealed class GroundEffectiveRoadsTests
         // The walk and the sidewalk are one paved surface: no kerb, edging or step across the join, and none beside it.
         for (var z = 5.0f; z <= 30f; z += 0.5f)
             foreach (var x in new[] { 29.3f, 30f, 30.7f })
-                Check.True(SurfaceAt(withWalk, x, z) == GroundSurface.Paver, $"({x}, {z}) is {SurfaceAt(withWalk, x, z)}, not plain paving.");
-        Check.True(SurfaceAt(bare, 30f, 20f) != GroundSurface.Paver, "Without the walk that ground is lawn.");
+                AssertThat(SurfaceAt(withWalk, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {SurfaceAt(withWalk, x, z)}, not plain paving.").IsTrue();
+        AssertThat(SurfaceAt(bare, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
 
         // The carriageway has no fillet or kerb of its own from a footway, and the footway's crossing sits where it meets the road.
-        Check.True(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0, "A footway never rounds a carriageway corner.");
+        AssertThat(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0).OverrideFailureMessage("A footway never rounds a carriageway corner.").IsTrue();
         var crossing = new Vector2[] { new(50f, -20f), new(50f, 20f) };
         var crossed = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-cross", crossing, 2.5f)], [], [], [], []));
         var marks = GroundLayout.Of(crossed).Markings(Section);
-        Check.True(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < 0.01f, "An authored footway across the road gets one zebra where it crosses.");
-        Check.True(GroundLayout.Of(bare).Markings(Section).Crossings.Count == 0, "No walk, no crossing.");
+        AssertThat(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < 0.01f).OverrideFailureMessage("An authored footway across the road gets one zebra where it crosses.").IsTrue();
+        AssertThat(GroundLayout.Of(bare).Markings(Section).Crossings.Count == 0).OverrideFailureMessage("No walk, no crossing.").IsTrue();
 
         // Feature and network copies together build the same tile as the network alone: no second layer, no z conflict.
         var a = new GroundModule().Build(TestWorld.Context(withWalk), new TileKey(0, 0), LodLevel.L0);
         var b = new GroundModule().Build(TestWorld.Context(networkOnly), new TileKey(0, 0), LodLevel.L0);
-        Check.True(a.Meshes.Count == b.Meshes.Count && a.Meshes.Count > 0, "Bundle count differs.");
+        AssertThat(a.Meshes.Count == b.Meshes.Count && a.Meshes.Count > 0).OverrideFailureMessage("Bundle count differs.").IsTrue();
         for (var k = 0; k < a.Meshes.Count; k++)
         {
-            Check.True(a.Meshes[k].Position.SequenceEqual(b.Meshes[k].Position) && a.Meshes[k].Index.SequenceEqual(b.Meshes[k].Index), $"Mesh {k} differs.");
+            AssertThat(a.Meshes[k].Position.SequenceEqual(b.Meshes[k].Position) && a.Meshes[k].Index.SequenceEqual(b.Meshes[k].Index)).OverrideFailureMessage($"Mesh {k} differs.").IsTrue();
             a.Meshes[k].ValidateVertexData();
         }
     }
@@ -139,31 +138,31 @@ public sealed class GroundEffectiveRoadsTests
         // Only the classes WP-08 projects into the network (footway, path, pedestrian); a design drive or service lane is laid from its own feature.
         var authored = world.Features.Values.Where(f => f.Source == FeatureSource.Design && f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
             GroundClassifier.RoadType(f.Props) is "footway" or "path" or "pedestrian").ToArray();
-        Check.True(authored.Length >= 7, $"The campus has at least seven authored footway lines, got {authored.Length}.");
+        AssertThat(authored.Length >= 7).OverrideFailureMessage($"The campus has at least seven authored footway lines, got {authored.Length}.").IsTrue();
         foreach (var feature in authored)
         {
             var road = world.Network.Roads.SingleOrDefault(r => r.Id == feature.Id);
-            Check.True(road is not null, $"{feature.Id.Value} is missing from the effective network.");
+            AssertThat(road is not null).OverrideFailureMessage($"{feature.Id.Value} is missing from the effective network.").IsTrue();
             var laid = shapes.Where(s => s.Id == feature.Id).ToArray();
-            Check.True(laid.Length == 1 && laid[0].Kind == SurfaceKind.Walk && laid[0].Line is not null, $"{feature.Id.Value} must be laid once as a footway, got {laid.Length}.");
-            Check.True(laid[0].Line!.SequenceEqual(GroundSources.Clean(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f, $"{feature.Id.Value} is not laid along its network line.");
+            AssertThat(laid.Length == 1 && laid[0].Kind == SurfaceKind.Walk && laid[0].Line is not null).OverrideFailureMessage($"{feature.Id.Value} must be laid once as a footway, got {laid.Length}.").IsTrue();
+            AssertThat(laid[0].Line!.SequenceEqual(GroundSources.Clean(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f).OverrideFailureMessage($"{feature.Id.Value} is not laid along its network line.").IsTrue();
         }
         // No centre line is laid twice anywhere: every network road has exactly one capsule chain, and no other line shape shares its ID.
         var chains = shapes.Where(s => s.Line is not null && s.Kind is SurfaceKind.Carriageway or SurfaceKind.Walk or SurfaceKind.Plaza && !s.Id.Value.Contains(":footprint:", StringComparison.Ordinal)).ToArray();
-        Check.True(chains.GroupBy(s => s.Id).All(g => g.Count() == 1), "A road ID is laid as more than one centre line.");
+        AssertThat(chains.GroupBy(s => s.Id).All(g => g.Count() == 1)).OverrideFailureMessage("A road ID is laid as more than one centre line.").IsTrue();
         // An authored line of a class the network does not take (a design drive) is laid from its own feature, once.
         var outside = world.Features.Values.Count(f => f.Source == FeatureSource.Design && f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
             world.Network.Roads.All(r => r.Id != f.Id));
-        Check.True(chains.Length == roads.Count + outside, $"{roads.Count} network roads and {outside} lines outside it give {chains.Length} line shapes.");
+        AssertThat(chains.Length == roads.Count + outside).OverrideFailureMessage($"{roads.Count} network roads and {outside} lines outside it give {chains.Length} line shapes.").IsTrue();
         // The authored pedestrian areas stay polygons.
         foreach (var id in new[] { "design:south-clock-forecourt", "design:south-a01-plaza" })
         {
             var area = shapes.Single(s => s.Id.Value == id);
-            Check.True(area.Kind == SurfaceKind.Plaza && area.Rings is not null && area.Line is null, $"{id} must stay a plaza polygon.");
+            AssertThat(area.Kind == SurfaceKind.Plaza && area.Rings is not null && area.Line is null).OverrideFailureMessage($"{id} must stay a plaza polygon.").IsTrue();
         }
         // The ring-shaped athletics relation names no sport: turf, with its infield hole, and no court.
         var field = shapes.Where(s => s.Id.Value == "osm:relation:11583700" || s.Id.Value == "qsh:relation:11583700").ToArray();
-        Check.True(field.Length == 1 && field[0].Kind == SurfaceKind.Turf && field[0].Rings is { Length: 2 }, "The athletics field is one turf ring with a hole.");
+        AssertThat(field.Length == 1 && field[0].Kind == SurfaceKind.Turf && field[0].Rings is { Length: 2 }).OverrideFailureMessage("The athletics field is one turf ring with a hole.").IsTrue();
     }
 
     // ---------------------------------------------------------------- helpers

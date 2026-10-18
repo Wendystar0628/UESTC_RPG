@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Bake.Tests;
 
@@ -26,13 +27,12 @@ public sealed class BakePaletteV2Tests
         var diagnostics = new List<BuildDiagnostic>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture placement", new FeatureId("fixture.feature"));
         var result = builder.BuildOutput(key, context, new([source], []) { Diagnostics = [warning] }, new(0, 0), LodLevel.L0, diagnostics.AddRange);
-        Check(diagnostics.SequenceEqual([warning]), "BuildOutput dropped or changed producer diagnostics.");
+        AssertThat(diagnostics.SequenceEqual([warning])).OverrideFailureMessage("BuildOutput dropped or changed producer diagnostics.").IsTrue();
         var quiet = builder.BuildOutput(key, context, new([source], []), new(0, 0), LodLevel.L0, diagnostics.AddRange);
-        Check(TileBundleCodec.Encode("fixture", result).SequenceEqual(TileBundleCodec.Encode("fixture", quiet)),
-            "Diagnostics changed serialized geometry.");
-        Check(result.Surfaces.Single().AttributeData.Span[10] == 16, "The ordinary geometry path rejected or narrowed bank 1 before the packer.");
+        AssertThat(TileBundleCodec.Encode("fixture", result).SequenceEqual(TileBundleCodec.Encode("fixture", quiet))).OverrideFailureMessage("Diagnostics changed serialized geometry.").IsTrue();
+        AssertThat(result.Surfaces.Single().AttributeData.Span[10] == 16).OverrideFailureMessage("The ordinary geometry path rejected or narrowed bank 1 before the packer.").IsTrue();
         var other = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = Catalog() };
-        Throws<InvalidOperationException>(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0, _ => { }));
+        AssertThrown(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0, _ => { })).IsInstanceOf<InvalidOperationException>();
     }
 
     [TestCase]
@@ -58,8 +58,7 @@ public sealed class BakePaletteV2Tests
             for (var i = 0; i < count; i++)
             {
                 var rgba = old.AttributeData.Span.Slice(i * stride, 4);
-                Check(rgba[0] == i && rgba[1] == (byte)(source.Ao![i] * 255f) && rgba[2] == (i & 15) && rgba[3] == 255 - i,
-                    "The bank-zero surface no longer copies the frozen R/A/flags bytes or truncates AO as before.");
+                AssertThat(rgba[0] == i && rgba[1] == (byte)(source.Ao![i] * 255f) && rgba[2] == (i & 15) && rgba[3] == 255 - i).OverrideFailureMessage("The bank-zero surface no longer copies the frozen R/A/flags bytes or truncates AO as before.").IsTrue();
             }
             foreach (var next in new[]
             {
@@ -67,14 +66,12 @@ public sealed class BakePaletteV2Tests
                 BakeSurfacePacker.Pack(GeometryBuffer.Freeze(source), Bounds(), catalog)
             })
             {
-                Check(old.Format == next.Format && old.VertexData.Span.SequenceEqual(next.VertexData.Span) &&
-                    old.AttributeData.Span.SequenceEqual(next.AttributeData.Span) && old.IndexData.Span.SequenceEqual(next.IndexData.Span),
-                    "Catalog support changed an existing vertex, attribute, index or format byte.");
+                AssertThat(old.Format == next.Format && old.VertexData.Span.SequenceEqual(next.VertexData.Span) &&
+                    old.AttributeData.Span.SequenceEqual(next.AttributeData.Span) && old.IndexData.Span.SequenceEqual(next.IndexData.Span)).OverrideFailureMessage("Catalog support changed an existing vertex, attribute, index or format byte.").IsTrue();
                 var key = BakeRequestKeys.Tile(new("fixture"), "fixture.palette", new(0, 0), LodLevel.L0);
                 var before = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [old]);
                 var after = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [next]);
-                Check(TileBundleCodec.Encode("same-fixture-identity", before).SequenceEqual(TileBundleCodec.Encode("same-fixture-identity", after)),
-                    "An equal surface no longer has equal TBIN payload bytes at the same identity.");
+                AssertThat(TileBundleCodec.Encode("same-fixture-identity", before).SequenceEqual(TileBundleCodec.Encode("same-fixture-identity", after))).OverrideFailureMessage("An equal surface no longer has equal TBIN payload bytes at the same identity.").IsTrue();
             }
         }
     }
@@ -99,17 +96,15 @@ public sealed class BakePaletteV2Tests
         for (var i = 0; i < 3; i++)
         {
             var data = packed.AttributeData.Span.Slice(i * stride, stride);
-            Check(data[..4].SequenceEqual(expected[i]), "255, 256 or 511 aliased, or AO/flags/reserved changed.");
-            Check(PaletteEncoding.DecodeColor(data[0], data[2]).Value == source.ColorIndices![i], "Logical color failed a bank round trip.");
+            AssertThat(data[..4].SequenceEqual(expected[i])).OverrideFailureMessage("255, 256 or 511 aliased, or AO/flags/reserved changed.").IsTrue();
+            AssertThat(PaletteEncoding.DecodeColor(data[0], data[2]).Value == source.ColorIndices![i]).OverrideFailureMessage("Logical color failed a bank round trip.").IsTrue();
             for (var component = 0; component < 2; component++)
-                Check(BinaryPrimitives.ReadInt32LittleEndian(data[(12 + component * 4)..]) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2 + component]),
-                    "Encoding 2 changed fp32 UV2 bits.");
+                AssertThat(BinaryPrimitives.ReadInt32LittleEndian(data[(12 + component * 4)..]) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2 + component])).OverrideFailureMessage("Encoding 2 changed fp32 UV2 bits.").IsTrue();
             var offset = 20;
             foreach (var custom in new[] { source.Custom0, source.Custom1, source.Custom2 })
             {
                 for (var component = 0; component < 4; component++)
-                    Check(BinaryPrimitives.ReadInt32LittleEndian(data[(offset + component * 4)..]) == BitConverter.SingleToInt32Bits(custom![i * 4 + component]),
-                        "Encoding 2 repurposed or changed a custom-channel bit.");
+                    AssertThat(BinaryPrimitives.ReadInt32LittleEndian(data[(offset + component * 4)..]) == BitConverter.SingleToInt32Bits(custom![i * 4 + component])).OverrideFailureMessage("Encoding 2 repurposed or changed a custom-channel bit.").IsTrue();
                 offset += 16;
             }
         }
@@ -133,10 +128,9 @@ public sealed class BakePaletteV2Tests
                 for (var i = 0; i < 3; i++)
                 {
                     var data = packed.AttributeData.Span.Slice(i * 8, 4);
-                    Check(data[0] == 255 && data[1] == 127 && data[2] == expectedFlags && data[3] == 255,
-                        "Decal banks collided with semantic flags or AO.");
-                    Check(PaletteEncoding.DecodeColor(data[0], data[2]).Value == foreground &&
-                        PaletteEncoding.DecodeDecalBase(data[3], data[2]).Value == background, "Decal foreground/base banks were conflated.");
+                    AssertThat(data[0] == 255 && data[1] == 127 && data[2] == expectedFlags && data[3] == 255).OverrideFailureMessage("Decal banks collided with semantic flags or AO.").IsTrue();
+                    AssertThat(PaletteEncoding.DecodeColor(data[0], data[2]).Value == foreground &&
+                        PaletteEncoding.DecodeDecalBase(data[3], data[2]).Value == background).OverrideFailureMessage("Decal foreground/base banks were conflated.").IsTrue();
                 }
             }
     }
@@ -147,13 +141,13 @@ public sealed class BakePaletteV2Tests
         var catalog = Catalog();
         var high = Geometry() with { Material = new(Spec(510)) };
         var packed = BakeSurfacePacker.Pack(high, Bounds(), catalog);
-        Check(packed.AttributeData.Span[0] == 254 && packed.AttributeData.Span[2] == 16, "A material-only extension token was narrowed to a byte.");
-        Check(BakeSurfacePacker.Pack(GeometryBuffer.Freeze(high), Bounds(), catalog).AttributeData.Span.SequenceEqual(packed.AttributeData.Span), "Freezing changed the high material fallback.");
+        AssertThat(packed.AttributeData.Span[0] == 254 && packed.AttributeData.Span[2] == 16).OverrideFailureMessage("A material-only extension token was narrowed to a byte.").IsTrue();
+        AssertThat(BakeSurfacePacker.Pack(GeometryBuffer.Freeze(high), Bounds(), catalog).AttributeData.Span.SequenceEqual(packed.AttributeData.Span)).OverrideFailureMessage("Freezing changed the high material fallback.").IsTrue();
         var source = Geometry() with { ColorIndices = [64, 66, 68], Flags = [4, 4, 4], DecalBaseColorIndices = [255, 256, 511] };
         var part = new PlacedPart(new("fixture.part"), new object(), Matrix4x4.Identity, Token(510));
         var tinted = BakeSurfacePacker.ApplyTint(source, part, catalog);
-        Check(tinted.ColorIndices!.All(i => i == 510) && tinted.Material.Spec == Spec(510), "Tint dropped its high bit or retained conflicting color streams.");
-        Check(ReferenceEquals(tinted.DecalBaseColorIndices, source.DecalBaseColorIndices) && ReferenceEquals(tinted.Flags, source.Flags), "Tint changed decal bases or semantic flags.");
+        AssertThat(tinted.ColorIndices!.All(i => i == 510) && tinted.Material.Spec == Spec(510)).OverrideFailureMessage("Tint dropped its high bit or retained conflicting color streams.").IsTrue();
+        AssertThat(ReferenceEquals(tinted.DecalBaseColorIndices, source.DecalBaseColorIndices) && ReferenceEquals(tinted.Flags, source.Flags)).OverrideFailureMessage("Tint changed decal bases or semantic flags.").IsTrue();
     }
 
     [TestCase]
@@ -166,7 +160,7 @@ public sealed class BakePaletteV2Tests
             Geometry() with { ColorIndices = [256, 256, 256], Flags = [16, 0, 0] },
             Geometry() with { DecalBaseColorIndices = [256, 256, 256], Flags = [4, 0, 4] },
             Geometry() with { DecalBaseColorIndices = [256, 256, 256], Flags = [4, 4, 4], Reserved = [0, 0, 0] }
-        }) Throws<ArgumentException>(() => BakeSurfacePacker.Pack(invalid, Bounds(), catalog));
+        }) AssertThrown(() => BakeSurfacePacker.Pack(invalid, Bounds(), catalog)).IsInstanceOf<ArgumentException>();
         GeometryBuffer.Freeze(Geometry() with { ColorIndices = [255, 255, 255] });
     }
 
@@ -180,10 +174,10 @@ public sealed class BakePaletteV2Tests
         InstanceStreamLayout.Write(record, Matrix4x4.Identity, new(1, 2, 3, 4));
         var stream = new GeometryInstanceStream("fixture.same-id", prototype, record, Bounds());
         var result = new BakeInstanceAdapter(catalog).Pack([stream, stream]);
-        Check(result.Count == 2 && ReferenceEquals(result[0].Surface, result[1].Surface) &&
-            result[0].InstanceData.Span.SequenceEqual(result[1].InstanceData.Span), "Repeated streams were deduplicated or prototype bytes were repacked.");
-        Check(result[0].Surface.AttributeData.Span[10] == 16, "Prototype packing reinterpreted its logical colour or lost bank 1.");
-        Throws<ArgumentNullException>(() => new BakeInstanceAdapter(catalog).Pack([null!]));
+        AssertThat(result.Count == 2 && ReferenceEquals(result[0].Surface, result[1].Surface) &&
+            result[0].InstanceData.Span.SequenceEqual(result[1].InstanceData.Span)).OverrideFailureMessage("Repeated streams were deduplicated or prototype bytes were repacked.").IsTrue();
+        AssertThat(result[0].Surface.AttributeData.Span[10] == 16).OverrideFailureMessage("Prototype packing reinterpreted its logical colour or lost bank 1.").IsTrue();
+        AssertThrown(() => new BakeInstanceAdapter(catalog).Pack([null!])).IsInstanceOf<ArgumentNullException>();
     }
 
     private static PaletteToken Token(int index) => new("fixture.p" + index);
@@ -200,10 +194,4 @@ public sealed class BakePaletteV2Tests
     private static GeometryBundle Geometry(int count = 3) => new(new(Spec(64)),
         Enumerable.Range(0, count).SelectMany(i => new[] { i % 3 == 1 ? 1f : 0f, 0f, i % 3 == 2 ? 1f : 0f }).ToArray(),
         Enumerable.Range(0, count).SelectMany(_ => new[] { 0f, 1f, 0f }).ToArray(), [0, 1, 2], Uv: new float[count * 2]);
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); } catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

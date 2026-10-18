@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -19,10 +20,8 @@ public sealed class EntranceHeightReferenceTests
     public void LegacyAndAbsolutePreserveAllFieldsWithoutQueryingTerrain()
     {
         var terrain = new ProbeTerrain(9, new NotSupportedException("Pad lookup must not run."));
-        Require(Parse(Entry) == Absolute && Parse(WithRef("\"absolute\"")) == Absolute,
-            "Legacy absolute coordinates changed without terrain.");
-        Require(Parse(Entry, terrain) == Absolute && Parse(WithRef("\"absolute\""), terrain) == Absolute && terrain.Calls == 0,
-            "Absolute coordinates queried terrain or changed authored values.");
+        AssertThat(Parse(Entry) == Absolute && Parse(WithRef("\"absolute\"")) == Absolute).OverrideFailureMessage("Legacy absolute coordinates changed without terrain.").IsTrue();
+        AssertThat(Parse(Entry, terrain) == Absolute && Parse(WithRef("\"absolute\""), terrain) == Absolute && terrain.Calls == 0).OverrideFailureMessage("Absolute coordinates queried terrain or changed authored values.").IsTrue();
     }
 
     [TestCase]
@@ -33,58 +32,104 @@ public sealed class EntranceHeightReferenceTests
             var terrain = new ProbeTerrain(padY);
             var resolved = Parse(WithRef("\"pad\""), terrain);
             var shift = new Vector3(0, padY, 0);
-            Require(resolved.Outside == Absolute.Outside + shift && resolved.Inside == Absolute.Inside + shift &&
+            AssertThat(resolved.Outside == Absolute.Outside + shift && resolved.Inside == Absolute.Inside + shift &&
                 resolved.Center == Absolute.Center + shift && resolved.Inside - resolved.Outside == Absolute.Inside - Absolute.Outside &&
-                resolved.Center - resolved.Outside == Absolute.Center - Absolute.Outside,
-                "The three points did not share one pad offset.");
-            Require(resolved.Id == Absolute.Id && resolved.YawDeg == Absolute.YawDeg &&
+                resolved.Center - resolved.Outside == Absolute.Center - Absolute.Outside).OverrideFailureMessage("The three points did not share one pad offset.").IsTrue();
+            AssertThat(resolved.Id == Absolute.Id && resolved.YawDeg == Absolute.YawDeg &&
                 resolved.ClearWidth == Absolute.ClearWidth && resolved.Open == Absolute.Open &&
-                terrain.Calls == 1 && terrain.LastFeature == Feature, "Pad lookup changed metadata or queried the wrong feature.");
+                terrain.Calls == 1 && terrain.LastFeature == Feature).OverrideFailureMessage("Pad lookup changed metadata or queried the wrong feature.").IsTrue();
             var json = JsonSerializer.Serialize(resolved, ContractJson.Options);
-            Require(!json.Contains("heightRef", StringComparison.Ordinal) &&
-                JsonSerializer.Deserialize<EntranceDecl>(json, ContractJson.Options) == resolved,
-                "Resolved entrances must remain absolute across their normal contract round trip.");
+            AssertThat(!json.Contains("heightRef", StringComparison.Ordinal) &&
+                JsonSerializer.Deserialize<EntranceDecl>(json, ContractJson.Options) == resolved).OverrideFailureMessage("Resolved entrances must remain absolute across their normal contract round trip.").IsTrue();
         }
         // Readiness belongs to the caller. An explicitly supplied zero-height implementation is valid.
-        Require(Parse(WithRef("\"pad\""), FlatTerrain.Default) == Absolute, "Explicit zero pad was mistaken for missing input.");
+        AssertThat(Parse(WithRef("\"pad\""), FlatTerrain.Default) == Absolute).OverrideFailureMessage("Explicit zero pad was mistaken for missing input.").IsTrue();
     }
 
     [TestCase]
     public void PadRequiresExplicitInputAndPropagatesUnsupportedOrUnknownFeatures()
     {
-        Throws<JsonException>(() => Parse(WithRef("\"pad\"")));
+        {
+            bool rejected = false;
+            try { Parse(WithRef("\"pad\"")); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
         foreach (var cause in new Exception[] { new NotSupportedException("unimplemented"), new KeyNotFoundException("missing pad") })
         {
             var terrain = new ProbeTerrain(0, cause);
-            var error = Throws<JsonException>(() => Parse(WithRef("\"pad\""), terrain));
-            Require(ReferenceEquals(error.InnerException, cause) && terrain.Calls == 1 &&
+            JsonException? error = null;
+            try { Parse(WithRef("\"pad\""), terrain); }
+            catch (JsonException caught) { error = caught; }
+            AssertThat(error is not null).OverrideFailureMessage("Expected JsonException.").IsTrue();
+            AssertThat(ReferenceEquals(error!.InnerException, cause) && terrain.Calls == 1 &&
                 error.Message.Contains("entry.main", StringComparison.Ordinal) &&
-                error.Message.Contains(Feature.Value, StringComparison.Ordinal), "Pad failure lost its source or identity.");
+                error.Message.Contains(Feature.Value, StringComparison.Ordinal)).OverrideFailureMessage("Pad failure lost its source or identity.").IsTrue();
         }
         var mismatched = new ProbeTerrain(2);
         using var document = JsonDocument.Parse(WithRef("\"pad\""));
-        Throws<JsonException>(() => InteriorEntranceJson.Parse(document.RootElement, new("fixture:other"), mismatched));
-        Require(mismatched.Calls == 0, "An entrance was resolved against a different feature's pad.");
+        {
+            bool rejected = false;
+            try { InteriorEntranceJson.Parse(document.RootElement, new("fixture:other"), mismatched); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        AssertThat(mismatched.Calls == 0).OverrideFailureMessage("An entrance was resolved against a different feature's pad.").IsTrue();
     }
 
     [TestCase]
     public void UnknownNullDuplicateAndMalformedReferencesAreRejected()
     {
         foreach (var reference in new[] { "\"ground\"", "\"PAD\"", "\"\"", "null", "0", "[\"pad\"]", "{}" })
-            Throws<JsonException>(() => Parse(WithRef(reference), new ProbeTerrain(2)));
-        Throws<JsonException>(() => Parse(WithRef("\"absolute\",\"heightRef\":\"pad\""), new ProbeTerrain(2)));
-        Throws<JsonException>(() => Parse(Entry.Insert(Entry.Length - 1, ",\"heightReference\":\"pad\""), new ProbeTerrain(2)));
+        {
+            bool rejected = false;
+            try { Parse(WithRef(reference), new ProbeTerrain(2)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(WithRef("\"absolute\",\"heightRef\":\"pad\""), new ProbeTerrain(2)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Entry.Insert(Entry.Length - 1, ",\"heightReference\":\"pad\""), new ProbeTerrain(2)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
     }
 
     [TestCase]
     public void NonFiniteRawPadAndResolvedHeightsAreRejected()
     {
         foreach (var padY in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
-            Throws<JsonException>(() => Parse(WithRef("\"pad\""), new ProbeTerrain(padY)));
+        {
+            bool rejected = false;
+            try { Parse(WithRef("\"pad\""), new ProbeTerrain(padY)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
         foreach (var field in new[] { "0.25", "0.5", "0.75", "127", "1.25" })
-            Throws<JsonException>(() => Parse(Entry.Replace(field, "1e999", StringComparison.Ordinal)));
-        Throws<JsonException>(() => Parse(WithRef("\"pad\"").Replace("0.25", "3e38", StringComparison.Ordinal), new ProbeTerrain(3e38f)));
-        Throws<JsonException>(() => Parse(Entry.Replace("[1,0.25,2]", "[1,2]", StringComparison.Ordinal)));
+        {
+            bool rejected = false;
+            try { Parse(Entry.Replace(field, "1e999", StringComparison.Ordinal)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(WithRef("\"pad\"").Replace("0.25", "3e38", StringComparison.Ordinal), new ProbeTerrain(3e38f)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Entry.Replace("[1,0.25,2]", "[1,2]", StringComparison.Ordinal)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -96,10 +141,25 @@ public sealed class EntranceHeightReferenceTests
             var missing = "{" + string.Join(",", entry.RootElement.EnumerateObject()
                 .Where(property => property.Name != field.Name)
                 .Select(property => JsonSerializer.Serialize(property.Name) + ":" + property.Value.GetRawText())) + "}";
-            Throws<JsonException>(() => Parse(missing));
+            {
+                bool rejected = false;
+                try { Parse(missing); }
+                catch (JsonException) { rejected = true; }
+                AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+            }
         }
-        Throws<JsonException>(() => Parse(Entry.Replace("\"open\":true", "\"open\":null", StringComparison.Ordinal)));
-        Throws<JsonException>(() => Parse(Entry.Replace("\"clearWidth\":1.25", "\"clearWidth\":\"1.25\"", StringComparison.Ordinal)));
+        {
+            bool rejected = false;
+            try { Parse(Entry.Replace("\"open\":true", "\"open\":null", StringComparison.Ordinal)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { Parse(Entry.Replace("\"clearWidth\":1.25", "\"clearWidth\":\"1.25\"", StringComparison.Ordinal)); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
         foreach (var (door, path) in new[]
         {
             ("null", "closedEntrances[0]"),
@@ -108,8 +168,11 @@ public sealed class EntranceHeightReferenceTests
         })
         {
             using var catalog = JsonDocument.Parse("{\"interiors\":[],\"closedEntrances\":[" + door + "]}");
-            var error = Throws<JsonException>(() => InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement));
-            Require(error.Path == path, "Closed entrance failure lost its authored ID or array position.");
+            JsonException? error = null;
+            try { InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement); }
+            catch (JsonException caught) { error = caught; }
+            AssertThat(error is not null).OverrideFailureMessage("Expected JsonException.").IsTrue();
+            AssertThat(error!.Path == path).OverrideFailureMessage("Closed entrance failure lost its authored ID or array position.").IsTrue();
         }
     }
 
@@ -130,16 +193,5 @@ public sealed class EntranceHeightReferenceTests
         public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
         public float? WaterY(FeatureId water) => throw new NotSupportedException();
         public TerrainFacts FactsAt(float x, float z) => throw new NotSupportedException();
-    }
-
-    private static T Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T error) { return error; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }

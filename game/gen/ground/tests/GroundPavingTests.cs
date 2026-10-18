@@ -9,6 +9,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// Q-015 plaza paving: the forecourt of a library's open entrance carries the granite profile with metre UVs square to
 /// the entrance, one joint on its axis; curbs, borders and other plazas stay plain, a place laid inside it continues the grid.
@@ -25,47 +27,44 @@ public sealed class GroundPavingTests
         var world = PavingWorld.Library("library", 90f);
         var meshes = Build(world);
         var patterned = meshes.Where(m => m.Material.Spec.SurfacePattern is not null).ToArray();
-        Check.True(patterned.Length > 0, "The library forecourt must produce patterned plaza geometry.");
+        AssertThat(patterned.Length > 0).OverrideFailureMessage("The library forecourt must produce patterned plaza geometry.").IsTrue();
         foreach (var mesh in patterned)
         {
             mesh.ValidateVertexData();   // contract: UV and UV2 present, gate/K constant per triangle
-            Check.True(mesh.Material.Spec.SurfacePattern == GroundPaving.Granite, "Granite 600 profile.");
-            Check.True(mesh.Material.Spec with { SurfacePattern = null } == GroundPalette.Spec(GroundMaterial.Plaza),
-                "The profile is the only material difference from the plain plaza class.");
-            Check.True(mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb)), "Granite keeps its colour.");
+            AssertThat(mesh.Material.Spec.SurfacePattern == GroundPaving.Granite).OverrideFailureMessage("Granite 600 profile.").IsTrue();
+            AssertThat(mesh.Material.Spec with { SurfacePattern = null } == GroundPalette.Spec(GroundMaterial.Plaza)).OverrideFailureMessage("The profile is the only material difference from the plain plaza class.").IsTrue();
+            AssertThat(mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb))).OverrideFailureMessage("Granite keeps its colour.").IsTrue();
             for (var v = 0; v < mesh.Position.Length / 3; v++)
             {
                 var x = mesh.Position[3 * v];
                 var z = mesh.Position[3 * v + 2];
                 // Frame: V along the axis from the plaza edge (x = 10), U across it with U = 0 on the axis line (z = 0).
-                Check.Close(z, mesh.Uv![2 * v], 0.01, "U is the signed distance from the entrance axis");
-                Check.Close(x - 10f, mesh.Uv[2 * v + 1], 2e-3, "V starts at the plaza edge on the axis");
-                Check.True(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f, "Without a fidelity model the D0 reading K3 applies.");
+                AssertThat(Math.Abs((double)(z) - (double)(mesh.Uv![2 * v])) <= 0.01).OverrideFailureMessage($"U is the signed distance from the entrance axis: expected {z}, got {mesh.Uv![2 * v]}.").IsTrue();
+                AssertThat(Math.Abs((double)(x - 10f) - (double)(mesh.Uv[2 * v + 1])) <= 2e-3).OverrideFailureMessage($"V starts at the plaza edge on the axis: expected {x - 10f}, got {mesh.Uv[2 * v + 1]}.").IsTrue();
+                AssertThat(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f).OverrideFailureMessage("Without a fidelity model the D0 reading K3 applies.").IsTrue();
             }
             for (var i = 0; i < mesh.Index.Length; i += 3)
-                Check.True(Centre(mesh, i).Y < 25f, "The neighbouring plaza off the axis is not patterned.");
+                AssertThat(Centre(mesh, i).Y < 25f).OverrideFailureMessage("The neighbouring plaza off the axis is not patterned.").IsTrue();
         }
         var layout = GroundLayout.Of(world);
         var sources = new GroundSourceContext(layout.Near(new(0, -64), new(64, 64)), GroundSection.Default, 0f, layout.Paving);
         var top = new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Top, sources);
-        Check.True(top.PavingAt(new(35, 0)) is { } inner && inner == top.PavingAt(new(20, 0)),
-            "An unbound place laid inside the forecourt continues the forecourt grid (no seam along the triangulation).");
-        Check.True(top.PavingAt(new(35, 40)) is null &&
+        AssertThat(top.PavingAt(new(35, 0)) is { } inner && inner == top.PavingAt(new(20, 0))).OverrideFailureMessage("An unbound place laid inside the forecourt continues the forecourt grid (no seam along the triangulation).").IsTrue();
+        AssertThat(top.PavingAt(new(35, 40)) is null &&
             new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Vertical, sources).PavingAt(new(20, 0)) is null &&
-            new GroundFaceInput(GroundSurface.PlazaBorder, GroundFaceRole.Top, sources).PavingAt(new(20, 0)) is null,
-            "Other plazas, vertical faces and plaza borders take no frame.");
+            new GroundFaceInput(GroundSurface.PlazaBorder, GroundFaceRole.Top, sources).PavingAt(new(20, 0)) is null).OverrideFailureMessage("Other plazas, vertical faces and plaza borders take no frame.").IsTrue();
         var plain = meshes.Where(m => m.Material.Spec.SurfacePattern is null).ToArray();
-        Check.True(plain.All(m => m.Uv is null && m.Uv2 is null), "Plain chunks keep the legacy vertex layout.");
-        Check.True(plain.Any(m => m.Material.Spec == GroundPalette.Spec(GroundMaterial.Plaza)), "Other plaza tops stay plain granite.");
+        AssertThat(plain.All(m => m.Uv is null && m.Uv2 is null)).OverrideFailureMessage("Plain chunks keep the legacy vertex layout.").IsTrue();
+        AssertThat(plain.Any(m => m.Material.Spec == GroundPalette.Spec(GroundMaterial.Plaza))).OverrideFailureMessage("Other plaza tops stay plain granite.").IsTrue();
     }
 
     [TestCase]
     public void OnlyLibraryEntrancesSelectAForecourt()
     {
         var meshes = Build(PavingWorld.Library("museum", 90f));
-        Check.True(meshes.All(m => m.Material.Spec.SurfacePattern is null), "Other building categories do not pave their forecourts (yet).");
+        AssertThat(meshes.All(m => m.Material.Spec.SurfacePattern is null)).OverrideFailureMessage("Other building categories do not pave their forecourts (yet).").IsTrue();
         var away = Build(PavingWorld.Library("library", 270f));
-        Check.True(away.All(m => m.Material.Spec.SurfacePattern is null), "An entrance facing away from every plaza binds nothing.");
+        AssertThat(away.All(m => m.Material.Spec.SurfacePattern is null)).OverrideFailureMessage("An entrance facing away from every plaza binds nothing.").IsTrue();
     }
 
     [TestCase]
@@ -78,7 +77,7 @@ public sealed class GroundPavingTests
                 var c = Centre(mesh, i);
                 var v = mesh.Index[i] * 2;
                 var expected = c.X > 25f ? (0f, 4f) : (1f, 1f);
-                Check.True((mesh.Uv2![v], mesh.Uv2[v + 1]) == expected, $"Gate/K at {c} must follow the exported zone.");
+                AssertThat((mesh.Uv2![v], mesh.Uv2[v + 1]) == expected).OverrideFailureMessage($"Gate/K at {c} must follow the exported zone.").IsTrue();
             }
     }
 
@@ -88,7 +87,7 @@ public sealed class GroundPavingTests
         // A second entrance reaches the same plaza from the side, across a short run: the façade axis stays the main axis.
         var world = PavingWorld.Library("library", 90f, side: true);
         var mesh = Build(world).First(m => m.Material.Spec.SurfacePattern is not null);
-        Check.Close(mesh.Position[2], mesh.Uv![0], 0.01, "U stays measured from the long east axis");
+        AssertThat(Math.Abs((double)(mesh.Position[2]) - (double)(mesh.Uv![0])) <= 0.01).OverrideFailureMessage($"U stays measured from the long east axis: expected {mesh.Position[2]}, got {mesh.Uv![0]}.").IsTrue();
     }
 
     private static IReadOnlyList<GeometryBundle> Build(FakeWorld world)

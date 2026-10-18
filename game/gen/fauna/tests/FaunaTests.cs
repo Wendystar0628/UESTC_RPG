@@ -7,6 +7,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Fauna.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class FaunaTests
 {
@@ -36,46 +38,40 @@ public sealed class FaunaTests
         throw new DirectoryNotFoundException("Repository root not found.");
     }
 
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
     [TestCase]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
     {
         var a = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
         var b = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
         foreach (var line in a.Log) Console.WriteLine("[fauna] " + line);
-        Check(a.Sites.Select(s => s.Key).SequenceEqual(b.Sites.Select(s => s.Key)), "Same world, same sites.");
-        Check(a.Sites.SelectMany(s => s.Day).Select(x => x.Position).SequenceEqual(b.Sites.SelectMany(s => s.Day).Select(x => x.Position)), "Same positions.");
+        AssertThat(a.Sites.Select(s => s.Key).SequenceEqual(b.Sites.Select(s => s.Key))).OverrideFailureMessage("Same world, same sites.").IsTrue();
+        AssertThat(a.Sites.SelectMany(s => s.Day).Select(x => x.Position).SequenceEqual(b.Sites.SelectMany(s => s.Day).Select(x => x.Position))).OverrideFailureMessage("Same positions.").IsTrue();
         var cats = a.Sites.Where(s => s.Kind == FaunaKind.Cat).ToArray();
-        Check(cats.Length is >= 2 and <= 3, $"Two or three cat sites, got {cats.Length}: {string.Join("; ", a.Log)}");
+        AssertThat(cats.Length is >= 2 and <= 3).OverrideFailureMessage($"Two or three cat sites, got {cats.Length}: {string.Join("; ", a.Log)}").IsTrue();
         var dayCats = cats.Sum(s => s.Day.Count);
         var nightCats = cats.Sum(s => s.Night.Count);
-        Check(dayCats <= 4 && nightCats < dayCats, $"At most four cats by day and fewer at night ({dayCats}/{nightCats}).");
-        Check(cats.All(s => s.Rain.Count == s.Day.Count), "Every cat has an under-the-eaves place in rain.");
+        AssertThat(dayCats <= 4 && nightCats < dayCats).OverrideFailureMessage($"At most four cats by day and fewer at night ({dayCats}/{nightCats}).").IsTrue();
+        AssertThat(cats.All(s => s.Rain.Count == s.Day.Count)).OverrideFailureMessage("Every cat has an under-the-eaves place in rain.").IsTrue();
         var pigeons = a.Sites.Single(s => s.Kind == FaunaKind.Pigeon);
-        Check(pigeons.Day.Count is >= 6 and <= 12, $"6-12 pigeons, got {pigeons.Day.Count}.");
-        Check(pigeons.Night.Count == 0 && pigeons.Rain.Count == 0, "No pigeons on the ground at night or in rain.");
-        Check(pigeons.Day.Count(p => p.Model.White) == 1, "One white pigeon among the grey.");
+        AssertThat(pigeons.Day.Count is >= 6 and <= 12).OverrideFailureMessage($"6-12 pigeons, got {pigeons.Day.Count}.").IsTrue();
+        AssertThat(pigeons.Night.Count == 0 && pigeons.Rain.Count == 0).OverrideFailureMessage("No pigeons on the ground at night or in rain.").IsTrue();
+        AssertThat(pigeons.Day.Count(p => p.Model.White) == 1).OverrideFailureMessage("One white pigeon among the grey.").IsTrue();
         var sparrowSites = a.Sites.Count(s => s.Kind == FaunaKind.Sparrow);
-        Check(sparrowSites is >= 2 and <= 6, $"3-6 sparrow places (fewer rather than more), got {sparrowSites}.");
+        AssertThat(sparrowSites is >= 2 and <= 6).OverrideFailureMessage($"3-6 sparrow places (fewer rather than more), got {sparrowSites}.").IsTrue();
         foreach (var site in a.Sites)
             foreach (var x in site.Day.Concat(site.Night).Concat(site.Rain))
-                Check(float.IsFinite(x.Position.X) && float.IsFinite(x.Position.Y) && float.IsFinite(x.Yaw), $"{site.Key}: finite pose.");
+                AssertThat(float.IsFinite(x.Position.X) && float.IsFinite(x.Position.Y) && float.IsFinite(x.Yaw)).OverrideFailureMessage($"{site.Key}: finite pose.").IsTrue();
         var swans = a.Sites.Where(s => s.Kind == FaunaKind.Swan).ToArray();
-        Check(swans.Length == 2 && swans[0].Day.Count == 4 && swans[1].Day.Count == 2 && swans.All(s => s.Night.Count == s.Day.Count),
-            $"Four black swans on the first lake, two on the second: {string.Join("; ", a.Log)}");
+        AssertThat(swans.Length == 2 && swans[0].Day.Count == 4 && swans[1].Day.Count == 2 && swans.All(s => s.Night.Count == s.Day.Count)).OverrideFailureMessage($"Four black swans on the first lake, two on the second: {string.Join("; ", a.Log)}").IsTrue();
         var crows = a.Sites.Where(s => s.Kind == FaunaKind.Crow).ToArray();
-        Check(crows.Length is >= 2 and <= 3 && crows.All(c => c.Day.Count is >= 2 and <= 3), $"2-3 crow groups of 2-3: {string.Join("; ", a.Log)}");
+        AssertThat(crows.Length is >= 2 and <= 3 && crows.All(c => c.Day.Count is >= 2 and <= 3)).OverrideFailureMessage($"2-3 crow groups of 2-3: {string.Join("; ", a.Log)}").IsTrue();
         for (var i = 0; i < crows.Length; i++)
             for (var j = i + 1; j < crows.Length; j++)
-                Check(Vector3.Distance(crows[i].Day[0].Position, crows[j].Day[0].Position) >= 140f, "Crow groups at least 150 m apart.");
+                AssertThat(Vector3.Distance(crows[i].Day[0].Position, crows[j].Day[0].Position) >= 140f).OverrideFailureMessage("Crow groups at least 150 m apart.").IsTrue();
         var spots = cats.Select(s => s.Day[0].Position).ToArray();
         for (var i = 0; i < spots.Length; i++)
             for (var j = i + 1; j < spots.Length; j++)
-                Check(Vector3.Distance(spots[i], spots[j]) >= FaunaStyle.CatSiteSpacing - 1f, "Cat sites keep apart.");
+                AssertThat(Vector3.Distance(spots[i], spots[j]) >= FaunaStyle.CatSiteSpacing - 1f).OverrideFailureMessage("Cat sites keep apart.").IsTrue();
     }
 
     private static FakeWorld NoNetworkWorld(IWorldModel inner) => new(inner)
@@ -88,8 +84,8 @@ public sealed class FaunaTests
     public void AStubWorldWithoutNetworkOrOverlaysDegradesQuietly()
     {
         var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
-        Check(layout.Sites.Any(s => s.Kind == FaunaKind.Cat), "Cats still find a wall without roads.");
-        Check(!layout.Sites.Any(s => s.Kind == FaunaKind.Pigeon), "No stepped plaza, no pigeons, and no exception.");
+        AssertThat(layout.Sites.Any(s => s.Kind == FaunaKind.Cat)).OverrideFailureMessage("Cats still find a wall without roads.").IsTrue();
+        AssertThat(!layout.Sites.Any(s => s.Kind == FaunaKind.Pigeon)).OverrideFailureMessage("No stepped plaza, no pigeons, and no exception.").IsTrue();
     }
 
     [TestCase]
@@ -107,11 +103,11 @@ public sealed class FaunaTests
         {
             var mesh = scene.Model(key);
             var box = mesh.Bounds();
-            Check(mesh.Triangles is > 100 and < 7000, $"{key}: {mesh.Triangles} triangles.");
-            if (key.Kind == FaunaKind.Swan) Check(box.Min.Y < -0.05f && box.Min.Y > -0.15f, $"{key}: the hull sits in the water (min y {box.Min.Y:F3}).");
-            else Check(box.Min.Y > -0.01f && box.Min.Y < 0.03f, $"{key}: feet on the ground (min y {box.Min.Y:F3}).");
-            Check(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < 0.01f), $"{key}: unit normals.");
-            Check(SignedVolume(mesh) < 0, $"{key}: clockwise front faces seen from outside (Godot), so the closed mesh has negative signed volume.");
+            AssertThat(mesh.Triangles is > 100 and < 7000).OverrideFailureMessage($"{key}: {mesh.Triangles} triangles.").IsTrue();
+            if (key.Kind == FaunaKind.Swan) AssertThat(box.Min.Y < -0.05f && box.Min.Y > -0.15f).OverrideFailureMessage($"{key}: the hull sits in the water (min y {box.Min.Y:F3}).").IsTrue();
+            else AssertThat(box.Min.Y > -0.01f && box.Min.Y < 0.03f).OverrideFailureMessage($"{key}: feet on the ground (min y {box.Min.Y:F3}).").IsTrue();
+            AssertThat(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < 0.01f)).OverrideFailureMessage($"{key}: unit normals.").IsTrue();
+            AssertThat(SignedVolume(mesh) < 0).OverrideFailureMessage($"{key}: clockwise front faces seen from outside (Godot), so the closed mesh has negative signed volume.").IsTrue();
             var height = box.Max.Y - MathF.Max(0f, box.Min.Y);
             var (lo, hi) = key.Kind switch
             {
@@ -122,13 +118,13 @@ public sealed class FaunaTests
                 FaunaKind.Crow => (0.25f, 0.45f),
                 _ => (0f, 0f),
             };
-            Check(height >= lo && height <= hi, $"{key}: height {height:F3} out of the species' range.");
+            AssertThat(height >= lo && height <= hi).OverrideFailureMessage($"{key}: height {height:F3} out of the species' range.").IsTrue();
         }
         var sites = FaunaPlanner.Build(World.Value, 1, Lakes.Value).Sites;
         var day = sites.SelectMany(s => s.Day).ToArray();
         var output = scene.Build(day);
-        Check(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIndices is { } c && c.Length * 3 == m.Position.Length), "One cat and one bird bundle with colour IDs.");
-        Check(scene.Triangles(day) < 90000, "The whole day set stays small.");
+        AssertThat(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIndices is { } c && c.Length * 3 == m.Position.Length)).OverrideFailureMessage("One cat and one bird bundle with colour IDs.").IsTrue();
+        AssertThat(scene.Triangles(day) < 90000).OverrideFailureMessage("The whole day set stays small.").IsTrue();
     }
 
     private static double SignedVolume(AnimalMesh m)
@@ -154,7 +150,7 @@ public sealed class FaunaTests
         foreach (var field in typeof(FaunaStyle).GetFields().Where(f => f.FieldType == typeof(PaletteToken)))
         {
             var token = (PaletteToken)field.GetValue(null)!;
-            Check(tokens.Contains(token.Value) && tokens.Contains(FaunaStyle.ShadeOf(token).Value), $"{field.Name}: '{token.Value}' and its shade are registered.");
+            AssertThat(tokens.Contains(token.Value) && tokens.Contains(FaunaStyle.ShadeOf(token).Value)).OverrideFailureMessage($"{field.Name}: '{token.Value}' and its shade are registered.").IsTrue();
         }
     }
 }

@@ -12,6 +12,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class FacadePresetTests
 {
@@ -27,11 +29,10 @@ public sealed class FacadePresetTests
             Feature("t:small", Rect(300, 0, 5, 6), 1, 3f, "service"),
         };
         var plain = BuildingSet.For(World(features), 4u);
-        Require(Layout(BuildingSet.For(World(features), 4u)) == Layout(plain), "the same input lays out ordinary buildings cell for cell");
+        AssertThat(Layout(BuildingSet.For(World(features), 4u)) == Layout(plain)).OverrideFailureMessage("Expected: " + ("the same input lays out ordinary buildings cell for cell")).IsTrue();
         var anchored = BuildingSet.For(World(Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
-        Require(anchored.Blocks.SequenceEqual(plain.Blocks), "an entrance anchor leaves every window block as it was");
-        Require(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), ""),
-            "the other buildings keep their layout");
+        AssertThat(anchored.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ("an entrance anchor leaves every window block as it was")).IsTrue();
+        AssertThat(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), "")).OverrideFailureMessage("Expected: " + ("the other buildings keep their layout")).IsTrue();
     }
 
     [TestCase]
@@ -47,14 +48,14 @@ public sealed class FacadePresetTests
         };
         var plain = BuildingSet.For(World(features), 4u);
         var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value == "t:lab" ? f with { Facade = new FacadePreset(preset.Key) } : f)]), 4u);
-        Require(styled.Blocks.SequenceEqual(plain.Blocks), "every window block as before");
-        Require(Layout(styled, where: p => p.Key != "t:lab") == Layout(plain, where: p => p.Key != "t:lab"), "the other buildings cell for cell");
+        AssertThat(styled.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ("every window block as before")).IsTrue();
+        AssertThat(Layout(styled, where: p => p.Key != "t:lab") == Layout(plain, where: p => p.Key != "t:lab")).OverrideFailureMessage("Expected: " + ("the other buildings cell for cell")).IsTrue();
         var (before, after) = (plain.Plans.Single(p => p.Key == "t:lab"), styled.Plans.Single(p => p.Key == "t:lab"));
-        Require(after.Profile.Preset == preset.Key && before.Profile.Preset is null && after.Style == before.Style, "the preset over the research family");
+        AssertThat(after.Profile.Preset == preset.Key && before.Profile.Preset is null && after.Style == before.Style).OverrideFailureMessage("Expected: " + ("the preset over the research family")).IsTrue();
         static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));
-        Require(Cells(after) == Cells(before), "the same window cells and kinds, so the same window numbers and cards");
+        AssertThat(Cells(after) == Cells(before)).OverrideFailureMessage("Expected: " + ("the same window cells and kinds, so the same window numbers and cards")).IsTrue();
         static float Glazed(BuildingPlan p) => p.Openings.Sum(o => o.Sum(x => (x.U1 - x.U0) * (x.Y1 - x.Y0)));
-        Require(Glazed(after) > 1.6f * Glazed(before), $"more and larger glass: {Glazed(before):0} → {Glazed(after):0} m²");
+        AssertThat(Glazed(after) > 1.6f * Glazed(before)).OverrideFailureMessage("Expected: " + ($"more and larger glass: {Glazed(before):0} → {Glazed(after):0} m²")).IsTrue();
 
         // 玻璃色, 框架材质 and 窗型 reach the meshes at every level: a fixture preset with colours of its own.
         var tinted = new Rules.FacadeLook("t.tinted") { Glass = "uestc.techblue", Frame = "wall.creamCoffee", Trim = "panel.brown", Window = PartCatalog.CurtainWall };
@@ -68,14 +69,14 @@ public sealed class FacadePresetTests
                 var bundles = new BuildingsModule().BuildOne(plan, block, lod, Campus.Contracts.Tests.PaletteFixture.Catalog);
                 foreach (var b in bundles) b.ValidateVertexData();
                 var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
-                Require(lod == LodLevel.L4 || (glass.Length > 0 && glass.All(g => ColorVertices(g, "uestc.techblue.lit").Count() == g.Position.Length / 3)), $"{name} {lod}: glass in the preset's colour");
+                AssertThat(lod == LodLevel.L4 || (glass.Length > 0 && glass.All(g => ColorVertices(g, "uestc.techblue.lit").Count() == g.Position.Length / 3))).OverrideFailureMessage("Expected: " + ($"{name} {lod}: glass in the preset's colour")).IsTrue();
                 var walls = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Static && b.Material.Spec.Fx == (ToonFx.BevelLift | ToonFx.Mottle)).ToArray();
-                Require(walls.Length > 0 && walls.All(b => ColorVertices(b, "wall.creamCoffee.lit").Count() == b.Position.Length / 3), $"{name} {lod}: the wall frame in the preset's colour");
-                Require(!bundles.Any(Fabric), $"{name} {lod}: curtain walls hang no curtains");
+                AssertThat(walls.Length > 0 && walls.All(b => ColorVertices(b, "wall.creamCoffee.lit").Count() == b.Position.Length / 3)).OverrideFailureMessage("Expected: " + ($"{name} {lod}: the wall frame in the preset's colour")).IsTrue();
+                AssertThat(!bundles.Any(Fabric)).OverrideFailureMessage("Expected: " + ($"{name} {lod}: curtain walls hang no curtains")).IsTrue();
             }
         }
-        Require(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
-            BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null, "a key WP-14 does not know keeps the family, with a warning");
+        AssertThat(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
+            BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key WP-14 does not know keeps the family, with a warning")).IsTrue();
 
         // The real campus with the innovation centre's five buildings on the preset (the StyleOps of overlay/south.d/): no
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
@@ -83,10 +84,10 @@ public sealed class FacadePresetTests
         var real = RealCampus();
         var withPreset = Styled(real, f => innovation.Contains(f.Id.Value) ? f with { Family = new BuildingFamily("research"), Facade = new FacadePreset(preset.Key) } : f);
         var (was, now) = (BuildingSet.For(real, 1u), BuildingSet.For(withPreset, 1u));
-        Require(now.Blocks.SequenceEqual(was.Blocks), "real campus: every window block as before");
-        Require(Layout(now, where: p => !innovation.Contains(p.Id.Value)) == Layout(was, where: p => !innovation.Contains(p.Id.Value)), "real campus: the other buildings cell for cell");
+        AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("real campus: every window block as before")).IsTrue();
+        AssertThat(Layout(now, where: p => !innovation.Contains(p.Id.Value)) == Layout(was, where: p => !innovation.Contains(p.Id.Value))).OverrideFailureMessage("Expected: " + ("real campus: the other buildings cell for cell")).IsTrue();
         var centre = now.Plans.Where(p => innovation.Contains(p.Id.Value)).ToArray();
-        Require(centre.Length >= 10 && centre.All(p => p.Profile.Preset == preset.Key && p.Style == Rules.BuildingStyle.Research), $"the centre's {centre.Length} footprints take the preset");
+        AssertThat(centre.Length >= 10 && centre.All(p => p.Profile.Preset == preset.Key && p.Style == Rules.BuildingStyle.Research)).OverrideFailureMessage("Expected: " + ($"the centre's {centre.Length} footprints take the preset")).IsTrue();
     }
 
     /// <summary>The five dormitory presets of the north zone as WP-20's table gives them (MAP-QSH-NORTH).</summary>
@@ -113,20 +114,20 @@ public sealed class FacadePresetTests
     public void DormPresetsMatchTheTable()
     {
         var all = Rules.FacadePresets.All;
-        Require(all.Select(p => p.Key).Distinct(StringComparer.Ordinal).Count() == all.Count, "one preset per key");
+        AssertThat(all.Select(p => p.Key).Distinct(StringComparer.Ordinal).Count() == all.Count).OverrideFailureMessage("Expected: " + ("one preset per key")).IsTrue();
         var tokens = PaletteTokens();
         foreach (var (key, glazing, windowHeight, sill, groundSill, glass, frame, trim, accent, window) in DormTable)
         {
             var look = Rules.FacadePresets.Find(new FacadePreset(key)) ?? throw new InvalidOperationException($"Expected: {key} is a known preset");
-            Require(look.Key == key, $"{key} is found under its own key");
-            Require(look.Glazing == glazing && look.WindowHeight == windowHeight && look.Sill == sill && look.GroundSill == groundSill, $"{key}: the window's size");
-            Require(look.Glass == glass && look.Frame == frame && look.Trim == trim && look.Accent == accent && look.Window == window, $"{key}: colours and window part");
+            AssertThat(look.Key == key).OverrideFailureMessage("Expected: " + ($"{key} is found under its own key")).IsTrue();
+            AssertThat(look.Glazing == glazing && look.WindowHeight == windowHeight && look.Sill == sill && look.GroundSill == groundSill).OverrideFailureMessage("Expected: " + ($"{key}: the window's size")).IsTrue();
+            AssertThat(look.Glass == glass && look.Frame == frame && look.Trim == trim && look.Accent == accent && look.Window == window).OverrideFailureMessage("Expected: " + ($"{key}: colours and window part")).IsTrue();
             foreach (var family in new[] { glass, frame, trim, accent })
-                Require(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade"), $"{key}: {family} is in the palette");
+                AssertThat(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade")).OverrideFailureMessage("Expected: " + ($"{key}: {family} is in the palette")).IsTrue();
             // Only type A puts its 陶红 as aprons under the windows; the masters' accent takes the window column whole (on the stone frame it is no band).
-            Require(look.AccentApron == (key.StartsWith("dorm.a.", StringComparison.Ordinal) ? true : (bool?)null), $"{key}: the accent as aprons");
+            AssertThat(look.AccentApron == (key.StartsWith("dorm.a.", StringComparison.Ordinal) ? true : (bool?)null)).OverrideFailureMessage("Expected: " + ($"{key}: the accent as aprons")).IsTrue();
         }
-        Require(Rules.FacadePresets.Find(new FacadePreset("dorm.a.nothing")) is null, "an unknown key stays unknown");
+        AssertThat(Rules.FacadePresets.Find(new FacadePreset("dorm.a.nothing")) is null).OverrideFailureMessage("Expected: " + ("an unknown key stays unknown")).IsTrue();
     }
 
     [TestCase]
@@ -142,17 +143,17 @@ public sealed class FacadePresetTests
                 case "panel.brown": seedB ??= seed; break;
                 default: break;
             }
-        Require(seedA is not null && seedB is not null, "seeds for both dormitory variants");
+        AssertThat(seedA is not null && seedB is not null).OverrideFailureMessage("Expected: " + ("seeds for both dormitory variants")).IsTrue();
         foreach (var (key, _, _, _, _, _, frame, trim, accent, _) in DormTable)
         {
             var styled = feature with { Facade = new FacadePreset(key) };
             var (a, b) = (BuildingSet.For(World(styled), seedA!.Value), BuildingSet.For(World(styled), seedB!.Value));
-            Require(a.Plans[0].Profile == b.Plans[0].Profile && a.Plans[0].Profile.Accent == accent, $"{key}: one profile under either hash");
+            AssertThat(a.Plans[0].Profile == b.Plans[0].Profile && a.Plans[0].Profile.Accent == accent).OverrideFailureMessage("Expected: " + ($"{key}: one profile under either hash")).IsTrue();
             foreach (var set in new[] { a, b })
             {
                 var lit = new HashSet<string>(new BuildingsModule().BuildOne(set.Plans[0], set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog).SelectMany(m => m.ColorIndices!.Select(i => Campus.Contracts.Tests.PaletteFixture.Catalog.Get(new PaletteIndex(i)).Token.Value)));
-                Require(lit.Contains(accent + ".lit") && lit.Contains(frame + ".lit") && lit.Contains(trim + ".lit"), $"{key}: frame, trim and accent reach the mesh");
-                Require(!lit.Contains("panel.brown.lit") && (accent == "panel.pinkSand") == lit.Contains("panel.pinkSand.lit"), $"{key}: no spandrel colour of the family's own");
+                AssertThat(lit.Contains(accent + ".lit") && lit.Contains(frame + ".lit") && lit.Contains(trim + ".lit")).OverrideFailureMessage("Expected: " + ($"{key}: frame, trim and accent reach the mesh")).IsTrue();
+                AssertThat(!lit.Contains("panel.brown.lit") && (accent == "panel.pinkSand") == lit.Contains("panel.pinkSand.lit")).OverrideFailureMessage("Expected: " + ($"{key}: no spandrel colour of the family's own")).IsTrue();
             }
         }
     }
@@ -174,11 +175,11 @@ public sealed class FacadePresetTests
                 var (apron, wide) = (Plan(feature with { Facade = new FacadePreset(look.Key) }, look), Plan(feature with { Facade = new FacadePreset(full.Key) }, full with { Frame = look.Frame }));
                 var (share, spread) = (TerracottaShare(apron), TerracottaShare(wide));
                 var what = $"{look.Key} on {footprint.Outer.Count} corners and {footprint.Holes.Count} courtyards";
-                Require(spread.Wall is > 0.23 and < 0.29, $"{what}: about a quarter of the wall with the lintels ({spread.Wall:0.000})");
-                Require(share.Wall is > 0.15 and < 0.19, $"{what}: about a sixth of the wall as aprons ({share.Wall:0.000})");
+                AssertThat(spread.Wall is > 0.23 and < 0.29).OverrideFailureMessage("Expected: " + ($"{what}: about a quarter of the wall with the lintels ({spread.Wall:0.000})")).IsTrue();
+                AssertThat(share.Wall is > 0.15 and < 0.19).OverrideFailureMessage("Expected: " + ($"{what}: about a sixth of the wall as aprons ({share.Wall:0.000})")).IsTrue();
                 var (area, expected, strays) = ApronCheck(apron);
-                Require(strays == 0, $"{what}: {strays} triangles of 陶红 outside a floor-to-sill band");
-                Require(MathF.Abs((float)(area / expected) - 1f) < 0.01f, $"{what}: the 陶红 is the aprons ({area:0.0} of {expected:0.0} m²)");
+                AssertThat(strays == 0).OverrideFailureMessage("Expected: " + ($"{what}: {strays} triangles of 陶红 outside a floor-to-sill band")).IsTrue();
+                AssertThat(MathF.Abs((float)(area / expected) - 1f) < 0.01f).OverrideFailureMessage("Expected: " + ($"{what}: the 陶红 is the aprons ({area:0.0} of {expected:0.0} m²)")).IsTrue();
             }
         }
     }
@@ -198,31 +199,30 @@ public sealed class FacadePresetTests
         foreach (var (key, _, _, _, _, _, _, _, _, _) in DormTable)
         {
             var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value != "t:lab" ? f with { Facade = new FacadePreset(key) } : f)]), 4u);
-            Require(styled.Blocks.SequenceEqual(plain.Blocks), $"{key}: every window block as before");
-            Require(Layout(styled, where: p => p.Key == "t:lab") == Layout(plain, where: p => p.Key == "t:lab"), $"{key}: the other buildings cell for cell");
+            AssertThat(styled.Blocks.SequenceEqual(plain.Blocks)).OverrideFailureMessage("Expected: " + ($"{key}: every window block as before")).IsTrue();
+            AssertThat(Layout(styled, where: p => p.Key == "t:lab") == Layout(plain, where: p => p.Key == "t:lab")).OverrideFailureMessage("Expected: " + ($"{key}: the other buildings cell for cell")).IsTrue();
             for (var i = 0; i < plain.Plans.Count; i++)
             {
                 var (before, after) = (plain.Plans[i], styled.Plans[i]);
-                Require(after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys, $"{key}: {before.Key} keeps its window grid");
-                Require(Cells(after) == Cells(before), $"{key}: {before.Key} keeps its window cells and kinds");
-                Require(after.Profile.Preset == (before.Key == "t:lab" ? null : key), $"{key}: {before.Key} takes the preset");
+                AssertThat(after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys).OverrideFailureMessage("Expected: " + ($"{key}: {before.Key} keeps its window grid")).IsTrue();
+                AssertThat(Cells(after) == Cells(before)).OverrideFailureMessage("Expected: " + ($"{key}: {before.Key} keeps its window cells and kinds")).IsTrue();
+                AssertThat(after.Profile.Preset == (before.Key == "t:lab" ? null : key)).OverrideFailureMessage("Expected: " + ($"{key}: {before.Key} takes the preset")).IsTrue();
             }
         }
 
         var real = RealCampus();
         var was = BuildingSet.For(real, 1u);
         var dorms = was.Plans.Where(p => p.Style == Rules.BuildingStyle.Dormitory).Select(p => p.Id).Distinct().ToArray();
-        Require(dorms.Length >= 20, $"the campus has dormitories ({dorms.Length})");
+        AssertThat(dorms.Length >= 20).OverrideFailureMessage("Expected: " + ($"the campus has dormitories ({dorms.Length})")).IsTrue();
         var keyOf = dorms.Select((id, i) => (id, key: DormTable[i % DormTable.Length].Key)).ToDictionary(x => x.id, x => x.key);
         var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
-        Require(now.Blocks.SequenceEqual(was.Blocks), "real campus: every window block as before");
-        Require(Layout(now, where: p => !keyOf.ContainsKey(p.Id)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id)), "real campus: the other buildings cell for cell");
+        AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("real campus: every window block as before")).IsTrue();
+        AssertThat(Layout(now, where: p => !keyOf.ContainsKey(p.Id)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id))).OverrideFailureMessage("Expected: " + ("real campus: the other buildings cell for cell")).IsTrue();
         for (var i = 0; i < was.Plans.Count; i++)
         {
             var (before, after) = (was.Plans[i], now.Plans[i]);
             if (!keyOf.TryGetValue(before.Id, out var k)) continue;
-            Require(after.Profile.Preset == k && after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before),
-                $"real campus: {before.Key} keeps its window grid under {k}");
+            AssertThat(after.Profile.Preset == k && after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before)).OverrideFailureMessage("Expected: " + ($"real campus: {before.Key} keeps its window grid under {k}")).IsTrue();
         }
     }
 
@@ -233,10 +233,10 @@ public sealed class FacadePresetTests
         foreach (var (key, _, _, glazing, windowHeight, sill, groundSill, frame, trim, window) in AnnexTable)
         {
             var look = Rules.FacadePresets.Find(new FacadePreset(key)) ?? throw new InvalidOperationException($"Expected: {key} is a known preset");
-            Require(look.Glazing == glazing && look.WindowHeight == windowHeight && look.Sill == sill && look.GroundSill == groundSill, $"{key}: the window's size");
-            Require(look.Glass == "glass" && look.Frame == frame && look.Trim == trim && look.Accent == frame && look.Window == window && look.AccentApron is null, $"{key}: colours and window part");
+            AssertThat(look.Glazing == glazing && look.WindowHeight == windowHeight && look.Sill == sill && look.GroundSill == groundSill).OverrideFailureMessage("Expected: " + ($"{key}: the window's size")).IsTrue();
+            AssertThat(look.Glass == "glass" && look.Frame == frame && look.Trim == trim && look.Accent == frame && look.Window == window && look.AccentApron is null).OverrideFailureMessage("Expected: " + ($"{key}: colours and window part")).IsTrue();
             foreach (var family in new[] { frame, trim })
-                Require(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade"), $"{key}: {family} is in the palette");
+                AssertThat(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade")).OverrideFailureMessage("Expected: " + ($"{key}: {family} is in the palette")).IsTrue();
         }
     }
 
@@ -255,21 +255,20 @@ public sealed class FacadePresetTests
         foreach (var (way, key) in keyed)
         {
             var plans = set.Plans.Where(p => p.Id.Value == way).ToArray();
-            Require(plans.Length > 0, $"{way} is a building of the real campus");
+            AssertThat(plans.Length > 0).OverrideFailureMessage("Expected: " + ($"{way} is a building of the real campus")).IsTrue();
             var look = Rules.FacadePresets.Find(new FacadePreset(key))!;
             foreach (var plan in plans)
             {
-                Require(plan.Profile.Preset == key && plan.Profile.Wall == look.Frame && plan.Profile.Trim == look.Trim, $"{way}: takes {key}");
-                Require(!BuildingsModule.UnknownPreset(plan).Any(), $"{way}: {key} is known");
+                AssertThat(plan.Profile.Preset == key && plan.Profile.Wall == look.Frame && plan.Profile.Trim == look.Trim).OverrideFailureMessage("Expected: " + ($"{way}: takes {key}")).IsTrue();
+                AssertThat(!BuildingsModule.UnknownPreset(plan).Any()).OverrideFailureMessage("Expected: " + ($"{way}: {key} is known")).IsTrue();
                 var windows = plan.Openings.SelectMany(o => o).Where(o => o.Kind == BayKind.Window).ToArray();
                 // Upper storeys open at exactly the preset's height; the ground storey's sill is a little higher, which may take a few cm off the 6-storey blocks.
-                Require(windows.Length > 0 && windows.All(w => MathF.Abs(w.Y1 - w.Y0 - look.WindowHeight!.Value) < (w.Row == 0 ? 0.1f : 0.01f)),
-                    $"{way}: windows {look.WindowHeight} m high, got {string.Join(", ", windows.Select(w => (w.Y1 - w.Y0).ToString("0.000")).Distinct())}");
+                AssertThat(windows.Length > 0 && windows.All(w => MathF.Abs(w.Y1 - w.Y0 - look.WindowHeight!.Value) < (w.Row == 0 ? 0.1f : 0.01f))).OverrideFailureMessage("Expected: " + ($"{way}: windows {look.WindowHeight} m high, got {string.Join(", ", windows.Select(w => (w.Y1 - w.Y0).ToString("0.000")).Distinct())}")).IsTrue();
             }
         }
         var table = AnnexTable.ToDictionary(r => r.Key);
         foreach (var (way, key) in keyed.Where(k => table.ContainsKey(k.Key)))
-            Require(set.Plans.Where(p => p.Id.Value == way).All(p => p.Style == table[key].Style), $"{way}: stays in the {table[key].Family} family");
+            AssertThat(set.Plans.Where(p => p.Id.Value == way).All(p => p.Style == table[key].Style)).OverrideFailureMessage("Expected: " + ($"{way}: stays in the {table[key].Family} family")).IsTrue();
     }
 
     [TestCase]
@@ -286,18 +285,18 @@ public sealed class FacadePresetTests
             ["qsh:way:544269693"] = "dorm.master.creamCoffeeWhite",
         };
         var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
-        Require(now.Blocks.SequenceEqual(was.Blocks), "every window block as before");
-        Require(Layout(now, where: p => !keyOf.ContainsKey(p.Id.Value)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id.Value)), "the other buildings cell for cell");
+        AssertThat(now.Blocks.SequenceEqual(was.Blocks)).OverrideFailureMessage("Expected: " + ("every window block as before")).IsTrue();
+        AssertThat(Layout(now, where: p => !keyOf.ContainsKey(p.Id.Value)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id.Value))).OverrideFailureMessage("Expected: " + ("the other buildings cell for cell")).IsTrue();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var i = 0; i < was.Plans.Count; i++)
         {
             var (before, after) = (was.Plans[i], now.Plans[i]);
             if (!keyOf.TryGetValue(before.Id.Value, out var k)) continue;
             seen.Add(before.Id.Value);
-            Require(after.Profile.Preset == k && after.Profile.Wall == Rules.Families.WallCreamCoffee, $"{before.Key} takes {k}");
-            Require(after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before), $"{before.Key} keeps its window grid");
+            AssertThat(after.Profile.Preset == k && after.Profile.Wall == Rules.Families.WallCreamCoffee).OverrideFailureMessage("Expected: " + ($"{before.Key} takes {k}")).IsTrue();
+            AssertThat(after.TotalColumns == before.TotalColumns && after.Storeys == before.Storeys && Cells(after) == Cells(before)).OverrideFailureMessage("Expected: " + ($"{before.Key} keeps its window grid")).IsTrue();
         }
-        Require(seen.Count == keyOf.Count, $"all three blocks planned ({seen.Count})");
+        AssertThat(seen.Count == keyOf.Count).OverrideFailureMessage("Expected: " + ($"all three blocks planned ({seen.Count})")).IsTrue();
     }
 
     private static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));

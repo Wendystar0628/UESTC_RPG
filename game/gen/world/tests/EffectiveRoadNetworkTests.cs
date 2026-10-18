@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -26,16 +27,16 @@ public sealed class EffectiveRoadNetworkTests
         var add = Design("design:line");
         var world = Load([add]).World;
         var line = world.Network.Roads.Single(road => road.Id == add.Id);
-        Require(world.Network.Roads.Count == 2 && line.Line.Points.SequenceEqual(DesignLine.Points) && line.Width == 2.5f &&
-            line.Props?.GetRawText() == add.Props?.GetRawText(), "Projected road changed identity, point order, width or props.");
-        Require(world.Features.ContainsKey(add.Id), "Projection removed the real design Feature.");
+        AssertThat(world.Network.Roads.Count == 2 && line.Line.Points.SequenceEqual(DesignLine.Points) && line.Width == 2.5f &&
+            line.Props?.GetRawText() == add.Props?.GetRawText()).OverrideFailureMessage("Projected road changed identity, point order, width or props.").IsTrue();
+        AssertThat(world.Features.ContainsKey(add.Id)).OverrideFailureMessage("Projection removed the real design Feature.").IsTrue();
         foreach (var type in new[] { "footway", "path", "pedestrian" })
         {
             var byHighway = Design("design:" + type, "{\"highway\":\"" + type + "\",\"width\":3}");
-            Require(Load([byHighway]).World.Network.Roads.Single(road => road.Id == byHighway.Id).Width == 3, "highway classification was lost.");
+            AssertThat(Load([byHighway]).World.Network.Roads.Single(road => road.Id == byHighway.Id).Width == 3).OverrideFailureMessage("highway classification was lost.").IsTrue();
         }
         var styled = Load([add, new StyleOp(add.Id, new("fixture"), null)]).World;
-        Require(styled.Network.Roads.Count(road => road.Id == add.Id) == 1, "A same-file style operation lost the design line's origin.");
+        AssertThat(styled.Network.Roads.Count(road => road.Id == add.Id) == 1).OverrideFailureMessage("A same-file style operation lost the design line's origin.").IsTrue();
     }
 
     [TestCase]
@@ -43,11 +44,10 @@ public sealed class EffectiveRoadNetworkTests
     {
         var add = Design("design:line");
         var hidden = Load([add, new HideOp(add.Id, "remove current design line")]).World;
-        Require(!hidden.Features.ContainsKey(add.Id) && hidden.Network.Roads.Count == 1, "Add-hide leaked a design road.");
+        AssertThat(!hidden.Features.ContainsKey(add.Id) && hidden.Network.Roads.Count == 1).OverrideFailureMessage("Add-hide leaked a design road.").IsTrue();
         var replacement = add with { Geometry = new PolylineGeometry(new([new(8, 2), new(4, 1)])) };
         var readded = Load([add, new HideOp(add.Id, "same-file replacement"), replacement]).World;
-        Require(readded.Network.Roads.Single(road => road.Id == add.Id).Line.Points.SequenceEqual(((PolylineGeometry)replacement.Geometry).Line.Points),
-            "Same-file add-hide-readd changed the surviving line.");
+        AssertThat(readded.Network.Roads.Single(road => road.Id == add.Id).Line.Points.SequenceEqual(((PolylineGeometry)replacement.Geometry).Line.Points)).OverrideFailureMessage("Same-file add-hide-readd changed the surviving line.").IsTrue();
     }
 
     [TestCase]
@@ -57,11 +57,11 @@ public sealed class EffectiveRoadNetworkTests
         {
             var previous = Load([]).World;
             var after = Load([new HideOp(new(target), "hide exact road")]).World;
-            Require(!after.Features.ContainsKey(new(RoadId)) && after.Network.Roads.Count == 0, "Road hide left one stack alive.");
-            Require(previous.Features.ContainsKey(new(RoadId)) && previous.Network.Roads.Count == 1, "Reload mutated an existing snapshot.");
+            AssertThat(!after.Features.ContainsKey(new(RoadId)) && after.Network.Roads.Count == 0).OverrideFailureMessage("Road hide left one stack alive.").IsTrue();
+            AssertThat(previous.Features.ContainsKey(new(RoadId)) && previous.Network.Roads.Count == 1).OverrideFailureMessage("Reload mutated an existing snapshot.").IsTrue();
         }
         var building = Load([new HideOp(new(BuildingId), "ordinary non-road hide")]).World;
-        Require(!building.Features.ContainsKey(new(BuildingId)) && building.Network.Roads.Count == 1, "Ordinary non-road hide changed roads.");
+        AssertThat(!building.Features.ContainsKey(new(BuildingId)) && building.Network.Roads.Count == 1).OverrideFailureMessage("Ordinary non-road hide changed roads.").IsTrue();
     }
 
     [TestCase]
@@ -71,9 +71,9 @@ public sealed class EffectiveRoadNetworkTests
         var water = Line("campus-test:source:way:80");
         var network = new WorldNetwork([road], [water], [Line("campus-test:source:way:81")], [Line("campus-test:source:way:82")], [new(new("tree"), Vector3.Zero)]);
         var after = Load([new HideOp(road.Id, "true network-only road")], network: network).World;
-        Require(after.Network.Roads.Count == 0 && Canonical(after.Network.Waterways) == Canonical(network.Waterways) &&
+        AssertThat(after.Network.Roads.Count == 0 && Canonical(after.Network.Waterways) == Canonical(network.Waterways) &&
             Canonical(after.Network.Bridges) == Canonical(network.Bridges) && Canonical(after.Network.Culverts) == Canonical(network.Culverts) &&
-            Canonical(after.Network.Trees) == Canonical(network.Trees) && after.Features.Count == 2, "Network-only hide changed another stack or category.");
+            Canonical(after.Network.Trees) == Canonical(network.Trees) && after.Features.Count == 2).OverrideFailureMessage("Network-only hide changed another stack or category.").IsTrue();
         Contains(Fails(() => Load([new HideOp(new("other:source:way:99"), "unverified prefix")],
             network: new([Line("other:source:way:99")], [], [], [], []))), "verify", "other:source:way:99");
     }
@@ -111,11 +111,9 @@ public sealed class EffectiveRoadNetworkTests
         var before = Canonical(previous.Features[new("campus-test:mixed")]);
         Contains(Fails(() => Load([new HidePartOp(new("campus-test:mixed"), "osm:way:10", "unsupported road source removal")], campus.ToJsonString())),
             "hidePart", RoadId, "osm:way:10", "campus-test:mixed");
-        Require(Canonical(previous.Features[new("campus-test:mixed")]) == before && previous.Network.Roads.Count == 1,
-            "Rejected road hidePart changed a previously published snapshot.");
+        AssertThat(Canonical(previous.Features[new("campus-test:mixed")]) == before && previous.Network.Roads.Count == 1).OverrideFailureMessage("Rejected road hidePart changed a previously published snapshot.").IsTrue();
         var ordinary = Load([new HidePartOp(new("campus-test:mixed"), "osm:way:20", "ordinary building source removal")], campus.ToJsonString()).World;
-        Require(ordinary.Features[new("campus-test:mixed")].Parts.Single().SourceId == "osm:way:10" && ordinary.Network.Roads.Count == 1,
-            "The road guard changed an ordinary building source removal.");
+        AssertThat(ordinary.Features[new("campus-test:mixed")].Parts.Single().SourceId == "osm:way:10" && ordinary.Network.Roads.Count == 1).OverrideFailureMessage("The road guard changed an ordinary building source removal.").IsTrue();
     }
 
     [TestCase]
@@ -160,9 +158,9 @@ public sealed class EffectiveRoadNetworkTests
         var closed = Design("design:area-ring", "{\"roadType\":\"pedestrian\",\"width\":2.5,\"area\":\"yes\"}") with
         { Geometry = new PolylineGeometry(new([new(0, 0), new(2, 0), new(2, 2), new(0, 0)])) };
         var world = Load([polygon, multi, closed]).World;
-        Require(world.Network.Roads.Count == 1, "An area or its boundary was fabricated as a centerline.");
-        Require(Canonical(world.Features[polygon.Id].Geometry) == Canonical(polygon.Geometry) &&
-            Canonical(world.Features[multi.Id].Geometry) == Canonical(multi.Geometry), "Real area rings or holes changed.");
+        AssertThat(world.Network.Roads.Count == 1).OverrideFailureMessage("An area or its boundary was fabricated as a centerline.").IsTrue();
+        AssertThat(Canonical(world.Features[polygon.Id].Geometry) == Canonical(polygon.Geometry) &&
+            Canonical(world.Features[multi.Id].Geometry) == Canonical(multi.Geometry)).OverrideFailureMessage("Real area rings or holes changed.").IsTrue();
     }
 
     [TestCase]
@@ -193,7 +191,7 @@ public sealed class EffectiveRoadNetworkTests
         var before = Canonical(previous.Network);
         var failed = Files([new HideOp(new(RoadId), "private removal"), Design("design:bad", "{\"roadType\":\"path\",\"width\":0}")]);
         _ = Fails(() => WorldModelLoader.Load(new("test"), failed));
-        Require(Canonical(previous.Network) == before && previous.Features.ContainsKey(new(RoadId)), "Failure changed a published snapshot.");
+        AssertThat(Canonical(previous.Network) == before && previous.Features.ContainsKey(new(RoadId))).OverrideFailureMessage("Failure changed a published snapshot.").IsTrue();
     }
 
     private static AddOp Design(string id, string props = "{\"roadType\":\"footway\",\"width\":2.5,\"sourceRoad\":\"original-kept\"}") =>
@@ -210,6 +208,5 @@ public sealed class EffectiveRoadNetworkTests
     { try { action(); } catch (WorldDataException error) { return error; } throw new InvalidOperationException("Expected world load failure."); }
     private static void Contains(WorldDataException error, params string[] parts) => Contains(error.Message, parts);
     private static void Contains(string error, params string[] parts)
-    { foreach (var part in parts) Require(error.Contains(part, StringComparison.Ordinal), "Missing error identity: " + part + " in " + error); }
-    private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
+    { foreach (var part in parts) AssertThat(error.Contains(part, StringComparison.Ordinal)).OverrideFailureMessage("Missing error identity: " + part + " in " + error).IsTrue(); }
 }

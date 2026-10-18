@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Reflection;
@@ -42,34 +43,30 @@ public sealed class InteriorProviderScopeTests
         {
             entered.SetResult(true);
             await resume.Task;
-            Require(a.FeatureIds.SequenceEqual([featureA]), "The older job saw the new map's feature IDs.");
+            AssertThat(a.FeatureIds.SequenceEqual([featureA])).OverrideFailureMessage("The older job saw the new map's feature IDs.").IsTrue();
             return a.Layout(contextA, featureA);
         });
         try
         {
             await entered.Task;
             var b = registry.CreateInteriorProvider(type, mapB);
-            Require(!ReferenceEquals(a, b) && !ReferenceEquals(a, global) && !ReferenceEquals(b, global),
-                "Fresh map providers reused each other or the global cached instance.");
+            AssertThat(!ReferenceEquals(a, b) && !ReferenceEquals(a, global) && !ReferenceEquals(b, global)).OverrideFailureMessage("Fresh map providers reused each other or the global cached instance.").IsTrue();
             var providersB = new Dictionary<string, IInteriorProvider> { [providerId] = b };
             Configure(providerId, featureB, [3, 4, 5], providersB);
             var contextB = Context(mapB, featureB, 200f, providersB);
             var layoutB = b.Layout(contextB, featureB);
-            Require(b.FeatureIds.SequenceEqual([featureB]) && layoutB.OpenStoreys.SequenceEqual([3, 4, 5]),
-                "The second map was not independently configured.");
-            Require(ReferenceEquals(registry.Create(type), global), "Fresh creation replaced the global cache.");
-            Require(global.FeatureIds.SequenceEqual([globalFeature]), "Fresh-map configuration changed global feature IDs.");
+            AssertThat(b.FeatureIds.SequenceEqual([featureB]) && layoutB.OpenStoreys.SequenceEqual([3, 4, 5])).OverrideFailureMessage("The second map was not independently configured.").IsTrue();
+            AssertThat(ReferenceEquals(registry.Create(type), global)).OverrideFailureMessage("Fresh creation replaced the global cache.").IsTrue();
+            AssertThat(global.FeatureIds.SequenceEqual([globalFeature])).OverrideFailureMessage("Fresh-map configuration changed global feature IDs.").IsTrue();
             var currentGlobal = global.Layout(globalContext, globalFeature);
-            Require(currentGlobal.Bounds == globalLayout.Bounds && currentGlobal.OpenStoreys.SequenceEqual(globalLayout.OpenStoreys),
-                "Fresh-map configuration changed the global layout.");
+            AssertThat(currentGlobal.Bounds == globalLayout.Bounds && currentGlobal.OpenStoreys.SequenceEqual(globalLayout.OpenStoreys)).OverrideFailureMessage("Fresh-map configuration changed the global layout.").IsTrue();
         }
         finally { resume.TrySetResult(true); }
 
         var afterA = await previousJob;
-        Require(afterA.Bounds == beforeA.Bounds && afterA.OpenStoreys.SequenceEqual([1, 2]) &&
+        AssertThat(afterA.Bounds == beforeA.Bounds && afterA.OpenStoreys.SequenceEqual([1, 2]) &&
             afterA.Storeys.Select(storey => storey.Index).SequenceEqual(beforeA.Storeys.Select(storey => storey.Index)) &&
-            afterA.Entrances.Select(entrance => entrance.Id).SequenceEqual(beforeA.Entrances.Select(entrance => entrance.Id)),
-            "The older map's layout changed after the newer map was configured.");
+            afterA.Entrances.Select(entrance => entrance.Id).SequenceEqual(beforeA.Entrances.Select(entrance => entrance.Id))).OverrideFailureMessage("The older map's layout changed after the newer map was configured.").IsTrue();
     }
 
     [TestCase]
@@ -79,13 +76,19 @@ public sealed class InteriorProviderScopeTests
         var map = new MapId("fixture-map");
         foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(Campus.Kernel.Maps.MapService) })
         {
-            var error = Throws<InvalidOperationException>(() => registry.CreateInteriorProvider(type, map));
-            Require(error.Message.Contains(type.FullName!, StringComparison.Ordinal), "Rejected type was not identified in the error.");
+            Exception? error = null;
+            AssertThrown(() =>
+            {
+                try { registry.CreateInteriorProvider(type, map); }
+                catch (Exception exception) { error = exception; throw; }
+            }).IsInstanceOf<InvalidOperationException>();
+            AssertThat(error is InvalidOperationException typedError && typedError.Message.Contains(type.FullName!, StringComparison.Ordinal))
+                .OverrideFailureMessage("Rejected type was not identified in the error.").IsTrue();
         }
         // Rejections must not leave the cycle guard or instance cache poisoned.
         var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
         var second = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
-        Require(!ReferenceEquals(first, second), "Factory did not recover after rejecting invalid requests.");
+        AssertThat(!ReferenceEquals(first, second)).OverrideFailureMessage("Factory did not recover after rejecting invalid requests.").IsTrue();
     }
 
     [TestCase]
@@ -101,13 +104,12 @@ public sealed class InteriorProviderScopeTests
         input.Clear();
         input["new.provider"] = first;
 
-        Require(context.InteriorProviders.Keys.SequenceEqual(["a.provider", "z.provider"], StringComparer.Ordinal),
-            "Context did not retain an ordinally sorted independent mapping.");
-        Require(ReferenceEquals(context.InteriorProviders["a.provider"], second) &&
+        AssertThat(context.InteriorProviders.Keys.SequenceEqual(["a.provider", "z.provider"], StringComparer.Ordinal)).OverrideFailureMessage("Context did not retain an ordinally sorted independent mapping.").IsTrue();
+        AssertThat(ReferenceEquals(context.InteriorProviders["a.provider"], second) &&
             ReferenceEquals(context.InteriorProviders["z.provider"], first) &&
-            !context.InteriorProviders.ContainsKey("A.PROVIDER"), "Context changed provider identity or inherited a non-ordinal comparer.");
+            !context.InteriorProviders.ContainsKey("A.PROVIDER")).OverrideFailureMessage("Context changed provider identity or inherited a non-ordinal comparer.").IsTrue();
         var writableView = (IDictionary<string, IInteriorProvider>)context.InteriorProviders;
-        _ = Throws<NotSupportedException>(() => writableView.Add("another.provider", first));
+        AssertThrown(() => writableView.Add("another.provider", first)).IsInstanceOf<NotSupportedException>();
     }
 
     private static ServiceRegistry ProviderRegistry()
@@ -127,8 +129,8 @@ public sealed class InteriorProviderScopeTests
             interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openFloors = floors, entrances = Array.Empty<object>() } }
         });
         var bindings = InteriorAssembly.Configure(bytes, providers);
-        Require(bindings.Count == 1 && bindings[0].FeatureIds.SequenceEqual([feature]) &&
-            bindings[0].OpenFloors.SequenceEqual(floors), "Configure lost catalog feature/floor coverage.");
+        AssertThat(bindings.Count == 1 && bindings[0].FeatureIds.SequenceEqual([feature]) &&
+            bindings[0].OpenFloors.SequenceEqual(floors)).OverrideFailureMessage("Configure lost catalog feature/floor coverage.").IsTrue();
     }
 
     private static BuildContext Context(MapId map, FeatureId feature, float offset,
@@ -150,16 +152,6 @@ public sealed class InteriorProviderScopeTests
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
     }
 
-    private static T Throws<T>(Action action) where T : Exception
-    {
-        try { action(); }
-        catch (T error) { return error; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 
     [InteriorProvider("fixture.box", Owner = "WP-00")]
     public sealed class FixtureBoxInterior : BoxInteriorProvider { }

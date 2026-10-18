@@ -10,6 +10,7 @@ using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
 using Campus.Tests;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Save.Tests;
 
@@ -22,12 +23,10 @@ public sealed partial class SaveLifecycleTests
     {
         using var fixture = new Fixture();
         await fixture.Start();
-        fixture.Camera.BeforeDefault = () => Check(fixture.Maps.HasTravelled,
-            "A pose default was requested before its target map travelled.");
+        fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasTravelled).OverrideFailureMessage("A pose default was requested before its target map travelled.").IsTrue();
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
         var result = await fixture.Pump(fixture.Save.NewGame(new("s1"), 733, start));
-        Check(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start),
-            "Deferred pose defaults lost the requested seed, map or starting preset.");
+        AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
     }
 
     [TestCase]
@@ -38,23 +37,23 @@ public sealed partial class SaveLifecycleTests
         await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.World.Hours = 91.25; fixture.Camera.SetPose(new(new Vector3(30, 40, 50), 70, -20));
         fixture.Flow = AppState.Playing;
-        Check((await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame))).Status == SaveStatus.Saved, "Initial save failed.");
+        AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame))).Status == SaveStatus.Saved).OverrideFailureMessage("Initial save failed.").IsTrue();
         fixture.Camera.SetPose(new(new Vector3(100, 200, 300), 0, 0));
         fixture.Flow = AppState.Title; fixture.Log.Clear();
         var preview = await fixture.Pump(fixture.Save.Load(new("s1"), LoadScope.Preview));
-        Check(preview.Status == LoadStatus.Loaded && fixture.Save.HasPendingPose, "Preview did not hold pose.");
-        Check(fixture.Camera.Pose.Position == new Vector3(100, 200, 300), "Preview moved the title camera.");
-        Check(fixture.Log.SequenceEqual(new[] { "world", "instance", "travel" }), "World/instance/travel ordering changed.");
+        AssertThat(preview.Status == LoadStatus.Loaded && fixture.Save.HasPendingPose).OverrideFailureMessage("Preview did not hold pose.").IsTrue();
+        AssertThat(fixture.Camera.Pose.Position == new Vector3(100, 200, 300)).OverrideFailureMessage("Preview moved the title camera.").IsTrue();
+        AssertThat(fixture.Log.SequenceEqual(new[] { "world", "instance", "travel" })).OverrideFailureMessage("World/instance/travel ordering changed.").IsTrue();
         var instance = fixture.World.Instance;
         fixture.Ready = false;
         var resume = fixture.Save.CompleteResume();
         await fixture.Frames(20);
-        Check(!resume.IsCompleted && fixture.Save.HasPendingPose, "Resume ignored destination readiness.");
+        AssertThat(!resume.IsCompleted && fixture.Save.HasPendingPose).OverrideFailureMessage("Resume ignored destination readiness.").IsTrue();
         fixture.Ready = true;
         await fixture.Pump(resume);
-        Check(!fixture.Save.HasPendingPose && fixture.World.Instance == instance, "Resume changed world instance.");
-        Check(fixture.Camera.Pose.Position == new Vector3(30, 40, 50), "Resume did not restore saved pose.");
-        Check(fixture.Log.Count(x => x == "view") == 1, "Pose restored more than once.");
+        AssertThat(!fixture.Save.HasPendingPose && fixture.World.Instance == instance).OverrideFailureMessage("Resume changed world instance.").IsTrue();
+        AssertThat(fixture.Camera.Pose.Position == new Vector3(30, 40, 50)).OverrideFailureMessage("Resume did not restore saved pose.").IsTrue();
+        AssertThat(fixture.Log.Count(x => x == "view") == 1).OverrideFailureMessage("Pose restored more than once.").IsTrue();
     }
 
     [TestCase]
@@ -67,16 +66,16 @@ public sealed partial class SaveLifecycleTests
         fixture.Flow = AppState.Quitting;
         fixture.ThumbnailBarrier = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var quit = await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromMilliseconds(30)));
-        Check(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == "save.error.timeout", "Timeout canceled or silently accepted a save.");
+        AssertThat(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == "save.error.timeout").OverrideFailureMessage("Timeout canceled or silently accepted a save.").IsTrue();
         var retry = fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(2));
         fixture.ThumbnailBarrier.SetResult(null);
         var result = await fixture.Pump(retry);
-        Check(result.Status == SaveStatus.Saved && fixture.Save.State.Last == SaveStatus.Saved, "Late write failed to finish.");
-        Check(fixture.Save.Slots[0].Meta?.Gen == 2, "Retry launched a duplicate write.");
+        AssertThat(result.Status == SaveStatus.Saved && fixture.Save.State.Last == SaveStatus.Saved).OverrideFailureMessage("Late write failed to finish.").IsTrue();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Retry launched a duplicate write.").IsTrue();
         var pose = fixture.Camera.Pose;
         fixture.Camera.SetPose(default);
         await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(fixture.Camera.Pose == pose, "Quit save did not recover the departure pose.");
+        AssertThat(fixture.Camera.Pose == pose).OverrideFailureMessage("Quit save did not recover the departure pose.").IsTrue();
     }
 
     [TestCase]
@@ -86,14 +85,14 @@ public sealed partial class SaveLifecycleTests
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         await fixture.Frames(200);
-        Check(fixture.Save.Slots[0].Meta?.Gen == 1, "An autosave was written without a request.");
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("An autosave was written without a request.").IsTrue();
         fixture.Save.Request(SaveReason.Interval);
         for (var i = 0; i < 500 && fixture.Save.Slots[0].Meta?.Gen != 2; i++) await fixture.Frames(1);
-        Check(fixture.Save.Slots[0].Meta is { Gen: 2, Reason: SaveReason.Interval }, "The interval request did not save.");
+        AssertThat(fixture.Save.Slots[0].Meta is { Gen: 2, Reason: SaveReason.Interval }).OverrideFailureMessage("The interval request did not save.").IsTrue();
         fixture.Flow = AppState.Title;
         fixture.Save.Request(SaveReason.Interval);
         await fixture.Frames(400);
-        Check(fixture.Save.Slots[0].Meta?.Gen == 2, "Title saved its camera state.");
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Title saved its camera state.").IsTrue();
     }
 
     [TestCase]
@@ -105,10 +104,9 @@ public sealed partial class SaveLifecycleTests
         fixture.World.TargetHours = 91.25;
         fixture.Weather.LastTickHours = 17.5;
         var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
-        Check(result.Status == SaveStatus.Saved, "Coherent forced capture failed.");
-        Check(fixture.Weather.CapturedMoment?.WorldHours == 91.25 && fixture.Save.Slots[0].Meta?.WorldHours == 91.25,
-            "Weather used its previous tick instead of the shared save moment.");
-        Check(fixture.World.Hours == 17.5 && fixture.Weather.LastTickHours == 17.5, "Capturing advanced live world or weather.");
+        AssertThat(result.Status == SaveStatus.Saved).OverrideFailureMessage("Coherent forced capture failed.").IsTrue();
+        AssertThat(fixture.Weather.CapturedMoment?.WorldHours == 91.25 && fixture.Save.Slots[0].Meta?.WorldHours == 91.25).OverrideFailureMessage("Weather used its previous tick instead of the shared save moment.").IsTrue();
+        AssertThat(fixture.World.Hours == 17.5 && fixture.Weather.LastTickHours == 17.5).OverrideFailureMessage("Capturing advanced live world or weather.").IsTrue();
     }
 
     [TestCase]
@@ -120,7 +118,7 @@ public sealed partial class SaveLifecycleTests
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.Maps.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
-        Check(result.Status == SaveStatus.Deferred && fixture.Save.Slots[0].Meta?.Gen == 1, "Captured across map generations.");
+        AssertThat(result.Status == SaveStatus.Deferred && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Captured across map generations.").IsTrue();
         fixture.Maps.Pending.SetResult(MapTravelResult.Arrived);
     }
 
@@ -133,19 +131,16 @@ public sealed partial class SaveLifecycleTests
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.Weather.FailRestore = true;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1,
-            "A partially restored world remained interactive.");
-        Check(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }, "Restore failure is not visible through the save state.");
+        AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A partially restored world remained interactive.").IsTrue();
+        AssertThat(fixture.Save.State is { Last: SaveStatus.Failed, ErrorKey: "save.error.restore_world" }).OverrideFailureMessage("Restore failure is not visible through the save state.").IsTrue();
         await fixture.Frames(10); // FakeWorld.Tick throws if a pending restore escaped the failing Save frame.
-        Check((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Failed, "Faulted state was saved.");
-        Check((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred,
-            "Fault exit attempted to serialize the partial world.");
-        Check(fixture.Save.Slots[0].Meta?.Gen == 1, "Fault damaged the last good generation.");
+        AssertThat((await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test))).Status == SaveStatus.Failed).OverrideFailureMessage("Faulted state was saved.").IsTrue();
+        AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Fault exit attempted to serialize the partial world.").IsTrue();
+        AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Fault damaged the last good generation.").IsTrue();
         fixture.Weather.FailRestore = false;
         var recovered = await fixture.Pump(fixture.Save.NewGame(new("s1"), 2));
-        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0,
-            "A complete new game did not release the fault lease.");
-        Check(fixture.Save.State.ErrorKey is null, "Recovery left the stale error visible.");
+        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete new game did not release the fault lease.").IsTrue();
+        AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
     }
 
     [TestCase]
@@ -156,15 +151,11 @@ public sealed partial class SaveLifecycleTests
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
         fixture.Maps.FailTravel = true;
         var failed = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1,
-            "A post-commit map failure exposed a half-restored world.");
+        AssertThat(failed.Status == LoadStatus.Failed && fixture.World.RestoreFaulted && fixture.Camera.Locks == 1).OverrideFailureMessage("A post-commit map failure exposed a half-restored world.").IsTrue();
         fixture.Maps.FailTravel = false;
         var recovered = await fixture.Pump(fixture.Save.Load(new("s1")));
-        Check(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0,
-            "Full load did not recover the faulted transaction.");
+        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("Full load did not recover the faulted transaction.").IsTrue();
     }
-
-    private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 
     private sealed class Fixture : IDisposable
     {
@@ -210,7 +201,7 @@ public sealed partial class SaveLifecycleTests
         public async Task Pump(Task task)
         {
             for (var i = 0; i < 5000 && !task.IsCompleted; i++) await Frames(1);
-            Check(task.IsCompleted, "Save lifecycle did not finish."); await task;
+            AssertThat(task.IsCompleted).OverrideFailureMessage("Save lifecycle did not finish.").IsTrue(); await task;
         }
         public async Task<T> Pump<T>(Task<T> task) { await Pump((Task)task); return await task; }
         public void Dispose() => Save.Dispose();
@@ -236,16 +227,16 @@ public sealed partial class SaveLifecycleTests
         public void AbortRestore() { RestoreFaulted = true; _pending = false; log.Add("abort"); }
         public void CompleteRestore()
         {
-            Check(_pending, "Commit without a fresh restore."); _pending = false; RestoreFaulted = false; Instance++; log.Add("instance");
+            AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance++; log.Add("instance");
         }
-        public void Tick() { if (!RestoreFaulted) Check(!_pending, "An uncommitted World phase escaped into the next frame."); }
+        public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public LifecycleWorld Capture(in CaptureContext context)
         {
-            Check(inFrame(), "Capture ran outside Save frame."); var moment = context.Moment ?? GetSaveMoment();
+            AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue(); var moment = context.Moment ?? GetSaveMoment();
             return new(moment.WorldHours, moment.ClockOffset, moment.Season, moment.FlowRate);
         }
         public void Restore(LifecycleWorld dto, RestoreContext context)
-        { Check(inFrame(), "Restore ran outside Save frame."); Hours = dto.WorldHours; TargetHours = null; _pending = true; log.Add("world"); }
+        { AssertThat(inFrame()).OverrideFailureMessage("Restore ran outside Save frame.").IsTrue(); Hours = dto.WorldHours; TargetHours = null; _pending = true; log.Add("world"); }
         public LifecycleWorld CreateDefault(NewGameContext context) => new(context.Start.Clock, 0, context.Start.Season);
     }
     private sealed class FakeCamera(Func<bool> inFrame, List<string> log)
@@ -255,8 +246,8 @@ public sealed partial class SaveLifecycleTests
         public NewGameContext? DefaultContext { get; private set; }
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
         public JsonTypeInfo<LifecycleView> TypeInfo => LifecycleJsonContext.Strict.LifecycleView;
-        public LifecycleView Capture(in CaptureContext context) { Check(inFrame(), "View capture outside Save frame."); return new(Pose, Mode, Space); }
-        public void Restore(LifecycleView dto, RestoreContext context) { Check(inFrame(), "Pose restore outside Save frame."); SetPose(dto.Pose); log.Add("view"); }
+        public LifecycleView Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return new(Pose, Mode, Space); }
+        public void Restore(LifecycleView dto, RestoreContext context) { AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue(); SetPose(dto.Pose); log.Add("view"); }
         public LifecycleView CreateDefault(NewGameContext context)
         {
             BeforeDefault?.Invoke(); DefaultContext = context;

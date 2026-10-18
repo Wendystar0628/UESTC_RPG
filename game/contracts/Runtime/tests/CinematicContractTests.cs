@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Cinematic;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -17,8 +18,18 @@ public sealed class CinematicContractTests
         var anchored = RoundTrip<CameraLook>("""{"mode":"target","target":"$dest","blendIn":0.4,"settle":{"anchor":"$dest","from":0.6}}""");
         if (anchored.Target is not null || anchored.TargetAnchor != "$dest" || anchored.BlendIn != 0.4f || anchored.Settle != new CameraLookSettle("$dest", 0.6f))
             throw new InvalidOperationException("Anchor look failed to round-trip.");
-        ExpectJsonError(() => JsonSerializer.Deserialize<CameraLook>("""{"mode":"fixed","blendIn":1e999}""", ContractJson.Options));
-        ExpectJsonError(() => JsonSerializer.Serialize(new CameraLook(CameraLookMode.Fixed) { BlendIn = float.PositiveInfinity }, ContractJson.Options));
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<CameraLook>("""{"mode":"fixed","blendIn":1e999}""", ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid look data was accepted.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { JsonSerializer.Serialize(new CameraLook(CameraLookMode.Fixed) { BlendIn = float.PositiveInfinity }, ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid look data was accepted.").IsTrue();
+        }
     }
 
     [TestCase]
@@ -79,9 +90,24 @@ public sealed class CinematicContractTests
         var resolved = RoundTrip<CinematicDef>(resolvedJson);
         if (resolved.End.Pose.Value != new Pose(new Vector3(1, 2, 3), 45, -10, 50) || resolved.Camera[0].Ease?.Bezier != new Vector4(.4f, 0, .6f, 1))
             throw new InvalidOperationException("Resolved endpoint or Bezier easing failed to round-trip inside a timeline.");
-        ExpectJsonError(() => JsonSerializer.Deserialize<CinematicDef>(resolvedJson.Replace("\"yawDeg\":45", "\"unexpected\":0,\"yawDeg\":45", StringComparison.Ordinal), ContractJson.Options));
-        ExpectJsonError(() => JsonSerializer.Deserialize<CinematicDef>(anchoredJson.Replace("\"mode\":\"target\"", "\"mode\":\"target\",\"unexpected\":0", StringComparison.Ordinal), ContractJson.Options));
-        ExpectJsonError(() => JsonSerializer.Deserialize<CinematicDef>(anchoredJson.Replace("\"ease\":\"smootherstep\"", "\"ease\":{\"unexpected\":0}", StringComparison.Ordinal), ContractJson.Options));
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<CinematicDef>(resolvedJson.Replace("\"yawDeg\":45", "\"unexpected\":0,\"yawDeg\":45", StringComparison.Ordinal), ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid look data was accepted.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<CinematicDef>(anchoredJson.Replace("\"mode\":\"target\"", "\"mode\":\"target\",\"unexpected\":0", StringComparison.Ordinal), ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid look data was accepted.").IsTrue();
+        }
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<CinematicDef>(anchoredJson.Replace("\"ease\":\"smootherstep\"", "\"ease\":{\"unexpected\":0}", StringComparison.Ordinal), ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid look data was accepted.").IsTrue();
+        }
     }
 
     private static T RoundTrip<T>(string json)
@@ -91,12 +117,7 @@ public sealed class CinematicContractTests
         return JsonSerializer.Deserialize<T>(written, ContractJson.Options) ?? throw new JsonException("Null round-trip.");
     }
 
-    private static void ExpectJsonError(Action action)
-    {
-        try { action(); }
-        catch (JsonException) { return; }
-        throw new InvalidOperationException("Invalid look data was accepted.");
-    }
+
 
     private static CinematicDef Timeline(MaskSeg mask) => new(1, "test", new MapId("example"), CinematicKind.Leave,
         3, [], [], [mask], [], [], [], new CinematicEnd(new CinematicPose(Anchor: "$current")));

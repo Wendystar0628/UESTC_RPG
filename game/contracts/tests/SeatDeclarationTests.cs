@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -54,17 +55,16 @@ public sealed class SeatDeclarationTests
             json.Replace("[0,0.45,0]", "[1e1000,0.45,0]", StringComparison.Ordinal),
             json.Replace("[1.5,0.45,0]", "[1.5,1e1000,0]", StringComparison.Ordinal),
             json.Replace("[0,0,-1]", "[0,0,1e1000]", StringComparison.Ordinal)
-        }) Expect<JsonException>(() => JsonSerializer.Deserialize<SeatDecl>(invalid, ContractJson.Options));
+        })
+        {
+            bool rejected = false;
+            try { JsonSerializer.Deserialize<SeatDecl>(invalid, ContractJson.Options); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
+        }
     }
 
     private static SeatDecl Seat() => new(new(0, .45f, 0), new(1.5f, .45f, 0), -Vector3.UnitZ, .5f, true, 2);
-
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 
     // Deliberately implements only the pre-seat abstract surface.
     private sealed class LegacyPart : IPartDef<int>

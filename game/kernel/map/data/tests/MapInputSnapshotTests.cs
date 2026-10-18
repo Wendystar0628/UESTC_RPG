@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -18,9 +19,8 @@ public sealed class MapInputSnapshotTests
         raw[0] = 9;
         files["campus.json"] = new byte[] { 7 };
         files["network.json"] = new byte[] { 8 };
-        Require(input.Files.Count == 1 && input.Files["campus.json"].Span.SequenceEqual(new byte[] { 1, 2, 3 }),
-            "Published map bytes still alias the caller's dictionary or array.");
-        Require(ReferenceEquals(input.Files, input.SourceInputs.Entries), "Files is not backed by the frozen snapshot.");
+        AssertThat(input.Files.Count == 1 && input.Files["campus.json"].Span.SequenceEqual(new byte[] { 1, 2, 3 })).OverrideFailureMessage("Published map bytes still alias the caller's dictionary or array.").IsTrue();
+        AssertThat(ReferenceEquals(input.Files, input.SourceInputs.Entries)).OverrideFailureMessage("Files is not backed by the frozen snapshot.").IsTrue();
     }
 
     [TestCase]
@@ -33,9 +33,8 @@ public sealed class MapInputSnapshotTests
             Files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["campus.json"] = replacementBytes }
         };
         replacementBytes[0] = 9;
-        Require(!ReferenceEquals(replaced.SourceInputs, original.SourceInputs) &&
-            replaced.Files["campus.json"].Span[0] == 6 && original.Files["campus.json"].Span[0] == 1,
-            "Files with did not create a separate frozen version.");
+        AssertThat(!ReferenceEquals(replaced.SourceInputs, original.SourceInputs) &&
+            replaced.Files["campus.json"].Span[0] == 6 && original.Files["campus.json"].Span[0] == 1).OverrideFailureMessage("Files with did not create a separate frozen version.").IsTrue();
     }
 
     [TestCase]
@@ -48,13 +47,12 @@ public sealed class MapInputSnapshotTests
         var newWorld = Loaded(entry);
         var oldContext = entry.CreateContext(oldWorld, oldInput.SourceInputs);
         var newContext = entry.CreateContext(newWorld, newInput.SourceInputs);
-        Require(ReferenceEquals(oldContext.World, oldWorld.World) && ReferenceEquals(newContext.World, newWorld.World),
-            "A context changed the world to which its source version belongs.");
-        Require(ReferenceEquals(oldContext.SourceInputs, oldInput.SourceInputs) &&
+        AssertThat(ReferenceEquals(oldContext.World, oldWorld.World) && ReferenceEquals(newContext.World, newWorld.World)).OverrideFailureMessage("A context changed the world to which its source version belongs.").IsTrue();
+        AssertThat(ReferenceEquals(oldContext.SourceInputs, oldInput.SourceInputs) &&
             ReferenceEquals(newContext.SourceInputs, newInput.SourceInputs) &&
-            !ReferenceEquals(oldContext.SourceInputs, newContext.SourceInputs), "Context construction refroze or mixed map versions.");
-        Require(oldContext.SourceInputs.Require("campus.json").Span[0] == 1 &&
-            newContext.SourceInputs.Require("campus.json").Span[0] == 2, "An old context observed newer source bytes.");
+            !ReferenceEquals(oldContext.SourceInputs, newContext.SourceInputs)).OverrideFailureMessage("Context construction refroze or mixed map versions.").IsTrue();
+        AssertThat(oldContext.SourceInputs.Require("campus.json").Span[0] == 1 &&
+            newContext.SourceInputs.Require("campus.json").Span[0] == 2).OverrideFailureMessage("An old context observed newer source bytes.").IsTrue();
     }
 
     private static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files(byte version) =>
@@ -77,6 +75,4 @@ public sealed class MapInputSnapshotTests
         return new(world, entry.Descriptor.Geo, entry.Descriptor.Center, entry.Descriptor.Bounds,
             entry.Descriptor.TileMin, entry.Descriptor.TileMax);
     }
-    private static void Require(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
 }

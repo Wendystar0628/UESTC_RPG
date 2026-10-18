@@ -10,6 +10,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Diorama.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>Builds the backdrop from every map's real backdrop file and checks budget, layout, encodings and determinism.</summary>
 [TestSuite]
 public sealed class DioramaModuleTests
@@ -48,24 +50,23 @@ public sealed class DioramaModuleTests
             var ctx = Context(File.ReadAllBytes(file));
             var module = new DioramaModule();
             var tiles = module.Tiles(ctx).ToArray();
-            if (tiles.Length != 1) throw new InvalidOperationException($"{file}: the backdrop is one resident product, got {tiles.Length} cells");
+            AssertThat(tiles.Length != 1).OverrideFailureMessage($"{file}: the backdrop is one resident product, got {tiles.Length} cells").IsFalse();
             var output = module.Build(ctx, new TileKey(0, 0), LodLevel.L4);
             var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
             Console.WriteLine($"{file}: {output.Meshes.Count} surfaces, {output.Meshes.Sum(m => m.Position.Length / 3)} vertices, {triangles} triangles");
-            if (triangles > module.Budget.TrianglesL0) throw new InvalidOperationException($"backdrop uses {triangles} triangles (budget {module.Budget.TrianglesL0})");
-            if (output.Meshes.Count > module.Budget.DrawCalls) throw new InvalidOperationException("too many draw calls");
+            AssertThat(triangles > module.Budget.TrianglesL0).OverrideFailureMessage($"backdrop uses {triangles} triangles (budget {module.Budget.TrianglesL0})").IsFalse();
+            AssertThat(output.Meshes.Count > module.Budget.DrawCalls).OverrideFailureMessage("too many draw calls").IsFalse();
             foreach (var mesh in output.Meshes)
             {
-                if (mesh.Shader != ShaderId.DioramaFar) throw new InvalidOperationException("every backdrop surface uses diorama_far");
-                if (mesh.Flags is not { } flags || flags.Any(f => (f & 8) == 0)) throw new InvalidOperationException("the backdrop never casts shadows");
-                if (mesh.Position.Length / 3 > 65536) throw new InvalidOperationException("surface over 65 536 vertices");
-                if (mesh.Position.Any(v => !float.IsFinite(v)) || mesh.Normal.Any(v => !float.IsFinite(v))) throw new InvalidOperationException("non-finite vertex data");
+                AssertThat(mesh.Shader != ShaderId.DioramaFar).OverrideFailureMessage("every backdrop surface uses diorama_far").IsFalse();
+                AssertThat(mesh.Flags is not { } flags || flags.Any(f => (f & 8) == 0)).OverrideFailureMessage("the backdrop never casts shadows").IsFalse();
+                AssertThat(mesh.Position.Length / 3 > 65536).OverrideFailureMessage("surface over 65 536 vertices").IsFalse();
+                AssertThat(mesh.Position.Any(v => !float.IsFinite(v)) || mesh.Normal.Any(v => !float.IsFinite(v))).OverrideFailureMessage("non-finite vertex data").IsFalse();
             }
-            if (module.Build(ctx, new TileKey(0, 0), LodLevel.L0).Meshes.Count != 0 || module.Build(ctx, new TileKey(1, 0), LodLevel.L4).Meshes.Count != 0)
-                throw new InvalidOperationException("only L4 tile (0, 0) carries the backdrop");
+            AssertThat(module.Build(ctx, new TileKey(0, 0), LodLevel.L0).Meshes.Count != 0 || module.Build(ctx, new TileKey(1, 0), LodLevel.L4).Meshes.Count != 0).OverrideFailureMessage("only L4 tile (0, 0) carries the backdrop").IsFalse();
             count++;
         }
-        if (count == 0) throw new InvalidOperationException("no backdrop.json found");
+        AssertThat(count == 0).OverrideFailureMessage("no backdrop.json found").IsFalse();
     }
 
     [TestCase]
@@ -76,26 +77,24 @@ public sealed class DioramaModuleTests
             var data = BackdropData.Parse(File.ReadAllBytes(file));
             var output = new DioramaModule().Build(Context(File.ReadAllBytes(file)), new TileKey(0, 0), LodLevel.L4);
             var byKind = output.Meshes.GroupBy(m => m.Reserved![0]).ToDictionary(g => g.Key, g => g.ToArray());
-            if (byKind[DioramaVertex.KindFogSea].Length != 1 || byKind[DioramaVertex.KindFar].Length != 1 ||
-                byKind[DioramaVertex.KindCity].Length != data.CityRings.Count)
-                throw new InvalidOperationException("one fog sea, one far ring and one surface per city ring");
+            AssertThat(byKind[DioramaVertex.KindFogSea].Length != 1 || byKind[DioramaVertex.KindFar].Length != 1 ||
+                byKind[DioramaVertex.KindCity].Length != data.CityRings.Count).OverrideFailureMessage("one fog sea, one far ring and one surface per city ring").IsFalse();
             var fog = byKind[DioramaVertex.KindFogSea][0];
             var outer = Radii(fog).Max();
-            if (MathF.Abs(outer - data.FogSea.OuterRadius) > 1f) throw new InvalidOperationException($"fog sea reaches {outer}");
-            if (Heights(fog).Min() < data.FogSea.TopY - 0.01f) throw new InvalidOperationException("fog sea dips below its top");
-            if (data.FogSea.EdgeBank.Height > 0f && Heights(fog).Max() <= 0f) throw new InvalidOperationException("the edge bank must rise above the ground");
+            AssertThat(MathF.Abs(outer - data.FogSea.OuterRadius) > 1f).OverrideFailureMessage($"fog sea reaches {outer}").IsFalse();
+            AssertThat(Heights(fog).Min() < data.FogSea.TopY - 0.01f).OverrideFailureMessage("fog sea dips below its top").IsFalse();
+            AssertThat(data.FogSea.EdgeBank.Height > 0f && Heights(fog).Max() <= 0f).OverrideFailureMessage("the edge bank must rise above the ground").IsFalse();
             for (var i = 0; i < data.CityRings.Count; i++)
             {
                 var ring = data.CityRings[i];
                 var mesh = byKind[DioramaVertex.KindCity][i];
                 var radii = Radii(mesh).ToArray();
-                if (radii.Min() < ring.Radius - ring.Depth || radii.Max() > ring.Radius + ring.Depth)
-                    throw new InvalidOperationException($"city ring {ring.Id} spans {radii.Min()}–{radii.Max()}");
-                if (Heights(mesh).Min() > data.FogSea.TopY) throw new InvalidOperationException($"city ring {ring.Id} must sink below the fog sea");
-                if (mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > 0.001f)) throw new InvalidOperationException("parallax in UV2.x");
+                AssertThat(radii.Min() < ring.Radius - ring.Depth || radii.Max() > ring.Radius + ring.Depth).OverrideFailureMessage($"city ring {ring.Id} spans {radii.Min()}–{radii.Max()}").IsFalse();
+                AssertThat(Heights(mesh).Min() > data.FogSea.TopY).OverrideFailureMessage($"city ring {ring.Id} must sink below the fog sea").IsFalse();
+                AssertThat(mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > 0.001f)).OverrideFailureMessage("parallax in UV2.x").IsFalse();
             }
             var far = byKind[DioramaVertex.KindFar][0];
-            if (Heights(far).Min() > data.FarRing.SkirtY + 0.01f) throw new InvalidOperationException("far ring skirt");
+            AssertThat(Heights(far).Min() > data.FarRing.SkirtY + 0.01f).OverrideFailureMessage("far ring skirt").IsFalse();
             // Every bearing has a silhouette above the horizon (WLD-DIORAMA: no empty direction).
             var crest = new float[360];
             for (var v = 0; v < far.Position.Length / 3; v++)
@@ -105,13 +104,13 @@ public sealed class DioramaModuleTests
                 var bearing = (int)MathF.Floor(CityRing.Wrap(MathF.Atan2(p.X, -p.Y) * 180f / MathF.PI)) % 360;
                 crest[bearing] = MathF.Max(crest[bearing], far.Position[3 * v + 1]);
             }
-            if (crest.Any(h => h <= 0f)) throw new InvalidOperationException("a bearing of the far ring has no silhouette");
+            AssertThat(crest.Any(h => h <= 0f)).OverrideFailureMessage("a bearing of the far ring has no silhouette").IsFalse();
             // The snow mountains stand clearly above the hills at their bearings, near their scaled elevation.
             foreach (var m in data.FarRing.Mountains)
             {
                 var expected = FarRing.MountainHeight(data.FarRing, m);
                 var top = crest[(int)CityRing.Wrap(MathF.Round(m.Azimuth)) % 360];
-                if (top < expected * 0.85f || top > expected * 1.15f) throw new InvalidOperationException($"{m.Name}: crest {top} m, expected about {expected} m");
+                AssertThat(top < expected * 0.85f || top > expected * 1.15f).OverrideFailureMessage($"{m.Name}: crest {top} m, expected about {expected} m").IsFalse();
             }
         }
     }
@@ -121,26 +120,24 @@ public sealed class DioramaModuleTests
     {
         float[] values = [0.75f, 0.95f, 0.8f, 0.5f];
         var word = DioramaVertex.PackSeasons(values);
-        if (word >= 1 << 24 || word != MathF.Floor(word)) throw new InvalidOperationException("word must be an exact fp32 integer");
+        AssertThat(word >= 1 << 24 || word != MathF.Floor(word)).OverrideFailureMessage("word must be an exact fp32 integer").IsFalse();
         for (var s = 0; s < 4; s++)
-            if (MathF.Abs(DioramaVertex.UnpackSeason(word, s) - values[s]) > 0.6f / 63f) throw new InvalidOperationException($"season {s}");
+            AssertThat(MathF.Abs(DioramaVertex.UnpackSeason(word, s) - values[s]) > 0.6f / 63f).OverrideFailureMessage($"season {s}").IsFalse();
     }
 
     [TestCase]
     public void NoBackdropFileMeansNoProductAndTheBuildIsDeterministic()
     {
         var empty = new DioramaModule();
-        if (empty.Tiles(Context(null)).Any() || empty.Build(Context(null), new TileKey(0, 0), LodLevel.L4).Meshes.Count != 0)
-            throw new InvalidOperationException("a map without backdrop file has no backdrop");
+        AssertThat(empty.Tiles(Context(null)).Any() || empty.Build(Context(null), new TileKey(0, 0), LodLevel.L4).Meshes.Count != 0).OverrideFailureMessage("a map without backdrop file has no backdrop").IsFalse();
         var file = BackdropFiles().First();
         var a = new DioramaModule().Build(Context(File.ReadAllBytes(file)), new TileKey(0, 0), LodLevel.L4);
         var b = new DioramaModule().Build(Context(File.ReadAllBytes(file)), new TileKey(0, 0), LodLevel.L4);
         for (var i = 0; i < a.Meshes.Count; i++)
-            if (!a.Meshes[i].Position.SequenceEqual(b.Meshes[i].Position) || !a.Meshes[i].Index.SequenceEqual(b.Meshes[i].Index) ||
-                !a.Meshes[i].Uv!.SequenceEqual(b.Meshes[i].Uv!))
-                throw new InvalidOperationException("the backdrop must be byte-identical across builds");
+            AssertThat(!a.Meshes[i].Position.SequenceEqual(b.Meshes[i].Position) || !a.Meshes[i].Index.SequenceEqual(b.Meshes[i].Index) ||
+                !a.Meshes[i].Uv!.SequenceEqual(b.Meshes[i].Uv!)).OverrideFailureMessage("the backdrop must be byte-identical across builds").IsFalse();
         var other = new DioramaModule().Build(Context(File.ReadAllBytes(file), 7), new TileKey(0, 0), LodLevel.L4);
-        if (other.Meshes[1].Position.SequenceEqual(a.Meshes[1].Position)) throw new InvalidOperationException("the world seed varies the city");
+        AssertThat(other.Meshes[1].Position.SequenceEqual(a.Meshes[1].Position)).OverrideFailureMessage("the world seed varies the city").IsFalse();
     }
 
     [TestCase]
@@ -148,10 +145,10 @@ public sealed class DioramaModuleTests
     {
         var rect = new MapRectLike(new(-1280, -1280), new(1280, 1280));
         var d = FogSea.EdgeDistance(Vector2.Zero, new(1, 0), null, rect);
-        if (MathF.Abs(d - 1280f) > 0.01f) throw new InvalidOperationException($"rectangle edge {d}");
+        AssertThat(MathF.Abs(d - 1280f) > 0.01f).OverrideFailureMessage($"rectangle edge {d}").IsFalse();
         var circle = Enumerable.Range(0, 720).Select(i => new Vector2(1500f * MathF.Cos(i * MathF.PI / 360f), 1500f * MathF.Sin(i * MathF.PI / 360f))).ToArray();
         var c = FogSea.EdgeDistance(Vector2.Zero, Vector2.Normalize(new(1, 1)), circle, rect);
-        if (MathF.Abs(c - 1500f) > 1f) throw new InvalidOperationException($"cut line edge {c}");
+        AssertThat(MathF.Abs(c - 1500f) > 1f).OverrideFailureMessage($"cut line edge {c}").IsFalse();
     }
 
     private static IEnumerable<float> Radii(GeometryBundle m)

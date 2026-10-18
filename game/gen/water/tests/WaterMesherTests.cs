@@ -7,6 +7,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class WaterMesherTests
 {
@@ -50,8 +52,7 @@ public sealed class WaterMesherTests
         {
             var mesh = WaterMesher.Build(body, Shapes);
             var area = MeshArea(mesh);
-            if (MathF.Abs(area - body.Area) > body.Area * 0.01f)
-                throw new InvalidOperationException($"{body.Id.Value}: mesh area {area} != polygon area {body.Area}");
+            AssertThat(MathF.Abs(area - body.Area) > body.Area * 0.01f).OverrideFailureMessage($"{body.Id.Value}: mesh area {area} != polygon area {body.Area}").IsFalse();
         }
     }
 
@@ -63,14 +64,14 @@ public sealed class WaterMesherTests
             var mesh = WaterMesher.Build(body, Shapes);
             for (var t = 0; t < mesh.TriangleCount; t++)
             {
-                if (Cross(mesh, t) >= 0f) throw new InvalidOperationException($"{body.Id.Value}: triangle {t} faces down");
+                AssertThat(Cross(mesh, t) >= 0f).OverrideFailureMessage($"{body.Id.Value}: triangle {t} faces down").IsFalse();
                 var c = Vector2.Zero;
                 for (var k = 0; k < 3; k++)
                 {
                     var v = mesh.Index[3 * t + k];
                     c += new Vector2(mesh.Position[3 * v], mesh.Position[3 * v + 2]) / 3f;
                 }
-                if (!body.Contains(c)) throw new InvalidOperationException($"{body.Id.Value}: triangle {t} outside the water");
+                AssertThat(!body.Contains(c)).OverrideFailureMessage($"{body.Id.Value}: triangle {t} outside the water").IsFalse();
             }
         }
     }
@@ -96,8 +97,7 @@ public sealed class WaterMesherTests
                 var mid = new Vector2((e.Item1 + e.Item3) * 0.5e-4f, (e.Item2 + e.Item4) * 0.5e-4f);
                 // A single-use edge must lie on the shore: water on one side only.
                 var n = Vector2.Normalize(new Vector2(-(e.Item4 - e.Item2), e.Item3 - e.Item1)) * 0.05f;
-                if (count != 1 || body.Contains(mid + n) == body.Contains(mid - n))
-                    throw new InvalidOperationException($"{body.Id.Value}: open inner edge at {mid} used {count} times");
+                AssertThat(count != 1 || body.Contains(mid + n) == body.Contains(mid - n)).OverrideFailureMessage($"{body.Id.Value}: open inner edge at {mid} used {count} times").IsFalse();
             }
         }
 
@@ -114,8 +114,7 @@ public sealed class WaterMesherTests
         {
             var p = new Vector2(mesh.Position[3 * v], mesh.Position[3 * v + 2]);
             var expected = MathF.Min(Exact(p), WaterParams.Default.SdfClamp);
-            if (MathF.Abs(mesh.Shore[v] - expected) > 0.01f)
-                throw new InvalidOperationException($"shore distance {mesh.Shore[v]} at {p}, expected {expected}");
+            AssertThat(MathF.Abs(mesh.Shore[v] - expected) > 0.01f).OverrideFailureMessage($"shore distance {mesh.Shore[v]} at {p}, expected {expected}").IsFalse();
         }
 
         static float Exact(Vector2 p)
@@ -137,9 +136,8 @@ public sealed class WaterMesherTests
         for (var v = 0; v < mesh.VertexCount; v++)
         {
             var p = new Vector2(mesh.Position[3 * v], mesh.Position[3 * v + 2]);
-            if (p.Y == 40f && p.X > 0.5f && p.X < 7.5f && mesh.Shore[v] < 0.49f)
-                throw new InvalidOperationException($"joint vertex {p} treated as shore ({mesh.Shore[v]})");
-            if (mesh.Flow[2 * v + 1] <= 0f) throw new InvalidOperationException("channel must flow toward +z");
+            AssertThat(p.Y == 40f && p.X > 0.5f && p.X < 7.5f && mesh.Shore[v] < 0.49f).OverrideFailureMessage($"joint vertex {p} treated as shore ({mesh.Shore[v]})").IsFalse();
+            AssertThat(mesh.Flow[2 * v + 1] <= 0f).OverrideFailureMessage("channel must flow toward +z").IsFalse();
         }
     }
 
@@ -148,8 +146,7 @@ public sealed class WaterMesherTests
     {
         var first = WaterMesher.Build(Shapes[1], Shapes);
         var second = WaterMesher.Build(Shapes[1], Shapes);
-        if (!first.Position.SequenceEqual(second.Position) || !first.Index.SequenceEqual(second.Index) ||
-            !first.Shore.SequenceEqual(second.Shore))
-            throw new InvalidOperationException("water mesh is not deterministic");
+        AssertThat(!first.Position.SequenceEqual(second.Position) || !first.Index.SequenceEqual(second.Index) ||
+            !first.Shore.SequenceEqual(second.Shore)).OverrideFailureMessage("water mesh is not deterministic").IsFalse();
     }
 }

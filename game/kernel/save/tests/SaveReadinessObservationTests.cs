@@ -1,5 +1,6 @@
 using Campus.Kernel.Save;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -14,7 +15,7 @@ public sealed class SaveReadinessObservationTests
         Task.Run(holder.Dispose).GetAwaiter().GetResult(); // Worker continuation has already left its finally.
         holder.Attach(token); // The previously-running main-frame action publishes late.
         holder.Dispose();
-        Check(token.Disposals == 1, "Late main-frame attachment leaked or disposed more than once.");
+        AssertThat(token.Disposals == 1).OverrideFailureMessage("Late main-frame attachment leaked or disposed more than once.").IsTrue();
     }
 
     [TestCase]
@@ -25,7 +26,7 @@ public sealed class SaveReadinessObservationTests
         holder.Attach(token);
         Task.Run(holder.Dispose).GetAwaiter().GetResult();
         holder.Dispose(); holder.Dispose();
-        Check(token.Disposals == 1 && otherOwner.Disposals == 0, "Disposal duplicated or crossed owner boundaries.");
+        AssertThat(token.Disposals == 1 && otherOwner.Disposals == 0).OverrideFailureMessage("Disposal duplicated or crossed owner boundaries.").IsTrue();
     }
 
     [TestCase]
@@ -36,7 +37,7 @@ public sealed class SaveReadinessObservationTests
         // This hook models cancellation after the main-frame API returned but before Attach takes its lock.
         holder.Dispose();
         holder.Attach(token);
-        Check(token.Disposals == 1, "A token created before cancellation escaped its terminated holder.");
+        AssertThat(token.Disposals == 1).OverrideFailureMessage("A token created before cancellation escaped its terminated holder.").IsTrue();
     }
 
     private sealed class CountingToken : IDisposable
@@ -44,5 +45,4 @@ public sealed class SaveReadinessObservationTests
         public int Disposals;
         public void Dispose() => Interlocked.Increment(ref Disposals);
     }
-    private static void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
 }

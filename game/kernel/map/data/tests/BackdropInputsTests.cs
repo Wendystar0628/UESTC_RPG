@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text;
@@ -22,9 +23,9 @@ public sealed class BackdropInputsTests
             path => path == "res://fixture/environment/far.json", path => { reads.Add(path); return raw; });
         raw[0] = 0;
         files.Clear();
-        Check(snapshot.Entries.Count == 2 && reads.SequenceEqual(["res://fixture/environment/far.json"]), "Wrong optional input path.");
-        Check(snapshot.Require("environment/far.json").Span[0] == (byte)'{' &&
-            !snapshot.Entries.ContainsKey("backdrop.json"), "Backdrop bytes were aliased or renamed.");
+        AssertThat(snapshot.Entries.Count == 2 && reads.SequenceEqual(["res://fixture/environment/far.json"])).OverrideFailureMessage("Wrong optional input path.").IsTrue();
+        AssertThat(snapshot.Require("environment/far.json").Span[0] == (byte)'{' &&
+            !snapshot.Entries.ContainsKey("backdrop.json")).OverrideFailureMessage("Backdrop bytes were aliased or renamed.").IsTrue();
     }
 
     [TestCase]
@@ -36,17 +37,17 @@ public sealed class BackdropInputsTests
         var reads = 0;
         BackdropInputs.AddOptional(map, "res://fixture/", files, _ => true, path =>
         {
-            Check(path == "res://fixture/environment/backdrop.data", "Extension-free capture used the wrong key.");
+            AssertThat(path == "res://fixture/environment/backdrop.data").OverrideFailureMessage("Extension-free capture used the wrong key.").IsTrue();
             ++reads;
             return bytes;
         });
         BackdropInputs.AddOptional(map, "res://fixture/", files,
             _ => throw new InvalidOperationException("Captured file was probed twice."),
             _ => throw new InvalidOperationException("Captured file was read twice."));
-        Check(reads == 1 && files[map.Env.Backdrop].Equals((ReadOnlyMemory<byte>)bytes), "Capture copied or reread the source.");
+        AssertThat(reads == 1 && files[map.Env.Backdrop].Equals((ReadOnlyMemory<byte>)bytes)).OverrideFailureMessage("Capture copied or reread the source.").IsTrue();
         var input = new MapLoadInput(new(map, "res://fixture/", []), files);
         bytes[0] = 0;
-        Check(input.SourceInputs.Require(map.Env.Backdrop).Span[0] == (byte)'{', "Formal load input did not freeze the captured bytes.");
+        AssertThat(input.SourceInputs.Require(map.Env.Backdrop).Span[0] == (byte)'{').OverrideFailureMessage("Formal load input did not freeze the captured bytes.").IsTrue();
     }
 
     [TestCase]
@@ -55,11 +56,21 @@ public sealed class BackdropInputsTests
         var map = Descriptor("nested/backdrop.json");
         var missing = BackdropInputs.Freeze(map, "res://fixture/", new Dictionary<string, ReadOnlyMemory<byte>>(),
             _ => false, _ => throw new InvalidOperationException("An absent input must not be read."));
-        Check(missing.Entries.Count == 0, "An absent backdrop was synthesized.");
-        Fails(() => BackdropInputs.Freeze(map, "res://fixture/", missing.Entries, _ => true, _ => ReadOnlyMemory<byte>.Empty));
+        AssertThat(missing.Entries.Count == 0).OverrideFailureMessage("An absent backdrop was synthesized.").IsTrue();
+        {
+            var rejected = false;
+            try { BackdropInputs.Freeze(map, "res://fixture/", missing.Entries, _ => true, _ => ReadOnlyMemory<byte>.Empty); }
+            catch (InvalidDataException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Expected invalid backdrop input to fail.").IsTrue();
+        }
         foreach (var key in new[] { "../backdrop.json", "/backdrop.json", "a\\b.json", "res://escape.json", "a//b.json" })
-            Fails(() => BackdropInputs.Freeze(Descriptor(key), "res://fixture/", missing.Entries,
-                _ => throw new InvalidOperationException("Invalid keys reached I/O."), _ => ReadOnlyMemory<byte>.Empty));
+            {
+                var rejected = false;
+                try { BackdropInputs.Freeze(Descriptor(key), "res://fixture/", missing.Entries,
+                _ => throw new InvalidOperationException("Invalid keys reached I/O."), _ => ReadOnlyMemory<byte>.Empty); }
+                catch (InvalidDataException) { rejected = true; }
+                AssertThat(rejected).OverrideFailureMessage("Expected invalid backdrop input to fail.").IsTrue();
+            }
     }
 
     [TestCase]
@@ -67,13 +78,18 @@ public sealed class BackdropInputsTests
     {
         var far = BackdropInputs.CameraFar(Descriptor(), Snapshot("backdrop.json", "{\"farClip\":12000}"), 8000, .05f);
         far = BackdropInputs.CameraFar(Descriptor("nested/far.json"), Snapshot("nested/far.json", "{\"farClip\":19000}"), far, .05f);
-        Check(far == 19000, "The second map retained the first map's far clip.");
+        AssertThat(far == 19000).OverrideFailureMessage("The second map retained the first map's far clip.").IsTrue();
         far = BackdropInputs.CameraFar(Descriptor(), BuildInputSnapshot.Empty, far, .05f);
-        Check(far == 19000, "The missing file reset the camera far clip.");
+        AssertThat(far == 19000).OverrideFailureMessage("The missing file reset the camera far clip.").IsTrue();
         foreach (var bad in new[] { "", "{", "[]", "null", "{}", "{\"farClip\":null}", "{\"farClip\":\"12000\"}",
             "{\"farClip\":0}", "{\"farClip\":-1}", "{\"farClip\":0.05}", "{\"farClip\":1e99}" })
-            Fails(() => BackdropInputs.CameraFar(Descriptor(), Snapshot("backdrop.json", bad), far, .05f));
-        Check(far == 19000, "Invalid data mutated the current value.");
+            {
+                var rejected = false;
+                try { BackdropInputs.CameraFar(Descriptor(), Snapshot("backdrop.json", bad), far, .05f); }
+                catch (InvalidDataException) { rejected = true; }
+                AssertThat(rejected).OverrideFailureMessage("Expected invalid backdrop input to fail.").IsTrue();
+            }
+        AssertThat(far == 19000).OverrideFailureMessage("Invalid data mutated the current value.").IsTrue();
     }
 
     internal static MapDescriptor Descriptor(string backdrop = "backdrop.json") => new(new("fixture-map"),
@@ -86,11 +102,4 @@ public sealed class BackdropInputsTests
 
     internal static BuildInputSnapshot Snapshot(string key, string json) =>
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = Encoding.UTF8.GetBytes(json) });
-    private static void Fails(Action action)
-    {
-        try { action(); }
-        catch (InvalidDataException) { return; }
-        throw new InvalidOperationException("Expected invalid backdrop input to fail.");
-    }
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
@@ -26,10 +27,19 @@ public sealed class CinematicPlaybackTests
     public void WorldReplacementRejectsFadeRampsAndLetterbox()
     {
         var definition = Timeline() with { World = [new(0.5, WorldCueKind.NewTimeline)] };
-        Reject(definition with { Masks = [new(0, 1, MaskKind.Letterbox)] });
-        Reject(definition with { Masks = [new MaskSeg(0, 2, MaskKind.Veil) { FadeIn = 1 }] });
+        var letterboxRejected = false;
+        try { CinematicValidation.Validate(definition with { Masks = [new(0, 1, MaskKind.Letterbox)] }, definition.Map); }
+        catch (InvalidDataException) { letterboxRejected = true; }
+        AssertThat(letterboxRejected).OverrideFailureMessage("Invalid timeline was accepted.").IsTrue();
+        var fadeRampRejected = false;
+        try { CinematicValidation.Validate(definition with { Masks = [new MaskSeg(0, 2, MaskKind.Veil) { FadeIn = 1 }] }, definition.Map); }
+        catch (InvalidDataException) { fadeRampRejected = true; }
+        AssertThat(fadeRampRejected).OverrideFailureMessage("Invalid timeline was accepted.").IsTrue();
         CinematicValidation.Validate(definition with { Masks = [new(0, 1, MaskKind.Veil)] }, definition.Map);
-        Reject(definition with { Masks = [new(0, 0.5, MaskKind.Veil)] });
+        var shortVeilRejected = false;
+        try { CinematicValidation.Validate(definition with { Masks = [new(0, 0.5, MaskKind.Veil)] }, definition.Map); }
+        catch (InvalidDataException) { shortVeilRejected = true; }
+        AssertThat(shortVeilRejected).OverrideFailureMessage("Invalid timeline was accepted.").IsTrue();
     }
     [TestCase]
     public async Task CoverageRequiresARealPostDrawAfterTheRequest()
@@ -212,10 +222,4 @@ public sealed class CinematicPlaybackTests
         new(default, current, destination, fov, CinematicSpawnMapStub.Map);
     private static CinematicAnchorSet Anchors(Pose current, Pose destination, float fov) =>
         new(default, current, destination, fov, new CinematicSpawnMapStub(), CinematicSpawnMapStub.Map);
-    private static void Reject(CinematicDef definition)
-    {
-        try { CinematicValidation.Validate(definition, definition.Map); }
-        catch (InvalidDataException) { return; }
-        throw new InvalidOperationException("Invalid timeline was accepted.");
-    }
 }

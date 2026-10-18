@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -35,11 +36,9 @@ public sealed class HidePartOverlayTests
         var json = Overlay(new HidePartOp(Main, "osm:way:10", "remove one source"));
         using var document = JsonDocument.Parse(json);
         var operation = document.RootElement.GetProperty("ops")[0];
-        Require(operation.EnumerateObject().First().Name == "op" && operation.GetProperty("op").GetString() == "hidePart",
-            "hidePart lost its explicit first-field discriminator.");
+        AssertThat(operation.EnumerateObject().First().Name == "op" && operation.GetProperty("op").GetString() == "hidePart").OverrideFailureMessage("hidePart lost its explicit first-field discriminator.").IsTrue();
         var roundTrip = JsonSerializer.Deserialize<OverlayFile>(json, ContractJson.Options)!;
-        Require(roundTrip.Ops[0] is HidePartOp { SourceId: "osm:way:10" } hide && hide.Target == Main,
-            "hidePart did not round-trip as its own operation.");
+        AssertThat(roundTrip.Ops[0] is HidePartOp { SourceId: "osm:way:10" } hide && hide.Target == Main).OverrideFailureMessage("hidePart did not round-trip as its own operation.").IsTrue();
     }
 
     [TestCase]
@@ -48,19 +47,17 @@ public sealed class HidePartOverlayTests
         var style = new StyleOp(Main, new("styled-family"), new FacadePreset("styled-facade"));
         var before = Load([style]).World.Features[Main];
         var after = Load([style, new HidePartOp(Main, "osm:way:10", "remove duplicate source")]).World.Features[Main];
-        Require(after.Id == before.Id && after.Name == before.Name && after.Zone == before.Zone &&
+        AssertThat(after.Id == before.Id && after.Name == before.Name && after.Zone == before.Zone &&
             after.Kind == before.Kind && after.Family == before.Family && after.Facade == before.Facade &&
-            after.Props?.GetRawText() == before.Props?.GetRawText(), "Entity metadata changed during part removal.");
-        Require(after.Source == FeatureSource.OsmOverlay && after.Parts.Count == 2,
-            "Part removal lost the entity or its overlay provenance.");
+            after.Props?.GetRawText() == before.Props?.GetRawText()).OverrideFailureMessage("Entity metadata changed during part removal.").IsTrue();
+        AssertThat(after.Source == FeatureSource.OsmOverlay && after.Parts.Count == 2).OverrideFailureMessage("Part removal lost the entity or its overlay provenance.").IsTrue();
         foreach (var part in after.Parts)
-            Require(Canonical(part) == Canonical(before.Parts.Single(old => old.SourceId == part.SourceId)),
-                "A retained part property changed.");
-        Require(after.Height == 7.8f && after.Storeys == 2 &&
-            after.Bounds == new Box3(new(0, 0, 0), new(22, 7.8f, 8)), "Aggregated height/storeys/bounds were not rebuilt from retained parts.");
-        Require(after.Geometry is MultiPolygonGeometry { Polygons.Count: 3 }, "Retained multi-polygon pieces were lost.");
+            AssertThat(Canonical(part) == Canonical(before.Parts.Single(old => old.SourceId == part.SourceId))).OverrideFailureMessage("A retained part property changed.").IsTrue();
+        AssertThat(after.Height == 7.8f && after.Storeys == 2 &&
+            after.Bounds == new Box3(new(0, 0, 0), new(22, 7.8f, 8))).OverrideFailureMessage("Aggregated height/storeys/bounds were not rebuilt from retained parts.").IsTrue();
+        AssertThat(after.Geometry is MultiPolygonGeometry { Polygons.Count: 3 }).OverrideFailureMessage("Retained multi-polygon pieces were lost.").IsTrue();
         var polygon = ((MultiPolygonGeometry)after.Geometry).Polygons[0];
-        Require(polygon.Holes.Count == 1 && !PlanGeometry.Contains(polygon, new(3, 3)), "A retained courtyard hole was filled.");
+        AssertThat(polygon.Holes.Count == 1 && !PlanGeometry.Contains(polygon, new(3, 3))).OverrideFailureMessage("A retained courtyard hole was filled.").IsTrue();
     }
 
     [TestCase]
@@ -68,12 +65,11 @@ public sealed class HidePartOverlayTests
     {
         var hide = new HidePartOp(Main, "osm:way:10", "remove one part");
         var error = Fails(() => Load([hide, new HideOp(new("osm:way:10"), "old source alias must be gone")]));
-        Require(error.Message.Contains("osm:way:10", StringComparison.Ordinal), "Removed alias failure lost its source identity.");
+        AssertThat(error.Message.Contains("osm:way:10", StringComparison.Ordinal)).OverrideFailureMessage("Removed alias failure lost its source identity.").IsTrue();
         var result = Load([hide, new StyleOp(new("osm:way:20"), new("retained-alias"), null),
             new HeightOp(new("osm:way:40"), 17, null, "unrelated alias remains")]);
-        Require(result.World.Features[Main].Parts.Count == 2 && result.World.Features[Main].Family == new BuildingFamily("retained-alias"),
-            "A retained source alias stopped resolving to its entity.");
-        Require(result.World.Features[Other].Height == 17, "An unrelated entity/source alias was changed or removed.");
+        AssertThat(result.World.Features[Main].Parts.Count == 2 && result.World.Features[Main].Family == new BuildingFamily("retained-alias")).OverrideFailureMessage("A retained source alias stopped resolving to its entity.").IsTrue();
+        AssertThat(result.World.Features[Other].Height == 17).OverrideFailureMessage("An unrelated entity/source alias was changed or removed.").IsTrue();
     }
 
     [TestCase]
@@ -96,8 +92,8 @@ public sealed class HidePartOverlayTests
         foreach (var operations in invalid)
         {
             var error = Fails(() => Load(operations));
-            Require(error.File == "overlay/test.d/0000-fixture.json", "hidePart failure lost its file location.");
-            Require(Canonical(previous) == stable, "A failed reload changed the previously published entity.");
+            AssertThat(error.File == "overlay/test.d/0000-fixture.json").OverrideFailureMessage("hidePart failure lost its file location.").IsTrue();
+            AssertThat(Canonical(previous) == stable).OverrideFailureMessage("A failed reload changed the previously published entity.").IsTrue();
         }
         // Loader already rejects duplicate canonical sources before overlay dispatch; the new operation also counts exact matches defensively.
         var duplicate = Campus.Replace("\"osm:way:30\"", "\"osm:way:20\"", StringComparison.Ordinal);
@@ -111,14 +107,13 @@ public sealed class HidePartOverlayTests
         files["overlay/a.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:10", "first part")], "WP-14");
         files["overlay/b.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "second part")], "WP-15");
         var error = Fails(() => WorldModelLoader.Load(new("fixture"), files));
-        Require(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) &&
-            error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains(Main.Value, StringComparison.Ordinal),
-            "hidePart bypassed entity-level conflict provenance.");
+        AssertThat(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) &&
+            error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains(Main.Value, StringComparison.Ordinal)).OverrideFailureMessage("hidePart bypassed entity-level conflict provenance.").IsTrue();
         files["overlay/b.d/0000-fixture.json"] = Overlay([new HidePartOp(Main, "osm:way:20", "same owner is not a claim")], "WP-14");
         _ = Fails(() => WorldModelLoader.Load(new("fixture"), files));
         var claims = new Dictionary<FeatureId, WpId> { [Main] = new("WP-14") };
         var allowed = WorldModelLoader.Load(new("fixture"), files, new() { ClaimedBy = claims }).World.Features[Main];
-        Require(allowed.Parts.Single().SourceId == "osm:way:30", "The existing explicit-claim exception changed.");
+        AssertThat(allowed.Parts.Single().SourceId == "osm:way:30").OverrideFailureMessage("The existing explicit-claim exception changed.").IsTrue();
         claims[Main] = new("WP-99");
         _ = Fails(() => WorldModelLoader.Load(new("fixture"), files, new() { ClaimedBy = claims }));
     }
@@ -129,7 +124,7 @@ public sealed class HidePartOverlayTests
         foreach (var target in new[] { Main, new FeatureId("osm:way:10") })
         {
             var result = Load([new HideOp(target, "explicit whole-entity removal")]);
-            Require(!result.World.Features.ContainsKey(Main) && result.World.Features.ContainsKey(Other), "Legacy hide semantics changed.");
+            AssertThat(!result.World.Features.ContainsKey(Main) && result.World.Features.ContainsKey(Other)).OverrideFailureMessage("Legacy hide semantics changed.").IsTrue();
         }
     }
 
@@ -151,6 +146,4 @@ public sealed class HidePartOverlayTests
         catch (WorldDataException error) { return error; }
         throw new InvalidOperationException("Expected an invalid or conflicting overlay to fail.");
     }
-    private static void Require(bool condition, string message)
-    { if (!condition) throw new InvalidOperationException(message); }
 }

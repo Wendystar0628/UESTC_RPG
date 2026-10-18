@@ -8,6 +8,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// Mesh, terrain draping and the collision sampler split every 1 m cell along the same anti-diagonal (1,0)-(0,1), the
 /// split Godot 4.7.2's Jolt height-field shape uses (WLD-TERRAIN 9.3). The reference values are native Jolt ray
@@ -60,9 +62,8 @@ public sealed class GroundDiagonalTests
             var worldX = NativeTile.X * GroundLod.TileSize + x;
             var worldZ = NativeTile.Z * GroundLod.TileSize + z;
             var sampled = GroundCollision.SampleHeight(collider, worldX, worldZ);
-            Check.True(MathF.Abs(sampled - jolt) <= MatchToleranceM, $"({x}, {z}): sampler {sampled}, native Jolt {jolt}.");
-            Check.True(MathF.Abs(MainDiagonal(cm, worldX - NativeTile.X * GroundLod.TileSize, worldZ - NativeTile.Z * GroundLod.TileSize) - jolt) > 0.2f,
-                $"({x}, {z}): the fixture must tell the diagonals apart.");
+            AssertThat(MathF.Abs(sampled - jolt) <= MatchToleranceM).OverrideFailureMessage($"({x}, {z}): sampler {sampled}, native Jolt {jolt}.").IsTrue();
+            AssertThat(MathF.Abs(MainDiagonal(cm, worldX - NativeTile.X * GroundLod.TileSize, worldZ - NativeTile.Z * GroundLod.TileSize) - jolt) > 0.2f).OverrideFailureMessage($"({x}, {z}): the fixture must tell the diagonals apart.").IsTrue();
         }
     }
 
@@ -75,7 +76,7 @@ public sealed class GroundDiagonalTests
         foreach (var (x, z, jolt) in Native)
         {
             var draped = grid.At(extent.X0 + x, extent.Z0 + z);
-            Check.True(MathF.Abs(draped - jolt) <= MatchToleranceM, $"({x}, {z}): draped {draped}, native Jolt {jolt}.");
+            AssertThat(MathF.Abs(draped - jolt) <= MatchToleranceM).OverrideFailureMessage($"({x}, {z}): draped {draped}, native Jolt {jolt}.").IsTrue();
         }
     }
 
@@ -83,12 +84,12 @@ public sealed class GroundDiagonalTests
     public void CellSplitIsTheAntiDiagonal()
     {
         // Corner heights 0, 1, 2, 4 at 00, 10, 01, 11: on the diagonal 10-01 the two triangles agree, off it they differ from the main-diagonal split.
-        Check.Close(1.5, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f), 0.01, "diagonal midpoint is the mean of corners 10 and 01");
-        Check.Close(1.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f), 0.01, "corner 10");
-        Check.Close(2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f), 0.01, "corner 01");
-        Check.Close(4.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f), 0.01, "corner 11");
-        Check.Close(0.25 * 1.0 + 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f), 0.01, "inside 00-10-01");
-        Check.Close(4.0 - 0.25 * 3.0 - 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f), 0.01, "inside 10-11-01");
+        AssertThat(Math.Abs((double)(1.5) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f))) <= 0.01).OverrideFailureMessage($"diagonal midpoint is the mean of corners 10 and 01: expected {1.5}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(1.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f))) <= 0.01).OverrideFailureMessage($"corner 10: expected {1.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f))) <= 0.01).OverrideFailureMessage($"corner 01: expected {2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(4.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f))) <= 0.01).OverrideFailureMessage($"corner 11: expected {4.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(0.25 * 1.0 + 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f))) <= 0.01).OverrideFailureMessage($"inside 00-10-01: expected {0.25 * 1.0 + 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(4.0 - 0.25 * 3.0 - 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f))) <= 0.01).OverrideFailureMessage($"inside 10-11-01: expected {4.0 - 0.25 * 3.0 - 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f)}.").IsTrue();
     }
 
 
@@ -124,9 +125,9 @@ public sealed class GroundDiagonalTests
                 checkedTriangles++;
                 if (p.All(q => q.X > 3f && q.X < 8f && q.Z > 3f && q.Z < 8f)) nearArc++;
             }
-        Check.True(checkedTriangles > 500, $"Only {checkedTriangles} lawn triangles checked.");
-        Check.True(nearArc > 20, $"Only {nearArc} lawn triangles beside the junction fillet.");
-        Check.True(worst <= 0.01f, $"Lawn leaves the draped terrain by {worst} m.");
+        AssertThat(checkedTriangles > 500).OverrideFailureMessage($"Only {checkedTriangles} lawn triangles checked.").IsTrue();
+        AssertThat(nearArc > 20).OverrideFailureMessage($"Only {nearArc} lawn triangles beside the junction fillet.").IsTrue();
+        AssertThat(worst <= 0.01f).OverrideFailureMessage($"Lawn leaves the draped terrain by {worst} m.").IsTrue();
     }
 
     [TestCase]
@@ -141,7 +142,7 @@ public sealed class GroundDiagonalTests
         var grid = TerrainGrid.For(FlatTerrain.Default, tile, LodLevel.L0, extent);
         var field = TileField.Build(GroundLayout.Of(ctx.World), extent, GroundSection.Default, grid, LawnNoise.Seed(ctx), GroundLod.ToneCell(LodLevel.L0));
         var m = field.ToneMacro;
-        Check.True(m >= 4, $"Tone macro cell of {m} fine cells is too small to test.");
+        AssertThat(m >= 4).OverrideFailureMessage($"Tone macro cell of {m} fine cells is too small to test.").IsTrue();
         var spread = 0f;
         for (var cj = 0; cj < 3; cj++)
             for (var ci = 0; ci < 3; ci++)
@@ -157,11 +158,11 @@ public sealed class GroundDiagonalTests
                         ? T(0, 0) + u * (T(1, 0) - T(0, 0)) + w * (T(1, 1) - T(1, 0))
                         : T(0, 0) + w * (T(0, 1) - T(0, 0)) + u * (T(1, 1) - T(0, 1));
                     var actual = field.Get(ci * m + a, cj * m + b, TileField.Tone);
-                    Check.Close(anti, actual, 2e-7, $"tone at cell ({ci}, {cj}) offset ({a}, {b})");
+                    AssertThat(Math.Abs((double)(anti) - (double)(actual)) <= 2e-7).OverrideFailureMessage($"tone at cell ({ci}, {cj}) offset ({a}, {b}): expected {anti}, got {actual}.").IsTrue();
                     spread = MathF.Max(spread, MathF.Abs(main - anti));
                 }
             }
-        Check.True(spread > 1e-6f, $"The sampled tone values must tell the two diagonals apart; they differ by at most {spread}.");
+        AssertThat(spread > 1e-6f).OverrideFailureMessage($"The sampled tone values must tell the two diagonals apart; they differ by at most {spread}.").IsTrue();
     }
 
     /// <summary>A terrain whose only non-flat tile is <paramref name="tile"/> at level 0, filled from a ready 65 x 65 centimetre field.</summary>

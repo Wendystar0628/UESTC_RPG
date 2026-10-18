@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using Godot;
 using N = System.Numerics;
 
@@ -25,16 +26,36 @@ public sealed class PaletteSurfaceUploadRuntimeTests
             var uv = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
             var gate = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
             for (var vertex = 0; vertex < 3; vertex++)
-                Check(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
-                    gate[vertex] == new Vector2(1, 3), "Native upload lost metre UV or discrete UV2.");
+                AssertThat(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
+                    gate[vertex] == new Vector2(1, 3)).OverrideFailureMessage("Native upload lost metre UV or discrete UV2.").IsTrue();
         }
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, Catalog(), materialSpec: Spec(64)));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, Catalog(),
-            materialSpec: spec with { SurfacePattern = spec.SurfacePattern.Value with { Layer = 8 } }));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, Catalog(),
-            materialSpec: spec with { Kind = ToonKind.Glass }));
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh, source, Catalog(), compressAttributes: true));
-        Check(mesh.GetSurfaceCount() == 2, "Rejected overrides published partial native surfaces.");
+        {
+            var thrown = false;
+            try { GeometrySurfaceUpload.Append(mesh, source, Catalog(), materialSpec: Spec(64)); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { GeometrySurfaceUpload.Append(mesh, source, Catalog(),
+            materialSpec: spec with { SurfacePattern = spec.SurfacePattern.Value with { Layer = 8 } }); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { GeometrySurfaceUpload.Append(mesh, source, Catalog(),
+            materialSpec: spec with { Kind = ToonKind.Glass }); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        {
+            var thrown = false;
+            try { GeometrySurfaceUpload.Append(mesh, source, Catalog(), compressAttributes: true); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        AssertThat(mesh.GetSurfaceCount() == 2).OverrideFailureMessage("Rejected overrides published partial native surfaces.").IsTrue();
     }
 
     [TestCase]
@@ -61,10 +82,9 @@ public sealed class PaletteSurfaceUploadRuntimeTests
             var nextColors = nextArrays[(int)Mesh.ArrayType.Color].AsColorArray();
             for (var i = 0; i < 256; i++)
             {
-                Check(oldColors[i] == nextColors[i], "Catalog selection changed legacy native COLOR values.");
-                Check(Byte(nextColors[i].R) == i && Byte(nextColors[i].G) == (byte)(legacy.Ao![i] * 255f) &&
-                    Byte(nextColors[i].B) == (i & 15) && Byte(nextColors[i].A) == 255 - i,
-                    "A real native COLOR byte differs from the frozen v1 meaning.");
+                AssertThat(oldColors[i] == nextColors[i]).OverrideFailureMessage("Catalog selection changed legacy native COLOR values.").IsTrue();
+                AssertThat(Byte(nextColors[i].R) == i && Byte(nextColors[i].G) == (byte)(legacy.Ao![i] * 255f) &&
+                    Byte(nextColors[i].B) == (i & 15) && Byte(nextColors[i].A) == 255 - i).OverrideFailureMessage("A real native COLOR byte differs from the frozen v1 meaning.").IsTrue();
             }
         }
         foreach (var foreground in new ushort[] { 255, 256, 511 })
@@ -89,15 +109,15 @@ public sealed class PaletteSurfaceUploadRuntimeTests
                 for (var i = 0; i < 3; i++)
                 {
                     var flags = (byte)Byte(colors[i].B);
-                    Check(PaletteEncoding.DecodeColor((byte)Byte(colors[i].R), flags).Value == foreground &&
+                    AssertThat(PaletteEncoding.DecodeColor((byte)Byte(colors[i].R), flags).Value == foreground &&
                         PaletteEncoding.DecodeDecalBase((byte)Byte(colors[i].A), flags).Value == background &&
-                        (flags & 15) == source.Flags![i] && Byte(colors[i].G) == (byte)(source.Ao![i] * 255f), "Native bank decode lost a palette/semantic/AO bit.");
-                    Check(BitConverter.SingleToInt32Bits(uv2[i].X) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2]) &&
-                        BitConverter.SingleToInt32Bits(uv2[i].Y) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2 + 1]), "Native UV2 bits changed.");
+                        (flags & 15) == source.Flags![i] && Byte(colors[i].G) == (byte)(source.Ao![i] * 255f)).OverrideFailureMessage("Native bank decode lost a palette/semantic/AO bit.").IsTrue();
+                    AssertThat(BitConverter.SingleToInt32Bits(uv2[i].X) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2]) &&
+                        BitConverter.SingleToInt32Bits(uv2[i].Y) == BitConverter.SingleToInt32Bits(source.Uv2![i * 2 + 1])).OverrideFailureMessage("Native UV2 bits changed.").IsTrue();
                 }
-                Check(arrays[(int)Mesh.ArrayType.Custom0].AsFloat32Array().SequenceEqual(source.Custom0!), "Native CUSTOM0 changed.");
-                Check(arrays[(int)Mesh.ArrayType.Custom1].AsFloat32Array().SequenceEqual(source.Custom1!), "Native CUSTOM1 changed.");
-                Check(arrays[(int)Mesh.ArrayType.Custom2].AsFloat32Array().SequenceEqual(source.Custom2!), "Native CUSTOM2 changed.");
+                AssertThat(arrays[(int)Mesh.ArrayType.Custom0].AsFloat32Array().SequenceEqual(source.Custom0!)).OverrideFailureMessage("Native CUSTOM0 changed.").IsTrue();
+                AssertThat(arrays[(int)Mesh.ArrayType.Custom1].AsFloat32Array().SequenceEqual(source.Custom1!)).OverrideFailureMessage("Native CUSTOM1 changed.").IsTrue();
+                AssertThat(arrays[(int)Mesh.ArrayType.Custom2].AsFloat32Array().SequenceEqual(source.Custom2!)).OverrideFailureMessage("Native CUSTOM2 changed.").IsTrue();
             }
     }
 
@@ -114,13 +134,17 @@ public sealed class PaletteSurfaceUploadRuntimeTests
         for (var surface = 0; surface < 2; surface++)
         {
             using var arrays = mesh.SurfaceGetArrays(surface);
-            Check(arrays[(int)Mesh.ArrayType.Color].AsColorArray().All(color => Byte(color.R) == 254 && Byte(color.B) == 16),
-                "High token fallback/tint called the byte provider or lost bank 1.");
+            AssertThat(arrays[(int)Mesh.ArrayType.Color].AsColorArray().All(color => Byte(color.R) == 254 && Byte(color.B) == 16)).OverrideFailureMessage("High token fallback/tint called the byte provider or lost bank 1.").IsTrue();
         }
         GeometrySurfaceUpload.Append(mesh, GeometryBuffer.Freeze(high), catalog);
-        Throws<ArgumentException>(() => GeometrySurfaceUpload.Append(mesh,
-            Geometry() with { ColorIndices = [512, 256, 256] }, catalog));
-        Check(mesh.GetSurfaceCount() == 3, "Rejected streams published partial native surfaces.");
+        {
+            var thrown = false;
+            try { GeometrySurfaceUpload.Append(mesh,
+            Geometry() with { ColorIndices = [512, 256, 256] }, catalog); }
+            catch (ArgumentException) { thrown = true; }
+            AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
+        }
+        AssertThat(mesh.GetSurfaceCount() == 3).OverrideFailureMessage("Rejected streams published partial native surfaces.").IsTrue();
     }
 
     private static int Byte(float value) => (int)MathF.Round(value * 255f);
@@ -137,10 +161,4 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     private static GeometryBundle Geometry(int count = 3) => new(new(Spec(64)),
         Enumerable.Range(0, count).SelectMany(i => new[] { i % 3 == 1 ? 1f : 0f, 0f, i % 3 == 2 ? 1f : 0f }).ToArray(),
         Enumerable.Range(0, count).SelectMany(_ => new[] { 0f, 1f, 0f }).ToArray(), [0, 1, 2], Uv: new float[count * 2]);
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private static void Throws<T>(Action action) where T : Exception
-    {
-        try { action(); } catch (T) { return; }
-        throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
 }

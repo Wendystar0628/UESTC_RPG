@@ -5,6 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Systems.Vegetation.Tests;
 
@@ -34,16 +35,15 @@ public sealed class VegetationContextTests
         };
         var source = new PreparedSource(prepared);
         var context = VegetationContext.Resolve(map, Module, source)();
-        Check(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad), "The overlay's design footway is missing.");
-        Check(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
+        AssertThat(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad)).OverrideFailureMessage("The overlay's design footway is missing.").IsTrue();
+        AssertThat(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
             context.SourceInputs.Keys.Any(path => path.StartsWith("overlay/center-east.d/", StringComparison.Ordinal)) &&
-            context.SourceInputs.ContainsKey("vegetation/planting.json"), "The prepared source lost the frozen input version.");
+            context.SourceInputs.ContainsKey("vegetation/planting.json")).OverrideFailureMessage("The prepared source lost the frozen input version.").IsTrue();
         var (feature, aspect, owner) = fixture.Claims.Sources.Where(s => !s.Global)
             .SelectMany(s => s.Claims.OfType<FeatureClaim>().Select(c => (c.Feature, Aspect: Lowest(c.Aspects), s.Owner)))
             .First(c => context.World.Features.ContainsKey(c.Feature));
-        Check(context.ClaimedBy(feature, aspect) == owner, "The prepared source lost registered claims.");
-        Check(ReferenceEquals(context, prepared) && source.Module == Module && ReferenceEquals(source.Context, map),
-            "Prepared context identity or source query changed.");
+        AssertThat(context.ClaimedBy(feature, aspect) == owner).OverrideFailureMessage("The prepared source lost registered claims.").IsTrue();
+        AssertThat(ReferenceEquals(context, prepared) && source.Module == Module && ReferenceEquals(source.Context, map)).OverrideFailureMessage("Prepared context identity or source query changed.").IsTrue();
     }
 
     [TestCase]
@@ -59,7 +59,7 @@ public sealed class VegetationContextTests
                 VegetationContext.Resolve(fixture.Map, Module, source);
             }
             catch (Exception error) when (ReferenceEquals(error, failure)) { thrown = true; }
-            Check(thrown && source.Calls == 1, $"{failure.GetType().Name} from the formal source did not surface unchanged.");
+            AssertThat(thrown && source.Calls == 1).OverrideFailureMessage($"{failure.GetType().Name} from the formal source did not surface unchanged.").IsTrue();
         }
     }
 
@@ -81,21 +81,16 @@ public sealed class VegetationContextTests
         };
         var source = new PreparedSource(prepared);
         var context = VegetationContext.Resolve(fixture.Map, Module, source)();
-        Check(source.Module == Module && ReferenceEquals(source.Context, fixture.Map), "The prepared query used another map or module.");
-        Check(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
+        AssertThat(source.Module == Module && ReferenceEquals(source.Context, fixture.Map)).OverrideFailureMessage("The prepared query used another map or module.").IsTrue();
+        AssertThat(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
               ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 && context.DataHash == "data" &&
-              context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog), "The prepared context lost a field or replaced the palette snapshot.");
+              context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog)).OverrideFailureMessage("The prepared context lost a field or replaced the palette snapshot.").IsTrue();
         var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
-        Check(ReferenceEquals(VegetationContext.Resolve(fixture.Map, Module, new PreparedSource(own))(), own), "A context with a palette must be returned as is.");
+        AssertThat(ReferenceEquals(VegetationContext.Resolve(fixture.Map, Module, new PreparedSource(own))(), own)).OverrideFailureMessage("A context with a palette must be returned as is.").IsTrue();
     }
 
     private static Aspects Lowest(Aspects aspects) => Enum.GetValues<Aspects>().First(bit => (aspects & bit) != 0);
     private static PaletteCatalog Palette() => Campus.Contracts.Tests.PaletteFixture.Catalog;
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 
     private sealed class FailingSource(Exception failure) : IBakeContextSource
     {

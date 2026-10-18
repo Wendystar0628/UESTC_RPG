@@ -1,3 +1,4 @@
+using static GdUnit4.Assertions;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -25,18 +26,17 @@ public sealed class WorldRestoreTests
         var instance = world.Instance;
         var dto = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
         world.Restore(dto, Restore());
-        Equal(world.Instance, instance);
-        Equal(world.WorldHours, 7);
-        Check(!world.IsSettled && world.Omega == 0 && world.Transition == WorldTransition.None,
-            "Restore must clear transition history but remain unsettled until commit.");
-        Throws<InvalidOperationException>(() => world.Tick(.1));
+        AssertThat(world.Instance).IsEqual(instance);
+        AssertThat(world.WorldHours).IsEqual(7);
+        AssertThat(!world.IsSettled && world.Omega == 0 && world.Transition == WorldTransition.None).OverrideFailureMessage("Restore must clear transition history but remain unsettled until commit.").IsTrue();
+        AssertThrown(() => world.Tick(.1)).IsInstanceOf<InvalidOperationException>();
         world.CompleteRestore();
-        Equal(world.Instance, instance + 1);
-        Equal(world.Capture(default), dto);
-        Throws<InvalidOperationException>(world.CompleteRestore);
-        Throws<InvalidOperationException>(() => world.Freeze(1, Season.Spring, 0));
-        Equal(weather.Resets, 0);
-        Equal(weather.Quiets, 0);
+        AssertThat(world.Instance).IsEqual(instance + 1);
+        AssertThat(world.Capture(default)).IsEqual(dto);
+        AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => world.Freeze(1, Season.Spring, 0)).IsInstanceOf<InvalidOperationException>();
+        AssertThat(weather.Resets).IsEqual(0);
+        AssertThat(weather.Quiets).IsEqual(0);
     }
 
     [TestCase]
@@ -51,25 +51,24 @@ public sealed class WorldRestoreTests
             world.Rev, world.Instance, weather.Steps.Count);
         var moment = world.GetSaveMoment();
         var captured = world.Capture(default);
-        Equal(moment.WorldHours, captured.WorldHours);
-        Equal(moment.ClockOffset, captured.ClockOffset);
-        Equal(moment.Season, captured.SeasonTarget);
-        Equal(moment.FlowRate, captured.FlowRate);
-        Check(moment.WorldHours > world.WorldHours && moment.Season == Season.Winter,
-            "Save moment used the last frame instead of the new settled endpoint.");
-        Equal((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
-            world.Rev, world.Instance, weather.Steps.Count), before);
+        AssertThat(moment.WorldHours).IsEqual(captured.WorldHours);
+        AssertThat(moment.ClockOffset).IsEqual(captured.ClockOffset);
+        AssertThat(moment.Season).IsEqual(captured.SeasonTarget);
+        AssertThat(moment.FlowRate).IsEqual(captured.FlowRate);
+        AssertThat(moment.WorldHours > world.WorldHours && moment.Season == Season.Winter).OverrideFailureMessage("Save moment used the last frame instead of the new settled endpoint.").IsTrue();
+        AssertThat((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
+            world.Rev, world.Instance, weather.Steps.Count)).IsEqual(before);
         var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
         world.FlowTo(18, 60);
         var shared = world.Capture(in context);
-        Equal(shared.WorldHours, moment.WorldHours);
-        Equal(shared.ClockOffset, moment.ClockOffset);
-        Equal(shared.SeasonTarget, moment.Season);
-        Equal(shared.FlowRate, moment.FlowRate);
+        AssertThat(shared.WorldHours).IsEqual(moment.WorldHours);
+        AssertThat(shared.ClockOffset).IsEqual(moment.ClockOffset);
+        AssertThat(shared.SeasonTarget).IsEqual(moment.Season);
+        AssertThat(shared.FlowRate).IsEqual(moment.FlowRate);
         moment = world.GetSaveMoment();
-        Equal(moment.FlowRate, 0);
-        Near(ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24), 18);
-        Equal(weather.Steps.Count, before.Count);
+        AssertThat(moment.FlowRate).IsEqual(0);
+        AssertThat(Math.Abs((ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24)) - (18)) <= 1e-10).OverrideFailureMessage($"Expected {18:R}, got {ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24):R}.").IsTrue();
+        AssertThat(weather.Steps.Count).IsEqual(before.Count);
     }
 
     [TestCase]
@@ -80,32 +79,31 @@ public sealed class WorldRestoreTests
         var instance = world.Instance;
         var failed = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
         world.Restore(failed, Restore());
-        Throws<InvalidOperationException>(() => world.Tick(.1));
+        AssertThrown(() => world.Tick(.1)).IsInstanceOf<InvalidOperationException>();
         world.AbortRestore();
-        Check(world.RestoreFaulted && !world.IsSettled, "Restore failure must be explicit and block a settled save.");
+        AssertThat(world.RestoreFaulted && !world.IsSettled).OverrideFailureMessage("Restore failure must be explicit and block a settled save.").IsTrue();
         var frozen = LiveReadings(world, weather);
         for (var frame = 0; frame < 5; frame++) world.Tick(.1);
-        Equal(LiveReadings(world, weather), frozen);
-        Throws<InvalidOperationException>(() => world.Capture(default));
-        Throws<InvalidOperationException>(() => world.GetSaveMoment());
-        Throws<InvalidOperationException>(world.CompleteRestore);
-        Throws<JsonException>(() => world.Restore(failed with { WorldHours = double.NaN }, Restore()));
-        Check(world.RestoreFaulted, "An invalid retry must not clear the fault.");
+        AssertThat(LiveReadings(world, weather)).IsEqual(frozen);
+        AssertThrown(() => world.Capture(default)).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => world.GetSaveMoment()).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => world.Restore(failed with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();
+        AssertThat(world.RestoreFaulted).OverrideFailureMessage("An invalid retry must not clear the fault.").IsTrue();
         var retry = new WorldSaveV1(11, .1, 1, Season.Summer, 60, 60, 120);
         world.Restore(retry, Restore());
         var prepared = LiveReadings(world, weather);
         world.Tick(.1);
-        Equal(LiveReadings(world, weather), prepared);
-        Equal(world.Instance, instance);
-        Check(world.RestoreFaulted, "Preparing a retry must not resume a partially restored world.");
+        AssertThat(LiveReadings(world, weather)).IsEqual(prepared);
+        AssertThat(world.Instance).IsEqual(instance);
+        AssertThat(world.RestoreFaulted).OverrideFailureMessage("Preparing a retry must not resume a partially restored world.").IsTrue();
         world.CompleteRestore();
-        Check(!world.RestoreFaulted && world.IsSettled, "Successful commit did not release the fault freeze.");
-        Equal(world.Instance, instance + 1);
-        Equal(world.Capture(default), retry);
+        AssertThat(!world.RestoreFaulted && world.IsSettled).OverrideFailureMessage("Successful commit did not release the fault freeze.").IsTrue();
+        AssertThat(world.Instance).IsEqual(instance + 1);
+        AssertThat(world.Capture(default)).IsEqual(retry);
         world.Tick(.1);
-        Check(world.WorldHours > retry.WorldHours && world.AnimTime > retry.AnimTime,
-            "Successful recovery remained frozen.");
-        Equal(weather.Steps.Count, frozen.Steps + 1);
+        AssertThat(world.WorldHours > retry.WorldHours && world.AnimTime > retry.AnimTime).OverrideFailureMessage("Successful recovery remained frozen.").IsTrue();
+        AssertThat(weather.Steps.Count).IsEqual(frozen.Steps + 1);
     }
 
     [TestCase]
@@ -124,8 +122,8 @@ public sealed class WorldRestoreTests
             var instance = world.Instance;
             world.AbortRestore();
             world.AbortRestore();
-            Check(world.RestoreFaulted, "Abort must fault before Restore as well as after World commit.");
-            Equal(world.Instance, instance);
+            AssertThat(world.RestoreFaulted).OverrideFailureMessage("Abort must fault before Restore as well as after World commit.").IsTrue();
+            AssertThat(world.Instance).IsEqual(instance);
             var frozen = LiveReadings(world, weather);
             var calls = weather.Calls.Count;
             Action[] controls =
@@ -146,19 +144,19 @@ public sealed class WorldRestoreTests
                 () => world.Capture(default),
                 () => world.Capture(new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment }),
             ];
-            foreach (var control in controls) Throws<InvalidOperationException>(control);
-            Throws<InvalidOperationException>(world.CompleteRestore);
+            foreach (var control in controls) AssertThrown(control).IsInstanceOf<InvalidOperationException>();
+            AssertThrown(world.CompleteRestore).IsInstanceOf<InvalidOperationException>();
             world.Tick(.1);
-            Equal(LiveReadings(world, weather), frozen);
-            Equal(weather.Calls.Count, calls);
+            AssertThat(LiveReadings(world, weather)).IsEqual(frozen);
+            AssertThat(weather.Calls.Count).IsEqual(calls);
             var fresh = world.CreateDefault(new NewGameContext(5, new("test-world"), new WorldPreset(17.5, Season.Autumn)));
             world.Restore(fresh, Restore());
-            Check(world.RestoreFaulted, "CreateDefault or Restore must not clear a failed transaction by itself.");
+            AssertThat(world.RestoreFaulted).OverrideFailureMessage("CreateDefault or Restore must not clear a failed transaction by itself.").IsTrue();
             world.CompleteRestore();
-            Check(!world.RestoreFaulted, "A complete fresh new game must remain available from the fault screen.");
+            AssertThat(!world.RestoreFaulted).OverrideFailureMessage("A complete fresh new game must remain available from the fault screen.").IsTrue();
             world.SetFlow(1);
             world.Tick(.1);
-            Check(world.WorldHours > fresh.WorldHours, "Controls did not resume after successful new game recovery.");
+            AssertThat(world.WorldHours > fresh.WorldHours).OverrideFailureMessage("Controls did not resume after successful new game recovery.").IsTrue();
         }
     }
 
@@ -168,9 +166,8 @@ public sealed class WorldRestoreTests
         ContractJson.Options.MakeReadOnly(populateMissingResolver: true);
         var world = CreateWorld(new RecordingWeatherProcess());
         var typeInfo = world.TypeInfo;
-        Check(ContractJson.Options.IsReadOnly, "Shared contract options must be locked for this regression.");
-        Check(!ReferenceEquals(typeInfo.Options, ContractJson.Options),
-            "World source generation must own an independent copy of the shared options.");
+        AssertThat(ContractJson.Options.IsReadOnly).OverrideFailureMessage("Shared contract options must be locked for this regression.").IsTrue();
+        AssertThat(!ReferenceEquals(typeInfo.Options, ContractJson.Options)).OverrideFailureMessage("World source generation must own an independent copy of the shared options.").IsTrue();
         var snapshot = world.Capture(default);
         foreach (var (season, text) in new[]
         {
@@ -181,16 +178,16 @@ public sealed class WorldRestoreTests
             var dto = snapshot with { SeasonTarget = season, SeasonPos = (int)season };
             var json = JsonSerializer.Serialize(dto, typeInfo);
             using var document = JsonDocument.Parse(json);
-            Equal(document.RootElement.GetProperty("seasonTarget").GetString(), text);
-            Equal(document.RootElement.GetProperty("worldHours").GetDouble(), dto.WorldHours);
-            Equal(JsonSerializer.Deserialize(json, typeInfo), dto);
+            AssertThat(document.RootElement.GetProperty("seasonTarget").GetString()).IsEqual(text);
+            AssertThat(document.RootElement.GetProperty("worldHours").GetDouble()).IsEqual(dto.WorldHours);
+            AssertThat(JsonSerializer.Deserialize(json, typeInfo)).IsEqual(dto);
             // Previously written PascalCase strings remain readable; new writes use the canonical casing.
             var legacy = json.Replace($"\"{text}\"", $"\"{season}\"", StringComparison.Ordinal);
-            Equal(JsonSerializer.Deserialize(legacy, typeInfo), dto);
+            AssertThat(JsonSerializer.Deserialize(legacy, typeInfo)).IsEqual(dto);
         }
         var autumn = JsonSerializer.Serialize(snapshot, typeInfo);
-        Throws<JsonException>(() => JsonSerializer.Deserialize(
-            autumn.Replace("\"autumn\"", "2", StringComparison.Ordinal), typeInfo));
+        AssertThrown(() => JsonSerializer.Deserialize(
+            autumn.Replace("\"autumn\"", "2", StringComparison.Ordinal), typeInfo)).IsInstanceOf<JsonException>();
     }
 
     [TestCase]
@@ -202,19 +199,19 @@ public sealed class WorldRestoreTests
         var dto = a.Capture(default);
         var json = JsonSerializer.Serialize(dto, a.TypeInfo);
         var parsed = JsonSerializer.Deserialize(json, a.TypeInfo)!;
-        Equal(parsed, dto);
+        AssertThat(parsed).IsEqual(dto);
         var b = CreateWorld(new RecordingWeatherProcess());
         b.Restore(parsed, Restore()); b.CompleteRestore();
         for (var i = 0; i < 150; i++)
         {
             var dt = i % 2 == 0 ? .013 : .027;
             a.Tick(dt); b.Tick(dt);
-            Equal(a.Capture(default), b.Capture(default));
-            Equal(a.Sun, b.Sun);
+            AssertThat(a.Capture(default)).IsEqual(b.Capture(default));
+            AssertThat(a.Sun).IsEqual(b.Sun);
         }
-        Throws<JsonException>(() => JsonSerializer.Deserialize(json[..^1] + ",\"unexpected\":1}", a.TypeInfo));
-        Throws<JsonException>(() => JsonSerializer.Deserialize("{}", a.TypeInfo));
-        Throws<JsonException>(() => JsonSerializer.Deserialize(json.Replace("\"autumn\"", "\"unknown\"", StringComparison.Ordinal), a.TypeInfo));
+        AssertThrown(() => JsonSerializer.Deserialize(json[..^1] + ",\"unexpected\":1}", a.TypeInfo)).IsInstanceOf<JsonException>();
+        AssertThrown(() => JsonSerializer.Deserialize("{}", a.TypeInfo)).IsInstanceOf<JsonException>();
+        AssertThrown(() => JsonSerializer.Deserialize(json.Replace("\"autumn\"", "\"unknown\"", StringComparison.Ordinal), a.TypeInfo)).IsInstanceOf<JsonException>();
     }
 
     [TestCase]
@@ -222,14 +219,14 @@ public sealed class WorldRestoreTests
     {
         var world = CreateWorld(new RecordingWeatherProcess());
         var initial = world.Capture(default);
-        Throws<ArgumentOutOfRangeException>(() => world.Advance(0));
-        Throws<ArgumentOutOfRangeException>(() => world.Advance(double.NaN));
-        Throws<ArgumentOutOfRangeException>(() => world.SetFlow(2));
-        Throws<ArgumentOutOfRangeException>(() => world.FlowTo(24, 60));
-        Throws<ArgumentOutOfRangeException>(() => world.SetClock(-1));
-        Throws<ArgumentOutOfRangeException>(() => world.SetSeason((Season)9));
-        Throws<JsonException>(() => world.Restore(initial with { WorldHours = double.NaN }, Restore()));
-        Throws<JsonException>(() => world.Restore(initial with { SeasonPos = 2.1 }, Restore()));
-        Equal(world.Capture(default), initial);
+        AssertThrown(() => world.Advance(0)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.Advance(double.NaN)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.SetFlow(2)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.FlowTo(24, 60)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.SetClock(-1)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.SetSeason((Season)9)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => world.Restore(initial with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();
+        AssertThrown(() => world.Restore(initial with { SeasonPos = 2.1 }, Restore())).IsInstanceOf<JsonException>();
+        AssertThat(world.Capture(default)).IsEqual(initial);
     }
 }

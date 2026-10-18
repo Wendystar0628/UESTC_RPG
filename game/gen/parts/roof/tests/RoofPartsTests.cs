@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Parts.Roof.Tests;
 
@@ -19,16 +20,16 @@ public sealed class RoofPartsTests
     public void RegisteredPartsMatchTheirCatalogueEntries()
     {
         var parts = RoofParts().ToArray();
-        Check(parts.Length == 11, $"Expected 11 roof parts; found {parts.Length}.");
+        AssertThat(parts.Length == 11).OverrideFailureMessage($"Expected 11 roof parts; found {parts.Length}.").IsTrue();
         foreach (var type in parts)
         {
             var attribute = type.GetCustomAttribute<PartAttribute>()!;
             var entry = PartCatalog.Find(new(attribute.Id)) ?? throw new InvalidOperationException($"{attribute.Id} is not catalogued.");
-            Check(attribute.Owner == "WP-12" && entry.Owner == new WpId("WP-12"), $"{attribute.Id} has the wrong owner.");
+            AssertThat(attribute.Owner == "WP-12" && entry.Owner == new WpId("WP-12")).OverrideFailureMessage($"{attribute.Id} has the wrong owner.").IsTrue();
             var contract = type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
-            Check(contract.GetGenericArguments()[0] == entry.ParameterType, $"{attribute.Id} takes the wrong parameter record.");
+            AssertThat(contract.GetGenericArguments()[0] == entry.ParameterType).OverrideFailureMessage($"{attribute.Id} takes the wrong parameter record.").IsTrue();
         }
-        Check(parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id).Distinct().Count() == parts.Length, "A part ID is registered twice.");
+        AssertThat(parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id).Distinct().Count() == parts.Length).OverrideFailureMessage("A part ID is registered twice.").IsTrue();
     }
 
     [TestCase]
@@ -41,21 +42,21 @@ public sealed class RoofPartsTests
             var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(part)!;
             var bounds = (Box3)type.GetMethod("Bounds")!.Invoke(part, [entry.Defaults])!;
             var budget = (PartBudget)type.GetProperty("Budget")!.GetValue(part)!;
-            Check(lods.Contains(LodLevel.L0) && lods.Contains(LodLevel.L1), $"{entry.Id.Value} lacks near levels.");
+            AssertThat(lods.Contains(LodLevel.L0) && lods.Contains(LodLevel.L1)).OverrideFailureMessage($"{entry.Id.Value} lacks near levels.").IsTrue();
             foreach (System.Collections.DictionaryEntry level in lods)
             {
                 var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(entry.Defaults)!;
                 ClosedClockwise(geometry, $"{entry.Id.Value} {level.Key}");
-                Check(geometry.Bounds == bounds, $"{entry.Id.Value} {level.Key} moved the bounds.");
+                AssertThat(geometry.Bounds == bounds).OverrideFailureMessage($"{entry.Id.Value} {level.Key} moved the bounds.").IsTrue();
                 var triangles = geometry.Meshes.Sum(m => m.Index.Length / 3);
-                Check(triangles <= ((LodLevel)level.Key == LodLevel.L0 ? budget.L0 : budget.L1), $"{entry.Id.Value} {level.Key} has {triangles} triangles, over budget.");
+                AssertThat(triangles <= ((LodLevel)level.Key == LodLevel.L0 ? budget.L0 : budget.L1)).OverrideFailureMessage($"{entry.Id.Value} {level.Key} has {triangles} triangles, over budget.").IsTrue();
             }
             // Interface dispatch, so default (empty) implementations count too. Roof and wall parts are visual only
             // (MAP-QSH-ADDITIONS); the equipment fence alone is a barrier.
             var contract = type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
             var colliders = (IReadOnlyList<Collider>)contract.GetMethod("Collision")!.Invoke(part, [entry.Defaults])!;
             var barrier = entry.Id.Value == PartCatalog.EquipmentFence;
-            Check(barrier ? colliders.Count == 1 && colliders[0].Tag == SurfaceTag.Barrier : colliders.Count == 0, $"{entry.Id.Value} has the wrong collision class.");
+            AssertThat(barrier ? colliders.Count == 1 && colliders[0].Tag == SurfaceTag.Barrier : colliders.Count == 0).OverrideFailureMessage($"{entry.Id.Value} has the wrong collision class.").IsTrue();
         }
     }
 
@@ -69,10 +70,10 @@ public sealed class RoofPartsTests
             {
                 if (sample.Build(level) is not { } geometry) continue;
                 ClosedClockwise(geometry, $"{sample.Id} {level}");
-                Check(geometry.Bounds == sample.Bounds, $"{sample.Id} {level} moved the bounds.");
+                AssertThat(geometry.Bounds == sample.Bounds).OverrideFailureMessage($"{sample.Id} {level} moved the bounds.").IsTrue();
                 var triangles = geometry.Meshes.Sum(m => m.Index.Length / 3);
                 var budget = budgets[sample.Part.Value];
-                Check(triangles <= (level == LodLevel.L0 ? budget.L0 : budget.L1), $"{sample.Id} {level} has {triangles} triangles, over budget.");
+                AssertThat(triangles <= (level == LodLevel.L0 ? budget.L0 : budget.L1)).OverrideFailureMessage($"{sample.Id} {level} has {triangles} triangles, over budget.").IsTrue();
             }
     }
 
@@ -80,17 +81,17 @@ public sealed class RoofPartsTests
     public void GenerationIsBitwiseRepeatable()
     {
         var first = RoofGallery.CreateExamples(); var second = RoofGallery.CreateExamples();
-        Check(first.Count == second.Count && first.Count >= 11, "Missing gallery examples.");
+        AssertThat(first.Count == second.Count && first.Count >= 11).OverrideFailureMessage("Missing gallery examples.").IsTrue();
         for (var i = 0; i < first.Count; i++)
         {
-            Check(first[i].Geometry.Meshes.Count == second[i].Geometry.Meshes.Count, "Surface count changed.");
+            AssertThat(first[i].Geometry.Meshes.Count == second[i].Geometry.Meshes.Count).OverrideFailureMessage("Surface count changed.").IsTrue();
             for (var m = 0; m < first[i].Geometry.Meshes.Count; m++)
             {
                 var a = first[i].Geometry.Meshes[m]; var b = second[i].Geometry.Meshes[m];
-                Check(a.Material == b.Material, "Material order changed.");
-                Check(a.Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Position.Select(BitConverter.SingleToInt32Bits)), "Vertex bytes changed.");
-                Check(a.Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Normal.Select(BitConverter.SingleToInt32Bits)), "Normal bytes changed.");
-                Check(a.Index.SequenceEqual(b.Index), "Index bytes changed.");
+                AssertThat(a.Material == b.Material).OverrideFailureMessage("Material order changed.").IsTrue();
+                AssertThat(a.Position.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Position.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Vertex bytes changed.").IsTrue();
+                AssertThat(a.Normal.Select(BitConverter.SingleToInt32Bits).SequenceEqual(b.Normal.Select(BitConverter.SingleToInt32Bits))).OverrideFailureMessage("Normal bytes changed.").IsTrue();
+                AssertThat(a.Index.SequenceEqual(b.Index)).OverrideFailureMessage("Index bytes changed.").IsTrue();
             }
         }
     }
@@ -110,20 +111,20 @@ public sealed class RoofPartsTests
     {
         // The catalogue's bare-rod default is raised to the prop minimum section and the documented standoff.
         var strip = new LightningStripPart().Bounds(new TrimParams(3.6f, 0.02f, 0.02f));
-        Check(strip.Max.Z - strip.Min.Z >= RoofStyle.StripMinRod && strip.Max.Y >= RoofStyle.StripDefaultHeight, "Lightning strip thinner than the style minimum.");
+        AssertThat(strip.Max.Z - strip.Min.Z >= RoofStyle.StripMinRod && strip.Max.Y >= RoofStyle.StripDefaultHeight).OverrideFailureMessage("Lightning strip thinner than the style minimum.").IsTrue();
         // The real-size unit fits inside its grille cage, behind the front louvres and under the lid.
         var unit = RoofGallery.DormUnit; var cage = RoofGallery.DormCage;
-        Check(unit.Width <= cage.Width - 2 * 0.07f && unit.Height <= cage.Height - RoofStyle.GrilleTopThickness && unit.Depth <= cage.Depth - 0.07f, "The unit does not fit its cage.");
+        AssertThat(unit.Width <= cage.Width - 2 * 0.07f && unit.Height <= cage.Height - RoofStyle.GrilleTopThickness && unit.Depth <= cage.Depth - 0.07f).OverrideFailureMessage("The unit does not fit its cage.").IsTrue();
         // Every surface colour is a registered Lit/Shade pair name, never a literal.
         foreach (var example in RoofGallery.CreateExamples())
             foreach (var mesh in example.Geometry.Meshes)
             {
                 var lit = mesh.Material.Spec.Lit.Value; var shade = mesh.Material.Spec.Shade.Value;
-                Check(lit.EndsWith(".lit", StringComparison.Ordinal) && shade == lit[..^4] + ".shade", $"{example.Id} uses an unpaired colour {lit}.");
+                AssertThat(lit.EndsWith(".lit", StringComparison.Ordinal) && shade == lit[..^4] + ".shade").OverrideFailureMessage($"{example.Id} uses an unpaired colour {lit}.").IsTrue();
             }
         IPartDef<RailingParams> fence = new EquipmentFencePart();
         var collider = (WallCollider)fence.Collision(new RailingParams() { Foot = FootMat.Metal }).Single();
-        Check(collider.Foot == FootMat.Metal && collider.Y1 >= WalkRules.BarrierHeight, "Fence collision lost the foot material or the 1.5 m barrier top.");
+        AssertThat(collider.Foot == FootMat.Metal && collider.Y1 >= WalkRules.BarrierHeight).OverrideFailureMessage("Fence collision lost the foot material or the 1.5 m barrier top.").IsTrue();
     }
 
     [TestCase]
@@ -140,18 +141,17 @@ public sealed class RoofPartsTests
                 if (!entry.TryGetProperty("token", out var token)) continue;
                 tokens.Add(token.GetString()!);
                 if (Path.GetFileName(file) != "WP-12.json") continue;
-                Check(entry.GetProperty("id").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255, $"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.");
+                AssertThat(entry.GetProperty("id").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255).OverrideFailureMessage($"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.").IsTrue();
                 // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING).
                 // Fire red is the small saturated identity colour (WLD-INTERIORS) and is exempt.
                 if (token.GetString()!.StartsWith("equip.fireRed.", StringComparison.Ordinal)) continue;
                 var albedo = entry.GetProperty("albedo").EnumerateArray().Select(v => v.GetDouble()).ToArray();
-                Check(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05, $"{token.GetString()} has intrinsic chroma above 0.05.");
+                AssertThat(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05).OverrideFailureMessage($"{token.GetString()} has intrinsic chroma above 0.05.").IsTrue();
             }
         }
         foreach (var example in RoofGallery.CreateExamples())
             foreach (var mesh in example.Geometry.Meshes)
-                Check(tokens.Contains(mesh.Material.Spec.Lit.Value) && tokens.Contains(mesh.Material.Spec.Shade.Value),
-                    $"{example.Id} uses unregistered colour {mesh.Material.Spec.Lit.Value}.");
+                AssertThat(tokens.Contains(mesh.Material.Spec.Lit.Value) && tokens.Contains(mesh.Material.Spec.Shade.Value)).OverrideFailureMessage($"{example.Id} uses unregistered colour {mesh.Material.Spec.Lit.Value}.").IsTrue();
     }
 
     [TestCase]
@@ -162,8 +162,8 @@ public sealed class RoofPartsTests
             var reduced = example.Geometry.Meshes.Where(m => m.Ao is not null).SelectMany(m => m.Ao!).Where(v => v < 1f).ToArray();
             // Only the louvre frames are opening panels; their reveals keep the kernel's visibility, nothing goes dark.
             var grille = example.Id.StartsWith("grille-", StringComparison.Ordinal);
-            Check(grille ? reduced.Length > 0 : reduced.Length == 0, $"{example.Id} has the wrong occlusion layout.");
-            Check(reduced.All(v => v is >= 0.45f and <= 0.88f), $"{example.Id} has a reveal visibility outside 0.45–0.88.");
+            AssertThat(grille ? reduced.Length > 0 : reduced.Length == 0).OverrideFailureMessage($"{example.Id} has the wrong occlusion layout.").IsTrue();
+            AssertThat(reduced.All(v => v is >= 0.45f and <= 0.88f)).OverrideFailureMessage($"{example.Id} has a reveal visibility outside 0.45–0.88.").IsTrue();
         }
     }
 
@@ -192,7 +192,7 @@ public sealed class RoofPartsTests
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
     private static void ClosedClockwise(PartGeometry geometry, string what)
     {
-        Check(geometry.Meshes.Count > 0, $"{what} is empty.");
+        AssertThat(geometry.Meshes.Count > 0).OverrideFailureMessage($"{what} is empty.").IsTrue();
         foreach (var m in geometry.Meshes)
         {
             m.ValidateVertexData();
@@ -201,19 +201,17 @@ public sealed class RoofPartsTests
             {
                 var a = m.Index[i]; var b = m.Index[i + 1]; var c = m.Index[i + 2];
                 var cross = Vector3.Cross(P(m, b) - P(m, a), P(m, c) - P(m, a));
-                Check(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0, $"{what}: face winding disagrees with outward normals.");
+                AssertThat(Vector3.Dot(cross, N(m, a) + N(m, b) + N(m, c)) < 0).OverrideFailureMessage($"{what}: face winding disagrees with outward normals.").IsTrue();
                 foreach (var (from, to) in new[] { (P(m, a), P(m, b)), (P(m, b), P(m, c)), (P(m, c), P(m, a)) })
                 { edges.TryGetValue((from, to), out var count); edges[(from, to)] = count + 1; }
             }
             foreach (var (edge, count) in edges)
-                Check(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1, $"{what}: a solid has an open or non-manifold edge.");
+                AssertThat(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1).OverrideFailureMessage($"{what}: a solid has an open or non-manifold edge.").IsTrue();
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
-                Check(geometry.Bounds.Contains(P(m, i)), $"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).");
-                Near(1, N(m, i).Length(), 0.01);
+                AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).").IsTrue();
+                AssertThat(Math.Abs((double)(1) - N(m, i).Length()) <= 0.01).OverrideFailureMessage($"Expected {1}; got {N(m, i).Length()}.").IsTrue();
             }
         }
     }
-    private static void Near(double expected, double actual, double tolerance) => Check(Math.Abs(expected - actual) <= tolerance, $"Expected {expected}; got {actual}.");
-    private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

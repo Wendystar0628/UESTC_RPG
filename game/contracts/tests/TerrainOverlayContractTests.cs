@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
@@ -271,41 +272,44 @@ public sealed class TerrainOverlayContractTests
     [TestCase]
     public void UnknownOrIncompleteContractsFailRatherThanCreatePlausibleTerrain()
     {
-        Reject(root => root["unapproved"] = 1);
-        Reject(root => root["ops"]![1]!["op"] = "noise");
-        Reject(root => root["ops"]![0]!.AsObject().Remove("op"));
-        Reject(root => root["ops"]![1]!["shape"]!.AsObject().Remove("shape"));
-        Reject(root => root["ops"]![1]!["unapproved"] = 1);
-        Reject(root => root["ops"]![0]!["id"] = "design:terrain:probe\n");
-        Reject(root => root["ops"]![0]!["side"]!["fill"] = "1:3\n");
-        Reject(root => root["ops"]![1]!["shape"]!["shape"] = "polygon");
-        Reject(root => root["ops"]![1]!["profile"] = "noise");
-        Reject(root => root["ops"]![1]!["profile"] = "hermite,hermite");
-        Reject(root => root["ops"]![6]!["bank"]!["kind"] = "soft,steps");
-        Reject(root => root["ops"]![5]!["weirs"]![0]!["kind"] = "weir,gate");
-        Reject(root => root["ops"]![7]!["edge"]!["kind"] = "edgeBand,terrace");
-        Reject(root => root["ops"]![0]!.AsObject().Remove("fillet"));
-        Reject(root => root["ops"]![0]!["priority"] = -1);
-        Reject(root => root["ops"]![0]!["priority"] = 2147483648L);
-        Reject(root => root["ops"]![5]!.AsObject().Remove("water"));
-        Reject(root => root["ops"]![5]!["waterY"] = null);
-        Reject(root => root["ops"]![5]!["dry"] = true);
-        Reject(root => root["ops"]![5]!["crossings"] = null);
-        Reject(root => root["ops"]![5]!["crossings"] = null, dry: true);
-        Reject(root => root["ops"]![5]!["wade"] = null);
-        Reject(root => root["ops"]![5]!["wade"] = null, dry: true);
-        Reject(root => root["ops"]![5]!["wade"] = new JsonArray(root["ops"]![0]!["rings"]!.DeepClone()), dry: true);
-        Reject(root => root["ops"]![8]!["steps"] = null);
-        Reject(root => root["ops"]![5]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""));
-        Reject(root => root["ops"]![6]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""));
-        Reject(root => root["ops"]![5]!["crossings"] = JsonNode.Parse("""[{"road":"design:road:fixture","at":[4,0]}]"""));
-        Reject(root => root["ops"]![5]!["bank"] = JsonNode.Parse("""{"kind":"soft","slope":"1:4"}"""), dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!["outer"] = 1, dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!["outer"] = null, dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!["outer"] = "0", dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!["left"] = "1:4", dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!["slope"] = "1:4", dry: true);
-        Reject(root => root["ops"]![5]!["bank"]!.AsObject().Remove("inner"), dry: true);
+        List<(Action<JsonObject> Mutate, bool Dry)> candidates =
+        [
+            (root => root["unapproved"] = 1, false),
+            (root => root["ops"]![1]!["op"] = "noise", false),
+            (root => root["ops"]![0]!.AsObject().Remove("op"), false),
+            (root => root["ops"]![1]!["shape"]!.AsObject().Remove("shape"), false),
+            (root => root["ops"]![1]!["unapproved"] = 1, false),
+            (root => root["ops"]![0]!["id"] = "design:terrain:probe\n", false),
+            (root => root["ops"]![0]!["side"]!["fill"] = "1:3\n", false),
+            (root => root["ops"]![1]!["shape"]!["shape"] = "polygon", false),
+            (root => root["ops"]![1]!["profile"] = "noise", false),
+            (root => root["ops"]![1]!["profile"] = "hermite,hermite", false),
+            (root => root["ops"]![6]!["bank"]!["kind"] = "soft,steps", false),
+            (root => root["ops"]![5]!["weirs"]![0]!["kind"] = "weir,gate", false),
+            (root => root["ops"]![7]!["edge"]!["kind"] = "edgeBand,terrace", false),
+            (root => root["ops"]![0]!.AsObject().Remove("fillet"), false),
+            (root => root["ops"]![0]!["priority"] = -1, false),
+            (root => root["ops"]![0]!["priority"] = 2147483648L, false),
+            (root => root["ops"]![5]!.AsObject().Remove("water"), false),
+            (root => root["ops"]![5]!["waterY"] = null, false),
+            (root => root["ops"]![5]!["dry"] = true, false),
+            (root => root["ops"]![5]!["crossings"] = null, false),
+            (root => root["ops"]![5]!["crossings"] = null, true),
+            (root => root["ops"]![5]!["wade"] = null, false),
+            (root => root["ops"]![5]!["wade"] = null, true),
+            (root => root["ops"]![5]!["wade"] = new JsonArray(root["ops"]![0]!["rings"]!.DeepClone()), true),
+            (root => root["ops"]![8]!["steps"] = null, false),
+            (root => root["ops"]![5]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""), false),
+            (root => root["ops"]![6]!["bank"] = JsonNode.Parse("""{"kind":"swale","inner":"1:4"}"""), false),
+            (root => root["ops"]![5]!["crossings"] = JsonNode.Parse("""[{"road":"design:road:fixture","at":[4,0]}]"""), false),
+            (root => root["ops"]![5]!["bank"] = JsonNode.Parse("""{"kind":"soft","slope":"1:4"}"""), true),
+            (root => root["ops"]![5]!["bank"]!["outer"] = 1, true),
+            (root => root["ops"]![5]!["bank"]!["outer"] = null, true),
+            (root => root["ops"]![5]!["bank"]!["outer"] = "0", true),
+            (root => root["ops"]![5]!["bank"]!["left"] = "1:4", true),
+            (root => root["ops"]![5]!["bank"]!["slope"] = "1:4", true),
+            (root => root["ops"]![5]!["bank"]!.AsObject().Remove("inner"), true),
+        ];
         foreach (var invalidCrossing in new[]
         {
             """{"road":"design:road:fixture","at":[4,0],"endBefore":true}""",
@@ -315,19 +319,28 @@ public sealed class TerrainOverlayContractTests
             """{"road":"design:road:fixture","at":null}""",
             """{"road":"design:road:fixture","at":[4,0],"roadWidth":2}"""
         })
-            Reject(root => root["ops"]![5]!["crossings"] = new JsonArray(JsonNode.Parse(invalidCrossing)), dry: true);
-        Reject(root => root["ops"]![8]!["steps"] = JsonNode.Parse("""[{"s0":3,"s1":5}]"""));
-        Reject(root => root["ops"]![5]!["weirs"]![0]!["downstream"] = "design:water:upstream");
-        Reject(root => root["ops"]![8]!["anchors"]!.AsArray().RemoveAt(1));
-        Reject(root =>
+            candidates.Add((root => root["ops"]![5]!["crossings"] = new JsonArray(JsonNode.Parse(invalidCrossing)), true));
+        candidates.Add((root => root["ops"]![8]!["steps"] = JsonNode.Parse("""[{"s0":3,"s1":5}]"""), false));
+        candidates.Add((root => root["ops"]![5]!["weirs"]![0]!["downstream"] = "design:water:upstream", false));
+        candidates.Add((root => root["ops"]![8]!["anchors"]!.AsArray().RemoveAt(1), false));
+        candidates.Add((root =>
         {
             root["ops"]![3]!["geometry"] = JsonNode.Parse("""{"type":"point","position":[0,0,0]}""");
-        });
-        Reject(root =>
+        }, false));
+        candidates.Add((root =>
         {
             var op = root["ops"]![0]!.AsObject();
             op.Remove("op"); op["op"] = "platform"; // Metadata moved after ordinary fields.
-        });
+        }, false));
+
+        foreach (var (mutate, dry) in candidates)
+        {
+            var bytes = InvalidCandidate(mutate, dry);
+            bool rejected = false;
+            try { TerrainOverlayJson.Parse(bytes); }
+            catch (JsonException) { rejected = true; }
+            AssertThat(rejected).OverrideFailureMessage("Invalid terrain candidate was accepted.").IsTrue();
+        }
     }
 
     private static JsonObject DryFixture()
@@ -340,16 +353,14 @@ public sealed class TerrainOverlayContractTests
         return root;
     }
 
-    private static void Reject(Action<JsonObject> mutate, bool dry = false)
+    private static byte[] InvalidCandidate(Action<JsonObject> mutate, bool dry = false)
     {
         var root = dry ? DryFixture() : JsonNode.Parse(Fixture)!.AsObject();
         // Establish that each negative case starts from a valid document. Otherwise an unrelated omitted
         // collection failure could make every rejection assertion pass without testing the intended mutation.
         _ = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString()));
         mutate(root);
-        try { TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString())); }
-        catch (JsonException) { return; }
-        throw new InvalidOperationException("Invalid terrain candidate was accepted.");
+        return Encoding.UTF8.GetBytes(root.ToJsonString());
     }
 
     // Synthetic wire fixtures only: they are not campus layout data and do not pass entity/topology validation.

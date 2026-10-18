@@ -12,6 +12,8 @@ namespace Campus.Gen.Buildings.Tests;
 
 using static Campus.Gen.Buildings.Tests.BuildingsTestSupport;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class BuildingMeshTests
 {
@@ -20,27 +22,27 @@ public sealed class BuildingMeshTests
     {
         var world = World(Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"));
         var set = BuildingSet.For(world, 1u);
-        Require(set.Plans.Count == 1, "one plan");
+        AssertThat(set.Plans.Count == 1).OverrideFailureMessage("Expected: " + ("one plan")).IsTrue();
         var plan = set.Plans[0];
-        Require(plan.Storeys == 6, "storeys from data");
-        Require(plan.TotalColumns >= 20, "bays on all four facades");
-        Require(plan.Entrances.Count == 1 && plan.Entrances[0].Anchor is null, "the generic entrance on the longest facade");
-        Require(set.WindowCount == plan.TotalColumns * plan.Storeys, "window block covers the building grid");
+        AssertThat(plan.Storeys == 6).OverrideFailureMessage("Expected: " + ("storeys from data")).IsTrue();
+        AssertThat(plan.TotalColumns >= 20).OverrideFailureMessage("Expected: " + ("bays on all four facades")).IsTrue();
+        AssertThat(plan.Entrances.Count == 1 && plan.Entrances[0].Anchor is null).OverrideFailureMessage("Expected: " + ("the generic entrance on the longest facade")).IsTrue();
+        AssertThat(set.WindowCount == plan.TotalColumns * plan.Storeys).OverrideFailureMessage("Expected: " + ("window block covers the building grid")).IsTrue();
         var bundles = new BuildingsModule().BuildOne(plan, set.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         var glass = bundles.Where(b => b.Material.Spec.Kind == ToonKind.Glass).ToArray();
-        Require(glass.Length > 0, "glass bundle");
+        AssertThat(glass.Length > 0).OverrideFailureMessage("Expected: " + ("glass bundle")).IsTrue();
         var block = set.Blocks[0];
         foreach (var g in glass)
             for (var i = 0; i < g.Position.Length / 3; i++)
             {
-                Require(g.Uv2![2 * i] == block.Base, "UV2.x is the building window base");
+                AssertThat(g.Uv2![2 * i] == block.Base).OverrideFailureMessage("Expected: " + ("UV2.x is the building window base")).IsTrue();
                 var packed = (int)MathF.Round(g.Uv2[2 * i + 1]);
-                Require(packed / 32 == plan.TotalColumns, "UV2.y carries the grid column count");
+                AssertThat(packed / 32 == plan.TotalColumns).OverrideFailureMessage("Expected: " + ("UV2.y carries the grid column count")).IsTrue();
                 var col = (int)MathF.Floor(g.Uv![2 * i]);
                 var row = (int)MathF.Floor(g.Uv[2 * i + 1]);
                 var id = block.Base + row * plan.TotalColumns + col;
-                Require(id >= block.Base && id < block.Base + block.Count, "window number inside the block");
-                Require((g.Reserved![i] & WindowCardEncoding.TypeMask) is >= 1 and <= 15, "window card type in the spare byte");
+                AssertThat(id >= block.Base && id < block.Base + block.Count).OverrideFailureMessage("Expected: " + ("window number inside the block")).IsTrue();
+                AssertThat((g.Reserved![i] & WindowCardEncoding.TypeMask) is >= 1 and <= 15).OverrideFailureMessage("Expected: " + ("window card type in the spare byte")).IsTrue();
             }
     }
 
@@ -53,22 +55,22 @@ public sealed class BuildingMeshTests
             Feature("t:c", Courtyard(0, 100), 3, 12f, "residence"),
             Feature("t:d", Rect(200, 0, 5, 6), 1, 3f, "service"));
         var set = BuildingSet.For(world, 7u);
-        Require(set.Plans.Count == 4, "four plans");
+        AssertThat(set.Plans.Count == 4).OverrideFailureMessage("Expected: " + ("four plans")).IsTrue();
         var module = new BuildingsModule();
         for (var i = 0; i < set.Plans.Count; i++)
             foreach (var lod in Levels)
             {
                 var bundles = module.BuildOne(set.Plans[i], set.Blocks[i], lod, Campus.Contracts.Tests.PaletteFixture.Catalog);
-                Require(bundles.Count > 0, $"{set.Plans[i].Key} {lod} has geometry");
+                AssertThat(bundles.Count > 0).OverrideFailureMessage("Expected: " + ($"{set.Plans[i].Key} {lod} has geometry")).IsTrue();
                 foreach (var b in bundles)
                 {
                     b.ValidateVertexData();
-                    Require(b.Position.Length / 3 <= 65536, "surface vertex limit");
-                    Require(b.Ao is not null && b.Flags is not null && b.Reserved is not null, "COLOR bytes always supplied");
+                    AssertThat(b.Position.Length / 3 <= 65536).OverrideFailureMessage("Expected: " + ("surface vertex limit")).IsTrue();
+                    AssertThat(b.Ao is not null && b.Flags is not null && b.Reserved is not null).OverrideFailureMessage("Expected: " + ("COLOR bytes always supplied")).IsTrue();
                     for (var v = 0; v < b.Normal.Length / 3; v++)
                     {
                         var n = new Vector3(b.Normal[3 * v], b.Normal[3 * v + 1], b.Normal[3 * v + 2]);
-                        Require(MathF.Abs(n.Length() - 1f) < 0.01f, "unit normals");
+                        AssertThat(MathF.Abs(n.Length() - 1f) < 0.01f).OverrideFailureMessage("Expected: " + ("unit normals")).IsTrue();
                     }
                     for (var t = 0; t < b.Index.Length; t += 3)
                     {
@@ -76,7 +78,7 @@ public sealed class BuildingMeshTests
                         var g = Vector3.Cross(P(b, b.Index[t + 1]) - a, P(b, b.Index[t + 2]) - a);
                         var n = N(b, b.Index[t]) + N(b, b.Index[t + 1]) + N(b, b.Index[t + 2]);
                         // Godot front faces are clockwise: the geometric normal opposes the shading normal.
-                        Require(Vector3.Dot(g, n) <= 1e-6f, "front-face winding");
+                        AssertThat(Vector3.Dot(g, n) <= 1e-6f).OverrideFailureMessage("Expected: " + ("front-face winding")).IsTrue();
                     }
                 }
             }
@@ -91,13 +93,13 @@ public sealed class BuildingMeshTests
         var s2 = BuildingSet.For(world2, 3u);
         var b1 = new BuildingsModule().BuildOne(s1.Plans[0], s1.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
         var b2 = new BuildingsModule().BuildOne(s2.Plans[0], s2.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
-        Require(b1.Count == b2.Count, "same bundle count");
+        AssertThat(b1.Count == b2.Count).OverrideFailureMessage("Expected: " + ("same bundle count")).IsTrue();
         for (var i = 0; i < b1.Count; i++)
         {
-            Require(b1[i].Position.SequenceEqual(b2[i].Position), "same positions");
-            Require(b1[i].Normal.SequenceEqual(b2[i].Normal), "same normals");
-            Require(b1[i].Index.SequenceEqual(b2[i].Index), "same indices");
-            Require(b1[i].Material == b2[i].Material, "same materials");
+            AssertThat(b1[i].Position.SequenceEqual(b2[i].Position)).OverrideFailureMessage("Expected: " + ("same positions")).IsTrue();
+            AssertThat(b1[i].Normal.SequenceEqual(b2[i].Normal)).OverrideFailureMessage("Expected: " + ("same normals")).IsTrue();
+            AssertThat(b1[i].Index.SequenceEqual(b2[i].Index)).OverrideFailureMessage("Expected: " + ("same indices")).IsTrue();
+            AssertThat(b1[i].Material == b2[i].Material).OverrideFailureMessage("Expected: " + ("same materials")).IsTrue();
         }
     }
 
@@ -129,13 +131,12 @@ public sealed class BuildingMeshTests
                 foreach (var g in module.BuildOne(plan, block, lod, Campus.Contracts.Tests.PaletteFixture.Catalog).Where(x => x.Material.Spec.Kind == ToonKind.Glass))
                     for (var i = 0; i < g.Position.Length / 3; i++)
                     {
-                        Require(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns,
-                            $"{plan.Key} {lod}: UV2 is (BaseId, slot + 32 × columns)");
+                        AssertThat(g.Uv2![2 * i] == block.Base && (int)MathF.Round(g.Uv2[2 * i + 1]) == plan.Profile.Channel + 32 * plan.TotalColumns).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: UV2 is (BaseId, slot + 32 × columns)")).IsTrue();
                         var id = block.Base + (int)MathF.Floor(g.Uv![2 * i + 1]) * plan.TotalColumns + (int)MathF.Floor(g.Uv[2 * i]);
-                        Require(expected.TryGetValue(id, out var card) && (g.Reserved![i] & WindowCardEncoding.TypeMask) == card, $"{plan.Key} {lod}: window {id} keeps its cell and card");
+                        AssertThat(expected.TryGetValue(id, out var card) && (g.Reserved![i] & WindowCardEncoding.TypeMask) == card).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: window {id} keeps its cell and card")).IsTrue();
                         seen.Add(id);
                     }
-                Require(seen.SetEquals(expected.Keys), $"{plan.Key} {lod}: every opening has glass");
+                AssertThat(seen.SetEquals(expected.Keys)).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: every opening has glass")).IsTrue();
             }
         }
     }

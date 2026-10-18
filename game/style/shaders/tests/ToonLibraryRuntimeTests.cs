@@ -8,6 +8,7 @@ using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
 using Campus.Style.Materials;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using Godot;
 
 namespace Campus.Tests;
@@ -28,12 +29,12 @@ public sealed class ToonLibraryRuntimeTests
         var method = keyType.GetMethod("Of", BindingFlags.Public | BindingFlags.Static)!;
         object Key(ToonSpec value) => method.Invoke(null, [value])!;
         var key = Key(spec);
-        Require(key.Equals(Key(spec with { Lit = new("other.lit"), Shade = new("other.shade") })), "Colour-only changes must still share a material class.");
+        AssertThat(key.Equals(Key(spec with { Lit = new("other.lit"), Shade = new("other.shade") }))).OverrideFailureMessage("Colour-only changes must still share a material class.").IsTrue();
         foreach (var pattern in new[] { spec.SurfacePattern.Value with { Layer = 10 },
             spec.SurfacePattern.Value with { PeriodMeters = new(3, 1) },
             spec.SurfacePattern.Value with { JointMeters = new(.01f, .03f) } })
-            Require(!key.Equals(Key(spec with { SurfacePattern = pattern })), "Material cache identity dropped a surface-profile field.");
-        Require(!key.Equals(Key(spec with { SurfacePattern = null })), "Pattern and legacy classes collapsed.");
+            AssertThat(!key.Equals(Key(spec with { SurfacePattern = pattern }))).OverrideFailureMessage("Material cache identity dropped a surface-profile field.").IsTrue();
+        AssertThat(!key.Equals(Key(spec with { SurfacePattern = null }))).OverrideFailureMessage("Pattern and legacy classes collapsed.").IsTrue();
     }
 
     [TestCase]
@@ -47,9 +48,8 @@ public sealed class ToonLibraryRuntimeTests
         var refused = false;
         try { fixture.Library.Get(fixture.Spec with { SurfacePattern = new(7, new(2, 1), new(.01f, .01f)) }); }
         catch (NotSupportedException) { refused = true; }
-        Require(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain) &&
-            ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count == count,
-            "Unregistered surface layers must fail before cache lookup/allocation, leaving plain materials intact.");
+        AssertThat(refused && ReferenceEquals(fixture.Library.Get(fixture.Spec), plain) &&
+            ReadPrivate<System.Collections.IDictionary>(fixture.Library, "_byClass").Count == count).OverrideFailureMessage("Unregistered surface layers must fail before cache lookup/allocation, leaving plain materials intact.").IsTrue();
     }
 
     [TestCase]
@@ -64,14 +64,12 @@ public sealed class ToonLibraryRuntimeTests
             SurfacePattern = new(SurfacePatternLayers.StackBond, new(.6f, .6f), new(.006f, .006f))
         };
         var patterned = (ShaderMaterial)fixture.Library.Get(spec);
-        Require(!ReferenceEquals(plain, patterned) && ReferenceEquals(patterned, fixture.Library.Get(spec)) &&
-            fixture.Library.MaterialId(spec) != fixture.Library.MaterialId(fixture.Spec),
-            "A registered profile is its own cached material class with its own material ID.");
-        Require(patterned.Shader.ResourcePath == "res://style/shaders/toon_static.gdshader", "Patterns are drawn by toon_static only.");
-        Require((int)patterned.GetShaderParameter("pattern_layer") == SurfacePatternLayers.StackBond &&
+        AssertThat(!ReferenceEquals(plain, patterned) && ReferenceEquals(patterned, fixture.Library.Get(spec)) &&
+            fixture.Library.MaterialId(spec) != fixture.Library.MaterialId(fixture.Spec)).OverrideFailureMessage("A registered profile is its own cached material class with its own material ID.").IsTrue();
+        AssertThat(patterned.Shader.ResourcePath == "res://style/shaders/toon_static.gdshader").OverrideFailureMessage("Patterns are drawn by toon_static only.").IsTrue();
+        AssertThat((int)patterned.GetShaderParameter("pattern_layer") == SurfacePatternLayers.StackBond &&
             ((Vector2)patterned.GetShaderParameter("pattern_period")).IsEqualApprox(new(.6f, .6f)) &&
-            ((Vector2)patterned.GetShaderParameter("pattern_joint")).IsEqualApprox(new(.006f, .006f)),
-            "Layer, period and joint reach the material uniforms.");
+            ((Vector2)patterned.GetShaderParameter("pattern_joint")).IsEqualApprox(new(.006f, .006f))).OverrideFailureMessage("Layer, period and joint reach the material uniforms.").IsTrue();
         var source = new GeometryBundle(new(spec),
             [0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1],
             [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2, 3, 4, 5],
@@ -91,24 +89,22 @@ public sealed class ToonLibraryRuntimeTests
             var draw = prepared.Draws.Single();
             var material = materials.Resolve(draw);
             prepared.MountOne(0, scenario, material.GetRid());
-            Require(ReferenceEquals(material, patterned) && !draw.Instanced &&
-                RenderingServer.MeshSurfaceGetMaterial(draw.Mesh, 0) == patterned.GetRid(),
-                "The formal packed-tile upload must bind the complete profile through ToonLibrary.");
+            AssertThat(ReferenceEquals(material, patterned) && !draw.Instanced &&
+                RenderingServer.MeshSurfaceGetMaterial(draw.Mesh, 0) == patterned.GetRid()).OverrideFailureMessage("The formal packed-tile upload must bind the complete profile through ToonLibrary.").IsTrue();
             using var arrays = RenderingServer.MeshSurfaceGetArrays(draw.Mesh, 0);
             var uv = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
             var gate = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();
             var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
             for (var vertex = 0; vertex < 6; vertex++)
-                Require(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
+                AssertThat(uv[vertex] == new Vector2(source.Uv![vertex * 2], source.Uv[vertex * 2 + 1]) &&
                     gate[vertex] == new Vector2(source.Uv2![vertex * 2], source.Uv2[vertex * 2 + 1]) &&
-                    colors[vertex].R8 == 64,
-                    "Native static upload changed metre coordinates, per-face gate/K or logical palette colour.");
+                    colors[vertex].R8 == 64).OverrideFailureMessage("Native static upload changed metre coordinates, per-face gate/K or logical palette colour.").IsTrue();
         }
         finally { RenderingServer.FreeRid(scenario); }
         var refused = false;
         try { fixture.Library.Get(spec with { Kind = ToonKind.Glass }); }
         catch (ArgumentException) { refused = true; }
-        Require(refused, "Only the ordinary Static kind can carry a surface pattern.");
+        AssertThat(refused).OverrideFailureMessage("Only the ordinary Static kind can carry a surface pattern.").IsTrue();
     }
 
     [TestCase(Timeout = 20000)]
@@ -152,7 +148,7 @@ public sealed class ToonLibraryRuntimeTests
                     var directory = Path.Combine(root, "output", "render-review");
                     Directory.CreateDirectory(directory);
                     using var image = parent.GetViewport().GetTexture().GetImage();
-                    Require(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok, "Save real glass smoke evidence.");
+                    AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
                 }
             }
             GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
@@ -173,22 +169,24 @@ public sealed class ToonLibraryRuntimeTests
         var library = fixture.Library;
         var previousMap = fixture.Borrow("canvas_item");
         library.Track(ShaderId.UiPanel, previousMap);
-        Require(library.CompleteWarm(library.CapturePendingWarm()), "The first map's canvas draw must be accepted.");
-        Require(library.IsReady(ShaderId.UiPanel, previousMap), "The live canvas must be ready after its draw.");
+        AssertThat(library.CompleteWarm(library.CapturePendingWarm())).OverrideFailureMessage("The first map's canvas draw must be accepted.").IsTrue();
+        AssertThat(library.IsReady(ShaderId.UiPanel, previousMap)).OverrideFailureMessage("The live canvas must be ready after its draw.").IsTrue();
 
         previousMap.Dispose();
         var empty = library.CapturePendingWarm();
-        Require(empty.Materials.Count == 0, "An unloaded map's disposed material must not re-enter a batch.");
-        Require(!library.IsReady(ShaderId.UiPanel, previousMap), "A disposed material must lose readiness.");
-        RequireNoTrackedMaterials(library);
+        AssertThat(empty.Materials.Count == 0).OverrideFailureMessage("An unloaded map's disposed material must not re-enter a batch.").IsTrue();
+        AssertThat(!library.IsReady(ShaderId.UiPanel, previousMap)).OverrideFailureMessage("A disposed material must lose readiness.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.IDictionary>(library, "_states").Count == 0).OverrideFailureMessage("Eviction must release the dictionary's strong references.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.ICollection>(library, "_order").Count == 0).OverrideFailureMessage("Eviction must release the ordered list's strong references.").IsTrue();
 
         var nextMap = fixture.Borrow("canvas_item");
         library.Track(ShaderId.UiPanel, nextMap);
-        Require(!library.IsReady(ShaderId.UiPanel, nextMap), "The next map must not inherit the previous instance's evidence.");
+        AssertThat(!library.IsReady(ShaderId.UiPanel, nextMap)).OverrideFailureMessage("The next map must not inherit the previous instance's evidence.").IsTrue();
         var pending = library.CapturePendingWarm();
-        RequireOnly(pending, nextMap);
-        Require(library.CompleteWarm(pending), "The replacement canvas must accept its own evidence.");
-        Require(library.IsReady(ShaderId.UiPanel, nextMap), "The replacement must be ready only after completion.");
+        AssertThat(pending.Materials.Count == 1 && ReferenceEquals(pending.Materials[0].Material, nextMap)).OverrideFailureMessage("The batch must contain exactly the live expected instance.").IsTrue();
+        AssertThat(pending.Materials.All(item => GodotObject.IsInstanceValid(item.Material))).OverrideFailureMessage("A batch must never contain disposed native objects.").IsTrue();
+        AssertThat(library.CompleteWarm(pending)).OverrideFailureMessage("The replacement canvas must accept its own evidence.").IsTrue();
+        AssertThat(library.IsReady(ShaderId.UiPanel, nextMap)).OverrideFailureMessage("The replacement must be ready only after completion.").IsTrue();
     }
 
     [TestCase]
@@ -199,11 +197,11 @@ public sealed class ToonLibraryRuntimeTests
         await using var fixture = new Fixture();
         var library = fixture.Library;
         var extension = new ToonSpec(new PaletteToken("ext.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.BevelLift };
-        Require(library.Get(extension) is ShaderMaterial, "A bank-1 Lit/Shade pair must pass the full-catalog ToonSpec check.");
+        AssertThat(library.Get(extension) is ShaderMaterial).OverrideFailureMessage("A bank-1 Lit/Shade pair must pass the full-catalog ToonSpec check.").IsTrue();
         var mismatched = false;
         try { library.Get(new ToonSpec(new PaletteToken("test.lit"), new PaletteToken("ext.shade")) { Fx = ToonFx.Rim }); }
         catch (ArgumentException) { mismatched = true; }
-        Require(mismatched, "A Lit/Shade pair across banks must be rejected.");
+        AssertThat(mismatched).OverrideFailureMessage("A Lit/Shade pair across banks must be rejected.").IsTrue();
     }
 
     [TestCase]
@@ -219,16 +217,17 @@ public sealed class ToonLibraryRuntimeTests
         library.TrackLayout(unloaded, Layout);
         library.Track(ShaderId.Water, survivor);
         library.TrackLayout(survivor, Layout);
-        Require(library.CompleteWarm(library.CapturePendingWarm()), "Both live layouts must warm initially.");
+        AssertThat(library.CompleteWarm(library.CapturePendingWarm())).OverrideFailureMessage("Both live layouts must warm initially.").IsTrue();
 
         unloaded.Dispose();
         fixture.Quality.ResetPipelines();
-        Require(!library.IsReady(ShaderId.Water, unloaded), "Quality reset must not revive a disposed instance.");
-        Require(!library.IsReady(ShaderId.Water, survivor), "Pipeline quality changes invalidate live evidence.");
+        AssertThat(!library.IsReady(ShaderId.Water, unloaded)).OverrideFailureMessage("Quality reset must not revive a disposed instance.").IsTrue();
+        AssertThat(!library.IsReady(ShaderId.Water, survivor)).OverrideFailureMessage("Pipeline quality changes invalidate live evidence.").IsTrue();
         var pending = library.CapturePendingWarm();
-        RequireOnly(pending, survivor);
-        Require(library.CompleteWarm(pending), "The survivor's new quality evidence must be accepted.");
-        Require(library.IsReady(ShaderId.Water, survivor), "Only the survivor becomes ready again.");
+        AssertThat(pending.Materials.Count == 1 && ReferenceEquals(pending.Materials[0].Material, survivor)).OverrideFailureMessage("The batch must contain exactly the live expected instance.").IsTrue();
+        AssertThat(pending.Materials.All(item => GodotObject.IsInstanceValid(item.Material))).OverrideFailureMessage("A batch must never contain disposed native objects.").IsTrue();
+        AssertThat(library.CompleteWarm(pending)).OverrideFailureMessage("The survivor's new quality evidence must be accepted.").IsTrue();
+        AssertThat(library.IsReady(ShaderId.Water, survivor)).OverrideFailureMessage("Only the survivor becomes ready again.").IsTrue();
     }
 
     [TestCase]
@@ -243,16 +242,17 @@ public sealed class ToonLibraryRuntimeTests
         library.Track(ShaderId.UiPanel, unloaded);
         library.Track(ShaderId.UiPanel, survivor);
         var inflight = library.CapturePendingWarm();
-        Require(inflight.Materials.Count == 2, "This batch must include both instances before disposal.");
+        AssertThat(inflight.Materials.Count == 2).OverrideFailureMessage("This batch must include both instances before disposal.").IsTrue();
 
         unloaded.Dispose();
-        Require(!library.CompleteWarm(inflight), "A batch containing a disposed material must be rejected as a whole.");
-        Require(!library.IsReady(ShaderId.UiPanel, survivor), "A rejected batch must not partially warm the survivor.");
+        AssertThat(!library.CompleteWarm(inflight)).OverrideFailureMessage("A batch containing a disposed material must be rejected as a whole.").IsTrue();
+        AssertThat(!library.IsReady(ShaderId.UiPanel, survivor)).OverrideFailureMessage("A rejected batch must not partially warm the survivor.").IsTrue();
         var replacement = library.CapturePendingWarm();
-        Require(replacement.Revision > inflight.Revision, "Eviction must advance the revision.");
-        RequireOnly(replacement, survivor);
-        Require(!library.CompleteWarm(inflight), "Old evidence stays invalid after recapture.");
-        Require(library.CompleteWarm(replacement), "Fresh survivor-only evidence must complete.");
+        AssertThat(replacement.Revision > inflight.Revision).OverrideFailureMessage("Eviction must advance the revision.").IsTrue();
+        AssertThat(replacement.Materials.Count == 1 && ReferenceEquals(replacement.Materials[0].Material, survivor)).OverrideFailureMessage("The batch must contain exactly the live expected instance.").IsTrue();
+        AssertThat(replacement.Materials.All(item => GodotObject.IsInstanceValid(item.Material))).OverrideFailureMessage("A batch must never contain disposed native objects.").IsTrue();
+        AssertThat(!library.CompleteWarm(inflight)).OverrideFailureMessage("Old evidence stays invalid after recapture.").IsTrue();
+        AssertThat(library.CompleteWarm(replacement)).OverrideFailureMessage("Fresh survivor-only evidence must complete.").IsTrue();
     }
 
     [TestCase]
@@ -264,21 +264,23 @@ public sealed class ToonLibraryRuntimeTests
         var library = fixture.Library;
         var borrowed = fixture.Borrow("canvas_item");
         library.Track(ShaderId.UiPanel, borrowed);
-        Require(library.CompleteWarm(library.CapturePendingWarm()), "The borrowed instance must warm.");
+        AssertThat(library.CompleteWarm(library.CapturePendingWarm())).OverrideFailureMessage("The borrowed instance must warm.").IsTrue();
         borrowed.Dispose();
-        Require(!library.IsReady(ShaderId.UiPanel, borrowed), "The shader overload must prune before reading evidence.");
-        RequireNoTrackedMaterials(library);
+        AssertThat(!library.IsReady(ShaderId.UiPanel, borrowed)).OverrideFailureMessage("The shader overload must prune before reading evidence.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.IDictionary>(library, "_states").Count == 0).OverrideFailureMessage("Eviction must release the dictionary's strong references.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.ICollection>(library, "_order").Count == 0).OverrideFailureMessage("Eviction must release the ordered list's strong references.").IsTrue();
 
         var owned = library.Get(fixture.Spec);
         library.TrackLayout(owned, Layout);
-        Require(library.CompleteWarm(library.CapturePendingWarm()), "The owned instance's layout must warm.");
-        Require(library.IsReady(fixture.Spec), "The spec overload must report the live instance ready.");
+        AssertThat(library.CompleteWarm(library.CapturePendingWarm())).OverrideFailureMessage("The owned instance's layout must warm.").IsTrue();
+        AssertThat(library.IsReady(fixture.Spec)).OverrideFailureMessage("The spec overload must report the live instance ready.").IsTrue();
         owned.Dispose();
-        Require(!library.IsReady(fixture.Spec), "The spec overload must tolerate and evict an already released instance.");
-        RequireNoTrackedMaterials(library);
+        AssertThat(!library.IsReady(fixture.Spec)).OverrideFailureMessage("The spec overload must tolerate and evict an already released instance.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.IDictionary>(library, "_states").Count == 0).OverrideFailureMessage("Eviction must release the dictionary's strong references.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.ICollection>(library, "_order").Count == 0).OverrideFailureMessage("Eviction must release the ordered list's strong references.").IsTrue();
         var replacement = library.Get(fixture.Spec);
-        Require(GodotObject.IsInstanceValid(replacement) && !ReferenceEquals(owned, replacement), "Get must not return the disposed cache entry.");
-        Require(!library.IsReady(fixture.Spec), "A recreated material has no previous layout evidence.");
+        AssertThat(GodotObject.IsInstanceValid(replacement) && !ReferenceEquals(owned, replacement)).OverrideFailureMessage("Get must not return the disposed cache entry.").IsTrue();
+        AssertThat(!library.IsReady(fixture.Spec)).OverrideFailureMessage("A recreated material has no previous layout evidence.").IsTrue();
     }
 
     [TestCase]
@@ -291,22 +293,23 @@ public sealed class ToonLibraryRuntimeTests
         var spatial = fixture.Borrow("spatial");
         var canvas = fixture.Borrow("canvas_item");
         library.Track(ShaderId.Water, spatial);
-        Require(library.CapturePendingWarm().Materials.Count == 0, "Spatial without an actual requested layout must stay out of batches.");
-        Require(!library.IsReady(ShaderId.Water, spatial), "Spatial without a layout must not be ready.");
+        AssertThat(library.CapturePendingWarm().Materials.Count == 0).OverrideFailureMessage("Spatial without an actual requested layout must stay out of batches.").IsTrue();
+        AssertThat(!library.IsReady(ShaderId.Water, spatial)).OverrideFailureMessage("Spatial without a layout must not be ready.").IsTrue();
         library.TrackLayout(spatial, Layout);
         library.Track(ShaderId.UiPanel, canvas);
         var pending = library.CapturePendingWarm();
-        Require(pending.Materials.Count == 2, "A spatial layout and a canvas draw must both be requested.");
-        Require(pending.Materials.Single(item => ReferenceEquals(item.Material, spatial)).Layouts.Count == 1, "Spatial evidence must name its layout.");
-        Require(pending.Materials.Single(item => ReferenceEquals(item.Material, canvas)).Layouts.Count == 0, "Canvas evidence must not invent vertex layouts.");
-        Require(!library.CompleteWarm(new ToonWarmBatch(pending.Revision, pending.Materials)), "A copied batch is not provider-issued evidence.");
-        Require(library.CompleteWarm(pending), "The actual issued batch must complete.");
-        Require(library.IsReady(ShaderId.Water, spatial) && library.IsReady(ShaderId.UiPanel, canvas), "Both supported modes must be ready after their respective evidence.");
+        AssertThat(pending.Materials.Count == 2).OverrideFailureMessage("A spatial layout and a canvas draw must both be requested.").IsTrue();
+        AssertThat(pending.Materials.Single(item => ReferenceEquals(item.Material, spatial)).Layouts.Count == 1).OverrideFailureMessage("Spatial evidence must name its layout.").IsTrue();
+        AssertThat(pending.Materials.Single(item => ReferenceEquals(item.Material, canvas)).Layouts.Count == 0).OverrideFailureMessage("Canvas evidence must not invent vertex layouts.").IsTrue();
+        AssertThat(!library.CompleteWarm(new ToonWarmBatch(pending.Revision, pending.Materials))).OverrideFailureMessage("A copied batch is not provider-issued evidence.").IsTrue();
+        AssertThat(library.CompleteWarm(pending)).OverrideFailureMessage("The actual issued batch must complete.").IsTrue();
+        AssertThat(library.IsReady(ShaderId.Water, spatial) && library.IsReady(ShaderId.UiPanel, canvas)).OverrideFailureMessage("Both supported modes must be ready after their respective evidence.").IsTrue();
 
         library.TrackLayout(spatial, new WarmDrawLayout(1, true));
-        Require(!library.IsReady(ShaderId.Water, spatial), "A new instanced layout must require new evidence.");
-        Require(library.IsReady(ShaderId.UiPanel, canvas), "Adding a spatial layout must not clear the canvas's completed evidence.");
-        RequireOnly(library.CapturePendingWarm(), spatial);
+        AssertThat(!library.IsReady(ShaderId.Water, spatial)).OverrideFailureMessage("A new instanced layout must require new evidence.").IsTrue();
+        AssertThat(library.IsReady(ShaderId.UiPanel, canvas)).OverrideFailureMessage("Adding a spatial layout must not clear the canvas's completed evidence.").IsTrue();
+        AssertThat(library.CapturePendingWarm().Materials.Count == 1 && ReferenceEquals(library.CapturePendingWarm().Materials[0].Material, spatial)).OverrideFailureMessage("The batch must contain exactly the live expected instance.").IsTrue();
+        AssertThat(library.CapturePendingWarm().Materials.All(item => GodotObject.IsInstanceValid(item.Material))).OverrideFailureMessage("A batch must never contain disposed native objects.").IsTrue();
     }
 
     [TestCase]
@@ -321,17 +324,17 @@ public sealed class ToonLibraryRuntimeTests
             fixture.Library.Track(ShaderId.Sky, material);
             fixture.Library.TrackLayout(material, Layout);
             var pending = fixture.Library.CapturePendingWarm();
-            Require(pending.Materials.Count == 0, $"No real prewarm path exists for {mode}.");
-            Require(fixture.Library.CompleteWarm(pending), "An empty issued batch may complete without granting draw evidence.");
-            Require(!fixture.Library.IsReady(ShaderId.Sky, material), $"{mode} must never inherit CanvasItem readiness.");
+            AssertThat(pending.Materials.Count == 0).OverrideFailureMessage($"No real prewarm path exists for {mode}.").IsTrue();
+            AssertThat(fixture.Library.CompleteWarm(pending)).OverrideFailureMessage("An empty issued batch may complete without granting draw evidence.").IsTrue();
+            AssertThat(!fixture.Library.IsReady(ShaderId.Sky, material)).OverrideFailureMessage($"{mode} must never inherit CanvasItem readiness.").IsTrue();
         }
         using var builtInParticles = new ParticleProcessMaterial();
         fixture.Library.Track(ShaderId.Precip, builtInParticles);
         fixture.Library.TrackLayout(builtInParticles, Layout);
         var builtInBatch = fixture.Library.CapturePendingWarm();
-        Require(builtInBatch.Materials.Count == 0, "A non-ShaderMaterial must not be assumed to be Spatial.");
-        Require(fixture.Library.CompleteWarm(builtInBatch), "An empty batch must not invent native particle draw evidence.");
-        Require(!fixture.Library.IsReady(ShaderId.Precip, builtInParticles), "Built-in particle materials have no supported prewarm path.");
+        AssertThat(builtInBatch.Materials.Count == 0).OverrideFailureMessage("A non-ShaderMaterial must not be assumed to be Spatial.").IsTrue();
+        AssertThat(fixture.Library.CompleteWarm(builtInBatch)).OverrideFailureMessage("An empty batch must not invent native particle draw evidence.").IsTrue();
+        AssertThat(!fixture.Library.IsReady(ShaderId.Precip, builtInParticles)).OverrideFailureMessage("Built-in particle materials have no supported prewarm path.").IsTrue();
     }
 
     [TestCase(Timeout = 10000)]
@@ -348,32 +351,33 @@ public sealed class ToonLibraryRuntimeTests
         var inflight = library.CapturePendingWarm();
         var image = ReadPrivate<Image>(library, "_matImage");
         var texture = ReadPrivate<ImageTexture>(library, "_matTexture");
-        Require(fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out var lease), "The registered mat_table must be leaseable.");
+        AssertThat(fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out var lease)).OverrideFailureMessage("The registered mat_table must be leaseable.").IsTrue();
         using var retained = lease ?? throw new InvalidOperationException("A successful acquire must return a lease.");
-        Require(fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out var cardLease), "The static window_cards table must be registered once by the library.");
+        AssertThat(fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out var cardLease)).OverrideFailureMessage("The static window_cards table must be registered once by the library.").IsTrue();
         using var retainedCards = cardLease ?? throw new InvalidOperationException("A successful acquire must return a card lease.");
         var cardRid = retainedCards.TextureRid;
 
         library.Dispose();
         library.Dispose();
-        Require(!GodotObject.IsInstanceValid(owned), "Library-created Toon material must be released deterministically.");
-        Require(!GodotObject.IsInstanceValid(image), "The producer-owned Image must be released deterministically.");
-        Require(GodotObject.IsInstanceValid(borrowed) && GodotObject.IsInstanceValid(shader), "Borrowed material and its shader must stay owned by the caller.");
-        Require(GodotObject.IsInstanceValid(texture), "A live reader lease must protect the registry-owned texture from library disposal.");
-        Require(!fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out _), "Dispose must unregister mat_table before returning.");
-        Require(!fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out _), "Dispose must unregister window_cards before returning.");
-        Require(retainedCards.TextureRid == cardRid, "An existing window-card lease remains valid through producer disposal.");
-        Require(fixture.Quality.SubscriberCount == 0, "Dispose must unsubscribe from quality changes.");
+        AssertThat(!GodotObject.IsInstanceValid(owned)).OverrideFailureMessage("Library-created Toon material must be released deterministically.").IsTrue();
+        AssertThat(!GodotObject.IsInstanceValid(image)).OverrideFailureMessage("The producer-owned Image must be released deterministically.").IsTrue();
+        AssertThat(GodotObject.IsInstanceValid(borrowed) && GodotObject.IsInstanceValid(shader)).OverrideFailureMessage("Borrowed material and its shader must stay owned by the caller.").IsTrue();
+        AssertThat(GodotObject.IsInstanceValid(texture)).OverrideFailureMessage("A live reader lease must protect the registry-owned texture from library disposal.").IsTrue();
+        AssertThat(!fixture.Textures.TryAcquire(ShaderGlobals.MatTable, out _)).OverrideFailureMessage("Dispose must unregister mat_table before returning.").IsTrue();
+        AssertThat(!fixture.Textures.TryAcquire(ShaderGlobals.WindowCards, out _)).OverrideFailureMessage("Dispose must unregister window_cards before returning.").IsTrue();
+        AssertThat(retainedCards.TextureRid == cardRid).OverrideFailureMessage("An existing window-card lease remains valid through producer disposal.").IsTrue();
+        AssertThat(fixture.Quality.SubscriberCount == 0).OverrideFailureMessage("Dispose must unsubscribe from quality changes.").IsTrue();
         fixture.Quality.ResetPipelines();
-        Require(!library.CompleteWarm(inflight), "Dispose invalidates all inflight evidence.");
-        Require(!library.IsReady(fixture.Spec) && !library.IsReady(ShaderId.UiPanel, borrowed), "Disposed libraries must never report ready.");
-        Require(library.CapturePendingWarm().Materials.Count == 0, "Disposed libraries must not retain warm candidates.");
-        RequireNoTrackedMaterials(library);
+        AssertThat(!library.CompleteWarm(inflight)).OverrideFailureMessage("Dispose invalidates all inflight evidence.").IsTrue();
+        AssertThat(!library.IsReady(fixture.Spec) && !library.IsReady(ShaderId.UiPanel, borrowed)).OverrideFailureMessage("Disposed libraries must never report ready.").IsTrue();
+        AssertThat(library.CapturePendingWarm().Materials.Count == 0).OverrideFailureMessage("Disposed libraries must not retain warm candidates.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.IDictionary>(library, "_states").Count == 0).OverrideFailureMessage("Eviction must release the dictionary's strong references.").IsTrue();
+        AssertThat(ReadPrivate<System.Collections.ICollection>(library, "_order").Count == 0).OverrideFailureMessage("Eviction must release the ordered list's strong references.").IsTrue();
 
         retained.Dispose();
         retainedCards.Dispose();
         await fixture.Textures.ShutdownAsync();
-        Require(!GodotObject.IsInstanceValid(texture), "The registry must release the texture after the final lease ends.");
+        AssertThat(!GodotObject.IsInstanceValid(texture)).OverrideFailureMessage("The registry must release the texture after the final lease ends.").IsTrue();
     }
 
     [TestCase(Timeout = 10000)]
@@ -386,11 +390,11 @@ public sealed class ToonLibraryRuntimeTests
         var rejected = false;
         try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), rejecting); }
         catch (InvalidOperationException error) when (error.Message == "reject window_cards") { rejected = true; }
-        Require(rejected, "Exercise failure after mat_table registration and card texture creation.");
-        Require(!registry.TryAcquire(ShaderGlobals.MatTable, out _), "A partially constructed library must unregister mat_table.");
-        Require(rejecting.Cards is not null && !GodotObject.IsInstanceValid(rejecting.Cards), "Rejected texture ownership stays local and must be disposed.");
+        AssertThat(rejected).OverrideFailureMessage("Exercise failure after mat_table registration and card texture creation.").IsTrue();
+        AssertThat(!registry.TryAcquire(ShaderGlobals.MatTable, out _)).OverrideFailureMessage("A partially constructed library must unregister mat_table.").IsTrue();
+        AssertThat(rejecting.Cards is not null && !GodotObject.IsInstanceValid(rejecting.Cards)).OverrideFailureMessage("Rejected texture ownership stays local and must be disposed.").IsTrue();
         await registry.ShutdownAsync();
-        Require(rejecting.Mat is not null && !GodotObject.IsInstanceValid(rejecting.Mat), "Previously transferred texture must be released by the registry.");
+        AssertThat(rejecting.Mat is not null && !GodotObject.IsInstanceValid(rejecting.Mat)).OverrideFailureMessage("Previously transferred texture must be released by the registry.").IsTrue();
     }
 
     private sealed class RejectCards(GlobalDataTextureRegistry inner) : IGlobalDataTextureRegistry
@@ -412,26 +416,9 @@ public sealed class ToonLibraryRuntimeTests
         public void Dispose() => inner.Dispose();
     }
 
-    private static void RequireOnly(ToonWarmBatch batch, Material material)
-    {
-        Require(batch.Materials.Count == 1 && ReferenceEquals(batch.Materials[0].Material, material), "The batch must contain exactly the live expected instance.");
-        Require(batch.Materials.All(item => GodotObject.IsInstanceValid(item.Material)), "A batch must never contain disposed native objects.");
-    }
-
-    private static void RequireNoTrackedMaterials(ToonLibrary library)
-    {
-        Require(ReadPrivate<System.Collections.IDictionary>(library, "_states").Count == 0, "Eviction must release the dictionary's strong references.");
-        Require(ReadPrivate<System.Collections.ICollection>(library, "_order").Count == 0, "Eviction must release the ordered list's strong references.");
-    }
-
     private static T ReadPrivate<T>(ToonLibrary library, string name) =>
         (T)(typeof(ToonLibrary).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(library)
             ?? throw new InvalidOperationException($"Missing lifecycle test field: {name}"));
-
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 
     private sealed class Fixture : IAsyncDisposable
     {
@@ -444,7 +431,7 @@ public sealed class ToonLibraryRuntimeTests
 
         public Fixture()
         {
-            Require(OS.GetThreadCallerId() == OS.GetMainThreadId(), "Native material lifetime tests must run on Godot's main thread.");
+            AssertThat(OS.GetThreadCallerId() == OS.GetMainThreadId()).OverrideFailureMessage("Native material lifetime tests must run on Godot's main thread.").IsTrue();
             Library = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), Textures, Quality);
         }
 

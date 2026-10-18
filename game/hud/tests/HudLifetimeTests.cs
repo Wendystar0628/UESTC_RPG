@@ -13,6 +13,7 @@ using Campus.Kernel.World;
 using Campus.Style.Materials;
 using Campus.Systems.Weather;
 using GdUnit4;
+using static GdUnit4.Assertions;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
@@ -38,14 +39,13 @@ public sealed class HudLifetimeTests
             for (var cycle = 0; cycle < 3; cycle++)
             {
                 parent.AddChild(clock);
-                Check(!clock.Dark && Subscribers(settings, "Changed") == baseline + 1, "Clock did not bind exactly once on entry.");
+                AssertThat(!clock.Dark && Subscribers(settings, "Changed") == baseline + 1).OverrideFailureMessage("Clock did not bind exactly once on entry.").IsTrue();
                 settings.SetTheme(UiThemeMode.Dark);
-                Check(clock.Dark, "Attached clock stopped responding to theme settings.");
+                AssertThat(clock.Dark).OverrideFailureMessage("Attached clock stopped responding to theme settings.").IsTrue();
                 parent.RemoveChild(clock);
                 var front = clock.Front;
                 settings.SetTheme(UiThemeMode.Light);
-                Check(clock.Dark && clock.Front == front && Subscribers(settings, "Changed") == baseline,
-                    "Detached clock still observed settings or retained a service subscription.");
+                AssertThat(clock.Dark && clock.Front == front && Subscribers(settings, "Changed") == baseline).OverrideFailureMessage("Detached clock still observed settings or retained a service subscription.").IsTrue();
             }
         }
         finally { clock.Free(); }
@@ -91,22 +91,20 @@ public sealed class HudLifetimeTests
             var root = hud.GetNode<Control>("Root");
             var corners = root.GetNode<Control>("Corners");
             var residentCount = corners.GetChildCount();
-            Check(residentCount > 0, "Playing HUD did not build its resident controls.");
+            AssertThat(residentCount > 0).OverrideFailureMessage("Playing HUD did not build its resident controls.").IsTrue();
             for (var cycle = 0; cycle < 3; cycle++)
             {
-                Check(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1, "HUD registered duplicate input layers or flow observers.");
-                Check(Subscribers(model, "Changed") == modelBaseline + 5, $"Root and four resident controls did not bind exactly once (got {Subscribers(model, "Changed") - modelBaseline}).");
+                AssertThat(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1).OverrideFailureMessage("HUD registered duplicate input layers or flow observers.").IsTrue();
+                AssertThat(Subscribers(model, "Changed") == modelBaseline + 5).OverrideFailureMessage($"Root and four resident controls did not bind exactly once (got {Subscribers(model, "Changed") - modelBaseline}).").IsTrue();
                 parent.RemoveChild(hud);
-                Check(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0, "Tree exit retained input layers or service observers.");
-                Check(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(model, "Changed") == modelBaseline,
-                    "Tree exit retained settings/model observers.");
-                Check(corners.GetChildCount() == 0, "Queued residents remained parented and could reenter before deletion.");
+                AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
+                AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(model, "Changed") == modelBaseline).OverrideFailureMessage("Tree exit retained settings/model observers.").IsTrue();
+                AssertThat(corners.GetChildCount() == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
                 router.SetInterfaceMode(!router.InterfaceMode);
                 flow.SetState(AppState.Boot);
                 flow.SetState(AppState.Playing);
                 parent.AddChild(hud);
-                Check(ReferenceEquals(root, hud.GetNode<Control>("Root")) && corners.GetChildCount() == residentCount,
-                    "Reentry duplicated the root or failed to rebuild residents.");
+                AssertThat(ReferenceEquals(root, hud.GetNode<Control>("Root")) && corners.GetChildCount() == residentCount).OverrideFailureMessage("Reentry duplicated the root or failed to rebuild residents.").IsTrue();
             }
         }
         finally
@@ -114,7 +112,7 @@ public sealed class HudLifetimeTests
             try
             {
                 hud?.Free();
-                Check(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0, "Free retained HUD registrations.");
+                AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Free retained HUD registrations.").IsTrue();
             }
             finally
             {
@@ -128,11 +126,6 @@ public sealed class HudLifetimeTests
 
     private static int Subscribers(object source, string name) =>
         ((Delegate?)source.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(source))?.GetInvocationList().Length ?? 0;
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
 
     private sealed class Probe : IPaletteProbe
     {

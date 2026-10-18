@@ -4,6 +4,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Kernel.Bake.Tests;
 
@@ -114,13 +115,7 @@ public sealed class BakeInstanceTests
         var frozen = GeometryBuffer.Freeze(source);
         var stream = new GeometryInstanceStream("unsupported", new("unsupported", [frozen], PrototypeBounds()),
             Records((Matrix4x4.Identity, Vector4.Zero)), PrototypeBounds());
-        ExpectUnsupported(() => new BakeInstanceAdapter(Palette()).Pack([stream]));
-    }
-    private static void ExpectUnsupported(Action action)
-    {
-        try { action(); }
-        catch (NotSupportedException) { return; }
-        throw new InvalidOperationException("An unsupported instance state was silently accepted.");
+        AssertThrown(() => new BakeInstanceAdapter(Palette()).Pack([stream])).IsInstanceOf<NotSupportedException>();
     }
     private static void CheckStream(BakedMultiMesh multi, GeometryInstanceStream stream, Matrix4x4 firstTransform)
     {

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Campus.Gen.Vegetation;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Systems.Vegetation.Tests;
 
@@ -31,10 +32,11 @@ public sealed class VegetationFadeTests
     private static void ExpectVec2(string text, string name, float a, float b, string file)
     {
         var m = Regex.Match(text, $@"const vec2 {name} = vec2\(([-0-9.]+), ([-0-9.]+)\);");
-        if (!m.Success) throw new InvalidOperationException($"{file}: {name} not found");
+        AssertThat(m.Success).OverrideFailureMessage($"{file}: {name} not found").IsTrue();
+        if (!m.Success) return;
         var x = float.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var y = float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-        if (x != a || y != b) throw new InvalidOperationException($"{file}: {name} = ({x}, {y}), expected ({a}, {b})");
+        AssertThat(x == a && y == b).OverrideFailureMessage($"{file}: {name} = ({x}, {y}), expected ({a}, {b})").IsTrue();
     }
 
     private static string FindRepository()

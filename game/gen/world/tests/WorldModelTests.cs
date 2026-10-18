@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Gen.World.Tests;
 
@@ -33,11 +34,11 @@ public sealed class WorldModelTests
         var world = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = root.ToJsonString() }).World;
         var feature = world.Features[new("fixture:relation:1")];
         var part = feature.Parts[0];
-        Require(((PolygonGeometry)part.Geometry).Rings.Outer.Count == 5, "Physical source detail was simplified.");
+        AssertThat(((PolygonGeometry)part.Geometry).Rings.Outer.Count == 5).OverrideFailureMessage("Physical source detail was simplified.").IsTrue();
         var facade = ((PolygonGeometry)WorldFeatureGeometry.FacadeGeometryOf(part)).Rings;
-        Require(facade.Outer.SequenceEqual(new Vector2[] { new(-10, -10), new(-2, -10), new(-2, -2), new(-10, -2) }), "Facade coordinate order or conversion changed.");
-        Require(ReferenceEquals(WorldFeatureGeometry.FacadeGeometryOf(feature.Parts[1]), feature.Parts[1].Geometry), "Missing facade did not fall back to current physical geometry.");
-        Require(WorldFeatureGeometry.FacadePolygonsOf(feature).SelectMany(p => p.Outer).SequenceEqual(facade.Outer.Concat(((PolygonGeometry)feature.Parts[1].Geometry).Rings.Outer)), "Current part order changed.");
+        AssertThat(facade.Outer.SequenceEqual(new Vector2[] { new(-10, -10), new(-2, -10), new(-2, -2), new(-10, -2) })).OverrideFailureMessage("Facade coordinate order or conversion changed.").IsTrue();
+        AssertThat(ReferenceEquals(WorldFeatureGeometry.FacadeGeometryOf(feature.Parts[1]), feature.Parts[1].Geometry)).OverrideFailureMessage("Missing facade did not fall back to current physical geometry.").IsTrue();
+        AssertThat(WorldFeatureGeometry.FacadePolygonsOf(feature).SelectMany(p => p.Outer).SequenceEqual(facade.Outer.Concat(((PolygonGeometry)feature.Parts[1].Geometry).Rings.Outer))).OverrideFailureMessage("Current part order changed.").IsTrue();
     }
 
     [TestCase]
@@ -53,7 +54,7 @@ public sealed class WorldModelTests
                 throw new InvalidOperationException("Malformed facade footprint accepted: " + value);
             }
             catch (WorldDataException error)
-            { Require(error.File == "campus.json" && error.Entry == "osm:way:10.facadePolygons", "Lost source facade error context."); }
+            { AssertThat(error.File == "campus.json" && error.Entry == "osm:way:10.facadePolygons").OverrideFailureMessage("Lost source facade error context.").IsTrue(); }
         }
     }
 
@@ -68,15 +69,15 @@ public sealed class WorldModelTests
             ["overlay/test.d/0000-fixture.json"] = "{\"zone\":\"test\",\"owner\":\"WP-08\",\"ops\":[" + ops + "]}"
         }).World.Features[new(id)];
         var height = Apply("""{"op":"height","target":"fixture:relation:1","height":20,"reason":"test"}""");
-        Require(height.Parts.All(p => p.FacadeGeometry is not null && p.Height == 20), "Height discarded facade geometry.");
+        AssertThat(height.Parts.All(p => p.FacadeGeometry is not null && p.Height == 20)).OverrideFailureMessage("Height discarded facade geometry.").IsTrue();
         var style = Apply("""{"op":"style","target":"fixture:relation:1","family":"test"}""");
-        Require(style.Parts.All(p => p.FacadeGeometry is not null), "Style discarded facade geometry.");
+        AssertThat(style.Parts.All(p => p.FacadeGeometry is not null)).OverrideFailureMessage("Style discarded facade geometry.").IsTrue();
         var hidden = Apply("""{"op":"hidePart","target":"fixture:relation:1","sourceId":"osm:way:10","reason":"test"}""");
-        Require(hidden.Parts.Count == 1 && hidden.Parts[0].SourceId == "osm:way:11" && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(hidden)[0], ((PolygonGeometry)hidden.Parts[0].FacadeGeometry!).Rings), "Hidden part survived in facade aggregation.");
+        AssertThat(hidden.Parts.Count == 1 && hidden.Parts[0].SourceId == "osm:way:11" && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(hidden)[0], ((PolygonGeometry)hidden.Parts[0].FacadeGeometry!).Rings)).OverrideFailureMessage("Hidden part survived in facade aggregation.").IsTrue();
         var reshaped = Apply("""{"op":"reshape","target":"fixture:relation:1","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]},"reason":"test"}""");
-        Require(reshaped.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(reshaped)[0], ((PolygonGeometry)reshaped.Geometry).Rings), "Reshape resurrected stale source facade geometry.");
+        AssertThat(reshaped.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(reshaped)[0], ((PolygonGeometry)reshaped.Geometry).Rings)).OverrideFailureMessage("Reshape resurrected stale source facade geometry.").IsTrue();
         var added = Apply("""{"op":"add","id":"design:test","kind":"building","geometry":{"type":"polygon","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]}},"reason":"test"}""", "design:test");
-        Require(added.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(added)[0], ((PolygonGeometry)added.Geometry).Rings), "Add ignored current authored geometry.");
+        AssertThat(added.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(added)[0], ((PolygonGeometry)added.Geometry).Rings)).OverrideFailureMessage("Add ignored current authored geometry.").IsTrue();
     }
 
     [TestCase]
@@ -89,8 +90,8 @@ public sealed class WorldModelTests
         var feature = new WorldFeature(new("fixture"), FeatureSource.Osm, new("building"), physical)
         { Parts = [part, new("first-source", new PolygonGeometry(second), null, null)] };
         var polygons = WorldFeatureGeometry.FacadePolygonsOf(feature);
-        Require(polygons.Count == 3 && ReferenceEquals(polygons[0], first) && ReferenceEquals(polygons[1], second) && ReferenceEquals(polygons[2], second), "Facade aggregation reordered or rebuilt rings.");
-        Require(PlanGeometry.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes), "Facade helper normalized input direction or holes.");
+        AssertThat(polygons.Count == 3 && ReferenceEquals(polygons[0], first) && ReferenceEquals(polygons[1], second) && ReferenceEquals(polygons[2], second)).OverrideFailureMessage("Facade aggregation reordered or rebuilt rings.").IsTrue();
+        AssertThat(PlanGeometry.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes)).OverrideFailureMessage("Facade helper normalized input direction or holes.").IsTrue();
     }
 
     [TestCase]
@@ -98,22 +99,22 @@ public sealed class WorldModelTests
     {
         var result = Load();
         var feature = result.World.Features[new("fixture:relation:1")];
-        Require(feature.Parts.Count == 2 && feature.Parts[0].Height == 8 && feature.Parts[1].Height == 16, "Wing heights were flattened.");
-        Require(feature.Geometry is MultiPolygonGeometry { Polygons.Count: 2 }, "Lost a footprint.");
-        Require(result.World.Spatial.MediumAt(new(-5, 10, -5)).Kind == MediumKind.Air, "Low wing became as tall as the high wing.");
-        Require(result.World.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior, "High wing missing.");
-        Require(result.Center == Vector2.Zero, "Boundary centroid changed.");
+        AssertThat(feature.Parts.Count == 2 && feature.Parts[0].Height == 8 && feature.Parts[1].Height == 16).OverrideFailureMessage("Wing heights were flattened.").IsTrue();
+        AssertThat(feature.Geometry is MultiPolygonGeometry { Polygons.Count: 2 }).OverrideFailureMessage("Lost a footprint.").IsTrue();
+        AssertThat(result.World.Spatial.MediumAt(new(-5, 10, -5)).Kind == MediumKind.Air).OverrideFailureMessage("Low wing became as tall as the high wing.").IsTrue();
+        AssertThat(result.World.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior).OverrideFailureMessage("High wing missing.").IsTrue();
+        AssertThat(result.Center == Vector2.Zero).OverrideFailureMessage("Boundary centroid changed.").IsTrue();
     }
 
     [TestCase]
     public void HolesRemainDryAndBoundaryQueriesAreExact()
     {
         var spatial = Load().World.Spatial;
-        Require(spatial.WalkClassAt(-6, 6) == WalkClass.Walk, "Water polygon hole filled.");
-        Require(spatial.WalkClassAt(-9, 3) == WalkClass.Water, "Water missing.");
-        Require(spatial.MediumAt(new(-9, -1, 3)).Kind == MediumKind.Underwater, "Underwater classification missing.");
-        Require(spatial.WalkClassAt(21, 0) == WalkClass.Outside, "Exterior became walkable.");
-        Require(spatial.WalkClassAt(-5, -5) == WalkClass.Walk, "A building projection blocked its physical openings.");
+        AssertThat(spatial.WalkClassAt(-6, 6) == WalkClass.Walk).OverrideFailureMessage("Water polygon hole filled.").IsTrue();
+        AssertThat(spatial.WalkClassAt(-9, 3) == WalkClass.Water).OverrideFailureMessage("Water missing.").IsTrue();
+        AssertThat(spatial.MediumAt(new(-9, -1, 3)).Kind == MediumKind.Underwater).OverrideFailureMessage("Underwater classification missing.").IsTrue();
+        AssertThat(spatial.WalkClassAt(21, 0) == WalkClass.Outside).OverrideFailureMessage("Exterior became walkable.").IsTrue();
+        AssertThat(spatial.WalkClassAt(-5, -5) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked its physical openings.").IsTrue();
     }
 
     [TestCase]
@@ -122,18 +123,18 @@ public sealed class WorldModelTests
         var previous = Load();
         const string invalid = """{"zone":"test","owner":"WP-08","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"},{"op":"hide","target":"missing","reason":"test"}]}""";
         try { Load(invalid); throw new InvalidOperationException("Invalid overlay accepted."); }
-        catch (WorldDataException e) { Require(e.File == "overlay/test.d/0000-fixture.json", "Lost error filename."); }
-        Require(previous.World.Features.ContainsKey(new("fixture:relation:1")), "Previous immutable snapshot changed.");
+        catch (WorldDataException e) { AssertThat(e.File == "overlay/test.d/0000-fixture.json").OverrideFailureMessage("Lost error filename.").IsTrue(); }
+        AssertThat(previous.World.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Previous immutable snapshot changed.").IsTrue();
         var hidden = Load("""{"zone":"test","owner":"WP-08","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"}]}""");
-        Require(!hidden.World.Features.ContainsKey(new("fixture:relation:1")), "Hide did not remove entity and its parts.");
+        AssertThat(!hidden.World.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Hide did not remove entity and its parts.").IsTrue();
     }
 
     [TestCase]
     public void RingNormalizationKeepsOrientationAndRejectsDegenerateInput()
     {
         var ring = PlanGeometry.OpenRing([new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0)]);
-        Require(ring.Count == 4 && PlanGeometry.SignedArea(ring) == 4, "Ring normalization failed.");
-        Require(PlanGeometry.PointInRing(new(0, 1), ring), "Boundary point excluded.");
+        AssertThat(ring.Count == 4 && PlanGeometry.SignedArea(ring) == 4).OverrideFailureMessage("Ring normalization failed.").IsTrue();
+        AssertThat(PlanGeometry.PointInRing(new(0, 1), ring)).OverrideFailureMessage("Boundary point excluded.").IsTrue();
         try { PlanGeometry.OpenRing([new(0, 0), new(1, 1), new(2, 2)]); throw new InvalidOperationException("Degenerate ring accepted."); }
         catch (ArgumentException) { }
     }
@@ -156,14 +157,14 @@ public sealed class WorldModelTests
         });
         using var original = JsonDocument.Parse(campus);
         foreach (var entity in original.RootElement.GetProperty("entities").EnumerateArray())
-            Require(result.World.Features.ContainsKey(new(entity.GetProperty("id").GetString()!)), "Lost an existing entity identity.");
+            AssertThat(result.World.Features.ContainsKey(new(entity.GetProperty("id").GetString()!))).OverrideFailureMessage("Lost an existing entity identity.").IsTrue();
         var sourceParts = result.World.Features.Values.SelectMany(f => f.Parts).ToArray();
         var sourceCount = original.RootElement.GetProperty("features").GetArrayLength();
-        Require(sourceParts.Length == sourceCount && sourceParts.Select(p => p.SourceId).Distinct(StringComparer.Ordinal).Count() == sourceCount, "Source geometry was lost or duplicated.");
+        AssertThat(sourceParts.Length == sourceCount && sourceParts.Select(p => p.SourceId).Distinct(StringComparer.Ordinal).Count() == sourceCount).OverrideFailureMessage("Source geometry was lost or duplicated.").IsTrue();
         using var network = JsonDocument.Parse(networkJson);
         int Authored(string name) => network.RootElement.GetProperty(name).GetArrayLength();
-        Require(result.World.Network.Bridges.Count == Authored("bridges") && result.World.Network.Culverts.Count == Authored("culverts") &&
-            result.World.Network.Trees.Count == Authored("trees"), "Network snapshot incomplete.");
+        AssertThat(result.World.Network.Bridges.Count == Authored("bridges") && result.World.Network.Culverts.Count == Authored("culverts") &&
+            result.World.Network.Trees.Count == Authored("trees")).OverrideFailureMessage("Network snapshot incomplete.").IsTrue();
         using var authoredInteriors = JsonDocument.Parse(interiors);
         var expectedEntrances = authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray()
             .SelectMany(interior => interior.GetProperty("entrances").EnumerateArray())
@@ -173,17 +174,16 @@ public sealed class WorldModelTests
             .OrderBy(id => id, StringComparer.Ordinal).ToArray();
         var actualEntrances = result.World.Interiors.EntrancesNear(Vector3.Zero, 3000)
             .Select(entrance => entrance.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
-        Require(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
-            actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal), "Authored interior entrances were lost or duplicated.");
+        AssertThat(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
+            actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal)).OverrideFailureMessage("Authored interior entrances were lost or duplicated.").IsTrue();
         var annex = result.World.Interiors.Get(new("qsh:way:806848403"))!;
         var annexDoor = annex.Entrances.Single();
-        Require(!annex.Open && annex.ProviderId is null && !annexDoor.Open && annexDoor.Id == "lib.north-annex" &&
+        AssertThat(!annex.Open && annex.ProviderId is null && !annexDoor.Open && annexDoor.Id == "lib.north-annex" &&
             annexDoor.Center == new Vector3(-143.7050f, .15f, -27.2100f) &&
             annexDoor.Outside == new Vector3(-142.2069f, .15f, -29.2114f) &&
             annexDoor.Inside == new Vector3(-145.5027f, .15f, -24.8083f) &&
-            annexDoor.YawDeg == 36.8f && annexDoor.ClearWidth == 2.4f,
-            "Approved north-annex closed entrance coordinates or availability changed.");
-        Require(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0, "Map coordinate frame is wrong.");
+            annexDoor.YawDeg == 36.8f && annexDoor.ClearWidth == 2.4f).OverrideFailureMessage("Approved north-annex closed entrance coordinates or availability changed.").IsTrue();
+        AssertThat(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0).OverrideFailureMessage("Map coordinate frame is wrong.").IsTrue();
     }
 
     [TestCase]
@@ -192,14 +192,14 @@ public sealed class WorldModelTests
         var baseline = Load().World.Interiors.Get(new("fixture:relation:1"))!;
         var world = LoadClosed().World;
         var entry = world.Interiors.Get(new("fixture:relation:1"))!;
-        Require(!entry.Open && entry.ProviderId is null && entry.Storeys.Count == baseline.Storeys.Count &&
+        AssertThat(!entry.Open && entry.ProviderId is null && entry.Storeys.Count == baseline.Storeys.Count &&
             entry.Storeys.Zip(baseline.Storeys).All(pair => pair.First.Index == pair.Second.Index &&
                 pair.First.FloorY == pair.Second.FloorY && pair.First.Height == pair.Second.Height &&
-                pair.First.Footprint.SequenceEqual(pair.Second.Footprint)), "Closed registration changed building availability or storeys.");
+                pair.First.Footprint.SequenceEqual(pair.Second.Footprint))).OverrideFailureMessage("Closed registration changed building availability or storeys.").IsTrue();
         var entrance = entry.Entrances.Single();
-        Require(!entrance.Open && entrance.Center == new Vector3(-5, .15f, -5) &&
-            world.Interiors.EntrancesNear(entrance.Center, .1f).Single() == entrance, "Closed entrance was lost from spatial lookup.");
-        Require(Load().World.Interiors.EntrancesNear(Vector3.Zero, 100).Count == 0, "Missing closed register no longer defaults empty.");
+        AssertThat(!entrance.Open && entrance.Center == new Vector3(-5, .15f, -5) &&
+            world.Interiors.EntrancesNear(entrance.Center, .1f).Single() == entrance).OverrideFailureMessage("Closed entrance was lost from spatial lookup.").IsTrue();
+        AssertThat(Load().World.Interiors.EntrancesNear(Vector3.Zero, 100).Count == 0).OverrideFailureMessage("Missing closed register no longer defaults empty.").IsTrue();
     }
 
     [TestCase]
@@ -216,19 +216,19 @@ public sealed class WorldModelTests
         {
             try { LoadClosed(record); throw new InvalidOperationException("Invalid closed entrance accepted."); }
             catch (WorldDataException error)
-            { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Closed error lost its catalog or door ID."); }
+            { AssertThat(error.File == "interiors.json" && error.Entry == "entry.closed").OverrideFailureMessage("Closed error lost its catalog or door ID.").IsTrue(); }
         }
         const string open = """{"featureIds":["fixture:relation:1"],"providerId":"fixture.provider","entrances":[]}""";
         try { LoadClosed(open: open); throw new InvalidOperationException("Open/closed feature overlap accepted."); }
-        catch (WorldDataException error) { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Lost overlap diagnostic."); }
+        catch (WorldDataException error) { AssertThat(error.File == "interiors.json" && error.Entry == "entry.closed").OverrideFailureMessage("Lost overlap diagnostic.").IsTrue(); }
         const string otherOpen = """{"featureIds":["other"],"providerId":"fixture.provider","entrances":[{"id":"entry.closed","featureId":"other"}]}""";
         try { LoadClosed(open: otherOpen); throw new InvalidOperationException("Cross-register duplicate ID accepted."); }
-        catch (WorldDataException error) { Require(error.File == "interiors.json" && error.Entry == "entry.closed", "Lost duplicate diagnostic."); }
+        catch (WorldDataException error) { AssertThat(error.File == "interiors.json" && error.Entry == "entry.closed").OverrideFailureMessage("Lost duplicate diagnostic.").IsTrue(); }
         foreach (var malformed in new[] { "null", "42", "{}" })
         {
             try { LoadClosed(malformed); throw new InvalidOperationException("Malformed closed record accepted."); }
             catch (WorldDataException error)
-            { Require(error.File == "interiors.json" && error.Entry == "closedEntrances[0]", "Malformed closed record lost its catalog array path."); }
+            { AssertThat(error.File == "interiors.json" && error.Entry == "closedEntrances[0]").OverrideFailureMessage("Malformed closed record lost its catalog array path.").IsTrue(); }
         }
     }
 
@@ -255,23 +255,23 @@ public sealed class WorldModelTests
         })
         {
             var medium = result.World.Spatial.MediumAt(sample.Point);
-            Require(medium.Kind == MediumKind.Interior && medium.Feature == sample.Id, $"Building part {sample.Id.Value} was classified as {medium.Kind}.");
-            Require(result.World.Spatial.WalkClassAt(sample.Point.X, sample.Point.Z) == WalkClass.Walk, "A building projection blocked its physical openings.");
-            Require(result.World.Interiors.Get(sample.Id) is not null, "Mixed parent lost its interior index.");
-            Require(result.World.Spatial.MediumAt(sample.Point with { Y = sample.Height + 1 }).Kind == MediumKind.Air, "Part height was ignored.");
+            AssertThat(medium.Kind == MediumKind.Interior && medium.Feature == sample.Id).OverrideFailureMessage($"Building part {sample.Id.Value} was classified as {medium.Kind}.").IsTrue();
+            AssertThat(result.World.Spatial.WalkClassAt(sample.Point.X, sample.Point.Z) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked its physical openings.").IsTrue();
+            AssertThat(result.World.Interiors.Get(sample.Id) is not null).OverrideFailureMessage("Mixed parent lost its interior index.").IsTrue();
+            AssertThat(result.World.Spatial.MediumAt(sample.Point with { Y = sample.Height + 1 }).Kind == MediumKind.Air).OverrideFailureMessage("Part height was ignored.").IsTrue();
         }
         var outdoors = new Vector3(-619.9118f, 1, -102.2f);
-        Require(result.World.Spatial.MediumAt(outdoors).Kind == MediumKind.Air, "Entire parent park became a building volume.");
-        Require(result.World.Spatial.WalkClassAt(outdoors.X, outdoors.Z) == WalkClass.Walk, "Open park became a building obstacle.");
+        AssertThat(result.World.Spatial.MediumAt(outdoors).Kind == MediumKind.Air).OverrideFailureMessage("Entire parent park became a building volume.").IsTrue();
+        AssertThat(result.World.Spatial.WalkClassAt(outdoors.X, outdoors.Z) == WalkClass.Walk).OverrideFailureMessage("Open park became a building obstacle.").IsTrue();
         foreach (var id in new[] { "qsh:way:682336066", "qsh:way:883187548" })
         {
             var feature = result.World.Features[new(id)];
             var buildingFootprints = feature.Parts.Where(part => part.Props?.GetProperty("kind").GetString() == "building")
                 .SelectMany(part => part.Geometry is PolygonGeometry polygon ? [polygon.Rings] : ((MultiPolygonGeometry)part.Geometry).Polygons).Select(polygon => polygon.Outer).ToArray();
-            Require(buildingFootprints.Length > 0, $"The regression fixture {id} no longer has building parts.");
+            AssertThat(buildingFootprints.Length > 0).OverrideFailureMessage($"The regression fixture {id} no longer has building parts.").IsTrue();
             var storeys = result.World.Interiors.Get(feature.Id)!.Storeys;
-            Require(buildingFootprints.All(ring => storeys.Any(storey => storey.Footprint.SequenceEqual(ring))), "A building part is missing from the interior index.");
-            Require(storeys.All(storey => buildingFootprints.Any(ring => storey.Footprint.SequenceEqual(ring))), "Interior index contains the parent park footprint.");
+            AssertThat(buildingFootprints.All(ring => storeys.Any(storey => storey.Footprint.SequenceEqual(ring)))).OverrideFailureMessage("A building part is missing from the interior index.").IsTrue();
+            AssertThat(storeys.All(storey => buildingFootprints.Any(ring => storey.Footprint.SequenceEqual(ring)))).OverrideFailureMessage("Interior index contains the parent park footprint.").IsTrue();
         }
     }
 
@@ -288,9 +288,9 @@ public sealed class WorldModelTests
         try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Conflicting overlays silently overwrote the same resolved entity."); }
         catch (WorldDataException error)
         {
-            Require(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal), "Conflict omitted one of its source files.");
+            AssertThat(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal)).OverrideFailureMessage("Conflict omitted one of its source files.").IsTrue();
         }
-        Require(previous.World.Features[new("fixture:relation:1")].Height == 16, "Failed reload mutated the previous snapshot.");
+        AssertThat(previous.World.Features[new("fixture:relation:1")].Height == 16).OverrideFailureMessage("Failed reload mutated the previous snapshot.").IsTrue();
     }
 
     [TestCase]
@@ -306,7 +306,7 @@ public sealed class WorldModelTests
         catch (WorldDataException) { }
         var claimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") };
         var result = WorldModelLoader.Load(new("test"), files, new() { ClaimedBy = claimedBy });
-        Require(result.World.Features[new("fixture:relation:1")].Height == 30, "Explicit registered claim did not allow the overlay exception.");
+        AssertThat(result.World.Features[new("fixture:relation:1")].Height == 30).OverrideFailureMessage("Explicit registered claim did not allow the overlay exception.").IsTrue();
         claimedBy[new("fixture:relation:1")] = new("WP-99");
         try { WorldModelLoader.Load(new("test"), files, new() { ClaimedBy = claimedBy }); throw new InvalidOperationException("An unrelated owner's claim bypassed a conflict."); }
         catch (WorldDataException) { }
@@ -314,7 +314,7 @@ public sealed class WorldModelTests
         try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Hide conflict was accepted."); }
         catch (WorldDataException error)
         {
-            Require(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal), "Hide lost its conflict provenance.");
+            AssertThat(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal)).OverrideFailureMessage("Hide lost its conflict provenance.").IsTrue();
         }
     }
 
@@ -327,10 +327,10 @@ public sealed class WorldModelTests
             ["map.json"] = """{"id":"test","roam":{"heightFactor":0.9,"heightStart":30,"maxRadius":3000,"floorY":-40,"ceilY":1500,"buffer":30,"softFloorClearance":40,"fallbackMargin":25}}"""
         };
         var result = WorldModelLoader.Load(new("test"), files);
-        Require(result.Bounds == new Box3(new(-45, -40, -45), new(45, 1500, 45)), $"Authored roam bounds ignored: {result.Bounds}.");
+        AssertThat(result.Bounds == new Box3(new(-45, -40, -45), new(45, 1500, 45))).OverrideFailureMessage($"Authored roam bounds ignored: {result.Bounds}.").IsTrue();
         var real = WorldModelLoader.Load(new("qingshuihe"), RealFiles());
-        Require(real.Bounds.Min.Y == -28 && real.Bounds.Max.Y == 2000, "Real campus vertical roam bounds were replaced with building heights.");
-        Require(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - 150)) < 0.01f, "Real campus fallback margin missing.");
+        AssertThat(real.Bounds.Min.Y == -28 && real.Bounds.Max.Y == 2000).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
+        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - 150)) < 0.01f).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
     }
 
     [TestCase]
@@ -349,13 +349,13 @@ public sealed class WorldModelTests
         foreach (var id in new[] { "walk:beat-fixture-point", "walk:beat-fixture-area", "walk:beat-fixture-multi" })
         {
             var anchor = result.World.Features[new(id)];
-            Require(anchor.Kind.Value == "beat" && anchor.Height is null && anchor.Parts.Count == 0, "Beat anchor acquired building semantics.");
-            Require(anchor.Source == FeatureSource.Design && anchor.Zone == new ZoneId("core"), "Beat anchor lost overlay provenance.");
-            Require(result.World.Interiors.Get(anchor.Id) is null, "Beat anchor created an interior.");
+            AssertThat(anchor.Kind.Value == "beat" && anchor.Height is null && anchor.Parts.Count == 0).OverrideFailureMessage("Beat anchor acquired building semantics.").IsTrue();
+            AssertThat(anchor.Source == FeatureSource.Design && anchor.Zone == new ZoneId("core")).OverrideFailureMessage("Beat anchor lost overlay provenance.").IsTrue();
+            AssertThat(result.World.Interiors.Get(anchor.Id) is null).OverrideFailureMessage("Beat anchor created an interior.").IsTrue();
         }
-        Require(result.World.Features[new("walk:beat-fixture-point")].Geometry is PointGeometry, "Point anchor shape changed.");
-        Require(result.World.Features[new("walk:beat-fixture-area")].Geometry is PolygonGeometry, "Area anchor shape changed.");
-        Require(result.World.Features[new("walk:beat-fixture-multi")].Geometry is MultiPolygonGeometry { Polygons.Count: 2 }, "Multi-area anchor lost a part.");
+        AssertThat(result.World.Features[new("walk:beat-fixture-point")].Geometry is PointGeometry).OverrideFailureMessage("Point anchor shape changed.").IsTrue();
+        AssertThat(result.World.Features[new("walk:beat-fixture-area")].Geometry is PolygonGeometry).OverrideFailureMessage("Area anchor shape changed.").IsTrue();
+        AssertThat(result.World.Features[new("walk:beat-fixture-multi")].Geometry is MultiPolygonGeometry { Polygons.Count: 2 }).OverrideFailureMessage("Multi-area anchor lost a part.").IsTrue();
     }
 
     [TestCase]
@@ -379,7 +379,7 @@ public sealed class WorldModelTests
             try { Load(overlay); throw new InvalidOperationException($"Invalid walk add '{op.Id.Value}' was accepted."); }
             catch (WorldDataException error)
             {
-                Require(error.File == "overlay/test.d/0000-fixture.json" && error.Message.Contains("walk: beat anchor", StringComparison.Ordinal), "Invalid walk add lost a precise validation error.");
+                AssertThat(error.File == "overlay/test.d/0000-fixture.json" && error.Message.Contains("walk: beat anchor", StringComparison.Ordinal)).OverrideFailureMessage("Invalid walk add lost a precise validation error.").IsTrue();
             }
         }
     }
@@ -397,10 +397,10 @@ public sealed class WorldModelTests
                 new HeightOp(new("fixture:relation:1"), null, 3, "fixture storeys")])
         };
         var world = WorldModelLoader.Load(new("test"), files).World;
-        Require(world.Features[new("fixture:relation:1")].Height == 12, "Operations within a shard were reordered.");
-        Require(world.Features[new("fixture:relation:1")].Family?.Value == "fixture-style", "Later shard style did not apply.");
-        Require(!world.Features.ContainsKey(new("fixture:source:way:20")) && world.Features.ContainsKey(new("design:split-fixture")), "Shard hide/add did not apply.");
-        Require(world.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior, "Shard height did not enter the spatial query.");
+        AssertThat(world.Features[new("fixture:relation:1")].Height == 12).OverrideFailureMessage("Operations within a shard were reordered.").IsTrue();
+        AssertThat(world.Features[new("fixture:relation:1")].Family?.Value == "fixture-style").OverrideFailureMessage("Later shard style did not apply.").IsTrue();
+        AssertThat(!world.Features.ContainsKey(new("fixture:source:way:20")) && world.Features.ContainsKey(new("design:split-fixture"))).OverrideFailureMessage("Shard hide/add did not apply.").IsTrue();
+        AssertThat(world.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior).OverrideFailureMessage("Shard height did not enter the spatial query.").IsTrue();
     }
 
     [TestCase]
@@ -414,9 +414,9 @@ public sealed class WorldModelTests
             ["overlay/a.d/B.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 30, null, "first ordinal shard")])
         };
         var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-08") } };
-        Require(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 19, "Group names are not Ordinal.");
+        AssertThat(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 19).OverrideFailureMessage("Group names are not Ordinal.").IsTrue();
         files.Remove("overlay/a.more.d/01.json");
-        Require(WorldModelLoader.Load(new("test"), files).World.Features[new("fixture:relation:1")].Height == 40, "Shard filenames are not Ordinal.");
+        AssertThat(WorldModelLoader.Load(new("test"), files).World.Features[new("fixture:relation:1")].Height == 40).OverrideFailureMessage("Shard filenames are not Ordinal.").IsTrue();
     }
 
     [TestCase]
@@ -434,8 +434,8 @@ public sealed class WorldModelTests
                 new PointGeometry(new(15, 0, 15)), 4, null, "before interior")])
         };
         var world = (WorldModelSnapshot)WorldModelLoader.Load(new("test"), files).World;
-        Require(world.InteriorOverlays.Single().Ops.Count == 2, "Interior references must resolve between the alpha add and north hide.");
-        Require(world.Features.ContainsKey(new("design:before-interior")) && !world.Features.ContainsKey(new("fixture:relation:1")), "Groups around the interior did not apply.");
+        AssertThat(world.InteriorOverlays.Single().Ops.Count == 2).OverrideFailureMessage("Interior references must resolve between the alpha add and north hide.").IsTrue();
+        AssertThat(world.Features.ContainsKey(new("design:before-interior")) && !world.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Groups around the interior did not apply.").IsTrue();
     }
 
     [TestCase]
@@ -446,7 +446,7 @@ public sealed class WorldModelTests
             {
                 var files = new Dictionary<string, string> { ["campus.json"] = Campus, [path] = Overlay(operations) };
                 var error = OverlayError(files);
-                Require(error.File == path && error.Entry == "path" && error.Message.Contains("Retired", StringComparison.Ordinal), "Retired input was ignored or lost its path.");
+                AssertThat(error.File == path && error.Entry == "path" && error.Message.Contains("Retired", StringComparison.Ordinal)).OverrideFailureMessage("Retired input was ignored or lost its path.").IsTrue();
             }
     }
 
@@ -454,24 +454,24 @@ public sealed class WorldModelTests
     public void SplitOverlaysKeepRealMapOperationAndConflictErrorSources()
     {
         var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = "{" };
-        Require(OverlayError(files).File == "overlay/test.d/01.json", "Malformed shard lost its filename.");
+        AssertThat(OverlayError(files).File == "overlay/test.d/01.json").OverrideFailureMessage("Malformed shard lost its filename.").IsTrue();
         files["overlay/test.d/01.json"] = Overlay([], map: "another-map");
         var mapError = OverlayError(files);
-        Require(mapError.File == "overlay/test.d/01.json" && mapError.Entry == "map", "Shard map validation lost its source.");
+        AssertThat(mapError.File == "overlay/test.d/01.json" && mapError.Entry == "map").OverrideFailureMessage("Shard map validation lost its source.").IsTrue();
         files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), -1, null, "invalid")]);
         var operationError = OverlayError(files);
-        Require(operationError.File == "overlay/test.d/01.json" && operationError.Entry == "ops[0]", "Shard operation validation lost its source.");
+        AssertThat(operationError.File == "overlay/test.d/01.json" && operationError.Entry == "ops[0]").OverrideFailureMessage("Shard operation validation lost its source.").IsTrue();
         files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 20, null, "first")], "WP-14");
         files["overlay/test.d/02.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "second")], "WP-15");
         var conflict = OverlayError(files);
-        Require(conflict.File == "overlay/test.d/02.json" && new[] { "overlay/test.d/01.json", "overlay/test.d/02.json", "WP-14", "WP-15" }.All(text => conflict.Message.Contains(text, StringComparison.Ordinal)), "Shard conflict lost a real filename or owner.");
+        AssertThat(conflict.File == "overlay/test.d/02.json" && new[] { "overlay/test.d/01.json", "overlay/test.d/02.json", "WP-14", "WP-15" }.All(text => conflict.Message.Contains(text, StringComparison.Ordinal))).OverrideFailureMessage("Shard conflict lost a real filename or owner.").IsTrue();
         var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") } };
-        Require(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 30, "Different shard owners did not respect a real claim.");
+        AssertThat(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 30).OverrideFailureMessage("Different shard owners did not respect a real claim.").IsTrue();
         files.Remove("overlay/test.d/02.json");
         files["overlay/other.d/01.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "same owner across groups")], "WP-14");
         var crossGroup = OverlayError(files);
-        Require(crossGroup.Message.Contains("Overlay conflict", StringComparison.Ordinal) &&
-            new[] { "overlay/other.d/01.json", "overlay/test.d/01.json" }.All(path => crossGroup.Message.Contains(path, StringComparison.Ordinal)), "Matching owners across split groups bypassed the conflict rule or lost their real paths.");
+        AssertThat(crossGroup.Message.Contains("Overlay conflict", StringComparison.Ordinal) &&
+            new[] { "overlay/other.d/01.json", "overlay/test.d/01.json" }.All(path => crossGroup.Message.Contains(path, StringComparison.Ordinal))).OverrideFailureMessage("Matching owners across split groups bypassed the conflict rule or lost their real paths.").IsTrue();
     }
 
     [TestCase]
@@ -485,7 +485,7 @@ public sealed class WorldModelTests
             files[path] = "not a feature overlay";
         files["overlay/interior/test.interior.json"] = """{"zone":"test","owner":"WP-08","ops":[]}""";
         var world = WorldModelLoader.Load(new("test"), files).World;
-        Require(world.Features.Count == Load().World.Features.Count && ((WorldModelSnapshot)world).InteriorOverlays.Count == 1, "Feature splitting consumed a dedicated format or nested/non-JSON file.");
+        AssertThat(world.Features.Count == Load().World.Features.Count && ((WorldModelSnapshot)world).InteriorOverlays.Count == 1).OverrideFailureMessage("Feature splitting consumed a dedicated format or nested/non-JSON file.").IsTrue();
     }
 
     private static string Overlay(IReadOnlyList<OverlayOp> operations, string owner = "WP-08", string map = "test") =>
@@ -513,5 +513,4 @@ public sealed class WorldModelTests
         if (overlay is not null) files["overlay/test.d/0000-fixture.json"] = overlay;
         return WorldModelLoader.Load(new("test"), files);
     }
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Style.Palette.Tests;
 
@@ -18,17 +19,17 @@ public sealed class PaletteCatalogLoaderTests
     {
         var (legacy, files) = Load();
         var catalog = LoadCatalog(legacy, files);
-        Check(catalog.Get(new PaletteIndex(legacy.Entries[0].Id)).Albedo == legacy.Entries[0].Albedo, "The base metadata changed while composing the catalog.");
-        Check(catalog.ExtensionCount == 14, $"Expected the seven approved bank-1 pairs, found {catalog.ExtensionCount} extension entries.");
+        AssertThat(catalog.Get(new PaletteIndex(legacy.Entries[0].Id)).Albedo == legacy.Entries[0].Albedo).OverrideFailureMessage("The base metadata changed while composing the catalog.").IsTrue();
+        AssertThat(catalog.ExtensionCount == 14).OverrideFailureMessage($"Expected the seven approved bank-1 pairs, found {catalog.ExtensionCount} extension entries.").IsTrue();
         foreach (var (family, lit) in new[]
         {
             ("bronze", 320), ("stone.black", 322), ("glass.tea", 324), ("band.ochre", 326), ("glass.deep", 328),
             ("street.blue", 448), ("hazard.black", 450)
         })
         {
-            Check(catalog.Resolve(new PaletteToken(family + ".lit")).Value == lit, $"{family}.lit is not at {lit}.");
-            Check(catalog.Resolve(new PaletteToken(family + ".shade")).Value == lit + 1, $"{family}.shade is not at {lit + 1}.");
-            Check(!legacy.TryGet(new PaletteToken(family + ".lit"), out _), $"{family} leaked into the legacy byte registry.");
+            AssertThat(catalog.Resolve(new PaletteToken(family + ".lit")).Value == lit).OverrideFailureMessage($"{family}.lit is not at {lit}.").IsTrue();
+            AssertThat(catalog.Resolve(new PaletteToken(family + ".shade")).Value == lit + 1).OverrideFailureMessage($"{family}.shade is not at {lit + 1}.").IsTrue();
+            AssertThat(!legacy.TryGet(new PaletteToken(family + ".lit"), out _)).OverrideFailureMessage($"{family} leaked into the legacy byte registry.").IsTrue();
             catalog.Validate(new ToonSpec(new PaletteToken(family + ".lit"), new PaletteToken(family + ".shade")));
         }
     }
@@ -56,13 +57,13 @@ public sealed class PaletteCatalogLoaderTests
             var refused = false;
             try { LoadCatalog(legacy, [("test/" + name, Encoding.UTF8.GetBytes(json))]); }
             catch (InvalidDataException) { refused = true; }
-            Check(refused, $"The loader accepted an invalid extension: {name}.");
+            AssertThat(refused).OverrideFailureMessage($"The loader accepted an invalid extension: {name}.").IsTrue();
         }
         var twice = File(2, Entry("t.lit", 256, "lit"), Entry("t.shade", 257, "shade"));
         var duplicated = false;
         try { LoadCatalog(legacy, [("a", Encoding.UTF8.GetBytes(twice)), ("b", Encoding.UTF8.GetBytes(twice))]); }
         catch (InvalidDataException) { duplicated = true; }
-        Check(duplicated, "The same token and index in two extension files must be refused.");
+        AssertThat(duplicated).OverrideFailureMessage("The same token and index in two extension files must be refused.").IsTrue();
     }
 
     private static PaletteCatalog LoadCatalog(PaletteRegistry bank0, IEnumerable<(string Path, byte[] Json)> extensions) =>
@@ -81,10 +82,5 @@ public sealed class PaletteCatalogLoaderTests
         var files = Directory.GetFiles(Path.Combine(palette, "ext-v2"), "WP-*.json").Order(StringComparer.Ordinal)
             .Select(file => (file, System.IO.File.ReadAllBytes(file))).ToArray();
         return (new PaletteRegistry(entries), files);
-    }
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 }
