@@ -75,5 +75,5 @@
     { "t": 2.9, "cue": "amb.altitude", "seconds": 6.6, "weight": 0.0 },
     { "t": 12.0, "cue": "title.fadeOut", "seconds": 7.0 }
   ],
-  "end": { "pose": "$waypoint:P00", "mode": "fly", "flow": 1, "titleCard": true, "firstGuide": true }
+  "end": { "pose": "$dest", "mode": null, "flow": 1, "titleCard": true, "firstGuide": true }
 }

@@ -9,7 +9,7 @@
 //   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG
 //   vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt)     exempt：地标雾豁免系数 0–1（instance uniform fog_exempt，
 //                                                                        ENG-PERF）；1 时起雾不近于 200 m、剪影不近于 800 m
-//   vec3 fog_desaturate(vec3 c, float dist)                        200 m 起降饱和，作用在受光色和影色上
+//   vec3 fog_desaturate(vec3 c, float dist)                        起雾距离（取各时刻关键帧）起降饱和，作用在受光色和影色上
 //   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)             等效雾程（按高度积分），fog_desaturate 的 dist 用它
 //   vec3 fog_sky(vec3 dir_w)                                       天空渐变（五段 OKLab 单调三次 + 霾带），与天空着色器同一规则
 //   float sky_side_weight(vec3 dir)                                太阳侧权重（真实太阳，入夜换月亮）
@@ -117,7 +117,7 @@ vec3 pal_season(int row, float s) {
 
 const float FOG_SIL_ALPHA = 0.9;     // 剪影距离处雾量的上限，远处仍能和天空分开
 const float FOG_RATE = 2.3;          // 起雾到剪影之间的指数速率
-const float FOG_DESAT = 0.25;        // 200 m 起的降饱和量（ART-SKYLIGHT）
+const float FOG_DESAT = 0.25;        // 起雾距离（取各时刻关键帧）起的降饱和量（ART-SKYLIGHT）
 const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)；主要效果靠 fog_range 里的距离收拢（ART-SKYLIGHT）
 const float FOG_VEIL_NEAR = 20.0;    // 全幕雾幕时剪影距离收到的位置（m）
 const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS）

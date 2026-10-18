@@ -59,7 +59,7 @@ public sealed class LodTree
         var reference = _settings.ReferenceFov * MathF.PI / 180;
         var scale = Math.Max(1, height) / _settings.ReferenceHeight *
             MathF.Tan(reference * .5f) / MathF.Tan(fov * .5f) *
-            1.5f / (_settings.BaseErrorPixels * (1 + Math.Max(0, speed) / 30));
+            StreamSettings.DefaultBaseErrorPixels / (_settings.BaseErrorPixels * (1 + Math.Max(0, speed) / 30));
         Visit(StreamTile.Root, camera, minimum, scale, required, refined);
     }
     private void Visit(StreamTile tile, Vector3 camera, LodLevel minimum, float scale,
