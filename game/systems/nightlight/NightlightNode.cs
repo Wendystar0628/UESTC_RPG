@@ -72,8 +72,10 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     public override void _EnterTree()
     {
         ProcessPriority = FramePriority.Channels;
+        _inventoryRev = long.MinValue;
         if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
         OnWorldInstanceChanged(0);
+        if (_overrideTexture is not null) EnsureOverrideTexture();
     }
 
     public override void _Ready()
@@ -92,6 +94,8 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     public override void _ExitTree()
     {
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        _windows.Bind(null);
+        _inventoryRev = long.MinValue;
         _lampGlow.Free();
         _windowGlow.Free();
     }
@@ -103,7 +107,8 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         _map = null;
         _cueDefs = [];
         Lamps = [];
-        _windows.ClearAll();
+        _windows.Bind(null);
+        _inventoryRev = long.MinValue;
         _lampGlow.Free();
         _windowGlow.Free();
     }
@@ -153,6 +158,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     {
         EndCue();
         _schedule?.Reset();
+        _windows.ClearAll();
     }
 
     // ------------------------------------------------------------------
@@ -216,10 +222,16 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
 
     private void RebuildFromInventory(IMapContext ctx, ScheduleEvaluator schedule)
     {
-        // 全图的灯具标记与窗格声明：WP-02 汇总各内容模块 Build() 的输出（含外围）。清单是桩或空时灯表为空，
-        // 光斑、灯头光晕、窗光晕都不画，地面读到的是"无灯"。
-        _inventoryRev = _inventory?.Rev ?? 0;
-        IReadOnlyList<LightEmitter> emitters = _inventory?.Lamps ?? [];
+        // WP-02 在地图准备阶段一起发布清单和窗号；只借用同一版数据，不重新分配窗号或复制库存。
+        var inventory = _inventory ?? throw new InvalidOperationException("The lighting inventory is not ready.");
+        var revision = inventory.Rev;
+        var numbering = inventory.WindowNumbering ?? throw new InvalidDataException("The lighting inventory has no prepared window numbering.");
+        if (numbering.Map != ctx.Descriptor.Id)
+            throw new InvalidDataException("The lighting inventory belongs to a different map.");
+        var emitters = inventory.Lamps;
+        var facades = inventory.Facades;
+        var windows = inventory.Windows;
+        _windows.Bind(numbering);
         var palette = Services.Get<IPaletteCatalogSource>().Catalog;
         var lamps = LampSetBuilder.Build(emitters, schedule,
             token => palette.TryGet(token, out var entry) ? entry.Index.Value : null,
@@ -237,13 +249,14 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampTable, _tableTexture);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampGrid, _gridTexture);
 
-        var windowSet = GlowSets.Windows(_inventory?.Facades ?? [], _inventory?.Windows ?? [], out var windowReport);
+        var windowSet = GlowSets.Windows(facades, windows, out var windowReport);
         if (_pools is not null && _materials is not null)
         {
             ShaderMaterial Material() => _materials.Create(ShaderId.FxGlow);
             _lampGlow.Upload(_pools, Material, GlowSets.Lamps(lamps));
             _windowGlow.Upload(_pools, Material, windowSet);
         }
+        _inventoryRev = revision;
         GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} rev={_inventoryRev} lamps={report.Accepted} cue={report.CueLamps} grid={size.Width}x{size.Height} " +
             $"overflowCells={overflow} skipped(channel={report.UnknownChannel}, notLamp={report.NotLamp}, color={report.UnknownColor}, dup={report.Duplicates}) " +
             $"windows={windowReport.Windows} skipped(channel={windowReport.UnknownChannel}, facade={windowReport.BadFacade})");
@@ -251,9 +264,11 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
 
     private void EnsureOverrideTexture()
     {
-        if (_overrideTexture is not null) return;
-        _overrideImage = Image.CreateFromData(WindowOverrides.Side, WindowOverrides.Side, false, Image.Format.Rgba8, _windows.Data);
-        _overrideTexture = ImageTexture.CreateFromImage(_overrideImage);
+        if (_overrideTexture is null)
+        {
+            _overrideImage = Image.CreateFromData(WindowOverrides.Side, WindowOverrides.Side, false, Image.Format.Rgba8, _windows.Data);
+            _overrideTexture = ImageTexture.CreateFromImage(_overrideImage);
+        }
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWindowOverride, _overrideTexture);
     }
 

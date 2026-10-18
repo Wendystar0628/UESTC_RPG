@@ -1,3 +1,5 @@
+using Campus.Contracts;
+
 namespace Campus.Systems.Nightlight.Windows;
 
 public enum WindowLight : byte { Auto = 0, ForceOff = 128, ForceOn = 255 }
@@ -7,12 +9,12 @@ public enum WindowCurtain : byte { Auto = 0, Open = 128, Drawn = 255 }
 /// <summary>
 /// window_override 的内容（256×256 RGBA8，纹素 = (窗号 % 256, 窗号 / 256)，只覆盖校内 0–65535 号窗）：
 /// R 亮灭（0 不覆盖、128 强制灭、255 强制亮），G 冷暖（0 按哈希、128 暖、255 冷），B 窗帘（0 按哈希、128 无帘、255 拉上），A 保留 0。
-/// 只在变化时上传，频率不超过 10 Hz（ENG-PERF）。按图：切图时清空。
+/// 只在变化时上传，频率不超过 10 Hz（ENG-PERF）。只持有正式窗号快照的引用，换快照或切图时清空。
 /// </summary>
 public sealed class WindowOverrides
 {
-    public const int Side = 256;
-    public const int Capacity = Side * Side;
+    public const int Side = WindowNumberingSnapshot.OverrideTextureSide;
+    public const int Capacity = WindowNumberingSnapshot.Capacity;
     public const double MinUploadInterval = 0.1;
 
     private readonly byte[] _data = new byte[Capacity * 4];
@@ -20,15 +22,25 @@ public sealed class WindowOverrides
     private int _count;
 
     public ReadOnlySpan<byte> Data => _data;
+    public WindowNumberingSnapshot? Numbering { get; private set; }
     public bool Dirty { get; private set; } = true;
     /// <summary>当前有覆盖值的窗数。</summary>
     public int Count => _count;
 
     public static bool InRange(int windowId) => windowId is >= 0 and < Capacity;
 
+    public void Bind(WindowNumberingSnapshot? numbering)
+    {
+        if (ReferenceEquals(Numbering, numbering)) return;
+        ClearAll();
+        Numbering = numbering;
+    }
+
     public void Set(int windowId, WindowLight light, WindowTint tint = WindowTint.Auto, WindowCurtain curtain = WindowCurtain.Auto)
     {
-        if (!InRange(windowId)) throw new ArgumentOutOfRangeException(nameof(windowId), windowId, "Only campus windows 0–65535 have overrides.");
+        var numbering = Numbering ?? throw new InvalidOperationException("Bind the prepared window numbering before setting an override.");
+        if (!InRange(windowId) || windowId >= numbering.WindowCount)
+            throw new ArgumentOutOfRangeException(nameof(windowId), windowId, "The window is outside the current map's prepared numbering.");
         var i = windowId * 4;
         var wasSet = _data[i] != 0 || _data[i + 1] != 0 || _data[i + 2] != 0;
         var isSet = light != WindowLight.Auto || tint != WindowTint.Auto || curtain != WindowCurtain.Auto;
