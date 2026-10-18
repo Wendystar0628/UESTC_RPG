@@ -86,4 +86,10 @@ public static class CoreIds
         (OsmFeatureIds.Way(OsmPrefix, 544161548).Source, GinkgoWalkWest, "design:core-ginkgo-sidewalk-west-bridge"),
         (OsmFeatureIds.Way(OsmPrefix, 544161558).Source, GinkgoWalkEast, "design:core-ginkgo-sidewalk-east-bridge"),
     ];
+    // OSM side paths whose end reached into the east walk's paving: hidden whole, re-added cut back to 2.5 m off its centre line.
+    public static readonly (string Hidden, string Kept)[] GinkgoSpurs =
+    [
+        (OsmFeatureIds.Way(OsmPrefix, 572770116).Source, "design:core-ginkgo-spur-572770116"),
+        (OsmFeatureIds.Way(OsmPrefix, 572770120).Source, "design:core-ginkgo-spur-572770120"),
+    ];
 }

@@ -251,8 +251,10 @@ public sealed class CoreModuleTests
             AssertThat(op.Reason.Length > 10).OverrideFailureMessage($"{op.Id.Value} has a reason").IsTrue();
         }
         AssertThat(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
-            .SequenceEqual(CoreIds.GinkgoWalks.Concat(CoreIds.GinkgoSidewalks.Select(s => s.Kept)))).OverrideFailureMessage("the ginkgo walks and the kept sidewalk ends are the overlay's only added roads").IsTrue();
-        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(CoreIds.GinkgoSidewalks.Select(s => s.Hidden))).OverrideFailureMessage("the two ginkgo sidewalks are the overlay's only hides").IsTrue();
+            .SequenceEqual(CoreIds.GinkgoWalks.Concat(CoreIds.GinkgoSidewalks.Select(s => s.Kept)).Concat(CoreIds.GinkgoSpurs.Select(s => s.Kept))))
+            .OverrideFailureMessage("the ginkgo walks, the kept sidewalk ends and the cut-back spurs are the overlay's only added roads").IsTrue();
+        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(CoreIds.GinkgoSidewalks.Select(s => s.Hidden).Concat(CoreIds.GinkgoSpurs.Select(s => s.Hidden))))
+            .OverrideFailureMessage("the two ginkgo sidewalks and the two spurs are the overlay's only hides").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
