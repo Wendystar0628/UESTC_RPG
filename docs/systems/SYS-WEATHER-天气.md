@@ -10,7 +10,7 @@ depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 contracts: [WeatherKind, WeatherMode, WeatherSel, WeatherVec, WorldPreset, LightningFlash, ILightningFeed]
 data: ["game/data/weather/chengdu/", "game/style/palette/keys/weather.json"]
-gates: [G2, G4, G10, G12, G13, G14, G16, G20, G21]
+gates: [G2, G4, G10, G7, G14, G20, G21]
 ---
 
 # SYS-WEATHER · 天气：天气清单、画面规则、可读性与湿润积水

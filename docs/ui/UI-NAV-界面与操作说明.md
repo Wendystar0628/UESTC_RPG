@@ -10,7 +10,7 @@ depends: [ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SY
 related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, OPS-RELEASE]
 contracts: [LocalizedName]
 data: ["user://settings.json", "game/hud/i18n/"]
-gates: [G2, G4, G7, G13, G14, G15, G16]
+gates: [G2, G4, G7, G14, G15]
 ---
 # UI-NAV · 界面与操作说明
 

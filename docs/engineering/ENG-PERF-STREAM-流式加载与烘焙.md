@@ -4,14 +4,14 @@ title: 流式加载、本机烘焙与内存
 category: engineering
 parent: ENG-PERF
 summary: 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
-keywords: [TileBundle, 流式加载, 本机烘焙缓存, tbin, 六条不变量, 看门狗, 碰撞级, 室内包, 目的地预取, 零分配, GC, 显存记账, 安装包布局, 泄漏门禁]
+keywords: [TileBundle, 流式加载, 本机烘焙缓存, tbin, 六条不变量, 看门狗, 碰撞级, 室内包, 目的地预取, 零分配, GC, 显存记账, 安装包布局, 不泄漏]
 owners: [WP-02]
 contributors: [WP-42, WP-47]
 depends: [CORE-INDEX, ENG-PERF, ENG-BUDGET, ENG-ARCH, SYS-MAPS, SYS-TITLE, SYS-SAVE, SYS-WALK, WLD-INTERIORS, WLD-OUTSKIRTS, UI-NAV]
 related: [ENG-GATES]
 contracts: []
 data: []
-gates: [G5, G6, G16]
+gates: [G5, G6]
 ---
 # ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
@@ -72,7 +72,7 @@ gates: [G5, G6, G16]
 
 ## 3 内存与显存
 
-显存与进程内存上限以 `budgets.json` 的 `presets` 为准。内核按格自己记字节账，每帧用 `Performance` 总量复核，报警口径同 ENG-BUDGET §4；显存总量经 DXGI 查询（WP-32），逼近预算时先收紧 LRU 字节上限，再按 ENG-PERF-ADAPT §1.2 降级。格子只释放自己的实例与 TileBundle，共享材质、图集、数据纹理归创建方与登记处。泄漏门禁：F1 跑两圈，显存与实例数不持续上涨，编译计数不变；另有同图重载 3 次门禁（G16）。
+显存与进程内存上限以 `budgets.json` 的 `presets` 为准。内核按格自己记字节账，每帧用 `Performance` 总量复核，报警口径同 ENG-BUDGET §4；显存总量经 DXGI 查询（WP-32），逼近预算时先收紧 LRU 字节上限，再按 ENG-PERF-ADAPT §1.2 降级。格子只释放自己的实例与 TileBundle，共享材质、图集、数据纹理归创建方与登记处。不泄漏：F1 跑两圈，显存与实例数不持续上涨，编译计数不变；同图重载 3 次同理（SYS-MAPS §3.5）。
 
 ## 4 安装包与磁盘布局
 

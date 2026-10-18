@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.3k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L121 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.5k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L122 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -300,7 +300,7 @@
 
 ## ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
 
-`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.5k 字 · 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
+`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.4k 字 · 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 关键词：视觉精度、精度区、K1–K5、判定距离、底线清单、B1–B13、不粗糙、一票否决、区界规则、可读规则、巡检点、行走走廊、外围分级
 
 - ART-FIDELITY §0 结论 · L21 · 1.1k
@@ -309,17 +309,17 @@
   - ART-FIDELITY §1.1 五个精度区 · L48 · 784
   - ART-FIDELITY §1.2 区界规则 · L60 · 187
   - ART-FIDELITY §1.3 细节项在各区的取用 · L67 · 442
-  - ART-FIDELITY §1.4 划分与数据 · L79 · 252
+  - ART-FIDELITY §1.4 划分与数据 · L79 · 224
   - ART-FIDELITY §1.5 换算基准 · L84 · 403
 - ART-FIDELITY §2 底线 · L90 · 1.1k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L94 · 1.1k
-- ART-FIDELITY §3 一票否决清单 · L114 · 871
-- ART-FIDELITY §4 巡检点与人工评分 · L140 · 268
-- ART-FIDELITY §5 行走走廊 · L146 · 761
-  - ART-FIDELITY §5.1 范围与画面构成 · L148 · 162
-  - ART-FIDELITY §5.2 走廊里的加密 · L153 · 203
-  - ART-FIDELITY §5.3 细节优先级 · L162 · 385
-- ART-FIDELITY §6 外围分级精度 · L173 · 218
+- ART-FIDELITY §3 一票否决清单 · L114 · 857
+- ART-FIDELITY §4 巡检点 · L140 · 230
+- ART-FIDELITY §5 行走走廊 · L145 · 761
+  - ART-FIDELITY §5.1 范围与画面构成 · L147 · 162
+  - ART-FIDELITY §5.2 走廊里的加密 · L152 · 203
+  - ART-FIDELITY §5.3 细节优先级 · L161 · 385
+- ART-FIDELITY §6 外围分级精度 · L172 · 218
 
 ## ART-MODELING-PROPORTION · 风格化比例、颜色与金样
 
@@ -535,7 +535,7 @@
 - WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 1.4k
   - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L71 · 665
 - WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L81 · 822
-- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L91 · 818
+- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L91 · 815
 
 ## WLD-INTERIORS-BUILD · 室内制作：加载、生成器、风格、痕迹、楼梯与碰撞
 
@@ -707,7 +707,7 @@
 
 ## WLD-VEGETATION · 植被：树冠画法、草坪、地面覆盖与季相
 
-`docs/world/WLD-VEGETATION-植被.md` · 10.0k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
+`docs/world/WLD-VEGETATION-植被.md` · 9.9k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
 关键词：植被、植物、树冠画法、云团型、插片型、冬季裸枝、叶量、开花、季相、局部季节、四季变色、草坪、绿篱、荷、芦苇、落叶地毯、树冠遮蔽、覆雪、过渡绿地、species.json
 
 - WLD-VEGETATION §0 结论 · L22 · 1.3k
@@ -736,7 +736,7 @@
   - WLD-VEGETATION §6.5 换季与天气切换 · L181 · 237
 - WLD-VEGETATION §7 碰撞、画面设置与声音 · L187 · 1.0k
   - WLD-VEGETATION §7.1 行走碰撞 · L189 · 361
-  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L198 · 367
+  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L198 · 362
   - WLD-VEGETATION §7.3 声音的接口（SYS-AUDIO） · L205 · 292
 - WLD-VEGETATION §8 待验证 · L214 · 80
 
@@ -1292,12 +1292,12 @@
 关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、风格底线、风格默认、渲染比例、雾幕类设置、画面页、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
 
 - SYS-GRAPHICS §0 结论 · L22 · 1.6k
-  - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 855
+  - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 850
 - SYS-GRAPHICS §1 预设 · L46 · 832
 - SYS-GRAPHICS §2 风格底线与风格默认 · L66 · 733
-- SYS-GRAPHICS §3 单项与生效方式 · L81 · 984
+- SYS-GRAPHICS §3 单项与生效方式 · L81 · 979
 - SYS-GRAPHICS §4 应用方式 · L105 · 441
-- SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L115 · 801
+- SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L115 · 796
 - SYS-GRAPHICS §6 持久化与恢复 · L134 · 305
 - SYS-GRAPHICS §7 画面页（WP-35，视觉见 UI-VISUAL-COMPONENTS §5） · L140 · 555
 - SYS-GRAPHICS §8 待验证（P0） · L152 · 224
@@ -1318,13 +1318,13 @@
   - SYS-MAPS §3.2 八步（切图部分主线之后） · L90 · 1.1k
   - SYS-MAPS §3.3 规则（主线之后） · L110 · 567
   - SYS-MAPS §3.4 入口 · L119 · 307
-  - SYS-MAPS §3.5 同图重载门禁（主线之后） · L128 · 207
+  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L128 · 179
 - SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L132 · 699
 - SYS-MAPS §5 相机、行走与安全点（主线之后） · L150 · 429
 - SYS-MAPS §6 归属与 `MapScope` · L161 · 600
 - SYS-MAPS §7 全局参数 `map_rect` · L169 · 691
-- SYS-MAPS §8 内存、包体与单图半径 · L179 · 347
-- SYS-MAPS §9 以后的方向 · L185 · 191
+- SYS-MAPS §8 内存、包体与单图半径 · L179 · 344
+- SYS-MAPS §9 以后的方向 · L185 · 184
 - SYS-MAPS §10 待验证（P0） · L189 · 265
 
 ## SYS-MOTION-ENV · 风、飘落、远景与季节氛围
@@ -1360,25 +1360,25 @@
 
 ## SYS-MOTION · 动态与事件：时钟、节奏与转场
 
-`docs/systems/SYS-MOTION-动态与事件.md` · 6.3k 字 · 两个时钟与一拍二、动作幅度上限、转场的唯一详述（改时间、换季、换天气、跳转与同时转场）；风与环境动态、生命体与偶发事件见子文档
+`docs/systems/SYS-MOTION-动态与事件.md` · 6.2k 字 · 两个时钟与一拍二、动作幅度上限、转场的唯一详述（改时间、换季、换天气、跳转与同时转场）；风与环境动态、生命体与偶发事件见子文档
 关键词：动态、两个时钟、动画时钟、AnimTime、一拍二、step_rate、480 s 回绕、转场、换季转场、改时间、同时转场、减少动态效果
 
 - SYS-MOTION §0 结论 · L22 · 1.0k
   - ★ SYS-MOTION §0.1 接入要点 · L37 · 361
 - SYS-MOTION §1 时钟与计时 · L45 · 1.0k
   - SYS-MOTION §1.1 两个时钟 · L47 · 365
-  - SYS-MOTION §1.2 计时规则 · L53 · 438
+  - SYS-MOTION §1.2 计时规则 · L53 · 433
   - SYS-MOTION §1.3 各档流逝的表现 · L60 · 126
   - SYS-MOTION §1.4 镜头 · L64 · 106
 - SYS-MOTION §2 节奏规则 · L68 · 710
-- SYS-MOTION §3 转场 · L79 · 2.5k
+- SYS-MOTION §3 转场 · L79 · 2.4k
   - SYS-MOTION §3.1 改时间 · L83 · 227
   - SYS-MOTION §3.2 换季 · L91 · 716
   - SYS-MOTION §3.3 跳转、传送与模式切换 · L107 · 175
   - SYS-MOTION §3.4 换天气 · L111 · 559
   - SYS-MOTION §3.5 叠加与优先级 · L119 · 210
   - SYS-MOTION §3.6 减少动态效果 · L127 · 127
-  - SYS-MOTION §3.7 验收原则 · L131 · 58
+  - SYS-MOTION §3.7 验收原则 · L131 · 53
   - SYS-MOTION §3.8 协调者 · L135 · 95
   - SYS-MOTION §3.9 开始页、进场过场与读档 · L139 · 132
 - SYS-MOTION §4 待验证 · L143 · 46
@@ -1758,7 +1758,7 @@
 `docs/engineering/ENG-BUDGET-RULES-推送硬规则.md` · 5.9k 字 · 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
 关键词：硬规则、推送规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、Shader Baker、版本锁定
 
-- ENG-BUDGET-RULES §0 结论 · L23 · 851
+- ENG-BUDGET-RULES §0 结论 · L23 · 846
   - ★ ENG-BUDGET-RULES §0.1 接入要点 · L29 · 570
 - ENG-BUDGET-RULES §1 硬规则（违反任何一条都不能推送） · L39 · 3.4k
   - ENG-BUDGET-RULES §1.1 渲染、材质与时间（第 1–10 条） · L41 · 1.5k
@@ -1767,15 +1767,15 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 额度的数值家：设备档与预设的预算口径、GPU 帧时分配、额度总账、怎么测；细节级别、速度律与推送硬规则在子文档
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.3k 字 · 额度的数值家：设备档与预设的预算口径、GPU 帧时分配、额度总账、怎么测；细节级别、速度律与推送硬规则在子文档
 关键词：性能预算、额度、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
 
-- ENG-BUDGET §0 结论 · L21 · 781
-  - ★ ENG-BUDGET §0.1 接入要点 · L35 · 195
-- ENG-BUDGET §1 总体要点 · L41 · 375
-- ENG-BUDGET §2 预设与设备档的预算 · L48 · 1.6k
+- ENG-BUDGET §0 结论 · L21 · 778
+  - ★ ENG-BUDGET §0.1 接入要点 · L35 · 192
+- ENG-BUDGET §1 总体要点 · L41 · 346
+- ENG-BUDGET §2 预设与设备档的预算 · L48 · 1.5k
 - ENG-BUDGET §3 额度总账（`budgets.json`） · L79 · 305
-- ENG-BUDGET §4 怎么测 · L87 · 280
+- ENG-BUDGET §4 怎么测 · L87 · 195
 - ENG-BUDGET §5 待验证（P0） · L91 · 197
 
 ## ENG-CODE · 代码结构准则
@@ -1794,43 +1794,41 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.7k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.6k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L22 · 505
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 226
-- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.2k
+- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.1k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 726
-  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 509
+  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 501
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.8k
-  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L99 · 682
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 371
+  - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L99 · 660
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 365
 - ENG-GATES-SHOTS §2 待验证（P0） · L117 · 144
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
 
-`docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md` · 3.1k 字 · 23 条一票否决（任一条即不通过；系统类条目指向各系统文档）与收尾阶段主代理逐项检查的全局清单
+`docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md` · 2.9k 字 · 23 条一票否决（任一条即不通过；系统类条目指向各系统文档）与收尾阶段主代理逐项检查的全局清单
 关键词：一票否决、全局清单、收尾清单、死黑、季节残留、硬切、切图残留、丢档、声音否决、观光规则集判据
 
 - ENG-GATES-VETO §0 结论 · L22 · 346
   - ★ ENG-GATES-VETO §0.1 接入要点 · L28 · 85
-- ENG-GATES-VETO §1 一票否决 · L32 · 1.5k
-- ENG-GATES-VETO §2 全局清单 · L60 · 525
-- ENG-GATES-VETO §3 待验证（P0） · L73 · 131
+- ENG-GATES-VETO §1 一票否决 · L32 · 1.4k
+- ENG-GATES-VETO §2 全局清单 · L60 · 532
 
-## ENG-GATES · 验收：测试三档与门禁 G1–G21
+## ENG-GATES · 验收：测试三档与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 6.3k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、门禁 G1–G21 各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
-关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、G1–G21、门禁编号、入口与交付分工、测试只锁本包输出、构建锁
+`docs/engineering/ENG-GATES-验收与门禁.md` · 4.8k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
-- ENG-GATES §0 结论 · L21 · 793
+- ENG-GATES §0 结论 · L21 · 808
   - ★ ENG-GATES §0.1 接入要点 · L34 · 255
-- ENG-GATES §1 门禁与测试节奏 · L40 · 4.1k
+- ENG-GATES §1 门禁与测试节奏 · L40 · 2.8k
   - ENG-GATES §1.1 测试三档 · L44 · 1.1k
-  - ENG-GATES §1.2 门禁 G1–G10 · L64 · 1.4k
-  - ENG-GATES §1.3 门禁 G11–G21 · L79 · 1.3k
-  - ENG-GATES §1.4 入口与交付分工 · L95 · 206
-- ENG-GATES §2 待验证（P0） · L101 · 283
+  - ENG-GATES §1.2 门禁表 · L64 · 1.4k
+  - ENG-GATES §1.4 入口与交付分工 · L85 · 207
+- ENG-GATES §2 待验证（P0） · L91 · 152
 
 ## ENG-PERF-ADAPT · 设备档、自适应与测量
 
@@ -1843,7 +1841,7 @@
   - ENG-PERF-ADAPT §1.1 设备档与首次分档（主线之后） · L36 · 194
   - ENG-PERF-ADAPT §1.2 运行时自适应（主线之后） · L40 · 410
   - ENG-PERF-ADAPT §1.3 帧节奏与画面设置约束 · L48 · 321
-- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L53 · 710
+- ENG-PERF-ADAPT §2 测量、剖析与门禁 · L53 · 678
 - ENG-PERF-ADAPT §3 D3D12 与 Vulkan 的选择 · L61 · 213
 - ENG-PERF-ADAPT §4 待验证（P0） · L65 · 58
 
@@ -1865,7 +1863,7 @@
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
 `docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md` · 3.7k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
-关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、泄漏门禁
+关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、不泄漏
 
 - ENG-PERF-STREAM §0 结论 · L22 · 610
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L30 · 216
@@ -1875,13 +1873,13 @@
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L59 · 168
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L63 · 179
 - ENG-PERF-STREAM §2 主线程与 C# · L67 · 327
-- ENG-PERF-STREAM §3 内存与显存 · L73 · 267
+- ENG-PERF-STREAM §3 内存与显存 · L73 · 274
 - ENG-PERF-STREAM §4 安装包与磁盘布局 · L77 · 155
 - ENG-PERF-STREAM §5 待验证（P0） · L81 · 79
 
 ## ENG-PERF · 性能工程：总原则、绘制管线与剔除
 
-`docs/engineering/ENG-PERF-性能工程.md` · 5.6k 字 · 性能策略总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与渲染图层
+`docs/engineering/ENG-PERF-性能工程.md` · 5.5k 字 · 性能策略总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与渲染图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
 - ENG-PERF §0 总原则 · L21 · 1.1k
@@ -1889,7 +1887,7 @@
 - ENG-PERF §1 绘制管线与合批 · L45 · 1.8k
   - ENG-PERF §1.1 容器选型 · L47 · 344
   - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L54 · 389
-  - ENG-PERF §1.3 调用口径 · L60 · 130
+  - ENG-PERF §1.3 调用口径 · L60 · 123
   - ENG-PERF §1.4 着色器白名单 · L64 · 430
   - ENG-PERF §1.5 全局参数与数据纹理 · L73 · 452
 - ENG-PERF §2 着色器与编译 · L82 · 607

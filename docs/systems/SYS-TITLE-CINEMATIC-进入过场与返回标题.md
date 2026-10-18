@@ -11,7 +11,7 @@ depends: [SYS-TITLE, ENG-ARCH, ENG-PERF, SYS-TIME, UI-NAV, UI-VISUAL, SYS-SAVE, 
 related: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, SYS-WALK, SYS-WEATHER, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-TERRAIN]
 contracts: [EnterKind, CinematicMode, EnterPath, EnterResult, EnterRequest, CinematicDef, CameraSeg, WorldCue, MaskSeg, CaptionCue, ExtraCue, AudioCue, CinematicEnd]
 data: ["game/data/maps/qingshuihe/cinematics/"]
-gates: [G2, G7, G8, G13, G16]
+gates: [G2, G7]
 ---
 
 # SYS-TITLE-CINEMATIC · 进入过场与返回标题：新游戏、继续、跳过、云卡

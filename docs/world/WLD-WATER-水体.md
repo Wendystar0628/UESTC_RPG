@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, ENG-ARCH, ENG-PERF, 
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, SYS-VIEW, SYS-WALK, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, WLD-TERRAIN, MAP-QSH-WATER]
 contracts: [refl_lamps, reflect_tex, reflect_vp, reflect_lake]
 data: ["game/data/maps/qingshuihe/map.json"]
-gates: [G4, G7, G8, G10, G12, G13, G16, G17]
+gates: [G4, G7, G10]
 ---
 
 # WLD-WATER · 水体：动画式水面画法、反光带与倒影、涉水与泳区规则

@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-RENOVATION, ART-MODELING, MAP-QSH-ADDITIONS]
 related: [ART-STYLE, ART-FIDELITY, ART-AMBIENCE, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-CORE, WLD-LIFE, ENG-WP, ENG-GATES]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/"]
-gates: [G5, G7, G9, G12]
+gates: [G5, G7]
 ---
 
 # MAP-QSH-RENOVATION · 清水河翻新清单

@@ -11,7 +11,7 @@ depends: [CORE-INDEX, WLD-OUTSKIRTS, SYS-VIEW, ENG-ARCH, SYS-WALK, SYS-MAPS]
 related: [WLD-OUTSKIRTS-BAND, MAP-QSH-OUTSKIRTS, MAP-QSH-SOUTH, UI-NAV, ENG-GATES, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO, WLD-TERRAIN]
 contracts: [SurfaceTag.Boundary, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, IWorldModel.Outskirts, RoamLimits.PushRate, RoamLimits.PushMax, RoamLimits.EdgeFogMax, MapEnvironment.Outskirts, ICameraRig.EdgeFog, ShaderGlobals.EdgeFog]
 data: []
-gates: [G2, G7, G13, G15]
+gates: [G2, G7, G15]
 ---
 
 # WLD-OUTSKIRTS-BORDER · 边界阻挡与提示：行走阻挡、飞行阻挡、提示文案

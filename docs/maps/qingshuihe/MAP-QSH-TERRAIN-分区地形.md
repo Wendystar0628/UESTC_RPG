@@ -10,7 +10,7 @@ depends: [CORE-INDEX, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MA
 related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES, ENG-WP]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/terrain/"]
-gates: [G2, G7, G9, G15, G19]
+gates: [G2, G7, G15, G19]
 ---
 
 # MAP-QSH-TERRAIN · 分区地形：全图骨架、地标丘、揭示路线与常水位

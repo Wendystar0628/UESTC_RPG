@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-CENTER-EAST, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/north.d/"]
-gates: [G5, G7, G8, G9, G10]
+gates: [G5, G7, G10]
 ---
 
 # MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅

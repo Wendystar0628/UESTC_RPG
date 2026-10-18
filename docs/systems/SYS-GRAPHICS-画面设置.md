@@ -10,7 +10,7 @@ depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
 related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE]
 contracts: [QualityPreset, DeviceTier, ApplyClass, KnobKind, QualityKnob, KnobSpec, QualityProfile, QualityView, ApplyOrigin, QualityChange, KnobDelta, ApplyPlan, ApplyStatus, ApplyResult, IQualityService, IQualityAware, QualityResponsiveAttribute]
 data: ["game/data/quality-presets.json", "user://settings.json"]
-gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
+gates: [G2, G5, G7, G10, G14]
 ---
 
 # SYS-GRAPHICS · 画面设置：预设、单项、风格底线、应用与持久化
@@ -38,7 +38,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 - **给低画质省开销**：只降渲染比例、阴影图、距离和密度，不降画风和近景建模；季节内容只降密度、不缺席
 - **新增画面单项**：在 `QualityKnob` 末尾追加（契约只增不改），写好 `KnobSpec` 和 `quality-presets.json` 里各预设的取值
 - **新增引擎设置、后期效果或着色器变体**：会清空管线的设置不做成选项；新的可达组合要进启动预热的并集（§3）
-- **负责会被自动调节的单项**（主线之后）：每级降档渐变淡化、不硬切（G13）；分帧生效，不卡顿
+- **负责会被自动调节的单项**（主线之后）：每级降档渐变淡化、不硬切；分帧生效，不卡顿
 - **界面或其他包改画面设置**：只调 `IQualityService.Plan()`、`Apply()`；跳转、传送、换季、切图、读档、过场等遮挡期间返回 `Deferred`（§4）
 - **临时改画面相关的引擎参数**（如开放室内的阴影范围）：作为介质覆盖自己记，不登记 `Owns`，也不进 `QualityView`（§3）
 - **门禁、截图、基准要指定画质**：用命令行参数，不读 `user://`；视觉基准是精致预设、自动调节关（ENG-GATES-SHOTS §1）
@@ -100,7 +100,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 
 **介质覆盖**（不是玩家单项，WLD-INTERIORS）：镜头在开放室内时，介质服务把方向光阴影的第一级范围缩小，0.5 s 内过渡，出楼恢复；它叠在阴影设置之上，自动调节和玩家的设置都不动它，`QualityView` 也不报告它。进入室内时抬高阴影方向最低高度同属介质呈现，不是画面单项。
 
-**启动预热**：扉页后面的预热覆盖"各预设和所有单项取值能到达的组合"的并集（SMAA 与 FXAA 两套后期、移轴两种分辨率），所以玩家怎么切都不再编译管线（G16）。
+**启动预热**：扉页后面的预热覆盖"各预设和所有单项取值能到达的组合"的并集（SMAA 与 FXAA 两套后期、移轴两种分辨率），所以玩家怎么切都不再编译管线。
 
 ## 4 应用方式
 
@@ -127,7 +127,7 @@ gates: [G2, G5, G7, G8, G9, G10, G11, G12, G13, G14, G16, G17]
 
 - 实际生效值 = clamp(min(玩家所选, 自适应上限), 最差值)。只往下调，回升不超过玩家所选。
 - 只动"即时"类的性能项：细节距离、模型 LOD 精度、植被与草密度、降水与粒子密度、倒影刷新、柔光质量、阴影距离与级联。不动渲染比例、显示设置和风格底线。
-- 玩家手动改过的项被锁定，自动调节跳过它。每级降档渐变完成，不硬切（G13）。
+- 玩家手动改过的项被锁定，自动调节跳过它。每级降档渐变完成，不硬切。
 - 界面用一行小字写明当前自动降了哪些项，例如"已自动降低：植被密度、阴影距离"。关闭时只保留帧节奏控制。控制律、样本剔除、发热漂移沿用 ENG-PERF-ADAPT §1.2。
 - 开始页、进场过场、返回标题期间自适应冻结，这些帧全部剔除出统计；传送的雾幕帧、存档抓缩略图的那一帧同样剔除。
 

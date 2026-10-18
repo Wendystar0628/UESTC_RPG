@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-WATER, SYS-TIME, SYS-WEATHER,
 related: [SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WALK, SYS-ATLAS, WLD-TERRAIN]
 contracts: []
 data: ["game/data/maps/qingshuihe/backdrop.json", "game/assets/style/backdrop/qingshuihe/"]
-gates: [G4, G5, G7, G8, G12, G13, G16]
+gates: [G4, G5, G7]
 ---
 # WLD-DIORAMA · 箱庭边界、截面与远景
 

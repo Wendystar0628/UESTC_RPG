@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/south.d/"]
-gates: [G4, G5, G7, G9]
+gates: [G4, G5, G7]
 ---
 
 # MAP-QSH-SOUTH · 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心

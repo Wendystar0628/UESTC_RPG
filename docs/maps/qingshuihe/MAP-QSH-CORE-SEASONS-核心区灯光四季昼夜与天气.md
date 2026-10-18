@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-CORE, SYS-TIME, ART-SKYLIGHT, MAP-QSH-ADDITIONS, S
 related: [MAP-QSH-LIBRARY, MAP-QSH-SOUTH, WLD-VEGETATION, WLD-LIFE]
 contracts: []
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
-gates: [G7, G12, G13]
+gates: [G7]
 ---
 
 # MAP-QSH-CORE-SEASONS · 核心区灯光、四季昼夜与天气

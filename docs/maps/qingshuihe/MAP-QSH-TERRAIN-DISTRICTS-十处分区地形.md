@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH,
 related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS, WLD-VEGETATION, UI-NAV]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/terrain/"]
-gates: [G2, G7, G9, G15]
+gates: [G2, G7, G15]
 ---
 
 # MAP-QSH-TERRAIN-DISTRICTS · 十处分区地形

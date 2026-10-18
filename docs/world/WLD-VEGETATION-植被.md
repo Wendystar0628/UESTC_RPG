@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME, SYS
 related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, ART-MODELING, ENG-BUDGET, ENG-WP, SYS-WALK, WLD-OUTSKIRTS, SYS-AUDIO, MAP-QSH-VEGETATION, MAP-QSH-OUTSKIRTS]
 contracts: []
 data: ["game/data/vegetation/species.json"]
-gates: [G2, G4, G5, G7, G8, G10, G12, G13, G15, G16, G17, G21]
+gates: [G2, G4, G5, G7, G10, G15, G21]
 ---
 
 # WLD-VEGETATION · 植被：树冠画法、草坪、地面覆盖与季相
@@ -198,7 +198,7 @@ gates: [G2, G4, G5, G7, G8, G10, G12, G13, G15, G16, G17, G21]
 ### 7.2 画面设置（SYS-GRAPHICS）
 
 - 植被相关的单项：近景几何叶开/关、植被与草密度 75%/100%、草地范围 12/20 m，以及细节距离系数（切换距离随它换算）。四项都是即时类，切换不重建格子、不重编译。
-- **乔木株数不降**：植被与草密度只降草叶、近处实例落叶和季节花境；银杏大道两侧各一行、行道树和 MAP-QSH-VEGETATION §3 的片区种植都是身份特征。降密度均匀分布，不是整片消失，并在 0.5–1 s 内淡化，不硬切（G13）；季节内容只降密度、不缺席。
+- **乔木株数不降**：植被与草密度只降草叶、近处实例落叶和季节花境；银杏大道两侧各一行、行道树和 MAP-QSH-VEGETATION §3 的片区种植都是身份特征。降密度均匀分布，不是整片消失，并在 0.5–1 s 内淡化，不硬切；季节内容只降密度、不缺席。
 - 描线、植被三阶明暗、透光、季节内容不随画面设置变；画面设置不改烘焙产物。
 - **验收**：最差值配置下，在 V1、E1 看银杏大道和草坪：两侧各一行树都在，春季粉带、冬季裸枝的枝序都成立，草环边缘不硬切，没有裸面。
 

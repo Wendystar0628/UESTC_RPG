@@ -11,7 +11,7 @@ depends: [SYS-SAVE, ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
 related: [CORE-INDEX, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-WALK, SYS-TITLE, WLD-OUTSKIRTS, WLD-INTERIORS]
 contracts: [SaveReason, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState]
 data: []
-gates: [G2, G10, G16, G20]
+gates: [G2, G10, G20]
 ---
 
 # SYS-SAVE-FLOW · 保存时机与读档流程：安全时刻、退出、读档、世界实例、一致性

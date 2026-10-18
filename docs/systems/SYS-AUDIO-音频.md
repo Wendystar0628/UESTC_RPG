@@ -10,7 +10,7 @@ depends: [SYS-MOTION, SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [CORE-INDEX, ART-STYLE, WLD-LIFE, ENG-GATES, ENG-BUDGET, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, ENG-ROADMAP, SYS-WALK, SYS-WEATHER, WLD-INTERIORS]
 contracts: [AudioBuses, AudioGroup, BackgroundBehavior, SuddenSoundMode, AudioSettings, UiCue, MusicCue, DuckReason, AudioSnapshot, IAudioService, SoundSetId]
 data: ["game/data/audio/", "user://settings.json"]
-gates: [G4, G5, G6, G13, G14, G21]
+gates: [G4, G5, G6, G14, G21]
 ---
 # SYS-AUDIO · 音频：内核、混音、加速节制、人迹禁区、界面音效与素材
 

@@ -11,7 +11,7 @@ depends: [MAP-QSH-WEST, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER]
 related: [MAP-QSH-WEST-WALK, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, ENG-GATES]
 contracts: []
 data: []
-gates: [G7, G12]
+gates: [G7]
 ---
 
 # MAP-QSH-WEST-SEASONS · 西区与西北区四季昼夜与天气：夜间角色、四季表、避雨处与积水点

@@ -10,7 +10,7 @@ depends: [ART-STYLE, ENG-ARCH, SYS-TIME, UI-NAV]
 related: [CORE-INDEX, ART-SKYLIGHT, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
 contracts: []
 data: ["game/style/palette/ext/ui.json", "game/hud/style/ui_metrics.json"]
-gates: [G4, G5, G14, G16]
+gates: [G4, G5, G14]
 ---
 # UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 

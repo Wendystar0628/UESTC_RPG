@@ -10,7 +10,7 @@ depends: [ENG-ARCH, ENG-PERF, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 related: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, SYS-TIME, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-ROADMAP, WLD-TERRAIN]
 contracts: [IAppFlow, AppState]
 data: ["game/assets/title/qingshuihe/"]
-gates: [G7, G10, G14, G16]
+gates: [G7, G10, G14]
 ---
 
 # SYS-TITLE · 开始页与启动：扉页、开始页、应用状态
@@ -41,7 +41,7 @@ gates: [G7, G10, G14, G16]
 
 1. **扉页**：引擎启动画面是全屏雾色 #B8B6D6，不显示标志；主场景第一帧，雾幕层在 0.3 s 内换上扉页静帧，界面层同时画出片名块，菜单还不出现。
 2. **在扉页后面做完**：地图与常驻数据、三维与二维预热（含云卡、外围、开始页与放映层的全部组件，大地图预建并隐藏）、恢复最近存档的世界作 T0（没有存档就建"预览世界"，秋 17:30、晴）、空跑让 JIT 先编译。
-3. **转为实时**：扉页 1.2 s 交叉淡化成实时 T0，淡化结束时菜单进场；高空远景床 3 s 淡入，有开场音乐时 2 s 后淡入。前置条件是上述全部完成且音频就绪。G16 的计数基线从这一刻算起。
+3. **转为实时**：扉页 1.2 s 交叉淡化成实时 T0，淡化结束时菜单进场；高空远景床 3 s 淡入，有开场音乐时 2 s 后淡入。前置条件是上述全部完成且音频就绪。
 4. 之后在标题页空闲时，预取继续的终点（SYS-TITLE-CINEMATIC §7）；新游戏整条路径的预取在主线之后。
 
 **目标**（按数量级）：窗口出现后扉页立刻到，几秒内转为实时；转为实时之后管线编译的三项计数不增，新生成的 MSDF 字形为 0。

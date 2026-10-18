@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, ART-SKYLIGHT]
 related: [SYS-MOTION, SYS-AUDIO, ENG-GATES, MAP-QSH-CENTER-EAST]
 contracts: []
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
-gates: [G12, G15]
+gates: [G7, G15]
 ---
 
 # MAP-QSH-ADDITIONS-ATMOSPHERE · 夜间灯光总图与雨天增补

@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME]
 related: [ART-STYLE-LINES, ART-MODELING, ART-SKYLIGHT, WLD-VEGETATION, WLD-INTERIORS, WLD-WATER, WLD-TERRAIN, SYS-WEATHER]
 contracts: [ToonSpec, ToonRef, ToonFx, ToonNormal, ShadeSteps]
 data: []
-gates: [G6, G7, G12, G13]
+gates: [G6, G7]
 ---
 # ART-STYLE-SHADING · 明暗、影色与材质表现
 

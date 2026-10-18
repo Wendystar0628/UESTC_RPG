@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ENG-PERF, ENG-BUDGET, ENG-GATES, SYS-GRAPHICS]
 related: [SYS-MAPS, SYS-SAVE]
 contracts: []
 data: ["output/perf/"]
-gates: [G10, G11, G13]
+gates: [G10]
 ---
 # ENG-PERF-ADAPT · 设备档、自适应与测量
 
@@ -52,8 +52,8 @@ gates: [G10, G11, G13]
 
 ## 2 测量、剖析与门禁
 
-- **机器**：吞吐、回归和额度核算在开发机（RTX 4080）上进行，`--gpu-index` 选卡；独显中与最低配置在真机上测（G11）。
-- **运行时测量**：GPU/CPU 计时读 `ViewportGetMeasuredRenderTime*`，调用与三角形读 `GetRenderInfo`；显存、对象、管线编译计数读 `Performance` 监视器（G16）。G8 按包预测；按包看 GPU 时间用 `-- --without=WP-xx` 增量对比，仅作诊断。只看 p95 与超过 100 ms 的卡顿；掉帧指间隔超过目标 1.5 倍。
+- **机器**：吞吐、回归和额度核算在开发机（RTX 4080）上进行，`--gpu-index` 选卡。
+- **运行时测量**：GPU/CPU 计时读 `ViewportGetMeasuredRenderTime*`，调用与三角形读 `GetRenderInfo`；显存、对象、管线编译计数读 `Performance` 监视器。按包看 GPU 时间用 `-- --without=WP-xx` 增量对比，仅作诊断。只看 p95 与超过 100 ms 的卡顿；掉帧指间隔超过目标 1.5 倍。
 - **自动化基准**测导出的 release 版，窗口模式；命令行与截图默认串以 ENG-GATES-SHOTS §1 为准，门禁判据以 ENG-GATES §1 为准。吞吐模式关垂直同步、固定步长；体验模式开垂直同步、按真实时间。预设只由命令行决定，`--adaptive=0`，不读 `user://`。世界状态基准另加夏夜雷雨固定组合（ENG-BUDGET §2）；编译计数连续 10 帧不增才开始采样；A/B 前后各测几次取中位数。
 - **体验脚本**（前推 24 小时、四季轮换、天气巡回、预设轮换、过场体验、跳转与传送压力）在体验模式下跑，判掉帧与卡顿，并要求跑完 DRAW 编译计数为 0；清单与判据见 ENG-GATES §1。
 - **日志与诊断**：各包只经 `Campus.Kernel.Inspect` 写日志；"导出诊断"默认不含存档，本机路径一律写成 `user://`、`res://`。

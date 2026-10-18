@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ENG-BUDGET, ENG-PERF, SYS-MAPS, SYS-WALK, SYS-TITLE, UI-NA
 related: [SYS-GRAPHICS, SYS-VIEW]
 contracts: []
 data: []
-gates: [G8, G10]
+gates: [G10]
 ---
 # ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 

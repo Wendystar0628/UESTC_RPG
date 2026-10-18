@@ -112,6 +112,7 @@ gates: []
 | D-230 | 行走用常规做法：地面每格一个高度场，楼和物件用盒子，0.35 m 以下薄边不单独做碰撞，只加载身边；落点与回位运行时算；不预算整图可行走栅格、安全点网格和精确支持面；碰撞与画面差几厘米可以接受；G15 日常只跑固定路线加改到区域撒点 | 行走、碰撞、门禁 | SYS-WALK-BOUNDS §1、§4、§7，ENG-GATES | 生效 |
 | D-232 | demo 阶段工程与流程减负：快检过就推，专项失败分级登记、整图专项只在阶段收尾；编译不算源码哈希，快检只跑受影响的测试；删 PublicAPI、锁文件、门禁自测与无人用的 Python 孪生；子单 1 小时内、小错指挥自己修、日常用 high；程序集并成约 4–5 个；确定性只保同机同输入同输出，撤 `DetMath` 与逐字节一致；新内容只做近中远三档；取消几何启动集与 `bake.manifest.json`；存档、天气、多地图、设置按单图收缩 | 全部工程与施工 | WF-RULE §7，ENG-ARCH §2、§4，ENG-GATES | 生效 |
 | D-237 | 不重写现成的：引擎内建或成熟的开源库能做的就用，不自己手写一套；现成的满足不了硬约束（纯 .NET 生成层、同机确定、许可）或接入代价明显更大时才手写，并写明理由 | 全部工程 | CORE-INDEX §0，ENG-CODE §3 | 生效 |
+| D-238 | 门禁按 demo 阶段收缩到 14 项：保留 G1–G7、G10、G14、G15、G18、G19a–c、G20、G21；删 G8 静态预算（G10 实测代替）、G9 近景巡检、G11 核显实测（自动分档已删）、G13 过渡逐帧判定、G16、G19d–h，G12 时季与 G17 预设并进 G7 的集中测试出图；编号不复用；gate.ps1 只跑保留项，不做门禁结果缓存 | 全部工程 | ENG-GATES §1 | 生效 |
 | D-126 | 包体估计约 0.45–0.75 GB、本机缓存烘满约 0.8–1.4 GB，原型实测后核账；超上限时向用户汇报 | 构建 | ENG-BUDGET §3 | 待原型验证 |
 | D-127 | 总账各项统一留约 10% 作主代理余量，界面加音频的主线程合计不到 1 ms；原型实测后统一核账，写回 ENG-BUDGET §3 | 预算 | ENG-WP §2；ENG-BUDGET §3 | 待原型验证 |
 | D-128 | 室内预算（楼内视角，精致）：≤ 80 万三角形、≤ 250 次绘制，大厅和中庭 ≤ 100 万三角形 | 开放室内 | ENG-BUDGET §2 | 生效 |
@@ -123,7 +124,7 @@ gates: []
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
 | D-131 | 工作包以 ENG-WP 为准（含 WP-54a、54b） | 全项目 | ENG-WP-LIST §1 | 生效 |
-| D-132 | 门禁是 G1–G21，以 ENG-GATES §1 为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
+| D-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
 | D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，工作包以 ENG-WP 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1；ENG-WP-LIST §1 | 生效 |
 | D-134 | 契约分批冻结：某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主代理宣布冻结，之后只增不改；改契约、全局着色器参数、着色器文件、程序集引用，一律向主代理申请 | 全项目 | WF-BUILD §1；ENG-WP §2 第 1 条；ENG-ARCH §5 | 生效 |
 | D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
@@ -139,6 +140,6 @@ gates: []
 | D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | WF-ENTRY | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
 | D-147 | 新增的设计物体写进覆盖层，ID 以 `design:` 开头；覆盖层按图放在 `game/data/maps/<地图>/overlay/` | 内容包 | CORE-CONVENTIONS §3.1；SYS-MAPS §1.1 | 生效 |
-| D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指门禁 G1–G21；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
+| D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指 ENG-GATES §1.2 门禁表里的门禁；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
 | D-160 | v1 冻结前做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；ENG-WP-LIST §1；CORE-CONVENTIONS §3.6 | 生效 |
 | D-177 | 目标框架用 net10.0（C# 14）：.NET 8 于 2026-11-10 停止支持；SDK 由 `global.json` 锁定；D0 在 net10.0 下跑通编译、导入、导出与导出版启动，不通时报作者决定，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §1；ENG-WP §2 第 2 条；ENG-ARCH §8 | 待原型验证 |

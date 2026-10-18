@@ -10,7 +10,7 @@ depends: [CORE-INDEX, WLD-VEGETATION, ART-STYLE, SYS-TIME]
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-OUTSKIRTS, MAP-QSH-WATER, WLD-WATER]
 contracts: []
 data: []
-gates: [G7, G12]
+gates: [G7]
 ---
 
 # MAP-QSH-VEGETATION · 清水河植被：树种、种植与地面覆盖的位置

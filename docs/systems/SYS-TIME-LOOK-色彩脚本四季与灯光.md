@@ -11,7 +11,7 @@ depends: [SYS-TIME, ART-STYLE, ART-SKYLIGHT, ENG-PERF, SYS-WEATHER]
 related: [WLD-VEGETATION, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-MOTION, ENG-GATES, UI-NAV, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/<地图>/lighting-schedule.json", "game/style/palette/keys/"]
-gates: [G12]
+gates: [G7]
 ---
 
 # SYS-TIME-LOOK · 色彩脚本、四季内容与灯光时刻表

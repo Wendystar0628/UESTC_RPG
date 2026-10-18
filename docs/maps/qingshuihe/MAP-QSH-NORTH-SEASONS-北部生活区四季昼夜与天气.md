@@ -11,7 +11,7 @@ depends: [MAP-QSH-NORTH, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER]
 related: [MAP-QSH-NORTH-WALK, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-LIFE, ART-FIDELITY, ENG-GATES]
 contracts: []
 data: []
-gates: [G7, G12]
+gates: [G7]
 ---
 
 # MAP-QSH-NORTH-SEASONS · 北部生活区四季昼夜与天气：夜间角色、四季表、开放室内的灯、避雨处与积水点

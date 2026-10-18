@@ -11,7 +11,7 @@ depends: [WLD-TERRAIN, CORE-INDEX, ENG-ARCH, SYS-WALK, ART-STYLE, ART-MODELING, 
 related: [WLD-TERRAIN-SHAPE, WLD-WATER, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, ENG-GATES, TOOL-PREVIEW]
 contracts: [ITerrain, TerrainFacts, TerrainClass, TerrainOverlayFile, TerrainOp]
 data: ["game/data/maps/qingshuihe/overlay/terrain/"]
-gates: [G2, G5, G6, G8, G15]
+gates: [G2, G5, G6, G15]
 ---
 
 # WLD-TERRAIN-APPLY · 地形落地：表达合成、贴地、可走性、着色

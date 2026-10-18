@@ -10,7 +10,7 @@ depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRA
 related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-WP, WLD-TERRAIN]
 contracts: [ShaderGlobals]
 data: ["game/style/shaders/", "game/style/outline/"]
-gates: [G5, G8, G16, G17, G19, G20, G21]
+gates: [G5, G7, G19, G20, G21]
 ---
 # ENG-PERF · 性能工程：总原则、绘制管线与剔除
 
@@ -21,7 +21,7 @@ gates: [G5, G8, G16, G17, G19, G20, G21]
 ## 0 总原则
 
 1. **引擎锁定 Godot 4.7.2-stable .NET**，Forward+，默认 D3D12，Vulkan 只用于调试与兜底（ENG-PERF-ADAPT §3）。
-2. **场景只用白名单着色器**（§1.4）；材质特性靠调色板、顶点标志位、全局参数在着色器内分支，运行时不新建 Shader；雾幕之后管线编译计数不增（G16）。
+2. **场景只用白名单着色器**（§1.4）；材质特性靠调色板、顶点标志位、全局参数在着色器内分支，运行时不新建 Shader；雾幕之后管线编译计数不增。
 3. **瓶颈在两头**：CPU 的提交与剔除，GPU 的多遍（预通道、颜色、4 级阴影）与后期。合批靠离线合并、自动实例化、MultiMesh（§1）；阴影只能靠减少投影物省钱（ENG-PERF-LIGHT §2.1）。
 4. **阴影用引擎原生 PSSM**；描线、边缘光、移轴、光斑、倒影、窗灯、路灯光斑自己实现；不用 SSAO、SSIL、SSR、SDFGI、体积雾、反射探针、Environment 雾。
 5. **主线程只挂载，不生成**；绝不卡帧、不穿地靠六条不变量（ENG-PERF-STREAM §1.2）。
@@ -59,7 +59,7 @@ gates: [G5, G8, G16, G17, G19, G20, G21]
 
 ### 1.3 调用口径
 
-绘制调用读 `Viewport.GetRenderInfo`（主通道 Visible、阴影 Shadow，界面 Canvas 另计）；三角形以 G8 预测与内核自记为准，引擎计数只作对照，报警口径见 ENG-BUDGET §4。
+绘制调用读 `Viewport.GetRenderInfo`（主通道 Visible、阴影 Shadow，界面 Canvas 另计）；三角形以内核自记为准，引擎计数只作对照，报警口径见 ENG-BUDGET §4。
 
 ### 1.4 着色器白名单
 

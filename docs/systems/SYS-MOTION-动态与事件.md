@@ -10,7 +10,7 @@ depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-VEGETATION, UI-NAV, SYS-WALK, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 contracts: []
 data: []
-gates: [G12, G13, G21]
+gates: [G7, G21]
 ---
 
 # SYS-MOTION · 动态与事件：时钟、节奏与转场
@@ -54,7 +54,7 @@ gates: [G12, G13, G21]
 
 - 每帧 `AnimTime = (AnimTime + delta) % 480`，单帧 delta 上限 0.1 s；"真实秒"是另一个只增不绕的累加。不读 `DateTime.Now`、`Stopwatch`，不用计时器节点。
 - **禁用 `TIME`**：它受 `Engine.TimeScale` 缩放且每 3600 s 回绕；白名单着色器出现 `TIME` 不能推送。`Engine.TimeScale` 固定为 1，倍速只改世界时钟。
-- **可复现**：Movie Maker 下 delta 恒定，同一组命令行参数每次出的帧序列相同（G13）。
+- **可复现**：Movie Maker 下 delta 恒定，同一组命令行参数每次出的帧序列相同。
 - **480 s 回绕无缝**：周期量的周期取 480 s 的整数分之一（阵风 15 s、喷泉 8 s、银杏灯 6 s、萤火虫 1.5–3 s）；有自己寿命的东西用 τ = mod(anim_time + φ, 480) 作局部时间。8 分钟才回绕一次，回绕处轻微跳一下不追。
 
 ### 1.3 各档流逝的表现
@@ -78,7 +78,7 @@ gates: [G12, G13, G21]
 
 ## 3 转场
 
-观者在界面上发起的过渡统称"转场"：改时间、换季、手动换天气、点位跳转、模式切换、传送和换图。转场要自然，不能硬切（G13）；不算偶发事件，也不算自动运镜；所有转场都只往前走。本节是转场的唯一详述处。声音按转场阶段编排（SYS-AUDIO §3）；转场打断时，偶发事件已排队的声音整批取消。
+观者在界面上发起的过渡统称"转场"：改时间、换季、手动换天气、点位跳转、模式切换、传送和换图。转场要自然，不能硬切；不算偶发事件，也不算自动运镜；所有转场都只往前走。本节是转场的唯一详述处。声音按转场阶段编排（SYS-AUDIO §3）；转场打断时，偶发事件已排队的声音整批取消。
 
 ### 3.1 改时间
 
@@ -130,7 +130,7 @@ gates: [G12, G13, G21]
 
 ### 3.7 验收原则
 
-判据同 SYS-TIME §4：录一段过渡看有没有硬切，雾幕遮罩区间除外（G13）。
+判据同 SYS-TIME §4：录一段过渡看有没有硬切，雾幕遮罩区间除外。
 
 ### 3.8 协调者
 

@@ -11,7 +11,7 @@ depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-DIORAMA, ART-FIDELITY, ENG-A
 related: [MAP-QSH-OUTSKIRTS, WLD-OUTSKIRTS-BORDER, ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, SYS-AUDIO, OPS-RELEASE, WLD-TERRAIN]
 contracts: []
 data: ["pipeline/outskirts/", "game/data/maps/qingshuihe/outskirts.json", "game/data/maps/qingshuihe/overlay/outskirts.overlay.json"]
-gates: [G2, G6, G7, G8, G9, G12, G13, G16]
+gates: [G2, G6, G7]
 ---
 
 # WLD-OUTSKIRTS-BAND · 外围环境带：截面、分层与精度、灯光季节、保留删除新增、画法、数据

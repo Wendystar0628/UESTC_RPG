@@ -11,7 +11,7 @@ depends: [UI-NAV, SYS-TIME, SYS-ATLAS, ENG-GATES]
 related: [WLD-OUTSKIRTS, SYS-MAPS, SYS-WEATHER, UI-VISUAL]
 contracts: [Waypoint, WaypointGroup, WaypointStand, WaypointRecommend]
 data: ["game/data/maps/qingshuihe/waypoints.json"]
-gates: [G2, G7, G13]
+gates: [G2, G7]
 ---
 # UI-NAV-WAYPOINTS · 点位、跳转与传送
 

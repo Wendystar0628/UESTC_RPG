@@ -11,7 +11,7 @@ depends: [MAP-QSH-CENTER-EAST, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WE
 related: [MAP-QSH-CENTER-EAST-WALK, WLD-VEGETATION, WLD-LIFE, ART-FIDELITY, ENG-GATES]
 contracts: []
 data: []
-gates: [G7, G12]
+gates: [G7]
 ---
 
 # MAP-QSH-CENTER-EAST-SEASONS · 中部与东区四季昼夜与天气：月出与光、夜间角色、四季表、避雨处与积水点

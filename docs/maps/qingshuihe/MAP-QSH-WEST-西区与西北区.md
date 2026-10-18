@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ART-RENOVATION, ENG-ARCH, WLD-INT
 related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-WATER, WLD-LIFE, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, WLD-OUTSKIRTS]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/west.d/"]
-gates: [G5, G7, G9]
+gates: [G5, G7]
 ---
 
 # MAP-QSH-WEST · 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头

@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-ADDITIONS, ART-STYLE, ART-FIDELITY, ART-MODELING, 
 related: [WLD-VEGETATION, WLD-LIFE, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ART-RENOVATION, ART-AMBIENCE, MAP-QSH-RENOVATION]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/"]
-gates: [G5, G7, G9, G15]
+gates: [G5, G7, G15]
 ---
 
 # MAP-QSH-ADDITIONS-VOCAB · 设计增补词汇与楼宇规则

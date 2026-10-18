@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ART-SKYLIGHT, ART-STYLE, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-DIORAMA, WLD-OUTSKIRTS, SYS-VIEW, ART-AMBIENCE]
 contracts: []
 data: ["game/data/maps/qingshuihe/sky.json"]
-gates: [G7, G12, G13, G16]
+gates: [G7]
 ---
 # ART-SKYLIGHT-ATMOS · 天空、月亮与雾
 

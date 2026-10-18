@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, SYS-WALK, ENG-GATES]
 related: [MAP-QSH-TERRAIN-DISTRICTS, MAP-QSH-LIBRARY, MAP-QSH-INTERIORS, UI-NAV, SYS-ATLAS, SYS-TITLE]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/terrain/"]
-gates: [G2, G7, G9, G15, G19]
+gates: [G2, G7, G15, G19]
 ---
 
 # MAP-QSH-TERRAIN-CHECKS · 地形验收镜头、冲突检查与点位标高

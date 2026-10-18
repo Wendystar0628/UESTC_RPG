@@ -17,7 +17,7 @@ gates: [G5, G19]
 # WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
 
 > **范围**：本文规定不分图的室内开放规则：精选开放的原则与共用约定，门的开与关（含自动门），关着的楼，导航图与开放更多楼的做法。
-> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）；门禁 G19（ENG-GATES §1.3）。
+> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）；门禁 G19（ENG-GATES §1.2）。
 > **查阅**：先读 §0；开放原则与共用约定看 §1；门看 §2；关着的楼看 §3；导航图与新开一栋楼看 §4
 
 ## 0 结论
@@ -90,7 +90,7 @@ gates: [G5, G19]
 
 ## 4 导航图、路线与扩展
 
-**导航图**：离线烘焙的分层图，用于路线预览、G19 连通检查与巡游、模式切换落点和存档里的"当前所在空间"，以后给 RPG 宏观寻路；定义见 `game/contracts/Navigation/`。楼里的自动门是 `AutoOpen` 的门边，锁着的房门记 `Locked`，关着的楼只有 `Locked` 的门户。室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分和登记的高处（MAP-QSH-INTERIORS §4）可走；宿舍组团只开学知一组团（SYS-WALK-BOUNDS §2）。路线 R1–R14 见 SYS-WALK-BOUNDS §6。
+**导航图**：离线烘焙的分层图，用于路线预览、G19 连通检查、模式切换落点和存档里的"当前所在空间"，以后给 RPG 宏观寻路；定义见 `game/contracts/Navigation/`。楼里的自动门是 `AutoOpen` 的门边，锁着的房门记 `Locked`，关着的楼只有 `Locked` 的门户。室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分和登记的高处（MAP-QSH-INTERIORS §4）可走；宿舍组团只开学知一组团（SYS-WALK-BOUNDS §2）。路线 R1–R14 见 SYS-WALK-BOUNDS §6。
 
 **开放更多室内**（不改契约，也不改流式架构）：
 

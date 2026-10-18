@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSK
 related: [SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, SYS-SAVE, SYS-AUDIO, ENG-ROADMAP]
 contracts: [IAtlasService, MarkerId, AtlasSave, TransitPreference]
 data: []
-gates: [G2, G16]
+gates: [G2]
 ---
 
 # SYS-ATLAS · 平面地图与传送

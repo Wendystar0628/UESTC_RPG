@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ART-STYLE, SYS-GRAPHICS]
 related: [ART-STYLE-SHADING, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, SYS-WEATHER, UI-VISUAL, WLD-INTERIORS]
 contracts: [LineClass]
 data: ["game/style/outline/"]
-gates: [G16, G17]
+gates: [G7]
 ---
 # ART-STYLE-LINES · 描线与后期
 

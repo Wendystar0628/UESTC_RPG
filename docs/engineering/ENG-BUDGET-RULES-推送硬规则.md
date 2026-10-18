@@ -11,7 +11,7 @@ depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SY
 related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
-gates: [G4, G5, G16, G17, G20, G21]
+gates: [G4, G5, G7, G20, G21]
 paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"]
 ---
 # ENG-BUDGET-RULES · 推送硬规则与工程设置
@@ -23,7 +23,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 ## 0 结论
 
 1. **硬规则 23 条，违反任何一条都不能推送**：第 1–10 条管渲染、材质与时间，第 11–23 条管烘焙、线程、存档与音频（§1）。
-2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G16、G17、G20、G21 各验其中几条。
+2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G7、G20、G21 各验其中几条。
 3. **工程设置由主代理维护**：`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
 
 ### 0.1 接入要点
@@ -48,7 +48,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 6. **容器**按 ENG-PERF §1.1 选；MultiMesh 不用实例色、成批整块写；GPUParticles3D 只作备选，用要批准。
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
 8. **discard**：不透明着色器里的 `discard` 与 `ALPHA_SCISSOR_THRESHOLD` 只用于白名单里的镂空类和抖动淡化。
-9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、雾幕、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动预热覆盖所有可达组合；时间、季节、天气、介质只经全局参数与全局纹理；每次雾幕淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0（G16）。
+9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、雾幕、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动预热覆盖所有可达组合；时间、季节、天气、介质只经全局参数与全局纹理；每次雾幕淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0。
 10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主代理评审，并重跑表面字节格式比对门禁。
 
 ### 1.2 烘焙、线程、存档与音频（第 11–23 条）
@@ -59,7 +59,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 14. **阴影投影物**必须在相机可见层上；草、插片、落叶、粒子、光晕、光锥一律 `cast_shadow = Off`；远处与植被的投影用 `ShadowsOnly` 代理。
 15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
 16. **线程边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。
-17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，G17 在最差值配置下截图检查。
+17. **风格底线不可关**（清单见 ART-STYLE-LINES §2）：任何预设、手动值和自动调节级别都不能关；实时阴影不低于 2048²、2 级，西湖倒影不低于每轴 1/4、每 4 帧；只有移轴、镜头光斑、光柱、暗角可关。最差值写在 `KnobSpec.WorstAllowed`，集中测试时在最差值配置下截图看一眼（G7）。
 18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各包只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §3）。
 20. **室内只在开放清单里**（WLD-INTERIORS-BUILD §5）：清单外的楼没有完整室内和楼内碰撞；可走性不随钟点、季节、天气变；会动的门只由观者位置触发，剧情锁门也只走运行时门体。

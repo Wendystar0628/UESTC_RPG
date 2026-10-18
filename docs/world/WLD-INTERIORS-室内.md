@@ -16,7 +16,7 @@ gates: []
 # WLD-INTERIORS · 室内：开放与制作
 
 > **范围**：本文是不分图室内规则的目录，规定室内规则分哪两块、各自什么时候读；规则本身在两份子文档。
-> **不在本文**：清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）；室内预算（ENG-BUDGET）；门禁 G19（ENG-GATES §1.3）。
+> **不在本文**：清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）；室内预算（ENG-BUDGET）；门禁 G19（ENG-GATES §1.2）。
 > **查阅**：先读 §0；开放、门、关着的楼、新开一栋看 WLD-INTERIORS-ACCESS；加载、生成器、风格、痕迹、楼梯与碰撞看 WLD-INTERIORS-BUILD
 
 ## 0 结论

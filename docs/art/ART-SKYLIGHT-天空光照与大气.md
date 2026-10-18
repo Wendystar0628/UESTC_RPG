@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-
 related: [WLD-DIORAMA, WLD-WATER, SYS-MOTION, SYS-VIEW, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, ART-AMBIENCE]
 contracts: [IWorldState, Body, Flow, WorldTransition]
 data: ["game/data/maps/qingshuihe/lighting-schedule.json", "game/style/palette/keys/"]
-gates: [G2, G7, G10, G12, G13, G16, G17]
+gates: [G2, G7, G10]
 ---
 # ART-SKYLIGHT · 天空、光照与大气
 

@@ -10,7 +10,7 @@ depends: [ART-STYLE, ART-SKYLIGHT, ENG-ARCH, SYS-WEATHER, SYS-MOTION]
 related: [ENG-GATES, UI-NAV, SYS-GRAPHICS, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, SYS-AUDIO]
 contracts: [IWorldState, IWorldControl, WorldPreset, Flow, Season, ViewMode, Body, WorldTransition, ClockSetMode]
 data: []
-gates: [G2, G7, G12, G13, G16]
+gates: [G2, G7]
 ---
 
 # SYS-TIME · 时间与季节系统：世界状态、美术日月、过渡口径

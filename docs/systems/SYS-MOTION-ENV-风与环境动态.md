@@ -11,7 +11,7 @@ depends: [SYS-MOTION, ART-STYLE, ART-SKYLIGHT, ENG-PERF, SYS-TIME, SYS-WEATHER]
 related: [WLD-VEGETATION, WLD-WATER, WLD-DIORAMA, WLD-INTERIORS, SYS-WALK, SYS-AUDIO]
 contracts: [IWindField, WindSample]
 data: []
-gates: [G13, G16]
+gates: []
 ---
 
 # SYS-MOTION-ENV · 风、飘落、远景与季节氛围

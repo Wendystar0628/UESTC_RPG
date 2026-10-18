@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, WLD-WATER, ART-FIDELITY, ART-MODELING, ART-RENO
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, ART-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, SYS-MAPS]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/center-east.d/"]
-gates: [G5, G7, G8, G9, G10]
+gates: [G5, G7, G10]
 ---
 
 # MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场

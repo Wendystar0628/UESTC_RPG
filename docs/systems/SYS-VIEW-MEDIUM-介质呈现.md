@@ -11,7 +11,7 @@ depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, WLD-INTERIORS, WLD-DIORAMA, WLD-WATER, S
 related: [SYS-WALK, SYS-GRAPHICS, ART-FIDELITY]
 contracts: [CameraMedium, MediumKind, IMediumPresenter, IMediumState]
 data: []
-gates: [G7, G16, G21]
+gates: [G7, G21]
 ---
 
 # SYS-VIEW-MEDIUM · 介质呈现：镜头在楼里、地下、水下、雾海里

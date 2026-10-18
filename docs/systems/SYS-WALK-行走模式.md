@@ -10,7 +10,7 @@ depends: [CORE-INDEX, SYS-VIEW, ENG-ARCH, ENG-BUDGET, ENG-PERF, UI-NAV, WLD-OUTS
 related: [SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-TERRAIN, WLD-WATER, WLD-LIFE]
 contracts: [IViewControl, ModeSwitchVia, ModeSwitchResult, IWalkTelemetry]
 data: []
-gates: [G15, G16, G21]
+gates: [G15, G21]
 ---
 
 # SYS-WALK · 行走模式：身体、手感、视角与切换

@@ -10,11 +10,11 @@ depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUT
 related: [CORE-INDEX, WLD-DIORAMA, ENG-GATES, ENG-BUDGET, ENG-WP, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
 contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapTravelCause, MapTravelRequest, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
 data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/", "game/contracts/schemas/map.schema.json"]
-gates: [G2, G4, G5, G6, G7, G8, G13, G16]
+gates: [G2, G4, G5, G6, G7]
 ---
 # SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
-> **范围**：本文规定多地图的模型：哪些数据按图存放、哪些全局共用，一个 World3D 内先卸后装的切图，时间与季节全局、天气按图，全图数据纹理的范围 `map_rect`，单图规模上限。现在只有一张图 `qingshuihe`，数据与采样的约定（地图编号、数据根目录、`map_rect`）从第一天起按多张图写；**切图的运行时、借用遮挡、请求排队、失败回退和同图重载门禁（G16）在主线之后**，主线只做启动时加载当前图（§3）。
+> **范围**：本文规定多地图的模型：哪些数据按图存放、哪些全局共用，一个 World3D 内先卸后装的切图，时间与季节全局、天气按图，全图数据纹理的范围 `map_rect`，单图规模上限。现在只有一张图 `qingshuihe`，数据与采样的约定（地图编号、数据根目录、`map_rect`）从第一天起按多张图写；**切图的运行时、借用遮挡、请求排队、失败回退和同图重载不泄漏在主线之后**，主线只做启动时加载当前图（§3）。
 > **不在本文**：`map.json` 的字段（`game/contracts/schemas/map.schema.json` 与各图的 `map.json`）；契约签名（`game/contracts/Maps/`）；帧顺序（ENG-ARCH §3 的 `FramePriority`）；命令行与同图重载门禁的做法（ENG-GATES-SHOTS §1、ENG-GATES §1）；平面地图的标记与传送（SYS-ATLAS）；活动范围与外围（WLD-OUTSKIRTS）；存档格式（SYS-SAVE）；开始页与过场（SYS-TITLE）；换图时的声音（SYS-AUDIO）。
 > **查阅**：先读 §0；按图与全局的划分、烘焙缓存与启动集看 §1；`map.json` 的约定看 §2；切图看 §3（运行时在主线之后）；时间与天气看 §4；归属看 §6；`map_rect` 看 §7；规模上限看 §8
 
@@ -25,7 +25,7 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 3. **切图在数据层完成，不换场景**：本作的静态内容不在场景树里，按图记账，卸一张图就是按账逐项释放（§3.1）。
 4. **一个 World3D，先卸后装**：雾幕盖起 → 卸旧图 → 装新图 → 出生 → 雾幕散；内存峰值是一张图加全局常驻，不做无缝切换（§3、§8）。切图运行时在主线之后。
 5. **时间与季节全局，天气按图求值**：世界时间切图时照常向前；自动天气是（种子、地图、世界时间）的纯函数，不存按图的状态，切图不需要补算（§4）。
-6. **同图重载门禁**（`Travel` 到当前图 3 次，G16）在主线之后，到第二张图立项时再启用（§3.5）。
+6. **同图重载不泄漏**（`Travel` 到当前图 3 次，旧模型能回收）在主线之后，到第二张图立项时再做（§3.5）。
 7. **全图数据纹理一律按 `map_rect` 采样**，不按"全校"隐式换算（§7）。
 8. **单图半径不超过 8 km**（§8）。
 
@@ -125,9 +125,9 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 | 继续 / 读档 | 先恢复世界段与天气段，再 `Travel`，最后恢复其余段（SYS-SAVE）；读档是换一个世界实例，切图本身不改 `Instance`，到达后也不请求保存 |
 | 平面地图传送（主线之后） | 只有目标标记在别的图时才用（SYS-ATLAS） |
 
-### 3.5 同图重载门禁（主线之后）
+### 3.5 同图重载不泄漏（主线之后）
 
-连续 `Travel` 到当前图 3 次，对比显存、内核账、对象数、托管堆、管线编译计数与截图；旧 `IWorldModel` 的弱引用必须能被回收，每个 `IMapAware` 各收到一次卸载与加载通知，热重载几秒内。判据与做法归 ENG-GATES（G16）。**一票否决**：同图重载后旧 `IWorldModel` 无法回收，或显存、对象数持续增长（泄漏）。
+连续 `Travel` 到当前图 3 次：旧 `IWorldModel` 的弱引用必须能被回收，每个 `IMapAware` 各收到一次卸载与加载通知，显存、内核账、对象数、托管堆不持续增长，热重载几秒内。**一票否决**：同图重载后旧 `IWorldModel` 无法回收，或显存、对象数持续增长（泄漏）。
 
 ## 4 世界状态：时间与季节全局，天气按图求值
 
@@ -179,12 +179,12 @@ gates: [G2, G4, G5, G6, G7, G8, G13, G16]
 ## 8 内存、包体与单图半径
 
 - **进程上限与图的数量无关**：峰值是最大的一张图加全局常驻，不是两张图之和；上限按预设（ENG-BUDGET §2、ENG-PERF-STREAM §3）。
-- **每张图单独核算**：`budgets.json` 的 `maps.<id>` 一节，G8 按图检查。安装包体按全部图的原始数据加全局资源计，本机缓存不计在内（ENG-PERF-STREAM §1、ENG-BUDGET §3）。
+- **每张图单独核算**：`budgets.json` 的 `maps.<id>` 一节，按图核算。安装包体按全部图的原始数据加全局资源计，本机缓存不计在内（ENG-PERF-STREAM §1、ENG-BUDGET §3）。
 - **单图半径不超过 8 km**（离中心最远的可达点）：单精度在 8 km 内步长不超过约 0.5 mm；整数 tileId 的格号范围远大于 8 km；远裁剪面、雾海外半径、远景环半径按图从 `backdrop.json` 读。更大的区域拆成几张图。
 
 ## 9 以后的方向
 
-**加第二张图**不改契约、不改流式架构：建 `game/data/maps/<id>/`，`index.json` 加一行；管线 `--map=<id>` 出世界数据；区代码新建程序集标 `MapScope`；补齐本图的远景、天空、室内、事件、点位、审查视角、导航、音频、预算、平面地图底图、过场与新游戏起点；G5、G7、G8、G16 对新图各跑一遍。
+**加第二张图**不改契约、不改流式架构：建 `game/data/maps/<id>/`，`index.json` 加一行；管线 `--map=<id>` 出世界数据；区代码新建程序集标 `MapScope`；补齐本图的远景、天空、室内、事件、点位、审查视角、导航、音频、预算、平面地图底图、过场与新游戏起点；G5、G7 对新图各跑一遍。
 
 ## 10 待验证（P0）
 
