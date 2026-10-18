@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.2k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.0k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L129 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.2k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L130 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -235,13 +235,13 @@
 - WF-RULE §6 文件操作 · L59 · 523
 - WF-RULE §7 git 与直接改主线（D-211） · L69 · 794
 - WF-RULE §8 主线优先（D-168） · L79 · 292
-- WF-RULE §9 测试最小（D-167） · L86 · 366
-- WF-RULE §10 少和别人打架（D-199） · L93 · 580
-- WF-RULE §11 拿不准就问 · L103 · 137
-- WF-RULE §12 写文档与记忆 · L108 · 247
-- WF-RULE §13 一次性产物（D-221） · L116 · 669
-- WF-RULE §14 按严重程度修 bug（D-223） · L125 · 384
-- WF-RULE §15 精度按 demo 阶段定（D-225、D-231） · L134 · 496
+- WF-RULE §9 测试最小（D-167） · L86 · 443
+- WF-RULE §10 少和别人打架（D-199） · L94 · 580
+- WF-RULE §11 拿不准就问 · L104 · 137
+- WF-RULE §12 写文档与记忆 · L109 · 247
+- WF-RULE §13 一次性产物（D-221） · L117 · 669
+- WF-RULE §14 按严重程度修 bug（D-223） · L126 · 384
+- WF-RULE §15 精度按 demo 阶段定（D-225、D-231） · L135 · 496
 
 ## WF-STATUS · 施工状态、队列与调研入队
 
@@ -1780,17 +1780,17 @@
 
 ## ENG-CODE · 代码结构准则
 
-`docs/engineering/ENG-CODE-代码结构准则.md` · 4.1k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
+`docs/engineering/ENG-CODE-代码结构准则.md` · 4.3k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
 关键词：代码结构准则、软件工程、坏味道、屎山、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、魔法数、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、复制粘贴、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、钉哈希、输入哈希、提交后提醒
 
-- ENG-CODE §0 结论 · L22 · 702
+- ENG-CODE §0 结论 · L22 · 726
   - ★ ENG-CODE §0.1 接入要点 · L31 · 407
 - ENG-CODE §1 依赖方向 · L41 · 351
 - ENG-CODE §2 规则值与数据各一份 · L50 · 656
 - ENG-CODE §3 先用现成，再复用，不复制 · L61 · 678
 - ENG-CODE §4 不留死代码 · L70 · 209
 - ENG-CODE §5 规模 · L77 · 160
-- ENG-CODE §6 测试代码怎么写 · L83 · 513
+- ENG-CODE §6 测试代码怎么写 · L83 · 708
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
@@ -1819,16 +1819,16 @@
 
 ## ENG-GATES · 验收：测试三档与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 5.0k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 5.2k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
 - ENG-GATES §0 结论 · L21 · 808
   - ★ ENG-GATES §0.1 接入要点 · L34 · 255
-- ENG-GATES §1 门禁与测试节奏 · L40 · 2.9k
-  - ENG-GATES §1.1 测试三档 · L44 · 1.2k
-  - ENG-GATES §1.2 门禁表 · L65 · 1.4k
-  - ENG-GATES §1.4 入口与交付分工 · L86 · 207
-- ENG-GATES §2 待验证（P0） · L92 · 152
+- ENG-GATES §1 门禁与测试节奏 · L40 · 3.2k
+  - ENG-GATES §1.1 测试三档 · L44 · 1.4k
+  - ENG-GATES §1.2 门禁表 · L68 · 1.4k
+  - ENG-GATES §1.4 入口与交付分工 · L89 · 207
+- ENG-GATES §2 待验证（P0） · L95 · 152
 
 ## ENG-PERF-ADAPT · 设备档、自适应与测量
 
