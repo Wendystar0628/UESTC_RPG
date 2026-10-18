@@ -58,21 +58,20 @@ def row_of(text):
 # ---------- Codex ----------
 
 def codex_block(queue):
-    """Astra、Sol 两个主会话与它们名下（含子代理再开的）子代理；型号与推理强度在会话表的 model、reasoning_effort 列。"""
+    """Codex 主线（Codex 侧唯一的会话）与它名下（含子代理再开的）子代理；型号与推理强度在会话表的 model、reasoning_effort 列，主线取这一轮实际用的型号。"""
     db = sqlite3.connect(f"file:{patrol.CODEX_DB}?mode=ro", uri=True)
     cut = time.time() - RECENT_MIN * 60
-    marks = ",".join("?" * len(patrol.APP))
     rows = db.execute(
         "select id, name, rollout_path, source, updated_at, created_at, agent_nickname, agent_path, model, reasoning_effort "
-        f"from threads where archived = 0 and (name in ({marks}) or updated_at > ?)",
-        [n for _, n in patrol.APP] + [cut]).fetchall()
+        "from threads where archived = 0 and (name = ? or updated_at > ?)",
+        [patrol.MAIN[1], cut]).fetchall()
     sessions, roots = [], {}
-    for label, name in patrol.APP:
+    for label, name in [patrol.MAIN]:
         r = next((x for x in rows if x[1] == name), None)
         if not r:
             continue
         running, _mtime, last = patrol.turn(r[2])   # 记录文件的修改时间被占用时不更新，最后动静一律取会话表的 updated_at
-        sessions.append({"id": r[0], "name": label, "side": "codex", "model": r[8] or None, "effort": r[9] or None,
+        sessions.append({"id": r[0], "name": label, "side": "codex", "model": patrol.turn_model(r[2]) or r[8] or None, "effort": r[9] or None,
                          "state": "running" if running else "idle", "since": iso(r[4]), "task": clip(last) or None})
         roots[r[0]] = label
     parent_of = {}
@@ -202,7 +201,6 @@ def script_defs():
         ("live", "观察台实时采集", "watch", "python", r"dashboard[/\\]tools[/\\]live\.py.*--loop"),
         ("gate", "门禁", "gate", "powershell|pwsh", r"gate\.ps1"),
         ("shots", "固定机位截图", "other", "powershell|pwsh", r"fixed_shots\.ps1"),
-        ("codex_run", "向 Codex 派活", "other", "python", r"codex_app_run\.py"),
         ("codex_steer", "向 Codex 发引导", "other", "python", r"codex_app_steer\.py"),
         ("clean", "清理脚本", "other", "python|powershell|pwsh", r"clean_artifacts\.py|clean[^ ]*\.ps1"),
     ]

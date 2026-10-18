@@ -30,7 +30,7 @@
   }
   function whoLabel(w) {
     const s = String(w || '');
-    return /^claude$/i.test(s) ? 'Claude' : /^astra$/i.test(s) ? 'Astra' : s;
+    return /^claude$/i.test(s) ? 'Claude' : /^codex$/i.test(s) ? 'Codex' : s;
   }
 
   function card(r, col) {

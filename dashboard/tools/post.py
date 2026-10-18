@@ -61,7 +61,7 @@ def check_link(link):
 def sender(args):
     name = args.sender or os.environ.get('DASH_FROM')
     if not name:
-        raise Reject('缺 --from（或环境变量 DASH_FROM）：写主会话、Astra、Sol 或子代理名')
+        raise Reject('缺 --from（或环境变量 DASH_FROM）：写主会话、Codex 主线或子代理名')
     return name
 
 
