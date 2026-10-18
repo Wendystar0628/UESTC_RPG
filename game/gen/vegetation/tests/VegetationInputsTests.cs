@@ -9,6 +9,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// The contract-32 read entry: the species table from the global inputs, the planting rules from the map's
 /// vegetation directory, the canopy channels painted as an exclusive ground-mask contributor.
@@ -30,7 +32,10 @@ public sealed class VegetationInputsTests
     {
         // No species table in the global inputs is an error naming the key; no planting file means a map without trees.
         var empty = new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog };
-        Expect<KeyNotFoundException>(() => VegetationInputs.Layout(empty));
+        var caughtExpectedException = false;
+        try { VegetationInputs.Layout(empty); }
+        catch (KeyNotFoundException) { caughtExpectedException = true; }
+        AssertThat(caughtExpectedException).OverrideFailureMessage($"Expected {nameof(KeyNotFoundException)}.").IsTrue();
         var bare = Context(withPlanting: false);
         var (layout, rules) = VegetationInputs.Layout(bare);
         if (layout.Trees.Count != 0 || rules is not null || new VegetationModule().Tiles(bare).Any())
@@ -78,13 +83,6 @@ public sealed class VegetationInputsTests
     }
 
     private static PaletteCatalog Catalog => MotherModelTests.Palette;
-
-    private static void Expect<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return; }
-        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
-    }
 
     private static string FindRepository()
     {

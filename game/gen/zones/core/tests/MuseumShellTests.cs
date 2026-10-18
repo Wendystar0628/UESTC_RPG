@@ -11,6 +11,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.Core.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class MuseumShellTests
 {
@@ -20,21 +22,20 @@ public sealed class MuseumShellTests
     public void RingsKeepTheHallBodyShapeAndTheColonnadeWidth()
     {
         var museum = Museum(RealWorld());
-        Require(museum.Body.Count == 8 && museum.Gallery.Count == 16 && museum.Hall.Count == 16 && museum.Eave.Count == 16 && museum.Platform.Count == 16,
-            "an octagon body and four chamfered rings");
-        Require(new[] { museum.South, museum.West, museum.North, museum.East }.Distinct().Count() == 4, "four distinct long faces");
+        AssertThat(museum.Body.Count == 8 && museum.Gallery.Count == 16 && museum.Hall.Count == 16 && museum.Eave.Count == 16 && museum.Platform.Count == 16).OverrideFailureMessage("an octagon body and four chamfered rings").IsTrue();
+        AssertThat(new[] { museum.South, museum.West, museum.North, museum.East }.Distinct().Count() == 4).OverrideFailureMessage("four distinct long faces").IsTrue();
         var south = MuseumGeometry.Normal(museum.Body, museum.South);
         var west = MuseumGeometry.Normal(museum.Body, museum.West);
-        Require(south.Y > 0.95f && west.X < -0.95f, $"south {south} faces +z, west {west} faces −x");
-        foreach (var p in museum.Hall) Require(Inside(p, museum.Gallery), "the hall stands inside the gallery");
-        foreach (var p in museum.Gallery) Require(Inside(p, museum.Eave), "the eave is outside the gallery walls");
-        foreach (var p in museum.Eave) Require(Inside(p, museum.Platform), "the eave is inside the platform edge");
+        AssertThat(south.Y > 0.95f && west.X < -0.95f).OverrideFailureMessage($"south {south} faces +z, west {west} faces −x").IsTrue();
+        foreach (var p in museum.Hall) AssertThat(Inside(p, museum.Gallery)).OverrideFailureMessage("the hall stands inside the gallery").IsTrue();
+        foreach (var p in museum.Gallery) AssertThat(Inside(p, museum.Eave)).OverrideFailureMessage("the eave is outside the gallery walls").IsTrue();
+        foreach (var p in museum.Eave) AssertThat(Inside(p, museum.Platform)).OverrideFailureMessage("the eave is inside the platform edge").IsTrue();
         for (var i = 0; i < 8; i++)
         {
             var gallery = museum.GalleryFace(i);
             var platform = MuseumGeometry.FaceOf(museum.Platform, 2 * i + 1);
             var width = Vector2.Dot(platform.A - gallery.A, gallery.Out);
-            Require(width is > 4.5f and < 7.5f, $"colonnade ring {i} is {width:F2} m wide (约 5.5 m, from 8402)");
+            AssertThat(width is > 4.5f and < 7.5f).OverrideFailureMessage($"colonnade ring {i} is {width:F2} m wide (约 5.5 m, from 8402)").IsTrue();
         }
         // The chamfered folds stay out of the outline's 40°–50° band.
         foreach (var ring in new[] { museum.Gallery, museum.Hall, museum.Eave })
@@ -43,7 +44,7 @@ public sealed class MuseumShellTests
                 var a = MuseumGeometry.Normal(ring, k);
                 var b = MuseumGeometry.Normal(ring, (k + 1) % ring.Count);
                 // cos 35° = 0.819: every fold is gentler than 35°.
-                Require(Vector2.Dot(a, b) > 0.819f, $"fold between faces {k} and {k + 1} (cos {Vector2.Dot(a, b):F3})");
+                AssertThat(Vector2.Dot(a, b) > 0.819f).OverrideFailureMessage($"fold between faces {k} and {k + 1} (cos {Vector2.Dot(a, b):F3})").IsTrue();
             }
     }
 
@@ -53,9 +54,9 @@ public sealed class MuseumShellTests
         var museum = Museum(RealWorld());
         var main = museum.MainDoor;
         var lake = museum.LakeDoor;
-        Require(main.Face == museum.GalleryFace(museum.South) && lake.Face == museum.GalleryFace(museum.West), "main door south, side door on the lake front");
+        AssertThat(main.Face == museum.GalleryFace(museum.South) && lake.Face == museum.GalleryFace(museum.West)).OverrideFailureMessage("main door south, side door on the lake front").IsTrue();
         var entrances = museum.Entrances().ToArray();
-        Require(entrances.Length == 2 && entrances.All(e => e.ClearWidth >= 1.1f), "two open entrances at least 1.1 m clear");
+        AssertThat(entrances.Length == 2 && entrances.All(e => e.ClearWidth >= 1.1f)).OverrideFailureMessage("two open entrances at least 1.1 m clear").IsTrue();
         foreach (var (id, centre, outward, clear) in entrances)
         {
             var bearing = Shapes.BearingOf(new Vector2(outward.X, outward.Z));
@@ -63,8 +64,8 @@ public sealed class MuseumShellTests
             Console.WriteLine($"{id}: door ({centre.X:F4}, {centre.Y:F2}, {centre.Z:F4}) facing {bearing:F1}° outside ({outside.X:F4}, {outside.Y:F2}, {outside.Z:F4}) inside ({inside.X:F4}, {inside.Y:F2}, {inside.Z:F4}) clear {clear:F2}");
         }
         var columns = museum.ColumnPositions().ToArray();
-        Require(columns.Count(c => c.Size == CoreStyle.PorticoColumn) == 4, "four portico columns");
-        Require(columns.Length is > 30 and < 70, $"{columns.Length} columns round the ring");
+        AssertThat(columns.Count(c => c.Size == CoreStyle.PorticoColumn) == 4).OverrideFailureMessage("four portico columns").IsTrue();
+        AssertThat(columns.Length is > 30 and < 70).OverrideFailureMessage($"{columns.Length} columns round the ring").IsTrue();
         // No column stands in front of either door's clear way.
         foreach (var (_, centre, outward, clear) in entrances)
             foreach (var c in columns)
@@ -72,11 +73,11 @@ public sealed class MuseumShellTests
                 var d = c.C - new Vector2(centre.X, centre.Z);
                 var o = new Vector2(outward.X, outward.Z);
                 var across = MathF.Abs(d.X * o.Y - d.Y * o.X);
-                Require(Vector2.Dot(d, o) < 0 || across > clear * 0.5f + c.Size * 0.5f, "the way out of each door is clear of columns");
+                AssertThat(Vector2.Dot(d, o) < 0 || across > clear * 0.5f + c.Size * 0.5f).OverrideFailureMessage("the way out of each door is clear of columns").IsTrue();
             }
         var parts = Build(museum, LodLevel.L0).Parts.Where(p => p.Part.Value == PartCatalog.DoorGlass).ToArray();
-        Require(parts.Length == 2 && parts.All(p => p.Params is DoorParams { OpenAngleDeg: 90f }), "two WP-10 glass doors fixed open");
-        Require(Build(museum, LodLevel.L2).Parts.Count == 0, "no door parts beyond L1");
+        AssertThat(parts.Length == 2 && parts.All(p => p.Params is DoorParams { OpenAngleDeg: 90f })).OverrideFailureMessage("two WP-10 glass doors fixed open").IsTrue();
+        AssertThat(Build(museum, LodLevel.L2).Parts.Count == 0).OverrideFailureMessage("no door parts beyond L1").IsTrue();
     }
 
     [TestCase]
@@ -87,17 +88,17 @@ public sealed class MuseumShellTests
         var museum = Museum(world);
         var numbering = Numbering(museum.Columns, 1);
         var allocation = numbering.Get(CoreFeatures.Museum, MuseumShell.WindowKey);
-        Require(museum.Columns > 20 && museum.Clerestory.Count >= 6, $"{museum.Columns} grid columns, {museum.Clerestory.Count} clerestory runs");
+        AssertThat(museum.Columns > 20 && museum.Clerestory.Count >= 6).OverrideFailureMessage($"{museum.Columns} grid columns, {museum.Clerestory.Count} clerestory runs").IsTrue();
         foreach (var lod in Levels)
         {
             var build = new CoreBuild(palette) { WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
             museum.Build(build, lod);
             var output = build.Finish(lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
-            Require(glass.Length == 1, $"{lod}: one window-glass bundle ({glass.Length})");
+            AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one window-glass bundle ({glass.Length})").IsTrue();
             for (var i = 0; i < glass[0].Uv2!.Length; i += 2)
-                Require(glass[0].Uv2![i] == allocation.BaseId && (int)glass[0].Uv2![i + 1] / 32 == museum.Columns, "UV2 carries the museum's base and columns");
-            Require(output.Meshes.Count <= 8, $"{lod}: {output.Meshes.Count} bundles");
+                AssertThat(glass[0].Uv2![i] == allocation.BaseId && (int)glass[0].Uv2![i + 1] / 32 == museum.Columns).OverrideFailureMessage("UV2 carries the museum's base and columns").IsTrue();
+            AssertThat(output.Meshes.Count <= 8).OverrideFailureMessage($"{lod}: {output.Meshes.Count} bundles").IsTrue();
             foreach (var m in output.Meshes)
             {
                 m.ValidateVertexData();
@@ -107,14 +108,14 @@ public sealed class MuseumShellTests
                     var a = P(m, m.Index[t]);
                     var g = Vector3.Cross(P(m, m.Index[t + 1]) - a, P(m, m.Index[t + 2]) - a);
                     var n = N(m, m.Index[t]) + N(m, m.Index[t + 1]) + N(m, m.Index[t + 2]);
-                    Require(Vector3.Dot(g, n) <= 1e-6f, "front-face winding");
+                    AssertThat(Vector3.Dot(g, n) <= 1e-6f).OverrideFailureMessage("front-face winding").IsTrue();
                 }
             }
             Console.WriteLine($"museum {lod}: {output.Meshes.Sum(m => m.Index.Length / 3)} triangles, {output.Meshes.Count} bundles");
         }
         var cells = museum.Cells().ToArray();
-        Require(cells.Select(c => (c.Column, c.Row)).Distinct().Count() == cells.Length, "every window cell has its own ID");
-        Require(museum.Windows(numbering).All(w => w.Channel == CoreStyle.MuseumWindowChannel), "every window on interior.public");
+        AssertThat(cells.Select(c => (c.Column, c.Row)).Distinct().Count() == cells.Length).OverrideFailureMessage("every window cell has its own ID").IsTrue();
+        AssertThat(museum.Windows(numbering).All(w => w.Channel == CoreStyle.MuseumWindowChannel)).OverrideFailureMessage("every window on interior.public").IsTrue();
     }
 
     [TestCase]
@@ -126,7 +127,7 @@ public sealed class MuseumShellTests
         var library = pieces.OfType<LibraryShell>().Single();
         var museum = pieces.OfType<MuseumShell>().Single();
         var tile = CoreTiles.Of(museum.Anchor, LodLevel.L3);
-        Require(tile == CoreTiles.Of(library.Anchor, LodLevel.L3), "library and museum share an L3 cell");
+        AssertThat(tile == CoreTiles.Of(library.Anchor, LodLevel.L3)).OverrideFailureMessage("library and museum share an L3 cell").IsTrue();
         var numbering = Numbering(museum.Columns, library.Columns);
         var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var module = new CoreModule();
@@ -134,12 +135,11 @@ public sealed class MuseumShellTests
         {
             var output = module.Build(ctx, CoreTiles.Of(museum.Anchor, lod), lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
-            Require(glass.Length == 1, $"{lod}: one shared window-glass bundle ({glass.Length})");
+            AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one shared window-glass bundle ({glass.Length})").IsTrue();
             var bases = Enumerable.Range(0, glass[0].Uv2!.Length / 2).Select(i => glass[0].Uv2![2 * i]).Distinct().Order().ToArray();
             var here = pieces.Where(p => p is IWindowedPiece && CoreTiles.Of(p.Anchor, lod) == CoreTiles.Of(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
-            Require(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order()),
-                $"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})");
-            Require(output.Meshes.Count <= module.Budget.DrawCalls, $"{lod}: {output.Meshes.Count} bundles within {module.Budget.DrawCalls}");
+            AssertThat(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order())).OverrideFailureMessage($"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})").IsTrue();
+            AssertThat(output.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod}: {output.Meshes.Count} bundles within {module.Budget.DrawCalls}").IsTrue();
         }
     }
 
@@ -148,8 +148,8 @@ public sealed class MuseumShellTests
     {
         var museum = Museum(RealWorld());
         var colliders = museum.Collide();
-        Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider has a foot material");
-        Require(colliders.OfType<SlabCollider>().Count(s => s.Tag == SurfaceTag.Ground) >= museum.Gallery.Count, "the colonnade floor collides round the ring");
+        AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
+        AssertThat(colliders.OfType<SlabCollider>().Count(s => s.Tag == SurfaceTag.Ground) >= museum.Gallery.Count).OverrideFailureMessage("the colonnade floor collides round the ring").IsTrue();
         foreach (var (id, centre, outward, clear) in museum.Entrances())
         {
             // Walk the door's centre line from 1 m outside to 1 m inside at knee height: no wall may cross it.
@@ -157,9 +157,9 @@ public sealed class MuseumShellTests
             var across = Vector2.Normalize(new Vector2(-outward.Z, outward.X));
             foreach (var offset in new[] { -clear * 0.5f + 0.05f, 0f, clear * 0.5f - 0.05f })
                 foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < centre.Y + 0.5f && w.Y1 > centre.Y + 0.5f))
-                    Require(SegmentDistance(a + across * offset, b + across * offset, w.A, w.B) > 0.01f, $"{id}: the way through the door at {offset:F2} m is clear of walls");
+                    AssertThat(SegmentDistance(a + across * offset, b + across * offset, w.A, w.B) > 0.01f).OverrideFailureMessage($"{id}: the way through the door at {offset:F2} m is clear of walls").IsTrue();
             foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < centre.Y + 0.5f && w.Y1 > centre.Y + 0.5f))
-                Require(SegmentDistance(a, b, w.A, w.B) > 0.3f, $"{id}: a walker's radius fits through the door's middle");
+                AssertThat(SegmentDistance(a, b, w.A, w.B) > 0.3f).OverrideFailureMessage($"{id}: a walker's radius fits through the door's middle").IsTrue();
         }
     }
 
@@ -215,10 +215,6 @@ public sealed class MuseumShellTests
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-    private static void Require(bool condition, string what)
-    {
-        if (!condition) throw new InvalidOperationException("Expected: " + what);
-    }
 
     private static IWorldModel RealWorld()
     {

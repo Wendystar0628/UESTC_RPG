@@ -15,6 +15,7 @@ using M = Campus.Gen.Zones.West.WestTune.Motto;
 using S = Campus.Gen.Zones.West.WestTune.Six;
 
 namespace Campus.Gen.Zones.West.Tests;
+using static GdUnit4.Assertions;
 
 [TestSuite]
 public sealed class WestModuleTests
@@ -29,28 +30,24 @@ public sealed class WestModuleTests
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
         {
             var traces = module.TraceSources(ctx, lod).ToArray();
-            Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, "source IDs are unique");
+            AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
-                Require(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0),
-                    $"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours");
+                AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
             var size = 64 << (int)lod;
             var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
-            Require(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes))),
-                $"{lod}: source triangles reproduce tiled production");
-            Require(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
-                .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)), "source parts reproduce production");
-            Require(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances)), "source instances reproduce production");
+            AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
+            AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
+                .SequenceEqual(built.SelectMany(o => o.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal))).OverrideFailureMessage("source parts reproduce production").IsTrue();
+            AssertThat(traces.SelectMany(t => t.Output.Instances).SequenceEqual(built.SelectMany(o => o.Instances))).OverrideFailureMessage("source instances reproduce production").IsTrue();
             string Dump(Collider collider) => System.Text.Json.JsonSerializer.Serialize<Collider>(collider, ContractJson.Options);
-            Require(traces.SelectMany(t => t.Colliders).Select(Dump).Order(StringComparer.Ordinal)
-                .SequenceEqual(module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Select(Dump).Order(StringComparer.Ordinal)),
-                "source colliders reproduce tiled production");
+            AssertThat(traces.SelectMany(t => t.Colliders).Select(Dump).Order(StringComparer.Ordinal)
+                .SequenceEqual(module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Select(Dump).Order(StringComparer.Ordinal))).OverrideFailureMessage("source colliders reproduce tiled production").IsTrue();
             var c = traces.Single(t => t.Feature == new FeatureId(S.EntityC));
-            Require(c.OccupiedContours.First().Holes.Single().SequenceEqual(SixSite.Plan(ctx.World, S.EntityC, S.PartC).Holes.Single()),
-                "C keeps its own courtyard hole");
+            AssertThat(c.OccupiedContours.First().Holes.Single().SequenceEqual(SixSite.Plan(ctx.World, S.EntityC, S.PartC).Holes.Single())).OverrideFailureMessage("C keeps its own courtyard hole").IsTrue();
             foreach (var block in SixSite.Blocks.Where(b => b.Entity != S.EntityC))
-                Require(traces.Single(t => t.Feature == new FeatureId(block.Entity)).OccupiedContours.Single().Outer
-                    .SequenceEqual(SixSite.Plan(ctx.World, block.Entity, block.Part).Outer), "A and B carry only their own generated plan");
+                AssertThat(traces.Single(t => t.Feature == new FeatureId(block.Entity)).OccupiedContours.Single().Outer
+                    .SequenceEqual(SixSite.Plan(ctx.World, block.Entity, block.Part).Outer)).OverrideFailureMessage("A and B carry only their own generated plan").IsTrue();
         }
 
         static IEnumerable<string> Triangles(IEnumerable<GeometryBundle> meshes)
@@ -73,15 +70,15 @@ public sealed class WestModuleTests
         foreach (var (id, height, storeys) in new[] { ("qsh:relation:11334253", 19.5f, 5), ("qsh:relation:8426842", 19.5f, 5), ("qsh:way:682336066", 11.7f, 3) })
         {
             var f = world.Features[new(id)];
-            Require(f.Height == height && f.Storeys == storeys, $"{id} raised to {storeys} storeys");
-            Require(f.Parts.All(p => p.Height == height && p.Storeys == storeys), $"every part of {id} follows its HeightOp");
+            AssertThat(f.Height == height && f.Storeys == storeys).OverrideFailureMessage($"{id} raised to {storeys} storeys").IsTrue();
+            AssertThat(f.Parts.All(p => p.Height == height && p.Storeys == storeys)).OverrideFailureMessage($"every part of {id} follows its HeightOp").IsTrue();
         }
         // 研究院大楼 keeps its per-part 4–7 storeys: an entity-wide HeightOp would flatten them (contract-31).
         var institute = world.Features[new("qsh:relation:11031411")].Parts.Where(p => p.Storeys is not null).Select(p => p.Storeys!.Value).ToArray();
-        Require(institute.Min() == 4 && institute.Max() == 7, "研究院大楼 parts stay 4–7 storeys");
-        Require(!world.Features.ContainsKey(new("qsh:way:779496166")), "六号's duplicate C shell stays hidden");
+        AssertThat(institute.Min() == 4 && institute.Max() == 7).OverrideFailureMessage("研究院大楼 parts stay 4–7 storeys").IsTrue();
+        AssertThat(!world.Features.ContainsKey(new("qsh:way:779496166"))).OverrideFailureMessage("六号's duplicate C shell stays hidden").IsTrue();
         var plaza = world.Features[new("design:west-a10-plaza")];
-        Require(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry, "the A10 plaza is registered as paving");
+        AssertThat(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry).OverrideFailureMessage("the A10 plaza is registered as paving").IsTrue();
     }
 
     [TestCase]
@@ -89,12 +86,11 @@ public sealed class WestModuleTests
     {
         var world = World();
         var claims = new WestModule().Claims.OfType<FeatureClaim>().Select(c => c.Feature.Value).OrderBy(s => s, StringComparer.Ordinal).ToArray();
-        Require(claims.SequenceEqual(new[] { S.EntityC, S.EntityA, S.EntityB, WestTune.Shelter.Entity }.OrderBy(s => s, StringComparer.Ordinal)),
-            $"六号's three entities and the 19c bus shelter are claimed: {string.Join(",", claims)}");
+        AssertThat(claims.SequenceEqual(new[] { S.EntityC, S.EntityA, S.EntityB, WestTune.Shelter.Entity }.OrderBy(s => s, StringComparer.Ordinal))).OverrideFailureMessage($"六号's three entities and the 19c bus shelter are claimed: {string.Join(",", claims)}").IsTrue();
         string[] Parts(string id) => world.Features[new(id)].Parts.Select(p => p.SourceId).OrderBy(s => s, StringComparer.Ordinal).ToArray();
-        Require(Parts(S.EntityC).SequenceEqual(new[] { S.PartC, S.LinkBC, S.LinkAB, S.Tower }.OrderBy(s => s, StringComparer.Ordinal)), "the C entity holds the block, both links and the tower");
-        Require(Parts(S.EntityA).SequenceEqual([S.PartA]) && Parts(S.EntityB).SequenceEqual([S.PartB]), "A and B are single blocks");
-        Require(SixSite.Plan(world, S.EntityC, S.PartC).Holes.Count == 1, "C keeps its courtyard");
+        AssertThat(Parts(S.EntityC).SequenceEqual(new[] { S.PartC, S.LinkBC, S.LinkAB, S.Tower }.OrderBy(s => s, StringComparer.Ordinal))).OverrideFailureMessage("the C entity holds the block, both links and the tower").IsTrue();
+        AssertThat(Parts(S.EntityA).SequenceEqual([S.PartA]) && Parts(S.EntityB).SequenceEqual([S.PartB])).OverrideFailureMessage("A and B are single blocks").IsTrue();
+        AssertThat(SixSite.Plan(world, S.EntityC, S.PartC).Holes.Count == 1).OverrideFailureMessage("C keeps its courtyard").IsTrue();
     }
 
     [TestCase]
@@ -103,17 +99,17 @@ public sealed class WestModuleTests
         var world = World();
         float Reach(string key) => S.BaseHeight + SixSite.Style(SixSite.Blocks.Single(k => k.Key == key).Upper(world)).Top;
         float a = Reach("a"), b = Reach("b"), c = Reach("c");
-        Require(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 0.6f, $"A reaches its data height, got {a}");
-        Require(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f && MathF.Abs(c - 32.5f) < 0.6f, $"B reaches its data height and C about 32.5 m, got {b}, {c}");
-        Require(a > b && a > c + S.SignRise, "A stays the tallest, above C's crown sign");
+        AssertThat(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 0.6f).OverrideFailureMessage($"A reaches its data height, got {a}").IsTrue();
+        AssertThat(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f && MathF.Abs(c - 32.5f) < 0.6f).OverrideFailureMessage($"B reaches its data height and C about 32.5 m, got {b}, {c}").IsTrue();
+        AssertThat(a > b && a > c + S.SignRise).OverrideFailureMessage("A stays the tallest, above C's crown sign").IsTrue();
         // The glass base sits back from the stone line by the recess on every face.
         foreach (var k in SixSite.Blocks)
         {
             var plan = SixSite.Plan(world, k.Entity, k.Part);
             var inner = SixSite.BasePlan(plan);
-            Require(inner.Outer.Count == plan.Outer.Count && inner.Holes.Count == plan.Holes.Count, $"{k.Key}: the base keeps the plan's rings");
-            Require(Math.Abs(PlanGeometry.SignedArea(inner.Outer)) < Math.Abs(PlanGeometry.SignedArea(plan.Outer)), $"{k.Key}: the base glass is set back inside the stone");
-            Require(inner.Outer.All(p => PlanGeometry.InsideByCrossings(plan.Outer, p)), $"{k.Key}: every base corner lies under the stone");
+            AssertThat(inner.Outer.Count == plan.Outer.Count && inner.Holes.Count == plan.Holes.Count).OverrideFailureMessage($"{k.Key}: the base keeps the plan's rings").IsTrue();
+            AssertThat(Math.Abs(PlanGeometry.SignedArea(inner.Outer)) < Math.Abs(PlanGeometry.SignedArea(plan.Outer))).OverrideFailureMessage($"{k.Key}: the base glass is set back inside the stone").IsTrue();
+            AssertThat(inner.Outer.All(p => PlanGeometry.InsideByCrossings(plan.Outer, p))).OverrideFailureMessage($"{k.Key}: every base corner lies under the stone").IsTrue();
         }
     }
 
@@ -122,11 +118,11 @@ public sealed class WestModuleTests
     {
         var ctx = Context();
         var module = new WestModule();
-        Require(module.Tiles(ctx).Any(), "the module occupies cells");
+        AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
             var items = module.ItemsFor(ctx, lod);
-            Require(items.Count > 0, $"{lod} has items");
+            AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var size = 64 << (int)lod;
             var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
             var meshes = 0;
@@ -137,15 +133,15 @@ public sealed class WestModuleTests
                 foreach (var mesh in output.Meshes)
                 {
                     mesh.ValidateVertexData();
-                    Require(mesh.Position.Length / 3 <= 65536, "bundle vertex limit");
+                    AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("bundle vertex limit").IsTrue();
                     meshes++;
                 }
                 parts += output.Parts.Count;
             }
-            Require(meshes > 0, $"{lod} emits meshes");
-            Require(items.Count(i => i.Part is not null) == parts, $"{lod}: every placed part is emitted exactly once");
+            AssertThat(meshes > 0).OverrideFailureMessage($"{lod} emits meshes").IsTrue();
+            AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
             string[] kit = [Contracts.Parts.PartCatalog.EntranceMat, Contracts.Parts.PartCatalog.OpenSign, Contracts.Parts.PartCatalog.EntranceLamp];
-            Require(!items.Any(i => i.Part is { } p && kit.Contains(p.Part.Value)), $"{lod}: no entrance kit placed by the zone (WP-13's)");
+            AssertThat(!items.Any(i => i.Part is { } p && kit.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: no entrance kit placed by the zone (WP-13's)").IsTrue();
         }
     }
 
@@ -162,8 +158,8 @@ public sealed class WestModuleTests
             {
                 var output = module.Build(ctx, new(x, z), lod);
                 var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                Require(triangles <= limit, $"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}");
-                Require(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls, $"{lod} cell ({x}, {z}) material count");
+                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
+                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
             }
         }
     }
@@ -173,7 +169,7 @@ public sealed class WestModuleTests
     {
         var a = Bytes(Context());
         var b = Bytes(Context());
-        Require(a.SequenceEqual(b), "two worlds give the same bytes");
+        AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
     [TestCase]
@@ -182,22 +178,21 @@ public sealed class WestModuleTests
         var ctx = Context();
         var module = new WestModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
-        Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider fills its foot material");
+        AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider fills its foot material").IsTrue();
         // Nothing at walking height crosses the doorway between the vestibule cheeks.
         var outward = PlanMath.Heading(77f);
         for (var d = -S.Recess - 1f; d <= 0.5f; d += 0.25f)
         {
             var p = SixSite.EastDoor(ctx.World) + outward * d;
-            Require(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + 0.05f)),
-                $"the east doorway is open {d:0.00} m along its axis");
+            AssertThat(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + 0.05f))).OverrideFailureMessage($"the east doorway is open {d:0.00} m along its axis").IsTrue();
         }
         // 六号's shut doors (19b's entrance boxes and portal add their own DoorClosed fronts elsewhere in the zone).
         var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed && (w.A.X + w.B.X) * 0.5f < -583f).ToArray();
-        Require(shut.Length == S.ShutDoors.Length, $"one DoorClosed segment per shut entrance, got {shut.Length}");
+        AssertThat(shut.Length == S.ShutDoors.Length).OverrideFailureMessage($"one DoorClosed segment per shut entrance, got {shut.Length}").IsTrue();
         foreach (var door in S.ShutDoors)
-            Require(shut.Any(w => Vector2.Distance((w.A + w.B) * 0.5f, door) < S.Recess + 0.6f), $"shut door {door} is DoorClosed");
+            AssertThat(shut.Any(w => Vector2.Distance((w.A + w.B) * 0.5f, door) < S.Recess + 0.6f)).OverrideFailureMessage($"shut door {door} is DoorClosed").IsTrue();
         // The motto stone is one unclimbable box.
-        Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Prop && MathF.Abs(b.Half.Y * 2 - M.Height) < 0.01f), "the motto stone collides as a 2 m box");
+        AssertThat(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Prop && MathF.Abs(b.Half.Y * 2 - M.Height) < 0.01f)).OverrideFailureMessage("the motto stone collides as a 2 m box").IsTrue();
     }
 
     [TestCase]
@@ -205,12 +200,12 @@ public sealed class WestModuleTests
     {
         var world = World();
         var layouts = new WestModule().DescribeWindowLayouts(world, 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        Require(layouts.Count == 4, $"four Facade-claimed features declare layouts, got {layouts.Count}");
-        Require(layouts[WestTune.Shelter.Entity].Count == 0, "the bus shelter declares an empty window layout");
+        AssertThat(layouts.Count == 4).OverrideFailureMessage($"four Facade-claimed features declare layouts, got {layouts.Count}").IsTrue();
+        AssertThat(layouts[WestTune.Shelter.Entity].Count == 0).OverrideFailureMessage("the bus shelter declares an empty window layout").IsTrue();
         int Upper(string key) => SixSite.Blocks.Single(k => k.Key == key).Upper(world);
-        Require(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == Upper("a"), "A: one grid over its upper floors");
-        Require(layouts[S.EntityB].Single().Rows == Upper("b") && layouts[S.EntityC].Single().Rows == S.UpperC, "B and C: one grid each");
-        Require(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0), "every grid has cells");
+        AssertThat(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == Upper("a")).OverrideFailureMessage("A: one grid over its upper floors").IsTrue();
+        AssertThat(layouts[S.EntityB].Single().Rows == Upper("b") && layouts[S.EntityC].Single().Rows == S.UpperC).OverrideFailureMessage("B and C: one grid each").IsTrue();
+        AssertThat(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0)).OverrideFailureMessage("every grid has cells").IsTrue();
     }
 
     [TestCase]
@@ -235,8 +230,8 @@ public sealed class WestModuleTests
             for (var r = 0; r < f.Rows; r++)
                 for (var c = 0; c < f.Columns; c++)
                     if (!f.Skip.Contains(r * f.Columns + c)) declared.Add(f.BaseId + r * f.TotalColumns + f.ColumnStart + c);
-        Require(declared.Count == declared.Distinct().Count() && declared.Count > 0, "every window is declared once");
-        Require(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier")), "declared IDs lie in the zone's grids");
+        AssertThat(declared.Count == declared.Distinct().Count() && declared.Count > 0).OverrideFailureMessage("every window is declared once").IsTrue();
+        AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
         var ids = new HashSet<int>();
         var size = 64;
         foreach (var (x, z) in module.ItemsFor(ctx, LodLevel.L0).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct())
@@ -246,7 +241,7 @@ public sealed class WestModuleTests
                     var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);
                     ids.Add((int)mesh.Uv2[2 * v] + (int)MathF.Floor(mesh.Uv![2 * v + 1]) * columns + (int)MathF.Floor(mesh.Uv[2 * v]));
                 }
-        Require(ids.SetEquals(declared), $"L0 glass carries exactly the declared windows ({ids.Count} vs {declared.Count})");
+        AssertThat(ids.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({ids.Count} vs {declared.Count})").IsTrue();
     }
 
     [TestCase]
@@ -267,28 +262,28 @@ public sealed class WestModuleTests
         var layouts = module.DescribeWindowLayouts(world, 1);
         var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
-        Require(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0), "every west grid is allocated with cells");
-        Require(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity, $"the table fits ({snapshot.WindowCount})");
+        AssertThat(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage("every west grid is allocated with cells").IsTrue();
+        AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"the table fits ({snapshot.WindowCount})").IsTrue();
         var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
-        Require(metadata.Facades.Count > 0, "the west zone declares facade runs");
+        AssertThat(metadata.Facades.Count > 0).OverrideFailureMessage("the west zone declares facade runs").IsTrue();
     }
 
     [TestCase]
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
-        Require(file.Zone.Value == "west" && file.Owner.Value == "WP-19", "the file belongs to WP-19's west zone");
-        Require(file.Ops.All(o => o.Id.StartsWith("design:terrain:west-", StringComparison.Ordinal) && o.Zone.Value == "west"), "ids and zones");
+        AssertThat(file.Zone.Value == "west" && file.Owner.Value == "WP-19").OverrideFailureMessage("the file belongs to WP-19's west zone").IsTrue();
+        AssertThat(file.Ops.All(o => o.Id.StartsWith("design:terrain:west-", StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == "design:terrain:west-wetland-low");
         var plaza = ((PolygonGeometry)World().Features[new("design:west-a10-plaza")].Geometry).Rings.Outer;
-        Require(low.Rings.Holes.Count == 1 && plaza.All(p => PlanGeometry.InsideByCrossings(low.Rings.Holes[0], p)), "the low ground leaves a dry hole round the plaza");
+        AssertThat(low.Rings.Holes.Count == 1 && plaza.All(p => PlanGeometry.InsideByCrossings(low.Rings.Holes[0], p))).OverrideFailureMessage("the low ground leaves a dry hole round the plaza").IsTrue();
         var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-wetland-stream");
         var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-hongguang-north");
-        Require(stream.WaterY is -0.5 && canal.WaterY is -1.2, "the wetland stream keeps the lake level, the canal runs 0.7 m lower");
+        AssertThat(stream.WaterY is -0.5 && canal.WaterY is -1.2).OverrideFailureMessage("the wetland stream keeps the lake level, the canal runs 0.7 m lower").IsTrue();
         // The west gates' 20 m zero bands (MAP-QSH-TERRAIN): no authored point comes near them.
         Vector2[] gates = [new(-372.7f, -505.0f), new(-197.6f, -731.3f), new(-620.0f, -190.0f)];
         var points = file.Ops.SelectMany(Points).ToArray();
-        Require(points.All(p => gates.All(g => Vector2.Distance(p, g) > 60f)), "every terrain operation stays out of the gates' zero bands");
+        AssertThat(points.All(p => gates.All(g => Vector2.Distance(p, g) > 60f))).OverrideFailureMessage("every terrain operation stays out of the gates' zero bands").IsTrue();
 
         static IEnumerable<Vector2> Points(TerrainOp op) => op switch
         {
@@ -310,11 +305,11 @@ public sealed class WestModuleTests
             ("qsh:relation:11032065", "research"), ("qsh:way:795677483", "research"), ("qsh:way:795677482", "research"),
             ("qsh:way:570145228", "office"), ("qsh:way:779496151", "research"), ("qsh:way:779496154", "research"),
         })
-            Require(world.Features[new(id)].Family?.Value == family, $"{id} is styled {family} for WP-14");
+            AssertThat(world.Features[new(id)].Family?.Value == family).OverrideFailureMessage($"{id} is styled {family} for WP-14").IsTrue();
         foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, "qsh:relation:8426842" })
-            Require(world.Features[new(id)].Facade?.Value == "research.stoneFrame", $"{id} takes the stone-and-glass preset");
+            AssertThat(world.Features[new(id)].Facade?.Value == "research.stoneFrame").OverrideFailureMessage($"{id} takes the stone-and-glass preset").IsTrue();
         // 19b claims nothing: the bodies stay WP-14's, the zone only adds entrance boxes, shafts and the portal in front of them.
-        Require(new WestModule().Claims.OfType<FeatureClaim>().Count() == 4, "only 六号's three entities and the 19c bus shelter are claimed");
+        AssertThat(new WestModule().Claims.OfType<FeatureClaim>().Count() == 4).OverrideFailureMessage("only 六号's three entities and the 19c bus shelter are claimed").IsTrue();
     }
 
     [TestCase]
@@ -326,21 +321,19 @@ public sealed class WestModuleTests
         {
             var ring = Six.SixSite.Plan(world, box.Entity, parts[box.Entity]).Outer;
             var onLine = Enumerable.Range(0, ring.Count).Any(i => Near(ring[i], ring[(i + 1) % ring.Count], box.Door, 0.3f));
-            Require(onLine, $"四号 {box.Key}: the door lies on the block's stone line");
+            AssertThat(onLine).OverrideFailureMessage($"四号 {box.Key}: the door lies on the block's stone line").IsTrue();
             var out1 = PlanMath.Heading(box.Facing);
-            Require(!PlanGeometry.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanGeometry.InsideByCrossings(ring, box.Door - out1 * 2f), $"四号 {box.Key}: the box faces out of the block");
+            AssertThat(!PlanGeometry.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanGeometry.InsideByCrossings(ring, box.Door - out1 * 2f)).OverrideFailureMessage($"四号 {box.Key}: the box faces out of the block").IsTrue();
         }
         var ctx = Context();
         var module = new WestModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         foreach (var box in F4.Boxes)
-            Require(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, box.Door) < F4.GlassDepth + 1f),
-                $"四号 {box.Key}: the glass box front is DoorClosed");
-        Require(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, I.MainDoor) < I.PortalDepth + 0.5f),
-            "创新中心: the main portal is DoorClosed");
+            AssertThat(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, box.Door) < F4.GlassDepth + 1f)).OverrideFailureMessage($"四号 {box.Key}: the glass box front is DoorClosed").IsTrue();
+        AssertThat(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, I.MainDoor) < I.PortalDepth + 0.5f)).OverrideFailureMessage("创新中心: the main portal is DoorClosed").IsTrue();
         // The seat wall runs inside the lawn, clear of the radial paths' gaps.
         foreach (var arc in F4.SeatArcs)
-            Require(FourSite.SeatLine(arc).All(p => Vector2.Distance(p, F4.LawnCentre) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre))), "the seat wall is inset into the lawn");
+            AssertThat(FourSite.SeatLine(arc).All(p => Vector2.Distance(p, F4.LawnCentre) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre)))).OverrideFailureMessage("the seat wall is inset into the lawn").IsTrue();
     }
 
     [TestCase]
@@ -352,9 +345,9 @@ public sealed class WestModuleTests
             .Concat(feature.Parts.Select(p => p.Geometry).OfType<MultiPolygonGeometry>().SelectMany(m => m.Polygons.Select(r => r.Outer))).ToArray();
         foreach (var (centre, length) in I.Shafts)
         {
-            Require(plans.Any(r => PlanGeometry.InsideByCrossings(r, centre)), $"shaft {centre} stands on a link of 创新中心");
+            AssertThat(plans.Any(r => PlanGeometry.InsideByCrossings(r, centre))).OverrideFailureMessage($"shaft {centre} stands on a link of 创新中心").IsTrue();
             var ends = new[] { centre + I.WingAxis * (length * 0.5f + 1.5f), centre - I.WingAxis * (length * 0.5f + 1.5f) };
-            Require(ends.All(e => plans.Any(r => PlanGeometry.InsideByCrossings(r, e))), $"shaft {centre} reaches a building at both ends");
+            AssertThat(ends.All(e => plans.Any(r => PlanGeometry.InsideByCrossings(r, e)))).OverrideFailureMessage($"shaft {centre} reaches a building at both ends").IsTrue();
         }
     }
 
@@ -363,8 +356,7 @@ public sealed class WestModuleTests
     {
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
         var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == "design:terrain:west-four-fan-lawn");
-        Require(dish.Height is 0.45 && dish.Shape is TerrainCircle { Radius: 32 } c && Vector2.Distance(c.Center, F4.LawnCentre) < 0.01f,
-            "the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN)");
+        AssertThat(dish.Height is 0.45 && dish.Shape is TerrainCircle { Radius: 32 } c && Vector2.Distance(c.Center, F4.LawnCentre) < 0.01f).OverrideFailureMessage("the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN)").IsTrue();
     }
 
     // ---- helpers ----
@@ -424,5 +416,4 @@ public sealed class WestModuleTests
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -6,6 +6,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.DesignPublic.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>WP-29 29a: the two corner pocket greens of overlay/public.d/, loaded with every other overlay of the map.</summary>
 [TestSuite]
 public sealed class PublicModuleTests
@@ -19,12 +21,12 @@ public sealed class PublicModuleTests
         var world = Loaded.Value;
         var benches = PocketGreens.Benches(world);
         var pits = PocketGreens.Pits(world);
-        Require(benches.Count == 2 && pits.Count == 2, $"two benches and two site-built pits ({benches.Count}, {pits.Count})");
+        AssertThat(benches.Count == 2 && pits.Count == 2).OverrideFailureMessage($"two benches and two site-built pits ({benches.Count}, {pits.Count})").IsTrue();
         foreach (var bench in benches)
         {
             var pad = Pad(world, bench);
-            Require(pad.Zone?.Value == "public", $"{pad.Id.Value} is filed under the public zone");
-            Require(Text(pad.Props, "roadType") == "pedestrian", $"{pad.Id.Value} is a pedestrian area WP-15 paves");
+            AssertThat(pad.Zone?.Value == "public").OverrideFailureMessage($"{pad.Id.Value} is filed under the public zone").IsTrue();
+            AssertThat(Text(pad.Props, "roadType") == "pedestrian").OverrideFailureMessage($"{pad.Id.Value} is a pedestrian area WP-15 paves").IsTrue();
         }
     }
 
@@ -36,13 +38,13 @@ public sealed class PublicModuleTests
         foreach (var bench in PocketGreens.Benches(world))
         {
             var (c, r) = Disc(Pad(world, bench));
-            Require(Vector2.Distance(c, bench.Centre) < 0.01f, $"{bench.Id.Value} is centred on its pad");
+            AssertThat(Vector2.Distance(c, bench.Centre) < 0.01f).OverrideFailureMessage($"{bench.Id.Value} is centred on its pad").IsTrue();
             foreach (var road in world.Network.Roads)
             {
                 var type = Text(road.Props, "highway") ?? Text(road.Props, "roadType") ?? "";
                 var edge = road.Width * 0.5f + (Carriageway.Contains(type) ? 0.15f : 0f);
                 var d = Distance(c, road.Line.Points) - edge - r;
-                Require(d > 0.2f, $"{bench.Id.Value} pad comes within {d:F2} m of road {road.Id.Value} ({type})");
+                AssertThat(d > 0.2f).OverrideFailureMessage($"{bench.Id.Value} pad comes within {d:F2} m of road {road.Id.Value} ({type})").IsTrue();
             }
             foreach (var f in world.Features.Values)
             {
@@ -50,12 +52,12 @@ public sealed class PublicModuleTests
                 var kind = f.Kind.Value;
                 if (kind is "building" or "water" or "parking" or "sport" || (kind == "road" && f.Geometry is PolygonGeometry or MultiPolygonGeometry))
                     foreach (var ring in Rings(f.Geometry))
-                        Require(Distance(c, ring, closed: true) - r > 0.2f && !Inside(c, ring), $"{bench.Id.Value} pad overlaps {f.Id.Value} ({kind})");
+                        AssertThat(Distance(c, ring, closed: true) - r > 0.2f && !Inside(c, ring)).OverrideFailureMessage($"{bench.Id.Value} pad overlaps {f.Id.Value} ({kind})").IsTrue();
                 if (f.Source == FeatureSource.Design && f.Geometry is PointGeometry p)
-                    Require(Vector2.Distance(c, new(p.Position.X, p.Position.Z)) > r + 1f, $"{bench.Id.Value} pad sits on {f.Id.Value}");
+                    AssertThat(Vector2.Distance(c, new(p.Position.X, p.Position.Z)) > r + 1f).OverrideFailureMessage($"{bench.Id.Value} pad sits on {f.Id.Value}").IsTrue();
             }
             foreach (var tree in world.Network.Trees)
-                Require(Vector2.Distance(c, new(tree.Position.X, tree.Position.Z)) > r + 1f, $"{bench.Id.Value} pad sits on OSM tree {tree.Id.Value}");
+                AssertThat(Vector2.Distance(c, new(tree.Position.X, tree.Position.Z)) > r + 1f).OverrideFailureMessage($"{bench.Id.Value} pad sits on OSM tree {tree.Id.Value}").IsTrue();
         }
     }
 
@@ -69,14 +71,14 @@ public sealed class PublicModuleTests
         {
             var (c, r) = Disc(Pad(world, bench));
             var length = bench.Radius * (bench.To - bench.From) * MathF.PI / 180f;
-            Require(MathF.Abs(length - 4f) < 0.05f, $"{bench.Id.Value} is 4 m long ({length:F2})");
-            Require(MathF.Abs((bench.From + bench.To) * 0.5f - 241f) < 15f, $"{bench.Id.Value} turns its back to 241° ± 15°");
-            Require(bench.Radius + PublicTune.Bench.PostOffset + PublicTune.Bench.PostSize < r - 0.2f, $"{bench.Id.Value} back stays on the paving");
+            AssertThat(MathF.Abs(length - 4f) < 0.05f).OverrideFailureMessage($"{bench.Id.Value} is 4 m long ({length:F2})").IsTrue();
+            AssertThat(MathF.Abs((bench.From + bench.To) * 0.5f - 241f) < 15f).OverrideFailureMessage($"{bench.Id.Value} turns its back to 241° ± 15°").IsTrue();
+            AssertThat(bench.Radius + PublicTune.Bench.PostOffset + PublicTune.Bench.PostSize < r - 0.2f).OverrideFailureMessage($"{bench.Id.Value} back stays on the paving").IsTrue();
             var pit = pits.Single(p => Vector2.Distance(p.Centre, c) < r);
-            Require(Vector2.Distance(pit.Centre, c) + pit.Radius < r - 0.3f, $"{pit.Id.Value} lies inside the pad with a paved margin");
-            Require(bench.Radius - PublicTune.Bench.HalfDepth - (Vector2.Distance(pit.Centre, c) + pit.Radius) > 0.6f, $"{pit.Id.Value} leaves knee room in front of the bench");
+            AssertThat(Vector2.Distance(pit.Centre, c) + pit.Radius < r - 0.3f).OverrideFailureMessage($"{pit.Id.Value} lies inside the pad with a paved margin").IsTrue();
+            AssertThat(bench.Radius - PublicTune.Bench.HalfDepth - (Vector2.Distance(pit.Centre, c) + pit.Radius) > 0.6f).OverrideFailureMessage($"{pit.Id.Value} leaves knee room in front of the bench").IsTrue();
             var toPit = Vector2.Normalize(pit.Centre - c);
-            Require(Vector2.Dot(toPit, PocketGreens.Dir(61f)) > 0.95f, $"{pit.Id.Value} stands north-east of the pad centre, so its evening shadow misses the bench");
+            AssertThat(Vector2.Dot(toPit, PocketGreens.Dir(61f)) > 0.95f).OverrideFailureMessage($"{pit.Id.Value} stands north-east of the pad centre, so its evening shadow misses the bench").IsTrue();
         }
     }
 
@@ -89,23 +91,23 @@ public sealed class PublicModuleTests
         float Ground(Vector2 p) => world.Terrain.HeightAt(p.X, p.Y);
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         var benches = PocketGreens.Benches(world);
-        Require(colliders.OfType<BoxCollider>().Count() == benches.Count * PublicTune.Bench.ColliderBoxes, "four seat boxes per bench");
-        Require(colliders.OfType<PostCollider>().Count() == PocketGreens.Pits(world).Count, "one kerb post per pit");
+        AssertThat(colliders.OfType<BoxCollider>().Count() == benches.Count * PublicTune.Bench.ColliderBoxes).OverrideFailureMessage("four seat boxes per bench").IsTrue();
+        AssertThat(colliders.OfType<PostCollider>().Count() == PocketGreens.Pits(world).Count).OverrideFailureMessage("one kerb post per pit").IsTrue();
         foreach (var bench in benches)
         {
             var deck = PocketGreens.Paving(bench, Ground);
             foreach (var box in PocketGreens.SeatBoxes(bench, Ground))
             {
                 var top = box.At.M42 + box.Half.Y - deck;
-                Require(top is >= 0.35f and <= 1.25f, $"{bench.Id.Value} seat box top {top:F2} m is jumpable (SYS-WALK)");
+                AssertThat(top is >= 0.35f and <= 1.25f).OverrideFailureMessage($"{bench.Id.Value} seat box top {top:F2} m is jumpable (SYS-WALK)").IsTrue();
             }
             var seats = PocketGreens.Seats(bench, Ground);
-            Require(seats.Count == PublicTune.Bench.ColliderBoxes && seats.All(s => s.Back), $"{bench.Id.Value} declares a backed seat edge on every box");
+            AssertThat(seats.Count == PublicTune.Bench.ColliderBoxes && seats.All(s => s.Back)).OverrideFailureMessage($"{bench.Id.Value} declares a backed seat edge on every box").IsTrue();
             foreach (var seat in seats)
             {
                 var mid = (seat.From + seat.To) * 0.5f;
-                Require(Vector2.Dot(new(seat.Facing.X, seat.Facing.Z), bench.Centre - new Vector2(mid.X, mid.Z)) > 0f, $"{bench.Id.Value} sitters face the pad centre");
-                Require(MathF.Abs(mid.Y - deck - PublicTune.Bench.SeatTop) < 0.01f, $"{bench.Id.Value} seat edge at the seat top");
+                AssertThat(Vector2.Dot(new(seat.Facing.X, seat.Facing.Z), bench.Centre - new Vector2(mid.X, mid.Z)) > 0f).OverrideFailureMessage($"{bench.Id.Value} sitters face the pad centre").IsTrue();
+                AssertThat(MathF.Abs(mid.Y - deck - PublicTune.Bench.SeatTop) < 0.01f).OverrideFailureMessage($"{bench.Id.Value} seat edge at the seat top").IsTrue();
             }
         }
     }
@@ -116,7 +118,7 @@ public sealed class PublicModuleTests
         var ctx = Context();
         var module = new PublicModule();
         var tiles = module.Tiles(ctx).ToArray();
-        Require(tiles.Length == 2, $"two occupied cells ({tiles.Length})");
+        AssertThat(tiles.Length == 2).OverrideFailureMessage($"two occupied cells ({tiles.Length})").IsTrue();
         var tokens = PaletteTokens();
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2 })
         {
@@ -127,21 +129,20 @@ public sealed class PublicModuleTests
             {
                 var a = module.Build(ctx, cell, lod);
                 var b = module.Build(ctx, cell, lod);
-                Require(a.Meshes.Count > 0 && a.Meshes.Count <= module.Budget.DrawCalls, $"{lod} {cell}: {a.Meshes.Count} draws");
-                Require(a.Meshes.Count == b.Meshes.Count && a.Meshes.Zip(b.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position) && p.First.Index.SequenceEqual(p.Second.Index)),
-                    $"{lod} {cell} builds the same bytes twice");
+                AssertThat(a.Meshes.Count > 0 && a.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} {cell}: {a.Meshes.Count} draws").IsTrue();
+                AssertThat(a.Meshes.Count == b.Meshes.Count && a.Meshes.Zip(b.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position) && p.First.Index.SequenceEqual(p.Second.Index))).OverrideFailureMessage($"{lod} {cell} builds the same bytes twice").IsTrue();
                 var triangles = a.Meshes.Sum(m => m.Index.Length / 3);
-                Require(triangles <= budget, $"{lod} {cell}: {triangles} triangles over {budget}");
+                AssertThat(triangles <= budget).OverrideFailureMessage($"{lod} {cell}: {triangles} triangles over {budget}").IsTrue();
                 total += triangles;
                 foreach (var mesh in a.Meshes)
-                    Require(mesh.Position.All(float.IsFinite) && mesh.Normal.All(float.IsFinite), $"{lod} {cell}: finite vertices");
+                    AssertThat(mesh.Position.All(float.IsFinite) && mesh.Normal.All(float.IsFinite)).OverrideFailureMessage($"{lod} {cell}: finite vertices").IsTrue();
             }
-            Require(total > 0, $"{lod} builds something");
+            AssertThat(total > 0).OverrideFailureMessage($"{lod} builds something").IsTrue();
         }
         foreach (var family in new[] { "door.wood", "stone.beige", "equip.fence", "base.warmBrown" })
-            Require(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade"), $"{family} is a registered pair");
-        Require(module.Build(ctx, new(0, 0), LodLevel.L4).Meshes.Count == 0, "no whole-map product");
-        foreach (var t in tiles) Require(module.Build(ctx, PublicModule.Cell(new(t.X * 64f + 1f, t.Z * 64f + 1f), LodLevel.L3), LodLevel.L3).Meshes.Count == 0, "nothing at L3");
+            AssertThat(tokens.Contains(family + ".lit") && tokens.Contains(family + ".shade")).OverrideFailureMessage($"{family} is a registered pair").IsTrue();
+        AssertThat(module.Build(ctx, new(0, 0), LodLevel.L4).Meshes.Count == 0).OverrideFailureMessage("no whole-map product").IsTrue();
+        foreach (var t in tiles) AssertThat(module.Build(ctx, PublicModule.Cell(new(t.X * 64f + 1f, t.Z * 64f + 1f), LodLevel.L3), LodLevel.L3).Meshes.Count == 0).OverrideFailureMessage("nothing at L3").IsTrue();
     }
 
     // ---- Helpers ----
@@ -224,5 +225,4 @@ public sealed class PublicModuleTests
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -12,6 +12,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
 
+using static GdUnit4.Assertions;
+
 /// <summary>
 /// The trees reach the kernel as static instance streams (0n): Build gives every planted tree exactly once per level band,
 /// over the shared mother-model prototypes, and nothing else; the trace hook flattens to Build and Collide.
@@ -56,8 +58,8 @@ public sealed class VegetationBuildTests
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
         var tiles = module.Tiles(ctx).ToArray();
         var near = tiles.Select(t => module.Build(ctx, t, LodLevel.L0)).ToArray();
-        Check(near.All(o => o.Instances.Count > 0), "an occupied cell built no instances");
-        Check(near.All(o => o.Meshes.Count == 0 && o.Parts.Count == 0), "vegetation must hand over instance streams only");
+        AssertThat(near.All(o => o.Instances.Count > 0)).OverrideFailureMessage("an occupied cell built no instances").IsTrue();
+        AssertThat(near.All(o => o.Meshes.Count == 0 && o.Parts.Count == 0)).OverrideFailureMessage("vegetation must hand over instance streams only").IsTrue();
         Records(near, trees, VegPool.L0);
 
         // Far tiles (128 m and 256 m): the same trees on the far stand-in.
@@ -68,9 +70,9 @@ public sealed class VegetationBuildTests
                 .Distinct().Select(t => module.Build(ctx, t, lod)).ToArray();
             Records(far, trees, VegPool.Far);
         }
-        Check(module.Build(ctx, tiles[0], LodLevel.L3).Instances.Count == 0 && module.Build(ctx, new(0, 0), LodLevel.L4).Instances.Count == 0,
-            "crown clouds are not built yet");
-        Check(module.Build(ctx, new(100000, 100000), LodLevel.L0) == ContentOutput.Empty, "an empty cell must stay empty");
+        AssertThat(module.Build(ctx, tiles[0], LodLevel.L3).Instances.Count == 0 && module.Build(ctx, new(0, 0), LodLevel.L4).Instances.Count == 0)
+            .OverrideFailureMessage("crown clouds are not built yet").IsTrue();
+        AssertThat(module.Build(ctx, new(100000, 100000), LodLevel.L0) == ContentOutput.Empty).OverrideFailureMessage("an empty cell must stay empty").IsTrue();
     }
 
     [TestCase]
@@ -80,12 +82,12 @@ public sealed class VegetationBuildTests
         var module = new VegetationModule();
         var streams = module.Tiles(ctx).SelectMany(t => module.Build(ctx, t, LodLevel.L0).Instances).ToArray();
         foreach (var group in streams.GroupBy(s => s.Prototype.Id))
-            Check(group.Select(s => s.Prototype).Distinct().Count() == 1, $"{group.Key}: prototype rebuilt per tile");
+            AssertThat(group.Select(s => s.Prototype).Distinct().Count() == 1).OverrideFailureMessage($"{group.Key}: prototype rebuilt per tile").IsTrue();
         var ids = streams.Select(s => s.Id).ToArray();
-        Check(ids.Distinct(StringComparer.Ordinal).Count() == ids.Length, "duplicate stream IDs");
+        AssertThat(ids.Distinct(StringComparer.Ordinal).Count() == ids.Length).OverrideFailureMessage("duplicate stream IDs").IsTrue();
         foreach (var s in streams)
         {
-            Check(s.Prototype.Surfaces.Count is 1 or 2, $"{s.Id}: surfaces");
+            AssertThat(s.Prototype.Surfaces.Count is 1 or 2).OverrideFailureMessage($"{s.Id}: surfaces").IsTrue();
             var palette = ctx.Catalog!;
             foreach (var surface in s.Prototype.Surfaces) palette.Validate(surface.Material.Spec);
         }
@@ -97,10 +99,10 @@ public sealed class VegetationBuildTests
         var stand = VegetationPrototypes.Get(info, variant, VegPool.Far, ctx.Catalog!);
         var standTriangles = VegetationPrototypes.Triangles(stand);
         Console.WriteLine($"{far.Id}: far stand-in {standTriangles} triangles, L1 {VegetationPrototypes.Triangles(l1)}");
-        Check(stand.Id != l1.Id && stand.Surfaces.Count == 2 && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
-            && stand.Surfaces[1].Material.Spec.Kind == ToonKind.VegCard && standTriangles <= 200,
-            "the mainline far stand-in is a trunk and a mass crown within 200 triangles (ENG-PERF L2: 150–300)");
-        Check(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Catalog!).Surfaces.Count == 1, "one shadow proxy surface");
+        AssertThat(stand.Id != l1.Id && stand.Surfaces.Count == 2 && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
+            && stand.Surfaces[1].Material.Spec.Kind == ToonKind.VegCard && standTriangles <= 200)
+            .OverrideFailureMessage("the mainline far stand-in is a trunk and a mass crown within 200 triangles (ENG-PERF L2: 150–300)").IsTrue();
+        AssertThat(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Catalog!).Surfaces.Count == 1).OverrideFailureMessage("one shadow proxy surface").IsTrue();
     }
 
     [TestCase]
@@ -110,8 +112,8 @@ public sealed class VegetationBuildTests
         var module = new VegetationModule();
         var sources = module.TraceSources(ctx, LodLevel.L0).ToArray();
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
-        Check(sources.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == sources.Length,
-            "all trees have stable unique source IDs");
+        AssertThat(sources.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == sources.Length)
+            .OverrideFailureMessage("all trees have stable unique source IDs").IsTrue();
         foreach (var tile in module.Tiles(ctx).Take(40))
         {
             var ids = trees.Where(t => (int)MathF.Floor(t.Position.X / TreeColliders.TileSize) == tile.X
@@ -120,11 +122,11 @@ public sealed class VegetationBuildTests
             var traces = sources.Where(t => ids.Contains(t.SourceId)).ToArray();
             var built = Flatten(module.Build(ctx, tile, LodLevel.L0).Instances);
             var traced = Flatten(traces.SelectMany(t => t.Output.Instances));
-            Check(built.SequenceEqual(traced), $"{tile}: traced records differ from Build");
+            AssertThat(built.SequenceEqual(traced)).OverrideFailureMessage($"{tile}: traced records differ from Build").IsTrue();
             var colliders = module.Collide(ctx, tile).Select(c => c.ToString()).Order(StringComparer.Ordinal);
             var tracedColliders = traces.SelectMany(t => t.Colliders).Select(c => c.ToString()).Order(StringComparer.Ordinal);
-            Check(colliders.SequenceEqual(tracedColliders), $"{tile}: traced colliders differ from Collide");
-            Check(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, $"{tile}: duplicate source IDs");
+            AssertThat(colliders.SequenceEqual(tracedColliders)).OverrideFailureMessage($"{tile}: traced colliders differ from Collide").IsTrue();
+            AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage($"{tile}: duplicate source IDs").IsTrue();
         }
     }
 
@@ -141,8 +143,8 @@ public sealed class VegetationBuildTests
         var l1 = trees.Select(t => new TileKey((int)MathF.Floor(t.Position.X / 128f), (int)MathF.Floor(t.Position.Z / 128f)))
             .Distinct().Max(t => Weigh(module.Build(ctx, t, LodLevel.L1)));
         Console.WriteLine($"vegetation budget: L0 cell {l0}, L1 tile {l1}, draws {draws}; trees {trees.Count}");
-        Check(l0 <= module.Budget.TrianglesL0 && l1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls,
-            $"L0 {l0}, L1 {l1}, draws {draws} over {module.Budget}");
+        AssertThat(l0 <= module.Budget.TrianglesL0 && l1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls)
+            .OverrideFailureMessage($"L0 {l0}, L1 {l1}, draws {draws} over {module.Budget}").IsTrue();
     }
 
     [TestCase]
@@ -158,7 +160,7 @@ public sealed class VegetationBuildTests
             {
                 var text = File.ReadAllText(file);
                 foreach (var word in banned)
-                    Check(!text.Contains(word, StringComparison.Ordinal), $"{Path.GetFileName(file)} uses {word}");
+                    AssertThat(!text.Contains(word, StringComparison.Ordinal)).OverrideFailureMessage($"{Path.GetFileName(file)} uses {word}").IsTrue();
             }
     }
 
@@ -177,20 +179,20 @@ public sealed class VegetationBuildTests
         var count = 0;
         foreach (var stream in outputs.SelectMany(o => o.Instances))
         {
-            Check(expected.TryGetValue(stream.Prototype.Id, out var list), $"{stream.Id}: unknown prototype {stream.Prototype.Id}");
+            AssertThat(expected.TryGetValue(stream.Prototype.Id, out var list)).OverrideFailureMessage($"{stream.Id}: unknown prototype {stream.Prototype.Id}").IsTrue();
             for (var i = 0; i < stream.Count; i++)
             {
                 var record = stream.Data.Span.Slice(i * 16, 16).ToArray();
                 var at = list!.FindIndex(r => r.AsSpan().SequenceEqual(record));
-                Check(at >= 0, $"{stream.Id}: record {i} matches no tree");
+                AssertThat(at >= 0).OverrideFailureMessage($"{stream.Id}: record {i} matches no tree").IsTrue();
                 list.RemoveAt(at);
                 count++;
                 var bounds = stream.Bounds;
-                Check(record[3] >= bounds.Min.X && record[3] <= bounds.Max.X && record[11] >= bounds.Min.Z && record[11] <= bounds.Max.Z,
-                    $"{stream.Id}: bounds miss a trunk");
+                AssertThat(record[3] >= bounds.Min.X && record[3] <= bounds.Max.X && record[11] >= bounds.Min.Z && record[11] <= bounds.Max.Z)
+                    .OverrideFailureMessage($"{stream.Id}: bounds miss a trunk").IsTrue();
             }
         }
-        Check(count == trees.Count && expected.Values.All(l => l.Count == 0), $"{pool}: {count} instances for {trees.Count} trees");
+        AssertThat(count == trees.Count && expected.Values.All(l => l.Count == 0)).OverrideFailureMessage($"{pool}: {count} instances for {trees.Count} trees").IsTrue();
     }
 
     private static List<string> Flatten(IEnumerable<GeometryInstanceStream> streams) => streams
@@ -207,11 +209,6 @@ public sealed class VegetationBuildTests
         foreach (var file in files)
             entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
         return new PaletteCatalog(new PaletteRegistry(entries), []);
-    }
-
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
     }
 
     private static string FindRepository()

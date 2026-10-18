@@ -9,6 +9,7 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.North.Tests;
 
+using static GdUnit4.Assertions;
 using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 
 [TestSuite]
@@ -22,8 +23,8 @@ public sealed class NorthModuleTests
         var world = World();
         foreach (var cluster in NorthTune.Clusters)
         {
-            Require(world.Features.ContainsKey(new(cluster.Id)), $"{cluster.Key} polygon exists");
-            Require(world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gate) && gate.Geometry is PointGeometry, $"{cluster.Key} gate addition is registered");
+            AssertThat(world.Features.ContainsKey(new(cluster.Id))).OverrideFailureMessage($"{cluster.Key} polygon exists").IsTrue();
+            AssertThat(world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gate) && gate.Geometry is PointGeometry).OverrideFailureMessage($"{cluster.Key} gate addition is registered").IsTrue();
         }
     }
 
@@ -36,12 +37,12 @@ public sealed class NorthModuleTests
             var layout = ClusterLayout.Of(world, cluster) ?? throw new InvalidOperationException($"{cluster.Key} has no layout");
             var open = world.Features[new("design:north-gate-" + cluster.Key)].Props is { ValueKind: JsonValueKind.Object } gateProps
                 && gateProps.TryGetProperty("open", out var openFlag) && openFlag.ValueKind == JsonValueKind.True;
-            Require(layout.Gates.Count(g => g.Main) == 1, $"{cluster.Key} has one main gate");
-            Require(layout.Gates.Count(g => g.Open) == (open ? 1 : 0), $"{cluster.Key} open gates");
-            Require(layout.Runs.Count > 0, $"{cluster.Key} has fence runs");
+            AssertThat(layout.Gates.Count(g => g.Main) == 1).OverrideFailureMessage($"{cluster.Key} has one main gate").IsTrue();
+            AssertThat(layout.Gates.Count(g => g.Open) == (open ? 1 : 0)).OverrideFailureMessage($"{cluster.Key} open gates").IsTrue();
+            AssertThat(layout.Runs.Count > 0).OverrideFailureMessage($"{cluster.Key} has fence runs").IsTrue();
             foreach (var run in layout.Runs)
                 for (var i = 0; i + 1 < run.Posts.Count; i++)
-                    Require(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + 0.01f, $"{cluster.Key} post gap at {run.Posts[i]}");
+                    AssertThat(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + 0.01f).OverrideFailureMessage($"{cluster.Key} post gap at {run.Posts[i]}").IsTrue();
         }
     }
 
@@ -62,12 +63,12 @@ public sealed class NorthModuleTests
                 {
                     var middle = f.P((cabinets[k] + cabinets[k + 1]) * 0.5f, 0);
                     var blocked = colliders.Any(c => Covers(c, middle, 0f));
-                    Require(blocked != gate.Open, $"{cluster.Key} gate passage {k} is {(gate.Open ? "open" : "closed")}");
+                    AssertThat(blocked != gate.Open).OverrideFailureMessage($"{cluster.Key} gate passage {k} is {(gate.Open ? "open" : "closed")}").IsTrue();
                 }
                 // The lane under the barrier arm is closed either way, and nothing crosses the gate line above 0.5 m wide.
-                Require(colliders.Any(c => Covers(c, f.P(0, 0), 0f)), $"{cluster.Key} vehicle lane is barred");
+                AssertThat(colliders.Any(c => Covers(c, f.P(0, 0), 0f))).OverrideFailureMessage($"{cluster.Key} vehicle lane is barred").IsTrue();
                 var tops = colliders.OfType<BoxCollider>().Where(c => Covers(c, f.P(cabinets[0], 0), 0f));
-                Require(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f), $"{cluster.Key} cabinets reach 1.5 m");
+                AssertThat(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f)).OverrideFailureMessage($"{cluster.Key} cabinets reach 1.5 m").IsTrue();
             }
         }
     }
@@ -77,11 +78,11 @@ public sealed class NorthModuleTests
     {
         var ctx = Context();
         var module = new NorthModule();
-        Require(module.Tiles(ctx).Any(), "the module occupies cells");
+        AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
             var items = module.ItemsFor(ctx, lod);
-            Require(items.Count > 0, $"{lod} has items");
+            AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var size = 64 << (int)lod;
             var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
             var meshes = 0;
@@ -92,15 +93,15 @@ public sealed class NorthModuleTests
                 foreach (var mesh in output.Meshes)
                 {
                     mesh.ValidateVertexData();
-                    Require(mesh.Position.Length / 3 <= 65536, "bundle vertex limit");
+                    AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("bundle vertex limit").IsTrue();
                     meshes++;
                 }
                 parts += output.Parts.Count;
             }
-            Require(meshes > 0, $"{lod} emits meshes");
-            Require(items.Count(i => i.Part is not null) == parts, $"{lod}: every placed part is emitted exactly once");
+            AssertThat(meshes > 0).OverrideFailureMessage($"{lod} emits meshes").IsTrue();
+            AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
             string[] entranceSet = [Campus.Contracts.Parts.PartCatalog.EntranceMat, Campus.Contracts.Parts.PartCatalog.OpenSign, Campus.Contracts.Parts.PartCatalog.EntranceLamp];
-            Require(!items.Any(i => i.Part is { } p && entranceSet.Contains(p.Part.Value)), $"{lod}: the open-entrance set is WP-13's, not placed by the zone");
+            AssertThat(!items.Any(i => i.Part is { } p && entranceSet.Contains(p.Part.Value))).OverrideFailureMessage($"{lod}: the open-entrance set is WP-13's, not placed by the zone").IsTrue();
         }
     }
 
@@ -117,8 +118,8 @@ public sealed class NorthModuleTests
             {
                 var output = module.Build(ctx, new(x, z), lod);
                 var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                Require(triangles <= limit, $"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}");
-                Require(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls, $"{lod} cell ({x}, {z}) material count");
+                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
+                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
             }
         }
     }
@@ -128,7 +129,7 @@ public sealed class NorthModuleTests
     {
         var a = Bytes(Context());
         var b = Bytes(Context());
-        Require(a.SequenceEqual(b), "two worlds give the same bytes");
+        AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
     [TestCase]
@@ -139,7 +140,7 @@ public sealed class NorthModuleTests
         // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH); batched boxes anchor at their
         // 64 m cell's centre, x 800 for that cell. South edge: 博翰一组团's fence reaches z −73 by 4499 (cell centre −96).
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
-            Require(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -64, $"item at {item.Anchor} is in the north zone");
+            AssertThat(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -64).OverrideFailureMessage($"item at {item.Anchor} is in the north zone").IsTrue();
     }
 
     private static bool Covers(Collider c, Vector2 p, float slack) => c switch

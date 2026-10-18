@@ -8,6 +8,8 @@ using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
 namespace Campus.Gen.Zones.DesignWaterfront.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class WaterfrontModuleTests
 {
@@ -20,13 +22,13 @@ public sealed class WaterfrontModuleTests
     {
         var world = World();
         var site = WaterfrontModule.SiteOf(world);
-        Require(site.Bridges.Select(b => b.Id.Value).SequenceEqual(["design:waterfront-bridge-library-north", "design:waterfront-bridge-ximen", Yinxing]), "three bridges in ID order");
-        Require(site.Stones.Count == 2, "two bridge-head stones");
+        AssertThat(site.Bridges.Select(b => b.Id.Value).SequenceEqual(["design:waterfront-bridge-library-north", "design:waterfront-bridge-ximen", Yinxing])).OverrideFailureMessage("three bridges in ID order").IsTrue();
+        AssertThat(site.Stones.Count == 2).OverrideFailureMessage("two bridge-head stones").IsTrue();
         // 路网拓扑照旧: every merged line is still its own network bridge.
-        foreach (var id in YinxingLines) Require(world.Network.Bridges.Any(l => l.Id.Value == id), $"{id} stays in the network");
+        foreach (var id in YinxingLines) AssertThat(world.Network.Bridges.Any(l => l.Id.Value == id)).OverrideFailureMessage($"{id} stays in the network").IsTrue();
         var yinxing = site.Bridges.Single(b => b.Id.Value == Yinxing);
-        Require(yinxing.Lines.Select(l => l.Value).SequenceEqual(YinxingLines), "the merged deck carries all three lines");
-        Require(yinxing.Bands.Count == 3 && yinxing.Bands[1].Kind == BandKind.Carriage, "one carriageway between two walking strips");
+        AssertThat(yinxing.Lines.Select(l => l.Value).SequenceEqual(YinxingLines)).OverrideFailureMessage("the merged deck carries all three lines").IsTrue();
+        AssertThat(yinxing.Bands.Count == 3 && yinxing.Bands[1].Kind == BandKind.Carriage).OverrideFailureMessage("one carriageway between two walking strips").IsTrue();
     }
 
     [TestCase]
@@ -35,22 +37,22 @@ public sealed class WaterfrontModuleTests
         var world = World();
         foreach (var plan in WaterfrontModule.SiteOf(world).Bridges)
         {
-            Require(plan.Abutments.Count == 2, $"{plan.Id.Value} crosses water and stands on two abutments");
+            AssertThat(plan.Abutments.Count == 2).OverrideFailureMessage($"{plan.Id.Value} crosses water and stands on two abutments").IsTrue();
             foreach (var id in plan.Lines)
             {
                 var line = world.Network.Bridges.Single(l => l.Id == id);
                 var ends = new[] { line.Line.Points[0], line.Line.Points[^1] }.Select(p => Local(plan, p)).OrderBy(p => p.S).ToArray();
-                Require(ends.All(e => e.U >= plan.Left - 0.01f && e.U <= plan.Right + 0.01f), $"{id} lies within the walking width");
+                AssertThat(ends.All(e => e.U >= plan.Left - 0.01f && e.U <= plan.Right + 0.01f)).OverrideFailureMessage($"{id} lies within the walking width").IsTrue();
                 // The deck is fitted to the water, not to the mapped line ends; it stays of the line's own order of size.
                 var length = plan.EndS(ends[0].U) - plan.StartS(ends[0].U);
-                Require(length > 3f && length < ends[1].S - ends[0].S + 6f, $"{plan.Id.Value} deck length {length} along {id}");
+                AssertThat(length > 3f && length < ends[1].S - ends[0].S + 6f).OverrideFailureMessage($"{plan.Id.Value} deck length {length} along {id}").IsTrue();
             }
             // Both abutments stand under the deck, between its ends.
             foreach (var a in plan.Abutments)
                 foreach (var c in new[] { a.A, a.B, a.C, a.D })
                 {
                     var (s, u) = Local(plan, c);
-                    Require(s >= plan.StartS(u) - 0.01f && s <= plan.EndS(u) + 0.01f, $"{plan.Id.Value} abutment corner {c} lies under the deck");
+                    AssertThat(s >= plan.StartS(u) - 0.01f && s <= plan.EndS(u) + 0.01f).OverrideFailureMessage($"{plan.Id.Value} abutment corner {c} lies under the deck").IsTrue();
                 }
         }
     }
@@ -67,7 +69,7 @@ public sealed class WaterfrontModuleTests
         var ctx = Context();
         var module = new WaterfrontModule();
         var tiles = module.Tiles(ctx).ToArray();
-        Require(tiles.Length > 0, "the module occupies cells");
+        AssertThat(tiles.Length > 0).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
             var keys = lod == LodLevel.L4 ? [new TileKey(0, 0)] : tiles.Select(t => new TileKey(t.X >> (int)lod, t.Z >> (int)lod)).Distinct().ToArray();
@@ -76,14 +78,14 @@ public sealed class WaterfrontModuleTests
                 var output = module.Build(ctx, tile, lod);
                 foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
                 var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                if (lod == LodLevel.L0) Require(triangles <= T.BudgetTrianglesL0 && output.Meshes.Count <= T.BudgetDrawCalls, $"L0 cell {tile} has {triangles} triangles in {output.Meshes.Count} surfaces");
-                if (lod == LodLevel.L1) Require(triangles <= T.BudgetTrianglesL1, $"L1 cell {tile} has {triangles} triangles");
-                if (lod == LodLevel.L4) Require(output.Meshes.Count == 0, "nothing at L4");
+                if (lod == LodLevel.L0) AssertThat(triangles <= T.BudgetTrianglesL0 && output.Meshes.Count <= T.BudgetDrawCalls).OverrideFailureMessage($"L0 cell {tile} has {triangles} triangles in {output.Meshes.Count} surfaces").IsTrue();
+                if (lod == LodLevel.L1) AssertThat(triangles <= T.BudgetTrianglesL1).OverrideFailureMessage($"L1 cell {tile} has {triangles} triangles").IsTrue();
+                if (lod == LodLevel.L4) AssertThat(output.Meshes.Count == 0).OverrideFailureMessage("nothing at L4").IsTrue();
             }
         }
         var first = module.Build(ctx, tiles[0], LodLevel.L0);
         var again = module.Build(Context(), tiles[0], LodLevel.L0);
-        Require(first.Meshes.Count == again.Meshes.Count && first.Meshes.Zip(again.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position)), "deterministic");
+        AssertThat(first.Meshes.Count == again.Meshes.Count && first.Meshes.Zip(again.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position))).OverrideFailureMessage("deterministic").IsTrue();
     }
 
     [TestCase]
@@ -93,17 +95,17 @@ public sealed class WaterfrontModuleTests
         var module = new WaterfrontModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         var site = WaterfrontModule.SiteOf(ctx.World);
-        Require(colliders.Length == site.Colliders.Count, "every collider is filed in exactly one cell");
+        AssertThat(colliders.Length == site.Colliders.Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
         foreach (var plan in site.Bridges)
         {
             var ramps = colliders.OfType<RampCollider>().Where(r => Inside(plan, new(r.P0.X, r.P0.Z))).ToArray();
-            Require(ramps.Length > 0 && ramps.All(r => r.Tag == SurfaceTag.Ground && r.Foot != FootMat.Auto), $"{plan.Id.Value}: walkable deck ramps with a foot material");
-            Require(ramps.All(r => Vector3.Distance(r.P0, r.P3) <= T.RampStep + 0.01f), "ramps are cut every 2 m");
-            Require(ramps.All(r => MathF.Abs(r.P0.Y - plan.RoadY) < 0.01f || MathF.Abs(r.P0.Y - plan.WalkY) < 0.01f), "ramp tops at the carriageway or walking level");
+            AssertThat(ramps.Length > 0 && ramps.All(r => r.Tag == SurfaceTag.Ground && r.Foot != FootMat.Auto)).OverrideFailureMessage($"{plan.Id.Value}: walkable deck ramps with a foot material").IsTrue();
+            AssertThat(ramps.All(r => Vector3.Distance(r.P0, r.P3) <= T.RampStep + 0.01f)).OverrideFailureMessage("ramps are cut every 2 m").IsTrue();
+            AssertThat(ramps.All(r => MathF.Abs(r.P0.Y - plan.RoadY) < 0.01f || MathF.Abs(r.P0.Y - plan.WalkY) < 0.01f)).OverrideFailureMessage("ramp tops at the carriageway or walking level").IsTrue();
             var walls = colliders.OfType<WallCollider>().Where(w => Inside(plan, (w.A + w.B) * 0.5f)).ToArray();
-            Require(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + WalkRules.BarrierHeight - 0.01f && w.HalfT <= 0.3f), $"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk");
+            AssertThat(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + WalkRules.BarrierHeight - 0.01f && w.HalfT <= 0.3f)).OverrideFailureMessage($"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk").IsTrue();
         }
-        Require(colliders.OfType<BoxCollider>().Count() == 2, "each stone is one box");
+        AssertThat(colliders.OfType<BoxCollider>().Count() == 2).OverrideFailureMessage("each stone is one box").IsTrue();
     }
 
     private static bool Inside(BridgePlan plan, Vector2 p)
@@ -132,5 +134,4 @@ public sealed class WaterfrontModuleTests
         return directory is null ? throw new DirectoryNotFoundException("game/data/maps/qingshuihe") : Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
     }
 
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

@@ -13,6 +13,8 @@ using P = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Plaza;
 
 namespace Campus.Gen.Zones.DesignBoundary.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class BoundaryModuleTests
 {
@@ -22,8 +24,8 @@ public sealed class BoundaryModuleTests
     public void OverlayRegistersTheForecourtAndThePlaza()
     {
         var world = World();
-        Require(world.Features.ContainsKey(new("design:boundary-north-forecourt")), "north forecourt registered");
-        Require(world.Features.ContainsKey(new(P.Feature)), "A05 plaza registered");
+        AssertThat(world.Features.ContainsKey(new("design:boundary-north-forecourt"))).OverrideFailureMessage("north forecourt registered").IsTrue();
+        AssertThat(world.Features.ContainsKey(new(P.Feature))).OverrideFailureMessage("A05 plaza registered").IsTrue();
     }
 
     [TestCase]
@@ -34,10 +36,10 @@ public sealed class BoundaryModuleTests
         foreach (var spec in BoundaryTune.Gates)
         {
             var g = GateSite.Of(world, spec) ?? throw new InvalidOperationException($"{spec.Name} not resolved");
-            Require(!ring.Contains(g.Frame.P(0, 2f)) && ring.Contains(g.Frame.P(0, -2f)), $"{spec.Name} +Z leaves the campus");
-            Require(g.OpeningLength > 2 * g.Carriage && g.OpeningLength < 40f, $"{spec.Name} opening {g.OpeningLength:F1} m");
+            AssertThat(!ring.Contains(g.Frame.P(0, 2f)) && ring.Contains(g.Frame.P(0, -2f))).OverrideFailureMessage($"{spec.Name} +Z leaves the campus").IsTrue();
+            AssertThat(g.OpeningLength > 2 * g.Carriage && g.OpeningLength < 40f).OverrideFailureMessage($"{spec.Name} opening {g.OpeningLength:F1} m").IsTrue();
             var origin = ring.Arc(g.Frame.Origin);
-            Require(ring.Forward(g.OpeningStart, origin) < g.OpeningLength, $"{spec.Name} opening holds the gate road");
+            AssertThat(ring.Forward(g.OpeningStart, origin) < g.OpeningLength).OverrideFailureMessage($"{spec.Name} opening holds the gate road").IsTrue();
         }
     }
 
@@ -54,21 +56,21 @@ public sealed class BoundaryModuleTests
             var o = plan.Openings[i];
             var next = plan.Openings[(i + 1) % plan.Openings.Count];
             var gap = ring.Forward(ring.Fold(o.Start + o.Length), next.Start);
-            Require(gap < ring.Perimeter - 1f && gap >= 0.3f, $"opening {o.Key} overlaps or touches {next.Key} (gap {gap:F2} m)");
+            AssertThat(gap < ring.Perimeter - 1f && gap >= 0.3f).OverrideFailureMessage($"opening {o.Key} overlaps or touches {next.Key} (gap {gap:F2} m)").IsTrue();
             covered += o.Length;
         }
-        Require(covered < ring.Perimeter * 0.05f, $"openings take {covered:F0} m of {ring.Perimeter:F0} m");
-        Require(plan.Openings.Count(o => o.Kind == OpeningKind.Gate) == BoundaryTune.Gates.Length + 1, "five gates of this package plus the south gate");
-        Require(plan.Openings.Count(o => o.Kind == OpeningKind.Grate) >= 5, "a grate at every river crossing");
+        AssertThat(covered < ring.Perimeter * 0.05f).OverrideFailureMessage($"openings take {covered:F0} m of {ring.Perimeter:F0} m").IsTrue();
+        AssertThat(plan.Openings.Count(o => o.Kind == OpeningKind.Gate) == BoundaryTune.Gates.Length + 1).OverrideFailureMessage("five gates of this package plus the south gate").IsTrue();
+        AssertThat(plan.Openings.Count(o => o.Kind == OpeningKind.Grate) >= 5).OverrideFailureMessage("a grate at every river crossing").IsTrue();
         foreach (var run in plan.Runs)
         {
             foreach (var p in run.Line)
-                Require(ring.Contains(p) || Near(ring, p, 0.35f), $"fence point {p} stays inside the ring");
+                AssertThat(ring.Contains(p) || Near(ring, p, 0.35f)).OverrideFailureMessage($"fence point {p} stays inside the ring").IsTrue();
             var posts = run.Posts();
             for (var i = 0; i + 1 < posts.Count; i++)
-                Require(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + 0.01f, $"pillar pitch at {posts[i].At}");
+                AssertThat(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + 0.01f).OverrideFailureMessage($"pillar pitch at {posts[i].At}").IsTrue();
             foreach (var hedge in run.Hedges)
-                foreach (var p in hedge) Require(ring.Contains(p), $"hedge point {p} inside the campus");
+                foreach (var p in hedge) AssertThat(ring.Contains(p)).OverrideFailureMessage($"hedge point {p} inside the campus").IsTrue();
         }
     }
 
@@ -83,12 +85,12 @@ public sealed class BoundaryModuleTests
         foreach (var road in world.Network.Roads.Where(r => !detours.Contains(r.Id.Value)))
             for (var k = 0; k + 1 < road.Line.Points.Count; k++)
                 foreach (var s in ring.Crossings(road.Line.Points[k], road.Line.Points[k + 1]))
-                    Require(Open(s), $"road {road.Id.Value} crosses the ring at {ring.At(s)} through the fence");
+                    AssertThat(Open(s)).OverrideFailureMessage($"road {road.Id.Value} crosses the ring at {ring.At(s)} through the fence").IsTrue();
         foreach (var water in world.Features.Values.Where(f => f.Kind.Value == "water"))
             foreach (var outer in Outers(water.Geometry))
                 for (var i = 0; i < outer.Count; i++)
                     foreach (var s in ring.Crossings(outer[i], outer[(i + 1) % outer.Count]))
-                        Require(plan.Openings.Any(o => o.Kind == OpeningKind.Grate && ring.Forward(o.Start, s) <= o.Length), $"water {water.Id.Value} crosses the ring at {ring.At(s)} without a grate");
+                        AssertThat(plan.Openings.Any(o => o.Kind == OpeningKind.Grate && ring.Forward(o.Start, s) <= o.Length)).OverrideFailureMessage($"water {water.Id.Value} crosses the ring at {ring.At(s)} without a grate").IsTrue();
     }
 
     [TestCase]
@@ -114,7 +116,7 @@ public sealed class BoundaryModuleTests
                     blocked = colliders.Any(c => c.Tag == SurfaceTag.Boundary && Covers(c, g.P(x, z), 0.2f));
                     outside = ring.Contains(g.P(x, z)) ? 0f : outside + 0.05f;
                 }
-                Require(blocked, $"{spec.Name}: a walker at local x {x:F2} can leave through the gate");
+                AssertThat(blocked).OverrideFailureMessage($"{spec.Name}: a walker at local x {x:F2} can leave through the gate").IsTrue();
             }
         }
     }
@@ -153,7 +155,7 @@ public sealed class BoundaryModuleTests
             for (var d = 2.5f; d >= -0.4f && !blocked; d -= 0.05f) blocked = Hit(p + n * d);
             if (!blocked) misses.Add($"{p}");
         }
-        Require(misses.Count == 0, $"{misses.Count} places along the ring can be walked through, first {string.Join(", ", misses.Take(5))}");
+        AssertThat(misses.Count == 0).OverrideFailureMessage($"{misses.Count} places along the ring can be walked through, first {string.Join(", ", misses.Take(5))}").IsTrue();
     }
 
     [TestCase]
@@ -161,11 +163,11 @@ public sealed class BoundaryModuleTests
     {
         var ctx = Context();
         var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).ToArray();
-        Require(colliders.Length > 0, "colliders exist");
-        Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider fills Foot");
+        AssertThat(colliders.Length > 0).OverrideFailureMessage("colliders exist").IsTrue();
+        AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider fills Foot").IsTrue();
         var rail = NorthPlazaSite.FrameOf(ctx.World)!.Value.P((P.RailT0 + P.RailT1) * 0.5f, P.RailN);
-        Require(colliders.Any(c => c.Tag == SurfaceTag.Barrier && Covers(c, rail, 0f)), "the waterside railing is an ordinary barrier");
-        Require(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= WalkRules.BarrierHeight), "barrier tops reach 1.5 m");
+        AssertThat(colliders.Any(c => c.Tag == SurfaceTag.Barrier && Covers(c, rail, 0f))).OverrideFailureMessage("the waterside railing is an ordinary barrier").IsTrue();
+        AssertThat(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= WalkRules.BarrierHeight)).OverrideFailureMessage("barrier tops reach 1.5 m").IsTrue();
     }
 
     [TestCase]
@@ -176,13 +178,13 @@ public sealed class BoundaryModuleTests
         var kiosk = frame.P(P.Kiosk.X, P.Kiosk.Y);
         var lane = world.Network.Roads.First(r => r.Id.Value == "qsh:source:way:987943170");
         var laneEdge = PolylineDistance(kiosk, lane.Line.Points) - lane.Width * 0.5f;
-        Require(laneEdge >= 4f, $"kiosk is {laneEdge:F2} m from the lane edge (≥ 3 m plus its half length)");
-        Require(P.Kiosk.Y - P.RailN >= 2f, "kiosk stays clear of the railing");
+        AssertThat(laneEdge >= 4f).OverrideFailureMessage($"kiosk is {laneEdge:F2} m from the lane edge (≥ 3 m plus its half length)").IsTrue();
+        AssertThat(P.Kiosk.Y - P.RailN >= 2f).OverrideFailureMessage("kiosk stays clear of the railing").IsTrue();
         var paving = Outers(world.Features[new(P.Feature)].Geometry).First();
-        Require(PlanGeometry.InsideByCrossings(paving, kiosk), "kiosk inside the plaza");
-        foreach (var bench in P.Benches) Require(Vector2.Distance(bench, P.Kiosk) > 5f, "benches leave the kiosk front free");
+        AssertThat(PlanGeometry.InsideByCrossings(paving, kiosk)).OverrideFailureMessage("kiosk inside the plaza").IsTrue();
+        foreach (var bench in P.Benches) AssertThat(Vector2.Distance(bench, P.Kiosk) > 5f).OverrideFailureMessage("benches leave the kiosk front free").IsTrue();
         var water = world.Features.Values.Where(f => f.Kind.Value == "water").ToArray();
-        Require(water.Length > 0, "water features present");
+        AssertThat(water.Length > 0).OverrideFailureMessage("water features present").IsTrue();
     }
 
     [TestCase]
@@ -190,11 +192,11 @@ public sealed class BoundaryModuleTests
     {
         var ctx = Context();
         var module = new BoundaryModule();
-        Require(module.Tiles(ctx).Any(), "the module occupies cells");
+        AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
             var items = module.ItemsFor(ctx, lod);
-            Require(items.Count > 0, $"{lod} has items");
+            AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var size = 64 << (int)lod;
             var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
             var parts = 0;
@@ -204,18 +206,18 @@ public sealed class BoundaryModuleTests
                 foreach (var mesh in output.Meshes)
                 {
                     mesh.ValidateVertexData();
-                    Require(mesh.Position.Length / 3 <= 65536, "bundle vertex limit");
+                    AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("bundle vertex limit").IsTrue();
                 }
                 parts += output.Parts.Count;
                 if (lod is LodLevel.L0 or LodLevel.L1)
                 {
                     var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
                     var limit = lod == LodLevel.L0 ? module.Budget.TrianglesL0 : module.Budget.TrianglesL1;
-                    Require(triangles <= limit, $"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}");
-                    Require(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls, $"{lod} cell ({x}, {z}) material count");
+                    AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
+                    AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
                 }
             }
-            Require(items.Count(i => i.Part is not null) == parts, $"{lod}: every placed part is emitted exactly once");
+            AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
         }
     }
 
@@ -224,7 +226,7 @@ public sealed class BoundaryModuleTests
     {
         var a = Bytes(Context());
         var b = Bytes(Context());
-        Require(a.Length > 0 && a.AsSpan().SequenceEqual(b), "two builds give the same bytes");
+        AssertThat(a.Length > 0 && a.AsSpan().SequenceEqual(b)).OverrideFailureMessage("two builds give the same bytes").IsTrue();
     }
 
     private static IEnumerable<IReadOnlyList<Vector2>> Outers(OverlayGeometry geometry) => geometry switch
@@ -326,5 +328,4 @@ public sealed class BoundaryModuleTests
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

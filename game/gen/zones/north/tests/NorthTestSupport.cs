@@ -56,6 +56,4 @@ internal static class NorthTestSupport
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
-
-    internal static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

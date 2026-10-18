@@ -5,7 +5,6 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
-using GdUnit4;
 
 namespace Campus.Gen.Zones.South.Tests;
 
@@ -74,8 +73,6 @@ internal static class SouthTestSupport
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
-
-    public static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 
     /// <summary>The map as the kernel loads it: every authored overlay, not only the south one.</summary>
     public static IWorldModel FullWorld()

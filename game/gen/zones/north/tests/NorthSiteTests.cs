@@ -10,6 +10,7 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.North.Tests;
 
+using static GdUnit4.Assertions;
 using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 
 [TestSuite]
@@ -22,13 +23,13 @@ public sealed class NorthSiteTests
         var porch = HallEntranceSite.Locate(world) ?? throw new InvalidOperationException("学知苑 1 栋 porch not located");
         var door = new Vector2(porch.Entrance.Center.X, porch.Entrance.Center.Z);
         var local = porch.Frame.Local(door);
-        Require(MathF.Abs(local.X) < 0.5f && MathF.Abs(local.Y) < 1.2f, $"porch axis passes the door centre (local {local})");
-        Require(Vector2.Dot(porch.Frame.W, PlanMath.Heading(porch.Entrance.YawDeg)) > 0.9f, "porch faces the declared facing");
-        Require(porch.Risers is >= NorthTune.Hall.MinRisers and <= NorthTune.Hall.MaxRisers, "6–8 risers");
-        Require(MathF.Abs(porch.Floor - porch.Entrance.Center.Y) < 0.01f, "landing at the declared floor level");
+        AssertThat(MathF.Abs(local.X) < 0.5f && MathF.Abs(local.Y) < 1.2f).OverrideFailureMessage($"porch axis passes the door centre (local {local})").IsTrue();
+        AssertThat(Vector2.Dot(porch.Frame.W, PlanMath.Heading(porch.Entrance.YawDeg)) > 0.9f).OverrideFailureMessage("porch faces the declared facing").IsTrue();
+        AssertThat(porch.Risers is >= NorthTune.Hall.MinRisers and <= NorthTune.Hall.MaxRisers).OverrideFailureMessage("6–8 risers").IsTrue();
+        AssertThat(MathF.Abs(porch.Floor - porch.Entrance.Center.Y) < 0.01f).OverrideFailureMessage("landing at the declared floor level").IsTrue();
         var outside = new Vector2(porch.Entrance.Outside.X, porch.Entrance.Outside.Z);
         var landing = porch.Frame.Local(outside);
-        Require(landing.Y > NorthTune.Hall.WallFace && landing.Y < porch.FrontZ, "teleport landing lies on the porch landing");
+        AssertThat(landing.Y > NorthTune.Hall.WallFace && landing.Y < porch.FrontZ).OverrideFailureMessage("teleport landing lies on the porch landing").IsTrue();
     }
 
     /// <summary>
@@ -47,10 +48,10 @@ public sealed class NorthSiteTests
             .Append((((PolylineGeometry)world.Features[new("design:north-drive-sf10")].Geometry).Line.Points, 5f)).ToArray();
         foreach (var p in outline)
         {
-            Require(PlanGeometry.InsideByCrossings(cluster, p), $"deck corner {p} is inside 硕丰苑十组团");
-            Require(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f), $"deck corner {p} keeps 8 m off the walls");
+            AssertThat(PlanGeometry.InsideByCrossings(cluster, p)).OverrideFailureMessage($"deck corner {p} is inside 硕丰苑十组团").IsTrue();
+            AssertThat(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f)).OverrideFailureMessage($"deck corner {p} keeps 8 m off the walls").IsTrue();
             foreach (var (line, width) in roads)
-                Require(PolylineDistance(p, line) - width * 0.5f >= 3f, $"deck corner {p} keeps 3 m off a road edge");
+                AssertThat(PolylineDistance(p, line) - width * 0.5f >= 3f).OverrideFailureMessage($"deck corner {p} keeps 3 m off a road edge").IsTrue();
         }
     }
 
@@ -77,12 +78,11 @@ public sealed class NorthSiteTests
             var main = layout.MainGate!;
             float ToBest(GateSpot g) => best.Min(r => PolylineDistance(g.Frame.Origin, r.Line.Points));
             var nearest = layout.Gates.Where(g => g.Kind == GateKind.Vehicle).MinBy(ToBest)!;
-            Require(ToBest(main) <= MathF.Max(Faces, ToBest(nearest)),
-                $"{cluster.Key}: main gate at {main.Frame.Origin} is {ToBest(main):0.0} m from the grade-{top} road; the gate at {nearest.Frame.Origin} is {ToBest(nearest):0.0} m");
+            AssertThat(ToBest(main) <= MathF.Max(Faces, ToBest(nearest))).OverrideFailureMessage($"{cluster.Key}: main gate at {main.Frame.Origin} is {ToBest(main):0.0} m from the grade-{top} road; the gate at {nearest.Frame.Origin} is {ToBest(nearest):0.0} m").IsTrue();
             // Walking in faces −W; the right of a facing d is (−d.z, d.x), which for d = −W is +U (PlanFrame: W = (−U.z, U.x)).
             var into = -main.Frame.W;
             var house = main.Frame.P((main.HouseStart + main.HouseEnd) * 0.5f, NorthTune.Gate.HouseOut - NorthTune.Gate.HouseDepth * 0.5f);
-            Require(Vector2.Dot(house - main.Frame.Origin, new Vector2(-into.Y, into.X)) > 0, $"{cluster.Key}: guard house on the right of the way in");
+            AssertThat(Vector2.Dot(house - main.Frame.Origin, new Vector2(-into.Y, into.X)) > 0).OverrideFailureMessage($"{cluster.Key}: guard house on the right of the way in").IsTrue();
         }
     }
 
@@ -103,8 +103,7 @@ public sealed class NorthSiteTests
             {
                 var crosses = Enumerable.Range(0, 4).Any(i => Enumerable.Range(0, ring.Count).Any(k =>
                     Framework.Plan.Intersect(house[i], house[(i + 1) % 4], ring[k], ring[(k + 1) % ring.Count]) is not null));
-                Require(!crosses && !house.Any(p => PlanGeometry.InsideByCrossings(ring, p)) && !ring.Any(p => PlanGeometry.InsideByCrossings(house, p)),
-                    $"{cluster.Key}: guard house at {g.Frame.Origin} overlaps a building");
+                AssertThat(!crosses && !house.Any(p => PlanGeometry.InsideByCrossings(ring, p)) && !ring.Any(p => PlanGeometry.InsideByCrossings(house, p))).OverrideFailureMessage($"{cluster.Key}: guard house at {g.Frame.Origin} overlaps a building").IsTrue();
             }
         }
     }
@@ -122,13 +121,13 @@ public sealed class NorthSiteTests
         var drive = ((PolylineGeometry)world.Features[new("design:north-drive-intl")].Geometry).Line.Points;
         var layout = ClusterLayout.Of(world, cluster)!;
         var main = layout.MainGate!;
-        Require(PolylineDistance(main.Frame.Origin, drive) < 1.5f, "the main gate stands where the design drive crosses the fence");
-        Require(layout.Gates.Count(g => g.Kind == GateKind.Vehicle) == 2, "the drive adds a lane; the north-west lane stays");
+        AssertThat(PolylineDistance(main.Frame.Origin, drive) < 1.5f).OverrideFailureMessage("the main gate stands where the design drive crosses the fence").IsTrue();
+        AssertThat(layout.Gates.Count(g => g.Kind == GateKind.Vehicle) == 2).OverrideFailureMessage("the drive adds a lane; the north-west lane stays").IsTrue();
         var joins = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:630914106");
-        Require(PolylineDistance(drive[0], joins.Line.Points) < 0.5f, "the drive starts on the 6 m campus road it joins");
+        AssertThat(PolylineDistance(drive[0], joins.Line.Points) < 0.5f).OverrideFailureMessage("the drive starts on the 6 m campus road it joins").IsTrue();
         var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
         foreach (var p in Samples(drive))
-            Require(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) - 2.5f >= 0.5f), $"drive point {p} keeps its 5 m clear of the walls");
+            AssertThat(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) - 2.5f >= 0.5f)).OverrideFailureMessage($"drive point {p} keeps its 5 m clear of the walls").IsTrue();
     }
 
     /// <summary>
@@ -146,28 +145,28 @@ public sealed class NorthSiteTests
         var w = frame.W;
         var joint = frame.Origin + u * -24.6f + w * 0.35f;
         var panels = Canal.CanalRailSite.Panels;
-        Require(Vector2.Distance(Canal.CanalRailSite.Post(frame, 0), joint) < 0.01f, "the run starts at the plaza's end post");
+        AssertThat(Vector2.Distance(Canal.CanalRailSite.Post(frame, 0), joint) < 0.01f).OverrideFailureMessage("the run starts at the plaza's end post").IsTrue();
         var tEnd = Vector2.Dot(Canal.CanalRailSite.Post(frame, panels) - frame.Origin, u);
-        Require(tEnd < -110.5f - 1f, $"the run ends beyond the far end of 商业街 (t {tEnd})");
+        AssertThat(tEnd < -110.5f - 1f).OverrideFailureMessage($"the run ends beyond the far end of 商业街 (t {tEnd})").IsTrue();
         for (var k = 0; k < panels; k++)
         {
             var step = Vector2.Distance(Canal.CanalRailSite.Post(frame, k), Canal.CanalRailSite.Post(frame, k + 1));
-            Require(step <= NorthTune.Bank.PostPitch + 0.01f && step > 1f, $"panel {k} is a post pitch long ({step})");
+            AssertThat(step <= NorthTune.Bank.PostPitch + 0.01f && step > 1f).OverrideFailureMessage($"panel {k} is a post pitch long ({step})").IsTrue();
         }
         var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
             .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < 0.01f && MathF.Abs(Vector2.Dot(c.B - joint, w)) < 0.01f)
             .OrderBy(c => Vector2.Dot(joint - c.A, u)).ToArray();
-        Require(walls.Length == panels, $"one collider per panel ({walls.Length} of {panels})");
-        Require(Vector2.Distance(walls[0].A, joint) < 0.01f, "the first collider starts on the plaza's end post");
+        AssertThat(walls.Length == panels).OverrideFailureMessage($"one collider per panel ({walls.Length} of {panels})").IsTrue();
+        AssertThat(Vector2.Distance(walls[0].A, joint) < 0.01f).OverrideFailureMessage("the first collider starts on the plaza's end post").IsTrue();
         for (var k = 0; k + 1 < walls.Length; k++)
-            Require(Vector2.Distance(walls[k].B, walls[k + 1].A) < 0.01f, $"colliders {k} and {k + 1} meet");
-        Require(walls.All(c => c.Y1 - c.Y0 >= WalkRules.BarrierHeight), "the colliders reach 1.5 m");
+            AssertThat(Vector2.Distance(walls[k].B, walls[k + 1].A) < 0.01f).OverrideFailureMessage($"colliders {k} and {k + 1} meet").IsTrue();
+        AssertThat(walls.All(c => c.Y1 - c.Y0 >= WalkRules.BarrierHeight)).OverrideFailureMessage("the colliders reach 1.5 m").IsTrue();
         var rings = ctx.World.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
         foreach (var p in Samples([Canal.CanalRailSite.Post(frame, 0), Canal.CanalRailSite.Post(frame, panels)]))
         {
-            Require(rings.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f), $"railing point {p} keeps 8 m off the buildings");
+            AssertThat(rings.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f)).OverrideFailureMessage($"railing point {p} keeps 8 m off the buildings").IsTrue();
             foreach (var road in ctx.World.Network.Roads)
-                Require(PolylineDistance(p, road.Line.Points) - road.Width * 0.5f >= 3f, $"railing point {p} keeps 3 m off the road edge of {road.Id.Value}");
+                AssertThat(PolylineDistance(p, road.Line.Points) - road.Width * 0.5f >= 3f).OverrideFailureMessage($"railing point {p} keeps 3 m off the road edge of {road.Id.Value}").IsTrue();
         }
     }
 
@@ -196,31 +195,30 @@ public sealed class NorthSiteTests
         var path = CourtyardSite.Path(wall, NorthTune.Court.SeatSegments);
         var front = CourtyardSite.Front(wall);
         var mid = (wall.Start + wall.End) * 0.5f;
-        Require(Vector2.Dot(front, Vector2.Normalize(hill.Center - mid)) > 0.9f, "the seat faces the hill");
+        AssertThat(Vector2.Dot(front, Vector2.Normalize(hill.Center - mid)) > 0.9f).OverrideFailureMessage("the seat faces the hill").IsTrue();
         var walk = world.Network.Roads.Single(r => r.Id.Value == NorthTune.Court.Walk);
         float ToWalk(Vector2 p) => Enumerable.Range(0, walk.Line.Points.Count - 1).Min(i => DistanceToSegment(p, walk.Line.Points[i], walk.Line.Points[i + 1]));
-        Require(ToWalk(mid + front) < ToWalk(mid), "the walk lies in front of the seat");
+        AssertThat(ToWalk(mid + front) < ToWalk(mid)).OverrideFailureMessage("the walk lies in front of the seat").IsTrue();
         // The pad's straight edge runs along the walk's paving edge, 2 cm short of it, over the whole length of the wall.
         var pad = CourtyardSite.PadOutline(wall);
         var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - wall.Start, front) - NorthTune.Court.PadReach) < 0.01f).ToArray();
-        Require(edge.Length == 2, "the pad has one straight edge toward the walk");
+        AssertThat(edge.Length == 2).OverrideFailureMessage("the pad has one straight edge toward the walk").IsTrue();
         foreach (var p in edge)
-            Require(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < 0.05f, $"pad corner {p} meets the walk's edge");
+            AssertThat(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < 0.05f).OverrideFailureMessage($"pad corner {p} meets the walk's edge").IsTrue();
         var buildings = world.Features.Values.SelectMany(Framework.Plan.BuildingRings)
             .Where(ring => ring.Any(q => Vector2.Distance(q, mid) < 60f)).ToArray();
-        Require(buildings.Length > 0, "dormitories around the courtyard found");
+        AssertThat(buildings.Length > 0).OverrideFailureMessage("dormitories around the courtyard found").IsTrue();
         foreach (var p in path)
         {
             double dx = p.X - hill.Center.X, dz = p.Y - hill.Center.Y;
             double along = dx * Math.Sin(yaw) - dz * Math.Cos(yaw), across = dx * Math.Cos(yaw) + dz * Math.Sin(yaw);
-            Require(along * along / (hill.Radii.X * hill.Radii.X) + across * across / (hill.Radii.Y * hill.Radii.Y) > 1.2, $"{p} is on level ground off the hill");
+            AssertThat(along * along / (hill.Radii.X * hill.Radii.X) + across * across / (hill.Radii.Y * hill.Radii.Y) > 1.2).OverrideFailureMessage($"{p} is on level ground off the hill").IsTrue();
             foreach (var road in world.Network.Roads)
                 for (var i = 0; i + 1 < road.Line.Points.Count; i++)
-                    Require(DistanceToSegment(p, road.Line.Points[i], road.Line.Points[i + 1]) > road.Width * 0.5f + NorthTune.Court.BodyWidth, $"{p} stands off the paving of {road.Id.Value}");
+                    AssertThat(DistanceToSegment(p, road.Line.Points[i], road.Line.Points[i + 1]) > road.Width * 0.5f + NorthTune.Court.BodyWidth).OverrideFailureMessage($"{p} stands off the paving of {road.Id.Value}").IsTrue();
             foreach (var ring in buildings)
                 for (var i = 0; i < ring.Count; i++)
-                    Require(DistanceToSegment(p, ring[i], ring[(i + 1) % ring.Count]) - NorthTune.Court.BodyWidth * 0.5f >= 8f + NorthTune.Hall.WallFace,
-                        $"{p} keeps 8 m off the windows");
+                    AssertThat(DistanceToSegment(p, ring[i], ring[(i + 1) % ring.Count]) - NorthTune.Court.BodyWidth * 0.5f >= 8f + NorthTune.Hall.WallFace).OverrideFailureMessage($"{p} keeps 8 m off the windows").IsTrue();
         }
     }
 }

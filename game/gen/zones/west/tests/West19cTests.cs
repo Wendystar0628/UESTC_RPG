@@ -17,6 +17,7 @@ using T = Campus.Gen.Zones.West.WestTune.LeveeSteps;
 using W = Campus.Gen.Zones.West.WestTune.Wetland;
 
 namespace Campus.Gen.Zones.West.Tests;
+using static GdUnit4.Assertions;
 
 /// <summary>19c: wetland boardwalk, wading beach, levee steps, bridgehead shelter and the 国防科技园 carving.</summary>
 [TestSuite]
@@ -31,21 +32,21 @@ public sealed class West19cTests
     {
         var world = World();
         var path = BoardwalkSite.Path;
-        Require(path.Length is > 200f and < 260f, $"the boardwalk is about 230 m long, got {path.Length}");
+        AssertThat(path.Length is > 200f and < 260f).OverrideFailureMessage($"the boardwalk is about 230 m long, got {path.Length}").IsTrue();
         // Both mouths meet paving: the A10 plaza in the south, the footway at the 西门车行桥's east head in the north.
         var plaza = ((PolygonGeometry)world.Features[new("design:west-a10-plaza")].Geometry).Rings.Outer;
-        Require(PlanGeometry.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f, "the south mouth lands on the A10 plaza");
+        AssertThat(PlanGeometry.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f).OverrideFailureMessage("the south mouth lands on the A10 plaza").IsTrue();
         var footway = Line(world, "qsh:source:way:552816780");
-        Require(footway.Any(p => Vector2.Distance(p, path.Points[^1]) < 1f), "the north mouth lands on the bridgehead footway's end");
+        AssertThat(footway.Any(p => Vector2.Distance(p, path.Points[^1]) < 1f)).OverrideFailureMessage("the north mouth lands on the bridgehead footway's end").IsTrue();
         // Inside the low ground (except the last few metres climbing out to the north footway).
         for (var s = 4f; s < path.Length - 8f; s += 2f)
-            Require(PlanGeometry.InsideByCrossings(LowGround, path.At(s).P), $"boardwalk station {s:0} lies in the wetland low ground");
+            AssertThat(PlanGeometry.InsideByCrossings(LowGround, path.At(s).P)).OverrideFailureMessage($"boardwalk station {s:0} lies in the wetland low ground").IsTrue();
         // Clear of WP-28's bridges (r005: all bridges are WP-28's) and of the stream except at the beach turn.
         foreach (var id in new[] { "qsh:source:way:692240860", "qsh:source:way:552816781" })
         {
             var bridge = world.Network.Bridges.Single(b => b.Id.Value == id).Line.Points;
             var near = path.Points.Min(p => Distance(bridge, p));
-            Require(near > 5f, $"the boardwalk keeps clear of bridge {id}, nearest {near:0.0} m");
+            AssertThat(near > 5f).OverrideFailureMessage($"the boardwalk keeps clear of bridge {id}, nearest {near:0.0} m").IsTrue();
         }
         var stream = Line(world, "qsh:source:way:217855313", waterway: true);
         var beach = BoardwalkSite.Beach;
@@ -53,15 +54,15 @@ public sealed class West19cTests
         {
             var d = Distance(stream, path.At(s).P);
             var limit = MathF.Abs(s - beach.S) < 15f ? 3.2f : 6f;
-            Require(d > limit, $"station {s:0}: deck centre {d:0.0} m from the stream (limit {limit})");
+            AssertThat(d > limit).OverrideFailureMessage($"station {s:0}: deck centre {d:0.0} m from the stream (limit {limit})").IsTrue();
         }
         // The beach lies between the deck and the stream, on the side the rail opens.
         var (bs, lateral) = path.Project(W.BeachCentre);
-        Require(MathF.Abs(bs - beach.S) < 0.01f && MathF.Abs(lateral) > W.Width * 0.5f, "the beach lies beside the deck");
-        Require(Distance(stream, W.BeachCentre) < Distance(stream, path.At(bs).P), "the beach is on the stream side");
-        Require(W.WadeRing.Any(p => Distance(stream, p) < 2f), "the wading polygon reaches into the stream");
+        AssertThat(MathF.Abs(bs - beach.S) < 0.01f && MathF.Abs(lateral) > W.Width * 0.5f).OverrideFailureMessage("the beach lies beside the deck").IsTrue();
+        AssertThat(Distance(stream, W.BeachCentre) < Distance(stream, path.At(bs).P)).OverrideFailureMessage("the beach is on the stream side").IsTrue();
+        AssertThat(W.WadeRing.Any(p => Distance(stream, p) < 2f)).OverrideFailureMessage("the wading polygon reaches into the stream").IsTrue();
         // P11's spot is on the deck.
-        Require(MathF.Abs(path.Project(W.P11).Lateral) < W.Width * 0.5f - 0.3f, "P11 stands on the deck");
+        AssertThat(MathF.Abs(path.Project(W.P11).Lateral) < W.Width * 0.5f - 0.3f).OverrideFailureMessage("P11 stands on the deck").IsTrue();
     }
 
     [TestCase]
@@ -70,22 +71,22 @@ public sealed class West19cTests
         var ctx = Context(World());
         var colliders = Colliders(ctx, new BoardwalkSite());
         var y = BoardwalkSite.DeckTop((_, _) => 0f);
-        Require(MathF.Abs(y - (W.PavingTop + W.Lip)) < 0.01f, "on flat ground the deck sits a lip above the paving");
+        AssertThat(MathF.Abs(y - (W.PavingTop + W.Lip)) < 0.01f).OverrideFailureMessage("on flat ground the deck sits a lip above the paving").IsTrue();
         var rails = colliders.OfType<WallCollider>().Where(c => c.Tag == SurfaceTag.Barrier).ToArray();
-        Require(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 0.01f), "every rail barrier tops out at 1.5 m over the deck");
-        Require(W.RailHeight >= 1.05f, "the visible rail is at least 1.05 m");
+        AssertThat(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 0.01f)).OverrideFailureMessage("every rail barrier tops out at 1.5 m over the deck").IsTrue();
+        AssertThat(W.RailHeight >= 1.05f).OverrideFailureMessage("the visible rail is at least 1.05 m").IsTrue();
         // One gap, on the water side, opposite the beach.
         var path = BoardwalkSite.Path;
         var (s, side) = BoardwalkSite.Beach;
         var runs = BoardwalkSite.RailRuns(side);
-        Require(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < 0.01f && BoardwalkSite.RailRuns(-side).Length == 1, "only the water side opens, by the beach gap");
+        AssertThat(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < 0.01f && BoardwalkSite.RailRuns(-side).Length == 1).OverrideFailureMessage("only the water side opens, by the beach gap").IsTrue();
         var gap = path.At(s).P + Route.Right(path.At(s).T) * side * BoardwalkSite.RailLateral;
-        Require(rails.All(r => Distance([r.A, r.B], gap) > W.BeachGap * 0.5f - 0.05f), "no rail barrier crosses the beach gap");
+        AssertThat(rails.All(r => Distance([r.A, r.B], gap) > W.BeachGap * 0.5f - 0.05f)).OverrideFailureMessage("no rail barrier crosses the beach gap").IsTrue();
         // The deck is 2 m slabs of timber; everything carries a foot material.
         var slabs = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Ground).ToArray();
-        Require(slabs.Length == (int)MathF.Ceiling(path.Length / W.SlabLength) && slabs.All(b => b.Foot == FootMat.WoodDeck), "the deck is timber slabs every 2 m");
-        Require(colliders.All(c => c.Foot != FootMat.Auto), "every boardwalk collider carries a foot material");
-        Require(colliders.OfType<RampCollider>().Any() || colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Stair), "steps lead down to the beach");
+        AssertThat(slabs.Length == (int)MathF.Ceiling(path.Length / W.SlabLength) && slabs.All(b => b.Foot == FootMat.WoodDeck)).OverrideFailureMessage("the deck is timber slabs every 2 m").IsTrue();
+        AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every boardwalk collider carries a foot material").IsTrue();
+        AssertThat(colliders.OfType<RampCollider>().Any() || colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Stair)).OverrideFailureMessage("steps lead down to the beach").IsTrue();
     }
 
     [TestCase]
@@ -94,59 +95,59 @@ public sealed class West19cTests
         var ctx = Context(World());
         var module = new WestModule();
         var lights = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Light is not null).Select(i => i.Light!).ToArray();
-        Require(module.DescribeLights(ctx).SequenceEqual(lights), "light metadata matches every site's L0 output");
+        AssertThat(module.DescribeLights(ctx).SequenceEqual(lights)).OverrideFailureMessage("light metadata matches every site's L0 output").IsTrue();
         var lamps = lights.Where(l => l.Channel.Value == "lamp.landscape").ToArray();
-        Require(lamps.Length == BoardwalkSite.LampStations().Length && lamps.Length >= 12, $"one landscape marker per boardwalk lamp, got {lamps.Length}");
+        AssertThat(lamps.Length == BoardwalkSite.LampStations().Length && lamps.Length >= 12).OverrideFailureMessage($"one landscape marker per boardwalk lamp, got {lamps.Length}").IsTrue();
         var path = BoardwalkSite.Path;
         var (_, waterSide) = BoardwalkSite.Beach;
         foreach (var l in lamps)
         {
             var (_, lateral) = path.Project(new(l.Position.X, l.Position.Z));
-            Require(MathF.Sign(lateral) == -waterSide && MathF.Abs(lateral) < W.Width * 0.5f, "a lamp stands on the deck's dry edge");
-            Require(l.Position.Y < BoardwalkSite.DeckTop((_, _) => 0f) + 0.7f && l.Range <= 4f, "the lamp is low with a short pool");
+            AssertThat(MathF.Sign(lateral) == -waterSide && MathF.Abs(lateral) < W.Width * 0.5f).OverrideFailureMessage("a lamp stands on the deck's dry edge").IsTrue();
+            AssertThat(l.Position.Y < BoardwalkSite.DeckTop((_, _) => 0f) + 0.7f && l.Range <= 4f).OverrideFailureMessage("the lamp is low with a short pool").IsTrue();
         }
         // The emitters reach the content output of their cells.
         var emitted = module.Tiles(ctx).Sum(t => module.Build(ctx, t, LodLevel.L0).Emitters?.Count ?? 0);
-        Require(emitted == lights.Length, $"every marker is emitted once, {emitted} of {lights.Length}");
-        Require(lights.Count(l => l.Channel.Value == "lamp.street") == H.Posts - 1, "the shelter has one downlight marker per bay");
+        AssertThat(emitted == lights.Length).OverrideFailureMessage($"every marker is emitted once, {emitted} of {lights.Length}").IsTrue();
+        AssertThat(lights.Count(l => l.Channel.Value == "lamp.street") == H.Posts - 1).OverrideFailureMessage("the shelter has one downlight marker per bay").IsTrue();
     }
 
     [TestCase]
     public void LeveeStepsFollowTheTerrainAndVanishOnFlatGround()
     {
-        foreach (var j in T.Junctions) Require(LeveeStepsSite.Flight(j, (_, _) => 0f) is null, $"{j.Key}: no flight on flat ground");
+        foreach (var j in T.Junctions) AssertThat(LeveeStepsSite.Flight(j, (_, _) => 0f) is null).OverrideFailureMessage($"{j.Key}: no flight on flat ground").IsTrue();
         foreach (var j in T.Junctions)
         {
             var f = LeveeStepsSite.Flight(j, LeveeHeight) ?? throw new InvalidOperationException($"{j.Key}: a flight on the levee");
             var riser = f.Flight.Height / f.Flight.Steps;
-            Require(MathF.Abs(f.Flight.Height - T.LeveeRise) < 0.1f && riser is >= 0.12f and <= 0.18f, $"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers");
+            AssertThat(MathF.Abs(f.Flight.Height - T.LeveeRise) < 0.1f && riser is >= 0.12f and <= 0.18f).OverrideFailureMessage($"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers").IsTrue();
             var tread = f.Flight.Depth / f.Flight.Steps;
-            Require(tread is >= 0.28f and <= 0.55f, $"{j.Key}: tread {tread:0.00}");
+            AssertThat(tread is >= 0.28f and <= 0.55f).OverrideFailureMessage($"{j.Key}: tread {tread:0.00}").IsTrue();
             // Its top tread lands on the crest, its first riser at the slope foot, along the path.
             var topEdge = f.Frame.P(0, f.Flight.Depth);
-            Require(MathF.Abs(LeveeHeight(topEdge.X, topEdge.Y) - (f.Foot + f.Flight.Height)) < 0.12f, $"{j.Key}: the top tread meets the levee top");
-            Require(Vector2.Dot(f.Frame.W, Vector2.Normalize(j.Top - j.Toward)) > 0.99f, $"{j.Key}: the flight climbs toward the levee");
+            AssertThat(MathF.Abs(LeveeHeight(topEdge.X, topEdge.Y) - (f.Foot + f.Flight.Height)) < 0.12f).OverrideFailureMessage($"{j.Key}: the top tread meets the levee top").IsTrue();
+            AssertThat(Vector2.Dot(f.Frame.W, Vector2.Normalize(j.Top - j.Toward)) > 0.99f).OverrideFailureMessage($"{j.Key}: the flight climbs toward the levee").IsTrue();
         }
         var world = new FakeWorld(World()) { Terrain = new FormulaTerrain(LeveeHeight) };
         var colliders = Colliders(Context(world), new LeveeStepsSite());
-        Require(colliders.OfType<RampCollider>().Count(r => r.Tag == SurfaceTag.Stair && r.Stair is not null) == 2, "each flight walks as one stair ramp");
-        Require(colliders.All(c => c.Foot == FootMat.StonePaving), "stone underfoot");
+        AssertThat(colliders.OfType<RampCollider>().Count(r => r.Tag == SurfaceTag.Stair && r.Stair is not null) == 2).OverrideFailureMessage("each flight walks as one stair ramp").IsTrue();
+        AssertThat(colliders.All(c => c.Foot == FootMat.StonePaving)).OverrideFailureMessage("stone underfoot").IsTrue();
     }
 
     [TestCase]
     public void ShelterStandsOnItsFootprintAndOpensToTheRoad()
     {
         var world = World();
-        Require(world.Features.ContainsKey(new(H.Entity)), "the shelter footprint is in the world model");
+        AssertThat(world.Features.ContainsKey(new(H.Entity))).OverrideFailureMessage("the shelter footprint is in the world model").IsTrue();
         var f = ShelterSite.Frame(world);
         var length = ShelterSite.Length(world);
         var service = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:217855160").Line.Points;
-        Require(Distance(service, f.P(length * 0.5f, H.Depth + H.RoofFront)) < Distance(service, f.P(length * 0.5f, 0)), "the open side faces the service road");
+        AssertThat(Distance(service, f.P(length * 0.5f, H.Depth + H.RoofFront)) < Distance(service, f.P(length * 0.5f, 0))).OverrideFailureMessage("the open side faces the service road").IsTrue();
         var front = f.P(length * 0.5f, H.Depth + H.RoofFront);
-        Require(Distance(service, front) > 2.5f, $"the front eave clears the carriageway, {Distance(service, front):0.0} m to its centreline");
+        AssertThat(Distance(service, front) > 2.5f).OverrideFailureMessage($"the front eave clears the carriageway, {Distance(service, front):0.0} m to its centreline").IsTrue();
         var colliders = Colliders(Context(world), new ShelterSite());
-        Require(colliders.OfType<PostCollider>().Count() == H.Posts && colliders.All(c => c.Foot != FootMat.Auto), "posts as cylinders, every collider with a foot");
-        Require(H.Clear >= 2.6f, "the roof clears a standing visitor");
+        AssertThat(colliders.OfType<PostCollider>().Count() == H.Posts && colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("posts as cylinders, every collider with a foot").IsTrue();
+        AssertThat(H.Clear >= 2.6f).OverrideFailureMessage("the roof clears a standing visitor").IsTrue();
     }
 
     [TestCase]
@@ -158,11 +159,11 @@ public sealed class West19cTests
         {
             var road = world.Network.Roads.Single(r => r.Id.Value == id);
             var d = Distance(road.Line.Points, at) - road.Width * 0.5f;
-            Require(d > C.Length * 0.5f + 0.5f, $"the carving stays off {id}, {d:0.0} m from its edge");
+            AssertThat(d > C.Length * 0.5f + 0.5f).OverrideFailureMessage($"the carving stays off {id}, {d:0.0} m from its edge").IsTrue();
         }
-        Require(Vector2.Distance(at, new(-238.37f, -411.91f)) > 10f, "it keeps clear of WP-28's bridge-head stone");
+        AssertThat(Vector2.Distance(at, new(-238.37f, -411.91f)) > 10f).OverrideFailureMessage("it keeps clear of WP-28's bridge-head stone").IsTrue();
         var box = Colliders(Context(world), new CarvingSite()).OfType<BoxCollider>().Single();
-        Require(box.Half.Y * 2f >= C.Height - 0.01f && box.Foot == FootMat.StonePaving, "one box with a top");
+        AssertThat(box.Half.Y * 2f >= C.Height - 0.01f && box.Foot == FootMat.StonePaving).OverrideFailureMessage("one box with a top").IsTrue();
     }
 
     // ---- Fixtures ----
@@ -223,5 +224,4 @@ public sealed class West19cTests
         return WorldModelLoader.Load(new("qingshuihe"), files).World;
     }
 
-    private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

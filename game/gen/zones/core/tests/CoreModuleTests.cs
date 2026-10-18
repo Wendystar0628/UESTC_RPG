@@ -12,6 +12,8 @@ using GdUnit4;
 
 namespace Campus.Gen.Zones.Core.Tests;
 
+using static GdUnit4.Assertions;
+
 [TestSuite]
 public sealed class CoreModuleTests
 {
@@ -28,30 +30,25 @@ public sealed class CoreModuleTests
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L3 })
         {
             var traces = module.TraceSources(context, lod).ToArray();
-            Require(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length, "source IDs are unique");
-            Require(traces.Select(t => t.SourceId).SequenceEqual(pieces.Select(p => $"core/{p.Id}")), "whole pieces retain production order and stable IDs across levels");
-            Require(traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)).Select(t => t.Feature!.Value).ToHashSet().SetEquals(buildings),
-                "every claimed building has its own actual source");
+            AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
+            AssertThat(traces.Select(t => t.SourceId).SequenceEqual(pieces.Select(p => $"core/{p.Id}"))).OverrideFailureMessage("whole pieces retain production order and stable IDs across levels").IsTrue();
+            AssertThat(traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)).Select(t => t.Feature!.Value).ToHashSet().SetEquals(buildings)).OverrideFailureMessage("every claimed building has its own actual source").IsTrue();
             foreach (var trace in traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)))
-                Require(trace.Output.Meshes.Count > 0, $"{trace.SourceId}: actual generated building geometry");
+                AssertThat(trace.Output.Meshes.Count > 0).OverrideFailureMessage($"{trace.SourceId}: actual generated building geometry").IsTrue();
             foreach (var tile in pieces.Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
             {
                 var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, lod) == tile).Select(pair => pair.First).ToArray();
                 var output = module.Build(context, tile, lod);
                 var expected = Triangles([output]);
                 var actual = Triangles(sources.Select(t => t.Output));
-                Require(expected.Count == actual.Count && expected.All(t => actual.TryGetValue(t.Key, out var count) && count == t.Value),
-                    $"{lod} {tile}: source triangles restore the batched visible geometry without clipping");
-                Require(JsonSerializer.Serialize(output.Parts, ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Parts).ToArray(), ContractJson.Options),
-                    $"{lod} {tile}: placed parts and transforms survive tracing");
-                Require(JsonSerializer.Serialize(output.Emitters ?? [], ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Emitters ?? []).ToArray(), ContractJson.Options),
-                    $"{lod} {tile}: emitters retain production order");
+                AssertThat(expected.Count == actual.Count && expected.All(t => actual.TryGetValue(t.Key, out var count) && count == t.Value)).OverrideFailureMessage($"{lod} {tile}: source triangles restore the batched visible geometry without clipping").IsTrue();
+                AssertThat(JsonSerializer.Serialize(output.Parts, ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Parts).ToArray(), ContractJson.Options)).OverrideFailureMessage($"{lod} {tile}: placed parts and transforms survive tracing").IsTrue();
+                AssertThat(JsonSerializer.Serialize(output.Emitters ?? [], ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Output.Emitters ?? []).ToArray(), ContractJson.Options)).OverrideFailureMessage($"{lod} {tile}: emitters retain production order").IsTrue();
             }
             foreach (var tile in module.Tiles(context))
             {
                 var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, LodLevel.L0) == tile).Select(pair => pair.First);
-                Require(JsonSerializer.Serialize(module.Collide(context, tile), ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Colliders).ToArray(), ContractJson.Options),
-                    $"{tile}: whole sources restore production collisions");
+                AssertThat(JsonSerializer.Serialize(module.Collide(context, tile), ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Colliders).ToArray(), ContractJson.Options)).OverrideFailureMessage($"{tile}: whole sources restore production collisions").IsTrue();
             }
         }
     }
@@ -72,18 +69,17 @@ public sealed class CoreModuleTests
     {
         var world = RealWorld();
         var pieces = CoreSite.Pieces(world);
-        Require(pieces.Select(p => p.Id).SequenceEqual(["time-plaza", "sundial", "library-shell", "library-entrance", "museum", "annex-northannex", "annex-courtwing", "annex-lowblock", "annex-link", "annex-joint", "quiet-garden"]),
-            "plaza, sundial, library, its entrance, the museum, the five north blocks and the quiet garden in order");
+        AssertThat(pieces.Select(p => p.Id).SequenceEqual(["time-plaza", "sundial", "library-shell", "library-entrance", "museum", "annex-northannex", "annex-courtwing", "annex-lowblock", "annex-link", "annex-joint", "quiet-garden"])).OverrideFailureMessage("plaza, sundial, library, its entrance, the museum, the five north blocks and the quiet garden in order").IsTrue();
         foreach (var claim in CoreSite.Claims.OfType<FeatureClaim>())
-            Require(world.Features.ContainsKey(claim.Feature), $"claimed feature {claim.Feature.Value} exists");
+            AssertThat(world.Features.ContainsKey(claim.Feature)).OverrideFailureMessage($"claimed feature {claim.Feature.Value} exists").IsTrue();
         var declared = CoreSite.Claims.Select(Describe).Order(StringComparer.Ordinal).ToArray();
         var fromPieces = pieces.SelectMany(p => p.Claims).Select(Describe).Order(StringComparer.Ordinal).ToArray();
-        Require(declared.SequenceEqual(fromPieces), "module claims are exactly the pieces' claims");
+        AssertThat(declared.SequenceEqual(fromPieces)).OverrideFailureMessage("module claims are exactly the pieces' claims").IsTrue();
         var plaza = (TimePlaza)pieces[0];
-        Require(MathF.Abs(plaza.Radius - 26.9f) < 0.3f, $"plaza radius {plaza.Radius} from the OSM circle");
+        AssertThat(MathF.Abs(plaza.Radius - 26.9f) < 0.3f).OverrideFailureMessage($"plaza radius {plaza.Radius} from the OSM circle").IsTrue();
         var bearing = Shapes.BearingOf(plaza.Axis);
-        Require(bearing is > 300f and < 315f, $"axis bearing {bearing} points northwest to the library stair");
-        Require(!plaza.Sunken, "flat terrain stub: no ring steps yet");
+        AssertThat(bearing is > 300f and < 315f).OverrideFailureMessage($"axis bearing {bearing} points northwest to the library stair").IsTrue();
+        AssertThat(!plaza.Sunken).OverrideFailureMessage("flat terrain stub: no ring steps yet").IsTrue();
     }
 
     [TestCase]
@@ -94,16 +90,16 @@ public sealed class CoreModuleTests
         var ctx = Context(world);
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
         var output = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
-        Require(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps, "sixteen rim lamps");
-        Require(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == 3, "three benches from the overlay");
-        Require(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps, "one first-light emitter per lamp");
-        Require(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) == 3, "three flag uplights");
-        Require(module.DescribeLights(ctx).SequenceEqual(output.Emitters!), "light metadata matches the plaza's L0 output");
-        Require(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlags.Decal) != 0)), "inlays are decals");
+        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
+        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == 3).OverrideFailureMessage("three benches from the overlay").IsTrue();
+        AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
+        AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) == 3).OverrideFailureMessage("three flag uplights").IsTrue();
+        AssertThat(module.DescribeLights(ctx).SequenceEqual(output.Emitters!)).OverrideFailureMessage("light metadata matches the plaza's L0 output").IsTrue();
+        AssertThat(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlags.Decal) != 0))).OverrideFailureMessage("inlays are decals").IsTrue();
         foreach (var lamp in plaza.LampPositions())
         {
             var off = Vector2.Distance(lamp, plaza.Centre);
-            Require(MathF.Abs(off - plaza.Radius - CoreStyle.RimLampOffset) < 0.01f, "lamps on the rim ring");
+            AssertThat(MathF.Abs(off - plaza.Radius - CoreStyle.RimLampOffset) < 0.01f).OverrideFailureMessage("lamps on the rim ring").IsTrue();
         }
     }
 
@@ -114,17 +110,17 @@ public sealed class CoreModuleTests
         var plazaFlat = (TimePlaza)CoreSite.Pieces(flat)[0];
         var world = new FakeWorld(flat) { Terrain = BowlTerrain(plazaFlat.Centre, plazaFlat.Radius - 2.1f + 0.3f, -0.9f, 0.5f) };
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
-        Require(plaza.Sunken && plaza.Risers == 6, $"six risers for a 0.9 m drop (got {plaza.Risers})");
-        Require(MathF.Abs(plaza.Riser - 0.15f) < 0.005f && MathF.Abs(plaza.Tread - 0.35f) < 0.01f, "R 0.15, T 0.35");
-        Require(MathF.Abs(plaza.FootRadius - (plaza.Radius - 2.1f)) < 0.01f, "the step band is 2.1 m wide");
+        AssertThat(plaza.Sunken && plaza.Risers == 6).OverrideFailureMessage($"six risers for a 0.9 m drop (got {plaza.Risers})").IsTrue();
+        AssertThat(MathF.Abs(plaza.Riser - 0.15f) < 0.005f && MathF.Abs(plaza.Tread - 0.35f) < 0.01f).OverrideFailureMessage("R 0.15, T 0.35").IsTrue();
+        AssertThat(MathF.Abs(plaza.FootRadius - (plaza.Radius - 2.1f)) < 0.01f).OverrideFailureMessage("the step band is 2.1 m wide").IsTrue();
         var colliders = plaza.Collide();
-        Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 6 }), "stair ramps carry the six-step spec");
-        Require(colliders.OfType<WallCollider>().Count() >= 8, "ramp cheek walls collide");
-        Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider has a foot material");
+        AssertThat(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 6 })).OverrideFailureMessage("stair ramps carry the six-step spec").IsTrue();
+        AssertThat(colliders.OfType<WallCollider>().Count() >= 8).OverrideFailureMessage("ramp cheek walls collide").IsTrue();
+        AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog);
         plaza.Build(build, LodLevel.L0);
         var bundles = build.Mesh.Finish();
-        Require(build.Mesh.Triangles > 4000, $"steps and ramps add geometry ({build.Mesh.Triangles} triangles)");
+        AssertThat(build.Mesh.Triangles > 4000).OverrideFailureMessage($"steps and ramps add geometry ({build.Mesh.Triangles} triangles)").IsTrue();
         CheckBundles(bundles);
     }
 
@@ -142,18 +138,18 @@ public sealed class CoreModuleTests
                 CheckBundles(output.Meshes);
                 foreach (var m in output.Meshes)
                 {
-                    Require(m.ColorIndices is not null, "palette IDs per vertex");
+                    AssertThat(m.ColorIndices is not null).OverrideFailureMessage("palette IDs per vertex").IsTrue();
                     palette.Validate(m.Material.Spec);
                 }
                 var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
                 var limit = lod == LodLevel.L0 ? module.Budget.TrianglesL0 : module.Budget.TrianglesL1;
-                Require(triangles <= limit, $"{lod} {tile}: {triangles} triangles within {limit}");
-                Require(output.Meshes.Count <= module.Budget.DrawCalls, $"{lod} {tile}: {output.Meshes.Count} bundles");
+                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} {tile}: {triangles} triangles within {limit}").IsTrue();
+                AssertThat(output.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} {tile}: {output.Meshes.Count} bundles").IsTrue();
                 Console.WriteLine($"core {lod} {tile}: {triangles} triangles, {output.Meshes.Count} bundles, {output.Parts.Count} parts");
             }
         var first = module.Build(ctx, CoreTiles.Of(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
         var second = new CoreModule().Build(Context(RealWorld(), palette), CoreTiles.Of(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
-        Require(first.Meshes.Count == second.Meshes.Count && first.Meshes.Zip(second.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position)), "deterministic");
+        AssertThat(first.Meshes.Count == second.Meshes.Count && first.Meshes.Zip(second.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position))).OverrideFailureMessage("deterministic").IsTrue();
     }
 
     [TestCase]
@@ -164,25 +160,25 @@ public sealed class CoreModuleTests
         var ctx = Context(world, Palette());
         // The oracle is the part definitions themselves; the context carries the catalogue captured from them (contract-36).
         var bench = new Campus.Gen.Parts.Street.BenchPart().Lods.Keys.ToArray();
-        Require(bench.SequenceEqual([LodLevel.L0, LodLevel.L1]), "the bench builds at L0 and L1 only");
+        AssertThat(bench.SequenceEqual([LodLevel.L0, LodLevel.L1])).OverrideFailureMessage("the bench builds at L0 and L1 only").IsTrue();
         var catalog = ctx.PartLods ?? throw new InvalidOperationException("the fixture context carries the part catalogue");
-        Require(catalog.SupportedLods(new PartId(PartCatalog.Bench)).SequenceEqual(bench), "the catalogue reads the bench's levels");
-        Require(catalog.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2), "the street lamp builds at L2");
+        AssertThat(catalog.SupportedLods(new PartId(PartCatalog.Bench)).SequenceEqual(bench)).OverrideFailureMessage("the catalogue reads the bench's levels").IsTrue();
+        AssertThat(catalog.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2)).OverrideFailureMessage("the street lamp builds at L2").IsTrue();
 
         var plaza = CoreSite.Pieces(world)[0];
         var near = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
-        Require(near.Parts.Any(p => p.Part.Value == PartCatalog.Bench), "the plaza cell still seats its benches at L0");
+        AssertThat(near.Parts.Any(p => p.Part.Value == PartCatalog.Bench)).OverrideFailureMessage("the plaza cell still seats its benches at L0").IsTrue();
         var l2Tiles = CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, LodLevel.L2)).Distinct().ToArray();
-        Require(l2Tiles.Length > 0, "the zone has L2 cells");
+        AssertThat(l2Tiles.Length > 0).OverrideFailureMessage("the zone has L2 cells").IsTrue();
         foreach (var lod in new[] { LodLevel.L2, LodLevel.L3, LodLevel.L4 })
             foreach (var tile in CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
                 foreach (var part in module.Build(ctx, tile, lod).Parts)
                 {
-                    Require(catalog.Supports(part.Part, lod), $"{lod} {tile}: {part.Part.Value} has no {lod} builder");
-                    Require(part.Part.Value != PartCatalog.Bench, $"{lod} {tile}: no bench");
+                    AssertThat(catalog.Supports(part.Part, lod)).OverrideFailureMessage($"{lod} {tile}: {part.Part.Value} has no {lod} builder").IsTrue();
+                    AssertThat(part.Part.Value != PartCatalog.Bench).OverrideFailureMessage($"{lod} {tile}: no bench").IsTrue();
                 }
         var far = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L2), LodLevel.L2);
-        Require(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps, "the rim lamps (L0 to L2) stay at L2");
+        AssertThat(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("the rim lamps (L0 to L2) stay at L2").IsTrue();
     }
 
     [TestCase]
@@ -193,9 +189,15 @@ public sealed class CoreModuleTests
         var plaza = CoreSite.Pieces(world)[0];
         var tile = CoreTiles.Of(plaza.Anchor, LodLevel.L0);
         var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
-        Require(Raises<InvalidOperationException>(() => new CoreModule().Build(bare, tile, LodLevel.L0)), "placed parts without BuildContext.PartLods are refused");
+        InvalidOperationException? missingLods = null;
+        try { new CoreModule().Build(bare, tile, LodLevel.L0); }
+        catch (InvalidOperationException ex) { missingLods = ex; }
+        AssertThat(missingLods is InvalidOperationException).OverrideFailureMessage("placed parts without BuildContext.PartLods are refused").IsTrue();
         var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
-        Require(Raises<KeyNotFoundException>(() => new CoreModule().Build(empty, tile, LodLevel.L0)), "a part the catalogue does not know is refused");
+        KeyNotFoundException? unknownPart = null;
+        try { new CoreModule().Build(empty, tile, LodLevel.L0); }
+        catch (KeyNotFoundException ex) { unknownPart = ex; }
+        AssertThat(unknownPart is KeyNotFoundException).OverrideFailureMessage("a part the catalogue does not know is refused").IsTrue();
     }
 
     [TestCase]
@@ -203,11 +205,11 @@ public sealed class CoreModuleTests
     {
         var sundial = (Sundial)CoreSite.Pieces(RealWorld())[1];
         var g = sundial.Gnomon;
-        Require(MathF.Abs(g.X) < 0.01f && g.Z < 0, "gnomon in the north meridian plane, pointing north (−z)");
+        AssertThat(MathF.Abs(g.X) < 0.01f && g.Z < 0).OverrideFailureMessage("gnomon in the north meridian plane, pointing north (−z)").IsTrue();
         var elevation = MathF.Asin(g.Y) * 180f / MathF.PI;
-        Require(MathF.Abs(elevation - 30.75f) < 0.01f, $"elevation {elevation}° equals the latitude");
-        Require(g.Y < 0.55f, "dial face normal y below the snow threshold (MAP-QSH-CORE)");
-        Require(sundial.Collide().All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider has a foot material");
+        AssertThat(MathF.Abs(elevation - 30.75f) < 0.01f).OverrideFailureMessage($"elevation {elevation}° equals the latitude").IsTrue();
+        AssertThat(g.Y < 0.55f).OverrideFailureMessage("dial face normal y below the snow threshold (MAP-QSH-CORE)").IsTrue();
+        AssertThat(sundial.Collide().All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
     }
 
     [TestCase]
@@ -216,14 +218,14 @@ public sealed class CoreModuleTests
         var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "terrain", "core.terrain.json");
         // The contract parser checks field names, discriminators and numeric bounds.
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(path));
-        Require(file.Zone.Value == "core" && file.Owner.Value == "WP-16", "zone and owner");
+        AssertThat(file.Zone.Value == "core" && file.Owner.Value == "WP-16").OverrideFailureMessage("zone and owner").IsTrue();
         var world = RealWorld();
         var roads = world.Network.Roads.Select(r => r.Id).ToHashSet();
         bool Exists(FeatureId id) => world.Features.ContainsKey(id) || roads.Contains(id);
         foreach (var op in file.Ops)
         {
-            Require(op.Id.StartsWith("design:terrain:core-", StringComparison.Ordinal), $"core terrain ID {op.Id}");
-            Require(op.Reason.Length > 10, $"{op.Id} has a reason");
+            AssertThat(op.Id.StartsWith("design:terrain:core-", StringComparison.Ordinal)).OverrideFailureMessage($"core terrain ID {op.Id}").IsTrue();
+            AssertThat(op.Reason.Length > 10).OverrideFailureMessage($"{op.Id} has a reason").IsTrue();
             IEnumerable<FeatureId> references = op switch
             {
                 TerrainPadOp pad => [pad.Feature],
@@ -231,7 +233,7 @@ public sealed class CoreModuleTests
                 TerrainChannelOp channel => channel.Crossings.Select(c => c.Road),
                 _ => [],
             };
-            foreach (var id in references) Require(Exists(id), $"{op.Id} references the real entity {id.Value}");
+            foreach (var id in references) AssertThat(Exists(id)).OverrideFailureMessage($"{op.Id} references the real entity {id.Value}").IsTrue();
         }
     }
 
@@ -247,16 +249,16 @@ public sealed class CoreModuleTests
         };
         var files = Directory.GetFiles(path, "*.json").Order(StringComparer.Ordinal)
             .Select(file => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(file), strict)!).ToArray();
-        Require(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe"), "zone, owner and map");
+        AssertThat(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe")).OverrideFailureMessage("zone, owner and map").IsTrue();
         var operations = files.SelectMany(file => file.Ops).ToArray();
         foreach (var op in operations.OfType<AddOp>())
         {
-            Require(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal), $"core design ID {op.Id.Value}");
-            Require(op.Reason.Length > 10, $"{op.Id.Value} has a reason");
+            AssertThat(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal)).OverrideFailureMessage($"core design ID {op.Id.Value}").IsTrue();
+            AssertThat(op.Reason.Length > 10).OverrideFailureMessage($"{op.Id.Value} has a reason").IsTrue();
         }
-        Require(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
-            .SequenceEqual(GinkgoWalks.Concat(GinkgoSidewalks.Select(s => s.Kept))), "the ginkgo walks and the kept sidewalk ends are the overlay's only added roads");
-        Require(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden)), "the two ginkgo sidewalks are the overlay's only hides");
+        AssertThat(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
+            .SequenceEqual(GinkgoWalks.Concat(GinkgoSidewalks.Select(s => s.Kept)))).OverrideFailureMessage("the ginkgo walks and the kept sidewalk ends are the overlay's only added roads").IsTrue();
+        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden))).OverrideFailureMessage("the two ginkgo sidewalks are the overlay's only hides").IsTrue();
     }
 
     [TestCase]
@@ -270,25 +272,24 @@ public sealed class CoreModuleTests
         var original = JsonSerializer.Deserialize<WorldNetwork>(File.ReadAllBytes(path), ContractJson.Options)!;
         foreach (var (hidden, walk, kept) in GinkgoSidewalks)
         {
-            Require(world.Network.Roads.All(r => r.Id.Value != hidden) && !world.Features.ContainsKey(new(hidden)), $"{hidden} is gone from the roads and the features");
+            AssertThat(world.Network.Roads.All(r => r.Id.Value != hidden) && !world.Features.ContainsKey(new(hidden))).OverrideFailureMessage($"{hidden} is gone from the roads and the features").IsTrue();
             var old = original.Roads.Single(r => r.Id.Value == hidden);
             var walkLine = world.Network.Roads.Single(r => r.Id.Value == walk).Line.Points;
             var piece = world.Network.Roads.Single(r => r.Id.Value == kept);
-            Require(piece.Width == old.Width && Prop(piece.Props, "roadType")?.GetString() == Prop(old.Props, "highway")?.GetString()
-                && Prop(piece.Props, "footway")?.GetString() == Prop(old.Props, "footway")?.GetString(), $"{kept}: the old width and type");
+            AssertThat(piece.Width == old.Width && Prop(piece.Props, "roadType")?.GetString() == Prop(old.Props, "highway")?.GetString()
+                && Prop(piece.Props, "footway")?.GetString() == Prop(old.Props, "footway")?.GetString()).OverrideFailureMessage($"{kept}: the old width and type").IsTrue();
             var points = piece.Line.Points;
             var joined = points[0] == walkLine[^1] ? points.Skip(1).ToArray() : points[^1] == walkLine[^1] ? points.Take(points.Count - 1).ToArray() : null;
-            Require(joined is { Length: >= 2 }, $"{kept}: one end is the walk's end");
+            AssertThat(joined is { Length: >= 2 }).OverrideFailureMessage($"{kept}: one end is the walk's end").IsTrue();
             var at = old.Line.Points.ToList().IndexOf(joined![0]);
-            Require(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
-                && (at == 0 || at + joined.Length == old.Line.Points.Count), $"{kept}: the old points in the old order, out to the old end");
+            AssertThat(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
+                && (at == 0 || at + joined.Length == old.Line.Points.Count)).OverrideFailureMessage($"{kept}: the old points in the old order, out to the old end").IsTrue();
             var line = old.Line.Points;
             for (var s = 0f; s <= Length(line); s += 0.5f)
             {
                 var p = At(line, s);
                 // The kept piece leaves the old line only where it bends onto the walk's end (1.26 m at most).
-                Require(PolylineDistance(p, walkLine) <= 2.5f || PolylineDistance(p, points) <= 1.3f,
-                    $"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}");
+                AssertThat(PolylineDistance(p, walkLine) <= 2.5f || PolylineDistance(p, points) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
             }
         }
     }
@@ -307,8 +308,8 @@ public sealed class CoreModuleTests
         foreach (var id in GinkgoWalks)
         {
             var feature = world.Features[new(id)];
-            Require(feature.Kind.Value == "road" && feature.Zone?.Value == "core", $"{id}: a core road feature");
-            Require(Prop(feature.Props, "roadType")?.GetString() == "footway" && Prop(feature.Props, "width")?.GetSingle() == 2 * half, $"{id}: a 2.5 m footway");
+            AssertThat(feature.Kind.Value == "road" && feature.Zone?.Value == "core").OverrideFailureMessage($"{id}: a core road feature").IsTrue();
+            AssertThat(Prop(feature.Props, "roadType")?.GetString() == "footway" && Prop(feature.Props, "width")?.GetSingle() == 2 * half).OverrideFailureMessage($"{id}: a 2.5 m footway").IsTrue();
             var line = ((PolylineGeometry)feature.Geometry).Line.Points;
             var min = line.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(20f);
             var max = line.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(20f);
@@ -319,15 +320,14 @@ public sealed class CoreModuleTests
                 var p = At(line, s);
                 var wall = outlines.Min(r => PlanGeometry.Contains(r, p) ? 0f
                     : r.Holes.Aggregate(PlanGeometry.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h))));
-                Require(wall - half >= 3f, $"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})");
+                AssertThat(wall - half >= 3f).OverrideFailureMessage($"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
                 var river = world.Network.Waterways.Min(w => PolylineDistance(p, w.Line.Points) - w.Width * 0.5f);
-                Require(river - half >= 3f, $"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})");
+                AssertThat(river - half >= 3f).OverrideFailureMessage($"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
                 var offset = PolylineDistance(p, avenue);
-                Require(MathF.Abs(offset - 10.5f) < 0.15f, $"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}");
+                AssertThat(MathF.Abs(offset - 10.5f) < 0.15f).OverrideFailureMessage($"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}").IsTrue();
             }
             foreach (var end in new[] { line[0], line[^1] })
-                Require(walks.Any(w => PolylineDistance(end, w.Line.Points) <= half + MathF.Max(w.Width, 2f) * 0.5f),
-                    $"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving");
+                AssertThat(walks.Any(w => PolylineDistance(end, w.Line.Points) <= half + MathF.Max(w.Width, 2f) * 0.5f)).OverrideFailureMessage($"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving").IsTrue();
         }
     }
 
@@ -410,7 +410,7 @@ public sealed class CoreModuleTests
                 var g = Vector3.Cross(P(b, b.Index[t + 1]) - a, P(b, b.Index[t + 2]) - a);
                 var n = N(b, b.Index[t]) + N(b, b.Index[t + 1]) + N(b, b.Index[t + 2]);
                 // Godot front faces are clockwise: the geometric normal opposes the shading normal.
-                Require(Vector3.Dot(g, n) <= 1e-6f, "front-face winding");
+                AssertThat(Vector3.Dot(g, n) <= 1e-6f).OverrideFailureMessage("front-face winding").IsTrue();
             }
         }
     }
@@ -418,17 +418,7 @@ public sealed class CoreModuleTests
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-    private static void Require(bool condition, string what)
-    {
-        if (!condition) throw new InvalidOperationException("Expected: " + what);
-    }
 
-    private static bool Raises<TException>(Action action) where TException : Exception
-    {
-        try { action(); }
-        catch (TException) { return true; }
-        return false;
-    }
 
     private static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) => new()
     {
