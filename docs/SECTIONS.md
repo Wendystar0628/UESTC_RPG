@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.2k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.2k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L130 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.5k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L131 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
