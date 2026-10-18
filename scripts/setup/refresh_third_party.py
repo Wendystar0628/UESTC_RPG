@@ -1,68 +1,54 @@
-"""Refresh NuGet sources in third_party.json from existing restore assets.
+"""Refresh the NuGet inventory with the .NET CLI and nuget-license.
 
-Reads NuGet libraries from obj/**/project.assets.json without running restore or
-recreating lockfiles. Existing package metadata and non-NuGet entries are preserved.
-New package metadata requires a local nupkg archive; nothing is downloaded.
-Manual entries (including fonts supplied by another package) are preserved.
-Python wheel inventory may retain explicit pending license reviews; that is not
-license approval. The certifi exception is restricted to its approved artifact.
-Recorded validation is preserved for unchanged artifacts; refreshing package
-metadata does not run validation or promote a historical result to a new run.
+Run dotnet tool restore and restore the projects first. This script never restores
+or builds projects. Non-NuGet entries and their existing license reviews remain
+manual inventory; refreshing them does not approve pending reviews.
 """
 
-import hashlib
 import json
 from pathlib import Path
-import xml.etree.ElementTree as ET
-import zipfile
+import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-DOWNLOADS = ROOT / "output" / "downloads"
-ALLOWED = {"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "OFL-1.1"}
+INPUTS = (
+    ROOT / "game/Campus.sln",
+    ROOT / "scripts/gates/arch/Campus.Arch.Tests.csproj",
+    ROOT / "scripts/godot-api/ApiDump/ApiDump.csproj",
+)
 
 
-def package_entry(name, version, scopes):
-    filename = f"{name}.{version}.nupkg"
-    archive = DOWNLOADS / filename
-    url = f"https://api.nuget.org/v3-flatcontainer/{name.lower()}/{version.lower()}/{name.lower()}.{version.lower()}.nupkg"
-    if not archive.exists():
-        raise FileNotFoundError(f"Package archive not available locally: {archive}")
-    with zipfile.ZipFile(archive) as content:
-        bad = content.testzip()
-        if bad:
-            raise ValueError(f"Corrupt package member: {name}/{bad}")
-        nuspec_name = next(n for n in content.namelist() if n.endswith(".nuspec"))
-        metadata = ET.fromstring(content.read(nuspec_name)).find("{*}metadata")
-        license_node = metadata.find("{*}license")
-        if license_node is None:
-            raise ValueError(f"Missing SPDX or bundled license: {name}")
-        license_evidence = license_node.text
-        if license_node.attrib.get("type") == "expression":
-            license_id = license_node.text
-        else:
-            text = content.read(license_node.text).decode("utf-8-sig")
-            if "MIT License" in text or "Permission is hereby granted, free of charge" in text:
-                license_id = "MIT"
-            elif "Apache License" in text and "Version 2.0" in text:
-                license_id = "Apache-2.0"
-            else:
-                raise ValueError(f"Unrecognized bundled license: {name}")
-        if license_id not in ALLOWED:
-            raise ValueError(f"License outside project allowlist: {name} {license_id}")
-        repository = metadata.find("{*}repository")
-        repo = repository.attrib if repository is not None else {}
-    payload = archive.read_bytes()
-    return {
-        "name": name, "version": version, "kind": "nuget", "scopes": sorted(scopes),
-        "commit": repo.get("commit"), "commitStatus": "NUSPEC_DECLARED" if repo.get("commit") else "NOT_DECLARED_UPSTREAM",
-        "license": license_id, "licenseEvidence": {"archive": "output/downloads/" + filename, "nuspec": nuspec_name, "declaration": license_evidence},
-        "source": url, "repository": repo.get("url"), "sha256": hashlib.sha256(payload).hexdigest(),
-        "sha512": hashlib.sha512(payload).hexdigest(), "hashStatus": "COMPUTED_FROM_OFFICIAL_NUGET_ARCHIVE", "hashScope": "Complete signed nupkg archive bytes", "bytes": len(payload),
-    }
+def run_json(*arguments):
+    result = subprocess.run(arguments, cwd=ROOT, capture_output=True,
+                            encoding="utf-8-sig", check=False)
+    if result.returncode:
+        raise RuntimeError(f"{' '.join(map(str, arguments))}\n"
+                           f"{result.stderr or result.stdout}")
+    return json.loads(result.stdout)
 
 
-def validate_manual_license(entry):
-    if entry["license"] in ALLOWED:
+def package_scopes():
+    packages = {}
+    projects = set()
+    for target in INPUTS:
+        listing = run_json("dotnet", "list", str(target), "package",
+                           "--include-transitive", "--format", "json",
+                           "--output-version", "1", "--no-restore")
+        if listing.get("problems"):
+            raise ValueError(f"Package listing failed: {listing['problems']}")
+        for project in listing["projects"]:
+            scope = Path(project["path"]).resolve().relative_to(ROOT).as_posix()
+            projects.add(scope)
+            for framework in project.get("frameworks", []):
+                for field in ("topLevelPackages", "transitivePackages"):
+                    for package in framework.get(field, []):
+                        key = (package["id"].casefold(), package["resolvedVersion"])
+                        packages.setdefault(key, set()).add(scope)
+    return packages, sorted(projects)
+
+
+def validate_manual_license(entry, allowed):
+    if entry["license"] in allowed:
         return
     development_wheel = (
         entry.get("kind") == "python-wheel"
@@ -88,65 +74,55 @@ def validate_manual_license(entry):
 
 def main():
     manifest_path = ROOT / "third_party.json"
-    existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
-    previous_entries = {(entry["name"], entry["version"]): entry
-                        for entry in existing.get("entries", [])}
-    retained_entries = [entry for entry in existing.get("entries", [])
-                        if entry.get("kind") != "nuget" or entry.get("managedBy") == "manual"]
-    versions = {}
-    def register(name, version, scope):
-        versions.setdefault((name, version), set()).add(scope)
-    props = ET.parse(ROOT / "Directory.Packages.props")
-    for node in props.findall(".//PackageVersion"):
-        register(node.attrib["Include"], node.attrib["Version"], "central-version")
-    register("Godot.NET.Sdk", "4.7.2", "project-sdk")
-    assets_files = []
-    for assets_path in sorted(ROOT.rglob("project.assets.json")):
-        parts = assets_path.relative_to(ROOT).parts
-        if "obj" not in parts or any(part in {"output", "bin"} for part in parts):
-            continue
-        assets = json.loads(assets_path.read_text(encoding="utf-8-sig"))
-        project_path = (assets.get("project", {}).get("restore", {}).get("projectPath")
-                        or assets.get("restore", {}).get("projectPath"))
-        if not project_path or not (ROOT / project_path).is_file():
-            continue
-        relative = assets_path.relative_to(ROOT).as_posix()
-        assets_files.append(relative)
-        for library, node in assets.get("libraries", {}).items():
-            if node.get("type") == "package":
-                name, version = library.rsplit("/", 1)
-                register(name, version, relative)
-    if not assets_files:
-        raise ValueError("No restore assets found; restore projects before refreshing the manifest")
-    missing = [key for key, entry in previous_entries.items()
-               if entry.get("kind") == "nuget" and key not in versions
-               and entry["name"] != "Microsoft.CodeAnalysis.PublicApiAnalyzers"]
-    if missing:
-        raise ValueError(f"Restore inputs do not cover registered NuGet packages: {missing}")
+    existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+    allowed = existing["allowedLicenses"]
+    scopes, projects = package_scopes()
+    with tempfile.TemporaryDirectory(prefix="uestc-licenses-") as temporary:
+        inputs = Path(temporary) / "projects.json"
+        inputs.write_text(json.dumps([str(ROOT / project) for project in projects]),
+                          encoding="utf-8")
+        licenses = run_json("dotnet", "tool", "run", "nuget-license", "--",
+                            "--json-input", str(inputs), "--include-transitive",
+                            "--allowed-license-types", ";".join(allowed),
+                            "--output", "Json")
     entries = []
-    for (name, version), scopes in sorted(versions.items()):
-        previous = previous_entries.get((name, version))
-        if previous is not None:
-            if previous in retained_entries:
-                raise ValueError(f"Manual entry conflicts with generated package: {name}")
-            entry = {**previous, "scopes": sorted(scopes)}
-        else:
-            entry = package_entry(name, version, scopes)
+    found = set()
+    for package in licenses:
+        key = (package["PackageId"].casefold(), package["PackageVersion"])
+        if package.get("ValidationErrors"):
+            raise ValueError(f"License validation failed: {package}")
+        if key not in scopes:
+            raise ValueError(f"License result absent from dotnet package list: {key}")
+        if key in found:
+            continue  # nuget-license can return the same package for several projects.
+        found.add(key)
+        entries.append({
+            "name": package["PackageId"], "version": package["PackageVersion"],
+            "kind": "nuget", "scopes": sorted(scopes[key]),
+            "license": package["License"],
+            "licenseUrl": package.get("LicenseUrl"),
+            "licenseInformationOrigin": package["LicenseInformationOrigin"],
+            "source": f"https://www.nuget.org/packages/{package['PackageId']}/{package['PackageVersion']}",
+            "projectUrl": package.get("PackageProjectUrl"),
+        })
+    if missing := scopes.keys() - found:
+        raise ValueError(f"Packages missing license results: {sorted(missing)}")
+    entries.sort(key=lambda entry: (entry["name"].casefold(), entry["version"]))
+    for entry in existing["entries"]:
+        if entry["kind"] == "nuget":
+            continue
+        validate_manual_license(entry, allowed)
         entries.append(entry)
-    for entry in retained_entries:
-        if entry.get("managedBy") == "manual" or entry.get("kind") == "font":
-            validate_manual_license(entry)
-    entries.extend(retained_entries)
-    closure = dict(existing.get("nugetClosure", {}))
-    for field in ("lockFiles", "lockFilePatterns", "status"):
-        closure.pop(field, None)
-    closure.update({
-        "assetsFiles": assets_files,
-        "policy": "Read NuGet package libraries from existing obj/**/project.assets.json without modifying restore outputs. Run after restoring all projects; this inventory does not grant license approval."
-    })
-    result = {**existing, "entries": entries, "nugetClosure": closure}
-    (ROOT / "third_party.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
-    print(f"Recorded {len(entries)} entries; NuGet restore assets: {len(assets_files)}")
+    result = {**existing, "version": 2, "entries": entries, "nugetClosure": {
+        "inputs": [target.relative_to(ROOT).as_posix() for target in INPUTS],
+        "projects": projects,
+        "packageListing": "dotnet list package --include-transitive --format json --output-version 1 --no-restore",
+        "licenseTool": "nuget-license",
+        "policy": "Resolved packages and licenses from previously restored projects; SDKs and development tools are manual entries. Pending manual license reviews remain pending.",
+    }}
+    manifest_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                             encoding="utf-8", newline="\n")
+    print(f"Recorded {len(entries)} entries from {len(projects)} projects")
 
 
 if __name__ == "__main__":
