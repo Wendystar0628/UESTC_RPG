@@ -4,12 +4,14 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 
 namespace Campus.Gen.Furniture;
 
+/// <summary>The offsets (metres off the centre line, both sides) of the planted tree rows of the road named <paramref name="Name"/>.</summary>
+internal sealed record RoadRows(string Name, IReadOnlyList<float> Offsets);
+
 /// <summary>
-/// The planted tree rows of the furnished roads, read from the map's frozen build inputs (the map input
-/// <see cref="FurnitureStyle.PlantingKey"/>, <c>vegetation/planting.json</c> relative to the map's DataRoot), never from WP-23's
-/// code: for each road of <see cref="FurnitureStyle.Roads"/> the offsets of its <c>rows</c> and its <c>band</c> from the centre
-/// line. Anything the input cannot say (no input, unreadable JSON, a road it does not list) keeps that road's fallback rows from
-/// <see cref="FurnitureStyle.Roads"/> and adds one warning diagnostic. Pure and deterministic: the result depends on the bytes only.
+/// The planted tree rows of the roads, read from the map's frozen build inputs (the map input <see cref="FurnitureStyle.PlantingKey"/>,
+/// <c>vegetation/planting.json</c> relative to the map's DataRoot), never from WP-23's code: for each road it lists, the offsets of its
+/// <c>rows</c> and its <c>band</c> from the centre line. Anything the input cannot say (no input, unreadable JSON, a road with unreadable
+/// offsets) leaves that road without rows and adds one warning diagnostic. Pure and deterministic: the result depends on the bytes only.
 /// </summary>
 internal static class PlantingRows
 {
@@ -17,30 +19,21 @@ internal static class PlantingRows
     public const string UnreadableCode = "furniture.planting.unreadable";
     public const string RoadCode = "furniture.planting.road";
 
-    public static (IReadOnlyList<RoadRule> Roads, IReadOnlyList<BuildDiagnostic> Diagnostics) Resolve(IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs) =>
-        Resolve(inputs, S.Roads);
-
-    /// <summary>The same for a given list of road rules (the style's own is the one the module uses).</summary>
-    public static (IReadOnlyList<RoadRule> Roads, IReadOnlyList<BuildDiagnostic> Diagnostics) Resolve(IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs, IReadOnlyList<RoadRule> rules)
+    public static (IReadOnlyList<RoadRows> Roads, IReadOnlyList<BuildDiagnostic> Diagnostics) Resolve(IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs)
     {
         if (inputs is null || !inputs.TryGetValue(S.PlantingKey, out var bytes))
-            return (rules, [Warn(MissingCode, $"Build input {S.PlantingKey} is not available; tree rows fall back to FurnitureStyle.Roads.")]);
+            return ([], [Warn(MissingCode, $"Build input {S.PlantingKey} is not available; no tree rows are kept clear.")]);
         PlantingFile file;
         try { file = PlantingJson.Read(bytes.Span); }
-        catch (InvalidDataException error) { return (rules, [Warn(UnreadableCode, $"Build input {S.PlantingKey} is unreadable ({error.Message}); tree rows fall back to FurnitureStyle.Roads.")]); }
-        var resolved = new List<RoadRule>();
+        catch (InvalidDataException error) { return ([], [Warn(UnreadableCode, $"Build input {S.PlantingKey} is unreadable ({error.Message}); no tree rows are kept clear.")]); }
+        var roads = new List<RoadRows>();
         var diagnostics = new List<BuildDiagnostic>();
-        foreach (var rule in rules)
+        foreach (var road in file.Roads)
         {
-            var offsets = file.Roads.FirstOrDefault(r => r.Name == rule.Name) is { } road ? Offsets(road) : null;
-            if (offsets is null)
-            {
-                diagnostics.Add(Warn(RoadCode, $"Build input {S.PlantingKey} has no readable tree rows for road {rule.Name}; its rows fall back to FurnitureStyle.Roads."));
-                resolved.Add(rule);
-            }
-            else resolved.Add(rule with { Rows = Array.AsReadOnly(offsets) });
+            if (Offsets(road) is { } offsets) roads.Add(new(road.Name, Array.AsReadOnly(offsets)));
+            else diagnostics.Add(Warn(RoadCode, $"Build input {S.PlantingKey} has no readable tree rows for road {road.Name}; none are kept clear on it."));
         }
-        return (Array.AsReadOnly([.. resolved]), diagnostics.AsReadOnly());
+        return (roads.AsReadOnly(), diagnostics.AsReadOnly());
     }
 
     /// <summary>The offsets of a road's <c>rows</c>, then its <c>band</c> when it has one; null when an offset is negative or not finite.</summary>

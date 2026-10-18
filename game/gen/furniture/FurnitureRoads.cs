@@ -7,51 +7,81 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 
 namespace Campus.Gen.Furniture;
 
+/// <summary>The network lines of one tier and one name that get lamps and rest stops by one <see cref="TierRule"/>, with the feature of their own that <see cref="FurnitureStyle.DesignedRoads"/> gives them, if any. <paramref name="Key"/> names them in item keys.</summary>
+internal sealed record RoadGroup(string Key, RoadTier Tier, string? Name, IReadOnlyList<NetworkLine> Lines, DesignedRoad? Designed);
+
 public static partial class FurniturePlanner
 {
     // ---------------------------------------------------------------------------------------------------------
     // Roads: lamps at the tier's spacing; rest stops midway between lamps.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Road(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, RoadRule rule)
+    /// <summary>
+    /// The roads that get lamps, grouped: the network lines of one tier (<see cref="FurnitureStyle.TierOf"/>, by each line's own road
+    /// class) and one name (the unnamed ones of a tier make one group), in tier then name order, so a group's key is stable for one map.
+    /// A line under cover stays out. A road the planting rules give <see cref="FurnitureStyle.AvenueRows"/> offsets is tree-lined, the avenue.
+    /// </summary>
+    internal static IReadOnlyList<RoadGroup> RoadGroups(IWorldModel world, IReadOnlyList<RoadRows> rows, IReadOnlyList<DesignedRoad> designed)
     {
-        var lines = site.World.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name).ToList();
-        if (lines.Count == 0) return;
-        var half = lines.Max(StreetSite.HalfWidth);
-        var main = rule.Tier == RoadTier.Main;
-        var spacing = main ? S.MainLampSpacing : S.SecondaryLampSpacing;
-        var lamp = main ? S.MainLamp : S.SecondaryLamp;
-        var chains = StreetSite.Chains(lines);
+        var treeLined = rows.Where(r => r.Offsets.Count >= S.AvenueRows).Select(r => r.Name).ToHashSet(StringComparer.Ordinal);
+        var graded = world.Network.Roads
+            .Where(l => l.Line.Points.Count >= 2 && !StreetSite.Covered(l))
+            .Select(l => (Line: l, Name: StreetSite.RoadName(l)))
+            .Select(g => (g.Line, g.Name, Tier: S.TierOf(StreetSite.RoadClass(g.Line), g.Name is { } name && treeLined.Contains(name))))
+            .Where(g => g.Tier is not null)
+            .GroupBy(g => (Tier: g.Tier!.Value, Name: g.Name ?? ""))
+            .OrderBy(g => g.Key.Tier).ThenBy(g => g.Key.Name, StringComparer.Ordinal);
+        var groups = new List<RoadGroup>();
+        var inTier = new Dictionary<RoadTier, int>();
+        foreach (var g in graded)
+        {
+            var index = inTier.GetValueOrDefault(g.Key.Tier);
+            inTier[g.Key.Tier] = index + 1;
+            var name = g.Key.Name.Length > 0 ? g.Key.Name : null;
+            groups.Add(new($"{g.Key.Tier}{Num(index)}", g.Key.Tier, name, [.. g.Select(t => t.Line).OrderBy(l => l.Id.Value, StringComparer.Ordinal)],
+                name is null ? null : designed.FirstOrDefault(d => d.Name == name)));
+        }
+        return groups.AsReadOnly();
+    }
+
+    private static void Road(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, RoadGroup group)
+    {
+        var rule = S.Rule(group.Tier);
+        var half = group.Lines.Max(StreetSite.HalfWidth);
+        var spacing = rule.LampSpacing;
+        var lamp = rule.DiscLamp ? S.MainLamp : S.SecondaryLamp;
+        var nodes = group.Designed?.Nodes;
+        var chains = StreetSite.Chains(group.Lines);
         for (var c = 0; c < chains.Count; c++)
         {
             var run = new StreetSite.Run(chains[c]);
             var n = (int)MathF.Floor(run.Length / spacing);
             if (n < 1) continue;
             var s0 = (run.Length - (n - 1) * spacing) * 0.5f;
-            // Grade one lights both sides, opposite each other; grade two one side, the side with more free slots.
-            float[] lampSides = main ? [1f, -1f] : [BestSide(site, run, s0, spacing, n, half)];
+            // Both sides lit: opposite each other; else the side with more free slots.
+            float[] lampSides = rule.BothSides ? [1f, -1f] : [BestSide(site, run, s0, spacing, n, half)];
             foreach (var side in lampSides)
                 for (var k = 0; k < n; k++)
-                    PlaceLamp(site, items, run, s0 + k * spacing, side, half, lamp, $"lamp:{r}:{c}:{Side(side)}:{Num(k)}");
-            // Rest stops: every RestEvery lamp gaps on a side; the avenue's two sides alternate, a secondary road's sit opposite its lamps.
+                    PlaceLamp(site, items, run, s0 + k * spacing, side, half, lamp, $"lamp:{group.Key}:{Num(c)}:{Side(side)}:{Num(k)}");
+            // Rest stops: every RestEvery lamp gaps on a side; two lit sides alternate, a one-sided road's sit opposite its lamps.
             // A road with rest nodes (Opus review 16:23) has none along its line: its stops are at the nodes.
-            float[] restSides = rule.Nodes is null ? main ? [1f, -1f] : [-lampSides[0]] : [];
+            float[] restSides = nodes is not null || rule.RestEvery == 0 ? [] : rule.BothSides ? [1f, -1f] : [-lampSides[0]];
             foreach (var side in restSides)
             {
-                var phase = main && side < 0f ? S.RestEvery / 2 : 0;
+                var phase = rule.BothSides && side < 0f ? rule.RestEvery / 2 : 0;
                 int stops = 0, bins = 0;
                 for (var k = 0; k + 1 < n; k++)
                 {
-                    if ((k + phase) % S.RestEvery != S.RestEvery / 2) continue;
-                    var key = $"rest:{r}:{c}:{Side(side)}:{Num(k)}";
-                    // A bin at every other stop; one that found no room passes to the next stop.
-                    var (bench, bin) = PlaceRest(site, items, run, s0 + (k + 0.5f) * spacing, side, half, withBin: bins * 2 <= stops, key);
+                    if ((k + phase) % rule.RestEvery != rule.RestEvery / 2) continue;
+                    var key = $"rest:{group.Key}:{Num(c)}:{Side(side)}:{Num(k)}";
+                    // A bin at every RestBinEvery-th stop; one that found no room passes to the next stop.
+                    var (bench, bin) = PlaceRest(site, items, run, s0 + (k + 0.5f) * spacing, side, half, withBin: bins * S.RestBinEvery <= stops, key);
                     if (bench) stops++;
                     if (bin) bins++;
                 }
             }
         }
-        if (rule.Nodes is { } nodes) NodeStops(site, items, diagnostics, r, rule.Name, nodes);
+        if (nodes is not null) NodeStops(site, items, diagnostics, group.Key, group.Name!, nodes);
     }
 
     /// <summary>
@@ -60,7 +90,7 @@ public static partial class FurniturePlanner
     /// just off the paving edge and facing the paving under the 13c1 rules (<see cref="PavingSlot"/>), <see cref="FurnitureStyle.NodeBenchGap"/>
     /// apart. A node that takes none says why, in the layout diagnostics, and the rules stay as they are.
     /// </summary>
-    private static void NodeStops(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, string road, IReadOnlyList<RestNode> nodes)
+    private static void NodeStops(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, string key, string road, IReadOnlyList<RestNode> nodes)
     {
         for (var n = 0; n < nodes.Count; n++)
         {
@@ -69,7 +99,7 @@ public static partial class FurniturePlanner
             var why = new SortedDictionary<string, int>(StringComparer.Ordinal);
             void Seat(WalkFit bench)
             {
-                items.Add(Placed($"node:{r}:{Num(n)}:{Num(placed.Count)}:bench", FurnitureKind.Bench, PartCatalog.Bench, S.Bench, bench, BenchDef.Collision(S.Bench)));
+                items.Add(Placed($"node:{key}:{Num(n)}:{Num(placed.Count)}:bench", FurnitureKind.Bench, PartCatalog.Bench, S.Bench, bench, BenchDef.Collision(S.Bench)));
                 site.Occupy(bench.Ends.A, bench.Ends.B, bench.Ends.R);
                 placed.Add(bench.Centre);
             }

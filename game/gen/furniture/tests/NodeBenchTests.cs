@@ -31,12 +31,12 @@ public sealed class NodeBenchTests
         var world = World.Value;
         var site = Site.Value;
         var baseline = RealLayout.Value;
-        var spot = baseline.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal)).Anchor;
-        var avenue = FurnitureStyle.Roads[0] with { Nodes = [new RestNode("test node", spot)] };
-        var layout = FurniturePlanner.Build(world, null, Inputs(), [avenue, FurnitureStyle.Roads[1], FurnitureStyle.Roads[2]]);
-        AssertThat(!layout.Items.Any(i => i.Key.StartsWith("rest:0:", StringComparison.Ordinal))).OverrideFailureMessage("rest stops along a road with nodes").IsTrue();
-        AssertThat(layout.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)) == baseline.Items.Count(i => i.Key.StartsWith("lamp:0:", StringComparison.Ordinal))).OverrideFailureMessage("the node rule changed the road's lamps").IsTrue();
-        var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        var spot = baseline.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith($"rest:{Avenue.Key}:", StringComparison.Ordinal)).Anchor;
+        var avenue = new DesignedRoad(Avenue.Name!, [new RestNode("test node", spot)]);
+        var layout = FurniturePlanner.Build(world, null, Inputs(), [avenue]);
+        AssertThat(!layout.Items.Any(i => i.Key.StartsWith($"rest:{Avenue.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("rest stops along a road with nodes").IsTrue();
+        AssertThat(layout.Items.Count(i => i.Key.StartsWith($"lamp:{Avenue.Key}:", StringComparison.Ordinal)) == baseline.Items.Count(i => i.Key.StartsWith($"lamp:{Avenue.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("the node rule changed the road's lamps").IsTrue();
+        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches).OverrideFailureMessage($"{benches.Count} benches at the node").IsTrue();
         AssertThat(!layout.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("test node", StringComparison.Ordinal))).OverrideFailureMessage("a node with benches logs 'no bench'").IsTrue();
         foreach (var bench in benches)
@@ -60,21 +60,21 @@ public sealed class NodeBenchTests
         // or looks at it); its two nodes take benches under the same rules or report why none fits, never by relaxing them.
         var world = World.Value;
         var layout = RealLayout.Value;
-        var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.Nodes is not null);
-        AssertThat(index >= 0).OverrideFailureMessage("no road has rest nodes").IsTrue();
-        var rule = FurnitureStyle.Roads[index];
-        AssertThat(!layout.Items.Any(i => i.Key.StartsWith($"rest:{index}:", StringComparison.Ordinal))).OverrideFailureMessage($"benches or bins along {rule.Name}").IsTrue();
+        var group = Groups.Value.FirstOrDefault(g => g.Designed?.Nodes is not null);
+        AssertThat(group is not null).OverrideFailureMessage("no road has rest nodes").IsTrue();
+        var rule = group!.Designed!;
+        AssertThat(!layout.Items.Any(i => i.Key.StartsWith($"rest:{group.Key}:", StringComparison.Ordinal))).OverrideFailureMessage($"benches or bins along {rule.Name}").IsTrue();
         for (var n = 0; n < rule.Nodes!.Count; n++)
         {
             var node = rule.Nodes[n];
-            var placed = layout.Items.Count(i => i.Key.StartsWith($"node:{index}:{n}:", StringComparison.Ordinal));
+            var placed = layout.Items.Count(i => i.Key.StartsWith($"node:{group.Key}:{n}:", StringComparison.Ordinal));
             var says = layout.Diagnostics.Where(d => d.Code == "wp13.node.no-bench" && d.Message.StartsWith($"road {rule.Name} node {node.Label} ", StringComparison.Ordinal)).Select(d => d.Message).ToList();
             AssertThat(placed > 0 ? says.Count == 0 : says.Count == 1).OverrideFailureMessage($"node {node.Label}: {placed} benches and {says.Count} 'no bench' lines").IsTrue();
         }
         // Opus review 17:28: a node bench may stand on the plaza, its back to the paving edge and parallel to it, facing into the
         // plaza, wholly on its paving and off the walks' strips, 3 m off carriageways (judged in general on a made-up plaza below).
         var site = Site.Value;
-        var standing = layout.Items.Where(i => i.Key.StartsWith($"node:{index}:", StringComparison.Ordinal) && i.Pad is null).ToList();
+        var standing = layout.Items.Where(i => i.Key.StartsWith($"node:{group.Key}:", StringComparison.Ordinal) && i.Pad is null).ToList();
         var plaza = standing.Where(b => site.OnPlaza(b.Anchor)).ToList();
         var walk = standing.Except(plaza).ToList();
         CheckPlazaBenches(site, plaza);
@@ -94,11 +94,11 @@ public sealed class NodeBenchTests
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), props.GetRawText());
         IWorldModel world = MadeWorld(WalkWorld(open, null, square), [], [], SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
-        var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => b.Pad is null)).OverrideFailureMessage($"{benches.Count} benches on the square, or on bays").IsTrue();
         CheckPlazaBenches(new StreetSite(world), benches);
         var bare = FurniturePlanner.Build(open, null, Inputs(), NodeRules(spot));
-        AssertThat(!bare.Items.Any(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal))).OverrideFailureMessage("benches at a node with no square").IsTrue();
+        AssertThat(!bare.Items.Any(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal))).OverrideFailureMessage("benches at a node with no square").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -113,7 +113,7 @@ public sealed class NodeBenchTests
             var (line, feature) = DesignWalk(spot, width);
             var world = WalkWorld(open, line, feature);
             var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
-            var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+            var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
             var onWalk = benches.Where(b => (float)PlanLines.Project(line.Line.Points, b.Anchor).Distance <= Half(line)).ToList();
             if (!takes)
             {
@@ -138,7 +138,7 @@ public sealed class NodeBenchTests
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
         IWorldModel world = MadeWorld(open, [walk], [square], SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
-        var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
         var site = new StreetSite(world);
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => site.OnPlaza(b.Anchor))).OverrideFailureMessage($"{benches.Count} benches on the square").IsTrue();
         CheckPlazaBenches(site, benches);
@@ -157,7 +157,7 @@ public sealed class NodeBenchTests
         var (line, feature) = DesignWalk(spot);
         var rules = NodeRules(spot);
         FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(WalkWorld(open, asLine, asFeature), null, Inputs(), rules);
-        List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
+        List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
         var none = Layout(null, null);
         var both = Layout(line, feature);
         var benches = Benches(both);
@@ -240,9 +240,9 @@ public sealed class NodeBenchTests
         }
     }
 
-    /// <summary>The avenue's rule with one rest node at <paramref name="spot"/> (the others as they are): the node's benches are keyed <c>node:0:0:</c>.</summary>
-    private static IReadOnlyList<RoadRule> NodeRules(Vector2 spot) =>
-        [FurnitureStyle.Roads[0] with { Nodes = [new RestNode("open node", spot)] }, FurnitureStyle.Roads[1], FurnitureStyle.Roads[2]];
+    /// <summary>The avenue with one rest node at <paramref name="spot"/>: the node's benches are keyed <c>node:{Avenue.Key}:0:</c>.</summary>
+    private static IReadOnlyList<DesignedRoad> NodeRules(Vector2 spot) =>
+        [new DesignedRoad(Avenue.Name!, [new RestNode("open node", spot)])];
 
     /// <summary>A 16 m east–west design walk centred on <paramref name="spot"/>, as the network line and as the feature of one ID.</summary>
     private static (NetworkLine Line, WorldFeature Feature) DesignWalk(Vector2 spot, float width = 2.5f)

@@ -11,6 +11,13 @@ internal sealed partial class StreetSite
     public static string? RoadName(NetworkLine line) =>
         WorldProps.TryText(line.Props, "name:zh") ?? WorldProps.TryText(line.Props, "name");
 
+    /// <summary>A network line's road class as WP-15 reads it: <c>roadType</c>, else <c>highway</c> (the field <see cref="FurnitureStyle.TierOf"/> grades by).</summary>
+    public static string? RoadClass(NetworkLine line) => RoadType(line.Props);
+
+    /// <summary>True for a line that runs under cover (a tunnel, a building passage, a covered way): nothing stands along it.</summary>
+    public static bool Covered(NetworkLine line) =>
+        WorldProps.TryText(line.Props, "tunnel") is not null || WorldProps.TryText(line.Props, "covered") == "yes";
+
     /// <summary>The nearest point on any carriageway (not a footpath) to <paramref name="p"/> within <paramref name="reach"/>, with its line.</summary>
     public (Vector2 Point, Vector2 Along, NetworkLine Line)? NearestCarriageway(Vector2 p, float reach)
     {

@@ -15,15 +15,15 @@ public static partial class FurniturePlanner
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>
-    /// A kerb ramp at every spot where a pedestrian line reaches the carriageway of <paramref name="rule"/>: a walk ending within
+    /// A kerb ramp at every spot where a pedestrian line reaches the carriageway of <paramref name="road"/>: a walk ending within
     /// <see cref="FurnitureStyle.RampKerbReach"/> of its kerb gets one on that kerb, a walk crossing it one on each kerb. The ramp lies on
     /// the carriageway against the kerb, rising to the kerb top and onto the paving behind it (sliding along the kerb by up to
     /// <see cref="FurnitureStyle.RampSlide"/> to find it, never onto a verge), <see cref="FurnitureStyle.RampGap"/> clear of the next; none inside a
     /// junction (on another road's surface), which WP-15 marks and paves. The count and the refusals go to the layout diagnostics.
     /// </summary>
-    private static void KerbRamps(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, int r, RoadRule rule)
+    private static void KerbRamps(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, RoadGroup road)
     {
-        var lines = site.World.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name && StreetSite.Carriageway(l)).OrderBy(l => l.Id.Value, StringComparer.Ordinal).ToList();
+        var lines = road.Lines.Where(StreetSite.Carriageway).OrderBy(l => l.Id.Value, StringComparer.Ordinal).ToList();
         if (lines.Count == 0) return;
         var p = S.KerbRamp;
         var placed = new List<Vector2>();
@@ -67,12 +67,12 @@ public static partial class FurniturePlanner
                         continue;
                     }
                     var at = Frame(centre, -normal * side, site.World.Terrain.HeightAt(centre.X, centre.Y));
-                    items.Add(Item($"ramp:{r}:{Num(placed.Count)}", FurnitureKind.KerbRamp, StreetStyle.KerbRampId, p, at, RampDef.Collision(p), []));
+                    items.Add(Item($"ramp:{road.Key}:{Num(placed.Count)}", FurnitureKind.KerbRamp, StreetStyle.KerbRampId, p, at, RampDef.Collision(p), []));
                     placed.Add(centre);
                 }
             }
         }
-        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.kerb-ramps.summary", $"road {rule.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)"));
+        diagnostics.Add(new(DiagnosticLevel.Info, "wp13.kerb-ramps.summary", $"road {road.Name}: {Num(placed.Count)} kerb ramps where walks reach its kerb ({Num(junction)} spots inside junctions, {Num(verge)} with no walk behind the kerb, {Num(crowded)} next to a ramp, left out)"));
     }
 
     /// <summary>The nearest point of any of <paramref name="lines"/> to <paramref name="p"/>, with the unit direction of its segment.</summary>

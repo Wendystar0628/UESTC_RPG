@@ -22,7 +22,7 @@ using static GdUnit4.Assertions;
 public sealed class FurnitureStreetLayoutTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
-    public void TheMainRoadAndTwoSecondaryRoadsAreFurnishedDeterministically()
+    public void TheLitRoadsAreFurnishedDeterministically()
     {
         var a = RealLayout.Value;
         var b = Build(World.Value);
@@ -30,11 +30,11 @@ public sealed class FurnitureStreetLayoutTests
         AssertThat(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)))).OverrideFailureMessage("two builds differ").IsTrue();
         AssertThat(a.Items.Select(i => i.Key).Distinct().Count() == a.Items.Count).OverrideFailureMessage("duplicate keys").IsTrue();
         AssertThat(lamps.Any(i => ((LampParams)i.Part.Params).Variation == 0) && lamps.Any(i => ((LampParams)i.Part.Params).Variation == 1)).OverrideFailureMessage("both lamp forms are placed").IsTrue();
-        // Rest stops only where a walk takes a bench (Opus review 12:15): the avenue's north half and Shuisha Road's walk.
+        // Rest stops only where a walk takes a bench (Opus review 12:15).
         AssertThat(a.Count(FurnitureKind.Bench) > 0).OverrideFailureMessage($"{a.Count(FurnitureKind.Bench)} benches").IsTrue();
-        // A bin at every other rest stop along a road; node benches (on the plazas) come without.
+        // A bin at about every other rest stop along a road (a stop with no room for its bin hands it to the next); node benches (on the plazas) come without.
         var rest = a.Items.Count(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:", StringComparison.Ordinal));
-        AssertThat(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at every other rest stop").IsTrue();
+        AssertThat(a.Count(FurnitureKind.Bin) * FurnitureStyle.RestBinEvery >= rest * 0.6f && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at about every other rest stop").IsTrue();
         // SYS-ATLAS: a kiosk or a post on every anchor on open ground or an authored elevated deck. The counts follow the anchor data, so
         // moving an anchor (WP-48c) never needs a new number here.
         var landings = AnchorLandings();

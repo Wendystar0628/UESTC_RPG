@@ -38,8 +38,15 @@ internal static class FurnitureTestSupport
     /// <summary>The real map's street index, built once; the tests only query it.</summary>
     internal static readonly Lazy<StreetSite> Site = new(() => new StreetSite(World.Value));
 
+    /// <summary>The real map's road groups (lamps and rest stops by class), as the planner forms them from the real planting rules.</summary>
+    internal static readonly Lazy<IReadOnlyList<RoadGroup>> Groups = new(() =>
+        FurniturePlanner.RoadGroups(World.Value, PlantingRows.Resolve(Inputs()).Roads, FurnitureStyle.DesignedRoads));
+
+    /// <summary>The avenue's group: the one tree-lined road the planting rules give a row and a band.</summary>
+    internal static RoadGroup Avenue => Groups.Value.Single(g => g.Tier == RoadTier.Avenue);
+
     /// <summary>
-    /// Open flat ground for made-up scenes: the real boundary and the furnished roads' lines only, so a made-up scene is planned
+    /// Open flat ground for made-up scenes: the real boundary and the avenue's lines only, so a made-up scene is planned
     /// without planning the whole map again. <see cref="OpenSpot"/> is clear of everything on the real map.
     /// </summary>
     internal static readonly Lazy<FakeWorld> OpenWorld = new(() => new FakeWorld
@@ -51,7 +58,7 @@ internal static class FurnitureTestSupport
 
     internal static readonly Lazy<Vector2> OpenSpot = new(OpenGround);
 
-    private static bool Furnished(NetworkLine line) => FurnitureStyle.Roads.Any(r => r.Name == StreetSite.RoadName(line));
+    private static bool Furnished(NetworkLine line) => StreetSite.RoadName(line) == Avenue.Name;
 
     /// <summary>A loaded world pared to what <see cref="OpenWorld"/> holds plus one made-up walk (its feature and its network line, whichever the world has).</summary>
     internal static FakeWorld Pared(IWorldModel loaded, FeatureId walk) => new()

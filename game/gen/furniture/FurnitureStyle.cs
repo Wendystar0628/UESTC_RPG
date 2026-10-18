@@ -5,20 +5,35 @@ using Campus.Gen.Parts.Street;
 
 namespace Campus.Gen.Furniture;
 
-/// <summary>Illuminance tier of a road (MAP-QSH-ADDITIONS): it picks the lamp, the spacing and the sides.</summary>
+/// <summary>
+/// The class of a road for street furniture (WLD-LIFE-STREET §2, MAP-QSH-ADDITIONS-ATMOSPHERE §1), read from the network line's own
+/// <c>roadType</c>/<c>highway</c> by <see cref="FurnitureStyle.TierOf"/>: how often it has lamps and rest stops is <see cref="FurnitureStyle.Rule"/>.
+/// </summary>
 public enum RoadTier
 {
-    /// <summary>Main axis (grade one): white disc lamps on both sides, opposite each other, 25–30 m apart.</summary>
-    Main,
-    /// <summary>Secondary road (grade two): grey single-arm LED lamps on one side, 30–40 m apart.</summary>
-    Secondary,
+    /// <summary>The tree-lined main axis (a carriageway with a tree row and a spring band in the planting rules): white disc lamps on both sides.</summary>
+    Avenue,
+    /// <summary>The campus's other trunk carriageways (<c>residential</c> and above): grey single-arm LED lamps on one side.</summary>
+    Trunk,
+    /// <summary>Service lanes (<c>service</c>, <c>unclassified</c>): the same lamps, further apart, few rest stops.</summary>
+    Branch,
+    /// <summary>Pedestrian streets (<c>pedestrian</c>): lamps only; footways, paths and steps get none (the third, point-like lighting grade has no part yet).</summary>
+    Walk,
 }
 
 /// <summary>
-/// A road that gets street furniture, by its name in the network (names are map data, never entity IDs). <paramref name="Rows"/>
-/// are the planted tree rows' offsets from its centre line (both sides), kept clear by benches and bins.
+/// What a <see cref="RoadTier"/> gets: its lamps (<paramref name="LampSpacing"/> apart, on <paramref name="BothSides"/> opposite each other
+/// or on the side with more free slots; <paramref name="DiscLamp"/> the white disc head, else the grey single arm) and its rest stops (a
+/// bench, and a bin at every <see cref="FurnitureStyle.RestBinEvery"/>-th one) midway between two lamps, every <paramref name="RestEvery"/> lamp
+/// gaps on a side; 0: none along the line.
 /// </summary>
-public sealed record RoadRule(string Name, RoadTier Tier, IReadOnlyList<float> Rows, IReadOnlyList<RestNode>? Nodes = null)
+public sealed record TierRule(float LampSpacing, bool BothSides, bool DiscLamp, int RestEvery);
+
+/// <summary>
+/// A road with a designed feature of its own, by its name in the network (names are map data, never entity IDs): the rest
+/// <paramref name="Nodes"/> where its stops stand instead of along its line, and <see cref="KerbRamps"/> where its walks reach its kerb.
+/// </summary>
+public sealed record DesignedRoad(string Name, IReadOnlyList<RestNode>? Nodes = null)
 {
     /// <summary>Kerb ramps where the road's walks reach its kerb (13c2b, Opus review 16:23: the osmanthus road's junctions).</summary>
     public bool KerbRamps { get; init; }
@@ -37,19 +52,52 @@ public sealed record RestNode(string Label, Vector2 At);
 /// </summary>
 public static class FurnitureStyle
 {
-    // ---- Roads (13b mainline: the ginkgo avenue and two representative secondary roads; the rest of the network follows) ----
-    /// <remarks>
-    /// The roads and their tiers are decided here; the row offsets are only the fallback. The placement reads the real offsets from the
-    /// map's <see cref="PlantingKey"/> build input (WP-23's planting rule: the avenue's ginkgo row and its spring band each side, one row on
-    /// each secondary road, <see cref="PlantingRows"/>) and uses these when the input cannot say, with a warning diagnostic.
-    /// </remarks>
-    public static IReadOnlyList<RoadRule> Roads { get; } = Array.AsReadOnly<RoadRule>(
+    // ---- Roads: every lit carriageway and pedestrian street of the campus, by its class (WLD-LIFE-STREET §2) ----
+    /// <summary>
+    /// Lamp and rest-stop rules by class. The avenue and the trunk roads follow MAP-QSH-ADDITIONS-ATMOSPHERE §1 (grade one 25–30 m, kept
+    /// regular on the avenue, grade two 30–40 m); the service lanes sit at the far end of grade two with a stop every eighth lamp gap;
+    /// pedestrian streets are lit like grade two, with no stops along their line (stops belong at the plaza ends and junction nodes).
+    /// Together they put some tens of bins on the campus, most of them on the trunk roads (WLD-LIFE-STREET §2: 92 in all).
+    /// </summary>
+    public static TierRule Rule(RoadTier tier) => tier switch
+    {
+        RoadTier.Avenue => new(27.5f, true, true, 4),
+        RoadTier.Trunk => new(35f, false, false, 4),
+        RoadTier.Branch => new(40f, false, false, 8),
+        RoadTier.Walk => new(40f, false, false, 0),
+        _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "Unknown road tier."),
+    };
+
+    /// <summary>
+    /// The class of a network line by its <c>roadType</c>/<c>highway</c> (<paramref name="type"/>); null for what gets no lamps (footways,
+    /// paths, steps, cycleways, tracks, roads under construction, motorways). A carriageway the planting rules give a tree row and a band
+    /// (<see cref="AvenueRows"/> offsets) is the avenue.
+    /// </summary>
+    public static RoadTier? TierOf(string? type, bool treeLined) => type switch
+    {
+        "residential" or "living_street" or "tertiary" or "secondary" or "primary" => treeLined ? RoadTier.Avenue : RoadTier.Trunk,
+        "service" or "unclassified" => RoadTier.Branch,
+        "pedestrian" => RoadTier.Walk,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The tree rows' offsets come from the map's <see cref="PlantingKey"/> build input (WP-23's planting rule, <see cref="PlantingRows"/>):
+    /// the avenue's ginkgo row and its spring band each side, one row on each other tree-lined road. A road with this many offsets is the avenue;
+    /// without the input nothing is a tree row and nothing is the avenue, with a warning diagnostic.
+    /// </summary>
+    public const int AvenueRows = 2;
+
+    /// <summary>A bin at every this-many-th rest stop of a road (the first has one).</summary>
+    public const int RestBinEvery = 2;
+
+    /// <summary>
+    /// Roads with a feature of their own. The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two
+    /// nodes, where the walks end: the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.
+    /// </summary>
+    public static IReadOnlyList<DesignedRoad> DesignedRoads { get; } = Array.AsReadOnly<DesignedRoad>(
     [
-        new("银杏大道", RoadTier.Main, [7f, 13f]),
-        new("水杉路", RoadTier.Secondary, [5f]),
-        // The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two nodes, where the walks end:
-        // the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.
-        new("丹桂路", RoadTier.Secondary, [4.5f], [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]) { KerbRamps = true },
+        new("丹桂路", [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]) { KerbRamps = true },
     ]);
 
     // ---- Kerb ramps (13c2b): where a walk reaches a ramped road's kerb, at its end or where it crosses ----
@@ -166,9 +214,6 @@ public static class FurnitureStyle
     /// <summary>The map input (relative to the map's DataRoot) the tree-row offsets come from: WP-23's planting rules.</summary>
     public const string PlantingKey = "vegetation/planting.json";
 
-    /// <summary>Lamp spacing along the road: grade one 25–30 m (ART-FIDELITY, kept regular on the avenue, §8.5), grade two 30–40 m.</summary>
-    public const float MainLampSpacing = 27.5f;
-    public const float SecondaryLampSpacing = 35f;
     /// <summary>Pole centre from the carriageway edge (the kerb face).</summary>
     public const float LampKerbGap = 0.8f;
     /// <summary>A lamp blocked at its slot may slide along the road by up to this much, in these steps, before it is dropped.</summary>
@@ -176,11 +221,10 @@ public static class FurnitureStyle
     public const float ShiftStep = 1.5f;
 
     /// <summary>
-    /// Rest stops (a bench, and a bin at every other one) belong to the lamp rhythm: midway between two lamps, every this many lamp
-    /// gaps on a side. Each lines the nearest walk on that side within <see cref="RestReach"/> of the road's centre line, sliding
-    /// along it by up to <see cref="RestSlide"/>; a slot with no walk that takes a bench stays empty.
+    /// Rest stops (a bench, and a bin at every <see cref="RestBinEvery"/>-th one) belong to the lamp rhythm: midway between two lamps, every
+    /// <see cref="TierRule.RestEvery"/> lamp gaps on a side. Each lines the nearest walk on that side within <see cref="RestReach"/> of the
+    /// road's centre line, sliding along it by up to <see cref="RestSlide"/>; a slot with no walk that takes a bench stays empty.
     /// </summary>
-    public const int RestEvery = 4;
     public const float RestReach = 20f;
     public const float RestSlide = 6f;
     /// <summary>A bench's front edge stands this far off the walk's edge, facing the walk (Opus review 12:15).</summary>

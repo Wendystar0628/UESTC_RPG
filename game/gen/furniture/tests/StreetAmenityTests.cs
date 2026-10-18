@@ -110,7 +110,7 @@ public sealed class StreetAmenityTests
         }
         var groups = layout.Items.Where(i => i.Kind == FurnitureKind.VendingMachine).GroupBy(i => i.Key[..i.Key.LastIndexOf(':')]).ToList();
         AssertThat(groups.Count > 0).OverrideFailureMessage($"{groups.Count} vending groups").IsTrue();
-        var axis = world.Network.Roads.Where(l => StreetSite.RoadName(l) == FurnitureStyle.Roads.First(r => r.Tier == RoadTier.Main).Name).ToList();
+        var axis = Avenue.Lines;
         var centres = new List<(string Site, Vector2 At)>();
         foreach (var group in groups)
         {

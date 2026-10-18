@@ -23,11 +23,11 @@ public static partial class FurniturePlanner
     /// <summary>A place a service thing serves: its point, a label for keys and the diagnostics, and the outline it must stay outside, if any.</summary>
     private readonly record struct ServiceSite(string Label, Vector2 At, PolygonRings? Outside, Vector2? Front, bool Open = false);
 
-    private static void Services(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, IReadOnlyList<RoadRule> roads)
+    private static void Services(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, IReadOnlyList<RoadGroup> roads)
     {
         var world = site.World;
         var cache = new Dictionary<(string, object), (int Meshes, int Triangles)>();
-        var axis = world.Network.Roads.Where(l => roads.Any(r => r.Tier == RoadTier.Main && r.Name == StreetSite.RoadName(l))).ToList();
+        var axis = roads.Where(r => r.Tier == RoadTier.Avenue).SelectMany(r => r.Lines).ToList();
         var gates = Gates(world);
         // Vending groups: the gates first, then the canteens and the sports venues; one to a line of sight, none on the main axis.
         var vendingSites = gates.Concat(Buildings(site, S.VendingCategories, door: false)).ToList();
