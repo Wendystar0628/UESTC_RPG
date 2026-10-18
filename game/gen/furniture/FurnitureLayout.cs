@@ -72,25 +72,21 @@ public static partial class FurniturePlanner
     /// <param name="world">The world model.</param>
     /// <param name="claimedBy">The claims query (<see cref="BuildContext.ClaimedBy"/>); none means nothing is claimed.</param>
     /// <param name="inputs">The map's preloaded source inputs (<see cref="BuildContext.SourceInputs"/>): the tree rows come from its <see cref="S.PlantingKey"/>.</param>
-    public static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
-        Build(world, claimedBy, inputs, S.DesignedRoads);
-
-    /// <summary><see cref="Build(IWorldModel, Func{FeatureId, Aspects, WpId?}?, IReadOnlyDictionary{string, ReadOnlyMemory{byte}}?)"/> for given designed roads (the style's own for the module; tests give their own).</summary>
-    internal static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs, IReadOnlyList<DesignedRoad> designed)
+    public static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         claimedBy ??= (_, _) => null;
         var (rows, plantingDiagnostics) = PlantingRows.Resolve(inputs);
         var site = new StreetSite(world);
         foreach (var road in rows) site.AddRows(world.Network.Roads.Where(l => StreetSite.RoadName(l) == road.Name), road.Offsets);
-        var roads = RoadGroups(world, rows, designed);
+        var roads = RoadGroups(world, rows);
         var items = new List<FurnitureItem>();
         var diagnostics = new List<BuildDiagnostic>(plantingDiagnostics);
         Anchors(site, items, diagnostics);
         Entrances(site, items, claimedBy);
         Stops(site, items);
         foreach (var road in roads) Road(site, items, diagnostics, road);
-        foreach (var road in roads.Where(r => r.Designed is { KerbRamps: true })) KerbRamps(site, items, diagnostics, road);
+        foreach (var road in roads.Where(r => r.KerbRamps)) KerbRamps(site, items, diagnostics, road);
         Cars(site, items);
         Fountains(site, items, diagnostics);
         Signposts(site, items, diagnostics);

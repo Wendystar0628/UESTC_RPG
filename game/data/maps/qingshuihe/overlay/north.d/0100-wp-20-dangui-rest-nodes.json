@@ -1,0 +1,31 @@
+{
+  "zone": "north",
+  "owner": "WP-20",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:north-dangui-rest-1-west-plaza",
+      "kind": "restNode",
+      "geometry": {"type": "point", "position": [-99.8, 0.0, -442.7]},
+      "props": {"road": "丹桂路"},
+      "reason": "丹桂路沿线不设长椅（设计步道离路约 7.5 m，椅子放哪一侧都离车行道太近或朝向车行道），休息座只落在路上的两处节点（街道家具读 restNode，按 props.road 找路）。本点在西端行人广场边，西南步道走进广场处：长椅贴广场铺装边、背靠种植、朝向广场，或落在不窄于 4 m 的步道边；落不下时街道家具在布局诊断里写明原因，不放宽规则。"
+    },
+    {
+      "op": "add",
+      "id": "design:north-dangui-rest-2-south-mouth",
+      "kind": "restNode",
+      "geometry": {"type": "point", "position": [69.9, 0.0, -833.1]},
+      "props": {"road": "丹桂路"},
+      "reason": "丹桂路的第二处休息节点，在南口路口，步道在此收尾（理由与落位规则同 design:north-dangui-rest-1-west-plaza）。"
+    },
+    {
+      "op": "add",
+      "id": "design:north-dangui-kerb-ramps",
+      "kind": "kerbRamps",
+      "geometry": {"type": "point", "position": [1.42, 0.0, -671.98]},
+      "props": {"road": "丹桂路"},
+      "reason": "丹桂路的路缘坡道：路上所有步道接到路缘的地方（止于路缘的各一处，穿过车行道的两侧各一处）都铺一处缘石坡道，让行走时能顺坡上下路缘；坡道由街道家具逐处求出，间距不足、背后不是铺装的略去。几何点只是登记位置（路全长约中点），作用范围是 props.road 指的整条路。"
+    }
+  ]
+}

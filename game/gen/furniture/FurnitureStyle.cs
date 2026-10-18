@@ -1,4 +1,3 @@
-using System.Numerics;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Street;
@@ -28,22 +27,6 @@ public enum RoadTier
 /// gaps on a side; 0: none along the line.
 /// </summary>
 public sealed record TierRule(float LampSpacing, bool BothSides, bool DiscLamp, int RestEvery);
-
-/// <summary>
-/// A road with a designed feature of its own, by its name in the network (names are map data, never entity IDs): the rest
-/// <paramref name="Nodes"/> where its stops stand instead of along its line, and <see cref="KerbRamps"/> where its walks reach its kerb.
-/// </summary>
-public sealed record DesignedRoad(string Name, IReadOnlyList<RestNode>? Nodes = null)
-{
-    /// <summary>Kerb ramps where the road's walks reach its kerb (13c2b, Opus review 16:23: the osmanthus road's junctions).</summary>
-    public bool KerbRamps { get; init; }
-}
-
-/// <summary>
-/// A rest node of a road (Opus review 16:23): a place on the map (a plaza edge, a junction) where the road's rest stops stand, instead
-/// of along its line. <paramref name="At"/> is its plan position in map metres, <paramref name="Label"/> the name its diagnostics use.
-/// </summary>
-public sealed record RestNode(string Label, Vector2 At);
 
 /// <summary>
 /// Every tunable value of the WP-13 placement in one place (WF-FLOW): which roads, spacings, offsets from the kerb, the
@@ -92,13 +75,12 @@ public static class FurnitureStyle
     public const int RestBinEvery = 2;
 
     /// <summary>
-    /// Roads with a feature of their own. The osmanthus road keeps no benches along its walks (Opus review 16:23): its stops are at its two
-    /// nodes, where the walks end: the pedestrian plaza at the west end (where the west-south walk runs into it) and the south mouth junction.
+    /// A road with a feature of its own gets it from the map's overlay (the road named by the feature's <c>road</c> prop): a
+    /// <see cref="RestNodeKind"/> point is a place where the road's rest stops stand, instead of along its line (the road then has
+    /// none along it); a <see cref="KerbRampsKind"/> feature gives it kerb ramps where its walks reach its kerb.
     /// </summary>
-    public static IReadOnlyList<DesignedRoad> DesignedRoads { get; } = Array.AsReadOnly<DesignedRoad>(
-    [
-        new("丹桂路", [new("west plaza", new(-99.8f, -442.7f)), new("south mouth", new(69.9f, -833.1f))]) { KerbRamps = true },
-    ]);
+    public const string RestNodeKind = "restNode";
+    public const string KerbRampsKind = "kerbRamps";
 
     // ---- Kerb ramps (13c2b): where a walk reaches a ramped road's kerb, at its end or where it crosses ----
     public static RampParams KerbRamp { get; } = new(1.5f, 0.15f, 1.05f);
@@ -237,7 +219,7 @@ public static class FurnitureStyle
     /// <summary>Benches and bins keep this far off any carriageway's edge, out of the green strip between the kerb and the trees.</summary>
     public const float RoadSetback = 3f;
     /// <summary>
-    /// A road's rest node (<see cref="RestNode"/>) takes up to this many benches, on the pedestrian paving within this reach of it, the
+    /// A road's rest node (<see cref="RestNodeKind"/>) takes up to this many benches, on the pedestrian paving within this reach of it, the
     /// spots sampled every <see cref="NodeStep"/> and the benches at least <see cref="NodeBenchGap"/> apart. The rules are the walk benches'.
     /// </summary>
     public const int NodeBenches = 2;

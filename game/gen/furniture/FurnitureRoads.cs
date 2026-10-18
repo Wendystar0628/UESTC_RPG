@@ -7,8 +7,15 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 
 namespace Campus.Gen.Furniture;
 
-/// <summary>The network lines of one tier and one name that get lamps and rest stops by one <see cref="TierRule"/>, with the feature of their own that <see cref="FurnitureStyle.DesignedRoads"/> gives them, if any. <paramref name="Key"/> names them in item keys.</summary>
-internal sealed record RoadGroup(string Key, RoadTier Tier, string? Name, IReadOnlyList<NetworkLine> Lines, DesignedRoad? Designed);
+/// <summary>
+/// The network lines of one tier and one name that get lamps and rest stops by one <see cref="TierRule"/>, with the features of their own the
+/// map's overlay gives that road (<see cref="FurnitureStyle.RestNodeKind"/>, <see cref="FurnitureStyle.KerbRampsKind"/>), if any.
+/// <paramref name="Key"/> names them in item keys. <paramref name="Nodes"/> are the places where its rest stops stand instead of along its line.
+/// </summary>
+internal sealed record RoadGroup(string Key, RoadTier Tier, string? Name, IReadOnlyList<NetworkLine> Lines, IReadOnlyList<RestNode> Nodes, bool KerbRamps);
+
+/// <summary>A rest node of a road: a place on the map (a plaza edge, a junction) where the road's rest stops stand. <paramref name="At"/> is its plan position in map metres.</summary>
+internal sealed record RestNode(FeatureId Id, Vector2 At);
 
 public static partial class FurniturePlanner
 {
@@ -20,9 +27,16 @@ public static partial class FurniturePlanner
     /// The roads that get lamps, grouped: the network lines of one tier (<see cref="FurnitureStyle.TierOf"/>, by each line's own road
     /// class) and one name (the unnamed ones of a tier make one group), in tier then name order, so a group's key is stable for one map.
     /// A line under cover stays out. A road the planting rules give <see cref="FurnitureStyle.AvenueRows"/> offsets is tree-lined, the avenue.
+    /// A road's own features come from the world's overlay features that name it in their <c>road</c> prop, nodes in ID order.
     /// </summary>
-    internal static IReadOnlyList<RoadGroup> RoadGroups(IWorldModel world, IReadOnlyList<RoadRows> rows, IReadOnlyList<DesignedRoad> designed)
+    internal static IReadOnlyList<RoadGroup> RoadGroups(IWorldModel world, IReadOnlyList<RoadRows> rows)
     {
+        var nodes = world.Features.Values.Where(f => f.Kind.Value == S.RestNodeKind && f.Geometry is PointGeometry)
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+            .Select(f => (Road: WorldProps.TryText(f.Props, "road"), Node: new RestNode(f.Id, new(((PointGeometry)f.Geometry).Position.X, ((PointGeometry)f.Geometry).Position.Z))))
+            .Where(n => n.Road is not null).ToLookup(n => n.Road!, n => n.Node, StringComparer.Ordinal);
+        var ramped = world.Features.Values.Where(f => f.Kind.Value == S.KerbRampsKind)
+            .Select(f => WorldProps.TryText(f.Props, "road")).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var treeLined = rows.Where(r => r.Offsets.Count >= S.AvenueRows).Select(r => r.Name).ToHashSet(StringComparer.Ordinal);
         var graded = world.Network.Roads
             .Where(l => l.Line.Points.Count >= 2 && !StreetSite.Covered(l))
@@ -39,7 +53,7 @@ public static partial class FurniturePlanner
             inTier[g.Key.Tier] = index + 1;
             var name = g.Key.Name.Length > 0 ? g.Key.Name : null;
             groups.Add(new($"{g.Key.Tier}{Num(index)}", g.Key.Tier, name, [.. g.Select(t => t.Line).OrderBy(l => l.Id.Value, StringComparer.Ordinal)],
-                name is null ? null : designed.FirstOrDefault(d => d.Name == name)));
+                name is null ? [] : [.. nodes[name]], name is not null && ramped.Contains(name)));
         }
         return groups.AsReadOnly();
     }
@@ -50,7 +64,7 @@ public static partial class FurniturePlanner
         var half = group.Lines.Max(StreetSite.HalfWidth);
         var spacing = rule.LampSpacing;
         var lamp = rule.DiscLamp ? S.MainLamp : S.SecondaryLamp;
-        var nodes = group.Designed?.Nodes;
+        var nodes = group.Nodes;
         var chains = StreetSite.Chains(group.Lines);
         for (var c = 0; c < chains.Count; c++)
         {
@@ -65,7 +79,7 @@ public static partial class FurniturePlanner
                     PlaceLamp(site, items, run, s0 + k * spacing, side, half, lamp, $"lamp:{group.Key}:{Num(c)}:{Side(side)}:{Num(k)}");
             // Rest stops: every RestEvery lamp gaps on a side; two lit sides alternate, a one-sided road's sit opposite its lamps.
             // A road with rest nodes (Opus review 16:23) has none along its line: its stops are at the nodes.
-            float[] restSides = nodes is not null || rule.RestEvery == 0 ? [] : rule.BothSides ? [1f, -1f] : [-lampSides[0]];
+            float[] restSides = nodes.Count > 0 || rule.RestEvery == 0 ? [] : rule.BothSides ? [1f, -1f] : [-lampSides[0]];
             foreach (var side in restSides)
             {
                 var phase = rule.BothSides && side < 0f ? rule.RestEvery / 2 : 0;
@@ -81,7 +95,7 @@ public static partial class FurniturePlanner
                 }
             }
         }
-        if (nodes is not null) NodeStops(site, items, diagnostics, group.Key, group.Name!, nodes);
+        if (nodes.Count > 0) NodeStops(site, items, diagnostics, group.Key, group.Name!, nodes);
     }
 
     /// <summary>
@@ -139,7 +153,7 @@ public static partial class FurniturePlanner
                 Seat(bench);
             }
             if (placed.Count == 0)
-                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.node.no-bench", $"road {road} node {node.Label} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
+                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.node.no-bench", $"road {road} node {node.Id.Value} has no bench: {plaza.Count} plaza edge spots within {Num(S.NodePlazaReach)} m and {candidates.Count} paving edge spots within {Num(S.NodeReach)} m, " +
                     (why.Count == 0 ? "none of them on pedestrian paving" : string.Join(", ", why.Select(w => $"{w.Value} {w.Key}")))));
         }
     }

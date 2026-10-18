@@ -40,7 +40,7 @@ internal static class FurnitureTestSupport
 
     /// <summary>The real map's road groups (lamps and rest stops by class), as the planner forms them from the real planting rules.</summary>
     internal static readonly Lazy<IReadOnlyList<RoadGroup>> Groups = new(() =>
-        FurniturePlanner.RoadGroups(World.Value, PlantingRows.Resolve(Inputs()).Roads, FurnitureStyle.DesignedRoads));
+        FurniturePlanner.RoadGroups(World.Value, PlantingRows.Resolve(Inputs()).Roads));
 
     /// <summary>The avenue's group: the one tree-lined road the planting rules give a row and a band.</summary>
     internal static RoadGroup Avenue => Groups.Value.Single(g => g.Tier == RoadTier.Avenue);

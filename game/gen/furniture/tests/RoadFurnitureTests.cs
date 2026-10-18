@@ -43,8 +43,8 @@ public sealed class RoadFurnitureTests
             AssertThat(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal).OverrideFailureMessage($"{car.Key}: one Metal box (WLD-LIFE)").IsTrue();
             AssertThat(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit")).OverrideFailureMessage($"{car.Key} is not in a car body colour").IsTrue();
         }
-        // Kerb ramps on the osmanthus road where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
-        var ramped = Groups.Value.First(g => g.Designed is { KerbRamps: true });
+        // Kerb ramps on the road the overlay gives them, where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
+        var ramped = Groups.Value.First(g => g.KerbRamps);
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
         AssertThat(ramps.All(r => r.Key.StartsWith($"ramp:{ramped.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("a kerb ramp on another road").IsTrue();
         var road = ramped.Lines.Where(StreetSite.Carriageway).ToList();

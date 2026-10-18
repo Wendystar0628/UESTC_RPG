@@ -21,6 +21,7 @@ using static GdUnit4.Assertions;
 public sealed class AnchorFacingTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
     {
         // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
@@ -57,6 +58,7 @@ public sealed class AnchorFacingTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AnchorsAndEntrancesFaceTheirData()
     {
         var world = World.Value;
