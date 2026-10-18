@@ -80,7 +80,7 @@ gates: []
 
 `docs/godot-api/` 是 Godot 4.7.2 C# API 参考。冲突怎么判见 WF-DOC §6。
 
-**常用脚本**：`python -I -X utf8 scripts/docs/doc_size.py --over` 列出超体量上限的文档；`scripts/build/clean_artifacts.py` 列出可删的一次性产物（加 `--delete` 删）；改完文档跑 `scripts/docs/gen_index.py` 和 `check_docs.py`。任务结束时跑前两个，超限的就地处理（WF-DOC §5、WF-RULE §13）。
+**常用脚本**：`python -I -X utf8 scripts/docs/doc_size.py --over` 列出超体量上限的文档；`scripts/build/clean_artifacts.py` 列出可删的一次性产物（加 `--delete` 删）；改完文档跑 `scripts/docs/gen_index.py` 和 `check_docs.py`。任务结束时跑前两个，超限的就地处理（WF-DOC §5、WF-RULE §13）。作者观察台（作者了解项目的入口）用 `dashboard/打开观察台.cmd` 打开，改了高层信息用 `dashboard/tools/post.py` 更新（WF-COMMS §6）。
 
 ## 2 作品与范围
 

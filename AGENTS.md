@@ -4,3 +4,4 @@
 
 - **钩子注入**：核心准则 CORE-INDEX §0、文档地图 CORE-INDEX §1 和本角色的入口卡（WF-ENTRY）。没出现就手动读这两节，以及 WF-ENTRY 里自己那一节。
 - **查资料**：先在 CORE-INDEX §1 找到域和文档，读那份文档的 §0 与接入要点；要细节时 grep `docs/SECTIONS.md`，按行号只读那一节，不整份通读。
+- **观察台**：改了高层信息，用 `dashboard/tools/post.py` 更新作者观察台（WF-COMMS §6）。

@@ -1,0 +1,61 @@
+/* 模型页。令牌：--surface --surface-2 --text(-2,-3) --line --claude --codex --auto --ok --risk */
+.mdl { display: flex; flex-direction: column; gap: 0.5rem; }
+.mdl .status { margin-bottom: 1rem; }
+.mdl-lock { color: var(--text-2); }
+.mdl-lock.is-held { color: var(--auto); font-weight: 600; }
+.mdl-h { margin: 1.5rem 0 0.5rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
+
+.mdl-tree { display: flex; flex-direction: column; gap: 0.75rem; }
+.mdl-group { background: var(--surface-2); border: 1px solid var(--line-2); border-left: 3px solid var(--text-3); border-radius: 6px; padding: 0.25rem 0; }
+.mdl-group--claude { border-left-color: var(--claude); }
+.mdl-group--codex { border-left-color: var(--codex); }
+
+.mdl-row, .mdl-script {
+  display: grid; align-items: center; gap: 0.6rem;
+  grid-template-columns: 0.6rem 9rem auto 1fr auto;
+  padding: 0.45rem 0.9rem; min-height: 2.1rem;
+}
+.mdl-row.is-nested { padding-left: 2rem; grid-template-columns: 0.6rem calc(9rem - 1.1rem) auto 1fr auto; }
+.mdl-row.is-nested + .mdl-row.is-nested { border-top: 1px solid var(--line); }
+.mdl-row.is-done, .mdl-row.is-idle { color: var(--text-2); }
+.mdl-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mdl-row.is-nested .mdl-name { font-weight: 500; }
+.mdl-sigs { display: inline-flex; gap: 0.3rem; flex-wrap: wrap; }
+.mdl-task { color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdl-when { color: var(--text-3); font-size: 0.85rem; white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; }
+.mdl-orphan { padding: 0.35rem 0.9rem; color: var(--text-3); font-size: 0.85rem; }
+
+.mdl-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--text-3); box-sizing: border-box; }
+.mdl-dot--running { background: var(--ok); }
+.mdl-dot--idle { background: var(--text-3); opacity: 0.6; }
+.mdl-dot--done { background: transparent; border: 1.5px solid var(--text-3); }
+.mdl-dot--held { background: var(--auto); }
+
+.mdl-fold {
+  display: flex; align-items: center; gap: 0.4rem; width: 100%;
+  background: none; border: 0; border-top: 1px solid var(--line); cursor: pointer;
+  padding: 0.4rem 0.9rem 0.4rem 2rem; color: var(--text-3); font: inherit; font-size: 0.85rem; text-align: left;
+}
+.mdl-fold:hover { color: var(--text); }
+.mdl-caret { width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.15s; }
+.mdl-done.is-open .mdl-caret { transform: rotate(90deg); }
+.mdl-done-list { display: none; }
+.mdl-done.is-open .mdl-done-list { display: block; }
+
+.mdl-scripts { background: var(--surface-2); border: 1px solid var(--line-2); border-left: 3px solid var(--auto); border-radius: 6px; padding: 0.25rem 0; }
+.mdl-script + .mdl-script { border-top: 1px solid var(--line); }
+.mdl-script { grid-template-columns: 0.6rem 9rem 3rem 1fr auto; }
+.mdl-script.is-held { background: var(--surface-2); }
+.mdl-script.is-held .mdl-task { color: var(--auto); font-weight: 600; }
+.mdl-script.is-idle .mdl-name { color: var(--text-2); font-weight: 500; }
+.mdl-kind { color: var(--text-3); font-size: 0.8rem; }
+
+@media (max-width: 640px) {
+  .mdl-row, .mdl-script { grid-template-columns: 0.6rem 1fr auto; row-gap: 0.15rem; }
+  .mdl-sigs { grid-column: 2; grid-row: 2; }
+  .mdl-task { grid-column: 2 / 4; grid-row: 3; white-space: normal; }
+  .mdl-script .mdl-kind { display: none; }
+  .mdl-script .mdl-task { grid-column: 2 / 4; grid-row: 2; }
+  .mdl-row.is-nested { padding-left: 1.2rem; grid-template-columns: 0.6rem 1fr auto; }
+  .mdl-fold { padding-left: 1.2rem; }
+}

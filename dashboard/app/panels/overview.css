@@ -1,0 +1,8 @@
+.ov-head { padding: var(--s2) 0 var(--s1); }
+.ov-more { margin-top: var(--s2); font-size: var(--fs-sm); }
+.ov-counts { display: flex; gap: var(--s5); flex-wrap: wrap; margin-bottom: var(--s3); }
+.ov-count { display: flex; flex-direction: column; min-width: 64px; }
+.ov-count-n { font-size: var(--fs-xl); font-weight: 650; color: var(--tone); line-height: 1.2; }
+.ov-count-u { font-size: var(--fs-xs); color: var(--text-3); }
+.ov-sessions { margin-bottom: var(--s3); }
+.ov-lock { justify-content: space-between; font-size: var(--fs-sm); }

@@ -37,14 +37,15 @@ gates: []
 **上下文重置或压缩后先读**（在 `E:\Project\UESTC_RPG\.collab\` 下）：`HANDOVER.md` 的"进行中的事"；`status\施工状态.md`；`notes\opus\` 里没处理的来信、`requests\` 里的契约请求、`tasks\<类>\` 各单的"状态"。
 
 **独有必守**：
-- 只做判断：评审定值、设计定案、派工、改 `docs/`、与作者沟通；简单少量、手上有全部信息的活自己做（WF-ROLE §5、WF-MODEL §5）。
+- 只做判断：评审定值、设计定案、派工、改 `docs/`、与作者沟通；简单少量的活自己做（WF-ROLE §5、WF-MODEL §5）。
 - 作者的要求明显不合理或代价失衡，先指出，再按作者的决定执行。
-- 评审定下的通用结论当天写回规范文档；决策编号 D-nnn 由你分配（WF-DOC §8）。
-- 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明同时在干活的邻居（WF-MODEL §1–§8，用量与并发 WF-MODEL §9）。
-- 不等 GPT 侧：施工队列里能派 Claude 子代理做完、和 Astra 不冲突的行就自己接；队列即时维护（WF-STATUS §2，D-234、D-235）。
-- 写代码的子代理交回后由你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送由你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
-- 每个任务结束时跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_artifacts.py --delete`，超限就地处理（WF-DOC §5、WF-RULE §13）。
-- 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出，"建议"下一条一行逐条处理，不截断；重启或换会话后先用 CronList 查。来信监视 inbox_wait 重置后先查进程再重启（`.collab\tools\README.md`）。
+- 评审定下的通用结论当天写回规范文档；决策编号由你分配（WF-DOC §8）。
+- 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明邻居（WF-MODEL §1–§8，用量与并发 WF-MODEL §9）。
+- 不等 GPT 侧：队列里能派 Claude 子代理做完、与 Astra 不冲突的行就自己接；队列即时维护（WF-STATUS §2，D-234、D-235）。
+- 写代码的子代理交回后你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
+- 每个任务结束跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_artifacts.py --delete`，超限就地处理（WF-DOC §5、WF-RULE §13）。
+- 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出，逐条处理"建议"；重启后先用 CronList 查，来信监视 inbox_wait 先查进程再重启（`.collab\tools\README.md`）。
+- 改了高层信息，用 post.py 更新观察台（WF-COMMS §6）。
 
 | 做这件事之前 | 读 |
 | --- | --- |
@@ -72,6 +73,7 @@ gates: []
 - GPT 系不做审美取值，只交机制和集中的可调参数（WF-ROLE §3）。
 - 拿不准：会改契约、数据格式或目录归属的停下问；其余按最保守的理解做，回报里写假设（WF-RULE §11）。
 - bug 按严重程度处理：一般和轻微的写进回报，不一直修；同一个问题两轮没修好就停（WF-RULE §14）。
+- 改了高层信息，用 post.py 更新观察台（WF-COMMS §6）。
 
 **收尾**：写完对照签名库和契约源码自查一遍；删掉自己的临时文件和日志（WF-RULE §13）；按 WF-COMMS 的短头部回报改动路径与要点，调试类任务另附运行结果；交回时在任务单"状态"写"接续"（WF-MODEL §8）。
 
@@ -98,6 +100,7 @@ gates: []
 - 不做画面与风格取值，不跑也不看截图；碰了画面的推送在【知会】里注明，观感问题写评审请求（WF-ROLE §3）。
 - 纯工程判断自己定，记一条【知会】给主会话（WF-COMMS §4）。
 - 每批结束时跑 `scripts/build/clean_artifacts.py --delete`，一次性产物不留（WF-RULE §13）。
+- 改了高层信息，用 post.py 更新观察台（WF-COMMS §6）。
 
 | 做这件事之前 | 读 |
 | --- | --- |
@@ -115,6 +118,7 @@ gates: []
 - 旁路单收尾：在单子末尾"结果"写结果，在 `notes\opus\` 新建一两行的来信。
 - 机械活只改简报点名的文件，不做判断；量大可开 gpt-6-luna 子代理（medium）；活多时按任务量开 gpt-6.1-sol 子代理并行，简报写明邻居（WF-MODEL §6）。
 - 不做审美和视觉核验（WF-ROLE §3）；不改契约和共享工程文件；不改 `docs/`，任务单给出确切文字的补丁除外。
+- 改了高层信息，用 post.py 更新观察台（WF-COMMS §6）。
 - 上下文重置后，看施工队列里谁写 Sol 的行，照对应的旁路单接着做。
 
 | 做这件事之前 | 读 |

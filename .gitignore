@@ -29,3 +29,6 @@ output/
 
 # CSV 翻译导入时由引擎生成
 *.translation
+
+# 作者观察台的本地数据（采集脚本与发布工具生成）
+/dashboard/data/
