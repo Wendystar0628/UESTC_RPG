@@ -5,6 +5,7 @@ using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
 using Campus.Gen.World;
 using S = Campus.Gen.Zones.Core.CoreStyle;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.Core.Annex;
 
@@ -68,7 +69,7 @@ public sealed class AnnexSite
             if (!world.Features.TryGetValue(cover, out var f)) continue;
             var pad = world.Terrain.PadY(cover);
             var height = f.Height is > 0.5f and var h ? h : (f.Storeys ?? 2) * 3.5f;
-            blocks.AddRange(Plan.Polygons(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, LibraryPlan.Ccw(r.Outer), pad - S.WallBelowPad, pad + height)));
+            blocks.AddRange(Plan.Polygons(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, LibraryPlan.Ccw(r.Outer), pad - FacadeRules.WallBelowPad, pad + height)));
         }
         return new AnnexSite(blocks, LibraryPlan.Exterior(blocks), annexes);
     }

@@ -5,6 +5,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Core.Framework;
 using S = Campus.Gen.Zones.Core.CoreStyle;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.Core.Library;
 
@@ -61,13 +62,13 @@ public sealed class LibraryPlan
         Centre = centre;
         FaceAngle = faceAngle;
         Landing = landing;
-        CafeFace = store is null ? null : CafeFaceBeside(pieces, store, PadY + S.FloorAbovePad);
+        CafeFace = store is null ? null : CafeFaceBeside(pieces, store, PadY + FacadeRules.FloorAbovePad);
     }
 
     public float PadY { get; }
-    public float FloorY => PadY + S.FloorAbovePad;
-    public float WallBaseY => PadY - S.WallBelowPad;
-    public float PlinthTopY => PadY + S.PlinthTop;
+    public float FloorY => PadY + FacadeRules.FloorAbovePad;
+    public float WallBaseY => PadY - FacadeRules.WallBelowPad;
+    public float PlinthTopY => PadY + FacadeRules.PlinthTop;
     public IReadOnlyList<Block> Blocks { get; }
     public IReadOnlyList<WallPiece> Pieces { get; }
     /// <summary>Centre of the octagon (the core's centroid): the skylight apex stands above it.</summary>
@@ -105,8 +106,8 @@ public sealed class LibraryPlan
             .ToDictionary(g => g.Key, g => g.SelectMany(p => Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(p))).Select(r => Ccw(r.Outer)).ToArray(), StringComparer.Ordinal);
         if (!parts.TryGetValue(CoreFeatures.LibraryCore, out var cores) || cores.Length != 1) return null;
         var padY = world.Terrain.PadY(CoreFeatures.Library);
-        var floor = padY + S.FloorAbovePad;
-        var wallBase = padY - S.WallBelowPad;
+        var floor = padY + FacadeRules.FloorAbovePad;
+        var wallBase = padY - FacadeRules.WallBelowPad;
         float Storey(int k)
         {
             var y = floor;

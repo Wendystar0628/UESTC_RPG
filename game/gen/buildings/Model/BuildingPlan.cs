@@ -39,11 +39,6 @@ public sealed class BuildingPlan
 {
     public const float TileSize = 64f;
     public const float WallChamfer = 0.035f;
-    public const float SinkDepth = 0.3f;
-    /// <summary>D-180: the plinth top is a level line 0.6 m above the pad; terrain makes 0.3-0.9 m of it visible.</summary>
-    public const float PlinthTop = 0.6f;
-    /// <summary>D-180: ground-floor level (and entrance threshold) above the pad.</summary>
-    public const float FloorLevel = 0.15f;
 
     public required FeatureId Id { get; init; }
     /// <summary>Stable key of this part inside the entity (the entity ID itself when it has a single footprint).</summary>
@@ -122,10 +117,10 @@ public sealed class BuildingPlan
     public int RingCount => 1 + Holes.Count;
 
     public float RoofY => BaseY + Height;
-    public float SunkY => BaseY - SinkDepth;
-    public float PlinthTopY => BaseY + PlinthTop;
+    public float SunkY => BaseY - FacadeRules.WallBelowPad;
+    public float PlinthTopY => BaseY + FacadeRules.PlinthTop;
     /// <summary>Floor level of storey k; storey 0 is the ground floor at pad + 0.15 m.</summary>
-    public float FloorY(int k) => BaseY + FloorLevel + k * StoreyHeight;
+    public float FloorY(int k) => BaseY + FacadeRules.FloorAbovePad + k * StoreyHeight;
     public float CorniceDrop => Small ? 0.3f : 0.5f;
     public float ParapetRise => Small ? 0.45f : 0.8f;
 

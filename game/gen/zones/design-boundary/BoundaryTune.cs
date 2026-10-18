@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.DesignBoundary;
 
@@ -94,7 +95,7 @@ public static class BoundaryTune
         public const float FlapHeight = 0.55f, FlapBase = 0.38f;
         /// <summary>Guard house (值班室): flat-roofed grey stone room closing the line beyond the turnstiles.</summary>
         public const float HouseGap = 0.07f, HouseWidth = 4.0f, HouseDepth = 3.4f, HouseHeight = 3.3f, HouseFront = -0.1f;
-        public const float HousePlinth = 0.45f, HouseRoof = 0.34f, HouseEave = 0.4f, WindowSill = 1.0f, WindowHead = 2.5f;
+        public const float HousePlinth = FacadeRules.HutPlinth, HouseRoof = 0.34f, HouseEave = 0.4f, WindowSill = FacadeRules.HutWindowSill, WindowHead = 2.5f;
     }
 
     /// <summary>

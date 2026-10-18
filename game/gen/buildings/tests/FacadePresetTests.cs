@@ -102,7 +102,7 @@ public sealed class FacadePresetTests
         ("dorm.master.creamCoffeeWhite", 0.55f, 1.80f, 0.80f, 0.90f, "glass", "wall.creamCoffee", "wall", "wall", "opening.window.casement"),
     ];
 
-    /// <summary>The three annex presets of the north zone (WP-20 DormPresets.json, WLD-INTERIORS) with the family each one lives in.</summary>
+    /// <summary>The three annex presets of the north zone (WP-20, WLD-INTERIORS) with the family each one lives in.</summary>
     private static readonly (string Key, string Family, Rules.BuildingStyle Style, float Glazing, float WindowHeight, float Sill, float GroundSill, string Frame, string Trim, string Window)[] AnnexTable =
     [
         ("annex.service.creamCoffee", "service", Rules.BuildingStyle.Service, 0.60f, 2.00f, 0.90f, 0.90f, "wall.creamCoffee", "wall", "opening.window.casement"),

@@ -111,10 +111,10 @@ public static class BuildingPlanner
         var (sill, head) = PlanFacades.StoreyRows(profile, baseY, wallTopRel, storeys, hs);
 
         // Entrance threshold = ground-floor level (D-180); the plinth is cut at the door, a landing sits in front.
-        var threshold = baseY + BuildingPlan.FloorLevel;
+        var threshold = baseY + FacadeRules.FloorAbovePad;
         var doorHead = threshold + Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
         var canopy = doorHead + 0.25f;
-        if (small) { doorHead = threshold + Math.Clamp(height - BuildingPlan.FloorLevel - 0.5f, 1.9f, 2.2f); canopy = doorHead + 0.15f; }
+        if (small) { doorHead = threshold + Math.Clamp(height - FacadeRules.FloorAbovePad - 0.5f, 1.9f, 2.2f); canopy = doorHead + 0.15f; }
 
         var longest = 0;
         for (var i = 1; i < outer.Count; i++) if (outer.Length[i] > outer.Length[longest]) longest = i;
@@ -125,8 +125,8 @@ public static class BuildingPlanner
         var uRange = PlanFacades.OpeningRanges(facades, skins);
 
         // Doors at the interior index's anchors replace the generic door; its column keeps its windows.
-        var doorRise = small ? Math.Clamp(height - BuildingPlan.FloorLevel - 0.5f, 1.9f, 2.2f) : Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
-        var anchors = PlanEntrances.AnchorDoors(world, feature, rings, facades, uRange, k => baseY + BuildingPlan.FloorLevel + k * hs, storeys,
+        var doorRise = small ? Math.Clamp(height - FacadeRules.FloorAbovePad - 0.5f, 1.9f, 2.2f) : Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
+        var anchors = PlanEntrances.AnchorDoors(world, feature, rings, facades, uRange, k => baseY + FacadeRules.FloorAbovePad + k * hs, storeys,
             baseY + wallTopRel, doorRise);
         if (anchors.Count > 0 && entranceFacade >= 0)
         {
@@ -202,7 +202,7 @@ public static class BuildingPlanner
         var storeys = src.Storeys is > 0 and var s0 ? s0 : Math.Max(1, (int)MathF.Round(height / profile.StoreyHeight));
         storeys = Math.Clamp(storeys, 1, 40);
         if (height / storeys < 2.6f) storeys = Math.Max(1, (int)MathF.Floor(height / 2.6f));
-        return (height, storeys, (height - BuildingPlan.FloorLevel) / storeys);
+        return (height, storeys, (height - FacadeRules.FloorAbovePad) / storeys);
     }
 
     /// <summary>The wall-skin rings; when any ring cannot be offset, the skin falls back to the footprint itself.</summary>

@@ -18,11 +18,6 @@ public static partial class CoreStyle
     /// <summary>Solids continue this far below the surface they stand on, so draping never opens a gap.</summary>
     public const float Sink = 0.1f;
 
-    // ---- Building datum (WLD-TERRAIN) ----
-    public const float FloorAbovePad = 0.15f;
-    public const float WallBelowPad = 0.3f;
-    public const float PlinthTop = 0.6f;
-
     // ---- Time plaza (MAP-QSH-CORE, MAP-QSH-TERRAIN) ----
     /// <summary>Axis bearing used only if the library stair feature is missing (P02 looks along 307°).</summary>
     public const float AxisBearingFallback = 307.5f;

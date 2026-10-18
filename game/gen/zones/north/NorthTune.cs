@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.North;
 
@@ -121,7 +122,7 @@ public static class NorthTune
         public const float BarrierCabinet = 0.36f, BarrierHeight = 1.05f, ArmY = 0.95f, ArmDepth = 0.07f, ArmHeight = 0.1f;
         /// <summary>Guard house (值班室): small flat-roofed room straddling the fence line, window toward the turnstiles.</summary>
         public const float HouseWidth = 3.4f, HouseDepth = 3.0f, HouseHeight = 3.0f, HouseOut = 0.6f, HouseGap = 0.35f;
-        public const float HousePlinth = 0.45f, HouseRoof = 0.3f, HouseEave = 0.35f;
+        public const float HousePlinth = FacadeRules.HutPlinth, HouseRoof = 0.3f, HouseEave = 0.35f;
         /// <summary>Footway crossings get a closed steel side gate between two piers.</summary>
         public const float SideGateHeight = 2.0f, PierSize = 0.3f;
         /// <summary>Footways narrower than this are side gates; wider roads get the vehicle gate.</summary>

@@ -96,6 +96,21 @@ public sealed record FacadeProfile(
 
 public static class FacadeRules
 {
+    // ---- Building datum (WLD-TERRAIN, D-180): every building, generic or zone-built, stands on its pad the same way ----
+    /// <summary>Ground-floor level (and entrance threshold) above the pad.</summary>
+    public const float FloorAbovePad = 0.15f;
+    /// <summary>Walls start this far below the pad, so the apron's small fall never opens a gap.</summary>
+    public const float WallBelowPad = 0.3f;
+    /// <summary>The plinth (勒脚) top is a level line this far above the pad; terrain makes 0.3-0.9 m of it visible.</summary>
+    public const float PlinthTop = 0.6f;
+
+    // ---- Small stone huts (guard houses and the like): the plinth and the window sill every hut shares ----
+    public const float HutPlinth = 0.45f;
+    public const float HutWindowSill = 1.0f;
+
+    /// <summary>The research family's storey height; landmark glass boxes that stand beside research blocks count their floors in it.</summary>
+    public const float ResearchStorey = 4.2f;
+
     // Dormitory variants by cluster: warm white with pink-sand spandrels, or warm yellow with brown spandrels.
     private static readonly FacadeProfile DormA = new(BuildingStyle.Dormitory, 3.3f, 3.6f, 0.5f, 1.7f, 1.0f, 1.0f, RoofEdge.Parapet,
         Families.WallWarmWhite, Families.WallGreyWhite, Families.BaseWarmBrown, Families.RoofGrey, Families.PanelPinkSand, LightSlots.Dorm, WindowCard.Dorm)
@@ -106,7 +121,7 @@ public static class FacadeRules
         Families.WallGreyWhite, Families.StoneBeige, Families.RoofGrey, Families.RoofGrey, null, LightSlots.Teach, WindowCard.Classroom)
     { PilasterEvery = 3, Transom = true, CardMix = [(WindowCard.Classroom, 8), (WindowCard.Office, 1), (WindowCard.Lecture, 1)] };
 
-    private static readonly FacadeProfile Research = new(BuildingStyle.Research, 4.2f, 3.9f, 0.62f, 2.1f, 0.85f, 1.0f, RoofEdge.Cornice,
+    private static readonly FacadeProfile Research = new(BuildingStyle.Research, ResearchStorey, 3.9f, 0.62f, 2.1f, 0.85f, 1.0f, RoofEdge.Cornice,
         Families.StoneBeige, Families.WallGreyWhite, Families.RoofGrey, Families.RoofGrey, null, LightSlots.Lab, WindowCard.Lab)
     { PilasterEvery = 2, CardMix = [(WindowCard.Lab, 7), (WindowCard.Office, 3)] };
 

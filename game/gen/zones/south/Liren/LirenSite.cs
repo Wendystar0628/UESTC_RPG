@@ -8,6 +8,7 @@ using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.South.SouthTune.Liren;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.South.Liren;
 
@@ -42,7 +43,7 @@ public sealed class LirenSite : ZoneSite
         GroundWindow = 2.3f,
         Sill = 0.9f,
         Window = 2.1f,
-        PlinthHeight = 0.6f,
+        PlinthHeight = FacadeRules.PlinthTop,
         Cornice = 0.6f,
         CorniceProjection = 0.34f,
         Parapet = T.Parapet,

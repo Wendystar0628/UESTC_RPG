@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.West;
 
@@ -255,11 +256,11 @@ public static class WestTune
         ];
 
         /// <summary>Glass box: width along the face, how far it stands out, and its height (two storeys of WP-14's 4.2 m research storey).</summary>
-        public const float GlassWidth = 7.2f, GlassDepth = 3.6f, GlassHeight = 8.4f;
+        public const float GlassWidth = 7.2f, GlassDepth = 3.6f, GlassHeight = 2 * FacadeRules.ResearchStorey;
         /// <summary>The white frame round it: member thickness, how far it stands proud of the glass, and the sign band on its head.</summary>
         public const float FrameMember = 0.65f, FrameProud = 0.55f, SignBand = 1.15f;
         /// <summary>Mullion pitch on the glass and the transom at the first-floor line.</summary>
-        public const float MullionPitch = 1.2f, Transom = 4.2f;
+        public const float MullionPitch = 1.2f, Transom = FacadeRules.ResearchStorey;
         public const float DoorWidth = 2.4f, DoorHeight = 2.7f;
         /// <summary>Granite landing in front of the box, 3 cm proud of WP-15's paving.</summary>
         public const float LandingDepth = 2.4f, PavingTop = 0.15f;

@@ -18,7 +18,7 @@ internal static class PlanFacades
         var head = new float[storeys];
         for (var k = 0; k < storeys; k++)
         {
-            var floor = baseY + BuildingPlan.FloorLevel + k * hs;
+            var floor = baseY + FacadeRules.FloorAbovePad + k * hs;
             float sillRel, win;
             if (hs > 6.5f)
             {
@@ -28,7 +28,7 @@ internal static class PlanFacades
             else
             {
                 // Ground-floor sills stay clear of the plinth line.
-                var minGround = BuildingPlan.PlinthTop - BuildingPlan.FloorLevel;
+                var minGround = FacadeRules.PlinthTop - FacadeRules.FloorAbovePad;
                 sillRel = k == 0 ? MathF.Max(profile.GroundSill, minGround + 0.3f) : profile.Sill;
                 if (hs - 0.55f - sillRel < 0.9f) sillRel = MathF.Max(k == 0 ? minGround + 0.2f : 0.5f, hs - 0.55f - 0.9f);
                 win = MathF.Min(profile.WindowHeight, hs - 0.55f - sillRel);

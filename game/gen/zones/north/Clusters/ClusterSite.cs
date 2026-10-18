@@ -10,6 +10,7 @@ using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
 using G = Campus.Gen.Zones.North.NorthTune.Gate;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.North.Clusters;
 
@@ -210,7 +211,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
     /// <summary>A window on a guard-house face: glass in an aluminium surround over a sill with a drip.</summary>
     private static void Window(SiteBuilder b, PlanFrame f, float x, float z, bool turned, int outward, float width, float y)
     {
-        float y0 = y + 1.0f, y1 = y + 2.4f, h = y1 - y0;
+        float y0 = y + FacadeRules.HutWindowSill, y1 = y + 2.4f, h = y1 - y0;
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);

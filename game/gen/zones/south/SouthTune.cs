@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.South;
 
@@ -160,9 +161,9 @@ public static class SouthTune
         public const float IslandRise = 0.15f;
 
         /// <summary>The guard house is 5.6 m square: its footprint is 6.0 × 6.2 m, but the house is drawn with a stone plinth and roof eave round it.</summary>
-        public const float HouseSize = 5.6f, HouseHeight = 3.4f, HousePlinth = 0.45f;
+        public const float HouseSize = 5.6f, HouseHeight = 3.4f, HousePlinth = FacadeRules.HutPlinth;
         public const float HouseRoof = 0.36f, HouseEave = 0.45f;
-        public const float HouseWindowSill = 1.0f, HouseWindowHead = 2.6f;
+        public const float HouseWindowSill = FacadeRules.HutWindowSill, HouseWindowHead = 2.6f;
 
         /// <summary>Stone pillars beside the carriageway, on the islands' street ends (初值).</summary>
         public const float PillarSize = 1.3f, PillarHeight = 6.4f, PillarZ = 1.6f;

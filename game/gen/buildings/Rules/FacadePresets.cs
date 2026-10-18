@@ -58,7 +58,7 @@ public static class FacadePresets
         Window = PartCatalog.CurtainWall,
     };
 
-    // 北区宿舍预设 (WP-20 DormPresets.json, MAP-QSH-NORTH). Every one names its frame, trims and accent outright:
+    // 北区宿舍预设 (WP-20, MAP-QSH-NORTH). Every one names its frame, trims and accent outright:
     // the dormitory family is one of two by cluster hash (DormA, DormB) and a preset has to cover both. Window cells, bays and
     // storeys stay the family's, so every window keeps its number (contract-29).
 
@@ -139,7 +139,7 @@ public static class FacadePresets
     /// </summary>
     public static readonly FacadeLook DormMasterCreamCoffeeWhite = Master("dorm.master.creamCoffeeWhite", Families.WallCreamCoffee, Families.WallWarmWhite, Families.WallWarmWhite);
 
-    // 博翰一组团附属 and 6735 (WP-20 DormPresets.json, WLD-INTERIORS). Not dormitories: the family (service, utility) stays the
+    // 博翰一组团附属 and 6735 (WP-20, WLD-INTERIORS). Not dormitories: the family (service, utility) stays the
     // zone pack's and keeps its own curtains, string courses and window cards. The accent is written out to keep the table whole,
     // though neither family paints it (AccentSpandrels is off there).
 
