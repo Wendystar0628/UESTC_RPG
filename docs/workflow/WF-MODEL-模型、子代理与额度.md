@@ -101,9 +101,9 @@ Opus 贵，只用在观感还没定的地方。
 
 **各方都适用**：一个包或子包一个子代理；同一时刻一个文件只有一个代理在写，简报写明邻居（WF-FLOW §2.1）；简报按 §8 模板写，入口由钩子注入（WF-ENTRY §2）；构建、import、烘焙、门禁和截图排队，一次一个（WF-BUILD §4）。
 
-**Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"` 并给 `name`；子代理的最终回复就是回报。开几个按任务量定，额度紧时少开（§9.1）。
+**Claude 侧**（主会话开）：用 Agent 工具在后台开，指定 `model: "opus"` 或 `"sonnet"`，`description` 以队列行号开头（如"Q-031 草地积水"），没有队列行的调研、核查以"调研""核查"开头，观察台按它把子代理对到在做的工作上；子代理的最终回复就是回报。开几个按任务量定，额度紧时少开（§9.1）。
 
-**Codex 侧**（Codex 主线）：用 `spawn_agent`（`task_name` 写包号，`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。开几个按任务量定（§9.1）；`~/.codex/config.toml` 里的上限是软件自身的硬限制，照它办。模型在开的时候指定：默认 gpt-6.1-sol，机械活 gpt-6-luna，临时审计 gpt-6-astra（WF-ROLE §6）。Codex 子代理和 Codex 主线共用工作目录，简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
+**Codex 侧**（Codex 主线）：用 `spawn_agent`（`task_name` 以队列行号开头（如 `q031_grass_puddles`），`message` 写完整简报）、`wait_agent`、`list_agents`、`send_input`。开几个按任务量定（§9.1）；`~/.codex/config.toml` 里的上限是软件自身的硬限制，照它办。模型在开的时候指定：默认 gpt-6.1-sol，机械活 gpt-6-luna，临时审计 gpt-6-astra（WF-ROLE §6）。Codex 子代理和 Codex 主线共用工作目录，简报里必须写明：只改点名的文件，读写用绝对路径，不碰邻居的文件，提交推送同 WF-RULE §7。
 
 ## 7 子代理的生命周期：默认新开，靠任务单交接
 
