@@ -7,14 +7,17 @@ namespace Campus.Kernel.Boot;
 public partial class Boot : Node
 {
     public static BootRunOptions Options { get; private set; } = BootArguments.Parse([], true);
+    internal static IReadOnlyList<FixedShot> FixedShots { get; private set; } = [];
     public static bool Failed { get; private set; }
     public override void _EnterTree()
     {
         GetTree().AutoAcceptQuit = false;
         Failed = false;
+        FixedShots = [];
         try
         {
-            Options = BootArguments.Parse(OS.GetCmdlineUserArgs(), OS.IsDebugBuild());
+            Options = BootArguments.Parse(OS.GetCmdlineUserArgs(), OS.IsDebugBuild(), out var fixedShots);
+            FixedShots = fixedShots;
         }
         catch (ArgumentException error) { Reject(error.Message); return; }
         var profile = Path.GetFileName(OS.GetUserDataDir().TrimEnd('/', '\\'));

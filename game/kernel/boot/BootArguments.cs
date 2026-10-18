@@ -42,7 +42,18 @@ public sealed class BootArguments
     private bool Has(string key) => _provided.Contains(key);
     private string Value(string key, string fallback = "") => _values.GetValueOrDefault(key, fallback);
 
-    public static BootRunOptions Parse(IEnumerable<string> args, bool development)
+    public static BootRunOptions Parse(IEnumerable<string> args, bool development) => Parse(args, development, out _);
+
+    internal static BootRunOptions Parse(IEnumerable<string> args, bool development, out IReadOnlyList<FixedShot> fixedShots)
+    {
+        var arguments = args.ToArray();
+        fixedShots = FixedShotPlan.Read(arguments, development);
+        if (fixedShots.Count == 0) return ParseSingle(arguments, development);
+        var first = fixedShots[0].Options;
+        return first with { Capture = first.Capture with { Shots = fixedShots.Select(shot => shot.Name).ToArray() } };
+    }
+
+    internal static BootRunOptions ParseSingle(IEnumerable<string> args, bool development)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var arg in args)

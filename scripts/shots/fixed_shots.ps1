@@ -1,7 +1,7 @@
-﻿# 固定机位截图：在主检出按 poses.txt 一个机位一个进程出图，拼一张缩略总览，看一眼就行，不做像素比对。
+﻿# 固定机位截图：一个 Godot 进程按 poses.txt 拍完所选机位，地图只加载一次，再拼一张缩略总览。
 # 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build]
 #   -Build：先 dotnet build 与 --headless --import（代码改过、还没编译时用）
-# 每个机位单独拿放构建锁（WF-BUILD §4），120 秒超时，不开声音。出图固定在主检出 output/shots/，每次运行覆盖上一轮，总览是 总览.jpg。
+# 整轮持有构建锁（WF-BUILD），不开声音；出图仍在主检出 output/shots/，覆盖上一轮，总览是 总览.jpg。
 param([string[]]$Only = @(), [switch]$Build)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -10,36 +10,30 @@ $layout = Get-UESTCLayout $repo
 $godot = Get-UESTCGodot
 $out = Join-Path $repo 'output\shots'
 $null = [IO.Directory]::CreateDirectory($out)
-# 每次覆盖上一轮：先清掉本目录里上一轮的截图、日志和总览，免得新旧画面混在一起
-Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in '.png', '.log', '.jpg' } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
-
-if ($Build) {
-    $lease = Enter-UESTCBuildLock $layout.Locks
-    try {
+$poses = Join-Path $PSScriptRoot 'poses.txt'
+$names = @(Get-Content -Encoding UTF8 $poses | Where-Object { $_.Trim() -and -not $_.TrimStart().StartsWith('#') } | ForEach-Object { ($_ -split '\s*\|\s*')[0].Trim() })
+if ($Only.Count) {
+    $Only = @($Only | ForEach-Object { $_ -split ',' })
+    foreach ($name in $Only) { if ($name -notin $names) { throw "未知固定机位：$name" } }
+    $names = @($names | Where-Object { $_ -in $Only })
+}
+$arguments = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
+    '--', "--shots-file=$poses", "--out=$out", '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1',
+    '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
+if ($Only.Count) { $arguments += "--shots=$($names -join ',')" }
+$lease = Enter-UESTCBuildLock $layout.Locks
+try {
+    # 拿到锁后清掉上一轮截图、日志和总览，整轮出图与拼图共用这把锁。
+    Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in '.png', '.log', '.jpg' } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+    if ($Build) {
         Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.sln", '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
         Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
-    } finally { Exit-UESTCBuildLock $lease }
-}
-
-$common = '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1', '--quality=fine',
-    '--map=qingshuihe', '--title=0', '--save=off', '--audio=off'
-# 第一个机位可能要重新烘焙（地图数据或代码改过后缓存失效），给 15 分钟；之后复用缓存，120 秒
-$timeout = 900
-foreach ($line in Get-Content -Encoding UTF8 (Join-Path $PSScriptRoot 'poses.txt')) {
-    if ($line.StartsWith('#') -or -not $line.Trim()) { continue }
-    $p = $line -split '\s*\|\s*'; $name = $p[0].Trim(); $pose = $p[1].Trim(); $extra = $p[2].Trim() -split '\s+'
-    if ($Only.Count -and $name -notin $Only) { continue }
-    $tmp = Join-Path $out "_$name"; $null = [IO.Directory]::CreateDirectory($tmp)
-    $args = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
-        '--', "--shots=$pose", "--out=$tmp", '--frames=300') + $extra + $common
-    $lease = Enter-UESTCBuildLock $layout.Locks
-    try { $r = Invoke-UESTCProcess $godot $args $repo (Join-Path $out "$name.log") -AllowFailure -Visible -TimeoutSeconds $timeout; $code = $r.ExitCode }
-    catch { $code = '超时' }
-    finally { Exit-UESTCBuildLock $lease }
-    $timeout = 120
-    $src = Join-Path $tmp "$pose.png"
-    if (Test-Path $src) { Move-Item -Force -LiteralPath $src -Destination (Join-Path $out "$name.png") }
-    Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
-    "{0}：{1}" -f $name, $(if (Test-Path (Join-Path $out "$name.png")) { '出图' } else { "没出图（$code，日志 $name.log）" })
-}
-& python -I -X utf8 (Join-Path $PSScriptRoot 'contact_sheet.py') $out
+    }
+    # 缓存失效时仍给首次烘焙留足时间；有缓存时按内容就绪抓取，不再先空跑 300 帧。
+    try { $r = Invoke-UESTCProcess $godot $arguments $repo (Join-Path $out 'capture.log') -AllowFailure -Visible -TimeoutSeconds 900; $code = $r.ExitCode }
+    catch { $code = '超时或启动失败' }
+    foreach ($name in $names) {
+        "{0}：{1}" -f $name, $(if (Test-Path -LiteralPath (Join-Path $out "$name.png")) { '出图' } else { "没出图（$code，日志 capture.log）" })
+    }
+    & python -I -X utf8 (Join-Path $PSScriptRoot 'contact_sheet.py') $out
+} finally { Exit-UESTCBuildLock $lease }
