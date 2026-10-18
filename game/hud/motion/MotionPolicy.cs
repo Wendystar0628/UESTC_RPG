@@ -1,9 +1,8 @@
+using Campus.Contracts.Startup;
 using Campus.Contracts;
 using Godot;
 
 namespace Campus.Hud.Motion;
-
-public enum MotionLevel : byte { Full, Reduced, Instant }
 
 /// <summary>
 /// "减少动态效果"的唯一来源（UI-VISUAL）：实现契约 <see cref="IMotionSettings"/>，3D 侧只读它；
@@ -67,9 +66,9 @@ public sealed class MotionPolicy : IMotionSettings
     }
 
     /// <summary>启动参数到位（BeforeMap）后由 HudRoot 调用一次：--motion 优先，其次 --ui=1 的截图默认 instant（UI-VISUAL）。</summary>
-    public void Apply(HudArguments args)
+    public void Apply(UiBootOptions args)
     {
-        _forced = args.Motion ?? (args.Ui == "1" ? MotionLevel.Instant : null);
+        _forced = args.Motion ?? (args.Visible == true ? MotionLevel.Instant : null);
         Refresh();
     }
 }

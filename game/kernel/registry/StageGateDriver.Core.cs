@@ -86,7 +86,7 @@ public sealed partial class StageGateDriver
             host.CheckActive();
             return true;
         }, host.Lifetime, includeCanvas: false);
-        var output = AppBoot.Options.Value("out");
+        var output = AppBoot.Options.Capture.Output ?? "";
         Directory.CreateDirectory(output);
         using (var image = stage.GetViewport().GetTexture().GetImage())
         {

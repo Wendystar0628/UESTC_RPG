@@ -1,7 +1,7 @@
-using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Registry;
 using Campus.Kernel.World;
 
@@ -10,26 +10,28 @@ namespace Campus.Kernel.Boot;
 /// <summary>Initial world values precede the first weather Enter; loaded worlds only use the save restore path.</summary>
 public static class BootWorldOverrides
 {
-    public static void InitializeFreshWorld(BootArguments args, ServiceRegistry services, MapDescriptor map)
+    public static void InitializeFreshWorld(BootRunOptions args, ServiceRegistry services, MapDescriptor map)
     {
         if (args.HasLoad) throw new InvalidOperationException("A loaded world cannot use boot Freeze or weather Reset.");
         var world = services.Get<IWorldState>();
         var control = services.Get<IWorldControl>();
         var weather = services.Get<IWeatherProcess>();
-        var season = args.Values.ContainsKey("season") ? Enum.Parse<Season>(args.Value("season"), true) : map.World.Default.Season;
-        var clock = Number(args, "clock", map.World.Default.Clock);
-        var anim = Number(args, "anim", world.AnimTime);
-        var seed = args.Values.TryGetValue("seed", out var seedText) ? uint.Parse(seedText, CultureInfo.InvariantCulture) : map.Seed;
-        var boot = weather.ParseBootOptions(args.Values, seed, season);
+        var options = args.World;
+        var season = options.Season ?? map.World.Default.Season;
+        var clock = options.Clock ?? map.World.Default.Clock;
+        var anim = options.AnimationTime ?? world.AnimTime;
+        var seed = options.Weather.Seed ?? options.Seed ?? map.Seed;
+        var boot = new WeatherBoot(seed, options.Weather.Kind, options.Weather.Intensity,
+            options.Weather.Wet, options.Weather.RemainingMinutes);
+        weather.ValidateBoot(boot, season);
         // Effective capture defaults count as weather choices too. Seed/clock/season alone do not override policy.
-        var useMapWeather = !new[] { "weather", "weather-intensity", "weather-remaining", "wet" }
-            .Any(args.Values.ContainsKey);
+        var useMapWeather = !options.Weather.Requested;
         if (useMapWeather && !string.Equals(map.World.SunProfile, "default", StringComparison.Ordinal))
             throw new NotSupportedException($"Boot weather policy does not support sun profile {map.World.SunProfile}.");
 
         // No await or weather call may split this initial state ordering. Freeze itself must be world-only.
         control.Freeze(clock, season, anim);
-        control.SetFlow((int)Number(args, "flow", 1));
+        control.SetFlow(options.FlowRate ?? 1);
         weather.Reset(boot);
         weather.Enter(map.Id, map.World.WeatherProfile, world.WorldHours);
         if (useMapWeather)
@@ -49,18 +51,18 @@ public static class BootWorldOverrides
     }
 
     /// <summary>Only view/flow overrides remain after PrepareWorld. Never Freeze, Reset or reseason a live process here.</summary>
-    public static async Task ApplyView(BootArguments args, ServiceRegistry services,
+    public static async Task ApplyView(BootRunOptions args, ServiceRegistry services,
         bool restoringWorld, bool showTitle)
     {
         if (restoringWorld || args.HasLoad || showTitle && !args.CaptureMode) return;
-        bool Applies(string key) => showTitle ? args.Has(key) : args.Values.ContainsKey(key);
+        var options = args.World;
         var context = services.Get<IMapService>().Context ?? throw new InvalidOperationException("View overrides require a loaded map.");
         var control = services.Get<IWorldControl>();
-        if (!showTitle || args.Has("flow")) control.SetFlow((int)Number(args, "flow", 1));
-        if (args.Has("focus") || args.Has("pose-file"))
+        if (!showTitle || options.ExplicitFlow) control.SetFlow(options.FlowRate ?? 1);
+        if (options.Focus is not null || options.PoseFile is not null)
             throw new NotSupportedException("Content preview location provider is not yet connected.");
-        var poseId = args.Value("pose");
-        if (poseId.Length > 0)
+        var poseId = options.Pose;
+        if (poseId is not null)
         {
             var titlePose = showTitle && poseId == "T0";
             var pose = titlePose ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
@@ -69,26 +71,23 @@ public static class BootWorldOverrides
                 throw new ArgumentException($"Pose is outside the reachable space or inside its buffer: {poseId}.");
             services.Get<ICameraRig>().SetPose(pose);
         }
-        if (Applies("mode"))
+        if (options.ViewMode is { } mode && (!showTitle || options.ExplicitViewMode))
         {
-            var mode = args.Value("mode") switch { "fly" => ViewMode.Fly, "walk" => ViewMode.Walk, _ => throw new ArgumentException("Unknown mode.") };
             await services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Key);
         }
     }
 
-    public static async Task ApplyQuality(BootArguments args, IQualityService quality)
+    public static async Task ApplyQuality(BootRunOptions args, IQualityService quality)
     {
-        if (!new[] { "quality", "quality-set" }.Any(args.Values.ContainsKey)) return;
+        var options = args.Quality;
+        if (!options.Requested) return;
         var requested = quality.Requested;
-        var preset = args.Values.ContainsKey("quality") ? Enum.Parse<QualityPreset>(args.Value("quality"), true) : requested.Preset;
-        var overrides = args.Values.ContainsKey("quality") ? new Dictionary<QualityKnob, float>() : new Dictionary<QualityKnob, float>(requested.Overrides);
-        foreach (var (knob, value) in args.QualityOverrides()) overrides[knob] = value;
+        var preset = options.Preset ?? requested.Preset;
+        var overrides = options.Preset is not null ? new Dictionary<QualityKnob, float>() : new Dictionary<QualityKnob, float>(requested.Overrides);
+        foreach (var (knob, value) in options.Overrides) overrides[knob] = value;
         var profile = new QualityProfile(preset, overrides);
         var result = await quality.Apply(profile, ApplyOrigin.CommandLine);
         if (result.Status != ApplyStatus.Applied)
             throw new InvalidOperationException($"Command-line quality was not applied: {result.Status}; rejected={string.Join(',', result.Rejected)}.");
     }
-
-    private static double Number(BootArguments args, string key, double fallback) => args.Values.TryGetValue(key, out var value)
-        ? double.Parse(value, CultureInfo.InvariantCulture) : fallback;
 }

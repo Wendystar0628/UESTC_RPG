@@ -25,7 +25,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
 {
     private const float IdleFade = 4f;
 
-    private HudArguments _args = HudArguments.None;
+    private UiBootOptions _args = new();
     private UiThemeBuilder _theme = null!;
 
     private UiKit _kit = null!;

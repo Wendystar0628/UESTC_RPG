@@ -32,7 +32,12 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     public WeatherKind PinnedKind { get; private set; }
     public float? PinnedIntensity { get; private set; }
 
-    public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) => throw new NotSupportedException();
+    public void ValidateBoot(WeatherBoot boot, Season season)
+    {
+        ArgumentNullException.ThrowIfNull(boot);
+        if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
+        if (boot.Kind is { } kind && !IsNative(kind, season)) throw new ArgumentException("Weather is not native to the requested season.", nameof(boot));
+    }
     public WeatherKind MapToSeason(WeatherKind kind, Season season) => throw new NotSupportedException();
 
     public void Reset(WeatherBoot b)

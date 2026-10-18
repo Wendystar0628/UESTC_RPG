@@ -42,9 +42,7 @@ public interface IMapService                 // Kernel 服务（WP-46）
     /// </summary>
     /// <exception cref="InvalidOperationException">The catalogue has not been initialized.</exception>
     /// <exception cref="ArgumentException">The map or spawn/waypoint ID is unknown.</exception>
-    /// <exception cref="NotSupportedException">The implementation does not support catalogue spawn lookup.</exception>
-    MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
-        throw new NotSupportedException("This map service does not support catalogue spawn lookup.");
+    MapSpawn ResolveSpawn(MapId map, string? spawn = null);
     IMapTransition Travel(MapTravelRequest r);   // 仅用于启动加载与同图的新游戏/读档落点；同图传送交给 ICameraRig.Transit 和 IAtlasService
 }
 public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用

@@ -18,7 +18,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     private const float DetailScale = 0.8f;
     private const float GrassRadius = 20f;
 
-    private QualityService _service = null!;
+    private IQualityFrame _service = null!;
     private IVeilService _veil = null!;
     private CancellationToken _lifetime;
     private bool _closed;
@@ -26,7 +26,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Quality;
-        _service = (QualityService)RuntimeKernel.Get<IQualityService>();
+        _service = RuntimeKernel.Get<IQualityFrame>();
         _veil = RuntimeKernel.Get<IVeilService>();
         _closed = false;
         _lifetime = _service.Bind(this);

@@ -19,7 +19,7 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
     private readonly HashSet<TileKey> _resident = [];
     private readonly HashSet<TileKey> _failed = [];
     private IMapContext? _context;
-    private CollisionWorld? _world;
+    private ICollisionMountRuntime? _world;
     private IBakeService? _bake;
     private IStreamMountQueue? _queue;
     private IObserverState? _observer;
@@ -31,7 +31,7 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Stream;
-        _world = Services.Get<ICollisionWorld>() as CollisionWorld ?? throw new InvalidOperationException("WP-43 collision service was not registered.");
+        _world = Services.Get<ICollisionMountRuntime>();
         _bake = Services.Get<IBakeService>();
         _queue = Services.Get<IStreamMountQueue>();
         _observer = Services.Get<IObserverState>();

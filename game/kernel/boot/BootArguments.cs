@@ -1,6 +1,10 @@
 using System.Globalization;
 using Campus.Contracts;
+using Campus.Contracts.AppFlow;
+using Campus.Contracts.Cinematic;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Save;
+using Campus.Contracts.Startup;
 
 namespace Campus.Kernel.Boot;
 
@@ -22,6 +26,7 @@ public sealed class BootArguments
         "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn", "focus", "pose-file"];
     private readonly Dictionary<string, string> _values;
     private readonly HashSet<string> _provided;
+    private IReadOnlyDictionary<QualityKnob, float> _qualityOverrides = new Dictionary<QualityKnob, float>();
 
     private BootArguments(Dictionary<string, string> values)
     {
@@ -29,16 +34,14 @@ public sealed class BootArguments
         _provided = new(values.Keys, StringComparer.Ordinal);
     }
 
-    public IReadOnlyDictionary<string, string> Values => _values;
-    public IReadOnlySet<string> ExplicitArguments => _provided;
-    public bool CaptureMode => _provided.Overlaps(["gate", "shots", "bench", "frames"]);
-    public bool CpuBakeMode => Has("bake");
-    public bool Title => Value("title", "1") == "1";
-    public bool HasLoad => Has("slot") || Has("load");
-    public bool Has(string key) => _provided.Contains(key);
-    public string Value(string key, string fallback = "") => _values.GetValueOrDefault(key, fallback);
+    private bool CaptureMode => _provided.Overlaps(["gate", "shots", "bench", "frames"]);
+    private bool CpuBakeMode => Has("bake");
+    private bool Title => Value("title", "1") == "1";
+    private bool HasLoad => Has("slot") || Has("load");
+    private bool Has(string key) => _provided.Contains(key);
+    private string Value(string key, string fallback = "") => _values.GetValueOrDefault(key, fallback);
 
-    public static BootArguments Parse(IEnumerable<string> args, bool development)
+    public static BootRunOptions Parse(IEnumerable<string> args, bool development)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var arg in args)
@@ -63,7 +66,7 @@ public sealed class BootArguments
         if (result.Value("pose") == "T0" && !result.Title) throw Invalid("T0 requires --title=1.");
         if (result.Has("cine") && !result.Title) throw Invalid("--cine requires --title=1.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
-        return result;
+        return result.Resolve();
     }
 
     private void Validate()
@@ -93,7 +96,7 @@ public sealed class BootArguments
             if (Has(key) && (!int.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value <= 0)) throw Invalid(key);
         foreach (var key in new[] { "out", "load", "save-dir", "bake-cache", "pose-file", "audio-out", "ui-export-theme" })
             if (Has(key) && !Path.IsPathFullyQualified(Value(key))) throw Invalid($"--{key} must be absolute.");
-        _ = QualityOverrides();
+        _qualityOverrides = QualityOverrides();
         if (Has("shots") && Value("shots").Split(',').Any(id => id.Length == 0 || id.Any(c => !char.IsLetterOrDigit(c) && c is not '_' and not '-')))
             throw Invalid("Invalid screenshot identifier.");
     }
@@ -118,7 +121,7 @@ public sealed class BootArguments
         _values.TryAdd("motion", CaptureMode && Value("ui") == "1" ? "instant" : "full");
     }
 
-    public IReadOnlyDictionary<QualityKnob, float> QualityOverrides()
+    private IReadOnlyDictionary<QualityKnob, float> QualityOverrides()
     {
         var result = new Dictionary<QualityKnob, float>();
         if (!Has("quality-set")) return result;
@@ -130,6 +133,81 @@ public sealed class BootArguments
                 !float.IsFinite(value) || !result.TryAdd(names[0], value)) throw Invalid("quality-set=" + item);
         }
         return result;
+    }
+
+    private BootRunOptions Resolve()
+    {
+        string? Text(string key) => _values.GetValueOrDefault(key);
+        string? Explicit(string key) => Has(key) ? Text(key) : null;
+        double? NumberValue(string key) => Text(key) is { } value ? double.Parse(value, CultureInfo.InvariantCulture) : null;
+        uint? Seed(string key, bool explicitOnly = false) => (explicitOnly ? Explicit(key) : Text(key)) is { } value
+            ? uint.Parse(value, CultureInfo.InvariantCulture) : null;
+        SlotId? Slot(string? value) => value is null or "off" ? null : new SlotId("s" + value.TrimStart('s'));
+        var cinematic = Text("cine") switch
+        {
+            null => (CinematicKind?)null,
+            "enter_new" => CinematicKind.EnterNew,
+            "enter_new_short" => CinematicKind.EnterNewShort,
+            "enter_continue" => CinematicKind.EnterContinue,
+            "leave" => CinematicKind.Leave,
+            _ => throw Invalid("cine")
+        };
+        var weather = Text("weather") switch
+        {
+            null or "auto" => (WeatherKind?)null,
+            "clear" => WeatherKind.Clear, "few-clouds" => WeatherKind.FewClouds,
+            "cloudy" => WeatherKind.Cloudy, "overcast" => WeatherKind.Overcast,
+            "fog" => WeatherKind.Fog, "light-rain" => WeatherKind.LightRain,
+            "rain" => WeatherKind.Rain, "thunderstorm" => WeatherKind.Thunderstorm,
+            "after-rain" => WeatherKind.AfterRain, "snow" => WeatherKind.Snow,
+            "after-snow" => WeatherKind.AfterSnow, _ => throw Invalid("weather")
+        };
+        return new BootRunOptions
+        {
+            Mode = CpuBakeMode ? BootRunMode.CpuBake : CaptureMode ? BootRunMode.Capture : BootRunMode.Interactive,
+            Automated = CaptureMode || Has("inspect"),
+            FreezeAnimation = Has("shots") && !Has("cine") && !Has("bench"),
+            Title = Title,
+            SaveDirectory = Text("save-dir"),
+            Flow = new BootFlowRequest(ShowTitle: Title && cinematic != CinematicKind.Leave,
+                Slot: Slot(Text("slot")), LoadFile: Text("load"),
+                Map: Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),
+                Cinematic: Text("cine"), Seed: Seed("weather-seed") ?? Seed("seed")),
+            World = new WorldBootOptions
+            {
+                Clock = NumberValue("clock"),
+                Season = Text("season") is { } season ? Enum.Parse<Season>(season, true) : null,
+                AnimationTime = NumberValue("anim"), Seed = Seed("seed"),
+                FlowRate = NumberValue("flow") is { } flow ? (int)flow : null,
+                ExplicitFlow = Has("flow"), ExplicitViewMode = Has("mode"),
+                ViewMode = Text("mode") switch { null => null, "fly" => ViewMode.Fly, "walk" => ViewMode.Walk, _ => throw Invalid("mode") },
+                Pose = Text("pose"), Focus = Text("focus"), PoseFile = Text("pose-file"),
+                Weather = new(Seed("weather-seed"), weather, (float?)NumberValue("weather-intensity"),
+                    (float?)NumberValue("wet"), NumberValue("weather-remaining"),
+                    new[] { "weather", "weather-intensity", "weather-remaining", "wet" }.Any(_values.ContainsKey))
+            },
+            Ui = new(Explicit("ui") is { } ui ? ui == "1" : null, (float?)NumberValue("ui-scale"),
+                Explicit("ui-gallery"), Explicit("ui-export-theme"),
+                Explicit("motion") switch { null => null, "full" => MotionLevel.Full, "reduced" => MotionLevel.Reduced, "instant" => MotionLevel.Instant, _ => throw Invalid("motion") },
+                Explicit("ui-theme") switch { null => null, "auto" => UiThemeMode.Auto, "light" => UiThemeMode.Light, "dark" => UiThemeMode.Dark, _ => throw Invalid("ui-theme") }),
+            Audio = new(Value("audio") == "on", CaptureMode || Value("audio-fixed", "0") == "1", Value("audio-limiter", "1") != "0"),
+            Save = new(Value("save") != "off" && (!Has("load") || Has("save") && Value("save") != "off"),
+                Slot(Text("save")), NumberValue("save-at") is { } at ? (int)at : null, Seed("weather-seed")),
+            Bake = new(Explicit("bake-cache"), Explicit("gen") == "live", Explicit("bake-strict") == "1",
+                Explicit("bake-bg") != "0", Explicit("bake") == "map", Seed("seed", explicitOnly: true)),
+            Capture = new()
+            {
+                Gate = Text("gate"), Inspect = Text("inspect"), Output = Text("out"),
+                Shots = Text("shots")?.Split(',') ?? [],
+                FrameLimit = NumberValue("frames") is { } frames ? (int)frames : null,
+                IncludeCanvas = Value("ui") == "1", Cinematic = cinematic
+            },
+            Quality = new()
+            {
+                Preset = Text("quality") is { } quality ? Enum.Parse<QualityPreset>(quality, true) : null,
+                Overrides = _qualityOverrides
+            }
+        };
     }
 
     private static string Snake(string value) => string.Concat(value.Select((c, i) => i > 0 && char.IsUpper(c) &&

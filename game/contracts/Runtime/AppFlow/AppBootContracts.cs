@@ -18,7 +18,7 @@ public sealed record BootFlowRequest(
 public interface IAppBootFlow
 {
     /// <summary>Accurate after PrepareBoot: a selected slot or external file will restore the world instead of initializing a new one.</summary>
-    bool WillRestoreWorld => false;
+    bool WillRestoreWorld { get; }
     // Called after BeforeMap participants. Retains the typed request, selects the slot and initial map,
     // and holds cinematic input. Explicit Map wins; otherwise use selected slot metadata then default map.
     // An external LoadFile may initially use the default map; its Full load performs the authoritative travel.

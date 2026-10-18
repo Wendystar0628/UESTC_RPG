@@ -3,7 +3,6 @@ using Campus.Contracts.Settings;
 
 namespace Campus.Hud;
 
-public enum UiThemeMode : byte { Auto, Light, Dark }
 public enum ResidentTheme : byte { Dark, Follow }
 public enum ReduceMotionMode : byte { System, On, Off }
 

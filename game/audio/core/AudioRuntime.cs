@@ -68,19 +68,14 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     private void InitializeCore(BootContext context)
     {
         if (_initialized) return;
-        string Value(string key, string fallback) => context.Arguments.TryGetValue(key, out var value) ? value : fallback;
-        _enabled = Value("audio", context.CaptureMode ? "off" : "on") switch
-        {
-            "off" => false,
-            "on" => true,
-            _ => throw new ArgumentException("--audio must be on or off.")
-        };
-        var fixedSettings = context.CaptureMode || Value("audio-fixed", "0") == "1";
+        var audio = context.Run.Audio;
+        _enabled = audio.Enabled;
+        var fixedSettings = audio.Fixed;
         _store = fixedSettings ? null : new AudioSettingsStore(RuntimeKernel.Get<ISettingsStore>());
         Settings = _store?.Load() ?? new();
         _mix.SetSettings(Settings, true);
         _mix.SetAudible(false, 0f);
-        _buses.Initialize(Value("audio-limiter", "1") != "0");
+        _buses.Initialize(audio.Limiter);
         ApplyRoute();
         _clips.LoadUi();
         AudioClipLibrary.ValidateMusic();

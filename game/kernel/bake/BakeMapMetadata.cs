@@ -16,6 +16,7 @@ public sealed record EntranceInventoryDocument(MapId Map,
 internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances);
 
 /// <summary>Runtime read-only inventory; map preparation publishes all three immutable tables together.</summary>
+[KernelService(typeof(BakeLightInventory), Owner = "WP-02a")]
 [KernelService(typeof(ILightInventory), Owner = "WP-02a")]
 public sealed class BakeLightInventory : ILightInventory
 {

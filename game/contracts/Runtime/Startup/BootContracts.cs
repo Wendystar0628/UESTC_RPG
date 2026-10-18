@@ -4,11 +4,12 @@ public enum BootPhase : byte { BeforeMap, AfterMapWarm, BeforeReveal }
 
 /// <summary>Read-only startup inputs. SaveDirectory is an absolute OS directory resolved by the kernel.</summary>
 public sealed record BootContext(
-    IReadOnlyDictionary<string, string> Arguments,
-    IReadOnlySet<string> ExplicitArguments,
+    BootRunOptions Run,
     string SaveDirectory,
-    string Build,
-    bool CaptureMode);
+    string Build)
+{
+    public bool CaptureMode => Run.CaptureMode;
+}
 
 /// <summary>
 /// Implement on an already registered service or node; do not register this interface as a singleton service.

@@ -1,4 +1,5 @@
 using Campus.Kernel.Boot;
+using Campus.Contracts;
 using GdUnit4;
 
 namespace Campus.Tests;
@@ -10,7 +11,9 @@ public sealed class BootArgumentsTests
     public void CaptureDefaultsRemainSeparateFromExplicitArguments()
     {
         var options = BootArguments.Parse(["--frames=30"], true);
-        if (options.Value("clock") != "17.5" || options.Has("clock") || options.ExplicitArguments.Count != 1)
+        if (options.World.Clock != 17.5 || options.World.ExplicitFlow || options.World.ExplicitViewMode ||
+            options.World.ViewMode != ViewMode.Fly || options.Ui.Visible is not null || options.Ui.Motion is not null ||
+            options.Audio.Enabled || !options.Bake.Background)
             throw new InvalidOperationException("Implicit defaults became explicit inputs.");
     }
 
@@ -18,7 +21,7 @@ public sealed class BootArgumentsTests
     public void CaptureDefaultsNeverOverrideLoadedWorld()
     {
         var options = BootArguments.Parse(["--slot=1", "--frames=120"], true);
-        if (options.Values.ContainsKey("clock") || options.Values.ContainsKey("pose") || options.Value("save") != "off" || options.Title)
+        if (options.World.Clock is not null || options.World.Pose is not null || options.Save.Enabled || options.Title)
             throw new InvalidOperationException("Capture defaults replaced a saved world.");
     }
 
@@ -56,8 +59,11 @@ public sealed class BootArgumentsTests
     public void NormalBootKeepsTitle()
     {
         var normal = BootArguments.Parse([], true);
-        if (!normal.Title || normal.Value("audio") != "on")
+        if (!normal.Title || !normal.Audio.Enabled)
             throw new InvalidOperationException("Normal startup defaults are incorrect.");
+        var inspect = BootArguments.Parse(["--inspect=palette"], true);
+        if (!inspect.Automated || inspect.CaptureMode)
+            throw new InvalidOperationException("Inspect must automate camera input without enabling capture defaults.");
     }
 
     [TestCase]

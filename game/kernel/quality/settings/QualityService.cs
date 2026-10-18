@@ -22,8 +22,17 @@ public interface IQualityRuntime
     void ReportInfo(string message);
 }
 
+public interface IQualityFrame : IQualityService
+{
+    bool CaptureMode { get; }
+    CancellationToken Bind(IQualityRuntime runtime);
+    void Unbind(IQualityRuntime runtime);
+    void Tick(double delta);
+}
+
+[KernelService(typeof(IQualityFrame), Owner = "WP-32")]
 [KernelService(typeof(IQualityService), Owner = "WP-32")]
-public sealed class QualityService : IQualityService, IBootParticipant
+public sealed class QualityService : IQualityFrame, IBootParticipant
 {
     internal const float VeilSeconds = 0.3f;
     private sealed class Binding

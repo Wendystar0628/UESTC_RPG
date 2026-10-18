@@ -85,7 +85,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             }
         };
         AddChild(environment);
-        var ui = new CanvasLayer { Name = "Ui", Layer = 10, Visible = AppBoot.Value("ui", "1") == "1" };
+        var ui = new CanvasLayer { Name = "Ui", Layer = 10, Visible = AppBoot.Options.Ui.Visible ?? true };
         AddChild(ui);
         CapturePresentation.Bind(ui);
         registry.Add(view.Camera);
@@ -139,7 +139,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private async Task StartWorld(IVeilLease bootVeil, IFlowLease startupFlow)
     {
         var options = AppBoot.Options;
-        var showTitle = options.Title && options.Value("cine") != "leave";
+        var showTitle = options.Flow.ShowTitle;
         var registry = Services.Services;
         var participants = _runtimeObjects.Distinct(ReferenceEqualityComparer.Instance).OfType<IBootParticipant>().OrderBy(item => item.Order)
             .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
@@ -158,15 +158,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await Initialize(BootPhase.BeforeMap);
         Phase = "prepare-flow";
         var appBoot = registry.Get<IAppBootFlow>();
-        var target = await appBoot.PrepareBoot(new BootFlowRequest(
-            ShowTitle: showTitle,
-            Slot: options.Has("slot") ? new SlotId("s" + options.Value("slot").TrimStart('s')) : null,
-            LoadFile: options.Has("load") ? options.Value("load") : null,
-            Map: options.Has("map") ? new MapId(options.Value("map")) : null,
-            Spawn: options.Has("spawn") ? options.Value("spawn") : null,
-            Cinematic: options.Has("cine") ? options.Value("cine") : null,
-            Seed: options.Values.TryGetValue("weather-seed", out var seed) ? uint.Parse(seed, CultureInfo.InvariantCulture)
-                : options.Values.TryGetValue("seed", out seed) ? uint.Parse(seed, CultureInfo.InvariantCulture) : null));
+        var target = await appBoot.PrepareBoot(options.Flow);
         CheckStartupActive();
         var maps = registry.Get<IMapService>();
         if (!appBoot.WillRestoreWorld)
@@ -177,7 +169,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         Phase = "travel-boot";
         // First classification measures the map's default overview (V1); PrepareWorld places T0 afterwards.
-        var travel = maps.Travel(new MapTravelRequest(target, options.Value("spawn") is { Length: > 0 } spawn ? spawn : null,
+        var travel = maps.Travel(new MapTravelRequest(target, options.Flow.Spawn,
             null, ViewMode.Fly, MapTravelCause.Boot));
         var travelled = await travel.Done;
         CheckStartupActive();
@@ -188,7 +180,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         Phase = "prepare-world";
         // The user's base flow is already set; only the initial warmup pause ends here.
         // Lifecycle checks also keep loaded world time fixed until their own test lease takes over.
-        if (options.Value("gate") is not ("save-close" or "save-resume")) startupFlow.Dispose();
+        if (options.Capture.Gate is not ("save-close" or "save-resume")) startupFlow.Dispose();
         await appBoot.PrepareWorld();
         CheckStartupActive();
         await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
@@ -249,8 +241,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private static BootContext CreateBootContext()
     {
         var options = AppBoot.Options;
-        return new(options.Values, options.ExplicitArguments,
-            options.Value("save-dir", Path.Combine(OS.GetUserDataDir(), "saves")), BuildInfo.Build, options.CaptureMode);
+        return new(options, options.SaveDirectory ?? Path.Combine(OS.GetUserDataDir(), "saves"), BuildInfo.Build);
     }
 
     public override void _Process(double delta)

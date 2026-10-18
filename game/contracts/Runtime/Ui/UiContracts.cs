@@ -28,8 +28,7 @@ public interface IVeilState
     float Opacity { get; }
     VeilReason Reason { get; }
     // True means a live readiness observation has reached its policy delay: show the waiting indicator.
-    // Default false is compatibility only; it does not attest that an implementation supports observations.
-    bool Waiting => false;
+    bool Waiting { get; }
 }   // 只读；音频据此压低 World 组（SYS-AUDIO）
 public interface IVeilLease : IDisposable
 {

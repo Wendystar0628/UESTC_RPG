@@ -5,9 +5,15 @@ using Godot;
 
 namespace Campus.Kernel.Stream;
 
+public interface IStreamMountFrame
+{
+    void Drain(Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
+}
+
 /// <summary>The sole owner of the shared collision/visual mount budget.</summary>
+[KernelService(typeof(IStreamMountFrame), Owner = "WP-02b")]
 [KernelService(typeof(IStreamMountQueue), Owner = "WP-02b")]
-public sealed class StreamMountQueue : IStreamMountQueue
+public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
 {
     private readonly List<IStreamMountWork> _pending = [];
     private readonly Campus.Kernel.Lod.StreamSettings _settings = new();

@@ -170,15 +170,14 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
-    public void PauseFreezesNaturalWeatherAndCommandLineRejectsInvalidInput()
+    public void PauseFreezesNaturalWeatherAndBootRejectsInvalidInput()
     {
         var p = Create(1, Season.Autumn, Profile);
         p.Step(Tick(16.1)); var before = p.Now;
         for (int i = 0; i < 40; i++) p.Step(Tick(16.1) with { FlowRate = 0, RealDt = .5 });
         AssertThat(p.Now == before).OverrideFailureMessage("Paused natural weather changed.").IsTrue();
-        AssertThrown(() => p.ParseBootOptions(new Dictionary<string, string> { ["weather"] = "snow" }, 1, Season.Summer)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => p.ParseBootOptions(new Dictionary<string, string> { ["weather-seed"] = "4", ["load"] = "save.sav" }, 1, Season.Autumn)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => p.ParseBootOptions(new Dictionary<string, string> { ["wet"] = "NaN" }, 1, Season.Autumn)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => p.ValidateBoot(new(1, WeatherKind.Snow), Season.Summer)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => p.ValidateBoot(new(1, Wet: float.NaN), Season.Autumn)).IsInstanceOf<ArgumentException>();
         p.Reset(new(4));
         p.Step(Tick(0));
         AssertThat(p.Seed == 4 && p.Capture().LeftAtHours == 0).OverrideFailureMessage("New-game Reset retained the previous instance's clock.").IsTrue();
@@ -260,11 +259,9 @@ public sealed class WeatherProcessTests
         var profile = Profile;
         var manual = new WeatherProcess(new Source(profile));
         IWeatherProcess options = manual;
-        var arguments = new Dictionary<string, string>
-        {
-            ["weather-seed"] = "85", ["weather"] = "snow", ["weather-intensity"] = ".82", ["wet"] = ".27"
-        };
-        manual.Reset(options.ParseBootOptions(arguments, 1, Season.Winter)); manual.Enter(Map, "test", 6);
+        var boot = new WeatherBoot(85, WeatherKind.Snow, .82f, .27f);
+        options.ValidateBoot(boot, Season.Winter);
+        manual.Reset(boot); manual.Enter(Map, "test", 6);
         manual.Quiet(6, WeatherRules.QuietEnd(6, 0, Season.Winter));
         manual.Step(Tick(6, Season.Winter));
         var saved = manual.Capture();
@@ -274,8 +271,9 @@ public sealed class WeatherProcessTests
             options.MapToSeason(WeatherKind.Snow, Season.Autumn) == WeatherKind.Rain).OverrideFailureMessage("Map boot weather did not follow the target season.").IsTrue();
 
         var timed = new WeatherProcess(new Source(profile));
-        arguments["weather-remaining"] = "90";
-        timed.Reset(options.ParseBootOptions(arguments, 1, Season.Winter)); timed.Enter(Map, "test", 6);
+        var timedBoot = boot with { RemainingMinutes = 90 };
+        options.ValidateBoot(timedBoot, Season.Winter);
+        timed.Reset(timedBoot); timed.Enter(Map, "test", 6);
         timed.Step(Tick(6, Season.Winter));
         saved = timed.Capture();
         AssertThat(timed.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .82f } &&

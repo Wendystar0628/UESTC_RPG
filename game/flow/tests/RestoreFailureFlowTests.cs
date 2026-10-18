@@ -99,6 +99,7 @@ public sealed class RestoreFailureFlowTests
     }
     private sealed class Fault : IWorldRestore
     {
+        public WorldSaveMoment GetSaveMoment() => throw new InvalidOperationException("Restore fault fixture cannot capture a world.");
         public bool RestoreFaulted { get; private set; } = true;
         public void AbortRestore() => RestoreFaulted = true;
         public void CompleteRestore() => RestoreFaulted = false;

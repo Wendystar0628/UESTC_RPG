@@ -13,9 +13,15 @@ namespace Campus.Kernel.Maps;
 /// Mainline scope: loads the current map once at startup (Boot) and re-places the pose on that same
 /// map for NewGame/LoadSave. Switching between maps is a later runtime and is rejected here.
 /// </summary>
+public interface IMapFrame : IDisposable
+{
+    void Step();
+}
+
+[KernelService(typeof(IMapFrame), Owner = "WP-46")]
 [KernelService(typeof(IMapService), Owner = "WP-46")]
 [SaveSection("maps", Owner = "WP-46", Version = 1, Phase = RestorePhase.World, Order = 0)]
-public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParticipant, IDisposable
+public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>, IBootParticipant, IDisposable
 {
     private readonly ICameraRig _camera;
     private readonly IViewControl _view;

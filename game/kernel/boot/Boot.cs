@@ -1,15 +1,13 @@
 using Godot;
 using Campus.Kernel.Registry;
+using Campus.Contracts.Startup;
 
 namespace Campus.Kernel.Boot;
 
 public partial class Boot : Node
 {
-    public static BootArguments Options { get; private set; } = BootArguments.Parse([], true);
-    // Consumers distinguish explicit inputs from the effective defaults in Options.
-    public static IReadOnlyDictionary<string, string> Arguments { get; private set; } = new Dictionary<string, string>();
+    public static BootRunOptions Options { get; private set; } = BootArguments.Parse([], true);
     public static bool Failed { get; private set; }
-    public static string Value(string key, string fallback = "") => Arguments.TryGetValue(key, out var value) ? value : fallback;
     public override void _EnterTree()
     {
         GetTree().AutoAcceptQuit = false;
@@ -17,7 +15,6 @@ public partial class Boot : Node
         try
         {
             Options = BootArguments.Parse(OS.GetCmdlineUserArgs(), OS.IsDebugBuild());
-            Arguments = Options.ExplicitArguments.ToDictionary(key => key, key => Options.Value(key), StringComparer.Ordinal);
         }
         catch (ArgumentException error) { Reject(error.Message); return; }
         var profile = Path.GetFileName(OS.GetUserDataDir().TrimEnd('/', '\\'));

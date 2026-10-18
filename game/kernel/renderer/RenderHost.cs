@@ -9,12 +9,20 @@ using N = System.Numerics;
 
 namespace Campus.Kernel.Renderer;
 
+public interface IRenderReadiness
+{
+    string? Error { get; }
+    bool Pending { get; }
+    bool PipelineReady { get; }
+}
+
 public readonly record struct RenderAccount(WpId Owner, int Handles, int Surfaces, int Triangles);
 
 /// <summary>Dynamic geometry host; static streamed TileBundles belong to WP-02.</summary>
+[KernelService(typeof(IRenderReadiness), Owner = "WP-01")]
 [KernelService(typeof(IRenderHost), Owner = "WP-01")]
 [KernelNode("render-host", Owner = "WP-01")]
-public partial class RenderHost : Node3D, IRenderHost, IMapAware
+public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAware
 {
     private sealed class Entry(WpId owner, Node3D root)
     {

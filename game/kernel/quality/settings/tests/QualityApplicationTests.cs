@@ -243,8 +243,8 @@ public sealed partial class QualityApplicationTests
     }
 
     private static BootContext Context() => new(
-        new Dictionary<string, string>(), new HashSet<string>(StringComparer.Ordinal),
-        Path.Combine(RepositoryFixture.Root, "output", "tests", "quality"), "quality-tests", false);
+        new BootRunOptions(),
+        Path.Combine(RepositoryFixture.Root, "output", "tests", "quality"), "quality-tests");
 
     private sealed class FileStoreSpy : IGraphicsSettingsStore
     {

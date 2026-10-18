@@ -7,12 +7,22 @@ using WorldFlow = Campus.Contracts.Flow;
 
 namespace Campus.Kernel.World;
 
+public interface IWorldFrame : IWorldState, IMapAware
+{
+    double SeasonFrom { get; }
+    double SeasonTo { get; }
+    double SeasonProgress { get; }
+    void SetStepRate(int stepRate);
+    void Tick(double delta, bool freezeAnimation = false);
+}
+
 /// <summary>One monotone world timeline. Only Tick consumes real delta; restoring a save commits a new instance.</summary>
+[KernelService(typeof(IWorldFrame), Owner = "WP-34")]
 [KernelService(typeof(IWorldState), Owner = "WP-34")]
 [KernelService(typeof(IWorldControl), Owner = "WP-34")]
 [KernelService(typeof(IWorldRestore), Owner = "WP-34")]
 [SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]
-public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldState, IWorldControl,
+public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldFrame, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
     private double _targetHours = 17.5;

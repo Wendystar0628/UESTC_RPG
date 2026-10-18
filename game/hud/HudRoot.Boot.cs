@@ -13,7 +13,7 @@ public partial class HudRoot
     public Task Initialize(BootPhase phase, BootContext context)
     {
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
-        _args = HudArguments.From(context);
+        _args = context.Run.Ui;
         _motion.Apply(_args);
         if (_args.ExportTheme is { } exportPath)
         {
@@ -23,10 +23,10 @@ public partial class HudRoot
             return Task.CompletedTask;
         }
         _clock.Apply(_args);
-        _hidden = _args.UiHidden;
+        _hidden = _args.Visible == false;
         _root.Visible = !_hidden;
         ApplyScale();
-        if (_args.UiGallery is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
+        if (_args.Gallery is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
         return Task.CompletedTask;
     }
 

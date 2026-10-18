@@ -14,6 +14,7 @@ using Campus.Kernel.Stubs;
 namespace Campus.Kernel.Bake;
 
 /// <summary>One path for live generation and per-cell local caching. Ready always means validated CPU data.</summary>
+[KernelService(typeof(BakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
 public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable

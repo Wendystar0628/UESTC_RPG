@@ -171,8 +171,8 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public Task Initialize(BootPhase phase, BootContext context)
     {
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
-        var args = HudArguments.From(context);
-        _uiEnabled = !args.UiHidden;
+        var args = context.Run.Ui;
+        _uiEnabled = args.Visible != false;
         Instant = args.Motion == MotionLevel.Instant;   // 界面截图用 instant（ENG-GATES）
         return Task.CompletedTask;
     }

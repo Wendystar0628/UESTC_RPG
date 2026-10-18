@@ -113,7 +113,7 @@ public partial class HudRoot
         var s = Math.Min(window.X / 1920f, window.Y / 1080f);
         var lo = 0.85f / s;
         var hi = Math.Min(window.X / 1280f, window.Y / 720f) / s;
-        var user = _args.UiScale ?? _settings.UiScale;
+        var user = _args.Scale ?? _settings.UiScale;
         GetTree().Root.ContentScaleFactor = Math.Clamp(user, lo, Math.Max(lo, hi));
     }
 }

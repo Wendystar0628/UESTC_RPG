@@ -13,9 +13,17 @@ using System.Collections.ObjectModel;
 namespace Campus.Kernel.Stream;
 
 /// <summary>Selection at -500; no instances or geometry are created in this phase.</summary>
+public interface IStreamVisualFrame
+{
+    bool CanActivateVisual { get; }
+    void FinishMountFrame(double remainingMilliseconds);
+    void ReleaseRetired(double budgetMilliseconds);
+}
+
+[KernelService(typeof(IStreamVisualFrame), Owner = "WP-02b")]
 [KernelService(typeof(IMapStreamState), Owner = "WP-02b")]
 [KernelNode("stream.select", Owner = "WP-02b")]
-public partial class StreamDirector : Node, IMapAware, IMapStreamState
+public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame
 {
     private readonly StreamSettings _settings = new();
     private readonly LodSpeedPolicy _speed = new();

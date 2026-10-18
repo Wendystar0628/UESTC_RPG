@@ -19,6 +19,7 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
     Func<AppState> AppState, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
     Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime);
 
+[KernelService(typeof(SaveService), Owner = "WP-50")]
 [KernelService(typeof(ISaveService), Owner = "WP-50")]
 public sealed class SaveService : ISaveService, IDisposable
 {

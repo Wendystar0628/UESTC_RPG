@@ -9,7 +9,7 @@ public sealed class CollisionMountWork : IStreamMountWork
 {
     // Keep ordinary batches small; 250 remains the hard ceiling checked again at the physics boundary.
     public const int ShapesPerSlice = 32;
-    private readonly CollisionWorld _world;
+    private readonly ICollisionMountRuntime _world;
     private readonly CollisionTile _tile;
     private readonly long _worldRevision;
     private readonly IReadOnlyList<Collider>[] _batches;
@@ -23,7 +23,7 @@ public sealed class CollisionMountWork : IStreamMountWork
     public bool Cancelled { get; private set; }
     public string? Error { get; private set; }
 
-    public CollisionMountWork(CollisionWorld world, CollisionTile tile, long revision)
+    public CollisionMountWork(ICollisionMountRuntime world, CollisionTile tile, long revision)
     {
         _world = world; _tile = tile; Revision = revision; _worldRevision = world.Revision;
         _batches = CollisionGeometry.BodyBatches(tile.Colliders).SelectMany(batch => batch.Chunk(ShapesPerSlice))

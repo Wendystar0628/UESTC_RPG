@@ -14,10 +14,10 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
     private readonly BakeLightInventory _inventory;
     private BakeService.MapBuild? _map;
     private bool _finished;
-    public BakeRuntime(IBakeService service, ILightInventory inventory)
+    public BakeRuntime(BakeService service, BakeLightInventory inventory)
     {
-        _service = service as BakeService ?? throw new InvalidOperationException("Bake runtime requires the registered bake service.");
-        _inventory = inventory as BakeLightInventory ?? throw new InvalidOperationException("Bake runtime requires the registered light inventory.");
+        _service = service;
+        _inventory = inventory;
     }
 
     public async Task Prepare(IMapContext context)
@@ -55,7 +55,7 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
         }
         if (_finished || _map is null) return;
         var progress = _service.Progress;
-        if (AppBoot.Value("bake-strict") == "1" && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))
+        if (AppBoot.Options.Bake.Strict && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))
         {
             _finished = true; GD.PushError("WP-02a strict bake failure."); GetTree().Quit(2); return;
         }

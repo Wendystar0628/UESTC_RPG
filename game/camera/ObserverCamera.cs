@@ -56,7 +56,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (Services.Services.Entries.Any(e => e.Kind == "service" && e.Id == typeof(IWalkController).FullName && !e.IsStub))
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
-        _automated = new[] { "gate", "shots", "bench", "frames", "inspect" }.Any(AppBoot.Arguments.ContainsKey);
+        _automated = AppBoot.Options.Automated;
         _bindings.Initialize(_automated ? null : Services.Get<ISettingsStore>());
         Input.UseAccumulatedInput = false;
         _flow.Changed += OnFlowChanged;

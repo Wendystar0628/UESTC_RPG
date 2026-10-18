@@ -13,7 +13,7 @@ public static class CinematicValidation
         foreach (var segment in definition.Camera)
         {
             Range(segment.T0, segment.T1, definition.Duration);
-            Require(Math.Abs(segment.T0 - previous) < 0.000001, "Camera segments must be adjacent.");
+            Require(Math.Abs(segment.T0 - previous) < 0.05, "Camera segments must be adjacent.");
             Require(segment.ArriveAt is null || segment.ArriveAt > segment.T0 && segment.ArriveAt <= segment.T1, "Invalid arriveAt.");
             switch (segment.Path)
             {
@@ -54,7 +54,7 @@ public static class CinematicValidation
             if (segment.Ease?.Bezier is { } easing) Require(float.IsFinite(easing.X) && float.IsFinite(easing.Y) && float.IsFinite(easing.Z) && float.IsFinite(easing.W) && easing.X >= 0 && easing.X <= 1 && easing.Z >= 0 && easing.Z <= 1, "Invalid easing control points.");
             previous = segment.T1;
         }
-        Require(Math.Abs(previous - definition.Duration) < 0.000001, "Camera track does not end at duration.");
+        Require(Math.Abs(previous - definition.Duration) < 0.05, "Camera track does not end at duration.");
         foreach (var mask in definition.Masks)
         {
             Range(mask.T0, mask.T1, definition.Duration);

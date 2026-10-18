@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Save;
 using Campus.Hud.Widgets;

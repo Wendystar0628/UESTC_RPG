@@ -30,7 +30,7 @@ public partial class SaveNode : Node, IBootParticipant
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Save;
-        _save = (SaveService)RuntimeKernel.Get<ISaveService>();
+        _save = RuntimeKernel.Get<SaveService>();
         RenderingServer.FramePostDraw += OnFramePostDraw;
     }
 
@@ -40,11 +40,7 @@ public partial class SaveNode : Node, IBootParticipant
         {
             case BootPhase.BeforeMap:
                 {
-                    var args = context.Arguments;
-                    var explicitWrite = args.TryGetValue("save", out var saveArg) && saveArg != "off";
-                    var enabled = saveArg != "off" && (!args.ContainsKey("load") || explicitWrite);
-                    var slot = explicitWrite ? ParseSlot(saveArg!) : (SlotId?)null;
-                    var seed = args.TryGetValue("weather-seed", out var value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
+                    var save = context.Run.Save;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
                     _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
                     var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
@@ -56,7 +52,7 @@ public partial class SaveNode : Node, IBootParticipant
                         () => RuntimeKernel.Get<IAppFlow>().State, id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem());
-                    await _save.Initialize(new(context.SaveDirectory, context.Build, enabled, slot, RegistryGateRunner.SaveAtFrame(args), seed), bindings, new(sections));
+                    await _save.Initialize(new(context.SaveDirectory, context.Build, save.Enabled, save.WriteSlot, save.AtFrame, save.WeatherSeed), bindings, new(sections));
                     break;
                 }
             case BootPhase.AfterMapWarm: break;
@@ -170,6 +166,4 @@ public partial class SaveNode : Node, IBootParticipant
         _hiddenHud?.Dispose(); _capture?.TrySetResult(null); _save?.Dispose();
         _exit.Dispose();
     }
-    private static SlotId ParseSlot(string value) => value switch
-    { "1" => new("s1"), "2" => new("s2"), "3" => new("s3"), _ => throw new ArgumentException("save must be off or 1..3.") };
 }

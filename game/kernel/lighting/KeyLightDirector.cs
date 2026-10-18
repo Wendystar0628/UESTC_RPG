@@ -35,7 +35,7 @@ public partial class KeyLightDirector : Node, IQualityAware
 
     private readonly KeyLightModel _model = new();
     private IWorldState? _world;
-    private KeyLightState? _state;
+    private IKeyLightPublisher? _state;
     private DirectionalLight3D? _light;
     private ShadowSettings _settings = ShadowSettings.From(1, 1600f);
     private N.Vector3 _writtenDir = new(float.NaN);
@@ -48,7 +48,7 @@ public partial class KeyLightDirector : Node, IQualityAware
     public override void _Ready()
     {
         _world = Services.Get<IWorldState>();
-        _state = Services.Get<IKeyLightState>() as KeyLightState;
+        _state = Services.Get<IKeyLightPublisher>();
         EnsureLight();
         RetireOtherDirectionalLights();
         Step();

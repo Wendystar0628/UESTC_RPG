@@ -215,6 +215,7 @@ public sealed partial class SaveLifecycleTests
         public long Instance { get; set; } = 1;
         public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
         public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public Body Sun => default; public Body Moon => default;
+        public float SunAltDegAt(double clock, Season season) => Sun.AltDeg;
         public float MoonPhase => 1; public float Omega => 0; public Campus.Contracts.Flow Flow => new(1); public bool Scrubbing => false;
         public Campus.Contracts.Flow BaseFlow => Flow;
         public int LastFlowRate => BaseFlow.Rate;

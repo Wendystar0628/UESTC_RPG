@@ -27,7 +27,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     Season SeasonTarget { get; }
     Body Sun { get; }
     /// <summary>Queries the art-directed solar altitude without advancing or modifying the world.</summary>
-    float SunAltDegAt(double clock, Season season) => throw new NotSupportedException("Solar forecast is not implemented by this world-state provider.");
+    float SunAltDegAt(double clock, Season season);
     Body Moon { get; }
     float MoonPhase { get; }                // 默认 1 = 满月
     float Omega { get; }                    // 主光角速度 °/s；WP-03 据此决定量化转灯还是连续转动（ENG-PERF）
@@ -72,13 +72,13 @@ public interface IWorldRestore
     // Get once per capture on the main Save frame, after all control requests for that frame.
     // WorldHours/ClockOffset/Season are the settled target; FlowRate is BaseFlow, never a temporary lease rate.
     // No time advancement, weather Step, random draws, or live-state mutation is permitted.
-    WorldSaveMoment GetSaveMoment() => throw new NotSupportedException("This world provider does not support a shared save moment.");
+    WorldSaveMoment GetSaveMoment();
 
     // Fault latch, not rollback: stop world progression and reject controls/capture while faulted.
     // Abort must run synchronously in the same Save frame as the failing restore callback.
     // It never increments Instance. Only a fresh valid Restore + CompleteRestore clears the latch.
-    void AbortRestore() => throw new NotSupportedException("This world provider does not support restore fault isolation.");
-    bool RestoreFaulted => false;
+    void AbortRestore();
+    bool RestoreFaulted { get; }
 
     // WP-50 在 FramePriority.Save 内、maps/world/weather/各图天气段全部恢复成功后调用一次，
     // 然后才执行地图 Travel 及 Content/Pose 阶段；新游戏同序，CompleteResume 不调用。
@@ -109,8 +109,8 @@ public sealed record WeatherProcessState(    // 全局天气设定的落定快�
 }
 public interface IWeatherProcess
 {
-    /// <summary>Parses and validates new-world command-line choices before any world state changes.</summary>
-    WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season);
+    /// <summary>Validates typed new-world weather choices before world initialization.</summary>
+    void ValidateBoot(WeatherBoot boot, Season season);
     /// <summary>Maps a map's default weather to a kind available in the requested season.</summary>
     WeatherKind MapToSeason(WeatherKind kind, Season season);
     void Reset(WeatherBoot b);               // 只在新游戏时调用
@@ -129,8 +129,7 @@ public interface IWeatherProcess
     WeatherProcessState Capture();                                  // 存档：给出落定值，过渡中取终点；在 FramePriority.Save 调用。
     // Pure settled snapshot for the shared world endpoint. Work on a copy:
     // never Step/Advance/Reseason the live process, consume its random stream, or change Now/Ahead.
-    WeatherProcessState CaptureAt(in WorldSaveMoment moment) =>
-        throw new NotSupportedException("This weather provider does not support a specified save moment.");
+    WeatherProcessState CaptureAt(in WorldSaveMoment moment);
     void Restore(WeatherProcessState s);                              // 读档：在遮挡下直接落到存档的状态，不做过渡、不调 Reset
 }
 
@@ -167,6 +166,6 @@ public readonly record struct WindSample(float Gust, float Phase);
 public interface IWindField                 // WP-26
 {
     /// <summary>Normalized horizontal direction of air travel in world X/Z coordinates; zero means calm.</summary>
-    Vector2 Direction => Vector2.Zero;
+    Vector2 Direction { get; }
     WindSample Sample(float x, float z, double animTime);   // CPU 侧：植被近池重建、粒子槽位
 }

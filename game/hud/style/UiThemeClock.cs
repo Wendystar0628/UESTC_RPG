@@ -1,3 +1,4 @@
+using Campus.Contracts.Startup;
 using Campus.Contracts;
 using Campus.Hud.Motion;
 using Godot;
@@ -104,9 +105,9 @@ public partial class UiThemeClock : Node, IUiTheme
     }
 
     /// <summary>启动参数到位（BeforeMap）后由 HudRoot 调用一次：--ui-theme 压过设置，直接落到该主题，不扫。</summary>
-    public void Apply(HudArguments args)
+    public void Apply(UiBootOptions args)
     {
-        _forced = args.UiTheme;
+        _forced = args.Theme;
         if (_forced is null || !IsInsideTree()) return;
         _dark = Decide(initial: true);
         Snap();

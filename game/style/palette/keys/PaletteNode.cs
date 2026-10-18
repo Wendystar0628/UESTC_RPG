@@ -78,7 +78,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
 
     public override void _Ready()
     {
-        if (AppBoot.Value("inspect") == "palette")
+        if (AppBoot.Options.Capture.Inspect == "palette")
         {
             _inspector = new PaletteInspector(this);
             AddChild(_inspector);

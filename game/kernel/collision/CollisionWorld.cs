@@ -7,6 +7,19 @@ using N = System.Numerics;
 
 namespace Campus.Kernel.Collision;
 
+public interface ICollisionMountRuntime : ICollisionWorld
+{
+    MapId? Map { get; }
+    long Revision { get; }
+    void Attach(Node3D root, IMapContext context);
+    void BeginTile(TileKey tile);
+    void MountBody(TileKey tile, IReadOnlyList<Collider> colliders);
+    void CompleteTile(TileKey tile);
+    void FailTile(TileKey tile, string error);
+    void RemoveTile(TileKey tile);
+    void Unload();
+}
+
 public sealed record CollisionDiagnostics(int Tiles, int ReadyTiles, int Bodies, int Shapes, int MaxBodyShapes,
     int MainThreadViolations, int IncompleteMounts)
 {
@@ -16,8 +29,9 @@ public sealed record CollisionDiagnostics(int Tiles, int ReadyTiles, int Bodies,
 
 /// <summary>The collision service owns every body it mounts. All entry points are main-thread only.</summary>
 // Registration activates with the formal Boot composition.
+[KernelService(typeof(ICollisionMountRuntime), Owner = "WP-43")]
 [KernelService(typeof(ICollisionWorld), Owner = "WP-43")]
-public sealed class CollisionWorld : ICollisionWorld
+public sealed class CollisionWorld : ICollisionMountRuntime
 {
     public const uint WalkMask = 479;
     public const uint SupportMask = (1u << (int)SurfaceTag.Ground) | (1u << (int)SurfaceTag.Stair) | (1u << (int)SurfaceTag.Prop);

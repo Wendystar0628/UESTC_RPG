@@ -17,7 +17,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private readonly List<(Type Type, Node Node)> _scoped = [];
     private IMapStreamState? _stream;
     private ICollisionWorld? _collision;
-    private RenderHost? _renderer;
+    private IRenderReadiness? _renderer;
     private MaterialWarmup? _materials;
     private IToonMaterialProvider? _materialSource;
     private MapId? _loaded;
@@ -57,8 +57,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         ProcessPriority = FramePriority.StreamMount + 1;
         _stream = Services.Get<IMapStreamState>();
         _collision = Services.Get<ICollisionWorld>();
-        _renderer = Services.Get<IRenderHost>() as RenderHost
-            ?? throw new InvalidOperationException("The stage requires its dynamic render host.");
+        _renderer = Services.Get<IRenderReadiness>();
         _materials = Services.Get<MaterialWarmup>();
         _materialSource = Services.Get<IToonMaterialProvider>();
         _presentation = Services.Get<IVeilPresentation>();
