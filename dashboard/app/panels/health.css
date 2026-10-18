@@ -1,0 +1,18 @@
+/* 健康页。只用令牌。 */
+.hl-list { display: flex; flex-direction: column; }
+.hl-item { border-top: 1px solid var(--line-2); }
+.hl-item:first-child { border-top: 0; }
+.hl-sum { display: flex; align-items: baseline; gap: var(--s2); padding: 8px 0; cursor: pointer; list-style: none; }
+.hl-sum::-webkit-details-marker { display: none; }
+.hl-sum .dot { align-self: center; }
+.hl-title { font-weight: 600; white-space: nowrap; }
+.hl-summary { flex: 1; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.hl-item.t-warn .hl-summary, .hl-item.t-risk .hl-summary { color: var(--tone); }
+.hl-caret { flex: none; width: 6px; height: 6px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+.hl-item[open] .hl-caret { transform: rotate(45deg); }
+.hl-body { padding: 0 0 var(--s3) 16px; display: flex; flex-direction: column; gap: 2px; }
+.hl-detail { display: flex; gap: var(--s3); font-size: var(--fs-sm); color: var(--text-2); }
+.hl-dtext { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.hl-dmeta { flex: 0 1 45%; text-align: right; color: var(--text-3); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.hl-tip { margin-top: var(--s1); font-size: var(--fs-sm); color: var(--auto); white-space: pre-line; }
+@media (max-width: 560px) { .hl-sum { flex-wrap: wrap; } .hl-dmeta { flex-basis: 35%; } }

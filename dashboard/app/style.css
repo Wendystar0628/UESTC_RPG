@@ -139,7 +139,7 @@ button { font: inherit; color: inherit; }
 .pop-row .grow { flex: 1; }
 .pop-row .ago { color: var(--text-3); font-size: var(--fs-xs); }
 
-.shell { display: flex; max-width: 1320px; margin: 0 auto; }
+.shell { display: flex; max-width: 1480px; margin: 0 auto; }
 .nav {
   position: sticky; top: 54px; align-self: flex-start;
   flex: none; width: 176px; height: calc(100vh - 54px);
@@ -340,3 +340,81 @@ button { font: inherit; color: inherit; }
 .tree-group { display: block; }
 .tree-item:not(.is-open) > .tree-group { display: none; }
 .at-ago { margin-left: 4px; opacity: .65; }
+
+/* ---------- 实时状态共用件（ui-live.js）：谁在干活 .who、后台脚本 .sc、钩子 .hk ---------- */
+.who { display: flex; flex-direction: column; gap: var(--s3); }
+.who-group { background: var(--surface-2); border: 1px solid var(--line-2); border-left: 3px solid var(--muted); border-radius: var(--radius-sm); padding: var(--s1) 0; }
+.who-group--claude { border-left-color: var(--claude); }
+.who-group--codex { border-left-color: var(--codex); }
+.who-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s2); padding: 6px var(--s3); min-width: 0; }
+.who-agent { padding-left: var(--s5); border-top: 1px solid var(--line-2); }
+.who-agent.is-done { color: var(--text-2); }
+.who-name { font-weight: 600; white-space: nowrap; }
+.who-agent .who-name { font-weight: 500; font-family: var(--mono); font-size: var(--fs-sm); }
+.who-sigs { display: inline-flex; gap: var(--s1); flex-wrap: wrap; }
+.who-task { flex: 1 1 8rem; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who-main-task { flex-basis: 100%; white-space: normal; color: var(--text-3); }
+.who-when { margin-left: auto; color: var(--text-3); font-size: var(--fs-xs); white-space: nowrap; }
+.who-orphan, .who-none { padding: 6px var(--s3); color: var(--text-3); font-size: var(--fs-sm); }
+.who-none { padding-left: var(--s5); }
+.who-group .fold { margin: 0; padding: 0 var(--s3) var(--s1) var(--s5); }
+.who-group .fold .who-row { padding-left: 0; }
+.who-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.who-dot--running { background: var(--ok); }
+.who-dot--idle { opacity: .5; }
+.who-dot--done { background: transparent; border: 1.5px solid var(--text-3); }
+.who-dot--held { background: var(--auto); }
+.who-dot--stopped { background: var(--risk); opacity: .7; }
+
+.sc { display: flex; flex-direction: column; }
+.sc-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--s2); padding: 7px 0; border-top: 1px solid var(--line-2); }
+.sc-row:first-child { border-top: 0; }
+.sc-row .who-dot { align-self: center; }
+.sc-name { font-weight: 600; white-space: nowrap; }
+.sc-where { font-size: var(--fs-xs); color: var(--text-3); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; white-space: nowrap; }
+.sc-cmd { flex: 1 1 10rem; min-width: 0; font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
+.sc-when { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
+.sc-extra { flex-basis: 100%; padding-left: 16px; font-size: var(--fs-xs); color: var(--auto); }
+.sc-lock.is-held .sc-cmd { color: var(--auto); font-weight: 600; font-family: var(--font); font-size: var(--fs-sm); }
+.sc-row.is-stopped .sc-name { color: var(--text-2); font-weight: 500; }
+.wt-row { padding: 8px 0; border-top: 1px solid var(--line-2); display: flex; flex-direction: column; gap: 2px; }
+.wt-row:first-child { border-top: 0; }
+.wt-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.wt-name { font-weight: 600; overflow-wrap: anywhere; }
+.wt-when { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
+.wt-path { font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-3); overflow-wrap: anywhere; }
+.wt-line { font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.wt-gate { font-size: var(--fs-xs); color: var(--text-2); }
+.wt-gate.is-bad { color: var(--risk); }
+.wt-gate.is-none { color: var(--text-3); }
+.wt-flag { font-size: var(--fs-xs); color: var(--auto); overflow-wrap: anywhere; }
+
+.hk-item { border-top: 1px solid var(--line-2); padding: 8px 0; }
+.hk-item:first-child { border-top: 0; }
+.hk-item > summary { cursor: pointer; list-style: none; display: block; }
+.hk-item > summary::-webkit-details-marker { display: none; }
+.hk-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.hk-name { font-weight: 600; }
+.hk-desc { color: var(--text-3); font-size: var(--fs-sm); }
+.hk-last { margin-left: auto; color: var(--text-2); font-size: var(--fs-sm); }
+.hk-sub { color: var(--text-3); font-size: var(--fs-xs); margin-top: 2px; overflow-wrap: anywhere; }
+.hk-flag { margin-top: 2px; font-size: var(--fs-sm); color: var(--auto); font-weight: 600; }
+.hk-item.is-flag { box-shadow: inset 3px 0 0 var(--auto); padding-left: var(--s3); }
+.hk-body { margin-top: var(--s2); padding: var(--s2) var(--s3); background: var(--surface-2); border-radius: var(--radius-sm); }
+.hk-rec { display: flex; flex-wrap: wrap; gap: 2px var(--s2); font-size: var(--fs-xs); padding: 2px 0; }
+.hk-rec.is-err { color: var(--risk); }
+.hk-t { color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hk-ev { color: var(--text-2); }
+.hk-inj { flex: 1 1 10rem; min-width: 0; overflow-wrap: anywhere; }
+.hk-warn { color: var(--auto); }
+
+@media (max-width: 560px) { .who-agent { padding-left: var(--s4); } }
+
+/* 长文字：不长直接全文，真长的先给一句话摘要，点开看全文（Dash.longText） */
+.longtext > summary { cursor: pointer; list-style: none; }
+.longtext > summary::-webkit-details-marker { display: none; }
+.longtext > summary::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 0 2px 6px; border-right: 1.5px solid var(--text-3); border-bottom: 1.5px solid var(--text-3); transform: rotate(45deg); }
+.longtext[open] > summary::after { transform: rotate(-135deg); }
+.longtext-body { margin-top: 2px; color: var(--text-2); overflow-wrap: anywhere; }
+.who-task { cursor: pointer; }
+.who-task.is-open { white-space: normal; overflow: visible; }

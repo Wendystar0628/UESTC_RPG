@@ -5,12 +5,9 @@
 用法：python -I -X utf8 dashboard/tools/collect.py          （巡逻每 10 分钟跑一次，也可手动）
       from collect import main; main()                       （巡逻 import 调用，不交互、不退出）
 """
-import calendar
 import glob
-import json
 import os
 import re
-import subprocess
 import sys
 import time
 from datetime import datetime
@@ -20,17 +17,14 @@ sys.path.insert(0, HERE)  # python -I 不带脚本目录
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, os.path.join(ROOT, 'scripts', 'docs'))
 sys.path.insert(0, os.path.join(ROOT, 'scripts', 'build'))
-sys.path.insert(0, os.path.join(ROOT, '.collab', 'tools', 'watch'))
+sys.path.insert(0, os.path.join(ROOT, '.collab', 'tools'))  # 监控库 monitor：本机协作数据（.collab）只经它读，这是仓库代码引用 .collab 的唯一例外
 
 import datafile  # noqa: E402
+from monitor.read import collab  # noqa: E402
 
 SOURCE = 'collect.py'
-STATUS_FILE = '.collab/status/施工状态.md'
 STATES = ('进行中', '待编译', '等前置', '可派', '暂停')
 RECENT_DECISIONS = 15
-TEXT_MAX = 44      # 一句话字段的上限（约 40 个汉字）
-SUMMARY_MAX = 60
-QUICK_TEST_S = 2.0  # 与 patrol 的快检口径一致
 CODE_EXT = ('.cs', '.gd', '.py', '.ps1', '.json', '.md')  # 另有 .gdshader*
 SKIP_DIRS = {'bin', 'obj', '.godot', '.venv', '__pycache__', 'godot-api', 'addons', 'node_modules'}
 SKIP_PATHS = {'game/bake'}  # 本机生成的暂存
@@ -69,33 +63,9 @@ def iso(ts):
     return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(ts))
 
 
-def iso_from_utc(text):
-    """'2026-10-18T13:58:30.5Z' → 本地时刻 ISO；解析不了返回原文。"""
-    try:
-        return iso(calendar.timegm(time.strptime(text[:19], '%Y-%m-%dT%H:%M:%S')))
-    except ValueError:
-        return text
-
-
-def git(*args):
-    try:
-        r = subprocess.run(['git', '-C', ROOT, *args], capture_output=True, timeout=30)
-        return r.stdout.decode('utf-8', 'ignore') if r.returncode == 0 else ''
-    except Exception:
-        return ''
-
-
-def brief(text, limit=TEXT_MAX):
-    """收成一句话：去掉强调、反引号与括号补充，取第一个句号或分号前；太短再并一句，太长在最近的逗号处断开。"""
-    text = re.sub(r'\([^()]*\)|（[^（）]*）', '', re.sub(r'[`*]', '', text or '')).strip()
-    parts = [p.strip() for p in re.split(r'[。；]', text) if p.strip()]
-    out = parts[0] if parts else ''
-    if len(out) < 8 and len(parts) > 1:
-        out += '，' + parts[1]
-    if len(out) > limit:
-        cut = max(out.rfind(c, 0, limit) for c in '，、：')
-        out = out[:cut] if cut >= 10 else out[:limit - 1] + '…'
-    return out
+def brief(text):
+    """去掉强调与反引号，收成一行；不截断（页面先显示摘要，细节点开看）。"""
+    return re.sub(r'\s+', ' ', re.sub(r'[`*]', '', text or '')).strip()
 
 
 def cells(line):
@@ -122,19 +92,13 @@ def main_status(cell):
 
 
 def queue_data():
-    text = read_text(STATUS_FILE)
-    head = lambda key: next((l.split('：', 1)[1] for l in text.splitlines() if key in l and '：' in l), '')
-    rows = []
-    for l in section(text, '## 施工队列').splitlines():
-        c = cells(l)
-        if len(c) >= 6 and re.match(r'^[A-Z]-\d+[a-z]*$', c[0]):
-            rows.append({'id': c[0], 'title': re.split(r'[。（(]', c[1], 1)[0].strip()[:TEXT_MAX], 'status': main_status(c[3]),
-                         'who': c[4].lower(), 'dirs': c[2], 'pre': c[5]})
+    head = lambda key: next((l.split('：', 1)[1] for l in collab.status_head().splitlines() if key in l and '：' in l), '')
+    rows = [{'id': r['id'], 'title': r['what'], 'status': main_status(r['state']), 'who': r['who'].lower(), 'dirs': r['dirs'], 'pre': r['pre']}
+            for r in collab.queue_rows()]
     counts = {s: 0 for s in STATES}
     for r in rows:
         counts[r['status']] = counts.get(r['status'], 0) + 1
-    return {'stage': brief(head('当前阶段')), 'priority': brief(head('当前优先级')),
-            'counts': counts, 'rows': rows}
+    return {'stage': brief(head('当前阶段')), 'priority': brief(head('当前优先级')), 'counts': counts, 'rows': rows}
 
 
 # ---------- structure ----------
@@ -294,8 +258,6 @@ def docs_data():
         fm = front(text)
         code, chars, _ = doc_size.measure(os.path.join(ROOT, path))
         summary = fm.get('summary', '')
-        if len(summary) > SUMMARY_MAX:
-            summary = summary[:SUMMARY_MAX - 1] + '…'
         items.append({'code': code, 'title': fm.get('title', code), 'path': path, 'summary': summary,
                       'chars': chars, 'parent': None, 'sections': sections.get(code, []), '_body': text})
     for d in items:
@@ -330,57 +292,11 @@ def decisions_data():
 
 # ---------- health ----------
 
-def test_record():
-    """门禁测试记录（运行时刻、测试名、秒数、结果）里最近一次运行：时刻、超 2 s 的个数、失败个数。"""
-    p = os.path.join(ROOT, 'output', 'build', 'test-record.tsv')
-    if not os.path.isfile(p):
-        return None, 0, 0
-    rows = [l.split('\t') for l in open(p, encoding='utf-8').read().splitlines()]
-    rows = [r for r in rows if len(r) == 4]
-    if not rows:
-        return None, 0, 0
-    last = max(r[0] for r in rows)
-    run = [r for r in rows if r[0] == last]
-    return iso_from_utc(last), sum(1 for r in run if float(r[2]) > QUICK_TEST_S), sum(1 for r in run if r[3] == 'Failed')
-
-
-def tests_health():
-    import patrol
-    (count, loc), ratio, _, _ = patrol.test_health()
-    last, slow, failed = test_record()
-    return {'count': count, 'loc': loc, 'ratio': round(ratio, 3), 'slow': slow, 'failed': failed, 'lastRun': last}
-
-
-def gate_health():
-    files = glob.glob(os.path.join(ROOT, 'output', 'build', 'gates', '*-result.json'))
-    if not files:
-        return None
-    data = json.load(open(max(files, key=os.path.getmtime), encoding='utf-8-sig'))
-    plan = data.get('Plan', {})
-    bad = [r.get('Gate') for r in data.get('Results', []) if r.get('Status') != 'Passed']
-    return {'at': iso_from_utc(data.get('GeneratedAt', '')), 'scope': plan.get('Scope', ''), 'wp': plan.get('WorkPackage', ''),
-            'result': 'failed' if bad else 'passed', 'failedGates': bad}
-
-
-def git_health():
-    recent = []
-    for l in git('log', '-5', '--format=%h%x09%s%x09%ct').splitlines():
-        h, subject, ts = l.split('\t')
-        recent.append({'hash': h, 'subject': subject, 'at': iso(int(ts))})
-    unpushed = git('rev-list', '--count', '@{u}..HEAD').strip()
-    return {'head': git('rev-parse', '--short', 'HEAD').strip(), 'unpushed': int(unpushed) if unpushed else None, 'recent': recent}
-
-
-def docs_over():
-    out = subprocess.run([sys.executable, '-I', '-X', 'utf8', os.path.join(ROOT, 'scripts', 'docs', 'doc_size.py'), '--over'],
-                         capture_output=True, timeout=60).stdout.decode('utf-8', 'ignore')
-    return len(set(re.findall(r'^超限\s+(\S+)', out, re.M)))
-
-
 def health_data():
-    import clean_artifacts
-    return {'tests': tests_health(), 'gate': gate_health(), 'git': git_health(),
-            'cleanup': {'stale': len(clean_artifacts.stale())}, 'docs': {'over': docs_over()}}
+    """健康检查只有一份实现（.collab/tools/monitor/check/），巡逻读同一份；这里把全部检查写成 health.js。"""
+    from monitor import check
+    from monitor.record import public
+    return {'checks': [public(r) for r in check.run_all()]}
 
 
 # ---------- audit-auto ----------
@@ -393,7 +309,7 @@ def file_item(kind, path, title):
 def research_items():
     """调研索引里总览还在、审计列写着待审的行。"""
     out = []
-    for l in read_text('.collab/research/INDEX.md').splitlines():
+    for l in collab.research_index().splitlines():
         c = cells(l)
         if len(c) >= 6 and re.match(r'^r\d+', c[0]) and c[4] != '已删' and '待审' in c[5]:
             path = c[4].strip('`') if '/' in c[4] else '.collab/research/INDEX.md'
@@ -405,11 +321,10 @@ def research_items():
 def decision_notes():
     """给 Opus 的来信里含【需定】的，标题取第一行。"""
     out = []
-    for p in sorted(glob.glob(os.path.join(ROOT, '.collab', 'notes', 'opus', '*.md'))):
-        text = read_text(rel(p))
-        if '【需定】' in text:
-            title = brief(text.strip().splitlines()[0].lstrip('# ').strip())
-            out.append(file_item('decision', rel(p), title))
+    for n in collab.notes('opus'):
+        if '【需定】' in n['text']:
+            rel_path = os.path.relpath(n['path'], ROOT).replace(os.sep, '/')
+            out.append(file_item('decision', rel_path, brief(n['text'].strip().splitlines()[0].lstrip('# '))))
     return out
 
 

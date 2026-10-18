@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datafile import read, write  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MAX_TEXT, MAX_WHY = 40, 60
+MAX_TEXT, MAX_WHY = 120, 200
 DONE_KEEP_DAYS = 7
 FMT = '%Y-%m-%dT%H:%M:%S'
 LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'curated', '.post.lock')

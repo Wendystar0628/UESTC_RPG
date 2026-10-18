@@ -5,8 +5,10 @@
 window.DashManifest = {
   pages: [
     { id: 'overview',  title: '总览', desc: '现在要不要你动手' },
-    { id: 'models',    title: '模型', desc: '谁在跑什么' },
+    { id: 'doing',     title: '在做', desc: '正在处理的工作' },
     { id: 'work',      title: '施工', desc: '队列与进度' },
+    { id: 'health',    title: '健康', desc: '测试、门禁、文档、协作与后台的检查' },
+    { id: 'models',    title: '模型', desc: '谁在跑什么' },
     { id: 'structure', title: '结构', desc: '项目分层与主要目录' },
     { id: 'docs',      title: '文档', desc: '按域分组的文档地图' },
     { id: 'audit',     title: '审计', desc: '等你审的事' },
@@ -15,8 +17,10 @@ window.DashManifest = {
   ],
   panels: [
     { id: 'overview',  page: 'overview',  file: 'panels/overview.js',  css: true },
-    { id: 'models',    page: 'models',    file: 'panels/models.js',    css: true },
+    { id: 'doing',     page: 'doing',     file: 'panels/doing.js',     css: true },
     { id: 'queue',     page: 'work',      file: 'panels/queue.js',     css: true },
+    { id: 'health',    page: 'health',    file: 'panels/health.js',    css: true },
+    { id: 'models',    page: 'models',    file: 'panels/models.js' },
     { id: 'structure', page: 'structure', file: 'panels/structure.js', css: true },
     { id: 'docs',      page: 'docs',      file: 'panels/docs.js',      css: true },
     { id: 'audit',     page: 'audit',     file: 'panels/audit.js' },
