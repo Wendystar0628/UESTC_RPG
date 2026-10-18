@@ -156,12 +156,6 @@
   },
   {
    "docs": [
-    "ENG-BUDGET-RULES"
-   ],
-   "glob": "export_presets.cfg"
-  },
-  {
-   "docs": [
     "ENG-CODE",
     "WF-BUILD"
    ],
@@ -172,6 +166,12 @@
     "WF-BUILD"
    ],
    "glob": "game/**/*.gdshader*"
+  },
+  {
+   "docs": [
+    "ENG-BUDGET-RULES"
+   ],
+   "glob": "game/export_presets.cfg"
   },
   {
    "docs": [

@@ -12,7 +12,7 @@ related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
 gates: [G4, G5, G16, G17, G20, G21]
-paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
+paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"]
 ---
 # ENG-BUDGET-RULES · 推送硬规则与工程设置
 
@@ -24,7 +24,7 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 
 1. **硬规则 23 条，违反任何一条都不能推送**：第 1–10 条管渲染、材质与时间，第 11–23 条管烘焙、线程、存档与音频（§1）。
 2. **门禁按这些条查**：一票否决含全部硬规则（ENG-GATES-VETO §1 第 10 条）；G4、G5、G16、G17、G20、G21 各验其中几条。
-3. **工程设置由主代理维护**：`game/project.godot`、`export_presets.cfg`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
+3. **工程设置由主代理维护**：`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 的改动要申请，固定项四预设相同、运行时不动（§2）。
 
 ### 0.1 接入要点
 
@@ -34,7 +34,7 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 - **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）；gen 里随机与哈希只用 `Rng`、`StableHash`（§1 第 22 条）
 - **要全局着色器参数**：先登记，运行时不增不读回（§1 第 13 条）
 - **读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档只经 `ISaveService`（§1 第 19、23 条）
-- **要改 `project.godot`、`export_presets.cfg`、`Directory.Build.props`**：由主代理维护，申请（§2）
+- **要改 `project.godot`、`game/export_presets.cfg`、`Directory.Build.props`**：由主代理维护，申请（§2）
 
 ## 1 硬规则（违反任何一条都不能推送）
 
@@ -69,7 +69,7 @@ paths: ["game/project.godot", "export_presets.cfg", "Directory.Build.props"]
 
 ## 2 工程设置
 
-`game/project.godot`、`export_presets.cfg`、`Directory.Build.props` 由主代理维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。运行时的规则：
+`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 由主代理维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。运行时的规则：
 
 - **固定项**四预设相同，运行时一律不动（§1 第 9 条）；随画面设置改的项按 SYS-GRAPHICS §3 的类别改。
 - **渲染器**：Forward+；D3D12 不可用时回落 Vulkan，不回落兼容渲染器；渲染线程模式 Safe；导出开 Shader Baker（只烘 D3D12，要窗口模式导出）。

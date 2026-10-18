@@ -1,13 +1,13 @@
 # 小节目录
 
-> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（WF-ONBOARD §3.1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
+> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（CORE-INDEX §1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
 
 ## CORE-INDEX · 《电光年华》开发总纲
 
-`docs/README.md` · 7.2k 字 · 全项目唯一的顶层：核心准则（钩子注入）、按功能分域的文档地图、作品定位与当前范围、全局不变量 INV-1–INV-12
+`docs/README.md` · 7.3k 字 · 全项目唯一的顶层：核心准则（钩子注入）、按功能分域的文档地图、作品定位与当前范围、全局不变量 INV-1–INV-12
 关键词：总纲、核心准则、文档地图、怎么查文档、作品定位、电光年华、当前范围、主线、全局不变量、INV、清水河、实现优先、不过度工程化、测试最小、改设计必清旧、直接改主线、一份权威、文档精简、落金初灯
 
-- CORE-INDEX §0 核心准则 · L21 · 1.6k
+- CORE-INDEX §0 核心准则 · L21 · 1.7k
   - ★ CORE-INDEX §0.1 接入要点 · L46 · 119
 - CORE-INDEX §1 文档地图 · L52 · 2.0k
 - CORE-INDEX §2 作品与范围 · L85 · 965
@@ -42,29 +42,29 @@
 `docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.0k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
-- CORE-DECISIONS-PROCESS §0 结论 · L23 · 163
+- CORE-DECISIONS-PROCESS §0 结论 · L23 · 173
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.3k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 11.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
-- CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 154
+- CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
   - ★ CORE-DECISIONS-SYSTEMS §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.2k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L120 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.3k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L121 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
 `docs/core/CORE-DECISIONS-WORLD-世界与画面决策.md` · 11.0k 字 · 作品定位与范围、世界与地图、时间季节天气、美术风格四个领域的已定决策
 关键词：决策、世界、画面、作品定位、地图、时间、季节、天气、美术风格
 
-- CORE-DECISIONS-WORLD §0 结论 · L23 · 148
+- CORE-DECISIONS-WORLD §0 结论 · L23 · 158
   - ★ CORE-DECISIONS-WORLD §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-WORLD §1 作品定位与范围 · L31 · 1.8k
 - CORE-DECISIONS-WORLD §2 世界与地图 · L48 · 3.6k
@@ -1758,12 +1758,12 @@
 `docs/engineering/ENG-BUDGET-RULES-推送硬规则.md` · 5.9k 字 · 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
 关键词：硬规则、推送规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、Shader Baker、版本锁定
 
-- ENG-BUDGET-RULES §0 结论 · L23 · 841
-  - ★ ENG-BUDGET-RULES §0.1 接入要点 · L29 · 565
+- ENG-BUDGET-RULES §0 结论 · L23 · 851
+  - ★ ENG-BUDGET-RULES §0.1 接入要点 · L29 · 570
 - ENG-BUDGET-RULES §1 硬规则（违反任何一条都不能推送） · L39 · 3.4k
   - ENG-BUDGET-RULES §1.1 渲染、材质与时间（第 1–10 条） · L41 · 1.5k
   - ENG-BUDGET-RULES §1.2 烘焙、线程、存档与音频（第 11–23 条） · L54 · 1.9k
-- ENG-BUDGET-RULES §2 工程设置 · L70 · 732
+- ENG-BUDGET-RULES §2 工程设置 · L70 · 737
 
 ## ENG-BUDGET · 性能预算
 
@@ -1780,17 +1780,17 @@
 
 ## ENG-CODE · 代码结构准则
 
-`docs/engineering/ENG-CODE-代码结构准则.md` · 3.2k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
+`docs/engineering/ENG-CODE-代码结构准则.md` · 3.5k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
 关键词：代码结构准则、软件工程、坏味道、屎山、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、魔法数、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、复制粘贴、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、钉哈希、输入哈希、提交后提醒
 
-- ENG-CODE §0 结论 · L22 · 628
-  - ★ ENG-CODE §0.1 接入要点 · L31 · 367
+- ENG-CODE §0 结论 · L22 · 702
+  - ★ ENG-CODE §0.1 接入要点 · L31 · 407
 - ENG-CODE §1 依赖方向 · L41 · 351
 - ENG-CODE §2 规则值与数据各一份 · L50 · 403
-- ENG-CODE §3 先复用，不复制 · L59 · 158
-- ENG-CODE §4 不留死代码 · L65 · 209
-- ENG-CODE §5 规模 · L72 · 160
-- ENG-CODE §6 测试代码怎么写 · L78 · 431
+- ENG-CODE §3 先用现成，再复用，不复制 · L59 · 431
+- ENG-CODE §4 不留死代码 · L67 · 209
+- ENG-CODE §5 规模 · L74 · 160
+- ENG-CODE §6 测试代码怎么写 · L80 · 431
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
@@ -1956,7 +1956,7 @@
   - ★ OPS-RELEASE §0.1 接入要点 · L31 · 750
 - OPS-RELEASE §1 版本号与构建信息 · L44 · 268
 - OPS-RELEASE §2 用户数据目录 · L51 · 273
-- OPS-RELEASE §3 导出与发布 · L57 · 578
+- OPS-RELEASE §3 导出与发布 · L57 · 584
 - OPS-RELEASE §4 安装、更新与卸载 · L66 · 504
 - OPS-RELEASE §5 地图数据包（ODbL） · L78 · 506
 - OPS-RELEASE §6 故障处理与诊断 · L86 · 547

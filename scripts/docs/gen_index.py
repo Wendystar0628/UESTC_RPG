@@ -112,7 +112,7 @@ def build_sections():
     items.sort(key=lambda x: (x[0], x[1], x[2]))
     out = ['# 小节目录', '',
            '> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；'
-           '★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（WF-ONBOARD §3.1）。'
+           '★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（CORE-INDEX §1）。'
            '行号以生成时为准，原文改过以后可能差几行，以标题文字为准。', '']
     for _, _, rel, fm, t in items:
         code = str(fm.get('id'))
