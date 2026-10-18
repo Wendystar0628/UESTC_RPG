@@ -11,11 +11,11 @@ public static class WetSurface
     public const float ScaleB = 0.9f;
     public const float WeightA = 0.62f;
     public const float PuddleTop = 0.80f;
-    public const float PuddleSpan = 0.24f;
-    public const float FlatFrom = 0.93f;
-    public const float FlatTo = 0.985f;
-    public const float ResponseFrom = 0.5f;
-    public const float ResponseTo = 0.9f;
+    public const float PuddleSpan = 0.22f;
+    public const float FlatFrom = 0.990f;
+    public const float FlatTo = 0.997f;
+    public const float ResponseFrom = 0.45f;
+    public const float ResponseTo = 0.55f;
 
     /// <summary>积水潜势 0–1，与着色器 precip_puddle_potential 相同。</summary>
     public static float PuddlePotential(float x, float z) =>

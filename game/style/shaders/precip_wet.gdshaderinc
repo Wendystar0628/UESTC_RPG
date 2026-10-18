@@ -17,10 +17,10 @@
 const float PW_SCALE_A = 2.4;           // 积水潜势：两层值噪声的尺度（m）与权重
 const float PW_SCALE_B = 0.9;
 const float PW_WEIGHT_A = 0.62;
-const float PW_PUDDLE_TOP = 0.80;       // 积水阈值：积水量刚大于 0 时 0.80（只有最低洼的几处），
-const float PW_PUDDLE_SPAN = 0.24;      // 积水量 1 时降到 0.56（约三成铺地成水）；干的时候原地缩小
-const vec2 PW_FLAT = vec2(0.93, 0.985); // 只有朝天的平面积水
-const vec2 PW_RESPONSE = vec2(0.5, 0.9);   // 材质湿润响应到这一段才积水（沥青 1；默认 0.6 很少；玻璃 0 没有）
+const float PW_PUDDLE_TOP = 0.80;       // 积水阈值：积水量刚大于 0 时 0.80（只有潜势最高的几处低洼，约 3%），
+const float PW_PUDDLE_SPAN = 0.22;      // 积水量 1 时降到 0.58（约三成硬质铺地成水）；轻雨阈值高、覆盖少，干的时候原地缩小
+const vec2 PW_FLAT = vec2(0.990, 0.997);   // 只有近乎水平的面积水（法线 y；约 8° 以上的坡不积）
+const vec2 PW_RESPONSE = vec2(0.45, 0.55); // 硬质面门：材质湿润响应 ≥ 0.55 才有积水和天光带（沥青 1、铺装 0.6）；草地 0.4、布与树叶更低，只做湿润变暗
 const vec2 PW_SHEEN_GRAZE = vec2(0.80, 0.985);   // 湿面掠射天光带：1 − |N·V| 在这一段里渐入天空色（远处的湿路面映天）
 const float PW_SHEEN_K = 0.5;           // 天光带的混合量 × 湿润
 const float PW_WET_EXTRA = 0.20;        // 湿面在 toon 的湿润变暗之上再压一档（× (1 − 0.20·wet)）
@@ -158,7 +158,10 @@ void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outs
 	}
 	float wet = clamp(weather_b.x, 0.0, 1.0) * precip_wet_exposure(wpos, n_w, interior, outskirt) * response;
 
-	// 湿面：整体再压一档、影色多压一点（对比略增）、彩度 +15%；掠射角映天光
+	// 硬质面门：草地等软面只变暗，不映天光、不积水
+	float hard = smoothstep(PW_RESPONSE.x, PW_RESPONSE.y, response);
+
+	// 湿面：整体再压一档、影色多压一点（对比略增）、彩度 +15%；硬质面的掠射角映天光
 	if (wet > 0.0) {
 		lit *= 1.0 - PW_WET_EXTRA * wet;
 		shade *= 1.0 - (PW_WET_EXTRA + PW_WET_CONTRAST) * wet;
@@ -167,14 +170,13 @@ void precip_puddle_apply(vec3 wpos, vec3 cam, vec3 n_w, bool interior, bool outs
 		shade = max(mix(vec3(dot(shade, vec3(0.2126, 0.7152, 0.0722))), shade, kc), vec3(0.0));
 		float band = smoothstep(PW_SHEEN_GRAZE.x, PW_SHEEN_GRAZE.y, graze);
 		vec3 sky = fog_sky(reflect(v, n_w));
-		float k = PW_SHEEN_K * wet * band;
+		float k = PW_SHEEN_K * wet * band * hard;
 		lit = mix(lit, sky, k);
 		shade = mix(shade, sky, k);
 	}
 
-	// 积水：朝天的硬质平面，按潜势阈值长出；外围 O1、O2 不积水
-	float level = clamp(weather_b.y, 0.0, 1.0) * smoothstep(PW_RESPONSE.x, PW_RESPONSE.y, response)
-			* smoothstep(PW_FLAT.x, PW_FLAT.y, n_w.y);
+	// 积水：近乎水平的硬质面，只在潜势高的低洼处按阈值长出；外围 O1、O2 不积水
+	float level = clamp(weather_b.y, 0.0, 1.0) * hard * smoothstep(PW_FLAT.x, PW_FLAT.y, n_w.y);
 	if (outskirt || level <= 0.0) {
 		return;
 	}
