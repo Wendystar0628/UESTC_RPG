@@ -2,7 +2,7 @@
 
 作者了解项目的唯一入口：一个本地网页，像后台控制面板一样给作者看高层信息——项目结构、各种状态、文档地图、正在运行的模型与脚本、需要作者审的东西、给作者的通知。双击 `打开观察台.cmd`（或直接用浏览器打开 `index.html`）即可，不需要服务器。
 
-**只放高层信息**。作者注意力有限：每块先给一句状态，数量只报数量级，细节只给指向（点开文档或文件），不复述底层内容。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
+**只放高层信息**。作者注意力有限：每块先给一句状态，能直接读出的数写确切值，只有测出来的大量值才报数量级，细节只给指向（点开文档或文件），不复述底层内容。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
 
 ## 1 目录
 
@@ -13,7 +13,7 @@ dashboard/
   app/
     manifest.js         页面、面板、数据源与刷新间隔的唯一清单；加页面或数据源只改这里
     core.js             Dash 运行时：数据注册与定时重载、页面路由、面板注册与渲染
-    ui.js               通用格式化与小组件（数量级、时间、h()、卡片、行、已看标记、待看汇总）；在 core.js 之后加载
+    ui.js               通用格式化与小组件（数量级、时刻、h()、卡片、行、树、已看标记、待看汇总）；在 core.js 之后加载
     style.css           颜色与字体令牌、通用组件样式
     panels/<id>.js      一个面板一个文件（可带同名 .css）；只经 Dash 读数据
   data/                 本地状态，不进 git（.gitignore）
@@ -28,14 +28,14 @@ dashboard/
 
 ## 2 数据文件
 
-每个数据文件只有一行：`Dash.put("<名字>", <JSON>);`。页面用 `<script>` 加载，所以 `file://` 下也能读；定时重载时换一个带时间戳的 `<script>`。读写一律经 `tools/datafile.py`（写入先写临时文件再改名）。每份数据都带 `updated`（ISO 时刻）和 `source`（哪个脚本或哪个会话写的），页面据此显示"多久前更新"，过期变灰。
+每个数据文件只有一行：`Dash.put("<名字>", <JSON>);`。页面用 `<script>` 加载，所以 `file://` 下也能读；定时重载时换一个带时间戳的 `<script>`。读写一律经 `tools/datafile.py`（写入先写临时文件再改名）。每份数据都带 `updated`（ISO 时刻）和 `source`（哪个脚本或哪个会话写的），页面据此显示"更新于 HH:MM"，过期变灰。
 
 | 名字 | 种类 | 写的人 | 刷新 | 内容 |
 | --- | --- | --- | --- | --- |
 | `live` | auto | live.py | 15 s | 正在运行的会话、子代理（型号与推理强度）、后台脚本、构建锁与引擎进程 |
 | `queue` | auto | collect.py | 10 min | 施工队列各状态的行、活跃工作包、当前阶段与优先级 |
-| `structure` | auto | collect.py | 10 min | 项目分层与主要目录（文件数、代码行，页面只显示数量级） |
-| `docs` | auto | collect.py | 10 min | 文档按域分组的清单（编码、标题、路径、一句话说明、体量）与互相引用关系 |
+| `structure` | auto | collect.py | 10 min | 项目分层与主要目录，目录可嵌套子目录（文件数、代码行、测试代码行） |
+| `docs` | auto | collect.py | 10 min | 文档按域分组的清单（编码、标题、路径、一句话说明、体量、所属主文档、节目录）与互相引用关系 |
 | `decisions` | auto | collect.py | 10 min | 最近的决策（编号、一句话、状态）与总数 |
 | `health` | auto | collect.py | 10 min | 测试（规模、超时数、失败数）、最近门禁、提交与推送、清理、文档超限 |
 | `audit-auto` | auto | collect.py | 10 min | 自动发现的待审项：新截图、新海报与报告页、待审调研、【需定】来信 |
@@ -51,9 +51,13 @@ live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state
              build:    { lock: "free"|"held", holder, engines, builds } }
 queue:     { stage, priority, counts: { "进行中": n, "待编译": n, "等前置": n, "可派": n, "暂停": n },
              rows: [{ id, title, status, who, dirs, pre }], packages: [{ id, goal, status, block }] }
-structure: { layers: [{ name, note, dirs: [{ path, files, loc, note }] }] }
-docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, sections }] }],
+structure: { layers: [{ name, note, dirs: [{ path, files, loc, testLoc, note, children }] }] }
+             # children 是子目录数组，形状同 dirs 的元素，递归；没有就是叶子；files 是该目录（含子目录）的文件数
+docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, parent, sections }] }],
              edges: [{ from, to, n }] }            # from/to 是文档编码，n 是引用次数；path 相对仓库根
+             # parent 是子文档的主文档编码（主文档为 null）；
+             # sections: [{ id, title, chars, children }]，id 如 "§8"、"§8.1"，children 是下一级节，递归
+             # 采集还没写出 children、parent、sections 时，两棵树照旧平铺，不报错
 decisions: { total, recent: [{ id, text, status, scope }] }
 health:    { tests: { count, loc, ratio, slow, failed, lastRun }, gate: { at, scope, result },
              git: { head, unpushed, recent: [{ hash, subject, at }] }, cleanup: { stale }, docs: { over } }
@@ -73,13 +77,22 @@ Dash.put(name, data)          数据文件调用；存下并重绘依赖它的�
 Dash.get(name)                取当前数据（没有返回 null）
 Dash.panel({ id, page, title, order, needs: [名字...], render(el, data) })
                               面板注册；data 是 { 名字: 数据 }；needs 里任一数据变了就重绘
-Dash.mag(n)                   数量级：0 → "无"，1–9 照写，10–19 "十几"，20–99 "几十"，100–199 "上百"，200–999 "几百"，
+Dash.mag(n)                   只给测出来的大量值（代码行、文件体积、测试代码行、引用次数）用；数量级：0 → "无"，1–9 照写，10–19 "十几"，20–99 "几十"，100–199 "上百"，200–999 "几百"，
                               1000–1999 "上千"，2000–9999 "几千"，10000+ "上万"
-Dash.ago(iso)                 "刚刚" / "几分钟前" / "约 N 小时前" / "昨天" / "几天前"
+Dash.at(iso)                  确切时刻：今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 "—"
+Dash.atAgo(iso)               确切时刻后面带一个灰色的"多久前"（节点）
+Dash.ago(iso)                 "多久前"："刚刚" / "几分钟前" / "约 N 小时前" / "昨天" / "几天前"；只作 Dash.at 后面的灰色补充
 Dash.stale(data, seconds)     超过期限没更新返回 true（面板据此变灰并标"数据旧了"）
 Dash.link(path)               仓库根相对路径 → 本页可点的链接
 Dash.chip(text, tone)         状态小签：tone 取 "ok" "warn" "risk" "claude" "codex" "author" "auto" "muted"
+Dash.tree({ key, nodes, label(n, depth), kids?(n), id?(n), openDepth? })
+                              可展开、收起的树（结构页、文档页共用）；返回节点。key 是 localStorage 里的名字（按页面分开，读写包 try/catch）；
+                              nodes 顶层节点数组，子节点取 kids(n)（默认 n.children），没有就是叶子；label 返回一行的内容，里面的 Dash.a 链接回车时打开；
+                              id 给节点稳定标识（默认按位置），数据刷新后据此保持展开；openDepth 默认展开几层（0 只露顶层，默认 1）。
+                              自带"全部展开/全部收起"；键盘：上下移动，右展开（再按进第一个子节点），左收起（再按回父节点），回车打开链接（没有则展开或收起），空格展开或收起
 ```
+
+**数字口径**：能直接读出的数写确切值——时刻（`Dash.at`）、份数与个数（文档、队列行、子代理、待审、测试个数、提交号等）；只有测出来的大量值才报数量级（`Dash.mag`）：代码行、文件体积、测试代码行、引用次数。
 
 - 页面路由用地址里的 `#页名`；页面清单在 `app/manifest.js`。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类，面板自己的样式写在同名 `.css`，只用令牌，不写颜色字面量。
@@ -94,8 +107,8 @@ Dash.chip(text, tone)         状态小签：tone 取 "ok" "warn" "risk" "claude
 | `#overview` 总览 | `overview.js` | 一行项目状态；"需要你看"（审计项与【需定】，最多 5 条）；健康签条；模型与脚本缩略；最新通知 3 条 |
 | `#models` 模型 | `models.js` | 会话 → 子代理的树，每个节点标型号与推理强度；后台脚本与构建锁 |
 | `#work` 施工 | `queue.js` | 队列按状态分栏，行只显示号与一句话；活跃工作包 |
-| `#structure` 结构 | `structure.js` | 项目分层与主要目录，规模只显示数量级 |
-| `#docs` 文档 | `docs.js` | 按域分组的文档地图，点开文档；引用关系图 |
+| `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数（确切）、代码行（数量级）、一句说明 |
+| `#docs` 文档 | `docs.js` | 域 → 主文档 → 子文档 → 节的树，默认只展开到域，点文档或节打开文件；树下是引用关系图 |
 | `#audit` 审计 | `audit.js` | 需要作者审的事（自动发现 + 模型挂的），可点开对应文件 |
 | `#notices` 通知 | `notices.js` | 通知时间线，过期自动收起 |
 | `#decisions` 决策 | `decisions.js` | 最近的决策 |
@@ -105,7 +118,7 @@ Dash.chip(text, tone)         状态小签：tone 取 "ok" "warn" "risk" "claude
 ## 5 视觉
 
 - **颜色有固定语义**，与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制（钩子、巡逻、脚本、构建锁），红＝问题与风险、要作者动手，绿＝通过与正常；结构、文字、分隔一律用中性蓝灰的深浅。不为装饰换色。
-- **低注意力**：每块第一行是一句状态；红色只给要作者动手的事；默认只露最重要的几条，其余折叠；数量只报数量级；"多久前"代替具体时刻。
+- **低注意力**：每块第一行是一句状态；红色只给要作者动手的事；默认只露最重要的几条，其余折叠；数字能读出就写确切值，测出来的大量值才报数量级；时刻写具体时间，"多久前"只作灰色补充。
 - 浅色为主，跟随系统深色；字体用系统中文无衬线，数字等宽对齐。
 
 ## 6 采集与维护

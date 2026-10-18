@@ -12,7 +12,7 @@
       lead: Dash.chip(it.label, it.tone),
       title: it.title,
       sub: it.why || '',
-      meta: Dash.ago(it.at),
+      meta: Dash.atAgo(it.at),
       act: act,
       tone: it.need ? 'risk' : ''
     });
@@ -42,24 +42,24 @@
     var tiles = [];
 
     var tTone = t.failed > 0 || t.slow > 0 ? 'warn' : 'ok';
-    var tVal = t.failed > 0 ? Dash.magText(t.failed, '个失败') : (t.slow > 0 ? '有慢测试' : '通过');
-    var tSub = Dash.magText(t.count, '个') + (t.slow > 0 ? ' · 慢 ' + Dash.mag(t.slow) : '') + (t.lastRun ? ' · ' + Dash.ago(t.lastRun) : '');
+    var tVal = t.failed > 0 ? t.failed + ' 个失败' : (t.slow > 0 ? '有慢测试' : '通过');
+    var tSub = t.count + ' 个' + (t.slow > 0 ? ' · 慢 ' + t.slow + ' 个' : '') + (t.lastRun ? ' · ' + Dash.at(t.lastRun) : '');
     tiles.push(Dash.tile('测试', tVal, tSub, tTone));
 
     var res = String(g.result == null ? '' : g.result);
     var gTone = /fail|失败|红|错/i.test(res) ? 'warn' : (/pass|ok|通过|绿|success/i.test(res) ? 'ok' : 'muted');
     tiles.push(Dash.tile('门禁', gTone === 'ok' ? '通过' : (gTone === 'warn' ? '没过' : (res || '没记录')),
-      [gTone === 'warn' && g.failedGates && g.failedGates.length ? g.failedGates.join(' ') : g.scope, g.at ? Dash.ago(g.at) : ''].filter(Boolean).join(' · '), gTone));
+      [gTone === 'warn' && g.failedGates && g.failedGates.length ? g.failedGates.join(' ') : g.scope, g.at ? Dash.at(g.at) : ''].filter(Boolean).join(' · '), gTone));
 
     var un = git.unpushed || 0;
-    tiles.push(Dash.tile('推送', un ? Dash.magText(un, '个没推') : '已推送',
-      git.recent && git.recent[0] ? Dash.ago(git.recent[0].at) + '最近提交' : '', un > 0 ? 'warn' : 'ok'));
+    tiles.push(Dash.tile('推送', un ? un + ' 个没推' : '已推送',
+      git.recent && git.recent[0] ? '最近提交 ' + Dash.at(git.recent[0].at) + (git.head ? ' · ' + git.head : '') : '', un > 0 ? 'warn' : 'ok'));
 
     var st = c.stale || 0;
-    tiles.push(Dash.tile('清理', st ? Dash.magText(st, '项待清') : '干净', '', st ? 'warn' : 'ok'));
+    tiles.push(Dash.tile('清理', st ? st + ' 项待清' : '干净', '', st ? 'warn' : 'ok'));
 
     var ov = d.over || 0;
-    tiles.push(Dash.tile('文档', ov ? Dash.magText(ov, '份超限') : '体量正常', '', ov ? 'warn' : 'ok'));
+    tiles.push(Dash.tile('文档', ov ? ov + ' 份超限' : '体量正常', '', ov ? 'warn' : 'ok'));
     return tiles;
   }
 
@@ -100,7 +100,7 @@
   }
 
   function count(n, unit, tone) {
-    return h('div.ov-count.t-' + tone, h('span.ov-count-n', Dash.mag(n)), h('span.ov-count-u', unit));
+    return h('div.ov-count.t-' + tone, h('span.ov-count-n', n), h('span.ov-count-u', unit));
   }
 
   /* ---------- 最新通知 ---------- */
@@ -118,7 +118,7 @@
         return Dash.row({
           lead: Dash.chip(lv[0], lv[1]),
           title: it.link ? Dash.a(it.link, it.text) : it.text,
-          meta: Dash.ago(it.at)
+          meta: Dash.atAgo(it.at)
         });
       })));
       body.appendChild(h('div.ov-more', h('a', { href: '#notices' }, '全部通知')));
@@ -130,8 +130,8 @@
   function headStatus(att, loaded) {
     if (!loaded) return Dash.status('等数据', 'muted', { large: true, sub: '采集脚本还没有写出数据，稍后会自动出现' });
     var needN = att.open.filter(function (x) { return x.need; }).length;
-    if (needN) return Dash.status('有 ' + Dash.mag(needN) + ' 件事等你拍板', 'risk', { large: true, sub: att.open.length > needN ? '另外还有 ' + Dash.mag(att.open.length - needN) + ' 条待看' : '' });
-    if (att.open.length) return Dash.status('有 ' + Dash.mag(att.open.length) + ' 条待看，不急', 'muted', { large: true });
+    if (needN) return Dash.status('有 ' + needN + ' 件事等你拍板', 'risk', { large: true, sub: att.open.length > needN ? '另外还有 ' + (att.open.length - needN) + ' 条待看' : '' });
+    if (att.open.length) return Dash.status('有 ' + att.open.length + ' 条待看，不急', 'muted', { large: true });
     return Dash.status('现在没有要你动手的事', 'ok', { large: true });
   }
 

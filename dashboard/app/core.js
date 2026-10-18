@@ -191,7 +191,7 @@
       if (p.card !== false) {
         p.el.classList.toggle('is-stale', stale);
         if (p.metaEl) {
-          p.metaEl.textContent = stale ? '数据旧了 · 更新于' + Dash.ago(oldest) : (isNaN(oldest) ? '' : '更新 ' + Dash.ago(oldest));
+          p.metaEl.textContent = stale ? '数据旧了 · 更新于 ' + Dash.at(oldest) : (isNaN(oldest) ? '' : '更新 ' + Dash.at(oldest));
         }
       }
     });
@@ -202,10 +202,10 @@
 
   function headlineText() {
     var q = store['queue'], l = store['live'], parts = [];
-    if (q && q.counts && q.counts['进行中']) parts.push('施工 ' + Dash.mag(q.counts['进行中']) + ' 项在做');
+    if (q && q.counts && q.counts['进行中']) parts.push('施工 ' + q.counts['进行中'] + ' 项在做');
     if (l) {
       var running = (l.sessions || []).filter(function (s) { return s.state === 'running'; }).length;
-      parts.push(running ? Dash.mag(running) + ' 个会话在跑' : '没有会话在跑');
+      parts.push(running ? running + ' 个会话在跑' : '没有会话在跑');
     }
     if (q && q.stage) parts.push('阶段：' + q.stage);
     return parts.length ? parts.join(' · ') : '等数据';
@@ -228,7 +228,7 @@
     });
     var tone = !any ? 'muted' : (anyStale ? 'warn' : 'ok');
     dot.className = 'dot t-' + tone;
-    txt.textContent = !any ? '等数据' : (anyStale ? '部分数据旧了' : (isNaN(newest) ? '数据已就绪' : '数据 ' + Dash.ago(newest)));
+    txt.textContent = !any ? '等数据' : (anyStale ? '部分数据旧了' : (isNaN(newest) ? '数据已就绪' : '数据 ' + Dash.at(newest)));
     if (DEMO) txt.textContent = '演示数据';
     var pop = document.getElementById('fresh-pop');
     if (pop && !pop.hidden) fillPop(pop);
@@ -238,9 +238,9 @@
     var rows = M.data.map(function (s) {
       var d = store[s.name], tone, text;
       if (!d) { tone = 'muted'; text = meta[s.name] && meta[s.name].tried ? '没有数据' : '读取中'; }
-      else if (s.stale == null) { tone = 'ok'; text = Dash.ago(d.updated) + '改动'; }
-      else if (Dash.isStale(s.name)) { tone = 'warn'; text = '旧了 · ' + Dash.ago(d.updated); }
-      else { tone = 'ok'; text = Dash.ago(d.updated); }
+      else if (s.stale == null) { tone = 'ok'; text = Dash.at(d.updated) + ' 改动'; }
+      else if (Dash.isStale(s.name)) { tone = 'warn'; text = '旧了 · ' + Dash.at(d.updated); }
+      else { tone = 'ok'; text = Dash.at(d.updated); }
       return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label || s.name), h('span.ago', text));
     });
     pop.replaceChildren(h('div.pop-title', DEMO ? '正在看演示数据（?demo）' : '数据新鲜度'), rows);

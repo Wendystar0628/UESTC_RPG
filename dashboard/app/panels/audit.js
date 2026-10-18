@@ -15,7 +15,7 @@
       lead: Dash.chip(it.label, it.tone),
       title: it.title,
       sub: sub,
-      meta: Dash.ago(it.at),
+      meta: Dash.atAgo(it.at),
       act: act,
       tone: mode === 'open' && it.need ? 'risk' : '',
       seen: mode !== 'open'
@@ -37,8 +37,8 @@
       var auditOpen = att.open.filter(function (x) { return x.src === 'audit'; });
       var autoOpen = att.open.filter(function (x) { return x.src !== 'audit'; });
       var status;
-      if (needN) status = Dash.status('有 ' + Dash.mag(needN) + ' 件要你拍板', 'risk', { sub: att.open.length > needN ? '另有 ' + Dash.mag(att.open.length - needN) + ' 条待看' : '' });
-      else if (att.open.length) status = Dash.status(Dash.mag(att.open.length) + ' 条待看，不急', 'muted');
+      if (needN) status = Dash.status('有 ' + needN + ' 件要你拍板', 'risk', { sub: att.open.length > needN ? '另有 ' + (att.open.length - needN) + ' 条待看' : '' });
+      else if (att.open.length) status = Dash.status(att.open.length + ' 条待看，不急', 'muted');
       else status = Dash.status('没有等你审的事', 'ok');
 
       var stack = h('div.stack', status);

@@ -50,7 +50,7 @@
       const items = rows.filter((r) => r.status === col);
       const n = counts[col] != null ? counts[col] : items.length;
       const colEl = h('section', 'qu-col qu-col--' + COLS.indexOf(col) + (n ? '' : ' is-empty'));
-      colEl.append(h('header', 'qu-colhead', [h('span', 'qu-colname', col), h('span', 'qu-count', Dash.mag(n)), h('span', 'qu-hint', HINT[col])]));
+      colEl.append(h('header', 'qu-colhead', [h('span', 'qu-colname', col), h('span', 'qu-count', n), h('span', 'qu-hint', HINT[col])]));
       const body = h('div', 'qu-cards');
       items.forEach((r) => body.append(card(r, col)));
       if (!items.length) body.append(h('div', 'qu-none', '空'));
@@ -66,7 +66,7 @@
     if (!n) return null;
     const key = 'paused';
     const wrap = h('div', 'qu-paused' + (opened.has(key) ? ' is-open' : ''));
-    const btn = h('button', 'qu-fold', [h('span', 'qu-caret'), '暂停 ' + Dash.mag(n) + ' 项']);
+    const btn = h('button', 'qu-fold', [h('span', 'qu-caret'), '暂停 ' + n + ' 项']);
     btn.type = 'button';
     btn.disabled = !rows.length;
     btn.addEventListener('click', () => {
@@ -110,7 +110,7 @@
       const blocked = (q.packages || []).filter((p) => p.block || p.status === '阻塞').length;
       const top = status(blocked ? 'warn' : 'ok');
       top.body.append(q.stage || '', q.priority ? '，' + q.priority : '');
-      if (blocked) top.body.append(' ', chip(Dash.mag(blocked) + ' 个工作包被阻塞', 'warn'));
+      if (blocked) top.body.append(' ', chip(blocked + ' 个工作包被阻塞', 'warn'));
       el.append(top, board(q));
       const p = paused(q);
       if (p) el.append(p);

@@ -34,6 +34,7 @@ QUICK_TEST_S = 2.0  # 与 patrol 的快检口径一致
 CODE_EXT = ('.cs', '.gd', '.py', '.ps1', '.json', '.md')  # 另有 .gdshader*
 SKIP_DIRS = {'bin', 'obj', '.godot', '.venv', '__pycache__', 'godot-api', 'addons', 'node_modules'}
 SKIP_PATHS = {'game/bake'}  # 本机生成的暂存
+MAX_DEPTH = 4  # 目录树列到离仓库根第几层
 
 # 文档域（CORE-INDEX §1）：键、名称、所在目录
 DOMAINS = [('collab', '协作'), ('eng', '工程'), ('plan', '计划与登记'), ('art', '画面'),
@@ -143,22 +144,34 @@ def queue_data():
 
 # ---------- structure ----------
 
-def count_dir(path):
-    """目录下代码文件数与行数（tests 子目录另计行数）。"""
-    files = loc = test_loc = 0
+def scan_dir(path):
+    """top 目录下每个目录"自己直接含"的 [文件数, 行数, 测试行数]（tests 子目录的行数记在它的父目录上）。"""
+    own = {}
     for r, ds, fs in os.walk(os.path.join(ROOT, path)):
         ds[:] = [d for d in ds if d not in SKIP_DIRS and rel(os.path.join(r, d)) not in SKIP_PATHS]
-        in_tests = 'tests' in rel(r).split('/')
+        parts = rel(r).split('/')
+        in_tests = 'tests' in parts
+        owner = '/'.join(parts[:parts.index('tests')]) if in_tests else rel(r)
         for f in fs:
             if not (f.endswith(CODE_EXT) or '.gdshader' in f):
                 continue
             n = open(os.path.join(r, f), 'rb').read().count(b'\n')
+            c = own.setdefault(owner, [0, 0, 0])
             if in_tests:
-                test_loc += n
+                c[2] += n
             else:
-                files += 1
-                loc += n
-    return files, loc, test_loc
+                c[0] += 1
+                c[1] += n
+    return own
+
+
+def total_of(own, path):
+    """path 及其全部后代的合计 (files, loc, testLoc)。"""
+    t = [0, 0, 0]
+    for k, c in own.items():
+        if k == path or k.startswith(path + '/'):
+            t = [a + b for a, b in zip(t, c)]
+    return t
 
 
 def dir_note(path):
@@ -204,30 +217,61 @@ def structure_dirs():
     return out
 
 
+def dir_node(own, path):
+    """目录节点：合计 + 子目录（到离仓库根第 4 层；只列含统计文件的）。"""
+    files, loc, test_loc = total_of(own, path)
+    kids = []
+    if path.count('/') < MAX_DEPTH - 1:
+        subs = sorted({k[len(path) + 1:].split('/')[0] for k in own if k.startswith(path + '/')})
+        kids = [dir_node(own, f'{path}/{d}') for d in subs]
+    return {'path': path, 'files': files, 'loc': loc, 'testLoc': test_loc, 'note': dir_note(path), 'children': kids}
+
+
 def structure_data():
     notes = layer_notes()
     layers = {n: [] for n in LAYERS}
     for path in structure_dirs():
-        files, loc, test_loc = count_dir(path)
+        own = scan_dir(path)
+        files, _, test_loc = total_of(own, path)
         if not (files or test_loc):
             continue  # 空目录不列
-        layers[layer_of(path)].append({'path': path, 'files': files, 'loc': loc, 'testLoc': test_loc, 'note': dir_note(path)})
+        layers[layer_of(path)].append(dir_node(own, path))
     return {'layers': [{'name': n, 'note': notes.get(n, ''), 'dirs': layers[n]} for n in LAYERS if layers[n]]}
 
 
 # ---------- docs ----------
 
-def section_counts():
-    """docs/SECTIONS.md 里每份文档的条目数（编码 → 数）。"""
-    counts, cur = {}, None
+def chars_of(text):
+    """'1.4k' → 1400，'119' → 119。"""
+    return round(float(text[:-1]) * 1000) if text.endswith('k') else int(text)
+
+
+def doc_sections():
+    """docs/SECTIONS.md 里每份文档的节树（编码 → [{id, title, chars, children}]）：顶级节为一级，缩进两格的挂在上一个顶级节下。"""
+    out, cur, top = {}, None, None
     for l in read_text('docs/SECTIONS.md').splitlines():
         m = re.match(r'^## (\S+) · ', l)
         if m:
-            cur = m.group(1)
-            counts[cur] = 0
-        elif cur and re.match(r'^\s*- ', l):
-            counts[cur] += 1
-    return counts
+            cur, top = m.group(1), None
+            out[cur] = []
+            continue
+        m = re.match(r'^( {0,2})- (?:★ )?(\S+) (§[\d.]+) (.*) · L\d+ · (\S+)$', l)
+        if not (cur and m):
+            continue
+        node = {'id': m.group(3), 'title': m.group(4), 'chars': chars_of(m.group(5)), 'children': []}
+        if m.group(1):
+            if top is not None:
+                top['children'].append(node)
+        else:
+            out[cur].append(node)
+            top = node
+    return out
+
+
+def parent_code(code, codes):
+    """主文档：同目录里编码是它前缀（以 - 分段）的最长一份；没有就 None。"""
+    best = [c for c in codes if c != code and code.startswith(c + '-')]
+    return max(best, key=len) if best else None
 
 
 def doc_files():
@@ -248,7 +292,7 @@ def domain_of(path, code):
 
 def docs_data():
     import doc_size
-    sections = section_counts()
+    sections = doc_sections()
     items = []
     for path in doc_files():
         text = read_text(path)
@@ -258,7 +302,10 @@ def docs_data():
         if len(summary) > SUMMARY_MAX:
             summary = summary[:SUMMARY_MAX - 1] + '…'
         items.append({'code': code, 'title': fm.get('title', code), 'path': path, 'summary': summary,
-                      'chars': chars, 'sections': sections.get(code, 0), '_body': text})
+                      'chars': chars, 'parent': None, 'sections': sections.get(code, []), '_body': text})
+    for d in items:
+        same = [x['code'] for x in items if os.path.dirname(x['path']) == os.path.dirname(d['path'])]
+        d['parent'] = parent_code(d['code'], same)
     # 引用关系：正文里出现的其他文档编码，按 from→to 计次；长编码优先，免得 ENG-GATES 吃掉 ENG-GATES-SHOTS
     codes = sorted({d['code'] for d in items}, key=len, reverse=True)
     pattern = re.compile(r'(?<![A-Za-z0-9-])(' + '|'.join(re.escape(c) for c in codes) + r')(?![A-Za-z0-9])')

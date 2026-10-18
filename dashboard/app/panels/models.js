@@ -36,7 +36,7 @@
       h('span', 'mdl-name', opts.name),
       h('span', 'mdl-sigs', [chip(Dash.modelName(opts.model), opts.side), chip(opts.effort, 'muted')]),
       h('span', 'mdl-task', opts.task),
-      h('span', 'mdl-when', opts.when ? Dash.ago(opts.when) : '')
+      h('span', 'mdl-when', opts.when ? Dash.at(opts.when) : '')
     );
     return r;
   }
@@ -64,7 +64,7 @@
       if (done.length) {
         const key = 'done:' + g.root.id;
         const wrap = h('div', 'mdl-done' + (opened.has(key) ? ' is-open' : ''));
-        const btn = h('button', 'mdl-fold', [h('span', 'mdl-caret'), '另有 ' + Dash.mag(done.length) + ' 个已交回']);
+        const btn = h('button', 'mdl-fold', [h('span', 'mdl-caret'), '另有 ' + done.length + ' 个已交回']);
         btn.type = 'button';
         btn.addEventListener('click', () => {
           wrap.classList.toggle('is-open');
@@ -99,7 +99,7 @@
         h('span', 'mdl-name', s.name),
         h('span', 'mdl-kind', KIND[s.kind] || ''),
         h('span', 'mdl-task', s.note || ''),
-        h('span', 'mdl-when', s.since ? Dash.ago(s.since) : '')
+        h('span', 'mdl-when', s.since ? Dash.at(s.since) : '')
       );
       box.append(r);
     });
@@ -113,7 +113,7 @@
     const held = lock.lock === 'held';
     const parts = [
       ss ? ss + ' 个会话在跑' : '没有会话在跑',
-      ag ? Dash.mag(ag) + ' 个子代理在跑' : '没有子代理在跑',
+      ag ? ag + ' 个子代理在跑' : '没有子代理在跑',
     ];
     const line = status(held ? 'auto' : ss ? 'ok' : 'muted');
     line.body.append(parts.join('，') + '，', h('span', held ? 'mdl-lock is-held' : 'mdl-lock', held ? '构建锁被 ' + (lock.holder || '某会话') + ' 占用' : '构建锁空闲'));

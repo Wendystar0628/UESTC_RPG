@@ -2,26 +2,17 @@
    --dn 是域的深浅（0.3–0.9，面板内联设置），节点与弧按它在 --ink 与 --surface 间混色。 */
 .dc .status { margin-bottom: 1rem; }
 .dc-over { color: var(--auto); font-weight: 600; }
-.dc-h { margin: 2rem 0 0.6rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text-3); }
 
-.dc-map { display: flex; flex-direction: column; gap: 1.1rem; }
-.dc-dhead { display: flex; align-items: baseline; gap: 0.6rem; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; padding: 0 0 0.4rem; font: inherit; color: var(--text); text-align: left; }
+.dc-line { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.15rem 0.7rem; flex-wrap: wrap; }
 .dc-dname { font-weight: 700; }
-.dc-dcount { color: var(--text-3); font-size: 0.85rem; }
-.dc-caret { align-self: center; width: 0; height: 0; border-left: 5px solid var(--text-3); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.15s; transform: rotate(90deg); }
-.dc-domain.is-folded .dc-caret { transform: none; }
-.dc-domain.is-folded .dc-grid { display: none; }
-.dc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.55rem; padding-top: 0.7rem; }
-.dc-tile {
-  display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 0.5rem; align-content: start;
-  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px;
-  padding: 0.5rem 0.7rem; color: inherit; text-decoration: none; min-width: 0;
-  transition: border-color 0.15s;
-}
-.dc-tile:hover { border-color: var(--text-2); }
-.dc-code { font-family: var(--mono); font-size: 0.78rem; color: var(--text-3); }
-.dc-title { grid-column: 1 / 3; font-weight: 600; }
-.dc-sum { grid-column: 1 / 3; color: var(--text-3); font-size: 0.82rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.dc-dcount { color: var(--text-3); font-size: var(--fs-xs); }
+.dc-code { flex: none; font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-3); }
+.dc-title, .dc-stitle { flex: none; font-weight: 600; }
+.dc-stitle { font-weight: 400; }
+.dc-title a, .dc-stitle a { color: var(--text); }
+.dc-title a:hover, .dc-stitle a:hover { color: var(--link); }
+.dc-sum { flex: 1 1 14rem; min-width: 0; color: var(--text-3); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-chars { color: var(--text-3); font-size: var(--fs-xs); }
 .dc-size { display: inline-flex; gap: 2px; align-self: center; }
 .dc-size i { width: 0.4rem; height: 0.3rem; border-radius: 1px; background: var(--line); }
 .dc-size i.on { background: var(--text-2); }
@@ -60,4 +51,3 @@
 .dg-nb { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0.05rem 0.4rem; font-family: var(--mono); font-size: 0.75rem; color: var(--text-2); cursor: pointer; }
 .dg-nb:hover { border-color: var(--text-2); }
 
-@media (max-width: 640px) { .dc-grid { grid-template-columns: 1fr; } }

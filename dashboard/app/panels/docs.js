@@ -1,4 +1,4 @@
-/* 文档页：按域分组的文档地图 + 引用关系图（自绘 SVG，不引库）。数据 docs（10 min 刷新）。 */
+/* 文档页：域 → 主文档 → 子文档 → 节的可展开树 + 引用关系图（自绘 SVG，不引库）。数据 docs（10 min 刷新）。 */
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const LEVELS = [
@@ -6,7 +6,7 @@
     { key: 'more', label: '更多', k: 4, min: 2, crossMin: 2 },
     { key: 'all', label: '全部', k: 1e9, min: 0, crossMin: 0 },
   ];
-  const view = { level: 'main', pinned: null, folded: new Set() }; // 重绘后保持
+  const view = { level: 'main', pinned: null }; // 重绘后保持
 
   function h(tag, cls, kids) {
     const e = document.createElement(tag);
@@ -37,36 +37,44 @@
     return str;
   }
   function sizeLevel(chars) { return Math.max(1, Math.min(4, Math.ceil((chars || 0) / 3000))); }
+  function charsText(n) { return n ? Dash.mag(n) + (n < 10 ? ' 字' : '字') : ''; }   // 体量是测出来的大数，报数量级
 
-  /* ---------- 文档地图 ---------- */
-  function tile(d) {
-    const a = h('a', 'dc-tile');
-    a.href = hrefOf(d.path);
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.title = d.summary || '';
+  /* ---------- 文档树：域 → 主文档 → 子文档 → 节 ---------- */
+  function sectionNode(sec, docId, path, parentId) {
+    const id = parentId + '/' + sec.id;
+    return { id: id, kind: 'section', secId: sec.id, title: sec.title, chars: sec.chars, path: path,
+      children: (sec.children || []).map((c) => sectionNode(c, docId, path, id)) };
+  }
+  function buildTree(domains) {
+    return domains.map((dm) => {
+      const docs = dm.docs || [];
+      const here = {};
+      docs.forEach((d) => { here[d.code] = d; });
+      const subs = {};
+      docs.forEach((d) => { if (d.parent && here[d.parent]) (subs[d.parent] = subs[d.parent] || []).push(d); });
+      function docNode(d) {
+        const id = 'c:' + d.code;
+        const secs = Array.isArray(d.sections) ? d.sections : [];   // 采集还没更新时 sections 是个数，当作没有
+        return { id: id, kind: 'doc', doc: d,
+          children: (subs[d.code] || []).map(docNode).concat(secs.map((x) => sectionNode(x, id, d.path, id))) };
+      }
+      const roots = docs.filter((d) => !(d.parent && here[d.parent])).map(docNode);
+      return { id: 'd:' + dm.key, kind: 'domain', name: dm.name, count: docs.length, children: roots };
+    });
+  }
+  function treeLabel(n) {
+    if (n.kind === 'domain') return h('span', 'dc-line', [h('span', 'dc-dname', n.name), h('span', 'dc-dcount', n.count + ' 份')]);
+    if (n.kind === 'section') {
+      return h('span', 'dc-line', [h('span', 'dc-code', n.secId), h('span', 'dc-stitle', Dash.a(n.path, n.title)), h('span', 'dc-chars', charsText(n.chars))]);
+    }
+    const d = n.doc;
     const bar = h('span', 'dc-size');
     for (let i = 1; i <= 4; i++) bar.append(h('i', i <= sizeLevel(d.chars) ? 'on' : ''));
-    bar.title = d.chars ? Dash.mag(d.chars) + ' 字' : '';
-    a.append(h('span', 'dc-code', d.code), bar, h('span', 'dc-title', d.title), h('span', 'dc-sum', d.summary || ''));
-    return a;
+    bar.title = charsText(d.chars);
+    return h('span', 'dc-line', [h('span', 'dc-code', d.code), h('span', 'dc-title', Dash.a(d.path, d.title)), bar, h('span', 'dc-sum', d.summary || '')]);
   }
-  function domainMap(domains) {
-    const box = h('div', 'dc-map');
-    domains.forEach((dm) => {
-      const sec = h('section', 'dc-domain' + (view.folded.has(dm.key) ? ' is-folded' : ''));
-      const head = h('button', 'dc-dhead', [h('span', 'dc-caret'), h('span', 'dc-dname', dm.name), h('span', 'dc-dcount', Dash.mag((dm.docs || []).length) + ' 份')]);
-      head.type = 'button';
-      head.addEventListener('click', () => {
-        sec.classList.toggle('is-folded');
-        sec.classList.contains('is-folded') ? view.folded.add(dm.key) : view.folded.delete(dm.key);
-      });
-      const grid = h('div', 'dc-grid');
-      (dm.docs || []).forEach((d) => grid.append(tile(d)));
-      sec.append(head, grid);
-      box.append(sec);
-    });
-    return box;
+  function docTree(domains) {
+    return Dash.tree({ key: 'docs', nodes: buildTree(domains), id: (n) => n.id, label: treeLabel, openDepth: 0 });
   }
 
   /* ---------- 引用关系图 ---------- */
@@ -184,7 +192,7 @@
       edges.forEach((e) => e.el.classList.toggle('is-shown', e.shown));
       [...seg.children].forEach((b) => b.classList.toggle('is-on', b.dataset.key === view.level));
       const cnt = edges.filter((e) => e.shown).length;
-      seg.title = '显示 ' + Dash.mag(cnt) + ' 条关系';
+      seg.title = '显示 ' + cnt + ' 条关系';
     }
 
     function focus(n) {
@@ -207,11 +215,11 @@
         const o = e.a === n ? e.b : e.a;
         const c = h('button', 'dg-nb', o.code);
         c.type = 'button';
-        c.title = o.title + '，引用 ' + e.n + ' 次';
+        c.title = o.title + '，引用 ' + Dash.mag(e.n) + ' 次';
         c.addEventListener('click', (ev) => { ev.stopPropagation(); view.pinned = o.code; focus(o); });
         list.append(c);
       });
-      info.append(a, h('span', 'dg-deg', '关联 ' + Dash.mag(n.adj.length) + ' 份'), list);
+      info.append(a, h('span', 'dg-deg', '关联 ' + n.adj.length + ' 份'), list);
     }
 
     root.append(h('div', 'dg-bar', [h('span', 'dg-label', '显示关系'), seg]), svg, info);
@@ -235,9 +243,9 @@
       const all = domains.reduce((a, x) => a.concat(x.docs || []), []);
       const over = ((Dash.get('health') || {}).docs || {}).over || 0; // 口径以 doc_size.py 为准
       const top = status(over ? 'auto' : 'muted');
-      top.body.append(domains.length + ' 个域，' + Dash.mag(all.length) + ' 份文档');
+      top.body.append(domains.length + ' 个域，' + all.length + ' 份文档');
       if (over) top.body.append('，', h('span', 'dc-over', over + ' 份超过体量上限'));
-      el.append(top, domainMap(domains));
+      el.append(top, docTree(domains));
     },
   });
 

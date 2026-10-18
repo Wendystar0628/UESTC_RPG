@@ -19,7 +19,7 @@
           Dash.chip(lv[0], lv[1]),
           it.from ? Dash.chip(it.from, Dash.sideTone(it.from)) : null,
           it.pinned ? h('span.tag', '置顶') : null,
-          h('span.tl-time', Dash.ago(it.at))),
+          h('span.tl-time', Dash.atAgo(it.at))),
         h('div.tl-text' + (seen ? '.is-seen' : ''), it.text)),
       act.length ? h('div.row-act', act) : null);
   }
@@ -42,8 +42,8 @@
 
       var status;
       if (!live.length) status = Dash.status('没有新通知', 'ok');
-      else if (care) status = Dash.status(Dash.mag(care) + ' 条需要你留意', 'warn', { sub: '共 ' + Dash.mag(live.length) + ' 条通知' });
-      else status = Dash.status('共 ' + Dash.mag(live.length) + ' 条通知，都不急', 'muted');
+      else if (care) status = Dash.status(care + ' 条需要你留意', 'warn', { sub: '共 ' + live.length + ' 条通知' });
+      else status = Dash.status('共 ' + live.length + ' 条通知，都不急', 'muted');
 
       var stack = h('div.stack', status);
       if (live.length) {

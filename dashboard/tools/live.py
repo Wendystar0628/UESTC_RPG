@@ -324,7 +324,9 @@ def main():
         if t - last_collect >= COLLECT_EVERY_S:
             last_collect = t
             try:
+                import importlib
                 import collect
+                importlib.reload(collect)  # 采集脚本改过也立即生效，不用重启循环
                 collect.main()
             except BaseException as e:  # 采集出错不影响实时数据
                 if isinstance(e, KeyboardInterrupt):

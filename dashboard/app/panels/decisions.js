@@ -30,8 +30,8 @@
       var recent = data.recent || [];
       var pending = recent.filter(function (x) { return statusTone(x.status) === 'warn'; }).length;
       var status = pending
-        ? Dash.status(Dash.mag(pending) + ' 条决策还没生效', 'warn', { sub: '累计 ' + Dash.mag(data.total) + ' 条决策' })
-        : Dash.status('累计 ' + Dash.mag(data.total) + ' 条决策，最近的都已生效', 'ok');
+        ? Dash.status(pending + ' 条决策还没生效', 'warn', { sub: '累计 ' + data.total + ' 条决策' })
+        : Dash.status('累计 ' + data.total + ' 条决策，最近的都已生效', 'ok');
 
       var body = h('div');
       if (!recent.length) {

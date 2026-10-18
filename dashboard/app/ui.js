@@ -1,4 +1,4 @@
-/* 观察台通用格式化与小组件：数量级、时间、链接、h() 建节点、卡片/行/指标块、已看标记、待看汇总。
+/* 观察台通用格式化与小组件：数量级、时刻、链接、h() 建节点、卡片/行/指标块、树、已看标记、待看汇总。
    依赖 core.js 先加载（取 Dash.internal 里的数据仓与数据源）；接口见 dashboard/README.md §3。 */
 (function () {
   'use strict';
@@ -87,12 +87,23 @@
     return '上万';
   };
 
-  /* 数量级加单位："几十个"、"3 个" */
-  Dash.magText = function (n, unit) {
-    var m = Dash.mag(n);
-    return m + (/^\d+$/.test(m) ? ' ' : '') + (unit || '');
+  /* 确切时刻：今天写 HH:MM，不是今天写 M-D HH:MM；解析不了写 — */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  Dash.at = function (iso) {
+    var t = parseTime(iso);
+    if (isNaN(t)) return '—';
+    var d = new Date(t), now = new Date();
+    var hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    var same = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    return same ? hm : (d.getMonth() + 1) + '-' + d.getDate() + ' ' + hm;
   };
 
+  /* 确切时刻后面带一个灰色的"多久前"（节点） */
+  Dash.atAgo = function (iso) {
+    return printable(h('span', Dash.at(iso), ' ', h('span.muted.at-ago', Dash.ago(iso))));
+  };
+
+  /* "多久前"：只作确切时刻后面的灰色补充 */
   Dash.ago = function (iso) {
     var t = parseTime(iso);
     if (isNaN(t)) return '—';
@@ -181,11 +192,6 @@
     return d;
   };
 
-  /* 数量级徽标：<b>几十</b><i>个</i> */
-  Dash.magBadge = function (n, unit) {
-    return printable(h('span.mag', Dash.mag(n), unit ? h('span.unit', unit) : null));
-  };
-
   /* 带标题的卡片，面板自己要分块时用 */
   Dash.card = function (title, body, meta) {
     var head = (title || meta) ? h('div.card-head', title ? h('span.card-title', title) : null, meta ? h('span.card-meta', meta) : null) : null;
@@ -223,6 +229,145 @@
     if (!item || !item.expires) return false;
     var t = parseTime(item.expires);
     return !isNaN(t) && t < Date.now();
+  };
+
+  /* ================= 树（可展开、收起） =================
+     Dash.tree({ key, nodes, label(n, depth), kids(n)?, id(n)?, openDepth? })  返回节点
+       key        展开状态在 localStorage 里的名字（按页面分开）；读写失败只在本次有效
+       nodes      顶层节点数组；kids(n) 给子节点数组（默认取 n.children），没有或为空就是叶子
+       label      返回这一行的内容（节点）；里面的链接（Dash.a）回车时会被打开
+       id         节点的稳定标识（默认按位置）；数据刷新后据此保持展开状态
+       openDepth  默认展开的层数（0 只露顶层，1 展开顶层，默认 1）
+     键盘：上下移动，右键展开（再按进入第一个子节点），左键收起（再按回到父节点），回车打开本行链接（没有则展开或收起），空格展开或收起。 */
+  var treeMem = {};
+  function treeLoad(key) {
+    if (treeMem[key]) return treeMem[key];
+    var m = {};
+    try { m = JSON.parse(localStorage.getItem('dash.tree.' + key) || '{}') || {}; } catch (e) { /* 同上 */ }
+    return (treeMem[key] = m);
+  }
+  function treeSave(key) {
+    try { localStorage.setItem('dash.tree.' + key, JSON.stringify(treeMem[key])); } catch (e) { /* 同上 */ }
+  }
+
+  Dash.tree = function (o) {
+    var kidsOf = function (n) { var k = o.kids ? o.kids(n) : n.children; return Array.isArray(k) ? k : []; };
+    var openDepth = o.openDepth == null ? 1 : o.openDepth;
+    var over = treeLoad(o.key);              // id -> 1 展开 / 0 收起，只记作者动过的
+    var branches = [];                       // 全部有子节点的 id，给"全部展开"用
+    var body = h('div.tree-body', { role: 'tree' });
+
+    function idOf(n, path) { return o.id ? String(o.id(n)) : path; }
+    function collect(list, path) {
+      list.forEach(function (n, i) {
+        var p = path + '/' + i, k = kidsOf(n);
+        if (k.length) { branches.push(idOf(n, p)); collect(k, p); }
+      });
+    }
+    collect(o.nodes || [], '');
+
+    function isOpen(id, depth) { return id in over ? !!over[id] : depth < openDepth; }
+
+    function build(list, depth, path) {
+      var group = h('div.tree-group', { role: 'group' });
+      list.forEach(function (n, i) {
+        var p = path + '/' + i, id = idOf(n, p), k = kidsOf(n);
+        var open = k.length > 0 && isOpen(id, depth);
+        var row = h('div.tree-row', { role: 'treeitem', tabindex: '-1', 'aria-level': String(depth + 1), style: '--depth:' + depth },
+          h('span.tree-caret' + (k.length ? '' : '.is-leaf')), o.label(n, depth));
+        var item = h('div.tree-item' + (open ? '.is-open' : ''), row);
+        item.treeId = id;
+        item.treeDepth = depth;
+        if (k.length) {
+          row.setAttribute('aria-expanded', String(open));
+          item.treeKids = k;
+          item.treePath = p;
+          if (open) item.appendChild(build(k, depth + 1, p));
+        }
+        group.appendChild(item);
+      });
+      Array.prototype.forEach.call(group.querySelectorAll('a'), function (a) { a.tabIndex = -1; });
+      return group;
+    }
+
+    function setOpen(item, on) {
+      if (!item.treeKids || item.classList.contains('is-open') === on) return;
+      over[item.treeId] = on ? 1 : 0;
+      treeSave(o.key);
+      if (on && !item.querySelector(':scope > .tree-group')) item.appendChild(build(item.treeKids, item.treeDepth + 1, item.treePath));
+      item.classList.toggle('is-open', on);
+      item.firstChild.setAttribute('aria-expanded', String(on));
+    }
+
+    function all(on) {
+      branches.forEach(function (id) { over[id] = on ? 1 : 0; });
+      treeSave(o.key);
+      show();
+    }
+
+    function show() {
+      body.replaceChildren(build(o.nodes || [], 0, ''));
+      var first = body.querySelector('.tree-row');
+      if (first) first.tabIndex = 0;
+    }
+
+    function visibleRows() {
+      return Array.prototype.filter.call(body.querySelectorAll('.tree-row'), function (r) { return r.offsetParent !== null; });
+    }
+    function focusRow(r) {
+      if (!r) return;
+      var cur = body.querySelector('.tree-row[tabindex="0"]');
+      if (cur && cur !== r) cur.tabIndex = -1;
+      r.tabIndex = 0;
+      r.focus();
+    }
+
+    body.addEventListener('click', function (e) {
+      var row = e.target.closest && e.target.closest('.tree-row');
+      if (!row) return;
+      if (e.target.closest('a')) return;
+      focusRow(row);
+      var item = row.parentNode;
+      if (item.treeKids) setOpen(item, !item.classList.contains('is-open'));
+    });
+
+    body.addEventListener('keydown', function (e) {
+      var row = e.target.closest && e.target.closest('.tree-row');
+      if (!row || e.target !== row) return;
+      var item = row.parentNode, openNow = item.classList.contains('is-open'), rows, i;
+      switch (e.key) {
+        case 'ArrowDown': case 'ArrowUp':
+          rows = visibleRows(); i = rows.indexOf(row);
+          focusRow(rows[i + (e.key === 'ArrowDown' ? 1 : -1)]);
+          break;
+        case 'ArrowRight':
+          if (item.treeKids && !openNow) setOpen(item, true);
+          else if (item.treeKids) focusRow(item.querySelector(':scope > .tree-group > .tree-item > .tree-row'));
+          break;
+        case 'ArrowLeft':
+          if (item.treeKids && openNow) setOpen(item, false);
+          else if (item.parentNode.parentNode.classList.contains('tree-item')) focusRow(item.parentNode.parentNode.firstChild);
+          break;
+        case 'Home': focusRow(visibleRows()[0]); break;
+        case 'End': rows = visibleRows(); focusRow(rows[rows.length - 1]); break;
+        case 'Enter': {
+          var a = row.querySelector('a[href]');
+          if (a) a.click(); else if (item.treeKids) setOpen(item, !openNow);
+          break;
+        }
+        case ' ':
+          if (item.treeKids) setOpen(item, !openNow);
+          break;
+        default: return;
+      }
+      e.preventDefault();
+    });
+
+    show();
+    var tools = branches.length ? h('div.tree-tools',
+      h('button.btn', { type: 'button', on: { click: function () { all(true); } } }, '全部展开'),
+      h('button.btn', { type: 'button', on: { click: function () { all(false); } } }, '全部收起')) : null;
+    return h('div.tree', tools, body);
   };
 
   /* ================= 已看标记（只存浏览器本地） ================= */
