@@ -45,6 +45,28 @@ internal sealed class ImmediateVeil : IVeilService
     }
 }
 
+/// <summary>Shared IAppFlow fake. Starts in Playing; <see cref="SetState"/> raises Changed and <see cref="Observers"/> counts subscribers. Enter throws, the rest are no-ops.</summary>
+internal sealed class TestAppFlow : IAppFlow
+{
+    public AppState State { get; private set; } = AppState.Playing;
+    public long Rev { get; private set; }
+    public EnterPath? Path => null;
+    public bool Skippable => false;
+    public event Action<AppState, AppState>? Changed;
+    public int Observers => Changed?.GetInvocationList().Length ?? 0;
+    public void SetState(AppState state)
+    {
+        var previous = State;
+        State = state;
+        Rev++;
+        Changed?.Invoke(previous, state);
+    }
+    public Task<EnterResult> Enter(EnterRequest request) => throw new NotSupportedException();
+    public Task ReturnToTitle() => Task.CompletedTask;
+    public void Skip() { }
+    public Task Quit() => Task.CompletedTask;
+}
+
 /// <summary>Shared IAppExit fake. With allowQuit false any quit is a test failure.</summary>
 internal sealed class TestAppExit(bool allowQuit = true) : IAppExit
 {

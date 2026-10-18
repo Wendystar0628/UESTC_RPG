@@ -99,8 +99,8 @@ public sealed class KeyLightModel
     /// <summary>Sun: smoothstep(−2°, 4°, h) (0.26 at h = 0). Moon: fades in with the moon shadow; the keyframe intensity lives in the palette lit row.</summary>
     public static float KeyStrength(KeyBody body, float sunAltDeg, float moonAltDeg) => body switch
     {
-        KeyBody.Sun => SmoothStep(-2f, 4f, sunAltDeg),
-        KeyBody.Moon => SmoothStep(-7f, -12f, sunAltDeg) * SmoothStep(-2f, 4f, moonAltDeg),
+        KeyBody.Sun => Godot.Mathf.SmoothStep(-2f, 4f, sunAltDeg),
+        KeyBody.Moon => Godot.Mathf.SmoothStep(-7f, -12f, sunAltDeg) * Godot.Mathf.SmoothStep(-2f, 4f, moonAltDeg),
         _ => throw new ArgumentOutOfRangeException(nameof(body)),
     };
 
@@ -108,7 +108,7 @@ public sealed class KeyLightModel
     public static float BaseShadowStrength(KeyBody body, float sunAltDeg, float moonAltDeg) => body switch
     {
         KeyBody.Sun => sunAltDeg >= -2f ? 1f : 0f,
-        KeyBody.Moon => MoonShadowMax * SmoothStep(-7f, -12f, sunAltDeg) * SmoothStep(15f, 20f, moonAltDeg),
+        KeyBody.Moon => MoonShadowMax * Godot.Mathf.SmoothStep(-7f, -12f, sunAltDeg) * Godot.Mathf.SmoothStep(15f, 20f, moonAltDeg),
         _ => throw new ArgumentOutOfRangeException(nameof(body)),
     };
 
@@ -119,7 +119,7 @@ public sealed class KeyLightModel
     public static float RainNightFactor(float precip, float precipKind)
     {
         var rain = Math.Clamp(precip, 0f, 1f) * (1f - Math.Clamp(precipKind, 0f, 1f));
-        return 1f - SmoothStep(0f, 0.15f, rain);
+        return 1f - Godot.Mathf.SmoothStep(0f, 0.15f, rain);
     }
 
     /// <summary>Retreat line: −10 m at 2.5° rising to 80 m at 0.3° (ART-SKYLIGHT 3.4); dawn runs in reverse.</summary>
@@ -148,12 +148,5 @@ public sealed class KeyLightModel
         var e = elevationDeg * (MathF.PI / 180f);
         var c = MathF.Cos(e);
         return new(c * horizontal.X, MathF.Sin(e), c * horizontal.Y);
-    }
-
-    /// <summary>GLSL smoothstep; reversed edges fade the other way.</summary>
-    public static float SmoothStep(float edge0, float edge1, float x)
-    {
-        var t = Math.Clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
-        return t * t * (3f - 2f * t);
     }
 }

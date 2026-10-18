@@ -293,7 +293,7 @@ public sealed class AtlasServiceTests
             Context = new(map, World);
             var maps = new SingleMapService(Context, Camera);
             Atlas = new(Camera, Observer, new TestRuleset(policy), Driver);
-            Atlas.Connect(maps, new Flow(), new TestAudio());
+            Atlas.Connect(maps, new TestAppFlow(), new TestAudio());
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
@@ -343,14 +343,6 @@ public sealed class AtlasServiceTests
 
         private IMapTransition Finish(MapId from, MapId to, MapTravelCause cause, MapTravelResult result) =>
             LastTransition = TestMapTransition.Completed(from, to, cause, result);
-    }
-    private sealed class Flow : IAppFlow
-    {
-        public AppState State => AppState.Playing; public long Rev => 1; public EnterPath? Path => null; public bool Skippable => false;
-        public event Action<AppState, AppState>? Changed { add { } remove { } }
-        public Task<EnterResult> Enter(EnterRequest r) => throw new NotSupportedException();
-        public Task ReturnToTitle() => Task.CompletedTask; public void Skip() { }
-        public Task Quit() => Task.CompletedTask;
     }
     private sealed class Driver : ITransitDriver
     {

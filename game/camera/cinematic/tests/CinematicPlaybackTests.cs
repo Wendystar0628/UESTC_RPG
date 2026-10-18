@@ -34,9 +34,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public async Task CoverageRequiresARealPostDrawAfterTheRequest()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var veil = new ImmediateVeil(); var presentation = new CinematicTestPresentation();
-        var playback = new CinematicPlayback(new TestCameraRig(world), veil, new TestRules(), presentation);
+        var rig = new FlowTestRig();
+        var veil = rig.Veil; var presentation = rig.Presentation; var playback = rig.Playback;
         await veil.Cover(VeilReason.Cinematic, 0);
         var covered = playback.WaitForPresentedCoverage();
         playback.Tick(0);
@@ -53,9 +52,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public void ClearCancelsInfiniteWaitsAndPlaybackWithoutCancelingTheirWorldJob()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
-        var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
+        var rig = new FlowTestRig();
+        var camera = rig.Camera; var playback = rig.Playback;
         var worldJob = new TaskCompletionSource();
         var definition = Timeline() with
         {
@@ -77,9 +75,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public async Task ReentrantClearDuringPlaybackCancellationPreservesTheNextPlaybackAndWait()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
-        var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
+        var rig = new FlowTestRig();
+        var camera = rig.Camera; var playback = rig.Playback;
         var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var oldPredicateCalls = 0;
@@ -112,9 +109,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public async Task TickDoesNotPollCanceledOrNewWaitsAfterACompletionClearsPlayback()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
-        var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
+        var rig = new FlowTestRig();
+        var camera = rig.Camera; var playback = rig.Playback;
         var oldPredicateCalls = 0;
         var oldWait = playback.WaitUntil(() => { oldPredicateCalls++; return false; }, double.PositiveInfinity, "Old wait.");
         var completeReady = false;
@@ -139,9 +135,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public async Task OldDoneCancellationCannotClearPlaybackStartedByAnOldWaitCancellation()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
-        var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
+        var rig = new FlowTestRig();
+        var camera = rig.Camera; var playback = rig.Playback;
         var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var waiting = playback.WaitUntil(() => false, double.PositiveInfinity, "Old wait.");
@@ -176,9 +171,8 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public async Task SkippingJoinsInFlightRestoreAndDrainsEachCueOnce()
     {
-        var world = new TestWorldState(new TestWeatherProcess(), new TestRules());
-        var camera = new TestCameraRig(world); var veil = new ImmediateVeil();
-        var playback = new CinematicPlayback(camera, veil, new TestRules(), new CinematicTestPresentation());
+        var rig = new FlowTestRig();
+        var camera = rig.Camera; var playback = rig.Playback;
         var blocked = new TaskCompletionSource(); var observed = new List<WorldCueKind>();
         var definition = Timeline() with
         {
@@ -221,21 +215,5 @@ public sealed class CinematicPlaybackTests
         try { CinematicValidation.Validate(definition, definition.Map); }
         catch (InvalidDataException) { return; }
         throw new InvalidOperationException("Invalid timeline was accepted.");
-    }
-    private sealed class TestRules : IRuleset
-    {
-        public RulesetDescriptor Current { get; } = new(new("test"), [ViewMode.Fly], WorldControlMask.All, "none", [], [AppState.Title, AppState.Entering, AppState.Leaving]);
-        public long Rev => 1;
-    }
-    private sealed class ImmediateVeil : IVeilService
-    {
-        public float Opacity { get; private set; }
-        public VeilReason Reason { get; private set; }
-        public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) { Reason = reason; Opacity = 1; return Task.CompletedTask; }
-        public Task Reveal(VeilReason reason, float seconds) { Reason = reason; Opacity = 0; return Task.CompletedTask; }
-        // Explicit test-only observation; this fixture does not simulate waiting-indicator timing.
-        public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness) => new Observation();
-        private sealed class Observation : IDisposable { public void Dispose() { } }
-        public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
     }
 }

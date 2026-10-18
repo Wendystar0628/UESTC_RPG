@@ -58,7 +58,7 @@ public sealed class HudLifetimeTests
         var previousRegistry = Services.Services;
         var servicesProperty = typeof(Services).GetProperty(nameof(Services.Services))!;
         var registry = new ServiceRegistry();
-        var flow = new Flow();
+        var flow = new TestAppFlow();
         var router = new Router();
         var settings = new HudSettings(Services.Get<ISettingsStore>());
         var world = new WorldStateService(new TestWeatherProcess());
@@ -138,27 +138,6 @@ public sealed class HudLifetimeTests
     {
         public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
             srgb24.Fill(System.Numerics.Vector3.Zero);
-    }
-
-    private sealed class Flow : IAppFlow
-    {
-        public AppState State { get; private set; } = AppState.Playing;
-        public long Rev { get; private set; }
-        public EnterPath? Path => null;
-        public bool Skippable => false;
-        public event Action<AppState, AppState>? Changed;
-        public int Observers => Changed?.GetInvocationList().Length ?? 0;
-        public void SetState(AppState state)
-        {
-            var previous = State;
-            State = state;
-            Rev++;
-            Changed?.Invoke(previous, state);
-        }
-        public Task<EnterResult> Enter(EnterRequest request) => throw new NotSupportedException();
-        public Task ReturnToTitle() => throw new NotSupportedException();
-        public void Skip() => throw new NotSupportedException();
-        public Task Quit() => throw new NotSupportedException();
     }
 
     private sealed class Router : IInputRouter

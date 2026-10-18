@@ -98,7 +98,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
         // 星空：色彩脚本给的可见度，再按阴度与雾淡出；被云挡住的部分在着色器里逐像素处理（ART-SKYLIGHT）
         var stars = Clamp01(frame.Stars) * (1f - Clamp01(weather.Overcast))
-            * (1f - SmoothStep(1f, SkyTuning.StarsFogHide, weather.Fog));
+            * (1f - Mathf.SmoothStep(1f, SkyTuning.StarsFogHide, weather.Fog));
         RenderingServer.GlobalShaderParameterSet(ShaderNames.Stars, stars);
 
         if (_material is null || _thresholds is null) return;
@@ -185,10 +185,4 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     }
 
     private static float Clamp01(float v) => float.IsFinite(v) ? Math.Clamp(v, 0f, 1f) : 0f;
-
-    private static float SmoothStep(float e0, float e1, float x)
-    {
-        var t = Math.Clamp((x - e0) / (e1 - e0), 0f, 1f);
-        return t * t * (3f - 2f * t);
-    }
 }

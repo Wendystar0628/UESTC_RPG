@@ -179,10 +179,4 @@ public static class CloudNoise
     private static float Fade(float t) => t * t * t * (t * (t * 6f - 15f) + 10f);
     private static float Lerp(float a, float b, float t) => a + (b - a) * t;
     private static byte ToByte(float v) => (byte)Math.Clamp((int)MathF.Round(v * 255f), 0, 255);
-
-    private static float SmoothStep(float e0, float e1, float x)
-    {
-        var t = Math.Clamp((x - e0) / (e1 - e0), 0f, 1f);
-        return t * t * (3f - 2f * t);
-    }
 }

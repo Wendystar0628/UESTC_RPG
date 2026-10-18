@@ -74,7 +74,7 @@ public sealed class PrecipModel
     /// <summary>雨丝倾角（度）：小雨 5° → 大雨 15°，风暴再加到 25°，阵风另加。</summary>
     public static float TiltDeg(in WeatherVec w, float gust)
     {
-        var heavy = SmoothStep(PrecipTuning.HeavyFrom, PrecipTuning.HeavyTo, w.Precip);
+        var heavy = Godot.Mathf.SmoothStep(PrecipTuning.HeavyFrom, PrecipTuning.HeavyTo, w.Precip);
         var tilt = PrecipTuning.TiltLight + (PrecipTuning.TiltHeavy - PrecipTuning.TiltLight) * heavy;
         tilt += (PrecipTuning.TiltStorm - PrecipTuning.TiltHeavy) * Math.Clamp(w.Storm, 0f, 1f);
         return tilt + PrecipTuning.TiltGust * Math.Clamp(gust, 0f, 1f);
@@ -139,11 +139,5 @@ public sealed class PrecipModel
     {
         var r = x % m;
         return r < 0 ? r + m : r;
-    }
-
-    private static float SmoothStep(float a, float b, float x)
-    {
-        var t = Math.Clamp((x - a) / (b - a), 0f, 1f);
-        return t * t * (3f - 2f * t);
     }
 }
