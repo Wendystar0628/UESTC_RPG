@@ -1,12 +1,11 @@
-# Default: G1, affected-module G2 and G4. Specialist checks are explicit.
+# Default: G1, affected-module G2 and G4, plus affected startup/walk/save cores.
 # -Plan is read-only. Core scopes drive the formal production stage.
-# -Full requests G1-G21; unfinished gates return NotImplemented and exit 2.
+# -Full requests the 14 retained gates; unfinished gates return NotImplemented and exit 2.
 # Exit codes: 0 requested implemented scope passed; 1 failed; 2 incomplete scope.
-# -NoCache forces fresh quick checks. full/window/export always run freshly.
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
-    [switch]$Plan, [switch]$NoCache, [string[]]$Paths = @(), [string]$BaseRef = '',
+    [switch]$Plan, [string[]]$Paths = @(), [string]$BaseRef = '',
     [string]$Map = 'qingshuihe', [int]$Frames = 300,
     [ValidateSet('Debug')][string]$Configuration = 'Debug')
 $ErrorActionPreference = 'Stop'
@@ -14,8 +13,43 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'lib/common.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
-. (Join-Path $PSScriptRoot 'gates/cache.ps1')
-. (Join-Path $PSScriptRoot 'gates/select-service-window.ps1')
+function Get-UESTCMainStage {
+    param([string]$Root)
+    $project = [IO.File]::ReadAllText((Join-Path $Root 'game/project.godot'))
+    $application = [regex]::Match($project, '(?ms)^\[application\]\s*(.*?)(?=^\[|\z)').Groups[1].Value
+    $sceneMatch = [regex]::Match($application, '(?m)^\s*run/main_scene\s*=\s*"res://([^"\r\n]+)"')
+    if (-not $sceneMatch.Success) { return 'Unknown' }
+    $scenePath = Assert-UESTCChildPath (Join-Path $Root ('game/' + $sceneMatch.Groups[1].Value)) (Join-Path $Root 'game')
+    if (-not (Test-Path -LiteralPath $scenePath -PathType Leaf)) { return 'Unknown' }
+    $scene = [IO.File]::ReadAllText($scenePath)
+    $rootNode = [regex]::Match($scene, '(?ms)^\[node\b[^\r\n]*\]\s*(.*?)(?=^\[node\b|\z)').Groups[1].Value
+    $scriptId = [regex]::Match($rootNode, '(?m)^\s*script\s*=\s*ExtResource\("([^"\r\n]+)"\)').Groups[1].Value
+    if (-not $scriptId) { return 'Unknown' }
+    foreach ($resource in [regex]::Matches($scene, '(?m)^\[ext_resource\s+[^\r\n]*\]')) {
+        $id = [regex]::Match($resource.Value, '\bid="([^"]+)"').Groups[1].Value
+        $path = [regex]::Match($resource.Value, '\bpath="([^"]+)"').Groups[1].Value
+        if ($id -ne $scriptId) { continue }
+        if ($path -match '^res://.+/KernelStage\.cs$') { return 'KernelStage' }
+        return 'Unknown'
+    }
+    return 'Unknown'
+}
+
+function Get-UESTCAttributedChanges {
+    param([string]$Root, [string]$BaseRef, [string[]]$Changes, [string]$Attribute)
+    $code = @($Changes | Where-Object { $_ -match '^game/.*\.cs$' -and $_ -notmatch '^game/addons/|/(tests?|obj|bin|\.godot)/' })
+    if (-not $code.Count) { return }
+    $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
+    $basePaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $base))
+    $pattern = '(?:\[|,)\s*(?:[A-Za-z_][\w.]*\.)?' + $Attribute + '(?:Attribute)?\b'
+    foreach ($path in $code) {
+        $absolute = Join-Path $Root $path
+        $current = if (Test-Path -LiteralPath $absolute -PathType Leaf) { [IO.File]::ReadAllText($absolute) } else { '' }
+        $old = if ($path -in $basePaths) { (Invoke-UESTCGit $Root @('show', "${base}:$path")).StdOut } else { '' }
+        if ($current -match $pattern -or $old -match $pattern) { $path }
+    }
+}
+
 function Get-UESTCG2CompileScope {
     param([string]$Root, [string]$Project, [string]$Configuration)
     try {
@@ -100,7 +134,6 @@ $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
 $godot = Get-UESTCGodot
 $work = Join-Path $root 'output/build/gates'
-$cacheWork = Join-Path $root 'output/cache/gates'
 $branch = (Invoke-UESTCGit $root @('branch', '--show-current')).StdOut.Trim()
 if (-not $BaseRef) {
     $BaseRef = 'main'
@@ -132,53 +165,42 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
 }
 $importRequired = $Full -or @($changes | Where-Object { $_ -match '^game/' -and $_ -notmatch '^game/(contracts|gen)/' -and $_ -notmatch '\.(md|txt|csproj|sln|props|lock\.json)$' }).Count -gt 0
 $selected = New-Object 'Collections.Generic.List[string]'
-if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -notmatch '^G(?:[1-9]|1[0-9]|2[01])$' -and $id -notin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; $selected.Add($id) } }
+$gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G18','G19','G20','G21')
+if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -cnotin $gateIds -and $id -cnotin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; if (-not $selected.Contains($id)) { $selected.Add($id) } } }
 elseif ($Smoke) { $selected.Add('G5Smoke') }
-elseif ($Full) { 1..21 | ForEach-Object { $selected.Add("G$_") }; $selected.Add('G5Smoke') }
+elseif ($Full) { foreach ($id in $gateIds) { $selected.Add($id) }; foreach ($id in @('G5Smoke','G15Core','G20Core')) { $selected.Add($id) } }
 elseif ($runtimeChanges.Count) {
     foreach ($id in @('G1','G2','G4')) { $selected.Add($id) }
 }
-# Service replacement is a required G5 subcheck, including explicitly selected G5.
+# Only changed attributed source files trigger startup; old content covers removals.
 $mainStage = Get-UESTCMainStage $root
-$serviceImpact = if ($selected.Contains('G5')) { Get-UESTCServiceWindowImpact $root $BaseRef $changes } else { [pscustomobject]@{ Required=$false; ChangedCode=@(); Reasons=@() } }
-$serviceWindowPlan = Select-UESTCServiceWindow $selected.ToArray() $serviceImpact.Required
-$selected.Clear()
-foreach ($gateId in $serviceWindowPlan.Gates) { $selected.Add($gateId) }
-$cacheIds = @('G1','G2','G3','G4')
-if ($serviceWindowPlan.CacheG5) { $cacheIds += 'G5' }
+$startupChanges = @()
+$walkChanges = @()
+$saveChanges = @()
+if (-not ($Full -or $Smoke -or $Only.Count)) {
+    $startupChanges = @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'Kernel(?:Service|Node)')
+    $walkChanges = @($runtimeChanges | Where-Object {
+        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/(Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
+    })
+    $saveChanges = @(@($runtimeChanges | Where-Object {
+        $_ -match '^game/(kernel/save/|contracts/Save/)|^game/.*Save[^/]*\.cs$'
+    }) + @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'SaveSection') | Sort-Object -Unique)
+    if ($startupChanges.Count) { $selected.Add('G5Smoke') }
+    if ($walkChanges.Count) { $selected.Add('G15Core') }
+    if ($saveChanges.Count) { $selected.Add('G20Core') }
+}
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $planObject['Stage'] = $mainStage
-$planObject['ServiceWindow'] = [ordered]@{ Impact=$serviceImpact; RequireFormalCore=$serviceWindowPlan.RequireFormalCore; CacheG5=$serviceWindowPlan.CacheG5 }
+$planObject['CoreChanges'] = [ordered]@{ Startup=$startupChanges; Walking=$walkChanges; Save=$saveChanges }
 if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
 $gateLease = Enter-UESTCBuildLock $layout.Locks
 try {
 $null = [IO.Directory]::CreateDirectory($work)
-$null = [IO.Directory]::CreateDirectory($cacheWork)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
-$cacheable = $selected.Count -gt 0 -and -not ($Full -or $NoCache)
-$cachePaths = if ($cacheable) { @(Get-UESTCCachePaths $root $Wp $changes) } else { @() }
-$cacheOptions = "$Configuration|map=$Map|frames=$Frames|import=$importRequired|G2=$(@($g2Selection | Where-Object Selected | ForEach-Object { $_.Project+':'+$_.Filter }) -join ',')"
-$inputHash = if ($cacheable) { Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $cachePaths } else { '' }
-$ownershipHash = if ($cacheable -and $selected.Contains('G3')) {
-    # Ownership is checked for every changed path, including documentation and deletions.
-    Get-UESTCStringHash ($inputHash + ($changes -join "`n") + (Invoke-UESTCGit $root @('show',"${BaseRef}:ownership.json")).StdOut +
-        (Get-UESTCOwnershipUidHash $root $changes))
-} else { '' }
-$cachePath = Join-Path $cacheWork "$Wp-cache.json"
-$cacheEntries = @{}
-if ($cacheable -and (Test-Path -LiteralPath $cachePath)) {
-    try {
-        $savedCache = Get-Content -Raw -Encoding UTF8 -LiteralPath $cachePath | ConvertFrom-Json
-        foreach ($entry in @($savedCache | Where-Object { $_.PSObject.Properties['version'] -and $_.version -eq 5 } | ForEach-Object entries)) {
-            if ($entry.Status -ne 'Passed') { continue }
-            $cacheEntries[$entry.Gate] = $entry
-        }
-    } catch { Write-Warning 'Unreadable gate cache ignored.' }
-}
 
 function Invoke-GateProcess {
     param([string]$Name, [string]$Executable, [string[]]$Arguments, [switch]$Visible,
@@ -215,17 +237,6 @@ function Write-TestSettings {
 foreach ($id in $selected) {
     Write-Host "[$id] $scope"
     try {
-        $gateHash = if ($id -eq 'G3') { $ownershipHash } else { $inputHash }
-        if ($cacheable -and $id -in $cacheIds -and $cacheEntries.ContainsKey($id)) {
-            $entry = $cacheEntries[$id]
-            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root $Wp $cachePaths }
-            if ($binaryHash -and $entry.InputHash -eq $gateHash -and $entry.BinaryHash -eq $binaryHash) {
-                $results.Add([pscustomobject]@{ Gate=$id; Status='CachedPass'; Scope=$scope; Detail=$entry.Detail })
-                Write-Host "[$id] CachedPass (source, dependency, tool and binary fingerprints unchanged)"
-                continue
-            }
-        }
-        $cacheEntries.Remove($id)
         $detail = ''
         $status = 'Passed'
         switch ($id) {
@@ -300,6 +311,14 @@ foreach ($id in $selected) {
                 $detail = "Windows Desktop release export; directory bytes=$bytes. Archive/PCK/license/production-budget checks: NotImplemented."
                 $status = 'NotImplemented'
             }
+            'G7' {
+                $status = 'NotImplemented'
+                $detail = 'Fixed-pose overview, seasonal shots and three quality-preset overviews are centralized; no gate implementation yet.'
+            }
+            'G19' {
+                $status = 'NotImplemented'
+                $detail = 'G19a connectivity, G19b closure/reachability and G19c door alignment have no gate implementation yet.'
+            }
             'G15Core' {
                 Assert-GodotVersion
                 # The daily walking core has a three-minute session limit.
@@ -326,7 +345,7 @@ foreach ($id in $selected) {
                     $detail = 'G20 core requires the formal KernelStage production lifecycle.'
                 } else {
                     . $coreScript
-                    $saveSuitesPassed = @($results | Where-Object { $_.Gate -eq 'G2' -and $_.Status -in @('Passed','CachedPass') }).Count -gt 0 -and
+                    $saveSuitesPassed = @($results | Where-Object { $_.Gate -eq 'G2' -and $_.Status -eq 'Passed' }).Count -gt 0 -and
                         @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles -and $_.Project -eq 'game/Campus.Tests.csproj' -and $_.Filter -notmatch 'FullyQualifiedName' }).Count -gt 0
                     $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
                     $status = $detail.Status
@@ -335,26 +354,15 @@ foreach ($id in $selected) {
             default { $status = 'NotImplemented'; $detail = 'Centralized or core-specialist gate has no implementation yet; no pre-bake was started.' }
         }
         $results.Add([pscustomobject]@{ Gate=$id; Status=$status; Scope=$scope; Detail=$detail })
-        if ($cacheable -and $status -eq 'Passed' -and $id -in $cacheIds) {
-            $binaryHash = if ($id -eq 'G3') { 'source-only' } else { Get-UESTCBinaryHash $root $Wp $cachePaths }
-            $cacheEntries[$id] = [pscustomobject]@{ Gate=$id; Status='Passed'; InputHash=$gateHash; BinaryHash=$binaryHash; Detail=$detail }
-        }
         Write-Host "[$id] $status - $detail"
     } catch {
-        $cacheEntries.Remove($id)
         $results.Add([pscustomobject]@{ Gate=$id; Status='Failed'; Scope=$scope; Detail=$_.Exception.Message })
         Write-Warning "[$id] $($_.Exception.Message)"
         # Dependent later stages must not test stale binaries after a build/import failure.
         break
     }
 }
-if ($cacheable) {
-    # If import or restore changed an input during this run, do not publish a stale pass.
-    $afterPaths = @(Get-UESTCCachePaths $root $Wp $changes)
-    $afterHash = Get-UESTCInputHash $root $Wp $BaseRef $cacheOptions $godot $changes $afterPaths
-    if ($afterHash -eq $inputHash) { [IO.File]::WriteAllText($cachePath, (@{ version=5; entries=@($cacheEntries.Values) } | ConvertTo-Json -Depth 8), $utf8) }
-}
-$report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); CachePolicy='Package inputs and project dependencies, shared tools/options and scoped binaries; only completed passes reused; full/window/export always fresh'; GeneratedAt=[DateTime]::UtcNow.ToString('o') }
+$report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); GeneratedAt=[DateTime]::UtcNow.ToString('o') }
 $reportPath = Join-Path $work "$Wp-result.json"
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 10), $utf8)
 Write-Host "Report: $reportPath"

@@ -18,11 +18,6 @@ KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels'}  # 构建锁、烘焙缓�
 COMMITS = 20
 
 
-def keep_file(rel):
-    # 门禁复用上次通过结果的记录（scripts/gate.ps1）
-    return rel.startswith('build/gates/') and rel.endswith('-cache.json')
-
-
 def cutoff(commits):
     """往前数第 commits 次提交的时间；提交不够这么多时返回 None（什么都不算过期）。"""
     out = subprocess.run(['git', '-C', ROOT, 'log', '-n', str(commits), '--format=%ct'],
@@ -44,7 +39,7 @@ def size(p):
 
 
 def stale(commits=COMMITS):
-    """返回可删的绝对路径：顶层整项过期就整项删；含保留记录的目录只删其中过期的文件。"""
+    """返回可删的绝对路径：顶层整项过期就整项删。"""
     before = cutoff(commits)
     if before is None or not os.path.isdir(OUT):
         return []
@@ -53,17 +48,8 @@ def stale(commits=COMMITS):
         p = os.path.join(OUT, name)
         if name in KEEP:
             continue
-        kept = [os.path.join(r, f) for r, _, fs in os.walk(p) for f in fs
-                if keep_file(os.path.relpath(os.path.join(r, f), OUT).replace(chr(92), '/'))] if os.path.isdir(p) else []
-        if not kept:
-            if newest(p) < before:
-                out.append(p)
-            continue
-        for r, _, fs in os.walk(p):
-            for f in fs:
-                q = os.path.join(r, f)
-                if q not in kept and os.path.getmtime(q) < before:
-                    out.append(q)
+        if newest(p) < before:
+            out.append(p)
     return out
 
 

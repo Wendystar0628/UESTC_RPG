@@ -143,16 +143,6 @@
       "maintainers": ["WP-00"]
     },
     {
-      "pattern": "scripts/gates/cache.ps1",
-      "owner": "WP-27",
-      "maintainers": ["WP-00"]
-    },
-    {
-      "pattern": "scripts/gates/select-service-window.ps1",
-      "owner": "WP-27",
-      "maintainers": ["WP-00"]
-    },
-    {
       "pattern": "game/kernel/lighting/LightChannels.cs",
       "owner": "WP-03",
       "maintainers": ["WP-00"]
