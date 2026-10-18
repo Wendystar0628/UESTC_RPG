@@ -7,6 +7,7 @@ namespace Campus.Hud.Style;
 /// 生成界面唯一的 Theme（UI-VISUAL）：字体链、字号阶梯、类型变体、StyleBox 载体。
 /// 颜色走 ui_panel 着色器按 ui_night 取日夜两值；载体与图标色一律取白，由着色器换色。
 /// 不写零散的 theme_override_*，不另存共享 .tres。
+/// 唯一的运行时改动：下拉展开框是 Window、挂不了着色器，它的颜色随日夜改写（<see cref="SetPopupDark"/>）。
 /// </summary>
 public sealed class UiThemeBuilder
 {
@@ -109,7 +110,12 @@ public sealed class UiThemeBuilder
         var name = $"Btn_{fontRole.Replace('.', '_').Replace('-', '_')}_{padX}_{padY}_{(sunk ? 1 : 0)}_{expand}_{iconMax}_{separation}";
         if (!_types.Add(name)) return name;
         Theme.SetTypeVariation(name, "Button");
-        var box = Carrier(expand, padX, padY, sunk ? 1 : 0);
+        FillButtonItems(name, fontRole, Carrier(expand, padX, padY, sunk ? 1 : 0), iconMax, separation);
+        return name;
+    }
+
+    private void FillButtonItems(string name, string fontRole, StyleBox box, int iconMax, int separation)
+    {
         foreach (var state in new[] { "normal", "hover", "pressed", "disabled", "hover_pressed", "normal_mirrored", "hover_mirrored",
                      "pressed_mirrored", "disabled_mirrored", "hover_pressed_mirrored" })
             Theme.SetStylebox(state, name, box);
@@ -124,7 +130,89 @@ public sealed class UiThemeBuilder
             Theme.SetColor(state, name, Colors.White);
         Theme.SetConstant("icon_max_width", name, iconMax);
         Theme.SetConstant("h_separation", name, separation);
+    }
+
+    // ---------- 下拉框（UI-VISUAL）：闭合的按钮同按钮，走 ui_panel 载体；展开的 PopupMenu 是独立窗口，挂不了着色器 ----------
+    /// <summary>OptionButton 的类型变体：载体与按钮一致，右侧留箭头；箭头取白色图标，由 ui_panel 按 role 换色。</summary>
+    public string DropdownType(string fontRole, int padX, int padY, Texture2D arrow)
+    {
+        var name = $"Drop_{fontRole.Replace('.', '_').Replace('-', '_')}_{padX}_{padY}";
+        if (!_types.Add(name)) return name;
+        Theme.SetTypeVariation(name, "OptionButton");
+        FillButtonItems(name, fontRole, Carrier(6, padX, padY, 0), 16, 8);
+        Theme.SetIcon("arrow", name, arrow);
+        Theme.SetConstant("arrow_margin", name, 2);
+        Theme.SetConstant("modulate_arrow", name, 0);
         return name;
+    }
+
+    public const string PopupType = "DropdownPopup";
+    private StyleBoxFlat? _popupPanel, _popupHover;
+    private bool? _popupDark;
+
+    /// <summary>
+    /// 下拉展开框的 PopupMenu 类型变体：实底面板、外缘 line.panel、悬停与键盘焦点项 surface.selected 加左侧 2 px primary.line。
+    /// 展开框是 Window，没有画布材质，颜色只能是真色值；<see cref="SetPopupDark"/> 在日夜切换后改写这几个对象（只改颜色，不增删项）。
+    /// </summary>
+    public string DropdownPopupType()
+    {
+        if (!_types.Add(PopupType)) return PopupType;
+        Theme.SetTypeVariation(PopupType, "PopupMenu");
+        _popupPanel = new StyleBoxFlat { DrawCenter = true, AntiAliasing = false };
+        _popupPanel.SetBorderWidthAll(1);
+        _popupPanel.SetContentMarginAll(4);
+        _popupHover = new StyleBoxFlat { DrawCenter = true, AntiAliasing = false };
+        _popupHover.SetBorderWidth(Side.Left, 2);
+        Theme.SetStylebox("panel", PopupType, _popupPanel);
+        Theme.SetStylebox("hover", PopupType, _popupHover);
+        var fv = Font("body", out var size, out _);
+        Theme.SetFont("font", PopupType, fv);
+        Theme.SetFontSize("font_size", PopupType, size);
+        Theme.SetConstant("v_separation", PopupType, 10);
+        Theme.SetConstant("h_separation", PopupType, 8);
+        Theme.SetConstant("item_start_padding", PopupType, 12);
+        Theme.SetConstant("item_end_padding", PopupType, 12);
+        SetPopupDark(false);
+        return PopupType;
+    }
+
+    public void SetPopupDark(bool dark)
+    {
+        if (_popupPanel is null || _popupHover is null || _popupDark == dark) return;
+        _popupDark = dark;
+        var theme = dark ? "dark" : "light";
+        _popupPanel.BgColor = _c.Theme(theme, "surface.solid");
+        _popupPanel.BorderColor = _c.Theme(theme, "line.panel");
+        _popupHover.BgColor = _c.Theme(theme, "surface.selected");
+        _popupHover.BorderColor = _c.Theme(theme, "primary.line");
+        var ink = _c.Theme(theme, "text.1");
+        Theme.SetColor("font_color", PopupType, ink);
+        Theme.SetColor("font_hover_color", PopupType, ink);
+        Theme.SetColor("font_disabled_color", PopupType, _c.Theme(theme, "text.off"));
+        Theme.SetColor("font_accelerator_color", PopupType, _c.Theme(theme, "text.2"));
+        Theme.SetColor("font_separator_color", PopupType, _c.Theme(theme, "text.2"));
+        // 当前项的单选标记：primary.line 实心点；其余项留同尺寸的透明位，文字对齐
+        var on = Dot(_c.Theme(theme, "primary.line"));
+        var off = Dot(new Color(0, 0, 0, 0));
+        Theme.SetIcon("radio_checked", PopupType, on);
+        Theme.SetIcon("radio_checked_disabled", PopupType, on);
+        Theme.SetIcon("radio_unchecked", PopupType, off);
+        Theme.SetIcon("radio_unchecked_disabled", PopupType, off);
+    }
+
+    private static ImageTexture Dot(Color color)
+    {
+        const int size = 12;
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        var center = (size - 1) / 2f;
+        for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var d = MathF.Sqrt((x - center) * (x - center) + (y - center) * (y - center));
+                var cover = Math.Clamp(3.5f - d, 0f, 1f);
+                image.SetPixel(x, y, new Color(color.R, color.G, color.B, color.A * cover));
+            }
+        return ImageTexture.CreateFromImage(image);
     }
 
     // 滚动条：宽 4，轨道不画，拇指是白色载体，由 ui_panel kind 3 换成 line.scroll（UI-VISUAL）

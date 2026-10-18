@@ -37,7 +37,7 @@
     "pushMax": 15,
     "edgeFogMax": 1.6
   },
-  "defaultSpawn": "P00",
+  "defaultSpawn": "P01",
   "spawns": [],
   "world": {
     "time": "shared",

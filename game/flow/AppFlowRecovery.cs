@@ -66,12 +66,7 @@ public sealed partial class AppFlowService
         var context = Context();
         if (newGame)
         {
-            _destination = maps.ResolveSpawn(context.Descriptor.Id).Fly;
-            _destinationMode = ViewMode.Fly;
-            var catalog = new CinematicCatalog(context);
-            _definition = catalog.Find("enterNew");
-            _playbackStart = new(TitlePose(), camera.Pose, _destination, _userFov, context.Descriptor.Id);
-            if (_definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
+            _definition = new CinematicCatalog(context).Find("enterNew");
             await AdvanceToDefault();
         }
         _finishing = true;

@@ -70,18 +70,43 @@ public partial class SettingsCard
             var widths = new float[steps];
             for (var i = 0; i < steps; i++)
             {
-                var v = spec.Min + i * spec.Step;
-                var key = $"{spec.LabelKey}.{v:0}";
-                labels[i] = Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : steps == 2 ? UiKit.T(v > 0 ? "ui.common.on" : "ui.common.off") : $"{v:0}";
-                widths[i] = steps <= 3 ? 72 : 56;
+                labels[i] = StepLabel(spec, steps, spec.Min + i * spec.Step);
+                widths[i] = SegmentWidth;
             }
-            var seg = Segmented.Create(_kit, page, at, widths, labels, false, selected: (int)Math.Round((value - spec.Min) / spec.Step));
+            var selected = (int)Math.Round((value - spec.Min) / spec.Step);
+            // 档数多或字放不进分段格的，用下拉框；其余分段钮
+            if (steps >= 4 || !Segmented.Fits(_kit, labels, widths))
+            {
+                var drop = Dropdown.Create(_kit, page, at, labels, selected, DropdownMinWidth);
+                drop.Changed += i => Change(spec.Knob, spec.Min + i * spec.Step);
+                return;
+            }
+            var seg = Segmented.Create(_kit, page, at, widths, labels, false, selected: selected);
             seg.Changed += i => Change(spec.Knob, spec.Min + i * spec.Step);
             return;
         }
         var step = spec.Step > 0 ? spec.Step : (spec.Max - spec.Min) / 20f;
         var fader = Fader.Create(_kit, page, at + new Vector2(6, 0), 200, spec.Min, spec.Max, step, value, false, v => FormatKnob(spec, v));
         fader.Changed += v => Change(spec.Knob, v);
+    }
+
+    private const float SegmentWidth = 72, DropdownMinWidth = 168;
+
+    private static string StepLabel(KnobSpec spec, int steps, float v)
+    {
+        var key = $"{spec.LabelKey}.{v:0}";
+        if (spec.Knob == QualityKnob.FrameCap && FrameCapHz((int)v) is { } hz) return UiKit.T(key + ".hz", ("hz", $"{hz}"));
+        return Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : steps == 2 ? UiKit.T(v > 0 ? "ui.common.on" : "ui.common.off") : $"{v:0}";
+    }
+
+    // 帧率上限的 2、3 档是刷新率的一半与整数倍：显示器的实际刷新率（当前屏）；取不到（−1）或不足 24 时返回 null，退回"半刷新""刷新率"原文案。
+    // 取整同 QualityCatalog.FrameLimit，所以文字与真正的上限一致
+    private static int? FrameCapHz(int code)
+    {
+        if (code is not (2 or 3)) return null;
+        var rate = DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen());
+        if (!float.IsFinite(rate) || rate < 24) return null;
+        return (int)MathF.Floor(code == 2 ? rate / 2 : rate);
     }
 
     private static string FormatKnob(KnobSpec spec, float v) => spec.Knob switch

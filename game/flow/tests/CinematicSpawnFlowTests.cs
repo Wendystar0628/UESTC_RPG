@@ -34,8 +34,9 @@ public sealed class CinematicSpawnFlowTests
     [TestCase]
     public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
     {
-        var rig = new FlowTestRig(); var maps = new CinematicSpawnMapStub(); var saves = new SaveService();
+        var rig = new FlowTestRig(); var maps = new CinematicSpawnMapStub();
         var camera = rig.Camera; var veil = rig.Veil; var presentation = rig.Presentation;
+        var saves = new SaveService(camera);
         var playback = rig.Playback; var diagnostics = rig.Diagnostics;
         var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
         if (maps.Context.Descriptor.Spawns.Count != 0) throw new InvalidOperationException("Fixture must use waypoint-only spawns.");
@@ -46,8 +47,11 @@ public sealed class CinematicSpawnFlowTests
         await CinematicTestFrames.Complete(entering, playback, presentation, veil);
         var result = await entering;
         if (diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, diagnostics));
-        if (result != EnterResult.Entered || flow.State != AppState.Playing || camera.Pose != CinematicSpawnMapStub.DefaultPose || saves.NewGames != 1 || saves.Saves != 1)
+        if (result != EnterResult.Entered || flow.State != AppState.Playing || saves.NewGames != 1 || saves.Saves != 1)
             throw new InvalidOperationException("New game failed or lost the authored default waypoint.");
+        if (camera.Mode != ViewMode.Walk || camera.Pose != SaveService.Landing ||
+            rig.Runtime.Destination is not { Mode: ViewMode.Walk } landing || landing.Pose != SaveService.Landing)
+            throw new InvalidOperationException("New game did not hand control back walking on the restored spawn stand.");
         if (maps.DefaultRequests < 2 || camera.InputLocked)
             throw new InvalidOperationException("The flow bypassed spawn resolution or failed to hand off input.");
     }
@@ -200,8 +204,10 @@ public sealed class CinematicSpawnFlowTests
             throw new InvalidOperationException("Continue lost the saved flow, world identity, endpoint or input handoff.");
     }
 
-    private sealed class SaveService : TestSaveService
+    private sealed class SaveService(TestCameraRig camera) : TestSaveService
     {
+        // What the restored view default is on a map whose default spawn has a stand (D-242).
+        public static readonly Pose Landing = new(new(120, 1.7f, -70), 20, 0);
         private SlotId? _active;
         public int NewGames { get; private set; }
         public int Saves { get; private set; }
@@ -209,7 +215,11 @@ public sealed class CinematicSpawnFlowTests
         public override SlotId? Active => _active;
         public override Task<SaveResult> SaveNow(SaveReason reason) { Saves++; return Task.FromResult(new SaveResult(SaveStatus.Saved, Active, 1)); }
         public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
-        { NewGames++; _active = slot; return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, [])); }
+        {
+            NewGames++; _active = slot;
+            camera.Mode = ViewMode.Walk; camera.SetPose(Landing);
+            return Task.FromResult(new LoadResult(LoadStatus.Loaded, slot, 0, []));
+        }
     }
     private sealed class ResumeSaveService(ICameraRig camera, IWorldState world, CinematicRuntimeTestStub runtime,
         Func<bool> covered) : TestSaveService

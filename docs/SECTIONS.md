@@ -48,16 +48,16 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.6k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.7k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
   - ★ CORE-DECISIONS-SYSTEMS §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
-- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.3k
-- CORE-DECISIONS-SYSTEMS §3 音频 · L77 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L99 · 2.7k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L125 · 2.8k
+- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.4k
+- CORE-DECISIONS-SYSTEMS §3 音频 · L78 · 2.1k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 2.7k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L126 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1391,7 +1391,7 @@
 - SYS-SAVE-FLOW §0 结论 · L23 · 521
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L30 · 277
 - SYS-SAVE-FLOW §1 保存时机与可靠性 · L36 · 1.2k
-  - SYS-SAVE-FLOW §1.1 时机 · L38 · 379
+  - SYS-SAVE-FLOW §1.1 时机 · L38 · 376
   - SYS-SAVE-FLOW §1.2 安全时刻与落定快照 · L51 · 341
   - SYS-SAVE-FLOW §1.3 写盘与失败 · L57 · 103
   - SYS-SAVE-FLOW §1.4 退出 · L61 · 289
@@ -1401,7 +1401,7 @@
   - SYS-SAVE-FLOW §2.2 世界实例：`IWorldState.Instance` · L90 · 384
   - SYS-SAVE-FLOW §2.3 "状态一致"的定义 · L96 · 379
   - SYS-SAVE-FLOW §2.4 天气 · L104 · 156
-  - SYS-SAVE-FLOW §2.5 新游戏 · L108 · 378
+  - SYS-SAVE-FLOW §2.5 新游戏 · L108 · 396
   - SYS-SAVE-FLOW §2.6 校验修复 · L115 · 453
 - SYS-SAVE-FLOW §3 关着游戏的那段现实时间不计 · L130 · 272
 - SYS-SAVE-FLOW §4 待验证（P0） · L137 · 172
@@ -1480,7 +1480,7 @@
 - SYS-TITLE-CINEMATIC §2 继续过场与返回标题 · L81 · 1.1k
   - SYS-TITLE-CINEMATIC §2.1 继续过场（约 9 s，主线之后） · L85 · 648
   - SYS-TITLE-CINEMATIC §2.2 返回标题过场（约 3 s，不可跳过，主线之后） · L95 · 268
-- SYS-TITLE-CINEMATIC §3 跳过、安全落点与设置项 · L99 · 741
+- SYS-TITLE-CINEMATIC §3 跳过、安全落点与设置项 · L99 · 744
 - SYS-TITLE-CINEMATIC §4 与时间不可逆的关系 · L116 · 390
 - SYS-TITLE-CINEMATIC §5 过场的规则 · L123 · 640
 - SYS-TITLE-CINEMATIC §6 云卡 · L131 · 301
@@ -1521,22 +1521,22 @@
 
 ## SYS-VIEW · 观察模式与旁观漫游
 
-`docs/systems/SYS-VIEW-观察模式与开场.md` · 5.7k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
+`docs/systems/SYS-VIEW-观察模式与开场.md` · 5.6k 字 · 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 关键词：旁观模式、观察模式、飞行速度档、视场角、鼠标灵敏度、活动范围、初始位置、镜头不会自己动、自动运镜、命令行参数、ICameraRig、Pose
 
 - SYS-VIEW §0 结论 · L22 · 1.1k
   - ★ SYS-VIEW §0.1 接入要点 · L37 · 362
 - SYS-VIEW §1 不做的事 · L44 · 199
-- SYS-VIEW §2 旁观者漫游 · L48 · 2.9k
+- SYS-VIEW §2 旁观者漫游 · L48 · 2.8k
   - SYS-VIEW §2.1 操作 · L52 · 846
   - SYS-VIEW §2.2 触屏 · L72 · 27
   - SYS-VIEW §2.3 活动范围 · L76 · 245
-  - SYS-VIEW §2.4 初始位置 · L84 · 646
-  - SYS-VIEW §2.5 镜头不会自己动 · L94 · 768
-  - SYS-VIEW §2.6 操作说明与提示 · L107 · 250
-- SYS-VIEW §3 启动与开场 · L116 · 39
-- SYS-VIEW §4 环境痕迹与平面地图的分工 · L120 · 250
-- SYS-VIEW §5 待验证 · L126 · 68
+  - SYS-VIEW §2.4 初始位置 · L84 · 533
+  - SYS-VIEW §2.5 镜头不会自己动 · L93 · 768
+  - SYS-VIEW §2.6 操作说明与提示 · L106 · 250
+- SYS-VIEW §3 启动与开场 · L115 · 39
+- SYS-VIEW §4 环境痕迹与平面地图的分工 · L119 · 250
+- SYS-VIEW §5 待验证 · L125 · 68
 
 ## SYS-WALK-BIKE · 骑行：共享单车的运动、可骑范围与取还
 
@@ -1696,7 +1696,7 @@
 
 ## UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 
-`docs/ui/UI-VISUAL-界面视觉语言.md` · 6.2k 字 · 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
+`docs/ui/UI-VISUAL-界面视觉语言.md` · 6.3k 字 · 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
 关键词：界面视觉、色彩令牌、清蓝、晶白、深屏、昼夜交班、常驻件、对比度规则、ui.json、ui_night、UiThemeBuilder、UiThemeClock、ui_panel、ui_screen
 
 - UI-VISUAL §0 结论 · L21 · 1.0k
@@ -1713,7 +1713,7 @@
   - UI-VISUAL §3.4 昼夜切换 · L102 · 427
   - UI-VISUAL §3.5 对比度规则 · L110 · 248
   - UI-VISUAL §3.6 登记 · L117 · 150
-- UI-VISUAL §4 实现边界 · L121 · 885
+- UI-VISUAL §4 实现边界 · L121 · 940
 
 ## ENG-ARCH · 工程架构
 

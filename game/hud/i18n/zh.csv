@@ -170,6 +170,8 @@ quality.frame_cap.0,30
 quality.frame_cap.1,60
 quality.frame_cap.2,半刷新
 quality.frame_cap.3,刷新率
+quality.frame_cap.2.hz,{hz} Hz（半刷新）
+quality.frame_cap.3.hz,{hz} Hz（刷新率）
 quality.frame_cap.4,不限
 quality.render_scale,渲染比例
 quality.anti_aliasing,抗锯齿

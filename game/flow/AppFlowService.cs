@@ -91,7 +91,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             var context = Context(); var catalog = new CinematicCatalog(context);
             var meta = newGame ? null : Info(_request.Slot!.Value)?.Meta;
             _destination = meta?.Pose ?? maps.ResolveSpawn(context.Descriptor.Id).Fly;
-            _destinationMode = meta?.Mode ?? ViewMode.Fly;
+            _destinationMode = meta?.Mode ?? ViewMode.Walk;
             var mode = _boot?.CinematicMode ?? settings?.Mode ?? CinematicMode.Full;
             var role = mode switch
             {
@@ -103,7 +103,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             _definition = _cinematicOverride is { } forced ? catalog.Read(forced) : catalog.Find(role);
             _cinematicOverride = null;
             _playbackStart = new(TitlePose(), camera.Pose, _destination, _userFov, context.Descriptor.Id);
-            if (_definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
+            if (!newGame && _definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
             _path = mode switch { CinematicMode.Full or CinematicMode.Off => EnterPath.Cinematic, CinematicMode.Short => EnterPath.ShortCinematic, _ => throw new InvalidOperationException("Unknown cinematic setting.") };
             if (_definition?.Kind is CinematicKind.EnterNewShort) _path = EnterPath.ShortCinematic;
             var direct = mode is CinematicMode.Off || motion.ReduceMotion || _definition is null || !rules.Current.CinematicStates.Contains(AppState.Entering)
@@ -172,7 +172,9 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         RequireLoaded(result); _newTimeline = true; _preview = null; _livePreview = false; _endFlow = 1;
         RequireHealthyWorld();
         control.SetFlow(0);
-        // NewGame restores view as well; the cinematic still owns the camera until handoff.
+        // NewGame restores the view default as well (D-242): walking on the spawn's stand is the landing.
+        // The cinematic still owns the camera until handoff.
+        _destination = camera.Pose; _destinationMode = camera.Mode;
         if (_playbackStart is not null) camera.SetPose(_playbackStart.Current);
     }
     private async Task RestoreRequested()
@@ -228,16 +230,6 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             underVeil = true;
         }
         camera.SetPose(_destination);
-        if (newGame)
-        {
-            var result = await view.SetMode(_definition?.End.Mode ?? _destinationMode, ModeSwitchVia.Ui);
-            switch (result)
-            {
-                case ModeSwitchResult.Ok: case ModeSwitchResult.Relocated: break;
-                case ModeSwitchResult.Refused: throw new InvalidOperationException("Cinematic endpoint mode was refused.");
-                default: throw new ArgumentOutOfRangeException(nameof(result));
-            }
-        }
         if (newGame) await PreparePlayableDestination();
         RequireHealthyWorld();
         playback.Clear();

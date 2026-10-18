@@ -49,6 +49,15 @@ public partial class Segmented : Control
         return seg;
     }
 
+    /// <summary>每段的字放得进格里吗（按钮两侧内边距各 6 px、边各 1 px）；放不进就该改用 <see cref="Dropdown"/>。</summary>
+    public static bool Fits(UiKit kit, string[] labels, float[] widths, string font = "segment")
+    {
+        var fv = kit.Theme.Font(font, out var size, out _);
+        for (var i = 0; i < labels.Length; i++)
+            if (fv.GetStringSize(labels[i], HorizontalAlignment.Left, -1, size).X + 12 > widths[i] - 2) return false;
+        return true;
+    }
+
     public void Select(int index, bool notify)
     {
         if (index < 0 || index >= _items.Count)

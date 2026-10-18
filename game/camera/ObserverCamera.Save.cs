@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization.Metadata;
+using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using N = System.Numerics;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
@@ -56,12 +58,14 @@ public partial class ObserverCamera
 
     public ViewSaveData CreateDefault(NewGameContext context)
     {
-        // The map catalogue resolves authored spawns before waypoints, including a target map that
-        // has not mounted yet. Current-map bounds must never project another map's default pose.
+        // D-242: a new game hands control back walking on the default spawn's stand. The catalogue resolves
+        // authored spawns before waypoints, including a target map that has not mounted yet; Restore
+        // legalizes the pose against the mounted map, as for every saved walk pose.
         var spawn = Services.Get<IMapService>().ResolveSpawn(context.Map);
-        ValidateFinite(spawn.Fly);
-        var pose = _map?.Descriptor.Id == context.Map ? Legalize(spawn.Fly) : spawn.Fly;
-        return new(ViewMode.Fly, pose with { FovDeg = null }, null,
-            Tuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
+        var stand = spawn.Stand ?? throw new InvalidDataException(
+            $"Default spawn of {context.Map.Value} has no walk stand.");
+        var eye = new Pose(stand.Feet + N.Vector3.UnitY * WalkTuning.StandingEye, stand.YawDeg, 0);
+        ValidateFinite(eye);
+        return new(ViewMode.Walk, eye, null, WalkTuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
     }
 }
