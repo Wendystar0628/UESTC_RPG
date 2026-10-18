@@ -261,7 +261,7 @@ gates: []
 - **中央 60%**：屏幕中央区域里不放任何常驻件（UI-VISUAL-COMPONENTS §5）。
 - **八个母题**：界面动效的八种样式，分三级使用（UI-VISUAL-MOTION §1.2）。
 - **减少动态效果**：无障碍设置，每个动效母题都有替代（UI-NAV-WAYPOINTS §2.4、UI-VISUAL-MOTION §2.1）。
-- **`HudModel`**：界面读世界状态的内核服务，值变了才发信号（SYS-TIME §1）。
+- **`HudModel`**：界面一侧读世界状态的只读转发，直接取源、不另存副本（SYS-TIME §1）。
 - **署名**：常驻的 OSM 署名，在最上层；`--ui=0` 时也保留（OPS-RELEASE §7.1、UI-VISUAL §4）。
 
 ## 12 音频

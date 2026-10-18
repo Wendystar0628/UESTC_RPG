@@ -66,7 +66,7 @@ gates: [G5, G6]
 
 ## 2 主线程与 C#
 
-- 节点的 `ProcessPriority` 定顺序；界面经 `HudModel` 采样；`*Module.cs`（gen 里，纯函数）与 `*Node.cs`（主线程）分开。主线程额度见 `KernelBudgets.cs`。
+- 节点的 `ProcessPriority` 定顺序；界面直接读源，不采样不缓存；`*Module.cs`（gen 里，纯函数）与 `*Node.cs`（主线程）分开。主线程额度见 `KernelBudgets.cs`。
 - **零分配**：逐帧路径不 `new` 引用类型、不用 LINQ、闭包、装箱、字符串拼接；参数名缓存成 `StringName`；`Godot.Collections` 每次跨边界都封送，热路径不用；调引擎 API 一律批量。
 - **GC**：F1 一圈不出现可见卡顿（GC 单次暂停 ≲ 5 ms）。线程边界见 ENG-BUDGET-RULES §1 第 16 条。
 
