@@ -60,7 +60,7 @@ public sealed class MottoStoneSite : WestSite
         {
             var t = closed ? from + 360f * i / segments : from + (to - from) * i / (count - 1);
             var a = t * (MathF.PI / 180f);
-            points[i] = f.P(half.X * DetMath.Cos(a), half.Y * DetMath.Sin(a));
+            points[i] = f.P(half.X * MathF.Cos(a), half.Y * MathF.Sin(a));
         }
         // Sweep wants a counter-clockwise path in world plan for an outward-right lateral; either way the section is symmetric.
         return points;

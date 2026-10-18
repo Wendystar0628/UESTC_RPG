@@ -13,7 +13,7 @@ public sealed class WorldInputCompatibilityTests
     [TestCase]
     public void GodotAndNumericsTransformsKeepOrientationAndTranslation()
     {
-        var matrix = Matrix4x4.CreateScale(2, 3, 4) * DetMath.RotationY(.6f) * Matrix4x4.CreateTranslation(14, 6, -2);
+        var matrix = Matrix4x4.CreateScale(2, 3, 4) * Matrix4x4.CreateRotationY(.6f) * Matrix4x4.CreateTranslation(14, 6, -2);
         if (matrix.ToGodot().ToNumerics() != matrix)
             throw new InvalidOperationException("Row/column conversion lost matrix values.");
     }

@@ -33,7 +33,7 @@ public static partial class FurniturePlanner
     public static Vector2 Facing(float yawDeg)
     {
         var a = yawDeg * (float.Pi / 180f);
-        return new(DetMath.Sin(a), -DetMath.Cos(a));
+        return new(MathF.Sin(a), -MathF.Cos(a));
     }
 
     /// <summary>Moves a part-local collider by a rigid placement matrix.</summary>
@@ -90,7 +90,7 @@ public static partial class FurniturePlanner
     /// <summary>The yaw in degrees (0 = north, 90 = east, [0, 360)) of a plan direction: the inverse of <see cref="Facing"/>.</summary>
     private static float YawDeg(Vector2 facing)
     {
-        var deg = DetMath.Atan2(facing.X, -facing.Y) * (180f / float.Pi);
+        var deg = MathF.Atan2(facing.X, -facing.Y) * (180f / float.Pi);
         return deg < 0f ? deg + 360f : deg;
     }
 

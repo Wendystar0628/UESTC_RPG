@@ -121,7 +121,7 @@ public sealed class BenchPart : IPartDef<FurnitureParams>
     {
         var (front, depth) = Seat(p);
         var tilt = S.BackTiltDeg * (float.Pi / 180f);
-        var s = (float)DetMath.Sin(tilt); var c = (float)DetMath.Cos(tilt); var t = s / c;
+        var s = MathF.Sin(tilt); var c = MathF.Cos(tilt); var t = s / c;
         var footY = S.SeatHeight + S.BackRise; var footZ = front + depth + 0.005f;
         var span = (p.Height - 0.01f - footY) / c;
         // Post centre line: half a slat plus half a post behind the slat plane (measured horizontally).

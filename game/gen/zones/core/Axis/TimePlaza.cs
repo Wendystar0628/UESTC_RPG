@@ -32,7 +32,7 @@ public sealed class TimePlaza : ICorePiece
         Radius = radius;
         Axis = axis;
         _benches = benches;
-        AxisAngle = DetMath.Atan2(axis.Y, axis.X);
+        AxisAngle = MathF.Atan2(axis.Y, axis.X);
         var terrain = world.Terrain;
         FloorTop = terrain.HeightAt(centre.X, centre.Y) + S.PavingLift;
         var rim = 0f;
@@ -175,11 +175,11 @@ public sealed class TimePlaza : ICorePiece
         var paint = S.Inlay(S.MarkStone);
         var (inner, outer) = S.Bands[0];
         float r0 = FootRadius * inner, r1 = FootRadius * outer;
-        var north = DetMath.Atan2(-1f, 0f);
+        var north = MathF.Atan2(-1f, 0f);
         for (var k = 0; k < 12; k++)
         {
             var a = north + k * (Shapes.Tau / 12f);
-            var u = new Vector2(DetMath.Cos(a), DetMath.Sin(a));
+            var u = new Vector2(MathF.Cos(a), MathF.Sin(a));
             Shapes.FlatStrip(mesh, paint, Centre + u * (r0 + 0.04f), Centre + u * (r1 - 0.04f), S.HourMarkWidth, Floor, S.DecalLift * 1.5f);
             if (lod != LodLevel.L0 || k % 3 != 0) continue;
             // 子、卯、午、酉 get a small diamond just outside the band.
@@ -201,7 +201,7 @@ public sealed class TimePlaza : ICorePiece
         for (var k = 0; k < 8; k++)
         {
             var a = AxisAngle + k * (Shapes.Tau / 8f);
-            corners[k] = new(DetMath.Cos(a), DetMath.Sin(a));
+            corners[k] = new(MathF.Cos(a), MathF.Sin(a));
         }
         for (var k = 0; k < 8; k++)
             Shapes.FlatStrip(mesh, gold, Centre + corners[k] * S.EmblemOctagon, Centre + corners[(k + 1) % 8] * S.EmblemOctagon, S.EmblemLine, Floor, S.DecalLift);
@@ -219,7 +219,7 @@ public sealed class TimePlaza : ICorePiece
 
     // ------------------------------------------------------------------ steps and ramps
 
-    private Vector2 Station(float r, float angle) => Centre + new Vector2(DetMath.Cos(angle), DetMath.Sin(angle)) * r;
+    private Vector2 Station(float r, float angle) => Centre + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * r;
 
     /// <summary>One flank ramp: arc centre angle, the ±1 direction from its top end to its bottom end, and its runs.</summary>
     private sealed record Ramp(float CentreAngle, float Direction, float Span, float Radius, float Length, IReadOnlyList<(float S0, float S1, float Y0, float Y1)> Runs);
@@ -322,14 +322,14 @@ public sealed class TimePlaza : ICorePiece
         Vector3 P(int i, (float R, bool Top, float Y) q)
         {
             var a = wall.Stations[i].Angle;
-            return new(Centre.X + DetMath.Cos(a) * q.R, q.Top ? wall.Stations[i].Top + q.Y : q.Y, Centre.Y + DetMath.Sin(a) * q.R);
+            return new(Centre.X + MathF.Cos(a) * q.R, q.Top ? wall.Stations[i].Top + q.Y : q.Y, Centre.Y + MathF.Sin(a) * q.R);
         }
         for (var i = 0; i + 1 < n; i++)
             for (var k = 0; k < section.Length; k++)
             {
                 var q0 = section[k]; var q1 = section[(k + 1) % section.Length];
                 var mid = (wall.Stations[i].Angle + wall.Stations[i + 1].Angle) * 0.5f;
-                var radial = new Vector3(DetMath.Cos(mid), 0, DetMath.Sin(mid));
+                var radial = new Vector3(MathF.Cos(mid), 0, MathF.Sin(mid));
                 var p0 = P(i, q0); var p1 = P(i, q1);
                 // Outward normal of a counterclockwise section edge (dr, dy) is (dy, −dr).
                 var normal = Shapes.Normalize(radial * (p1.Y - p0.Y) - Vector3.UnitY * (q1.R - q0.R));
@@ -338,7 +338,7 @@ public sealed class TimePlaza : ICorePiece
         foreach (var (i, sign) in new[] { (0, -1f), (n - 1, 1f) })
         {
             var a = wall.Stations[i].Angle;
-            var along = new Vector3(-DetMath.Sin(a), 0, DetMath.Cos(a)) * (sign * MathF.Sign(wall.Stations[n - 1].Angle - wall.Stations[0].Angle));
+            var along = new Vector3(-MathF.Sin(a), 0, MathF.Cos(a)) * (sign * MathF.Sign(wall.Stations[n - 1].Angle - wall.Stations[0].Angle));
             for (var k = 1; k + 1 < section.Length; k++)
                 mesh.Tri(paint, P(i, section[0]), P(i, section[k]), P(i, section[k + 1]), along);
         }
@@ -388,7 +388,7 @@ public sealed class TimePlaza : ICorePiece
                 for (var i = 0; i < ball.Length; i++)
                 {
                     var a = -Shapes.Tau / 4f + i * (Shapes.Tau / 2f) / (ball.Length - 1);
-                    ball[i] = new(MathF.Max(0f, DetMath.Cos(a) * S.FlagFinial), pole.Height + S.FlagFinial + DetMath.Sin(a) * S.FlagFinial);
+                    ball[i] = new(MathF.Max(0f, MathF.Cos(a) * S.FlagFinial), pole.Height + S.FlagFinial + MathF.Sin(a) * S.FlagFinial);
                 }
                 ball[0] = ball[0] with { X = 0 }; ball[^1] = ball[^1] with { X = 0 };
                 Shapes.Lathe(mesh, steel, frame, ball, sides);

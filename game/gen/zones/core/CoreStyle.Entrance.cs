@@ -25,7 +25,6 @@ public static partial class CoreStyle
 
     // ---- Section (WLD-TERRAIN): risers near 0.15, flights of at most 1.5 m rise, one deep middle landing
     //      between the two runs (两跑) and short rest landings inside each run (review). ----
-    public const float FlightMaxRise = 1.5f;
     public const float RestLanding = 1.2f, MiddleLanding = 2.8f;
     /// <summary>The stair rises from the axis paving: terrain plus <see cref="PavingLift"/> at its foot.</summary>
     public const float StairFootLift = PavingLift;
@@ -41,8 +40,6 @@ public static partial class CoreStyle
     public const float CourseThickness = 0.08f, CourseRelief = 0.025f;
     /// <summary>Plinth band (勒脚) at the foot of the lower terrace fronts and the guard walls, above the ground.</summary>
     public const float StairPlinth = 0.45f;
-    /// <summary>Guards against a drop are collided this high above the walking surface (SYS-WALK).</summary>
-    public const float GuardCollision = 1.5f;
 
     // ---- Front door in the glass slot (MAP-QSH-CORE): four-leaf glass door over the slot's three middle cells,
     //      the outer two leaves fixed side lights, the inner two fixed open at 90° (WLD-INTERIORS). ----

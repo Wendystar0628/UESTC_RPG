@@ -55,7 +55,7 @@ public sealed class GrandstandSite : SouthSite
         {
             var angle = i * T.StationStep;
             var a = angle * (MathF.PI / 180f);
-            var d = new Vector2(DetMath.Cos(a), DetMath.Sin(a));
+            var d = new Vector2(MathF.Cos(a), MathF.Sin(a));
             float near = float.MaxValue, far = float.MinValue;
             for (var k = 0; k < ring.Length; k++)
                 if (Cross(centre, d, ring[k], ring[(k + 1) % ring.Length]) is { } hit) { near = MathF.Min(near, hit); far = MathF.Max(far, hit); }
@@ -311,7 +311,7 @@ public sealed class GrandstandSite : SouthSite
     {
         var top = Main(s, 0).Top;
         var ease = Math.Clamp(MathF.Min(s.Angle - T.CanopyFrom, T.CanopyTo - s.Angle) / T.CanopyEnd, 0f, 1f);
-        var g = MathF.Sqrt(DetMath.Sin(ease * MathF.PI * 0.5f));
+        var g = MathF.Sqrt(MathF.Sin(ease * MathF.PI * 0.5f));
         var thickness = T.CanopyThickness * (0.15f + 0.85f * g);
         var reach = T.CanopyReach * (0.35f + 0.65f * g) * (s.Depth - T.Concourse);
         Vector2 back = new(s.Depth + T.CanopyBack, top + T.CanopyBackRise), front = new(s.Depth - reach, top + T.CanopyFrontRise);
@@ -334,7 +334,7 @@ public sealed class GrandstandSite : SouthSite
         return [.. ring];
     }
 
-    private static float Half(float v, float thickness) => thickness * 0.5f * DetMath.Pow(MathF.Max(0f, DetMath.Sin(v * MathF.PI)), T.CanopyRound);
+    private static float Half(float v, float thickness) => thickness * 0.5f * MathF.Pow(MathF.Max(0f, MathF.Sin(v * MathF.PI)), T.CanopyRound);
 
     /// <summary>Dark grey steel on the concourse: a column up to the canopy's belly and a raking strut out under it.</summary>
     private static void Supports(SiteBuilder b, Plan p)

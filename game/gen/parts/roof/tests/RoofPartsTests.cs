@@ -123,7 +123,7 @@ public sealed class RoofPartsTests
             }
         IPartDef<RailingParams> fence = new EquipmentFencePart();
         var collider = (WallCollider)fence.Collision(new RailingParams() { Foot = FootMat.Metal }).Single();
-        Check(collider.Foot == FootMat.Metal && collider.Y1 >= 1.5f, "Fence collision lost the foot material or the 1.5 m barrier top.");
+        Check(collider.Foot == FootMat.Metal && collider.Y1 >= WalkRules.BarrierHeight, "Fence collision lost the foot material or the 1.5 m barrier top.");
     }
 
     [TestCase]

@@ -20,7 +20,7 @@ public sealed class RailingPart() : CirculationPart<RailingParams>(new(440, 240)
     private protected override IReadOnlyList<Collider> Colliders(RailingParams p) =>
     [
         new WallCollider(new(-p.Width * 0.5f, 0), new(p.Width * 0.5f, 0), Math.Max(p.Depth * 0.5f, S.BarrierMinHalfThickness),
-            -S.BarrierBelow, Math.Max(p.Height, S.BarrierTop), SurfaceTag.Barrier) { Foot = Foot(p.Foot, S.MetalFoot) },
+            -S.BarrierBelow, Math.Max(p.Height, WalkRules.BarrierHeight), SurfaceTag.Barrier) { Foot = Foot(p.Foot, S.MetalFoot) },
     ];
 
     private protected override void Compose(MeshBuilder mesh, RailingParams p, Detail detail)
@@ -100,7 +100,7 @@ public sealed class IronGatePart() : CirculationPart<DoorParams>(new(540, 300))
     private protected override IReadOnlyList<Collider> Colliders(DoorParams p) =>
     [
         new WallCollider(new(-p.Width * 0.5f, 0), new(p.Width * 0.5f, 0), Math.Max(p.Depth * 0.5f, S.BarrierMinHalfThickness),
-            0, Math.Max(p.Height, S.BarrierTop), SurfaceTag.DoorClosed) { Foot = Foot(p.Foot, S.MetalFoot) },
+            0, Math.Max(p.Height, WalkRules.BarrierHeight), SurfaceTag.DoorClosed) { Foot = Foot(p.Foot, S.MetalFoot) },
     ];
 
     private protected override void Compose(MeshBuilder mesh, DoorParams p, Detail detail)

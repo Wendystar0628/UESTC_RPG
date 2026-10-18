@@ -8,7 +8,7 @@ namespace Campus.Camera.Walk;
 /// <summary>One placement rule for entry, warps and recovery, evaluated against mounted native collision.</summary>
 public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
 {
-    private readonly CylinderShape3D _shape = new() { Radius = WalkTuning.Radius };
+    private readonly CylinderShape3D _shape = new() { Radius = WalkRules.Radius };
     private readonly PhysicsShapeQueryParameters3D _query = new()
     {
         CollisionMask = body.CollisionMask,
@@ -20,8 +20,8 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
 
     public N.Vector3? Resolve(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 candidate, float height)
     {
-        if (!WalkMath.Finite(candidate) || !collision.Ready(candidate, WalkTuning.Radius)) return null;
-        float hint = MathF.Max(candidate.Y, spatial.GroundY(candidate.X, candidate.Z) + WalkTuning.StepHeight);
+        if (!WalkMath.Finite(candidate) || !collision.Ready(candidate, WalkRules.Radius)) return null;
+        float hint = MathF.Max(candidate.Y, spatial.GroundY(candidate.X, candidate.Z) + WalkRules.StepHeight);
         if (collision.SupportY(candidate.X, candidate.Z, hint) is not { } hit || !float.IsFinite(hit.Y)) return null;
         var feet = new N.Vector3(candidate.X, hit.Y, candidate.Z);
         if (!WalkSafetyQueries.AllowsFeet(spatial, feet)
@@ -32,7 +32,7 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
         // height until its volume clears; ordinary gravity then settles it onto the native slope.
         for (int step = 0; step <= 4; step++)
         {
-            var placed = feet + N.Vector3.UnitY * (WalkTuning.StepHeight * step / 4);
+            var placed = feet + N.Vector3.UnitY * (WalkRules.StepHeight * step / 4);
             _query.Transform = new(Basis.Identity,
                 (placed + N.Vector3.UnitY * (height * .5f + WalkTuning.SafeMargin)).ToGodot());
             if (body.GetWorld3D().DirectSpaceState.IntersectShape(_query, 1).Count == 0) return placed;

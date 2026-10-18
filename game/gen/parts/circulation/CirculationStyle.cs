@@ -78,14 +78,12 @@ public static class CirculationStyle
     public const float HandrailExtension = 0.25f;
 
     // ---- Barrier collision (SYS-WALK rules 2–3, §13) ----
-    public const float BarrierTop = 1.5f;
     public const float BarrierBelow = 1.0f;
     public const float BarrierMinHalfThickness = 0.05f;
 
     // ---- Outdoor steps (WLD-TERRAIN) ----
     public const float RiserMin = 0.12f, RiserMax = 0.16f, RiserTarget = 0.15f;
     public const float TreadBase = 0.65f, TreadMin = 0.30f, TreadMax = 0.40f;
-    public const float FlightMaxRise = 1.5f;
     public const float LandingMin = 1.2f;
     public const float MainNetworkWidth = 2.4f, OtherWidth = 1.5f;
     /// <summary>Cheek wall width, its height above the nosing line and the flat pier at its foot (review).</summary>
@@ -118,7 +116,6 @@ public static class CirculationStyle
     public const float StairLandingMin = 1.5f;
     public const float StringerWidth = 0.06f, StringerRise = 0.06f, StringerDepth = 0.32f;
     public const float BalusterInset = 0.06f;
-    public const float StairBarrierAbove = 1.5f;
 
     // ---- Balconies (ART-MODELING: prefer solid parapets) ----
     public const float BalconySlab = 0.15f;

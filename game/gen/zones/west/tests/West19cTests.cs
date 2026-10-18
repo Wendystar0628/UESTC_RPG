@@ -68,7 +68,7 @@ public sealed class West19cTests
         var y = BoardwalkSite.DeckTop((_, _) => 0f);
         Require(MathF.Abs(y - (W.PavingTop + W.Lip)) < 1e-4f, "on flat ground the deck sits a lip above the paving");
         var rails = colliders.OfType<WallCollider>().Where(c => c.Tag == SurfaceTag.Barrier).ToArray();
-        Require(rails.Length > 40 && rails.All(r => r.Y1 - y >= 1.5f - 1e-4f), "every rail barrier tops out at 1.5 m over the deck");
+        Require(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 1e-4f), "every rail barrier tops out at 1.5 m over the deck");
         Require(W.RailHeight >= 1.05f, "the visible rail is at least 1.05 m");
         // One gap, on the water side, opposite the beach.
         var path = BoardwalkSite.Path;

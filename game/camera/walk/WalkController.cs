@@ -23,8 +23,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         | (1u << (int)SurfaceTag.DoorClosed);
     private readonly PhysicsTestMotionParameters3D _probe = new();
     private readonly PhysicsTestMotionResult3D _probeResult = new();
-    private readonly CylinderShape3D _cylinder = new() { Radius = WalkTuning.Radius, Height = WalkTuning.StandingHeight };
-    private readonly CylinderShape3D _standingProbe = new() { Radius = WalkTuning.Radius, Height = WalkTuning.StandingHeight };
+    private readonly CylinderShape3D _cylinder = new() { Radius = WalkRules.Radius, Height = WalkRules.StandingHeight };
+    private readonly CylinderShape3D _standingProbe = new() { Radius = WalkRules.Radius, Height = WalkRules.StandingHeight };
     private readonly PhysicsShapeQueryParameters3D _clearance = new();
     private WalkPlacementAdmission? _admission;
     private CollisionShape3D? _shape;
@@ -116,7 +116,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         UpDirection = Vector3.Up;
         CollisionLayer = 0;
         CollisionMask = BlockingLayers;
-        FloorMaxAngle = WalkTuning.FloorAngleDegrees * (float.Pi / 180f);
+        FloorMaxAngle = WalkRules.FloorAngleDegrees * (float.Pi / 180f);
         FloorSnapLength = WalkTuning.SnapLength;
         FloorConstantSpeed = true;
         FloorStopOnSlope = true;
@@ -240,7 +240,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         if (!Active || _shape is null || _map is null || _collision is null || _safetyFailed) return;
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= Services.Get<IAppFlow>();
-        CollisionReady = _collision.Ready(_feet, WalkTuning.Radius);
+        CollisionReady = _collision.Ready(_feet, WalkRules.Radius);
         if (_placementNeedsCheck)
         {
             if (!CollisionReady || !ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
@@ -301,7 +301,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         velocity.X = requested.X / dt;
         velocity.Z = requested.Z / dt;
         var next = _feet + new N.Vector3(requested.X, 0, requested.Z);
-        if (!_collision.Ready(next, WalkTuning.Radius)) { CollisionReady = false; _previousFeet = _feet; return; }
+        if (!_collision.Ready(next, WalkRules.Radius)) { CollisionReady = false; _previousFeet = _feet; return; }
         _previousFeet = _feet;
         Velocity = velocity.ToGodot();
         FloorSnapLength = jump ? 0 : WalkTuning.SnapLength;
@@ -333,7 +333,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private void ApplyHeight()
     {
-        _cylinder.Height = _crouching ? WalkTuning.CrouchingHeight : WalkTuning.StandingHeight;
+        _cylinder.Height = _crouching ? WalkTuning.CrouchingHeight : WalkRules.StandingHeight;
         if (_shape is not null) _shape.Position = Vector3.Up * (_cylinder.Height * .5f);
     }
 
@@ -341,7 +341,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         // Existing crouch volume is already collision-resolved. Query only the added crown, so a sloped
         // supporting floor does not falsely count as an overhead obstruction during the full-cylinder query.
-        float extra = WalkTuning.StandingHeight - WalkTuning.CrouchingHeight;
+        float extra = WalkRules.StandingHeight - WalkTuning.CrouchingHeight;
         _standingProbe.Height = extra;
         _clearance.Shape = _standingProbe;
         _clearance.Transform = new(Basis.Identity,
@@ -384,7 +384,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         var actual = current - before;
         var remaining = new Vector3(requested.X - actual.X, 0, requested.Z - actual.Z);
         if (remaining.LengthSquared() < .0000001f || remaining.Dot(requested) <= 0) return false;
-        var lift = Vector3.Up * WalkTuning.StepHeight;
+        var lift = Vector3.Up * WalkRules.StepHeight;
         if (Probe(current, lift)) lift = _probeResult.GetTravel();
         if (lift.Y <= WalkTuning.SafeMargin) return false;
         var raised = current + lift;
@@ -394,7 +394,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         if (_probeResult.GetCollisionNormal().Y < MathF.Cos(FloorMaxAngle)) return false;
         if (_probeResult.GetCollider() is CollisionObject3D floor && (floor.CollisionLayer & NoStepLayers) != 0) return false;
         var destination = advanced + _probeResult.GetTravel();
-        if (destination.Y - before.Y > WalkTuning.StepHeight + WalkTuning.SafeMargin) return false;
+        if (destination.Y - before.Y > WalkRules.StepHeight + WalkTuning.SafeMargin) return false;
         GlobalPosition = destination;
         FloorSnapLength = 0;
         Velocity = new(Velocity.X, 0, Velocity.Z);

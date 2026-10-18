@@ -482,7 +482,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
-        var top = Plan.PadY + 300f;
+        var top = Plan.PadY + WalkRules.BuildingCollisionHeight;
         foreach (var piece in Plan.Pieces)
         {
             var onGround = piece.Y0 <= Plan.WallBaseY + 0.01f;
@@ -494,8 +494,8 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             {
                 foreach (var (a, b, landing) in Split((piece.A, piece.B), Plan.Landing))
                     foreach (var (p, q) in Open(face, a, b, doors))
-                        list.Add(Wall(p, q, piece.Y0, landing ? Plan.SecondFloorY : Plan.SecondFloorY + 1.5f));
-                foreach (var o in doors) list.AddRange(DoorBay(o, Plan.SecondFloorY + 1.5f));
+                        list.Add(Wall(p, q, piece.Y0, landing ? Plan.SecondFloorY : Plan.SecondFloorY + WalkRules.BarrierHeight));
+                foreach (var o in doors) list.AddRange(DoorBay(o, Plan.SecondFloorY + WalkRules.BarrierHeight));
                 foreach (var o in doors.Where(o => o.Kind == OpeningKind.Entry))
                 {
                     var (u0, u1, depth) = Apron(o);

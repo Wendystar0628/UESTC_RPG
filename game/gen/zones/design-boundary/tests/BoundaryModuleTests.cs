@@ -173,7 +173,7 @@ public sealed class BoundaryModuleTests
         Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider fills Foot");
         var rail = NorthPlazaSite.Frame.P((P.RailT0 + P.RailT1) * 0.5f, P.RailN);
         Require(colliders.Any(c => c.Tag == SurfaceTag.Barrier && Covers(c, rail, 0f)), "the waterside railing is an ordinary barrier");
-        Require(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= 1.5f), "barrier tops reach 1.5 m");
+        Require(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= WalkRules.BarrierHeight), "barrier tops reach 1.5 m");
     }
 
     [TestCase]

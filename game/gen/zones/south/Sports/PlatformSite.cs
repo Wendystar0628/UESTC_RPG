@@ -383,7 +383,7 @@ public sealed class PlatformSite : SouthSite
             c.Add(Steps.Collision(fl), f.AtReversed(0, p.Y, d + P.StairLanding + d * 0.5f));
             // Cheeks: no stepping off the sides of the upper flight and the landing.
             foreach (var x in new[] { -s.Width * 0.5f, s.Width * 0.5f })
-                c.Wall(f.P(x, 0), f.P(x, d + P.StairLanding), 0.15f, p.Y, p.Top + 1.5f, SurfaceTag.Barrier, FootMat.StonePaving);
+                c.Wall(f.P(x, 0), f.P(x, d + P.StairLanding), 0.15f, p.Y, p.Top + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         }
     }
 

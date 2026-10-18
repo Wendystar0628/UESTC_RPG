@@ -44,12 +44,12 @@ public sealed class GymSite : SouthSite
 
         public float Angle(float i) => Phase + 2f * MathF.PI * i / Bays;
 
-        public Vector2 At(float angle, float r) => new(Centre.X + r * DetMath.Cos(angle), Centre.Y + r * DetMath.Sin(angle));
+        public Vector2 At(float angle, float r) => new(Centre.X + r * MathF.Cos(angle), Centre.Y + r * MathF.Sin(angle));
 
         /// <summary>A frame on the plan circle of radius r at an angle: +Z outward, X along the circle.</summary>
         public PlanFrame Frame(float angle, float r)
         {
-            var n = new Vector2(DetMath.Cos(angle), DetMath.Sin(angle));
+            var n = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
             return new(Centre + n * r, new(n.Y, -n.X));
         }
 
@@ -57,7 +57,7 @@ public sealed class GymSite : SouthSite
         public (PlanFrame Frame, float Width) Facet(int i)
         {
             var half = MathF.PI / Bays;
-            return (Frame(Angle(i) + half, GlassRadius * DetMath.Cos(half)), 2f * GlassRadius * DetMath.Sin(half));
+            return (Frame(Angle(i) + half, GlassRadius * MathF.Cos(half)), 2f * GlassRadius * MathF.Sin(half));
         }
     }
 
@@ -71,7 +71,7 @@ public sealed class GymSite : SouthSite
         var radius = MathF.Sqrt(MathF.Abs(Area(ring)) / MathF.PI);
         var bays = (int)MathF.Round(2f * MathF.PI * (radius - S.GymGlassInset) / S.GymBay);
         var door = PlanMath.Heading(S.GymDoorBearing);
-        return new(PlanMath.Centroid(ring), radius, DetMath.Atan2(door.Y, door.X) - MathF.PI / bays, bays);
+        return new(PlanMath.Centroid(ring), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays);
     }
 
     internal static float Area(IReadOnlyList<Vector2> ring)
@@ -189,7 +189,7 @@ public sealed class GymSite : SouthSite
         {
             var a0 = p.Angle(i);
             var (lo, hi) = (p.At(a0, r), p.At(a0 + lean, r));
-            var n = new Vector3(DetMath.Cos(a0 + lean * 0.5f), 0, DetMath.Sin(a0 + lean * 0.5f));
+            var n = new Vector3(MathF.Cos(a0 + lean * 0.5f), 0, MathF.Sin(a0 + lean * 0.5f));
             var foot = new Vector3(lo.X, y + S.PlatformTop, lo.Y);
             var head = new Vector3(hi.X, y + S.GymGlassTop - 0.1f, hi.Y);
             b.Add(PartGeometryKernel.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), Solids.Along(foot, head, n));
@@ -210,7 +210,7 @@ public sealed class GymSite : SouthSite
         for (var k = 0; k < ribs; k++)
         {
             var angle = p.Phase + 2f * MathF.PI * k / ribs;
-            var d = new Vector2(DetMath.Cos(angle), DetMath.Sin(angle));
+            var d = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
             for (var j = 1; j + 2 < profile.Length; j++)
             {
                 Vector2 q0 = profile[j], q1 = profile[j + 1];
@@ -245,7 +245,7 @@ public sealed class GymSite : SouthSite
             for (var k = 0; k < S.GymSeams; k++)
             {
                 var angle = p.Phase + 2f * MathF.PI * (k + 0.5f) / S.GymSeams;
-                var d = new Vector2(DetMath.Cos(angle), DetMath.Sin(angle));
+                var d = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
                 for (var j = 0; j + 2 < profile.Length; j++)
                 {
                     float r0 = profile[j].X - 0.4f, r1 = profile[j + 1].X;
@@ -299,7 +299,7 @@ public sealed class GymSite : SouthSite
     private static float BearingAngle(float bearing)
     {
         var d = PlanMath.Heading(bearing);
-        return DetMath.Atan2(d.Y, d.X);
+        return MathF.Atan2(d.Y, d.X);
     }
 
     /// <summary>A closed field-level service door in the ochre band (WLD-INTERIORS), under a small stone hood.</summary>

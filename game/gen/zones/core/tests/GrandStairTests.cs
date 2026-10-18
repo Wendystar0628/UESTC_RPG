@@ -21,7 +21,7 @@ public sealed class GrandStairTests
         Require(MathF.Abs(stair.TopY - shell.Plan.SecondFloorY) < 1e-4f, "the top landing is the 2F floor");
         Require(MathF.Abs(stair.Risers * stair.Riser - (stair.TopY - stair.FootY)) < 1e-3f, "risers close the rise");
         Require(stair.Riser is >= 0.12f and <= 0.16f && MathF.Abs(stair.Tread - (0.65f - 2 * stair.Riser)) < 1e-3f, $"R {stair.Riser}, T {stair.Tread}");
-        Require(stair.Flights.All(f => f.Risers * stair.Riser <= CoreStyle.FlightMaxRise + 1e-3f), "every flight rises at most 1.5 m");
+        Require(stair.Flights.All(f => f.Risers * stair.Riser <= WalkRules.OutdoorFlightMaxRise + 1e-3f), "every flight rises at most 1.5 m");
         Require(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1, "two runs split by one middle landing");
         Require(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < 1e-3f,
             "flights run from the foot to the top landing");
@@ -127,7 +127,7 @@ public sealed class GrandStairTests
         var hedges = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Barrier).ToArray();
         Require(hedges.Length == 2 * 2 * 3 && hedges.All(w => w.Foot == FootMat.Hedge), $"three hedges on each tier and side ({hedges.Length})");
         var guards = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Wall).ToArray();
-        Require(guards.Max(w => w.Y1) >= stair.TopY + CoreStyle.GuardCollision - 1e-3f, "the guard walls stand 1.5 m over the top landing");
+        Require(guards.Max(w => w.Y1) >= stair.TopY + WalkRules.BarrierHeight - 1e-3f, "the guard walls stand 1.5 m over the top landing");
         Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.DoorClosed), "the service doors are closed doors");
     }
 

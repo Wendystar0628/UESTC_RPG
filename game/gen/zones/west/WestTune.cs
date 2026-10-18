@@ -350,7 +350,7 @@ public static class WestTune
         /// <summary>Stringers along both edges (收边): width, depth below the deck top.</summary>
         public const float StringerWidth = 0.09f, StringerDepth = 0.30f;
         /// <summary>Railing (SYS-WALK: waterside rails ≥ 1.05 m, barrier top 1.5 m): posts, handrail, one mid rail.</summary>
-        public const float RailHeight = 1.05f, RailBarrier = 1.5f, PostSize = 0.10f, PostPitch = 2.0f, RailInset = 0.06f;
+        public const float RailHeight = 1.05f, PostSize = 0.10f, PostPitch = 2.0f, RailInset = 0.06f;
         public const float HandrailWidth = 0.14f, HandrailDepth = 0.07f, MidRail = 0.5f, MidRailSize = 0.05f;
         /// <summary>Piles under the deck: pitch along the route, radius, how deep they go into the mud.</summary>
         public const float PilePitch = 3.0f, PileRadius = 0.085f, PileSink = 0.4f;

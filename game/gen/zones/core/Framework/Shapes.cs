@@ -8,7 +8,7 @@ public delegate float Surface(float x, float z);
 
 /// <summary>
 /// Pure, deterministic shape builders for zone pieces: lathed solids (tiers, poles, discs, rings), draped flat inlays
-/// and frames. Trigonometry goes through DetMath (ENG-ARCH); only arithmetic and Math.Sqrt otherwise.
+/// and frames, using standard .NET math functions.
 /// </summary>
 public static class Shapes
 {
@@ -22,7 +22,7 @@ public static class Shapes
         for (var i = 0; i < sides; i++)
         {
             var a = Tau * i / sides;
-            result[i] = new(DetMath.Cos(a), DetMath.Sin(a));
+            result[i] = new(MathF.Cos(a), MathF.Sin(a));
         }
         return result;
     }
@@ -31,13 +31,13 @@ public static class Shapes
     public static Vector2 Bearing(float degrees)
     {
         var a = degrees * (Tau / 360f);
-        return new(DetMath.Sin(a), -DetMath.Cos(a));
+        return new(MathF.Sin(a), -MathF.Cos(a));
     }
 
     /// <summary>Compass bearing in degrees [0, 360) of a plan direction (x, z).</summary>
     public static float BearingOf(Vector2 d)
     {
-        var deg = DetMath.Atan2(d.X, -d.Y) * (360f / Tau);
+        var deg = MathF.Atan2(d.X, -d.Y) * (360f / Tau);
         return deg < 0 ? deg + 360f : deg;
     }
 
@@ -92,8 +92,8 @@ public static class Shapes
         {
             var t0 = a0 + (a1 - a0) * k / pieces;
             var t1 = a0 + (a1 - a0) * (k + 1) / pieces;
-            var u0 = new Vector2(DetMath.Cos(t0), DetMath.Sin(t0));
-            var u1 = new Vector2(DetMath.Cos(t1), DetMath.Sin(t1));
+            var u0 = new Vector2(MathF.Cos(t0), MathF.Sin(t0));
+            var u1 = new Vector2(MathF.Cos(t1), MathF.Sin(t1));
             mesh.Quad(paint, On(centre + u0 * r0), On(centre + u1 * r0), On(centre + u1 * r1), On(centre + u0 * r1), Vector3.UnitY);
         }
 
@@ -150,13 +150,13 @@ public static class Shapes
         {
             if (i < 0) return centre + u * (ra * c.X) + v * (rb * c.Y) - Vector3.UnitY * CoreStyle.Sink;
             var phi = Tau * 0.25f * i / rings;
-            float cp = DetMath.Cos(phi), sp = DetMath.Sin(phi);
+            float cp = MathF.Cos(phi), sp = MathF.Sin(phi);
             return centre + u * (ra * cp * c.X) + v * (rb * cp * c.Y) + Vector3.UnitY * (h * sp);
         }
         Vector3 N(int i, Vector2 c)
         {
             var phi = Tau * 0.25f * Math.Max(i, 0) / rings;
-            float cp = DetMath.Cos(phi), sp = DetMath.Sin(phi);
+            float cp = MathF.Cos(phi), sp = MathF.Sin(phi);
             return Normalize(u * (cp * c.X / ra) + v * (cp * c.Y / rb) + Vector3.UnitY * (sp / h));
         }
         for (var i = -1; i < rings; i++)

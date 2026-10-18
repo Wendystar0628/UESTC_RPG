@@ -97,8 +97,8 @@ public static class Lettering
             for (var i = 0; i < 8; i++)
             {
                 var a0 = Math.PI * 2 * i / 8 + Math.PI / 8; var a1 = Math.PI * 2 * (i + 1) / 8 + Math.PI / 8;
-                Segment(builder, hub + new Vector2((float)(r * DetMath.Cos(a0)), (float)(r * DetMath.Sin(a0))),
-                    hub + new Vector2((float)(r * DetMath.Cos(a1)), (float)(r * DetMath.Sin(a1))), stroke, zFace, back, material);
+                Segment(builder, hub + new Vector2((float)(r * Math.Cos(a0)), (float)(r * Math.Sin(a0))),
+                    hub + new Vector2((float)(r * Math.Cos(a1)), (float)(r * Math.Sin(a1))), stroke, zFace, back, material);
             }
         var crank = new Vector2(cx - size * 0.02f, cy - size * 0.1f);
         var seat = new Vector2(cx - size * 0.12f, cy + size * 0.2f);

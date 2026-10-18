@@ -172,9 +172,6 @@ public static class SouthTune
         public const float TurnstileZ = -0.6f, CabinetWidth = 0.26f, CabinetDepth = 1.5f, CabinetHeight = 1.02f;
         public const int TurnstilePassages = 2;
 
-        /// <summary>Boundary collision: 1.5 m minimum, the gate's invisible top-up to 2.2 m (WLD-OUTSKIRTS).</summary>
-        public const float BoundaryTop = 2.2f;
-
         /// <summary>Name wall (§1.3): low granite wall left of the gate seen from the street, one slab per character (初值).</summary>
         public const float NameWallX0 = -33.5f, NameWallX1 = -19.5f, NameWallZ = 5.2f;
         public const float NameWallHeight = 1.35f, NameWallThickness = 0.7f, NameSlab = 1.0f, NameSlabPitch = 1.25f;

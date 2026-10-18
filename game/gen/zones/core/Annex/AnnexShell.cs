@@ -326,7 +326,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
-        var high = Frame.PadY + 300f;
+        var high = Frame.PadY + WalkRules.BuildingCollisionHeight;
         foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f))
         {
             var f = Face.Of(piece);
@@ -346,7 +346,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
             foreach (var block in _pieces.Select(p => p.Block).Distinct())
                 list.Add(new SlabCollider([.. block.Ring], Top, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
             foreach (var piece in _pieces.Where(p => p.Top))
-                list.Add(Wall(piece.A, piece.B, Top, Top + 1.5f, SurfaceTag.Barrier));
+                list.Add(Wall(piece.A, piece.B, Top, Top + WalkRules.BarrierHeight, SurfaceTag.Barrier));
         }
         return list;
     }

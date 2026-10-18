@@ -14,7 +14,7 @@ namespace Campus.Gen.Buildings.Build;
 /// The WP-11 parts in front of one entrance door, placed by PartCatalog ID (WLD-TERRAIN): a stone landing
 /// (platform) at the door floor, and from its front edge the connection down to the outside landing, as TerrainDrop plans
 /// it: nothing up to 0.04 m, a kerbed 1:12 slope up to 0.15 m, one flight of steps above that (cheek walls; handrails from
-/// 0.6 m by the WP-11 rule) up to EntranceRules.MaxRise; a landing more than 1.0 m up gets guard railings on its open sides
+/// 0.6 m by the WP-11 rule) up to WalkRules.OutdoorFlightMaxRise; a landing more than 1.0 m up gets guard railings on its open sides
 /// (§5.7). Doors in K1 and K2 take the deeper, wider landing and cheek walls on every flight; the rest a smaller landing
 /// and bare-block steps below handrail height. The stone takes WP-14's trim
 /// class, so the parts share the facade's material. Parts stand on the outside ground with +X along the facade and +Z back
@@ -60,7 +60,7 @@ public static class EntranceKit
             foreach (var u in new[] { u0 + EntranceRules.GuardInset, u1 - EntranceRules.GuardInset })
                 pieces.Add(new(PartCatalog.Railing, guard, Outward(f, u, depth * 0.5f, door.Y0)));
         }
-        if (rise > EntranceRules.MaxRise) return pieces;
+        if (rise > WalkRules.OutdoorFlightMaxRise) return pieces;
         var drop = TerrainDrop.Plan(rise, 0f, mainNetwork: false, clearWidth: width - 2f * C.CheekWidth);
         switch (drop.Method)
         {

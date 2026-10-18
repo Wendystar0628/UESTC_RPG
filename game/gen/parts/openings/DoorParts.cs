@@ -173,8 +173,8 @@ internal static class DoorBuilder
     {
         if (openDeg <= 0 || !slot.Swings) return Place.Identity;
         var radians = openDeg * (MathF.PI / 180f);
-        var cos = DetMath.Cos(radians);
-        var sin = DetMath.Sin(radians);
+        var cos = MathF.Cos(radians);
+        var sin = MathF.Sin(radians);
         var pivot = new Vector3(slot.HingeLeft ? slot.X0 : slot.X1, 0, -thickness * 0.5f);
         return Place.TurnY(cos, slot.HingeLeft ? sin : -sin, pivot);
     }

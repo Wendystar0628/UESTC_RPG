@@ -100,7 +100,7 @@ public sealed class CollisionGeometryTests
         Require(walls.Length == 8, "Two rectangular buildings must create exactly their eight perimeter walls.");
         Require(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15))), "A building perimeter is missing.");
         Require(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15))), "Open park ground or the aggregate perimeter was walled off.");
-        Require(walls.All(w => MathF.Abs(w.Y1 - 300) < 0.0001f), "Aggregate parent height leaked into its building parts.");
+        Require(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.0001f), "Aggregate parent height leaked into its building parts.");
     }
 
     [TestCase]
@@ -144,7 +144,7 @@ public sealed class CollisionGeometryTests
         var walls = CollisionTileBuilder.BuildingWalls(Rectangle(0, 0, 10, 10),
             new FlatSpatial((x, z) => z <= -2 ? -3 : 0), null);
         var south = walls.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1);
-        Require(south.Y0 == -5 && south.Y1 == 300, "Exterior low ground was missed or the visible-side wall top moved.");
+        Require(south.Y0 == -5 && south.Y1 == WalkRules.BuildingCollisionHeight, "Exterior low ground was missed or the visible-side wall top moved.");
         var corner = CollisionTileBuilder.BuildingWalls(Rectangle(0, 0, 10, 10),
             new FlatSpatial((x, z) => x <= -2 && z <= -2 ? -4 : 0), null);
         Require(corner.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1).Y0 == -6,

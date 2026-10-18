@@ -111,7 +111,7 @@ internal sealed class GroundPaving
     {
         var yaw = entrance.YawDeg * (MathF.PI / 180f);
         // Yaw 0 = north (−Z), 90 = east (+X) (WLD-INTERIORS).
-        var axis = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+        var axis = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         if (!float.IsFinite(axis.X) || !float.IsFinite(axis.Y) || axis.LengthSquared() < 0.5f) return null;
         axis = Vector2.Normalize(axis);
         var door = new Vector2(entrance.Center.X, entrance.Center.Z);

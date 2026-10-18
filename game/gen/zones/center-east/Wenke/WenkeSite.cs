@@ -386,7 +386,7 @@ public sealed class WenkeSite : CenterEastSite
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            points[i] = f.P(DetMath.Cos(a) * K.AtriumHalf.X * scale, DetMath.Sin(a) * K.AtriumHalf.Y * scale);
+            points[i] = f.P(MathF.Cos(a) * K.AtriumHalf.X * scale, MathF.Sin(a) * K.AtriumHalf.Y * scale);
         }
         return points;
     }
@@ -406,7 +406,7 @@ public sealed class WenkeSite : CenterEastSite
         for (var r = 0; r < K.AtriumRibs; r++)
         {
             var a = 2f * MathF.PI * r / K.AtriumRibs;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             for (var k = 0; k + 1 < profile.Length; k++)
             {
                 Vector3 Point(Vector2 q)

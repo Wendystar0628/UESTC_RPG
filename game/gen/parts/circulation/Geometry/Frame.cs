@@ -2,7 +2,6 @@ using System.Numerics;
 
 namespace Campus.Gen.Parts.Circulation.Geometry;
 
-// Scalar arithmetic in a fixed order, as in the WP-09 kernel: results must match byte for byte on every CPU (D-165).
 internal static class V3
 {
     internal static Vector3 Add(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);

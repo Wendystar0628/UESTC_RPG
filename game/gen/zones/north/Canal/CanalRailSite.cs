@@ -79,7 +79,7 @@ public sealed class CanalRailSite : NorthSite
         {
             Vector2 a = k == 0 ? Post(0) : Post(k), d = Post(k + 1);
             var y = MathF.Min(c.Ground(a), c.Ground(d)) + B.PavingTop;
-            c.Wall(a, d, B.ColliderHalf, y - 0.6f, y + B.ColliderTop, SurfaceTag.Barrier, FootMat.Metal);
+            c.Wall(a, d, B.ColliderHalf, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         }
     }
 }

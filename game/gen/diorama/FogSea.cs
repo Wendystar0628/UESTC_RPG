@@ -30,7 +30,7 @@ public static class FogSea
         for (var s = 0; s < segments; s++)
         {
             var theta = s * (2f * MathF.PI / segments);
-            var dir = new Vector2(DetMath.Sin(theta), -DetMath.Cos(theta));
+            var dir = new Vector2(MathF.Sin(theta), -MathF.Cos(theta));
             var edge = EdgeDistance(centre, dir, cutLine, rect);
             // Bank crest wanders along the perimeter (cells of waveLength metres, periodic round the ring).
             var perimeterCells = MathF.Max(1f, MathF.Round(2f * MathF.PI * edge / bank.WaveLength));

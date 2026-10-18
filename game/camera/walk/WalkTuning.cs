@@ -13,14 +13,10 @@ public static class WalkTuning
     public const float TerminalFallSpeed = 50f;
     public const float GroundResponse = 12.1f;
     public const float AirResponse = 1.89f;
-    public const float Radius = .3f;
-    public const float StandingHeight = 1.8f;
     public const float CrouchingHeight = 1.5f;
     public const float StandingEye = 1.62f;
     public const float CrouchingEye = 1.27f;
-    public const float StepHeight = .35f;
     public const float SnapLength = .5f;
-    public const float FloorAngleDegrees = 45f;
     public const float SlowSlideAngleDegrees = 60f;
     public const float SlowSlideSpeed = 1.3f;
     public const float SafeMargin = .01f;

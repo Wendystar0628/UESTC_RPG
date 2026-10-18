@@ -144,7 +144,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         var plinth = S.PostPlinthHeight;
         b.AddBox(new(-p.Width * 0.5f, 0, -p.Depth * 0.5f), new(p.Width * 0.5f, plinth, p.Depth * 0.5f), near ? 0.015f : 0, S.Stone(new(S.Lit(S.StoneDark), S.Shade(S.StoneDark)), false), VertexFlag.NoShadow);
         // Shaft up to the low (front) edge of the slant; the slanted cap plate sits on it.
-        var tan = (float)DetMath.Tan(S.PostSlantDeg * (float.Pi / 180f));
+        var tan = MathF.Tan(S.PostSlantDeg * (float.Pi / 180f));
         var c = s + 2 * CapOverhang;
         var low = p.Height - c * tan;
         b.AddBox(new(-s * 0.5f, plinth - S.Joint, -s * 0.5f), new(s * 0.5f, low - CapThickness + 0.01f, s * 0.5f), near ? 0.012f : 0, dark);
@@ -155,7 +155,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         b.Add(PartGeometryKernel.Sweep(section, [new(-c * 0.5f, 0), new(c * 0.5f, 0)], dark));
         // Plate on the slant: local Y along the slant normal (up and towards the viewer), local Z up the slope.
         var slant = S.PostSlantDeg * (float.Pi / 180f);
-        var cs = (float)DetMath.Cos(slant); var sn = (float)DetMath.Sin(slant);
+        var cs = MathF.Cos(slant); var sn = MathF.Sin(slant);
         var mid = new Vector3(0, (low + p.Height) * 0.5f, 0);
         var lift = 0.0035f;
         var frame = new Matrix4x4(1, 0, 0, 0, 0, cs, -sn, 0, 0, sn, cs, 0, mid.X, mid.Y + cs * lift, mid.Z - sn * lift, 1);

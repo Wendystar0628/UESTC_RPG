@@ -86,7 +86,7 @@ public sealed class NorthPlazaSite : BoundarySite
         var d = Frame.P(P.RailT1, P.RailN);
         var y = MathF.Min(c.Ground(a), c.Ground(d)) + P.PavingTop;
         // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS), top 1.5 m (SYS-WALK).
-        c.Wall(a, d, 0.08f, y - 0.6f, y + P.RailColliderTop, SurfaceTag.Barrier, FootMat.Metal);
+        c.Wall(a, d, 0.08f, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         foreach (var at in P.Benches)
         {
             var bench = Frame.Shift(at.X, at.Y);

@@ -1316,7 +1316,7 @@ public sealed class BuildingsTests
     private static (string Feature, EntranceDecl Door) Anchor(string feature, string id, Vector3 centre, float yawDeg, float? outsideY = null)
     {
         var yaw = yawDeg * (float.Pi / 180f);
-        var facing = new Vector3(DetMath.Sin(yaw), 0f, -DetMath.Cos(yaw));
+        var facing = new Vector3(MathF.Sin(yaw), 0f, -MathF.Cos(yaw));
         var outside = centre + facing * 2.5f;
         outside.Y = outsideY ?? centre.Y;
         return (feature, new EntranceDecl(id, outside, centre - facing * 3f, 1.1f, true) { Center = centre, YawDeg = yawDeg });

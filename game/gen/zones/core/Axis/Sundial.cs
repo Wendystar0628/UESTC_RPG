@@ -23,7 +23,7 @@ public sealed class Sundial : ICorePiece
         Position = position;
         Base = world.Terrain.HeightAt(position.X, position.Y) + S.PavingLift;
         var phi = S.Latitude * (Shapes.Tau / 360f);
-        Gnomon = new(0, DetMath.Sin(phi), -DetMath.Cos(phi));
+        Gnomon = new(0, MathF.Sin(phi), -MathF.Cos(phi));
     }
 
     public static Sundial? From(IWorldModel world)
@@ -89,7 +89,7 @@ public sealed class Sundial : ICorePiece
             var half = new Vector3(radius * 0.924f, (height + S.Sink) * 0.5f, radius * 0.924f);
             var centre = new Vector3(Position.X, y + height - half.Y, Position.Y);
             list.Add(new BoxCollider(Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
-            list.Add(new BoxCollider(DetMath.RotationY(Shapes.Tau / 8f) * Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+            list.Add(new BoxCollider(Matrix4x4.CreateRotationY(Shapes.Tau / 8f) * Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
             y += height;
         }
         list.Add(new PostCollider(Position, S.SundialRingOuter, TiersTop, DialCentre.Y + S.SundialRingOuter, SurfaceTag.Prop) { Foot = FootMat.Metal });

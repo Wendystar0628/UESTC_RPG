@@ -7,7 +7,7 @@ namespace Campus.Gen.Zones.West.Framework;
 /// Curved solids for the 21b2 monuments: lathes (heads, collars, sockets), lathes whose radius also varies round the axis
 /// (coats hanging in folds, the bust's lapels) and a rounded landscape stone with one flat inscription face. Same
 /// conventions as <see cref="Shapes"/>: metres, origin at the base centre, front faces clockwise from outside, AO 1, UV in
-/// metres, angles through DetMath. Lathe and Draped follow the south zone's statue helpers (zones never reference each other).
+/// metres, angles in radians. Lathe and Draped follow the south zone's statue helpers (zones never reference each other).
 /// </summary>
 public static class Solids
 {
@@ -41,7 +41,7 @@ public static class Solids
             for (var i = 0; i <= segments; i++)
             {
                 var a = 2f * MathF.PI * (i % segments) / segments;
-                float c = DetMath.Cos(a), s = DetMath.Sin(a);
+                float c = MathF.Cos(a), s = MathF.Sin(a);
                 var r = profile[k].X;
                 var normal = Unit(new(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz));
                 rings[k][i] = m.Vertex(new(c * r * sx, profile[k].Y, s * r * sz), normal, new(2f * MathF.PI * i / segments, arc));
@@ -73,7 +73,7 @@ public static class Solids
             {
                 var a = 2f * MathF.PI * i / segments;
                 var r = profile[k].X * (1f + fold(a, profile[k].Y));
-                p[k, i] = new(DetMath.Cos(a) * r * sx, profile[k].Y, DetMath.Sin(a) * r * sz);
+                p[k, i] = new(MathF.Cos(a) * r * sx, profile[k].Y, MathF.Sin(a) * r * sz);
             }
         return Grid(p, [.. profile.Select(q => new Vector3(0, q.Y, 0))], material);
     }
@@ -154,7 +154,7 @@ public static class Solids
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             ring[i] = m.Vertex(new(c * r * sx, y, s * r * sz), normal, new(c * r, s * r));
         }
         for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);
@@ -184,10 +184,10 @@ public sealed record BoulderShape(float Length, float Depth, float Height, float
         [(0f, 0.93f), (0.1f, 1f), (0.32f, 0.99f), (0.52f, 0.92f), (0.7f, 0.79f), (0.84f, 0.6f), (0.94f, 0.36f), (1f, 0f)];
 
     /// <summary>Unit normal of the face plane, pointing forward and up.</summary>
-    public Vector3 FaceNormal => new(0, DetMath.Sin(FaceTilt), DetMath.Cos(FaceTilt));
+    public Vector3 FaceNormal => new(0, MathF.Sin(FaceTilt), MathF.Cos(FaceTilt));
 
     /// <summary>Up direction within the face plane.</summary>
-    public Vector3 FaceUp => new(0, DetMath.Cos(FaceTilt), -DetMath.Sin(FaceTilt));
+    public Vector3 FaceUp => new(0, MathF.Cos(FaceTilt), -MathF.Sin(FaceTilt));
 
     /// <summary>Point of the face plane at (x across, y up the face) from its centre.</summary>
     public Vector3 OnFace(float x, float y) => new Vector3(x, FaceHeight, FaceOut) + FaceUp * y;
@@ -204,14 +204,14 @@ public sealed record BoulderShape(float Length, float Depth, float Height, float
     /// <summary>The uncut surface point at angle a (radians from +X toward +Z) and height fraction t.</summary>
     internal Vector3 Surface(float a, float t)
     {
-        var r = Section(t) * (1f + 0.07f * DetMath.Cos(2f * a + 0.9f) + 0.05f * DetMath.Cos(3f * a + 2.3f) + 0.035f * (1f - t) * DetMath.Cos(5f * a + 0.4f));
+        var r = Section(t) * (1f + 0.07f * MathF.Cos(2f * a + 0.9f) + 0.05f * MathF.Cos(3f * a + 2.3f) + 0.035f * (1f - t) * MathF.Cos(5f * a + 0.4f));
         var c = Centre(t);
-        var x = DetMath.Cos(a) * r;
-        return new(c.X + x * Length * 0.5f, c.Y + Lift(t, x), DetMath.Sin(a) * r * Depth * 0.5f);
+        var x = MathF.Cos(a) * r;
+        return new(c.X + x * Length * 0.5f, c.Y + Lift(t, x), MathF.Sin(a) * r * Depth * 0.5f);
     }
 
     /// <summary>Height added at height fraction t and normalised offset x (−1 at the −X end, 1 at the +X end).</summary>
-    private float Lift(float t, float x) => Rise * Height * DetMath.Sin(MathF.PI * t) * x;
+    private float Lift(float t, float x) => Rise * Height * MathF.Sin(MathF.PI * t) * x;
 
     /// <summary>Height fraction of the ring through a point at height y and local x (two fixed-point steps of the lift).</summary>
     private float RingAt(float x, float y)
@@ -246,7 +246,7 @@ public sealed record BoulderShape(float Length, float Depth, float Height, float
             if (t <= 0 || t >= 1) return false;
             var c = Centre(t);
             var d = new Vector2(q.X + dx - c.X, q.Z);
-            var a = DetMath.Atan2(d.Y / (Depth * 0.5f), d.X / (Length * 0.5f));
+            var a = MathF.Atan2(d.Y / (Depth * 0.5f), d.X / (Length * 0.5f));
             var s = Surface(a, t);
             if (new Vector2(s.X - c.X, s.Z).Length() < d.Length() + margin) return false;
         }

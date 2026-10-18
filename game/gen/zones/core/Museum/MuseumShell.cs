@@ -511,7 +511,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
-        var top = Frame.PadY + 300f;
+        var top = Frame.PadY + WalkRules.BuildingCollisionHeight;
         var doors = new[] { (MainDoor, S.MuseumDoorLeaves), (LakeDoor, S.LakeDoorLeaves) };
         for (var k = 0; k < Gallery.Count; k++)
         {

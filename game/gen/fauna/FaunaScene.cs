@@ -46,7 +46,7 @@ public sealed class FaunaScene(PaletteCatalog catalog)
         foreach (var animal in animals)
         {
             var model = Model(animal.Model);
-            var rotation = DetMath.RotationY(animal.Yaw);
+            var rotation = Matrix4x4.CreateRotationY(animal.Yaw);
             var world = Matrix4x4.CreateScale(animal.Scale) * rotation * Matrix4x4.CreateTranslation(animal.Position);
             for (var i = 0; i < model.Positions.Length; i++)
             {

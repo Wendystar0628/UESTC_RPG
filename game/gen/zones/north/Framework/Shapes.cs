@@ -6,7 +6,7 @@ namespace Campus.Gen.Zones.North.Framework;
 /// <summary>
 /// Small closed solids the WP-09 kernel has no helper for: smooth round shafts, hipped pyramids and arch outlines.
 /// Same conventions as the kernel: metres, origin at the base centre, Godot front faces clockwise from outside,
-/// AO visibility 1, UV in metres. Angles go through DetMath only.
+/// AO visibility 1, UV in metres.
 /// </summary>
 public static class Shapes
 {
@@ -21,7 +21,7 @@ public static class Shapes
         for (var i = 0; i <= segments; i++)
         {
             var a = 2f * MathF.PI * (i % segments) / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             var n = Normalize(new(c, slope, s));
             var u = 2f * MathF.PI * r0 * i / segments;
             foot[i] = m.Vertex(new(c * r0, 0, s * r0), n, new(u, 0));
@@ -58,7 +58,7 @@ public static class Shapes
         for (var i = 0; i <= segments; i++)
         {
             var a = MathF.PI * i / segments;
-            points.Add(new(centreX + r * DetMath.Cos(a), y0 + spring + r * DetMath.Sin(a)));
+            points.Add(new(centreX + r * MathF.Cos(a), y0 + spring + r * MathF.Sin(a)));
         }
         return [.. points];
     }
@@ -72,7 +72,7 @@ public static class Shapes
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             ring[i] = m.Vertex(new(c * r, y, s * r), normal, new(c * r, s * r));
         }
         for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);

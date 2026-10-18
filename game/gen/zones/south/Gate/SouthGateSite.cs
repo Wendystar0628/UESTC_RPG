@@ -296,12 +296,12 @@ public sealed class SouthGateSite : SouthSite
         }
         // Islands with their pillars, the carriageway behind the barrier arms, and the two turnstile rows.
         foreach (var x in new[] { T.IslandWestX, T.IslandEastX })
-            c.Box(Frame.At(x, y + T.BoundaryTop * 0.5f, T.IslandZ), new(T.IslandWidth * 0.5f, T.BoundaryTop * 0.5f, T.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
-        c.Box(Frame.At((CarriageA + CarriageB) * 0.5f, y + T.BoundaryTop * 0.5f, T.BarrierZ), new((CarriageB - CarriageA) * 0.5f + 0.05f, T.BoundaryTop * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
+            c.Box(Frame.At(x, y + WalkRules.BoundaryHeight * 0.5f, T.IslandZ), new(T.IslandWidth * 0.5f, WalkRules.BoundaryHeight * 0.5f, T.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
+        c.Box(Frame.At((CarriageA + CarriageB) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.BarrierZ), new((CarriageB - CarriageA) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
         foreach (var side in new[] { -1, 1 })
         {
             var (a, b) = Lane(side);
-            c.Box(Frame.At((a + b) * 0.5f, y + T.BoundaryTop * 0.5f, T.TurnstileZ), new((b - a) * 0.5f + 0.05f, T.BoundaryTop * 0.5f, T.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
+            c.Box(Frame.At((a + b) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.TurnstileZ), new((b - a) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, T.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
         }
         // Name wall: an ordinary wall outside the closure.
         c.Wall(Frame.P(T.NameWallX0, T.NameWallZ), Frame.P(T.NameWallX1, T.NameWallZ), T.NameWallThickness * 0.5f, y, y + T.NameWallHeight, SurfaceTag.Wall, FootMat.StonePaving);

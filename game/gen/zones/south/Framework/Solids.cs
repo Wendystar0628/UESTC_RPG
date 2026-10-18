@@ -6,7 +6,7 @@ namespace Campus.Gen.Zones.South.Framework;
 /// <summary>
 /// Curved and sloped solids for the 18b landmarks: lathes (the dome, columns, balusters, the statue), regular-polygon
 /// roofs with upturned eaves (the hexagonal pavilion) and a rowing-boat hull. Same conventions as <see cref="Shapes"/>:
-/// metres, origin at the base centre, front faces clockwise from outside, AO 1, UV in metres, angles through DetMath.
+/// metres, origin at the base centre, front faces clockwise from outside, AO 1, UV in metres, angles in radians.
 /// </summary>
 public static class Solids
 {
@@ -41,7 +41,7 @@ public static class Solids
             for (var i = 0; i <= segments; i++)
             {
                 var a = 2f * MathF.PI * (i % segments) / segments;
-                float c = DetMath.Cos(a), s = DetMath.Sin(a);
+                float c = MathF.Cos(a), s = MathF.Sin(a);
                 var r = profile[k].X;
                 var normal = Unit(new(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz));
                 rings[k][i] = m.Vertex(new(c * r * sx, profile[k].Y, s * r * sz), normal, new(2f * MathF.PI * i / segments, arc));
@@ -73,7 +73,7 @@ public static class Solids
             {
                 var a = 2f * MathF.PI * i / segments;
                 var r = profile[k].X * (1f + fold(a, profile[k].Y));
-                p[k, i] = new(DetMath.Cos(a) * r * sx, profile[k].Y, DetMath.Sin(a) * r * sz);
+                p[k, i] = new(MathF.Cos(a) * r * sx, profile[k].Y, MathF.Sin(a) * r * sz);
             }
         var m = new Shapes.Writer(material);
         var rings = new int[n][];
@@ -124,7 +124,7 @@ public static class Solids
         Vector2 Corner(int i, float r)
         {
             var a = phase + 2f * MathF.PI * (i % sides) / sides;
-            return new(r * DetMath.Cos(a), r * DetMath.Sin(a));
+            return new(r * MathF.Cos(a), r * MathF.Sin(a));
         }
         for (var i = 0; i < sides; i++)
         {
@@ -265,7 +265,7 @@ public static class Solids
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             ring[i] = m.Vertex(new(c * r * sx, y, s * r * sz), normal, new(c * r, s * r));
         }
         for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);

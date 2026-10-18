@@ -84,13 +84,13 @@ public static class CityRing
     private static BoxFrame Frame(Vector2 centre, float bearing, float radius, float yawDeg)
     {
         var b = bearing * (MathF.PI / 180f);
-        var dir = new Vector3(DetMath.Sin(b), 0f, -DetMath.Cos(b));
+        var dir = new Vector3(MathF.Sin(b), 0f, -MathF.Cos(b));
         var c = new Vector3(centre.X, 0f, centre.Y) + dir * radius;
         var y = yawDeg * (MathF.PI / 180f);
         var inward = -dir;
         var side = new Vector3(-inward.Z, 0f, inward.X);
-        var cy = DetMath.Cos(y);
-        var sy = DetMath.Sin(y);
+        var cy = MathF.Cos(y);
+        var sy = MathF.Sin(y);
         var inwardR = Vector3.Normalize(inward * cy + side * sy);
         var sideR = Vector3.Normalize(side * cy - inward * sy);
         return new(c, sideR, inwardR);

@@ -195,7 +195,7 @@ public static class FaunaPlanner
         {
             var angle = rng.NextFloat() * 2f * float.Pi;
             var radius = MathF.Sqrt(rng.NextFloat()) * S.PigeonScatter;
-            var p = flock + new Vector2(DetMath.Cos(angle), DetMath.Sin(angle) * 0.7f) * radius;
+            var p = flock + new Vector2(MathF.Cos(angle), MathF.Sin(angle) * 0.7f) * radius;
             var yaw = rng.NextFloat() * 2f * float.Pi;
             var peck = rng.NextFloat() < 0.6f;
             if (!free(p) || taken.Any(q => Vector2.Distance(p, q) < 0.5f)) continue;
@@ -228,7 +228,7 @@ public static class FaunaPlanner
             for (var attempt = 0; attempt < 60 && birds.Count < S.SparrowsPerGroup; attempt++)
             {
                 var angle = rng.NextFloat() * 2f * float.Pi;
-                var p = at + new Vector2(DetMath.Cos(angle), DetMath.Sin(angle)) * (1.5f + rng.NextFloat() * 1.8f);
+                var p = at + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (1.5f + rng.NextFloat() * 1.8f);
                 if (!free(p) || birds.Any(b => Vector2.Distance(p, new(b.Position.X, b.Position.Z)) < 0.3f)) continue;
                 var pose = rng.NextFloat() < 0.55f ? BirdPose.Peck : BirdPose.Stand;
                 birds.Add(new(FaunaModelKey.SparrowOf(pose), new(p.X, ground(p), p.Y), rng.NextFloat() * 2f * float.Pi, S.Scale));
@@ -285,7 +285,7 @@ public static class FaunaPlanner
                 var heading = rng.NextFloat() * 2f * float.Pi;
                 if (!Open(p, S.SwanShoreMargin) || day.Any(d => Vector2.Distance(p, new(d.Position.X, d.Position.Z)) < S.SwanPairGap * 4f)) continue;
                 // A pair: the second bird a little behind and beside the first, on nearly the same heading.
-                var dir = new Vector2(DetMath.Sin(heading), DetMath.Cos(heading));
+                var dir = new Vector2(MathF.Sin(heading), MathF.Cos(heading));
                 var mate = p - dir * S.SwanPairGap + new Vector2(dir.Y, -dir.X) * 0.9f;
                 day.Add(new(FaunaModelKey.SwanOf(SwanPose.Float), new(p.X, y, p.Y), heading, 1f));
                 if (day.Count < count && Open(mate, S.SwanShoreMargin * 0.6f))
@@ -301,7 +301,7 @@ public static class FaunaPlanner
             for (var i = 0; i < day.Count; i++)
             {
                 var angle = i * 2.4f;
-                var p = huddle + new Vector2(DetMath.Cos(angle), DetMath.Sin(angle)) * (i == 0 ? 0f : 1.3f + 0.25f * i);
+                var p = huddle + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (i == 0 ? 0f : 1.3f + 0.25f * i);
                 night.Add(new(FaunaModelKey.SwanOf(SwanPose.Sleep), new(p.X, y, p.Y), angle * 1.7f, 1f));
             }
             var key = $"swans.lake-{li + 1}";
@@ -474,12 +474,12 @@ public static class FaunaPlanner
     }
 
     /// <summary>Heading in the plan (x, z) to the model yaw: model +Z turned by yaw about +Y points along (sin yaw, cos yaw).</summary>
-    private static float Yaw(Vector2 heading) => DetMath.Atan2(heading.X, heading.Y);
+    private static float Yaw(Vector2 heading) => MathF.Atan2(heading.X, heading.Y);
 
     private static Vector2 Rotate(Vector2 v, float radians)
     {
-        var c = DetMath.Cos(radians);
-        var s = DetMath.Sin(radians);
+        var c = MathF.Cos(radians);
+        var s = MathF.Sin(radians);
         return new(v.X * c - v.Y * s, v.X * s + v.Y * c);
     }
 }

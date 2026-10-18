@@ -237,8 +237,8 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
             {
                 var a = 2f * MathF.PI * i / segments;
                 // A slightly irregular outline: a fixed ripple, not a perfect ellipse.
-                var wobble = 1f + 0.06f * DetMath.Sin(3f * a + 0.7f) * r;
-                ring[i] = Vertex(DetMath.Cos(a) * r * wobble, DetMath.Sin(a) * r * wobble, r);
+                var wobble = 1f + 0.06f * MathF.Sin(3f * a + 0.7f) * r;
+                ring[i] = Vertex(MathF.Cos(a) * r * wobble, MathF.Sin(a) * r * wobble, r);
             }
             for (var i = 0; i < segments; i++)
             {
@@ -260,7 +260,7 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
             var stretch = 0.7f + 0.5f * rng.NextFloat();
             var turn = rng.NextFloat();
             var w = f.P(u * W.BeachHalfLength, v * W.BeachHalfWidth);
-            var dir = new Vector2(DetMath.Cos(turn * 6.2831855f), DetMath.Sin(turn * 6.2831855f));
+            var dir = new Vector2(MathF.Cos(turn * 6.2831855f), MathF.Sin(turn * 6.2831855f));
             var y = b.Ground(w) + W.GrassTop + 0.02f + 0.05f * (1f - (u * u + v * v));
             Vector2[] dome = [new(1f, 0f), new(0.92f, 0.32f * size), new(0.62f, 0.58f * size), new(0f, 0.68f * size)];
             b.Add(Solids.Lathe(dome, 9, i % 3 == 0 ? L.Granite : L.Pebble, size * stretch, size), PlanFrame.Along(w, dir).At(0, y - size * 0.18f, 0));
@@ -288,7 +288,7 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
                 if (s1 - s0 < 0.5f) continue;
                 var line = Route.Offset(path.Sub(s0, s1), side * RailLateral);
                 for (var i = 0; i + 1 < line.Length; i++)
-                    c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + W.RailBarrier, SurfaceTag.Barrier, FootMat.WoodDeck);
+                    c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
             }
         foreach (var s in LampStations())
         {

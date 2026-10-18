@@ -149,7 +149,7 @@ public sealed class StreetPartsTests
         foreach (var s in backless)
             Check(Seating.Positions(s).All(p => Math.Abs(p.Y - StreetStyle.SeatHeight) < 1e-5f), "Sitting positions lie on the seat.");
         // Turned boxes (a placed tier, a rotated bench) keep the edge on the box's own front.
-        var turned = new BoxCollider(Matrix4x4.CreateTranslation(0, 0.2f, 0) * DetMath.RotationY(float.Pi * 0.5f) * Matrix4x4.CreateTranslation(3, 0, 1), new(1f, 0.2f, 0.25f), SurfaceTag.Prop);
+        var turned = new BoxCollider(Matrix4x4.CreateTranslation(0, 0.2f, 0) * Matrix4x4.CreateRotationY(float.Pi * 0.5f) * Matrix4x4.CreateTranslation(3, 0, 1), new(1f, 0.2f, 0.25f), SurfaceTag.Prop);
         var edge = Seating.FromBox(turned, SeatSide.Front).Single();
         Check(Math.Abs(edge.Facing.X - -1f) < 1e-5f && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < 1e-5f, "A box turned a quarter faces −X.");
         Check(Seating.FromBox(new BoxCollider(Matrix4x4.CreateTranslation(0, 0.6f, 0), new(1, 0.6f, 0.3f), SurfaceTag.Prop), SeatSide.Front).Count == 0, "A 1.2 m top is not a seat.");

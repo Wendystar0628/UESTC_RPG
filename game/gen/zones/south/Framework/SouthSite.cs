@@ -52,7 +52,7 @@ public abstract class SouthSite
     /// <summary>Bearing in degrees of a plan direction (world x east, z south).</summary>
     public static float Bearing(System.Numerics.Vector2 direction)
     {
-        var degrees = DetMath.Atan2(direction.X, -direction.Y) * (180f / MathF.PI);
+        var degrees = MathF.Atan2(direction.X, -direction.Y) * (180f / MathF.PI);
         return degrees < 0 ? degrees + 360f : degrees;
     }
 }

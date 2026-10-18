@@ -390,7 +390,7 @@ public sealed class MainBuildingSite : SouthSite
         c.Box(F.At(Xc, y + LowerRise - 0.15f, (landing0 + landing1) * 0.5f), new(Width * 0.5f, 0.15f, M.MidLanding * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
         c.Add(Steps.Collision(lower), F.AtReversed(Xc, y, landing1 + lower.Depth * 0.5f));
         foreach (var x in new[] { M.StepsX0 + 0.18f, M.StepsX1 - 0.18f })
-            c.Wall(F.P(x, pz0), F.P(x, pz1), 0.18f, floor, floor + 1.5f, SurfaceTag.Barrier, FootMat.StonePaving);
+            c.Wall(F.P(x, pz0), F.P(x, pz1), 0.18f, floor, floor + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         foreach (var dx in M.SingleColumns.Concat(M.PairColumns))
             c.Box(F.At(Xc + dx, floor + M.PorticoHeight * 0.5f, M.ColumnZ), new(M.ColumnSize * 0.5f + 0.05f, M.PorticoHeight * 0.5f, M.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
         // Back wall either side of the open door (the doorway itself belongs to WP-31a's interior entrance).
@@ -405,7 +405,7 @@ public sealed class MainBuildingSite : SouthSite
         var deck = c.Ground(F.P(36f, -20f).X, F.P(36f, -20f).Y) + M.RoofY;
         var g = M.GalleryColumn * 0.5f;
         Vector2[] rail = [F.P(M.GalleryX0 + g, M.GalleryZ1 - g), F.P(M.GalleryX1 - g, M.GalleryZ1 - g), F.P(M.GalleryX1 - g, M.GalleryZ0 + g), F.P(M.GalleryX0 + g, M.GalleryZ0 + g)];
-        for (var i = 0; i < 4; i++) c.Wall(rail[i], rail[(i + 1) % 4], 0.08f, deck - 1f, deck + 1.5f, SurfaceTag.Barrier, FootMat.Metal);
+        for (var i = 0; i < 4; i++) c.Wall(rail[i], rail[(i + 1) % 4], 0.08f, deck - 1f, deck + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         var inset = M.GalleryWalk + 0.6f;
         Vector2[] pen = [F.P(M.GalleryX0 + inset, M.GalleryZ1 - inset), F.P(M.GalleryX1 - inset, M.GalleryZ1 - inset), F.P(M.GalleryX1 - inset, M.GalleryZ0 + inset), F.P(M.GalleryX0 + inset, M.GalleryZ0 + inset)];
         for (var i = 0; i < 4; i++) c.Wall(pen[i], pen[(i + 1) % 4], 0.05f, deck, deck + 1.8f, SurfaceTag.Barrier, FootMat.Metal);
@@ -426,8 +426,8 @@ public sealed class MainBuildingSite : SouthSite
         var stepsHalf = M.RearStepsWidth * 0.5f;
         foreach (var side in new[] { -1f, 1f })
         {
-            c.Wall(R.P(side * (M.RearLandingWidth * 0.5f - 0.18f), -0.3f), R.P(side * (M.RearLandingWidth * 0.5f - 0.18f), landingFront), 0.18f, rfloor, rfloor + 1.5f, SurfaceTag.Barrier, FootMat.StonePaving);
-            c.Wall(R.P(side * stepsHalf, landingFront - 0.18f), R.P(side * M.RearLandingWidth * 0.5f, landingFront - 0.18f), 0.18f, rfloor, rfloor + 1.5f, SurfaceTag.Barrier, FootMat.StonePaving);
+            c.Wall(R.P(side * (M.RearLandingWidth * 0.5f - 0.18f), -0.3f), R.P(side * (M.RearLandingWidth * 0.5f - 0.18f), landingFront), 0.18f, rfloor, rfloor + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
+            c.Wall(R.P(side * stepsHalf, landingFront - 0.18f), R.P(side * M.RearLandingWidth * 0.5f, landingFront - 0.18f), 0.18f, rfloor, rfloor + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         }
         var rupper = Flight(M.RisersUpper, M.RearStepsWidth, 0) with { Depth = M.RearTread * M.RisersUpper };
         var rlower = Flight(M.RisersLower, M.RearStepsWidth, 0) with { Depth = M.RearTread * M.RisersLower };

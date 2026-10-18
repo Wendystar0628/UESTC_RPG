@@ -286,7 +286,7 @@ public sealed class EastLakeSite : SouthSite
         float Fold(float a, float h)
         {
             var depth = 0.16f * Math.Clamp((0.95f * s - h) / (0.65f * s), 0f, 1f);
-            return depth * (0.6f * DetMath.Cos(6f * a) + 0.4f * DetMath.Cos(10f * a + 1.3f));
+            return depth * (0.6f * MathF.Cos(6f * a) + 0.4f * MathF.Cos(10f * a + 1.3f));
         }
         b.Add(Solids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold), At(0, 0, 0));
         // Head on its neck: ovoid wider front to back than side to side.
@@ -363,7 +363,7 @@ public sealed class EastLakeSite : SouthSite
     private static Vector2 Corner(PlanFrame f, int i, float r)
     {
         var a = Phase + MathF.PI / 3f * i;
-        return f.P(r * DetMath.Cos(a), r * DetMath.Sin(a));
+        return f.P(r * MathF.Cos(a), r * MathF.Sin(a));
     }
 
     private static Vector2[] Hexagon(PlanFrame f, float r) => [.. Enumerable.Range(0, 6).Select(i => Corner(f, i, r))];
@@ -434,7 +434,7 @@ public sealed class EastLakeSite : SouthSite
         {
             var line = PlanFrame.Toward(rail[i], rail[i + 1]);
             foreach (var (u0, u1) in GridFacade.Open(-0.17f, Vector2.Distance(rail[i], rail[i + 1]) + 0.17f, RailOpenings(f, l, i, rail[i], rail[i + 1])))
-                c.Wall(line.P(u0, 0), line.P(u1, 0), 0.17f, y - 1f, y + 1.5f, SurfaceTag.Barrier, FootMat.StonePaving);
+                c.Wall(line.P(u0, 0), line.P(u1, 0), 0.17f, y - 1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         }
         // Wade treads (auto-step 0.30 and 0.35 m) and the mooring posts.
         var w = WadeFrame;

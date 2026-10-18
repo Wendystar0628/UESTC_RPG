@@ -51,7 +51,7 @@ internal static class PlanEntrances
         foreach (var e in entry.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal))
         {
             var yaw = e.YawDeg * (float.Pi / 180f);
-            var facing = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+            var facing = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
             var centre = new Vector2(e.Center.X, e.Center.Z);
             int fi = -1;
             float uFoot = 0f, nearest = EntranceRules.AnchorReach;
@@ -75,7 +75,7 @@ internal static class PlanEntrances
             var room = (row + 1 < storeys ? floorY(row + 1) - EntranceRules.SlabDepth : wallTop - 0.3f) - y0;
             // The anchor's own doorway top (contract-34 HeadY, absolute; 0 = unknown) wins over the family's door rise.
             var rise = MathF.Min(e.HeadY != 0f ? e.HeadY - y0 : doorRise, room);
-            if (rise < MathF.Min(EntranceRules.MinDoorHeight, doorRise)) continue;
+            if (rise < MathF.Min(WalkRules.MinimumDoorHeight, doorRise)) continue;
 
             var f = facades[fi];
             var k = 0;

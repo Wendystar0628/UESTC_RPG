@@ -20,7 +20,7 @@ public static class PartPlacement
         return Array.AsReadOnly(result);
     }
 
-    /// <summary>Rotates the source's entire local placement around a world-space centre using deterministic Y rotation.</summary>
+    /// <summary>Rotates the source's entire local placement around a world-space centre using Y rotation.</summary>
     public static IReadOnlyList<PlacedPart> Radial(PlacedPart source, int count, Vector3 centre, float stepRadians)
     {
         ArgumentNullException.ThrowIfNull(source); Count(count); GeometryMath.Finite(centre, nameof(centre)); ValidateMatrix(source.At);
@@ -28,7 +28,7 @@ public static class PartPlacement
         var result = new PlacedPart[count];
         for (var i = 0; i < count; i++)
         {
-            var rotation = DetMath.RotationY(stepRadians * i);
+            var rotation = Matrix4x4.CreateRotationY(stepRadians * i);
             var at = source.At; at.M41 -= centre.X; at.M42 -= centre.Y; at.M43 -= centre.Z;
             at = Multiply(at, rotation); at.M41 += centre.X; at.M42 += centre.Y; at.M43 += centre.Z;
             ValidateMatrix(at); result[i] = source with { At = at };

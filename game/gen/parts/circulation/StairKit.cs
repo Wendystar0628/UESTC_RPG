@@ -180,6 +180,6 @@ internal readonly record struct FlightLane(Flight Flight, float X0, float X1, fl
     {
         var f = Flight;
         return new SlopedWallCollider(new(x, Z(0)), new(x, Z(f.Run)), S.BarrierMinHalfThickness,
-            Y0 - S.RampBury, Y0 + S.StairBarrierAbove, Y0 + (f.Risers - 1) * f.Riser - f.Waist, Y0 + f.Rise + S.StairBarrierAbove, SurfaceTag.Barrier);
+            Y0 - S.RampBury, Y0 + WalkRules.BarrierHeight, Y0 + (f.Risers - 1) * f.Riser - f.Waist, Y0 + f.Rise + WalkRules.BarrierHeight, SurfaceTag.Barrier);
     }
 }

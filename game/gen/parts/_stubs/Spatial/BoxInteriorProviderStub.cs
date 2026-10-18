@@ -77,8 +77,8 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
         else
         {
             Wall(left, 0, right, 0, y, y + 4);
-            Wall(stairLeft, 3, stairLeft, 11.5f, y, y + 1.5f);
-            Wall(stairRight, 3, stairRight, 11.5f, y, y + 1.5f);
+            Wall(stairLeft, 3, stairLeft, 11.5f, y, y + WalkRules.BarrierHeight);
+            Wall(stairRight, 3, stairRight, 11.5f, y, y + WalkRules.BarrierHeight);
         }
         int next = Array.IndexOf(_floors, storey) + 1;
         if (next < _floors.Length)
@@ -171,8 +171,8 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
                 { Center = center, YawDeg = 0 }];
         }
         float angle = entrances[0].YawDeg * (float.Pi / 180f);
-        return new(width, depth, entrances[0].Center, new(DetMath.Cos(angle), 0, DetMath.Sin(angle)),
-            new(-DetMath.Sin(angle), 0, DetMath.Cos(angle)), _floors[0], entrances);
+        return new(width, depth, entrances[0].Center, new(MathF.Cos(angle), 0, MathF.Sin(angle)),
+            new(-MathF.Sin(angle), 0, MathF.Cos(angle)), _floors[0], entrances);
     }
 
     private sealed record PlanData(float Width, float Depth, Vector3 Origin, Vector3 Right, Vector3 Inward,

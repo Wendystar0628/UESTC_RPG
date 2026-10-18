@@ -53,7 +53,7 @@ public static class PlanMath
     public static Vector2 Heading(float bearing)
     {
         var a = bearing * (MathF.PI / 180f);
-        return new(DetMath.Sin(a), -DetMath.Cos(a));
+        return new(MathF.Sin(a), -MathF.Cos(a));
     }
 
     /// <summary>A frame at <paramref name="origin"/> whose local +Z faces <paramref name="bearing"/> (local +X is then its left).</summary>

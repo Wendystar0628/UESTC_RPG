@@ -5,8 +5,8 @@ using Campus.Gen.Parts.Core;
 namespace Campus.Gen.Parts.Openings;
 
 /// <summary>
-/// Proper rigid placement inside one part: the images of the unit axes plus an origin. Scalar arithmetic only, so
-/// the output is byte-identical on every bake machine (D-165).
+/// Proper rigid placement inside one part: the images of the unit axes plus an origin.
+/// the output is reproducible for the same input on the same machine (D-232).
 /// </summary>
 internal readonly record struct Place(Vector3 X, Vector3 Y, Vector3 Z, Vector3 Origin)
 {
@@ -287,8 +287,8 @@ internal static class Solid
             var u = k == count ? u1 : u0 + (u1 - u0) * k / count;
             var phase = 2 * Math.PI * (u - u0) / pitch;
             us[k] = u;
-            zs[k] = zCentre + amp * (float)DetMath.Cos(phase);
-            slopes[k] = -normalAmp * (float)(2 * Math.PI / pitch * DetMath.Sin(phase));
+            zs[k] = zCentre + amp * (float)Math.Cos(phase);
+            slopes[k] = -normalAmp * (float)(2 * Math.PI / pitch * Math.Sin(phase));
         }
         var t = thickness * 0.5f;
         foreach (var side in new[] { -1f, 1f })

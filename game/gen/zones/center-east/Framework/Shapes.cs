@@ -8,7 +8,7 @@ namespace Campus.Gen.Zones.CenterEast.Framework;
 /// Small closed solids the WP-09 kernel has no helper for: smooth round shafts, hipped pyramids, arch outlines, and the
 /// circle and arc paths the kernel's sweep takes (basin rims, curved bays).
 /// Same conventions as the kernel: metres, origin at the base centre, Godot front faces clockwise from outside,
-/// AO visibility 1, UV in metres. Angles go through DetMath only.
+/// AO visibility 1, UV in metres. Angles are in radians.
 /// </summary>
 public static class Shapes
 {
@@ -23,7 +23,7 @@ public static class Shapes
         for (var i = 0; i <= segments; i++)
         {
             var a = 2f * MathF.PI * (i % segments) / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             var n = Normalize(new(c, slope, s));
             var u = 2f * MathF.PI * r0 * i / segments;
             foot[i] = m.Vertex(new(c * r0, 0, s * r0), n, new(u, 0));
@@ -60,7 +60,7 @@ public static class Shapes
         for (var i = 0; i <= segments; i++)
         {
             var a = MathF.PI * i / segments;
-            points.Add(new(centreX + r * DetMath.Cos(a), y0 + spring + r * DetMath.Sin(a)));
+            points.Add(new(centreX + r * MathF.Cos(a), y0 + spring + r * MathF.Sin(a)));
         }
         return [.. points];
     }
@@ -73,7 +73,7 @@ public static class Shapes
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            points[i] = new(centre.X + radius * DetMath.Cos(a), centre.Y + radius * DetMath.Sin(a));
+            points[i] = new(centre.X + radius * MathF.Cos(a), centre.Y + radius * MathF.Sin(a));
         }
         return points;
     }
@@ -88,8 +88,8 @@ public static class Shapes
         var half = Vector2.Distance(a, b) * 0.5f;
         var radius = (half * half + sagitta * sagitta) / (2f * sagitta);
         var centre = (a + b) * 0.5f - side * (radius - sagitta);
-        var start = DetMath.Atan2(a.Y - centre.Y, a.X - centre.X);
-        var end = DetMath.Atan2(b.Y - centre.Y, b.X - centre.X);
+        var start = MathF.Atan2(a.Y - centre.Y, a.X - centre.X);
+        var end = MathF.Atan2(b.Y - centre.Y, b.X - centre.X);
         var sweep = end - start;
         // Take the short way round, which is the side the bulge faces for a sagitta below the radius.
         if (sweep > MathF.PI) sweep -= 2f * MathF.PI;
@@ -98,7 +98,7 @@ public static class Shapes
         for (var i = 0; i <= segments; i++)
         {
             var t = start + sweep * i / segments;
-            points[i] = new(centre.X + radius * DetMath.Cos(t), centre.Y + radius * DetMath.Sin(t));
+            points[i] = new(centre.X + radius * MathF.Cos(t), centre.Y + radius * MathF.Sin(t));
         }
         points[0] = a;
         points[segments] = b;
@@ -118,7 +118,7 @@ public static class Shapes
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             ring[i] = m.Vertex(new(c * r, y, s * r), normal, new(c * r, s * r));
         }
         for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);

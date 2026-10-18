@@ -9,7 +9,7 @@ namespace Campus.Gen.Zones.CenterEast.Framework;
 /// fillets, miter offsets, cells of equal arclength for ribbon glazing, and slabs and ring walls whose sides keep smooth
 /// normals round the curves so a rounded floor edge shades as one band (ART-MODELING). Rings are canonical: outside
 /// on the right of the path (<see cref="PlanMath.OutsideRight"/>), so an edge a→b faces out along (b − a) turned to (dz, −dx).
-/// Scalar arithmetic and DetMath only.
+/// Scalar arithmetic and standard math.
 /// </summary>
 public static class Contour
 {
@@ -73,7 +73,7 @@ public static class Contour
             Vector2 din = q - p, dout = r - q;
             float lin = din.Length(), lout = dout.Length();
             din /= lin; dout /= lout;
-            var turn = MathF.Abs(DetMath.Atan2(Cross(din, dout), Dot(din, dout))) * (180f / MathF.PI);
+            var turn = MathF.Abs(MathF.Atan2(Cross(din, dout), Dot(din, dout))) * (180f / MathF.PI);
             if (turn < minTurnDegrees || pinned(q)) { points.Add(q); continue; }
             // Tangent run of a circular fillet: r·tan(θ/2), tan(θ/2) = sinθ / (1 + cosθ).
             var half = MathF.Abs(Cross(din, dout)) / (1f + Dot(din, dout));

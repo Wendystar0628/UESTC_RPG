@@ -39,7 +39,7 @@ internal sealed record BridgeStone(FeatureId Id, Vector2 Position, float FaceDeg
         get
         {
             var r = FaceDeg * (MathF.PI / 180f);
-            return new((float)DetMath.Sin(r), -(float)DetMath.Cos(r));
+            return new(MathF.Sin(r), -MathF.Cos(r));
         }
     }
 

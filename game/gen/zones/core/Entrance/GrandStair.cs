@@ -61,8 +61,8 @@ public sealed class GrandStair : ICorePiece
         Risers = TerrainDrop.RiserCount(rise);
         Riser = rise / Risers;
         Tread = TerrainDrop.TreadFor(Riser);
-        var count = Math.Max(1, (int)MathF.Ceiling(rise / S.FlightMaxRise - 1e-4f));
-        while ((Risers + count - 1) / count * Riser > S.FlightMaxRise + 1e-4f) count++;
+        var count = Math.Max(1, (int)MathF.Ceiling(rise / WalkRules.OutdoorFlightMaxRise - 1e-4f));
+        while ((Risers + count - 1) / count * Riser > WalkRules.OutdoorFlightMaxRise + 1e-4f) count++;
         // Bottom-up risers (the extra ones low), then laid out from the top landing outward.
         var risers = Enumerable.Range(0, count).Select(f => Risers / count + (f < Risers % count ? 1 : 0)).ToArray();
         var landings = new float[count - 1];
@@ -455,13 +455,13 @@ public sealed class GrandStair : ICorePiece
             {
                 list.Add(Slab(tier.S0, tier.S1, w0, w1, tier.Y - S.LawnDrop, SurfaceTag.Ground, FootMat.Grass));
                 foreach (var (a, b, _) in Hedges(tier, side))
-                    list.Add(new WallCollider(a, b, S.HedgeWidth * 0.5f, tier.Y - S.LawnDrop - 0.1f, tier.Y + S.GuardCollision, SurfaceTag.Barrier) { Foot = FootMat.Hedge });
+                    list.Add(new WallCollider(a, b, S.HedgeWidth * 0.5f, tier.Y - S.LawnDrop - 0.1f, tier.Y + WalkRules.BarrierHeight, SurfaceTag.Barrier) { Foot = FootMat.Hedge });
             }
             var top = GuardTop();
             var wc = side * (HalfWidth - S.GuardWallWidth * 0.5f);
             for (var k = 0; k + 1 < top.Count; k++)
             {
-                var high = MathF.Max(top[k].Y, top[k + 1].Y) - S.GuardHeight + S.GuardCollision;
+                var high = MathF.Max(top[k].Y, top[k + 1].Y) - S.GuardHeight + WalkRules.BarrierHeight;
                 list.Add(new WallCollider(At(top[k].X, wc), At(top[k + 1].X, wc), S.GuardWallWidth * 0.5f, Base, high, SurfaceTag.Wall) { Foot = FootMat.StonePaving });
             }
         }

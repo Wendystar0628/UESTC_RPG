@@ -95,7 +95,7 @@ internal sealed partial class RoadMarkings
             var reach = MathF.Abs(spotU - penaltyEdge) / radius;
             if (reach < 1f)
             {
-                var span = DetMath.Acos(reach);
+                var span = MathF.Acos(reach);
                 Curve(Arc(spotU, 0f, radius, -span, span, -g, 1f, spec.Chord));
             }
 
@@ -116,7 +116,7 @@ internal sealed partial class RoadMarkings
         for (var k = 0; k <= steps; k++)
         {
             var angle = from + (to - from) * k / steps;
-            points.Add(new(cu + ku * radius * DetMath.Cos(angle), cv + kv * radius * DetMath.Sin(angle)));
+            points.Add(new(cu + ku * radius * MathF.Cos(angle), cv + kv * radius * MathF.Sin(angle)));
         }
         return points;
     }

@@ -23,8 +23,8 @@ public static class EntranceRules
     public const float AnchorTolerance = 0.5f;
     /// <summary>An anchor floor within this of a storey floor takes the building's floor; farther, the door stands at the anchor floor.</summary>
     public const float FloorSnap = 0.2f;
-    /// <summary>A raised door needs at least this height under the next floor's slab (SlabDepth); lower anchors are left to their zone pack.</summary>
-    public const float MinDoorHeight = 2.0f, SlabDepth = 0.15f;
+    /// <summary>Depth of the next floor's slab above a raised door.</summary>
+    public const float SlabDepth = 0.15f;
     /// <summary>Wall kept between an anchor door and a window beside it in the same storey; nearer windows give way to the door.</summary>
     public const float Pier = 0.3f;
     /// <summary>An anchor door is at least its clear width plus this (the frame on both sides).</summary>
@@ -44,8 +44,6 @@ public static class EntranceRules
     public const float LandingEnd = 0.2f;
     /// <summary>The outside landing level is the terrain this far beyond the landing's front edge.</summary>
     public const float GroundProbe = 1.0f;
-    /// <summary>Steps connect at most one flight; a larger drop in front of a door is a terrace edge (WLD-TERRAIN), not a door step.</summary>
-    public const float MaxRise = 1.5f;
     /// <summary>
     /// A landing standing more than this above the ground gets WP-11 guard railings (balusters) on its open sides, this
     /// high and this far in from its edges (WLD-TERRAIN: 临空 > 1.0 m, 1.05 m railing).

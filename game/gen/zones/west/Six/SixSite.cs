@@ -360,7 +360,7 @@ public sealed class SixSite : WestSite
         for (var i = 0; i < 6; i++)
         {
             var a = MathF.PI / 6f + i * MathF.PI / 3f;
-            float c = DetMath.Cos(a), s = DetMath.Sin(a);
+            float c = MathF.Cos(a), s = MathF.Sin(a);
             var length = r * 0.38f;
             var mid = r * (0.23f + 0.19f);
             var at = new Matrix4x4(c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, c * mid, 0, s * mid, 1);

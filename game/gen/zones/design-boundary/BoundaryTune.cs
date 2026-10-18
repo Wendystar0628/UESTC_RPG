@@ -70,8 +70,8 @@ public static class BoundaryTune
         public const float BottomRail = 0.26f, TopRail = 2.04f, RailSize = 0.05f, BarSize = 0.025f, BarPitch = 0.14f, BarTop = 2.17f;
         /// <summary>Hedge centre this far inside the fence centreline; 1.2 m high, 0.8 m wide.</summary>
         public const float HedgeOffset = 0.75f, HedgeHeight = 1.2f, HedgeWidth = 0.8f, HedgeBevel = 0.1f;
-        /// <summary>Boundary collision: top 2.2 m, half thickness so it reaches the pillar faces (≤ 0.3 m beyond the fence).</summary>
-        public const float ColliderTop = 2.2f, ColliderHalf = 0.27f;
+        /// <summary>Boundary collision half thickness reaches the pillar faces (≤ 0.3 m beyond the fence).</summary>
+        public const float ColliderHalf = 0.27f;
     }
 
     /// <summary>
@@ -95,8 +95,6 @@ public static class BoundaryTune
         /// <summary>Guard house (值班室): flat-roofed grey stone room closing the line beyond the turnstiles.</summary>
         public const float HouseGap = 0.07f, HouseWidth = 4.0f, HouseDepth = 3.4f, HouseHeight = 3.3f, HouseFront = -0.1f;
         public const float HousePlinth = 0.45f, HouseRoof = 0.34f, HouseEave = 0.4f, WindowSill = 1.0f, WindowHead = 2.5f;
-        /// <summary>Collision tops: turnstiles and arm at least 1.5 m; the gate's invisible top-up over the lane to 2.2 m (SYS-WALK).</summary>
-        public const float LowTop = 1.5f, LaneTop = 2.2f;
     }
 
     /// <summary>
@@ -201,7 +199,7 @@ public static class BoundaryTune
         public const float PavingTop = 0.15f;
         /// <summary>Railing: 1.1 m, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
         public const float RailN = 0.35f, RailHeight = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;
-        public const float BarSize = 0.02f, BarPitch = 0.12f, RailColliderTop = 1.5f;
+        public const float BarSize = 0.02f, BarPitch = 0.12f;
         public const float RailT0 = -24.6f, RailT1 = -11.4f;
         public static readonly Contracts.Parts.FurnitureParams BenchSize = new(1.8f, 0.8f, 0.62f);
         /// <summary>Bench centres (t, n); sitters face the water.</summary>

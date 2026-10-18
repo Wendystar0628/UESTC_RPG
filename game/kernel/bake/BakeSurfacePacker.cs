@@ -163,7 +163,7 @@ public static class BakeSurfacePacker
     {
         var planar = Math.Sqrt((double)normal.X * normal.X + (double)normal.Y * normal.Y);
         if (planar < 1e-12) return (Vector3.UnitX, normal.Z >= 0 ? 0 : 3.14159265358979323846f);
-        return (new((float)(normal.Y / planar), (float)(-normal.X / planar), 0), DetMath.Acos(Math.Clamp(normal.Z, -1f, 1f)));
+        return (new((float)(normal.Y / planar), (float)(-normal.X / planar), 0), MathF.Acos(Math.Clamp(normal.Z, -1f, 1f)));
     }
     private static Vector3 Normalize(Vector3 value)
     {

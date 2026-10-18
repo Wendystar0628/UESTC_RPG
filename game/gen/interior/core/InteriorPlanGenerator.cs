@@ -187,7 +187,7 @@ public static class InteriorPlanGenerator
                 return;
             }
             Vector2 d = doorB - doorA;
-            float yaw = DetMath.Atan2(-d.Y, d.X) * (180f / float.Pi);
+            float yaw = MathF.Atan2(-d.Y, d.X) * (180f / float.Pi);
             string id = string.Join('/', _request.WingId, s.Index.ToString(CultureInfo.InvariantCulture), key);
             // ClosedYawDeg rotates the local +X hinge-to-latch axis about +Y.
             _doors.Add(new(id, s.Index, zoneA, zoneB, At(doorA, s.FloorY), PlanGeometry.Quantize(yaw),
@@ -220,14 +220,14 @@ public static class InteriorPlanGenerator
             _portals.Add(new(upper.Index, lowerZone, upperZone, _frame.Point3(u2, upper.FloorY, start),
                 _frame.Point3(u3, upper.FloorY, start), 2.2f, PortalKind.StairOpening));
             Wall(lower, _frame.Point((u1 + u2) * 0.5f, start), _frame.Point((u1 + u2) * 0.5f, end),
-                lower.FloorY, upper.FloorY + 1.5f, InteriorWallRole.StairBarrier, _options.StairWellWidth);
+                lower.FloorY, upper.FloorY + WalkRules.BarrierHeight, InteriorWallRole.StairBarrier, _options.StairWellWidth);
             Wall(upper, _frame.Point(u0, wellEnd), _frame.Point(u3, wellEnd),
-                upper.FloorY, upper.FloorY + 1.5f, InteriorWallRole.StairBarrier, 0.1f);
+                upper.FloorY, upper.FloorY + WalkRules.BarrierHeight, InteriorWallRole.StairBarrier, 0.1f);
             // Intermediate landings reuse this lane for the next upward flight.
             // Only the terminal storey needs a barrier across the first-flight entrance.
             if (upper.Index == _storeys[^1].Index)
                 Wall(upper, _frame.Point(u0, start), _frame.Point(u2, start),
-                    upper.FloorY, upper.FloorY + 1.5f, InteriorWallRole.StairBarrier, 0.1f);
+                    upper.FloorY, upper.FloorY + WalkRules.BarrierHeight, InteriorWallRole.StairBarrier, 0.1f);
 
             RampCollider Ramp(float left, float right, float from, float to, float bottom, float top, int count, float rise) =>
                 new(_frame.Point3(left, bottom, from), _frame.Point3(right, bottom, from),
@@ -376,7 +376,7 @@ public static class InteriorPlanGenerator
         float[] dimensions = [o.CorridorClearWidth, o.ExteriorWallThickness, o.PartitionThickness, o.SlabThickness,
             o.DoorClearWidth, o.DoorHeight, o.StairFlightWidth, o.StairWellWidth, o.StairLandingDepth, o.StairTreadDepth, o.MaximumRiserHeight];
         if (dimensions.Any(d => !float.IsFinite(d) || d <= 0f) || o.CorridorClearWidth < 2.2f || o.DoorClearWidth < 1.1f ||
-            o.DoorHeight < 2f || o.StairFlightWidth < 1.2f || o.StairLandingDepth < MathF.Max(o.StairFlightWidth, 1.5f) ||
+            o.DoorHeight < WalkRules.MinimumDoorHeight || o.StairFlightWidth < 1.2f || o.StairLandingDepth < MathF.Max(o.StairFlightWidth, 1.5f) ||
             o.StairWellWidth > 0.2f || o.MaximumRiserHeight > 0.165f || o.StairTreadDepth < 0.27f)
             throw new ArgumentException("Dormitory dimensions violate the mainline clearances.", nameof(r));
         StoreyInfo[] storeys = r.Storeys.OrderBy(s => s.Index).ToArray();

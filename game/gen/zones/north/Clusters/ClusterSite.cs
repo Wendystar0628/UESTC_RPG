@@ -255,13 +255,13 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
                 c.Wall(p, q, 0.06f, lo - 1f, hi + F.Height, SurfaceTag.Barrier, FootMat.Metal);
                 Vector2 hp = run.Hedge[i], hq = run.Hedge[i + 1];
                 if (Vector2.Distance(hp, hq) >= 0.05f)
-                    c.Wall(hp, hq, F.HedgeWidth * 0.5f, lo - 0.5f, hi + MathF.Max(F.HedgeHeight, G.ColliderTop), SurfaceTag.Barrier, FootMat.Hedge);
+                    c.Wall(hp, hq, F.HedgeWidth * 0.5f, lo - 0.5f, hi + MathF.Max(F.HedgeHeight, WalkRules.BarrierHeight), SurfaceTag.Barrier, FootMat.Hedge);
             }
         foreach (var g in layout.Gates)
         {
             var f = g.Frame;
             var y = c.Ground(f.Origin);
-            var top = y + G.ColliderTop;
+            var top = y + WalkRules.BarrierHeight;
             switch (g.Kind)
             {
                 case GateKind.Footway:
@@ -273,13 +273,13 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
                     c.Wall(f.P(-g.LaneHalf - G.PierSize, 0), f.P(laneTo, 0), 0.15f, y - 0.5f, top, SurfaceTag.Barrier, FootMat.Metal);
                     if (g.Open)
                         foreach (var x in g.Cabinets())
-                            c.Box(f.At(x, y + G.ColliderTop * 0.5f, 0), new(G.CabinetWidth * 0.5f + 0.02f, G.ColliderTop * 0.5f, G.CabinetDepth * 0.5f), SurfaceTag.Barrier, FootMat.Metal);
+                            c.Box(f.At(x, y + WalkRules.BarrierHeight * 0.5f, 0), new(G.CabinetWidth * 0.5f + 0.02f, WalkRules.BarrierHeight * 0.5f, G.CabinetDepth * 0.5f), SurfaceTag.Barrier, FootMat.Metal);
                     if (g.Main)
                     {
                         float x0 = g.HouseStart, x1 = g.HouseEnd, z1 = G.HouseOut, z0 = G.HouseOut - G.HouseDepth;
                         Vector2[] ring = [f.P(x0, z0), f.P(x1, z0), f.P(x1, z1), f.P(x0, z1)];
                         for (var i = 0; i < 4; i++)
-                            c.Wall(ring[i], ring[(i + 1) % 4], 0.12f, y - 0.5f, y + 300f, SurfaceTag.Wall, FootMat.Concrete);
+                            c.Wall(ring[i], ring[(i + 1) % 4], 0.12f, y - 0.5f, y + WalkRules.BuildingCollisionHeight, SurfaceTag.Wall, FootMat.Concrete);
                         // Close the gap between the bank's last cabinet and the house.
                         c.Wall(f.P(g.BankEnd - 0.05f, 0), f.P(g.HouseStart + 0.05f, 0), 0.1f, y - 0.5f, top, SurfaceTag.Barrier, FootMat.Metal);
                     }

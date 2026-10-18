@@ -67,8 +67,8 @@ public sealed class OrganicMesh
             for (var k = 0; k < segments; k++)
             {
                 var angle = 2f * float.Pi * k / segments;
-                var c = DetMath.Cos(angle);
-                var sn = DetMath.Sin(angle);
+                var c = MathF.Cos(angle);
+                var sn = MathF.Sin(angle);
                 local.Add(ring.Centre + s * (c * ring.HalfWidth) + v * (sn * ring.HalfHeight));
             }
         }
@@ -109,12 +109,12 @@ public sealed class OrganicMesh
         for (var i = 1; i < rings; i++)
         {
             var theta = float.Pi * i / rings;
-            var z = -DetMath.Cos(theta) * alongRadius;
-            var r = DetMath.Sin(theta);
+            var z = -MathF.Cos(theta) * alongRadius;
+            var r = MathF.Sin(theta);
             list.Add(new(centre + a * z, widthRadius * r, heightRadius * r));
         }
         // Pole caps land on the true poles: cap distance = remaining radius / min ring radius.
-        var endDist = alongRadius * (1f - DetMath.Cos(float.Pi / rings));
+        var endDist = alongRadius * (1f - MathF.Cos(float.Pi / rings));
         var minRing = MathF.Min(list[0].HalfWidth, list[0].HalfHeight);
         var cap = endDist / MathF.Max(minRing, 1e-4f);
         return Loft(list, paint, segments, cap, cap, u);

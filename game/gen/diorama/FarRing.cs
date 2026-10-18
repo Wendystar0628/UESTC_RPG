@@ -44,7 +44,7 @@ public static class FarRing
         {
             var az = columns[i];
             var b = az * (MathF.PI / 180f);
-            var dir = new Vector3(DetMath.Sin(b), 0f, -DetMath.Cos(b));
+            var dir = new Vector3(MathF.Sin(b), 0f, -MathF.Cos(b));
             var spurPeriod = SpurPeriodHillDeg + (SpurPeriodMountainDeg - SpurPeriodHillDeg) * weights[i];
             var spur = DioramaNoise.Value(az / spurPeriod, spurSeed, (int)MathF.Round(360f / spurPeriod));
             for (var r = 0; r < rows; r++)
@@ -54,7 +54,7 @@ public static class FarRing
                 // The crest's detail belongs to the ridge: lower down the slope the profile is a wider and wider average, so
                 // ridges converge at the peaks and the foot is broad instead of the peaks' flanks running straight down.
                 var crest = Blurred(columns, crests, i, FootBlurDeg * (1f - w));
-                var y = crest * DetMath.Pow(w, SlopeExponent) * (1f + SpurAmp * bell * spur);
+                var y = crest * MathF.Pow(w, SlopeExponent) * (1f + SpurAmp * bell * spur);
                 var radius = far.Radius - far.Depth * (1f - w);
                 position[i, r] = new Vector3(centre.X, 0f, centre.Y) + dir * radius + Vector3.UnitY * y;
                 potential[i, r] = Math.Clamp(y / maxPeak + GullySnow * bell * MathF.Max(0f, -spur), 0f, 1f);
@@ -141,11 +141,11 @@ public static class FarRing
         var t = span <= 0f ? 0f : CityRing.Wrap(b - a.Azimuth) / span;
         var s = t * t * (3f - 2f * t);
         var elev = a.ElevationDeg + (c.ElevationDeg - a.ElevationDeg) * s;
-        return far.Radius * DetMath.Tan(elev * (MathF.PI / 180f));
+        return far.Radius * MathF.Tan(elev * (MathF.PI / 180f));
     }
 
     public static float MountainHeight(FarRingData far, MountainData m) =>
-        far.Radius * DetMath.Tan(m.TrueElevationDeg * far.VisualScale * (MathF.PI / 180f));
+        far.Radius * MathF.Tan(m.TrueElevationDeg * far.VisualScale * (MathF.PI / 180f));
 
     /// <summary>Silhouette height at a bearing and how much of it is snow mountain (0 hills … 1 mountain).</summary>
     public static (float Height, float MountainWeight) Crest(FarRingData far, float az, uint hillSeed, uint ridgeSeed)
@@ -168,7 +168,7 @@ public static class FarRing
             {
                 var d = MathF.Abs(Delta(az, m.Azimuth + p.OffsetDeg));
                 if (d >= p.HalfWidthDeg) continue;
-                peaks = MathF.Max(peaks, p.Height * h * DetMath.Pow(1f - d / p.HalfWidthDeg, PeakExponent));
+                peaks = MathF.Max(peaks, p.Height * h * MathF.Pow(1f - d / p.HalfWidthDeg, PeakExponent));
             }
             mountain = MathF.Max(mountain, MathF.Max(shoulder, peaks));
         }

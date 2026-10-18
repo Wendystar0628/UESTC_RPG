@@ -30,7 +30,7 @@ public sealed class BakeInstanceTests
         var frozenFirst = GeometryBuffer.Freeze(firstSource);
         var frozenSecond = GeometryBuffer.Freeze(secondSource);
         var prototype = new GeometryPrototype("fixture.multi", [frozenFirst, frozenSecond], PrototypeBounds());
-        var at0 = Matrix4x4.CreateScale(1.5f, 2f, .5f) * DetMath.RotationY(.7f) * Matrix4x4.CreateTranslation(-480, 20, 300);
+        var at0 = Matrix4x4.CreateScale(1.5f, 2f, .5f) * Matrix4x4.CreateRotationY(.7f) * Matrix4x4.CreateTranslation(-480, 20, 300);
         var at1 = Matrix4x4.CreateTranslation(-470, 22, 315);
         var at2 = Matrix4x4.CreateTranslation(-430, 30, 350);
         var negativeZero = BitConverter.Int32BitsToSingle(unchecked((int)0x80000000));

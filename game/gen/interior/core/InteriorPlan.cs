@@ -12,7 +12,7 @@ public sealed record DormitoryPlanOptions
     public float PartitionThickness { get; init; } = 0.2f;
     public float SlabThickness { get; init; } = 0.15f;
     public float DoorClearWidth { get; init; } = 1.1f;
-    public float DoorHeight { get; init; } = 2.1f;
+    public float DoorHeight { get; init; } = WalkRules.DefaultDoorHeight;
     public float StairFlightWidth { get; init; } = 1.45f;
     public float StairWellWidth { get; init; } = 0.2f;
     public float StairLandingDepth { get; init; } = 1.5f;

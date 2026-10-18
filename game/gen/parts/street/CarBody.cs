@@ -55,8 +55,8 @@ internal static class CarBody
         for (var s = ends; s >= 0; s--)
         {
             var theta = 0.5 * Math.PI * s / ends;
-            stations.Add(new(zN + shape.Nose.Along * (1f - (float)DetMath.Sin(theta)), 1f - (float)DetMath.Cos(theta), -1, false));
-            stations.Add(new(zT - shape.Tail.Along * (1f - (float)DetMath.Sin(theta)), 1f - (float)DetMath.Cos(theta), 1, false));
+            stations.Add(new(zN + shape.Nose.Along * (1f - (float)Math.Sin(theta)), 1f - (float)Math.Cos(theta), -1, false));
+            stations.Add(new(zT - shape.Tail.Along * (1f - (float)Math.Sin(theta)), 1f - (float)Math.Cos(theta), 1, false));
         }
         if (!far)
             foreach (var a in axles)
@@ -64,7 +64,7 @@ internal static class CarBody
                 stations.Add(new(a - ra - S.ArchFoot, 0, 0, true));
                 stations.Add(new(a + ra + S.ArchFoot, 0, 0, true));
                 for (var k = 0; k <= arc; k++)
-                    stations.Add(new(a - ra * (float)DetMath.Cos(Math.PI * k / arc), 0, 0, k == 0 || k == arc));
+                    stations.Add(new(a - ra * (float)Math.Cos(Math.PI * k / arc), 0, 0, k == 0 || k == arc));
             }
         stations.Add(new(zCowl, 0, 0, true));
         stations.Add(new(zRear, 0, 0, true));

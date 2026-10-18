@@ -55,8 +55,6 @@ public static class WaterfrontTune
     // ---- Collision (SYS-WALK; MAP-QSH-ADDITIONS WP-28 行) ----
     /// <summary>Deck ramps are cut every 2 m along the bridge; each is a sloped box this thick.</summary>
     public const float RampStep = 2.0f, RampThick = 0.3f;
-    /// <summary>Railing barrier top above the walking surface: max(visual 1.05, 1.5).</summary>
-    public const float BarrierTop = 1.5f;
     public const FootMat CarriageFoot = FootMat.Asphalt, WalkFoot = FootMat.StonePaving, RailFoot = FootMat.Metal, StoneFoot = FootMat.StonePaving;
 
     // ---- Colours (palette names only; MAP-QSH-ADDITIONS 第 2 条) ----

@@ -200,7 +200,7 @@ internal static partial class TerrainCompiler
             throw new WorldDataException(file, op.Id, "Terrain shape radius cannot be represented in world coordinates.");
         if (1.5 * Math.Abs(amplitude) / Math.Min(radii.X, radii.Y) > 0.5)
             throw new WorldDataException(file, op.Id, "Mound/basin profile exceeds the 1:2 soil-grade limit before composition.");
-        var c = DetMath.Cos(yaw); var s = DetMath.Sin(yaw);
+        var c = Math.Cos(yaw); var s = Math.Sin(yaw);
         var ex = Math.Sqrt(radii.X * (double)radii.X * c * c + radii.Y * (double)radii.Y * s * s);
         var ez = Math.Sqrt(radii.X * (double)radii.X * s * s + radii.Y * (double)radii.Y * c * c);
         var bounds = new MapRect(new((float)(center.X - ex), (float)(center.Y - ez)), new((float)(center.X + ex), (float)(center.Y + ez)));

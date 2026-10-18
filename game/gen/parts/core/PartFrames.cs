@@ -1,9 +1,8 @@
 using System.Numerics;
-using Campus.Contracts;
 
 namespace Campus.Gen.Parts.Core;
 
-/// <summary>Rigid row-vector transforms written as scalar arithmetic so bakes stay bitwise stable (D-165).</summary>
+/// <summary>Rigid row-vector transforms for part placement.</summary>
 public static class Xf
 {
     public static readonly Matrix4x4 Identity = Matrix4x4.Identity;
@@ -16,8 +15,8 @@ public static class Xf
 
     public static Matrix4x4 Move(float x, float y, float z) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1);
     public static Matrix4x4 Move(Vector3 v) => Move(v.X, v.Y, v.Z);
-    public static Matrix4x4 RotX(float degrees) => DetMath.RotationX(degrees * (float.Pi / 180f));
-    public static Matrix4x4 RotY(float degrees) => DetMath.RotationY(degrees * (float.Pi / 180f));
+    public static Matrix4x4 RotX(float degrees) => Matrix4x4.CreateRotationX(degrees * (float.Pi / 180f));
+    public static Matrix4x4 RotY(float degrees) => Matrix4x4.CreateRotationY(degrees * (float.Pi / 180f));
 
     /// <summary>Apply a first, then b.</summary>
     public static Matrix4x4 Then(this Matrix4x4 a, Matrix4x4 b) => new(

@@ -38,7 +38,7 @@ internal static class BridgeColliders
             var u = (inner + outer) * 0.5f;
             var half = Math.Abs(outer - inner) * 0.5f;
             var a = plan.P(plan.StartS(u), u); var b = plan.P(plan.EndS(u), u);
-            var wall = new WallCollider(a, b, half, plan.WalkY - 0.3f, plan.WalkY + Math.Max(T.BarrierTop, T.HeadTop), SurfaceTag.Barrier) { Foot = T.RailFoot };
+            var wall = new WallCollider(a, b, half, plan.WalkY - 0.3f, plan.WalkY + Math.Max(WalkRules.BarrierHeight, T.HeadTop), SurfaceTag.Barrier) { Foot = T.RailFoot };
             yield return ((a + b) * 0.5f, wall);
         }
     }

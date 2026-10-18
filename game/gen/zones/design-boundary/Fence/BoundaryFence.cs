@@ -145,7 +145,7 @@ public static class BoundaryFence
             if (Vector2.Distance(p, q) < 0.05f) continue;
             var lo = MathF.Min(c.Ground(p), c.Ground(q));
             var hi = MathF.Max(c.Ground(p), c.Ground(q));
-            c.Wall(p, q, F.ColliderHalf, lo - 0.5f, hi + F.ColliderTop, SurfaceTag.Boundary, FootMat.Metal);
+            c.Wall(p, q, F.ColliderHalf, lo - 0.5f, hi + WalkRules.BoundaryHeight, SurfaceTag.Boundary, FootMat.Metal);
         }
         foreach (var hedge in run.Hedges)
             for (var i = 0; i + 1 < hedge.Count; i++)
@@ -154,7 +154,7 @@ public static class BoundaryFence
                 if (Vector2.Distance(p, q) < 0.05f) continue;
                 var lo = MathF.Min(c.Ground(p), c.Ground(q));
                 var hi = MathF.Max(c.Ground(p), c.Ground(q));
-                c.Wall(p, q, F.HedgeWidth * 0.5f, lo - 0.5f, hi + BoundaryTune.Gate.LowTop, SurfaceTag.Boundary, FootMat.Hedge);
+                c.Wall(p, q, F.HedgeWidth * 0.5f, lo - 0.5f, hi + WalkRules.BarrierHeight, SurfaceTag.Boundary, FootMat.Hedge);
             }
     }
 

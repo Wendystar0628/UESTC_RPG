@@ -45,7 +45,7 @@ public static class PoseMath
         if (!float.IsFinite(dist) || dist < 0) throw new ArgumentOutOfRangeException(nameof(dist));
         if (!float.IsFinite(azDeg) || !float.IsFinite(elDeg)) throw new ArgumentOutOfRangeException(nameof(azDeg));
         float az = azDeg * (float.Pi / 180f), el = elDeg * (float.Pi / 180f);
-        var forward = new Vector3(DetMath.Sin(az) * DetMath.Cos(el), -DetMath.Sin(el), -DetMath.Cos(az) * DetMath.Cos(el));
+        var forward = new Vector3(MathF.Sin(az) * MathF.Cos(el), -MathF.Sin(el), -MathF.Cos(az) * MathF.Cos(el));
         return new(target - forward * dist, azDeg, -elDeg);
     }
 }

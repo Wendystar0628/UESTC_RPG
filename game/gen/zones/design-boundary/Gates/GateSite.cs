@@ -263,27 +263,27 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : BoundarySite
         // Left pier, and the L that closes the carriageway: the lane line behind the arm (the gate's invisible top-up to
         // 2.2 m) and a short return from the pier's back to that line.
         c.Box(g.At(g.LeftPierX, y + G.PierHeight * 0.5f, G.PierZ), new(pierHalf, G.PierHeight * 0.5f, pierHalf), SurfaceTag.Boundary, FootMat.StonePaving);
-        c.Box(g.At((g.LeftPierX - pierHalf + g.Carriage) * 0.5f, y + G.LaneTop * 0.5f, G.BarrierZ), new((g.Carriage - g.LeftPierX + pierHalf) * 0.5f + 0.05f, G.LaneTop * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
-        c.Wall(g.P(g.LeftPierX, G.PierZ), g.P(g.LeftPierX, G.BarrierZ), 0.2f, y - 0.5f, y + G.LaneTop, SurfaceTag.Boundary, FootMat.StonePaving);
+        c.Box(g.At((g.LeftPierX - pierHalf + g.Carriage) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, G.BarrierZ), new((g.Carriage - g.LeftPierX + pierHalf) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
+        c.Wall(g.P(g.LeftPierX, G.PierZ), g.P(g.LeftPierX, G.BarrierZ), 0.2f, y - 0.5f, y + WalkRules.BoundaryHeight, SurfaceTag.Boundary, FootMat.StonePaving);
         // Island with its pier and barrier cabinet.
-        c.Box(g.At(g.IslandX, y + G.LaneTop * 0.5f, -G.IslandLength * 0.5f), new(G.IslandWidth * 0.5f, G.LaneTop * 0.5f, G.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
+        c.Box(g.At(g.IslandX, y + WalkRules.BoundaryHeight * 0.5f, -G.IslandLength * 0.5f), new(G.IslandWidth * 0.5f, WalkRules.BoundaryHeight * 0.5f, G.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
         // Turnstile banks, closed: one box across each bank reaching 1.5 m.
         Bank(c, g, g.BankStart, y);
         if (g.HasWicket)
         {
             Bank(c, g, g.WicketFar, y);
             var half = F.EndPillarSize * 0.5f;
-            c.Box(g.At(g.WicketPierX, y + F.ColliderTop * 0.5f, -F.Inset), new(half, F.ColliderTop * 0.5f, half), SurfaceTag.Boundary, FootMat.StonePaving);
+            c.Box(g.At(g.WicketPierX, y + WalkRules.BoundaryHeight * 0.5f, -F.Inset), new(half, WalkRules.BoundaryHeight * 0.5f, half), SurfaceTag.Boundary, FootMat.StonePaving);
         }
         // Guard house: its four walls close the line.
         Vector2[] ring = [g.P(g.HouseStart, G.HouseFront - G.HouseDepth), g.P(g.HouseEnd, G.HouseFront - G.HouseDepth), g.P(g.HouseEnd, G.HouseFront), g.P(g.HouseStart, G.HouseFront)];
         for (var i = 0; i < 4; i++)
             c.Wall(ring[i], ring[(i + 1) % 4], 0.12f, y - 0.5f, y + G.HouseHeight + G.HouseRoof, SurfaceTag.Boundary, FootMat.StonePaving);
-        c.Wall(g.P(g.BankEnd - 0.05f, G.TurnstileZ), g.P(g.HouseStart + 0.1f, G.TurnstileZ), 0.12f, y - 0.5f, y + G.LowTop, SurfaceTag.Boundary, FootMat.Metal);
+        c.Wall(g.P(g.BankEnd - 0.05f, G.TurnstileZ), g.P(g.HouseStart + 0.1f, G.TurnstileZ), 0.12f, y - 0.5f, y + WalkRules.BarrierHeight, SurfaceTag.Boundary, FootMat.Metal);
         if (Spec.Locker is { } locker)
             c.Box(g.At(locker.X, c.Ground(g.P(locker.X, locker.Y)) + LockerSize.Height * 0.5f, locker.Y), new(LockerSize.Width * 0.5f, LockerSize.Height * 0.5f, LockerSize.Depth * 0.5f), SurfaceTag.Barrier, FootMat.Metal);
     }
 
     private static void Bank(SiteColliders c, GateLayout g, float bankStart, float y) =>
-        c.Box(g.At(bankStart + GateLayout.BankWidth * 0.5f, y + G.LowTop * 0.5f, G.TurnstileZ), new(GateLayout.BankWidth * 0.5f + 0.05f, G.LowTop * 0.5f, G.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
+        c.Box(g.At(bankStart + GateLayout.BankWidth * 0.5f, y + WalkRules.BarrierHeight * 0.5f, G.TurnstileZ), new(GateLayout.BankWidth * 0.5f + 0.05f, WalkRules.BarrierHeight * 0.5f, G.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
 }

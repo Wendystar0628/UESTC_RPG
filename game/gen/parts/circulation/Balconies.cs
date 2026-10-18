@@ -21,7 +21,7 @@ public sealed class BalconyPart() : CirculationPart<BalconyParams>(new(400, 120)
     private protected override IReadOnlyList<Collider> Colliders(BalconyParams p)
     {
         float w = p.Width * 0.5f, d = p.Depth * 0.5f, floor = S.BalconySlab;
-        var top = floor + Math.Max(p.Height - floor, S.BarrierTop);
+        var top = floor + Math.Max(p.Height - floor, WalkRules.BarrierHeight);
         var foot = Foot(p.Foot, S.SlabFoot);
         var barrierFoot = p.Variation == 2 ? S.MetalFoot : foot;
         var at = Matrix4x4.Identity; at.M42 = floor * 0.5f;

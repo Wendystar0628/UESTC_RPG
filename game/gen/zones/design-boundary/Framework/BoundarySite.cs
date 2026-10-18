@@ -22,7 +22,7 @@ public abstract class BoundarySite
     /// <summary>Bearing in degrees of a plan direction (world x east, z south; 0 north, 90 east).</summary>
     public static float Bearing(System.Numerics.Vector2 direction)
     {
-        var degrees = DetMath.Atan2(direction.X, -direction.Y) * (180f / MathF.PI);
+        var degrees = MathF.Atan2(direction.X, -direction.Y) * (180f / MathF.PI);
         return degrees < 0 ? degrees + 360f : degrees;
     }
 
@@ -30,6 +30,6 @@ public abstract class BoundarySite
     public static System.Numerics.Vector2 Direction(float bearingDeg)
     {
         var a = bearingDeg * (MathF.PI / 180f);
-        return new(DetMath.Sin(a), -DetMath.Cos(a));
+        return new(MathF.Sin(a), -MathF.Cos(a));
     }
 }

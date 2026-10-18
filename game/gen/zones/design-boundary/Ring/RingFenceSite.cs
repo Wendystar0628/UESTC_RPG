@@ -50,14 +50,14 @@ public sealed class RingFenceSite : BoundarySite
                     {
                         var (a, d) = plan.Ends(o);
                         var y = MathF.Min(c.Ground(a), c.Ground(d));
-                        c.Wall(a, d, 0.15f, y - 0.5f, y + F.ColliderTop, SurfaceTag.Boundary, FootMat.Metal);
+                        c.Wall(a, d, 0.15f, y - 0.5f, y + WalkRules.BoundaryHeight, SurfaceTag.Boundary, FootMat.Metal);
                         break;
                     }
                 case OpeningKind.Grate:
                     {
                         var (a, d) = plan.Ends(o);
                         var (bank, bed) = Levels(c.Ground, a, d);
-                        c.Wall(a, d, 0.12f, bed - 0.5f, bank + R.Top, SurfaceTag.Boundary, FootMat.Metal);
+                        c.Wall(a, d, 0.12f, bed - 0.5f, bank + WalkRules.BarrierHeight, SurfaceTag.Boundary, FootMat.Metal);
                         break;
                     }
                 default: throw new InvalidOperationException($"Unknown opening kind {o.Kind}.");

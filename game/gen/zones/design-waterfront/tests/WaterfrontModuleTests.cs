@@ -101,7 +101,7 @@ public sealed class WaterfrontModuleTests
             Require(ramps.All(r => Vector3.Distance(r.P0, r.P3) <= T.RampStep + 0.01f), "ramps are cut every 2 m");
             Require(ramps.All(r => MathF.Abs(r.P0.Y - plan.RoadY) < 1e-4f || MathF.Abs(r.P0.Y - plan.WalkY) < 1e-4f), "ramp tops at the carriageway or walking level");
             var walls = colliders.OfType<WallCollider>().Where(w => Inside(plan, (w.A + w.B) * 0.5f)).ToArray();
-            Require(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + 1.5f - 1e-4f && w.HalfT <= 0.3f), $"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk");
+            Require(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + WalkRules.BarrierHeight - 1e-4f && w.HalfT <= 0.3f), $"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk");
         }
         Require(colliders.OfType<BoxCollider>().Count() == 2, "each stone is one box");
     }

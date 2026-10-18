@@ -230,7 +230,7 @@ public sealed class SouthModuleTests
             var p = Vector2.Lerp(west, east, s) + inward;
             Require(boundary.Any(c => Covers(c, p)), $"gate line covered at {p}");
         }
-        Require(boundary.All(c => c is not BoxCollider box || box.Half.Y * 2 >= 1.5f), "boundary boxes reach 1.5 m");
+        Require(boundary.All(c => c is not BoxCollider box || box.Half.Y * 2 >= WalkRules.BarrierHeight), "boundary boxes reach 1.5 m");
     }
 
     [TestCase]
@@ -262,7 +262,7 @@ public sealed class SouthModuleTests
         Require(court.Kind.Value == "road" && Text(court, "roadType") == "pedestrian" && Text(walk, "roadType") == "footway", "plaza paving and a footway, drawn by WP-15");
         var door = world.Interiors.Get(new(Xuanbang.XuanbangSite.Feature))!.Entrances.Single(e => e.Id == "xb.clock");
         var yaw = door.YawDeg * MathF.PI / 180f;
-        var outward = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+        var outward = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var across = new Vector2(-outward.Y, outward.X);
         var centre = new Vector2(door.Center.X, door.Center.Z);
         var ring = ((PolygonGeometry)court.Geometry).Rings;
@@ -289,7 +289,7 @@ public sealed class SouthModuleTests
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
         // WP-13's kiosk (2 × 0.8 m) on the spot the plaza keeps for A01: on the paving, at least 3 m from every carriageway edge.
         var yaw = SouthTune.Plaza.KioskYaw * MathF.PI / 180f;
-        var face = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
+        var face = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var side = new Vector2(-face.Y, face.X);
         var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => SouthTune.Plaza.KioskSpot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
         Require(corners.All(p => PlanGeometry.Contains(ring, p)), "the kiosk stands on the plaza");
@@ -387,7 +387,7 @@ public sealed class SouthModuleTests
                 var p = f.P(u, -SouthTune.Lake.RailSetback);
                 var inOpening = openings.Any(o => u > o.U0 + 0.5f && u < o.U1 - 0.5f);
                 var nearOpening = openings.Any(o => u > o.U0 - 0.5f && u < o.U1 + 0.5f);
-                var guarded = barriers.Any(w => w.Y1 >= 1.5f && Covers(w, p, 1.0f));
+                var guarded = barriers.Any(w => w.Y1 >= WalkRules.BarrierHeight && Covers(w, p, 1.0f));
                 if (inOpening) Require(!guarded, $"the wade step at {p} is open");
                 else if (!nearOpening) Require(guarded, $"the bank at {p} is guarded");
             }
@@ -453,7 +453,7 @@ public sealed class SouthModuleTests
         // Astra moves it after the merge.
         var stadium = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
         var a = A06Yaw * MathF.PI / 180f;
-        var face = new Vector2(DetMath.Sin(a), -DetMath.Cos(a));
+        var face = new Vector2(MathF.Sin(a), -MathF.Cos(a));
         var side = new Vector2(-face.Y, face.X);
         var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => A06Spot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
         Require(corners.All(c => Framework.PlanMath.Inside(p.Decks[0], c)), "A06 stands on the deck");

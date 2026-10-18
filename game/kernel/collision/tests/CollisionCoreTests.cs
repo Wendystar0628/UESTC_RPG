@@ -62,9 +62,9 @@ public sealed class CollisionCoreTests
                 var point = route[index];
                 var stand = point.Stand!;
                 await LoadNearby(stand.Feet);
-                Require(collision.Ready(stand.Feet, WalkTuning.Radius), point.Id + " collision is not Ready.");
-                var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkTuning.StandingHeight)
-                    ?? admission.Nearby(context.World.Spatial, collision, stand.Feet, WalkTuning.StandingHeight);
+                Require(collision.Ready(stand.Feet, WalkRules.Radius), point.Id + " collision is not Ready.");
+                var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight)
+                    ?? admission.Nearby(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight);
                 Require(landing is not null, point.Id + " has no legal raycast landing with cylinder clearance.");
                 var feet = landing!.Value;
                 character.GlobalPosition = feet.ToGodot();
@@ -78,7 +78,7 @@ public sealed class CollisionCoreTests
                 await MoveFor(.5f, N.Vector3.Zero, point.Id, start);
                 var finish = character.GlobalPosition.ToNumerics();
                 Require(character.IsOnFloor(), point.Id + " lost the floor after its short walk.");
-                Require(N.Vector2.Distance(new(start.X, start.Z), new(finish.X, finish.Z)) > WalkTuning.Radius,
+                Require(N.Vector2.Distance(new(start.X, start.Z), new(finish.X, finish.Z)) > WalkRules.Radius,
                     point.Id + " could not move away from its landing.");
                 GD.Print($"G15Core point={point.Id} authored={stand.Feet} landing={feet} finish={finish} resident={resident.Count}");
             }
@@ -126,7 +126,7 @@ public sealed class CollisionCoreTests
             {
                 await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
                 var feet = character.GlobalPosition.ToNumerics();
-                Require(collision.Ready(feet, WalkTuning.Radius), point + " left its Ready neighbourhood.");
+                Require(collision.Ready(feet, WalkRules.Radius), point + " left its Ready neighbourhood.");
                 var delta = (float)character.GetPhysicsProcessDeltaTime();
                 character.Velocity = new(horizontal.X, character.Velocity.Y - WalkTuning.Gravity * delta, horizontal.Z);
                 character.MoveAndSlide();
@@ -141,7 +141,7 @@ public sealed class CollisionCoreTests
         var character = new CharacterBody3D
         {
             CollisionLayer = 0, CollisionMask = CollisionWorld.WalkMask,
-            FloorMaxAngle = WalkTuning.FloorAngleDegrees * float.Pi / 180,
+            FloorMaxAngle = WalkRules.FloorAngleDegrees * float.Pi / 180,
             FloorSnapLength = WalkTuning.SnapLength, FloorConstantSpeed = true,
             FloorStopOnSlope = true, FloorBlockOnWall = true,
             SafeMargin = WalkTuning.SafeMargin, MaxSlides = 4,
@@ -149,8 +149,8 @@ public sealed class CollisionCoreTests
         };
         character.AddChild(new CollisionShape3D
         {
-            Shape = new CylinderShape3D { Radius = WalkTuning.Radius, Height = WalkTuning.StandingHeight },
-            Position = Vector3.Up * (WalkTuning.StandingHeight / 2)
+            Shape = new CylinderShape3D { Radius = WalkRules.Radius, Height = WalkRules.StandingHeight },
+            Position = Vector3.Up * (WalkRules.StandingHeight / 2)
         });
         return character;
     }

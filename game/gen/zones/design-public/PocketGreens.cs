@@ -24,7 +24,7 @@ public sealed record RoundPit(FeatureId Id, Vector2 Centre, float Radius);
 /// <summary>
 /// WP-29's pocket greens read from the world model: every <c>design:public-</c> curved bench and site-built tree pit.
 /// The paving under them is a pedestrian polygon in the same overlay, paved by WP-15 like every plaza; the tree is WP-23's.
-/// Pure .NET: reads the world model and terrain only, angles through DetMath.
+/// Pure .NET: reads the world model and terrain only, angles through MathF.
 /// </summary>
 public static class PocketGreens
 {
@@ -74,7 +74,7 @@ public static class PocketGreens
     public static Vector2 Dir(float bearing)
     {
         var a = bearing * (MathF.PI / 180f);
-        return new(DetMath.Sin(a), -DetMath.Cos(a));
+        return new(MathF.Sin(a), -MathF.Cos(a));
     }
 
     /// <summary>Points on the arc from <paramref name="from"/> to <paramref name="to"/>, segments + 1 of them.</summary>
@@ -92,7 +92,7 @@ public static class PocketGreens
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            points[i] = new(c.X + r * DetMath.Cos(a), c.Y + r * DetMath.Sin(a));
+            points[i] = new(c.X + r * MathF.Cos(a), c.Y + r * MathF.Sin(a));
         }
         return points;
     }
@@ -169,13 +169,13 @@ public static class PocketGreens
         var deck = Paving(bench, ground);
         var n = B.ColliderBoxes;
         var step = (bench.To - bench.From) / n;
-        var half = bench.Radius * DetMath.Sin(step * 0.5f * (MathF.PI / 180f));
+        var half = bench.Radius * MathF.Sin(step * 0.5f * (MathF.PI / 180f));
         var boxes = new BoxCollider[n];
         for (var i = 0; i < n; i++)
         {
             var mid = bench.From + step * (i + 0.5f);
             var o = Dir(mid);
-            var centre = bench.Centre + o * (bench.Radius * DetMath.Cos(step * 0.5f * (MathF.PI / 180f)));
+            var centre = bench.Centre + o * (bench.Radius * MathF.Cos(step * 0.5f * (MathF.PI / 180f)));
             boxes[i] = new BoxCollider(Facing(centre, o, deck + B.SeatTop * 0.5f), new(half, B.SeatTop * 0.5f, B.HalfDepth), SurfaceTag.Prop) { Foot = FootMat.WoodDeck };
         }
         return boxes;

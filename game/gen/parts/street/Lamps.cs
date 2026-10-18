@@ -164,7 +164,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
     private static (Vector3 Joint, Vector3 Tip, Matrix4x4 Head, float FrontZ) Arm(LampParams p)
     {
         var rise = S.ArmRiseDeg * (float.Pi / 180f);
-        var c = (float)DetMath.Cos(rise); var s = (float)DetMath.Sin(rise);
+        var c = MathF.Cos(rise); var s = MathF.Sin(rise);
         var reach = Math.Max(p.Width - S.ArmHeadLength, S.ArmMinReach);
         var half = S.ArmHeadLength * 0.5f;
         var centreZ = -(reach + half * c);

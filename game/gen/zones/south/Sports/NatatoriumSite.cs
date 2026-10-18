@@ -34,7 +34,7 @@ public sealed class NatatoriumSite : SouthSite
     internal sealed record Plan(PlanFrame Frame, float A, float B, int Bays)
     {
         /// <summary>Plan point at parameter t (radians) on the ellipse scaled by rho.</summary>
-        public Vector2 At(float t, float rho) => Frame.P(A * rho * DetMath.Cos(t), B * rho * DetMath.Sin(t));
+        public Vector2 At(float t, float rho) => Frame.P(A * rho * MathF.Cos(t), B * rho * MathF.Sin(t));
 
         /// <summary>Facet i of the glass drum: frame on the chord's midpoint (+Z outward), and the chord's length.</summary>
         public (PlanFrame Frame, float Width) Facet(int i)
@@ -70,13 +70,13 @@ public sealed class NatatoriumSite : SouthSite
         }
         sxx /= area; szz /= area; sxz /= area;
         double mean = (sxx + szz) * 0.5, spread = Math.Sqrt((sxx - szz) * (sxx - szz) * 0.25 + sxz * sxz);
-        var theta = 0.5f * DetMath.Atan2((float)(2 * sxz), (float)(sxx - szz));
+        var theta = 0.5f * MathF.Atan2((float)(2 * sxz), (float)(sxx - szz));
         float a = 2f * (float)Math.Sqrt(mean + spread), b = 2f * (float)Math.Sqrt(mean - spread);
         // Keep the footprint's area: π·a·b = |area|.
         var scale = MathF.Sqrt((float)Math.Abs(area) / (MathF.PI * a * b));
         a *= scale; b *= scale;
         var drum = MathF.PI * (3 * (a + b) - MathF.Sqrt((3 * a + b) * (a + 3 * b))) * S.PoolDrum;
-        return new(new(centre, new(DetMath.Cos(theta), DetMath.Sin(theta))), a, b, (int)MathF.Round(drum / S.PoolBay));
+        return new(new(centre, new(MathF.Cos(theta), MathF.Sin(theta))), a, b, (int)MathF.Round(drum / S.PoolBay));
     }
 
     internal static GlazedOpening[] Openings(Plan p, float y)
@@ -167,7 +167,7 @@ public sealed class NatatoriumSite : SouthSite
         for (var k = 0; k < count; k++)
         {
             var t = 2f * MathF.PI * (k + 0.5f) / count;
-            float c = DetMath.Cos(t), s = DetMath.Sin(t);
+            float c = MathF.Cos(t), s = MathF.Sin(t);
             // The ellipse's outward plan normal at t (gradient of x²/A² + z²/B²), in world.
             var g = p.Frame.U * (c / p.A) + p.Frame.W * (s / p.B);
             var outward = g / MathF.Sqrt(g.X * g.X + g.Y * g.Y);

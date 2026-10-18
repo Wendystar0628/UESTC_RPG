@@ -212,8 +212,8 @@ public sealed class QuietGarden : ICorePiece
     {
         var c = Pavilion;
         var y = Y(c);
-        var turn = DetMath.Atan2(Along.Y, Along.X);
-        Vector2 Corner(int k, float r) { var a = turn + Shapes.Tau * k / 6f; return c + new Vector2(DetMath.Cos(a), DetMath.Sin(a)) * r; }
+        var turn = MathF.Atan2(Along.Y, Along.X);
+        Vector2 Corner(int k, float r) { var a = turn + Shapes.Tau * k / 6f; return c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r; }
         var granite = S.Stone(S.ColonnadeGranite);
         var timber = S.Wall(S.Timber);
         float rp = S.PavilionRadius + S.PavilionPlinthOut;
@@ -240,7 +240,7 @@ public sealed class QuietGarden : ICorePiece
         {
             var p = Corner(k, S.PavilionRadius);
             float h = S.PavilionPost * 0.5f;
-            Prism(mesh, timber, i => p + new Vector2(DetMath.Cos(turn + Shapes.Tau * i / 4f + 0.785398f), DetMath.Sin(turn + Shapes.Tau * i / 4f + 0.785398f)) * h * 1.414f,
+            Prism(mesh, timber, i => p + new Vector2(MathF.Cos(turn + Shapes.Tau * i / 4f + 0.785398f), MathF.Sin(turn + Shapes.Tau * i / 4f + 0.785398f)) * h * 1.414f,
                 1f, 1f, floor - 0.02f, eave - S.PavilionFascia, 0f, sides: 4);
             if (k == gate || lod > LodLevel.L1) continue;
             // Bench rail between this post and the next: a seat board on two short legs.

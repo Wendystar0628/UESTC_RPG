@@ -27,7 +27,7 @@ public sealed record WindowParams(float Width = 1.8f, float Height = 1.5f, float
     [property: Param(Min = 1, Max = 12)] int Columns = 2,
     [property: Param(Min = 1, Max = 8)] int Rows = 1)
     : BoxPartParams(Width, Height, Depth);
-public sealed record DoorParams(float Width = 0.9f, float Height = 2.1f, float Depth = 0.12f,
+public sealed record DoorParams(float Width = 0.9f, float Height = WalkRules.DefaultDoorHeight, float Depth = 0.12f,
     [property: Param(Min = 0, Max = 120)] float OpenAngleDeg = 0f,
     [property: Param(Min = 1, Max = 4)] int Leaves = 1)
     : BoxPartParams(Width, Height, Depth);

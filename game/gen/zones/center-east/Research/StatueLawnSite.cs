@@ -151,8 +151,8 @@ public sealed class StatueLawnSite : CenterEastSite
         float Coat(float a, float h)
         {
             var hem = Math.Clamp((0.95f * s - h) / (0.45f * s), 0f, 1f);
-            var folds = 0.08f * hem * (0.6f * DetMath.Cos(6f * a) + 0.4f * DetMath.Cos(10f * a + 1.3f));
-            var front = MathF.Max(0f, DetMath.Sin(a));
+            var folds = 0.08f * hem * (0.6f * MathF.Cos(6f * a) + 0.4f * MathF.Cos(10f * a + 1.3f));
+            var front = MathF.Max(0f, MathF.Sin(a));
             front *= front; front *= front; front *= front;
             var open = 0.5f * Math.Clamp((0.98f * s - h) / (0.4f * s), 0f, 1f) * front;
             return folds - open;

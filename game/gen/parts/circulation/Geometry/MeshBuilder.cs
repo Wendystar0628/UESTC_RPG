@@ -85,11 +85,11 @@ internal sealed class MeshBuilder
         for (var i = 1; i < rings; i++)
         {
             var theta = Math.PI * i / rings;
-            var y = (float)DetMath.Cos(theta); var r = (float)DetMath.Sin(theta);
+            var y = (float)Math.Cos(theta); var r = (float)Math.Sin(theta);
             for (var j = 0; j < segments; j++)
             {
                 var phi = 2 * Math.PI * j / segments;
-                var unit = new Vector3(r * (float)DetMath.Cos(phi), y, r * (float)DetMath.Sin(phi));
+                var unit = new Vector3(r * (float)Math.Cos(phi), y, r * (float)Math.Sin(phi));
                 ring[i - 1, j] = Vertex(layer, frame, At(unit), Normal(unit), new(j / (float)segments, i / (float)rings));
             }
         }

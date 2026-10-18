@@ -246,7 +246,7 @@ public sealed class LibraryShellTests
     public void SkylightSpansTheAtrium()
     {
         var plan = Shell(RealWorld()).Plan;
-        var across = 2 * plan.SkylightRadius * DetMath.Cos(Shapes.Tau / 16f);
+        var across = 2 * plan.SkylightRadius * MathF.Cos(Shapes.Tau / 16f);
         Require(MathF.Abs(across - 34.5f) < 0.01f, $"skylight across flats {across}");
         Require(LibraryRoof.SkylightApexY(plan) > plan.RoofY + 3f, "the cone rises above the curb");
         var north = LibraryRoof.FaceDirection(plan, LibraryRoof.NorthFace(plan));

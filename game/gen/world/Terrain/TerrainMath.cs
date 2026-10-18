@@ -71,7 +71,7 @@ public static class TerrainMath
         RequireFinite(x, nameof(x)); RequireFinite(z, nameof(z)); RequireFinite(yawRadians, nameof(yawRadians)); RequireFinite(amplitude, nameof(amplitude));
         if (!float.IsFinite(center.X) || !float.IsFinite(center.Y) || !float.IsFinite(radii.X) || !float.IsFinite(radii.Y) || radii.X <= 0 || radii.Y <= 0)
             throw new ArgumentException("Ellipse centre and positive radii must be finite.");
-        var c = DetMath.Cos(yawRadians); var s = DetMath.Sin(yawRadians);
+        var c = Math.Cos(yawRadians); var s = Math.Sin(yawRadians);
         if (!double.IsFinite(c) || !double.IsFinite(s)) throw new ArgumentOutOfRangeException(nameof(yawRadians));
         var dx = x - center.X; var dz = z - center.Y;
         var u = (c * dx + s * dz) / radii.X;

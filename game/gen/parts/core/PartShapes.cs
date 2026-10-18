@@ -108,7 +108,7 @@ public static class PartShapes
         for (var i = 0; i < segments; i++)
         {
             var angle = 2.0 * Math.PI * i / segments;
-            var c = (float)DetMath.Cos(angle); var s = (float)DetMath.Sin(angle);
+            var c = (float)Math.Cos(angle); var s = (float)Math.Sin(angle);
             points[i] = new(centre.X + radius * c, centre.Y + radius * s);
             normals[i] = LatheBand.Normal2(c, s);
         }
@@ -176,7 +176,7 @@ public static class PartShapes
         for (var i = 0; i < segments; i++)
         {
             var angle = 2.0 * Math.PI * i / segments;
-            cos[i] = (float)DetMath.Cos(angle); sin[i] = (float)DetMath.Sin(angle);
+            cos[i] = (float)Math.Cos(angle); sin[i] = (float)Math.Sin(angle);
         }
         var writer = new MeshWriter(material);
         foreach (var band in bands)
@@ -223,8 +223,8 @@ public static class PartShapes
         {
             var a0 = (fromDeg + (toDeg - fromDeg) * k / steps) * Math.PI / 180.0;
             var a1 = (fromDeg + (toDeg - fromDeg) * (k + 1) / steps) * Math.PI / 180.0;
-            var c0 = (float)DetMath.Cos(a0); var s0 = (float)DetMath.Sin(a0);
-            var c1 = (float)DetMath.Cos(a1); var s1 = (float)DetMath.Sin(a1);
+            var c0 = (float)Math.Cos(a0); var s0 = (float)Math.Sin(a0);
+            var c1 = (float)Math.Cos(a1); var s1 = (float)Math.Sin(a1);
             // Snap the poles onto the axis exactly so the fan closes.
             var r0 = Math.Abs(c0) < 1e-6f ? 0 : radius * c0; var r1 = Math.Abs(c1) < 1e-6f ? 0 : radius * c1;
             yield return new(r0, centreY + radius * squash * s0, r1, centreY + radius * squash * s1,

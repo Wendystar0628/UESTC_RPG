@@ -160,7 +160,7 @@ public sealed class ForestParkSite : SouthSite
         Vector2 At(int k)
         {
             var bearing = (-60f + 120f * k / n) * MathF.PI / 180f;
-            return P.HillTop + new Vector2(DetMath.Sin(bearing), -DetMath.Cos(bearing)) * P.SeatWallRadius;
+            return P.HillTop + new Vector2(MathF.Sin(bearing), -MathF.Cos(bearing)) * P.SeatWallRadius;
         }
         for (var k = 0; k < n; k++) yield return (At(k), At(k + 1));
     }

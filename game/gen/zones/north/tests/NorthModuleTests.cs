@@ -93,7 +93,7 @@ public sealed class NorthModuleTests
                 // The lane under the barrier arm is closed either way, and nothing crosses the gate line above 0.5 m wide.
                 Require(colliders.Any(c => Covers(c, f.P(0, 0), 0f)), $"{cluster.Name} vehicle lane is barred");
                 var tops = colliders.OfType<BoxCollider>().Where(c => Covers(c, f.P(cabinets[0], 0), 0f));
-                Require(tops.All(b => b.At.M42 + b.Half.Y >= NorthTune.Gate.ColliderTop - 0.01f), $"{cluster.Name} cabinets reach 1.5 m");
+                Require(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f), $"{cluster.Name} cabinets reach 1.5 m");
             }
         }
     }
@@ -313,7 +313,7 @@ public sealed class NorthModuleTests
         Require(Vector2.Distance(walls[0].A, joint) < 0.01f, "the first collider starts on the plaza's end post");
         for (var k = 0; k + 1 < walls.Length; k++)
             Require(Vector2.Distance(walls[k].B, walls[k + 1].A) < 0.01f, $"colliders {k} and {k + 1} meet");
-        Require(walls.All(c => c.Y1 - c.Y0 >= NorthTune.Bank.ColliderTop), "the colliders reach 1.5 m");
+        Require(walls.All(c => c.Y1 - c.Y0 >= WalkRules.BarrierHeight), "the colliders reach 1.5 m");
         var rings = ctx.World.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
         foreach (var p in Samples([Canal.CanalRailSite.Post(0), Canal.CanalRailSite.Post(panels)]))
         {

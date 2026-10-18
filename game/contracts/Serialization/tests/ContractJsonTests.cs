@@ -10,7 +10,7 @@ public sealed class ContractJsonTests
     [TestCase]
     public void SceneTransformsAndIdentifiersKeepTheirWireShapes()
     {
-        var matrix = DetMath.RotationY(.7f) * Matrix4x4.CreateTranslation(10, 2, -3);
+        var matrix = Matrix4x4.CreateRotationY(.7f) * Matrix4x4.CreateTranslation(10, 2, -3);
         var text = JsonSerializer.Serialize(matrix, ContractJson.Options);
         if (!text.StartsWith('[') || JsonSerializer.Deserialize<Matrix4x4>(text, ContractJson.Options) != matrix)
             throw new InvalidOperationException("Transform must round-trip as a row-major 16-value array.");

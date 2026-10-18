@@ -77,15 +77,15 @@ public partial class WalkController
 
     private bool RegionAllowsMotion(Vector3 motion)
     {
-        int count = Math.Max(1, (int)MathF.Ceiling(motion.Length() / WalkTuning.Radius));
+        int count = Math.Max(1, (int)MathF.Ceiling(motion.Length() / WalkRules.Radius));
         for (int i = 1; i <= count; i++)
         {
             var center = _feet + (motion * ((float)i / count)).ToNumerics();
             if (!RegionAllowsPoint(center)
-                || !RegionAllowsPoint(center + N.Vector3.UnitX * WalkTuning.Radius)
-                || !RegionAllowsPoint(center - N.Vector3.UnitX * WalkTuning.Radius)
-                || !RegionAllowsPoint(center + N.Vector3.UnitZ * WalkTuning.Radius)
-                || !RegionAllowsPoint(center - N.Vector3.UnitZ * WalkTuning.Radius)) return false;
+                || !RegionAllowsPoint(center + N.Vector3.UnitX * WalkRules.Radius)
+                || !RegionAllowsPoint(center - N.Vector3.UnitX * WalkRules.Radius)
+                || !RegionAllowsPoint(center + N.Vector3.UnitZ * WalkRules.Radius)
+                || !RegionAllowsPoint(center - N.Vector3.UnitZ * WalkRules.Radius)) return false;
         }
         return true;
     }
@@ -95,9 +95,9 @@ public partial class WalkController
         var spatial = _map!.World.Spatial;
         var classification = spatial.WalkClassAt(point.X, point.Z);
         if (classification != WalkClass.Water) return WalkMath.CanWalk(classification);
-        if (!_collision!.Ready(point, WalkTuning.Radius)) return false;
+        if (!_collision!.Ready(point, WalkRules.Radius)) return false;
         // A dry bridge is allowed only when the native floor, rather than airborne feet, is above water.
-        var support = _collision.SupportY(point.X, point.Z, point.Y + WalkTuning.StepHeight);
+        var support = _collision.SupportY(point.X, point.Z, point.Y + WalkRules.StepHeight);
         return support is { } hit && float.IsFinite(hit.Y)
             && !WalkSafetyQueries.InWater(spatial, point with { Y = hit.Y });
     }

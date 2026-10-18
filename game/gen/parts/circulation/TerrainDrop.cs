@@ -64,7 +64,7 @@ public static class TerrainDrop
             return new(DropMethod.SlopedCurb, rise, run, run <= available + 1e-3f) { ClearWidth = clear, Grade = S.RampMaxGrade };
         }
         if (rise > 4f) return new(DropMethod.Terraces, rise, 0, false) { ClearWidth = clear };
-        if (rise <= S.FlightMaxRise && available >= rise / S.RampMaxGrade) return RampPlan(rise, available, clear);
+        if (rise <= WalkRules.OutdoorFlightMaxRise && available >= rise / S.RampMaxGrade) return RampPlan(rise, available, clear);
         return StepsPlan(rise, available, clear);
     }
 
@@ -111,8 +111,8 @@ public static class TerrainDrop
         var n = RiserCount(rise);
         var r = rise / n; var t = TreadFor(r);
         // Enough flights that the tallest one (risers split as evenly as possible) still rises ≤ 1.5 m.
-        var flights = Math.Max(1, (int)Math.Ceiling(rise / S.FlightMaxRise - 1e-4));
-        while ((n + flights - 1) / flights * r > S.FlightMaxRise + 1e-4f) flights++;
+        var flights = Math.Max(1, (int)Math.Ceiling(rise / WalkRules.OutdoorFlightMaxRise - 1e-4));
+        while ((n + flights - 1) / flights * r > WalkRules.OutdoorFlightMaxRise + 1e-4f) flights++;
         var landing = Math.Max(S.LandingMin, clear);
         var pad = Math.Max(0, landing - t);
         var width = clear + 2 * S.CheekWidth;
@@ -135,7 +135,7 @@ public static class TerrainDrop
             ClearWidth = clear,
             Parts = parts,
             Landings = landings,
-            ParallelRampNeeded = rise > S.FlightMaxRise,
+            ParallelRampNeeded = rise > WalkRules.OutdoorFlightMaxRise,
         };
     }
 

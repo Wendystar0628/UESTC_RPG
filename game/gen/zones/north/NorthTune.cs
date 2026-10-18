@@ -196,7 +196,7 @@ public static class NorthTune
         /// <summary>Clear passage width: 1.1 m on the open route (WLD-INTERIORS), 1.0 m elsewhere.</summary>
         public const float Passage = 1.0f, OpenPassage = 1.1f;
         /// <summary>Cabinet: about 1.05 m tall; the collision top still goes to 1.5 m (§8: otherwise it can be jumped).</summary>
-        public const float CabinetWidth = 0.24f, CabinetDepth = 1.4f, CabinetHeight = 1.05f, ColliderTop = 1.5f;
+        public const float CabinetWidth = 0.24f, CabinetDepth = 1.4f, CabinetHeight = 1.05f;
         public const float WingHeight = 0.75f, WingBase = 0.3f, Indicator = 0.13f;
         public const float BarrierCabinet = 0.36f, BarrierHeight = 1.05f, ArmY = 0.95f, ArmDepth = 0.07f, ArmHeight = 0.1f;
         /// <summary>Guard house (值班室): small flat-roofed room straddling the fence line, window toward the turnstiles.</summary>
@@ -281,7 +281,7 @@ public static class NorthTune
         /// <summary>Same as the plaza: the railing stands on a 0.15 m paved walk; with the real bank top this follows the ground.</summary>
         public const float PavingTop = 0.15f;
         public const float Height = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f, BarSize = 0.02f, BarPitch = 0.12f;
-        public const float ColliderTop = 1.5f, ColliderHalf = 0.08f;
+        public const float ColliderHalf = 0.08f;
     }
 
     /// <summary>

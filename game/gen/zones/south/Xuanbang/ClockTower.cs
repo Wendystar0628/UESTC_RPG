@@ -215,7 +215,7 @@ internal static class ClockTower
             for (var k = 0; k < X.LanternColumns; k++)
             {
                 var a = 2f * MathF.PI * (k + 0.5f) / X.LanternColumns;
-                float c = DetMath.Cos(a), s = DetMath.Sin(a);
+                float c = MathF.Cos(a), s = MathF.Sin(a);
                 var at = f.P(c * X.LanternRadius, s * X.LanternRadius);
                 var tangent = f.U * -s + f.W * c;
                 var col = PlanFrame.Along(at, tangent);
@@ -308,7 +308,7 @@ internal static class ClockTower
         for (var k = 0; k < 12; k++)
         {
             var a = 2f * MathF.PI * k / 12f;
-            float s = DetMath.Sin(a), c = DetMath.Cos(a);
+            float s = MathF.Sin(a), c = MathF.Cos(a);
             var major = k % 3 == 0;
             var size = major ? 0.42f : 0.24f;
             b.Add(PartGeometryKernel.BeveledBox(size, size, 0.06f, 0.01f, L.DialRim), g.At(s * r * 0.8f, cy + c * r * 0.8f - size * 0.5f, 0.15f));

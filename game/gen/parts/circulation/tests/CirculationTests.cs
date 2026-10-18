@@ -92,13 +92,13 @@ public sealed class CirculationTests
         foreach (var height in new[] { 0.9f, 1.05f, 1.2f })
         {
             var wall = (WallCollider)new RailingPart().Collision(new RailingParams(4, height, 0.1f, 2)).Single();
-            Check(wall.Tag == SurfaceTag.Barrier && wall.Y1 >= S.BarrierTop && wall.Y0 <= -S.BarrierBelow, "Railing collision is jumpable.");
+            Check(wall.Tag == SurfaceTag.Barrier && wall.Y1 >= WalkRules.BarrierHeight && wall.Y0 <= -S.BarrierBelow, "Railing collision is jumpable.");
             Check(wall.HalfT <= 0.3f && wall.Foot == FootMat.Metal, "Railing collision spreads too far or has no foot.");
         }
         var balcony = new BalconyPart().Collision(new BalconyParams(3.6f, 1.2f, 1.2f));
-        Check(balcony.OfType<WallCollider>().Count() == 3 && balcony.OfType<WallCollider>().All(w => w.Y1 >= S.BalconySlab + S.BarrierTop), "Balcony guard is jumpable.");
+        Check(balcony.OfType<WallCollider>().Count() == 3 && balcony.OfType<WallCollider>().All(w => w.Y1 >= S.BalconySlab + WalkRules.BarrierHeight), "Balcony guard is jumpable.");
         var gate = (WallCollider)new IronGatePart().Collision(new DoorParams(1.8f, 1.2f, 0.1f)).Single();
-        Check(gate.Tag == SurfaceTag.DoorClosed && gate.Y1 >= S.BarrierTop, "Gate seal is too low.");
+        Check(gate.Tag == SurfaceTag.DoorClosed && gate.Y1 >= WalkRules.BarrierHeight, "Gate seal is too low.");
     }
 
     [TestCase]
@@ -148,11 +148,11 @@ public sealed class CirculationTests
         // The top edge of flight 1 is the landing's front edge.
         Near(landing.Ring.Min(v => v.Y), ramps[0].P3.Z, 1e-5);
         var well = colliders.OfType<WallCollider>().Single();
-        Check(well.Tag == SurfaceTag.Barrier && Math.Abs(well.HalfT - S.WellWidth * 0.5f) < 1e-6 && Math.Abs(well.Y1 - (p.Height + 1.5f)) < 1e-5 && well.Y0 == 0,
+        Check(well.Tag == SurfaceTag.Barrier && Math.Abs(well.HalfT - S.WellWidth * 0.5f) < 1e-6 && Math.Abs(well.Y1 - (p.Height + WalkRules.BarrierHeight)) < 1e-5 && well.Y0 == 0,
             "The well needs a full wall to 1.5 m over the upper floor.");
         var open = new StairOpenPart().Collision(new StairParams(1.6f, 1.8f, 11 * 0.27f, 11));
         var sides = open.OfType<SlopedWallCollider>().ToArray();
-        Check(sides.Length == 2 && sides.All(s => s.Y1a >= s.Y0a + 1.5f && s.Y1b >= 1.8f + 1.5f - 1e-4), "Open flights need sloped barriers 1.5 m over the nosings.");
+        Check(sides.Length == 2 && sides.All(s => s.Y1a >= s.Y0a + WalkRules.BarrierHeight && s.Y1b >= 1.8f + WalkRules.BarrierHeight - 1e-4), "Open flights need sloped barriers 1.5 m over the nosings.");
         Check(open.All(c => c.Foot != FootMat.Auto), "Indoor stair colliders need a foot material.");
     }
 
@@ -174,12 +174,12 @@ public sealed class CirculationTests
                 if (rise > 0.35f && rise >= 0.36f) Check(plan.Riser >= S.RiserMin - 1e-4 && plan.Riser <= S.RiserMax + 1e-4, $"Riser {plan.Riser} out of 0.12–0.16.");
                 if (rise <= 0.35f) Check(plan.Riser <= S.RiserTarget + 1e-5, "Low steps exceed 0.15 m.");
                 Near(Math.Clamp(0.65 - 2 * plan.Riser, 0.30, 0.40), plan.Tread, 1e-5);
-                Check(plan.ParallelRampNeeded == rise > S.FlightMaxRise, "Steps over 1.5 m need a second route.");
+                Check(plan.ParallelRampNeeded == rise > WalkRules.OutdoorFlightMaxRise, "Steps over 1.5 m need a second route.");
                 float y = 0;
                 foreach (var part in plan.Parts)
                 {
                     var p = (StairParams)part.Params;
-                    Check(p.Height <= S.FlightMaxRise + 1e-4, "A flight rises more than 1.5 m.");
+                    Check(p.Height <= WalkRules.OutdoorFlightMaxRise + 1e-4, "A flight rises more than 1.5 m.");
                     Near(y, part.At.M42, 1e-4); y += p.Height;
                     var geometry = new StepsPart().Lods[LodLevel.L0](p);
                     ClosedClockwise(geometry, new StepsPart().Bounds(p), "planned steps");
@@ -291,7 +291,7 @@ public sealed class CirculationTests
         {
             var angle = 0.45 * i / 20; var s = 12.5f * i / 20;
             var y = -Math.Clamp(s < 5.5f ? s / 12 : s < 7 ? 5.5f / 12 : (s - 1.5f) / 12, 0, 0.9f);
-            deck.Add(new((float)(25.9 * DetMath.Cos(angle)), y, (float)(25.9 * DetMath.Sin(angle))));
+            deck.Add(new((float)(25.9 * Math.Cos(angle)), y, (float)(25.9 * Math.Sin(angle))));
         }
         foreach (var lod in Enum.GetValues<LodLevel>())
         {
@@ -310,7 +310,7 @@ public sealed class CirculationTests
         Enumerable.Range(0, count).Select(i =>
         {
             var a = 2 * Math.PI * i / count;
-            return new Vector2((float)(rx * DetMath.Cos(a)), (float)(rz * DetMath.Sin(a)));
+            return new Vector2((float)(rx * Math.Cos(a)), (float)(rz * Math.Sin(a)));
         }).ToArray();
 
     private static void Throws(Action action)

@@ -19,7 +19,7 @@ public static class LibraryRoof
     public static Vector2 FaceDirection(LibraryPlan plan, int k)
     {
         var a = plan.FaceAngle + k * (Shapes.Tau / 8f);
-        return new(DetMath.Cos(a), DetMath.Sin(a));
+        return new(MathF.Cos(a), MathF.Sin(a));
     }
 
     /// <summary>The face whose normal points closest to true north (−z): the mechanical box stands there.</summary>
@@ -35,7 +35,7 @@ public static class LibraryRoof
     public static Vector3 Vertex(LibraryPlan plan, int k, float radius, float y)
     {
         var a = plan.FaceAngle + Shapes.Tau / 16f + k * (Shapes.Tau / 8f);
-        return new(plan.Centre.X + DetMath.Cos(a) * radius, y, plan.Centre.Y + DetMath.Sin(a) * radius);
+        return new(plan.Centre.X + MathF.Cos(a) * radius, y, plan.Centre.Y + MathF.Sin(a) * radius);
     }
 
     public static float SkylightBaseY(LibraryPlan plan) => plan.RoofY + S.SkylightCurb;
@@ -96,7 +96,7 @@ public static class LibraryRoof
     private static void Curb(LibraryPlan plan, CoreMesh mesh, LodLevel lod)
     {
         var trim = S.Trim(S.LibraryTrim);
-        float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / DetMath.Cos(Shapes.Tau / 16f);
+        float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / MathF.Cos(Shapes.Tau / 16f);
         float y0 = plan.RoofY - (lod == LodLevel.L0 ? 0.02f : 0f), y1 = SkylightBaseY(plan);
         for (var k = 0; k < 8; k++)
         {
@@ -160,7 +160,7 @@ public static class LibraryRoof
         for (var i = 1; i < segments; i++)
         {
             var t = Shapes.Tau * 0.5f * i / segments;
-            profile.Add(new(DetMath.Cos(t) * half, S.VaultCurb + DetMath.Sin(t) * S.VaultRise));
+            profile.Add(new(MathF.Cos(t) * half, S.VaultCurb + MathF.Sin(t) * S.VaultRise));
         }
         profile.Add(new(-half, S.VaultCurb));
         var section = new SweepProfile(profile);
@@ -185,7 +185,7 @@ public static class LibraryRoof
         foreach (var side in new[] { -1.5f, 1.5f })
         {
             var a = plan.FaceAngle + (north + side) * (Shapes.Tau / 8f);
-            var u = new Vector2(DetMath.Cos(a), DetMath.Sin(a));
+            var u = new Vector2(MathF.Cos(a), MathF.Sin(a));
             var t = new Vector2(-u.Y, u.X);
             var c = plan.Centre + u * S.PlantRadius;
             Vector2[] corners = [c - t * hl - u * hd, c + t * hl - u * hd, c + t * hl + u * hd, c - t * hl + u * hd];

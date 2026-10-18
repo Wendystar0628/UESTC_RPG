@@ -107,7 +107,7 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
                 for (var i = 0; i < ring.Length; i++)
                 {
                     var a = 2.0 * Math.PI * i / ring.Length;
-                    ring[i] = new((float)((r - t) * DetMath.Cos(a)), (float)((r - t) * DetMath.Sin(a)));
+                    ring[i] = new((float)((r - t) * Math.Cos(a)), (float)((r - t) * Math.Sin(a)));
                 }
                 b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(2 * t, 2 * t, 0), ring, S.Pole(S.Tyre), closed: true, baseY: -t), at);
                 b.AddLathe(PartShapes.Creased(new(0, -0.012f), new(r - 2 * t + 0.004f, -0.012f), new(r - 2 * t + 0.004f, 0.012f), new(0, 0.012f)), WheelRingSegments, S.Pole(S.GreyMetal), at);

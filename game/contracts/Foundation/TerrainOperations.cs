@@ -45,7 +45,7 @@ public sealed record TerrainPadEdge(string StructureId, TerrainEdgeKind Kind, do
 [JsonDerivedType(typeof(TerrainEllipse), "ellipse")]
 public abstract record TerrainShape;
 public sealed record TerrainCircle(Vector2 Center, double Radius) : TerrainShape;
-// Yaw follows the project convention: 0 north, 90 east. Evaluate trig only through DetMath.
+// Yaw follows the project convention: 0 north, 90 east.
 public sealed record TerrainEllipse(Vector2 Center, Vector2 Radii, double YawDeg) : TerrainShape;
 
 // One platform operation covers one outer ring plus its holes. Independent pieces use distinct operation

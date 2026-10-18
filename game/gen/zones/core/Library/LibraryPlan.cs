@@ -94,7 +94,7 @@ public sealed class LibraryPlan
         .OrderByDescending(p => p.Length).FirstOrDefault();
     public float TerraceY => StoreyY(S.LibraryStoreys.Length - 1);
     public float RoofY => StoreyY(S.LibraryStoreys.Length);
-    public float SkylightRadius => S.SkylightAcross * 0.5f / DetMath.Cos(Shapes.Tau / 16f);
+    public float SkylightRadius => S.SkylightAcross * 0.5f / MathF.Cos(Shapes.Tau / 16f);
 
     public static LibraryPlan? From(IWorldModel world)
     {
@@ -368,6 +368,6 @@ public sealed class LibraryPlan
             if (Vector2.DistanceSquared(core[i], core[(i + 1) % core.Count]) > Vector2.DistanceSquared(core[best], core[(best + 1) % core.Count])) best = i;
         Vector2 a = core[best], b = core[(best + 1) % core.Count];
         var mid = (a + b) * 0.5f - centre;
-        return DetMath.Atan2(mid.Y, mid.X);
+        return MathF.Atan2(mid.Y, mid.X);
     }
 }

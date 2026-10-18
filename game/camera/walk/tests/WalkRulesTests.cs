@@ -17,12 +17,13 @@ public sealed class WalkRulesTests
     [TestCase]
     public void CylinderDimensionsKeepStandingCrouchingAndFlatBottomShapesDistinctFromCapsules()
     {
-        Require(WalkMath.ValidCylinderDimensions(.3f, 1.8f) && WalkMath.ValidCylinderDimensions(.3f, 1.5f),
+        Require(WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkRules.StandingHeight)
+            && WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkTuning.CrouchingHeight),
             "Standing or crouching cylinder dimensions were rejected.");
-        Require(WalkMath.ValidCylinderDimensions(.3f, .2f), "A capsule height-to-radius rule was imposed on a cylinder.");
-        Require(!WalkMath.ValidCylinderDimensions(float.NaN, 1.8f)
-            && !WalkMath.ValidCylinderDimensions(.3f, float.PositiveInfinity)
-            && !WalkMath.ValidCylinderDimensions(0, 1.8f) && !WalkMath.ValidCylinderDimensions(.3f, -1),
+        Require(WalkMath.ValidCylinderDimensions(WalkRules.Radius, .2f), "A capsule height-to-radius rule was imposed on a cylinder.");
+        Require(!WalkMath.ValidCylinderDimensions(float.NaN, WalkRules.StandingHeight)
+            && !WalkMath.ValidCylinderDimensions(WalkRules.Radius, float.PositiveInfinity)
+            && !WalkMath.ValidCylinderDimensions(0, WalkRules.StandingHeight) && !WalkMath.ValidCylinderDimensions(WalkRules.Radius, -1),
             "Invalid dimensions can be presented as a usable native shape snapshot.");
     }
 

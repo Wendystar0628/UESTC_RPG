@@ -28,7 +28,7 @@ internal static class Profiles
         for (var i = 0; i < segments; i++)
         {
             var angle = 2 * Math.PI * i / segments;
-            var c = (float)DetMath.Cos(angle); var s = (float)DetMath.Sin(angle);
+            var c = (float)Math.Cos(angle); var s = (float)Math.Sin(angle);
             var length = (float)Math.Sqrt((double)c * c + (double)s * s);
             normals[i] = new(c / length, s / length);
             points[i] = new(radius * c, radius * s);

@@ -176,7 +176,7 @@ public sealed class StairDoublePart() : CirculationPart<StairParams>(new(1200, 9
             one.Ramp(one.X0, one.X1) with { Foot = foot },
             two.Ramp(two.X0, two.X1) with { Foot = foot },
             new SlabCollider([new(-w, z0), new(w, z0), new(w, z1), new(-w, z1)], l.H * 0.5f, S.LandingThickness, SurfaceTag.Ground) { Foot = foot },
-            new WallCollider(new(wellX, -l.D * 0.5f), new(wellX, z0), S.WellWidth * 0.5f, 0, l.H + S.StairBarrierAbove, SurfaceTag.Barrier) { Foot = S.MetalFoot },
+            new WallCollider(new(wellX, -l.D * 0.5f), new(wellX, z0), S.WellWidth * 0.5f, 0, l.H + WalkRules.BarrierHeight, SurfaceTag.Barrier) { Foot = S.MetalFoot },
         ];
     }
 

@@ -31,7 +31,7 @@ public sealed class ResearchSteleSite : CenterEastSite
     {
         var f = Frame;
         var lean = M.SteleLean * (MathF.PI / 180f);
-        float c = DetMath.Cos(lean), s = DetMath.Sin(lean);
+        float c = MathF.Cos(lean), s = MathF.Sin(lean);
         Vector3 across = new(f.U.X, 0, f.U.Y), back = new(-f.W.X, 0, -f.W.Y), up = Vector3.UnitY;
         var y = back * c - up * s;
         var z = up * c + back * s;
