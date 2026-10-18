@@ -137,7 +137,7 @@ internal sealed class TerrainProgram
     private static int Cell(double value) => checked((int)Math.Floor(value / TerrainSampling.TileQuads));
 }
 
-internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource
+internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWaterSource
 {
     private readonly TerrainHeightField _field;
     private readonly TerrainWaterRegion[] _water;
@@ -145,12 +145,15 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource
     public bool ZonesValidated { get; }
     private readonly IReadOnlyDictionary<string, ResolvedTerrainBank> _banks;
     public IReadOnlyList<TerrainBankSpan> Banks { get; }
+    public IReadOnlyList<TerrainWaterBody> Waters { get; }
 
     public CompiledTerrain(MapRect dataRect, TerrainProgram program, IReadOnlyDictionary<FeatureId, float> pads,
         IEnumerable<TerrainWaterRegion> water, IReadOnlyList<string> diagnostics, bool zonesValidated,
         IReadOnlyList<ResolvedTerrainBank>? banks = null)
     {
         _water = water.OrderBy(w => w.Feature.Value, StringComparer.Ordinal).ToArray();
+        Waters = Array.AsReadOnly(_water.Where(value => !value.Underground).Select(value => new TerrainWaterBody(value.Feature,
+            CopyPolygons(value.Region.Polygons), CopyPolygons(value.Wade.SelectMany(area => area.Polygons)))).ToArray());
         _field = new(dataRect, (x, z) => program.Evaluate(x, z), program.Nodes.SelectMany(n => n.IndexPatches ?? [n.Support]).ToArray(), pads,
             _water.ToDictionary(w => w.Feature, w => (float)w.Level));
         Diagnostics = diagnostics.ToArray(); ZonesValidated = zonesValidated;
@@ -158,6 +161,10 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource
         _banks = orderedBanks.ToDictionary(bank => bank.Span.Id, StringComparer.Ordinal);
         Banks = Array.AsReadOnly(orderedBanks.Select(bank => bank.Span).ToArray());
     }
+
+    private static IReadOnlyList<PolygonRings> CopyPolygons(IEnumerable<PolygonRings> polygons) => Array.AsReadOnly(polygons.Select(polygon =>
+        new PolygonRings(Array.AsReadOnly(polygon.Outer.ToArray()),
+            Array.AsReadOnly(polygon.Holes.Select(hole => (IReadOnlyList<System.Numerics.Vector2>)Array.AsReadOnly(hole.ToArray())).ToArray()))).ToArray());
 
     public bool IsFlat(TileKey tile) => _field.IsFlat(tile);
     public float HeightAt(float x, float z) => _field.HeightAt(x, z);
@@ -176,14 +183,15 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource
 
     public (FeatureId Id, float Surface, bool Wade)? WaterAt(float x, float z)
     {
+        TerrainWaterRegion? first = null;
         foreach (var water in _water)
         {
             if (water.Underground) continue;
             if (!water.Region.Contains(x, z)) continue;
-            var wade = false;
-            foreach (var area in water.Wade) if (area.Contains(x, z)) { wade = true; break; }
-            return (water.Feature, (float)water.Level, wade);
+            first ??= water;
+            foreach (var area in water.Wade)
+                if (area.Contains(x, z)) return (water.Feature, (float)water.Level, true);
         }
-        return null;
+        return first is null ? null : (first.Feature, (float)first.Level, false);
     }
 }

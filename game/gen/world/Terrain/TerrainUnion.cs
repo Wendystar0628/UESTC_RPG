@@ -14,6 +14,18 @@ internal static class TerrainUnion
     private static readonly PrecisionModel Precision = new(100);
     private static readonly GeometryFactory Factory = new(Precision);
 
+    public static bool Covers(TerrainRegion region, TerrainRegion candidate) => GeometryOf(region).Covers(GeometryOf(candidate));
+
+    public static bool CoversPath(TerrainRegion region, TerrainPath path, double from, double to)
+    {
+        var coordinates = new[] { from }.Concat(path.VertexStations.Where(station => station > from && station < to)).Append(to)
+            .Select(station => { var p = path.AtDouble(station); return new Coordinate(p.X, p.Z); }).ToArray();
+        return GeometryOf(region).Covers(GeometryPrecisionReducer.Reduce(Factory.CreateLineString(coordinates), Precision));
+    }
+
+    private static NtsGeometry GeometryOf(TerrainRegion region) =>
+        UnaryUnionNG.Union(region.Polygons.Select(ToGeometry).ToArray(), Factory, Precision);
+
     public static TerrainRegion Build(IEnumerable<TerrainRegion> regions)
     {
         var polygons = regions.SelectMany(region => region.Polygons).Select(ToGeometry)

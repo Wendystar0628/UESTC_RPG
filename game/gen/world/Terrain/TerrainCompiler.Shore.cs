@@ -40,9 +40,9 @@ internal static partial class TerrainCompiler
         // The finite candidate identities are frozen here; geometry-only values are memoized
         // lazily once for participating roads, and never depend on the current trial profile.
         var radii = entries.ToDictionary(entry => entry.Road.Source, entry => new Lazy<double>(() => RoadCorePathRadius(entry.Road)));
-        var candidates = (from shore in shores from entry in entries where entry.Operation is null
+        var candidates = (from shore in shores from entry in entries where entry.Operation is null || entry.Plan is not null
             select (Key: (shore.Id, entry.Road.Source), Value: new Lazy<TerrainRoadProfile.Bound>(() => new(
-                levels[shore.Id] + 0.3 + 0.015 * radii[entry.Road.Source].Value, string.Join(",", shore.Waters.OrderBy(w => w.Value, StringComparer.Ordinal).Select(w => w.Value))))))
+                levels[shore.Id] + 0.3 + entry.MaximumCrossFall * radii[entry.Road.Source].Value, string.Join(",", shore.Waters.OrderBy(w => w.Value, StringComparer.Ordinal).Select(w => w.Value))))))
             .ToDictionary(item => item.Key, item => item.Value);
         var maximumIterations = checked(1L + (long)fit.NodeCount * candidates.Count);
         FootwayPlan[]? first = null; FootwayPlan[]? prior = null; FootwayPlan[] final = [];
@@ -66,10 +66,10 @@ internal static partial class TerrainCompiler
                     foreach (var contact in span.Roads)
                     {
                         var entry = bySource[contact.Road];
-                        if (entry.Operation is not null)
+                        if (entry.Operation is not null && entry.Plan is null)
                         {
                             // Fixed authored Hermite needs its own continuous-extrema proof.
-                            var required = levels[plan.Shore.Id] + 0.3 + Math.Abs(entry.Operation.CrossFall) * radii[entry.Road.Source].Value;
+                            var required = levels[plan.Shore.Id] + 0.3 + entry.MaximumCrossFall * radii[entry.Road.Source].Value;
                             foreach (var (a, c) in ShoreSupportSegments(path, span.From - TerrainBridgeBanks.TransitionLength, span.To + TerrainBridgeBanks.TransitionLength))
                                 foreach (var interval in RoadSurfaceSupportIntervals(entry.Road, a, c))
                                     if (entry.Profile.MinimumHeight(interval.From, interval.To) < required)
@@ -87,7 +87,7 @@ internal static partial class TerrainCompiler
             if (raisedBounds == 0) { final = plans; completed = true; break; }
             var before = fit.Samples.Select(fit.Height).ToArray();
             var profiles = fit.Solve();
-            foreach (var entry in b.Roads.Where(entry => entry.Operation is null)) entry.ReplaceProfile(profiles[entry.Road.Source]);
+            foreach (var entry in b.Roads.Where(entry => entry.Operation is null || entry.Plan is not null)) entry.ReplaceProfile(profiles[entry.Road.Source]);
             ReportProfileChanges(b, fit, before, $"iteration={iteration}");
             prior = plans;
         }
@@ -265,8 +265,11 @@ internal static partial class TerrainCompiler
         var changed = fit.Samples.Where((sample, i) => fit.Height(sample) != before[i]).Select(sample => sample.Source).ToHashSet();
         foreach (var entry in b.Roads.Where(entry => changed.Contains(entry.Road.Source)))
         {
-            var node = b.Nodes.Single(value => value.Id == "auto-corridor-" + entry.Road.Feature.Value);
-            minX = Math.Min(minX, node.Support.Min.X); minZ = Math.Min(minZ, node.Support.Min.Y); maxX = Math.Max(maxX, node.Support.Max.X); maxZ = Math.Max(maxZ, node.Support.Max.Y);
+            foreach (var node in b.Nodes.Where(value => value.Id == "auto-corridor-" + entry.Road.Feature.Value
+                || entry.Plan?.Operations.Any(op => op.Id == value.Id) == true))
+            {
+                minX = Math.Min(minX, node.Support.Min.X); minZ = Math.Min(minZ, node.Support.Min.Y); maxX = Math.Max(maxX, node.Support.Max.X); maxZ = Math.Max(maxZ, node.Support.Max.Y);
+            }
         }
         b.Diagnostics.Add($"Road freeboard changes {phase}: changedSamples={count}, maxAbsChange={maximum:R}, belowSolverComparisonCount={tiny}, influenceBBox={(count == 0 ? "empty" : $"({minX:R},{minZ:R})-({maxX:R},{maxZ:R})")}.");
     }
@@ -311,7 +314,10 @@ internal static partial class TerrainCompiler
     private static TerrainDifferential RoadCoreTop(Builder b, RoadEntry entry, CorridorContact core, double x, double z)
     {
         var longitudinal = entry.Profile.SurfaceAt(entry.Road.Path, x, z, entry.Road.Width, entry.Road.Path.Project(x, z));
-        var cross = entry.Operation is { } op ? TerrainDifferential.Constant(op.CrossFall) : ZeroBandWeight(b, x, z) * 0.015;
+        var hit = entry.Road.Path.Project(x, z);
+        var cross = entry.Plan?.Parameters(hit, b.Context.Defaults?.CorridorShoulder ?? entry.Operation!.Shoulder).Cross
+            ?? (entry.Operation is { } op ? TerrainDifferential.Constant(op.CrossFall) : ZeroBandWeight(b, x, z) * 0.015);
+        if (entry.Plan is { } plan && plan.At(hit.Station) is null) cross = TerrainDifferential.Product(cross, ZeroBandWeight(b, x, z));
         var lateral = CorridorOffsetAt(entry.Road, core, x, z);
         var offset = IsMotorRoad(entry.Road) ? lateral * (lateral.Height > 0 ? -1 : lateral.Height < 0 ? 1 : 0) : lateral;
         return new(longitudinal.Height + cross.Height * offset.Height,
@@ -377,7 +383,7 @@ internal static partial class TerrainCompiler
         var transverse = Math.Abs(surface.Dx * roadDistance.Dx + surface.Dz * roadDistance.Dz);
         var total = Math.Sqrt(surface.Dx * surface.Dx + surface.Dz * surface.Dz);
         if (total > 1.000001 || previous.Class != TerrainClass.Transition && (total > 0.500001 || transverse > 1d / 3 + 0.000001))
-            throw new WorldDataException(file, id, $"Road-water side envelope cannot fit its grade: water='{nearest.Id}', point=({x:R},{z:R}), transverseGrade={transverse:R}, totalGrade={total:R}, roadDistance={roadDistance.Height:R}, waterDistance={waterDistance.Height:R}, previous={previous.Surface}, proposed={proposed.Surface}, final={surface}, class={previous.Class}, shoulder={b.AutomaticRoads[id].Grading!.Width:R}, profile={profile}.")
+            throw new WorldDataException(file, id, $"Road-water side envelope cannot fit its grade: water='{nearest.Id}', point=({x:R},{z:R}), transverseGrade={transverse:R}, totalGrade={total:R}, roadDistance={roadDistance.Height:R}, waterDistance={waterDistance.Height:R}, previous={previous.Surface}, proposed={proposed.Surface}, final={surface}, class={previous.Class}, shoulder={b.AutomaticRoads[id].Grading?.Width:R}, profile={profile}.")
             { CanNarrowAutomaticRoad = true };
         return WithSurface(previous, surface, proposed.CrestDistance, Math.Min(proposed.ToeDistance, waterDistance.Height));
     }

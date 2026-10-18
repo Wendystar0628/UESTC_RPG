@@ -179,10 +179,12 @@ internal static partial class TerrainCompiler
         public TerrainCorridorOp? Operation { get; } = operation;
         public string File { get; } = file;
         public AutomaticShoulder? Grading { get; } = grading;
+        public CorridorPlan? Plan { get; init; }
+        public double MaximumCrossFall => Plan is { } plan ? Math.Max(plan.HasGaps ? 0.015 : 0, plan.Operations.Max(op => Math.Abs(op.CrossFall))) : Math.Abs(Operation?.CrossFall ?? 0.015);
         private bool _frozen;
         public void ReplaceProfile(TerrainRoadProfile replacement)
         {
-            if (_frozen || Operation is not null) throw new InvalidOperationException("A frozen/authored road profile cannot be replaced.");
+            if (_frozen || Operation is not null && Plan is null) throw new InvalidOperationException("A frozen/authored road profile cannot be replaced.");
             Profile = replacement;
         }
         public void FreezeProfile() => _frozen = true;
@@ -191,20 +193,38 @@ internal static partial class TerrainCompiler
     private static void AddCorridors(Builder b, IEnumerable<TerrainCorridorOp> operations)
     {
         var roads = new List<RoadEntry>();
-        foreach (var op in operations)
+        var plans = CorridorPlans(b, operations);
+        foreach (var plan in plans)
         {
-            if (op.Range is not null)
-                throw new WorldDataException(b.Files[op.Id], op.Id,
-                    "Unsupported corridor Range: interval authoring is not implemented by this terrain compiler, including an explicit full-source interval. Omit Range only for an intended full-source corridor.");
-            var road = b.References.Road(op.Road, b.Files[op.Id], op.Id);
-            if (!b.WrittenRoads.Add(road.Source)) throw new WorldDataException(b.Files[op.Id], op.Id, "Multiple corridor operations resolve to one source road.");
-            roads.Add(AddCorridor(b, road, op, b.Files[op.Id]));
+            b.WrittenRoads.Add(plan.Road.Source);
+            if (plan.Operations.Length == 1 && plan.Operations[0].Range is null)
+            {
+                var op = plan.Operations[0];
+                roads.Add(AddCorridor(b, plan.Road, op, b.Files[op.Id], exclusionsOverride: plan.Exclusions));
+            }
         }
+        var ranged = plans.Where(plan => plan.Operations.Any(op => op.Range is not null)).ToArray();
         var automatic = b.References.AutomaticRoads().Where(road => !b.WrittenRoads.Contains(road.Source)).ToArray();
         b.RoadFit = new(automatic.Select(road => new TerrainRoadProfile.Request(road,
-            BridgeExclusions(b, road), IsMotorRoad(road) ? 0.06 : 1d / 12)).ToArray(), b.LandBeforeCorridors,
+            BridgeExclusions(b, road), IsMotorRoad(road) ? 0.06 : 1d / 12))
+            .Concat(ranged.Select(plan => new TerrainRoadProfile.Request(plan.Road, plan.Exclusions, IsMotorRoad(plan.Road) ? 0.06 : 1d / 12,
+                plan.Operations.Select(op => new TerrainRoadProfile.Interval(op.Anchors, b.Files[op.Id], op.Id)).ToArray()))).ToArray(), b.LandBeforeCorridors,
             roads.Select(entry => (entry.Road, entry.Profile)).ToArray(), (x, z) => ZeroBandWeight(b, x, z).Height == 0);
         var profiles = b.RoadFit.Solve();
+        foreach (var plan in ranged)
+        {
+            var op = plan.Operations[0];
+            if (plan.HasGaps && b.Context.Defaults is null)
+                throw new WorldDataException("map.json", "terrainDefaults", "Automatic road gaps require explicit map defaults.");
+            var entry = new RoadEntry(plan.Road, profiles[plan.Road.Source], op, b.Files[op.Id], null) { Plan = plan };
+            foreach (var interval in plan.Operations) AddCorridor(b, plan.Road, interval, b.Files[interval.Id], sharedEntry: entry);
+            if (plan.HasGaps)
+            {
+                AddCorridor(b, plan.Road, null, "network.json", sharedEntry: entry);
+                b.AutomaticRoads.Add("auto-corridor-" + plan.Road.Feature.Value, entry);
+            }
+            roads.Add(entry);
+        }
         foreach (var road in automatic)
         {
             if (!b.WrittenRoads.Add(road.Source)) continue;
@@ -228,47 +248,41 @@ internal static partial class TerrainCompiler
         return exclusions;
     }
 
-    private static RoadEntry AddCorridor(Builder b, TerrainRoad road, TerrainCorridorOp? op, string file, TerrainRoadProfile? automaticProfile = null)
+    private static RoadEntry AddCorridor(Builder b, TerrainRoad road, TerrainCorridorOp? op, string file, TerrainRoadProfile? automaticProfile = null,
+        RoadEntry? sharedEntry = null, IReadOnlyList<(double From, double To)>? exclusionsOverride = null)
     {
         var id = op?.Id ?? "auto-corridor-" + road.Feature.Value;
-        var exclusions = BridgeExclusions(b, road);
-        if (op is not null)
-            foreach (var step in op.Steps)
-            {
-                var structure = b.References.Structure(step.Structure, file, id, "stair", "stairs", "steps", "terrace");
-                var start = TerrainRoadProfile.ResolveStation(step.S0, op.Anchors[^1].S, road.Path.Length, file, id);
-                var end = TerrainRoadProfile.ResolveStation(step.S1, op.Anchors[^1].S, road.Path.Length, file, id);
-                foreach (var station in new[] { start, (start + end) / 2, end })
-                    if (!TerrainReferences.NearStructure(structure, road.Path.At(station), 0.02))
-                        throw new WorldDataException(file, id, "Corridor step interval is not covered by its actual named stair footprint/alignment.");
-                exclusions.Add((start, end));
-                b.Diagnostics.Add($"NOT_VERIFIED: stair '{step.Structure.Value}' plan coverage resolved; its generated end elevations/collision require content acceptance.");
-            }
+        var exclusions = exclusionsOverride ?? BridgeExclusions(b, road);
         var motor = IsMotorRoad(road);
         var maximumGrade = motor ? 0.06 : 1d / 12;
-        var profile = op is null
-            ? automaticProfile ?? throw new InvalidOperationException("Automatic roads require the completed shared network profile solve.")
-            : new TerrainRoadProfile(op.Anchors, road.Path.Length, exclusions, maximumGrade, file, id);
+        var profile = sharedEntry?.Profile ?? automaticProfile ?? (op is null
+            ? throw new InvalidOperationException("Automatic roads require the completed shared network profile solve.")
+            : new TerrainRoadProfile(op.Anchors, road.Path.Length, exclusions, maximumGrade, file, id));
         var shoulder = op?.Shoulder ?? b.Context.Defaults?.CorridorShoulder
             ?? throw new WorldDataException("map.json", "terrainDefaults", "Automatic road constraints require explicit map defaults.");
-        var grading = op is null ? new AutomaticShoulder(shoulder) : null;
-        var width = road.Width / 2 + shoulder;
-        var crossMagnitude = Math.Abs(op?.CrossFall ?? 0.015);
+        var grading = op is null ? sharedEntry?.Grading ?? new AutomaticShoulder(shoulder) : null;
+        var width = road.Width / 2 + (sharedEntry?.Plan is { } planWidth ? Math.Max(shoulder, planWidth.Operations.Max(operation => operation.Shoulder)) : shoulder);
+        var crossMagnitude = sharedEntry?.MaximumCrossFall ?? Math.Abs(op?.CrossFall ?? 0.015);
         var reach = width + (b.RangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + crossMagnitude * width) / (1d / 3 - crossMagnitude) + 4;
         var support = TerrainRegion.Expand(road.Path.Bounds, reach);
         var patches = PathPatches(road.Path, reach);
-        var entry = new RoadEntry(road, profile, op, file, grading);
+        var entry = sharedEntry ?? new RoadEntry(road, profile, op, file, grading);
         b.Nodes.Add(new(id, file, op?.Zone ?? default, TerrainGroup.Corridor, op?.Priority ?? 50, support, (previous, x, z) =>
         {
             if (op is null && previous.BoundaryWeight is { Height: 0 } && previous.Surface == TerrainDifferential.Constant(0)) return previous;
-            var contact = CorridorContactAt(road, grading?.Width ?? shoulder, x, z);
+            var pointHit = road.Path.Project(x, z);
+            if (entry.Plan is { } plan && plan.At(pointHit.Station)?.Id != op?.Id) return previous;
+            var parameters = entry.Plan?.Parameters(pointHit, shoulder);
+            var widthAt = parameters?.Shoulder ?? TerrainDifferential.Constant(grading?.Width ?? shoulder);
+            var contact = CorridorContactAt(road, widthAt.Height, x, z);
+            contact = contact with { Distance = contact.Distance - new TerrainDifferential(0, widthAt.Dx, widthAt.Dz) };
             var hit = road.Path.Project(contact.X, contact.Z);
             if (entry.Profile.Excluded(hit.Station)) return previous;
             var longitudinal = entry.Profile.SurfaceAt(road.Path, x, z, road.Width, road.Path.Project(x, z));
-            var cross = TerrainDifferential.Constant(op?.CrossFall ?? 0.015);
+            var cross = parameters?.Cross ?? TerrainDifferential.Constant(op?.CrossFall ?? 0.015);
             if (op is null)
             {
-                cross = (previous.BoundaryWeight ?? ZeroBandWeight(b, x, z)) * 0.015;
+                cross = TerrainDifferential.Product(previous.BoundaryWeight ?? ZeroBandWeight(b, x, z), cross);
             }
             var lateral = CorridorOffsetAt(road, contact, x, z);
             var offset = motor ? lateral * (lateral.Height > 0 ? -1 : lateral.Height < 0 ? 1 : 0) : lateral;

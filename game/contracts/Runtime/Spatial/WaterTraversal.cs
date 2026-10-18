@@ -100,13 +100,28 @@ public interface IWaterTraversalQuery
 
 /// <summary>WP-42 movement configuration, never supplied by the visible character model.</summary>
 /// <remarks>
-/// Approved initial swimming values: radius .40 m, height .90 m, feet .75 m below surface, eye .87 m above feet,
-/// enter column depth >=1.05 m, exit <=.95 m. Exit also requires support, head clearance and a declared exit.
-/// Speed 1.4 m/s and sprint 2.2 m/s are independent of scroll speed. Deep wading .3-1.05 m is allowed only in an approved swim area.
+/// Initial values come from WaterMotionRules.DefaultProfile. Entry and exit use standing column depth,
+/// not feet immersion. Exit also requires support, head clearance and a declared exit.
+/// Swimming speeds are independent of scroll speed. Deep wading is allowed only in an approved swim area.
 /// </remarks>
 public sealed record WaterMotionProfile(
     WalkBodyShape SwimmingShape, float FeetBelowSurface, float EyeAboveFeet,
     float EnterColumnDepth, float ExitColumnDepth, float Speed, float SprintSpeed, float StrokeDistance);
+
+/// <summary>Shared water movement rules. They classify depth and movement; they never grant water access.</summary>
+public static class WaterMotionRules
+{
+    /// <summary>Wade-only permission requires a supported water column strictly shallower than this limit.</summary>
+    public const float ShallowWadeDepth = .3f;
+    public const float WadeSpeedMultiplier = .6f;
+    private const float DefaultSwimSpeed = 1.4f;
+
+    /// <summary>Approved initial physical profile; stroke distance advances from accepted horizontal travel.</summary>
+    public static WaterMotionProfile DefaultProfile { get; } = new(
+        SwimmingShape: new(.4f, .9f), FeetBelowSurface: .75f, EyeAboveFeet: .87f,
+        EnterColumnDepth: 1.05f, ExitColumnDepth: .95f,
+        Speed: DefaultSwimSpeed, SprintSpeed: 2.2f, StrokeDistance: DefaultSwimSpeed * 1.33f);
+}
 
 public enum WaterMotionEventKind : byte { Enter, Exit, Stroke }
 /// <summary>A committed physical edge; measured normal/tangent speed in m/s supplies intensity, not artistic sound gain.</summary>

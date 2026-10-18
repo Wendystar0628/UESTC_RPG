@@ -8,8 +8,8 @@ internal static partial class TerrainCompiler
 {
     private static void Channel(Builder b, TerrainChannelOp op, string file)
     {
-        if (op.Wade.Count != 0)
-            throw new WorldDataException(file, op.Id, "Unsupported channel Wade: wading profiles are not implemented by this terrain compiler.");
+        if (op.Wade.Count != 0 && (op.Dry || b.References.IsUndergroundWater(op.Water!.Value)))
+            throw new WorldDataException(file, op.Id, "Wade requires a surface wet channel.");
         if (op.Dry) { DryChannel(b, op, file); return; }
         var water = op.Water!.Value;
         var region = b.References.Area(water, "water", file, op.Id);
@@ -30,7 +30,8 @@ internal static partial class TerrainCompiler
                 return Constrain(previous, TerrainDifferential.Constant(op.WaterY!.Value - op.Depth),
                     new(hit.Distance - width / 2, hit.DistanceDx, hit.DistanceDz), sideGrade, sideGrade, 2, op.Bank.Kind is TerrainBankKind.Hard or TerrainBankKind.Steps);
             }, WaterBed: true));
-        AddWater(b, op, file, water, region, op.WaterY!.Value, op.Bank, op.Depth, 1d / 7, [], true);
+        AddWater(b, op, file, water, region, op.WaterY!.Value, op.Bank, op.Depth, 1d / 7,
+            op.Wade.Select(p => new TerrainRegion([p])).ToArray(), true);
     }
 
     private static void Lake(Builder b, TerrainLakeOp op, string file) =>
@@ -53,9 +54,8 @@ internal static partial class TerrainCompiler
             throw new WorldDataException(file, name, "Steps shore requires the real stair nosing profile and submerged landing; the current input has no structural profile reference. It cannot be replaced by a generic ramp.");
         if (grade > 1) throw new WorldDataException(file, name, "Water profile exceeds the maximum 1:1 terrain grade.");
         foreach (var band in wade)
-            foreach (var polygon in band.Polygons)
-                foreach (var p in polygon.Outer)
-                    if (!region.Contains(p.X, p.Y)) throw new WorldDataException(file, name, "Wade area extends outside the actual water footprint or into a hole.");
+            if (!TerrainUnion.Covers(region, band))
+                throw new WorldDataException(file, name, "Wade area extends outside the actual water footprint or into a hole.");
         b.WaterSpecs.Add(new(op, file, id, region, level, bank, depth, shelf, wade, channel));
     }
 
@@ -89,18 +89,7 @@ internal static partial class TerrainCompiler
                         var inward = -d;
                         var bed = SoftDepth(inward, depth, shelf, false, bank.Kind == TerrainBankKind.Wetland ? grade : 0.15);
                         target = TerrainDifferential.Constant(level) - bed;
-                        foreach (var band in wade)
-                        {
-                            var toBand = band.Distance(x, z);
-                            var shallow = TerrainDifferential.Constant(level) - SoftDepth(inward, depth, shelf, true);
-                            if (toBand.Height <= 0) target = shallow;
-                            else
-                            {
-                                // Continue the shallow band into its surrounding bed with the prescribed 1:6 slope.
-                                var envelope = shallow - toBand * (1d / 6);
-                                if (envelope.Height > target.Height) target = envelope;
-                            }
-                        }
+                        target = WadeSurface(target, inward, level, depth, shelf, wade, x, z);
                     }
                     else target = SoftOuterBank(previous.Surface, d, level, grade);
                     if (bridgeBanks is not null)
@@ -123,6 +112,7 @@ internal static partial class TerrainCompiler
                             target += new TerrainDifferential(delta.Height * weight.Height,
                                 delta.Dx * weight.Height + delta.Height * weight.Dx,
                                 delta.Dz * weight.Height + delta.Height * weight.Dz);
+                            if (d.Height < 0) target = WadeSurface(target, -d, level, depth, shelf, wade, x, z);
                             return WithSurface(previous, target, d.Height, -d.Height, d.Height < 0);
                         }
                     }
@@ -132,12 +122,27 @@ internal static partial class TerrainCompiler
                     // contract-15 09:38: preserve the land; the covered 1:1 transition is entirely waterward.
                     if (d.Height >= 0) return WithSurface(previous, RaiseBankTop(previous.Surface, d, level + 0.3), d.Height, double.PositiveInfinity);
                     target = HardWaterSurface(b, region, d, previous.Surface, x, z, level, depth, grade, file, name, reserveTransitionGrade: reserveTransitionGrade);
+                    target = WadeSurface(target, -d, level, depth, shelf, wade, x, z);
                     return WithSurface(previous, target, d.Height, double.PositiveInfinity, true);
                 }
                 case TerrainBankKind.Steps: throw new WorldDataException(file, name, "Missing real stepped-bank profile.");
                 default: throw new WorldDataException(file, name, "A wet water segment cannot use a swale bank.");
             }
         }, op is null);
+    }
+
+    private static TerrainDifferential WadeSurface(TerrainDifferential bed, TerrainDifferential inward,
+        double level, double depth, double shelf, TerrainRegion[] wade, double x, double z)
+    {
+        foreach (var band in wade)
+        {
+            var distance = band.Distance(x, z);
+            var shallow = TerrainDifferential.Constant(level) - SoftDepth(inward, depth, shelf, true);
+            // Only the bed envelope extends beyond the registration; WaterAt keeps permission local.
+            if (distance.Height > 0) shallow -= distance * (1d / 6);
+            if (shallow.Height > bed.Height) bed = shallow;
+        }
+        return bed;
     }
 
     private static TerrainDifferential HardWaterSurface(Builder b, TerrainRegion region, TerrainDifferential distance,

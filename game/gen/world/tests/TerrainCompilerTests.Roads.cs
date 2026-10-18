@@ -37,32 +37,6 @@ public sealed partial class TerrainCompilerTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void ExplicitCorridorRangeIsUnsupportedEvenForTheFullValidSource()
-    {
-        var road = new NetworkLine(new("fixture:range-road"), new([new(-10, 0), new(10, 0)]), 2.5f)
-            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
-        var context = Context([]) with { Network = new([road], [], [], [], []) };
-        var full = new TerrainCorridorOp("design:terrain:range-road", "explicit interval capability boundary", road.Id,
-            [new(0, 0.5), new(20, 0.5)], 0, 0.75) { Zone = Zone };
-        foreach (var range in new[] { new TerrainStationRange(5, 15), new TerrainStationRange(0, 20) })
-        {
-            var ranged = full with { Range = range, Anchors = [new(range.S0, 0.5), new(range.S1, 0.5)] };
-            var source = Source([ranged]);
-            try
-            {
-                TerrainCompiler.Compile(context, [source]);
-                throw new InvalidOperationException("An explicit Range was silently treated as a full-source corridor.");
-            }
-            catch (WorldDataException error)
-            {
-                AssertThat(error.File == source.File && error.Entry == ranged.Id).IsTrue();
-            }
-        }
-        var unchanged = TerrainCompiler.Compile(context, [Source([full with { Range = null }])]);
-        AssertThat(Math.Abs((double)(0.5) - (double)(unchanged.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
     public void AutomaticCorridorUsesNonRoadPlateauAndExplicitAnchorsOverrideIt()
     {
         var road = new NetworkLine(new("fixture:plateau-road"), new([new(-30, 0), new(30, 0)]), 2.5f)

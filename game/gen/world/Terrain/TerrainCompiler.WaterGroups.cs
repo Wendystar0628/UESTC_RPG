@@ -137,8 +137,9 @@ internal static partial class TerrainCompiler
             else
             {
                 var lakeArea = TerrainUnion.Build(lakes.Select(spec => spec.Region));
-                var lake = lakes[0] with { Wade = lakes.SelectMany(spec => spec.Wade).ToArray() };
-                var channel = channels[0];
+                var wade = members.SelectMany(spec => spec.Wade).ToArray();
+                var lake = lakes[0] with { Wade = wade };
+                var channel = channels[0] with { Wade = wade };
                 var blend = new WaterJoinBudget(2);
                 var join = new TerrainWaterJoin(domain, lakeArea);
                 originalHard = join.HardIntervals(lake.Bank.Kind == TerrainBankKind.Hard, channel.Bank.Kind == TerrainBankKind.Hard);

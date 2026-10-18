@@ -5,7 +5,9 @@ namespace Campus.Gen.World;
 internal sealed class TerrainRoadProfile
 {
     internal const double JunctionHeightTolerance = 0.0001;
-    internal sealed record Request(TerrainRoad Road, IReadOnlyList<(double From, double To)> Exclusions, double MaximumGrade);
+    internal sealed record Interval(IReadOnlyList<TerrainAnchor> Anchors, string File, string Id);
+    internal sealed record Request(TerrainRoad Road, IReadOnlyList<(double From, double To)> Exclusions, double MaximumGrade,
+        IReadOnlyList<Interval>? Intervals = null);
     private sealed record NetworkEdge(int A, int B, double Limit)
     {
         public double CorrectionA; public double CorrectionB;
@@ -38,7 +40,7 @@ internal sealed class TerrainRoadProfile
     private readonly string? _authoredFile;
     private readonly string? _authoredEntry;
     public double Length { get; }
-    internal IReadOnlyList<TerrainAnchor> AuthoredAnchors { get; } = [];
+    internal IReadOnlyList<TerrainAnchor> AuthoredAnchors { get; private set; } = [];
     internal IReadOnlyList<TerrainAnchor> AutomaticSamples { get; } = [];
 
     // These are the original samples of the existing linear/two-sided rounding pieces.
@@ -128,6 +130,15 @@ internal sealed class TerrainRoadProfile
                     locked[key] = value;
                     firstLockedSource.TryAdd(key, (entry.Road, entry.Profile, p.X, p.Y, value));
                 }
+            foreach (var request in requests)
+                foreach (var interval in request.Intervals ?? [])
+                    foreach (var anchor in interval.Anchors)
+                    {
+                        var p = request.Road.Path.AtDouble(anchor.S); var key = Key(p.X, p.Z);
+                        if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - anchor.Y) > JunctionHeightTolerance)
+                            throw new WorldDataException(interval.File, interval.Id, "Fixed corridor anchors disagree at a shared source-road node.");
+                        locked[key] = anchor.Y;
+                    }
             var keys = new Dictionary<(long X, long Z), int>(); var values = new List<double>(); var fixedValues = new List<bool>();
             var paths = new List<NetworkPath>(); var ownersByNode = new List<string>();
             var edges = new List<NetworkEdge>();
@@ -150,21 +161,42 @@ internal sealed class TerrainRoadProfile
                 foreach (var s in junctions)
                     foreach (var offset in new[] { -12.5, -10, 10, 12.5 }) stations.Add(Math.Max(0, Math.Min(path.Length, s + offset)));
                 foreach (var e in request.Exclusions) { stations.Add(e.From); stations.Add(e.To); }
+                foreach (var interval in request.Intervals ?? [])
+                    foreach (var anchor in interval.Anchors) stations.Add(anchor.S);
                 var sampled = stations.ToArray(); var nodes = new int[sampled.Length]; var fixedJunctions = new bool[sampled.Length];
                 for (var i = 0; i < sampled.Length; i++)
                 {
                     var p = path.At(sampled[i]); var key = Key(p.X, p.Y);
                     fixedJunctions[i] = ownership.TryGetValue(key, out var owners) && owners.Count > 1;
+                    var isZero = protectedZeroBand(p.X, p.Y); var isAuthored = locked.TryGetValue(key, out var authorY);
+                    var interval = request.Intervals?.FirstOrDefault(value => sampled[i] >= value.Anchors[0].S && sampled[i] <= value.Anchors[^1].S);
+                    if (interval is not null)
+                    {
+                        var anchors = interval.Anchors; var right = 1;
+                        while (right + 1 < anchors.Count && anchors[right].S < sampled[i]) right++;
+                        var a = anchors[right - 1]; var c = anchors[right];
+                        var fixedY = a.Y + (c.Y - a.Y) * ((sampled[i] - a.S) / (c.S - a.S));
+                        if (isAuthored && Math.Abs(authorY - fixedY) > JunctionHeightTolerance)
+                            throw new WorldDataException(interval.File, interval.Id, "Authored interval conflicts with another fixed road at a shared node.");
+                        authorY = fixedY; isAuthored = true;
+                    }
+                    if (isZero && isAuthored && Math.Abs(authorY) > 0.000001)
+                        throw new WorldDataException(interval?.File ?? "overlay/terrain", interval?.Id ?? "corridor", "An authored shared road node conflicts with the protected zero band.");
                     if (!keys.TryGetValue(key, out var node))
                     {
-                        var isZero = protectedZeroBand(p.X, p.Y); var isAuthored = locked.TryGetValue(key, out var authorY);
-                        if (isZero && isAuthored && Math.Abs(authorY) > 0.000001)
-                            throw new WorldDataException("overlay/terrain", "corridor", "An authored shared road node conflicts with the protected zero band.");
                         node = values.Count; keys.Add(key, node);
                         values.Add(isAuthored ? authorY : isZero ? 0 : terrain.Evaluate(p.X, p.Y).Surface.Height);
                         fixedValues.Add(isZero || isAuthored);
-                        ownersByNode.Add(isAuthored ? $"source='{firstLockedSource[key].Road.Source.Value}', file='{firstLockedSource[key].Profile._authoredFile}', entry='{firstLockedSource[key].Profile._authoredEntry}'"
+                        ownersByNode.Add(isAuthored && firstLockedSource.TryGetValue(key, out var owner) ? $"source='{owner.Road.Source.Value}', file='{owner.Profile._authoredFile}', entry='{owner.Profile._authoredEntry}'"
+                            : isAuthored ? "authored-corridor-interval"
                             : isZero ? "protected-zero-band" : "automatic-soft-target");
+                    }
+                    else if (isAuthored)
+                    {
+                        if (fixedValues[node] && Math.Abs(values[node] - authorY) > JunctionHeightTolerance)
+                            throw new WorldDataException(interval?.File ?? "overlay/terrain", interval?.Id ?? "corridor",
+                                "Fixed corridor intervals disagree at a shared network node.");
+                        values[node] = authorY; fixedValues[node] = true;
                     }
                     nodes[i] = node;
                     if (i == 0 || request.Exclusions.Any(e => (sampled[i - 1] + sampled[i]) / 2 > e.From && (sampled[i - 1] + sampled[i]) / 2 < e.To)) continue;
@@ -172,6 +204,10 @@ internal sealed class TerrainRoadProfile
                     // Include the 2.5 m rounding half-width so rounding cannot import a steeper
                     // exterior derivative into the prescribed 10 m junction zone.
                     var grade = junctions.Any(s => Math.Abs(midpoint - s) < 12.5) ? Math.Min(0.03, request.MaximumGrade) : request.MaximumGrade;
+                    // Mixed-source final rounding preserves the fixed author anchors. Leave room
+                    // for its one-sided Hermite derivative peak only in the automatically fitted gaps.
+                    if (request.Intervals is { Count: > 0 } ranges && !ranges.Any(value => midpoint >= value.Anchors[0].S && midpoint <= value.Anchors[^1].S))
+                        grade *= 0.75;
                     edges.Add(new(nodes[i - 1], node, grade * (sampled[i] - sampled[i - 1])));
                 }
                 paths.Add(new(request, sampled, nodes, fixedJunctions));
@@ -271,7 +307,14 @@ internal sealed class TerrainRoadProfile
             foreach (var item in _paths)
             {
                 var anchors = item.Stations.Select((s, i) => new TerrainAnchor(s, heights[item.Nodes[i]])).ToArray();
-                result.Add(item.Request.Road.Source, new(anchors, item.Request.Road.Path.Length, item.Request.Exclusions, item.Junctions));
+                if (item.Request.Intervals is { Count: > 0 } intervals)
+                {
+                    var profile = new TerrainRoadProfile(anchors, item.Request.Road.Path.Length, item.Request.Exclusions,
+                        item.Request.MaximumGrade, intervals[0].File, intervals[0].Id, preserveBounds: true);
+                    profile.AuthoredAnchors = intervals.SelectMany(interval => interval.Anchors).Distinct().OrderBy(anchor => anchor.S).ToArray();
+                    result.Add(item.Request.Road.Source, profile);
+                }
+                else result.Add(item.Request.Road.Source, new(anchors, item.Request.Road.Path.Length, item.Request.Exclusions, item.Junctions));
             }
             _heights = heights; Profiles = result; return result;
         }
@@ -308,7 +351,7 @@ internal sealed class TerrainRoadProfile
     }
 
     public TerrainRoadProfile(IReadOnlyList<TerrainAnchor> anchors, double actualLength,
-        IReadOnlyList<(double From, double To)> exclusions, double maximumGrade, string file, string op)
+        IReadOnlyList<(double From, double To)> exclusions, double maximumGrade, string file, string op, bool preserveBounds = false)
     {
         _authoredFile = file; _authoredEntry = op;
         // Source plan coordinates and authored station values are centimetre precision; never infer a missing endpoint.
@@ -320,6 +363,7 @@ internal sealed class TerrainRoadProfile
         if (anchors[^2].S >= actualLength)
             throw new WorldDataException(file, op, "The final interior anchor must precede the actual source endpoint.");
         AuthoredAnchors = anchors.ToArray();
+        if (preserveBounds) AutomaticSamples = anchors.ToArray();
         Length = actualLength; _exclusions = exclusions.OrderBy(e => e.From).ThenBy(e => e.To).ToArray();
         var slopes = new double[anchors.Count - 1];
         for (var i = 0; i < slopes.Length; i++) slopes[i] = (anchors[i + 1].Y - anchors[i].Y) / (anchors[i + 1].S - anchors[i].S);
@@ -329,16 +373,21 @@ internal sealed class TerrainRoadProfile
             var a = anchors[i]; var c = anchors[i + 1]; var slope = slopes[i];
             var leftWidth = i > 0 && !TouchesExclusion(anchors[i - 1].S, c.S) ? Math.Min(2.5, (c.S - a.S) / 2) : 0;
             var rightWidth = i + 1 < slopes.Length && !TouchesExclusion(a.S, anchors[i + 2].S) ? Math.Min(2.5, (c.S - a.S) / 2) : 0;
-            if (leftWidth > 0) pieces.Add(new(a.S, a.S + leftWidth, a.Y, a.Y + slope * leftWidth, Joint(slopes[i - 1], slope), slope, true, []));
+            int[] support = preserveBounds ? [i, i + 1] : [];
+            if (leftWidth > 0) pieces.Add(new(a.S, a.S + leftWidth, a.Y, a.Y + slope * leftWidth, RoundedGrade(slopes[i - 1], slope), slope, true, support));
             if (c.S - rightWidth > a.S + leftWidth) pieces.Add(new(a.S + leftWidth, c.S - rightWidth,
-                a.Y + slope * leftWidth, c.Y - slope * rightWidth, slope, slope, false, []));
-            if (rightWidth > 0) pieces.Add(new(c.S - rightWidth, c.S, c.Y - slope * rightWidth, c.Y, slope, Joint(slope, slopes[i + 1]), true, []));
+                a.Y + slope * leftWidth, c.Y - slope * rightWidth, slope, slope, false, support));
+            if (rightWidth > 0) pieces.Add(new(c.S - rightWidth, c.S, c.Y - slope * rightWidth, c.Y, slope, RoundedGrade(slope, slopes[i + 1]), true, support));
         }
         _pieces = pieces.ToArray();
         foreach (var piece in _pieces)
             foreach (var station in piece.CriticalStations().Concat(_exclusions.SelectMany(e => new[] { e.From, e.To })).Where(s => s >= piece.S0 && s <= piece.S1))
                 if (!_exclusions.Any(e => station >= e.From && station <= e.To) && Math.Abs(piece.At(station).Grade) > maximumGrade + 0.000001)
                     throw new WorldDataException(file, op, $"Fixed corridor anchors cannot be smoothed within grade {maximumGrade:R}; station={station:R}, grade={piece.At(station).Grade:R}. Anchors were not moved.");
+
+        // A harmonic joint keeps each mixed-source piece between its two samples, so the
+        // existing automatic freeboard solver can raise gap samples without moving anchors.
+        double RoundedGrade(double a, double c) => !preserveBounds ? Joint(a, c) : a * c <= 0 ? 0 : 2 * a * c / (a + c);
     }
 
     public (double Y, double Grade) At(double station)

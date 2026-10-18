@@ -1,0 +1,21 @@
+namespace Campus.Contracts;
+
+/// <summary>Optional immutable geometry directory on the same ITerrain instance, independent of visual residency.</summary>
+/// <remarks>Empty means confirmed no surface water. An absent capability does not make that claim.
+/// The producer freezes final polygons (including holes) and approved wade areas, orders by ordinal Water ID,
+/// and excludes underground channels. Levels remain exclusively ITerrain.WaterY; beds remain HeightAt.
+/// </remarks>
+public interface ITerrainWaterSource
+{
+    IReadOnlyList<TerrainWaterBody> Waters { get; }
+}
+
+public sealed record TerrainWaterBody(FeatureId Water, IReadOnlyList<PolygonRings> Polygons,
+    IReadOnlyList<PolygonRings> WadeAreas);
+
+/// <summary>Single identity rule for a compiled natural water volume. Authored volume IDs cannot use this prefix.</summary>
+public static class TerrainWaterIdentity
+{
+    public const string VolumePrefix = "terrain-water:";
+    public static string VolumeId(FeatureId water) => VolumePrefix + water.Value;
+}
