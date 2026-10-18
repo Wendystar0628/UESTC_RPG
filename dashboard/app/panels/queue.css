@@ -11,7 +11,7 @@
 .qu-count { font-variant-numeric: tabular-nums; color: var(--text-2); }
 .qu-hint { margin-left: auto; font-size: 0.78rem; color: var(--text-3); }
 .qu-cards { display: flex; flex-direction: column; gap: 0.5rem; }
-.qu-card, .qu-pack { background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 0.55rem 0.7rem; display: grid; gap: 0.2rem; }
+.qu-card { background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 0.55rem 0.7rem; display: grid; gap: 0.2rem; }
 .qu-card { grid-template-columns: auto 1fr; align-items: center; gap: 0.15rem 0.6rem; }
 .qu-card .qu-title { grid-column: 1 / 3; }
 .qu-id { font-family: var(--mono); font-size: 0.8rem; color: var(--text-3); }
@@ -30,12 +30,6 @@
 .qu-cards--paused { display: none; margin-top: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
 .qu-paused.is-open .qu-cards--paused { display: grid; }
 
-.qu-packs { display: flex; flex-direction: column; gap: 0.5rem; }
-.qu-pack { grid-template-columns: 4.5rem 1fr auto; align-items: center; gap: 0.6rem; }
-.qu-pack.is-blocked { border-color: var(--risk); border-left-width: 3px; }
-.qu-block { grid-column: 2 / 4; color: var(--risk); font-size: 0.88rem; }
-
 @media (max-width: 640px) {
   .qu-board { grid-template-columns: 1fr; }
-  .qu-pack { grid-template-columns: 4rem 1fr auto; }
 }

@@ -124,22 +124,17 @@ def main_status(cell):
 def queue_data():
     text = read_text(STATUS_FILE)
     head = lambda key: next((l.split('：', 1)[1] for l in text.splitlines() if key in l and '：' in l), '')
-    rows, packages = [], []
+    rows = []
     for l in section(text, '## 施工队列').splitlines():
         c = cells(l)
         if len(c) >= 6 and re.match(r'^[A-Z]-\d+[a-z]*$', c[0]):
             rows.append({'id': c[0], 'title': re.split(r'[。（(]', c[1], 1)[0].strip()[:TEXT_MAX], 'status': main_status(c[3]),
                          'who': c[4].lower(), 'dirs': c[2], 'pre': c[5]})
-    for l in section(text, '## 活跃工作包').splitlines():
-        c = cells(l)
-        if len(c) >= 7 and re.match(r'^WP-\w+$', c[0]):
-            block = '' if c[6] in ('—', '-') else brief(c[6])
-            packages.append({'id': c[0], 'goal': brief(c[1]), 'status': main_status(c[5]), 'block': block})
     counts = {s: 0 for s in STATES}
     for r in rows:
         counts[r['status']] = counts.get(r['status'], 0) + 1
     return {'stage': brief(head('当前阶段')), 'priority': brief(head('当前优先级')),
-            'counts': counts, 'rows': rows, 'packages': packages}
+            'counts': counts, 'rows': rows}
 
 
 # ---------- structure ----------

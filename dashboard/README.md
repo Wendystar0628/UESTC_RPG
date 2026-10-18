@@ -33,7 +33,7 @@ dashboard/
 | 名字 | 种类 | 写的人 | 刷新 | 内容 |
 | --- | --- | --- | --- | --- |
 | `live` | auto | live.py | 15 s | 正在运行的会话、子代理（型号与推理强度）、后台脚本、构建锁与引擎进程 |
-| `queue` | auto | collect.py | 10 min | 施工队列各状态的行、活跃工作包、当前阶段与优先级 |
+| `queue` | auto | collect.py | 10 min | 施工队列各状态的行、当前阶段与优先级 |
 | `structure` | auto | collect.py | 10 min | 项目分层与主要目录，目录可嵌套子目录（文件数、代码行、测试代码行） |
 | `docs` | auto | collect.py | 10 min | 文档按域分组的清单（编码、标题、路径、一句话说明、体量、所属主文档、节目录）与互相引用关系 |
 | `decisions` | auto | collect.py | 10 min | 最近的决策（编号、一句话、状态）与总数 |
@@ -50,7 +50,7 @@ live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state
              scripts:  [{ id, name, kind: "watch"|"cron"|"gate"|"engine"|"build"|"other", state: "running"|"stopped", since, note }],
              build:    { lock: "free"|"held", holder, engines, builds } }
 queue:     { stage, priority, counts: { "进行中": n, "待编译": n, "等前置": n, "可派": n, "暂停": n },
-             rows: [{ id, title, status, who, dirs, pre }], packages: [{ id, goal, status, block }] }
+             rows: [{ id, title, status, who, dirs, pre }] }
 structure: { layers: [{ name, note, dirs: [{ path, files, loc, testLoc, note, children }] }] }
              # children 是子目录数组，形状同 dirs 的元素，递归；没有就是叶子；files 是该目录（含子目录）的文件数
 docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, parent, sections }] }],
@@ -106,7 +106,7 @@ Dash.tree({ key, nodes, label(n, depth), kids?(n), id?(n), openDepth? })
 | --- | --- | --- |
 | `#overview` 总览 | `overview.js` | 一行项目状态；"需要你看"（审计项与【需定】，最多 5 条）；健康签条；模型与脚本缩略；最新通知 3 条 |
 | `#models` 模型 | `models.js` | 会话 → 子代理的树，每个节点标型号与推理强度；后台脚本与构建锁 |
-| `#work` 施工 | `queue.js` | 队列按状态分栏，行只显示号与一句话；活跃工作包 |
+| `#work` 施工 | `queue.js` | 队列按状态分栏，行只显示号与一句话 |
 | `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数（确切）、代码行（数量级）、一句说明 |
 | `#docs` 文档 | `docs.js` | 域 → 主文档 → 子文档 → 节的树，默认只展开到域，点文档或节打开文件；树下是引用关系图 |
 | `#audit` 审计 | `audit.js` | 需要作者审的事（自动发现 + 模型挂的），可点开对应文件 |

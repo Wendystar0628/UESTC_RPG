@@ -1,4 +1,4 @@
-/* 施工页：队列按状态分栏，行只显示号、一句话、谁；活跃工作包。数据 queue（10 min 刷新）。 */
+/* 施工页：队列按状态分栏，行只显示号、一句话、谁。数据 queue（10 min 刷新）。 */
 (function () {
   const opened = new Set();
   const COLS = ['进行中', '待编译', '可派', '等前置'];
@@ -82,20 +82,6 @@
     return wrap;
   }
 
-  function packages(q) {
-    const pk = q.packages || [];
-    if (!pk.length) return null;
-    const box = h('div', 'qu-packs');
-    pk.forEach((p) => {
-      const blocked = !!p.block || p.status === '阻塞';
-      const r = h('div', 'qu-pack' + (blocked ? ' is-blocked' : ''));
-      r.append(h('span', 'qu-id', p.id), h('span', 'qu-title', p.goal), chip(p.status, blocked ? 'warn' : 'muted'));
-      if (p.block) r.append(h('span', 'qu-block', p.block));
-      box.append(r);
-    });
-    return box;
-  }
-
   Dash.panel({
     id: 'queue',
     page: 'work',
@@ -107,27 +93,11 @@
       el.replaceChildren();
       el.classList.add('qu');
       if (!q) { el.append(h('p', 'muted', '还没有队列数据')); return; }
-      const blocked = (q.packages || []).filter((p) => p.block || p.status === '阻塞').length;
-      const top = status(blocked ? 'warn' : 'ok');
+      const top = status('ok');
       top.body.append(q.stage || '', q.priority ? '，' + q.priority : '');
-      if (blocked) top.body.append(' ', chip(blocked + ' 个工作包被阻塞', 'warn'));
       el.append(top, board(q));
       const p = paused(q);
       if (p) el.append(p);
-    },
-  });
-
-  Dash.panel({
-    id: 'queue-packs',
-    page: 'work',
-    title: '活跃工作包',
-    order: 20,
-    needs: ['queue'],
-    render(el, data) {
-      el.replaceChildren();
-      el.classList.add('qu');
-      const pk = data.queue && packages(data.queue);
-      el.append(pk || h('p', 'muted', '没有活跃的工作包'));
     },
   });
 })();
