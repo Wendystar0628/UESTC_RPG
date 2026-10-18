@@ -32,14 +32,14 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 ### 0.1 接入要点
 
-- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；`project.godot`、csproj、`Directory.*.props`、契约、`ownership.json`、`docs/` 这些共享文件向 Astra 申请（WF-BUILD §1）。
+- **新建或修改文件**：只改 `ownership.json` 划给本包的路径；`project.godot`、csproj、`Directory.*.props`、契约、`ownership.json`、`docs/` 这些共享文件向 Codex 主线申请（WF-BUILD §1）。
 - **写契约、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
 - **要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经音频服务；不自己创建网格实例、`ShaderMaterial` 和音频播放器（§2）。
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
 - **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以各程序集的 `BannedSymbols.txt` 和 G4 为准（§2）。
 - **读写 `user://`**：每个文件只有一个读写方；任何代码都不用 `ResourceLoader`、`ResourceSaver` 读写 `user://`（§2）。
 - **用到契约**：签名看 `game/contracts/` 源码；会追加值的枚举写穷举 `switch`；JSON 用 `ContractJson.Options`（§3）。
-- **要改契约，或加着色器全局参数、着色器文件、项目引用、NuGet 包**：向 Astra 申请（§3）。
+- **要改契约，或加着色器全局参数、着色器文件、项目引用、NuGet 包**：向 Codex 主线申请（§3）。
 - **依赖的能力还没交付**：照显式桩开发，真实实现接入时同批删桩（§5）。
 
 ## 1 当前架构
@@ -76,7 +76,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 ### 依赖方向
 
-- 上层可以引用下层，反过来不行；同层的内容包、归属不同地图的命名空间互不引用（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Astra 批准。
+- 上层可以引用下层，反过来不行；同层的内容包、归属不同地图的命名空间互不引用（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
 - **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
 - **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他包的内部类型。
 - **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他包经 `IRenderHost` 申请并按包记账；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。
@@ -115,7 +115,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 ## 3 契约
 
 - 契约在 `game/contracts/`（`Campus.Contracts`）；签名、注释和 JSON 格式（`schemas/`）以源码为准，文档不抄签名。
-- 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Astra 申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方、数据和文档同批迁移，不保留旧接口（WF-RULE §10，D-209、D-214）。
+- 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方、数据和文档同批迁移，不保留旧接口（WF-RULE §10，D-209、D-214）。
 - 画面相关的契约（`ToonSpec`、调色板、着色器全局参数、界面令牌、过场 JSON）由主会话确认字段够用、命名与美术文档一致。
 - **枚举纪律**：枚举只在末尾追加值，JSON 按字符串存；会追加值的枚举，消费方写穷举 `switch`，`default` 分支拒绝或报错，不写二值判断；读到不认识的字符串按不合法处理（SYS-SAVE-FORMAT §1.3）。
 - JSON 一律用 `ContractJson.Options`；存读档用 System.Text.Json 源生成（SYS-SAVE-FORMAT §4）。
@@ -173,6 +173,6 @@ gates: [G1, G2, G3, G4, G5, G6]
 | 待验证 | 验证方法与负责 | 验证前用的初值 |
 | --- | --- | --- |
 | 导出版里的反射与程序集加载，注册结果是否与开发态一致（§2） | 跑通 `dotnet build` → `--headless --import` → `--export-release` → 导出版启动，比对两边的注册结果；WP-00 | 注册器按构建时生成的程序集清单逐个显式加载 |
-| Godot 4.7.2 在 net10.0 下的全链路（§1） | 同上四步；不通时报作者决定，不自行退回 net8.0；Astra | net10.0，`global.json` 锁定 SDK |
+| Godot 4.7.2 在 net10.0 下的全链路（§1） | 同上四步；不通时报作者决定，不自行退回 net8.0；Codex 主线 | net10.0，`global.json` 锁定 SDK |
 | 导出包里能否读到 `data/` 下的 JSON（§4） | 导出验证；WP-00、WP-02 | 导出过滤器显式包含按图与全局的 JSON 数据 |
 | gdUnit4Net 预发布版下需要引擎的测试怎么托管（§1） | 验证经 `gate.ps1` 把 `UESTC_GODOT` 交给测试适配器的做法；WP-00、WP-27 | 标 `[RequireGodotRuntime]` 的测试由 `gate.ps1` 交给引擎 |
