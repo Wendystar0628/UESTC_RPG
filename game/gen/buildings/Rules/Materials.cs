@@ -13,10 +13,8 @@ public enum MaterialKind : byte
     Roof,
     /// <summary>Window and door glass (toon_glass): window number in UV/UV2, window card type in the spare byte.</summary>
     Glass,
-    /// <summary>Window frames, mullions, downpipes: metal, fine line class, no shadow.</summary>
+    /// <summary>Window frames, mullions, penthouse doors: metal, fine line class, no shadow.</summary>
     Metal,
-    /// <summary>Air-conditioner grilles and roof plant enclosures.</summary>
-    Grille,
 }
 
 /// <summary>Palette token pair helpers and the ToonSpec of each material class.</summary>
@@ -33,7 +31,6 @@ public static class Materials
         MaterialKind.Roof => Families.RoofGrey,
         MaterialKind.Glass => Families.Glass,
         MaterialKind.Metal => Families.FrameAlu,
-        MaterialKind.Grille => Families.RoofGrey,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown material kind.")
     };
 
@@ -48,7 +45,6 @@ public static class Materials
         MaterialKind.Roof => new(Lit(family), Shade(family)) { Fx = ToonFx.Mottle, Wet = 0.85f },
         MaterialKind.Glass => new(Lit(family), Shade(family)) { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0f },
         MaterialKind.Metal => new(Lit(family), Shade(family)) { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f },
-        MaterialKind.Grille => new(Lit(family), Shade(family)) { Line = LineClass.Fine, Wet = 0.5f },
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown material kind.")
     };
 

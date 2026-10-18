@@ -102,13 +102,19 @@ public sealed partial class BuildingMesher
                 new V(f.At(u1, d, y1), Vector3.UnitY, default), new V(f.At(u0, d, y1), Vector3.UnitY, default));
     }
 
+    /// <summary>Rain downpipes every ~20 m on the outer ring, and condensate drains beside the niche strips (WP-12 parts, FacadeFittings).</summary>
     private void Downpipes()
     {
         var top = _prof.RoofEdge == Rules.RoofEdge.Cornice ? _p.WallTopY : _p.RoofY + 0.15f;
+        var rain = new ToonSpec(Materials.Lit(_prof.Trim), Materials.Shade(_prof.Trim));
+        var drainColour = new ToonSpec(Materials.Lit(FittingRules.DrainFamily), Materials.Shade(FittingRules.DrainFamily));
         foreach (var (fi, f, layout, skin) in FacadeFrames())
         {
             if (layout.Ring != 0 || skin.Length[layout.Edge] < 10f) continue;
             var openings = _p.Openings[fi];
+            var slots = _fittings.Slots(fi, layout, skin);
+            var drains = _fittings.Drains(fi, layout, skin).ToArray();
+            foreach (var (u, drainTop) in drains) _fittings.Downpipe(f, u, _p.SunkY, drainTop, true, drainColour);
             var spots = new List<float> { 0.2f };
             for (var x = 20f; x < skin.Length[layout.Edge] - 6f; x += 20f)
             {
@@ -116,44 +122,44 @@ public sealed partial class BuildingMesher
                 var m = (int)MathF.Round((x + layout.SkinShift) / layout.BayWidth);
                 if (_prof.PilasterEvery > 0 && m % _prof.PilasterEvery == 0) m++;
                 if (m <= 0 || m >= layout.Bays) continue;
-                spots.Add(layout.BoundarySkin(m) + (_prof.AcGrilles ? 0.45f : 0f));
+                spots.Add(layout.BoundarySkin(m) + (_prof.AcGrilles ? FittingRules.RainBesideGrille : 0f));
             }
             foreach (var u in spots)
             {
-                var u0 = u - 0.065f;
-                var u1 = u + 0.065f;
-                if (openings.Any(o => o.U0 - 0.05f < u1 && u0 < o.U1 + 0.05f)) continue;
-                f.Box(_sink, _metal, u0, u1, 0.02f, 0.15f, _p.PlinthTopY, top, bottom: true);
+                // Clear of every opening, niche and drain of the facade.
+                var near = FittingRules.PipeHalf + FittingRules.PipeClear;
+                if (!FacadeFittings.Clear(openings, u) || slots.Any(s => s.U0 - near < u && u < s.U1 + near) ||
+                    drains.Any(d => MathF.Abs(d.U - u) < 2f * FittingRules.PipeHalf)) continue;
+                _fittings.Downpipe(f, u, _p.SunkY, top, false, rain);
             }
         }
     }
 
+    /// <summary>The unit grilles: a WP-12 cage on a chamfered shelf beside each window, in vertical strips.</summary>
     private void Grilles()
     {
         foreach (var (fi, f, layout, skin) in FacadeFrames())
-        {
-            var openings = _p.Openings[fi];
-            var uEnd = skin.Length[layout.Edge] - 0.2f;
-            foreach (var o in openings)
+            foreach (var slot in _fittings.Slots(fi, layout, skin))
             {
-                if (o.Kind != BayKind.Window || o.Row == 0) continue;
-                var u0 = o.U1 + 0.14f;
-                var u1 = u0 + 0.95f;
-                if (u1 > uEnd || openings.Any(p => p.Row == o.Row && p.U0 < u1 + 0.1f && p.U1 > u0)) continue;
-                var y0 = _p.FloorY(o.Row) + 0.2f;
-                const float depth = 0.38f;
-                f.Box(_sink, _trim, u0 - 0.03f, u1 + 0.03f, 0f, depth + 0.04f, y0 - 0.08f, y0, aoBottom: 0.3f);
-                f.Box(_sink, _grille, u0, u1, 0f, depth, y0, y0 + 0.8f, bottom: false);
-                if (Full)
-                    for (var k = 1; k <= 3; k++)
-                    {
-                        // Louvre blades: read as a perforated grille rather than a closed box.
-                        var yb = y0 + 0.2f * k;
-                        f.Box(_sink, _grilleBlade, u0 + 0.04f, u1 - 0.04f, depth, depth + 0.025f, yb - 0.018f, yb + 0.018f);
-                    }
+                Shelf(f, slot);
+                _fittings.Grille(f, slot);
             }
-        }
     }
 
-
+    /// <summary>Shelf under a niche, from the wall to just past the cage front; chamfered front top edge at L0, AO under it.</summary>
+    private void Shelf(EdgeFrame f, GrilleSlot slot)
+    {
+        var u0 = slot.U0 - FittingRules.ShelfSide;
+        var u1 = slot.U1 + FittingRules.ShelfSide;
+        var depth = FittingRules.Grille.Depth + FittingRules.ShelfOverhang;
+        var top = slot.Y0;
+        var bottom = top - FittingRules.ShelfThickness;
+        if (!Full)
+        {
+            f.Box(_sink, _trim, u0, u1, 0f, depth, bottom, top, aoBottom: FittingRules.ShelfAo);
+            return;
+        }
+        var c = FittingRules.ShelfChamfer;
+        f.Bar(_sink, _trim, u0, u1, Profile.Of([new(0f, bottom, 0f, FittingRules.ShelfAo), new(depth, bottom), new(depth, top - c), new(depth - c, top), new(0f, top)], 2));
+    }
 }

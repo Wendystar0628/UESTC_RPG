@@ -98,8 +98,10 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
         if (Level(Fence) is { } fenceLevel)
         {
             var at = Matrix4x4.CreateTranslation(0f, baseY, 0f);
-            foreach (var mesh in EquipmentFencePart.Along(ring.Points, true, Defaults<RailingParams>(PartCatalog.EquipmentFence), fenceLevel).Meshes)
+            var fence = Defaults<RailingParams>(PartCatalog.EquipmentFence);
+            foreach (var mesh in EquipmentFencePart.Along(ring.Points, true, fence, fenceLevel).Meshes)
                 sink.Append(FenceBoards(mesh), at);
+            if (fenceLevel == LodLevel.L0) FenceDoor(ring, baseY, fence);
         }
         var (tank, pumps) = RoofRules.Plant(plan.Style, Full);
         var units = Units(tank, pumps);
@@ -112,6 +114,39 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
             var geometry = isTank ? Part(Tank, PartCatalog.WaterTank, p) : Part(HeatPump, PartCatalog.HeatPump, p);
             if (geometry is not null) Place(geometry, at);
         }
+    }
+
+    private static readonly Face FrameFace = new(MaterialKind.Metal, Families.FrameAlu, VertexFlags.NoShadow);
+    private static readonly Face LeafFace = new(MaterialKind.Trim, RoofRules.DoorLeaf);
+
+    /// <summary>
+    /// The access door on the longest run of the fence ring, on the bay the WP-12 fence part would give an open run (middle
+    /// one): frame, leaf and handle stand proud of the boards between that bay's posts, so nothing crosses the fence itself.
+    /// The posts and bays are the part's (round(length / PostSpacing) bays from the run's first corner); a bay too narrow
+    /// for a door after its posts gets none.
+    /// </summary>
+    private void FenceDoor(PlanRing ring, float baseY, RailingParams fence)
+    {
+        var run = Array.IndexOf(ring.Length, ring.Length.Max());
+        var count = Math.Max(1, (int)Math.Round(ring.Length[run] / Math.Max(fence.PostSpacing, 0.3f)));
+        var bay = ring.Length[run] / count;
+        var width = MathF.Min(RoofStyle.FenceDoorWidth, bay - RoofStyle.FencePost - 2f * (RoofRules.DoorJamb + RoofRules.DoorSideClear));
+        if (width < RoofRules.DoorMinWidth) return;
+        var f = EdgeFrame.Of(ring, run);
+        var centre = bay * (count / 2 + 0.5f);
+        float u0 = centre - width * 0.5f, u1 = centre + width * 0.5f, jamb = RoofRules.DoorJamb;
+        var board = fence.Depth * 0.5f;
+        float sFrame = board + RoofRules.DoorFrameProud, sLeaf = board + RoofRules.DoorLeafProud;
+        var cap = MathF.Min(RoofStyle.FenceCap, fence.Height * 0.1f);
+        var headTop = baseY + fence.Height - cap - RoofRules.DoorHeadGap;
+        var headBottom = headTop - RoofRules.DoorHead;
+        f.Box(sink, FrameFace, u0 - jamb, u0, 0f, sFrame, baseY, headTop, bottom: false);
+        f.Box(sink, FrameFace, u1, u1 + jamb, 0f, sFrame, baseY, headTop, bottom: false);
+        f.Box(sink, FrameFace, u0, u1, 0f, sFrame, headBottom, headTop);
+        f.Box(sink, LeafFace, u0, u1, 0f, sLeaf, baseY + RoofRules.DoorSill, headBottom, bottom: false);
+        var h0 = u1 - RoofRules.HandleFromJamb - RoofRules.HandleLength;
+        var y0 = baseY + RoofRules.HandleY;
+        f.Box(sink, FrameFace, h0, h0 + RoofRules.HandleLength, sLeaf - 0.004f, sLeaf + RoofRules.HandleProud, y0, y0 + RoofRules.HandleHeight);
     }
 
     /// <summary>A communication mast (WP-12 antenna, mast variant) standing at <paramref name="spot"/>.</summary>

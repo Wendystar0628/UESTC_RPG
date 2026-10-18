@@ -15,7 +15,7 @@ namespace Campus.Gen.Buildings.Build;
 /// wall; WP-10 frames, doors and curtains with OpeningGlass glass, see FacadeOpenings), cornice or parapet with
 /// the WP-12 coping and lightning strip, roof with stair-core penthouses and a fenced WP-12 plant enclosure (see
 /// RoofParts), entrances (surround, canopy, the WP-11 landing with its slope or steps, see EntranceKit), pilasters,
-/// downpipes and AC grilles. Surfaces that persist across
+/// downpipes and AC grilles (WP-12 parts, see FacadeFittings). Surfaces that persist across
 /// levels keep their normals, colours and material classes.
 /// </summary>
 public sealed partial class BuildingMesher
@@ -28,8 +28,9 @@ public sealed partial class BuildingMesher
     private readonly FacadeProfile _prof;
     private readonly FacadeOpenings _openings;
     private readonly RoofParts _roofParts;
+    private readonly FacadeFittings _fittings;
     private readonly bool _parapetOk;
-    private readonly Face _wall, _trim, _plinth, _roof, _metal, _grille, _grilleBlade, _accent, _stone;
+    private readonly Face _wall, _trim, _plinth, _roof, _metal, _accent, _stone;
 
     public BuildingMesher(BuildingPlan plan, WindowBlock block, LodLevel lod, MeshSink sink)
     {
@@ -39,6 +40,7 @@ public sealed partial class BuildingMesher
         _prof = plan.Profile;
         _openings = new FacadeOpenings(plan, block, lod, sink);
         _roofParts = new RoofParts(plan, lod, sink);
+        _fittings = new FacadeFittings(plan, lod, sink);
         _wall = new Face(MaterialKind.Wall, _prof.Wall);
         _accent = new Face(MaterialKind.Wall, _prof.Accent ?? _prof.Wall);
         _trim = new Face(MaterialKind.Trim, _prof.Trim);
@@ -46,8 +48,6 @@ public sealed partial class BuildingMesher
         _stone = new Face(MaterialKind.Trim, Families.StoneBeige);
         _roof = new Face(MaterialKind.Roof, _prof.Roof);
         _metal = new Face(MaterialKind.Metal, Families.FrameAlu, VertexFlags.NoShadow);
-        _grille = new Face(MaterialKind.Grille, Families.FrameAlu);
-        _grilleBlade = new Face(MaterialKind.Grille, Families.RoofGrey, VertexFlags.NoShadow);
         _parapetOk = plan.SkinRings.All(r => r.Offset(ParapetInner - 0.06f) is not null);
     }
 

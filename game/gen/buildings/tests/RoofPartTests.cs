@@ -30,7 +30,9 @@ public sealed class RoofPartTests
         static bool Fence(GeometryBundle b) => HasColor(b, Rules.RoofRules.FenceBoard + ".lit") &&
             b.Material.Spec.Line == LineClass.Building && b.Material.Spec.Fx == ToonFx.None;
         static bool Strip(GeometryBundle b) => HasColor(b, "roof.silverMetal.lit") && b.Material.Spec.Fx.HasFlag(ToonFx.Rim);
-        static bool Tank(GeometryBundle b) => HasColor(b, "roof.silverMetal.lit") && b.Material.Spec.Fx == ToonFx.BevelLift;
+        // Roof plant is the silver metal standing on the roof: the facade's AC cages share its colour but hang below the roof line.
+        static bool OnRoof(GeometryBundle b, BuildingPlan p) => ColorVertices(b, "roof.silverMetal.lit").Any(v => b.Position[3 * v + 1] > p.RoofY);
+        static bool Tank(GeometryBundle b, BuildingPlan p) => b.Material.Spec.Fx == ToonFx.BevelLift && OnRoof(b, p);
         static int Tris(IEnumerable<GeometryBundle> bs, string token) => bs.Sum(b => Enumerable.Range(0, b.Index.Length / 3).Count(t => TriangleColor(b, t * 3, token)));
         for (var i = 0; i < plain.Plans.Count; i++)
         {
@@ -40,11 +42,11 @@ public sealed class RoofPartTests
             var nearFull = module.BuildOne(full, hero.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             AssertThat(near.Any(Fence) && near.Any(Pump) && near.Any(Strip)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: fenced plant and lightning strip")).IsTrue();
             AssertThat(!near.Concat(nearFull).Any(b => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.Building)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: no dark fence steel left on the boards")).IsTrue();
-            AssertThat((simple.Style == Rules.BuildingStyle.Research) == near.Any(Tank)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: a water tank beside teaching plant only")).IsTrue();
+            AssertThat((simple.Style == Rules.BuildingStyle.Research) == near.Any(b => Tank(b, simple))).OverrideFailureMessage("Expected: " + ($"{simple.Key}: a water tank beside teaching plant only")).IsTrue();
             AssertThat(Tris(nearFull.Where(Pump), "equip.grey.lit") > Tris(near.Where(Pump), "equip.grey.lit")).OverrideFailureMessage("Expected: " + ($"{simple.Key}: a K1 roof carries more and finer units")).IsTrue();
             AssertThat(Tris(nearFull.Where(Strip), "roof.silverMetal.lit") > Tris(near.Where(Strip), "roof.silverMetal.lit")).OverrideFailureMessage("Expected: " + ($"{simple.Key}: K1 strip on supports, elsewhere one rod")).IsTrue();
             var mid = module.BuildOne(simple, plain.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog);
-            AssertThat(!mid.Any(Strip) && module.BuildOne(full, hero.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog).Any(Strip)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: the rod stops at L0 on simple roofs")).IsTrue();
+            AssertThat(!mid.Any(b => Strip(b) && OnRoof(b, simple)) && module.BuildOne(full, hero.Blocks[i], LodLevel.L1, Campus.Contracts.Tests.PaletteFixture.Catalog).Any(b => Strip(b) && OnRoof(b, full))).OverrideFailureMessage("Expected: " + ($"{simple.Key}: the rod stops at L0 on simple roofs")).IsTrue();
             // Coping: the WP-12 cap reaches the parapet top, its drip hangs 60 mm under the slab outside the wall.
             var trim = near.Where(b => HasColor(b, Rules.Materials.Lit(simple.Profile.Trim).Value) && b.Material.Spec.Fx == ToonFx.BevelLift).ToArray();
             var ys = trim.SelectMany(b => ColorVertices(b, Rules.Materials.Lit(simple.Profile.Trim).Value).Select(v => b.Position[3 * v + 1])).ToArray();

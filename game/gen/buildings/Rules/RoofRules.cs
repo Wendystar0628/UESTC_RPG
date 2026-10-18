@@ -42,6 +42,25 @@ public static class RoofRules
     /// </summary>
     public const string FenceBoard = "frame.alu";
 
+    // ---- Access door of the enclosure (MAP-QSH-ADDITIONS-VOCAB: 留检修门; ART-MODELING: an L0 variant of K1 and K2 roofs).
+    // The fence ring is closed, so the generator draws the door itself, on the middle bay of its longest run. ----
+    /// <summary>Jamb and head face width of the door frame.</summary>
+    public const float DoorJamb = 0.05f;
+    /// <summary>Free fence between the door frame and the posts of its bay.</summary>
+    public const float DoorSideClear = 0.04f;
+    /// <summary>A bay too narrow for a door at least this wide (after jambs and posts) gets none.</summary>
+    public const float DoorMinWidth = 0.6f;
+    /// <summary>The frame and the leaf stand this far proud of the board face; the frame leads, so the leaf reads as set in.</summary>
+    public const float DoorFrameProud = 0.024f, DoorLeafProud = 0.012f;
+    /// <summary>Head bar: its top this far under the cap rail's underside, and its height.</summary>
+    public const float DoorHeadGap = 0.10f, DoorHead = 0.06f;
+    /// <summary>Leaf bottom above the roof slab.</summary>
+    public const float DoorSill = 0.03f;
+    /// <summary>Handle: length, height, height above the slab, proud of the leaf, and distance from the lock-side jamb.</summary>
+    public const float HandleLength = 0.12f, HandleHeight = 0.035f, HandleY = 1.0f, HandleProud = 0.035f, HandleFromJamb = 0.08f;
+    /// <summary>Leaf colour: the light equipment grey, one step off the aluminium boards so the door reads on the fence.</summary>
+    public const string DoorLeaf = "equip.grey";
+
     /// <summary>
     /// What the enclosure holds: dormitories run air-source heat pumps (no solar heaters, MAP-QSH-ADDITIONS),
     /// canteens their kitchen units, teaching and service buildings a panel water tank beside the heat pumps.
