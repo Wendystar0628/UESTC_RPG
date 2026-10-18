@@ -12,7 +12,8 @@ dashboard/
   打开观察台.cmd         启动实时采集（没在跑时）、跑一次项目采集、用默认浏览器打开 index.html
   app/
     manifest.js         页面、面板、数据源与刷新间隔的唯一清单；加页面或数据源只改这里
-    core.js             Dash 运行时：数据注册与定时重载、页面路由、面板渲染、通用格式化
+    core.js             Dash 运行时：数据注册与定时重载、页面路由、面板注册与渲染
+    ui.js               通用格式化与小组件（数量级、时间、h()、卡片、行、已看标记、待看汇总）；在 core.js 之后加载
     style.css           颜色与字体令牌、通用组件样式
     panels/<id>.js      一个面板一个文件（可带同名 .css）；只经 Dash 读数据
   data/                 本地状态，不进 git（.gitignore）
@@ -65,7 +66,7 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 - 文字字段都是一句话：`task`、`text`、`title` 不超过约 40 个汉字，`why` 不超过约 60 个汉字。
 - 不放会话号、本机绝对路径之外的隐私信息；会话号只在 `id` 里给页面去重用，不显示。
 
-## 3 页面运行时（app/core.js 提供）
+## 3 页面运行时（app/core.js 与 ui.js 提供）
 
 ```
 Dash.put(name, data)          数据文件调用；存下并重绘依赖它的面板
