@@ -134,6 +134,14 @@
     return row;
   }
 
+  /* 不是命令行任务的 Godot 进程：个数加各自的开始时刻（几天前留下的一眼能看出来），读不到命令行的写明 */
+  function editorsText(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    var unread = list.filter(function (e) { return !e.cmd; }).length;
+    return '另有 Godot 进程 ' + list.length + ' 个（' + list.map(function (e) { return Dash.at(e.since) + ' 起'; }).join('、') + '）' +
+      (unread ? '，' + (unread === list.length ? '' : unread + ' 个') + '读不到命令行' : '');
+  }
+
   /* 构建锁 + 逐个进程列出的后台脚本（同一脚本的外壳与子进程已在采集时合并）+ 巡逻 */
   Dash.scripts = function (live) {
     var b = live.build || {};
@@ -143,7 +151,7 @@
       dot(held ? 'held' : 'idle'),
       h('span.sc-name', '构建锁'),
       h('span.sc-cmd', held ? '被 ' + (b.holder || '某个进程') + ' 占用' : '空闲'),
-      h('span.sc-when', b.editors ? '开着 ' + b.editors + ' 个编辑器' : '')));
+      h('span.sc-when', editorsText(b.editors))));
     var list = live.scripts || [];
     list.filter(function (s) { return s.kind !== 'cron'; }).forEach(function (s) { box.appendChild(runLine(s)); });
     list.filter(function (s) { return s.kind === 'cron'; }).forEach(function (s) {

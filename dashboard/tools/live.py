@@ -60,7 +60,7 @@ def collect():
     a_part = part(errors, "Claude", lambda: people.claude(ids), ([], []))
     sessions, agents = people.merge(a_part, c_part)
     procs = part(errors, "进程表", repo.processes, [])
-    items, n_engine, n_build, editors = part(errors, "脚本", lambda: running.build(procs), ([], 0, 0, 0))
+    items, n_engine, n_build, editors = part(errors, "脚本", lambda: running.build(procs), ([], 0, 0, []))
     out_scripts = running.with_status(items)
     build = part(errors, "构建锁", lambda: build_block(items, n_engine, n_build, editors), None)
     hook_cards = part(errors, "钩子", hooks.cards, None)

@@ -2,8 +2,8 @@
 并顺手删掉 curated/notices 里过期的通知。形状见 dashboard/README.md §2.1。
 只读来源、不改它们；任何一份采集失败只跳过那一份，在 stderr 说一句，不影响其余。
 
-用法：python -I -X utf8 dashboard/tools/collect.py          （巡逻每 10 分钟跑一次，也可手动）
-      from collect import main; main()                       （巡逻 import 调用，不交互、不退出）
+用法：python -I -X utf8 dashboard/tools/collect.py          （live.py --loop 在输入一变时跑、不变时每 2 分钟兜底；也可手动）
+      from collect import main; main()                       （live.py import 调用，不交互、不退出）
 """
 import glob
 import os
@@ -92,9 +92,12 @@ def main_status(cell):
 
 
 def queue_data():
+    from monitor.check.flow import queue_fixes   # 可派与等前置怎么维护：判据只在巡逻那一份检查里，这里取同一份结果给施工页
     head = lambda key: next((l.split('：', 1)[1] for l in collab.status_head().splitlines() if key in l and '：' in l), '')
-    rows = [{'id': r['id'], 'title': r['what'], 'status': main_status(r['state']), 'who': r['who'].lower(), 'dirs': r['dirs'], 'pre': r['pre']}
-            for r in collab.queue_rows()]
+    source = collab.queue_rows()
+    fixes = {i: text for i, _kind, text in queue_fixes(source)}
+    rows = [{'id': r['id'], 'title': r['what'], 'status': main_status(r['state']), 'who': r['who'].lower(), 'dirs': r['dirs'], 'pre': r['pre'],
+             'fix': fixes.get(r['id'])} for r in source]
     counts = {s: 0 for s in STATES}
     for r in rows:
         counts[r['status']] = counts.get(r['status'], 0) + 1

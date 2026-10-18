@@ -46,8 +46,8 @@
     return c;
   }
   function changesLine(ch) {
-    if (!ch.files) return h('div.dg-line.muted', '工作区里这行的目录下没有未提交的改动');
-    return h('div.dg-line', h('b', '目录范围内改动 ' + ch.files + ' 个文件（候选匹配）'), '：',
+    if (!ch.files) return h('div.dg-line.muted', '工作区里这行的目录或工作包下没有未提交的改动');
+    return h('div.dg-line', h('b', '目录或工作包范围内改动 ' + ch.files + ' 个文件（候选匹配）'), '：',
       ch.dirs.map(function (x, i) { return h('span.dg-dir', (i ? '、' : '') + x.path + '（' + x.files + '）'); }));
   }
   function itemCard(it) {
@@ -126,8 +126,8 @@
       Dash.chip(it.who || '—', sideOf(it.who))));
     body.appendChild(h('div.dg-line', h('b', '谁编 '), p.by));
     body.appendChild(p.files.count
-      ? Dash.fold('主检出目录范围内改动 ' + p.files.count + ' 个（候选文件）', h('div.pd-files', p.files.list.map(function (f) { return h('div.dg-dir', f); })))
-      : h('div.dg-line.muted', '这行的目录下没有未提交的文件' + (it.dirs ? '（目录：' + it.dirs + '）' : '')));
+      ? Dash.fold('主检出目录或工作包范围内改动 ' + p.files.count + ' 个（候选文件）', h('div.pd-files', p.files.list.map(function (f) { return h('div.dg-dir', f); })))
+      : h('div.dg-line.muted', '这行的目录或工作包下没有未提交的文件' + (it.dirs ? '（目录：' + it.dirs + '）' : '')));
     body.appendChild(treeBlock(p.tree));
     body.appendChild(waitLine(p.waiting));
     if (it.agents.length) body.appendChild(h('div.dg-agents', it.agents.map(agentChip)));
@@ -180,7 +180,8 @@
       h('span.qu-foot',
         col === '等前置' && r.pre ? h('span.qu-pre', '等 ' + r.pre) : null,
         r.who ? Dash.chip(whoLabel(r.who), sideOf(r.who)) : null),
-      h('span.qu-title', r.title));
+      h('span.qu-title', r.title),
+      r.fix ? h('span.qu-fix', r.fix) : null);   // 与巡逻、健康页"施工队列"同一份判据（monitor/check/flow.queue_fixes）
   }
   function qColumn(q, col, hint) {
     var rows = (q.rows || []).filter(function (r) { return r.status === col; });
@@ -202,8 +203,10 @@
     id: 'work-queued', page: 'work', title: '排着的', order: 30, needs: ['queue'],
     render: function (el, d) {
       var q = d.queue;
-      var top = Dash.statusLine('ok');
-      top.body.append(q.stage || '', q.priority ? '，' + q.priority : '');
+      var fixes = (q.rows || []).filter(function (r) { return r.fix; }).length;
+      var top = Dash.statusLine(fixes ? 'warn' : 'ok');
+      top.body.append([q.stage ? '阶段：' + q.stage : '', q.priority ? '优先级：' + q.priority : '', fixes ? fixes + ' 行的状态或前置要改（卡片下方写了怎么改）' : '']
+        .filter(Boolean).join(' · '));
       el.append(top, h('div.qu-board', COLS.map(function (c) { return qColumn(q, c[0], c[1]); })));
     }
   });

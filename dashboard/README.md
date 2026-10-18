@@ -37,12 +37,12 @@ dashboard/
 | 名字 | 种类 | 写的人 | 刷新 | 内容 |
 | --- | --- | --- | --- | --- |
 | `live` | auto | live.py | 15 s | 会话、子代理（型号与推理强度）、在做的工作、后台脚本、构建锁与引擎进程、临时工作树、钩子与生效记录 |
-| `queue` | auto | collect.py | 10 min | 施工队列各状态的行、当前阶段与优先级 |
-| `structure` | auto | collect.py | 10 min | 项目分层与主要目录，目录可嵌套子目录（文件数、代码行、测试代码行） |
-| `docs` | auto | collect.py | 10 min | 文档按域分组的清单（编码、标题、路径、一句话说明、体量、所属主文档、节目录）与互相引用关系 |
-| `decisions` | auto | collect.py | 10 min | 最近的决策（编号、一句话、状态）与总数 |
-| `health` | auto | collect.py | 10 min | 健康检查记录（测试与门禁、代码与文档、工作区与推送、协作流程、后台与钩子、会话与子代理） |
-| `audit-auto` | auto | collect.py | 10 min | 自动发现的待审项：新截图、新海报与报告页、待审调研、【需定】来信 |
+| `queue` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 施工队列各状态的行、当前阶段与优先级 |
+| `structure` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 项目分层与主要目录，目录可嵌套子目录（文件数、代码行、测试代码行） |
+| `docs` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 文档按域分组的清单（编码、标题、路径、一句话说明、体量、所属主文档、节目录）与互相引用关系 |
+| `decisions` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 最近的决策（编号、一句话、状态）与总数 |
+| `health` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 健康检查记录（测试与门禁、代码与文档、工作区与推送、协作流程、后台与钩子、会话与子代理） |
+| `audit-auto` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 自动发现的待审项：新截图、新海报与报告页、待审调研、【需定】来信 |
 | `catalog` | auto | live.py | 60 s | 所有脚本与作用：按组、按子目录成树，每个脚本的作用、用法、开头说明、语言、行数、修改时刻、进不进 git、现在是否在跑 |
 | `notices` | curated | post.py | 30 s | 给作者的通知 |
 | `audit` | curated | post.py | 30 s | 模型挂给作者审的事 |
@@ -54,7 +54,7 @@ live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state
              agents:   [{ id, parent, name, side, model, effort, state: "running"|"done", started, last, task, row, stalled }],
              scripts:  [{ id, name, kind: "watch"|"cron"|"gate"|"engine"|"build"|"other", state: "running"|"stopped", since, where, cmd, note,
                           stage?, testing? }],
-             build:    { lock: "free"|"held", holder, engines, builds, editors },
+             build:    { lock: "free"|"held", holder, engines, builds, editors: [{ pid, since, cmd }] },   # editors：不是命令行任务的 Godot 进程，命令行读不到时 cmd 是空串
              work:     { items: [{ row, what, dirs, state, who, sheet, agents: [{ id, side, name, model, effort, state, started, last, task }],
                                    changes: { files, dirs: [{ path, files }] }, flags: [一句话],
                                    pending?: { by, files: { count, list: [路径] },
@@ -71,7 +71,7 @@ live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state
                           last, h1, h24, lastInj, recent, flag, note }],
              errors:   [采集这一块失败的原文："块名：异常类型 原文"] }
 queue:     { stage, priority, counts: { "进行中": n, "待编译": n, "等前置": n, "可派": n, "暂停": n },
-             rows: [{ id, title, status, who, dirs, pre }] }
+             rows: [{ id, title, status, who, dirs, pre, fix }] }   # fix：可派、等前置该怎么改（monitor/check/flow.queue_fixes，与巡逻同一份），没有是 null
 structure: { layers: [{ name, note, dirs: [{ path, files, loc, testLoc, note, children }] }] }
              # children 是子目录数组，形状同 dirs 的元素，递归；没有就是叶子；files 是该目录（含子目录）的文件数
 docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, parent, sections }] }],
@@ -89,10 +89,10 @@ notices:   { items: [{ id, at, from, level: "info"|"attention"|"decision", text,
 audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] }
 ```
 
-- `live.sessions`、`live.agents`：Claude 与 Codex 两侧；`agents[].row` 是子代理名开头对上的队列行号（Claude 看 `description`，Codex 看 `task_name`；没有行号的是调研、核查一类，`row` 为空）；`stalled` 是"记录没收尾却 20 分钟没写"。`since`：会话当前状态从何时起（Codex 取会话记录里最近一次开始或结束，Claude 取记录最后写入）。`task`：Codex 主线最近一句话（全文）。
+- `live.sessions`、`live.agents`：Claude 与 Codex 两侧；`agents[].row` 是子代理名开头对上的队列行号（Claude 看 `description`，Codex 看 `task_name`；没有行号的是调研、核查一类，`row` 为空）；`stalled` 是"记录没收尾却 20 分钟没写"。`since`：会话当前状态从何时起（Codex 取会话记录里最近一次开始或结束；Claude 在忙时取这一轮开始的那条消息，空闲时取记录最后写入）。Claude 子代理的 `effort` 派单时传的优先，没传取记录里实际用的推理强度，都没有写"默认"。`task`：Codex 主线最近一句话（全文）。
 - `live.scripts`：逐个进程列出，同一脚本的外壳与子进程合并成一项；`where` 是"主检出"或临时工作树的路径（命令行路径对上 git 登记的工作树）；`cmd` 是命令摘要（`gate.ps1 -Wp WP-00`、`fixed_shots.ps1 -Only …`、`dotnet test Campus.Gen.Tests --filter …`、Godot 的 `--shots=P02 clear/autumn/17.5` 等）；门禁另有 `stage`（走到哪一门：G1 编译、G1 资源导入、G2 测试 <项目>、G4 架构规则……，读该检出 `output/build/gates` 下的日志）与 `testing`（正在跑的测试项目）。没在跑也要露面的来信监视、实时采集和巡逻（定时任务，进程里看不到，看 `state/patrol.last`）带 `state: "stopped"`。
-- `live.work`：`items` 是施工队列里进行中、待编译的行（再加有子代理在跑的行），`agents` 是按行号对上的最近 30 分钟有动静的子代理，`changes` 是工作区里落在这行"目录"列下的未提交文件数与目录，`sheet` 是任务单路径或 null；`flags` 是程序算出的不一致（子代理在跑但行不是进行中；进行中却 3 小时没改动也没子代理；待编译但工作区里已没有改动）。`loose` 是在跑或刚交回、却对不上队列行的子代理；`mains` 是两个主会话现在在干什么。
-  待编译的行另带 `pending`（没有的写明没有）：`by` 谁编（谁一列写 Claude 的是"主会话统一编译"，写 Codex 的是"Codex 主线编译"）；`files` 是主检出里落在这行"目录"列下还没提交的文件，数量加全部清单；`tree` 是按行号对上的同名临时工作树（开在 `worktreeRoot/<队列行号>`，WF-RULE §13，`C-176` 与 `c176` 同一行），没有就是 `null`，对上了给路径、状态、未提交数、`running`（在里面跑的脚本，来自 `live.scripts`：门禁的 `stage` 走到哪一门与 `testing`，Godot 的 `cmd` 里带 `--shots=机位`）、`gate`/`gateOk`（最近一次门禁的一句话，来自 `check/build.gate_brief`，没跑过是 `null`）、`shots`（这个检出 `output/shots` 的截图张数与这一轮的时刻）；`waiting` 是等了多久：队列没有记"改成待编译"的时刻，`since` 取那批文件里最早的修改时间，`estimated` 恒为真，`basis` 写明是估算，没有文件可估算时 `since` 为 `null`。临时工作树与后台脚本由 `live.py` 取好传给 `monitor.view.work`，视图不另读进程表。
+- `live.work`：`items` 是施工队列里进行中、待编译的行（再加有子代理在跑的行），`agents` 是按行号对上的最近 30 分钟有动静的子代理，`changes` 是工作区里落在这行"目录"列的路径或工作包下的未提交文件数与目录（文件归哪个包按 `ownership.json` 最具体的一条，与门禁同一判法），`sheet` 是任务单路径或 null；`flags` 是程序算出的不一致（子代理在跑但行不是进行中；进行中却 3 小时没改动也没子代理；待编译但工作区里已没有改动）。`loose` 是在跑或刚交回、却对不上队列行的子代理；`mains` 是两个主会话现在在干什么。
+  待编译的行另带 `pending`（没有的写明没有）：`by` 谁编（谁一列写 Claude 的是"主会话统一编译"，写 Codex 的是"Codex 主线编译"）；`files` 是主检出里落在这行"目录"列的路径或工作包下还没提交的文件，数量加全部清单；`tree` 是按行号对上的同名临时工作树（开在 `worktreeRoot/<队列行号>`，WF-RULE §13，`C-176` 与 `c176` 同一行），没有就是 `null`，对上了给路径、状态、未提交数、`running`（在里面跑的脚本，来自 `live.scripts`：门禁的 `stage` 走到哪一门与 `testing`，Godot 的 `cmd` 里带 `--shots=机位`）、`gate`/`gateOk`（最近一次门禁的一句话，来自 `check/build.gate_brief`，没跑过是 `null`）、`shots`（这个检出 `output/shots` 的截图张数与这一轮的时刻）；`waiting` 是等了多久：队列没有记"改成待编译"的时刻，文件修改时间也不能代表交回时间，所以 `since` 为 `null`、`estimated` 为假，`basis` 写明拿不到的原因。临时工作树与后台脚本由 `live.py` 取好传给 `monitor.view.work`，视图不另读进程表。
 - `live.worktrees`：git 登记着的每个工作树（主检出除外）。`ahead` / `behind` 是领先、落后本地 main 的提交数，`dirty` 是未提交的文件数，`touched` 是最后动过的时刻（改动文件、检出目录里最新的），`inRoot` 是否在 `root`（`monitor/local.json` 的 `worktreeRoot`）下，`running` 是命令行里带这个路径的进程按类（门禁、截图、Godot、dotnet 测试、dotnet 编译、其他）分组，`gate` 是最近一次门禁的一句话（没有报告是 null）。`state`：`using`（里面有进程在跑）、`idle`、`invalid`（目录没了，登记失效）；`flags` 是要看的理由与处理办法（不在指定目录、失效、没进程且超过 90 分钟没动）。
 - `live.hooks`：登记的每个钩子（读 `~/.claude/settings.json` 与 `~/.codex/hooks.json`）。有我们自己记账的（`tracked: true`）带 `last`（最后触发）、`h1`/`h24`（近 1 小时、24 小时的 `n` 触发、`inj` 成功注入、`err` 报错、`dropped` 被挤掉、`miss` 取不到）、`lastInj`（最近一次注入：时刻、哪几类、字数）、`recent`（最近 20 条：时刻、事件、工具、注入类、字数、报错、挤掉与取不到个数、降级 `cut`）、`flag`（要看的理由：登记了但一次都没触发、触发了但没有一次成功注入、只有报错）；第三方钩子 `tracked: false`，只有登记信息，写明无记账。
 - `live.errors`：采集某一块失败时的原文（哪个文件读不到会写在里面）；页面据此区分三种空状态：数据里没有这个字段（采集脚本是旧版本）、读源失败（显示 errors 原文）、有字段但确实为空。
