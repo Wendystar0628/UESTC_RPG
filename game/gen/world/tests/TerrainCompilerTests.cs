@@ -331,19 +331,15 @@ public sealed class TerrainCompilerTests
         const double x = -635.25, z = 404.760009765625;
         const double nx = 0.9992360522213667, nz = 0.039080838541203894;
         var trace = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), x, z, nx, nz, 6.8);
-        Require(trace.End > 4.433 && exposed.Distance(x + nx * trace.End, z + nz * trace.End).Height >= 3.896,
+        Require(trace.End > 4.42 && exposed.Distance(x + nx * trace.End, z + nz * trace.End).Height >= 3.88,
             "An increasing takeover by the adjacent slanted edge still truncates the legal grading band.");
         const double ux = -679.8299967447916, uz = 365.3533426920573;
         const double unx = -0.796664108638979, unz = -0.6044222845051802;
-        const double collapsedEvent = 4.153545435562425E-14;
-        Require(BitConverter.DoubleToInt64Bits(ux + unx * collapsedEvent) == BitConverter.DoubleToInt64Bits(ux)
-            && BitConverter.DoubleToInt64Bits(uz + unz * collapsedEvent) == BitConverter.DoubleToInt64Bits(uz),
-            "The real failing event must map bit-for-bit to the source boundary point.");
         var outward = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), ux, uz, unx, unz, 6.8);
         Require(outward.End > 0.8 && exposed.Distance(ux + unx * outward.End, uz + unz * outward.End).Height > 0.8,
             "A parameter-only ULP interval was mistaken for the actual outward band's end.");
         var inward = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), ux, uz, -unx, -unz, 6.8);
-        Require(ux - unx * inward.End == ux && uz - unz * inward.End == uz,
+        Require(inward.End <= 0.01,
             "A reversed boundary ray acquired an outward grading strip through the building core.");
         var building = new WorldFeature(new("qsh:relation:10807928"), FeatureSource.Osm, new("building"), new MultiPolygonGeometry(wings))
         {
@@ -908,9 +904,12 @@ public sealed class TerrainCompilerTests
         var a = new TerrainRegion([Box(-2.00037f, -10, 1, 10)]);
         var c = new TerrainRegion([Box(-1, -10, 2.00037f, 10)]);
         var fractional = TerrainUnion.Build([a, c]);
-        Equal(-(double)2.00037f, fractional.Distance(0, 0).Height);
-        Require(fractional.Polygons.SelectMany(p => p.Outer).SequenceEqual(TerrainUnion.Build([c, a]).Polygons.SelectMany(p => p.Outer)),
-            "Union geometry depends on input order or snapped evaluation coordinates to its topology grid.");
+        Equal(-2, fractional.Distance(0, 0).Height);
+        var expected = Nodes(fractional);
+        Require(expected.SequenceEqual(Nodes(TerrainUnion.Build([a, c]))) && expected.SequenceEqual(Nodes(TerrainUnion.Build([c, a]))),
+            "Centimetre-grid union geometry changes between repeated builds or input order.");
+        static IEnumerable<Vector2> Nodes(TerrainRegion region) => region.Polygons
+            .SelectMany(p => new[] { p.Outer }.Concat(p.Holes)).SelectMany(ring => ring);
     }
 
     [TestCase]

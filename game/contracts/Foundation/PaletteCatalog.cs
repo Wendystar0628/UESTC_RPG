@@ -59,12 +59,6 @@ public sealed record PaletteExtensionData(
     [property: JsonRequired] IReadOnlyList<PaletteEntryV2> Entries,
     [property: JsonRequired] int Schema = PaletteLayout.ExtensionSchema);
 
-/// <summary>CPU metadata source. Its presence does not imply that extension files or a GPU palette are ready.</summary>
-public interface IPaletteCatalogSource
-{
-    PaletteCatalog Catalog { get; }
-}
-
 /// <summary>Resolves a token to its logical palette index. Does not load files or allocate resources.</summary>
 public interface IPaletteIndexResolver
 {

@@ -31,3 +31,14 @@ M:Godot.AudioStreamPlaylist.SetShuffle(System.Boolean);Playlist shuffle is nonde
 M:Godot.AudioServer.set_PlaybackSpeedScale(System.Single);Do not change playback speed globally.
 M:Godot.AudioServer.SetPlaybackSpeedScale(System.Single);Do not change playback speed globally.
 M:Godot.AudioServerInstance.SetPlaybackSpeedScale(System.Single);Do not change playback speed globally.
+
+// Pure contracts consume supplied data and never access the file system.
+T:System.IO.File;Contracts consume preloaded inputs.
+T:System.IO.Directory;Contracts consume preloaded inputs.
+T:System.IO.FileInfo;Contracts consume preloaded inputs.
+T:System.IO.DirectoryInfo;Contracts consume preloaded inputs.
+T:System.IO.FileStream;Contracts consume preloaded inputs.
+T:System.IO.FileSystemInfo;Contracts consume preloaded inputs.
+T:System.IO.FileSystemWatcher;Contracts consume preloaded inputs.
+T:System.IO.StreamReader;Contracts consume preloaded inputs.
+T:System.IO.StreamWriter;Contracts consume preloaded inputs.

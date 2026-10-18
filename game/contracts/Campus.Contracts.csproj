@@ -1,6 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Contracts</RootNamespace></PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="schemas/**/*.json" LogicalName="Campus.Contracts.Schemas.%(Filename)%(Extension)" />
-  </ItemGroup>
+  <ItemGroup><Compile Remove="Runtime/**/*.cs" /></ItemGroup>
 </Project>

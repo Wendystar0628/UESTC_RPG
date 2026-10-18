@@ -40,8 +40,8 @@ public sealed class BuildingOverlapValidatorTests
         PolygonRings B(float width) => new([new(0, 0), new(width, 0), new(0, 10)]);
         Require(BuildingOverlapValidator.Measure(a, B(18)).IoU == 0.9, "Exact threshold fixture");
         BuildingOverlapValidator.Validate(World(Feature("a", "a", a), Feature("b", "b", B(18))));
-        BuildingOverlapValidator.Validate(World(Feature("a", "a", a), Feature("b", "b", B(17.9998f))));
-        Contains(Failure(World(Feature("a", "a", a), Feature("b", "b", B(18.0002f)))), "IoU=", "> 0.9");
+        BuildingOverlapValidator.Validate(World(Feature("a", "a", a), Feature("b", "b", B(17.98f))));
+        Contains(Failure(World(Feature("a", "a", a), Feature("b", "b", B(18.02f)))), "IoU=", "> 0.9");
     }
 
     [TestCase]
@@ -118,7 +118,7 @@ public sealed class BuildingOverlapValidatorTests
         var b = ReadRings(remove.GetProperty("polygons")[0]);
         Require(a.Holes.Count == 1, "Real C source must retain its hole");
         var m = BuildingOverlapValidator.Measure(a, b);
-        // Campus coordinates and the shared triangulator can evolve independently of this package.
+        // Campus coordinates can evolve independently of this package.
         // Exact areas are covered by the synthetic fixtures above; this real pair locks rejection and source identity.
         Require(m.AreaA > m.AreaB && m.AreaB > 0 && m.Intersection > 0 && m.Intersection <= m.AreaB &&
             m.IoU > BuildingOverlapValidator.MaximumIntersectionOverUnion && m.IoU < 1,

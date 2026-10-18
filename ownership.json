@@ -512,6 +512,10 @@
       "owner": "WP-00"
     },
     {
+      "pattern": "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/contracts/Campus.Contracts.csproj",
       "owner": "WP-00"
     },

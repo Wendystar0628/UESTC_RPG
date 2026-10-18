@@ -12,6 +12,7 @@ if(-not(Test-Path -LiteralPath $commitFile) -or [IO.File]::ReadAllText($commitFi
 $kind=if($Configuration -eq 'Debug'){'dev'}else{'export'}
 $moduleProjects=@(Get-ChildItem -LiteralPath (Join-Path $rootPath 'game/gen') -Recurse -Filter *.csproj | Where-Object { $_.FullName -notmatch '(?i)[\\/](obj|bin|tests)[\\/]' -and $_.BaseName -notmatch 'Tests' })
 $moduleProjects+=Get-Item -LiteralPath (Join-Path $rootPath 'pipeline/map/Campus.Pipeline.Map.csproj')
+$moduleProjects+=Get-Item -LiteralPath (Join-Path $rootPath 'game/contracts/Runtime/Campus.Contracts.Runtime.csproj')
 $moduleNames=[string[]]@($moduleProjects | ForEach-Object BaseName)
 [Array]::Sort($moduleNames,[StringComparer]::Ordinal)
 $names=@($moduleNames | ForEach-Object {'"'+$_+'"'}) -join ','

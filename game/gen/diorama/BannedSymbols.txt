@@ -33,6 +33,15 @@ M:Godot.AudioServer.SetPlaybackSpeedScale(System.Single);Do not change playback 
 M:Godot.AudioServerInstance.SetPlaybackSpeedScale(System.Single);Do not change playback speed globally.
 
 // ENG-ARCH 2 / D-165. Include only in gen and shipped baking code, never test oracles.
+T:System.IO.File;Generators consume preloaded inputs.
+T:System.IO.Directory;Generators consume preloaded inputs.
+T:System.IO.FileInfo;Generators consume preloaded inputs.
+T:System.IO.DirectoryInfo;Generators consume preloaded inputs.
+T:System.IO.FileStream;Generators consume preloaded inputs.
+T:System.IO.FileSystemInfo;Generators consume preloaded inputs.
+T:System.IO.FileSystemWatcher;Generators consume preloaded inputs.
+T:System.IO.StreamReader;Generators consume preloaded inputs.
+T:System.IO.StreamWriter;Generators consume preloaded inputs.
 T:System.Diagnostics.Stopwatch;The kernel schedules generation.
 T:System.Threading.Tasks.Parallel;Parallelism belongs between cells in the kernel.
 T:System.Timers.Timer;Generators do not own time.

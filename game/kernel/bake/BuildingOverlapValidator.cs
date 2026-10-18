@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
+using NetTopologySuite.Geometries;
 
 namespace Campus.Kernel.Bake;
 
@@ -14,6 +15,7 @@ namespace Campus.Kernel.Bake;
 public static class BuildingOverlapValidator
 {
     public const double MaximumIntersectionOverUnion = 0.9;
+    private static readonly GeometryFactory Factory = new();
 
     /// <summary>
     /// Throws one stable report containing every different-source pair whose area IoU is strictly
@@ -30,7 +32,7 @@ public static class BuildingOverlapValidator
             {
                 var left = footprints[a];
                 var right = footprints[b];
-                if (StringComparer.Ordinal.Equals(left.Source, right.Source) || !left.Shape.Bounds.Overlaps(right.Shape.Bounds)) continue;
+                if (StringComparer.Ordinal.Equals(left.Source, right.Source) || !left.Shape.Bounds.Intersects(right.Shape.Bounds)) continue;
                 var measurement = Measure(left.Shape, right.Shape);
                 if (measurement.IoU <= MaximumIntersectionOverUnion) continue;
                 failures.Add($"A: {Describe(left)}\nB: {Describe(right)}\n" +
@@ -139,7 +141,7 @@ public static class BuildingOverlapValidator
     private static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n") + "\"";
 
     // Normalise ring starts, orientation, redundant straight vertices and hole order before comparing
-    // aliases or triangulating. Polygon positions in a MultiPolygon remain the supplied source indices.
+    // aliases. Polygon positions in a MultiPolygon remain the supplied source indices.
     private static PolygonShape Prepare(PolygonRings rings)
     {
         var initial = PolygonTriangulator.Triangulate(rings);
@@ -156,18 +158,19 @@ public static class BuildingOverlapValidator
             canonical[r] = ring;
         }
         Array.Sort(canonical, 1, canonical.Length - 1, Comparer<Vector2[]>.Create(CompareRings));
-        var triangulated = PolygonTriangulator.Triangulate(new(canonical[0], canonical.Skip(1).Cast<IReadOnlyList<Vector2>>().ToArray()));
-        var triangles = new Triangle[triangulated.Indices.Length / 3];
-        var area = new Sum();
-        for (var i = 0; i < triangles.Length; i++)
-        {
-            var t = new Triangle(new(triangulated.Vertices[triangulated.Indices[3 * i]]),
-                new(triangulated.Vertices[triangulated.Indices[3 * i + 1]]), new(triangulated.Vertices[triangulated.Indices[3 * i + 2]]));
-            triangles[i] = t;
-            area.Add(Cross(t.A, t.B, t.C) * 0.5);
-        }
-        if (!double.IsFinite(area.Value) || area.Value <= 0) throw new ArgumentException("Polygon area must be finite and positive.");
-        return new(canonical, triangles, area.Value, BoundsOf(triangulated.Vertices));
+        var polygon = Factory.CreatePolygon(ToRing(canonical[0]), canonical.Skip(1).Select(ToRing).ToArray());
+        if (!double.IsFinite(polygon.Area) || polygon.Area <= 0) throw new ArgumentException("Polygon area must be finite and positive.");
+        return new(canonical, polygon);
+    }
+
+    // Promote the supplied float X/Z metres once; area/IoU stay in double and never round back to float.
+    // Unlike terrain union, overlap validation must measure the supplied footprint without snapping it.
+    private static LinearRing ToRing(Vector2[] ring)
+    {
+        var coordinates = new Coordinate[ring.Length + 1];
+        for (var i = 0; i < ring.Length; i++) coordinates[i] = new((double)ring[i].X, (double)ring[i].Y);
+        coordinates[^1] = coordinates[0].Copy();
+        return Factory.CreateLinearRing(coordinates);
     }
 
     private static int Compare(Vector2 a, Vector2 b)
@@ -194,82 +197,19 @@ public static class BuildingOverlapValidator
 
     private static AreaMeasurement Measure(PolygonShape a, PolygonShape b)
     {
-        var intersection = new Sum();
-        if (a.Bounds.Overlaps(b.Bounds))
-            foreach (var left in a.Triangles)
-                foreach (var right in b.Triangles)
-                    if (left.Bounds.Overlaps(right.Bounds)) intersection.Add(Intersection(left, right));
-        // Clipping/summation can exceed an area by a few ulps. Clamp only to mathematical bounds;
-        // do not shift the 0.9 rejection threshold or buffer the supplied footprints.
-        var common = Math.Clamp(intersection.Value, 0, Math.Min(a.Area, b.Area));
+        var intersection = a.Bounds.Intersects(b.Bounds) ? a.Geometry.Intersection(b.Geometry).Area : 0;
+        // Clamp only arithmetic drift to mathematical area bounds; the rejection threshold stays 0.9.
+        var common = Math.Clamp(intersection, 0, Math.Min(a.Area, b.Area));
         var union = a.Area + b.Area - common;
         return new(a.Area, b.Area, common, union, common / union);
     }
 
-    private static double Intersection(Triangle subject, Triangle clip)
-    {
-        Span<Point> input = stackalloc Point[12];
-        Span<Point> output = stackalloc Point[12];
-        input[0] = subject.A; input[1] = subject.B; input[2] = subject.C;
-        var count = 3;
-        for (var edge = 0; edge < 3; edge++)
-        {
-            var a = edge == 0 ? clip.A : edge == 1 ? clip.B : clip.C;
-            var b = edge == 0 ? clip.B : edge == 1 ? clip.C : clip.A;
-            var nextCount = 0;
-            var previous = input[count - 1];
-            var previousDistance = Cross(a, b, previous);
-            for (var i = 0; i < count; i++)
-            {
-                var current = input[i];
-                var distance = Cross(a, b, current);
-                if ((previousDistance >= 0) != (distance >= 0))
-                {
-                    var t = previousDistance / (previousDistance - distance);
-                    var crossing = previousDistance == 0 ? previous : distance == 0 ? current :
-                        new Point(previous.X + t * (current.X - previous.X), previous.Y + t * (current.Y - previous.Y));
-                    Append(output, ref nextCount, crossing);
-                }
-                if (distance >= 0) Append(output, ref nextCount, current);
-                previous = current;
-                previousDistance = distance;
-            }
-            if (nextCount > 1 && output[0] == output[nextCount - 1]) nextCount--;
-            if (nextCount < 3) return 0;
-            var temporary = input; input = output; output = temporary;
-            count = nextCount;
-        }
-        var area = new Sum();
-        for (var i = 1; i + 1 < count; i++) area.Add(Cross(input[0], input[i], input[i + 1]) * 0.5);
-        return Math.Max(0, area.Value);
-    }
-
-    private static void Append(Span<Point> points, ref int count, Point point)
-    {
-        if (count == 0 || points[count - 1] != point) points[count++] = point;
-    }
-
-    private static double Cross(Point a, Point b, Point c) =>
-        (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
-
-    private static Bounds BoundsOf(Vector2[] vertices) => new(vertices.Min(p => (double)p.X), vertices.Min(p => (double)p.Y),
-        vertices.Max(p => (double)p.X), vertices.Max(p => (double)p.Y));
-
-    private readonly record struct Point(double X, double Y)
-    {
-        public Point(Vector2 point) : this(point.X, point.Y) { }
-    }
-    private readonly record struct Bounds(double MinX, double MinY, double MaxX, double MaxY)
-    {
-        public bool Overlaps(Bounds other) => MinX < other.MaxX && other.MinX < MaxX && MinY < other.MaxY && other.MinY < MaxY;
-    }
-    private readonly record struct Triangle(Point A, Point B, Point C)
-    {
-        public Bounds Bounds { get; } = new(Math.Min(A.X, Math.Min(B.X, C.X)), Math.Min(A.Y, Math.Min(B.Y, C.Y)),
-            Math.Max(A.X, Math.Max(B.X, C.X)), Math.Max(A.Y, Math.Max(B.Y, C.Y)));
-    }
     internal readonly record struct AreaMeasurement(double AreaA, double AreaB, double Intersection, double Union, double IoU);
-    private sealed record PolygonShape(Vector2[][] Rings, Triangle[] Triangles, double Area, Bounds Bounds);
+    private sealed record PolygonShape(Vector2[][] Rings, Polygon Geometry)
+    {
+        public double Area { get; } = Geometry.Area;
+        public Envelope Bounds { get; } = Geometry.EnvelopeInternal;
+    }
     private sealed record Footprint(string Source, int PolygonIndex, PolygonShape Shape, string[] References);
     private sealed class Source(PolygonShape[] polygons, OverlayGeometry geometry, string reference)
     {
@@ -277,17 +217,5 @@ public static class BuildingOverlapValidator
         public OverlayGeometry Geometry { get; } = geometry;
         public SortedSet<string> References { get; } = new(StringComparer.Ordinal) { reference };
         public SortedSet<string> Conflicts { get; } = new(StringComparer.Ordinal);
-    }
-    private struct Sum
-    {
-        public double Value;
-        private double _correction;
-        public void Add(double value)
-        {
-            var corrected = value - _correction;
-            var next = Value + corrected;
-            _correction = (next - Value) - corrected;
-            Value = next;
-        }
     }
 }

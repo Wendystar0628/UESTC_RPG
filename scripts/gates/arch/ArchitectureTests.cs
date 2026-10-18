@@ -23,7 +23,8 @@ public sealed class ArchitectureTests
             .Where(path => !Path.GetFileNameWithoutExtension(path).EndsWith("Tests", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal).ToArray();
         if (!names.Any(path => Path.GetFileName(path) == "Campus.dll") ||
-            !names.Any(path => Path.GetFileName(path) == "Campus.Contracts.dll"))
+            !names.Any(path => Path.GetFileName(path) == "Campus.Contracts.dll") ||
+            !names.Any(path => Path.GetFileName(path) == "Campus.Contracts.Runtime.dll"))
         {
             throw new InvalidOperationException("Production binaries missing; architecture checks cannot run on an empty model.");
         }
@@ -41,19 +42,14 @@ public sealed class ArchitectureTests
     [TestCase]
     public void GeneratorsCannotDependOnEngineOrRuntimeContracts()
     {
-        const string runtimeNames = "IWorldState|IWorldControl|IWeatherProcess|ICameraRig|IViewControl|ICollisionWorld|" +
-            "IMapService|IMapContext|IMapTransition|IMapAware|IAtlasService|IAppFlow|IBakeService|ISaveService|" +
-            "IVeilState|IVeilService|IMotionSettings|IPaletteProbe|IInteriorDoors|IRuleset|IObserverState|" +
-            "IAudioService|IAmbienceService|IAcousticEnv|IFoleyService|IGroundCover|IWalkTelemetry|IMediumState|ILightningFeed|IChannelReader";
         var forbidden = Types().That().ResideInAssemblyMatching("^GodotSharp(?:,|$)")
-            .Or().HaveFullNameMatching(@"^System\.IO\.(File|Directory|FileInfo|DirectoryInfo|FileStream|FileSystemWatcher)$")
-            .Or().ResideInNamespaceMatching(@"^Campus\.Contracts\.(Quality|Save)(\.|$)")
-            .Or().HaveFullNameMatching(@"^Campus\.Contracts\.(?:.*\.)?(?:" + runtimeNames + ")$");
-        Check(Types().That().ResideInAssemblyMatching(@"^Campus\.(Gen\.|Pipeline\.Map)")
+            .Or().ResideInAssemblyMatching(@"^Campus(?:,|$)|^Campus\.Contracts\.Runtime(?:,|$)")
+            .Or().HaveFullNameMatching(@"^System\.IO\.(File|Directory|FileInfo|DirectoryInfo|FileStream|FileSystemInfo|FileSystemWatcher|StreamReader|StreamWriter)$");
+        Check(Types().That().ResideInAssemblyMatching(@"^Campus\.(Gen|Pipeline)(\.|,|$)")
             .Should().NotDependOnAny(forbidden).Because("ENG-ARCH 2: generators are pure and independent of runtime state")
             .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Contracts(?:,|$)")
-            .Should().NotDependOnAny(Types().That().ResideInAssemblyMatching(@"^(GodotSharp|Campus(?:,|$)|Campus\.(Gen|Pipeline)\.)"))
+            .Should().NotDependOnAny(forbidden.Or().ResideInAssemblyMatching(@"^Campus(?:,|\.)(?!Contracts(?:,|$))"))
             .WithoutRequiringPositiveResults());
     }
 
@@ -109,6 +105,7 @@ public sealed class ArchitectureTests
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? FindRepository();
         foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "game", "gen"), "*.csproj", SearchOption.AllDirectories)
                      .Append(Path.Combine(root, "game", "contracts", "Campus.Contracts.csproj"))
+                     .Append(Path.Combine(root, "game", "contracts", "Runtime", "Campus.Contracts.Runtime.csproj"))
                      .Append(Path.Combine(root, "pipeline", "map", "Campus.Pipeline.Map.csproj")))
         {
             var document = XDocument.Load(path);
@@ -140,6 +137,7 @@ public sealed class ArchitectureTests
         else if (!target.StartsWith("Campus", StringComparison.Ordinal)) return;
         else if (origin == "Campus.Contracts") allowed = false;
         else if (target == "Campus.Contracts") allowed = true;
+        else if (origin == "Campus.Contracts.Runtime") allowed = false;
         else if (origin == "Campus.Gen.Geometry") allowed = false;
         else if (origin == "Campus.Gen.World") allowed = false;
         else if (origin == "Campus.Gen.Parts.Core") allowed = false;

@@ -86,7 +86,7 @@ function Get-UESTCG2ProjectSelection {
     param([string]$Root, [string[]]$Changes, [bool]$ForceAll=$false, [string]$Configuration='Debug')
     $normalizedChanges = @($Changes | ForEach-Object { $_.Replace('\','/') })
     # Contract, build and shared data changes can affect both test hosts.
-    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!tests/)|^game/contracts/tests/PaletteFixture\.cs$|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
+    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!Runtime/|tests/)|^game/contracts/tests/PaletteFixture\.cs$|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
         $scope = Get-UESTCG2CompileScope $Root $project $Configuration
         $reasons = New-Object 'Collections.Generic.List[string]'
@@ -96,6 +96,11 @@ function Get-UESTCG2ProjectSelection {
                 ($project -eq 'game/Campus.Tests.csproj' -and $path -eq 'game/Campus.csproj')) { $reasons.Add("Test host changed: $path") }
         }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
+        if ($project -eq 'game/Campus.Tests.csproj') {
+            foreach ($path in @($normalizedChanges | Where-Object { $_ -match '^game/contracts/Runtime/' -and $_ -notmatch '/tests/' })) {
+                $reasons.Add("Runtime contract changed: $path")
+            }
+        }
         $compileFiles = @($scope.CompileFiles)
         $allTests = $reasons.Count -gt 0
         $classes = New-Object 'Collections.Generic.List[string]'
@@ -180,10 +185,10 @@ $saveChanges = @()
 if (-not ($Full -or $Smoke -or $Only.Count)) {
     $startupChanges = @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'Kernel(?:Service|Node)')
     $walkChanges = @($runtimeChanges | Where-Object {
-        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/(Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
+        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/((?:Runtime/)?Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
     })
     $saveChanges = @(@($runtimeChanges | Where-Object {
-        $_ -match '^game/(kernel/save/|contracts/Save/)|^game/.*Save[^/]*\.cs$'
+        $_ -match '^game/(kernel/save/|contracts/(?:Runtime/)?Save/)|^game/.*Save[^/]*\.cs$'
     }) + @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'SaveSection') | Sort-Object -Unique)
     if ($startupChanges.Count) { $selected.Add('G5Smoke') }
     if ($walkChanges.Count) { $selected.Add('G15Core') }

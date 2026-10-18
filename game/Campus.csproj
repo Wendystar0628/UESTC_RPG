@@ -2,9 +2,10 @@
   <PropertyGroup><LangVersion>14.0</LangVersion><RootNamespace>Campus</RootNamespace><EnableDynamicLoading>true</EnableDynamicLoading><TargetFramework>net10.0</TargetFramework></PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.IO.Hashing" />
+    <PackageReference Include="NetTopologySuite" />
     <PackageReference Include="gdUnit4.api" PrivateAssets="all" Condition="'$(Configuration)' == 'Debug'" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;**/tests/**/*.cs" />
-    <ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" />
+    <ProjectReference Include="contracts/Campus.Contracts.csproj;contracts/Runtime/Campus.Contracts.Runtime.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">

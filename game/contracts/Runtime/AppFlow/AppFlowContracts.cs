@@ -25,7 +25,7 @@ public interface IAppFlow                     // Kernel 服务（WP-49a），主
     Task Quit();                               // 任何状态（SYS-TITLE）
 }
 
-// 过场数据的记录：game/contracts/Cinematic/（命名空间 Campus.Contracts.Cinematic），WP-00 合入；
+// 过场数据的记录：game/contracts/Runtime/Cinematic/（命名空间 Campus.Contracts.Cinematic），WP-00 合入；
 // CinematicDef、CameraSeg、WorldCue、MaskSeg、CaptionCue、ExtraCue、AudioCue、CinematicEnd 的字段与 SYS-TITLE 的 JSON 一一对应，
 // 数据放在 game/data/maps/<地图>/cinematics/<id>.json，format 只增；遇到不认识的轨由 SYS-TITLE 的检查报错，不静默忽略。
 // 现在没有"角色轨"

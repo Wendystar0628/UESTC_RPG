@@ -41,30 +41,3 @@ public sealed record HeightFieldCollider(TileKey Tile, short[] HeightsCm, Surfac
 }
 public sealed record SlopedWallCollider(Vector2 A, Vector2 B, float HalfT,
     float Y0a, float Y1a, float Y0b, float Y1b, SurfaceTag Tag) : Collider(Tag);
-// WLD-INTERIORS：斜顶薄墙。A 端底 Y0a、顶 Y1a，B 端底 Y0b、顶 Y1b；宽梯井（> 0.2 m）的栏杆，顶面取踏步前缘线以上 1.5 m
-// 图元到 Godot 形状的映射归 WP-43（SYS-WALK）：Wall → 薄 BoxShape3D（楼体顶取地面以上约 300 m），
-// Ramp → 斜放的 BoxShape3D 或 8 顶点 ConvexPolygonShape3D，Post → CylinderShape3D，Box → BoxShape3D，
-// Slab → 凸分解，HeightField → HeightMapShape3D 65×65，SlopedWall → 8 顶点 ConvexPolygonShape3D
-// 楼梯：斜面 26–34°、上限 40°，坡顶与上平台齐平、坡底埋进下层地面 ≥ 0.2 m，SYS-WALK 的登阶层必须开；梯井 ≤ 0.2 m 时整面做墙（WLD-INTERIORS）
-
-public readonly record struct SweepHit(Vector3 Point, Vector3 Normal, float T, SurfaceTag Tag);
-public readonly record struct SupportHit(float Y, SurfaceTag Tag);
-public interface ICollisionWorld             // WP-43，Godot 侧实现
-{
-    /// <summary>Terminal failure of the active map's collision preparation or mounting; never a readiness result.</summary>
-    string? Error { get; }
-    bool Ready(Vector3 p, float r);          // ENG-PERF 第 5 条用它判断
-    SweepHit? Sweep(Vector3 from, Vector3 to, float r, float h);
-    SupportHit? SupportY(float x, float z, float yHint);
-    /// <summary>Mounted analytical tread data near the support layer, or null when unavailable. Callers retain Ready/leg-reach checks.</summary>
-    StairHit? StairAt(Vector3 p, float yHint) => null;
-}
-
-public enum ModeSwitchVia { Key, Ui, DoubleSpace }        // 没有触屏输入
-public enum ModeSwitchResult { Ok, Relocated, Refused }
-public interface IViewControl
-{
-    ViewMode Mode { get; }
-    Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via);
-}
-// IContentModule.Collide、IPartDef.Collision 两个默认方法和 IInteriorProvider.CollisionStorey 分别在 §3 的内容模块块、部件块、室内块里，照 SYS-WALK

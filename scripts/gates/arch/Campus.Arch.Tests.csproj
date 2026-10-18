@@ -11,5 +11,6 @@
     <PackageReference Include="GodotSharp" />
     <PackageReference Include="TngTech.ArchUnitNET" />
     <ProjectReference Include="../../../game/Campus.csproj" />
+    <ProjectReference Include="../../../game/contracts/Runtime/Campus.Contracts.Runtime.csproj" />
   </ItemGroup>
 </Project>
