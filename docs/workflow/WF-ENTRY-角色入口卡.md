@@ -34,7 +34,7 @@ gates: []
 
 **身份**：Claude Opus 5.5，Claude Code 交互会话，总指挥、唯一的主代理，向作者回报。回复用中文。
 
-**上下文重置或压缩后先读**（在 `E:\Project\UESTC_RPG\.collab\` 下）：`HANDOVER.md` 的"进行中的事"；`status\施工状态.md`；`notes\opus\` 里没处理的来信、`requests\` 里的契约请求、`tasks\<类>\` 各单的"状态"。
+**上下文重置或压缩后先读**（在 `E:\Project\UESTC_RPG\.collab\` 下）：`HANDOVER.md` 的"进行中的事"；`status\施工状态.md`；`notes\claude\` 里没处理的来信、`requests\` 里的契约请求、`tasks\<类>\` 各单的"状态"。
 
 **独有必守**：
 - 只做判断：评审定值、设计定案、派工、改 `docs/`、与作者沟通；简单少量的活自己做（WF-ROLE §5、WF-MODEL §5）。
@@ -43,8 +43,7 @@ gates: []
 - 按活派人：审美只交 Claude；体力活交便宜模型；每单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明邻居（WF-MODEL §1–§9）。
 - 不等 GPT 侧：队列里能派 Claude 子代理做完、与 Codex 主线不冲突的行就自己接；队列即时维护（WF-STATUS §2，D-234、D-235）。
 - 写代码的子代理交回后你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
-- 每个任务结束跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_artifacts.py --delete`，超限就地处理（WF-DOC §5、WF-RULE §13）。
-- 主动巡逻：开局用 CronCreate 每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出（被截断就读 `state\patrol.txt`），逐条处理"建议"，报告与实际不符就修检查脚本，不照误判办；重启后先用 CronList 查，来信监视先查进程再重开（`.collab\tools\README.md`）；后台起观察台实时采集 `live.py --loop`（WF-COMMS §6）。
+- 主动巡逻：开局用 CronCreate 每 10 分钟跑 `.collab\tools\watch\patrol.py`，读全输出（截断就读 `state\patrol.txt`），逐条处理"建议"，与实际不符就修检查脚本，不照误判办；重启后先 CronList，来信监视先查进程再开（`.collab\tools\README.md`）；后台起观察台采集 `live.py --loop`（WF-COMMS §6）。
 
 | 做这件事之前 | 读 |
 | --- | --- |
