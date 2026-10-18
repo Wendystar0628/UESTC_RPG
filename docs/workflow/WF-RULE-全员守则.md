@@ -119,6 +119,7 @@ gates: []
 - **放对地方**：临时脚本和中间结果放系统临时目录（Claude 用会话的 scratchpad），测试写的临时文件也放系统临时目录并在结束时删；必须落在仓库里的生成物只进 `output/`。
 - **长期保留的只有**：构建锁 `output/.locks/`、烘焙缓存 `output/cache/bake/`（旧格式目录除外）、固定机位截图 `output/shots/`、管线安装包 `output/pipeline-wheels/`、交给作者的海报 `output/posters/`。
 - **会一直增长的由产出方封顶**：日志、状态与存档类文件由写它的工具自己限大小或按时间删，不靠人清。
+- **临时工作树**：用完就 `git worktree remove`；巡逻列出主检出之外每个登记着的工作树，失效的登记和久没动的会提醒。
 - **统一清理**：`python -I -X utf8 scripts/build/clean_artifacts.py` 列出 `output/` 各层里之后主线上已有 20 次提交的产物（按提交轮次算，不开发就不过期）、缓存里的一次性副本与旧格式、已删工程留下的 `bin/`、`obj/`、失效的工作树登记，加 `--delete` 删除；主会话和 Astra 每个任务结束时跑一次，巡逻发现可删项会提醒。
 
 ## 14 按严重程度修 bug（D-223）

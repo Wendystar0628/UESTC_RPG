@@ -104,9 +104,27 @@ def stale(commits=COMMITS):
 
 
 def worktrees():
-    """还登记着的工作树（主检出除外）。"""
-    paths = [l[9:] for l in git('worktree', 'list', '--porcelain').splitlines() if l.startswith('worktree ')]
-    return [p for p in paths if os.path.normcase(os.path.abspath(p)) != os.path.normcase(ROOT)]
+    """登记着的工作树（主检出除外）：路径、是否已失效（目录没了，prune 会清掉）、最后动过的时间。"""
+    out = []
+    for block in git('worktree', 'list', '--porcelain').strip().split('\n\n'):
+        lines = block.splitlines()
+        path = next((l[9:] for l in lines if l.startswith('worktree ')), '')
+        if not path or os.path.normcase(os.path.abspath(path)) == os.path.normcase(ROOT):
+            continue
+        prunable = any(l.startswith('prunable') for l in lines) or not os.path.isdir(path)
+        touched = 0.0
+        if not prunable:
+            # 最后动过：改动文件的最新修改时间，没有改动就取检出时间（.git 文件）与 HEAD 提交时间
+            changed = [os.path.join(path, l[3:].strip().strip('"').split(' -> ')[-1])
+                       for l in git('-C', path, 'status', '--porcelain').splitlines()]
+            times = [os.path.getmtime(f) for f in changed if os.path.exists(f)]
+            head = git('-C', path, 'log', '-1', '--format=%ct').strip()
+            dot = os.path.join(path, '.git')
+            times += [float(head)] if head else []
+            times += [os.path.getmtime(dot)] if os.path.exists(dot) else []
+            touched = max(times) if times else 0.0
+        out.append({'path': path, 'prunable': prunable, 'touched': touched})
+    return out
 
 
 def remove(p):
@@ -130,8 +148,8 @@ def main(argv):
     for p in items:
         print(os.path.relpath(p, ROOT).replace(chr(92), '/'))
     print('可删 %d 项，共 %.1f MB（output 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
-    for p in worktrees():
-        print('还登记着的工作树（确认不用了再 git worktree remove）：' + p)
+    for t in worktrees():
+        print(('失效的工作树登记（--delete 时 prune）：' if t['prunable'] else '还登记着的工作树（确认不用了再 git worktree remove）：') + t['path'])
     if '--delete' in argv:
         for p in items:
             remove(p)
