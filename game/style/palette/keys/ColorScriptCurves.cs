@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Campus.Contracts;
 using static Campus.Style.Palette.Keys.FrameLayout;
 
@@ -71,15 +70,6 @@ public static class ArtSun
 /// <summary>Autumn base keyframes + seasonal deltas and overrides (SYS-TIME; seasons.json).</summary>
 public static class SeasonComposer
 {
-    public static string SeasonKey(Season s) => s switch
-    {
-        Season.Spring => "spring",
-        Season.Summer => "summer",
-        Season.Autumn => "autumn",
-        Season.Winter => "winter",
-        _ => throw new ArgumentOutOfRangeException(nameof(s))
-    };
-
     private static string ClassKey(KeyClass c) => c switch
     {
         KeyClass.Day => "day",
@@ -90,13 +80,6 @@ public static class SeasonComposer
         _ => throw new ArgumentOutOfRangeException(nameof(c))
     };
 
-    private static double ScopeWeight(JsonElement seasons, string scope, string keyId)
-    {
-        var sc = seasons.GetProperty("scopes").GetProperty(scope);
-        if (sc.ValueKind == JsonValueKind.String) return sc.GetString() == "all" ? 1.0 : throw new InvalidDataException($"Bad scope {scope}.");
-        return sc.TryGetProperty(keyId, out var w) ? w.GetDouble() : 0.0;
-    }
-
     private static Lab ShiftLch(Lab c, double dL, double dC, double dh, double w) =>
         Oklab.FromLch(c.L + dL * w, Math.Max(0.0, c.Chroma + dC * w), c.Hue + dh * w);
 
@@ -106,95 +89,82 @@ public static class SeasonComposer
         var f = data.AutumnFrames[keyIndex].Clone();
         var v = f.V;
         var seasons = data.Seasons;
-        var sd = seasons.GetProperty("seasons").GetProperty(SeasonKey(season));
+        var sd = seasons.Seasons.For(season);
         var kid = info.Id;
         // Sky: zenith delta spread over the five bands by skyFalloff.
-        var sky = sd.GetProperty("sky");
-        var z = sky.GetProperty("zenith");
-        var wSky = ScopeWeight(seasons, sky.GetProperty("scope").GetString()!, kid);
-        var fall = seasons.GetProperty("skyFalloff").EnumerateArray().Select(e => e.GetDouble()).ToArray();
+        var z = sd.Sky.Zenith;
+        var wSky = seasons.ScopeWeight(sd.Sky.Scope, kid);
+        var fall = seasons.SkyFalloff;
         for (var band = 0; band < 5; band++)
         {
             foreach (var start in new[] { SkySun, SkyAnti })
             {
                 var i = start + 3 * band;
-                f.SetColor(i, ShiftLch(f.Color(i), z.GetProperty("dL").GetDouble(), z.GetProperty("dC").GetDouble(),
-                    z.GetProperty("dh").GetDouble(), wSky * fall[band]));
+                f.SetColor(i, ShiftLch(f.Color(i), z.DL, z.DC, z.Dh, wSky * fall[band]));
             }
         }
         // Key light.
-        foreach (var op in sd.GetProperty("key").EnumerateArray())
+        foreach (var op in sd.Key)
         {
-            var w = ScopeWeight(seasons, op.GetProperty("scope").GetString()!, kid);
+            var w = seasons.ScopeWeight(op.Scope, kid);
             if (w <= 0) continue;
-            switch (op.GetProperty("op").GetString())
+            if (op.Op == "toward")
+                f.SetColor(Key, Oklab.Lerp(f.Color(Key), op.Color!.Value, op.Amount!.Value * w));
+            else
             {
-                case "toward":
-                    f.SetColor(Key, Oklab.Lerp(f.Color(Key), Oklab.Parse(op.GetProperty("color").GetString()!), op.GetProperty("amount").GetDouble() * w));
-                    break;
-                case "chroma":
-                    var k = f.Color(Key);
-                    f.SetColor(Key, Oklab.FromLch(k.L, k.Chroma * (1.0 + (op.GetProperty("mul").GetDouble() - 1.0) * w), k.Hue));
-                    break;
-                default:
-                    throw new InvalidDataException($"Unknown key op {op.GetProperty("op").GetString()}.");
+                var k = f.Color(Key);
+                f.SetColor(Key, Oklab.FromLch(k.L, k.Chroma * (1.0 + (op.Mul!.Value - 1.0) * w), k.Hue));
             }
         }
         // Shade: ambient.sky and r, clamped by limits.
-        var shade = sd.GetProperty("shade");
-        var ws = ScopeWeight(seasons, shade.GetProperty("scope").GetString()!, kid);
+        var shade = sd.Shade;
+        var ws = seasons.ScopeWeight(shade.Scope, kid);
         var (ac, ah) = f.Ambient;
-        var amb = shade.GetProperty("ambientSky");
-        ac = Math.Max(0.0, ac + amb.GetProperty("dC").GetDouble() * ws);
-        ah += amb.GetProperty("dh").GetDouble() * ws;
+        ac = Math.Max(0.0, ac + shade.AmbientSky.DC * ws);
+        ah += shade.AmbientSky.Dh * ws;
         v[AmbientA] = ac * Math.Cos(ah * Math.PI / 180.0);
         v[AmbientB] = ac * Math.Sin(ah * Math.PI / 180.0);
-        v[R] += shade.GetProperty("dr").GetDouble() * ws;
-        var limits = seasons.GetProperty("limits");
-        if (limits.GetProperty("rMax").TryGetProperty(ClassKey(info.Class), out var rmax) && v[R] > rmax.GetDouble() + 1e-9)
-            v[R] = rmax.GetDouble();
-        if (limits.TryGetProperty("zenithMinC", out var zmc) && zmc.TryGetProperty(kid, out var zmin))
+        v[R] += shade.Dr * ws;
+        var limits = seasons.Limits;
+        if (limits.RMax.TryGetValue(ClassKey(info.Class), out var rmax) && v[R] > rmax + 1e-9)
+            v[R] = rmax;
+        if (limits.ZenithMinC is { } zenithMinC && zenithMinC.TryGetValue(kid, out var zmin))
         {
             foreach (var i in new[] { SkySun + 12, SkyAnti + 12 })
             {
                 var c = f.Color(i);
-                if (c.Chroma < zmin.GetDouble()) f.SetColor(i, Oklab.FromLch(c.L, zmin.GetDouble(), c.Hue));
+                if (c.Chroma < zmin) f.SetColor(i, Oklab.FromLch(c.L, zmin, c.Hue));
             }
         }
         // Fog.
-        var fog = sd.GetProperty("fog");
-        var wf = ScopeWeight(seasons, fog.GetProperty("scope").GetString()!, kid);
-        Lab? toward = fog.GetProperty("toward").ValueKind == JsonValueKind.String ? Oklab.Parse(fog.GetProperty("toward").GetString()!) : null;
+        var fog = sd.Fog;
+        var wf = seasons.ScopeWeight(fog.Scope, kid);
         foreach (var i in new[] { FogSun, FogAnti })
         {
             var c = f.Color(i);
             double a = c.A, b = c.B;
-            if (toward is { } t)
+            if (fog.Toward is { } t)
             {
-                var amount = fog.GetProperty("abAmount").GetDouble() * wf;
+                var amount = fog.AbAmount * wf;
                 a = Oklab.Lerp(a, t.A, amount);
                 b = Oklab.Lerp(b, t.B, amount);
             }
-            f.SetColor(i, new Lab(Math.Min(1.0, c.L + fog.GetProperty("dL").GetDouble()), a, b));
+            f.SetColor(i, new Lab(Math.Min(1.0, c.L + fog.DL), a, b));
         }
-        v[FogStart] *= fog.GetProperty("visibilityMul").GetDouble();
-        v[FogSilhouette] *= fog.GetProperty("visibilityMul").GetDouble();
-        v[HazeDeg] *= fog.GetProperty("hazeMul").GetDouble();
-        v[GlowIntensity] *= sd.GetProperty("post").GetProperty("glowIntensityMul").GetDouble();
-        v[LampPoolGain] = sd.TryGetProperty("lampPoolGain", out var lamp) ? lamp.GetDouble() : 1.0;
+        v[FogStart] *= fog.VisibilityMul;
+        v[FogSilhouette] *= fog.VisibilityMul;
+        v[HazeDeg] *= fog.HazeMul;
+        v[GlowIntensity] *= sd.Post.GlowIntensityMul;
+        v[LampPoolGain] = sd.LampPoolGain;
         // Season-specific overrides (hand-tuned colours).
-        foreach (var ov in sd.GetProperty("overrides").EnumerateArray())
+        foreach (var ov in sd.Overrides)
         {
-            if (!ov.GetProperty("keys").EnumerateArray().Any(e => e.GetString() == kid)) continue;
-            if (ov.TryGetProperty("colors", out var colors))
-                foreach (var p in colors.EnumerateObject())
-                {
-                    var found = Array.Find(FrameLayout.ColorTokens, t => t.Token == p.Name);
-                    if (found.Token is null) throw new InvalidDataException($"Unknown override colour {p.Name}.");
-                    f.SetColor(found.Index, Oklab.Parse(p.Value.GetString()!));
-                }
-            if (ov.TryGetProperty("skyFx", out var fx) && fx.TryGetProperty("cloudAmountAdd", out var add))
-                v[CloudAmount] = Math.Min(1.0, v[CloudAmount] + add.GetDouble());
+            if (!ov.Keys.Contains(kid)) continue;
+            if (ov.Colors is { } colors)
+                foreach (var (token, color) in colors)
+                    f.SetColor(Array.Find(FrameLayout.ColorTokens, t => t.Token == token).Index, color);
+            if (ov.SkyFx?.CloudAmountAdd is { } add)
+                v[CloudAmount] = Math.Min(1.0, v[CloudAmount] + add);
         }
         return f;
     }
@@ -318,48 +288,45 @@ public static class WeatherCorrection
 {
     public static bool IsClear(in WeatherVec w) => w.Overcast == 0f && w.Precip == 0f && w.Wet == 0f;
 
-    public static void Apply(JsonElement weather, FrameVector f, in WeatherVec w, bool daylight)
+    public static void Apply(WeatherFile weather, FrameVector f, in WeatherVec w, bool daylight)
     {
         if (IsClear(w)) return;
         var v = f.V;
         double g = w.Overcast, p = w.Precip, k = w.PrecipKind, wet = w.Wet;
-        var keyEv = weather.GetProperty("keyEv");
-        var ev = keyEv.GetProperty("overcast").GetDouble() * g + keyEv.GetProperty("heavyRainExtra").GetDouble() * p * (1.0 - k);
+        var ev = weather.KeyEv.Overcast * g + weather.KeyEv.HeavyRainExtra * p * (1.0 - k);
         v[Intensity] *= Math.Pow(2.0, ev);
-        var rf = weather.GetProperty("shade").GetProperty("rFloor");
-        var target = Math.Max(v[R], rf.GetProperty("base").GetDouble() + rf.GetProperty("perOvercast").GetDouble() * g);
+        var rf = weather.Shade.RFloor;
+        var target = Math.Max(v[R], rf.Base + rf.PerOvercast * g);
         v[R] += g * (target - v[R]);
-        var tgt = weather.GetProperty("shade").GetProperty("ambientSkyTarget");
+        var tgt = weather.Shade.AmbientSkyTarget;
         var (c0, h0) = f.Ambient;
-        var c1 = Oklab.Lerp(c0, tgt.GetProperty("c").GetDouble(), g);
-        var h1 = (h0 + Oklab.HueDiff(h0, tgt.GetProperty("h").GetDouble()) * g) * Math.PI / 180.0;
+        var c1 = Oklab.Lerp(c0, tgt.C, g);
+        var h1 = (h0 + Oklab.HueDiff(h0, tgt.H) * g) * Math.PI / 180.0;
         v[AmbientA] = c1 * Math.Cos(h1);
         v[AmbientB] = c1 * Math.Sin(h1);
-        var so = weather.GetProperty("sky").GetProperty("overcast");
-        var minL = so.GetProperty("minL").GetDouble();
-        var oc = Oklab.FromLch(Math.Max(minL, 0.78 - so.GetProperty("rainLDrop").GetDouble() * p * (1.0 - k)),
-            so.GetProperty("c").GetDouble(), so.GetProperty("h").GetDouble());
+        var so = weather.Sky.Overcast;
+        var oc = Oklab.FromLch(Math.Max(so.MinL, 0.78 - so.RainLDrop * p * (1.0 - k)), so.C, so.H);
         var washed = wet * (1.0 - g) * (1.0 - p);
-        var washedC = weather.GetProperty("sky").GetProperty("washedChromaAdd").GetDouble() * washed;
+        var washedC = weather.Sky.WashedChromaAdd * washed;
         for (var i = SkySun; i < FogSun; i += 3)
         {
             var c = Oklab.Lerp(f.Color(i), oc, g);
             double l = c.L, ch = c.Chroma;
             if (g > 0.5)
             {
-                if (daylight) l = Math.Max(l, minL);
-                ch = Math.Max(ch, so.GetProperty("minC").GetDouble());
+                if (daylight) l = Math.Max(l, so.MinL);
+                ch = Math.Max(ch, so.MinC);
             }
             f.SetColor(i, Oklab.FromLch(l, ch + washedC, c.Hue));
         }
-        v[SatGain] += weather.GetProperty("washedSatAdd").GetDouble() * washed;
+        v[SatGain] += weather.WashedSatAdd * washed;
         v[CloudAmount] = Math.Max(v[CloudAmount] * (1.0 - g), w.Cloud);
     }
 
     /// <summary>Rainy vegetation chroma +15% (SYS-WEATHER), continuous in precipitation and wetness.</summary>
-    public static double VegetationChromaMul(JsonElement weather, in WeatherVec w)
+    public static double VegetationChromaMul(WeatherFile weather, in WeatherVec w)
     {
         var p = w.Precip * (1.0 - w.PrecipKind);
-        return 1.0 + (weather.GetProperty("rainVegetationChromaMul").GetDouble() - 1.0) * Math.Min(1.0, Math.Max(p, w.Wet));
+        return 1.0 + (weather.RainVegetationChromaMul - 1.0) * Math.Min(1.0, Math.Max(p, w.Wet));
     }
 }

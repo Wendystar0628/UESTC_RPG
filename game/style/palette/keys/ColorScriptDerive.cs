@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Campus.Contracts;
 using static Campus.Style.Palette.Keys.FrameLayout;
 
@@ -37,48 +36,38 @@ public sealed class Deriver
     public double SwatchLAmbient { get; }
     public double SwatchLInterior { get; }
 
-    public Deriver(JsonElement derive)
+    public Deriver(DeriveFile derive)
     {
-        var lit = derive.GetProperty("lit");
-        _adaptRef = lit.GetProperty("adaptRef").GetDouble();
-        _tintK = lit.GetProperty("tintK").GetDouble();
-        _vegTintK = lit.GetProperty("vegetationTintK").GetDouble();
-        var cap = lit.GetProperty("chromaCap");
-        _capRatio = cap.GetProperty("ratio").GetDouble();
-        _capMinC = cap.GetProperty("minAlbedoC").GetDouble();
-        var warm = lit.GetProperty("vegetationWarmCap");
-        _warmK = warm.GetProperty("k").GetDouble();
-        _warmAlt0 = warm.GetProperty("altDeg")[0].GetDouble();
-        _warmAlt1 = warm.GetProperty("altDeg")[1].GetDouble();
-        _warmC0 = warm.GetProperty("keyC")[0].GetDouble();
-        _warmC1 = warm.GetProperty("keyC")[1].GetDouble();
-        _hueMax = warm.GetProperty("hueMax").GetDouble();
-        _albedoGain = warm.GetProperty("albedoChromaGain").GetDouble();
-        var guard = lit.GetProperty("heroGuard");
-        _guardLo = guard.GetProperty("hueRange")[0].GetDouble();
-        _guardHi = guard.GetProperty("hueRange")[1].GetDouble();
-        _guardMinC = guard.GetProperty("minHeroC").GetDouble();
-        _guardMirror = guard.GetProperty("warmMirror").GetDouble();
-        _guardFloor = guard.GetProperty("chromaFloor").GetDouble();
-        var shade = derive.GetProperty("shade");
-        _chromaMulMax = shade.GetProperty("chromaMulMax").GetDouble();
-        _neutral0 = shade.GetProperty("neutralCEdge")[0].GetDouble();
-        _neutral1 = shade.GetProperty("neutralCEdge")[1].GetDouble();
-        _yellowLo = shade.GetProperty("yellowGuard")[0].GetDouble();
-        _yellowHi = shade.GetProperty("yellowGuard")[1].GetDouble();
-        _greenLo = shade.GetProperty("greenGuard")[0].GetDouble();
-        _greenHi = shade.GetProperty("greenGuard")[1].GetDouble();
-        _scaleChroma = shade.GetProperty("scaleChromaWithLight").GetBoolean();
-        var interior = derive.GetProperty("interior");
-        _rIn = interior.GetProperty("rIn").GetDouble();
-        _litGain = interior.GetProperty("litGain").GetDouble();
-        _litLMax = interior.GetProperty("litLMax").GetDouble();
-        _shaderGain = interior.GetProperty("shaderGain").GetDouble();
-        SwatchLAmbient = derive.GetProperty("swatchL").GetProperty("ambient.sky").GetDouble();
-        SwatchLInterior = derive.GetProperty("swatchL").GetProperty("interior.warm").GetDouble();
-        foreach (var p in derive.GetProperty("materialClasses").EnumerateObject())
-            _classes[p.Name] = new ClassParams(p.Value.GetProperty("rMat").GetDouble(), p.Value.GetProperty("kC").GetDouble(), p.Value.GetProperty("dhMax").GetDouble(),
-                p.Value.GetProperty("steps").GetString() == "three");
+        var lit = derive.Lit;
+        _adaptRef = lit.AdaptRef;
+        _tintK = lit.TintK;
+        _vegTintK = lit.VegetationTintK;
+        _capRatio = lit.ChromaCap.Ratio;
+        _capMinC = lit.ChromaCap.MinAlbedoC;
+        var warm = lit.VegetationWarmCap;
+        _warmK = warm.K;
+        (_warmAlt0, _warmAlt1) = (warm.AltDeg.First, warm.AltDeg.Second);
+        (_warmC0, _warmC1) = (warm.KeyC.First, warm.KeyC.Second);
+        _hueMax = warm.HueMax;
+        _albedoGain = warm.AlbedoChromaGain;
+        var guard = lit.HeroGuard;
+        (_guardLo, _guardHi) = (guard.HueRange.First, guard.HueRange.Second);
+        _guardMinC = guard.MinHeroC;
+        _guardMirror = guard.WarmMirror;
+        _guardFloor = guard.ChromaFloor;
+        var shade = derive.Shade;
+        _chromaMulMax = shade.ChromaMulMax;
+        (_neutral0, _neutral1) = (shade.NeutralCEdge.First, shade.NeutralCEdge.Second);
+        (_yellowLo, _yellowHi) = (shade.YellowGuard.First, shade.YellowGuard.Second);
+        (_greenLo, _greenHi) = (shade.GreenGuard.First, shade.GreenGuard.Second);
+        _scaleChroma = shade.ScaleChromaWithLight;
+        _rIn = derive.Interior.RIn;
+        _litGain = derive.Interior.LitGain;
+        _litLMax = derive.Interior.LitLMax;
+        _shaderGain = derive.Interior.ShaderGain;
+        SwatchLAmbient = derive.SwatchL.AmbientSky;
+        SwatchLInterior = derive.SwatchL.InteriorWarm;
+        foreach (var (name, c) in derive.MaterialClasses) _classes[name] = new ClassParams(c.RMat, c.KC, c.DhMax, c.Steps == "three");
     }
 
     public bool HasClass(string cls) => _classes.ContainsKey(cls);
@@ -253,55 +242,49 @@ public sealed class VegetationSet
 
     public VegetationSet(ColorScriptData data, Deriver deriver, IReadOnlyList<FrameVector>[] seasonKeys)
     {
-        var heroes = data.Vegetation.GetProperty("heroFrames");
+        var veg = data.Vegetation;
         var keyIndex = data.Keys.Select((k, i) => (k.Id, i)).ToDictionary(p => p.Id, p => p.i, StringComparer.Ordinal);
         (FrameVector Frame, double X) Hero(Season s)
         {
-            var id = heroes.GetProperty(SeasonComposer.SeasonKey(s)).GetString()!;
-            var i = keyIndex[id];
+            var i = keyIndex[veg.HeroFrames.For(s)];
             return (seasonKeys[(int)s][i], data.Keys[i].AltDeg);
         }
-        (Lab, HeroRef) Anchor(JsonElement value, Season s)
+        (Lab, HeroRef) Anchor(VegAnchor value, Season s)
         {
             var (frame, x) = Hero(s);
             Lab albedo;
             HeroRef hero;
-            if (value.ValueKind == JsonValueKind.Object)
+            if (value.IsAlbedo)
             {
-                albedo = Oklab.Parse(value.GetProperty("albedo").GetString()!);
+                albedo = value.Color;
                 hero = deriver.AlbedoRef(frame);
             }
-            else (albedo, hero) = deriver.InvertLit(Oklab.Parse(value.GetString()!), frame);
+            else (albedo, hero) = deriver.InvertLit(value.Color, frame);
             deriver.CalibrateHero(albedo, hero, frame, x);
             return (albedo, hero);
         }
         var entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
-        foreach (var v in data.Vegetation.GetProperty("seasonal").EnumerateArray())
+        foreach (var v in veg.Seasonal)
         {
             var albedo = new Lab[4];
             var hero = new HeroRef[4];
             foreach (var s in Enum.GetValues<Season>())
-                (albedo[(int)s], hero[(int)s]) = Anchor(v.GetProperty("lit").GetProperty(SeasonComposer.SeasonKey(s)), s);
-            var token = v.GetProperty("token").GetString()!;
-            entries[token] = new Entry(token, v.GetProperty("class").GetString()!, albedo, hero, false);
+                (albedo[(int)s], hero[(int)s]) = Anchor(v.Lit.For(s), s);
+            entries[v.Token] = new Entry(v.Token, v.Class, albedo, hero, false);
         }
-        foreach (var v in data.Vegetation.GetProperty("constant").EnumerateArray())
+        foreach (var v in veg.Constant)
         {
-            var season = Enum.Parse<Season>(v.GetProperty("heroSeason").GetString()!, true);
-            var (a, h) = Anchor(v.GetProperty("lit"), season);
-            var token = v.GetProperty("token").GetString()!;
-            entries[token] = new Entry(token, v.GetProperty("class").GetString()!, [a, a, a, a], [h, h, h, h], true);
+            var season = Enum.Parse<Season>(v.HeroSeason, true);
+            var (a, h) = Anchor(v.Lit, season);
+            entries[v.Token] = new Entry(v.Token, v.Class, [a, a, a, a], [h, h, h, h], true);
         }
         Entries = entries;
         var variants = new Dictionary<string, Variant>(StringComparer.Ordinal);
-        if (data.Vegetation.TryGetProperty("variants", out var list))
-            foreach (var v in list.EnumerateArray())
-            {
-                var token = v.GetProperty("token").GetString()!;
-                var baseToken = v.GetProperty("base").GetString()!;
-                if (!entries.ContainsKey(baseToken)) throw new InvalidDataException($"Variant {token} follows unknown token {baseToken}.");
-                variants[token] = new Variant(token, baseToken, v.GetProperty("dL").GetDouble(), v.GetProperty("dh").GetDouble());
-            }
+        foreach (var v in veg.Variants ?? [])
+        {
+            if (!entries.ContainsKey(v.Base)) throw new InvalidDataException($"vegetation.json: variant {v.Token} follows unknown token {v.Base}.");
+            variants[v.Token] = new Variant(v.Token, v.Base, v.DL, v.Dh);
+        }
         Variants = variants;
     }
 }

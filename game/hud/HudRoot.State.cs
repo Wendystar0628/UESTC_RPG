@@ -1,0 +1,118 @@
+using Campus.Contracts.AppFlow;
+using Campus.Contracts.Audio;
+using Campus.Contracts;
+using Campus.Hud.Widgets;
+using Godot;
+
+namespace Campus.Hud;
+
+public partial class HudRoot
+{
+    // ---------------- 状态 ----------------
+    private bool Playing => _flow is null || _flow.State == AppState.Playing;
+    private bool InterfaceState => _router?.InterfaceMode ?? Input.MouseMode != Input.MouseModeEnum.Captured;
+    private bool BigPage => _settingsCard.Visible || _savePage.Visible;
+
+    private void SyncState()
+    {
+        var state = _flow?.State ?? AppState.Playing;
+        _root.Visible = !_hidden;
+        switch (state)
+        {
+            case AppState.Title:
+                ReleaseResident();
+                if (!_title.Visible) _title.Open();
+                _corners.Visible = _minimapSlot.Visible = false;
+                break;
+            case AppState.Playing:
+                BuildResident();
+                if (!_galleryTitle) _title.Close();
+                break;
+            case AppState.Entering:
+            case AppState.Leaving:
+                BuildResident();   // 进出都在雾幕下，建在这里不露出建页那一帧
+                goto case AppState.Quitting;
+            case AppState.Boot:
+            case AppState.Quitting:
+                _title.Close();
+                if (_settingsCard.Visible) CloseSettings();
+                if (_savePage.Visible) CloseSaves();
+                break;
+            default:
+                throw new InvalidOperationException("Unknown application state.");
+        }
+        SyncCorners();
+    }
+
+    private void SyncCorners()
+    {
+        if (!Playing || _resident is not { } r) { _corners.Visible = false; _minimapSlot.Visible = false; return; }
+        var ui = InterfaceState && !_clean;
+        _minimapSlot.Visible = !_clean && !BigPage;
+        _corners.Visible = ui && !_savePage.Visible;
+        r.Speed.Visible = !_settingsCard.Visible;
+        r.Time.Visible = _timeOpen;
+        r.Weather.Visible = _timeOpen && _model.Allows(WorldControlMask.Weather);
+        r.Strip.Visible = !_timeOpen;
+    }
+
+    private void OnModelChanged()
+    {
+        if (!_primed)
+        {
+            // 第一次采样只记下当前值，不出提示
+            _primed = true;
+            _lastMode = _model.Mode;
+            _lastSeason = _model.Season;
+            return;
+        }
+        if (_model.Mode != _lastMode)
+        {
+            _lastMode = _model.Mode;
+            _toast.Show(UiKit.T(_model.Mode == ViewMode.Walk ? "toast.mode.walk" : "toast.mode.fly"), _model.Mode == ViewMode.Walk ? "view_eye" : "view_free");
+        }
+        if (_model.Season != _lastSeason)
+        {
+            _lastSeason = _model.Season;
+            _toast.Show(UiKit.T("hud.season." + TimeCard.SeasonCode(_model.Season).ToLowerInvariant()), "season_" + TimeCard.SeasonCode(_model.Season).ToLowerInvariant());
+        }
+    }
+
+    private void OnSettingsChanged()
+    {
+        _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
+        _scaleDebounce = 0;
+    }
+
+    private void BindEvents()
+    {
+        if (_bound) return;
+        _bound = true;
+        _clock.Switched += OnThemeSwitched;
+        _root.Resized += Layout;
+        _settings.Changed += OnSettingsChanged;
+        if (_flow is not null) _flow.Changed += OnFlowChanged;
+        _model.Changed += OnModelChanged;
+    }
+
+    private void OnThemeSwitched(bool dark)
+    {
+        if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio?.PlayUi(UiCue.ShiftDayNight);
+    }
+
+    private void OnFlowChanged(AppState previous, AppState current) => SyncState();
+
+    private void OnInterfaceModeChanged(bool enabled) => SyncCorners();
+
+    // ---------------- 界面缩放（UI-VISUAL）：不乘 DPI ----------------
+    private void ApplyScale()
+    {
+        var window = DisplayServer.WindowGetSize();
+        if (window.X <= 0 || window.Y <= 0) return;
+        var s = Math.Min(window.X / 1920f, window.Y / 1080f);
+        var lo = 0.85f / s;
+        var hi = Math.Min(window.X / 1280f, window.Y / 720f) / s;
+        var user = _args.UiScale ?? _settings.UiScale;
+        GetTree().Root.ContentScaleFactor = Math.Clamp(user, lo, Math.Max(lo, hi));
+    }
+}

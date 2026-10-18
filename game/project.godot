@@ -265,6 +265,11 @@ waypoint_9={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://hud/i18n/zh.zh.translation")
+locale/fallback="zh"
+
 [physics]
 
 common/physics_ticks_per_second=120

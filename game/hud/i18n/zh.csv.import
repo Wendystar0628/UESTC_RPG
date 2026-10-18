@@ -1,3 +1,19 @@
 [remap]
 
-importer="keep"
+importer="csv_translation"
+type="Translation"
+uid="uid://cxjivmcf17ilg"
+
+[deps]
+
+files=["res://hud/i18n/zh.zh.translation"]
+
+source_file="res://hud/i18n/zh.csv"
+dest_files=["res://hud/i18n/zh.zh.translation"]
+
+[params]
+
+compress=true
+delimiter=0
+unescape_keys=false
+unescape_translations=true

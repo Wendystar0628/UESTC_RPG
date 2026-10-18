@@ -99,7 +99,7 @@ public sealed class PaletteComposer
     {
         _script = script;
         var warnings = new List<string>();
-        _shadowReference = Oklab.Parse(script.Data.Derive.GetProperty("shadowReference").GetString()!);
+        _shadowReference = script.Data.Derive.ShadowReference;
         // Row 1 lamp light (mainline placeholder until the WP-39 rule): the warm streetlamp constant, else the warm window light.
         _lampColor = catalog.TryGet(new PaletteToken("lamp.warm"), out var lamp) || catalog.TryGet(new PaletteToken("window.warm"), out lamp)
             ? FromSrgb(lamp.Albedo) : new Lab(0.92, 0.01, 0.07);
@@ -186,15 +186,14 @@ public sealed class PaletteComposer
             case "weather.washedSky": { var z = f.Sky(true, 4); return Oklab.FromLch(z.L, z.Chroma + 0.03, z.Hue); }
             case "weather.overcast":
                 {
-                    var tokens = _script.Data.Weather.GetProperty("tokens");
-                    if (w.SeasonA == Season.Winter) return Oklab.Parse(tokens.GetProperty("weather.snowOvercast").GetString()!);
-                    var o = tokens.GetProperty("weather.overcast");
-                    return Oklab.FromLch(o.GetProperty("l").GetDouble(), o.GetProperty("c").GetDouble(), o.GetProperty("h").GetDouble());
+                    var tokens = _script.Data.Weather.Tokens;
+                    if (w.SeasonA == Season.Winter) return tokens.SnowOvercast;
+                    return Oklab.FromLch(tokens.Overcast.L, tokens.Overcast.C, tokens.Overcast.H);
                 }
             case "weather.nightRain":
                 {
-                    var o = _script.Data.Weather.GetProperty("tokens").GetProperty("weather.nightRain");
-                    return Oklab.FromLch(o.GetProperty("l").GetDouble(), o.GetProperty("c").GetDouble(), o.GetProperty("h").GetDouble());
+                    var o = _script.Data.Weather.Tokens.NightRain;
+                    return Oklab.FromLch(o.L, o.C, o.H);
                 }
         }
         if (token.StartsWith("sky.sun.", StringComparison.Ordinal)) return f.Sky(true, token[^1] - '0');

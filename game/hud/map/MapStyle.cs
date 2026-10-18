@@ -50,10 +50,9 @@ public sealed class MapStyle
             ?? throw new InvalidDataException("ui.json is empty.");
         // 地图界面与其他消费者使用同一份完整场景目录。
         var palette = new UiPalette(document, Campus.Kernel.Registry.Kernel.Get<IPaletteCatalogSource>().Catalog);
-        using var metrics = JsonDocument.Parse(Godot.FileAccess.GetFileAsBytes(MetricsPath));
-        var root = metrics.RootElement;
+        var metrics = MapMetricsJson.Parse(Godot.FileAccess.GetFileAsBytes(MetricsPath));
         return new MapStyle(MapTone.From(palette, "light", false), MapTone.From(palette, "dark", true),
-            MapTable(palette, "light"), MapTable(palette, "dark"), MapMetrics.From(root), MapFonts.From(root));
+            MapTable(palette, "light"), MapTable(palette, "dark"), MapMetrics.From(metrics), MapFonts.From(metrics.Metrics.Type));
     }
 
     private static Color[] MapTable(UiPalette palette, string theme)
@@ -185,26 +184,16 @@ public sealed record MapMetrics(
     float ChamferPage, float ChamferPanel, float ChamferCard, float Via, float IconStroke, float Indicator,
     float ScrimMs, float PageInMs, float PageOutMs, float ReducedFadeMs, float GlowMax)
 {
-    internal static MapMetrics From(JsonElement root)
+    internal static MapMetrics From(UiMetricsDoc d)
     {
-        var m = root.GetProperty("metrics");
-        var map = m.GetProperty("map");
-        var dash = map.GetProperty("map.bound").GetProperty("dash");
-        var player = map.GetProperty("map.player");
-        var theme = root.GetProperty("themeSwitch");
-        var chamfer = m.GetProperty("shape").GetProperty("chamfer");
-        var durations = root.GetProperty("motion").GetProperty("durations");
-        var page = durations.GetProperty("page");
-        return new(dash[0].GetSingle(), dash[1].GetSingle(), map.GetProperty("map.label.halo").GetProperty("width").GetSingle(),
-            player.GetProperty("lineWidth").GetSingle(), player.GetProperty("glow").GetProperty("dark").GetSingle(),
-            theme.GetProperty("toDarkBelowDeg").GetSingle(), theme.GetProperty("toLightAboveDeg").GetSingle(),
-            theme.GetProperty("frontWidth").GetSingle(), theme.GetProperty("sweepMs").GetSingle(),
-            chamfer.GetProperty("page").GetSingle(), chamfer.GetProperty("panel").GetSingle(), chamfer.GetProperty("card").GetSingle(),
-            m.GetProperty("shape").GetProperty("signatureVia").GetSingle(), m.GetProperty("line").GetProperty("iconStroke").GetSingle(),
-            m.GetProperty("line").GetProperty("indicator").GetSingle(), durations.GetProperty("scrim").GetSingle(),
-            page.GetProperty("in")[1].GetSingle(), page.GetProperty("out")[0].GetSingle(),
-            root.GetProperty("motion").GetProperty("reduced").GetProperty("fadeMax").GetSingle(),
-            m.GetProperty("glow").GetProperty("max").GetSingle());
+        var map = d.Metrics.Map;
+        var chamfer = d.Metrics.Shape.Chamfer;
+        var theme = d.ThemeSwitch;
+        var durations = d.Motion.Durations;
+        return new(map.Bound.Dash[0], map.Bound.Dash[1], map.LabelHalo.Width, map.Player.LineWidth, map.Player.Glow.Dark,
+            theme.ToDarkBelowDeg, theme.ToLightAboveDeg, theme.FrontWidth, theme.SweepMs,
+            chamfer.Page, chamfer.Panel, chamfer.Card, d.Metrics.Shape.SignatureVia, d.Metrics.Line.IconStroke, d.Metrics.Line.Indicator,
+            durations.Scrim, durations.Page.In[1], durations.Page.Out[0], d.Motion.Reduced.FadeMax, d.Metrics.Glow.Max);
     }
 }
 
@@ -227,27 +216,23 @@ public sealed class MapFonts
     private readonly Dictionary<string, MapFont> _roles = new(StringComparer.Ordinal);
     public MapFont this[string role] => _roles[role];
 
-    internal static MapFonts From(JsonElement root)
+    internal static MapFonts From(TypeDoc type)
     {
-        var type = root.GetProperty("metrics").GetProperty("type");
-        var families = type.GetProperty("families");
-        var chains = type.GetProperty("chains");
         var cache = new Dictionary<string, Font>(StringComparer.Ordinal);
         Font Face(string family, string weight)
         {
             var key = family + "/" + weight;
             if (cache.TryGetValue(key, out var hit)) return hit;
-            var f = families.GetProperty(family);
+            var f = type.Families[family];
             Font font;
-            var files = f.GetProperty("files");
-            var file = files.TryGetProperty(weight, out var w) ? w.GetString() : files.GetProperty("Regular").GetString();
+            var file = f.Files.TryGetValue(weight, out var w) ? w : f.Files["Regular"];
             var path = FontDir + file;
-            if (file is not null && ResourceLoader.Exists(path)) font = GD.Load<Font>(path);
+            if (ResourceLoader.Exists(path)) font = GD.Load<Font>(path);
             else
             {
                 font = new SystemFont
                 {
-                    FontNames = [f.GetProperty("name").GetString() ?? "", family == "mono" ? "monospace" : "sans-serif"],
+                    FontNames = [f.Name, family == "mono" ? "monospace" : "sans-serif"],
                     FontWeight = weight switch { "Light" => 300, "Medium" => 500, _ => 400 },
                     SubpixelPositioning = TextServer.SubpixelPositioning.Auto,
                 };
@@ -256,20 +241,16 @@ public sealed class MapFonts
             return font;
         }
         var fonts = new MapFonts();
-        foreach (var role in type.GetProperty("roles").EnumerateObject())
+        foreach (var (name, r) in type.Roles)
         {
-            var r = role.Value;
-            var weight = r.GetProperty("weight").GetString() ?? "Regular";
-            var chain = chains.GetProperty(r.GetProperty("chain").GetString() ?? "body").EnumerateArray().Select(e => e.GetString() ?? "").ToArray();
-            var size = r.GetProperty("size").GetInt32();
-            var primary = Face(chain[0], weight);
+            var chain = type.Chains[r.Chain];
+            var primary = Face(chain[0], r.Weight);
             var variation = new FontVariation { BaseFont = primary };
-            variation.SpacingGlyph = (int)MathF.Round(r.GetProperty("tracking").GetSingle() * size);
+            variation.SpacingGlyph = (int)MathF.Round(r.Tracking * r.Size);
             var fallbacks = new Godot.Collections.Array<Font>();
-            foreach (var family in chain.Skip(1)) fallbacks.Add(Face(family, weight));
+            foreach (var family in chain.Skip(1)) fallbacks.Add(Face(family, r.Weight));
             variation.Fallbacks = fallbacks;
-            var upper = r.TryGetProperty("upper", out var u) && u.GetBoolean();
-            fonts._roles[role.Name] = new MapFont(variation, size, upper);
+            fonts._roles[name] = new MapFont(variation, r.Size, r.Upper);
         }
         return fonts;
     }

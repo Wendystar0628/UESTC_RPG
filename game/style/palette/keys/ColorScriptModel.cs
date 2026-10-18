@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Campus.Style.Palette.Keys;
 
 public enum KeySide : byte { Nadir, Dawn, Noon, Dusk }
@@ -78,130 +76,98 @@ public sealed class ColorScriptData
     public required IReadOnlyList<KeyframeInfo> Keys { get; init; }
     public required IReadOnlyList<FrameVector> AutumnFrames { get; init; }
     public required double[] SkyStopsDeg { get; init; }
-    public required JsonElement Derive { get; init; }
-    public required JsonElement Seasons { get; init; }
-    public required JsonElement Vegetation { get; init; }
-    public required JsonElement Weather { get; init; }
+    public required DeriveFile Derive { get; init; }
+    public required SeasonsFile Seasons { get; init; }
+    public required VegetationFile Vegetation { get; init; }
+    public required WeatherFile Weather { get; init; }
     public required IReadOnlyList<string> FrameTokens { get; init; }
 
-    /// <summary>Parses the five data files of game/style/palette/keys (UTF-8 JSON bytes).</summary>
+    /// <summary>Parses the five data files of game/style/palette/keys (UTF-8 JSON bytes); errors name the file and JSON path.</summary>
     public static ColorScriptData Load(byte[] autumn, byte[] derive, byte[] seasons, byte[] vegetation, byte[] weather)
     {
-        var autumnDoc = JsonDocument.Parse(autumn).RootElement.Clone();
-        var keys = new List<KeyframeInfo>();
-        var frames = new List<FrameVector>();
-        foreach (var k in autumnDoc.GetProperty("keys").EnumerateArray())
-        {
-            keys.Add(new KeyframeInfo(
-                k.GetProperty("id").GetString()!,
-                k.GetProperty("name").GetString()!,
-                ParseClass(k.GetProperty("class").GetString()!),
-                ParseSide(k.GetProperty("side").GetString()!),
-                k.GetProperty("altDeg").GetDouble(),
-                k.GetProperty("exampleClock").GetDouble()));
-            frames.Add(ParseFrame(k));
-        }
-        if (keys.Count != 12) throw new InvalidDataException($"Expected 12 autumn keyframes, got {keys.Count}.");
-        var stops = autumnDoc.GetProperty("skyStopsDeg").EnumerateArray().Select(e => e.GetDouble()).ToArray();
-        if (stops.Length != 5 || stops[0] != 0 || stops[4] != 90) throw new InvalidDataException("skyStopsDeg must be five elevations from 0 to 90.");
-        var deriveDoc = JsonDocument.Parse(derive).RootElement.Clone();
+        var keyFile = ColorScriptJson.Keys(autumn);
+        var deriveFile = ColorScriptJson.Derive(derive);
+        var seasonsFile = ColorScriptJson.Seasons(seasons);
+        var vegetationFile = ColorScriptJson.Vegetation(vegetation);
+        var weatherFile = ColorScriptJson.Weather(weather);
+        ColorScriptJson.Validate(keyFile, deriveFile, seasonsFile, vegetationFile);
         return new ColorScriptData
         {
-            Keys = keys,
-            AutumnFrames = frames,
-            SkyStopsDeg = stops,
-            Derive = deriveDoc,
-            Seasons = JsonDocument.Parse(seasons).RootElement.Clone(),
-            Vegetation = JsonDocument.Parse(vegetation).RootElement.Clone(),
-            Weather = JsonDocument.Parse(weather).RootElement.Clone(),
-            FrameTokens = deriveDoc.GetProperty("frameTokens").EnumerateArray().Select(e => e.GetString()!).ToArray()
+            Keys = keyFile.Keys.Select(k => new KeyframeInfo(k.Id, k.Name, k.Class, k.Side, k.AltDeg, k.ExampleClock)).ToArray(),
+            AutumnFrames = keyFile.Keys.Select(ToFrame).ToArray(),
+            SkyStopsDeg = keyFile.SkyStopsDeg,
+            Derive = deriveFile,
+            Seasons = seasonsFile,
+            Vegetation = vegetationFile,
+            Weather = weatherFile,
+            FrameTokens = deriveFile.FrameTokens
         };
     }
 
-    private static KeyClass ParseClass(string s) => s switch
-    {
-        "day" => KeyClass.Day,
-        "default" => KeyClass.Default,
-        "lowSun" => KeyClass.LowSun,
-        "twilight" => KeyClass.Twilight,
-        "night" => KeyClass.Night,
-        _ => throw new InvalidDataException($"Unknown keyframe class '{s}'.")
-    };
-
-    private static KeySide ParseSide(string s) => s switch
-    {
-        "nadir" => KeySide.Nadir,
-        "dawn" => KeySide.Dawn,
-        "noon" => KeySide.Noon,
-        "dusk" => KeySide.Dusk,
-        _ => throw new InvalidDataException($"Unknown keyframe side '{s}'.")
-    };
-
-    private static FrameVector ParseFrame(JsonElement k)
+    private static FrameVector ToFrame(KeyJson k)
     {
         var f = new FrameVector();
         var v = f.V;
-        var sky = k.GetProperty("sky");
-        var i = 0;
-        foreach (var c in sky.GetProperty("sun").EnumerateArray()) f.SetColor(FrameLayout.SkySun + 3 * i++, Oklab.Parse(c.GetString()!));
-        i = 0;
-        foreach (var c in sky.GetProperty("anti").EnumerateArray()) f.SetColor(FrameLayout.SkyAnti + 3 * i++, Oklab.Parse(c.GetString()!));
-        var fog = k.GetProperty("fog");
-        f.SetColor(FrameLayout.FogSun, Oklab.Parse(fog.GetProperty("sun").GetString()!));
-        f.SetColor(FrameLayout.FogAnti, Oklab.Parse(fog.GetProperty("anti").GetString()!));
-        v[FrameLayout.FogStart] = fog.GetProperty("startM").GetDouble();
-        v[FrameLayout.FogSilhouette] = fog.GetProperty("silhouetteM").GetDouble();
-        v[FrameLayout.FogDensity] = fog.GetProperty("density").GetDouble();
-        v[FrameLayout.HazeDeg] = fog.GetProperty("hazeDeg").GetDouble();
-        var low = k.GetProperty("fogLow");
-        v[FrameLayout.FogLowTop] = low.GetProperty("topM").GetDouble();
-        v[FrameLayout.FogLowDensity] = low.GetProperty("density").GetDouble();
-        v[FrameLayout.FogLake] = low.GetProperty("lake").GetDouble();
-        var key = k.GetProperty("key");
-        f.SetColor(FrameLayout.Key, Oklab.Parse(key.GetProperty("color").GetString()!));
-        v[FrameLayout.Intensity] = key.GetProperty("intensity").GetDouble();
-        v[FrameLayout.SatGain] = key.GetProperty("satGain").GetDouble();
-        v[FrameLayout.LitLift] = key.GetProperty("litLift").GetDouble();
-        v[FrameLayout.VegChroma] = key.TryGetProperty("vegChroma", out var vegChroma) ? vegChroma.GetDouble() : 1.0;
-        var shade = k.GetProperty("shade");
-        v[FrameLayout.R] = shade.GetProperty("r").GetDouble();
-        v[FrameLayout.WMin] = shade.GetProperty("wMin").GetDouble();
-        v[FrameLayout.VegDepth] = shade.TryGetProperty("vegDepth", out var vegDepth) ? vegDepth.GetDouble() : 1.0;
-        SetAb(v, FrameLayout.AmbientA, shade.GetProperty("ambientSky"));
-        var line = k.GetProperty("line");
-        v[FrameLayout.LineDarken] = line.GetProperty("darken").GetDouble();
-        f.SetColor(FrameLayout.LineWarm, Oklab.Parse(line.GetProperty("warm").GetString()!));
-        f.SetColor(FrameLayout.LineCool, Oklab.Parse(line.GetProperty("cool").GetString()!));
-        var colors = k.GetProperty("colors");
-        foreach (var (token, index) in FrameLayout.ColorTokens) f.SetColor(index, Oklab.Parse(colors.GetProperty(token).GetString()!));
-        SetAb(v, FrameLayout.InteriorA, colors.GetProperty("interior.warm"));
-        var post = k.GetProperty("post");
-        v[FrameLayout.ExposureEv] = post.GetProperty("exposureEv").GetDouble();
-        v[FrameLayout.GlowBloom] = post.GetProperty("glowBloom").GetDouble();
-        v[FrameLayout.GlowIntensity] = post.GetProperty("glowIntensity").GetDouble();
-        v[FrameLayout.GlowHdrThreshold] = post.GetProperty("glowHdrThreshold").GetDouble();
-        v[FrameLayout.GlowHdrScale] = post.GetProperty("glowHdrScale").GetDouble();
-        var vignette = post.GetProperty("vignette");
-        v[FrameLayout.Vignette] = vignette.GetProperty("strength").GetDouble();
-        i = 0;
-        foreach (var t in vignette.GetProperty("tint").EnumerateArray()) v[FrameLayout.VignetteTint + i++] = t.GetDouble();
-        var cdl = post.GetProperty("cdl");
-        v[FrameLayout.CdlSlope] = cdl.GetProperty("slope").GetDouble();
-        v[FrameLayout.CdlOffset] = cdl.GetProperty("offset").GetDouble();
-        v[FrameLayout.CdlPower] = cdl.GetProperty("power").GetDouble();
-        v[FrameLayout.CdlSaturation] = cdl.GetProperty("saturation").GetDouble();
-        var fx = k.GetProperty("skyFx");
-        v[FrameLayout.Stars] = fx.GetProperty("stars").GetDouble();
-        v[FrameLayout.CloudAmount] = fx.GetProperty("cloudAmount").GetDouble();
+        for (var i = 0; i < 5; i++)
+        {
+            f.SetColor(FrameLayout.SkySun + 3 * i, k.Sky.Sun[i]);
+            f.SetColor(FrameLayout.SkyAnti + 3 * i, k.Sky.Anti[i]);
+        }
+        f.SetColor(FrameLayout.FogSun, k.Fog.Sun);
+        f.SetColor(FrameLayout.FogAnti, k.Fog.Anti);
+        v[FrameLayout.FogStart] = k.Fog.StartM;
+        v[FrameLayout.FogSilhouette] = k.Fog.SilhouetteM;
+        v[FrameLayout.FogDensity] = k.Fog.Density;
+        v[FrameLayout.HazeDeg] = k.Fog.HazeDeg;
+        v[FrameLayout.FogLowTop] = k.FogLow.TopM;
+        v[FrameLayout.FogLowDensity] = k.FogLow.Density;
+        v[FrameLayout.FogLake] = k.FogLow.Lake;
+        f.SetColor(FrameLayout.Key, k.Key.Color);
+        v[FrameLayout.Intensity] = k.Key.Intensity;
+        v[FrameLayout.SatGain] = k.Key.SatGain;
+        v[FrameLayout.LitLift] = k.Key.LitLift;
+        v[FrameLayout.VegChroma] = k.Key.VegChroma;
+        v[FrameLayout.R] = k.Shade.R;
+        v[FrameLayout.WMin] = k.Shade.WMin;
+        v[FrameLayout.VegDepth] = k.Shade.VegDepth;
+        SetAb(v, FrameLayout.AmbientA, k.Shade.AmbientSky);
+        v[FrameLayout.LineDarken] = k.Line.Darken;
+        f.SetColor(FrameLayout.LineWarm, k.Line.Warm);
+        f.SetColor(FrameLayout.LineCool, k.Line.Cool);
+        var colors = k.Colors;
+        f.SetColor(FrameLayout.Bounce, colors.BounceGround);
+        f.SetColor(FrameLayout.ShaftNear, colors.ShaftNear);
+        f.SetColor(FrameLayout.ShaftFar, colors.ShaftFar);
+        f.SetColor(FrameLayout.Rim, colors.Rim);
+        f.SetColor(FrameLayout.Glare, colors.GlassGlare);
+        f.SetColor(FrameLayout.CloudLit, colors.SkyCloudLit);
+        f.SetColor(FrameLayout.CloudRim, colors.SkyCloudRim);
+        f.SetColor(FrameLayout.CloudBelly, colors.SkyCloudBelly);
+        f.SetColor(FrameLayout.CloudDeep, colors.SkyCloudDeep);
+        f.SetColor(FrameLayout.Moon, colors.SkyMoon);
+        SetAb(v, FrameLayout.InteriorA, colors.InteriorWarm);
+        var post = k.Post;
+        v[FrameLayout.ExposureEv] = post.ExposureEv;
+        v[FrameLayout.GlowBloom] = post.GlowBloom;
+        v[FrameLayout.GlowIntensity] = post.GlowIntensity;
+        v[FrameLayout.GlowHdrThreshold] = post.GlowHdrThreshold;
+        v[FrameLayout.GlowHdrScale] = post.GlowHdrScale;
+        v[FrameLayout.Vignette] = post.Vignette.Strength;
+        for (var i = 0; i < 3; i++) v[FrameLayout.VignetteTint + i] = post.Vignette.Tint[i];
+        v[FrameLayout.CdlSlope] = post.Cdl.Slope;
+        v[FrameLayout.CdlOffset] = post.Cdl.Offset;
+        v[FrameLayout.CdlPower] = post.Cdl.Power;
+        v[FrameLayout.CdlSaturation] = post.Cdl.Saturation;
+        v[FrameLayout.Stars] = k.SkyFx.Stars;
+        v[FrameLayout.CloudAmount] = k.SkyFx.CloudAmount;
         v[FrameLayout.LampPoolGain] = 1.0;
         return f;
     }
 
-    private static void SetAb(double[] v, int index, JsonElement ch)
+    private static void SetAb(double[] v, int index, ChromaHueJson ch)
     {
-        var c = ch.GetProperty("c").GetDouble();
-        var h = ch.GetProperty("h").GetDouble() * Math.PI / 180.0;
-        v[index] = c * Math.Cos(h);
-        v[index + 1] = c * Math.Sin(h);
+        var h = ch.H * Math.PI / 180.0;
+        v[index] = ch.C * Math.Cos(h);
+        v[index + 1] = ch.C * Math.Sin(h);
     }
 }

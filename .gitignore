@@ -26,3 +26,6 @@ output/
 
 # gdUnit4 runtime adapter injects its own temporary SceneTree runner.
 /game/gdunit4_testadapter_v*/
+
+# CSV 翻译导入时由引擎生成
+*.translation
