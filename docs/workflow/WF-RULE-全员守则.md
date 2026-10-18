@@ -116,9 +116,10 @@ gates: []
 ## 13 一次性产物（D-221）
 
 - **用完就删**：日志、测试输出、临时脚本、调试截图都是一次性产物；回报要引用的留到评审结束，其余在交回前删掉自己的。
-- **放对地方**：临时脚本和中间结果放系统临时目录（Claude 用会话的 scratchpad），不放仓库；必须落在仓库里的生成物只进 `output/`。
-- **长期保留的只有**：构建锁 `output/.locks/`、烘焙缓存 `output/cache/`、固定机位截图 `output/shots/`、门禁复用记录 `output/build/gates/*-cache.json`、管线安装包 `output/pipeline-wheels/`。
-- **定期清理**：`python -I -X utf8 scripts/build/clean_output.py` 列出之后主线上已有 20 次提交的一次性产物（按提交轮次算，不开发就不过期），加 `--delete` 删除；主会话和 Astra 每个任务结束时跑一次。
+- **放对地方**：临时脚本和中间结果放系统临时目录（Claude 用会话的 scratchpad），测试写的临时文件也放系统临时目录并在结束时删；必须落在仓库里的生成物只进 `output/`。
+- **长期保留的只有**：构建锁 `output/.locks/`、烘焙缓存 `output/cache/bake/`（旧格式目录除外）、固定机位截图 `output/shots/`、管线安装包 `output/pipeline-wheels/`。
+- **会一直增长的由产出方封顶**：日志、状态与存档类文件由写它的工具自己限大小或按时间删，不靠人清。
+- **统一清理**：`python -I -X utf8 scripts/build/clean_artifacts.py` 列出 `output/` 各层里之后主线上已有 20 次提交的产物（按提交轮次算，不开发就不过期）、缓存里的一次性副本与旧格式、已删工程留下的 `bin/`、`obj/`、失效的工作树登记，加 `--delete` 删除；主会话和 Astra 每个任务结束时跑一次，巡逻发现可删项会提醒。
 
 ## 14 按严重程度修 bug（D-223）
 

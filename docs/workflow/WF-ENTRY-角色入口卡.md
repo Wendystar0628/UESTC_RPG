@@ -43,7 +43,7 @@ gates: []
 - 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明同时在干活的邻居（WF-MODEL §1–§8，用量与并发 WF-MODEL §9）。
 - 不等 GPT 侧：施工队列里能派 Claude 子代理做完、和 Astra 不冲突的行就自己接；队列即时维护（WF-STATUS §2，D-234、D-235）。
 - 写代码的子代理交回后由你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送由你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
-- 每个任务结束时跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_output.py --delete`，超限文档就地处理（WF-DOC §5、WF-RULE §13）。
+- 每个任务结束时跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_artifacts.py --delete`，超限就地处理（WF-DOC §5、WF-RULE §13）。
 - 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出，"建议"下一条一行逐条处理，不截断；重启或换会话后先用 CronList 查。来信监视 inbox_wait 重置后先查进程再重启（`.collab\tools\README.md`）。
 
 | 做这件事之前 | 读 |
@@ -97,7 +97,7 @@ gates: []
 - 改契约和共享件前告知邻居，改完同批迁完使用方（WF-BUILD §3）。
 - 不做画面与风格取值，不跑也不看截图；碰了画面的推送在【知会】里注明，观感问题写评审请求（WF-ROLE §3）。
 - 纯工程判断自己定，记一条【知会】给主会话（WF-COMMS §4）。
-- 每批结束时跑 `scripts/build/clean_output.py --delete`，一次性产物不留（WF-RULE §13）。
+- 每批结束时跑 `scripts/build/clean_artifacts.py --delete`，一次性产物不留（WF-RULE §13）。
 
 | 做这件事之前 | 读 |
 | --- | --- |
