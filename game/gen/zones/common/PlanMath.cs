@@ -1,10 +1,19 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 
-namespace Campus.Gen.Zones.South.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>Small plan-geometry helpers on world (x, z) rings, in scalar arithmetic.</summary>
 public static class PlanMath
 {
+    /// <summary>The ring walked so that its outside lies on the right of the path (lateral positive in a sweep); positive-area rings already are.</summary>
+    public static Vector2[] OutsideRight(IReadOnlyList<Vector2> ring)
+    {
+        var points = ring.ToArray();
+        if (PlanGeometry.SignedArea(points) < 0) Array.Reverse(points);
+        return points;
+    }
+
     /// <summary>Area centroid of a simple ring (vertex mean for a degenerate one).</summary>
     public static Vector2 Centroid(IReadOnlyList<Vector2> ring)
     {
@@ -43,7 +52,7 @@ public static class PlanMath
         return new(MathF.Sin(a), -MathF.Cos(a));
     }
 
-    /// <summary>A frame at <paramref name="origin"/> whose local +Z faces <paramref name="bearing"/>.</summary>
+    /// <summary>A frame at <paramref name="origin"/> whose local +Z faces <paramref name="bearing"/> (local +X is then its left).</summary>
     public static PlanFrame Facing(Vector2 origin, float bearing)
     {
         var w = Heading(bearing);

@@ -1,22 +1,23 @@
 using System.Numerics;
 using Campus.Contracts;
 
-namespace Campus.Gen.Zones.CenterEast.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>
-/// Curved solids for the 21b2 monuments: lathes (heads, collars, sockets), lathes whose radius also varies round the axis
-/// (coats hanging in folds, the bust's lapels) and a rounded landscape stone with one flat inscription face. Same
-/// conventions as <see cref="Shapes"/>: metres, origin at the base centre, front faces clockwise from outside, AO 1, UV in
-/// metres, angles in radians. Lathe and Draped follow the south zone's statue helpers (zones never reference each other).
+/// Curved solids for monuments and landmarks: lathes (domes, columns, heads, collars, sockets), lathes whose radius also
+/// varies round the axis (coats hanging in folds, a bust's lapels) and a rounded landscape stone with one flat inscription
+/// face. Same conventions as <see cref="Shapes"/>: metres, origin at the base centre, front faces clockwise from outside,
+/// AO 1, UV in metres, angles in radians.
 /// </summary>
 public static class Solids
 {
     /// <summary>
     /// A surface of revolution about local Y. Profile points are (radius, y) from bottom to top; a zero radius closes the
     /// end to a point. Normals follow the profile (smooth, ART-MODELING); the section is scaled by (sx, sz) for an
-    /// elliptical body. Flat caps close a nonzero first or last ring.
+    /// elliptical body. Flat caps close a nonzero first or last ring unless turned off (an open ring such as a bezel).
     /// </summary>
-    public static PartGeometry Lathe(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx = 1f, float sz = 1f)
+    public static PartGeometry Lathe(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx = 1f, float sz = 1f,
+        bool capBottom = true, bool capTop = true)
     {
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Count < 2) throw new ArgumentException("A lathe needs at least two profile points.", nameof(profile));
@@ -50,8 +51,8 @@ public static class Solids
         for (var k = 0; k + 1 < n; k++)
             for (var i = 0; i < segments; i++)
                 m.Quad(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i], m.Normal(rings[k][i]) + m.Normal(rings[k + 1][i + 1]));
-        if (profile[0].X > 1e-5f) Cap(m, profile[0].X, profile[0].Y, segments, -1, sx, sz);
-        if (profile[n - 1].X > 1e-5f) Cap(m, profile[n - 1].X, profile[n - 1].Y, segments, 1, sx, sz);
+        if (capBottom && profile[0].X > 1e-5f) Cap(m, profile[0].X, profile[0].Y, segments, -1, sx, sz);
+        if (capTop && profile[n - 1].X > 1e-5f) Cap(m, profile[n - 1].X, profile[n - 1].Y, segments, 1, sx, sz);
         return m.Finish();
     }
 

@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using B = Campus.Gen.Zones.North.NorthTune.Bank;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.North.Canal;
 /// <see cref="B.JointT"/> is shared: the first rail panel starts flush on its campus-side face and the first collider overlaps its
 /// centre. Frame: t along the bank (the run heads south into the campus, toward negative t), n off the water edge toward the road (<see cref="B"/>).
 /// </summary>
-public sealed class CanalRailSite : NorthSite
+public sealed class CanalRailSite : ZoneSite
 {
     public override string Id => "20a4.canal-rail";
 

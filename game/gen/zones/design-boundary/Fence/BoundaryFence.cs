@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.DesignBoundary.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
 

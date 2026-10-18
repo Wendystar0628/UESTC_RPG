@@ -1,60 +1,17 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.South.Framework;
 
 /// <summary>
-/// Curved and sloped solids for the 18b landmarks: lathes (the dome, columns, balusters, the statue), regular-polygon
-/// roofs with upturned eaves (the hexagonal pavilion) and a rowing-boat hull. Same conventions as <see cref="Shapes"/>:
-/// metres, origin at the base centre, front faces clockwise from outside, AO 1, UV in metres, angles in radians.
+/// Sloped and draped solids for the 18b landmarks: regular-polygon roofs with upturned eaves (the hexagonal pavilion), a
+/// rowing-boat hull, boxes stood along a segment, and the statue's coat skirt, whose U runs in metres round each ring (the
+/// shared <see cref="Solids"/> keep the lathes). Same conventions as <see cref="Shapes"/>: metres, origin at the base centre,
+/// front faces clockwise from outside, AO 1, UV in metres, angles in radians.
 /// </summary>
-public static class Solids
+public static class LandmarkSolids
 {
-    /// <summary>
-    /// A surface of revolution about local Y. Profile points are (radius, y) from bottom to top; a zero radius closes the
-    /// end to a point. Normals follow the profile (smooth, ART-MODELING); the section is scaled by (sx, sz) for an
-    /// elliptical body. Flat caps close a nonzero first or last ring unless turned off (an open ring such as a bezel).
-    /// </summary>
-    public static PartGeometry Lathe(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx = 1f, float sz = 1f,
-        bool capBottom = true, bool capTop = true)
-    {
-        ArgumentNullException.ThrowIfNull(profile);
-        if (profile.Count < 2) throw new ArgumentException("A lathe needs at least two profile points.", nameof(profile));
-        if (segments < 6) throw new ArgumentOutOfRangeException(nameof(segments));
-        var m = new Shapes.Writer(material);
-        var n = profile.Count;
-        var normals = new Vector2[n];
-        for (var k = 0; k < n; k++)
-        {
-            if (profile[k].X <= 1e-5f && (k == 0 || k == n - 1)) { normals[k] = new(0, k == 0 ? -1 : 1); continue; }
-            var t = profile[Math.Min(n - 1, k + 1)] - profile[Math.Max(0, k - 1)];
-            var nn = new Vector2(t.Y, -t.X);
-            var length = MathF.Sqrt(nn.X * nn.X + nn.Y * nn.Y);
-            normals[k] = length > 1e-9f ? nn / length : new Vector2(1, 0);
-        }
-        var rings = new int[n][];
-        var arc = 0f;
-        for (var k = 0; k < n; k++)
-        {
-            if (k > 0) arc += Vector2.Distance(profile[k], profile[k - 1]);
-            rings[k] = new int[segments + 1];
-            for (var i = 0; i <= segments; i++)
-            {
-                var a = 2f * MathF.PI * (i % segments) / segments;
-                float c = MathF.Cos(a), s = MathF.Sin(a);
-                var r = profile[k].X;
-                var normal = Unit(new(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz));
-                rings[k][i] = m.Vertex(new(c * r * sx, profile[k].Y, s * r * sz), normal, new(2f * MathF.PI * i / segments, arc));
-            }
-        }
-        for (var k = 0; k + 1 < n; k++)
-            for (var i = 0; i < segments; i++)
-                m.Quad(rings[k][i], rings[k][i + 1], rings[k + 1][i + 1], rings[k + 1][i], m.Normal(rings[k][i]) + m.Normal(rings[k + 1][i + 1]));
-        if (capBottom && profile[0].X > 1e-5f) Cap(m, profile[0].X, profile[0].Y, segments, -1, sx, sz);
-        if (capTop && profile[n - 1].X > 1e-5f) Cap(m, profile[n - 1].X, profile[n - 1].Y, segments, 1, sx, sz);
-        return m.Finish();
-    }
-
     /// <summary>
     /// A lathe whose radius also varies round the axis: radius(angle, y) = profile radius × (1 + <paramref name="fold"/>(angle, y)),
     /// for cloth that hangs in folds (the statue's coat skirt). Angle is in radians from local +X towards +Z. Normals come from
@@ -255,20 +212,6 @@ public static class Solids
         var n = new Vector2(t.Y, -t.X);
         var length = MathF.Sqrt(n.X * n.X + n.Y * n.Y);
         return length > 1e-9f ? n / length : new Vector2(0, -1);
-    }
-
-    private static void Cap(Shapes.Writer m, float r, float y, int segments, float sign, float sx, float sz)
-    {
-        var normal = new Vector3(0, sign, 0);
-        var centre = m.Vertex(new(0, y, 0), normal, Vector2.Zero);
-        var ring = new int[segments];
-        for (var i = 0; i < segments; i++)
-        {
-            var a = 2f * MathF.PI * i / segments;
-            float c = MathF.Cos(a), s = MathF.Sin(a);
-            ring[i] = m.Vertex(new(c * r * sx, y, s * r * sz), normal, new(c * r, s * r));
-        }
-        for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);
     }
 
     private static Vector3 Unit(Vector3 v)

@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Zones.DesignBoundary.Fence;
-using Campus.Gen.Zones.DesignBoundary.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
 using R = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Grate;
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.DesignBoundary.Ring;
 /// other roads cross the ring, and the river grates where water does (WLD-OUTSKIRTS). The gates themselves are
 /// <see cref="Gates.GateSite"/>s. Every collider here is Boundary.
 /// </summary>
-public sealed class RingFenceSite : BoundarySite
+public sealed class RingFenceSite : ZoneSite
 {
     public override string Id => "30b.ring";
 

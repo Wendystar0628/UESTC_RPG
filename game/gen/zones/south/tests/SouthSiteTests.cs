@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
 
@@ -94,7 +94,7 @@ public sealed class SouthSiteTests
         Require(plaza.Kind.Value == "road" && Text(plaza, "roadType") == "pedestrian", "plaza paving, drawn by WP-15 with its kerbs and edging");
         var (frame, across, along) = Gate.GatePlazaSite.FrameOf(world)!.Value;
         Require(MathF.Abs(along * 2f - 18f) < 0.1f && MathF.Abs(across * 2f - 12f) < 0.1f, $"about 18 × 12 m ({along * 2f:0.0} × {across * 2f:0.0})");
-        Require(MathF.Abs(SouthSite.Bearing(frame.W) - 36.8f) < 1f, $"the long side runs along the main axis ({SouthSite.Bearing(frame.W):0.0}°)");
+        Require(MathF.Abs(ZoneSite.Bearing(frame.W) - 36.8f) < 1f, $"the long side runs along the main axis ({ZoneSite.Bearing(frame.W):0.0}°)");
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
         // WP-13's kiosk (2 × 0.8 m) on the spot the plaza keeps for A01: on the paving, at least 3 m from every carriageway edge.
         var yaw = SouthTune.Plaza.KioskYaw * MathF.PI / 180f;
@@ -134,8 +134,8 @@ public sealed class SouthSiteTests
         var module = new SouthModule();
         var f = Liren.LirenSite.Rings(ctx.World);
         var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Where(c => c.Tag is SurfaceTag.Wall or SurfaceTag.DoorClosed).ToArray();
-        var open = Framework.GridFacade.Edges(f.Bridge).Select(e => e.Info).First(e => Liren.LirenSite.Dress(e, f.BridgeNeighbours).Kind != Framework.EdgeKind.Hidden);
-        var centre = Framework.PlanMath.Centroid(f.Bridge);
+        var open = Common.GridFacade.Edges(f.Bridge).Select(e => e.Info).First(e => Liren.LirenSite.Dress(e, f.BridgeNeighbours).Kind != Common.EdgeKind.Hidden);
+        var centre = Common.PlanMath.Centroid(f.Bridge);
         for (var t = -14f; t <= 14f; t += 0.25f)
         {
             var p = centre + open.Frame.W * t;
@@ -192,7 +192,7 @@ public sealed class SouthSiteTests
         var parapet = SouthTune.Platform.ParapetInset + SouthTune.Platform.ParapetDepth * 0.5f;
         var clearance = corners.Min(c => p.Edges.Min(e => DistanceToSegment(c, e.A, e.B) - (e.Free ? parapet : 0f)));
         Require(clearance >= 3f, $"A06 keeps {clearance:0.00} m from the deck edges and parapets");
-        var turn = Framework.PlanMath.Turn(SouthSite.Bearing(stadium - A06Spot) - A06Yaw);
+        var turn = Common.PlanMath.Turn(ZoneSite.Bearing(stadium - A06Spot) - A06Yaw);
         Require(MathF.Abs(turn) < 5f, $"A06 faces the stadium ({turn:0.0}° off)");
         Require(p.Stairs.Count == 2 && p.Bays.Count > 20 && p.Columns.Count > 20, $"two stairs, {p.Bays.Count} shop bays, {p.Columns.Count} columns");
         Require(p.Edges.Count(e => !e.Free) > 10 && p.Edges.Count(e => e.Free) > 20, "the edges against the venues stay open, the rest are guarded");
@@ -223,10 +223,10 @@ public sealed class SouthSiteTests
         Require(poolTop is > 14.5f and < 16f, $"natatorium a low dome near 15 m ({poolTop})");
         // The platform-storey doorway (gym.deck) is open between the platform and the door head; the drum is walled elsewhere.
         var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().ToArray();
-        var deck = gym.Centre + Framework.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
+        var deck = gym.Centre + Common.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
         Require(!walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop + 1.5f)), "the gym's deck doorway is open");
         Require(walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop - 1f)), "the drum is closed below the platform storey");
-        var back = gym.Centre - Framework.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
+        var back = gym.Centre - Common.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
         Require(walls.Any(w => Covers(w, back, SouthTune.Sports.PlatformTop + 1.5f)), "the drum is closed opposite the door");
     }
 

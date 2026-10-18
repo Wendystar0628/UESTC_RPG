@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.CenterEast;
 
@@ -20,11 +20,11 @@ public sealed class CenterEastModule : IContentModule, IWindowMetadataSource, IC
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
 
-    private readonly IReadOnlyList<CenterEastSite> _sites;
+    private readonly IReadOnlyList<ZoneSite> _sites;
 
     public CenterEastModule() : this(CenterEastSites.All) { }
 
-    internal CenterEastModule(IReadOnlyList<CenterEastSite> sites)
+    internal CenterEastModule(IReadOnlyList<ZoneSite> sites)
     {
         _sites = sites;
         Claims = sites.SelectMany(s => s.Claims).ToArray();
@@ -151,7 +151,7 @@ public sealed class CenterEastModule : IContentModule, IWindowMetadataSource, IC
 /// </summary>
 public static class CenterEastSites
 {
-    public static IReadOnlyList<CenterEastSite> All { get; } = Array.AsReadOnly<CenterEastSite>(
+    public static IReadOnlyList<ZoneSite> All { get; } = Array.AsReadOnly<ZoneSite>(
     [
         new Pinxue.PinxueFrameSite(),
         new Pinxue.PinxueForecourtSite(),

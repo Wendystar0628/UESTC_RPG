@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using M = Campus.Gen.Zones.West.WestTune.Motto;
 
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.West.Motto;
 /// The face is left blank until the scene text atlas carries the motto (contract-26). The low lawn lamp beside it is WP-39's
 /// (lighting-schedule.json).
 /// </summary>
-public sealed class MottoStoneSite : WestSite
+public sealed class MottoStoneSite : ZoneSite
 {
     /// <summary>The stone's frame: origin at its plan centre, local +Z toward its face's bearing.</summary>
     internal static PlanFrame Frame => PlanMath.Facing(M.At, M.Facing);

@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
 using G = Campus.Gen.Zones.North.NorthTune.Gate;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
@@ -19,7 +20,7 @@ namespace Campus.Gen.Zones.North.Clusters;
 /// Walk mode (SYS-WALK): every gate is closed (wings shut, red cross) except an open cluster's main gate, whose wings are
 /// retracted and arrows green; its barrier arm stays down (WLD-INTERIORS). The buildings stay with WP-14.
 /// </summary>
-public sealed class ClusterSite(NorthTune.Cluster cluster) : NorthSite
+public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 {
     private static readonly IronGatePart SideGate = new();
 

@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.South.SouthTune.Liren;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -18,7 +18,7 @@ namespace Campus.Gen.Zones.South.Liren;
 /// columns at both open faces (§6.3), and the two-storey east link between A and B. The void stays open from the paved
 /// plaza into the courtyard; its floor is paved.
 /// </summary>
-public sealed class LirenSite : SouthSite
+public sealed class LirenSite : ZoneSite
 {
     public const string Connector = "qsh:relation:11185938";
     public const string BlockA = "qsh:relation:11185936", BlockB = "qsh:way:814133732";

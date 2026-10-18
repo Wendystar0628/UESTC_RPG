@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 
@@ -15,7 +15,7 @@ namespace Campus.Gen.Zones.CenterEast.Pinxue;
 /// curtain-wall bay: a dark plinth, glass behind white slab bands at each storey, a deep attic band and coping, and a roof
 /// cap over the bulge. B stays unclaimed; the bay is registered as a design addition in overlay/center-east.d/.
 /// </summary>
-public sealed class PinxueArcEndSite : CenterEastSite
+public sealed class PinxueArcEndSite : ZoneSite
 {
     public override string Id => "21a.pinxue-arc-end";
 

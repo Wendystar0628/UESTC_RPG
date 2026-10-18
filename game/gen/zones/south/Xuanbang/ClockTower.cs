@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -32,13 +32,13 @@ internal static class ClockTower
         for (var i = 0; i < 4; i++)
         {
             var d = ring[(i + 1) % 4] - ring[i];
-            var error = MathF.Abs(PlanMath.Turn(SouthSite.Bearing(d) - X.ClockAxis));
-            error = MathF.Min(error, MathF.Abs(PlanMath.Turn(SouthSite.Bearing(d) - X.ClockAxis - 180f)));
+            var error = MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(d) - X.ClockAxis));
+            error = MathF.Min(error, MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(d) - X.ClockAxis - 180f)));
             if (error < bestError) { bestError = error; best = i; }
         }
         var along = ring[(best + 1) % 4] - ring[best];
         var across = ring[(best + 2) % 4] - ring[(best + 1) % 4];
-        if (MathF.Abs(PlanMath.Turn(SouthSite.Bearing(along) - X.ClockAxis)) > 90f) along = -along;
+        if (MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(along) - X.ClockAxis)) > 90f) along = -along;
         var f = PlanFrame.Along(centre, along);
         return (f, Length(along) * 0.5f, Length(across) * 0.5f);
     }

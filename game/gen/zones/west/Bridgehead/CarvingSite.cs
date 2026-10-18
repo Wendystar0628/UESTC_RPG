@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Zones.West.Motto;
 using C = Campus.Gen.Zones.West.WestTune.Carving;
 using L = Campus.Gen.Zones.West.WestTune.Look;
@@ -15,7 +15,7 @@ namespace Campus.Gen.Zones.West.Bridgehead;
 /// the bridgehead junction. It lies in a low oval of pebbles so its foot meets the lawn softly. The face is blank until the
 /// scene text atlas (contract-26) carries "国防科技园" in dark green running script. Night role: dark area (§11).
 /// </summary>
-public sealed class CarvingSite : WestSite
+public sealed class CarvingSite : ZoneSite
 {
     public override string Id => "19c.carving";
 

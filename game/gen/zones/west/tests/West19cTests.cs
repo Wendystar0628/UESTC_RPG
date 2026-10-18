@@ -8,6 +8,7 @@ using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using Campus.Gen.Zones.West.Bridgehead;
 using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Zones.West.Wetland;
 using GdUnit4;
 using C = Campus.Gen.Zones.West.WestTune.Carving;
@@ -174,7 +175,7 @@ public sealed class West19cTests
     private static readonly Vector2[] LeveeLine =
         [new(-308.84f, -147.52f), new(-307.28f, -150.63f), new(-303.98f, -154.91f), new(-296.28f, -164.94f), new(-293.69f, -168.33f), new(-281.59f, -184.05f)];
 
-    private static List<Collider> Colliders(BuildContext ctx, WestSite site)
+    private static List<Collider> Colliders(BuildContext ctx, ZoneSite site)
     {
         var module = new WestModule([site]);
         return [.. module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t))];

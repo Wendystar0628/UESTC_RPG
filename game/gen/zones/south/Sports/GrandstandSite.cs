@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.South.SouthTune.Stand;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -20,7 +21,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// - the low dark seats across the track (design:south-stadium-east-seats in overlay/south.d/).
 /// The track, the pitch and their markings are WP-15's ground. The stand has no glass: its window declaration is empty.
 /// </summary>
-public sealed class GrandstandSite : SouthSite
+public sealed class GrandstandSite : ZoneSite
 {
     public const string Feature = "qsh:way:217855276";
     private const string Part = "osm:way:217855276";
@@ -137,9 +138,9 @@ public sealed class GrandstandSite : SouthSite
         var stride = lod switch { LodLevel.L0 => 1, LodLevel.L1 => 2, _ => 4 };
         var picked = p.Stations.Where((_, i) => i % stride == 0).ToList();
         if (picked[^1] != p.Stations[^1]) picked.Add(p.Stations[^1]);
-        yield return Trace(ctx, lod, Id + "/main", new(Feature), b => Build(b, true, false), c => Collide(c, true, false), Contours(picked));
+        yield return SiteSourceTrace.Build(ctx, lod, Id + "/main", new(Feature), b => Build(b, true, false), c => Collide(c, true, false), Contours(picked));
         if (p.Low.Count == 2)
-            yield return Trace(ctx, lod, Id + "/east-seats", new(LowSeats), b => Build(b, false, true), c => Collide(c, false, true), Contours(p.Low));
+            yield return SiteSourceTrace.Build(ctx, lod, Id + "/east-seats", new(LowSeats), b => Build(b, false, true), c => Collide(c, false, true), Contours(p.Low));
     }
 
     private static IReadOnlyList<PolygonRings> Contours(IReadOnlyList<Station> stations) =>
@@ -298,7 +299,7 @@ public sealed class GrandstandSite : SouthSite
             {
                 var a = rings[i][k] + normals[i][k] * 0.03f;
                 var c = rings[i][k + 1] + normals[i][k + 1] * 0.03f;
-                b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c) + 0.04f, 0.05f, 0, L.DarkFrame), Solids.Along(a, c, normals[i][k] + normals[i][k + 1]));
+                b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c) + 0.04f, 0.05f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, normals[i][k] + normals[i][k + 1]));
             }
         }
     }
@@ -355,7 +356,7 @@ public sealed class GrandstandSite : SouthSite
             var across = new Vector3(-s.Out.Y, 0, s.Out.X);
             var reachPoint = belly[belly.Length / 3];
             var from = foot + new Vector3(0, height * 0.55f, 0);
-            b.Add(PartGeometryKernel.BeveledBox(0.3f, Vector3.Distance(from, reachPoint), 0.3f, 0.02f, L.DarkFrame), Solids.Along(from, reachPoint, across));
+            b.Add(PartGeometryKernel.BeveledBox(0.3f, Vector3.Distance(from, reachPoint), 0.3f, 0.02f, L.DarkFrame), LandmarkSolids.Along(from, reachPoint, across));
         }
     }
 

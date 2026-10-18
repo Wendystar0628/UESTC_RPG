@@ -6,7 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
 using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
@@ -22,7 +22,7 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 /// collide as DoorClosed. Each gridded block is one named window grid (contract-29) sized from the same layout as its
 /// geometry; the lens halls' glass and the entrance glazing stay unnumbered.
 /// </summary>
-public abstract class ResearchSite : CenterEastSite
+public abstract class ResearchSite : ZoneSite
 {
     /// <summary>The shared research frame R: X along the blocks' long faces, +Z roughly south.</summary>
     internal static readonly PlanFrame Frame = PlanFrame.Along(Vector2.Zero, R.Axis);

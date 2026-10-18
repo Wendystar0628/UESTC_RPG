@@ -167,6 +167,7 @@ public sealed class ArchitectureTests
     {
         // Includes map registration classes -> generic BoxInteriorProvider in the same shell namespace.
         if (origin == target) return true;
+        if (target == "Campus.Gen.Zones.Common") return origin.StartsWith("Campus.Gen.Zones.", StringComparison.Ordinal);
         if (origin == "Campus.Gen.Geometry") return false;
         if (origin is "Campus.Gen.World" or "Campus.Gen.Parts.Core") return target == "Campus.Gen.Geometry";
         if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";

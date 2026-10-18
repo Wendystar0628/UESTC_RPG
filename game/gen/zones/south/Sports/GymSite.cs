@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -21,7 +22,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// The glass is one grid (contract-29): a column per facet, the platform storey and the upper hall as rows, the door cell skipped.
 /// The tea glass borrows the registered glass colour (the palette is full, ART-STYLE).
 /// </summary>
-public sealed class GymSite : SouthSite
+public sealed class GymSite : ZoneSite
 {
     public const string Feature = "qsh:way:217855275";
     private const string Part = "osm:way:217855275";
@@ -192,7 +193,7 @@ public sealed class GymSite : SouthSite
             var n = new Vector3(MathF.Cos(a0 + lean * 0.5f), 0, MathF.Sin(a0 + lean * 0.5f));
             var foot = new Vector3(lo.X, y + S.PlatformTop, lo.Y);
             var head = new Vector3(hi.X, y + S.GymGlassTop - 0.1f, hi.Y);
-            b.Add(PartGeometryKernel.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), Solids.Along(foot, head, n));
+            b.Add(PartGeometryKernel.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), LandmarkSolids.Along(foot, head, n));
         }
     }
 
@@ -221,7 +222,7 @@ public sealed class GymSite : SouthSite
                 Vector3 P(Vector2 q, float e) => new(p.Centre.X + d.X * (q.X + n.X * e), y + q.Y + n.Y * e, p.Centre.Y + d.Y * (q.X + n.X * e));
                 var (a, c) = (P(q0, lift), P(q1, lift));
                 var normal = new Vector3(d.X * n.X, n.Y, d.Y * n.X);
-                b.Add(PartGeometryKernel.BeveledBox(S.GymRibWidth, Vector3.Distance(a, c) + 0.06f, S.GymRibDepth, bevel, RibFin), Solids.Along(a - (c - a) * (0.03f / Vector3.Distance(a, c)), c, normal));
+                b.Add(PartGeometryKernel.BeveledBox(S.GymRibWidth, Vector3.Distance(a, c) + 0.06f, S.GymRibDepth, bevel, RibFin), LandmarkSolids.Along(a - (c - a) * (0.03f / Vector3.Distance(a, c)), c, normal));
             }
         }
     }
@@ -253,7 +254,7 @@ public sealed class GymSite : SouthSite
                     var c = new Vector3(p.Centre.X + d.X * r1, y + Height(r1) + 0.02f, p.Centre.Y + d.Y * r1);
                     var rise = profile[j + 1].Y - profile[j].Y;
                     var up = new Vector3(d.X * rise, profile[j].X - profile[j + 1].X, d.Y * rise);
-                    b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c), 0.1f, 0, L.DarkFrame), Solids.Along(a, c, up));
+                    b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c), 0.1f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, up));
                 }
             }
         // Vent caps: a short drum under a mushroom hood, the inner ring staggered half a step.

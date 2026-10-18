@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using N = Campus.Gen.Zones.South.SouthTune.Lawn;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.South.Innovation;
 /// terrain operation in south.terrain.json, this site adds the stop on its crest, a granite seat-wall arc facing north-east.
 /// Each chord follows the ground, so the seat rides the mound once the terrain evaluator lands and stands level on the flat stub.
 /// </summary>
-public sealed class WestLawnSite : SouthSite
+public sealed class WestLawnSite : ZoneSite
 {
     public override string Id => "18c.west-lawn";
 

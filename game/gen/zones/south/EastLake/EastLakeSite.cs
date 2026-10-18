@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using K = Campus.Gen.Zones.South.SouthTune.Lake;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -22,7 +23,7 @@ namespace Campus.Gen.Zones.South.EastLake;
 /// - the Wu Liren statue on its polished dark stone pedestal, facing the lake (§4.9);
 /// - the double-eaved hexagonal timber pavilion on the south-bank hill top (§4.5), standing on the terrain height.
 /// </summary>
-public sealed class EastLakeSite : SouthSite
+public sealed class EastLakeSite : ZoneSite
 {
     public const string Lake = "qsh:relation:7849760";
     public const string Statue = "qsh:node:7867995301";
@@ -228,7 +229,7 @@ public sealed class EastLakeSite : SouthSite
         foreach (var x in new[] { WadeLength * 0.5f - K.BoatLength * 0.6f, WadeLength * 0.5f + K.BoatLength * 0.6f })
         {
             var keel = y + K.BoatKeel;
-            b.Add(Solids.Hull(K.BoatLength, K.BoatBeam, K.BoatDepth, L.BoatWood, L.BoatInside), f.AtTurned(x, keel, z));
+            b.Add(LandmarkSolids.Hull(K.BoatLength, K.BoatBeam, K.BoatDepth, L.BoatWood, L.BoatInside), f.AtTurned(x, keel, z));
             if (b.Detail == SiteDetail.Mass) continue;
             // Thwarts across the hull (the hull's length runs along the frame's −x in the turned placement).
             foreach (var (along, width) in new[] { (-0.7f, K.BoatBeam * 0.84f), (0.6f, K.BoatBeam * 0.8f) })
@@ -289,7 +290,7 @@ public sealed class EastLakeSite : SouthSite
             var depth = 0.16f * Math.Clamp((0.95f * s - h) / (0.65f * s), 0f, 1f);
             return depth * (0.6f * MathF.Cos(6f * a) + 0.4f * MathF.Cos(10f * a + 1.3f));
         }
-        b.Add(Solids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold), At(0, 0, 0));
+        b.Add(LandmarkSolids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold), At(0, 0, 0));
         // Head on its neck: ovoid wider front to back than side to side.
         b.Add(Shapes.Shaft(0.056f * s, 0.05f * s, 0.12f * s, small, L.Bronze), At(0, 1.55f, 0.012f));
         b.Add(Solids.Lathe([P(0, 0), P(0.045f, 0.01f), P(0.075f, 0.05f), P(0.088f, 0.1f), P(0.092f, 0.15f), P(0.088f, 0.19f), P(0.07f, 0.225f),
@@ -401,12 +402,12 @@ public sealed class EastLakeSite : SouthSite
         var head = floor + K.PavilionColumnHeight;
         var perSide = detail == SiteDetail.Full ? 4 : 2;
         var lower = head + 0.16f - K.LowerRise * (K.LowerEave - K.PavilionColumns) / (K.LowerEave - K.DrumRadius + 0.05f);
-        b.Add(Solids.PolyRoof(6, K.LowerEave, K.DrumRadius - 0.05f, K.LowerRise, 0.35f, 0.16f, perSide, Phase, L.Tiles, L.Wood), f.At(0, lower, 0));
+        b.Add(LandmarkSolids.PolyRoof(6, K.LowerEave, K.DrumRadius - 0.05f, K.LowerRise, 0.35f, 0.16f, perSide, Phase, L.Tiles, L.Wood), f.At(0, lower, 0));
         // Drum between the eaves, then the upper roof, its soffit meeting the drum, and the finial.
         var drumTop = lower + K.LowerRise + 0.6f;
         b.Add(PartGeometryKernel.Extrude(new PolygonRings(Hexagon(f, K.DrumRadius)), drumTop - (lower + K.LowerRise - 0.2f), L.Wood, lower + K.LowerRise - 0.2f), Matrix4x4.Identity);
         var upper = drumTop + 0.14f - K.UpperRise * (K.UpperEave - K.DrumRadius) / K.UpperEave;
-        b.Add(Solids.PolyRoof(6, K.UpperEave, 0, K.UpperRise, 0.3f, 0.14f, perSide, Phase, L.Tiles, L.Wood), f.At(0, upper, 0));
+        b.Add(LandmarkSolids.PolyRoof(6, K.UpperEave, 0, K.UpperRise, 0.3f, 0.14f, perSide, Phase, L.Tiles, L.Wood), f.At(0, upper, 0));
         if (detail != SiteDetail.Mass)
             b.Add(Solids.Lathe([new(0.15f, 0), new(0.19f, 0.12f), new(0.1f, 0.26f), new(0.13f, 0.36f), new(0, 0.5f)], 12, L.Tiles), f.At(0, upper + K.UpperRise - 0.05f, 0));
     }

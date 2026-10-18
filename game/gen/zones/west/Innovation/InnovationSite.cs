@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using I = Campus.Gen.Zones.West.WestTune.Innovation;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 
@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.West.Innovation;
 /// (glass doors, lobby card, DoorClosed), whose head carries the slot for the red-brown calligraphy sign (§3.2).</item>
 /// </list>
 /// </summary>
-public sealed class InnovationSite : WestSite
+public sealed class InnovationSite : ZoneSite
 {
     public override string Id => "19b.innovation";
 

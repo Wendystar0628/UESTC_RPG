@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using P = Campus.Gen.Zones.South.SouthTune.Park;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.South.ForestPark;
 /// design:south-hongfeng-pavilion). Everything stands on the terrain height, so the pavilion rises with the hill once the
 /// WP-08 evaluator lands; until then it stands on the flat stub.
 /// </summary>
-public sealed class ForestParkSite : SouthSite
+public sealed class ForestParkSite : ZoneSite
 {
     public const string Pavilion = "design:south-hongfeng-pavilion";
 

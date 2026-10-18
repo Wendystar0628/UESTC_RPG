@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -18,7 +19,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// platform-storey entrance hall on the platform side, closed until WP-31a registers the pool's entrance.
 /// The ellipse is fitted to the footprint's area and second moments. The glass band is one grid (contract-29), a column per facet.
 /// </summary>
-public sealed class NatatoriumSite : SouthSite
+public sealed class NatatoriumSite : ZoneSite
 {
     public const string Feature = "qsh:way:217855279";
     private const string Part = "osm:way:217855279";
@@ -179,7 +180,7 @@ public sealed class NatatoriumSite : SouthSite
                     return new(at.X, y + q.Y, at.Y);
                 }
                 var (a, e) = (P(profile[j]), P(profile[j + 1]));
-                b.Add(PartGeometryKernel.BeveledBox(0.2f, Vector3.Distance(a, e) + 0.05f, 0.12f, 0, Rib), Solids.Along(a, e, new(outward.X, 0.6f, outward.Y)));
+                b.Add(PartGeometryKernel.BeveledBox(0.2f, Vector3.Distance(a, e) + 0.05f, 0.12f, 0, Rib), LandmarkSolids.Along(a, e, new(outward.X, 0.6f, outward.Y)));
             }
         }
     }

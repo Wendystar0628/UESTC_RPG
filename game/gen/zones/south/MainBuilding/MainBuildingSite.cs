@@ -6,7 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Roof;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using M = Campus.Gen.Zones.South.SouthTune.Main;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.South.MainBuilding;
 /// round-headed windows and door in its back wall, the colonnaded roof gallery (空廊) with railing parapets on B2, and the
 /// rear door porch. The front steps are a "building" in the OSM data, so this site claims them.
 /// </summary>
-public sealed class MainBuildingSite : SouthSite
+public sealed class MainBuildingSite : ZoneSite
 {
     public const string B2 = "qsh:way:687370085";
     public const string FrontSteps = "qsh:way:618752446";
@@ -125,14 +125,14 @@ public sealed class MainBuildingSite : SouthSite
 
     public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext ctx, LodLevel lod)
     {
-        yield return Trace(ctx, lod, Id + "/front", new(FrontSteps), Front, CollideFront,
+        yield return SiteSourceTrace.Build(ctx, lod, Id + "/front", new(FrontSteps), Front, CollideFront,
             [new(F.Rect(M.StepsX0, -0.3f, M.StepsX1, M.StepsZ))]);
-        yield return Trace(ctx, lod, Id + "/roof-gallery", new(B2),
+        yield return SiteSourceTrace.Build(ctx, lod, Id + "/roof-gallery", new(B2),
             b => RoofGallery(b, b.Ground(F.P(36f, -20f))), CollideGallery,
             [new(F.Rect(M.GalleryX0, M.GalleryZ0, M.GalleryX1, M.GalleryZ1),
                 [F.Rect(M.GalleryX0 + M.GalleryWalk, M.GalleryZ0 + M.GalleryWalk,
                     M.GalleryX1 - M.GalleryWalk, M.GalleryZ1 - M.GalleryWalk)])]);
-        yield return Trace(ctx, lod, Id + "/rear-porch", new(B2),
+        yield return SiteSourceTrace.Build(ctx, lod, Id + "/rear-porch", new(B2),
             b => RearPorch(b, b.Ground(R.Origin)), CollideRear,
             [new(R.Rect(-M.RearLandingWidth * 0.5f, -0.3f, M.RearLandingWidth * 0.5f, 2.6f + M.RearLandingDepth))]);
     }

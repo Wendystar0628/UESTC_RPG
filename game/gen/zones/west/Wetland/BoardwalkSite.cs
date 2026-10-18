@@ -8,6 +8,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using StreetStyle = Campus.Gen.Parts.Street.StreetStyle;
 using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using W = Campus.Gen.Zones.West.WestTune.Wetland;
 
@@ -22,7 +23,7 @@ namespace Campus.Gen.Zones.West.Wetland;
 /// only, so both water sides stay dark for the fireflies (§10.1). Snow lies on the planks and the handrail tops by normal
 /// (SYS-TIME); the deck only darkens when wet, it never pools (§11 天气要点).
 /// </summary>
-public sealed class BoardwalkSite : WestSite, ILightMetadataSource
+public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 {
     private static readonly StepsPart Steps = new();
     private static readonly Lazy<Route> Line = new(() => new(Route.Smooth(W.Route, 2)));

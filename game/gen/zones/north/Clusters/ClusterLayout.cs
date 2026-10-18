@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
 using G = Campus.Gen.Zones.North.NorthTune.Gate;

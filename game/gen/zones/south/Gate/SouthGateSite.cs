@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.South.SouthTune.Gate;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.South.Gate;
 /// lights (§11): they declare one grid on the all-night channel.
 /// The OSM relation is a "building" in the source data, so this site claims it and WP-14 must not extrude it.
 /// </summary>
-public sealed class SouthGateSite : SouthSite
+public sealed class SouthGateSite : ZoneSite
 {
     public const string Feature = "qsh:relation:8407525";
     /// <summary>The guard houses' window grid (contract-29): three watch windows per house, one row per house.</summary>

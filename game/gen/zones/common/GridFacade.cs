@@ -6,14 +6,14 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
 using Campus.Gen.World;
 
-namespace Campus.Gen.Zones.South.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>How one footprint edge of a gridded block is dressed.</summary>
 public enum EdgeKind
 {
     /// <summary>Piers, spandrel bands and windows.</summary>
     Plain,
-    /// <summary>As Plain, plus the front treatments of the style (giant pilasters, round-headed ground-floor windows).</summary>
+    /// <summary>As Plain, plus the style's front treatments: giant-order pilasters on every Nth pier, round-headed ground-floor windows.</summary>
     Front,
     /// <summary>A plain wall with plinth, cornice and parapet: edges too short for a window bay.</summary>
     Blank,
@@ -25,12 +25,12 @@ public enum EdgeKind
 public readonly record struct GridEdgeInfo(int Index, Vector2 A, Vector2 B, PlanFrame Frame, float Length)
 {
     /// <summary>Outward bearing in degrees (0 north, 90 east).</summary>
-    public float Facing => SouthSite.Bearing(Frame.W);
+    public float Facing => ZoneSite.Bearing(Frame.W);
 }
 
 /// <summary>
-/// An edge's dressing; Cuts are ranges along it (local x) where nothing is built below Top, a height above the block base (a
-/// portico stands there).
+/// An edge's dressing; Cuts are ranges along it (local x) where nothing is built below Top, a height above the block base (an
+/// entrance portal or a portico stands there).
 /// </summary>
 public sealed record GridEdge(EdgeKind Kind)
 {
@@ -46,10 +46,35 @@ public sealed record GridRun(GridEdgeInfo Info, GridEdge Edge, bool Convex0, boo
 /// <summary>A gridded block's layout: every edge in ring order, the block's window columns and its storey rows. Independent of LOD and terrain.</summary>
 public sealed record GridLayout(IReadOnlyList<GridRun> Runs, int Columns, int Rows);
 
-/// <summary>Where a gridded block's windows sit in the map-wide numbering: its named grid, the block's first column there, and the light.</summary>
-public sealed record GridNumbering(FeatureId Feature, string Key, int ColumnOffset, ChannelId Channel, byte Card);
+/// <summary>
+/// Where a gridded block's windows sit in the map-wide numbering: its named grid, the block's first column there, the light
+/// and the window card; AltShare tenths of the windows (by window ID) take AltCard instead (a card mix such as W-LAB : W-OFF).
+/// </summary>
+public sealed record GridNumbering(FeatureId Feature, string Key, int ColumnOffset, ChannelId Channel, byte Card)
+{
+    public byte AltCard { get; init; }
+    public int AltShare { get; init; }
 
-/// <summary>Proportions and materials of a gridded masonry block (see <see cref="GridFacade"/>). Heights are above the block base.</summary>
+    /// <summary>The card of one window, a fixed integer hash of its ID so every level and rebuild agrees.</summary>
+    public byte CardOf(int windowId) => AltShare > 0 && (uint)windowId * 2654435761u % 10u < (uint)AltShare ? AltCard : Card;
+}
+
+/// <summary>
+/// Proportions of the giant-order pilasters on a front edge, in metres. The shaft overhangs its pier by Halo on each side and
+/// stands Proud in front of the pier face; it rises from a trim base (BaseHalo wider, BaseProud prouder) running from BaseDrop
+/// below the first-floor line to BaseRise above it, up to the cornice, or up to a trim capital CapHeight tall (CapHalo wider,
+/// CapProud prouder) when CapHeight is positive. EndPiers counts every Nth pier from the first to the last; otherwise only
+/// inner piers carry one.
+/// </summary>
+public sealed record PilasterOrder(float Halo, float Proud, float BaseHalo, float BaseProud, float BaseDrop, float BaseRise)
+{
+    public float CapHeight { get; init; }
+    public float CapHalo { get; init; }
+    public float CapProud { get; init; }
+    public bool EndPiers { get; init; }
+}
+
+/// <summary>Proportions and materials of a gridded block (see <see cref="GridFacade"/>). Heights are above the block base.</summary>
 public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, ToonSpec Glass, ToonSpec Frame, ToonSpec Roof)
 {
     public float Bay { get; init; } = 3.9f;
@@ -58,7 +83,7 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
     public float BandDepth { get; init; } = 0.35f;
     public float GroundStorey { get; init; } = 5f;
     public float Storey { get; init; } = 4.2f;
-    public int Storeys { get; init; } = 8;
+    public int Storeys { get; init; } = 5;
     public float GroundSill { get; init; } = 1.3f;
     public float GroundWindow { get; init; } = 3.0f;
     public float Sill { get; init; } = 0.9f;
@@ -69,27 +94,45 @@ public sealed record GridStyle(ToonSpec Wall, ToonSpec Trim, ToonSpec Plinth, To
     public float Parapet { get; init; } = 0.6f;
     /// <summary>Front edges: a giant-order pilaster on every Nth pier above the ground storey (0 = none).</summary>
     public int PilasterEvery { get; init; }
+    /// <summary>Shape of those pilasters; the default is a plain shaft on a short trim base, on inner piers only.</summary>
+    public PilasterOrder Pilaster { get; init; } = new(0.15f, 0.22f, 0.08f, 0.06f, 0.35f, 0.2f);
     /// <summary>Front edges: round-headed ground-floor windows.</summary>
     public bool ArchedGround { get; init; }
     /// <summary>A slim vertical fin in the middle of every window column instead of mullions (towers).</summary>
     public bool Ribs { get; init; }
+    /// <summary>
+    /// A continuous dark strip on every spandrel between window rows, proud of the piers so it runs unbroken round convex
+    /// corners (louvre bands); null leaves plain stone spandrels.
+    /// </summary>
+    public ToonSpec? Band { get; init; }
+    /// <summary>Height of that strip and its lift above the window head below.</summary>
+    public float BandHeight { get; init; } = 0.8f;
+    public float BandLift { get; init; } = 0.25f;
+    /// <summary>How far the strip stands in front of the pier face.</summary>
+    public float BandProud { get; init; } = 0.2f;
+    /// <summary>Horizontal louvre slats on the strip, at L0 (0 = a plain strip).</summary>
+    public int Louvres { get; init; }
 
     /// <summary>Top of the wall grid (cornice soffit).</summary>
     public float WallTop => GroundStorey + (Storeys - 1) * Storey;
     /// <summary>Top of the parapet coping: the block's height.</summary>
     public float Top => WallTop + Cornice + Parapet;
+    /// <summary>Top of the roof slab inside the parapet, where roof structures stand.</summary>
+    public float RoofTop => WallTop + 0.35f;
 
     internal float FloorOf(int k) => k == 0 ? 0 : GroundStorey + (k - 1) * Storey;
-    internal float SillOf(int k) => FloorOf(k) + (k == 0 ? GroundSill : Sill);
-    internal float HeadOf(int k) => SillOf(k) + (k == 0 ? GroundWindow : Window);
+    public float SillOf(int k) => FloorOf(k) + (k == 0 ? GroundSill : Sill);
+    public float HeadOf(int k) => SillOf(k) + (k == 0 ? GroundWindow : Window);
 }
 
 /// <summary>
-/// A gridded masonry block on a plan ring: a glass core, a stone frame of full-height piers and storey-high spandrel bands
-/// in front of it (the window reveals are the frame's depth), plinth, a two-step cornice, a parapet with coping and a
-/// roof slab. This is how the zone dresses buildings it claims from WP-14 (Xuanbang, Liren's corner gateway); it keeps
-/// the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames, cornice and
-/// coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate.
+/// A gridded masonry block on a plan (an outer ring, optionally with courtyard holes): a glass core, a stone frame of
+/// full-height piers and storey-high spandrel bands in front of it (the window reveals are the frame's depth), plinth, a
+/// two-step cornice, a parapet with coping and a roof slab. Zones dress the buildings they claim from WP-14 with it; it
+/// keeps the ART-MODELING minimum set: corner piers, plinth, string courses, sills, recessed glass with frames, cornice and
+/// coping. Bands and copings wrap convex corners; reflex corners simply interpenetrate. One pure layout
+/// (<see cref="Layout(PolygonRings, GridStyle, Func{GridEdgeInfo, GridEdge})"/>) feeds the geometry, the collision and the
+/// window declarations. Each zone's facade rules live in the <see cref="GridStyle"/> and the edge dressing it passes.
 /// </summary>
 public static class GridFacade
 {
@@ -97,13 +140,13 @@ public static class GridFacade
     private const float PaneZ = 0.03f;
 
     /// <summary>The block's layout: the one source for geometry, collision and the window declarations.</summary>
-    public static GridLayout Layout(IReadOnlyList<Vector2> ring, GridStyle s, Func<GridEdgeInfo, GridEdge> dress)
+    public static GridLayout Layout(PolygonRings plan, GridStyle s, Func<GridEdgeInfo, GridEdge> dress)
     {
-        ArgumentNullException.ThrowIfNull(ring);
+        ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(dress);
         var runs = new List<GridRun>();
         var column = 0;
-        foreach (var (info, convex0, convex1) in Edges(ring))
+        foreach (var (info, convex0, convex1) in Edges(plan))
         {
             var edge = dress(info);
             var bays = 0;
@@ -115,21 +158,26 @@ public static class GridFacade
         return new(runs, column, s.Storeys);
     }
 
-    /// <summary>True when cell (bay, storey) of a windowed run lies under a cut (the portico), so it carries no window.</summary>
+    /// <summary>The layout of a block without courtyards.</summary>
+    public static GridLayout Layout(IReadOnlyList<Vector2> ring, GridStyle s, Func<GridEdgeInfo, GridEdge> dress) =>
+        Layout(new PolygonRings(ring), s, dress);
+
+    /// <summary>True when cell (bay, storey) of a windowed run lies under a cut (the portal), so it carries no window.</summary>
     public static bool Skipped(GridRun run, int bay, int storey, GridStyle s)
     {
         float x0 = bay * run.Pitch + s.Pier, x1 = (bay + 1) * run.Pitch;
         return run.Edge.Cuts.Any(c => x1 > c.U0 && x0 < c.U1 && c.Top > s.SillOf(storey));
     }
 
-    public static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, GridNumbering? numbering = null)
+    public static void Build(SiteBuilder b, PolygonRings plan, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, GridNumbering? numbering = null)
     {
-        ArgumentNullException.ThrowIfNull(ring);
+        ArgumentNullException.ThrowIfNull(plan);
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
-        var layout = Layout(ring, s, dress);
-        // Glass core (stone at the coarse levels, where window bands no longer read) and the roof slab inside the parapet.
-        var footprint = new PolygonRings(ring);
+        var layout = Layout(plan, s, dress);
+        // Glass core (stone at the coarse levels, where window bands no longer read) and the roof slab inside the parapet;
+        // courtyard holes stay open.
+        var footprint = plan;
         b.Add(PartGeometryKernel.Extrude(footprint, s.WallTop + 0.1f, coarse ? s.Wall : s.Glass, y0 - 0.1f), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Extrude(footprint, 0.25f, s.Roof, y0 + s.WallTop + 0.1f), Matrix4x4.Identity);
         if (numbering is not null && WindowNumbers.Allocation(b.Context, numbering.Feature, numbering.Key) is { } allocation)
@@ -173,8 +221,21 @@ public static class GridFacade
             foreach (var (r0, r1, sill) in rows)
             {
                 if (r1 - r0 < 0.05f) continue;
+                var inner = sill && r0 > s.PlinthHeight - 0.01f;
                 run.Run(b, 0, s.BandDepth, y0 + r0, r1 - r0, s.Wall, false);
-                if (sill && detail != SiteDetail.Mass && r0 > s.PlinthHeight - 0.01f)
+                if (inner && s.Band is { } band)
+                {
+                    // The louvre strip: continuous in front of the piers, slats across it at L0.
+                    float strip = s.PierDepth + s.BandProud, yb = y0 + r0 + s.BandLift;
+                    run.Run(b, 0, strip, yb, s.BandHeight, band, detail == SiteDetail.Full);
+                    if (detail == SiteDetail.Full && s.Louvres > 0)
+                    {
+                        var slat = s.BandHeight / s.Louvres;
+                        for (var i = 0; i < s.Louvres; i++)
+                            run.Run(b, strip - 0.02f, strip + 0.07f, yb + (i + 0.3f) * slat, 0.07f, band, false);
+                    }
+                }
+                if (inner && detail != SiteDetail.Mass)
                     run.Run(b, 0, s.BandDepth + 0.06f, y0 + r1 - 0.08f, 0.08f, s.Trim, false);
             }
             if (detail == SiteDetail.Mass) continue;
@@ -183,10 +244,14 @@ public static class GridFacade
         }
     }
 
+    /// <summary>A block without courtyards.</summary>
+    public static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, GridNumbering? numbering = null) =>
+        Build(b, new PolygonRings(ring), y0, s, dress, numbering);
+
     /// <summary>Wall colliders along every built edge, outside the cut ranges (whoever builds there collides there).</summary>
-    public static void Collide(SiteColliders c, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, FootMat foot)
+    public static void Collide(SiteColliders c, PolygonRings plan, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, FootMat foot)
     {
-        foreach (var run in Layout(ring, s, dress).Runs)
+        foreach (var run in Layout(plan, s, dress).Runs)
         {
             if (run.Edge.Kind == EdgeKind.Hidden) continue;
             var z = s.PierDepth * 0.5f;
@@ -195,15 +260,19 @@ public static class GridFacade
         }
     }
 
+    /// <summary>A block without courtyards.</summary>
+    public static void Collide(SiteColliders c, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress, FootMat foot) =>
+        Collide(c, new PolygonRings(ring), y0, s, dress, foot);
+
     /// <summary>
     /// The block's windows as facade declarations, one per windowed run, from the same layout as the panes: origin at the
     /// lower-left corner of the run's first window on the outer facade surface (the pier face), Right along the edge (Right × Up
     /// points out), one sill per storey; cells under a cut are skipped. Height is the upper storeys' window height.
     /// </summary>
-    public static void Declare(ICollection<WindowFacadeDecl> facades, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress,
+    public static void Declare(ICollection<WindowFacadeDecl> facades, PolygonRings plan, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress,
         GridNumbering numbering, WindowAllocation allocation)
     {
-        var layout = Layout(ring, s, dress);
+        var layout = Layout(plan, s, dress);
         WindowNumbers.Fit(layout, numbering, allocation);
         var sills = Enumerable.Range(0, s.Storeys).Select(k => s.SillOf(k) - s.SillOf(0)).ToArray();
         foreach (var run in layout.Runs.Where(r => r.Bays > 0))
@@ -220,6 +289,11 @@ public static class GridFacade
         }
     }
 
+    /// <summary>A block without courtyards.</summary>
+    public static void Declare(ICollection<WindowFacadeDecl> facades, IReadOnlyList<Vector2> ring, float y0, GridStyle s, Func<GridEdgeInfo, GridEdge> dress,
+        GridNumbering numbering, WindowAllocation allocation) =>
+        Declare(facades, new PolygonRings(ring), y0, s, dress, numbering, allocation);
+
     /// <summary>One numbered VF-B pane per window cell (WP-10 OpeningGlass), just proud of the core, at every level.</summary>
     private static void Panes(SiteBuilder b, GridLayout layout, float y0, GridStyle s, GridNumbering numbering, WindowAllocation allocation)
     {
@@ -233,19 +307,27 @@ public static class GridFacade
                 for (var i = 0; i < run.Bays; i++)
                 {
                     if (Skipped(run, i, k, s)) continue;
+                    var column = numbering.ColumnOffset + run.ColumnStart + i;
                     var p = f.P(s.Pier + (i + 0.5f) * run.Pitch - s.Pier * 0.5f, PaneZ);
-                    var pane = OpeningGlass.Grid(width, s.HeadOf(k) - s.SillOf(k), 1, 1, allocation.BaseId, numbering.ColumnOffset + run.ColumnStart + i, k,
-                        allocation.Columns, numbering.Channel, numbering.Card);
+                    var pane = OpeningGlass.Grid(width, s.HeadOf(k) - s.SillOf(k), 1, 1, allocation.BaseId, column, k,
+                        allocation.Columns, numbering.Channel, numbering.CardOf(allocation.IdAt(column, k)));
                     b.Add(pane, OpeningPlacement.Frame(new(p.X, y0 + s.SillOf(k), p.Y), outward));
                 }
         }
     }
 
-    /// <summary>The ring's edges oriented so each frame's +Z points out of the block, with the convexity of both ends.</summary>
-    public static IEnumerable<(GridEdgeInfo Info, bool Convex0, bool Convex1)> Edges(IReadOnlyList<Vector2> ring)
+    /// <summary>Edges of the outer ring, then of each courtyard hole, every frame's +Z pointing out of the block.</summary>
+    public static IEnumerable<(GridEdgeInfo Info, bool Convex0, bool Convex1)> Edges(PolygonRings plan) =>
+        Edges(plan.Outer).Concat(plan.Holes.SelectMany(h => Edges(h, hole: true)));
+
+    /// <summary>
+    /// The ring's edges oriented so each frame's +Z points out of the block, with the convexity of both ends; a hole's
+    /// block lies outside the ring, so its frames face into the courtyard.
+    /// </summary>
+    public static IEnumerable<(GridEdgeInfo Info, bool Convex0, bool Convex1)> Edges(IReadOnlyList<Vector2> ring, bool hole = false)
     {
         var count = ring.Count;
-        var ccw = PlanGeometry.SignedArea(ring) > 0;
+        var ccw = PlanGeometry.SignedArea(ring) > 0 != hole;
         bool Convex(int i)
         {
             Vector2 p = ring[(i + count - 1) % count], q = ring[i], r = ring[(i + 1) % count];
@@ -290,14 +372,14 @@ public static class GridFacade
                 if (k == 0 && edge.Kind == EdgeKind.Front && s.ArchedGround) continue;
                 float sill = y0 + s.SillOf(k), head = y0 + s.HeadOf(k);
                 if (Clear(edge, xc - width * 0.5f, xc + width * 0.5f, sill, y0) > sill) continue;
-                // A mullion and a transom in the dark window-frame colour, just proud of the glass.
+                // A mullion and a transom in the window-frame colour, just proud of the glass.
                 Box(b, f, xc - 0.045f, xc + 0.045f, sill, head, 0.02f, 0.1f, s.Frame, 0);
                 Box(b, f, xc - width * 0.5f, xc + width * 0.5f, sill + (head - sill) * 0.68f, sill + (head - sill) * 0.68f + 0.08f, 0.02f, 0.1f, s.Frame, 0);
             }
         }
     }
 
-    /// <summary>Front edges: giant-order pilasters on every Nth pier and round-headed ground-floor windows.</summary>
+    /// <summary>Front edges: round-headed ground-floor windows and giant-order pilasters on every Nth pier up to the cornice.</summary>
     private static void FrontDress(SiteBuilder b, PlanFrame f, GridEdge edge, int n, float pitch, float y0, GridStyle s, SiteDetail detail)
     {
         var width = pitch - s.Pier;
@@ -317,16 +399,18 @@ public static class GridFacade
             }
         }
         if (s.PilasterEvery <= 0) return;
+        var o = s.Pilaster;
         float p0 = y0 + s.GroundStorey, p1 = y0 + s.WallTop;
-        for (var i = 0; i <= n; i += s.PilasterEvery)
+        for (var i = o.EndPiers ? 0 : s.PilasterEvery; o.EndPiers ? i <= n : i < n; i += s.PilasterEvery)
         {
-            float x0 = i * pitch - 0.2f, x1 = i * pitch + s.Pier + 0.2f;
+            float x0 = i * pitch - o.Halo, x1 = i * pitch + s.Pier + o.Halo;
             if (Clear(edge, x0, x1, p0, y0) > p0) continue;
-            var d = s.PierDepth + 0.25f;
+            var d = s.PierDepth + o.Proud;
             var bevel = detail == SiteDetail.Full ? 0.03f : 0;
-            Box(b, f, x0 - 0.1f, x1 + 0.1f, p0, p0 + 0.55f, 0, d + 0.08f, s.Trim, bevel);
-            Box(b, f, x0, x1, p0 + 0.55f, p1 - 0.85f, 0, d, s.Wall, bevel);
-            Box(b, f, x0 - 0.15f, x1 + 0.15f, p1 - 0.85f, p1, 0, d + 0.12f, s.Trim, bevel);
+            Box(b, f, x0 - o.BaseHalo, x1 + o.BaseHalo, p0 - o.BaseDrop, p0 + o.BaseRise, 0, d + o.BaseProud, s.Trim, bevel);
+            Box(b, f, x0, x1, p0 + o.BaseRise, p1 - o.CapHeight, 0, d, s.Wall, bevel);
+            if (o.CapHeight > 0)
+                Box(b, f, x0 - o.CapHalo, x1 + o.CapHalo, p1 - o.CapHeight, p1, 0, d + o.CapProud, s.Trim, bevel);
         }
     }
 

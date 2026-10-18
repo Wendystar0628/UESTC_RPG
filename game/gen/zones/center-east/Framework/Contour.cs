@@ -3,6 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.CenterEast.Framework;
 

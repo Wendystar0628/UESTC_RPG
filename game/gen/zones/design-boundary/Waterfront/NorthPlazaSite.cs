@@ -5,7 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
-using Campus.Gen.Zones.DesignBoundary.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
 using P = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Plaza;
 
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.DesignBoundary.Waterfront;
 /// the overlay polygon; this site adds a light steel railing along the water edge and two benches whose sitters face the
 /// channel and the north gate bridge. Frame: t along the bank, n off the water edge toward the road (<see cref="P"/>).
 /// </summary>
-public sealed class NorthPlazaSite : BoundarySite
+public sealed class NorthPlazaSite : ZoneSite
 {
     private static readonly BenchPart Bench = new();
 

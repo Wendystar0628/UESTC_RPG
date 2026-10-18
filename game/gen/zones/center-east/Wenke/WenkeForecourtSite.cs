@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.CenterEast.CenterEastTune.Friendship;
 using K = Campus.Gen.Zones.CenterEast.CenterEastTune.Wenke;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.CenterEast.Wenke;
 /// WP-23's, at the registered point), and the granite landscape stone beside it with the gold original emblem on its
 /// dressed face (ART-STYLE). The lawn's middle and the 2.5 m outside the door stay clear. Values in <see cref="F"/>, <see cref="K"/>.
 /// </summary>
-public sealed class WenkeForecourtSite : CenterEastSite
+public sealed class WenkeForecourtSite : ZoneSite
 {
     internal static PlanFrame StoneFrame => PlanMath.Facing(F.StoneAt, F.StoneFacing);
     internal static PlanFrame WalkFrame => PlanFrame.Toward(K.WalkFrom, K.WalkTo);

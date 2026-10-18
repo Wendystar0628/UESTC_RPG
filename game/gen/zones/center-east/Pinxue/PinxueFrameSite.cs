@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 using W = Campus.Gen.Zones.CenterEast.CenterEastTune.Windows;
@@ -18,7 +18,7 @@ namespace Campus.Gen.Zones.CenterEast.Pinxue;
 /// columns carrying a two-storey beam bridge with the inscription plaque on its forecourt face (storeys 1–2 open as the
 /// passage), and the A–C, B–C bridges over storeys 2–3. The wings themselves stay with WP-14 on the +1.5 m platform.
 /// </summary>
-public sealed class PinxueFrameSite : CenterEastSite
+public sealed class PinxueFrameSite : ZoneSite
 {
     /// <summary>Frame of the bar: X south along it from A's wall, +Z west out to the forecourt.</summary>
     internal static readonly PlanFrame F = PlanFrame.Toward(P.FrameNorthWest, P.FrameSouthWest);

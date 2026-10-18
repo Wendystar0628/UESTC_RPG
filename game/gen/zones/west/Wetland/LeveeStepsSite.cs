@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using T = Campus.Gen.Zones.West.WestTune.LeveeSteps;
 
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.West.Wetland;
 /// west.terrain.json; on flat ground (the stub) there is no rise and no flight. Cheek walls with copings and side
 /// handrails (StepsPart variation 0), granite like the zone's other aprons, StonePaving underfoot.
 /// </summary>
-public sealed class LeveeStepsSite : WestSite
+public sealed class LeveeStepsSite : ZoneSite
 {
     private static readonly StepsPart Steps = new();
 

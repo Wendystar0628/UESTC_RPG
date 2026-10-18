@@ -1,12 +1,14 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Parts.Core;
 
-namespace Campus.Gen.Zones.North.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>
-/// Small closed solids the WP-09 kernel has no helper for: smooth round shafts, hipped pyramids and arch outlines.
+/// Small closed solids the WP-09 kernel has no helper for: smooth round shafts, hipped pyramids, arch outlines, and the
+/// circle and arc paths the kernel's sweep takes (basin rims, curved bays).
 /// Same conventions as the kernel: metres, origin at the base centre, Godot front faces clockwise from outside,
-/// AO visibility 1, UV in metres.
+/// AO visibility 1, UV in metres. Angles are in radians.
 /// </summary>
 public static class Shapes
 {
@@ -63,6 +65,95 @@ public static class Shapes
         return [.. points];
     }
 
+    /// <summary>Closed plan ring of a circle; the angle runs from +x toward +z, so a sweep's right side faces outward.</summary>
+    public static Vector2[] Circle(Vector2 centre, float radius, int segments)
+    {
+        if (segments < 6) throw new ArgumentOutOfRangeException(nameof(segments));
+        var points = new Vector2[segments];
+        for (var i = 0; i < segments; i++)
+        {
+            var a = 2f * MathF.PI * i / segments;
+            points[i] = new(centre.X + radius * MathF.Cos(a), centre.Y + radius * MathF.Sin(a));
+        }
+        return points;
+    }
+
+    /// <summary>
+    /// Open plan arc from <paramref name="a"/> to <paramref name="b"/> bulging <paramref name="sagitta"/> metres toward
+    /// <paramref name="side"/> (a unit plan direction across the chord), ends included.
+    /// </summary>
+    public static Vector2[] Arc(Vector2 a, Vector2 b, float sagitta, Vector2 side, int segments)
+    {
+        if (segments < 2 || !(sagitta > 0)) throw new ArgumentOutOfRangeException(nameof(sagitta));
+        var half = Vector2.Distance(a, b) * 0.5f;
+        var radius = (half * half + sagitta * sagitta) / (2f * sagitta);
+        var centre = (a + b) * 0.5f - side * (radius - sagitta);
+        var start = MathF.Atan2(a.Y - centre.Y, a.X - centre.X);
+        var end = MathF.Atan2(b.Y - centre.Y, b.X - centre.X);
+        var sweep = end - start;
+        // Take the short way round, which is the side the bulge faces for a sagitta below the radius.
+        if (sweep > MathF.PI) sweep -= 2f * MathF.PI;
+        if (sweep < -MathF.PI) sweep += 2f * MathF.PI;
+        var points = new Vector2[segments + 1];
+        for (var i = 0; i <= segments; i++)
+        {
+            var t = start + sweep * i / segments;
+            points[i] = new(centre.X + radius * MathF.Cos(t), centre.Y + radius * MathF.Sin(t));
+        }
+        points[0] = a;
+        points[segments] = b;
+        return points;
+    }
+
+    /// <summary>
+    /// The same geometry with every triangle on its own three vertices and a flat normal, turned to agree with the source
+    /// normals: broad planar facets for rough stone (ART-MODELING faceted surfaces).
+    /// </summary>
+    public static PartGeometry Faceted(PartGeometry geometry)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        var meshes = new List<GeometryBundle>();
+        foreach (var mesh in geometry.Meshes)
+        {
+            var count = mesh.Index.Length;
+            float[] position = new float[count * 3], normal = new float[count * 3], ao = new float[count], uv = new float[count * 2];
+            var index = new int[count];
+            for (var t = 0; t < count; t += 3)
+            {
+                var p = new Vector3[3];
+                var smooth = Vector3.Zero;
+                for (var k = 0; k < 3; k++)
+                {
+                    var v = mesh.Index[t + k];
+                    p[k] = new(mesh.Position[3 * v], mesh.Position[3 * v + 1], mesh.Position[3 * v + 2]);
+                    smooth += new Vector3(mesh.Normal[3 * v], mesh.Normal[3 * v + 1], mesh.Normal[3 * v + 2]);
+                }
+                Vector3 e1 = p[1] - p[0], e2 = p[2] - p[0];
+                var n = new Vector3(e1.Y * e2.Z - e1.Z * e2.Y, e1.Z * e2.X - e1.X * e2.Z, e1.X * e2.Y - e1.Y * e2.X);
+                if (n.X * smooth.X + n.Y * smooth.Y + n.Z * smooth.Z < 0) n = -n;
+                n = Normalize(n.LengthSquared() > 1e-20f ? n : smooth);
+                for (var k = 0; k < 3; k++)
+                {
+                    var v = mesh.Index[t + k];
+                    var o = t + k;
+                    position[3 * o] = p[k].X; position[3 * o + 1] = p[k].Y; position[3 * o + 2] = p[k].Z;
+                    normal[3 * o] = n.X; normal[3 * o + 1] = n.Y; normal[3 * o + 2] = n.Z;
+                    ao[o] = mesh.Ao?[v] ?? 1f;
+                    uv[2 * o] = mesh.Uv?[2 * v] ?? 0f; uv[2 * o + 1] = mesh.Uv?[2 * v + 1] ?? 0f;
+                    index[o] = o;
+                }
+            }
+            var flat = new GeometryBundle(mesh.Material, position, normal, index, ao, uv);
+            flat.ValidateVertexData();
+            meshes.Add(flat);
+        }
+        return new(meshes, geometry.Bounds);
+    }
+
+    /// <summary>A ring wall of rectangular section swept round a circle (basin rims, kerbs), base at y = 0.</summary>
+    public static PartGeometry Ring(Vector2 centre, float radius, float width, float height, int segments, ToonSpec material, float bevel = 0.02f) =>
+        PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(width, height, bevel), Circle(centre, radius, segments), material, closed: true);
+
     private static void Cap(Writer m, float r, float y, int segments, float sign)
     {
         if (r <= 0) return;
@@ -100,7 +191,7 @@ public static class Shapes
     }
 
     /// <summary>Minimal writer with the kernel's winding rule: front faces clockwise seen from outside.</summary>
-    private sealed class Writer(ToonSpec material)
+    internal sealed class Writer(ToonSpec material)
     {
         private readonly List<float> _p = [], _n = [], _uv = [], _ao = [];
         private readonly List<int> _i = [];

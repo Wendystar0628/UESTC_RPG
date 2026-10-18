@@ -17,7 +17,7 @@ function Test-UESTCNamespaceRole {
             'interior/core'='Interior'; 'interior/shell'='Interior.Shell';
             'parts/core'='Parts.Core'; 'parts/openings'='Parts.Openings'; 'parts/circulation'='Parts.Circulation';
             'parts/roof'='Parts.Roof'; 'parts/street'='Parts.Street'; 'parts/_stubs'='Parts.Stubs';
-            'zones/core'='Zones.Core'; 'zones/north'='Zones.North'; 'zones/south'='Zones.South';
+            'zones/common'='Zones.Common'; 'zones/core'='Zones.Core'; 'zones/north'='Zones.North'; 'zones/south'='Zones.South';
             'zones/west'='Zones.West'; 'zones/center-east'='Zones.CenterEast';
             'zones/design-boundary'='Zones.DesignBoundary'; 'zones/design-public'='Zones.DesignPublic';
             'zones/design-waterfront'='Zones.DesignWaterfront'

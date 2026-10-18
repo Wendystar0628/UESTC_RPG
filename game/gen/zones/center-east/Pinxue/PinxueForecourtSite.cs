@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
 
@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.CenterEast.Pinxue;
 /// WP-24's, WLD-WATER), the seat ring of the round bed and the planter seat walls stepping down both
 /// sides of the 5 % ramp. The entrance kit at the A-wing hall door (px.a.hall: mat, open sign, door lamp) is WP-13's.
 /// </summary>
-public sealed class PinxueForecourtSite : CenterEastSite
+public sealed class PinxueForecourtSite : ZoneSite
 {
     private static PlanFrame F => PinxueFrameSite.F;
     /// <summary>Frame of the A hall's diagonal facade: X along it, +Z outward (bearing 216°).</summary>

@@ -10,6 +10,10 @@
       "owner": "WP-00"
     },
     {
+      "pattern": "game/gen/zones/common/**",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/kernel/map/data/**",
       "owner": "WP-00"
     },

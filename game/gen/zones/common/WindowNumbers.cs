@@ -3,13 +3,12 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Openings;
 
-namespace Campus.Gen.Zones.CenterEast.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>
-/// The zone's side of the map-wide window numbering (contract-29): sites declare named grids from their LOD-free layouts
-/// (CenterEastModule.DescribeWindowLayouts), WP-14 allocates them, and every pane and declaration reads its base from the
-/// kernel's snapshot in BuildContext.WindowNumbering. The zone never numbers a window by itself. Same rules as the south
-/// zone's helper, kept in this assembly because zones do not reference each other (G4).
+/// The zones' side of the map-wide window numbering (contract-29): sites declare named grids from their LOD-free layouts
+/// (each zone module's DescribeWindowLayouts), WP-14 allocates them, and every pane and declaration reads its base from the
+/// kernel's snapshot in BuildContext.WindowNumbering. A zone never numbers a window by itself.
 /// </summary>
 public static class WindowNumbers
 {

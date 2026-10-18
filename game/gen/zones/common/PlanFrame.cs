@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Campus.Gen.Zones.DesignBoundary.Framework;
+namespace Campus.Gen.Zones.Common;
 
 /// <summary>
 /// A level frame on the plan: origin (world x, z), local X along <see cref="U"/>, local Y up, local Z = X × Y, which in plan

@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Street;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using P = Campus.Gen.Zones.South.SouthTune.Plaza;
 using T = Campus.Gen.Zones.South.SouthTune.Gate;
 
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.South.Gate;
 /// benches in front of it, their backs to the shrubs, facing back across the plaza toward the gate. The kiosk is WP-13's on WP-48c's
 /// anchor; <see cref="SouthTune.Plaza.KioskSpot"/> is the spot the plaza keeps free for it.
 /// </summary>
-public sealed class GatePlazaSite : SouthSite
+public sealed class GatePlazaSite : ZoneSite
 {
     public const string Feature = "design:south-a01-plaza";
 

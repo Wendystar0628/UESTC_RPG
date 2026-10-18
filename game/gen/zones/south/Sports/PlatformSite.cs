@@ -7,7 +7,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using P = Campus.Gen.Zones.South.SouthTune.Platform;
 using S = Campus.Gen.Zones.South.SouthTune.Sports;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
@@ -25,7 +25,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// - the grand steps in the south edge's notch and the OSM steps at the north tip, both catalogue flights (PartCatalog.Steps).
 /// The shopfront glass is one grid (contract-29), a column per bay round the shop block.
 /// </summary>
-public sealed class PlatformSite : SouthSite
+public sealed class PlatformSite : ZoneSite
 {
     public const string Feature = "qsh:way:601600526";
     private const string Part = "osm:way:601600526";

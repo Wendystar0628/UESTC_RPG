@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using A = Campus.Gen.Zones.South.SouthTune.Axis;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.South.MainBuilding;
 /// WP-23 planting; this site builds the national flagpole at the centre of the front lawn on a three-tier granite base.
 /// The flag itself waits for the wind field (WP-26) and its cloth material.
 /// </summary>
-public sealed class EntranceAxisSite : SouthSite
+public sealed class EntranceAxisSite : ZoneSite
 {
     private static readonly PlanFrame Frame = new(A.Flagpole, A.FlagpoleFacing);
 

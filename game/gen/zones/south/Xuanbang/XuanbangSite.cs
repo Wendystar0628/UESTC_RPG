@@ -6,7 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 using X = Campus.Gen.Zones.South.SouthTune.Xuanbang;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -24,7 +24,7 @@ namespace Campus.Gen.Zones.South.Xuanbang;
 /// - the clock tower (66.65 m, <see cref="ClockTower"/>).
 /// Footprints are read from the world model; proportions live in SouthTune.Xuanbang.
 /// </summary>
-public sealed class XuanbangSite : SouthSite
+public sealed class XuanbangSite : ZoneSite
 {
     public const string Feature = "qsh:way:844548980";
     public const string MainPart = "osm:way:844548980", TowerPart = "osm:way:987943106", ClockPart = "osm:way:1157144625";
@@ -47,6 +47,8 @@ public sealed class XuanbangSite : SouthSite
         Sill = 0.9f,
         Window = 2.5f,
         PilasterEvery = 2,
+        // From the end piers on, a tall trim base and a trim capital under the cornice.
+        Pilaster = new(0.2f, 0.25f, 0.1f, 0.08f, 0f, 0.55f) { CapHeight = 0.85f, CapHalo = 0.15f, CapProud = 0.12f, EndPiers = true },
         ArchedGround = true,
     };
 

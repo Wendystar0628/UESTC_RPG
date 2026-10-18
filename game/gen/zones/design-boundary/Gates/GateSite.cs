@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.DesignBoundary.Fence;
 using Campus.Gen.Zones.DesignBoundary.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using G = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Gate;
 using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
@@ -61,7 +62,7 @@ public sealed record GateLayout(PlanFrame Frame, float S, float Carriage, Bounda
 /// turnstile bank beside the island is closed, and a flat-roofed grey stone guard house closes the line beyond it. A fence wing
 /// runs off each side (the ring fence, Ring.BoundaryPlan). Walk mode: every gap is under 0.5 m and the closure is Boundary.
 /// </summary>
-public sealed class GateSite(BoundaryTune.GateSpec spec) : BoundarySite
+public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
 {
     public BoundaryTune.GateSpec Spec { get; } = spec;
 

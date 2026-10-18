@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using D = Campus.Gen.Zones.North.NorthTune.Deck;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -15,7 +15,7 @@ namespace Campus.Gen.Zones.North.Shuofeng;
 /// round a square pit, a clipped shrub in the pit. The cluster is closed, so it is seen through the fence. It stands on level
 /// ground: the base is the lowest ground under its corners and the frame is sunk below it (WLD-TERRAIN).
 /// </summary>
-public sealed class RestDeckSite : NorthSite
+public sealed class RestDeckSite : ZoneSite
 {
     public override string Id => "20b1.sf10-deck";
 

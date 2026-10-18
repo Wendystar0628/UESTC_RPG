@@ -344,7 +344,7 @@ public static class CenterEastTune
         /// </summary>
         public static readonly Vector2 StoneAt = new(93.11f, -185.73f);
         public const float StoneFacing = 160f;
-        public static readonly Framework.BoulderShape Stone = new(2.4f, 1.2f, 1.35f, 0.72f, 0.32f, 18f * (MathF.PI / 180f), -0.12f) { Rise = -0.22f };
+        public static readonly Common.BoulderShape Stone = new(2.4f, 1.2f, 1.35f, 0.72f, 0.32f, 18f * (MathF.PI / 180f), -0.12f) { Rise = -0.22f };
         /// <summary>Inscription lines (bottom to top, the four equations): length, and the line height and pitch on the face.</summary>
         public static readonly float[] StoneLines = [0.95f, 0.78f, 0.42f, 0.66f];
         public const float StoneLineHeight = 0.07f, StoneLinePitch = 0.15f, StoneLineBottom = -0.24f;
@@ -474,7 +474,7 @@ public static class CenterEastTune
         /// <summary>The stone: position, face bearing (toward the forecourt and the door, lit at sunset, R1) and shape.</summary>
         public static readonly Vector2 StoneAt = new(419.6f, 133.2f);
         public const float StoneFacing = 300f;
-        public static readonly Framework.BoulderShape Stone = new(1.9f, 1.0f, 1.05f, 0.55f, 0.27f, 15f * (MathF.PI / 180f), -0.08f) { Rise = 0.15f };
+        public static readonly Common.BoulderShape Stone = new(1.9f, 1.0f, 1.05f, 0.55f, 0.27f, 15f * (MathF.PI / 180f), -0.08f) { Rise = 0.15f };
         /// <summary>The emblem disc on the face: radius, centre height on the face, relief.</summary>
         public const float EmblemRadius = 0.21f, EmblemY = 0.02f, EmblemRelief = 0.02f;
 

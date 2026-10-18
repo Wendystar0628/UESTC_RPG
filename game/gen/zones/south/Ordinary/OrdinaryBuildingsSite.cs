@@ -1,6 +1,6 @@
 using Campus.Gen.Geometry;
 using Campus.Contracts;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.South.Ordinary;
 
@@ -11,7 +11,7 @@ namespace Campus.Gen.Zones.South.Ordinary;
 /// Their storeys, heights and families are set in overlay/south.d/; this site claims nothing and builds nothing, it only
 /// registers the zone's inspection probes on them (MAP-QSH-SOUTH Q5, Q6, Q8 (a)), from their OSM footprints.
 /// </summary>
-public sealed class OrdinaryBuildingsSite : SouthSite
+public sealed class OrdinaryBuildingsSite : ZoneSite
 {
     public const string InnovationA = "qsh:relation:10807928", InnovationC = "qsh:way:779496165", Building4 = "qsh:way:691679134";
 

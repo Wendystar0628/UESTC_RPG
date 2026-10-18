@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.West;
 
@@ -19,11 +19,11 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource, ILightMe
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
 
-    private readonly IReadOnlyList<WestSite> _sites;
+    private readonly IReadOnlyList<ZoneSite> _sites;
 
     public WestModule() : this(WestSites.All) { }
 
-    internal WestModule(IReadOnlyList<WestSite> sites)
+    internal WestModule(IReadOnlyList<ZoneSite> sites)
     {
         _sites = sites;
         Claims = sites.SelectMany(s => s.Claims).ToArray();
@@ -157,7 +157,7 @@ public sealed class WestModule : IContentModule, IWindowMetadataSource, ILightMe
 /// </summary>
 public static class WestSites
 {
-    public static IReadOnlyList<WestSite> All { get; } = Array.AsReadOnly<WestSite>(
+    public static IReadOnlyList<ZoneSite> All { get; } = Array.AsReadOnly<ZoneSite>(
     [
         new Six.SixSite(),
         new Motto.MottoStoneSite(),

@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 
@@ -19,7 +19,7 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 /// masses; the face one smooth volume, no features or likeness, CORE-INDEX). Lawn, paving and trees are WP-15's and
 /// WP-23's; this site builds the stone and the bronze. Every value lives in <see cref="M"/>.
 /// </summary>
-public sealed class StatueLawnSite : CenterEastSite
+public sealed class StatueLawnSite : ZoneSite
 {
     internal static PlanFrame LinFrame => PlanMath.Facing(M.LinAt, M.LinFacing);
     internal static PlanFrame MaxwellFrame => PlanMath.Facing(M.MaxwellAt, M.MaxwellFacing);

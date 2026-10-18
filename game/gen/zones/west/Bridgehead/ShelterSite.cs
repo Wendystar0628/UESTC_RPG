@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using StreetStyle = Campus.Gen.Parts.Street.StreetStyle;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using H = Campus.Gen.Zones.West.WestTune.Shelter;
 
@@ -18,7 +18,7 @@ namespace Campus.Gen.Zones.West.Bridgehead;
 /// platform at night (候车亭顶灯, §11). Snow lies on the roof by normal. The stop sign and its light box are WP-13's.
 /// Frame: origin at the footprint's south-west corner, local X north along the back line, local +Z toward the road.
 /// </summary>
-public sealed class ShelterSite : WestSite, ILightMetadataSource
+public sealed class ShelterSite : ZoneSite, ILightMetadataSource
 {
     public override string Id => "19c.shelter";
 

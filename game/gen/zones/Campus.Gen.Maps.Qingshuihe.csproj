@@ -4,7 +4,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="center-east/**/*.cs;core/**/*.cs;design-boundary/**/*.cs;design-public/**/*.cs;design-waterfront/**/*.cs;north/**/*.cs;south/**/*.cs;west/**/*.cs"
+    <Compile Include="center-east/**/*.cs;common/**/*.cs;core/**/*.cs;design-boundary/**/*.cs;design-public/**/*.cs;design-waterfront/**/*.cs;north/**/*.cs;south/**/*.cs;west/**/*.cs"
              Exclude="$(DefaultItemExcludes);**/tests/**/*.cs;**/obj/**/*.cs;**/bin/**/*.cs" />
     <Compile Include="../interior/shell/Box/BoxInteriorRegistrations.cs" Link="Interiors/BoxInteriorRegistrations.cs" />
     <ProjectReference Include="../../contracts/Campus.Contracts.csproj;../Campus.Gen.csproj" />

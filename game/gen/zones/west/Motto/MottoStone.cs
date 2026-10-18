@@ -1,6 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using M = Campus.Gen.Zones.West.WestTune.Motto;
 
 namespace Campus.Gen.Zones.West.Motto;

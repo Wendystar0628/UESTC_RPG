@@ -4,7 +4,6 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
-using Campus.Gen.Zones.South.Framework;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
 

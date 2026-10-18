@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
-using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.North;
 
@@ -19,11 +19,11 @@ public sealed class NorthModule : IContentModule
     private static readonly ConditionalWeakTable<IWorldModel, IReadOnlyList<(Vector2 Anchor, Collider Collider)>> ColliderCache = new();
     private static readonly object Sync = new();
 
-    private readonly IReadOnlyList<NorthSite> _sites;
+    private readonly IReadOnlyList<ZoneSite> _sites;
 
     public NorthModule() : this(NorthSites.All) { }
 
-    internal NorthModule(IReadOnlyList<NorthSite> sites)
+    internal NorthModule(IReadOnlyList<ZoneSite> sites)
     {
         _sites = sites;
         Claims = sites.SelectMany(s => s.Claims).ToArray();
@@ -124,10 +124,10 @@ public sealed class NorthModule : IContentModule
 /// </summary>
 public static class NorthSites
 {
-    public static IReadOnlyList<NorthSite> All { get; } = Array.AsReadOnly<NorthSite>(
+    public static IReadOnlyList<ZoneSite> All { get; } = Array.AsReadOnly<ZoneSite>(
     [
         // 20a
-        .. NorthTune.Clusters.Select(c => (NorthSite)new Clusters.ClusterSite(c)),
+        .. NorthTune.Clusters.Select(c => (ZoneSite)new Clusters.ClusterSite(c)),
         new Xuezhi.HallEntranceSite(),
         // 20a-2
         new Xuezhi.CourtyardSite(),

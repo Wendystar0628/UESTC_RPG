@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using C = Campus.Gen.Zones.North.NorthTune.Court;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.North.Xuezhi;
 /// north.terrain.json; this site adds the wall and its pad. Both sit on level ground, so their base is the lowest ground under
 /// the wall's path and the body is sunk below it (WLD-TERRAIN 带厚度的小实体).
 /// </summary>
-public sealed class CourtyardSite : NorthSite
+public sealed class CourtyardSite : ZoneSite
 {
     public override string Id => "20a2.xz1-court";
 

@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
-using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.South;
 
@@ -19,11 +19,11 @@ public sealed class SouthModule : IContentModule, IWindowMetadataSource, IConten
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>>> Cache = new();
     private static readonly object Sync = new();
 
-    private readonly IReadOnlyList<SouthSite> _sites;
+    private readonly IReadOnlyList<ZoneSite> _sites;
 
     public SouthModule() : this(SouthSites.All) { }
 
-    internal SouthModule(IReadOnlyList<SouthSite> sites)
+    internal SouthModule(IReadOnlyList<ZoneSite> sites)
     {
         _sites = sites;
         Claims = sites.SelectMany(s => s.Claims).ToArray();
@@ -152,7 +152,7 @@ public sealed class SouthModule : IContentModule, IWindowMetadataSource, IConten
 /// </summary>
 public static class SouthSites
 {
-    public static IReadOnlyList<SouthSite> All { get; } = Array.AsReadOnly<SouthSite>(
+    public static IReadOnlyList<ZoneSite> All { get; } = Array.AsReadOnly<ZoneSite>(
     [
         new Gate.SouthGateSite(),
         new MainBuilding.EntranceAxisSite(),

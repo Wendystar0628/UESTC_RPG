@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;

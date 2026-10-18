@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using H = Campus.Gen.Zones.North.NorthTune.Hall;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
@@ -21,7 +22,7 @@ namespace Campus.Gen.Zones.North.Xuezhi;
 /// lamp) is placed by WP-13 for every open entrance, not here (main session 12:15). The door centre, facing and floor level come from the interior index (the `xz1.hall` EntranceDecl), so the porch and
 /// WP-31c's hall meet at the same doorway; WP-43 opens the facade wall there by EntranceDecl.Open.
 /// </summary>
-public sealed class HallEntranceSite : NorthSite
+public sealed class HallEntranceSite : ZoneSite
 {
     private static readonly StepsPart Steps = new();
 
@@ -48,7 +49,7 @@ public sealed class HallEntranceSite : NorthSite
         if (ring is null || ring.Count < 3) return null;
         var door = new Vector2(entrance.Center.X, entrance.Center.Z);
         // The facade edge nearest the door centre whose outward side faces the declared facing.
-        var facing = Direction(entrance.YawDeg);
+        var facing = PlanMath.Heading(entrance.YawDeg);
         PlanFrame? best = null;
         var bestDistance = float.MaxValue;
         for (var e = 0; e < ring.Count; e++)

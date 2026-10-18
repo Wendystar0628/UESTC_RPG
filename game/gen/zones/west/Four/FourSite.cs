@@ -4,7 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.West.WestTune.Four;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 
@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.West.Four;
 /// </list>
 /// It claims nothing: the blocks keep WP-14's massing and windows, the box stands in front of their stone line.
 /// </summary>
-public sealed class FourSite : WestSite
+public sealed class FourSite : ZoneSite
 {
     public override string Id => "19b.four";
 

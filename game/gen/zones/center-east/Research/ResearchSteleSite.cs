@@ -3,7 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.CenterEast.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 
@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 /// degrees. The face stays blank until the scene text atlas writes 科研楼 in ink-green running script (contract-26).
 /// A small beat of R5 (§8), dark at night (§7).
 /// </summary>
-public sealed class ResearchSteleSite : CenterEastSite
+public sealed class ResearchSteleSite : ZoneSite
 {
     internal static PlanFrame Frame => PlanMath.Facing(M.SteleAt, M.SteleFacing);
 

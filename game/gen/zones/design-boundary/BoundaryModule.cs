@@ -2,7 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
-using Campus.Gen.Zones.DesignBoundary.Framework;
+using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.DesignBoundary;
 
@@ -19,11 +19,11 @@ public sealed class BoundaryModule : IContentModule
     private static readonly ConditionalWeakTable<IWorldModel, IReadOnlyList<(Vector2 Anchor, Collider Collider)>> ColliderCache = new();
     private static readonly object Sync = new();
 
-    private readonly IReadOnlyList<BoundarySite> _sites;
+    private readonly IReadOnlyList<ZoneSite> _sites;
 
     public BoundaryModule() : this(BoundarySites.All) { }
 
-    internal BoundaryModule(IReadOnlyList<BoundarySite> sites) => _sites = sites;
+    internal BoundaryModule(IReadOnlyList<ZoneSite> sites) => _sites = sites;
 
     public IReadOnlyList<Claim> Claims { get; } = [];
 
@@ -114,10 +114,10 @@ public sealed class BoundaryModule : IContentModule
 /// <summary>The boundary package's sites in a fixed order; later sub-tickets append theirs after these.</summary>
 public static class BoundarySites
 {
-    public static IReadOnlyList<BoundarySite> All { get; } = Array.AsReadOnly<BoundarySite>(
+    public static IReadOnlyList<ZoneSite> All { get; } = Array.AsReadOnly<ZoneSite>(
     [
         // 30a (north, west) and 30b (northwest, west2, southeast)
-        .. BoundaryTune.Gates.Select(g => (BoundarySite)new Gates.GateSite(g)),
+        .. BoundaryTune.Gates.Select(g => (ZoneSite)new Gates.GateSite(g)),
         new Waterfront.NorthPlazaSite(),
         // 30b: the fence all the way round, side gates, river grates
         new Ring.RingFenceSite(),

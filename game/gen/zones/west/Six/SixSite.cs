@@ -5,7 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
-using Campus.Gen.Zones.West.Framework;
+using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
 using S = Campus.Gen.Zones.West.WestTune.Six;
 using W = Campus.Gen.Zones.West.WestTune.Windows;
@@ -23,7 +23,7 @@ namespace Campus.Gen.Zones.West.Six;
 /// live sun only; nothing here keys on the clock (§1.5). Each stone block is one named window grid (contract-29); the base
 /// glass stays unnumbered.
 /// </summary>
-public sealed class SixSite : WestSite
+public sealed class SixSite : ZoneSite
 {
     /// <summary>One stone block: its entity, its source part, its window grid key and its floors above the base.</summary>
     internal sealed record Block(string Entity, string Part, string Key, int Upper);
