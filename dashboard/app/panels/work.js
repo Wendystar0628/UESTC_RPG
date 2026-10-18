@@ -24,7 +24,7 @@
         h('span.dg-main-name', m.name),
         Dash.chip(Dash.modelName(m.model) || '—', side),
         m.effort ? Dash.chip(m.effort, 'muted') : null,
-        Dash.chip(m.state === 'running' ? '在跑' : '空闲', m.state === 'running' ? 'ok' : 'muted'),
+        Dash.chip(m.state === 'unknown' ? '状态未知' : m.state === 'running' ? '在跑' : '空闲', m.state === 'running' ? 'ok' : 'muted'),
         h('span.dg-main-when', Dash.at(m.since) + (m.state === 'running' ? ' 起，已 ' + Dash.elapsed(m.since) : ' 起'))),
       m.task ? h('div.dg-main-task', Dash.longText(m.task)) : null);
   }
@@ -47,7 +47,7 @@
   }
   function changesLine(ch) {
     if (!ch.files) return h('div.dg-line.muted', '工作区里这行的目录下没有未提交的改动');
-    return h('div.dg-line', h('b', '改动 ' + ch.files + ' 个文件'), '：',
+    return h('div.dg-line', h('b', '目录范围内改动 ' + ch.files + ' 个文件（候选匹配）'), '：',
       ch.dirs.map(function (x, i) { return h('span.dg-dir', (i ? '、' : '') + x.path + '（' + x.files + '）'); }));
   }
   function itemCard(it) {
@@ -55,10 +55,13 @@
       h('span.dg-id', it.row),
       h('span.dg-what', Dash.longText(it.what)),
       Dash.chip(it.state, it.state === '进行中' ? 'ok' : 'muted'),
-      Dash.chip(it.who || '—', sideOf(it.who))));
+      Dash.chip('队列负责人 ' + (it.who || '—'), sideOf(it.who))));
     body.appendChild(it.agents.length
       ? h('div.dg-agents', it.agents.map(agentChip))
-      : h('div.dg-line.muted', '最近 30 分钟没有对上的子代理'));
+      : h('div.dg-line.muted', '没有未收尾或最近 30 分钟交回的匹配子代理'));
+    if (it.agents.length && !it.agents.some(function (a) { return a.state === 'running'; })) {
+      body.appendChild(h('div.dg-line.muted', '当前没有未收尾子代理；队列状态由负责人维护，主线集成另看后台脚本'));
+    }
     body.appendChild(changesLine(it.changes));
     body.appendChild(h('div.dg-line',
       it.sheet ? h('span', '任务单：', Dash.a(it.sheet, it.sheet.split('/').pop().replace(/\.md$/, ''))) : h('span.muted', '没有对上任务单'),
@@ -94,7 +97,7 @@
     return [what, r.stage ? '现在在 ' + r.stage : '', r.testing || '', Dash.at(r.since) + ' 起，已 ' + Dash.elapsed(r.since)].filter(Boolean).join(' · ');
   }
   function treeBlock(t) {
-    if (!t) return h('div.dg-line.muted', '还没开始统一编译（没有同名的临时工作树）');
+    if (!t) return h('div.dg-line.muted', '没有同名临时工作树；主检出也可统一编译，进度见后台脚本');
     var tone = { using: 'ok', idle: 'muted', invalid: 'risk' }[t.state] || 'muted';
     var label = { using: '在用', idle: '闲置', invalid: '失效' }[t.state] || t.state;
     var box = h('div.pd-tree',
@@ -123,7 +126,7 @@
       Dash.chip(it.who || '—', sideOf(it.who))));
     body.appendChild(h('div.dg-line', h('b', '谁编 '), p.by));
     body.appendChild(p.files.count
-      ? Dash.fold('待编译文件 ' + p.files.count + ' 个', h('div.pd-files', p.files.list.map(function (f) { return h('div.dg-dir', f); })))
+      ? Dash.fold('主检出目录范围内改动 ' + p.files.count + ' 个（候选文件）', h('div.pd-files', p.files.list.map(function (f) { return h('div.dg-dir', f); })))
       : h('div.dg-line.muted', '这行的目录下没有未提交的文件' + (it.dirs ? '（目录：' + it.dirs + '）' : '')));
     body.appendChild(treeBlock(p.tree));
     body.appendChild(waitLine(p.waiting));
@@ -144,11 +147,23 @@
       } else {
         var items = d.live.work.items.filter(function (i) { return i.state === '待编译'; });
         var started = items.filter(function (i) { return i.pending && i.pending.tree; }).length;
-        root.appendChild(Dash.status(items.length ? '待编译 ' + items.length + ' 项（已开工作树 ' + started + '，还没开始统一编译 ' + (items.length - started) + '）' : '队列里没有待编译的行',
+        root.appendChild(Dash.status(items.length ? '待编译 ' + items.length + ' 项（有同名工作树 ' + started + '，无同名工作树 ' + (items.length - started) + '）' : '队列里没有待编译的行',
           items.length ? 'ok' : 'muted'));
         root.appendChild(h('div.dg-cards', items.map(function (i) { return i.pending ? pendingCard(i) : itemCard(i); })));
       }
       el.appendChild(root);
+    }
+  });
+
+  Dash.panel({
+    id: 'work-changes', page: 'work', title: '主检出未提交改动的候选行', order: 27, needs: ['live'],
+    render: function (el, d) {
+      var c = d.live && d.live.work && d.live.work.changes;
+      if (!c) { el.appendChild(h('div.muted', '等待采集目录匹配结果')); return; }
+      el.appendChild(h('div', '共 ' + c.total + ' 个文件；未匹配路径 ' + c.unmatched.length + ' 个，共文件候选 ' + c.shared.length + ' 个'));
+      el.appendChild(h('p.muted', c.basis));
+      if (c.unmatched.length) el.appendChild(Dash.fold('未匹配到队列目录的路径（不等于无人负责）', c.unmatched.map(function (p) { return h('div.dg-dir', p); })));
+      if (c.shared.length) el.appendChild(Dash.fold('对应多行的路径（不重复认领作者）', c.shared.map(function (x) { return h('div.dg-dir', x.path + ' → ' + x.rows.join('、')); })));
     }
   });
 

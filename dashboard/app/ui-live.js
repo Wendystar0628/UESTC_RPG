@@ -15,7 +15,7 @@
     return m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时 ' + (m % 60) + ' 分钟';
   };
 
-  var STATE = { running: '在跑', idle: '空闲', done: '已交回' };
+  var STATE = { running: '在跑', idle: '空闲', done: '已交回', unknown: '状态未知' };
 
   /* 一条文字：不长（约 120 字以内）直接全文；真长的先给一句话摘要（第一句，没有句号就取前 120 字），点开看全文。不靠省略号硬截。 */
   var TEXT_SHORT = 120;
@@ -49,13 +49,15 @@
 
   /* 在跑的写"HH:MM 起，已 N 分钟"，已交回的写"HH:MM 交回" */
   Dash.sinceText = function (a) {
+    if (a.state === 'unknown') return '记录不足，状态未知';
+    if (a.stalled) return '未收尾，最后记录 ' + Dash.at(a.last) + '（可能卡住）';
     if (a.state === 'done') return Dash.at(a.last) + ' 交回';
     return Dash.at(a.started || a.since) + ' 起，已 ' + Dash.elapsed(a.started || a.since);
   };
 
   /* 子代理的签条文字：名字 · 型号 · 推理档 · 在跑/已交回 · 开始多久 */
   Dash.agentLabel = function (a) {
-    return [a.name, Dash.modelName(a.model), a.effort, STATE[a.state] || a.state, a.state === 'done' ? Dash.at(a.last) + ' 交回' : '已 ' + Dash.elapsed(a.started)]
+    return [a.side === 'codex' ? 'Codex' : 'Claude', a.name, Dash.modelName(a.model), a.effort, a.stalled ? '未收尾、可能卡住' : STATE[a.state] || a.state, Dash.sinceText(a)]
       .filter(Boolean).join(' · ');
   };
 
@@ -95,13 +97,18 @@
   /* 会话 → 它名下的子代理：每个会话一块，在跑的逐个列出（行号或名字、型号、推理档、开始多久），已交回的折叠 */
   Dash.who = function (live) {
     var sessions = live.sessions || [], agents = live.agents || [];
-    var ids = {};
-    sessions.forEach(function (s) { ids[s.id] = true; });
+    var owners = {};
+    sessions.forEach(function (s) { owners[s.id] = s.id; });
+    var changed = true;
+    while (changed) {
+      changed = false;
+      agents.forEach(function (a) { if (!owners[a.id] && owners[a.parent]) { owners[a.id] = owners[a.parent]; changed = true; } });
+    }
     var box = h('div.who');
     sessions.forEach(function (s) {
-      box.appendChild(group(s, agents.filter(function (a) { return a.parent === s.id; })));
+      box.appendChild(group(s, agents.filter(function (a) { return owners[a.id] === s.id; })));
     });
-    var orphans = agents.filter(function (a) { return !ids[a.parent]; });
+    var orphans = agents.filter(function (a) { return !owners[a.id]; });
     if (orphans.length) box.appendChild(group({ name: '没有挂到会话的子代理', side: 'claude', virtual: true }, orphans));
     if (!sessions.length && !orphans.length) {
       box.appendChild(Dash.liveGap(live, 'sessions', ['Codex', 'Claude'], '没有会话') || Dash.empty('没有会话', '', true));
