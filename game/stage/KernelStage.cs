@@ -315,6 +315,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         catch (Exception error) { failures.Add(error); }
 
+        // Saving has allowed departure and map consumers have drained. Only CPU bake bodies may outlive teardown.
+        try { _runtimeObjects.OfType<Campus.Kernel.Bake.BakeService>().SingleOrDefault()?.StopForExit(); }
+        catch (Exception error) { failures.Add(error); }
+
         Phase = "shutdown-nodes";
         _gate.TraceClose(Phase);
         var children = GetChildren();

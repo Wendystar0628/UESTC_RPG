@@ -10,9 +10,6 @@ using Campus.Contracts.Parts;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Stubs;
-using Campus.Kernel.Frame;
-using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Bake;
 
@@ -30,11 +27,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private readonly object _sync = new();
     private long _cacheGeneration;
     private Task? _clearing;
-    private readonly bool _traceCore;
+    private bool _stopped;
+    private bool _exiting;
 
     public BakeService(IMapService maps, IAppFlow flow) : this(BakeOptions.FromApplication())
     {
-        _traceCore = AppBoot.Value("gate") is "save-close" or "save-resume";
         _maps = maps; _flow = flow;
         ApplyPhase(flow.State);
         flow.Changed += PhaseChanged;
@@ -87,8 +84,12 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
 
     public void Clear()
     {
-        Interlocked.Increment(ref _cacheGeneration);
-        lock (_sync) _clearing = Task.Run(_cache.Clear);
+        lock (_sync)
+        {
+            ObjectDisposedException.ThrowIf(_stopped, this);
+            Interlocked.Increment(ref _cacheGeneration);
+            _clearing = Task.Run(_cache.Clear);
+        }
     }
     public void ClearFailures() => _queue.ClearFailures();
 
@@ -96,6 +97,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     {
         lock (_sync)
         {
+            ObjectDisposedException.ThrowIf(_stopped, this);
             if (_contexts.TryGetValue(context.Descriptor.Id, out var existing))
             {
                 if (!ReferenceEquals(existing.Context, context))
@@ -214,8 +216,10 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             catch (Exception) when (!map.Active) { }
             catch (Exception error)
             {
-                _queue.Ensure(new(context.Descriptor.Id, "bake.catalog", "enumerate"), BakePriority.Background,
-                    () => throw new InvalidDataException("Background catalog failed: " + error.Message, error));
+                lock (_sync)
+                    if (map.Active && !_stopped)
+                        _queue.Ensure(new(context.Descriptor.Id, "bake.catalog", "enumerate"), BakePriority.Background,
+                            () => throw new InvalidDataException("Background catalog failed: " + error.Message, error));
             }
             finally { map.EnumerationComplete = true; _queue.EndCatalog(); }
         })
@@ -227,32 +231,12 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     {
         lock (_sync)
         {
-            if (!map.Active) throw new OperationCanceledException("Map unloaded before request scheduling.");
+            if (_stopped || !map.Active) throw new OperationCanceledException("Map unloaded before request scheduling.");
             return _queue.Ensure(key, priority, () => Build(map, key));
         }
     }
 
     internal object Build(MapBuild map, BakeKey key)
-    {
-        var phase = "inputs";
-        string? cancelledPhase = null;
-        double cancelledAt = 0;
-        using var observation = map.Lifetime.Token.Register(() =>
-        {
-            cancelledPhase = Volatile.Read(ref phase);
-            if (_traceCore) cancelledAt = FrameClock.MonotonicMilliseconds;
-        });
-        try { return BuildCore(map, key, value => Volatile.Write(ref phase, value)); }
-        catch (OperationCanceledException)
-        {
-            if (_traceCore)
-                GD.Print($"BAKE_CANCELLED {key.Map.Value}/{key.Module}/{key.Detail} phase={cancelledPhase ?? phase} " +
-                    $"returnedAfterMs={FrameClock.MonotonicMilliseconds - cancelledAt:R}");
-            throw;
-        }
-    }
-
-    private object BuildCore(MapBuild map, BakeKey key, Action<string> phase)
     {
         var cancellation = map.Lifetime.Token;
         cancellation.ThrowIfCancellationRequested();
@@ -290,7 +274,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var identity = BakeInputFingerprint.Identity(key, inputHash);
         if (!_options.Live)
         {
-            phase("cache-read");
             var cached = _cache.TryRead(key,
                 key.Module == "map" ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes, cancellation);
             if (cached is not null)
@@ -307,21 +290,17 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
         var buildContext = map.CreateBuildContext(codeHash, inputHash);
-        phase(module is not null ? "content-body" : interior is not null ? "interior-body" : "producer-body");
-        var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics), phase) :
+        var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
         cancellation.ThrowIfCancellationRequested();
-        phase("encode");
         var bytes = Encode(identity, built);
         cancellation.ThrowIfCancellationRequested();
         // Validate exactly the bytes about to be written before publishing Ready; malformed producer output is terminal.
-        phase("decode");
         var validated = Decode(identity, key, bytes);
         cancellation.ThrowIfCancellationRequested();
         RequireInteriorProduct(map, key, validated);
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
-            phase("cache-write");
             _cache.Write(key, bytes, cancellation);
         }
         return validated;
@@ -445,12 +424,23 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var origin = start is { } p ? new System.Numerics.Vector2(p.X, p.Z) : map.Descriptor.Center;
         return System.Numerics.Vector2.DistanceSquared(center, origin);
     }
-    public void Dispose()
+    /// <summary>Called by the stage only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
+    public void StopForExit()
+    {
+        Stop();
+        // Drain only native compression/file publication, never the current pure generation body.
+        _cache.Stop();
+        _exiting = true;
+    }
+
+    private void Stop()
     {
         if (_flow is not null) _flow.Changed -= PhaseChanged;
         MapBuild[] maps;
         lock (_sync)
         {
+            if (_stopped) return;
+            _stopped = true;
             maps = _contexts.Values.ToArray();
             foreach (var map in maps) map.Active = false;
         }
@@ -459,7 +449,14 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             _queue.ForgetMap(map.Context.Descriptor.Id);
             map.Lifetime.Cancel();
         }
-        _queue.Dispose();
+        _queue.Stop();
+    }
+
+    public void Dispose()
+    {
+        Stop();
+        // Ordinary disposal/restart still drains owned workers; process exit has closed native access above.
+        if (!_exiting) _queue.Dispose();
     }
 
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);

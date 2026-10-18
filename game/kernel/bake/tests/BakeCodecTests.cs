@@ -130,6 +130,43 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    public void StoppingRejectsPendingWorkAndLateProductsWhileDisposeStillDrainsWorkers()
+    {
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
+        var queue = new BakeQueue(1);
+        var finished = false;
+        var pendingRan = false;
+        try
+        {
+            var running = queue.Ensure(key, BakePriority.Normal, () =>
+            {
+                started.Set();
+                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
+                finished = true;
+                return new object();
+            });
+            if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker did not start.");
+            var pending = queue.Ensure(key with { Detail = "pending" }, BakePriority.Background, () =>
+            {
+                pendingRan = true;
+                return new object();
+            });
+            queue.Stop(); // Must return while generation is still paused.
+            AssertThat(running.State == BakeState.Failed && pending.State == BakeState.Failed && !finished)
+                .OverrideFailureMessage("Stopping waited for generation or left publishable work.").IsTrue();
+            AssertThrown(() => queue.Ensure(key, BakePriority.Normal, () => new object()))
+                .IsInstanceOf<ObjectDisposedException>();
+            release.Set();
+            queue.Dispose(); // Even after Stop, ordinary disposal must join the remaining CPU worker.
+            AssertThat(finished && !pendingRan && running.Product is null && pending.Product is null && queue.Failures.IsEmpty)
+                .OverrideFailureMessage("A stopped job ran or published, or disposal failed to drain its worker.").IsTrue();
+        }
+        finally { release.Set(); queue.Dispose(); }
+    }
+
+    [TestCase]
     [RequireGodotRuntime]
     public void CorruptCacheIsAMissAndGameVersionChangesClearProducts()
     {
@@ -151,8 +188,11 @@ public sealed class BakeCodecTests
             updated.Initialize();
             if (updated.CacheBytes != 0 || updated.TryRead(key) is not null)
                 throw new InvalidOperationException("A game version change reused player products.");
+            writer.Stop();
+            AssertThrown(() => writer.Write(key, payload)).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.TryRead(key)).IsInstanceOf<OperationCanceledException>();
         }
-        finally { writer.Clear(); }
+        finally { new BakeCacheStore(directory, "version-two").Clear(); }
     }
     [TestCase]
     public void NegativeTileParentsUseFloorDivision()

@@ -19,6 +19,7 @@ public sealed class BakeCacheStore
     private readonly object _sync = new();
     private long _bytes;
     private bool _initialized;
+    private bool _stopped;
     private static long _temporarySequence;
 
     public BakeCacheStore(string root, string? version = null)
@@ -35,6 +36,7 @@ public sealed class BakeCacheStore
     {
         lock (_sync)
         {
+            ThrowIfStopped();
             if (_initialized) return;
             if (Directory.Exists(_root) && IsLink(_root)) throw new IOException("Cache root must not be a reparse point.");
             Directory.CreateDirectory(_root);
@@ -60,9 +62,16 @@ public sealed class BakeCacheStore
         try
         {
             var limit = maximumPayload == MaximumProductBytes ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
-            var bytes = DecodeFile(ReadBounded(path, limit), maximumPayload);
-            cancellationToken.ThrowIfCancellationRequested();
-            return bytes;
+            var file = ReadBounded(path, limit);
+            EnterCache(cancellationToken);
+            try
+            {
+                ThrowIfStopped();
+                var bytes = DecodeFile(file, maximumPayload);
+                cancellationToken.ThrowIfCancellationRequested();
+                return bytes;
+            }
+            finally { Monitor.Exit(_sync); }
         }
         catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException)
         {
@@ -76,20 +85,32 @@ public sealed class BakeCacheStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
-        var encoded = EncodeFile(bytes);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (key.Module != "map" && encoded.Length > MaximumCompressedTileBytes)
-            throw new InvalidDataException("Compressed tile exceeds 8 MiB on disk; split the generated tile.");
         EnterCache(cancellationToken);
         try
         {
+            ThrowIfStopped();
+            var encoded = EncodeFile(bytes);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (key.Module != "map" && encoded.Length > MaximumCompressedTileBytes)
+                throw new InvalidDataException("Compressed tile exceeds 8 MiB on disk; split the generated tile.");
             var path = FilePath(key);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
-            AtomicWrite(path, encoded);
+            AtomicWrite(path, encoded, cancellationToken);
             _bytes += encoded.Length - oldLength;
         }
         finally { Monitor.Exit(_sync); }
+    }
+
+    // After this returns, no worker can enter Godot's compression API or publish another cache file.
+    internal void Stop()
+    {
+        lock (_sync) _stopped = true;
+    }
+
+    private void ThrowIfStopped()
+    {
+        if (_stopped) throw new OperationCanceledException("Bake cache stopped.");
     }
 
     private void EnterCache(CancellationToken cancellationToken)
@@ -109,6 +130,7 @@ public sealed class BakeCacheStore
     {
         lock (_sync)
         {
+            ThrowIfStopped();
             DeleteProducts();
             _bytes = 0;
         }
@@ -126,6 +148,7 @@ public sealed class BakeCacheStore
         EnterCache(cancellationToken);
         try
         {
+            ThrowIfStopped();
             var path = FilePath(key);
             if (File.Exists(path)) { _bytes -= new FileInfo(path).Length; File.Delete(path); }
         }
@@ -168,15 +191,21 @@ public sealed class BakeCacheStore
         return result;
     }
 
-    public static void AtomicWrite(string path, byte[] bytes)
+    public static void AtomicWrite(string path, byte[] bytes, CancellationToken cancellationToken = default)
     {
         var temporary = path + "." + System.Environment.ProcessId + "." + Interlocked.Increment(ref _temporarySequence) + ".tmp";
-        using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        try
         {
-            file.Write(bytes);
-            file.Flush(flushToDisk: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            using (var file = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                file.Write(bytes);
+                file.Flush(flushToDisk: true);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, path, overwrite: true);
         }
-        File.Move(temporary, path, overwrite: true);
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
     private string FilePath(BakeKey key)

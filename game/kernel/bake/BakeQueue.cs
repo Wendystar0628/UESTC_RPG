@@ -157,15 +157,27 @@ internal sealed class BakeQueue : IDisposable
         }
     }
 
-    public void Dispose()
+    internal void Stop()
     {
         lock (_sync)
         {
             if (_disposed) return;
             _disposed = true;
-            foreach (var job in _jobs.Values.Where(j => j.Handle.State == BakeState.Pending)) job.Handle.Fail("Bake service stopped.");
+            foreach (var job in _jobs.Values.Where(j => j.Handle.State is BakeState.Pending or BakeState.Running))
+            {
+                job.Counted = false;
+                job.Handle.Fail("Bake service stopped.");
+                _done++;
+                _failed++;
+            }
+            _queue.Clear();
             Monitor.PulseAll(_sync);
         }
+    }
+
+    public void Dispose()
+    {
+        Stop();
         // In-flight builds own their captured map context until completion; no thread is aborted.
         foreach (var worker in _workers)
             if (worker != Thread.CurrentThread) worker.Join();
