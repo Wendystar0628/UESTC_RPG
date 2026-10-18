@@ -121,7 +121,7 @@ public sealed class CeilingFanPart() : MepPart<EquipmentParams>(new(800, 220))
             new(rm * 0.92f, hm * 0.8f, rm * 0.3f, hm, new(0.3f, 0.954f), new(0, 1)),
             new(rm * 0.3f, hm, 0, hm, new(0, 1), new(0, 1)),
         ];
-        b.Add(Shapes.Lathe(housing, segments, motor), f);
+        b.Add(PartShapes.Lathe(housing, segments, motor), f);
         var rc = MepStyle.FanCanopyRadius; var hc = MepStyle.FanCanopyHeight; var ceiling = p.Height;
         LatheBand[] canopy =
         [
@@ -130,7 +130,7 @@ public sealed class CeilingFanPart() : MepPart<EquipmentParams>(new(800, 220))
             new(rc, ceiling - 0.012f, rc, ceiling, new(1, 0), new(1, 0)),
             new(rc, ceiling, 0, ceiling, new(0, 1), new(0, 1)),
         ];
-        b.Add(Shapes.Lathe(canopy, segments, motor), f);
+        b.Add(PartShapes.Lathe(canopy, segments, motor), f);
         b.AddColumn(0, hm - 0.01f, ceiling - hc + 0.004f, 0, MepStyle.FanRodRadius, near ? 10 : 6, MepStyle.Pipe(v == 1 ? MepStyle.Aluminium : MepStyle.White), f);
 
         var blades = v == 2 ? 4 : 3;

@@ -49,7 +49,7 @@ function Get-UESTCCachePaths {
     foreach ($path in $files) {
         # Map snapshots, the full palette and global data assets are read outside
         # ProjectReference by generators and tests, so remain shared inputs.
-        if ($path -match '^game/(data/|style/palette/|kernel/registry/)|^scripts/(gate\.ps1$|gates/|lib/|build/|setup/install-test-runner\.ps1$)|^(ownership\.json|global\.json|\.editorconfig|\.gitattributes|\.gitignore|NuGet\.Config)$|(^|/)Directory\.[^/]+\.(props|targets)$|^tools/godot-version\.txt$|^game/(project\.godot|Campus\.sln)$') {
+        if ($path -match '^game/(data/|style/palette/|kernel/(registry/|map/data/|renderer/(geometry|presentation|render-state)/|materials/|instances/))|^scripts/(gate\.ps1$|gates/|lib/|build/|setup/install-test-runner\.ps1$)|^(ownership\.json|global\.json|\.editorconfig|\.gitattributes|\.gitignore|NuGet\.Config)$|(^|/)Directory\.[^/]+\.(props|targets)$|^tools/godot-version\.txt$|^game/(project\.godot|Campus\.sln)$') {
             $null = $paths.Add($path)
         }
     }

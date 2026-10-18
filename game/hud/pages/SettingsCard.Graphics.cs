@@ -13,13 +13,11 @@ public partial class SettingsCard
     private Segmented? _preset;
     private static readonly (string Key, QualityKnob[] Knobs)[] Groups =
     [
-        ("display", [QualityKnob.DisplayMode, QualityKnob.VSync, QualityKnob.FrameCap, QualityKnob.Vrr]),
-        ("clarity", [QualityKnob.RenderScale, QualityKnob.FsrSharpness, QualityKnob.AntiAliasing, QualityKnob.Anisotropy]),
-        ("lighting", [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance, QualityKnob.SmallCasters]),
-        ("post", [QualityKnob.GlowQuality, QualityKnob.TiltShift, QualityKnob.LensFlare, QualityKnob.LightShafts, QualityKnob.Vignette]),
-        ("scene", [QualityKnob.DetailScale, QualityKnob.MeshLodThreshold, QualityKnob.GeometricLeaves, QualityKnob.FoliageDensity, QualityKnob.GrassRadius]),
-        ("effects", [QualityKnob.ReflectionInterval, QualityKnob.ParticleDensity, QualityKnob.Adaptive]),
-        ("advanced", [QualityKnob.GraphicsApi, QualityKnob.GpuIndex]),
+        ("display", [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync, QualityKnob.FrameCap]),
+        ("clarity", [QualityKnob.RenderScale, QualityKnob.AntiAliasing]),
+        ("lighting", [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance]),
+        ("scene", [QualityKnob.FoliageDensity]),
+        ("effects", [QualityKnob.ReflectionInterval, QualityKnob.ParticleDensity]),
     ];
 
     private float BuildGraphics(Control page, float width)
@@ -28,19 +26,16 @@ public partial class SettingsCard
         try { quality = Svc<IQualityService>(); }
         catch (InvalidOperationException) { _kit.Text(page, UiKit.T("settings.graphics.unavailable"), "small", "text.2", new Vector2(8, 8)); return 48; }
         float y = 8;
-        _preset = Segmented.Create(_kit, page, new Vector2(8, y), [112, 112, 114, 112, 122],
-            [UiKit.T("quality.preset.smooth"), UiKit.T("quality.preset.balanced"), UiKit.T("quality.preset.fine"), UiKit.T("quality.preset.ultra"), UiKit.T("quality.preset.custom")],
+        _preset = Segmented.Create(_kit, page, new Vector2(8, y), [112, 114, 112, 122],
+            [UiKit.T("quality.preset.balanced"), UiKit.T("quality.preset.fine"), UiKit.T("quality.preset.ultra"), UiKit.T("quality.preset.custom")],
             false, selected: (int)(_planned?.Preset ?? quality.Requested.Preset));
         _preset.Changed += i =>
         {
             if ((QualityPreset)i == QualityPreset.Custom) return;
             _pending.Clear();
-            Plan(new QualityProfile((QualityPreset)i, new Dictionary<QualityKnob, float>(), quality.Requested.Adaptive));
+            Plan(new QualityProfile((QualityPreset)i, new Dictionary<QualityKnob, float>()));
         };
         y += 46;
-        var rec = UiKit.T("quality.recommended", ("preset", UiKit.T("quality.preset." + PresetKey(quality.Recommended))), ("gpu", RenderingServer.GetVideoAdapterName()));
-        _kit.Text(page, rec, "small", "text.2", new Vector2(8, y), width: width - 8);
-        y += 34;
         var specs = quality.Knobs.ToDictionary(s => s.Knob);
         foreach (var (group, knobs) in Groups)
         {
@@ -95,7 +90,6 @@ public partial class SettingsCard
     {
         QualityKnob.RenderScale => $"{v:0.00}×",
         QualityKnob.ShadowDistance => $"{v:0} m",
-        QualityKnob.GrassRadius => $"{v:0} m",
         QualityKnob.FoliageDensity or QualityKnob.ParticleDensity => $"{v * 100:0}%",
         _ => $"{v:0.##}",
     };
@@ -109,7 +103,7 @@ public partial class SettingsCard
         _preset?.Select((int)QualityPreset.Custom, notify: false);
         var overrides = new Dictionary<QualityKnob, float>(quality.Requested.Overrides);
         foreach (var (k, v) in _pending) overrides[k] = v;
-        Plan(new QualityProfile(QualityPreset.Custom, overrides, quality.Requested.Adaptive));
+        Plan(new QualityProfile(QualityPreset.Custom, overrides));
     }
 
     private QualityProfile? _planned;
@@ -155,14 +149,4 @@ public partial class SettingsCard
         try { _preset.Select((int)Svc<IQualityService>().Requested.Preset, notify: false); }
         catch (InvalidOperationException) { }
     }
-
-    private static string PresetKey(QualityPreset p) => p switch
-    {
-        QualityPreset.Smooth => "smooth",
-        QualityPreset.Balanced => "balanced",
-        QualityPreset.Fine => "fine",
-        QualityPreset.Ultra => "ultra",
-        QualityPreset.Custom => "custom",
-        _ => throw new ArgumentOutOfRangeException(nameof(p)),
-    };
 }

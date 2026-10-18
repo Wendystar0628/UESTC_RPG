@@ -5,6 +5,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using GdUnit4;

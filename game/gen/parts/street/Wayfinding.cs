@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;
@@ -138,7 +139,7 @@ public sealed class BicycleBayPart : IPartDef<RoofParams>
         var paint = Lettering.Print(S.Board(S.GroundPaint));
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var l = S.BayLine; const float y = 0.004f;
         void Line(float x0, float z0, float x1, float z1) =>
-            b.Add(Shapes.FlatQuad(new(x0, y, z0), new(x0, y, z1), new(x1, y, z1), new(x1, y, z0), Vector3.UnitY, paint), VertexFlag.NoShadow);
+            b.Add(PartShapes.FlatQuad(new(x0, y, z0), new(x0, y, z1), new(x1, y, z1), new(x1, y, z0), Vector3.UnitY, paint), VertexFlag.NoShadow);
         Line(-hx, -hz, hx, -hz + l); Line(-hx, hz - l, hx, hz);
         Line(-hx, -hz + l, -hx + l, hz - l); Line(hx - l, -hz + l, hx, hz - l);
         if (near)
@@ -217,14 +218,14 @@ public sealed class KerbRampPart : IPartDef<RampParams>
         b.AddProfile([new(-hz, 0), new(hz, 0), new(hz, h), new(-hz, lip)], -hx, hx, 0, concrete);
         var f = S.KerbRampFlare;
         foreach (var side in new[] { -1f, 1f })
-            b.Add(Shapes.Tetra(new(side * (hx - S.Joint), 0, -hz), new(side * (hx - S.Joint), 0, hz), new(side * (hx - S.Joint), h, hz), new(side * (hx + f), 0, hz), concrete));
+            b.Add(PartShapes.Tetra(new(side * (hx - S.Joint), 0, -hz), new(side * (hx - S.Joint), 0, hz), new(side * (hx - S.Joint), h, hz), new(side * (hx + f), 0, hz), concrete));
         if (!near) return b.Finish(Bounds(p));
         // The tactile strip across the foot, on the slope, 3 mm proud.
         var slope = (h - lip) / p.Depth;
         var n = Xf.Unit(new(0, 1, -slope));
         Vector3 On(float x, float z) => new Vector3(x, lip + (z + hz) * slope, z) + n * 0.003f;
         var z0 = -hz + 0.05f; var z1 = z0 + S.TactileDepth;
-        b.Add(Shapes.FlatQuad(On(-hx + 0.08f, z0), On(-hx + 0.08f, z1), On(hx - 0.08f, z1), On(hx - 0.08f, z0), n, Lettering.Print(S.Board(S.TactileYellow))), VertexFlag.NoShadow);
+        b.Add(PartShapes.FlatQuad(On(-hx + 0.08f, z0), On(-hx + 0.08f, z1), On(hx - 0.08f, z1), On(hx - 0.08f, z0), n, Lettering.Print(S.Board(S.TactileYellow))), VertexFlag.NoShadow);
         return b.Finish(Bounds(p));
     }
 

@@ -5,7 +5,6 @@
     <ProjectReference Include="../../parts/core/Campus.Gen.Parts.Core.csproj" />
     <ProjectReference Include="../../world/Campus.Gen.World.csproj" />
     <ProjectReference Include="../core/Campus.Gen.Interior.csproj" />
-    <ProjectReference Include="../../interior-props/Campus.Gen.InteriorProps.csproj" />
     <ProjectReference Include="../../parts/openings/Campus.Gen.Parts.Openings.csproj" />
     <ProjectReference Include="../../parts/circulation/Campus.Gen.Parts.Circulation.csproj" />
     <ProjectReference Include="../../parts/roof/Campus.Gen.Parts.Roof.csproj" />

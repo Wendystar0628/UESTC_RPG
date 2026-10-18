@@ -48,11 +48,11 @@ public sealed class EquipmentFencePart : IPartDef<RailingParams>
         if (lod <= LodLevel.L1)
         {
             var inset = Math.Min(RoofStyle.FenceBoardInset, half * 0.4f);
-            builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(-half + inset, half - inset, 0, p.Height - cap + 0.003f), path, board, closed));
+            builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-half + inset, half - inset, 0, p.Height - cap + 0.003f), path, board, closed));
         }
-        else builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(-half, half, 0, p.Height - cap + 0.003f), path, board, closed));
+        else builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-half, half, 0, p.Height - cap + 0.003f), path, board, closed));
         if (lod <= LodLevel.L2)
-            builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(-half - CapOverhang, half + CapOverhang, p.Height - cap, p.Height), path, light, closed));
+            builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-half - CapOverhang, half + CapOverhang, p.Height - cap, p.Height), path, light, closed));
         if (lod == LodLevel.L0)
         {
             var post = new Vector3(RoofStyle.FencePost, p.Height - cap + 0.003f, p.Depth + 0.02f);
@@ -158,8 +158,8 @@ public sealed class CanopyPart : IPartDef<RoofParams>
         // Edge band on three sides; the right of travel is outside, so the section sits inside the path.
         Vector2[] edge = [new(-hx, hz), new(-hx, -hz), new(hx, -hz), new(hx, hz)];
         var white = RoofStyle.Trim(RoofStyle.CasingWhite);
-        builder.Add(PartGeometryKernel.Sweep(Shapes.BevelRect(band, p.Height, near ? 0.015f : 0, -band * 0.5f, 0), edge, white), tilt);
-        var slabPiece = Shapes.Box(new(-hx + band - 0.004f, p.Height - rise - slab, -hz + band - 0.004f), new(hx - band + 0.004f, p.Height - rise, hz), 0, host, out var slabAt);
+        builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(band, p.Height, near ? 0.015f : 0, -band * 0.5f, 0), edge, white), tilt);
+        var slabPiece = PartShapes.Box(new(-hx + band - 0.004f, p.Height - rise - slab, -hz + band - 0.004f), new(hx - band + 0.004f, p.Height - rise, hz), 0, host, out var slabAt);
         builder.Add(slabPiece, slabAt.Then(tilt));
         if (p.Variation >= 1)
         {
@@ -223,18 +223,18 @@ public sealed class SkylightPart : IPartDef<RoofParams>
         var baseY = curbH - 0.003f;
         var builder = new PartBuilder();
         Vector2[] ring = [new(-hx, -a), new(hx, -a), new(hx, a), new(-hx, a)];
-        builder.Add(PartGeometryKernel.Sweep(Shapes.BevelRect(curb, curbH, near ? 0.015f : 0, 0, 0), ring, RoofStyle.Trim(p.Material), true));
+        builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(curb, curbH, near ? 0.015f : 0, 0, 0), ring, RoofStyle.Trim(p.Material), true));
         Vector2[] ridge = [new(-hx, 0), new(hx, 0)];
         builder.Add(PartGeometryKernel.Sweep(new([new(-a, 0), new(a, 0), new(0, rise)]), ridge, RoofStyle.Glazing(), false, baseY));
         if (lod <= LodLevel.L1)
         {
             var frame = RoofStyle.Metal(RoofStyle.Aluminium);
             Vector2[] bar = [new(-hx - 0.01f, 0), new(hx + 0.01f, 0)];
-            builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(-0.035f, 0.035f, rise - 0.02f, rise + 0.04f), bar, frame, false, baseY));
+            builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-0.035f, 0.035f, rise - 0.02f, rise + 0.04f), bar, frame, false, baseY));
             if (near)
             {
-                builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(a - 0.05f, a + 0.02f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
-                builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(-a - 0.02f, -a + 0.05f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
+                builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(a - 0.05f, a + 0.02f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
+                builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-a - 0.02f, -a + 0.05f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
                 var length = (float)Math.Sqrt((double)a * a + (double)rise * rise);
                 var angle = DetMath.Atan2(rise, a) * (180f / float.Pi);
                 var count = Math.Max(1, (int)Math.Round(2 * hx / RoofStyle.SkylightBarPitch));

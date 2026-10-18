@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Parts.Core;
 
 namespace Campus.Gen.Parts.Street;
 

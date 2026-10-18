@@ -416,11 +416,11 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private SlotInfo? Info(SlotId slot) => saves.Slots.FirstOrDefault(s => s.Slot == slot);
     private static bool Readable(SlotInfo? slot) => slot?.Health switch
     {
-        SlotHealth.Ok or SlotHealth.RecoveredOlderGen => slot.Meta is not null,
-        SlotHealth.Empty or SlotHealth.Corrupt or SlotHealth.NewerBuild or null => false,
+        SlotHealth.Ok => slot.Meta is not null,
+        SlotHealth.Empty or SlotHealth.Corrupt or null => false,
         _ => throw new InvalidOperationException("Unknown slot health."),
     };
-    private static bool Loaded(LoadStatus status) => status switch { LoadStatus.Loaded or LoadStatus.Recovered => true, LoadStatus.Empty or LoadStatus.Corrupt or LoadStatus.NewerBuild or LoadStatus.Failed => false, _ => throw new ArgumentOutOfRangeException(nameof(status)) };
+    private static bool Loaded(LoadStatus status) => status switch { LoadStatus.Loaded => true, LoadStatus.Empty or LoadStatus.Corrupt or LoadStatus.Failed => false, _ => throw new ArgumentOutOfRangeException(nameof(status)) };
     private static void RequireLoaded(LoadResult result) { if (!Loaded(result.Status)) throw new InvalidDataException(result.Error ?? "The requested world could not be restored."); }
     private static bool CanLeave(SaveStatus status) => status switch { SaveStatus.Saved or SaveStatus.Deferred or SaveStatus.Disabled => true, SaveStatus.Failed => false, _ => throw new ArgumentOutOfRangeException(nameof(status)) };
     private bool In(AppState expected) => State switch { AppState.Boot or AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => State == expected, _ => throw new InvalidOperationException("Unknown application state.") };

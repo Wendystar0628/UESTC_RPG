@@ -62,7 +62,7 @@ public partial class SettingsCard
         if (key.PhysicalKeycode == Godot.Key.Escape) { EndCapture(); return null; }
         if (_router is not null)
         {
-            // 一个物理键只能绑一个动作，冲突时拒绝；成功后由 WP-06 写 user://input.cfg
+            // 一个物理键只能绑一个动作，冲突时拒绝；成功后由 WP-06 写 settings.json 的 input 节
             if (!_router.TryRebind(action, (int)key.PhysicalKeycode, out var conflict))
                 return conflict is not null && Campus.Hud.I18n.Tr.Has("rebind.action." + conflict)
                     ? UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + conflict)))

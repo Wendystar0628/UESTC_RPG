@@ -135,23 +135,21 @@ public sealed class KeyLightTests
     [TestCase]
     public void ShadowSettingsMatchPresets()
     {
-        var fine = ShadowSettings.From(1, 1600f, true);
+        var fine = ShadowSettings.From(1, 1600f);
         True(fine is { AtlasSize: 4096, Splits: 4, MaxDistance: 1600f }, "fine preset");
         Near(0.03f, fine.Split1, 1e-6f, "split 1");
         Near(0.12f, fine.Split2, 1e-6f, "split 2");
         Near(0.40f, fine.Split3, 1e-6f, "split 3");
         True((fine.CasterMask & ShadowSettings.LayerBit(2)) == 0 && (fine.CasterMask & ShadowSettings.LayerBit(1)) != 0, "layers");
-        var smooth = ShadowSettings.From(0, 600f, false);
-        True(smooth is { AtlasSize: 2048, Splits: 2, MaxDistance: 600f, Split1: 0.15f }, "smooth preset");
-        True((smooth.CasterMask & ShadowSettings.SmallCasterLayer) == 0, "small casters off");
-        var custom = ShadowSettings.From(2, 600f, true);
+        var twoSplits = ShadowSettings.From(0, 600f);
+        True(twoSplits is { AtlasSize: 2048, Splits: 2, MaxDistance: 600f, Split1: 0.15f }, "two-split preset");
+        var custom = ShadowSettings.From(2, 600f);
         True(custom.Split1 < custom.Split2 && custom.Split2 < custom.Split3 && custom.Split3 <= 0.6f, "custom splits ordered");
-        var view = new QualityView(1, QualityPreset.Fine, DeviceTier.DgpuMid, false,
+        var view = new QualityView(1, QualityPreset.Fine,
             Enumerable.Range(0, Enum.GetValues<QualityKnob>().Length).Select(i => (QualityKnob)i switch
             {
                 QualityKnob.ShadowQuality => 2f,
                 QualityKnob.ShadowDistance => 1600f,
-                QualityKnob.SmallCasters => 1f,
                 _ => 0f,
             }).ToArray());
         True(ShadowSettings.From(view).AtlasSize == 8192, "ultra atlas from the quality view");

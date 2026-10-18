@@ -70,7 +70,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
-    public void BootKeepsVeilAndWaitsForMountDestinationAndWarm()
+    public void BootWaitsForMountDestinationAndWarm()
     {
         var f = new Fixture();
         f.Runtime.ResidentReady = false;
@@ -95,8 +95,7 @@ public sealed class MapServiceTests
         f.Until(() => travel.Done.IsCompleted);
         Require(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.A && f.Service.Rev == 1,
             "Boot did not arrive.");
-        Require(f.Veil.Covers == 0 && f.Veil.Reveals == 0 && f.Veil.Opacity == 1 &&
-            f.Veil.Reason == VeilReason.Boot && !f.Camera.InputLocked, "Boot altered the caller's presentation.");
+        Require(!f.Camera.InputLocked, "Boot leaked its input lease.");
     }
 
     [TestCase]
@@ -120,150 +119,24 @@ public sealed class MapServiceTests
         f.Runtime.WarmReady = true;
         f.Until(() => travel.Done.IsCompleted);
         Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Runtime.Unloads == 0 && f.Veil.Covers == 0 && f.Veil.Reveals == 0,
-            "Warming a same-map restore rebuilt the map or changed the caller's opaque presentation.");
+            f.Runtime.Unloads == 0, "Warming a same-map restore rebuilt the map.");
     }
 
     [TestCase]
-    public void SameMapNewGameDoesNotChangeTheCallersCinematicCover()
+    public void SameMapNewGameKeepsTheMapAndAddsNoWarm()
     {
         var f = new Fixture(); f.Boot();
         var context = f.Service.Context;
         var warmStarts = f.Runtime.WarmStarts;
-        f.Veil.SetExternalPresentation(1, VeilReason.Cinematic);
         f.Runtime.DestinationReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
         f.Until(() => travel.Stage == MapStage.Warm);
-        Require(!travel.Done.IsCompleted && f.Veil.Covers == 0 && f.Veil.Reveals == 0 &&
-            f.Veil.Opacity == 1 && f.Veil.Reason == VeilReason.Cinematic && f.Runtime.WarmStarts == warmStarts,
-            "Same-map NewGame claimed the outer cover or introduced another warm operation.");
+        Require(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts,
+            "Same-map NewGame introduced another warm operation.");
         f.Runtime.DestinationReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Veil.Covers == 0 && f.Veil.Reveals == 0 && f.Veil.Opacity == 1 && f.Veil.Reason == VeilReason.Cinematic,
-            "NewGame returned to save restoration after revealing the caller's cover.");
-    }
-
-    [TestCase]
-    public void CrossMapLoadSaveKeepsCallerCoverThroughLoadAndWarm()
-    {
-        var f = new Fixture(); f.Boot();
-        var before = f.Service.Context;
-        var warmStarts = f.Runtime.WarmStarts;
-        f.Veil.SetExternalPresentation(1, VeilReason.Cinematic);
-        var travel = f.Service.Travel(new(f.B, Pose: new(new(10, 20, 10), 0, -10), Cause: MapTravelCause.LoadSave));
-        f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.B &&
-            !ReferenceEquals(before, f.Service.Context) && f.Runtime.Unloads == 1 && f.Runtime.WarmStarts == warmStarts + 1 &&
-            f.Veil.Covers == 0 && f.Veil.Reveals == 0 && f.Veil.Opacity == 1 && f.Veil.Reason == VeilReason.Cinematic,
-            "Borrowed LoadSave skipped map lifecycle work or revealed the caller's presentation.");
-    }
-
-    [TestCase]
-    public void OrdinaryTravelCausesOwnTheirMapTravelCover()
-    {
-        foreach (var cause in new[] { MapTravelCause.Ui, MapTravelCause.Teleport, MapTravelCause.Portal, MapTravelCause.Test })
-        {
-            var f = new Fixture(); f.Boot();
-            f.Veil.SetExternalPresentation(0, VeilReason.Boot);
-            var travel = f.Service.Travel(new(f.B, Cause: cause));
-            f.Until(() => travel.Done.IsCompleted);
-            Require(travel.Done.Result == MapTravelResult.Arrived && f.Veil.Covers == 1 && f.Veil.Reveals == 1 &&
-                f.Veil.Opacity == 0 && f.Veil.Reason == VeilReason.MapTravel,
-                "Ordinary map travel did not own its complete cover/reveal lifecycle: " + cause);
-        }
-    }
-
-    [TestCase]
-    public void BorrowedTravelRejectsMissingCoverWithoutTakingIt()
-    {
-        foreach (var cause in new[] { MapTravelCause.Boot, MapTravelCause.NewGame, MapTravelCause.LoadSave })
-        {
-            var f = new Fixture();
-            f.Veil.SetExternalPresentation(0, VeilReason.Cinematic);
-            var travel = f.Service.Travel(new(f.A, Cause: cause));
-            Require(travel.Done.IsCompleted && travel.Done.Result == MapTravelResult.Rejected &&
-                f.Service.Transition is null && f.Loader.Loads == 0 && f.Data.Inputs.Count == 0 && !f.Camera.InputLocked &&
-                f.Veil.Covers == 0 && f.Veil.Reveals == 0 && f.Veil.Reason == VeilReason.Cinematic,
-                "Uncovered borrowed travel started work or seized the presentation: " + cause);
-        }
-    }
-
-    [TestCase]
-    public void MixedPresentationRequestsAreRejectedBeforeCoalescingAndPreserveTheQueue()
-    {
-        foreach (var owned in new[] { false, true })
-        {
-            var f = new Fixture(); f.Boot();
-            f.Veil.SetExternalPresentation(owned ? 0 : 1, VeilReason.Cinematic);
-            f.Runtime.DestinationReady = false;
-            var activeCause = owned ? MapTravelCause.Ui : MapTravelCause.LoadSave;
-            var queuedCause = owned ? MapTravelCause.Teleport : MapTravelCause.NewGame;
-            var incompatibleCause = owned ? MapTravelCause.LoadSave : MapTravelCause.Ui;
-            var active = f.Service.Travel(new(f.B, Cause: activeCause));
-            f.Service.Step(); // The owned operation is fully covered, so rejection is about ownership, not opacity.
-            var queued = f.Service.Travel(new(f.C, Cause: queuedCause));
-            var covers = f.Veil.Covers;
-            var reason = f.Veil.Reason;
-            foreach (var target in new[] { f.B, f.C, f.A })
-            {
-                var rejected = f.Service.Travel(new(target, Cause: incompatibleCause));
-                Require(rejected.Done.IsCompleted && rejected.Done.Result == MapTravelResult.Rejected &&
-                    !ReferenceEquals(rejected, active) && !ReferenceEquals(rejected, queued),
-                    "Mixed ownership request was coalesced with an operation that cannot own its presentation.");
-            }
-            Require(!active.Done.IsCompleted && !queued.Done.IsCompleted &&
-                ReferenceEquals(queued, f.Service.Travel(new(f.C, Cause: queuedCause))) &&
-                f.Veil.Covers == covers && f.Veil.Reveals == 0 && f.Veil.Reason == reason,
-                "Rejected mixed requests mutated the existing active task, valid queue or cover.");
-            f.Runtime.DestinationReady = true;
-            f.Until(() => queued.Done.IsCompleted);
-            Require(active.Done.Result == MapTravelResult.Arrived && queued.Done.Result == MapTravelResult.Arrived &&
-                f.Service.Current == f.C && f.Veil.Covers == (owned ? 1 : 0) && f.Veil.Reveals == (owned ? 1 : 0) &&
-                f.Veil.Opacity == (owned ? 0 : 1) && f.Veil.Reason == reason,
-                "Same-owner queued travel revealed an outer cover or lost its own reveal.");
-        }
-    }
-
-    [TestCase]
-    public void BorrowedLoadFailureRollsBackWithoutRevealingTheOuterCover()
-    {
-        var f = new Fixture(); f.Boot();
-        var original = f.Service.Context!;
-        f.Data.SetVersion(f.A, 2);
-        f.Loader.Failing.Add(f.B);
-        f.Veil.SetExternalPresentation(1, VeilReason.Cinematic);
-        var travel = f.Service.Travel(new(f.B, Cause: MapTravelCause.LoadSave));
-        f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Service.Current == f.A &&
-            !ReferenceEquals(original.World, f.Service.Context!.World) &&
-            ReferenceEquals(original.SourceInputs, f.Service.Context.SourceInputs) && f.Data.ReadCount(f.A) == 1 &&
-            f.Veil.Covers == 0 && f.Veil.Reveals == 0 && f.Veil.Opacity == 1 && f.Veil.Reason == VeilReason.Cinematic,
-            "Borrowed rollback changed the caller's cover or lost the prior frozen source version.");
-    }
-
-    [TestCase]
-    public void LosingBorrowedCoverFailsWithoutPublishingALateLoad()
-    {
-        var f = new Fixture(); f.Boot();
-        f.Veil.SetExternalPresentation(1, VeilReason.Cinematic);
-        f.Loader.DelayNext(f.B);
-        var travel = f.Service.Travel(new(f.B, Cause: MapTravelCause.LoadSave));
-        try
-        {
-            f.Until(() => f.Loader.DelayedLoadStarted);
-            f.Veil.SetExternalPresentation(0, VeilReason.Cinematic); // Caller violated its hold-through-restore protocol.
-            f.Service.Step();
-            Require(travel.Done.IsCompleted && travel.Done.Result == MapTravelResult.Failed &&
-                f.Service.Context is null && f.Service.Rev == 1 && f.Veil.Covers == 0 && f.Veil.Reveals == 0,
-                "Lost external cover was silently reacquired or an unready map was exposed.");
-            f.Loader.ReleaseDelayed();
-            f.Until(() => f.Loader.CompletedLoads == 2);
-            Require(f.Service.Context is null && f.Service.Rev == 1 && f.Service.Transition is null &&
-                f.Veil.Opacity == 0 && f.Veil.Reason == VeilReason.Cinematic,
-                "An abandoned worker published after its presentation owner had ended the operation.");
-        }
-        finally { f.Loader.ReleaseDelayed(); }
+        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) && f.Runtime.Unloads == 0,
+            "Same-map NewGame rebuilt the map.");
     }
 
     [TestCase]
@@ -302,24 +175,8 @@ public sealed class MapServiceTests
         f.Runtime.FailMount("Fixture asynchronous preparation failure.");
         f.Until(() => travel.Done.IsCompleted);
         Require(travel.Done.Result == MapTravelResult.Failed && f.Runtime.PrefetchCalls == 0 &&
-            f.Runtime.WarmStarts == 0 && f.Service.Rev == 0 && f.Veil.Reveals == 0,
+            f.Runtime.WarmStarts == 0 && f.Service.Rev == 0,
             "Failed asynchronous preparation was mistaken for readiness.");
-    }
-
-    [TestCase]
-    public void UnloadClearsContextBeforeLoadingAndSameMapTestReallyReloads()
-    {
-        var f = new Fixture(); f.Boot();
-        var old = f.Service.Context;
-        f.Runtime.IsUnloaded = false;
-        var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Test));
-        f.Until(() => travel.Stage == MapStage.Unload);
-        f.Service.Step();
-        Require(f.Service.Context is null && f.Loader.Loads == 1, "Load started before the old map was released.");
-        f.Runtime.IsUnloaded = true;
-        f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && f.Loader.Loads == 2 &&
-            !ReferenceEquals(old!.World, f.Service.Context!.World), "Same-map test reused the old world model.");
     }
 
     [TestCase]
@@ -330,7 +187,7 @@ public sealed class MapServiceTests
         f.Data.SetVersion(f.A, 2);
         var savedPose = new Pose(new Vector3(23, 17, -9), 70, -8, 60);
         var titlePose = new Pose(new Vector3(-10, 90, 55), 4, -10, 38);
-        f.Service.Restore(new(f.A, [new(f.A, savedPose, ViewMode.Fly, 0, 18)]),
+        f.Service.Restore(new(f.A, [new(f.A, savedPose, ViewMode.Fly)]),
             new() { Map = f.A, FromVersion = 1, Missing = false });
         f.Camera.SetPose(titlePose);
         var legalizeCalls = f.Poses.LegalizeCalls;
@@ -371,7 +228,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         Require(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original && f.Veil.Reveals == 0,
+            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original,
             "Non-finite legalization output was applied or replaced by an invented fallback position.");
     }
 
@@ -382,7 +239,7 @@ public sealed class MapServiceTests
         var context = f.Service.Context;
         var saved = new Pose(new(80, 40, 10), 12, -6, 60);
         var legal = saved with { Position = new(20, 40, 10) };
-        f.Service.Restore(new(f.A, [new(f.A, saved, ViewMode.Fly, 0, 18)]),
+        f.Service.Restore(new(f.A, [new(f.A, saved, ViewMode.Fly)]),
             new() { Map = f.A, FromVersion = 1, Missing = false });
         f.Poses.Project = _ => legal;
         f.Poses.Allowed = pose => pose.Position.X <= 20;
@@ -412,52 +269,6 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
-    public void LastQueuedRequestWinsAndAllReturnedTasksFinish()
-    {
-        var f = new Fixture(); f.Boot();
-        f.Runtime.DestinationReady = false;
-        var first = f.Service.Travel(new(f.A, Cause: MapTravelCause.Test));
-        var replaced = f.Service.Travel(new(f.B, Cause: MapTravelCause.Ui));
-        var last = f.Service.Travel(new(f.C, Cause: MapTravelCause.Ui));
-        Require(replaced.Done.IsCompleted && replaced.Done.Result == MapTravelResult.Rejected, "Superseded request stayed pending.");
-        Require(ReferenceEquals(last, f.Service.Travel(new(f.C, Cause: MapTravelCause.Ui))), "Same target was not coalesced.");
-        f.Runtime.DestinationReady = true;
-        f.Until(() => last.Done.IsCompleted);
-        Require(first.Done.Result == MapTravelResult.Arrived && last.Done.Result == MapTravelResult.Arrived &&
-            f.Service.Current == f.C && f.Runtime.Mounted.SequenceEqual(new[] { f.A, f.A, f.C }), "Queued travel ordering is wrong.");
-        Require(f.Veil.Reveals == 1 && !f.Camera.InputLocked, "A chained trip exposed an intermediate map or leaked input.");
-        Require(f.Data.ReadCount(f.B) == 0, "Superseded queued travel read an input version despite never starting.");
-    }
-
-    [TestCase]
-    public void DelayedLoadPublishesItsOwnSnapshotBeforeANewerQueuedLoad()
-    {
-        var f = new Fixture();
-        f.Loader.DelayNext(f.A);
-        var first = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
-        try
-        {
-            f.Until(() => f.Loader.DelayedLoadStarted);
-            var firstInput = f.Data.Inputs.Single();
-            f.Data.SetVersion(f.A, 2); // Simulate source files changing while the old worker is parsing.
-            f.Data.SetVersion(f.B, 9);
-            var second = f.Service.Travel(new(f.B, Cause: MapTravelCause.LoadSave));
-            f.Loader.ReleaseDelayed();
-            f.Until(() => second.Done.IsCompleted);
-            var firstContext = f.Runtime.Contexts[0];
-            var secondContext = f.Service.Context!;
-            Require(first.Done.Result == MapTravelResult.Arrived && second.Done.Result == MapTravelResult.Arrived &&
-                ReferenceEquals(firstContext.SourceInputs, firstInput.SourceInputs) && SnapshotVersion(firstContext) == 1 &&
-                f.Loader.WorldVersion(firstContext.World) == 1 && SnapshotVersion(secondContext) == 9 &&
-                f.Loader.WorldVersion(secondContext.World) == 9 && !ReferenceEquals(firstContext.SourceInputs, secondContext.SourceInputs),
-                "A delayed load published a newer operation's bytes or changed an already published context.");
-            Require(f.Data.ReadCount(f.A) == 1 && f.Data.ReadCount(f.B) == 1,
-                "Completing a load reread disk instead of publishing its captured inputs.");
-        }
-        finally { f.Loader.ReleaseDelayed(); }
-    }
-
-    [TestCase]
     public void LeavingTheTreeCompletesAcceptedTravelAndPreventsLatePublication()
     {
         var f = new Fixture();
@@ -468,10 +279,8 @@ public sealed class MapServiceTests
         try
         {
             f.Until(() => f.Loader.DelayedLoadStarted);
-            var queued = f.Service.Travel(new(f.B, Cause: MapTravelCause.LoadSave));
             f.Service.Dispose(); f.Service.Dispose();
-            Require(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed &&
-                queued.Done.IsCompleted && queued.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked,
+            Require(first.Done.IsCompleted && first.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked,
                 "Map shutdown left an accepted request or its input lease pending.");
             f.Loader.ReleaseDelayed();
             f.Until(() => f.Loader.CompletedLoads == 1);
@@ -483,71 +292,13 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
-    public void FailedLoadRollsBackWithOldSourceVersionWithoutRereadingIt()
-    {
-        var f = new Fixture(); f.Boot();
-        var original = f.Service.Context!;
-        f.Data.SetVersion(f.A, 2);
-        f.Data.SetVersion(f.B, 7);
-        f.Loader.Failing.Add(f.B);
-        f.Loader.DelayNext(f.B);
-        var failed = f.Service.Travel(new(f.B));
-        try
-        {
-            f.Until(() => f.Loader.DelayedLoadStarted);
-            f.Data.SetVersion(f.B, 8);
-            f.Loader.ReleaseDelayed();
-            f.Until(() => failed.Done.IsCompleted);
-            var restored = f.Service.Context!;
-            Require(failed.Done.Result == MapTravelResult.Failed && f.Service.Current == f.A &&
-                !ReferenceEquals(original, restored) && !ReferenceEquals(original.World, restored.World) &&
-                ReferenceEquals(original.SourceInputs, restored.SourceInputs) && SnapshotVersion(restored) == 1 &&
-                f.Loader.WorldVersion(restored.World) == 1 && f.Data.ReadCount(f.A) == 1,
-                "Rollback reloaded newer disk inputs or retained the unloaded world instead of its source version.");
-
-            f.Loader.Failing.Remove(f.B);
-            var retry = f.Service.Travel(new(f.B));
-            f.Until(() => retry.Done.IsCompleted);
-            Require(retry.Done.Result == MapTravelResult.Arrived && SnapshotVersion(f.Service.Context!) == 8 &&
-                f.Loader.WorldVersion(f.Service.Context!.World) == 8 && f.Data.ReadCount(f.B) == 2 && SnapshotVersion(original) == 1,
-                "Failed operation inputs leaked into the next load or mutated the old context.");
-        }
-        finally { f.Loader.ReleaseDelayed(); }
-    }
-
-    [TestCase]
-    public void FailedLoadReturnsToPreviousMapAndReportsFailed()
-    {
-        var f = new Fixture(); f.Boot();
-        f.Loader.Failing.Add(f.B);
-        var travel = f.Service.Travel(new(f.B));
-        f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Service.Current == f.A &&
-            f.Service.Context!.Descriptor.Id == f.A && f.Service.LastError is not null,
-            "A failed destination did not restore the previous map.");
-        Require(!f.Camera.InputLocked && f.Veil.Reveals == 1, "Recovered map did not finish its veil/input lifecycle.");
-    }
-
-    [TestCase]
-    public void RequestQueuedDuringRevealStillRuns()
-    {
-        var f = new Fixture(); f.Boot();
-        var first = f.Service.Travel(new(f.A, Cause: MapTravelCause.Test));
-        f.Until(() => first.Stage == MapStage.VeilOut);
-        var next = f.Service.Travel(new(f.B));
-        f.Until(() => next.Done.IsCompleted);
-        Require(first.Done.Result == MapTravelResult.Arrived && next.Done.Result == MapTravelResult.Arrived &&
-            f.Service.Current == f.B && !f.Camera.InputLocked, "Late queued request was stranded after reveal.");
-    }
-
-    [TestCase]
-    public void UnrecoverableBootFinishesWithoutRevealing()
+    public void FailedBootFinishesWithoutRetry()
     {
         var f = new Fixture(); f.Loader.Failing.Add(f.A);
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Failed && f.Veil.Reveals == 0 && f.Loader.Loads == 1,
-            "Boot retried indefinitely or revealed a failed world.");
+        Require(travel.Done.Result == MapTravelResult.Failed && f.Loader.Loads == 1,
+            "Boot retried after a failed load.");
     }
 
     [TestCase]
@@ -570,9 +321,9 @@ public sealed class MapServiceTests
     public void RestoreDropsDeletedMapVisitsAndPreservesKnownVisitsInMapOrder()
     {
         var f = new Fixture();
-        var current = new MapVisit(f.A, new(new(12, 20, -3), 45, -10), ViewMode.Fly, 2, 18);
-        var known = new MapVisit(f.C, new(new(-9, 30, 4), 80, -15), ViewMode.Walk, 3, 17);
-        var removed = new MapVisit(new("deleted-map"), new(new(2, 20, 8), 0, 0), ViewMode.Fly, 1, 16);
+        var current = new MapVisit(f.A, new(new(12, 20, -3), 45, -10), ViewMode.Fly);
+        var known = new MapVisit(f.C, new(new(-9, 30, 4), 80, -15), ViewMode.Walk);
+        var removed = new MapVisit(new("deleted-map"), new(new(2, 20, 8), 0, 0), ViewMode.Fly);
         var restore = new RestoreContext { Map = f.A, FromVersion = 1, Missing = false };
         f.Service.Restore(new(f.A, [known, removed, current]), restore);
         Require(f.Service.Visits.SequenceEqual(new[] { current, known }),
@@ -616,7 +367,6 @@ public sealed class MapServiceTests
         public MapService Service { get; }
         public TestCameraRig Camera { get; }
         public TestRuntime Runtime { get; } = new();
-        public TestVeil Veil { get; } = new();
         public TestLoader Loader { get; }
         public TestData Data { get; }
         public TestPoseValidator Poses { get; }
@@ -638,11 +388,10 @@ public sealed class MapServiceTests
             };
             Catalog = new(new(1, A, entries.Select(e => new MapIndexEntry(e.Descriptor.Id, e.DataRoot)).ToArray()), entries);
             Data = new(Catalog); Loader = new(Catalog);
-            var weather = new TestWeatherProcess();
-            var world = new TestWorldState(weather, new TestRuleset());
+            var world = new TestWorldState(new TestWeatherProcess(), new TestRuleset());
             Camera = new(world);
             Poses = new(Runtime);
-            Service = new(Camera, world, world, weather, Veil, Runtime, Loader, Poses, Data);
+            Service = new(Camera, world, Runtime, Loader, Poses, Data);
             if (initialize)
             {
                 var initialized = Service.Initialize();
@@ -654,7 +403,7 @@ public sealed class MapServiceTests
         public void Until(Func<bool> ready)
         {
             if (!SpinWait.SpinUntil(() => { Service.Step(); return ready(); }, 5000))
-                throw new InvalidOperationException("Map transition did not finish; stage=" + Service.Transition?.Stage + "; error=" + Service.LastError);
+                throw new InvalidOperationException("Map transition did not finish; stage=" + Service.Transition?.Stage);
         }
         private static MapCatalogEntry MakeMap(MapId id)
         {
@@ -798,22 +547,6 @@ public sealed class MapServiceTests
             return Project(pose);
         }
         public bool IsLegal(Pose pose, bool outsideBuffer) => Allowed(pose);
-    }
-    private sealed class TestVeil : IVeilService
-    {
-        public int Covers { get; private set; }
-        public int Reveals { get; private set; }
-        public float Opacity { get; private set; } = 1;
-        public VeilReason Reason { get; private set; } = VeilReason.Boot;
-        public void SetExternalPresentation(float opacity, VeilReason reason) { Opacity = opacity; Reason = reason; }
-        public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog)
-        { Reason = reason; Opacity = 1; Covers++; return Task.CompletedTask; }
-        public Task Reveal(VeilReason reason, float seconds)
-        { Reason = reason; Opacity = 0; Reveals++; return Task.CompletedTask; }
-        // Explicit test-only observation; this fixture does not simulate waiting-indicator timing.
-        public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness) => new Observation();
-        private sealed class Observation : IDisposable { public void Dispose() { } }
-        public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
     }
     private sealed class TestRuleset : IRuleset
     {

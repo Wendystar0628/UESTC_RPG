@@ -79,19 +79,18 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
-    public async Task RequestsMergeRespectThirtySecondsAndTitleNeverWrites()
+    public async Task OnlyIntervalRequestsSaveAndTitleNeverWrites()
     {
         using var fixture = new Fixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing; await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.Save.Request(SaveReason.Settled); fixture.Save.Request(SaveReason.FocusLost);
         await fixture.Frames(200);
-        Check(fixture.Save.Slots[0].Meta?.Gen == 1, "Autosave ignored thirty-second rate limit.");
-        await fixture.Frames(200);
+        Check(fixture.Save.Slots[0].Meta?.Gen == 1, "An autosave was written without a request.");
+        fixture.Save.Request(SaveReason.Interval);
         for (var i = 0; i < 500 && fixture.Save.Slots[0].Meta?.Gen != 2; i++) await fixture.Frames(1);
-        Check(fixture.Save.Slots[0].Meta is { Gen: 2, Reason: SaveReason.FocusLost }, "Requests did not merge using latest reason.");
+        Check(fixture.Save.Slots[0].Meta is { Gen: 2, Reason: SaveReason.Interval }, "The interval request did not save.");
         fixture.Flow = AppState.Title;
-        fixture.Save.Request(SaveReason.Settled);
+        fixture.Save.Request(SaveReason.Interval);
         await fixture.Frames(400);
         Check(fixture.Save.Slots[0].Meta?.Gen == 2, "Title saved its camera state.");
     }
@@ -112,18 +111,14 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
-    public async Task StaleWeatherSnapshotAndActiveMapTransitionCannotWriteANewGeneration()
+    public async Task ActiveMapTransitionCannotWriteANewGeneration()
     {
         using var fixture = new Fixture();
         await fixture.Start(); await fixture.Pump(fixture.Save.NewGame(new("s1"), 1));
         fixture.Flow = AppState.Playing;
         await fixture.Pump(fixture.Save.SaveNow(SaveReason.NewGame));
-        fixture.World.TargetHours = 91.25; fixture.Weather.UseStaleMoment = true;
-        var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
-        Check(result.Status == SaveStatus.Failed && fixture.Save.Slots[0].Meta?.Gen == 1, "Mismatched core moments were written.");
-        fixture.Weather.UseStaleMoment = false;
         fixture.Maps.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
+        var result = await fixture.Pump(fixture.Save.SaveNow(SaveReason.Test));
         Check(result.Status == SaveStatus.Deferred && fixture.Save.Slots[0].Meta?.Gen == 1, "Captured across map generations.");
         fixture.Maps.Pending.SetResult(MapTravelResult.Arrived);
     }
@@ -196,7 +191,7 @@ public sealed partial class SaveLifecycleTests
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400);
             var sections = new SaveSections([
                 new(new("world") { Owner = "WP-50", Phase = RestorePhase.World, Order = 10 }, World),
-                new(new("weather") { Owner = "WP-50", Scope = SaveScope.PerMap, Phase = RestorePhase.World, Order = 21 }, Weather),
+                new(new("weather") { Owner = "WP-50", Phase = RestorePhase.World, Order = 21 }, Weather),
                 new(new("view") { Owner = "WP-50", Phase = RestorePhase.Pose, Order = 60 }, Camera)]);
             await Pump(Save.Initialize(new(directory, "test", true, null, null, 1), bindings, sections));
         }
@@ -282,20 +277,16 @@ public sealed partial class SaveLifecycleTests
     {
         public double LastTickHours { get; set; } = 17.5;
         public WorldSaveMoment? CapturedMoment { get; private set; }
-        public bool UseStaleMoment { get; set; }
         public bool FailRestore { get; set; }
         public JsonTypeInfo<LifecycleWeather> TypeInfo => LifecycleJsonContext.Strict.LifecycleWeather;
         public LifecycleWeather Capture(in CaptureContext context)
         {
             CapturedMoment = context.Moment ?? throw new InvalidOperationException("Missing shared capture moment.");
-            var moment = CapturedMoment.Value;
-            return State(context.Map, UseStaleMoment ? LastTickHours : moment.WorldHours, moment.ClockOffset, moment.Season);
+            return new(new(WeatherMode.Auto, WeatherKind.Clear, 0), CapturedMoment.Value.WorldHours);
         }
         public void Restore(LifecycleWeather dto, RestoreContext context)
-        { if (FailRestore) throw new InvalidDataException("Injected core semantic restore failure."); LastTickHours = dto.LeftAtHours; }
-        public LifecycleWeather CreateDefault(NewGameContext context) => State(context.Map, context.Start.Clock, 0, context.Start.Season);
-        private static LifecycleWeather State(MapId map, double hours, double offset, Season season) => new(map,
-            new(WeatherMode.Auto, WeatherKind.Clear, 0), [new(WeatherKind.Clear, 2880) { Intensity = 0 }], hours - 24, hours, offset, season);
+        { if (FailRestore) throw new InvalidDataException("Injected core semantic restore failure."); LastTickHours = dto.AtHours; }
+        public LifecycleWeather CreateDefault(NewGameContext context) => new(new(WeatherMode.Auto, WeatherKind.Clear, 0), context.Start.Clock);
     }
     private sealed class FakeMaps(List<string> log) : IMapService
     {
@@ -305,7 +296,7 @@ public sealed partial class SaveLifecycleTests
         public bool HasTravelled { get; private set; }
         public long Rev => 1; public MapId Default => Id; public MapId Current => Id; public IMapContext? Context => null;
         public IMapTransition? Transition => Pending is { Task.IsCompleted: false } ? new CompletedMap(new(Id), Pending.Task) : null;
-        public IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly, 0, 17.5)];
+        public IReadOnlyList<MapVisit> Visits => [new(Id, default, ViewMode.Fly)];
         public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
         public IReadOnlyList<MapDescriptor> Maps { get; } = [new(Id, new("测试", "Test"), MapKind.Outdoor, 1, 1,
             new(0, 0, 32648, new(-100), new(100)), Vector2.Zero, new(new(-100), new(100)), new(new(-100), new(100)),
@@ -344,8 +335,7 @@ public sealed partial class SaveLifecycleTests
 
 public sealed record LifecycleWorld(double WorldHours, double ClockOffset, Season SeasonTarget, int FlowRate = 1);
 public sealed record LifecycleView(Pose Pose, ViewMode Mode, NavSpace? Space);
-public sealed record LifecycleWeather(MapId Map, WeatherSel Selection, IReadOnlyList<WeatherQueueItem> Queue,
-    double QueueFromHours, double LeftAtHours, double ClockOffset, Season Season);
+public sealed record LifecycleWeather(WeatherSel Selection, double AtHours);
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(LifecycleWorld))]
 [JsonSerializable(typeof(LifecycleView))]

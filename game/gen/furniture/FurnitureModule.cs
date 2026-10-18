@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
+using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using S = Campus.Gen.Furniture.FurnitureStyle;
 

@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Quality.Adaptive;
+using Campus.Kernel.Settings;
 using Godot;
 
 namespace Campus.Kernel.Quality.Settings;
@@ -16,8 +16,6 @@ public interface IQualityRuntime
     float RefreshRate { get; }
     Vector2I OutputSize { get; }
     Vector2I ScreenSize { get; }
-    GraphicsDevice ReadDevice();
-    Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken);
     Task Cover(CancellationToken cancellationToken);
     Task Reveal(CancellationToken cancellationToken);
     Task WaitForDestination(CancellationToken cancellationToken);
@@ -43,32 +41,22 @@ public sealed class QualityService : IQualityService, IBootParticipant
     private readonly QualityState _state;
     private readonly IGraphicsSettingsStore _store;
     private Binding? _binding;
-    private GraphicsDevice _device = new("Unknown", "Unknown", "Unknown", 0, 0, null, false);
-    private string _deviceKey = "";
-    private QualityProfile _durableProfile = QualityCatalog.Profile(QualityPreset.Balanced);
-    private DeviceTier _durableTier = DeviceTier.MinSpec;
-    private string _durableDeviceKey = "";
-    private readonly Dictionary<QualityKnob, float> _pendingDisplay = [];
-    private bool _userSelected;
+    private QualityProfile _durableProfile = QualityCatalog.Profile(QualityPreset.Fine);
     private bool _initialized;
     private bool _initializing;
     private Request? _pending;
     private Task? _active;
     private Request? _activeRequest;
     private double _debounce;
-    private double _confirmSeconds;
-    private QualityProfile? _displayBefore;
     private Task _lastSave = Task.CompletedTask;
 
     public QualityService(QualityCatalog? catalog = null, IGraphicsSettingsStore? store = null)
     {
         _catalog = catalog ?? new(Godot.FileAccess.GetFileAsString("res://data/quality-presets.json"));
         _state = new(_catalog);
-        _store = store ?? new GraphicsSettingsStore(OS.GetUserDataDir(), _catalog);
+        _store = store ?? new GraphicsSettingsStore(SettingsStore.Shared, _catalog);
     }
 
-    public DeviceTier Tier => _state.Tier;
-    public QualityPreset Recommended => DeviceProbe.Recommend(Tier);
     public QualityProfile Requested => _state.Requested;
     public QualityView Effective => _state.Effective;
     public IReadOnlyList<KnobSpec> Knobs => _catalog.Knobs;
@@ -97,9 +85,6 @@ public sealed class QualityService : IQualityService, IBootParticipant
         _activeRequest = null;
         _initialized = false;
         _initializing = false;
-        _displayBefore = null;
-        _pendingDisplay.Clear();
-        _confirmSeconds = 0;
         _lastSave = Task.CompletedTask;
         binding.Lifetime.Cancel();
         binding.Lifetime.Dispose();
@@ -120,7 +105,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
     {
         if (_initialized) return;
         if (_initializing) throw new InvalidOperationException("Quality initialization is already running.");
-        var binding = _binding ?? throw new InvalidOperationException("Quality runtime must be mounted before boot detection.");
+        var binding = _binding ?? throw new InvalidOperationException("Quality runtime must be mounted before boot.");
         var runtime = binding.Runtime;
         var cancellationToken = binding.Token;
         _initializing = true;
@@ -132,50 +117,15 @@ public sealed class QualityService : IQualityService, IBootParticipant
             _catalog.OutputWidth = Math.Max(1, size.X);
             _catalog.OutputHeight = Math.Max(1, size.Y);
             _state.RefreshRate = runtime.RefreshRate;
-            _catalog.RefreshRate = _state.RefreshRate;
-            var stored = CaptureMode ? null : _store.Read();
-            _device = runtime.ReadDevice();
-            var outputWidth = _catalog.OutputWidth;
-            var outputHeight = _catalog.OutputHeight;
-            if (stored is not null && !CaptureMode)
-            {
-                var savedValues = _catalog.Resolve(stored.Profile, stored.Profile.Preset);
-                if (savedValues[(int)QualityKnob.DisplayMode] == 0)
-                {
-                    var savedSize = QualityCatalog.WindowSizes[(int)savedValues[(int)QualityKnob.WindowSize]];
-                    outputWidth = savedSize.Width;
-                    outputHeight = savedSize.Height;
-                }
-            }
-            _deviceKey = _device.CacheKey(outputWidth, outputHeight);
-            var forcedTier = context.ExplicitArguments.Contains("tier");
-            var tier = forcedTier ? context.Arguments["tier"] : null;
-            var detectedTier = forcedTier ? tier switch
-            {
-                "min-spec" => DeviceTier.MinSpec,
-                "dgpu-mid" => DeviceTier.DgpuMid,
-                "dgpu-high" => DeviceTier.DgpuHigh,
-                _ => throw new ArgumentException($"Unknown device tier: {tier}"),
-            } : stored is not null && stored.DeviceKey == _deviceKey ? stored.Tier : DeviceProbe.Classify(_device) ?? await runtime.Sample(_device, cancellationToken).WaitAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            _state.Tier = detectedTier;
-            _userSelected = stored?.UserSelected == true;
-            var profile = !forcedTier && stored is not null && (stored.UserSelected || stored.DeviceKey == _deviceKey)
-                ? stored.Profile : QualityCatalog.Profile(Recommended, !CaptureMode);
-            _durableProfile = QualityCatalog.Freeze(forcedTier
-                ? stored?.Profile ?? QualityCatalog.Profile(QualityPreset.Balanced)
-                : profile);
-            _durableTier = forcedTier ? stored?.Tier ?? DeviceTier.MinSpec : Tier;
-            // A forced tier with no genuine cache must be detected again on the next ordinary launch.
-            _durableDeviceKey = forcedTier ? stored?.DeviceKey ?? "" : _deviceKey;
+            // settings.json > default (Fine); captures never read user://. The command line is applied after this.
+            var profile = (CaptureMode ? null : _store.Read()) ?? QualityCatalog.Profile(QualityPreset.Fine);
+            _durableProfile = QualityCatalog.Freeze(profile);
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             Publish(binding, _state.Commit(profile, ApplyOrigin.Startup, true));
             cancellationToken.ThrowIfCancellationRequested();
             _initialized = true;
-            runtime.ReportInfo($"[WP-32] device={_device.Name}; tier={Tier}; recommended={Recommended}; UMA={_device.Uma}; budget={_device.BudgetBytes}");
-            // A command-line override must never be cached as the hardware recommendation.
-            if (!CaptureMode && !forcedTier && (stored is null || stored.DeviceKey != _deviceKey)) QueueSave();
+            runtime.ReportInfo($"[WP-32] preset={Requested.Preset}; overrides={Requested.Overrides.Count}");
         }
         finally { if (ReferenceEquals(_binding, binding)) _initializing = false; }
     }
@@ -183,7 +133,6 @@ public sealed class QualityService : IQualityService, IBootParticipant
     public Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin)
     {
         if (!Enum.IsDefined(origin)) throw new ArgumentOutOfRangeException(nameof(origin));
-        if (origin == ApplyOrigin.Adaptive) throw new ArgumentException("Adaptive is a change origin, not a request.", nameof(origin));
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) return Task.FromResult(Result(ApplyStatus.Rejected, plan.Rejected));
         var binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
@@ -199,24 +148,6 @@ public sealed class QualityService : IQualityService, IBootParticipant
         return completion?.Task ?? Task.FromResult(Result(ApplyStatus.Deferred));
     }
 
-    public void ConfirmDisplay()
-    {
-        if (_binding is null || _displayBefore is null) return;
-        _displayBefore = null;
-        _confirmSeconds = 0;
-        if (_pendingDisplay.Count != 0)
-        {
-            var before = _durableProfile;
-            _durableProfile = MergeDurable(_durableProfile, _pendingDisplay);
-            _pendingDisplay.Clear();
-            if (!SameProfile(before, _durableProfile))
-            {
-                _userSelected = true;
-                QueueSave();
-            }
-        }
-    }
-
     public void Tick(double delta)
     {
         if (_binding is not { } binding) return;
@@ -225,19 +156,6 @@ public sealed class QualityService : IQualityService, IBootParticipant
             if (_active.IsFaulted) binding.Runtime.ReportError($"[WP-32] Quality apply failed: {_active.Exception!.GetBaseException().Message}");
             _active = null;
             _activeRequest = null;
-        }
-        if (_displayBefore is not null)
-        {
-            _confirmSeconds -= Math.Max(0, delta);
-            if (_confirmSeconds <= 0)
-            {
-                var restore = _state.RestoreDisplay(_displayBefore);
-                _displayBefore = null;
-                _pendingDisplay.Clear();
-                _pending?.Completion?.TrySetResult(Result(ApplyStatus.Deferred));
-                _pending = new(restore, ApplyOrigin.Revert, null);
-                _debounce = 0;
-            }
         }
         if (_pending is null || _active is not null || _initializing || binding.Runtime.Transitioning) return;
         _debounce -= Math.Max(0, delta);
@@ -262,11 +180,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
         var runtime = binding.Runtime;
         var cancellationToken = binding.Token;
         var snapshot = _state.Capture();
-        var previousDisplay = _displayBefore;
-        var previousCountdown = _confirmSeconds;
-        var previousPendingDisplay = _pendingDisplay.ToArray();
         var previousDurable = _durableProfile;
-        var previousUserSelected = _userSelected;
         var applied = false;
         var coverRequested = false;
         var persistenceAttempted = false;
@@ -295,12 +209,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
                 await runtime.Reveal(cancellationToken).WaitAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            if (plan.NeedsConfirm && request.Origin == ApplyOrigin.User)
-            {
-                _displayBefore ??= snapshot.Profile;
-                _confirmSeconds = 15;
-            }
-            // No failed dispatch/readiness/reveal operation is ever written to either settings file.
+            // No failed dispatch/readiness/reveal operation is ever written to settings.json.
             if (request.Origin == ApplyOrigin.User && MergeUserIntoDurable(snapshot.Profile, request.Profile))
             {
                 persistenceAttempted = !CaptureMode;
@@ -319,15 +228,10 @@ public sealed class QualityService : IQualityService, IBootParticipant
         catch (Exception error)
         {
             var recoveryErrors = new List<Exception>();
-            _displayBefore = previousDisplay;
-            _confirmSeconds = previousCountdown;
-            _pendingDisplay.Clear();
-            foreach (var pair in previousPendingDisplay) _pendingDisplay.Add(pair.Key, pair.Value);
             _durableProfile = previousDurable;
-            _userSelected = previousUserSelected;
             if (applied)
             {
-                var rollback = _state.Restore(snapshot, runtime.OwnsQualityVeil);
+                var rollback = _state.Restore(snapshot, request.Origin, runtime.OwnsQualityVeil);
                 try { runtime.Dispatch(Effective, rollback); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
                 if (cancellationToken.IsCancellationRequested) return;
@@ -382,58 +286,41 @@ public sealed class QualityService : IQualityService, IBootParticipant
         }
     }
 
+    /// <summary>Folds only the user's own edit into the saved profile, so a command-line overlay never reaches the file.</summary>
     private bool MergeUserIntoDurable(QualityProfile beforeLive, QualityProfile input)
     {
         var before = _catalog.Resolve(beforeLive, beforeLive.Preset);
         var after = _catalog.Resolve(Requested, Requested.Preset);
-        var priorDurable = _durableProfile;
-        var durableValues = _catalog.Resolve(priorDurable, priorDurable.Preset);
+        var prior = _durableProfile;
         var presetChosen = input.Preset != QualityPreset.Custom && (input.Preset != beforeLive.Preset || input.Overrides.Count == 0);
-        if (presetChosen) _durableProfile = QualityCatalog.Profile(Requested.Preset, priorDurable.Adaptive);
+        var baseline = presetChosen ? QualityCatalog.Profile(Requested.Preset) : prior;
         var deltas = new Dictionary<QualityKnob, float>();
         foreach (var knob in QualityCatalog.All)
-        {
-            var changed = before[(int)knob] != after[(int)knob];
-            if (!changed && (!presetChosen || knob == QualityKnob.Adaptive)) continue;
-            if (QualityState.IsDisplay(knob) && _displayBefore is not null)
-            {
-                _pendingDisplay[knob] = after[(int)knob];
-                // A new preset must not silently persist its unconfirmed display defaults.
-                if (presetChosen) deltas[knob] = durableValues[(int)knob];
-            }
-            else deltas[knob] = after[(int)knob];
-        }
-        _durableProfile = MergeDurable(_durableProfile, deltas);
-        var dirty = !SameProfile(priorDurable, _durableProfile) || presetChosen && !_userSelected;
-        if (dirty) _userSelected = true;
-        return dirty;
+            if (presetChosen || before[(int)knob] != after[(int)knob]) deltas[knob] = after[(int)knob];
+        _durableProfile = MergeDurable(baseline, deltas);
+        return !SameProfile(prior, _durableProfile);
     }
 
     private QualityProfile MergeDurable(QualityProfile baseline, IReadOnlyDictionary<QualityKnob, float> deltas)
     {
         var overrides = baseline.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        var adaptive = baseline.Adaptive;
-        foreach (var pair in deltas.OrderBy(pair => pair.Key))
-        {
-            if (pair.Key == QualityKnob.Adaptive) adaptive = pair.Value != 0;
-            else overrides[pair.Key] = pair.Value;
-        }
+        foreach (var pair in deltas.OrderBy(pair => pair.Key)) overrides[pair.Key] = pair.Value;
         // Reuse the existing canonicalization (including output-dependent render scale) without touching live state.
         var canonical = new QualityState(_catalog);
-        canonical.Commit(new(baseline.Preset, overrides, adaptive), ApplyOrigin.Startup, false);
+        canonical.Commit(new(baseline.Preset, overrides), ApplyOrigin.Startup, false);
         return canonical.Requested;
     }
 
     private static bool SameProfile(QualityProfile left, QualityProfile right) => left.Preset == right.Preset &&
-        left.Adaptive == right.Adaptive && left.Overrides.Count == right.Overrides.Count &&
+        left.Overrides.Count == right.Overrides.Count &&
         left.Overrides.All(pair => right.Overrides.TryGetValue(pair.Key, out var value) && pair.Value == value);
 
     private ApplyResult Result(ApplyStatus status, IReadOnlyList<QualityKnob>? rejected = null) =>
-        new(status, Effective, _displayBefore is not null, _state.RestartPending, rejected ?? []);
+        new(status, Effective, false, rejected ?? []);
 
     private void QueueSave()
     {
         if (CaptureMode) return;
-        _lastSave = _store.Write(_durableProfile, _device, _durableTier, _durableDeviceKey, _userSelected);
+        _lastSave = _store.Write(_durableProfile);
     }
 }

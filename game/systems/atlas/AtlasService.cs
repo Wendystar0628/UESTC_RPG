@@ -28,7 +28,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private IMapService? _maps;
     private IAppFlow? _flow;
     private IAudioService? _audio;
-    private ISaveService? _saves;
     private ITransitHandle? _transit;
     private IDisposable? _transitInput;
     private MarkerId? _destination;
@@ -49,9 +48,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public JsonTypeInfo<AtlasSave> TypeInfo => AtlasJsonContext.Contract.AtlasSave;
 
     // Runtime-only services are connected after discovery to avoid Save -> Atlas -> Save cycles.
-    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, ISaveService saves)
+    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio)
     {
-        _maps = maps; _flow = flow; _audio = audio; _saves = saves;
+        _maps = maps; _flow = flow; _audio = audio;
     }
 
     public void OnMapLoaded(IMapContext context)
@@ -247,7 +246,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                 if (destination is { } id && Find(id) is { Kind: MarkerKind.Anchor } anchor)
                 { Visit(anchor); Publish(); }
                 if (style == TravelStyle.Teleport) _audio?.PlayUi(UiCue.TeleportArrive);
-                _saves?.Request(SaveReason.Settled);
             }
         }
         if (_context is null || !IsPlaying() || _transit is not null || MapTransitioning()) return;

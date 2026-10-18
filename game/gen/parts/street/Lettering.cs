@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Parts.Core;
 
 namespace Campus.Gen.Parts.Street;
 
@@ -131,7 +132,7 @@ public static class Lettering
         var outward = back ? 1f : -1f;
         var z = zFace + outward * StreetStyle.PrintLift;
         var points = corners.Select(c => new Vector3(back ? c.X : -c.X, c.Y, z)).ToArray();
-        builder.Add(Shapes.FlatQuad(points[0], points[1], points[2], points[3], new(0, 0, outward), Print(material)), VertexFlag.NoShadow);
+        builder.Add(PartShapes.FlatQuad(points[0], points[1], points[2], points[3], new(0, 0, outward), Print(material)), VertexFlag.NoShadow);
     }
 
     /// <summary>The print class of a colour: face geometry draws no line of its own (ART-MODELING).</summary>

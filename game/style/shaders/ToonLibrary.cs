@@ -321,15 +321,9 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private static bool AffectsPipelines(QualityKnob knob) => knob switch
     {
         QualityKnob.AntiAliasing or QualityKnob.ShadowQuality => true,
-        QualityKnob.DisplayMode or QualityKnob.WindowSize or QualityKnob.VSync or QualityKnob.FrameCap or QualityKnob.Vrr
-            or QualityKnob.RenderScale or QualityKnob.FsrSharpness or QualityKnob.Anisotropy
-            or QualityKnob.ShadowDistance or QualityKnob.SmallCasters
-            or QualityKnob.GlowQuality or QualityKnob.TiltShift or QualityKnob.LensFlare or QualityKnob.LightShafts
-            or QualityKnob.DetailScale or QualityKnob.MeshLodThreshold
-            or QualityKnob.GeometricLeaves or QualityKnob.FoliageDensity or QualityKnob.GrassRadius
-            or QualityKnob.ReflectionInterval or QualityKnob.ParticleDensity
-            or QualityKnob.Adaptive or QualityKnob.GraphicsApi or QualityKnob.GpuIndex
-            or QualityKnob.Vignette => false,
+        QualityKnob.DisplayMode or QualityKnob.WindowSize or QualityKnob.VSync or QualityKnob.FrameCap
+            or QualityKnob.RenderScale or QualityKnob.ShadowDistance or QualityKnob.FoliageDensity
+            or QualityKnob.ReflectionInterval or QualityKnob.ParticleDensity => false,
         _ => throw new ArgumentOutOfRangeException(nameof(knob), knob, "Unclassified QualityKnob.")
     };
 

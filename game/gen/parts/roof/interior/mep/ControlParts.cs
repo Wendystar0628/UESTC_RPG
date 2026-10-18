@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 
 namespace Campus.Gen.Parts.Roof.Mep;
 

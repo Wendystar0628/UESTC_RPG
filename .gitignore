@@ -18,6 +18,9 @@ output/
 # 本地发布产物
 /build/
 
+# 构建时生成的提交信息
+/game/data/build-commit.txt
+
 # 生产烘焙暂存与管线摘要
 /game/bake/
 

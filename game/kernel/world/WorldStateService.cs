@@ -37,12 +37,10 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     private int _stepRate = 12;
     private bool _initializationApplied;
     private bool _restorePending;
-    private bool _requestSettled;
     private bool _mapUnavailable = true;
     private MapWorldRules? _rules;
     private MapId? _map;
 
-    public event Action? Settled;
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
     public double WorldHours { get; private set; } = 17.5;
@@ -155,11 +153,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         if (!_mapUnavailable)
             weather.Step(new WeatherTick(WorldHours, TargetHours, _offset, SeasonTarget, Sun.AltDeg, Flow.Rate, dt));
         Rev++;
-        if (_requestSettled && IsSettled && !weather.Transitioning)
-        {
-            _requestSettled = false;
-            Settled?.Invoke();
-        }
     }
 
     public void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump)
@@ -246,7 +239,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
             if (_flowStop == WorldHours && _targetHours == WorldHours) SetFlow(0);
         }
         weather.Reseason(WorldHours, season, _finalOffset);
-        _requestSettled = true;
         Rev++;
     }
 
@@ -284,7 +276,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         var intensity = preset.Weather == WeatherKind.Thunderstorm &&
             preset.Season is Season.Autumn or Season.Winter ? 1f : preset.Intensity;
         weather.Pin(WorldHours, kind, intensity, _targetHours - .5, _targetHours + 2);
-        _requestSettled = true;
         Rev++;
     }
 
@@ -308,7 +299,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         }
         else weather.Pin(WorldHours, MapWeather(rules.Default.Weather ?? WeatherKind.Clear, SeasonTarget),
             rules.Default.Intensity, _targetHours - .5, _targetHours + 2);
-        _requestSettled = true;
         Rev++;
     }
 
@@ -407,7 +397,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     {
         // A failed transaction cannot later commit by accident. A new valid Restore must prepare it again.
         _restorePending = false;
-        _requestSettled = false;
         RestoreFaulted = true;
     }
 
@@ -431,7 +420,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
         _flowStop = null;
         _flowClock = null;
-        _dragging = _requestSettled = false;
+        _dragging = false;
         _dragIdle = 1;
         (Sun, Moon) = ArtEphemeris.Evaluate(Clock, SeasonPos);
         Omega = 0;

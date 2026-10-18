@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;

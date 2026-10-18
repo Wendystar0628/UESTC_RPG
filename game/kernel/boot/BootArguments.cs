@@ -10,7 +10,7 @@ public sealed class BootArguments
     {
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
         "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "weather-queue", "sunshower",
-        "quality", "quality-set", "adaptive", "bench", "tier", "without", "inspect", "shots", "frames", "out",
+        "quality", "quality-set", "bench", "without", "inspect", "shots", "frames", "out",
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "cine", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
@@ -67,13 +67,12 @@ public sealed class BootArguments
 
     private void Validate()
     {
-        foreach (var key in new[] { "ui", "title", "adaptive", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
+        foreach (var key in new[] { "ui", "title", "bench", "bake-bg", "bake-strict", "audio-fixed", "audio-limiter", "audio-log", "amb-debug" })
             OneOf(key, "0", "1");
         OneOf("season", "spring", "summer", "autumn", "winter");
         OneOf("flow", "0", "1", "10", "60", "360", "1440");
         OneOf("mode", "fly", "walk");
-        OneOf("quality", "smooth", "balanced", "fine", "ultra");
-        OneOf("tier", "min-spec", "dgpu-mid", "dgpu-high");
+        OneOf("quality", "balanced", "fine", "ultra");
         OneOf("weather", "auto", "clear", "few-clouds", "cloudy", "overcast", "fog", "light-rain", "rain", "thunderstorm", "after-rain", "snow", "after-snow");
         OneOf("sunshower", "auto", "on", "off");
         OneOf("save", "off", "1", "2", "3");
@@ -106,8 +105,8 @@ public sealed class BootArguments
         _values.TryAdd("audio", CaptureMode ? "off" : "on");
         if (CaptureMode)
         {
-            _values.TryAdd("save", "off"); _values.TryAdd("adaptive", "0"); _values.TryAdd("bake-bg", "0");
-            if (!Has("tier")) _values.TryAdd("quality", "fine");
+            _values.TryAdd("save", "off"); _values.TryAdd("bake-bg", "0");
+            _values.TryAdd("quality", "fine");
             if (!HasLoad)
             {
                 _values.TryAdd("clock", "17.5"); _values.TryAdd("season", "autumn"); _values.TryAdd("anim", "240");

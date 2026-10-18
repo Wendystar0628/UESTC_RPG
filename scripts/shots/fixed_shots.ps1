@@ -21,7 +21,7 @@ if ($Build) {
     } finally { Exit-UESTCBuildLock $lease }
 }
 
-$common = '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1', '--quality=fine', '--adaptive=0',
+$common = '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1', '--quality=fine',
     '--map=qingshuihe', '--title=0', '--save=off', '--audio=off'
 # 第一个机位可能要重新烘焙（地图数据或代码改过后缓存失效），给 15 分钟；之后复用缓存，120 秒
 $timeout = 900

@@ -23,7 +23,7 @@ public sealed class AudioMix
     public static AudioSettings Normalize(AudioSettings next)
     {
         ArgumentNullException.ThrowIfNull(next);
-        if (!Enum.IsDefined(next.Sudden) || !Enum.IsDefined(next.Background) || next.Schema != 1)
+        if (!Enum.IsDefined(next.Sudden) || !Enum.IsDefined(next.Background))
             throw new ArgumentException("Unsupported audio settings value.", nameof(next));
         return next with
         {

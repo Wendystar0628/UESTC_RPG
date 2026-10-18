@@ -29,7 +29,6 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private FlightBounds? _bounds;
     private IAppFlow? _flow;
     private IRuleset? _rules;
-    private ISaveService? _saves;
     private IWalkController? _walk;
     private ITransitDriver? _transit;
     private Pose _pose;
@@ -99,7 +98,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public override void _Ready()
     {
         _flow = Services.Get<IAppFlow>(); _rules = Services.Get<IRuleset>();
-        _saves = Services.Get<ISaveService>(); _world = Services.Get<IWorldState>();
+        _world = Services.Get<IWorldState>();
         if (Services.Services.Entries.Any(e => e.Kind == "service" && e.Id == typeof(IWalkController).FullName && !e.IsStub))
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
@@ -227,7 +226,6 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         }
         _mode = mode; _flight.Reset(); _input.Clear(); SetEdgeFog(0);
         _flight.ConstrainVelocity(inheritedVelocity);
-        _saves?.Request(SaveReason.Settled);
         return Task.FromResult(result);
     }
 

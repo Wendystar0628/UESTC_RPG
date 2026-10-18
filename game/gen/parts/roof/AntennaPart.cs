@@ -63,7 +63,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
             bands.Add(new(r0, Front(r0) - Shell, r1, Front(r1) - Shell, BackNormal(r0), BackNormal(r1)));
         }
         // The rim is the silhouette: 24 sides near keep it round at roof-walking distance; the bowl needs few rings.
-        var dish = Shapes.Lathe(bands, near ? 24 : 8, RoofStyle.Curved(RoofStyle.CasingWhite));
+        var dish = PartShapes.Lathe(bands, near ? 24 : 8, RoofStyle.Curved(RoofStyle.CasingWhite));
         // Aim: the bowl axis (+Y) turns to (0, sin tilt, −cos tilt); the rim top lands on Height.
         var aim = Xf.RotX(-(90f - RoofStyle.DishTiltDeg));
         var top = float.MinValue;

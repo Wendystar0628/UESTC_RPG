@@ -3,6 +3,7 @@ using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using GdUnit4;
 
 namespace Campus.Gen.Parts.Street.Tests;

@@ -5,46 +5,40 @@ using Campus.Contracts.Save;
 
 namespace Campus.Systems.Weather;
 
-public sealed record WeatherSeedSave(uint Seed);
+/// <summary>The whole weather save: the seed plus the manual choice, pin, quiet window and wetness residue. Automatic weather is not saved.</summary>
+public sealed record WeatherSave(uint Seed, WeatherProcessState Process);
 
-[KernelService(typeof(WeatherSeedSection), Owner = "WP-45a")]
+[KernelService(typeof(WeatherSection), Owner = "WP-45a")]
 [SaveSection("weather", Owner = "WP-45a", Version = 1, Scope = SaveScope.Global, Phase = RestorePhase.World, Order = 20)]
-public sealed class WeatherSeedSection(WeatherProcess weather) : ISaveSection<WeatherSeedSave>
+public sealed class WeatherSection(WeatherProcess weather, IMapService maps, IWeatherProfileSource profiles) : ISaveSection<WeatherSave>
 {
-    public JsonTypeInfo<WeatherSeedSave> TypeInfo => WeatherJsonContext.Contract.WeatherSeedSave;
-    public WeatherSeedSave Capture(in CaptureContext c) => new(weather.Seed);
-    public void Restore(WeatherSeedSave dto, RestoreContext c) => weather.RestoreSeed(dto.Seed);
-    public WeatherSeedSave CreateDefault(NewGameContext c) => new(c.Seed);
-}
-
-[KernelService(typeof(WeatherMapSection), Owner = "WP-45a")]
-[SaveSection("weather", Owner = "WP-45a", Version = 1, Scope = SaveScope.PerMap, Phase = RestorePhase.World, Order = 21)]
-public sealed class WeatherMapSection(WeatherProcess weather, IMapService maps, IWeatherProfileSource profiles) : ISaveSection<WeatherProcessState>
-{
-    public JsonTypeInfo<WeatherProcessState> TypeInfo => WeatherJsonContext.Contract.WeatherProcessState;
+    public JsonTypeInfo<WeatherSave> TypeInfo => WeatherJsonContext.Contract.WeatherSave;
     public bool IsSettled => !weather.Transitioning;
-    public WeatherProcessState Capture(in CaptureContext c) => c.Map == maps.Current && c.Moment is { } moment
-        ? weather.CaptureAt(c.Map, in moment) : weather.Capture(c.Map);
-    public void Restore(WeatherProcessState dto, RestoreContext c)
+
+    public WeatherSave Capture(in CaptureContext c) =>
+        new(weather.Seed, c.Moment is { } moment ? weather.CaptureAt(c.Map, in moment) : weather.Capture(c.Map));
+
+    public void Restore(WeatherSave dto, RestoreContext c)
     {
-        if (dto.Map != c.Map) throw new InvalidDataException("Weather section belongs to a different map.");
-        if (!WeatherRules.IsNative(dto.Selection.Kind, dto.Season))
+        var state = dto.Process;
+        if (!WeatherRules.IsNative(state.Selection.Kind, state.Season))
         {
-            var mapped = WeatherRules.MapToSeason(dto.Selection.Kind, dto.Season);
-            dto = dto with
+            var mapped = WeatherRules.MapToSeason(state.Selection.Kind, state.Season);
+            state = state with
             {
-                Selection = dto.Selection with
+                Selection = state.Selection with
                 {
                     Kind = mapped,
-                    Intensity = dto.Selection.Kind == WeatherKind.Thunderstorm ? 1 : dto.Selection.Intensity
+                    Intensity = state.Selection.Kind == WeatherKind.Thunderstorm ? 1 : state.Selection.Intensity
                 }
             };
             c.Repair("天气已替换为本季可用的天气。");
         }
-        weather.BindProfile(c.Map, maps.Maps.Single(m => m.Id == c.Map).World.WeatherProfile);
-        weather.Restore(c.Map, dto);
+        weather.RestoreSeed(dto.Seed);
+        weather.Restore(c.Map, state);
     }
-    public WeatherProcessState CreateDefault(NewGameContext c)
+
+    public WeatherSave CreateDefault(NewGameContext c)
     {
         var descriptor = maps.Maps.Single(m => m.Id == c.Map);
         var initial = new WeatherProcess(profiles);
@@ -55,6 +49,6 @@ public sealed class WeatherMapSection(WeatherProcess weather, IMapService maps, 
             initial.Quiet(c.Start.Clock, WeatherRules.QuietEnd(c.Start.Clock, 0, c.Start.Season));
         else if (c.Start.Weather is { } kind && kind != WeatherKind.Clear)
             initial.Pin(c.Start.Clock, kind, c.Start.Intensity, c.Start.Clock, c.Start.Clock + 2);
-        return initial.Capture(c.Map);
+        return new(c.Seed, initial.Capture(c.Map));
     }
 }

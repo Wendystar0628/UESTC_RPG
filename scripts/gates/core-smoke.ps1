@@ -52,7 +52,7 @@ function Invoke-UESTCMainlineSmoke {
         if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks }
         $engineArgs = @('--path',(Join-Path $rootPath 'game'),'--rendering-method','forward_plus',
             '--rendering-driver','d3d12','--resolution','1280x720','--fixed-fps','60','--')
-        $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=0','--audio=off','--quality=fine','--adaptive=0')
+        $captureArgs = @("--save-dir=$saves","--out=$shots",'--shots=V1','--ui=0','--audio=off','--quality=fine')
         $closeObservation = @{ At=$null; Sent=$false }
         $closeObserver = New-UESTCCoreCloseObserver $closeObservation
         $close = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-close','--title=1',

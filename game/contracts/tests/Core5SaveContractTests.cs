@@ -11,9 +11,9 @@ public sealed class Core5SaveContractTests
     public void CaptureContextKeepsLegacyShapeAndCarriesOneImmutableMoment()
     {
         var map = new MapId("core5-test");
-        var legacy = new CaptureContext(SaveReason.Settled, map, true);
+        var legacy = new CaptureContext(SaveReason.Interval, map, true);
         var (reason, capturedMap, forced) = legacy;
-        Check(reason == SaveReason.Settled && capturedMap == map && forced && legacy.Moment is null,
+        Check(reason == SaveReason.Interval && capturedMap == map && forced && legacy.Moment is null,
             "The existing three-argument capture context changed.");
         var moment = new WorldSaveMoment(31.5, 1.25, Season.Summer, 0);
         var current = legacy with { Moment = moment };

@@ -47,7 +47,7 @@ gates: [G7, G9, G12, G13, G17]
 **截图默认串**（全文唯一一份，别处引用这里）：
 
 ```
--- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --adaptive=0 --map=qingshuihe --title=0 --save=off --audio=off
+-- --pose=V1 --clock=17.5 --season=autumn --anim=240 --flow=0 --mode=fly --ui=0 --seed=1 --weather=clear --weather-seed=1 --quality=fine --map=qingshuihe --title=0 --save=off --audio=off
 ```
 
 即秋 17:30、晴、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、跳过开场、不写存档、无声。精致预设 1920×1080 原生是视觉精度的验收基准（SYS-GRAPHICS §0.1）。雨雪截图加 `--fixed-fps 60`，让天气混合按帧推进。

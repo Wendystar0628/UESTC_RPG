@@ -297,8 +297,6 @@ public sealed class WorldStateTests
         var weather = new RecordingWeather();
         var world = CreateWorld(weather);
         world.SetFlow(0);
-        var settled = 0;
-        world.Settled += () => settled++;
         world.Apply(new WorldPreset(21, Season.Winter, WeatherKind.Thunderstorm));
         Check(weather.Calls.SequenceEqual(new[] { "reseason", "pin" }), "Apply weather hooks are out of order.");
         Equal(weather.PinnedKind, WeatherKind.Snow);
@@ -310,7 +308,6 @@ public sealed class WorldStateTests
         Near(world.Clock, 21);
         Equal(world.SeasonTarget, Season.Winter);
         Equal(world.Capture(default), snapshot with { AnimTime = world.AnimTime });
-        Equal(settled, 1);
     }
 
     [TestCase]

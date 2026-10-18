@@ -112,7 +112,7 @@ public partial class SavePage : Control
             if (child is not TechButton) child.QueueFree();
         var size = holder.Size;
         var empty = slot.Health == SlotHealth.Empty || slot.Meta is null;
-        var corrupt = slot.Health is SlotHealth.Corrupt or SlotHealth.NewerBuild;
+        var corrupt = slot.Health == SlotHealth.Corrupt;
         _kit.Box(holder, new Rect2(Vector2.Zero, size), new UiFx(Fill: empty ? null : "surface.solid", Line: selected ? "primary.line" : empty ? "line.control" : "line.panel",
             Chamfer: _kit.Tokens.Chamfer("card"), Flags: (empty ? UiFlags.Dashed : 0) | (selected ? UiFlags.SelectedIris : 0)));
         _kit.Text(holder, $"SLOT {slot.Slot.Value.TrimStart('s').PadLeft(2, '0')}", "mono-caps", "text.2", new Vector2(24, 16));
@@ -170,14 +170,12 @@ public partial class SavePage : Control
         var empty = slot.Meta is null;
         _primary.Text = UiKit.T(empty ? "saves.new_here" : "saves.load");
         _primary.OffReason = UiKit.T("saves.only_from_title");
-        _primary.Off = !_fromTitle || slot.Health is SlotHealth.Corrupt or SlotHealth.NewerBuild;
+        _primary.Off = !_fromTitle || slot.Health == SlotHealth.Corrupt;
         _detail.Text = slot.Health switch
         {
             SlotHealth.Empty => UiKit.T("saves.detail.empty"),
             SlotHealth.Ok => UiKit.T("saves.detail.ok", ("gens", $"{slot.Generations}")),
-            SlotHealth.RecoveredOlderGen => UiKit.T("saves.detail.recovered"),
             SlotHealth.Corrupt => UiKit.T("saves.detail.corrupt"),
-            SlotHealth.NewerBuild => UiKit.T("saves.detail.newer"),
             _ => throw new InvalidOperationException("Unknown slot health."),
         };
     }

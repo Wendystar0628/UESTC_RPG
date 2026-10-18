@@ -17,8 +17,7 @@
     "kind": {
       "type": "string",
       "enum": [
-        "auto",
-        "manual"
+        "auto"
       ]
     },
     "gen": {
@@ -144,28 +143,13 @@
         "quit",
         "toTitle",
         "interval",
-        "focusLost",
-        "settled",
-        "mapChanged",
         "newGame",
-        "manual",
-        "checkpoint",
         "test"
       ]
     },
     "ruleset": {
       "type": "string",
       "minLength": 1
-    },
-    "origin": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/slotId"
-        },
-        {
-          "type": "null"
-        }
-      ]
     },
     "hasThumb": {
       "type": "boolean"
@@ -370,7 +354,7 @@
     },
     "slotId": {
       "type": "string",
-      "pattern": "^(s[1-3]|m[1-9])$"
+      "pattern": "^s[1-3]$"
     }
   }
 }

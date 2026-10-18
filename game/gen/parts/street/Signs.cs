@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;
@@ -51,9 +52,9 @@ public sealed class BusStopPart : IPartDef<SignParams>
         var cap = p.Height - 0.03f;
         // Flared foot as one chamfer band, straight pole, dome cap: 96 triangles near (the stop stays within 400, Opus review 10:07).
         var pole = new List<LatheBand>(near
-            ? Shapes.Creased(new(0, 0), new(rp + 0.03f, 0), new(rp, 0.03f), new(rp, cap), new(0, cap)).Take(3)
-            : Shapes.Creased(new(0, 0), new(rp, 0), new(rp, cap), new(0, cap)).Take(2));
-        pole.AddRange(Shapes.Arc(rp, cap, 0, 90, near ? 2 : 1, 0.03f / rp));
+            ? PartShapes.Creased(new(0, 0), new(rp + 0.03f, 0), new(rp, 0.03f), new(rp, cap), new(0, cap)).Take(3)
+            : PartShapes.Creased(new(0, 0), new(rp, 0), new(rp, cap), new(0, cap)).Take(2));
+        pole.AddRange(PartShapes.Arc(rp, cap, 0, 90, near ? 2 : 1, 0.03f / rp));
         if (lod <= LodLevel.L1) b.AddLathe(pole, segments, S.Pole(S.GreyMetal), Xf.Move(poleX, 0, 0));
         var bh = S.StopBoardHeight; var bd = S.StopBoardDepth; var e = S.StopBorder;
         var front = -bd * 0.5f; var back = bd * 0.5f;

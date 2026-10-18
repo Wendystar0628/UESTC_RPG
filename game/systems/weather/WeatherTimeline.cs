@@ -1,219 +1,150 @@
-using System.Globalization;
 using Campus.Contracts;
 
 namespace Campus.Systems.Weather;
 
-internal sealed record WeatherInitialPolicy(double WorldHours, double UntilHours,
-    WeatherKind? Kind = null, float? Intensity = null, double? FromHours = null);
-
-/// <summary>A whole event is committed at once: look-ahead refill cadence cannot consume random draws.</summary>
-internal sealed class WeatherTimeline(MapId map, WeatherProfile profile, Season season, double hours)
+/// <summary>World-level weather choices layered over the automatic weather: everything a save keeps besides the seed.</summary>
+internal sealed class WeatherSettings
 {
-    public MapId Map { get; } = map;
-    public WeatherProfile Profile { get; } = profile;
-    public Season Season = season;
+    public const double WetHours = 2, PuddleHours = 3, SnowHours = 6;
+
+    public Season Season = Season.Autumn;
     public double ClockOffset;
-    public double Hours = hours;
-    public uint Epoch;
-    public int Segment;
-    public int Attempt;
-    public WeatherSel Selection = new(WeatherMode.Auto, WeatherKind.Clear, 1);
-    public readonly List<WeatherSpan> Queue = [];
-    public readonly List<double> Minutes = [];
+    public bool FrameBound;
+    public WeatherSel? Manual;
     public double? PinFrom, PinTo;
     public WeatherKind? PinKind;
     public float? PinIntensity;
     public double QuietUntil;
     public float? WetOverride;
-    public WeatherInitialPolicy? InitialPolicy;
+    /// <summary>Wetness left behind by a manual change, draining from <see cref="ResidueAt"/>.</summary>
+    public float ResidueWet, ResiduePuddle, ResidueSnow;
+    public double ResidueAt;
 
-    public WeatherTimeline Copy()
+    public WeatherSettings Copy() => (WeatherSettings)MemberwiseClone();
+
+    public void ClearChoices()
     {
-        var copy = new WeatherTimeline(Map, Profile, Season, Hours)
-        {
-            ClockOffset = ClockOffset,
-            Epoch = Epoch,
-            Segment = Segment,
-            Attempt = Attempt,
-            Selection = Selection,
-            PinFrom = PinFrom,
-            PinTo = PinTo,
-            PinKind = PinKind,
-            PinIntensity = PinIntensity,
-            QuietUntil = QuietUntil,
-            WetOverride = WetOverride,
-            InitialPolicy = InitialPolicy
-        };
-        // Preserve the canonical durations and already-normalized endpoints bit for bit.
-        copy.Queue.AddRange(Queue);
-        copy.Minutes.AddRange(Minutes);
-        return copy;
+        Manual = null;
+        PinFrom = PinTo = null;
+        PinKind = null;
+        PinIntensity = null;
+        QuietUntil = 0;
+        WetOverride = null;
     }
 
-    public void Ensure(uint seed, double horizon)
+    public void ClearResidue() => ResidueWet = ResiduePuddle = ResidueSnow = 0;
+
+    public void SetResidue(WeatherVec vector, double hours)
     {
-        if (Queue.Count == 0) Add(new(Hours, Math.Max(Hours + Profile.ClearGapHours, QuietUntil), WeatherKind.Clear, 1));
-        while (Queue[^1].ToHours < horizon) Generate(seed);
+        ResidueWet = vector.Wet;
+        ResiduePuddle = vector.Puddle;
+        ResidueSnow = vector.SnowAdd;
+        ResidueAt = hours;
     }
 
-    private void Generate(uint seed)
+    public (float Wet, float Puddle, float Snow) ResidueNow(double hours)
     {
-        double cursor = Queue[^1].ToHours;
-        var templates = Profile.Templates.Where(t => t.Season == Season).ToArray();
-        double bound = templates.Sum(t => t.RatePerDay / t.WindowHours);
-        double candidate = cursor;
-        for (int retry = 0; retry < 4096; retry++)
+        double age = Math.Max(0, hours - ResidueAt);
+        return (Drain(ResidueWet, age, WetHours), Drain(ResiduePuddle, age, PuddleHours), Drain(ResidueSnow, age, SnowHours));
+    }
+
+    // A constant drain rate (a full reading empties in the given hours) lets a save re-anchor the residue without changing its course.
+    private static float Drain(float value, double age, double hours) => (float)Math.Max(0, value - age / hours);
+
+    public static float Fade(double age, double hours) => (float)Math.Max(0, 1 - age / hours);
+
+    /// <summary>The weather frame changes season: manual and pinned kinds are mapped in place (雨 ↔ 雪).</summary>
+    public void Reseason(Season to, double offset)
+    {
+        if (Manual is { } manual)
         {
-            int attempt = Attempt++;
-            var gapRng = Stream(seed, attempt, "gap");
-            candidate += -Math.Log(1 - gapRng.NextFloat()) / bound + 1e-8;
-            candidate = WeatherRules.AfterProtected(candidate, ClockOffset, Season);
-            double clock = WeatherRules.Clock(candidate + ClockOffset);
-            double hazard = templates.Sum(t => t.Hazard(clock));
-            var thinning = Stream(seed, attempt, "accept");
-            if (hazard == 0 || thinning.NextFloat() * bound >= hazard) continue;
-            var choice = Stream(seed, attempt, "template");
-            double pick = choice.NextFloat() * hazard;
-            var template = templates[^1];
-            foreach (var item in templates)
-            {
-                pick -= item.Hazard(clock);
-                if (pick < 0) { template = item; break; }
-            }
-            var spans = Expand(template, seed, attempt, candidate);
-            if (spans is null || !PrecipitationAllowed(spans)) continue;
-            AppendClear(cursor, candidate);
-            foreach (var span in spans) Add(span);
-            double end = Queue[^1].ToHours;
-            Add(new(end, WeatherRules.AfterProtected(end + Profile.ClearGapHours, ClockOffset, Season), WeatherKind.Clear, 1));
-            Segment = checked(Segment + 1);
-            Attempt = 0;
-            return;
+            var kind = WeatherRules.MapToSeason(manual.Kind, to);
+            Manual = manual with { Kind = kind, Intensity = manual.Kind == WeatherKind.Thunderstorm && kind != manual.Kind ? 1 : manual.Intensity };
         }
-        throw new InvalidDataException("Weather profile cannot produce a legal event after 4096 candidates.");
+        if (PinKind is { } pin) PinKind = WeatherRules.MapToSeason(pin, to);
+        WetOverride = null;
+        Season = to;
+        ClockOffset = offset;
+        FrameBound = true;
     }
+}
 
-    private List<WeatherSpan>? Expand(WeatherTemplate template, uint seed, int attempt, double start)
-    {
-        var spans = new List<WeatherSpan>();
-        for (int i = 0; i < template.Phases.Length; i++)
-        {
-            var phase = template.Phases[i];
-            if (phase.Kind == WeatherKind.Fog && !WeatherRules.IsNight(start, ClockOffset, Season)) return null;
-            var duration = Stream(seed, attempt, "duration:" + i.ToString(CultureInfo.InvariantCulture));
-            double end = start + phase.MinHours + duration.NextFloat() * (phase.MaxHours - phase.MinHours);
-            end = phase.Kind == WeatherKind.Fog ? WeatherRules.FogEnd(end, ClockOffset, Season)
-                : WeatherRules.AfterProtected(end, ClockOffset, Season);
-            var intensity = Stream(seed, attempt, "intensity:" + i.ToString(CultureInfo.InvariantCulture));
-            float strength = phase.MinIntensity + intensity.NextFloat() * (phase.MaxIntensity - phase.MinIntensity);
-            spans.Add(new(start, end, phase.Kind, strength));
-            start = end;
-        }
-        return spans;
-    }
+/// <summary>
+/// Weather at any world hour for one (seed, map): the automatic days plus the settings on top. Nothing here is state
+/// beyond a cache of generated days, so every query gives the same answer in any call order.
+/// </summary>
+internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId map, WeatherSettings settings)
+{
+    private readonly Dictionary<long, WeatherSpan[]> _days = [];
+    private Season _season;
+    private double _offset;
+    private bool _primed;
 
-    private bool PrecipitationAllowed(List<WeatherSpan> spans)
-    {
-        var added = spans.Where(s => WeatherRules.IsPrecipitation(s.Kind)).ToArray();
-        if (added.Length == 0) return true;
-        double first = added[0].FromHours;
-        var previous = Queue.LastOrDefault(s => WeatherRules.IsPrecipitation(s.Kind));
-        if (previous.ToHours > 0 && first - previous.ToHours < Profile.PrecipGapHours) return false;
-        var rain = Queue.Where(s => WeatherRules.IsPrecipitation(s.Kind) && s.ToHours > first - 24).Concat(added).ToArray();
-        foreach (double edge in rain.SelectMany(s => new[] { s.FromHours, s.ToHours, s.FromHours + 24, s.ToHours + 24 }))
-        {
-            double sum = rain.Sum(s => Math.Max(0, Math.Min(edge, s.ToHours) - Math.Max(edge - 24, s.FromHours)));
-            if (sum > Profile.MaxPrecipHoursPerDay + 1e-9) return false;
-        }
-        return true;
-    }
-
-    private Rng Stream(uint seed, int attempt, string purpose) => new(StableHash.Hash32(seed, Map.Value,
-        Epoch.ToString(CultureInfo.InvariantCulture), Segment.ToString(CultureInfo.InvariantCulture),
-        attempt.ToString(CultureInfo.InvariantCulture), purpose));
-
-    private void AppendClear(double from, double to)
-    {
-        if (to <= from) return;
-        if (Queue.Count > 0 && Queue[^1].Kind == WeatherKind.Clear)
-        {
-            Minutes[^1] = (to - Queue[^1].FromHours) * 60;
-            Queue[^1] = Queue[^1] with { ToHours = Queue[^1].FromHours + Minutes[^1] / 60 };
-        }
-        else Add(new(from, to, WeatherKind.Clear, 1));
-    }
-
-    public void Add(WeatherSpan span)
-    {
-        double from = Queue.Count == 0 ? span.FromHours : Queue[^1].ToHours;
-        double minutes = (span.ToHours - from) * 60;
-        Minutes.Add(minutes);
-        Queue.Add(span with { FromHours = from, ToHours = from + minutes / 60 });
-    }
-
-    public void ClearQueue() { Queue.Clear(); Minutes.Clear(); }
-
-    public void Trim(double hours)
-    {
-        // Keep complete spans, including the predecessor of the 24 h history boundary.
-        int count = 0;
-        while (count + 1 < Queue.Count && Queue[count + 1].ToHours < hours - 24) count++;
-        if (count > 0) { Queue.RemoveRange(0, count); Minutes.RemoveRange(0, count); }
-    }
-
-    public WeatherSpan At(double hours)
-    {
-        foreach (var span in Queue)
-            if (hours >= span.FromHours && hours < span.ToHours) return span;
-        return new(hours, hours + 24, WeatherKind.Clear, 1);
-    }
-
+    /// <summary>The choice in force at the hour; automatic weather reports the current span.</summary>
     public WeatherSel SelectionAt(double hours)
     {
-        if (Selection.Mode == WeatherMode.Manual) return Selection;
-        if (hours < QuietUntil) return new(WeatherMode.Auto, WeatherKind.Clear, 1);
-        if (PinKind is { } pinned && PinFrom <= hours && hours < PinTo)
-            return new(WeatherMode.Auto, pinned, PinIntensity ?? WeatherRules.DefaultIntensity(pinned));
-        var span = At(hours);
-        return new(WeatherMode.Auto, span.Kind, span.Intensity);
+        if (settings.Manual is { } manual) return manual;
+        var (kind, intensity) = Overlay(hours, null);
+        return new(WeatherMode.Auto, kind, intensity);
     }
 
     public WeatherVec Evaluate(double hours)
     {
         var selection = SelectionAt(hours);
-        var target = WeatherVectors.For(selection.Kind, selection.Intensity);
-        if (selection.Mode == WeatherMode.Manual || hours < QuietUntil || PinKind.HasValue && PinFrom <= hours && hours < PinTo)
-            return target;
-        target = BlendQueue(hours);
-        float wet = target.Wet, puddle = target.Puddle, snow = target.SnowAdd;
-        foreach (var span in Queue)
+        var vector = WeatherVectors.For(selection.Kind, selection.Intensity);
+        // Pinned and quiet windows show exactly what was asked for.
+        if (hours < settings.QuietUntil || InPin(hours)) return vector;
+        float wet = vector.Wet, puddle = vector.Puddle, snow = vector.SnowAdd;
+        if (settings.Manual is null)
         {
-            if (span.FromHours > hours || span.ToHours < hours - 6 || !WeatherRules.IsPrecipitation(span.Kind)) continue;
-            var peak = WeatherVectors.For(span.Kind, span.Intensity);
-            double age = Math.Max(0, hours - span.ToHours);
-            float rise = WeatherVectors.Smooth((float)((hours - span.FromHours) / Profile.BlendHours));
-            wet = Math.Max(wet, peak.Wet * rise * (float)Math.Max(0, 1 - age / 2));
-            puddle = Math.Max(puddle, peak.Puddle * rise * (float)Math.Max(0, 1 - age / 3));
-            snow = Math.Max(snow, peak.SnowAdd * rise * (float)Math.Max(0, 1 - age / 6));
+            vector = Blend(hours);
+            wet = vector.Wet;
+            puddle = vector.Puddle;
+            snow = vector.SnowAdd;
+            foreach (var span in Segments(hours - WeatherSettings.SnowHours, hours))
+            {
+                if (!WeatherRules.IsPrecipitation(span.Kind)) continue;
+                var peak = WeatherVectors.For(span.Kind, span.Intensity);
+                double age = Math.Max(0, hours - span.ToHours);
+                float rise = WeatherVectors.Smooth((float)((hours - span.FromHours) / profile.BlendHours));
+                wet = Math.Max(wet, peak.Wet * rise * WeatherSettings.Fade(age, WeatherSettings.WetHours));
+                puddle = Math.Max(puddle, peak.Puddle * rise * WeatherSettings.Fade(age, WeatherSettings.PuddleHours));
+                snow = Math.Max(snow, peak.SnowAdd * rise * WeatherSettings.Fade(age, WeatherSettings.SnowHours));
+            }
         }
-        return target with { Wet = wet, Puddle = puddle, SnowAdd = snow };
+        var residue = settings.ResidueNow(hours);
+        return vector with { Wet = Math.Max(wet, residue.Wet), Puddle = Math.Max(puddle, residue.Puddle), SnowAdd = Math.Max(snow, residue.Snow) };
     }
 
-    private WeatherVec BlendQueue(double hours)
+    /// <summary>The next 24 hours as contiguous spans, merged where the weather does not change.</summary>
+    public WeatherSpan[] Ahead(double hours)
     {
-        // Convolve the piecewise-constant targets with a finite smoothstep-derivative kernel.
-        // A span contributes S((h-from)/B)-S((h-to)/B). An isolated edge is the usual smoothstep;
-        // short consecutive phases overlap continuously instead of restarting at a full target.
-        // Only the preceding B hours matter, so the saved queue is sufficient without frame state.
-        double duration = Profile.BlendHours;
-        var first = Queue[0];
-        var result = WeatherVectors.For(first.Kind, first.Intensity);
-        // Before the queue origin the initial weather is already settled (new game / explicit queue).
-        float total = 1 - WeatherVectors.Smooth((float)((hours - first.FromHours) / duration));
-        foreach (var span in Queue)
+        if (settings.Manual is { } manual) return [new(hours, hours + 24, manual.Kind, manual.Intensity)];
+        var merged = new List<WeatherSpan>();
+        foreach (var span in Segments(hours, hours + 24))
         {
-            if (span.ToHours <= hours - duration) continue;
-            if (span.FromHours > hours) break;
+            if (merged.Count > 0 && merged[^1].Kind == span.Kind && merged[^1].Intensity == span.Intensity)
+                merged[^1] = merged[^1] with { ToHours = span.ToHours };
+            else merged.Add(span);
+        }
+        return merged.ToArray();
+    }
+
+    /// <summary>Convolve the piecewise-constant targets with a smoothstep-derivative kernel of the profile's blend length:
+    /// a span contributes S((h-from)/B)-S((h-to)/B), so short consecutive phases overlap instead of restarting.</summary>
+    private WeatherVec Blend(double hours)
+    {
+        double duration = profile.BlendHours;
+        var spans = Segments(hours - duration, hours);
+        if (spans.Count == 0)
+        {
+            var selection = SelectionAt(hours);
+            return WeatherVectors.For(selection.Kind, selection.Intensity);
+        }
+        var result = WeatherVectors.For(spans[0].Kind, spans[0].Intensity);
+        float total = 1 - WeatherVectors.Smooth((float)((hours - spans[0].FromHours) / duration));
+        foreach (var span in spans)
+        {
             float weight = WeatherVectors.Smooth((float)((hours - span.FromHours) / duration))
                 - WeatherVectors.Smooth((float)((hours - span.ToHours) / duration));
             if (weight <= 0) continue;
@@ -222,5 +153,72 @@ internal sealed class WeatherTimeline(MapId map, WeatherProfile profile, Season 
             total += weight;
         }
         return result;
+    }
+
+    /// <summary>The automatic days over [lo, hi] with quiet and pin windows applied, cut into contiguous spans.</summary>
+    private List<WeatherSpan> Segments(double lo, double hi)
+    {
+        var result = new List<WeatherSpan>();
+        if (!(hi > lo)) return result;
+        var auto = new List<WeatherSpan>();
+        for (long day = DayOf(lo), last = DayOf(hi); day <= last; day++) auto.AddRange(DaySpans(day));
+        var cuts = new SortedSet<double> { lo, hi };
+        foreach (var span in auto)
+        {
+            Cut(span.FromHours);
+            Cut(span.ToHours);
+        }
+        Cut(settings.PinFrom);
+        Cut(settings.PinTo);
+        Cut(settings.QuietUntil);
+        double from = lo;
+        foreach (double cut in cuts.Skip(1))
+        {
+            var (kind, intensity) = Overlay((from + cut) / 2, auto);
+            result.Add(new(from, cut, kind, intensity));
+            from = cut;
+        }
+        return result;
+
+        void Cut(double? value)
+        {
+            if (value is { } x && x > lo && x < hi) cuts.Add(x);
+        }
+    }
+
+    /// <summary>Quiet beats pin beats the automatic span; <paramref name="auto"/> null looks the span up by day.</summary>
+    private (WeatherKind Kind, float Intensity) Overlay(double hours, List<WeatherSpan>? auto)
+    {
+        if (hours < settings.QuietUntil) return (WeatherKind.Clear, 1);
+        if (InPin(hours)) return (settings.PinKind!.Value, settings.PinIntensity ?? WeatherRules.DefaultIntensity(settings.PinKind.Value));
+        if (auto is null)
+        {
+            long day = DayOf(hours);
+            for (int step = 0; step < 3; step++)
+                foreach (var span in DaySpans(step == 0 ? day : step == 1 ? day - 1 : day + 1))
+                    if (hours >= span.FromHours && hours < span.ToHours) return (span.Kind, span.Intensity);
+            return (WeatherKind.Clear, 1);
+        }
+        foreach (var span in auto)
+            if (hours >= span.FromHours && hours < span.ToHours) return (span.Kind, span.Intensity);
+        return (WeatherKind.Clear, 1);
+    }
+
+    private bool InPin(double hours) => settings.PinKind.HasValue && settings.PinFrom <= hours && hours < settings.PinTo;
+
+    private long DayOf(double hours) => WeatherDay.DayOf(profile, hours, settings.ClockOffset);
+
+    private WeatherSpan[] DaySpans(long day)
+    {
+        if (!_primed || _season != settings.Season || _offset != settings.ClockOffset)
+        {
+            _days.Clear();
+            _season = settings.Season;
+            _offset = settings.ClockOffset;
+            _primed = true;
+        }
+        if (_days.TryGetValue(day, out var spans)) return spans;
+        if (_days.Count >= 8) _days.Clear();
+        return _days[day] = WeatherDay.Spans(profile, seed, map, day, _season, _offset);
     }
 }

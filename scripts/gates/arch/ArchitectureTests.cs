@@ -128,7 +128,7 @@ public sealed class ArchitectureTests
         ?.ConstructorArguments[0].Value as string;
 
     private static bool IsContent(string name) => name.StartsWith("Campus.Gen.", StringComparison.Ordinal) &&
-        name is not "Campus.Gen.Geometry" and not "Campus.Gen.World" and not "Campus.Gen.Interior" and not "Campus.Gen.InteriorProps" &&
+        name is not "Campus.Gen.Geometry" and not "Campus.Gen.World" and not "Campus.Gen.Interior" &&
         !name.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
 
     private static void AssertReference(string origin, string target)
@@ -145,9 +145,8 @@ public sealed class ArchitectureTests
         else if (origin == "Campus.Gen.Parts.Core") allowed = false;
         else if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) allowed = target == "Campus.Gen.Parts.Core";
         else if (origin == "Campus.Gen.Interior") allowed = target == "Campus.Gen.Parts.Core";
-        else if (origin == "Campus.Gen.InteriorProps") allowed = target is "Campus.Gen.Parts.Core" or "Campus.Gen.Interior";
         else if (origin == "Campus.Pipeline.Map") allowed = target == "Campus.Gen.World";
-        else allowed = target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" or "Campus.Gen.InteriorProps" || target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
+        else allowed = target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" || target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
         if (!allowed) throw new InvalidOperationException($"Assembly boundary: {origin} -> {target}");
     }
 

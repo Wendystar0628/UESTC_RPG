@@ -14,7 +14,6 @@ config/name="电光年华"
 run/main_scene="res://stage/main.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="UESTC"
-config/project_settings_override="user://engine_override.cfg"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://assets/hud/app_icon_placeholder.svg"
 

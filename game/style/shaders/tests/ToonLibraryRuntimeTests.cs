@@ -481,8 +481,6 @@ public sealed class ToonLibraryRuntimeTests
 
     private sealed class QualityEvents : IQualityService
     {
-        public DeviceTier Tier => throw new NotSupportedException();
-        public QualityPreset Recommended => throw new NotSupportedException();
         public QualityProfile Requested => throw new NotSupportedException();
         public QualityView Effective => throw new NotSupportedException();
         public IReadOnlyList<KnobSpec> Knobs => [];
@@ -492,6 +490,5 @@ public sealed class ToonLibraryRuntimeTests
         public float PresetValue(QualityPreset preset, QualityKnob knob) => throw new NotSupportedException();
         public ApplyPlan Plan(QualityProfile next) => throw new NotSupportedException();
         public Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin) => throw new NotSupportedException();
-        public void ConfirmDisplay() => throw new NotSupportedException();
     }
 }

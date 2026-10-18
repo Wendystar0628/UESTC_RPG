@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;
@@ -54,14 +55,14 @@ public sealed class BollardPart : IPartDef<ColumnParams>
                     // Flared foot (one chamfer band from the flange edge on the ground up to the body), straight body, two-step
                     // dome; smooth lathe normals do the rounding. The profile's closing edge on the axis is left out.
                     var bands = near
-                        ? new List<LatheBand>(Shapes.Creased(new(0, 0), new(r + f, 0), new(r, S.BollardFlareHeight), new(r, shoulder), new(0, shoulder)).Take(3))
-                        : new List<LatheBand>(Shapes.Creased(new(0, 0), new(r, 0), new(r, shoulder), new(0, shoulder)).Take(2));
-                    bands.AddRange(Shapes.Arc(r, shoulder, 0, 90, near ? 2 : 1, dome / r));
+                        ? new List<LatheBand>(PartShapes.Creased(new(0, 0), new(r + f, 0), new(r, S.BollardFlareHeight), new(r, shoulder), new(0, shoulder)).Take(3))
+                        : new List<LatheBand>(PartShapes.Creased(new(0, 0), new(r, 0), new(r, shoulder), new(0, shoulder)).Take(2));
+                    bands.AddRange(PartShapes.Arc(r, shoulder, 0, 90, near ? 2 : 1, dome / r));
                     b.AddLathe(bands, segments, body, Matrix4x4.Identity);
                     // One dark band: the stainless bollard's reflector ring, the crash bollard's black stripe between yellow.
                     var top = crash ? p.Height * S.CrashBandTop : p.Height - S.BollardBandDrop;
                     var y0 = top - (crash ? S.CrashBandHeight : S.BollardBandHeight);
-                    b.AddLathe(Shapes.Creased(new(0, y0), new(r + 0.004f, y0), new(r + 0.004f, top), new(0, top)), segments, S.Pole(crash ? S.HazardBlack : S.DarkSteel), Matrix4x4.Identity);
+                    b.AddLathe(PartShapes.Creased(new(0, y0), new(r + 0.004f, y0), new(r + 0.004f, top), new(0, top)), segments, S.Pole(crash ? S.HazardBlack : S.DarkSteel), Matrix4x4.Identity);
                     break;
                 }
             case 2:
@@ -119,12 +120,12 @@ public sealed class StoneSpherePart : IPartDef<FurnitureParams>
         var colour = S.BodyColour(p.Material, p.Variation == 1 ? S.StoneGrey : S.StoneWhite);
         var b = new PartBuilder();
         var centre = Top(p) - r;
-        b.AddLathe([.. Shapes.Arc(r, centre, -90, 90, near ? 8 : 4)], near ? S.RoundSegments : S.RoundSegmentsFar, S.Stone(colour, true), Matrix4x4.Identity);
+        b.AddLathe([.. PartShapes.Arc(r, centre, -90, 90, near ? 8 : 4)], near ? S.RoundSegments : S.RoundSegmentsFar, S.Stone(colour, true), Matrix4x4.Identity);
         // The plinth is a separate stone material, so the ball meets it with a material line, not a seam (ART-MODELING item 3).
         var rp = r * S.SpherePlinthRatio; var hp = S.SpherePlinthHeight;
         b.AddLathe(near
-            ? Shapes.Creased(new(0, 0), new(rp, 0), new(rp, hp - 0.01f), new(rp - 0.01f, hp), new(0, hp))
-            : Shapes.Creased(new(0, 0), new(rp, 0), new(rp, hp), new(0, hp)), near ? S.RoundSegmentsSmall : S.RoundSegmentsFar, S.Stone(colour, false), Matrix4x4.Identity, VertexFlag.NoShadow);
+            ? PartShapes.Creased(new(0, 0), new(rp, 0), new(rp, hp - 0.01f), new(rp - 0.01f, hp), new(0, hp))
+            : PartShapes.Creased(new(0, 0), new(rp, 0), new(rp, hp), new(0, hp)), near ? S.RoundSegmentsSmall : S.RoundSegmentsFar, S.Stone(colour, false), Matrix4x4.Identity, VertexFlag.NoShadow);
         return b.Finish(Bounds(p));
     }
 

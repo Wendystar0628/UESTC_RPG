@@ -13,16 +13,16 @@ namespace Campus.Kernel.Post;
 /// the runtime LUT. Each frame it copies the colour-script keyframe scalars (IColorScriptFrame), the key light,
 /// weather, veil, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads
 /// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS).
+/// Glow runs at the standard level; vignette, tilt-shift, lens flare and light shafts are style defaults and always on.
 /// </summary>
 [KernelNode("post.chain", Owner = "WP-05")]
-[QualityResponsive(Owns = [QualityKnob.AntiAliasing, QualityKnob.GlowQuality, QualityKnob.TiltShift,
-    QualityKnob.LensFlare, QualityKnob.LightShafts, QualityKnob.Vignette],
-    Reads = [QualityKnob.RenderScale])]
+[QualityResponsive(Owns = [QualityKnob.AntiAliasing], Reads = [QualityKnob.RenderScale])]
 public partial class PostChain : Node, IQualityAware, IMapAware
 {
-    private const float FadeSeconds = 0.5f;            // style-default knobs and glow level changes fade, never cut
+    private const float FadeSeconds = 0.5f;            // glow level changes fade, never cut
+    private const int GlowLevelCount = 2;              // standard glow: two consecutive levels
     private const float GlowThresholdFloor = 1.0f;     // registered lit colours (peak 1.0) never bloom by day
-    private const float GlowLowSunDeg = 6f;            // levels 2–4 above, 3–5 below (ART-STYLE)
+    private const float GlowLowSunDeg = 6f;            // glow starts at level 2 above, level 3 below (ART-STYLE)
     private const float FlashBloom = 0.1f;             // thunderstorm flash frame (SYS-WEATHER)
     private const float SeasonVeilBloom = 0.1f;        // season-change veil (SYS-TIME)
 
@@ -44,13 +44,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
-    private bool _highGlow = true;
-    private bool _bicubicApplied;
-    private bool _vignetteOn = true;
-    private float _vignetteFade = 1f;
-    private bool _tiltOn = true;
-    private bool _lensFlareOn = true;
-    private bool _lightShaftsOn = true;
 
     public PostChain()
     {
@@ -61,11 +54,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _finish.Inputs = _box;
         _compositor.CompositorEffects = [_outline, _finish];
     }
-
-    /// <summary>Tilt-shift, lens flare and light shafts: current switch state, for the passes that land later.</summary>
-    internal bool TiltShiftOn => _tiltOn;
-    internal bool LensFlareOn => _lensFlareOn;
-    internal bool LightShaftsOn => _lightShaftsOn;
 
     public override void _Ready()
     {
@@ -80,6 +68,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
         // Startup-only pipeline switches (ENG-PERF rule 10): set before warm-up, never toggled at runtime.
         GetViewport().UseDebanding = true;
+        RenderingServer.EnvironmentGlowSetUseBicubicUpscale(false);   // standard glow upscales bilinearly
     }
 
     public override void _ExitTree()
@@ -112,41 +101,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
                 var v => throw new ArgumentOutOfRangeException(nameof(view), v, "AntiAliasing knob"),
             };
         }
-        if (change.Has(QualityKnob.GlowQuality))
-        {
-            _highGlow = (int)view[QualityKnob.GlowQuality] switch
-            {
-                0 => true,
-                1 => false,
-                var v => throw new ArgumentOutOfRangeException(nameof(view), v, "GlowQuality knob"),
-            };
-            _bicubicApplied = false;   // switched in the frame the level fade finishes
-            if (change.Veiled) SnapGlowLevels();
-        }
-        if (change.Has(QualityKnob.Vignette))
-        {
-            _vignetteOn = OnOff(view[QualityKnob.Vignette], "Vignette");
-            if (change.Veiled || change.Origin == ApplyOrigin.Startup) _vignetteFade = _vignetteOn ? 1f : 0f;
-        }
-        if (change.Has(QualityKnob.TiltShift))
-        {
-            _tiltOn = (int)view[QualityKnob.TiltShift] switch
-            {
-                0 or 1 => true,        // 1/2 or 1/4 resolution blur
-                2 => false,
-                var v => throw new ArgumentOutOfRangeException(nameof(view), v, "TiltShift knob"),
-            };
-        }
-        if (change.Has(QualityKnob.LensFlare)) _lensFlareOn = OnOff(view[QualityKnob.LensFlare], "LensFlare");
-        if (change.Has(QualityKnob.LightShafts)) _lightShaftsOn = OnOff(view[QualityKnob.LightShafts], "LightShafts");
     }
-
-    private static bool OnOff(float value, string knob) => (int)value switch
-    {
-        0 => false,
-        1 => true,
-        var v => throw new ArgumentOutOfRangeException(nameof(value), v, knob + " knob"),
-    };
 
     public void OnMapUnloading(MapId from) { }
 
@@ -175,7 +130,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         var mediumColor = _medium.MediumColor;
 
         var step = dt / FadeSeconds;
-        _vignetteFade = Mathf.MoveToward(_vignetteFade, _vignetteOn ? 1f : 0f, step);
 
         var frame = new PostFrame
         {
@@ -199,7 +153,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
             MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
             TiltAmount = 0f,
-            VignetteK = cs.Vignette * _vignetteFade,
+            VignetteK = cs.Vignette,
             VignetteTint = new Vector3(cs.VignetteTint.X, cs.VignetteTint.Y, cs.VignetteTint.Z),
             CdlSlope = new Vector3(cs.CdlSlope.X, cs.CdlSlope.Y, cs.CdlSlope.Z),
             CdlOffset = new Vector3(cs.CdlOffset.X, cs.CdlOffset.Y, cs.CdlOffset.Z),
@@ -254,13 +208,12 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         SnapGlowLevels();
     }
 
-    // Glow levels: 2–4 by day, 3–5 once the sun is below 6°; "standard" quality drops the top level. Changes fade
-    // over 0.5 s (SetGlowLevel), and the bicubic upscale switch follows when the fade has finished (ENG-PERF).
+    // Glow levels start at 2 by day and at 3 once the sun is below 6°; standard glow keeps two levels from there.
+    // Changes fade over 0.5 s (SetGlowLevel).
     private void TargetGlowLevels(float sunAltDeg)
     {
         var first = sunAltDeg >= GlowLowSunDeg ? 1 : 2;   // 0-based index of level 2 or level 3
-        var count = _highGlow ? 3 : 2;
-        for (var i = 0; i < _glowTargets.Length; i++) _glowTargets[i] = i >= first && i < first + count ? 1f : 0f;
+        for (var i = 0; i < _glowTargets.Length; i++) _glowTargets[i] = i >= first && i < first + GlowLevelCount ? 1f : 0f;
     }
 
     private void SnapGlowLevels()
@@ -272,29 +225,18 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             _glowLevels[i] = _glowTargets[i];
             _environment.SetGlowLevel(i, _glowLevels[i]);
         }
-        RenderingServer.EnvironmentGlowSetUseBicubicUpscale(_highGlow);
-        _bicubicApplied = true;
     }
 
     private void UpdateGlowLevels(float sunAltDeg, float step)
     {
         if (_environment is null) return;
         TargetGlowLevels(sunAltDeg);
-        var settled = true;
         for (var i = 0; i < _glowLevels.Length; i++)
         {
             var next = Mathf.MoveToward(_glowLevels[i], _glowTargets[i], step);
-            if (next != _glowLevels[i])
-            {
-                _glowLevels[i] = next;
-                _environment.SetGlowLevel(i, next);
-            }
-            settled &= next == _glowTargets[i];
-        }
-        if (settled && !_bicubicApplied)
-        {
-            RenderingServer.EnvironmentGlowSetUseBicubicUpscale(_highGlow);
-            _bicubicApplied = true;
+            if (next == _glowLevels[i]) continue;
+            _glowLevels[i] = next;
+            _environment.SetGlowLevel(i, next);
         }
     }
 }

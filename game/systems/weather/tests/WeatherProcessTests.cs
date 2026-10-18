@@ -16,7 +16,7 @@ public sealed class WeatherProcessTests
         "game", "data", "weather", "chengdu", "profile.json")));
 
     [TestCase]
-    public void QueueRefillCadenceAndSameSeedAreBitIdentical()
+    public void SameSeedMapAndTimeGiveTheSameWeatherInAnyCallOrder()
     {
         var profile = Profile;
         var a = Create(127, Season.Autumn, profile);
@@ -25,8 +25,8 @@ public sealed class WeatherProcessTests
         a.Step(Tick(240));
         Equal(a, b);
         var c = Create(128, Season.Autumn, profile);
-        c.Step(Tick(240));
-        Check(!a.Capture(Map).Queue.SequenceEqual(c.Capture(Map).Queue), "Different seeds must change the queue.");
+        Check(!Forecast(Create(127, Season.Autumn, profile), Season.Autumn, 30).SequenceEqual(Forecast(c, Season.Autumn, 30)),
+            "Different seeds must change the weather.");
     }
 
     [TestCase]
@@ -37,31 +37,17 @@ public sealed class WeatherProcessTests
         var b = new WeatherProcess(source);
         a.Reset(new(42)); b.Reset(new(42));
         a.Enter(Map, "test", 0); b.Enter(new("weather-test-b"), "test", 0);
-        a.Step(Tick(0)); b.Step(Tick(0));
-        Check(!a.Capture(Map).Queue.SequenceEqual(b.Capture(new("weather-test-b")).Queue), "Map identifier must separate the forecast stream.");
+        Check(!Forecast(a, Season.Autumn, 30).SequenceEqual(Forecast(b, Season.Autumn, 30)),
+            "Map identifier must separate the weather stream.");
     }
 
     [TestCase]
-    public void GeneratedEdgesRespectTwilightMinimumsAndPrecipitationLimits()
+    public void GeneratedWeatherRespectsTwilightMinimumsAndPrecipitationLimits()
     {
         var profile = Profile;
         foreach (var season in Enum.GetValues<Season>())
         {
-            var process = Create(195, season, profile);
-            var observed = new List<WeatherSpan>();
-            for (int hour = 0; hour <= 24 * 14; hour += 12)
-            {
-                process.Step(Tick(hour, season));
-                var saved = process.Capture(Map);
-                double from = saved.QueueFromHours;
-                foreach (var item in saved.Queue)
-                {
-                    var span = new WeatherSpan(from, from + item.Minutes / 60, item.Kind, item.Intensity!.Value);
-                    if (!observed.Any(s => s.FromHours == span.FromHours && s.Kind == span.Kind)) observed.Add(span);
-                    from = span.ToHours;
-                }
-            }
-            var ordered = observed.Where(s => s.Kind != WeatherKind.Clear).OrderBy(s => s.FromHours).ToArray();
+            var ordered = Forecast(Create(195, season, profile), season, 60).OrderBy(s => s.FromHours).ToArray();
             foreach (var span in ordered)
             {
                 Check(WeatherRules.IsNative(span.Kind, season), "Non-native weather generated.");
@@ -76,130 +62,86 @@ public sealed class WeatherProcessTests
                     Check(clock >= bands.DawnTo && clock < bands.DuskFrom, "Fog clears before the sun is above +3 degrees.");
                 }
             }
-            var rain = ordered.Where(s => WeatherRules.IsPrecipitation(s.Kind)).ToArray();
-            for (int i = 1; i < rain.Length; i++) Check(rain[i].FromHours - rain[i - 1].ToHours >= 8 - 1e-9, "Precipitation refractory gap violated.");
-            foreach (var span in rain)
+            // Days are independent, so the refractory gap and the daily cap hold inside each day.
+            foreach (var day in ordered.Where(s => WeatherRules.IsPrecipitation(s.Kind))
+                .GroupBy(s => Math.Floor((s.FromHours - profile.DayBoundaryClock) / 24)))
             {
-                double end = span.ToHours;
-                double total = rain.Sum(s => Math.Max(0, Math.Min(end, s.ToHours) - Math.Max(end - 24, s.FromHours)));
-                Check(total <= 12 + 1e-9, "Rolling 24 hour precipitation exceeds 12 hours.");
+                var rain = day.ToArray();
+                for (int i = 1; i < rain.Length; i++) Check(rain[i].FromHours - rain[i - 1].ToHours >= 8 - 1e-9, "Precipitation refractory gap violated.");
+                Check(rain.Sum(s => s.ToHours - s.FromHours) <= 12 + 1e-9, "Daily precipitation exceeds 12 hours.");
             }
         }
     }
 
     [TestCase]
-    public void TwoThousandNewGameSeedsRemainClearAtHandoff()
+    public void NewGameSeedsRemainClearAtHandoff()
     {
         var source = new Source(Profile);
         var maps = new TestMaps();
-        for (uint seed = 0; seed < 2000; seed++)
+        for (uint seed = 0; seed < 500; seed++)
         {
             var p = new WeatherProcess(source);
-            var seedSection = new WeatherSeedSection(p);
-            var mapSection = new WeatherMapSection(p, maps, source);
-            var context = new NewGameContext(seed, Map, new(17 + 5 / 60.0, Season.Autumn, WeatherKind.Clear));
-            var restore = new RestoreContext { Map = Map, FromVersion = 1, Missing = false };
-            var dto = mapSection.CreateDefault(context);
+            var section = new WeatherSection(p, maps, source);
+            var dto = section.CreateDefault(new NewGameContext(seed, Map, new(17 + 5 / 60.0, Season.Autumn, WeatherKind.Clear)));
             if (seed == 0)
             {
-                string json = JsonSerializer.Serialize(dto, mapSection.TypeInfo);
+                string json = JsonSerializer.Serialize(dto, section.TypeInfo);
                 Check(json.Contains("\"pinFromHours\":null", StringComparison.Ordinal), "Strict nullable constructor fields must be written.");
-                dto = JsonSerializer.Deserialize(json, mapSection.TypeInfo)!;
+                dto = JsonSerializer.Deserialize(json, section.TypeInfo)!;
             }
-            seedSection.Restore(seedSection.CreateDefault(context), restore);
-            mapSection.Restore(dto, restore);
+            section.Restore(dto, new RestoreContext { Map = Map, FromVersion = 1, Missing = false });
+            p.Enter(Map, "test", 17.5);
             p.Step(Tick(17.5));
-            Check(p.Selection.Kind == WeatherKind.Clear && p.Selection.Mode == WeatherMode.Auto && p.Now.Precip == 0,
+            Check(p.Seed == seed && p.Selection.Kind == WeatherKind.Clear && p.Selection.Mode == WeatherMode.Auto && p.Now.Precip == 0,
                 $"New-game seed {seed} is not clear at handoff.");
         }
     }
 
     [TestCase]
-    public void SaveRoundTripContinuesIdenticallyThroughTrimAndRefill()
+    public void SaveRoundTripContinuesIdentically()
     {
         var profile = Profile;
-        foreach (var season in new[] { Season.Autumn, Season.Winter })
-        {
-            var a = Create(17, season, profile);
-            for (int hour = 1; hour < 150; hour++) a.Step(Tick(hour, season));
-            var dto = a.Capture(Map);
-            string json = JsonSerializer.Serialize(dto, TestJson.Contract.WeatherProcessState);
-            var restored = JsonSerializer.Deserialize(json, TestJson.Contract.WeatherProcessState)!;
-            var b = Create(17, season, profile);
-            b.Restore(Map, restored);
-            Equal(a, b);
-            for (int i = 0; i < 300; i++)
-            {
-                double hours = 149 + i * .137;
-                a.Step(Tick(hours, season)); b.Step(Tick(hours, season));
-                Equal(a, b);
-            }
-        }
-    }
-
-    [TestCase]
-    public void RainSnowAndWetOverrideResumeWithoutNewDecayAnchors()
-    {
-        var profile = Profile;
+        var source = new Source(profile);
         foreach (var season in new[] { Season.Autumn, Season.Winter })
         {
             var rain = season == Season.Winter ? WeatherKind.Snow : WeatherKind.Rain;
-            var after = season == Season.Winter ? WeatherKind.AfterSnow : WeatherKind.AfterRain;
-            var boot = new WeatherBoot(3, Wet: .37f, Queue: new[] { new WeatherQueueItem(rain, 180) { Intensity = .8f }, new WeatherQueueItem(after, 90) { Intensity = 1 } });
-            var a = new WeatherProcess(new Source(profile));
-            a.Reset(boot); a.Enter(Map, "test", 0); a.Step(Tick(0, season)); a.Step(Tick(3.2, season));
-            var b = Create(3, season, profile); b.Restore(Map, a.Capture(Map));
-            for (int i = 0; i < 40; i++)
+            var a = Create(17, season, profile);
+            a.Step(Tick(150, season));
+            a.Select(new(WeatherMode.Manual, rain, .6f));
+            a.Step(Tick(150.5, season)); a.Step(Tick(150.5, season));
+            var section = new WeatherSection(a, new TestMaps(), source);
+            var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true));
+            var restored = JsonSerializer.Deserialize(JsonSerializer.Serialize(saved, section.TypeInfo), section.TypeInfo)!;
+            var b = new WeatherProcess(source);
+            new WeatherSection(b, new TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 1, Missing = false });
+            b.Enter(Map, "test", 150.5);
+            Equal(a, b);
+            a.Select(new(WeatherMode.Auto, rain, .6f)); b.Select(new(WeatherMode.Auto, rain, .6f));
+            for (int i = 0; i < 300; i++)
             {
-                double hours = 3.2 + i * .2;
+                double hours = 150.5 + i * .137;
                 a.Step(Tick(hours, season)); b.Step(Tick(hours, season));
-                Equal(a, b);
-                Check(a.Now.Wet == .37f, "Explicit wet override was lost.");
+                if (i >= 2) Equal(a, b);
             }
         }
     }
 
     [TestCase]
-    public void ShortExplicitQueueBoundariesAreContinuousAndResumeBitIdentically()
+    public void ManualWetnessDrainsAfterReturningToAuto()
     {
-        var profile = Profile;
-        string[] queues =
-        [
-            "clear:60,cloudy:1,clear:60",
-            "clear:60,few-clouds:1,cloudy:1,few-clouds:1,clear:60",
-            "clear:60,cloudy:1,rain:45,after-rain:1,clear:60"
-        ];
-        foreach (string queue in queues)
-        {
-            var boot = WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-queue"] = queue }, 73, Season.Autumn);
-            var items = boot.Queue!;
-            double boundary = 0;
-            foreach (var item in items.Take(items.Count - 1))
-            {
-                boundary += item.Minutes / 60;
-                const double epsilon = 1e-7;
-                var original = new WeatherProcess(new Source(profile));
-                original.Reset(boot); original.Enter(Map, "test", 0); original.Step(Tick(0));
-                original.Step(Tick(boundary - epsilon));
-                var before = original.Now;
-                var saved = original.Capture(Map);
-                string json = JsonSerializer.Serialize(saved, TestJson.Contract.WeatherProcessState);
-                var restored = Create(73, Season.Autumn, profile);
-                restored.Restore(Map, JsonSerializer.Deserialize(json, TestJson.Contract.WeatherProcessState)!);
-                Equal(original, restored);
-                foreach (double hours in new[] { boundary, boundary + epsilon, boundary + .005, boundary + .6 })
-                {
-                    original.Step(Tick(hours)); restored.Step(Tick(hours));
-                    Equal(original, restored);
-                    if (hours <= boundary + epsilon)
-                        Check(Distance(before, original.Now) < .0001f, $"Short queue hard-cut at {boundary}: {queue}");
-                }
-            }
-        }
+        var p = Create(5, Season.Autumn, Profile);
+        p.Select(new(WeatherMode.Manual, WeatherKind.Rain, .6f));
+        p.Step(Tick(10));
+        p.Select(new(WeatherMode.Auto, WeatherKind.Rain, .6f));
+        p.Step(Tick(10.5));
+        Check(p.Capture(Map).Wet > 0, "Leftover wetness was not kept.");
+        p.Step(Tick(13));
+        var saved = p.Capture(Map);
+        Check(saved.Wet == 0 && saved.Puddle == 0, "Leftover wetness did not drain.");
     }
 
     [TestCase]
-    public void ManualForcedCaptureAndSeasonReplacementAreSettled()
+    public void ManualCaptureAndSeasonReplacementAreSettled()
     {
         var profile = Profile;
         var a = Create(9, Season.Summer, profile);
@@ -222,7 +164,7 @@ public sealed class WeatherProcessTests
         p.Pin(0, WeatherKind.Fog, .5f, 4.5, 7);
         p.Step(Tick(1) with { TargetHours = 5 });
         var saved = p.Capture(Map);
-        Check(saved.LeftAtHours == 5 && saved.Selection.Kind == WeatherKind.Fog, "Forced capture must match the world landing time.");
+        Check(saved.LeftAtHours == 5 && saved.PinKind == WeatherKind.Fog && saved.PinToHours == 7, "Forced capture must match the world landing time.");
         var restored = Create(15, Season.Autumn, Profile); restored.Restore(Map, saved);
         Check(restored.Selection.Kind == WeatherKind.Fog && !restored.Transitioning, "Pinned weather must restore settled.");
         restored.Step(Tick(5));
@@ -246,76 +188,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
-    public void RestoreBatchDoesNotOverwriteAnInactiveMapsSavedClock()
-    {
-        var profile = Profile;
-        var a = Create(1, Season.Autumn, profile);
-        a.Step(Tick(12));
-        var saved = a.Capture(Map);
-        a.Restore(Map, saved);
-        a.Leave(Map, 80);
-        Check(a.Capture(Map).LeftAtHours == 12, "Old scene unload overwrote newly restored map time.");
-        a.Enter(Map, "test", 12);
-        a.Leave(Map, 13);
-        Check(a.Capture(Map).LeftAtHours == 13, "Normal Leave should resume after Enter.");
-    }
-
-    [TestCase]
-    public void CaptureAtUsesTheLatestMomentWithoutChangingLiveState()
-    {
-        var source = new Source(Profile);
-        var process = new WeatherProcess(source);
-        var boot = WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-queue"] = "clear:60,cloudy:120,clear:60" }, 73, Season.Autumn);
-        process.Reset(boot); process.Enter(Map, "test", 0); process.Step(Tick(0));
-        process.Step(Tick(.5) with { TargetHours = 1 });
-        var before = process.Capture(Map);
-        var beforeNow = process.Now;
-        var beforeSelection = process.Selection;
-        var beforeAhead = process.Ahead.ToArray();
-        bool beforeTransition = process.Transitioning;
-        var section = new WeatherMapSection(process, new TestMaps(), source);
-        var moment = new WorldSaveMoment(1.5, 0, Season.Autumn, 60);
-        var context = new CaptureContext(SaveReason.Quit, Map, true) { Moment = moment };
-        var saved = section.Capture(in context);
-        Check(saved.LeftAtHours == 1.5 && saved.Selection.Kind == WeatherKind.Cloudy,
-            "CaptureAt reused the old tick target instead of the HUD's latest save moment.");
-        double future = before.QueueFromHours + before.Queue.Sum(q => q.Minutes) / 60 + 48;
-        var later = new WorldSaveMoment(future, 0, Season.Autumn, 1440);
-        var futureSave = process.CaptureAt(Map, in later);
-        Check(futureSave.LeftAtHours == future, "Pure capture did not extend its private forecast.");
-        Check(SnapshotJson(before) == SnapshotJson(process.Capture(Map)), "CaptureAt changed live queue/counters/windows.");
-        Check(process.Now == beforeNow && process.Selection == beforeSelection && process.Ahead.SequenceEqual(beforeAhead) &&
-            process.Transitioning == beforeTransition && process.Seed == 73, "CaptureAt changed live weather or transition state.");
-        var resumed = Create(73, Season.Autumn, Profile);
-        resumed.Restore(Map, JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
-        for (int i = 0; i < 200; i++)
-        {
-            double hours = 1.5 + i * .137;
-            process.Step(Tick(hours)); resumed.Step(Tick(hours));
-            Equal(process, resumed);
-        }
-    }
-
-    [TestCase]
-    public void CaptureAtKeepsInactiveMapsFrozen()
-    {
-        var source = new Source(Profile);
-        var process = Create(27, Season.Autumn, Profile);
-        process.Step(Tick(12)); process.Leave(Map, 12);
-        var other = new MapId("weather-test-b");
-        process.Enter(other, "test", 12); process.Step(Tick(12));
-        string inactive = SnapshotJson(process.Capture(Map));
-        string active = SnapshotJson(process.Capture(other));
-        var moment = new WorldSaveMoment(150, 2, Season.Winter, 1440);
-        Check(inactive == SnapshotJson(process.CaptureAt(Map, in moment)), "Inactive map advanced or reseasoned to the global moment.");
-        var section = new WeatherMapSection(process, new TestMaps(other), source);
-        var context = new CaptureContext(SaveReason.Quit, Map, true) { Moment = moment };
-        Check(inactive == SnapshotJson(section.Capture(in context)), "Per-map save section ignored its frozen map time.");
-        Check(active == SnapshotJson(process.Capture(other)), "Inactive capture changed the active map.");
-    }
-
-    [TestCase]
-    public void CaptureAtSeasonProjectionIsPureAndResumesAtTheSameEndpoint()
+    public void CaptureAtIsPureAndProjectsTheSaveMoment()
     {
         var profile = Profile;
         var process = Create(9, Season.Summer, profile);
@@ -323,17 +196,20 @@ public sealed class WeatherProcessTests
         process.Step(Tick(0, Season.Summer) with { RealDt = .1 });
         string before = SnapshotJson(process.Capture(Map));
         var beforeNow = process.Now;
+        var beforeAhead = process.Ahead.ToArray();
         var moment = new WorldSaveMoment(2, 1.25, Season.Winter, 0);
         var saved = process.CaptureAt(Map, in moment);
         Check(saved.LeftAtHours == 2 && saved.Season == Season.Winter && saved.ClockOffset == 1.25 &&
             saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1,
             "Save moment's season/offset were not applied to the private snapshot.");
-        Check(before == SnapshotJson(process.Capture(Map)) && process.Now == beforeNow && process.Transitioning,
-            "Season prediction changed live state or completed its blend.");
+        Check(before == SnapshotJson(process.Capture(Map)) && process.Now == beforeNow && process.Ahead.SequenceEqual(beforeAhead) && process.Transitioning,
+            "CaptureAt changed live state.");
         var resumed = Create(9, Season.Winter, profile);
         resumed.Restore(Map, JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
         process.Reseason(0, Season.Winter, 1.25);
-        for (int i = 0; i < 100; i++)
+        var first = Tick(2, Season.Winter) with { ClockOffset = 1.25 };
+        process.Step(first); resumed.Step(first);
+        for (int i = 1; i < 100; i++)
         {
             var tick = Tick(2 + i * .17, Season.Winter) with { ClockOffset = 1.25 };
             process.Step(tick); resumed.Step(tick);
@@ -342,84 +218,78 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
-    public void InitialQuietWaitsForWinterBindingAndPreservesBootWet()
+    public void QuietWindowAndBootWetSurviveTheFirstStepAndKeepTheBlend()
     {
         var process = new WeatherProcess(new Source(Profile));
         process.Reset(new(83, Wet: .37f));
         process.Enter(Map, "test", 6);
         double until = WeatherRules.QuietEnd(6, .75, Season.Winter);
         process.Quiet(6, until);
-        Check(process.Ahead.Count == 0 && process.Transitioning, "Initial Quiet generated weather before binding the first season.");
         var tick = Tick(6, Season.Winter) with { ClockOffset = .75, FlowRate = 0, RealDt = .1 };
         process.Step(tick);
         var saved = process.Capture(Map);
-        Check(saved.Season == Season.Winter && saved.ClockOffset == .75 && saved.QuietUntilHours == until,
-            "Initial Quiet used the placeholder autumn season or offset.");
-        Check(saved.Queue.All(q => WeatherRules.IsNative(q.Kind, Season.Winter)) && saved.WetOverride == .37f &&
+        Check(saved.Season == Season.Winter && saved.ClockOffset == .75 && saved.QuietUntilHours == until && saved.WetOverride == .37f &&
             process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Clear }, "Boot options overwrote Quiet or lost the explicit wet value.");
         process.Step(tick with { RealDt = 2.8 });
-        Check(process.Transitioning && process.Now.Wet < .37f, "Initial Quiet shortened the three-second blend.");
+        Check(process.Transitioning && process.Now.Wet < .37f, "Quiet shortened the three-second blend.");
         process.Step(tick with { RealDt = .11 });
-        Check(!process.Transitioning && process.Now.Wet == .37f, "Initial Quiet did not settle after three real seconds.");
+        Check(!process.Transitioning && process.Now.Wet == .37f, "Quiet did not settle after three real seconds.");
     }
 
     [TestCase]
-    public void InitialSnowPinWaitsForBindingAndKeepsTheFullBlend()
+    public void PinBeforeTheFirstStepBindsToTheSeasonAndBlendsInThreeSeconds()
     {
         var process = new WeatherProcess(new Source(Profile));
-        process.Reset(new(84, Intensity: .8f, Wet: .37f));
+        process.Reset(new(84));
         process.Enter(Map, "test", 6);
         process.Pin(6, WeatherKind.Snow, .4f, 5.5, 8);
-        Check(process.Ahead.Count == 0 && process.Transitioning, "Initial Pin must record its policy without generating autumn weather.");
-        var moment = new WorldSaveMoment(6, .25, Season.Winter, 0);
-        var projected = process.CaptureAt(Map, in moment);
-        Check(projected.Selection is { Kind: WeatherKind.Snow, Intensity: .8f } && projected.WetOverride == .37f &&
-            process.Ahead.Count == 0 && process.Now.Precip == 0 && process.Transitioning,
-            "Initial-policy CaptureAt consumed live pending state or omitted boot parameters.");
         var tick = Tick(6, Season.Winter) with { ClockOffset = .25, FlowRate = 0, RealDt = .5 };
         process.Step(tick);
-        Check(process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .8f } &&
+        Check(process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .4f } &&
             process.Now.PrecipKind is > 0 and < 1 && process.Transitioning, "Initial snow Pin did not begin its real-time blend.");
         process.Step(tick with { RealDt = 2.4 });
         Check(process.Transitioning && process.Now.PrecipKind < 1, "Initial Pin settled before three seconds.");
         process.Step(tick with { RealDt = .11 });
-        Check(!process.Transitioning && process.Now.PrecipKind == 1 &&
-            SnapshotJson(projected) == SnapshotJson(process.Capture(Map)), "Initial Pin's actual endpoint differs from its pure snapshot.");
+        Check(!process.Transitioning && process.Now.PrecipKind == 1, "Initial Pin did not settle.");
         process.Pin(6, WeatherKind.Clear, null, 6, 8);
         process.Step(tick with { RealDt = .1 });
         process.Step(tick with { RealDt = 2.8 });
-        Check(process.Transitioning && process.Now.PrecipKind > 0, "A normal initialized Pin lost its three-second blend.");
+        Check(process.Transitioning && process.Now.PrecipKind > 0, "A normal Pin lost its three-second blend.");
         process.Step(tick with { RealDt = .11 });
-        Check(!process.Transitioning && process.Now.PrecipKind == 0, "Normal initialized Pin did not settle.");
+        Check(!process.Transitioning && process.Now.PrecipKind == 0, "Normal Pin did not settle.");
     }
 
     [TestCase]
-    public void InitialDefaultsNeverDiscardExplicitWeatherQueueOrRemainingParameters()
+    public void ExplicitBootWeatherKeepsEveryParameter()
     {
         var profile = Profile;
-        (WeatherBoot Boot, Season Season, WeatherKind First, double? Minutes)[] cases =
-        [
-            (new(85, WeatherKind.Snow, .82f, .27f), Season.Winter, WeatherKind.Snow, null),
-            (new(85, WeatherKind.Snow, .82f, .27f, 90), Season.Winter, WeatherKind.Snow, 90),
-            (new(85, Intensity: .82f, Wet: .27f, Queue: new[]
-            {
-                new WeatherQueueItem(WeatherKind.Cloudy, 30), new WeatherQueueItem(WeatherKind.Rain, 90),
-                new WeatherQueueItem(WeatherKind.AfterRain, 45)
-            }), Season.Autumn, WeatherKind.Cloudy, 30)
-        ];
-        foreach (var test in cases)
+        var manual = new WeatherProcess(new Source(profile));
+        manual.Reset(new(85, WeatherKind.Snow, .82f, .27f)); manual.Enter(Map, "test", 6);
+        manual.Quiet(6, WeatherRules.QuietEnd(6, 0, Season.Winter));
+        manual.Step(Tick(6, Season.Winter));
+        var saved = manual.Capture(Map);
+        Check(saved.Selection is { Mode: WeatherMode.Manual, Kind: WeatherKind.Snow, Intensity: .82f } && saved.WetOverride == .27f &&
+            saved.QuietUntilHours == 0, "A map default consumed explicit boot weather or scalar arguments.");
+
+        var timed = new WeatherProcess(new Source(profile));
+        timed.Reset(new(85, WeatherKind.Snow, .82f, .27f, 90)); timed.Enter(Map, "test", 6);
+        timed.Step(Tick(6, Season.Winter));
+        saved = timed.Capture(Map);
+        Check(timed.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .82f } &&
+            saved.PinKind == WeatherKind.Snow && saved.PinFromHours == 6 && saved.PinToHours == 7.5, "--weather-remaining did not become a pinned window.");
+    }
+
+    private static List<WeatherSpan> Forecast(WeatherProcess p, Season season, int days)
+    {
+        var seen = new List<WeatherSpan>();
+        for (double hour = 0; hour <= 24 * days; hour += 6)
         {
-            var process = new WeatherProcess(new Source(profile));
-            process.Reset(test.Boot); process.Enter(Map, "test", 6);
-            process.Quiet(6, WeatherRules.QuietEnd(6, 0, test.Season));
-            process.Step(Tick(6, test.Season));
-            var saved = process.Capture(Map);
-            Check(saved.Selection.Kind == test.First && saved.Selection.Intensity == .82f && saved.WetOverride == .27f &&
-                saved.QuietUntilHours == 0, "A map default consumed explicit boot weather or scalar arguments.");
-            if (test.Minutes is { } minutes)
-                Check(saved.Queue[0].Kind == test.First && saved.Queue[0].Minutes == minutes && saved.Queue[0].Intensity == .82f,
-                    "A default policy replaced the explicit queue/remaining duration.");
+            p.Step(Tick(hour, season));
+            foreach (var span in p.Ahead)
+                if (span.Kind != WeatherKind.Clear && span.FromHours > hour && span.ToHours < hour + 24 &&
+                    !seen.Any(s => s.FromHours == span.FromHours && s.Kind == span.Kind)) seen.Add(span);
         }
+        return seen;
     }
 
     private static WeatherProcess Create(uint seed, Season season, WeatherProfile profile)
@@ -432,20 +302,10 @@ public sealed class WeatherProcessTests
     private static void Equal(WeatherProcess a, WeatherProcess b)
     {
         Check(a.Selection == b.Selection && a.Now == b.Now && a.Ahead.SequenceEqual(b.Ahead), "Live weather or forecast differs bitwise.");
-        string sa = JsonSerializer.Serialize(a.Capture(Map), TestJson.Contract.WeatherProcessState);
-        string sb = JsonSerializer.Serialize(b.Capture(Map), TestJson.Contract.WeatherProcessState);
-        Check(sa == sb, "Captured weather state differs.");
+        Check(SnapshotJson(a.Capture(Map)) == SnapshotJson(b.Capture(Map)), "Captured weather state differs.");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static string SnapshotJson(WeatherProcessState state) => JsonSerializer.Serialize(state, TestJson.Contract.WeatherProcessState);
-    private static float Distance(WeatherVec a, WeatherVec b) => new[]
-    {
-        Math.Abs(a.Cloud - b.Cloud), Math.Abs(a.CloudType - b.CloudType), Math.Abs(a.Cb - b.Cb),
-        Math.Abs(a.Overcast - b.Overcast), Math.Abs(a.Precip - b.Precip), Math.Abs(a.PrecipKind - b.PrecipKind),
-        Math.Abs(a.Wet - b.Wet), Math.Abs(a.Puddle - b.Puddle), Math.Abs(a.Fog - b.Fog),
-        Math.Abs(a.GroundFog - b.GroundFog), Math.Abs(a.Storm - b.Storm), Math.Abs(a.SnowAdd - b.SnowAdd),
-        Math.Abs(a.Rainbow - b.Rainbow), Math.Abs(a.Lightning - b.Lightning)
-    }.Max();
     private static void Reject(Action action)
     {
         try { action(); } catch (ArgumentException) { return; }

@@ -99,7 +99,7 @@ public sealed class ExtinguisherPart() : MepPart<EquipmentParams>(new(1300, 200)
             new(r * 0.72f, body - dome * 0.25f, r * 0.3f, body, new(0.6f, 0.8f), new(0.15f, 0.99f)),
             new(r * 0.3f, body, 0, body, new(0, 1), new(0, 1)),
         ];
-        b.Add(Shapes.Lathe(bands, segments, MepStyle.Curved(MepStyle.FireRed)), Xf.Move(x, 0, 0), f);
+        b.Add(PartShapes.Lathe(bands, segments, MepStyle.Curved(MepStyle.FireRed)), Xf.Move(x, 0, 0), f);
         var dark = MepStyle.Insert(MepStyle.Dark);
         var valve = height - body;
         b.AddBox(new(x - 0.017f, body - 0.004f, -0.022f), new(x + 0.017f, body + valve * 0.55f, 0.022f), near ? 0.004f : 0, dark, f);

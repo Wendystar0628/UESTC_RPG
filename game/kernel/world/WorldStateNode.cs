@@ -1,7 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
-using Campus.Contracts.Save;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -10,13 +9,12 @@ namespace Campus.Kernel.World;
 
 /// <summary>The sole frame driver of world time. Weather Step stays inside this ordered step.</summary>
 [KernelNode("world-state", Owner = "WP-34")]
-[QualityResponsive(Reads = new[] { QualityKnob.FrameCap, QualityKnob.Vrr })]
+[QualityResponsive(Reads = new[] { QualityKnob.FrameCap })]
 public partial class WorldStateNode : Node, IMapAware, IQualityAware
 {
     private WorldStateService? _world;
     private IViewControl? _view;
     private int _stepRate = 12;
-    private ISaveService? _save;
 
     public override void _Ready()
     {
@@ -24,8 +22,6 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         _world = (WorldStateService)Services.Get<IWorldState>();
         _view = Services.Get<IViewControl>();
         _stepRate = Services.Get<IQualityService>().Effective.StepRate;
-        _save = Services.Get<ISaveService>();
-        _world.Settled += RequestSettled;
         WriteGlobals();
     }
 
@@ -39,11 +35,6 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         WriteGlobals();
     }
 
-    public override void _ExitTree()
-    {
-        if (_world is not null) _world.Settled -= RequestSettled;
-    }
-
     public void OnMapUnloading(MapId from) => World.OnMapUnloading(from);
     public void ApplyQuality(QualityView view, in QualityChange change) => _stepRate = view.StepRate;
     public void OnMapLoaded(IMapContext context)
@@ -53,7 +44,6 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     }
 
     private WorldStateService World => _world ??= (WorldStateService)Services.Get<IWorldState>();
-    private void RequestSettled() => _save?.Request(SaveReason.Settled);
 
     private void WriteGlobals()
     {

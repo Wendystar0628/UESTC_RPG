@@ -33,7 +33,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 - **新增契约、全局着色器参数、着色器文件、程序集引用、NuGet 包**：不自己加，写 `requests/contract-<包号>-<主题>.md` 交 Astra（§3）；要早提。
 - **要改的路径不在本包独占目录里**：不改，写进回报或契约申请。
-- **写 gen 或烘焙子任务**：只用 `DetMath` 的超越函数，随机只用契约的 `Rng` 与 `StableHash`（ENG-ARCH §2）。
+- **写 gen 或烘焙子任务**：随机只用契约的 `Rng` 与 `StableHash`，同机同输入同输出即可（ENG-ARCH §2，D-232）。
 - **跑构建、导入、烘焙、门禁或截图**：经构建锁排队，不绕过；只走命令行，不在编辑器里重存场景（§4）。
 - **写 Godot 代码前**：先读 `docs/godot-api/README.md`，用到的类、方法、属性都先在 `docs/godot-api/signatures.txt` 查到签名再写（D-145），着色语言查 `docs/godot-api/shaders/README.md`。
 

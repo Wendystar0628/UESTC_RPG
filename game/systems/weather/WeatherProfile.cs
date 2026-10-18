@@ -8,12 +8,11 @@ public sealed record WeatherPhase(WeatherKind Kind, double MinHours, double MaxH
 public sealed record WeatherTemplate(string Id, Season Season, double RatePerDay, double FromClock, double ToClock, WeatherPhase[] Phases)
 {
     public double WindowHours => FromClock == ToClock ? 24 : WeatherRules.Clock(ToClock - FromClock);
-    public double Hazard(double clock) => WeatherRules.Clock(clock - FromClock) < WindowHours ? RatePerDay / WindowHours : 0;
 }
 public sealed record WeatherEdge(WeatherKind From, WeatherKind To);
 public sealed record WeatherProfile(int Version, double ClearGapHours, double PrecipGapHours, double MaxPrecipHoursPerDay,
-    double BlendHours, WeatherTemplate[] Templates, WeatherEdge[] Edges)
-{
+    double BlendHours, WeatherTemplate[] Templates, WeatherEdge[] Edges, double DayBoundaryClock = 19)
+{   // DayBoundaryClock：日界的钟点，取在傍晚一段几乎不发生天气的间隔里（SYS-WEATHER-PROCESS）
     public static WeatherProfile Parse(string json)
     {
         var profile = JsonSerializer.Deserialize(json, WeatherJsonContext.Contract.WeatherProfile)
@@ -22,7 +21,8 @@ public sealed record WeatherProfile(int Version, double ClearGapHours, double Pr
             !double.IsFinite(profile.PrecipGapHours) || profile.PrecipGapHours < 8 ||
             !double.IsFinite(profile.MaxPrecipHoursPerDay) || profile.MaxPrecipHoursPerDay is <= 0 or > 12 ||
             !double.IsFinite(profile.BlendHours) || profile.BlendHours < .6 || profile.Templates is not { Length: > 0 } ||
-            profile.Edges is not { Length: > 0 }) throw new InvalidDataException("Invalid weather profile limits.");
+            profile.Edges is not { Length: > 0 } || !double.IsFinite(profile.DayBoundaryClock) ||
+            profile.DayBoundaryClock is < 0 or >= 24) throw new InvalidDataException("Invalid weather profile limits.");
         if (profile.Templates.Select(t => t.Id).Distinct(StringComparer.Ordinal).Count() != profile.Templates.Length)
             throw new InvalidDataException("Weather template IDs must be unique.");
         foreach (var template in profile.Templates)
@@ -61,7 +61,7 @@ public interface IWeatherProfileSource
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(WeatherProfile))]
-[JsonSerializable(typeof(WeatherSeedSave))]
+[JsonSerializable(typeof(WeatherSave))]
 [JsonSerializable(typeof(WeatherProcessState))]
 internal partial class WeatherJsonContext : JsonSerializerContext
 {

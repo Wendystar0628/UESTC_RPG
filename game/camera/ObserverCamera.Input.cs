@@ -50,7 +50,6 @@ public partial class ObserverCamera
 
     public override void _Input(InputEvent input)
     {
-        _inputEventCount++;
         if (_flow?.State == AppState.Entering) _skipHintVisible = true;
         // Releases always clear held state, including when a newly opened GUI consumes the release.
         foreach (string action in InputBindings.Actions)
@@ -60,7 +59,6 @@ public partial class ObserverCamera
 
     public override void _UnhandledInput(InputEvent input)
     {
-        _unhandledInputEventCount++;
         if (_flow is null) return;
         if (_flow.State == AppState.Entering)
         {
@@ -146,19 +144,14 @@ public partial class ObserverCamera
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default);
         _menuHeld = false; _menuSeconds = 0; _skipSent = false;
         SetInterfaceMode(true);
-        _saves?.Request(SaveReason.FocusLost);
     }
 
     private bool Dispatch(InputActionEvent action)
     {
-        _lastRoutedAction = action.Action;
-        _lastRoutedPressed = action.Pressed;
-        _lastInputConsumer = null;
         // Inactive registered layers return false. The first active consumer stops propagation;
         // snapshot registrations because handling an action may open or close a page.
         foreach (var layer in _layers.ToArray())
-            if (_layers.Contains(layer) && layer.Handler(action))
-            { _lastInputConsumer = layer.Owner; return true; }
+            if (_layers.Contains(layer) && layer.Handler(action)) return true;
         return false;
     }
     private void AdvanceInput(float seconds)

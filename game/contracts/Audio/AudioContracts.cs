@@ -17,14 +17,14 @@ public static class AudioBuses
 }
 public enum AudioGroup : byte { Master, Ambience, Foley, Ui, Music }      // 设置里的五组音量：总、环境、动作、界面、音乐
 
-// ===== 设置：user://audio.cfg，只有 53a 读写，读取只收基本类型 =====
+// ===== 设置：user://settings.json 的 audio 节，由统一设置读写方持久化 =====
 public enum BackgroundBehavior : byte { Keep, Lower, Mute }
 public enum SuddenSoundMode : byte { Normal, Softer, Off }                 // 雷、钟、孔雀
 public sealed record AudioSettings(
     float Master = 0.8f, float Ambience = 1.0f, float Foley = 0.8f, float Ui = 0.6f, float Music = 0.7f,   // 滑杆值 0–1；脚步默认安静
     bool UiSounds = true, bool HoverSounds = false, bool QuietMode = false, bool Mono = false,
     SuddenSoundMode Sudden = SuddenSoundMode.Normal, BackgroundBehavior Background = BackgroundBehavior.Keep,
-    string? OutputDevice = null, int Schema = 1);
+    string? OutputDevice = null);
 
 // ===== 界面音与音乐 =====
 public enum UiCue : byte

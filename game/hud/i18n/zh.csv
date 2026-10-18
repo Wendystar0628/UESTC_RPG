@@ -129,19 +129,15 @@ keys.minimap,小地图显隐
 keys.help,操作说明
 keys.clean,纯净模式
 keys.note,时间只往前走，没有倒退键。Esc 不暂停世界；暂停流逝用 P。数字键 1–9、0 跳到点位 P01–P09、P00。
-quality.preset.smooth,流畅
 quality.preset.balanced,均衡
 quality.preset.fine,精致
 quality.preset.ultra,极致
 quality.preset.custom,自定义
-quality.recommended,推荐：{preset} · {gpu} · 重新检测 · 试跑
 quality.group.display,显示 · DISPLAY
 quality.group.clarity,清晰度 · CLARITY
 quality.group.lighting,光影 · LIGHTING
-quality.group.post,后期 · POST
 quality.group.scene,场景与植被 · SCENE
 quality.group.effects,水与粒子 · EFFECTS
-quality.group.advanced,高级 · ADVANCED
 quality.tag.veil,雾幕
 quality.tag.restart,重启
 quality.footnote,描线、分阶明暗与按材质的影色、柔光、平涂贴图、实时阴影与西湖倒影是本作画风，任何画质下都保留。
@@ -158,6 +154,11 @@ quality.display_mode.0,窗口
 quality.display_mode.1,无边框
 quality.display_mode.2,独占全屏
 quality.window_size,窗口尺寸
+quality.window_size.0,1920×1080
+quality.window_size.1,1280×720
+quality.window_size.2,1600×900
+quality.window_size.3,2560×1440
+quality.window_size.4,3840×2160
 quality.v_sync,垂直同步
 quality.frame_cap,帧率上限
 quality.frame_cap.0,30
@@ -165,44 +166,21 @@ quality.frame_cap.1,60
 quality.frame_cap.2,半刷新
 quality.frame_cap.3,刷新率
 quality.frame_cap.4,不限
-quality.vrr,可变刷新率
 quality.render_scale,渲染比例
-quality.fsr_sharpness,FSR 锐度
 quality.anti_aliasing,抗锯齿
 quality.anti_aliasing.0,SMAA 1x
 quality.anti_aliasing.1,FXAA
-quality.anisotropy,各向异性过滤
 quality.shadow_quality,阴影质量
 quality.shadow_quality.0,2048·2
 quality.shadow_quality.1,4096·4
 quality.shadow_quality.2,8192·4
 quality.shadow_distance,阴影距离
-quality.small_casters,细小物件投影
-quality.glow_quality,柔光质量
-quality.glow_quality.0,高
-quality.glow_quality.1,标准
-quality.tilt_shift,移轴
-quality.tilt_shift.0,1/2
-quality.tilt_shift.1,1/4
-quality.tilt_shift.2,关
-quality.lens_flare,镜头光斑
-quality.light_shafts,光柱
-quality.vignette,暗角
-quality.detail_scale,细节距离
-quality.mesh_lod_threshold,模型 LOD 精度
-quality.geometric_leaves,近景几何叶
 quality.foliage_density,植被与草密度
-quality.grass_radius,草地范围
 quality.reflection_interval,西湖倒影刷新
 quality.reflection_interval.2,每 2 帧
 quality.reflection_interval.3,每 3 帧
 quality.reflection_interval.4,每 4 帧
 quality.particle_density,降水与粒子密度
-quality.adaptive,自动调节画质
-quality.graphics_api,图形接口
-quality.graphics_api.0,D3D12
-quality.graphics_api.1,Vulkan
-quality.gpu_index,显卡选择
 sound.group.volume,音量 · VOLUME
 sound.group.calm,减少干扰 · CALM
 sound.master,总音量
@@ -267,7 +245,5 @@ saves.only_from_title,从开始页读取或开始
 saves.place.unknown,清水河校区
 saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。
 saves.detail.ok,自动保存 · 保留最近 {gens} 代
-saves.detail.recovered,最近一次保存不完整，已回到上一代
 saves.detail.corrupt,存档文件损坏，无法读取
-saves.detail.newer,这个存档来自更新的版本
 rebind.rejected,这个键不能用：{reason}

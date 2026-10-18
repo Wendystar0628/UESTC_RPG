@@ -18,7 +18,6 @@ public partial class SaveNode : Node, IBootParticipant
     private SaveService _save = null!;
     private IMapRuntime _mapRuntime = null!;
     private ICollisionWorld _collision = null!;
-    private IMapService? _maps;
     private IVeilPresentation? _veilPresentation;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<byte[]?>? _capture;
@@ -50,7 +49,6 @@ public partial class SaveNode : Node, IBootParticipant
                     var seed = args.TryGetValue("weather-seed", out value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
                     _collision = RuntimeKernel.Get<ICollisionWorld>();
-                    _maps = RuntimeKernel.Get<IMapService>();
                     _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
                     var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
                         new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
@@ -62,7 +60,6 @@ public partial class SaveNode : Node, IBootParticipant
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem());
                     await _save.Initialize(new(context.SaveDirectory, context.Build, enabled, slot, at, seed), bindings, new(sections));
-                    if (!_exiting && _maps is not null) _maps.Arrived += OnMapArrived;
                     break;
                 }
             case BootPhase.AfterMapWarm: break;
@@ -176,25 +173,10 @@ public partial class SaveNode : Node, IBootParticipant
         _drawCovered = _veilPresentation?.IsCovered == true;
     }
 
-    private void OnMapArrived(MapId map, MapTravelCause cause)
-    {
-        switch (cause)
-        {
-            case MapTravelCause.Boot: case MapTravelCause.LoadSave: case MapTravelCause.NewGame: break;
-            case MapTravelCause.Ui:
-            case MapTravelCause.Portal:
-            case MapTravelCause.Teleport:
-            case MapTravelCause.Test:
-                _save.Request(SaveReason.MapChanged); break;
-            default: throw new ArgumentOutOfRangeException(nameof(cause));
-        }
-    }
-
     public override void _ExitTree()
     {
         _exiting = true;
         RenderingServer.FramePostDraw -= OnFramePostDraw;
-        if (_maps is not null) _maps.Arrived -= OnMapArrived;
         _exit.Cancel();
         _hiddenHud?.Dispose(); _capture?.TrySetResult(null); _save?.Dispose();
         _exit.Dispose();

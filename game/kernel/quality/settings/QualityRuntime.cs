@@ -4,7 +4,6 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
-using Campus.Kernel.Quality.Adaptive;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
 using Godot;
 
@@ -12,10 +11,13 @@ namespace Campus.Kernel.Quality.Settings;
 
 [KernelNode("quality", Owner = "WP-32")]
 [QualityResponsive(Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
-    QualityKnob.FrameCap, QualityKnob.Vrr, QualityKnob.RenderScale, QualityKnob.FsrSharpness,
-    QualityKnob.Adaptive, QualityKnob.GraphicsApi, QualityKnob.GpuIndex])]
+    QualityKnob.FrameCap, QualityKnob.RenderScale])]
 public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
+    // Fixed style defaults written into the global quality vector (SYS-GRAPHICS): detail distance factor and grass radius.
+    private const float DetailScale = 0.8f;
+    private const float GrassRadius = 20f;
+
     private QualityService _service = null!;
     private IVeilService _veil = null!;
     private CancellationToken _lifetime;
@@ -90,7 +92,6 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         cancellationToken.ThrowIfCancellationRequested();
         return OwnsQualityVeil ? _veil.Reveal(VeilReason.Quality, 0.3f).WaitAsync(cancellationToken) : Task.CompletedTask;
     }
-    public GraphicsDevice ReadDevice() => DeviceProbe.Read();
     public void ReportError(string message) => GD.PushError(message);
     public void ReportInfo(string message) => GD.Print(message);
     public bool Booting => RuntimeKernel.Get<IAppFlow>().State switch
@@ -121,7 +122,8 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         _lifetime.ThrowIfCancellationRequested();
         var notification = change;
-        var recoveryErrors = change.Origin == ApplyOrigin.Revert ? new List<Exception>() : null;
+        // Every consumer is attempted so a failed apply or its rollback leaves no consumer behind.
+        var errors = new List<Exception>();
         var currentMap = RuntimeKernel.Get<IMapService>().Current.Value;
         var registrations = RuntimeKernel.Services.ForMap(currentMap).Where(entry => entry.Kind == "node")
             .Select(entry => (Entry: entry, Quality: entry.Type.GetCustomAttribute<QualityResponsiveAttribute>()))
@@ -135,18 +137,18 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             if (RuntimeKernel.Services.Create(item.Entry.Type) is IQualityAware aware && aware is Node node && node.IsInsideTree())
             {
                 try { aware.ApplyQuality(view, change); }
-                catch (Exception error) when (recoveryErrors is not null) { recoveryErrors.Add(error); }
+                catch (Exception error) { errors.Add(error); }
             }
         }
+        _lifetime.ThrowIfCancellationRequested();
         try
         {
-            _lifetime.ThrowIfCancellationRequested();
-            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, new Vector4(view[QualityKnob.DetailScale],
-                view[QualityKnob.FoliageDensity], view[QualityKnob.GrassRadius], 0));
+            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, new Vector4(DetailScale,
+                view[QualityKnob.FoliageDensity], GrassRadius, 0));
             RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
         }
-        catch (Exception error) when (recoveryErrors is not null) { recoveryErrors.Add(error); }
-        if (recoveryErrors is { Count: > 0 }) throw new AggregateException("Quality consumers failed to restore.", recoveryErrors);
+        catch (Exception error) { errors.Add(error); }
+        if (errors.Count > 0) throw new AggregateException("Quality consumers failed.", errors);
     }
 
     public void ApplyQuality(QualityView view, in QualityChange change)
@@ -170,56 +172,9 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             viewport.Scaling3DMode = view[QualityKnob.RenderScale] < 1 ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
             viewport.Scaling3DScale = view[QualityKnob.RenderScale];
         }
-        if (change.Has(QualityKnob.FsrSharpness)) GetViewport().FsrSharpness = view[QualityKnob.FsrSharpness];
         if (change.Has(QualityKnob.VSync)) DisplayServer.WindowSetVsyncMode(view[QualityKnob.VSync] != 0 ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
-        if (change.Has(QualityKnob.FrameCap) || change.Has(QualityKnob.Vrr))
-            Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameCap], view[QualityKnob.Vrr] != 0, RefreshRate);
-    }
-
-    public async Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var viewport = GetViewport();
-        var previousScale = viewport.Scaling3DScale;
-        var previousMode = viewport.Scaling3DMode;
-        var rid = viewport.GetViewportRid();
-        RenderingServer.ViewportSetMeasureRenderTime(rid, true);
-        var full = new List<double>();
-        var reduced = new List<double>();
-        var time = 0d;
-        var reducedPhase = false;
-        var discard = 3;
-        try
-        {
-            viewport.Scaling3DMode = Viewport.Scaling3DModeEnum.Bilinear;
-            viewport.Scaling3DScale = 1;
-            while (time < 2.4)
-            {
-                time += await NextFrame(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                if (time >= 2.4) break;
-                if (!reducedPhase && time >= 1.4)
-                {
-                    reducedPhase = true;
-                    viewport.Scaling3DMode = Viewport.Scaling3DModeEnum.Fsr;
-                    viewport.Scaling3DScale = 0.67f;
-                    discard = 3;
-                }
-                if (discard-- > 0 || time < 0.4) continue;
-                var milliseconds = RenderingServer.ViewportGetMeasuredRenderTimeGpu(rid);
-                if (double.IsFinite(milliseconds) && milliseconds > 0) (reducedPhase ? reduced : full).Add(milliseconds);
-            }
-            var size = OutputSize;
-            return DeviceProbe.FromSamples(device, full, reduced, (double)size.X * size.Y);
-        }
-        finally
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                viewport.Scaling3DMode = previousMode;
-                viewport.Scaling3DScale = previousScale;
-            }
-        }
+        if (change.Has(QualityKnob.FrameCap))
+            Engine.MaxFps = QualityCatalog.FrameLimit(view[QualityKnob.FrameCap], RefreshRate);
     }
 
     private static int OwnerOrder(string owner) => owner switch
@@ -227,9 +182,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         "WP-32" => 0,
         "WP-03" => 1,
         "WP-05" => 2,
-        "WP-04" => 3,
-        "WP-02" => 4,
-        _ => 5,
+        _ => 3,
     };
 
     private static bool OtherVeil(VeilReason reason) => reason switch

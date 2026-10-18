@@ -35,12 +35,12 @@ public sealed class SaveSections
 
     public PreparedSave Prepare(SaveDocument document)
     {
-        // A newer known segment makes the entire slot read-only even when some other segment is corrupt.
+        // A segment newer than this build makes the whole generation unreadable; it is never rewritten with fields dropped.
         foreach (var (key, raw) in document.Sections)
         {
             var registration = Find(key);
             if (registration is not null && raw.Version > registration.Attribute.Version)
-                throw new SaveFormatException("Newer section version: " + key, newerBuild: true);
+                throw new SaveFormatException("Newer section version: " + key);
         }
         var maps = document.Sections.Keys.Where(k => k.StartsWith("map:", StringComparison.Ordinal))
             .Select(k => new MapId(k[4..k.IndexOf('/')])).Append(document.Meta.Map).Distinct().OrderBy(m => m.Value, StringComparer.Ordinal).ToArray();
@@ -57,21 +57,9 @@ public sealed class SaveSections
                 {
                     using var envelope = SaveContainer.ParseJson(raw.Envelope);
                     var data = envelope.RootElement.GetProperty("data");
-                    object? dto;
-                    if (raw.Version == attribute.Version)
-                    {
-                        ValidateData(data, attribute, map);
-                        dto = JsonSerializer.Deserialize(data, registration.Section.TypeInfo);
-                    }
-                    else
-                    {
-                        var migrated = JsonNode.Parse(data.GetRawText()) ?? throw new JsonException("Null section.");
-                        for (var version = raw.Version; version < attribute.Version; version++)
-                            migrated = registration.Section.Migrate(version, migrated) ?? throw new JsonException("Null migration result.");
-                        using var checkedJson = SaveContainer.ParseJson(Encoding.UTF8.GetBytes(migrated.ToJsonString()));
-                        ValidateData(checkedJson.RootElement, attribute, map);
-                        dto = JsonSerializer.Deserialize(checkedJson.RootElement, registration.Section.TypeInfo);
-                    }
+                    if (raw.Version != attribute.Version) throw new SaveFormatException("Section version mismatch: " + key);
+                    ValidateData(data, attribute);
+                    var dto = JsonSerializer.Deserialize(data, registration.Section.TypeInfo);
                     if (dto is null) throw new JsonException("Null section.");
                     prepared.Add(new(key, registration, map, dto, raw.Version, null));
                 }
@@ -82,9 +70,6 @@ public sealed class SaveSections
                 }
             }
         }
-        try { ValidatePreparedTimeline(prepared, document.Meta.Map); }
-        catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
-        { throw new SaveFormatException("Invalid core timeline: " + error.Message); }
         return new(document, prepared);
     }
 
@@ -124,29 +109,7 @@ public sealed class SaveSections
         var visit = visits.FirstOrDefault(v => v?["map"]?.GetValue<string>() == current)
             ?? throw new JsonException("Current map has no visit.");
         visit["lastPose"] = pose.DeepClone(); visit["mode"] = mode.DeepClone();
-        if (sections.TryGetValue("world", out var world))
-        {
-            var worldData = JsonNode.Parse(world.Envelope)?["data"];
-            if (worldData?["worldHours"] is { } hours) visit["leftAtHours"] = hours.DeepClone();
-        }
-        if (sections.TryGetValue("map:" + current + "/weather", out var weather))
-        {
-            var weatherData = JsonNode.Parse(weather.Envelope)?["data"];
-            if (weatherData?["epoch"] is { } epoch) visit["weatherEpoch"] = epoch.DeepClone();
-        }
         sections["maps"] = new(maps.Version, Encoding.UTF8.GetBytes(mapEnvelope.ToJsonString()));
-    }
-
-    private static void ValidatePreparedTimeline(IReadOnlyList<PreparedSection> prepared, MapId currentMap)
-    {
-        var world = prepared.FirstOrDefault(p => p.Registration.Attribute.Id == "world" && p.Registration.Attribute.Scope == SaveScope.Global);
-        var weather = prepared.FirstOrDefault(p => p.Map == currentMap && p.Registration.Attribute.Id == "weather" && p.Registration.Attribute.Scope == SaveScope.PerMap);
-        if (world?.Dto is null || weather?.Dto is null) return; // A missing segment is explicitly defaulted on the main thread.
-        var worldBytes = JsonSerializer.SerializeToUtf8Bytes(world.Dto, world.Registration.Section.TypeInfo);
-        var weatherBytes = JsonSerializer.SerializeToUtf8Bytes(weather.Dto, weather.Registration.Section.TypeInfo);
-        using var worldJson = SaveContainer.ParseJson(worldBytes);
-        using var weatherJson = SaveContainer.ParseJson(weatherBytes);
-        CheckWeatherMoment(worldJson.RootElement, weatherJson.RootElement);
     }
 
     private static void ValidateSnapshotTimeline(IReadOnlyDictionary<string, RawSaveSection> sections, MapId? expectedMap, WorldSaveMoment? moment)
@@ -172,19 +135,6 @@ public sealed class SaveSections
                 worldData.GetProperty("flowRate").GetInt32() != expected.FlowRate)
                 throw new SaveFormatException("World section disagrees with the shared capture moment.");
         }
-        if (expectedMap is { } current && sections.TryGetValue("map:" + current.Value + "/weather", out var weather))
-        {
-            using var weatherJson = SaveContainer.ParseJson(weather.Envelope);
-            CheckWeatherMoment(worldData, weatherJson.RootElement.GetProperty("data"));
-        }
-    }
-
-    private static void CheckWeatherMoment(JsonElement world, JsonElement weather)
-    {
-        if (world.GetProperty("worldHours").GetDouble() != weather.GetProperty("leftAtHours").GetDouble() ||
-            world.GetProperty("clockOffset").GetDouble() != weather.GetProperty("clockOffset").GetDouble() ||
-            !string.Equals(world.GetProperty("seasonTarget").GetString(), weather.GetProperty("season").GetString(), StringComparison.OrdinalIgnoreCase))
-            throw new SaveFormatException("World and current-map weather describe different moments.");
     }
 
     public static string Key(SaveSectionAttribute attribute, MapId map) => attribute.Scope switch
@@ -203,9 +153,9 @@ public sealed class SaveSections
 
     private static bool IsCore(SaveSectionAttribute attribute) => attribute.Phase == RestorePhase.World;
 
-    private static void ValidateData(JsonElement data, SaveSectionAttribute attribute, MapId map)
+    private static void ValidateData(JsonElement data, SaveSectionAttribute attribute)
     {
-        ValidateNumbersAndArrays(data, attribute.Id == "weather" ? 256 : int.MaxValue);
+        ValidateFinite(data);
         if (attribute.Id == "world")
         {
             foreach (var field in new[] { "flowRate", "flowRateBeforePause" })
@@ -223,46 +173,9 @@ public sealed class SaveSections
                 (!Enum.TryParse<Season>(target.GetString(), true, out var season) || position.GetDouble() != (int)season))
                 throw new JsonException("Season position is not settled at its target.");
         }
-        if (attribute.Id == "atlas" && data.TryGetProperty("pins", out var pins) && pins.GetArrayLength() > 50)
-            throw new JsonException("More than fifty custom pins.");
-        if (attribute.Id == "weather" && attribute.Scope == SaveScope.PerMap) ValidateWeather(data, map);
     }
 
-    private static void ValidateWeather(JsonElement data, MapId map)
-    {
-        if (data.GetProperty("map").GetString() != map.Value) throw new JsonException("Weather map does not match its section key.");
-        foreach (var field in new[] { "segment", "attempt", "leftAtHours", "quietUntilHours" })
-            if (data.TryGetProperty(field, out var value) && value.GetDouble() < 0) throw new JsonException("Negative weather counter: " + field);
-        foreach (var field in new[] { "wet", "puddle", "snowAdd", "wetOverride", "pinIntensity" })
-            CheckUnit(data, field);
-        CheckUnit(data.GetProperty("selection"), "intensity");
-        var queue = data.GetProperty("queue");
-        if (queue.GetArrayLength() == 0) throw new JsonException("Weather queue is empty.");
-        var from = data.GetProperty("queueFromHours").GetDouble();
-        var left = data.GetProperty("leftAtHours").GetDouble();
-        if (from > left) throw new JsonException("Weather queue starts after the saved time.");
-        var end = from;
-        foreach (var item in queue.EnumerateArray())
-        {
-            var minutes = item.GetProperty("minutes").GetDouble();
-            if (minutes <= 0 || minutes > 1e6) throw new JsonException("Invalid weather duration.");
-            CheckUnit(item, "intensity"); end += minutes / 60;
-        }
-        if (!double.IsFinite(end) || end < left + 24 - 1e-8) throw new JsonException("Weather forecast does not cover twenty-four hours.");
-        var hasKind = Present(data, "pinKind");
-        if (hasKind != Present(data, "pinFromHours") || hasKind != Present(data, "pinToHours") || !hasKind && Present(data, "pinIntensity"))
-            throw new JsonException("Incomplete weather pin.");
-        if (hasKind && data.GetProperty("pinToHours").GetDouble() <= data.GetProperty("pinFromHours").GetDouble())
-            throw new JsonException("Invalid weather pin interval.");
-    }
-    private static bool Present(JsonElement data, string field) => data.TryGetProperty(field, out var value) && value.ValueKind != JsonValueKind.Null;
-    private static void CheckUnit(JsonElement data, string field)
-    {
-        if (Present(data, field) && (data.GetProperty(field).GetDouble() < 0 || data.GetProperty(field).GetDouble() > 1))
-            throw new JsonException("Weather amount outside [0,1]: " + field);
-    }
-
-    private static void ValidateNumbersAndArrays(JsonElement value, int arrayLimit)
+    private static void ValidateFinite(JsonElement value)
     {
         switch (value.ValueKind)
         {
@@ -270,51 +183,11 @@ public sealed class SaveSections
                 if (!value.TryGetDouble(out var number) || !double.IsFinite(number)) throw new JsonException("Non-finite number.");
                 break;
             case JsonValueKind.Object:
-                foreach (var property in value.EnumerateObject()) ValidateNumbersAndArrays(property.Value, arrayLimit);
+                foreach (var property in value.EnumerateObject()) ValidateFinite(property.Value);
                 break;
             case JsonValueKind.Array:
-                if (value.GetArrayLength() > arrayLimit) throw new JsonException("Array exceeds section limit.");
-                foreach (var item in value.EnumerateArray()) ValidateNumbersAndArrays(item, arrayLimit);
+                foreach (var item in value.EnumerateArray()) ValidateFinite(item);
                 break;
         }
-    }
-}
-
-public static class SaveMigrations
-{
-    /// <summary>Apply build-generated immutable ID mappings without I/O or service access.</summary>
-    public static JsonNode RemapIds(JsonNode data, IReadOnlyDictionary<string, string> mapping)
-    {
-        var result = data.DeepClone();
-        Rewrite(result, mapping);
-        return result;
-    }
-
-    private static void Rewrite(JsonNode node, IReadOnlyDictionary<string, string> mapping)
-    {
-        if (node is JsonObject obj)
-        {
-            var renamed = new List<KeyValuePair<string, JsonNode?>>();
-            var keys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var (key, child) in obj.ToArray())
-            {
-                var newKey = mapping.TryGetValue(key, out var replacementKey) ? replacementKey : key;
-                if (!keys.Add(newKey)) throw new JsonException("ID remap would merge two object keys.");
-                JsonNode? rewritten = child;
-                if (child is JsonValue value && value.TryGetValue<string>(out var id) && mapping.TryGetValue(id, out var replacement))
-                    rewritten = JsonValue.Create(replacement);
-                else if (child is not null) Rewrite(child, mapping);
-                renamed.Add(new(newKey, rewritten));
-            }
-            obj.Clear();
-            foreach (var (key, child) in renamed) obj.Add(key, child);
-        }
-        else if (node is JsonArray array)
-            for (var i = 0; i < array.Count; i++)
-            {
-                if (array[i] is JsonValue value && value.TryGetValue<string>(out var id) && mapping.TryGetValue(id, out var replacement))
-                    array[i] = replacement;
-                else if (array[i] is { } child) Rewrite(child, mapping);
-            }
     }
 }

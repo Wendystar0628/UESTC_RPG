@@ -204,7 +204,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
             Vector2[] ring = [new(-hx, -hz), new(hx, -hz), new(hx, hz), new(-hx, hz)];
             var inner = -(0.04f * 0.6f + 0.004f);
             for (var y = y0 + RoofStyle.TankPanel; y < top - 0.25f; y += RoofStyle.TankPanel)
-                builder.Add(PartGeometryKernel.Sweep(Shapes.Rect(inner, f, -RoofStyle.TankFlangeHeight * 0.5f, RoofStyle.TankFlangeHeight * 0.5f), ring, seam, true, y), VertexFlag.NoShadow);
+                builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(inner, f, -RoofStyle.TankFlangeHeight * 0.5f, RoofStyle.TankFlangeHeight * 0.5f), ring, seam, true, y), VertexFlag.NoShadow);
             // Ribs stand 6 mm less proud than the flanges, so the horizontal bands lead.
             var rib = f - 0.006f;
             for (var x = -hx + RoofStyle.TankPanel; x < hx - 0.3f; x += RoofStyle.TankPanel)

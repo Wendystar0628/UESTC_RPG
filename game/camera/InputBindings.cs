@@ -1,9 +1,9 @@
-using System.Text;
+using Campus.Kernel.Settings;
 using Godot;
 
 namespace Campus.Camera;
 
-/// <summary>Primitive-only ConfigFile storage; parsing is never attempted on object-bearing text.</summary>
+/// <summary>Physical key bindings, stored as action name to key code in the input section of settings.json.</summary>
 public sealed class InputBindings
 {
     public static readonly string[] Actions =
@@ -14,6 +14,7 @@ public sealed class InputBindings
         "waypoint_next", "waypoint_0", "waypoint_1", "waypoint_2", "waypoint_3", "waypoint_4",
         "waypoint_5", "waypoint_6", "waypoint_7", "waypoint_8", "waypoint_9"
     ];
+    private const string Section = "input";
     private readonly Dictionary<string, int> _keys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _defaults = new(StringComparer.Ordinal);
 
@@ -30,8 +31,7 @@ public sealed class InputBindings
             }
         }
         if (!readUserSettings) return;
-        string path = ProjectSettings.GlobalizePath("user://input.cfg");
-        if (!TryLoad(path) && !TryLoad(path + ".bak")) GD.Print("Input bindings: defaults (no valid saved file).");
+        if (!TryLoad()) GD.Print("Input bindings: defaults (no valid saved bindings).");
         ApplyAll();
     }
 
@@ -64,54 +64,37 @@ public sealed class InputBindings
 
     public bool Save()
     {
-        using var cfg = new ConfigFile();
-        foreach (string action in Actions) cfg.SetValue("physical", action, _keys[action]);
-        string path = ProjectSettings.GlobalizePath("user://input.cfg");
-        byte[] bytes = Encoding.UTF8.GetBytes(cfg.EncodeToText());
-        try { WriteAtomic(path, bytes); return true; }
-        catch (IOException error) { GD.PushWarning($"Input bindings were changed but could not be saved: {error.Message}"); return false; }
-        catch (UnauthorizedAccessException error) { GD.PushWarning($"Input bindings could not be saved: {error.Message}"); return false; }
+        var section = SettingsStore.Shared.Section(Section);
+        foreach (string action in Actions) section.Set(action, _keys[action]);
+        if (SettingsStore.Shared.TrySave()) return true;
+        GD.PushWarning("Input bindings were changed but could not be saved.");
+        return false;
     }
 
-    private bool TryLoad(string path)
+    private bool TryLoad()
     {
-        try
+        var section = SettingsStore.Shared.Section(Section);
+        if (!Actions.Any(section.Has)) return false;
+        var candidate = new Dictionary<string, int>(_defaults, StringComparer.Ordinal);
+        foreach (string action in Actions)
         {
-            if (!File.Exists(path)) return false;
-            if (new FileInfo(path).Length > 64 * 1024) return false;
-            string text = File.ReadAllText(path, Encoding.UTF8);
-            if (!IsPrimitiveText(text)) { GD.PushWarning("Input bindings rejected object-bearing settings text."); return false; }
-            using var cfg = new ConfigFile();
-            if (cfg.Parse(text) != Error.Ok || !cfg.HasSection("physical")) return false;
-            var candidate = new Dictionary<string, int>(_defaults, StringComparer.Ordinal);
-            foreach (string action in Actions)
-            {
-                if (!cfg.HasSectionKey("physical", action)) continue;
-                var value = cfg.GetValue("physical", action);
-                if (value.VariantType == Variant.Type.Int && value.AsInt64() is > 0 and <= int.MaxValue
-                    && ValidKey(value.AsInt32())) candidate[action] = value.AsInt32();
-            }
-            // Aliases share a physical control across mutually exclusive fly/walk modes.
-            candidate["jump"] = candidate["move_up"];
-            candidate["crouch"] = candidate["move_down"];
-            var used = new Dictionary<int, string>();
-            foreach (string action in Actions)
-            {
-                string canonical = Canonical(action);
-                int key = candidate[action];
-                if (used.TryGetValue(key, out string? existing) && existing != canonical) return false;
-                used[key] = canonical;
-            }
-            foreach (string action in Actions) _keys[action] = candidate[action];
-            return true;
+            int value = section.Int(action, 0, 1, int.MaxValue);
+            if (value > 0 && ValidKey(value)) candidate[action] = value;
         }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
+        // Aliases share a physical control across mutually exclusive fly/walk modes.
+        candidate["jump"] = candidate["move_up"];
+        candidate["crouch"] = candidate["move_down"];
+        var used = new Dictionary<int, string>();
+        foreach (string action in Actions)
+        {
+            string canonical = Canonical(action);
+            int key = candidate[action];
+            if (used.TryGetValue(key, out string? existing) && existing != canonical) return false;
+            used[key] = canonical;
+        }
+        foreach (string action in Actions) _keys[action] = candidate[action];
+        return true;
     }
-
-    public static bool IsPrimitiveText(string text) =>
-        !new[] { "Object(", "Resource(", "SubResource(", "ExtResource(" }
-            .Any(token => text.Contains(token, StringComparison.Ordinal));
 
     private static bool ValidKey(int key) => key > 0 && key != (int)Key.Escape && Enum.IsDefined((Key)key);
     private static string Canonical(string action) => action switch
@@ -125,21 +108,5 @@ public sealed class InputBindings
     {
         InputMap.ActionEraseEvents(action);
         InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = (Key)key });
-    }
-
-    private static void WriteAtomic(string path, byte[] bytes)
-    {
-        for (int attempt = 0; ; attempt++)
-        {
-            try
-            {
-                using (var stream = new FileStream(path + ".tmp", FileMode.Create, System.IO.FileAccess.Write, FileShare.None))
-                { stream.Write(bytes); stream.Flush(true); }
-                if (File.Exists(path)) File.Replace(path + ".tmp", path, path + ".bak");
-                else File.Move(path + ".tmp", path);
-                return;
-            }
-            catch (IOException) when (attempt < 3) { Thread.Sleep(50); }
-        }
     }
 }

@@ -51,7 +51,7 @@ function Get-UESTCServiceImpactCore {
     $hits = New-Object 'Collections.Generic.List[string]'
     $owners = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
     foreach ($path in $code) {
-        if ($path -match '^game/(kernel/(boot|registry|stubs)/|stage/)') { $hits.Add("shared-startup:$path") }
+        if ($path -match '^game/(kernel/(boot/|registry/|stubs/|map/data/|renderer/(geometry|presentation|render-state)/|materials/|instances/)|stage/)') { $hits.Add("shared-startup:$path") }
         $currentOwner = Get-UESTCOwnerForWindow $path $CurrentRules
         $oldOwner = Get-UESTCOwnerForWindow $path $OldRules
         if (-not $currentOwner -and -not $oldOwner) { $hits.Add("unknown-owner:$path") }

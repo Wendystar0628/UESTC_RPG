@@ -289,8 +289,6 @@ public partial class KernelStage : Node3D, IAppExit
         _statistics?.Sample();
         if (!_ready || _closing || _finishing) return;
         _frames++;
-        if (int.TryParse(AppBoot.Value("save-at"), NumberStyles.None, CultureInfo.InvariantCulture, out var saveAt) && _frames == saveAt)
-            Services.Get<ISaveService>().Request(SaveReason.Test);
         if (!AppBoot.Options.Has("gate") && int.TryParse(AppBoot.Value("frames"), NumberStyles.None, CultureInfo.InvariantCulture, out var limit) && _frames >= limit)
         { _finishing = true; _ = FinishRun(); }
     }

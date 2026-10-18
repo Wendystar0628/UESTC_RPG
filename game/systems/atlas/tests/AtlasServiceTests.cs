@@ -70,25 +70,23 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
-    public void TravelPassesPreferenceRetainsInputAndSavesOnlyAfterArrival()
+    public void TravelPassesPreferenceAndRetainsInput()
     {
         var test = new Fixture();
         test.Observer.Feet = new(100, 0, 100);
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
         Check(test.Camera.Options?.Prefer == TransitPreference.Teleport && test.Camera.Options.Entry is null, "Teleport used flight path options.");
-        Check(test.Camera.Locks == 1 && !test.Atlas.IsSettled && test.Saves.Requests == 0, "Travel lock or unsettled state missing.");
+        Check(test.Camera.Locks == 1 && !test.Atlas.IsSettled, "Travel lock or unsettled state missing.");
         Check(!test.Atlas.CanTravel(new("test-post"), TravelStyle.Fly, out var why) && why == TravelRefusal.Busy, "Concurrent travel was allowed.");
         test.Camera.Handle!.Completion.SetResult(TransitResult.Arrived);
         test.Atlas.Tick();
-        Check(test.Camera.Locks == 0 && test.Atlas.IsSettled && test.Saves.Requests == 1, "Arrival did not release input and request save exactly once.");
-        test.Atlas.Tick();
-        Check(test.Saves.Requests == 1, "Arrival requested duplicate save.");
+        Check(test.Camera.Locks == 0 && test.Atlas.IsSettled, "Arrival did not release input.");
         test.Atlas.Travel(new("test-post"), TravelStyle.Fly);
         Check(test.Camera.Options?.Prefer == TransitPreference.Auto, "Fly did not use normal transit preference.");
         Check(test.Camera.Locks == 0, "Fly retained an Atlas input lock and cannot be interrupted.");
         test.Camera.Handle!.Completion.SetResult(TransitResult.Cancelled);
         test.Atlas.Tick();
-        Check(test.Camera.Locks == 0 && test.Saves.Requests == 1, "Cancelled transit requested a settled save.");
+        Check(test.Camera.Locks == 0, "Cancelled transit retained the input lock.");
     }
 
     [TestCase]
@@ -102,8 +100,8 @@ public sealed class AtlasServiceTests
                 && why == TravelRefusal.Unavailable, "Unready transit driver advertised travel.");
             Check(test.Atlas.Travel(new("test-kiosk"), style) is null, "Unready transit driver was started.");
         }
-        Check(test.Camera.Handle is null && test.Camera.Locks == 0 && test.Saves.Requests == 0,
-            "Unready transit changed camera, input, or save state.");
+        Check(test.Camera.Handle is null && test.Camera.Locks == 0,
+            "Unready transit changed camera or input state.");
     }
 
     [TestCase]
@@ -282,7 +280,6 @@ public sealed class AtlasServiceTests
         internal MutableWorldFixture World { get; }
         internal Context Context { get; }
         internal AtlasService Atlas { get; }
-        internal SaveRecorder Saves { get; }
         internal Fixture(string policy = "all-unlocked")
         {
             World = new(Interiors);
@@ -294,9 +291,8 @@ public sealed class AtlasServiceTests
                 new("test", "test", []), new Dictionary<string, string>(), []);
             Context = new(map, World);
             var maps = new TestMapService(Context, Camera);
-            Saves = new();
             Atlas = new(Camera, Observer, new Rules(policy), Driver);
-            Atlas.Connect(maps, new Flow(), new TestAudio(), Saves);
+            Atlas.Connect(maps, new Flow(), new TestAudio());
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
@@ -325,7 +321,7 @@ public sealed class AtlasServiceTests
         public MapId Default => Current; public MapId Current => context.Descriptor.Id;
         public IReadOnlyList<MapDescriptor> Maps => [context.Descriptor]; public IMapContext? Context => context;
         // This fixture starts on its sole map at world hour zero, before any weather epoch change.
-        public IReadOnlyList<MapVisit> Visits => [new(Current, camera.Pose, camera.Mode, 0, 0)];
+        public IReadOnlyList<MapVisit> Visits => [new(Current, camera.Pose, camera.Mode)];
         public IMapTransition? Transition { get; private set; }
         public event Action<MapId, MapTravelCause>? Arrived;
 
@@ -392,21 +388,6 @@ public sealed class AtlasServiceTests
     }
     private sealed class Lease(Action release) : IDisposable
     { private Action? _release = release; public void Dispose() { _release?.Invoke(); _release = null; } }
-    private sealed class SaveRecorder : ISaveService
-    {
-
-        public int Requests { get; private set; }
-        public void Request(SaveReason reason) { Check(reason == SaveReason.Settled, "Unexpected save reason."); Requests++; }
-        public bool Enabled => false; public IReadOnlyList<SlotInfo> Slots => []; public SlotId? Continue => null;
-        public SlotId? Active => null; public bool Busy => false; public SaveState State => new(null, null, null, null, ReadOnlyReason.SaveOff); public bool HasPendingPose => false;
-        public event Action? SlotsChanged { add { } remove { } }
-        public Task<SaveResult> SaveNow(SaveReason r) => throw new NotSupportedException();
-        public Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full) => throw new NotSupportedException();
-        public Task CompleteResume() => throw new NotSupportedException(); public Task<LoadResult> LoadFile(string path) => throw new NotSupportedException();
-        public Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null) => throw new NotSupportedException();
-        public Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout) => throw new NotSupportedException();
-        public byte[]? Thumbnail(SlotId s) => null;
-    }
     private sealed class TestAudio : Campus.Contracts.Audio.IAudioService
     {
         public Campus.Contracts.Audio.AudioSettings Settings { get; } = new();

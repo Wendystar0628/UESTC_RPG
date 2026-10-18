@@ -100,6 +100,6 @@ public interface IMapAware                   // [KernelNode] 可选实现；雾�
     void OnMapUnloading(MapId from);         // 释放本图的实例、纹理内容和缓存；之后不得再读旧的 IWorldModel
     void OnMapLoaded(IMapContext ctx);       // 读新图的数据，重建本图的状态
 }
-public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode, uint WeatherEpoch, double LeftAtHours);
+public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode);
 // 存档只需记：MapId CurrentMap、各图的 MapVisit；段的格式由 SYS-SAVE定（按图的段名是 "map:<id>/…"）
 // 其他契约里与多地图有关的部分（在 §3 世界状态块和全局着色器参数）：IWeatherProcess.Enter/Leave；FramePriority.Map；ResetDefault 即"回到本图默认状态"；ShaderGlobals.MapRect

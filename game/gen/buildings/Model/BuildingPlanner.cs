@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.Buildings.Mesh;
 using Campus.Gen.Buildings.Plan;
 using Campus.Gen.Buildings.Rules;
 using Campus.Gen.Interior;
@@ -75,16 +74,7 @@ public static class BuildingPlanner
         ArgumentNullException.ThrowIfNull(world);
         var fidelity = world.Fidelity;
         var feature = src.Feature;
-        var outerClean = PlanRing.Clean(src.Rings.Outer, hole: false);
-        if (outerClean is null) return null;
-        var holesClean = new List<PlanRing>();
-        foreach (var h in src.Rings.Holes)
-        {
-            var ring = PlanRing.Clean(h, hole: true);
-            if (ring is null || MathF.Abs(PlanRing.SignedArea(ring.Points)) < 8f) continue;
-            if (!ring.Points.All(p => PlanRing.Contains(outerClean.Points, p))) continue;
-            holesClean.Add(ring);
-        }
+        if (!CleanRings(src.Rings, out var outerClean, out var holesClean)) return null;
 
         var style = FacadeRules.StyleOf(feature.Family, src.Props, feature.Props);
         var centroidClean = PlanRing.Centroid(outerClean, holesClean);
@@ -104,50 +94,20 @@ public static class BuildingPlanner
         if (area < 6f) return null;
         var centroid = PlanRing.Centroid(outer, holes);
 
-        var height = src.Height is > 0.5f and var h0 ? h0 : (src.Storeys ?? 1) * profile.StoreyHeight;
-        height = MathF.Max(height, 2.2f);
-        var storeys = src.Storeys is > 0 and var s0 ? s0 : Math.Max(1, (int)MathF.Round(height / profile.StoreyHeight));
-        storeys = Math.Clamp(storeys, 1, 40);
-        if (height / storeys < 2.6f) storeys = Math.Max(1, (int)MathF.Floor(height / 2.6f));
-        var hs = (height - BuildingPlan.FloorLevel) / storeys;
+        var (height, storeys, hs) = Heights(src, profile);
         var small = area < 40f || height < 3.2f;
 
         // Wall skin: the footprint is the glass plane (WP-51a), the wall face sits one reveal outside it.
         var reveal = profile.Reveal;
-        var skinOuter = Skin(outer, reveal);
-        var skinHoles = holes.Select(h => Skin(h, reveal)).ToList();
-        if (skinOuter is null || skinHoles.Any(h => h is null))
-        {
-            skinOuter = outer;
-            skinHoles = [.. holes];
-        }
+        var (skinOuter, skinHoles) = Skins(outer, holes, reveal);
+        var rings = new List<PlanRing> { outer };
+        rings.AddRange(holes);
+        var skins = new List<PlanRing> { skinOuter };
+        skins.AddRange(skinHoles);
 
         var baseY = PadY(world, feature);
-
-        // Storey rows: sill and head per storey; tall single-storey halls get a clerestory band.
-        var sill = new float[storeys];
-        var head = new float[storeys];
         var wallTopRel = profile.RoofEdge == RoofEdge.Cornice ? height - (small ? 0.3f : 0.5f) : height + (small ? 0.45f : 0.8f);
-        for (var k = 0; k < storeys; k++)
-        {
-            var floor = baseY + BuildingPlan.FloorLevel + k * hs;
-            float sillRel, win;
-            if (hs > 6.5f)
-            {
-                sillRel = MathF.Max(profile.Sill, hs * 0.55f);
-                win = MathF.Min(profile.WindowHeight, hs * 0.3f);
-            }
-            else
-            {
-                // Ground-floor sills stay clear of the plinth line.
-                var minGround = BuildingPlan.PlinthTop - BuildingPlan.FloorLevel;
-                sillRel = k == 0 ? MathF.Max(profile.GroundSill, minGround + 0.3f) : profile.Sill;
-                if (hs - 0.55f - sillRel < 0.9f) sillRel = MathF.Max(k == 0 ? minGround + 0.2f : 0.5f, hs - 0.55f - 0.9f);
-                win = MathF.Min(profile.WindowHeight, hs - 0.55f - sillRel);
-            }
-            sill[k] = floor + sillRel;
-            head[k] = MathF.Min(floor + sillRel + win, baseY + wallTopRel - 0.3f);
-        }
+        var (sill, head) = PlanFacades.StoreyRows(profile, baseY, wallTopRel, storeys, hs);
 
         // Entrance threshold = ground-floor level (D-180); the plinth is cut at the door, a landing sits in front.
         var threshold = baseY + BuildingPlan.FloorLevel;
@@ -159,75 +119,13 @@ public static class BuildingPlanner
         for (var i = 1; i < outer.Count; i++) if (outer.Length[i] > outer.Length[longest]) longest = i;
         var axis = outer.Dir[longest];
 
-        // Facade layouts per footprint edge, read from the kernel's bays (ring -> edge -> bay order).
-        var facades = new List<FacadeLayout>();
-        var rings = new List<PlanRing> { outer };
-        rings.AddRange(holes);
-        var bayList = grid.Bays;
-        var next = 0;
-        for (var r = 0; r < rings.Count; r++)
-        {
-            var ring = rings[r];
-            var skin = r == 0 ? skinOuter : skinHoles[r - 1]!;
-            for (var e = 0; e < ring.Count; e++)
-            {
-                var first = next;
-                while (next < bayList.Count && bayList[next].Ring == r && bayList[next].Edge == e) next++;
-                var count = next - first;
-                if (count == 0) throw new InvalidOperationException($"Facade grid has no bay on ring {r} edge {e}.");
-                var bounds = new float[count + 1];
-                var widths = new float[count];
-                var kinds = new BayKind[count];
-                for (var k = 0; k < count; k++)
-                {
-                    var bay = bayList[first + k];
-                    bounds[k] = Vector2.Dot(bay.A - ring.Points[e], ring.Dir[e]);
-                    widths[k] = Vector2.Distance(bay.OpeningA, bay.OpeningB);
-                    kinds[k] = bay.WindowKind == FacadeWindowKind.Blank ? BayKind.Blank : BayKind.Window;
-                }
-                bounds[count] = Vector2.Dot(bayList[next - 1].B - ring.Points[e], ring.Dir[e]);
-                var shift = Vector2.Dot(skin!.Points[e] - ring.Points[e], ring.Dir[e]);
-                facades.Add(new FacadeLayout(r, e, count, ring.Length[e] / count, widths.Max(), bayList[first].Index, kinds, shift, bounds, widths));
-            }
-        }
-        if (next != bayList.Count) throw new InvalidOperationException("Facade grid bays do not match the footprint rings.");
-        var column = bayList.Count;
-
-        // Skeleton columns: entrance on the longest outer facade, stair and toilet columns, corridor ends.
-        var entranceFacade = -1;
-        var entranceBay = -1;
-        var main = facades.FindIndex(f => f.Ring == 0 && f.Edge == longest);
-        if (main >= 0 && hs >= 2.9f)
-        {
-            var f = facades[main];
-            var mid = f.Bays / 2;
-            if (f.Kinds[mid] != BayKind.Blank)
-            {
-                entranceFacade = main;
-                entranceBay = mid;
-                f.Kinds[mid] = BayKind.Door;
-            }
-            if (storeys >= 2 && f.Bays >= 5)
-            {
-                var a = Math.Max(0, (int)MathF.Round(f.Bays * 0.18f));
-                SetIfWindow(f.Kinds, a, BayKind.Stair);
-                SetIfWindow(f.Kinds, a + 1, BayKind.Toilet);
-                if (f.Bays >= 9) SetIfWindow(f.Kinds, f.Bays - 1 - a, BayKind.Stair);
-            }
-        }
-        if (storeys >= 2)
-            foreach (var f in facades)
-                if (f.Ring == 0 && MathF.Abs(Vector2.Dot(outer.Dir[f.Edge], axis)) < 0.35f)
-                    SetIfWindow(f.Kinds, f.Bays / 2, BayKind.Corridor);
-
-        // Openings in skin u, kept clear of the skin corners.
-        var skins = new List<PlanRing> { skinOuter };
-        skins.AddRange(skinHoles.Select(h => h!));
-        var uRange = facades.Select(f => OpeningRange(skins[f.Ring], f.Edge)).ToArray();
+        var facades = PlanFacades.Layouts(grid, rings, skins);
+        var (entranceFacade, entranceBay) = PlanFacades.SkeletonColumns(facades, outer, longest, axis, storeys, hs);
+        var uRange = PlanFacades.OpeningRanges(facades, skins);
 
         // Doors at the interior index's anchors replace the generic door; its column keeps its windows.
         var doorRise = small ? Math.Clamp(height - BuildingPlan.FloorLevel - 0.5f, 1.9f, 2.2f) : Math.Clamp(hs - 1.0f, 2.1f, 2.4f);
-        var anchors = AnchorDoors(world, feature, rings, facades, uRange, k => baseY + BuildingPlan.FloorLevel + k * hs, storeys,
+        var anchors = PlanEntrances.AnchorDoors(world, feature, rings, facades, uRange, k => baseY + BuildingPlan.FloorLevel + k * hs, storeys,
             baseY + wallTopRel, doorRise);
         if (anchors.Count > 0 && entranceFacade >= 0)
         {
@@ -236,72 +134,14 @@ public static class BuildingPlanner
             entranceBay = -1;
         }
 
-        var openings = new List<Opening[]>(facades.Count);
-        for (var fi = 0; fi < facades.Count; fi++)
-        {
-            var f = facades[fi];
-            var (uMin, uMax) = uRange[fi];
-            var list = new List<Opening>();
-            for (var k = 0; k < f.Bays; k++)
-            {
-                var anchored = anchors.Any(a => a.Facade == fi && a.Bay == k);
-                if (f.Kinds[k] == BayKind.Blank && !anchored) continue;
-                var c = f.CentreSkin(k);
-                for (var j = 0; j < storeys; j++)
-                {
-                    if (anchored && anchors.FirstOrDefault(a => a.Facade == fi && a.Bay == k && a.Row == j) is { Id: not null } door)
-                    {
-                        list.Add(new Opening(k, j, door.U0, door.U1, door.Y0, door.Y1, BayKind.Door));
-                        continue;
-                    }
-                    if (f.Kinds[k] == BayKind.Blank) continue;
-                    float u0, u1, y0, y1;
-                    BayKind kind;
-                    if (fi == entranceFacade && k == entranceBay && j == 0)
-                    {
-                        var dw = Math.Clamp(f.BayWidthAt(k) - 0.7f, 1.2f, 2.1f);
-                        (u0, u1, y0, y1, kind) = (c - dw * 0.5f, c + dw * 0.5f, threshold, doorHead, BayKind.Door);
-                    }
-                    else
-                    {
-                        if (head[j] - sill[j] < 0.6f) continue;
-                        kind = f.Kinds[k] == BayKind.Door ? BayKind.Window : f.Kinds[k];
-                        var w = kind == BayKind.Stair ? MathF.Min(f.Widths[k], 1.0f) : f.Widths[k];
-                        (u0, u1, y0, y1) = (c - w * 0.5f, c + w * 0.5f, sill[j], head[j]);
-                    }
-                    u0 = MathF.Max(u0, uMin);
-                    u1 = MathF.Min(u1, uMax);
-                    if (u1 - u0 < 0.5f) continue;
-                    list.Add(new Opening(k, j, u0, u1, y0, y1, kind));
-                }
-            }
-            // Windows of the door's storey that come within a pier of an anchor door give way to it (their cells stay empty).
-            foreach (var a in anchors.Where(a => a.Facade == fi))
-                list.RemoveAll(o => o.Row == a.Row && o.Kind != BayKind.Door &&
-                    o.U0 < a.U1 + EntranceRules.Pier && o.U1 > a.U0 - EntranceRules.Pier);
-            openings.Add([.. list]);
-        }
+        var openings = PlanFacades.Openings(facades, uRange, anchors, sill, head, storeys, threshold, doorHead, entranceFacade, entranceBay);
         if (entranceFacade >= 0 && !openings[entranceFacade].Any(o => o.Kind == BayKind.Door))
         {
             facades[entranceFacade].Kinds[entranceBay] = BayKind.Window;
             entranceFacade = -1;
             entranceBay = -1;
         }
-
-        // Entrances: the generic door at the building's floor with its landing, or the anchor doors.
-        var entrances = new List<PlanEntrance>();
-        if (entranceFacade >= 0)
-        {
-            var door = openings[entranceFacade].First(o => o.Kind == BayKind.Door);
-            entrances.Add(new PlanEntrance(entranceFacade, entranceBay, 0, null, true,
-                GroundInFront(world, skins[facades[entranceFacade].Ring], facades[entranceFacade].Edge, door), canopy));
-        }
-        foreach (var a in anchors)
-        {
-            var door = openings[a.Facade].First(o => o.Kind == BayKind.Door && o.Bay == a.Bay && o.Row == a.Row);
-            entrances.Add(new PlanEntrance(a.Facade, a.Bay, a.Row, a.Id, a.Row == 0 && !a.Deck,
-                GroundInFront(world, skins[facades[a.Facade].Ring], facades[a.Facade].Edge, door), a.Y1 + (small ? 0.15f : 0.25f)));
-        }
+        var entrances = PlanEntrances.Entrances(world, facades, openings, skins, anchors, entranceFacade, entranceBay, canopy, small);
 
         return new BuildingPlan
         {
@@ -311,7 +151,7 @@ public static class BuildingPlanner
             Outer = outer,
             Holes = holes,
             SkinOuter = skinOuter,
-            SkinHoles = skinHoles.Select(h => h!).ToArray(),
+            SkinHoles = skinHoles,
             Reveal = reveal,
             Centroid = centroid,
             Area = area,
@@ -328,98 +168,49 @@ public static class BuildingPlanner
             Grid = grid,
             Facades = facades,
             Openings = openings,
-            OpeningZones = fidelity is null ? [] : Zones(fidelity.Facades(feature.Id), rings, facades, openings),
+            OpeningZones = fidelity is null ? [] : PlanFacades.Zones(fidelity.Facades(feature.Id), rings, facades, openings),
             RoofZone = fidelity?.Roof(feature.Id).Zone ?? FidelityZone.K4,
-            TotalColumns = column,
+            TotalColumns = grid.Bays.Count,
             Axis = axis,
             Entrances = entrances,
         };
     }
 
-    /// <summary>An anchor door before the openings exist: facade, bay, storey row and its clear opening in skin u and Y.</summary>
-    private readonly record struct AnchorDoor(int Facade, int Bay, int Row, float U0, float U1, float Y0, float Y1, string Id, bool Deck);
-
-    /// <summary>
-    /// The doors this footprint opens for the open entrances its feature has in the interior index (WLD-INTERIORS): on
-    /// the facade edge the anchor stands on and faces out of, in the bay under its door centre (centred on the anchor unless
-    /// the bay centre is within EntranceRules.BaySnap), at the storey of its floor. An anchor is left alone (to another part
-    /// of the feature, or to the zone pack that builds that door) when no edge of this footprint takes it, its outside lies in
-    /// another footprint, its floor leaves no door height under the next slab, or the door cannot stand within
-    /// EntranceRules.AnchorTolerance of it. The door top is the anchor's HeadY when the index gives one (else the family's
-    /// door rise), never above the next slab. Deck: the outside landing stands well above the terrain (a porch or deck).
-    /// </summary>
-    private static List<AnchorDoor> AnchorDoors(IWorldModel world, WorldFeature feature, IReadOnlyList<PlanRing> rings,
-        IReadOnlyList<FacadeLayout> facades, IReadOnlyList<(float Min, float Max)> uRange, Func<int, float> floorY, int storeys,
-        float wallTop, float doorRise)
+    /// <summary>The cleaned outer ring and the holes that survive (big enough and inside the outer ring); false when the outer ring is unusable.</summary>
+    private static bool CleanRings(PolygonRings source, out PlanRing outerClean, out List<PlanRing> holesClean)
     {
-        var doors = new List<AnchorDoor>();
-        if (world.Interiors.Get(feature.Id) is not { } entry) return doors;
-        foreach (var e in entry.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal))
+        holesClean = [];
+        var cleaned = PlanRing.Clean(source.Outer, hole: false);
+        outerClean = cleaned!;
+        if (cleaned is null) return false;
+        foreach (var h in source.Holes)
         {
-            var yaw = e.YawDeg * (float.Pi / 180f);
-            var facing = new Vector2(DetMath.Sin(yaw), -DetMath.Cos(yaw));
-            var centre = new Vector2(e.Center.X, e.Center.Z);
-            int fi = -1;
-            float uFoot = 0f, nearest = EntranceRules.AnchorReach;
-            for (var i = 0; i < facades.Count; i++)
-            {
-                var ring = rings[facades[i].Ring];
-                var edge = facades[i].Edge;
-                if (Vector2.Dot(ring.Normal[edge], facing) < EntranceRules.FacingMin) continue;
-                var t = Vector2.Dot(centre - ring.Points[edge], ring.Dir[edge]);
-                var d = MathF.Abs(Vector2.Dot(centre - ring.Points[edge], ring.Normal[edge]));
-                if (t < 0f || t > ring.Length[edge] || d >= nearest) continue;
-                (fi, uFoot, nearest) = (i, t, d);
-            }
-            if (fi < 0) continue;
-
-            // Storey: the highest whose floor lies at or below the anchor floor; the door stands on that floor when near it.
-            var row = 0;
-            for (var j = 1; j < storeys; j++) if (e.Center.Y >= floorY(j) - EntranceRules.FloorSnap) row = j;
-            var y0 = MathF.Abs(e.Center.Y - floorY(row)) <= EntranceRules.FloorSnap ? floorY(row) : e.Center.Y;
-            if (Indoors(world, centre + facing * EntranceRules.ExteriorProbe, y0)) continue;
-            var room = (row + 1 < storeys ? floorY(row + 1) - EntranceRules.SlabDepth : wallTop - 0.3f) - y0;
-            // The anchor's own doorway top (contract-34 HeadY, absolute; 0 = unknown) wins over the family's door rise.
-            var rise = MathF.Min(e.HeadY != 0f ? e.HeadY - y0 : doorRise, room);
-            if (rise < MathF.Min(EntranceRules.MinDoorHeight, doorRise)) continue;
-
-            var f = facades[fi];
-            var k = 0;
-            while (k + 1 < f.Bays && f.Bounds[k + 1] <= uFoot) k++;
-            if (doors.Any(d => d.Facade == fi && d.Bay == k && d.Row == row)) continue;
-            var width = MathF.Max(Math.Clamp(f.BayWidthAt(k) - 0.7f, 1.2f, 2.1f), MathF.Min(2.1f, e.ClearWidth + EntranceRules.DoorFrame));
-            var anchor = uFoot - f.SkinShift;
-            var c = MathF.Abs(f.CentreSkin(k) - anchor) <= EntranceRules.BaySnap ? f.CentreSkin(k) : anchor;
-            var (uMin, uMax) = uRange[fi];
-            if (uMax - uMin < width) continue;
-            c = Math.Clamp(c, uMin + width * 0.5f, uMax - width * 0.5f);
-            if (MathF.Abs(c - anchor) > EntranceRules.AnchorTolerance) continue;
-            var deck = e.Outside.Y - world.Terrain.HeightAt(e.Outside.X, e.Outside.Z) > EntranceRules.DeckAbove;
-            doors.Add(new AnchorDoor(fi, k, row, c - width * 0.5f, c + width * 0.5f, y0, y0 + rise, e.Id, deck));
+            var ring = PlanRing.Clean(h, hole: true);
+            if (ring is null || MathF.Abs(PlanRing.SignedArea(ring.Points)) < 8f) continue;
+            if (!ring.Points.All(p => PlanRing.Contains(cleaned.Points, p))) continue;
+            holesClean.Add(ring);
         }
-        return doors;
+        return true;
     }
 
-    /// <summary>Where openings may sit on a skin edge: clear of its corner chamfers by 0.2 m.</summary>
-    private static (float Min, float Max) OpeningRange(PlanRing skin, int edge) =>
-        ((Prims.Chamferable(skin, edge, BuildingPlan.WallChamfer) ? BuildingPlan.WallChamfer : 0f) + 0.2f,
-            skin.Length[edge] - (Prims.Chamferable(skin, (edge + 1) % skin.Count, BuildingPlan.WallChamfer) ? BuildingPlan.WallChamfer : 0f) - 0.2f);
-
-    /// <summary>
-    /// True when a plan point at floor level <paramref name="y"/> lies inside another building: a footprint over it whose
-    /// roof stands higher than the floor by EntranceRules.DeckAbove. A lower block there is a deck the door opens onto.
-    /// </summary>
-    private static bool Indoors(IWorldModel world, Vector2 p, float y)
+    /// <summary>Total height, storey count and storey height: the source's own values, else the family's storey height.</summary>
+    private static (float Height, int Storeys, float StoreyHeight) Heights(BuildingSource src, FacadeProfile profile)
     {
-        var box = new Box3(new Vector3(p.X - 0.5f, -1000f, p.Y - 0.5f), new Vector3(p.X + 0.5f, 1000f, p.Y + 0.5f));
-        foreach (var id in world.Spatial.Query(box))
-        {
-            if (!world.Features.TryGetValue(id, out var f)) continue;
-            foreach (var src in Sources(f))
-                if (PlanRing.Contains(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanRing.Contains(h, p)) &&
-                    PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) > y + EntranceRules.DeckAbove) return true;
-        }
-        return false;
+        var height = src.Height is > 0.5f and var h0 ? h0 : (src.Storeys ?? 1) * profile.StoreyHeight;
+        height = MathF.Max(height, 2.2f);
+        var storeys = src.Storeys is > 0 and var s0 ? s0 : Math.Max(1, (int)MathF.Round(height / profile.StoreyHeight));
+        storeys = Math.Clamp(storeys, 1, 40);
+        if (height / storeys < 2.6f) storeys = Math.Max(1, (int)MathF.Floor(height / 2.6f));
+        return (height, storeys, (height - BuildingPlan.FloorLevel) / storeys);
+    }
+
+    /// <summary>The wall-skin rings; when any ring cannot be offset, the skin falls back to the footprint itself.</summary>
+    private static (PlanRing Outer, PlanRing[] Holes) Skins(PlanRing outer, IReadOnlyList<PlanRing> holes, float reveal)
+    {
+        var skinOuter = Skin(outer, reveal);
+        var skinHoles = holes.Select(h => Skin(h, reveal)).ToList();
+        if (skinOuter is null || skinHoles.Any(h => h is null)) return (outer, [.. holes]);
+        return (skinOuter, [.. skinHoles.Select(h => h!)]);
     }
 
     /// <summary>
@@ -438,53 +229,6 @@ public static class BuildingPlanner
                     MathF.Abs(PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) - y) <= EntranceRules.DeckAbove) return id;
         }
         return null;
-    }
-
-    /// <summary>
-    /// The outside landing level in front of a door (WLD-TERRAIN): the terrain beyond the landing's front edge on the
-    /// door's centre line (ITerrain; level ground at the pad while the evaluator is a stub).
-    /// </summary>
-    private static float GroundInFront(IWorldModel world, PlanRing skin, int edge, Opening door)
-    {
-        var p = skin.Points[edge] + skin.Dir[edge] * ((door.U0 + door.U1) * 0.5f) +
-            skin.Normal[edge] * (EntranceRules.LandingDepth + EntranceRules.GroundProbe);
-        return world.Terrain.HeightAt(p.X, p.Y);
-    }
-
-    /// <summary>
-    /// Zone of each opening from the facade segments of the exported fidelity data (ENG-ARCH: one or more segments
-    /// per footprint edge, A → B along the ring). An opening takes the segment its centre lies on (parallel, within
-    /// OpeningRules.ZoneMatchDistance of the footprint line); row 0 takes the segment's ground band. No segment: K3.
-    /// </summary>
-    private static FidelityZone[][] Zones(IReadOnlyList<FacadeSegment> segments, IReadOnlyList<PlanRing> rings,
-        IReadOnlyList<FacadeLayout> facades, IReadOnlyList<Opening[]> openings)
-    {
-        var zones = new FidelityZone[facades.Count][];
-        for (var fi = 0; fi < facades.Count; fi++)
-        {
-            var f = facades[fi];
-            var ring = rings[f.Ring];
-            var dir = ring.Dir[f.Edge];
-            zones[fi] = new FidelityZone[openings[fi].Length];
-            for (var k = 0; k < openings[fi].Length; k++)
-            {
-                var o = openings[fi][k];
-                var centre = ring.Points[f.Edge] + dir * ((o.U0 + o.U1) * 0.5f + f.SkinShift);
-                FacadeSegment? best = null;
-                var bestDistance = OpeningRules.ZoneMatchDistance;
-                foreach (var s in segments)
-                {
-                    var ab = s.B - s.A;
-                    var length = ab.Length();
-                    if (length < 1e-3f || MathF.Abs(Vector2.Dot(ab / length, dir)) < 0.95f) continue;
-                    var t = Math.Clamp(Vector2.Dot(centre - s.A, ab) / (length * length), 0f, 1f);
-                    var distance = Vector2.Distance(centre, s.A + ab * t);
-                    if (distance < bestDistance) { best = s; bestDistance = distance; }
-                }
-                zones[fi][k] = best is null ? FidelityZone.K3 : o.Row == 0 ? best.GroundBand : best.Zone;
-            }
-        }
-        return zones;
     }
 
     /// <summary>
@@ -526,10 +270,5 @@ public static class BuildingPlanner
     {
         var pts = ring.Offset(d);
         return pts is null ? null : PlanRing.FromPoints(pts, ring.IsHole);
-    }
-
-    private static void SetIfWindow(BayKind[] kinds, int i, BayKind kind)
-    {
-        if (i >= 0 && i < kinds.Length && kinds[i] == BayKind.Window) kinds[i] = kind;
     }
 }

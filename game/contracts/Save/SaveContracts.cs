@@ -3,28 +3,22 @@ using Campus.Contracts.Maps;
 // 存档与持久化（照 SYS-SAVE，WP-50；Campus.Gen.* 不得引用）
 namespace Campus.Contracts.Save;
 
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 
-public readonly record struct SlotId(string Value);   // "s1"–"s3"：三个存档位；"m1"–"m9" 预留给手动槽。文件夹名就是 Value
+public readonly record struct SlotId(string Value);   // "s1"–"s3"：三个存档位，文件夹名就是 Value
 // MapId、MapVisit 由多地图契约定义，存档只引用。现在只有 new MapId("qingshuihe")
 
-public enum SlotKind : byte { Auto, Manual }           // Manual 预留
+public enum SlotKind : byte { Auto }
 public enum SaveScope : byte { Global, PerMap }        // PerMap 的段在文件里的键是 "map:<MapId>/<段 ID>"
 public enum SaveReason : byte
 {
     Quit,          // 关窗口、Alt+F4、菜单"退出"：AutoAcceptQuit = false，后台写完再 Quit()
     ToTitle,       // 返回开始页（SYS-TITLE）
     Interval,      // 漫游态累计 5 分钟
-    FocusLost,     // 窗口失焦
-    Settled,       // 关键动作落定：跳转或传送到达、换季落定、Apply 落定、回到落金初灯落定
-    MapChanged,    // 换图到达（SYS-MAPS）
     NewGame,       // 新游戏交还控制：写这条世界线的第一代
-    Manual,        // 预留：手动槽
-    Checkpoint,    // 预留：RPG 的剧情节点
     Test,          // 门禁（--save-at）
 }
-public enum SlotHealth : byte { Empty, Ok, RecoveredOlderGen, Corrupt, NewerBuild }
+public enum SlotHealth : byte { Empty, Ok, Corrupt }
 
 public sealed record SaveMeta(
     int Format,                     // 正文结构版本，现为 1（SYS-SAVE）
@@ -41,7 +35,6 @@ public sealed record SaveMeta(
     long SavedAtUnix,               // 系统时钟，只用于显示（SYS-SAVE，G4 例外）
     SaveReason Reason,
     string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
-    SlotId? Origin = null,          // 手动槽预留：读它之后自动保存写回这个存档位
     bool HasThumb = false);
 public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations);
 
@@ -73,7 +66,7 @@ public readonly record struct CaptureContext(SaveReason Reason, MapId Map, bool 
 public sealed class RestoreContext
 {
     public required MapId Map { get; init; }
-    public required int FromVersion { get; init; }   // 迁移前的版本，只用于日志；迁移已在后台做完
+    public required int FromVersion { get; init; }   // 存档中本段的版本，只用于日志
     public required bool Missing { get; init; }      // 文件里没有这一段，传进来的是 CreateDefault 的值
     private readonly List<string> _repairs = [];
     public IReadOnlyList<string> Repairs => _repairs.AsReadOnly();
@@ -95,8 +88,6 @@ public interface ISaveSection                         // 注册器只认这个�
     object Capture(in CaptureContext c);
     void Restore(object dto, RestoreContext c);
     object CreateDefault(NewGameContext c);
-    JsonNode Migrate(int fromVersion, JsonNode data) => throw new NotSupportedException();
-    // 从 fromVersion 迁到 fromVersion + 1；纯函数，在后台线程调用，不碰 Godot 和服务状态
 }
 public interface ISaveSection<T> : ISaveSection where T : class   // T：sealed record，只读，不含 Godot 类型（SYS-SAVE）
 {
@@ -112,7 +103,7 @@ public interface ISaveSection<T> : ISaveSection where T : class   // T：sealed 
 
 public enum SaveStatus : byte { Saved, Deferred, Disabled, Failed }
 public sealed record SaveResult(SaveStatus Status, SlotId? Slot, ulong Gen, string? Error = null);
-public enum LoadStatus : byte { Loaded, Recovered, Empty, Corrupt, NewerBuild, Failed }
+public enum LoadStatus : byte { Loaded, Empty, Corrupt, Failed }
 public sealed record LoadResult(LoadStatus Status, SlotId? Slot, ulong Gen, IReadOnlyList<string> Repairs, string? Error = null);
 public enum ReadOnlyReason : byte { None, SaveOff, OtherWindow }   // 不保存的原因：--save=off、另一个窗口持有锁（SYS-SAVE、SYS-SAVE）
 public sealed record SaveState(                                     // 保存状态（SYS-SAVE）：存档页、设置卡持续显示
@@ -132,9 +123,9 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     SaveState State { get; }                          // 保存状态（SYS-SAVE）；值变时也发 SlotsChanged
     event Action? SlotsChanged;                       // 在主线程发出
     void Request(SaveReason r);                       // 合并、限频（两次之间至少 30 s）、等安全时刻（SYS-SAVE）；只在漫游态有效；Quit、ToTitle 不走这里
-    Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁、预留的手动槽
+    Task<SaveResult> SaveNow(SaveReason r);           // 不等、不限频：新游戏交还控制、门禁
     Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full);
-    // 后台读取、校验、迁移，主线程按阶段恢复（SYS-SAVE）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
+    // 后台读取、校验，主线程按阶段恢复（SYS-SAVE）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
     bool HasPendingPose { get; }                      // Preview 读档后为 true，Pose 阶段的段已解析、还没恢复
     Task CompleteResume();                            // 继续过场交还控制那一帧调用，在 FramePriority.Save 恢复 view、walk；Instance 不变
     Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写

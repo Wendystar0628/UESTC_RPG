@@ -110,9 +110,9 @@ public sealed class ParkedBicyclePart : IPartDef<VehicleParams>
                     ring[i] = new((float)((r - t) * DetMath.Cos(a)), (float)((r - t) * DetMath.Sin(a)));
                 }
                 b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(2 * t, 2 * t, 0), ring, S.Pole(S.Tyre), closed: true, baseY: -t), at);
-                b.AddLathe(Shapes.Creased(new(0, -0.012f), new(r - 2 * t + 0.004f, -0.012f), new(r - 2 * t + 0.004f, 0.012f), new(0, 0.012f)), WheelRingSegments, S.Pole(S.GreyMetal), at);
+                b.AddLathe(PartShapes.Creased(new(0, -0.012f), new(r - 2 * t + 0.004f, -0.012f), new(r - 2 * t + 0.004f, 0.012f), new(0, 0.012f)), WheelRingSegments, S.Pole(S.GreyMetal), at);
             }
-            else b.AddLathe(Shapes.Creased(new(0, -0.025f), new(r, -0.025f), new(r, 0.025f), new(0, 0.025f)), 6, S.Pole(S.Tyre), at);
+            else b.AddLathe(PartShapes.Creased(new(0, -0.025f), new(r, -0.025f), new(r, 0.025f), new(0, 0.025f)), 6, S.Pole(S.Tyre), at);
         }
         var tube = S.BikeTube; var seg = near ? 5 : 4;
         Vector3 P(Vector2 zy, float x = 0) => new(x, zy.Y, zy.X);

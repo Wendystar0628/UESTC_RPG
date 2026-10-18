@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 
 namespace Campus.Gen.Parts.Roof.Mep;
 
@@ -167,7 +168,7 @@ public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200
             new(r, y1 - 0.06f, r * 0.7f, y1, new(1, 0), new(0, 1)),
             new(r * 0.7f, y1, 0, y1, new(0, 1), new(0, 1)),
         ];
-        b.Add(Shapes.Lathe(bands, segments, water), Xf.Move(0, 0, zc), f);
+        b.Add(PartShapes.Lathe(bands, segments, water), Xf.Move(0, 0, zc), f);
         if (!near) return;
         // Two moulded rings on the wall catch the light like a real bottle.
         foreach (var t in new[] { 0.38f, 0.66f })

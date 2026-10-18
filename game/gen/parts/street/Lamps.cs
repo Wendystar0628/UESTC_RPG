@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using S = Campus.Gen.Parts.Street.StreetStyle;
 
 namespace Campus.Gen.Parts.Street;
@@ -100,19 +101,19 @@ public sealed class StreetLampPart : IPartDef<LampParams>
         if (lod <= LodLevel.L1) AddFoot(b, p, near, segments, white);
         // Pole, slightly tapered, into the head.
         var poleFrom = lod <= LodLevel.L1 ? S.LampSleeveHeight - 0.01f : 0f;
-        b.AddLathe(Shapes.Creased(new(0, poleFrom), new(S.LampPoleBaseRadius, poleFrom), new(S.LampPoleTopRadius, yb + 0.05f), new(0, yb + 0.05f)), segments, white, Matrix4x4.Identity);
+        b.AddLathe(PartShapes.Creased(new(0, poleFrom), new(S.LampPoleBaseRadius, poleFrom), new(S.LampPoleTopRadius, yb + 0.05f), new(0, yb + 0.05f)), segments, white, Matrix4x4.Identity);
         // Disc head: flat underside, chamfered rim, shallow smooth dome.
         var head = new List<LatheBand> { LatheBand.Flat(0, yb, r - chamfer, yb) };
         if (near) head.Add(LatheBand.Flat(r - chamfer, yb, r, yb + chamfer));
         head.Add(new(r, yb + chamfer, r, rimTop, new(1, 0), new(1, 0)));
-        head.AddRange(Shapes.Arc(r, rimTop, 0, 90, near ? 4 : 2, (p.Height - rimTop) / r));
+        head.AddRange(PartShapes.Arc(r, rimTop, 0, 90, near ? 4 : 2, (p.Height - rimTop) / r));
         b.AddLathe(head, segments, white, Matrix4x4.Identity);
         if (lod > LodLevel.L1) return;
         // Diffuser: the self-lit disc under the head, proud by the lens drop.
         var rl = r - S.DiscLensInset; var yl = yb - S.DiscLensDrop;
         b.AddLathe(near
-            ? Shapes.Creased(new(0, yl), new(rl - 0.008f, yl), new(rl, yl + 0.008f), new(rl, yb + S.Joint), new(0, yb + S.Joint))
-            : Shapes.Creased(new(0, yl), new(rl, yl), new(rl, yb + S.Joint), new(0, yb + S.Joint)), segments, lens, Matrix4x4.Identity, VertexFlag.NoShadow);
+            ? PartShapes.Creased(new(0, yl), new(rl - 0.008f, yl), new(rl, yl + 0.008f), new(rl, yb + S.Joint), new(0, yb + S.Joint))
+            : PartShapes.Creased(new(0, yl), new(rl, yl), new(rl, yb + S.Joint), new(0, yb + S.Joint)), segments, lens, Matrix4x4.Identity, VertexFlag.NoShadow);
     }
 
     private static void BuildArm(PartBuilder b, LampParams p, LodLevel lod, int segments, ToonSpec lens)
@@ -123,15 +124,15 @@ public sealed class StreetLampPart : IPartDef<LampParams>
         if (lod <= LodLevel.L1) AddFoot(b, p, near, segments, grey);
         var poleFrom = lod <= LodLevel.L1 ? S.LampSleeveHeight - 0.01f : 0f;
         var poleTop = arm.Joint.Y + 0.14f;
-        b.AddLathe(Shapes.Creased(new(0, poleFrom), new(S.LampPoleBaseRadius, poleFrom), new(S.LampPoleTopRadius, poleTop), new(0, poleTop)), segments, grey, Matrix4x4.Identity);
+        b.AddLathe(PartShapes.Creased(new(0, poleFrom), new(S.LampPoleBaseRadius, poleFrom), new(S.LampPoleTopRadius, poleTop), new(0, poleTop)), segments, grey, Matrix4x4.Identity);
         if (near)
         {
             // Rounded pole cap and the arm clamp.
             var cap = new List<LatheBand> { LatheBand.Flat(0, poleTop - 0.02f, S.LampPoleTopRadius + 0.012f, poleTop - 0.02f) };
             cap.Add(new(S.LampPoleTopRadius + 0.012f, poleTop - 0.02f, S.LampPoleTopRadius + 0.012f, poleTop, new(1, 0), new(1, 0)));
-            cap.AddRange(Shapes.Arc(S.LampPoleTopRadius + 0.012f, poleTop, 0, 90, 2, 0.45f));
+            cap.AddRange(PartShapes.Arc(S.LampPoleTopRadius + 0.012f, poleTop, 0, 90, 2, 0.45f));
             b.AddLathe(cap, segments, grey, Matrix4x4.Identity);
-            b.AddLathe(Shapes.Creased(new(0, arm.Joint.Y - 0.08f), new(S.LampPoleTopRadius + 0.02f, arm.Joint.Y - 0.08f), new(S.LampPoleTopRadius + 0.02f, arm.Joint.Y + 0.08f), new(0, arm.Joint.Y + 0.08f)),
+            b.AddLathe(PartShapes.Creased(new(0, arm.Joint.Y - 0.08f), new(S.LampPoleTopRadius + 0.02f, arm.Joint.Y - 0.08f), new(S.LampPoleTopRadius + 0.02f, arm.Joint.Y + 0.08f), new(0, arm.Joint.Y + 0.08f)),
                 segments, S.Pole(S.DarkSteel), Matrix4x4.Identity);
         }
         if (lod <= LodLevel.L1)
@@ -146,15 +147,15 @@ public sealed class StreetLampPart : IPartDef<LampParams>
     {
         var rs = S.LampSleeveRadius; var hs = S.LampSleeveHeight; var c = near ? 0.03f : 0;
         b.AddLathe(near
-            ? Shapes.Creased(new(0, 0), new(rs, 0), new(rs, hs - c), new(rs - c, hs), new(0, hs))
-            : Shapes.Creased(new(0, 0), new(rs, 0), new(rs, hs), new(0, hs)), segments, body, Matrix4x4.Identity);
+            ? PartShapes.Creased(new(0, 0), new(rs, 0), new(rs, hs - c), new(rs - c, hs), new(0, hs))
+            : PartShapes.Creased(new(0, 0), new(rs, 0), new(rs, hs), new(0, hs)), segments, body, Matrix4x4.Identity);
         if (!near) return;
         var accent = p.Variation == 1 ? S.DarkSteel : S.GreyMetal;
         var small = S.RoundSegmentsSmall;
         var rf = S.LampFlangeRadius; var hf = S.LampFlangeHeight;
-        b.AddLathe(Shapes.Creased(new(0, 0), new(rf, 0), new(rf, hf - 0.01f), new(rf - 0.01f, hf), new(0, hf)), small, S.Casing(accent), Matrix4x4.Identity, VertexFlag.NoShadow);
+        b.AddLathe(PartShapes.Creased(new(0, 0), new(rf, 0), new(rf, hf - 0.01f), new(rf - 0.01f, hf), new(0, hf)), small, S.Casing(accent), Matrix4x4.Identity, VertexFlag.NoShadow);
         var y0 = hs - c - 0.03f - S.LampRingHeight;
-        b.AddLathe(Shapes.Creased(new(0, y0), new(rs + 0.006f, y0), new(rs + 0.006f, y0 + S.LampRingHeight), new(0, y0 + S.LampRingHeight)), small, S.Pole(accent), Matrix4x4.Identity, VertexFlag.NoShadow);
+        b.AddLathe(PartShapes.Creased(new(0, y0), new(rs + 0.006f, y0), new(rs + 0.006f, y0 + S.LampRingHeight), new(0, y0 + S.LampRingHeight)), small, S.Pole(accent), Matrix4x4.Identity, VertexFlag.NoShadow);
     }
 
     private static float DiscRadius(LampParams p) => Math.Max(p.Width, S.DiscMinDiameter) * 0.5f;

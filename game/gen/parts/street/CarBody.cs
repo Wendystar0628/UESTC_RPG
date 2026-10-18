@@ -175,9 +175,9 @@ internal static class CarBody
             {
                 // XUp turns the lathe's axis (local Y) onto −X: the outer face (local −Y) faces +X, so flip for −X.
                 var at = (sx > 0 ? Xf.XUp : Xf.XUp.Then(Xf.RotY(180f))).Then(Xf.Move(sx * wheelX, r, a));
-                b.AddLathe(Shapes.Creased(new(0, -w * 0.5f), new(r, -w * 0.5f), new(r, w * 0.5f), new(0, w * 0.5f)), near ? 18 : 6, tyre, at);
+                b.AddLathe(PartShapes.Creased(new(0, -w * 0.5f), new(r, -w * 0.5f), new(r, w * 0.5f), new(0, w * 0.5f)), near ? 18 : 6, tyre, at);
                 if (near)
-                    b.AddLathe(Shapes.Creased(new(0, -w * 0.5f - 0.008f), new(r * S.HubRatio, -w * 0.5f - 0.008f), new(r * S.HubRatio, -w * 0.5f + 0.004f), new(0, -w * 0.5f + 0.004f)),
+                    b.AddLathe(PartShapes.Creased(new(0, -w * 0.5f - 0.008f), new(r * S.HubRatio, -w * 0.5f - 0.008f), new(r * S.HubRatio, -w * 0.5f + 0.004f), new(0, -w * 0.5f + 0.004f)),
                         12, S.Pole(S.GreyMetal), at, VertexFlag.NoShadow);
             }
         }

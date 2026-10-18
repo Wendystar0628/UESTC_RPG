@@ -14,7 +14,7 @@ namespace Campus.Kernel.Lighting;
 /// fixed: the key colour and intensity reach the toon materials only through the palette and globals.
 /// </summary>
 [KernelNode("key-light", Owner = "WP-03")]
-[QualityResponsive(Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance, QualityKnob.SmallCasters])]
+[QualityResponsive(Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance])]
 public partial class KeyLightDirector : Node, IQualityAware
 {
     /// <summary>
@@ -31,7 +31,7 @@ public partial class KeyLightDirector : Node, IQualityAware
     private IWorldState? _world;
     private KeyLightState? _state;
     private DirectionalLight3D? _light;
-    private ShadowSettings _settings = ShadowSettings.From(1, 1600f, true);
+    private ShadowSettings _settings = ShadowSettings.From(1, 1600f);
     private N.Vector3 _writtenDir = new(float.NaN);
     private N.Vector3 _writtenOvercast = new(float.NaN);
 

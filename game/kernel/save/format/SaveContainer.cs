@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Buffers;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,22 +9,18 @@ using Campus.Contracts.Save;
 
 namespace Campus.Kernel.Save.Format;
 
-public sealed class SaveFormatException(string message, bool newerBuild = false) : Exception(message)
-{
-    public bool NewerBuild { get; } = newerBuild;
-}
+public sealed class SaveFormatException(string message) : Exception(message);
 
 public sealed record RawSaveSection(int Version, byte[] Envelope);
 public sealed record SaveDocument(SaveMeta Meta, IReadOnlyDictionary<string, RawSaveSection> Sections, byte[]? Thumbnail);
 
-/// <summary>Version one is frozen. No engine types, reflection serialization, paths, or executable content.</summary>
+/// <summary>One format number (header, meta and body agree). No engine types, reflection serialization, paths, or executable content.</summary>
 public static class SaveContainer
 {
     public const int HeaderSize = 64;
     public const int MaxFile = 20 * 1024 * 1024;
     public const int MaxMeta = 16 * 1024;
     public const int MaxCompressed = 16 * 1024 * 1024;
-    public const int MaxBody = 64 * 1024 * 1024;
     public const int MaxThumbnail = 256 * 1024;
     public const int CurrentFormat = 1;
     private static ReadOnlySpan<byte> Magic => "UESTCSAV"u8;
@@ -51,13 +46,12 @@ public static class SaveContainer
             }
             writer.WriteEndObject(); writer.WriteEndObject();
         }
-        if (raw.Length > MaxBody) throw new SaveFormatException("Save body exceeds 64 MiB.");
         using var compressed = new MemoryStream();
         using (var brotli = new BrotliStream(compressed, CompressionLevel.Fastest, leaveOpen: true)) raw.WriteTo(brotli);
         if (compressed.Length > MaxCompressed) throw new SaveFormatException("Compressed save exceeds 16 MiB.");
         var bytes = new byte[checked(HeaderSize + meta.Length + (int)compressed.Length + (thumb?.Length ?? 0))];
         Magic.CopyTo(bytes);
-        BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(8), 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(8), (ushort)CurrentFormat);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(10), (ushort)(thumb is null ? 1 : 3));
         BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(12), (uint)meta.Length);
         BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(16), (uint)compressed.Length);
@@ -83,7 +77,7 @@ public static class SaveContainer
         var bytes = memory.Span;
         if (bytes.Length < HeaderSize || bytes.Length > MaxFile || !bytes[..8].SequenceEqual(Magic))
             throw new SaveFormatException("Invalid save header or file size.");
-        var version = BinaryPrimitives.ReadUInt16LittleEndian(bytes[8..]);
+        var headerFormat = BinaryPrimitives.ReadUInt16LittleEndian(bytes[8..]);
         var flags = BinaryPrimitives.ReadUInt16LittleEndian(bytes[10..]);
         var ml = BinaryPrimitives.ReadUInt32LittleEndian(bytes[12..]);
         var bl = BinaryPrimitives.ReadUInt32LittleEndian(bytes[16..]);
@@ -94,44 +88,25 @@ public static class SaveContainer
             throw new SaveFormatException("Invalid lengths or generation.");
         if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
             throw new SaveFormatException("SHA-256 mismatch.");
-        if (version > 1) throw new SaveFormatException("Newer container version.", newerBuild: true);
-        if (version != 1 || (flags & ~3) != 0 || (flags & 1) == 0 || ((flags & 2) != 0) != (tl != 0))
+        if (headerFormat != CurrentFormat || (flags & ~3) != 0 || (flags & 1) == 0 || ((flags & 2) != 0) != (tl != 0))
             throw new SaveFormatException("Unsupported container flags.");
         using var metaJson = ParseJson(memory.Slice(HeaderSize, (int)ml));
         var meta = JsonSerializer.Deserialize(metaJson.RootElement, SaveFormatJsonContext.Strict.SaveMeta)
             ?? throw new SaveFormatException("Missing metadata.");
-        if (meta.Format > CurrentFormat) throw new SaveFormatException("Newer body format.", newerBuild: true);
         ValidateMeta(meta);
         if (meta.Gen != gen || expectedSlot is { } es && meta.Slot != es || meta.HasThumb != (tl != 0))
             throw new SaveFormatException("Metadata identity disagrees with the container.");
         using var body = new MemoryStream();
-        var buffer = new byte[8192];
-        var compressed = memory.Span.Slice(HeaderSize + (int)ml, (int)bl);
-        var decoder = new BrotliDecoder();
         try
         {
-            var consumed = 0;
-            while (true)
-            {
-                var status = decoder.Decompress(compressed[consumed..], buffer, out var read, out var written);
-                consumed += read;
-                if (body.Length + written > MaxBody) throw new SaveFormatException("Decompressed body exceeds 64 MiB.");
-                body.Write(buffer, 0, written);
-                if (status == OperationStatus.Done)
-                {
-                    if (consumed != compressed.Length) throw new SaveFormatException("Trailing compressed content.");
-                    break;
-                }
-                if (status != OperationStatus.DestinationTooSmall || read == 0 && written == 0)
-                    throw new SaveFormatException("Incomplete or invalid Brotli stream.");
-            }
+            using var brotli = new BrotliStream(new MemoryStream(memory.Slice(HeaderSize + (int)ml, (int)bl).ToArray()), CompressionMode.Decompress);
+            brotli.CopyTo(body);
         }
-        finally { decoder.Dispose(); }
+        catch (InvalidDataException) { throw new SaveFormatException("Invalid Brotli stream."); }
         using var json = ParseJson(body.ToArray());
         var root = json.RootElement;
         RequireMembers(root, ["format", "sections"]);
         var format = root.GetProperty("format").GetInt32();
-        if (format > CurrentFormat) throw new SaveFormatException("Newer body format.", newerBuild: true);
         if (format != meta.Format || format != CurrentFormat) throw new SaveFormatException("Body format mismatch.");
         var sectionsElement = root.GetProperty("sections");
         if (sectionsElement.ValueKind != JsonValueKind.Object) throw new SaveFormatException("sections must be an object.");
@@ -149,7 +124,7 @@ public static class SaveContainer
 
     public static JsonDocument ParseJson(ReadOnlyMemory<byte> utf8)
     {
-        var document = JsonDocument.Parse(utf8, new JsonDocumentOptions { MaxDepth = 64 });
+        var document = JsonDocument.Parse(utf8);
         try { CheckDuplicates(document.RootElement); return document; }
         catch { document.Dispose(); throw; }
     }
@@ -222,7 +197,7 @@ public static class SaveContainer
             !Enum.IsDefined(meta.Reason)) throw new SaveFormatException("Invalid metadata fields.");
     }
 
-    public static bool ValidSlot(SlotId slot) => slot.Value is "s1" or "s2" or "s3" or "m1" or "m2" or "m3" or "m4" or "m5" or "m6" or "m7" or "m8" or "m9";
+    public static bool ValidSlot(SlotId slot) => slot.Value is "s1" or "s2" or "s3";
 }
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]

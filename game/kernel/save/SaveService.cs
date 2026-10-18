@@ -35,7 +35,7 @@ public sealed class SaveService : ISaveService, IDisposable
     private Task<SaveResult>? _writing;
     private Task<SaveResult>? _flush;
     private SaveReason? _request;
-    private double _requestAge, _interval, _sinceSuccess = 30, _playSeconds;
+    private double _requestAge, _interval, _playSeconds;
     private ulong _line;
     private bool _newLine, _restoring, _initialized, _disposed, _authorizedOverwrite;
     private bool _restoreMutationStarted, _restoreBlocked, _restoreAbortApplied;
@@ -47,7 +47,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     public bool Enabled => _initialized && _repository?.Enabled == true;
     public IReadOnlyList<SlotInfo> Slots => _slotInfos;
-    public SlotId? Continue => _slotInfos.Where(s => s.Health is SlotHealth.Ok or SlotHealth.RecoveredOlderGen)
+    public SlotId? Continue => _slotInfos.Where(s => s.Health == SlotHealth.Ok)
         .OrderByDescending(s => s.Meta!.SavedAtUnix).ThenBy(s => s.Slot.Value, StringComparer.Ordinal).Select(s => (SlotId?)s.Slot).FirstOrDefault();
     public SlotId? Active { get; private set; }
     public bool Busy => _writing is { IsCompleted: false };
@@ -83,7 +83,6 @@ public sealed class SaveService : ISaveService, IDisposable
         if (!_initialized || _disposed) return;
         _frame++;
         var dt = Math.Clamp(double.IsFinite(delta) ? delta : 0, 0, .1);
-        _sinceSuccess += dt;
         if (_request.HasValue) _requestAge += dt;
         if (Playing && !_restoring && !RestoreFaulted)
         {
@@ -93,7 +92,7 @@ public sealed class SaveService : ISaveService, IDisposable
         }
         if (_options.SaveAtFrame is { } at && _frame >= at && !_saveAtDone && Safe)
         { _saveAtDone = true; _ = SaveNow(SaveReason.Test); }
-        if (_request is { } reason && !Busy && _sinceSuccess >= 30 && (Safe || _requestAge >= 60) && !_restoring &&
+        if (_request is { } reason && !Busy && (Safe || _requestAge >= 60) && !_restoring &&
             Playing && !HasPendingPose)
         {
             var forced = !Safe;
@@ -119,10 +118,12 @@ public sealed class SaveService : ISaveService, IDisposable
         }
     }
 
+    /// <summary>Timed saves are the 5-minute Interval (and the gate's Test); other reasons never schedule a save (SYS-SAVE-FLOW §1.1).</summary>
     public void Request(SaveReason reason)
     {
         if (!Enum.IsDefined(reason)) throw new ArgumentOutOfRangeException(nameof(reason));
         if (reason is SaveReason.Quit or SaveReason.ToTitle) throw new ArgumentException("Use FlushForQuit.", nameof(reason));
+        if (reason is not (SaveReason.Interval or SaveReason.Test)) return;
         if (!_initialized || !Enabled || Active is null || _restoring || RestoreFaulted || HasPendingPose ||
             !Playing || _runtime.Maps.Transition is { Done.IsCompleted: false }) return;
         if (_request is null) _requestAge = 0;
@@ -131,7 +132,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     public Task<SaveResult> SaveNow(SaveReason reason)
     {
-        if (!Enum.IsDefined(reason) || reason is SaveReason.Quit or SaveReason.ToTitle) throw new ArgumentOutOfRangeException(nameof(reason));
+        if (reason is not (SaveReason.NewGame or SaveReason.Test)) throw new ArgumentOutOfRangeException(nameof(reason));
         return StartSave(reason, forced: true);
     }
 
@@ -154,10 +155,10 @@ public sealed class SaveService : ISaveService, IDisposable
             var active = Active!.Value;
             var current = await Task.Run(() => _repository!.Scan(active)).ConfigureAwait(false);
             await OnFrame(() => _slots[active] = current).ConfigureAwait(false);
-            if (!_authorizedOverwrite && current.Info.Health is SlotHealth.Corrupt or SlotHealth.NewerBuild)
+            if (!_authorizedOverwrite && current.Info.Health == SlotHealth.Corrupt)
                 return new(SaveStatus.Disabled, active, 0, "save.error.read_only_slot");
             byte[]? thumbnail = _thumbnail;
-            if (reason is SaveReason.Quit or SaveReason.ToTitle or SaveReason.FocusLost or SaveReason.NewGame or SaveReason.Manual)
+            if (reason is SaveReason.Quit or SaveReason.ToTitle or SaveReason.NewGame)
             {
                 var capture = await OnFrame(_runtime.CaptureThumbnail).ConfigureAwait(false);
                 thumbnail = await capture.ConfigureAwait(false) ?? thumbnail;
@@ -193,7 +194,7 @@ public sealed class SaveService : ISaveService, IDisposable
             {
                 _slots[active] = saved; _line = saved.Info.Meta!.Line; _newLine = false; _authorizedOverwrite = false;
                 _thumbnail = saved.Save!.Document.Thumbnail; _unknown = saved.Save.Document.Sections;
-                _interval = 0; _sinceSuccess = 0;
+                _interval = 0;
                 var result = new SaveResult(SaveStatus.Saved, active, saved.Info.Meta.Gen);
                 Publish(result); return result;
             }).ConfigureAwait(false);
@@ -212,7 +213,7 @@ public sealed class SaveService : ISaveService, IDisposable
         if (RestoreFaulted) throw new InvalidOperationException("save.error.restore_world");
         // Never combine the old map's stable maps segment with a new map's observer/weather state.
         if (_runtime.Maps.Transition is { Done.IsCompleted: false } ||
-            reason is SaveReason.Interval or SaveReason.FocusLost or SaveReason.Settled or SaveReason.MapChanged && !Playing)
+            reason == SaveReason.Interval && !Playing)
             return null;
         var map = _runtime.Maps.Current;
         var moment = _runtime.WorldRestore.GetSaveMoment();
@@ -284,10 +285,9 @@ public sealed class SaveService : ISaveService, IDisposable
             {
                 SlotHealth.Empty => LoadStatus.Empty,
                 SlotHealth.Corrupt => LoadStatus.Corrupt,
-                SlotHealth.NewerBuild => LoadStatus.NewerBuild,
                 _ => LoadStatus.Failed
             }, slot, 0, []);
-            return await Restore(scan.Save, _options.WriteSlot ?? slot, scope, scan.Info.Health == SlotHealth.RecoveredOlderGen).ConfigureAwait(false);
+            return await Restore(scan.Save, _options.WriteSlot ?? slot, scope).ConfigureAwait(false);
         }
         catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
         finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
@@ -300,15 +300,15 @@ public sealed class SaveService : ISaveService, IDisposable
         {
             await BeginRestoreOperation().ConfigureAwait(false);
             var prepared = await Task.Run(() => _repository!.ReadExternal(path)).ConfigureAwait(false);
-            return await Restore(prepared, _options.WriteSlot, LoadScope.Full, false).ConfigureAwait(false);
+            return await Restore(prepared, _options.WriteSlot, LoadScope.Full).ConfigureAwait(false);
         }
         catch (SaveFormatException error) when (!_restoreMutationStarted)
-        { return new(error.NewerBuild ? LoadStatus.NewerBuild : LoadStatus.Corrupt, null, 0, [], error.Message); }
+        { return new(LoadStatus.Corrupt, null, 0, [], error.Message); }
         catch (Exception error) { return await RestoreFailed(null, error).ConfigureAwait(false); }
         finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
     }
 
-    private async Task<LoadResult> Restore(PreparedSave prepared, SlotId? active, LoadScope scope, bool recovered)
+    private async Task<LoadResult> Restore(PreparedSave prepared, SlotId? active, LoadScope scope)
     {
         var meta = prepared.Document.Meta;
         var repairs = new List<string>();
@@ -362,7 +362,7 @@ public sealed class SaveService : ISaveService, IDisposable
                 _slots[meta.Slot] = slot with { Info = slot.Info with { Meta = meta }, Save = prepared };
             _interval = 0; RestoreSucceeded();
         }).ConfigureAwait(false);
-        return new(recovered ? LoadStatus.Recovered : LoadStatus.Loaded, active, meta.Gen, repairs);
+        return new(LoadStatus.Loaded, active, meta.Gen, repairs);
     }
 
     private void RestorePhaseOf(PreparedSave prepared, RestorePhase phase, List<string> repairs, NewGameContext? defaults = null)
@@ -438,8 +438,6 @@ public sealed class SaveService : ISaveService, IDisposable
                 _thumbnail = null; _unknown = new Dictionary<string, RawSaveSection>(); _pendingPose = null;
                 return save;
             }).ConfigureAwait(false);
-            // Only the explicit NewGame operation is authorized to archive an unusable selected slot.
-            await Task.Run(() => _repository!.ArchiveUnusableSlot(_slots[slot])).ConfigureAwait(false);
             await Travel(prepared.Document.Meta.Map, null, null, MapTravelCause.NewGame).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {

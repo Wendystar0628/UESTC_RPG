@@ -108,8 +108,8 @@
 `docs/workflow/WF-BUILD-施工边界.md` · 3.5k 字 · 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
 关键词：独占目录、共享文件、契约申请、契约冻结、构建锁、构建与测试排队、.uid、特性接入、穷举 switch、几何不随时季天气变、GDScript、uid、signatures.txt、Godot API
 
-- WF-BUILD §0 结论 · L23 · 841
-  - ★ WF-BUILD §0.1 接入要点 · L32 · 432
+- WF-BUILD §0 结论 · L23 · 839
+  - ★ WF-BUILD §0.1 接入要点 · L32 · 430
 - WF-BUILD §1 改哪里 · L40 · 513
 - WF-BUILD §2 G4 拦不住的约定 · L48 · 170
 - WF-BUILD §3 契约申请与冻结 · L53 · 325
@@ -251,7 +251,7 @@
 - WF-STATUS §0 结论 · L23 · 607
   - ★ WF-STATUS §0.1 接入要点 · L32 · 231
 - WF-STATUS §1 施工状态文件怎么填 · L39 · 787
-- WF-STATUS §2 施工队列与队列平衡 · L60 · 865
+- WF-STATUS §2 施工队列与队列平衡 · L60 · 902
 - WF-STATUS §3 交接单 · L90 · 89
 - WF-STATUS §4 调研入队流水线 · L94 · 1.4k
   - WF-STATUS §4.1 调研与旁路单 · L108 · 716
@@ -1408,19 +1408,19 @@
 
 ## SYS-SAVE-FORMAT · 格式、迁移、损坏处理与安全：容器、段版本、坏档、设置文件
 
-`docs/systems/SYS-SAVE-FORMAT-格式迁移损坏与安全.md` · 4.4k 字 · 存档容器与序列化约定、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式迁移损坏与安全.md` · 4.3k 字 · 存档容器与序列化约定、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档迁移、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
-- SYS-SAVE-FORMAT §0 结论 · L23 · 612
-  - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L31 · 272
-- SYS-SAVE-FORMAT §1 格式与迁移 · L38 · 1.1k
+- SYS-SAVE-FORMAT §0 结论 · L23 · 626
+  - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L31 · 264
+- SYS-SAVE-FORMAT §1 格式与迁移 · L38 · 1.0k
   - SYS-SAVE-FORMAT §1.1 容器 · L40 · 429
   - SYS-SAVE-FORMAT §1.2 缩略图 · L51 · 79
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L55 · 228
-  - SYS-SAVE-FORMAT §1.4 版本与迁移 · L61 · 338
-- SYS-SAVE-FORMAT §2 存档损坏 · L69 · 424
-- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L82 · 672
-- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L92 · 549
+  - SYS-SAVE-FORMAT §1.4 版本与迁移 · L61 · 277
+- SYS-SAVE-FORMAT §2 存档损坏 · L68 · 424
+- SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L81 · 672
+- SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L91 · 549
 
 ## SYS-SAVE · 存档与持久化：存档模型、存什么、不存什么
 
@@ -1767,7 +1767,7 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.6k 字 · 额度的数值家：设备档与预设的预算口径、GPU 帧时分配、额度总账、怎么测；细节级别、速度律与推送硬规则在子文档
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 额度的数值家：设备档与预设的预算口径、GPU 帧时分配、额度总账、怎么测；细节级别、速度律与推送硬规则在子文档
 关键词：性能预算、额度、额度总账、budgets.json、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
 
 - ENG-BUDGET §0 结论 · L21 · 781
@@ -1800,7 +1800,7 @@
 - ENG-GATES-SHOTS §0 结论 · L22 · 505
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 226
 - ENG-GATES-SHOTS §1 审查视角 · L36 · 4.4k
-  - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 739
+  - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 726
   - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 509
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 2.0k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L110 · 682

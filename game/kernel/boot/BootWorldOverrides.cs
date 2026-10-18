@@ -81,12 +81,12 @@ public static class BootWorldOverrides
 
     public static async Task ApplyQuality(BootArguments args, IQualityService quality)
     {
-        if (!new[] { "quality", "quality-set", "adaptive" }.Any(args.Values.ContainsKey)) return;
+        if (!new[] { "quality", "quality-set" }.Any(args.Values.ContainsKey)) return;
         var requested = quality.Requested;
         var preset = args.Values.ContainsKey("quality") ? Enum.Parse<QualityPreset>(args.Value("quality"), true) : requested.Preset;
         var overrides = args.Values.ContainsKey("quality") ? new Dictionary<QualityKnob, float>() : new Dictionary<QualityKnob, float>(requested.Overrides);
         foreach (var (knob, value) in args.QualityOverrides()) overrides[knob] = value;
-        var profile = new QualityProfile(preset, overrides, args.Values.ContainsKey("adaptive") ? args.Value("adaptive") == "1" : requested.Adaptive);
+        var profile = new QualityProfile(preset, overrides);
         var result = await quality.Apply(profile, ApplyOrigin.CommandLine);
         if (result.Status != ApplyStatus.Applied)
             throw new InvalidOperationException($"Command-line quality was not applied: {result.Status}; rejected={string.Join(',', result.Rejected)}.");

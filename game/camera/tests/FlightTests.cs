@@ -78,14 +78,6 @@ public sealed class FlightTests
     }
 
     [TestCase]
-    public void InputSettingsRejectEngineObjectSyntaxBeforeParsing()
-    {
-        foreach (string token in new[] { "Object(", "Resource(", "SubResource(", "ExtResource(" })
-            Check(!InputBindings.IsPrimitiveText("[physical]\nmove_forward=" + token + "InputEventKey)"), "Unsafe object token accepted.");
-        Check(InputBindings.IsPrimitiveText("[physical]\nmove_forward=87\n"), "Primitive physical key was rejected.");
-    }
-
-    [TestCase]
     public void PolygonDistanceDistinguishesCampusAndInteriorHoles()
     {
         var ring = new PolygonRings([new(-10, -10), new(10, -10), new(10, 10), new(-10, 10)],

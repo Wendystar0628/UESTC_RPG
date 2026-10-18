@@ -4,7 +4,6 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Contracts.Save;
 using Campus.Pipeline.Map;
 
 namespace Campus.Systems.Atlas;
@@ -19,12 +18,12 @@ public partial class AtlasRuntime : Godot.Node, IMapAware
     private bool _productPublished;
 
     public AtlasRuntime(IAtlasService atlas, IAtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
-        IAudioService audio, ISaveService saves, IBakeService bake)
+        IAudioService audio, IBakeService bake)
     {
         _atlas = (AtlasService)atlas;
         _bake = bake;
         _baseSource = (AtlasBaseSource)baseSource;
-        _atlas.Connect(maps, flow, audio, saves);
+        _atlas.Connect(maps, flow, audio);
     }
 
     public override void _Ready() => ProcessPriority = FramePriority.Systems;

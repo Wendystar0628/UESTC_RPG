@@ -3,7 +3,6 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
-using Campus.Kernel.Quality.Adaptive;
 using Campus.Kernel.Quality.Settings;
 using GdUnit4;
 
@@ -32,8 +31,8 @@ public sealed class QualityApplicationTests
     {
         var runtime = new FakeRuntime();
         var baseline = new QualityProfile(QualityPreset.Fine,
-            new Dictionary<QualityKnob, float> { [QualityKnob.ShadowDistance] = 1000 }, true);
-        var store = new FileStoreSpy(name, new(baseline, DeviceTier.MinSpec, runtime.Device.CacheKey(1920, 1080), true));
+            new Dictionary<QualityKnob, float> { [QualityKnob.ShadowDistance] = 1000 });
+        var store = new FileStoreSpy(name, baseline);
         var service = new QualityService(Catalog(), store);
         service.Bind(runtime);
         await service.Initialize(BootPhase.AfterMapWarm, Context());
@@ -48,10 +47,9 @@ public sealed class QualityApplicationTests
         var changes = new List<QualityChange>();
         service.Changed += changes.Add;
         var overrides = beforeProfile.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        overrides[QualityKnob.AntiAliasing] = 1; // UnderVeil, deliberately not a 15-second-confirmation setting.
-        overrides[QualityKnob.LensFlare] = 0;
-        overrides[QualityKnob.GraphicsApi] = 1;
-        var pending = service.Apply(new(beforeProfile.Preset, overrides, beforeProfile.Adaptive), ApplyOrigin.User);
+        overrides[QualityKnob.AntiAliasing] = 1; // UnderVeil
+        overrides[QualityKnob.ParticleDensity] = .5f;
+        var pending = service.Apply(new(beforeProfile.Preset, overrides), ApplyOrigin.User);
         service.Tick(.25);
         var failed = false;
         try { await pending; }
@@ -61,11 +59,11 @@ public sealed class QualityApplicationTests
         foreach (var knob in QualityCatalog.All)
         {
             if (service.Effective[knob] != before[knob] || service.Effective.Requested(knob) != before.Requested(knob) ||
-                service.Effective.Locked(knob) != before.Locked(knob) || runtime.EngineView![knob] != before[knob])
+                runtime.EngineView![knob] != before[knob])
                 throw new InvalidOperationException($"Failed quality application was not rolled back: {knob}");
         }
-        if (service.Requested.Preset != beforeProfile.Preset || service.Requested.Adaptive != beforeProfile.Adaptive ||
-            service.Requested.Overrides.Count != beforeProfile.Overrides.Count || !changes.Any(change => change.Origin == ApplyOrigin.Revert))
+        if (service.Requested.Preset != beforeProfile.Preset ||
+            service.Requested.Overrides.Count != beforeProfile.Overrides.Count || changes.Count == 0)
             throw new InvalidOperationException("Requested profile or rollback notification was lost.");
         if (store.SaveCount != 0 || store.Hash != beforeHash) throw new InvalidOperationException("Failed application reached persistent storage.");
         if (takeover)
@@ -78,85 +76,32 @@ public sealed class QualityApplicationTests
     }
 
     [TestCase]
-    public async Task ForcedTierAndCliProfileStayTemporaryWhileUserDeltaIsSaved()
+    public async Task CliProfileStaysTemporaryWhileUserDeltaIsSaved()
     {
-        var (service, runtime, store) = await CliSession("cli-user");
+        var (service, _, store) = await CliSession("cli-user");
         var beforeHash = store.Hash;
         if (store.SaveCount != 0) throw new InvalidOperationException("CLI startup wrote settings.");
         var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        next[QualityKnob.LensFlare] = 0;
-        await ApplyUser(service, new(service.Requested.Preset, next, service.Requested.Adaptive));
+        next[QualityKnob.ParticleDensity] = .5f;
+        await ApplyUser(service, new(service.Requested.Preset, next));
         var saved = store.Read()!;
-        var values = Catalog().Resolve(saved.Profile, saved.Profile.Preset);
-        if (store.SaveCount != 1 || store.Hash == beforeHash || saved.Tier != DeviceTier.MinSpec ||
-            saved.DeviceKey != runtime.Device.CacheKey(1920, 1080) || saved.Profile.Preset != QualityPreset.Balanced ||
-            values[(int)QualityKnob.ShadowDistance] != 1000 || values[(int)QualityKnob.LensFlare] != 0 || !saved.Profile.Adaptive)
-            throw new InvalidOperationException("User delta was dropped or a CLI override leaked into the saved profile/cache.");
-        if (service.Tier != DeviceTier.DgpuHigh || service.Requested.Preset != QualityPreset.Ultra ||
-            service.Effective[QualityKnob.ShadowDistance] != 600 || service.Requested.Adaptive)
+        var values = Catalog().Resolve(saved, saved.Preset);
+        if (store.SaveCount != 1 || store.Hash == beforeHash || saved.Preset != QualityPreset.Balanced ||
+            values[(int)QualityKnob.ShadowDistance] != 1000 || values[(int)QualityKnob.ParticleDensity] != .5f)
+            throw new InvalidOperationException("User delta was dropped or a CLI override leaked into the saved profile.");
+        if (service.Requested.Preset != QualityPreset.Ultra || service.Effective[QualityKnob.ShadowDistance] != 600)
             throw new InvalidOperationException("Saving a user edit removed the live CLI overlay.");
     }
 
     [TestCase]
-    public async Task ConfirmDisplayPersistsOnlyTheUsersDisplayDelta()
-    {
-        var (service, _, store) = await CliSession("cli-confirm");
-        var beforeHash = store.Hash;
-        var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        next[QualityKnob.RenderScale] = .5f;
-        var applied = await ApplyUser(service, new(service.Requested.Preset, next, service.Requested.Adaptive));
-        if (!applied.AwaitingConfirm || store.SaveCount != 0 || store.Hash != beforeHash)
-            throw new InvalidOperationException("Unconfirmed display change was saved.");
-        service.ConfirmDisplay();
-        await service.Initialize(BootPhase.BeforeReveal, Context()); // Drain the existing pending-write task.
-        var saved = store.Read()!;
-        var values = Catalog().Resolve(saved.Profile, saved.Profile.Preset);
-        if (store.SaveCount != 1 || store.Hash == beforeHash || saved.Profile.Preset != QualityPreset.Balanced ||
-            saved.Tier != DeviceTier.MinSpec || values[(int)QualityKnob.RenderScale] != .5f ||
-            values[(int)QualityKnob.ShadowDistance] != 1000 || !saved.Profile.Adaptive)
-            throw new InvalidOperationException("Display confirmation persisted unrelated CLI settings.");
-    }
-
-    [TestCase]
-    public async Task DisplayTimeoutRestoresCliPreviewWithoutPersistingIt()
-    {
-        var (service, _, store) = await CliSession("cli-revert");
-        var beforeHash = store.Hash;
-        var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        next[QualityKnob.RenderScale] = .5f;
-        await ApplyUser(service, new(service.Requested.Preset, next, service.Requested.Adaptive));
-        service.Tick(16);
-        service.Tick(0);
-        if (service.Effective[QualityKnob.RenderScale] != .67f || store.SaveCount != 0 || store.Hash != beforeHash)
-            throw new InvalidOperationException("Timeout leaked the CLI display baseline or failed to restore it.");
-    }
-
-    [TestCase]
-    public async Task CleanPresetSelectionPersistsTheChoiceWithoutForcedDeviceOrAdaptive()
+    public async Task CleanPresetSelectionPersistsTheChoiceWithoutCliOverrides()
     {
         var (service, _, store) = await CliSession("cli-preset");
-        await ApplyUser(service, QualityCatalog.Profile(QualityPreset.Ultra, adaptive: false));
-        service.ConfirmDisplay();
+        await ApplyUser(service, QualityCatalog.Profile(QualityPreset.Ultra));
         await service.Initialize(BootPhase.BeforeReveal, Context());
         var saved = store.Read()!;
-        if (store.SaveCount == 0 || saved.Profile.Preset != QualityPreset.Ultra || saved.Tier != DeviceTier.MinSpec || !saved.Profile.Adaptive)
-            throw new InvalidOperationException("Explicit preset selection was dropped or carried unrelated CLI metadata.");
-    }
-
-    [TestCase]
-    public async Task ForcedTierWithoutRealCacheCannotSeedAValidDetectionCache()
-    {
-        var runtime = new FakeRuntime();
-        var store = new FileStoreSpy("cli-no-cache", null);
-        var service = new QualityService(Catalog(), store);
-        service.Bind(runtime);
-        await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
-        runtime.Booting = false;
-        if (store.SaveCount != 0) throw new InvalidOperationException("Forced tier created a hardware cache.");
-        await ApplyUser(service, new(QualityPreset.Ultra, new Dictionary<QualityKnob, float> { [QualityKnob.LensFlare] = 0 }, true));
-        var saved = store.Read()!;
-        if (store.SaveCount != 1 || saved.DeviceKey.Length != 0 || saved.Tier == DeviceTier.DgpuHigh)
-            throw new InvalidOperationException("A forced tier was stored as a real detection result.");
+        if (store.SaveCount == 0 || saved.Preset != QualityPreset.Ultra || saved.Overrides.Count != 0)
+            throw new InvalidOperationException("Explicit preset selection was dropped or carried CLI overrides.");
     }
 
     [TestCase]
@@ -171,8 +116,8 @@ public sealed class QualityApplicationTests
             if (boundary == "save") store.HeldWrite = new();
             var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
             next[QualityKnob.AntiAliasing] = 1;
-            next[QualityKnob.LensFlare] = 0;
-            var pending = service.Apply(new(service.Requested.Preset, next, service.Requested.Adaptive), ApplyOrigin.User);
+            next[QualityKnob.ParticleDensity] = .5f;
+            var pending = service.Apply(new(service.Requested.Preset, next), ApplyOrigin.User);
             service.Tick(.25);
             if (pending.IsCompleted || (boundary == "save" ? store.SaveCount != 1 : runtime.HeldCalls != 1))
                 throw new InvalidOperationException($"Application did not wait at {boundary}.");
@@ -190,7 +135,7 @@ public sealed class QualityApplicationTests
             // Rebinding must not revive either request from the old runtime.
             var replacement = new FakeRuntime();
             service.Bind(replacement);
-            await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
+            await service.Initialize(BootPhase.AfterMapWarm, Context());
             await service.Initialize(BootPhase.BeforeReveal, Context()).WaitAsync(TimeSpan.FromSeconds(5));
             replacement.Booting = false;
             var afterRebind = replacement.DispatchCount;
@@ -203,7 +148,7 @@ public sealed class QualityApplicationTests
             if (replacement.DispatchCount != afterRebind || runtime.DispatchCount != dispatches ||
                 runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != notificationsAfterRebind)
                 throw new InvalidOperationException("Old completion or queued request survived runtime replacement.");
-            await ApplyUser(service, new(service.Requested.Preset, new Dictionary<QualityKnob, float> { [QualityKnob.LensFlare] = 0 }, service.Requested.Adaptive));
+            await ApplyUser(service, new(service.Requested.Preset, new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }));
             service.Unbind(replacement);
         }
     }
@@ -217,7 +162,7 @@ public sealed class QualityApplicationTests
             runtime.Transitioning = transitioning;
             var dispatches = runtime.DispatchCount;
             var pending = service.Apply(new(service.Requested.Preset,
-                new Dictionary<QualityKnob, float> { [QualityKnob.LensFlare] = 0 }, service.Requested.Adaptive), ApplyOrigin.User);
+                new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }), ApplyOrigin.User);
             service.Unbind(runtime);
             if (transitioning)
             {
@@ -239,7 +184,7 @@ public sealed class QualityApplicationTests
             var store = new FileStoreSpy($"close-boot-{initializing}", null);
             var service = new QualityService(Catalog(), store);
             var token = service.Bind(runtime);
-            if (!initializing) await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
+            if (!initializing) await service.Initialize(BootPhase.AfterMapWarm, Context());
             runtime.HoldAt = "frame";
             var dispatches = runtime.DispatchCount;
             var changes = 0;
@@ -281,15 +226,13 @@ public sealed class QualityApplicationTests
     private static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)
     {
         var runtime = new FakeRuntime();
-        var stored = new StoredGraphics(QualityCatalog.Profile(QualityPreset.Balanced), DeviceTier.MinSpec,
-            runtime.Device.CacheKey(1920, 1080), true);
-        var store = new FileStoreSpy(name, stored);
+        var store = new FileStoreSpy(name, QualityCatalog.Profile(QualityPreset.Balanced));
         var service = new QualityService(Catalog(), store);
         service.Bind(runtime);
         var originalHash = store.Hash;
-        await service.Initialize(BootPhase.AfterMapWarm, Context(forcedTier: true));
+        await service.Initialize(BootPhase.AfterMapWarm, Context());
         await service.Apply(new(QualityPreset.Ultra, new Dictionary<QualityKnob, float>
-        { [QualityKnob.ShadowDistance] = 600, [QualityKnob.RenderScale] = .67f }, false), ApplyOrigin.CommandLine);
+        { [QualityKnob.ShadowDistance] = 600, [QualityKnob.RenderScale] = .67f }), ApplyOrigin.CommandLine);
         if (store.Hash != originalHash || store.SaveCount != 0) throw new InvalidOperationException("CLI application touched the file.");
         runtime.Booting = false;
         return (service, runtime, store);
@@ -305,14 +248,12 @@ public sealed class QualityApplicationTests
         return result;
     }
 
-    private static BootContext Context(bool forcedTier = false) => new(
-        forcedTier ? new Dictionary<string, string> { ["tier"] = "dgpu-high" } : new Dictionary<string, string>(),
-        forcedTier ? new HashSet<string>(["tier"], StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal),
+    private static BootContext Context() => new(
+        new Dictionary<string, string>(), new HashSet<string>(StringComparer.Ordinal),
         Path.Combine(RepositoryRoot(), "output", "tests", "quality"), "quality-tests", false);
 
     private sealed class FakeRuntime : IQualityRuntime
     {
-        public GraphicsDevice Device { get; } = new("test-uma", "test-vendor", "test-driver", 256UL << 20, 4UL << 30, true, true);
         public bool Booting { get; set; } = true;
         public bool Transitioning { get; set; }
         public bool OwnsQualityVeil => Reason == VeilReason.Quality;
@@ -344,8 +285,6 @@ public sealed class QualityApplicationTests
             HeldCalls++;
             return Held.Task;
         }
-        public GraphicsDevice ReadDevice() => Device;
-        public Task<DeviceTier> Sample(GraphicsDevice device, CancellationToken cancellationToken) => Task.FromResult(DeviceTier.MinSpec);
         public Task Cover(CancellationToken cancellationToken) { Reason = VeilReason.Quality; return Wait("cover"); }
         public Task Reveal(CancellationToken cancellationToken) { RevealCount++; Reason = null; return Wait("reveal"); }
         public Task WaitForDestination(CancellationToken cancellationToken)
@@ -357,8 +296,8 @@ public sealed class QualityApplicationTests
         {
             DispatchCount++;
             EngineView = view; // Model a consumer that mutates before it fails.
-            if (change.Origin == ApplyOrigin.Revert && FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
             if (FailDispatch) { FailDispatch = false; throw new InvalidOperationException("Fake apply consumer failed."); }
+            if (FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
         }
         public void ReportError(string message) => Errors.Add(message);
         public void ReportInfo(string message) { }
@@ -371,21 +310,21 @@ public sealed class QualityApplicationTests
         public int SaveCount { get; private set; }
         public TaskCompletionSource? HeldWrite { get; set; }
         public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path)));
-        public FileStoreSpy(string scenario, StoredGraphics? baseline)
+        public FileStoreSpy(string scenario, QualityProfile? baseline)
         {
             var directory = Path.Combine(RepositoryRoot(), "output", "tests", "quality", $"{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
             Directory.CreateDirectory(directory);
             _path = Path.Combine(directory, "graphics-spy.json");
             File.WriteAllBytes(_path, baseline is null ? [] : JsonSerializer.SerializeToUtf8Bytes(baseline));
         }
-        public StoredGraphics? Read()
+        public QualityProfile? Read()
         {
             var bytes = File.ReadAllBytes(_path);
-            return bytes.Length == 0 ? null : JsonSerializer.Deserialize<StoredGraphics>(bytes);
+            return bytes.Length == 0 ? null : JsonSerializer.Deserialize<QualityProfile>(bytes);
         }
-        public Task Write(QualityProfile profile, GraphicsDevice device, DeviceTier tier, string key, bool userSelected)
+        public Task Write(QualityProfile profile)
         {
-            File.WriteAllBytes(_path, JsonSerializer.SerializeToUtf8Bytes(new StoredGraphics(profile, tier, key, userSelected)));
+            File.WriteAllBytes(_path, JsonSerializer.SerializeToUtf8Bytes(profile));
             SaveCount++;
             return HeldWrite?.Task ?? Task.CompletedTask;
         }
