@@ -132,6 +132,13 @@ function Get-UESTCGitLines {
     $result.StdOut -split '\r?\n' | Where-Object { $_.Length -gt 0 }
 }
 
+# Path-list commands use Git's -z output, without quoting or line splitting.
+function Get-UESTCGitPaths {
+    param([Parameter(Mandatory)][string]$Repository, [string[]]$Arguments = @())
+    $result = Invoke-UESTCGit $Repository $Arguments
+    $result.StdOut -split "`0" | Where-Object { $_.Length -gt 0 }
+}
+
 function Get-UESTCGodot {
     if ($env:UESTC_GODOT) { return [IO.Path]::GetFullPath($env:UESTC_GODOT) }
     return 'E:\Tools\Godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe'

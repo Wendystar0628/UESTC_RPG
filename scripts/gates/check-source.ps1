@@ -1,13 +1,15 @@
 function Get-UESTCFiles {
     param([string]$Root)
-    Get-UESTCGitLines $Root @('ls-files', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
+    Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
 }
 
 function Get-UESTCChanges {
     param([string]$Root, [string]$BaseRef)
-    $files = @(Get-UESTCGitLines $Root @('diff', '--no-renames', '--name-only', '--diff-filter=ACDMRTUXB', "$BaseRef...HEAD"))
-    $files += @(Get-UESTCGitLines $Root @('diff', '--no-renames', '--name-only', 'HEAD'))
-    $files += @(Get-UESTCGitLines $Root @('ls-files', '--others', '--exclude-standard'))
+    $files = @(Get-UESTCGitPaths $Root @('diff', '-z', '--no-renames', '--name-only', '--diff-filter=ACDMRTUXB', "$BaseRef...HEAD"))
+    # Keep index and worktree changes separately: they can cancel against HEAD.
+    $files += @(Get-UESTCGitPaths $Root @('diff', '-z', '--no-renames', '--name-only', '--cached'))
+    $files += @(Get-UESTCGitPaths $Root @('diff', '-z', '--no-renames', '--name-only'))
+    $files += @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--others', '--exclude-standard'))
     @($files | Where-Object { $_ } | Sort-Object -Unique)
 }
 
@@ -17,14 +19,18 @@ function Test-UESTCCommentOnlyChange {
     $absolute = Join-Path $Root $Path
     if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { return $false }
     $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
-    if (-not @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $base, '--', $Path)).Count) { return $false }
+    if (-not @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $base, '--', $Path)).Count) { return $false }
+    if (-not @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--', $Path)).Count) { return $false }
     $before = (Invoke-UESTCGit $Root @('show', "${base}:$Path")).StdOut.Replace("`r`n", "`n")
+    $indexed = (Invoke-UESTCGit $Root @('show', ":$Path")).StdOut.Replace("`r`n", "`n")
     $after = [IO.File]::ReadAllText($absolute).Replace("`r`n", "`n")
     # Raw strings can contain quote/comment sequences; conservatively run the gates for them.
-    if ($before.Contains('"""') -or $after.Contains('"""')) { return $false }
+    if ($before.Contains('"""') -or $indexed.Contains('"""') -or $after.Contains('"""')) { return $false }
     $pattern = '(@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*'')|/\*[\s\S]*?\*/|//[^\r\n]*'
     $strip = { param($m) if ($m.Groups[1].Success) { $m.Value } else { ' ' } }
-    return [regex]::Replace($before, $pattern, $strip).Trim() -ceq [regex]::Replace($after, $pattern, $strip).Trim()
+    $beforeCode = [regex]::Replace($before, $pattern, $strip).Trim()
+    return $beforeCode -ceq [regex]::Replace($indexed, $pattern, $strip).Trim() -and
+        $beforeCode -ceq [regex]::Replace($after, $pattern, $strip).Trim()
 }
 
 function Test-UESTCGlob {
@@ -42,7 +48,7 @@ function Get-UESTCPathOwnership {
     $basePaths = @()
     $baseRules = @()
     if ($deleted.Count) {
-        $basePaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $BaseRef))
+        $basePaths = @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $BaseRef))
         if (@($deleted | Where-Object { $_ -in $basePaths }).Count) {
             $baseOwnership = (Invoke-UESTCGit $Root @('show', "${BaseRef}:ownership.json")).StdOut | ConvertFrom-Json
             $baseRules = @($baseOwnership.rules | Sort-Object @{Expression={ ($_.pattern -replace '[*?]', '').Length };Descending=$true})
@@ -87,8 +93,8 @@ function Get-UESTCUidInputs {
     param([string]$Root, [string[]]$Changes)
     $required = @(Get-UESTCScopedUidPaths $Changes)
     if (-not $required.Count) { return }
-    $committed = @(Get-UESTCGitLines $Root @('ls-tree','-r','--name-only','HEAD','--','game') | Where-Object { $_ -match '\.uid$' })
-    $dirty = @(Get-UESTCGitLines $Root @('diff','--no-renames','--name-only','HEAD','--','*.uid'))
+    $committed = @(Get-UESTCGitPaths $Root @('ls-tree','-z','-r','--name-only','HEAD','--','game') | Where-Object { $_ -match '\.uid$' })
+    $dirty = @(Get-UESTCGitPaths $Root @('diff','-z','--no-renames','--name-only','HEAD','--','*.uid'))
     foreach ($path in @($committed + $required | Sort-Object -Unique)) {
         if ($path -notin $required -and $path -in $dirty) {
             $value = (Invoke-UESTCGit $Root @('show',"HEAD:$path")).StdOut.Trim()
@@ -108,7 +114,7 @@ function Test-UESTCOwnership {
             ($Wp -eq 'WP-00' -and $entry.Owner -in @('shared','main'))) { continue }
         $failures.Add("Ownership: $($entry.Path) belongs to '$($entry.Owner)', requested $Wp")
     }
-    $tracked = @(Get-UESTCGitLines $Root @('ls-files', '--cached'))
+    $tracked = @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached'))
     $requiredUids = @(Get-UESTCScopedUidPaths $Changes)
     $uids = @{}
     foreach ($input in (Get-UESTCUidInputs $Root $Changes)) {

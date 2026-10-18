@@ -40,7 +40,7 @@ function Get-UESTCAttributedChanges {
     $code = @($Changes | Where-Object { $_ -match '^game/.*\.cs$' -and $_ -notmatch '^game/addons/|/(tests?|obj|bin|\.godot)/' })
     if (-not $code.Count) { return }
     $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
-    $basePaths = @(Get-UESTCGitLines $Root @('ls-tree', '-r', '--name-only', $base))
+    $basePaths = @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $base))
     $pattern = '(?:\[|,)\s*(?:[A-Za-z_][\w.]*\.)?' + $Attribute + '(?:Attribute)?\b'
     foreach ($path in $code) {
         $absolute = Join-Path $Root $path
@@ -159,11 +159,16 @@ $changes = @(if ($PSBoundParameters.ContainsKey('Paths')) {
         }
         $absolute.Substring($root.Length + 1).Replace('\','/')
     } | Sort-Object -Unique)
-} else { Select-UESTCChanges $root $Wp @(Get-UESTCChanges $root $BaseRef) $BaseRef })
+} else {
+    $actualChanges = @(Get-UESTCChanges $root $BaseRef)
+    # WP-00 integrates the shared checkout; package entry points keep ownership scope.
+    if ($Wp -eq 'WP-00') { $actualChanges }
+    else { Select-UESTCChanges $root $Wp $actualChanges $BaseRef }
+})
 $formatPaths = @($changes | Where-Object { $_ -match '\.cs$' -and $_ -notmatch '^game/addons/' -and (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) })
 $runtimeChanges = @($changes | Where-Object { $_ -notmatch '^docs/|\.md$|^\.collab/' })
 if (-not ($Full -or $Smoke -or $Only.Count)) {
-    $existingBasePaths = @(Get-UESTCGitLines $root @('ls-tree', '-r', '--name-only', $BaseRef))
+    $existingBasePaths = @(Get-UESTCGitPaths $root @('ls-tree', '-z', '-r', '--name-only', $BaseRef))
     $runtimeChanges = @($runtimeChanges | Where-Object {
         $_ -notin $existingBasePaths -or -not (Test-UESTCCommentOnlyChange $root $_ $BaseRef)
     })
