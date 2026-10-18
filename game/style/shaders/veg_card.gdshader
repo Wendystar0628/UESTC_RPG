@@ -22,6 +22,7 @@ const float VEG_LOD_L1 = 40.0;
 const float VEG_KEEP_L0 = 0.4;             // L0 留下的插片比例（MotherModels.CardCount 的前缀）
 const float VEG_KEEP_L1 = 0.0556;          // L1 留下的插片比例
 const float VEG_COVER_GROW = 1.5;          // 远处按像素外扩叶形的上限，保住树冠覆盖率（§11.1）
+const float VEG_TWIG_MIN_PX = 0.5;         // 裸枝笔触按像素外扩的量（像素），保住约一个像素的线宽，不外扩成团
 // 远处叶卡化简（23c2c）：一张插片在屏幕上只剩几个像素时，叶形的细节逐像素闪烁；按 UV 的像素导数从前者到后者，叶形换成一个圆润的叶团
 // （覆盖率与叶簇相近）。枝条笔触、棕榈扇叶不换
 const vec2 VEG_CARD_SIMPLE = vec2(0.1, 0.25);
@@ -154,7 +155,8 @@ void vertex() {
 		vec3 center = c;
 		if ((sp.flags & VEG_FLAG_DECIDUOUS) != 0) {
 			size = mix(0.6, 1.0, k);
-			center = mix(CUSTOM1.xyz, c, k);
+			// 整冠叶量少时，留下的叶簇也随团块同一个收缩量收到枝梢（枝头残留的叶），不悬在已经收掉的团块位置上（§1.5、§6.5）
+			center = mix(CUSTOM1.xyz, c, k * smoothstep(0.15, 0.6, a));
 			twig = k < 0.5;
 			leafy = k;
 		}
@@ -354,6 +356,16 @@ float veg_card_sdf(int layer, vec2 uv, float seed) {
 	return min(d, veg_seg(p, vec2(0.0), vec2(0.0, 0.1), 0.014, 0.01));
 }
 
+// 叶卡形状的距离：远处（一张插片在屏幕上只剩几个像素）叶形换成圆润的叶团；枝条笔触、棕榈扇叶不换
+float veg_card_shape(int layer, vec2 uv, float seed, float uv_px) {
+	float d = veg_card_sdf(layer, uv, seed);
+	if (layer != VEG_CARD_TWIG && layer != VEG_CARD_FROND) {
+		float blob = (length((uv - vec2(0.5, 0.5)) / vec2(0.42, 0.46)) - 1.0) * 0.42;
+		d = mix(d, blob, smoothstep(VEG_CARD_SIMPLE.x, VEG_CARD_SIMPLE.y, uv_px));
+	}
+	return d;
+}
+
 // 碎边噪声：世界坐标的三维值噪声，两级叠加，按树种行错开；格子随叶卡形状（细叶小、阔叶大）
 float veg_edge_noise(vec3 wp, int row, int layer) {
 	float cell = VEG_EDGE_CELL * (layer == VEG_CARD_NEEDLE || layer == VEG_CARD_STRAND ? 0.75 : (layer == VEG_CARD_FAN || layer == VEG_CARD_PALMATE ? 1.15 : 1.0));
@@ -388,6 +400,12 @@ void fragment() {
 	if (!FRONT_FACING) {
 		NORMAL = -NORMAL;
 	}
+	// 外壳法线朝上的程度：插片镶雪只在冠顶、冠侧，冠底不镶
+	float shell_up = (mat3(INV_VIEW_MATRIX) * normalize(NORMAL)).y;
+	// 叶卡的 UV、叶形种子和 UV 的像素导数（插片的叶形与镶雪共用；团块用不到）
+	vec2 card_uv = (v_bits & 128) != 0 ? vec2(0.5, 0.0) + (UV - vec2(0.5, 0.0)) * VEG_UNDER_FIT : UV;
+	float card_seed = float((v_bits >> 8) & 255) / 256.0;
+	float card_px = max(fwidth(card_uv.x), fwidth(card_uv.y));
 	int row = v_row & 63;
 	VegSpecies sp = veg_species(row);
 	bool mass = (v_bits & 64) != 0;
@@ -430,17 +448,11 @@ void fragment() {
 		ALPHA = clamp(e / max(fwidth(e), 1e-4) + 0.5, 0.0, 1.0);
 	} else {
 		// v_bits 是 flat 的，同一个图元内分支一致，fwidth 不受影响
-		vec2 uv = (v_bits & 128) != 0 ? vec2(0.5, 0.0) + (UV - vec2(0.5, 0.0)) * VEG_UNDER_FIT : UV;
-		int layer = v_bits & 15;
-		float d = veg_card_sdf(layer, uv, float((v_bits >> 8) & 255) / 256.0);
-		if (layer != VEG_CARD_TWIG && layer != VEG_CARD_FROND) {
-			float uv_px = max(fwidth(uv.x), fwidth(uv.y));
-			float blob = (length((uv - vec2(0.5, 0.5)) / vec2(0.42, 0.46)) - 1.0) * 0.42;
-			d = mix(d, blob, smoothstep(VEG_CARD_SIMPLE.x, VEG_CARD_SIMPLE.y, uv_px));
-		}
+		float d = veg_card_shape(v_bits & 15, card_uv, card_seed, card_px);
 		float fw = max(fwidth(d), 1e-4);
 		// 远处按像素外扩，叶形不至于在远距离上变稀（主线版代替保覆盖率的 mip，§11.1）
-		d -= fw * (0.35 + min(fw * 30.0, VEG_COVER_GROW));
+		// 裸枝笔触不外扩成团：只保住约一个像素的线宽，冬季裸冠在远处仍读成细枝，不糊成灰紫色的絮团
+		d -= fw * ((v_bits & 15) == VEG_CARD_TWIG ? VEG_TWIG_MIN_PX : 0.35 + min(fw * 30.0, VEG_COVER_GROW));
 		ALPHA = clamp(0.5 - d / fw, 0.0, 1.0);
 	}
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
@@ -477,7 +489,19 @@ void fragment() {
 			shade = ok_adjust(shade, 1.0, 1.0, dl);
 		}
 	}
-	ToonCol tcol = veg_colors(tctx, tmat, lit, shade, lamp, twig ? -1.0 : v_spare, trans_k);
+	// 覆雪（§6.4）：团块按法线朝上的程度覆雪（常绿树冠顶一层白）；插片（裸枝笔触、叶簇）只在朝上的一侧镶一线雪——
+	// 形状在 UV 里往上挪一个雪宽就出了形状的那一条（叶卡的 v 轴是世界竖直方向在卡面上的投影）
+	float t_grad = twig ? -1.0 : v_spare;
+	float snow_k = 0.0;
+	if (mass) {
+		snow_k = veg_snow_cover(tctx.n_w.y, tctx.ao, veg_hash(v_seed, 43u));
+	} else if (snow >= VEG_SNOW_MIN) {
+		float w = VEG_SNOW_EDGE_W * smoothstep(VEG_SNOW_MIN, 0.7, snow) * smoothstep(-0.2, 0.4, shell_up);
+		float d_up = veg_card_shape(v_bits & 15, card_uv + vec2(0.0, w), card_seed, card_px);
+		snow_k = w > 1e-4 ? clamp(d_up / max(fwidth(d_up), 1e-4) + 0.5, 0.0, 1.0) : 0.0;
+	}
+	veg_snow_apply(sp, snow_k, lit, shade, lamp, t_grad, trans_k);
+	ToonCol tcol = veg_colors(tctx, tmat, lit, shade, lamp, t_grad, trans_k);
 	if (!twig) {
 		vec3 lv = normalize(mat3(VIEW_MATRIX) * key_dir);
 		float glow = pow(clamp(dot(-VIEW, lv), 0.0, 1.0), 2.5) * (0.45 + 0.55 * clamp(-dot(clump, lv), 0.0, 1.0))
@@ -486,7 +510,7 @@ void fragment() {
 		float glow_dist = length(VERTEX);
 		// 只在背光的影面上把影色往受光色补（23d），不在受光色上再叠一份：逆光外缘读成亮边，受光面不冲白，团块明暗留住
 		float away = 1.0 - smoothstep(VEG_RIM_GLOW_AWAY.x, VEG_RIM_GLOW_AWAY.y, dot(NORMAL, lv));
-		tcol.extra += max(tcol.lit - tcol.shade, vec3(0.0)) * mix(VEG_RIM_GLOW, VEG_RIM_GLOW_FAR, smoothstep(VEG_RIM_GLOW_FADE.x, VEG_RIM_GLOW_FADE.y, glow_dist)) * glow * away;
+		tcol.extra += max(tcol.lit - tcol.shade, vec3(0.0)) * mix(VEG_RIM_GLOW, VEG_RIM_GLOW_FAR, smoothstep(VEG_RIM_GLOW_FADE.x, VEG_RIM_GLOW_FADE.y, glow_dist)) * glow * away * (1.0 - snow_k);
 	}
 	TOON_FRAGMENT_END(tcol)
 	v_band.z += VEG_LIT_SHIFT;

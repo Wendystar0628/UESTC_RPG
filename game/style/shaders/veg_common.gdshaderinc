@@ -69,6 +69,7 @@ struct VegSpecies {
 	int flags;
 	int twig_cid;     // 枝条笔触的受光色号（tree.bare）
 	int whitewash_cid; // 树干下半截刷白的受光色号（wall.greyWhite）
+	int snow_cid;     // 覆雪的受光色号（snow.lit），−1 = 树种表没写，不覆雪
 };
 
 // 每株量（WLD-VEGETATION）：x 种子，y 树种号 × 16 + 变体号，z 风向位置，w 树高。
@@ -97,6 +98,7 @@ VegSpecies veg_species(int row) {
 	s.flags = 0;
 	s.twig_cid = 0;
 	s.whitewash_cid = 0;
+	s.snow_cid = -1;
 	if (row < 0 || row > 31) {
 		return s;
 	}
@@ -120,7 +122,37 @@ VegSpecies veg_species(int row) {
 	s.flags = int(round(t3.w));
 	s.twig_cid = int(round(t4.z));
 	s.whitewash_cid = int(round(t4.w));
+	s.snow_cid = int(round(texelFetch(tree_species, ivec2(5, row), 0).x));
 	return s;
+}
+
+// 覆雪（WLD-VEGETATION §6.4）：按世界法线朝上的程度覆雪，覆雪量越大雪线越往下；每个团块（叶簇）的雪线按自己的哈希错开一点，
+// 遮蔽处雪线抬高。雪是平涂的 snow.*，与叶色之间只有一个像素的抗锯齿边，不混色。
+const vec2 VEG_SNOW_LINE = vec2(0.95, 0.4);  // 覆雪量 0 → 1 时，雪线（法线 y）从前者降到后者；冬季基线 0.7 时约 0.57
+const float VEG_SNOW_JITTER = 0.12;          // 每个团块雪线的起伏（法线 y，±一半）
+const float VEG_SNOW_AO = 0.3;               // 遮蔽（ao = 0）把雪线抬高这么多
+const float VEG_SNOW_EDGE_W = 0.012;         // 插片（裸枝笔触、叶簇）朝上一侧镶雪的宽度（叶卡 UV），冬季基线时
+const float VEG_SNOW_MIN = 0.02;             // 覆雪量低于它不覆雪
+
+float veg_snow_cover(float n_y, float ao, float hash) {
+	if (snow < VEG_SNOW_MIN) {
+		return 0.0;
+	}
+	float line = mix(VEG_SNOW_LINE.x, VEG_SNOW_LINE.y, clamp(snow, 0.0, 1.0)) + (hash - 0.5) * VEG_SNOW_JITTER
+			+ VEG_SNOW_AO * (1.0 - clamp(ao, 0.0, 1.0));
+	return clamp((n_y - line) / max(fwidth(n_y), 1e-3) + 0.5, 0.0, 1.0);
+}
+
+// 把覆雪混进取色：雪不透光，也不按叶色分类压暗（t_grad 换成 −1）
+void veg_snow_apply(VegSpecies sp, float k, inout vec3 lit, inout vec3 shade, inout vec3 lamp, inout float t_grad, inout float trans_k) {
+	if (k <= 0.0 || sp.snow_cid < 0) {
+		return;
+	}
+	lit = mix(lit, pal_cur(sp.snow_cid), k);
+	shade = mix(shade, pal_cur(sp.snow_cid + PAL_SHADE_OFFSET), k);
+	lamp = mix(lamp, pal_fetch(sp.snow_cid, PAL_ROW_LAMP), k);
+	t_grad = k > 0.5 ? -1.0 : t_grad;
+	trans_k *= 1.0 - k;
 }
 
 float veg_hash(float seed, uint salt) {

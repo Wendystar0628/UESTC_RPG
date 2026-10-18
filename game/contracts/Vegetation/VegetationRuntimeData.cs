@@ -30,4 +30,9 @@ public interface IVegetationRuntimeSource : IContentModule
     IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context);
     /// <summary>Authored grass scopes from this exact map version; actual prototypes use the existing geometry instance pools.</summary>
     GrassRuntimeData PrepareGrass(BuildContext context);
+    /// <summary>
+    /// The packed species table for the tree_species global texture (WLD-VEGETATION): RGBA32F texels, row-major,
+    /// 8 texels per species row and 32 rows; the layout is documented on Campus.Gen.Vegetation.SpeciesTable.
+    /// </summary>
+    float[] PrepareSpeciesTable(BuildContext context);
 }

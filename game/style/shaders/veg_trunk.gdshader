@@ -93,6 +93,8 @@ void fragment() {
 		lit = pal_cur(cid);
 		shade = pal_cur(cid + PAL_SHADE_OFFSET);
 		lamp = pal_fetch(cid, PAL_ROW_LAMP);
+		// 主枝、二级枝朝上的一面覆雪（§6.4），竖直的树干不挂雪
+		veg_snow_apply(sp, veg_snow_cover(tctx.n_w.y, tctx.ao, 0.5), lit, shade, lamp, grad, trans_k);
 	} else {
 		bool bloom = (v_bits & 4) != 0;
 		int cid = bloom ? sp.bloom_cid : v_cid;

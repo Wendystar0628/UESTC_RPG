@@ -59,6 +59,13 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     /// <summary>Plan-only grass input from the same prepared context used by trees; no grass geometry is implied.</summary>
     public GrassRuntimeData PrepareGrass(BuildContext context) => GrassInputs.Read(context);
 
+    /// <summary>The species table packed for the tree_species texture (<see cref="SpeciesTable.Pack"/>).</summary>
+    public float[] PrepareSpeciesTable(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return VegetationInputs.Species(context).Pack(RequirePalette(context));
+    }
+
     /// <summary>
     /// All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes; then the grass pools
     /// (<see cref="GrassClumps.Mothers"/>), which carry one prototype each and are told apart by their key prefix.

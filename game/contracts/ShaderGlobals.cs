@@ -31,7 +31,7 @@ public static class ShaderGlobals
     public const string RetreatY = "retreat_y";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Wind = "wind";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode.</summary>
     public const string Snow = "snow";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string GroundAmt = "ground_amt";
@@ -91,7 +91,7 @@ public static class ShaderGlobals
     public const string LampGrid = "lamp_grid";
     /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string LampTable = "lamp_table";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode.</summary>
     public const string TreeSpecies = "tree_species";
     /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string MatTable = "mat_table";
