@@ -268,11 +268,11 @@
   - ART-AMBIENCE §1.2 区域代号 · L49 · 461
   - ART-AMBIENCE §1.3 方式与通用约束 · L62 · 706
   - ART-AMBIENCE §1.4 颜色 · L75 · 338
-- ART-AMBIENCE §2 校舍外立面与屋顶 · L86 · 970
+- ART-AMBIENCE §2 校舍外立面与屋顶 · L86 · 996
 - ART-AMBIENCE §3 外廊、楼梯与出入口 · L97 · 617
 - ART-AMBIENCE §4 车棚、售货机与街角小设施 · L106 · 578
 - ART-AMBIENCE §5 电线杆、架空线与线上的鸟 · L114 · 492
-- ART-AMBIENCE §6 道路标线、凸面镜、护栏、路缘与排水 · L120 · 847
+- ART-AMBIENCE §6 道路标线、凸面镜、护栏、路缘与排水 · L120 · 851
 - ART-AMBIENCE §7 绿化 · L134 · 386
 - ART-AMBIENCE §8 照明与夜景 · L142 · 468
 - ART-AMBIENCE §10 河堤、球场设施、店头、外围街道与飞机云 · L151 · 720
