@@ -75,7 +75,7 @@ public sealed class FurniturePlantingRowTests
         // Signposts, fountains and the service things (13c2c) come last and keep off the rows and what stands before them: they may move too.
         foreach (var item in before.Items.Where(i => !i.Key.StartsWith(restKey, StringComparison.Ordinal) && !i.Key.StartsWith($"lamp:{Avenue.Key}:", StringComparison.Ordinal)
             && i.Kind is not (FurnitureKind.Signpost or FurnitureKind.DrinkingFountain or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker
-                or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle)))
+                or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle or FurnitureKind.Barrier)))
             AssertThat(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < TestTolerance.Position)).OverrideFailureMessage($"{item.Key} moved with the avenue's rows").IsTrue();
     }
 }

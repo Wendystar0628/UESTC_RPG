@@ -101,7 +101,7 @@ public sealed class FurnitureModuleTests
                 FurnitureKind.Bench => item.Pad is null ? 2 : 3,
                 FurnitureKind.AtlasKiosk => 4,
                 FurnitureKind.Bin => 2,
-                FurnitureKind.OpenSign or FurnitureKind.ParkedCar or FurnitureKind.KerbRamp => 1,
+                FurnitureKind.OpenSign or FurnitureKind.ParkedCar or FurnitureKind.KerbRamp or FurnitureKind.Barrier => 1,
                 // Two posts and the boards, and the bay; the fountain's box and its bay.
                 FurnitureKind.Signpost => item.Pad is null ? 3 : 4,
                 FurnitureKind.DrinkingFountain => item.Pad is null ? 1 : 2,

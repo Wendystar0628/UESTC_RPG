@@ -91,7 +91,7 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
         FurnitureKind.StreetLamp or FurnitureKind.AtlasKiosk or FurnitureKind.BusStop or FurnitureKind.ParkedCar or FurnitureKind.Signpost => LodLevel.L2,
         FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.AtlasPost or FurnitureKind.EntranceMat
             or FurnitureKind.OpenSign or FurnitureKind.EntranceLamp or FurnitureKind.KerbRamp or FurnitureKind.DrinkingFountain
-            or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle => LodLevel.L1,
+            or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle or FurnitureKind.Barrier => LodLevel.L1,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown furniture kind."),
     };
 }

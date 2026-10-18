@@ -7,7 +7,7 @@ using S = Campus.Gen.Furniture.FurnitureStyle;
 
 namespace Campus.Gen.Furniture;
 
-public enum FurnitureKind : byte { StreetLamp, Bench, Bin, BusStop, AtlasKiosk, AtlasPost, EntranceMat, OpenSign, EntranceLamp, ParkedCar, KerbRamp, Signpost, DrinkingFountain, VendingMachine, DeliveryLocker, BicycleBay, ParkedBicycle }
+public enum FurnitureKind : byte { StreetLamp, Bench, Bin, BusStop, AtlasKiosk, AtlasPost, EntranceMat, OpenSign, EntranceLamp, ParkedCar, KerbRamp, Signpost, DrinkingFountain, VendingMachine, DeliveryLocker, BicycleBay, ParkedBicycle, Barrier }
 
 /// <summary>
 /// One placed piece of street furniture: the catalogue part with its world matrix, its lamp-inventory markers, its world-space
@@ -44,6 +44,8 @@ public sealed record FurnitureLayout(IReadOnlyList<FurnitureItem> Items)
 /// and rest stops midway between lamps: a bench lining the nearest walk on that side, facing the walk on a bay joined to it,
 /// never facing a carriageway or in the strip between the kerb and the tree rows; at every other stop a four-stream bin on its
 /// own bay 2–4 m along the same walk, towards a junction where there is one (Opus review 12:15).</item>
+/// <item>Barriers (WLD-LIFE-STREET §2): a row of white stone spheres across each wide walk's mouth at a carriageway (<see cref="FurnitureStyle.BarrierWalkMin"/>).
+/// The south gate's own forecourt spheres and bollards belong to its zone site.</item>
 /// </list>
 /// Everything lands on <see cref="IWorldModel.Terrain"/> (<see cref="Land"/>) and keeps clear of buildings, water, courts,
 /// parking, other roads, bridges, trees and each other (<see cref="StreetSite"/>).
@@ -91,6 +93,7 @@ public static partial class FurniturePlanner
         Fountains(site, items, diagnostics);
         Signposts(site, items, diagnostics);
         Services(site, items, diagnostics, roads);
+        Barriers(site, items, diagnostics);
         return new(items.AsReadOnly()) { Diagnostics = diagnostics.AsReadOnly() };
     }
 }

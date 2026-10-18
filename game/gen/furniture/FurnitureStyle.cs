@@ -95,6 +95,24 @@ public static class FurnitureStyle
     public const float RampWalkBehind = 0.6f;
     public const float RampSlide = 4.5f;
 
+    // ---- Barriers (WLD-LIFE-STREET §2 路障): white stone spheres across the mouth of a wide walk where it meets a carriageway ----
+    /// <summary>
+    /// A main junction is where a carriageway meets a walk (footway, path, pedestrian street) at least <see cref="BarrierWalkMin"/> wide: the
+    /// walk's end within <see cref="RampKerbReach"/> of the kerb, or the walk crossing the carriageway (a row on each side). The row stands
+    /// <see cref="BarrierSetback"/> inside the walk from the kerb, across it, <see cref="BarrierPitch"/> apart, centred on the walk and
+    /// <see cref="BarrierEdge"/> clear of its edges: cars stop, people pass between the spheres. The kerb is looked for within
+    /// <see cref="BarrierSearch"/> along the walk, in <see cref="BarrierStep"/> steps; two rows within <see cref="BarrierRowGap"/> are one junction.
+    /// Size is the part's default (white stone, variation 0).
+    /// </summary>
+    public static FurnitureParams BarrierSphere { get; } = (FurnitureParams)PartCatalog.Find(new(PartCatalog.StoneSphere))!.Defaults;
+    public const float BarrierWalkMin = 3f;
+    public const float BarrierSetback = 1f;
+    public const float BarrierPitch = 1.5f;
+    public const float BarrierEdge = 0.15f;
+    public const float BarrierSearch = 8f;
+    public const float BarrierStep = 0.25f;
+    public const float BarrierRowGap = 2f;
+
     // ---- Signposts and drinking fountains (Opus review 13c2b 21:05). Interim rules, all of them here: when WP-44's walk: points ----
     // ---- land, the points replace them. Both keep to "no piling up": rather too few than too many.                              ----
     /// <summary>

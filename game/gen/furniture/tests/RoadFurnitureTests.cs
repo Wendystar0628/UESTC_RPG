@@ -136,4 +136,33 @@ public sealed class RoadFurnitureTests
             }
         }
     }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void AWideWalkMeetingARoadGetsARowOfWhiteStoneSpheresAcrossItsMouth()
+    {
+        // WLD-LIFE-STREET 路障: a row inside the walk, Setback from the kerb, across it, Pitch apart; cars stop, people still pass.
+        var spot = OpenSpot.Value;
+        var road = new NetworkLine(new("design:furniture-test-road"), new Polyline([spot + new Vector2(-12f, 0f), spot + new Vector2(12f, 0f)]), 6f)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "residential" }) };
+        var walk = new NetworkLine(new("design:furniture-test-mouth"), new Polyline([spot + new Vector2(0f, -14f), spot + new Vector2(0f, -1.1f)]), 4f)
+            { Props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 4f }) };
+        var layout = FurniturePlanner.Build(MadeWorld(OpenWorld.Value, [road, walk], []), null, Inputs());
+        var spheres = layout.Items.Where(i => i.Kind == FurnitureKind.Barrier).OrderBy(i => i.Anchor.X).ToList();
+        AssertThat(spheres.Count >= 2).OverrideFailureMessage($"{spheres.Count} spheres across a 4 m walk's mouth").IsTrue();
+        var radius = ((PostCollider)spheres[0].Colliders[0]).R;
+        foreach (var sphere in spheres)
+        {
+            AssertThat(sphere.Part.Part.Value == PartCatalog.StoneSphere && ((FurnitureParams)sphere.Part.Params).Variation == 0).OverrideFailureMessage($"{sphere.Key} is not the white default sphere").IsTrue();
+            var behindKerb = spot.Y - sphere.Anchor.Y - Half(road);
+            AssertThat(behindKerb >= FurnitureStyle.BarrierSetback - TestTolerance.Layout && behindKerb <= FurnitureStyle.BarrierSetback + FurnitureStyle.BarrierStep + TestTolerance.Layout)
+                .OverrideFailureMessage($"{sphere.Key} stands {behindKerb:F2} m inside the walk from the kerb").IsTrue();
+            AssertThat(MathF.Abs(sphere.Anchor.X - spot.X) + radius <= Half(walk)).OverrideFailureMessage($"{sphere.Key} sticks out of the walk").IsTrue();
+        }
+        for (var i = 1; i < spheres.Count; i++)
+        {
+            var pitch = Vector2.Distance(spheres[i].Anchor, spheres[i - 1].Anchor);
+            AssertThat(MathF.Abs(pitch - FurnitureStyle.BarrierPitch) < TestTolerance.Layout).OverrideFailureMessage($"spheres {pitch:F2} m apart").IsTrue();
+            AssertThat(pitch - 2f * radius >= 0.8f).OverrideFailureMessage($"only {pitch - 2f * radius:F2} m between two spheres: a person cannot pass").IsTrue();
+        }
+    }
 }

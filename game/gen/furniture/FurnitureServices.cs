@@ -316,6 +316,7 @@ public static partial class FurniturePlanner
             PartCatalog.DeliveryLocker => LockerDef.Lods[LodLevel.L0]((EquipmentParams)p),
             PartCatalog.BicycleShelter => BayDef.Lods[LodLevel.L0]((RoofParams)p),
             PartCatalog.ParkedBicycle => BikeDef.Lods[LodLevel.L0]((VehicleParams)p),
+            PartCatalog.StoneSphere => SphereDef.Lods[LodLevel.L0]((FurnitureParams)p),
             StreetStyle.KerbRampId => RampDef.Lods[LodLevel.L0]((RampParams)p),
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, "Unknown street part."),
         };
