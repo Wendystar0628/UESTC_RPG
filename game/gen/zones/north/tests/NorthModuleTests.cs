@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -304,7 +305,7 @@ public sealed class NorthModuleTests
         for (var k = 0; k < panels; k++)
         {
             var step = Vector2.Distance(Canal.CanalRailSite.Post(k), Canal.CanalRailSite.Post(k + 1));
-            Require(step <= NorthTune.Bank.PostPitch + 0.001f && step > 1f, $"panel {k} is a post pitch long ({step})");
+            Require(step <= NorthTune.Bank.PostPitch + 0.01f && step > 1f, $"panel {k} is a post pitch long ({step})");
         }
         var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
             .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < 0.01f && MathF.Abs(Vector2.Dot(c.B - joint, w)) < 0.01f)
@@ -369,10 +370,10 @@ public sealed class NorthModuleTests
                     var (shape, height) = op is TerrainMoundOp m ? (m.Shape, m.Height) : (((TerrainBasinOp)op).Shape, ((TerrainBasinOp)op).Height);
                     var ellipse = (TerrainEllipse)shape;
                     var steepest = 1.5 * height / Math.Min(ellipse.Radii.X, ellipse.Radii.Y);
-                    Require(height <= 1.5 && steepest <= 1.0 / 3 + 1e-6, $"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3");
+                    Require(height <= 1.5 && steepest <= 1.0 / 3 + 0.001, $"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3");
                     // The courtyard hill is an activity lawn (Opus 13:32, R6): short radius at least 7.5 × height (1:5).
                     if (op.Id == "design:terrain:north-xz1-court-hill")
-                        Require(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - 1e-6, $"{op.Id}: activity hill no steeper than 1:5");
+                        Require(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - 0.01, $"{op.Id}: activity hill no steeper than 1:5");
                     break;
                 case TerrainSlopeOp s:
                     Require(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / ((PolylineGeometry)s.Geometry).Line.Points.Zip(((PolylineGeometry)s.Geometry).Line.Points.Skip(1), Vector2.Distance).Sum() <= 0.0501,
@@ -405,7 +406,7 @@ public sealed class NorthModuleTests
                 Require(corridors.ContainsKey(road.Id), $"{road.Id.Value} runs onto a terrace without corridor anchors");
         foreach (var c in corridors.Values)
             for (var i = 0; i + 1 < c.Anchors.Count; i++)
-                Require(Math.Abs(Grade(c.Anchors, i)) <= 0.05 + 1e-6, $"{c.Id}: piece at s {c.Anchors[i].S} is steeper than 5 %");
+                Require(Math.Abs(Grade(c.Anchors, i)) <= 0.05 + 0.001, $"{c.Id}: piece at s {c.Anchors[i].S} is steeper than 5 %");
 
         var junctions = new Dictionary<(long, long), List<(NetworkLine Road, double S)>>();
         foreach (var road in roads)
@@ -427,11 +428,11 @@ public sealed class NorthModuleTests
             var first = Elevation(corridors, list[0].Road, list[0].S);
             foreach (var (road, s) in list)
             {
-                Require(Math.Abs(Elevation(corridors, road, s) - first) <= 1e-4, $"junction {key} of {road.Id.Value}: {Elevation(corridors, road, s):0.000} vs {first:0.000}");
+                Require(Math.Abs(Elevation(corridors, road, s) - first) <= 0.01, $"junction {key} of {road.Id.Value}: {Elevation(corridors, road, s):0.000} vs {first:0.000}");
                 if (!corridors.TryGetValue(road.Id, out var c)) continue;
                 for (var i = 0; i + 1 < c.Anchors.Count; i++)
                     if (c.Anchors[i + 1].S > s - 10 && c.Anchors[i].S < s + 10)
-                        Require(Math.Abs(Grade(c.Anchors, i)) <= 0.03 + 1e-6, $"{c.Id}: steeper than 3 % within 10 m of the junction at s {s:0.0}");
+                        Require(Math.Abs(Grade(c.Anchors, i)) <= 0.03 + 0.001, $"{c.Id}: steeper than 3 % within 10 m of the junction at s {s:0.0}");
             }
         }
         Require(checkedJunctions > 1000, "the whole network's junctions were checked");

@@ -1,3 +1,4 @@
+using Campus.Contracts.Atlas;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;

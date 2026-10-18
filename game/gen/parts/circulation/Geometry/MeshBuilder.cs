@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
@@ -122,12 +123,7 @@ internal sealed class MeshBuilder
         int n = section.Count, m = path.Count;
         if (n < 3 || chamfer is not null && chamfer.Count != n) throw new ArgumentException("A section needs three points and one flag per edge.");
         if (m < (closed ? 3 : 2)) throw new ArgumentException("A sweep needs two points, or three for a closed path.");
-        double area = 0;
-        for (var i = 0; i < n; i++)
-        {
-            var a = section[i]; var b = section[(i + 1) % n];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
+        double area = 2d * PlanGeometry.SignedArea(section);
         if (!(Math.Abs(area) > 1e-12)) throw new ArgumentException("A section must enclose area.");
         var sign = area > 0 ? 1f : -1f;
         // Outward section-edge normals in (lateral, up); counterclockwise means outward = (du, −dl).
@@ -235,12 +231,7 @@ internal sealed class MeshBuilder
         if (!(x1 > x0)) throw new ArgumentException("Extrusion needs x1 > x0.");
         var n = ring.Count;
         if (n < 3 || chamfer is not null && chamfer.Count != n) throw new ArgumentException("A ring needs three points and one flag per edge.");
-        double area = 0;
-        for (var i = 0; i < n; i++)
-        {
-            var a = ring[i]; var b = ring[(i + 1) % n];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
+        double area = 2d * PlanGeometry.SignedArea(ring);
         if (!(Math.Abs(area) > 1e-12)) throw new ArgumentException("A ring must enclose area.");
         var (capPoints, capIndices) = capTriangles is null ? Earcut(ring) : Explicit(ring, capTriangles, Math.Abs(area) * 0.5);
         var sign = area > 0 ? 1f : -1f;
@@ -306,7 +297,7 @@ internal sealed class MeshBuilder
             int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
             if (a < 0 || b < 0 || c < 0 || a >= ring.Count || b >= ring.Count || c >= ring.Count) throw new ArgumentException("Cap triangle index out of range.");
             var pa = ring[a]; var pb = ring[b]; var pc = ring[c];
-            var twice = ((double)pb.X - pa.X) * ((double)pc.Y - pa.Y) - ((double)pb.Y - pa.Y) * ((double)pc.X - pa.X);
+            var twice = PlanGeometry.Cross(pa, pb, pc);
             if (!(Math.Abs(twice) > 1e-9)) throw new ArgumentException($"Cap triangle {pa} {pb} {pc} is degenerate.");
             covered += Math.Abs(twice) * 0.5;
             ordered[i] = a; ordered[i + 1] = twice > 0 ? b : c; ordered[i + 2] = twice > 0 ? c : b;

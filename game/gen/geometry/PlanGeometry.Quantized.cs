@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Campus.Gen.Interior;
+namespace Campus.Gen.Geometry;
 
 /// <summary>Scalar, millimetre-quantized plan operations shared by the facade and room generators.</summary>
-internal static class PlanGeometry
+public static partial class PlanGeometry
 {
     internal const float Tolerance = 0.002f;
 
@@ -85,13 +85,6 @@ internal static class PlanGeometry
     {
         int x = a.X.CompareTo(b.X);
         return x != 0 ? x : a.Y.CompareTo(b.Y);
-    }
-
-    internal static double SignedArea(IReadOnlyList<Vector2> ring)
-    {
-        double area = 0d;
-        for (int i = 0; i < ring.Count; i++) area += Cross(ring[i], ring[(i + 1) % ring.Count]);
-        return area * 0.5d;
     }
 
     internal static bool OnSegment(Vector2 p, Vector2 a, Vector2 b, float tolerance = Tolerance)

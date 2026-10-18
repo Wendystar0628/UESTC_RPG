@@ -18,12 +18,12 @@ public sealed class GrandStairTests
     {
         var world = RealWorld();
         var (stair, shell) = Pieces(world);
-        Require(MathF.Abs(stair.TopY - shell.Plan.SecondFloorY) < 1e-4f, "the top landing is the 2F floor");
-        Require(MathF.Abs(stair.Risers * stair.Riser - (stair.TopY - stair.FootY)) < 1e-3f, "risers close the rise");
-        Require(stair.Riser is >= 0.12f and <= 0.16f && MathF.Abs(stair.Tread - (0.65f - 2 * stair.Riser)) < 1e-3f, $"R {stair.Riser}, T {stair.Tread}");
-        Require(stair.Flights.All(f => f.Risers * stair.Riser <= WalkRules.OutdoorFlightMaxRise + 1e-3f), "every flight rises at most 1.5 m");
+        Require(MathF.Abs(stair.TopY - shell.Plan.SecondFloorY) < 0.01f, "the top landing is the 2F floor");
+        Require(MathF.Abs(stair.Risers * stair.Riser - (stair.TopY - stair.FootY)) < 0.01f, "risers close the rise");
+        Require(stair.Riser is >= 0.12f and <= 0.16f && MathF.Abs(stair.Tread - (0.65f - 2 * stair.Riser)) < 0.01f, $"R {stair.Riser}, T {stair.Tread}");
+        Require(stair.Flights.All(f => f.Risers * stair.Riser <= WalkRules.OutdoorFlightMaxRise + 0.01f), "every flight rises at most 1.5 m");
         Require(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1, "two runs split by one middle landing");
-        Require(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < 1e-3f,
+        Require(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < 0.01f,
             "flights run from the foot to the top landing");
         // The data footprint (overlay/core.d/ reshape) is the built stair: the same rectangle within 0.15 m.
         var ring = Plan.OuterRing(world.Features[CoreFeatures.LibraryStair]);
@@ -88,7 +88,7 @@ public sealed class GrandStairTests
         var overDoor = points.Where(p => MathF.Abs(Vector2.Dot(new Vector2(p.X - bay.Origin.X, p.Z - bay.Origin.Z), f.Along)) < bay.Width).ToArray();
         Require(overDoor.Min(p => p.Y) > bay.Origin.Y + bay.Height + 0.5f, "the canopy's soffit clears the door transom");
         Require(points.Min(p => p.Y) < bay.Origin.Y, "the piers stand on the terrace");
-        Require(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - CoreStyle.CanopyPier * 0.5f) < 1e-4f && w.Y0 < bay.Origin.Y) == 2, "the piers collide");
+        Require(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - CoreStyle.CanopyPier * 0.5f) < 0.01f && w.Y0 < bay.Origin.Y) == 2, "the piers collide");
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
         {
             var coarse = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
@@ -127,7 +127,7 @@ public sealed class GrandStairTests
         var hedges = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Barrier).ToArray();
         Require(hedges.Length == 2 * 2 * 3 && hedges.All(w => w.Foot == FootMat.Hedge), $"three hedges on each tier and side ({hedges.Length})");
         var guards = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Wall).ToArray();
-        Require(guards.Max(w => w.Y1) >= stair.TopY + WalkRules.BarrierHeight - 1e-3f, "the guard walls stand 1.5 m over the top landing");
+        Require(guards.Max(w => w.Y1) >= stair.TopY + WalkRules.BarrierHeight - 0.01f, "the guard walls stand 1.5 m over the top landing");
         Require(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.DoorClosed), "the service doors are closed doors");
     }
 

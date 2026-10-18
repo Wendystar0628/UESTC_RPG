@@ -1,8 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Campus.Gen.Tests")]
-
 namespace Campus.Gen.World;
 
 internal enum TerrainGroup { Regional, Linear, Water, Pad, Corridor }

@@ -229,7 +229,7 @@ internal static class CarBody
         var n = Xf.Unit(outward);
         var ring = outline.ToList();
         var newell = Vector3.Zero;
-        for (var i = 0; i < ring.Count; i++) newell += Cross(ring[i], ring[(i + 1) % ring.Count]);
+        for (var i = 0; i < ring.Count; i++) newell += GeometryMath.Cross(ring[i], ring[(i + 1) % ring.Count]);
         if (Vector3.Dot(newell, n) < 0) ring.Reverse();
         var writer = new MeshWriter(material);
         var top = ring.Select(q => q + n * S.PaneProud).ToArray();
@@ -244,7 +244,7 @@ internal static class CarBody
         for (var i = 0; i < ring.Count; i++)
         {
             var j = (i + 1) % ring.Count;
-            var side = Xf.Unit(Cross(ring[j] - ring[i], n));
+            var side = Xf.Unit(GeometryMath.Cross(ring[j] - ring[i], n));
             var a = writer.Vertex(top[i], side, Vector2.Zero); var c = writer.Vertex(top[j], side, Vector2.Zero);
             var e = writer.Vertex(bottom[j], side, Vector2.Zero); var f = writer.Vertex(bottom[i], side, Vector2.Zero);
             writer.Triangle(a, c, e, side); writer.Triangle(a, e, f, side);
@@ -253,7 +253,6 @@ internal static class CarBody
     }
 
     private static float Lerp(float a, float b, float t) => a + (b - a) * t;
-    internal static Vector3 Cross(Vector3 a, Vector3 b) => new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
 }
 
 /// <summary>
@@ -282,7 +281,7 @@ internal static class Loft
             if (!chamfer[band]) { a = band; b = band + 1; }
             else if (((j - band) % n + n) % n == 0) { a = band - 1; b = band; }
             else { a = band + 1; b = band + 2; }
-            return Xf.Unit(CarBody.Cross(P(i, b) - P(i, a), along));
+            return Xf.Unit(GeometryMath.Cross(P(i, b) - P(i, a), along));
         }
         for (var g = 0; g + 1 < m; g++)
             for (var k = 0; k < n; k++)
@@ -290,8 +289,8 @@ internal static class Loft
                 var A = P(g, k); var B = P(g, k + 1); var C = P(g + 1, k + 1); var D = P(g + 1, k);
                 var ia = w.Vertex(A, Normal(g, k, k, g), new(A.Z, A.Y)); var ib = w.Vertex(B, Normal(g, k + 1, k, g), new(B.Z, B.Y));
                 var ic = w.Vertex(C, Normal(g + 1, k + 1, k, g), new(C.Z, C.Y)); var id = w.Vertex(D, Normal(g + 1, k, k, g), new(D.Z, D.Y));
-                w.Triangle(ia, ib, ic, CarBody.Cross(B - A, C - A));
-                w.Triangle(ia, ic, id, CarBody.Cross(C - A, D - A));
+                w.Triangle(ia, ib, ic, GeometryMath.Cross(B - A, C - A));
+                w.Triangle(ia, ic, id, GeometryMath.Cross(C - A, D - A));
             }
         foreach (var e in new[] { 0, m - 1 })
         {

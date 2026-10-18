@@ -3,6 +3,7 @@ using Campus.Contracts;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.OverlayNG;
 using NetTopologySuite.Precision;
+using NtsGeometry = NetTopologySuite.Geometries.Geometry;
 
 namespace Campus.Gen.World;
 
@@ -16,7 +17,7 @@ internal static class TerrainUnion
     public static TerrainRegion Build(IEnumerable<TerrainRegion> regions)
     {
         var polygons = regions.SelectMany(region => region.Polygons).Select(ToGeometry)
-            .Order(Comparer<Geometry>.Create((a, b) => a.CompareTo(b))).ToArray();
+            .Order(Comparer<NtsGeometry>.Create((a, b) => a.CompareTo(b))).ToArray();
         var union = UnaryUnionNG.Union(polygons, Factory, Precision);
         if (union.IsEmpty) throw new ArgumentException("Terrain union has no area at centimetre precision.");
         union.Normalize();
@@ -25,7 +26,7 @@ internal static class TerrainUnion
             Enumerable.Range(0, polygon.NumInteriorRings).Select(i => ToRing(polygon.GetInteriorRingN(i))).ToArray())));
     }
 
-    private static Geometry ToGeometry(PolygonRings polygon)
+    private static NtsGeometry ToGeometry(PolygonRings polygon)
     {
         var geometry = Factory.CreatePolygon(ToRing(polygon.Outer), polygon.Holes.Select(ToRing).ToArray());
         // Apply the same grid even for a lone/disjoint polygon, which unary union can otherwise pass through.
@@ -50,7 +51,7 @@ internal static class TerrainUnion
         return new Vector2(x == 0 ? 0 : x, z == 0 ? 0 : z);
     }).ToArray();
 
-    private static IEnumerable<Polygon> Polygons(Geometry geometry)
+    private static IEnumerable<Polygon> Polygons(NtsGeometry geometry)
     {
         if (geometry.IsEmpty) yield break;
         if (geometry is Polygon polygon) { yield return polygon; yield break; }

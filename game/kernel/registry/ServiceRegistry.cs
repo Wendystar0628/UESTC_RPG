@@ -154,7 +154,7 @@ public sealed class ServiceRegistry
         var map = metadata.GetProperty("Map")?.GetValue(attribute) as string;
         if (string.IsNullOrEmpty(map)) map = type.Assembly.GetCustomAttribute<MapScopeAttribute>()?.Map;
         var stub = metadata.GetProperty("IsStub")?.GetValue(attribute) is true ||
-            type.Assembly.GetName().Name == "Campus.Gen.Parts.Stubs" ||
+            type.Namespace?.StartsWith("Campus.Gen.Parts.Stubs", StringComparison.Ordinal) == true ||
             type.Namespace?.StartsWith("Campus.Kernel.Stubs", StringComparison.Ordinal) == true;
         _entries.Add(new(kind, id, owner, map, type, stub)
         {

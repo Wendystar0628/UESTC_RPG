@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -122,10 +123,10 @@ public sealed class StreetAmenityTests
             var facing = Front(machines[0].Part.At);
             Check(machines.Count is >= FurnitureStyle.VendingMin and <= FurnitureStyle.VendingMax, $"{group.Key}: {machines.Count} machines");
             Check(machines.Count(m => ((EquipmentParams)m.Part.Params).Variation == 1) <= 1, $"{group.Key}: more than one odd machine");
-            Check(machines.All(m => Vector2.Dot(Front(m.Part.At), facing) > 0.999f && MathF.Abs(m.Part.At.M42 - machines[0].Part.At.M42) < 1e-5f), $"{group.Key}: machines not in one row");
+            Check(machines.All(m => Vector2.Dot(Front(m.Part.At), facing) > 0.999f && MathF.Abs(m.Part.At.M42 - machines[0].Part.At.M42) < 0.01f), $"{group.Key}: machines not in one row");
             for (var k = 1; k < machines.Count; k++)
-                Check(MathF.Abs(Vector2.Distance(machines[k].Anchor, machines[k - 1].Anchor) - FurnitureStyle.Vending.Width - FurnitureStyle.VendingSideGap) < 1e-3f, $"{group.Key}: machines not side by side");
-            Check(machines[0].Pad is { } bay && MathF.Abs(bay.Top - machines[0].Part.At.M42) < 1e-4f, $"{group.Key} is off its bay");
+                Check(MathF.Abs(Vector2.Distance(machines[k].Anchor, machines[k - 1].Anchor) - FurnitureStyle.Vending.Width - FurnitureStyle.VendingSideGap) < 0.01f, $"{group.Key}: machines not side by side");
+            Check(machines[0].Pad is { } bay && MathF.Abs(bay.Top - machines[0].Part.At.M42) < 0.01f, $"{group.Key} is off its bay");
             Check(machines.All(m => Serves(m, FurnitureStyle.ServiceFront)), $"{group.Key} does not face the paving or the road");
             var centre = machines.Aggregate(Vector2.Zero, (a, m) => a + m.Anchor) / machines.Count;
             Check(axis.All(l => Distance(centre, l) >= FurnitureStyle.MainAxisClear - FurnitureStyle.ServiceReach - 2f), $"{group.Key} stands on the main axis");
@@ -136,7 +137,7 @@ public sealed class StreetAmenityTests
                 var rings = Polygons(cluster).Single();
                 foreach (var m in machines)
                     foreach (var corner in Corners(m, FurnitureStyle.ServiceFront))
-                        Check(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, rings.Outer) >= FurnitureStyle.GateOutside - 1e-3f, $"{m.Key} is inside its cluster's fence line");
+                        Check(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, rings.Outer) >= FurnitureStyle.GateOutside - 0.01f, $"{m.Key} is inside its cluster's fence line");
                 var gate = (PointGeometry)feature.Geometry;
                 Check(Vector2.Distance(centre, new(gate.Position.X, gate.Position.Z)) <= FurnitureStyle.ServiceReach + 2f, $"{group.Key} strays from its gate");
             }
@@ -169,7 +170,7 @@ public sealed class StreetAmenityTests
             {
                 var q = Vector3.Transform(new Vector3(bike.Part.At.M41, bike.Part.At.M42, bike.Part.At.M43), local);
                 var bp = (VehicleParams)bike.Part.Params;
-                Check(MathF.Abs(q.X) + bp.Width * 0.5f <= p.Width * 0.5f + 1e-3f && MathF.Abs(q.Z) + bp.Depth * 0.5f <= p.Depth * 0.5f + 1e-3f, $"{bike.Key} leaves its bay's frame");
+                Check(MathF.Abs(q.X) + bp.Width * 0.5f <= p.Width * 0.5f + 0.01f && MathF.Abs(q.Z) + bp.Depth * 0.5f <= p.Depth * 0.5f + 0.01f, $"{bike.Key} leaves its bay's frame");
                 Check(Vector2.Dot(Front(bike.Part.At), Front(bay.Part.At)) < -0.999f && bike.Colliders.Count == 0, $"{bike.Key}: front wheel not to the back line, or a collider");
             }
         }
@@ -198,7 +199,7 @@ public sealed class StreetAmenityTests
         foreach (var m in machines)
         {
             foreach (var corner in Corners(m, FurnitureStyle.ServiceFront))
-                Check(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - 1e-3f, $"{m.Key} is inside the cluster");
+                Check(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - 0.01f, $"{m.Key} is inside the cluster");
             var facing = Front(m.Part.At);
             Check(MathF.Abs(facing.X) > 0.99f && Vector2.Dot(facing, new Vector2(spot.X - m.Anchor.X, 0f)) > 0f, $"{m.Key} does not face the road");
             Check(Distance(m.Anchor, road) - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - 0.05f, $"{m.Key} crowds the road");

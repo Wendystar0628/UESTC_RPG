@@ -17,8 +17,8 @@ public sealed class InteriorProviderScopeTests
     [TestCase]
     public async Task NewMapConfigurationDoesNotChangeAnOlderRunningMapOrTheGlobalCache()
     {
-        var registry = RealProviderRegistry();
-        var type = typeof(LibraryBoxInterior);
+        var registry = ProviderRegistry();
+        var type = typeof(FixtureBoxInterior);
         var providerId = type.GetCustomAttribute<InteriorProviderAttribute>()!.Id;
         var globalFeature = new FeatureId("fixture:building:global");
         var featureA = new FeatureId("fixture:building:a");
@@ -75,7 +75,7 @@ public sealed class InteriorProviderScopeTests
     [TestCase]
     public void NarrowFactoryRejectsUnregisteredEngineAndServiceTypes()
     {
-        var registry = RealProviderRegistry();
+        var registry = ProviderRegistry();
         var map = new MapId("fixture-map");
         foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(Campus.Kernel.Maps.MapService) })
         {
@@ -83,18 +83,18 @@ public sealed class InteriorProviderScopeTests
             Require(error.Message.Contains(type.FullName!, StringComparison.Ordinal), "Rejected type was not identified in the error.");
         }
         // Rejections must not leave the cycle guard or instance cache poisoned.
-        var first = registry.CreateInteriorProvider(typeof(LibraryBoxInterior), map);
-        var second = registry.CreateInteriorProvider(typeof(LibraryBoxInterior), map);
+        var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
+        var second = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
         Require(!ReferenceEquals(first, second), "Factory did not recover after rejecting invalid requests.");
     }
 
     [TestCase]
     public void BuildContextCopiesAndOrdinallySortsTheProviderMapping()
     {
-        var registry = RealProviderRegistry();
+        var registry = ProviderRegistry();
         var map = new MapId("fixture-snapshot");
-        var first = registry.CreateInteriorProvider(typeof(LibraryBoxInterior), map);
-        var second = registry.CreateInteriorProvider(typeof(LibraryBoxInterior), map);
+        var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
+        var second = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
         var input = new Dictionary<string, IInteriorProvider>(StringComparer.OrdinalIgnoreCase)
         { ["z.provider"] = first, ["a.provider"] = second };
         var context = Context(map, new("fixture:building:snapshot"), 0f, input);
@@ -110,11 +110,11 @@ public sealed class InteriorProviderScopeTests
         _ = Throws<NotSupportedException>(() => writableView.Add("another.provider", first));
     }
 
-    private static ServiceRegistry RealProviderRegistry()
+    private static ServiceRegistry ProviderRegistry()
     {
         var registry = new ServiceRegistry();
-        // Only the production box interior assembly is discovered. Never scan Campus.Tests or use Kernel.Services.
-        registry.Discover([typeof(LibraryBoxInterior).Assembly]);
+        // The global fixture registration exercises the production box implementation across distinct test maps.
+        registry.Discover([typeof(FixtureBoxInterior).Assembly]);
         return registry;
     }
 
@@ -161,6 +161,9 @@ public sealed class InteriorProviderScopeTests
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    // Deliberately unregistered, and its assembly is never passed to Discover.
+    [InteriorProvider("fixture.box", Owner = "WP-00")]
+    public sealed class FixtureBoxInterior : BoxInteriorProvider { }
+
+    // Deliberately lacks a registration attribute even though its assembly is discovered.
     private sealed class UnregisteredInterior : BoxInteriorProvider { }
 }

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Parts.Core;
 
@@ -67,18 +68,16 @@ public static partial class PartGeometryKernel
         GeometryMath.Positive(height, nameof(height)); ValidateBevel(bevel, height * 0.5f);
         if (bevel == 0) return Extrude(new(footprint), height, material, baseY);
         var polygon = PolygonTriangulator.Triangulate(new(footprint));
-        var ring = polygon.Vertices; var inset = new Vector2[ring.Length];
+        var ring = polygon.Vertices;
         for (var i = 0; i < ring.Length; i++)
         {
             var p = ring[(i + ring.Length - 1) % ring.Length]; var c = ring[i]; var n = ring[(i + 1) % ring.Length];
-            if (PolygonTriangulator.Cross(p, c, n) <= 0) throw new ArgumentException("Beveled extrusion currently requires a convex footprint.", nameof(footprint));
-            var previous = EdgeNormal(p, c); var next = EdgeNormal(c, n);
-            var divisor = 1 + (double)previous.X * next.X + (double)previous.Y * next.Y;
-            inset[i] = new((float)(c.X - bevel * (previous.X + next.X) / divisor), (float)(c.Y - bevel * (previous.Y + next.Y) / divisor));
+            if (PlanGeometry.Cross(p, c, n) <= 0) throw new ArgumentException("Beveled extrusion currently requires a convex footprint.", nameof(footprint));
         }
+        var inset = PlanGeometry.MitreInset(ring, bevel);
         for (var i = 0; i < ring.Length; i++)
             for (var j = 0; j < ring.Length; j++)
-                if (PolygonTriangulator.Cross(ring[i], ring[(i + 1) % ring.Length], inset[j]) <= 0)
+                if (PlanGeometry.Cross(ring[i], ring[(i + 1) % ring.Length], inset[j]) <= 0)
                     throw new ArgumentException("Bevel is too large for the footprint.", nameof(bevel));
         var cap = PolygonTriangulator.Triangulate(new(inset));
         // A valid inset must keep correspondence; edge reversals mean the bevel passed the medial axis.
@@ -93,7 +92,7 @@ public static partial class PartGeometryKernel
         AddCap(writer, cap, new(0, baseY, 0), Vector3.UnitX, Vector3.UnitZ, Vector3.UnitY, height, Vector3.UnitY);
         for (var i = 0; i < ring.Length; i++)
         {
-            var j = (i + 1) % ring.Length; var edge = EdgeNormal(ring[i], ring[j]); var normal = new Vector3(edge.X, 0, edge.Y);
+            var j = (i + 1) % ring.Length; var edge = PlanGeometry.RightUnitNormal(ring[i], ring[j]); var normal = new Vector3(edge.X, 0, edge.Y);
             Vector3 P(Vector2 p, float y) => new(p.X, baseY + y, p.Y);
             AddStrip(writer, P(inset[i], 0), P(inset[j], 0), P(ring[j], bevel), P(ring[i], bevel), -Vector3.UnitY, normal, GeometryMath.Sub(normal, Vector3.UnitY));
             AddStrip(writer, P(ring[i], bevel), P(ring[j], bevel), P(ring[j], height - bevel), P(ring[i], height - bevel), normal, normal, normal);
@@ -114,7 +113,7 @@ public static partial class PartGeometryKernel
             for (var i = start; i < end; i++)
             {
                 var a = polygon.Vertices[i]; var b = polygon.Vertices[i + 1 < end ? i + 1 : start];
-                var edge = EdgeNormal(a, b); var normal = GeometryMath.Add(GeometryMath.Scale(u, edge.X), GeometryMath.Scale(v, edge.Y));
+                var edge = PlanGeometry.RightUnitNormal(a, b); var normal = GeometryMath.Add(GeometryMath.Scale(u, edge.X), GeometryMath.Scale(v, edge.Y));
                 var p0 = GeometryMath.Point(a, origin, u, v, axis, 0); var p1 = GeometryMath.Point(b, origin, u, v, axis, 0);
                 var p2 = GeometryMath.Point(b, origin, u, v, axis, depth); var p3 = GeometryMath.Point(a, origin, u, v, axis, depth);
                 // OpeningAo remains the authored occlusion strength; only reveals reduce visibility.
@@ -136,11 +135,6 @@ public static partial class PartGeometryKernel
         var height = (float)Math.Sqrt(GeometryMath.Dot(GeometryMath.Sub(d, a), GeometryMath.Sub(d, a)));
         writer.Quad(writer.Vertex(a, lowerNormal, Vector2.Zero, visibility), writer.Vertex(b, lowerNormal, new(length, 0), visibility),
             writer.Vertex(c, upperNormal, new(length, height), visibility), writer.Vertex(d, upperNormal, new(0, height), visibility), outward);
-    }
-    private static Vector2 EdgeNormal(Vector2 a, Vector2 b)
-    {
-        var direction = GeometryMath.Unit(new(b.Y - a.Y, a.X - b.X, 0));
-        return new(direction.X, direction.Y);
     }
     private static Vector3 Axis(int axis, float sign) => axis switch { 0 => new(sign, 0, 0), 1 => new(0, sign, 0), 2 => new(0, 0, sign), _ => throw new ArgumentOutOfRangeException(nameof(axis)) };
     private static void ValidateBevel(float bevel, float limit)

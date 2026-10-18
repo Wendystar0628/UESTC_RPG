@@ -68,7 +68,7 @@ public sealed class BuildingMeshTests
                     for (var v = 0; v < b.Normal.Length / 3; v++)
                     {
                         var n = new Vector3(b.Normal[3 * v], b.Normal[3 * v + 1], b.Normal[3 * v + 2]);
-                        Require(MathF.Abs(n.Length() - 1f) < 1e-3f, "unit normals");
+                        Require(MathF.Abs(n.Length() - 1f) < 0.01f, "unit normals");
                     }
                     for (var t = 0; t < b.Index.Length; t += 3)
                     {

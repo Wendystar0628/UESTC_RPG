@@ -4,7 +4,6 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Pipeline.Map;
 
 namespace Campus.Systems.Atlas;
 

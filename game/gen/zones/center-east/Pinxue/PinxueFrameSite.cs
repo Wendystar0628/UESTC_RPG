@@ -247,7 +247,7 @@ public sealed class PinxueFrameSite : CenterEastSite
     internal static (PlanFrame Frame, float X0, float X1, float Z0, float Z1) Bar(IWorldModel world, string sourceId)
     {
         var part = world.Features[new(P.Complex)].Parts.First(p => p.SourceId == sourceId);
-        var ring = PlanGeometry.FacadeGeometryOf(part) is PolygonGeometry polygon ? polygon.Rings.Outer
+        var ring = WorldFeatureGeometry.FacadeGeometryOf(part) is PolygonGeometry polygon ? polygon.Rings.Outer
             : throw new InvalidOperationException($"Bridge part {sourceId} is not a single polygon.");
         var best = 0;
         for (var i = 1; i < ring.Count; i++)

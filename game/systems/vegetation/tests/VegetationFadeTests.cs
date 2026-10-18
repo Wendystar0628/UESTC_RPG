@@ -11,9 +11,13 @@ public sealed class VegetationFadeTests
     [TestCase]
     public void ShadersMirrorTheFadeConstants()
     {
-        foreach (var name in new[] { "veg_card.gdshader", "veg_trunk.gdshader" })
+        var shaders = Path.Combine(FindRepository(), "game", "style", "shaders");
+        foreach (var user in new[] { "veg_card.gdshader", "veg_trunk.gdshader" })
+            if (!File.ReadAllText(Path.Combine(shaders, user)).Contains("veg_common.gdshaderinc", StringComparison.Ordinal))
+                throw new InvalidOperationException($"{user} must include veg_common.gdshaderinc");
         {
-            var text = File.ReadAllText(Path.Combine(FindRepository(), "game", "style", "shaders", name));
+            const string name = "veg_common.gdshaderinc";
+            var text = File.ReadAllText(Path.Combine(shaders, name));
             ExpectVec2(text, "VEG_POOL_FADE", VegFade.NearFadeStart, VegFade.NearFadeEnd, name);
             ExpectVec2(text, "VEG_CLOUD_FADE", VegFade.CloudFadeStart, VegFade.CloudFadeEnd, name);
             ExpectVec2(text, "VEG_UNDER_FADE", Understorey.FadeStart, Understorey.DrawDistance, name);

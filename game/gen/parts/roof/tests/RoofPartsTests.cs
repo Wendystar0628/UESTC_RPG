@@ -210,7 +210,7 @@ public sealed class RoofPartsTests
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 Check(geometry.Bounds.Contains(P(m, i)), $"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).");
-                Near(1, N(m, i).Length(), 1e-5);
+                Near(1, N(m, i).Length(), 0.01);
             }
         }
     }

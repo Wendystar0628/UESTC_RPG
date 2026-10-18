@@ -10,9 +10,13 @@ $commitSource="$commit`n"
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($commitFile)) | Out-Null
 if(-not(Test-Path -LiteralPath $commitFile) -or [IO.File]::ReadAllText($commitFile) -ne $commitSource){[IO.File]::WriteAllText($commitFile,$commitSource,[Text.UTF8Encoding]::new($false))}
 $kind=if($Configuration -eq 'Debug'){'dev'}else{'export'}
-$moduleProjects=@(Get-ChildItem -LiteralPath (Join-Path $rootPath 'game/gen') -Recurse -Filter *.csproj | Where-Object { $_.FullName -notmatch '(?i)[\\/](obj|bin|tests)[\\/]' -and $_.BaseName -notmatch 'Tests' })
-$moduleProjects+=Get-Item -LiteralPath (Join-Path $rootPath 'pipeline/map/Campus.Pipeline.Map.csproj')
-$moduleProjects+=Get-Item -LiteralPath (Join-Path $rootPath 'game/contracts/Runtime/Campus.Contracts.Runtime.csproj')
+$moduleProjects=@(
+    'game/Campus.csproj'
+    'game/contracts/Campus.Contracts.csproj'
+    'game/contracts/Runtime/Campus.Contracts.Runtime.csproj'
+    'game/gen/Campus.Gen.csproj'
+    'game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj'
+) | ForEach-Object { Get-Item -LiteralPath (Join-Path $rootPath $_) }
 $moduleNames=[string[]]@($moduleProjects | ForEach-Object BaseName)
 [Array]::Sort($moduleNames,[StringComparer]::Ordinal)
 $names=@($moduleNames | ForEach-Object {'"'+$_+'"'}) -join ','

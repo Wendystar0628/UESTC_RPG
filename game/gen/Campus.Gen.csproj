@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Campus.Gen</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="geometry/**/*.cs;world/**/*.cs;parts/**/*.cs;interior/**/*.cs;buildings/**/*.cs;collision/**/*.cs;diorama/**/*.cs;fauna/**/*.cs;furniture/**/*.cs;ground/**/*.cs;vegetation/**/*.cs;water/**/*.cs"
+             Exclude="$(DefaultItemExcludes);**/tests/**/*.cs;**/obj/**/*.cs;**/bin/**/*.cs;zones/**/*.cs;interior/shell/Box/BoxInteriorRegistrations.cs" />
+    <Compile Include="../../pipeline/map/**/*.cs"
+             Exclude="$(DefaultItemExcludes);../../pipeline/map/**/tests/**/*.cs;../../pipeline/map/**/obj/**/*.cs;../../pipeline/map/**/bin/**/*.cs" />
+    <ProjectReference Include="../contracts/Campus.Contracts.csproj" />
+    <PackageReference Include="NetTopologySuite" />
+    <AdditionalFiles Include="../../scripts/gates/arch/BannedSymbols.Common.txt;../../scripts/gates/arch/BannedSymbols.Deterministic.txt" />
+    <InternalsVisibleTo Include="Campus.Gen.Tests" />
+  </ItemGroup>
+</Project>

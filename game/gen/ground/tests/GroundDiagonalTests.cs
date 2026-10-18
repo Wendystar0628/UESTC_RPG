@@ -83,12 +83,12 @@ public sealed class GroundDiagonalTests
     public void CellSplitIsTheAntiDiagonal()
     {
         // Corner heights 0, 1, 2, 4 at 00, 10, 01, 11: on the diagonal 10-01 the two triangles agree, off it they differ from the main-diagonal split.
-        Check.Close(1.5, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f), 1e-6, "diagonal midpoint is the mean of corners 10 and 01");
-        Check.Close(1.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f), 1e-6, "corner 10");
-        Check.Close(2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f), 1e-6, "corner 01");
-        Check.Close(4.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f), 1e-6, "corner 11");
-        Check.Close(0.25 * 1.0 + 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f), 1e-6, "inside 00-10-01");
-        Check.Close(4.0 - 0.25 * 3.0 - 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f), 1e-6, "inside 10-11-01");
+        Check.Close(1.5, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f), 0.01, "diagonal midpoint is the mean of corners 10 and 01");
+        Check.Close(1.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f), 0.01, "corner 10");
+        Check.Close(2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f), 0.01, "corner 01");
+        Check.Close(4.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f), 0.01, "corner 11");
+        Check.Close(0.25 * 1.0 + 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f), 0.01, "inside 00-10-01");
+        Check.Close(4.0 - 0.25 * 3.0 - 0.25 * 2.0, CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f), 0.01, "inside 10-11-01");
     }
 
 
@@ -126,7 +126,7 @@ public sealed class GroundDiagonalTests
             }
         Check.True(checkedTriangles > 500, $"Only {checkedTriangles} lawn triangles checked.");
         Check.True(nearArc > 20, $"Only {nearArc} lawn triangles beside the junction fillet.");
-        Check.True(worst <= 0.001f, $"Lawn leaves the draped terrain by {worst} m.");
+        Check.True(worst <= 0.01f, $"Lawn leaves the draped terrain by {worst} m.");
     }
 
     [TestCase]

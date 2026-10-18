@@ -54,9 +54,6 @@ internal static class BuildingsTestSupport
         return sb.ToString();
     }
 
-    internal static string LayoutHash(BuildingSet set) =>
-        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Layout(set))))[..16];
-
     /// <summary>Plan position of an entrance door's centre on the glass plane (where the interior index puts it).</summary>
     internal static Vector2 GlassCentre(BuildingPlan plan, PlanEntrance e)
     {

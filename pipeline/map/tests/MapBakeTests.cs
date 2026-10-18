@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Pipeline.Map.Tests;
@@ -27,7 +28,7 @@ public sealed class MapBakeTests
         var multi = new WorldFeature(new("fixture:building"), FeatureSource.Design, new("building"),
             new MultiPolygonGeometry([Square(-12, -12, -8, -8), Square(8, 8, 12, 12)]));
         var road = new NetworkLine(new("fixture:road"), new([new(-16, 0), new(16, 0)]), 0.1f);
-        var world = new TestWorld([multi], new([road], [], [], [], []));
+        var world = World([multi], new([road], [], [], [], []));
         var product = MapBaker.Build(Input(world));
         var a = product.Textures[0];
         Check(Pixel(a, 5, 5, 3) < 128 && Pixel(a, 26, 26, 3) < 128, "A multipolygon island was lost.");
@@ -51,7 +52,7 @@ public sealed class MapBakeTests
                     { Props = JsonSerializer.SerializeToElement(new { kind = "building" }) }
             ]
         };
-        var product = MapBaker.Build(Input(new TestWorld([poi])));
+        var product = MapBaker.Build(Input(World([poi])));
         var a = product.Textures[0];
         Check(Pixel(a, 5, 5, 3) < 128 && Pixel(a, 26, 26, 3) < 128 && Pixel(a, 26, 5, 3) < 128,
             "A building part of the POI was omitted.");
@@ -59,14 +60,14 @@ public sealed class MapBakeTests
         Equal((byte)MapFeatureClass.None, Pixel(product.Textures[1], 8, 8, 1));
         Equal((byte)MapFeatureClass.Building, Pixel(product.Textures[1], 2, 2, 1));
         var reordered = poi with { Parts = poi.Parts.Reverse().ToArray() };
-        Check(MapBakeCodec.Serialize(product).SequenceEqual(MapBakeCodec.Serialize(MapBaker.Build(Input(new TestWorld([reordered]))))),
+        Check(MapBakeCodec.Serialize(product).SequenceEqual(MapBakeCodec.Serialize(MapBaker.Build(Input(World([reordered]))))),
             "Source part insertion order changed map bytes.");
     }
 
     [TestCase]
     public void TextureRectsKeepCampusDetailSeparateFromDataAndPageCoverage()
     {
-        var input = Input(new TestWorld([]));
+        var input = Input(World([]));
         var product = MapBaker.Build(input with
         {
             AtlasRect = new(new(-128, -128), new(128, 128)),
@@ -83,7 +84,7 @@ public sealed class MapBakeTests
     [TestCase]
     public void MissingRegionalPolygonsReturnUnknownAndKnownRegionsClipAtTheCampus()
     {
-        var input = Input(new TestWorld([]));
+        var input = Input(World([]));
         var unknown = MapBaker.Build(input);
         Check(unknown.Regions.Cells.All(v => v == 0), "Missing regional boundaries invented a region.");
         Equal<string?>(null, unknown.Regions.RegionAt(0, 0));
@@ -98,8 +99,8 @@ public sealed class MapBakeTests
     {
         var one = new WorldFeature(new("fixture:one"), FeatureSource.Design, new("water"), new PolygonGeometry(Square(-8, -8, 0, 0)));
         var two = new WorldFeature(new("fixture:two"), FeatureSource.Design, new("green"), new PolygonGeometry(Square(0, 0, 8, 8)));
-        var a = MapBakeCodec.Serialize(MapBaker.Build(Input(new TestWorld([one, two]))));
-        var b = MapBakeCodec.Serialize(MapBaker.Build(Input(new TestWorld([two, one]))));
+        var a = MapBakeCodec.Serialize(MapBaker.Build(Input(World([one, two]))));
+        var b = MapBakeCodec.Serialize(MapBaker.Build(Input(World([two, one]))));
         Check(a.SequenceEqual(b), "Dictionary insertion order changed bytes.");
         Check(a.SequenceEqual(MapBakeCodec.Serialize(MapBakeCodec.Deserialize(a))), "Map codec changed a valid product.");
     }
@@ -107,7 +108,7 @@ public sealed class MapBakeTests
     [TestCase]
     public void CodecRejectsTruncationOversizedCountsAndCorruptTextureBytes()
     {
-        var product = MapBaker.Build(Input(new TestWorld([])));
+        var product = MapBaker.Build(Input(World([])));
         var bytes = MapBakeCodec.Serialize(product);
         Throws<InvalidDataException>(() => MapBakeCodec.Deserialize(bytes.AsSpan(0, bytes.Length - 1)));
         var badCount = (byte[])bytes.Clone(); badCount[8] = 200;
@@ -143,6 +144,13 @@ public sealed class MapBakeTests
         };
     }
 
+    private static FakeWorld World(IReadOnlyList<WorldFeature> features, WorldNetwork? network = null) => new()
+    {
+        Features = features.ToDictionary(f => f.Id),
+        Network = network ?? WorldNetwork.Empty,
+        Boundary = Square(-16, -16, 16, 16),
+    };
+
     private static AtlasLabels Labels() => new(1, [new AtlasRegion("district", new("District", "District"), null)], [],
         [new("district-label", "region", 100, Ref: "district", At: Vector2.Zero)]);
     private static PolygonRings Square(float x0, float z0, float x1, float z1) => new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
@@ -153,18 +161,5 @@ public sealed class MapBakeTests
     {
         try { action(); } catch (T) { return; }
         throw new InvalidOperationException($"Expected {typeof(T).Name}.");
-    }
-
-    private sealed class TestWorld : IWorldModel
-    {
-        internal TestWorld(IReadOnlyList<WorldFeature> features, WorldNetwork? network = null)
-        { Features = features.ToDictionary(f => f.Id); Network = network ?? WorldNetwork.Empty; }
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
-        public WorldNetwork Network { get; }
-        public PolygonRings Boundary => Square(-16, -16, 16, 16);
-        public ISpatialIndex Spatial => throw new NotSupportedException();
-        public IInteriorIndex Interiors => throw new NotSupportedException();
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity => null;
     }
 }

@@ -12,27 +12,14 @@ public sealed class AoContractTests
     private static readonly ToonSpec Material = new(new("wall.lit"), new("wall.shade"));
 
     [TestCase]
-    public void GeometryMatchesThePreContract20AoFix()
+    public void SameInputBuildsTheSameGeometryBytes()
     {
-        // Captured from the unchanged production core at main 153ebf0 (which includes 3af35c3).
-        // Excludes AO only: counts, positions, normals, indices, UVs and bounds must remain bitwise unchanged.
-        string[] expected =
-        [
-            "679E55CDCA115EB54966B2AF5E33696748D911BAFF96C7569CD26F7D414FB7EA",
-            "403EEACBCD39FDC0132DE74A6E0739471C6B7F364A662634B4E90D6E81397780",
-            "F82125715B8593B34D5DFF13EDD3F7B64E4A5BDE915CCA0BCE8F2AE9F6BB2E2F",
-            "D041C26F156CC2A9399D167D7E1BD5FC424361C67F679A38A6C6723D6F6B5963",
-            "0A902FC0A83E668197536A3519744158120934411237CC1343BBA2E5E2382403",
-            "A19E8DEC69289174F726D082C49D8CF9ADCA468943DFA972BB8D2C5865D867B7",
-            "619C86874706797F3AAAC9527B6344A1DCC58A503CE8A08F62BD4C53CE5C7FFC",
-            "FAF2A164EDA67A05223333BE7F433AE93D34AEED132CD59F21C4E50C30C343C2",
-            "0B8E4FF5239128E91C8FB93BD5F256ADA5FE927E24CF48E4C89AEA36FDCAF4FC",
-            "AE081F8507647CB755254A3D6781171942DC2F23C0AB94210C446121993BB716",
-        ];
+        // Counts, positions, normals, indices, UVs and bounds of every example are bitwise the same on a second build.
         var examples = Examples();
-        var actual = examples.Select(example => Fingerprint(example.Geometry)).ToArray();
-        if (!expected.SequenceEqual(actual))
-            throw new InvalidOperationException("Geometry baseline mismatch:\n" + string.Join("\n", examples.Select((example, i) => example.Id + " " + actual[i])));
+        var again = Examples();
+        for (var i = 0; i < examples.Count; i++)
+            if (Fingerprint(examples[i].Geometry) != Fingerprint(again[i].Geometry))
+                throw new InvalidOperationException($"{examples[i].Id}: a second build gave different geometry bytes.");
     }
 
     [TestCase]

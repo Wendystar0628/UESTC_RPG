@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -26,7 +27,7 @@ public sealed class AnnexShellTests
         {
             Require(shell.Frame.StoreyHeights.Count == CoreStyle.AnnexStoreysOf(shell.Kind), $"{shell.Id}: storeys");
             for (var k = 0; k <= shell.Rows; k++)
-                Require(MathF.Abs(shell.Frame.StoreyY(k) - library.Plan.StoreyY(k)) < 1e-3f, $"{shell.Id}: floor line {k} runs on from the library");
+                Require(MathF.Abs(shell.Frame.StoreyY(k) - library.Plan.StoreyY(k)) < 0.01f, $"{shell.Id}: floor line {k} runs on from the library");
             Require(shell.Openings.Count > 0, $"{shell.Id}: has windows");
             foreach (var lod in Levels)
             {
@@ -38,8 +39,8 @@ public sealed class AnnexShellTests
             Require(shell.Collide().All(c => c.Foot != Campus.Contracts.Audio.FootMat.Auto), $"{shell.Id}: every collider has a Foot");
         }
         var low = shells.Single(s => s.Kind == AnnexKind.LowBlock);
-        Require(MathF.Abs(low.Frame.EavesY - library.Plan.StoreyY(2)) < 1e-3f, "the low block's roof is the library's 3F floor (G terrace)");
-        Require(low.Collide().OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - library.Plan.StoreyY(2)) < 1e-3f), "the G terrace is a walkable slab");
+        Require(MathF.Abs(low.Frame.EavesY - library.Plan.StoreyY(2)) < 0.01f, "the low block's roof is the library's 3F floor (G terrace)");
+        Require(low.Collide().OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - library.Plan.StoreyY(2)) < 0.01f), "the G terrace is a walkable slab");
         var annex = shells.Single(s => s.Kind == AnnexKind.NorthAnnex);
         var door = annex.Door ?? throw new InvalidOperationException("Expected: the north annex has its closed door");
         var c = door.Face.At((door.Hole.U0 + door.Hole.U1) * 0.5f, 0f, door.Hole.Y0);

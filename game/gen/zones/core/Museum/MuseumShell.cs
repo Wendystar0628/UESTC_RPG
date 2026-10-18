@@ -113,10 +113,10 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
         if (!world.Features.TryGetValue(CoreFeatures.Museum, out var museum)) return null;
         var hall = museum.Parts.FirstOrDefault(p => p.SourceId == CoreFeatures.MuseumHall);
         if (hall is null) return null;
-        var body = Plan.Polygons(PlanGeometry.FacadeGeometryOf(hall)).FirstOrDefault()?.Outer;
+        var body = Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(hall)).FirstOrDefault()?.Outer;
         if (body is null || body.Count < 4) return null;
         body = MuseumGeometry.Positive(body);
-        var outer = museum.Parts.Where(p => p.SourceId == CoreFeatures.MuseumRing).SelectMany(p => Plan.Polygons(PlanGeometry.FacadeGeometryOf(p))).FirstOrDefault()?.Outer;
+        var outer = museum.Parts.Where(p => p.SourceId == CoreFeatures.MuseumRing).SelectMany(p => Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(p))).FirstOrDefault()?.Outer;
         var ring = Enumerable.Range(0, body.Count).Select(i => outer is null ? S.ColonnadeFallback : MuseumGeometry.ParallelDistance(body, i, outer, S.ColonnadeFallback)).ToArray();
         var frame = BuildingFrame.Of(world, CoreFeatures.Museum, S.MuseumStoreys);
         return new MuseumShell(frame, body, ring);

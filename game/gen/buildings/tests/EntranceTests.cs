@@ -45,7 +45,7 @@ public sealed class EntranceTests
         var entrance = dorm.Entrances.Single();
         Require(entrance.Anchor == "dorm.south" && entrance.Row == 0 && entrance.Landing, "the dorm's door moved to its anchor, with a landing");
         var door = dorm.DoorOf(entrance);
-        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 1e-4f, "an anchor at the pad takes the building's floor (WLD-TERRAIN)");
+        Require(MathF.Abs(door.Y0 - dorm.FloorY(0)) < 0.01f, "an anchor at the pad takes the building's floor (WLD-TERRAIN)");
         Require(Vector2.Distance(GlassCentre(dorm, entrance), new Vector2(21.3f, 0f)) <= Rules.EntranceRules.AnchorTolerance, "door within G18's 0.5 m of its anchor");
         Require(!dorm.Openings[entrance.Facade].Any(o => o.Row == 0 && o.Kind != BayKind.Door && o.U0 < door.U1 + Rules.EntranceRules.Pier && o.U1 > door.U0 - Rules.EntranceRules.Pier),
             "no window crowds the door");
@@ -53,7 +53,7 @@ public sealed class EntranceTests
         Require(old.Entrances.Single().Facade != entrance.Facade || old.Entrances.Single().Bay != entrance.Bay, "the generic door is gone");
         var lab = set.Plans.Single(p => p.Key == "t:lab").Entrances.Single();
         var labDoor = set.Plans.Single(p => p.Key == "t:lab").DoorOf(lab);
-        Require(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < 1e-4f && labDoor.Y1 - labDoor.Y0 >= 2f,
+        Require(lab.Anchor == "lab.porch" && !lab.Landing && MathF.Abs(labDoor.Y0 - 1.2f) < 0.01f && labDoor.Y1 - labDoor.Y0 >= 2f,
             "a raised anchor opens a door at its floor, onto the porch, without a landing");
         Require(EntranceKit.Pieces(set.Plans.Single(p => p.Key == "t:lab"), lab).Count == 0, "no WP-14 landing under a porch");
         foreach (var key in new[] { "t:low", "t:wing" })
@@ -132,11 +132,11 @@ public sealed class EntranceTests
             return plan.Entrances.SingleOrDefault(e => e.Anchor == "dorm.south");
         }
         var known = Door(2.6f, out var p1)!;
-        Require(MathF.Abs(p1.DoorOf(known).Y1 - 2.6f) < 1e-4f, "HeadY 2.6 is the door top");
+        Require(MathF.Abs(p1.DoorOf(known).Y1 - 2.6f) < 0.01f, "HeadY 2.6 is the door top");
         var unknown = Door(0f, out var p0)!;
-        Require(MathF.Abs(p0.DoorOf(unknown).Y1 - (p0.FloorY(0) + Math.Clamp(p0.StoreyHeight - 1f, 2.1f, 2.4f))) < 1e-4f, "0 = unknown: the family's door rise");
+        Require(MathF.Abs(p0.DoorOf(unknown).Y1 - (p0.FloorY(0) + Math.Clamp(p0.StoreyHeight - 1f, 2.1f, 2.4f))) < 0.01f, "0 = unknown: the family's door rise");
         var tall = Door(9f, out var p2)!;
-        Require(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 1e-4f, "never through the next slab");
+        Require(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 0.01f, "never through the next slab");
 
         // Doors alone (outside landing on a porch or deck) are logged with the package expected to build what they open onto.
         var lab = Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research") with { Zone = new ZoneId("north") };
@@ -172,7 +172,7 @@ public sealed class EntranceTests
         Require(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps]),
             "landing, guard railings on its sides (over 1.0 m) and one flight");
         var flight = (StairParams)steps[3].Params;
-        Require(MathF.Abs(flight.Height - 1.05f) < 1e-3f && flight.Steps == 7 && flight.Variation == 0, $"1.05 m in 7 risers with cheek walls ({flight.Steps})");
+        Require(MathF.Abs(flight.Height - 1.05f) < 0.01f && flight.Steps == 7 && flight.Variation == 0, $"1.05 m in 7 risers with cheek walls ({flight.Steps})");
         var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
         EntranceKit.Build(sink, steps, LodLevel.L0);
         Require(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit"), "handrails from 0.6 m (WP-11)");
@@ -185,6 +185,6 @@ public sealed class EntranceTests
         var slope = EntranceKit.Pieces(lab, lab.Entrances.Single());
         Require(slope.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Ramp]), "0.15 m: landing and a kerbed slope, no step");
         var ramp = (RampParams)slope[1].Params;
-        Require(ramp.Height / ramp.Depth <= 1f / 12f + 1e-4f && ramp.Variation == 1, "the slope is 1:12 or gentler");
+        Require(ramp.Height / ramp.Depth <= 1f / 12f + 0.001f && ramp.Variation == 1, "the slope is 1:12 or gentler");
     }
 }

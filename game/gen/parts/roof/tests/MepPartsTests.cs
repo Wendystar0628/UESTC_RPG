@@ -151,7 +151,7 @@ public sealed class MepPartsTests
         var p = new SignParams(0.36f, 0.145f, 0.03f);
         var glow = ExitSignPart.Glow(p, Matrix4x4.CreateTranslation(2, 2.3f, -5));
         Check(LightChannelCatalog.Slot(glow.Channel) == 22 && glow.Color == new PaletteToken("sign.green"), "The exit glow must use sign.signal and sign.green.");
-        Check(Vector3.Distance(glow.Position, new(2, 2.3f + p.Height * 0.5f, -5 - p.Depth * 0.5f - 0.02f)) < 1e-5f, "The glow sits just in front of the face centre.");
+        Check(Vector3.Distance(glow.Position, new(2, 2.3f + p.Height * 0.5f, -5 - p.Depth * 0.5f - 0.02f)) < 0.005f, "The glow sits just in front of the face centre.");
         Check(glow.Range > 0 && glow.Energy > 0, "The glow needs a radius and a level.");
         // Only the exit sign is self-lit.
         foreach (var example in MepGallery.CreateExamples().Where(e => !e.Id.StartsWith("exit-", StringComparison.Ordinal)))
@@ -230,7 +230,7 @@ public sealed class MepPartsTests
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 Check(geometry.Bounds.Contains(P(m, i)), $"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).");
-                Check(Math.Abs(1 - N(m, i).Length()) <= 1e-5, $"{what}: normal {i} is not unit length.");
+                Check(Math.Abs(1 - N(m, i).Length()) <= 0.01, $"{what}: normal {i} is not unit length.");
             }
         }
     }

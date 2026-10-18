@@ -135,9 +135,8 @@ public sealed class VegetationContextTests
             var loader = new WorldModelLoaderAdapter();
             var baseInput = new MapLoadInput(entry, baseFiles);
             var map = entry.CreateContext(MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
-            var assemblies = Directory.EnumerateFiles(AppContext.BaseDirectory, "Campus.Gen.*.dll")
-                .Where(path => !Path.GetFileName(path).StartsWith("Campus.Gen.Tests", StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal).Select(path => System.Reflection.Assembly.LoadFrom(path)).ToArray();
+            var assemblies = new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }
+                .Select(System.Reflection.Assembly.Load).ToArray();
             var registry = new ServiceRegistry();
             registry.Discover(assemblies);
             var claims = MapClaimCapture.Capture(registry, id);

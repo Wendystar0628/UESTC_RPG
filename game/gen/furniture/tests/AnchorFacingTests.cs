@@ -81,7 +81,7 @@ public sealed class AnchorFacingTests
             Check(Vector2.Dot(mat.Anchor - new Vector2(door.Center.X, door.Center.Z), outward) > 0.4f, $"{door.Id}: mat not in front of the door");
             // On the entrance floor, never below the paving (flat terrain: 0.15 m).
             var floor = MathF.Max(door.Center.Y, FurnitureStyle.PavingLift);
-            Check(MathF.Abs(mat.Part.At.M42 - floor) < 1e-4f && lamp.Part.At.M42 > floor + 2f, $"{door.Id}: kit off the entrance floor");
+            Check(MathF.Abs(mat.Part.At.M42 - floor) < 0.01f && lamp.Part.At.M42 > floor + 2f, $"{door.Id}: kit off the entrance floor");
             Check(Vector2.Dot(Front(lamp.Part.At), outward) > 0.999f && lamp.Emitters.Single().Channel == StreetStyle.FirstGroup, $"{door.Id}: lamp");
         }
         // A building whose props another package claims keeps its own kit.

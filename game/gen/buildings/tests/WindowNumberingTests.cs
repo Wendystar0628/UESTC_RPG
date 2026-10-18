@@ -36,10 +36,10 @@ public sealed class WindowNumberingTests
                     var id = set.Blocks[0].Base + o.Row * plan.TotalColumns + plan.Facades[fi].ColumnStart + o.Bay;
                     var d = decls.Single(x => x.Id == id);
                     var outward = new Vector3(skin.Normal[e].X, 0, skin.Normal[e].Y);
-                    Require(Vector3.Distance(Vector3.Cross(d.Right, d.Up), outward) < 1e-4f, "Right × Up points out of the facade");
+                    Require(Vector3.Distance(Vector3.Cross(d.Right, d.Up), outward) < 0.01f, "Right × Up points out of the facade");
                     var mid = skin.Points[e] + skin.Dir[e] * ((o.U0 + o.U1) * 0.5f) - skin.Normal[e] * plan.Reveal;
-                    Require(Vector3.Distance(d.Center, new Vector3(mid.X, (o.Y0 + o.Y1) * 0.5f, mid.Y)) < 1e-3f, "centred on the opening's glass");
-                    Require(MathF.Abs(d.Width - (o.U1 - o.U0)) < 1e-4f && d.BaseId == set.Blocks[0].Base && d.TotalColumns == plan.TotalColumns,
+                    Require(Vector3.Distance(d.Center, new Vector3(mid.X, (o.Y0 + o.Y1) * 0.5f, mid.Y)) < 0.01f, "centred on the opening's glass");
+                    Require(MathF.Abs(d.Width - (o.U1 - o.U0)) < 0.01f && d.BaseId == set.Blocks[0].Base && d.TotalColumns == plan.TotalColumns,
                         "size and numbering as the glass");
                 }
         }

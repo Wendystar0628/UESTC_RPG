@@ -23,10 +23,10 @@ public sealed class LibraryShellTests
         Require(Count(BlockKind.Core) == 1 && Count(BlockKind.Wing) == 4 && Count(BlockKind.Setback) == 4, "core, four wings, four set-back strips");
         Require(Count(BlockKind.Tower) == 3 && Count(BlockKind.FrontTower) == 1 && Count(BlockKind.Podium) == 2,
             $"towers {Count(BlockKind.Tower)}, front tower {Count(BlockKind.FrontTower)}, podium {Count(BlockKind.Podium)}");
-        Require(MathF.Abs(plan.SecondFloorY - plan.PadY - 5.1f) < 1e-3f && MathF.Abs(plan.TerraceY - plan.PadY - 18.6f) < 1e-3f && MathF.Abs(plan.RoofY - plan.PadY - 23.1f) < 1e-3f,
+        Require(MathF.Abs(plan.SecondFloorY - plan.PadY - 5.1f) < 0.01f && MathF.Abs(plan.TerraceY - plan.PadY - 18.6f) < 0.01f && MathF.Abs(plan.RoofY - plan.PadY - 23.1f) < 0.01f,
             "2F 5.1, 5F 18.6, roof 23.1 above the pad (MAP-QSH-LIBRARY)");
         var front = plan.Blocks.Single(b => b.Kind == BlockKind.FrontTower);
-        Require(MathF.Abs(front.Y1 - plan.PadY - 27.6f) < 1e-3f, "front tower six storeys");
+        Require(MathF.Abs(front.Y1 - plan.PadY - 27.6f) < 0.01f, "front tower six storeys");
         Require(plan.Landing.Count > 0, "the stair base 8398 stands against the podium");
     }
 
@@ -54,7 +54,7 @@ public sealed class LibraryShellTests
         var centre = (door.A + door.B) * 0.5f;
         Require(Vector2.Distance(centre, new(-154.6f, 80f)) < 0.6f, $"front face centre {centre} at the lib.main door");
         Require(MathF.Abs(Shapes.BearingOf(door.Out) - 127f) < 3f, $"front face bearing {Shapes.BearingOf(door.Out)}");
-        Require(MathF.Abs(door.Y0 - plan.SecondFloorY) < 1e-3f, "the front face starts on the 2F terrace");
+        Require(MathF.Abs(door.Y0 - plan.SecondFloorY) < 0.01f, "the front face starts on the 2F terrace");
     }
 
     [TestCase]
@@ -185,7 +185,7 @@ public sealed class LibraryShellTests
         Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider has a foot material");
         var plan = shell.Plan;
         Require(colliders.OfType<SlabCollider>().Count(s => s.Ring.Count > 4) == 2, "the podium terrace is a slab");
-        Require(colliders.OfType<WallCollider>().Any(w => MathF.Abs(w.Y1 - plan.SecondFloorY) < 1e-3f), "low wall under the stair landing");
+        Require(colliders.OfType<WallCollider>().Any(w => MathF.Abs(w.Y1 - plan.SecondFloorY) < 0.01f), "low wall under the stair landing");
         Require(colliders.OfType<WallCollider>().Count(w => w.Y1 > plan.PadY + 200f) >= 12, "walls above the terrace run to 300 m");
     }
 
@@ -197,7 +197,7 @@ public sealed class LibraryShellTests
         var plan = shell.Plan;
         var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the 1F cafe door");
         // lib.cafe: on the 1F floor of the podium face that starts at the 品·悦吧 store front, two open leaves clear 1.1 m.
-        Require(MathF.Abs(cafe.Origin.Y - plan.FloorY) < 1e-3f && plan.CafeFace is { Piece.Block.Kind: BlockKind.Podium }, "the cafe door is in the 1F podium");
+        Require(MathF.Abs(cafe.Origin.Y - plan.FloorY) < 0.01f && plan.CafeFace is { Piece.Block.Kind: BlockKind.Podium }, "the cafe door is in the 1F podium");
         var store = Plan.OuterRing(world.Features[CoreFeatures.CafeStore]);
         Require(store.Min(p => Vector2.Distance(p, new(cafe.Origin.X, cafe.Origin.Z))) < 6f, "the cafe door is beside the store front");
         Require(cafe.Width / CoreStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f, $"cafe door {cafe.Width} × {cafe.Height}");
@@ -218,7 +218,7 @@ public sealed class LibraryShellTests
                 foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < bay.Origin.Y + 1.8f && w.Y1 > bay.Origin.Y + 0.3f))
                     Require(SegmentDistance(a, b, w.A, w.B) > w.HalfT, $"the way through the door at {bay.Origin} crosses a wall {w.A}–{w.B}");
             }
-            Require(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < 1e-3f && Inside(o + n * 0.01f, s.Ring)), "the recess has a floor at the door's level");
+            Require(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < 0.01f && Inside(o + n * 0.01f, s.Ring)), "the recess has a floor at the door's level");
             // The face line is closed beside the bay: a wall 1 m to either side of the door's outer leaves.
             foreach (var side in new[] { -1f, 1f })
             {

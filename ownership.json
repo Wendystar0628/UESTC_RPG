@@ -2,6 +2,14 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/gen/Campus.Gen.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/kernel/map/data/**",
       "owner": "WP-00"
     },
@@ -180,20 +188,8 @@
       "owner": "WP-15"
     },
     {
-      "pattern": "game/gen/zones/design-waterfront/Campus.Gen.Zones.DesignWaterfront.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/design-boundary/Campus.Gen.Zones.DesignBoundary.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/qingshuihe/overlay/interior/west-east.interior.json",
       "owner": "WP-31b"
-    },
-    {
-      "pattern": "game/gen/zones/design-public/Campus.Gen.Zones.DesignPublic.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/interior/library.interior.json",
@@ -212,28 +208,12 @@
       "owner": "WP-31a"
     },
     {
-      "pattern": "game/gen/parts/circulation/Campus.Gen.Parts.Circulation.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/center-east/Campus.Gen.Zones.CenterEast.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/qingshuihe/overlay/center-east.d/**",
       "owner": "WP-21"
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/waterfront.d/**",
       "owner": "WP-28"
-    },
-    {
-      "pattern": "game/gen/interior/shell/Campus.Gen.Interior.Shell.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/openings/Campus.Gen.Parts.Openings.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/boundary.d/**",
@@ -252,52 +232,12 @@
       "owner": "WP-18"
     },
     {
-      "pattern": "game/gen/parts/street/Campus.Gen.Parts.Street.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/qingshuihe/overlay/core.d/**",
       "owner": "WP-16"
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/west.d/**",
       "owner": "WP-19"
-    },
-    {
-      "pattern": "game/gen/parts/_stubs/Campus.Gen.Parts.Stubs.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/north/Campus.Gen.Zones.North.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/south/Campus.Gen.Zones.South.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/interior/core/Campus.Gen.Interior.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/core/Campus.Gen.Parts.Core.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/roof/Campus.Gen.Parts.Roof.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/vegetation/Campus.Gen.Vegetation.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/core/Campus.Gen.Zones.Core.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/west/Campus.Gen.Zones.West.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/style/outline/post_tiltshift_blur.glsl.uid",
@@ -310,18 +250,6 @@
     {
       "pattern": "game/style/shaders/toon_glass_near.gdshader.uid",
       "owner": "WP-04"
-    },
-    {
-      "pattern": "game/gen/buildings/Campus.Gen.Buildings.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/collision/Campus.Gen.Collision.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/furniture/Campus.Gen.Furniture.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/style/shaders/medium_overlay.gdshader.uid",
@@ -384,10 +312,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gen/diorama/Campus.Gen.Diorama.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/shaders/cine_cloud.gdshader.uid",
       "owner": "WP-49b"
     },
@@ -440,10 +364,6 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/gen/ground/Campus.Gen.Ground.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/outline/post_outline.glsl.uid",
       "owner": "WP-05"
     },
@@ -476,10 +396,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gen/zones/design-waterfront/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/shaders/diorama_far.gdshader",
       "owner": "WP-22"
     },
@@ -504,10 +420,6 @@
       "owner": "WP-24"
     },
     {
-      "pattern": "pipeline/map/Campus.Pipeline.Map.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/systems/vegetation/seasons/*.csproj",
       "owner": "WP-00"
     },
@@ -522,18 +434,6 @@
     {
       "pattern": "game/data/maps/qingshuihe/network.json",
       "owner": "WP-08"
-    },
-    {
-      "pattern": "game/gen/fauna/Campus.Gen.Fauna.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/water/Campus.Gen.Water.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/world/Campus.Gen.World.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/style/outline/post_flare.glsl.uid",
@@ -570,10 +470,6 @@
     {
       "pattern": "game/data/maps/*/lighting-schedule.json",
       "owner": "WP-39"
-    },
-    {
-      "pattern": "game/gen/zones/design-boundary/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/qingshuihe/campus.json",
@@ -630,10 +526,6 @@
     {
       "pattern": "game/style/shaders/veg_card.gdshader",
       "owner": "WP-23"
-    },
-    {
-      "pattern": "game/gen/zones/design-public/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/kernel/quality/settings/*.csproj",
@@ -914,14 +806,6 @@
     {
       "pattern": "game/data/maps/*/audio/ui_cues.json",
       "owner": "WP-53a"
-    },
-    {
-      "pattern": "game/gen/parts/circulation/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/center-east/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/*/audio/recipes*.json",
@@ -1408,14 +1292,6 @@
       "owner": "WP-40"
     },
     {
-      "pattern": "game/gen/interior/shell/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/openings/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/palette/keys/*.csproj",
       "owner": "WP-00"
     },
@@ -1468,10 +1344,6 @@
       "owner": "WP-36"
     },
     {
-      "pattern": "game/gen/interior/core/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/systems/furniture/*.csproj",
       "owner": "WP-00"
     },
@@ -1494,14 +1366,6 @@
     {
       "pattern": "game/data/maps/*/fidelity.json",
       "owner": "WP-44"
-    },
-    {
-      "pattern": "game/gen/parts/_stubs/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/street/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/kernel/collision/*.csproj",
@@ -1548,14 +1412,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gen/zones/north/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/south/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/kernel/lighting/*.csproj",
       "owner": "WP-00"
     },
@@ -1590,26 +1446,6 @@
     {
       "pattern": "game/data/maps/*/review.json",
       "owner": "WP-27"
-    },
-    {
-      "pattern": "game/gen/parts/core/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/parts/roof/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/vegetation/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/core/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/west/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/kernel/inspect/*.csproj",
@@ -1657,18 +1493,6 @@
     },
     {
       "pattern": "game/data/rulesets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/buildings/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/collision/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/furniture/*.csproj",
       "owner": "WP-00"
     },
     {
@@ -1777,10 +1601,6 @@
       "owner": "WP-40"
     },
     {
-      "pattern": "game/gen/diorama/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/hud/gallery/*.csproj",
       "owner": "WP-00"
     },
@@ -1841,10 +1661,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gen/ground/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/hud/motion/*.csproj",
       "owner": "WP-00"
     },
@@ -1874,18 +1690,6 @@
     },
     {
       "pattern": "game/data/text/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/fauna/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/water/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/world/*.csproj",
       "owner": "WP-00"
     },
     {
@@ -1974,10 +1778,6 @@
     },
     {
       "pattern": "game/hud/map/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/map/*.csproj",
       "owner": "WP-00"
     },
     {

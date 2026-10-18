@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Gen.Zones.Core.Library;
 using Campus.Gen.World;

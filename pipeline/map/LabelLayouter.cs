@@ -1,3 +1,4 @@
+using Campus.Contracts.Atlas;
 using System.Numerics;
 
 namespace Campus.Pipeline.Map;

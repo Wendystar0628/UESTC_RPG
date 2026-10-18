@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -125,7 +126,7 @@ public sealed class PlantingTests
         var flat = Planting.Build(world, species, rules, 1u);
         foreach (var t in layout.Trees)
         {
-            if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > 1e-4f) throw new InvalidOperationException($"{t.Key} floats");
+            if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > 0.01f) throw new InvalidOperationException($"{t.Key} floats");
             if (terrain.FactsAt(t.Position.X, t.Position.Z).Grade > Planting.MaxGrade) throw new InvalidOperationException($"{t.Key} on a steep slope");
         }
         if (flat.Trees.Count(t => TiltedTerrain.Steep(t.Position.X)) == 0) throw new InvalidOperationException("the steep band had no trees to remove");

@@ -2,7 +2,6 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
-using Campus.Pipeline.Map;
 using Campus.Systems.Atlas;
 using GdUnit4;
 

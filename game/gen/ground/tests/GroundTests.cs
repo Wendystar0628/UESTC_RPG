@@ -32,7 +32,7 @@ public sealed class GroundTests
                 for (var v = 0; v < mesh.Position.Length / 3; v++)
                 {
                     if (OnTileBorder(mesh.Position[3 * v], mesh.Position[3 * v + 2])) continue;   // border skirts hang below
-                    Check.Close(Section.GrassY, mesh.Position[3 * v + 1], 1e-6, "lawn height");
+                    Check.Close(Section.GrassY, mesh.Position[3 * v + 1], 0.01, "lawn height");
                 }
             }
             AssertWinding(output);

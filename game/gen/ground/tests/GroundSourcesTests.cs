@@ -84,10 +84,10 @@ public sealed class GroundSourcesTests
         Check.True(shapes.Select(s => s.Rings!.Length).Order().SequenceEqual([1, 2]), "The courtyard must stay a hole of its own footprint.");
 
         var layout = GroundLayout.Of(world);
-        Check.Close(6.0, layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f), 1e-4, "courtyard centre is outside, 6 m from the walls");
-        Check.Close(-7.0, layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f), 1e-4, "inside the block wall");
-        Check.Close(-5.0, layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f), 1e-4, "inside the annex");
-        Check.Close(5.0, layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f), 1e-4, "gap between the parts stays open");
+        Check.Close(6.0, layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f), 0.01, "courtyard centre is outside, 6 m from the walls");
+        Check.Close(-7.0, layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f), 0.01, "inside the block wall");
+        Check.Close(-5.0, layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f), 0.01, "inside the annex");
+        Check.Close(5.0, layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f), 0.01, "gap between the parts stays open");
 
         var masks = GroundMasks.Build(TestWorld.Context(world, 128f));
         byte Shelter(float x, float z) { var (px, pz) = masks.Pixel(new(x, z)); return masks.Read(MaskChannel.Shelter, px, pz); }

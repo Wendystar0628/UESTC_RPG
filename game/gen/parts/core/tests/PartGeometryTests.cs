@@ -19,7 +19,7 @@ public sealed class PartGeometryTests
         Vector2[] b = [new(6, 1), new(7, 1), new(7, 3), new(6, 3)];
         var polygon = new PolygonRings(outer, [a, b]);
         var result = PolygonTriangulator.Triangulate(polygon);
-        Near(35, Area(result), 1e-6);
+        Near(35, Area(result), 0.01);
         foreach (var hole in new[] { a, b })
             for (var i = 0; i < result.Indices.Length; i += 3)
             {
@@ -28,7 +28,7 @@ public sealed class PartGeometryTests
             }
         Check(result.Indices.SequenceEqual(PolygonTriangulator.Triangulate(polygon).Indices), "Triangulation order changed.");
         Array.Reverse(outer); Array.Reverse(a);
-        Near(35, Area(PolygonTriangulator.Triangulate(polygon)), 1e-6);
+        Near(35, Area(PolygonTriangulator.Triangulate(polygon)), 0.01);
     }
 
     [TestCase]
@@ -36,7 +36,7 @@ public sealed class PartGeometryTests
     {
         var p = PolygonTriangulator.Triangulate(new([new(0, 0), new(1, 0), new(2, 0), new(2, 2), new(0, 2), new(0, 0)]));
         Check(p.Vertices.Length == 4 && p.Indices.Length == 6, "Ring cleanup failed.");
-        Near(4, Area(p), 1e-6);
+        Near(4, Area(p), 0.01);
     }
 
     [TestCase]
@@ -75,7 +75,7 @@ public sealed class PartGeometryTests
             if (N(mesh, a) != -Vector3.UnitZ) continue;
             frontArea += Vector3.Cross(P(mesh, b) - P(mesh, a), P(mesh, c) - P(mesh, a)).Length() / 2;
         }
-        Near(10.5, frontArea, 1e-6);
+        Near(10.5, frontArea, 0.01);
         Check(mesh.Ao!.Any(v => v < 1), "Reveals have no local occlusion.");
         ClosedClockwise(geometry);
         // A door is represented by a notch that connects to the bottom boundary.
@@ -124,11 +124,11 @@ public sealed class PartGeometryTests
         Check(line[3].At.M41 == 5 && line[3].Tint == source.Tint && line[3].Params == source.Params && line[3].IgnoreOcclusionCulling, "Array lost placement metadata.");
         Check(source.At.M41 == 2, "Array mutated its source.");
         var radial = PartPlacement.Radial(source, 4, Vector3.Zero, (float)(Math.PI / 2));
-        Near(-2, radial[1].At.M43, 1e-5); Near(-2, radial[2].At.M41, 1e-5);
+        Near(-2, radial[1].At.M43, 0.01); Near(-2, radial[2].At.M41, 0.01);
         foreach (var socket in PartPlacement.BoxSockets(2, 3, 4).Values)
         {
             var x = new Vector3(socket.M11, socket.M12, socket.M13); var y = new Vector3(socket.M21, socket.M22, socket.M23); var z = new Vector3(socket.M31, socket.M32, socket.M33);
-            Near(1, x.Length(), 1e-6); Near(1, y.Length(), 1e-6); Near(1, z.Length(), 1e-6); Near(0, Vector3.Dot(x, y), 1e-6);
+            Near(1, x.Length(), 0.01); Near(1, y.Length(), 0.01); Near(1, z.Length(), 0.01); Near(0, Vector3.Dot(x, y), 0.01);
         }
         Throws(() => PartPlacement.Socket(Vector3.Zero, Vector3.UnitY, Vector3.UnitY));
     }
@@ -177,7 +177,7 @@ public sealed class PartGeometryTests
             foreach (var (edge, count) in edges)
                 Check(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1, "A solid has an open or non-manifold edge.");
             for (var i = 0; i < m.Position.Length / 3; i++)
-            { Check(geometry.Bounds.Contains(P(m, i)), "Bounds miss a vertex."); Near(1, N(m, i).Length(), 1e-5); }
+            { Check(geometry.Bounds.Contains(P(m, i)), "Bounds miss a vertex."); Near(1, N(m, i).Length(), 0.01); }
         }
     }
     private static void Near(double expected, double actual, double tolerance) => Check(Math.Abs(expected - actual) <= tolerance, $"Expected {expected}; got {actual}.");

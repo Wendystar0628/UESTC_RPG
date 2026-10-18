@@ -79,7 +79,7 @@ public sealed class WenkeSite : CenterEastSite
     {
         if (!world.Features.TryGetValue(new(K.Entity), out var feature))
             throw new InvalidOperationException($"文科楼群 {K.Entity} is missing from the world model.");
-        IReadOnlyList<Vector2> Ring(string part) => feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
+        IReadOnlyList<Vector2> Ring(string part) => feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && WorldFeatureGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"文科楼群 part {part} is missing or not a single polygon.");
         // Clipped (set-back) outlines first, then the rounding, which keeps sharp the corners where another block meets.

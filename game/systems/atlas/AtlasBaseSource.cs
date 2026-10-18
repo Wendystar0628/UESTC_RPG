@@ -1,7 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
-using Campus.Pipeline.Map;
 
 namespace Campus.Systems.Atlas;
 

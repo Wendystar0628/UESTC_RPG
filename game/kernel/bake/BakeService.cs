@@ -2,7 +2,6 @@ using Campus.Pipeline.Map;
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -285,7 +284,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
                     value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
                     value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y)) dependencies[id] = source.CodeHash;
-            dependencies.Add("collision", GenerationInputAssembly.CodeVersion(Assembly.Load(new AssemblyName("Campus.Gen.Collision"))));
+            dependencies.Add("collision", GenerationInputAssembly.CodeVersion(typeof(Campus.Gen.Collision.CollisionGeometry).Assembly));
         }
         var inputHash = BakeInputFingerprint.Compute(context, key, runtimeCode, dependencies);
         var identity = BakeInputFingerprint.Identity(key, inputHash);

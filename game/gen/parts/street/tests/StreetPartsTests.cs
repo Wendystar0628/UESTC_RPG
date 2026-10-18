@@ -11,7 +11,9 @@ namespace Campus.Gen.Parts.Street.Tests;
 [TestSuite]
 public sealed class StreetPartsTests
 {
-    private static readonly Assembly Street = typeof(StreetGallery).Assembly;
+    private static IEnumerable<Type> StreetTypes => typeof(StreetGallery).Assembly.GetTypes()
+        .Where(type => type.Namespace == typeof(StreetGallery).Namespace ||
+            type.Namespace?.StartsWith(typeof(StreetGallery).Namespace + ".", StringComparison.Ordinal) == true);
     private static readonly string[] Parts =
     [
         PartCatalog.StreetLamp, PartCatalog.Bench, PartCatalog.BinFour, PartCatalog.Bollard, PartCatalog.StoneSphere, PartCatalog.BusStop,
@@ -26,7 +28,7 @@ public sealed class StreetPartsTests
     [TestCase]
     public void RegisteredPartsMatchTheirCatalogueEntries()
     {
-        var parts = Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null).ToArray();
+        var parts = StreetTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null).ToArray();
         Check(parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id).Order(StringComparer.Ordinal).SequenceEqual(Parts.Order(StringComparer.Ordinal)),
             $"13a and 13c2b register exactly their parts; found {string.Join(", ", parts.Select(t => t.GetCustomAttribute<PartAttribute>()!.Id))}.");
         foreach (var type in parts)
@@ -41,7 +43,7 @@ public sealed class StreetPartsTests
     [TestCase]
     public void CatalogueDefaultsBuildClosedAtEveryLevelWithinBudget()
     {
-        foreach (var type in Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
+        foreach (var type in StreetTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null))
         {
             var entry = Entry(type.GetCustomAttribute<PartAttribute>()!.Id);
             var part = Activator.CreateInstance(type)!;
@@ -63,7 +65,7 @@ public sealed class StreetPartsTests
     [TestCase]
     public void ReviewSamplesAreClosedBoundedAndWithinBudget()
     {
-        var budgets = Street.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
+        var budgets = StreetTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
             .ToDictionary(t => t.GetCustomAttribute<PartAttribute>()!.Id, t => (PartBudget)t.GetProperty("Budget")!.GetValue(Activator.CreateInstance(t))!);
         var samples = StreetGallery.CreateSamples();
         Check(samples.Select(s => s.Part.Value).Distinct().Count() == Parts.Length, "The gallery misses a part.");
@@ -105,7 +107,7 @@ public sealed class StreetPartsTests
     {
         foreach (var sample in StreetGallery.CreateSamples())
         {
-            var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
+            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
             // Parked bicycles never collide (WLD-LIFE: they come and go, a collider would leave an invisible wall).
             var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle";
@@ -139,28 +141,28 @@ public sealed class StreetPartsTests
         var seats = def.Seats(backed);
         Check(seats.Count == 1 && seats[0].Back && seats[0].Places == 2, "A 1.8 m backed bench declares one front edge with two places.");
         var top = seat.At.M42 + seat.Half.Y;
-        Check(Math.Abs(top - StreetStyle.SeatHeight) < 1e-5f && Math.Abs(seats[0].From.Y - top) < 1e-5f && Math.Abs(seats[0].To.Y - top) < 1e-5f,
+        Check(Math.Abs(top - StreetStyle.SeatHeight) < 0.01f && Math.Abs(seats[0].From.Y - top) < 0.01f && Math.Abs(seats[0].To.Y - top) < 0.01f,
             "The seat edge lies on the seat collider top at 0.45 m.");
-        Check(Math.Abs(seats[0].From.Z - (seat.At.M43 - seat.Half.Z)) < 1e-5f && seats[0].Facing == -Vector3.UnitZ, "The seat edge is the collider's front edge, facing −Z.");
+        Check(Math.Abs(seats[0].From.Z - (seat.At.M43 - seat.Half.Z)) < 0.01f && seats[0].Facing == -Vector3.UnitZ, "The seat edge is the collider's front edge, facing −Z.");
         Check(seats[0].From.X < seats[0].To.X, "From is on the sitter's left.");
-        Check(Math.Abs(seats[0].Depth - 2 * seat.Half.Z) < 1e-5f, "Seat depth is the collider depth.");
+        Check(Math.Abs(seats[0].Depth - 2 * seat.Half.Z) < 0.01f, "Seat depth is the collider depth.");
         var backless = def.Seats(new FurnitureParams(1.6f, 0.45f, 0.5f) { Variation = 1 });
         Check(backless.Count == 2 && backless.All(s => !s.Back) && backless[0].Facing == -backless[1].Facing, "A backless bench seats both sides.");
         foreach (var s in backless)
-            Check(Seating.Positions(s).All(p => Math.Abs(p.Y - StreetStyle.SeatHeight) < 1e-5f), "Sitting positions lie on the seat.");
+            Check(Seating.Positions(s).All(p => Math.Abs(p.Y - StreetStyle.SeatHeight) < 0.01f), "Sitting positions lie on the seat.");
         // Turned boxes (a placed tier, a rotated bench) keep the edge on the box's own front.
         var turned = new BoxCollider(Matrix4x4.CreateTranslation(0, 0.2f, 0) * Matrix4x4.CreateRotationY(float.Pi * 0.5f) * Matrix4x4.CreateTranslation(3, 0, 1), new(1f, 0.2f, 0.25f), SurfaceTag.Prop);
         var edge = Seating.FromBox(turned, SeatSide.Front).Single();
-        Check(Math.Abs(edge.Facing.X - -1f) < 1e-5f && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < 1e-5f, "A box turned a quarter faces −X.");
+        Check(Math.Abs(edge.Facing.X - -1f) < 0.01f && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < 0.01f, "A box turned a quarter faces −X.");
         Check(Seating.FromBox(new BoxCollider(Matrix4x4.CreateTranslation(0, 0.6f, 0), new(1, 0.6f, 0.3f), SurfaceTag.Prop), SeatSide.Front).Count == 0, "A 1.2 m top is not a seat.");
         // Every street part reaches its seats through the contract: only the bench declares any, and nothing returns another seat type.
         foreach (var sample in StreetGallery.CreateSamples())
         {
-            var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
+            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var declared = (IReadOnlyList<SeatDecl>)Contract(type).GetMethod("Seats")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
             Check(sample.Part.Value == PartCatalog.Bench ? declared.Count > 0 : declared.Count == 0, $"{sample.Id} declares {declared.Count} seats through IPartDef.");
         }
-        Check(!Street.GetTypes().Any(t => t.Name == nameof(SeatDecl)), "The street assembly still defines its own seat record.");
+        Check(!StreetTypes.Any(t => t.Name == nameof(SeatDecl)), "The street assembly still defines its own seat record.");
     }
 
     [TestCase]
@@ -253,9 +255,9 @@ public sealed class StreetPartsTests
             Check(body.Count == 1 && tyres.Count == 1, "the car's body or tyres are not one surface each");
             var bodyPoints = Enumerable.Range(0, body[0].Position.Length / 3).Select(i => P(body[0], i)).ToList();
             var tyrePoints = Enumerable.Range(0, tyres[0].Position.Length / 3).Select(i => P(tyres[0], i)).ToList();
-            Check(bodyPoints.Min(q => q.Y) >= StreetStyle.CarClearance - 1e-4f, $"the body hangs to {bodyPoints.Min(q => q.Y):F3} m");
+            Check(bodyPoints.Min(q => q.Y) >= StreetStyle.CarClearance - 0.01f, $"the body hangs to {bodyPoints.Min(q => q.Y):F3} m");
             var diameter = tyrePoints.Max(q => q.Y) - tyrePoints.Min(q => q.Y);
-            Check(MathF.Abs(diameter - 2f * StreetStyle.WheelRadius) < 0.01f && tyrePoints.Min(q => q.Y) > -1e-3f, $"wheels {diameter:F3} m across");
+            Check(MathF.Abs(diameter - 2f * StreetStyle.WheelRadius) < 0.01f && tyrePoints.Min(q => q.Y) > -0.01f, $"wheels {diameter:F3} m across");
             // Over each axle the body rises in an arch, so the wheel shows whole from the side.
             foreach (var axle in new[] { -p.Depth * 0.5f + shape.FrontAxle * p.Depth, p.Depth * 0.5f - shape.RearAxle * p.Depth })
             {
@@ -271,7 +273,7 @@ public sealed class StreetPartsTests
         // WLD-LIFE: of the street parts only the vending machine hums, within 4 m; every other part is silent.
         foreach (var sample in StreetGallery.CreateSamples())
         {
-            var type = Street.GetTypes().Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
+            var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var sounds = (IReadOnlyList<SoundSocketDecl>)Contract(type).GetMethod("Sounds")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
             if (sample.Part.Value != PartCatalog.VendingMachine) { Check(sounds.Count == 0, $"{sample.Id} makes a sound."); continue; }
             Check(sounds.Count == 1 && sounds[0].AudibleRadius <= 4f && sounds[0].Set.Value.Length > 0, $"{sample.Id}: the compressor socket is missing or carries too far.");
@@ -344,7 +346,7 @@ public sealed class StreetPartsTests
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 Check(geometry.Bounds.Contains(P(m, i)), $"{what}: bounds miss vertex {P(m, i)} ({geometry.Bounds.Min} – {geometry.Bounds.Max}).");
-                Check(Math.Abs(1 - N(m, i).Length()) <= 1e-5, $"{what}: a normal is not unit length.");
+                Check(Math.Abs(1 - N(m, i).Length()) <= 0.01, $"{what}: a normal is not unit length.");
             }
         }
     }

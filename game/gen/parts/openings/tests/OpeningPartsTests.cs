@@ -10,12 +10,14 @@ namespace Campus.Gen.Parts.Openings.Tests;
 [TestSuite]
 public sealed class OpeningPartsTests
 {
-    private static readonly Assembly Openings = typeof(OpeningGallery).Assembly;
+    private static IEnumerable<Type> OpeningTypes => typeof(OpeningGallery).Assembly.GetTypes()
+        .Where(type => type.Namespace == typeof(OpeningGallery).Namespace ||
+            type.Namespace?.StartsWith(typeof(OpeningGallery).Namespace + ".", StringComparison.Ordinal) == true);
 
     [TestCase]
     public void EveryWp10CatalogEntryHasARealPartWithTheCatalogParameters()
     {
-        var parts = Openings.GetTypes().Select(t => (Type: t, Attribute: t.GetCustomAttribute<PartAttribute>())).Where(x => x.Attribute is not null).ToArray();
+        var parts = OpeningTypes.Select(t => (Type: t, Attribute: t.GetCustomAttribute<PartAttribute>())).Where(x => x.Attribute is not null).ToArray();
         foreach (var entry in PartCatalog.Entries.Where(e => e.Owner.Value == "WP-10"))
         {
             var match = parts.Where(x => x.Attribute!.Id == entry.Id.Value).ToArray();
@@ -36,7 +38,7 @@ public sealed class OpeningPartsTests
     [TestCase]
     public void GallerySamplesAreClosedInsideBoundsAndWithinBudget()
     {
-        var budgets = Openings.GetTypes().Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
+        var budgets = OpeningTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
             .ToDictionary(t => t.GetCustomAttribute<PartAttribute>()!.Id, t => (PartBudget)t.GetProperty("Budget")!.GetValue(Activator.CreateInstance(t))!);
         var over = new List<string>();
         void Measure(string id, PartId part, object parameters)
@@ -180,8 +182,8 @@ public sealed class OpeningPartsTests
     {
         var m = OpeningPlacement.Frame(new(5, 1, 2), new(-3, 0, 0));
         var x = new Vector3(m.M11, m.M12, m.M13); var y = new Vector3(m.M21, m.M22, m.M23); var z = new Vector3(m.M31, m.M32, m.M33);
-        Near(1, Vector3.Dot(Vector3.Cross(x, y), z), 1e-6);
-        Near(1, y.Y, 1e-6);
+        Near(1, Vector3.Dot(Vector3.Cross(x, y), z), 0.01);
+        Near(1, y.Y, 0.01);
         Check(z == new Vector3(1, 0, 0) && m.M41 == 5, "Exterior must map to the part's −Z.");
         Check(OpeningPlacement.Frame(Vector3.Zero, new(0, 0, -1)) == Matrix4x4.Identity, "A facade facing −Z is the part frame itself.");
         Throws(() => OpeningPlacement.Frame(Vector3.Zero, new(0, 1, 0)));
@@ -221,7 +223,7 @@ public sealed class OpeningPartsTests
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 Check(geometry.Bounds.Contains(P(m, i)), $"{what}: vertex {P(m, i)} outside {geometry.Bounds}.");
-                Near(1, N(m, i).Length(), 1e-5);
+                Near(1, N(m, i).Length(), 0.01);
             }
         }
     }

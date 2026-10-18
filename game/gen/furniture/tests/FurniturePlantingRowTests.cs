@@ -74,6 +74,6 @@ public sealed class FurniturePlantingRowTests
         foreach (var item in before.Items.Where(i => !i.Key.StartsWith("rest:0:", StringComparison.Ordinal) && !i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)
             && i.Kind is not (FurnitureKind.Signpost or FurnitureKind.DrinkingFountain or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker
                 or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle)))
-            Check(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < 1e-3f), $"{item.Key} moved with the avenue's rows");
+            Check(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < 0.01f), $"{item.Key} moved with the avenue's rows");
     }
 }

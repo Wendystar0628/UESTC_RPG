@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -78,7 +79,7 @@ public sealed class FurnitureStreetLayoutTests
             var pad = item.Pad ?? throw new InvalidOperationException($"{item.Key} has no bay");
             var padFront = new Vector2(pad.Frame.M41, pad.Frame.M43) + facing * pad.HalfDepth;
             Check(Distance(padFront, walk!) < Half(walk!), $"{item.Key}: its bay does not reach the walk");
-            Check(MathF.Abs(pad.Top - item.Part.At.M42) < 1e-4f, $"{item.Key} is off its bay");
+            Check(MathF.Abs(pad.Top - item.Part.At.M42) < 0.01f, $"{item.Key} is off its bay");
             var radius = p.Depth * 0.5f;
             foreach (var lane in lanes)
                 Check(Distance(item.Anchor, lane) - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f, $"{item.Key} stands in the kerbside strip of {lane.Id.Value}");

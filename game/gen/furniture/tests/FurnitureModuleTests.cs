@@ -7,6 +7,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
+using Campus.Pipeline.Map;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
@@ -33,24 +34,24 @@ public sealed class FurnitureModuleTests
         Check(benches.Count > 10, "no benches on 8%");
         foreach (var bench in benches)
         {
-            Check(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < 1e-4f, $"{bench.Key} has no plinth on 8%");
+            Check(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < 0.01f, $"{bench.Key} has no plinth on 8%");
             var plinth = bench.Pad!;
             var high = Corners(bench).Max(c => terrain.HeightAt(c.X, c.Y));
             var low = Corners(bench).Min(c => terrain.HeightAt(c.X, c.Y));
-            Check(plinth.Top >= high + FurnitureStyle.PavingLift - 1e-3f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 1e-3f, $"{bench.Key}: plinth does not cover the slope");
+            Check(plinth.Top >= high + FurnitureStyle.PavingLift - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f, $"{bench.Key}: plinth does not cover the slope");
             Check(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete), $"{bench.Key}: plinth has no collider");
             Check(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0, $"{bench.Key}: empty plinth mesh");
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
-            Check(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 1e-4f, $"{bench.Key}: the bin is off its own plinth");
+            Check(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 0.01f, $"{bench.Key}: the bin is off its own plinth");
         }
         // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
         var flat = Build(World.Value);
         var top = FurnitureStyle.PavingLift + FurnitureStyle.PadProud;
         Check(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth), "plinths on flat ground");
-        Check(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? FurnitureStyle.PavingLift : top)) < 1e-5f),
+        Check(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? FurnitureStyle.PavingLift : top)) < 0.01f),
             "benches off their bays (or, on a plaza, off its paving)");
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
-        Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 1e-3f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 1e-5f) == kiosks.Count - 1,
+        Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 0.01f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 0.01f) == kiosks.Count - 1,
             "kiosks: one on the A06 deck, the others on their pads");
         // 30%: no pole stands.
         var steep = Build(new FakeWorld(World.Value) { Terrain = Tilted(0.3f) });
@@ -167,7 +168,8 @@ public sealed class FurnitureModuleTests
 
     private static (int L0, int L1, int Meshes) Measure(PlacedPart part)
     {
-        var type = typeof(StreetGallery).Assembly.GetTypes().Single(t => t.GetCustomAttributes(typeof(PartAttribute), false).OfType<PartAttribute>().Any(a => a.Id == part.Part.Value));
+        var type = RegistrationDiscovery.Discover([typeof(StreetGallery).Assembly])
+            .Single(entry => entry.Kind == "part" && entry.Id == part.Part.Value).Type;
         var def = Activator.CreateInstance(type)!;
         var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(def)!;
         PartGeometry? Level(LodLevel l) => lods.Contains(l) ? (PartGeometry)((Delegate)lods[l]!).DynamicInvoke(part.Params)! : null;

@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -97,7 +98,7 @@ internal sealed partial class StreetSite
         else
             geometries = feature.Parts.Where(part =>
                 (part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared) ? declared.GetString() : feature.Kind.Value) == kind)
-                .Select(PlanGeometry.FacadeGeometryOf);
+                .Select(WorldFeatureGeometry.FacadeGeometryOf);
         foreach (var geometry in geometries)
         {
             IEnumerable<PolygonRings> polygons = geometry switch

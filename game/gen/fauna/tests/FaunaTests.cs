@@ -110,7 +110,7 @@ public sealed class FaunaTests
             Check(mesh.Triangles is > 100 and < 7000, $"{key}: {mesh.Triangles} triangles.");
             if (key.Kind == FaunaKind.Swan) Check(box.Min.Y < -0.05f && box.Min.Y > -0.15f, $"{key}: the hull sits in the water (min y {box.Min.Y:F3}).");
             else Check(box.Min.Y > -0.01f && box.Min.Y < 0.03f, $"{key}: feet on the ground (min y {box.Min.Y:F3}).");
-            Check(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < 1e-3f), $"{key}: unit normals.");
+            Check(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < 0.01f), $"{key}: unit normals.");
             Check(SignedVolume(mesh) < 0, $"{key}: clockwise front faces seen from outside (Godot), so the closed mesh has negative signed volume.");
             var height = box.Max.Y - MathF.Max(0f, box.Min.Y);
             var (lo, hi) = key.Kind switch

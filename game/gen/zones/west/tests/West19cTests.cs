@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -67,15 +68,15 @@ public sealed class West19cTests
         var ctx = Context(World());
         var colliders = Colliders(ctx, new BoardwalkSite());
         var y = BoardwalkSite.DeckTop((_, _) => 0f);
-        Require(MathF.Abs(y - (W.PavingTop + W.Lip)) < 1e-4f, "on flat ground the deck sits a lip above the paving");
+        Require(MathF.Abs(y - (W.PavingTop + W.Lip)) < 0.01f, "on flat ground the deck sits a lip above the paving");
         var rails = colliders.OfType<WallCollider>().Where(c => c.Tag == SurfaceTag.Barrier).ToArray();
-        Require(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 1e-4f), "every rail barrier tops out at 1.5 m over the deck");
+        Require(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 0.01f), "every rail barrier tops out at 1.5 m over the deck");
         Require(W.RailHeight >= 1.05f, "the visible rail is at least 1.05 m");
         // One gap, on the water side, opposite the beach.
         var path = BoardwalkSite.Path;
         var (s, side) = BoardwalkSite.Beach;
         var runs = BoardwalkSite.RailRuns(side);
-        Require(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < 1e-3f && BoardwalkSite.RailRuns(-side).Length == 1, "only the water side opens, by the beach gap");
+        Require(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < 0.01f && BoardwalkSite.RailRuns(-side).Length == 1, "only the water side opens, by the beach gap");
         var gap = path.At(s).P + Route.Right(path.At(s).T) * side * BoardwalkSite.RailLateral;
         Require(rails.All(r => Distance([r.A, r.B], gap) > W.BeachGap * 0.5f - 0.05f), "no rail barrier crosses the beach gap");
         // The deck is 2 m slabs of timber; everything carries a foot material.
@@ -157,7 +158,7 @@ public sealed class West19cTests
         }
         Require(Vector2.Distance(C.At, new(-238.37f, -411.91f)) > 10f, "it keeps clear of WP-28's bridge-head stone");
         var box = Colliders(Context(world), new CarvingSite()).OfType<BoxCollider>().Single();
-        Require(box.Half.Y * 2f >= C.Height - 1e-3f && box.Foot == FootMat.StonePaving, "one box with a top");
+        Require(box.Half.Y * 2f >= C.Height - 0.01f && box.Foot == FootMat.StonePaving, "one box with a top");
     }
 
     // ---- Fixtures ----

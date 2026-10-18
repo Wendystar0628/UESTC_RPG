@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><LangVersion>14.0</LangVersion><TargetFramework>net10.0</TargetFramework><RootNamespace>Campus.Gen.Tests</RootNamespace><EnableDefaultCompileItems>false</EnableDefaultCompileItems><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
-  <ItemGroup><Compile Include="contracts/**/tests/**/*.cs;gen/**/tests/**/*.cs;../pipeline/map/tests/**/*.cs" /><Compile Remove="contracts/Runtime/**/tests/**/*.cs" /><ProjectReference Include="contracts/Campus.Contracts.csproj;gen/**/*.csproj;../pipeline/map/Campus.Pipeline.Map.csproj" /></ItemGroup>
+  <ItemGroup><Compile Include="contracts/**/tests/**/*.cs;gen/**/tests/**/*.cs;../pipeline/map/tests/**/*.cs" /><Compile Remove="contracts/Runtime/**/tests/**/*.cs" /><ProjectReference Include="contracts/Campus.Contracts.csproj;gen/Campus.Gen.csproj;gen/zones/Campus.Gen.Maps.Qingshuihe.csproj" /></ItemGroup>
   <ItemGroup>
     <PackageReference Include="gdUnit4.api" />
     <PackageReference Include="gdUnit4.test.adapter" />

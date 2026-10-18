@@ -1,19 +1,11 @@
 using System.Numerics;
 using Campus.Contracts;
 
-namespace Campus.Gen.World;
+namespace Campus.Gen.Geometry;
 
 /// <summary>Plan geometry uses world X/Z, keeps holes, and omits closing duplicates.</summary>
-public static class PlanGeometry
+public static partial class PlanGeometry
 {
-    /// <summary>Facade layout follows the current source part, falling back to its physical geometry.</summary>
-    public static OverlayGeometry FacadeGeometryOf(WorldFeaturePart part) => part.FacadeGeometry ?? part.Geometry;
-
-    /// <summary>Current parts in their existing order, or the current authored geometry after reshape/add.</summary>
-    public static IReadOnlyList<PolygonRings> FacadePolygonsOf(WorldFeature feature) => feature.Parts.Count == 0
-        ? WorldModelLoader.Polygons(feature.Geometry).ToArray()
-        : feature.Parts.SelectMany(part => WorldModelLoader.Polygons(FacadeGeometryOf(part))).ToArray();
-
     public static IReadOnlyList<Vector2> OpenRing(IEnumerable<Vector2> input, bool outer = true)
     {
         var points = new List<Vector2>();
@@ -36,6 +28,19 @@ public static class PlanGeometry
             var a = ring[i]; var b = ring[(i + 1) % ring.Count];
             area += (double)a.X * b.Y - (double)b.X * a.Y;
         }
+        return area * 0.5;
+    }
+
+    /// <summary>Scalar double orientation; coordinates are promoted before subtraction.</summary>
+    public static double Cross(Vector2 a, Vector2 b, Vector2 c) =>
+        ((double)b.X - a.X) * ((double)c.Y - a.Y) - ((double)b.Y - a.Y) * ((double)c.X - a.X);
+
+    /// <summary>Area accumulated as a fan about the first vertex, retaining triangulation's operation order.</summary>
+    public static double FanSignedArea(IReadOnlyList<Vector2> ring)
+    {
+        double area = 0;
+        var origin = ring[0];
+        for (var i = 1; i + 1 < ring.Count; i++) area += Cross(origin, ring[i], ring[i + 1]);
         return area * 0.5;
     }
 
@@ -102,6 +107,33 @@ public static class PlanGeometry
         var v = new Vector2(b.Y - a.Y, a.X - b.X);
         var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
         return length > 1e-9f ? v / length : Vector2.UnitX;
+    }
+
+    /// <summary>
+    /// Closed-ring inset with one vertex per corner and scalar double normals/intersections. Positive distance moves left;
+    /// zero-length edges fail. Unlike <see cref="MitreOffset"/>, no fallback normal or miter limit is applied.
+    /// </summary>
+    public static Vector2[] MitreInset(IReadOnlyList<Vector2> ring, float distance)
+    {
+        var inset = new Vector2[ring.Count];
+        for (var i = 0; i < ring.Count; i++)
+        {
+            var p = ring[(i + ring.Count - 1) % ring.Count]; var c = ring[i]; var n = ring[(i + 1) % ring.Count];
+            var previous = RightUnitNormal(p, c); var next = RightUnitNormal(c, n);
+            var divisor = 1 + (double)previous.X * next.X + (double)previous.Y * next.Y;
+            inset[i] = new((float)(c.X - distance * (previous.X + next.X) / divisor), (float)(c.Y - distance * (previous.Y + next.Y) / divisor));
+        }
+        return inset;
+    }
+
+    /// <summary>Right-hand normal normalized in scalar double precision; nonfinite and zero-length edges fail.</summary>
+    public static Vector2 RightUnitNormal(Vector2 a, Vector2 b)
+    {
+        float x = b.Y - a.Y, y = a.X - b.X;
+        if (!float.IsFinite(x) || !float.IsFinite(y)) throw new ArgumentException("Coordinates must be finite.", nameof(a));
+        var length = Math.Sqrt((double)x * x + (double)y * y);
+        if (length <= 1e-12) throw new ArgumentException("A direction or edge must be nonzero.");
+        return new((float)(x / length), (float)(y / length));
     }
 
     public static float SegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b)

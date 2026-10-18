@@ -83,7 +83,7 @@ public sealed class XuanbangSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Xuanbang {Feature} is missing from the world model.");
-        IReadOnlyList<Vector2> Ring(string source) => feature.Parts.FirstOrDefault(p => p.SourceId == source) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
+        IReadOnlyList<Vector2> Ring(string source) => feature.Parts.FirstOrDefault(p => p.SourceId == source) is { } src && WorldFeatureGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"Xuanbang part {source} is missing or not a single polygon.");
         return new(Ring(MainPart), Ring(TowerPart), Ring(ClockPart));

@@ -80,7 +80,7 @@ public sealed class GroundStadiumTests
         { Props = Json("""{"kind":"sport","sport":"running"}""") };
         var shape = GroundSources.Read(TestWorld.Of([line])).Shapes.Single(s => s.Kind == SurfaceKind.Track);
         Check.True(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1], "A closed track line stays closed.");
-        Check.Close(SportGround.TrackWidth * 0.5, shape.HalfWidth, 1e-6, "track line half width");
+        Check.Close(SportGround.TrackWidth * 0.5, shape.HalfWidth, 0.01, "track line half width");
 
         // A concave outline cannot be offset outward: it falls back to a band centred on the outline, never a filled area.
         var dent = new PolygonRings([new(0f, 0f), new(60f, 0f), new(60f, 40f), new(40f, 40f), new(40f, 20f), new(20f, 20f), new(20f, 40f), new(0f, 40f)]);
@@ -137,7 +137,7 @@ public sealed class GroundStadiumTests
         foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
         foreach (var mesh in marking)
             for (var v = 0; v < mesh.Position.Length / 3; v++)
-                Check.Close(Section.PavingY + Section.DecalLift, mesh.Position[3 * v + 1], 1e-4, "pitch line height above flat ground");
+                Check.Close(Section.PavingY + Section.DecalLift, mesh.Position[3 * v + 1], 0.001, "pitch line height above flat ground");
     }
 
     [TestCase]

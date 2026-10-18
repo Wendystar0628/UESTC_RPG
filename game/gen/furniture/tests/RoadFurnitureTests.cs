@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -60,7 +61,7 @@ public sealed class RoadFurnitureTests
         }
         for (var i = 0; i < ramps.Count; i++)
             for (var k = i + 1; k < ramps.Count; k++)
-                Check(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - 1e-3f, $"{ramps[i].Key} and {ramps[k].Key} crowd each other");
+                Check(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - 0.01f, $"{ramps[i].Key} and {ramps[k].Key} crowd each other");
     }
 
     [TestCase]

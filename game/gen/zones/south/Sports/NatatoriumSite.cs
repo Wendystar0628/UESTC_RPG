@@ -52,7 +52,7 @@ public sealed class NatatoriumSite : SouthSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Natatorium {Feature} is missing from the world model.");
-        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? PlanGeometry.FacadeGeometryOf(src) : feature.Geometry) is PolygonGeometry g
+        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? WorldFeatureGeometry.FacadeGeometryOf(src) : feature.Geometry) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"Natatorium {Feature} is not a single polygon.");
         var centre = PlanMath.Centroid(ring);

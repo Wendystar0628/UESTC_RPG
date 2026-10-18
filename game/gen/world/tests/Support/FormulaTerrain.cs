@@ -8,19 +8,20 @@ internal delegate void TileFill(TileKey tile, int level, Span<short> cm);
 /// <summary>
 /// The one fake <see cref="ITerrain"/>: ground whose height is <paramref name="height"/>(x, z), with no pads and no water.
 /// Facts default to level ground; a tile is never flat and is sampled from the height unless <paramref name="isFlat"/> or
-/// <paramref name="fill"/> say otherwise.
+/// <paramref name="fill"/> say otherwise. Pads are at 0 unless <paramref name="padY"/> answers per feature.
 /// </summary>
 internal sealed class FormulaTerrain(
     Func<float, float, float> height,
     Func<float, float, TerrainFacts>? facts = null,
     Func<TileKey, bool>? isFlat = null,
-    TileFill? fill = null) : ITerrain
+    TileFill? fill = null,
+    Func<FeatureId, float>? padY = null) : ITerrain
 {
     private static readonly TerrainFacts LevelFacts = new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
 
     public bool IsFlat(TileKey tile) => isFlat?.Invoke(tile) ?? false;
     public float HeightAt(float x, float z) => height(x, z);
-    public float PadY(FeatureId feature) => 0f;
+    public float PadY(FeatureId feature) => padY?.Invoke(feature) ?? 0f;
     public float? WaterY(FeatureId water) => null;
     public TerrainFacts FactsAt(float x, float z) => facts?.Invoke(x, z) ?? LevelFacts;
 

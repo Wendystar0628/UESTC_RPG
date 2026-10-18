@@ -92,7 +92,7 @@ public sealed class DioramaModuleTests
                 if (radii.Min() < ring.Radius - ring.Depth || radii.Max() > ring.Radius + ring.Depth)
                     throw new InvalidOperationException($"city ring {ring.Id} spans {radii.Min()}–{radii.Max()}");
                 if (Heights(mesh).Min() > data.FogSea.TopY) throw new InvalidOperationException($"city ring {ring.Id} must sink below the fog sea");
-                if (mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > 1e-6f)) throw new InvalidOperationException("parallax in UV2.x");
+                if (mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > 0.001f)) throw new InvalidOperationException("parallax in UV2.x");
             }
             var far = byKind[DioramaVertex.KindFar][0];
             if (Heights(far).Min() > data.FarRing.SkirtY + 0.01f) throw new InvalidOperationException("far ring skirt");

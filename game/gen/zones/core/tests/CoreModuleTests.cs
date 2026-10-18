@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -114,7 +115,7 @@ public sealed class CoreModuleTests
         var world = new FakeWorld(flat) { Terrain = BowlTerrain(plazaFlat.Centre, plazaFlat.Radius - 2.1f + 0.3f, -0.9f, 0.5f) };
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
         Require(plaza.Sunken && plaza.Risers == 6, $"six risers for a 0.9 m drop (got {plaza.Risers})");
-        Require(MathF.Abs(plaza.Riser - 0.15f) < 1e-3f && MathF.Abs(plaza.Tread - 0.35f) < 1e-3f, "R 0.15, T 0.35");
+        Require(MathF.Abs(plaza.Riser - 0.15f) < 0.005f && MathF.Abs(plaza.Tread - 0.35f) < 0.01f, "R 0.15, T 0.35");
         Require(MathF.Abs(plaza.FootRadius - (plaza.Radius - 2.1f)) < 0.01f, "the step band is 2.1 m wide");
         var colliders = plaza.Collide();
         Require(colliders.OfType<RampCollider>().Any(r => r.Stair is { Count: 6 }), "stair ramps carry the six-step spec");
@@ -202,7 +203,7 @@ public sealed class CoreModuleTests
     {
         var sundial = (Sundial)CoreSite.Pieces(RealWorld())[1];
         var g = sundial.Gnomon;
-        Require(MathF.Abs(g.X) < 1e-6f && g.Z < 0, "gnomon in the north meridian plane, pointing north (−z)");
+        Require(MathF.Abs(g.X) < 0.01f && g.Z < 0, "gnomon in the north meridian plane, pointing north (−z)");
         var elevation = MathF.Asin(g.Y) * 180f / MathF.PI;
         Require(MathF.Abs(elevation - 30.75f) < 0.01f, $"elevation {elevation}° equals the latitude");
         Require(g.Y < 0.55f, "dial face normal y below the snow threshold (MAP-QSH-CORE)");

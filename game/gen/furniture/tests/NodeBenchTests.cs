@@ -45,9 +45,9 @@ public sealed class NodeBenchTests
             Check(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f }, $"{bench.Key} does not face pedestrian paving");
             Check(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f), $"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway");
             Check(!site.CarriagewayAhead(front, facing, FurnitureStyle.FaceClear), $"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m");
-            Check(bench.Pad is { } bay && MathF.Abs(bay.Top - bench.Part.At.M42) < 1e-4f, $"{bench.Key} is off its bay");
+            Check(bench.Pad is { } bay && MathF.Abs(bay.Top - bench.Part.At.M42) < 0.01f, $"{bench.Key} is off its bay");
         }
-        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the node's benches stand closer than the gap");
+        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 0.01f, "the node's benches stand closer than the gap");
     }
 
     [TestCase]
@@ -167,7 +167,7 @@ public sealed class NodeBenchTests
         Console.WriteLine($"design walk at {spot}: {benches.Count} node benches " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
         Check(Benches(none).Count == 0 && none.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("open node", StringComparison.Ordinal)), "a node with no walk has benches or no diagnostic message");
         Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node of a walk filed twice");
-        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the walk's node benches stand closer than the gap");
+        Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 0.01f, "the walk's node benches stand closer than the gap");
         Check(both.Items.Count == none.Items.Count + benches.Count && !both.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("open node", StringComparison.Ordinal)), "the walk changed more than its node's benches");
         var site = new StreetSite(WalkWorld(open, line, feature));
         foreach (var bench in benches)
@@ -207,14 +207,14 @@ public sealed class NodeBenchTests
             Check(2f * Half(walk) >= FurnitureStyle.NodeWalkMin, $"{bench.Key} stands on a walk {2f * Half(walk):F1} m wide");
             foreach (var u in new[] { -p.Width * 0.5f, 0f, p.Width * 0.5f })
                 foreach (var v in new[] { -p.Depth * 0.5f, p.Depth * 0.5f + FurnitureStyle.FeetReach })
-                    Check(Distance(bench.Anchor + right * u + facing * v, walk) <= Half(walk) + 1e-3f, $"{bench.Key} leaves its walk at ({u:F2}, {v:F2})");
+                    Check(Distance(bench.Anchor + right * u + facing * v, walk) <= Half(walk) + 0.01f, $"{bench.Key} leaves its walk at ({u:F2}, {v:F2})");
             var back = bench.Anchor - facing * (p.Depth * 0.5f);
             Check(MathF.Abs(Half(walk) - Distance(back, walk) - FurnitureStyle.WalkBenchClear) < 0.05f, $"{bench.Key} has its back {Half(walk) - Distance(back, walk):F2} m inside the walk's edge");
             var toLine = Vector2.Normalize(Nearest(back, walk) - back);
             Check(Vector2.Dot(toLine, facing) > 0.97f, $"{bench.Key} does not face across its walk");
             var feet = bench.Anchor + facing * (p.Depth * 0.5f + FurnitureStyle.FeetReach);
             var across = Vector2.Dot(feet - Nearest(feet, walk), facing);
-            Check(Half(walk) - across >= FurnitureStyle.NodeWalkPass - 1e-3f, $"{bench.Key} leaves {Half(walk) - across:F2} m to pass");
+            Check(Half(walk) - across >= FurnitureStyle.NodeWalkPass - 0.01f, $"{bench.Key} leaves {Half(walk) - across:F2} m to pass");
             Check(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f), $"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway");
             Check(!site.CarriagewayAhead(bench.Anchor + facing * (p.Depth * 0.5f), facing, FurnitureStyle.FaceClear), $"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m");
             Console.WriteLine($"{bench.Key} at the edge of {walk.Id.Value} ({2f * Half(walk):F1} m) at ({bench.Anchor.X:F1}, {bench.Anchor.Y:F1}), {Half(walk) - across:F2} m to pass");

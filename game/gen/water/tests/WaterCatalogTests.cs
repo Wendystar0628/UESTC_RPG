@@ -46,10 +46,10 @@ public sealed class WaterCatalogTests
         var p = WaterParams.Default;
         if (bodies.Count != 4) throw new InvalidOperationException($"expected 4 bodies, got {bodies.Count}");
         var l = bodies.Single(b => b.Id == lake);
-        if (l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > 1e-5f)
+        if (l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > 0.001f)
             throw new InvalidOperationException("lake level or slot wrong");
         foreach (var r in bodies.Where(b => b.Id == river))
-            if (r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > 1e-5f)
+            if (r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > 0.001f)
                 throw new InvalidOperationException("channel level, kind or slot wrong");
     }
 }

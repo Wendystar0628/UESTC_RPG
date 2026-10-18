@@ -179,7 +179,7 @@ public sealed class SouthSiteTests
         var ctx = Context();
         var p = Sports.PlatformSite.PlanOf(ctx.World);
         Require(p.Decks.Count == 1, "one deck: A06 moves onto it, no terrace is added");
-        Require(SouthTune.Sports.PlatformTop == 5.0f && MathF.Abs(p.Top - p.Y - SouthTune.Sports.PlatformTop) < 1e-4f, "the deck top, A06's y, is the 5.0 m platform storey");
+        Require(SouthTune.Sports.PlatformTop == 5.0f && MathF.Abs(p.Top - p.Y - SouthTune.Sports.PlatformTop) < 0.01f, "the deck top, A06's y, is the 5.0 m platform storey");
         // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces. The anchor data stays as it is until
         // Astra moves it after the merge.

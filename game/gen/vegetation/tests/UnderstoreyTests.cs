@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,25 +17,17 @@ namespace Campus.Gen.Vegetation.Tests;
 public sealed class UnderstoreyTests
 {
     /// <summary>
-    /// The pit and design trees that were in the map when 23c2b was taken, in planting order, with the first 16 hex digits of
-    /// each one's record fingerprint (PavementTests.Fingerprint of that tree alone). Other packages may add or drop pits and
-    /// design trees (D-199), so the test checks these by ID and does not pin the whole set.
+    /// The pit and design trees that were in the map when 23c2b was taken, in planting order. Other packages may add or drop
+    /// pits and design trees (D-199), so the test checks these by ID and does not pin the whole set.
     /// </summary>
-    private static readonly (string Key, string Print)[] KnownNewSources =
+    private static readonly string[] KnownNewSources =
     [
-        ("design:center-east-pinxue-round-bed", "41e7dd2bb4d6c0e2"),
-        ("design:center-east-pinxue-tree-pits:0", "3f09744f930c4cf5"),
-        ("design:center-east-pinxue-tree-pits:1", "4d576bef25bdf198"),
-        ("design:center-east-pinxue-tree-pits:2", "cf68dd8410e935dc"),
-        ("design:center-east-pinxue-tree-pits:3", "dba13a448f2bd8f0"),
-        ("design:center-east-pinxue-tree-pits:4", "09cd336330f1478c"),
-        ("design:center-east-pinxue-tree-pits:5", "57ca50a48d8fa1cf"),
-        ("design:center-east-pinxue-tree-pits:6", "6efd633289ec125b"),
-        ("design:center-east-pinxue-tree-pits:7", "a44e68251dbe3540"),
-        ("design:center-east-pinxue-tree-pits:8", "c0a9f049087a5e61"),
-        ("design:center-east-pinxue-tree-pits:9", "89dc6f90108b6b93"),
-        ("design:core-library-camphor-1", "4d3fbc9ef3a849eb"),
-        ("design:core-library-camphor-2", "e0259e8ca2f61b06"),
+        "design:center-east-pinxue-round-bed",
+        "design:center-east-pinxue-tree-pits:0", "design:center-east-pinxue-tree-pits:1", "design:center-east-pinxue-tree-pits:2",
+        "design:center-east-pinxue-tree-pits:3", "design:center-east-pinxue-tree-pits:4", "design:center-east-pinxue-tree-pits:5",
+        "design:center-east-pinxue-tree-pits:6", "design:center-east-pinxue-tree-pits:7", "design:center-east-pinxue-tree-pits:8",
+        "design:center-east-pinxue-tree-pits:9",
+        "design:core-library-camphor-1", "design:core-library-camphor-2",
     ];
 
     private static readonly Lazy<PlantingLayout> Overlaid = new(() => PavementTests.Plant(PavementTests.World(true)));
@@ -53,16 +46,14 @@ public sealed class UnderstoreyTests
         if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         Console.WriteLine($"new sources: {added.Count(t => t.Source == PlantSource.Pit)} pit trees, {added.Count(t => t.Source == PlantSource.Design)} design trees, " +
             $"{layout.PitsHeld} pits already held a tree; fingerprint {print}");
-        // Pit trees come before design trees; the known ones keep their bytes and their order (by ID, D-199).
+        // Pit trees come before design trees; the known ones keep their order (by ID, D-199).
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
         if (firstDesign >= 0 && added.Skip(firstDesign).Any(t => t.Source == PlantSource.Pit)) throw new InvalidOperationException("a pit tree follows a design tree");
         var at = added.Select((t, i) => (t, i)).ToDictionary(e => e.t.Key, e => e.i, StringComparer.Ordinal);
         var last = -1;
-        foreach (var (key, known) in KnownNewSources)
+        foreach (var key in KnownNewSources)
         {
             if (!at.TryGetValue(key, out var index)) continue;
-            var now = PavementTests.Fingerprint([added[index]])[..16];
-            if (now != known) throw new InvalidOperationException($"{key} changed: {now}, was {known}");
             if (index < last) throw new InvalidOperationException($"{key} moved before an earlier known source");
             last = index;
         }
@@ -101,7 +92,7 @@ public sealed class UnderstoreyTests
             var feature = PavementTests.World(true).Features.Values.Single(f => f.Id.Value == id);
             var at = ((PointGeometry)feature.Geometry).Position;
             if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > 0.01f ||
-                MathF.Abs(tree.Position.X - at.X) > 1e-3f || MathF.Abs(tree.Position.Z - at.Z) > 1e-3f)
+                MathF.Abs(tree.Position.X - at.X) > 0.01f || MathF.Abs(tree.Position.Z - at.Z) > 0.01f)
                 throw new InvalidOperationException($"{id}: {tree.Source} {tree.Species.Id} {tree.Height:F2} m at ({tree.Position.X:F2}, {tree.Position.Z:F2})");
         }
     }

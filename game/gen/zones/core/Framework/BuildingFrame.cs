@@ -43,7 +43,7 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(feature, out var f))
             throw new KeyNotFoundException($"Core building '{feature.Value}' is missing from the world model.");
-        var rings = (f.Parts.Count > 0 ? f.Parts.Select(PlanGeometry.FacadeGeometryOf) : [f.Geometry]).SelectMany(Plan.Polygons).ToArray();
+        var rings = (f.Parts.Count > 0 ? f.Parts.Select(WorldFeatureGeometry.FacadeGeometryOf) : [f.Geometry]).SelectMany(Plan.Polygons).ToArray();
         if (rings.Length == 0) throw new InvalidOperationException($"Core building '{feature.Value}' has no footprint.");
         return new(feature, rings, world.Terrain.PadY(feature), storeyHeights);
     }

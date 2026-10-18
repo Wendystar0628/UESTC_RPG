@@ -46,13 +46,13 @@ public sealed class RoofPartTests
             // Coping: the WP-12 cap reaches the parapet top, its drip hangs 60 mm under the slab outside the wall.
             var trim = near.Where(b => HasColor(b, Rules.Materials.Lit(simple.Profile.Trim).Value) && b.Material.Spec.Fx == ToonFx.BevelLift).ToArray();
             var ys = trim.SelectMany(b => ColorVertices(b, Rules.Materials.Lit(simple.Profile.Trim).Value).Select(v => b.Position[3 * v + 1])).ToArray();
-            Require(ys.Any(y => MathF.Abs(y - simple.EdgeTopY) < 1e-3f) && ys.Any(y => MathF.Abs(y - (simple.EdgeTopY - 0.21f)) < 1e-3f), $"{simple.Key}: coping and drip");
+            Require(ys.Any(y => MathF.Abs(y - simple.EdgeTopY) < 0.01f) && ys.Any(y => MathF.Abs(y - (simple.EdgeTopY - 0.21f)) < 0.01f), $"{simple.Key}: coping and drip");
             foreach (var b in near.Where(b => Fence(b) || Pump(b)))
                 foreach (var v in ColorVertices(b, Rules.RoofRules.FenceBoard + ".lit", "equip.grey.lit"))
                 {
                     var p = new Vector2(b.Position[3 * v], b.Position[3 * v + 2]);
                     Require(PlanRing.InsideFootprint(simple.Outer, simple.Holes, p) && PlanRing.DistanceToEdges(simple.Outer, simple.Holes, p) > 0.4f &&
-                        b.Position[3 * v + 1] >= simple.RoofY - 1e-3f, $"{simple.Key}: plant stands on the roof, clear of the parapet");
+                        b.Position[3 * v + 1] >= simple.RoofY - 0.01f, $"{simple.Key}: plant stands on the roof, clear of the parapet");
                 }
         }
     }

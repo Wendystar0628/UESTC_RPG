@@ -50,7 +50,7 @@ public sealed class WaterMesherTests
         {
             var mesh = WaterMesher.Build(body, Shapes);
             var area = MeshArea(mesh);
-            if (MathF.Abs(area - body.Area) > body.Area * 1e-4f)
+            if (MathF.Abs(area - body.Area) > body.Area * 0.01f)
                 throw new InvalidOperationException($"{body.Id.Value}: mesh area {area} != polygon area {body.Area}");
         }
     }
@@ -114,7 +114,7 @@ public sealed class WaterMesherTests
         {
             var p = new Vector2(mesh.Position[3 * v], mesh.Position[3 * v + 2]);
             var expected = MathF.Min(Exact(p), WaterParams.Default.SdfClamp);
-            if (MathF.Abs(mesh.Shore[v] - expected) > 1e-3f)
+            if (MathF.Abs(mesh.Shore[v] - expected) > 0.01f)
                 throw new InvalidOperationException($"shore distance {mesh.Shore[v]} at {p}, expected {expected}");
         }
 

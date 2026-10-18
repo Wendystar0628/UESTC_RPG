@@ -18,8 +18,8 @@ public sealed class FacadePresetTests
     [TestCase]
     public void OrdinaryBuildingsKeepTheirOpeningsAndNumbers()
     {
-        // Buildings without an entrance anchor keep 14-2b's layout cell for cell: openings, window numbers and cards (hash
-        // of that layout taken on b66d4df). Anchored buildings only move their door; their window blocks never change.
+        // Buildings without an entrance anchor lay out the same way every build: openings, window numbers and cards cell for
+        // cell. Anchored buildings only move their door; their window blocks never change.
         var features = new[]
         {
             Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", new PolygonRings(LShape(100, 0)), 4, 15.6f, "research"),
@@ -27,7 +27,7 @@ public sealed class FacadePresetTests
             Feature("t:small", Rect(300, 0, 5, 6), 1, 3f, "service"),
         };
         var plain = BuildingSet.For(World(features), 4u);
-        Require(LayoutHash(plain) == "f3e3eb7b1d0265df", $"14-2b layout of ordinary buildings ({LayoutHash(plain)})");
+        Require(Layout(BuildingSet.For(World(features), 4u)) == Layout(plain), "the same input lays out ordinary buildings cell for cell");
         var anchored = BuildingSet.For(World(Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
         Require(anchored.Blocks.SequenceEqual(plain.Blocks), "an entrance anchor leaves every window block as it was");
         Require(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), ""),

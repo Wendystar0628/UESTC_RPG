@@ -30,7 +30,7 @@ public static class RegistrationDiscovery
             if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(owner))
                 throw new InvalidOperationException($"Registration has empty identity: {type.FullName}");
             if (string.IsNullOrEmpty(map)) map = type.Assembly.GetCustomAttribute<MapScopeAttribute>()?.Map;
-            var stub = type.Assembly.GetName().Name == "Campus.Gen.Parts.Stubs" ||
+            var stub = type.Namespace?.StartsWith("Campus.Gen.Parts.Stubs", StringComparison.Ordinal) == true ||
                 type.Namespace?.StartsWith("Campus.Kernel.Stubs", StringComparison.Ordinal) == true;
             entries.Add(new(kind, id, owner, map, type, stub));
         }

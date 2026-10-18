@@ -81,7 +81,7 @@ public sealed class SixSite : WestSite
     {
         if (!world.Features.TryGetValue(new(entity), out var feature))
             throw new InvalidOperationException($"六号科研楼 entity {entity} is missing from the world model.");
-        return feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && PlanGeometry.FacadeGeometryOf(src) is PolygonGeometry g
+        return feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && WorldFeatureGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings
             : throw new InvalidOperationException($"六号科研楼 part {part} is missing or not a single polygon.");
     }

@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
@@ -38,7 +39,7 @@ public static class BuildingPlanner
             foreach (var part in f.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
             {
                 if (PartKind(f, part) != BuildingKind.Value) continue;
-                foreach (var (key, rings) in Polygons(part.SourceId, PlanGeometry.FacadeGeometryOf(part)))
+                foreach (var (key, rings) in Polygons(part.SourceId, WorldFeatureGeometry.FacadeGeometryOf(part)))
                     yield return new BuildingSource(f, key, rings, part.Height ?? f.Height, part.Storeys ?? f.Storeys, part.Props ?? f.Props);
             }
             yield break;

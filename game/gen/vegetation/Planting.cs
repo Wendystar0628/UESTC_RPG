@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
@@ -691,7 +692,7 @@ public static class Planting
         {
             foreach (var part in Parts(feature, kind))
             {
-                IEnumerable<PolygonRings> polygons = PlanGeometry.FacadeGeometryOf(part) switch
+                IEnumerable<PolygonRings> polygons = WorldFeatureGeometry.FacadeGeometryOf(part) switch
                 {
                     PolygonGeometry polygon => [polygon.Rings],
                     MultiPolygonGeometry multi => multi.Polygons,

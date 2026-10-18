@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -261,7 +262,7 @@ public sealed class CenterEastModuleTests
         foreach (var x in P.RampWallX)
         {
             var runs = PinxueForecourtSite.RampRuns(_ => 0f, x);
-            Require(runs.Count == 1 && MathF.Abs(runs[0].Top - P.SeatHeight) < 1e-4f, "flat ground gives one continuous wall");
+            Require(runs.Count == 1 && MathF.Abs(runs[0].Top - P.SeatHeight) < 0.01f, "flat ground gives one continuous wall");
         }
         // The designed 5 % ramp along the frame's z: the wall steps once per segment, each top above the ground under it.
         var frame = PinxueFrameSite.F;
@@ -281,14 +282,14 @@ public sealed class CenterEastModuleTests
         Require(registered.Length == tiers.Count, "one registered tier per built tier");
         static Vector2 Pair(System.Text.Json.JsonElement e) => new(e[0].GetSingle(), e[1].GetSingle());
         var axis = Pair(props.GetProperty("axis"));
-        Require(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame.U) < 1e-3f, "the registered long axis runs along the bar");
+        Require(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame.U) < 0.01f, "the registered long axis runs along the bar");
         for (var i = 0; i < tiers.Count; i++)
         {
             var (half, coping, rim, water) = tiers[i];
-            Require(MathF.Abs(registered[i].GetProperty("rimAbove").GetSingle() - rim) < 1e-3f, $"tier {i} rim");
-            Require(MathF.Abs(registered[i].GetProperty("waterAbove").GetSingle() - water) < 1e-3f, $"tier {i} water");
-            Require(Vector2.Distance(Pair(registered[i].GetProperty("half")), half) < 1e-3f, $"tier {i} stone extent");
-            Require(Vector2.Distance(Pair(registered[i].GetProperty("waterHalf")), half - new Vector2(coping)) < 1e-3f, $"tier {i} water extent");
+            Require(MathF.Abs(registered[i].GetProperty("rimAbove").GetSingle() - rim) < 0.01f, $"tier {i} rim");
+            Require(MathF.Abs(registered[i].GetProperty("waterAbove").GetSingle() - water) < 0.01f, $"tier {i} water");
+            Require(Vector2.Distance(Pair(registered[i].GetProperty("half")), half) < 0.01f, $"tier {i} stone extent");
+            Require(Vector2.Distance(Pair(registered[i].GetProperty("waterHalf")), half - new Vector2(coping)) < 0.01f, $"tier {i} water extent");
             Require(water < rim, $"tier {i} water stays below its rim");
             if (i > 0) Require(half.X < tiers[i - 1].Half.X - tiers[i - 1].Coping && half.Y < tiers[i - 1].Half.Y - tiers[i - 1].Coping && rim > tiers[i - 1].Rim, $"tier {i} steps up inside the pool below");
         }

@@ -19,16 +19,13 @@ public sealed class ArchitectureTests
 
     private static ReflectionAssembly[] LoadProduction()
     {
-        var names = Directory.GetFiles(AppContext.BaseDirectory, "Campus*.dll")
-            .Where(path => !Path.GetFileNameWithoutExtension(path).EndsWith("Tests", StringComparison.Ordinal))
-            .Order(StringComparer.Ordinal).ToArray();
-        if (!names.Any(path => Path.GetFileName(path) == "Campus.dll") ||
-            !names.Any(path => Path.GetFileName(path) == "Campus.Contracts.dll") ||
-            !names.Any(path => Path.GetFileName(path) == "Campus.Contracts.Runtime.dll"))
+        string[] names = ["Campus.Contracts", "Campus.Contracts.Runtime", "Campus.Gen", "Campus.Gen.Maps.Qingshuihe", "Campus"];
+        var paths = names.Select(name => Path.Combine(AppContext.BaseDirectory, name + ".dll")).ToArray();
+        if (paths.Any(path => !File.Exists(path)))
         {
             throw new InvalidOperationException("Production binaries missing; architecture checks cannot run on an empty model.");
         }
-        return names.Select(ReflectionAssembly.LoadFrom).ToArray();
+        return paths.Select(ReflectionAssembly.LoadFrom).ToArray();
     }
 
     private static void Check(IArchRule rule)
@@ -79,7 +76,7 @@ public sealed class ArchitectureTests
             var name = assembly.GetName().Name!;
             foreach (var reference in assembly.GetReferencedAssemblies())
             {
-                AssertReference(name, reference.Name!);
+                AssertAssemblyReference(name, reference.Name!);
                 if (name == "Campus" || !scopes.TryGetValue(reference.Name!, out var target) || target is null)
                 {
                     continue; // Campus is the composition root and must discover every map.
@@ -89,10 +86,10 @@ public sealed class ArchitectureTests
                     throw new InvalidOperationException($"MapScope violation: {name} ({scopes[name] ?? "generic"}) -> {reference.Name} ({target})");
                 }
             }
-            // Check real IL dependencies as well as declared assembly references.
-            if (IsContent(name))
+            // Generic generation must never reach into a map, even when namespaces are shared.
+            if (name == "Campus.Gen")
             {
-                var others = Production.Value.Where(other => other != assembly && IsContent(other.GetName().Name!)).ToArray();
+                var others = Production.Value.Where(other => scopes[other.GetName().Name!] is not null).ToArray();
                 if (others.Length > 0)
                 {
                     Check(Types().That().ResideInAssembly(assembly).Should()
@@ -101,12 +98,23 @@ public sealed class ArchitectureTests
                 }
             }
         }
+        // Merged DLLs retain the former package dependency directions through namespaces.
+        var packages = Model.Value.Types.Select(type => NamespaceOwner(type.Namespace.FullName))
+            .Where(name => name is not null).Select(name => name!).Distinct(StringComparer.Ordinal).ToArray();
+        foreach (var origin in packages)
+        {
+            var forbidden = packages.Where(target => !AssertReference(origin, target)).Select(NamespacePattern).ToArray();
+            if (forbidden.Length > 0)
+                Check(Types().That().ResideInNamespaceMatching(NamespacePattern(origin)).Should()
+                    .NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden)))
+                    .WithoutRequiringPositiveResults());
+        }
         // An empty project can lose unused references during compilation. Inspect its declaration too.
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? FindRepository();
         foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "game", "gen"), "*.csproj", SearchOption.AllDirectories)
                      .Append(Path.Combine(root, "game", "contracts", "Campus.Contracts.csproj"))
                      .Append(Path.Combine(root, "game", "contracts", "Runtime", "Campus.Contracts.Runtime.csproj"))
-                     .Append(Path.Combine(root, "pipeline", "map", "Campus.Pipeline.Map.csproj")))
+                     .Append(Path.Combine(root, "game", "Campus.csproj")))
         {
             var document = XDocument.Load(path);
             foreach (var item in document.Descendants().Where(element => element.Name.LocalName == "ProjectReference"))
@@ -114,7 +122,7 @@ public sealed class ArchitectureTests
                 var target = (string?)item.Attribute("Include") ?? throw new InvalidOperationException("ProjectReference missing Include");
                 foreach (var reference in target.Split(';', StringSplitOptions.RemoveEmptyEntries))
                 {
-                    AssertReference(Path.GetFileNameWithoutExtension(path), Path.GetFileNameWithoutExtension(reference.Replace('\\', '/')));
+                    AssertAssemblyReference(Path.GetFileNameWithoutExtension(path), Path.GetFileNameWithoutExtension(reference.Replace('\\', '/')));
                 }
             }
         }
@@ -124,11 +132,24 @@ public sealed class ArchitectureTests
         .SingleOrDefault(attribute => attribute.AttributeType.FullName == "Campus.Contracts.MapScopeAttribute")
         ?.ConstructorArguments[0].Value as string;
 
+    private static string? NamespaceOwner(string name)
+    {
+        if (name == "Campus.Pipeline.Map" || name.StartsWith("Campus.Pipeline.Map.", StringComparison.Ordinal)) return "Campus.Pipeline.Map";
+        if (!name.StartsWith("Campus.Gen.", StringComparison.Ordinal)) return null;
+        var parts = name.Split('.');
+        var length = parts[2] is "Parts" or "Zones" || name.StartsWith("Campus.Gen.Interior.Shell", StringComparison.Ordinal) ? 4 : 3;
+        return string.Join('.', parts.Take(length));
+    }
+
+    private static string NamespacePattern(string owner) => owner == "Campus.Gen.Interior"
+        ? @"^Campus\.Gen\.Interior(?!(?:\.Shell)(?:\.|$))(?:\.|$)"
+        : "^" + Regex.Escape(owner) + @"(?:\.|$)";
+
     private static bool IsContent(string name) => name.StartsWith("Campus.Gen.", StringComparison.Ordinal) &&
         name is not "Campus.Gen.Geometry" and not "Campus.Gen.World" and not "Campus.Gen.Interior" &&
         !name.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
 
-    private static void AssertReference(string origin, string target)
+    private static void AssertAssemblyReference(string origin, string target)
     {
         if (!origin.StartsWith("Campus", StringComparison.Ordinal) || origin.EndsWith("Tests", StringComparison.Ordinal)) return;
         bool allowed;
@@ -138,14 +159,21 @@ public sealed class ArchitectureTests
         else if (origin == "Campus.Contracts") allowed = false;
         else if (target == "Campus.Contracts") allowed = true;
         else if (origin == "Campus.Contracts.Runtime") allowed = false;
-        else if (origin == "Campus.Gen.Geometry") allowed = false;
-        else if (origin == "Campus.Gen.World") allowed = false;
-        else if (origin == "Campus.Gen.Parts.Core") allowed = false;
-        else if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) allowed = target == "Campus.Gen.Parts.Core";
-        else if (origin == "Campus.Gen.Interior") allowed = target == "Campus.Gen.Parts.Core";
-        else if (origin == "Campus.Pipeline.Map") allowed = target == "Campus.Gen.World";
-        else allowed = target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" || target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
+        else allowed = origin == "Campus.Gen.Maps.Qingshuihe" && target == "Campus.Gen";
         if (!allowed) throw new InvalidOperationException($"Assembly boundary: {origin} -> {target}");
+    }
+
+    private static bool AssertReference(string origin, string target)
+    {
+        // Includes map registration classes -> generic BoxInteriorProvider in the same shell namespace.
+        if (origin == target) return true;
+        if (origin == "Campus.Gen.Geometry") return false;
+        if (origin is "Campus.Gen.World" or "Campus.Gen.Parts.Core") return target == "Campus.Gen.Geometry";
+        if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";
+        if (origin == "Campus.Gen.Interior") return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";
+        if (origin == "Campus.Pipeline.Map") return target == "Campus.Gen.World";
+        return IsContent(origin) && (target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" ||
+            target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal));
     }
 
     [TestCase]
@@ -177,6 +205,18 @@ public sealed class ArchitectureTests
     [TestCase]
     public void HudAndSystemsOnlyUsePublishedInterfaces()
     {
+        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Kernel(?:\.|$)").Should()
+            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Systems(?:\.|$)"))
+            .WithoutRequiringPositiveResults());
+        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.(?:Systems|Style)(?:\.|$)").Should()
+            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(?:Gen|Pipeline)(?:\.|$)"))
+            .WithoutRequiringPositiveResults());
+        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Camera\.Cinematic(?:\.|$)").Should()
+            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Flow(?:\.|$)"))
+            .WithoutRequiringPositiveResults());
+        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Flow(?:\.|$)").Should()
+            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Camera\.Cinematic(?:\.|$)"))
+            .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(Kernel|Style|Camera|Medium|Systems|Audio|Flow)(\.|$)")
                 .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel")

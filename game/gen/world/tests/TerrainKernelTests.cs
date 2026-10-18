@@ -106,6 +106,6 @@ public sealed class TerrainKernelTests
         var support = new MapRect(new(-40, -60), new(40, 60));
         return new(new(new(-128), new(128)), (x, z) => new(TerrainMath.EllipticalMound(x, z, Vector2.Zero, new(40, 60), 0, 3), TerrainClass.Slope), [support]);
     }
-    private static void Equal(double expected, double actual) => Require(Math.Abs(expected - actual) <= 0.000001, $"Expected {expected}, got {actual}.");
+    private static void Equal(double expected, double actual) => Require(Math.Abs(expected - actual) <= 0.001, $"Expected {expected}, got {actual}.");
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 }

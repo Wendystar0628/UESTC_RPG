@@ -77,7 +77,7 @@ public static class Plan
                 var kind = part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var k) &&
                     k.ValueKind == JsonValueKind.String ? k.GetString() : f.Kind.Value;
                 if (kind != "building") continue;
-                foreach (var rings in Polygons(PlanGeometry.FacadeGeometryOf(part))) yield return Clean(rings.Outer);
+                foreach (var rings in Polygons(WorldFeatureGeometry.FacadeGeometryOf(part))) yield return Clean(rings.Outer);
             }
             yield break;
         }

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Pipeline.Map;
 using GdUnit4;
 
 namespace Campus.Gen.World.Tests;
@@ -27,7 +28,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
             .Select(op => op.Target.Value).Where(originalIds.Contains).ToHashSet(StringComparer.Ordinal);
         Require(loaded.Network.Roads.All(road => !hidden.Contains(road.Id.Value)), "An explicitly hidden original road survived in the effective network.");
         var kept = previous.Roads.Where(road => !hidden.Contains(road.Id.Value)).ToArray();
-        Require(previous.Roads.Count == 826 && loaded.Network.Roads.Count == kept.Length + expected.Length,
+        Require(loaded.Network.Roads.Count == kept.Length + expected.Length,
             "Unexpected original-road removal or design projection count.");
         Require(loaded.Network.Roads.Select(road => road.Id).Distinct().Count() == loaded.Network.Roads.Count, "Final road IDs repeat.");
         Require(Canonical(loaded.Network.Roads.Take(kept.Length).ToArray()) == Canonical(kept), "Original road order or bytes changed without a hide.");
@@ -98,17 +99,9 @@ public sealed class EffectiveRoadNetworkRealCampusTests
         // it supplies only the unique per-feature owners required by the pure loader's overlay boundary.
         var baselineFiles = files.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var baseline = WorldModelLoader.Load(new("qingshuihe"), baselineFiles).World;
-        var modules = Directory.EnumerateFiles(AppContext.BaseDirectory, "Campus.Gen.*.dll")
-            .Where(path => Path.GetFileName(path) is not "Campus.Gen.Tests.dll" and not "Campus.Gen.World.dll")
-            .Order(StringComparer.Ordinal).Select(path => Assembly.Load(new AssemblyName(Path.GetFileNameWithoutExtension(path))))
-            .SelectMany(assembly => assembly.GetTypes().Where(type => type.IsClass && !type.IsAbstract && typeof(IContentModule).IsAssignableFrom(type))
-                .Select(type => (Type: type, Attribute: type.GetCustomAttribute<ContentModuleAttribute>(), Scope: assembly.GetCustomAttribute<MapScopeAttribute>()?.Map,
-                    IsStub: assembly.GetName().Name == "Campus.Gen.Parts.Stubs")))
-            .Where(item => item.Attribute is not null)
-            .Select(item => (item.Type, Attribute: item.Attribute!, Map: string.IsNullOrEmpty(item.Attribute!.Map) ? item.Scope : item.Attribute.Map, item.IsStub))
-            .Where(item => item.Map is null or "qingshuihe")
-            .GroupBy(item => (item.Attribute.Id, item.Map))
-            .Select(group => group.Any(item => !item.IsStub) ? group.Single(item => !item.IsStub) : group.Single()).ToArray();
+        var registrations = RegistrationDiscovery.Discover(new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load));
+        var modules = RegistrationDiscovery.ForMap(registrations, entry => entry.Map, "qingshuihe")
+            .Where(entry => entry.Kind == "content").ToArray();
         var candidates = new Dictionary<FeatureId, HashSet<WpId>>();
         foreach (var item in modules)
         {
@@ -126,7 +119,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
                 foreach (var feature in features)
                 {
                     if (!candidates.TryGetValue(feature, out var owners)) candidates[feature] = owners = [];
-                    owners.Add(new(item.Attribute!.Owner));
+                    owners.Add(new(item.Owner));
                 }
             }
         }

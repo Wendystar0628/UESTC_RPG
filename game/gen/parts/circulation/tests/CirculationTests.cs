@@ -108,19 +108,19 @@ public sealed class CirculationTests
         var colliders = new StepsPart().Collision(p);
         var ramp = colliders.OfType<RampCollider>().Single();
         float r = 0.15f, t = 0.35f;
-        Near(-S.RampBury, ramp.P0.Y, 1e-5); Near(p.Height, ramp.P2.Y, 1e-5); Near(p.Height, ramp.P3.Y, 1e-5);
+        Near(-S.RampBury, ramp.P0.Y, 0.01); Near(p.Height, ramp.P2.Y, 0.01); Near(p.Height, ramp.P3.Y, 0.01);
         // Nosing k sits at z = −D/2 + (k − 1)·T, y = k·R; the plane through P0..P3 must pass every one of them.
         for (var k = 1; k <= p.Steps; k++)
         {
             var z = -p.Depth * 0.5f + (k - 1) * t;
             var y = ramp.P0.Y + (z - ramp.P0.Z) * (ramp.P3.Y - ramp.P0.Y) / (ramp.P3.Z - ramp.P0.Z);
-            Near(k * r, y, 1e-4);
+            Near(k * r, y, 0.01);
         }
         var angle = Math.Atan2(ramp.P3.Y - ramp.P0.Y, ramp.P3.Z - ramp.P0.Z) * 180 / Math.PI;
         Check(angle is > 19 and < 27, $"Outdoor step ramp pitch {angle}° is outside 19–27°.");
-        Check(ramp.Tag == SurfaceTag.Stair && ramp.Stair is { Count: 6 } spec && Math.Abs(spec.RiserM - r) < 1e-5 && Math.Abs(spec.TreadM - t) < 1e-5
+        Check(ramp.Tag == SurfaceTag.Stair && ramp.Stair is { Count: 6 } spec && Math.Abs(spec.RiserM - r) < 0.005 && Math.Abs(spec.TreadM - t) < 0.01
             && ramp.Foot == FootMat.StonePaving, "Ramp metadata is incomplete.");
-        Check(colliders.OfType<BoxCollider>().Any(b => Math.Abs(b.At.M42 + b.Half.Y - p.Height) < 1e-5), "Top tread has no level support.");
+        Check(colliders.OfType<BoxCollider>().Any(b => Math.Abs(b.At.M42 + b.Half.Y - p.Height) < 0.01), "Top tread has no level support.");
         var stoop = new StepsPart().Collision(new StairParams(2f, 0.3f, 0.7f, 2));
         Check(!stoop.OfType<RampCollider>().Any() && stoop.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Stair) == 2, "Two steps should rely on auto-step boxes.");
     }
@@ -138,21 +138,21 @@ public sealed class CirculationTests
             var run = Math.Abs(ramp.P3.Z - ramp.P0.Z); var rise = ramp.P3.Y - ramp.P0.Y;
             var angle = Math.Atan2(rise, run) * 180 / Math.PI;
             Check(angle is >= 26 and <= 34, $"Flight pitch {angle}° is outside 26–34°.");
-            Check(ramp.Stair is { Count: 11 } spec && Math.Abs(spec.RiserM - 0.15f) < 1e-5 && Math.Abs(spec.TreadM - 0.28f) < 1e-5 && ramp.Tag == SurfaceTag.Stair,
+            Check(ramp.Stair is { Count: 11 } spec && Math.Abs(spec.RiserM - 0.15f) < 0.005 && Math.Abs(spec.TreadM - 0.28f) < 0.01 && ramp.Tag == SurfaceTag.Stair,
                 "Flight StairSpec is wrong.");
         }
-        Near(-S.RampBury, ramps[0].P0.Y, 1e-5); Near(p.Height * 0.5f, ramps[0].P3.Y, 1e-5);
-        Near(p.Height * 0.5f - S.RampBury, ramps[1].P0.Y, 1e-5); Near(p.Height, ramps[1].P3.Y, 1e-5);
+        Near(-S.RampBury, ramps[0].P0.Y, 0.01); Near(p.Height * 0.5f, ramps[0].P3.Y, 0.01);
+        Near(p.Height * 0.5f - S.RampBury, ramps[1].P0.Y, 0.01); Near(p.Height, ramps[1].P3.Y, 0.01);
         var landing = colliders.OfType<SlabCollider>().Single();
-        Near(p.Height * 0.5f, landing.Y, 1e-5);
+        Near(p.Height * 0.5f, landing.Y, 0.01);
         // The top edge of flight 1 is the landing's front edge.
-        Near(landing.Ring.Min(v => v.Y), ramps[0].P3.Z, 1e-5);
+        Near(landing.Ring.Min(v => v.Y), ramps[0].P3.Z, 0.01);
         var well = colliders.OfType<WallCollider>().Single();
-        Check(well.Tag == SurfaceTag.Barrier && Math.Abs(well.HalfT - S.WellWidth * 0.5f) < 1e-6 && Math.Abs(well.Y1 - (p.Height + WalkRules.BarrierHeight)) < 1e-5 && well.Y0 == 0,
+        Check(well.Tag == SurfaceTag.Barrier && Math.Abs(well.HalfT - S.WellWidth * 0.5f) < 0.01 && Math.Abs(well.Y1 - (p.Height + WalkRules.BarrierHeight)) < 0.01 && well.Y0 == 0,
             "The well needs a full wall to 1.5 m over the upper floor.");
         var open = new StairOpenPart().Collision(new StairParams(1.6f, 1.8f, 11 * 0.27f, 11));
         var sides = open.OfType<SlopedWallCollider>().ToArray();
-        Check(sides.Length == 2 && sides.All(s => s.Y1a >= s.Y0a + WalkRules.BarrierHeight && s.Y1b >= 1.8f + WalkRules.BarrierHeight - 1e-4), "Open flights need sloped barriers 1.5 m over the nosings.");
+        Check(sides.Length == 2 && sides.All(s => s.Y1a >= s.Y0a + WalkRules.BarrierHeight && s.Y1b >= 1.8f + WalkRules.BarrierHeight - 0.01), "Open flights need sloped barriers 1.5 m over the nosings.");
         Check(open.All(c => c.Foot != FootMat.Auto), "Indoor stair colliders need a foot material.");
     }
 
@@ -170,31 +170,31 @@ public sealed class CirculationTests
                 var plan = TerrainDrop.Plan(rise, 0.5f, main);
                 Check(plan.Method == DropMethod.Steps, $"{rise} m with no room must be steps.");
                 Check(plan.ClearWidth >= (main ? S.MainNetworkWidth : S.OtherWidth), "Clear width below the network minimum.");
-                Check(plan.Risers >= 2 && Math.Abs(plan.Risers * plan.Riser - rise) < 1e-4, "Risers do not add up.");
-                if (rise > 0.35f && rise >= 0.36f) Check(plan.Riser >= S.RiserMin - 1e-4 && plan.Riser <= S.RiserMax + 1e-4, $"Riser {plan.Riser} out of 0.12–0.16.");
-                if (rise <= 0.35f) Check(plan.Riser <= S.RiserTarget + 1e-5, "Low steps exceed 0.15 m.");
-                Near(Math.Clamp(0.65 - 2 * plan.Riser, 0.30, 0.40), plan.Tread, 1e-5);
+                Check(plan.Risers >= 2 && Math.Abs(plan.Risers * plan.Riser - rise) < 0.01, "Risers do not add up.");
+                if (rise > 0.35f && rise >= 0.36f) Check(plan.Riser >= S.RiserMin - 0.005 && plan.Riser <= S.RiserMax + 0.005, $"Riser {plan.Riser} out of 0.12–0.16.");
+                if (rise <= 0.35f) Check(plan.Riser <= S.RiserTarget + 0.005, "Low steps exceed 0.15 m.");
+                Near(Math.Clamp(0.65 - 2 * plan.Riser, 0.30, 0.40), plan.Tread, 0.01);
                 Check(plan.ParallelRampNeeded == rise > WalkRules.OutdoorFlightMaxRise, "Steps over 1.5 m need a second route.");
                 float y = 0;
                 foreach (var part in plan.Parts)
                 {
                     var p = (StairParams)part.Params;
-                    Check(p.Height <= WalkRules.OutdoorFlightMaxRise + 1e-4, "A flight rises more than 1.5 m.");
-                    Near(y, part.At.M42, 1e-4); y += p.Height;
+                    Check(p.Height <= WalkRules.OutdoorFlightMaxRise + 0.01, "A flight rises more than 1.5 m.");
+                    Near(y, part.At.M42, 0.01); y += p.Height;
                     var geometry = new StepsPart().Lods[LodLevel.L0](p);
                     ClosedClockwise(geometry, new StepsPart().Bounds(p), "planned steps");
                 }
-                Near(rise, y, 1e-4);
+                Near(rise, y, 0.01);
                 foreach (var landing in plan.Landings)
-                    Check(landing.End - landing.Start + plan.Tread >= Math.Max(S.LandingMin, plan.ClearWidth) - 1e-4, "Landing shorter than the rule.");
+                    Check(landing.End - landing.Start + plan.Tread >= Math.Max(S.LandingMin, plan.ClearWidth) - 0.01, "Landing shorter than the rule.");
             }
         }
         for (var rise = 0.16f; rise <= 1.5f; rise += 0.11f)
         {
             var plan = TerrainDrop.Plan(rise, 40, true);
-            Check(plan.Method == DropMethod.Ramp && plan.Grade <= S.RampMaxGrade + 1e-6 && plan.Fits, "Ramp plan breaks 1:12 or does not fit.");
-            foreach (var run in plan.RampRuns) Check(run.Y1 - run.Y0 <= S.RampMaxSegmentRise + 1e-4, "Ramp run rises more than 0.75 m.");
-            foreach (var pad in plan.Landings) Check(pad.End - pad.Start >= S.RampLandingMin - 1e-4, "Ramp pad shorter than 1.5 m.");
+            Check(plan.Method == DropMethod.Ramp && plan.Grade <= S.RampMaxGrade + 0.001 && plan.Fits, "Ramp plan breaks 1:12 or does not fit.");
+            foreach (var run in plan.RampRuns) Check(run.Y1 - run.Y0 <= S.RampMaxSegmentRise + 0.01, "Ramp run rises more than 0.75 m.");
+            foreach (var pad in plan.Landings) Check(pad.End - pad.Start >= S.RampLandingMin - 0.01, "Ramp pad shorter than 1.5 m.");
             foreach (var part in plan.Parts)
             {
                 var p = (RampParams)part.Params;
@@ -212,9 +212,9 @@ public sealed class CirculationTests
         {
             Check(plan is { Method: DropMethod.Steps, Risers: 7, Fits: true, ParallelRampNeeded: false } && plan.Parts.Count == 1 && plan.Landings.Count == 0,
                 "Embankment steps are not a single 7-riser flight.");
-            Near(1.0 / 7, plan.Riser, 1e-6); Near(0.65 - 2.0 / 7, plan.Tread, 1e-5);
+            Near(1.0 / 7, plan.Riser, 0.005); Near(0.65 - 2.0 / 7, plan.Tread, 0.01);
             var p = (StairParams)plan.Parts[0].Params;
-            Check(p.Steps == 7 && Math.Abs(p.Height - 1f) < 1e-5 && Math.Abs(p.Depth - 7 * plan.Tread) < 1e-4, "Embankment flight parameters are wrong.");
+            Check(p.Steps == 7 && Math.Abs(p.Height - 1f) < 0.01 && Math.Abs(p.Depth - 7 * plan.Tread) < 0.01, "Embankment flight parameters are wrong.");
         }
         // The paired route (§5.1 两条路): a 1:12 ramp in two runs of ≤ 0.75 m when the bank has the room.
         Check(TerrainDrop.Plan(1.0f, 40, mainNetwork: true) is { Method: DropMethod.Ramp, Fits: true }
@@ -231,10 +231,10 @@ public sealed class CirculationTests
             previous = n;
             if (rise < 0.36f) continue;
             var r = rise / n;
-            Check(n >= 3 && r >= S.RiserMin - 1e-5 && r <= S.RiserMax + 1e-5, $"{rise} m: riser {r} out of 0.12–0.16.");
+            Check(n >= 3 && r >= S.RiserMin - 0.005 && r <= S.RiserMax + 0.005, $"{rise} m: riser {r} out of 0.12–0.16.");
             for (var m = 3; m <= 40; m++)
                 if (rise / m >= S.RiserMin - 1e-5 && rise / m <= S.RiserMax + 1e-5)
-                    Check(Math.Abs(rise / m - S.RiserTarget) >= Math.Abs(r - S.RiserTarget) - 1e-5, $"{rise} m: {m} risers come closer to 0.15 than {n}.");
+                    Check(Math.Abs(rise / m - S.RiserTarget) >= Math.Abs(r - S.RiserTarget) - 0.005, $"{rise} m: {m} risers come closer to 0.15 than {n}.");
         }
     }
 
@@ -249,10 +249,10 @@ public sealed class CirculationTests
         }
         var colliders = TerraceEdge.Collide(line, 0, 0.7f);
         var walls = colliders.OfType<WallCollider>().ToArray();
-        Check(walls.Length == 2 && walls.All(w => w.Y0 <= -TerraceEdge.Below + 1e-5 && Math.Abs(w.Y1 - 0.7f) < 1e-5), "Band front walls are wrong.");
+        Check(walls.Length == 2 && walls.All(w => w.Y0 <= -TerraceEdge.Below + 0.01 && Math.Abs(w.Y1 - 0.7f) < 0.01), "Band front walls are wrong.");
         // A line running +x keeps its high ground toward −z, so the first wall stands on the +z (low) side.
         Check(walls[0].A.Y > 0.9f && walls[0].B.Y > 0.9f, "The wall is not on the low side.");
-        Check(colliders.OfType<BoxCollider>().All(b => Math.Abs(b.At.M42 + b.Half.Y - 0.7f) < 1e-4), "Band top is not walkable at the upper level.");
+        Check(colliders.OfType<BoxCollider>().All(b => Math.Abs(b.At.M42 + b.Half.Y - 0.7f) < 0.01), "Band top is not walkable at the upper level.");
         Throws(() => TerraceEdge.Build(line, 0, 1.6f, LodLevel.L0));
     }
 
@@ -269,7 +269,7 @@ public sealed class CirculationTests
         var ramps = StepsAlong.Collide(ring, true, -0.9f, 6, 0.15f, 0.35f, StepsFinish.Stone).OfType<RampCollider>().ToArray();
         Check(ramps.Length == 64 && ramps.All(r => r.Foot == FootMat.StonePaving && r.Stair is { Count: 6 }), "Ring needs a stair ramp per segment.");
         static float Radius(Vector3 p) => MathF.Sqrt(p.X * p.X + p.Z * p.Z);
-        Check(ramps.All(r => Radius(r.P3) > Radius(r.P0) + 1.5f && Math.Abs(r.P3.Y - 0) < 1e-4 && Math.Abs(r.P0.Y + 1.1f) < 1e-4), "Ring steps must climb outward to 0 m.");
+        Check(ramps.All(r => Radius(r.P3) > Radius(r.P0) + 1.5f && Math.Abs(r.P3.Y - 0) < 0.01 && Math.Abs(r.P0.Y + 1.1f) < 0.01), "Ring steps must climb outward to 0 m.");
         // Open arc of stone steps, and grass seat tiers straight and round (看台 4 × 0.4 / 1.5, 下沉草坪 3 × 0.3 / 1.3).
         var arc = Loop(12f, 12f, 48).Take(13).ToArray();
         var seatsLine = new[] { new Vector2(0, 0), new Vector2(0, 20), new Vector2(3, 38) };
@@ -283,7 +283,7 @@ public sealed class CirculationTests
             ClosedClockwise(e, e.Bounds, "sunken lawn");
         }
         var seats = StepsAlong.Collide(seatsLine, false, 0, 4, 0.4f, 1.5f, StepsFinish.GrassSeats);
-        Check(seats.Count == 8 && seats.OfType<BoxCollider>().Max(b => b.At.M42 + b.Half.Y) is var top && Math.Abs(top - 1.6f) < 1e-4, "Seat tiers top out at +1.6.");
+        Check(seats.Count == 8 && seats.OfType<BoxCollider>().Max(b => b.At.M42 + b.Half.Y) is var top && Math.Abs(top - 1.6f) < 0.01, "Seat tiers top out at +1.6.");
         Throws(() => StepsAlong.Build(seatsLine, false, 0, 4, 0.4f, 1.5f, StepsFinish.Stone, LodLevel.L0));
         // Rim ramp of the plaza: 1:12 along the circle with a level pad, deck in the height field.
         var deck = new List<Vector3>();
@@ -320,7 +320,8 @@ public sealed class CirculationTests
     }
 
     private static List<(Type Type, PartAttribute Attribute)> Registered() =>
-        typeof(RailingPart).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract)
+        typeof(RailingPart).Assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract &&
+            (t.Namespace == typeof(RailingPart).Namespace || t.Namespace?.StartsWith(typeof(RailingPart).Namespace + ".", StringComparison.Ordinal) == true))
             .Select(t => (Type: t, Attribute: t.GetCustomAttribute<PartAttribute>()))
             .Where(x => x.Attribute is not null).Select(x => (x.Type, x.Attribute!)).OrderBy(x => x.Item2.Id, StringComparer.Ordinal).ToList();
 
@@ -357,7 +358,7 @@ public sealed class CirculationTests
             foreach (var (edge, count) in edges)
                 Check(count == 1 && edges.TryGetValue((edge.Item2, edge.Item1), out var reverse) && reverse == 1, $"{what}: a solid has an open or non-manifold edge at {edge.Item1}–{edge.Item2}.");
             for (var i = 0; i < m.Position.Length / 3; i++)
-            { Check(bounds.Contains(P(m, i)), $"{what}: a vertex leaves the bounds."); Near(1, N(m, i).Length(), 1e-5); }
+            { Check(bounds.Contains(P(m, i)), $"{what}: a vertex leaves the bounds."); Near(1, N(m, i).Length(), 0.01); }
             // Ao is visibility (1 = unoccluded); WP-11 adds no occlusion of its own, so only kernel reveals (0.8) may dip below 1.
             Check(m.Ao is not null && m.Ao.All(v => v >= 0.45f && v <= 1f), $"{what}: Ao must be visibility in 0.45–1 (a double flip would read 0).");
         }

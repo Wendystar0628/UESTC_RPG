@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -56,13 +57,7 @@ public static class PartShapes
     {
         // The kernel extrudes a footprint (x, z) up Y; footprint (y, z) extruded up local Y, turned by XUp, runs across −X.
         var ring = profile.Select(p => new Vector2(p.Y, p.X)).ToList();
-        var area = 0.0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var a = ring[i]; var b = ring[(i + 1) % ring.Count];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        if (area < 0) ring.Reverse();
+        if (PlanGeometry.SignedArea(ring) < 0) ring.Reverse();
         var piece = PartGeometryKernel.BeveledExtrude(ring, x1 - x0, bevel, material, -x1);
         return builder.Add(piece, Xf.XUp, flags);
     }
@@ -75,13 +70,7 @@ public static class PartShapes
     {
         // Footprint (x, y) extruded up local Y, turned by RotX(−90): local Z becomes world Y, local Y becomes world −Z.
         var ring = outline.ToList();
-        var area = 0.0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var a = ring[i]; var b = ring[(i + 1) % ring.Count];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        if (area < 0) ring.Reverse();
+        if (PlanGeometry.SignedArea(ring) < 0) ring.Reverse();
         var piece = PartGeometryKernel.BeveledExtrude(ring, z1 - z0, bevel, material, -z1);
         return builder.Add(piece, Xf.RotX(-90f), flags);
     }

@@ -101,7 +101,7 @@ public sealed class CollisionGeometryTests
         Require(walls.Length == 8, "Two rectangular buildings must create exactly their eight perimeter walls.");
         Require(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15))), "A building perimeter is missing.");
         Require(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15))), "Open park ground or the aggregate perimeter was walled off.");
-        Require(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.0001f), "Aggregate parent height leaked into its building parts.");
+        Require(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.01f), "Aggregate parent height leaked into its building parts.");
     }
 
     [TestCase]

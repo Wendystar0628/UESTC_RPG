@@ -5,7 +5,29 @@ function Test-UESTCNamespaceRole {
     if ($Path -match '^game/contracts/') {
         return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Cinematic|Save|Audio|Bake|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
     }
-    if ($Path -match '^game/gen/|^pipeline/') {
+    if ($Path -match '^pipeline/map/') {
+        # These sources are compiled into Campus.Gen, retaining their pipeline responsibility.
+        return $Namespace -ceq 'Campus.Pipeline.Map' -or $Namespace.StartsWith('Campus.Pipeline.Map.', [StringComparison]::Ordinal)
+    }
+    if ($Path -match '^game/gen/') {
+        # A merged project may contain both generic and map-specific responsibilities.
+        $owners = @{
+            geometry='Geometry'; world='World'; buildings='Buildings'; ground='Ground'; vegetation='Vegetation';
+            water='Water'; fauna='Fauna'; furniture='Furniture'; collision='Collision'; diorama='Diorama';
+            'interior/core'='Interior'; 'interior/shell'='Interior.Shell';
+            'parts/core'='Parts.Core'; 'parts/openings'='Parts.Openings'; 'parts/circulation'='Parts.Circulation';
+            'parts/roof'='Parts.Roof'; 'parts/street'='Parts.Street'; 'parts/_stubs'='Parts.Stubs';
+            'zones/core'='Zones.Core'; 'zones/north'='Zones.North'; 'zones/south'='Zones.South';
+            'zones/west'='Zones.West'; 'zones/center-east'='Zones.CenterEast';
+            'zones/design-boundary'='Zones.DesignBoundary'; 'zones/design-public'='Zones.DesignPublic';
+            'zones/design-waterfront'='Zones.DesignWaterfront'
+        }
+        foreach ($owner in $owners.Keys) {
+            if ($Path.StartsWith('game/gen/' + $owner + '/', [StringComparison]::Ordinal)) {
+                $expected = 'Campus.Gen.' + $owners[$owner]
+                return $Namespace -ceq $expected -or $Namespace.StartsWith($expected + '.', [StringComparison]::Ordinal)
+            }
+        }
         return $ProjectNamespace -and ($Namespace -ceq $ProjectNamespace -or $Namespace.StartsWith($ProjectNamespace + '.', [StringComparison]::Ordinal))
     }
     $roles = @{
@@ -45,7 +67,7 @@ function Test-UESTCSourceNaming {
             $failures.Add("${path}: production and test types require an explicit Campus namespace")
         }
         $projectNamespace = ''
-        if ($path -match '^game/gen/|^pipeline/') {
+        if ($path -match '^game/gen/') {
             $directory = Split-Path $absolute -Parent
             while ($directory.StartsWith($Root, [StringComparison]::OrdinalIgnoreCase)) {
                 $projects = @(Get-ChildItem -LiteralPath $directory -Filter '*.csproj' -File)

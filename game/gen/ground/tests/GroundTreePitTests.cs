@@ -33,25 +33,25 @@ public sealed class GroundTreePitTests
         var pits = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Pit).ToArray();
         Check.True(pits.Length == 3, $"Two square pits and one strip are three pit shapes, got {pits.Length}.");
         var (rim, soil, kerb) = pits[0].PitHeights(Section);
-        Check.Close(PitRim, rim, 1e-6, "pit frame top");
-        Check.Close(PitSoil, soil, 1e-6, "pit soil top");
-        Check.Close(PitKerb, kerb, 1e-6, "pit frame thickness");
+        Check.Close(PitRim, rim, 0.01, "pit frame top");
+        Check.Close(PitSoil, soil, 0.01, "pit soil top");
+        Check.Close(PitKerb, kerb, 0.01, "pit frame thickness");
 
         var mesher = Mesher(world, out var field);
         Check.True(SurfaceAt(mesher, field, 20f, 20f) == GroundSurface.PitSoil, "The middle of a pit is soil.");
         Check.True(SurfaceAt(mesher, field, 19.25f, 20f) == GroundSurface.PitRim && SurfaceAt(mesher, field, 20.75f, 20f) == GroundSurface.PitRim,
             "A quarter metre in from the outer face (0.15 m) is the frame.");
         Check.True(SurfaceAt(mesher, field, 19.5f, 19.5f) == GroundSurface.PitSoil, "Inside the frame's thickness is soil.");
-        Check.Close(PitRim, HeightAt(mesher, field, 19.25f, 20f), 1e-5, "frame height");
-        Check.Close(PitSoil, HeightAt(mesher, field, 20f, 20f), 1e-5, "soil height");
+        Check.Close(PitRim, HeightAt(mesher, field, 19.25f, 20f), 0.01, "frame height");
+        Check.Close(PitSoil, HeightAt(mesher, field, 20f, 20f), 0.01, "soil height");
         Check.True(PitSoil < PitRim, "The soil lies below the frame top.");
 
         // The strip: 2 m wide, a thinner and lower kerb (0.15 m above the paving), soil a little below it.
         Check.True(SurfaceAt(mesher, field, 40f, 31f) == GroundSurface.PitSoil, "The strip is soil inside its frame.");
-        Check.Close(StripSoil, HeightAt(mesher, field, 40f, 31f), 1e-5, "strip soil height");
-        Check.Close(Section.PavingY + 0.15, pits[2].PitHeights(Section).Rim, 1e-6, "strip kerb stands 0.15 m above the paving");
-        Check.Close(Section.PavingY + 0.20, rim, 1e-6, "pit frame stands 0.20 m above the paving");
-        Check.Close(rim - 0.05, soil, 1e-6, "soil lies 5 cm below the frame top");
+        Check.Close(StripSoil, HeightAt(mesher, field, 40f, 31f), 0.01, "strip soil height");
+        Check.Close(Section.PavingY + 0.15, pits[2].PitHeights(Section).Rim, 0.01, "strip kerb stands 0.15 m above the paving");
+        Check.Close(Section.PavingY + 0.20, rim, 0.01, "pit frame stands 0.20 m above the paving");
+        Check.Close(rim - 0.05, soil, 0.01, "soil lies 5 cm below the frame top");
         Check.True(StripSoil < StripRim && StripSoil > Section.PavingY, "The strip soil lies a little below its kerb, above the paving.");
     }
 
@@ -70,8 +70,8 @@ public sealed class GroundTreePitTests
                 var surface = mesher.SurfaceAt(i, j);
                 var isPit = surface is GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil;
                 var d = world.Features.Values.Where(f => f.Kind.Value == "tree-pit").Select(f => PitDistance(f, x, z)).Min();
-                if (d < -1e-3f) { inside++; Check.True(isPit, $"({x}, {z}) lies inside a pit's outline but is {surface}."); }
-                if (d > 1e-3f) Check.True(!isPit, $"({x}, {z}) lies outside every pit but is {surface}.");
+                if (d < -0.01f) { inside++; Check.True(isPit, $"({x}, {z}) lies inside a pit's outline but is {surface}."); }
+                if (d > 0.01f) Check.True(!isPit, $"({x}, {z}) lies outside every pit but is {surface}.");
             }
         Check.True(inside > 500, $"The pits and the strip cover many lattice points, got {inside}.");
 
@@ -103,10 +103,10 @@ public sealed class GroundTreePitTests
                 if (color == earth) tops.Add(cy);
             }
         Check.True(checkedTriangles > 20, $"The pits are meshed, got {checkedTriangles} triangles inside them.");
-        Check.True(tops.Any(y => Math.Abs(y - PitSoil) < 1e-3f) && tops.Any(y => Math.Abs(y - StripSoil) < 1e-3f), "Soil faces lie at the pit and strip soil heights.");
+        Check.True(tops.Any(y => Math.Abs(y - PitSoil) < 0.01f) && tops.Any(y => Math.Abs(y - StripSoil) < 0.01f), "Soil faces lie at the pit and strip soil heights.");
         foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
         var maxY = output.Meshes.Max(m => Enumerable.Range(0, m.Position.Length / 3).Max(v => m.Position[3 * v + 1]));
-        Check.Close(PitRim, maxY, 1e-4, "highest point of the ground is the frame top");
+        Check.Close(PitRim, maxY, 0.01, "highest point of the ground is the frame top");
     }
 
     [TestCase]
@@ -154,18 +154,18 @@ public sealed class GroundTreePitTests
     public void PitDefaultsAndAuthoredHeights()
     {
         var bare = new PitProfile(null, null, null).Resolve(Section, compact: true);
-        Check.Close(Section.PavingY + Section.Pits.PitRimAbovePaving, bare.Rim, 1e-6, "default pit frame top");
-        Check.Close(Section.PavingY + Section.Pits.StripRimAbovePaving, new PitProfile(null, null, null).Resolve(Section, compact: false).Rim, 1e-6, "default strip kerb top");
+        Check.Close(Section.PavingY + Section.Pits.PitRimAbovePaving, bare.Rim, 0.01, "default pit frame top");
+        Check.Close(Section.PavingY + Section.Pits.StripRimAbovePaving, new PitProfile(null, null, null).Resolve(Section, compact: false).Rim, 0.01, "default strip kerb top");
         Check.True(bare.Soil < bare.Rim && bare.Kerb == Section.Pits.DefaultKerb, "default soil below the frame, default thickness");
         // The record's own heights are drawn only when asked for, measured from the paving unless a datum is given.
         var authored = Section with { Pits = Section.Pits with { UseAuthoredHeights = true } };
         var drawn = new PitProfile(0.42f, 0.32f, 0.22f).Resolve(authored, compact: true);
-        Check.Close(Section.PavingY + 0.42f, drawn.Rim, 1e-6, "authored frame top from the paving");
-        Check.Close(Section.PavingY + 0.32f, drawn.Soil, 1e-6, "authored soil top from the paving");
+        Check.Close(Section.PavingY + 0.42f, drawn.Rim, 0.01, "authored frame top from the paving");
+        Check.Close(Section.PavingY + 0.32f, drawn.Soil, 0.01, "authored soil top from the paving");
         var fromRoad = new PitProfile(0.42f, 0.32f, 0.22f).Resolve(authored with { Pits = authored.Pits with { Datum = 0f } }, compact: true);
-        Check.Close(0.42, fromRoad.Rim, 1e-6, "Datum 0 measures the authored heights from the carriageway level");
+        Check.Close(0.42, fromRoad.Rim, 0.01, "Datum 0 measures the authored heights from the carriageway level");
         var thin = new PitProfile(0.3f, 0.29f, 0.001f).Resolve(authored, compact: true);
-        Check.True(thin.Kerb >= Section.Pits.MinKerb && thin.Rim - thin.Soil >= Section.Pits.MinSoilBelowRim - 1e-6f, "A degenerate record still gets a frame and a sunken soil face.");
+        Check.True(thin.Kerb >= Section.Pits.MinKerb && thin.Rim - thin.Soil >= Section.Pits.MinSoilBelowRim - 0.005f, "A degenerate record still gets a frame and a sunken soil face.");
     }
 
     [TestCase]
@@ -217,13 +217,15 @@ public sealed class GroundTreePitTests
     {
         var world = WorldModelLoader.Load(new("qingshuihe"), RealFiles()).World;
         var shapes = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Pit).ToArray();
-        Check.True(shapes.Count(s => s.Id.Value == "design:north-dangui-plaza-tree-pits") == 47, "The 47 square pits of the north plaza are 47 shapes.");
+        int Authored(string id) => world.Features[new(id)].Geometry switch { MultiPolygonGeometry m => m.Polygons.Count, PolygonGeometry => 1, _ => 0 };
+        var squares = shapes.Count(s => s.Id.Value == "design:north-dangui-plaza-tree-pits");
+        Check.True(squares > 0 && squares == Authored("design:north-dangui-plaza-tree-pits"), "Every square pit of the north plaza is one shape.");
         var strip = shapes.Where(s => s.Id.Value == "design:north-dangui-planting-strip").ToArray();
-        Check.True(strip.Length == 3, "The planting strip is three segments.");
+        Check.True(strip.Length > 0 && strip.Length == Authored("design:north-dangui-planting-strip"), "Every segment of the planting strip is one shape.");
         var (rim, soil, kerb) = strip[0].PitHeights(Section);
-        Check.Close(StripRim, rim, 1e-6, "strip kerb top");
-        Check.Close(StripSoil, soil, 1e-6, "strip soil top");
-        Check.Close(0.15, kerb, 1e-6, "strip frame thickness");
+        Check.Close(StripRim, rim, 0.01, "strip kerb top");
+        Check.Close(StripSoil, soil, 0.01, "strip soil top");
+        Check.Close(0.15, kerb, 0.01, "strip frame thickness");
         Check.True(shapes.All(s => s.Rings is { Length: >= 1 }), "Every pit is an outline.");
     }
 

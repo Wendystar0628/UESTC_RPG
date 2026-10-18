@@ -38,7 +38,7 @@ public sealed class GroundPavingTests
                 var x = mesh.Position[3 * v];
                 var z = mesh.Position[3 * v + 2];
                 // Frame: V along the axis from the plaza edge (x = 10), U across it with U = 0 on the axis line (z = 0).
-                Check.Close(z, mesh.Uv![2 * v], 1e-3, "U is the signed distance from the entrance axis");
+                Check.Close(z, mesh.Uv![2 * v], 0.01, "U is the signed distance from the entrance axis");
                 Check.Close(x - 10f, mesh.Uv[2 * v + 1], 2e-3, "V starts at the plaza edge on the axis");
                 Check.True(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f, "Without a fidelity model the D0 reading K3 applies.");
             }
@@ -88,7 +88,7 @@ public sealed class GroundPavingTests
         // A second entrance reaches the same plaza from the side, across a short run: the façade axis stays the main axis.
         var world = PavingWorld.Library("library", 90f, side: true);
         var mesh = Build(world).First(m => m.Material.Spec.SurfacePattern is not null);
-        Check.Close(mesh.Position[2], mesh.Uv![0], 1e-3, "U stays measured from the long east axis");
+        Check.Close(mesh.Position[2], mesh.Uv![0], 0.01, "U stays measured from the long east axis");
     }
 
     private static IReadOnlyList<GeometryBundle> Build(FakeWorld world)

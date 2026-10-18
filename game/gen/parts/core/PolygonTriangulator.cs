@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -39,10 +40,10 @@ public static class PolygonTriangulator
         for (var i = 0; i < rings.Count; i++) { starts[i] = points.Count; points.AddRange(rings[i]); }
         var vertices = points.ToArray();
         var indices = Earcut.Triangulate(vertices, starts);
-        double expected = rings.Sum(SignedArea), actual = 0;
+        double expected = rings.Sum(PlanGeometry.FanSignedArea), actual = 0;
         for (var i = 0; i < indices.Length; i += 3)
         {
-            var area = Cross(vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]) * 0.5;
+            var area = PlanGeometry.Cross(vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]) * 0.5;
             if (area <= 0) throw new ArgumentException("Triangulation produced an inverted or empty triangle.", nameof(polygon));
             actual += area;
         }
@@ -72,17 +73,6 @@ public static class PolygonTriangulator
         return new(vertices, Earcut.Triangulate(vertices, starts), starts);
     }
 
-    internal static double Cross(Vector2 a, Vector2 b, Vector2 c) =>
-        ((double)b.X - a.X) * ((double)c.Y - a.Y) - ((double)b.Y - a.Y) * ((double)c.X - a.X);
-
-    internal static double SignedArea(Vector2[] ring)
-    {
-        double area = 0;
-        var origin = ring[0];
-        for (var i = 1; i + 1 < ring.Length; i++) area += Cross(origin, ring[i], ring[i + 1]);
-        return area * 0.5;
-    }
-
     private static Vector2[] Clean(IReadOnlyList<Vector2> input, bool positive)
     {
         ArgumentNullException.ThrowIfNull(input);
@@ -97,13 +87,13 @@ public static class PolygonTriangulator
         {
             var previous = points[(i + points.Count - 1) % points.Count];
             var next = points[(i + 1) % points.Count];
-            if (Cross(previous, points[i], next) == 0 && OnSegment(previous, points[i], next))
+            if (PlanGeometry.Cross(previous, points[i], next) == 0 && OnSegment(previous, points[i], next))
             { points.RemoveAt(i); i = 0; }
             else i++;
         }
         if (points.Count < 3) throw new ArgumentException("A ring needs at least three non-collinear vertices.", nameof(input));
         var ring = points.ToArray();
-        var area = SignedArea(ring);
+        var area = PlanGeometry.FanSignedArea(ring);
         if (area == 0) throw new ArgumentException("A ring must enclose a nonzero area.", nameof(input));
         if ((area > 0) != positive) Array.Reverse(ring);
         return ring;
@@ -117,8 +107,8 @@ public static class PolygonTriangulator
         p.X >= Math.Min(a.X, b.X) && p.X <= Math.Max(a.X, b.X) && p.Y >= Math.Min(a.Y, b.Y) && p.Y <= Math.Max(a.Y, b.Y);
     private static bool Intersects(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
     {
-        var abC = Math.Sign(Cross(a, b, c)); var abD = Math.Sign(Cross(a, b, d));
-        var cdA = Math.Sign(Cross(c, d, a)); var cdB = Math.Sign(Cross(c, d, b));
+        var abC = Math.Sign(PlanGeometry.Cross(a, b, c)); var abD = Math.Sign(PlanGeometry.Cross(a, b, d));
+        var cdA = Math.Sign(PlanGeometry.Cross(c, d, a)); var cdB = Math.Sign(PlanGeometry.Cross(c, d, b));
         return abC != abD && cdA != cdB || abC == 0 && OnSegment(a, c, b) || abD == 0 && OnSegment(a, d, b) ||
             cdA == 0 && OnSegment(c, a, d) || cdB == 0 && OnSegment(c, b, d);
     }

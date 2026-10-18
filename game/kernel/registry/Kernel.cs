@@ -30,8 +30,7 @@ public partial class Kernel : Node
         var rulesets = new RulesetService(descriptor);
         Services.Add<IRuleset>(rulesets);
         Services.Add<IRulesetActivation>(rulesets);
-        var assemblies = new List<Assembly> { typeof(Kernel).Assembly };
-        foreach (var name in BuildInfo.ModuleAssemblies) assemblies.Add(Assembly.Load(new AssemblyName(name)));
+        var assemblies = BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name)));
         Services.Discover(assemblies);
         Services.Add(Services.Get<IPaletteCatalogSource>().Catalog);
         GD.Print($"Kernel registry: {Services.Entries.Count} declarations; build {BuildInfo.Build}");
