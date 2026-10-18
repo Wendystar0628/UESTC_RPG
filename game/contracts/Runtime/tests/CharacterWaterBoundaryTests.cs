@@ -7,8 +7,6 @@ using static GdUnit4.Assertions;
 
 namespace Campus.Contracts.Tests;
 
-// Four focused boundary tests for after the candidate + shared.patch are applied.
-// No Godot scene, native physics, water permissions fixture or asset readiness is claimed here.
 [TestSuite]
 public sealed class CharacterWaterBoundaryTests
 {
@@ -21,27 +19,9 @@ public sealed class CharacterWaterBoundaryTests
         AssertThat(current.CanInterpolateFrom(before) && current.Perceptible).OverrideFailureMessage("Adjacent live physical samples must remain usable.").IsTrue();
         AssertThat(!(current with { Presence = WalkPresence.Pending }).Perceptible).OverrideFailureMessage("An unvalidated landing stimulated animals.").IsTrue();
         AssertThat(!(current with { Mode = ViewMode.Fly }).Perceptible).OverrideFailureMessage("A flying camera was treated as a body.").IsTrue();
-        AssertThat(!(current with { Hold = WalkHold.WaterNotReady }).CanInterpolateFrom(before)).OverrideFailureMessage("Missing water data allowed interpolation.").IsTrue();
         AssertThat(!(current with { Stamp = current.Stamp with { Continuity = 2 } }).CanInterpolateFrom(before)).OverrideFailureMessage("Warp swept from the old position.").IsTrue();
         AssertThat(!(current with { Stamp = current.Stamp with { WorldInstance = 2 } }).CanInterpolateFrom(before)).OverrideFailureMessage("Restore blended an old world body.").IsTrue();
         AssertThat(!(current with { Stamp = current.Stamp with { Tick = 12 } }).CanInterpolateFrom(before)).OverrideFailureMessage("A missing physics tick was invented.").IsTrue();
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void MissingWaterNeverBecomesReadyAndSwimmingDepthIsNotFootImmersion()
-    {
-        WaterQueryResult missing = default;
-        AssertThat(missing.Status == WaterQueryStatus.NotReady && missing.Sample is null).OverrideFailureMessage("Default query must fail closed.").IsTrue();
-        var sample = new WaterSample(new(0, -.75f, 0), new("test:water"), "volume", "swim-area", null,
-            0, -1.2f, WaterBottomKind.Terrain, -2, 1, WaterAccess.SurfaceSwim);
-        var hit = new WaterQueryResult(WaterQueryStatus.Ready, sample, .5f);
-        AssertThat(MathF.Abs(hit.Sample!.Value.ColumnDepth - 1.2f) < TestTolerance.Position && hit.Sample.Value.DepthAtPoint == .75f).OverrideFailureMessage("Column depth and the swimming reference-point immersion were conflated.").IsTrue();
-        AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => new WaterQueryResult(WaterQueryStatus.NotReady, sample)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready, sample with { SwimAreaId = null })).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready, sample with { SurfaceY = float.NaN })).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready, sample, 1.01f)).IsInstanceOf<ArgumentOutOfRangeException>();
     }
 
     [TestCase]

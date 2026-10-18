@@ -12,10 +12,3 @@ public interface ITerrainWaterSource
 
 public sealed record TerrainWaterBody(FeatureId Water, IReadOnlyList<PolygonRings> Polygons,
     IReadOnlyList<PolygonRings> WadeAreas);
-
-/// <summary>Single identity rule for a compiled natural water volume. Authored volume IDs cannot use this prefix.</summary>
-public static class TerrainWaterIdentity
-{
-    public const string VolumePrefix = "terrain-water:";
-    public static string VolumeId(FeatureId water) => VolumePrefix + water.Value;
-}

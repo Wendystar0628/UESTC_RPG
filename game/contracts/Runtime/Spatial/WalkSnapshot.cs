@@ -7,12 +7,12 @@ namespace Campus.Contracts;
 public readonly record struct WalkStamp(MapId Map, long MapRevision, long WorldInstance, ulong Continuity, ulong Tick);
 
 public enum WalkPresence : byte { Absent, Pending, Live }
-public enum WalkMotion : byte { Ground, Air, Wade, SurfaceSwim, ExitCandidate }
-public enum WalkPosture : byte { Standing, Crouching, Swimming }
+public enum WalkMotion : byte { Ground, Air, Wade }
+public enum WalkPosture : byte { Standing, Crouching }
 [Flags]
 public enum WalkHold : ushort
 {
-    None = 0, CollisionNotReady = 1, WaterNotReady = 2,
+    None = 0, CollisionNotReady = 1,
     MapTransition = 4, PhysicsPaused = 8, PlacementInvalid = 16
 }
 public enum WalkTransition : byte { None, Landing, SafetyReturn, Elevator }
@@ -25,20 +25,12 @@ public enum WalkReset : byte
 public readonly record struct WalkBodyShape(float Radius, float Height);
 public readonly record struct WalkSupport(Vector3 Point, Vector3 Normal, SurfaceTag Tag, NavSpace? Space);
 
-/// <summary>Confirmed physical water contact; an unavailable query is represented by WalkHold, never by inventing zero water height.</summary>
-/// <param name="FeetDepth">max(SurfaceY - Feet.Y, 0), approximately 0.75 m during surface swimming.</param>
-/// <param name="ColumnDepth">SurfaceY minus the available standing support or bottom; the 1.05/0.95 m posture thresholds use this depth.</param>
-public readonly record struct WalkWaterContact(
-    FeatureId Water, string VolumeId, string? SwimAreaId, float SurfaceY,
-    float FeetDepth, float ColumnDepth, WaterAccess Access, string? ExitId);
-
 /// <summary>WP-42's committed physical truth, published on the main thread at the end of a fixed physics step.</summary>
 /// <remarks>
 /// Feet is the active cylinder's bottom centre; PhysicalEye is not interpolated. Velocity is actual accepted motion,
 /// not input intent or a camera-arm velocity; a relocation never becomes a large velocity.
 /// Mode/Presence gate all position, shape, support and phase fields. Absent/Pending values are not usable physical evidence.
-/// StepPhase is the same phi as IWalkTelemetry; floating swimming does not advance it. NextFoot is Left/Right or null.
-/// StrokePhase is controlled by physical swim travel; idle animation and render frame rate never create Stroke events.
+/// StepPhase is the same phi as IWalkTelemetry. NextFoot is Left/Right or null.
 /// Body visibility is not a field: disabling the model must not change physical perception or the simulation.
 /// </remarks>
 public readonly record struct WalkSnapshot(
@@ -60,10 +52,7 @@ public readonly record struct WalkSnapshot(
     NavSpace? Space,
     WalkSupport? Support,
     float StepPhase,
-    FootSide? NextFoot,
-    float StrokePhase,
-    bool Stroking,
-    WalkWaterContact? Water)
+    FootSide? NextFoot)
 {
     /// <summary>Only a validated Walk body in Playing is perceptible; the producer encodes that admission in Presence.</summary>
     public bool Perceptible => Mode switch
@@ -74,7 +63,7 @@ public readonly record struct WalkSnapshot(
     };
 
     /// <summary>Whether a consumer may interpolate continuous values from the immediately previous publication.</summary>
-    /// <remarks>Discrete state, space, shape and water identity are always read from Current.</remarks>
+    /// <remarks>Discrete state, space and shape are always read from Current.</remarks>
     public bool CanInterpolateFrom(in WalkSnapshot previous) =>
         Perceptible && previous.Perceptible &&
         Stamp.Map == previous.Stamp.Map && Stamp.MapRevision == previous.Stamp.MapRevision &&

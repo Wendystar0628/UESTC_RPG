@@ -24,9 +24,8 @@ public sealed class WalkSnapshotStub(IWorldState world, IMapService maps, IViewC
                 Stamp = new(maps.Current, maps.Rev, world.Instance, 0, 0),
                 Mode = mode,
                 Presence = presence,
-                Hold = WalkHold.CollisionNotReady | WalkHold.WaterNotReady,
+                Hold = WalkHold.CollisionNotReady,
                 Support = null,
-                Water = null,
                 NextFoot = null
             };
         }
