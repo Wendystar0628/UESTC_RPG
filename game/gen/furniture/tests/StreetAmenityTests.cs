@@ -124,7 +124,7 @@ public sealed class StreetAmenityTests
             AssertThat(machines[0].Pad is { } bay && MathF.Abs(bay.Top - machines[0].Part.At.M42) < TestTolerance.Position).OverrideFailureMessage($"{group.Key} is off its bay").IsTrue();
             AssertThat(machines.All(m => Serves(m, FurnitureStyle.ServiceFront))).OverrideFailureMessage($"{group.Key} does not face the paving or the road").IsTrue();
             var centre = machines.Aggregate(Vector2.Zero, (a, m) => a + m.Anchor) / machines.Count;
-            AssertThat(axis.All(l => (float)PlanGeometry.Project(l.Line.Points, centre).Distance >= FurnitureStyle.MainAxisClear - FurnitureStyle.ServiceReach - 2f)).OverrideFailureMessage($"{group.Key} stands on the main axis").IsTrue();
+            AssertThat(axis.All(l => (float)PlanLines.Project(l.Line.Points, centre).Distance >= FurnitureStyle.MainAxisClear - FurnitureStyle.ServiceReach - 2f)).OverrideFailureMessage($"{group.Key} stands on the main axis").IsTrue();
             var siteId = group.Key["vending:".Length..];
             if (world.Features.TryGetValue(new(siteId), out var feature) && feature.Kind.Value == "clusterGate")
             {
@@ -194,7 +194,7 @@ public sealed class StreetAmenityTests
                 AssertThat(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - TestTolerance.Position).OverrideFailureMessage($"{m.Key} is inside the cluster").IsTrue();
             var facing = Front(m.Part.At);
             AssertThat(MathF.Abs(facing.X) > 0.99f && Vector2.Dot(facing, new Vector2(spot.X - m.Anchor.X, 0f)) > 0f).OverrideFailureMessage($"{m.Key} does not face the road").IsTrue();
-            AssertThat((float)PlanGeometry.Project(road.Line.Points, m.Anchor).Distance - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - TestTolerance.Layout).OverrideFailureMessage($"{m.Key} crowds the road").IsTrue();
+            AssertThat((float)PlanLines.Project(road.Line.Points, m.Anchor).Distance - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - TestTolerance.Layout).OverrideFailureMessage($"{m.Key} crowds the road").IsTrue();
         }
         AssertThat(layout.Items.Any(i => i.Key == "locker:design:furniture-test-gate")).OverrideFailureMessage("the first closed gate's group has no locker beside it").IsTrue();
     }

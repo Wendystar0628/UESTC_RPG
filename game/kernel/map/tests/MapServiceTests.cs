@@ -495,6 +495,12 @@ public sealed class MapServiceTests
         public void DelayMount() => _delayMount = true;
         public void ReleaseMount() => _mount!.TrySetResult();
         public void FailMount(string message) => _mount!.TrySetException(new InvalidDataException(message));
+        public string DescribeReadiness() => $"mountReady={MountReady},arrival={Arrival?.Done.Status}";
+        public Task ShutdownAsync(MapId map)
+        {
+            Arrival?.Cancel();
+            return Task.CompletedTask;
+        }
         public Task Mount(IMapContext context)
         {
             Mounted.Add(context.Descriptor.Id);

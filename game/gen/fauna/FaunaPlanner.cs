@@ -132,7 +132,7 @@ public static class FaunaPlanner
             if (Inside(b, mid + outward * 0.3f)) outward = -outward;
             var spot = mid + outward * S.CatDoorOffset;
             // Without a road network (a stub world) the longest free wall stands in for the door side.
-            var d = roads.Length == 0 ? -length : roads.Min(r => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(r.Line.Points, spot)) - r.Width * 0.5f);
+            var d = roads.Length == 0 ? -length : roads.Min(r => MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line.Points, spot)) - r.Width * 0.5f);
             if ((roads.Length > 0 && (d > S.CatRoadReach || d < 0.8f)) || d >= bestD) continue;
             if (!free(spot) || !free(spot + along * 0.6f) || !free(spot - along * 0.6f) || !free(spot + outward * S.CatNightOut)) continue;
             bestD = d;
@@ -253,7 +253,7 @@ public static class FaunaPlanner
             foreach (var (t, turn) in new[] { (0.36f, 0.5f), (0.41f, -0.6f) })
             {
                 var sample = points.Skip(1).Any(vertex => vertex != points[0])
-                    ? PlanGeometry.Sample(points, PlanGeometry.Length(points) * t)
+                    ? PlanLines.Sample(points, PlanLines.Length(points) * t)
                     : new PlanLineSample(points[0], Vector2.UnitX, 0);
                 var p = sample.Point;
                 var dir = sample.Tangent;

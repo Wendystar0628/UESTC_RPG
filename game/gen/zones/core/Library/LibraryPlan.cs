@@ -251,7 +251,7 @@ public sealed class LibraryPlan
         Vector2 Intersect(int e0, float s0, int e1, float s1)
         {
             var a = Line(e0, s0); var b = Line(e1, s1);
-            return PlanGeometry.LineIntersection(a.P, a.D, b.P, b.D, 1e-6f) ?? b.P;
+            return PlanLines.LineIntersection(a.P, a.D, b.P, b.D, 1e-6f) ?? b.P;
         }
         var result = new List<Vector2> { Intersect(start + n - 1, 0f, start, setback) };
         for (var k = 1; k < count; k++) result.Add(Intersect(start + k - 1, setback, start + k, setback));

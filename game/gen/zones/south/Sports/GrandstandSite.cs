@@ -418,7 +418,7 @@ public sealed class GrandstandSite : ZoneSite
     private static float? RayStation(Vector2 origin, Vector2 direction, Vector2 a, Vector2 b)
     {
         var edge = b - a;
-        if (PlanGeometry.LineIntersection(origin, direction, a, edge, 1e-9f) is not { } hit) return null;
+        if (PlanLines.LineIntersection(origin, direction, a, edge, 1e-9f) is not { } hit) return null;
         var station = Vector2.Dot(hit - origin, direction);
         var alongEdge = Vector2.Dot(hit - a, edge);
         return station > 0 && alongEdge >= 0 && alongEdge <= edge.LengthSquared() ? station : null;

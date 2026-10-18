@@ -168,7 +168,8 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void LampEncodingKeepsLegacyFloatBitsAndRejectsUnassignedPackedValues()
     {
         for (var sample = 0; sample < TestSamples.PerProperty; sample++)

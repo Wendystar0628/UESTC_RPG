@@ -39,7 +39,7 @@ public sealed class WaterMapDataTests
                     area += MathF.Abs((m.Position[3 * b + 2] - m.Position[3 * a + 2]) * (m.Position[3 * c] - m.Position[3 * a]) -
                         (m.Position[3 * b] - m.Position[3 * a]) * (m.Position[3 * c + 2] - m.Position[3 * a + 2])) * 0.5f;
                 }
-                AssertThat(MathF.Abs(area - m.Body.Area) > MathF.Max(1f, m.Body.Area * 2e-3f)).OverrideFailureMessage($"{m.Body.Id.Value}: mesh area {area} != polygon area {m.Body.Area}").IsFalse();
+                AssertThat(MathF.Abs(area - m.Body.Area) > MathF.Max(MathF.Pow(20 * TestTolerance.Layout, 2), m.Body.Area * 20 * TestTolerance.FloatRelative)).OverrideFailureMessage($"{m.Body.Id.Value}: mesh area {area} != polygon area {m.Body.Area}").IsFalse();
             }
             checkedMaps++;
         }

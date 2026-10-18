@@ -112,7 +112,7 @@ public sealed partial class CenterEastModuleTests
         foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
         {
             var built = Area(site.Footprints(world).Hall);
-            AssertThat(MathF.Abs(Area(Outline(site.HallId)) - built) < 0.03f * built).OverrideFailureMessage($"{site.HallId} outline matches the built hall").IsTrue();
+            AssertThat(MathF.Abs(Area(Outline(site.HallId)) - built) < TestTolerance.Proportion * built).OverrideFailureMessage($"{site.HallId} outline matches the built hall").IsTrue();
         }
     }
 
@@ -168,7 +168,8 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BuildIsDeterministic()
     {
         var ctx = Context();

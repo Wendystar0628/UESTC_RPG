@@ -78,7 +78,8 @@ public sealed class StreetPartsTests
             }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
         var first = StreetGallery.CreateExamples(); var second = StreetGallery.CreateExamples();

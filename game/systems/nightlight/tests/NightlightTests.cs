@@ -75,7 +75,8 @@ public sealed class NightlightTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void ValuesDependOnStateNotOnHistory()
     {
         var a = Default();
@@ -286,8 +287,8 @@ public sealed class NightlightTests
 
     /// <summary>与 lamp.gdshaderinc 的 lamp_level 同一写法：开灯（太阳高度低于 θ）与保留比例（smoothstep(κ, κ + Δ, L)）。</summary>
     private static (float On, float Keep) LampState(LampRecord l, float heff, Vector2 channel) =>
-        (1f - ScheduleMath.SmoothStep(l.ThresholdDeg - 0.08f, l.ThresholdDeg + 0.08f, heff),
-         ScheduleMath.SmoothStep(l.Keep, l.Keep + Math.Max(channel.Y, 1e-3f), channel.X));
+        (1f - ScalarMath.Smoothstep(l.ThresholdDeg - 0.08f, l.ThresholdDeg + 0.08f, heff),
+         ScalarMath.Smoothstep(l.Keep, l.Keep + Math.Max(channel.Y, 1e-3f), channel.X));
 
     [TestCase]
     [TestCategory(TestReason.Contract)]

@@ -25,6 +25,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private FrameStatistics? _statistics;
     private IAppFlow? _flow;
     private IMapRuntime? _mapRuntime;
+    private IMapLifetime? _mapLifetime;
     private bool _ready;
     private bool _closing;
     private bool _cpuCommand;
@@ -114,6 +115,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _mapRuntime = registry.Get<IMapRuntime>();
+        _mapLifetime = registry.Get<IMapLifetime>();
         view.Bind(registry.Get<ICameraRig>());
         _statistics = new(GetViewport());
         _statistics.Enable();
@@ -320,10 +322,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var textures = _runtimeObjects.OfType<IGlobalDataTextureRegistry>().SingleOrDefault();
         try
         {
-            if (_mapRuntime is MapRuntime runtime)
+            if (_mapLifetime is { } lifetime)
             {
                 var maps = Services.Get<IMapService>();
-                await runtime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
+                await lifetime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
             }
         }
         catch (Exception error) { failures.Add(error); }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Gen.Geometry;
 
@@ -20,10 +21,9 @@ public static partial class PlanGeometry
     internal static Vector3 Quantize(Vector3 p) => new(Quantize(p.X), Quantize(p.Y), Quantize(p.Z));
     internal static double Cross(Vector2 a, Vector2 b) => (double)a.X * b.Y - (double)a.Y * b.X;
     internal static double Dot(Vector2 a, Vector2 b) => (double)a.X * b.X + (double)a.Y * b.Y;
-    internal static float Length(Vector2 p) => (float)Math.Sqrt(Dot(p, p));
     internal static Vector2 Unit(Vector2 p)
     {
-        float length = Length(p);
+        float length = VectorMath.Length(p);
         if (length < 0.001f) throw new ArgumentException("A plan direction cannot have zero length.");
         return new(p.X / length, p.Y / length);
     }
@@ -90,8 +90,8 @@ public static partial class PlanGeometry
     internal static bool OnSegment(Vector2 p, Vector2 a, Vector2 b, float tolerance = Tolerance)
     {
         Vector2 d = b - a;
-        float length = Length(d);
-        if (length < 0.001f) return Length(p - a) <= tolerance;
+        float length = VectorMath.Length(d);
+        if (length < 0.001f) return VectorMath.Length(p - a) <= tolerance;
         return Math.Abs(Cross(d, p - a)) <= length * tolerance &&
             Dot(p - a, d) >= -length * tolerance && Dot(p - b, d) <= length * tolerance;
     }

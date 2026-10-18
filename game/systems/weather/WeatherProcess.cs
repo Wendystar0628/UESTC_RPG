@@ -83,7 +83,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
             }
             double total = _jumpTo.Value - _jumpFrom!.Value;
             float progress = (float)((t.WorldHours - _jumpFrom.Value) / total);
-            Now = WeatherVectors.Lerp(_jumpVector, Vector(t.TargetHours), WeatherVectors.Smooth((progress - .3f) / .5f));
+            Now = WeatherVectors.Lerp(_jumpVector, Vector(t.TargetHours), ScalarMath.Smoothstep((progress - .3f) / .5f));
         }
         else
         {
@@ -92,7 +92,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
             if (_blendElapsed < 3)
             {
                 _blendElapsed = Math.Min(3, _blendElapsed + t.RealDt);
-                Now = WeatherVectors.Lerp(_blendFrom, target, WeatherVectors.Smooth((float)(_blendElapsed / 3)));
+                Now = WeatherVectors.Lerp(_blendFrom, target, ScalarMath.Smoothstep((float)(_blendElapsed / 3)));
             }
             else Now = target;
         }

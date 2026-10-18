@@ -106,8 +106,9 @@ public sealed class NorthModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory("Slow")]
+    [TestCategory(TestReason.Contract)]
     public void BuildIsDeterministic()
     {
         var ctx = Context();
@@ -134,7 +135,7 @@ public sealed class NorthModuleTests
     private static bool Covers(Collider c, Vector2 p, float slack) => c switch
     {
         BoxCollider box => InBox(box, p, slack),
-        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + slack,
+        WallCollider wall => MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + slack,
         _ => false,
     };
 

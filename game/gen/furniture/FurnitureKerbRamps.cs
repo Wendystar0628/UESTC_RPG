@@ -35,7 +35,7 @@ public static partial class FurniturePlanner
             foreach (var line in lines)
                 for (var i = 1; i < points.Count; i++)
                     for (var j = 1; j < line.Line.Points.Count; j++)
-                        if (PlanGeometry.SegmentIntersection(points[i - 1], points[i], line.Line.Points[j - 1], line.Line.Points[j], 1e-6f) is { } x) spots.Add((x, true));
+                        if (PlanLines.SegmentIntersection(points[i - 1], points[i], line.Line.Points[j - 1], line.Line.Points[j], 1e-6f) is { } x) spots.Add((x, true));
             foreach (var (spot, crossing) in spots)
             {
                 if (Nearest(lines, spot) is not { } near) continue;
@@ -61,7 +61,7 @@ public static partial class FurniturePlanner
                     }
                     if (found is not { } centre) { verge++; continue; }
                     if (placed.Any(q => Vector2.Distance(q, centre) < S.RampGap)) { crowded++; continue; }
-                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetSite.Carriageway(o) && MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(o.Line.Points, centre)) < StreetSite.HalfWidth(o) + p.Width * 0.5f))
+                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetSite.Carriageway(o) && MathF.Sqrt(PlanLines.PolylineDistanceSquared(o.Line.Points, centre)) < StreetSite.HalfWidth(o) + p.Width * 0.5f))
                     {
                         junction++;
                         continue;
@@ -82,7 +82,7 @@ public static partial class FurniturePlanner
         var bestD = float.MaxValue;
         foreach (var line in lines)
         {
-            var near = PlanGeometry.Project(line.Line.Points, p);
+            var near = PlanLines.Project(line.Line.Points, p);
             var d = Vector2.DistanceSquared(p, near.Point);
             if (d >= bestD) continue;
             bestD = d;

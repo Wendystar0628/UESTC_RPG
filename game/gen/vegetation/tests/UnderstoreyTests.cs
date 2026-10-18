@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Campus.Gen.Geometry;
 using System;
 using System.Collections.Generic;
@@ -62,7 +63,12 @@ public sealed class UnderstoreyTests
     [TestCategory("Slow")]
     public void TheTwoLibraryCamphorsArePlanted()
     {
-        foreach (var id in new[] { "design:core-library-camphor-1", "design:core-library-camphor-2" })
+        using var overlay = JsonDocument.Parse(RealMapFixture.ReadFiles()["overlay/core.d/0000-wp-16-base.json"]);
+        var ids = overlay.RootElement.GetProperty("ops").EnumerateArray()
+            .Where(op => op.TryGetProperty("kind", out var kind) && kind.GetString() == "tree"
+                && op.GetProperty("props").GetProperty("species").GetString() == "camphor")
+            .Select(op => op.GetProperty("id").GetString()!).ToArray();
+        foreach (var id in ids)
         {
             var tree = PavementTests.OverlaidLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
             var feature = PavementTests.World(true).Features.Values.Single(f => f.Id.Value == id);
@@ -131,7 +137,7 @@ public sealed class UnderstoreyTests
             {
                 var r = road.Width * 0.5f;
                 for (var i = 1; i < road.Line.Points.Count; i++)
-                    if (PlanGeometry.SegmentDistanceSquared(at, road.Line.Points[i - 1], road.Line.Points[i]) < r * r)
+                    if (PlanLines.SegmentDistanceSquared(at, road.Line.Points[i - 1], road.Line.Points[i]) < r * r)
                         throw new InvalidOperationException($"{p.Key} stands on {road.Id.Value}");
             }
         }

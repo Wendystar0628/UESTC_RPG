@@ -5,14 +5,6 @@ namespace Campus.Systems.Nightlight.Schedule;
 /// <summary>时刻表用到的纯函数：与着色器一侧（lamp_heff、窗灯 smoothstep）同一写法，G2 用同一组输入比对两边。</summary>
 public static class ScheduleMath
 {
-    /// <summary>Hermite smoothstep；允许 edge0 &gt; edge1（这时随 x 增大而减小），与 GLSL 在 edge0 &lt; edge1 时一致。</summary>
-    public static float SmoothStep(float edge0, float edge1, float x)
-    {
-        if (edge0 == edge1) return x < edge0 ? 0f : 1f;
-        var t = Math.Clamp((x - edge0) / (edge1 - edge0), 0f, 1f);
-        return t * t * (3f - 2f * t);
-    }
-
     /// <summary>有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER、SYS-TIME）。</summary>
     public static float EffectiveSun(float sunAltDeg, float overcast, float precip, EffectiveSunSpec spec) =>
         sunAltDeg - spec.OvercastDeg * Math.Clamp(overcast, 0f, 1f) - spec.PrecipDeg * Math.Clamp(precip, 0f, 1f);

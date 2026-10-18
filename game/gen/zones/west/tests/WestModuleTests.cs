@@ -104,8 +104,8 @@ public sealed class WestModuleTests
         var world = World();
         float Reach(string key) => S.BaseHeight + SixSite.Style(SixSite.Blocks.Single(k => k.Key == key).Upper(world)).Top;
         float a = Reach("a"), b = Reach("b"), c = Reach("c");
-        AssertThat(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 0.6f).OverrideFailureMessage($"A reaches its data height, got {a}").IsTrue();
-        AssertThat(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f).OverrideFailureMessage($"B reaches its data height, got {b}").IsTrue();
+        AssertThat(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 12 * TestTolerance.Layout).OverrideFailureMessage($"A reaches its data height, got {a}").IsTrue();
+        AssertThat(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 12 * TestTolerance.Layout).OverrideFailureMessage($"B reaches its data height, got {b}").IsTrue();
         AssertThat(a > b && a > c + S.SignRise).OverrideFailureMessage("A stays the tallest, above C's crown sign").IsTrue();
         // The glass base sits back from the stone line by the recess on every face.
         foreach (var k in SixSite.Blocks)
@@ -150,7 +150,8 @@ public sealed class WestModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BuildIsDeterministic()
     {
         var ctx = Context();
@@ -275,7 +276,7 @@ public sealed class WestModuleTests
             var road = terrainWorld.Network.Roads.Single(item => item.Id.Value == id).Line.Points;
             return Enumerable.Range(0, road.Count - 1)
                 .SelectMany(i => Enumerable.Range(0, boundary.Count).Select(j =>
-                    PlanGeometry.SegmentIntersection(road[i], road[i + 1], boundary[j], boundary[(j + 1) % boundary.Count], 1e-6f)))
+                    PlanLines.SegmentIntersection(road[i], road[i + 1], boundary[j], boundary[(j + 1) % boundary.Count], 1e-6f)))
                 .First(point => point.HasValue)!.Value;
         }).ToArray();
         var points = file.Ops.SelectMany(Points).ToArray();
@@ -357,7 +358,7 @@ public sealed class WestModuleTests
     // ---- helpers ----
 
     private static bool Near(Vector2 a, Vector2 b, Vector2 p, float radius) =>
-        PlanGeometry.SegmentDistanceSquared(p, a, b) < radius * radius;
+        PlanLines.SegmentDistanceSquared(p, a, b) < radius * radius;
 
     private static byte[] Bytes(BuildContext ctx, IEnumerable<TileKey> cells)
     {

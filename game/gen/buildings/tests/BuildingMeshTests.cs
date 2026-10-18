@@ -86,7 +86,8 @@ public sealed class BuildingMeshTests
             }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsDeterministic()
     {
         var world1 = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 21f, storeys: 6));

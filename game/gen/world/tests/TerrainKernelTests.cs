@@ -43,7 +43,8 @@ public sealed class TerrainKernelTests
         catch (ArgumentOutOfRangeException) { }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SharedEdgesAndRepeatedQueriesHaveIdenticalCentimetres()
     {
         var terrain = Mound();

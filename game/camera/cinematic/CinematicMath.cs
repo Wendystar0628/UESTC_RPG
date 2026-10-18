@@ -7,11 +7,10 @@ namespace Campus.Camera.Cinematic;
 /// <summary>Pure cinematic math shared by sampling and semantic checks.</summary>
 public static class CinematicMath
 {
-    public static float Smooth(float t) { t = Math.Clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); }
     public static float Ease(float t, CinematicEase? easing)
     {
         t = Math.Clamp(t, 0, 1);
-        if (easing?.Bezier is not { } p) return Smooth(t);
+        if (easing?.Bezier is not { } p) return ScalarMath.Smootherstep(t);
         var lo = 0f; var hi = 1f;
         for (var i = 0; i < 20; i++)
         {

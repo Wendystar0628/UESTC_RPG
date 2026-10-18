@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using System.Numerics;
 using Campus.Gen.Geometry;
 
@@ -56,7 +57,7 @@ public static class WaterMesher
             float sxx = 0f, sxz = 0f, szz = 0f;
             foreach (var s in shores)
             {
-                var d = PlanGeometry.SegmentDistanceSquared(v, s.A, s.B);
+                var d = PlanLines.SegmentDistanceSquared(v, s.A, s.B);
                 if (d < best) best = d;
                 if (body.Kind != WaterKind.Channel || d > FlowReach * FlowReach) continue;
                 // Orientation tensor of the nearby banks: the long banks outweigh an end cap or a joint.

@@ -53,7 +53,7 @@ public sealed class WaterMesherTests
         {
             var mesh = WaterMesher.Build(body, Shapes);
             var area = MeshArea(mesh);
-            AssertThat(MathF.Abs(area - body.Area) > body.Area * 0.01f).OverrideFailureMessage($"{body.Id.Value}: mesh area {area} != polygon area {body.Area}").IsFalse();
+            AssertThat(MathF.Abs(area - body.Area) > body.Area * 100 * TestTolerance.FloatRelative).OverrideFailureMessage($"{body.Id.Value}: mesh area {area} != polygon area {body.Area}").IsFalse();
         }
     }
 
@@ -142,7 +142,8 @@ public sealed class WaterMesherTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SameInputGivesTheSameBytes()
     {
         var first = WaterMesher.Build(Shapes[1], Shapes);

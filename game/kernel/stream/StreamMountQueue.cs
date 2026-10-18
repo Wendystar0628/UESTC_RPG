@@ -75,7 +75,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         for (var i = 0; i < _pending.Count;)
         {
             var work = _pending[i];
-            if (work is VisualMountWork { IsCancelled: true }) { _pending.RemoveAt(i); continue; }
+            if (work is IStreamMountCancellationState { IsCancelled: true }) { _pending.RemoveAt(i); continue; }
             if (work.Revision != Revision) { work.Cancel(); _pending.RemoveAt(i); continue; }
             var elapsed = _clock() - start;
             var remaining = _settings.MountMilliseconds - elapsed;
@@ -107,7 +107,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             }
         }
         if (blockedByRetirement || retiring && !visualUsed &&
-            _pending.Any(work => work.Kind == StreamMountKind.Visual && work is not VisualMountWork { IsCancelled: true }))
+            _pending.Any(work => work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }))
             BlockedByRetirementFrames++;
         finish?.Invoke(_watchdog.CanActivate(start)
             ? Math.Max(0, _settings.MountMilliseconds - (_clock() - start)) : 0);

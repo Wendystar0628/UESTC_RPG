@@ -39,8 +39,8 @@ internal static class RoadGraph
     public static (Vector2? Point, Vector2 Dir) Walk(Vector2[] points, int vertex, bool forward, float d)
     {
         var arm = forward ? points[vertex..] : points[..(vertex + 1)].Reverse().ToArray();
-        if (arm.Length < 2 || d > PlanGeometry.Length(arm)) return (null, Vector2.UnitX);
-        var sample = PlanGeometry.Sample(arm, d);
+        if (arm.Length < 2 || d > PlanLines.Length(arm)) return (null, Vector2.UnitX);
+        var sample = PlanLines.Sample(arm, d);
         return (sample.Point, sample.Tangent);
     }
 
@@ -85,7 +85,7 @@ internal static class RoadGraph
         var radius = Math.Clamp(MathF.Min(a.Half, b.Half) * 1.4f, 4f, 8f);
         var na = new Vector2(-a.Dir.Y, a.Dir.X);   // a's kerb side facing b
         var nb = new Vector2(b.Dir.Y, -b.Dir.X);   // b's kerb side facing a
-        if (PlanGeometry.LineIntersection(node + na * (a.Half + radius), a.Dir, node + nb * (b.Half + radius), b.Dir, 1e-5f) is not { } centre) return null;
+        if (PlanLines.LineIntersection(node + na * (a.Half + radius), a.Dir, node + nb * (b.Half + radius), b.Dir, 1e-5f) is not { } centre) return null;
         var t1 = centre - na * radius;
         var t2 = centre - nb * radius;
         // Tangent points must lie on the arms, within their straight-ish first stretch.
@@ -110,7 +110,7 @@ internal static class RoadGraph
     private static float ArmLength(Arm arm)
     {
         var points = arm.Road.Points;
-        return (float)PlanGeometry.Length(arm.Forward ? points[arm.Vertex..] : points[..(arm.Vertex + 1)]);
+        return (float)PlanLines.Length(arm.Forward ? points[arm.Vertex..] : points[..(arm.Vertex + 1)]);
     }
 
     /// <summary>Monotonic in the angle of (x, z), in [0, 4); no trigonometry.</summary>

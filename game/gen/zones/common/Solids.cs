@@ -44,7 +44,7 @@ public static class Solids
                 var a = 2f * MathF.PI * (i % segments) / segments;
                 float c = MathF.Cos(a), s = MathF.Sin(a);
                 var r = profile[k].X;
-                var normal = Unit(new(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz));
+                var normal = VectorMath.Unit(new Vector3(c * normals[k].X / sx, normals[k].Y, s * normals[k].X / sz), Vector3.UnitY, minimumLength: 1e-12f);
                 rings[k][i] = m.Vertex(new(c * r * sx, profile[k].Y, s * r * sz), normal, new(2f * MathF.PI * i / segments, arc));
             }
         }
@@ -118,7 +118,7 @@ public static class Solids
                 var j = i % segments;
                 var around = p[k, (j + 1) % segments] - p[k, (j + segments - 1) % segments];
                 var up = p[Math.Min(n - 1, k + 1), j] - p[Math.Max(0, k - 1), j];
-                var normal = Unit(new(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X));
+                var normal = VectorMath.Unit(new Vector3(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X), Vector3.UnitY, minimumLength: 1e-12f);
                 var radial = p[k, j] - centres[k];
                 if (normal.X * radial.X + normal.Z * radial.Z < 0) normal = -normal;
                 if (Pole(p, centres, k)) normal = new(0, k == 0 ? -1 : 1, 0);
@@ -161,11 +161,6 @@ public static class Solids
         for (var i = 0; i < segments; i++) m.Triangle(centre, ring[i], ring[(i + 1) % segments], normal);
     }
 
-    internal static Vector3 Unit(Vector3 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-        return length > 1e-12f ? new(v.X / length, v.Y / length, v.Z / length) : Vector3.UnitY;
-    }
 }
 
 /// <summary>

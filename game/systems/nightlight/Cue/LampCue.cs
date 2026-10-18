@@ -1,5 +1,5 @@
+using Campus.Contracts;
 using Campus.Contracts.Cinematic;
-using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Schedule;
 
 namespace Campus.Systems.Nightlight.Cue;
@@ -22,7 +22,9 @@ public sealed class LampCue
         if (def.Front.Count == 0) throw new ArgumentException("A lamp cue needs at least one front key.", nameof(def));
         if (!float.IsFinite(targetSunDeg)) throw new ArgumentOutOfRangeException(nameof(targetSunDeg));
         _def = def;
-        _length = LampSetBuilder.RouteLength(def.Route);
+        if (!def.Route.Skip(1).Any(point => point != def.Route[0]))
+            throw new ArgumentException("A lamp cue route must have a positive length.", nameof(def));
+        _length = (float)PlanLines.Length(def.Route);
         if (_length <= 0f) throw new ArgumentException("A lamp cue route must have a positive length.", nameof(def));
         TargetSunDeg = targetSunDeg;
     }

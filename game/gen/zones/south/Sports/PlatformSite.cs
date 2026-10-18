@@ -123,7 +123,7 @@ public sealed class PlatformSite : ZoneSite
             {
                 var c = Vector2.Lerp(e.A, e.B, (P.ColumnEnd + (e.Length - 2f * P.ColumnEnd) * k / n) / e.Length) - e.Out * P.ColumnInset;
                 if (PlanGeometry.InsideByCrossings(core, c) || !decks.Any(r => PlanGeometry.InsideByCrossings(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
-                if (roads.Any(r => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(r.Line, c)) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
+                if (roads.Any(r => MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line, c)) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
                 if (stairs.Any(s => InStair(s, c, 1.0f))) continue;
                 columns.Add(c);
             }

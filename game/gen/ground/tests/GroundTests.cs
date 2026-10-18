@@ -109,7 +109,8 @@ public sealed class GroundTests
         AssertThat(found).OverrideFailureMessage("No kerb face found along the road edge.").IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BuildsAreDeterministic()
     {
         var a = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);

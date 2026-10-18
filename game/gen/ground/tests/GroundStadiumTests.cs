@@ -135,7 +135,7 @@ public sealed class GroundStadiumTests
         foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
         foreach (var mesh in marking)
             for (var v = 0; v < mesh.Position.Length / 3; v++)
-                AssertThat(Math.Abs((double)(Section.PavingY + Section.DecalLift) - (double)(mesh.Position[3 * v + 1])) <= 0.001).OverrideFailureMessage($"pitch line height above flat ground: expected {Section.PavingY + Section.DecalLift}, got {mesh.Position[3 * v + 1]}.").IsTrue();
+                AssertThat(Math.Abs((double)(Section.PavingY + Section.DecalLift) - (double)(mesh.Position[3 * v + 1])) <= Campus.Gen.Geometry.PlanGeometry.Tolerance).OverrideFailureMessage($"pitch line height above flat ground: expected {Section.PavingY + Section.DecalLift}, got {mesh.Position[3 * v + 1]}.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -71,7 +71,7 @@ public static class Contour
     /// <summary>Equal arc-length facade cells, retaining each source vertex inside its cell.</summary>
     public static IReadOnlyList<Vector2[]> Cells(IReadOnlyList<Vector2> ring, float pitch)
     {
-        var total = PlanGeometry.Length(ring, closed: true);
+        var total = PlanLines.Length(ring, closed: true);
         var count = Math.Max(1, (int)Math.Round(total / pitch));
         var stations = new double[ring.Count];
         for (var i = 1; i < ring.Count; i++) stations[i] = stations[i - 1] + Vector2.Distance(ring[i - 1], ring[i]);
@@ -79,16 +79,16 @@ public static class Contour
         {
             var start = total * c / count;
             var end = total * (c + 1) / count;
-            return new[] { PlanGeometry.Sample(ring, start, closed: true).Point }
+            return new[] { PlanLines.Sample(ring, start, closed: true).Point }
                 .Concat(Enumerable.Range(1, ring.Count - 1).Where(i => stations[i] > start + 1e-3 && stations[i] < end - 1e-3).Select(i => ring[i]))
-                .Append(PlanGeometry.Sample(ring, end, closed: true).Point).ToArray();
+                .Append(PlanLines.Sample(ring, end, closed: true).Point).ToArray();
         }).ToArray();
     }
 
     /// <summary>Point and outward normal halfway along a glazing cell.</summary>
     public static (Vector2 Point, Vector2 Out) Middle(IReadOnlyList<Vector2> cell)
     {
-        var sample = PlanGeometry.Sample(cell, PlanGeometry.Length(cell) * 0.5);
+        var sample = PlanLines.Sample(cell, PlanLines.Length(cell) * 0.5);
         return (sample.Point, new(sample.Tangent.Y, -sample.Tangent.X));
     }
 
@@ -115,8 +115,8 @@ public static class Contour
             m.Quad(m.Vertex(new(a.X, y0, a.Y), na, new(0, 0)), m.Vertex(new(b.X, y0, b.Y), nb, new(1, 0)),
                 m.Vertex(new(b.X, sideTop, b.Y), nb, new(1, 1)), m.Vertex(new(a.X, sideTop, a.Y), na, new(0, 1)), outward);
             if (chamfer > 0)
-                m.Quad(m.Vertex(new(a.X, sideTop, a.Y), Solids.Unit(na + up), new(0, 0)), m.Vertex(new(b.X, sideTop, b.Y), Solids.Unit(nb + up), new(1, 0)),
-                    m.Vertex(new(top[j].X, y1, top[j].Y), Solids.Unit(nb + up), new(1, 1)), m.Vertex(new(top[i].X, y1, top[i].Y), Solids.Unit(na + up), new(0, 1)), outward + up);
+                m.Quad(m.Vertex(new(a.X, sideTop, a.Y), VectorMath.Unit(na + up, Vector3.UnitY, minimumLength: 1e-12f), new(0, 0)), m.Vertex(new(b.X, sideTop, b.Y), VectorMath.Unit(nb + up, Vector3.UnitY, minimumLength: 1e-12f), new(1, 0)),
+                    m.Vertex(new(top[j].X, y1, top[j].Y), VectorMath.Unit(nb + up, Vector3.UnitY, minimumLength: 1e-12f), new(1, 1)), m.Vertex(new(top[i].X, y1, top[i].Y), VectorMath.Unit(na + up, Vector3.UnitY, minimumLength: 1e-12f), new(0, 1)), outward + up);
         }
         if (caps)
         {

@@ -43,7 +43,7 @@ internal static class GroundSources
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
-            var points = PlanGeometry.CleanPath(line.Line.Points);
+            var points = PlanLines.CleanPath(line.Line.Points);
             if (points.Length < 2) continue;
             var type = GroundClassifier.RoadType(line.Props);
             var width = GroundClassifier.Width(line.Props, type, line.Width);
@@ -182,7 +182,7 @@ internal static class GroundSources
             if (shape is null) return;
             shape.PartSourceId = source.PartSourceId;
             if (shape.DirectionPath is null && source.Geometry is PolylineGeometry line)
-                shape.DirectionPath = PlanGeometry.CleanPath(line.Line.Points);
+                shape.DirectionPath = PlanLines.CleanPath(line.Line.Points);
             shapes.Add(shape);
         }
         switch (source.Geometry)
@@ -219,12 +219,12 @@ internal static class GroundSources
     internal static GroundShape? Polygon(FeatureId id, SurfaceKind kind, PolygonRings rings, bool marked = false, PitProfile? pit = null)
     {
         var list = new List<Vector2[]>();
-        var outer = PlanGeometry.CleanPath(rings.Outer);
+        var outer = PlanLines.CleanPath(rings.Outer);
         if (outer.Length < 3) return null;
         list.Add(outer);
         foreach (var hole in rings.Holes)
         {
-            var h = PlanGeometry.CleanPath(hole);
+            var h = PlanLines.CleanPath(hole);
             if (h.Length >= 3) list.Add(h);
         }
         var min = outer[0];
@@ -235,7 +235,7 @@ internal static class GroundSources
 
     private static GroundShape? Capsule(FeatureId id, SurfaceKind kind, IReadOnlyList<Vector2> line, float width)
     {
-        var points = PlanGeometry.CleanPath(line);
+        var points = PlanLines.CleanPath(line);
         if (points.Length < 2 || !(width > 0f)) return null;
         var half = width * 0.5f;
         var min = points[0];

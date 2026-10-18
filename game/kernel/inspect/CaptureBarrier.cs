@@ -81,11 +81,10 @@ public static class CaptureBarrier
     {
         try
         {
-            var runtime = Services.Get<IMapRuntime>();
+            var lifetime = Services.Get<IMapLifetime>();
             var veil = Services.Get<IVeilState>();
             var presentation = Services.Get<IVeilPresentation>();
-            var map = runtime is MapRuntime actual ? actual.DescribeReadiness()
-                : $"provider={runtime.GetType().FullName},arrival={runtime.Arrival?.Done.Status},destination={runtime.Arrival?.Destination}";
+            var map = lifetime.DescribeReadiness();
             return $"veil[opacity={veil.Opacity},reason={veil.Reason},covered={presentation.IsCovered}]; runtime[{map}]";
         }
         catch (Exception error) { return $"producerDiagnosticsUnavailable={error.GetBaseException().Message}"; }

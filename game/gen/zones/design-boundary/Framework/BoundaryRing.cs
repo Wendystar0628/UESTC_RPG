@@ -50,7 +50,7 @@ public sealed class BoundaryRing
     {
         for (var k = 0; k + 1 < line.Count; k++)
             for (var i = 0; i < _p.Length; i++)
-                if (PlanGeometry.SegmentHit(line[k], line[k + 1], _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit) return (hit.Point, i, hit.U);
+                if (PlanLines.SegmentHit(line[k], line[k + 1], _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit) return (hit.Point, i, hit.U);
         return null;
     }
 
@@ -59,7 +59,7 @@ public sealed class BoundaryRing
     {
         var hits = new List<(float Along, float S)>();
         for (var i = 0; i < _p.Length; i++)
-            if (PlanGeometry.SegmentHit(p, q, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit)
+            if (PlanLines.SegmentHit(p, q, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit)
             {
                 var s = Arc(i, hit.U);
                 if (hits.Any(h => MathF.Abs(h.Along - hit.T) * Vector2.Distance(p, q) < 0.05f)) continue;
@@ -75,7 +75,7 @@ public sealed class BoundaryRing
         (Vector2 Point, int Edge, float T)? best = null;
         var bestS = float.MaxValue;
         for (var i = 0; i < _p.Length; i++)
-            if (PlanGeometry.SegmentHit(p, p + dir * reach, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit && hit.T * reach < bestS && hit.T > 1e-4f)
+            if (PlanLines.SegmentHit(p, p + dir * reach, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit && hit.T * reach < bestS && hit.T > 1e-4f)
             {
                 bestS = hit.T * reach;
                 best = (hit.Point, i, hit.U);
@@ -85,7 +85,7 @@ public sealed class BoundaryRing
 
     /// <summary>Nearest point of the ring to p: edge index and parameter.</summary>
     public (int Edge, float T) Project(Vector2 p) =>
-        Locate((float)PlanGeometry.Project(_p, p, closed: true).Station);
+        Locate((float)PlanLines.Project(_p, p, closed: true).Station);
 
     public Vector2 At(int edge, float t)
     {

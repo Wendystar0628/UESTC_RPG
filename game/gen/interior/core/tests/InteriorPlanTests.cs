@@ -166,7 +166,8 @@ public sealed class InteriorPlanTests
         AssertThrown(() => InteriorPlanGenerator.Generate(request with { Entrances = [entry] })).IsInstanceOf<ArgumentException>();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void LocaleDoesNotChangeThePlanHashOrDoorKeys()
     {
         CultureInfo previous = CultureInfo.CurrentCulture;

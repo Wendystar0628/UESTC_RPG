@@ -21,17 +21,20 @@ public static class DioramaVertex
     public const byte KindFar = 2;
     public const byte FlagNoShadow = 8;
 
+    /// <summary>Largest value stored in one 6-bit season field.</summary>
+    public const int SeasonQuantizationMax = 63;
+
     /// <summary>Four 0–1 values as 6-bit fields, spring in the lowest bits (≤ 2^24, exact in fp32).</summary>
     public static float PackSeasons(IReadOnlyList<float> four)
     {
         ArgumentNullException.ThrowIfNull(four);
         if (four.Count != 4) throw new ArgumentException("Four seasons expected.", nameof(four));
         var word = 0;
-        for (var i = 0; i < 4; i++) word |= (int)MathF.Round(Math.Clamp(four[i], 0f, 1f) * 63f) << (6 * i);
+        for (var i = 0; i < 4; i++) word |= (int)MathF.Round(Math.Clamp(four[i], 0f, 1f) * SeasonQuantizationMax) << (6 * i);
         return word;
     }
 
-    public static float UnpackSeason(float word, int season) => (((int)word >> (6 * season)) & 63) / 63f;
+    public static float UnpackSeason(float word, int season) => (((int)word >> (6 * season)) & SeasonQuantizationMax) / (float)SeasonQuantizationMax;
 }
 
 /// <summary>Growable vertex and index lists for one diorama surface.</summary>

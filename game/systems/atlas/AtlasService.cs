@@ -12,6 +12,7 @@ using Campus.Contracts.Save;
 namespace Campus.Systems.Atlas;
 
 [KernelService(typeof(IAtlasService), Owner = "WP-48c")]
+[KernelService(typeof(AtlasService), Owner = "WP-48c")]
 [SaveSection("atlas", Owner = "WP-48c", Version = 1, Scope = SaveScope.PerMap, Phase = RestorePhase.Content, Order = 40)]
 public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRuleset ruleset, ITransitDriver? transitDriver = null) : IAtlasService, IMapAware, ISaveSection<AtlasSave>
 {

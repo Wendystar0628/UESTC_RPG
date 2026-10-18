@@ -16,12 +16,12 @@ public partial class AtlasRuntime : Godot.Node, IMapAware
     private IBakeHandle? _mapBake;
     private bool _productPublished;
 
-    public AtlasRuntime(IAtlasService atlas, IAtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
+    public AtlasRuntime(AtlasService atlas, AtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
         IAudioService audio, IBakeService bake, IViewControl view)
     {
-        _atlas = (AtlasService)atlas;
+        _atlas = atlas;
         _bake = bake;
-        _baseSource = (AtlasBaseSource)baseSource;
+        _baseSource = baseSource;
         _atlas.Connect(maps, flow, audio, view);
     }
 

@@ -144,7 +144,7 @@ public sealed class ClusterLayout
                     if (MathF.Abs(Vector2.Dot(road.Dir, samples[i].Tangent)) < 0.5f) continue;
                     var p = samples[i].Ring + samples[i].Inward * d;
                     var need = road.Half + F.RoadClearance;
-                    var closest = PlanGeometry.ClosestPoint(p, road.A, road.B, 1e-12f);
+                    var closest = PlanLines.ClosestPoint(p, road.A, road.B, 1e-12f);
                     if (Vector2.Distance(p, closest) >= need) continue;
                     var across = Vector2.Dot(closest - samples[i].Ring, samples[i].Inward);
                     d = across < d ? across + need : across - need;
@@ -187,7 +187,7 @@ public sealed class ClusterLayout
             foreach (var road in roads)
             {
                 var cos = MathF.Abs(Vector2.Dot(road.Dir, along));
-                if (PlanGeometry.SegmentHit(p, q, road.A, road.B, 1e-9f) is not { } hit || cos >= 0.85f) continue;
+                if (PlanLines.SegmentHit(p, q, road.A, road.B, 1e-9f) is not { } hit || cos >= 0.85f) continue;
                 // A skewed road cuts a wider stretch of the fence line than its own width.
                 var width = road.Half * 2 / MathF.Max(MathF.Sqrt(1 - cos * cos), 0.6f);
                 var crossing = new Crossing(Wrap(samples[i].S + hit.T * step, perimeter), hit.Point, width, road.Half * 2, along, samples[i].Inward);

@@ -103,7 +103,8 @@ public sealed class PartGeometryTests
         AssertThrown(() => PartGeometryKernel.BeveledExtrude([new(-0.1f, -1), new(0.1f, -1), new(0.1f, 1), new(-0.1f, 1)], 2, 0.2f, Material)).IsInstanceOf<ArgumentException>();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GalleryGenerationIsBitwiseRepeatable()
     {
         var first = PartGallery.CreateExamples(); var second = PartGallery.CreateExamples();

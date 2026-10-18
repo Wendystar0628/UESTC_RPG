@@ -146,7 +146,7 @@ public sealed class GroundEffectiveRoadsTests
             AssertThat(road is not null).OverrideFailureMessage($"{feature.Id.Value} is missing from the effective network.").IsTrue();
             var laid = shapes.Where(s => s.Id == feature.Id).ToArray();
             AssertThat(laid.Length == 1 && laid[0].Kind == SurfaceKind.Walk && laid[0].Line is not null).OverrideFailureMessage($"{feature.Id.Value} must be laid once as a footway, got {laid.Length}.").IsTrue();
-            AssertThat(laid[0].Line!.SequenceEqual(PlanGeometry.CleanPath(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f).OverrideFailureMessage($"{feature.Id.Value} is not laid along its network line.").IsTrue();
+            AssertThat(laid[0].Line!.SequenceEqual(PlanLines.CleanPath(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f).OverrideFailureMessage($"{feature.Id.Value} is not laid along its network line.").IsTrue();
         }
         // No centre line is laid twice anywhere: every network road has exactly one capsule chain, and no other line shape shares its ID.
         var chains = shapes.Where(s => s.Line is not null && s.Kind is SurfaceKind.Carriageway or SurfaceKind.Walk or SurfaceKind.Plaza && !s.Id.Value.Contains(":footprint:", StringComparison.Ordinal)).ToArray();

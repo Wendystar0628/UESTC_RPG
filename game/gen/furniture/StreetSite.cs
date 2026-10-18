@@ -40,7 +40,7 @@ internal sealed partial class StreetSite
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             foreach (var kind in Blocking)
-                foreach (var rings in Polygons(feature, kind))
+                foreach (var rings in WorldFeatureGeometry.FacadePolygonsOf(feature, kind))
                 {
                     var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                     var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);

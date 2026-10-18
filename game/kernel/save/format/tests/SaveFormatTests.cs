@@ -53,7 +53,8 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void RoundTripsPreserveNumericBitsAndUnknownEnvelopes()
     {
         var rng = new Rng(50);

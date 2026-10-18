@@ -54,9 +54,9 @@ public sealed class RoadFurnitureTests
         {
             var p = (RampParams)ramp.Part.Params;
             var back = ramp.Anchor - Front(ramp.Part.At) * (p.Depth * 0.5f);
-            var kerb = road.Min(l => (float)PlanGeometry.Project(l.Line.Points, back).Distance - StreetSite.HalfWidth(l));
+            var kerb = road.Min(l => (float)PlanLines.Project(l.Line.Points, back).Distance - StreetSite.HalfWidth(l));
             AssertThat(MathF.Abs(kerb) < TestTolerance.Layout).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
-            AssertThat(road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor + Front(ramp.Part.At) * 2f).Distance) < road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor).Distance)).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
+            AssertThat(road.Min(l => (float)PlanLines.Project(l.Line.Points, ramp.Anchor + Front(ramp.Part.At) * 2f).Distance) < road.Min(l => (float)PlanLines.Project(l.Line.Points, ramp.Anchor).Distance)).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
         }
         for (var i = 0; i < ramps.Count; i++)
             for (var k = i + 1; k < ramps.Count; k++)
@@ -89,7 +89,7 @@ public sealed class RoadFurnitureTests
             AssertThat(!outlines.Any(o => PlanGeometry.Contains(o, p))).OverrideFailureMessage($"{item.Key} inside a building or water").IsTrue();
             foreach (var road in world.Network.Roads)
             {
-                var d = MathF.Sqrt(road.Line.Points.Zip(road.Line.Points.Skip(1), (u, v) => PlanGeometry.SegmentDistanceSquared(p, u, v)).DefaultIfEmpty(float.MaxValue).Min());
+                var d = MathF.Sqrt(road.Line.Points.Zip(road.Line.Points.Skip(1), (u, v) => PlanLines.SegmentDistanceSquared(p, u, v)).DefaultIfEmpty(float.MaxValue).Min());
                 AssertThat(d > MathF.Max(road.Width, 2f) * 0.5f + 0.2f).OverrideFailureMessage($"{item.Key} stands on {road.Id.Value} ({d:F2} m from its centre line)").IsTrue();
             }
         }

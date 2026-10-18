@@ -116,7 +116,7 @@ public sealed class West19cTests
         var line = world.TerrainLine(WestIds.Levee);
         float LeveeHeight(float x, float z)
         {
-            var distance = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line, new(x, z)));
+            var distance = MathF.Sqrt(PlanLines.PolylineDistanceSquared(line, new(x, z)));
             var crest = T.CrestHalf(world);
             var rise = T.LeveeRise(world);
             var run = rise * T.SideRun(world);
@@ -127,12 +127,12 @@ public sealed class West19cTests
         {
             var f = LeveeStepsSite.Flight(world, j, LeveeHeight) ?? throw new InvalidOperationException($"{j.Key}: a flight on the levee");
             var riser = f.Flight.Height / f.Flight.Steps;
-            AssertThat(MathF.Abs(f.Flight.Height - T.LeveeRise(world)) < 0.1f && MathF.Abs(riser - T.Riser) <= TestTolerance.Layout).OverrideFailureMessage($"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers").IsTrue();
+            AssertThat(MathF.Abs(f.Flight.Height - T.LeveeRise(world)) < 2 * TestTolerance.Layout && MathF.Abs(riser - T.Riser) <= TestTolerance.Layout).OverrideFailureMessage($"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers").IsTrue();
             var tread = f.Flight.Depth / f.Flight.Steps;
             AssertThat(tread is >= 0.28f and <= 0.55f).OverrideFailureMessage($"{j.Key}: tread {tread:0.00}").IsTrue();
             // Its top tread lands on the crest, its first riser at the slope foot, along the path.
             var topEdge = f.Frame.P(0, f.Flight.Depth);
-            AssertThat(MathF.Abs(LeveeHeight(topEdge.X, topEdge.Y) - (f.Foot + f.Flight.Height)) < 0.12f).OverrideFailureMessage($"{j.Key}: the top tread meets the levee top").IsTrue();
+            AssertThat(MathF.Abs(LeveeHeight(topEdge.X, topEdge.Y) - (f.Foot + f.Flight.Height)) < 6 * TestTolerance.Position).OverrideFailureMessage($"{j.Key}: the top tread meets the levee top").IsTrue();
             AssertThat(Vector2.Dot(f.Frame.W, Vector2.Normalize(j.Top - j.Toward)) > 0.99f).OverrideFailureMessage($"{j.Key}: the flight climbs toward the levee").IsTrue();
         }
         var fixture = new FakeWorld(world) { Terrain = new FormulaTerrain(LeveeHeight) };
@@ -191,7 +191,7 @@ public sealed class West19cTests
     }
 
     private static float Distance(IReadOnlyList<Vector2> line, Vector2 point) =>
-        MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line, point));
+        MathF.Sqrt(PlanLines.PolylineDistanceSquared(line, point));
 
     private static BuildContext Context(IWorldModel world) => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
 

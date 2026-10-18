@@ -61,29 +61,6 @@ internal sealed partial class StreetSite
             new Paving(rings, null, 0f));
     }
 
-    /// <summary>The polygons of a feature of one kind (a part's own kind wins over its feature's), as the world model groups them.</summary>
-    private static IEnumerable<PolygonRings> Polygons(WorldFeature feature, string kind)
-    {
-        IEnumerable<OverlayGeometry> geometries;
-        if (feature.Parts.Count == 0)
-            geometries = feature.Kind.Value == kind ? [feature.Geometry] : [];
-        else
-            geometries = feature.Parts.Where(part =>
-                (part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared) ? declared.GetString() : feature.Kind.Value) == kind)
-                .Select(WorldFeatureGeometry.FacadeGeometryOf);
-        foreach (var geometry in geometries)
-        {
-            IEnumerable<PolygonRings> polygons = geometry switch
-            {
-                PolygonGeometry polygon => [polygon.Rings],
-                MultiPolygonGeometry multi => multi.Polygons,
-                _ => [],
-            };
-            foreach (var rings in polygons)
-                if (rings.Outer.Count >= 3) yield return rings;
-        }
-    }
-
     private void IndexLine(SpatialGrid<NetworkLine> grid, NetworkLine line)
     {
         if (line.Line.Points.Count < 2) return;

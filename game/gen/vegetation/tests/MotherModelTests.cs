@@ -77,7 +77,8 @@ public sealed class MotherModelTests
                 throw new InvalidOperationException($"row {row} tagged");
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void MothersAreDeterministic()
     {
         var (table, palette) = Data.Value;
@@ -91,7 +92,7 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Contract), TestCategory("Slow")]
     public void LevelsAreNested()
     {
         var table = Data.Value.Table;

@@ -130,7 +130,8 @@ public sealed class GroundDiagonalTests
         AssertThat(worst <= 0.01f).OverrideFailureMessage($"Lawn leaves the draped terrain by {worst} m.").IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void LawnToneFieldFollowsTheSameDiagonal()
     {
         // The tone field is sampled on a coarse lattice and linear on its triangles; the mesher clips blocks that are

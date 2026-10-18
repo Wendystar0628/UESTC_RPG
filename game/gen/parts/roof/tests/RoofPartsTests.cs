@@ -70,7 +70,8 @@ public sealed class RoofPartsTests
             }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
         var first = RoofGallery.CreateExamples(); var second = RoofGallery.CreateExamples();

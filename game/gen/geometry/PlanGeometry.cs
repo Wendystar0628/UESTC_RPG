@@ -50,7 +50,7 @@ public static partial class PlanGeometry
         for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
         {
             var a = ring[j]; var b = ring[i];
-            if (SegmentDistanceSquared(p, a, b) <= 0.00000001f) return true;
+            if (PlanLines.SegmentDistanceSquared(p, a, b) <= 0.00000001f) return true;
             if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (double)(b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X)
                 inside = !inside;
         }
@@ -136,23 +136,10 @@ public static partial class PlanGeometry
         return new((float)(x / length), (float)(y / length));
     }
 
-    public static float SegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b)
-        => Vector2.DistanceSquared(p, ClosestPoint(p, a, b));
-
-    /// <summary>Allocation-free scalar float projection; degenerate segments return their first endpoint.</summary>
-    public static Vector2 ClosestPoint(Vector2 p, Vector2 a, Vector2 b, float minimumLengthSquared = 0f)
-    {
-        var d = b - a;
-        var length = d.X * d.X + d.Y * d.Y;
-        if (length == 0 || length < minimumLengthSquared) return a;
-        var t = Math.Clamp(((p.X - a.X) * d.X + (p.Y - a.Y) * d.Y) / length, 0f, 1f);
-        return a + d * t;
-    }
-
     public static float DistanceToRing(Vector2 p, IReadOnlyList<Vector2> ring)
     {
         var distance = float.PositiveInfinity;
-        for (var i = 0; i < ring.Count; i++) distance = Math.Min(distance, SegmentDistanceSquared(p, ring[i], ring[(i + 1) % ring.Count]));
+        for (var i = 0; i < ring.Count; i++) distance = Math.Min(distance, PlanLines.SegmentDistanceSquared(p, ring[i], ring[(i + 1) % ring.Count]));
         return MathF.Sqrt(distance);
     }
 

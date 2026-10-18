@@ -125,7 +125,8 @@ public sealed class SouthModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BuildIsDeterministic()
     {
         var ctx = Context();

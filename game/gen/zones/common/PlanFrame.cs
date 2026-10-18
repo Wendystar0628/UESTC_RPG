@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Gen.Zones.Common;
 
@@ -12,10 +13,10 @@ public readonly record struct PlanFrame(Vector2 Origin, Vector2 U)
     public Vector2 W => new(-U.Y, U.X);
 
     /// <summary>A frame through <paramref name="origin"/> whose X runs toward <paramref name="toward"/>.</summary>
-    public static PlanFrame Toward(Vector2 origin, Vector2 toward) => new(origin, Unit(toward - origin));
+    public static PlanFrame Toward(Vector2 origin, Vector2 toward) => new(origin, VectorMath.Unit(toward - origin, minimumLength: 1e-6));
 
     /// <summary>A frame whose X runs along <paramref name="direction"/>.</summary>
-    public static PlanFrame Along(Vector2 origin, Vector2 direction) => new(origin, Unit(direction));
+    public static PlanFrame Along(Vector2 origin, Vector2 direction) => new(origin, VectorMath.Unit(direction, minimumLength: 1e-6));
 
     /// <summary>World plan point of local (x, z).</summary>
     public Vector2 P(float x, float z) => new(Origin.X + U.X * x + W.X * z, Origin.Y + U.Y * x + W.Y * z);
@@ -62,6 +63,4 @@ public readonly record struct PlanFrame(Vector2 Origin, Vector2 U)
 
     /// <summary>Plan ring of a local rectangle, counter-clockwise in local (x, z).</summary>
     public Vector2[] Rect(float x0, float z0, float x1, float z1) => [P(x0, z0), P(x1, z0), P(x1, z1), P(x0, z1)];
-
-    private static Vector2 Unit(Vector2 v) => Campus.Contracts.VectorMath.Unit(v, minimumLength: 1e-6);
 }

@@ -34,7 +34,8 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs(nearLeft.Dx) < TestTolerance.Position && Math.Abs(nearRight.Dx) < TestTolerance.Position).OverrideFailureMessage("Taper endpoint derivative is not continuous.").IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void RegionalPriorityAndOrdinalIdHaveNoHiddenTypeOrder()
     {
         TerrainOp mound = new TerrainMoundOp("design:terrain:a-mound", "fixture", new TerrainCircle(Vector2.Zero, 20), 1, Priority: 300) { Zone = Zone };

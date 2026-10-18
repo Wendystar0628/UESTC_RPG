@@ -82,7 +82,7 @@ public sealed class DioramaModuleTests
                 byKind[DioramaVertex.KindCity].Length != data.CityRings.Count).OverrideFailureMessage("one fog sea, one far ring and one surface per city ring").IsFalse();
             var fog = byKind[DioramaVertex.KindFogSea][0];
             var outer = Radii(fog).Max();
-            AssertThat(MathF.Abs(outer - data.FogSea.OuterRadius) > 1f).OverrideFailureMessage($"fog sea reaches {outer}").IsFalse();
+            AssertThat(MathF.Abs(outer - data.FogSea.OuterRadius) > 20 * TestTolerance.Layout).OverrideFailureMessage($"fog sea reaches {outer}").IsFalse();
             AssertThat(Heights(fog).Min() < data.FogSea.TopY - TestTolerance.Position).OverrideFailureMessage("fog sea dips below its top").IsFalse();
             AssertThat(data.FogSea.EdgeBank.Height > 0f && Heights(fog).Max() <= 0f).OverrideFailureMessage("the edge bank must rise above the ground").IsFalse();
             for (var i = 0; i < data.CityRings.Count; i++)
@@ -123,10 +123,11 @@ public sealed class DioramaModuleTests
         var word = DioramaVertex.PackSeasons(values);
         AssertThat(word >= 1 << 24 || word != MathF.Floor(word)).OverrideFailureMessage("word must be an exact fp32 integer").IsFalse();
         for (var s = 0; s < 4; s++)
-            AssertThat(MathF.Abs(DioramaVertex.UnpackSeason(word, s) - values[s]) > 0.6f / 63f).OverrideFailureMessage($"season {s}").IsFalse();
+            AssertThat(MathF.Abs(DioramaVertex.UnpackSeason(word, s) - values[s]) > 0.6f / DioramaVertex.SeasonQuantizationMax).OverrideFailureMessage($"season {s}").IsFalse();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void NoBackdropFileMeansNoProductAndTheBuildIsDeterministic()
     {
         var empty = new DioramaModule();
@@ -149,7 +150,7 @@ public sealed class DioramaModuleTests
         AssertThat(MathF.Abs(d - 1280f) > TestTolerance.Position).OverrideFailureMessage($"rectangle edge {d}").IsFalse();
         var circle = Enumerable.Range(0, 720).Select(i => new Vector2(1500f * MathF.Cos(i * MathF.PI / 360f), 1500f * MathF.Sin(i * MathF.PI / 360f))).ToArray();
         var c = FogSea.EdgeDistance(Vector2.Zero, Vector2.Normalize(new(1, 1)), circle, rect);
-        AssertThat(MathF.Abs(c - 1500f) > 1f).OverrideFailureMessage($"cut line edge {c}").IsFalse();
+        AssertThat(MathF.Abs(c - 1500f) > 20 * TestTolerance.Layout).OverrideFailureMessage($"cut line edge {c}").IsFalse();
     }
 
     private static IEnumerable<float> Radii(GeometryBundle m)

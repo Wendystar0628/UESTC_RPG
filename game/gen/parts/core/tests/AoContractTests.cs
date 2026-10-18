@@ -13,7 +13,8 @@ public sealed class AoContractTests
 {
     private static readonly ToonSpec Material = new(new("wall.lit"), new("wall.shade"));
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SameInputBuildsTheSameGeometryBytes()
     {
         // Counts, positions, normals, indices, UVs and bounds of every example are bitwise the same on a second build.

@@ -125,7 +125,7 @@ internal static class Sdf
         if (shape.Line is { } line)
         {
             var d = double.MaxValue;
-            for (var i = 0; i + 1 < line.Length; i++) d = Math.Min(d, PlanGeometry.SegmentDistance(p.X, p.Y, line[i], line[i + 1]));
+            for (var i = 0; i + 1 < line.Length; i++) d = Math.Min(d, PlanLines.SegmentDistance(p.X, p.Y, line[i], line[i + 1]));
             return Math.Clamp((float)(d - shape.HalfWidth), -limit, limit);
         }
         var rings = shape.Rings!;
@@ -136,7 +136,7 @@ internal static class Sdf
             {
                 var a = ring[i];
                 var b = ring[(i + 1) % ring.Length];
-                best = Math.Min(best, PlanGeometry.SegmentDistance(p.X, p.Y, a, b));
+                best = Math.Min(best, PlanLines.SegmentDistance(p.X, p.Y, a, b));
                 if ((a.Y <= p.Y) != (b.Y <= p.Y))
                 {
                     var x = a.X + (p.Y - a.Y) * (b.X - a.X) / (b.Y - a.Y);

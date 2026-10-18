@@ -13,10 +13,10 @@ internal static class NorthTestSupport
         {
             var segment = new[] { line[i], line[i + 1] };
             if (segment[0] == segment[1]) continue;
-            var length = PlanGeometry.Length(segment);
+            var length = PlanLines.Length(segment);
             if (length == 0) continue;
             var steps = Math.Max(1, (int)Math.Ceiling(length));
-            for (var k = 0; k < steps; k++) yield return PlanGeometry.Sample(segment, length * k / steps).Point;
+            for (var k = 0; k < steps; k++) yield return PlanLines.Sample(segment, length * k / steps).Point;
         }
         yield return line[^1];
     }

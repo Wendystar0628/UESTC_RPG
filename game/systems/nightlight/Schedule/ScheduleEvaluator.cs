@@ -125,7 +125,7 @@ public sealed class ScheduleEvaluator
     private float WindowTarget(ChannelSpec spec, in ScheduleInput input)
     {
         var heff = EffectiveSun(input);
-        var dark = spec.Dark is { } d ? ScheduleMath.SmoothStep(d.X, d.Y, heff) : 1f;
+        var dark = spec.Dark is { } d ? ScalarMath.Smoothstep(d.X, d.Y, heff) : 1f;
         var occ = Math.Clamp(ScheduleMath.Curve(spec.Curve, input.Clock), 0f, 1f);
         var value = Math.Clamp(dark * occ, 0f, spec.Cap);
         if (spec.DayFloor) value = Math.Max(value, Math.Min(spec.Cap, DayFloor(occ, input)));
@@ -138,9 +138,9 @@ public sealed class ScheduleEvaluator
         var o = f.OvercastRamp ?? new Vector2(0.45f, 0.9f);
         var r = f.RainRamp ?? new Vector2(0.08f, 0.4f);
         var u = f.OccupancyRamp ?? new Vector2(0.1f, 0.45f);
-        var floor = Math.Max(f.Overcast * ScheduleMath.SmoothStep(o.X, o.Y, input.Overcast),
-            f.Rain * ScheduleMath.SmoothStep(r.X, r.Y, input.Precip));
-        return floor * ScheduleMath.SmoothStep(u.X, u.Y, occupancy);
+        var floor = Math.Max(f.Overcast * ScalarMath.Smoothstep(o.X, o.Y, input.Overcast),
+            f.Rain * ScalarMath.Smoothstep(r.X, r.Y, input.Precip));
+        return floor * ScalarMath.Smoothstep(u.X, u.Y, occupancy);
     }
 
     private static void Validate(LightingScheduleFile file)

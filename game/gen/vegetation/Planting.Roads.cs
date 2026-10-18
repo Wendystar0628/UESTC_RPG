@@ -85,16 +85,16 @@ public static partial class Planting
     /// <summary>Points every <paramref name="spacing"/> along a polyline from <paramref name="start"/>, with the unit left normal there.</summary>
     private static IEnumerable<(Vector2 P, Vector2 N)> Samples(List<Vector2> line, float start, float spacing)
     {
-        var total = PlanGeometry.Length(line);
+        var total = PlanLines.Length(line);
         for (var s = start; s < total; s += spacing)
         {
             // The normal comes from a 4 m chord, so rows round the bends instead of kinking at the vertices.
-            var a = PlanGeometry.Sample(line, MathF.Max(0f, s - 2f)).Point;
-            var b = PlanGeometry.Sample(line, Math.Min(total, s + 2f)).Point;
+            var a = PlanLines.Sample(line, MathF.Max(0f, s - 2f)).Point;
+            var b = PlanLines.Sample(line, Math.Min(total, s + 2f)).Point;
             var t = b - a;
             if (t.LengthSquared() < 1e-6f) continue;
             t = Vector2.Normalize(t);
-            yield return (PlanGeometry.Sample(line, s).Point, new Vector2(-t.Y, t.X));
+            yield return (PlanLines.Sample(line, s).Point, new Vector2(-t.Y, t.X));
         }
     }
 
@@ -116,7 +116,7 @@ public static partial class Planting
             var best = rules.OsmNear;
             foreach (var (rule, line) in named)
             {
-                var d = (float)PlanGeometry.Project(line.Line.Points, p).Distance;
+                var d = (float)PlanLines.Project(line.Line.Points, p).Distance;
                 if (d < best) (best, id, wash) = (d, rule.Species[0], rule.Wash);
             }
             if (point.Species is { Length: > 0 } given && species.TryGet(given, out var known)) id = known!.Id;

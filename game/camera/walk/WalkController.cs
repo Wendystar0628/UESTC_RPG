@@ -95,7 +95,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             if (_appFrozen) return EyeAt(_feet);
             if (_descentDuration > 0)
             {
-                float t = WalkMath.SmoothStep(_descentElapsed / _descentDuration);
+                float t = ScalarMath.Smootherstep(_descentElapsed / _descentDuration);
                 var destination = _feet + N.Vector3.UnitY * EyeHeight;
                 var position = N.Vector3.Lerp(_descentFrom.Position, destination, t);
                 // Height approaches the landing point logarithmically; the final .3 m uses real physics.

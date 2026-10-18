@@ -67,45 +67,20 @@ public static class LampSetBuilder
         {
             if (cue.Route.Count < 2 || !schedule.File.Cue.Groups.TryGetValue(cue.Group, out var source)) continue;
             var sourceSlot = schedule.SlotOf(source);
-            var length = RouteLength(cue.Route);
+            if (!cue.Route.Skip(1).Any(point => point != cue.Route[0])) continue;
+            var length = (float)PlanLines.Length(cue.Route);
             if (length <= 0f) continue;
             for (var i = 0; i < lamps.Count; i++)
             {
                 var l = lamps[i];
                 if (l.Slot != sourceSlot) continue;
-                var (distance, arc) = Project(cue.Route, new Vector2(l.Base.X, l.Base.Z));
-                if (distance > cue.Band) continue;
-                lamps[i] = l with { Slot = schedule.CueSlot, Keep = Math.Clamp(arc / length, 0f, 0.999f) };
+                var projection = PlanLines.Project(cue.Route, new Vector2(l.Base.X, l.Base.Z));
+                if ((float)projection.Distance > cue.Band) continue;
+                lamps[i] = l with { Slot = schedule.CueSlot, Keep = Math.Clamp((float)projection.Station / length, 0f, 0.999f) };
                 assigned++;
             }
         }
         return assigned;
     }
 
-    public static float RouteLength(IReadOnlyList<Vector2> route)
-    {
-        var total = 0f;
-        for (var i = 1; i < route.Count; i++) total += Vector2.Distance(route[i - 1], route[i]);
-        return total;
-    }
-
-    /// <summary>点到折线的最近距离，以及最近点沿折线的弧长。</summary>
-    public static (float Distance, float Arc) Project(IReadOnlyList<Vector2> route, Vector2 p)
-    {
-        var best = float.MaxValue;
-        var bestArc = 0f;
-        var arc = 0f;
-        for (var i = 1; i < route.Count; i++)
-        {
-            var a = route[i - 1];
-            var b = route[i];
-            var ab = b - a;
-            var len2 = ab.LengthSquared();
-            var t = len2 > 0f ? Math.Clamp(Vector2.Dot(p - a, ab) / len2, 0f, 1f) : 0f;
-            var d = Vector2.Distance(p, a + ab * t);
-            if (d < best) { best = d; bestArc = arc + MathF.Sqrt(len2) * t; }
-            arc += MathF.Sqrt(len2);
-        }
-        return (best, bestArc);
-    }
 }

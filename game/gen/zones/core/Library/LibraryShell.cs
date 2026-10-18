@@ -87,7 +87,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             var half = (road.Width > 0f ? road.Width : S.CafeWalkFallbackWidth) * 0.5f;
             var line = road.Line.Points;
             if (line.Count < 2) continue;
-            var projection = PlanGeometry.Project(line, p);
+            var projection = PlanLines.Project(line, p);
             var gap = (float)projection.Distance - half;
             if (best is null || gap < best.Value.Gap) best = (projection.Point, half, gap);
         }

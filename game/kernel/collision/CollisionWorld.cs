@@ -75,7 +75,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     public bool Ready(N.Vector3 p, float r)
     {
         MainThread();
-        if (_context is null || _root is null || !_root.IsInsideTree() || !Finite(p) || !float.IsFinite(r) || r < 0) return false;
+        if (_context is null || _root is null || !_root.IsInsideTree() || !VectorMath.Finite(p) || !float.IsFinite(r) || r < 0) return false;
         var center = TileGrid.At(p);
         var min = TileGrid.At(p - new N.Vector3(r, 0, r));
         var max = TileGrid.At(p + new N.Vector3(r, 0, r));
@@ -204,7 +204,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     {
         MainThread();
         if (_root is null || !_root.IsInsideTree()) return null;
-        if (!Finite(from) || !Finite(to) || !float.IsFinite(r) || !float.IsFinite(h) || r <= 0 || h <= 0) throw new ArgumentException("Invalid sweep cylinder.");
+        if (!VectorMath.Finite(from) || !VectorMath.Finite(to) || !float.IsFinite(r) || !float.IsFinite(h) || r <= 0 || h <= 0) throw new ArgumentException("Invalid sweep cylinder.");
         using var cylinder = new CylinderShape3D { Radius = r, Height = h };
         using var query = new PhysicsShapeQueryParameters3D
         {
@@ -243,7 +243,6 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         _threadViolations++;
         throw new InvalidOperationException("Collision bodies and queries are main-thread only.");
     }
-    private static bool Finite(N.Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
     private SurfaceTag? SurfaceForHit(Rid rid, GodotObject? body)
     {
         if (_bodySurfaces.TryGetValue(rid, out var registered)) return registered;

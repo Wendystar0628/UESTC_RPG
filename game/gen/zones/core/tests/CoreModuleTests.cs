@@ -279,11 +279,11 @@ public sealed class CoreModuleTests
             AssertThat(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
                 && (at == 0 || at + joined.Length == old.Line.Points.Count)).OverrideFailureMessage($"{kept}: the old points in the old order, out to the old end").IsTrue();
             var line = old.Line.Points;
-            for (var s = 0f; s <= PlanGeometry.Length(line); s += 0.5f)
+            for (var s = 0f; s <= PlanLines.Length(line); s += 0.5f)
             {
-                var p = PlanGeometry.Sample(line, s).Point;
+                var p = PlanLines.Sample(line, s).Point;
                 // The kept piece leaves the old line only where it bends onto the walk's end (1.26 m at most).
-                AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(walkLine, p)) <= 2.5f || MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(points, p)) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
+                AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(walkLine, p)) <= 2.5f || MathF.Sqrt(PlanLines.PolylineDistanceSquared(points, p)) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
             }
         }
     }
@@ -309,19 +309,19 @@ public sealed class CoreModuleTests
             var max = line.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(20f);
             var outlines = Outlines(world, "building").Concat(Outlines(world, "water"))
                 .Where(r => r.Outer.Any(q => q.X >= min.X && q.X <= max.X && q.Y >= min.Y && q.Y <= max.Y)).ToArray();
-            for (var s = 0f; s <= PlanGeometry.Length(line); s += 0.5f)
+            for (var s = 0f; s <= PlanLines.Length(line); s += 0.5f)
             {
-                var p = PlanGeometry.Sample(line, s).Point;
+                var p = PlanLines.Sample(line, s).Point;
                 var wall = outlines.Min(r => PlanGeometry.Contains(r, p) ? 0f
                     : r.Holes.Aggregate(PlanGeometry.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h))));
                 AssertThat(wall - half >= 3f).OverrideFailureMessage($"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
-                var river = world.Network.Waterways.Min(w => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(w.Line.Points, p)) - w.Width * 0.5f);
+                var river = world.Network.Waterways.Min(w => MathF.Sqrt(PlanLines.PolylineDistanceSquared(w.Line.Points, p)) - w.Width * 0.5f);
                 AssertThat(river - half >= 3f).OverrideFailureMessage($"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
-                var offset = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(avenue, p));
-                AssertThat(MathF.Abs(offset - 10.5f) < 0.15f).OverrideFailureMessage($"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}").IsTrue();
+                var offset = MathF.Sqrt(PlanLines.PolylineDistanceSquared(avenue, p));
+                AssertThat(MathF.Abs(offset - 10.5f) < 3 * TestTolerance.Layout).OverrideFailureMessage($"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}").IsTrue();
             }
             foreach (var end in new[] { line[0], line[^1] })
-                AssertThat(walks.Any(w => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(w.Line.Points, end)) <= half + MathF.Max(w.Width, 2f) * 0.5f)).OverrideFailureMessage($"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving").IsTrue();
+                AssertThat(walks.Any(w => MathF.Sqrt(PlanLines.PolylineDistanceSquared(w.Line.Points, end)) <= half + MathF.Max(w.Width, 2f) * 0.5f)).OverrideFailureMessage($"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving").IsTrue();
         }
     }
 

@@ -311,10 +311,10 @@ public static class Understorey
         var ring = parcel.Rings.Outer;
         // Counter-clockwise rings (positive signed area) have the interior on the left of the direction of travel.
         var left = PlanGeometry.SignedArea(ring) > 0;
-        var length = PlanGeometry.Length(ring, closed: true);
+        var length = PlanLines.Length(ring, closed: true);
         for (var station = step * 0.5f; station <= length; station += step)
         {
-            var sample = PlanGeometry.Sample(ring, station, closed: true);
+            var sample = PlanLines.Sample(ring, station, closed: true);
             var t = sample.Tangent;
             var n = left ? new Vector2(-t.Y, t.X) : new Vector2(t.Y, -t.X);
             yield return (sample.Point, t, n, station);

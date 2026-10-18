@@ -10,6 +10,7 @@ namespace Campus.Arch.Tests;
 public sealed class RegistryGateTests
 {
     [TestCase]
+    [TestCategory("Contract")]
     public void DeclarationValidationDoesNotConstructRegisteredImplementations()
     {
         var registry = new ServiceRegistry();

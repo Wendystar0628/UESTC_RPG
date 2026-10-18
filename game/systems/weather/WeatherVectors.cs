@@ -25,7 +25,6 @@ public static class WeatherVectors
         };
     }
 
-    public static float Smooth(float u) { u = Math.Clamp(u, 0, 1); return u * u * (3 - 2 * u); }
     public static WeatherVec Lerp(WeatherVec a, WeatherVec b, float t)
     {
         t = Math.Clamp(t, 0, 1);

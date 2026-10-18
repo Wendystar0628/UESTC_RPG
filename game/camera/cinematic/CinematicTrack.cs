@@ -86,9 +86,9 @@ public sealed class CinematicTrack : IDisposable
         };
         desired = desired with { PitchDeg = desired.PitchDeg + (segment.Look.PitchBias ?? 0) };
         if (segment.Look.Settle is { } settle && t >= settle.From)
-            desired = CinematicMath.BlendOrientation(desired, _anchors.Resolve(settle.Anchor) with { Position = position }, CinematicMath.Smooth((t - settle.From) / (1 - settle.From)));
+            desired = CinematicMath.BlendOrientation(desired, _anchors.Resolve(settle.Anchor) with { Position = position }, ScalarMath.Smootherstep((t - settle.From) / (1 - settle.From)));
         if (segment.Look.BlendIn is > 0)
-            desired = CinematicMath.BlendOrientation(_segmentStart, desired, CinematicMath.Smooth((float)((time - segment.T0) / segment.Look.BlendIn.Value)));
+            desired = CinematicMath.BlendOrientation(_segmentStart, desired, ScalarMath.Smootherstep((float)((time - segment.T0) / segment.Look.BlendIn.Value)));
         if (!CinematicMath.FullyCovered(_definition, time)) desired = desired with
         {
             YawDeg = previous.YawDeg + Math.Clamp(CinematicPoseMath.AngleDelta(previous.YawDeg, desired.YawDeg), -CinematicTuning.MaxYawRate * (float)delta, CinematicTuning.MaxYawRate * (float)delta),
@@ -142,7 +142,7 @@ public sealed class CinematicTrack : IDisposable
             var to = segment.Fov[i];
             if (to.T > time)
             {
-                var blend = to.T > from.T ? CinematicMath.Smooth((float)((time - from.T) / (to.T - from.T))) : 0;
+                var blend = to.T > from.T ? ScalarMath.Smootherstep((float)((time - from.T) / (to.T - from.T))) : 0;
                 return _anchors.Resolve(from) + (_anchors.Resolve(to) - _anchors.Resolve(from)) * blend;
             }
             from = to;

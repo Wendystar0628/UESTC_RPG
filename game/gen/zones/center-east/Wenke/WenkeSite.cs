@@ -442,7 +442,7 @@ public sealed class WenkeSite : ZoneSite
     internal static Matrix4x4 Along(Vector3 at, Vector3 y)
     {
         var reference = MathF.Abs(y.Y) < 0.95f ? Vector3.UnitY : Vector3.UnitX;
-        var x = Solids.Unit(Vector3.Cross(y, reference));
+        var x = VectorMath.Unit(Vector3.Cross(y, reference), Vector3.UnitY, minimumLength: 1e-12f);
         var z = Vector3.Cross(x, y);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, at.X, at.Y, at.Z, 1);
     }

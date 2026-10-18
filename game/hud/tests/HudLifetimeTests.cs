@@ -95,6 +95,7 @@ public sealed class HudLifetimeTests
             registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());
             registry.Add<IPaletteProbe>(new Probe());
             registry.Add<IAudioService>(previousRegistry.Get<IAudioService>());
+            registry.Add<IVeilState>(previousRegistry.Get<IVeilState>());
             registry.Add<IMapService>(previousRegistry.Get<IMapService>());
             registry.Add<IAppFlow>(flow);
             registry.Add<IInputRouter>(router);

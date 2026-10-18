@@ -384,7 +384,7 @@ public sealed class BoundaryPlan
         private bool Blocked(Vector2 p)
         {
             foreach (var (a, b, reach) in _segments)
-                if (MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, a, b)) < reach) return true;
+                if (MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, a, b)) < reach) return true;
             var pad = H.Area + F.HedgeWidth * 0.5f;
             foreach (var (outer, min, max) in _areas)
             {
@@ -404,7 +404,7 @@ public sealed class BoundaryPlan
             {
                 if (lastClear is { } end && current.Count > 0 && current[^1] != end) current.Add(end);
                 // Each piece's ends pull back a little from what stopped it.
-                if (current.Count >= 2 && PlanGeometry.Length(current) >= H.MinLength)
+                if (current.Count >= 2 && PlanLines.Length(current) >= H.MinLength)
                     pieces.Add(BoundaryFence.Offset(current, 0f, _ => true, H.Trim * 0.5f, H.Trim * 0.5f));
                 current = [];
                 lastClear = null;

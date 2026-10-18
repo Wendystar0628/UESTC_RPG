@@ -105,7 +105,7 @@ public sealed class GroundTreePitTests
                 // A flat triangle (a top, not a vertical face) is never at the paving level: nothing is laid over a pit.
                 var flat = MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * b + 1]) < 1e-4f && MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * c + 1]) < 1e-4f;
                 if (!flat) continue;
-                AssertThat(Math.Abs(cy - Section.PavingY) > 0.005f).OverrideFailureMessage($"A triangle at paving level lies over a pit at ({cx}, {cz}).").IsTrue();
+                AssertThat(Math.Abs(cy - Section.PavingY) > Campus.Gen.Geometry.PlanGeometry.Tolerance).OverrideFailureMessage($"A triangle at paving level lies over a pit at ({cx}, {cz}).").IsTrue();
                 if (color == earth) tops.Add(cy);
             }
         AssertThat(checkedTriangles > 20).OverrideFailureMessage($"The pits are meshed, got {checkedTriangles} triangles inside them.").IsTrue();

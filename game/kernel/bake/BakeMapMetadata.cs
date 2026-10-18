@@ -1,5 +1,4 @@
 using Campus.Pipeline.Map;
-using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 
@@ -88,13 +87,12 @@ internal static class BakeMapMetadataBuilder
             lights.Lamps.Count > 100000 || lights.Facades.Count > 100000 || lights.Windows.Count > 100000 || doors.Entrances.Count > 100000)
             throw new InvalidDataException("Invalid resident metadata collection.");
         foreach (var lamp in lights.Lamps)
-            if (lamp is null || !Finite(lamp.Position) || !float.IsFinite(lamp.Energy) || !float.IsFinite(lamp.Range) || lamp.Energy < 0 || lamp.Range <= 0 || LightChannelCatalog.Slot(lamp.Channel) < 0)
+            if (lamp is null || !VectorMath.Finite(lamp.Position) || !float.IsFinite(lamp.Energy) || !float.IsFinite(lamp.Range) || lamp.Energy < 0 || lamp.Range <= 0 || LightChannelCatalog.Slot(lamp.Channel) < 0)
                 throw new InvalidDataException("Invalid lamp declaration.");
         // Window ranges, Skip cells and cross-list duplicate IDs are validated together against the prepared table.
         foreach (var item in doors.Entrances)
-            if (item?.Entrance is null || string.IsNullOrWhiteSpace(item.Module) || string.IsNullOrWhiteSpace(item.Entrance.Id) || !Finite(item.Entrance.Outside) ||
-                !Finite(item.Entrance.Inside) || !Finite(item.Entrance.Center) || !float.IsFinite(item.Entrance.ClearWidth) || item.Entrance.ClearWidth <= 0 ||
+            if (item?.Entrance is null || string.IsNullOrWhiteSpace(item.Module) || string.IsNullOrWhiteSpace(item.Entrance.Id) || !VectorMath.Finite(item.Entrance.Outside) ||
+                !VectorMath.Finite(item.Entrance.Inside) || !VectorMath.Finite(item.Entrance.Center) || !float.IsFinite(item.Entrance.ClearWidth) || item.Entrance.ClearWidth <= 0 ||
                 !float.IsFinite(item.Entrance.YawDeg)) throw new InvalidDataException("Invalid entrance declaration.");
     }
-    private static bool Finite(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 }

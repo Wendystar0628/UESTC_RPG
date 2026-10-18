@@ -46,7 +46,7 @@ public sealed class HallEntranceSite : ZoneSite
         if (world.Interiors.Get(id)?.Entrances.FirstOrDefault(e => e.Open) is not { } entrance) return null;
         var edge = world.ContourSegment(NorthFeatureIds.HallFacade);
         var door = new Vector2(entrance.Center.X, entrance.Center.Z);
-        var foot = PlanGeometry.ClosestPoint(door, edge[0], edge[^1], 1e-12f);
+        var foot = PlanLines.ClosestPoint(door, edge[0], edge[^1], 1e-12f);
         var f = PlanFrame.Along(foot, edge[0] - edge[^1]);
         var ground = world.Terrain.HeightAt(f.P(0, H.WallFace + H.LandingDepth + 2f).X, f.P(0, H.WallFace + H.LandingDepth + 2f).Y);
         // The floor follows the terrace (+3.0 → 4.0, MAP-QSH-TERRAIN) even while the shared entrance still reads 1.0.

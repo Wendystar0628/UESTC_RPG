@@ -91,7 +91,8 @@ public sealed class MapBakeTests
         AssertThat(known.Regions.RegionAt(float.NaN, 0)).IsNull();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void OutputIsIndependentOfFeatureDictionaryInsertionOrder()
     {
         var one = WorldFeatureFixture.Create("fixture:one", "water", new PolygonGeometry(Square(-8, -8, 0, 0)));

@@ -106,7 +106,7 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
                 if (!WeatherRules.IsPrecipitation(span.Kind)) continue;
                 var peak = WeatherVectors.For(span.Kind, span.Intensity);
                 double age = Math.Max(0, hours - span.ToHours);
-                float rise = WeatherVectors.Smooth((float)((hours - span.FromHours) / profile.BlendHours));
+                float rise = ScalarMath.Smoothstep((float)((hours - span.FromHours) / profile.BlendHours));
                 wet = Math.Max(wet, peak.Wet * rise * WeatherSettings.Fade(age, WeatherSettings.WetHours));
                 puddle = Math.Max(puddle, peak.Puddle * rise * WeatherSettings.Fade(age, WeatherSettings.PuddleHours));
                 snow = Math.Max(snow, peak.SnowAdd * rise * WeatherSettings.Fade(age, WeatherSettings.SnowHours));
@@ -142,11 +142,11 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
             return WeatherVectors.For(selection.Kind, selection.Intensity);
         }
         var result = WeatherVectors.For(spans[0].Kind, spans[0].Intensity);
-        float total = 1 - WeatherVectors.Smooth((float)((hours - spans[0].FromHours) / duration));
+        float total = 1 - ScalarMath.Smoothstep((float)((hours - spans[0].FromHours) / duration));
         foreach (var span in spans)
         {
-            float weight = WeatherVectors.Smooth((float)((hours - span.FromHours) / duration))
-                - WeatherVectors.Smooth((float)((hours - span.ToHours) / duration));
+            float weight = ScalarMath.Smoothstep((float)((hours - span.FromHours) / duration))
+                - ScalarMath.Smoothstep((float)((hours - span.ToHours) / duration));
             if (weight <= 0) continue;
             var value = WeatherVectors.For(span.Kind, span.Intensity);
             result = total == 0 ? value : WeatherVectors.Lerp(result, value, weight / (total + weight));

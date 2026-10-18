@@ -41,7 +41,7 @@ public sealed class GrandStairTests
         var centre = new Vector2(entrance.Center.X, entrance.Center.Z);
         var offAxis = MathF.Abs(Vector2.Dot(centre - stair.Origin, stair.Across));
         AssertThat(offAxis < 0.6f).OverrideFailureMessage($"the door centre is {offAxis} m off the stair axis").IsTrue();
-        AssertThat(MathF.Abs(Angles.Bearing(stair.Out) - entrance.YawDeg) < 3f).OverrideFailureMessage($"axis bearing {Angles.Bearing(stair.Out)}").IsTrue();
+        AssertThat(MathF.Abs(Angles.Bearing(stair.Out) - entrance.YawDeg) < 3 * TestTolerance.AngleDegrees).OverrideFailureMessage($"axis bearing {Angles.Bearing(stair.Out)}").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

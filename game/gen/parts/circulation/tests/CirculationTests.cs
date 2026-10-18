@@ -68,7 +68,8 @@ public sealed class CirculationTests
             }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
         var first = CirculationGallery.CreateExamples(); var second = CirculationGallery.CreateExamples();

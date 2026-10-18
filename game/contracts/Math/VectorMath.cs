@@ -11,6 +11,8 @@ public static class VectorMath
 
     public static double Dot(Vector2 a, Vector2 b) => (double)a.X * b.X + (double)a.Y * b.Y;
     public static double Dot(Vector3 a, Vector3 b) => (double)a.X * b.X + (double)a.Y * b.Y + (double)a.Z * b.Z;
+    /// <summary>Plan vector length with double accumulation and a single float result rounding.</summary>
+    public static float Length(Vector2 value) => (float)Math.Sqrt(Dot(value, value));
     public static double Cross(Vector2 a, Vector2 b) => (double)a.X * b.Y - (double)a.Y * b.X;
     public static double Cross(Vector2 origin, Vector2 a, Vector2 b) =>
         ((double)a.X - origin.X) * ((double)b.Y - origin.Y) - ((double)a.Y - origin.Y) * ((double)b.X - origin.X);

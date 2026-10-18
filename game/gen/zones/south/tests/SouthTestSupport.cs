@@ -14,7 +14,7 @@ internal static class SouthTestSupport
     public static bool Covers(Collider c, Vector2 p, float y) => c switch
     {
         BoxCollider box => InBox(box, p) && MathF.Abs(y - box.At.M42) <= box.Half.Y,
-        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f && y >= wall.Y0 && y <= wall.Y1,
+        WallCollider wall => MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f && y >= wall.Y0 && y <= wall.Y1,
         PostCollider post => Vector2.Distance(p, post.C) <= post.R + 0.26f && y >= post.Y0 && y <= post.Y1,
         _ => false,
     };
@@ -32,7 +32,7 @@ internal static class SouthTestSupport
     public static bool Covers(Collider c, Vector2 p) => c switch
     {
         BoxCollider box => InBox(box, p),
-        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f,
+        WallCollider wall => MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f,
         _ => false,
     };
 

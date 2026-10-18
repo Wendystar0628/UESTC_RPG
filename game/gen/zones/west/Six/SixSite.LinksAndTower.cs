@@ -83,9 +83,9 @@ public sealed partial class SixSite
         {
             var a = world.ContourSegment(start);
             var b = world.ContourSegment(end);
-            var from = PlanGeometry.LineIntersection(centre, direction, a[0], a[^1] - a[0], 1e-6f)
+            var from = PlanLines.LineIntersection(centre, direction, a[0], a[^1] - a[0], 1e-6f)
                 ?? throw new InvalidOperationException($"Bridge source {start} is parallel to its axis.");
-            var to = PlanGeometry.LineIntersection(centre, direction, b[0], b[^1] - b[0], 1e-6f)
+            var to = PlanLines.LineIntersection(centre, direction, b[0], b[^1] - b[0], 1e-6f)
                 ?? throw new InvalidOperationException($"Bridge target {end} is parallel to its axis.");
             yield return (from, to);
         }

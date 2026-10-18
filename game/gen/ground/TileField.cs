@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using System.Numerics;
 using Campus.Gen.Geometry;
 
@@ -259,7 +260,7 @@ internal sealed class TileField
             var row = (j - j0) * w - i0;
             for (var i = c0; i <= c1; i++)
             {
-                var d = PlanGeometry.SegmentDistance(X(i), z, a, b);
+                var d = PlanLines.SegmentDistance(X(i), z, a, b);
                 if (d < dist[row + i]) dist[row + i] = d;
             }
         }

@@ -192,7 +192,7 @@ public static class InteriorPlanGenerator
             string id = string.Join('/', _request.WingId, s.Index.ToString(CultureInfo.InvariantCulture), key);
             // ClosedYawDeg rotates the local +X hinge-to-latch axis about +Y.
             _doors.Add(new(id, s.Index, zoneA, zoneB, At(doorA, s.FloorY), PlanGeometry.Quantize(yaw),
-                90f, PlanGeometry.Quantize(PlanGeometry.Length(d)), _options.DoorHeight, kind));
+                90f, PlanGeometry.Quantize(VectorMath.Length(d)), _options.DoorHeight, kind));
         }
 
         private void BuildStair(StoreyInfo lower, StoreyInfo upper, int side)
@@ -264,7 +264,7 @@ public static class InteriorPlanGenerator
             {
                 Vector2 a = _grid.Footprint.Outer[edge], b = _grid.Footprint.Outer[(edge + 1) % 4];
                 Vector2 tangent = PlanGeometry.Unit(b - a), inward = new(-tangent.Y, tangent.X);
-                float length = PlanGeometry.Length(b - a);
+                float length = VectorMath.Length(b - a);
                 var openings = new List<Opening>();
                 foreach (EntranceDecl entry in _request.Entrances.Where(e => MathF.Abs(e.Center.Y - s.FloorY) <= PlanGeometry.Tolerance)
                     .OrderBy(e => e.Id, StringComparer.Ordinal))
@@ -348,7 +348,7 @@ public static class InteriorPlanGenerator
             SealKind? closure = null, DoorLeafKind? leafKind = null)
         {
             a = PlanGeometry.Quantize(a); b = PlanGeometry.Quantize(b);
-            if (PlanGeometry.Length(b - a) <= 0.002f || top - bottom <= 0.002f) return;
+            if (VectorMath.Length(b - a) <= 0.002f || top - bottom <= 0.002f) return;
             _walls.Add(new(s.Index, a, b, PlanGeometry.Quantize(thickness ?? _options.PartitionThickness),
                 PlanGeometry.Quantize(bottom), PlanGeometry.Quantize(top), role)
             {
@@ -418,7 +418,7 @@ public static class InteriorPlanGenerator
         if (r.Entrances.Select(e => e.Id).Distinct(StringComparer.Ordinal).Count() != r.Entrances.Count)
             throw new ArgumentException("Entrance IDs must be unique.", nameof(r));
         foreach (SealOp seal in r.Seals)
-            if (seal.Building != r.Feature || !storeys.Any(s => s.Index == seal.Storey) || PlanGeometry.Length(seal.B - seal.A) < 0.5f)
+            if (seal.Building != r.Feature || !storeys.Any(s => s.Index == seal.Storey) || VectorMath.Length(seal.B - seal.A) < 0.5f)
                 throw new ArgumentException("A seal must reference this feature and a supplied storey.", nameof(r));
     }
 
@@ -434,13 +434,13 @@ public static class InteriorPlanGenerator
             if (footprint.Outer.Count != 4 || footprint.Holes.Count != 0)
                 throw new ArgumentException("Supply an authored rectangular wing; arbitrary footprints require explicit decomposition.");
             IReadOnlyList<Vector2> ring = footprint.Outer;
-            int edge = Enumerable.Range(0, 4).OrderByDescending(i => PlanGeometry.Length(ring[(i + 1) % 4] - ring[i])).ThenBy(i => i).First();
+            int edge = Enumerable.Range(0, 4).OrderByDescending(i => VectorMath.Length(ring[(i + 1) % 4] - ring[i])).ThenBy(i => i).First();
             Vector2 origin = ring[edge], along = PlanGeometry.Unit(ring[(edge + 1) % 4] - origin), inward = new(-along.Y, along.X);
-            float length = PlanGeometry.Length(ring[(edge + 1) % 4] - origin);
+            float length = VectorMath.Length(ring[(edge + 1) % 4] - origin);
             float depth = (float)PlanGeometry.Dot(ring[(edge + 3) % 4] - origin, inward);
             Frame frame = new(origin, along, inward, length, depth, edge);
-            if (depth <= 0f || PlanGeometry.Length(frame.Point(length, depth) - ring[(edge + 2) % 4]) > 0.005f ||
-                PlanGeometry.Length(frame.Point(0f, depth) - ring[(edge + 3) % 4]) > 0.005f)
+            if (depth <= 0f || VectorMath.Length(frame.Point(length, depth) - ring[(edge + 2) % 4]) > 0.005f ||
+                VectorMath.Length(frame.Point(0f, depth) - ring[(edge + 3) % 4]) > 0.005f)
                 throw new ArgumentException("The supplied wing is not rectangular within 5 mm.");
             return frame;
         }

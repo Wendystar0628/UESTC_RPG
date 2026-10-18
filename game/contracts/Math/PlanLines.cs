@@ -1,16 +1,28 @@
 using System.Numerics;
-using Campus.Contracts;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.LinearReferencing;
 
-namespace Campus.Gen.Geometry;
+namespace Campus.Contracts;
 
 public readonly record struct PlanLineSample(Vector2 Point, Vector2 Tangent, double Station);
 public readonly record struct PlanLineProjection(Vector2 Point, Vector2 Tangent, double Station, double Distance);
 
-public static partial class PlanGeometry
+public static class PlanLines
 {
     private static readonly GeometryFactory Factory = new();
+
+    public static float SegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b)
+        => Vector2.DistanceSquared(p, ClosestPoint(p, a, b));
+
+    /// <summary>Allocation-free scalar float projection; degenerate segments return their first endpoint.</summary>
+    public static Vector2 ClosestPoint(Vector2 p, Vector2 a, Vector2 b, float minimumLengthSquared = 0f)
+    {
+        var d = b - a;
+        var length = d.X * d.X + d.Y * d.Y;
+        if (length == 0 || length < minimumLengthSquared) return a;
+        var t = Math.Clamp(((p.X - a.X) * d.X + (p.Y - a.Y) * d.Y) / length, 0f, 1f);
+        return a + d * t;
+    }
 
     public static double Length(IReadOnlyList<Vector2> points, bool closed = false) => PlanLine(points, closed).Length;
 

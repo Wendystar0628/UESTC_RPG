@@ -58,7 +58,7 @@ public sealed class LibraryShellTests
         var centre = (door.A + door.B) * 0.5f;
         var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         AssertThat(Vector2.Distance(centre, new(entrance.Center.X, entrance.Center.Z)) < door.Length * 0.5f).OverrideFailureMessage($"front face centre {centre} at the lib.main door").IsTrue();
-        AssertThat(MathF.Abs(Angles.Bearing(door.Out) - entrance.YawDeg) < 3f).OverrideFailureMessage($"front face bearing {Angles.Bearing(door.Out)}").IsTrue();
+        AssertThat(MathF.Abs(Angles.Bearing(door.Out) - entrance.YawDeg) < 3 * TestTolerance.AngleDegrees).OverrideFailureMessage($"front face bearing {Angles.Bearing(door.Out)}").IsTrue();
         AssertThat(MathF.Abs(door.Y0 - plan.SecondFloorY) < TestTolerance.Position).OverrideFailureMessage("the front face starts on the 2F terrace").IsTrue();
     }
 

@@ -50,11 +50,5 @@ public static class WalkMath
         return new(value.X * scale, value.Y, value.Z * scale);
     }
 
-    public static float SmoothStep(float value)
-    {
-        float t = Math.Clamp(value, 0f, 1f);
-        return t * t * t * (t * (t * 6f - 15f) + 10f);
-    }
-
     public static float DescentSeconds(float height) => Math.Clamp(.4f + .4f * MathF.Log10(MathF.Max(height, 1f)), .5f, 1.6f);
 }

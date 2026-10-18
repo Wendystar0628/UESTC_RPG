@@ -83,7 +83,7 @@ internal sealed partial class RoadMarkings
                 for (var i = 0; i + 1 < walk.Points.Length; i++)
                     for (var k = 0; k + 1 < road.Points.Length; k++)
                     {
-                        if (PlanGeometry.SegmentIntersection(walk.Points[i], walk.Points[i + 1], road.Points[k], road.Points[k + 1], 1e-6f) is not { } x) continue;
+                        if (PlanLines.SegmentIntersection(walk.Points[i], walk.Points[i + 1], road.Points[k], road.Points[k + 1], 1e-6f) is not { } x) continue;
                         if (NearJunction(junctions, x, spec.ZebraLength + spec.ZebraSetback)) continue;
                         var along = Vector2.Normalize(road.Points[k + 1] - road.Points[k]);
                         zebras.Add((x, along, road.Width * 0.5f, MathF.Max(spec.ZebraLength, walk.Width + 1f)));
@@ -103,12 +103,12 @@ internal sealed partial class RoadMarkings
         {
             if (road.Width < spec.CentreLineMinWidth) continue;
             var period = spec.DashLength + spec.DashGap;
-            var length = PlanGeometry.Length(road.Points);
+            var length = PlanLines.Length(road.Points);
             var start = spec.DashGap * 0.5f;
             for (var s = start; s + spec.DashLength <= length; s += period)
             {
-                var p0 = PlanGeometry.Sample(road.Points, s).Point;
-                var p1 = PlanGeometry.Sample(road.Points, s + spec.DashLength).Point;
+                var p0 = PlanLines.Sample(road.Points, s).Point;
+                var p1 = PlanLines.Sample(road.Points, s + spec.DashLength).Point;
                 var mid = (p0 + p1) * 0.5f;
                 if (NearJunction(junctions, mid, spec.ZebraSetback + spec.ZebraLength + 1.5f)) continue;
                 if (placed.Any(p => Vector2.DistanceSquared(p, mid) < 25f)) continue;   // keep clear of mid-block crossings

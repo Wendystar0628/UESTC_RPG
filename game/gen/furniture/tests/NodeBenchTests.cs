@@ -114,7 +114,7 @@ public sealed class NodeBenchTests
             var world = WalkWorld(open, line, feature);
             var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
             var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
-            var onWalk = benches.Where(b => (float)PlanGeometry.Project(line.Line.Points, b.Anchor).Distance <= Half(line)).ToList();
+            var onWalk = benches.Where(b => (float)PlanLines.Project(line.Line.Points, b.Anchor).Distance <= Half(line)).ToList();
             if (!takes)
             {
                 AssertThat(onWalk.Count == 0).OverrideFailureMessage($"{onWalk.Count} benches on a {width} m walk").IsTrue();
@@ -171,7 +171,7 @@ public sealed class NodeBenchTests
             var facing = Front(bench.Part.At);
             var p = (FurnitureParams)bench.Part.Params;
             var front = bench.Anchor + facing * (p.Depth * 0.5f);
-            var edge = (float)PlanGeometry.Project(line.Line.Points, front).Distance - Half(line);
+            var edge = (float)PlanLines.Project(line.Line.Points, front).Distance - Half(line);
             AssertThat(edge >= -TestTolerance.Position && edge <= FurnitureStyle.WalkGap + TestTolerance.Layout * 2).OverrideFailureMessage($"{bench.Key}: front {edge:F2} m off the walk's edge").IsTrue();
             AssertThat(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f, Road: { } walk } && walk.Id == line.Id).OverrideFailureMessage($"{bench.Key} does not face the walk").IsTrue();
         }
@@ -197,18 +197,18 @@ public sealed class NodeBenchTests
             var p = (FurnitureParams)bench.Part.Params;
             var facing = Front(bench.Part.At);
             var right = new Vector2(-facing.Y, facing.X);
-            var walk = walks.Where(w => (float)PlanGeometry.Project(w.Line.Points, bench.Anchor).Distance <= Half(w)).MinBy(w => (float)PlanGeometry.Project(w.Line.Points, bench.Anchor).Distance)
+            var walk = walks.Where(w => (float)PlanLines.Project(w.Line.Points, bench.Anchor).Distance <= Half(w)).MinBy(w => (float)PlanLines.Project(w.Line.Points, bench.Anchor).Distance)
                 ?? throw new InvalidOperationException($"{bench.Key} does not stand on a walk");
             AssertThat(2f * Half(walk) >= FurnitureStyle.NodeWalkMin).OverrideFailureMessage($"{bench.Key} stands on a walk {2f * Half(walk):F1} m wide").IsTrue();
             foreach (var u in new[] { -p.Width * 0.5f, 0f, p.Width * 0.5f })
                 foreach (var v in new[] { -p.Depth * 0.5f, p.Depth * 0.5f + FurnitureStyle.FeetReach })
-                    AssertThat((float)PlanGeometry.Project(walk.Line.Points, bench.Anchor + right * u + facing * v).Distance <= Half(walk) + TestTolerance.Position).OverrideFailureMessage($"{bench.Key} leaves its walk at ({u:F2}, {v:F2})").IsTrue();
+                    AssertThat((float)PlanLines.Project(walk.Line.Points, bench.Anchor + right * u + facing * v).Distance <= Half(walk) + TestTolerance.Position).OverrideFailureMessage($"{bench.Key} leaves its walk at ({u:F2}, {v:F2})").IsTrue();
             var back = bench.Anchor - facing * (p.Depth * 0.5f);
-            AssertThat(MathF.Abs(Half(walk) - (float)PlanGeometry.Project(walk.Line.Points, back).Distance - FurnitureStyle.WalkBenchClear) < TestTolerance.Layout).OverrideFailureMessage($"{bench.Key} has its back {Half(walk) - (float)PlanGeometry.Project(walk.Line.Points, back).Distance:F2} m inside the walk's edge").IsTrue();
-            var toLine = Vector2.Normalize(PlanGeometry.Project(walk.Line.Points, back).Point - back);
+            AssertThat(MathF.Abs(Half(walk) - (float)PlanLines.Project(walk.Line.Points, back).Distance - FurnitureStyle.WalkBenchClear) < TestTolerance.Layout).OverrideFailureMessage($"{bench.Key} has its back {Half(walk) - (float)PlanLines.Project(walk.Line.Points, back).Distance:F2} m inside the walk's edge").IsTrue();
+            var toLine = Vector2.Normalize(PlanLines.Project(walk.Line.Points, back).Point - back);
             AssertThat(Vector2.Dot(toLine, facing) > 0.97f).OverrideFailureMessage($"{bench.Key} does not face across its walk").IsTrue();
             var feet = bench.Anchor + facing * (p.Depth * 0.5f + FurnitureStyle.FeetReach);
-            var across = Vector2.Dot(feet - PlanGeometry.Project(walk.Line.Points, feet).Point, facing);
+            var across = Vector2.Dot(feet - PlanLines.Project(walk.Line.Points, feet).Point, facing);
             AssertThat(Half(walk) - across >= FurnitureStyle.NodeWalkPass - TestTolerance.Position).OverrideFailureMessage($"{bench.Key} leaves {Half(walk) - across:F2} m to pass").IsTrue();
             AssertThat(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f)).OverrideFailureMessage($"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway").IsTrue();
             AssertThat(!site.CarriagewayAhead(bench.Anchor + facing * (p.Depth * 0.5f), facing, FurnitureStyle.FaceClear)).OverrideFailureMessage($"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m").IsTrue();

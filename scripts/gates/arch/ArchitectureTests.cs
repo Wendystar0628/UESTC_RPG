@@ -41,6 +41,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void GeneratorsCannotDependOnEngineOrRuntimeContracts()
     {
         var forbidden = Types().That().ResideInAssemblyMatching("^GodotSharp(?:,|$)")
@@ -55,6 +56,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void ArchitectureEngineDetectsAForbiddenDependency()
     {
         var probeModel = new ArchLoader().LoadAssembly(typeof(ArchitectureTests).Assembly).Build();
@@ -72,6 +74,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void AssemblyReferencesAndMapScopesRespectLayering()
     {
         var scopes = Production.Value.ToDictionary(assembly => assembly.GetName().Name!, MapScope, StringComparer.Ordinal);
@@ -186,6 +189,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void EngineCreationTimingAndAudioCallsStayWithOwners()
     {
         DenyCallsOutside(@"^Campus\.Kernel\.", method =>
@@ -212,6 +216,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void HudAndSystemsOnlyUsePublishedInterfaces()
     {
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Kernel(?:\.|$)").Should()
@@ -258,6 +263,7 @@ public sealed class ArchitectureTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void SaveSectionsOnlyUseSafeSerialization()
     {
         var sectionNames = Model.Value.Types.Where(type => type.ImplementedInterfaces.Any(contract => contract.FullName.Contains("ISaveSection", StringComparison.Ordinal)))
@@ -290,7 +296,7 @@ public sealed class ArchitectureTests
     private static bool IsMethod(MethodMember method, string type, params string[] prefixes) =>
         method.DeclaringType.FullName == type && prefixes.Any(prefix => method.Name.StartsWith(prefix, StringComparison.Ordinal));
 
-    private static string FindRepository()
+    internal static string FindRepository()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)

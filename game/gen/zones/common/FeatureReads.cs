@@ -30,23 +30,11 @@ public static partial class FeatureReads
     public static IReadOnlyList<Vector2> Outer(this WorldFeature feature) =>
         feature.Geometry is PolygonGeometry polygon ? polygon.Rings.Outer : throw new InvalidOperationException($"{feature.Id.Value} is not a polygon.");
 
-    /// <summary>The polygons of an area feature, one or many.</summary>
-    public static IReadOnlyList<PolygonRings> Polygons(this WorldFeature feature) => feature.Geometry switch
-    {
-        PolygonGeometry polygon => [polygon.Rings],
-        MultiPolygonGeometry multi => multi.Polygons,
-        _ => throw new InvalidOperationException($"{feature.Id.Value} is not an area."),
-    };
-
     /// <summary>The outer rings of the feature's source parts (their facade layout), or of its geometry when it has none.</summary>
     public static IReadOnlyList<IReadOnlyList<Vector2>> Outers(this WorldFeature feature)
     {
-        static IEnumerable<IReadOnlyList<Vector2>> Of(OverlayGeometry g) => g switch
-        {
-            PolygonGeometry p => [p.Rings.Outer],
-            MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
-            _ => [],
-        };
+        static IEnumerable<IReadOnlyList<Vector2>> Of(OverlayGeometry geometry) =>
+            WorldFeatureGeometry.PolygonsOf(geometry).Select(rings => rings.Outer);
         return [.. feature.Parts.Count > 0 ? feature.Parts.SelectMany(p => Of(WorldFeatureGeometry.FacadeGeometryOf(p))) : Of(feature.Geometry)];
     }
 

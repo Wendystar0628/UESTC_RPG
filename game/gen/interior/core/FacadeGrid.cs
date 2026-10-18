@@ -30,7 +30,7 @@ public sealed record FacadeBay(int Index, int Ring, int Edge, int Bay,
 {
     public string Key => FormattableString.Invariant($"r{Ring}/e{Edge}/b{Bay}");
     public Vector2 Center => PlanGeometry.Lerp(A, B, 0.5d);
-    public float Width => PlanGeometry.Length(B - A);
+    public float Width => VectorMath.Length(B - A);
     /// <summary>The caller adds its building allocation base; ordinal is zero-based, not a floor label.</summary>
     public int WindowIndex(int storeyOrdinal, int baysPerStorey)
     {
@@ -64,7 +64,7 @@ public static class FacadeGridGenerator
                 Vector2 a = ring[edge], b = ring[(edge + 1) % ring.Count];
                 Vector2 tangent = PlanGeometry.Unit(b - a);
                 Vector2 inward = new(-tangent.Y, tangent.X);
-                float length = PlanGeometry.Length(b - a);
+                float length = VectorMath.Length(b - a);
                 int count = BayCount(length, options);
                 if (bays.Count + count > 65536)
                     throw new ArgumentException("A single footprint exceeds the supported facade bay count.", nameof(footprint));
@@ -72,7 +72,7 @@ public static class FacadeGridGenerator
                 {
                     Vector2 start = PlanGeometry.Lerp(a, b, (double)bay / count);
                     Vector2 end = PlanGeometry.Lerp(a, b, (double)(bay + 1) / count);
-                    float width = PlanGeometry.Length(end - start);
+                    float width = VectorMath.Length(end - start);
                     float openingWidth = MathF.Min(options.WindowWidth, width - 2f * options.JambClearance);
                     bool blank = width < options.MinimumBayWidth || openingWidth < 0.5f;
                     Vector2 center = PlanGeometry.Lerp(start, end, 0.5d);

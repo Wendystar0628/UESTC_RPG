@@ -67,13 +67,13 @@ public sealed class FurniturePlantingRowTests
         var before = RealLayout.Value;
         var avenue = world.Network.Roads.Where(l => StreetSite.RoadName(l) == FurnitureStyle.Roads[0].Name).ToList();
         var bench = before.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal));
-        var offset = avenue.Min(l => (float)PlanGeometry.Project(l.Line.Points, bench.Anchor).Distance);
+        var offset = avenue.Min(l => (float)PlanLines.Project(l.Line.Points, bench.Anchor).Distance);
         var moved = Build(world, null, Inputs(Edit(root => root["roads"]![0]!["rows"] = new JsonArray(new JsonObject { ["offset"] = offset }))));
         var after = moved.Items.FirstOrDefault(i => i.Key == bench.Key);
         AssertThat(after is null || Vector2.Distance(after.Anchor, bench.Anchor) > 0.5f).OverrideFailureMessage($"{bench.Key} stands where it did, on a tree row").IsTrue();
         // And the row it now keeps clear of is the new one: every bench of the avenue is off the offset line.
         foreach (var item in moved.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin && i.Key.StartsWith("rest:0:", StringComparison.Ordinal)))
-            AssertThat(MathF.Abs(avenue.Min(l => (float)PlanGeometry.Project(l.Line.Points, item.Anchor).Distance) - offset) >= FurnitureStyle.RowClear).OverrideFailureMessage($"{item.Key} stands on the changed row").IsTrue();
+            AssertThat(MathF.Abs(avenue.Min(l => (float)PlanLines.Project(l.Line.Points, item.Anchor).Distance) - offset) >= FurnitureStyle.RowClear).OverrideFailureMessage($"{item.Key} stands on the changed row").IsTrue();
         // Signposts, fountains and the service things (13c2c) come last and keep off the rows and what stands before them: they may move too.
         foreach (var item in before.Items.Where(i => !i.Key.StartsWith("rest:0:", StringComparison.Ordinal) && !i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)
             && i.Kind is not (FurnitureKind.Signpost or FurnitureKind.DrinkingFountain or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker

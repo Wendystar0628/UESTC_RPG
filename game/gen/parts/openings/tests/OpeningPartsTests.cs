@@ -58,7 +58,8 @@ public sealed class OpeningPartsTests
         AssertThat(empty.Count == 0).OverrideFailureMessage("Empty near geometry: " + string.Join("; ", empty)).IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
         foreach (var sample in OpeningGallery.Samples())

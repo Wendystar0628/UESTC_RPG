@@ -82,7 +82,7 @@ public sealed class QuietGarden : ICorePiece
                 {
                     var band = ReferenceEquals(w, Pergola) ? S.PergolaInset + S.PergolaDepth + S.PergolaOverhang
                         : ReferenceEquals(w, Colonnade) ? S.ColonnadeInset + S.ColonnadeColumn : 0f;
-                    clear = MathF.Min(clear, MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, w.A, w.B)) - band);
+                    clear = MathF.Min(clear, MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, w.A, w.B)) - band);
                 }
                 foreach (var (q, r) in keep) clear = MathF.Min(clear, Vector2.Distance(p, q) - r);
                 if (clear > bestClear + 1e-4f) { bestClear = clear; best = p; }

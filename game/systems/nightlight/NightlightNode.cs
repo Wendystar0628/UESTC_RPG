@@ -260,9 +260,9 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     /// <summary>光柱的整体强度：太阳 2°–30° 之间才有；雨中的白天不画（太阳雨由 WP-45 的判定另算）；雾天 ×1.5。</summary>
     private static float ShaftStrength(float sunAltDeg, WeatherVec w)
     {
-        var sun = ScheduleMath.SmoothStep(2f, 6f, sunAltDeg) * (1f - ScheduleMath.SmoothStep(24f, 30f, sunAltDeg));
-        var rain = ScheduleMath.SmoothStep(0.05f, 0.2f, w.Precip * (1f - w.PrecipKind)) * ScheduleMath.SmoothStep(0.4f, 0.6f, w.Overcast);
-        var fog = 1f + 0.5f * ScheduleMath.SmoothStep(1.2f, 2.5f, w.Fog);
+        var sun = ScalarMath.Smoothstep(2f, 6f, sunAltDeg) * (1f - ScalarMath.Smoothstep(24f, 30f, sunAltDeg));
+        var rain = ScalarMath.Smoothstep(0.05f, 0.2f, w.Precip * (1f - w.PrecipKind)) * ScalarMath.Smoothstep(0.4f, 0.6f, w.Overcast);
+        var fog = 1f + 0.5f * ScalarMath.Smoothstep(1.2f, 2.5f, w.Fog);
         return sun * (1f - rain) * fog;
     }
 }

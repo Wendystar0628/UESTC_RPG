@@ -248,7 +248,7 @@ public sealed class BakeSurfaceTests
                 for (var i = 0; i < 3; i++)
                 {
                     var expected = new Vector3(input.Normal[i * 3], input.Normal[i * 3 + 1], input.Normal[i * 3 + 2]);
-                    if ((normals[i] - expected).Length() > .001f) throw new InvalidOperationException("Native normal direction differs from source.");
+                    if ((normals[i] - expected).Length() > 10 * TestTolerance.FloatRelative) throw new InvalidOperationException("Native normal direction differs from source.");
                 }
                 if (!useUv2) continue;
                 var decoded = arrays[(int)Mesh.ArrayType.TexUV2].AsVector2Array();

@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using System.Numerics;
 using Campus.Gen.Geometry;
 
@@ -7,7 +8,7 @@ namespace Campus.Gen.Zones.West.Framework;
 public sealed class Route(IReadOnlyList<Vector2> points)
 {
     public Vector2[] Points { get; } = [.. points];
-    public float Length { get; } = (float)PlanGeometry.Length(points);
+    public float Length { get; } = (float)PlanLines.Length(points);
 
     /// <summary>Two Chaikin corner-cutting passes per <paramref name="passes"/>, keeping both end points.</summary>
     public static Vector2[] Smooth(IReadOnlyList<Vector2> points, int passes)
@@ -30,7 +31,7 @@ public sealed class Route(IReadOnlyList<Vector2> points)
 
     public (Vector2 P, Vector2 T) At(float station)
     {
-        var sample = PlanGeometry.Sample(Points, station);
+        var sample = PlanLines.Sample(Points, station);
         return (sample.Point, sample.Tangent);
     }
 
@@ -38,9 +39,9 @@ public sealed class Route(IReadOnlyList<Vector2> points)
 
     public (float S, float Lateral) Project(Vector2 point)
     {
-        var projection = PlanGeometry.Project(Points, point);
+        var projection = PlanLines.Project(Points, point);
         return ((float)projection.Station, Vector2.Dot(point - projection.Point, Right(projection.Tangent)));
     }
 
-    public Vector2[] Sub(float from, float to) => PlanGeometry.Subline(Points, from, to);
+    public Vector2[] Sub(float from, float to) => PlanLines.Subline(Points, from, to);
 }

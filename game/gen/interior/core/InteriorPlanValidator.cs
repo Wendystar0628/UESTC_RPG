@@ -63,7 +63,7 @@ public static class InteriorPlanValidator
                 throw new ArgumentException("A stair flight is not flush with its landing or buried into the lower floor.");
             foreach (RampCollider ramp in new[] { stair.UpFlight, stair.ReturnFlight })
             {
-                float horizontal = PlanGeometry.Length(new(ramp.P3.X - ramp.P0.X, ramp.P3.Z - ramp.P0.Z));
+                float horizontal = VectorMath.Length(new(ramp.P3.X - ramp.P0.X, ramp.P3.Z - ramp.P0.Z));
                 float slope = (ramp.P3.Y - ramp.P0.Y) / horizontal;
                 if (slope < 0.487f || slope > 0.675f || ramp.Stair is not { Count: >= 3 and <= 18 })
                     throw new ArgumentException("A dormitory flight must stay within 26 to 34 degrees and 3 to 18 steps.");
@@ -73,7 +73,7 @@ public static class InteriorPlanValidator
                 throw new ArgumentException("The upper floor incorrectly covers its stair opening.");
         }
         foreach (InteriorWallSpan wall in plan.Walls)
-            if (wall.Thickness <= 0f || wall.TopY <= wall.BottomY || PlanGeometry.Length(wall.B - wall.A) <= 0.001f)
+            if (wall.Thickness <= 0f || wall.TopY <= wall.BottomY || VectorMath.Length(wall.B - wall.A) <= 0.001f)
                 throw new ArgumentException("A wall span is degenerate.");
         ValidateConnectivity(plan);
     }

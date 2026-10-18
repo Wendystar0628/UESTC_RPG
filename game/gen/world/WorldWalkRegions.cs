@@ -76,7 +76,7 @@ internal sealed class WorldWalkRegions
         if (width <= 0) return false;
         var radiusSquared = width * width * .25f;
         for (var i = 1; i < line.Points.Count; i++)
-            if (PlanGeometry.SegmentDistanceSquared(point, line.Points[i - 1], line.Points[i]) <= radiusSquared)
+            if (PlanLines.SegmentDistanceSquared(point, line.Points[i - 1], line.Points[i]) <= radiusSquared)
                 return true;
         return false;
     }

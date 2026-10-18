@@ -27,6 +27,8 @@ public interface IMapArrival
 public interface IMapLifetime
 {
     Task Mount(IMapContext context);
+    Task ShutdownAsync(MapId map);
+    string DescribeReadiness();
 }
 
 /// <summary>

@@ -6,6 +6,8 @@ namespace Campus.Gen.Geometry;
 
 public static partial class PlanGeometry
 {
+    private static readonly GeometryFactory Factory = new();
+
     /// <summary>Drop adjacent and closing duplicates, preserving the first point and traversal direction.</summary>
     public static Vector2[] DeduplicateRing(IReadOnlyList<Vector2> ring, float distanceSquared = 1e-8f)
     {

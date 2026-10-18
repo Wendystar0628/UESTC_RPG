@@ -36,7 +36,7 @@ public static partial class FurniturePlanner
         var lockerSpots = new List<ServiceSite>();
         foreach (var spot in vendingSites)
         {
-            if (axis.Any(l => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(l.Line.Points, spot.At)) < S.MainAxisClear)) { axial++; continue; }
+            if (axis.Any(l => MathF.Sqrt(PlanLines.PolylineDistanceSquared(l.Line.Points, spot.At)) < S.MainAxisClear)) { axial++; continue; }
             if (groups.Any(g => Vector2.Distance(g.At, spot.At) < S.VendingSpacing)) { crowded++; continue; }
             var hash = StableHash.Hash32(0x13C2Cu, "vending", spot.Label);
             var count = S.VendingMin + (int)(hash % (uint)(S.VendingMax - S.VendingMin + 1));
@@ -187,7 +187,7 @@ public static partial class FurniturePlanner
                     var q = Vector2.Lerp(a, b, (k + 0.5f) / steps);
                     foreach (var line in lines)
                     {
-                        var d = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, q)) - StreetSite.HalfWidth(line);
+                        var d = MathF.Sqrt(PlanLines.PolylineDistanceSquared(line.Line.Points, q)) - StreetSite.HalfWidth(line);
                         if (d <= 30f && (best is null || d < best.Value.D)) best = (d, q);
                     }
                 }
@@ -251,7 +251,7 @@ public static partial class FurniturePlanner
         foreach (var line in site.World.Network.Roads.Where(StreetSite.Carriageway).OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
             var half = StreetSite.HalfWidth(line);
-            if (MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, p)) > reach + half) continue;
+            if (MathF.Sqrt(PlanLines.PolylineDistanceSquared(line.Line.Points, p)) > reach + half) continue;
             var run = new StreetSite.Run([.. line.Line.Points]);
             for (var s = 0f; s <= run.Length; s += 1f)
             {

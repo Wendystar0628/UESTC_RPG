@@ -65,7 +65,8 @@ public sealed class WindowCardTableTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void PackingIsDeterministicAndRejectsBadCards()
     {
         AssertThat(WindowCardTable.Pack().SequenceEqual(WindowCardTable.Pack())).OverrideFailureMessage("Packing is not deterministic.").IsTrue();

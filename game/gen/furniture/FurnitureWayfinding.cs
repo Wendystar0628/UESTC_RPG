@@ -116,7 +116,7 @@ public static partial class FurniturePlanner
                 if (ends.Contains(i)) continue;
                 var points = lines[i].Line.Points;
                 if (Vector2.Distance(points[0], at) <= S.JunctionSnap || Vector2.Distance(points[^1], at) <= S.JunctionSnap) continue;
-                if (MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(lines[i].Line.Points, at)) <= S.JunctionSnap) { branches += 2; through++; }
+                if (MathF.Sqrt(PlanLines.PolylineDistanceSquared(lines[i].Line.Points, at)) <= S.JunctionSnap) { branches += 2; through++; }
             }
             if (ends.Distinct().Count() + through >= 2) result.Add((at, branches));
         }

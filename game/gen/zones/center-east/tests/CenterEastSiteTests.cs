@@ -71,7 +71,7 @@ public sealed partial class CenterEastModuleTests
         }
         for (var i = 1; i < stepped.Count; i++)
         {
-            AssertThat(MathF.Abs(stepped[i - 1].Z1 - stepped[i].Z0) < 0.01f)
+            AssertThat(MathF.Abs(stepped[i - 1].Z1 - stepped[i].Z0) < 5 * PlanGeometry.Tolerance)
                 .OverrideFailureMessage("neighbouring runs meet without a gap").IsTrue();
             var expectedDrop = (stepped[i].Z0 - stepped[i - 1].Z0) * slope;
             AssertThat(MathF.Abs(stepped[i - 1].Top - stepped[i].Top - expectedDrop) < TestTolerance.Position)

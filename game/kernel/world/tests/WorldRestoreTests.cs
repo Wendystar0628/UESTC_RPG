@@ -215,7 +215,8 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void JsonRoundTripIsStrictAndContinuesBitExactly()
     {
         var a = CreateWorld(new TestWeatherProcess());

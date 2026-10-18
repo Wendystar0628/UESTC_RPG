@@ -15,7 +15,8 @@ public sealed class FaunaTests
     private static readonly Lazy<IWorldModel> World = new(() => RealMapFixture.Load().World);
     private static readonly Lazy<IReadOnlyList<FeatureId>> Lakes = new(() => RealMapFixture.Entry().Descriptor.Env.ReflectLakes);
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
     {
         var a = FaunaPlanner.Build(World.Value, 1, Lakes.Value);

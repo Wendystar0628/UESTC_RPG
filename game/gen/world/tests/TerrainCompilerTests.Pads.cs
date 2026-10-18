@@ -169,7 +169,11 @@ public sealed partial class TerrainCompilerTests
                 new(-607.56f,448.56f),new(-629.28f,432.33f),new(-622.72f,415.31f)]),
             new([new(-660.78f,360.05f),new(-667.97f,369.8f),new(-671.87f,366.8f),new(-664.64f,357.22f)]),
             new([new(-680.92f,366.79f),new(-673.77f,372.16f),new(-678.04f,378.16f),new(-685.45f,372.8f)])];
-        string[] sources = ["osm:relation:10807928", "osm:way:779496157", "osm:way:779496158", "osm:way:842746200"];
+        using var campus = JsonDocument.Parse(RealMapFixture.ReadFiles()["campus.json"]);
+        var identity = Campus.Gen.Zones.South.SouthIds.InnovationA.Entity;
+        var sources = campus.RootElement.GetProperty("entities").EnumerateArray()
+            .Single(entity => entity.GetProperty("id").GetString() == identity)
+            .GetProperty("featureIds").EnumerateArray().Select(id => id.GetString()!).ToArray();
         var exposed = TerrainUnion.Build([new TerrainRegion(wings)]);
         const double x = -635.25, z = 404.760009765625;
         const double nx = 0.9992360522213667, nz = 0.039080838541203894;
@@ -181,7 +185,7 @@ public sealed partial class TerrainCompilerTests
         AssertThat(outward.End > 0.8 && exposed.Distance(ux + unx * outward.End, uz + unz * outward.End).Height > 0.8).OverrideFailureMessage("A parameter-only ULP interval was mistaken for the actual outward band's end.").IsTrue();
         var inward = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), ux, uz, -unx, -unz, 6.8);
         AssertThat(inward.End <= TestTolerance.Position).OverrideFailureMessage("A reversed boundary ray acquired an outward grading strip through the building core.").IsTrue();
-        var building = new WorldFeature(new("qsh:relation:10807928"), FeatureSource.Osm, new("building"), new MultiPolygonGeometry(wings))
+        var building = new WorldFeature(new(identity), FeatureSource.Osm, new("building"), new MultiPolygonGeometry(wings))
         {
             Height = 20,
             Parts = wings.Select((wing, i) => new WorldFeaturePart(sources[i], new PolygonGeometry(wing), 20, 5) { Props = Kind("building") }).ToArray()

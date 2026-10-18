@@ -47,7 +47,7 @@ public sealed class PublicModuleTests
             {
                 var type = road.Props.TryText("highway") ?? road.Props.TryText("roadType") ?? "";
                 var edge = road.Width * 0.5f + (Carriageway.Contains(type) ? 0.15f : 0f);
-                var d = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(road.Line.Points, c)) - edge - r;
+                var d = MathF.Sqrt(PlanLines.PolylineDistanceSquared(road.Line.Points, c)) - edge - r;
                 AssertThat(d > 0.2f).OverrideFailureMessage($"{bench.Id.Value} pad comes within {d:F2} m of road {road.Id.Value} ({type})").IsTrue();
             }
             foreach (var f in world.Features.Values)
@@ -113,7 +113,8 @@ public sealed class PublicModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BuildIsDeterministicWithRegisteredColours()
     {
         var ctx = Context();

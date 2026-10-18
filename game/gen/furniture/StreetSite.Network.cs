@@ -19,7 +19,7 @@ internal sealed partial class StreetSite
         foreach (var road in World.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
         {
             if (!Carriageway(road)) continue;
-            var near = PlanGeometry.Project(road.Line.Points, p);
+            var near = PlanLines.Project(road.Line.Points, p);
             var d = Vector2.DistanceSquared(p, near.Point);
             if (d >= bestD) continue;
             bestD = d;
@@ -86,12 +86,12 @@ internal sealed partial class StreetSite
         public Run(List<Vector2> points)
         {
             _points = points;
-            Length = (float)PlanGeometry.Length(points);
+            Length = (float)PlanLines.Length(points);
         }
 
         public float Length { get; }
 
-        public Vector2 At(float s) => PlanGeometry.Sample(_points, s).Point;
+        public Vector2 At(float s) => PlanLines.Sample(_points, s).Point;
 
         /// <summary>Unit left normal at <paramref name="s"/> (the tangent turned towards +X×−Z), averaged over a 4 m chord so bends stay smooth.</summary>
         public Vector2? Normal(float s)

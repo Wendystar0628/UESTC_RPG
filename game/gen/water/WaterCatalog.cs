@@ -108,8 +108,8 @@ public static class WaterCatalog
 
     private static float Perimeter(PolygonRings rings)
     {
-        var length = (float)PlanGeometry.Length(rings.Outer, closed: true);
-        foreach (var hole in rings.Holes) length += (float)PlanGeometry.Length(hole, closed: true);
+        var length = (float)PlanLines.Length(rings.Outer, closed: true);
+        foreach (var hole in rings.Holes) length += (float)PlanLines.Length(hole, closed: true);
         return length;
     }
 

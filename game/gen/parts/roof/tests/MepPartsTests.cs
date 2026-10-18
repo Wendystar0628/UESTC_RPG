@@ -164,7 +164,8 @@ public sealed class MepPartsTests
         AssertThat(refused).OverrideFailureMessage("Characters without a glyph must be refused, not dropped.").IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
         var first = MepGallery.CreateExamples(); var second = MepGallery.CreateExamples();

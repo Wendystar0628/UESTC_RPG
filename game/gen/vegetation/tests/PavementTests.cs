@@ -22,7 +22,7 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class PavementTests
 {
-    private static NetworkLine DanguiWalk => Overlaid.Value.Network.Roads.Single(r => r.Id.Value == "design:north-dangui-walk-w2");
+    private static NetworkLine DanguiWalk => Overlaid.Value.Network.Roads.Single(r => r.Id.Value == Campus.Gen.Zones.North.NorthFeatureIds.DanguiWalkPrefix + "w2");
 
     private static IEnumerable<string> DanguiOsmTrees => BareLayout.Value.Trees
         .Where(t => t.Source == PlantSource.OsmTree && Off(DanguiWalk, new(t.Position.X, t.Position.Z)) < DanguiWalk.Width * 0.5f + Planting.TrunkClearance)
@@ -290,7 +290,7 @@ public sealed class PavementTests
     // Compare every stored field of the planted instances.
     internal static bool SameRecords(IEnumerable<PlantedTree> a, IEnumerable<PlantedTree> b) => a.SequenceEqual(b);
 
-    private static float Off(NetworkLine line, Vector2 p) => (float)PlanGeometry.Project(line.Line.Points, p).Distance;
+    private static float Off(NetworkLine line, Vector2 p) => (float)PlanLines.Project(line.Line.Points, p).Distance;
 
     /// <summary>A world with some of its network roads and features left out, to file a walk one way only.</summary>
     private static FakeWorld Filed(IWorldModel inner, Func<NetworkLine, bool> keepRoad, Func<WorldFeature, bool> keepFeature) => new(inner)
@@ -476,7 +476,7 @@ public sealed class PavementTests
                     rings.Holes.Prepend(rings.Outer).Any(ring => PlanGeometry.DistanceToRing(p, ring) < clearance);
             var r = pave.Half + clearance;
             for (var i = 1; i < pave.Line!.Count; i++)
-                if (PlanGeometry.SegmentDistanceSquared(p, pave.Line[i - 1], pave.Line[i]) < r * r) return true;
+                if (PlanLines.SegmentDistanceSquared(p, pave.Line[i - 1], pave.Line[i]) < r * r) return true;
             return false;
         }
 

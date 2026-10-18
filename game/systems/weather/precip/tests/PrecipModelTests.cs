@@ -15,7 +15,8 @@ public sealed class PrecipModelTests
         new(0.8f, 0f, 0f, 0.85f, precip, kind, wet, puddle, 1f, 0f, storm, 0f, 0f, 0f);
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void BufferIsDeterministicIdentityAndInsideTheUnitCube()
     {
         var a = PrecipModel.BuildBuffer();

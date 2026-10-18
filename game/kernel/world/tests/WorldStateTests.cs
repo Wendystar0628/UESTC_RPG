@@ -115,7 +115,8 @@ public sealed class WorldStateTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void FlowToLandsBitExactlyAtAllCinematicSpeeds()
     {
         foreach (var rate in new[] { 60, 360, 1440 })

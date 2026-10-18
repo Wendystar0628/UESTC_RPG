@@ -173,7 +173,7 @@ internal sealed class BridgePlan
                 var points = banks[bank];
                 for (var j = 1; j < points.Length; j++)
                 {
-                    if (PlanGeometry.SegmentIntersection(a, b, points[j - 1], points[j], 1e-9f) is not { } hit) continue;
+                    if (PlanLines.SegmentIntersection(a, b, points[j - 1], points[j], 1e-9f) is not { } hit) continue;
                     var s = Vector2.Dot(hit - Origin, Axis);
                     if (!hits.Any(previous => MathF.Abs(previous - s) < 0.001f)) hits.Add(s);
                 }

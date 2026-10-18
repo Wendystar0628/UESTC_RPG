@@ -49,9 +49,9 @@ public static partial class Planting
             foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             {
                 foreach (var kind in Blocking)
-                    foreach (var rings in Polygons(feature, kind))
+                    foreach (var rings in Parcels(feature, kind))
                         _blocking.AddBox(rings.Min, rings.Max, rings);
-                foreach (var rings in Polygons(feature, "green")) green.Add(rings);
+                foreach (var rings in Parcels(feature, "green")) green.Add(rings);
                 // The effective world's hard pavement: the road areas and design walks of the features (the network's own
                 // centre lines are roads above), and the tree pits that may stand on it.
                 if (!(IsWalk(feature) && published.Contains(feature.Id.Value)))
@@ -106,7 +106,7 @@ public static partial class Planting
             foreach (var road in _roads.In(p))
             {
                 var r = road.Width * 0.5f + clearance;
-                if (PlanGeometry.Project(road.Line.Points, p).Distance < r) return true;
+                if (PlanLines.Project(road.Line.Points, p).Distance < r) return true;
             }
             return false;
         }
@@ -130,7 +130,7 @@ public static partial class Planting
                 else
                 {
                     var r = pave.Half + clearance;
-                    if (PlanGeometry.Project(pave.Line!, p).Distance < r) return true;
+                    if (PlanLines.Project(pave.Line!, p).Distance < r) return true;
                 }
             }
             return false;
@@ -246,16 +246,11 @@ public static partial class Planting
             }
         }
 
-        private static IEnumerable<Parcel> Polygons(WorldFeature feature, string kind)
+        private static IEnumerable<Parcel> Parcels(WorldFeature feature, string kind)
         {
             foreach (var part in Parts(feature, kind))
             {
-                IEnumerable<PolygonRings> polygons = WorldFeatureGeometry.FacadeGeometryOf(part) switch
-                {
-                    PolygonGeometry polygon => [polygon.Rings],
-                    MultiPolygonGeometry multi => multi.Polygons,
-                    _ => []
-                };
+                var polygons = WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(part));
                 foreach (var (rings, index) in polygons.Select((rings, index) => (rings, index)))
                 {
                     if (rings.Outer.Count < 3) continue;

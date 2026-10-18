@@ -52,7 +52,8 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs((double)(0) - (double)(center.Dx)) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCase, TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SameSpanRoadContributorInputOrderDoesNotChangeItsSurface()
     {
         var first = BankContributor("fixture:bank-a", (_, z) => (new(2 + z * 0.05, 0, 0.05), new(1 + z * 0.02, 0, 0.02)));

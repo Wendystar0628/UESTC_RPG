@@ -18,7 +18,8 @@ public sealed class WeatherProcessTests
         RepositoryFixture.FilePath("game", "data", "weather", "chengdu", "profile.json")));
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SameSeedMapAndTimeGiveTheSameWeatherInAnyCallOrder()
     {
         var profile = Profile;
@@ -101,7 +102,8 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void SaveRoundTripContinuesIdentically()
     {
         var profile = Profile;
@@ -194,7 +196,8 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
-    [TestCategory(TestReason.Determinism)]
+    [TestCategory(TestTag.Determinism)]
+    [TestCategory(TestReason.Contract)]
     public void CaptureAtIsPureAndProjectsTheSaveMoment()
     {
         var profile = Profile;

@@ -102,7 +102,7 @@ public static class CanopyProjection
                 for (var pz = Math.Max(z0, 0); pz <= Math.Min(z1, Height - 1); pz++)
                     for (var px = Math.Max(x0, 0); px <= Math.Min(x1, Width - 1); px++)
                     {
-                        var d = MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(Centre(px, pz), a, b));
+                        var d = MathF.Sqrt(PlanLines.SegmentDistanceSquared(Centre(px, pz), a, b));
                         if (d >= half) continue;
                         var track = MathF.Abs(d - TrackOffset) < TrackWidth * 0.5f;
                         var index = (pz * Width + px) * 4;

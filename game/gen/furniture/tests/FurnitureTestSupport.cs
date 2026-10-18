@@ -85,7 +85,7 @@ internal static class FurnitureTestSupport
                 var p = new Vector2(x, z);
                 if (!PlanGeometry.Contains(world.Boundary, p) || site.Blocker(p, 14f) is not null || site.PavingEdgeFacing(p) is not null) continue;
                 if (!Compass.All(d => PlanGeometry.Contains(world.Boundary, p + d * Clear))) continue;
-                if (lines.Any(l => (float)PlanGeometry.Project(l.Line.Points, p).Distance < Half(l) + Clear)) continue;
+                if (lines.Any(l => (float)PlanLines.Project(l.Line.Points, p).Distance < Half(l) + Clear)) continue;
                 return p;
             }
         throw new InvalidOperationException("The map has no open ground for a made-up walk.");

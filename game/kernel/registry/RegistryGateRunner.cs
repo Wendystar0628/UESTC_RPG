@@ -46,7 +46,7 @@ public static partial class RegistryGateRunner
             if (map.Id != entry.Id || map.Version < 1 || points.Version < 1)
                 throw new InvalidDataException($"Map identity or version mismatch: {entry.Id}");
             var rect = map.DataRect;
-            if (!Finite(rect.Min) || !Finite(rect.Max) || rect.Max.X <= rect.Min.X || rect.Max.Y <= rect.Min.Y)
+            if (!VectorMath.Finite(rect.Min) || !VectorMath.Finite(rect.Max) || rect.Max.X <= rect.Min.X || rect.Max.Y <= rect.Min.Y)
                 throw new InvalidDataException($"Invalid dataRect: {entry.Id}");
             if (map.Spawns.Select(spawn => spawn.Id).Distinct(StringComparer.Ordinal).Count() != map.Spawns.Count ||
                 points.Waypoints.Select(point => point.Id).Distinct(StringComparer.Ordinal).Count() != points.Waypoints.Count)
@@ -183,7 +183,6 @@ public static partial class RegistryGateRunner
             if (current.FullName == "Godot.Node") return true;
         return false;
     }
-    private static bool Finite(Vector2 value) => float.IsFinite(value.X) && float.IsFinite(value.Y);
     private static void ValidatePose(MapId map, Pose pose)
     {
         if (!float.IsFinite(pose.Position.X) || !float.IsFinite(pose.Position.Y) || !float.IsFinite(pose.Position.Z) ||

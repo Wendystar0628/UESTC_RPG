@@ -63,22 +63,22 @@ public sealed class FurnitureStreetLayoutTests
             var p = (FurnitureParams)item.Part.Params;
             var facing = Front(item.Part.At);
             var front = item.Anchor + facing * (p.Depth * 0.5f);
-            var walk = walks.MinBy(w => (float)PlanGeometry.Project(w.Line.Points, front).Distance);
-            var edge = (float)PlanGeometry.Project(walk!.Line.Points, front).Distance - Half(walk!);
+            var walk = walks.MinBy(w => (float)PlanLines.Project(w.Line.Points, front).Distance);
+            var edge = (float)PlanLines.Project(walk!.Line.Points, front).Distance - Half(walk!);
             AssertThat(edge >= -TestTolerance.Position && edge <= FurnitureStyle.WalkGap + TestTolerance.Layout * 2).OverrideFailureMessage($"{item.Key}: front {edge:F2} m off its walk's edge").IsTrue();
-            var toWalk = Vector2.Normalize(PlanGeometry.Project(walk!.Line.Points, front).Point - item.Anchor);
+            var toWalk = Vector2.Normalize(PlanLines.Project(walk!.Line.Points, front).Point - item.Anchor);
             AssertThat(Vector2.Dot(toWalk, facing) > 0.97f).OverrideFailureMessage($"{item.Key} does not face its walk").IsTrue();
             AssertThat(2f * Half(walk!) - FurnitureStyle.FeetReach >= FurnitureStyle.PassClear).OverrideFailureMessage($"{item.Key}: walk too narrow to pass").IsTrue();
             var pad = item.Pad ?? throw new InvalidOperationException($"{item.Key} has no bay");
             var padFront = new Vector2(pad.Frame.M41, pad.Frame.M43) + facing * pad.HalfDepth;
-            AssertThat((float)PlanGeometry.Project(walk!.Line.Points, padFront).Distance < Half(walk!)).OverrideFailureMessage($"{item.Key}: its bay does not reach the walk").IsTrue();
+            AssertThat((float)PlanLines.Project(walk!.Line.Points, padFront).Distance < Half(walk!)).OverrideFailureMessage($"{item.Key}: its bay does not reach the walk").IsTrue();
             AssertThat(MathF.Abs(pad.Top - item.Part.At.M42) < TestTolerance.Position).OverrideFailureMessage($"{item.Key} is off its bay").IsTrue();
             var radius = p.Depth * 0.5f;
             foreach (var lane in lanes)
-                AssertThat((float)PlanGeometry.Project(lane.Line.Points, item.Anchor).Distance - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f).OverrideFailureMessage($"{item.Key} stands in the kerbside strip of {lane.Id.Value}").IsTrue();
+                AssertThat((float)PlanLines.Project(lane.Line.Points, item.Anchor).Distance - Half(lane) - radius >= FurnitureStyle.RoadSetback - 0.6f).OverrideFailureMessage($"{item.Key} stands in the kerbside strip of {lane.Id.Value}").IsTrue();
             if (item.Kind != FurnitureKind.Bench) continue;
             for (var d = 0f; d <= FurnitureStyle.FaceClear; d += 0.5f)
-                AssertThat(lanes.All(l => (float)PlanGeometry.Project(l.Line.Points, front + facing * d).Distance >= Half(l))).OverrideFailureMessage($"{item.Key} faces a carriageway {d:F1} m ahead").IsTrue();
+                AssertThat(lanes.All(l => (float)PlanLines.Project(l.Line.Points, front + facing * d).Distance >= Half(l))).OverrideFailureMessage($"{item.Key} faces a carriageway {d:F1} m ahead").IsTrue();
         }
         foreach (var bin in layout.Items.Where(i => i.Kind == FurnitureKind.Bin))
         {
@@ -143,7 +143,7 @@ public sealed class FurnitureStreetLayoutTests
                     areas.AddRange(geometry switch { PolygonGeometry p => [p.Rings], MultiPolygonGeometry m => m.Polygons, _ => [] });
         }
         float Gap(Vector2 q) => MathF.Max(0f, MathF.Min(
-            lines.Select(l => (float)PlanGeometry.Project(l.Line.Points, q).Distance - Half(l)).DefaultIfEmpty(float.MaxValue).Min(),
+            lines.Select(l => (float)PlanLines.Project(l.Line.Points, q).Distance - Half(l)).DefaultIfEmpty(float.MaxValue).Min(),
             areas.Select(a => PlanGeometry.Contains(a, q) ? 0f : a.Holes.Append(a.Outer).Min(r => PlanGeometry.DistanceToRing(q, r))).DefaultIfEmpty(float.MaxValue).Min()));
         foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
         {

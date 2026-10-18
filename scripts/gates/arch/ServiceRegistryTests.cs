@@ -12,6 +12,7 @@ namespace Campus.Arch.Tests
     public sealed class ServiceRegistryTests
     {
         [TestCase]
+        [TestCategory("Contract")]
         public void SaveScopesKeepTheRawIdAndReplaceOnlyTheirOwnFallback()
         {
             var registry = DiscoverFixtures();
@@ -26,6 +27,7 @@ namespace Campus.Arch.Tests
         }
 
         [TestCase]
+        [TestCategory("Contract")]
         public void ReleaseClearsSameInstanceAliasesWithoutDisposingOrDroppingOtherInstances()
         {
             var registry = DiscoverFixtures();
@@ -48,6 +50,7 @@ namespace Campus.Arch.Tests
         }
 
         [TestCase]
+        [TestCategory("Contract")]
         public void BakeProducerIsDiscoveredAndConstructibleFromItsEntry()
         {
             var registry = DiscoverFixtures();

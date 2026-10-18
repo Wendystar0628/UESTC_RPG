@@ -36,10 +36,10 @@ public sealed class NorthTerrainTests
                         AssertThat(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - TestTolerance.Position).OverrideFailureMessage($"{op.Id}: activity hill no steeper than 1:5").IsTrue();
                     break;
                 case TerrainSlopeOp s:
-                    AssertThat(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / PlanGeometry.Length(((PolylineGeometry)s.Geometry).Line.Points) <= 0.05 + TestTolerance.FloatRelative).OverrideFailureMessage($"{op.Id}: the 通学坡 stays at or below 5 %").IsTrue(); break;
+                    AssertThat(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / PlanLines.Length(((PolylineGeometry)s.Geometry).Line.Points) <= 0.05 + TestTolerance.FloatRelative).OverrideFailureMessage($"{op.Id}: the 通学坡 stays at or below 5 %").IsTrue(); break;
                 case TerrainCorridorOp c:
                     AssertThat(roads.TryGetValue(c.Road, out var road)).OverrideFailureMessage($"{op.Id}: road {c.Road.Value} exists").IsTrue();
-                    var length = PlanGeometry.Length(road!.Line.Points);
+                    var length = PlanLines.Length(road!.Line.Points);
                     AssertThat(Math.Abs(c.Anchors[^1].S - length) < TestTolerance.Layout).OverrideFailureMessage($"{op.Id}: last anchor at the full centreline length {length:0.00}").IsTrue();
                     break;
                 default: throw new InvalidOperationException($"{op.Id}: unexpected operation for 20a-2");
@@ -115,7 +115,7 @@ public sealed class NorthTerrainTests
                 for (var j = 0; j < ring.Count; j++)
                 {
                     Vector2 a0 = footprint[i], a1 = footprint[(i + 1) % footprint.Count], b0 = ring[j], b1 = ring[(j + 1) % ring.Count];
-                    clear = PlanGeometry.SegmentIntersection(a0, a1, b0, b1, 1e-9f) is null ? MathF.Min(clear, MathF.Min(MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(a0, b0, b1)), MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(b0, a0, a1)))) : 0f;
+                    clear = PlanLines.SegmentIntersection(a0, a1, b0, b1, 1e-9f) is null ? MathF.Min(clear, MathF.Min(MathF.Sqrt(PlanLines.SegmentDistanceSquared(a0, b0, b1)), MathF.Sqrt(PlanLines.SegmentDistanceSquared(b0, a0, a1)))) : 0f;
                 }
             AssertThat(clear >= 6f).OverrideFailureMessage($"{terrace.Id}: crest {clear:0.00} m from 5561, at least 6 m").IsTrue();
         }
@@ -162,15 +162,15 @@ public sealed class NorthTerrainTests
             AssertThat(world.Features[add.Id].Geometry is PolylineGeometry loaded && loaded.Line.Points.SequenceEqual(line)).OverrideFailureMessage($"{add.Id.Value}: loaded into the world model").IsTrue();
             foreach (var p in line)
             {
-                var d = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(dangui, p));
-                AssertThat(MathF.Abs(d - offset) <= 0.2f).OverrideFailureMessage($"{add.Id.Value}: {p} is {d:0.00} m off the road centre, not {offset}").IsTrue();
+                var d = MathF.Sqrt(PlanLines.PolylineDistanceSquared(dangui, p));
+                AssertThat(MathF.Abs(d - offset) <= 4 * TestTolerance.Layout).OverrideFailureMessage($"{add.Id.Value}: {p} is {d:0.00} m off the road centre, not {offset}").IsTrue();
             }
             foreach (var p in Samples(line))
             {
                 var wall = walls.Min(r => PlanGeometry.InsideByCrossings(r, p) ? 0f : PlanGeometry.DistanceToRing(p, r)) - half;
                 AssertThat(wall >= wallClear).OverrideFailureMessage($"{add.Id.Value}: surface at {p} is {wall:0.00} m from a wall or water edge").IsTrue();
                 foreach (var water in world.Network.Waterways)
-                    AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(water.Line.Points, p)) - water.Width * 0.5f - half >= wallClear).OverrideFailureMessage($"{add.Id.Value}: {p} keeps off {water.Id.Value}").IsTrue();
+                    AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(water.Line.Points, p)) - water.Width * 0.5f - half >= wallClear).OverrideFailureMessage($"{add.Id.Value}: {p} keeps off {water.Id.Value}").IsTrue();
                 foreach (var op in terrain)
                     switch (op)
                     {
@@ -190,7 +190,7 @@ public sealed class NorthTerrainTests
                 // Where a road crosses or runs beside the walk, its authored profile is 0 m there.
                 foreach (var (id, c) in corridors)
                 {
-                    var hit = PlanGeometry.Project(roads[id].Line.Points, p);
+                    var hit = PlanLines.Project(roads[id].Line.Points, p);
                     if (hit.Distance <= roads[id].Width * 0.5f + c.Shoulder + half)
                         AssertThat(Math.Abs(Elevation(corridors, roads[id], hit.Station)) < TestTolerance.Position).OverrideFailureMessage($"{add.Id.Value}: {p} meets {c.Id} at {Elevation(corridors, roads[id], hit.Station):0.00} m").IsTrue();
                 }
@@ -203,7 +203,7 @@ public sealed class NorthTerrainTests
                 {
                     var type = WorldProps.TryText(target.Props, "highway");
                     var reach = type is "footway" or "path" or "pedestrian" or "steps" ? MathF.Max(target.Width, 2f) * 0.5f : target.Width * 0.5f;
-                    AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(target.Line.Points, end)) <= reach + TestTolerance.Layout).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
+                    AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(target.Line.Points, end)) <= reach + TestTolerance.Layout).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
                     AssertThat(type is "footway" or "path" or "pedestrian" or "steps" || Meets(target.Line.Points, dangui)).OverrideFailureMessage($"{add.Id.Value}: {to} is a walk or a road that meets 丹桂路").IsTrue();
                 }
                 else
@@ -218,7 +218,7 @@ public sealed class NorthTerrainTests
     }
 
     private static bool Meets(IReadOnlyList<Vector2> a, IReadOnlyList<Vector2> b) =>
-        a.Any(p => b.Contains(p)) || Enumerable.Range(0, a.Count - 1).Any(i => Enumerable.Range(0, b.Count - 1).Any(k => PlanGeometry.SegmentIntersection(a[i], a[i + 1], b[k], b[k + 1], 1e-9f) is not null));
+        a.Any(p => b.Contains(p)) || Enumerable.Range(0, a.Count - 1).Any(i => Enumerable.Range(0, b.Count - 1).Any(k => PlanLines.SegmentIntersection(a[i], a[i + 1], b[k], b[k + 1], 1e-9f) is not null));
 
     private static double Grade(IReadOnlyList<TerrainAnchor> a, int i) => (a[i + 1].Y - a[i].Y) / (a[i + 1].S - a[i].S);
 

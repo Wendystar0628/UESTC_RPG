@@ -11,8 +11,12 @@ internal static class TestReason
 
     /// <summary>Guards a bug that has occurred before.</summary>
     public const string Regression = "Regression";
+}
 
-    /// <summary>Compares results bit for bit; the only reason allowed to skip <see cref="TestTolerance"/>.</summary>
+/// <summary>Additional test behavior tags, independent of the test's reason.</summary>
+internal static class TestTag
+{
+    /// <summary>Compares results bit for bit; allows skipping <see cref="TestTolerance"/>.</summary>
     public const string Determinism = "Determinism";
 }
 
