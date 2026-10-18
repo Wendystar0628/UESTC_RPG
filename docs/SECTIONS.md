@@ -580,13 +580,13 @@
 
 ## WLD-LIFE-STREET · 停着的车与街道家具：车、家具、碰撞
 
-`docs/world/WLD-LIFE-STREET-停着的车与街道家具.md` · 4.6k 字 · 停着的车与匿名共享单车、街道家具的设计，行走模式下的碰撞与 Foot 材质、声音数据
+`docs/world/WLD-LIFE-STREET-停着的车与街道家具.md` · 4.7k 字 · 停着的车与匿名共享单车、街道家具的设计，行走模式下的碰撞与 Foot 材质、声音数据
 关键词：停着的车、校车、街道家具、分类垃圾箱、路灯灯具、售货机、外卖柜、长椅、声音插座、家具碰撞、共享单车停放点
 
 - WLD-LIFE-STREET §0 结论 · L23 · 611
   - ★ WLD-LIFE-STREET §0.1 接入要点 · L28 · 470
 - WLD-LIFE-STREET §1 停着的车 · L37 · 788
-- WLD-LIFE-STREET §2 街道家具 · L47 · 1.6k
+- WLD-LIFE-STREET §2 街道家具 · L47 · 1.7k
 - WLD-LIFE-STREET §3 行走模式下的碰撞 · L60 · 679
 - WLD-LIFE-STREET §4 待验证（P0） · L75 · 59
 
