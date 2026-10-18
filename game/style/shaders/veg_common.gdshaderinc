@@ -68,6 +68,7 @@ struct VegSpecies {
 	int twig_card;
 	int flags;
 	int twig_cid;     // 枝条笔触的受光色号（tree.bare）
+	int whitewash_cid; // 树干下半截刷白的受光色号（wall.greyWhite）
 };
 
 // 每株量（WLD-VEGETATION）：x 种子，y 树种号 × 16 + 变体号，z 风向位置，w 树高。
@@ -95,6 +96,7 @@ VegSpecies veg_species(int row) {
 	s.twig_card = VEG_CARD_TWIG;
 	s.flags = 0;
 	s.twig_cid = 0;
+	s.whitewash_cid = 0;
 	if (row < 0 || row > 31) {
 		return s;
 	}
@@ -117,6 +119,7 @@ VegSpecies veg_species(int row) {
 	s.twig_card = int(round(t3.z));
 	s.flags = int(round(t3.w));
 	s.twig_cid = int(round(t4.z));
+	s.whitewash_cid = int(round(t4.w));
 	return s;
 }
 

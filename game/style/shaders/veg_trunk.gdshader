@@ -88,8 +88,8 @@ void fragment() {
 	float trans_k = 0.0;
 	float grad = -1.0;
 	if ((v_bits & 1) == 0) {
-		// 树干、枝：tree.bark；变体位 1 时下半截刷白（§1.7，借 wall.greyWhite），色号存在备用字节里
-		int cid = ((v_bits & 2) != 0 && v_ly < VEG_WHITEWASH_Y) ? int(round(v_spare * 255.0)) : v_cid;
+		// 树干、枝：tree.bark；变体位 1 时下半截刷白（§1.7，借 wall.greyWhite），色号取树种表
+		int cid = ((v_bits & 2) != 0 && v_ly < VEG_WHITEWASH_Y) ? sp.whitewash_cid : v_cid;
 		lit = pal_cur(cid);
 		shade = pal_cur(cid + PAL_SHADE_OFFSET);
 		lamp = pal_fetch(cid, PAL_ROW_LAMP);

@@ -5,8 +5,7 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// Mother-model generator (WLD-VEGETATION; ENG-PERF). Pure and deterministic: the same species,
 /// variant and level always give the same bytes. Vertex channels:
-/// COLOR = (lit colour ID, AO, flags, spare) where spare is the crown-gradient t0 on crown vertices (§1.3) and the
-/// whitewash colour ID on trunk vertices; CUSTOM0 = (card centre | mass centre, h2 | mass hash; −1 marks wood);
+/// COLOR = (lit colour ID, AO, flags, spare) where spare is the crown-gradient t0 on crown vertices (§1.3), 0 on wood; CUSTOM0 = (card centre | mass centre, h2 | mass hash; −1 marks wood);
 /// CUSTOM1 = (branch-tip anchor, h3 bloom hash); CUSTOM2 = (mass or ball centre, card importance rank in [0, 1) or −1 on
 /// mass vertices, which never shrink with the level bands; underside cards carry 1 + rank when drawn through L0 and
 /// 2 + rank when drawn at L0+ only). NORMAL on the crown is the shell normal; on cards it is the shell normal at the card
@@ -321,7 +320,7 @@ public static partial class MotherModels
             var top = limb.Points.FindIndex(p => p.Y >= plan.BranchY);
             if (top <= 0) top = limb.Points.Count - 1;
             WriteTube(wood, [limb.Points[0], limb.Points[top]], [limb.Radii[0], limb.Radii[top]], FarTrunkSides, 0f, 0f,
-                cap: false, trunk: true, ids, FarWoodTag);
+                cap: false, ids, FarWoodTag);
         }
         // A palm's crown is its fronds (cards): the stand-in swells the head mass to about the frond reach instead.
         var palm = plan.Form.Id == "palm";
@@ -334,9 +333,9 @@ public static partial class MotherModels
     }
 
     private static Ids IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
-        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value, palette.Resolve(Whitewash).Value);
+        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value);
 
-    private readonly record struct Ids(ushort Leaf, ushort Bark, ushort Whitewash);
+    private readonly record struct Ids(ushort Leaf, ushort Bark);
 
 
 }

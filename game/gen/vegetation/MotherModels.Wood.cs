@@ -52,12 +52,12 @@ public static partial class MotherModels
             }
             var flare = limb.Level == 0 && !TreeForms.IsBall(plan.Form.Id) ? level switch { VegLevel.L0Plus => 0.55f, VegLevel.L0 => 0.4f, _ => 0.2f } : 0f;
             var cap = limb.Level > 0 || plan.Form.Leader;
-            WriteTube(w, points, radii, sides, flare, flarePhase, cap, limb.Level == 0, ids);
+            WriteTube(w, points, radii, sides, flare, flarePhase, cap, ids);
         }
     }
 
     private static void WriteTube(MeshWriter w, List<Vector3> points, List<float> radii, int sides, float flare,
-        float flarePhase, bool cap, bool trunk, Ids ids, float tag = 0f)
+        float flarePhase, bool cap, Ids ids, float tag = 0f)
     {
         var n = points.Count;
         var tangent = Vector3.Normalize(points[1] - points[0]);
@@ -83,7 +83,7 @@ public static partial class MotherModels
                     var k = 1f - Math.Clamp(y / 0.9f, 0f, 1f);
                     r *= 1f + flare * k * k * (1f + 0.35f * MathF.Cos(5f * a + flarePhase));
                 }
-                w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, trunk ? checked((byte)ids.Whitewash) : (byte)0,
+                w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, 0,
                     new Vector4(0f, 0f, 0f, -1f), Vector4.Zero, new Vector4(0f, 0f, 0f, tag), Vector2.Zero);
             }
         }
