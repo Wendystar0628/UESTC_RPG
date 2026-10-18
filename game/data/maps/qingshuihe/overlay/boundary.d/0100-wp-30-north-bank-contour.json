@@ -1,0 +1,15 @@
+{
+  "zone": "boundary",
+  "owner": "WP-30",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:boundary-north-bank-contour",
+      "kind": "contourSegment",
+      "geometry": { "type": "polyline", "line": { "points": [[-75.21, -778.91], [-288.56, -244.89]] } },
+      "props": { "parent": "qsh:source:way:687770522" },
+      "reason": "选段登记：北门水岸广场与北区商业街栏杆共用红光右支渠东岸，按父轮廓逆时针由北端指向南端；只指明原有岸段，不改水体与摆放。"
+    }
+  ]
+}

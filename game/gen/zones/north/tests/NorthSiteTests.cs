@@ -140,7 +140,7 @@ public sealed class NorthSiteTests
     public void CanalRailCarriesOnFromThePlazaRailing()
     {
         var ctx = Context();
-        var frame = Canal.CanalRailSite.FrameOf(ctx.World) ?? throw new InvalidOperationException("bank frame not located");
+        var frame = ctx.World.ContourFrame(NorthTune.Bank.BankContour, originAtEnd: false, forward: false);
         var u = frame.U;
         var w = frame.W;
         var joint = frame.Origin + u * -24.6f + w * 0.35f;

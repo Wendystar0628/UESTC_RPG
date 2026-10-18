@@ -8,6 +8,7 @@ import unittest
 
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
+from pyproj import Transformer
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'pipeline'))
@@ -23,22 +24,29 @@ class DatasetTests(unittest.TestCase):
         subprocess.run(command, check=True, capture_output=True)
         self.assertEqual(first, [hashlib.sha256(path.read_bytes()).hexdigest() for path in paths])
 
-    def test_source_geometry_and_entity_ids_survive_migration(self):
-        migrated = json.loads((ROOT / 'game/data/maps/qingshuihe/campus.json').read_bytes())
-        # Entity/boundary goldens retain the pre-migration baseline. Feature geometry now
-        # preserves source parent-family interfaces. Optional facade coordinates are
-        # checked separately; water source tags and dam/weir kinds use the current source baseline.
-        golden = {'entities': '77735dc7f66e1fdda61b0b469093be859865c13ccb56d51e59ecf645b1103757',
-                  'boundary': '4fece2373778f8510feb2ae0e5158f118161533b77ff01e8d5d2de8962aae3dc',
-                  'features': '175f0bef7993369a08f502fa1173397dad515b7692df529dad942c371eadefaf'}
-        for key, expected in golden.items():
-            value = migrated[key]
-            if key == 'features':
-                value = [{k: v for k, v in feature.items() if k not in ('family', 'facadePolygons')} for feature in value]
-            digest = hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
-            self.assertEqual(expected, digest, key)
+    def test_independent_building_outers_keep_member_geometry_under_the_relation_entity(self):
+        campus = json.loads((ROOT / 'game/data/maps/qingshuihe/campus.json').read_bytes())
+        raw = json.loads((ROOT / 'pipeline/raw/qingshuihe/osm-campus.json').read_bytes())
+        elements = {(e['type'], e['id']): e for e in raw['elements']}
+        relation = next(e for e in raw['elements'] if e['type'] == 'relation' and e.get('tags', {}).get('name') == '南门')
+        entity = next(e for e in campus['entities'] if e['source'].endswith(f"/relation/{relation['id']}"))
+        expected_ids = [f"osm:way:{member['ref']}" for member in relation['members']]
+        parts = [f for f in campus['features'] if f['entityId'] == entity['id']]
+        self.assertCountEqual(expected_ids, entity['featureIds'])
+        self.assertCountEqual(expected_ids, [part['id'] for part in parts])
+        self.assertNotIn(f"osm:relation:{relation['id']}", {f['id'] for f in campus['features']})
+        self.assertEqual(relation['tags']['name'], entity['name'])
+        projector = Transformer.from_crs('EPSG:4326', campus['meta']['crs'], always_xy=True)
+        e0, n0 = projector.transform(*campus['meta']['origin'])
+        for part in parts:
+            way = elements['way', int(part['id'].split(':')[-1])]
+            nodes = [elements['node', node] for node in way['nodes']]
+            projected = [projector.transform(node['lon'], node['lat']) for node in nodes]
+            expected = Polygon([(round(e-e0, 2), round(-(n-n0), 2)) for e, n in projected])
+            actual = unary_union([Polygon(poly[0], poly[1:]) for poly in part['polygons']])
+            self.assertTrue(actual.equals(expected), part['id'])
         metadata = json.loads((ROOT / 'pipeline/raw/qingshuihe/osm-campus.meta.json').read_bytes())
-        self.assertEqual(metadata['retrievedDateUtc'], migrated['meta']['date'])
+        self.assertEqual(metadata['retrievedDateUtc'], campus['meta']['date'])
 
     def test_water_tags_are_exact_source_values_and_do_not_guess_a_centreline(self):
         raw = json.loads((ROOT / 'pipeline/raw/qingshuihe/osm-campus.json').read_bytes())

@@ -472,11 +472,6 @@ public static class SouthTune
     /// <summary>East lake shore (§4).</summary>
     public static class Lake
     {
-        /// <summary>
-        /// Liren-side hard bank: the rectilinear north edge of osm:relation:7849760 is the last BankVertices vertices of its outline,
-        /// read west to east (water to the south).
-        /// </summary>
-        public const int BankVertices = 11;
         /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK); balustrade line set back from the water.</summary>
         public const float WallBottom = -1.1f, CopingTop = 0.12f, RailTop = 1.08f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
         /// <summary>

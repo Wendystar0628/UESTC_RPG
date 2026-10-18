@@ -1,0 +1,15 @@
+{
+  "zone": "west",
+  "owner": "WP-19",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:west-shelter-back",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-214.98, -417.82], [-210.09, -430.99]]}},
+      "props": {"parent": "qsh:way:604832425", "sourceId": "osm:way:604832425", "contour": "facade"},
+      "reason": "登记西门候车亭后墙所用的当前来源外立面西侧边，沿父轮廓逆时针从南端到北端读取，保持现有候车亭朝向、尺寸与碰撞。"
+    }
+  ]
+}

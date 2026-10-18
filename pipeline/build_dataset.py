@@ -209,6 +209,25 @@ def main():
                 member_ways.add(member['ref'])
         return transform(project, outer)
 
+    def source_geometries(record, render_geometry):
+        source_type, source_number = record['sourceId'].split('/')
+        if record['kind'] == 'building' and source_type == 'relation':
+            members = elements[source_type, int(source_number)].get('members', [])
+            if len(members) > 1 and all(m['type'] == 'way' and m.get('role', '') in ('outer', '') for m in members):
+                ways = [elements['way', m['ref']] for m in members]
+                coords = [way_coords(way) for way in ways]
+                if all(len(ring) >= 4 and ring[0] == ring[-1] for ring in coords):
+                    parts = [geometry_for(way) for way in ways]
+                    if all(part.is_valid and all(part.disjoint(other) for other in parts[:i]) for i, part in enumerate(parts)):
+                        # Relation metadata owns the entity; each independent outer owns its geometry.
+                        # Reuse assembled polygons so their ring starts and directions stay unchanged.
+                        sources = []
+                        for way, part in zip(ways, parts):
+                            owned = [polygon for polygon in polygons(render_geometry) if part.covers(polygon)]
+                            sources.append((f"way/{way['id']}", owned[0] if len(owned) == 1 else MultiPolygon(owned)))
+                        return sources
+        return [(record['sourceId'], render_geometry)]
+
     boundary = geometry_for(elements[tuple(config['boundary'])])
     if not boundary or not boundary.is_valid:
         raise ValueError('Campus boundary is missing or invalid; refusing to create an empty map.')
@@ -382,23 +401,25 @@ def main():
             defaults = {'footway': 2.5, 'path': 2, 'steps': 2.5, 'cycleway': 3, 'service': 5, 'residential': 6, 'tertiary': 8, 'secondary': 10, 'pedestrian': 5}
             width = number(tags.get('width')) or defaults.get(tags.get('highway'), 4)
             render_geometry = render_geometry.buffer(width/2, cap_style=2, join_style=2).intersection(boundary)
-        polys = render_polygons(render_geometry, r['kind'], r.get('parent') is not None, bool(children))
-        feature_id = 'osm:' + r['sourceId'].replace('/', ':')
-        r['featureId'] = feature_id
         anchor = geometry.representative_point() if geometry.area else geometry.interpolate(.5, normalized=True) if geometry.geom_type.endswith('LineString') else geometry.representative_point()
         r['anchor'] = [round(anchor.x, 2), round(render_height, 2), round(anchor.y, 2)]
         r['bounds'] = [round(v, 2) for v in geometry.bounds]
-        if polys:
+        sources = source_geometries(r, render_geometry)
+        r['featureIds'] = ['osm:' + source_id.replace('/', ':') for source_id, _ in sources]
+        for feature_id, (_, part_geometry) in zip(r['featureIds'], sources):
+            polys = render_polygons(part_geometry, r['kind'], r.get('parent') is not None, bool(children))
+            if not polys:
+                continue
             features.append({'id': feature_id, 'entityId': r['entityId'], 'kind': r['kind'], 'polygons': polys, 'height': round(render_height, 2), 'heightStatus': status, 'levels': levels, 'levelsBasis': levels_basis, 'category': r['category'], 'sport': tags.get('sport'), 'roadType': tags.get('highway'), 'widthEstimated': width is not None and not tags.get('width')})
             water_tags = {key: tags[key] for key in ('water', 'waterway') if key in tags}
             if water_tags:
                 features[-1]['sourceTags'] = water_tags
-            facade = facade_polygons(render_geometry)
+            facade = facade_polygons(part_geometry)
             if facade != polys:
                 features[-1]['facadePolygons'] = facade
 
     def descendant_features(r):
-        return [r['featureId']] + [fid for b in buildings if b.get('parent') is r for fid in descendant_features(b)]
+        return r['featureIds'] + [fid for b in buildings if b.get('parent') is r for fid in descendant_features(b)]
 
     for r in records:
         if not r['entityId'] or r.get('merged'):

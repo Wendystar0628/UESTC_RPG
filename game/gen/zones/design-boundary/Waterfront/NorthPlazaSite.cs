@@ -6,7 +6,6 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.Zones.Common;
-using Campus.Gen.Zones.DesignBoundary.Ring;
 using L = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Look;
 using P = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Plaza;
 
@@ -25,39 +24,13 @@ public sealed class NorthPlazaSite : ZoneSite
     public override string Id => "30a.north-plaza";
 
     /// <summary>
-    /// The bank frame (D-239): the water feature's bank edge nearest the plaza paving. Origin on the edge's end vertex beside the
-    /// plaza, X along the bank toward that end, +Z off the water. Null when the plaza or the channel is not in the map.
+    /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
+    /// Null when the plaza or bank selection is not in the map.
     /// </summary>
     public static PlanFrame? FrameOf(IWorldModel world)
     {
-        if (!world.Features.TryGetValue(new(P.Feature), out var plaza) || !world.Features.TryGetValue(new(P.Water), out var water)) return null;
-        var paving = BoundaryPlan.Outers(plaza.Geometry).FirstOrDefault();
-        if (paving is null || paving.Count < 3) return null;
-        var best = float.MaxValue;
-        Vector2 a = default, b = default;
-        foreach (var ring in BoundaryPlan.Outers(water.Geometry))
-            for (var i = 0; i < ring.Count; i++)
-            {
-                var p = ring[i];
-                var q = ring[(i + 1) % ring.Count];
-                foreach (var v in paving)
-                {
-                    var d = SegmentDistance(v, p, q);
-                    if (d < best) { best = d; a = p; b = q; }
-                }
-            }
-        if (best == float.MaxValue || a == b) return null;
-        var centre = paving.Aggregate(Vector2.Zero, (sum, v) => sum + v) / paving.Count;
-        return Vector2.Distance(centre, b) <= Vector2.Distance(centre, a)
-            ? PlanFrame.Along(b, b - a)
-            : PlanFrame.Along(a, a - b);
-    }
-
-    private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)
-    {
-        var ab = b - a;
-        var t = Math.Clamp(Vector2.Dot(p - a, ab) / ab.LengthSquared(), 0f, 1f);
-        return Vector2.Distance(p, a + ab * t);
+        if (!world.Features.ContainsKey(new(P.Feature)) || !world.Features.ContainsKey(new(P.BankContour))) return null;
+        return world.ContourFrame(P.BankContour, originAtEnd: false, forward: false);
     }
 
     public override void Build(SiteBuilder b)

@@ -194,8 +194,8 @@ public static class BoundaryTune
     public static class Plaza
     {
         public const string Feature = "design:boundary-north-a05-plaza";
-        /// <summary>The channel whose east bank edge anchors the plaza frame.</summary>
-        public const string Water = "qsh:source:way:687770522";
+        /// <summary>The bank selection shared with the north canal railing.</summary>
+        public const string BankContour = "design:boundary-north-bank-contour";
         public const float PavingTop = 0.15f;
         /// <summary>Railing: 1.1 m, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
         public const float RailN = 0.35f, RailHeight = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;

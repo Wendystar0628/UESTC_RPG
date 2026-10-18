@@ -188,7 +188,7 @@ public static class NorthTune
     /// Canal-bank railing along the 商业街 side of 红光右支渠北段 (20a-4; MAP-QSH-NORTH 碰撞体, MAP-QSH-TERRAIN: the bank is
     /// a stone wall with a railing, 1.05 m at least, collision top 1.5 m). It starts where the north-gate plaza's railing
     /// (WP-30 30a, design:boundary-north-a05-plaza, commit 04767c7) ends and runs south along the east bank to the street's far
-    /// end. Frame as the plaza's, read from the channel's outline: <c>t</c> along the straight water edge (toward bearing 21.8°, so the run south into the campus
+    /// end. Frame as the plaza's, read from the registered bank selection: <c>t</c> along the straight water edge (toward bearing 21.8°, so the run south into the campus
     /// is toward negative t), <c>n</c> off the water toward the road. The railing language is the plaza's: 1.1 m, square posts at most 1.6 m apart, handrail and bottom
     /// rail, 20 mm bars at 0.12 m, an end post a size heavier with a cap. The plaza's end post at <see cref="JointT"/> is shared:
     /// this run starts flush on its campus-side face and carries on from its centre in collision, so there is neither gap nor overlap.
@@ -196,8 +196,8 @@ public static class NorthTune
     /// </summary>
     public static class Bank
     {
-        /// <summary>The channel whose straight east bank edge anchors the frame (D-239, CanalRailSite.FrameOf): the same vertex and direction as the plaza's.</summary>
-        public const string Water = "qsh:source:way:687770522";
+        /// <summary>The bank selection shared with the plaza, with the same origin and direction.</summary>
+        public const string BankContour = "design:boundary-north-bank-contour";
         /// <summary>The plaza railing's campus-side end: <c>BoundaryTune.Plaza.RailT0</c> and <c>RailN</c>. Its end post is <see cref="JointPost"/> thick.</summary>
         public const float JointT = -24.6f, RailN = 0.35f, JointPost = 0.08f;
         /// <summary>Where the run ends: 商业街's far end is at t −110.5; the end post stands just beyond it.</summary>

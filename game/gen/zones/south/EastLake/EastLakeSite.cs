@@ -27,6 +27,7 @@ namespace Campus.Gen.Zones.South.EastLake;
 public sealed class EastLakeSite : ZoneSite
 {
     public const string Lake = "qsh:relation:7849760";
+    public const string HardBank = "design:south-eastlake-hard-bank";
     public const string Statue = "qsh:node:7867995301";
     public const string WadeStep = "design:south-eastlake-wade-step";
 
@@ -35,9 +36,8 @@ public sealed class EastLakeSite : ZoneSite
     public override string Id => "18b.east-lake";
 
     /// <summary>
-    /// The shore read from the map data (D-239): the Liren-side hard bank (the lake outline's last <see cref="K.BankVertices"/>
-    /// vertices, the rectilinear north edge, west to east), the bank segment the wade step lies on, the step's width and two
-    /// tread levels (design:south-eastlake-wade-step), and the statue's place.
+    /// The shore read from the map data: the registered Liren-side hard bank, west to east, the bank segment the wade step
+    /// lies on, the step's width and two tread levels (design:south-eastlake-wade-step), and the statue's place.
     /// </summary>
     internal sealed record Shore(Vector2[] Bank, int WadeSegment, float WadeWidth, float Tread1, float Tread2, Vector2 StatueAt)
     {
@@ -57,9 +57,7 @@ public sealed class EastLakeSite : ZoneSite
 
     private static Shore ReadShore(IWorldModel world)
     {
-        var outline = Water(world).Outer;
-        var bank = outline.Skip(outline.Count - K.BankVertices).ToArray();
-        if (bank[0].X > bank[^1].X) Array.Reverse(bank);
+        var bank = world.ContourSegment(HardBank);
         var step = world.Feature(WadeStep);
         var at = step.Point();
         var wade = Enumerable.Range(0, bank.Length - 1).MinBy(i => DistanceToSegment(at, bank[i], bank[i + 1]));

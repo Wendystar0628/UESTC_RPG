@@ -4,7 +4,6 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Common;
-using Campus.Gen.Zones.North.Framework;
 using B = Campus.Gen.Zones.North.NorthTune.Bank;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -23,27 +22,13 @@ public sealed class CanalRailSite : ZoneSite
     public override string Id => "20a4.canal-rail";
 
     /// <summary>
-    /// The bank frame (D-239): the longest edge of the channel's outline is its straight east bank; origin on that edge's north end
-    /// (the smaller z), X along the bank toward that end, +Z off the water. Null when the channel is not in the map.
+    /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
+    /// Null when the bank selection is not in the map.
     /// </summary>
     public static PlanFrame? FrameOf(IWorldModel world)
     {
-        if (!world.Features.TryGetValue(new(B.Water), out var water)) return null;
-        var ring = Plan.Polygons(water.Geometry).FirstOrDefault()?.Outer;
-        if (ring is null || ring.Count < 3) return null;
-        Vector2 a = default, b = default;
-        var longest = 0f;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 p = ring[i], q = ring[(i + 1) % ring.Count];
-            var d = Vector2.DistanceSquared(p, q);
-            if (d <= longest) continue;
-            longest = d;
-            a = p;
-            b = q;
-        }
-        if (longest <= 0f) return null;
-        return b.Y <= a.Y ? PlanFrame.Along(b, b - a) : PlanFrame.Along(a, a - b);
+        if (!world.Features.ContainsKey(new(B.BankContour))) return null;
+        return world.ContourFrame(B.BankContour, originAtEnd: false, forward: false);
     }
 
     /// <summary>Panels from the joint post to the end post, at most <see cref="B.PostPitch"/> apart.</summary>

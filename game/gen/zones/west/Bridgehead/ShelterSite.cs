@@ -2,7 +2,6 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
-using Campus.Gen.World;
 using StreetStyle = Campus.Gen.Parts.Street.StreetStyle;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
@@ -25,33 +24,13 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
 
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(H.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    /// <summary>
-    /// The back line: the footprint's west edge in the world model, south end then north end (the platform opens to its right,
-    /// toward the road). The footprint is a rectangle; its two long sides are the candidates and the western one is the back.
-    /// </summary>
-    internal static (Vector2 A, Vector2 B) Back(IWorldModel world)
-    {
-        if (!world.Features.TryGetValue(new(H.Entity), out var feature))
-            throw new InvalidOperationException($"候车亭 {H.Entity} is missing from the world model.");
-        if (feature.Parts.FirstOrDefault() is not { } part || WorldFeatureGeometry.FacadeGeometryOf(part) is not PolygonGeometry g)
-            throw new InvalidOperationException($"候车亭 {H.Entity} has no single polygon footprint.");
-        var ring = g.Rings.Outer;
-        var back = Enumerable.Range(0, ring.Count).Select(i => (A: ring[i], B: ring[(i + 1) % ring.Count]))
-            .Where(edge => Vector2.Distance(edge.A, edge.B) > 8f)
-            .MinBy(edge => edge.A.X + edge.B.X);
-        return back.A.Y >= back.B.Y ? back : (back.B, back.A);
-    }
-
-    internal static PlanFrame Frame(IWorldModel world)
-    {
-        var (a, b) = Back(world);
-        return PlanFrame.Toward(a, b);
-    }
+    /// <summary>The registered back line runs south to north, with the platform opening toward the road.</summary>
+    internal static PlanFrame Frame(IWorldModel world) => world.ContourFrame(WestFeatures.ShelterBack);
 
     internal static float Length(IWorldModel world)
     {
-        var (a, b) = Back(world);
-        return Vector2.Distance(a, b);
+        var back = world.ContourSegment(WestFeatures.ShelterBack);
+        return Vector2.Distance(back[0], back[^1]);
     }
 
     /// <summary>Post positions along the back (local x), inset from the ends.</summary>

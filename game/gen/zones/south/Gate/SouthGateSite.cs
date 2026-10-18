@@ -7,6 +7,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Common;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.World;
 using T = Campus.Gen.Zones.South.SouthTune.Gate;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -30,8 +31,8 @@ public sealed class SouthGateSite : ZoneSite
     private const int HouseColumns = 3;
 
     /// <summary>
-    /// The gate's plan, read from the relation's four footprints (D-239): the two larger are the guard houses, the two smaller the
-    /// traffic islands. Frame: origin midway between the houses, X from the west house to the east one, +Z outward to the street.
+    /// The gate's plan, read from the relation's named source parts: west/east guard houses and traffic islands.
+    /// Frame: origin midway between the houses, X from the west house to the east one, +Z outward to the street.
     /// </summary>
     internal sealed record Layout(PlanFrame Frame, float HouseX, float IslandWestX, float IslandEastX, float IslandZ, float IslandWidth, float IslandLength)
     {
@@ -55,11 +56,13 @@ public sealed class SouthGateSite : ZoneSite
 
     private static Layout Read(IWorldModel world)
     {
-        var rings = world.Feature(Feature).Outers().OrderByDescending(r => Math.Abs(PlanGeometry.SignedArea(r))).ToArray();
-        if (rings.Length != 4) throw new InvalidOperationException($"{Feature} is expected to hold two guard houses and two islands, found {rings.Length} footprints.");
-        var houses = rings.Take(2).Select(PlanMath.Centroid).OrderBy(c => c.X).ToArray();
+        var gate = world.Feature(Feature);
+        IReadOnlyList<Vector2> Ring(string sourceId) => WorldFeatureGeometry.FacadeGeometryOf(gate.Part(sourceId)) is PolygonGeometry polygon
+            ? polygon.Rings.Outer
+            : throw new InvalidOperationException($"South gate part {sourceId} is not a single polygon.");
+        Vector2[] houses = [PlanMath.Centroid(Ring("osm:way:601600522")), PlanMath.Centroid(Ring("osm:way:601600523"))];
         var frame = PlanFrame.Along((houses[0] + houses[1]) * 0.5f, houses[1] - houses[0]);
-        var islands = rings.Skip(2).OrderBy(r => frame.Local(PlanMath.Centroid(r)).X).ToArray();
+        IReadOnlyList<Vector2>[] islands = [Ring("osm:way:601600525"), Ring("osm:way:601600524")];
         var at = islands.Select(r => frame.Local(PlanMath.Centroid(r))).ToArray();
         // An island is a thin rotated rectangle: its width and length are the means of its short and long sides.
         static float[] Sides(IReadOnlyList<Vector2> r) => [.. Enumerable.Range(0, r.Count).Select(i => Vector2.Distance(r[i], r[(i + 1) % r.Count])).Order()];

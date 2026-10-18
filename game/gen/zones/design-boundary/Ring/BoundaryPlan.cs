@@ -111,14 +111,14 @@ public sealed class BoundaryPlan
 
     // ---- Openings ----
 
-    /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two guard houses (the two largest
-    /// footprints of the gate entity; the other two are its islands).</summary>
+    /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two source-identified guard houses.</summary>
     private static Opening? South(IWorldModel world, BoundaryRing ring)
     {
         if (!world.Features.TryGetValue(new(BoundaryTune.SouthGate.Feature), out var gate)) return null;
-        var houses = gate.Outers().OrderByDescending(r => Math.Abs(PlanGeometry.SignedArea(r))).Take(2).Select(PlanMath.Centroid).OrderBy(c => c.X).ToArray();
-        if (houses.Length != 2) return null;
-        var (west, east) = (houses[0], houses[1]);
+        Vector2 House(string sourceId) => WorldFeatureGeometry.FacadeGeometryOf(gate.Part(sourceId)) is PolygonGeometry polygon
+            ? PlanMath.Centroid(polygon.Rings.Outer)
+            : throw new InvalidOperationException($"South gate part {sourceId} is not a single polygon.");
+        var (west, east) = (House("osm:way:601600522"), House("osm:way:601600523"));
         var u = Vector2.Normalize(east - west);
         var reach = BoundaryTune.SouthGate.HouseSize * 0.5f - 0.05f;
         var a = ring.Arc(west - u * reach);

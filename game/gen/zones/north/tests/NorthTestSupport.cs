@@ -50,7 +50,7 @@ internal static class NorthTestSupport
     internal static IWorldModel World()
     {
         var data = DataDirectory();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
+        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json", "overlay/boundary.d/0100-wp-30-north-bank-contour.json" }
             .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "north.d"), "*.json").Order(StringComparer.Ordinal)
                 .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
