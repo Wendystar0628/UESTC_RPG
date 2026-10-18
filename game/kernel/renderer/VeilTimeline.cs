@@ -18,7 +18,9 @@ public sealed class VeilTimeline : IVeilService
     public VeilReason Reason { get; private set; } = VeilReason.Boot;
     public VeilContent Content { get; private set; } = VeilContent.Fog;
     public bool Waiting => _readiness.Waiting;
-    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness) => _readiness.Begin(kind);
+    public bool FirstShaderCompilation => _readiness.FirstShaderCompilation;
+    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness, bool firstShaderCompilation = false) =>
+        _readiness.Begin(kind, firstShaderCompilation);
     public bool Busy => _animating;
     public event Action? Changed;
 

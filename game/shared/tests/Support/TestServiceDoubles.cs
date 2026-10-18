@@ -29,6 +29,8 @@ internal sealed class ImmediateVeil : IVeilService
     public VeilReason Reason { get; private set; }
     public VeilContent Content { get; private set; }
     public bool Waiting => false;
+    public bool FirstShaderCompilation => Volatile.Read(ref _firstShaderCompilations) > 0;
+    private int _firstShaderCompilations;
     public int Reveals { get; private set; }
     public int ActiveObservations;
     public int ObservationCount;
@@ -39,11 +41,22 @@ internal sealed class ImmediateVeil : IVeilService
         Reason = reason; Content = content; Opacity = 1;
         return lease;
     }
-    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
+    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness, bool firstShaderCompilation = false)
     {
+        var first = kind switch
+        {
+            VeilWaitKind.Readiness => false,
+            VeilWaitKind.BootFrontispiece => firstShaderCompilation,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+        if (first) Interlocked.Increment(ref _firstShaderCompilations);
         Interlocked.Increment(ref ActiveObservations);
         Interlocked.Increment(ref ObservationCount);
-        return new Observation(() => Interlocked.Decrement(ref ActiveObservations));
+        return new Observation(() =>
+        {
+            if (first) Interlocked.Decrement(ref _firstShaderCompilations);
+            Interlocked.Decrement(ref ActiveObservations);
+        });
     }
     private sealed class Lease(ImmediateVeil owner, VeilReason reason, VeilContent content) : IVeilLease
     {

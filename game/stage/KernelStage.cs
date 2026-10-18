@@ -5,6 +5,7 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
@@ -154,9 +155,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         CheckStartupActive();
         if (!registry.Get<IVeilPresentation>().IsCovered)
             throw new InvalidOperationException("Startup has no fully opaque viewport veil.");
+        var shaderCompilation = options.Title && !context.CaptureMode
+            ? StartupShaderCompilation.Capture(registry.Get<ISettingsStore>()) : null;
         // One observation owns the whole boot preparation; nested save/map work must not start a 1.5 s scope.
         using var readinessWait = veil.ObserveReadinessWait(options.Title
-            ? VeilWaitKind.BootFrontispiece : VeilWaitKind.Readiness);
+            ? VeilWaitKind.BootFrontispiece : VeilWaitKind.Readiness,
+            firstShaderCompilation: shaderCompilation?.FirstShaderCompilation == true);
         await Initialize(BootPhase.BeforeMap);
         Phase = "prepare-flow";
         var appBoot = registry.Get<IAppBootFlow>();
@@ -201,6 +205,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         CheckStartupActive();
         Phase = "reveal";
         readinessWait.Dispose(); // Preparation ended; the authored reveal duration is not loading.
+        shaderCompilation?.RecordSuccess();
         _statistics!.MarkRealtime();
         await bootVeil.Reveal(showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
         CheckStartupActive();

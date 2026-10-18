@@ -15,6 +15,7 @@ public partial class VeilService : Node, IVeilService
     public float Opacity => _timeline.Opacity;
     public VeilReason Reason => _timeline.Reason;
     public bool Waiting => _timeline.Waiting;
+    public bool FirstShaderCompilation => _timeline.FirstShaderCompilation;
     public bool Busy => _timeline.Busy;
 
     public override void _Ready()
@@ -27,11 +28,11 @@ public partial class VeilService : Node, IVeilService
     }
     public override void _Process(double delta) => _timeline.Advance(delta);
     public IVeilLease Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) => _timeline.Cover(reason, seconds, content);
-    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
+    public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness, bool firstShaderCompilation = false)
     {
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Begin readiness observation on the Godot main thread.");
-        return _timeline.ObserveReadinessWait(kind);
+        return _timeline.ObserveReadinessWait(kind, firstShaderCompilation);
     }
     public override void _ExitTree()
     {

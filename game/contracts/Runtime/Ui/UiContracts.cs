@@ -29,6 +29,9 @@ public interface IVeilState
     VeilReason Reason { get; }
     // True means a live readiness observation has reached its policy delay: show the waiting indicator.
     bool Waiting { get; }
+    // A live boot-frontispiece observation has no successful startup record for this device/driver.
+    // Does not mean compilation is active. Show its explanation only together with Waiting.
+    bool FirstShaderCompilation { get; }
 }   // 只读；音频据此压低 World 组（SYS-AUDIO）
 public interface IVeilLease : IDisposable
 {
@@ -44,7 +47,8 @@ public interface IVeilService : IVeilState
     // Observe actual readiness work only. Main-thread begin; Dispose may run on a worker and is idempotent.
     // Does not cover/reveal, change Reason, evaluate Ready, cancel work, or impose any timeout.
     // Each scope owns only itself; simultaneous live scopes aggregate with OR.
-    IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness);
+    // firstShaderCompilation belongs only to BootFrontispiece and clears immediately on scope disposal.
+    IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness, bool firstShaderCompilation = false);
 }
 
 // 其他包补的只读状态（SYS-AUDIO）
