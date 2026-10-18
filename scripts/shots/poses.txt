@@ -7,4 +7,3 @@ d-P17-南门主轴 | P17 | --clock=17.5 --season=autumn --weather=clear
 d-P10-西区 | P10 | --clock=17.5 --season=autumn --weather=clear
 d-P14-东区 | P14 | --clock=17.5 --season=autumn --weather=clear
 n-P00-夜景全景 | P00 | --clock=22 --season=autumn --weather=clear
-r-P02-雨天图书馆门前 | P02 | --clock=17.5 --season=autumn --weather=rain
