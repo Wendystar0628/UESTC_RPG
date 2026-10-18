@@ -129,9 +129,11 @@ public sealed class PreparedTile : IDisposable
 
         _reflectionInstances.Add(default);
         _reflectionReadiness.Add(false);
-        _mainVisible.Add(false);
+        _mainVisible.Add(draw.Resident);
         _mainDetached.Add(false); _reflectionDetached.Add(false);
-        RenderingServer.InstanceSetVisible(instance, false);
+        // LOD selection may go directly to ready children. The resident backdrop belongs to the
+        // map lifecycle, so activate it on mount independently of LOD visibility transitions.
+        RenderingServer.InstanceSetVisible(instance, draw.Resident);
         RenderingServer.InstanceSetTransform(instance, draw.At);
         var water = draw.IsWater;
         RenderingServer.InstanceSetLayerMask(instance, water ? 1u << 8 : 1u);

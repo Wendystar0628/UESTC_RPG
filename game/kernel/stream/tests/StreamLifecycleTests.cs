@@ -1,16 +1,54 @@
 using Campus.Gen.Tests.Support;
 using System.Reflection;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Bake;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Stream;
 using GdUnit4;
+using Godot;
 
 namespace Campus.Tests;
 
 [TestSuite]
 public sealed class StreamLifecycleTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheRootFallback()
+    {
+        var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
+        var tree = new LodTree(bounds, new StreamSettings());
+        var visible = new HashSet<StreamTile>();
+        tree.ResolveVisible(new HashSet<StreamTile> { StreamTile.Root }, _ => true, visible);
+        if (visible.Contains(StreamTile.Root)) throw new InvalidOperationException("The fixture must skip the ready root fallback.");
+
+        var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
+            [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
+        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
+        var key = new BakeKey(new("fixture"), "fixture.resident", "L4/0/0");
+        var bundle = new TileBundle(key, StreamTile.Root.Tile, LodLevel.L4, bounds,
+            [BakeSurfacePacker.Pack(source with { Shader = ShaderId.DioramaFar }, bounds, palette),
+             BakeSurfacePacker.Pack(source, bounds, palette)]);
+        var scenario = RenderingServer.ScenarioCreate();
+        var material = RenderingServer.MaterialCreate();
+        try
+        {
+            using var prepared = PreparedTile.Create(bundle);
+            for (var i = 0; i < prepared.Draws.Count; i++) prepared.MountOne(i, scenario, material);
+            var resident = prepared.Draws.Count(draw => draw.Resident);
+            if (prepared.VisibleInstanceCount != resident || resident == 0 || resident == prepared.Draws.Count)
+                throw new InvalidOperationException("Resident background stayed hidden until a root selection, or ordinary fallback geometry appeared early.");
+            prepared.SetVisible(false, 0);
+            if (prepared.VisibleInstanceCount != resident)
+                throw new InvalidOperationException("Refining the root hid its resident background.");
+        }
+        finally { RenderingServer.FreeRid(material); RenderingServer.FreeRid(scenario); }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
