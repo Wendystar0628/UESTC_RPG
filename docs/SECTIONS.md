@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L78 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 2.8k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L127 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 3.0k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L128 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1717,7 +1717,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 9.3k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 9.4k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、英雄资产、桩、占位、仓库脚本自成一体、架构导向、扩展方式、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L21 · 1.4k
@@ -1736,9 +1736,9 @@
 - ENG-ARCH §3 契约 · L115 · 566
 - ENG-ARCH §4 资源与烘焙 · L124 · 1.0k
 - ENG-ARCH §5 未交付能力的占位边界 · L135 · 359
-- ENG-ARCH §6 架构导向 · L144 · 662
-- ENG-ARCH §7 扩展点（RPG） · L156 · 448
-- ENG-ARCH §8 待验证（P0） · L168 · 583
+- ENG-ARCH §6 架构导向 · L144 · 807
+- ENG-ARCH §7 扩展点（RPG） · L157 · 448
+- ENG-ARCH §8 待验证（P0） · L169 · 583
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
@@ -1780,17 +1780,17 @@
 
 ## ENG-CODE · 代码结构准则
 
-`docs/engineering/ENG-CODE-代码结构准则.md` · 3.6k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
+`docs/engineering/ENG-CODE-代码结构准则.md` · 4.1k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
 关键词：代码结构准则、软件工程、坏味道、屎山、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、魔法数、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、复制粘贴、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、钉哈希、输入哈希、提交后提醒
 
 - ENG-CODE §0 结论 · L22 · 702
   - ★ ENG-CODE §0.1 接入要点 · L31 · 407
 - ENG-CODE §1 依赖方向 · L41 · 351
-- ENG-CODE §2 规则值与数据各一份 · L50 · 403
-- ENG-CODE §3 先用现成，再复用，不复制 · L59 · 459
-- ENG-CODE §4 不留死代码 · L67 · 209
-- ENG-CODE §5 规模 · L74 · 160
-- ENG-CODE §6 测试代码怎么写 · L80 · 431
+- ENG-CODE §2 规则值与数据各一份 · L50 · 656
+- ENG-CODE §3 先用现成，再复用，不复制 · L61 · 678
+- ENG-CODE §4 不留死代码 · L70 · 209
+- ENG-CODE §5 规模 · L77 · 160
+- ENG-CODE §6 测试代码怎么写 · L83 · 513
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
@@ -1824,11 +1824,11 @@
 
 - ENG-GATES §0 结论 · L21 · 808
   - ★ ENG-GATES §0.1 接入要点 · L34 · 255
-- ENG-GATES §1 门禁与测试节奏 · L40 · 2.8k
-  - ENG-GATES §1.1 测试三档 · L44 · 1.1k
-  - ENG-GATES §1.2 门禁表 · L64 · 1.4k
-  - ENG-GATES §1.4 入口与交付分工 · L85 · 207
-- ENG-GATES §2 待验证（P0） · L91 · 152
+- ENG-GATES §1 门禁与测试节奏 · L40 · 2.9k
+  - ENG-GATES §1.1 测试三档 · L44 · 1.2k
+  - ENG-GATES §1.2 门禁表 · L65 · 1.4k
+  - ENG-GATES §1.4 入口与交付分工 · L86 · 207
+- ENG-GATES §2 待验证（P0） · L92 · 152
 
 ## ENG-PERF-ADAPT · 设备档、自适应与测量
 
