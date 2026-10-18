@@ -56,6 +56,9 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         return ContentOutput.Empty with { Instances = streams.AsReadOnly() };
     }
 
+    /// <summary>Plan-only grass input from the same prepared context used by trees; no grass geometry is implied.</summary>
+    public GrassRuntimeData PrepareGrass(BuildContext context) => GrassInputs.Read(context);
+
     /// <summary>All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes.</summary>
     public IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context)
     {

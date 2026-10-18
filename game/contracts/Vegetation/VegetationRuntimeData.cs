@@ -28,4 +28,6 @@ public sealed class VegetationMotherData
 public interface IVegetationRuntimeSource : IContentModule
 {
     IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context);
+    /// <summary>Authored grass scopes from this exact map version; actual prototypes use the existing geometry instance pools.</summary>
+    GrassRuntimeData PrepareGrass(BuildContext context);
 }

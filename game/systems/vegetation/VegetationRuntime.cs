@@ -47,6 +47,8 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private N.Vector3? _appliedEye;
     private bool _resetForCapture;
     public string? Error { get; private set; }
+    /// <summary>Current map's frozen grass scopes, cleared with its pools on unload. No grass instances have been generated here.</summary>
+    public GrassRuntimeData? Grass { get; private set; }
     public bool IsReady(Pose pose) => Error is null && _map is not null && _pending is null &&
         _mounted == _mothers.Count && _appliedEye == pose.Position;
 
@@ -105,6 +107,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         {
             context = ContextFor(ctx);
             producer = Services.Get<IMapContentSource>().GetModule<IVegetationRuntimeSource>(ctx, ModuleId);
+            Grass = producer.PrepareGrass(context());
         }
         catch (Exception error)
         {
@@ -163,6 +166,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private void FreeAll()
     {
         _pending = null;
+        Grass = null;
         foreach (var mother in _mothers) mother.Free();
         _mothers.Clear();
         _mounted = 0;
