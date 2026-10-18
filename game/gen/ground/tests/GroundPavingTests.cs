@@ -21,7 +21,7 @@ public sealed class GroundPavingTests
     // Door at (0, 0) facing east (yaw 90): the axis is +X, the plaza starts 10 m out.
     private static readonly Vector2 Door = new(0f, 0f);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LibraryForecourtGetsGraniteFrameOnTheEntranceAxis()
     {
         var world = PavingWorld.Library("library", 90f);
@@ -39,8 +39,8 @@ public sealed class GroundPavingTests
                 var x = mesh.Position[3 * v];
                 var z = mesh.Position[3 * v + 2];
                 // Frame: V along the axis from the plaza edge (x = 10), U across it with U = 0 on the axis line (z = 0).
-                AssertThat(Math.Abs((double)(z) - (double)(mesh.Uv![2 * v])) <= 0.01).OverrideFailureMessage($"U is the signed distance from the entrance axis: expected {z}, got {mesh.Uv![2 * v]}.").IsTrue();
-                AssertThat(Math.Abs((double)(x - 10f) - (double)(mesh.Uv[2 * v + 1])) <= 2e-3).OverrideFailureMessage($"V starts at the plaza edge on the axis: expected {x - 10f}, got {mesh.Uv[2 * v + 1]}.").IsTrue();
+                AssertThat(Math.Abs((double)(z) - (double)(mesh.Uv![2 * v])) <= TestTolerance.Position).OverrideFailureMessage($"U is the signed distance from the entrance axis: expected {z}, got {mesh.Uv![2 * v]}.").IsTrue();
+                AssertThat(Math.Abs((double)(x - 10f) - (double)(mesh.Uv[2 * v + 1])) <= TestTolerance.Position).OverrideFailureMessage($"V starts at the plaza edge on the axis: expected {x - 10f}, got {mesh.Uv[2 * v + 1]}.").IsTrue();
                 AssertThat(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f).OverrideFailureMessage("Without a fidelity model the D0 reading K3 applies.").IsTrue();
             }
             for (var i = 0; i < mesh.Index.Length; i += 3)
@@ -58,7 +58,7 @@ public sealed class GroundPavingTests
         AssertThat(plain.Any(m => m.Material.Spec == GroundPalette.Spec(GroundMaterial.Plaza))).OverrideFailureMessage("Other plaza tops stay plain granite.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OnlyLibraryEntrancesSelectAForecourt()
     {
         var meshes = Build(PavingWorld.Library("museum", 90f));
@@ -67,7 +67,7 @@ public sealed class GroundPavingTests
         AssertThat(away.All(m => m.Material.Spec.SurfacePattern is null)).OverrideFailureMessage("An entrance facing away from every plaza binds nothing.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FarPrecisionZonesSwitchTheGateOff()
     {
         var world = PavingWorld.Library("library", 90f, x => x > 25f ? FidelityZone.K4 : FidelityZone.K1);
@@ -81,13 +81,13 @@ public sealed class GroundPavingTests
             }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MainAxisIsTheLongestRunAcrossThePlaza()
     {
         // A second entrance reaches the same plaza from the side, across a short run: the façade axis stays the main axis.
         var world = PavingWorld.Library("library", 90f, side: true);
         var mesh = Build(world).First(m => m.Material.Spec.SurfacePattern is not null);
-        AssertThat(Math.Abs((double)(mesh.Position[2]) - (double)(mesh.Uv![0])) <= 0.01).OverrideFailureMessage($"U stays measured from the long east axis: expected {mesh.Position[2]}, got {mesh.Uv![0]}.").IsTrue();
+        AssertThat(Math.Abs((double)(mesh.Position[2]) - (double)(mesh.Uv![0])) <= TestTolerance.Position).OverrideFailureMessage($"U stays measured from the long east axis: expected {mesh.Position[2]}, got {mesh.Uv![0]}.").IsTrue();
     }
 
     private static IReadOnlyList<GeometryBundle> Build(FakeWorld world)

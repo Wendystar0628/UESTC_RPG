@@ -10,7 +10,7 @@ namespace Campus.Gen.World.Tests;
 
 public sealed partial class TerrainCompilerTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadBoundaryValidationUsesTheFinalCorridorSurface()
     {
         var building = WorldFeatureFixture.Create("fixture:final-pad", "building", new PolygonGeometry(Box(-2, -8, 2, 8)), height: 8);
@@ -33,10 +33,10 @@ public sealed partial class TerrainCompilerTests
             AssertThat(rejection is not null).IsTrue();
         }
         var accepted = TerrainCompiler.Compile(context, [Source([Corridor(0.2)])]);
-        AssertThat(Math.Abs((double)(0) - (double)(accepted.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.2) - (double)(accepted.HeightAt(2, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(accepted.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.2) - (double)(accepted.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MultipartPadSharedAndOverlappingWingEdgesAreNotExposedGradingBoundaries()
     {
         foreach (var wings in new[]
@@ -52,12 +52,12 @@ public sealed partial class TerrainCompilerTests
                     new PolygonGeometry(wing), null, null) { Props = Kind("building") }).ToArray()
             };
             var terrain = Compile([], [building]);
-            AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= 0.001).IsTrue();
-            AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-2, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(2, 0))) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-2, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadPreFieldIsDiagnosticWhenTheFinalCorridorReplacesItsWholeSection()
     {
         var building = WorldFeatureFixture.Create("fixture:replaced-pad", "building", new PolygonGeometry(Box(-2, -2, 2, 2)), height: 8);
@@ -68,11 +68,11 @@ public sealed partial class TerrainCompilerTests
             [new(0, 1.3), new(60, 1.3)], 0, 0.75) { Zone = Zone };
         var context = Context([building]) with { Network = new([road], [], [], [], []) };
         var terrain = TerrainCompiler.Compile(context, [Source([pad, corridor])]);
-        AssertThat(Math.Abs((double)(1.3) - (double)(terrain.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(1.3) - (double)(terrain.HeightAt(2, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(1.3) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1.3) - (double)(terrain.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
         AssertThat(terrain.Diagnostics.Any(message => message.StartsWith("PRE_FIELD:", StringComparison.Ordinal))).OverrideFailureMessage("Pre-pad earthwork evidence disappeared instead of becoming a diagnostic.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadCoreHeightCannotHideAnUnfinishedFiniteGradingBand()
     {
         var building = WorldFeatureFixture.Create("fixture:unfinished-pad", "building", new PolygonGeometry(Box(-2, -2, 2, 2)), height: 8);
@@ -85,7 +85,7 @@ public sealed partial class TerrainCompilerTests
             AssertThat(rejection is not null).IsTrue();
         }
         var accepted = Compile([pad with { PadY = 0.2 }], [building]);
-        AssertThat(Math.Abs((double)(0.2) - (double)(accepted.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(accepted.HeightAt(9, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0.2) - (double)(accepted.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(accepted.HeightAt(9, 0))) <= TestTolerance.Position).IsTrue();
         // A named but distant structure does not cover this pad's actual transition.
         var remote = WorldFeatureFixture.Create("fixture:remote-edge", "edgeBand", new PolygonGeometry(Box(50, 50, 52, 52)));
         var unrelated = pad with { Edge = new(remote.Id.Value, TerrainEdgeKind.EdgeBand, 1, 2, 1) };
@@ -96,7 +96,7 @@ public sealed partial class TerrainCompilerTests
         }
         var covering = WorldFeatureFixture.Create("fixture:covering-edge", "edgeBand", new PolygonGeometry(Box(-20, -20, 20, 20)));
         var covered = pad with { Edge = new(covering.Id.Value, TerrainEdgeKind.EdgeBand, 1, 2, 1) };
-        AssertThat(Math.Abs((double)(1) - (double)(Compile([covered], [building, covering]).PadY(building.Id))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(Compile([covered], [building, covering]).PadY(building.Id))) <= TestTolerance.Position).IsTrue();
         // Structural plan coverage may allow its actual steep transition, but never
         // an unfinished envelope that would jump at the finite grade-width cap.
         {
@@ -106,7 +106,7 @@ public sealed partial class TerrainCompilerTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadGradingChecksTheFullGradientAndAcceptsTheOneInFourBoundary()
     {
         var diagonalComponent = 0.25 * Math.Sqrt(0.5);
@@ -135,11 +135,11 @@ public sealed partial class TerrainCompilerTests
         var terrain = Compile([plateau, pad], [building]);
         // Two metres beyond this straight edge the actual generated profile has
         // H=.25 and |gradient|=.25, then returns exactly to H=.75 within six metres.
-        AssertThat(Math.Abs((double)(0.25) - (double)(terrain.HeightAt(4, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.25) - (double)(terrain.FactsAt(4, 0).Grade)) <= 0.001).IsTrue();
-        AssertThat(Math.Abs((double)(0.75) - (double)(terrain.HeightAt(8, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0.25) - (double)(terrain.HeightAt(4, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.25) - (double)(terrain.FactsAt(4, 0).Grade)) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(0.75) - (double)(terrain.HeightAt(8, 0))) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadCourtyardNeedsARealReturnAndConcaveOffsetCornersUseMiters()
     {
         WorldFeature Courtyard(float half) => WorldFeatureFixture.Create("fixture:courtyard-pad", "building", new PolygonGeometry(new PolygonRings(Box(-20, -20, 20, 20).Outer, [Box(-half, -half, half, half).Outer])), height: 8);
@@ -155,10 +155,10 @@ public sealed partial class TerrainCompilerTests
         // The corner's diagonal section exceeds 6 m, but its true distance offset
         // returns within 6 m just like the straight edges of the same courtyard.
         var large = Compile([pad], [Courtyard(8)]);
-        AssertThat(Math.Abs((double)(0) - (double)(large.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.4) - (double)(large.PadY(small.Id))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(large.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.4) - (double)(large.PadY(small.Id))) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void RealFourPartPadContinuesPastAnIncreasingNearestEdgeSwitch()
     {
         PolygonRings[] wings = [
@@ -180,7 +180,7 @@ public sealed partial class TerrainCompilerTests
         var outward = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), ux, uz, unx, unz, 6.8);
         AssertThat(outward.End > 0.8 && exposed.Distance(ux + unx * outward.End, uz + unz * outward.End).Height > 0.8).OverrideFailureMessage("A parameter-only ULP interval was mistaken for the actual outward band's end.").IsTrue();
         var inward = TerrainCompiler.TracePadRayBoundary(exposed, TerrainRegion.Expand(exposed.Bounds, 6.8), ux, uz, -unx, -unz, 6.8);
-        AssertThat(inward.End <= 0.01).OverrideFailureMessage("A reversed boundary ray acquired an outward grading strip through the building core.").IsTrue();
+        AssertThat(inward.End <= TestTolerance.Position).OverrideFailureMessage("A reversed boundary ray acquired an outward grading strip through the building core.").IsTrue();
         var building = new WorldFeature(new("qsh:relation:10807928"), FeatureSource.Osm, new("building"), new MultiPolygonGeometry(wings))
         {
             Height = 20,
@@ -192,23 +192,23 @@ public sealed partial class TerrainCompilerTests
             Zones = new Dictionary<ZoneId, IReadOnlyList<PolygonRings>> { [Zone] = [Box(-1024, -1024, 1024, 1024)] }
         };
         var terrain = TerrainCompiler.Compile(context, []);
-        AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-630.82035f, 404.93326f))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-630.82035f, 404.93326f))) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadRayStopsAtTheOpposingWallMaximumAndHandlesAnExactPlateau()
     {
         var courtyard = new TerrainRegion([new PolygonRings(Box(-20, -20, 20, 20).Outer, [Box(-4, -4, 4, 4).Outer])]);
         var trace = TerrainCompiler.TracePadRayBoundary(courtyard, TerrainRegion.Expand(courtyard.Bounds, 6.8), -4, 0, 1, 0, 6.8);
-        AssertThat(Math.Abs(trace.End - 4) < 0.01).OverrideFailureMessage("The ray borrowed grading space from the opposing courtyard wall.").IsTrue();
+        AssertThat(Math.Abs(trace.End - 4) < TestTolerance.Position).OverrideFailureMessage("The ray borrowed grading space from the opposing courtyard wall.").IsTrue();
         // This ray first grows away from the left wall, then has an exact 2 m
         // plateau under the top/bottom walls, then turns towards the right wall.
         var slot = new TerrainRegion([new PolygonRings(Box(-20, -20, 20, 20).Outer, [Box(-8, -2, 8, 2).Outer])]);
         var plateau = TerrainCompiler.TracePadRayBoundary(slot, TerrainRegion.Expand(slot.Bounds, 6.8), -8, 0, 1, 0, 6.8);
-        AssertThat(Math.Abs(plateau.End - 14) < 0.01).OverrideFailureMessage("An exact plateau was mistaken for a return or a numerical derivative epsilon.").IsTrue();
+        AssertThat(Math.Abs(plateau.End - 14) < TestTolerance.Position).OverrideFailureMessage("An exact plateau was mistaken for a return or a numerical derivative epsilon.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadCounterfactualSkipsOnlyTheExactNodeAndKeepsLaterConstraintsFrozen()
     {
         var support = new MapRect(new(-10), new(10));
@@ -218,22 +218,22 @@ public sealed partial class TerrainCompilerTests
         var road = new TerrainNode("fixture:road", "fixture", Zone, TerrainGroup.Corridor, 50, support,
             (before, _, _) => before with { Surface = before.Surface * 0.5 });
         var program = new TerrainProgram([pad, road], (_, _) => TerrainDifferential.Constant(0.75));
-        AssertThat(Math.Abs((double)(1) - (double)(program.Evaluate(0, 0).Surface.Height)) <= 0.001).IsTrue();
-        AssertThat(Math.Abs((double)(0) - (double)(program.EvaluateExcept(0, 0, pad).Surface.Height)) <= 0.001).IsTrue();
-        AssertThat(Math.Abs((double)(1) - (double)(program.EvaluateExcept(0, 0, equalButDistinct).Surface.Height)) <= 0.001).IsTrue();
-        AssertThat(Math.Abs((double)(0.75) - (double)(program.EvaluateExcept(0, 0, pad).BoundaryWeight!.Value.Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(program.Evaluate(0, 0).Surface.Height)) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(program.EvaluateExcept(0, 0, pad).Surface.Height)) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(program.EvaluateExcept(0, 0, equalButDistinct).Surface.Height)) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(0.75) - (double)(program.EvaluateExcept(0, 0, pad).BoundaryWeight!.Value.Height)) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AutoPadTouchesProtectedBandAndApronJoinsWithoutJump()
     {
         var building = WorldFeatureFixture.Create("fixture:building", "building", new PolygonGeometry(Box(19, 40, 32, 60)), height: 8);
         var context = Context([building]) with { Boundary = Box(0, 0, 200, 200), DataRect = new(new(0), new(200)) };
         var terrain = TerrainCompiler.Compile(context, []);
-        AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(19.5f, 50))) <= 0.001).IsTrue();
-        AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(18.5f, 50))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(19.5f, 50))) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(18.5f, 50))) <= TestTolerance.Position).IsTrue();
         var inside = terrain.HeightAt(32.7999f, 50); var outside = terrain.HeightAt(32.8001f, 50);
-        AssertThat(Math.Abs(inside - outside) < 0.01).OverrideFailureMessage("Apron edge reset to PadY and made a vertical seam.").IsTrue();
+        AssertThat(Math.Abs(inside - outside) < TestTolerance.Position).OverrideFailureMessage("Apron edge reset to PadY and made a vertical seam.").IsTrue();
     }
 
 }

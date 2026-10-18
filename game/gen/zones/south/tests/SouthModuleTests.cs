@@ -6,6 +6,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
+using Campus.Gen.Zones.Common.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Zones.South.Tests;
@@ -18,7 +19,7 @@ public sealed class SouthModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void BuildingOneKeepsOnlyItsOneStoreySourcePartOnTheRealMap()
     {
         var one = new FeatureId(SouthIds.Building1.Entity);
@@ -32,7 +33,7 @@ public sealed class SouthModuleTests
         AssertThat(building.Parts.Select(part => part.SourceId).SequenceEqual(raw.Features[one].Parts.Where(part => part.SourceId != SouthIds.Building1HiddenWing.Part).Select(part => part.SourceId))).OverrideFailureMessage("only the 1-storey source part is left").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClaimsNameExistingFeatures()
     {
         var world = RealMapFixture.Load().World;
@@ -45,7 +46,7 @@ public sealed class SouthModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
     {
         var ctx = Context();
@@ -93,7 +94,7 @@ public sealed class SouthModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -123,33 +124,17 @@ public sealed class SouthModuleTests
         }
     }
 
-    [TestCase]
-    public void HeaviestCellsStayInsideTheDeclaredBudget()
-    {
-        var ctx = Context();
-        var module = new SouthModule();
-        foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
-        {
-            var cells = module.ItemsFor(ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
-            foreach (var (x, z) in cells)
-            {
-                var output = module.Build(ctx, new(x, z), lod);
-                var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
-                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
-            }
-        }
-    }
-
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void BuildIsDeterministic()
     {
-        var a = Bytes(Context());
-        var b = Bytes(Context());
+        var ctx = Context();
+        var cells = ZoneTestCells.Heaviest(new SouthModule(SouthSites.All.ToArray()), ctx);
+        var a = Bytes(ctx, cells);
+        var b = Bytes(Context(), cells);
         AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void WritableBuildOutputCannotModifySharedSiteGeometry()
     {
         var ctx = Context();
@@ -170,7 +155,7 @@ public sealed class SouthModuleTests
         AssertThat(again.Meshes.Count == positions.Length && again.Meshes.Select((m, i) => m.Position.SequenceEqual(positions[i]) && m.Index.SequenceEqual(indices[i])).All(same => same)).OverrideFailureMessage("a caller's writable output changed the next build from the cached site").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EntranceKitsAreLeftToTheStreetFurniture()
     {
         // WLD-INTERIORS: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
@@ -180,7 +165,7 @@ public sealed class SouthModuleTests
         AssertThat(!new SouthModule().Claims.OfType<FeatureClaim>().Any(c => (c.Aspects & Aspects.Props) != 0)).OverrideFailureMessage("no Props claim keeps WP-13 off the zone's entrances").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SitesStayInsideTheSouthZone()
     {
         var ctx = Context();
@@ -189,12 +174,12 @@ public sealed class SouthModuleTests
             AssertThat(item.Anchor.X is > -1000 and < 1000 && item.Anchor.Y is > 90 and < 1000).OverrideFailureMessage($"item at {item.Anchor} is in the south zone").IsTrue();
     }
 
-    private static byte[] Bytes(BuildContext ctx)
+    private static byte[] Bytes(BuildContext ctx, IEnumerable<TileKey> cells)
     {
         var module = new SouthModule(SouthSites.All.ToArray());
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
-        foreach (var tile in module.Tiles(ctx))
+        foreach (var tile in cells)
         {
             var output = module.Build(ctx, tile, LodLevel.L0);
             foreach (var mesh in output.Meshes)

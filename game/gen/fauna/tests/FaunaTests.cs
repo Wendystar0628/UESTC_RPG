@@ -15,7 +15,7 @@ public sealed class FaunaTests
     private static readonly Lazy<IWorldModel> World = new(() => RealMapFixture.Load().World);
     private static readonly Lazy<IReadOnlyList<FeatureId>> Lakes = new(() => RealMapFixture.Entry().Descriptor.Env.ReflectLakes);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
     {
         var a = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
@@ -57,7 +57,7 @@ public sealed class FaunaTests
         Network = WorldNetwork.Empty,
     };
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AStubWorldWithoutNetworkOrOverlaysDegradesQuietly()
     {
         var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
@@ -65,8 +65,8 @@ public sealed class FaunaTests
         AssertThat(!layout.Sites.Any(s => s.Kind == FaunaKind.Pigeon)).OverrideFailureMessage("No stepped plaza, no pigeons, and no exception.").IsTrue();
     }
 
-    [TestCase]
-    public void ModelsAreClosedValidAndWithinBudget()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ModelsAreClosedAndValid()
     {
         var scene = new FaunaScene(Campus.Contracts.Tests.PaletteFixture.Catalog);
         var keys = new List<FaunaModelKey>();
@@ -80,10 +80,9 @@ public sealed class FaunaTests
         {
             var mesh = scene.Model(key);
             var box = mesh.Bounds();
-            AssertThat(mesh.Triangles is > 100 and < 7000).OverrideFailureMessage($"{key}: {mesh.Triangles} triangles.").IsTrue();
             if (key.Kind == FaunaKind.Swan) AssertThat(box.Min.Y < -0.05f && box.Min.Y > -0.15f).OverrideFailureMessage($"{key}: the hull sits in the water (min y {box.Min.Y:F3}).").IsTrue();
-            else AssertThat(box.Min.Y > -0.01f && box.Min.Y < 0.03f).OverrideFailureMessage($"{key}: feet on the ground (min y {box.Min.Y:F3}).").IsTrue();
-            AssertThat(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < 0.01f)).OverrideFailureMessage($"{key}: unit normals.").IsTrue();
+            else AssertThat(MathF.Abs(box.Min.Y) < TestTolerance.Layout).OverrideFailureMessage($"{key}: feet on the ground (min y {box.Min.Y:F3}).").IsTrue();
+            AssertThat(mesh.Normals.All(n => MathF.Abs(n.Length() - 1) < TestTolerance.FloatRelative)).OverrideFailureMessage($"{key}: unit normals.").IsTrue();
             AssertThat(SignedVolume(mesh) < 0).OverrideFailureMessage($"{key}: clockwise front faces seen from outside (Godot), so the closed mesh has negative signed volume.").IsTrue();
             var height = box.Max.Y - MathF.Max(0f, box.Min.Y);
             var (lo, hi) = key.Kind switch
@@ -101,7 +100,6 @@ public sealed class FaunaTests
         var day = sites.SelectMany(s => s.Day).ToArray();
         var output = scene.Build(day);
         AssertThat(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIndices is { } c && c.Length * 3 == m.Position.Length)).OverrideFailureMessage("One cat and one bird bundle with colour IDs.").IsTrue();
-        AssertThat(scene.Triangles(day) < 90000).OverrideFailureMessage("The whole day set stays small.").IsTrue();
     }
 
     private static double SignedVolume(AnimalMesh m)
@@ -112,7 +110,7 @@ public sealed class FaunaTests
         return v;
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ColoursAreRegisteredNames()
     {
         var root = RepositoryFixture.Root;

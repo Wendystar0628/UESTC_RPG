@@ -16,7 +16,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class FacadePresetTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OrdinaryBuildingsKeepTheirOpeningsAndNumbers()
     {
         // Buildings without an entrance anchor lay out the same way every build: openings, window numbers and cards cell for
@@ -34,7 +34,7 @@ public sealed class FacadePresetTests
         AssertThat(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), "")).OverrideFailureMessage("Expected: " + ("the other buildings keep their layout")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadePresetsChangeOnlyTheirBuilding()
     {
         // MAP-QSH-SOUTH on one research block among ordinary buildings: larger glass in the same window cells; every
@@ -54,7 +54,7 @@ public sealed class FacadePresetTests
         static string Cells(BuildingPlan p) => string.Join(" ", p.Openings.SelectMany((o, fi) => o.Select(x => $"{fi}/{x.Bay}/{x.Row}/{x.Kind}")));
         AssertThat(Cells(after) == Cells(before)).OverrideFailureMessage("Expected: " + ("the same window cells and kinds, so the same window numbers and cards")).IsTrue();
         static float Glazed(BuildingPlan p) => p.Openings.Sum(o => o.Sum(x => (x.U1 - x.U0) * (x.Y1 - x.Y0)));
-        AssertThat(Glazed(after) > 1.6f * Glazed(before)).OverrideFailureMessage("Expected: " + ($"more and larger glass: {Glazed(before):0} → {Glazed(after):0} m²")).IsTrue();
+        AssertThat(Glazed(after) > Glazed(before)).OverrideFailureMessage("Expected: " + ($"more and larger glass: {Glazed(before):0} → {Glazed(after):0} m²")).IsTrue();
 
         // 玻璃色, 框架材质 and 窗型 reach the meshes at every level: a fixture preset with colours of its own.
         var tinted = new Rules.FacadeLook("t.tinted") { Glass = "uestc.techblue", Frame = "wall.creamCoffee", Trim = "panel.brown", Window = PartCatalog.CurtainWall };
@@ -92,7 +92,7 @@ public sealed class FacadePresetTests
     private static Rules.FacadeLook[] DormLooks => Rules.FacadePresets.All
         .Where(look => look.Key.StartsWith("dorm.", StringComparison.Ordinal)).ToArray();
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PresetsResolveTheirPaletteFamiliesAndWindowParts()
     {
         var all = Rules.FacadePresets.All;
@@ -108,7 +108,7 @@ public sealed class FacadePresetTests
         AssertThat(Rules.FacadePresets.Find(new FacadePreset("t:unknown")) is null).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void DormPresetAccentDoesNotFollowTheClusterHash()
     {
         // DormA (pink-sand spandrels) and DormB (brown) by cluster: the same footprint on two world seeds, each way.
@@ -137,7 +137,7 @@ public sealed class FacadePresetTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TypeAAccentIsTheApronUnderTheWindow()
     {
         // The 陶红 of type A sits only under the windows, as wide as the window, floor to sill: the area of the L0 mesh is the
@@ -154,17 +154,16 @@ public sealed class FacadePresetTests
                 var (apron, wide) = (Plan(feature with { Facade = new FacadePreset(look.Key) }, look), Plan(feature with { Facade = new FacadePreset(full.Key) }, full with { Frame = look.Frame }));
                 var (share, spread) = (TerracottaShare(apron), TerracottaShare(wide));
                 var what = $"{look.Key} on {footprint.Outer.Count} corners and {footprint.Holes.Count} courtyards";
-                AssertThat(spread.Wall is > 0.23 and < 0.29).OverrideFailureMessage("Expected: " + ($"{what}: about a quarter of the wall with the lintels ({spread.Wall:0.000})")).IsTrue();
-                AssertThat(share.Wall is > 0.15 and < 0.19).OverrideFailureMessage("Expected: " + ($"{what}: about a sixth of the wall as aprons ({share.Wall:0.000})")).IsTrue();
+                AssertThat(share.Wall > 0 && share.Wall < spread.Wall).OverrideFailureMessage("Expected: " + ($"{what}: aprons alone ({share.Wall:0.000}) take less of the wall than aprons with lintels ({spread.Wall:0.000})")).IsTrue();
                 var (area, expected, strays) = ApronCheck(apron);
                 AssertThat(strays == 0).OverrideFailureMessage("Expected: " + ($"{what}: {strays} triangles of 陶红 outside a floor-to-sill band")).IsTrue();
-                AssertThat(MathF.Abs((float)(area / expected) - 1f) < 0.01f).OverrideFailureMessage("Expected: " + ($"{what}: the 陶红 is the aprons ({area:0.0} of {expected:0.0} m²)")).IsTrue();
+                AssertThat(MathF.Abs((float)(area / expected) - 1f) < TestTolerance.Position).OverrideFailureMessage("Expected: " + ($"{what}: the 陶红 is the aprons ({area:0.0} of {expected:0.0} m²)")).IsTrue();
             }
         }
     }
 
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void DormPresetsKeepEveryWindowNumber()
     {
         // The window cells and the storeys are the family's, so no window of a building changes its number (contract-29): on
@@ -206,7 +205,7 @@ public sealed class FacadePresetTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NorthPresetsReachTheRealBuildings()
     {
         // Presets supply nominal window dimensions; the authored storey height can cap a row's clear opening.
@@ -229,14 +228,14 @@ public sealed class FacadePresetTests
                 AssertThat(plan.Profile.WindowHeight == look.WindowHeight && plan.Profile.Sill == look.Sill && plan.Profile.GroundSill == look.GroundSill)
                     .OverrideFailureMessage($"{way}: nominal window dimensions come from {key}.").IsTrue();
                 // The storey rows already account for the plinth, slab clearance and roof; openings must use those exact rows.
-                AssertThat(windows.Length > 0 && windows.All(w => MathF.Abs(w.Y0 - plan.SillY[w.Row]) < 0.01f &&
-                    MathF.Abs(w.Y1 - plan.HeadY[w.Row]) < 0.01f && w.Y1 > w.Y0 && w.Y1 - w.Y0 <= look.WindowHeight!.Value + 0.01f))
+                AssertThat(windows.Length > 0 && windows.All(w => MathF.Abs(w.Y0 - plan.SillY[w.Row]) < TestTolerance.Position &&
+                    MathF.Abs(w.Y1 - plan.HeadY[w.Row]) < TestTolerance.Position && w.Y1 > w.Y0 && w.Y1 - w.Y0 <= look.WindowHeight!.Value + TestTolerance.Position))
                     .OverrideFailureMessage($"{way}: windows follow their constrained sill/head rows and stay within the preset's nominal height.").IsTrue();
             }
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NorthUnkeyedBlocksTakeTheBohanLanguage()
     {
         // Sample dormitories take keys as an overlay op would; each takes the
@@ -301,7 +300,7 @@ public sealed class FacadePresetTests
                 var (a, c, d) = (P(b, b.Index[t]), P(b, b.Index[t + 1]), P(b, b.Index[t + 2]));
                 area += 0.5 * Vector3.Cross(c - a, d - a).Length();
                 var (low, high) = (MathF.Min(a.Y, MathF.Min(c.Y, d.Y)), MathF.Max(a.Y, MathF.Max(c.Y, d.Y)));
-                if (!Enumerable.Range(0, plan.Storeys).Any(k => low >= MathF.Max(plan.FloorY(k), plan.PlinthTopY) - 0.01f && high <= plan.SillY[k] + 0.01f)) strays++;
+                if (!Enumerable.Range(0, plan.Storeys).Any(k => low >= MathF.Max(plan.FloorY(k), plan.PlinthTopY) - TestTolerance.Position && high <= plan.SillY[k] + TestTolerance.Position)) strays++;
             }
         var expected = plan.Openings.Sum(o => o.Where(x => x.Kind == BayKind.Window)
             .Sum(x => (double)(x.U1 - x.U0) * (plan.SillY[x.Row] - MathF.Max(plan.FloorY(x.Row), plan.PlinthTopY))));

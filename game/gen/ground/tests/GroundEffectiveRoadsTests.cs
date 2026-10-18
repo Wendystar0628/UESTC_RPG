@@ -23,7 +23,7 @@ public sealed class GroundEffectiveRoadsTests
 {
     private static readonly GroundSection Section = GroundSection.Default;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AuthoredLineInFeaturesAndRoadsIsPavedOnce()
     {
         var points = new Vector2[] { new(0f, 20f), new(30f, 24f), new(60f, 20f) };
@@ -40,7 +40,7 @@ public sealed class GroundEffectiveRoadsTests
             p.First.HalfWidth == p.Second.HalfWidth && p.First.Line!.SequenceEqual(p.Second.Line!))).OverrideFailureMessage("Features copy changed the shapes.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HiddenAuthoredLineIsNotLaidAgain()
     {
         // A feature of a class the network owns, with no road under its ID, has been hidden: nothing is paved.
@@ -57,7 +57,7 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(GroundSources.Read(TestWorld.Of([original])).Shapes.Count == 1).OverrideFailureMessage("An original way is not an authored line.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HideThroughTheLoaderLeavesNoShape()
     {
         var added = GroundSources.Read(Load([Add("design:line")]).World);
@@ -66,7 +66,7 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(hidden.Shapes.All(s => s.Id.Value != "design:line") && hidden.Roads.All(r => r.Id.Value != "design:line")).OverrideFailureMessage("A hidden authored line is not paved from anywhere.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AreasStayAreasAndKeepTheirHoles()
     {
         var plaza = Rect(0f, 0f, 40f, 40f);
@@ -92,7 +92,7 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(laid.Count == 2 && laid.Count(s => s.Rings is not null) == 1 && laid.Count(s => s.Line is not null) == 1).OverrideFailureMessage("Polygon as polygon, centre line as capsule.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AuthoredWalkJoinsAnExistingSidewalkAsOneSurfaceWithNoKerbAtTheJoin()
     {
         var walk = new Vector2[] { new(30f, 4.25f), new(30f, 40f) };
@@ -117,7 +117,7 @@ public sealed class GroundEffectiveRoadsTests
         var crossing = new Vector2[] { new(50f, -20f), new(50f, 20f) };
         var crossed = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-cross", crossing, 2.5f)], [], [], [], []));
         var marks = GroundLayout.Of(crossed).Markings(Section);
-        AssertThat(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < 0.01f).OverrideFailureMessage("An authored footway across the road gets one zebra where it crosses.").IsTrue();
+        AssertThat(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < TestTolerance.Position).OverrideFailureMessage("An authored footway across the road gets one zebra where it crosses.").IsTrue();
         AssertThat(GroundLayout.Of(bare).Markings(Section).Crossings.Count == 0).OverrideFailureMessage("No walk, no crossing.").IsTrue();
 
         // Feature and network copies together build the same tile as the network alone: no second layer, no z conflict.
@@ -131,7 +131,7 @@ public sealed class GroundEffectiveRoadsTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void RealCampusLaysEveryAuthoredLineOnceAndKeepsItsAreasAndHoles()
     {
         var world = RealMapFixture.Load().World;

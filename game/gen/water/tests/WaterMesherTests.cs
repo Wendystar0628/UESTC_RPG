@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
@@ -45,7 +46,7 @@ public sealed class WaterMesherTests
         Body("bay", WaterKind.Lake, [new(100f, 0f), new(160f, 8f), new(150.5f, 60f), new(128f, 24f), new(104f, 52f), new(96f, 20f)]),
     ];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MeshCoversThePolygonExactly()
     {
         foreach (var body in Shapes)
@@ -56,7 +57,7 @@ public sealed class WaterMesherTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TrianglesFaceUpAndStayInside()
     {
         foreach (var body in Shapes)
@@ -76,7 +77,7 @@ public sealed class WaterMesherTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InnerEdgesAreSharedSoTheSurfaceIsWatertight()
     {
         foreach (var body in Shapes)
@@ -105,7 +106,7 @@ public sealed class WaterMesherTests
             ((long)MathF.Round(m.Position[3 * v] * 1e4f), (long)MathF.Round(m.Position[3 * v + 2] * 1e4f));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ShoreDistanceIsZeroOnTheBankAndExactInside()
     {
         var lake = Shapes[0];
@@ -114,7 +115,7 @@ public sealed class WaterMesherTests
         {
             var p = new Vector2(mesh.Position[3 * v], mesh.Position[3 * v + 2]);
             var expected = MathF.Min(Exact(p), WaterParams.Default.SdfClamp);
-            AssertThat(MathF.Abs(mesh.Shore[v] - expected) > 0.01f).OverrideFailureMessage($"shore distance {mesh.Shore[v]} at {p}, expected {expected}").IsFalse();
+            AssertThat(MathF.Abs(mesh.Shore[v] - expected) > TestTolerance.Position).OverrideFailureMessage($"shore distance {mesh.Shore[v]} at {p}, expected {expected}").IsFalse();
         }
 
         static float Exact(Vector2 p)
@@ -126,7 +127,7 @@ public sealed class WaterMesherTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void JointsBetweenRiverPiecesAreOpenWater()
     {
         var a = Body("a", WaterKind.Channel, Rect(0f, 0f, 8f, 40f));
@@ -141,7 +142,7 @@ public sealed class WaterMesherTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void SameInputGivesTheSameBytes()
     {
         var first = WaterMesher.Build(Shapes[1], Shapes);

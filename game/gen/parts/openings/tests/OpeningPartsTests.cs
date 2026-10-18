@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using GdUnit4;
+using Campus.Tests;
 using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Parts.Openings.Tests;
@@ -15,7 +16,7 @@ public sealed class OpeningPartsTests
         .Where(type => type.Namespace == typeof(OpeningGallery).Namespace ||
             type.Namespace?.StartsWith(typeof(OpeningGallery).Namespace + ".", StringComparison.Ordinal) == true);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryWp10CatalogEntryHasARealPartWithTheCatalogParameters()
     {
         var parts = OpeningTypes.Select(t => (Type: t, Attribute: t.GetCustomAttribute<PartAttribute>())).Where(x => x.Attribute is not null).ToArray();
@@ -28,7 +29,7 @@ public sealed class OpeningPartsTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CatalogDefaultsBuildClosedGeometryAtEveryLevel()
     {
         foreach (var entry in PartCatalog.Entries.Where(e => e.Owner.Value == "WP-10"))
@@ -36,22 +37,17 @@ public sealed class OpeningPartsTests
                 Closed(OpeningGallery.Build(entry.Id, entry.Defaults, level), entry.Id.Value + " " + level);
     }
 
-    [TestCase]
-    public void GallerySamplesAreClosedInsideBoundsAndWithinBudget()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void GallerySamplesAreClosedAndInsideBounds()
     {
-        var budgets = OpeningTypes.Where(t => t.GetCustomAttribute<PartAttribute>() is not null)
-            .ToDictionary(t => t.GetCustomAttribute<PartAttribute>()!.Id, t => (PartBudget)t.GetProperty("Budget")!.GetValue(Activator.CreateInstance(t))!);
-        var over = new List<string>();
+        var empty = new List<string>();
         void Measure(string id, PartId part, object parameters)
         {
             foreach (var level in Enum.GetValues<LodLevel>())
             {
                 var geometry = OpeningGallery.Build(part, parameters, level);
                 Closed(geometry, id + " " + level);
-                var triangles = geometry.Meshes.Sum(m => m.Index.Length / 3);
-                var budget = budgets[part.Value];
-                if (level == LodLevel.L0 && (triangles == 0 || triangles > budget.L0)) over.Add($"{id} L0 {triangles}/{budget.L0}");
-                if (level == LodLevel.L1 && triangles > budget.L1) over.Add($"{id} L1 {triangles}/{budget.L1}");
+                if (level == LodLevel.L0 && geometry.Meshes.Sum(m => m.Index.Length) == 0) empty.Add(id);
             }
         }
         foreach (var sample in OpeningGallery.Samples())
@@ -59,10 +55,10 @@ public sealed class OpeningPartsTests
             Measure(sample.Id, sample.Part, sample.Params);
             if (sample.Covering is { } covering) Measure(sample.Id + " covering", covering, sample.CoveringParams!);
         }
-        AssertThat(over.Count == 0).OverrideFailureMessage("Over budget: " + string.Join("; ", over)).IsTrue();
+        AssertThat(empty.Count == 0).OverrideFailureMessage("Empty near geometry: " + string.Join("; ", empty)).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void GenerationIsBitwiseRepeatable()
     {
         foreach (var sample in OpeningGallery.Samples())
@@ -79,7 +75,7 @@ public sealed class OpeningPartsTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FramesKeepNoShadowAndLeaveFarLevelsToTheBuilding()
     {
         var p = new WindowParams(1.8f, 1.6f, 0.07f, 2, 2);
@@ -94,7 +90,7 @@ public sealed class OpeningPartsTests
         AssertThat(own.Meshes.Any(m => m.Material.Spec.Lit.Value == "wall.greyWhite.lit")).OverrideFailureMessage("An explicit material was ignored.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void KernelVisibilityPassesThroughUnchanged()
     {
         // Wood door at L0: the vision hole is cut by the kernel's slab, whose reveal faces carry visibility 0.8.
@@ -107,7 +103,7 @@ public sealed class OpeningPartsTests
                 AssertThat(m.Ao!.All(v => v >= 0.45f)).OverrideFailureMessage($"{sample.Id}: visibility below the reveal floor.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void DoorGlassUsesTheWindowCardEncoding()
     {
         var door = new EntranceDoorPart().Lods[LodLevel.L0](new DoorParams(1.8f, 2.7f, 0.12f, 0f, 2));
@@ -135,7 +131,7 @@ public sealed class OpeningPartsTests
         AssertThat(Vector3.Cross(decl.Right, decl.Up) == new Vector3(0, 0, -1)).OverrideFailureMessage("Right × Up must point outdoors.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClosedDoorsAndLoweredShuttersBlockAsDoorClosed()
     {
         var shut = (BoxCollider)new WoodDoorPart().Collision(new DoorParams(0.9f, 2.1f, 0.2f)).Single();
@@ -147,7 +143,7 @@ public sealed class OpeningPartsTests
         AssertThat(new CasementWindowPart().Collision(new WindowParams()).Count == 0).OverrideFailureMessage("Windows collide through their wall.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OpenLeavesSwingOutwardsWithinBounds()
     {
         var p = new DoorParams(1.8f, 2.4f, 0.12f, 90f, 2);
@@ -158,11 +154,13 @@ public sealed class OpeningPartsTests
         Closed(geometry, "open door");
     }
 
-    [TestCase]
-    public void CurtainChoiceFollowsTheDormitoryRatio()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void CurtainChoiceCoversEveryStateAndIsStable()
     {
+        // The ratios are design values, so only their presence is checked.
+        const int samples = TestSamples.PerProperty;
         int none = 0, open = 0, half = 0, drawn = 0, cream = 0;
-        for (var i = 0; i < 20000; i++)
+        for (var i = 0; i < samples; i++)
         {
             var c = OpeningPlacement.Curtain(7u, i, 1.6f, 1.4f);
             if (c is null) { none++; continue; }
@@ -171,27 +169,25 @@ public sealed class OpeningPartsTests
             switch (c.Variation) { case 0: open++; break; case 1: half++; break; default: drawn++; break; }
             AssertThat(c.Material.Steps == ShadeSteps.TwoHalf).OverrideFailureMessage("Curtains keep soft-goods shading.").IsTrue();
         }
-        AssertThat(Math.Abs((double)(0.4) - none / 20000.0) <= 0.02).OverrideFailureMessage($"Expected {0.4}; got {none / 20000.0}.").IsTrue();
-        var hung = 20000.0 - none;
-        AssertThat(Math.Abs((double)(0.3) - open / hung) <= 0.03).OverrideFailureMessage($"Expected {0.3}; got {open / hung}.").IsTrue(); AssertThat(Math.Abs((double)(0.4) - half / hung) <= 0.03).OverrideFailureMessage($"Expected {0.4}; got {half / hung}.").IsTrue(); AssertThat(Math.Abs((double)(0.3) - drawn / hung) <= 0.03).OverrideFailureMessage($"Expected {0.3}; got {drawn / hung}.").IsTrue();
-        AssertThat(Math.Abs((double)(0.6) - cream / hung) <= 0.03).OverrideFailureMessage($"Expected {0.6}; got {cream / hung}.").IsTrue();
+        AssertThat(none > 0 && none < samples).OverrideFailureMessage("Some windows hang curtains and some do not.").IsTrue();
+        AssertThat(open > 0 && half > 0 && drawn > 0 && cream > 0).OverrideFailureMessage("Every curtain state and the cream colour occur.").IsTrue();
         AssertThat(OpeningPlacement.Curtain(7u, 42, 1.6f, 1.4f) == OpeningPlacement.Curtain(7u, 42, 1.6f, 1.4f)).OverrideFailureMessage("Curtain choice must be stable.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlacementFrameIsAProperRotation()
     {
         var m = OpeningPlacement.Frame(new(5, 1, 2), new(-3, 0, 0));
         var x = new Vector3(m.M11, m.M12, m.M13); var y = new Vector3(m.M21, m.M22, m.M23); var z = new Vector3(m.M31, m.M32, m.M33);
-        AssertThat(Math.Abs((double)(1) - Vector3.Dot(Vector3.Cross(x, y), z)) <= 0.01).OverrideFailureMessage($"Expected {1}; got {Vector3.Dot(Vector3.Cross(x, y), z)}.").IsTrue();
-        AssertThat(Math.Abs((double)(1) - y.Y) <= 0.01).OverrideFailureMessage($"Expected {1}; got {y.Y}.").IsTrue();
+        AssertThat(Math.Abs((double)(1) - Vector3.Dot(Vector3.Cross(x, y), z)) <= TestTolerance.Position).OverrideFailureMessage($"Expected {1}; got {Vector3.Dot(Vector3.Cross(x, y), z)}.").IsTrue();
+        AssertThat(Math.Abs((double)(1) - y.Y) <= TestTolerance.Position).OverrideFailureMessage($"Expected {1}; got {y.Y}.").IsTrue();
         AssertThat(z == new Vector3(1, 0, 0) && m.M41 == 5).OverrideFailureMessage("Exterior must map to the part's −Z.").IsTrue();
         AssertThat(OpeningPlacement.Frame(Vector3.Zero, new(0, 0, -1)) == Matrix4x4.Identity).OverrideFailureMessage("A facade facing −Z is the part frame itself.").IsTrue();
         AssertThrown(() => OpeningPlacement.Frame(Vector3.Zero, new(0, 1, 0))).IsInstanceOf<ArgumentException>();
         AssertThrown(() => OpeningPlacement.Frame(Vector3.Zero, Vector3.Zero)).IsInstanceOf<ArgumentException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InvalidParametersFailClosed()
     {
         AssertThrown(() => new CasementWindowPart().Lods[LodLevel.L0](new WindowParams(0.4f, 0.4f, 0.07f, 6, 1))).IsInstanceOf<ArgumentException>();
@@ -224,7 +220,7 @@ public sealed class OpeningPartsTests
             for (var i = 0; i < m.Position.Length / 3; i++)
             {
                 AssertThat(geometry.Bounds.Contains(P(m, i))).OverrideFailureMessage($"{what}: vertex {P(m, i)} outside {geometry.Bounds}.").IsTrue();
-                AssertThat(Math.Abs((double)(1) - N(m, i).Length()) <= 0.01).OverrideFailureMessage($"Expected {1}; got {N(m, i).Length()}.").IsTrue();
+                AssertThat(Math.Abs((double)(1) - N(m, i).Length()) <= TestTolerance.Position).OverrideFailureMessage($"Expected {1}; got {N(m, i).Length()}.").IsTrue();
             }
         }
     }

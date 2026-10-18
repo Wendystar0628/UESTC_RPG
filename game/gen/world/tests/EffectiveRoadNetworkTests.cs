@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -21,7 +22,7 @@ public sealed class EffectiveRoadNetworkTests
     private const string BuildingId = "campus-test:source:way:20";
     private static readonly Polyline DesignLine = new([new(-5, 4), new(3, 6), new(1, 8)]);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SurvivingDesignLinesPublishExactlyOnceWithAuthoredIdentityOrderWidthAndProps()
     {
         var add = Design("design:line");
@@ -39,7 +40,7 @@ public sealed class EffectiveRoadNetworkTests
         AssertThat(styled.Network.Roads.Count(road => road.Id == add.Id) == 1).OverrideFailureMessage("A same-file style operation lost the design line's origin.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SameFileAddHideAndReaddPreservesLegacySemanticsButNeverLeaksADeadRoad()
     {
         var add = Design("design:line");
@@ -50,7 +51,7 @@ public sealed class EffectiveRoadNetworkTests
         AssertThat(readded.Network.Roads.Single(road => road.Id == add.Id).Line.Points.SequenceEqual(((PolylineGeometry)replacement.Geometry).Line.Points)).OverrideFailureMessage("Same-file add-hide-readd changed the surviving line.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ExactRoadAndLegacySourceAliasHideRemoveBothStacksAtomically()
     {
         foreach (var target in new[] { RoadId, "osm:way:10" })
@@ -64,7 +65,7 @@ public sealed class EffectiveRoadNetworkTests
         AssertThat(!building.Features.ContainsKey(new(BuildingId)) && building.Network.Roads.Count == 1).OverrideFailureMessage("Ordinary non-road hide changed roads.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OnlyProvenNetworkOnlyRoadsAreDeletedAndOtherNetworkCategoriesSurvive()
     {
         var road = Line("campus-test:source:way:99");
@@ -78,7 +79,7 @@ public sealed class EffectiveRoadNetworkTests
             network: new([Line("other:source:way:99")], [], [], [], [])));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NamedSourceAndMixedOrMultipleSourceEntitiesRejectBothRoadAndFeatureEntrypoints()
     {
         var named = JsonNode.Parse(Campus)!;
@@ -98,7 +99,7 @@ public sealed class EffectiveRoadNetworkTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HidePartRejectsReferencedRoadSourcesWithoutChangingOrdinaryBuildingPartRemoval()
     {
         var campus = JsonNode.Parse(Campus)!;
@@ -113,7 +114,7 @@ public sealed class EffectiveRoadNetworkTests
         AssertThat(ordinary.Features[new("campus-test:mixed")].Parts.Single().SourceId == "osm:way:10" && ordinary.Network.Roads.Count == 1).OverrideFailureMessage("The road guard changed an ordinary building source removal.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RoadBridgeWaterwayCulvertAndAreaAmbiguitiesRejectEveryRoadHideEntrypoint()
     {
         var road = Line(RoadId);
@@ -126,7 +127,7 @@ public sealed class EffectiveRoadNetworkTests
                 _ = Fails(() => Load([new HideOp(new(target), "ambiguous multi-class or area")], network: network));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CrossFileSameOwnerWritesAndAddHideReaddCannotBypassTheConflictLedger()
     {
         var add = Design("design:line");
@@ -145,7 +146,7 @@ public sealed class EffectiveRoadNetworkTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PolygonAndMultiPolygonRoadsKeepRealHolesAndDoNotBecomeCenterlines()
     {
         var rings = new PolygonRings([new(-10, 1), new(-2, 1), new(-2, 9), new(-10, 9)], [[new(-8, 3), new(-8, 7), new(-4, 7), new(-4, 3)]]);
@@ -159,7 +160,7 @@ public sealed class EffectiveRoadNetworkTests
             Canonical(world.Features[multi.Id].Geometry) == Canonical(multi.Geometry)).OverrideFailureMessage("Real area rings or holes changed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InvalidWidthsPointsDuplicateIdsAndConflictingClassificationsFailBeforePublication()
     {
         foreach (var json in new[]

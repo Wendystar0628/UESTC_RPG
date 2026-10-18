@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -8,7 +9,7 @@ namespace Campus.Gen.Geometry.Tests;
 [TestSuite]
 public sealed class GeometryTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FrozenPublicationOwnsEveryWritableChannelAndLodIndex()
     {
         var source = Surface() with
@@ -46,7 +47,7 @@ public sealed class GeometryTests
         AssertThat(GeometryPublication.Publish(frozenDecal).DecalBaseColorIndices![0] == 3).OverrideFailureMessage("decal background indices alias the cache").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SingletonAndPassthroughPreserveAllChannelsWithoutAliasing()
     {
         var source = Surface();
@@ -70,7 +71,7 @@ public sealed class GeometryTests
         AssertThat(GeometryBatch.Merge([restored, source], GeometryMergePolicy.Plain).Count == 2).OverrideFailureMessage("an explicitly empty LOD channel changed merge eligibility").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MergePoliciesRetainBucketOrderAndNumberedWindowIndices()
     {
         var a = Surface();
@@ -87,7 +88,7 @@ public sealed class GeometryTests
         AssertThat(GeometryBatch.Merge([window, window], GeometryMergePolicy.Plain).Count == 2).OverrideFailureMessage("plain regions changed their window merge policy").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlacementKeepsScalarRowOrderNormalsAndColliderMetadata()
     {
         var at = new Matrix4x4(0, 0, 2, 0, 0, 2, 0, 0, -2, 0, 0, 0, 11, 7, 13, 1);

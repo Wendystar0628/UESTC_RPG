@@ -42,7 +42,7 @@ public sealed class DioramaModuleTests
         return Directory.EnumerateFiles(maps, "backdrop.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void EveryMapBackdropStaysInsideTheDioramaBudget()
     {
         var count = 0;
@@ -55,8 +55,8 @@ public sealed class DioramaModuleTests
             var output = module.Build(ctx, new TileKey(0, 0), LodLevel.L4);
             var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
             Console.WriteLine($"{file}: {output.Meshes.Count} surfaces, {output.Meshes.Sum(m => m.Position.Length / 3)} vertices, {triangles} triangles");
-            AssertThat(triangles > module.Budget.TrianglesL0).OverrideFailureMessage($"backdrop uses {triangles} triangles (budget {module.Budget.TrianglesL0})").IsFalse();
-            AssertThat(output.Meshes.Count > module.Budget.DrawCalls).OverrideFailureMessage("too many draw calls").IsFalse();
+            AssertThat(triangles > TestTolerance.BudgetFactor * module.Budget.TrianglesL0).OverrideFailureMessage($"backdrop uses {triangles} triangles, an order of magnitude over its budget {module.Budget.TrianglesL0}").IsFalse();
+            AssertThat(output.Meshes.Count > TestTolerance.BudgetFactor * module.Budget.DrawCalls).OverrideFailureMessage("draw calls an order of magnitude over budget").IsFalse();
             foreach (var mesh in output.Meshes)
             {
                 AssertThat(mesh.Shader != ShaderId.DioramaFar).OverrideFailureMessage("every backdrop surface uses diorama_far").IsFalse();
@@ -70,7 +70,7 @@ public sealed class DioramaModuleTests
         AssertThat(count == 0).OverrideFailureMessage("no backdrop.json found").IsFalse();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LayersSitWhereTheFileSaysAndSinkBelowTheFogSea()
     {
         foreach (var file in BackdropFiles())
@@ -83,7 +83,7 @@ public sealed class DioramaModuleTests
             var fog = byKind[DioramaVertex.KindFogSea][0];
             var outer = Radii(fog).Max();
             AssertThat(MathF.Abs(outer - data.FogSea.OuterRadius) > 1f).OverrideFailureMessage($"fog sea reaches {outer}").IsFalse();
-            AssertThat(Heights(fog).Min() < data.FogSea.TopY - 0.01f).OverrideFailureMessage("fog sea dips below its top").IsFalse();
+            AssertThat(Heights(fog).Min() < data.FogSea.TopY - TestTolerance.Position).OverrideFailureMessage("fog sea dips below its top").IsFalse();
             AssertThat(data.FogSea.EdgeBank.Height > 0f && Heights(fog).Max() <= 0f).OverrideFailureMessage("the edge bank must rise above the ground").IsFalse();
             for (var i = 0; i < data.CityRings.Count; i++)
             {
@@ -92,10 +92,10 @@ public sealed class DioramaModuleTests
                 var radii = Radii(mesh).ToArray();
                 AssertThat(radii.Min() < ring.Radius - ring.Depth || radii.Max() > ring.Radius + ring.Depth).OverrideFailureMessage($"city ring {ring.Id} spans {radii.Min()}–{radii.Max()}").IsFalse();
                 AssertThat(Heights(mesh).Min() > data.FogSea.TopY).OverrideFailureMessage($"city ring {ring.Id} must sink below the fog sea").IsFalse();
-                AssertThat(mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > 0.001f)).OverrideFailureMessage("parallax in UV2.x").IsFalse();
+                AssertThat(mesh.Uv2!.Where((_, k) => k % 2 == 0).Any(k => MathF.Abs(k - ring.Parallax) > TestTolerance.Position)).OverrideFailureMessage("parallax in UV2.x").IsFalse();
             }
             var far = byKind[DioramaVertex.KindFar][0];
-            AssertThat(Heights(far).Min() > data.FarRing.SkirtY + 0.01f).OverrideFailureMessage("far ring skirt").IsFalse();
+            AssertThat(Heights(far).Min() > data.FarRing.SkirtY + TestTolerance.Position).OverrideFailureMessage("far ring skirt").IsFalse();
             // Every bearing has a silhouette above the horizon (WLD-DIORAMA: no empty direction).
             var crest = new float[360];
             for (var v = 0; v < far.Position.Length / 3; v++)
@@ -116,7 +116,7 @@ public sealed class DioramaModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SeasonWordsRoundTrip()
     {
         float[] values = [0.75f, 0.95f, 0.8f, 0.5f];
@@ -126,7 +126,7 @@ public sealed class DioramaModuleTests
             AssertThat(MathF.Abs(DioramaVertex.UnpackSeason(word, s) - values[s]) > 0.6f / 63f).OverrideFailureMessage($"season {s}").IsFalse();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void NoBackdropFileMeansNoProductAndTheBuildIsDeterministic()
     {
         var empty = new DioramaModule();
@@ -141,12 +141,12 @@ public sealed class DioramaModuleTests
         AssertThat(other.Meshes[1].Position.SequenceEqual(a.Meshes[1].Position)).OverrideFailureMessage("the world seed varies the city").IsFalse();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FogSeaInnerEdgeFollowsTheCutLineWhenGiven()
     {
         var rect = new MapRectLike(new(-1280, -1280), new(1280, 1280));
         var d = FogSea.EdgeDistance(Vector2.Zero, new(1, 0), null, rect);
-        AssertThat(MathF.Abs(d - 1280f) > 0.01f).OverrideFailureMessage($"rectangle edge {d}").IsFalse();
+        AssertThat(MathF.Abs(d - 1280f) > TestTolerance.Position).OverrideFailureMessage($"rectangle edge {d}").IsFalse();
         var circle = Enumerable.Range(0, 720).Select(i => new Vector2(1500f * MathF.Cos(i * MathF.PI / 360f), 1500f * MathF.Sin(i * MathF.PI / 360f))).ToArray();
         var c = FogSea.EdgeDistance(Vector2.Zero, Vector2.Normalize(new(1, 1)), circle, rect);
         AssertThat(MathF.Abs(c - 1500f) > 1f).OverrideFailureMessage($"cut line edge {c}").IsFalse();

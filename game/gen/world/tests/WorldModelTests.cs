@@ -25,7 +25,7 @@ public sealed class WorldModelTests
          ]}
         """;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeFootprintsUseTheSameRingConversionAndKeepPhysicalGeometry()
     {
         var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
@@ -42,7 +42,7 @@ public sealed class WorldModelTests
         AssertThat(WorldFeatureGeometry.FacadePolygonsOf(feature).SelectMany(p => p.Outer).SequenceEqual(facade.Outer.Concat(((PolygonGeometry)feature.Parts[1].Geometry).Rings.Outer))).OverrideFailureMessage("Current part order changed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeFootprintsRejectPresentEmptyMalformedAndMismatchedValues()
     {
         foreach (var value in new[] { "null", "{}", "[]", "[[]]", "[[[[0,0],[1,1],[2,2]]]]", "[[[[0],[1,0],[0,1]]]]", "[[[[0,0],[1,0],[0,1]]],[[[2,2],[3,2],[2,3]]]]", "[[[[0,0],[4,0],[0,4]],[[1,1],[2,1],[1,2]]]]" })
@@ -59,7 +59,7 @@ public sealed class WorldModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeFootprintsFollowOverlayPartLifecycle()
     {
         var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
@@ -81,7 +81,7 @@ public sealed class WorldModelTests
         AssertThat(added.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(added)[0], ((PolygonGeometry)added.Geometry).Rings)).OverrideFailureMessage("Add ignored current authored geometry.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeAggregationPreservesPolygonHoleAndPartOrderWithoutNormalization()
     {
         var first = new PolygonRings([new(3, 3), new(3, 0), new(0, 0), new(0, 3)], [new Vector2[] { new(1, 1), new(2, 1), new(1, 2) }]);
@@ -95,7 +95,7 @@ public sealed class WorldModelTests
         AssertThat(PlanGeometry.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes)).OverrideFailureMessage("Facade helper normalized input direction or holes.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MultiWingEntitiesKeepTheirOwnHeightAndStableIdentity()
     {
         var result = Load();
@@ -107,7 +107,7 @@ public sealed class WorldModelTests
         AssertThat(result.Center == Vector2.Zero).OverrideFailureMessage("Boundary centroid changed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HolesRemainDryAndBoundaryQueriesAreExact()
     {
         var spatial = Load().World.Spatial;
@@ -118,7 +118,7 @@ public sealed class WorldModelTests
         AssertThat(spatial.WalkClassAt(-5, -5) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked its physical openings.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OverlayFailureNeverMutatesThePreviousSnapshot()
     {
         var previous = Load();
@@ -130,7 +130,7 @@ public sealed class WorldModelTests
         AssertThat(!hidden.World.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Hide did not remove entity and its parts.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RingNormalizationKeepsOrientationAndRejectsDegenerateInput()
     {
         var ring = PlanGeometry.OpenRing([new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0)]);
@@ -140,7 +140,7 @@ public sealed class WorldModelTests
         catch (ArgumentException) { }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void RealMigratedCampusLoadsEverySourcePartOnce()
     {
         var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
@@ -182,7 +182,7 @@ public sealed class WorldModelTests
         AssertThat(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0).OverrideFailureMessage("Map coordinate frame is wrong.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClosedRegisterPreservesBuildingStoreysAndAddsOnlyQueryableClosedDoors()
     {
         var baseline = Load().World.Interiors.Get(new("fixture:relation:1"))!;
@@ -198,7 +198,7 @@ public sealed class WorldModelTests
         AssertThat(Load().World.Interiors.EntrancesNear(Vector3.Zero, 100).Count == 0).OverrideFailureMessage("Missing closed register no longer defaults empty.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClosedRegisterRejectsInvalidClaimsWithCatalogAndDoorDiagnostics()
     {
         foreach (var record in new[]
@@ -240,7 +240,7 @@ public sealed class WorldModelTests
             ["interiors.json"] = "{\"version\":1,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
         });
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void ArchitectureReviewMixedParentsKeepBuildingPartsAndOpenParkDistinct()
     {
         var result = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
@@ -277,7 +277,7 @@ public sealed class WorldModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void ArchitectureReviewOverlayAliasesCannotSilentlyOverwriteAnotherFile()
     {
         var previous = Load();
@@ -292,7 +292,7 @@ public sealed class WorldModelTests
         AssertThat(previous.World.Features[new("fixture:relation:1")].Height == 16).OverrideFailureMessage("Failed reload mutated the previous snapshot.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void ArchitectureReviewOverlayClaimsMustBeExplicit()
     {
         var files = new Dictionary<string, string>
@@ -314,7 +314,7 @@ public sealed class WorldModelTests
         catch (WorldDataException) { }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void ArchitectureReviewBoundsUseAuthoredRoamLimits()
     {
         var files = new Dictionary<string, string>
@@ -328,10 +328,10 @@ public sealed class WorldModelTests
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
         var roam = RealMapFixture.Entry().Descriptor.Roam;
         AssertThat(real.Bounds.Min.Y == roam.FloorY && real.Bounds.Max.Y == roam.CeilY).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
-        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.FallbackMargin)) < 0.01f).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
+        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.FallbackMargin)) < TestTolerance.Position).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SyntheticBeatAnchorsLoadOverRealCampusWithoutBecomingBuildings()
     {
         // contract-25 / MAP-QSH-CORE 8.6: synthetic regression inputs, not an authored campus walk layout.
@@ -357,7 +357,7 @@ public sealed class WorldModelTests
         AssertThat(result.World.Features[new("walk:beat-fixture-multi")].Geometry is MultiPolygonGeometry { Polygons.Count: 2 }).OverrideFailureMessage("Multi-area anchor lost a part.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WalkPrefixRejectsNonBeatGeometryAndVolume()
     {
         var point = new PointGeometry(Vector3.Zero);
@@ -383,7 +383,7 @@ public sealed class WorldModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SplitOverlaysKeepOperationOrderAndDerivedQueries()
     {
         var files = new Dictionary<string, string>
@@ -402,7 +402,7 @@ public sealed class WorldModelTests
         AssertThat(world.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior).OverrideFailureMessage("Shard height did not enter the spatial query.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SplitOverlaysUseOrdinalGroupNamesAndFilenames()
     {
         var files = new Dictionary<string, string>
@@ -418,7 +418,7 @@ public sealed class WorldModelTests
         AssertThat(WorldModelLoader.Load(new("test"), files).World.Features[new("fixture:relation:1")].Height == 40).OverrideFailureMessage("Shard filenames are not Ordinal.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SplitOverlaysKeepInteriorBetweenEarlierAndLaterGroups()
     {
         var interior = new InteriorOverlayFile(new("test"), new("WP-08"),
@@ -437,7 +437,7 @@ public sealed class WorldModelTests
         AssertThat(world.Features.ContainsKey(new("design:before-interior")) && !world.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Groups around the interior did not apply.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FeatureOverlaysRejectRetiredInputsEvenWhenEmpty()
     {
         foreach (var path in new[] { "overlay/test.overlay.json", "overlay/another/test.overlay.json", "overlay/test.d/nested/03.overlay.json" })
@@ -449,7 +449,7 @@ public sealed class WorldModelTests
             }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SplitOverlaysKeepRealMapOperationAndConflictErrorSources()
     {
         var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = "{" };
@@ -472,7 +472,7 @@ public sealed class WorldModelTests
 
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SplitOverlaysReadOnlyDirectJsonChildrenAndLeaveDedicatedFormatsAlone()
     {
         var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = Overlay([]) };

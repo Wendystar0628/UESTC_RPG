@@ -15,7 +15,7 @@ using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 [TestSuite]
 public sealed class NorthTerrainTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainOverlayParsesAndReferencesRealRoads()
     {
         var file = Terrain();
@@ -30,17 +30,17 @@ public sealed class NorthTerrainTests
                     var (shape, height) = op is TerrainMoundOp m ? (m.Shape, m.Height) : (((TerrainBasinOp)op).Shape, ((TerrainBasinOp)op).Height);
                     var ellipse = (TerrainEllipse)shape;
                     var steepest = 1.5 * height / Math.Min(ellipse.Radii.X, ellipse.Radii.Y);
-                    AssertThat(height <= 1.5 && steepest <= 1.0 / 3 + 0.001).OverrideFailureMessage($"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3").IsTrue();
+                    AssertThat(height <= 1.5 && steepest <= 1.0 / 3 + TestTolerance.Position).OverrideFailureMessage($"{op.Id}: R6 relief ≤ 1.5 m, no steeper than 1:3").IsTrue();
                     // The courtyard hill is an activity lawn (Opus 13:32, R6): short radius at least 7.5 × height (1:5).
                     if (op.Id == NorthFeatureIds.Hill)
-                        AssertThat(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - 0.01).OverrideFailureMessage($"{op.Id}: activity hill no steeper than 1:5").IsTrue();
+                        AssertThat(Math.Min(ellipse.Radii.X, ellipse.Radii.Y) >= 7.5 * height - TestTolerance.Position).OverrideFailureMessage($"{op.Id}: activity hill no steeper than 1:5").IsTrue();
                     break;
                 case TerrainSlopeOp s:
-                    AssertThat(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / PlanGeometry.Length(((PolylineGeometry)s.Geometry).Line.Points) <= 0.0501).OverrideFailureMessage($"{op.Id}: the 通学坡 stays at or below 5 %").IsTrue(); break;
+                    AssertThat(s.Geometry is PolylineGeometry && Math.Abs(s.Y1 - s.Y0) / PlanGeometry.Length(((PolylineGeometry)s.Geometry).Line.Points) <= 0.05 + TestTolerance.FloatRelative).OverrideFailureMessage($"{op.Id}: the 通学坡 stays at or below 5 %").IsTrue(); break;
                 case TerrainCorridorOp c:
                     AssertThat(roads.TryGetValue(c.Road, out var road)).OverrideFailureMessage($"{op.Id}: road {c.Road.Value} exists").IsTrue();
                     var length = PlanGeometry.Length(road!.Line.Points);
-                    AssertThat(Math.Abs(c.Anchors[^1].S - length) < 0.02).OverrideFailureMessage($"{op.Id}: last anchor at the full centreline length {length:0.00}").IsTrue();
+                    AssertThat(Math.Abs(c.Anchors[^1].S - length) < TestTolerance.Layout).OverrideFailureMessage($"{op.Id}: last anchor at the full centreline length {length:0.00}").IsTrue();
                     break;
                 default: throw new InvalidOperationException($"{op.Id}: unexpected operation for 20a-2");
             }
@@ -52,7 +52,7 @@ public sealed class NorthTerrainTests
     /// line road that runs onto a terrace carries anchors; every shared centreline vertex has one elevation; the authored
     /// profile keeps to 5 %, and to 3 % within 10 m of a junction (WLD-TERRAIN).
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryRoadOnATerraceHasAnchorsAndJunctionsAgree()
     {
         var file = Terrain();
@@ -65,7 +65,7 @@ public sealed class NorthTerrainTests
                 AssertThat(corridors.ContainsKey(road.Id)).OverrideFailureMessage($"{road.Id.Value} runs onto a terrace without corridor anchors").IsTrue();
         foreach (var c in corridors.Values)
             for (var i = 0; i + 1 < c.Anchors.Count; i++)
-                AssertThat(Math.Abs(Grade(c.Anchors, i)) <= 0.05 + 0.001).OverrideFailureMessage($"{c.Id}: piece at s {c.Anchors[i].S} is steeper than 5 %").IsTrue();
+                AssertThat(Math.Abs(Grade(c.Anchors, i)) <= 0.05 + TestTolerance.Position).OverrideFailureMessage($"{c.Id}: piece at s {c.Anchors[i].S} is steeper than 5 %").IsTrue();
 
         var junctions = new Dictionary<(long, long), List<(NetworkLine Road, double S)>>();
         foreach (var road in roads)
@@ -87,11 +87,11 @@ public sealed class NorthTerrainTests
             var first = Elevation(corridors, list[0].Road, list[0].S);
             foreach (var (road, s) in list)
             {
-                AssertThat(Math.Abs(Elevation(corridors, road, s) - first) <= 0.01).OverrideFailureMessage($"junction {key} of {road.Id.Value}: {Elevation(corridors, road, s):0.000} vs {first:0.000}").IsTrue();
+                AssertThat(Math.Abs(Elevation(corridors, road, s) - first) <= TestTolerance.Position).OverrideFailureMessage($"junction {key} of {road.Id.Value}: {Elevation(corridors, road, s):0.000} vs {first:0.000}").IsTrue();
                 if (!corridors.TryGetValue(road.Id, out var c)) continue;
                 for (var i = 0; i + 1 < c.Anchors.Count; i++)
                     if (c.Anchors[i + 1].S > s - 10 && c.Anchors[i].S < s + 10)
-                        AssertThat(Math.Abs(Grade(c.Anchors, i)) <= 0.03 + 0.001).OverrideFailureMessage($"{c.Id}: steeper than 3 % within 10 m of the junction at s {s:0.0}").IsTrue();
+                        AssertThat(Math.Abs(Grade(c.Anchors, i)) <= 0.03 + TestTolerance.Position).OverrideFailureMessage($"{c.Id}: steeper than 3 % within 10 m of the junction at s {s:0.0}").IsTrue();
             }
         }
         AssertThat(checkedJunctions > 0).OverrideFailureMessage("the whole network's junctions were checked").IsTrue();
@@ -101,7 +101,7 @@ public sealed class NorthTerrainTests
     /// Main session 2026-10-16 15:0x: 未命名建筑 5561 must not straddle a terrace edge (it showed a 1.4 m step, over the
     /// 1.2 m allowed without a structure). Its whole footprint stands on one level and every terrace crest keeps 6 m off it.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void Building5561StandsOnOneLevelClearOfTheTerraceEdge()
     {
         var footprint = NorthBuildings.Rings(RealMapFixture.Load().World.Features[new(NorthFeatureIds.Building5561.Entity)]).Single();
@@ -128,7 +128,7 @@ public sealed class NorthTerrainTests
     /// corridor (a design road takes no corridor anchors); and each end lies on the surface it names in <c>joins</c>: an
     /// existing walk or pedestrian area, or the kerb of a carriageway that meets 丹桂路 (a junction).
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void DanguiWalksKeepOffWallsAndWaterAndJoinTheNetwork()
     {
         var road = NorthFeatureIds.DanguiRoad.Source;
@@ -192,7 +192,7 @@ public sealed class NorthTerrainTests
                 {
                     var hit = PlanGeometry.Project(roads[id].Line.Points, p);
                     if (hit.Distance <= roads[id].Width * 0.5f + c.Shoulder + half)
-                        AssertThat(Math.Abs(Elevation(corridors, roads[id], hit.Station)) < 0.01).OverrideFailureMessage($"{add.Id.Value}: {p} meets {c.Id} at {Elevation(corridors, roads[id], hit.Station):0.00} m").IsTrue();
+                        AssertThat(Math.Abs(Elevation(corridors, roads[id], hit.Station)) < TestTolerance.Position).OverrideFailureMessage($"{add.Id.Value}: {p} meets {c.Id} at {Elevation(corridors, roads[id], hit.Station):0.00} m").IsTrue();
                 }
             }
             var joins = props!.Value.GetProperty("joins").EnumerateArray().Select(j => j.GetString()!).ToArray();
@@ -203,7 +203,7 @@ public sealed class NorthTerrainTests
                 {
                     var type = WorldProps.TryText(target.Props, "highway");
                     var reach = type is "footway" or "path" or "pedestrian" or "steps" ? MathF.Max(target.Width, 2f) * 0.5f : target.Width * 0.5f;
-                    AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(target.Line.Points, end)) <= reach + 0.05f).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
+                    AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(target.Line.Points, end)) <= reach + TestTolerance.Layout).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
                     AssertThat(type is "footway" or "path" or "pedestrian" or "steps" || Meets(target.Line.Points, dangui)).OverrideFailureMessage($"{add.Id.Value}: {to} is a walk or a road that meets 丹桂路").IsTrue();
                 }
                 else
@@ -211,7 +211,7 @@ public sealed class NorthTerrainTests
                     var area = world.Features[new(to)];
                     AssertThat(area.Kind.Value == "road" && WorldProps.TryText(area.Props, "roadType") == "pedestrian").OverrideFailureMessage($"{add.Id.Value}: {to} is a pedestrian area").IsTrue();
                     var rings = area.Polygons().Select(r => r.Outer).ToArray();
-                    AssertThat(rings.Any(r => PlanGeometry.InsideByCrossings(r, end) || PlanGeometry.DistanceToRing(end, r) <= 0.05f)).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
+                    AssertThat(rings.Any(r => PlanGeometry.InsideByCrossings(r, end) || PlanGeometry.DistanceToRing(end, r) <= TestTolerance.Layout)).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
                 }
             }
         }

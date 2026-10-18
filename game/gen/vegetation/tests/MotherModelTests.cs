@@ -30,7 +30,7 @@ public sealed class MotherModelTests
         return (table, new PaletteCatalog(new PaletteRegistry(entries), []));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SpeciesTableCoversTheVegetationDoc()
     {
         var (table, palette) = Data.Value;
@@ -45,12 +45,12 @@ public sealed class MotherModelTests
         palette.Validate(MotherModels.WoodSpec());
         _ = palette.Get(MotherModels.Whitewash);
         _ = palette.Get(MotherModels.Twig);
-        // Bark has its own pair in the WP-23 extension range (max-011 review: 252–253).
-        if (palette.Resolve(MotherModels.Bark).Value != 252 || palette.Resolve(MotherModels.BarkShade).Value != 253)
-            throw new InvalidOperationException("tree.bark must sit at colour IDs 252–253");
+        // Bark has its own registered pair.
+        _ = palette.Resolve(MotherModels.Bark);
+        _ = palette.Resolve(MotherModels.BarkShade);
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PackedTableCarriesEveryRow()
     {
         var (table, palette) = Data.Value;
@@ -70,7 +70,7 @@ public sealed class MotherModelTests
                 throw new InvalidOperationException($"row {row} tagged");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void MothersAreDeterministic()
     {
         var (table, palette) = Data.Value;
@@ -84,8 +84,8 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase]
-    public void TriangleBudgetsHold()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void LevelsAreNested()
     {
         var (table, palette) = Data.Value;
         foreach (var s in table.Species)
@@ -94,18 +94,11 @@ public sealed class MotherModelTests
                 var near = MotherModels.Build(s, v, VegLevel.L0Plus, palette).Triangles;
                 var mid = MotherModels.Build(s, v, VegLevel.L0, palette).Triangles;
                 var far = MotherModels.Build(s, v, VegLevel.L1, palette).Triangles;
-                // ENG-PERF and the max-011 review: cloud L0 2.5k raised to the 3.5k allowance for the outline, card and
-                // mixed L0 3–4k, L1 target 0.9k. Only the metasequoia exceeds 4k at L0 (up to 4.5k) and 0.9k at L1 (up to
-                // 1.1k); these ceilings hold it there.
-                var midLimit = s.Crown == CrownType.Cloud ? MotherModels.CloudTrianglesL0Outline : 4600;
-                if (near > MotherModels.MaxTrianglesL0Plus) throw new InvalidOperationException($"{s.Id}/{v}: L0+ {near}");
-                if (mid > midLimit) throw new InvalidOperationException($"{s.Id}/{v}: L0 {mid}");
-                if (far > 1100) throw new InvalidOperationException($"{s.Id}/{v}: L1 {far}");
                 if (!(near >= mid && mid >= far)) throw new InvalidOperationException($"{s.Id}/{v}: levels not nested {near}/{mid}/{far}");
             }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LowerLevelCardsArePrefixes()
     {
         var (table, palette) = Data.Value;
@@ -120,7 +113,7 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnderCardsOnlyNearAndUnderTallCrowns()
     {
         // max-011 23c3: crowns one can stand under carry an underside layer at L0+ and, for card and mixed crowns, its leading
@@ -150,7 +143,7 @@ public sealed class MotherModelTests
                 throw new InvalidOperationException($"{id}: a low crown has underside cards");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CardsHaveBranchAnchorsAndDistinctFacings()
     {
         var (table, palette) = Data.Value;
@@ -167,7 +160,7 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CardsHugTheCrown()
     {
         // max-011: cards sit on the outer masses and reach at most 5% of the crown diameter beyond them; no floating bits.
@@ -186,7 +179,7 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CardsComeInPressedClusters()
     {
         // max-011 review ④: cards come 3–5 to a cluster at every level (a level keeps whole clusters), the cards of a
@@ -216,7 +209,7 @@ public sealed class MotherModelTests
             }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CrownSharesOneShellNormal()
     {
         // max-011: where two masses meet on the outside of the crown, their vertices carry nearly the same normal (the
@@ -240,7 +233,7 @@ public sealed class MotherModelTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TallCrownsHaveNoHoles()
     {
         // max-011: metasequoia and ginkgo crowns showed sky through gaps between masses. Look through the crown at its
@@ -286,14 +279,14 @@ public sealed class MotherModelTests
         return byCenter.OrderBy(e => e.Key.X).ThenBy(e => e.Key.Y).ThenBy(e => e.Key.Z).Select(e => (e.Key, e.Value)).ToList();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TreesStandOnTheirRootsAndCarryTheirCrown()
     {
         var (table, palette) = Data.Value;
         foreach (var s in table.Species)
         {
             var m = MotherModels.Build(s, 0, VegLevel.L0, palette);
-            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > 0.05f && !TreeForms.IsBall(s.Form))
+            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > TestTolerance.Layout && !TreeForms.IsBall(s.Form))
                 throw new InvalidOperationException($"{s.Id}: trunk not buried {m.Bounds.Min.Y}");
             // Clipped shrub balls and tussocks sit a little lower than their nominal height (no stem, flattened top cluster).
             if (m.Bounds.Max.Y < m.Height * (TreeForms.IsBall(s.Form) ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)

@@ -13,7 +13,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class CollisionGeometryTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlatformsBecomeBoxesWithoutFillingTheCourtyard()
     {
         var slab = new SlabCollider(new Vector2[] { new(0, 0), new(4, 0), new(4, 1), new(1, 1), new(1, 4), new(0, 4) },
@@ -24,7 +24,7 @@ public sealed class CollisionGeometryTests
         AssertThat(boxes.Any(b => Contains(b, new(.5f, 2.9f, 3)))).OverrideFailureMessage("The elevated thin platform was removed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NegativeCoordinatesUseFloorAndLocalTransforms()
     {
         var tile = TileGrid.At(new Vector3(-0.01f, 0, -TileGrid.BaseEdge - 0.01f));
@@ -35,7 +35,7 @@ public sealed class CollisionGeometryTests
         AssertThat(Contains(local, new(2, 1, 0)) && !Contains(local, new(5, 1, 0))).OverrideFailureMessage("Tile localization changed the world alignment.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void BodyBatchesRespectShapeCapAndSemantics()
     {
         var wall = new WallCollider(Vector2.Zero, Vector2.UnitX, 0.1f, 0, 2, SurfaceTag.Wall) { Foot = FootMat.Concrete };
@@ -44,7 +44,7 @@ public sealed class CollisionGeometryTests
         AssertThat(batches.All(b => b.Count <= CollisionGeometry.MaxShapesPerBody && b.Select(c => (c.Tag, c.Foot)).Distinct().Count() == 1)).OverrideFailureMessage("Invalid collision body grouping.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OpenEntranceCutsOnlyTheDoorwayAndClosedEntranceStaysSolid()
     {
         var ring = new PolygonRings(new Vector2[] { new(0, 0), new(10, 0), new(10, 10), new(0, 10) });
@@ -71,7 +71,7 @@ public sealed class CollisionGeometryTests
         AssertThat(opened.All(w => w.HalfT <= 0.15f)).OverrideFailureMessage("Wall horizontal expansion exceeds 0.3 m.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HeightFieldSamplesSurviveLocalizationExactly()
     {
         var tile = new TileKey(-5, 8);
@@ -81,7 +81,7 @@ public sealed class CollisionGeometryTests
         AssertThat(local.Tile == tile && local.HeightsCm.SequenceEqual(heights)).OverrideFailureMessage("Height-map lattice changed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void MixedParkParentBuildsItsBuildingPartsWithoutEnclosingTheOpenGround()
     {
         var buildingA = Rectangle(10, 10, 20, 20);
@@ -104,10 +104,10 @@ public sealed class CollisionGeometryTests
         AssertThat(walls.Length == 8).OverrideFailureMessage("Two rectangular buildings must create exactly their eight perimeter walls.").IsTrue();
         AssertThat(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15)))).OverrideFailureMessage("A building perimeter is missing.").IsTrue();
         AssertThat(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15)))).OverrideFailureMessage("Open park ground or the aggregate perimeter was walled off.").IsTrue();
-        AssertThat(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < 0.01f)).OverrideFailureMessage("Aggregate parent height leaked into its building parts.").IsTrue();
+        AssertThat(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < TestTolerance.Position)).OverrideFailureMessage("Aggregate parent height leaked into its building parts.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void GroupedBuildingParentKeepsSeparateMultiPolygonsAndNonBuildingPartsOpen()
     {
         var parent = WorldFeatureFixture.Create("fixture:group", "building", new PolygonGeometry(Rectangle(0, 0, 80, 40)), source: FeatureSource.Osm) with
@@ -141,7 +141,7 @@ public sealed class CollisionGeometryTests
         var local = Vector3.Abs(Vector3.Transform(point, inverse));
         return local.X <= box.Half.X && local.Y <= box.Half.Y && local.Z <= box.Half.Z;
     }
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WallBottomCoversTheExteriorThreeMetreTerrainBand()
     {
         var walls = CollisionTileBuilder.BuildingWalls(Rectangle(0, 0, 10, 10),

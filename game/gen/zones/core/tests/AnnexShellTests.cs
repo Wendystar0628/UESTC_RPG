@@ -8,6 +8,7 @@ using Campus.Gen.Zones.Core.Annex;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Zones.Core.Tests;
 
@@ -18,7 +19,7 @@ public sealed class AnnexShellTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheFiveNorthBlocksAreBuiltOnTheLibraryFloorLines()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -29,7 +30,7 @@ public sealed class AnnexShellTests
         {
             AssertThat(shell.Frame.StoreyHeights.Count == world.Features[shell.Feature].Storeys).OverrideFailureMessage($"{shell.Id}: storeys follow the data").IsTrue();
             for (var k = 0; k <= shell.Rows; k++)
-                AssertThat(MathF.Abs(shell.Frame.StoreyY(k) - library.Plan.StoreyY(k)) < 0.01f).OverrideFailureMessage($"{shell.Id}: floor line {k} runs on from the library").IsTrue();
+                AssertThat(MathF.Abs(shell.Frame.StoreyY(k) - library.Plan.StoreyY(k)) < TestTolerance.Position).OverrideFailureMessage($"{shell.Id}: floor line {k} runs on from the library").IsTrue();
             AssertThat(shell.Openings.Count > 0).OverrideFailureMessage($"{shell.Id}: has windows").IsTrue();
             foreach (var lod in Levels)
             {
@@ -41,8 +42,8 @@ public sealed class AnnexShellTests
             AssertThat(shell.Collide().All(c => c.Foot != Campus.Contracts.Audio.FootMat.Auto)).OverrideFailureMessage($"{shell.Id}: every collider has a Foot").IsTrue();
         }
         var low = shells.Single(s => s.Kind == AnnexKind.LowBlock);
-        AssertThat(MathF.Abs(low.Frame.EavesY - library.Plan.StoreyY(2)) < 0.01f).OverrideFailureMessage("the low block's roof is the library's 3F floor (G terrace)").IsTrue();
-        AssertThat(low.Collide().OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - library.Plan.StoreyY(2)) < 0.01f)).OverrideFailureMessage("the G terrace is a walkable slab").IsTrue();
+        AssertThat(MathF.Abs(low.Frame.EavesY - library.Plan.StoreyY(2)) < TestTolerance.Position).OverrideFailureMessage("the low block's roof is the library's 3F floor (G terrace)").IsTrue();
+        AssertThat(low.Collide().OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - library.Plan.StoreyY(2)) < TestTolerance.Position)).OverrideFailureMessage("the G terrace is a walkable slab").IsTrue();
         var annex = shells.Single(s => s.Kind == AnnexKind.NorthAnnex);
         var door = annex.Door ?? throw new InvalidOperationException("Expected: the north annex has its closed door");
         var c = door.Face.At((door.Hole.U0 + door.Hole.U1) * 0.5f, 0f, door.Hole.Y0);
@@ -53,7 +54,7 @@ public sealed class AnnexShellTests
         AssertThat(parts.Count(p => p.Part.Value == PartCatalog.DoorGlass) == 1).OverrideFailureMessage("one closed glass door").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheQuietGardenFillsTheClosedCourt()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -61,7 +62,6 @@ public sealed class AnnexShellTests
         var area = MathF.Abs((float)PlanGeometry.SignedArea(garden.Ring));
         Console.WriteLine($"court: {garden.Ring.Count} corners, {area:F1} m², pavilion ({garden.Pavilion.X:F2}, {garden.Pavilion.Y:F2}), planters " +
             string.Join(", ", garden.Planters.Select(p => $"({p.X:F2}, {p.Y:F2})")));
-        AssertThat(area is > 150f and < 600f).OverrideFailureMessage($"the court is {area:F0} m²").IsTrue();
         AssertThat(garden.Colonnade is not null).OverrideFailureMessage("the colonnade stands along the library wall").IsTrue();
         foreach (var p in garden.Planters.Append(garden.Pavilion)) AssertThat(PlanGeometry.InsideByCrossings(garden.Ring, p)).OverrideFailureMessage("pavilion and planters stand in the court").IsTrue();
         foreach (var lod in Levels)

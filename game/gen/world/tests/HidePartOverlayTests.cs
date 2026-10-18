@@ -2,6 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -30,7 +31,7 @@ public sealed class HidePartOverlayTests
         """;
     private const string Zones = """{"zones":[{"id":"zone-keep","features":["fixture:entity:main"]}]}""";
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HidePartHasAnExplicitPolymorphicWireOperation()
     {
         var json = Overlay(new HidePartOp(Main, "osm:way:10", "remove one source"));
@@ -41,7 +42,7 @@ public sealed class HidePartOverlayTests
         AssertThat(roundTrip.Ops[0] is HidePartOp { SourceId: "osm:way:10" } hide && hide.Target == Main).OverrideFailureMessage("hidePart did not round-trip as its own operation.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RemovalPreservesEntityAndPartPropertiesAndReaggregatesHolesAndHeight()
     {
         var style = new StyleOp(Main, new("styled-family"), new FacadePreset("styled-facade"));
@@ -60,7 +61,7 @@ public sealed class HidePartOverlayTests
         AssertThat(polygon.Holes.Count == 1 && !PlanGeometry.Contains(polygon, new(3, 3))).OverrideFailureMessage("A retained courtyard hole was filled.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RemovedAliasCannotDeleteSurvivorsAndOtherAliasesRemainUsable()
     {
         var hide = new HidePartOp(Main, "osm:way:10", "remove one part");
@@ -72,7 +73,7 @@ public sealed class HidePartOverlayTests
         AssertThat(result.World.Features[Other].Height == 17).OverrideFailureMessage("An unrelated entity/source alias was changed or removed.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InvalidTargetsMissingRepeatedOrFinalPartsAndReasonsFailAtomically()
     {
         var previous = Load([]).World.Features[Main];
@@ -100,7 +101,7 @@ public sealed class HidePartOverlayTests
         _ = Fails(() => Load([new HidePartOp(Main, "osm:way:20", "ambiguous source")], duplicate));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void DifferentPartsStillShareTheExistingWholeEntityConflictRule()
     {
         var files = BaseFiles();
@@ -117,7 +118,7 @@ public sealed class HidePartOverlayTests
         _ = Fails(() => WorldModelLoader.Load(new("fixture"), files, new() { ClaimedBy = claims }));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LegacyHideStillRemovesTheWholeEntityIncludingViaItsExistingAlias()
     {
         foreach (var target in new[] { Main, new FeatureId("osm:way:10") })

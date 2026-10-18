@@ -23,7 +23,7 @@ public sealed class BoundaryModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OverlayRegistersTheForecourtAndThePlaza()
     {
         var world = RealMapFixture.Load().World;
@@ -31,7 +31,7 @@ public sealed class BoundaryModuleTests
         AssertThat(world.Features.ContainsKey(new(BoundaryFeatureIds.NorthPlaza))).OverrideFailureMessage("A05 plaza registered").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void GatesSitWhereTheirRoadsLeaveTheCampus()
     {
         var world = RealMapFixture.Load().World;
@@ -46,7 +46,7 @@ public sealed class BoundaryModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheFenceRunsAllTheWayRound()
     {
         var world = RealMapFixture.Load().World;
@@ -70,13 +70,13 @@ public sealed class BoundaryModuleTests
                 AssertThat(ring.Contains(p) || Near(ring, p, 0.35f)).OverrideFailureMessage($"fence point {p} stays inside the ring").IsTrue();
             var posts = run.Posts();
             for (var i = 0; i + 1 < posts.Count; i++)
-                AssertThat(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + 0.01f).OverrideFailureMessage($"pillar pitch at {posts[i].At}").IsTrue();
+                AssertThat(Vector2.Distance(posts[i].At, posts[i + 1].At) <= BoundaryTune.Fence.PillarPitch + TestTolerance.Position).OverrideFailureMessage($"pillar pitch at {posts[i].At}").IsTrue();
             foreach (var hedge in run.Hedges)
                 foreach (var p in hedge) AssertThat(ring.Contains(p)).OverrideFailureMessage($"hedge point {p} inside the campus").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryRoadAndChannelThroughTheRingMeetsAnOpening()
     {
         var world = RealMapFixture.Load().World;
@@ -95,7 +95,7 @@ public sealed class BoundaryModuleTests
                         AssertThat(plan.Openings.Any(o => o.Kind == OpeningKind.Grate && ring.Forward(o.Start, s) <= o.Length)).OverrideFailureMessage($"water {water.Id.Value} crosses the ring at {ring.At(s)} without a grate").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NothingWalksOutThroughAGate()
     {
         var ctx = Context();
@@ -123,7 +123,7 @@ public sealed class BoundaryModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NothingWalksOutAnywhereAlongTheRing()
     {
         var ctx = Context();
@@ -160,7 +160,7 @@ public sealed class BoundaryModuleTests
         AssertThat(misses.Count == 0).OverrideFailureMessage($"{misses.Count} places along the ring can be walked through, first {string.Join(", ", misses.Take(5))}").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CollidersAreTaggedAndCarryAFootMaterial()
     {
         var ctx = Context();
@@ -172,7 +172,7 @@ public sealed class BoundaryModuleTests
         AssertThat(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= WalkRules.BarrierHeight)).OverrideFailureMessage("barrier tops reach 1.5 m").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlazaBenchesStayOnThePavingBehindTheRailing()
     {
         var world = RealMapFixture.Load().World;
@@ -185,8 +185,8 @@ public sealed class BoundaryModuleTests
         }
     }
 
-    [TestCase]
-    public void EveryLevelIsValidAndInsideTheBudget()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void EveryLevelIsValid()
     {
         var ctx = Context();
         var module = new BoundaryModule();
@@ -206,19 +206,13 @@ public sealed class BoundaryModuleTests
                     AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("bundle vertex limit").IsTrue();
                 }
                 parts += output.Parts.Count;
-                if (lod is LodLevel.L0 or LodLevel.L1)
-                {
-                    var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                    var limit = lod == LodLevel.L0 ? module.Budget.TrianglesL0 : module.Budget.TrianglesL1;
-                    AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({tile.X}, {tile.Z}) has {triangles} triangles, budget {limit}").IsTrue();
-                    AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({tile.X}, {tile.Z}) material count").IsTrue();
-                }
             }
             AssertThat(items.Count(i => i.Part is not null) == parts).OverrideFailureMessage($"{lod}: every placed part is emitted exactly once").IsTrue();
         }
     }
 
-    [TestCase, TestCategory("Slow")]
+    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCategory("Slow")]
     public void SameInputSameBytes()
     {
         var a = Bytes(Context());

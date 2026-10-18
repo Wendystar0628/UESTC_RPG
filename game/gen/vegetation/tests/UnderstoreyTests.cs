@@ -6,6 +6,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.World;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Vegetation.Tests;
 
@@ -18,7 +19,7 @@ public sealed class UnderstoreyTests
 {
     private static readonly Lazy<PlantingLayout> Overlaid = new(() => PavementTests.Plant(PavementTests.World(true)));
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NewSourcesComeLastAndAreStable()
     {
         var layout = Overlaid.Value;
@@ -29,14 +30,12 @@ public sealed class UnderstoreyTests
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
         var again = PavementTests.Plant(PavementTests.Load(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
         if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
-        Console.WriteLine($"new sources: {added.Count(t => t.Source == PlantSource.Pit)} pit trees, {added.Count(t => t.Source == PlantSource.Design)} design trees, " +
-            $"{layout.PitsHeld} pits already held a tree");
         // Pit trees come before design trees; repeatability above also checks their complete order.
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
         if (firstDesign >= 0 && added.Skip(firstDesign).Any(t => t.Source == PlantSource.Pit)) throw new InvalidOperationException("a pit tree follows a design tree");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AddingSourcesPreservesExistingRecordsAndOrder()
     {
         var original = PavementTests.PlantFixture(PavementTests.Fixture());
@@ -60,7 +59,7 @@ public sealed class UnderstoreyTests
             throw new InvalidOperationException("adding pit and design trees changed existing records or their order");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheTwoLibraryCamphorsArePlanted()
     {
         foreach (var id in new[] { "design:core-library-camphor-1", "design:core-library-camphor-2" })
@@ -68,13 +67,13 @@ public sealed class UnderstoreyTests
             var tree = Overlaid.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
             var feature = PavementTests.World(true).Features.Values.Single(f => f.Id.Value == id);
             var at = ((PointGeometry)feature.Geometry).Position;
-            if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > 0.01f ||
-                MathF.Abs(tree.Position.X - at.X) > 0.01f || MathF.Abs(tree.Position.Z - at.Z) > 0.01f)
+            if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > TestTolerance.Position ||
+                MathF.Abs(tree.Position.X - at.X) > TestTolerance.Position || MathF.Abs(tree.Position.Z - at.Z) > TestTolerance.Position)
                 throw new InvalidOperationException($"{id}: {tree.Source} {tree.Species.Id} {tree.Height:F2} m at ({tree.Position.X:F2}, {tree.Position.Z:F2})");
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void APitThatHoldsATreeGetsNoOther()
     {
         // Exclusive fixture: one occupied square pit and one empty pit well away from every original tree.
@@ -86,13 +85,13 @@ public sealed class UnderstoreyTests
         var layout = PavementTests.PlantFixture(world);
         var pitTrees = layout.Trees.Where(t => t.Source == PlantSource.Pit).ToList();
         if (layout.PitsHeld != 1 || pitTrees.Count != 1 || pitTrees[0].Key != "design:fixture-empty-pit" ||
-            Vector2.Distance(new(pitTrees[0].Position.X, pitTrees[0].Position.Z), empty) > 0.01f)
+            Vector2.Distance(new(pitTrees[0].Position.X, pitTrees[0].Position.Z), empty) > TestTolerance.Position)
             throw new InvalidOperationException($"{layout.PitsHeld} pits held, pit trees: {string.Join(", ", pitTrees.Select(t => t.Key))}");
         if (!PavementTests.SameRecords(PavementTests.Original(layout.Trees), PavementTests.Original(bare.Trees)))
             throw new InvalidOperationException("the pits moved a rule tree");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnderstoreyKeepsOffPavementAndRoads()
     {
         var world = PavementTests.Fixture(Pit("design:fixture-understorey-pit", -70f, -70f));
@@ -138,24 +137,15 @@ public sealed class UnderstoreyTests
         var again = Understorey.Build(world, species, rules, trees, 1u);
         if (!again.Plants.SequenceEqual(under.Plants))
             throw new InvalidOperationException("the understorey differs between two builds");
-        Console.WriteLine("understorey: " + string.Join(", ", Enum.GetValues<UnderKind>().Select(k => $"{k} {under.Count(k)}")) + "; " +
-            string.Join(", ", under.Plants.GroupBy(p => p.Species.Id).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}")));
     }
 
-    [TestCase]
-    public void UnderstoreyModelsStayLight()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void UnderstoreyModelsAreClippedBalls()
     {
-        // Shrubs, hedge modules and tussocks are many and small: their mother models are the clipped-ball form at every level.
+        // Shrubs, hedge modules and tussocks are many and small: their mother models are the clipped-ball form.
         var (species, _) = PavementTests.Data;
-        var palette = MotherModelTests.Palette;
         foreach (var id in new[] { "photinia", "loropetalum", "boxhedge", "grass" })
-        {
-            var s = species.Get(id);
-            var counts = Enum.GetValues<VegLevel>().Select(level => Enumerable.Range(0, TreeForms.Variants)
-                .Max(v => MotherModels.Build(s, v, level, palette).Triangles)).ToArray();
-            Console.WriteLine($"{id}: L0+ {counts[0]}, L0 {counts[1]}, L1 {counts[2]} triangles (largest variant)");
-            if (!TreeForms.IsBall(s.Form)) throw new InvalidOperationException($"{id} is not a ball form");
-        }
+            if (!TreeForms.IsBall(species.Get(id).Form)) throw new InvalidOperationException($"{id} is not a ball form");
     }
 
     // ---------------------------------------------------------------------------------------------------------

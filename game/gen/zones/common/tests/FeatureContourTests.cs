@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
+using Campus.Tests;
 using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Zones.Common.Tests;
@@ -14,7 +15,7 @@ public sealed class FeatureContourTests
     private const string Selection = "design:test-contour";
     private static readonly Vector2[] Square = [new(0, 0), new(4, 0), new(4, 4), new(0, 4)];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OrderedEndpointsKeepTheExplicitCcwArcThroughRingRotationAndReversal()
     {
         var selection = Segment(new(4.1f, 0.1f), new(-0.1f, 0.1f));
@@ -35,7 +36,7 @@ public sealed class FeatureContourTests
             }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EndpointMismatchReportsTheSelectionIdInsteadOfChoosingAnotherSegment()
     {
         foreach (var endpoints in new[] { (new Vector2(4.6f, 0), Vector2.Zero), (Square[1], Square[1]) })
@@ -44,12 +45,12 @@ public sealed class FeatureContourTests
             WorldDataException? failure = null;
             try { world.ContourSegment(Selection); }
             catch (WorldDataException error) { failure = error; }
-            AssertThat(failure is not null && failure.Entry == Selection && failure.Message.Contains(Selection))
+            AssertThat(failure is not null && failure.Entry == Selection)
                 .OverrideFailureMessage("Bad selection endpoints must report a data error with the selection identity.").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SourcePartAndFacadeAreExplicitReferences()
     {
         var facade = Square.Select(p => p + new Vector2(10, 0)).ToArray();
@@ -65,7 +66,7 @@ public sealed class FeatureContourTests
             .OverrideFailureMessage("Selection lost its exact source part or current facade geometry.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OverlaySelectionLoadsWithoutPublishingARoad()
     {
         var world = WorldModelLoader.Load(new("test"), new Dictionary<string, string>

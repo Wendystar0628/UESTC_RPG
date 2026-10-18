@@ -18,7 +18,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class BuildingTraceTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TraceSourcesReproduceBuildAndCollidePerBuilding()
     {
         // Full-map sources are selected by the plans that actually contribute to each fixture cell.
@@ -77,7 +77,7 @@ public sealed class BuildingTraceTests
         AssertThat(!module.TraceSources(Ctx(World(), 2u), LodLevel.L0).Any()).OverrideFailureMessage("Expected: " + ("nothing to number in an empty world")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TraceSourcesReproduceBuildAndCollideOnTheRealCampus()
     {
         var real = RealMapFixture.Load().World;

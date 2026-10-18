@@ -9,6 +9,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Furniture.Tests;
 
@@ -19,7 +20,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class AnchorFacingTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AKioskOffThePavingTurnsOntoItWholeWithItsBackToTheEdge()
     {
         // Opus review 14:20: an apron that does not touch paving stands whole on it, 0.5 m inside the edge, its back parallel to the
@@ -36,9 +37,8 @@ public sealed class AnchorFacingTests
         var layout = Build(MadeWorld(world, [], [moved]));
         var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
         var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
-        Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; diagnostics: {layout.Diagnostics.Single(d => d.Feature == moved.Id && d.Code == "wp13.anchor.turned").Message}");
         var facing = Front(item.Part.At);
-        AssertThat(Vector2.Dot(facing, Angles.Heading(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f).OverrideFailureMessage("the diagnostic does not give the placement").IsTrue();
+        AssertThat(Vector2.Dot(facing, Angles.Heading(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < TestTolerance.Position).OverrideFailureMessage("the diagnostic does not give the placement").IsTrue();
         AssertThat(Vector2.Dot(facing, Angles.Heading(90f)) < 0.99f).OverrideFailureMessage("the yaw of the data stands, though the apron was off the paving").IsTrue();
         var apron = item.Pad ?? throw new InvalidOperationException("no apron");
         var right = new Vector2(-facing.Y, facing.X);
@@ -56,7 +56,7 @@ public sealed class AnchorFacingTests
         AssertThat(Vector2.Dot(behind.Inward, facing) > 0.98f).OverrideFailureMessage("the back edge is not parallel to the paving edge, or the face looks at it").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AnchorsAndEntrancesFaceTheirData()
     {
         var world = World.Value;
@@ -71,7 +71,7 @@ public sealed class AnchorFacingTests
             var ring = ((PolygonGeometry)feature.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
             // On its footprint, or moved to the paving edge nearby (AnchorsStandOnOrBesidePaving).
-            AssertThat(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + 0.1f).OverrideFailureMessage($"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint").IsTrue();
+            AssertThat(Vector2.Distance(centre, item.Anchor) < FurnitureStyle.AnchorPavingReach + TestTolerance.Layout * 2).OverrideFailureMessage($"{item.Key} strayed {Vector2.Distance(centre, item.Anchor):F2} m from its footprint").IsTrue();
             var yaw = feature.Props!.Value.GetProperty("yawDeg").GetSingle();
             AssertThat(Vector2.Dot(Front(item.Part.At), ExpectedFacing(layout, feature)) > 0.999f).OverrideFailureMessage($"{item.Key} does not face {yaw}° (or the yaw its diagnostic message gives)").IsTrue();
         }
@@ -83,7 +83,7 @@ public sealed class AnchorFacingTests
             AssertThat(Vector2.Dot(mat.Anchor - new Vector2(door.Center.X, door.Center.Z), outward) > 0.4f).OverrideFailureMessage($"{door.Id}: mat not in front of the door").IsTrue();
             // On the entrance floor, never below the paving in front of the door.
             var floor = MathF.Max(door.Center.Y, world.Terrain.HeightAt(mat.Anchor.X, mat.Anchor.Y) + GroundLevels.Paving);
-            AssertThat(MathF.Abs(mat.Part.At.M42 - floor) < 0.01f && lamp.Part.At.M42 > floor + 2f).OverrideFailureMessage($"{door.Id}: kit off the entrance floor").IsTrue();
+            AssertThat(MathF.Abs(mat.Part.At.M42 - floor) < TestTolerance.Position && lamp.Part.At.M42 > floor + 2f).OverrideFailureMessage($"{door.Id}: kit off the entrance floor").IsTrue();
             AssertThat(Vector2.Dot(Front(lamp.Part.At), outward) > 0.999f && lamp.Emitters.Single().Channel == StreetStyle.FirstGroup).OverrideFailureMessage($"{door.Id}: lamp").IsTrue();
         }
         // A building whose props another package claims keeps its own kit.

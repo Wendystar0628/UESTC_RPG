@@ -26,7 +26,7 @@ public sealed class WaterCatalogTests
         new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("", ""), false, "test"),
         new MapEnvironment("", "", lakes), new Dictionary<string, string>(), []);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryBodyHasItsOwnLevelAndPartsAreBuiltSeparately()
     {
         var lake = new FeatureId("lake");
@@ -48,8 +48,8 @@ public sealed class WaterCatalogTests
         var p = WaterParams.Default;
         AssertThat(bodies.Count != 4).OverrideFailureMessage($"expected 4 bodies, got {bodies.Count}").IsFalse();
         var l = bodies.Single(b => b.Id == lake);
-        AssertThat(l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > 0.001f).OverrideFailureMessage("lake level or slot wrong").IsFalse();
+        AssertThat(l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > TestTolerance.Position).OverrideFailureMessage("lake level or slot wrong").IsFalse();
         foreach (var r in bodies.Where(b => b.Id == river))
-            AssertThat(r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > 0.001f).OverrideFailureMessage("channel level, kind or slot wrong").IsFalse();
+            AssertThat(r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > TestTolerance.Position).OverrideFailureMessage("channel level, kind or slot wrong").IsFalse();
     }
 }

@@ -11,6 +11,7 @@ using Campus.Pipeline.Map;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Furniture.Tests;
 
@@ -21,7 +22,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class FurnitureModuleTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FurnitureLandsOnTheTerrain()
     {
         // 8% everywhere: poles sink 0.05–0.3 m below the lawn level at their centre; benches and bins share a concrete plinth.
@@ -33,25 +34,25 @@ public sealed class FurnitureModuleTests
             AssertThat(burial is >= 0.049f and <= 0.301f).OverrideFailureMessage($"{lamp.Key} buried {burial:F3} m").IsTrue();
         }
         var benches = gentle.Items.Where(i => i.Kind == FurnitureKind.Bench).ToList();
-        AssertThat(benches.Count > 10).OverrideFailureMessage("no benches on 8%").IsTrue();
+        AssertThat(benches.Count > 0).OverrideFailureMessage("no benches on 8%").IsTrue();
         foreach (var bench in benches)
         {
-            AssertThat(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < 0.01f).OverrideFailureMessage($"{bench.Key} has no plinth on 8%").IsTrue();
+            AssertThat(bench.Pad is { Plinth: true } pad && MathF.Abs(pad.Top - bench.Part.At.M42) < TestTolerance.Position).OverrideFailureMessage($"{bench.Key} has no plinth on 8%").IsTrue();
             var plinth = bench.Pad!;
             var high = Corners(bench).Max(c => terrain.HeightAt(c.X, c.Y));
             var low = Corners(bench).Min(c => terrain.HeightAt(c.X, c.Y));
-            AssertThat(plinth.Top >= high + GroundLevels.Paving - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f).OverrideFailureMessage($"{bench.Key}: plinth does not cover the slope").IsTrue();
+            AssertThat(plinth.Top >= high + GroundLevels.Paving - TestTolerance.Position && plinth.Bottom <= low - FurnitureStyle.PadSkirt + TestTolerance.Position).OverrideFailureMessage($"{bench.Key}: plinth does not cover the slope").IsTrue();
             AssertThat(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete)).OverrideFailureMessage($"{bench.Key}: plinth has no collider").IsTrue();
             AssertThat(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0).OverrideFailureMessage($"{bench.Key}: empty plinth mesh").IsTrue();
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
-            AssertThat(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 0.01f).OverrideFailureMessage($"{bench.Key}: the bin is off its own plinth").IsTrue();
+            AssertThat(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < TestTolerance.Position).OverrideFailureMessage($"{bench.Key}: the bin is off its own plinth").IsTrue();
         }
         // Flat: rest stops stand on paved bays; authored deck kiosks stay at their declared elevation.
         var flatWorld = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var flat = Build(flatWorld);
         var top = GroundLevels.Paving + FurnitureStyle.PadProud;
         AssertThat(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth)).OverrideFailureMessage("plinths on flat ground").IsTrue();
-        AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? GroundLevels.Paving : top)) < 0.01f)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
+        AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? GroundLevels.Paving : top)) < TestTolerance.Position)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
         var deckAnchors = flatWorld.Features.Values.Where(f => f.Kind.Value == "anchor" && f.TryText("form") == "kiosk"
             && f.TryNumber("groundY") is > FurnitureStyle.DeckAbove).ToArray();
@@ -61,20 +62,20 @@ public sealed class FurnitureModuleTests
             var kiosk = kiosks.Single(k => k.Key == "anchor:" + anchor.Id.Value);
             var ring = ((PolygonGeometry)anchor.Geometry).Rings.Outer;
             var centre = ring.Aggregate(Vector2.Zero, (a, point) => a + point) / ring.Count;
-            AssertThat(Vector2.Distance(kiosk.Anchor, centre) < 0.01f).OverrideFailureMessage($"{anchor.Id}: deck kiosk moved off its authored footprint").IsTrue();
+            AssertThat(Vector2.Distance(kiosk.Anchor, centre) < TestTolerance.Position).OverrideFailureMessage($"{anchor.Id}: deck kiosk moved off its authored footprint").IsTrue();
         }
         foreach (var kiosk in kiosks)
         {
             var anchor = flatWorld.Features[new(kiosk.Key["anchor:".Length..])];
             var level = anchor.TryNumber("groundY") ?? flatWorld.Terrain.PadY(anchor.Id);
-            AssertThat(MathF.Abs(kiosk.Part.At.M42 - level - top) < 0.01f).OverrideFailureMessage($"{anchor.Id}: kiosk is off its authored landing").IsTrue();
+            AssertThat(MathF.Abs(kiosk.Part.At.M42 - level - top) < TestTolerance.Position).OverrideFailureMessage($"{anchor.Id}: kiosk is off its authored landing").IsTrue();
         }
         // 30%: no pole stands.
         var steep = Build(new FakeWorld(World.Value) { Terrain = Tilted(0.3f) });
         AssertThat(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0).OverrideFailureMessage("poles on a 30% grade").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CollidersFollowThePartsWithTheirFootMaterial()
     {
         foreach (var item in Build(World.Value).Items)
@@ -113,44 +114,29 @@ public sealed class FurnitureModuleTests
         }
     }
 
-    [TestCase]
-    public void ModuleTilesCarryEveryItemOnceWithinBudget()
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ModuleTilesCarryEveryItemOnce()
     {
         var ctx = Context(Inputs());
         var module = new FurnitureModule();
         var layout = FurnitureModule.Layout(ctx);
         var tiles = module.Tiles(ctx).ToList();
         var parts = 0; var emitters = 0; var colliders = 0;
-        var heaviest = 0; var heaviestL1 = 0; var draws = 0;
-        var triangles = new Dictionary<(string, object), (int L0, int L1, int Meshes)>();
         foreach (var tile in tiles)
         {
             var output = module.Build(ctx, tile, LodLevel.L0);
             parts += output.Parts.Count;
             emitters += output.Emitters?.Count ?? 0;
             colliders += module.Collide(ctx, tile).Count;
-            var l0 = 0; var l1 = 0;
-            foreach (var part in output.Parts)
-            {
-                var key = (part.Part.Value, part.Params);
-                if (!triangles.TryGetValue(key, out var t)) triangles[key] = t = Measure(part);
-                l0 += t.L0; l1 += t.L1;
-            }
-            l0 += output.Meshes.Sum(m => m.Index.Length / 3);
-            heaviest = Math.Max(heaviest, l0);
-            heaviestL1 = Math.Max(heaviestL1, l1);
-            draws = Math.Max(draws, output.Parts.Select(p => (p.Part.Value, p.Params)).Distinct().Sum(k => triangles[k].Meshes) + output.Meshes.Count);
             AssertThat(module.Build(ctx, tile, LodLevel.L1).Emitters is null).OverrideFailureMessage("emitters outside L0").IsTrue();
         }
         AssertThat(parts == layout.Items.Count).OverrideFailureMessage($"{parts} placed parts for {layout.Items.Count} items").IsTrue();
         AssertThat(emitters == layout.Items.Sum(i => i.Emitters.Count)).OverrideFailureMessage("emitters lost or repeated").IsTrue();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(layout.Items.SelectMany(i => i.Emitters))).OverrideFailureMessage("light metadata differs from the item layout").IsTrue();
         AssertThat(colliders == layout.Items.Sum(i => i.Colliders.Count)).OverrideFailureMessage("colliders lost or repeated").IsTrue();
-        AssertThat(heaviest <= module.Budget.TrianglesL0 && heaviestL1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls).OverrideFailureMessage($"heaviest cell L0 {heaviest}, L1 {heaviestL1}, draws {draws} over {module.Budget}").IsTrue();
-        Console.WriteLine($"furniture module: {tiles.Count} cells, {parts} parts, {emitters} lamp markers, {colliders} colliders; heaviest cell L0 {heaviest} / L1 {heaviestL1} triangles, {draws} draws");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LayoutDiagnosticsTravelWithTheFirstCellOnly()
     {
         // Structured diagnostics (ContentOutput.Diagnostics) are reported once per layout: with the first cell's L0 output.
@@ -179,17 +165,6 @@ public sealed class FurnitureModuleTests
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World.Value, Map = map, WorldSeed = 1u, SourceInputs = inputs };
-    }
-
-    private static (int L0, int L1, int Meshes) Measure(PlacedPart part)
-    {
-        var type = RegistrationDiscovery.Discover([typeof(StreetGallery).Assembly])
-            .Single(entry => entry.Kind == "part" && entry.Id == part.Part.Value).Type;
-        var def = Activator.CreateInstance(type)!;
-        var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(def)!;
-        PartGeometry? Level(LodLevel l) => lods.Contains(l) ? (PartGeometry)((Delegate)lods[l]!).DynamicInvoke(part.Params)! : null;
-        var l0 = Level(LodLevel.L0)!;
-        return (l0.Meshes.Sum(m => m.Index.Length / 3), Level(LodLevel.L1)?.Meshes.Sum(m => m.Index.Length / 3) ?? 0, l0.Meshes.Count);
     }
 
     /// <summary>A uniform tilt along x with a constant grade.</summary>

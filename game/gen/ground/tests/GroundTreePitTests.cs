@@ -33,35 +33,35 @@ public sealed class GroundTreePitTests
     private const float PitKerb = 0.22f, StripKerb = 0.15f;
     private const float AuthoredPitRim = 0.42f, AuthoredStripRim = 0.2f;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PitFrameAndSoilStandAtTheDesignHeightsAbovePaving()
     {
         var world = PlazaWorld();
         var pits = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Pit).ToArray();
         AssertThat(pits.Length == 3).OverrideFailureMessage($"Two square pits and one strip are three pit shapes, got {pits.Length}.").IsTrue();
         var (rim, soil, kerb) = pits[0].PitHeights(Section);
-        AssertThat(Math.Abs((double)(PitRim) - (double)(rim)) <= 0.01).OverrideFailureMessage($"pit frame top: expected {PitRim}, got {rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(PitSoil) - (double)(soil)) <= 0.01).OverrideFailureMessage($"pit soil top: expected {PitSoil}, got {soil}.").IsTrue();
-        AssertThat(Math.Abs((double)(PitKerb) - (double)(kerb)) <= 0.01).OverrideFailureMessage($"pit frame thickness: expected {PitKerb}, got {kerb}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitRim) - (double)(rim)) <= TestTolerance.Position).OverrideFailureMessage($"pit frame top: expected {PitRim}, got {rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitSoil) - (double)(soil)) <= TestTolerance.Position).OverrideFailureMessage($"pit soil top: expected {PitSoil}, got {soil}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitKerb) - (double)(kerb)) <= TestTolerance.Position).OverrideFailureMessage($"pit frame thickness: expected {PitKerb}, got {kerb}.").IsTrue();
 
         var mesher = Mesher(world, out var field);
         AssertThat(SurfaceAt(mesher, field, 20f, 20f) == GroundSurface.PitSoil).OverrideFailureMessage("The middle of a pit is soil.").IsTrue();
         AssertThat(SurfaceAt(mesher, field, 19.25f, 20f) == GroundSurface.PitRim && SurfaceAt(mesher, field, 20.75f, 20f) == GroundSurface.PitRim).OverrideFailureMessage("A quarter metre in from the outer face (0.15 m) is the frame.").IsTrue();
         AssertThat(SurfaceAt(mesher, field, 19.5f, 19.5f) == GroundSurface.PitSoil).OverrideFailureMessage("Inside the frame's thickness is soil.").IsTrue();
-        AssertThat(Math.Abs((double)(PitRim) - (double)(HeightAt(mesher, field, 19.25f, 20f))) <= 0.01).OverrideFailureMessage($"frame height: expected {PitRim}, got {HeightAt(mesher, field, 19.25f, 20f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(PitSoil) - (double)(HeightAt(mesher, field, 20f, 20f))) <= 0.01).OverrideFailureMessage($"soil height: expected {PitSoil}, got {HeightAt(mesher, field, 20f, 20f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitRim) - (double)(HeightAt(mesher, field, 19.25f, 20f))) <= TestTolerance.Position).OverrideFailureMessage($"frame height: expected {PitRim}, got {HeightAt(mesher, field, 19.25f, 20f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitSoil) - (double)(HeightAt(mesher, field, 20f, 20f))) <= TestTolerance.Position).OverrideFailureMessage($"soil height: expected {PitSoil}, got {HeightAt(mesher, field, 20f, 20f)}.").IsTrue();
         AssertThat(PitSoil < PitRim).OverrideFailureMessage("The soil lies below the frame top.").IsTrue();
 
         // The strip: 2 m wide, a thinner and lower kerb (0.15 m above the paving), soil a little below it.
         AssertThat(SurfaceAt(mesher, field, 40f, 31f) == GroundSurface.PitSoil).OverrideFailureMessage("The strip is soil inside its frame.").IsTrue();
-        AssertThat(Math.Abs((double)(StripSoil) - (double)(HeightAt(mesher, field, 40f, 31f))) <= 0.01).OverrideFailureMessage($"strip soil height: expected {StripSoil}, got {HeightAt(mesher, field, 40f, 31f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.PavingY + 0.15) - (double)(pits[2].PitHeights(Section).Rim)) <= 0.01).OverrideFailureMessage($"strip kerb stands 0.15 m above the paving: expected {Section.PavingY + 0.15}, got {pits[2].PitHeights(Section).Rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.PavingY + 0.20) - (double)(rim)) <= 0.01).OverrideFailureMessage($"pit frame stands 0.20 m above the paving: expected {Section.PavingY + 0.20}, got {rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(rim - 0.05) - (double)(soil)) <= 0.01).OverrideFailureMessage($"soil lies 5 cm below the frame top: expected {rim - 0.05}, got {soil}.").IsTrue();
+        AssertThat(Math.Abs((double)(StripSoil) - (double)(HeightAt(mesher, field, 40f, 31f))) <= TestTolerance.Position).OverrideFailureMessage($"strip soil height: expected {StripSoil}, got {HeightAt(mesher, field, 40f, 31f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + 0.15) - (double)(pits[2].PitHeights(Section).Rim)) <= TestTolerance.Position).OverrideFailureMessage($"strip kerb stands 0.15 m above the paving: expected {Section.PavingY + 0.15}, got {pits[2].PitHeights(Section).Rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + 0.20) - (double)(rim)) <= TestTolerance.Position).OverrideFailureMessage($"pit frame stands 0.20 m above the paving: expected {Section.PavingY + 0.20}, got {rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(rim - 0.05) - (double)(soil)) <= TestTolerance.Position).OverrideFailureMessage($"soil lies 5 cm below the frame top: expected {rim - 0.05}, got {soil}.").IsTrue();
         AssertThat(StripSoil < StripRim && StripSoil > Section.PavingY).OverrideFailureMessage("The strip soil lies a little below its kerb, above the paving.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PavingStopsAtTheFrameAndNothingLiesOverAPit()
     {
         var world = PlazaWorld();
@@ -76,8 +76,8 @@ public sealed class GroundTreePitTests
                 var surface = mesher.SurfaceAt(i, j);
                 var isPit = surface is GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil;
                 var d = world.Features.Values.Where(f => f.Kind.Value == "tree-pit").Select(f => PitDistance(f, x, z)).Min();
-                if (d < -0.01f) { inside++; AssertThat(isPit).OverrideFailureMessage($"({x}, {z}) lies inside a pit's outline but is {surface}.").IsTrue(); }
-                if (d > 0.01f) AssertThat(!isPit).OverrideFailureMessage($"({x}, {z}) lies outside every pit but is {surface}.").IsTrue();
+                if (d < -TestTolerance.Position) { inside++; AssertThat(isPit).OverrideFailureMessage($"({x}, {z}) lies inside a pit's outline but is {surface}.").IsTrue(); }
+                if (d > TestTolerance.Position) AssertThat(!isPit).OverrideFailureMessage($"({x}, {z}) lies outside every pit but is {surface}.").IsTrue();
             }
         AssertThat(inside > 500).OverrideFailureMessage($"The pits and the strip cover many lattice points, got {inside}.").IsTrue();
 
@@ -109,13 +109,13 @@ public sealed class GroundTreePitTests
                 if (color == earth) tops.Add(cy);
             }
         AssertThat(checkedTriangles > 20).OverrideFailureMessage($"The pits are meshed, got {checkedTriangles} triangles inside them.").IsTrue();
-        AssertThat(tops.Any(y => Math.Abs(y - PitSoil) < 0.01f) && tops.Any(y => Math.Abs(y - StripSoil) < 0.01f)).OverrideFailureMessage("Soil faces lie at the pit and strip soil heights.").IsTrue();
+        AssertThat(tops.Any(y => Math.Abs(y - PitSoil) < TestTolerance.Position) && tops.Any(y => Math.Abs(y - StripSoil) < TestTolerance.Position)).OverrideFailureMessage("Soil faces lie at the pit and strip soil heights.").IsTrue();
         foreach (var mesh in output.Meshes) mesh.ValidateVertexData();
         var maxY = output.Meshes.Max(m => Enumerable.Range(0, m.Position.Length / 3).Max(v => m.Position[3 * v + 1]));
-        AssertThat(Math.Abs((double)(PitRim) - (double)(maxY)) <= 0.01).OverrideFailureMessage($"highest point of the ground is the frame top: expected {PitRim}, got {maxY}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitRim) - (double)(maxY)) <= TestTolerance.Position).OverrideFailureMessage($"highest point of the ground is the frame top: expected {PitRim}, got {maxY}.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PitFramesCarryChamfersAndFacesInStone()
     {
         var world = PlazaWorld();
@@ -132,7 +132,7 @@ public sealed class GroundTreePitTests
                 var c = mesh.Index[t + 2];
                 if (mesh.ColorIndices![a] != frame) continue;
                 var top = MathF.Max(mesh.Position[3 * a + 1], MathF.Max(mesh.Position[3 * b + 1], mesh.Position[3 * c + 1]));
-                if (top < PitRim - 0.02f || top > PitRim + 1e-4f) continue;
+                if (top < PitRim - TestTolerance.Position || top > PitRim + TestTolerance.Position) continue;
                 var ny = (mesh.Normal[3 * a + 1] + mesh.Normal[3 * b + 1] + mesh.Normal[3 * c + 1]) / 3f;
                 if (ny < 0.05f) faces++;                           // vertical face of the frame
                 else if (ny is > 0.5f and < 0.95f) chamfers++;     // tilted chamfer on a top edge
@@ -141,7 +141,7 @@ public sealed class GroundTreePitTests
         AssertThat(chamfers > 0).OverrideFailureMessage("The frame's top edges are chamfered, not cut square.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NoPitDoesNotChangeTheGroundAndSiteStoneIsLeftAlone()
     {
         var bare = new TestWorldBuilder().Plaza().Build();
@@ -156,37 +156,37 @@ public sealed class GroundTreePitTests
         AssertThat(SurfaceAt(mesher, field, 20f, 20f) is GroundSurface.Granite or GroundSurface.Paver or GroundSurface.PlazaBorder).OverrideFailureMessage("The paving runs on where a site builds its own pit.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PitDefaultsAndAuthoredHeights()
     {
         var bare = new PitProfile(null, null, null).Resolve(Section, compact: true);
-        AssertThat(Math.Abs((double)(Section.PavingY + Section.Pits.PitRimAbovePaving) - (double)(bare.Rim)) <= 0.01).OverrideFailureMessage($"default pit frame top: expected {Section.PavingY + Section.Pits.PitRimAbovePaving}, got {bare.Rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.PavingY + Section.Pits.StripRimAbovePaving) - (double)(new PitProfile(null, null, null).Resolve(Section, compact: false).Rim)) <= 0.01).OverrideFailureMessage($"default strip kerb top: expected {Section.PavingY + Section.Pits.StripRimAbovePaving}, got {new PitProfile(null, null, null).Resolve(Section, compact: false).Rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + Section.Pits.PitRimAbovePaving) - (double)(bare.Rim)) <= TestTolerance.Position).OverrideFailureMessage($"default pit frame top: expected {Section.PavingY + Section.Pits.PitRimAbovePaving}, got {bare.Rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + Section.Pits.StripRimAbovePaving) - (double)(new PitProfile(null, null, null).Resolve(Section, compact: false).Rim)) <= TestTolerance.Position).OverrideFailureMessage($"default strip kerb top: expected {Section.PavingY + Section.Pits.StripRimAbovePaving}, got {new PitProfile(null, null, null).Resolve(Section, compact: false).Rim}.").IsTrue();
         AssertThat(bare.Soil < bare.Rim && bare.Kerb == Section.Pits.DefaultKerb).OverrideFailureMessage("default soil below the frame, default thickness").IsTrue();
         // The record's own heights are drawn only when asked for, measured from the paving unless a datum is given.
         var authored = Section with { Pits = Section.Pits with { UseAuthoredHeights = true } };
         var drawn = new PitProfile(0.42f, 0.32f, 0.22f).Resolve(authored, compact: true);
-        AssertThat(Math.Abs((double)(Section.PavingY + 0.42f) - (double)(drawn.Rim)) <= 0.01).OverrideFailureMessage($"authored frame top from the paving: expected {Section.PavingY + 0.42f}, got {drawn.Rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.PavingY + 0.32f) - (double)(drawn.Soil)) <= 0.01).OverrideFailureMessage($"authored soil top from the paving: expected {Section.PavingY + 0.32f}, got {drawn.Soil}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + 0.42f) - (double)(drawn.Rim)) <= TestTolerance.Position).OverrideFailureMessage($"authored frame top from the paving: expected {Section.PavingY + 0.42f}, got {drawn.Rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY + 0.32f) - (double)(drawn.Soil)) <= TestTolerance.Position).OverrideFailureMessage($"authored soil top from the paving: expected {Section.PavingY + 0.32f}, got {drawn.Soil}.").IsTrue();
         var fromRoad = new PitProfile(0.42f, 0.32f, 0.22f).Resolve(authored with { Pits = authored.Pits with { Datum = 0f } }, compact: true);
-        AssertThat(Math.Abs((double)(0.42) - (double)(fromRoad.Rim)) <= 0.01).OverrideFailureMessage($"Datum 0 measures the authored heights from the carriageway level: expected {0.42}, got {fromRoad.Rim}.").IsTrue();
+        AssertThat(Math.Abs((double)(0.42) - (double)(fromRoad.Rim)) <= TestTolerance.Position).OverrideFailureMessage($"Datum 0 measures the authored heights from the carriageway level: expected {0.42}, got {fromRoad.Rim}.").IsTrue();
         var thin = new PitProfile(0.3f, 0.29f, 0.001f).Resolve(authored, compact: true);
-        AssertThat(thin.Kerb >= Section.Pits.MinKerb && thin.Rim - thin.Soil >= Section.Pits.MinSoilBelowRim - 0.005f).OverrideFailureMessage("A degenerate record still gets a frame and a sunken soil face.").IsTrue();
+        AssertThat(thin.Kerb >= Section.Pits.MinKerb && thin.Rim - thin.Soil >= Section.Pits.MinSoilBelowRim - TestTolerance.Position).OverrideFailureMessage("A degenerate record still gets a frame and a sunken soil face.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PitSoilUsesTheGroundHeightFieldAndFootMaterial()
     {
         var ctx = TestWorld.Context(PlazaWorld());
         var colliders = new GroundModule().Collide(ctx, new(0, 0));
         AssertThat(colliders.Count == 1 && colliders[0] is HeightFieldCollider).OverrideFailureMessage("Tree pits must not add exact support shapes.").IsTrue();
         var field = (HeightFieldCollider)colliders[0];
-        AssertThat(Math.Abs((double)(PitSoil) - (double)(GroundCollision.SampleHeight(field, 20f, 20f))) <= .02).OverrideFailureMessage($"pit soil height: expected {PitSoil}, got {GroundCollision.SampleHeight(field, 20f, 20f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(PitSoil) - (double)(GroundCollision.SampleHeight(field, 20f, 20f))) <= TestTolerance.Position).OverrideFailureMessage($"pit soil height: expected {PitSoil}, got {GroundCollision.SampleHeight(field, 20f, 20f)}.").IsTrue();
         AssertThat((FootMat)field.FootMatHalfMeter![40 * GroundCollision.FootCells + 40] == FootMat.Soil).OverrideFailureMessage("Soil remains the foot material inside a pit.").IsTrue();
     }
 
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CoarseLevelsDoNotMarkPits()
     {
         var world = PlazaWorld();
@@ -200,7 +200,7 @@ public sealed class GroundTreePitTests
                 AssertThat(mesher.SurfaceAt(i, j) is not (GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil)).OverrideFailureMessage("L2 and beyond resolve no pits.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AnUntaggedPitchGetsNoWhiteLinesWhateverItsProportions()
     {
         // A 105 x 68 rectangle is football proportions. With a sport tag it is marked; without one it is plain grass.
@@ -217,7 +217,7 @@ public sealed class GroundTreePitTests
         AssertThat(output.Meshes.All(m => m.Material.Spec.Lit.Value != "ground.marking.lit")).OverrideFailureMessage("No marking mesh is built for an untagged pitch.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void RealCampusPitsAndStripBecomeGroundShapes()
     {
         var world = RealMapFixture.Load().World;
@@ -235,7 +235,7 @@ public sealed class GroundTreePitTests
                 var (rim, soil, kerb) = piece.PitHeights(Section);
                 AssertThat(rim > Section.PavingY && soil < rim && kerb >= Section.Pits.MinKerb && kerb <= Section.Pits.MaxKerb)
                     .OverrideFailureMessage("The stone frame stands above paving and contains sunken soil.").IsTrue();
-                AssertThat(MathF.Abs(rim - soil - Section.Pits.SoilBelowRim) <= 0.01f).IsTrue();
+                AssertThat(MathF.Abs(rim - soil - Section.Pits.SoilBelowRim) <= TestTolerance.Position).IsTrue();
             }
         }
         AssertThat(shapes.All(shape => shape.Rings is { Length: >= 1 })).IsTrue();

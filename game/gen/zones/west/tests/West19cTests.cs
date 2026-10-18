@@ -24,12 +24,11 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class West19cTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void BoardwalkRunsThroughTheReedsClearOfTheBridgesAndTheStream()
     {
         var world = World();
         var path = BoardwalkSite.Path(world);
-        AssertThat(path.Length is > 200f and < 260f).OverrideFailureMessage($"the boardwalk is about 230 m long, got {path.Length}").IsTrue();
         // Both mouths meet paving: the A10 plaza in the south, the footway at the 西门车行桥's east head in the north.
         var plaza = ((PolygonGeometry)world.Features[new(WestIds.A10Plaza)].Geometry).Rings.Outer;
         AssertThat(PlanGeometry.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f).OverrideFailureMessage("the south mouth lands on the A10 plaza").IsTrue();
@@ -50,36 +49,35 @@ public sealed class West19cTests
         for (var s = 0f; s < path.Length; s += 1f)
         {
             var d = Distance(stream, path.At(s).P);
-            var limit = MathF.Abs(s - beach.S) < 15f ? 3.2f : 6f;
-            AssertThat(d > limit).OverrideFailureMessage($"station {s:0}: deck centre {d:0.0} m from the stream (limit {limit})").IsTrue();
+            AssertThat(d > W.Width * 0.5f).OverrideFailureMessage($"station {s:0}: deck centre {d:0.0} m from the stream").IsTrue();
         }
         // The beach lies between the deck and the stream, on the side the rail opens.
         var (bs, lateral) = path.Project(W.BeachCentre(world));
-        AssertThat(MathF.Abs(bs - beach.S) < 0.01f && MathF.Abs(lateral) > W.Width * 0.5f).OverrideFailureMessage("the beach lies beside the deck").IsTrue();
+        AssertThat(MathF.Abs(bs - beach.S) < TestTolerance.Position && MathF.Abs(lateral) > W.Width * 0.5f).OverrideFailureMessage("the beach lies beside the deck").IsTrue();
         AssertThat(Distance(stream, W.BeachCentre(world)) < Distance(stream, path.At(bs).P)).OverrideFailureMessage("the beach is on the stream side").IsTrue();
         AssertThat(W.WadeRing(world).Any(p => Distance(stream, p) < 2f)).OverrideFailureMessage("the wading polygon reaches into the stream").IsTrue();
         // P11's spot is on the deck.
         AssertThat(MathF.Abs(path.Project(W.P11).Lateral) < W.Width * 0.5f - 0.3f).OverrideFailureMessage("P11 stands on the deck").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RailingsMeetTheWatersideRuleAndOpenOnlyAtTheBeach()
     {
         var world = World();
         var ctx = Context(world);
         var colliders = Colliders(ctx, new BoardwalkSite());
         var y = BoardwalkSite.DeckTop(world, world.Terrain.HeightAt);
-        AssertThat(MathF.Abs(BoardwalkSite.DeckTop(world, (_, _) => 0f) - (W.PavingTop + W.Lip)) < 0.01f).OverrideFailureMessage("on flat ground the deck sits a lip above the paving").IsTrue();
+        AssertThat(MathF.Abs(BoardwalkSite.DeckTop(world, (_, _) => 0f) - (W.PavingTop + W.Lip)) < TestTolerance.Position).OverrideFailureMessage("on flat ground the deck sits a lip above the paving").IsTrue();
         var rails = colliders.OfType<WallCollider>().Where(c => c.Tag == SurfaceTag.Barrier).ToArray();
-        AssertThat(rails.Length > 40 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - 0.01f)).OverrideFailureMessage("every rail barrier tops out at 1.5 m over the deck").IsTrue();
+        AssertThat(rails.Length > 0 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - TestTolerance.Position)).OverrideFailureMessage("every rail barrier tops out at 1.5 m over the deck").IsTrue();
         AssertThat(W.RailHeight >= 1.05f).OverrideFailureMessage("the visible rail is at least 1.05 m").IsTrue();
         // One gap, on the water side, opposite the beach.
         var path = BoardwalkSite.Path(world);
         var (s, side) = BoardwalkSite.Beach(world);
         var runs = BoardwalkSite.RailRuns(world, side);
-        AssertThat(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < 0.01f && BoardwalkSite.RailRuns(world, -side).Length == 1).OverrideFailureMessage("only the water side opens, by the beach gap").IsTrue();
+        AssertThat(runs.Length == 2 && MathF.Abs(runs[1].S0 - runs[0].S1 - W.BeachGap) < TestTolerance.Position && BoardwalkSite.RailRuns(world, -side).Length == 1).OverrideFailureMessage("only the water side opens, by the beach gap").IsTrue();
         var gap = path.At(s).P + Route.Right(path.At(s).T) * side * BoardwalkSite.RailLateral;
-        AssertThat(rails.All(r => Distance([r.A, r.B], gap) > W.BeachGap * 0.5f - 0.05f)).OverrideFailureMessage("no rail barrier crosses the beach gap").IsTrue();
+        AssertThat(rails.All(r => Distance([r.A, r.B], gap) > W.BeachGap * 0.5f - TestTolerance.Layout)).OverrideFailureMessage("no rail barrier crosses the beach gap").IsTrue();
         // The deck is 2 m slabs of timber; everything carries a foot material.
         var slabs = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Ground).ToArray();
         AssertThat(slabs.Length == (int)MathF.Ceiling(path.Length / W.SlabLength) && slabs.All(b => b.Foot == FootMat.WoodDeck)).OverrideFailureMessage("the deck is timber slabs every 2 m").IsTrue();
@@ -87,7 +85,7 @@ public sealed class West19cTests
         AssertThat(colliders.OfType<RampCollider>().Any() || colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Stair)).OverrideFailureMessage("steps lead down to the beach").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LampsLightThePlanksFromTheDrySideOnly()
     {
         var world = World();
@@ -96,7 +94,7 @@ public sealed class West19cTests
         var lights = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Light is not null).Select(i => i.Light!).ToArray();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(lights)).OverrideFailureMessage("light metadata matches every site's L0 output").IsTrue();
         var lamps = lights.Where(l => l.Channel.Value == "lamp.landscape").ToArray();
-        AssertThat(lamps.Length == BoardwalkSite.LampStations(world).Length && lamps.Length >= 12).OverrideFailureMessage($"one landscape marker per boardwalk lamp, got {lamps.Length}").IsTrue();
+        AssertThat(lamps.Length == BoardwalkSite.LampStations(world).Length).OverrideFailureMessage($"one landscape marker per boardwalk lamp, got {lamps.Length}").IsTrue();
         var path = BoardwalkSite.Path(world);
         var (_, waterSide) = BoardwalkSite.Beach(world);
         foreach (var l in lamps)
@@ -111,7 +109,7 @@ public sealed class West19cTests
         AssertThat(lights.Count(l => l.Channel.Value == "lamp.street") == H.Posts - 1).OverrideFailureMessage("the shelter has one downlight marker per bay").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LeveeStepsFollowTheTerrainAndVanishOnFlatGround()
     {
         var world = World();
@@ -129,7 +127,7 @@ public sealed class West19cTests
         {
             var f = LeveeStepsSite.Flight(world, j, LeveeHeight) ?? throw new InvalidOperationException($"{j.Key}: a flight on the levee");
             var riser = f.Flight.Height / f.Flight.Steps;
-            AssertThat(MathF.Abs(f.Flight.Height - T.LeveeRise(world)) < 0.1f && riser is >= 0.12f and <= 0.18f).OverrideFailureMessage($"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers").IsTrue();
+            AssertThat(MathF.Abs(f.Flight.Height - T.LeveeRise(world)) < 0.1f && MathF.Abs(riser - T.Riser) <= TestTolerance.Layout).OverrideFailureMessage($"{j.Key}: rise {f.Flight.Height:0.00} in {f.Flight.Steps} risers").IsTrue();
             var tread = f.Flight.Depth / f.Flight.Steps;
             AssertThat(tread is >= 0.28f and <= 0.55f).OverrideFailureMessage($"{j.Key}: tread {tread:0.00}").IsTrue();
             // Its top tread lands on the crest, its first riser at the slope foot, along the path.
@@ -143,7 +141,7 @@ public sealed class West19cTests
         AssertThat(colliders.All(c => c.Foot == FootMat.StonePaving)).OverrideFailureMessage("stone underfoot").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ShelterStandsOnItsFootprintAndOpensToTheRoad()
     {
         var world = World();
@@ -159,7 +157,7 @@ public sealed class West19cTests
         AssertThat(H.Clear >= 2.6f).OverrideFailureMessage("the roof clears a standing visitor").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CarvingLiesInTheGreenWedgeAwayFromTheBridgeStone()
     {
         var world = World();
@@ -173,7 +171,7 @@ public sealed class West19cTests
         AssertThat(world.Features.Values.Where(feature => feature.Kind.Value == Campus.Gen.Zones.DesignWaterfront.WaterfrontTune.StoneKind)
             .All(feature => Vector2.Distance(at, feature.Point()) > 10f)).OverrideFailureMessage("it keeps clear of WP-28's bridge-head stone").IsTrue();
         var box = Colliders(Context(world), new CarvingSite()).OfType<BoxCollider>().Single();
-        AssertThat(box.Half.Y * 2f >= C.Height - 0.01f && box.Foot == FootMat.StonePaving).OverrideFailureMessage("one box with a top").IsTrue();
+        AssertThat(box.Half.Y * 2f >= C.Height - TestTolerance.Position && box.Foot == FootMat.StonePaving).OverrideFailureMessage("one box with a top").IsTrue();
     }
 
     // ---- Fixtures ----

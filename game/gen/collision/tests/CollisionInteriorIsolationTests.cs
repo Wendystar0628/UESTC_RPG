@@ -18,7 +18,7 @@ public sealed class CollisionInteriorIsolationTests
     private const string ProviderId = "interior.fixture";
     private static readonly FeatureId Feature = new("fixture:shared-building");
 
-    [TestCase(Timeout = 10000)]
+    [TestCase(Timeout = 10000), TestCategory(TestReason.Regression)]
     public async Task InFlightOldMapUsesItsOwnProviderWhileNewMapBuilds()
     {
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -42,7 +42,7 @@ public sealed class CollisionInteriorIsolationTests
             // the same provider/feature IDs while the old build is still inside CollisionStorey.
             var newContext = Context(newMap, Bind(newProvider), open: true, catalog: true);
             var newResult = builder.Build(newContext, new(0, 0));
-            AssertThat(newResult.Count != 1 || newResult.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 7) > .02f))
+            AssertThat(newResult.Count != 1 || newResult.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 7) > TestTolerance.Position))
                 .OverrideFailureMessage("Expected one box floor at 7 m from this map's provider.").IsFalse();
         }
         finally
@@ -51,11 +51,11 @@ public sealed class CollisionInteriorIsolationTests
             oldResult = await oldJob;
         }
         AssertThat(oldResult).OverrideFailureMessage("Old-map worker did not complete.").IsNotNull();
-        AssertThat(oldResult!.Count != 1 || oldResult!.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 3) > .02f))
+        AssertThat(oldResult!.Count != 1 || oldResult!.Any(c => c is not BoxCollider box || MathF.Abs(box.At.M42 + box.Half.Y - 3) > TestTolerance.Position))
             .OverrideFailureMessage("Expected one box floor at 3 m from this map's provider.").IsFalse();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OpenIndexedInteriorCannotUseAnEmptyProviderSnapshot()
     {
         var context = Context(new("fixture-missing"), EmptyBindings(), open: true, catalog: false);
@@ -66,7 +66,7 @@ public sealed class CollisionInteriorIsolationTests
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CatalogBindingCannotDisappearBehindAClosedOrIncompleteIndex()
     {
         var context = Context(new("fixture-catalog"), EmptyBindings(), open: false, catalog: true);
@@ -77,7 +77,7 @@ public sealed class CollisionInteriorIsolationTests
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnconfiguredProviderDoesNotSilentlyProduceAnEmptyInterior()
     {
         var map = new MapId("fixture-unconfigured");
@@ -89,7 +89,7 @@ public sealed class CollisionInteriorIsolationTests
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MapWithoutDeclaredOrOpenInteriorsAllowsLegacyEmptySnapshot()
     {
         var map = new MapId("fixture-no-interiors");

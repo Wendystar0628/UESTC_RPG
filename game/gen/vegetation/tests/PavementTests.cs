@@ -30,7 +30,7 @@ public sealed class PavementTests
 
     private static readonly Lazy<(SpeciesTable Species, PlantingRules Rules)> Rules = new(() =>
     {
-        var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(Root, "game", "data", "vegetation", "species.json")));
+        var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json")));
         return (species, PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species));
     });
 
@@ -38,9 +38,7 @@ public sealed class PavementTests
     private static readonly Lazy<IWorldModel> Overlaid = new(() => Load(true));
     private static readonly Lazy<PlantingLayout> BareLayout = new(() => Plant(Bare.Value));
 
-    private static string Root => RepositoryFixture.Root;
-
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NoTreeStandsOnHardPavementAndOnlyThoseTreesGiveWay()
     {
         // The campus data alone, and the world as the kernel loads it (every overlay: design walks, plazas, tree pits).
@@ -52,7 +50,7 @@ public sealed class PavementTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheDesignWalksAndPlazasOfTheOverlaysAreRead()
     {
         // The exclusive fixture supplies nonempty walk, plaza, pit and avoidance cases; production owners may remove theirs.
@@ -86,7 +84,7 @@ public sealed class PavementTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ADesignWalkAcrossTheAvenueTakesTheTreesOnIt()
     {
         var bare = PlantFixture(Fixture());
@@ -101,7 +99,7 @@ public sealed class PavementTests
         Console.WriteLine($"pavement (avenue walk): {more} more trees give way, {string.Join(", ", layout.Avoided.Select(a => a.Tree.Key).Except(bare.Avoided.Select(a => a.Tree.Key)))}");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheOsmTreesOnDanguiWalkW2GiveWay()
     {
         if (!DanguiOsmTrees.Any()) throw new InvalidOperationException("the authored walk has no OSM trees to exercise");
@@ -121,7 +119,7 @@ public sealed class PavementTests
         Console.WriteLine($"pavement (w2): {more.Count} more trees give way: " + string.Join(", ", more.Select(t => $"{t.Source}/{t.Species.Id} {t.Key}")));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheOsmTreesOnDanguiWalkW2GiveWayInTheMap()
     {
         // The same case on the map as the kernel loads it, now that 0h-b's walks are in the overlays.
@@ -135,7 +133,7 @@ public sealed class PavementTests
         Console.WriteLine($"pavement (map): {DanguiOsmTrees.Count()} OSM trees on the authored Dangui Road walk give way");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineIsPavedOnce()
     {
         // WP-08's effective network files a design walk twice under one ID: as the feature the overlay added and as a network line.
@@ -164,7 +162,7 @@ public sealed class PavementTests
                 throw new InvalidOperationException($"{t.Key} stands on the walk filed as a network line");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AHiddenDesignWalkTakesNoTree()
     {
         // A walk the overlays add and then hide leaves both stacks, and nothing of it comes back: the layout is the original fixture's.
@@ -179,7 +177,7 @@ public sealed class PavementTests
         if (!SameLayout(layout, bare) || layout.Trees.All(t => t.Key != tree.Key)) throw new InvalidOperationException("a hidden design walk still takes trees");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheOsmTreePointsOnAWalkFiledInBothStacksGiveWayAndDoNotVanish()
     {
         // The OSM tree points on a design walk (Dangui Road's second walk, 9633125237 and its neighbours) give way: each is in the
@@ -204,7 +202,7 @@ public sealed class PavementTests
         Console.WriteLine($"pavement (w2 in both stacks): {onWalk.Count} OSM tree points give way: {string.Join(", ", onWalk)}");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheTreePitsOfTheMapProtectOnlyTheTreesInsideThem()
     {
         // Production pits may be added or removed by their owners; check each currently protected original tree.
@@ -219,7 +217,7 @@ public sealed class PavementTests
             string.Join(", ", kept.GroupBy(t => $"{t.Source}/{t.Species.Id}").OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Key} {g.Count()}")));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ATreePitLetsATreeStandOnPavement()
     {
         // Two trees that give way on the fixture plaza: one gets a square pit, the other a round bed; both stay, nothing else moves.
@@ -243,7 +241,7 @@ public sealed class PavementTests
             throw new InvalidOperationException($"{layout.Avoided.Count} trees give way, {bare.Avoided.Count} did before, {inPits} stand in the pits");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void APitNamingItsSpeciesGetsOneTreeOfIt()
     {
         // WP-29 29a's pocket-garden pits (overlay/public.d/, 160bdfa): round beds at a point with radius, perPit 1, props.species,

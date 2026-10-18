@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using GdUnit4;
+using Campus.Tests;
 using static GdUnit4.Assertions;
 
 namespace Campus.Gen.Parts.Core.Tests;
@@ -12,7 +13,7 @@ public sealed class AoContractTests
 {
     private static readonly ToonSpec Material = new(new("wall.lit"), new("wall.shade"));
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void SameInputBuildsTheSameGeometryBytes()
     {
         // Counts, positions, normals, indices, UVs and bounds of every example are bitwise the same on a second build.
@@ -23,7 +24,7 @@ public sealed class AoContractTests
                 .OverrideFailureMessage($"{examples[i].Id}: a second build gave different geometry bytes.").IsFalse();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnoccludedVerticesUseVisibilityOneAcrossProductionPaths()
     {
         foreach (var example in Examples())
@@ -38,7 +39,7 @@ public sealed class AoContractTests
         AssertPartUnoccluded(new TrimPart(), new TrimParams());
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OnlyOpeningRevealsReduceVisibility()
     {
         Vector2[] outer = [new(-2, 0), new(2, 0), new(2, 3), new(-2, 3)];

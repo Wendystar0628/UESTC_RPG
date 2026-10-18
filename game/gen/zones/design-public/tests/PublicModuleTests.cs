@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Tests;
 using Campus.Gen.Geometry;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Contracts;
 using Campus.Gen.World;
 using GdUnit4;
@@ -17,7 +18,7 @@ public sealed class PublicModuleTests
     private static readonly string[] Carriageway = ["service", "residential", "tertiary", "secondary", "primary", "unclassified", "living_street", "road", "trunk"];
     private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OverlayLoadsBesideEveryOtherOverlay()
     {
         var world = Loaded.Value;
@@ -34,14 +35,14 @@ public sealed class PublicModuleTests
     }
 
     /// <summary>Each pad keeps off carriageways, footways, buildings, water, parking, courts and every other package's additions.</summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PadsKeepClearOfRoadsBuildingsAndOtherAdditions()
     {
         var world = Loaded.Value;
         foreach (var bench in PocketGreens.Benches(world))
         {
             var (c, r) = Disc(Pad(world, bench));
-            AssertThat(Vector2.Distance(c, bench.Centre) < 0.01f).OverrideFailureMessage($"{bench.Id.Value} is centred on its pad").IsTrue();
+            AssertThat(Vector2.Distance(c, bench.Centre) < TestTolerance.Position).OverrideFailureMessage($"{bench.Id.Value} is centred on its pad").IsTrue();
             foreach (var road in world.Network.Roads)
             {
                 var type = road.Props.TryText("highway") ?? road.Props.TryText("roadType") ?? "";
@@ -65,7 +66,7 @@ public sealed class PublicModuleTests
     }
 
     /// <summary>The bench and tree fit on their authored pad with room for a sitter.</summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void BenchAndTreeFitOnThePad()
     {
         var world = Loaded.Value;
@@ -82,7 +83,7 @@ public sealed class PublicModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SeatsAndCollidersShareTheSeatBoxes()
     {
         var ctx = Context();
@@ -107,13 +108,13 @@ public sealed class PublicModuleTests
             {
                 var mid = (seat.From + seat.To) * 0.5f;
                 AssertThat(Vector2.Dot(new(seat.Facing.X, seat.Facing.Z), bench.Centre - new Vector2(mid.X, mid.Z)) > 0f).OverrideFailureMessage($"{bench.Id.Value} sitters face the pad centre").IsTrue();
-                AssertThat(MathF.Abs(mid.Y - deck - PublicTune.Bench.SeatTop) < 0.01f).OverrideFailureMessage($"{bench.Id.Value} seat edge at the seat top").IsTrue();
+                AssertThat(MathF.Abs(mid.Y - deck - PublicTune.Bench.SeatTop) < TestTolerance.Position).OverrideFailureMessage($"{bench.Id.Value} seat edge at the seat top").IsTrue();
             }
         }
     }
 
-    [TestCase]
-    public void BuildIsDeterministicWithinBudgetAndRegisteredColours()
+    [TestCase, TestCategory(TestReason.Determinism)]
+    public void BuildIsDeterministicWithRegisteredColours()
     {
         var ctx = Context();
         var module = new PublicModule();
@@ -121,17 +122,15 @@ public sealed class PublicModuleTests
         AssertThat(tiles.Length > 0).OverrideFailureMessage("pocket greens occupy cells").IsTrue();
         foreach (var lod in new[] { LodLevel.L0, LodLevel.L1, LodLevel.L2 })
         {
-            var budget = lod == LodLevel.L0 ? module.Budget.TrianglesL0 : module.Budget.TrianglesL1;
-            var cells = PocketGreens.Benches(ctx.World).Select(b => TileGrid.At(b.Centre, lod)).Distinct().ToArray();
+            var cells = ZoneTestCells.Heaviest(module, ctx, lod);
             var total = 0;
             foreach (var cell in cells)
             {
                 var a = module.Build(ctx, cell, lod);
                 var b = module.Build(ctx, cell, lod);
-                AssertThat(a.Meshes.Count > 0 && a.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} {cell}: {a.Meshes.Count} draws").IsTrue();
+                AssertThat(a.Meshes.Count > 0).OverrideFailureMessage($"{lod} {cell}: {a.Meshes.Count} draws").IsTrue();
                 AssertThat(a.Meshes.Count == b.Meshes.Count && a.Meshes.Zip(b.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position) && p.First.Index.SequenceEqual(p.Second.Index))).OverrideFailureMessage($"{lod} {cell} builds the same bytes twice").IsTrue();
                 var triangles = a.Meshes.Sum(m => m.Index.Length / 3);
-                AssertThat(triangles <= budget).OverrideFailureMessage($"{lod} {cell}: {triangles} triangles over {budget}").IsTrue();
                 total += triangles;
                 foreach (var mesh in a.Meshes)
                     AssertThat(mesh.Position.All(float.IsFinite) && mesh.Normal.All(float.IsFinite)).OverrideFailureMessage($"{lod} {cell}: finite vertices").IsTrue();

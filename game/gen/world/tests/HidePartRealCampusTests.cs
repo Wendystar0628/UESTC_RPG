@@ -10,7 +10,7 @@ namespace Campus.Gen.World.Tests;
 [TestSuite]
 public sealed class HidePartRealCampusTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AuthoredSourceRemovalsKeepParentIdentitiesAndIndependentEntities()
     {
         var captured = RealMapFixture.ReadTextFiles();

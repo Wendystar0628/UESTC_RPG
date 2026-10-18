@@ -5,6 +5,7 @@ using Campus.Tests;
 using Campus.Gen.Geometry;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Gen.Zones.North.Clusters;
 using GdUnit4;
 
@@ -18,7 +19,7 @@ public sealed class NorthModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryClusterHasItsPolygonAndGateAddition()
     {
         var world = RealMapFixture.Load().World;
@@ -29,7 +30,7 @@ public sealed class NorthModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryClusterGetsAMainGateAndAClosedFence()
     {
         var world = RealMapFixture.Load().World;
@@ -43,11 +44,11 @@ public sealed class NorthModuleTests
             AssertThat(layout.Runs.Count > 0).OverrideFailureMessage($"{cluster.Key} has fence runs").IsTrue();
             foreach (var run in layout.Runs)
                 for (var i = 0; i + 1 < run.Posts.Count; i++)
-                    AssertThat(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + 0.01f).OverrideFailureMessage($"{cluster.Key} post gap at {run.Posts[i]}").IsTrue();
+                    AssertThat(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + TestTolerance.Position).OverrideFailureMessage($"{cluster.Key} post gap at {run.Posts[i]}").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OpenGateLeavesPassagesAndClosedGatesBarTheLine()
     {
         var ctx = Context();
@@ -69,12 +70,12 @@ public sealed class NorthModuleTests
                 // The lane under the barrier arm is closed either way, and nothing crosses the gate line above 0.5 m wide.
                 AssertThat(colliders.Any(c => Covers(c, f.P(0, 0), 0f))).OverrideFailureMessage($"{cluster.Key} vehicle lane is barred").IsTrue();
                 var tops = colliders.OfType<BoxCollider>().Where(c => Covers(c, f.P(cabinets[0], 0), 0f));
-                AssertThat(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f)).OverrideFailureMessage($"{cluster.Key} cabinets reach 1.5 m").IsTrue();
+                AssertThat(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - TestTolerance.Position)).OverrideFailureMessage($"{cluster.Key} cabinets reach 1.5 m").IsTrue();
             }
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -105,33 +106,18 @@ public sealed class NorthModuleTests
         }
     }
 
-    [TestCase]
-    public void HeaviestCellsStayInsideTheDeclaredBudget()
-    {
-        var ctx = Context();
-        var module = new NorthModule();
-        foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
-        {
-            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
-            foreach (var (x, z) in cells)
-            {
-                var output = module.Build(ctx, new(x, z), lod);
-                var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
-                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
-            }
-        }
-    }
-
-    [TestCase, TestCategory("Slow")]
+    [TestCase, TestCategory(TestReason.Determinism)]
+    [TestCategory("Slow")]
     public void BuildIsDeterministic()
     {
-        var a = Bytes(Context());
-        var b = Bytes(Context());
+        var ctx = Context();
+        var cells = ZoneTestCells.Heaviest(new NorthModule(NorthSites.All.ToArray()), ctx);
+        var a = Bytes(ctx, cells);
+        var b = Bytes(Context(), cells);
         AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SitesStayInsideTheNorthZone()
     {
         var ctx = Context();
@@ -160,12 +146,12 @@ public sealed class NorthModuleTests
         return MathF.Abs(Vector2.Dot(d, ux)) <= box.Half.X + slack && MathF.Abs(Vector2.Dot(d, uz)) <= box.Half.Z + slack;
     }
 
-    private static byte[] Bytes(BuildContext ctx)
+    private static byte[] Bytes(BuildContext ctx, IEnumerable<TileKey> cells)
     {
         var module = new NorthModule(NorthSites.All.ToArray());
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
-        foreach (var tile in module.Tiles(ctx))
+        foreach (var tile in cells)
         {
             var output = module.Build(ctx, tile, LodLevel.L0);
             foreach (var mesh in output.Meshes)

@@ -22,7 +22,7 @@ using static GdUnit4.Assertions;
 
 public sealed partial class CenterEastModuleTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryFacadeClaimDeclaresItsWindowGrids()
     {
         // 品学楼's own parts are the frame beam and the two link bridges (ribbon windows); the three research buildings declare
@@ -37,7 +37,7 @@ public sealed partial class CenterEastModuleTests
         AssertThat(envelope.All(l => l.Grids.SequenceEqual(layouts[l.Feature.Value])) && envelope.Count == layouts.Count).OverrideFailureMessage("the envelope view declares the same grids").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
         var world = World();
@@ -90,7 +90,7 @@ public sealed partial class CenterEastModuleTests
         AssertThat(Glass(LodLevel.L3).SetEquals(declared)).OverrideFailureMessage("coarse glass keeps the same numbers").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowTablePublishesWithTheCenterEastDeclarations()
     {
         // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map (every authored overlay)

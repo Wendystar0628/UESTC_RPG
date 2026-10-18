@@ -22,7 +22,7 @@ using static GdUnit4.Assertions;
 
 public sealed partial class CenterEastModuleTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PassageAndBridgesKeepTheirClearHeights()
     {
         var ctx = Context();
@@ -32,17 +32,17 @@ public sealed partial class CenterEastModuleTests
         AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider fills its foot material").IsTrue();
         var boxes = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y > 1f).ToArray();
         AssertThat(boxes.Length == PinxueFrameSite.Bridges(ctx.World).Count).OverrideFailureMessage($"the beam and the two bridges are lifted boxes, got {boxes.Length}").IsTrue();
-        AssertThat(boxes.All(b => b.At.M42 - b.Half.Y >= gate.BridgeBottom - 0.01f)).OverrideFailureMessage("nothing walls off the passage or the paths under the bridges").IsTrue();
+        AssertThat(boxes.All(b => b.At.M42 - b.Half.Y >= gate.BridgeBottom - TestTolerance.Position)).OverrideFailureMessage("nothing walls off the passage or the paths under the bridges").IsTrue();
         var frame = gate.F.P(gate.Axis, -gate.Depth * 0.5f);
-        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < 0.01f && b.Half.Y * 2 >= gate.BeamBottom - 0.01f
+        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < TestTolerance.Position && b.Half.Y * 2 >= gate.BeamBottom - TestTolerance.Position
             && Vector2.Distance(new(b.At.M41, b.At.M43), frame) < 25f);
         AssertThat(columns == P.ColumnX.Length).OverrideFailureMessage("the four columns reach the beam soffit").IsTrue();
         // The beam leaves the two-storey passage open between the columns.
         var beam = boxes.OrderByDescending(b => b.At.M42).First();
-        AssertThat(MathF.Abs(beam.At.M42 - beam.Half.Y - gate.BeamBottom) < 0.01f).OverrideFailureMessage("the beam soffit sits at two storeys").IsTrue();
+        AssertThat(MathF.Abs(beam.At.M42 - beam.Half.Y - gate.BeamBottom) < TestTolerance.Position).OverrideFailureMessage("the beam soffit sits at two storeys").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RampWallsStepWithTheGround()
     {
         var world = World();
@@ -52,21 +52,21 @@ public sealed partial class CenterEastModuleTests
         foreach (var (x, z0, z1) in walls)
         {
             var runs = PinxueForecourtSite.RampRuns(_ => 0f, frame, x, z0, z1);
-            AssertThat(runs.Count == 1 && MathF.Abs(runs[0].Top - P.SeatHeight) < 0.01f).OverrideFailureMessage("flat ground gives one continuous wall").IsTrue();
+            AssertThat(runs.Count == 1 && MathF.Abs(runs[0].Top - P.SeatHeight) < TestTolerance.Position).OverrideFailureMessage("flat ground gives one continuous wall").IsTrue();
         }
         // Controlled monotone ground: verify coverage and seat height against the registered wall span.
         const float slope = 0.05f;
         var wall = walls[0];
         float Ramp(Vector2 p) => (wall.Z1 - frame.Local(p).Y) * slope;
         var stepped = PinxueForecourtSite.RampRuns(Ramp, frame, wall.X, wall.Z0, wall.Z1);
-        AssertThat(stepped.Count > 1 && stepped.All(run => run.Z1 > run.Z0 && run.Z1 - run.Z0 <= P.RampWallSegment + 0.01f))
+        AssertThat(stepped.Count > 1 && stepped.All(run => run.Z1 > run.Z0 && run.Z1 - run.Z0 <= P.RampWallSegment + TestTolerance.Position))
             .OverrideFailureMessage("sloping ground has positive runs within the segment length").IsTrue();
-        AssertThat(MathF.Abs(stepped[0].Z0 - wall.Z0) < 0.01f && MathF.Abs(stepped[^1].Z1 - wall.Z1) < 0.01f)
+        AssertThat(MathF.Abs(stepped[0].Z0 - wall.Z0) < TestTolerance.Position && MathF.Abs(stepped[^1].Z1 - wall.Z1) < TestTolerance.Position)
             .OverrideFailureMessage("runs cover the registered wall span within a centimetre").IsTrue();
         foreach (var run in stepped)
         {
             var uphillGround = Ramp(frame.P(wall.X, run.Z0));
-            AssertThat(MathF.Abs(run.Top - uphillGround - P.SeatHeight) < 0.01f)
+            AssertThat(MathF.Abs(run.Top - uphillGround - P.SeatHeight) < TestTolerance.Position)
                 .OverrideFailureMessage("every seat top follows the uphill ground plus seat height").IsTrue();
         }
         for (var i = 1; i < stepped.Count; i++)
@@ -74,12 +74,12 @@ public sealed partial class CenterEastModuleTests
             AssertThat(MathF.Abs(stepped[i - 1].Z1 - stepped[i].Z0) < 0.01f)
                 .OverrideFailureMessage("neighbouring runs meet without a gap").IsTrue();
             var expectedDrop = (stepped[i].Z0 - stepped[i - 1].Z0) * slope;
-            AssertThat(MathF.Abs(stepped[i - 1].Top - stepped[i].Top - expectedDrop) < 0.01f)
+            AssertThat(MathF.Abs(stepped[i - 1].Top - stepped[i].Top - expectedDrop) < TestTolerance.Position)
                 .OverrideFailureMessage("each step follows the ground fall across its actual span").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FountainTiersMatchTheRegisteredWaterLevels()
     {
         var world = World();
@@ -88,21 +88,21 @@ public sealed partial class CenterEastModuleTests
         var tiers = PinxueForecourtSite.FountainTiers();
         AssertThat(registered.Length == tiers.Count).OverrideFailureMessage("one registered tier per built tier").IsTrue();
         var axis = props.Pair("axis");
-        AssertThat(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame(world).U) < 0.01f).OverrideFailureMessage("the registered long axis runs along the bar").IsTrue();
+        AssertThat(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame(world).U) < TestTolerance.Position).OverrideFailureMessage("the registered long axis runs along the bar").IsTrue();
         for (var i = 0; i < tiers.Count; i++)
         {
             var (half, coping, rim, water) = tiers[i];
-            AssertThat(MathF.Abs(registered[i].GetProperty("rimAbove").GetSingle() - rim) < 0.01f).OverrideFailureMessage($"tier {i} rim").IsTrue();
-            AssertThat(MathF.Abs(registered[i].GetProperty("waterAbove").GetSingle() - water) < 0.01f).OverrideFailureMessage($"tier {i} water").IsTrue();
-            AssertThat(Vector2.Distance(registered[i].Pair("half"), half) < 0.01f).OverrideFailureMessage($"tier {i} stone extent").IsTrue();
-            AssertThat(Vector2.Distance(registered[i].Pair("waterHalf"), half - new Vector2(coping)) < 0.01f).OverrideFailureMessage($"tier {i} water extent").IsTrue();
+            AssertThat(MathF.Abs(registered[i].GetProperty("rimAbove").GetSingle() - rim) < TestTolerance.Position).OverrideFailureMessage($"tier {i} rim").IsTrue();
+            AssertThat(MathF.Abs(registered[i].GetProperty("waterAbove").GetSingle() - water) < TestTolerance.Position).OverrideFailureMessage($"tier {i} water").IsTrue();
+            AssertThat(Vector2.Distance(registered[i].Pair("half"), half) < TestTolerance.Position).OverrideFailureMessage($"tier {i} stone extent").IsTrue();
+            AssertThat(Vector2.Distance(registered[i].Pair("waterHalf"), half - new Vector2(coping)) < TestTolerance.Position).OverrideFailureMessage($"tier {i} water extent").IsTrue();
             AssertThat(water < rim).OverrideFailureMessage($"tier {i} water stays below its rim").IsTrue();
             if (i > 0) AssertThat(half.X < tiers[i - 1].Half.X - tiers[i - 1].Coping && half.Y < tiers[i - 1].Half.Y - tiers[i - 1].Coping && rim > tiers[i - 1].Rim).OverrideFailureMessage($"tier {i} steps up inside the pool below").IsTrue();
         }
         AssertThat(tiers[^1].Rim <= 0.9f).OverrideFailureMessage("the cascade stays low, under 0.9 m").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MonumentsStandAtTheirPointsAndLeaveTheDoorsClear()
     {
         var world = World();
@@ -125,14 +125,14 @@ public sealed partial class CenterEastModuleTests
         AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every monument collider fills its foot material").IsTrue();
         var boxes = colliders.OfType<BoxCollider>().ToArray();
         foreach (var (at, top) in new[] { (StatueLawnSite.LinFrame(world).Origin, StatueLawnSite.LinPedestalTop), (maxwellAt, M.MaxwellPedestalTop), (stoneAt, M.Stone.Height - 0.08f) })
-            AssertThat(boxes.Any(b => Vector2.Distance(new(b.At.M41, b.At.M43), at) < 0.6f && MathF.Abs(b.At.M42 + b.Half.Y - top) < 0.02f)).OverrideFailureMessage($"the box at {at} reaches its top {top}").IsTrue();
+            AssertThat(boxes.Any(b => Vector2.Distance(new(b.At.M41, b.At.M43), at) < 0.6f && MathF.Abs(b.At.M42 + b.Half.Y - top) < TestTolerance.Layout)).OverrideFailureMessage($"the box at {at} reaches its top {top}").IsTrue();
         var doors = new[] { world.Feature(CenterEastIds.Layout.KeADoor1).Point(), world.Feature(CenterEastIds.Layout.KeBDoor1).Point(), new KeCSite().HallApex(new KeCSite().Footprints(world)).Apex };
         var clear = 2.5f + R.PortalDepth + 3 * R.TreadDepth;
         foreach (var b in boxes)
             AssertThat(doors.All(d => Vector2.Distance(new(b.At.M41, b.At.M43), d) > clear + b.Half.X + b.Half.Z)).OverrideFailureMessage("monuments keep 2.5 m clear outside the doors and their steps").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WenkeStandsTerracedWithOneShutDoorAndAClearForecourt()
     {
         var ctx = Context();

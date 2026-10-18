@@ -13,7 +13,7 @@ namespace Campus.Pipeline.Map.Tests;
 [TestSuite]
 public sealed class MapBakeTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void VectorDistancePreservesHolesAndBoundaryEncoding()
     {
         var polygon = new PolygonRings(Square(-8, -8, 8, 8).Outer, [Square(-2, -2, 2, 2).Outer]);
@@ -24,7 +24,7 @@ public sealed class MapBakeTests
         AssertThat(MapDistance.Encode(1)).IsEqual((byte)144);
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MultiplePolygonsAndNarrowRoadSurviveNorthUpRasterization()
     {
         var multi = WorldFeatureFixture.Create("fixture:building", "building",
@@ -39,7 +39,7 @@ public sealed class MapBakeTests
         AssertThat(product.Manifest.RowOrder).IsEqual("z-increasing");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MixedPoiUsesOnlyBuildingPartsAndLeavesCampusGroundUnfilled()
     {
         var grounds = new PolygonGeometry(Square(-14, -14, 14, 14));
@@ -61,7 +61,7 @@ public sealed class MapBakeTests
         AssertThat(MapBakeCodec.Serialize(product).SequenceEqual(MapBakeCodec.Serialize(MapBaker.Build(Input(World([reordered])))))).OverrideFailureMessage("Source part insertion order changed map bytes.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TextureRectsKeepCampusDetailSeparateFromDataAndPageCoverage()
     {
         var input = Input(World([]));
@@ -78,7 +78,7 @@ public sealed class MapBakeTests
         MapBakeCodec.Validate(product);
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MissingRegionalPolygonsReturnUnknownAndKnownRegionsClipAtTheCampus()
     {
         var input = Input(World([]));
@@ -91,7 +91,7 @@ public sealed class MapBakeTests
         AssertThat(known.Regions.RegionAt(float.NaN, 0)).IsNull();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void OutputIsIndependentOfFeatureDictionaryInsertionOrder()
     {
         var one = WorldFeatureFixture.Create("fixture:one", "water", new PolygonGeometry(Square(-8, -8, 0, 0)));
@@ -102,7 +102,7 @@ public sealed class MapBakeTests
         AssertThat(a.SequenceEqual(MapBakeCodec.Serialize(MapBakeCodec.Deserialize(a)))).OverrideFailureMessage("Map codec changed a valid product.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CodecRejectsTruncationOversizedCountsAndCorruptTextureBytes()
     {
         var product = MapBaker.Build(Input(World([])));
@@ -115,7 +115,7 @@ public sealed class MapBakeTests
         AssertThrown(() => MapBakeCodec.FromFiles(files)).IsInstanceOf<InvalidDataException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LabelPlacementNeedsRealMeasurementsAndProducesBothLanguages()
     {
         var source = Labels();

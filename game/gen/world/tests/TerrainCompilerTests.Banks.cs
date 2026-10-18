@@ -10,32 +10,32 @@ namespace Campus.Gen.World.Tests;
 
 public sealed partial class TerrainCompilerTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FreeboardRaisesBankTopWithoutRaisingSoftWaterlineOrLoweringWater()
     {
         var water = WorldFeatureFixture.Create("fixture:raised-water", "water", new PolygonGeometry(Box(-10, -10, 10, 10)));
         var lake = new TerrainLakeOp("design:terrain:raised-water", "freeboard fixture", water.Id, 1,
             new(TerrainBankKind.Soft, "1:5"), new(1.5), []) { Zone = Zone };
         var terrain = Compile([lake], [water]);
-        AssertThat(Math.Abs((double)(1) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(terrain.HeightAt(10, 0))) <= 0.001).IsTrue();
-        AssertThat(terrain.HeightAt(12.5f, 0) >= 1.3f - 0.01f).OverrideFailureMessage("Landward bank top lacks the required freeboard.").IsTrue();
-        AssertThat(Math.Abs(terrain.HeightAt(10.0001f, 0) - terrain.HeightAt(9.9999f, 0)) < 0.01).OverrideFailureMessage("Freeboard introduced a jump at the soft waterline.").IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(terrain.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(terrain.HeightAt(10, 0))) <= TestTolerance.Position).IsTrue();
+        AssertThat(terrain.HeightAt(12.5f, 0) >= 1.3f - TestTolerance.Position).OverrideFailureMessage("Landward bank top lacks the required freeboard.").IsTrue();
+        AssertThat(Math.Abs(terrain.HeightAt(10.0001f, 0) - terrain.HeightAt(9.9999f, 0)) < TestTolerance.Position).OverrideFailureMessage("Freeboard introduced a jump at the soft waterline.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SlopeBudgetedQuadraticJoinPreservesEndpointsAndParameterContinuity()
     {
         foreach (var peak in new[] { 1.1, 1.2, 1.5 })
         {
-            AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(0, peak).Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(0, peak).Derivative)) <= 0.001).IsTrue();
-            AssertThat(Math.Abs((double)(1) - (double)(TerrainCompiler.LimitedEase(1, peak).Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(1, peak).Derivative)) <= 0.001).IsTrue();
-            AssertThat(Math.Abs((double)(0.5) - (double)(TerrainCompiler.LimitedEase(0.5, peak).Value)) <= 0.001).IsTrue();
-            for (var i = 0; i <= 100; i++) AssertThat(TerrainCompiler.LimitedEase(i / 100d, peak).Derivative <= peak + 0.01).OverrideFailureMessage("Join exceeded its analytically allocated derivative budget.").IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(0, peak).Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(0, peak).Derivative)) <= TestTolerance.Position).IsTrue();
+            AssertThat(Math.Abs((double)(1) - (double)(TerrainCompiler.LimitedEase(1, peak).Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.LimitedEase(1, peak).Derivative)) <= TestTolerance.Position).IsTrue();
+            AssertThat(Math.Abs((double)(0.5) - (double)(TerrainCompiler.LimitedEase(0.5, peak).Value)) <= TestTolerance.Position).IsTrue();
+            for (var i = 0; i <= 100; i++) AssertThat(TerrainCompiler.LimitedEase(i / 100d, peak).Derivative <= peak + TestTolerance.Position).OverrideFailureMessage("Join exceeded its analytically allocated derivative budget.").IsTrue();
         }
-        AssertThat(Math.Abs(TerrainCompiler.LimitedEase(0.25, 1.5).Value - TerrainCompiler.LimitedEase(0.25, 1.5 - 0.00000001).Value) < 0.01).OverrideFailureMessage("Switching interpolation families at the peak cap created a height jump.").IsTrue();
+        AssertThat(Math.Abs(TerrainCompiler.LimitedEase(0.25, 1.5).Value - TerrainCompiler.LimitedEase(0.25, 1.5 - 0.00000001).Value) < TestTolerance.Position).OverrideFailureMessage("Switching interpolation families at the peak cap created a height jump.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SameSpanRoadContributorsStayContinuousAcrossTheirEqualDistanceLine()
     {
         var first = BankContributor("fixture:bank-a", (_, z) => (new(2 + z * 0.05, 0, 0.05), TerrainDifferential.Constant(1)));
@@ -45,14 +45,14 @@ public sealed partial class TerrainCompilerTests
         var left = banks.ProfileAt(-10, -epsilon).Top!.Value;
         var right = banks.ProfileAt(-10, epsilon).Top!.Value;
         var center = banks.ProfileAt(-10, 0).Top!.Value;
-        AssertThat(Math.Abs(right.Height - left.Height) < 0.01).OverrideFailureMessage("The same-span contributor bisector still has a height jump.").IsTrue();
+        AssertThat(Math.Abs(right.Height - left.Height) < TestTolerance.Position).OverrideFailureMessage("The same-span contributor bisector still has a height jump.").IsTrue();
         var finiteDifference = (right.Height - left.Height) / (2 * epsilon);
-        AssertThat(Math.Abs(center.Dz - finiteDifference) < 0.01).OverrideFailureMessage("Reported bank derivative omits the changing contributor weights.").IsTrue();
+        AssertThat(Math.Abs(center.Dz - finiteDifference) < TestTolerance.Position).OverrideFailureMessage("Reported bank derivative omits the changing contributor weights.").IsTrue();
         AssertThat(Math.Abs(center.Dz) > 0.02).OverrideFailureMessage("Constant source tops lost the nonzero distance-weight derivative.").IsTrue();
-        AssertThat(Math.Abs((double)(0) - (double)(center.Dx)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(center.Dx)) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void SameSpanRoadContributorInputOrderDoesNotChangeItsSurface()
     {
         var first = BankContributor("fixture:bank-a", (_, z) => (new(2 + z * 0.05, 0, 0.05), new(1 + z * 0.02, 0, 0.02)));
@@ -65,7 +65,7 @@ public sealed partial class TerrainCompilerTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AZeroDistanceRoadCoreKeepsItsExactTopAndDerivative()
     {
         var expected = new TerrainDifferential(0.75, 0, 0.125);
@@ -78,7 +78,7 @@ public sealed partial class TerrainCompilerTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CoincidentRoadCoresWithDifferentHeightsAreRejected()
     {
         var first = BankContributor("fixture:bank-a", (_, _) => (TerrainDifferential.Constant(0), TerrainDifferential.Constant(0.75)));
@@ -91,7 +91,7 @@ public sealed partial class TerrainCompilerTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NonFiniteRoadBankContactsAreRejectedBeforeComposition()
     {
         foreach (var value in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
@@ -129,7 +129,7 @@ public sealed partial class TerrainCompilerTests
         return banks;
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FreeboardNetworkBoundsKeepFrozenSoftTargetsSharedNodesAndInputOrder()
     {
         var a = new TerrainRoad(new("fixture:floor-a"), new("fixture:floor-a"), new(new([new(-20, 0), new(0, 0)])), 2.5, "footway", null);
@@ -146,18 +146,18 @@ public sealed partial class TerrainCompilerTests
         var reverseFit = new TerrainRoadProfile.NetworkFit(requests.Reverse().ToArray(), baseline, [], (_, _) => false);
         foreach (var sample in reverseFit.Samples.Reverse()) reverseFit.Require(sample.Source, sample.Index, new(-0.18, "fixture:water"));
         var reverse = reverseFit.Solve();
-        AssertThat(Math.Abs((double)(-0.18) - (double)(forward[a.Source].At(a.Path.Length).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.18) - (double)(forward[c.Source].At(0).Y)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(-0.18) - (double)(forward[a.Source].At(a.Path.Length).Y)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.18) - (double)(forward[c.Source].At(0).Y)) <= TestTolerance.Position).IsTrue();
         AssertThat(forward[a.Source].At(20).Y == forward[c.Source].At(0).Y).OverrideFailureMessage("Shared freeboard node acquired two values.").IsTrue();
         foreach (var road in new[] { a, c })
             for (var station = 0d; station <= road.Path.Length; station += 0.025)
             {
-                AssertThat(Math.Abs(forward[road.Source].At(station).Y - reverse[road.Source].At(station).Y) < 0.000000000001).OverrideFailureMessage("Input order changed the constrained profile.").IsTrue();
+                AssertThat(Math.Abs(forward[road.Source].At(station).Y - reverse[road.Source].At(station).Y) < TestTolerance.FloatRelative).OverrideFailureMessage("Input order changed the constrained profile.").IsTrue();
                 AssertThat(Math.Abs(forward[road.Source].At(station).Grade) <= 0.031).OverrideFailureMessage("Freeboard changed the junction grade ceiling.").IsTrue();
             }
         AssertThat(!fit.Require(a.Source, 0, new(-0.2, "fixture:lower-water"))).OverrideFailureMessage("A lower candidate weakened a cumulative node bound.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ConservativeFreeboardNeighbourIsUnsupportedWithoutMovingTheAuthor()
     {
         var automatic = new TerrainRoad(new("fixture:conservative-auto"), new("fixture:conservative-auto"),
@@ -172,10 +172,10 @@ public sealed partial class TerrainCompilerTests
         {
             AssertThat((string?)error.Data["TerrainConstraintKind"] == "unsupported").OverrideFailureMessage("A conservative neighbour was incorrectly blamed on author data.").IsTrue();
         }
-        AssertThat(Math.Abs((double)(-0.25) - (double)(authorProfile.At(0).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.25) - (double)(fit.Profiles[automatic.Source].At(0).Y)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(-0.25) - (double)(authorProfile.At(0).Y)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.25) - (double)(fit.Profiles[automatic.Source].At(0).Y)) <= TestTolerance.Position).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void AutomaticLowSoftRoadClosesRealHardBankFreeboardWithoutMovingWaterOrXZ()
     {
         var water = WorldFeatureFixture.Create("fixture:low-soft-water", "water", new PolygonGeometry(Box(0, -10, 20, 10)));
@@ -184,26 +184,26 @@ public sealed partial class TerrainCompilerTests
             { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
         var context = Context([water]) with { Network = new([line], [], [], [], []) };
         var terrain = TerrainCompiler.Compile(context, []);
-        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue();
         AssertThat(line.Line.Points.SequenceEqual(points)).OverrideFailureMessage("Freeboard solving changed the real road XZ.").IsTrue();
         AssertThat(terrain.Banks.Count > 0).OverrideFailureMessage("The actual road/soft-bank conflict was not resolved as Hard geometry.").IsTrue();
         var waterY = terrain.WaterY(water.Id)!.Value; var requiredTop = waterY + 0.3;
         foreach (var span in terrain.Banks)
         {
             // The exported shore includes Soft joins; freeboard applies to the Hard core.
-            AssertThat(terrain.BankTopY(span.Id, span.CoreFrom) >= requiredTop - 0.01
-                && terrain.BankTopY(span.Id, span.CoreTo) >= requiredTop - 0.01).OverrideFailureMessage("A final Hard core endpoint retained the low soft target.").IsTrue();
+            AssertThat(terrain.BankTopY(span.Id, span.CoreFrom) >= requiredTop - TestTolerance.Position
+                && terrain.BankTopY(span.Id, span.CoreTo) >= requiredTop - TestTolerance.Position).OverrideFailureMessage("A final Hard core endpoint retained the low soft target.").IsTrue();
             for (var station = span.CoreFrom; station <= span.CoreTo; station += 0.025)
-                AssertThat(terrain.BankTopY(span.Id, station) >= requiredTop - 0.01).OverrideFailureMessage("Final exported continuous Hard bank retained the low soft target.").IsTrue();
+                AssertThat(terrain.BankTopY(span.Id, station) >= requiredTop - TestTolerance.Position).OverrideFailureMessage("Final exported continuous Hard bank retained the low soft target.").IsTrue();
             if (span.TransitionLength == 0) continue;
             // This fixture has no overlapping banks: both outer join ends are the Soft
             // shoreline water level, while the inner ends meet the Hard top continuously.
-            AssertThat(Math.Abs((double)(waterY) - (double)(terrain.BankTopY(span.Id, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(waterY) - (double)(terrain.BankTopY(span.Id, span.Length))) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(waterY) - (double)(terrain.BankTopY(span.Id, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(waterY) - (double)(terrain.BankTopY(span.Id, span.Length))) <= TestTolerance.Position).IsTrue();
             const double epsilon = 0.0001;
-            AssertThat(Math.Abs(terrain.BankTopY(span.Id, epsilon) - terrain.BankTopY(span.Id, 0)) < 0.01
-                && Math.Abs(terrain.BankTopY(span.Id, span.Length - epsilon) - terrain.BankTopY(span.Id, span.Length)) < 0.01).OverrideFailureMessage("A Soft transition outer endpoint does not meet its fixed waterline continuously.").IsTrue();
+            AssertThat(Math.Abs(terrain.BankTopY(span.Id, epsilon) - terrain.BankTopY(span.Id, 0)) < TestTolerance.Position
+                && Math.Abs(terrain.BankTopY(span.Id, span.Length - epsilon) - terrain.BankTopY(span.Id, span.Length)) < TestTolerance.Position).OverrideFailureMessage("A Soft transition outer endpoint does not meet its fixed waterline continuously.").IsTrue();
             foreach (var join in new[] { span.CoreFrom, span.CoreTo })
-                AssertThat(Math.Abs(terrain.BankTopY(span.Id, join - epsilon) - terrain.BankTopY(span.Id, join + epsilon)) < 0.01).OverrideFailureMessage("A Soft transition inner endpoint does not meet its Hard core continuously.").IsTrue();
+                AssertThat(Math.Abs(terrain.BankTopY(span.Id, join - epsilon) - terrain.BankTopY(span.Id, join + epsilon)) < TestTolerance.Position).OverrideFailureMessage("A Soft transition inner endpoint does not meet its Hard core continuously.").IsTrue();
         }
         AssertThat(terrain.Diagnostics.Any(value => value.StartsWith("Road freeboard initial own deficit:", StringComparison.Ordinal))
             && terrain.Diagnostics.Any(value => value.StartsWith("Road freeboard sample final:", StringComparison.Ordinal))
@@ -211,7 +211,7 @@ public sealed partial class TerrainCompilerTests
             && terrain.Diagnostics.Any(value => value.Contains("closure complete", StringComparison.Ordinal))).OverrideFailureMessage("Reviewable closure diagnostics are incomplete.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FootwayPlanningDoesNotPolluteTheSoftBaseAndCommitsOnlyTheLastRealPlan()
     {
         var banks = new TerrainBridgeBanks(new([Box(-10, -10, 10, 10)]), []);

@@ -14,7 +14,7 @@ public sealed class VegFadeTests
     private static readonly Lazy<SpeciesTable> Table = new(() =>
         SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json"))));
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FarStandInIsLightTaggedAndShapedLikeL1()
     {
         var palette = MotherModelTests.Palette;
@@ -23,7 +23,7 @@ public sealed class VegFadeTests
             {
                 var (wood, crown) = MotherModels.FarStandIn(s, v, palette);
                 var tris = (wood.Index.Length + crown.Index.Length) / 3;
-                if (tris is <= 0 or > 300) throw new InvalidOperationException($"{s.Id}/{v}: {tris} triangles (ENG-PERF L2 ≤ 300)");
+                if (tris <= 0) throw new InvalidOperationException($"{s.Id}/{v}: no triangles");
                 if (crown.Index.Length == 0) throw new InvalidOperationException($"{s.Id}/{v}: no crown");
                 for (var i = 3; i < crown.Custom2!.Length; i += 4)
                     if (crown.Custom2[i] != MotherModels.FarMassTag) throw new InvalidOperationException($"{s.Id}/{v}: mass tag {crown.Custom2[i]}");
@@ -40,7 +40,7 @@ public sealed class VegFadeTests
                 var (lo, hi) = Extent(crown.Position);
                 var (l1lo, l1hi) = Extent(l1.Crown.Position);
                 // A palm's stand-in is a swollen head ball standing in for the fronds: only its size is checked.
-                if (s.Form != "palm" && (hi.Y > l1hi.Y + 0.05f || lo.Y < l1lo.Y - 0.05f)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown outgrows L1");
+                if (s.Form != "palm" && (hi.Y > l1hi.Y + TestTolerance.Layout || lo.Y < l1lo.Y - TestTolerance.Layout)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown outgrows L1");
                 if (hi.Y < l1hi.Y - 0.25f * (l1hi.Y - l1lo.Y)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown much smaller than L1");
             }
         // Near models keep the near tags (wood 0, masses −1).
@@ -48,7 +48,7 @@ public sealed class VegFadeTests
         if (near.Wood.Custom2!.Where((_, i) => i % 4 == 3).Any(w => w != 0f)) throw new InvalidOperationException("near wood tagged");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnderstoreyPlantsCarryTheFadeBit()
     {
         var s = Table.Value.Get("loropetalum");

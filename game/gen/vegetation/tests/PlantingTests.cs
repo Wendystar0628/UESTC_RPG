@@ -28,7 +28,7 @@ public sealed class PlantingTests
         return (PavementTests.World(false), species, rules);
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheCampusIsPlantedAndTheAvenueHasOneRowEachSide()
     {
         var (world, species, rules) = Data.Value;
@@ -52,11 +52,9 @@ public sealed class PlantingTests
         if (a.Trees.Select(t => t.Key).Distinct().Count() != a.Trees.Count) throw new InvalidOperationException("duplicate keys");
         if (a.Trees.Any(t => t.Custom.X is < 0f or >= 1f || t.Custom.Z is < 0f or > 1f || !(t.Custom.W > 0f)))
             throw new InvalidOperationException("INSTANCE_CUSTOM out of range");
-        Console.WriteLine($"planting: {a.Trees.Count} trees; avenue {avenue.Count}, band {band.Count}, OSM {a.Count(PlantSource.OsmTree)}, groves {a.Count(PlantSource.Grove)}; "
-            + string.Join(", ", a.Trees.GroupBy(t => t.Species.Id).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} {g.Count()}")));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EditingADistantGreenParcelKeepsLocalTrees()
     {
         var original = PavementTests.PlantFixture(PavementTests.Fixture()).BeforeGivingWay();
@@ -77,7 +75,7 @@ public sealed class PlantingTests
             PavementTests.F(east) + ",-70],[" + PavementTests.F(east) + ",70],[-95,70]],\"holes\":[]}},\"reason\":\"Fixture: a distant green parcel.\"}";
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void GinkgosStayWhereTheyAreRegistered()
     {
         // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
@@ -88,12 +86,12 @@ public sealed class PlantingTests
             .Select(a => (a.Radius, Features: world.Features.Values.Where(f => f.Name == a.Name).ToList())).ToList();
         foreach (var t in layout.Trees.Where(t => t.Species.Id == "ginkgo" && t.Source == PlantSource.Grove))
         {
-            var near = allowed.Any(area => area.Features.Any(f => Distance(f.Bounds, t.Position) <= area.Radius + 0.05f));
+            var near = allowed.Any(area => area.Features.Any(f => Distance(f.Bounds, t.Position) <= area.Radius + TestTolerance.Layout));
             if (!near) throw new InvalidOperationException($"grove ginkgo {t.Key} at ({t.Position.X:F0}, {t.Position.Z:F0})");
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TrunksKeepOffBuildingsWaterAndRoads()
     {
         var (world, species, rules) = Data.Value;
@@ -117,7 +115,7 @@ public sealed class PlantingTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TreesLandOnTheTerrainAndAvoidSteepGround()
     {
         // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band.
@@ -127,14 +125,14 @@ public sealed class PlantingTests
         var flat = Planting.Build(world, species, rules, 1u);
         foreach (var t in layout.Trees)
         {
-            if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > 0.01f) throw new InvalidOperationException($"{t.Key} floats");
+            if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > TestTolerance.Position) throw new InvalidOperationException($"{t.Key} floats");
             if (terrain.FactsAt(t.Position.X, t.Position.Z).Grade > Planting.MaxGrade) throw new InvalidOperationException($"{t.Key} on a steep slope");
         }
         if (flat.Trees.Count(t => TiltedTerrain.Steep(t.Position.X)) == 0) throw new InvalidOperationException("the steep band had no trees to remove");
         if (layout.Trees.Count >= flat.Trees.Count) throw new InvalidOperationException("the steep band removed nothing");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TrunkCollidersFollowTheTrees()
     {
         var (world, species, rules) = Data.Value;
@@ -163,7 +161,7 @@ public sealed class PlantingTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LeavesFallUnderTheCrownsAndCarpetTheAvenue()
     {
         var (world, species, rules) = Data.Value;

@@ -21,7 +21,7 @@ public sealed class GroundStadiumTests
 {
     private static readonly GroundSection Section = GroundSection.Default;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UntaggedStadiumAndSportsCentreOutlinesHaveNoCourt()
     {
         var world = TestWorld.Of(
@@ -42,7 +42,7 @@ public sealed class GroundStadiumTests
         AssertThat(SurfaceAt(world, -185f, 165f) == GroundSurface.Court).OverrideFailureMessage("A tagged court is still a court.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RunningTrackIsARingAroundItsInfield()
     {
         var oval = Oval(0f, 0f, 40f, 30f);   // 60 m wide, 140 m long: the line along the track's inner edge
@@ -51,8 +51,8 @@ public sealed class GroundStadiumTests
         var tracks = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Track).ToArray();
         AssertThat(tracks.Length == 1 && tracks[0].Rings is { Length: 2 }).OverrideFailureMessage("A running track polygon is one ring: an outer and an inner outline.").IsTrue();
         var layout = GroundLayout.Of(world);
-        AssertThat(Math.Abs((double)(-SportGround.TrackWidth * 0.5) - (double)(layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f))) <= 0.05).OverrideFailureMessage($"the middle of the ring is half a track width from both edges: expected {-SportGround.TrackWidth * 0.5}, got {layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f)}.").IsTrue();
-        AssertThat(layout.SignedDistance(SurfaceKind.Track, new(30f, 0f), 50f) is > -0.01f and < 0.01f).OverrideFailureMessage("The traced line is the inner edge of the ring.").IsTrue();
+        AssertThat(Math.Abs((double)(-SportGround.TrackWidth * 0.5) - (double)(layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f))) <= TestTolerance.Layout).OverrideFailureMessage($"the middle of the ring is half a track width from both edges: expected {-SportGround.TrackWidth * 0.5}, got {layout.SignedDistance(SurfaceKind.Track, new(30f + SportGround.TrackWidth * 0.5f, 0f), 50f)}.").IsTrue();
+        AssertThat(MathF.Abs(layout.SignedDistance(SurfaceKind.Track, new(30f, 0f), 50f)) < TestTolerance.Position).OverrideFailureMessage("The traced line is the inner edge of the ring.").IsTrue();
 
         // Along the straight (x = 30 is the inner edge): the ring lies outside it, the infield inside is lawn.
         AssertThat(SurfaceAt(world, 34f, 0f) == GroundSurface.Track).OverrideFailureMessage("4 m outside the inner edge is track.").IsTrue();
@@ -65,7 +65,7 @@ public sealed class GroundStadiumTests
         AssertThat(IsLawn(SurfaceAt(world, 0f, 64f)) && IsLawn(SurfaceAt(world, 0f, 85f))).OverrideFailureMessage("Infield and outside of the end are lawn.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TrackTaggedByLeisureAloneAndTrackLinesAreBands()
     {
         // leisure=track without any sport tag is a track too.
@@ -78,7 +78,7 @@ public sealed class GroundStadiumTests
             new PolylineGeometry(new Polyline([.. points, points[0]])), """{"kind":"sport","sport":"running"}""", FeatureSource.Osm);
         var shape = GroundSources.Read(TestWorld.Of([line])).Shapes.Single(s => s.Kind == SurfaceKind.Track);
         AssertThat(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1]).OverrideFailureMessage("A closed track line stays closed.").IsTrue();
-        AssertThat(Math.Abs((double)(SportGround.TrackWidth * 0.5) - (double)(shape.HalfWidth)) <= 0.01).OverrideFailureMessage($"track line half width: expected {SportGround.TrackWidth * 0.5}, got {shape.HalfWidth}.").IsTrue();
+        AssertThat(Math.Abs((double)(SportGround.TrackWidth * 0.5) - (double)(shape.HalfWidth)) <= TestTolerance.Position).OverrideFailureMessage($"track line half width: expected {SportGround.TrackWidth * 0.5}, got {shape.HalfWidth}.").IsTrue();
 
         // A concave outline cannot be offset outward: it falls back to a band centred on the outline, never a filled area.
         var dent = new PolygonRings([new(0f, 0f), new(60f, 0f), new(60f, 40f), new(40f, 40f), new(40f, 20f), new(20f, 20f), new(20f, 40f), new(0f, 40f)]);
@@ -87,7 +87,7 @@ public sealed class GroundStadiumTests
         AssertThat(fallback.Line is not null && fallback.Rings is null).OverrideFailureMessage("A concave track polygon becomes a band along its outline.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FootballPitchIsTurfWithWhiteLines()
     {
         var pitch = Pitch(0f, 0f, 108f, 70f, 8f);
@@ -138,7 +138,7 @@ public sealed class GroundStadiumTests
                 AssertThat(Math.Abs((double)(Section.PavingY + Section.DecalLift) - (double)(mesh.Position[3 * v + 1])) <= 0.001).OverrideFailureMessage($"pitch line height above flat ground: expected {Section.PavingY + Section.DecalLift}, got {mesh.Position[3 * v + 1]}.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PitchesThatAreNotFootballRectanglesGetNoLines()
     {
         var tiny = Pitch(0f, 0f, 24f, 12f, 0f);                       // narrower than a pitch worth marking
@@ -154,7 +154,7 @@ public sealed class GroundStadiumTests
         AssertThat(QuadsNear(GroundLayout.Of(world), 100f, 100f, 400f).Count == 0).OverrideFailureMessage("Only rectangles of football proportions are marked.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TrackOutsidePitchAndLinesStayClear()
     {
         // A stadium as the campus has it: an outline with no sport tag, the track line, and a pitch inside the track.
@@ -176,7 +176,7 @@ public sealed class GroundStadiumTests
         AssertThat(IsLawn(SurfaceAt(world, 60f, 60f))).OverrideFailureMessage("Inside the stadium outline, outside the track, the lawn shows.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void RealCampusStadiumIsARingAroundTurfOnLawn()
     {
         var world = RealMapFixture.Load().World;

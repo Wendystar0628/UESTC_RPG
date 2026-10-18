@@ -16,7 +16,7 @@ using static Campus.Gen.Zones.South.Tests.SouthTestSupport;
 [TestSuite]
 public sealed class SouthWindowTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowLayoutsDeclareEveryFacadeClaimWithItsGrids()
     {
         var module = new SouthModule();
@@ -28,7 +28,7 @@ public sealed class SouthWindowTests
         AssertThat(layouts.Values.SelectMany(grids => grids).All(grid => grid.Columns > 0 && grid.Rows > 0)).OverrideFailureMessage("declared grids have cells").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryDeclaredGridIsValidOnTheRealMap()
     {
         // The map as the kernel loads it: every authored overlay, not only the south one. One invalid grid withholds the whole table.
@@ -47,7 +47,7 @@ public sealed class SouthWindowTests
         AssertThat(EastLake.EastLakeSite.Water(FakeWorld.Enveloped(world)).Outer.SequenceEqual(lake.Outer) && EastLake.EastLakeSite.Water(world).Outer.SequenceEqual(lake.Outer)).OverrideFailureMessage("the east lake's water ring comes from its own part in both views").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowTablePublishesWithTheSouthDeclarations()
     {
         // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map with the zone's
@@ -78,7 +78,7 @@ public sealed class SouthWindowTests
         public int GetHashCode(ClaimedWindowLayout l) => l.Feature.GetHashCode();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void GuardHouseAndPorticoGlassIsNumberedOutward()
     {
         var world = RealMapFixture.Load().World;
@@ -101,7 +101,7 @@ public sealed class SouthWindowTests
         AssertThat(glass.Where(o => o.Row == 1).All(o => o.Origin.Y > 0.45f + SouthTune.Xuanbang.DoorSpring)).OverrideFailureMessage("the windows sit above the doors").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
         var world = RealMapFixture.Load().World;

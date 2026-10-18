@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Interior.Tests;
@@ -11,7 +12,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class InteriorPlanTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeGridIgnoresRingStartWindingAndCollinearVertices()
     {
         var ring = Rectangle();
@@ -28,7 +29,7 @@ public sealed class InteriorPlanTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeGridKeepsCourtyardNormalsPointingIntoTheBuilding()
     {
         Vector2[] hole = [new(10, 4), new(20, 4), new(20, 9), new(10, 9)];
@@ -43,7 +44,7 @@ public sealed class InteriorPlanTests
             { new(0, 0), new(10, 10), new(0, 10), new(10, 0) }))).IsInstanceOf<ArgumentException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void GoldWingHasExplicitOpenRoomsAndNoBakedMovingLeaves()
     {
         InteriorPlan plan = InteriorPlanGenerator.Generate(Request());
@@ -62,7 +63,7 @@ public sealed class InteriorPlanTests
         AssertThat(InteriorPlanCollision.BuildStorey(plan, 2).All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("A collider lacks a foot material.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void StairFlightsMeetLandingsAndUpperFloorsHaveRealHoles()
     {
         InteriorPlan plan = InteriorPlanGenerator.Generate(Request());
@@ -83,7 +84,7 @@ public sealed class InteriorPlanTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void IntermediateStoreyStairEntryStaysClearWhileTerminalStoreyIsGuarded()
     {
         InteriorPlanRequest request = Request();
@@ -119,7 +120,7 @@ public sealed class InteriorPlanTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlanHashCoversOpeningsSeedsAndParametersAndIgnoresInputOrdering()
     {
         InteriorPlanRequest request = Request();
@@ -137,7 +138,7 @@ public sealed class InteriorPlanTests
         { Options = request.Options with { DoorHeight = 2.2f } }).PlanHash).OverrideFailureMessage("Door geometry is absent from the hash.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RotatedWingAndReservedZoneRangeRemainUsable()
     {
         InteriorPlanRequest request = Request();
@@ -151,7 +152,7 @@ public sealed class InteriorPlanTests
         AssertThat(plan.Stairs.All(s => s.LowerZone >= 1000 && s.UpperZone >= 1000)).OverrideFailureMessage("Stair links use local IDs.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InvalidFootprintsFloorsAndUnmatchedSelectionsFailExplicitly()
     {
         InteriorPlanRequest request = Request();
@@ -165,7 +166,7 @@ public sealed class InteriorPlanTests
         AssertThrown(() => InteriorPlanGenerator.Generate(request with { Entrances = [entry] })).IsInstanceOf<ArgumentException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void LocaleDoesNotChangeThePlanHashOrDoorKeys()
     {
         CultureInfo previous = CultureInfo.CurrentCulture;
@@ -196,8 +197,8 @@ public sealed class InteriorPlanTests
 
     private static Vector2[] Rectangle() => [new(0, 0), new(36, 0), new(36, 13.6f), new(0, 13.6f)];
     private static bool InAxisAlignedRing(IReadOnlyList<Vector2> ring, Vector2 p) =>
-        p.X > ring.Min(v => v.X) + 0.001f && p.X < ring.Max(v => v.X) - 0.001f &&
-        p.Y > ring.Min(v => v.Y) + 0.001f && p.Y < ring.Max(v => v.Y) - 0.001f;
+        p.X > ring.Min(v => v.X) + TestTolerance.Position && p.X < ring.Max(v => v.X) - TestTolerance.Position &&
+        p.Y > ring.Min(v => v.Y) + TestTolerance.Position && p.Y < ring.Max(v => v.Y) - TestTolerance.Position;
     private static bool Covers(WallCollider wall, Vector3 p)
     {
         if (p.Y <= wall.Y0 || p.Y >= wall.Y1) return false;

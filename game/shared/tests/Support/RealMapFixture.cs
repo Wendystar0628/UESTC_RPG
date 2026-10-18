@@ -32,7 +32,13 @@ internal static class RealMapFixture
     public static Dictionary<string, string> ReadTextFiles(MapId? map = null) =>
         ReadFiles(map).ToDictionary(pair => pair.Key, pair => Encoding.UTF8.GetString(pair.Value.Span), StringComparer.Ordinal);
 
-    public static WorldModelLoadResult Load(MapId? map = null, WorldLoadOptions? options = null)
+    private static readonly Lazy<WorldModelLoadResult> DefaultLoaded = new(() => LoadFresh(null, null));
+
+    /// <summary>Default map with default options is loaded once per process and shared read-only; anything else loads fresh.</summary>
+    public static WorldModelLoadResult Load(MapId? map = null, WorldLoadOptions? options = null) =>
+        map is null && options is null ? DefaultLoaded.Value : LoadFresh(map, options);
+
+    private static WorldModelLoadResult LoadFresh(MapId? map, WorldLoadOptions? options)
     {
         var entry = Entry(map);
         var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new DiskWorldInputSource(ResourceDirectory(entry.DataRoot)));

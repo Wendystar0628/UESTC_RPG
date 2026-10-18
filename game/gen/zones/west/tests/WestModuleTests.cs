@@ -1,4 +1,5 @@
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -23,7 +24,7 @@ public sealed class WestModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
     {
         var ctx = Context();
@@ -64,7 +65,7 @@ public sealed class WestModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OverlayCorrectsStoreysAndRegistersTheA10Plaza()
     {
         var world = World();
@@ -84,7 +85,7 @@ public sealed class WestModuleTests
         AssertThat(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry).OverrideFailureMessage("the A10 plaza is registered as paving").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClaimsCoverEveryPartOfSix()
     {
         var world = World();
@@ -96,7 +97,7 @@ public sealed class WestModuleTests
         AssertThat(SixSite.Plan(world, S.EntityC, S.PartC).Holes.Count == 1).OverrideFailureMessage("C keeps its courtyard").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void BlocksStandAtTheirHeightsWithATallestA()
     {
         var world = World();
@@ -116,7 +117,7 @@ public sealed class WestModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -148,34 +149,17 @@ public sealed class WestModuleTests
         }
     }
 
-    [TestCase]
-    public void HeaviestCellsStayInsideTheDeclaredBudget()
-    {
-        var ctx = Context();
-        var module = new WestModule();
-        foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
-        {
-            var size = TileGrid.Edge(lod);
-            var cells = module.ItemsFor(ctx, lod).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
-            foreach (var (x, z) in cells)
-            {
-                var output = module.Build(ctx, new(x, z), lod);
-                var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({x}, {z}) has {triangles} triangles, budget {limit}").IsTrue();
-                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({x}, {z}) material count").IsTrue();
-            }
-        }
-    }
-
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void BuildIsDeterministic()
     {
-        var a = Bytes(Context());
-        var b = Bytes(Context());
+        var ctx = Context();
+        var cells = ZoneTestCells.Heaviest(new WestModule(WestSites.All.ToArray()), ctx);
+        var a = Bytes(ctx, cells);
+        var b = Bytes(Context(), cells);
         AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EastDoorIsOpenAndTheOtherEntrancesAreShut()
     {
         var ctx = Context();
@@ -187,7 +171,7 @@ public sealed class WestModuleTests
         for (var d = -S.Recess - 1f; d <= 0.5f; d += 0.25f)
         {
             var p = SixSite.EastDoor(ctx.World) + outward * d;
-            AssertThat(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + 0.05f))).OverrideFailureMessage($"the east doorway is open {d:0.00} m along its axis").IsTrue();
+            AssertThat(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + TestTolerance.Layout))).OverrideFailureMessage($"the east doorway is open {d:0.00} m along its axis").IsTrue();
         }
         // 六号's shut doors (19b's entrance boxes and portal add their own DoorClosed fronts elsewhere in the zone).
         var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed && (w.A.X + w.B.X) * 0.5f < -583f).ToArray();
@@ -195,10 +179,10 @@ public sealed class WestModuleTests
         foreach (var door in S.ShutDoors(ctx.World))
             AssertThat(shut.Any(w => Vector2.Distance((w.A + w.B) * 0.5f, door) < S.Recess + 0.6f)).OverrideFailureMessage($"shut door {door} is DoorClosed").IsTrue();
         // The motto stone is one unclimbable box.
-        AssertThat(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Prop && MathF.Abs(b.Half.Y * 2 - M.Height) < 0.01f)).OverrideFailureMessage("the motto stone collides as a 2 m box").IsTrue();
+        AssertThat(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Prop && MathF.Abs(b.Half.Y * 2 - M.Height) < TestTolerance.Position)).OverrideFailureMessage("the motto stone collides as a 2 m box").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryFacadeClaimDeclaresItsWindowGrids()
     {
         var world = World();
@@ -212,7 +196,7 @@ public sealed class WestModuleTests
         AssertThat(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0)).OverrideFailureMessage("every grid has cells").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
         var world = World();
@@ -248,7 +232,7 @@ public sealed class WestModuleTests
         AssertThat(ids.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({ids.Count} vs {declared.Count})").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowTablePublishesWithTheWestDeclarations()
     {
         var world = World();
@@ -265,7 +249,7 @@ public sealed class WestModuleTests
         AssertThat(metadata.Facades.Count > 0).OverrideFailureMessage("the west zone declares facade runs").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
@@ -305,7 +289,7 @@ public sealed class WestModuleTests
         };
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OtherWestBuildingsGoToWp14WithTheirFamilies()
     {
         var world = World();
@@ -321,7 +305,7 @@ public sealed class WestModuleTests
             AssertThat(world.Features[new(id)].Facade?.Value == "research.stoneFrame").OverrideFailureMessage($"{id} takes the stone-and-glass preset").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FourGlassBoxesSitOnTheirStoneLinesAndAreShut()
     {
         var world = World();
@@ -345,7 +329,7 @@ public sealed class WestModuleTests
             AssertThat(FourSite.SeatLine(world, arc).All(p => Vector2.Distance(p, F4.LawnCentre(world)) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre(world))))).OverrideFailureMessage("the seat wall is inset into the lawn").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InnovationShaftsBridgeWingAndBar()
     {
         var world = World();
@@ -360,13 +344,13 @@ public sealed class WestModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FourFanLawnIsAShallowDish()
     {
         var world = World();
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
         var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == WestIds.FourFanLawn);
-        AssertThat(dish.Height > 0 && dish.Shape is TerrainCircle { Radius: > 0 } c && Vector2.Distance(c.Center, F4.LawnCentre(world)) < 0.01f).OverrideFailureMessage("the fan lawn is a shallow circular dish centred on the authored layout").IsTrue();
+        AssertThat(dish.Height > 0 && dish.Shape is TerrainCircle { Radius: > 0 } c && Vector2.Distance(c.Center, F4.LawnCentre(world)) < TestTolerance.Position).OverrideFailureMessage("the fan lawn is a shallow circular dish centred on the authored layout").IsTrue();
     }
 
     // ---- helpers ----
@@ -374,12 +358,12 @@ public sealed class WestModuleTests
     private static bool Near(Vector2 a, Vector2 b, Vector2 p, float radius) =>
         PlanGeometry.SegmentDistanceSquared(p, a, b) < radius * radius;
 
-    private static byte[] Bytes(BuildContext ctx)
+    private static byte[] Bytes(BuildContext ctx, IEnumerable<TileKey> cells)
     {
         var module = new WestModule(WestSites.All.ToArray());
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
-        foreach (var tile in module.Tiles(ctx))
+        foreach (var tile in cells)
         {
             var output = module.Build(ctx, tile, LodLevel.L0);
             foreach (var mesh in output.Meshes)

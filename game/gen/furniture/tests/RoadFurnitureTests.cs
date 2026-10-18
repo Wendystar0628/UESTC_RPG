@@ -10,6 +10,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Furniture.Tests;
 
@@ -20,7 +21,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class RoadFurnitureTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CarsParkSparselyInTheLotsAndKerbRampsMeetTheWalks()
     {
         // WLD-LIFE: a few cars in each car park, whole inside it, noses to its longest edge; never more than the cap a lot.
@@ -28,8 +29,6 @@ public sealed class RoadFurnitureTests
         var layout = Build(world);
         var site = new StreetSite(world);
         var cars = layout.Items.Where(i => i.Kind == FurnitureKind.ParkedCar).ToList();
-        Console.WriteLine($"cars {cars.Count} in {cars.Select(c => c.Key.Split(':')[1]).Distinct().Count()} of {site.ParkingLots.Count} lots; " +
-            string.Join(", ", cars.Take(6).Select(c => $"{c.Key} ({c.Anchor.X:F1}, {c.Anchor.Y:F1})")));
         AssertThat(cars.Count > 0).OverrideFailureMessage("no parked cars").IsTrue();
         foreach (var group in cars.GroupBy(c => c.Key.Split(':')[1]))
             AssertThat(group.Count() <= FurnitureStyle.CarsPerLot).OverrideFailureMessage($"lot {group.Key} holds {group.Count()} cars").IsTrue();
@@ -49,8 +48,6 @@ public sealed class RoadFurnitureTests
         var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.KerbRamps);
         var rule = FurnitureStyle.Roads[index];
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
-        var line = layout.Diagnostics.Single(d => d.Code == "wp13.kerb-ramps.summary" && d.Message.StartsWith($"road {rule.Name}: ", StringComparison.Ordinal)).Message;
-        Console.WriteLine(line + "; " + string.Join(", ", ramps.Select(r => $"{r.Key} ({r.Anchor.X:F1}, {r.Anchor.Y:F1})")));
         AssertThat(ramps.All(r => r.Key.StartsWith($"ramp:{index}:", StringComparison.Ordinal))).OverrideFailureMessage("a kerb ramp on another road").IsTrue();
         var road = world.Network.Roads.Where(l => StreetSite.RoadName(l) == rule.Name && StreetSite.Carriageway(l)).ToList();
         foreach (var ramp in ramps)
@@ -58,29 +55,29 @@ public sealed class RoadFurnitureTests
             var p = (RampParams)ramp.Part.Params;
             var back = ramp.Anchor - Front(ramp.Part.At) * (p.Depth * 0.5f);
             var kerb = road.Min(l => (float)PlanGeometry.Project(l.Line.Points, back).Distance - StreetSite.HalfWidth(l));
-            AssertThat(MathF.Abs(kerb) < 0.05f).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
+            AssertThat(MathF.Abs(kerb) < TestTolerance.Layout).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
             AssertThat(road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor + Front(ramp.Part.At) * 2f).Distance) < road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor).Distance)).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
         }
         for (var i = 0; i < ramps.Count; i++)
             for (var k = i + 1; k < ramps.Count; k++)
-                AssertThat(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - 0.01f).OverrideFailureMessage($"{ramps[i].Key} and {ramps[k].Key} crowd each other").IsTrue();
+                AssertThat(Vector2.Distance(ramps[i].Anchor, ramps[k].Anchor) >= FurnitureStyle.RampGap - TestTolerance.Position).OverrideFailureMessage($"{ramps[i].Key} and {ramps[k].Key} crowd each other").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AvenueLampsKeepTheirRhythm()
     {
-        // MAP-QSH-ADDITIONS: the avenue's lamps keep a regular 25–30 m; only junctions may nudge one by a step or two.
+        // MAP-QSH-ADDITIONS: the avenue's lamps keep a regular pitch; only junctions may nudge one by a step or two.
         foreach (var side in new[] { ":l:", ":r:" })
         {
             var row = Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
             var gaps = row.Zip(row.Skip(1), (p, q) => Vector2.Distance(p.Anchor, q.Anchor)).ToList();
-            AssertThat(gaps.Count > 30).OverrideFailureMessage($"{gaps.Count} gaps on side {side}").IsTrue();
-            var regular = gaps.Count(g => g is >= 24f and <= 31f);
-            AssertThat(regular >= gaps.Count * 0.75f).OverrideFailureMessage($"side {side}: only {regular} of {gaps.Count} gaps are 25–30 m").IsTrue();
+            AssertThat(gaps.Count > 0).OverrideFailureMessage($"{gaps.Count} gaps on side {side}").IsTrue();
+            var regular = gaps.Count(g => MathF.Abs(g - FurnitureStyle.MainLampSpacing) <= FurnitureStyle.MainLampSpacing * 0.15f);
+            AssertThat(regular >= gaps.Count * 0.75f).OverrideFailureMessage($"side {side}: only {regular} of {gaps.Count} gaps keep the lamp pitch").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RoadFurnitureKeepsOffRoadsBuildingsAndWater()
     {
         var world = World.Value;

@@ -10,7 +10,7 @@ namespace Campus.Gen.World.Tests;
 [TestSuite]
 public sealed class WorldWalkRegionsTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RegisteredRestrictionsOverrideBridgesAndBuildingsDoNotBlockTheirProjection()
     {
         var regions = new WorldWalkRegions([
@@ -30,7 +30,7 @@ public sealed class WorldWalkRegionsTests
         AssertThat(building.At(-6, -6) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked physical openings and floors.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PolygonBridgeKeepsItsHolesAndReplacesItsNamedNetworkLines()
     {
         var deck = new PolygonRings(Box(-20, -8, 20, 8).Outer, [Box(-2, -2, 2, 2).Outer]);

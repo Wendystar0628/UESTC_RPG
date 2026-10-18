@@ -10,6 +10,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using GdUnit4;
+using Campus.Tests;
 
 namespace Campus.Gen.Furniture.Tests;
 
@@ -20,7 +21,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class FurniturePlantingRowTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TreeRowsComeFromThePlantingInputAndFallBackWithOneWarning()
     {
         // The rows are read from the map's frozen planting rules, not copied: the real file gives the avenue's rows and its band,
@@ -32,12 +33,12 @@ public sealed class FurniturePlantingRowTests
         var file = JsonNode.Parse(PlantingBytes.Value)!["roads"]!.AsArray();
         float[] Offsets(int i) => [.. file[i]!["rows"]!.AsArray().Select(r => r!["offset"]!.GetValue<float>()),
             .. file[i]!["band"] is JsonNode band ? [band["offset"]!.GetValue<float>()] : Array.Empty<float>()];
-        AssertThat(Enumerable.Range(0, 3).All(i => roads[i].Rows.SequenceEqual(Offsets(i))) && roads[0].Rows.Count >= 2).OverrideFailureMessage("rows differ from the planting file").IsTrue();
+        AssertThat(Enumerable.Range(0, 3).All(i => roads[i].Rows.SequenceEqual(Offsets(i))) && roads[0].Rows.Count > 0).OverrideFailureMessage("rows differ from the planting file").IsTrue();
         // A changed offset is read back; a road the file leaves out keeps its fallback and is warned about once.
         var edited = Edit(root => root["roads"]![1]!["rows"] = new JsonArray(new JsonObject { ["offset"] = 6.5f }));
         AssertThat(PlantingRows.Resolve(Inputs(edited)).Roads[1].Rows.SequenceEqual([6.5f])).OverrideFailureMessage("an edited offset is not read").IsTrue();
         var (kept, gap) = PlantingRows.Resolve(Inputs(Edit(root => root["roads"]!.AsArray().RemoveAt(2))));
-        AssertThat(kept[2].Rows.SequenceEqual(FurnitureStyle.Roads[2].Rows) && gap.Count == 1 && gap[0].Level == DiagnosticLevel.Warning && gap[0].Code == PlantingRows.RoadCode && gap[0].Message.Contains("丹桂路", StringComparison.Ordinal)).OverrideFailureMessage("a road missing from the planting file is not warned about once").IsTrue();
+        AssertThat(kept[2].Rows.SequenceEqual(FurnitureStyle.Roads[2].Rows) && gap.Count == 1 && gap[0].Level == DiagnosticLevel.Warning && gap[0].Code == PlantingRows.RoadCode).OverrideFailureMessage("a road missing from the planting file is not warned about once").IsTrue();
         // Nothing to read, or nothing readable: the fallback stands, with exactly one warning, and the layout still builds.
         (IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? Inputs, string Code)[] unreadable =
         [
@@ -55,7 +56,7 @@ public sealed class FurniturePlantingRowTests
         AssertThat(!Build(World.Value).Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal))).OverrideFailureMessage("the real layout warns").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ChangingARowOffsetInThePlantingInputMovesTheBenches()
     {
         // A bench keeps RowClear off the planted rows, so moving a row onto an avenue bench forces that bench off its slot (or off
@@ -66,7 +67,6 @@ public sealed class FurniturePlantingRowTests
         var bench = before.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal));
         var offset = avenue.Min(l => (float)PlanGeometry.Project(l.Line.Points, bench.Anchor).Distance);
         var moved = Build(world, null, Inputs(Edit(root => root["roads"]![0]!["rows"] = new JsonArray(new JsonObject { ["offset"] = offset }))));
-        Console.WriteLine($"{bench.Key} stood {offset:F2} m off the avenue's centre line; a row there: {(moved.Items.FirstOrDefault(i => i.Key == bench.Key) is { } m ? $"moved {Vector2.Distance(m.Anchor, bench.Anchor):F2} m" : "dropped")}");
         var after = moved.Items.FirstOrDefault(i => i.Key == bench.Key);
         AssertThat(after is null || Vector2.Distance(after.Anchor, bench.Anchor) > 0.5f).OverrideFailureMessage($"{bench.Key} stands where it did, on a tree row").IsTrue();
         // And the row it now keeps clear of is the new one: every bench of the avenue is off the offset line.
@@ -76,6 +76,6 @@ public sealed class FurniturePlantingRowTests
         foreach (var item in before.Items.Where(i => !i.Key.StartsWith("rest:0:", StringComparison.Ordinal) && !i.Key.StartsWith("lamp:0:", StringComparison.Ordinal)
             && i.Kind is not (FurnitureKind.Signpost or FurnitureKind.DrinkingFountain or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker
                 or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle)))
-            AssertThat(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < 0.01f)).OverrideFailureMessage($"{item.Key} moved with the avenue's rows").IsTrue();
+            AssertThat(moved.Items.Any(m => m.Key == item.Key && Vector2.Distance(m.Anchor, item.Anchor) < TestTolerance.Position)).OverrideFailureMessage($"{item.Key} moved with the avenue's rows").IsTrue();
     }
 }

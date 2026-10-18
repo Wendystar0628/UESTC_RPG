@@ -18,7 +18,7 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class WindowNumberingTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowDeclarationsMatchTheGlass()
     {
         var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4));
@@ -39,16 +39,16 @@ public sealed class WindowNumberingTests
                     var id = set.Blocks[0].Base + o.Row * plan.TotalColumns + plan.Facades[fi].ColumnStart + o.Bay;
                     var d = decls.Single(x => x.Id == id);
                     var outward = new Vector3(skin.Normal[e].X, 0, skin.Normal[e].Y);
-                    AssertThat(Vector3.Distance(Vector3.Cross(d.Right, d.Up), outward) < 0.01f).OverrideFailureMessage("Expected: " + ("Right × Up points out of the facade")).IsTrue();
+                    AssertThat(Vector3.Distance(Vector3.Cross(d.Right, d.Up), outward) < TestTolerance.Position).OverrideFailureMessage("Expected: " + ("Right × Up points out of the facade")).IsTrue();
                     var mid = skin.Points[e] + skin.Dir[e] * ((o.U0 + o.U1) * 0.5f) - skin.Normal[e] * plan.Reveal;
-                    AssertThat(Vector3.Distance(d.Center, new Vector3(mid.X, (o.Y0 + o.Y1) * 0.5f, mid.Y)) < 0.01f).OverrideFailureMessage("Expected: " + ("centred on the opening's glass")).IsTrue();
-                    AssertThat(MathF.Abs(d.Width - (o.U1 - o.U0)) < 0.01f && d.BaseId == set.Blocks[0].Base && d.TotalColumns == plan.TotalColumns).OverrideFailureMessage("Expected: " + ("size and numbering as the glass")).IsTrue();
+                    AssertThat(Vector3.Distance(d.Center, new Vector3(mid.X, (o.Y0 + o.Y1) * 0.5f, mid.Y)) < TestTolerance.Position).OverrideFailureMessage("Expected: " + ("centred on the opening's glass")).IsTrue();
+                    AssertThat(MathF.Abs(d.Width - (o.U1 - o.U0)) < TestTolerance.Position && d.BaseId == set.Blocks[0].Base && d.TotalColumns == plan.TotalColumns).OverrideFailureMessage("Expected: " + ("size and numbering as the glass")).IsTrue();
                 }
         }
         AssertThat(new BuildingsModule().Build(ctx, plan.Tile(LodLevel.L1), LodLevel.L1).LooseWindows.Count == 0).OverrideFailureMessage("Expected: " + ("declared with the L0 cell only")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WindowNumbersFollowFeatureOrder()
     {
         var world = World(
@@ -61,7 +61,7 @@ public sealed class WindowNumberingTests
 
     // ---------------------------------------------------------------- contract-29: the map-wide numbering provider
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheProviderKeepsTheGenericNumbersWhenNothingIsClaimed()
     {
         var world = World(
@@ -103,7 +103,7 @@ public sealed class WindowNumberingTests
         AssertThrown(() => module.DescribeWindows(Ctx(world, 4u, other))).IsInstanceOf<InvalidOperationException>();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AClaimedLayoutReplacesItsWholeFeature()
     {
         // t:a has two building parts; its zone pack claims the facade and numbers it as one 7 × 3 shell, sorted before t:b.
@@ -137,7 +137,7 @@ public sealed class WindowNumberingTests
         AssertThat(module.Build(ctx, BuildingSet.For(world, 1u).Plans[0].Tile(LodLevel.L0), LodLevel.L0).Meshes.Count == 0).OverrideFailureMessage("Expected: " + ("WP-14 builds nothing of t:a")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AnEmptyLayoutDeclaresNoWindowsInAnyOrder()
     {
         var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3),
@@ -152,7 +152,7 @@ public sealed class WindowNumberingTests
         AssertThat(module.PrepareWindowNumbering(ctx, [Layout("t:a", ("main", 4, 3), ("tower", 2, 5))]).Fingerprint != snapshot.Fingerprint).OverrideFailureMessage("Expected: " + ("an omitted empty declaration is a different input")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InvalidLayoutsPublishNoTable()
     {
         var parts = new[] { new WorldFeaturePart("osm:way:1", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), 10.5f, 3) };
@@ -175,7 +175,7 @@ public sealed class WindowNumberingTests
         AssertThat(module.PrepareWindowNumbering(ctx, [Layout("t:a"), Layout("t:b", ("osm:way:1", 3, 3))]).WindowCount == 9).OverrideFailureMessage("Expected: " + ("once its holder is claimed too")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheTableStopsAtTheOverrideCapacity()
     {
         var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"service\"}", source: FeatureSource.Osm, height: 3.5f, storeys: 1), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3));

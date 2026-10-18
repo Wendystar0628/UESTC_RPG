@@ -19,7 +19,7 @@ public sealed class GroundTests
 {
     private static readonly GroundSection Section = GroundSection.Default;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EmptyWorldIsFlatLawnInBroadTones()
     {
         var ctx = TestWorld.Context(TestWorld.Empty());
@@ -35,7 +35,7 @@ public sealed class GroundTests
                 for (var v = 0; v < mesh.Position.Length / 3; v++)
                 {
                     if (OnTileBorder(mesh.Position[3 * v], mesh.Position[3 * v + 2])) continue;   // border skirts hang below
-                    AssertThat(Math.Abs((double)(Section.GrassY) - (double)(mesh.Position[3 * v + 1])) <= 0.01).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {mesh.Position[3 * v + 1]}.").IsTrue();
+                    AssertThat(Math.Abs((double)(Section.GrassY) - (double)(mesh.Position[3 * v + 1])) <= TestTolerance.Position).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {mesh.Position[3 * v + 1]}.").IsTrue();
                 }
             }
             AssertWinding(output);
@@ -44,7 +44,7 @@ public sealed class GroundTests
         AssertThat(triangles < 4 * 12000).OverrideFailureMessage($"Lawn tone contours stay cheap, got {triangles} triangles.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void LawnTonesDoNotSpeckle()
     {
         // Every tone patch is broad: sample a 1 m grid and require each sample to share its tone with a neighbour.
@@ -62,7 +62,7 @@ public sealed class GroundTests
         AssertThat(isolated == 0).OverrideFailureMessage($"{isolated} isolated tone samples.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void StreetHasKerbPavingMarkingsAndValidGeometry()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
@@ -85,7 +85,7 @@ public sealed class GroundTests
         AssertWinding(output);
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void KerbFaceSpansRoadToChamfer()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
@@ -108,7 +108,7 @@ public sealed class GroundTests
         AssertThat(found).OverrideFailureMessage("No kerb face found along the road edge.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void BuildsAreDeterministic()
     {
         var a = new GroundModule().Build(TestWorld.Context(TestWorld.Street()), new TileKey(0, 0), LodLevel.L0);
@@ -122,7 +122,7 @@ public sealed class GroundTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TileSeamsShareVertices()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
@@ -143,7 +143,7 @@ public sealed class GroundTests
                 " left near: " + string.Join(" ", a.Where(q => MathF.Abs(q.Item3 - p.Item3) < 0.02f).Select(q => $"({q.Item1:R},{q.Item2:R},{q.Item3:R})"))).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HeightFieldMatchesSurfaces()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
@@ -153,13 +153,13 @@ public sealed class GroundTests
         AssertThat(collider.HeightsCm.Length == GroundCollision.Samples * GroundCollision.Samples).OverrideFailureMessage("Height field must be 65 x 65.").IsTrue();
         AssertThat(collider.FootMatHalfMeter?.Length == GroundCollision.FootCells * GroundCollision.FootCells).OverrideFailureMessage("Footstep grid must be 128 x 128.").IsTrue();
         AssertThat(collider.FootMatHalfMeter!.All(b => b != 0)).OverrideFailureMessage("No Auto footstep material on the ground.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 10f, 0f))) <= .02).OverrideFailureMessage($"road height: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 10f, 0f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.PavingY) - (double)(GroundCollision.SampleHeight(collider, 10f, 4.5f))) <= .02).OverrideFailureMessage($"sidewalk height: expected {Section.PavingY}, got {GroundCollision.SampleHeight(collider, 10f, 4.5f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 10f, 20f))) <= .02).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 10f, 20f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 10f, 0f))) <= TestTolerance.Position).OverrideFailureMessage($"road height: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 10f, 0f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.PavingY) - (double)(GroundCollision.SampleHeight(collider, 10f, 4.5f))) <= TestTolerance.Position).OverrideFailureMessage($"sidewalk height: expected {Section.PavingY}, got {GroundCollision.SampleHeight(collider, 10f, 4.5f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 10f, 20f))) <= TestTolerance.Position).OverrideFailureMessage($"lawn height: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 10f, 20f)}.").IsTrue();
     }
 
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void AllLevelsBuild()
     {
         var ctx = TestWorld.Context(TestWorld.Street());
@@ -175,7 +175,7 @@ public sealed class GroundTests
         AssertThat(whole.Meshes.Sum(m => m.Index.Length / 3) < 20000).OverrideFailureMessage("L4 is a light whole-map surface.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MasksFollowSurfaces()
     {
         var ctx = TestWorld.Context(TestWorld.Street(), 128f);
@@ -195,7 +195,7 @@ public sealed class GroundTests
         AssertThat(masks.Read(MaskChannel.GinkgoLeaves, 3, 4) == 200).OverrideFailureMessage("Channel write round-trips.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void GroundFollowsDesignedTerrain()
     {
         var terrain = Mound();
@@ -216,7 +216,7 @@ public sealed class GroundTests
                 if (OnTileBorder(m.Position[3 * v], m.Position[3 * v + 2])) continue;
                 float x = m.Position[3 * v], y = m.Position[3 * v + 1], z = m.Position[3 * v + 2];
                 if (z < 12f) continue;   // away from the flattened road verge
-                AssertThat(Math.Abs((double)(terrain.HeightAt(x, z) + Section.GrassY) - (double)(y)) <= 0.03).OverrideFailureMessage($"lawn at ({x}, {z}): expected {terrain.HeightAt(x, z) + Section.GrassY}, got {y}.").IsTrue();
+                AssertThat(Math.Abs((double)(terrain.HeightAt(x, z) + Section.GrassY) - (double)(y)) <= TestTolerance.Layout).OverrideFailureMessage($"lawn at ({x}, {z}): expected {terrain.HeightAt(x, z) + Section.GrassY}, got {y}.").IsTrue();
                 checkedLawn++;
             }
         }
@@ -225,8 +225,8 @@ public sealed class GroundTests
         AssertThat(faceted > 0).OverrideFailureMessage("The steep flank of the mound (steeper than 1:6) shades with faceted normals.").IsTrue();
         AssertWinding(output);
         var collider = module.Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
-        AssertThat(Math.Abs((double)(terrain.HeightAt(50f, 50f) + Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 50f, 50f))) <= 0.02).OverrideFailureMessage($"collision on the mound: expected {terrain.HeightAt(50f, 50f) + Section.GrassY}, got {GroundCollision.SampleHeight(collider, 50f, 50f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 50f, 0f))) <= 0.02).OverrideFailureMessage($"road stays at its flattened grade: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 50f, 0f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(terrain.HeightAt(50f, 50f) + Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 50f, 50f))) <= TestTolerance.Position).OverrideFailureMessage($"collision on the mound: expected {terrain.HeightAt(50f, 50f) + Section.GrassY}, got {GroundCollision.SampleHeight(collider, 50f, 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 50f, 0f))) <= TestTolerance.Position).OverrideFailureMessage($"road stays at its flattened grade: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 50f, 0f)}.").IsTrue();
     }
 
     private static FormulaTerrain Mound() => new(
@@ -237,7 +237,7 @@ public sealed class GroundTests
         },
         (x, z) => new TerrainFacts(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity));
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PaletteColumnsMatchTheRegistry()
     {
         var palette = RepositoryFixture.FilePath("game", "style", "palette");
@@ -258,17 +258,17 @@ public sealed class GroundTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void JunctionCornersAreRounded()
     {
         var ctx = TestWorld.Context(TestWorld.Junction());
         var collider = new GroundModule().Collide(ctx, new TileKey(0, 0)).OfType<HeightFieldCollider>().Single();
         // (4, 4) lies in the corner between the two kerb lines (x, z > 3): asphalt with a fillet, raised lawn without.
-        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 4f, 4f))) <= 0.011).OverrideFailureMessage($"fillet corner: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 4f, 4f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 12f, 12f))) <= 0.011).OverrideFailureMessage($"lawn beyond the fillet: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 12f, 12f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 4f, 4f))) <= TestTolerance.Position).OverrideFailureMessage($"fillet corner: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 4f, 4f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 12f, 12f))) <= TestTolerance.Position).OverrideFailureMessage($"lawn beyond the fillet: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 12f, 12f)}.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SurfacesAreWatertight()
     {
         // Every edge inside the tile is shared by exactly two triangles: no T-junctions, no pinholes between leaves,

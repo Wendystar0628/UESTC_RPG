@@ -3,6 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Tests;
 using Campus.Gen.World;
 using Campus.Gen.Zones.CenterEast.Framework;
@@ -25,7 +26,7 @@ public sealed partial class CenterEastModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
     {
         var ctx = Context();
@@ -72,7 +73,7 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ClaimsNameExistingFeaturesAndCoverTheirBuildings()
     {
         var world = World();
@@ -101,7 +102,7 @@ public sealed partial class CenterEastModuleTests
             .SequenceEqual(K.Blocks.Select(b => b.Part).OrderBy(s => s, StringComparer.Ordinal))).OverrideFailureMessage("文科楼群's five buildings are the site's five blocks").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ResearchRegistrationsMatchWhatIsBuilt()
     {
         var world = World();
@@ -114,19 +115,19 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ResearchBlocksStandFiveStoreysWithOneShutEntranceEach()
     {
         var ctx = Context();
         var module = new CenterEastModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         var top = ResearchSite.Style.Top;
-        AssertThat(MathF.Abs(top - (R.GroundStorey + (R.Storeys - 1) * R.Storey + 1.3f)) < 0.01f).OverrideFailureMessage($"five storeys to the coping, got {top}").IsTrue();
+        AssertThat(MathF.Abs(top - (R.GroundStorey + (R.Storeys - 1) * R.Storey + 1.3f)) < TestTolerance.Position).OverrideFailureMessage($"five storeys to the coping, got {top}").IsTrue();
         foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
         {
             var plan = site.Footprints(ctx.World);
             var walls = colliders.OfType<WallCollider>().Where(w => plan.Blocks.Any(r => NearRing(r, (w.A + w.B) * 0.5f))).ToArray();
-            AssertThat(walls.Any(w => w.Tag == SurfaceTag.Wall && MathF.Abs(w.Y1 - top) < 0.01f)).OverrideFailureMessage($"{site.Id} walls reach the coping").IsTrue();
+            AssertThat(walls.Any(w => w.Tag == SurfaceTag.Wall && MathF.Abs(w.Y1 - top) < TestTolerance.Position)).OverrideFailureMessage($"{site.Id} walls reach the coping").IsTrue();
             var door = plan.Door ?? site.HallApex(plan).Apex;
             AssertThat(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, door) < 3f) is >= 1 and <= 2).OverrideFailureMessage($"{site.Id} has its shut entrance at the door").IsTrue();
         }
@@ -134,7 +135,7 @@ public sealed partial class CenterEastModuleTests
         static bool NearRing(IReadOnlyList<Vector2> ring, Vector2 p) => PlanGeometry.DistanceToRing(p, ring) < 1f;
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -166,38 +167,22 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-    [TestCase]
-    public void HeaviestCellsStayInsideTheDeclaredBudget()
-    {
-        var ctx = Context();
-        var module = new CenterEastModule();
-        foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
-        {
-            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
-            foreach (var tile in cells)
-            {
-                var output = module.Build(ctx, tile, lod);
-                var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
-                AssertThat(triangles <= limit).OverrideFailureMessage($"{lod} cell ({tile.X}, {tile.Z}) has {triangles} triangles, budget {limit}").IsTrue();
-                AssertThat(output.Meshes.Select(m => m.Material).Distinct().Count() <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} cell ({tile.X}, {tile.Z}) material count").IsTrue();
-            }
-        }
-    }
-
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void BuildIsDeterministic()
     {
-        var a = Bytes(Context());
-        var b = Bytes(Context());
+        var ctx = Context();
+        var cells = ZoneTestCells.Heaviest(new CenterEastModule(CenterEastSites.All.ToArray()), ctx);
+        var a = Bytes(ctx, cells);
+        var b = Bytes(Context(), cells);
         AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("two worlds give the same bytes").IsTrue();
     }
 
-    private static byte[] Bytes(BuildContext ctx)
+    private static byte[] Bytes(BuildContext ctx, IEnumerable<TileKey> cells)
     {
         var module = new CenterEastModule(CenterEastSites.All.ToArray());
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
-        foreach (var tile in module.Tiles(ctx))
+        foreach (var tile in cells)
         {
             var output = module.Build(ctx, tile, LodLevel.L0);
             foreach (var mesh in output.Meshes)

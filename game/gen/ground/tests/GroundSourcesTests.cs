@@ -17,7 +17,7 @@ public sealed class GroundSourcesTests
 {
     private const string Building = """{"kind":"building"}""";
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FaceInputQueriesActualPositionAndKeepsAmbiguousSourcesUnresolved()
     {
         const string plaza = """{"kind":"road","roadType":"pedestrian"}""";
@@ -35,7 +35,7 @@ public sealed class GroundSourcesTests
         AssertThat(input.SourcesAt(new(35, 5)).Single().PartSourceId == "source:far").OverrideFailureMessage("Queries must use the current face position.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void WalkFaceInputRetainsTheOriginalPolylineWithoutInventingPhase()
     {
         Vector2[] points = [new(0, 20), new(10, 20), new(10, 30)];
@@ -48,7 +48,7 @@ public sealed class GroundSourcesTests
         AssertThat(source.PartSourceId is null).OverrideFailureMessage("A network-independent feature must not invent a part identity.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PlazaTopAndKerbAreSeparateContentClassesWithoutFakeShaderDifferences()
     {
         var context = new GroundSourceContext([], GroundSection.Default, 0f);
@@ -66,7 +66,7 @@ public sealed class GroundSourcesTests
             meshes.All(mesh => mesh.Material.Spec.SurfacePattern is null && mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb)))).OverrideFailureMessage("Content classes split before batching; colour/Fx and GPU material sharing stay unchanged until T03 opts in.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MultiPartParentKeepsEveryPolygonAndItsHoles()
     {
         // One entity, two source parts: a block around a courtyard and a separate annex. The parent's aggregate geometry
@@ -80,10 +80,10 @@ public sealed class GroundSourcesTests
         AssertThat(shapes.Select(s => s.Rings!.Length).Order().SequenceEqual([1, 2])).OverrideFailureMessage("The courtyard must stay a hole of its own footprint.").IsTrue();
 
         var layout = GroundLayout.Of(world);
-        AssertThat(Math.Abs((double)(6.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f))) <= 0.01).OverrideFailureMessage($"courtyard centre is outside, 6 m from the walls: expected {6.0}, got {layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(-7.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f))) <= 0.01).OverrideFailureMessage($"inside the block wall: expected {-7.0}, got {layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(-5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f))) <= 0.01).OverrideFailureMessage($"inside the annex: expected {-5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f))) <= 0.01).OverrideFailureMessage($"gap between the parts stays open: expected {5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(6.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"courtyard centre is outside, 6 m from the walls: expected {6.0}, got {layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(-7.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"inside the block wall: expected {-7.0}, got {layout.SignedDistance(SurfaceKind.Building, new(-13f, 0f), 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(-5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"inside the annex: expected {-5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(35f, 0f), 50f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(5.0) - (double)(layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f))) <= TestTolerance.Position).OverrideFailureMessage($"gap between the parts stays open: expected {5.0}, got {layout.SignedDistance(SurfaceKind.Building, new(25f, 0f), 50f)}.").IsTrue();
 
         var masks = GroundMasks.Build(TestWorld.Context(world, 128f));
         byte Shelter(float x, float z) { var (px, pz) = masks.Pixel(new(x, z)); return masks.Read(MaskChannel.Shelter, px, pz); }
@@ -97,7 +97,7 @@ public sealed class GroundSourcesTests
         foreach (var mesh in tile.Meshes) mesh.ValidateVertexData();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MixedPoiParentIsClassifiedPartByPart()
     {
         // A poi entity (a park) that owns building parts, a car park, a track and a pool: the parent's kind says nothing
@@ -131,7 +131,7 @@ public sealed class GroundSourcesTests
         AssertThat(layout.SignedDistance(SurfaceKind.Building, new(0f, 0f), 20f) > 0f).OverrideFailureMessage("The poi part itself is no footprint.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void SingleSourceFeaturesReadTheSameWithOrWithoutParts()
     {
         foreach (var legacy in new[] { TestWorld.Street(), TestWorld.Junction() })
@@ -161,7 +161,7 @@ public sealed class GroundSourcesTests
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void UnsupportedGroundGeometryIsRejected()
     {
         var odd = new Unsupported();
@@ -192,7 +192,7 @@ public sealed class GroundSourcesTests
         AssertThat(GroundSources.Read(green).Shapes.Count == 0).OverrideFailureMessage("Green parts leave the lawn untouched.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void AnchorOnlyEntitiesHaveNoGroundExtent()
     {
         // Entities known only by their anchor (no footprint in the data) arrive as point geometry, with or without a
@@ -207,7 +207,7 @@ public sealed class GroundSourcesTests
         AssertThat(GroundSources.Read(world).Shapes.Count == 0).OverrideFailureMessage("Point geometry yields no ground shape.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Smoke)]
     public void RealCampusIsReadPartByPart()
     {
         var world = RealMapFixture.Load().World;

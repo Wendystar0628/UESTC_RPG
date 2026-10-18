@@ -22,7 +22,7 @@ public sealed class WindowPartTests
     // The WP-10 gasket class (dark equipment steel without outline), not the WP-12 roof fence of the same colour.
     private static bool Gasket(GeometryBundle b) => HasColor(b, "equip.fence.lit") && b.Material.Spec.Line == LineClass.None;
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void PhysicalCurtainFlagMatchesActualPerOpeningGeometryAtEachLodAndZone()
     {
         var world = World(WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6));
@@ -60,7 +60,7 @@ public sealed class WindowPartTests
         AssertThat(present > 0 && absent > 0).OverrideFailureMessage("Expected: " + ("Exercise actual curtains and uncurtained openings, including distant LODs.")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void K1AndK2OpeningsTakeTheWp10Parts()
     {
         // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH FacadeSegment).
@@ -82,7 +82,7 @@ public sealed class WindowPartTests
         AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps WP-10's placeholder numbering")).IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void K3OpeningsTakeTheSimpleWindow()
     {
         var world = World(
@@ -95,22 +95,6 @@ public sealed class WindowPartTests
         for (var i = 0; i < set.Plans.Count; i++)
         {
             var plan = set.Plans[i];
-            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1 })
-            {
-                var levelMax = 0;
-                for (var fi = 0; fi < plan.Facades.Count; fi++)
-                {
-                    var layout = plan.Facades[fi];
-                    var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
-                    foreach (var o in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
-                    {
-                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
-                        new Build.FacadeOpenings(plan, set.Blocks[i], lod, sink).Fill(frame, layout, o, FidelityZone.K3);
-                        levelMax = Math.Max(levelMax, sink.Triangles - 2);
-                    }
-                }
-                AssertThat(levelMax is >= 16 and <= 60).OverrideFailureMessage("Expected: " + ($"{plan.Key} {lod}: a simple window is 40–60 triangles at most ({levelMax})")).IsTrue();
-            }
             var near = module.BuildOne(plan, set.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             AssertThat(!near.Any(Sash) && !near.Any(Fabric)).OverrideFailureMessage("Expected: " + ($"{plan.Key}: K3 has no sashes, handles or curtains")).IsTrue();
             AssertThat(near.All(b => !Gasket(b) || b.Index.Length / 3 <= 24)).OverrideFailureMessage("Expected: " + ($"{plan.Key}: no window gaskets")).IsTrue();

@@ -25,7 +25,7 @@ public sealed class VegetationInputsTests
         return (root, PavementTests.World(false));
     });
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InputsComeOnlyFromTheBoundary()
     {
         // No species table in the global inputs is an error naming the key; no planting file means a map without trees.
@@ -40,7 +40,7 @@ public sealed class VegetationInputsTests
             throw new InvalidOperationException("a map without planting rules got trees");
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TheModuleOwnsTheCanopyChannelsAndOverwritesThem()
     {
         var ctx = Context(withPlanting: true);

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -18,7 +19,6 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class GroundDiagonalTests
 {
-    private const float MatchToleranceM = 0.002f;   // the native probe's own tolerance
     private static readonly TileKey NativeTile = new(-3, 2);
 
     // The probe's sample points (tile-local metres) and the heights the real Jolt body returned for them
@@ -51,7 +51,7 @@ public sealed class GroundDiagonalTests
         return u >= v ? H(0, 0) + u * (H(1, 0) - H(0, 0)) + v * (H(1, 1) - H(1, 0)) : H(0, 0) + v * (H(0, 1) - H(0, 0)) + u * (H(1, 1) - H(0, 1));
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CollisionSamplerMatchesNativeJoltRays()
     {
         var cm = NativeField();
@@ -62,12 +62,12 @@ public sealed class GroundDiagonalTests
             var worldX = NativeTile.X * TileGrid.BaseEdge + x;
             var worldZ = NativeTile.Z * TileGrid.BaseEdge + z;
             var sampled = GroundCollision.SampleHeight(collider, worldX, worldZ);
-            AssertThat(MathF.Abs(sampled - jolt) <= MatchToleranceM).OverrideFailureMessage($"({x}, {z}): sampler {sampled}, native Jolt {jolt}.").IsTrue();
+            AssertThat(MathF.Abs(sampled - jolt) <= TestTolerance.Position).OverrideFailureMessage($"({x}, {z}): sampler {sampled}, native Jolt {jolt}.").IsTrue();
             AssertThat(MathF.Abs(MainDiagonal(cm, worldX - NativeTile.X * TileGrid.BaseEdge, worldZ - NativeTile.Z * TileGrid.BaseEdge) - jolt) > 0.2f).OverrideFailureMessage($"({x}, {z}): the fixture must tell the diagonals apart.").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainDrapingFollowsTheSameDiagonal()
     {
         var ctx = TestWorld.Context(TestWorld.Empty());
@@ -76,25 +76,25 @@ public sealed class GroundDiagonalTests
         foreach (var (x, z, jolt) in Native)
         {
             var draped = grid.At(extent.X0 + x, extent.Z0 + z);
-            AssertThat(MathF.Abs(draped - jolt) <= MatchToleranceM).OverrideFailureMessage($"({x}, {z}): draped {draped}, native Jolt {jolt}.").IsTrue();
+            AssertThat(MathF.Abs(draped - jolt) <= TestTolerance.Position).OverrideFailureMessage($"({x}, {z}): draped {draped}, native Jolt {jolt}.").IsTrue();
         }
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CellSplitIsTheAntiDiagonal()
     {
         // Corner heights 0, 1, 2, 4 at 00, 10, 01, 11: on the diagonal 10-01 the two triangles agree, off it they differ from the main-diagonal split.
-        AssertThat(Math.Abs((double)(1.5) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f))) <= 0.01).OverrideFailureMessage($"diagonal midpoint is the mean of corners 10 and 01: expected {1.5}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(1.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f))) <= 0.01).OverrideFailureMessage($"corner 10: expected {1.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f))) <= 0.01).OverrideFailureMessage($"corner 01: expected {2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(4.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f))) <= 0.01).OverrideFailureMessage($"corner 11: expected {4.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(0.25 * 1.0 + 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f))) <= 0.01).OverrideFailureMessage($"inside 00-10-01: expected {0.25 * 1.0 + 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f)}.").IsTrue();
-        AssertThat(Math.Abs((double)(4.0 - 0.25 * 3.0 - 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f))) <= 0.01).OverrideFailureMessage($"inside 10-11-01: expected {4.0 - 0.25 * 3.0 - 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(1.5) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f))) <= TestTolerance.Position).OverrideFailureMessage($"diagonal midpoint is the mean of corners 10 and 01: expected {1.5}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.5f, 0.5f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(1.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f))) <= TestTolerance.Position).OverrideFailureMessage($"corner 10: expected {1.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 0f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f))) <= TestTolerance.Position).OverrideFailureMessage($"corner 01: expected {2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0f, 1f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(4.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f))) <= TestTolerance.Position).OverrideFailureMessage($"corner 11: expected {4.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 1f, 1f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(0.25 * 1.0 + 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f))) <= TestTolerance.Position).OverrideFailureMessage($"inside 00-10-01: expected {0.25 * 1.0 + 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.25f, 0.25f)}.").IsTrue();
+        AssertThat(Math.Abs((double)(4.0 - 0.25 * 3.0 - 0.25 * 2.0) - (double)(CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f))) <= TestTolerance.Position).OverrideFailureMessage($"inside 10-11-01: expected {4.0 - 0.25 * 3.0 - 0.25 * 2.0}, got {CellSplit.Lerp(0f, 1f, 2f, 4f, 0.75f, 0.75f)}.").IsTrue();
     }
 
 
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void CutCellsOfTheL0MeshLieOnTheDrapedSurface()
     {
         // Roads and kerbs cut the lawn into small pieces along curves (the junction fillet), where the mesher works on
@@ -130,7 +130,7 @@ public sealed class GroundDiagonalTests
         AssertThat(worst <= 0.01f).OverrideFailureMessage($"Lawn leaves the draped terrain by {worst} m.").IsTrue();
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Determinism)]
     public void LawnToneFieldFollowsTheSameDiagonal()
     {
         // The tone field is sampled on a coarse lattice and linear on its triangles; the mesher clips blocks that are

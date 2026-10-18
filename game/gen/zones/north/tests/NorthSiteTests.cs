@@ -16,7 +16,7 @@ using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 [TestSuite]
 public sealed class NorthSiteTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HallPorchMeetsTheDeclaredEntrance()
     {
         var world = RealMapFixture.Load().World;
@@ -26,7 +26,7 @@ public sealed class NorthSiteTests
         AssertThat(MathF.Abs(local.X) < 0.5f && MathF.Abs(local.Y) < 1.2f).OverrideFailureMessage($"porch axis passes the door centre (local {local})").IsTrue();
         AssertThat(Vector2.Dot(porch.Frame.W, Angles.Heading(porch.Entrance.YawDeg)) > 0.9f).OverrideFailureMessage("porch faces the declared facing").IsTrue();
         AssertThat(porch.Risers is >= NorthTune.Hall.MinRisers and <= NorthTune.Hall.MaxRisers).OverrideFailureMessage("6–8 risers").IsTrue();
-        AssertThat(MathF.Abs(porch.Floor - porch.Entrance.Center.Y) < 0.01f).OverrideFailureMessage("landing at the declared floor level").IsTrue();
+        AssertThat(MathF.Abs(porch.Floor - porch.Entrance.Center.Y) < TestTolerance.Position).OverrideFailureMessage("landing at the declared floor level").IsTrue();
         var outside = new Vector2(porch.Entrance.Outside.X, porch.Entrance.Outside.Z);
         var landing = porch.Frame.Local(outside);
         AssertThat(landing.Y > NorthTune.Hall.WallFace && landing.Y < porch.FrontZ).OverrideFailureMessage("teleport landing lies on the porch landing").IsTrue();
@@ -36,7 +36,7 @@ public sealed class NorthSiteTests
     /// 20b1 (D-185 R6): the 硕丰苑十组团 rest deck is the registered polygon, lies inside its cluster, and keeps 8 m off every
     /// wall and 3 m off every road edge, the cluster's design drive included.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void RestDeckSitsInTheShuofengTenCourtyard()
     {
         var world = RealMapFixture.Load().World;
@@ -62,7 +62,7 @@ public sealed class NorthSiteTests
     /// <see cref="Faces"/> of such a road, or no vehicle gate is nearer one; and its guard house stands on the right of the
     /// way in. 学知一组团's gate is the open walking route (P13, A11, WP-31c) and keeps its place.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void MainGatesFaceTheHighestGradeRoadWithTheHouseOnTheRight()
     {
         var world = RealMapFixture.Load().World;
@@ -90,7 +90,7 @@ public sealed class NorthSiteTests
     /// Every cluster's guard house stands clear of every building footprint (20a-4 moved 学知二、六、八 and the international
     /// students' main gates; the latter two used to run into a dormitory).
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Regression)]
     public void GuardHousesStandClearOfBuildings()
     {
         var world = RealMapFixture.Load().World;
@@ -113,7 +113,7 @@ public sealed class NorthSiteTests
     /// at the guard house's right hand there; the main gate is on the design drive that joins the 6 m campus road beside it in
     /// the south-east corner, and the north-west gate stays a closed lane without a house.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void InternationalClusterMainGateIsOnItsDesignDrive()
     {
         var world = RealMapFixture.Load().World;
@@ -138,7 +138,7 @@ public sealed class NorthSiteTests
     /// plaza's end post and its collision on the post's centre, panel after panel without a gap or an overlap, runs past the
     /// far end of the street (商业街 reaches t −110.5; the run heads south into the campus, toward negative t), and keeps clear of buildings and road edges.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CanalRailCarriesOnFromThePlazaRailing()
     {
         var ctx = Context();
@@ -149,14 +149,14 @@ public sealed class NorthSiteTests
         var panels = Canal.CanalRailSite.Panels;
         AssertThat(Vector2.Distance(Canal.CanalRailSite.Post(frame, 0), joint) < 0.01f).OverrideFailureMessage("the run starts at the plaza's end post").IsTrue();
         var tEnd = Vector2.Dot(Canal.CanalRailSite.Post(frame, panels) - frame.Origin, u);
-        AssertThat(tEnd <= NorthTune.Bank.EndT + 0.05f).OverrideFailureMessage($"the run ends beyond the far end of 商业街 (t {tEnd})").IsTrue();
+        AssertThat(tEnd <= NorthTune.Bank.EndT + TestTolerance.Layout).OverrideFailureMessage($"the run ends beyond the far end of 商业街 (t {tEnd})").IsTrue();
         for (var k = 0; k < panels; k++)
         {
             var step = Vector2.Distance(Canal.CanalRailSite.Post(frame, k), Canal.CanalRailSite.Post(frame, k + 1));
-            AssertThat(step <= NorthTune.Bank.PostPitch + 0.01f && step > 1f).OverrideFailureMessage($"panel {k} is a post pitch long ({step})").IsTrue();
+            AssertThat(step <= NorthTune.Bank.PostPitch + TestTolerance.Position && step > 1f).OverrideFailureMessage($"panel {k} is a post pitch long ({step})").IsTrue();
         }
         var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
-            .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < 0.01f && MathF.Abs(Vector2.Dot(c.B - joint, w)) < 0.01f)
+            .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < TestTolerance.Position && MathF.Abs(Vector2.Dot(c.B - joint, w)) < TestTolerance.Position)
             .OrderBy(c => Vector2.Dot(joint - c.A, u)).ToArray();
         AssertThat(walls.Length == panels).OverrideFailureMessage($"one collider per panel ({walls.Length} of {panels})").IsTrue();
         AssertThat(Vector2.Distance(walls[0].A, joint) < 0.01f).OverrideFailureMessage("the first collider starts on the plaza's end post").IsTrue();
@@ -187,7 +187,7 @@ public sealed class NorthSiteTests
     /// 20a-3 (Opus 13:32): the seat wall stands at the courtyard walk facing the hill and the lawn, a paved pad joins it to
     /// the walk, and its back keeps 8 m off every dormitory window.
     /// </summary>
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void CourtyardSeatWallFacesTheHillFromTheWalk()
     {
         var world = RealMapFixture.Load().World;
@@ -203,10 +203,10 @@ public sealed class NorthSiteTests
         AssertThat(ToWalk(mid + front) < ToWalk(mid)).OverrideFailureMessage("the walk lies in front of the seat").IsTrue();
         // The pad's straight edge runs along the walk's paving edge, 2 cm short of it, over the whole length of the wall.
         var pad = CourtyardSite.PadOutline(wall);
-        var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - wall.Start, front) - NorthTune.Court.PadReach) < 0.01f).ToArray();
+        var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - wall.Start, front) - NorthTune.Court.PadReach) < TestTolerance.Position).ToArray();
         AssertThat(edge.Length == 2).OverrideFailureMessage("the pad has one straight edge toward the walk").IsTrue();
         foreach (var p in edge)
-            AssertThat(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < 0.05f).OverrideFailureMessage($"pad corner {p} meets the walk's edge").IsTrue();
+            AssertThat(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < TestTolerance.Layout).OverrideFailureMessage($"pad corner {p} meets the walk's edge").IsTrue();
         var buildings = world.Features.Values.SelectMany(NorthBuildings.Rings)
             .Where(ring => ring.Any(q => Vector2.Distance(q, mid) < 60f)).ToArray();
         AssertThat(buildings.Length > 0).OverrideFailureMessage("dormitories around the courtyard found").IsTrue();

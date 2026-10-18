@@ -9,7 +9,7 @@ namespace Campus.Gen.World.Tests;
 [TestSuite]
 public sealed class EffectiveRoadNetworkRealCampusTests
 {
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void EveryCurrentDesignCenterlineProjectsOnceAndKeepsOtherNetworkCategories()
     {
         var files = RealMapFixture.ReadTextFiles();
@@ -46,7 +46,7 @@ public sealed class EffectiveRoadNetworkRealCampusTests
 
     }
 
-    [TestCase]
+    [TestCase, TestCategory(TestReason.Contract)]
     public void ActualNamedSourceBindingsNeverBecomeNetworkOnly()
     {
         var files = RealMapFixture.ReadTextFiles();
