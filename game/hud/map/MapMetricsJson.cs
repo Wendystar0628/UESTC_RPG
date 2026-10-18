@@ -19,7 +19,7 @@ internal sealed record HaloDoc(float Width);
 internal sealed record PlayerDoc(float LineWidth, PlayerGlowDoc Glow);
 internal sealed record PlayerGlowDoc(float Dark);
 
-internal sealed record ThemeSwitchDoc(float ToDarkBelowDeg, float ToLightAboveDeg, float FrontWidth, float SweepMs);
+internal sealed record ThemeSwitchDoc(float FrontWidth);
 internal sealed record ShapeDoc(ChamferDoc Chamfer, float SignatureVia);
 internal sealed record ChamferDoc(float Page, float Panel, float Card);
 internal sealed record LineDoc(float IconStroke, float Indicator);

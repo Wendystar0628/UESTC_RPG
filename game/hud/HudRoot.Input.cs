@@ -44,7 +44,7 @@ public partial class HudRoot
             {
                 case "menu":
                     if (_settingsCard.Visible) CloseSettings();
-                    else CloseSaves();
+                    else if (!_savePage.DismissConfirm()) CloseSaves();
                     break;
                 case "help":
                     if (_settingsCard.Visible) CloseSettings();

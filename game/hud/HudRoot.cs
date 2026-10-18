@@ -104,6 +104,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
 
         _title = TitleMenu.Create(_kit, _root);
         _title.SavesRequested += () => OpenSaves(fromTitle: true);
+        _title.OverwriteRequested += () => OpenSaves(fromTitle: true, SaveIntent.NewGame);
         _title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
         _title.CreditsRequested += () => OpenSettings(SettingsPage.Licenses, fromTitle: true);
         _title.QuitRequested += RequestQuit;

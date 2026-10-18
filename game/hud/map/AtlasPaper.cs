@@ -20,7 +20,7 @@ public partial class AtlasPaper : Control
 
     private readonly MapHudContext _ctx;
     private MapView _view = new(Vector2.Zero, 0.8f, 0);
-    private Rect2 _bounds = new(-1536, -1536, 3072, 3072);
+    private Rect2 _bounds;
     private float _zoomFrom, _zoomTo, _zoomT = 1;
     private Vector2 _zoomAnchorWorld, _zoomAnchorLocal;
     private bool _dragging;

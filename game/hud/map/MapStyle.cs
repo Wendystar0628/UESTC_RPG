@@ -171,10 +171,10 @@ public sealed class MapTone
     }
 }
 
-/// <summary>ui_metrics.json 里地图界面用到的几何、主题切换与动效时长（逻辑像素，1920×1080 基准）。</summary>
+/// <summary>ui_metrics.json 里地图界面用到的几何、主题扫描前沿宽与动效时长（逻辑像素，1920×1080 基准）。</summary>
 public sealed record MapMetrics(
     float BoundDash, float BoundGap, float HaloWidth, float PlayerLine, float PlayerGlowDark,
-    float ToDarkBelowDeg, float ToLightAboveDeg, float FrontWidth, float SweepMs,
+    float FrontWidth,
     float ChamferPage, float ChamferPanel, float ChamferCard, float Via, float IconStroke, float Indicator,
     float ScrimMs, float PageInMs, float PageOutMs, float ReducedFadeMs, float GlowMax)
 {
@@ -185,7 +185,7 @@ public sealed record MapMetrics(
         var theme = d.ThemeSwitch;
         var durations = d.Motion.Durations;
         return new(map.Bound.Dash[0], map.Bound.Dash[1], map.LabelHalo.Width, map.Player.LineWidth, map.Player.Glow.Dark,
-            theme.ToDarkBelowDeg, theme.ToLightAboveDeg, theme.FrontWidth, theme.SweepMs,
+            theme.FrontWidth,
             chamfer.Page, chamfer.Panel, chamfer.Card, d.Metrics.Shape.SignatureVia, d.Metrics.Line.IconStroke, d.Metrics.Line.Indicator,
             durations.Scrim, durations.Page.In[1], durations.Page.Out[0], d.Motion.Reduced.FadeMax, d.Metrics.Glow.Max);
     }

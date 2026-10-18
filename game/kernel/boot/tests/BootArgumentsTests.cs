@@ -54,12 +54,11 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
-    public void NormalAndMainlineBootKeepTitle()
+    public void NormalBootKeepsTitle()
     {
         var normal = BootArguments.Parse([], true);
-        var mainline = BootArguments.Parse(["--gate=mainline"], true);
-        if (!normal.Title || normal.Value("audio") != "on" || !mainline.Title || mainline.Value("audio") != "off")
-            throw new InvalidOperationException("Normal or mainline startup defaults are incorrect.");
+        if (!normal.Title || normal.Value("audio") != "on")
+            throw new InvalidOperationException("Normal startup defaults are incorrect.");
     }
 
     [TestCase]

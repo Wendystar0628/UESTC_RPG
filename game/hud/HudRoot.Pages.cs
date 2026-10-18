@@ -35,10 +35,10 @@ public partial class HudRoot
         SyncCorners();
     }
 
-    private void OpenSaves(bool fromTitle)
+    private void OpenSaves(bool fromTitle, SaveIntent intent = SaveIntent.Browse)
     {
         if (_settingsCard.Visible) CloseSettings();
-        _savePage.Open(fromTitle);
+        _savePage.Open(fromTitle, intent);
         _audio.PlayUi(UiCue.PageOpen);
         if (Playing) SetInterface(true);
         SyncCorners();

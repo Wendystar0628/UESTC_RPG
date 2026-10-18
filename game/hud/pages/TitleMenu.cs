@@ -20,6 +20,8 @@ public partial class TitleMenu : Control
     private TechButton _continue = null!;
 
     public event Action? SavesRequested;
+    /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE §2.2）。</summary>
+    public event Action? OverwriteRequested;
     public event Action? SettingsRequested;
     public event Action? CreditsRequested;
     public event Action? QuitRequested;
@@ -114,7 +116,7 @@ public partial class TitleMenu : Control
                 if (_continue.Off) { Notice?.Invoke(UiKit.T("title.continue.none")); return; }
                 _ = Enter(new EnterRequest(EnterKind.Continue));
                 break;
-            case 1: _ = Enter(new EnterRequest(EnterKind.NewGame, FirstSlot())); break;
+            case 1: NewGame(); break;
             case 2: SavesRequested?.Invoke(); break;
             case 3: SettingsRequested?.Invoke(); break;
             case 4: CreditsRequested?.Invoke(); break;
@@ -123,10 +125,12 @@ public partial class TitleMenu : Control
         }
     }
 
-    private static SlotId? FirstSlot()
+    private void NewGame()
     {
         var slots = Svc<ISaveService>().Slots;
-        return (slots.FirstOrDefault(s => s.Health == SlotHealth.Empty) ?? slots.FirstOrDefault())?.Slot;
+        var empty = slots.FirstOrDefault(s => s.Health == SlotHealth.Empty);
+        if (empty is null && slots.Count > 0) OverwriteRequested?.Invoke();
+        else _ = Enter(new EnterRequest(EnterKind.NewGame, empty?.Slot));
     }
 
     private async Task Enter(EnterRequest request)

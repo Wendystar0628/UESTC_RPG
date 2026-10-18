@@ -36,7 +36,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private long _atlasRev = -1;
 
     private bool _uiEnabled = true;
-    private UiThemeMode _theme = UiThemeMode.Auto;
+    private Campus.Hud.Style.UiThemeClock? _clock;
     private bool _night;
     private bool _pure;
 
@@ -61,9 +61,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
         _ctx = new MapHudContext(_style);
         _ctx.PinShapeLookup = id => atlas.Pins.FirstOrDefault(p => "pin:" + p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == id.Value)?.Shape ?? PinShape.Diamond;
-        _night = InitialNight();
-        _ctx.ThemeFront = _night ? 1 : 0;
-
         var layer = new CanvasLayer { Layer = 10 };
         _layer = layer;
         AddChild(layer);
@@ -73,6 +70,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         _minimap = new Minimap(_ctx);
         root.AddChild(_minimap);
         CallDeferred(MethodName.MountMinimap);
+        CallDeferred(MethodName.FindClock);
         // 大地图在扉页之后预建、隐藏：第一次按 M 不建控件（SYS-ATLAS）
         _page = new AtlasPage(_ctx) { Visible = false };
         root.AddChild(_page);
@@ -101,6 +99,8 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
     private void MountMinimap() => _minimapCtl.Mount();
 
+    private void FindClock() => _clock = GetParent()?.FindChild("UiThemeClock", true, false) as Campus.Hud.Style.UiThemeClock;
+
     // ------------------------------------------------------------------ 地图数据
 
     public void OnMapUnloading(MapId from)
@@ -122,6 +122,9 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         if (_style is null) return;
         _atlasCtl.SetTitle(ctx.Descriptor.Name.Zh, ctx.Descriptor.Name.En.ToUpperInvariant());
         _base!.Clear();
+        var page = _services!.Atlas.PageRect;   // IAtlasService 先于本节点收到 OnMapLoaded（按 ID 顺序）
+        var pageMin = MapView.Flat(page.Min);
+        _atlasCtl.SetBounds(new Rect2(pageMin, MapView.Flat(page.Max) - pageMin));
         _atlasRev = -1;
         RebuildEntries();
     }
@@ -142,8 +145,8 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public override void _Process(double delta)
     {
         var dt = (float)Math.Min(delta, 0.1);
-        UpdateTheme();
-        if (_base!.Poll(_map?.Id) && _base.PageRect is { } pageRect) _atlasCtl.SetBounds(pageRect);
+        if (_clock is { } clock && GodotObject.IsInstanceValid(clock)) ApplyNight(clock.Dark);
+        _base!.Poll(_map?.Id);
         var playing = _services!.Flow.State switch
         {
             AppState.Playing => true,
@@ -167,41 +170,14 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public string Id => "hud-map";
     public int Order => 0;
 
-    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里补上 --ui、--ui-theme、--motion，并按强制主题重定初始昼夜。</summary>
+    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里补上 --ui、--motion。昼夜主题读 UiThemeClock.Dark（含 --ui-theme）。</summary>
     public Task Initialize(BootPhase phase, BootContext context)
     {
         if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
         var args = HudArguments.From(context);
         _uiEnabled = !args.UiHidden;
-        _theme = args.UiTheme ?? UiThemeMode.Auto;
         Instant = args.Motion == MotionLevel.Instant;   // 界面截图用 instant（ENG-GATES）
-        if (_style is not null) ApplyNight(InitialNight());
         return Task.CompletedTask;
-    }
-
-    private bool InitialNight() => _theme switch
-    {
-        UiThemeMode.Light => false,
-        UiThemeMode.Dark => true,
-        UiThemeMode.Auto => _services!.World.Sun.AltDeg < 0,
-        _ => throw new InvalidOperationException("Unknown UI theme mode."),
-    };
-
-    /// <summary>
-    /// 大页随昼夜主题：按真实太阳高度带回差锁存（下穿 −0.5° 切深屏，上穿 +0.5° 切回，快进中不判断）。
-    /// 这是 WP-35 UiThemeClock 的同一规则；它合入后改读它的锁存结果，这里只保留读数。
-    /// </summary>
-    private void UpdateTheme()
-    {
-        var world = _services!.World;
-        var night = _night;
-        if (_theme == UiThemeMode.Auto && (world.Transition & WorldTransition.Time) == 0)
-        {
-            var alt = world.Sun.AltDeg;
-            if (!night && alt < _style!.Metrics.ToDarkBelowDeg) night = true;
-            else if (night && alt > _style!.Metrics.ToLightAboveDeg) night = false;
-        }
-        ApplyNight(night);
     }
 
     private void ApplyNight(bool night)

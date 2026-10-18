@@ -23,9 +23,6 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial mat
     private readonly List<ImageTexture> _owned = [];
     private long _rev = long.MinValue;
 
-    /// <summary>当前图快照的地图页范围（世界 XZ）；快照没发布前为 null。</summary>
-    public Rect2? PageRect { get; private set; }
-
     /// <summary>加载或切图时调：清 data_ready 与旧图绑定，下一次 <see cref="Poll"/> 重新判断。</summary>
     public void Clear()
     {
@@ -33,15 +30,14 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial mat
         Release();
     }
 
-    /// <summary>每帧调。Rev 没变什么都不做；变了返回 true（可能就绪，也可能刚被清空）。<paramref name="map"/> 为 null 表示没有当前图。</summary>
-    public bool Poll(MapId? map)
+    /// <summary>每帧调。Rev 没变什么都不做；变了按快照重绑（可能就绪，也可能刚被清空）。<paramref name="map"/> 为 null 表示没有当前图。</summary>
+    public void Poll(MapId? map)
     {
-        if (map is null || source.Rev == _rev) return false;
+        if (map is null || source.Rev == _rev) return;
         _rev = source.Rev;
         Release();
         var snapshot = source.Ready ? source.Snapshot : null;
-        if (snapshot is null || snapshot.Map != map.Value) return true;
-        PageRect = ToRect(snapshot.PageRect);
+        if (snapshot is null || snapshot.Map != map.Value) return;
         material.SetShaderParameter(SdfA, Own(snapshot.SdfA));
         material.SetShaderParameter(SdfB, Own(snapshot.SdfB));
         material.SetShaderParameter(SdfOut, Own(snapshot.SdfOut));
@@ -50,14 +46,12 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial mat
         material.SetShaderParameter(RectOut, RectUniform(snapshot.SdfOut.Rect));
         material.SetShaderParameter(RectRing, RectUniform(snapshot.SdfRing.Rect));
         material.SetShaderParameter(DataReady, 1f);
-        return true;
     }
 
     public void Dispose() => Clear();
 
     private void Release()
     {
-        PageRect = null;
         if (GodotObject.IsInstanceValid(material))
         {
             material.SetShaderParameter(DataReady, 0f);
@@ -74,12 +68,6 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial mat
         var texture = ImageTexture.CreateFromImage(image);
         _owned.Add(texture);
         return texture;
-    }
-
-    private static Rect2 ToRect(MapRect r)
-    {
-        var min = MapView.Flat(r.Min);
-        return new Rect2(min, MapView.Flat(r.Max) - min);
     }
 
     private static Vector4 RectUniform(MapRect r) => new(r.Min.X, r.Min.Y, r.Max.X - r.Min.X, r.Max.Y - r.Min.Y);

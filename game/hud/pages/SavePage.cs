@@ -7,9 +7,13 @@ using Godot;
 
 namespace Campus.Hud.Pages;
 
+/// <summary>存档页的打开方式：浏览（读取 / 在空位开始），或开始页"新游戏"三位全占时选位覆盖（SYS-TITLE §2.2、SYS-SAVE-FLOW §2.5）。</summary>
+public enum SaveIntent : byte { Browse, NewGame }
+
 /// <summary>
 /// 存档页（UI-VISUAL、SYS-SAVE）：全屏大页，随主题，背后 scrim；三个存档位画成"存储模组"卡（400×212，切角 10，底边 16 根接点）。
 /// 只读 ISaveService 的存档位列表和缩略图；写入只经 IAppFlow（开始页里"继续 / 读取 / 新游戏"）。打开期间 LockInput(Menu)。
+/// 新游戏方式下已占的位主按钮是危险样式"覆盖并开始"，按一次弹出确认框（默认焦点在取消，Esc 等于取消）。
 /// </summary>
 public partial class SavePage : Control
 {
@@ -17,10 +21,13 @@ public partial class SavePage : Control
     private UiKit _kit = null!;
     private Control _panel = null!;
     private TechButton _primary = null!;
+    private TechButton? _overwrite;
+    private Control? _confirm;
     private Label _detail = null!;
     private IDisposable? _lock;
     private int _selected;
     private bool _fromTitle;
+    private SaveIntent _intent;
 
     public event Action? CloseRequested;
 
@@ -34,9 +41,10 @@ public partial class SavePage : Control
         return page;
     }
 
-    public void Open(bool fromTitle)
+    public void Open(bool fromTitle, SaveIntent intent = SaveIntent.Browse)
     {
         _fromTitle = fromTitle;
+        _intent = intent;
         Rebuild();
         Visible = true;
         _lock ??= Lock();
@@ -53,6 +61,8 @@ public partial class SavePage : Control
         _lock = null;
         foreach (var child in GetChildren()) child.QueueFree();
         _cards.Clear();
+        _confirm = null;
+        _overwrite = null;
     }
 
     private static IDisposable Lock() => Svc<ICameraRig>().LockInput(InputLockReason.Menu);
@@ -61,6 +71,8 @@ public partial class SavePage : Control
     {
         foreach (var child in GetChildren()) child.QueueFree();
         _cards.Clear();
+        _confirm = null;
+        _overwrite = null;
         var view = GetViewportRect().Size;
         _kit.Box(this, new Rect2(Vector2.Zero, view), new UiFx(Fill: "scrim", Margin: 0));
         var size = new Vector2(Math.Min(1280, view.X - 128), 680);
@@ -68,7 +80,7 @@ public partial class SavePage : Control
         AddChild(_panel);
         _kit.Box(_panel, new Rect2(Vector2.Zero, size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("page"),
             Flags: UiFlags.Highlight | UiFlags.Via));
-        _kit.Text(_panel, UiKit.T("saves.title"), "h2", "text.1", new Vector2(32, 26));
+        _kit.Text(_panel, UiKit.T(_intent == SaveIntent.NewGame ? "saves.title.new_game" : "saves.title"), "h2", "text.1", new Vector2(32, 26));
         _kit.Text(_panel, "SAVES", "mono-caps", "text.2", new Vector2(32 + 62, 38));
         _kit.Button(_panel, ButtonStyle.Icon, "", new Rect2(size.X - 32 - 32, 24, 32, 32), padX: 4, icon: "close", iconMax: 20,
             pressed: () => CloseRequested?.Invoke());
@@ -96,6 +108,9 @@ public partial class SavePage : Control
         _detail = _kit.Text(_panel, "", "small", "text.2", new Vector2(x0, 96 + card.Y + 32), width: size.X - x0 * 2, wrap: true);
         _primary = _kit.Button(_panel, ButtonStyle.Primary, "", new Rect2(size.X - x0 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
             pressed: () => _ = Act());
+        if (_intent == SaveIntent.NewGame)
+            _overwrite = _kit.Button(_panel, ButtonStyle.Primary, UiKit.T("saves.overwrite"), new Rect2(size.X - x0 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
+                pressed: ShowConfirm);
         _kit.Button(_panel, ButtonStyle.Secondary, UiKit.T("ui.common.back"), new Rect2(x0, size.Y - 32 - 40, 132, 40), pressed: () => CloseRequested?.Invoke());
         _selected = Math.Clamp(slots.ToList().FindIndex(s => s.Slot == latest), 0, Math.Max(0, slots.Count - 1));
         if (slots.Count > 0) Select(_selected);
@@ -160,16 +175,68 @@ public partial class SavePage : Control
         for (var i = 0; i < _cards.Count && i < slots.Count; i++) BuildCard(_cards[i].Card, slots[i], slots[i].Slot == latest, i == index);
         var slot = slots[index];
         var empty = slot.Meta is null;
+        var overwrite = _overwrite is not null && slot.Health != SlotHealth.Empty;
+        _primary.Visible = !overwrite;
+        if (_overwrite is not null) _overwrite.Visible = overwrite;
         _primary.Text = UiKit.T(empty ? "saves.new_here" : "saves.load");
         _primary.OffReason = UiKit.T("saves.only_from_title");
         _primary.Off = !_fromTitle || slot.Health == SlotHealth.Corrupt;
         _detail.Text = slot.Health switch
         {
             SlotHealth.Empty => UiKit.T("saves.detail.empty"),
-            SlotHealth.Ok => UiKit.T("saves.detail.ok", ("gens", $"{slot.Generations}")),
-            SlotHealth.Corrupt => UiKit.T("saves.detail.corrupt"),
+            SlotHealth.Ok => UiKit.T(overwrite ? "saves.detail.overwrite" : "saves.detail.ok", ("gens", $"{slot.Generations}")),
+            SlotHealth.Corrupt => UiKit.T(overwrite ? "saves.detail.corrupt_overwrite" : "saves.detail.corrupt"),
             _ => throw new InvalidOperationException("Unknown slot health."),
         };
+    }
+
+    /// <summary>覆盖确认框：画在本页内，背后 scrim 并挡住鼠标；Tab 与方向键只在两个钮之间走，默认焦点在取消。</summary>
+    private void ShowConfirm()
+    {
+        if (_confirm is not null || !_fromTitle) return;
+        var slot = Svc<ISaveService>().Slots[_selected];
+        var view = GetViewportRect().Size;
+        _confirm = new Control { Position = Vector2.Zero, Size = view, MouseFilter = MouseFilterEnum.Stop };
+        AddChild(_confirm);
+        _kit.Box(_confirm, new Rect2(Vector2.Zero, view), new UiFx(Fill: "scrim", Margin: 0));
+        var size = new Vector2(480, 232);
+        var dialog = new Control { Position = ((view - size) / 2).Round(), Size = size, MouseFilter = MouseFilterEnum.Ignore };
+        _confirm.AddChild(dialog);
+        _kit.Box(dialog, new Rect2(Vector2.Zero, size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("card"),
+            Flags: UiFlags.Highlight | UiFlags.Via));
+        _kit.Text(dialog, UiKit.T("saves.overwrite.title"), "h3", "danger.text", new Vector2(32, 28));
+        _kit.Text(dialog, UiKit.T("saves.overwrite.body", ("slot", slot.Slot.Value.TrimStart('s').PadLeft(2, '0'))), "small", "text.2",
+            new Vector2(32, 76), width: size.X - 64, wrap: true);
+        var cancel = _kit.Button(dialog, ButtonStyle.Secondary, UiKit.T("saves.overwrite.cancel"), new Rect2(32, size.Y - 32 - 40, 132, 40),
+            pressed: HideConfirm);
+        var ok = _kit.Button(dialog, ButtonStyle.Danger, UiKit.T("saves.overwrite"), new Rect2(size.X - 32 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
+            pressed: () => _ = Act());
+        LoopFocus(cancel, ok);
+        LoopFocus(ok, cancel);
+        cancel.GrabFocus();
+    }
+
+    private static void LoopFocus(TechButton self, TechButton other)
+    {
+        self.FocusNext = self.FocusPrevious = self.FocusNeighborLeft = self.FocusNeighborRight = other.GetPath();
+        self.FocusNeighborTop = self.FocusNeighborBottom = self.GetPath();
+    }
+
+    private void HideConfirm()
+    {
+        if (_confirm is null) return;
+        _confirm.Visible = false;
+        _confirm.QueueFree();
+        _confirm = null;
+        (_overwrite is { Visible: true } ? _overwrite : _cards[_selected].Hit).GrabFocus();
+    }
+
+    /// <summary>Esc 先取消确认框；有框返回 true，由界面根决定是否还要关页。</summary>
+    public bool DismissConfirm()
+    {
+        if (_confirm is null) return false;
+        HideConfirm();
+        return true;
     }
 
     private async Task Act()
@@ -177,7 +244,9 @@ public partial class SavePage : Control
         if (!_fromTitle) return;
         var slots = Svc<ISaveService>().Slots;
         var slot = slots[_selected];
-        var request = slot.Meta is null ? new EnterRequest(EnterKind.NewGame, slot.Slot) : new EnterRequest(EnterKind.LoadSlot, slot.Slot);
+        var request = _intent == SaveIntent.NewGame || slot.Meta is null
+            ? new EnterRequest(EnterKind.NewGame, slot.Slot)
+            : new EnterRequest(EnterKind.LoadSlot, slot.Slot);
         CloseRequested?.Invoke();
         await Svc<IAppFlow>().Enter(request);
     }

@@ -99,8 +99,7 @@ public sealed class BootArguments
 
     private void AddDefaults()
     {
-        var mainlineGate = Value("gate") is "mainline" or "mainline-resume";
-        _values.TryAdd("title", CaptureMode && !mainlineGate ? "0" : "1");
+        _values.TryAdd("title", CaptureMode ? "0" : "1");
         _values.TryAdd("ui", CaptureMode ? "0" : "1");
         _values.TryAdd("audio", CaptureMode ? "off" : "on");
         if (CaptureMode)
