@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -90,7 +91,7 @@ public sealed class GroundPavingTests
         Check.Close(mesh.Position[2], mesh.Uv![0], 1e-3, "U stays measured from the long east axis");
     }
 
-    private static IReadOnlyList<GeometryBundle> Build(PavingWorld world)
+    private static IReadOnlyList<GeometryBundle> Build(FakeWorld world)
     {
         var ctx = TestWorld.Context(world);
         var meshes = new List<GeometryBundle>();
@@ -106,24 +107,9 @@ public sealed class GroundPavingTests
         return c / 3f;
     }
 
-    private sealed class PavingWorld : IWorldModel
+    private static class PavingWorld
     {
-        private PavingWorld(IEnumerable<WorldFeature> features, IInteriorIndex interiors, IFidelityModel? fidelity)
-        {
-            Features = features.ToDictionary(f => f.Id);
-            Interiors = interiors;
-            Fidelity = fidelity;
-        }
-
-        public PolygonRings Boundary { get; } = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]);
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial => TestWorld.Empty().Spatial;
-        public IInteriorIndex Interiors { get; }
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity { get; }
-
-        public static PavingWorld Library(string category, float yaw, Func<float, FidelityZone>? zone = null, bool side = false)
+        public static FakeWorld Library(string category, float yaw, Func<float, FidelityZone>? zone = null, bool side = false)
         {
             var building = Feature("fixture:hall", "building", Rect(-20f, -15f, 0f, 15f),
                 $$"""{"kind":"building","category":"{{category}}"}""");
@@ -137,7 +123,13 @@ public sealed class GroundPavingTests
             };
             var entrances = new List<EntranceDecl> { Entrance("hall.main", Door, yaw) };
             if (side) entrances.Add(Entrance("hall.side", new(20f, -25f), 180f));   // faces south across the forecourt (40 m run)
-            return new(features, new Index(building.Id, entrances), zone is null ? null : new Zones(zone));
+            return new FakeWorld
+            {
+                Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
+                Features = features.ToDictionary(f => f.Id),
+                Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null)),
+                Fidelity = zone is { } zoneAt ? new FakeFidelity(groundAt: (x, _) => zoneAt(x), walkDistance: 15f) : null,
+            };
         }
 
         private static EntranceDecl Entrance(string id, Vector2 at, float yaw) =>
@@ -153,20 +145,5 @@ public sealed class GroundPavingTests
                     new(rings.Outer.Max(p => p.X), kind == "building" ? 20f : 0f, rings.Outer.Max(p => p.Y))),
                 Props = JsonDocument.Parse(props).RootElement.Clone()
             };
-
-        private sealed class Index(FeatureId building, IReadOnlyList<EntranceDecl> entrances) : IInteriorIndex
-        {
-            public InteriorIndexEntry? Get(FeatureId id) => id == building ? new(id, [], entrances, true, null) : null;
-            public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => entrances;
-        }
-
-        private sealed class Zones(Func<float, FidelityZone> zone) : IFidelityModel
-        {
-            public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => [];
-            public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K3);
-            public FidelityZone GroundAt(float x, float z) => zone(x);
-            public float WalkDistanceAt(float x, float z) => 15f;
-            public string InputHash => "fixture";
-        }
     }
 }

@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
 
@@ -157,11 +158,11 @@ public sealed class PavementTests
         var both = Verify(world, bare, "filed twice", fixture: true);
         if (both.Avoided.Count(a => a.Tree.Key == tree.Key) != 1 || both.Trees.Any(t => t.Key == tree.Key))
             throw new InvalidOperationException($"{tree.Key} stands on the walk and did not give way exactly once");
-        var featureOnly = new Filed(world, road => road.Id.Value != id, _ => true);
+        var featureOnly = Filed(world, road => road.Id.Value != id, _ => true);
         RequireFiled(featureOnly, id, line: false, feature: true);
         var asFeature = Verify(featureOnly, bare, "filed as the feature", fixture: true);
         if (!SameLayout(both, asFeature)) throw new InvalidOperationException("the walk filed as the feature alone takes other trees than filed twice");
-        var lineOnly = new Filed(world, _ => true, feature => feature.Id.Value != id);
+        var lineOnly = Filed(world, _ => true, feature => feature.Id.Value != id);
         RequireFiled(lineOnly, id, line: true, feature: false);
         var asLine = PlantFixture(lineOnly);
         var walk = lineOnly.Network.Roads.Single(r => r.Id.Value == id);
@@ -215,7 +216,7 @@ public sealed class PavementTests
     {
         // Production pits may be added or removed by their owners; check each currently protected original tree.
         var withPits = Verify(Overlaid.Value, null, "with pits");
-        var noPits = Verify(new Filed(Overlaid.Value, _ => true, f => f.Kind.Value != Planting.TreePitKind), withPits, "without pits");
+        var noPits = Verify(Filed(Overlaid.Value, _ => true, f => f.Kind.Value != Planting.TreePitKind), withPits, "without pits");
         var standing = withPits.Trees.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
         var kept = noPits.Avoided.Where(a => standing.Contains(a.Tree.Key)).Select(a => a.Tree).ToList();
         var census = Census.Of(Overlaid.Value);
@@ -295,19 +296,11 @@ public sealed class PavementTests
     }
 
     /// <summary>A world with some of its network roads and features left out, to file a walk one way only.</summary>
-    private sealed class Filed(IWorldModel inner, Func<NetworkLine, bool> keepRoad, Func<WorldFeature, bool> keepFeature) : IWorldModel
+    private static FakeWorld Filed(IWorldModel inner, Func<NetworkLine, bool> keepRoad, Func<WorldFeature, bool> keepFeature) => new(inner)
     {
-        private readonly Dictionary<FeatureId, WorldFeature> _features = inner.Features.Where(f => keepFeature(f.Value)).ToDictionary(f => f.Key, f => f.Value);
-        private readonly WorldNetwork _network = inner.Network with { Roads = inner.Network.Roads.Where(keepRoad).ToList() };
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
-        public WorldNetwork Network => _network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
+        Features = inner.Features.Where(f => keepFeature(f.Value)).ToDictionary(f => f.Key, f => f.Value),
+        Network = inner.Network with { Roads = inner.Network.Roads.Where(keepRoad).ToList() },
+    };
 
     /// <summary>
     /// Builds the layout and checks it against the world by an independent census: the trees before pavement gave way are the

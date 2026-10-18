@@ -5,6 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Zones.South.Tests;
@@ -512,17 +513,17 @@ public sealed class SouthModuleTests
         var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
         // The contract only promises an aggregate query envelope in WorldFeature.Geometry (the D0 world model gives a bounding
         // rectangle): the sites must read footprints from the parts, so the same declarations hold over such a view.
-        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
+        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
         {
             var layouts = new SouthModule().DescribeWindowLayouts(view, 1);
             var grids = layouts.SelectMany(l => l.Grids.Select(g => $"{l.Feature.Value}/{g.Key} {g.Columns}x{g.Rows}")).ToArray();
             Require(layouts.All(l => l.Grids.All(g => g.Columns > 0 && g.Rows > 0)), $"{name}: every declared grid has cells: {string.Join(", ", grids)}");
             Require(layouts.All(l => l.Grids.Select(g => g.Key).Distinct(StringComparer.Ordinal).Count() == l.Grids.Count), $"{name}: keys are unique per feature");
         }
-        Require(new SouthModule().DescribeWindowLayouts(new EnvelopeWorld(world), 1).SequenceEqual(new SouthModule().DescribeWindowLayouts(world, 1), LayoutComparer.Instance),
+        Require(new SouthModule().DescribeWindowLayouts(FakeWorld.Enveloped(world), 1).SequenceEqual(new SouthModule().DescribeWindowLayouts(world, 1), LayoutComparer.Instance),
             "the envelope view declares the same grids");
         var lake = ((PolygonGeometry)world.Features[new(EastLake.EastLakeSite.Lake)].Geometry).Rings;
-        Require(EastLake.EastLakeSite.Water(new EnvelopeWorld(world)).Outer.SequenceEqual(lake.Outer) && EastLake.EastLakeSite.Water(world).Outer.SequenceEqual(lake.Outer),
+        Require(EastLake.EastLakeSite.Water(FakeWorld.Enveloped(world)).Outer.SequenceEqual(lake.Outer) && EastLake.EastLakeSite.Water(world).Outer.SequenceEqual(lake.Outer),
             "the east lake's water ring comes from its own part in both views");
     }
 
@@ -541,7 +542,7 @@ public sealed class SouthModuleTests
         var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
         var module = new SouthModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
-        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
+        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
         {
             WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-18") : null;
             var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
@@ -555,34 +556,6 @@ public sealed class SouthModuleTests
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             Require(ids.Length > 0 && ids.All(id => south.Any(a => id >= a.BaseId && id < a.BaseId + a.Count)), $"{name}: the zone's windows lie in its own blocks");
-        }
-    }
-
-    /// <summary>The loaded world with every multi-source entity's Geometry replaced by its parts' bounding rectangle.</summary>
-    private sealed class EnvelopeWorld(IWorldModel inner) : IWorldModel
-    {
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => p.Value.Parts.Count == 0 ? p.Value : p.Value with
-        {
-            Geometry = Envelope(p.Value.Parts.SelectMany(part => part.Geometry switch
-            {
-                PolygonGeometry g => g.Rings.Outer,
-                MultiPolygonGeometry m => m.Polygons.SelectMany(r => r.Outer),
-                _ => [],
-            }).ToArray()),
-        });
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-
-        private static OverlayGeometry Envelope(Vector2[] points)
-        {
-            if (points.Length == 0) return new PointGeometry(Vector3.Zero);
-            float x0 = points.Min(p => p.X), x1 = points.Max(p => p.X), z0 = points.Min(p => p.Y), z1 = points.Max(p => p.Y);
-            return new PolygonGeometry(new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]));
         }
     }
 

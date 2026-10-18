@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Fauna.Tests;
@@ -76,22 +77,16 @@ public sealed class FaunaTests
                 Check(Vector3.Distance(spots[i], spots[j]) >= FaunaStyle.CatSiteSpacing - 1f, "Cat sites keep apart.");
     }
 
-    private sealed class NoNetworkWorld(IWorldModel inner) : IWorldModel
+    private static FakeWorld NoNetworkWorld(IWorldModel inner) => new(inner)
     {
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } =
-            inner.Features.Where(p => p.Value.Source != FeatureSource.Design).ToDictionary(p => p.Key, p => p.Value);
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
+        Features = inner.Features.Where(p => p.Value.Source != FeatureSource.Design).ToDictionary(p => p.Key, p => p.Value),
+        Network = WorldNetwork.Empty,
+    };
 
     [TestCase]
     public void AStubWorldWithoutNetworkOrOverlaysDegradesQuietly()
     {
-        var layout = FaunaPlanner.Build(new NoNetworkWorld(World.Value), 1, Lakes.Value);
+        var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
         Check(layout.Sites.Any(s => s.Kind == FaunaKind.Cat), "Cats still find a wall without roads.");
         Check(!layout.Sites.Any(s => s.Kind == FaunaKind.Pigeon), "No stepped plaza, no pigeons, and no exception.");
     }

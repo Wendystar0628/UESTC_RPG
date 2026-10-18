@@ -3,6 +3,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using Campus.Gen.Zones.West.Bridgehead;
 using Campus.Gen.Zones.West.Framework;
@@ -123,7 +124,7 @@ public sealed class West19cTests
             Require(MathF.Abs(LeveeHeight(topEdge.X, topEdge.Y) - (f.Foot + f.Flight.Height)) < 0.12f, $"{j.Key}: the top tread meets the levee top");
             Require(Vector2.Dot(f.Frame.W, Vector2.Normalize(j.Top - j.Toward)) > 0.99f, $"{j.Key}: the flight climbs toward the levee");
         }
-        var world = new TerrainWorld(World(), new LeveeTerrain());
+        var world = new FakeWorld(World()) { Terrain = new FormulaTerrain(LeveeHeight) };
         var colliders = Colliders(Context(world), new LeveeStepsSite());
         Require(colliders.OfType<RampCollider>().Count(r => r.Tag == SurfaceTag.Stair && r.Stair is not null) == 2, "each flight walks as one stair ramp");
         Require(colliders.All(c => c.Foot == FootMat.StonePaving), "stone underfoot");
@@ -171,28 +172,6 @@ public sealed class West19cTests
 
     private static readonly Vector2[] LeveeLine =
         [new(-308.84f, -147.52f), new(-307.28f, -150.63f), new(-303.98f, -154.91f), new(-296.28f, -164.94f), new(-293.69f, -168.33f), new(-281.59f, -184.05f)];
-
-    private sealed class LeveeTerrain : ITerrain
-    {
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => LeveeHeight(x, z);
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
-    }
-
-    private sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel
-    {
-        public ITerrain Terrain => terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
 
     private static List<Collider> Colliders(BuildContext ctx, WestSite site)
     {

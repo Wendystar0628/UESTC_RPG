@@ -8,6 +8,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Furniture.Tests;
@@ -85,12 +86,12 @@ public sealed class NodeBenchTests
     {
         // Opus review 17:28, judged on a made-up 12 × 10 m pedestrian square on open ground with a rest node at its middle: the
         // benches stand on the square (no bay on flat ground), backs to its edge, facing in; a square that is not there takes none.
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" });
         var square = new WorldFeature(new("design:furniture-test-square"), FeatureSource.Design, new("road"), new PolygonGeometry(new PolygonRings(ring, []))) { Props = props };
-        IWorldModel world = new TreedWorld(new WalkWorld(open, null, square), SquareTrees(spot));
+        IWorldModel world = MadeWorld(WalkWorld(open, null, square), [], [], SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"square at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
@@ -105,12 +106,12 @@ public sealed class NodeBenchTests
     {
         // Opus review 13c2b 21:05, judged on made-up walks on open ground with a rest node on them: a 5 m walk seats the node's benches on
         // itself at its edge (backs to the edge, 2.5 m left to pass); a 3.5 m walk takes none on itself (they stand beside it, 13c1).
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         foreach (var (width, takes) in new[] { (5f, true), (3.5f, false) })
         {
             var (line, feature) = DesignWalk(spot, width);
-            var world = new WalkWorld(open, line, feature);
+            var world = WalkWorld(open, line, feature);
             var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
             var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
             var onWalk = benches.Where(b => Distance(b.Anchor, line) <= Half(line)).ToList();
@@ -131,14 +132,14 @@ public sealed class NodeBenchTests
     {
         // Opus review 13c2b rework, on the made-up 12 × 10 m square with a 2.5 m footway running through its middle: the walk line does
         // not count against the benches (they stand on the square, backs to its edge, 2.5 m of paving in front), but none sits across it.
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var square = new WorldFeature(new("design:furniture-test-square"), FeatureSource.Design, new("road"), new PolygonGeometry(new PolygonRings(ring, [])))
         { Props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" }) };
         var walkProps = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
-        IWorldModel world = new TreedWorld(new MadeWorld(open, [walk], [square]), SquareTrees(spot));
+        IWorldModel world = MadeWorld(open, [walk], [square], SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"square with a walk through it at {spot}: " + string.Join(", ", benches.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
@@ -154,11 +155,11 @@ public sealed class NodeBenchTests
         // The walk is one walk: whichever way it is filed (line only, feature only, both) its node gets the same benches, standing
         // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
         // ground, so it holds on a world with or without the effective network.
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         var (line, feature) = DesignWalk(spot);
         var rules = NodeRules(spot);
-        FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(new WalkWorld(open, asLine, asFeature), null, Inputs(), rules);
+        FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(WalkWorld(open, asLine, asFeature), null, Inputs(), rules);
         List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
         var none = Layout(null, null);
         var both = Layout(line, feature);
@@ -168,7 +169,7 @@ public sealed class NodeBenchTests
         Check(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches, $"{benches.Count} benches at the node of a walk filed twice");
         Check(benches.Count < 2 || Vector2.Distance(benches[0].Anchor, benches[1].Anchor) >= FurnitureStyle.NodeBenchGap - 1e-3f, "the walk's node benches stand closer than the gap");
         Check(both.Items.Count == none.Items.Count + benches.Count && !both.Diagnostics.Any(d => d.Code == "wp13.node.no-bench" && d.Message.Contains("open node", StringComparison.Ordinal)), "the walk changed more than its node's benches");
-        var site = new StreetSite(new WalkWorld(open, line, feature));
+        var site = new StreetSite(WalkWorld(open, line, feature));
         foreach (var bench in benches)
         {
             var facing = Front(bench.Part.At);
@@ -181,8 +182,8 @@ public sealed class NodeBenchTests
         foreach (var (name, filed) in new[] { ("line only", Layout(line, null)), ("feature only", Layout(null, feature)) })
             Check(Benches(filed).Select(b => (b.Key, b.Anchor, b.Part.Params)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor, b.Part.Params))), $"the walk filed as {name} has other node benches than filed twice");
         // The same through the loader: an overlay adds the walk (with and without a hide that takes it away again).
-        var shown = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: false), FlatTerrain.Default), null, Inputs(), rules);
-        var hidden = FurniturePlanner.Build(new TerrainWorld(Loaded(spot, hide: true), FlatTerrain.Default), null, Inputs(), rules);
+        var shown = FurniturePlanner.Build(new FakeWorld(Loaded(spot, hide: false)) { Terrain = FlatTerrain.Default }, null, Inputs(), rules);
+        var hidden = FurniturePlanner.Build(new FakeWorld(Loaded(spot, hide: true)) { Terrain = FlatTerrain.Default }, null, Inputs(), rules);
         Check(Benches(shown).Select(b => (b.Key, b.Anchor)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor))), "the loaded walk has other node benches than the walk filed by hand");
         Check(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Diagnostics.SequenceEqual(none.Diagnostics), "a hidden design walk still gets furniture");
     }
@@ -277,19 +278,8 @@ public sealed class NodeBenchTests
     }
 
     /// <summary>The world with a walk filed the way the effective network files a design walk: as a network line, as a feature, or both (null leaves that stack alone).</summary>
-    private sealed class WalkWorld(IWorldModel inner, NetworkLine? line, WorldFeature? feature) : IWorldModel
-    {
-        private readonly Dictionary<FeatureId, WorldFeature> _features = feature is null ? new(inner.Features) : new(inner.Features) { [feature.Id] = feature };
-        private readonly WorldNetwork _network = line is null ? inner.Network : inner.Network with { Roads = [.. inner.Network.Roads, line] };
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
-        public WorldNetwork Network => _network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
+    private static FakeWorld WalkWorld(IWorldModel inner, NetworkLine? line, WorldFeature? feature) =>
+        MadeWorld(inner, line is null ? Array.Empty<NetworkLine>() : [line], feature is null ? Array.Empty<WorldFeature>() : [feature]);
 
     /// <summary>Trees 1.5 m outside the made-up 12 × 10 m square's edges (a plaza bench's back stands against planting, Opus review 13c2c).</summary>
     private static IReadOnlyList<NetworkTree> SquareTrees(Vector2 spot)
@@ -301,19 +291,5 @@ public sealed class NodeBenchTests
         for (var z = -3f; z <= 3.01f; z += 3f)
             foreach (var x in new[] { -7.5f, 7.5f }) list.Add(new NetworkTree(new($"design:furniture-test-tree-{n++}"), new Vector3(spot.X + x, 0f, spot.Y + z)));
         return list;
-    }
-
-    /// <summary>The world with made-up trees added to its network.</summary>
-    private sealed class TreedWorld(IWorldModel inner, IReadOnlyList<NetworkTree> trees) : IWorldModel
-    {
-        private readonly WorldNetwork _network = inner.Network with { Trees = [.. inner.Network.Trees, .. trees] };
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
-        public WorldNetwork Network => _network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
     }
 }

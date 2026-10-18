@@ -31,7 +31,7 @@ public sealed class AnchorFacingTests
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First();
         var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
         var moved = original with { Geometry = new PolygonGeometry(new PolygonRings(ring, [])), Props = Edit(original.Props!.Value, "yawDeg", 90f) };
-        var layout = Build(new FeatureWorld(world, moved));
+        var layout = Build(MadeWorld(world, [], [moved]));
         var turned = Turned(layout, moved.Id.Value) ?? throw new InvalidOperationException("the kiosk off the paving is not logged as turned: " + string.Join(" | ", layout.Diagnostics.Select(d => d.Message)));
         var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
         Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; diagnostics: {layout.Diagnostics.Single(d => d.Feature == moved.Id && d.Code == "wp13.anchor.turned").Message}");

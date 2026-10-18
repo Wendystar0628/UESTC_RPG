@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
 
@@ -195,7 +196,7 @@ public sealed class GroundTests
     [TestCase]
     public void GroundFollowsDesignedTerrain()
     {
-        var terrain = new Mound();
+        var terrain = Mound();
         var world = TestWorld.Street();
         world.Terrain = terrain;
         var ctx = TestWorld.Context(world);
@@ -224,31 +225,13 @@ public sealed class GroundTests
         Check.Close(Section.RoadY, GroundCollision.SampleHeight(collider, 50f, 0f), 0.02, "road stays at its flattened grade");
     }
 
-    private sealed class Mound : ITerrain
-    {
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
-        public bool IsFlat(TileKey tile) => false;
-
-        public float HeightAt(float x, float z)
+    private static FormulaTerrain Mound() => new(
+        (x, z) =>
         {
             var d2 = ((x - 50f) * (x - 50f) + (z - 50f) * (z - 50f)) / 361f;
             return d2 >= 1f ? 0f : 3f * (1f - d2) * (1f - d2);
-        }
-
-        public void FillTile(TileKey tile, int level, Span<short> cm)
-        {
-            var count = level == 4 ? 81 : 65;
-            var size = level == 4 ? 2560f : 64f * (1 << level);
-            var x0 = level == 4 ? -1280f : tile.X * size;
-            var z0 = level == 4 ? -1280f : tile.Z * size;
-            var step = size / (count - 1);
-            for (var j = 0; j < count; j++)
-                for (var i = 0; i < count; i++)
-                    cm[j * count + i] = (short)MathF.Round(HeightAt(x0 + i * step, z0 + j * step) * 100f);
-        }
-    }
+        },
+        (x, z) => new TerrainFacts(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity));
 
     [TestCase]
     public void PaletteColumnsMatchTheRegistry()
@@ -363,22 +346,14 @@ internal static class Check
 }
 
 /// <summary>Small synthetic worlds: an east-west street with kerbs, a sidewalk, a plaza and a crossing footpath.</summary>
-internal sealed class TestWorld : IWorldModel
+internal sealed class TestWorld : FakeWorld
 {
     private TestWorld(IEnumerable<WorldFeature> features, WorldNetwork network)
     {
+        Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]);
         Features = features.ToDictionary(f => f.Id);
         Network = network;
     }
-
-    public ITerrain Terrain { get; set; } = FlatTerrain.Default;
-    public PolygonRings Boundary { get; } = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]);
-    public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
-    public WorldNetwork Network { get; }
-    public ISpatialIndex Spatial { get; } = new FlatSpatial();
-    public IInteriorIndex Interiors { get; } = new NoInteriors();
-    public IOutskirtsModel? Outskirts => null;
-    public IFidelityModel? Fidelity => null;
 
     public static TestWorld Empty() => new([], WorldNetwork.Empty);
 
@@ -447,21 +422,5 @@ internal sealed class TestWorld : IWorldModel
             Bounds = new Box3(new(min.X, 0f, min.Y), new(max.X, kind == "building" ? 20f : 0f, max.Y)),
             Props = JsonDocument.Parse(props).RootElement.Clone()
         };
-    }
-
-    private sealed class FlatSpatial : ISpatialIndex
-    {
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
-        public float GroundY(float x, float z) => 0f;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public float? SupportY(float x, float z, float yHint) => 0f;
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-        public Vector3? NearestSafe(Vector3 p, float maxDist) => p;
-    }
-
-    private sealed class NoInteriors : IInteriorIndex
-    {
-        public InteriorIndexEntry? Get(FeatureId id) => null;
-        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [];
     }
 }

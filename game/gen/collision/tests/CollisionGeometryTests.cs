@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
@@ -149,13 +150,5 @@ public sealed class CollisionGeometryTests
             new FlatSpatial((x, z) => x <= -2 && z <= -2 ? -4 : 0), null);
         Require(corner.Single(wall => wall.A.Y == wall.B.Y && wall.A.Y < 1).Y0 == -6,
             "The exterior three-metre band omitted the footprint corner.");
-    }
-
-    private sealed class FlatSpatial(Func<float, float, float>? height = null) : ISpatialIndex
-    {
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
-        public float GroundY(float x, float z) => height?.Invoke(x, z) ?? 0;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
     }
 }

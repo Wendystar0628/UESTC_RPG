@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Buildings.Build;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Plan;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Buildings.Tests;
@@ -191,93 +192,47 @@ internal static class BuildingsTestSupport
             Props = JsonDocument.Parse("{\"category\":\"" + category + "\"}").RootElement.Clone(),
         };
 
-    internal static TestWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id), null);
+    internal static FakeWorld World(params WorldFeature[] features) => Of(features);
 
-    internal static TestWorld World(Entrances entrances, params WorldFeature[] features) =>
-        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances };
+    internal static FakeWorld World(FakeInteriors entrances, params WorldFeature[] features) => Of(features, entrances);
 
-    internal static TestWorld World(Entrances entrances, ITerrain terrain, params WorldFeature[] features) =>
-        new(features.ToDictionary(f => f.Id), null) { Interiors = entrances, Terrain = terrain };
+    internal static FakeWorld World(FakeInteriors entrances, ITerrain terrain, params WorldFeature[] features) => Of(features, entrances, terrain);
 
-    internal static TestWorld World(ZonedFidelity fidelity, params WorldFeature[] features)
+    internal static FakeWorld World(ZonedFidelity zones, params WorldFeature[] features)
     {
         var map = features.ToDictionary(f => f.Id);
-        fidelity.Features = map;
-        return new(map, fidelity);
-    }
-
-    /// <summary>Every footprint edge one segment: Zone above the ground band, GroundBand within it; roofs in <paramref name="roof"/>.</summary>
-    internal sealed class ZonedFidelity(FidelityZone zone, FidelityZone ground, FidelityZone roof = FidelityZone.K4) : IFidelityModel
-    {
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; set; } = new Dictionary<FeatureId, WorldFeature>();
-        public string InputHash => "test";
-        public IReadOnlyList<FacadeSegment> Facades(FeatureId building)
+        return Of(features, fidelity: new FakeFidelity(building =>
         {
-            var ring = ((PolygonGeometry)Features[building].Geometry).Rings.Outer;
-            return [.. ring.Select((a, i) => new FacadeSegment(building, i, a, ring[(i + 1) % ring.Count], zone, ground))];
-        }
-        public RoofZone Roof(FeatureId building) => new(building, roof);
-        public FidelityZone GroundAt(float x, float z) => FidelityZone.K3;
-        public float WalkDistanceAt(float x, float z) => 0f;
+            var ring = ((PolygonGeometry)map[building].Geometry).Rings.Outer;
+            return [.. ring.Select((a, i) => new FacadeSegment(building, i, a, ring[(i + 1) % ring.Count], zones.Zone, zones.Ground))];
+        }, zones.Roof));
     }
 
-    internal sealed class TestWorld(IReadOnlyDictionary<FeatureId, WorldFeature> features, IFidelityModel? fidelity) : IWorldModel
-    {
-        public PolygonRings Boundary { get; } = new([new(-1000, -1000), new(1000, -1000), new(1000, 1000), new(-1000, 1000)]);
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features;
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial { get; } = new Flat(features);
-        public IInteriorIndex Interiors { get; init; } = new NoInteriors();
-        public ITerrain Terrain { get; init; } = FlatTerrain.Default;
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity { get; } = fidelity;
-    }
-
-    /// <summary>A loaded world with its features rewritten (as an overlay op would), everything else as loaded.</summary>
-    internal sealed class StyledWorld(IWorldModel inner, Func<WorldFeature, WorldFeature> rewrite) : IWorldModel
-    {
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => rewrite(p.Value));
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
+    /// <summary>Every footprint edge one segment: Zone above the ground band, Ground within it; roofs in Roof.</summary>
+    internal sealed record ZonedFidelity(FidelityZone Zone, FidelityZone Ground, FidelityZone Roof = FidelityZone.K4);
 
     /// <summary>The open entrances of the fixture's features (the interior index's EntranceDecl).</summary>
-    internal sealed class Entrances(params (string Feature, EntranceDecl Door)[] doors) : IInteriorIndex
-    {
-        public InteriorIndexEntry? Get(FeatureId id) => doors.Any(d => d.Feature == id.Value)
-            ? new(id, [], [.. doors.Where(d => d.Feature == id.Value).Select(d => d.Door)], true, "test")
-            : null;
-        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [.. doors.Select(d => d.Door).Where(d => Vector3.Distance(d.Center, p) <= r)];
-    }
+    internal static FakeInteriors Entrances(params (string Feature, EntranceDecl Door)[] doors) =>
+        new([.. doors.GroupBy(d => d.Feature).Select(g => new InteriorIndexEntry(new FeatureId(g.Key), [], [.. g.Select(d => d.Door)], true, "test"))]);
 
     /// <summary>Level at 0 (pads too) north of <paramref name="edge"/> (z), <paramref name="drop"/> lower south of it.</summary>
-    internal sealed class Falling(float edge, float drop) : ITerrain
-    {
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => z < edge ? -drop : 0f;
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
-    }
+    internal static FormulaTerrain Falling(float edge, float drop) => new((x, z) => z < edge ? -drop : 0f);
+
+    /// <summary>A loaded world with its features rewritten (as an overlay op would), everything else as loaded.</summary>
+    internal static FakeWorld Styled(IWorldModel inner, Func<WorldFeature, WorldFeature> rewrite) =>
+        new(inner) { Features = inner.Features.ToDictionary(p => p.Key, p => rewrite(p.Value)) };
 
     /// <summary>Flat ground; every fixture feature is a candidate of every query (the planner tests containment itself).</summary>
-    internal sealed class Flat(IReadOnlyDictionary<FeatureId, WorldFeature> features) : ISpatialIndex
+    private static FakeWorld Of(WorldFeature[] features, FakeInteriors? interiors = null, ITerrain? terrain = null, IFidelityModel? fidelity = null)
     {
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [.. features.Keys.OrderBy(k => k.Value, StringComparer.Ordinal)];
-        public float GroundY(float x, float z) => 0f;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-    }
-
-    internal sealed class NoInteriors : IInteriorIndex
-    {
-        public InteriorIndexEntry? Get(FeatureId id) => null;
-        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => [];
+        var map = features.ToDictionary(f => f.Id);
+        return new FakeWorld
+        {
+            Features = map,
+            Spatial = new FlatSpatial(candidates: map),
+            Interiors = interiors ?? new FakeInteriors(),
+            Terrain = terrain ?? FlatTerrain.Default,
+            Fidelity = fidelity,
+        };
     }
 }

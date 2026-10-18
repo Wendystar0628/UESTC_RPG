@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -70,7 +71,7 @@ public sealed class GroundDiagonalTests
     {
         var ctx = TestWorld.Context(TestWorld.Empty());
         var extent = GroundLod.Tile(NativeTile, LodLevel.L0, ctx.Map.DataRect);
-        var grid = TerrainGrid.For(new FixtureTerrain(NativeTile, NativeField()), NativeTile, LodLevel.L0, extent);
+        var grid = TerrainGrid.For(FixtureTerrain(NativeTile, NativeField()), NativeTile, LodLevel.L0, extent);
         foreach (var (x, z, jolt) in Native)
         {
             var draped = grid.At(extent.X0 + x, extent.Z0 + z);
@@ -99,7 +100,7 @@ public sealed class GroundDiagonalTests
         // single fine cells instead of whole blocks. Every lawn piece must still lie on the draped terrain surface,
         // so each fine cell has to be split along the same diagonal as the terrain grid.
         var tile = new TileKey(0, 0);
-        var terrain = new FixtureTerrain(tile, NativeField());
+        var terrain = FixtureTerrain(tile, NativeField());
         var world = TestWorld.Junction();
         world.Terrain = terrain;
         var ctx = TestWorld.Context(world);
@@ -164,14 +165,8 @@ public sealed class GroundDiagonalTests
     }
 
     /// <summary>A terrain whose only non-flat tile is <paramref name="tile"/> at level 0, filled from a ready 65 x 65 centimetre field.</summary>
-    private sealed class FixtureTerrain(TileKey tile, short[] cm) : ITerrain
-    {
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity);
-        public bool IsFlat(TileKey other) => other != tile;
-
-        public float HeightAt(float x, float z)
+    private static FormulaTerrain FixtureTerrain(TileKey tile, short[] cm) => new(
+        (x, z) =>
         {
             var u = x - tile.X * GroundLod.TileSize;
             var w = z - tile.Z * GroundLod.TileSize;
@@ -180,12 +175,12 @@ public sealed class GroundDiagonalTests
             var j = Math.Clamp((int)MathF.Floor(w), 0, 63);
             float H(int a, int b) => cm[(j + b) * 65 + i + a] * 0.01f;
             return CellSplit.Lerp(H(0, 0), H(1, 0), H(0, 1), H(1, 1), u - i, w - j);
-        }
-
-        public void FillTile(TileKey other, int level, Span<short> target)
+        },
+        (x, z) => new TerrainFacts(0f, TerrainClass.Slope, float.PositiveInfinity, float.PositiveInfinity),
+        other => other != tile,
+        (other, level, target) =>
         {
             if (level == 0 && other == tile) cm.CopyTo(target);
             else target.Clear();
-        }
-    }
+        });
 }

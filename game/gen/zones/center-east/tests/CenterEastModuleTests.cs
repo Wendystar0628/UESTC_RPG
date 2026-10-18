@@ -6,6 +6,7 @@ using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.CenterEast.Pinxue;
 using Campus.Gen.Zones.CenterEast.Research;
 using Campus.Gen.Zones.CenterEast.Wenke;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
@@ -453,7 +454,7 @@ public sealed class CenterEastModuleTests
         Require(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0 && g.Rows > 0), "every grid has cells");
         Require(layouts[R.KeB].Single(g => g.Key == "attic").Rows == 1 && layouts[R.KeA].All(g => g.Rows == R.Storeys), "five storeys, one attic row");
         Require(Keys(K.Entity) == "hub,north,south,tower,west" && layouts[K.Entity].Single(g => g.Key == "tower").Rows == 15, $"文科楼 grids by block: {Keys(K.Entity)}");
-        var envelope = new CenterEastModule().DescribeWindowLayouts(new EnvelopeWorld(world), 1);
+        var envelope = new CenterEastModule().DescribeWindowLayouts(FakeWorld.Enveloped(world), 1);
         Require(envelope.All(l => l.Grids.SequenceEqual(layouts[l.Feature.Value])) && envelope.Count == layouts.Count, "the envelope view declares the same grids");
     }
 
@@ -523,7 +524,7 @@ public sealed class CenterEastModuleTests
         var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
         var module = new CenterEastModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
-        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)new EnvelopeWorld(world)) })
+        foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
         {
             WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-21") : null;
             var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
@@ -537,34 +538,6 @@ public sealed class CenterEastModuleTests
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             Require(ids.Length > 0 && ids.All(id => ours.Any(a => id >= a.BaseId && id < a.BaseId + a.Count)), $"{name}: the zone's windows lie in its own grids");
-        }
-    }
-
-    /// <summary>The loaded world with every multi-source entity's Geometry replaced by its parts' bounding rectangle.</summary>
-    private sealed class EnvelopeWorld(IWorldModel inner) : IWorldModel
-    {
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = inner.Features.ToDictionary(p => p.Key, p => p.Value.Parts.Count == 0 ? p.Value : p.Value with
-        {
-            Geometry = Envelope(p.Value.Parts.SelectMany(part => part.Geometry switch
-            {
-                PolygonGeometry g => g.Rings.Outer,
-                MultiPolygonGeometry m => m.Polygons.SelectMany(r => r.Outer),
-                _ => [],
-            }).ToArray()),
-        });
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-
-        private static OverlayGeometry Envelope(Vector2[] points)
-        {
-            if (points.Length == 0) return new PointGeometry(Vector3.Zero);
-            float x0 = points.Min(p => p.X), x1 = points.Max(p => p.X), z0 = points.Min(p => p.Y), z1 = points.Max(p => p.Y);
-            return new PolygonGeometry(new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]));
         }
     }
 

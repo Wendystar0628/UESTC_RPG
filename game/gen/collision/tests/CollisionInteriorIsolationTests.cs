@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
@@ -74,7 +75,7 @@ public sealed class CollisionInteriorIsolationTests
     public void MapWithoutDeclaredOrOpenInteriorsAllowsLegacyEmptySnapshot()
     {
         var map = new MapId("fixture-no-interiors");
-        var context = new BuildContext { Map = Descriptor(map), World = new FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
+        var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
         var result = new CollisionTileBuilder([], _ => []).Build(context, new(0, 0));
         if (result.Count != 0) throw new InvalidOperationException("A map without interior declarations produced extra collision shapes.");
     }
@@ -90,7 +91,7 @@ public sealed class CollisionInteriorIsolationTests
         return new BuildContext
         {
             Map = Descriptor(map),
-            World = new FixtureWorld(open),
+            World = FixtureWorld(open),
             WorldSeed = 1,
             Catalog = Catalog,
             InteriorProviders = providers,
@@ -120,23 +121,15 @@ public sealed class CollisionInteriorIsolationTests
         throw new InvalidOperationException($"Expected an explicit interior binding error containing '{expected}'.");
     }
 
-    private sealed class FixtureWorld(bool open) : IWorldModel
+    // The aggregate is a non-building marker so this fixture isolates the provider's floor, not automatic exterior walls.
+    private static FakeWorld FixtureWorld(bool open) => new()
     {
-        public PolygonRings Boundary { get; } = new(new Vector2[] { new(0, 0), new(64, 0), new(64, 64), new(0, 64) });
-        // The aggregate is a non-building marker so this fixture isolates the provider's floor, not automatic exterior walls.
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = new ReadOnlyDictionary<FeatureId, WorldFeature>(
-            new Dictionary<FeatureId, WorldFeature> { [Feature] = new(Feature, FeatureSource.Design, new("poi"), new PointGeometry(new(2, 0, 2))) });
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial => throw new InvalidOperationException("This isolation test must not fabricate ground support.");
-        public IInteriorIndex Interiors { get; } = new FixtureIndex(open);
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity => null;
-    }
-    private sealed class FixtureIndex(bool open) : IInteriorIndex
-    {
-        public InteriorIndexEntry? Get(FeatureId id) => id == Feature ? new(id, [], [], open, open ? ProviderId : null) : null;
-        public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float radius) => [];
-    }
+        Boundary = new([new(0, 0), new(64, 0), new(64, 64), new(0, 64)]),
+        Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(
+            new Dictionary<FeatureId, WorldFeature> { [Feature] = new(Feature, FeatureSource.Design, new("poi"), new PointGeometry(new(2, 0, 2))) }),
+        Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
+        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null)),
+    };
     private sealed class FixtureProvider(MapId map, float height, IReadOnlyList<FeatureId> features, Action? beforeCollision = null) : IInteriorProvider
     {
         private static readonly Vector2[] Ring = [new(1, 1), new(3, 1), new(3, 3), new(1, 3)];

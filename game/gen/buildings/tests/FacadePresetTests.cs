@@ -28,7 +28,7 @@ public sealed class FacadePresetTests
         };
         var plain = BuildingSet.For(World(features), 4u);
         Require(LayoutHash(plain) == "f3e3eb7b1d0265df", $"14-2b layout of ordinary buildings ({LayoutHash(plain)})");
-        var anchored = BuildingSet.For(World(new Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
+        var anchored = BuildingSet.For(World(Entrances(Anchor("t:dorm", "a", new(21.3f, 0f, 0f), 0f)), features), 4u);
         Require(anchored.Blocks.SequenceEqual(plain.Blocks), "an entrance anchor leaves every window block as it was");
         Require(Layout(anchored).Replace(Layout(anchored, "t:dorm"), "") == Layout(plain).Replace(Layout(plain, "t:dorm"), ""),
             "the other buildings keep their layout");
@@ -81,7 +81,7 @@ public sealed class FacadePresetTests
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
         string[] innovation = ["qsh:relation:10807928", "qsh:relation:10807929", "qsh:relation:17732622", "qsh:way:779496164", "qsh:way:779496165"];
         var real = RealCampus();
-        var withPreset = new StyledWorld(real, f => innovation.Contains(f.Id.Value) ? f with { Family = new BuildingFamily("research"), Facade = new FacadePreset(preset.Key) } : f);
+        var withPreset = Styled(real, f => innovation.Contains(f.Id.Value) ? f with { Family = new BuildingFamily("research"), Facade = new FacadePreset(preset.Key) } : f);
         var (was, now) = (BuildingSet.For(real, 1u), BuildingSet.For(withPreset, 1u));
         Require(now.Blocks.SequenceEqual(was.Blocks), "real campus: every window block as before");
         Require(Layout(now, where: p => !innovation.Contains(p.Id.Value)) == Layout(was, where: p => !innovation.Contains(p.Id.Value)), "real campus: the other buildings cell for cell");
@@ -214,7 +214,7 @@ public sealed class FacadePresetTests
         var dorms = was.Plans.Where(p => p.Style == Rules.BuildingStyle.Dormitory).Select(p => p.Id).Distinct().ToArray();
         Require(dorms.Length >= 20, $"the campus has dormitories ({dorms.Length})");
         var keyOf = dorms.Select((id, i) => (id, key: DormTable[i % DormTable.Length].Key)).ToDictionary(x => x.id, x => x.key);
-        var now = BuildingSet.For(new StyledWorld(real, f => keyOf.TryGetValue(f.Id, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
+        var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
         Require(now.Blocks.SequenceEqual(was.Blocks), "real campus: every window block as before");
         Require(Layout(now, where: p => !keyOf.ContainsKey(p.Id)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id)), "real campus: the other buildings cell for cell");
         for (var i = 0; i < was.Plans.Count; i++)
@@ -285,7 +285,7 @@ public sealed class FacadePresetTests
             ["qsh:way:550365561"] = "dorm.master.creamCoffee",
             ["qsh:way:544269693"] = "dorm.master.creamCoffeeWhite",
         };
-        var now = BuildingSet.For(new StyledWorld(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
+        var now = BuildingSet.For(Styled(real, f => keyOf.TryGetValue(f.Id.Value, out var k) ? f with { Facade = new FacadePreset(k) } : f), 1u);
         Require(now.Blocks.SequenceEqual(was.Blocks), "every window block as before");
         Require(Layout(now, where: p => !keyOf.ContainsKey(p.Id.Value)) == Layout(was, where: p => !keyOf.ContainsKey(p.Id.Value)), "the other buildings cell for cell");
         var seen = new HashSet<string>(StringComparer.Ordinal);

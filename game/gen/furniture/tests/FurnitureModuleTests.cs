@@ -8,6 +8,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Furniture.Tests;
@@ -21,8 +22,8 @@ public sealed class FurnitureModuleTests
     public void FurnitureLandsOnTheTerrain()
     {
         // 8% everywhere: poles sink 0.05–0.3 m below the lawn level at their centre; benches and bins share a concrete plinth.
-        var terrain = new Tilted(0.08f);
-        var gentle = Build(new TerrainWorld(World.Value, terrain));
+        var terrain = Tilted(0.08f);
+        var gentle = Build(new FakeWorld(World.Value) { Terrain = terrain });
         foreach (var lamp in gentle.Items.Where(i => i.Kind == FurnitureKind.StreetLamp))
         {
             var burial = terrain.HeightAt(lamp.Part.At.M41, lamp.Part.At.M43) + FurnitureStyle.LawnLift - lamp.Part.At.M42;
@@ -52,7 +53,7 @@ public sealed class FurnitureModuleTests
         Check(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 1e-3f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 1e-5f) == kiosks.Count - 1,
             "kiosks: one on the A06 deck, the others on their pads");
         // 30%: no pole stands.
-        var steep = Build(new TerrainWorld(World.Value, new Tilted(0.3f)));
+        var steep = Build(new FakeWorld(World.Value) { Terrain = Tilted(0.3f) });
         Check(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0, "poles on a 30% grade");
     }
 
@@ -175,13 +176,6 @@ public sealed class FurnitureModuleTests
     }
 
     /// <summary>A uniform tilt along x with a constant grade.</summary>
-    private sealed class Tilted(float grade) : ITerrain
-    {
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => grade * x;
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(grade, TerrainClass.Slope, 0f, 0f);
-    }
+    private static FormulaTerrain Tilted(float grade) =>
+        new((x, z) => grade * x, (x, z) => new TerrainFacts(grade, TerrainClass.Slope, 0f, 0f));
 }

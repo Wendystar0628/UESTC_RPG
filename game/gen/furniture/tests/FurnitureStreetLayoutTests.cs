@@ -126,7 +126,7 @@ public sealed class FurnitureStreetLayoutTests
         var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
         var shift = building.Centre - anchor.Centre;
         var moved = anchor.Feature with { Geometry = new PolygonGeometry(new PolygonRings([.. ring.Select(p => p + shift)], [])) };
-        var indoors = Build(new FeatureWorld(world, moved));
+        var indoors = Build(MadeWorld(world, [], [moved]));
         var name = anchor.Feature.Id.Value;
         Check(!indoors.Items.Any(i => i.Key == "anchor:" + name), "an anchor's furniture stands in a building");
         Check(indoors.Diagnostics.Any(d => d.Feature == anchor.Feature.Id && d.Code == "wp13.anchor.not-placed" && d.Level == DiagnosticLevel.Warning), "the building fallback is not logged");

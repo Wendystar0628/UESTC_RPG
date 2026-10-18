@@ -8,6 +8,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Furniture.Tests;
@@ -47,7 +48,7 @@ public sealed class StreetAmenityTests
     {
         // Made up on open ground: three walks meeting at a point, a landmark 20 m off: one signpost at the junction. Without the landmark,
         // none; a second such junction 40 m away (inside the 80 m line of sight) adds none.
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         var props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
         NetworkLine Walk(string id, Vector2 a, Vector2 b) => new(new($"design:furniture-test-{id}"), new Polyline([a, b]), 2.5f) { Props = props };
@@ -57,9 +58,9 @@ public sealed class StreetAmenityTests
         { Props = JsonSerializer.SerializeToElement(new { category = "landscape", subcategory = "landmark" }), Bounds = new(new(landmarkAt.X, 0f, landmarkAt.Y), new(landmarkAt.X, 0f, landmarkAt.Y)) };
         int Signs(IWorldModel world) => FurniturePlanner.Build(world, null, Inputs()).Count(FurnitureKind.Signpost);
         var baseline = Signs(open);
-        var one = Signs(new MadeWorld(open, Star("a", spot), [landmark]));
-        var bare = Signs(new MadeWorld(open, Star("a", spot), []));
-        var two = Signs(new MadeWorld(open, [.. Star("a", spot), .. Star("b", spot + new Vector2(0f, 40f))], [landmark]));
+        var one = Signs(MadeWorld(open, Star("a", spot), [landmark]));
+        var bare = Signs(MadeWorld(open, Star("a", spot), []));
+        var two = Signs(MadeWorld(open, [.. Star("a", spot), .. Star("b", spot + new Vector2(0f, 40f))], [landmark]));
         Console.WriteLine($"made-up junction at {spot}: baseline {baseline}, with a landmark {one}, without {bare}, two junctions {two}");
         Check(one == baseline + 1, $"{one - baseline} signposts at a three-walk junction by a landmark");
         Check(bare == baseline, $"{bare - baseline} signposts at a junction with no landmark near");
@@ -179,7 +180,7 @@ public sealed class StreetAmenityTests
     {
         // Made up on open ground: a 5 m service road running north into a 40 × 36 m cluster, a closed gate where it crosses the outline.
         // The gate takes one vending group (and, as the first closed gate's, a locker) beside the road, outside the cluster, facing the road.
-        var open = new TerrainWorld(World.Value, FlatTerrain.Default);
+        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         var road = new NetworkLine(new("design:furniture-test-drive"), new Polyline([spot + new Vector2(0f, 24f), spot + new Vector2(0f, -30f)]), 5f)
         { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };
@@ -188,7 +189,7 @@ public sealed class StreetAmenityTests
         var gateAt = spot + new Vector2(0f, -3f);
         var gate = new WorldFeature(new("design:furniture-test-gate"), FeatureSource.Design, new("clusterGate"), new PointGeometry(new Vector3(gateAt.X, 0f, gateAt.Y)))
         { Props = JsonSerializer.SerializeToElement(new { cluster = "design:furniture-test-cluster", open = false }) };
-        var layout = Build(new MadeWorld(open, [road], [cluster, gate]));
+        var layout = Build(MadeWorld(open, [road], [cluster, gate]));
         var machines = layout.Items.Where(i => i.Key.StartsWith("vending:design:furniture-test-gate:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"made-up gate at {gateAt}: " + string.Join(", ", machines.Select(m => $"{m.Key} ({m.Anchor.X:F1}, {m.Anchor.Y:F1})")) +
             $"; locker {layout.Items.Any(i => i.Key == "locker:design:furniture-test-gate")}");

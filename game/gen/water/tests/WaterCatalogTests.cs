@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
@@ -11,21 +12,6 @@ namespace Campus.Gen.Water.Tests;
 [TestSuite]
 public sealed class WaterCatalogTests
 {
-    private sealed class World(IReadOnlyDictionary<FeatureId, WorldFeature> features, float bank) : IWorldModel, ISpatialIndex
-    {
-        public PolygonRings Boundary { get; } = Rect(-1000, -1000, 1000, 1000);
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = features;
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial => this;
-        public IInteriorIndex Interiors => null!;
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity => null;
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
-        public float GroundY(float x, float z) => bank;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-    }
-
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
         new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
 
@@ -56,7 +42,7 @@ public sealed class WaterCatalogTests
                 ],
             },
         };
-        var bodies = WaterCatalog.Build(new World(features, 2f), Map(lake));
+        var bodies = WaterCatalog.Build(new FakeWorld { Features = features, Spatial = new FlatSpatial((_, _) => 2f) }, Map(lake));
         var p = WaterParams.Default;
         if (bodies.Count != 4) throw new InvalidOperationException($"expected 4 bodies, got {bodies.Count}");
         var l = bodies.Single(b => b.Id == lake);

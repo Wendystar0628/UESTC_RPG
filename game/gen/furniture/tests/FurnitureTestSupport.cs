@@ -7,6 +7,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
 
@@ -137,52 +138,16 @@ internal static class FurnitureTestSupport
         (feature.Parts.Count == 0 ? [feature.Geometry] : feature.Parts.Where(p => (p.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var k) ? k.GetString() : feature.Kind.Value) == feature.Kind.Value).Select(p => p.Geometry))
         .SelectMany(g => g switch { PolygonGeometry p => [p.Rings], MultiPolygonGeometry m => m.Polygons, _ => Array.Empty<PolygonRings>() });
 
-    /// <summary>The world with one feature replaced.</summary>
-    internal sealed class FeatureWorld(IWorldModel inner, WorldFeature feature) : IWorldModel
+    /// <summary>The world with made-up network lines, trees and features added (a feature with an existing id replaces that one).</summary>
+    internal static FakeWorld MadeWorld(IWorldModel inner, IReadOnlyList<NetworkLine> lines, IReadOnlyList<WorldFeature> features, IReadOnlyList<NetworkTree>? trees = null)
     {
-        private readonly Dictionary<FeatureId, WorldFeature> _features = new(inner.Features) { [feature.Id] = feature };
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
-
-    /// <summary>The world with made-up network lines and features added.</summary>
-    internal sealed class MadeWorld(IWorldModel inner, IReadOnlyList<NetworkLine> lines, IReadOnlyList<WorldFeature> features) : IWorldModel
-    {
-        private readonly Dictionary<FeatureId, WorldFeature> _features = Merge(inner, features);
-        private readonly WorldNetwork _network = inner.Network with { Roads = [.. inner.Network.Roads, .. lines] };
-        public ITerrain Terrain => inner.Terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => _features;
-        public WorldNetwork Network => _network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-
-        private static Dictionary<FeatureId, WorldFeature> Merge(IWorldModel inner, IReadOnlyList<WorldFeature> features)
+        var all = new Dictionary<FeatureId, WorldFeature>(inner.Features);
+        foreach (var f in features) all[f.Id] = f;
+        return new(inner)
         {
-            var all = new Dictionary<FeatureId, WorldFeature>(inner.Features);
-            foreach (var f in features) all[f.Id] = f;
-            return all;
-        }
-    }
-
-    internal sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel
-    {
-        public ITerrain Terrain => terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
+            Features = all,
+            Network = inner.Network with { Roads = [.. inner.Network.Roads, .. lines], Trees = [.. inner.Network.Trees, .. trees ?? Array.Empty<NetworkTree>()] },
+        };
     }
 
     internal static void Check(bool condition, string message)

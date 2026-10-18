@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Buildings.Build;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Plan;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Buildings.Tests;
@@ -18,7 +19,7 @@ public sealed class EntranceTests
     [TestCase]
     public void DoorsOpenAtTheEntranceAnchors()
     {
-        var index = new Entrances(
+        var index = Entrances(
             Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f),                          // off the bay centre, at the floor
             Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f),             // raised onto a porch
             Anchor("t:low", "low.mid", new(220f, 2.0f, 0f), 0f),                                // no door height under the next floor
@@ -85,7 +86,7 @@ public sealed class EntranceTests
         // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
         // landing, canopy and doorway colliders with it (the zone pack builds that door).
         var features = new[] { Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(200, 0, 40, 16), 4, 15.6f, "research") };
-        var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
+        var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
         var module = new BuildingsModule();
         var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
         var tile = dorm.Tile(LodLevel.L0);
@@ -127,7 +128,7 @@ public sealed class EntranceTests
         PlanEntrance? Door(float head, out BuildingPlan plan)
         {
             var (feature, decl) = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f);
-            plan = BuildingSet.For(World(new Entrances((feature, decl with { HeadY = head })), dorm), 2u).Plans.Single();
+            plan = BuildingSet.For(World(Entrances((feature, decl with { HeadY = head })), dorm), 2u).Plans.Single();
             return plan.Entrances.SingleOrDefault(e => e.Anchor == "dorm.south");
         }
         var known = Door(2.6f, out var p1)!;
@@ -139,9 +140,9 @@ public sealed class EntranceTests
 
         // Doors alone (outside landing on a porch or deck) are logged with the package expected to build what they open onto.
         var lab = Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research") with { Zone = new ZoneId("north") };
-        var porch = new Entrances(Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f));
+        var porch = Entrances(Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f));
         var deck = Feature("t:deck", Rect(100, -6, 40, 6), 1, 1.2f, "service");
-        string Log(TestWorld w, Func<FeatureId, Aspects, WpId?> claims)
+        string Log(FakeWorld w, Func<FeatureId, Aspects, WpId?> claims)
         {
             var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
             var plan = BuildingSet.For(w, 2u).Plans.Single(p => p.Key == "t:lab");
@@ -163,8 +164,8 @@ public sealed class EntranceTests
     public void EntranceLandingsFollowTheOutsideGround()
     {
         // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN).
-        var world = World(new Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
-            new Falling(-1f, 0.9f), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 20, 40, 16), 4, 15.6f, "research"));
+        var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
+            Falling(-1f, 0.9f), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 20, 40, 16), 4, 15.6f, "research"));
         var set = BuildingSet.For(world, 2u);
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var steps = EntranceKit.Pieces(dorm, dorm.Entrances.Single());

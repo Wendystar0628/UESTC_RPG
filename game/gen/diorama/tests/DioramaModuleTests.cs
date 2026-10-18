@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 
 namespace Campus.Gen.Diorama.Tests;
@@ -13,21 +14,6 @@ namespace Campus.Gen.Diorama.Tests;
 [TestSuite]
 public sealed class DioramaModuleTests
 {
-    private sealed class World : IWorldModel, ISpatialIndex
-    {
-        public PolygonRings Boundary { get; } = new([new(-1000, -1000), new(1000, -1000), new(1000, 1000), new(-1000, 1000)]);
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; } = new Dictionary<FeatureId, WorldFeature>();
-        public WorldNetwork Network => WorldNetwork.Empty;
-        public ISpatialIndex Spatial => this;
-        public IInteriorIndex Interiors => null!;
-        public IOutskirtsModel? Outskirts => null;
-        public IFidelityModel? Fidelity => null;
-        public IReadOnlyList<FeatureId> Query(Box3 box) => [];
-        public float GroundY(float x, float z) => 0f;
-        public CameraMedium MediumAt(Vector3 p) => new(MediumKind.Air);
-        public WalkClass WalkClassAt(float x, float z) => WalkClass.Walk;
-    }
-
     private static MapDescriptor Map(string backdrop) => new(
         new MapId("test"), new LocalizedName("", ""), MapKind.Outdoor, 1, 1,
         new GeoFrame(0, 0, 0, Vector2.Zero, Vector2.Zero), Vector2.Zero, new Box3(),
@@ -39,7 +25,7 @@ public sealed class DioramaModuleTests
     private static BuildContext Context(byte[]? backdrop, uint seed = 1) => new()
     {
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
-        World = new World(),
+        World = new FakeWorld(),
         Map = Map("backdrop.json"),
         WorldSeed = seed,
         SourceInputs = backdrop is null

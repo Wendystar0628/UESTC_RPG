@@ -7,6 +7,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
 
@@ -119,8 +120,8 @@ public sealed class PlantingTests
     {
         // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band.
         var (world, species, rules) = Data.Value;
-        var terrain = new TiltedTerrain();
-        var layout = Planting.Build(new TerrainWorld(world, terrain), species, rules, 1u);
+        var terrain = TiltedTerrain.Create();
+        var layout = Planting.Build(new FakeWorld(world) { Terrain = terrain }, species, rules, 1u);
         var flat = Planting.Build(world, species, rules, 1u);
         foreach (var t in layout.Trees)
         {
@@ -202,27 +203,11 @@ public sealed class PlantingTests
     }
 
     /// <summary>A gentle 4% tilt along x, with a 40% band between x = −100 and 0 m.</summary>
-    private sealed class TiltedTerrain : ITerrain
+    private static class TiltedTerrain
     {
         public static bool Steep(float x) => x is > -100f and < 0f;
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => 0.04f * x + 0.36f * Math.Clamp(x + 100f, 0f, 100f);
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(Steep(x) ? 0.4f : 0.04f, Steep(x) ? TerrainClass.Slope : TerrainClass.Flat, 0f, 0f);
-    }
-
-    private sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel
-    {
-        public ITerrain Terrain => terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
+        public static FormulaTerrain Create() => new((x, z) => 0.04f * x + 0.36f * Math.Clamp(x + 100f, 0f, 100f),
+            (x, z) => new TerrainFacts(Steep(x) ? 0.4f : 0.04f, Steep(x) ? TerrainClass.Slope : TerrainClass.Flat, 0f, 0f));
     }
 
     private static string FindRepository()

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Core.Axis;
 using Campus.Gen.Zones.Core.Framework;
@@ -110,7 +111,7 @@ public sealed class CoreModuleTests
     {
         var flat = RealWorld();
         var plazaFlat = (TimePlaza)CoreSite.Pieces(flat)[0];
-        var world = new TerrainWorld(flat, new BowlTerrain(plazaFlat.Centre, plazaFlat.Radius - 2.1f + 0.3f, -0.9f, 0.5f));
+        var world = new FakeWorld(flat) { Terrain = BowlTerrain(plazaFlat.Centre, plazaFlat.Radius - 2.1f + 0.3f, -0.9f, 0.5f) };
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
         Require(plaza.Sunken && plaza.Risers == 6, $"six risers for a 0.9 m drop (got {plaza.Risers})");
         Require(MathF.Abs(plaza.Riser - 0.15f) < 1e-3f && MathF.Abs(plaza.Tread - 0.35f) < 1e-3f, "R 0.15, T 0.35");
@@ -468,27 +469,7 @@ public sealed class CoreModuleTests
         throw new InvalidOperationException("repository root not found");
     }
 
-    /// <summary>The real world with a replaced terrain (a stand-in for WP-08's evaluator in tests).</summary>
-    private sealed class TerrainWorld(IWorldModel inner, ITerrain terrain) : IWorldModel
-    {
-        public ITerrain Terrain { get; } = terrain;
-        public PolygonRings Boundary => inner.Boundary;
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => inner.Features;
-        public WorldNetwork Network => inner.Network;
-        public ISpatialIndex Spatial => inner.Spatial;
-        public IInteriorIndex Interiors => inner.Interiors;
-        public IOutskirtsModel? Outskirts => inner.Outskirts;
-        public IFidelityModel? Fidelity => inner.Fidelity;
-    }
-
     /// <summary>A sunken disc at <paramref name="floor"/> out to <paramref name="radius"/>, rising at <paramref name="grade"/> back to 0.</summary>
-    private sealed class BowlTerrain(Vector2 centre, float radius, float floor, float grade) : ITerrain
-    {
-        public bool IsFlat(TileKey tile) => false;
-        public float HeightAt(float x, float z) => MathF.Min(0f, floor + grade * MathF.Max(0f, Vector2.Distance(new(x, z), centre) - radius));
-        public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
-        public float PadY(FeatureId feature) => 0f;
-        public float? WaterY(FeatureId water) => null;
-        public TerrainFacts FactsAt(float x, float z) => new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
-    }
+    private static FormulaTerrain BowlTerrain(Vector2 centre, float radius, float floor, float grade) =>
+        new((x, z) => MathF.Min(0f, floor + grade * MathF.Max(0f, Vector2.Distance(new(x, z), centre) - radius)));
 }

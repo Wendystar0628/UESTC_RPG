@@ -29,7 +29,7 @@ public sealed class BuildingTraceTests
             Feature("t:court", Courtyard(0, 100), 3, 12f, "teaching"),
             Feature("t:plant", Rect(200, 0, 20, 12), 2, 8f, "utility"),
         ];
-        var world = World(new Entrances(door), new Falling(-1f, 0.9f), features);
+        var world = World(Entrances(door), Falling(-1f, 0.9f), features);
         var ctx = Prepared(Ctx(world, 2u, claims: ["t:claimed"]));
         var module = new BuildingsModule();
         var plans = BuildingSet.For(world, 2u).Plans;
@@ -63,7 +63,7 @@ public sealed class BuildingTraceTests
         Require(ids.Count == 5 && ids.Distinct(StringComparer.Ordinal).Count() == 5, "every building has its own source ID over the map");
 
         // The IDs and what they stand for do not depend on the order the features were declared in.
-        var shuffled = Prepared(Ctx(World(new Entrances(door), new Falling(-1f, 0.9f), [.. Enumerable.Reverse(features)]), 2u, claims: ["t:claimed"]));
+        var shuffled = Prepared(Ctx(World(Entrances(door), Falling(-1f, 0.9f), [.. Enumerable.Reverse(features)]), 2u, claims: ["t:claimed"]));
         {
             var a = traced.ToDictionary(t => t.SourceId);
             var b = module.TraceSources(shuffled, LodLevel.L0).ToDictionary(t => t.SourceId);
