@@ -60,7 +60,7 @@ public sealed class CinematicPlaybackTests
             World = [new(0, WorldCueKind.NewTimeline)],
             Masks = [new(0, 1, MaskKind.Veil)],
         };
-        var playing = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+        var playing = playback.Play(definition, Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
             (_, _) => worldJob.Task);
         playback.Tick(0);
         var predicateCalls = 0;
@@ -77,7 +77,7 @@ public sealed class CinematicPlaybackTests
     {
         var rig = new FlowTestRig();
         var camera = rig.Camera; var playback = rig.Playback;
-        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+        var playing = playback.Play(Timeline(), Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var oldPredicateCalls = 0;
         var oldWait = playback.WaitUntil(() => { oldPredicateCalls++; return false; }, double.PositiveInfinity, "Old wait.");
@@ -101,7 +101,7 @@ public sealed class CinematicPlaybackTests
                 // EnterCore also clears playback synchronously when its awaited task is canceled.
                 playback.Clear();
                 nextWait = playback.WaitUntil(() => nextReady, double.PositiveInfinity, "Replacement wait.");
-                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+                nextPlaying = playback.Play(Timeline(), Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
                     (_, _) => Task.CompletedTask);
             }
         }
@@ -137,7 +137,7 @@ public sealed class CinematicPlaybackTests
     {
         var rig = new FlowTestRig();
         var camera = rig.Camera; var playback = rig.Playback;
-        var playing = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+        var playing = playback.Play(Timeline(), Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
             (_, _) => Task.CompletedTask);
         var waiting = playback.WaitUntil(() => false, double.PositiveInfinity, "Old wait.");
         Task? nextPlaying = null; Task? nextWait = null; var nextReady = false;
@@ -157,7 +157,7 @@ public sealed class CinematicPlaybackTests
             try { await waiting; throw new InvalidOperationException("The old wait should be canceled."); }
             catch (OperationCanceledException)
             {
-                nextPlaying = playback.Play(Timeline(), Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+                nextPlaying = playback.Play(Timeline(), Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
                     (_, _) => Task.CompletedTask);
                 nextWait = playback.WaitUntil(() => nextReady, double.PositiveInfinity, "Replacement wait.");
             }
@@ -179,7 +179,7 @@ public sealed class CinematicPlaybackTests
             World = [new(0, WorldCueKind.NewTimeline), new(0.5, WorldCueKind.FlowTo, 17.5, 60), new(2, WorldCueKind.SetFlow, Rate: 1)],
             Masks = [new(0, 1, MaskKind.Veil)],
         };
-        var done = playback.Play(definition, Anchors(camera.Pose, default, 70), new TestWorldModel(), AppState.Entering,
+        var done = playback.Play(definition, Start(camera.Pose, default, 70), new CinematicSpawnMapStub(), new TestWorldModel(), AppState.Entering,
             (cue, skipped) => { observed.Add(cue.Cue); return cue.Cue == WorldCueKind.NewTimeline ? blocked.Task : Task.CompletedTask; });
         playback.Tick(0.1);
         var finish = playback.FinishWorld();
@@ -193,7 +193,7 @@ public sealed class CinematicPlaybackTests
     [TestCase]
     public void VisibleOrientationUsesTheShortRouteAcrossNorth()
     {
-        if (Math.Abs(CinematicMath.AngleDelta(179, -179) - 2) > 0.0001f || Math.Abs(CinematicMath.AngleDelta(-179, 179) + 2) > 0.0001f)
+        if (Math.Abs(CinematicPoseMath.AngleDelta(179, -179) - 2) > 0.0001f || Math.Abs(CinematicPoseMath.AngleDelta(-179, 179) + 2) > 0.0001f)
             throw new InvalidOperationException("Camera yaw takes the long rotation path.");
     }
     [TestCase]
@@ -208,6 +208,8 @@ public sealed class CinematicPlaybackTests
         [new(Anchor: "$current")], new(CameraLookMode.Fixed), [new(from, 70)]);
     private static CinematicDef Timeline() => new(1, "test", new("test"), CinematicKind.EnterNew, 2,
         [Hold(0, 2)], [], [], [], [], [], new(new(Anchor: "$current")));
+    private static CinematicPlaybackStart Start(Pose current, Pose destination, float fov) =>
+        new(default, current, destination, fov, CinematicSpawnMapStub.Map);
     private static CinematicAnchorSet Anchors(Pose current, Pose destination, float fov) =>
         new(default, current, destination, fov, new CinematicSpawnMapStub(), CinematicSpawnMapStub.Map);
     private static void Reject(CinematicDef definition)

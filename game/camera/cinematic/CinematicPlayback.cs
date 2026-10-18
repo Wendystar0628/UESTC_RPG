@@ -1,14 +1,14 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
-using Campus.Flow;
+using Campus.Contracts.Maps;
 using Campus.Kernel.Renderer;
 
 namespace Campus.Camera.Cinematic;
 
 /// <summary>Single playback owner, advanced only by the camera-priority node.</summary>
-[KernelService(typeof(CinematicPlayback), Owner = "WP-49a")]
-public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation)
+[KernelService(typeof(ICinematicPlayback), Owner = "WP-49a")]
+public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation) : ICinematicPlayback
 {
     private readonly List<FrameWait> _waits = [];
     private CinematicDef? _definition;
@@ -38,15 +38,20 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
     {
         var firstEligibleFrame = _drawFrame + 1;
         return WaitUntil(() => _coveredDrawFrame >= firstEligibleFrame && presentation.IsCovered && veil.Opacity >= 1,
-            FlowTuning.PresentationReadyTimeoutSeconds, "Cinematic cover has not been presented by FramePostDraw.");
+            CinematicTuning.PresentationReadyTimeoutSeconds, "Cinematic cover has not been presented by FramePostDraw.");
     }
 
-    public Task Play(CinematicDef definition, CinematicAnchorSet anchors, IWorldModel world,
+    public Pose ResolvePose(CinematicPose pose, CinematicPlaybackStart start, IMapService maps) =>
+        Anchors(start, maps).Resolve(pose);
+    private static CinematicAnchorSet Anchors(CinematicPlaybackStart start, IMapService maps) =>
+        new(start.Title, start.Current, start.Destination, start.UserFov, maps, start.Map);
+
+    public Task Play(CinematicDef definition, CinematicPlaybackStart start, IMapService maps, IWorldModel world,
         AppState state, Func<WorldCue, bool, Task> worldCue)
     {
         if (IsPlaying) throw new InvalidOperationException("A cinematic is already playing.");
         if (!rules.Current.CinematicStates.Contains(state)) throw new InvalidOperationException("Ruleset forbids cinematic playback in this state.");
-        _track?.Dispose(); _track = new(definition, anchors, world);
+        _track?.Dispose(); _track = new(definition, Anchors(start, maps), world);
         _definition = definition; _worldCue = worldCue; _worldIndex = 0; Time = 0;
         _paused = false; _covered = false; _stopping = false; _pending = null; _finish = null; _veilTask = null; _carry = 0;
         _done = new();

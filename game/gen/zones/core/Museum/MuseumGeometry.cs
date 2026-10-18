@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Gen.Zones.Core.Library;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.Core.Museum;
 
@@ -13,13 +14,7 @@ public static class MuseumGeometry
     /// <summary>The ring in positive orientation (reversed when its shoelace area is negative).</summary>
     public static IReadOnlyList<Vector2> Positive(IReadOnlyList<Vector2> ring)
     {
-        double area = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        return area >= 0 ? ring.ToArray() : ring.Reverse().ToArray();
+        return PlanGeometry.SignedArea(ring) >= 0 ? ring.ToArray() : ring.Reverse().ToArray();
     }
 
     /// <summary>Outward unit normal of edge <paramref name="i"/>.</summary>

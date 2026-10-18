@@ -20,6 +20,8 @@ internal sealed class RecordingWeatherProcess : IWeatherProcess
     public uint Seed => 17;
     public bool Transitioning => false;
     public bool IsNative(WeatherKind kind, Season season) => true;
+    public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) => throw new NotSupportedException();
+    public WeatherKind MapToSeason(WeatherKind kind, Season season) => throw new NotSupportedException();
     public void Reset(WeatherBoot boot) => Resets++;
     public void Step(in WeatherTick tick) => Steps.Add(tick);
     public void Select(WeatherSel selection) { Selection = selection; Calls.Add("select"); }

@@ -179,9 +179,9 @@ public sealed class WeatherProcessTests
         p.Step(Tick(16.1)); var before = p.Now;
         for (int i = 0; i < 40; i++) p.Step(Tick(16.1) with { FlowRate = 0, RealDt = .5 });
         Check(p.Now == before, "Paused natural weather changed.");
-        Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather"] = "snow" }, 1, Season.Summer));
-        Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-seed"] = "4", ["load"] = "save.sav" }, 1, Season.Autumn));
-        Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["wet"] = "NaN" }, 1, Season.Autumn));
+        Reject(() => p.ParseBootOptions(new Dictionary<string, string> { ["weather"] = "snow" }, 1, Season.Summer));
+        Reject(() => p.ParseBootOptions(new Dictionary<string, string> { ["weather-seed"] = "4", ["load"] = "save.sav" }, 1, Season.Autumn));
+        Reject(() => p.ParseBootOptions(new Dictionary<string, string> { ["wet"] = "NaN" }, 1, Season.Autumn));
         p.Reset(new(4));
         p.Step(Tick(0));
         Check(p.Seed == 4 && p.Capture().LeftAtHours == 0, "New-game Reset retained the previous instance's clock.");
@@ -264,15 +264,24 @@ public sealed class WeatherProcessTests
     {
         var profile = Profile;
         var manual = new WeatherProcess(new Source(profile));
-        manual.Reset(new(85, WeatherKind.Snow, .82f, .27f)); manual.Enter(Map, "test", 6);
+        IWeatherProcess options = manual;
+        var arguments = new Dictionary<string, string>
+        {
+            ["weather-seed"] = "85", ["weather"] = "snow", ["weather-intensity"] = ".82", ["wet"] = ".27"
+        };
+        manual.Reset(options.ParseBootOptions(arguments, 1, Season.Winter)); manual.Enter(Map, "test", 6);
         manual.Quiet(6, WeatherRules.QuietEnd(6, 0, Season.Winter));
         manual.Step(Tick(6, Season.Winter));
         var saved = manual.Capture();
-        Check(saved.Selection is { Mode: WeatherMode.Manual, Kind: WeatherKind.Snow, Intensity: .82f } && saved.WetOverride == .27f &&
+        Check(manual.Seed == 85 && saved.Selection is { Mode: WeatherMode.Manual, Kind: WeatherKind.Snow, Intensity: .82f } && saved.WetOverride == .27f &&
             saved.QuietUntilHours == 0, "A map default consumed explicit boot weather or scalar arguments.");
+        Check(options.MapToSeason(WeatherKind.Rain, Season.Winter) == WeatherKind.Snow &&
+            options.MapToSeason(WeatherKind.Snow, Season.Autumn) == WeatherKind.Rain,
+            "Map boot weather did not follow the target season.");
 
         var timed = new WeatherProcess(new Source(profile));
-        timed.Reset(new(85, WeatherKind.Snow, .82f, .27f, 90)); timed.Enter(Map, "test", 6);
+        arguments["weather-remaining"] = "90";
+        timed.Reset(options.ParseBootOptions(arguments, 1, Season.Winter)); timed.Enter(Map, "test", 6);
         timed.Step(Tick(6, Season.Winter));
         saved = timed.Capture();
         Check(timed.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .82f } &&

@@ -84,7 +84,7 @@ public sealed class PlatformSite : SouthSite
                 var d = Vector2.Normalize(b - a);
                 var out_ = new Vector2(d.Y, -d.X);
                 var probe = (a + b) * 0.5f + out_ * P.AbutProbe;
-                edges.Add(new(a, b, out_, !closed.Any(r => PlanMath.Inside(r, probe))));
+                edges.Add(new(a, b, out_, !closed.Any(r => PlanGeometry.InsideByCrossings(r, probe))));
             }
 
         var stairs = new List<Stair>();
@@ -116,7 +116,7 @@ public sealed class PlatformSite : SouthSite
             for (var k = 0; k <= n; k++)
             {
                 var c = Vector2.Lerp(e.A, e.B, (P.ColumnEnd + (e.Length - 2f * P.ColumnEnd) * k / n) / e.Length) - e.Out * P.ColumnInset;
-                if (PlanMath.Inside(core, c) || !decks.Any(r => PlanMath.Inside(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
+                if (PlanGeometry.InsideByCrossings(core, c) || !decks.Any(r => PlanGeometry.InsideByCrossings(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
                 if (roads.Any(r => Distance(r.Line, c) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
                 if (stairs.Any(s => InStair(s, c, 1.0f))) continue;
                 columns.Add(c);

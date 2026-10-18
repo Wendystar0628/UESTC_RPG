@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.World;
 using H = Campus.Gen.Zones.North.NorthTune.Hall;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -56,7 +57,7 @@ public sealed class HallEntranceSite : NorthSite
             var foot = Plan.Closest(door, a, b);
             var distance = Vector2.Distance(door, foot);
             var frame = PlanFrame.Along(foot, b - a);
-            if (Plan.Contains(ring, frame.P(0, 0.5f))) frame = PlanFrame.Along(foot, a - b);
+            if (PlanGeometry.InsideByCrossings(ring, frame.P(0, 0.5f))) frame = PlanFrame.Along(foot, a - b);
             if (Vector2.Dot(frame.W, facing) < 0.7f || distance >= bestDistance) continue;
             best = frame;
             bestDistance = distance;

@@ -5,6 +5,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using StreetStyle = Campus.Gen.Parts.Street.StreetStyle;
 using Campus.Gen.Zones.West.Framework;
 using L = Campus.Gen.Zones.West.WestTune.Look;
@@ -76,7 +77,7 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
         // Stringers along both edges: the deck's clean edge line (收边), a step darker.
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.StringerWidth, W.StringerDepth, detail == SiteDetail.Mass ? 0f : 0.02f),
-                Route.Offset(path.Points, side * (W.Width * 0.5f + W.StringerWidth * 0.5f - 0.02f)), L.DeckDark, baseY: y - W.StringerDepth + 0.015f), Matrix4x4.Identity);
+                PlanGeometry.MitreOffset(path.Points, side * (W.Width * 0.5f + W.StringerWidth * 0.5f - 0.02f), closed: false), L.DeckDark, baseY: y - W.StringerDepth + 0.015f), Matrix4x4.Identity);
         // Granite sills at both mouths: the step from the paving onto the planks reads as a finished edge (收边).
         foreach (var (s, sign) in new[] { (0f, -1f), (path.Length, 1f) })
         {
@@ -134,7 +135,7 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
     {
         if (s1 - s0 < 0.5f) return;
         var lateral = side * RailLateral;
-        var line = Route.Offset(path.Sub(s0, s1), lateral);
+        var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), lateral, closed: false);
         var bevel = detail == SiteDetail.Full ? 0.025f : 0f;
         b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.HandrailWidth, W.HandrailDepth, bevel), line, L.Deck, baseY: y + W.RailHeight - W.HandrailDepth), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.MidRailSize, W.MidRailSize, detail == SiteDetail.Full ? 0.01f : 0f), line, L.DeckDark, baseY: y + W.MidRail), Matrix4x4.Identity);
@@ -286,7 +287,7 @@ public sealed class BoardwalkSite : WestSite, ILightMetadataSource
             foreach (var (s0, s1) in RailRuns(side))
             {
                 if (s1 - s0 < 0.5f) continue;
-                var line = Route.Offset(path.Sub(s0, s1), side * RailLateral);
+                var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), side * RailLateral, closed: false);
                 for (var i = 0; i + 1 < line.Length; i++)
                     c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
             }

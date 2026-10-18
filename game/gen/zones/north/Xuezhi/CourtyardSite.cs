@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.World;
 using C = Campus.Gen.Zones.North.NorthTune.Court;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -59,7 +60,7 @@ public sealed class CourtyardSite : NorthSite
         }
         Vector2 Edge(Vector2 p) => p + front * (C.PadReach - Vector2.Dot(p - C.SeatStart, front));
         Vector2[] ring = [.. face, Edge(face[^1]), Edge(face[0])];
-        if (Plan.SignedArea2(ring) < 0) Array.Reverse(ring);
+        if (PlanGeometry.SignedArea(ring) < 0) Array.Reverse(ring);
         return ring;
     }
 

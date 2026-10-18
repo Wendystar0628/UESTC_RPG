@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.Vegetation;
 using Campus.Style.Palette.Keys;
 using GdUnit4;
 
@@ -26,14 +25,14 @@ public sealed class BarkColourTests
         foreach (var (clock, target) in new[] { (17.5, "#9F703E"), (12.0, "#9F7E5E") })
         {
             composer.ComposeCurrent(script.EvaluateWorld(clock, (double)Season.Autumn, null, default));
-            var lit = Hex(composer, catalog, MotherModels.Bark);
+            var lit = Hex(composer, catalog, new PaletteToken("tree.bark.lit"));
             var litLab = Oklab.Parse(lit);
             var want = Oklab.Parse(target);
             var d = Math.Sqrt((litLab.L - want.L) * (litLab.L - want.L) + (litLab.A - want.A) * (litLab.A - want.A) + (litLab.B - want.B) * (litLab.B - want.B));
             if (d > Tolerance) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, {d:F3} from the review's {target}");
             // Warm grey-brown: red over blue at every frame, never the neutral cool grey the first albedo gave at noon.
             if (!(litLab.A > 0.0 && litLab.B >= 0.0)) throw new InvalidOperationException($"tree.bark.lit at autumn {clock} is {lit}, not warm");
-            var shade = Oklab.Parse(Hex(composer, catalog, MotherModels.BarkShade));
+            var shade = Oklab.Parse(Hex(composer, catalog, new PaletteToken("tree.bark.shade")));
             // The shade keeps the bark's own warm hue (0q): never pulled to the sky's blue-violet, and not grey.
             var shadeHue = Math.Atan2(shade.B, shade.A) * 180.0 / Math.PI;
             var shadeChroma = Math.Sqrt(shade.A * shade.A + shade.B * shade.B);

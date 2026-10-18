@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.Water;
 
 namespace Campus.Gen.Water;
 
@@ -8,7 +9,7 @@ namespace Campus.Gen.Water;
 /// COLOR flag 8 = never casts. Banks, bridges and culvert structures belong to the zone packages.
 /// </summary>
 [ContentModule("water", Owner = "WP-24")]
-public sealed class WaterModule : IContentModule
+public sealed class WaterModule : IWaterContentSource
 {
     private readonly object _gate = new();
     private (IWorldModel World, MapId Map, WaterSurfaces Surfaces)? _cache;
@@ -19,6 +20,10 @@ public sealed class WaterModule : IContentModule
     public ModuleBudget Budget { get; } = new(50_000, 50_000, 45);
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx) => Surfaces(ctx).Tiles();
+
+    public IReadOnlyList<WaterReflectionSurface> GetWaterBodies(BuildContext context) =>
+        Surfaces(context).Bodies.Select(body => new WaterReflectionSurface(body.Id, body.Rings, body.SurfaceY,
+            body.ReflectSlot, body.Min, body.Max, body.Area)).ToArray();
 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod) =>
         Surfaces(ctx).Bundle(tile, lod) is { } bundle ? new([bundle], []) : ContentOutput.Empty;

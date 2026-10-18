@@ -1,4 +1,4 @@
-namespace Campus.Gen.Interior.Shell.Cards;
+namespace Campus.Style.Shaders.Cards;
 
 /// <summary>
 /// The 15 window cards and the lobby card (WLD-INTERIORS). This is the single place to tune what a closed

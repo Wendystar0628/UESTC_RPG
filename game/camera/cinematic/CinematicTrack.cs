@@ -1,7 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Cinematic;
-using Campus.Flow;
 using Godot;
 using Vector3 = System.Numerics.Vector3;
 
@@ -29,20 +28,20 @@ public sealed class CinematicTrack : IDisposable
                 case CameraPath.Hold: break;
                 case CameraPath.Orbit: break;
                 case CameraPath.Bezier:
-                    var curve = new Curve3D { BakeInterval = FlowTuning.CurveBakeInterval };
+                    var curve = new Curve3D { BakeInterval = CinematicTuning.CurveBakeInterval };
                     foreach (var point in segment.Points) curve.AddPoint(ToGodot(Point(point)), ToGodot(point.In ?? Vector3.Zero), ToGodot(point.Out ?? Vector3.Zero));
                     _curves[i] = curve; _lengths[i] = curve.GetBakedLength();
                     break;
                 case CameraPath.Transit:
                     var from = Point(segment.Points[0]); var to = Point(segment.Points[1]);
                     var roof = Math.Max(from.Y, to.Y);
-                    for (var s = 0; s <= FlowTuning.TransitSamples; s++)
+                    for (var s = 0; s <= CinematicTuning.TransitSamples; s++)
                     {
-                        var p = Vector3.Lerp(from, to, (float)s / FlowTuning.TransitSamples);
-                        roof = Math.Max(roof, SourceRoof(world, p) + FlowTuning.TransitClearance);
+                        var p = Vector3.Lerp(from, to, (float)s / CinematicTuning.TransitSamples);
+                        roof = Math.Max(roof, SourceRoof(world, p) + CinematicTuning.TransitClearance);
                     }
-                    var apex = roof + Vector3.Distance(from, to) * FlowTuning.TransitHeightFactor;
-                    var transit = new Curve3D { BakeInterval = FlowTuning.CurveBakeInterval };
+                    var apex = roof + Vector3.Distance(from, to) * CinematicTuning.TransitHeightFactor;
+                    var transit = new Curve3D { BakeInterval = CinematicTuning.CurveBakeInterval };
                     // A single cubic whose control points lift the arc, with a vertical destination tangent.
                     var firstHandle = Vector3.Lerp(from, to, 0.35f) with { Y = apex };
                     var lastHandle = to with { Y = apex };
@@ -92,8 +91,8 @@ public sealed class CinematicTrack : IDisposable
             desired = CinematicMath.BlendOrientation(_segmentStart, desired, CinematicMath.Smooth((float)((time - segment.T0) / segment.Look.BlendIn.Value)));
         if (!CinematicMath.FullyCovered(_definition, time)) desired = desired with
         {
-            YawDeg = previous.YawDeg + Math.Clamp(CinematicMath.AngleDelta(previous.YawDeg, desired.YawDeg), -FlowTuning.MaxYawRate * (float)delta, FlowTuning.MaxYawRate * (float)delta),
-            PitchDeg = previous.PitchDeg + Math.Clamp(desired.PitchDeg - previous.PitchDeg, -FlowTuning.MaxPitchRate * (float)delta, FlowTuning.MaxPitchRate * (float)delta),
+            YawDeg = previous.YawDeg + Math.Clamp(CinematicPoseMath.AngleDelta(previous.YawDeg, desired.YawDeg), -CinematicTuning.MaxYawRate * (float)delta, CinematicTuning.MaxYawRate * (float)delta),
+            PitchDeg = previous.PitchDeg + Math.Clamp(desired.PitchDeg - previous.PitchDeg, -CinematicTuning.MaxPitchRate * (float)delta, CinematicTuning.MaxPitchRate * (float)delta),
         };
         return desired with { Position = position, FovDeg = Fov(segment, time) };
     }

@@ -4,6 +4,7 @@ using Campus.Gen.Buildings.Mesh;
 using Campus.Gen.Buildings.Model;
 using Campus.Gen.Buildings.Plan;
 using Campus.Gen.Buildings.Rules;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Buildings.Build;
 
@@ -404,7 +405,7 @@ public sealed class BuildingMesher
             if (plant && taken.Any(t => MathF.Abs(t.A - a) < t.HalfA + halfA + margin && MathF.Abs(t.B - bc) < t.HalfB + halfB + margin)) return false;
             Vector2 At(float da, float db) => axis * (a + da) + perp * (bc + db);
             var corners = new[] { At(-halfA, -halfB), At(halfA, -halfB), At(halfA, halfB), At(-halfA, halfB) };
-            if (PlanRing.SignedArea(corners) < 0f) Array.Reverse(corners);
+            if (PlanGeometry.SignedArea(corners) < 0) Array.Reverse(corners);
             var ok = corners.Append(At(0f, 0f)).All(q =>
                 PlanRing.InsideFootprint(_p.Outer, _p.Holes, q) && PlanRing.DistanceToEdges(_p.Outer, _p.Holes, q) > margin);
             if (!ok) return false;

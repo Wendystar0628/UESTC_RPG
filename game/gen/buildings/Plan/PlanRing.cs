@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Buildings.Plan;
 
@@ -63,19 +64,6 @@ public sealed class PlanRing
     /// <summary>Wraps already clean, correctly oriented points (for offset skins).</summary>
     public static PlanRing FromPoints(Vector2[] points, bool hole) => new(points, hole);
 
-    /// <summary>Signed area, positive for counter-clockwise rings in the (X, Z) plane.</summary>
-    public static float SignedArea(IReadOnlyList<Vector2> ring)
-    {
-        double sum = 0d;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var a = ring[i];
-            var b = ring[(i + 1) % ring.Count];
-            sum += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        return (float)(sum * 0.5d);
-    }
-
     /// <summary>
     /// Removes duplicate, collinear and sliver vertices, then orients the ring (outer CCW, hole CW).
     /// Returns null when fewer than three useful vertices remain or the area is negligible.
@@ -125,7 +113,7 @@ public sealed class PlanRing
             }
         }
         if (pts.Count < 3) return null;
-        var area = SignedArea(pts);
+        var area = (float)PlanGeometry.SignedArea(pts);
         if (MathF.Abs(area) < 4f) return null;
         if (area > 0f == hole) pts.Reverse();
         return new PlanRing([.. pts], hole);
@@ -153,24 +141,12 @@ public sealed class PlanRing
         }
     }
 
-    public static bool Contains(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            var a = ring[i];
-            var b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
-    }
-
     /// <summary>Point inside the outer ring and outside every hole.</summary>
     public static bool InsideFootprint(PlanRing outer, IReadOnlyList<PlanRing> holes, Vector2 p)
     {
-        if (!Contains(outer.Points, p)) return false;
+        if (!PlanGeometry.InsideByCrossings(outer.Points, p)) return false;
         foreach (var h in holes)
-            if (Contains(h.Points, p)) return false;
+            if (PlanGeometry.InsideByCrossings(h.Points, p)) return false;
         return true;
     }
 

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Vegetation;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
 using GdUnit4;

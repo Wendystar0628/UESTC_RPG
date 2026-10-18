@@ -27,18 +27,6 @@ public static class PlanMath
         return new(cx / (3f * a), cz / (3f * a));
     }
 
-    /// <summary>Point in ring by crossings (boundary points may go either way).</summary>
-    public static bool Inside(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            Vector2 a = ring[i], b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
-    }
-
     /// <summary>An angle in degrees wrapped to (−180, 180].</summary>
     public static float Turn(float degrees)
     {

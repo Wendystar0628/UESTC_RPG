@@ -201,8 +201,8 @@ public sealed class NorthModuleTests
             .Append((((PolylineGeometry)world.Features[new("design:north-drive-sf10")].Geometry).Line.Points, 5f)).ToArray();
         foreach (var p in outline)
         {
-            Require(Framework.Plan.Contains(cluster, p), $"deck corner {p} is inside 硕丰苑十组团");
-            Require(walls.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) >= 8f), $"deck corner {p} keeps 8 m off the walls");
+            Require(PlanGeometry.InsideByCrossings(cluster, p), $"deck corner {p} is inside 硕丰苑十组团");
+            Require(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f), $"deck corner {p} keeps 8 m off the walls");
             foreach (var (line, width) in roads)
                 Require(PolylineDistance(p, line) - width * 0.5f >= 3f, $"deck corner {p} keeps 3 m off a road edge");
         }
@@ -256,7 +256,7 @@ public sealed class NorthModuleTests
             {
                 var crosses = Enumerable.Range(0, 4).Any(i => Enumerable.Range(0, ring.Count).Any(k =>
                     Framework.Plan.Intersect(house[i], house[(i + 1) % 4], ring[k], ring[(k + 1) % ring.Count]) is not null));
-                Require(!crosses && !house.Any(p => Framework.Plan.Contains(ring, p)) && !ring.Any(p => Framework.Plan.Contains(house, p)),
+                Require(!crosses && !house.Any(p => PlanGeometry.InsideByCrossings(ring, p)) && !ring.Any(p => PlanGeometry.InsideByCrossings(house, p)),
                     $"{cluster.Name}: guard house at {g.Frame.Origin} overlaps a building");
             }
         }
@@ -281,7 +281,7 @@ public sealed class NorthModuleTests
         Require(PolylineDistance(drive[0], joins.Line.Points) < 0.5f, "the drive starts on the 6 m campus road it joins");
         var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
         foreach (var p in Samples(drive))
-            Require(walls.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) - 2.5f >= 0.5f), $"drive point {p} keeps its 5 m clear of the walls");
+            Require(walls.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) - 2.5f >= 0.5f), $"drive point {p} keeps its 5 m clear of the walls");
     }
 
     /// <summary>
@@ -317,7 +317,7 @@ public sealed class NorthModuleTests
         var rings = ctx.World.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
         foreach (var p in Samples([Canal.CanalRailSite.Post(0), Canal.CanalRailSite.Post(panels)]))
         {
-            Require(rings.All(r => !Framework.Plan.Contains(r, p) && RingDistance(p, r) >= 8f), $"railing point {p} keeps 8 m off the buildings");
+            Require(rings.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f), $"railing point {p} keeps 8 m off the buildings");
             foreach (var road in ctx.World.Network.Roads)
                 Require(PolylineDistance(p, road.Line.Points) - road.Width * 0.5f >= 3f, $"railing point {p} keeps 3 m off the road edge of {road.Id.Value}");
         }
@@ -401,7 +401,7 @@ public sealed class NorthModuleTests
         var corridors = file.Ops.OfType<TerrainCorridorOp>().ToDictionary(c => c.Road);
         var terraces = file.Ops.OfType<TerrainPlatformOp>().Select(p => p.Rings.Outer).ToArray();
         foreach (var road in roads)
-            if (Samples(road.Line.Points).Any(p => terraces.Any(t => Framework.Plan.Contains(t, p))))
+            if (Samples(road.Line.Points).Any(p => terraces.Any(t => PlanGeometry.InsideByCrossings(t, p))))
                 Require(corridors.ContainsKey(road.Id), $"{road.Id.Value} runs onto a terrace without corridor anchors");
         foreach (var c in corridors.Values)
             for (var i = 0; i + 1 < c.Anchors.Count; i++)
@@ -448,7 +448,7 @@ public sealed class NorthModuleTests
         foreach (var terrace in Terrain().Ops.OfType<TerrainPlatformOp>())
         {
             var ring = terrace.Rings.Outer;
-            var inside = footprint.Count(p => Framework.Plan.Contains(ring, p));
+            var inside = footprint.Count(p => PlanGeometry.InsideByCrossings(ring, p));
             Require(inside == 0 || inside == footprint.Count, $"5561 straddles {terrace.Id}");
             var clear = float.MaxValue;
             for (var i = 0; i < footprint.Count; i++)
@@ -507,7 +507,7 @@ public sealed class NorthModuleTests
             }
             foreach (var p in Samples(line))
             {
-                var wall = walls.Min(r => Framework.Plan.Contains(r, p) ? 0f : RingDistance(p, r)) - half;
+                var wall = walls.Min(r => PlanGeometry.InsideByCrossings(r, p) ? 0f : RingDistance(p, r)) - half;
                 Require(wall >= wallClear, $"{add.Id.Value}: surface at {p} is {wall:0.00} m from a wall or water edge");
                 foreach (var water in world.Network.Waterways)
                     Require(PolylineDistance(p, water.Line.Points) - water.Width * 0.5f - half >= wallClear, $"{add.Id.Value}: {p} keeps off {water.Id.Value}");
@@ -518,7 +518,7 @@ public sealed class NorthModuleTests
                         case TerrainPlatformOp t:
                             var n = double.Parse(t.Side.Fill.Split(':')[1], System.Globalization.CultureInfo.InvariantCulture);
                             var foot = Math.Abs(t.Y) * n + t.Fillet * 0.5;
-                            Require(!Framework.Plan.Contains(t.Rings.Outer, p) && RingDistance(p, t.Rings.Outer) - half >= foot, $"{add.Id.Value}: {p} is on {t.Id} or its side slope");
+                            Require(!PlanGeometry.InsideByCrossings(t.Rings.Outer, p) && RingDistance(p, t.Rings.Outer) - half >= foot, $"{add.Id.Value}: {p} is on {t.Id} or its side slope");
                             break;
                         case TerrainMoundOp or TerrainBasinOp:
                             var e = (TerrainEllipse)(op is TerrainMoundOp m ? m.Shape : ((TerrainBasinOp)op).Shape);
@@ -551,7 +551,7 @@ public sealed class NorthModuleTests
                     var area = world.Features[new(to)];
                     Require(area.Kind.Value == "road" && Text(area.Props, "roadType") == "pedestrian", $"{add.Id.Value}: {to} is a pedestrian area");
                     var rings = Framework.Plan.Polygons(area.Geometry).Select(r => r.Outer).ToArray();
-                    Require(rings.Any(r => Framework.Plan.Contains(r, end) || RingDistance(end, r) <= 0.05f), $"{add.Id.Value}: end {end} reaches {to}");
+                    Require(rings.Any(r => PlanGeometry.InsideByCrossings(r, end) || RingDistance(end, r) <= 0.05f), $"{add.Id.Value}: end {end} reaches {to}");
                 }
             }
         }

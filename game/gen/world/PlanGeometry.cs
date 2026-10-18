@@ -55,6 +55,55 @@ public static class PlanGeometry
     public static bool Contains(PolygonRings polygon, Vector2 p) =>
         PointInRing(p, polygon.Outer) && !polygon.Holes.Any(h => PointInRing(p, h));
 
+    /// <summary>
+    /// Single-precision even-odd crossing test, each edge read from ring[i] back to ring[i − 1]; boundary points may go either
+    /// way. <see cref="PointInRing"/> is the boundary-inclusive test.
+    /// </summary>
+    public static bool InsideByCrossings(IReadOnlyList<Vector2> ring, Vector2 p)
+    {
+        var inside = false;
+        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
+        {
+            Vector2 a = ring[i], b = ring[j];
+            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
+        }
+        return inside;
+    }
+
+    /// <summary>
+    /// Mitred offset with one output vertex per input vertex, positive to the right of the path (dz, −dx): a corner moves along
+    /// (n0 + n1) / (1 + n0·n1) of its edges' unit normals, held to <paramref name="limit"/> at sharp corners; an open line's ends
+    /// move along their own edge's normal.
+    /// </summary>
+    public static Vector2[] MitreOffset(IReadOnlyList<Vector2> points, float distance, bool closed, float limit = float.PositiveInfinity)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        var n = points.Count;
+        var output = new Vector2[n];
+        for (var i = 0; i < n; i++)
+        {
+            Vector2 m;
+            if (!closed && i == 0) m = RightNormal(points[0], points[1]);
+            else if (!closed && i == n - 1) m = RightNormal(points[n - 2], points[n - 1]);
+            else
+            {
+                Vector2 n0 = RightNormal(points[(i + n - 1) % n], points[i]), n1 = RightNormal(points[i], points[(i + 1) % n]);
+                m = (n0 + n1) / (1f + n0.X * n1.X + n0.Y * n1.Y);
+                var length = m.Length();
+                if (length > limit) m *= limit / length;
+            }
+            output[i] = points[i] + m * distance;
+        }
+        return output;
+    }
+
+    private static Vector2 RightNormal(Vector2 a, Vector2 b)
+    {
+        var v = new Vector2(b.Y - a.Y, a.X - b.X);
+        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
+        return length > 1e-9f ? v / length : Vector2.UnitX;
+    }
+
     public static float SegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b)
     {
         var d = b - a;

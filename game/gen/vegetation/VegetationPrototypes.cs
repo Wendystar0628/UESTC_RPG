@@ -3,14 +3,9 @@ using System.Globalization;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
+using Campus.Contracts.Vegetation;
 
 namespace Campus.Gen.Vegetation;
-
-/// <summary>
-/// The pools a tree can be drawn in (WLD-VEGETATION, ENG-PERF): the three near levels (≤ 150 m), the far
-/// pool (150–400 m) and the ShadowsOnly proxy of the near trees.
-/// </summary>
-public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
 
 /// <summary>
 /// Frozen prototypes of the vegetation pools and the per-tree instance record. One prototype per mother model (species ×

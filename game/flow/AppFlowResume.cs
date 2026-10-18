@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 
@@ -117,7 +118,7 @@ public sealed partial class AppFlowService
         };
     }
     private static bool SameLocation(Pose a, Pose b) => a.Position == b.Position &&
-        Math.Abs(Camera.Cinematic.CinematicMath.AngleDelta(a.YawDeg, b.YawDeg)) < 0.0001f && a.PitchDeg == b.PitchDeg;
+        Math.Abs(CinematicPoseMath.AngleDelta(a.YawDeg, b.YawDeg)) < 0.0001f && a.PitchDeg == b.PitchDeg;
     private sealed record ResumeEndpoint(SlotId Slot, IMapContext Context, long Instance, Pose Pose,
         ViewMode Mode, MapStreamDestination Prefetched);
 }

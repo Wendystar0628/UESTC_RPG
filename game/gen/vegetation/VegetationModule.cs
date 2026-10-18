@@ -1,5 +1,6 @@
 using System.Globalization;
 using Campus.Contracts;
+using Campus.Contracts.Vegetation;
 
 namespace Campus.Gen.Vegetation;
 
@@ -16,7 +17,7 @@ namespace Campus.Gen.Vegetation;
 /// nothing yet (crown clouds, ENG-PERF). Engine instances are made only by the kernel's instance pools.
 /// </summary>
 [ContentModule("vegetation", Owner = "WP-23")]
-public sealed class VegetationModule : IContentModule, IGroundMaskContributor, IContentSourceTraceProvider
+public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
 {
     private readonly object _gate = new();
     private Cache? _cache;
@@ -54,6 +55,40 @@ public sealed class VegetationModule : IContentModule, IGroundMaskContributor, I
         }
         return ContentOutput.Empty with { Instances = streams.AsReadOnly() };
     }
+
+    /// <summary>All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes.</summary>
+    public IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var species = VegetationInputs.Species(context);
+        var groups = new SortedDictionary<string, (SpeciesInfo Info, int Variant, List<float> Records)>(StringComparer.Ordinal);
+        foreach (var tile in Tiles(context))
+            foreach (var stream in Build(context, tile, LodLevel.L0).Instances)
+            {
+                var (id, variant, _) = VegetationPrototypes.Parse(stream.Prototype.Id);
+                var key = id + "." + variant.ToString(CultureInfo.InvariantCulture);
+                if (!groups.TryGetValue(key, out var group)) groups.Add(key, group = (species.Get(id), variant, []));
+                group.Records.AddRange(stream.Data.ToArray());
+            }
+        var mothers = groups.ToArray();
+        var built = new VegetationMotherData[mothers.Length];
+        for (var i = 0; i < mothers.Length; i++)
+        {
+            var (key, (info, variant, records)) = (mothers[i].Key, mothers[i].Value);
+            var prototypes = Enum.GetValues<VegPool>()
+                .Select(pool => VegetationPrototypes.Get(info, variant, pool, context.Catalog)).ToArray();
+            var data = records.ToArray();
+            var bounds = new Box3[data.Length / InstanceStreamLayout.FloatsPerInstance];
+            for (var tree = 0; tree < bounds.Length; tree++)
+                bounds[tree] = VegetationPrototypes.WorldBounds(prototypes[(int)VegPool.L0Plus].Bounds,
+                    InstanceMatrix(data.AsSpan(tree * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance)));
+            built[i] = new(key, new WpId(VegetationPrototypes.Owner), data, prototypes, bounds);
+        }
+        return built;
+    }
+
+    private static System.Numerics.Matrix4x4 InstanceMatrix(ReadOnlySpan<float> r) =>
+        new(r[0], r[4], r[8], 0f, r[1], r[5], r[9], 0f, r[2], r[6], r[10], 0f, r[3], r[7], r[11], 1f);
 
     /// <summary>Complete trees over the same production prototypes and trunk collision parameters as Build and Collide.</summary>
     public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)

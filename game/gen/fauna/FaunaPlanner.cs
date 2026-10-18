@@ -1,6 +1,8 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Fauna;
+using Campus.Gen.World;
 using S = Campus.Gen.Fauna.FaunaStyle;
 
 namespace Campus.Gen.Fauna;
@@ -405,19 +407,7 @@ public static class FaunaPlanner
     };
 
     private static bool Inside(Footprint f, Vector2 p) =>
-        p.X >= f.Min.X && p.X <= f.Max.X && p.Y >= f.Min.Y && p.Y <= f.Max.Y && Crossings(f.Ring, p);
-
-    private static bool Crossings(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            var a = ring[i];
-            var b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
-    }
+        p.X >= f.Min.X && p.X <= f.Max.X && p.Y >= f.Min.Y && p.Y <= f.Max.Y && PlanGeometry.InsideByCrossings(f.Ring, p);
 
     private static float SignedArea(IReadOnlyList<Vector2> ring)
     {

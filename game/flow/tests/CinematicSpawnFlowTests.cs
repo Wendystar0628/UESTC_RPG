@@ -1,6 +1,5 @@
 using System.Numerics;
 using System.Text.Json;
-using Campus.Camera.Cinematic;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
@@ -58,10 +57,11 @@ public sealed class CinematicSpawnFlowTests
     {
         var authored = new Pose(new(12, 18, -25), 45, -10, 65);
         var maps = new CinematicSpawnMapStub([new("named", authored, null)]);
-        var anchors = new CinematicAnchorSet(default, default, default, 60, maps, CinematicSpawnMapStub.Map);
-        if (anchors.Resolve("$waypoint:named") != authored || maps.NamedRequests != 1)
+        ICinematicPlayback playback = new FlowTestRig().Playback;
+        var start = new CinematicPlaybackStart(default, default, default, 60, CinematicSpawnMapStub.Map);
+        if (playback.ResolvePose(new(Anchor: "$waypoint:named"), start, maps) != authored || maps.NamedRequests != 1)
             throw new InvalidOperationException("Named cinematic lookup bypassed the map catalogue's inline-spawn precedence.");
-        try { anchors.Resolve("$waypoint:missing"); }
+        try { playback.ResolvePose(new(Anchor: "$waypoint:missing"), start, maps); }
         catch (ArgumentException) { return; }
         throw new InvalidOperationException("Unknown cinematic waypoint silently fell back to an origin or default.");
     }

@@ -45,6 +45,4 @@ public sealed record WaterParams
     /// <summary>Grid lines closer than this fraction of a step to a ring vertex or band edge are skipped.</summary>
     public float SliverFraction { get; init; } = 0.15f;
 
-    /// <summary>Screen-area estimate samples per reflection candidate lake.</summary>
-    public int AreaSamples { get; init; } = 48;
 }

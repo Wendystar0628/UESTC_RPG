@@ -1,7 +1,9 @@
 using Campus.Contracts;
+using Campus.Contracts.Bake;
+using Campus.Contracts.Content;
+using Campus.Contracts.Fauna;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
-using Campus.Gen.Fauna;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
@@ -22,8 +24,6 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
     private const double CheckSeconds = 0.25;              // 4 Hz latch check (WLD-LIFE)
     private static readonly WpId Package = new("WP-25");
 
-    private sealed record Prepared(FaunaLayout Layout, ContentOutput[][] Sets);
-
     private sealed class Latch
     {
         public bool Applied;
@@ -33,8 +33,8 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
 
     private IWorldState? _world;
     private IRenderHost? _host;
-    private Task<Prepared>? _job;
-    private Prepared? _prepared;
+    private Task<FaunaContent>? _job;
+    private FaunaContent? _prepared;
     private Latch[] _latches = [];
     private long _instance = long.MinValue;
     private double _sinceCheck;
@@ -45,7 +45,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
     /// <summary>Applied set per site key, for gates and the review sandbox (read only).</summary>
     public IReadOnlyDictionary<string, FaunaSet?> Applied =>
         _prepared is null ? new Dictionary<string, FaunaSet?>() :
-        _prepared.Layout.Sites.Select((s, i) => (s.Key, _latches[i].Set)).ToDictionary(p => p.Key, p => p.Set, StringComparer.Ordinal);
+        _prepared.Sites.Select((s, i) => (s.Key, _latches[i].Set)).ToDictionary(p => p.Key, p => p.Set, StringComparer.Ordinal);
 
     public override void _EnterTree() => ProcessPriority = FramePriority.Systems;
 
@@ -71,20 +71,10 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         ArgumentNullException.ThrowIfNull(ctx);
         Release();
         Error = null;
-        var world = ctx.World;
-        var seed = ctx.Descriptor.Seed;
-        var palette = Services.Get<PaletteCatalog>();
-        // Layout and meshes are pure and built off the main thread; mounting happens on the main thread when it is done.
-        var lakes = ctx.Descriptor.Env.ReflectLakes;
-        _job = Task.Run(() => Prepare(world, seed, lakes, palette));
-    }
-
-    private static Prepared Prepare(IWorldModel world, uint seed, IReadOnlyList<FeatureId> lakes, PaletteCatalog palette)
-    {
-        var layout = FaunaPlanner.Build(world, seed, lakes);
-        var scene = new FaunaScene(palette);
-        var sets = layout.Sites.Select(site => Enum.GetValues<FaunaSet>().Select(set => scene.Build(site.Set(set))).ToArray()).ToArray();
-        return new(layout, sets);
+        var source = Services.Get<IMapContentSource>().GetModule<IFaunaContentSource>(ctx, "fauna");
+        var context = Services.Get<IBakeContextSource>().GetPreparedContext(ctx, "fauna");
+        // The registered producer builds pure geometry off-thread; runtime only mounts the resulting states.
+        _job = Task.Run(() => source.PrepareFauna(context));
     }
 
     public override void _Process(double delta)
@@ -105,8 +95,8 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         {
             _job = null;
             _prepared = job.GetAwaiter().GetResult();
-            _latches = _prepared.Layout.Sites.Select(_ => new Latch()).ToArray();
-            foreach (var line in _prepared.Layout.Log) GD.Print("[WP-25 fauna] " + line);
+            _latches = _prepared.Sites.Select(_ => new Latch()).ToArray();
+            foreach (var line in _prepared.Log) GD.Print("[WP-25 fauna] " + line);
             _force = true;
         }
         if (_prepared is null) return;
@@ -120,7 +110,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         var frustum = anywhere ? null : GetViewport()?.GetCamera3D()?.GetFrustum();
         for (var i = 0; i < _latches.Length; i++)
         {
-            var site = _prepared.Layout.Sites[i];
+            var site = _prepared.Sites[i];
             var latch = _latches[i];
             var target = FaunaSchedule.Target(site.Kind, sun, _world.Clock, weather);
             if (latch.Applied && latch.Set == target) continue;
@@ -135,7 +125,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         var latch = _latches[index];
         _host ??= Services.Get<IRenderHost>();
         if (latch.Handle is { } old) { _host.Unmount(old); latch.Handle = null; }
-        if (target is { } set && _prepared!.Sets[index][(int)set] is { Meshes.Count: > 0 } output)
+        if (target is { } set && _prepared!.Sites[index].Sets[(int)set] is { Meshes.Count: > 0 } output)
             latch.Handle = _host.Mount(output, Package);
         latch.Set = target;
         latch.Applied = true;

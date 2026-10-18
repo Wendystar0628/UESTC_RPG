@@ -1,6 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Gen.Water;
+using Campus.Contracts.Water;
 using Campus.Systems.Water;
 using GdUnit4;
 
@@ -9,16 +9,17 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class ReflectionLakesTests
 {
-    private static WaterBody Lake(string id, int slot, float x0, float z0, float x1, float z1)
+    private static WaterReflectionSurface Lake(string id, int slot, float x0, float z0, float x1, float z1)
     {
         var rings = new PolygonRings([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
-        return new(new FeatureId(id), WaterKind.Lake, rings, -0.3f, slot, new(x0, z0), new(x1, z1), WaterCatalog.Area(rings));
+        return new(new FeatureId(id), rings, -0.3f, slot, new(x0, z0), new(x1, z1), (x1 - x0) * (z1 - z0));
     }
 
     private static ReflectionLakes TwoLakes() =>
         ReflectionLakes.FromBodies([Lake("west", 0, -300f, -100f, -100f, 100f), Lake("east", 1, 100f, -100f, 300f, 100f)], 48);
 
     [TestCase]
+    [RequireGodotRuntime]
     public void LargestLakeOnScreenWinsAndSwitchesOnlyPastHysteresis()
     {
         var lakes = TwoLakes();
@@ -30,6 +31,7 @@ public sealed class ReflectionLakesTests
     }
 
     [TestCase]
+    [RequireGodotRuntime]
     public void HiddenLakesDoNotCount()
     {
         var lakes = TwoLakes();

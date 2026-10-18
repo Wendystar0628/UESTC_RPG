@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.World;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
 namespace Campus.Gen.Zones.DesignWaterfront.Bridges;
@@ -68,13 +69,7 @@ internal sealed class BridgePlan
 
     internal static Vector2[] Ccw(Vector2[] ring)
     {
-        var area = 0.0;
-        for (var i = 0; i < ring.Length; i++)
-        {
-            var a = ring[i]; var b = ring[(i + 1) % ring.Length];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        if (area < 0) Array.Reverse(ring);
+        if (PlanGeometry.SignedArea(ring) < 0) Array.Reverse(ring);
         return ring;
     }
 

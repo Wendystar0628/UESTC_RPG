@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Fauna;
 
 namespace Campus.Gen.Fauna;
 

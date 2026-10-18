@@ -130,7 +130,7 @@ public sealed class CenterEastModuleTests
     {
         var world = World();
         IReadOnlyList<Vector2> Outline(string id) => ((PolygonGeometry)world.Features[new(id)].Geometry).Rings.Outer;
-        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs(PlanMath.SignedArea2(ring)) * 0.5f;
+        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanGeometry.SignedArea(ring));
         foreach (var (id, back, sagitta) in new[] { ("design:center-east-ke-a-lens-hall", R.KeAHallBack, R.KeAHallSagitta),
                      ("design:center-east-ke-b-lens-hall", R.KeBHallBack, R.KeBHallSagitta), ("design:center-east-ke-c-lens-hall", R.KeCHallBack, R.KeCHallSagitta) })
         {
@@ -325,13 +325,13 @@ public sealed class CenterEastModuleTests
         // The OSM points move by less than 4 m (a minor adjustment with no reshape, MAP-QSH-CENTER-EAST "定位").
         foreach (var (id, at) in new[] { (M.Lin, M.LinAt), (M.Maxwell, M.MaxwellAt), (M.Stele, M.SteleAt) })
             Require(Vector2.Distance(Point(id), at) < 4f, $"{id} stays within 4 m of its OSM point");
-        Require(StatueLawnSite.Island(world) is { } island && PlanMath.Inside(island, M.LinAt), "林为干像 stands on the plaza's tree island");
+        Require(StatueLawnSite.Island(world) is { } island && PlanGeometry.InsideByCrossings(island, M.LinAt), "林为干像 stands on the plaza's tree island");
         // The design additions agree with what is built.
         Require(Vector2.Distance(Point("design:center-east-maxwell-equation-stone"), M.StoneAt) < 0.02f, "overlay and tune agree on the equation stone");
         var apron = ((PolygonGeometry)world.Features[new("design:center-east-maxwell-apron")].Geometry).Rings.Outer;
         Require(apron.Count == 4 && apron.Zip(StatueLawnSite.ApronRing).All(p => Vector2.Distance(p.First, p.Second) < 0.05f), "overlay and tune agree on the apron");
         foreach (var at in new[] { M.MaxwellAt, M.StoneAt })
-            Require(PlanMath.Inside(StatueLawnSite.ApronRing, at), $"{at} stands on the apron");
+            Require(PlanGeometry.InsideByCrossings(StatueLawnSite.ApronRing, at), $"{at} stands on the apron");
         // Every inscription line lies on the dressed face with stone round it.
         foreach (var (x, y, length) in StatueLawnSite.StoneLines())
             foreach (var (fx, fy) in new[] { (x - length * 0.5f, y), (x + length * 0.5f, y), (x - length * 0.5f, y + M.StoneLineHeight), (x + length * 0.5f, y + M.StoneLineHeight) })
@@ -368,7 +368,7 @@ public sealed class CenterEastModuleTests
     {
         var ctx = Context();
         var plan = WenkeSite.Footprints(ctx.World);
-        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs(PlanMath.SignedArea2(ring)) * 0.5f;
+        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanGeometry.SignedArea(ring));
         WenkeSite.Block Block(string part) => plan.Blocks.Single(b => b.Part == part);
         Require(Block(K.Tower).Storeys == 15 && WenkeSite.Floor(15) + K.Parapet > 58f, "the tower stands fifteen storeys, about 60 m");
         // The wings step back toward their tips: each top storey is smaller than its ground storey, with planted terraces between.
@@ -401,7 +401,7 @@ public sealed class CenterEastModuleTests
         Require(Vector2.Distance(Point("design:center-east-wenke-friendship-stone"), F.StoneAt) < 0.02f, "overlay and tune agree on the stone");
         var vault = Outline("design:center-east-wenke-atrium-roof");
         Require(MathF.Abs(Area(vault) - MathF.PI * K.AtriumHalf.X * K.AtriumHalf.Y) < 0.05f * Area(vault), "the registered atrium roof matches the vault");
-        Require(PlanMath.Inside(Block(K.Hub).Outlines[^1], K.AtriumCentre), "the vault stands on the hub");
+        Require(PlanGeometry.InsideByCrossings(Block(K.Hub).Outlines[^1], K.AtriumCentre), "the vault stands on the hub");
         // The emblem sits on the stone's dressed face with stone round it.
         foreach (var (x, y) in new[] { (-F.EmblemRadius, F.EmblemY), (F.EmblemRadius, F.EmblemY), (0f, F.EmblemY - F.EmblemRadius), (0f, F.EmblemY + F.EmblemRadius) })
             Require(F.Stone.OnDressedFace(x, y, 0.03f), $"emblem edge ({x}, {y}) is on the dressed face");

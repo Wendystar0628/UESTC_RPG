@@ -1,29 +1,17 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.CenterEast.Framework;
 
 /// <summary>Small plan-geometry helpers on world (x, z) rings, in scalar arithmetic.</summary>
 public static class PlanMath
 {
-    /// <summary>Twice the signed shoelace area; positive rings have their outside on the right of the path (sweep convention).</summary>
-    public static float SignedArea2(IReadOnlyList<Vector2> ring)
-    {
-        ArgumentNullException.ThrowIfNull(ring);
-        var a = 0f;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 p = ring[i], q = ring[(i + 1) % ring.Count];
-            a += p.X * q.Y - q.X * p.Y;
-        }
-        return a;
-    }
-
-    /// <summary>The ring walked so that its outside lies on the right of the path (lateral positive in a sweep).</summary>
+    /// <summary>The ring walked so that its outside lies on the right of the path (lateral positive in a sweep); positive-area rings already are.</summary>
     public static Vector2[] OutsideRight(IReadOnlyList<Vector2> ring)
     {
         var points = ring.ToArray();
-        if (SignedArea2(points) < 0) Array.Reverse(points);
+        if (PlanGeometry.SignedArea(points) < 0) Array.Reverse(points);
         return points;
     }
 
@@ -61,17 +49,5 @@ public static class PlanMath
     {
         var w = Heading(bearing);
         return new(origin, new(w.Y, -w.X));
-    }
-
-    /// <summary>Point in ring by crossings (boundary points may go either way).</summary>
-    public static bool Inside(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            Vector2 a = ring[i], b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
     }
 }

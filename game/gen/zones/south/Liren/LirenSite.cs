@@ -123,7 +123,7 @@ public sealed class LirenSite : SouthSite
     internal static GridEdge Dress(GridEdgeInfo e, IReadOnlyList<IReadOnlyList<Vector2>> neighbours)
     {
         var probe = (e.A + e.B) * 0.5f + e.Frame.W * 0.8f;
-        if (neighbours.Any(ring => PlanMath.Inside(ring, probe))) return new(EdgeKind.Hidden);
+        if (neighbours.Any(ring => PlanGeometry.InsideByCrossings(ring, probe))) return new(EdgeKind.Hidden);
         return new(e.Length < 4f ? EdgeKind.Blank : EdgeKind.Plain);
     }
 

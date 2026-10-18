@@ -1,6 +1,6 @@
-// window_card.gdshaderinc：窗卡与门厅卡的主线版程序化内容（WP-51b，contract-NN 申请登记）。
+// window_card.gdshaderinc：窗卡与门厅卡的主线版程序化内容（WP-51b）。
 // 规格：WLD-INTERIORS；ART-FIDELITY（亮窗、门厅卡不是空盒子）；SYS-TIME（亮灭仍归 lamp_window_on）。
-// 窗卡号 = VF-B 玻璃的窗位类型字节（COLOR.a），也是 window_cards 表的行号；表由 Campus.Gen.Interior.Shell.Cards.WindowCardTable
+// 窗卡号 = VF-B 玻璃的窗位类型字节（COLOR.a），也是 window_cards 表的行号；表由 Campus.Style.Shaders.Cards.WindowCardTable
 // 打包（RGBA32F，6 × 32），一行一种卡：进深权重、隔墙、侧墙距离、近层与背墙剪影、侧墙内容、窗帘或百叶、日间明度、夜间增益、吊顶、点缀。
 // 主线版按卡号程序化画出各层（与 veg_card 的叶卡同一做法）；细节版换成 Texture2DArray 的同号层（表 x4.w 起的层号）。
 // 由 toon_glass 在 toon.gdshaderinc 之后引入；只用统一控制流里算好的 aa（每像素对应的窗面米数），不在分支里取导数。

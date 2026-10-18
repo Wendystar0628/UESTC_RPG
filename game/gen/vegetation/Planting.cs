@@ -456,11 +456,11 @@ public static class Planting
     internal sealed class Site
     {
         private const float Cell = 32f;
-        private readonly Dictionary<(int, int), List<Parcel>> _blocking = [];
-        private readonly Dictionary<(int, int), List<NetworkLine>> _roads = [];
-        private readonly Dictionary<(int, int), List<Pave>> _pavement = [];
+        private readonly SpatialGrid<Parcel> _blocking = new(Cell);
+        private readonly SpatialGrid<NetworkLine> _roads = new(Cell);
+        private readonly SpatialGrid<Pave> _pavement = new(Cell);
         private readonly List<Pit> _pits = [];
-        private readonly Dictionary<(int, int), List<(Vector2 P, float R)>> _occupied = [];
+        private readonly SpatialGrid<(Vector2 P, float R)> _occupied = new(Cell);
         private readonly float _windMin;
         private readonly float _windSpan;
 
@@ -476,7 +476,7 @@ public static class Planting
             {
                 foreach (var kind in Blocking)
                     foreach (var rings in Polygons(feature, kind))
-                        Index(_blocking, rings.Min, rings.Max, rings);
+                        _blocking.AddBox(rings.Min, rings.Max, rings);
                 foreach (var rings in Polygons(feature, "green")) green.Add(rings);
                 // The effective world's hard pavement: the road areas and design walks of the features (the network's own
                 // centre lines are roads above), and the tree pits that may stand on it.
@@ -497,7 +497,7 @@ public static class Planting
                 }
                 var min = road.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(road.Width * 0.5f);
                 var max = road.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(road.Width * 0.5f);
-                Index(_roads, min, max, road);
+                _roads.AddBox(min, max, road);
             }
             var outer = world.Boundary.Outer;
             _windMin = outer.Count > 0 ? outer.Min(p => p.X) : -1000f;
@@ -519,7 +519,7 @@ public static class Planting
 
         public bool Blocked(Vector2 p, float radius)
         {
-            foreach (var parcel in Near(_blocking, p))
+            foreach (var parcel in _blocking.In(p))
             {
                 if (p.X < parcel.Min.X - radius || p.X > parcel.Max.X + radius || p.Y < parcel.Min.Y - radius || p.Y > parcel.Max.Y + radius) continue;
                 if (PlanGeometry.Contains(parcel.Rings, p) || Edge(parcel.Rings, p) < radius) return true;
@@ -529,7 +529,7 @@ public static class Planting
 
         public bool OnRoad(Vector2 p, float clearance)
         {
-            foreach (var road in Near(_roads, p))
+            foreach (var road in _roads.In(p))
             {
                 var r = road.Width * 0.5f + clearance;
                 if (PolylineDistanceSquared(p, road.Line.Points) < r * r) return true;
@@ -545,7 +545,7 @@ public static class Planting
         /// <summary>True when <paramref name="p"/> lies on hard pavement or within <paramref name="clearance"/> of it (tree pits included).</summary>
         public bool IsPaved(Vector2 p, float clearance)
         {
-            foreach (var pave in Near(_pavement, p))
+            foreach (var pave in _pavement.In(p))
             {
                 if (pave.Rings is { } rings)
                 {
@@ -562,23 +562,9 @@ public static class Planting
             return false;
         }
 
-        public bool Spaced(Vector2 p, float radius)
-        {
-            var (cx, cz) = Key(p);
-            for (var dx = -1; dx <= 1; dx++)
-                for (var dz = -1; dz <= 1; dz++)
-                    if (_occupied.TryGetValue((cx + dx, cz + dz), out var list) &&
-                        list.Any(o => Vector2.Distance(p, o.P) < radius + o.R + CrownGap))
-                        return false;
-            return true;
-        }
+        public bool Spaced(Vector2 p, float radius) => !_occupied.AnyAround(p, o => Vector2.Distance(p, o.P) < radius + o.R + CrownGap);
 
-        public void Occupy(Vector2 p, float radius)
-        {
-            var key = Key(p);
-            if (!_occupied.TryGetValue(key, out var list)) _occupied.Add(key, list = []);
-            list.Add((p, radius));
-        }
+        public void Occupy(Vector2 p, float radius) => _occupied.AddPoint(p, (p, radius));
 
         /// <summary>Plan envelope of the features named <paramref name="name"/> (all parts), or null when the map has none.</summary>
         public (Vector2 Min, Vector2 Max)? Envelope(string name)
@@ -620,7 +606,7 @@ public static class Planting
                     var half = (width > 0f ? width : PavedWidth(props, type)) * 0.5f;
                     var min = points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(half);
                     var max = points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(half);
-                    Index(_pavement, min, max, new Pave(null, points, half, min, max));
+                    _pavement.AddBox(min, max, new Pave(null, points, half, min, max));
                     break;
             }
         }
@@ -630,7 +616,7 @@ public static class Planting
             if (rings.Outer.Count < 3) return;
             var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
             var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-            Index(_pavement, min, max, new Pave(rings, null, 0f, min, max));
+            _pavement.AddBox(min, max, new Pave(rings, null, 0f, min, max));
         }
 
         /// <summary>Width of a paved line as WP-15 paves it (GroundClassifier): its own width, else the type's default.</summary>
@@ -739,22 +725,5 @@ public static class Planting
                 if (partKind == kind) yield return part;
             }
         }
-
-        private static (int, int) Key(Vector2 p) => ((int)MathF.Floor(p.X / Cell), (int)MathF.Floor(p.Y / Cell));
-
-        private static void Index<T>(Dictionary<(int, int), List<T>> grid, Vector2 min, Vector2 max, T item)
-        {
-            var (x0, z0) = Key(min - new Vector2(Cell * 0.5f));
-            var (x1, z1) = Key(max + new Vector2(Cell * 0.5f));
-            for (var x = x0; x <= x1; x++)
-                for (var z = z0; z <= z1; z++)
-                {
-                    if (!grid.TryGetValue((x, z), out var list)) grid.Add((x, z), list = []);
-                    list.Add(item);
-                }
-        }
-
-        private static IEnumerable<T> Near<T>(Dictionary<(int, int), List<T>> grid, Vector2 p) =>
-            grid.TryGetValue(Key(p), out var list) ? list : [];
     }
 }

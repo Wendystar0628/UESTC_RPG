@@ -1,4 +1,3 @@
-using Campus.Camera.Cinematic;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
@@ -9,7 +8,7 @@ namespace Campus.Flow;
 
 public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil, ISaveService saves,
     IMapService maps, IWorldState world, IWorldControl control, IRuleset rules,
-    IMotionSettings motion, IViewControl view, ICollisionWorld collision, CinematicPlayback playback,
+    IMotionSettings motion, IViewControl view, ICollisionWorld collision, ICinematicPlayback playback,
     IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState streamState,
     ICinematicSettings? settings = null) : IAppFlow
 {
@@ -39,7 +38,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private bool _skipped;
     private EnterRequest? _request;
     private CinematicDef? _definition;
-    private CinematicAnchorSet? _anchors;
+    private CinematicPlaybackStart? _playbackStart;
     private EnterPath? _path;
     public AppState State { get; private set; } = AppState.Boot;
     public long Rev { get; private set; }
@@ -73,7 +72,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         LastError = null;
         _faultHold = null;
         _newTimeline = false; _flowTarget = null; _skip = null; _endFlow = _resumeFlow;
-        _definition = null; _anchors = null; _path = null;
+        _definition = null; _playbackStart = null; _path = null;
         _resumeEndpoint = null; _resumeRequested = false;
         HoldInput(); Change(AppState.Entering);
         _entry = EnterCore(); return _entry;
@@ -103,8 +102,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             };
             _definition = _cinematicOverride is { } forced ? catalog.Read(forced) : catalog.Find(role);
             _cinematicOverride = null;
-            _anchors = new(TitlePose(), camera.Pose, _destination, _userFov, maps, context.Descriptor.Id);
-            if (_definition is not null) _destination = _anchors.Resolve(_definition.End.Pose);
+            _playbackStart = new(TitlePose(), camera.Pose, _destination, _userFov, context.Descriptor.Id);
+            if (_definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
             _path = mode switch { CinematicMode.Full or CinematicMode.Off => EnterPath.Cinematic, CinematicMode.Short => EnterPath.ShortCinematic, _ => throw new InvalidOperationException("Unknown cinematic setting.") };
             if (_definition?.Kind is CinematicKind.EnterNewShort) _path = EnterPath.ShortCinematic;
             var direct = mode is CinematicMode.Off || motion.ReduceMotion || _definition is null || !rules.Current.CinematicStates.Contains(AppState.Entering)
@@ -120,7 +119,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             }
             else
             {
-                await playback.Play(_definition!, _anchors, context.World, State, ExecuteWorldCue);
+                await playback.Play(_definition!, _playbackStart, maps, context.World, State, ExecuteWorldCue);
                 _finishing = true;
                 if (_skip is not null) await _skip;
             }
@@ -174,7 +173,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         RequireHealthyWorld();
         control.SetFlow(0);
         // NewGame restores view as well; the cinematic still owns the camera until handoff.
-        if (_anchors is not null) camera.SetPose(_anchors.Current);
+        if (_playbackStart is not null) camera.SetPose(_playbackStart.Current);
     }
     private async Task RestoreRequested()
     {
@@ -307,8 +306,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         _cinematicOverride = null;
         if (definition is not null && !motion.ReduceMotion && !_quitting && rules.Current.CinematicStates.Contains(AppState.Leaving))
         {
-            var anchors = new CinematicAnchorSet(TitlePose(), camera.Pose, TitlePose(), _userFov, maps, context.Descriptor.Id);
-            await playback.Play(definition, anchors, context.World, State, ExecuteLeaveCue);
+            var start = new CinematicPlaybackStart(TitlePose(), camera.Pose, TitlePose(), _userFov, context.Descriptor.Id);
+            await playback.Play(definition, start, maps, context.World, State, ExecuteLeaveCue);
             playback.Clear();
         }
         else await veil.Cover(VeilReason.Cinematic, FlowTuning.CoverSeconds);

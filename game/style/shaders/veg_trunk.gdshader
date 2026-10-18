@@ -1,7 +1,7 @@
 // veg_trunk.gdshader：树干与枝（tree.bark，下半截可刷白）；同一着色器也画 ShadowsOnly 投影代理（木质加 L1 团块）（WP-23）
 // 规格：WLD-VEGETATION；ENG-PERF；ART-STYLE（植被三阶）。
 // 看得见的树冠团块在 veg_card 里（max-011：团块与叶卡同一面）；这里的团块只出现在投影代理上，挖洞、随叶量收缩。
-// 顶点数据见 Campus.Gen.Vegetation.MotherModels：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；
+// 树母型顶点数据：CUSTOM0.w < 0 是木质，其余是团块（CUSTOM2 = 所属团块或小球的球心）；
 // 远池替身的木质 CUSTOM2.w = 1，与近池 L1 在 135–165 m 按 Bayer 抖动互补交接（植被公共段 veg_pool_code，23c2c）。
 // 每株量读 INSTANCE_CUSTOM（§11.2），树种量读全局纹理 tree_species（§11.6）；按距离的判断只用 MAIN_CAM_INV_VIEW_MATRIX。
 shader_type spatial;
@@ -259,7 +259,7 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 }
 // 远近池交接与淡出（WLD-VEGETATION、ENG-PERF，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
 // visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
-// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Gen.Vegetation.VegFade 分桶）。
+// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Systems.Vegetation.VegetationBuckets 分桶）。
 // 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
 // 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
 // 距离乘细节系数 quality.x（WLD-VEGETATION）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。

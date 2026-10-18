@@ -59,10 +59,10 @@ internal sealed partial class StreetSite
     public Landing LandingAt(Vector2 p)
     {
         foreach (var kind in new[] { "building", "water" })
-            foreach (var o in Near(_outlines, p))
+            foreach (var o in _outlines.In(p))
                 if (o.Kind == kind && p.X >= o.Min.X && p.X <= o.Max.X && p.Y >= o.Min.Y && p.Y <= o.Max.Y && PlanGeometry.Contains(o.Rings, p))
                     return kind == "building" ? Landing.Building : Landing.Water;
-        if (!OffCarriageways(p, 0f, 0f) || Near(_lanes, p).Any(rings => PlanGeometry.Contains(rings, p))) return Landing.Carriageway;
+        if (!OffCarriageways(p, 0f, 0f) || _lanes.In(p).Any(rings => PlanGeometry.Contains(rings, p))) return Landing.Carriageway;
         return Landing.Open;
     }
 

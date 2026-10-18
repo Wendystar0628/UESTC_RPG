@@ -20,6 +20,9 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     public uint Seed { get; private set; }
     public bool Transitioning => false;
 
+    public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) => throw new NotSupportedException();
+    public WeatherKind MapToSeason(WeatherKind kind, Season season) => throw new NotSupportedException();
+
     public void Reset(WeatherBoot b)
     {
         ArgumentNullException.ThrowIfNull(b);

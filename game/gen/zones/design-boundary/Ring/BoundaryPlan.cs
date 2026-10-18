@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Gen.Zones.DesignBoundary.Fence;
 using Campus.Gen.Zones.DesignBoundary.Framework;
 using Campus.Gen.Zones.DesignBoundary.Gates;
+using Campus.Gen.World;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using H = Campus.Gen.Zones.DesignBoundary.BoundaryTune.HedgeClear;
 
@@ -143,7 +144,7 @@ public sealed class BoundaryPlan
         {
             var p = ring.At(s) + ring.InwardAt(s) * F.Inset;
             foreach (var (outer, min, max) in boxes)
-                if (p.X >= min.X && p.Y >= min.Y && p.X <= max.X && p.Y <= max.Y && Obstacles.Inside(outer, p)) { hits.Add(s); break; }
+                if (p.X >= min.X && p.Y >= min.Y && p.X <= max.X && p.Y <= max.Y && PlanGeometry.InsideByCrossings(outer, p)) { hits.Add(s); break; }
         }
         if (hits.Count == 0) yield break;
         hits.Sort();
@@ -390,7 +391,7 @@ public sealed class BoundaryPlan
             foreach (var (outer, min, max) in _areas)
             {
                 if (p.X < min.X || p.Y < min.Y || p.X > max.X || p.Y > max.Y) continue;
-                if (Inside(outer, p) || EdgeDistance(outer, p) < pad) return true;
+                if (PlanGeometry.InsideByCrossings(outer, p) || EdgeDistance(outer, p) < pad) return true;
             }
             return false;
         }
@@ -448,17 +449,6 @@ public sealed class BoundaryPlan
             var best = float.MaxValue;
             for (var i = 0; i < ring.Count; i++) best = MathF.Min(best, Distance(p, ring[i], ring[(i + 1) % ring.Count]));
             return best;
-        }
-
-        internal static bool Inside(IReadOnlyList<Vector2> ring, Vector2 p)
-        {
-            var inside = false;
-            for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-            {
-                Vector2 a = ring[i], b = ring[j];
-                if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-            }
-            return inside;
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.DesignBoundary.Framework;
 
@@ -49,17 +50,7 @@ public sealed class BoundaryRing
     }
 
     /// <summary>Even-odd point in ring.</summary>
-    public bool Contains(Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = _p.Length - 1; i < _p.Length; j = i++)
-        {
-            var a = _p[i];
-            var b = _p[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
-    }
+    public bool Contains(Vector2 p) => PlanGeometry.InsideByCrossings(_p, p);
 
     /// <summary>First crossing of a polyline with the ring: the point, the edge and the edge parameter.</summary>
     public (Vector2 Point, int Edge, float T)? Crossing(IReadOnlyList<Vector2> line)

@@ -90,7 +90,7 @@ public static class BuildingPlanner
         if (grid is null) return null;
         var outer = PlanRing.FromPoints([.. grid.Footprint.Outer], hole: false);
         var holes = grid.Footprint.Holes.Select(h => PlanRing.FromPoints([.. h], hole: true)).ToList();
-        var area = PlanRing.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs(PlanRing.SignedArea(h.Points)));
+        var area = (float)PlanGeometry.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanGeometry.SignedArea(h.Points)));
         if (area < 6f) return null;
         var centroid = PlanRing.Centroid(outer, holes);
 
@@ -186,8 +186,8 @@ public static class BuildingPlanner
         foreach (var h in source.Holes)
         {
             var ring = PlanRing.Clean(h, hole: true);
-            if (ring is null || MathF.Abs(PlanRing.SignedArea(ring.Points)) < 8f) continue;
-            if (!ring.Points.All(p => PlanRing.Contains(cleaned.Points, p))) continue;
+            if (ring is null || MathF.Abs((float)PlanGeometry.SignedArea(ring.Points)) < 8f) continue;
+            if (!ring.Points.All(p => PlanGeometry.InsideByCrossings(cleaned.Points, p))) continue;
             holesClean.Add(ring);
         }
         return true;
@@ -225,7 +225,7 @@ public static class BuildingPlanner
         {
             if (id == self || !world.Features.TryGetValue(id, out var f)) continue;
             foreach (var src in Sources(f))
-                if (PlanRing.Contains(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanRing.Contains(h, p)) &&
+                if (PlanGeometry.InsideByCrossings(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p)) &&
                     MathF.Abs(PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) - y) <= EntranceRules.DeckAbove) return id;
         }
         return null;

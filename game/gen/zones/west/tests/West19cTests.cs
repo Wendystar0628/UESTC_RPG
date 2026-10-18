@@ -31,12 +31,12 @@ public sealed class West19cTests
         var path = BoardwalkSite.Path;
         Require(path.Length is > 200f and < 260f, $"the boardwalk is about 230 m long, got {path.Length}");
         // Both mouths meet paving: the A10 plaza in the south, the footway at the 西门车行桥's east head in the north.
-        Require(PlanMath.Inside(WestTune.A10.Dry, path.Points[0]), "the south mouth lands on the A10 plaza's dry ground");
+        Require(PlanGeometry.InsideByCrossings(WestTune.A10.Dry, path.Points[0]), "the south mouth lands on the A10 plaza's dry ground");
         var footway = Line(world, "qsh:source:way:552816780");
         Require(footway.Any(p => Vector2.Distance(p, path.Points[^1]) < 1f), "the north mouth lands on the bridgehead footway's end");
         // Inside the low ground (except the last few metres climbing out to the north footway).
         for (var s = 4f; s < path.Length - 8f; s += 2f)
-            Require(PlanMath.Inside(LowGround, path.At(s).P), $"boardwalk station {s:0} lies in the wetland low ground");
+            Require(PlanGeometry.InsideByCrossings(LowGround, path.At(s).P), $"boardwalk station {s:0} lies in the wetland low ground");
         // Clear of WP-28's bridges (r005: all bridges are WP-28's) and of the stream except at the beach turn.
         foreach (var id in new[] { "qsh:source:way:692240860", "qsh:source:way:552816781" })
         {

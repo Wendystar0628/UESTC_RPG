@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.Zones.North.Framework;
+using Campus.Gen.World;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
 using G = Campus.Gen.Zones.North.NorthTune.Gate;
 
@@ -80,7 +81,7 @@ public sealed class ClusterLayout
         if (!world.Features.TryGetValue(new(cluster.Id), out var feature)) return null;
         var ring = Plan.OuterRing(feature);
         if (ring is null || ring.Count < 3) return null;
-        var sign = Plan.SignedArea2(ring) > 0 ? 1f : -1f;
+        var sign = PlanGeometry.SignedArea(ring) > 0 ? 1f : -1f;
         float minX = ring.Min(p => p.X) - 20, maxX = ring.Max(p => p.X) + 20, minZ = ring.Min(p => p.Y) - 20, maxZ = ring.Max(p => p.Y) + 20;
         bool Near(Vector2 p) => p.X >= minX && p.X <= maxX && p.Y >= minZ && p.Y <= maxZ;
 
@@ -235,7 +236,7 @@ public sealed class ClusterLayout
 
         var keep = new bool[samples.Count];
         for (var i = 0; i < samples.Count; i++)
-            keep[i] = !spans.Any(sp => InSpan(samples[i].S, sp.From, sp.To, perimeter)) && !buildings.Any(r => Plan.Contains(r, posts[i]));
+            keep[i] = !spans.Any(sp => InSpan(samples[i].S, sp.From, sp.To, perimeter)) && !buildings.Any(r => PlanGeometry.InsideByCrossings(r, posts[i]));
 
         // Runs of kept samples; a run that meets a gate ends exactly on the gate's end, one into a building ends inside it.
         var runs = new List<FenceRun>();

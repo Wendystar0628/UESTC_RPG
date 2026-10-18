@@ -20,16 +20,16 @@ internal sealed partial class StreetSite
                 var pad = new Vector2(offset + 2f);
                 var min = line.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad;
                 var max = line.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad;
-                Index(_rows, min, max, (line, offset));
+                _rows.AddBox(min, max, (line, offset));
             }
     }
 
     /// <summary>True when a tree stands, or a registered tree row runs, within <paramref name="reach"/> of <paramref name="p"/> (planting to back a bench onto).</summary>
     public bool PlantingNear(Vector2 p, float reach)
     {
-        foreach (var tree in Near(_trees, p))
+        foreach (var tree in _trees.In(p))
             if (Vector2.Distance(p, tree) <= reach) return true;
-        foreach (var (line, offset) in Near(_rows, p))
+        foreach (var (line, offset) in _rows.In(p))
             if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) <= reach) return true;
         return false;
     }
@@ -37,7 +37,7 @@ internal sealed partial class StreetSite
     /// <summary>True when a disc keeps <see cref="FurnitureStyle.RowClear"/> off every registered tree row.</summary>
     public bool OffRows(Vector2 p, float radius)
     {
-        foreach (var (line, offset) in Near(_rows, p))
+        foreach (var (line, offset) in _rows.In(p))
             if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) < radius + FurnitureStyle.RowClear) return false;
         return true;
     }
@@ -45,7 +45,7 @@ internal sealed partial class StreetSite
     /// <summary>True when a disc keeps <paramref name="clear"/> off every carriageway surface (beyond its half width).</summary>
     public bool OffCarriageways(Vector2 p, float radius, float clear)
     {
-        foreach (var road in Near(_roads, p))
+        foreach (var road in _roads.In(p))
         {
             if (!Carriageway(road)) continue;
             var r = HalfWidth(road) + clear + radius;
@@ -82,40 +82,34 @@ internal sealed partial class StreetSite
     public string? Blocker(Vector2 p, float radius, NetworkLine? beside = null, bool onBeside = false, float? outlineClear = null, bool walksPass = false)
     {
         if (!PlanGeometry.Contains(World.Boundary, p)) return "the campus edge";
-        foreach (var o in Near(_outlines, p))
+        foreach (var o in _outlines.In(p))
         {
             var keep = radius + (o.Kind == "building" && outlineClear is { } wall ? wall : FurnitureStyle.OutlineClear);
             if (p.X < o.Min.X - keep || p.X > o.Max.X + keep || p.Y < o.Min.Y - keep || p.Y > o.Max.Y + keep) continue;
             if (PlanGeometry.Contains(o.Rings, p) || Edge(o.Rings, p) < keep) return $"a {o.Kind} outline";
         }
-        foreach (var road in Near(_roads, p))
+        foreach (var road in _roads.In(p))
         {
             if (onBeside && ReferenceEquals(road, beside)) continue;
             if (walksPass && IsPedestrian(road)) continue;
             var r = HalfWidth(road) + (ReferenceEquals(road, beside) ? 0f : FurnitureStyle.RoadClear) + radius;
             if (LineDistanceSquared(p, road.Line.Points) < r * r) return "a road surface";
         }
-        foreach (var bridge in Near(_bridges, p))
+        foreach (var bridge in _bridges.In(p))
         {
             var r = HalfWidth(bridge) + 2f + radius;
             if (LineDistanceSquared(p, bridge.Line.Points) < r * r) return "a bridge";
         }
-        foreach (var tree in Near(_trees, p))
+        foreach (var tree in _trees.In(p))
             if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return "a tree";
-        var (cx, cz) = Key(p);
-        for (var dx = -1; dx <= 1; dx++)
-            for (var dz = -1; dz <= 1; dz++)
-                if (_occupied.TryGetValue((cx + dx, cz + dz), out var list) &&
-                    list.Any(o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap))
-                    return "another item";
-        return null;
+        return _occupied.AnyAround(p, o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap) ? "another item" : null;
     }
 
     /// <summary>True when a pedestrian line's centre line passes within <paramref name="clear"/> of any of <paramref name="points"/>.</summary>
     public bool NearWalkLine(IReadOnlyList<Vector2> points, float clear)
     {
         foreach (var p in points)
-            foreach (var road in Near(_roads, p))
+            foreach (var road in _roads.In(p))
                 if (IsPedestrian(road) && LineDistanceSquared(p, road.Line.Points) < clear * clear) return true;
         return false;
     }
@@ -126,14 +120,9 @@ internal sealed partial class StreetSite
     /// <summary>What crowds a disc inside an area the outlines do not cover (a parking lot): "a tree" or "another item", or null.</summary>
     public string? Clutter(Vector2 p, float radius)
     {
-        foreach (var tree in Near(_trees, p))
+        foreach (var tree in _trees.In(p))
             if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return "a tree";
-        var (cx, cz) = Key(p);
-        for (var dx = -1; dx <= 1; dx++)
-            for (var dz = -1; dz <= 1; dz++)
-                if (_occupied.TryGetValue((cx + dx, cz + dz), out var list) && list.Any(o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap))
-                    return "another item";
-        return null;
+        return _occupied.AnyAround(p, o => Vector2.Distance(p, o.P) < radius + o.R + FurnitureStyle.ItemGap) ? "another item" : null;
     }
 
     /// <summary>Pedestrian network lines (footways, paths, pedestrian streets, steps), in ID order: where walkers reach a kerb.</summary>
@@ -156,8 +145,6 @@ internal sealed partial class StreetSite
 
     public void Occupy(Vector2 p, float radius)
     {
-        var key = Key(p);
-        if (!_occupied.TryGetValue(key, out var list)) _occupied.Add(key, list = []);
-        list.Add((p, radius));
+        _occupied.AddPoint(p, (p, radius));
     }
 }

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Campus.Camera.Cinematic;
 using Campus.Contracts;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;

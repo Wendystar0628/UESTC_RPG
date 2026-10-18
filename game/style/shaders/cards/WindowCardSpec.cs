@@ -1,4 +1,4 @@
-namespace Campus.Gen.Interior.Shell.Cards;
+namespace Campus.Style.Shaders.Cards;
 
 /// <summary>
 /// Content of one window card (WLD-INTERIORS): the room the shader paints behind a pane. Everything is chosen per

@@ -14,7 +14,7 @@ internal sealed partial class StreetSite
     public List<WalkPoint> Walks(Vector2 p, float reach)
     {
         var found = new List<WalkPoint>();
-        foreach (var line in NearAll(_walks, p))
+        foreach (var line in _walks.AllAround(p))
         {
             var points = line.Line.Points;
             WalkPoint? best = null;
@@ -41,7 +41,7 @@ internal sealed partial class StreetSite
     public float OtherWalk(Vector2 p, NetworkLine except)
     {
         var best = float.MaxValue;
-        foreach (var line in NearAll(_walks, p))
+        foreach (var line in _walks.AllAround(p))
             if (!ReferenceEquals(line, except)) best = MathF.Min(best, MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)));
         return best;
     }
@@ -61,7 +61,7 @@ internal sealed partial class StreetSite
     public (float Gap, Vector2 Edge, Vector2 Inward, NetworkLine? Road)? PavingEdgeFacing(Vector2 p)
     {
         (float, Vector2, Vector2, NetworkLine?)? best = null;
-        foreach (var paving in NearAll(_paving, p))
+        foreach (var paving in _paving.AllAround(p))
         {
             float gap; Vector2 edge, inward;
             if (paving.Line is { } line)
@@ -104,7 +104,7 @@ internal sealed partial class StreetSite
     /// </summary>
     public bool OnPlaza(Vector2 p)
     {
-        foreach (var paving in NearAll(_paving, p))
+        foreach (var paving in _paving.AllAround(p))
             if (paving.Rings is { } rings && PlanGeometry.Contains(rings, p)) return true;
         return false;
     }
@@ -115,7 +115,7 @@ internal sealed partial class StreetSite
     /// </summary>
     public bool OnPavedGround(Vector2 p)
     {
-        foreach (var paving in NearAll(_paving, p))
+        foreach (var paving in _paving.AllAround(p))
         {
             if (paving.Rings is { } rings) { if (PlanGeometry.Contains(rings, p)) return true; continue; }
             var line = paving.Line!;

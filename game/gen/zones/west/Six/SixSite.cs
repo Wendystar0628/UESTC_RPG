@@ -91,7 +91,7 @@ public sealed class SixSite : WestSite
         [.. Blocks.Select(k => Plan(world, k.Entity, k.Part)), Plan(world, S.EntityC, S.LinkAB), Plan(world, S.EntityC, S.Tower)];
 
     /// <summary>Inside a plan's outer ring and outside its courtyard holes.</summary>
-    internal static bool In(PolygonRings plan, Vector2 p) => PlanMath.Inside(plan.Outer, p) && !plan.Holes.Any(h => PlanMath.Inside(h, p));
+    internal static bool In(PolygonRings plan, Vector2 p) => PlanGeometry.InsideByCrossings(plan.Outer, p) && !plan.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
 
     internal static float BaseY(BuildContext ctx, string entity) => ctx.World.Terrain.PadY(new(entity));
 
@@ -191,7 +191,7 @@ public sealed class SixSite : WestSite
     internal static Vector2[] Inset(IReadOnlyList<Vector2> ring, float by, bool hole)
     {
         var n = ring.Count;
-        var left = PlanMath.SignedArea2(ring) > 0 != hole;
+        var left = PlanGeometry.SignedArea(ring) > 0 != hole;
         var result = new Vector2[n];
         for (var i = 0; i < n; i++)
         {

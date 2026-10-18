@@ -1,4 +1,4 @@
-namespace Campus.Gen.Interior.Shell.Cards;
+namespace Campus.Style.Shaders.Cards;
 
 /// <summary>
 /// Window card type (WLD-INTERIORS). The numeric value is the VF-B glass window-type byte (COLOR's fourth byte)

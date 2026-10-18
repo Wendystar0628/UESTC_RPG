@@ -1,5 +1,5 @@
 using Campus.Contracts;
-using Campus.Gen.Vegetation;
+using Campus.Contracts.Vegetation;
 using N = System.Numerics;
 
 namespace Campus.Systems.Vegetation;

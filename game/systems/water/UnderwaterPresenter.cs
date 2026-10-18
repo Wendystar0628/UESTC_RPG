@@ -1,5 +1,5 @@
 using Campus.Contracts;
-using Campus.Gen.Water;
+using Campus.Contracts.Water;
 
 namespace Campus.Systems.Water;
 

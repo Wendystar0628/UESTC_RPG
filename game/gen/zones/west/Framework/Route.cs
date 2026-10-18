@@ -94,30 +94,4 @@ public sealed class Route
         list.Add(At(s1).P);
         return [.. list];
     }
-
-    /// <summary>A polyline offset to the right by <paramref name="lateral"/> with exact miters (as the sweep kernel builds them).</summary>
-    public static Vector2[] Offset(IReadOnlyList<Vector2> line, float lateral)
-    {
-        var n = line.Count;
-        var rights = new Vector2[n - 1];
-        for (var i = 0; i + 1 < n; i++)
-        {
-            var d = line[i + 1] - line[i];
-            rights[i] = Right(d / MathF.Sqrt(d.X * d.X + d.Y * d.Y));
-        }
-        var result = new Vector2[n];
-        for (var i = 0; i < n; i++)
-        {
-            Vector2 m;
-            if (i == 0) m = rights[0];
-            else if (i == n - 1) m = rights[^1];
-            else
-            {
-                Vector2 a = rights[i - 1], b = rights[i];
-                m = (a + b) / (1f + a.X * b.X + a.Y * b.Y);
-            }
-            result[i] = line[i] + m * lateral;
-        }
-        return result;
-    }
 }

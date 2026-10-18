@@ -137,12 +137,12 @@ public abstract class ResearchSite : CenterEastSite
     {
         // Hidden only when the whole face is covered: a link strip touching the middle of a long face leaves it dressed.
         var mid = (e.A + e.B) * 0.5f;
-        if (new[] { 0.1f, 0.5f, 0.9f }.All(t => plan.AllBlocks.Any(r => PlanMath.Inside(r, Vector2.Lerp(e.A, e.B, t) + e.Frame.W * 0.6f))))
+        if (new[] { 0.1f, 0.5f, 0.9f }.All(t => plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, Vector2.Lerp(e.A, e.B, t) + e.Frame.W * 0.6f))))
             return new(EdgeKind.Hidden);
         if (e.Length < 4.5f) return new(EdgeKind.Blank);
         var courtyard = false;
         for (var d = 3f; d <= R.CourtyardReach && !courtyard; d += 3f)
-            courtyard = plan.AllBlocks.Any(r => PlanMath.Inside(r, mid + e.Frame.W * d));
+            courtyard = plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, mid + e.Frame.W * d));
         var kind = e.Length >= R.FrontMin && !courtyard ? EdgeKind.Front : EdgeKind.Plain;
         if (DoorOn(e) is not { } x) return new(kind);
         var half = R.PortalHalfWidth + R.PortalJamb;
@@ -301,7 +301,7 @@ public abstract class ResearchSite : CenterEastSite
             Vector2 a = ring[i], b = ring[(i + 1) % ring.Length];
             var t = Vector2.Normalize(b - a);
             var outward = new Vector2(-t.Y, t.X) * -1f;
-            if (plan.AllBlocks.Any(r => PlanMath.Inside(r, (a + b) * 0.5f + outward * 0.6f))) continue;
+            if (plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, (a + b) * 0.5f + outward * 0.6f))) continue;
             yield return (a, b);
         }
     }

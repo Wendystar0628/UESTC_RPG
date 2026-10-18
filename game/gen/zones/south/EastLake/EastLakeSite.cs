@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.South.Framework;
+using Campus.Gen.World;
 using K = Campus.Gen.Zones.South.SouthTune.Lake;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -81,7 +82,7 @@ public sealed class EastLakeSite : SouthSite
 
     private const string LakePart = "osm:relation:7849760";
 
-    internal static bool InWater(PolygonRings water, Vector2 p) => PlanMath.Inside(water.Outer, p) && !water.Holes.Any(h => PlanMath.Inside(h, p));
+    internal static bool InWater(PolygonRings water, Vector2 p) => PlanGeometry.InsideByCrossings(water.Outer, p) && !water.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
 
     /// <summary>Hard-bank segments as frames with +Z over the water, x from 0 to the segment length.</summary>
     internal static IEnumerable<(PlanFrame Frame, float Length, int Index)> BankSegments(PolygonRings water)

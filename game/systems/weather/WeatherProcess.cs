@@ -29,6 +29,11 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
 
     public bool IsNative(WeatherKind k, Season s) => WeatherRules.IsNative(k, s);
 
+    public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) =>
+        WeatherBootOptions.Parse(arguments, seed, season);
+
+    public WeatherKind MapToSeason(WeatherKind kind, Season season) => WeatherRules.MapToSeason(kind, season);
+
     public void Reset(WeatherBoot b)
     {
         ArgumentNullException.ThrowIfNull(b);

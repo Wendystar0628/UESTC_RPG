@@ -84,11 +84,6 @@ public interface IWorldRestore
 
 // 天气过程：WP-45 实现，注册为 Kernel 服务；只有 WorldState（WP-34）和 WP-45a 自己的存档段调用它
 // （Reset 由新游戏调用，见 WeatherBoot），其他代码一律读 IWorldState 和天气类全局参数。有了这一层，WP-34 和 WP-45 可以并行开发
-public sealed record WeatherBoot(            // Boot 解析 --weather* 后交给新游戏；新游戏在第一帧之前调 Reset（SYS-WEATHER、SYS-SAVE）
-    uint Seed,                               // --weather-seed；没给时由 ISaveService.NewGame 取一次熵（§2 BannedApiAnalyzers 的唯一例外）。
-                                             // 读档时不调 Reset，天气由 WP-45a 的 weather 存档段恢复（SYS-SAVE）
-    WeatherKind? Kind = null, float? Intensity = null, float? Wet = null,   // --weather（auto 为 null）、--weather-intensity、--wet
-    double? RemainingMinutes = null);        // --weather-remaining
 public readonly record struct WeatherTick(
     double WorldHours,
     double TargetHours,                      // 大于 WorldHours 表示正在快进（跳转、拨时间环、Advance、FlowTo、ResetDefault、Apply）
@@ -108,6 +103,10 @@ public sealed record WeatherProcessState(    // 全局天气设定的落定快�
 }
 public interface IWeatherProcess
 {
+    /// <summary>Parses and validates new-world command-line choices before any world state changes.</summary>
+    WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season);
+    /// <summary>Maps a map's default weather to a kind available in the requested season.</summary>
+    WeatherKind MapToSeason(WeatherKind kind, Season season);
     void Reset(WeatherBoot b);               // 只在新游戏时调用
     void Step(in WeatherTick t);             // 每帧在钟点、季节推进之后调用：求本帧向量和未来 24 h 预报
     WeatherSel Selection { get; }

@@ -20,15 +20,15 @@ internal sealed partial class StreetSite
     private const float Cell = 32f;
     private static readonly string[] Blocking = ["building", "water", "sport", "parking"];
 
-    private readonly Dictionary<(int, int), List<Outline>> _outlines = [];
-    private readonly Dictionary<(int, int), List<NetworkLine>> _roads = [];
-    private readonly Dictionary<(int, int), List<NetworkLine>> _walks = [];
-    private readonly Dictionary<(int, int), List<Paving>> _paving = [];
-    private readonly Dictionary<(int, int), List<PolygonRings>> _lanes = [];
-    private readonly Dictionary<(int, int), List<(NetworkLine Line, float Offset)>> _rows = [];
-    private readonly Dictionary<(int, int), List<NetworkLine>> _bridges = [];
-    private readonly Dictionary<(int, int), List<Vector2>> _trees = [];
-    private readonly Dictionary<(int, int), List<(Vector2 P, float R)>> _occupied = [];
+    private readonly SpatialGrid<Outline> _outlines = new(Cell);
+    private readonly SpatialGrid<NetworkLine> _roads = new(Cell);
+    private readonly SpatialGrid<NetworkLine> _walks = new(Cell);
+    private readonly SpatialGrid<Paving> _paving = new(Cell);
+    private readonly SpatialGrid<PolygonRings> _lanes = new(Cell);
+    private readonly SpatialGrid<(NetworkLine Line, float Offset)> _rows = new(Cell);
+    private readonly SpatialGrid<NetworkLine> _bridges = new(Cell);
+    private readonly SpatialGrid<Vector2> _trees = new(Cell);
+    private readonly SpatialGrid<(Vector2 P, float R)> _occupied = new(Cell);
     private readonly List<PolygonRings> _parking = [];
 
     public StreetSite(IWorldModel world)
@@ -44,7 +44,7 @@ internal sealed partial class StreetSite
                 {
                     var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                     var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-                    Index(_outlines, min, max, new Outline(kind, rings, min, max));
+                    _outlines.AddBox(min, max, new Outline(kind, rings, min, max));
                     if (kind == "parking") _parking.Add(rings);
                 }
             foreach (var (props, geometry) in RoadSources(feature))
@@ -57,7 +57,7 @@ internal sealed partial class StreetSite
                 else if (CarriagewayType(type))
                     foreach (var rings in geometry switch { PolygonGeometry polygon => [polygon.Rings], MultiPolygonGeometry multi => multi.Polygons, _ => [] })
                         if (rings.Outer.Count >= 3)
-                            Index(_lanes, rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max), rings);
+                            _lanes.AddBox(rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max), rings);
             }
         }
         foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
@@ -71,7 +71,7 @@ internal sealed partial class StreetSite
         foreach (var tree in world.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
         {
             var p = new Vector2(tree.Position.X, tree.Position.Z);
-            Index(_trees, p, p, p);
+            _trees.AddBox(p, p, p);
         }
     }
 

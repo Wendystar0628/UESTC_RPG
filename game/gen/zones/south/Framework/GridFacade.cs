@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.South.Framework;
 
@@ -244,9 +245,7 @@ public static class GridFacade
     public static IEnumerable<(GridEdgeInfo Info, bool Convex0, bool Convex1)> Edges(IReadOnlyList<Vector2> ring)
     {
         var count = ring.Count;
-        var area = 0f;
-        for (var i = 0; i < count; i++) area += ring[i].X * ring[(i + 1) % count].Y - ring[(i + 1) % count].X * ring[i].Y;
-        var ccw = area > 0;
+        var ccw = PlanGeometry.SignedArea(ring) > 0;
         bool Convex(int i)
         {
             Vector2 p = ring[(i + count - 1) % count], q = ring[i], r = ring[(i + 1) % count];

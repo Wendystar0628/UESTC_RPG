@@ -1,8 +1,9 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.Content;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
-using Campus.Gen.Vegetation;
+using Campus.Contracts.Vegetation;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Renderer;
@@ -14,7 +15,7 @@ namespace Campus.Systems.Vegetation;
 
 /// <summary>
 /// WP-23's vegetation runtime (WLD-VEGETATION, ENG-PERF). On map load a worker takes the module's L0
-/// instance streams (<see cref="VegetationModule.Build"/>, every planted tree once, grouped by mother model) and the
+/// instance streams (the content producer, every planted tree once, grouped by mother model) and the
 /// shared prototypes of every pool; the main thread then asks the kernel's instance pools (<see cref="IInstancePoolHost"/>)
 /// for one pool per mother model and pool: L0+, L0, L1 and far on layer 4 without shadows, and the ShadowsOnly proxy on
 /// layer 5 holding the near trees. At most 10 Hz the trees are re-bucketed by camera distance (<see cref="VegetationBuckets"/>)
@@ -81,14 +82,19 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         Error = null;
         _map = ctx.Descriptor.Id;
         Func<BuildContext> context;
-        try { context = ContextFor(ctx); }
+        IVegetationRuntimeSource producer;
+        try
+        {
+            context = ContextFor(ctx);
+            producer = Services.Get<IMapContentSource>().GetModule<IVegetationRuntimeSource>(ctx, ModuleId);
+        }
         catch (Exception error)
         {
             Error = error.GetBaseException().Message;
             GD.PushError($"Vegetation build context unavailable, no trees on {ctx.Descriptor.Id.Value}: {error}");
             return;
         }
-        _pending = Task.Run(() => Prepare(context));
+        _pending = Task.Run(() => producer.PrepareVegetation(context()).Select(data => new Mother(data)).ToArray());
     }
 
     public override void _Process(double delta)
@@ -152,34 +158,6 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private static Func<BuildContext> ContextFor(IMapContext map) => VegetationContext.Resolve(map, ModuleId,
         Services.Get<IBakeContextSource>());
 
-    /// <summary>Worker: the module's L0 streams regrouped per mother model, and every pool's prototype built once.</summary>
-    private static Mother[] Prepare(Func<BuildContext> contextFor)
-    {
-        var ctx = contextFor();
-        var module = new VegetationModule();
-        var species = VegetationInputs.Species(ctx);
-        var palette = ctx.Catalog!;
-        var groups = new SortedDictionary<string, (SpeciesInfo Info, int Variant, List<float> Records)>(StringComparer.Ordinal);
-        foreach (var tile in module.Tiles(ctx))
-            foreach (var stream in module.Build(ctx, tile, LodLevel.L0).Instances)
-            {
-                var (id, variant, _) = VegetationPrototypes.Parse(stream.Prototype.Id);
-                var key = id + "." + variant.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                if (!groups.TryGetValue(key, out var group)) groups.Add(key, group = (species.Get(id), variant, []));
-                group.Records.AddRange(stream.Data.ToArray());
-            }
-        var mothers = groups.ToArray();
-        var built = new Mother[mothers.Length];
-        Parallel.For(0, mothers.Length, i =>
-        {
-            var (key, (info, variant, records)) = (mothers[i].Key, mothers[i].Value);
-            var prototypes = Enumerable.Range(0, Mother.PoolCount)
-                .Select(p => VegetationPrototypes.Get(info, variant, (VegPool)p, palette)).ToArray();
-            built[i] = new Mother(key, records.ToArray(), prototypes);
-        });
-        return built;
-    }
-
     /// <summary>One mother model's pools: its trees' records, their buckets and the kernel pools fed from them.</summary>
     private sealed class Mother
     {
@@ -187,6 +165,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         private const int Stride = InstanceStreamLayout.FloatsPerInstance;
 
         private readonly string _key;
+        private readonly WpId _owner;
         private readonly float[] _records;
         private readonly GeometryPrototype[] _prototypes;
         private readonly Box3[] _bounds;
@@ -196,17 +175,17 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         /// <summary>Bounds of a pool holding no tree: far below the ground, outside every camera and shadow cascade.</summary>
         private static readonly Aabb Parked = new(new Vector3(0f, -100000f, 0f), Vector3.One);
 
-        public Mother(string key, float[] records, GeometryPrototype[] prototypes)
+        public Mother(VegetationMotherData data)
         {
-            _key = key;
+            _key = data.Key;
+            _owner = data.Owner;
+            var records = data.Records.ToArray();
+            var prototypes = data.Prototypes.ToArray();
             _records = records;
             _prototypes = prototypes;
             Buckets = new VegetationBuckets(records);
             _scratch = new float[records.Length];
-            // Per-tree world bounds on the largest level (L0+), shared by every pool of the tree.
-            _bounds = new Box3[Buckets.Count];
-            for (var i = 0; i < _bounds.Length; i++)
-                _bounds[i] = VegetationPrototypes.WorldBounds(prototypes[(int)VegPool.L0Plus].Bounds, Matrix(records.AsSpan(i * Stride, Stride)));
+            _bounds = data.Bounds.ToArray();
         }
 
         public VegetationBuckets Buckets { get; }
@@ -216,7 +195,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             for (var p = 0; p < PoolCount; p++)
             {
                 var shadow = (VegPool)p == VegPool.Shadow;
-                var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{(VegPool)p}", VegetationPrototypes.Owner, _prototypes[p], Buckets.Count, Parked,
+                var spec = new GeometryInstancePoolSpec($"vegetation.{_key}.{(VegPool)p}", _owner.Value, _prototypes[p], Buckets.Count, Parked,
                     shadow ? ProxyLayer : VisibleLayer,
                     shadow ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.Off)
                 { Map = map };
@@ -292,7 +271,5 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             return new Aabb(new Vector3(min.X, min.Y, min.Z), new Vector3(size.X, size.Y, size.Z));
         }
 
-        private static N.Matrix4x4 Matrix(ReadOnlySpan<float> r) =>
-            new(r[0], r[4], r[8], 0f, r[1], r[5], r[9], 0f, r[2], r[6], r[10], 0f, r[3], r[7], r[11], 1f);
     }
 }

@@ -53,6 +53,8 @@ public sealed class Core5SaveContractTests
         public IReadOnlyList<WeatherSpan> Ahead => [];
         public uint Seed => 1;
         public bool Transitioning => false;
+        public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) => throw new NotSupportedException();
+        public WeatherKind MapToSeason(WeatherKind kind, Season season) => throw new NotSupportedException();
         public void Reset(WeatherBoot boot) { }
         public void Step(in WeatherTick tick) => Steps++;
         public bool IsNative(WeatherKind kind, Season season) => true;

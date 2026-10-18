@@ -55,7 +55,7 @@ public sealed class AnnexShellTests
     {
         var world = RealWorld();
         var garden = CoreSite.Pieces(world).OfType<QuietGarden>().Single();
-        var area = MathF.Abs(AnnexSite.SignedArea(garden.Ring));
+        var area = MathF.Abs((float)PlanGeometry.SignedArea(garden.Ring));
         Console.WriteLine($"court: {garden.Ring.Count} corners, {area:F1} m², pavilion ({garden.Pavilion.X:F2}, {garden.Pavilion.Y:F2}), planters " +
             string.Join(", ", garden.Planters.Select(p => $"({p.X:F2}, {p.Y:F2})")));
         Require(area is > 150f and < 600f, $"the court is {area:F0} m²");

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Water;
 
@@ -21,20 +22,8 @@ public sealed record WaterBody(
     public bool Contains(Vector2 p)
     {
         if (p.X < Min.X || p.X > Max.X || p.Y < Min.Y || p.Y > Max.Y) return false;
-        var inside = Crossings(Rings.Outer, p);
-        foreach (var hole in Rings.Holes) inside ^= Crossings(hole, p);
-        return inside;
-    }
-
-    private static bool Crossings(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            var a = ring[i];
-            var b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
+        var inside = PlanGeometry.InsideByCrossings(Rings.Outer, p);
+        foreach (var hole in Rings.Holes) inside ^= PlanGeometry.InsideByCrossings(hole, p);
         return inside;
     }
 }

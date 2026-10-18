@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
-using Campus.Gen.Interior.Shell.Cards;
+using Campus.Style.Shaders.Cards;
 using GdUnit4;
 
-namespace Campus.Gen.Interior.Shell.Tests;
+namespace Campus.Style.Shaders.Tests;
 
 [TestSuite]
 public sealed class WindowCardTableTests

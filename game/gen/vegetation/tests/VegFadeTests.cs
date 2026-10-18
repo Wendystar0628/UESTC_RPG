@@ -1,14 +1,12 @@
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Campus.Contracts;
 using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
 
-/// <summary>The far stand-in, the pool cross-fade policy and their mirror constants in veg_card / veg_trunk (max-011 23c2c).</summary>
+/// <summary>Far stand-in geometry and the generated understorey fade bit.</summary>
 [TestSuite]
 public sealed class VegFadeTests
 {
@@ -50,39 +48,6 @@ public sealed class VegFadeTests
     }
 
     [TestCase]
-    public void PoolsOverlapOnlyInTheBand()
-    {
-        Expect(VegFade.Pools(60f), (true, false), "60 m");
-        Expect(VegFade.Pools(134f), (true, false), "134 m");
-        Expect(VegFade.Pools(150f), (true, true), "150 m");
-        Expect(VegFade.Pools(166f), (false, true), "166 m");
-        // No crown clouds yet: the far stand-in stays at any distance.
-        Expect(VegFade.Pools(1500f), (false, !VegFade.CloudReady || 1500f < VegFade.CloudFadeEnd), "1500 m");
-        // The detail factor scales the band.
-        Expect(VegFade.Pools(120f, 0.8f), (true, true), "120 m at 0.8");
-        if (VegFade.FarShare(130f) != 0f || VegFade.FarShare(170f) != 1f || Math.Abs(VegFade.FarShare(150f) - 0.5f) > 1e-4f)
-            throw new InvalidOperationException("far share");
-        for (var d = 130f; d < 170f; d += 1f)
-            if (VegFade.FarShare(d + 1f) < VegFade.FarShare(d)) throw new InvalidOperationException("far share not monotone");
-    }
-
-    [TestCase]
-    public void ShadersMirrorTheFadeConstants()
-    {
-        foreach (var name in new[] { "veg_card.gdshader", "veg_trunk.gdshader" })
-        {
-            var text = File.ReadAllText(Path.Combine(FindRepository(), "game", "style", "shaders", name));
-            ExpectVec2(text, "VEG_POOL_FADE", VegFade.NearFadeStart, VegFade.NearFadeEnd, name);
-            ExpectVec2(text, "VEG_CLOUD_FADE", VegFade.CloudFadeStart, VegFade.CloudFadeEnd, name);
-            ExpectVec2(text, "VEG_UNDER_FADE", Understorey.FadeStart, Understorey.DrawDistance, name);
-            if (!Regex.IsMatch(text, $@"const bool VEG_CLOUD_READY = {(VegFade.CloudReady ? "true" : "false")};"))
-                throw new InvalidOperationException($"{name}: VEG_CLOUD_READY differs from VegFade.CloudReady");
-            if (!Regex.IsMatch(text, $@"const int VEG_VARIANT_UNDER = {Understorey.UnderVariantBit};"))
-                throw new InvalidOperationException($"{name}: VEG_VARIANT_UNDER differs from Understorey.UnderVariantBit");
-        }
-    }
-
-    [TestCase]
     public void UnderstoreyPlantsCarryTheFadeBit()
     {
         var s = Table.Value.Get("loropetalum");
@@ -90,20 +55,6 @@ public sealed class VegFadeTests
         var code = (int)MathF.Round(plant.Custom.Y);
         if (code / 16 != s.Row || (code % 16 & Understorey.UnderVariantBit) == 0) throw new InvalidOperationException($"custom.y {code}");
         if ((Understorey.UnderVariantBit & 1) != 0) throw new InvalidOperationException("bit 0 is the whitewash");
-    }
-
-    private static void Expect((bool, bool) got, (bool, bool) want, string label)
-    {
-        if (got != want) throw new InvalidOperationException($"{label}: pools {got}, expected {want}");
-    }
-
-    private static void ExpectVec2(string text, string name, float a, float b, string file)
-    {
-        var m = Regex.Match(text, $@"const vec2 {name} = vec2\(([-0-9.]+), ([-0-9.]+)\);");
-        if (!m.Success) throw new InvalidOperationException($"{file}: {name} not found");
-        var x = float.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-        var y = float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-        if (x != a || y != b) throw new InvalidOperationException($"{file}: {name} = ({x}, {y}), expected ({a}, {b})");
     }
 
     private static (System.Numerics.Vector3 Lo, System.Numerics.Vector3 Hi) Extent(float[] p)

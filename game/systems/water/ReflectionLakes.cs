@@ -1,6 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Gen.Water;
+using Campus.Contracts.Water;
 
 namespace Campus.Systems.Water;
 
@@ -9,11 +9,12 @@ public sealed record ReflectionLake(int Slot, FeatureId Id, float WaterY, IReadO
 
 /// <summary>
 /// Picks the lake that gets the planar reflection this frame: the candidate with the largest estimated screen area,
-/// switching only when another lake is clearly larger (WLD-WATER: 换湖带回差). Engine-free so it can be tested.
+/// switching only when another lake is clearly larger (WLD-WATER: 换湖带回差).
 /// </summary>
 public sealed class ReflectionLakes
 {
     public const float Hysteresis = 1.3f;
+    public const int AreaSamples = 48;
     private int _current = -1;
 
     public ReflectionLakes(IReadOnlyList<ReflectionLake> lakes) => Lakes = lakes;
@@ -21,7 +22,7 @@ public sealed class ReflectionLakes
     public IReadOnlyList<ReflectionLake> Lakes { get; }
     public int Current => _current;
 
-    public static ReflectionLakes FromBodies(IReadOnlyList<WaterBody> bodies, int samples)
+    public static ReflectionLakes FromBodies(IReadOnlyList<WaterReflectionSurface> bodies, int samples)
     {
         var lakes = new List<ReflectionLake>();
         foreach (var body in bodies.Where(b => b.ReflectSlot >= 0).OrderBy(b => b.ReflectSlot))
@@ -69,14 +70,21 @@ public sealed class ReflectionLakes
         return float.NegativeInfinity;
     }
 
-    private static List<Vector3> SamplePoints(WaterBody body, int target)
+    private static List<Vector3> SamplePoints(WaterReflectionSurface body, int target)
     {
         var points = new List<Vector3>();
+        var outer = body.Rings.Outer.Select(p => new Godot.Vector2(p.X, p.Y)).ToArray();
+        var holes = body.Rings.Holes.Select(ring => ring.Select(p => new Godot.Vector2(p.X, p.Y)).ToArray()).ToArray();
         var spacing = MathF.Sqrt(MathF.Max(body.Area, 1f) / MathF.Max(target, 1));
         for (var step = spacing; points.Count == 0 && step > 0.25f; step *= 0.5f)
             for (var z = body.Min.Y + step * 0.5f; z < body.Max.Y; z += step)
                 for (var x = body.Min.X + step * 0.5f; x < body.Max.X; x += step)
-                    if (body.Contains(new Vector2(x, z))) points.Add(new(x, body.SurfaceY, z));
+                {
+                    var p = new Godot.Vector2(x, z);
+                    var inside = Godot.Geometry2D.IsPointInPolygon(p, outer);
+                    foreach (var hole in holes) inside ^= Godot.Geometry2D.IsPointInPolygon(p, hole);
+                    if (inside) points.Add(new(x, body.SurfaceY, z));
+                }
         return points;
     }
 }

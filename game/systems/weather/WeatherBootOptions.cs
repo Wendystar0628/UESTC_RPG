@@ -3,7 +3,7 @@ using Campus.Contracts;
 
 namespace Campus.Systems.Weather;
 
-public static class WeatherBootOptions
+internal static class WeatherBootOptions
 {
     public static WeatherBoot Parse(IReadOnlyDictionary<string, string> arguments, uint seed, Season season)
     {
@@ -41,7 +41,7 @@ public static class WeatherBootOptions
         }
     }
 
-    public static WeatherKind ParseKind(string text) => text switch
+    private static WeatherKind ParseKind(string text) => text switch
     {
         "clear" => WeatherKind.Clear,
         "few-clouds" => WeatherKind.FewClouds,

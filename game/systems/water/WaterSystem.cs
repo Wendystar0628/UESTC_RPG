@@ -1,7 +1,9 @@
 using Campus.Contracts;
+using Campus.Contracts.Bake;
+using Campus.Contracts.Content;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
-using Campus.Gen.Water;
+using Campus.Contracts.Water;
 using Campus.Kernel.Materials;
 using Godot;
 
@@ -12,7 +14,7 @@ namespace Campus.Systems.Water;
 /// of the screen. A SubViewport with its own World3D (no shadow-casting light there), a mirrored camera, and every
 /// N frames one render; reflect_tex, reflect_vp and reflect_lake are written for water.gdshader. The reflection is a
 /// style floor: it never switches off, only its refresh interval follows the quality setting (2 / 3 / 4 frames).
-/// Water surfaces themselves are static content (Campus.Gen.Water.WaterModule).
+/// Water surfaces themselves are static content supplied by the map's water module.
 /// </summary>
 [KernelNode("systems.water", Owner = "WP-24")]
 [QualityResponsive(Owns = [QualityKnob.ReflectionInterval])]
@@ -27,6 +29,8 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     private readonly IMediumState? _medium;
     private readonly IWorldState? _world;
     private readonly IShaderMaterialSource? _materials;
+    private readonly IMapContentSource? _content;
+    private readonly IBakeContextSource? _builds;
     private ShaderMaterial? _proxyMaterial;
     private SubViewport? _viewport;
     private Camera3D? _mirror;
@@ -42,11 +46,14 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
 
     public WaterSystem() => _inFrustum = InFrustum;
 
-    public WaterSystem(IMediumState medium, IWorldState world, IShaderMaterialSource materials) : this()
+    public WaterSystem(IMediumState medium, IWorldState world, IShaderMaterialSource materials,
+        IMapContentSource content, IBakeContextSource builds) : this()
     {
         _medium = medium;
         _world = world;
         _materials = materials;
+        _content = content;
+        _builds = builds;
     }
 
     /// <summary>Lake number that currently has the planar reflection, or -1.</summary>
@@ -112,8 +119,11 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     public void OnMapLoaded(IMapContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var bodies = WaterCatalog.Build(ctx.World, ctx.Descriptor);
-        _lakes = ReflectionLakes.FromBodies(bodies, WaterParams.Default.AreaSamples);
+        var content = _content ?? throw new InvalidOperationException("Map content source is unavailable.");
+        var builds = _builds ?? throw new InvalidOperationException("Prepared build context source is unavailable.");
+        var module = content.GetModule<IWaterContentSource>(ctx, "water");
+        var bodies = module.GetWaterBodies(builds.GetPreparedContext(ctx, "water"));
+        _lakes = ReflectionLakes.FromBodies(bodies, ReflectionLakes.AreaSamples);
         _lake = -1;
         _frame = 0;
     }

@@ -126,8 +126,7 @@ public sealed class CollisionTileBuilder(
         void AddRing(IReadOnlyList<Vector2> ring, bool hole)
         {
             if (ring.Count < 3) return;
-            var area = 0f;
-            for (var i = 0; i < ring.Count; i++) area += ring[i].X * ring[(i + 1) % ring.Count].Y - ring[(i + 1) % ring.Count].X * ring[i].Y;
+            var area = PlanGeometry.SignedArea(ring);
             for (var i = 0; i < ring.Count; i++)
             {
                 var a = ring[i]; var b = ring[(i + 1) % ring.Count];

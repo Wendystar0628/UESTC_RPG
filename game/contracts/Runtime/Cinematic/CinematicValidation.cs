@@ -1,7 +1,4 @@
-using Campus.Contracts;
-using Campus.Contracts.Cinematic;
-
-namespace Campus.Camera.Cinematic;
+namespace Campus.Contracts.Cinematic;
 
 /// <summary>Runtime-independent format and timeline invariants. Geometry checks use the loaded world separately.</summary>
 public static class CinematicValidation
@@ -31,7 +28,7 @@ public static class CinematicValidation
             foreach (var point in segment.Points)
             {
                 Require((point.Anchor is null) != (point.P is null), "Camera point needs exactly one position source.");
-                if (point.Anchor is not null) Require(Contracts.Cinematic.CinematicAnchors.IsPoseAnchor(point.Anchor), "Invalid point anchor.");
+                if (point.Anchor is not null) Require(CinematicAnchors.IsPoseAnchor(point.Anchor), "Invalid point anchor.");
                 if (point.P is { } p) Require(Finite(p), "Non-finite camera point.");
                 if (point.In is { } incoming) Require(Finite(incoming), "Non-finite incoming handle.");
                 if (point.Out is { } outgoing) Require(Finite(outgoing), "Non-finite outgoing handle.");
@@ -53,7 +50,7 @@ public static class CinematicValidation
             };
             if (segment.Look.Mode == CameraLookMode.Target) Require((segment.Look.Target is null) != (segment.Look.TargetAnchor is null), "Target look needs exactly one target.");
             if (segment.Look.BlendIn is { } blend) Require(float.IsFinite(blend) && blend >= 0, "Invalid look blend.");
-            if (segment.Look.Settle is { } settle) Require(float.IsFinite(settle.From) && settle.From >= 0 && settle.From < 1 && Contracts.Cinematic.CinematicAnchors.IsPoseAnchor(settle.Anchor), "Invalid settle.");
+            if (segment.Look.Settle is { } settle) Require(float.IsFinite(settle.From) && settle.From >= 0 && settle.From < 1 && CinematicAnchors.IsPoseAnchor(settle.Anchor), "Invalid settle.");
             if (segment.Ease?.Bezier is { } easing) Require(float.IsFinite(easing.X) && float.IsFinite(easing.Y) && float.IsFinite(easing.Z) && float.IsFinite(easing.W) && easing.X >= 0 && easing.X <= 1 && easing.Z >= 0 && easing.Z <= 1, "Invalid easing control points.");
             previous = segment.T1;
         }

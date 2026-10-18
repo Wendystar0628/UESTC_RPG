@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.CenterEast.Framework;
 
@@ -90,22 +91,7 @@ public static class Contour
     }
 
     /// <summary>Miter offset, outward for positive <paramref name="d"/>; the miter is held to 2.5 |d| at sharp corners.</summary>
-    public static Vector2[] Offset(IReadOnlyList<Vector2> ring, float d)
-    {
-        ArgumentNullException.ThrowIfNull(ring);
-        var count = ring.Count;
-        var output = new Vector2[count];
-        for (var i = 0; i < count; i++)
-        {
-            Vector2 p = ring[(i + count - 1) % count], q = ring[i], r = ring[(i + 1) % count];
-            Vector2 n0 = Outward(p, q), n1 = Outward(q, r);
-            var m = (n0 + n1) / (1f + Dot(n0, n1));
-            var length = m.Length();
-            if (length > 2.5f) m *= 2.5f / length;
-            output[i] = q + m * d;
-        }
-        return output;
-    }
+    public static Vector2[] Offset(IReadOnlyList<Vector2> ring, float d) => PlanGeometry.MitreOffset(ring, d, closed: true, limit: 2.5f);
 
     /// <summary>Outward unit normal of a canonical ring's edge a→b.</summary>
     public static Vector2 Outward(Vector2 a, Vector2 b) => Unit(new(b.Y - a.Y, a.X - b.X));

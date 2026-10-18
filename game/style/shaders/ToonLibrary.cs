@@ -1,6 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Quality;
-using Campus.Gen.Interior.Shell.Cards;
+using Campus.Style.Shaders.Cards;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Godot;

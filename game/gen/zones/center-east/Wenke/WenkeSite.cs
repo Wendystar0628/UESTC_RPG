@@ -129,7 +129,7 @@ public sealed class WenkeSite : CenterEastSite
     private static CellKind Kind(string part, int k, Vector2[] path, Vector2[][] others)
     {
         var (mid, outward) = Contour.Middle(path);
-        if (others.Any(o => PlanMath.Inside(o, mid + outward * 0.8f))) return CellKind.Hidden;
+        if (others.Any(o => PlanGeometry.InsideByCrossings(o, mid + outward * 0.8f))) return CellKind.Hidden;
         if (part == K.Tower && k >= K.PanelStripFrom && Vector2.Distance(mid, K.PanelStrip) <= K.PanelStripHalf) return CellKind.Panel;
         return CellKind.Window;
     }
@@ -241,7 +241,7 @@ public sealed class WenkeSite : CenterEastSite
             if (cell.Kind == CellKind.Hidden) continue;
             var (mid, outward) = Contour.Middle(cell.Path);
             var inside = mid - outward * 1.2f;
-            if (!PlanMath.Inside(above, inside) && !others.Any(o => PlanMath.Inside(o, inside))) yield return cell;
+            if (!PlanGeometry.InsideByCrossings(above, inside) && !others.Any(o => PlanGeometry.InsideByCrossings(o, inside))) yield return cell;
         }
     }
 

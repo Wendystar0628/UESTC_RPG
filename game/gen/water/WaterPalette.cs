@@ -14,8 +14,6 @@ public static class WaterPalette
     public static readonly PaletteToken MidShade = new("water.mid.shade");
     public static readonly PaletteToken FarLit = new("water.far.lit");
     public static readonly PaletteToken FarShade = new("water.far.shade");
-    public static readonly PaletteToken DeepLit = new("water.deep.lit");
-    public static readonly PaletteToken DeepShade = new("water.deep.shade");
     public static readonly PaletteToken FoamLit = new("water.foam.lit");
     public static readonly PaletteToken FoamShade = new("water.foam.shade");
 

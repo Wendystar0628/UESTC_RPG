@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
+using Campus.Gen.World;
 using S = Campus.Gen.Zones.Core.CoreStyle;
 
 namespace Campus.Gen.Zones.Core.Annex;
@@ -108,22 +109,11 @@ public sealed class AnnexSite
             }
             if (!closed) continue;
             var ring = loop.Select(i => ground[i].A).ToArray();
-            var area = SignedArea(ring);
+            var area = (float)PlanGeometry.SignedArea(ring);
             if (area > -60f) continue;
             var distance = Vector2.Distance(Plan.Centroid([ring]), wing.Value);
             if (distance < bestDistance) { bestDistance = distance; best = loop.Select(i => ground[i]).ToArray(); }
         }
         return best;
-    }
-
-    public static float SignedArea(IReadOnlyList<Vector2> ring)
-    {
-        double area = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        return (float)(area * 0.5);
     }
 }

@@ -5,7 +5,7 @@
 // 插片朝向 = mix(外壳法线, 主相机视线, 0.5)，侧对镜头时缩小；只在外轮廓一圈保持全尺寸，朝向镜头的内部插片只留少数。
 // 插片 3–5 张一簇（簇心压进团块），一簇同去同留、同明度；团块在外轮廓一圈按树种稳定的噪声剪成叶团锯齿边（max-011 评审③④）。
 // 人能站到冠下的树另有一层冠底叶簇，只在近处出，从树下仰看时冠底读成松软的叶团（max-011 23c3）。
-// 叶卡在主线版由本着色器按层号程序化画出（层号 = Campus.Gen.Vegetation.CardShape），细节版换成 Texture2DArray 的同号层。
+// 叶卡在主线版由本着色器按叶形层号程序化画出，细节版换成 Texture2DArray 的同号层。
 // 远近池交接（23c2c）：近池 L1 与远池替身在 135–165 m 按 Bayer 抖动互补交接，林下地被在绘制距离前抖动淡出（植被公共段 veg_pool_code）；
 // 远处的碎边、叶形和团块法线按像素收拢，远处的树读成干净的绿色体块。
 // 顶点数据见 MotherModels：插片 CUSTOM0 = (插片中心, h2)，CUSTOM1 = (枝梢锚点, h3)，CUSTOM2 = (团心, 重要度序)；
@@ -262,7 +262,7 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 }
 // 远近池交接与淡出（WLD-VEGETATION、ENG-PERF，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
 // visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
-// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Gen.Vegetation.VegFade 分桶）。
+// 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Systems.Vegetation.VegetationBuckets 分桶）。
 // 远池替身由 MotherModels.FarStandIn 出模型，顶点里带记号：木质 CUSTOM2.w = 1，团块 CUSTOM2.w = −2。
 // 林下地被（Understorey 的 GroundPlant，INSTANCE_CUSTOM 外观变体位 1）没有远池，在绘制距离前抖动淡出，不在 100 m 上硬切。
 // 距离乘细节系数 quality.x（WLD-VEGETATION）。阴影通道不做（投影代理只在近池，抖动的影子会碎）。

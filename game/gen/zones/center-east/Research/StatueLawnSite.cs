@@ -3,6 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.World;
 using Campus.Gen.Zones.CenterEast.Framework;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
@@ -44,7 +45,7 @@ public sealed class StatueLawnSite : CenterEastSite
     internal static IReadOnlyList<Vector2>? Island(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(M.Plaza), out var plaza) || plaza.Geometry is not PolygonGeometry polygon) return null;
-        return polygon.Rings.Holes.FirstOrDefault(h => PlanMath.Inside(h, M.LinAt));
+        return polygon.Rings.Holes.FirstOrDefault(h => PlanGeometry.InsideByCrossings(h, M.LinAt));
     }
 
     private static void IslandKerb(SiteBuilder b)

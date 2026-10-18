@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
+using Campus.Gen.World;
 using S = Campus.Gen.Zones.Core.CoreStyle;
 
 namespace Campus.Gen.Zones.Core.Annex;
@@ -73,7 +74,7 @@ public sealed class QuietGarden : ICorePiece
             for (var z = z0 + 0.25f; z < z1; z += 0.5f)
             {
                 var p = new Vector2(x, z);
-                if (!Inside(p)) continue;
+                if (!PlanGeometry.InsideByCrossings(Ring, p)) continue;
                 var clear = float.MaxValue;
                 foreach (var w in Walls)
                 {
@@ -85,17 +86,6 @@ public sealed class QuietGarden : ICorePiece
                 if (clear > bestClear + 1e-4f) { bestClear = clear; best = p; }
             }
         return best;
-    }
-
-    private bool Inside(Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = Ring.Count - 1; i < Ring.Count; j = i++)
-        {
-            Vector2 a = Ring[i], b = Ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
     }
 
     private static float Distance(Vector2 p, Vector2 a, Vector2 b)

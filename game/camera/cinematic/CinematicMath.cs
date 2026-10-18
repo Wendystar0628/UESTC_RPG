@@ -21,8 +21,7 @@ public static class CinematicMath
         return Cubic((lo + hi) * 0.5f, p.Y, p.W);
     }
     private static float Cubic(float t, float a, float b) => 3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t;
-    public static float AngleDelta(float from, float to) => ((to - from + 540) % 360 + 360) % 360 - 180;
-    public static float BlendAngle(float from, float to, float weight) => from + AngleDelta(from, to) * weight;
+    public static float BlendAngle(float from, float to, float weight) => from + CinematicPoseMath.AngleDelta(from, to) * weight;
     public static Pose Face(Vector3 position, Vector3 target, Pose fallback)
     {
         var direction = target - position;
@@ -63,8 +62,8 @@ public static class CinematicMath
         var forward = new Vector3(MathF.Sin(yaw) * MathF.Cos(pitch), MathF.Sin(pitch), -MathF.Cos(yaw) * MathF.Cos(pitch));
         return destination with
         {
-            Position = destination.Position - forward * Flow.FlowTuning.ApproachBack +
-            Vector3.UnitY * (destination.Position.Y > Flow.FlowTuning.HighDestination ? 0 : Flow.FlowTuning.ApproachRise)
+            Position = destination.Position - forward * CinematicTuning.ApproachBack +
+            Vector3.UnitY * (destination.Position.Y > CinematicTuning.HighDestination ? 0 : CinematicTuning.ApproachRise)
         };
     }
     public static float MaskOpacity(MaskSeg mask, double time)

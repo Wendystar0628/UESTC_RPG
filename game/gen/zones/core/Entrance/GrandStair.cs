@@ -8,6 +8,7 @@ using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Openings;
 using Campus.Gen.Zones.Core.Framework;
 using Campus.Gen.Zones.Core.Library;
+using Campus.Gen.World;
 using S = Campus.Gen.Zones.Core.CoreStyle;
 using Shapes = Campus.Gen.Zones.Core.Framework.Shapes;
 
@@ -349,9 +350,7 @@ public sealed class GrandStair : ICorePiece
     private void Prism(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> section, float w0, float w1)
     {
         var ring = section;
-        var area = 0f;
-        for (var i = 0; i < ring.Count; i++) { var a = ring[i]; var b = ring[(i + 1) % ring.Count]; area += a.X * b.Y - b.X * a.Y; }
-        var sign = area >= 0 ? 1f : -1f;
+        var sign = PlanGeometry.SignedArea(ring) >= 0 ? 1f : -1f;
         for (var i = 0; i < ring.Count; i++)
         {
             Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];

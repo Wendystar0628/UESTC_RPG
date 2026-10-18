@@ -11,6 +11,7 @@ namespace Campus.Gen.Water;
 public sealed class WaterSurfaces
 {
     private readonly WaterParams _p;
+    private readonly Lazy<WaterMesh[]> _meshes;
 
     public WaterSurfaces(IWorldModel world, MapDescriptor map, WaterParams? parameters = null)
     {
@@ -18,11 +19,12 @@ public sealed class WaterSurfaces
         ArgumentNullException.ThrowIfNull(map);
         _p = parameters ?? WaterParams.Default;
         Bodies = WaterCatalog.Build(world, map, _p);
-        Meshes = Bodies.Select(b => WaterMesher.Build(b, Bodies, _p)).ToArray();
+        _meshes = new(() => Bodies.Select(b => WaterMesher.Build(b, Bodies, _p)).ToArray(),
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public IReadOnlyList<WaterBody> Bodies { get; }
-    public IReadOnlyList<WaterMesh> Meshes { get; }
+    public IReadOnlyList<WaterMesh> Meshes => _meshes.Value;
     public int TriangleCount => Meshes.Sum(m => m.TriangleCount);
 
     public IEnumerable<TileKey> Tiles()

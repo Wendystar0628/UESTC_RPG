@@ -82,7 +82,7 @@ public sealed class WestModuleTests
         var plaza = world.Features[new("design:west-a10-plaza")];
         Require(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry g && g.Rings.Outer.Zip(A.Plaza).All(p => Vector2.Distance(p.First, p.Second) < 0.01f),
             "the A10 plaza is registered as the tune's polygon");
-        Require(PlanMath.Inside(A.Plaza, A.Post), "the A10 post stands on its plaza");
+        Require(PlanGeometry.InsideByCrossings(A.Plaza, A.Post), "the A10 post stands on its plaza");
     }
 
     [TestCase]
@@ -114,8 +114,8 @@ public sealed class WestModuleTests
             var plan = SixSite.Plan(world, k.Entity, k.Part);
             var inner = SixSite.BasePlan(plan);
             Require(inner.Outer.Count == plan.Outer.Count && inner.Holes.Count == plan.Holes.Count, $"{k.Key}: the base keeps the plan's rings");
-            Require(MathF.Abs(PlanMath.SignedArea2(inner.Outer)) < MathF.Abs(PlanMath.SignedArea2(plan.Outer)), $"{k.Key}: the base glass is set back inside the stone");
-            Require(inner.Outer.All(p => PlanMath.Inside(plan.Outer, p)), $"{k.Key}: every base corner lies under the stone");
+            Require(Math.Abs(PlanGeometry.SignedArea(inner.Outer)) < Math.Abs(PlanGeometry.SignedArea(plan.Outer)), $"{k.Key}: the base glass is set back inside the stone");
+            Require(inner.Outer.All(p => PlanGeometry.InsideByCrossings(plan.Outer, p)), $"{k.Key}: every base corner lies under the stone");
         }
     }
 
@@ -282,7 +282,7 @@ public sealed class WestModuleTests
         Require(file.Ops.All(o => o.Id.StartsWith("design:terrain:west-", StringComparison.Ordinal) && o.Zone.Value == "west"), "ids and zones");
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == "design:terrain:west-wetland-low");
         Require(low.Rings.Holes.Count == 1 && low.Rings.Holes[0].Zip(A.Dry).All(p => Vector2.Distance(p.First, p.Second) < 0.01f), "the low ground leaves the plaza's dry hole");
-        Require(A.Plaza.All(p => PlanMath.Inside(A.Dry, p)) && PlanMath.Inside(A.Dry, A.Post), "the plaza and its post lie inside the dry hole");
+        Require(A.Plaza.All(p => PlanGeometry.InsideByCrossings(A.Dry, p)) && PlanGeometry.InsideByCrossings(A.Dry, A.Post), "the plaza and its post lie inside the dry hole");
         var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-wetland-stream");
         var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-hongguang-north");
         Require(stream.WaterY is -0.5 && canal.WaterY is -1.2, "the wetland stream keeps the lake level, the canal runs 0.7 m lower");
@@ -329,7 +329,7 @@ public sealed class WestModuleTests
             var onLine = Enumerable.Range(0, ring.Count).Any(i => Near(ring[i], ring[(i + 1) % ring.Count], box.Door, 0.3f));
             Require(onLine, $"四号 {box.Key}: the door lies on the block's stone line");
             var out1 = PlanMath.Heading(box.Facing);
-            Require(!PlanMath.Inside(ring, box.Door + out1 * 2f) && PlanMath.Inside(ring, box.Door - out1 * 2f), $"四号 {box.Key}: the box faces out of the block");
+            Require(!PlanGeometry.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanGeometry.InsideByCrossings(ring, box.Door - out1 * 2f), $"四号 {box.Key}: the box faces out of the block");
         }
         var ctx = Context();
         var module = new WestModule();
@@ -353,9 +353,9 @@ public sealed class WestModuleTests
             .Concat(feature.Parts.Select(p => p.Geometry).OfType<MultiPolygonGeometry>().SelectMany(m => m.Polygons.Select(r => r.Outer))).ToArray();
         foreach (var (centre, length) in I.Shafts)
         {
-            Require(plans.Any(r => PlanMath.Inside(r, centre)), $"shaft {centre} stands on a link of 创新中心");
+            Require(plans.Any(r => PlanGeometry.InsideByCrossings(r, centre)), $"shaft {centre} stands on a link of 创新中心");
             var ends = new[] { centre + I.WingAxis * (length * 0.5f + 1.5f), centre - I.WingAxis * (length * 0.5f + 1.5f) };
-            Require(ends.All(e => plans.Any(r => PlanMath.Inside(r, e))), $"shaft {centre} reaches a building at both ends");
+            Require(ends.All(e => plans.Any(r => PlanGeometry.InsideByCrossings(r, e))), $"shaft {centre} reaches a building at both ends");
         }
     }
 

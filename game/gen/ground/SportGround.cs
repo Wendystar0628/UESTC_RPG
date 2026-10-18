@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -55,15 +56,9 @@ internal static class SportGround
     internal static Vector2[]? Outward(Vector2[] ring, float distance)
     {
         var n = ring.Length;
-        var area = 0f;
-        for (var i = 0; i < n; i++)
-        {
-            var a = ring[i];
-            var b = ring[(i + 1) % n];
-            area += a.X * b.Y - b.X * a.Y;
-        }
-        if (MathF.Abs(area) < 1e-3f) return null;
-        var side = area > 0f ? 1f : -1f;   // +1: counter-clockwise in (x, z); the outside is then on the right of every edge
+        var area = PlanGeometry.SignedArea(ring);
+        if (Math.Abs(area) < 5e-4) return null;
+        var side = area > 0 ? 1f : -1f;   // +1: counter-clockwise in (x, z); the outside is then on the right of every edge
         var direction = new Vector2[n];
         var normal = new Vector2[n];
         for (var i = 0; i < n; i++)

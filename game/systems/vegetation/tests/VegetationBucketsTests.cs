@@ -1,6 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Gen.Vegetation;
+using Campus.Contracts.Vegetation;
 using GdUnit4;
 
 namespace Campus.Systems.Vegetation.Tests;

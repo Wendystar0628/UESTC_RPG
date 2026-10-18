@@ -335,7 +335,7 @@ public static class Understorey
     private sealed class TrunkGrid
     {
         private const float Cell = 4f;
-        private readonly Dictionary<(int, int), List<Vector2>> _cells = [];
+        private readonly SpatialGrid<Vector2> _cells = new(Cell);
 
         public TrunkGrid(IEnumerable<PlantedTree> trees)
         {
@@ -343,22 +343,10 @@ public static class Understorey
             {
                 if (TreeForms.IsBall(t.Species.Form)) continue;
                 var p = new Vector2(t.Position.X, t.Position.Z);
-                var key = Key(p);
-                if (!_cells.TryGetValue(key, out var list)) _cells.Add(key, list = []);
-                list.Add(p);
+                _cells.AddPoint(p, p);
             }
         }
 
-        public bool Near(Vector2 p, float gap)
-        {
-            var (cx, cz) = Key(p);
-            for (var dx = -1; dx <= 1; dx++)
-                for (var dz = -1; dz <= 1; dz++)
-                    if (_cells.TryGetValue((cx + dx, cz + dz), out var list) && list.Any(q => Vector2.DistanceSquared(p, q) < gap * gap))
-                        return true;
-            return false;
-        }
-
-        private static (int, int) Key(Vector2 p) => ((int)MathF.Floor(p.X / Cell), (int)MathF.Floor(p.Y / Cell));
+        public bool Near(Vector2 p, float gap) => _cells.AnyAround(p, q => Vector2.DistanceSquared(p, q) < gap * gap);
     }
 }

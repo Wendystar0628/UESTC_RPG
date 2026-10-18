@@ -95,7 +95,7 @@ public sealed class XuanbangSite : SouthSite
     internal static GridEdge MainEdge(GridEdgeInfo e, Footprints f)
     {
         var probe = (e.A + e.B) * 0.5f + e.Frame.W;
-        if (PlanMath.Inside(f.Tower, probe) || PlanMath.Inside(f.Clock, probe)) return new(EdgeKind.Hidden);
+        if (PlanGeometry.InsideByCrossings(f.Tower, probe) || PlanGeometry.InsideByCrossings(f.Clock, probe)) return new(EdgeKind.Hidden);
         if (e.Length < 4f) return new(EdgeKind.Blank);
         if (MathF.Abs(PlanMath.Turn(e.Facing - X.FrontFacing)) > 20f) return new(EdgeKind.Plain);
         if (e.Length < X.MainFrontMin) return new(EdgeKind.Front);

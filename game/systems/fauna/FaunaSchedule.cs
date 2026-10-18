@@ -1,11 +1,7 @@
 using Campus.Contracts;
+using Campus.Contracts.Fauna;
 
-namespace Campus.Gen.Fauna;
-
-public enum FaunaKind : byte { Cat, Pigeon, Sparrow, Swan, Crow }
-
-/// <summary>The sets of one site (WLD-LIFE): day and night positions, and the cats' "under the eaves" set for rain.</summary>
-public enum FaunaSet : byte { Day, Night, Rain }
+namespace Campus.Systems.Fauna;
 
 /// <summary>The weather dimension of the latched state (WLD-LIFE): clear, rain (snow counts as rain for animals), after rain.</summary>
 public enum WeatherDim : byte { Clear, Rain, AfterRain }

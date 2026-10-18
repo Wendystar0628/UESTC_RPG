@@ -68,7 +68,7 @@ internal sealed partial class StreetSite
                     half = (props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("width", out var w) && w.ValueKind == JsonValueKind.Number
                         ? MathF.Max(w.GetSingle(), 2f) : 2.5f) * 0.5f;
                 var pad = new Vector2(half);
-                Index(_paving, points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad,
+                _paving.AddBox(points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad,
                     points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad, new Paving(null, points, half, road));
                 break;
         }
@@ -77,7 +77,7 @@ internal sealed partial class StreetSite
     private void IndexPaving(PolygonRings rings)
     {
         if (rings.Outer.Count < 3) return;
-        Index(_paving, rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max),
+        _paving.AddBox(rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max),
             new Paving(rings, null, 0f));
     }
 
@@ -111,43 +111,12 @@ internal sealed partial class StreetSite
         }
     }
 
-    private void IndexLine(Dictionary<(int, int), List<NetworkLine>> grid, NetworkLine line)
+    private void IndexLine(SpatialGrid<NetworkLine> grid, NetworkLine line)
     {
         if (line.Line.Points.Count < 2) return;
         var pad = new Vector2(HalfWidth(line) + 2f);
         var min = line.Line.Points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - pad;
         var max = line.Line.Points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + pad;
-        Index(grid, min, max, line);
-    }
-
-    private static (int, int) Key(Vector2 p) => ((int)MathF.Floor(p.X / Cell), (int)MathF.Floor(p.Y / Cell));
-
-    private static void Index<T>(Dictionary<(int, int), List<T>> grid, Vector2 min, Vector2 max, T item)
-    {
-        var (x0, z0) = Key(min - new Vector2(Cell * 0.5f));
-        var (x1, z1) = Key(max + new Vector2(Cell * 0.5f));
-        for (var x = x0; x <= x1; x++)
-            for (var z = z0; z <= z1; z++)
-            {
-                if (!grid.TryGetValue((x, z), out var list)) grid.Add((x, z), list = []);
-                list.Add(item);
-            }
-    }
-
-    private static IEnumerable<T> Near<T>(Dictionary<(int, int), List<T>> grid, Vector2 p) =>
-        grid.TryGetValue(Key(p), out var list) ? list : [];
-
-    /// <summary>Everything filed in the 3 × 3 cells around <paramref name="p"/>, each once, in cell then filing order.</summary>
-    private static List<T> NearAll<T>(Dictionary<(int, int), List<T>> grid, Vector2 p) where T : class
-    {
-        var (cx, cz) = Key(p);
-        var seen = new HashSet<T>(ReferenceEqualityComparer.Instance);
-        var result = new List<T>();
-        for (var dx = -1; dx <= 1; dx++)
-            for (var dz = -1; dz <= 1; dz++)
-                if (grid.TryGetValue((cx + dx, cz + dz), out var list))
-                    foreach (var item in list)
-                        if (seen.Add(item)) result.Add(item);
-        return result;
+        grid.AddBox(min, max, line);
     }
 }

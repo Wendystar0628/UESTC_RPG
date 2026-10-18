@@ -152,23 +152,11 @@ public sealed class LibraryPlan
     {
         static float Near(Vector2 p, IReadOnlyList<Vector2> ring) => ring.Min(q => Vector2.Distance(p, q));
         var best = pieces
-            .Where(p => p.Block.Kind == BlockKind.Podium && p.Y0 <= floor && !Inside((p.A + p.B) * 0.5f + p.Out * 0.5f, store))
+            .Where(p => p.Block.Kind == BlockKind.Podium && p.Y0 <= floor && !PlanGeometry.InsideByCrossings(store, (p.A + p.B) * 0.5f + p.Out * 0.5f))
             .Select(p => (Piece: p, AtA: Near(p.A, store) <= Near(p.B, store), Gap: MathF.Min(Near(p.A, store), Near(p.B, store))))
             .Where(c => c.Gap < 1f)
             .OrderByDescending(c => c.Piece.Length).FirstOrDefault();
         return best.Piece is null ? null : (best.Piece, best.AtA);
-    }
-
-    /// <summary>Even-odd point in polygon.</summary>
-    private static bool Inside(Vector2 p, IReadOnlyList<Vector2> ring)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            Vector2 a = ring[i], b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
     }
 
     // ------------------------------------------------------------------ exterior wall pieces
@@ -334,12 +322,7 @@ public sealed class LibraryPlan
     /// <summary>Signed area in (x, z) is positive for the counterclockwise order every block uses.</summary>
     public static Vector2[] Ccw(IReadOnlyList<Vector2> ring)
     {
-        double area = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
-            area += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
+        var area = PlanGeometry.SignedArea(ring);
         var list = ring.ToList();
         if (list.Count > 1 && Vector2.Distance(list[0], list[^1]) < 1e-4f) list.RemoveAt(list.Count - 1);
         if (area < 0) list.Reverse();

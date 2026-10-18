@@ -33,32 +33,6 @@ public static class Plan
         return points;
     }
 
-    /// <summary>Twice the signed area: positive when the ring turns from +x toward +z.</summary>
-    public static float SignedArea2(IReadOnlyList<Vector2> ring)
-    {
-        double sum = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var a = ring[i];
-            var b = ring[(i + 1) % ring.Count];
-            sum += (double)a.X * b.Y - (double)b.X * a.Y;
-        }
-        return (float)sum;
-    }
-
-    /// <summary>Even-odd point in ring.</summary>
-    public static bool Contains(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-        {
-            var a = ring[i];
-            var b = ring[j];
-            if ((a.Y > p.Y) != (b.Y > p.Y) && p.X < (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-        }
-        return inside;
-    }
-
     /// <summary>Distance from p to the segment ab.</summary>
     public static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b) => Vector2.Distance(p, Closest(p, a, b));
 

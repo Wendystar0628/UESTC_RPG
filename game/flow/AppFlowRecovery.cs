@@ -1,4 +1,3 @@
-using Campus.Camera.Cinematic;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
@@ -71,8 +70,8 @@ public sealed partial class AppFlowService
             _destinationMode = ViewMode.Fly;
             var catalog = new CinematicCatalog(context);
             _definition = catalog.Find("enterNew");
-            _anchors = new(TitlePose(), camera.Pose, _destination, _userFov, maps, context.Descriptor.Id);
-            if (_definition is not null) _destination = _anchors.Resolve(_definition.End.Pose);
+            _playbackStart = new(TitlePose(), camera.Pose, _destination, _userFov, context.Descriptor.Id);
+            if (_definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
             await AdvanceToDefault();
         }
         _finishing = true;

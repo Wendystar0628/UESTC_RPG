@@ -20,7 +20,7 @@ namespace Campus.Kernel.Bake;
 /// <summary>One path for live generation and per-cell local caching. Ready always means validated CPU data.</summary>
 [KernelService(typeof(IBakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
-public sealed class BakeService : IBakeService, IBakeContextSource, IDisposable
+public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable
 {
     private readonly IMapService? _maps;
     private readonly IAppFlow? _flow;

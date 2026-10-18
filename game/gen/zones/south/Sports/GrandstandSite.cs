@@ -371,7 +371,7 @@ public sealed class GrandstandSite : SouthSite
             if (previous is { } prev) arc += Vector2.Distance(prev.Back, s.Back);
             previous = s;
             if (arc - last < T.PortalPitch) continue;
-            if (!deck.Decks.Any(r => PlanMath.Inside(r, s.Back + s.Out * 1.0f))) continue;
+            if (!deck.Decks.Any(r => PlanGeometry.InsideByCrossings(r, s.Back + s.Out * 1.0f))) continue;
             last = arc;
             var f = new PlanFrame(s.Back, new(s.Out.Y, -s.Out.X));
             float floor = deck.Top, hw = T.PortalWidth * 0.5f;
