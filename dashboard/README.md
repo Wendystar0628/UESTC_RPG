@@ -24,11 +24,11 @@ dashboard/
   tools/
     datafile.py         数据文件读写（唯一入口）
     collect.py          项目采集：读权威来源，写 data/auto 下的项目数据；live.py --loop 每 10 分钟跑一次
-    live.py             实时采集：只组装监控库 view/ 的结果，写 live.js；--loop 每 15 s 写一次
+    live.py             实时采集：只组装监控库 view/ 的结果，写 live.js 与 catalog.js；--loop 每 15 s 写一次 live.js、每 60 s 写一次 catalog.js
     post.py             给模型用的发布工具：发通知、挂审计项、结项、删过期
 ```
 
-**数据从哪来**：观察台的健康、在做、谁在干活、后台脚本、临时工作树、钩子这几项都由监控库 `.collab/tools/monitor/`（本机 `.collab` 工具，与巡逻共用，只读；分层与各文件职责见 `.collab/tools/README.md` 的 monitor/ 表）读出，观察台不另写一份读法或检查：`collect.py` 经 `monitor.check.run_all` 取健康检查、经 `monitor.read.collab` 读队列与来信与调研；`live.py` 经 `monitor.view` 取 `people`（谁在干活）、`work`（在做的工作）、`scripts`（后台脚本）、`trees`（临时工作树）、`hooks`（钩子卡），临时工作树里"最近一次门禁"的一句话取自 `monitor.check.build.gate_brief`（门禁结果只有那一份实现）。这是仓库代码引用 `.collab` 的唯一例外（本机协作数据不进仓库）。模型写的只有 `post.py` 的通知与审计项；其余都是程序从权威来源读出，模型把这些结构化位置写对即可：施工队列表与状态头部的"当前阶段""当前优先级"、子代理名开头的队列行号、任务单开头的行号、来信第一行的标记（WF-COMMS §6）。
+**数据从哪来**：观察台的健康、在做、谁在干活、后台脚本、临时工作树、钩子、脚本目录这几项都由监控库 `.collab/tools/monitor/`（本机 `.collab` 工具，与巡逻共用，只读；分层与各文件职责见 `.collab/tools/README.md` 的 monitor/ 表）读出，观察台不另写一份读法或检查：`collect.py` 经 `monitor.check.run_all` 取健康检查、经 `monitor.read.collab` 读队列与来信与调研；`live.py` 经 `monitor.view` 取 `people`（谁在干活）、`work`（在做的工作）、`running`（后台脚本）、`trees`（临时工作树）、`hooks`（钩子卡）、`catalog`（脚本目录，读 `monitor.read.scriptfiles`），临时工作树里"最近一次门禁"的一句话取自 `monitor.check.build.gate_brief`（门禁结果只有那一份实现）。这是仓库代码引用 `.collab` 的唯一例外（本机协作数据不进仓库）。模型写的只有 `post.py` 的通知与审计项；其余都是程序从权威来源读出，模型把这些结构化位置写对即可：施工队列表与状态头部的"当前阶段""当前优先级"、子代理名开头的队列行号、任务单开头的行号、来信第一行的标记（WF-COMMS §6）。
 
 ## 2 数据文件
 
@@ -43,6 +43,7 @@ dashboard/
 | `decisions` | auto | collect.py | 10 min | 最近的决策（编号、一句话、状态）与总数 |
 | `health` | auto | collect.py | 10 min | 健康检查记录（测试与门禁、代码与文档、工作区与推送、协作流程、后台与钩子、会话与子代理） |
 | `audit-auto` | auto | collect.py | 10 min | 自动发现的待审项：新截图、新海报与报告页、待审调研、【需定】来信 |
+| `catalog` | auto | live.py | 60 s | 所有脚本与作用：按组、按子目录成树，每个脚本的作用、用法、开头说明、语言、行数、修改时刻、进不进 git、现在是否在跑 |
 | `notices` | curated | post.py | 30 s | 给作者的通知 |
 | `audit` | curated | post.py | 30 s | 模型挂给作者审的事 |
 
@@ -73,6 +74,10 @@ docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, 
              # parent 是子文档的主文档编码（主文档为 null）；
              # sections: [{ id, title, chars, children }]，id 如 "§8"、"§8.1"，children 是下一级节，递归
 decisions: { total, recent: [{ id, text, status, scope }] }
+catalog:   { total, missing, groups: [{ label, note, roots, count, missing, dirs: [目录...], scripts: [脚本...] }] }
+             # 组按 monitor/local.json 的 scriptRoots（脚本放在哪只写那一处；同名标签并成一组）；目录 { name, path, count, dirs, scripts } 递归；
+             # 脚本 { path, name, lang, lines, mtime, tracked, purpose, usage, intro, running }：purpose 是作用（Python 取模块文档字符串、其余取开头注释块的第一段，
+             # 没写是空串，计入 missing），usage 是“用法：”开头那一行及其缩进续行，intro 是开头说明全文，running 是 null 或 { n 个进程, since }
 health:    { checks: [{ id, group, title, level: "ok"|"warn"|"bad", summary, details: [{ text, link?, meta? }], tip, link? }] }
 audit-auto:{ items: [{ id, kind: "shots"|"poster"|"report"|"research"|"decision", title, path, since }] }
 notices:   { items: [{ id, at, from, level: "info"|"attention"|"decision", text, link, expires, pinned }] }
@@ -110,9 +115,10 @@ Dash.tree({ key, nodes, label(n, depth), kids?(n), id?(n), openDepth? })
                               可展开、收起的树（结构页、文档页共用），键盘与展开状态见 ui.js 注释
 Dash.who(live)                谁在干活：每个会话一块，名下在跑的子代理逐个列出（行号或名字、型号、推理档、开始多久），已交回的折叠（总览与模型页共用）
 Dash.scripts(live)            构建锁 + 逐个进程列出的后台脚本 + 巡逻（总览与模型页共用）
-Dash.worktrees(live)          临时工作树：每个登记的工作树一行（名字、路径、HEAD 与离 main 的提交数、未提交文件数、在跑什么或闲置多久、最近一次门禁、状态签条：在用 / 闲置 / 不在指定目录 / 失效）（在做页与总览共用）
+Dash.worktrees(live)          临时工作树：每个登记的工作树一行（名字、路径、HEAD 与离 main 的提交数、未提交文件数、在跑什么或闲置多久、最近一次门禁、状态签条：在用 / 闲置 / 不在指定目录 / 失效）（施工页与总览共用）
 Dash.worktreeFold(live)       总览用：一行"临时工作树 N 个"，点开是 Dash.worktrees
 Dash.hooks(live)              钩子卡：每个登记的钩子一行，点开看最近 20 条
+Dash.gist(text)               { text 摘要（不长就是全文）, long 是否真长 }，longText 与脚本页共用
 Dash.longText(text)           不长直接全文，真长的先给一句话摘要、点开看全文
 Dash.liveGap(live, key, 块名们, 空时的话)
                               实时数据某一项没有内容时说清真实原因（没有数据 / 没有这个字段 / 读源失败原文 / 确实为空）；有内容返回 null
@@ -120,7 +126,7 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 
 **数字口径**：能直接读出的数写确切值——时刻（`Dash.at`）、份数与个数（文档、队列行、子代理、待审、测试个数、提交号等）；只有测出来的大量值才报数量级（`Dash.mag`）：代码行、文件体积、测试代码行、引用次数。
 
-- 页面路由用地址里的 `#页名`；页面清单在 `app/manifest.js`。
+- 页面路由用地址里的 `#页名`，`#页名/块` 滚到那一页的某一块（块 id 就是面板 id，如 `#work/work-doing`）；页面清单在 `app/manifest.js`。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类，面板自己的样式写在同名 `.css`，只用令牌，不写颜色字面量。
 - 已看标记（作者点"知道了"）只存在浏览器本地（localStorage），不回写数据文件；要真正结项由模型用 `post.py done`。
 - **演示数据**：地址带 `?demo` 时，所有数据改从 `data/demo/<名字>.js` 读（同一格式），用来在采集脚本没跑时开发和预览面板；演示数据只放这里，不写进 `auto/`、`curated/`。
@@ -131,12 +137,12 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 | 页 | 面板（文件） | 看什么 |
 | --- | --- | --- |
 | `#overview` 总览 | `overview.js` | 第一行：一句项目状态、阶段与优先级、数据新旧；第二行三栏：需要你看（审计项与【需定】，最多 5 条）、在做（队列里进行中与待编译的行，最多 8 条，谁的签条）、谁在干活（每个主会话一块，名下在跑的子代理逐个列，已交回的折叠）；第三行两栏：后台脚本（构建锁、逐个进程、巡逻，末尾一行"临时工作树 N 个"可展开）、健康摘要（只列不正常的项，最多 5 条，另有 N 项正常）；钩子与生效记录；最新通知 3 条。宽屏（≥1280 px）按此排，窄屏同顺序叠成一列 |
-| `#doing` 在做 | `doing.js` | 两个主会话现在在干什么；每个工作项一张卡（行、状态、谁、按行号对上的子代理的签条、改动的目录与文件数、任务单链接、程序算出的不一致）；临时工作树一张卡；没挂队列行的子代理 |
-| `#work` 施工 | `queue.js` | 队列按状态分栏，行只显示号与一句话 |
+| `#work` 施工 | `work.js` | 自上而下四块：① 两个主会话现在在干什么；② 正在做（`work-doing`）：进行中与待编译的行，一行一张详细卡（行、状态、谁、按行号对上的子代理的签条、改动的目录与文件数、任务单链接、程序算出的不一致），末尾是没挂队列行的子代理；③ 排着的（`work-queued`）：可派、等前置、暂停三栏的紧凑卡片，暂停默认收起；④ 临时工作树（`work-trees`）一张卡 |
 | `#health` 健康 | `health.js` | 全部检查按分组列出，每项一行：状态点、标题、一句话；点开看细节、建议、链接；分组标题写几项正常、几项要看 |
 | `#models` 模型 | `models.js` | 会话 → 子代理（与总览同一个 `Dash.who`）；后台脚本与构建锁（同一个 `Dash.scripts`） |
 | `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数（确切）、代码行（数量级）、一句说明 |
 | `#docs` 文档 | `docs.js` | 域 → 主文档 → 子文档 → 节的树，默认只展开到域，点文档或节打开文件；树下是引用关系图 |
+| `#scripts` 脚本 | `scripts.js` | 所有脚本与作用，全部由程序从脚本自己读出：顶部一行“共几个脚本、几个没写开头说明”；按组（仓库工程脚本、观察台入口、数据管线、本机协作工具、双击入口）各一张卡，组内按子目录成可展开的树；每个脚本一行：文件名、作用（长的给摘要）、签条（语言、进 git 或仅本机、在跑、缺说明）；点开看用法、开头说明全文、路径、行数、修改时刻。写法见 ENG-CODE 接入要点“写或改脚本时”，改了脚本页面自动跟着变 |
 | `#audit` 审计 | `audit.js` | 需要作者审的事（自动发现 + 模型挂的），可点开对应文件 |
 | `#notices` 通知 | `notices.js` | 通知时间线，过期自动收起 |
 | `#decisions` 决策 | `decisions.js` | 最近的决策 |

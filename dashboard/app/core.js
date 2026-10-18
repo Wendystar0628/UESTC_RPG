@@ -279,7 +279,8 @@
   Dash.page = function () { return currentPage; };
 
   function route() {
-    var id = (location.hash || '').replace(/^#/, '');
+    var hash = (location.hash || '').replace(/^#/, '').split('/');   // #页名 或 #页名/块 id（面板 id），后者滚到那一块
+    var id = hash[0];
     if (!M.pages.some(function (p) { return p.id === id; })) id = M.pages.length ? M.pages[0].id : '';
     currentPage = id;
     M.pages.forEach(function (p) {
@@ -292,6 +293,14 @@
     var pg = M.pages.filter(function (p) { return p.id === id; })[0];
     document.title = (pg ? pg.title + ' · ' : '') + '作者观察台';
     window.scrollTo(0, 0);
+    if (hash[1]) {
+      var jump = function () {
+        var box = document.querySelector('#page-' + id + ' [data-panel="' + hash[1] + '"]');
+        if (box) box.scrollIntoView();
+      };
+      jump();
+      setTimeout(jump, 400);   // 刚打开页面时面板还没画完
+    }
   }
 
   /* ================= 启动 ================= */

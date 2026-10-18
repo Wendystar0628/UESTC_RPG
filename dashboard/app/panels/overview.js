@@ -64,7 +64,7 @@
           Dash.chip(it.who || '—', sideOf(it.who)));
       })));
       var more = items.length > MAX_WORK ? '另有 ' + (items.length - MAX_WORK) + ' 项，' : '';
-      body.appendChild(h('div.ov-more', more, h('a', { href: '#doing' }, '去在做页')));
+      body.appendChild(h('div.ov-more', more, h('a', { href: '#work/work-doing' }, '去施工页的“正在做”')));
     }
     return staleCard(Dash.card('在做（' + items.length + ' 项）', body), 'live', !!live);
   }
@@ -77,7 +77,7 @@
 
   /* ---------- 后台脚本 ---------- */
   function scriptsCard(live) {
-    var card = Dash.card('后台脚本', live ? h('div', Dash.scripts(live), h('div.ov-wt', Dash.worktreeFold(live)), h('div.ov-more', h('a', { href: '#models' }, '看模型页'), '，', h('a', { href: '#doing' }, '看在做页的工作树'))) : Dash.empty('等数据', '', true));
+    var card = Dash.card('后台脚本', live ? h('div', Dash.scripts(live), h('div.ov-wt', Dash.worktreeFold(live)), h('div.ov-more', h('a', { href: '#models' }, '看模型页'), '，', h('a', { href: '#work/work-trees' }, '看施工页的工作树'))) : Dash.empty('等数据', '', true));
     return staleCard(card, 'live', !!live);
   }
 

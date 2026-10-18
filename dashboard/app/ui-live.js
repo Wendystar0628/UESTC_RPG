@@ -19,12 +19,19 @@
 
   /* 一条文字：不长（约 120 字以内）直接全文；真长的先给一句话摘要（第一句，没有句号就取前 120 字），点开看全文。不靠省略号硬截。 */
   var TEXT_SHORT = 120;
-  Dash.longText = function (text, cls) {
+  /* 返回 { text: 摘要（不长就是全文）, long: 是否真长 } */
+  Dash.gist = function (text) {
     text = String(text == null ? '' : text);
-    if (text.length <= TEXT_SHORT) return h('span' + (cls ? '.' + cls : ''), text);
+    if (text.length <= TEXT_SHORT) return { text: text, long: false };
     var m = /^[^。；！？.!?\n]{8,}?[。；！？]/.exec(text);
-    var first = m && m[0].length <= TEXT_SHORT ? m[0] : text.slice(0, TEXT_SHORT);
-    return h('details.longtext' + (cls ? '.' + cls : ''), h('summary', first + '（展开全文）'), h('div.longtext-body', text));
+    if (m && m[0].length <= TEXT_SHORT) return { text: m[0], long: true };
+    var cut = text.slice(0, TEXT_SHORT), at = Math.max(cut.lastIndexOf('，'), cut.lastIndexOf('；'), cut.lastIndexOf('、'), cut.lastIndexOf(', '));
+    return { text: at >= 24 ? cut.slice(0, at) : cut, long: true };   // 第一句太长：落在最后一个逗号前，不在词中间断
+  };
+  Dash.longText = function (text, cls) {
+    var g = Dash.gist(text);
+    if (!g.long) return h('span' + (cls ? '.' + cls : ''), g.text);
+    return h('details.longtext' + (cls ? '.' + cls : ''), h('summary', g.text + '（展开全文）'), h('div.longtext-body', String(text)));
   };
 
   /* 实时数据某一项没有内容时，说清真实原因：没有这份数据 / 数据里没有这个字段（旧版采集脚本）/ 读源失败（用采集记下的原文）/ 有字段但确实为空。

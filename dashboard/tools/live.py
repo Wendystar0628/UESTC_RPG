@@ -1,4 +1,5 @@
-"""实时采集：谁在跑（会话、子代理）、在做的工作、后台脚本、构建锁、临时工作树、钩子，写 data/auto/live.js，作者观察台的总览、在做、模型页读它。
+"""实时采集：谁在跑（会话、子代理）、在做的工作、后台脚本、构建锁、临时工作树、钩子，写 data/auto/live.js，作者观察台的总览、施工、模型页读它；
+另每 60 s 写一次脚本目录 data/auto/catalog.js（所有脚本与开头说明，脚本页读它）。
 用法：python -I -X utf8 dashboard/tools/live.py          写一次
       python -I -X utf8 dashboard/tools/live.py --loop   每 15 s 写一次；已有一个在跑就直接退出；每 10 分钟顺带跑一次 collect.py
 入口只组装：数据都经监控库（.collab/tools/monitor/，与巡逻共用，只读）的 view/ 取，不在这里另写读法；本机协作数据（.collab）经它读，
@@ -14,12 +15,13 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "..", ".collab", "tools"))  # 监控库 monitor 在仓库根的 .collab 下
 from datafile import write  # noqa: E402
 from monitor import util as U  # noqa: E402
-from monitor.read import collab, repo  # noqa: E402
+from monitor.read import collab, repo, scriptfiles  # noqa: E402
 from monitor.check import build as gate_check  # noqa: E402
-from monitor.view import hooks, people, scripts, trees, work  # noqa: E402
+from monitor.view import catalog, hooks, people, running, trees, work  # noqa: E402
 
 EVERY_S = 15            # --loop 的间隔
 COLLECT_EVERY_S = 600   # 项目采集（collect.py）的间隔
+CATALOG_EVERY_S = 60    # 脚本目录（catalog.js）的间隔，扫描很轻
 LOCK_FILE = U.REPO + "/output/.locks/live.lock"
 
 
@@ -58,18 +60,36 @@ def collect():
     a_part = part(errors, "Claude", lambda: people.claude(ids), ([], []))
     sessions, agents = people.merge(a_part, c_part)
     procs = part(errors, "进程表", repo.processes, [])
-    items, n_engine, n_build, editors = part(errors, "脚本", lambda: scripts.build(procs), ([], 0, 0, 0))
-    out_scripts = scripts.with_status(items)
+    items, n_engine, n_build, editors = part(errors, "脚本", lambda: running.build(procs), ([], 0, 0, 0))
+    out_scripts = running.with_status(items)
     build = part(errors, "构建锁", lambda: build_block(items, n_engine, n_build, editors), None)
     hook_cards = part(errors, "钩子", hooks.cards, None)
     changes = part(errors, "工作区改动", repo.changes, [])
     done = part(errors, "在做的工作", lambda: work.build(rows, agents, sessions, changes), None)
     worktrees = part(errors, "临时工作树", lambda: worktree_block(procs), None)
-    return {"sessions": sessions, "agents": agents, "scripts": out_scripts, "build": build, "work": done, "worktrees": worktrees, "hooks": hook_cards, "errors": errors}
+    live = {"sessions": sessions, "agents": agents, "scripts": out_scripts, "build": build, "work": done, "worktrees": worktrees, "hooks": hook_cards, "errors": errors}
+    return live, procs
+
+
+_last_catalog = 0.0
+
+
+def write_catalog(procs):
+    """脚本目录：失败只在 stderr 说一句（旧的 catalog.js 留着，页面按它的 updated 显示数据旧了）。"""
+    try:
+        write("auto", "catalog", catalog.build(scriptfiles.scan(), procs), source="live.py")
+    except Exception as e:
+        print(f"{U.iso(time.time())} 写 catalog.js 失败：{type(e).__name__} {e}", file=sys.stderr)
 
 
 def write_once():
-    return write("auto", "live", collect(), source="live.py")
+    global _last_catalog
+    live, procs = collect()
+    path = write("auto", "live", live, source="live.py")
+    if time.time() - _last_catalog >= CATALOG_EVERY_S:
+        _last_catalog = time.time()
+        write_catalog(procs)
+    return path
 
 
 def single_instance():

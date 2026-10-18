@@ -206,6 +206,7 @@ button { font: inherit; color: inherit; }
 
 /* ---------- 布局辅助 ---------- */
 .stack { display: flex; flex-direction: column; gap: var(--s4); }
+.stack.is-stale { opacity: .6; }
 .stack-sm { display: flex; flex-direction: column; gap: var(--s2); }
 .cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .grid { display: grid; gap: var(--s4); }

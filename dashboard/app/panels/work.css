@@ -1,0 +1,45 @@
+/* 施工页。只用令牌。块之间的间距由 .page-body 的面板间距管。 */
+.dg-mains { display: flex; flex-direction: column; gap: var(--s3); }
+.dg-main { border-left: 3px solid var(--muted); padding: 2px 0 2px var(--s3); }
+.dg-main--claude { border-left-color: var(--claude); }
+.dg-main--codex { border-left-color: var(--codex); }
+.dg-main-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.dg-main-name { font-weight: 600; }
+.dg-main-when { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); }
+.dg-main-task { margin-top: 2px; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.dg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr)); gap: var(--s3); align-items: start; }
+.dg-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.dg-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.dg-id { font-family: var(--mono); font-weight: 600; }
+.dg-what { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+.dg-agents { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); }
+.dg-line { font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.dg-line.muted { color: var(--text-3); }
+.dg-dir { font-family: var(--mono); font-size: var(--fs-xs); }
+.dg-flag { font-size: var(--fs-xs); color: var(--auto); }
+
+.qu-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; align-items: start; margin-top: var(--s3); }
+.qu-col { min-width: 0; }
+.qu-colhead { display: flex; align-items: baseline; gap: 0.5rem; width: 100%; padding: 0 0.15rem 0.5rem; border: 0; border-bottom: 2px solid var(--text-2); background: none; font: inherit; color: inherit; text-align: left; margin-bottom: 0.6rem; }
+.qu-colname { font-weight: 600; }
+.qu-count { font-variant-numeric: tabular-nums; color: var(--text-2); }
+.qu-hint { margin-left: auto; font-size: 0.78rem; color: var(--text-3); }
+.qu-cards { display: flex; flex-direction: column; gap: 0.5rem; }
+.qu-card { background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 0.55rem 0.7rem; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.15rem 0.6rem; }
+.qu-card .qu-title { grid-column: 1 / 3; line-height: 1.4; }
+.qu-id { font-family: var(--mono); font-size: 0.8rem; color: var(--text-3); }
+.qu-foot { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; min-height: 1.25rem; }
+.qu-pre { font-size: 0.8rem; color: var(--text-3); }
+.qu-none { padding: 0.6rem 0.2rem; color: var(--text-3); font-size: 0.85rem; }
+.qu-col.is-empty .qu-colname { color: var(--text-3); }
+
+/* 暂停栏默认收起：只露一行标题，点开看卡片 */
+.qu-fold { cursor: pointer; align-items: center; border-bottom-color: var(--text-3); }
+.qu-fold:disabled { cursor: default; }
+.qu-fold:hover:not(:disabled) .qu-colname { color: var(--link); }
+.qu-caret { width: 0; height: 0; border-left: 5px solid var(--text-3); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 0.15s; }
+.qu-col.is-open .qu-caret { transform: rotate(90deg); }
+.qu-col:has(> .qu-fold) > .qu-cards { display: none; }
+.qu-col.is-open > .qu-cards { display: flex; }
+
+@media (max-width: 560px) { .dg-cards { grid-template-columns: minmax(0, 1fr); } }
