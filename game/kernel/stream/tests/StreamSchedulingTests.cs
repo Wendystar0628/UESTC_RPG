@@ -37,6 +37,8 @@ public sealed class StreamSchedulingTests
             stream.Load(context);
             if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)));
             else stream.Select(medium);
+            Console.WriteLine($"InteriorRequests waypoint={waypoint.Id} position={waypoint.Fly.Position} medium={medium} " +
+                $"selector={(knownDestination ? "Prefetch" : "Select")} receiver=collection-fixture keys=[{string.Join(",", bake.Keys)}]");
             if (!bake.Keys.SequenceEqual(expected) || stream.Error is not null || knownDestination && stream.DestinationReady)
                 throw new InvalidOperationException("Open-floor requests or pending destination readiness changed.");
             stream.Prefetch(new(building, checked((short)(medium.Storey + 1))));
